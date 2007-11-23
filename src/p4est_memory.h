@@ -4,7 +4,7 @@
 
 /* p4est memory management */
 
-#include <obstack.h>
+#include <p4est_obstack.h>
 
 /*
  * Prototypes for memory allocation functions.
