@@ -1,0 +1,21 @@
+#! /bin/bash
+
+# This is the GNU style for indent 2.2.9 (according to man page)
+#
+#"$INDENT" \
+#    -nbad -bap -nbc -bbo -bl -bli2 -bls -ncdb -nce -cp1 -cs -di2 \
+#    -ndj -nfc1 -nfca -hnl -i2 -ip5 -lp -pcs -nprs -psl -saf -sai \
+#    -saw -nsc -nsob
+#    "$@"
+
+# This is our modification
+#
+# blank line after procedure body
+# braces indent 0 (or do you want -bl2 here and -bl below?)
+# braces to right of control statements (or do you want -bl here?)
+# no tabs
+# put the return type of a function on a separate line
+# swallow optional blank lines
+INDENT_OPTIONS="-bap -bli0 -br -nut -psl -sob -di20"
+
+exec indent $INDENT_OPTIONS "$@"
