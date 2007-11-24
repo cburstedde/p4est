@@ -10,7 +10,7 @@ main (void)
   p4est_connectivity_t *connectivity;
 
   retval = p4est_connectivity_read ("mesh.p4t", &connectivity);
-  P4EST_CHECK_ABORT (retval, "Unable to read the mesh file.");
+  P4EST_CHECK_ABORT (!retval, "Unable to read the mesh file.");
 
   return 0;
 }

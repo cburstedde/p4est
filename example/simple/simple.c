@@ -6,7 +6,7 @@ int
 main (int argc, char **argv)
 {
 #if HAVE_MPI
-  int                 use_mpi = 0;
+  int                 use_mpi = 1;
   int                 mpiret;
 #endif
   MPI_Comm            mpicomm;
