@@ -10,6 +10,7 @@
  * The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.
  * Elements are accessed by their 0-based index, their address may change.
+ * The size (== elem_count) of the array can be changed by _grow1 or _resize.
  * Elements can be sorted.
  */
 typedef struct p4est_array
@@ -20,7 +21,7 @@ typedef struct p4est_array
 
   /* implementation variables */
   int                 elem_alloc;       /* number of allocated elements */
-  void               *array;    /* linear array to store elements */
+  char               *array;    /* linear array to store elements */
 }
 p4est_array_t;
 

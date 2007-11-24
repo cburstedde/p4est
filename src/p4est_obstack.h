@@ -20,7 +20,7 @@
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110-1301, USA.  */
 
-/* renamed to p4est_obstack.h for this project */
+/* renamed from glibc 2.7 to p4est_obstack.h for this project */
 
 /* Summary:
 
@@ -200,9 +200,6 @@ void obstack_free (struct obstack *obstack, void *block);
    return.  The default action is to print a message and abort.  */
 extern void (*obstack_alloc_failed_handler) (void);
 
-/* Exit value used when `print_and_abort' is used.  */
-extern int obstack_exit_failure;
-
 /* Pointer to beginning of object being allocated or to be allocated next.
    Note that this might not be the final address of the object
    because a new chunk might be needed to hold the final size.  */

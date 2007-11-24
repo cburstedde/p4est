@@ -2,10 +2,16 @@
 #include <p4est.h>
 #include <p4est_base.h>
 
+typedef struct
+{
+  int                 a;
+}
+user_data_t;
+
 int
 main (int argc, char **argv)
 {
-#if HAVE_MPI
+#ifdef HAVE_MPI
   int                 use_mpi = 1;
   int                 mpiret;
 #endif
@@ -14,7 +20,7 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
 
   mpicomm = MPI_COMM_NULL;
-#if HAVE_MPI
+#ifdef HAVE_MPI
   if (use_mpi) {
     mpiret = MPI_Init (&argc, &argv);
     P4EST_CHECK_MPI (mpiret);
@@ -43,12 +49,12 @@ main (int argc, char **argv)
   connectivity->tree_to_face[3] = 3;
 
   /* ownership of the connectivity structure transfers to p4est */
-  p4est = p4est_new (mpicomm, connectivity);
+  p4est = p4est_new (mpicomm, stdout, connectivity, sizeof (user_data_t));
 
   /* destroy the 4est and its connectivity structure */
   p4est_destroy (p4est);
 
-#if HAVE_MPI
+#ifdef HAVE_MPI
   if (use_mpi) {
     mpiret = MPI_Finalize ();
     P4EST_CHECK_MPI (mpiret);

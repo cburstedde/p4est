@@ -3,13 +3,16 @@
 #define __P4EST_H__
 
 #include <p4est_memory.h>
-#include <stdint.h>
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include <p4est_config.h>
 #endif
 
-#if HAVE_MPI
+/* should we make these includes depend on config.h too? */
+#include <stdio.h>
+#include <stdint.h>
+
+#ifdef HAVE_MPI
 #include <mpi.h>
 #else
 #include <p4est_mpi_dummy.h>
@@ -47,6 +50,9 @@ typedef struct p4est
   MPI_Comm            mpicomm;
   int                 mpisize, mpirank;
 
+  FILE               *nout;     /* log messages go here if not NULL */
+  int                 data_size;        /* size of user_data */
+
   int32_t             first_local_tree; /* 0-based index of first local tree */
   int32_t             local_num_trees;  /* number of trees on this processors */
   int32_t             local_num_quadrants;      /* number of quadrants
@@ -55,6 +61,8 @@ typedef struct p4est
                                                    on all trees on all processors */
   p4est_connectivity_t *connectivity;   /* connectivity structure */
   p4est_array_t      *trees;    /* list of all trees */
+
+  p4est_mempool_t    *user_data_pool;   /* memory allocator for user data */
 }
 p4est_t;
 
@@ -63,8 +71,9 @@ p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
 
-p4est_t            *p4est_new (MPI_Comm mpicomm,
-                               p4est_connectivity_t * connectivity);
+p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
+                               p4est_connectivity_t * connectivity,
+                               int data_size);
 void                p4est_destroy (p4est_t * p4est);
 
 #endif /* !__P4EST_H__ */

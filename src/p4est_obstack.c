@@ -20,18 +20,10 @@
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110-1301, USA.  */
 
-/* renamed to p4est_obstack.h and modified for this project */
+/* renamed from glibc 2.7 to p4est_obstack.h and modified for this project */
 
-#ifdef HAVE_CONFIG_H
-# include <p4est_config.h>
-#endif
-
-#ifdef _LIBC /* not the case here */
-# include <obstack.h>
-# include <shlib-compat.h>
-#else
-# include <p4est_obstack.h>
-#endif
+#include <p4est_obstack.h>
+#include <p4est_base.h>
 
 /* NOTE BEFORE MODIFYING THIS FILE: This version number must be
    incremented whenever callers compiled using an old obstack.h can no
@@ -105,10 +97,6 @@ enum
    `print_and_abort'.  */
 static void print_and_abort (void);
 void (*obstack_alloc_failed_handler) (void) = print_and_abort;
-
-/* Exit value used when `print_and_abort' is used.  */
-# include <stdlib.h>
-int obstack_exit_failure = EXIT_FAILURE;
 
 # ifdef _LIBC
 #  if SHLIB_COMPAT (libc, GLIBC_2_0, GLIBC_2_3_4)
@@ -398,10 +386,6 @@ _obstack_memory_used (struct obstack *h)
   return nbytes;
 }
 
-/* Define the error handler.  */
-# ifndef _
-#  define _(msgid) (msgid)
-# endif
 
 # ifdef _LIBC
 #  include <libio/iolibio.h>
@@ -418,17 +402,9 @@ static void
 __attribute__ ((noreturn))
 print_and_abort (void)
 {
-  /* Don't change any of these strings.  Yes, it would be possible to add
-     the newline to the string and use fputs or so.  But this must not
-     happen because the "memory exhausted" message appears in other places
-     like this and the translation should be reused instead of creating
-     a very similar string which requires a separate translation.  */
-# ifdef _LIBC
-  (void) __fxprintf (NULL, "%s\n", _("memory exhausted"));
-# else
-  fprintf (stderr, "%s\n", _("memory exhausted"));
-# endif
-  exit (obstack_exit_failure);
+  /* replaced this function */
+
+  P4EST_CHECK_ABORT (0, "Obstack memory allocation");
 }
 
 #endif	/* !ELIDE_CODE */
