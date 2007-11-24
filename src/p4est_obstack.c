@@ -400,7 +400,7 @@ _obstack_memory_used (struct obstack *h)
 
 /* Define the error handler.  */
 # ifndef _
-#  define _(msgid) gettext (msgid)
+#  define _(msgid) (msgid)
 # endif
 
 # ifdef _LIBC
