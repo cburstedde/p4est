@@ -54,4 +54,8 @@ p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
 
+p4est_t            *p4est_new (MPI_Comm mpicomm,
+                               p4est_connectivity_t * connectivity);
+void                p4est_destroy (p4est_t * p4est);
+
 #endif /* !__P4EST_H__ */
