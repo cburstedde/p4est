@@ -4,7 +4,16 @@
 
 #include <p4est_memory.h>
 #include <stdint.h>
+
+#if HAVE_CONFIG_H
+#include <p4est_config.h>
+#endif
+
+#if HAVE_MPI
 #include <mpi.h>
+#else
+#include <p4est_mpi_dummy.h>
+#endif
 
 typedef struct p4est_connectivity
 {
