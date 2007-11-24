@@ -1,4 +1,4 @@
 
 ## Makefile.am in example
 
-SUBDIRS = simple
+SUBDIRS = read_forest simple
