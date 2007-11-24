@@ -50,8 +50,8 @@ typedef struct p4est_mempool
   int                 elem_count;       /* number of valid elements */
 
   /* implementation variables */
-  struct obstack      stack;    /* holds the allocated elements */
-  p4est_array_t       freed;    /* buffers the freed elements */
+  struct obstack      obstack;  /* holds the allocated elements */
+  p4est_array_t      *freed;    /* buffers the freed elements */
 }
 p4est_mempool_t;
 
@@ -62,7 +62,7 @@ void                p4est_mempool_reset (p4est_mempool_t * mempool);
 
 /* allocate or free a single element */
 void               *p4est_mempool_alloc (p4est_mempool_t * mempool);
-void               *p4est_mempool_free (p4est_mempool_t * mempool,
+void                p4est_mempool_free (p4est_mempool_t * mempool,
                                         void *elem);
 
 #endif /* !__P4EST_MEMORY_H__ */

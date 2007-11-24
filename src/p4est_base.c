@@ -66,7 +66,7 @@ p4est_realloc (void * ptr, size_t size)
   return ret;
 }
 
-void               *
+void
 p4est_free (void * ptr)
 {
   if (ptr != NULL) {

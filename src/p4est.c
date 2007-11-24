@@ -97,6 +97,9 @@ p4est_new (MPI_Comm mpicomm, FILE * nout,
              (long long) global_num_quadrants, local_num_quadrants);
   }
 
+  /* allocate memory pools */
+  p4est->user_data_pool = p4est_mempool_new (p4est->data_size);
+
   /* allocate trees and quadrants */
   p4est->trees = p4est_array_new (sizeof (p4est_tree_t));
   p4est_array_resize (p4est->trees, num_trees);
@@ -119,6 +122,8 @@ p4est_destroy (p4est_t * p4est)
     p4est_array_destroy (tree->quadrants);
   }
   p4est_array_destroy (p4est->trees);
+
+  p4est_mempool_destroy (p4est->user_data_pool);
 
   p4est_connectivity_destroy (p4est->connectivity);
 

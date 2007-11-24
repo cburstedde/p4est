@@ -29,7 +29,7 @@ main (int argc, char **argv)
 #endif
 
   connectivity = p4est_connectivity_new (1, 4);
-  
+
   /* assign vertex numbers */
   connectivity->tree_to_vertex[0] = 0;
   connectivity->tree_to_vertex[1] = 1;
@@ -50,7 +50,7 @@ main (int argc, char **argv)
 
   /* ownership of the connectivity structure transfers to p4est */
   p4est = p4est_new (mpicomm, stdout, connectivity, sizeof (user_data_t));
-  
+
   /* destroy the 4est and its connectivity structure */
   p4est_destroy (p4est);
 
