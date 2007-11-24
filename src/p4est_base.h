@@ -36,15 +36,21 @@
 #define P4EST_CHECK_MPI(r) P4EST_CHECK_ABORT ((r) == MPI_SUCCESS, "MPI operation")
 #define P4EST_ASSERT(c) P4EST_CHECK_ABORT ((c), "Assertion '" #c "'")
 
-#define P4EST_ALLOC(t,n) (t *) malloc ((n) * sizeof(t))
-#define P4EST_ALLOC_ZERO(t,n) (t *) calloc ((n), sizeof(t))
-#define P4EST_REALLOC(p,t,n) (t *) realloc ((p), (n) * sizeof(t))
+#define P4EST_ALLOC(t,n) (t *) p4est_malloc ((n) * sizeof(t))
+#define P4EST_ALLOC_ZERO(t,n) (t *) p4est_calloc ((n), sizeof(t))
+#define P4EST_REALLOC(p,t,n) (t *) p4est_realloc ((p), (n) * sizeof(t))
 
 /* it is allowed to call P4EST_FREE (NULL) which does nothing. */
-#define P4EST_FREE(p) free (p)
+#define P4EST_FREE(p) p4est_free (p)
 
 #define P4EST_MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define P4EST_MAX(a,b) (((a) > (b)) ? (a) : (b))
+
+void               *p4est_malloc (size_t size);
+void               *p4est_calloc (size_t nmemb, size_t size);
+void               *p4est_realloc (void * ptr, size_t size);
+void               *p4est_free (void * ptr);
+void                p4est_memory_check (void);
 
 void                p4est_abort (void);
 

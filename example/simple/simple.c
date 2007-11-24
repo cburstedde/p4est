@@ -50,9 +50,12 @@ main (int argc, char **argv)
 
   /* ownership of the connectivity structure transfers to p4est */
   p4est = p4est_new (mpicomm, stdout, connectivity, sizeof (user_data_t));
-
+  
   /* destroy the 4est and its connectivity structure */
   p4est_destroy (p4est);
+
+  /* clean up and exit */
+  p4est_memory_check ();
 
 #ifdef HAVE_MPI
   if (use_mpi) {

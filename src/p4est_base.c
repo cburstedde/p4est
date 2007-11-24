@@ -7,6 +7,80 @@
 #endif
 #endif
 
+static int          malloc_count = 0;
+static int          free_count = 0;
+
+void               *
+p4est_malloc (size_t size)
+{
+  void             *ret;
+
+  ret = malloc (size);
+
+  if (size > 0) {
+    ++malloc_count;
+  }
+  else {
+    malloc_count += ((ret == NULL) ? 0 : 1);
+  }
+  
+  return ret;
+}
+
+void               *
+p4est_calloc (size_t nmemb, size_t size)
+{
+  void             *ret;
+
+  ret = calloc (nmemb, size);
+
+  if (nmemb * size > 0) {
+    ++malloc_count;
+  }
+  else {
+    malloc_count += ((ret == NULL) ? 0 : 1);
+  }
+  
+  return ret;  
+}
+
+void               *
+p4est_realloc (void * ptr, size_t size)
+{
+  void             *ret;
+
+  ret = realloc (ptr, size);
+
+  if (ptr == NULL) {
+    if (size > 0) {
+      ++malloc_count;
+    }
+    else {
+      malloc_count += ((ret == NULL) ? 0 : 1);
+    }
+  }
+  else if (size == 0) {
+    ++free_count;
+  }
+
+  return ret;
+}
+
+void               *
+p4est_free (void * ptr)
+{
+  if (ptr != NULL) {
+    ++free_count;
+    free (ptr);
+  }
+}
+
+void
+p4est_memory_check (void) 
+{
+  P4EST_CHECK_ABORT (malloc_count == free_count, "Memory balance");
+}
+
 void
 p4est_abort (void)
 {
