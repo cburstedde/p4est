@@ -44,6 +44,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
   int8_t              level;
   int32_t             num_trees;
   int32_t             num_quadrants;
+  int32_t             local_num_quadrants;
   int64_t             global_num_quadrants;
   p4est_t            *p4est;
 
@@ -56,6 +57,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
   p4est->mpicomm = mpicomm;
   p4est->mpisize = 1;
   p4est->mpirank = 0;
+#ifdef HAVE_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
     P4EST_CHECK_MPI (mpiret);
@@ -63,6 +65,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
     mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
     P4EST_CHECK_MPI (mpiret);
   }
+#endif
 
   /* determine uniform level of initial tree */
   num_quadrants = 1;
@@ -77,12 +80,13 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
 
   /* compute index of first tree for this processor */
   global_num_quadrants = (int64_t) num_quadrants * (int64_t) num_trees;
+  local_num_quadrants = (int32_t) (global_num_quadrants / p4est->mpisize);
 
   if (p4est->mpirank == 0) {
     fprintf (stderr, "New forest: %d trees %d processors\n",
              connectivity->num_trees, p4est->mpisize);
-    fprintf (stderr, "   initial level %d global quadrants %lld\n",
-             level, (long long) global_num_quadrants);
+    fprintf (stderr, "   initial level %d global quadrants %lld local %d\n",
+             level, (long long) global_num_quadrants, local_num_quadrants);
   }
 
   return p4est;

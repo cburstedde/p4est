@@ -19,10 +19,7 @@ echo "o----------------------------------"
 echo "| Checking for compilers"
 echo "o----------------------------------"
 
-ACX_MPI(
-[icc cc gcc],
-[ifort f77 g77 gfortran f90 xlf90 f95 g95 gfortran-dp-4.2]
-)
+ACX_MPI([icc gcc cc])
 AC_PROG_RANLIB
 
 # Checks for libraries.
