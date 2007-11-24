@@ -40,7 +40,9 @@ p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
 {
+#ifdef HAVE_MPI
   int                 mpiret;
+#endif
   int8_t              level;
   int32_t             num_trees;
   int32_t             num_quadrants;
