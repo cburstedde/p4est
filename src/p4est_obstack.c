@@ -108,12 +108,7 @@ void (*obstack_alloc_failed_handler) (void) = print_and_abort;
 
 /* Exit value used when `print_and_abort' is used.  */
 # include <stdlib.h>
-# ifdef _LIBC
 int obstack_exit_failure = EXIT_FAILURE;
-# else
-#  include "exitfail.h"
-#  define obstack_exit_failure exit_failure
-# endif
 
 # ifdef _LIBC
 #  if SHLIB_COMPAT (libc, GLIBC_2_0, GLIBC_2_3_4)
@@ -404,11 +399,6 @@ _obstack_memory_used (struct obstack *h)
 }
 
 /* Define the error handler.  */
-# ifdef _LIBC
-#  include <libintl.h>
-# else
-#  include "gettext.h"
-# endif
 # ifndef _
 #  define _(msgid) gettext (msgid)
 # endif
