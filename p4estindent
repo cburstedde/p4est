@@ -18,4 +18,8 @@
 # swallow optional blank lines
 INDENT_OPTIONS="-bap -bli0 -br -nut -psl -sob -di20"
 
-exec indent $INDENT_OPTIONS "$@"
+INDENT=`which gnuindent`
+if [ "$INDENT" == '' ] ; then
+  INDENT=`which indent`
+fi
+exec $INDENT $INDENT_OPTIONS "$@"
