@@ -2,7 +2,7 @@
 #include <p4est.h>
 #include <p4est_base.h>
 
-static const int32_t initial_quadrants_per_processor = 15;
+static const int64_t initial_quadrants_per_processor = 15;
 
 p4est_connectivity_t *
 p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
@@ -46,9 +46,9 @@ p4est_new (MPI_Comm mpicomm, FILE * nout,
 #endif
   int8_t              level;
   int32_t             j, num_trees;
-  int32_t             num_quadrants;
-  int32_t             local_num_quadrants;
-  int64_t             global_num_quadrants;
+  int64_t             tree_num_quadrants, global_num_quadrants;
+  int64_t             first_tree, first_quadrant, first_tree_quadrant;
+  int64_t             last_tree, last_quadrant, last_tree_quadrant;
   p4est_t            *p4est;
   p4est_tree_t       *tree;
 
@@ -74,31 +74,55 @@ p4est_new (MPI_Comm mpicomm, FILE * nout,
   }
 #endif
 
+  /* allocate memory pools */
+  p4est->user_data_pool = p4est_mempool_new (p4est->data_size);
+
   /* determine uniform level of initial tree */
-  num_quadrants = 1;
+  tree_num_quadrants = 1;
   for (level = 0; level < 16; ++level) {
-    if (num_quadrants >=
+    if (tree_num_quadrants >=
         (p4est->mpisize * initial_quadrants_per_processor) / num_trees) {
       break;
     }
-    num_quadrants *= 4;
+    tree_num_quadrants *= 4;
   }
-  P4EST_ASSERT (level < 16);
+  P4EST_ASSERT (level < 16 && tree_num_quadrants <= INT32_MAX);
 
   /* compute index of first tree for this processor */
-  global_num_quadrants = (int64_t) num_quadrants *(int64_t) num_trees;
-  local_num_quadrants = (int32_t) (global_num_quadrants / p4est->mpisize);
+  global_num_quadrants = tree_num_quadrants * num_trees;
+  first_quadrant = (global_num_quadrants * p4est->mpirank) / p4est->mpisize;
+  first_tree = first_quadrant / tree_num_quadrants;
+  first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
+  last_quadrant =
+    (global_num_quadrants * (p4est->mpirank + 1)) / p4est->mpisize - 1;
+  last_tree = last_quadrant / tree_num_quadrants;
+  last_tree_quadrant = last_quadrant - last_tree * tree_num_quadrants;
 
-  if (p4est->mpirank == 0 && p4est->nout != NULL) {
-    fprintf (p4est->nout, "New forest: %d trees %d processors\n",
-             num_trees, p4est->mpisize);
-    fprintf (p4est->nout,
-             "   initial level %d global quadrants %lld local %d\n", level,
-             (long long) global_num_quadrants, local_num_quadrants);
+  /* check ranges of various integers */
+  P4EST_ASSERT (first_tree <= last_tree && last_tree < num_trees);
+  P4EST_ASSERT (0 <= first_tree_quadrant && 0 <= last_tree_quadrant);
+  P4EST_ASSERT (first_tree_quadrant < tree_num_quadrants);
+  P4EST_ASSERT (last_tree_quadrant < tree_num_quadrants);
+
+  /* print some diagnostics */
+  if (p4est->nout != NULL) {
+    if (p4est->mpirank == 0) {
+      fprintf (p4est->nout, "New forest: %d trees %d processors\n",
+               num_trees, p4est->mpisize);
+      fprintf (p4est->nout,
+               "   initial level %d global quadrants %lld per tree %lld\n",
+               level, (long long) global_num_quadrants,
+               (long long) tree_num_quadrants);
+    }
+    fprintf (p4est->nout, "[%d] first tree %lld first quadrant %lld"
+             " global quadrant %lld\n", p4est->mpirank,
+             (long long) first_tree, (long long) first_tree_quadrant,
+             (long long) first_quadrant);
+    fprintf (p4est->nout, "[%d] last tree %lld last quadrant %lld"
+             " global quadrant %lld\n", p4est->mpirank,
+             (long long) last_tree, (long long) last_tree_quadrant,
+             (long long) last_quadrant);
   }
-
-  /* allocate memory pools */
-  p4est->user_data_pool = p4est_mempool_new (p4est->data_size);
 
   /* allocate trees and quadrants */
   p4est->trees = p4est_array_new (sizeof (p4est_tree_t));

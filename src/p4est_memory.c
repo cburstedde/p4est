@@ -79,6 +79,8 @@ p4est_mempool_new (int elem_size)
   p4est_mempool_t    *mempool;
 
   mempool = P4EST_ALLOC_ZERO (p4est_mempool_t, 1);
+  P4EST_CHECK_ALLOC (mempool);
+
   mempool->elem_size = elem_size;
   mempool->elem_count = 0;
 
