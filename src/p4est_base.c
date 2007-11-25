@@ -60,7 +60,7 @@ p4est_realloc (void * ptr, size_t size)
     }
   }
   else if (size == 0) {
-    ++free_count;
+    free_count += ((ret == NULL) ? 1 : 0);
   }
 
   return ret;

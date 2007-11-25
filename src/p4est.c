@@ -144,7 +144,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
     tree->quadrants = p4est_array_new (sizeof (p4est_quadrant_t));
   }
 
-  /* for every locally non-empty tree fill first and last octant */
+  /* for every locally non-empty tree fill first and last quadrant */
   for (j = first_tree; j <= last_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     must_remove_last_quadrant = 0;
@@ -193,6 +193,9 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
       /* now run algorithm CompleteRegion (&tree->quadrants) here */
     }
   }
+
+  p4est->first_local_tree = first_tree;
+  p4est->local_num_trees = last_tree - first_tree + 1;
 
   return p4est;
 }
