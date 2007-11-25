@@ -9,6 +9,8 @@ p4est_array_new (int elem_size)
 {
   p4est_array_t      *array;
 
+  P4EST_ASSERT (elem_size > 0);
+
   array = P4EST_ALLOC_ZERO (p4est_array_t, 1);
   P4EST_CHECK_ALLOC (array);
 
@@ -77,6 +79,8 @@ p4est_mempool_t    *
 p4est_mempool_new (int elem_size)
 {
   p4est_mempool_t    *mempool;
+
+  P4EST_ASSERT (elem_size > 0);
 
   mempool = P4EST_ALLOC_ZERO (p4est_mempool_t, 1);
   P4EST_CHECK_ALLOC (mempool);

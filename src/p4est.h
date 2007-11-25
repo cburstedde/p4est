@@ -66,6 +66,12 @@ typedef struct p4est
 }
 p4est_t;
 
+/*
+ * callback function to initialize the quadrant's user data
+ */
+typedef void        (*p4est_init_t) (int32_t which_tree,
+                                     p4est_quadrant_t * quadrant);
+
 p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
                                               int32_t num_vertices);
 void                p4est_connectivity_destroy (p4est_connectivity_t *
@@ -73,7 +79,7 @@ void                p4est_connectivity_destroy (p4est_connectivity_t *
 
 p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
                                p4est_connectivity_t * connectivity,
-                               int data_size);
+                               int data_size, p4est_init_t init_fn);
 void                p4est_destroy (p4est_t * p4est);
 
 #endif /* !__P4EST_H__ */

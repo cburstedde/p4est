@@ -4,9 +4,17 @@
 
 typedef struct
 {
-  int                 a;
+  int32_t             a;
 }
 user_data_t;
+
+void
+init_fn (int32_t which_tree, p4est_quadrant_t *quadrant) 
+{
+  user_data_t        *data = quadrant->user_data;
+
+  data->a = which_tree;
+}
 
 int
 main (int argc, char **argv)
@@ -49,7 +57,8 @@ main (int argc, char **argv)
   connectivity->tree_to_face[3] = 3;
 
   /* ownership of the connectivity structure transfers to p4est */
-  p4est = p4est_new (mpicomm, stdout, connectivity, sizeof (user_data_t));
+  p4est = p4est_new (mpicomm, stdout, connectivity,
+                     sizeof (user_data_t), init_fn);
 
   /* destroy the 4est and its connectivity structure */
   p4est_destroy (p4est);
