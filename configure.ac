@@ -63,6 +63,7 @@ AC_CONFIG_FILES([Makefile
                  example/Makefile
                  example/read_forest/Makefile
                  example/simple/Makefile
+                 doc/Makefile
                 ])
 
 AC_OUTPUT

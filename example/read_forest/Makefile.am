@@ -8,4 +8,4 @@ AM_CPPFLAGS = -I@top_srcdir@/src
 
 LDADD = @top_builddir@/src/libp4est.a
 
-EXTRA_DIST = mesh.p4
+EXTRA_DIST = mesh.p4t
