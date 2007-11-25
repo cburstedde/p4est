@@ -28,7 +28,6 @@ p4est_array_t;
 p4est_array_t      *p4est_array_new (int elem_size);
 void                p4est_array_destroy (p4est_array_t * array);
 
-void                p4est_array_grow1 (p4est_array_t * array);
 void                p4est_array_resize (p4est_array_t * array, int new_count);
 void                p4est_array_sort (p4est_array_t * array,
                                       int (*compar) (const void *,

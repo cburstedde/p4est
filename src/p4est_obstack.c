@@ -362,9 +362,10 @@ obstack_free (struct obstack *h, void *obj)
       h->chunk_limit = lp->limit;
       h->chunk = lp;
     }
-  else if (obj != 0)
+  else {
     /* obj is not in any of the chunks! */
-    abort ();
+    P4EST_CHECK_ABORT (obj == NULL, "Obstack freed invalid object");
+  }
 }
 
 # ifdef _LIBC

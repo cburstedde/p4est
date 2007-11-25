@@ -28,12 +28,6 @@ p4est_array_destroy (p4est_array_t * array)
 }
 
 void
-p4est_array_grow1 (p4est_array_t * array)
-{
-  p4est_array_resize (array, array->elem_count + 1);
-}
-
-void
 p4est_array_resize (p4est_array_t * array, int new_count)
 {
   char               *ptr;
