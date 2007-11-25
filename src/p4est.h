@@ -69,7 +69,7 @@ p4est_t;
 /*
  * callback function to initialize the quadrant's user data
  */
-typedef void        (*p4est_init_t) (int32_t which_tree,
+typedef void        (*p4est_init_t) (p4est_t * p4est, int32_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
 p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,

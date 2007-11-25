@@ -5,21 +5,6 @@
 
 static const int64_t initial_quadrants_per_processor = 15;
 
-static inline void
-p4est_quadrant_init (p4est_t * p4est, p4est_quadrant_t * quad,
-                     int32_t which_tree, p4est_init_t init_fn)
-{
-  if (p4est->data_size > 0) {
-    quad->user_data = p4est_mempool_alloc (p4est->user_data_pool);
-  }
-  else {
-    quad->user_data = NULL;
-  }
-  if (init_fn != NULL) {
-    init_fn (which_tree, quad);
-  }
-}
-
 p4est_connectivity_t *
 p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
 {
@@ -177,7 +162,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
       fprintf (p4est->nout, "[%d] tree %d first morton %d %d\n",
                p4est->mpirank, j, quad->x, quad->y);
     }
-    p4est_quadrant_init (p4est, quad, j, init_fn);
+    p4est_quadrant_init_data (p4est, j, quad, init_fn);
 
     /* set morton id of last quadrant */
     if (j == first_tree && first_tree_quadrant == tree_num_quadrants - 1) {
@@ -203,7 +188,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
         fprintf (p4est->nout, "[%d] tree %d last morton %d %d\n",
                  p4est->mpirank, j, quad->x, quad->y);
       }
-      p4est_quadrant_init (p4est, quad, j, init_fn);
+      p4est_quadrant_init_data (p4est, j, quad, init_fn);
 
       /* now run algorithm CompleteRegion (&tree->quadrants) here */
     }

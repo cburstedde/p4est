@@ -16,4 +16,12 @@ int                 p4est_quadrant_compare (const void *v1, const void *v2);
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int8_t level, int32_t index);
 
+/*
+ * initialize the user data of a quadrant which already has Morton indices
+ */
+void                p4est_quadrant_init_data (p4est_t * p4est,
+                                              int32_t which_tree,
+                                              p4est_quadrant_t * quad,
+                                              p4est_init_t init_fn);
+
 #endif /* !__P4EST_ALGORITHMS_H__ */

@@ -1,1 +1,3 @@
 p4est - a C library to manage a parallel collection of quadtrees
+
+See more documentation in the doc subdirectory
