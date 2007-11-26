@@ -18,7 +18,7 @@
 # swallow optional blank lines
 INDENT_OPTIONS="-bap -bli0 -br -nut -psl -sob -di20"
 
-INDENT=`which gnuindent`
+INDENT=`which gnuindent 2> /dev/null`
 if [ "$INDENT" == '' ] ; then
   INDENT=`which indent`
 fi

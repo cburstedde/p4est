@@ -45,7 +45,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
-  int                 must_remove_last_quadrant;
+  int                 i, must_remove_last_quadrant;
   int8_t              level;
   int32_t             j, num_trees;
   int64_t             tree_num_quadrants, global_num_quadrants;
@@ -85,6 +85,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   else {
     p4est->user_data_pool = NULL;
   }
+  p4est->quadrant_pool = p4est_mempool_new (sizeof (p4est_quadrant_t));
 
   /* determine uniform level of initial tree */
   tree_num_quadrants = 1;
@@ -142,6 +143,10 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   for (j = 0; j < num_trees; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     tree->quadrants = p4est_array_new (sizeof (p4est_quadrant_t));
+    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+      tree->quadrants_per_level[i] = 0;
+    }
+    tree->maxlevel = 0;
   }
 
   /* for every locally non-empty tree fill first and last quadrant */
@@ -159,13 +164,14 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
       p4est_quadrant_set_morton (quad, level, 0);
     }
     if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "[%d] tree %d first morton %d %d\n",
+      fprintf (p4est->nout, "[%d] tree %d first morton 0x%x 0x%x\n",
                p4est->mpirank, j, quad->x, quad->y);
     }
     p4est_quadrant_init_data (p4est, j, quad, init_fn);
 
     /* set morton id of last quadrant */
-    if (j == first_tree && first_tree_quadrant == tree_num_quadrants - 1) {
+    if (tree_num_quadrants == 1 ||
+        (j == first_tree && first_tree_quadrant == tree_num_quadrants - 1)) {
       /* nothing to do for this tree, we will have only one quadrant */
     }
     else {
@@ -185,7 +191,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
         p4est_quadrant_set_morton (quad, level, tree_num_quadrants - 1);
       }
       if (p4est->nout != NULL) {
-        fprintf (p4est->nout, "[%d] tree %d last morton %d %d\n",
+        fprintf (p4est->nout, "[%d] tree %d last morton 0x%x 0x%x\n",
                  p4est->mpirank, j, quad->x, quad->y);
       }
       p4est_quadrant_init_data (p4est, j, quad, init_fn);
@@ -215,6 +221,7 @@ p4est_destroy (p4est_t * p4est)
   if (p4est->user_data_pool != NULL) {
     p4est_mempool_destroy (p4est->user_data_pool);
   }
+  p4est_mempool_destroy (p4est->quadrant_pool);
 
   p4est_connectivity_destroy (p4est->connectivity);
 

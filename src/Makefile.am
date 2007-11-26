@@ -8,4 +8,14 @@ libp4est_a_SOURCES = \
 	p4est_file.h p4est_file.c p4est.h p4est.c \
 	p4est_algorithms.h p4est_algorithms.c
 
-include_HEADERS = p4est_mpi_dummy.h p4est_memory.h p4est.h
+include_HEADERS = \
+	p4est_mpi_dummy.h p4est_obstack.h p4est_memory.h \
+	p4est_file.h p4est_algorithms.h p4est.h
+
+install-data-hook:
+	perl -pi -e 's/(#define\s+P4EST_CONFIG_INSTALLED)\s+\d/\1 1/' \
+		$(DESTDIR)$(includedir)/p4est.h
+if HAVE_MPI
+	perl -pi -e 's/(#define\s+P4EST_CONFIG_MPI)\s+\d/\1 1/' \
+		$(DESTDIR)$(includedir)/p4est.h
+endif
