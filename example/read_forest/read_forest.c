@@ -1,5 +1,6 @@
 
 #include <p4est.h>
+#include <p4est_file.h>
 #include <p4est_base.h>
 
 int
