@@ -2,6 +2,11 @@
 #ifndef __P4EST_BASE_H__
 #define __P4EST_BASE_H__
 
+/*
+ * this header is the only one that includes p4est_config.h
+ * it is not installed in the final include directory
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <p4est_config.h>
 #endif

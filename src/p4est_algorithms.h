@@ -24,4 +24,10 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad,
                                               p4est_init_t init_fn);
 
+/*
+ * free the user data of a quadrant
+ */
+void                p4est_quadrant_free_data (p4est_t * p4est,
+                                              p4est_quadrant_t * quad);
+
 #endif /* !__P4EST_ALGORITHMS_H__ */

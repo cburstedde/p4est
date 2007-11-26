@@ -2,21 +2,37 @@
 #ifndef __P4EST_H__
 #define __P4EST_H__
 
-#include <p4est_memory.h>
+/* finest level of the quadtree */
+#define P4EST_MAXLEVEL 30
 
+/* this will be changed to 1 by make install */
+#define P4EST_CONFIG_INSTALLED 0
+
+/* this will be changed to 1 by make install if mpi is configured in */
+#define P4EST_CONFIG_MPI 0
+
+/* do some magic to avoid using p4est_config.h in the installed header */
+#if P4EST_CONFIG_INSTALLED
+#if P4EST_CONFIG_MPI
+#include <mpi.h>
+#else
+#include <p4est_mpi_dummy.h>
+#endif
+#else
 #ifdef HAVE_CONFIG_H
 #include <p4est_config.h>
 #endif
-
-/* should we make these includes depend on config.h too? */
-#include <stdio.h>
-#include <stdint.h>
-
 #ifdef HAVE_MPI
 #include <mpi.h>
 #else
 #include <p4est_mpi_dummy.h>
 #endif
+#endif
+
+/* include necessary headers */
+#include <p4est_memory.h>
+#include <stdio.h>
+#include <stdint.h>
 
 typedef struct p4est_connectivity
 {
@@ -42,6 +58,8 @@ p4est_quadrant_t;
 typedef struct p4est_tree
 {
   p4est_array_t      *quadrants;        /* locally stored quadrants */
+  int32_t             quadrants_per_level[P4EST_MAXLEVEL + 1];  /* locals only */
+  int8_t              maxlevel; /* highest local quadrant level */
 }
 p4est_tree_t;
 
@@ -63,6 +81,7 @@ typedef struct p4est
   p4est_array_t      *trees;    /* list of all trees */
 
   p4est_mempool_t    *user_data_pool;   /* memory allocator for user data */
+  p4est_mempool_t    *quadrant_pool;    /* memory allocator for temporary quadrants */
 }
 p4est_t;
 
