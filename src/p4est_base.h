@@ -18,6 +18,10 @@
 #include <string.h>
 #endif
 
+#ifdef HAVE_CTYPE_H
+#include <ctype.h>
+#endif
+
 #if(defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS)
 #define P4EST_BACKTRACE
 #endif

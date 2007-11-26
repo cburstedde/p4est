@@ -35,7 +35,7 @@ echo "o----------------------------------"
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([execinfo.h getopt.h stdint.h stdlib.h stdio.h])
+AC_CHECK_HEADERS([execinfo.h getopt.h stdint.h stdlib.h stdio.h ctype.h])
 
 # Checks for functions.
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
