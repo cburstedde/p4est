@@ -35,6 +35,9 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 
   int32_t             exclorx, exclory;
 
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
 
@@ -50,9 +53,23 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 }
 
 int
+p4est_quadrant_is_valid (const p4est_quadrant_t * q)
+{
+  return
+    (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
+    (q->x >= 0 && q->x < (1 << P4EST_MAXLEVEL)) &&
+    (q->y >= 0 && q->y < (1 << P4EST_MAXLEVEL)) &&
+    ((q->x & ((1 << (P4EST_MAXLEVEL - q->level)) - 1)) == 0) &&
+    ((q->y & ((1 << (P4EST_MAXLEVEL - q->level)) - 1)) == 0);
+}
+
+int
 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                          const p4est_quadrant_t * q2)
 {
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+
   return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
 }
 
@@ -62,6 +79,9 @@ p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
 {
   int32_t             exclorx;
   int32_t             exclory;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
 
   if (q->level > r->level) {
     return 0;
@@ -87,11 +107,15 @@ p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
 void
 p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 {
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
   P4EST_ASSERT (q->level > 0);
 
   r->x = q->x & ~(1 << (P4EST_MAXLEVEL - q->level));
   r->y = q->y & ~(1 << (P4EST_MAXLEVEL - q->level));
   r->level = (int8_t) (q->level - 1);
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
 }
 
 void
@@ -99,18 +123,23 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2,
                                p4est_quadrant_t * r)
 {
-  int32_t             levelx, levely, maxlevel;
-  int32_t             exclorx;
-  int32_t             exclory;
+  int32_t             exclorx, exclory;
+  int32_t             maxclor, maxlevel;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
 
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
+  maxclor = exclorx | exclory;
+  maxlevel = P4EST_LOG2_32 (maxclor) + 1;
 
-  levelx = P4EST_LOG2_32 (exclorx);
-  levely = P4EST_LOG2_32 (exclory);
-  maxlevel = P4EST_MAX (levelx, levely);
+  r->x = q1->x & ~((1 << maxlevel) - 1);
+  r->y = q1->y & ~((1 << maxlevel) - 1);
+  r->level = (int8_t) P4EST_MIN (P4EST_MAXLEVEL - maxlevel,
+                                 P4EST_MIN (q1->level, q2->level));
 
-  P4EST_CHECK_ABORT (0, "Not implemented yet");
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
 }
 
 void
@@ -120,6 +149,10 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 {
   p4est_quadrant_t    s1 = *q1;
   p4est_quadrant_t    s2 = *q2;
+  void               *user_data = r->user_data;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
 
   /* first stage: promote the deepest one to the same level */
   while (s1.level > s2.level) {
@@ -136,6 +169,9 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   }
 
   *r = s1;
+  r->user_data = user_data;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
 }
 
 void
@@ -157,12 +193,16 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 
   quadrant->x <<= (P4EST_MAXLEVEL - level);
   quadrant->y <<= (P4EST_MAXLEVEL - level);
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
 }
 
 void
 p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
                           p4est_quadrant_t * quad, p4est_init_t init_fn)
 {
+  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+
   if (p4est->data_size > 0) {
     quad->user_data = p4est_mempool_alloc (p4est->user_data_pool);
   }
@@ -177,6 +217,8 @@ p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
 void
 p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
 {
+  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+
   if (p4est->data_size > 0) {
     p4est_mempool_free (p4est->user_data_pool, quad->user_data);
   }

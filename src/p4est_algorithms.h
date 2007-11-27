@@ -11,6 +11,12 @@
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
+/** Test if a quadrant has valid Morton indices
+ * \param [in] q Quadrant to be tested.
+ * \return Returns 1 if \a q is valid.
+ */
+int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
+
 /** Test if two quadrants have equal Morton indices
  * \return 1 if \a q1 describes the same quadrant as \a q2.
  */
