@@ -70,6 +70,6 @@ int                 p4est_connectivity_read (const char *filename,
                                              connectivity);
 
 void                p4est_connectivity_print (p4est_connectivity_t
-                                              *connectivity);
+                                              * connectivity);
 
 #endif /* !__P4EST_FILE_H__ */
