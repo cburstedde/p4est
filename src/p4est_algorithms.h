@@ -40,20 +40,34 @@ int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
 
 /** Compute the parent of a quadrant
  * \param [in]  q Input quadrant.
- * \param [out] r Existing quadrant whose Morton index will be filled
- *                with the Morton index of the parent of \a q.
- *                Its user_data will be untouched.
- * \note \a q == \a r is permitted.
+ * \param [in,out] r Existing quadrant whose Morton index will be filled
+ *                   with the Morton index of the parent of \a q.
+ *                   Its user_data will be untouched.
+ * \note \a q may point to the same quadrant as \a r.
+         The user_data of \a r is never modified.
  */
 void                p4est_quadrant_parent (const p4est_quadrant_t * q,
                                            p4est_quadrant_t * r);
 
+/** Compute the 4 children of a quadrant
+ * \param [in]     q  Input quadrant.
+ * \param [in,out] c0 First computed child.
+ *                    \a q may point to the same quadrant as \a c0.
+ * \note The user_data of \a c0, c1, c2, c3 is never modified.
+ */
+void                p4est_quadrant_children (const p4est_quadrant_t * q,
+                                             p4est_quadrant_t * c0,
+                                             p4est_quadrant_t * c1,
+                                             p4est_quadrant_t * c2,
+                                             p4est_quadrant_t * c3);
+
 /** Computes the nearest common ancestor of two quadrants
- * \param [in]  q1 First input quadrant.
- * \param [in]  q2 Second input quadrant.
- * \param [out] r Existing quadrant whose Morton index will be filled.
- *                Its user_data will be untouched.
+ * \param [in]     q1 First input quadrant.
+ * \param [in]     q2 Second input quadrant.
+ * \param [in,out] r Existing quadrant whose Morton index will be filled.
+ *                   Its user_data will be untouched.
  * \note \a q1, \a q2, \a r may point to the same quadrant.
+ *       The user_data of \a r is never modified.
  */
 void                p4est_nearest_common_ancestor (const p4est_quadrant_t *
                                                    q1,
@@ -71,14 +85,16 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      p4est_quadrant_t * r);
 
 /** Set quadrant Morton indices based on linear index in uniform grid
- * \note uniform grid implies level < 16 and thus morton_xy < INT32_MAX.
+ * \param [in,out] Quadrant whose Morton indices will be set.
+ * \note Uniform grid implies level < 16 and thus morton_xy < INT32_MAX.
+ *       The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int8_t level, int32_t index);
 
 /** Alloc and initialize the user data of a valid quadrant
  * \param [in]  which_tree 0-based index of this quadrant's tree.
- * \param [in]  quad       The quadrant to be initialized.
+ * \param [in,out]  quad       The quadrant to be initialized.
  * \param [in]  init_fn    User-supplied callback function to init data.
  */
 void                p4est_quadrant_init_data (p4est_t * p4est,
@@ -87,7 +103,7 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
                                               p4est_init_t init_fn);
 
 /** Free the user data of a valid quadrant
- * \param [in]  quad The quadrant whose data shall be freed.
+ * \param [in,out]  quad The quadrant whose data shall be freed.
  */
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);

@@ -118,6 +118,36 @@ p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 }
 
 void
+p4est_quadrant_children (const p4est_quadrant_t * q,
+                         p4est_quadrant_t * c0, p4est_quadrant_t * c1,
+                         p4est_quadrant_t * c2, p4est_quadrant_t * c3)
+{
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+
+  c0->x = q->x;
+  c0->y = q->y;
+  c0->level = (int8_t) (q->level + 1);
+
+  c1->x = c0->x | (1 << (P4EST_MAXLEVEL - c0->level));
+  c1->y = c0->y;
+  c1->level = c0->level;
+
+  c2->x = c0->x;
+  c2->y = c0->y | (1 << (P4EST_MAXLEVEL - c0->level));
+  c2->level = c0->level;
+
+  c3->x = c1->x;
+  c3->y = c2->y;
+  c3->level = c0->level;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (c0));
+  P4EST_ASSERT (p4est_quadrant_is_valid (c1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (c2));
+  P4EST_ASSERT (p4est_quadrant_is_valid (c3));
+}
+
+void
 p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2,
                                p4est_quadrant_t * r)
