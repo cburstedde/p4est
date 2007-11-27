@@ -4,10 +4,42 @@
 
 #include <p4est.h>
 
-/*
- * comparison function in Morton ordering
+/** Compare two quadrants in their Morton ordering
+ * \return Returns < 0 if \a v1 < \a v2,
+ *                   0 if \a v1 == \a v2,
+ *                 > 0 if \a v1 > \a v2
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
+
+/** Test if a quadrant is an ancestor of another quadrant
+ * \param [in] q Quadrant to be tested.
+ * \param [in] r Descendent quadrant.
+ * \return True if \a q is an ancestor of \a r or if \a q == \a r.
+ */
+int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t *q,
+                                                const p4est_quadrant_t *r);
+
+/** Compute the parent of a quadrant
+ * \param [in]  q Input quadrant.
+ * \param [out] r Existing quadrant whose Morton index will be filled
+ *                with the Morton index of the parent of \a q.
+ *                Its user_data will be untouched.
+ * \note \a q == \a r is permitted.
+ */
+void                p4est_quadrant_parent (const p4est_quadrant_t * q,
+                                           p4est_quadrant_t * r);
+
+/** Computes the nearest common ancestor of two quadrants
+ * \param [in]  q1 First input quadrant.
+ * \param [in]  q2 Second input quadrant.
+ * \param [out] r Existing quadrant whose Morton index will be filled.
+ *                Its user_data will be untouched.
+ * \note \a q1, \a q2, \a r may point to the same quadrant.
+ */
+void                p4est_nearest_common_ancestor (const p4est_quadrant_t *
+                                                   q1,
+                                                   const p4est_quadrant_t *
+                                                   q2, p4est_quadrant_t * r);
 
 /*
  * set quadrant Morton indices based on linear index in uniform grid

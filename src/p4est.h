@@ -96,6 +96,9 @@ p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
 
+/*
+ * TODO document ownership of connectivity
+ */
 p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
                                p4est_connectivity_t * connectivity,
                                int data_size, p4est_init_t init_fn);

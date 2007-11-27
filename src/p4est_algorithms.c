@@ -24,6 +24,58 @@ p4est_quadrant_compare (const void *v1, const void *v2)
   }
 }
 
+int
+p4est_quadrant_is_ancestor (const p4est_quadrant_t *q,
+                            const p4est_quadrant_t *r)
+{
+  int32_t             exclorx;
+  int32_t             exclory;
+
+  if (q->level > r->level) {
+    return 0;
+  }
+
+  exclorx = (q->x ^ r->x) >> (P4EST_MAXLEVEL - q->level);
+  exclory = (q->y ^ r->y) >> (P4EST_MAXLEVEL - q->level);
+
+  return (exclorx == 0 && exclory == 0);
+}
+
+void
+p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
+{
+  P4EST_ASSERT (q->level > 0);
+
+  r->x = q->x & ~(1 << (P4EST_MAXLEVEL - q->level));
+  r->y = q->y & ~(1 << (P4EST_MAXLEVEL - q->level));
+  r->level = (int8_t) (q->level - 1);
+}
+
+void
+p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
+                               const p4est_quadrant_t * q2,
+                               p4est_quadrant_t * r)
+{
+  p4est_quadrant_t    s1 = *q1;
+  p4est_quadrant_t    s2 = *q2;
+
+  /* first stage: promote the deepest one to the same level */
+  while (s1.level > s2.level) {
+    p4est_quadrant_parent (&s1, &s1);
+  }
+  while (s1.level < s2.level) {
+    p4est_quadrant_parent (&s2, &s2);
+  }
+
+  /* second stage: simultaneously go through their parents */
+  while (p4est_quadrant_compare (&s1, &s2) != 0) {
+    p4est_quadrant_parent (&s1, &s1);
+    p4est_quadrant_parent (&s2, &s2);
+  }
+
+  *r = s1;
+}
+
 void
 p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                            int8_t level, int32_t index)
