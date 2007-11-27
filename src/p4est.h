@@ -30,22 +30,9 @@
 #endif
 
 /* include necessary headers */
+#include <p4est_connectivity.h>
 #include <p4est_memory.h>
 #include <stdio.h>
-#include <stdint.h>
-
-typedef struct p4est_connectivity
-{
-  int32_t             num_trees;
-  int32_t             num_vertices;
-  int32_t            *tree_to_vertex;   /* allocated [0][0]..[0][3]
-                                           .. [num_trees-1][0]..[num_trees-1][3] */
-  int32_t            *tree_to_tree;     /* allocated [0][0]..[0][3]
-                                           .. [num_trees-1][0]..[num_trees-1][3] */
-  int8_t             *tree_to_face;     /* allocated [0][0]..[0][3]
-                                           .. [num_trees-1][0]..[num_trees-1][3] */
-}
-p4est_connectivity_t;
 
 typedef struct p4est_quadrant
 {
@@ -91,17 +78,17 @@ p4est_t;
 typedef void        (*p4est_init_t) (p4est_t * p4est, int32_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
-p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
-                                              int32_t num_vertices);
-void                p4est_connectivity_destroy (p4est_connectivity_t *
-                                                connectivity);
-
-/*
- * TODO document ownership of connectivity
+/** Create a new p4est
+ * \note The connectivity structure must not be destroyed
+ *       during the lifetime of this p4est.
  */
 p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
                                p4est_connectivity_t * connectivity,
                                int data_size, p4est_init_t init_fn);
+
+/** Destroy a p4est
+ * \note The connectivity structure is not destroyed with the p4est.
+ */
 void                p4est_destroy (p4est_t * p4est);
 
 #endif /* !__P4EST_H__ */

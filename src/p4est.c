@@ -5,39 +5,6 @@
 
 static const int64_t initial_quadrants_per_processor = 15;
 
-p4est_connectivity_t *
-p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
-{
-  p4est_connectivity_t *connectivity;
-
-  connectivity = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
-  P4EST_CHECK_ALLOC (connectivity);
-
-  connectivity->num_trees = num_trees;
-  connectivity->num_vertices = num_vertices;
-
-  connectivity->tree_to_vertex = P4EST_ALLOC (int32_t, 4 * num_trees);
-  P4EST_CHECK_ALLOC (connectivity->tree_to_vertex);
-
-  connectivity->tree_to_tree = P4EST_ALLOC (int32_t, 4 * num_trees);
-  P4EST_CHECK_ALLOC (connectivity->tree_to_tree);
-
-  connectivity->tree_to_face = P4EST_ALLOC (int8_t, 4 * num_trees);
-  P4EST_CHECK_ALLOC (connectivity->tree_to_face);
-
-  return connectivity;
-}
-
-void
-p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
-{
-  P4EST_FREE (connectivity->tree_to_face);
-  P4EST_FREE (connectivity->tree_to_tree);
-  P4EST_FREE (connectivity->tree_to_vertex);
-
-  P4EST_FREE (connectivity);
-}
-
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
            int data_size, p4est_init_t init_fn)
@@ -222,8 +189,6 @@ p4est_destroy (p4est_t * p4est)
     p4est_mempool_destroy (p4est->user_data_pool);
   }
   p4est_mempool_destroy (p4est->quadrant_pool);
-
-  p4est_connectivity_destroy (p4est->connectivity);
 
   P4EST_FREE (p4est);
 }
