@@ -57,8 +57,8 @@
 
 void               *p4est_malloc (size_t size);
 void               *p4est_calloc (size_t nmemb, size_t size);
-void               *p4est_realloc (void * ptr, size_t size);
-void                p4est_free (void * ptr);
+void               *p4est_realloc (void *ptr, size_t size);
+void                p4est_free (void *ptr);
 void                p4est_memory_check (void);
 
 void                p4est_abort (void);
