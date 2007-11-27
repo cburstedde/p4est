@@ -142,4 +142,122 @@ p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
   *(void **) p4est_array_index (mempool->freed, old_count) = elem;
 }
 
+/* list routines */
+
+p4est_list_t       *
+p4est_list_new (p4est_mempool_t * allocator)
+{
+  p4est_list_t     *list;
+
+  list = P4EST_ALLOC_ZERO (p4est_list_t, 1);
+  list->elem_count = 0;
+  list->first = NULL;
+  list->last = NULL;
+
+  if (allocator != NULL) {
+    list->allocator = allocator;
+    list->allocator_owned = 0;
+  }
+  else {
+    list->allocator = p4est_mempool_new (sizeof (p4est_link_t));
+    list->allocator_owned = 1;
+  }
+
+  return list;
+}
+
+void
+p4est_list_destroy (p4est_list_t * list)
+{
+  p4est_link_t     *link;
+  p4est_link_t     *temp;
+
+  link = list->first;
+  while (link != NULL) {
+    temp = link->next;
+    p4est_mempool_free (list->allocator, link);
+    link = temp;
+    --list->elem_count;
+  }
+  P4EST_ASSERT (list->elem_count == 0);
+
+  if (list->allocator_owned) {
+    p4est_mempool_destroy (list->allocator);
+  }
+  P4EST_FREE (list);
+}
+
+void
+p4est_list_prepend (p4est_list_t * list, void * data)
+{
+  p4est_link_t     *link;
+
+  link = p4est_mempool_alloc (list->allocator);
+  link->data = data;
+  link->next = list->first;
+  list->first = link;
+  if (list->last == NULL) {
+    list->last = link;
+  }
+
+  ++list->elem_count;
+}
+
+void
+p4est_list_append (p4est_list_t * list, void * data)
+{
+  p4est_link_t     *link;
+
+  link = p4est_mempool_alloc (list->allocator);
+  link->data = data;
+  link->next = NULL;
+  if (list->last != NULL) {
+    list->last->next = link;
+  }
+  else {
+    list->first = link;
+  }
+  list->last = link;
+
+  ++list->elem_count;
+}
+
+void
+p4est_list_insert (p4est_list_t * list, p4est_link_t * after, void * data)
+{
+  p4est_link_t     *link;
+
+  P4EST_ASSERT (after != NULL);
+
+  link = p4est_mempool_alloc (list->allocator);
+  link->data = data;
+  link->next = after->next;
+  after->next = link;
+  if (after == list->last) {
+    list->last = link;
+  }
+
+  ++list->elem_count;
+}
+
+void               *
+p4est_list_pop (p4est_list_t * list)
+{
+  p4est_link_t     *link;
+  void             *data;
+
+  P4EST_ASSERT (list->first != NULL);
+
+  link = list->first;
+  list->first = link->next;
+  data =  link->data;
+  p4est_mempool_free (list->allocator, link);
+  if (list->first == NULL) {
+    list->last = NULL;
+  }
+
+  --list->elem_count;
+  return data;
+}
+
 /* EOF p4est_memory.c */

@@ -6,8 +6,7 @@
 
 #include <p4est_obstack.h>
 
-/*
- * The p4est_array object provides a large array of equal-size elements.
+/** The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.
  * Elements are accessed by their 0-based index, their address may change.
  * The size (== elem_count) of the array can be changed by _grow1 or _resize.
@@ -35,8 +34,7 @@ void                p4est_array_sort (p4est_array_t * array,
 
 void               *p4est_array_index (p4est_array_t * array, int index);
 
-/*
- * The p4est_mempool object provides a large pool of equal-size elements.
+/** The p4est_mempool object provides a large pool of equal-size elements.
  * The pool grows dynamically for element allocation.
  * Elements are referenced by their address which never changes.
  * Elements can be freed (that is, returned to the pool)
@@ -63,5 +61,52 @@ void                p4est_mempool_reset (p4est_mempool_t * mempool);
 void               *p4est_mempool_alloc (p4est_mempool_t * mempool);
 void                p4est_mempool_free (p4est_mempool_t * mempool,
                                         void *elem);
+
+/** The p4est_link is one link of a linked list.
+ */
+typedef struct p4est_link
+{
+  void               *data;
+  struct p4est_link  *next;
+}
+p4est_link_t;
+
+/** The p4est_list object provides a linked list.
+ */
+typedef struct p4est_list
+{
+  /* interface variables */
+  int                 elem_count;
+  p4est_link_t       *first;
+  p4est_link_t       *last;
+
+  /* implementation variables */
+  int                 allocator_owned;
+  p4est_mempool_t    *allocator;        /* must allocate sizeof (p4est_link_t) */
+}
+p4est_list_t;
+
+/** Allocate a linked list structure
+ * \param [in] allocator Memory allocator, can be NULL.
+ */
+p4est_list_t       *p4est_list_new (p4est_mempool_t * allocator);
+
+/** Destroy a linked list structure
+ * \note if allocator was provided in p4est_list_new, it will not be destroyed.
+ */
+void                p4est_list_destroy (p4est_list_t * list);
+
+void                p4est_list_prepend (p4est_list_t * list, void * data);
+void                p4est_list_append (p4est_list_t * list, void * data);
+
+/** Insert a link after a given position
+ */
+void                p4est_list_insert (p4est_list_t * list,
+                                       p4est_link_t * after, void * data);
+
+/** Remove a link from the front of the list
+ * \return Returns the removed first list element.
+ */
+void               *p4est_list_pop (p4est_list_t * list);
 
 #endif /* !__P4EST_MEMORY_H__ */

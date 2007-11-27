@@ -59,6 +59,7 @@ typedef struct p4est
   int                 data_size;        /* size of user_data */
 
   int32_t             first_local_tree; /* 0-based index of first local tree */
+  int32_t             last_local_tree;  /* 0-based index of last local tree */
   int32_t             local_num_trees;  /* number of trees on this processor */
   int32_t             local_num_quadrants;      /* number of quadrants
                                                    on all trees on this processor */
