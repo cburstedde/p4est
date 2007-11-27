@@ -70,23 +70,24 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/*
- * set quadrant Morton indices based on linear index in uniform grid
- * uniform grid implies level < 16 and thus morton_xy < INT32_MAX
+/** Set quadrant Morton indices based on linear index in uniform grid
+ * \note uniform grid implies level < 16 and thus morton_xy < INT32_MAX.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int8_t level, int32_t index);
 
-/*
- * initialize the user data of a quadrant which already has Morton indices
+/** Alloc and initialize the user data of a valid quadrant
+ * \param [in]  which_tree 0-based index of this quadrant's tree.
+ * \param [in]  quad       The quadrant to be initialized.
+ * \param [in]  init_fn    User-supplied callback function to init data.
  */
 void                p4est_quadrant_init_data (p4est_t * p4est,
                                               int32_t which_tree,
                                               p4est_quadrant_t * quad,
                                               p4est_init_t init_fn);
 
-/*
- * free the user data of a quadrant
+/** Free the user data of a valid quadrant
+ * \param [in]  quad The quadrant whose data shall be freed.
  */
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
