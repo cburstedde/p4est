@@ -2,6 +2,31 @@
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 
+static const int8_t log_lookup_table[256] =
+{ -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
+  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+};
+
+#define P4EST_LOG2_8(x) (log_lookup_table[(x)])
+#define P4EST_LOG2_16(x) (((x) > 0xff) ? \
+                          P4EST_LOG2_8 ((x) >> 8) : P4EST_LOG2_8 (x))
+#define P4EST_LOG2_32(x) (((x) > 0xffff) ? \
+                          P4EST_LOG2_16 ((x) >> 16) : P4EST_LOG2_16 (x))
+
 int
 p4est_quadrant_compare (const void *v1, const void *v2)
 {
@@ -25,8 +50,15 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 }
 
 int
-p4est_quadrant_is_ancestor (const p4est_quadrant_t *q,
-                            const p4est_quadrant_t *r)
+p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
+                         const p4est_quadrant_t * q2)
+{
+  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
+}
+
+int
+p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
+                            const p4est_quadrant_t * r)
 {
   int32_t             exclorx;
   int32_t             exclory;
@@ -39,6 +71,17 @@ p4est_quadrant_is_ancestor (const p4est_quadrant_t *q,
   exclory = (q->y ^ r->y) >> (P4EST_MAXLEVEL - q->level);
 
   return (exclorx == 0 && exclory == 0);
+}
+
+int
+p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
+                              const p4est_quadrant_t * r)
+{
+  p4est_quadrant_t    s;
+
+  p4est_nearest_common_ancestor_D (q, r, &s);
+
+  return p4est_quadrant_is_equal (q, &s);
 }
 
 void
@@ -56,6 +99,25 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2,
                                p4est_quadrant_t * r)
 {
+  int32_t             levelx, levely, maxlevel;
+  int32_t             exclorx;
+  int32_t             exclory;
+
+  exclorx = q1->x ^ q2->x;
+  exclory = q1->y ^ q2->y;
+
+  levelx = P4EST_LOG2_32 (exclorx);
+  levely = P4EST_LOG2_32 (exclory);
+  maxlevel = P4EST_MAX (levelx, levely);
+
+  P4EST_CHECK_ABORT (0, "Not implemented yet");
+}
+
+void
+p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
+                                 const p4est_quadrant_t * q2,
+                                 p4est_quadrant_t * r)
+{
   p4est_quadrant_t    s1 = *q1;
   p4est_quadrant_t    s2 = *q2;
 
@@ -68,7 +130,7 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
   }
 
   /* second stage: simultaneously go through their parents */
-  while (p4est_quadrant_compare (&s1, &s2) != 0) {
+  while (!p4est_quadrant_is_equal (&s1, &s2)) {
     p4est_quadrant_parent (&s1, &s1);
     p4est_quadrant_parent (&s2, &s2);
   }
