@@ -18,7 +18,7 @@ main (void)
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
   p4est1 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 0, NULL);
-  p4est2 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 0, NULL);
+  p4est2 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 8, NULL);
 
   /* refine the second tree to a uniform level */
   p4est_refine (p4est2, refine_fn, NULL);

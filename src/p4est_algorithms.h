@@ -11,6 +11,11 @@
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
+/** Compute the position of this child within its siblings
+ * \return Returns its child id in 0..3
+ */
+int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
+
 /** Test if a quadrant has valid Morton indices
  * \param [in] q Quadrant to be tested.
  * \return Returns 1 if \a q is valid.

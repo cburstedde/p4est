@@ -198,7 +198,7 @@ p4est_destroy (p4est_t * p4est)
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  int                 quadrant_pool_size;
+  int                 quadrant_pool_size, data_pool_size;
   int                 dorefine;
   int32_t             j, movecount;
   int32_t             current, restpos, incount;
@@ -221,6 +221,9 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     quadrant_pool_size = p4est->quadrant_pool->elem_count;
+    if (p4est->user_data_pool != NULL) {
+      data_pool_size = p4est->user_data_pool->elem_count;
+    }
 
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Into refine tree %d with %d\n",
@@ -307,6 +310,10 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     P4EST_ASSERT (current == tree->quadrants->elem_count);
     P4EST_ASSERT (list->first == NULL && list->last == NULL);
     P4EST_ASSERT (quadrant_pool_size == p4est->quadrant_pool->elem_count);
+    if (p4est->user_data_pool != NULL) {
+      P4EST_ASSERT (data_pool_size + tree->quadrants->elem_count ==
+                    p4est->user_data_pool->elem_count + incount);
+    }
     P4EST_ASSERT (p4est_tree_is_sorted (tree));
 
     if (p4est->nout != NULL) {

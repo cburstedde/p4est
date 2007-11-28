@@ -53,6 +53,17 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 }
 
 int
+p4est_quadrant_child_id (const p4est_quadrant_t * q)
+{
+  int                 id = 0;
+
+  id |= ((q->x & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x01 : 0);
+  id |= ((q->y & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x02 : 0);
+
+  return id;
+}
+
+int
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
   return
