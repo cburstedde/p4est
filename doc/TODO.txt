@@ -1,0 +1,12 @@
+ * Balance Tree
+ * Partition Tree
+   * Algo 3
+   * Algo 4 weighted? blocked
+   * Algo 5 weighted linear
+   * Algo 8
+ * doxygen
+ * coarsening
+ * test cases
+ * vtk output
+   * simple
+   * geometry
