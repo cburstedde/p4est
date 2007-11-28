@@ -216,6 +216,133 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 }
 
 void
+p4est_complete_region (p4est_t * p4est,
+                       const p4est_quadrant_t * q1,
+                       int include_q1,
+                       const p4est_quadrant_t * q2,
+                       int include_q2,
+                       p4est_tree_t * tree,
+                       int32_t which_tree, p4est_init_t init_fn)
+{
+  p4est_tree_t       *R;
+  p4est_list_t       *W;
+
+  p4est_quadrant_t    a = *q1;
+  p4est_quadrant_t    b = *q2;
+
+  p4est_quadrant_t    Afinest;
+  p4est_quadrant_t   *c0, *c1, *c2, *c3;
+
+  p4est_array_t      *quadrants;
+  p4est_mempool_t    *quadrant_pool = p4est->quadrant_pool;
+
+  p4est_quadrant_t   *w;
+  p4est_quadrant_t   *r;
+
+  int                 comp;
+  int8_t              level;
+  int8_t              maxlevel = 0;
+  int32_t            *quadrants_per_level;
+  int32_t             num_quadrants = 0;
+
+  W = p4est_list_new (NULL);
+  R = tree;
+
+  quadrants = R->quadrants;
+  quadrants_per_level = R->quadrants_per_level;
+
+  /* Assert that we have an empty tree */
+  P4EST_ASSERT (quadrants->elem_count == 0);
+
+  comp = p4est_quadrant_compare (&a, &b);
+  /* Assert that a<b */
+  P4EST_ASSERT (comp < 0);
+
+  /* R <- R + a */
+  if (include_q1) {
+    p4est_array_resize (quadrants, 1);
+    r = p4est_array_index (quadrants, 0);
+    *r = a;
+    maxlevel = (int8_t) P4EST_MAX (a.level, maxlevel);
+    ++quadrants_per_level[a.level];
+    ++num_quadrants;
+  }
+
+  if (comp < 0) {
+    /* W <- C(A_{finest}(a,b)) */
+    p4est_nearest_common_ancestor (&a, &b, &Afinest);
+
+    c0 = p4est_mempool_alloc (quadrant_pool);
+    c1 = p4est_mempool_alloc (quadrant_pool);
+    c2 = p4est_mempool_alloc (quadrant_pool);
+    c3 = p4est_mempool_alloc (quadrant_pool);
+
+    p4est_quadrant_children (&Afinest, c0, c1, c2, c3);
+
+    p4est_list_append (W, c0);
+    p4est_list_append (W, c1);
+    p4est_list_append (W, c2);
+    p4est_list_append (W, c3);
+
+    /* for each w in W */
+    while (W->elem_count > 0) {
+      w = p4est_list_pop (W);
+      level = w->level;
+      /* if (a < w < b) and (w not in {A(b)}) */
+      if (((p4est_quadrant_compare (&a, w) < 0) &&
+           (p4est_quadrant_compare (w, &b) < 0)
+          ) && !p4est_quadrant_is_ancestor (w, &b)
+        ) {
+        /* R <- R + w */
+        p4est_array_resize (quadrants, num_quadrants + 1);
+        r = p4est_array_index (quadrants, num_quadrants);
+        *r = *w;
+        p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
+        maxlevel = (int8_t) P4EST_MAX (level, maxlevel);
+        ++quadrants_per_level[level];
+        ++num_quadrants;
+      }
+      /* else if (w in {{A(a)}, {A(b)}}) */
+      else if (p4est_quadrant_is_ancestor (w, &a)
+               || p4est_quadrant_is_ancestor (w, &b)) {
+        /* W <- W + C(w) */
+        c0 = p4est_mempool_alloc (quadrant_pool);
+        c1 = p4est_mempool_alloc (quadrant_pool);
+        c2 = p4est_mempool_alloc (quadrant_pool);
+        c3 = p4est_mempool_alloc (quadrant_pool);
+
+        p4est_quadrant_children (w, c0, c1, c2, c3);
+
+        p4est_list_prepend (W, c3);
+        p4est_list_prepend (W, c2);
+        p4est_list_prepend (W, c1);
+        p4est_list_prepend (W, c0);
+      }
+
+      /* W <- W - w */
+      p4est_mempool_free (quadrant_pool, w);
+    }                           /* end for */
+
+    /* R <- R + b */
+    if (include_q2) {
+      p4est_array_resize (quadrants, num_quadrants + 1);
+      r = p4est_array_index (quadrants, num_quadrants);
+      *r = b;
+      maxlevel = (int8_t) P4EST_MAX (level, maxlevel);
+      ++quadrants_per_level[level];
+      ++num_quadrants;
+    }
+  }
+
+  R->maxlevel = maxlevel;
+
+  P4EST_ASSERT (W->elem_count == 0);
+  p4est_list_destroy (W);
+
+  P4EST_ASSERT (p4est_tree_is_sorted (R));
+}
+
+void
 p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                            int8_t level, int32_t index)
 {

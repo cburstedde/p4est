@@ -23,6 +23,8 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
+  p4est_quadrant_t    a;
+  p4est_quadrant_t    b;
 
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   P4EST_CHECK_ALLOC (p4est);
@@ -123,28 +125,29 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
     must_remove_last_quadrant = 0;
 
     /* set morton id of first quadrant and initialize user data */
-    p4est_array_resize (tree->quadrants, 1);
-    quad = p4est_array_index (tree->quadrants, 0);
     if (j == first_tree) {
-      p4est_quadrant_set_morton (quad, level, first_tree_quadrant);
+      p4est_quadrant_set_morton (&a, level, first_tree_quadrant);
     }
     else {
-      p4est_quadrant_set_morton (quad, level, 0);
+      p4est_quadrant_set_morton (&a, level, 0);
     }
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] tree %d first morton 0x%x 0x%x\n",
-               p4est->mpirank, j, quad->x, quad->y);
+               p4est->mpirank, j, a.x, a.y);
     }
-    p4est_quadrant_init_data (p4est, j, quad, init_fn);
+    p4est_quadrant_init_data (p4est, j, &a, init_fn);
 
     /* set morton id of last quadrant */
     if (tree_num_quadrants == 1 ||
         (j == first_tree && first_tree_quadrant == tree_num_quadrants - 1)) {
-      /* nothing to do for this tree, we will have only one quadrant */
+      /* There is only a in the tree */
+      p4est_array_resize (tree->quadrants, 1);
+      quad = p4est_array_index (tree->quadrants, 0);
+      *quad = a;
+      tree->maxlevel = a.level;
+      ++tree->quadrants_per_level[a.level];
     }
     else {
-      p4est_array_resize (tree->quadrants, 2);
-      quad = p4est_array_index (tree->quadrants, 1);
       if (j == last_tree) {
         if (last_tree_quadrant == tree_num_quadrants - 1) {
           quadrant_index = last_tree_quadrant;
@@ -153,18 +156,23 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
           quadrant_index = last_tree_quadrant + 1;
           must_remove_last_quadrant = 1;
         }
-        p4est_quadrant_set_morton (quad, level, quadrant_index);
+        p4est_quadrant_set_morton (&b, level, quadrant_index);
       }
       else {
-        p4est_quadrant_set_morton (quad, level, tree_num_quadrants - 1);
+        p4est_quadrant_set_morton (&b, level, tree_num_quadrants - 1);
       }
       if (p4est->nout != NULL) {
         fprintf (p4est->nout, "[%d] tree %d last morton 0x%x 0x%x\n",
-                 p4est->mpirank, j, quad->x, quad->y);
+                 p4est->mpirank, j, b.x, b.y);
       }
-      p4est_quadrant_init_data (p4est, j, quad, init_fn);
+
+      if (!must_remove_last_quadrant) {
+        p4est_quadrant_init_data (p4est, j, &b, init_fn);
+      }
 
       /* now run algorithm CompleteRegion (&tree->quadrants) here */
+      p4est_complete_region (p4est, &a, 1, &b, !must_remove_last_quadrant,
+                             tree, j, init_fn);
     }
   }
 
