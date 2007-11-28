@@ -240,6 +240,7 @@ p4est_complete_region (p4est_t * p4est,
   p4est_quadrant_t   *r;
 
   int                 comp;
+  int                 quadrant_pool_size, data_pool_size;
   int8_t              level;
   int8_t              maxlevel = 0;
   int32_t            *quadrants_per_level;
@@ -247,6 +248,12 @@ p4est_complete_region (p4est_t * p4est,
 
   W = p4est_list_new (NULL);
   R = tree;
+
+  /* needed for sanity check */
+  quadrant_pool_size = p4est->quadrant_pool->elem_count;
+  if (p4est->user_data_pool != NULL) {
+    data_pool_size = p4est->user_data_pool->elem_count;
+  }
 
   quadrants = R->quadrants;
   quadrants_per_level = R->quadrants_per_level;
@@ -336,10 +343,17 @@ p4est_complete_region (p4est_t * p4est,
 
   R->maxlevel = maxlevel;
 
-  P4EST_ASSERT (W->elem_count == 0);
+  P4EST_ASSERT (W->first == NULL && W->last == NULL);
   p4est_list_destroy (W);
 
   P4EST_ASSERT (p4est_tree_is_sorted (R));
+  P4EST_ASSERT (quadrant_pool_size == p4est->quadrant_pool->elem_count);
+  P4EST_ASSERT (num_quadrants == quadrants->elem_count);
+  if (p4est->user_data_pool != NULL) {
+    P4EST_ASSERT (data_pool_size + quadrants->elem_count ==
+                  p4est->user_data_pool->elem_count + (include_q1 ? 1 : 0)
+                  + (include_q2 ? 1 : 0));
+  }
 }
 
 void
