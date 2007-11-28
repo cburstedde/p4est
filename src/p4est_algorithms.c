@@ -255,4 +255,26 @@ p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
   quad->user_data = NULL;
 }
 
+int
+p4est_tree_is_sorted (p4est_tree_t * tree)
+{
+  int                 i;
+  p4est_quadrant_t   *q1, *q2;
+
+  if (tree->quadrants->elem_count <= 1) {
+    return 1;
+  }
+
+  q1 = p4est_array_index (tree->quadrants, 0);
+  for (i = 1; i < tree->quadrants->elem_count; ++i) {
+    q2 = p4est_array_index (tree->quadrants, i);
+    if (p4est_quadrant_compare (q1, q2) >= 0) {
+      return 0;
+    }
+    q1 = q2;
+  }
+
+  return 1;
+}
+
 /* EOF p4est_algorithms.c */

@@ -4,6 +4,8 @@
 
 /* array routines */
 
+static const int elements_per_chunk = 1024;
+
 p4est_array_t      *
 p4est_array_new (int elem_size)
 {
@@ -89,7 +91,7 @@ p4est_mempool_new (int elem_size)
   mempool->elem_count = 0;
 
   obstack_init (&mempool->obstack);
-  obstack_chunk_size (&mempool->obstack) = 1000 * elem_size;
+  obstack_chunk_size (&mempool->obstack) = elements_per_chunk * elem_size;
   mempool->freed = p4est_array_new (sizeof (void *));
 
   return mempool;

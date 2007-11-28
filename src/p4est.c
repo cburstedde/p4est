@@ -4,6 +4,7 @@
 #include <p4est_base.h>
 
 static const int64_t initial_quadrants_per_processor = 15;
+static const int number_toread_quadrants = 32;
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
@@ -222,6 +223,11 @@ p4est_refine (p4est_t * p4est,
     tree = p4est_array_index (p4est->trees, j);
     quadrant_pool_size = p4est->quadrant_pool->elem_count;
 
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Into refine tree %d with %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+
     /* run through the array to find first quadrant to be refined */
     q = NULL;
     dorefine = 0;
@@ -276,12 +282,12 @@ p4est_refine (p4est_t * p4est,
       else {
         /* need to make room in the array to store this new quadrant */
         if (restpos < incount && current == restpos) {
-          movecount = P4EST_MIN (incount - restpos, 10);
+          movecount = P4EST_MIN (incount - restpos, number_toread_quadrants);
           while (movecount > 0) {
             q = p4est_array_index (tree->quadrants, restpos);
             qalloc = p4est_mempool_alloc (p4est->quadrant_pool);
-            *qalloc = *q;       /* never prepend array members */
-            p4est_list_prepend (list, qalloc);  /* only newly allocated quadrants */
+            *qalloc = *q;       /* never append array members */
+            p4est_list_append (list, qalloc);   /* only newly allocated quadrants */
             --movecount;
             ++restpos;
           }
@@ -302,6 +308,12 @@ p4est_refine (p4est_t * p4est,
     P4EST_ASSERT (current == tree->quadrants->elem_count);
     P4EST_ASSERT (list->first == NULL && list->last == NULL);
     P4EST_ASSERT (quadrant_pool_size == p4est->quadrant_pool->elem_count);
+    P4EST_ASSERT (p4est_tree_is_sorted (tree));
+
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Done refine tree %d now %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
   }
 
   p4est_list_destroy (list);

@@ -108,4 +108,9 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
 
+/** Test if a tree is sorted in Morton ordering
+ * \return Returns 1 if sorted, 0 otherwise.
+ */
+int                 p4est_tree_is_sorted (p4est_tree_t * tree);
+
 #endif /* !__P4EST_ALGORITHMS_H__ */
