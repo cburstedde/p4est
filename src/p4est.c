@@ -168,6 +168,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   }
 
   p4est->first_local_tree = first_tree;
+  p4est->last_local_tree = last_tree;
   p4est->local_num_trees = last_tree - first_tree + 1;
 
   return p4est;
@@ -191,6 +192,119 @@ p4est_destroy (p4est_t * p4est)
   p4est_mempool_destroy (p4est->quadrant_pool);
 
   P4EST_FREE (p4est);
+}
+
+void
+p4est_refine (p4est_t * p4est,
+              p4est_refine_t refine_fn, p4est_init_t init_fn)
+{
+  int                 quadrant_pool_size;
+  int                 dorefine;
+  int32_t             j, movecount;
+  int32_t             current, restpos, incount;
+  p4est_list_t       *list;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *q, *qalloc, *qpop;
+  p4est_quadrant_t   *c0, *c1, *c2, *c3;
+  int                *key;
+
+  /*
+    q points to a quadrant that is an array member
+    qalloc is a quadrant that has been allocated through quadrant_pool
+    qpop is q quadrant that has been allocated through quadrant_pool
+    never mix these two types of quadrant pointers
+  */
+  key = &dorefine;      /* use this to create a unique user_data pointer */
+  list = p4est_list_new (NULL);
+
+  /* loop over all local trees */
+  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+    quadrant_pool_size = p4est->quadrant_pool->elem_count;
+
+    /* run through the array to find first quadrant to be refined */
+    q = NULL;
+    dorefine = 0;
+    incount = tree->quadrants->elem_count;
+    for (current = 0; current < incount; ++current) {
+      q = p4est_array_index (tree->quadrants, current);
+      dorefine = refine_fn (p4est, j, q);
+      if (dorefine) {
+        break;
+      }
+    }
+    if (!dorefine) {
+      continue;
+    }
+
+    /* now we have a quadrant to refine, prepend it to the list */
+    qalloc = p4est_mempool_alloc (p4est->quadrant_pool);
+    *qalloc = *q;                       /* never prepend array members */
+    p4est_list_prepend (list, qalloc);  /* only newly allocated quadrants */
+
+    /*
+      current points to the next array member to write
+      restpos points to the next array member to read
+    */
+    restpos = current + 1;
+
+    /* run through the list and refine recursively */
+    while (list->elem_count > 0) {
+      qpop = p4est_list_pop (list);
+      if (dorefine || refine_fn (p4est, j, qpop)) {
+        dorefine = 0;   /* a marker so that refine_fn is never called twice */
+        p4est_array_resize (tree->quadrants, tree->quadrants->elem_count + 3);
+
+        /* compute children and prepend them to the list */
+        if (qpop->user_data != key) {
+          p4est_quadrant_free_data (p4est, qpop);
+        }
+        c0 = qpop;
+        c1 = p4est_mempool_alloc (p4est->quadrant_pool);
+        c2 = p4est_mempool_alloc (p4est->quadrant_pool);
+        c3 = p4est_mempool_alloc (p4est->quadrant_pool);
+        p4est_quadrant_children (qpop, c0, c1, c2, c3);
+        c0->user_data = key;
+        c1->user_data = key;
+        c2->user_data = key;
+        c3->user_data = key;
+        p4est_list_prepend (list, c3);
+        p4est_list_prepend (list, c2);
+        p4est_list_prepend (list, c1);
+        p4est_list_prepend (list, c0);
+      }
+      else {
+        /* need to make room in the array to store this new quadrant */
+        if (restpos < incount && current == restpos) {
+          movecount = P4EST_MIN (incount - restpos, 10);
+          while (movecount > 0) {
+            q = p4est_array_index (tree->quadrants, restpos);
+            qalloc = p4est_mempool_alloc (p4est->quadrant_pool);
+            *qalloc = *q;       /* never prepend array members */
+            p4est_list_prepend (list, qalloc);  /* only newly allocated quadrants */
+            --movecount;
+            ++restpos;
+          }
+        }
+
+        /* store new quadrant and update counters */
+        if (qpop->user_data == key) {
+          p4est_quadrant_init_data (p4est, j, qpop, init_fn);
+        }
+        q = p4est_array_index (tree->quadrants, current);
+        *q = *qpop;
+        ++current;
+        p4est_mempool_free (p4est->quadrant_pool, qpop);
+      }
+    }
+
+    P4EST_ASSERT (restpos == incount);
+    P4EST_ASSERT (current == tree->quadrants->elem_count);
+    P4EST_ASSERT (list->first == NULL && list->last == NULL);
+    P4EST_ASSERT (quadrant_pool_size == p4est->quadrant_pool->elem_count);
+  }
+
+  p4est_list_destroy (list);
 }
 
 /* EOF p4est.c */
