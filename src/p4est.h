@@ -68,25 +68,41 @@ typedef struct p4est
   p4est_connectivity_t *connectivity;   /* connectivity structure */
   p4est_array_t      *trees;    /* list of all trees */
 
-  p4est_mempool_t    *user_data_pool;   /* memory allocator for user data */
+  p4est_mempool_t    *user_data_pool;   /* memory allocator for user data
+                                         * WARNING: This is NULL if data size
+                                         *          equals zero.
+                                         */
   p4est_mempool_t    *quadrant_pool;    /* memory allocator for temporary quadrants */
 }
 p4est_t;
 
-/** Callback function prototype to initialize the quadrant's user data
+/** Callback function prototype to initialize the quadrant's user data.
  */
 typedef void        (*p4est_init_t) (p4est_t * p4est, int32_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
-/** Callback function prototype to decide for refinement
+/** Callback function prototype to decide for refinement.
  * \return Returns 1 if the quadrant shall be refined
  */
 typedef int         (*p4est_refine_t) (p4est_t * p4est, int32_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
-/** Create a new p4est
+/** Create a new p4est.
+ *
+ * \param [in] mpicomm A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] nout    Stream for log messages.  If NULL then no messages
+ *                     are logged.
+ * \param [in] connectivity This is the connectivity information that
+ *                          the forest is build with.  Note the p4est
+ *                          does not take ownership of the memory.
+ * \param [in] data_size This is the size of data for each quadrant which
+ *                       can be zero.  If zero the \c user_data_pool is
+ *                       set to \c NULL.
  * \param [in] init_fn Callback function to initialize the user_data
  *                     which is already allocated automatically.
+ *
+ * \return This returns a vaild forest.
+ *
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this p4est.
  */
@@ -94,12 +110,12 @@ p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
                                p4est_connectivity_t * connectivity,
                                int data_size, p4est_init_t init_fn);
 
-/** Destroy a p4est
+/** Destroy a p4est.
  * \note The connectivity structure is not destroyed with the p4est.
  */
 void                p4est_destroy (p4est_t * p4est);
 
-/** Refine a forest
+/** Refine a forest.
  * \param [in] refine_fn Callback function to decide
  *                       if a quadrant gets refined
  * \param [in] init_fn   Callback function to initialize the user_data
