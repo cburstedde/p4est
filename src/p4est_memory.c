@@ -4,7 +4,7 @@
 
 /* array routines */
 
-static const int elements_per_chunk = 1024;
+static const int    elements_per_chunk = 1024;
 
 p4est_array_t      *
 p4est_array_new (int elem_size)
@@ -149,7 +149,7 @@ p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
 p4est_list_t       *
 p4est_list_new (p4est_mempool_t * allocator)
 {
-  p4est_list_t     *list;
+  p4est_list_t       *list;
 
   list = P4EST_ALLOC_ZERO (p4est_list_t, 1);
   list->elem_count = 0;
@@ -171,8 +171,8 @@ p4est_list_new (p4est_mempool_t * allocator)
 void
 p4est_list_destroy (p4est_list_t * list)
 {
-  p4est_link_t     *link;
-  p4est_link_t     *temp;
+  p4est_link_t       *link;
+  p4est_link_t       *temp;
 
   link = list->first;
   while (link != NULL) {
@@ -190,9 +190,9 @@ p4est_list_destroy (p4est_list_t * list)
 }
 
 void
-p4est_list_prepend (p4est_list_t * list, void * data)
+p4est_list_prepend (p4est_list_t * list, void *data)
 {
-  p4est_link_t     *link;
+  p4est_link_t       *link;
 
   link = p4est_mempool_alloc (list->allocator);
   link->data = data;
@@ -206,9 +206,9 @@ p4est_list_prepend (p4est_list_t * list, void * data)
 }
 
 void
-p4est_list_append (p4est_list_t * list, void * data)
+p4est_list_append (p4est_list_t * list, void *data)
 {
-  p4est_link_t     *link;
+  p4est_link_t       *link;
 
   link = p4est_mempool_alloc (list->allocator);
   link->data = data;
@@ -225,9 +225,9 @@ p4est_list_append (p4est_list_t * list, void * data)
 }
 
 void
-p4est_list_insert (p4est_list_t * list, p4est_link_t * after, void * data)
+p4est_list_insert (p4est_list_t * list, p4est_link_t * after, void *data)
 {
-  p4est_link_t     *link;
+  p4est_link_t       *link;
 
   P4EST_ASSERT (after != NULL);
 
@@ -245,14 +245,14 @@ p4est_list_insert (p4est_list_t * list, p4est_link_t * after, void * data)
 void               *
 p4est_list_pop (p4est_list_t * list)
 {
-  p4est_link_t     *link;
-  void             *data;
+  p4est_link_t       *link;
+  void               *data;
 
   P4EST_ASSERT (list->first != NULL);
 
   link = list->first;
   list->first = link->next;
-  data =  link->data;
+  data = link->data;
   p4est_mempool_free (list->allocator, link);
   if (list->first == NULL) {
     list->last = NULL;

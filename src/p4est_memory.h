@@ -96,13 +96,13 @@ p4est_list_t       *p4est_list_new (p4est_mempool_t * allocator);
  */
 void                p4est_list_destroy (p4est_list_t * list);
 
-void                p4est_list_prepend (p4est_list_t * list, void * data);
-void                p4est_list_append (p4est_list_t * list, void * data);
+void                p4est_list_prepend (p4est_list_t * list, void *data);
+void                p4est_list_append (p4est_list_t * list, void *data);
 
 /** Insert a link after a given position
  */
 void                p4est_list_insert (p4est_list_t * list,
-                                       p4est_link_t * after, void * data);
+                                       p4est_link_t * after, void *data);
 
 /** Remove a link from the front of the list
  * \return Returns the removed first list element.

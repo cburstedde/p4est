@@ -4,7 +4,7 @@
 #include <p4est_base.h>
 
 static const int64_t initial_quadrants_per_processor = 15;
-static const int number_toread_quadrants = 32;
+static const int    number_toread_quadrants = 32;
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
@@ -196,8 +196,7 @@ p4est_destroy (p4est_t * p4est)
 }
 
 void
-p4est_refine (p4est_t * p4est,
-              p4est_refine_t refine_fn, p4est_init_t init_fn)
+p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
   int                 quadrant_pool_size;
   int                 dorefine;
@@ -210,12 +209,12 @@ p4est_refine (p4est_t * p4est,
   int                *key;
 
   /*
-    q points to a quadrant that is an array member
-    qalloc is a quadrant that has been allocated through quadrant_pool
-    qpop is q quadrant that has been allocated through quadrant_pool
-    never mix these two types of quadrant pointers
-  */
-  key = &dorefine;      /* use this to create a unique user_data pointer */
+     q points to a quadrant that is an array member
+     qalloc is a quadrant that has been allocated through quadrant_pool
+     qpop is q quadrant that has been allocated through quadrant_pool
+     never mix these two types of quadrant pointers
+   */
+  key = &dorefine;              /* use this to create a unique user_data pointer */
   list = p4est_list_new (NULL);
 
   /* loop over all local trees */
@@ -245,20 +244,20 @@ p4est_refine (p4est_t * p4est,
 
     /* now we have a quadrant to refine, prepend it to the list */
     qalloc = p4est_mempool_alloc (p4est->quadrant_pool);
-    *qalloc = *q;                       /* never prepend array members */
+    *qalloc = *q;               /* never prepend array members */
     p4est_list_prepend (list, qalloc);  /* only newly allocated quadrants */
 
     /*
-      current points to the next array member to write
-      restpos points to the next array member to read
-    */
+       current points to the next array member to write
+       restpos points to the next array member to read
+     */
     restpos = current + 1;
 
     /* run through the list and refine recursively */
     while (list->elem_count > 0) {
       qpop = p4est_list_pop (list);
       if (dorefine || refine_fn (p4est, j, qpop)) {
-        dorefine = 0;   /* a marker so that refine_fn is never called twice */
+        dorefine = 0;           /* a marker so that refine_fn is never called twice */
         p4est_array_resize (tree->quadrants, tree->quadrants->elem_count + 3);
 
         /* compute children and prepend them to the list */
