@@ -73,6 +73,14 @@ int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
 int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * r);
 
+/** Test if two quadrants follow each other in the tree with no holes.
+ * \param [in] q First quadrant
+ * \param [in] r Second quadrant >= \a q
+ * \return 1 if \a q is immediately before \a r in the tree.
+ */
+int                 p4est_quadrant_is_next (const p4est_quadrant_t * q,
+                                            const p4est_quadrant_t * r);
+
 /** Compute the parent of a quadrant.
  * \param [in]  q Input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled
@@ -145,8 +153,15 @@ void                p4est_quadrant_free_data (p4est_t * p4est,
 
 /** Test if a tree is sorted in Morton ordering.
  * \return Returns 1 if sorted, 0 otherwise.
+ * \note Duplicate quadrants are not allowed.
  */
 int                 p4est_tree_is_sorted (p4est_tree_t * tree);
+
+/** Test if a tree is sorted and complete in Morton ordering.
+ * \return Returns 1 if complete, 0 otherwise.
+ * \note Complete means that the tree has no holes and no overlap.
+ */
+int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
