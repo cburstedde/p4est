@@ -119,32 +119,6 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/** Constructs a minimal linear octree between two octants.
- *
- * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros.
- *
- * \pre \a q1 < \a q2 in the Morton ordering.
- *
- * \param [in] p43est used for the memory polls and quadrant init.
- * \param [in]  q1         First input quadrant.  The user data will not change.
- * \param [in]  include_q1 Flag is set to 1 if q1 is included.
- * \param [in]  q2         First input quadrant.  The user data will not change.
- * \param [in]  include_q2 Flag is set to 1 if q2 is included.
- * \param [out] tree       Initialized tree with zero elements.
- * \param [in]  which_tree The 0-based index of \a tree which is needed for
- *                         the \c p4est_quadrant_init_data routine.
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is already allocated automatically.
- */
-void                p4est_complete_region (p4est_t * p4est,
-                                           const p4est_quadrant_t * q1,
-                                           int include_q1,
-                                           const p4est_quadrant_t * q2,
-                                           int include_q2,
-                                           p4est_tree_t * tree,
-                                           int32_t which_tree,
-                                           p4est_init_t init_fn);
-
 /** Set quadrant Morton indices based on linear index in uniform grid.
  * \param [in,out] Quadrant whose Morton indices will be set.
  * \note Uniform grid implies level < 16 and thus morton_xy < INT32_MAX.
@@ -181,5 +155,31 @@ int                 p4est_tree_is_sorted (p4est_tree_t * tree);
  */
 void                p4est_tree_print (p4est_tree_t * tree, int identifier,
                                       FILE * nout);
+
+/** Constructs a minimal linear octree between two octants.
+ *
+ * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros.
+ *
+ * \pre \a q1 < \a q2 in the Morton ordering.
+ *
+ * \param [in] p43est used for the memory polls and quadrant init.
+ * \param [in]  q1         First input quadrant.  The user data will not change.
+ * \param [in]  include_q1 Flag is set to 1 if q1 is included.
+ * \param [in]  q2         First input quadrant.  The user data will not change.
+ * \param [in]  include_q2 Flag is set to 1 if q2 is included.
+ * \param [out] tree       Initialized tree with zero elements.
+ * \param [in]  which_tree The 0-based index of \a tree which is needed for
+ *                         the \c p4est_quadrant_init_data routine.
+ * \param [in] init_fn   Callback function to initialize the user_data
+ *                       which is already allocated automatically.
+ */
+void                p4est_complete_region (p4est_t * p4est,
+                                           const p4est_quadrant_t * q1,
+                                           int include_q1,
+                                           const p4est_quadrant_t * q2,
+                                           int include_q2,
+                                           p4est_tree_t * tree,
+                                           int32_t which_tree,
+                                           p4est_init_t init_fn);
 
 #endif /* !__P4EST_ALGORITHMS_H__ */
