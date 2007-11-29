@@ -1,5 +1,5 @@
 
-#include <p4est.h>
+#include <p4est_algorithms.h>
 #include <p4est_base.h>
 
 typedef struct
@@ -40,6 +40,8 @@ main (int argc, char **argv)
   connectivity = p4est_connectivity_new_unitsquare ();
   p4est = p4est_new (mpicomm, stdout, connectivity,
                      sizeof (user_data_t), init_fn);
+  p4est_tree_print (p4est_array_index (p4est->trees, 0),
+                    p4est->mpirank, stdout);
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

@@ -85,6 +85,70 @@ p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
 }
 
 int
+p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
+                           const p4est_quadrant_t * q2)
+{
+  int32_t             exclorx, exclory;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+
+  exclorx = q1->x ^ q2->x;
+  exclory = q1->y ^ q2->y;
+
+  return
+    (q1->level == q2->level) &&
+    ((exclorx & ~(1 << (P4EST_MAXLEVEL - q1->level))) == 0) &&
+    ((exclory & ~(1 << (P4EST_MAXLEVEL - q1->level))) == 0);
+}
+
+int
+p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
+                             const p4est_quadrant_t * q2)
+{
+  p4est_quadrant_t    p1, p2;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+
+  if (p4est_quadrant_is_equal (q1, q2)) {
+    return 1;
+  }
+
+  p4est_quadrant_parent (q1, &p1);
+  p4est_quadrant_parent (q2, &p2);
+
+  return p4est_quadrant_is_equal (&p1, &p2);
+}
+
+int
+p4est_quadrant_is_parent (const p4est_quadrant_t * q,
+                          const p4est_quadrant_t * r)
+{
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+
+  return
+    (q->level + 1 == r->level) &&
+    (q->x == (r->x & ~(1 << (P4EST_MAXLEVEL - r->level)))) &&
+    (q->y == (r->y & ~(1 << (P4EST_MAXLEVEL - r->level))));
+}
+
+int
+p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
+                            const p4est_quadrant_t * r)
+{
+  p4est_quadrant_t    p;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+
+  p4est_quadrant_parent (r, &p);
+
+  return p4est_quadrant_is_equal (q, &p);
+}
+
+int
 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                             const p4est_quadrant_t * r)
 {
@@ -427,6 +491,54 @@ p4est_tree_is_sorted (p4est_tree_t * tree)
   }
 
   return 1;
+}
+
+void
+p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
+{
+  int                 j, childid, comp;
+  char                prefix[BUFSIZ];
+  p4est_quadrant_t   *q1, *q2;
+
+  if (nout == NULL) {
+    return;
+  }
+
+  if (identifier >= 0) {
+    snprintf (prefix, BUFSIZ, "[%d] ", identifier);
+  }
+  else {
+    prefix[0] = '\0';
+  }
+
+  q1 = NULL;
+  for (j = 0; j < tree->quadrants->elem_count; ++j) {
+    q2 = p4est_array_index (tree->quadrants, j);
+    childid = p4est_quadrant_child_id (q2);
+    fprintf (nout, "%s0x%x 0x%x %d", prefix, q2->x, q2->y, q2->level);
+    if (j > 0) {
+      comp = p4est_quadrant_compare (q1, q2);
+      if (comp > 0) {
+        fputs (" R", nout);
+      }
+      else if (comp == 0) {
+        fputs (" I", nout);
+      }
+      else {
+        if (p4est_quadrant_is_sibling (q1, q2)) {
+          fprintf (nout, " S%d", childid);
+        }
+        else if (p4est_quadrant_is_parent (q1, q2)) {
+          fprintf (nout, " C%d", childid);
+        }
+        else if (p4est_quadrant_is_ancestor (q1, q2)) {
+          fputs (" D", nout);
+        }
+      }
+    }
+    fputs ("\n", nout);
+    q1 = q2;
+  }
 }
 
 /* EOF p4est_algorithms.c */

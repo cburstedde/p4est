@@ -4,31 +4,61 @@
 
 #include <p4est.h>
 
-/** Compare two quadrants in their Morton ordering
+/** Compare two quadrants in their Morton ordering.
  * \return Returns < 0 if \a v1 < \a v2,
  *                   0 if \a v1 == \a v2,
  *                 > 0 if \a v1 > \a v2
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
-/** Compute the position of this child within its siblings
+/** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */
 int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
-/** Test if a quadrant has valid Morton indices
+/** Test if a quadrant has valid Morton indices.
  * \param [in] q Quadrant to be tested.
  * \return Returns 1 if \a q is valid.
  */
 int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
-/** Test if two quadrants have equal Morton indices
+/** Test if two quadrants have equal Morton indices.
  * \return 1 if \a q1 describes the same quadrant as \a q2.
  */
 int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                                              const p4est_quadrant_t * q2);
 
-/** Test if a quadrant is an ancestor of another quadrant
+/** Test if two quadrants are siblings.
+ * \param [in] q1 First quadrant to be tested.
+ * \param [in] q2 Second quadrant to be tested.
+ * \return 1 if \a q1 is equal to or a sibling of \a q2.
+ */
+int                 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
+                                               const p4est_quadrant_t * q2);
+
+/** Test if two quadrants are siblings.
+ * Descriptive, slower version of \a p4est_quadrant_is_sibling.
+ * For debugging and educational purposes only.
+ */
+int                 p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
+                                                 const p4est_quadrant_t * q2);
+
+/** Test if a quadrant it the parent of another quadrant.
+ * \param [in] q Quadrant to be tested.
+ * \param [in] r Possible child quadrant.
+ * \return 1 if \a q is the parent of \a r.
+ */
+int                 p4est_quadrant_is_parent (const p4est_quadrant_t * q,
+                                              const p4est_quadrant_t * r);
+
+/** Test if a quadrant it the parent of another quadrant.
+ * Descriptive, slower version of \a p4est_quadrant_is_parent.
+ * For debugging and educational purposes only.
+ */
+int                 p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
+                                                const p4est_quadrant_t * r);
+
+/** Test if a quadrant is an ancestor of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Descendent quadrant.
  * \return 1 if \a q is an ancestor of \a r or if \a q is equal to \a r.
@@ -36,14 +66,14 @@ int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
 int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                                                 const p4est_quadrant_t * r);
 
-/** Test if a quadrant is an ancestor of another quadrant
+/** Test if a quadrant is an ancestor of another quadrant.
  * Descriptive, slower version of \a p4est_quadrant_is_ancestor.
  * For debugging and educational purposes only.
  */
 int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * r);
 
-/** Compute the parent of a quadrant
+/** Compute the parent of a quadrant.
  * \param [in]  q Input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled
  *                   with the Morton index of the parent of \a q.
@@ -54,7 +84,7 @@ int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
 void                p4est_quadrant_parent (const p4est_quadrant_t * q,
                                            p4est_quadrant_t * r);
 
-/** Compute the 4 children of a quadrant
+/** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
  *                    \a q may point to the same quadrant as \a c0.
@@ -66,7 +96,7 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
                                              p4est_quadrant_t * c2,
                                              p4est_quadrant_t * c3);
 
-/** Computes the nearest common ancestor of two quadrants
+/** Computes the nearest common ancestor of two quadrants.
  * \param [in]     q1 First input quadrant.
  * \param [in]     q2 Second input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled.
@@ -79,7 +109,7 @@ void                p4est_nearest_common_ancestor (const p4est_quadrant_t *
                                                    const p4est_quadrant_t *
                                                    q2, p4est_quadrant_t * r);
 
-/** Computes the nearest common ancestor of two quadrants
+/** Computes the nearest common ancestor of two quadrants.
  * Descriptive, slower version of \a p4est_nearest_common_ancestor.
  * For debugging and educationial purposes only.
  */
@@ -89,7 +119,7 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/** Constructs a minimal linear octree between two octants
+/** Constructs a minimal linear octree between two octants.
  *
  * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros.
  *
@@ -115,7 +145,7 @@ void                p4est_complete_region (p4est_t * p4est,
                                            int32_t which_tree,
                                            p4est_init_t init_fn);
 
-/** Set quadrant Morton indices based on linear index in uniform grid
+/** Set quadrant Morton indices based on linear index in uniform grid.
  * \param [in,out] Quadrant whose Morton indices will be set.
  * \note Uniform grid implies level < 16 and thus morton_xy < INT32_MAX.
  *       The user_data of \a quadrant is never modified.
@@ -123,7 +153,7 @@ void                p4est_complete_region (p4est_t * p4est,
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int8_t level, int32_t index);
 
-/** Alloc and initialize the user data of a valid quadrant
+/** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.
  * \param [in,out]  quad       The quadrant to be initialized.
  * \param [in]  init_fn    User-supplied callback function to init data.
@@ -133,15 +163,23 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad,
                                               p4est_init_t init_fn);
 
-/** Free the user data of a valid quadrant
+/** Free the user data of a valid quadrant.
  * \param [in,out]  quad The quadrant whose data shall be freed.
  */
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
 
-/** Test if a tree is sorted in Morton ordering
+/** Test if a tree is sorted in Morton ordering.
  * \return Returns 1 if sorted, 0 otherwise.
  */
 int                 p4est_tree_is_sorted (p4est_tree_t * tree);
+
+/** Print the quadrants in a tree.
+ * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.
+ * \param [in] identifier  If >= 0, each line is prepended by "[identifier] "
+ * \param [in] nout        Stream to print to. May be NULL, then nothing happens.
+ */
+void                p4est_tree_print (p4est_tree_t * tree, int identifier,
+                                      FILE * nout);
 
 #endif /* !__P4EST_ALGORITHMS_H__ */
