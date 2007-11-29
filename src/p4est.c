@@ -165,7 +165,6 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
         fprintf (p4est->nout, "[%d] tree %d last morton 0x%x 0x%x\n",
                  p4est->mpirank, j, b.x, b.y);
       }
-
       if (!must_remove_last_quadrant) {
         p4est_quadrant_init_data (p4est, j, &b, init_fn);
       }
@@ -208,6 +207,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
   int                 quadrant_pool_size, data_pool_size;
   int                 dorefine;
+  int8_t              i, maxlevel;
   int32_t             j, movecount;
   int32_t             current, restpos, incount;
   p4est_list_t       *list;
@@ -233,9 +233,16 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       data_pool_size = p4est->user_data_pool->elem_count;
     }
 
+    /* initial log message for this tree */
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Into refine tree %d with %d\n",
                p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+
+    /* reset the quadrant counters */
+    maxlevel = 0;
+    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+      tree->quadrants_per_level[i] = 0;
     }
 
     /* run through the array to find first quadrant to be refined */
@@ -248,6 +255,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       if (dorefine) {
         break;
       }
+      maxlevel = (int8_t) P4EST_MAX (maxlevel, q->level);
+      ++tree->quadrants_per_level[q->level];
     }
     if (!dorefine) {
       continue;
@@ -309,10 +318,13 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         }
         q = p4est_array_index (tree->quadrants, current);
         *q = *qpop;
+        maxlevel = (int8_t) P4EST_MAX (maxlevel, qpop->level);
+        ++tree->quadrants_per_level[qpop->level];
         ++current;
         p4est_mempool_free (p4est->quadrant_pool, qpop);
       }
     }
+    tree->maxlevel = maxlevel;
 
     P4EST_ASSERT (restpos == incount);
     P4EST_ASSERT (current == tree->quadrants->elem_count);

@@ -23,9 +23,9 @@ static const int8_t log_lookup_table[256] =
 
 #define P4EST_LOG2_8(x) (log_lookup_table[(x)])
 #define P4EST_LOG2_16(x) (((x) > 0xff) ? \
-                          P4EST_LOG2_8 ((x) >> 8) : P4EST_LOG2_8 (x))
+                          (P4EST_LOG2_8 ((x) >> 8) + 8) : P4EST_LOG2_8 (x))
 #define P4EST_LOG2_32(x) (((x) > 0xffff) ? \
-                          P4EST_LOG2_16 ((x) >> 16) : P4EST_LOG2_16 (x))
+                          (P4EST_LOG2_16 ((x) >> 16)) + 16 : P4EST_LOG2_16 (x))
 
 /* here come small auxiliary functions */
 
@@ -46,7 +46,7 @@ p4est_quadrant_compare (const void *v1, const void *v2)
   if (exclory == 0 && exclorx == 0) {
     return q1->level - q2->level;
   }
-  else if (exclory >= exclorx) {
+  else if (P4EST_LOG2_32 (exclory) >= P4EST_LOG2_32 (exclorx)) {
     return q1->y - q2->y;
   }
   else {
@@ -97,6 +97,9 @@ p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
 
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
+  if (exclorx == 0 && exclory == 0) {
+    return 0;
+  }
 
   return
     (q1->level == q2->level) &&
@@ -114,7 +117,7 @@ p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
   P4EST_ASSERT (p4est_quadrant_is_valid (q2));
 
   if (p4est_quadrant_is_equal (q1, q2)) {
-    return 1;
+    return 0;
   }
 
   p4est_quadrant_parent (q1, &p1);
@@ -160,7 +163,7 @@ p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (p4est_quadrant_is_valid (r));
 
-  if (q->level > r->level) {
+  if (q->level >= r->level) {
     return 0;
   }
 
@@ -175,6 +178,10 @@ p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                               const p4est_quadrant_t * r)
 {
   p4est_quadrant_t    s;
+
+  if (p4est_quadrant_is_equal (q, r)) {
+    return 0;
+  }
 
   p4est_nearest_common_ancestor_D (q, r, &s);
 
@@ -395,7 +402,13 @@ p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
         else if (p4est_quadrant_is_ancestor (q1, q2)) {
           fputs (" D", nout);
         }
+        else {
+          fprintf (nout, " Q%d", childid);
+        }
       }
+    }
+    else {
+      fprintf (nout, " Q%d", childid);
     }
     fputs ("\n", nout);
     q1 = q2;
@@ -484,6 +497,7 @@ p4est_complete_region (p4est_t * p4est,
     while (W->elem_count > 0) {
       w = p4est_list_pop (W);
       level = w->level;
+
       /* if (a < w < b) and (w not in {A(b)}) */
       if (((p4est_quadrant_compare (&a, w) < 0) &&
            (p4est_quadrant_compare (w, &b) < 0)
@@ -524,8 +538,8 @@ p4est_complete_region (p4est_t * p4est,
       p4est_array_resize (quadrants, num_quadrants + 1);
       r = p4est_array_index (quadrants, num_quadrants);
       *r = b;
-      maxlevel = (int8_t) P4EST_MAX (level, maxlevel);
-      ++quadrants_per_level[level];
+      maxlevel = (int8_t) P4EST_MAX (b.level, maxlevel);
+      ++quadrants_per_level[b.level];
       ++num_quadrants;
     }
   }

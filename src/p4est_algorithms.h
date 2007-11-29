@@ -31,7 +31,7 @@ int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
 /** Test if two quadrants are siblings.
  * \param [in] q1 First quadrant to be tested.
  * \param [in] q2 Second quadrant to be tested.
- * \return 1 if \a q1 is equal to or a sibling of \a q2.
+ * \return 1 if \a q1 is unequal to and a sibling of \a q2.
  */
 int                 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
                                                const p4est_quadrant_t * q2);
@@ -61,7 +61,7 @@ int                 p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
 /** Test if a quadrant is an ancestor of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Descendent quadrant.
- * \return 1 if \a q is an ancestor of \a r or if \a q is equal to \a r.
+ * \return 1 if \a q isunequal to and an ancestor of \a r.
  */
 int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                                                 const p4est_quadrant_t * r);
@@ -149,8 +149,16 @@ void                p4est_quadrant_free_data (p4est_t * p4est,
 int                 p4est_tree_is_sorted (p4est_tree_t * tree);
 
 /** Print the quadrants in a tree.
+ * Prints one line per quadrant with x, y, level and a string.
+ * The string denotes the relation to the previous quadrant and can be:
+ *   I   for identical quadrants
+ *   R   for a quadrant that with smaller Morton index
+ *   Cn  for child id n
+ *   Sn  for sibling with child id n
+ *   D   for a descendent
+ *   Qn  for a general quadrant whose child id is n
  * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.
- * \param [in] identifier  If >= 0, each line is prepended by "[identifier] "
+ * \param [in] identifier  If >= 0, each line is prefixed by "[identifier] "
  * \param [in] nout        Stream to print to. May be NULL, then nothing happens.
  */
 void                p4est_tree_print (p4est_tree_t * tree, int identifier,

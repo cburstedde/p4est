@@ -5,7 +5,7 @@
 static int
 refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 {
-  return (q->level < 5);
+  return (q->level < 4);
 }
 
 int
