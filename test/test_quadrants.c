@@ -20,11 +20,13 @@ int
 main (void)
 {
   int                 i, j;
+  int8_t              level;
+  int64_t             index1, index2;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
   p4est_t            *p4est2;
   p4est_tree_t       *t1, *t2;
-  p4est_quadrant_t   *q1, *q2;
+  p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
 
   /* create connectivity and forest structures */
@@ -40,8 +42,28 @@ main (void)
   P4EST_CHECK_ABORT (p4est_tree_is_sorted (t2), "is_sorted");
 
   /* run a bunch of cross-tests */
+  p = NULL;
   for (i = 0; i < t1->quadrants->elem_count; ++i) {
     q1 = p4est_array_index (t1->quadrants, i);
+
+    /* test the index conversion */
+    index1 = p4est_quadrant_linear_id (q1, q1->level);
+    p4est_quadrant_set_morton (&r, q1->level, index1);
+    index2 = p4est_quadrant_linear_id (&r, r.level);
+    P4EST_CHECK_ABORT (index1 == index2, "index conversion");
+    level = (int8_t) (q1->level - 1);
+    if (level >= 0) {
+      index1 = p4est_quadrant_linear_id (q1, level);
+      p4est_quadrant_set_morton (&r, level, index1);
+      index2 = p4est_quadrant_linear_id (&r, level);
+      P4EST_CHECK_ABORT (index1 == index2, "index conversion");
+    }
+
+    /* test the is_next function */
+    if (p != NULL) {
+      P4EST_CHECK_ABORT (p4est_quadrant_is_next (p, q1), "is_next");
+    }
+    p = q1;
 
     /* test t1 against itself */
     for (j = 0; j < t1->quadrants->elem_count; ++j) {
@@ -100,6 +122,17 @@ main (void)
       p4est_nearest_common_ancestor (q2, q1, &s);
       P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
     }
+  }
+
+  p = NULL;
+  for (i = 0; i < t2->quadrants->elem_count; ++i) {
+    q1 = p4est_array_index (t2->quadrants, i);
+
+    /* test the is_next function */
+    if (p != NULL) {
+      P4EST_CHECK_ABORT (p4est_quadrant_is_next (p, q1), "is_next");
+    }
+    p = q1;
   }
 
   /* destroy the p4est and its connectivity structure */

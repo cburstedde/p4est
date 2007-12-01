@@ -74,9 +74,10 @@ int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * r);
 
 /** Test if two quadrants follow each other in the tree with no holes.
- * \param [in] q First quadrant
- * \param [in] r Second quadrant >= \a q
+ * \param [in] q A quadrant
+ * \param [in] r Another quadrant
  * \return 1 if \a q is immediately before \a r in the tree.
+ * \note for every \a q there are between 0 and P4EST_MAXLEVEL+1 possible nexts.
  */
 int                 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                                             const p4est_quadrant_t * r);
@@ -127,13 +128,23 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/** Set quadrant Morton indices based on linear index in uniform grid.
- * \param [in,out] Quadrant whose Morton indices will be set.
- * \note Uniform grid implies level < 16 and thus morton_xy < INT32_MAX.
+/** Computes the linear position of a quadrant in a uniform grid.
+ * \param [in] quadrant  Quadrant whose id will be computed.
+ * \return Returns the linear position of this quadrant on a grid.
+ * \note This is the inverse operation of p4est_quadrant_set_morton.
+ *       The user_data of \a quadrant is never modified.
+ */
+int64_t             p4est_quadrant_linear_id (p4est_quadrant_t * quadrant,
+                                              int8_t level);
+
+/** Set quadrant Morton indices based on linear position in uniform grid.
+ * \param [in,out] quadrant  Quadrant whose Morton indices will be set.
+ * \param [in]     id        The linear position of this quadrant on a grid.
+ * \note This is the inverse operation of p4est_quadrant_linear_id.
  *       The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
-                                               int8_t level, int32_t index);
+                                               int8_t level, int64_t id);
 
 /** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.
@@ -171,6 +182,7 @@ int                 p4est_tree_is_complete (p4est_tree_t * tree);
  *   Cn  for child id n
  *   Sn  for sibling with child id n
  *   D   for a descendent
+ *   Nn   for a next quadrant in the tree with no holes in between and child id n
  *   Qn  for a general quadrant whose child id is n
  * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.
  * \param [in] identifier  If >= 0, each line is prefixed by "[identifier] "

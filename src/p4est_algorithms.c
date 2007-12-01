@@ -59,6 +59,8 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
   int                 id = 0;
 
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
   id |= ((q->x & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x01 : 0);
   id |= ((q->y & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x02 : 0);
 
@@ -113,9 +115,7 @@ p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
 {
   p4est_quadrant_t    p1, p2;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
-
+  /* validity of q1 and q2 is asserted in p4est_quadrant_is_equal */
   if (p4est_quadrant_is_equal (q1, q2)) {
     return 0;
   }
@@ -146,8 +146,8 @@ p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
   p4est_quadrant_t    p;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
 
+  /* validity of r is asserted in p4est_quadrant_parent */
   p4est_quadrant_parent (r, &p);
 
   return p4est_quadrant_is_equal (q, &p);
@@ -179,6 +179,7 @@ p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
 {
   p4est_quadrant_t    s;
 
+  /* validity of q and r is asserted in p4est_quadrant_is_equal */
   if (p4est_quadrant_is_equal (q, r)) {
     return 0;
   }
@@ -192,9 +193,26 @@ int
 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
-  P4EST_CHECK_ABORT (0, "Not yet implemented");
+  int64_t             i1, i2;
+  p4est_quadrant_t    a, b;
 
-  return 0;
+  /* validity of q and r is asserted in p4est_quadrant_compare */
+  if (p4est_quadrant_compare (q, r) >= 0) {
+    return 0;
+  }
+
+  a = *q;
+  b = *r;
+  while (a.level > b.level) {
+    if (p4est_quadrant_child_id (&a) != 3) {
+      return 0;
+    }
+    p4est_quadrant_parent (&a, &a);
+  }
+  i1 = p4est_quadrant_linear_id (&a, a.level);
+  i2 = p4est_quadrant_linear_id (&b, a.level);
+
+  return (i1 + 1 == i2);
 }
 
 void
@@ -297,21 +315,44 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   P4EST_ASSERT (p4est_quadrant_is_valid (r));
 }
 
+int64_t
+p4est_quadrant_linear_id (p4est_quadrant_t * quadrant, int8_t level)
+{
+  int8_t              i;
+  int64_t             x, y;
+  int64_t             id;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
+  P4EST_ASSERT (quadrant->level >= level && level >= 0);
+
+  x = quadrant->x >> (P4EST_MAXLEVEL - level);
+  y = quadrant->y >> (P4EST_MAXLEVEL - level);
+
+  id = 0;
+  for (i = 0; i < level; ++i) {
+    id |= ((x & (1 << i)) << i);
+    id |= ((y & (1 << i)) << (i + 1));
+  }
+
+  return id;
+}
+
 void
 p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
-                           int8_t level, int32_t index)
+                           int8_t level, int64_t id)
 {
   int8_t              i;
 
-  P4EST_ASSERT (level < 16 && index < (1 << (2 * level)));
+  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT (id < (1LL << (2 * level)));
 
   quadrant->level = level;
   quadrant->x = 0;
   quadrant->y = 0;
 
   for (i = 0; i < level; ++i) {
-    quadrant->x |= ((index & (1 << (2 * i))) >> i);
-    quadrant->y |= ((index & (1 << (2 * i + 1))) >> (i + 1));
+    quadrant->x |= (int32_t) ((id & (1LL << (2 * i))) >> i);
+    quadrant->y |= (int32_t) ((id & (1LL << (2 * i + 1))) >> (i + 1));
   }
 
   quadrant->x <<= (P4EST_MAXLEVEL - level);
@@ -432,6 +473,9 @@ p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
         }
         else if (p4est_quadrant_is_ancestor (q1, q2)) {
           fputs (" D", nout);
+        }
+        else if (p4est_quadrant_is_next (q1, q2)) {
+          fprintf (nout, " N%d", childid);
         }
         else {
           fprintf (nout, " Q%d", childid);
@@ -580,7 +624,7 @@ p4est_complete_region (p4est_t * p4est,
   P4EST_ASSERT (W->first == NULL && W->last == NULL);
   p4est_list_destroy (W);
 
-  P4EST_ASSERT (p4est_tree_is_sorted (R));
+  P4EST_ASSERT (p4est_tree_is_complete (R));
   P4EST_ASSERT (quadrant_pool_size == p4est->quadrant_pool->elem_count);
   P4EST_ASSERT (num_quadrants == quadrants->elem_count);
   if (p4est->user_data_pool != NULL) {

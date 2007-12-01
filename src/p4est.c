@@ -335,6 +335,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
                     p4est->user_data_pool->elem_count + incount);
     }
     P4EST_ASSERT (p4est_tree_is_sorted (tree));
+    P4EST_ASSERT (p4est_tree_is_complete (tree));
 
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Done refine tree %d now %d\n",
