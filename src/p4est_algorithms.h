@@ -82,6 +82,13 @@ int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
 int                 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                                             const p4est_quadrant_t * r);
 
+/** Test if two quadrants follow each other in the tree with no holes.
+ * Descriptive, slower version of \a p4est_quadrant_is_next.
+ * For debugging and educational purposes only.
+ */
+int                 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
+                                              const p4est_quadrant_t * r);
+
 /** Compute the parent of a quadrant.
  * \param [in]  q Input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled
@@ -134,8 +141,8 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
  * \note This is the inverse operation of p4est_quadrant_set_morton.
  *       The user_data of \a quadrant is never modified.
  */
-int64_t             p4est_quadrant_linear_id (p4est_quadrant_t * quadrant,
-                                              int8_t level);
+int64_t             p4est_quadrant_linear_id (const p4est_quadrant_t *
+                                              quadrant, int8_t level);
 
 /** Set quadrant Morton indices based on linear position in uniform grid.
  * \param [in,out] quadrant  Quadrant whose Morton indices will be set.

@@ -193,6 +193,37 @@ int
 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
+  int8_t              minlevel;
+  int32_t             mask;
+  int64_t             i1, i2;
+
+  /* validity of q and r is asserted in p4est_quadrant_compare */
+  if (p4est_quadrant_compare (q, r) >= 0) {
+    return 0;
+  }
+
+  if (q->level > r->level) {
+    /* check if q is the third child up to the common level */
+    mask =
+      (1 << (P4EST_MAXLEVEL - r->level)) - (1 << (P4EST_MAXLEVEL - q->level));
+    if ((q->x & mask) != mask || (q->y & mask) != mask) {
+      return 0;
+    }
+    minlevel = r->level;
+  }
+  else {
+    minlevel = q->level;
+  }
+  i1 = p4est_quadrant_linear_id (q, minlevel);
+  i2 = p4est_quadrant_linear_id (r, minlevel);
+
+  return (i1 + 1 == i2);
+}
+
+int
+p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
+                          const p4est_quadrant_t * r)
+{
   int64_t             i1, i2;
   p4est_quadrant_t    a, b;
 
@@ -316,7 +347,7 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 }
 
 int64_t
-p4est_quadrant_linear_id (p4est_quadrant_t * quadrant, int8_t level)
+p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int8_t level)
 {
   int8_t              i;
   int64_t             x, y;

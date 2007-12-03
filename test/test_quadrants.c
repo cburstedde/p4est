@@ -86,6 +86,10 @@ main (void)
                          p4est_quadrant_is_ancestor (q1, q2), "is_ancestor");
       P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q2, q1) ==
                          p4est_quadrant_is_ancestor (q2, q1), "is_ancestor");
+      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q1, q2) ==
+                         p4est_quadrant_is_next (q1, q2), "is_next");
+      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q2, q1) ==
+                         p4est_quadrant_is_next (q2, q1), "is_next");
       p4est_nearest_common_ancestor_D (q1, q2, &r);
       p4est_nearest_common_ancestor (q1, q2, &s);
       P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
@@ -115,6 +119,10 @@ main (void)
                          p4est_quadrant_is_ancestor (q1, q2), "is_ancestor");
       P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q2, q1) ==
                          p4est_quadrant_is_ancestor (q2, q1), "is_ancestor");
+      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q1, q2) ==
+                         p4est_quadrant_is_next (q1, q2), "is_next");
+      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q2, q1) ==
+                         p4est_quadrant_is_next (q2, q1), "is_next");
       p4est_nearest_common_ancestor_D (q1, q2, &r);
       p4est_nearest_common_ancestor (q1, q2, &s);
       P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
