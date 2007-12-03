@@ -216,13 +216,13 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
   int32_t             mask;
   int64_t             i1, i2;
 
-  /* validity of q and r is asserted in p4est_quadrant_compare */
-  if (p4est_quadrant_compare (q, r) >= 0) {
-    return 0;
-  }
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+
+  /* the condition q < r is checked implicitly */
 
   if (q->level > r->level) {
-    /* check if q is the third child up to the common level */
+    /* check if q is the last child up to the common level */
     mask =
       (1 << (P4EST_MAXLEVEL - r->level)) - (1 << (P4EST_MAXLEVEL - q->level));
     if ((q->x & mask) != mask || (q->y & mask) != mask) {
