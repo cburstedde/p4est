@@ -38,7 +38,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   int64_t             tree_num_quadrants, global_num_quadrants;
   int64_t             first_tree, first_quadrant, first_tree_quadrant;
   int64_t             last_tree, last_quadrant, last_tree_quadrant;
-  int64_t             quadrant_index;
+  int64_t             quadrant_index, qlocal;
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
@@ -112,7 +112,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
       fprintf (p4est->nout, "New forest: %d trees %d processors\n",
                num_trees, p4est->mpisize);
       fprintf (p4est->nout,
-               "   initial level %d global quadrants %lld per tree %lld\n",
+               "   initial level %d potential global quadrants %lld per tree %lld\n",
                level, (long long) global_num_quadrants,
                (long long) tree_num_quadrants);
     }
@@ -137,6 +137,8 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
     }
     tree->maxlevel = 0;
   }
+  p4est->local_num_quadrants = 0;
+  p4est->global_num_quadrants = 0;
 
   /* for every locally non-empty tree fill first and last quadrant */
   for (j = first_tree; j <= last_tree; ++j) {
@@ -191,6 +193,31 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
       /* now run algorithm CompleteRegion (&tree->quadrants) here */
       p4est_complete_region (p4est, &a, 1, &b, !must_remove_last_quadrant,
                              tree, j, init_fn);
+    }
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] tree %d quadrants %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+    p4est->local_num_quadrants += tree->quadrants->elem_count;
+  }
+
+  /* compute global number of quadrants */
+  qlocal = p4est->local_num_quadrants;
+  p4est->global_num_quadrants = qlocal;
+#ifdef HAVE_MPI
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
+                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
+#endif
+
+  if (p4est->nout != NULL) {
+    fprintf (p4est->nout, "[%d] total local quadrants %d\n",
+             p4est->mpirank, p4est->local_num_quadrants);
+    if (p4est->mpirank == 0) {
+      fprintf (p4est->nout, "   total global quadrants %lld\n",
+               (long long int) p4est->global_num_quadrants);
     }
   }
 
