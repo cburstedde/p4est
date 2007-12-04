@@ -42,6 +42,9 @@ p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
   connectivity->tree_to_face = P4EST_ALLOC (int8_t, 4 * num_trees);
   P4EST_CHECK_ALLOC (connectivity->tree_to_face);
 
+  connectivity->vertices = P4EST_ALLOC (double, 3 * num_vertices);
+  P4EST_CHECK_ALLOC (connectivity->vertices);
+
   return connectivity;
 }
 
@@ -51,6 +54,7 @@ p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
   P4EST_FREE (connectivity->tree_to_face);
   P4EST_FREE (connectivity->tree_to_tree);
   P4EST_FREE (connectivity->tree_to_vertex);
+  P4EST_FREE (connectivity->vertices);
 
   P4EST_FREE (connectivity);
 }
@@ -79,6 +83,29 @@ p4est_connectivity_new_unitsquare (void)
   connectivity->tree_to_face[1] = 1;
   connectivity->tree_to_face[2] = 2;
   connectivity->tree_to_face[3] = 3;
+
+  /* This is a square from [0,0] to [1,1].
+   * Note that the z component is zero.
+   */
+  /* x=0 y=0 z=0 */
+  connectivity->vertices[0 * 3 + 0] = 0.0;
+  connectivity->vertices[0 * 3 + 1] = 0.0;
+  connectivity->vertices[0 * 3 + 2] = 0.0;
+
+  /* x=1 y=0 z=0 */
+  connectivity->vertices[1 * 3 + 0] = 1.0;
+  connectivity->vertices[1 * 3 + 1] = 0.0;
+  connectivity->vertices[1 * 3 + 2] = 0.0;
+
+  /* x=1 y=1 z=0 */
+  connectivity->vertices[2 * 3 + 0] = 1.0;
+  connectivity->vertices[2 * 3 + 1] = 1.0;
+  connectivity->vertices[2 * 3 + 2] = 0.0;
+
+  /* x=0 y=1 z=0 */
+  connectivity->vertices[3 * 3 + 0] = 0.0;
+  connectivity->vertices[3 * 3 + 1] = 1.0;
+  connectivity->vertices[3 * 3 + 2] = 0.0;
 
   return connectivity;
 }

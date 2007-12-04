@@ -59,13 +59,13 @@ main (int argc, char **argv)
     "Nct = 0      # Number of curved types\n"
     "\n"
     "                          [Coordinates of Element Vertices]\n"
-    "1 -1.00000000000e+00 -1.00000000000e+00\n"
-    "2  0.00000000000e+00 -1.00000000000e+00\n"
-    "3  0.00000000000e+00  0.00000000000e+00\n"
-    "4  1.00000000000e+00  0.00000000000e+00\n"
-    "5  1.00000000000e+00  1.00000000000e+00\n"
-    "6  0.00000000000e+00  1.00000000000e+00\n"
-    "7 -1.00000000000e+00  0.00000000000e+00\n"
+    "1 -1.00000000000e+00 -1.00000000000e+00  0.00000000000e+00\n"
+    "2  0.00000000000e+00 -1.00000000000e+00  0.00000000000e+00\n"
+    "3  0.00000000000e+00  0.00000000000e+00  0.00000000000e+00\n"
+    "4  1.00000000000e+00  0.00000000000e+00  0.00000000000e+00\n"
+    "5  1.00000000000e+00  1.00000000000e+00  0.00000000000e+00\n"
+    "6  0.00000000000e+00  1.00000000000e+00  0.00000000000e+00\n"
+    "7 -1.00000000000e+00  0.00000000000e+00  0.00000000000e+00\n"
     "   [Element to Vertex]\n"
     "1     1   2   4   3\n"
     "2     1   3   6   7\n"
@@ -85,6 +85,7 @@ main (int argc, char **argv)
   int                 fd;
   size_t              meshlength;
   size_t              templatelength;
+  const double        EPS = 2.22045e-16;
 
   int32_t             i;
   const int32_t       num_trees = 3;
@@ -97,6 +98,15 @@ main (int argc, char **argv)
   };
   const int32_t       tree_to_face[] = {
     0, 1, 0, 0, 3, 3, 2, 3, 2, 1, 2, 1
+  };
+  const double        vertices[] = {
+    -1.00000000000e+00, -1.00000000000e+00, 0.00000000000e+00,
+    0.00000000000e+00, -1.00000000000e+00, 0.00000000000e+00,
+    0.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00,
+    1.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00,
+    1.00000000000e+00, 1.00000000000e+00, 0.00000000000e+00,
+    0.00000000000e+00, 1.00000000000e+00, 0.00000000000e+00,
+    -1.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00
   };
 
 #ifdef HAVE_MPI
@@ -142,6 +152,9 @@ main (int argc, char **argv)
   for (i = 0; i < num_trees * 4; ++i)
     P4EST_CHECK_ABORT (connectivity->tree_to_face[i] == tree_to_face[i],
                        "tree_to_face");
+  for (i = 0; i < num_vertices * 3; ++i)
+    P4EST_CHECK_ABORT (connectivity->vertices[i] - vertices[i] < EPS,
+                       "vertices");
 
   /* destroy the p4est and its connectivity structure */
   p4est_connectivity_destroy (connectivity);

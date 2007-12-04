@@ -91,6 +91,8 @@ p4est_connectivity_read (const char *filename,
   int32_t             k, k0, k1, k2, k3, f0, f1, f2, f3, v0, v1, v2, v3;
   int32_t            *tree_to_vertex, *tree_to_tree;
   int8_t             *tree_to_face;
+  double             *vertices;
+  double              vx, vy, vz;
 
   *connectivity = NULL;
 
@@ -205,10 +207,20 @@ p4est_connectivity_read (const char *filename,
           tree_to_vertex = (*connectivity)->tree_to_vertex;
           tree_to_tree = (*connectivity)->tree_to_tree;
           tree_to_face = (*connectivity)->tree_to_face;
+          vertices = (*connectivity)->vertices;
         }
 
         break;
       case COORD:
+        sscanf (line, "%d %lf %lf %lf", &k, &vx, &vy, &vz);
+        --k;
+
+        P4EST_CHECK_ABORT (k >= 0 && k < num_vertices, "Bad [] entry");
+
+        vertices[k * 3 + 0] = vx;
+        vertices[k * 3 + 1] = vy;
+        vertices[k * 3 + 2] = vz;
+
         break;
       case ETOV:
         sscanf (line, "%d %d %d %d %d", &k, &v0, &v1, &v2, &v3);

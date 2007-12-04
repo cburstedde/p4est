@@ -34,6 +34,10 @@ typedef struct p4est_connectivity
                                            [num_trees-1][0]..[num_trees-1][3] */
   int8_t             *tree_to_face;     /* allocated [0][0]..[0][3]..
                                            [num_trees-1][0]..[num_trees-1][3] */
+  double             *vertices; /* allocated [0][0]..[0][2]..
+                                   [num_vertices-1][0]..
+                                   [num_vertices-1][2] */
+
 }
 p4est_connectivity_t;
 
