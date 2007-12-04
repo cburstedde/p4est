@@ -218,6 +218,16 @@ int                 p4est_tree_is_complete (p4est_tree_t * tree);
 void                p4est_tree_print (p4est_tree_t * tree, int identifier,
                                       FILE * nout);
 
+/** Checks a p4est for validity.
+ * A valid p4est has the following properties:
+ *    the quadrant counters are consistent
+ *    all trees are complete
+ *    all non-local trees are empty
+ * \param [in] p4est  The p4est to be tested.
+ * \return Returns 1 if valid, 0 otherwise.
+ */
+int                 p4est_is_valid (p4est_t * p4est);
+
 /** Constructs a minimal linear octree between two octants.
  *
  * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros.

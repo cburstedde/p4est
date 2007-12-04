@@ -202,7 +202,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
     p4est->local_num_quadrants += tree->quadrants->elem_count;
   }
 
-  /* compute global number of quadrants */
+  /* compute some member variables */
   qlocal = p4est->local_num_quadrants;
   p4est->global_num_quadrants = qlocal;
 #ifdef HAVE_MPI
@@ -212,7 +212,11 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
     P4EST_CHECK_MPI (mpiret);
   }
 #endif
+  p4est->first_local_tree = first_tree;
+  p4est->last_local_tree = last_tree;
+  p4est->local_num_trees = last_tree - first_tree + 1;
 
+  /* print more statistics */
   if (p4est->nout != NULL) {
     fprintf (p4est->nout, "[%d] total local quadrants %d\n",
              p4est->mpirank, p4est->local_num_quadrants);
@@ -222,9 +226,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
     }
   }
 
-  p4est->first_local_tree = first_tree;
-  p4est->last_local_tree = last_tree;
-  p4est->local_num_trees = last_tree - first_tree + 1;
+  P4EST_ASSERT (p4est_is_valid (p4est));
 
   return p4est;
 }
@@ -252,11 +254,15 @@ p4est_destroy (p4est_t * p4est)
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
+#ifdef HAVE_MPI
+  int                 mpiret;
+#endif
   int                 quadrant_pool_size, data_pool_size;
   int                 dorefine;
   int8_t              i, maxlevel;
   int32_t             j, movecount;
   int32_t             current, restpos, incount;
+  int64_t             qlocal;
   p4est_list_t       *list;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q, *qalloc, *qpop;
@@ -266,11 +272,13 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   /*
      q points to a quadrant that is an array member
      qalloc is a quadrant that has been allocated through quadrant_pool
-     qpop is q quadrant that has been allocated through quadrant_pool
+     qpop is a quadrant that has been allocated through quadrant_pool
      never mix these two types of quadrant pointers
    */
   key = &dorefine;              /* use this to create a unique user_data pointer */
   list = p4est_list_new (NULL);
+  p4est->local_num_quadrants = 0;
+  p4est->global_num_quadrants = 0;
 
   /* loop over all local trees */
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
@@ -306,6 +314,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       ++tree->quadrants_per_level[q->level];
     }
     if (!dorefine) {
+      p4est->local_num_quadrants += incount;
       continue;
     }
 
@@ -372,6 +381,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       }
     }
     tree->maxlevel = maxlevel;
+    p4est->local_num_quadrants += tree->quadrants->elem_count;
 
     P4EST_ASSERT (restpos == incount);
     P4EST_ASSERT (current == tree->quadrants->elem_count);
@@ -391,6 +401,19 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   }
 
   p4est_list_destroy (list);
+
+  /* compute global number of quadrants */
+  qlocal = p4est->local_num_quadrants;
+  p4est->global_num_quadrants = qlocal;
+#ifdef HAVE_MPI
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
+                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
+#endif
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
 }
 
 /* EOF p4est.c */

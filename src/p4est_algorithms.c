@@ -541,6 +541,53 @@ p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
   }
 }
 
+int
+p4est_is_valid (p4est_t * p4est)
+{
+  int                 i;
+  int8_t              maxlevel;
+  int32_t             j, nquadrants, lquadrants, perlevel;
+  p4est_tree_t       *tree;
+
+  lquadrants = 0;
+  for (j = 0; j < p4est->trees->elem_count; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+    if (!p4est_tree_is_complete (tree)) {
+      return 0;
+    }
+    if ((j < p4est->first_local_tree || j > p4est->last_local_tree) &&
+        tree->quadrants->elem_count > 0) {
+      return 0;
+    }
+
+    maxlevel = 0;
+    nquadrants = 0;
+    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+      perlevel = tree->quadrants_per_level[i];
+
+      P4EST_ASSERT (perlevel >= 0);
+      nquadrants += perlevel;
+      if (perlevel > 0) {
+        maxlevel = (int8_t) i;
+      }
+    }
+    lquadrants += nquadrants;
+
+    if (maxlevel != tree->maxlevel) {
+      return 0;
+    }
+    if (nquadrants != tree->quadrants->elem_count) {
+      return 0;
+    }
+  }
+
+  if (lquadrants != p4est->local_num_quadrants) {
+    return 0;
+  }
+
+  return 1;
+}
+
 /* here come the heavyweight algorithms */
 
 void
