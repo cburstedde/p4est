@@ -10,6 +10,12 @@ AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_HEADER([src/p4est_config.h])
 AM_INIT_AUTOMAKE(1.8.2)
 
+# Configure switches
+P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
+                 [P4EST_VTK_BINARY])
+P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
+                 [P4EST_VTK_COMPRESSION])
+
 # General settings.
 AC_CANONICAL_HOST
 AC_GNU_SOURCE
@@ -28,6 +34,7 @@ echo "| Checking for libraries"
 echo "o----------------------------------"
 
 P4EST_REQUIRE_LIB([m], [fabs])
+P4EST_REQUIRE_LIB([z], [compress2])
 
 echo "o----------------------------------"
 echo "| Checking headers and functions"
