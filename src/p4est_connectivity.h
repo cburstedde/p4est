@@ -1,6 +1,7 @@
 /*
   This file is part of p4est.
-  p4est is a C library to manage a parallel collection of quadtrees and/or octrees.
+  p4est is a C library to manage a parallel collection of quadtrees and/or
+  octrees.
 
   Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
 
