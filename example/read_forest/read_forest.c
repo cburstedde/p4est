@@ -133,7 +133,7 @@ main (int argc, char **argv)
   /* Print the connectivity */
 
   if (rank == 0) {
-    p4est_connectivity_print (connectivity);
+    p4est_connectivity_print (connectivity, stdout);
   }
 
   p4est = p4est_new (mpicomm, stdout, connectivity,

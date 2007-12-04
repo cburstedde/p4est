@@ -87,8 +87,17 @@
 int                 p4est_connectivity_read (const char *filename,
                                              p4est_connectivity_t **
                                              connectivity);
-
-void                p4est_connectivity_print (p4est_connectivity_t
-                                              * connectivity);
+/** Prints a forest connectivity file
+ *
+ * This function prints a connectivity structure to a file stream.
+ *
+ * \param [in]  connectivity allocates a connectivity structure
+ *                           that is returned filled with the info
+ *                           from the file \a filename
+ * \param [out] nout         stream that the connectivity file is printed to.
+ *
+ */
+void                p4est_connectivity_print (p4est_connectivity_t *
+                                              connectivity, FILE * nout);
 
 #endif /* !__P4EST_FILE_H__ */

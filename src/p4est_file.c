@@ -300,7 +300,7 @@ p4est_connectivity_read (const char *filename,
 }
 
 void
-p4est_connectivity_print (p4est_connectivity_t * connectivity)
+p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
 {
   int                 k, num_trees, num_vertices;
   int32_t            *tree_to_vertex, *tree_to_tree;
@@ -312,36 +312,36 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity)
   tree_to_tree = connectivity->tree_to_tree;
   tree_to_face = connectivity->tree_to_face;
 
-  fprintf (stdout, "[Forest Info]\n");
-  fprintf (stdout, "ver = 0.0.1  # Version of the forest file\n");
-  fprintf (stdout, "Nk  = %d      # Number of elements\n", num_trees);
-  fprintf (stdout, "Nv  = %d      # Number of mesh vertices\n", num_vertices);
-  fprintf (stdout, "Net = 0      # Number of element tags\n");
-  fprintf (stdout, "Nft = 0      # Number of face tags\n");
-  fprintf (stdout, "Ncf = 0      # Number of curved faces\n");
-  fprintf (stdout, "Nct = 0      # Number of curved types\n");
-  fprintf (stdout, "\n");
-  fprintf (stdout, "[Coordinates of Element Vertices]\n");
-  fprintf (stdout, "[Element to Vertex]\n");
+  fprintf (nout, "[Forest Info]\n");
+  fprintf (nout, "ver = 0.0.1  # Version of the forest file\n");
+  fprintf (nout, "Nk  = %d      # Number of elements\n", num_trees);
+  fprintf (nout, "Nv  = %d      # Number of mesh vertices\n", num_vertices);
+  fprintf (nout, "Net = 0      # Number of element tags\n");
+  fprintf (nout, "Nft = 0      # Number of face tags\n");
+  fprintf (nout, "Ncf = 0      # Number of curved faces\n");
+  fprintf (nout, "Nct = 0      # Number of curved types\n");
+  fprintf (nout, "\n");
+  fprintf (nout, "[Coordinates of Element Vertices]\n");
+  fprintf (nout, "[Element to Vertex]\n");
   for (k = 0; k < num_trees; ++k)
     printf ("    %d    %d    %d    %d    %d\n",
             k + 1, tree_to_vertex[4 * k + 0] + 1,
             tree_to_vertex[4 * k + 1] + 1, tree_to_vertex[4 * k + 2] + 1,
             tree_to_vertex[4 * k + 3] + 1);
-  fprintf (stdout, "[Element to Element]\n");
+  fprintf (nout, "[Element to Element]\n");
   for (k = 0; k < num_trees; ++k)
     printf ("    %d    %d    %d    %d    %d\n",
             k + 1, tree_to_tree[4 * k + 0] + 1, tree_to_tree[4 * k + 1] + 1,
             tree_to_tree[4 * k + 2] + 1, tree_to_tree[4 * k + 3] + 1);
-  fprintf (stdout, "[Element to Face]\n");
+  fprintf (nout, "[Element to Face]\n");
   for (k = 0; k < num_trees; ++k)
     printf ("    %d    %d    %d    %d    %d\n",
             k + 1, tree_to_face[4 * k + 0] + 1, tree_to_face[4 * k + 1] + 1,
             tree_to_face[4 * k + 2] + 1, tree_to_face[4 * k + 3] + 1);
-  fprintf (stdout, "[Element Tags]\n");
-  fprintf (stdout, "[Face Tags]\n");
-  fprintf (stdout, "[Curved Faces]\n");
-  fprintf (stdout, "[Curved Types]\n");
+  fprintf (nout, "[Element Tags]\n");
+  fprintf (nout, "[Face Tags]\n");
+  fprintf (nout, "[Curved Faces]\n");
+  fprintf (nout, "[Curved Types]\n");
 }
 
 /* EOF p4est_file.h> */
