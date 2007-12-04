@@ -1,6 +1,7 @@
 /*
   This file is part of p4est.
-  p4est is a C library to manage a parallel collection of quadtrees and/or octrees.
+  p4est is a C library to manage a parallel collection of quadtrees and/or
+  octrees.
 
   Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
 
@@ -16,6 +17,11 @@
 
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/*
+  The files p4est_obstack.{c,h} have been copied from the GNU C library 2.7,
+  Copyright (C) Free Software Foundation, Inc., and modified for p4est.
 */
 
 Contact:

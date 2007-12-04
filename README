@@ -1,3 +1,5 @@
-p4est - a C library to manage a parallel collection of quadtrees
+This is the README file for p4est.
+p4est is a C library to manage a parallel collection of quadtrees and/or
+octrees.
 
-See more documentation in the doc subdirectory
+See more documentation in the doc subdirectory.
