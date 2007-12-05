@@ -11,6 +11,8 @@ AC_CONFIG_HEADER([src/p4est_config.h])
 AM_INIT_AUTOMAKE(1.8.2)
 
 # Configure switches
+P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
+                 [P4EST_VTK_DOUBLES])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
                  [P4EST_VTK_BINARY])
 P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],

@@ -23,6 +23,7 @@
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 #include <p4est_file.h>
+#include <p4est_vtk.h>
 
 #include <unistd.h>
 
@@ -99,9 +100,9 @@ main (int argc, char **argv)
 
   int                 fd;
   size_t              meshlength;
-  size_t              templatelength;
 
 #ifdef HAVE_MPI
+  size_t              templatelength;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   P4EST_CHECK_MPI (mpiret);
 #endif
@@ -141,6 +142,7 @@ main (int argc, char **argv)
                      sizeof (user_data_t), init_fn);
   p4est_tree_print (p4est_array_index (p4est->trees, 0),
                     p4est->mpirank, stdout);
+  p4est_vtk_write_file (p4est, "mesh");
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

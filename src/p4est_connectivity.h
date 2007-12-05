@@ -29,7 +29,11 @@ typedef struct p4est_connectivity
   int32_t             num_trees;
   int32_t             num_vertices;
   int32_t            *tree_to_vertex;   /* allocated [0][0]..[0][3]..
-                                           [num_trees-1][0]..[num_trees-1][3] */
+                                           [num_trees-1][0]..[num_trees-1][3]
+
+                                           Note: This is stored in
+                                           right-hand-rule order.
+                                         */
   int32_t            *tree_to_tree;     /* allocated [0][0]..[0][3]..
                                            [num_trees-1][0]..[num_trees-1][3] */
   int8_t             *tree_to_face;     /* allocated [0][0]..[0][3]..
