@@ -63,6 +63,13 @@ int                 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
 int                 p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
                                                  const p4est_quadrant_t * q2);
 
+/** Test if four quadrants are siblings in Morton ordering.
+ */
+int                 p4est_quadrant_is_family (const p4est_quadrant_t * q0,
+                                              const p4est_quadrant_t * q1,
+                                              const p4est_quadrant_t * q2,
+                                              const p4est_quadrant_t * q3);
+
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Possible child quadrant.

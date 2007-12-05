@@ -102,10 +102,20 @@ typedef void        (*p4est_init_t) (p4est_t * p4est, int32_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for refinement.
- * \return Returns 1 if the quadrant shall be refined
+ * \return Returns 1 if the quadrant shall be refined.
  */
 typedef int         (*p4est_refine_t) (p4est_t * p4est, int32_t which_tree,
                                        p4est_quadrant_t * quadrant);
+
+/** Callback function prototype to decide for coarsening.
+ * The quadrants are siblings enumerated in Morton ordering.
+ * \return Returns 1 if the quadrants shall be replaced with their parent.
+ */
+typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
+                                        p4est_quadrant_t * q0,
+                                        p4est_quadrant_t * q1,
+                                        p4est_quadrant_t * q2,
+                                        p4est_quadrant_t * q3);
 
 /** Create a new p4est.
  *
@@ -144,5 +154,15 @@ void                p4est_destroy (p4est_t * p4est);
 void                p4est_refine (p4est_t * p4est,
                                   p4est_refine_t refine_fn,
                                   p4est_init_t init_fn);
+
+/** Coarsen a forest.
+ * \param [in] coarsen_fn Callback function to decide
+ *                        if quadrants get coarsened
+ * \param [in] init_fn   Callback function to initialize the user_data
+ *                       which is already allocated automatically.
+ */
+void                p4est_coarsen (p4est_t * p4est,
+                                   p4est_coarsen_t coarsen_fn,
+                                   p4est_init_t init_fn);
 
 #endif /* !__P4EST_H__ */

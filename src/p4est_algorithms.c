@@ -147,6 +147,30 @@ p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
 }
 
 int
+p4est_quadrant_is_family (const p4est_quadrant_t * q0,
+                          const p4est_quadrant_t * q1,
+                          const p4est_quadrant_t * q2,
+                          const p4est_quadrant_t * q3)
+{
+  int32_t             inc;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q0));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q3));
+
+  if (q0->level != q1->level ||
+      q0->level != q2->level || q0->level != q3->level) {
+    return 0;
+  }
+
+  inc = (1 << (P4EST_MAXLEVEL - q0->level));
+  return ((q0->x + inc == q1->x && q0->y == q1->y) &&
+          (q0->x == q2->x && q0->y + inc == q2->y) &&
+          (q1->x == q3->x && q2->y == q3->y));
+}
+
+int
 p4est_quadrant_is_parent (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {

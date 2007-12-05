@@ -416,4 +416,144 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   P4EST_ASSERT (p4est_is_valid (p4est));
 }
 
+void
+p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
+               p4est_init_t init_fn)
+{
+#ifdef HAVE_MPI
+  int                 mpiret;
+#endif
+  int                 k, data_pool_size;
+  int8_t              i, maxlevel;
+  int32_t             j, incount, removed;
+  int32_t             first, last, rest, before;
+  int64_t             qlocal;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *c[4];
+  p4est_quadrant_t   *cfirst, *clast;
+
+  p4est->global_num_quadrants = 0;
+
+  /* loop over all local trees */
+  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+    if (p4est->user_data_pool != NULL) {
+      data_pool_size = p4est->user_data_pool->elem_count;
+    }
+    removed = 0;
+
+    /* initial log message for this tree */
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Into coarsen tree %d with %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+
+    /* Initialize array indices.
+       If children are coarsened, the array will have an empty window.
+       first   index of the first child to be considered
+       last    index of the last child before the hole in the array
+       before  number of children before the hole in the array
+       rest    index of the first child after the hole in the array
+     */
+    first = last = 0;
+    before = rest = 1;
+
+    /* run through the array and coarsen recursively */
+    incount = tree->quadrants->elem_count;
+    while (rest + 3 - before < incount) {
+      for (k = 0; k < 4; ++k) {
+        if (k < before) {
+          c[k] = p4est_array_index (tree->quadrants, first + k);
+        }
+        else {
+          c[k] = p4est_array_index (tree->quadrants, rest + k - before);
+        }
+      }
+      if (p4est_quadrant_is_family (c[0], c[1], c[2], c[3]) &&
+          coarsen_fn (p4est, j, c[0], c[1], c[2], c[3])) {
+        /* coarsen now */
+        for (k = 0; k < 4; ++k) {
+          p4est_quadrant_free_data (p4est, c[k]);
+        }
+        tree->quadrants_per_level[c[0]->level] -= 4;
+        cfirst = c[0];
+        p4est_quadrant_parent (c[0], cfirst);
+        p4est_quadrant_init_data (p4est, j, cfirst, init_fn);
+        tree->quadrants_per_level[cfirst->level] += 1;
+        p4est->local_num_quadrants -= 3;
+        removed += 3;
+
+        rest += 4 - before;
+        last = first;
+        first -= p4est_quadrant_child_id (cfirst);
+        first = P4EST_MAX (first, 0);
+      }
+      else {
+        /* do nothing, just move the counters and the hole */
+        ++first;
+        if (first > last) {
+          if (first != rest) {
+            cfirst = p4est_array_index (tree->quadrants, first);
+            clast = p4est_array_index (tree->quadrants, rest);
+            *cfirst = *clast;
+          }
+          last = first;
+          ++rest;
+        }
+      }
+      before = last - first + 1;
+    }
+
+    /* adjust final array size */
+    first = last;
+    if (first + 1 < rest) {
+      while (rest < incount) {
+        ++first;
+        cfirst = p4est_array_index (tree->quadrants, first);
+        clast = p4est_array_index (tree->quadrants, rest);
+        *cfirst = *clast;
+        ++rest;
+      }
+      p4est_array_resize (tree->quadrants, first + 1);
+    }
+
+    /* compute maximum level */
+    maxlevel = 0;
+    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+      P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
+      if (tree->quadrants_per_level[i] > 0) {
+        maxlevel = i;
+      }
+    }
+    tree->maxlevel = maxlevel;
+
+    /* do some sanity checks */
+    P4EST_ASSERT (tree->quadrants->elem_count == incount - removed);
+    if (p4est->user_data_pool != NULL) {
+      P4EST_ASSERT (data_pool_size - removed ==
+                    p4est->user_data_pool->elem_count);
+    }
+    P4EST_ASSERT (p4est_tree_is_sorted (tree));
+    P4EST_ASSERT (p4est_tree_is_complete (tree));
+
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Done coarsen tree %d now %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+  }
+
+  /* compute global number of quadrants */
+  qlocal = p4est->local_num_quadrants;
+  p4est->global_num_quadrants = qlocal;
+#ifdef HAVE_MPI
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
+                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
+#endif
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+}
+
 /* EOF p4est.c */
