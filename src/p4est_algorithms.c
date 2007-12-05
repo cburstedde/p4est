@@ -487,6 +487,31 @@ p4est_tree_is_sorted (p4est_tree_t * tree)
 }
 
 int
+p4est_tree_is_linear (p4est_tree_t * tree)
+{
+  int                 i;
+  p4est_quadrant_t   *q1, *q2;
+
+  if (tree->quadrants->elem_count <= 1) {
+    return 1;
+  }
+
+  q1 = p4est_array_index (tree->quadrants, 0);
+  for (i = 1; i < tree->quadrants->elem_count; ++i) {
+    q2 = p4est_array_index (tree->quadrants, i);
+    if (p4est_quadrant_compare (q1, q2) >= 0) {
+      return 0;
+    }
+    if (p4est_quadrant_is_ancestor (q1, q2)) {
+      return 0;
+    }
+    q1 = q2;
+  }
+
+  return 1;
+}
+
+int
 p4est_tree_is_complete (p4est_tree_t * tree)
 {
   int                 i;
@@ -553,12 +578,12 @@ p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
           fprintf (nout, " N%d", childid);
         }
         else {
-          fprintf (nout, " Q%d", childid);
+          fprintf (nout, " q%d", childid);
         }
       }
     }
     else {
-      fprintf (nout, " Q%d", childid);
+      fprintf (nout, " F%d", childid);
     }
     fputs ("\n", nout);
     q1 = q2;
@@ -754,6 +779,78 @@ p4est_complete_region (p4est_t * p4est,
                   p4est->user_data_pool->elem_count + (include_q1 ? 1 : 0)
                   + (include_q2 ? 1 : 0));
   }
+}
+
+void
+p4est_linearize (p4est_t * p4est, p4est_tree_t * tree)
+{
+  int                 data_pool_size;
+  int                 incount, removed;
+  int                 current, rest, num_quadrants;
+  int8_t              i, maxlevel;
+  p4est_quadrant_t   *q1, *q2;
+
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+
+  incount = tree->quadrants->elem_count;
+  if (incount <= 1) {
+    return;
+  }
+  if (p4est->user_data_pool != NULL) {
+    data_pool_size = p4est->user_data_pool->elem_count;
+  }
+  removed = 0;
+
+  /* run through the array and remove ancestors */
+  current = 0;
+  rest = current + 1;
+  q1 = p4est_array_index (tree->quadrants, current);
+  while (rest < incount) {
+    q2 = p4est_array_index (tree->quadrants, rest);
+    if (p4est_quadrant_is_ancestor (q1, q2)) {
+      --tree->quadrants_per_level[q1->level];
+      p4est_quadrant_free_data (p4est, q1);
+      *q1 = *q2;
+      ++removed;
+      ++rest;
+    }
+    else {
+      ++current;
+      if (current < rest) {
+        q1 = p4est_array_index (tree->quadrants, current);
+        *q1 = *q2;
+      }
+      else {
+        q1 = q2;
+      }
+      ++rest;
+    }
+  }
+
+  /* resize array */
+  p4est_array_resize (tree->quadrants, current + 1);
+
+  /* update level counters */
+  maxlevel = 0;
+  num_quadrants = 0;
+  for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+    P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
+    num_quadrants += tree->quadrants_per_level[i];
+    if (tree->quadrants_per_level[i] > 0) {
+      maxlevel = i;
+    }
+  }
+  tree->maxlevel = maxlevel;
+
+  /* sanity checks */
+  P4EST_ASSERT (num_quadrants == tree->quadrants->elem_count);
+  P4EST_ASSERT (tree->quadrants->elem_count == incount - removed);
+  if (p4est->user_data_pool != NULL) {
+    P4EST_ASSERT (data_pool_size - removed ==
+                  p4est->user_data_pool->elem_count);
+  }
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+  P4EST_ASSERT (p4est_tree_is_linear (tree));
 }
 
 /* EOF p4est_algorithms.c */

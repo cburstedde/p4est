@@ -202,22 +202,29 @@ void                p4est_quadrant_free_data (p4est_t * p4est,
  */
 int                 p4est_tree_is_sorted (p4est_tree_t * tree);
 
-/** Test if a tree is sorted and complete in Morton ordering.
+/** Test if a tree is sorted in Morton ordering and linear.
+ * \return Returns 1 if linear, 0 otherwise.
+ * \note Linear means that the tree has no overlaps.
+ */
+int                 p4est_tree_is_linear (p4est_tree_t * tree);
+
+/** Test if a tree is sorted in Morton ordering and complete.
  * \return Returns 1 if complete, 0 otherwise.
- * \note Complete means that the tree has no holes and no overlap.
+ * \note Complete means that the tree has no holes and no overlaps.
  */
 int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
  * The string denotes the relation to the previous quadrant and can be:
+ *   Fn  for the first quadrant in the tree with child id n
  *   I   for identical quadrants
  *   R   for a quadrant that with smaller Morton index
  *   Cn  for child id n
  *   Sn  for sibling with child id n
  *   D   for a descendent
  *   Nn   for a next quadrant in the tree with no holes in between and child id n
- *   Qn  for a general quadrant whose child id is n
+ *   qn  for a general quadrant whose child id is n
  * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.
  * \param [in] identifier  If >= 0, each line is prefixed by "[identifier] "
  * \param [in] nout        Stream to print to. May be NULL, then nothing happens.
@@ -237,15 +244,17 @@ int                 p4est_is_valid (p4est_t * p4est);
 
 /** Constructs a minimal linear octree between two octants.
  *
- * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros.
+ * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros
+ * with the additional improvements that we do not require sorting
+ * and the runtime is O(N).
  *
  * \pre \a q1 < \a q2 in the Morton ordering.
  *
- * \param [in] p43est used for the memory polls and quadrant init.
+ * \param [in]  p4est used for the memory pools and quadrant init.
  * \param [in]  q1         First input quadrant.  The user data will not change.
- * \param [in]  include_q1 Flag is set to 1 if q1 is included.
+ * \param [in]  include_q1 Flag is set to true if q1 is included.
  * \param [in]  q2         First input quadrant.  The user data will not change.
- * \param [in]  include_q2 Flag is set to 1 if q2 is included.
+ * \param [in]  include_q2 Flag is set to true if q2 is included.
  * \param [out] tree       Initialized tree with zero elements.
  * \param [in]  which_tree The 0-based index of \a tree which is needed for
  *                         the \c p4est_quadrant_init_data routine.
@@ -260,5 +269,15 @@ void                p4est_complete_region (p4est_t * p4est,
                                            p4est_tree_t * tree,
                                            int32_t which_tree,
                                            p4est_init_t init_fn);
+
+/** Remove overlaps from a sorted list of quadrants.
+ *
+ * This is alogorithm 8 from H. Sundar, R.S. Sampath and G. Biros
+ * with the additional improvement that it works in-place.
+ *
+ * \param [in]     p4est used for the memory pool and quadrant free.
+ * \param [in,out] tree   A sorted tree to be linearized in-place.
+ */
+void                p4est_linearize (p4est_t * p4est, p4est_tree_t * tree);
 
 #endif /* !__P4EST_ALGORITHMS_H__ */

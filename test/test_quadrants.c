@@ -77,20 +77,20 @@ coarsen_all (p4est_t * p4est, int32_t which_tree,
 int
 main (void)
 {
-  int                 i, j;
+  int                 i, j, incount;
   int8_t              level;
   int64_t             index1, index2;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
   p4est_t            *p4est2;
-  p4est_tree_t       *t1, *t2;
+  p4est_tree_t       *t1, *t2, tree;
   p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
   p4est_quadrant_t    c0, c1, c2, c3;
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est1 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 16, NULL);
+  p4est1 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 0, NULL);
   p4est2 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 8, NULL);
 
   /* refine the second tree to a uniform level */
@@ -127,9 +127,12 @@ main (void)
 
     /* test the is_family function */
     p4est_quadrant_children (q1, &c0, &c1, &c2, &c3);
-    P4EST_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3), "is_family");
-    P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c1, &c0, &c2, &c3), "is_family");
-    P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c0, &c0, &c1, &c2), "is_family");
+    P4EST_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3),
+                       "is_family");
+    P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c1, &c0, &c2, &c3),
+                       "is_family");
+    P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c0, &c0, &c1, &c2),
+                       "is_family");
 
     /* test t1 against itself */
     for (j = 0; j < t1->quadrants->elem_count; ++j) {
@@ -211,8 +214,52 @@ main (void)
 
   /* test the coarsen function */
   p4est_coarsen (p4est1, coarsen_none, NULL);
-  p4est_coarsen (p4est1, coarsen_all, NULL);  
+  p4est_coarsen (p4est1, coarsen_all, NULL);
   p4est_coarsen (p4est2, coarsen_some, NULL);
+
+  /* test the linearize algorithm */
+  incount = t2->quadrants->elem_count;
+  p4est_linearize (p4est2, t2);
+  P4EST_CHECK_ABORT (incount == t2->quadrants->elem_count, "linearize");
+
+  /* this is user_data neutral only when p4est1->data_size == 0 */
+  tree.quadrants = p4est_array_new (sizeof (p4est_quadrant_t));
+  p4est_array_resize (tree.quadrants, 18);
+  q1 = p4est_array_index (tree.quadrants, 0);
+  q2 = p4est_array_index (t2->quadrants, 0);
+  *q1 = *q2;
+  q2 = p4est_array_index (t2->quadrants, 1);
+  for (i = 0; i < 3; ++i) {
+    q1 = p4est_array_index (tree.quadrants, i + 1);
+    *q1 = *q2;
+    q1->level += (int8_t) i;
+  }
+  for (i = 0; i < 10; ++i) {
+    q1 = p4est_array_index (tree.quadrants, i + 4);
+    q2 = p4est_array_index (t2->quadrants, i + 3);
+    *q1 = *q2;
+    q1->level += (int8_t) i;
+  }
+  for (i = 0; i < 4; ++i) {
+    q1 = p4est_array_index (tree.quadrants, i + 14);
+    q2 = p4est_array_index (t2->quadrants, i + 12);
+    *q1 = *q2;
+    q1->level += (int8_t) (10 + i);
+  }
+  tree.maxlevel = 0;
+  for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+    tree.quadrants_per_level[i] = 0;
+  }
+  incount = tree.quadrants->elem_count;
+  for (i = 0; i < incount; ++i) {
+    q1 = p4est_array_index (tree.quadrants, i);
+    ++tree.quadrants_per_level[q1->level];
+    tree.maxlevel = (int8_t) P4EST_MAX (tree.maxlevel, q1->level);
+  }
+  P4EST_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
+  p4est_linearize (p4est1, &tree);
+  P4EST_CHECK_ABORT (incount - 3 == tree.quadrants->elem_count, "linearize");
+  p4est_array_destroy (tree.quadrants);
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est1);

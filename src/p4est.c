@@ -269,6 +269,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   p4est_quadrant_t   *c0, *c1, *c2, *c3;
   int                *key;
 
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
   /*
      q points to a quadrant that is an array member
      qalloc is a quadrant that has been allocated through quadrant_pool
@@ -278,7 +280,6 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   key = &dorefine;              /* use this to create a unique user_data pointer */
   list = p4est_list_new (NULL);
   p4est->local_num_quadrants = 0;
-  p4est->global_num_quadrants = 0;
 
   /* loop over all local trees */
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
@@ -423,16 +424,17 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
-  int                 k, data_pool_size;
+  int                 k, couldbegood, data_pool_size;
+  int                 incount, removed, num_quadrants;
+  int                 first, last, rest, before;
   int8_t              i, maxlevel;
-  int32_t             j, incount, removed;
-  int32_t             first, last, rest, before;
+  int32_t             j;
   int64_t             qlocal;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *c[4];
   p4est_quadrant_t   *cfirst, *clast;
 
-  p4est->global_num_quadrants = 0;
+  P4EST_ASSERT (p4est_is_valid (p4est));
 
   /* loop over all local trees */
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
@@ -461,15 +463,21 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     /* run through the array and coarsen recursively */
     incount = tree->quadrants->elem_count;
     while (rest + 3 - before < incount) {
+      couldbegood = 1;
       for (k = 0; k < 4; ++k) {
         if (k < before) {
           c[k] = p4est_array_index (tree->quadrants, first + k);
+          if (k != p4est_quadrant_child_id (c[k])) {
+            couldbegood = 0;
+            break;
+          }
         }
         else {
           c[k] = p4est_array_index (tree->quadrants, rest + k - before);
         }
       }
-      if (p4est_quadrant_is_family (c[0], c[1], c[2], c[3]) &&
+      if (couldbegood &&
+          p4est_quadrant_is_family (c[0], c[1], c[2], c[3]) &&
           coarsen_fn (p4est, j, c[0], c[1], c[2], c[3])) {
         /* coarsen now */
         for (k = 0; k < 4; ++k) {
@@ -519,8 +527,10 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 
     /* compute maximum level */
     maxlevel = 0;
+    num_quadrants = 0;
     for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
       P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
+      num_quadrants += tree->quadrants_per_level[i];
       if (tree->quadrants_per_level[i] > 0) {
         maxlevel = i;
       }
@@ -528,6 +538,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     tree->maxlevel = maxlevel;
 
     /* do some sanity checks */
+    P4EST_ASSERT (num_quadrants == tree->quadrants->elem_count);
     P4EST_ASSERT (tree->quadrants->elem_count == incount - removed);
     if (p4est->user_data_pool != NULL) {
       P4EST_ASSERT (data_pool_size - removed ==
