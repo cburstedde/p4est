@@ -20,11 +20,8 @@
 */
 
 #include <p4est.h>
-#include <p4est_algorithms.h>
 #include <p4est_base.h>
 #include <p4est_file.h>
-
-#include <unistd.h>
 
 int
 main (int argc, char **argv)
@@ -83,7 +80,7 @@ main (int argc, char **argv)
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
   int                 fd;
-  size_t              meshlength;
+  FILE               *outfile;
   size_t              templatelength;
   const double        EPS = 2.22045e-16;
 
@@ -117,16 +114,19 @@ main (int argc, char **argv)
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
     fd = mkstemp (template);
-    P4EST_CHECK_ABORT (fd != -1, "Unable to open temp mesh file.");
+    P4EST_CHECK_ABORT (fd != -1, "Unable to create temp mesh file.");
+
+    /* Promote the file descriptor to a FILE stream */
+    outfile = fdopen (fd, "wb");
+    P4EST_CHECK_ABORT (outfile != NULL, "Unable to fdopen temp mesh file.");
 
     /* Write out to the mesh to the temporary file */
-    meshlength = strlen (mesh);
-    retval = write (fd, mesh, meshlength);
-    P4EST_CHECK_ABORT (retval != -1, "Unable to write to temp mesh file.");
+    retval = fputs (mesh, outfile);
+    P4EST_CHECK_ABORT (retval != EOF, "Unable to fputs temp mesh file.");
 
     /* Close the temporary file */
-    retval = close (fd);
-    P4EST_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
+    retval = fclose (outfile);
+    P4EST_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
   }
 
 #ifdef HAVE_MPI
@@ -160,9 +160,9 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
 
   if (rank == 0) {
-    /* unlink the temporary file */
-    retval = unlink (template);
-    P4EST_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
+    /* remove the temporary file */
+    retval = remove (template);
+    P4EST_CHECK_ABORT (!retval, "Unable to remove the temp mesh file.");
   }
 
   /* clean up and exit */

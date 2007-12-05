@@ -3,9 +3,7 @@
    * Algo 3
    * Algo 4 weighted? blocked
    * Algo 5 weighted linear
-   * Algo 8 (carsten)
  * doxygen
- * coarsening (carsten)
  * test cases
  * vtk output
    * simple
