@@ -1,6 +1,8 @@
 
 ## Makefile.am in src
 
+SUBDIRS = . libb64
+
 lib_LIBRARIES = libp4est.a
 libp4est_a_SOURCES = \
 	p4est_base.h p4est_base.c p4est_mpi_dummy.h \

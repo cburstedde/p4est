@@ -67,6 +67,7 @@ echo "o----------------------------------"
 # And the end.
 AC_CONFIG_FILES([Makefile
                  src/Makefile
+                 src/libb64/Makefile
                  test/Makefile
                  example/Makefile
                  example/read_forest/Makefile
