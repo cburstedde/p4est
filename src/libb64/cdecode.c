@@ -67,7 +67,8 @@ base64_decode_block (const char *code_in, const int length_in,
         }
         fragment = (char) base64_decode_value (*codechar++);
       } while (fragment < 0);
-      *plainchar++ = (char) (*plainchar | (char) ((fragment & 0x030) >> 4));
+      *plainchar = (char) (*plainchar | ((fragment & 0x030) >> 4));
+      ++plainchar;
       *plainchar = (char) ((fragment & 0x00f) << 4);
   case step_c:
       do {
@@ -78,7 +79,8 @@ base64_decode_block (const char *code_in, const int length_in,
         }
         fragment = (char) base64_decode_value (*codechar++);
       } while (fragment < 0);
-      *plainchar++ = (char) (*plainchar | (char) ((fragment & 0x03c) >> 2));
+      *plainchar = (char) (*plainchar | ((fragment & 0x03c) >> 2));
+      ++plainchar;
       *plainchar = (char) ((fragment & 0x003) << 6);
   case step_d:
       do {
@@ -89,7 +91,8 @@ base64_decode_block (const char *code_in, const int length_in,
         }
         fragment = (char) base64_decode_value (*codechar++);
       } while (fragment < 0);
-      *plainchar++ = (char) (*plainchar | (char) (fragment & 0x03f));
+      *plainchar = (char) (*plainchar | (fragment & 0x03f));
+      ++plainchar;
     }
   }
   /* control should not reach here */

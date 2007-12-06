@@ -51,6 +51,7 @@
 #define P4EST_BACKTRACE
 #endif
 
+#define P4EST_NOOP do { ; } while (0)
 #define P4EST_CHECK_ABORT(c,s)                     \
   do {                                             \
     if (!(c)) {                                    \
@@ -63,7 +64,12 @@
 #define P4EST_CHECK_REALLOC(p,n) P4EST_CHECK_ABORT (((p) != NULL || (n) == 0), \
                                                     "Allocation")
 #define P4EST_CHECK_MPI(r) P4EST_CHECK_ABORT ((r) == MPI_SUCCESS, "MPI operation")
+#ifdef P4EST_HAVE_DEBUG
 #define P4EST_ASSERT(c) P4EST_CHECK_ABORT ((c), "Assertion '" #c "'")
+#else
+#define P4EST_ASSERT(c) P4EST_NOOP
+#endif
+#define P4EST_ASSERT_NOT_REACHED() P4EST_CHECK_ABORT (0, "Unreachable code")
 
 #define P4EST_ALLOC(t,n) (t *) p4est_malloc ((n) * sizeof(t))
 #define P4EST_ALLOC_ZERO(t,n) (t *) p4est_calloc ((n), sizeof(t))

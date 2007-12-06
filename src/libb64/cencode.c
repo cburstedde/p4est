@@ -63,7 +63,7 @@ base64_encode_block (const char *plaintext_in, int length_in, char *code_out,
         return codechar - code_out;
       }
       fragment = *plainchar++;
-      result = (char) (result | (char) ((fragment & 0x0f0) >> 4));
+      result = (char) (result | ((fragment & 0x0f0) >> 4));
       *codechar++ = base64_encode_value (result);
       result = (char) ((fragment & 0x00f) << 2);
   case step_C:
@@ -73,7 +73,7 @@ base64_encode_block (const char *plaintext_in, int length_in, char *code_out,
         return codechar - code_out;
       }
       fragment = *plainchar++;
-      result = (char) (result | (char) ((fragment & 0x0c0) >> 6));
+      result = (char) (result | ((fragment & 0x0c0) >> 6));
       *codechar++ = base64_encode_value (result);
       result = (char) ((fragment & 0x03f) >> 0);
       *codechar++ = base64_encode_value (result);

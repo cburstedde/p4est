@@ -81,7 +81,9 @@ main (int argc, char **argv)
 
   int                 fd;
   FILE               *outfile;
+#ifdef HAVE_MPI
   size_t              templatelength;
+#endif
   const double        EPS = 2.22045e-16;
 
   int32_t             i;
@@ -174,6 +176,8 @@ main (int argc, char **argv)
     P4EST_CHECK_MPI (mpiret);
   }
 #endif
+
+  return 0;
 }
 
 /* EOF test_file.c */

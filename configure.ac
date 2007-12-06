@@ -11,6 +11,7 @@ AC_CONFIG_HEADER([src/p4est_config.h])
 AM_INIT_AUTOMAKE(1.8.2)
 
 # Configure switches
+P4EST_ARG_ENABLE([debug], [enable debug mode], [P4EST_HAVE_DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [P4EST_VTK_DOUBLES])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],

@@ -98,7 +98,6 @@ main (int argc, char **argv)
 
   int                 fd;
   FILE               *outfile;
-  size_t              meshlength;
 
 #ifdef HAVE_MPI
   size_t              templatelength;
