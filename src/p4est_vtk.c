@@ -207,7 +207,7 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
 #endif /* P4EST_VTK_BINARY */
 
 void
-p4est_vtk_write_file (p4est_t * p4est, char *baseName)
+p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
 {
   int                 retval;
 
@@ -218,7 +218,7 @@ p4est_vtk_write_file (p4est_t * p4est, char *baseName)
 }
 
 int
-p4est_vtk_write_header (p4est_t * p4est, char *baseName)
+p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 {
   int                 i, j;
 #ifdef P4EST_VTK_ASCII
@@ -588,7 +588,7 @@ p4est_vtk_write_header (p4est_t * p4est, char *baseName)
 }
 
 int
-p4est_vtk_write_footer (p4est_t * p4est, char *baseName)
+p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
 {
   char                vtufilename[BUFSIZ];
   int                 p;

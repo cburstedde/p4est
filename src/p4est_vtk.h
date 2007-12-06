@@ -35,7 +35,8 @@
  *                   the proc number appended to it (i.e., the
  *                   output file will be baseName_procNum.vtu).
  */
-void                p4est_vtk_write_file (p4est_t * p4est, char *baseName);
+void                p4est_vtk_write_file (p4est_t * p4est,
+                                          const char *baseName);
 
 /** This will write the header of the vtu file.
  *
@@ -56,7 +57,8 @@ void                p4est_vtk_write_file (p4est_t * p4est, char *baseName);
  *
  *  \return         This returns 0 if no error and -1 if there is an error.
  */
-int                 p4est_vtk_write_header (p4est_t * p4est, char *baseName);
+int                 p4est_vtk_write_header (p4est_t * p4est,
+                                            const char *baseName);
 
 /** This will write the footer of the vtu file.
  *
@@ -77,6 +79,7 @@ int                 p4est_vtk_write_header (p4est_t * p4est, char *baseName);
  *
  *  \return         This returns 0 if no error and -1 if there is an error.
  */
-int                 p4est_vtk_write_footer (p4est_t * p4est, char *baseName);
+int                 p4est_vtk_write_footer (p4est_t * p4est,
+                                            const char *baseName);
 
 #endif /* !__P4EST_VTK_H__ */
