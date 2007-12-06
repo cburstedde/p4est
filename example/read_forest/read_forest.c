@@ -25,8 +25,6 @@
 #include <p4est_file.h>
 #include <p4est_vtk.h>
 
-#include <unistd.h>
-
 typedef struct
 {
   int32_t             a;
@@ -99,6 +97,7 @@ main (int argc, char **argv)
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
   int                 fd;
+  FILE               *outfile;
   size_t              meshlength;
 
 #ifdef HAVE_MPI
@@ -112,14 +111,17 @@ main (int argc, char **argv)
     fd = mkstemp (template);
     P4EST_CHECK_ABORT (fd != -1, "Unable to open temp mesh file.");
 
+    /* Promote the file descriptor to a FILE stream */
+    outfile = fdopen (fd, "wb");
+    P4EST_CHECK_ABORT (outfile != NULL, "Unable to fdopen temp mesh file.");
+
     /* Write out to the mesh to the temporary file */
-    meshlength = strlen (mesh);
-    retval = write (fd, mesh, meshlength);
-    P4EST_CHECK_ABORT (retval != -1, "Unable to write to temp mesh file.");
+    retval = fputs (mesh, outfile);
+    P4EST_CHECK_ABORT (retval != EOF, "Unable to fputs temp mesh file.");
 
     /* Close the temporary file */
-    retval = close (fd);
-    P4EST_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
+    retval = fclose (outfile);
+    P4EST_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
   }
 
 #ifdef HAVE_MPI
@@ -150,7 +152,7 @@ main (int argc, char **argv)
 
   if (rank == 0) {
     /* unlink the temporary file */
-    retval = unlink (template);
+    retval = remove (template);
     P4EST_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
   }
 
