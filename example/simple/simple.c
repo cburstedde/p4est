@@ -21,6 +21,7 @@
 
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
+#include <p4est_vtk.h>
 
 typedef struct
 {
@@ -62,6 +63,7 @@ main (int argc, char **argv)
                      sizeof (user_data_t), init_fn);
   p4est_tree_print (p4est_array_index (p4est->trees, 0),
                     p4est->mpirank, stdout);
+  p4est_vtk_write_file (p4est, "mesh_simple");
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

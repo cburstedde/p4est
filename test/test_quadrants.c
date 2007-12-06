@@ -232,19 +232,19 @@ main (void)
   for (i = 0; i < 3; ++i) {
     q1 = p4est_array_index (tree.quadrants, i + 1);
     *q1 = *q2;
-    q1->level += (int8_t) i;
+    q1->level = (int8_t) (q1->level + i);
   }
   for (i = 0; i < 10; ++i) {
     q1 = p4est_array_index (tree.quadrants, i + 4);
     q2 = p4est_array_index (t2->quadrants, i + 3);
     *q1 = *q2;
-    q1->level += (int8_t) i;
+    q1->level = (int8_t) (q1->level + i);
   }
   for (i = 0; i < 4; ++i) {
     q1 = p4est_array_index (tree.quadrants, i + 14);
     q2 = p4est_array_index (t2->quadrants, i + 12);
     *q1 = *q2;
-    q1->level += (int8_t) (10 + i);
+    q1->level = (int8_t) (q1->level + 10 + i);
   }
   tree.maxlevel = 0;
   for (i = 0; i <= P4EST_MAXLEVEL; ++i) {

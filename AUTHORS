@@ -24,6 +24,11 @@
   Copyright (C) Free Software Foundation, Inc., and modified for p4est.
 */
 
+/*
+  The source files in src/libb64 have been copied from libb64 and modified.
+  libb64 is public domain software, see the LICENSE file in that directory.
+*/
+
 Contact:
 
 Carsten Burstedde <carsten@ices.utexas.edu>
