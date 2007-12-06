@@ -534,6 +534,38 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #endif
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </Cells>\n");
+  fprintf (vtufile, "      <CellData Scalars=\"mpirank\">\n");
+#ifdef P4EST_VTK_ASCII
+  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"mpirank\""
+           " format=\"ascii\">\n");
+  fprintf (vtufile, "         ");
+  for (i = 0, sk = 1; i < Ncells; ++i, ++sk) {
+    fprintf (vtufile, " %d", procRank);
+    if (!(sk % 20) && i != (Ncells - 1))
+      fprintf (vtufile, "\n         ");
+  }
+  fprintf (vtufile, "\n");
+#else
+  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"mpirank\""
+           " format=\"binary\">\n");
+  int32_data = P4EST_ALLOC (int32_t, Ncells);
+  P4EST_CHECK_ALLOC (int32_data);
+  for (i = 0; i < Ncells; ++i) {
+    int32_data[i] = procRank;
+  }
+  fprintf (vtufile, "          ");
+  retval = p4est_vtk_binary (vtufile, (char *) int32_data,
+                             sizeof (*int32_data) * Ncells);
+  P4EST_FREE (int32_data);
+  fprintf (vtufile, "\n");
+  if (retval) {
+    fprintf (stderr, "p4est_vtk: Error encoding types\n");
+    fclose (vtufile);
+    return -1;
+  }
+#endif
+  fprintf (vtufile, "        </DataArray>\n");
+  fprintf (vtufile, "      </CellData>\n");
   fprintf (vtufile, "      <PointData>\n");
 
   if (ferror (vtufile)) {
@@ -606,8 +638,6 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
   }
 
   fprintf (vtufile, "      </PointData>\n");
-  fprintf (vtufile, "      <CellData>\n");
-  fprintf (vtufile, "      </CellData>\n");
   fprintf (vtufile, "    </Piece>\n");
   fprintf (vtufile, "  </UnstructuredGrid>\n");
   fprintf (vtufile, "</VTKFile>\n");
@@ -636,7 +666,9 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
     }
 
     fprintf (pvtufile, "    </PPointData>\n");
-    fprintf (pvtufile, "    <PCellData>\n");
+    fprintf (pvtufile, "    <PCellData Scalars=\"mpirank\">\n");
+    fprintf (pvtufile,
+             "      <PDataArray type=\"Int32\" Name=\"mpirank\"/>\n");
     fprintf (pvtufile, "    </PCellData>\n");
     fprintf (pvtufile, "    <PPoints>\n");
     fprintf (pvtufile, "      <PDataArray type=\"%s\""
