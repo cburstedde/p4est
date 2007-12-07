@@ -85,6 +85,113 @@ p4est_array_sort (p4est_array_t * array,
 }
 
 void               *
+p4est_array_bsearch (p4est_array_t * array, const void *key,
+                     int (*compar) (const void *, const void *))
+{
+  return
+    bsearch (key, array->array, array->elem_count, array->elem_size, compar);
+}
+
+int
+p4est_array_pqueue_add (p4est_array_t * array, void *temp,
+                        int (*compar) (const void *, const void *))
+{
+  int                 parent, child;
+  int                 comp, swaps;
+  const int           size = array->elem_size;
+  void               *p, *c;
+
+  swaps = 0;
+  child = array->elem_count - 1;
+  c = array->array + (size * child);
+  while (child > 0) {
+    parent = (child - 1) / 2;
+    p = array->array + (size * parent);
+
+    /* compare child to parent */
+    comp = compar (p, c);
+    if (comp <= 0) {
+      break;
+    }
+
+    /* swap child and parent */
+    memcpy (temp, c, size);
+    memcpy (c, p, size);
+    memcpy (p, temp, size);
+    ++swaps;
+
+    /* walk up the tree */
+    child = parent;
+    c = p;
+  }
+
+  return swaps;
+}
+
+int
+p4est_array_pqueue_pop (p4est_array_t * array, void *result,
+                        int (*compar) (const void *, const void *))
+{
+  int                 new_count;
+  int                 parent, child, child1;
+  int                 comp, swaps;
+  const int           size = array->elem_size;
+  void               *p, *c, *c1;
+  void               *temp;
+
+  swaps = 0;
+  new_count = array->elem_count - 1;
+  P4EST_ASSERT (new_count >= 0);
+
+  /* extract root */
+  parent = 0;
+  p = array->array + (size * parent);
+  memcpy (result, p, size);
+
+  /* copy the last element to the top and reuse it as temp storage */
+  temp = array->array + (size * new_count);
+  if (new_count > 0) {
+    memcpy (p, temp, size);
+  }
+
+  /* sift down the tree */
+  while ((child = 2 * parent + 1) < new_count) {
+    c = array->array + (size * child);
+
+    /* check if child has a sibling and use that one if it is smaller */
+    if ((child1 = 2 * parent + 2) < new_count) {
+      c1 = array->array + (size * child1);
+      comp = compar (c, c1);
+      if (comp > 0) {
+        child = child1;
+        c = c1;
+      }
+    }
+
+    /* sift down the parent if it is larger */
+    comp = compar (p, c);
+    if (comp <= 0) {
+      break;
+    }
+
+    /* swap child and parent */
+    memcpy (temp, c, size);
+    memcpy (c, p, size);
+    memcpy (p, temp, size);
+    ++swaps;
+
+    /* walk down the tree */
+    parent = child;
+    p = c;
+  }
+
+  /* we can resize down here only since we need the temp element above */
+  p4est_array_resize (array, new_count);
+
+  return swaps;
+}
+
+void               *
 p4est_array_index (p4est_array_t * array, int index)
 {
   P4EST_ASSERT (index >= 0 && index < array->elem_count);

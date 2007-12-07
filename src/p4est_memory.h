@@ -29,8 +29,11 @@
 /** The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.
  * Elements are accessed by their 0-based index, their address may change.
- * The size (== elem_count) of the array can be changed by _grow1 or _resize.
- * Elements can be sorted.
+ * The size (== elem_count) of the array can be changed by array_resize.
+ * Elements can be sorted with array_sort.
+ * If the array is sorted elements can be binary searched with array_bsearch.
+ * A priority queue is implemented with pqueue_add and pqueue_pop.
+ * Use sort and search whenever possible, they are faster than the pqueue.
  */
 typedef struct p4est_array
 {
@@ -47,11 +50,59 @@ p4est_array_t;
 p4est_array_t      *p4est_array_new (int elem_size);
 void                p4est_array_destroy (p4est_array_t * array);
 
+/** Sets the element count to new_count.
+ * Reallocation takes place only occasionally, so this function is usually fast.
+ */
 void                p4est_array_resize (p4est_array_t * array, int new_count);
+
+/** Sorts the array in ascending order wrt. the comparison function.
+ * \param [in] compar The comparison function to be used.
+ */
 void                p4est_array_sort (p4est_array_t * array,
                                       int (*compar) (const void *,
                                                      const void *));
 
+/** Performs a binary search on an array. The array must be sorted.
+ * \param [in] key     An element to be searched for.
+ * \param [in] compar  The comparison function to be used.
+ * \return Returns a pointer to the item found, or NULL.
+ */
+void               *p4est_array_bsearch (p4est_array_t * array,
+                                         const void *key,
+                                         int (*compar) (const void *,
+                                                        const void *));
+
+/** Adds an element to a priority queue.
+ * The priority queue is implemented as a heap in ascending order.
+ * A heap is a binary tree where the children are not less than their parent.
+ * Assumes that elements [0]..[elem_count-2] form a valid heap.
+ * Then propagates [elem_count-1] upward by swapping if necessary.
+ * \param [in] temp    Pointer to unused allocated memory of elem_size.
+ * \param [in] compar  The comparison function to be used.
+ * \return Returns the number of swap operations.
+ * \note  If the return value is zero for all elements in an array,
+ *        the array is sorted linearly and unchanged.
+ */
+int                 p4est_array_pqueue_add (p4est_array_t * array,
+                                            void *temp,
+                                            int (*compar) (const void *,
+                                                           const void *));
+
+/** Pops the smallest element from a priority queue.
+ * This function assumes that the array forms a valid heap in ascending order.
+ * \param [out] result  Pointer to unused allocated memory of elem_size.
+ * \param [in]  compar  The comparison function to be used.
+ * \return Returns the number of swap operations.
+ * \note This function resizes the array to elem_count-1.
+ */
+int                 p4est_array_pqueue_pop (p4est_array_t * array,
+                                            void *result,
+                                            int (*compar) (const void *,
+                                                           const void *));
+
+/** Returns a pointer to an array element.
+ * \param [in] index needs to be in [0]..[elem_count-1].
+ */
 void               *p4est_array_index (p4est_array_t * array, int index);
 
 /** The p4est_mempool object provides a large pool of equal-size elements.
