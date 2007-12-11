@@ -68,6 +68,14 @@ main (int argc, char **argv)
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
   P4EST_CHECK_ABORT (f3 == &q2
                      && f3->user_data == (void *) 5, "Lookup return");
+ 
+  f1 = f2 = f3 = NULL;
+  i1 = p4est_hash_remove (qhash, &q1, (void **) &f1);
+  i2 = p4est_hash_remove (qhash, &q2, (void **) &f2);
+  i3 = p4est_hash_remove (qhash, &q3, NULL);
+  P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
+  P4EST_CHECK_ABORT (f2 == &q2
+                     && f2->user_data == (void *) 5, "Remove return");
 
   p4est_hash_destroy (qhash);
 

@@ -414,6 +414,7 @@ p4est_list_remove (p4est_list_t * list, p4est_link_t * pred)
   }
   p4est_mempool_free (list->allocator, link);
 
+  --list->elem_count;
   return data;
 }
 
@@ -515,6 +516,7 @@ p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
   list = p4est_array_index (hash->table, hval);
 
   for (link = list->first; link != NULL; link = link->next) {
+    /* check if an equal object is contained in the hash table */
     if (hash->equal_fn (link->data, v)) {
       if (found != NULL) {
         *found = link->data;
@@ -536,7 +538,7 @@ p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
   list = p4est_array_index (hash->table, hval);
 
   for (link = list->first; link != NULL; link = link->next) {
-    /* check if object is already contained in the hash table */
+    /* check if an equal object is already contained in the hash table */
     if (hash->equal_fn (link->data, v)) {
       if (found != NULL) {
         *found = link->data;
@@ -562,6 +564,7 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
 
   prev = NULL;
   for (link = list->first; link != NULL; link = link->next) {
+    /* check if an equal object is contained in the hash table */
     if (hash->equal_fn (link->data, v)) {
       if (found != NULL) {
         *found = link->data;
