@@ -153,31 +153,79 @@ typedef struct p4est_list
 
   /* implementation variables */
   int                 allocator_owned;
-  p4est_mempool_t    *allocator;        /* must allocate sizeof (p4est_link_t) */
+  p4est_mempool_t    *allocator;        /* must allocate p4est_link_t */
 }
 p4est_list_t;
 
-/** Allocate a linked list structure
- * \param [in] allocator Memory allocator, can be NULL.
+/** Allocate a linked list structure.
+ * \param [in] allocator Memory allocator for p4est_link_t, can be NULL.
  */
 p4est_list_t       *p4est_list_new (p4est_mempool_t * allocator);
 
-/** Destroy a linked list structure
- * \note if allocator was provided in p4est_list_new, it will not be destroyed.
+/** Destroy a linked list structure.
+ * \note If allocator was provided in p4est_list_new, it will not be destroyed.
  */
 void                p4est_list_destroy (p4est_list_t * list);
 
 void                p4est_list_prepend (p4est_list_t * list, void *data);
 void                p4est_list_append (p4est_list_t * list, void *data);
 
-/** Insert a link after a given position
+/** Insert a link after a given position.
  */
 void                p4est_list_insert (p4est_list_t * list,
                                        p4est_link_t * after, void *data);
 
-/** Remove a link from the front of the list
+/** Remove a link from the front of the list.
  * \return Returns the removed first list element.
  */
 void               *p4est_list_pop (p4est_list_t * list);
+
+/** Function to compute a hash value of an object.
+ * \return Returns a non-negative integer.
+ */
+typedef int         (*p4est_hash_function_t) (const void *v);
+
+/** Function to check equality of two objects.
+ * \return Returns 0 if *v1 is unequal *v2 and true otherwise.
+ */
+typedef int         (*p4est_equal_function_t) (const void *v1,
+                                               const void *v2);
+
+/** The p4est_hash implements a hash table.
+ * It uses an array which has linked lists as elements.
+ */
+typedef struct p4est_hash
+{
+  /* interface variables */
+  int                 elem_count;       /* total number of objects contained */
+
+  /* implementation variables */
+  p4est_array_t      *table;
+  p4est_hash_function_t hash_fn;
+  p4est_equal_function_t equal_fn;
+  int                 allocator_owned;
+  p4est_mempool_t    *allocator;        /* must allocate p4est_link_t */
+}
+p4est_hash_t;
+
+/** Create a new hash table.
+ * \param [in] table_size  The number of slots in the hash table.
+ * \param [in] hash_fn     Function to compute the hash value.
+ * \param [in] equal_fn    Function to test two objects for equality.
+ * \param [in] allocator   Memory allocator for p4est_link_t, can be NULL.
+ */
+p4est_hash_t       *p4est_hash_new (int table_size,
+                                    p4est_hash_function_t hash_fn,
+                                    p4est_equal_function_t equal_fn,
+                                    p4est_mempool_t * allocator);
+/** Destroy a hash table.
+ * \note If allocator was provided in p4est_hash_new, it will not be destroyed.
+ */
+void                p4est_hash_destroy (p4est_hash_t * hash);
+
+/** Insert a value into a hash table only if it is not contained already.
+ * \return Returns 1 if value is added, 0 if it is already contained.
+ */
+int                 p4est_hash_insert_unique (p4est_hash_t * hash, void *v);
 
 #endif /* !__P4EST_MEMORY_H__ */
