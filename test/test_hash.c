@@ -37,7 +37,7 @@ main (int argc, char **argv)
     p4est_hash_destroy (ihash);
   }
 
-  qhash = p4est_hash_new (17, p4est_quadrant_hash_fn,
+  qhash = p4est_hash_new (17, p4est_quadrant_hash,
                           p4est_quadrant_is_equal, NULL);
 
   p4est_quadrant_set_morton (&q1, 3, 15);

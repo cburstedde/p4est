@@ -169,6 +169,20 @@ p4est_list_t       *p4est_list_new (p4est_mempool_t * allocator);
  */
 void                p4est_list_destroy (p4est_list_t * list);
 
+/** Initializes an already allocated list structure.
+ * \param [in,out]  list       List structure to be initialized.
+ * \param [in]      allocator  External memory allocator for p4est_link_t.
+ */
+void                p4est_list_init (p4est_list_t * list,
+                                     p4est_mempool_t * allocator);
+
+/** Removes all elements from a list.
+ * \param [in,out]  list       List structure to be resetted.
+ * \note Calling p4est_list_init, then any list operations,
+ *       then p4est_list_reset is memory neutral.
+ */
+void                p4est_list_reset (p4est_list_t * list);
+
 void                p4est_list_prepend (p4est_list_t * list, void *data);
 void                p4est_list_append (p4est_list_t * list, void *data);
 

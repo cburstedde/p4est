@@ -87,7 +87,7 @@ p4est_quadrant_is_equal (const void *v1, const void *v2)
 }
 
 int
-p4est_quadrant_hash_fn (const void *v)
+p4est_quadrant_hash (const void *v)
 {
   const p4est_quadrant_t *q = v;
 
@@ -789,6 +789,13 @@ p4est_complete_region (p4est_t * p4est,
                   p4est->user_data_pool->elem_count + (include_q1 ? 1 : 0)
                   + (include_q2 ? 1 : 0));
   }
+}
+
+void
+p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
+                       int32_t which_tree, p4est_init_t init_fn)
+{
+
 }
 
 void

@@ -38,7 +38,7 @@ int                 p4est_quadrant_is_equal (const void *v1, const void *v2);
 
 /** Computes a hash value for a quadrant.
  */
-int                 p4est_quadrant_hash_fn (const void *v);
+int                 p4est_quadrant_hash (const void *v);
 
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
@@ -261,14 +261,27 @@ int                 p4est_is_valid (p4est_t * p4est);
  * \param [out] tree       Initialized tree with zero elements.
  * \param [in]  which_tree The 0-based index of \a tree which is needed for
  *                         the \c p4est_quadrant_init_data routine.
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is already allocated automatically.
+ * \param [in]  init_fn    Callback function to initialize the user_data
+ *                         which is already allocated automatically.
  */
 void                p4est_complete_region (p4est_t * p4est,
                                            const p4est_quadrant_t * q1,
                                            int include_q1,
                                            const p4est_quadrant_t * q2,
                                            int include_q2,
+                                           p4est_tree_t * tree,
+                                           int32_t which_tree,
+                                           p4est_init_t init_fn);
+
+/** Balances a sorted, complete, linear subtree.
+ * \param [in]  p4est used for the memory pools and quadrant init.
+ * \param [out] tree       Initialized tree with zero elements.
+ * \param [in]  which_tree The 0-based index of \a tree which is needed for
+ *                         the \c p4est_quadrant_init_data routine.
+ * \param [in]  init_fn    Callback function to initialize the user_data
+ *                         which is already allocated automatically.
+ */
+void                p4est_balance_subtree (p4est_t * p4est,
                                            p4est_tree_t * tree,
                                            int32_t which_tree,
                                            p4est_init_t init_fn);
