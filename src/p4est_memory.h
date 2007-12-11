@@ -126,6 +126,8 @@ p4est_mempool_t;
 /* create, destroy or reset to count=0 the memory pool */
 p4est_mempool_t    *p4est_mempool_new (int elem_size);
 void                p4est_mempool_destroy (p4est_mempool_t * mempool);
+
+/** Invalidates all previously returned pointers, resets count to 0. */
 void                p4est_mempool_reset (p4est_mempool_t * mempool);
 
 /* allocate or free a single element */
@@ -170,13 +172,22 @@ void                p4est_list_destroy (p4est_list_t * list);
 void                p4est_list_prepend (p4est_list_t * list, void *data);
 void                p4est_list_append (p4est_list_t * list, void *data);
 
-/** Insert a link after a given position.
+/** Insert an element after a given position.
+ * \param [in] pred The predecessor of the element to be removed.
  */
 void                p4est_list_insert (p4est_list_t * list,
-                                       p4est_link_t * after, void *data);
+                                       p4est_link_t * pred, void *data);
 
-/** Remove a link from the front of the list.
- * \return Returns the removed first list element.
+/** Remove an element after a given position.
+ * \param [in] pred  The predecessor of the element to be removed.
+                     If \a pred == NULL, the first element is removed.
+ * \return Returns the data of the removed element.
+ */
+void               *p4est_list_remove (p4est_list_t * list,
+                                       p4est_link_t * pred);
+
+/** Remove an element from the front of the list.
+ * \return Returns the data of the removed first list element.
  */
 void               *p4est_list_pop (p4est_list_t * list);
 
@@ -223,9 +234,34 @@ p4est_hash_t       *p4est_hash_new (int table_size,
  */
 void                p4est_hash_destroy (p4est_hash_t * hash);
 
-/** Insert a value into a hash table only if it is not contained already.
- * \return Returns 1 if value is added, 0 if it is already contained.
+/** Remove all entries from a hash table. */
+void                p4est_hash_reset (p4est_hash_t * hash);
+
+/** Check if an object is contained in the hash table.
+ * \param [in]  v      The object to be looked up.
+ * \param [out] found  If found != NULL, *found is set to the object
+ *                     if the object is found.
+ * \return Returns 1 if object is found, 0 otherwise.
  */
-int                 p4est_hash_insert_unique (p4est_hash_t * hash, void *v);
+int                 p4est_hash_lookup (p4est_hash_t * hash, void *v,
+                                       void **found);
+
+/** Insert an object into a hash table only if it is not contained already.
+ * \param [in]  v      The object to be inserted.
+ * \param [out] found  If found != NULL, *found is set to the object
+ *                     that is already contained if that exists.
+ * \return Returns 1 if object is added, 0 if it is already contained.
+ */
+int                 p4est_hash_insert_unique (p4est_hash_t * hash, void *v,
+                                              void **found);
+
+/** Remove an object from a hash table.
+ * \param [in]  v      The object to be removed.
+ * \param [out] found  If found != NULL, *found is set to the object
+                       that is removed if that exists.
+ * \return Returns 1 if object is found, 0 if is not contained.
+ */
+int                 p4est_hash_remove (p4est_hash_t * hash, void *v,
+                                       void **found);
 
 #endif /* !__P4EST_MEMORY_H__ */

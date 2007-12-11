@@ -75,6 +75,26 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 }
 
 int
+p4est_quadrant_is_equal (const void *v1, const void *v2)
+{
+  const p4est_quadrant_t *q1 = v1;
+  const p4est_quadrant_t *q2 = v2;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+
+  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
+}
+
+int
+p4est_quadrant_hash_fn (const void *v)
+{
+  const p4est_quadrant_t *q = v;
+
+  return p4est_quadrant_linear_id (q, q->level) % (1LL << 30);
+}
+
+int
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
   int                 id = 0;
@@ -96,16 +116,6 @@ p4est_quadrant_is_valid (const p4est_quadrant_t * q)
     (q->y >= 0 && q->y < (1 << P4EST_MAXLEVEL)) &&
     ((q->x & ((1 << (P4EST_MAXLEVEL - q->level)) - 1)) == 0) &&
     ((q->y & ((1 << (P4EST_MAXLEVEL - q->level)) - 1)) == 0);
-}
-
-int
-p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
-                         const p4est_quadrant_t * q2)
-{
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
-
-  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
 }
 
 int

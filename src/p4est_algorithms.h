@@ -31,6 +31,15 @@
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
+/** Test if two quadrants have equal Morton indices.
+ * \return 1 if \a v1 describes the same quadrant as \a v2.
+ */
+int                 p4est_quadrant_is_equal (const void *v1, const void *v2);
+
+/** Computes a hash value for a quadrant.
+ */
+int                 p4est_quadrant_hash_fn (const void *v);
+
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */
@@ -41,12 +50,6 @@ int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
  * \return Returns 1 if \a q is valid.
  */
 int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
-
-/** Test if two quadrants have equal Morton indices.
- * \return 1 if \a q1 describes the same quadrant as \a q2.
- */
-int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
-                                             const p4est_quadrant_t * q2);
 
 /** Test if two quadrants are siblings.
  * \param [in] q1 First quadrant to be tested.

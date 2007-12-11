@@ -353,21 +353,44 @@ p4est_list_append (p4est_list_t * list, void *data)
 }
 
 void
-p4est_list_insert (p4est_list_t * list, p4est_link_t * after, void *data)
+p4est_list_insert (p4est_list_t * list, p4est_link_t * pred, void *data)
 {
   p4est_link_t       *link;
 
-  P4EST_ASSERT (after != NULL);
+  P4EST_ASSERT (pred != NULL);
 
   link = p4est_mempool_alloc (list->allocator);
   link->data = data;
-  link->next = after->next;
-  after->next = link;
-  if (after == list->last) {
+  link->next = pred->next;
+  pred->next = link;
+  if (pred == list->last) {
     list->last = link;
   }
 
   ++list->elem_count;
+}
+
+void               *
+p4est_list_remove (p4est_list_t * list, p4est_link_t * pred)
+{
+  p4est_link_t       *link;
+  void               *data;
+
+  if (pred == NULL) {
+    return p4est_list_pop (list);
+  }
+
+  P4EST_ASSERT (pred->next != NULL);
+
+  link = pred->next;
+  pred->next = link->next;
+  data = link->data;
+  if (list->last == link) {
+    list->last = pred;
+  }
+  p4est_mempool_free (list->allocator, link);
+
+  return data;
 }
 
 void               *
@@ -429,6 +452,19 @@ p4est_hash_new (int table_size, p4est_hash_function_t hash_fn,
 void
 p4est_hash_destroy (p4est_hash_t * hash)
 {
+  p4est_hash_reset (hash);
+
+  p4est_array_destroy (hash->table);
+  if (hash->allocator_owned) {
+    p4est_mempool_destroy (hash->allocator);
+  }
+
+  P4EST_FREE (hash);
+}
+
+void
+p4est_hash_reset (p4est_hash_t * hash)
+{
   int                 i, size, count;
   p4est_list_t      **plist, *list;
 
@@ -440,20 +476,40 @@ p4est_hash_destroy (p4est_hash_t * hash)
     if (list != NULL) {
       count += list->elem_count;
       p4est_list_destroy (list);
+      list = *plist = NULL;
     }
   }
   P4EST_ASSERT (count == hash->elem_count);
 
-  p4est_array_destroy (hash->table);
-  if (hash->allocator_owned) {
-    p4est_mempool_destroy (hash->allocator);
-  }
-
-  P4EST_FREE (hash);
+  hash->elem_count = 0;
 }
 
 int
-p4est_hash_insert_unique (p4est_hash_t * hash, void *v)
+p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
+{
+  int                 hval;
+  p4est_list_t      **plist, *list;
+  p4est_link_t       *link;
+
+  hval = hash->hash_fn (v) % hash->table->elem_count;
+  plist = p4est_array_index (hash->table, hval);
+  list = *plist;
+
+  if (list != NULL) {
+    for (link = list->first; link != NULL; link = link->next) {
+      if (hash->equal_fn (link->data, v)) {
+        if (found != NULL) {
+          *found = link->data;
+        }
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+int
+p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
 {
   int                 hval;
   p4est_list_t      **plist, *list;
@@ -469,16 +525,47 @@ p4est_hash_insert_unique (p4est_hash_t * hash, void *v)
   }
   else {
     for (link = list->first; link != NULL; link = link->next) {
-      /* check if value is already contained in the hash table */
+      /* check if object is already contained in the hash table */
       if (hash->equal_fn (link->data, v)) {
+        if (found != NULL) {
+          *found = link->data;
+        }
         return 0;
       }
     }
   }
-  /* append new value to the list */
+  /* append new object to the list */
   p4est_list_append (list, v);
   ++hash->elem_count;
   return 1;
+}
+
+int
+p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
+{
+  int                 hval;
+  p4est_list_t      **plist, *list;
+  p4est_link_t       *link, *prev;
+
+  hval = hash->hash_fn (v) % hash->table->elem_count;
+  plist = p4est_array_index (hash->table, hval);
+  list = *plist;
+
+  if (list != NULL) {
+    prev = NULL;
+    for (link = list->first; link != NULL; link = link->next) {
+      if (hash->equal_fn (link->data, v)) {
+        if (found != NULL) {
+          *found = link->data;
+        }
+        p4est_list_remove (list, prev);
+        --hash->elem_count;
+        return 1;
+      }
+      prev = link;
+    }
+  }
+  return 0;
 }
 
 /* EOF p4est_memory.c */
