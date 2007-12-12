@@ -142,6 +142,15 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
                                              p4est_quadrant_t * c2,
                                              p4est_quadrant_t * c3);
 
+/** Compute the last descendent of a quadrant on a given level.
+ * \param [in]  q      Input quadrant.
+ * \param [out] ld     Last descendent of \a q on level \a level.
+ * \param [in]  level  Level must be greater equal than q's level.
+ */
+void                p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
+                                                    p4est_quadrant_t * ld,
+                                                    int8_t level);
+
 /** Computes the nearest common ancestor of two quadrants.
  * \param [in]     q1 First input quadrant.
  * \param [in]     q2 Second input quadrant.
@@ -274,12 +283,13 @@ void                p4est_complete_region (p4est_t * p4est,
                                            p4est_init_t init_fn);
 
 /** Balances a sorted, complete, linear subtree.
- * \param [in]  p4est used for the memory pools and quadrant init.
- * \param [out] tree       Initialized tree with zero elements.
- * \param [in]  which_tree The 0-based index of \a tree which is needed for
- *                         the \c p4est_quadrant_init_data routine.
- * \param [in]  init_fn    Callback function to initialize the user_data
- *                         which is already allocated automatically.
+ * \param [in]     p4est used for the memory pools and quadrant init.
+ * \param [in,out] tree       On input, a sorted tree. On output,
+ *                            a sorted complete linear balanced tree.
+ * \param [in]     which_tree The 0-based index of \a tree which is needed for
+ *                            the \c p4est_quadrant_init_data routine.
+ * \param [in]     init_fn    Callback function to initialize the user_data
+ *                            which is already allocated automatically.
  */
 void                p4est_balance_subtree (p4est_t * p4est,
                                            p4est_tree_t * tree,

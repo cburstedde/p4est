@@ -344,6 +344,22 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
 }
 
 void
+p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
+                                p4est_quadrant_t * ld, int8_t level)
+{
+  int32_t             shift;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
+
+  shift = (1 << (P4EST_MAXLEVEL - q->level)) - (1 << (P4EST_MAXLEVEL - level));
+
+  ld->x = q->x + shift;
+  ld->y = q->y + shift;
+  ld->level = level;
+}
+
+void
 p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2,
                                p4est_quadrant_t * r)
@@ -795,7 +811,68 @@ void
 p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
                        int32_t which_tree, p4est_init_t init_fn)
 {
+  int                 i, incount;
+  int                 comp;
+  int8_t              l, inmaxl;
+  p4est_quadrant_t   *q;
+  p4est_quadrant_t    ld, tree_last;
+  p4est_array_t      *inlist;
+  p4est_array_t      *outlist;
+  p4est_mempool_t    *list_alloc;
+  p4est_hash_t       *hash[P4EST_MAXLEVEL + 1];
 
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+
+  /* assign some shortcut variables */
+  inlist = tree->quadrants;
+  incount = inlist->elem_count;
+  inmaxl = tree->maxlevel;
+
+  /* if tree is empty or a single block, there is nothing to do */
+  if (incount <= 1) {
+    return;
+  }
+
+  /* determine the last quadrant contained in the tree */
+  q = p4est_array_index (inlist, 0);
+  p4est_quadrant_last_descendent (q, &tree_last, inmaxl);
+  for (i = 1; i < incount; ++i) {
+    q = p4est_array_index (inlist, i);
+    p4est_quadrant_last_descendent (q, &ld, inmaxl);
+    comp = p4est_quadrant_compare (&tree_last, &ld);
+    if (comp < 0) {
+      tree_last = ld;
+    }
+  }
+  fprintf (p4est->nout, "Last descendent 0x%x 0x%x %d\n",
+           tree_last.x, tree_last.y, tree_last.level);
+
+  /* initialize temporary storage */
+  outlist = p4est_array_new (sizeof (p4est_quadrant_t));
+  list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
+  for (l = 0; l <= inmaxl; ++l) {
+    hash[l] = p4est_hash_new (P4EST_MIN (1361, incount / 2 + 1),
+                              p4est_quadrant_hash,
+                              p4est_quadrant_is_equal, list_alloc);
+  }
+  for (l = inmaxl + 1; l <= P4EST_MAXLEVEL; ++l) {
+    hash[l] = NULL;
+  }
+
+  /* walk to the input tree level-wise */
+  for (l = inmaxl; l >= 0; --l) {
+  }
+
+  /* assemble output list into a linear tree */
+
+  /* assign valid output tree */
+
+  /* free temporary storage */
+  for (l = 0; l <= inmaxl; ++l) {
+    p4est_hash_destroy (hash[l]);
+  }
+  p4est_mempool_destroy (list_alloc);
+  p4est_array_destroy (outlist);
 }
 
 void

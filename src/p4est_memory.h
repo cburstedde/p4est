@@ -135,7 +135,7 @@ void               *p4est_mempool_alloc (p4est_mempool_t * mempool);
 void                p4est_mempool_free (p4est_mempool_t * mempool,
                                         void *elem);
 
-/** The p4est_link is one link of a linked list.
+/** The p4est_link structure is one link of a linked list.
  */
 typedef struct p4est_link
 {
@@ -187,7 +187,7 @@ void                p4est_list_prepend (p4est_list_t * list, void *data);
 void                p4est_list_append (p4est_list_t * list, void *data);
 
 /** Insert an element after a given position.
- * \param [in] pred The predecessor of the element to be removed.
+ * \param [in] pred The predecessor of the element to be inserted.
  */
 void                p4est_list_insert (p4est_list_t * list,
                                        p4est_link_t * pred, void *data);
