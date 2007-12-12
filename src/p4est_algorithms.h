@@ -142,13 +142,22 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
                                              p4est_quadrant_t * c2,
                                              p4est_quadrant_t * c3);
 
+/** Compute the first descendent of a quadrant on a given level.
+ * \param [in]  q      Input quadrant.
+ * \param [out] fd     First descendent of \a q on level \a level.
+ * \param [in]  level  Level must be greater equal than q's level.
+ */
+void                p4est_quadrant_first_descendent (const p4est_quadrant_t *
+                                                     q, p4est_quadrant_t * fd,
+                                                     int8_t level);
+
 /** Compute the last descendent of a quadrant on a given level.
  * \param [in]  q      Input quadrant.
  * \param [out] ld     Last descendent of \a q on level \a level.
  * \param [in]  level  Level must be greater equal than q's level.
  */
-void                p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
-                                                    p4est_quadrant_t * ld,
+void                p4est_quadrant_last_descendent (const p4est_quadrant_t *
+                                                    q, p4est_quadrant_t * ld,
                                                     int8_t level);
 
 /** Computes the nearest common ancestor of two quadrants.

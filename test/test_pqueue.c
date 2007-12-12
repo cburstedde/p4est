@@ -22,6 +22,8 @@
 #include <p4est.h>
 #include <p4est_base.h>
 
+/* #define THEBIGTEST */
+
 static int
 compar (const void *p1, const void *p2)
 {
@@ -51,7 +53,11 @@ main (int argc, char **argv)
   a3 = p4est_array_new (sizeof (int));
   a4 = p4est_array_new (sizeof (int));
 
+#ifdef THEBIGTEST
   count = 325323;
+#else
+  count = 3251;
+#endif
   printf ("Test pqueue with count %d\n", count);
 
 #ifdef HAVE_MPI

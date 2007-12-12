@@ -344,6 +344,18 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
 }
 
 void
+p4est_quadrant_first_descendent (const p4est_quadrant_t * q,
+                                 p4est_quadrant_t * fd, int8_t level)
+{
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
+
+  fd->x = q->x;
+  fd->y = q->y;
+  fd->level = level;
+}
+
+void
 p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
                                 p4est_quadrant_t * ld, int8_t level)
 {
@@ -352,7 +364,8 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
 
-  shift = (1 << (P4EST_MAXLEVEL - q->level)) - (1 << (P4EST_MAXLEVEL - level));
+  shift =
+    (1 << (P4EST_MAXLEVEL - q->level)) - (1 << (P4EST_MAXLEVEL - level));
 
   ld->x = q->x + shift;
   ld->y = q->y + shift;
@@ -815,7 +828,7 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
   int                 comp;
   int8_t              l, inmaxl;
   p4est_quadrant_t   *q;
-  p4est_quadrant_t    ld, tree_last;
+  p4est_quadrant_t    ld, tree_first, tree_last;
   p4est_array_t      *inlist;
   p4est_array_t      *outlist;
   p4est_mempool_t    *list_alloc;
@@ -833,8 +846,9 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
     return;
   }
 
-  /* determine the last quadrant contained in the tree */
+  /* determine the first and last small quadrants contained in the tree */
   q = p4est_array_index (inlist, 0);
+  p4est_quadrant_first_descendent (q, &tree_first, inmaxl);
   p4est_quadrant_last_descendent (q, &tree_last, inmaxl);
   for (i = 1; i < incount; ++i) {
     q = p4est_array_index (inlist, i);
