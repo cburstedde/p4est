@@ -78,7 +78,7 @@ int
 main (void)
 {
   int                 i, j, incount;
-  int8_t              level;
+  int8_t              level, mid, cid;
   int64_t             index1, index2;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
@@ -133,6 +133,18 @@ main (void)
                        "is_family");
     P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c0, &c0, &c1, &c2),
                        "is_family");
+
+    /* test the sibling function */
+    mid = p4est_quadrant_child_id (q1);
+    for (cid = 0; cid < 4; ++cid) {
+      p4est_quadrant_sibling (q1, &r, cid);
+      if (cid != mid) {
+        P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (q1, &r), "sibling");
+      }
+      else {
+        P4EST_CHECK_ABORT (p4est_quadrant_is_equal (q1, &r), "sibling");
+      }
+    }
 
     /* test t1 against itself */
     for (j = 0; j < t1->quadrants->elem_count; ++j) {
@@ -219,7 +231,7 @@ main (void)
 
   /* test the linearize algorithm */
   incount = t2->quadrants->elem_count;
-  p4est_linearize (p4est2, t2);
+  p4est_linearize_subtree (p4est2, t2);
   P4EST_CHECK_ABORT (incount == t2->quadrants->elem_count, "linearize");
 
   /* this is user_data neutral only when p4est1->data_size == 0 */
@@ -257,7 +269,7 @@ main (void)
     tree.maxlevel = (int8_t) P4EST_MAX (tree.maxlevel, q1->level);
   }
   P4EST_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
-  p4est_linearize (p4est1, &tree);
+  p4est_linearize_subtree (p4est1, &tree);
   P4EST_CHECK_ABORT (incount - 3 == tree.quadrants->elem_count, "linearize");
   p4est_array_destroy (tree.quadrants);
 

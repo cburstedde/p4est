@@ -130,6 +130,16 @@ int                 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 void                p4est_quadrant_parent (const p4est_quadrant_t * q,
                                            p4est_quadrant_t * r);
 
+/** Compute a specific sibling of a quadrant.
+ * \param [in]     q  Input quadrant.
+ * \param [in,out] r  Existing quadrant whose Morton index will be filled
+ *                    with the coordinates of sibling no. sibling_id of q.
+ * \param [in]     sibling_id The id of the sibling computed, 0..3.
+ */
+void                p4est_quadrant_sibling (const p4est_quadrant_t * q,
+                                            p4est_quadrant_t * r,
+                                            int8_t sibling_id);
+
 /** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
@@ -291,7 +301,21 @@ void                p4est_complete_region (p4est_t * p4est,
                                            int32_t which_tree,
                                            p4est_init_t init_fn);
 
-/** Balances a sorted, complete, linear subtree.
+/** Completes a sorted subtree.
+ * \param [in]     p4est used for the memory pools and quadrant init.
+ * \param [in,out] tree       On input, a sorted tree. On output,
+ *                            a sorted complete linear tree.
+ * \param [in]     which_tree The 0-based index of \a tree which is needed for
+ *                            the \c p4est_quadrant_init_data routine.
+ * \param [in]     init_fn    Callback function to initialize the user_data
+ *                            which is already allocated automatically.
+ */
+void                p4est_complete_subtree (p4est_t * p4est,
+                                            p4est_tree_t * tree,
+                                            int32_t which_tree,
+                                            p4est_init_t init_fn);
+
+/** Balances a sorted subtree.
  * \param [in]     p4est used for the memory pools and quadrant init.
  * \param [in,out] tree       On input, a sorted tree. On output,
  *                            a sorted complete linear balanced tree.
@@ -313,6 +337,7 @@ void                p4est_balance_subtree (p4est_t * p4est,
  * \param [in]     p4est used for the memory pool and quadrant free.
  * \param [in,out] tree   A sorted tree to be linearized in-place.
  */
-void                p4est_linearize (p4est_t * p4est, p4est_tree_t * tree);
+void                p4est_linearize_subtree (p4est_t * p4est,
+                                             p4est_tree_t * tree);
 
 #endif /* !__P4EST_ALGORITHMS_H__ */

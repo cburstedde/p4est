@@ -23,7 +23,7 @@
 #include <p4est_base.h>
 
 int
-main (int argc, char ** argv) 
+main (int argc, char **argv)
 {
   int8_t              l;
   p4est_t            *p4est;
@@ -47,12 +47,13 @@ main (int argc, char ** argv)
   p4est_quadrant_set_morton (q, 0, 0);
   ++tree->quadrants_per_level[0];
   q = p4est_array_index (tree->quadrants, 1);
-  p4est_quadrant_set_morton (q, 3, 11);
+  p4est_quadrant_set_morton (q, 3, 13);
   ++tree->quadrants_per_level[3];
   tree->maxlevel = 3;
 
-  /* balance the tree */   
+  /* balance the tree */
   p4est_balance_subtree (p4est, tree, 0, NULL);
+  p4est_tree_print (tree, p4est->mpirank, p4est->nout);
 
   /* clean up memory */
   p4est_array_destroy (tree->quadrants);

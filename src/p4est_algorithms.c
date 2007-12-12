@@ -22,24 +22,38 @@
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 
+static const int    hash_table_entries = 1361;
+
+/* *INDENT-OFF* */
 static const int8_t log_lookup_table[256] =
-  { -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+{ -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
+   4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+   5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+   5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
 };
+
+/** The offsets of the 3 indirect neighbors in units of h.
+ * Indexing [cid][neighbor][xy] where cid is the child id.
+ */
+static const int32_t indirect_neighbors[4][3][2] =
+{{{-1, -1}, { 1, -1}, {-1, 1}},
+ {{ 0, -1}, { 2, -1}, { 1, 0}},
+ {{-1,  0}, {-2,  1}, { 0, 1}},
+ {{ 1, -1}, {-1,  1}, { 1, 1}}
+};
+/* *INDENT-ON* */
 
 #define P4EST_LOG2_8(x) (log_lookup_table[(x)])
 #define P4EST_LOG2_16(x) (((x) > 0xff) ? \
@@ -311,6 +325,23 @@ p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
   r->level = (int8_t) (q->level - 1);
 
   P4EST_ASSERT (p4est_quadrant_is_valid (r));
+}
+
+void
+p4est_quadrant_sibling (const p4est_quadrant_t * q, p4est_quadrant_t * r,
+                        int8_t sibling_id)
+{
+  int                 addx = (sibling_id & 0x01);
+  int                 addy = (sibling_id & 0x02) >> 1;
+  int                 shift = (1 << (P4EST_MAXLEVEL - q->level));
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level > 0);
+  P4EST_ASSERT (sibling_id >= 0 && sibling_id < 4);
+
+  r->x = (addx ? (q->x | shift) : (q->x & ~shift));
+  r->y = (addy ? (q->y | shift) : (q->y & ~shift));
+  r->level = q->level;
 }
 
 void
@@ -821,25 +852,56 @@ p4est_complete_region (p4est_t * p4est,
 }
 
 void
+p4est_complete_subtree (p4est_t * p4est, p4est_tree_t * tree,
+                        int32_t which_tree, p4est_init_t init_fn)
+{
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+}
+
+void
 p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
                        int32_t which_tree, p4est_init_t init_fn)
 {
-  int                 i, incount;
-  int                 comp;
+  int                 i, incount, curcount, ocount;
+  int                 comp, inserted;
+  int                 quadrant_pool_size, data_pool_size;
+  int                *key;
   int8_t              l, inmaxl;
-  p4est_quadrant_t   *q;
-  p4est_quadrant_t    ld, tree_first, tree_last;
-  p4est_array_t      *inlist;
-  p4est_array_t      *outlist;
-  p4est_mempool_t    *list_alloc;
+  int8_t              qid, sid, pid;
+  int32_t             ph, rh;
+  p4est_quadrant_t   *q, *r;
+  p4est_quadrant_t   *qalloc, **qpointer;
+  p4est_quadrant_t    ld, tree_first, tree_last, parent;
+  p4est_array_t      *inlist, *olist;
+  p4est_mempool_t    *list_alloc, *qpool;
   p4est_hash_t       *hash[P4EST_MAXLEVEL + 1];
+  p4est_array_t      *outlist[P4EST_MAXLEVEL + 1];
 
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
+
+  /*
+   * Algorithm works with these data structures
+   * inlist  --  sorted list of input quadrants
+   * hash    --  hash table to hold additional quadrants not in inlist
+   *             this is filled bottom-up to ensure balance condition
+   * outlist --  filled simultaneously with hash, holding pointers
+   *             don't rely on addresses of elements, it is resized
+   * In the end, the elements of hash are appended to inlist
+   * and inlist is sorted and linearized. This can be optimized later.
+   */
 
   /* assign some shortcut variables */
   inlist = tree->quadrants;
   incount = inlist->elem_count;
   inmaxl = tree->maxlevel;
+  qpool = p4est->quadrant_pool;
+  key = &comp;                  /* unique user_data pointer to mark temporary quadrants */
+
+  /* needed for sanity check */
+  quadrant_pool_size = qpool->elem_count;
+  if (p4est->user_data_pool != NULL) {
+    data_pool_size = p4est->user_data_pool->elem_count;
+  }
 
   /* if tree is empty or a single block, there is nothing to do */
   if (incount <= 1) {
@@ -858,39 +920,172 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
       tree_last = ld;
     }
   }
-  fprintf (p4est->nout, "Last descendent 0x%x 0x%x %d\n",
-           tree_last.x, tree_last.y, tree_last.level);
+  if (p4est->nout != NULL) {
+    fprintf (p4est->nout, "[%d] First descendent 0x%x 0x%x %d\n",
+             p4est->mpirank, tree_first.x, tree_first.y, tree_first.level);
+    fprintf (p4est->nout, "[%d] Last descendent 0x%x 0x%x %d\n",
+             p4est->mpirank, tree_last.x, tree_last.y, tree_last.level);
+  }
 
   /* initialize temporary storage */
-  outlist = p4est_array_new (sizeof (p4est_quadrant_t));
   list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
   for (l = 0; l <= inmaxl; ++l) {
-    hash[l] = p4est_hash_new (P4EST_MIN (1361, incount / 2 + 1),
-                              p4est_quadrant_hash,
+    hash[l] = p4est_hash_new (hash_table_entries, p4est_quadrant_hash,
                               p4est_quadrant_is_equal, list_alloc);
+    outlist[l] = p4est_array_new (sizeof (p4est_quadrant_t *));
   }
-  for (l = inmaxl + 1; l <= P4EST_MAXLEVEL; ++l) {
+  for (l = (int8_t) (inmaxl + 1); l <= P4EST_MAXLEVEL; ++l) {
     hash[l] = NULL;
+    outlist[l] = NULL;
   }
 
-  /* walk to the input tree level-wise */
-  for (l = inmaxl; l >= 0; --l) {
+  /* walk to the input tree bottom-up */
+  pid = -1;
+  parent.x = -1;
+  parent.y = -1;
+  parent.level = -1;
+  qalloc = p4est_mempool_alloc (qpool);
+  qalloc->user_data = key;
+  rh = (1 << P4EST_MAXLEVEL);
+  for (l = inmaxl; l > 0; --l) {
+    ocount = outlist[l]->elem_count;    /* fix ocount here, it is growing */
+    for (i = 0; i < incount + ocount; ++i) {
+      if (i < incount) {
+        q = p4est_array_index (inlist, i);
+        if (q->level != l) {
+          continue;
+        }
+      }
+      else {
+        qpointer = p4est_array_index (outlist[l], i - incount);
+        q = *qpointer;
+        P4EST_ASSERT (q->level == l);
+      }
+
+      /*
+       * check for q and its siblings,
+       * then for q's parent and parent's indirect relevant neighbors
+       * sid == 0..3  siblings including q
+       *        4     parent of q
+       *        5..7  relevant indirect neighbors of parent
+       */
+      qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 */
+      for (sid = 0; sid < 8; ++sid) {
+        printf ("Level %d qxy 0x%x 0x%x sid %d\n", l, q->x, q->y, sid);
+        if (qid == sid) {
+          /* q is included in inlist by construction */
+          printf ("Self\n");
+          continue;
+        }
+        /* stage 1: determine candidate qalloc */
+        if (sid < 4) {
+          p4est_quadrant_sibling (q, qalloc, sid);
+        }
+        else if (sid == 4) {
+          /* compute the parent */
+          p4est_quadrant_parent (q, qalloc);
+          parent = *qalloc;     /* make a temp copy for cases 5..7 */
+          ph = (1 << (P4EST_MAXLEVEL - parent.level));  /* parent size */
+          pid = p4est_quadrant_child_id (&parent);      /* parent position */
+          printf ("Parent child id %d\n", pid);
+        }
+        else {
+          /* determine the 3 parent's relevant indirect neighbors */
+          P4EST_ASSERT (sid >= 5);
+          qalloc->x = parent.x + indirect_neighbors[pid][sid - 5][0] * ph;
+          qalloc->y = parent.y + indirect_neighbors[pid][sid - 5][1] * ph;
+          qalloc->level = parent.level;
+          if ((qalloc->x < 0 || qalloc->x >= rh) ||
+              (qalloc->y < 0 || qalloc->y >= rh)) {
+            printf ("Outside root\n");
+            continue;
+          }
+        }
+        printf ("Candidate level %d qxy 0x%x 0x%x\n", qalloc->level,
+                qalloc->x, qalloc->y);
+
+        /* stage 2: include qalloc if necessary */
+        if ((p4est_quadrant_compare (&tree_first, qalloc) > 0 &&
+             (qalloc->x != tree_first.x || qalloc->y != tree_first.y)) ||
+            p4est_quadrant_compare (qalloc, &tree_last) > 0) {
+          /* qalloc is outside the tree */
+          printf ("Outside tree\n");
+          continue;
+        }
+        r = p4est_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
+        if (r != NULL) {
+          /* qalloc is included in inlist */
+          printf ("Included in inlist\n");
+          continue;
+        }
+        inserted =
+          p4est_hash_insert_unique (hash[qalloc->level], qalloc, NULL);
+        if (inserted) {
+          /* insert qalloc into the output list as well */
+          olist = outlist[qalloc->level];
+          p4est_array_resize (olist, olist->elem_count + 1);
+          qpointer = p4est_array_index (olist, olist->elem_count - 1);
+          *qpointer = qalloc;
+          /* we need a new quadrant now, the old one is stored away */
+          qalloc = p4est_mempool_alloc (qpool);
+          qalloc->user_data = key;
+        }
+        else {
+          printf ("Already in output list\n");
+        }
+      }
+    }
+  }
+  p4est_mempool_free (qpool, qalloc);
+
+  /* merge hash into input list */
+  for (l = 0; l <= inmaxl; ++l) {
+    curcount = inlist->elem_count;
+    ocount = outlist[l]->elem_count;
+    p4est_array_resize (inlist, curcount + ocount);
+    for (i = 0; i < ocount; ++i) {
+      q = p4est_array_index (inlist, curcount + i);
+      qpointer = p4est_array_index (outlist[l], i);
+      *q = **qpointer;
+      ++tree->quadrants_per_level[q->level];
+      if (q->level > tree->maxlevel) {
+        tree->maxlevel = q->level;
+      }
+      P4EST_ASSERT (q->user_data == key);
+      p4est_quadrant_init_data (p4est, which_tree, q, init_fn);
+    }
   }
 
-  /* assemble output list into a linear tree */
-
-  /* assign valid output tree */
+  /* sort and linearize tree */
+  p4est_array_sort (inlist, p4est_quadrant_compare);
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+  p4est_linearize_subtree (p4est, tree);
 
   /* free temporary storage */
   for (l = 0; l <= inmaxl; ++l) {
     p4est_hash_destroy (hash[l]);
+    olist = outlist[l];
+    for (i = 0; i < olist->elem_count; ++i) {
+      qpointer = p4est_array_index (olist, i);
+      qalloc = *qpointer;
+      p4est_mempool_free (qpool, qalloc);
+    }
+    p4est_array_destroy (olist);
   }
   p4est_mempool_destroy (list_alloc);
-  p4est_array_destroy (outlist);
+
+  /* run sanity checks */
+  P4EST_ASSERT (quadrant_pool_size == qpool->elem_count);
+  if (p4est->user_data_pool != NULL) {
+    P4EST_ASSERT (data_pool_size + inlist->elem_count ==
+                  p4est->user_data_pool->elem_count + incount);
+  }
+  P4EST_ASSERT (p4est_tree_is_linear (tree));
+  P4EST_ASSERT (p4est_tree_is_complete (tree));
 }
 
 void
-p4est_linearize (p4est_t * p4est, p4est_tree_t * tree)
+p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
 {
   int                 data_pool_size;
   int                 incount, removed;
