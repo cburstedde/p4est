@@ -21,6 +21,7 @@
 
 #include <p4est_memory.h>
 #include <p4est_base.h>
+#include <math.h>
 
 /* array routines */
 
@@ -576,6 +577,36 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
     prev = link;
   }
   return 0;
+}
+
+void
+p4est_hash_print_statistics (p4est_hash_t * hash, FILE * nout)
+{
+  int                 i;
+  int64_t             a, sum, squaresum;
+  double              divide, avg, sqr, std;
+  p4est_list_t       *list;
+
+  if (nout == NULL) {
+    return;
+  }
+
+  sum = 0;
+  squaresum = 0;
+  for (i = 0; i < hash->table->elem_count; ++i) {
+    list = p4est_array_index (hash->table, i);
+    a = list->elem_count;
+    sum += a;
+    squaresum += a * a;
+  }
+  P4EST_ASSERT (sum == hash->elem_count);
+
+  divide = hash->table->elem_count;
+  avg = sum / divide;
+  sqr = squaresum / divide - avg * avg;
+  std = sqrt (sqr);
+  fprintf (nout, "Hash size %d avg %.3g std %.3g\n",
+           hash->table->elem_count, avg, std);
 }
 
 /* EOF p4est_memory.c */

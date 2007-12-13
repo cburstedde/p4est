@@ -22,7 +22,8 @@
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 
-static const int    hash_table_entries = 1361;
+static const int    hash_table_minsize = 1361;
+static const int    hash_table_maxsize = (1 << 20) / P4EST_MAXLEVEL - 1;
 
 /* *INDENT-OFF* */
 
@@ -873,6 +874,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 incount, curcount, ocount;
   int                 comp, inserted, isfamily;
   int                 quadrant_pool_size, data_pool_size;
+  int                 hash_size;
   int                *key;
   int8_t              l, inmaxl, bbound;
   int8_t              qid, sid, pid;
@@ -943,7 +945,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   /* initialize temporary storage */
   list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
   for (l = 0; l <= inmaxl; ++l) {
-    hash[l] = p4est_hash_new (hash_table_entries, p4est_quadrant_hash,
+    hash_size = P4EST_MAX (incount / (P4EST_MAXLEVEL * 10),
+                           tree->quadrants_per_level[l] / 10);
+    hash_size = P4EST_MIN (hash_table_maxsize, hash_size);
+    hash_size = P4EST_MAX (hash_table_minsize, hash_size);
+    hash[l] = p4est_hash_new (hash_size, p4est_quadrant_hash,
                               p4est_quadrant_is_equal, list_alloc);
     outlist[l] = p4est_array_new (sizeof (p4est_quadrant_t *));
   }
@@ -1097,6 +1103,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 
   /* free temporary storage */
   for (l = 0; l <= inmaxl; ++l) {
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Level %d ", p4est->mpirank, l);
+    }
+    p4est_hash_print_statistics (hash[l], p4est->nout);
     p4est_hash_destroy (hash[l]);
     olist = outlist[l];
     for (i = 0; i < olist->elem_count; ++i) {

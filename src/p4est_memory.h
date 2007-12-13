@@ -25,6 +25,7 @@
 /* p4est memory management */
 
 #include <p4est_obstack.h>
+#include <stdio.h>
 
 /** The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.
@@ -277,5 +278,11 @@ int                 p4est_hash_insert_unique (p4est_hash_t * hash, void *v,
  */
 int                 p4est_hash_remove (p4est_hash_t * hash, void *v,
                                        void **found);
+
+/** Compute and print statistical information about the occupancy.
+ * \param [in] nout  Stream to print to. May be NULL, then nothing happens.
+ */
+void                p4est_hash_print_statistics (p4est_hash_t * hash,
+                                                 FILE * nout);
 
 #endif /* !__P4EST_MEMORY_H__ */
