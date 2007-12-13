@@ -869,13 +869,15 @@ static void
 p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
                            int32_t which_tree, p4est_init_t init_fn)
 {
-  int                 i, incount, curcount, ocount;
-  int                 comp, inserted;
+  int                 i, j;
+  int                 incount, curcount, ocount;
+  int                 comp, inserted, isfamily;
   int                 quadrant_pool_size, data_pool_size;
   int                *key;
   int8_t              l, inmaxl, bbound;
   int8_t              qid, sid, pid;
   int32_t             ph, rh;
+  p4est_quadrant_t   *family[4];
   p4est_quadrant_t   *q, *r;
   p4est_quadrant_t   *qalloc, **qpointer;
   p4est_quadrant_t    ld, tree_first, tree_last, parent;
@@ -961,10 +963,20 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   for (l = inmaxl; l > 0; --l) {
     ocount = outlist[l]->elem_count;    /* fix ocount here, it is growing */
     for (i = 0; i < incount + ocount; ++i) {
+      isfamily = 0;
       if (i < incount) {
         q = p4est_array_index (inlist, i);
         if (q->level != l) {
           continue;
+        }
+        /* this is an optimization to catch adjacent siblings */
+        if (i + 4 <= incount) {
+          family[0] = q;
+          for (j = 1; j < 4; ++j) {
+            family[j] = p4est_array_index (inlist, i + j);
+          }
+          isfamily = p4est_quadrant_is_family (family[0], family[1],
+                                               family[2], family[3]);
         }
       }
       else {
@@ -982,15 +994,15 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
        */
       qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 */
       for (sid = 0; sid < bbound; ++sid) {
-#ifdef P4EST_HAVE_DEBUG
-        printf ("Level %d qxy 0x%x 0x%x sid %d\n", l, q->x, q->y, sid);
-#endif
         if (qid == sid) {
           /* q is included in inlist by construction */
           continue;
         }
         /* stage 1: determine candidate qalloc */
         if (sid < 4) {
+          if (isfamily) {
+            continue;
+          }
           p4est_quadrant_sibling (q, qalloc, sid);
         }
         else if (sid == 4) {
@@ -999,9 +1011,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           parent = *qalloc;     /* make a temp copy for cases 5..7 */
           ph = (1 << (P4EST_MAXLEVEL - parent.level));  /* parent size */
           pid = p4est_quadrant_child_id (&parent);      /* parent position */
-#ifdef P4EST_HAVE_DEBUG
-          printf ("Parent child id %d\n", pid);
-#endif
         }
         else {
           /* determine the 3 parent's relevant indirect neighbors */
@@ -1018,8 +1027,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           }
         }
 #ifdef P4EST_HAVE_DEBUG
-        printf ("Candidate level %d qxy 0x%x 0x%x\n", qalloc->level,
-                qalloc->x, qalloc->y);
+        printf ("Candidate level %d qxy 0x%x 0x%x at sid %d\n",
+                qalloc->level, qalloc->x, qalloc->y, sid);
 #endif
 
         /* stage 2: include qalloc if necessary */

@@ -21,6 +21,7 @@
 
 #include <p4est.h>
 #include <p4est_algorithms.h>
+#include <p4est_communication.h>
 #include <p4est_base.h>
 
 static const int64_t initial_quadrants_per_processor = 15;
@@ -39,7 +40,7 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   int64_t             tree_num_quadrants, global_num_quadrants;
   int64_t             first_tree, first_quadrant, first_tree_quadrant;
   int64_t             last_tree, last_quadrant, last_tree_quadrant;
-  int64_t             quadrant_index, qlocal;
+  int64_t             quadrant_index;
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
@@ -203,18 +204,10 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   }
 
   /* compute some member variables */
-  qlocal = p4est->local_num_quadrants;
-  p4est->global_num_quadrants = qlocal;
-#ifdef HAVE_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
-                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
   p4est->local_num_trees = last_tree - first_tree + 1;
+  p4est_comm_count_quadrants (p4est);
 
   /* print more statistics */
   if (p4est->nout != NULL) {
@@ -254,15 +247,11 @@ p4est_destroy (p4est_t * p4est)
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-#ifdef HAVE_MPI
-  int                 mpiret;
-#endif
   int                 quadrant_pool_size, data_pool_size;
   int                 dorefine;
   int8_t              i, maxlevel;
   int32_t             j, movecount;
   int32_t             current, restpos, incount;
-  int64_t             qlocal;
   p4est_list_t       *list;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q, *qalloc, *qpop;
@@ -406,15 +395,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   p4est_list_destroy (list);
 
   /* compute global number of quadrants */
-  qlocal = p4est->local_num_quadrants;
-  p4est->global_num_quadrants = qlocal;
-#ifdef HAVE_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
-                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
+  p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 }
@@ -423,15 +404,11 @@ void
 p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
                p4est_init_t init_fn)
 {
-#ifdef HAVE_MPI
-  int                 mpiret;
-#endif
   int                 k, couldbegood, data_pool_size;
   int                 incount, removed, num_quadrants;
   int                 first, last, rest, before;
   int8_t              i, maxlevel;
   int32_t             j;
-  int64_t             qlocal;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *c[4];
   p4est_quadrant_t   *cfirst, *clast;
@@ -557,15 +534,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   }
 
   /* compute global number of quadrants */
-  qlocal = p4est->local_num_quadrants;
-  p4est->global_num_quadrants = qlocal;
-#ifdef HAVE_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
-                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
+  p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 }
@@ -573,11 +542,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 void
 p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
-#ifdef HAVE_MPI
-  int                 mpiret;
-#endif
   int32_t             j;
-  int64_t             qlocal;
   p4est_tree_t       *tree;
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -604,15 +569,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 
   /* compute global number of quadrants */
-  qlocal = p4est->local_num_quadrants;
-  p4est->global_num_quadrants = qlocal;
-#ifdef HAVE_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
-                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
+  p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 }
