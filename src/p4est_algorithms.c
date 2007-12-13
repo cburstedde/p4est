@@ -902,7 +902,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
    */
 
   /* assign some shortcut variables */
-  bbound = ((balance == 0) ? 5 : 8);
+  bbound = (int8_t) ((balance == 0) ? 5 : 8);
   inlist = tree->quadrants;
   incount = inlist->elem_count;
   inmaxl = tree->maxlevel;
@@ -1000,13 +1000,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
        */
       qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 */
       for (sid = 0; sid < bbound; ++sid) {
-        if (qid == sid) {
-          /* q is included in inlist by construction */
-          continue;
-        }
         /* stage 1: determine candidate qalloc */
         if (sid < 4) {
-          if (isfamily) {
+          if (qid == sid || isfamily) {
+            /* q (or its family) is included in inlist */
             continue;
           }
           p4est_quadrant_sibling (q, qalloc, sid);
@@ -1014,14 +1011,17 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
         else if (sid == 4) {
           /* compute the parent */
           p4est_quadrant_parent (q, qalloc);
-          parent = *qalloc;     /* make a temp copy for cases 5..7 */
-          ph = (1 << (P4EST_MAXLEVEL - parent.level));  /* parent size */
-          pid = p4est_quadrant_child_id (&parent);      /* parent position */
+          if (bbound > 5) {
+            parent = *qalloc;   /* copy parent for cases 5..7 */
+            ph = (1 << (P4EST_MAXLEVEL - parent.level));        /* its size */
+            pid = p4est_quadrant_child_id (&parent);    /* and position */
+          }
         }
         else {
           /* determine the 3 parent's relevant indirect neighbors */
           P4EST_ASSERT (sid >= 5 && sid < 8);
           if (balance < 2 && sid - 5 == corners_omitted[pid]) {
+            /* this quadrant would only be needed for corner balance */
             continue;
           }
           qalloc->x = parent.x + indirect_neighbors[pid][sid - 5][0] * ph;
@@ -1029,6 +1029,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           qalloc->level = parent.level;
           if ((qalloc->x < 0 || qalloc->x >= rh) ||
               (qalloc->y < 0 || qalloc->y >= rh)) {
+            /* quadrant is outside the root */
             continue;
           }
         }
@@ -1070,6 +1071,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
         }
         else {
 #ifdef P4EST_HAVE_DEBUG
+          /* quadrant is already contained in hash and output list */
           printf ("Already in output list\n");
 #endif
         }
