@@ -307,7 +307,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     incount = tree->quadrants->elem_count;
     for (current = 0; current < incount; ++current) {
       q = p4est_array_index (tree->quadrants, current);
-      dorefine = refine_fn (p4est, j, q);
+      dorefine = ((q->level < P4EST_MAXLEVEL) && refine_fn (p4est, j, q));
       if (dorefine) {
         break;
       }
@@ -333,7 +333,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     /* run through the list and refine recursively */
     while (list->elem_count > 0) {
       qpop = p4est_list_pop (list);
-      if (dorefine || refine_fn (p4est, j, qpop)) {
+      if (dorefine ||
+          ((qpop->level < P4EST_MAXLEVEL) && refine_fn (p4est, j, qpop))) {
         dorefine = 0;           /* a marker so that refine_fn is never called twice */
         p4est_array_resize (tree->quadrants, tree->quadrants->elem_count + 3);
 
@@ -395,6 +396,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     P4EST_ASSERT (p4est_tree_is_sorted (tree));
     P4EST_ASSERT (p4est_tree_is_complete (tree));
 
+    /* final log message for this tree */
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Done refine tree %d now %d\n",
                p4est->mpirank, j, tree->quadrants->elem_count);
@@ -547,8 +549,56 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     P4EST_ASSERT (p4est_tree_is_sorted (tree));
     P4EST_ASSERT (p4est_tree_is_complete (tree));
 
+    /* final log message for this tree */
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Done coarsen tree %d now %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+  }
+
+  /* compute global number of quadrants */
+  qlocal = p4est->local_num_quadrants;
+  p4est->global_num_quadrants = qlocal;
+#ifdef HAVE_MPI
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Allreduce (&qlocal, &p4est->global_num_quadrants,
+                            1, MPI_LONG_LONG, MPI_SUM, p4est->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
+#endif
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+}
+
+void
+p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
+{
+#ifdef HAVE_MPI
+  int                 mpiret;
+#endif
+  int32_t             j;
+  int64_t             qlocal;
+  p4est_tree_t       *tree;
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  /* loop over all local trees */
+  p4est->local_num_quadrants = 0;
+  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+
+    /* initial log message for this tree */
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Into balance tree %d with %d\n",
+               p4est->mpirank, j, tree->quadrants->elem_count);
+    }
+
+    p4est_balance_subtree (p4est, tree, j, init_fn);
+    p4est->local_num_quadrants += tree->quadrants->elem_count;
+
+    /* final log message for this tree */
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Done balance tree %d now %d\n",
                p4est->mpirank, j, tree->quadrants->elem_count);
     }
   }

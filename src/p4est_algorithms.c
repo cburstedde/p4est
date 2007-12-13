@@ -25,6 +25,7 @@
 static const int    hash_table_entries = 1361;
 
 /* *INDENT-OFF* */
+
 static const int8_t log_lookup_table[256] =
 { -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -46,6 +47,7 @@ static const int8_t log_lookup_table[256] =
 
 /** The offsets of the 3 indirect neighbors in units of h.
  * Indexing [cid][neighbor][xy] where cid is the child id.
+ * Neighbors are indexed in z-order.
  */
 static const int32_t indirect_neighbors[4][3][2] =
 {{{-1, -1}, { 1, -1}, {-1, 1}},
@@ -53,6 +55,13 @@ static const int32_t indirect_neighbors[4][3][2] =
  {{-1,  0}, {-2,  1}, { 0, 1}},
  {{ 1, -1}, {-1,  1}, { 1, 1}}
 };
+
+/** Indicate which neighbor to omit if edges are balanced, not corners
+ * Indexing [cid] where cid is the child id.
+ */
+static const int corners_omitted[4] = 
+{ 0, 1, 1, 2 };
+
 /* *INDENT-ON* */
 
 #define P4EST_LOG2_8(x) (log_lookup_table[(x)])
@@ -108,7 +117,7 @@ p4est_quadrant_hash (const void *v)
   return p4est_quadrant_linear_id (q, q->level) % (1LL << 30);
 }
 
-int
+int8_t
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
   int                 id = 0;
@@ -118,7 +127,7 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
   id |= ((q->x & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x01 : 0);
   id |= ((q->y & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x02 : 0);
 
-  return id;
+  return (int8_t) id;
 }
 
 int
@@ -851,22 +860,20 @@ p4est_complete_region (p4est_t * p4est,
   }
 }
 
-void
-p4est_complete_subtree (p4est_t * p4est, p4est_tree_t * tree,
-                        int32_t which_tree, p4est_init_t init_fn)
-{
-  P4EST_ASSERT (p4est_tree_is_sorted (tree));
-}
-
-void
-p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
-                       int32_t which_tree, p4est_init_t init_fn)
+/** Internal function to realize local completion / balancing.
+ * \param [in] balance  can be 0: no balancing
+ *                             1: balance across edges
+ *                             2: balance across edges and corners
+ */
+static void
+p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
+                           int32_t which_tree, p4est_init_t init_fn)
 {
   int                 i, incount, curcount, ocount;
   int                 comp, inserted;
   int                 quadrant_pool_size, data_pool_size;
   int                *key;
-  int8_t              l, inmaxl;
+  int8_t              l, inmaxl, bbound;
   int8_t              qid, sid, pid;
   int32_t             ph, rh;
   p4est_quadrant_t   *q, *r;
@@ -891,11 +898,13 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
    */
 
   /* assign some shortcut variables */
+  bbound = ((balance == 0) ? 5 : 8);
   inlist = tree->quadrants;
   incount = inlist->elem_count;
   inmaxl = tree->maxlevel;
   qpool = p4est->quadrant_pool;
-  key = &comp;                  /* unique user_data pointer to mark temporary quadrants */
+  key = &comp;                  /* unique user_data pointer
+                                   to mark temporary quadrants */
 
   /* needed for sanity check */
   quadrant_pool_size = qpool->elem_count;
@@ -920,12 +929,14 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
       tree_last = ld;
     }
   }
+#ifdef P4EST_HAVE_DEBUG
   if (p4est->nout != NULL) {
     fprintf (p4est->nout, "[%d] First descendent 0x%x 0x%x %d\n",
              p4est->mpirank, tree_first.x, tree_first.y, tree_first.level);
     fprintf (p4est->nout, "[%d] Last descendent 0x%x 0x%x %d\n",
              p4est->mpirank, tree_last.x, tree_last.y, tree_last.level);
   }
+#endif
 
   /* initialize temporary storage */
   list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
@@ -939,7 +950,7 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
     outlist[l] = NULL;
   }
 
-  /* walk to the input tree bottom-up */
+  /* walk through the input tree bottom-up */
   pid = -1;
   parent.x = -1;
   parent.y = -1;
@@ -970,11 +981,12 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
        *        5..7  relevant indirect neighbors of parent
        */
       qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 */
-      for (sid = 0; sid < 8; ++sid) {
+      for (sid = 0; sid < bbound; ++sid) {
+#ifdef P4EST_HAVE_DEBUG
         printf ("Level %d qxy 0x%x 0x%x sid %d\n", l, q->x, q->y, sid);
+#endif
         if (qid == sid) {
           /* q is included in inlist by construction */
-          printf ("Self\n");
           continue;
         }
         /* stage 1: determine candidate qalloc */
@@ -987,35 +999,46 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
           parent = *qalloc;     /* make a temp copy for cases 5..7 */
           ph = (1 << (P4EST_MAXLEVEL - parent.level));  /* parent size */
           pid = p4est_quadrant_child_id (&parent);      /* parent position */
+#ifdef P4EST_HAVE_DEBUG
           printf ("Parent child id %d\n", pid);
+#endif
         }
         else {
           /* determine the 3 parent's relevant indirect neighbors */
-          P4EST_ASSERT (sid >= 5);
+          P4EST_ASSERT (sid >= 5 && sid < 8);
+          if (balance < 2 && sid - 5 == corners_omitted[pid]) {
+            continue;
+          }
           qalloc->x = parent.x + indirect_neighbors[pid][sid - 5][0] * ph;
           qalloc->y = parent.y + indirect_neighbors[pid][sid - 5][1] * ph;
           qalloc->level = parent.level;
           if ((qalloc->x < 0 || qalloc->x >= rh) ||
               (qalloc->y < 0 || qalloc->y >= rh)) {
-            printf ("Outside root\n");
             continue;
           }
         }
+#ifdef P4EST_HAVE_DEBUG
         printf ("Candidate level %d qxy 0x%x 0x%x\n", qalloc->level,
                 qalloc->x, qalloc->y);
+#endif
 
         /* stage 2: include qalloc if necessary */
+        p4est_quadrant_last_descendent (qalloc, &ld, inmaxl);
         if ((p4est_quadrant_compare (&tree_first, qalloc) > 0 &&
              (qalloc->x != tree_first.x || qalloc->y != tree_first.y)) ||
-            p4est_quadrant_compare (qalloc, &tree_last) > 0) {
+            p4est_quadrant_compare (&ld, &tree_last) > 0) {
           /* qalloc is outside the tree */
+#ifdef P4EST_HAVE_DEBUG
           printf ("Outside tree\n");
+#endif
           continue;
         }
         r = p4est_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
         if (r != NULL) {
           /* qalloc is included in inlist */
+#ifdef P4EST_HAVE_DEBUG
           printf ("Included in inlist\n");
+#endif
           continue;
         }
         inserted =
@@ -1031,7 +1054,9 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
           qalloc->user_data = key;
         }
         else {
+#ifdef P4EST_HAVE_DEBUG
           printf ("Already in output list\n");
+#endif
         }
       }
     }
@@ -1082,6 +1107,20 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
   }
   P4EST_ASSERT (p4est_tree_is_linear (tree));
   P4EST_ASSERT (p4est_tree_is_complete (tree));
+}
+
+void
+p4est_complete_subtree (p4est_t * p4est, p4est_tree_t * tree,
+                        int32_t which_tree, p4est_init_t init_fn)
+{
+  p4est_complete_or_balance (p4est, tree, 0, which_tree, init_fn);
+}
+
+void
+p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
+                       int32_t which_tree, p4est_init_t init_fn)
+{
+  p4est_complete_or_balance (p4est, tree, 2, which_tree, init_fn);
 }
 
 void

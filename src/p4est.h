@@ -165,4 +165,12 @@ void                p4est_coarsen (p4est_t * p4est,
                                    p4est_coarsen_t coarsen_fn,
                                    p4est_init_t init_fn);
 
+/** Balance a forest. Currently only doing local balance.
+ * \param [in] init_fn   Callback function to initialize the user_data
+ *                       which is already allocated automatically.
+ * \note Balances edges and corners.
+ *       Can be easily changed to edges only in p4est_algorithms.c.
+ */
+void                p4est_balance (p4est_t * p4est, p4est_init_t init_fn);
+
 #endif /* !__P4EST_H__ */

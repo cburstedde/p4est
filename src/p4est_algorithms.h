@@ -43,7 +43,7 @@ int                 p4est_quadrant_hash (const void *v);
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */
-int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
+int8_t              p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
 /** Test if a quadrant has valid Morton indices.
  * \param [in] q Quadrant to be tested.

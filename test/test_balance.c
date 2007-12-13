@@ -42,21 +42,32 @@ main (int argc, char **argv)
   tree->maxlevel = 0;
 
   /* insert two quadrants */
-  p4est_array_resize (tree->quadrants, 2);
+  p4est_array_resize (tree->quadrants, 4);
   q = p4est_array_index (tree->quadrants, 0);
-  p4est_quadrant_set_morton (q, 0, 0);
-  ++tree->quadrants_per_level[0];
+  p4est_quadrant_set_morton (q, 1, 0);
+  ++tree->quadrants_per_level[1];
   q = p4est_array_index (tree->quadrants, 1);
   p4est_quadrant_set_morton (q, 3, 13);
   ++tree->quadrants_per_level[3];
+  q = p4est_array_index (tree->quadrants, 2);
+  p4est_quadrant_set_morton (q, 1, 1);
+  ++tree->quadrants_per_level[1];
+  q = p4est_array_index (tree->quadrants, 3);
+  p4est_quadrant_set_morton (q, 1, 2);
+  ++tree->quadrants_per_level[1];
   tree->maxlevel = 3;
 
-  /* balance the tree */
+  /* balance the tree, print and destroy */
   p4est_balance_subtree (p4est, tree, 0, NULL);
+  p4est_tree_print (tree, p4est->mpirank, p4est->nout);
+  p4est_array_destroy (tree->quadrants);
+
+  /* balance the forest */
+  p4est_balance (p4est, NULL);
+  tree = p4est_array_index (p4est->trees, 0);
   p4est_tree_print (tree, p4est->mpirank, p4est->nout);
 
   /* clean up memory */
-  p4est_array_destroy (tree->quadrants);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 

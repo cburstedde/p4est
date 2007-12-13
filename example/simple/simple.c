@@ -37,6 +37,23 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   data->a = which_tree;
 }
 
+static int
+refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+{
+  if (quadrant->level >= 6) {
+    return 0;
+  }
+  if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&
+      quadrant->y == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2))) {
+    return 1;
+  }
+  if (quadrant->x >= (1 << (P4EST_MAXLEVEL - 2))) {
+    return 0;
+  }
+
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -63,7 +80,11 @@ main (int argc, char **argv)
                      sizeof (user_data_t), init_fn);
   p4est_tree_print (p4est_array_index (p4est->trees, 0),
                     p4est->mpirank, stdout);
-  p4est_vtk_write_file (p4est, "mesh_simple");
+  p4est_vtk_write_file (p4est, "mesh_simple_new");
+  p4est_refine (p4est, refine_fn, init_fn);
+  p4est_vtk_write_file (p4est, "mesh_simple_refined");
+  p4est_balance (p4est, init_fn);
+  p4est_vtk_write_file (p4est, "mesh_simple_balanced");
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
