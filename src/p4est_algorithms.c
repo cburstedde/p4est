@@ -1661,4 +1661,25 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   P4EST_ASSERT (p4est_tree_is_linear (tree));
 }
 
+void
+p4est_partition_given (p4est_t * p4est, int32_t * num_quadrants_in_proc)
+{
+#ifdef P4EST_HAVE_DEBUG
+  int                 i;
+  int                 num_procs = p4est->mpisize;
+
+  for (i = 0; i < num_procs - 1; ++i) {
+    P4EST_ASSERT (num_quadrants_in_proc[i] >= 0);
+  }
+#endif
+
+  /* Calculate where the quadrants are coming from */
+
+  /* Post receives for the quadrants and their data */
+
+  /* Communicate the quadrants and their data */
+
+  /* Fill in the necessary variables to make sure we have a valid forest */
+}
+
 /* EOF p4est_algorithms.c */

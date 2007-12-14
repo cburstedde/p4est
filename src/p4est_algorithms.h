@@ -373,4 +373,15 @@ void                p4est_balance_subtree (p4est_t * p4est,
 void                p4est_linearize_subtree (p4est_t * p4est,
                                              p4est_tree_t * tree);
 
+/** Partition \a p4est given the number of quadrants per proc.
+ *
+ * Given the desired number of quadrants per proc \a num_quadrants_in_proc
+ * the forest \a p4est is partitioned.
+ *
+ * \param [in,out] p4est the forest that is partitioned.
+ * \param [in]     num_quadrants_in_proc  an integer array of the number of
+ *                                        quadrants desired per processor.
+ */
+void                p4est_partition_given (p4est_t * p4est,
+                                           int32_t * num_quadrants_in_proc);
 #endif /* !__P4EST_ALGORITHMS_H__ */
