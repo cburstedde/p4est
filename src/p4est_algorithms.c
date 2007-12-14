@@ -981,8 +981,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           for (j = 1; j < 4; ++j) {
             family[j] = p4est_array_index (inlist, i + j);
           }
-          isfamily = p4est_quadrant_is_family (family[0], family[1],
-                                               family[2], family[3]);
+          if (p4est_quadrant_is_family (family[0], family[1],
+                                        family[2], family[3])) {
+            isfamily = 1;
+            i += 3;
+          }
         }
       }
       else {
@@ -1080,45 +1083,44 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   }
   p4est_mempool_free (qpool, qalloc);
 
-  /* merge hash into input list */
+  /* merge outlist into input list and free temporary storage */
   for (l = 0; l <= inmaxl; ++l) {
+    /* print statistics and free hash tables */
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Tree %d Level %d ",
+               p4est->mpirank, which_tree, l);
+    }
+    p4est_hash_print_statistics (hash[l], p4est->nout);
+    p4est_hash_destroy (hash[l]);
+
+    /* merge outlist into inlist */
     curcount = inlist->elem_count;
     ocount = outlist[l]->elem_count;
     p4est_array_resize (inlist, curcount + ocount);
     for (i = 0; i < ocount; ++i) {
+      /* copy and free temporary quadrants */
       q = p4est_array_index (inlist, curcount + i);
       qpointer = p4est_array_index (outlist[l], i);
-      *q = **qpointer;
+      qalloc = *qpointer;
+      *q = *qalloc;
+      p4est_mempool_free (qpool, qalloc);
+
+      /* complete quadrant initialization */
+      P4EST_ASSERT (q->user_data == key);
+      p4est_quadrant_init_data (p4est, which_tree, q, init_fn);      
       ++tree->quadrants_per_level[q->level];
       if (q->level > tree->maxlevel) {
         tree->maxlevel = q->level;
       }
-      P4EST_ASSERT (q->user_data == key);
-      p4est_quadrant_init_data (p4est, which_tree, q, init_fn);
     }
+    p4est_array_destroy (outlist[l]);
   }
+  p4est_mempool_destroy (list_alloc);
 
   /* sort and linearize tree */
   p4est_array_sort (inlist, p4est_quadrant_compare);
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
   p4est_linearize_subtree (p4est, tree);
-
-  /* free temporary storage */
-  for (l = 0; l <= inmaxl; ++l) {
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "[%d] Level %d ", p4est->mpirank, l);
-    }
-    p4est_hash_print_statistics (hash[l], p4est->nout);
-    p4est_hash_destroy (hash[l]);
-    olist = outlist[l];
-    for (i = 0; i < olist->elem_count; ++i) {
-      qpointer = p4est_array_index (olist, i);
-      qalloc = *qpointer;
-      p4est_mempool_free (qpool, qalloc);
-    }
-    p4est_array_destroy (olist);
-  }
-  p4est_mempool_destroy (list_alloc);
 
   /* run sanity checks */
   P4EST_ASSERT (quadrant_pool_size == qpool->elem_count);
