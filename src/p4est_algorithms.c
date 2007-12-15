@@ -23,7 +23,7 @@
 #include <p4est_base.h>
 
 static const int    hash_table_minsize = 1361;
-static const int    hash_table_maxsize = (1 << 20) / P4EST_MAXLEVEL - 1;
+static const int    hash_table_maxsize = 99133;
 
 /* *INDENT-OFF* */
 
@@ -872,16 +872,19 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 {
   int                 i, j;
   int                 incount, curcount, ocount;
-  int                 comp, inserted, isfamily;
+  int                 comp, lookup, inserted, isfamily;
   int                 quadrant_pool_size, data_pool_size;
   int                 hash_size;
-  int                *key;
+  int                 count_outside_root, count_outside_tree;
+  int                 count_already_inlist, count_already_outlist;
+  int                *key, *parent_key;
   int8_t              l, inmaxl, bbound;
   int8_t              qid, sid, pid;
   int32_t             ph, rh;
+  void               *vlookup;
   p4est_quadrant_t   *family[4];
   p4est_quadrant_t   *q, *r;
-  p4est_quadrant_t   *qalloc, **qpointer;
+  p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
   p4est_quadrant_t    ld, tree_first, tree_last, parent;
   p4est_array_t      *inlist, *olist;
   p4est_mempool_t    *list_alloc, *qpool;
@@ -907,8 +910,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   incount = inlist->elem_count;
   inmaxl = tree->maxlevel;
   qpool = p4est->quadrant_pool;
-  key = &comp;                  /* unique user_data pointer
-                                   to mark temporary quadrants */
+  key = &comp;                  /* unique user_data pointer */
+  parent_key = &lookup;
 
   /* needed for sanity check */
   quadrant_pool_size = qpool->elem_count;
@@ -933,20 +936,24 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
       tree_last = ld;
     }
   }
-#ifdef P4EST_HAVE_DEBUG
-  if (p4est->nout != NULL) {
-    fprintf (p4est->nout, "[%d] First descendent 0x%x 0x%x %d\n",
-             p4est->mpirank, tree_first.x, tree_first.y, tree_first.level);
-    fprintf (p4est->nout, "[%d] Last descendent 0x%x 0x%x %d\n",
-             p4est->mpirank, tree_last.x, tree_last.y, tree_last.level);
-  }
-#endif
+  /*
+     if (p4est->nout != NULL) {
+     fprintf (p4est->nout, "[%d] First descendent 0x%x 0x%x %d\n",
+     p4est->mpirank, tree_first.x, tree_first.y, tree_first.level);
+     fprintf (p4est->nout, "[%d] Last descendent 0x%x 0x%x %d\n",
+     p4est->mpirank, tree_last.x, tree_last.y, tree_last.level);
+     }
+   */
+
+  /* initialize some counters */
+  count_outside_root = count_outside_tree = 0;
+  count_already_inlist = count_already_outlist = 0;
 
   /* initialize temporary storage */
   list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
   for (l = 0; l <= inmaxl; ++l) {
     hash_size = P4EST_MAX (incount / (P4EST_MAXLEVEL * 10),
-                           tree->quadrants_per_level[l] / 10);
+                           tree->quadrants_per_level[l] * 2 - 1);
     hash_size = P4EST_MIN (hash_table_maxsize, hash_size);
     hash_size = P4EST_MAX (hash_table_minsize, hash_size);
     hash[l] = p4est_hash_new (hash_size, p4est_quadrant_hash,
@@ -959,6 +966,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   }
 
   /* walk through the input tree bottom-up */
+  ph = 0;
   pid = -1;
   parent.x = -1;
   parent.y = -1;
@@ -984,7 +992,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           if (p4est_quadrant_is_family (family[0], family[1],
                                         family[2], family[3])) {
             isfamily = 1;
-            i += 3;
+            i += 3;             /* skip siblings */
           }
         }
       }
@@ -1033,13 +1041,14 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           if ((qalloc->x < 0 || qalloc->x >= rh) ||
               (qalloc->y < 0 || qalloc->y >= rh)) {
             /* quadrant is outside the root */
+            ++count_outside_root;
             continue;
           }
         }
-#ifdef P4EST_HAVE_DEBUG
-        printf ("Candidate level %d qxy 0x%x 0x%x at sid %d\n",
-                qalloc->level, qalloc->x, qalloc->y, sid);
-#endif
+        /*
+           printf ("Candidate level %d qxy 0x%x 0x%x at sid %d\n",
+           qalloc->level, qalloc->x, qalloc->y, sid);
+         */
 
         /* stage 2: include qalloc if necessary */
         p4est_quadrant_last_descendent (qalloc, &ld, inmaxl);
@@ -1047,43 +1056,46 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
              (qalloc->x != tree_first.x || qalloc->y != tree_first.y)) ||
             p4est_quadrant_compare (&ld, &tree_last) > 0) {
           /* qalloc is outside the tree */
-#ifdef P4EST_HAVE_DEBUG
-          printf ("Outside tree\n");
-#endif
+          ++count_outside_tree;
+          continue;
+        }
+        lookup = p4est_hash_lookup (hash[qalloc->level], qalloc, &vlookup);
+        if (lookup) {
+          /* qalloc is already included in output list, this catches most */
+          ++count_already_outlist;
+          qlookup = vlookup;
+          if (sid == 4 && qlookup->user_data == parent_key) {
+            break;              /* this parent has been triggered before */
+          }
           continue;
         }
         r = p4est_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
         if (r != NULL) {
-          /* qalloc is included in inlist */
-#ifdef P4EST_HAVE_DEBUG
-          printf ("Included in inlist\n");
-#endif
+          /* qalloc is included in inlist, this is more expensive to test */
+          ++count_already_inlist;
           continue;
         }
-        inserted =
-          p4est_hash_insert_unique (hash[qalloc->level], qalloc, NULL);
-        if (inserted) {
-          /* insert qalloc into the output list as well */
-          olist = outlist[qalloc->level];
-          p4est_array_resize (olist, olist->elem_count + 1);
-          qpointer = p4est_array_index (olist, olist->elem_count - 1);
-          *qpointer = qalloc;
-          /* we need a new quadrant now, the old one is stored away */
-          qalloc = p4est_mempool_alloc (qpool);
-          qalloc->user_data = key;
+        /* insert qalloc into the output list as well */
+        if (sid == 4) {
+          qalloc->user_data = parent_key;
         }
-        else {
-#ifdef P4EST_HAVE_DEBUG
-          /* quadrant is already contained in hash and output list */
-          printf ("Already in output list\n");
-#endif
-        }
+        inserted = p4est_hash_insert_unique (hash[qalloc->level], qalloc,
+                                             NULL);
+        P4EST_ASSERT (inserted);
+        olist = outlist[qalloc->level];
+        p4est_array_resize (olist, olist->elem_count + 1);
+        qpointer = p4est_array_index (olist, olist->elem_count - 1);
+        *qpointer = qalloc;
+        /* we need a new quadrant now, the old one is stored away */
+        qalloc = p4est_mempool_alloc (qpool);
+        qalloc->user_data = key;
       }
     }
   }
   p4est_mempool_free (qpool, qalloc);
 
   /* merge outlist into input list and free temporary storage */
+  curcount = 0;
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
     if (p4est->nout != NULL) {
@@ -1091,6 +1103,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
                p4est->mpirank, which_tree, l);
     }
     p4est_hash_print_statistics (hash[l], p4est->nout);
+    p4est_hash_unlink (hash[l]);        /* performance optimization */
     p4est_hash_destroy (hash[l]);
 
     /* merge outlist into inlist */
@@ -1102,20 +1115,34 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
       q = p4est_array_index (inlist, curcount + i);
       qpointer = p4est_array_index (outlist[l], i);
       qalloc = *qpointer;
+      P4EST_ASSERT (qalloc->level == l);
+      P4EST_ASSERT (qalloc->user_data == key ||
+                    qalloc->user_data == parent_key);
       *q = *qalloc;
       p4est_mempool_free (qpool, qalloc);
 
       /* complete quadrant initialization */
-      P4EST_ASSERT (q->user_data == key);
-      p4est_quadrant_init_data (p4est, which_tree, q, init_fn);      
-      ++tree->quadrants_per_level[q->level];
-      if (q->level > tree->maxlevel) {
-        tree->maxlevel = q->level;
-      }
+      p4est_quadrant_init_data (p4est, which_tree, q, init_fn);
+    }
+    tree->quadrants_per_level[l] += ocount;
+    if (ocount > 0 && l > tree->maxlevel) {
+      tree->maxlevel = l;
     }
     p4est_array_destroy (outlist[l]);
   }
   p4est_mempool_destroy (list_alloc);
+
+  /* print more statistics */
+  if (p4est->nout != NULL) {
+    fprintf (p4est->nout, "[%d] Tree %d Outside root %d tree %d\n",
+             p4est->mpirank, which_tree,
+             count_outside_root, count_outside_tree);
+    fprintf (p4est->nout, "[%d] Tree %d Already in inlist %d outlist %d\n",
+             p4est->mpirank, which_tree,
+             count_already_inlist, count_already_outlist);
+    fprintf (p4est->nout, "[%d] Tree %d Insertions %d\n",
+             p4est->mpirank, which_tree, curcount - incount);
+  }
 
   /* sort and linearize tree */
   p4est_array_sort (inlist, p4est_quadrant_compare);

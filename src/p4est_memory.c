@@ -343,6 +343,13 @@ p4est_list_reset (p4est_list_t * list)
 }
 
 void
+p4est_list_unlink (p4est_list_t * list)
+{
+  list->first = list->last = NULL;
+  list->elem_count = 0;
+}
+
+void
 p4est_list_prepend (p4est_list_t * list, void *data)
 {
   p4est_link_t       *link;
@@ -494,12 +501,35 @@ p4est_hash_reset (p4est_hash_t * hash)
   int                 i, size, count;
   p4est_list_t       *list;
 
+  if (hash->elem_count == 0) {
+    return;
+  }
+
+  count = 0;
+  size = hash->table->elem_count;
+
+  for (i = 0; i < size; ++i) {
+    list = p4est_array_index (hash->table, i);
+    count += list->elem_count;
+    p4est_list_reset (list);
+  }
+  P4EST_ASSERT (count == hash->elem_count);
+
+  hash->elem_count = 0;
+}
+
+void
+p4est_hash_unlink (p4est_hash_t * hash)
+{
+  int                 i, size, count;
+  p4est_list_t       *list;
+
   count = 0;
   size = hash->table->elem_count;
   for (i = 0; i < size; ++i) {
     list = p4est_array_index (hash->table, i);
     count += list->elem_count;
-    p4est_list_reset (list);
+    p4est_list_unlink (list);
   }
   P4EST_ASSERT (count == hash->elem_count);
 

@@ -165,7 +165,7 @@ p4est_list_t;
  */
 p4est_list_t       *p4est_list_new (p4est_mempool_t * allocator);
 
-/** Destroy a linked list structure.
+/** Destroy a linked list structure in O(N).
  * \note If allocator was provided in p4est_list_new, it will not be destroyed.
  */
 void                p4est_list_destroy (p4est_list_t * list);
@@ -177,12 +177,18 @@ void                p4est_list_destroy (p4est_list_t * list);
 void                p4est_list_init (p4est_list_t * list,
                                      p4est_mempool_t * allocator);
 
-/** Removes all elements from a list.
+/** Removes all elements from a list in O(N).
  * \param [in,out]  list       List structure to be resetted.
  * \note Calling p4est_list_init, then any list operations,
  *       then p4est_list_reset is memory neutral.
  */
 void                p4est_list_reset (p4est_list_t * list);
+
+/** Unliks all list elements without returning them to the mempool.
+ * This runs in O(1) but is dangerous because of potential memory leaks.
+ * \param [in,out]  list       List structure to be unlinked.
+ */
+void                p4est_list_unlink (p4est_list_t * list);
 
 void                p4est_list_prepend (p4est_list_t * list, void *data);
 void                p4est_list_append (p4est_list_t * list, void *data);
@@ -244,13 +250,20 @@ p4est_hash_t       *p4est_hash_new (int table_size,
                                     p4est_hash_function_t hash_fn,
                                     p4est_equal_function_t equal_fn,
                                     p4est_mempool_t * allocator);
-/** Destroy a hash table.
+/** Destroy a hash table in O(N).
  * \note If allocator was provided in p4est_hash_new, it will not be destroyed.
  */
 void                p4est_hash_destroy (p4est_hash_t * hash);
 
-/** Remove all entries from a hash table. */
+/** Remove all entries from a hash table in O(N). */
 void                p4est_hash_reset (p4est_hash_t * hash);
+
+/** Unlinks all hash elements without returning them to the mempool.
+ * This runs faster than p4est_hash_reset, still in O(N),
+ *    but is dangerous because of potential memory leaks.
+ * \param [in,out]  hash       Hash structure to be unlinked.
+ */
+void                p4est_hash_unlink (p4est_hash_t * hash);
 
 /** Check if an object is contained in the hash table.
  * \param [in]  v      The object to be looked up.
@@ -261,7 +274,7 @@ void                p4est_hash_reset (p4est_hash_t * hash);
 int                 p4est_hash_lookup (p4est_hash_t * hash, void *v,
                                        void **found);
 
-/** Insert an object into a hash table only if it is not contained already.
+/** Insert an object into a hash table if it is not contained already.
  * \param [in]  v      The object to be inserted.
  * \param [out] found  If found != NULL, *found is set to the object
  *                     that is already contained if that exists.
