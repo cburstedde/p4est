@@ -48,7 +48,8 @@ main (int argc, char ** argv)
   int                 mpiret;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  double              start, elapsed_refine, elapsed_balance;
+  double              start, elapsed_refine;
+  double              elapsed_balance, elapsed_rebalance;
   MPI_Comm            mpicomm;
 
   mpiret = MPI_Init (&argc, &argv);
@@ -79,9 +80,14 @@ main (int argc, char ** argv)
     p4est_vtk_write_file (p4est, "mesh_timings_balanced");
   }
 
+  /* time rebalance - is a noop on the tree */
+  start = -MPI_Wtime ();
+  p4est_balance (p4est, NULL);
+  elapsed_rebalance = start + MPI_Wtime ();
+
   /* print timings */
-  printf ("Level %d refinement %.3gs balance %.3gs\n",
-          refine_level, elapsed_refine, elapsed_balance);
+  printf ("Level %d refinement %.3gs balance %.3gs rebalance %.3gs\n",
+          refine_level, elapsed_refine, elapsed_balance, elapsed_rebalance);
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
