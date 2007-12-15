@@ -42,4 +42,39 @@ p4est_comm_count_quadrants (p4est_t * p4est)
 #endif
 }
 
+void
+p4est_comm_global_partition (p4est_t * p4est)
+{
+#ifdef HAVE_MPI
+  int                 mpiret;
+  int32_t             input[3];
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quadrant;
+#endif
+
+  p4est->global_first_indices[0] = 0;
+  p4est->global_first_indices[1] = 0;
+  p4est->global_first_indices[2] = 0;
+
+#ifdef HAVE_MPI
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    tree = p4est_array_index (p4est->trees, p4est->first_local_tree);
+    quadrant = p4est_array_index (tree->quadrants, 0);
+
+    input[0] = p4est->first_local_tree;
+    input[1] = quadrant->x;
+    input[2] = quadrant->y;
+    mpiret = MPI_Allgather (input, 3, MPI_INT,
+                            p4est->global_first_indices, 3, MPI_INT,
+                            p4est->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
+#endif
+
+  p4est->global_first_indices[3 * p4est->mpisize + 0] =
+    p4est->connectivity->num_trees;
+  p4est->global_first_indices[3 * p4est->mpisize + 1] = 0;
+  p4est->global_first_indices[3 * p4est->mpisize + 2] = 0;
+}
+
 /* EOF p4est_communication.h */

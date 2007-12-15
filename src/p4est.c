@@ -209,6 +209,12 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   p4est->local_num_trees = last_tree - first_tree + 1;
   p4est_comm_count_quadrants (p4est);
 
+  /* compute global partition information */
+  p4est->global_first_indices = P4EST_ALLOC (int32_t,
+                                             3 * (p4est->mpisize + 1));
+  P4EST_CHECK_ALLOC (p4est->global_first_indices);
+  p4est_comm_global_partition (p4est);
+
   /* print more statistics */
   if (p4est->nout != NULL) {
     fprintf (p4est->nout, "[%d] total local quadrants %d\n",
@@ -240,6 +246,8 @@ p4est_destroy (p4est_t * p4est)
     p4est_mempool_destroy (p4est->user_data_pool);
   }
   p4est_mempool_destroy (p4est->quadrant_pool);
+
+  P4EST_FREE (p4est->global_first_indices);
 
   P4EST_FREE (p4est);
 }

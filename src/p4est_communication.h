@@ -29,4 +29,9 @@
  */
 void                p4est_comm_count_quadrants (p4est_t * p4est);
 
+/** Distribute the global partition boundaries.
+ * \parm [in,out] p4est  Fills p4est->global_first_indices.
+ */
+void                p4est_comm_global_partition (p4est_t * p4est);
+
 #endif /* !__P4EST_COMMUNICATION_H__ */
