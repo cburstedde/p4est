@@ -39,6 +39,7 @@ main (int argc, char **argv)
 {
   int                 i, k, inserted;
   int                 i1, i2, i3;
+  void               *v1, *v2, *v3;
   p4est_quadrant_t    q1, q2, q3;
   p4est_quadrant_t   *f1, *f2, *f3;
   p4est_hash_t       *ihash;
@@ -68,9 +69,9 @@ main (int argc, char **argv)
   q3.user_data = NULL;
 
   f1 = f2 = f3 = NULL;
-  i1 = p4est_hash_insert_unique (qhash, &q1, (void **) &f1);
-  i2 = p4est_hash_insert_unique (qhash, &q2, (void **) &f2);
-  i3 = p4est_hash_insert_unique (qhash, &q3, (void **) &f3);
+  i1 = p4est_hash_insert_unique (qhash, &q1, &v1); f1 = v1;
+  i2 = p4est_hash_insert_unique (qhash, &q2, &v2); f2 = v2;
+  i3 = p4est_hash_insert_unique (qhash, &q3, &v3); f3 = v3;
   printf ("Quadrants inserted %d %d %d total %d\n", i1, i2, i3,
           qhash->elem_count);
 
@@ -82,7 +83,7 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton (&q1, 3, 19);
   i1 = p4est_hash_lookup (qhash, &q1, NULL);
   i2 = p4est_hash_lookup (qhash, &q2, NULL);
-  i3 = p4est_hash_lookup (qhash, &q3, (void **) &f3);
+  i3 = p4est_hash_lookup (qhash, &q3, &v3); f3 = v3;
   printf ("Quadrants lookup %d %d %d total %d\n", i1, i2, i3,
           qhash->elem_count);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
@@ -90,8 +91,8 @@ main (int argc, char **argv)
                      && f3->user_data == (void *) 5, "Lookup return");
  
   f1 = f2 = f3 = NULL;
-  i1 = p4est_hash_remove (qhash, &q1, (void **) &f1);
-  i2 = p4est_hash_remove (qhash, &q2, (void **) &f2);
+  i1 = p4est_hash_remove (qhash, &q1, &v1); f1 = v1;
+  i2 = p4est_hash_remove (qhash, &q2, &v2); f2 = v2;
   i3 = p4est_hash_remove (qhash, &q3, NULL);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
   P4EST_CHECK_ABORT (f2 == &q2

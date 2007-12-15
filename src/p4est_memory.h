@@ -265,6 +265,12 @@ void                p4est_hash_reset (p4est_hash_t * hash);
  */
 void                p4est_hash_unlink (p4est_hash_t * hash);
 
+/** Same effect as unlink and destroy, but in O(1).
+ * This is dangerous because of potential memory leaks.
+ * \param [in]  hash       Hash structure to be unlinked and destroyed.
+ */
+void                p4est_hash_unlink_destroy (p4est_hash_t * hash);
+
 /** Check if an object is contained in the hash table.
  * \param [in]  v      The object to be looked up.
  * \param [out] found  If found != NULL, *found is set to the object

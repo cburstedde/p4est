@@ -1098,13 +1098,14 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   curcount = 0;
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
+#ifdef P4EST_HAVE_DEBUG
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Tree %d Level %d ",
                p4est->mpirank, which_tree, l);
     }
     p4est_hash_print_statistics (hash[l], p4est->nout);
-    p4est_hash_unlink (hash[l]);        /* performance optimization */
-    p4est_hash_destroy (hash[l]);
+#endif
+    p4est_hash_unlink_destroy (hash[l]);        /* performance optimization */
 
     /* merge outlist into inlist */
     curcount = inlist->elem_count;

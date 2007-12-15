@@ -536,6 +536,17 @@ p4est_hash_unlink (p4est_hash_t * hash)
   hash->elem_count = 0;
 }
 
+void
+p4est_hash_unlink_destroy (p4est_hash_t * hash)
+{
+  p4est_array_destroy (hash->table);
+  if (hash->allocator_owned) {
+    p4est_mempool_destroy (hash->allocator);
+  }
+
+  P4EST_FREE (hash);
+}
+
 int
 p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
 {
