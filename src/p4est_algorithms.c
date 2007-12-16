@@ -952,7 +952,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   /* initialize temporary storage */
   list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
   for (l = 0; l <= inmaxl; ++l) {
-    hash_size = P4EST_MAX (incount / (P4EST_MAXLEVEL * 10),
+    hash_size = P4EST_MAX (incount / (P4EST_MAXLEVEL * 2),
                            tree->quadrants_per_level[l] * 2 - 1);
     hash_size = P4EST_MIN (hash_table_maxsize, hash_size);
     hash_size = P4EST_MAX (hash_table_minsize, hash_size);

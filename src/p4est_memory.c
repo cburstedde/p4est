@@ -32,15 +32,10 @@ p4est_array_new (int elem_size)
 {
   p4est_array_t      *array;
 
-  P4EST_ASSERT (elem_size > 0);
-
   array = P4EST_ALLOC_ZERO (p4est_array_t, 1);
   P4EST_CHECK_ALLOC (array);
 
-  array->elem_size = elem_size;
-  array->elem_count = 0;
-  array->elem_alloc = 0;
-  array->array = NULL;
+  p4est_array_init (array, elem_size);
 
   return array;
 }
@@ -50,6 +45,27 @@ p4est_array_destroy (p4est_array_t * array)
 {
   P4EST_FREE (array->array);
   P4EST_FREE (array);
+}
+
+void
+p4est_array_init (p4est_array_t * array, int elem_size)
+{
+  P4EST_ASSERT (elem_size > 0);
+
+  array->elem_size = elem_size;
+  array->elem_count = 0;
+  array->elem_alloc = 0;
+  array->array = NULL;
+}
+
+void
+p4est_array_reset (p4est_array_t * array)
+{
+  P4EST_FREE (array->array);
+  array->array = NULL;
+
+  array->elem_count = 0;
+  array->elem_alloc = 0;
 }
 
 void
@@ -237,7 +253,7 @@ p4est_mempool_destroy (p4est_mempool_t * mempool)
 void
 p4est_mempool_reset (p4est_mempool_t * mempool)
 {
-  p4est_array_resize (mempool->freed, 0);
+  p4est_array_reset (mempool->freed);
   obstack_free (&mempool->obstack, NULL);
   mempool->elem_count = 0;
 }

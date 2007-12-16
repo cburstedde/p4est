@@ -48,8 +48,29 @@ typedef struct p4est_array
 }
 p4est_array_t;
 
+/** Creates a new array structure with 0 elements.
+ * \param [in] elem_size  Size of one array element in bytes.
+ * \return Returns an allocated and initialized array.
+ */
 p4est_array_t      *p4est_array_new (int elem_size);
+
+/** Destroys an array structure.
+ * \param [in] array  The array to be destroyed.
+ */
 void                p4est_array_destroy (p4est_array_t * array);
+
+/** Initializes an already allocated array structure.
+ * \param [in,out]  array       Array structure to be initialized.
+ * \param [in] elem_size  Size of one array element in bytes.
+ */
+void                p4est_array_init (p4est_array_t * array, int elem_size);
+
+/** Sets the array count to zero and frees all elements.
+ * \param [in,out]  array       Array structure to be resetted.
+ * \note Calling p4est_array_init, then any array operations,
+ *       then p4est_array_reset is memory neutral.
+ */
+void                p4est_array_reset (p4est_array_t * array);
 
 /** Sets the element count to new_count.
  * Reallocation takes place only occasionally, so this function is usually fast.
@@ -124,15 +145,30 @@ typedef struct p4est_mempool
 }
 p4est_mempool_t;
 
-/* create, destroy or reset to count=0 the memory pool */
+/** Creates a new mempool structure.
+ * \param [in] elem_size  Size of one element in bytes.
+ * \return Returns an allocated and initialized memory pool.
+ */
 p4est_mempool_t    *p4est_mempool_new (int elem_size);
+
+/** Destroys a mempool structure.
+ * All elements that are still in use are invalidated.
+ */
 void                p4est_mempool_destroy (p4est_mempool_t * mempool);
 
-/** Invalidates all previously returned pointers, resets count to 0. */
+/** Invalidates all previously returned pointers, resets count to 0.
+ */
 void                p4est_mempool_reset (p4est_mempool_t * mempool);
 
-/* allocate or free a single element */
+/** Allocate a single element.
+ * Elements previously returned to the pool are recycled.
+ * \return Returns a new or recycled element pointer.
+ */
 void               *p4est_mempool_alloc (p4est_mempool_t * mempool);
+
+/** Return a previously allocated element to the pool.
+ * \param [in] elem  The element to be returned to the pool.
+ */
 void                p4est_mempool_free (p4est_mempool_t * mempool,
                                         void *elem);
 
