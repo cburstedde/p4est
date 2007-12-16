@@ -77,4 +77,54 @@ p4est_comm_global_partition (p4est_t * p4est)
   p4est->global_first_indices[3 * p4est->mpisize + 2] = 0;
 }
 
+int32_t
+p4est_comm_find_owner (p4est_t * p4est, int32_t which_tree,
+                       const p4est_quadrant_t * q, int32_t guess)
+{
+  int32_t             proc_low, proc_high;
+  int32_t             ctree;
+  p4est_quadrant_t    cur;
+
+  proc_low = 0;
+  proc_high = p4est->mpisize - 1;
+  cur.level = P4EST_MAXLEVEL;
+  
+  for (;;) {
+    P4EST_ASSERT (proc_low <= proc_high);
+    P4EST_ASSERT (0 <= proc_low && proc_low < p4est->mpisize);
+    P4EST_ASSERT (0 <= proc_high && proc_high < p4est->mpisize);
+    P4EST_ASSERT (proc_low <= guess && guess <= proc_high);
+
+    /* check if q is on a lower processor than guess */
+    ctree = p4est->global_first_indices[3 * guess + 0];
+    cur.x = p4est->global_first_indices[3 * guess + 1];
+    cur.y = p4est->global_first_indices[3 * guess + 2];
+    if (which_tree < ctree ||
+        (which_tree == ctree &&
+         (p4est_quadrant_compare (q, &cur) < 0 &&
+          (q->x != cur.x || q->y != cur.y)))) {
+      proc_high = guess - 1;
+      guess = (proc_low + proc_high + 1) / 2;
+      continue;
+    }
+
+    /* check if q is on a higher processor than guess */
+    ctree = p4est->global_first_indices[3 * (guess + 1) + 0];
+    cur.x = p4est->global_first_indices[3 * (guess + 1) + 1];
+    cur.y = p4est->global_first_indices[3 * (guess + 1) + 2];
+    if (which_tree > ctree ||
+        (which_tree == ctree &&
+         (p4est_quadrant_compare (&cur, q) <= 0))) {
+      proc_low = guess + 1;
+      guess = (proc_low + proc_high) / 2;
+      continue;
+    }
+
+    /* otherwise guess is the correct processor */
+    break;
+  }
+
+  return guess;
+}
+
 /* EOF p4est_communication.h */

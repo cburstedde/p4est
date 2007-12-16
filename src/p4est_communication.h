@@ -24,6 +24,13 @@
 
 #include <p4est.h>
 
+typedef struct 
+{
+  p4est_array_t       send_first, recv_first;
+  p4est_array_t       send_second, recv_second;
+}
+p4est_balance_peer_t;
+
 /** Compute the global number of quadrants.
  * \parm [in,out] p4est  Adds all p4est->local_num_quadrant counters.
  */
@@ -33,5 +40,14 @@ void                p4est_comm_count_quadrants (p4est_t * p4est);
  * \parm [in,out] p4est  Fills p4est->global_first_indices.
  */
 void                p4est_comm_global_partition (p4est_t * p4est);
+
+/** Searches the owner of a quadrant via p4est->global_first_indices.
+ * \param [in] guess   Initial guess for the search.
+ * \return Returns the processor id of the owner.
+ */
+int32_t             p4est_comm_find_owner (p4est_t * p4est,
+                                           int32_t which_tree,
+                                           const p4est_quadrant_t * q,
+                                           int32_t guess);
 
 #endif /* !__P4EST_COMMUNICATION_H__ */

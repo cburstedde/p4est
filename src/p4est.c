@@ -550,14 +550,47 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 void
 p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
-  int32_t             j;
+  int                 k, l, which;
+  int                 comp, scount;
+  int32_t             i, j;
+  int32_t             qh, rh;
+  int32_t             qcount;
+  int32_t             first_tree, last_tree;
+  int32_t             owner, first_owner, last_owner;
   p4est_tree_t       *tree;
+  p4est_array_t      *peers;
+  p4est_balance_peer_t *peer;
+  p4est_quadrant_t   *q, *s;
+  p4est_quadrant_t    mylow, nextlow, ld;
+  p4est_quadrant_t    ins[9];   /* insulation layer including its center */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
+  /* allocate temporary storage */
+  peers = p4est_array_new (sizeof (p4est_balance_peer_t));
+  p4est_array_resize (peers, p4est->mpisize);
+  for (i = 0; i < p4est->mpisize; ++i) {
+    peer = p4est_array_index (peers, i);
+    p4est_array_init (&peer->send_first, sizeof (p4est_quadrant_t));
+    p4est_array_init (&peer->recv_first, sizeof (p4est_quadrant_t));
+    p4est_array_init (&peer->send_second, sizeof (p4est_quadrant_t));
+    p4est_array_init (&peer->recv_second, sizeof (p4est_quadrant_t));
+  }
+
+  /* compute first quadrants on finest level for comparison for me and next */
+  first_tree = p4est->first_local_tree;
+  last_tree = p4est->last_local_tree;
+  mylow.x = p4est->global_first_indices[3 * p4est->mpirank + 1];
+  mylow.y = p4est->global_first_indices[3 * p4est->mpirank + 2];
+  mylow.level = P4EST_MAXLEVEL;
+  nextlow.x = p4est->global_first_indices[3 * (p4est->mpirank + 1) + 1];
+  nextlow.y = p4est->global_first_indices[3 * (p4est->mpirank + 1) + 2];
+  nextlow.level = P4EST_MAXLEVEL;
+  rh = (1 << P4EST_MAXLEVEL);
+
   /* loop over all local trees */
   p4est->local_num_quadrants = 0;
-  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
+  for (j = first_tree; j <= last_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
 
     /* initial log message for this tree */
@@ -566,8 +599,80 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                p4est->mpirank, j, tree->quadrants->elem_count);
     }
 
+    /* local balance first pass */
     p4est_balance_subtree (p4est, tree, j, init_fn);
-    p4est->local_num_quadrants += tree->quadrants->elem_count;
+    p4est->local_num_quadrants += (qcount = tree->quadrants->elem_count);
+
+    if ((j > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
+        (j < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
+      /* this tree is not shared with other processors */
+      continue;
+    }
+
+    /* identify boundary quadrants and prepare them to be sent */
+    for (i = 0; i < qcount; ++i) {
+      /* this quadrant may be on the boundary with a range of processors */
+      first_owner = last_owner = p4est->mpirank;
+      q = p4est_array_index (tree->quadrants, i);
+      qh = (1 << (P4EST_MAXLEVEL - q->level));
+      for (k = 0; k < 3; ++k) {
+        for (l = 0; l < 3; ++l) {
+          which = k * 3 + l;    /* 0..8 */
+          /* exclude myself from the queries */
+          if (which == 4) {
+            continue;
+          }
+          s = &ins[which];
+          *s = *q;
+          s->x += (l - 1) * qh;
+          s->y += (k - 1) * qh;
+          if ((s->x < 0 || s->x >= rh) || (s->y < 0 || s->y >= rh)) {
+            /* this quadrant is relevant for inter-tree balancing */
+            continue;
+          }
+          comp = p4est_quadrant_compare (s, q);
+          P4EST_ASSERT (comp != 0);
+          if (comp < 0) {
+            /* querying s is equivalent to querying first descendent */
+            owner = p4est_comm_find_owner (p4est, j, s, p4est->mpirank);
+            P4EST_ASSERT (owner <= p4est->mpirank);
+            first_owner = P4EST_MIN (owner, first_owner);
+          }
+          else {
+            p4est_quadrant_last_descendent (s, &ld, P4EST_MAXLEVEL);
+            owner = p4est_comm_find_owner (p4est, j, &ld, p4est->mpirank);
+            P4EST_ASSERT (owner >= p4est->mpirank);
+            last_owner = P4EST_MAX (owner, last_owner);
+          }
+          if (owner != p4est->mpirank) {
+            if (p4est->nout != NULL) {
+              fprintf (p4est->nout, "[%d] Tree %d 0x%x 0x%x %d owner %d\n",
+                       p4est->mpirank, j,
+                       ins[which].x, ins[which].y, ins[which].level, owner);
+            }
+          }
+        }
+      }
+      /*
+       * send q to all processors on its insulation layer
+       * rely on the space filling curve to have not too many owners
+       */
+      for (owner = first_owner; owner <= last_owner; ++owner) {
+        if (owner == p4est->mpirank) {
+          continue;
+        }
+        peer = p4est_array_index (peers, owner);
+        if (p4est_array_bsearch (&peer->send_first, q,
+                                 p4est_quadrant_compare) != NULL) {
+          continue;
+        }
+        scount = peer->send_first.elem_count;
+        p4est_array_resize (&peer->send_first, scount + 1);
+        s = p4est_array_index (&peer->send_first, scount);
+        *s = *q;
+      }
+
+    }
 
     /* final log message for this tree */
     if (p4est->nout != NULL) {
@@ -575,6 +680,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                p4est->mpirank, j, tree->quadrants->elem_count);
     }
   }
+
+  /* cleanup temporary storage */
+  for (i = 0; i < p4est->mpisize; ++i) {
+    peer = p4est_array_index (peers, i);
+    p4est_array_reset (&peer->send_first);
+    p4est_array_reset (&peer->recv_first);
+    p4est_array_reset (&peer->send_second);
+    p4est_array_reset (&peer->recv_second);
+  }
+  p4est_array_destroy (peers);
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
