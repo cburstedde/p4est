@@ -550,22 +550,33 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 void
 p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
-  int                 k, l, which;
-  int                 comp, scount;
-  int32_t             i, j;
-  int32_t             qh, rh;
+  int32_t             j;
+  int32_t             rh;
   int32_t             qcount;
   int32_t             first_tree, last_tree;
-  int32_t             owner, first_owner, last_owner;
+  int32_t             first_peer, last_peer;
   p4est_tree_t       *tree;
-  p4est_array_t      *peers;
   p4est_balance_peer_t *peer;
+  p4est_quadrant_t    mylow, nextlow;
+#ifdef HAVE_MPI
+  int                 mpiret;
+  int                 k, l;
+  int                 which, comp, scount;
+  int                 request_count, index;
+  int32_t             i;
+  int32_t             qh;
+  int32_t             owner, first_owner, last_owner;
+  int32_t             mypb[2], *peer_boundaries;
+  p4est_quadrant_t    ld, ins[9];       /* insulation layer including its center */
   p4est_quadrant_t   *q, *s;
-  p4est_quadrant_t    mylow, nextlow, ld;
-  p4est_quadrant_t    ins[9];   /* insulation layer including its center */
+  p4est_array_t      *peers;
+  MPI_Request        *requests_first;
+  MPI_Status         *status;
+#endif
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
+#ifdef HAVE_MPI
   /* allocate temporary storage */
   peers = p4est_array_new (sizeof (p4est_balance_peer_t));
   p4est_array_resize (peers, p4est->mpisize);
@@ -576,8 +587,17 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     p4est_array_init (&peer->send_second, sizeof (p4est_quadrant_t));
     p4est_array_init (&peer->recv_second, sizeof (p4est_quadrant_t));
   }
+  /* will contain first and last peer (inclusive) for each processor */
+  peer_boundaries = P4EST_ALLOC (int32_t, 2 * p4est->mpisize);
+  P4EST_CHECK_ALLOC (peer_boundaries);
+  requests_first = P4EST_ALLOC (MPI_Request, p4est->mpisize);
+  P4EST_CHECK_ALLOC (requests_first);
+  status = P4EST_ALLOC (MPI_Status, p4est->mpisize);
+  P4EST_CHECK_ALLOC (status);
+#endif
 
   /* compute first quadrants on finest level for comparison for me and next */
+  first_peer = last_peer = p4est->mpirank;
   first_tree = p4est->first_local_tree;
   last_tree = p4est->last_local_tree;
   mylow.x = p4est->global_first_indices[3 * p4est->mpirank + 1];
@@ -588,7 +608,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   nextlow.level = P4EST_MAXLEVEL;
   rh = (1 << P4EST_MAXLEVEL);
 
-  /* loop over all local trees */
+  /* loop over all local trees to assemble first send list */
   p4est->local_num_quadrants = 0;
   for (j = first_tree; j <= last_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
@@ -603,9 +623,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     p4est_balance_subtree (p4est, tree, j, init_fn);
     p4est->local_num_quadrants += (qcount = tree->quadrants->elem_count);
 
+#ifdef HAVE_MPI
+    /* check if this tree is not shared with other processors */
+    if (p4est->mpicomm == MPI_COMM_NULL) {
+      continue;
+    }
     if ((j > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
         (j < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
-      /* this tree is not shared with other processors */
       continue;
     }
 
@@ -669,10 +693,86 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         scount = peer->send_first.elem_count;
         p4est_array_resize (&peer->send_first, scount + 1);
         s = p4est_array_index (&peer->send_first, scount);
+        s->user_data = (void *) j;      /* piggy back tree id with quadrant */
         *s = *q;
       }
-
+      first_peer = P4EST_MIN (first_owner, first_peer);
+      last_peer = P4EST_MAX (last_owner, last_peer);
     }
+#endif  /* HAVE_MPI */
+  }
+
+#ifdef HAVE_MPI
+  /* distribute information about first and last peers to inform receivers */
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mypb[0] = first_peer;
+    mypb[1] = last_peer;
+    mpiret = MPI_Allgather (mypb, 2, MPI_INT, peer_boundaries, 2, MPI_INT,
+                            p4est->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
+  
+  /* loop over all peers and send first round of quadrants */
+  request_count = 0;
+  for (j = first_peer; j <= last_peer; ++j) {
+    if (j == p4est->mpirank) {
+      continue;
+    }
+    peer = p4est_array_index (peers, j);
+
+    /* first send number of quadrants to be expected */
+    qcount = peer->send_first.elem_count;
+    mpiret = MPI_Isend (&qcount, 1, MPI_INT,
+                        j, P4EST_COMM_BALANCE_FIRST_COUNT,
+                        p4est->mpicomm, &peer->request_send_first[0]);
+    P4EST_CHECK_MPI (mpiret);
+
+    /* then send the actual quadrants */
+    if (qcount > 0) {
+      qcount = peer->send_first.elem_count * sizeof (p4est_quadrant_t);
+      mpiret = MPI_Isend (peer->send_first.array, qcount, MPI_CHAR,
+                          j, P4EST_COMM_BALANCE_FIRST_LOAD,
+                          p4est->mpicomm, &peer->request_send_first[1]);
+      P4EST_CHECK_MPI (mpiret);
+    }
+
+    ++request_count;
+  }
+
+  /* find out who is sending to me and receive quadrant counts */
+  for (j = 0; j < p4est->mpisize; ++j) {
+    peer = p4est_array_index (peers, j);
+    peer->will_receive = 0;
+    peer->have_received = 0;
+    peer->expect_count = 0;
+    if (j == p4est->mpirank) {
+      continue;
+    }
+    first_peer = peer_boundaries[2 * j + 0];
+    last_peer = peer_boundaries[2 * j + 1];
+    if (p4est->mpirank < first_peer || p4est->mpirank > last_peer) {
+      continue;
+    }
+    peer = p4est_array_index (peers, j);
+    peer->will_receive = 1;
+
+    /* processor j is sending to me */
+    mpiret = MPI_Irecv (&peer->expect_count, 1, MPI_INT,
+                        j, P4EST_COMM_BALANCE_FIRST_COUNT,
+                        p4est->mpicomm, &peer->request_recv_first[0]);
+    P4EST_CHECK_MPI (mpiret);
+  }
+
+  /* wait for quadrant counts and post receive for quadrants */
+  for (j = 0; j < p4est->mpisize; ++j) {
+    
+  }
+  
+#endif  /* HAVE_MPI */
+  
+  /* loop over all local trees to finalize balance */
+  for (j = first_tree; j <= last_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
 
     /* final log message for this tree */
     if (p4est->nout != NULL) {
@@ -681,6 +781,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
   }
 
+#ifdef HAVE_MPI
   /* cleanup temporary storage */
   for (i = 0; i < p4est->mpisize; ++i) {
     peer = p4est_array_index (peers, i);
@@ -690,6 +791,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     p4est_array_reset (&peer->recv_second);
   }
   p4est_array_destroy (peers);
+  P4EST_FREE (peer_boundaries);
+  P4EST_FREE (requests_first);
+  P4EST_FREE (status);
+#endif
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);

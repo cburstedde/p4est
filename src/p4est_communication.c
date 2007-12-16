@@ -20,6 +20,7 @@
 */
 
 #include <p4est_communication.h>
+#include <p4est_algorithms.h>
 #include <p4est_base.h>
 
 void

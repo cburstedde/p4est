@@ -24,10 +24,25 @@
 
 #include <p4est.h>
 
+typedef enum
+{
+  P4EST_COMM_BALANCE_FIRST_COUNT = 1,
+  P4EST_COMM_BALANCE_FIRST_LOAD,
+  P4EST_COMM_BALANCE_SECOND_COUNT,
+  P4EST_COMM_BALANCE_SECOND_LOAD,
+}
+p4est_comm_tag_t;
+
 typedef struct 
 {
+  int8_t              will_receive, have_received;
+  int32_t             expect_count;
   p4est_array_t       send_first, recv_first;
   p4est_array_t       send_second, recv_second;
+#ifdef HAVE_MPI
+  MPI_Request         request_send_first[2], request_recv_first[2];
+  MPI_Request         request_send_second[2], request_recv_second[2];
+#endif
 }
 p4est_balance_peer_t;
 
