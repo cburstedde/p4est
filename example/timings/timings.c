@@ -43,8 +43,9 @@ refine_fractal (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 }
 
 int
-main (int argc, char ** argv) 
+main (int argc, char **argv)
 {
+#ifdef HAVE_MPI
   int                 mpiret;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
@@ -98,7 +99,7 @@ main (int argc, char ** argv)
 
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
-  
+#endif
   return 0;
 }
 
