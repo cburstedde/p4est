@@ -33,14 +33,14 @@ typedef enum
 }
 p4est_comm_tag_t;
 
-typedef struct 
+typedef struct
 {
-  int8_t              will_receive, have_received;
+  int8_t              will_receive, have_count, have_load;
   int32_t             expect_count;
   p4est_array_t       send_first, recv_first;
   p4est_array_t       send_second, recv_second;
 #ifdef HAVE_MPI
-  MPI_Request         request_send_first[2], request_recv_first[2];
+  MPI_Request         request_send_first_count, request_send_first_load;
   MPI_Request         request_send_second[2], request_recv_second[2];
 #endif
 }
@@ -57,6 +57,7 @@ void                p4est_comm_count_quadrants (p4est_t * p4est);
 void                p4est_comm_global_partition (p4est_t * p4est);
 
 /** Searches the owner of a quadrant via p4est->global_first_indices.
+ * Assumes a tree with no overlaps.
  * \param [in] guess   Initial guess for the search.
  * \return Returns the processor id of the owner.
  */

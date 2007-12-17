@@ -559,10 +559,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_balance_peer_t *peer;
   p4est_quadrant_t    mylow, nextlow;
 #ifdef HAVE_MPI
-  int                 mpiret;
+  int                 mpiret, qbytes;
   int                 k, l;
   int                 which, comp, scount;
-  int                 request_count, index;
+  int                 request_count, outcount;
+  int                *wait_indices;
   int32_t             i;
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
@@ -570,8 +571,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_quadrant_t    ld, ins[9];       /* insulation layer including its center */
   p4est_quadrant_t   *q, *s;
   p4est_array_t      *peers;
-  MPI_Request        *requests_first;
-  MPI_Status         *status;
+  MPI_Request        *requests;
+  MPI_Status         *statuses;
 #endif
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -590,10 +591,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* will contain first and last peer (inclusive) for each processor */
   peer_boundaries = P4EST_ALLOC (int32_t, 2 * p4est->mpisize);
   P4EST_CHECK_ALLOC (peer_boundaries);
-  requests_first = P4EST_ALLOC (MPI_Request, p4est->mpisize);
-  P4EST_CHECK_ALLOC (requests_first);
-  status = P4EST_ALLOC (MPI_Status, p4est->mpisize);
-  P4EST_CHECK_ALLOC (status);
+  requests = P4EST_ALLOC (MPI_Request, p4est->mpisize);
+  P4EST_CHECK_ALLOC (requests);
+  statuses = P4EST_ALLOC (MPI_Status, p4est->mpisize);
+  P4EST_CHECK_ALLOC (statuses);
+  wait_indices = P4EST_ALLOC (int, p4est->mpisize);
+  P4EST_CHECK_ALLOC (wait_indices);
 #endif
 
   /* compute first quadrants on finest level for comparison for me and next */
@@ -693,13 +696,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         scount = peer->send_first.elem_count;
         p4est_array_resize (&peer->send_first, scount + 1);
         s = p4est_array_index (&peer->send_first, scount);
-        s->user_data = (void *) j;      /* piggy back tree id with quadrant */
         *s = *q;
+        s->user_data = (void *) j;      /* piggy back tree id with quadrant */
       }
       first_peer = P4EST_MIN (first_owner, first_peer);
       last_peer = P4EST_MAX (last_owner, last_peer);
     }
-#endif  /* HAVE_MPI */
+#endif /* HAVE_MPI */
   }
 
 #ifdef HAVE_MPI
@@ -711,9 +714,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
   }
-  
+
   /* loop over all peers and send first round of quadrants */
-  request_count = 0;
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == p4est->mpirank) {
       continue;
@@ -722,29 +724,35 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
     /* first send number of quadrants to be expected */
     qcount = peer->send_first.elem_count;
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "[%d] Balance A send %d quadrants to %d\n",
+               p4est->mpirank, qcount, j);
+    }
     mpiret = MPI_Isend (&qcount, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
-                        p4est->mpicomm, &peer->request_send_first[0]);
+                        p4est->mpicomm, &peer->request_send_first_count);
     P4EST_CHECK_MPI (mpiret);
 
     /* then send the actual quadrants */
     if (qcount > 0) {
-      qcount = peer->send_first.elem_count * sizeof (p4est_quadrant_t);
-      mpiret = MPI_Isend (peer->send_first.array, qcount, MPI_CHAR,
+      qbytes = qcount * sizeof (p4est_quadrant_t);
+      mpiret = MPI_Isend (peer->send_first.array, qbytes, MPI_CHAR,
                           j, P4EST_COMM_BALANCE_FIRST_LOAD,
-                          p4est->mpicomm, &peer->request_send_first[1]);
+                          p4est->mpicomm, &peer->request_send_first_load);
       P4EST_CHECK_MPI (mpiret);
     }
-
-    ++request_count;
   }
 
   /* find out who is sending to me and receive quadrant counts */
+  request_count = 0;
   for (j = 0; j < p4est->mpisize; ++j) {
     peer = p4est_array_index (peers, j);
     peer->will_receive = 0;
-    peer->have_received = 0;
+    peer->have_count = 0;
+    peer->have_load = 0;
     peer->expect_count = 0;
+    requests[j] = MPI_REQUEST_NULL;
+    wait_indices[j] = -1;
     if (j == p4est->mpirank) {
       continue;
     }
@@ -755,21 +763,67 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
     peer = p4est_array_index (peers, j);
     peer->will_receive = 1;
+    ++request_count;
 
     /* processor j is sending to me */
     mpiret = MPI_Irecv (&peer->expect_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
-                        p4est->mpicomm, &peer->request_recv_first[0]);
+                        p4est->mpicomm, &requests[j]);
     P4EST_CHECK_MPI (mpiret);
   }
 
-  /* wait for quadrant counts and post receive for quadrants */
-  for (j = 0; j < p4est->mpisize; ++j) {
-    
+  /* wait for quadrant counts and post receive and send for quadrants */
+  while (request_count > 0) {
+    mpiret = MPI_Waitsome (p4est->mpisize, requests,
+                           &outcount, wait_indices, statuses);
+    P4EST_CHECK_MPI (mpiret);
+    P4EST_ASSERT (outcount > 0);
+    for (i = 0; i < outcount; ++i) {
+      /* retrieve sender's rank */
+      j = wait_indices[i];
+      P4EST_ASSERT (0 <= j && j < p4est->mpisize);
+
+      /* check if we are in receiving count or load */
+      peer = p4est_array_index (peers, j);
+      P4EST_ASSERT (peer->will_receive);
+      P4EST_ASSERT (!peer->have_load);
+      if (!peer->have_count) {
+        peer->have_count = 1;
+        qcount = peer->expect_count;
+        if (p4est->nout != NULL) {
+          fprintf (p4est->nout,
+                   "[%d] Balance A recv %d quadrants from %d\n",
+                   p4est->mpirank, qcount, j);
+        }
+        if (qcount > 0) {
+          /* received nonzero count, post receive for load */
+          qbytes = qcount * sizeof (p4est_quadrant_t);
+          p4est_array_resize (&peer->recv_first, qbytes);
+          mpiret = MPI_Irecv (peer->recv_first.array, qbytes, MPI_CHAR,
+                              j, P4EST_COMM_BALANCE_FIRST_LOAD,
+                              p4est->mpicomm, &requests[j]);
+          P4EST_CHECK_MPI (mpiret);
+        }
+        else {
+          /* will not receive load, close this request */
+          requests[j] = MPI_REQUEST_NULL;
+          --request_count;
+        }
+      }
+      else {
+        /* received load, close this request */
+        P4EST_ASSERT (peer->expect_count > 0);
+        peer->have_load = 1;
+        requests[j] = MPI_REQUEST_NULL;
+        --request_count;
+
+        /* process incoming quadrants to interleave with communication */
+
+      }
+    }
   }
-  
-#endif  /* HAVE_MPI */
-  
+#endif /* HAVE_MPI */
+
   /* loop over all local trees to finalize balance */
   for (j = first_tree; j <= last_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
@@ -792,8 +846,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   p4est_array_destroy (peers);
   P4EST_FREE (peer_boundaries);
-  P4EST_FREE (requests_first);
-  P4EST_FREE (status);
+  P4EST_FREE (requests);
+  P4EST_FREE (statuses);
+  P4EST_FREE (wait_indices);
 #endif
 
   /* compute global number of quadrants */

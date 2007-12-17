@@ -19,10 +19,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Usage: p4est_timings <level>
+ */
+
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 #include <p4est_vtk.h>
 
+#ifdef HAVE_MPI
 static int          refine_level = 0;
 static int          level_shift = 0;
 
@@ -41,6 +46,7 @@ refine_fractal (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
   qid = p4est_quadrant_child_id (q);
   return (qid == 0 || qid == 3);
 }
+#endif /* HAVE_MPI */
 
 int
 main (int argc, char **argv)
@@ -53,10 +59,12 @@ main (int argc, char **argv)
   double              elapsed_balance, elapsed_rebalance;
   MPI_Comm            mpicomm;
 
+  /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
 
+  /* get command line argument: maximum refinement level */
   P4EST_CHECK_ABORT (argc == 2, "Give level");
   refine_level = atoi (argv[1]);
   level_shift = 4;
@@ -99,7 +107,10 @@ main (int argc, char **argv)
 
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
+#else
+  P4EST_CHECK_ABORT (0, "This example requires the --enable-mpi flag to run.");
 #endif
+
   return 0;
 }
 

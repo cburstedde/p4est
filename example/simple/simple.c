@@ -19,6 +19,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Usage: p4est_simple <level>
+ */
+
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 #include <p4est_vtk.h>
@@ -28,6 +32,8 @@ typedef struct
   int32_t             a;
 }
 user_data_t;
+
+static int          refine_level = 0;
 
 static void
 init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
@@ -40,7 +46,7 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 static int
 refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
-  if (quadrant->level >= 6) {
+  if (quadrant->level >= refine_level) {
     return 0;
   }
   if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&
@@ -65,6 +71,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
 
+  /* initialize MPI */
   mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
   if (use_mpi) {
@@ -73,6 +80,10 @@ main (int argc, char **argv)
     mpicomm = MPI_COMM_WORLD;
   }
 #endif
+
+  /* get command line argument: maximum refinement level */
+  P4EST_CHECK_ABORT (argc == 2, "Give level");
+  refine_level = atoi (argv[1]);
 
   /* create connectivity and forest structures */
   /* connectivity = p4est_connectivity_new_unitsquare (); */
