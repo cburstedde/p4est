@@ -781,6 +781,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (i = 0; i < outcount; ++i) {
       /* retrieve sender's rank */
       j = wait_indices[i];
+      wait_indices[i] = -1;
       P4EST_ASSERT (0 <= j && j < p4est->mpisize);
 
       /* check if we are in receiving count or load */
@@ -797,8 +798,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
+          p4est_array_resize (&peer->recv_first, qcount);
           qbytes = qcount * sizeof (p4est_quadrant_t);
-          p4est_array_resize (&peer->recv_first, qbytes);
           mpiret = MPI_Irecv (peer->recv_first.array, qbytes, MPI_CHAR,
                               j, P4EST_COMM_BALANCE_FIRST_LOAD,
                               p4est->mpicomm, &requests[j]);
