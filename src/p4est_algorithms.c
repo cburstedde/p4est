@@ -614,6 +614,14 @@ p4est_tree_is_complete (p4est_tree_t * tree)
 }
 
 void
+p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
+                            p4est_array_t * out)
+{
+  P4EST_ASSERT (p4est_tree_is_complete (tree));
+  P4EST_ASSERT (out->elem_count == 0);
+}
+
+void
 p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
 {
   int                 j, childid, comp;

@@ -245,6 +245,15 @@ int                 p4est_tree_is_linear (p4est_tree_t * tree);
  */
 int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
+/** Compute the overlap of a number of quadrants with a tree.
+ * \param [in] tree     A sorted complete linear tree to be checked against.
+ * \param [in] in       A sorted linear list of quadrants.
+ * \param [in,out] out  A sorted subset of \a in. Zero size on input.
+ */
+void                p4est_tree_compute_overlap (p4est_tree_t * tree,
+                                                p4est_array_t * in,
+                                                p4est_array_t * out);
+
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
  * The string denotes the relation to the previous quadrant and can be:

@@ -564,13 +564,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 which, comp, scount;
   int                 request_count, outcount;
   int                *wait_indices;
-  int32_t             i;
+  int32_t             i, qtree;
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
   int32_t             mypb[2], *peer_boundaries;
   p4est_quadrant_t    ld, ins[9];       /* insulation layer including its center */
   p4est_quadrant_t   *q, *s;
-  p4est_array_t      *peers;
+  p4est_array_t      *peers, *qarray;
   MPI_Request        *requests;
   MPI_Status         *statuses;
 #endif
@@ -715,7 +715,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     P4EST_CHECK_MPI (mpiret);
   }
 
-  /* loop over all peers and send first round of quadrants */
+  /*
+   * loop over all peers and send first round of quadrants
+   * for intra-tree balancing, each load is contained in one tree
+   */
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == p4est->mpirank) {
       continue;
@@ -819,10 +822,33 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         --request_count;
 
         /* process incoming quadrants to interleave with communication */
+        qarray = &peer->recv_first;
+        qcount = qarray->elem_count;
+        P4EST_ASSERT (peer->expect_count == qcount);
+        q = p4est_array_index (qarray, 0);
+        qtree = (int) q->user_data;
+        P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
+        for (k = 1; k < qcount; ++k) {
+          s = p4est_array_index (qarray, k);
+          P4EST_ASSERT ((int) s->user_data == qtree);
+        }
+        tree = p4est_array_index (p4est->trees, qtree);
+        P4EST_ASSERT (tree->quadrants->elem_count > 0);
+        p4est_tree_compute_overlap (tree, qarray, &peer->send_second);
 
+        /* remove duplicates from send buffer and send back overlap */
       }
     }
   }
+
+  /* receive second round */
+
+  /* merge received quadrants */
+
+  /* rebalance */
+
+  /* update counters */
+
 #endif /* HAVE_MPI */
 
   /* loop over all local trees to finalize balance */
