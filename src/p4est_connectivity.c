@@ -110,4 +110,43 @@ p4est_connectivity_new_unitsquare (void)
   return connectivity;
 }
 
+p4est_connectivity_t *
+p4est_connectivity_new_corner (void)
+{
+  p4est_connectivity_t *connectivity;
+  const int32_t       num_trees = 3;
+  const int32_t       num_vertices = 7;
+  const int32_t       tree_to_vertex[] = {
+    0, 1, 3, 2, 0, 2, 5, 6, 2, 3, 4, 5
+  };
+  const int32_t       tree_to_tree[] = {
+    0, 0, 2, 1, 0, 2, 1, 1, 0, 2, 2, 1
+  };
+  const int8_t        tree_to_face[] = {
+    0, 1, 0, 0, 3, 3, 2, 3, 2, 1, 2, 1
+  };
+  const double        vertices[] = {
+    -1.00000000000e+00, -1.00000000000e+00, 0.00000000000e+00,
+    0.00000000000e+00, -1.00000000000e+00, 0.00000000000e+00,
+    0.00000000000e+00, 0.00000000000e+00, 1.00000000000e+00,
+    1.00000000000e+00, 0.00000000000e+00, 1.00000000000e+00,
+    1.00000000000e+00, 1.00000000000e+00, 1.00000000000e+00,
+    0.00000000000e+00, 1.00000000000e+00, 1.00000000000e+00,
+    -1.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00
+  };
+
+  connectivity = p4est_connectivity_new (3, 7);
+
+  memcpy (connectivity->tree_to_vertex, tree_to_vertex,
+          sizeof (int32_t) * 4 * num_trees);
+  memcpy (connectivity->tree_to_tree, tree_to_tree,
+          sizeof (int32_t) * 4 * num_trees);
+  memcpy (connectivity->tree_to_face, tree_to_face,
+          sizeof (int8_t) * 4 * num_trees);
+  memcpy (connectivity->vertices, vertices,
+          sizeof (double) * 3 * num_vertices);
+
+  return connectivity;
+}
+
 /* EOF p4est_connectivity.c */

@@ -75,7 +75,8 @@ main (int argc, char **argv)
 #endif
 
   /* create connectivity and forest structures */
-  connectivity = p4est_connectivity_new_unitsquare ();
+  /* connectivity = p4est_connectivity_new_unitsquare (); */
+  connectivity = p4est_connectivity_new_corner ();
   p4est = p4est_new (mpicomm, stdout, connectivity,
                      sizeof (user_data_t), init_fn);
   p4est_tree_print (p4est_array_index (p4est->trees, 0),

@@ -61,4 +61,10 @@ void                p4est_connectivity_destroy (p4est_connectivity_t *
  */
 p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
 
+/** Create a connectivity structure for a three element mesh at a corner.
+ *
+ * This is used for testing multi tree forests.
+ */
+p4est_connectivity_t *p4est_connectivity_new_corner (void);
+
 #endif /* !__P4EST_CONNECTIVITY_H__ */
