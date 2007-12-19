@@ -73,6 +73,12 @@ static const int corners_omitted[4] =
 
 /* here come small auxiliary functions */
 
+static void
+print_quadrant (const char * prefix, const p4est_quadrant_t *q)
+{
+  printf ("%s x 0x%x y 0x%x l %d\n", prefix, q->x, q->y, q->level);
+}
+
 int
 p4est_quadrant_compare (const void *v1, const void *v2)
 {
@@ -719,7 +725,8 @@ p4est_is_valid (p4est_t * p4est)
 
 /* here come the heavyweight algorithms */
 
-/** Find the lowest position tq in a quadrant array such that tq >= q
+/** Find the lowest position tq in a quadrant array such that tq >= q.
+ * \return  Returns the guess id if found, -1 otherwise.
  */
 static int
 p4est_find_lower_bound (p4est_array_t * array,
@@ -753,6 +760,9 @@ p4est_find_lower_bound (p4est_array_t * array,
     /* check if guess is lower than q */
     if (comp > 0) {
       quad_low = guess + 1;
+      if (quad_low > quad_high) {
+        return -1;
+      }
       guess = (quad_low + quad_high) / 2;
       continue;
     }
@@ -764,7 +774,8 @@ p4est_find_lower_bound (p4est_array_t * array,
   return guess;
 }
 
-/** Find the highest position tq in a quadrant array such that tq <= q
+/** Find the highest position tq in a quadrant array such that tq <= q.
+ * \return  Returns the id of the matching quadrant, or -1 if not found.
  */
 static int
 p4est_find_higher_bound (p4est_array_t * array,
@@ -799,6 +810,9 @@ p4est_find_higher_bound (p4est_array_t * array,
     /* check if guess is higher than q */
     if (comp > 0) {
       quad_high = guess - 1;
+      if (quad_high < quad_low) {
+        return -1;
+      }
       guess = (quad_low + quad_high + 1) / 2;
       continue;
     }
@@ -837,11 +851,16 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     return;
   }
 
+  printf ("Into compute overlap with %d %d\n", treecount, incount);
+
   /* compute first and last descendants in the tree */
   tq = p4est_array_index (tree->quadrants, 0);
   p4est_quadrant_first_descendent (tq, &treefd, P4EST_MAXLEVEL);
   tq = p4est_array_index (tree->quadrants, treecount - 1);
   p4est_quadrant_last_descendent (tq, &treeld, P4EST_MAXLEVEL);
+
+  print_quadrant ("TFD", &treefd);
+  print_quadrant ("TLD", &treeld);
 
   /* loop over input list of quadrants */
   for (i = 0; i < incount; ++i) {
@@ -872,6 +891,8 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     }
     p4est_quadrant_last_descendent (&high_ins, &ld, P4EST_MAXLEVEL);
 
+    print_quadrant ("LD", &ld);
+
     /* skip this insulation layer if there is no overlap */
     if (p4est_quadrant_compare (&ld, &treefd) < 0 ||
         p4est_quadrant_compare (&treeld, &fd) < 0) {
@@ -887,8 +908,13 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     else {
       /* do a binary search for the lowest tree quadrant >= low_ins */
       first_index = p4est_find_lower_bound (tree->quadrants, &low_ins, guess);
+      if (first_index < 0) {
+        continue;
+      }
       guess = first_index;
     }
+
+    printf ("Into second bsearch\n");
 
     /* find last quadrant in tree that fits between fd and ld */
     if (p4est_quadrant_compare (&treeld, &ld) <= 0) {
@@ -898,6 +924,9 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     else {
       /* do a binary search for the highest tree quadrant <= ld */
       last_index = p4est_find_higher_bound (tree->quadrants, &ld, guess);
+      if (last_index < 0) {
+        continue;
+      }
     }
     P4EST_ASSERT (first_index <= last_index);
 
