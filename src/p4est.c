@@ -24,6 +24,19 @@
 #include <p4est_communication.h>
 #include <p4est_base.h>
 
+typedef struct
+{
+  int8_t              will_receive, have_count, have_load;
+  int32_t             expect_count;
+  p4est_array_t       send_first, recv_first;
+  p4est_array_t       send_second, recv_second;
+#ifdef HAVE_MPI
+  MPI_Request         request_send_first_count, request_send_first_load;
+  MPI_Request         request_send_second[2], request_recv_second[2];
+#endif
+}
+p4est_balance_peer_t;
+
 static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
 

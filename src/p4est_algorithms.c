@@ -60,7 +60,7 @@ static const int32_t indirect_neighbors[4][3][2] =
 /** Indicate which neighbor to omit if edges are balanced, not corners
  * Indexing [cid] where cid is the child id.
  */
-static const int corners_omitted[4] = 
+static const int corners_omitted[4] =
 { 0, 1, 1, 2 };
 
 /* *INDENT-ON* */
@@ -614,14 +614,6 @@ p4est_tree_is_complete (p4est_tree_t * tree)
 }
 
 void
-p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
-                            p4est_array_t * out)
-{
-  P4EST_ASSERT (p4est_tree_is_complete (tree));
-  P4EST_ASSERT (out->elem_count == 0);
-}
-
-void
 p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
 {
   int                 j, childid, comp;
@@ -726,6 +718,227 @@ p4est_is_valid (p4est_t * p4est)
 }
 
 /* here come the heavyweight algorithms */
+
+/** Find the lowest position tq in a quadrant array such that tq >= q
+ */
+static int
+p4est_find_lower_bound (p4est_array_t * array,
+                        const p4est_quadrant_t * q, int guess)
+{
+  int                 count, comp;
+  int                 quad_low, quad_high;
+  p4est_quadrant_t   *cur;
+
+  count = array->elem_count;
+  quad_low = 0;
+  quad_high = count - 1;
+
+  for (;;) {
+    P4EST_ASSERT (quad_low <= quad_high);
+    P4EST_ASSERT (0 <= quad_low && quad_low < count);
+    P4EST_ASSERT (0 <= quad_high && quad_high < count);
+    P4EST_ASSERT (quad_low <= guess && guess <= quad_high);
+
+    /* compare two quadrants */
+    cur = p4est_array_index (array, guess);
+    comp = p4est_quadrant_compare (q, cur);
+
+    /* check if guess is higher or equal q and there's room below it */
+    if (comp <= 0 && (guess > 0 && p4est_quadrant_compare (q, cur - 1) <= 0)) {
+      quad_high = guess - 1;
+      guess = (quad_low + quad_high + 1) / 2;
+      continue;
+    }
+
+    /* check if guess is lower than q */
+    if (comp > 0) {
+      quad_low = guess + 1;
+      guess = (quad_low + quad_high) / 2;
+      continue;
+    }
+
+    /* otherwise guess is the correct quadrant */
+    break;
+  }
+
+  return guess;
+}
+
+/** Find the highest position tq in a quadrant array such that tq <= q
+ */
+static int
+p4est_find_higher_bound (p4est_array_t * array,
+                         const p4est_quadrant_t * q, int guess)
+{
+  int                 count, comp;
+  int                 quad_low, quad_high;
+  p4est_quadrant_t   *cur;
+
+  count = array->elem_count;
+  quad_low = 0;
+  quad_high = count - 1;
+
+  for (;;) {
+    P4EST_ASSERT (quad_low <= quad_high);
+    P4EST_ASSERT (0 <= quad_low && quad_low < count);
+    P4EST_ASSERT (0 <= quad_high && quad_high < count);
+    P4EST_ASSERT (quad_low <= guess && guess <= quad_high);
+
+    /* compare two quadrants */
+    cur = p4est_array_index (array, guess);
+    comp = p4est_quadrant_compare (cur, q);
+
+    /* check if guess is lower or equal q and there's room above it */
+    if (comp <= 0 &&
+        (guess < count - 1 && p4est_quadrant_compare (cur + 1, q) <= 0)) {
+      quad_low = guess + 1;
+      guess = (quad_low + quad_high) / 2;
+      continue;
+    }
+
+    /* check if guess is higher than q */
+    if (comp > 0) {
+      quad_high = guess - 1;
+      guess = (quad_low + quad_high + 1) / 2;
+      continue;
+    }
+
+    /* otherwise guess is the correct quadrant */
+    break;
+  }
+
+  return guess;
+}
+
+void
+p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
+                            p4est_array_t * out)
+{
+  int                 i, j, guess;
+  int                 treecount, incount, outcount;
+  int                 first_index, last_index;
+  int32_t             qh, rh;
+  p4est_quadrant_t    treefd, treeld;
+  p4est_quadrant_t    low_ins, high_ins, fd, ld;
+  p4est_quadrant_t   *tq;
+  p4est_quadrant_t   *inq, *outq;
+
+  P4EST_ASSERT (p4est_tree_is_complete (tree));
+  P4EST_ASSERT (out->elem_count == 0);
+
+  /* assign some numbers */
+  treecount = tree->quadrants->elem_count;
+  incount = in->elem_count;
+  outcount = 0;
+  rh = (1 << P4EST_MAXLEVEL);
+
+  /* return if there is nothing to do */
+  if (treecount == 0 || incount == 0) {
+    return;
+  }
+
+  /* compute first and last descendants in the tree */
+  tq = p4est_array_index (tree->quadrants, 0);
+  p4est_quadrant_first_descendent (tq, &treefd, P4EST_MAXLEVEL);
+  tq = p4est_array_index (tree->quadrants, treecount - 1);
+  p4est_quadrant_last_descendent (tq, &treeld, P4EST_MAXLEVEL);
+
+  /* loop over input list of quadrants */
+  for (i = 0; i < incount; ++i) {
+    inq = p4est_array_index (in, i);
+    qh = (1 << (P4EST_MAXLEVEL - inq->level));
+
+    /* compute first descendent of first insulation quadrant */
+    low_ins = *inq;
+    if (low_ins.x > 0) {
+      low_ins.x -= qh;
+      P4EST_ASSERT (low_ins.x >= 0);
+    }
+    if (low_ins.y > 0) {
+      low_ins.y -= qh;
+      P4EST_ASSERT (low_ins.y >= 0);
+    }
+    p4est_quadrant_first_descendent (&low_ins, &fd, P4EST_MAXLEVEL);
+
+    /* compute last descendent of last insulation quadrant */
+    high_ins = *inq;
+    if (high_ins.x + qh < rh) {
+      high_ins.x += qh;
+      P4EST_ASSERT (high_ins.x + qh <= rh);
+    }
+    if (high_ins.y + qh < rh) {
+      high_ins.y += qh;
+      P4EST_ASSERT (high_ins.y + qh <= rh);
+    }
+    p4est_quadrant_last_descendent (&high_ins, &ld, P4EST_MAXLEVEL);
+
+    /* skip this insulation layer if there is no overlap */
+    if (p4est_quadrant_compare (&ld, &treefd) < 0 ||
+        p4est_quadrant_compare (&treeld, &fd) < 0) {
+      continue;
+    }
+
+    /* find first quadrant in tree that fits between fd and ld */
+    guess = treecount / 2;
+    if (p4est_quadrant_compare (&fd, &treefd) <= 0) {
+      /* the first tree quadrant is contained in insulation layer */
+      first_index = 0;
+    }
+    else {
+      /* do a binary search for the lowest tree quadrant >= low_ins */
+      first_index = p4est_find_lower_bound (tree->quadrants, &low_ins, guess);
+      guess = first_index;
+    }
+
+    /* find last quadrant in tree that fits between fd and ld */
+    if (p4est_quadrant_compare (&treeld, &ld) <= 0) {
+      /* the last tree quadrant is contained in insulation layer */
+      last_index = treecount - 1;
+    }
+    else {
+      /* do a binary search for the highest tree quadrant <= ld */
+      last_index = p4est_find_higher_bound (tree->quadrants, &ld, guess);
+    }
+    P4EST_ASSERT (first_index <= last_index);
+
+    /* copy all overlapping quadrants that are small enough into out */
+    for (j = first_index; j <= last_index; ++j) {
+      inq = p4est_array_index (tree->quadrants, j);
+      p4est_array_resize (out, outcount + 1);
+      outq = p4est_array_index (out, outcount);
+      *outq = *inq;
+      ++outcount;
+    }
+  }
+
+  /* sort array and remove duplicates */
+  p4est_array_sort (out, p4est_quadrant_compare);
+  i = 0;                        /* read counter */
+  j = 0;                        /* write counter */
+  inq = p4est_array_index (out, i);
+  while (i < outcount - 1) {
+    tq = p4est_array_index (out, i + 1);
+    if (p4est_quadrant_is_equal (inq, tq)) {
+      ++i;
+    }
+    else {
+      if (i > j) {
+        outq = p4est_array_index (out, j);
+        *outq = *inq;
+      }
+      ++i;
+      ++j;
+    }
+    inq = tq;
+  }
+  if (i > j) {
+    outq = p4est_array_index (out, j);
+    *outq = *inq;
+  }
+  P4EST_ASSERT (i == outcount - 1);
+  P4EST_ASSERT (j <= outcount - 1);
+  p4est_array_resize (out, j);
+}
 
 void
 p4est_complete_region (p4est_t * p4est,

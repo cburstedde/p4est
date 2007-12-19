@@ -53,6 +53,7 @@ main (int argc, char **argv)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
+  int32_t             count_refined, count_balanced;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   double              start, elapsed_refine;
@@ -71,7 +72,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est = p4est_new (mpicomm, stdout, connectivity, 0, NULL);
+  p4est = p4est_new (mpicomm, NULL, connectivity, 0, NULL);
 
   /* time refine */
   start = -MPI_Wtime ();
@@ -80,6 +81,7 @@ main (int argc, char **argv)
   if (refine_level <= 6) {
     p4est_vtk_write_file (p4est, "mesh_timings_refined");
   }
+  count_refined = p4est->global_num_quadrants;
 
   /* time balance */
   start = -MPI_Wtime ();
@@ -88,15 +90,21 @@ main (int argc, char **argv)
   if (refine_level <= 6) {
     p4est_vtk_write_file (p4est, "mesh_timings_balanced");
   }
+  count_balanced = p4est->global_num_quadrants;
 
   /* time rebalance - is a noop on the tree */
   start = -MPI_Wtime ();
   p4est_balance (p4est, NULL);
   elapsed_rebalance = start + MPI_Wtime ();
+  P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
 
   /* print timings */
-  printf ("Level %d refinement %.3gs balance %.3gs rebalance %.3gs\n",
-          refine_level, elapsed_refine, elapsed_balance, elapsed_rebalance);
+  if (p4est->mpirank == 0) {
+    printf ("Level %d refined to %lld balanced to %lld\n", refine_level,
+            (long long) count_refined, (long long) count_balanced);
+    printf ("Level %d refinement %.3gs balance %.3gs rebalance %.3gs\n",
+            refine_level, elapsed_refine, elapsed_balance, elapsed_rebalance);
+  }
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

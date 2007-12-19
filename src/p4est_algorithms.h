@@ -245,15 +245,6 @@ int                 p4est_tree_is_linear (p4est_tree_t * tree);
  */
 int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
-/** Compute the overlap of a number of quadrants with a tree.
- * \param [in] tree     A sorted complete linear tree to be checked against.
- * \param [in] in       A sorted linear list of quadrants.
- * \param [in,out] out  A sorted subset of \a in. Zero size on input.
- */
-void                p4est_tree_compute_overlap (p4est_tree_t * tree,
-                                                p4est_array_t * in,
-                                                p4est_array_t * out);
-
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
  * The string denotes the relation to the previous quadrant and can be:
@@ -281,6 +272,19 @@ void                p4est_tree_print (p4est_tree_t * tree, int identifier,
  * \return Returns 1 if valid, 0 otherwise.
  */
 int                 p4est_is_valid (p4est_t * p4est);
+
+/** Compute the overlap of a number of insulation layers with a tree.
+ * Every quadrant out of the insulation layer of the quadrants in \a in
+ * except the quadrant itself is checked for overlap of quadrants
+ * from \a tree that are smaller by at least two levels and thus can cause
+ * a split. Those elements from tree that overlap are put into \a out.
+ * \param [in] tree     A sorted complete linear tree to be checked against.
+ * \param [in] in       A sorted linear list of quadrants.
+ * \param [in,out] out  A sorted subset of \a in. Zero size on input.
+ */
+void                p4est_tree_compute_overlap (p4est_tree_t * tree,
+                                                p4est_array_t * in,
+                                                p4est_array_t * out);
 
 /** Constructs a minimal linear octree between two octants.
  *

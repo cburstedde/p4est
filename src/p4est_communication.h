@@ -33,19 +33,6 @@ typedef enum
 }
 p4est_comm_tag_t;
 
-typedef struct
-{
-  int8_t              will_receive, have_count, have_load;
-  int32_t             expect_count;
-  p4est_array_t       send_first, recv_first;
-  p4est_array_t       send_second, recv_second;
-#ifdef HAVE_MPI
-  MPI_Request         request_send_first_count, request_send_first_load;
-  MPI_Request         request_send_second[2], request_recv_second[2];
-#endif
-}
-p4est_balance_peer_t;
-
 /** Compute the global number of quadrants.
  * \parm [in,out] p4est  Adds all p4est->local_num_quadrant counters.
  */
