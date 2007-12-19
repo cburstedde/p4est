@@ -227,6 +227,9 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
 
+void                p4est_quadrant_print (const p4est_quadrant_t * q,
+                                          int identifier, FILE * nout);
+
 /** Test if a tree is sorted in Morton ordering.
  * \return Returns 1 if sorted, 0 otherwise.
  * \note Duplicate quadrants are not allowed.
