@@ -869,7 +869,9 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     return;
   }
 
-  printf ("Into compute overlap with %d %d\n", treecount, incount);
+  /*
+     printf ("Into compute overlap with %d %d\n", treecount, incount);
+   */
 
   /* compute first and last descendants in the tree */
   tq = p4est_array_index (tree->quadrants, 0);
