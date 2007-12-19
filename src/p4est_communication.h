@@ -33,13 +33,15 @@ typedef enum
 }
 p4est_comm_tag_t;
 
-/** Compute the global number of quadrants.
- * \parm [in,out] p4est  Adds all p4est->local_num_quadrant counters.
+/** Caculate the number and partition of quadrents.
+ * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters.
+ *                        This also fills in \c p4est->global_last_quad_index
+ *                        with the correct values.
  */
 void                p4est_comm_count_quadrants (p4est_t * p4est);
 
 /** Distribute the global partition boundaries.
- * \parm [in,out] p4est  Fills p4est->global_first_indices.
+ * \param [in,out] p4est  Fills \c p4est->global_first_indices.
  */
 void                p4est_comm_global_partition (p4est_t * p4est);
 

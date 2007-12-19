@@ -84,6 +84,10 @@ typedef struct p4est
                                                    on all trees on this processor */
   int64_t             global_num_quadrants;     /* number of quadrants
                                                    on all trees on all processors */
+  int64_t            *global_last_quad_index;   /* Index in the total ordering
+                                                   of all quadrants of the
+                                                   last quadrant on each proc.
+                                                 */
   int32_t            *global_first_indices;     /* first_tree, x, y of first quadrant
                                                    for each processor and 1 beyond */
   p4est_connectivity_t *connectivity;   /* connectivity structure */
