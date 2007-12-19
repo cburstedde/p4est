@@ -563,16 +563,18 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 void
 p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
+  const int           rank = p4est->mpirank;
   int32_t             j;
   int32_t             rh;
-  int32_t             qcount;
-  int32_t             first_tree, last_tree;
+  int32_t             qcount, treecount;
+  int32_t             first_tree, last_tree, next_tree;
   int32_t             first_peer, last_peer;
   p4est_tree_t       *tree;
   p4est_balance_peer_t *peer;
   p4est_quadrant_t    mylow, nextlow;
 #ifdef HAVE_MPI
   int                 mpiret, qbytes;
+  int                 first_index, last_index;
   int                 k, l;
   int                 which, comp, scount;
   int                 request_count, outcount;
@@ -613,14 +615,17 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif
 
   /* compute first quadrants on finest level for comparison for me and next */
-  first_peer = last_peer = p4est->mpirank;
+  first_peer = last_peer = rank;
   first_tree = p4est->first_local_tree;
   last_tree = p4est->last_local_tree;
-  mylow.x = p4est->global_first_indices[3 * p4est->mpirank + 1];
-  mylow.y = p4est->global_first_indices[3 * p4est->mpirank + 2];
+  P4EST_ASSERT (p4est->global_first_indices[3 * rank + 0] == first_tree);
+  mylow.x = p4est->global_first_indices[3 * rank + 1];
+  mylow.y = p4est->global_first_indices[3 * rank + 2];
   mylow.level = P4EST_MAXLEVEL;
-  nextlow.x = p4est->global_first_indices[3 * (p4est->mpirank + 1) + 1];
-  nextlow.y = p4est->global_first_indices[3 * (p4est->mpirank + 1) + 2];
+  next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
+  P4EST_ASSERT (next_tree == last_tree || next_tree == last_tree + 1);
+  nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
+  nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
   nextlow.level = P4EST_MAXLEVEL;
   rh = (1 << P4EST_MAXLEVEL);
 
@@ -632,7 +637,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* initial log message for this tree */
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Into balance tree %d with %d\n",
-               p4est->mpirank, j, tree->quadrants->elem_count);
+               rank, j, tree->quadrants->elem_count);
     }
 
     /* local balance first pass */
@@ -652,7 +657,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* identify boundary quadrants and prepare them to be sent */
     for (i = 0; i < qcount; ++i) {
       /* this quadrant may be on the boundary with a range of processors */
-      first_owner = last_owner = p4est->mpirank;
+      first_owner = last_owner = rank;
       q = p4est_array_index (tree->quadrants, i);
       qh = (1 << (P4EST_MAXLEVEL - q->level));
       for (k = 0; k < 3; ++k) {
@@ -674,20 +679,20 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           P4EST_ASSERT (comp != 0);
           if (comp < 0) {
             /* querying s is equivalent to querying first descendent */
-            owner = p4est_comm_find_owner (p4est, j, s, p4est->mpirank);
-            P4EST_ASSERT (owner <= p4est->mpirank);
+            owner = p4est_comm_find_owner (p4est, j, s, rank);
+            P4EST_ASSERT (owner <= rank);
             first_owner = P4EST_MIN (owner, first_owner);
           }
           else {
             p4est_quadrant_last_descendent (s, &ld, P4EST_MAXLEVEL);
-            owner = p4est_comm_find_owner (p4est, j, &ld, p4est->mpirank);
-            P4EST_ASSERT (owner >= p4est->mpirank);
+            owner = p4est_comm_find_owner (p4est, j, &ld, rank);
+            P4EST_ASSERT (owner >= rank);
             last_owner = P4EST_MAX (owner, last_owner);
           }
-          if (owner != p4est->mpirank) {
+          if (owner != rank) {
             if (p4est->nout != NULL) {
               fprintf (p4est->nout, "[%d] Tree %d 0x%x 0x%x %d owner %d\n",
-                       p4est->mpirank, j,
+                       rank, j,
                        ins[which].x, ins[which].y, ins[which].level, owner);
             }
           }
@@ -698,7 +703,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
        * rely on the space filling curve to have not too many owners
        */
       for (owner = first_owner; owner <= last_owner; ++owner) {
-        if (owner == p4est->mpirank) {
+        if (owner == rank) {
           continue;
         }
         peer = p4est_array_index (peers, owner);
@@ -733,7 +738,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
    * for intra-tree balancing, each load is contained in one tree
    */
   for (j = first_peer; j <= last_peer; ++j) {
-    if (j == p4est->mpirank) {
+    if (j == rank) {
       continue;
     }
     peer = p4est_array_index (peers, j);
@@ -742,7 +747,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     qcount = peer->send_first.elem_count;
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Balance A send %d quadrants to %d\n",
-               p4est->mpirank, qcount, j);
+               rank, qcount, j);
     }
     mpiret = MPI_Isend (&qcount, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
@@ -769,12 +774,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     peer->expect_count = 0;
     requests[j] = MPI_REQUEST_NULL;
     wait_indices[j] = -1;
-    if (j == p4est->mpirank) {
+    if (j == rank) {
       continue;
     }
     first_peer = peer_boundaries[2 * j + 0];
     last_peer = peer_boundaries[2 * j + 1];
-    if (p4est->mpirank < first_peer || p4est->mpirank > last_peer) {
+    if (rank < first_peer || rank > last_peer) {
       continue;
     }
     peer = p4est_array_index (peers, j);
@@ -810,7 +815,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         if (p4est->nout != NULL) {
           fprintf (p4est->nout,
                    "[%d] Balance A recv %d quadrants from %d\n",
-                   p4est->mpirank, qcount, j);
+                   rank, qcount, j);
         }
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
@@ -849,7 +854,18 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_ASSERT (tree->quadrants->elem_count > 0);
         p4est_tree_compute_overlap (tree, qarray, &peer->send_second);
 
-        /* remove duplicates from send buffer and send back overlap */
+        for (k = 0; k < qarray->elem_count; ++k) {
+          s = p4est_array_index (qarray, k);
+          printf ("[%d] Tree %d inq 0x%x 0x%x %d\n", rank, qtree,
+                  s->x, s->y, s->level);
+        }
+        for (k = 0; k < peer->send_second.elem_count; ++k) {
+          s = p4est_array_index (&peer->send_second, k);
+          printf ("[%d] Tree %d s2q 0x%x 0x%x %d\n", rank, qtree,
+                  s->x, s->y, s->level);
+        }
+
+        /* remove what has already been in first send and send overlap */
       }
     }
   }
@@ -857,11 +873,99 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* receive second round */
 
   /* merge received quadrants */
+  for (j = 0; j < p4est->mpisize; ++j) {
+    break;
 
-  /* rebalance */
+    peer = p4est_array_index (peers, j);
+    if (!peer->will_receive || peer->expect_count == 0) {
+      continue;
+    }
+    qarray = &peer->recv_first;
+    qcount = qarray->elem_count;
+    P4EST_ASSERT (qcount = peer->expect_count);
+    q = p4est_array_index (qarray, 0);
+    qtree = (int) q->user_data;
+    P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
+    tree = p4est_array_index (p4est->trees, qtree);
+    treecount = tree->quadrants->elem_count;
+    p4est_array_resize (tree->quadrants, treecount + qcount);
+    for (k = 0; k < qcount; ++k) {
+      s = p4est_array_index (qarray, k);
+      P4EST_ASSERT ((int) s->user_data == qtree);
+      q = p4est_array_index (tree->quadrants, treecount + k);
+      *q = *s;
+      ++tree->quadrants_per_level[q->level];
+      tree->maxlevel = P4EST_MAX (q->level, tree->maxlevel);
+      ++p4est->local_num_quadrants;
+      p4est_quadrant_init_data (p4est, qtree, q, init_fn);
+    }
+    p4est_array_sort (tree->quadrants, p4est_quadrant_compare);
+  }
+  
+  /* rebalance and clamp result back to original tree boundaries */
+  p4est->local_num_quadrants = 0;
+  for (j = first_tree; j <= last_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+    treecount = tree->quadrants->elem_count;
+    if (1 || (j > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
+        (j < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
+      p4est->local_num_quadrants += treecount;
+      continue;
+    }
+    p4est_balance_subtree (p4est, tree, j, init_fn);
 
-  /* update counters */
+    /* figure out the new elements outside the original tree */
+    first_index = 0;
+    last_index = treecount - 1;
+    if (j == first_tree) {
+      for (first_index = 0; first_index < treecount; ++first_index) {
+        q = p4est_array_index (tree->quadrants, first_index);
+        if (p4est_quadrant_compare (q, &mylow) >= 0 ||
+            (q->x == mylow.x && q->y == mylow.y)) {
+          break;
+        }
+      }
+    }
+    if (j == next_tree) {
+      for (last_index = treecount - 1; last_index >= 0; --last_index) {
+        q = p4est_array_index (tree->quadrants, last_index);
+        if (p4est_quadrant_compare (q, &nextlow) < 0) {
+          break;
+        }
+      }
+    }
+    printf ("TC %d FI %d LI %d\n", treecount, first_index, last_index);
+    P4EST_ASSERT (first_index <= last_index);
 
+    /* remove first part of tree */
+    if (first_index > 0) {
+      k = 0;
+      while (first_index + k <= last_index) {
+        q = p4est_array_index (tree->quadrants, k);
+        s = p4est_array_index (tree->quadrants, first_index + k);
+        p4est_quadrant_free_data (p4est, q);
+        *q = *s;
+        ++k;
+      }
+    }
+    /* remove last part of tree */
+    qcount = last_index - first_index + 1;
+    for (k = last_index + 1; k < treecount; ++k) {
+      q = p4est_array_index (tree->quadrants, k);
+      p4est_quadrant_free_data (p4est, q);
+    }
+    p4est_array_resize (tree->quadrants, qcount);
+    for (l = 0; l <= P4EST_MAXLEVEL; ++l) {
+      tree->quadrants_per_level[l] = 0;
+    }
+    tree->maxlevel = 0;
+    for (k = 0; k < qcount; ++k) {
+      q = p4est_array_index (tree->quadrants, k);
+      ++tree->quadrants_per_level[q->level];
+      tree->maxlevel = P4EST_MAX (tree->maxlevel, q->level);
+    }
+    p4est->local_num_quadrants += qcount;
+  }
 #endif /* HAVE_MPI */
 
   /* loop over all local trees to finalize balance */
@@ -871,7 +975,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* final log message for this tree */
     if (p4est->nout != NULL) {
       fprintf (p4est->nout, "[%d] Done balance tree %d now %d\n",
-               p4est->mpirank, j, tree->quadrants->elem_count);
+               rank, j, tree->quadrants->elem_count);
     }
   }
 

@@ -688,10 +688,12 @@ p4est_is_valid (p4est_t * p4est)
   for (j = 0; j < p4est->trees->elem_count; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     if (!p4est_tree_is_complete (tree)) {
+      printf ("not complete\n");
       return 0;
     }
     if ((j < p4est->first_local_tree || j > p4est->last_local_tree) &&
         tree->quadrants->elem_count > 0) {
+      printf ("outside count\n");
       return 0;
     }
 
@@ -709,14 +711,17 @@ p4est_is_valid (p4est_t * p4est)
     lquadrants += nquadrants;
 
     if (maxlevel != tree->maxlevel) {
+      printf ("wrong maxlevel\n");
       return 0;
     }
     if (nquadrants != tree->quadrants->elem_count) {
+      printf ("wrong tree quadrant count\n");
       return 0;
     }
   }
 
   if (lquadrants != p4est->local_num_quadrants) {
+    printf ("wrong local quadrant count\n");
     return 0;
   }
 
@@ -909,12 +914,13 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
       /* do a binary search for the lowest tree quadrant >= low_ins */
       first_index = p4est_find_lower_bound (tree->quadrants, &low_ins, guess);
       if (first_index < 0) {
+        printf ("First index < 0\n");
         continue;
       }
       guess = first_index;
     }
 
-    printf ("Into second bsearch\n");
+    printf ("First index %d, Into second bsearch\n", first_index);
 
     /* find last quadrant in tree that fits between fd and ld */
     if (p4est_quadrant_compare (&treeld, &ld) <= 0) {
@@ -925,29 +931,40 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
       /* do a binary search for the highest tree quadrant <= ld */
       last_index = p4est_find_higher_bound (tree->quadrants, &ld, guess);
       if (last_index < 0) {
+        printf ("Last index < 0\n");
         continue;
       }
     }
     P4EST_ASSERT (first_index <= last_index);
 
+    printf ("Last index %d\n", last_index);
+
     /* copy all overlapping quadrants that are small enough into out */
     for (j = first_index; j <= last_index; ++j) {
-      inq = p4est_array_index (tree->quadrants, j);
-      p4est_array_resize (out, outcount + 1);
-      outq = p4est_array_index (out, outcount);
-      *outq = *inq;
-      ++outcount;
+      tq = p4est_array_index (tree->quadrants, j);
+      if (tq->level > inq->level + 1) {
+        p4est_array_resize (out, outcount + 1);
+        outq = p4est_array_index (out, outcount);
+        *outq = *tq;
+        ++outcount;
+      }
     }
   }
+
+  if (outcount == 0) {
+    return;
+  }
+
+  printf ("Outcount %d\n", outcount);
 
   /* sort array and remove duplicates */
   p4est_array_sort (out, p4est_quadrant_compare);
   i = 0;                        /* read counter */
   j = 0;                        /* write counter */
   inq = p4est_array_index (out, i);
-  while (i < outcount - 1) {
-    tq = p4est_array_index (out, i + 1);
-    if (p4est_quadrant_is_equal (inq, tq)) {
+  while (i < outcount) {
+    tq = ((i < outcount - 1) ? p4est_array_index (out, i + 1) : NULL);
+    if (i < outcount - 1 && p4est_quadrant_is_equal (inq, tq)) {
       ++i;
     }
     else {
@@ -960,12 +977,8 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     }
     inq = tq;
   }
-  if (i > j) {
-    outq = p4est_array_index (out, j);
-    *outq = *inq;
-  }
-  P4EST_ASSERT (i == outcount - 1);
-  P4EST_ASSERT (j <= outcount - 1);
+  P4EST_ASSERT (i == outcount);
+  P4EST_ASSERT (j <= outcount);
   p4est_array_resize (out, j);
 }
 
