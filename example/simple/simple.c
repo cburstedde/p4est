@@ -46,7 +46,7 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 static int
 refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
-  if (quadrant->level >= refine_level) {
+  if (quadrant->level >= (refine_level - (which_tree % 3))) {
     return 0;
   }
   if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&

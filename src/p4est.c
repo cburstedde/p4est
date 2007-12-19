@@ -893,7 +893,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       q = p4est_array_index (tree->quadrants, treecount + k);
       *q = *s;
       ++tree->quadrants_per_level[q->level];
-      tree->maxlevel = P4EST_MAX (q->level, tree->maxlevel);
+      tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
       ++p4est->local_num_quadrants;
       p4est_quadrant_init_data (p4est, qtree, q, init_fn);
       /*
@@ -985,7 +985,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (k = 0; k < qcount; ++k) {
       q = p4est_array_index (tree->quadrants, k);
       ++tree->quadrants_per_level[q->level];
-      tree->maxlevel = P4EST_MAX (tree->maxlevel, q->level);
+      tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
     }
     p4est->local_num_quadrants += qcount;
   }
