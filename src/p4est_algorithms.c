@@ -692,21 +692,87 @@ p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
 int
 p4est_is_valid (p4est_t * p4est)
 {
+  const int           rank = p4est->mpirank;
+  const int32_t       first_tree = p4est->first_local_tree;
+  const int32_t       last_tree = p4est->last_local_tree;
   int                 i;
   int8_t              maxlevel;
+  int32_t             next_tree, rh;
   int32_t             j, nquadrants, lquadrants, perlevel;
+  p4est_quadrant_t   *q;
+  p4est_quadrant_t    mylow, nextlow, s;
   p4est_tree_t       *tree;
 
+  /* check first tree in global partition */
+  if (p4est->global_first_indices[3 * rank + 0] != first_tree) {
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "p4est invalid first tree\n");
+    }
+    return 0;
+  }
+  mylow.x = p4est->global_first_indices[3 * rank + 1];
+  mylow.y = p4est->global_first_indices[3 * rank + 2];
+  mylow.level = P4EST_MAXLEVEL;
+  tree = p4est_array_index (p4est->trees, first_tree);
+  if (tree->quadrants->elem_count > 0) {
+    q = p4est_array_index (tree->quadrants, 0);
+    if (q->x != mylow.x || q->y != mylow.y) {
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "p4est invalid low quadrant\n");
+      }
+      return 0;
+    }
+  }
+
+  /* check last tree in global partition */
+  next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
+  if (next_tree != last_tree && next_tree != last_tree + 1) {
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "p4est invalid last tree\n");
+    }
+    return 0;
+  }
+  nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
+  nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
+  nextlow.level = P4EST_MAXLEVEL;
+  tree = p4est_array_index (p4est->trees, last_tree);
+  if (tree->quadrants->elem_count > 0) {
+    q = p4est_array_index (tree->quadrants, tree->quadrants->elem_count - 1);
+    if (next_tree == last_tree) {
+      if (!p4est_quadrant_is_next (q, &nextlow)) {
+        if (p4est->nout != NULL) {
+          fprintf (p4est->nout, "p4est invalid next quadrant\n");
+        }
+        return 0;
+      }
+    }
+    else {
+      p4est_quadrant_last_descendent (q, &s, P4EST_MAXLEVEL);
+      rh = (1 << P4EST_MAXLEVEL);
+      if (s.x + 1 != rh || s.y + 1 != rh) {
+        if (p4est->nout != NULL) {
+          fprintf (p4est->nout, "p4est invalid last quadrant\n");
+        }
+        return 0;
+      }
+    }
+  }
+
+  /* check individual trees */
   lquadrants = 0;
   for (j = 0; j < p4est->trees->elem_count; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     if (!p4est_tree_is_complete (tree)) {
-      printf ("not complete\n");
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "p4est invalid not complete\n");
+      }
       return 0;
     }
     if ((j < p4est->first_local_tree || j > p4est->last_local_tree) &&
         tree->quadrants->elem_count > 0) {
-      printf ("outside count\n");
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "p4est invalid outside count\n");
+      }
       return 0;
     }
 
@@ -724,17 +790,23 @@ p4est_is_valid (p4est_t * p4est)
     lquadrants += nquadrants;
 
     if (maxlevel != tree->maxlevel) {
-      printf ("wrong maxlevel\n");
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "p4est invalid wrong maxlevel\n");
+      }
       return 0;
     }
     if (nquadrants != tree->quadrants->elem_count) {
-      printf ("wrong tree quadrant count\n");
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "p4est invalid tree quadrant count\n");
+      }
       return 0;
     }
   }
 
   if (lquadrants != p4est->local_num_quadrants) {
-    printf ("wrong local quadrant count\n");
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "p4est invalid local quadrant count\n");
+    }
     return 0;
   }
 
