@@ -81,12 +81,18 @@
 #define P4EST_MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define P4EST_MAX(a,b) (((a) > (b)) ? (a) : (b))
 
+typedef void        (*p4est_handler_t) (void *data);
+
 void               *p4est_malloc (size_t size);
 void               *p4est_calloc (size_t nmemb, size_t size);
 void               *p4est_realloc (void *ptr, size_t size);
 void                p4est_free (void *ptr);
 void                p4est_memory_check (void);
 
+
+void                p4est_set_abort_handler (int identifier,
+                                             p4est_handler_t handler,
+                                             void *data);
 void                p4est_abort (void);
 
 #endif /* !__P4EST_BASE_H__ */

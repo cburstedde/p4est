@@ -30,6 +30,10 @@
 static int          malloc_count = 0;
 static int          free_count = 0;
 
+static int          p4est_base_identifier = -1;
+static p4est_handler_t p4est_abort_handler = NULL;
+static void        *p4est_abort_data = NULL;
+
 void               *
 p4est_malloc (size_t size)
 {
@@ -102,19 +106,39 @@ p4est_memory_check (void)
 }
 
 void
+p4est_set_abort_handler (int identifier,
+                         p4est_handler_t handler, void *data)
+{
+  p4est_base_identifier = identifier;
+  p4est_abort_handler = handler;
+  p4est_abort_data = data;
+}
+
+void
 p4est_abort (void)
 {
+  char                prefix[BUFSIZ];
 #ifdef P4EST_BACKTRACE
   int                 i;
   size_t              bt_size;
   void               *bt_buffer[64];
   char              **bt_strings;
   const char         *str;
+#endif
 
+  if (p4est_base_identifier >= 0) {
+    snprintf (prefix, BUFSIZ, "[%d] ", p4est_base_identifier);
+  }
+  else {
+    prefix[0] = '\0';
+  }
+
+#ifdef P4EST_BACKTRACE  
   bt_size = backtrace (bt_buffer, 64);
   bt_strings = backtrace_symbols (bt_buffer, bt_size);
 
-  fprintf (stderr, "Abort: Obtained %ld stack frames\n", (long int) bt_size);
+  fprintf (stderr, "%sAbort: Obtained %ld stack frames\n",
+           prefix, (long int) bt_size);
 
 #ifdef P4EST_ADDRTOLINE
   /* implement pipe connection to addr2line */
@@ -129,13 +153,17 @@ p4est_abort (void)
       str = bt_strings[i];
     }
     /* fprintf (stderr, "   %p %s\n", bt_buffer[i], str); */
-    fprintf (stderr, "   %s\n", str);
+    fprintf (stderr, "%s   %s\n", prefix, str);
   }
   free (bt_strings);
-#endif
+#endif  /* P4EST_BACKTRACE */
 
   fflush (stdout);
   fflush (stderr);
+
+  if (p4est_abort_handler != NULL) {
+    p4est_abort_handler (p4est_abort_data);
+  }
 
   abort ();
 }
