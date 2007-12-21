@@ -283,7 +283,7 @@ int                 p4est_is_valid (p4est_t * p4est);
  * a split. Those elements from tree that overlap are put into \a out.
  * \param [in] tree     A sorted complete linear tree to be checked against.
  * \param [in] in       A sorted linear list of quadrants.
- * \param [in,out] out  A sorted subset of \a in. Zero size on input.
+ * \param [in,out] out  A sorted subset of tree->quadrants. Zero size on input.
  */
 void                p4est_tree_compute_overlap (p4est_tree_t * tree,
                                                 p4est_array_t * in,
