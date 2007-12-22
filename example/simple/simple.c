@@ -20,12 +20,23 @@
 */
 
 /*
- * Usage: p4est_simple <level>
+ * Usage: p4est_simple <configuration> <level>
+ *        possible configurations:
+ *        o unit    Refinement on the unit square.
+ *        o three   Refinement on a forest with three trees.
+ *        o evil    Check second round of refinement with np=5 level=7
  */
 
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 #include <p4est_vtk.h>
+
+enum {
+  P4EST_CONFIG_NULL,
+  P4EST_CONFIG_UNIT,
+  P4EST_CONFIG_THREE,
+  P4EST_CONFIG_EVIL,
+};
 
 typedef struct
 {
@@ -51,7 +62,8 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 }
 
 static int
-refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+refine_normal_fn (p4est_t * p4est, int32_t which_tree,
+                  p4est_quadrant_t * quadrant)
 {
   if (quadrant->level >= (refine_level - (which_tree % 3))) {
     return 0;
@@ -65,6 +77,32 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   }
 
   return 1;
+}
+
+static int
+refine_evil_fn (p4est_t * p4est, int32_t which_tree,
+                p4est_quadrant_t * quadrant)
+{
+  if (quadrant->level >= refine_level) {
+    return 0;
+  }
+  if (p4est->mpirank <= 1) {
+    return 1;
+  }
+  
+  return 0;
+}
+
+static int
+coarsen_evil_fn (p4est_t * p4est, int32_t which_tree,
+                 p4est_quadrant_t * q0, p4est_quadrant_t * q1,
+                 p4est_quadrant_t * q2, p4est_quadrant_t * q3)
+{
+  if (p4est->mpirank >= 2) {
+    return 1;
+  }
+
+  return 0;
 }
 
 static void
@@ -90,9 +128,13 @@ main (int argc, char **argv)
   int                 use_mpi = 1;
   int                 mpiret;
 #endif
+  int                 wrongusage, config;
+  char               *usage, *errmsg;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
+  p4est_refine_t      refine_fn;
+  p4est_coarsen_t     coarsen_fn;
 
   /* initialize MPI */
   mpi->mpirank = 0;
@@ -110,22 +152,77 @@ main (int argc, char **argv)
   /* register MPI abort handler */
   p4est_set_abort_handler (mpi->mpirank, abort_fn, mpi);
 
-  /* get command line argument: maximum refinement level */
-  if (mpi->mpirank == 0) {
-    P4EST_CHECK_ABORT (argc == 2, "Give level");
+  /* process command line arguments */
+  usage =
+    "Arguments: <configuration> <level>\n"
+    "   Configuration can be any of unit|three|evil\n"
+    "   Level controls the maximum depth of refinement\n";
+  errmsg = NULL;
+  wrongusage = 0;
+  config = P4EST_CONFIG_NULL;
+  if (!wrongusage && argc != 3) {
+    wrongusage = 1;
   }
-  refine_level = atoi (argv[1]);
+  if (!wrongusage) {
+    if (!strcmp (argv[1], "unit")) {
+      config = P4EST_CONFIG_UNIT;
+    }
+    else if (!strcmp (argv[1], "three")) {
+      config = P4EST_CONFIG_THREE;    
+    }
+    else if (!strcmp (argv[1], "evil")) {
+      config = P4EST_CONFIG_EVIL;    
+    }
+    else {
+      wrongusage = 1;
+    }
+  }
+  if (wrongusage) {
+    if (mpi->mpirank == 0) {
+      fputs ("Usage error\n", stderr);
+      fputs (usage, stderr);
+      if (errmsg != NULL) {
+        fputs (errmsg, stderr);
+      }
+      p4est_abort ();
+    }
+#ifdef HAVE_MPI
+    MPI_Barrier (mpi->mpicomm);
+#endif
+  }
+
+  /* assign variables based on configuration */
+  refine_level = atoi (argv[2]);
+  if (config == P4EST_CONFIG_EVIL) {
+    refine_fn = refine_evil_fn;
+    coarsen_fn = coarsen_evil_fn;
+  }
+  else {
+    refine_fn = refine_normal_fn;
+    coarsen_fn = NULL;
+  }
 
   /* create connectivity and forest structures */
-  /* connectivity = p4est_connectivity_new_unitsquare (); */
-  connectivity = p4est_connectivity_new_corner ();
+  if (config == P4EST_CONFIG_THREE) {
+    connectivity = p4est_connectivity_new_corner ();
+  }
+  else {
+    connectivity = p4est_connectivity_new_unitsquare ();
+  }
   p4est = p4est_new (mpi->mpicomm, stdout, connectivity,
                      sizeof (user_data_t), init_fn);
   p4est_tree_print (p4est_array_index (p4est->trees, 0),
                     mpi->mpirank, stdout);
   p4est_vtk_write_file (p4est, "mesh_simple_new");
+
+  /* refinement and coarsening */
   p4est_refine (p4est, refine_fn, init_fn);
+  if (coarsen_fn != NULL) {
+    p4est_coarsen (p4est, coarsen_fn, init_fn);
+  }
   p4est_vtk_write_file (p4est, "mesh_simple_refined");
+
+  /* balance */
   p4est_balance (p4est, init_fn);
   p4est_vtk_write_file (p4est, "mesh_simple_balanced");
 
