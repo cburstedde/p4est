@@ -26,13 +26,15 @@
 
 typedef struct
 {
-  int8_t              will_receive, have_count, have_load;
-  int32_t             expect_count;
+  int8_t              will_receive;
+  int8_t              have_first_count, have_first_load;
+  int8_t              have_second_count, have_second_load;
+  int32_t             first_count, second_count;
   p4est_array_t       send_first, recv_first;
   p4est_array_t       send_second, recv_second;
 #ifdef HAVE_MPI
   MPI_Request         request_send_first_count, request_send_first_load;
-  MPI_Request         request_send_second[2], request_recv_second[2];
+  MPI_Request         request_send_second_count, request_send_second_load;
 #endif
 }
 p4est_balance_peer_t;
@@ -773,7 +775,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                         p4est->mpicomm, &peer->request_send_first_count);
     P4EST_CHECK_MPI (mpiret);
 
-    /* then send the actual quadrants */
+    /* then send the actual quadrants and post receive for reply */
     if (qcount > 0) {
       qbytes = qcount * sizeof (p4est_quadrant_t);
       mpiret = MPI_Isend (peer->send_first.array, qbytes, MPI_CHAR,
@@ -788,9 +790,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   for (j = 0; j < p4est->mpisize; ++j) {
     peer = p4est_array_index (peers, j);
     peer->will_receive = 0;
-    peer->have_count = 0;
-    peer->have_load = 0;
-    peer->expect_count = 0;
+    peer->have_first_count = peer->have_first_load = 0;
+    peer->have_second_count = peer->have_second_load = 0;
+    peer->first_count = 0;
+    peer->second_count = 0;
     requests[j] = MPI_REQUEST_NULL;
     wait_indices[j] = -1;
     if (j == rank) {
@@ -806,7 +809,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     ++request_count;
 
     /* processor j is sending to me */
-    mpiret = MPI_Irecv (&peer->expect_count, 1, MPI_INT,
+    mpiret = MPI_Irecv (&peer->first_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
                         p4est->mpicomm, &requests[j]);
     P4EST_CHECK_MPI (mpiret);
@@ -827,10 +830,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       /* check if we are in receiving count or load */
       peer = p4est_array_index (peers, j);
       P4EST_ASSERT (peer->will_receive);
-      P4EST_ASSERT (!peer->have_load);
-      if (!peer->have_count) {
-        peer->have_count = 1;
-        qcount = peer->expect_count;
+      P4EST_ASSERT (!peer->have_first_load);
+      if (!peer->have_first_count) {
+        peer->have_first_count = 1;
+        qcount = peer->first_count;
         if (p4est->nout != NULL) {
           fprintf (p4est->nout,
                    "[%d] Balance A recv %d quadrants from %d\n",
@@ -853,15 +856,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       }
       else {
         /* received load, close this request */
-        P4EST_ASSERT (peer->expect_count > 0);
-        peer->have_load = 1;
+        P4EST_ASSERT (peer->first_count > 0);
+        peer->have_first_load = 1;
         requests[j] = MPI_REQUEST_NULL;
         --request_count;
 
         /* process incoming quadrants to interleave with communication */
         qarray = &peer->recv_first;
         qcount = qarray->elem_count;
-        P4EST_ASSERT (peer->expect_count == qcount);
+        P4EST_ASSERT (peer->first_count == qcount);
         q = p4est_array_index (qarray, 0);
         qtree = (int) q->user_data;
         P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
@@ -872,20 +875,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         tree = p4est_array_index (p4est->trees, qtree);
         P4EST_ASSERT (tree->quadrants->elem_count > 0);
 
-        /*
-           for (k = 0; k < qcount; ++k) {
-           p4est_quadrant_print (p4est_array_index (qarray, k),
-           rank, p4est->nout);
-           }
-           printf ("[%d] Tree %d Into overlap with %d\n", rank, qtree, qcount);
-         */
-        p4est_tree_compute_overlap (tree, qarray, &peer->send_second);
-        /*
-           printf ("[%d] Tree %d Out of overlap with %d\n",
-           rank, qtree, peer->send_second.elem_count);
-         */
-
-        /* remove what has already been in first send and send overlap */
+        /* compute overlap quadrants and send them */
+        p4est_tree_compute_overlap (tree, qarray,
+                                    &peer->send_first, &peer->send_second);
       }
     }
   }
@@ -906,7 +898,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* merge received quadrants */
   for (j = 0; j < p4est->mpisize; ++j) {
     peer = p4est_array_index (peers, j);
-    if (!peer->will_receive || peer->expect_count == 0) {
+    if (!peer->will_receive || peer->first_count == 0) {
       continue;
     }
     P4EST_ASSERT (j != rank);
@@ -914,7 +906,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* retrieve the correct tree */
     qarray = &peer->recv_first;
     qcount = qarray->elem_count;
-    P4EST_ASSERT (qcount = peer->expect_count);
+    P4EST_ASSERT (qcount = peer->first_count);
     q = p4est_array_index (qarray, 0);
     qtree = (int) q->user_data;
     P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);

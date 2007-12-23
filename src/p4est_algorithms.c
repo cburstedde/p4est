@@ -916,11 +916,11 @@ p4est_find_higher_bound (p4est_array_t * array,
 
 void
 p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
-                            p4est_array_t * out)
+                            p4est_array_t * not, p4est_array_t * out)
 {
   int                 i, j, guess;
   int                 k, l, which;
-  int                 treecount, incount, outcount;
+  int                 treecount, incount, dupcount, notcount, outcount;
   int                 first_index, last_index;
   int32_t             qh, rh;
   p4est_quadrant_t    treefd, treeld;
@@ -1036,12 +1036,18 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
 
   /* sort array and remove duplicates */
   p4est_array_sort (out, p4est_quadrant_compare);
+  dupcount = notcount = 0;
   i = 0;                        /* read counter */
   j = 0;                        /* write counter */
   inq = p4est_array_index (out, i);
   while (i < outcount) {
     tq = ((i < outcount - 1) ? p4est_array_index (out, i + 1) : NULL);
     if (i < outcount - 1 && p4est_quadrant_is_equal (inq, tq)) {
+      ++dupcount;
+      ++i;
+    }
+    else if (p4est_array_bsearch (not, inq, p4est_quadrant_compare) != NULL) {
+      ++notcount;
       ++i;
     }
     else {
@@ -1057,6 +1063,9 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   P4EST_ASSERT (i == outcount);
   P4EST_ASSERT (j <= outcount);
   p4est_array_resize (out, j);
+
+  printf ("Overlap %d in %d dup %d not %d res %d\n",
+          incount, outcount, dupcount, notcount, out->elem_count);
 }
 
 void
