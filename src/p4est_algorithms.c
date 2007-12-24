@@ -942,10 +942,6 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     return;
   }
 
-  /*
-     printf ("Into compute overlap with %d %d\n", treecount, incount);
-   */
-
   /* compute first and last descendants in the tree */
   tq = p4est_array_index (tree->quadrants, 0);
   p4est_quadrant_first_descendent (tq, &treefd, P4EST_MAXLEVEL);
@@ -1035,6 +1031,7 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   }
 
   /* sort array and remove duplicates */
+  P4EST_ASSERT (outcount == out->elem_count);
   p4est_array_sort (out, p4est_quadrant_compare);
   dupcount = notcount = 0;
   i = 0;                        /* read counter */
@@ -1064,8 +1061,10 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   P4EST_ASSERT (j <= outcount);
   p4est_array_resize (out, j);
 
-  printf ("Overlap %d in %d dup %d not %d res %d\n",
-          incount, outcount, dupcount, notcount, out->elem_count);
+  /*
+     printf ("Overlap %d in %d out %d dup %d not %d res %d\n",
+     treecount, incount, outcount, dupcount, notcount, out->elem_count);
+   */
 }
 
 void
