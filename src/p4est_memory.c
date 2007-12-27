@@ -137,7 +137,7 @@ p4est_array_bsearch (p4est_array_t * array, const void *key,
 }
 
 unsigned
-p4est_array_adler32 (p4est_array_t * array, int first_elem)
+p4est_array_checksum (p4est_array_t * array, int first_elem)
 {
   int                 first_byte;
   uInt                bytes;

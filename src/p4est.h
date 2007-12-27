@@ -118,6 +118,10 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
                                         p4est_quadrant_t * q2,
                                         p4est_quadrant_t * q3);
 
+/** set statically allocated quadrant to defined values */
+#define P4EST_QUADRANT_INIT(q) \
+  do { memset (q, -1, sizeof (p4est_quadrant_t)); } while (0)
+
 /** Create a new p4est.
  *
  * \param [in] mpicomm A valid MPI_Comm or MPI_COMM_NULL.
@@ -173,5 +177,11 @@ void                p4est_coarsen (p4est_t * p4est,
  *       Can be easily changed to edges only in p4est_algorithms.c.
  */
 void                p4est_balance (p4est_t * p4est, p4est_init_t init_fn);
+
+/** Compute the checksum for a forest.
+ * Based on quadrant arrays only. It is independent of partition and mpisize.
+ * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ */
+unsigned            p4est_checksum (p4est_t * p4est);
 
 #endif /* !__P4EST_H__ */

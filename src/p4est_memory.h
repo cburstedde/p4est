@@ -99,8 +99,8 @@ void               *p4est_array_bsearch (p4est_array_t * array,
  * \param [in] first_elem  Index of the element to start with.
  *                         Can be between 0 and elem_count (inclusive).
  */
-unsigned            p4est_array_adler32 (p4est_array_t * array,
-                                         int first_elem);
+unsigned            p4est_array_checksum (p4est_array_t * array,
+                                          int first_elem);
 
 /** Adds an element to a priority queue.
  * The priority queue is implemented as a heap in ascending order.

@@ -28,6 +28,15 @@
 #include <p4est_vtk.h>
 
 #ifdef HAVE_MPI
+
+typedef struct
+{
+  MPI_Comm            mpicomm;
+  int                 mpisize;
+  int                 mpirank;
+}
+mpi_context_t;
+
 static int          refine_level = 0;
 static int          level_shift = 0;
 
@@ -46,6 +55,19 @@ refine_fractal (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
   qid = p4est_quadrant_child_id (q);
   return (qid == 0 || qid == 3);
 }
+
+static void
+abort_fn (void * data) 
+{
+  int                 mpiret;
+  mpi_context_t      *mpi = data;
+
+  fprintf (stderr, "[%d] p4est_timings abort handler\n", mpi->mpirank);
+
+  mpiret = MPI_Abort (mpi->mpicomm, 1);
+  P4EST_CHECK_MPI (mpiret);
+}
+
 #endif /* HAVE_MPI */
 
 int
@@ -53,32 +75,44 @@ main (int argc, char **argv)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
+  unsigned            crc;
   int32_t             count_refined, count_balanced;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   double              start, elapsed_refine;
   double              elapsed_balance, elapsed_rebalance;
-  MPI_Comm            mpicomm;
+  mpi_context_t       mpi_context, *mpi = &mpi_context;
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
+  mpi->mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  P4EST_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
+  P4EST_CHECK_MPI (mpiret);
+  p4est_set_abort_handler (mpi->mpirank, abort_fn, mpi);
 
   /* get command line argument: maximum refinement level */
   P4EST_CHECK_ABORT (argc == 2, "Give level");
   refine_level = atoi (argv[1]);
   level_shift = 4;
 
+  /* print general setup information */
+  if (mpi->mpirank == 0) {
+    printf ("Processors %d level %d shift %d\n",
+            mpi->mpisize, refine_level, level_shift);
+  }
+
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est = p4est_new (mpicomm, NULL, connectivity, 0, NULL);
+  p4est = p4est_new (mpi->mpicomm, stdout, connectivity, 0, NULL);
 
   /* time refine */
   start = -MPI_Wtime ();
   p4est_refine (p4est, refine_fractal, NULL);
   elapsed_refine = start + MPI_Wtime ();
-  if (refine_level <= 6) {
+  if (refine_level <= 8) {
     p4est_vtk_write_file (p4est, "mesh_timings_refined");
   }
   count_refined = p4est->global_num_quadrants;
@@ -87,19 +121,22 @@ main (int argc, char **argv)
   start = -MPI_Wtime ();
   p4est_balance (p4est, NULL);
   elapsed_balance = start + MPI_Wtime ();
-  if (refine_level <= 6) {
+  if (refine_level <= 8) {
     p4est_vtk_write_file (p4est, "mesh_timings_balanced");
   }
   count_balanced = p4est->global_num_quadrants;
+  crc = p4est_checksum (p4est);
 
   /* time rebalance - is a noop on the tree */
   start = -MPI_Wtime ();
   p4est_balance (p4est, NULL);
   elapsed_rebalance = start + MPI_Wtime ();
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
-
-  /* print timings */
-  if (p4est->mpirank == 0) {
+  P4EST_ASSERT (crc == p4est_checksum (p4est));
+  
+  /* print checksum and timings */
+  if (mpi->mpirank == 0) {
+    printf ("Tree checksum 0x%x\n", crc);
     printf ("Level %d refined to %lld balanced to %lld\n", refine_level,
             (long long) count_refined, (long long) count_balanced);
     printf ("Level %d refinement %.3gs balance %.3gs rebalance %.3gs\n",
@@ -113,6 +150,8 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_memory_check ();
 
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
 #else

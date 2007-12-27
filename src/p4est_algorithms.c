@@ -703,6 +703,10 @@ p4est_is_valid (p4est_t * p4est)
   p4est_quadrant_t    mylow, nextlow, s;
   p4est_tree_t       *tree;
 
+  P4EST_QUADRANT_INIT (&mylow);
+  P4EST_QUADRANT_INIT (&nextlow);
+  P4EST_QUADRANT_INIT (&s);
+
   /* check first tree in global partition */
   if (p4est->global_first_indices[3 * rank + 0] != first_tree) {
     if (p4est->nout != NULL) {
@@ -931,6 +935,14 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   P4EST_ASSERT (p4est_tree_is_complete (tree));
   P4EST_ASSERT (out->elem_count == 0);
 
+  P4EST_QUADRANT_INIT (&treefd);
+  P4EST_QUADRANT_INIT (&treeld);
+  P4EST_QUADRANT_INIT (&fd);
+  P4EST_QUADRANT_INIT (&ld);
+  for (which = 0; which < 9; ++which) {
+    P4EST_QUADRANT_INIT (&ins[which]);
+  }
+
   /* assign some numbers */
   treecount = tree->quadrants->elem_count;
   incount = in->elem_count;
@@ -1098,6 +1110,8 @@ p4est_complete_region (p4est_t * p4est,
   int32_t            *quadrants_per_level;
   int32_t             num_quadrants = 0;
 
+  P4EST_QUADRANT_INIT (&Afinest);
+
   W = p4est_list_new (NULL);
   R = tree;
 
@@ -1240,6 +1254,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   p4est_array_t      *outlist[P4EST_MAXLEVEL + 1];
 
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
+
+  P4EST_QUADRANT_INIT (&ld);
+  P4EST_QUADRANT_INIT (&tree_first);
+  P4EST_QUADRANT_INIT (&tree_last);
+  P4EST_QUADRANT_INIT (&parent);
 
   /*
    * Algorithm works with these data structures

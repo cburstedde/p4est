@@ -24,6 +24,8 @@
 #include <p4est_communication.h>
 #include <p4est_base.h>
 
+#include <zlib.h>
+
 typedef struct
 {
   int8_t              have_first_count, have_first_load;
@@ -55,6 +57,9 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   p4est_quadrant_t   *quad;
   p4est_quadrant_t    a;
   p4est_quadrant_t    b;
+
+  P4EST_QUADRANT_INIT (&a);
+  P4EST_QUADRANT_INIT (&b);
 
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   P4EST_CHECK_ALLOC (p4est);
@@ -575,6 +580,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 which, comp, scount, offset;
   int                 request_first_count, request_second_count, outcount;
   int                *wait_indices;
+  unsigned            checksum;
   int32_t             i, qtree, qcount;
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
@@ -593,6 +599,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* prepare sanity checks */
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
+  }
+
+  P4EST_QUADRANT_INIT (&mylow);
+  P4EST_QUADRANT_INIT (&nextlow);
+  P4EST_QUADRANT_INIT (&ld);
+  for (which = 0; which < 9; ++which) {
+    P4EST_QUADRANT_INIT (&ins[which]);
   }
 
 #ifdef HAVE_MPI
@@ -778,6 +791,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* then send the actual quadrants and post receive for reply */
     if (qcount > 0) {
       qbytes = qcount * sizeof (p4est_quadrant_t);
+#ifdef P4EST_HAVE_DEBUG
+      checksum = p4est_array_checksum (&peer->send_first, 0);
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "[%d] Balance A send checksum %x to %d\n",
+                 rank, checksum, j);
+      }
+#endif
       mpiret = MPI_Isend (peer->send_first.array, qbytes, MPI_CHAR,
                           j, P4EST_COMM_BALANCE_FIRST_LOAD,
                           p4est->mpicomm, &send_request);
@@ -839,6 +859,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
+          P4EST_ASSERT (peer->recv_both.elem_count == 0);
           p4est_array_resize (&peer->recv_both, qcount);
           qbytes = qcount * sizeof (p4est_quadrant_t);
           mpiret = MPI_Irecv (peer->recv_both.array, qbytes, MPI_CHAR,
@@ -858,6 +879,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         peer->have_first_load = 1;
         requests_first[j] = MPI_REQUEST_NULL;
         --request_first_count;
+#ifdef P4EST_HAVE_DEBUG
+        checksum = p4est_array_checksum (&peer->recv_both, 0);
+        if (p4est->nout != NULL) {
+          fprintf (p4est->nout, "[%d] Balance A recv checksum %x from %d\n",
+                   rank, checksum, j);
+        }
+#endif
 
         /* process incoming quadrants to interleave with communication */
         qarray = &peer->recv_both;
@@ -926,6 +954,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
           offset = peer->recv_both.elem_count;
+          P4EST_ASSERT (offset == peer->first_count);
           obytes = offset * sizeof (p4est_quadrant_t);
           p4est_array_resize (&peer->recv_both, offset + qcount);
           qbytes = qcount * sizeof (p4est_quadrant_t);
@@ -1128,6 +1157,58 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                   p4est->user_data_pool->elem_count);
   }
   P4EST_ASSERT (p4est_is_valid (p4est));
+}
+
+unsigned
+p4est_checksum (p4est_t * p4est)
+{
+  int                 mpiret;
+  int                 treelength;
+  unsigned            treecrc, crc;
+  int32_t             j;
+  uint32_t            send[2];
+  uint32_t           *gather;
+  p4est_tree_t       *tree;
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  if (p4est->mpirank == 0) {
+    gather = P4EST_ALLOC (uint32_t, 2 * p4est->mpisize);
+    P4EST_CHECK_ALLOC (gather);
+  }
+  else {
+    gather = NULL;
+  }
+
+  crc = 0;
+  treelength = 0;
+  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+    treelength = tree->quadrants->elem_count * sizeof (p4est_quadrant_t);
+    treecrc = p4est_array_checksum (tree->quadrants, 0);
+    if (j == p4est->first_local_tree) {
+      crc = treecrc;
+    }
+    else {
+      crc = adler32_combine (crc, treecrc, treelength);
+    }
+  }
+  send[0] = crc;
+  send[1] = p4est->local_num_quadrants * sizeof (p4est_quadrant_t);
+  mpiret = MPI_Gather (send, 2, MPI_UNSIGNED, gather, 2, MPI_UNSIGNED,
+                       0, p4est->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
+
+  crc = 0;
+  if (p4est->mpirank == 0) {
+    crc = gather[0];
+    for (j = 1; j < p4est->mpisize; ++j) {
+      crc = adler32_combine (crc, gather[2 * j + 0], gather[2 * j + 1]);
+    }
+    P4EST_FREE (gather);
+  }
+
+  return crc;
 }
 
 /* EOF p4est.c */
