@@ -25,6 +25,7 @@
 int
 main (int argc, char **argv)
 {
+  int                 k;
   int8_t              l;
   p4est_t            *p4est;
   p4est_tree_t        stree, *tree = &stree;
@@ -45,21 +46,26 @@ main (int argc, char **argv)
   p4est_array_resize (tree->quadrants, 4);
   q = p4est_array_index (tree->quadrants, 0);
   p4est_quadrant_set_morton (q, 1, 0);
-  ++tree->quadrants_per_level[1];
   q = p4est_array_index (tree->quadrants, 1);
   p4est_quadrant_set_morton (q, 3, 13);
-  ++tree->quadrants_per_level[3];
   q = p4est_array_index (tree->quadrants, 2);
   p4est_quadrant_set_morton (q, 1, 1);
-  ++tree->quadrants_per_level[1];
   q = p4est_array_index (tree->quadrants, 3);
   p4est_quadrant_set_morton (q, 1, 2);
-  ++tree->quadrants_per_level[1];
-  tree->maxlevel = 3;
+  for (k = 0; k < tree->quadrants->elem_count; ++k) {
+    q = p4est_array_index (tree->quadrants, k);
+    q->user_data = p4est_mempool_alloc (p4est->user_data_pool);
+    ++tree->quadrants_per_level[q->level];
+    tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
+  }
 
   /* balance the tree, print and destroy */
   p4est_balance_subtree (p4est, tree, 0, NULL);
   p4est_tree_print (tree, p4est->mpirank, p4est->nout);
+  for (k = 0; k < tree->quadrants->elem_count; ++k) {
+    q = p4est_array_index (tree->quadrants, k);
+    p4est_mempool_free (p4est->user_data_pool, q->user_data);
+  }
   p4est_array_destroy (tree->quadrants);
 
   /* balance the forest */
@@ -68,6 +74,8 @@ main (int argc, char **argv)
   p4est_tree_print (tree, p4est->mpirank, p4est->nout);
 
   /* clean up memory */
+  P4EST_ASSERT (p4est->user_data_pool->elem_count ==
+                p4est->local_num_quadrants);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 

@@ -22,6 +22,7 @@
 #include <p4est_memory.h>
 #include <p4est_base.h>
 #include <math.h>
+#include <zlib.h>
 
 /* array routines */
 
@@ -73,25 +74,51 @@ p4est_array_resize (p4est_array_t * array, int new_count)
 {
   char               *ptr;
   int                 newsize;
+  int                 oldoffs, newoffs, minoffs;
+#ifdef P4EST_HAVE_DEBUG
+  int                 i, alloffs;
+  const int           padding = 1;
+#else
+  const int           padding = 0;
+#endif
 
+  oldoffs = array->elem_count * array->elem_size;
   array->elem_count = new_count;
+  newoffs = array->elem_count * array->elem_size;
+  minoffs = P4EST_MIN (oldoffs, newoffs);
 
-  if (new_count > array->elem_alloc) {
-    array->elem_alloc = P4EST_MAX (8 + 2 * array->elem_alloc, new_count);
+  if (new_count + padding > array->elem_alloc) {
+    array->elem_alloc = P4EST_MAX (8 + 2 * array->elem_alloc,
+                                   new_count + padding);
   }
-  else if (new_count < (array->elem_alloc + 1) / 2) {
-    array->elem_alloc = new_count;
+  else if (new_count + padding < (array->elem_alloc + 1) / 2) {
+    array->elem_alloc = new_count + padding;
   }
   else {
+#ifdef P4EST_HAVE_DEBUG
+    for (i = newoffs; i < oldoffs; ++i) {
+      array->array[i] = (char) -1;
+    }
+    for (i = oldoffs; i < newoffs; ++i) {
+      P4EST_ASSERT (array->array[i] == (char) -1);
+    }
+#endif
     return;
   }
-  P4EST_ASSERT (array->elem_alloc >= 0 && array->elem_alloc >= new_count);
+  P4EST_ASSERT (array->elem_alloc >= 0 &&
+                array->elem_alloc >= new_count + padding);
 
   newsize = array->elem_alloc * array->elem_size;
   ptr = P4EST_REALLOC (array->array, char, newsize);
   P4EST_CHECK_REALLOC (ptr, newsize);
 
   array->array = ptr;
+#ifdef P4EST_HAVE_DEBUG
+  alloffs = array->elem_alloc * array->elem_size;
+  for (i = minoffs; i < alloffs; ++i) {
+    array->array[i] = (char) -1;
+  }
+#endif
 }
 
 void
@@ -107,6 +134,27 @@ p4est_array_bsearch (p4est_array_t * array, const void *key,
 {
   return
     bsearch (key, array->array, array->elem_count, array->elem_size, compar);
+}
+
+unsigned
+p4est_array_adler32 (p4est_array_t * array, int first_elem)
+{
+  int                 first_byte;
+  uInt                bytes;
+  uLong               crc;
+
+  P4EST_ASSERT (0 <= first_elem && first_elem <= array->elem_count);
+
+  crc = adler32 (0L, Z_NULL, 0);
+  if (array->elem_count == 0) {
+    return (unsigned) crc;
+  }
+
+  first_byte = first_elem * array->elem_size;
+  bytes = (array->elem_count - first_elem) * array->elem_size;
+  crc = adler32 (crc, (const Bytef *) (array->array + first_byte), bytes);
+
+  return (unsigned) crc;
 }
 
 int
@@ -270,16 +318,37 @@ p4est_mempool_alloc (p4est_mempool_t * mempool)
     new_count = mempool->freed->elem_count - 1;
     ret = *(void **) p4est_array_index (mempool->freed, new_count);
     p4est_array_resize (mempool->freed, new_count);
-    return ret;
+  }
+  else {
+    ret = obstack_alloc (&mempool->obstack, mempool->elem_size);
   }
 
-  return obstack_alloc (&mempool->obstack, mempool->elem_size);
+  /*
+     printf ("mempool_alloc %d %d with %d for %p\n",
+     mempool->elem_count, mempool->freed->elem_count,
+     mempool->elem_size, ret);
+   */
+
+#ifdef P4EST_HAVE_DEBUG
+  memset (ret, (char) -1, mempool->elem_size);
+#endif
+
+  return ret;
 }
 
 void
 p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
 {
   int                 old_count;
+
+  /*
+     printf ("mempool_free %d %d with %d for %p\n",
+     mempool->elem_count, mempool->freed->elem_count,
+     mempool->elem_size, elem);
+   */
+#ifdef P4EST_HAVE_DEBUG
+  memset (elem, (char) -1, mempool->elem_size);
+#endif
 
   --mempool->elem_count;
 
