@@ -21,8 +21,14 @@
 
 #include <p4est_memory.h>
 #include <p4est_base.h>
+
+/* using sqrt to compute hash statistics */
 #include <math.h>
+
+/* require zlib header for adler32 checksums */
+#ifdef HAVE_ZLIB_H
 #include <zlib.h>
+#endif
 
 /* array routines */
 

@@ -24,7 +24,18 @@
 #include <p4est_communication.h>
 #include <p4est_base.h>
 
+/* htonl is in either of these two */
+#ifdef HAVE_ARPA_NET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+/* require zlib header for adler32 checksums */
+#ifdef HAVE_ZLIB_H
 #include <zlib.h>
+#endif
 
 typedef struct
 {
@@ -918,6 +929,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                             p4est->mpicomm, &send_request);
         P4EST_CHECK_MPI (mpiret);
         if (qcount > 0) {
+#ifdef P4EST_HAVE_DEBUG
+          checksum = p4est_array_checksum (&peer->send_second, 0);
+          if (p4est->nout != NULL) {
+            fprintf (p4est->nout, "[%d] Balance B send checksum %x to %d\n",
+                     rank, checksum, j);
+          }
+#endif
           qbytes = qcount * sizeof (p4est_quadrant_t);
           mpiret = MPI_Isend (peer->send_second.array, qbytes, MPI_CHAR,
                               j, P4EST_COMM_BALANCE_SECOND_LOAD,
@@ -975,6 +993,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         peer->have_second_load = 1;
         requests_second[j] = MPI_REQUEST_NULL;
         --request_second_count;
+#ifdef P4EST_HAVE_DEBUG
+        checksum = p4est_array_checksum (&peer->recv_both, peer->first_count);
+        if (p4est->nout != NULL) {
+          fprintf (p4est->nout, "[%d] Balance B recv checksum %x from %d\n",
+                   rank, checksum, j);
+        }
+#endif
       }
     }
   }
@@ -1165,10 +1190,13 @@ p4est_checksum (p4est_t * p4est)
   int                 mpiret;
   int                 treelength;
   unsigned            treecrc, crc;
-  int32_t             j;
+  int32_t             j, k, qcount;
   uint32_t            send[2];
   uint32_t           *gather;
+  uint32_t           *check;
+  p4est_quadrant_t   *q;
   p4est_tree_t       *tree;
+  p4est_array_t      *checkarray;
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -1179,22 +1207,31 @@ p4est_checksum (p4est_t * p4est)
   else {
     gather = NULL;
   }
+  checkarray = p4est_array_new (4);
 
   crc = 0;
   treelength = 0;
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
-    treelength = tree->quadrants->elem_count * sizeof (p4est_quadrant_t);
-    treecrc = p4est_array_checksum (tree->quadrants, 0);
+    qcount = tree->quadrants->elem_count;
+    p4est_array_resize (checkarray, qcount * 3);
+    for (k = 0; k < qcount; ++k) {
+      q = p4est_array_index (tree->quadrants, k);
+      check = p4est_array_index (checkarray, k * 3);
+      check[0] = htonl ((uint32_t) q->x);
+      check[1] = htonl ((uint32_t) q->y);
+      check[2] = htonl ((uint32_t) q->level);
+    }
+    treecrc = p4est_array_checksum (checkarray, 0);
     if (j == p4est->first_local_tree) {
       crc = treecrc;
     }
     else {
-      crc = adler32_combine (crc, treecrc, treelength);
+      crc = adler32_combine (crc, treecrc, qcount * 12);
     }
   }
   send[0] = crc;
-  send[1] = p4est->local_num_quadrants * sizeof (p4est_quadrant_t);
+  send[1] = p4est->local_num_quadrants * 12;
   mpiret = MPI_Gather (send, 2, MPI_UNSIGNED, gather, 2, MPI_UNSIGNED,
                        0, p4est->mpicomm);
   P4EST_CHECK_MPI (mpiret);
@@ -1207,6 +1244,7 @@ p4est_checksum (p4est_t * p4est)
     }
     P4EST_FREE (gather);
   }
+  p4est_array_destroy (checkarray);
 
   return crc;
 }
