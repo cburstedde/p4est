@@ -581,9 +581,10 @@ p4est_quadrant_checksum (p4est_array_t * quadrants,
   uint32_t           *check;
   p4est_quadrant_t   *q;
 
+  qcount = quadrants->elem_count;
+
   P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
-  P4EST_ASSERT (0 <= first_quadrant &&
-                first_quadrant <= quadrants->elem_count);
+  P4EST_ASSERT (0 <= first_quadrant && first_quadrant <= qcount);
 
   if (checkarray == NULL) {
     checkarray = p4est_array_new (4);
@@ -594,16 +595,15 @@ p4est_quadrant_checksum (p4est_array_t * quadrants,
     own_check = 0;
   }
 
-  qcount = quadrants->elem_count;
-  p4est_array_resize (checkarray, qcount * 3);
-  for (k = 0; k < qcount; ++k) {
+  p4est_array_resize (checkarray, (qcount - first_quadrant) * 3);
+  for (k = first_quadrant; k < qcount; ++k) {
     q = p4est_array_index (quadrants, k);
-    check = p4est_array_index (checkarray, k * 3);
+    check = p4est_array_index (checkarray, (k - first_quadrant) * 3);
     check[0] = htonl ((uint32_t) q->x);
     check[1] = htonl ((uint32_t) q->y);
     check[2] = htonl ((uint32_t) q->level);
   }
-  crc = p4est_array_checksum (checkarray, first_quadrant * 3);
+  crc = p4est_array_checksum (checkarray, 0);
 
   if (own_check) {
     p4est_array_destroy (checkarray);

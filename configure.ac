@@ -37,7 +37,7 @@ echo "| Checking for libraries"
 echo "o----------------------------------"
 
 P4EST_REQUIRE_LIB([m], [fabs])
-P4EST_REQUIRE_LIB([z], [compress2])
+P4EST_REQUIRE_LIB([z], [adler32_combine])
 
 echo "o----------------------------------"
 echo "| Checking headers and functions"
