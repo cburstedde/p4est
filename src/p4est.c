@@ -24,14 +24,6 @@
 #include <p4est_communication.h>
 #include <p4est_base.h>
 
-/* htonl is in either of these two */
-#ifdef HAVE_ARPA_NET_H
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
 /* require zlib header for adler32 checksums */
 #ifdef HAVE_ZLIB_H
 #include <zlib.h>
@@ -585,13 +577,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_tree_t       *tree;
   p4est_quadrant_t    mylow, nextlow;
 #ifdef HAVE_MPI
+#ifdef P4EST_HAVE_DEBUG
+  unsigned            checksum;
+  p4est_array_t      *checkarray;
+#endif
   int                 mpiret, qbytes, obytes;
   int                 first_index, last_index;
   int                 k, l;
   int                 which, comp, scount, offset;
   int                 request_first_count, request_second_count, outcount;
   int                *wait_indices;
-  unsigned            checksum;
   int32_t             i, qtree, qcount;
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
@@ -614,10 +609,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
   P4EST_QUADRANT_INIT (&mylow);
   P4EST_QUADRANT_INIT (&nextlow);
+#ifdef HAVE_MPI
   P4EST_QUADRANT_INIT (&ld);
   for (which = 0; which < 9; ++which) {
     P4EST_QUADRANT_INIT (&ins[which]);
   }
+#endif
 
 #ifdef HAVE_MPI
   /* will contain first and last peer (inclusive) for each processor */
@@ -643,6 +640,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     requests_first[i] = requests_second[i] = MPI_REQUEST_NULL;
     peer->first_count = peer->second_count = 0;
   }
+#ifdef P4EST_HAVE_DEBUG
+  checkarray = p4est_array_new (4);
+#endif
 #endif
 
   /* compute first quadrants on finest level for comparison for me and next */
@@ -803,7 +803,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (qcount > 0) {
       qbytes = qcount * sizeof (p4est_quadrant_t);
 #ifdef P4EST_HAVE_DEBUG
-      checksum = p4est_array_checksum (&peer->send_first, 0);
+      checksum = p4est_quadrant_checksum (&peer->send_first, checkarray, 0);
       if (p4est->nout != NULL) {
         fprintf (p4est->nout, "[%d] Balance A send checksum %x to %d\n",
                  rank, checksum, j);
@@ -891,7 +891,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         requests_first[j] = MPI_REQUEST_NULL;
         --request_first_count;
 #ifdef P4EST_HAVE_DEBUG
-        checksum = p4est_array_checksum (&peer->recv_both, 0);
+        checksum = p4est_quadrant_checksum (&peer->recv_both, checkarray, 0);
         if (p4est->nout != NULL) {
           fprintf (p4est->nout, "[%d] Balance A recv checksum %x from %d\n",
                    rank, checksum, j);
@@ -930,7 +930,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_CHECK_MPI (mpiret);
         if (qcount > 0) {
 #ifdef P4EST_HAVE_DEBUG
-          checksum = p4est_array_checksum (&peer->send_second, 0);
+          checksum =
+            p4est_quadrant_checksum (&peer->send_second, checkarray, 0);
           if (p4est->nout != NULL) {
             fprintf (p4est->nout, "[%d] Balance B send checksum %x to %d\n",
                      rank, checksum, j);
@@ -994,7 +995,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         requests_second[j] = MPI_REQUEST_NULL;
         --request_second_count;
 #ifdef P4EST_HAVE_DEBUG
-        checksum = p4est_array_checksum (&peer->recv_both, peer->first_count);
+        checksum = p4est_quadrant_checksum (&peer->recv_both, checkarray,
+                                            peer->first_count);
         if (p4est->nout != NULL) {
           fprintf (p4est->nout, "[%d] Balance B recv checksum %x from %d\n",
                    rank, checksum, j);
@@ -1170,6 +1172,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
   P4EST_FREE (statuses);
   P4EST_FREE (wait_indices);
+#ifdef P4EST_HAVE_DEBUG
+  p4est_array_destroy (checkarray);
+#endif
 #endif
 
   /* compute global number of quadrants */
@@ -1187,48 +1192,39 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 unsigned
 p4est_checksum (p4est_t * p4est)
 {
-  int                 mpiret;
-  int                 treelength;
   unsigned            treecrc, crc;
-  int32_t             j, k, qcount;
-  uint32_t            send[2];
-  uint32_t           *gather;
-  uint32_t           *check;
-  p4est_quadrant_t   *q;
+  int32_t             j;
   p4est_tree_t       *tree;
   p4est_array_t      *checkarray;
+#ifdef HAVE_MPI
+  int                 mpiret;
+  uint32_t            send[2];
+  uint32_t           *gather;
+#endif
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
+  checkarray = p4est_array_new (4);
+  crc = 0;
+  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
+    tree = p4est_array_index (p4est->trees, j);
+    treecrc = p4est_quadrant_checksum (tree->quadrants, checkarray, 0);
+    if (j == p4est->first_local_tree) {
+      crc = treecrc;
+    }
+    else {
+      crc = adler32_combine (crc, treecrc, checkarray->elem_count * 4);
+    }
+  }
+  p4est_array_destroy (checkarray);
+
+#ifdef HAVE_MPI
   if (p4est->mpirank == 0) {
     gather = P4EST_ALLOC (uint32_t, 2 * p4est->mpisize);
     P4EST_CHECK_ALLOC (gather);
   }
   else {
     gather = NULL;
-  }
-  checkarray = p4est_array_new (4);
-
-  crc = 0;
-  treelength = 0;
-  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
-    tree = p4est_array_index (p4est->trees, j);
-    qcount = tree->quadrants->elem_count;
-    p4est_array_resize (checkarray, qcount * 3);
-    for (k = 0; k < qcount; ++k) {
-      q = p4est_array_index (tree->quadrants, k);
-      check = p4est_array_index (checkarray, k * 3);
-      check[0] = htonl ((uint32_t) q->x);
-      check[1] = htonl ((uint32_t) q->y);
-      check[2] = htonl ((uint32_t) q->level);
-    }
-    treecrc = p4est_array_checksum (checkarray, 0);
-    if (j == p4est->first_local_tree) {
-      crc = treecrc;
-    }
-    else {
-      crc = adler32_combine (crc, treecrc, qcount * 12);
-    }
   }
   send[0] = crc;
   send[1] = p4est->local_num_quadrants * 12;
@@ -1244,7 +1240,7 @@ p4est_checksum (p4est_t * p4est)
     }
     P4EST_FREE (gather);
   }
-  p4est_array_destroy (checkarray);
+#endif
 
   return crc;
 }

@@ -227,8 +227,23 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
 
+/** Prints one line with quadrant's x, y and level.
+ * \param [in]  identifier  If this number is >= 0, it is prepended.
+ */
 void                p4est_quadrant_print (const p4est_quadrant_t * q,
                                           int identifier, FILE * nout);
+
+/** Computes a machine-independent checksum of a list of quadrants.
+ * \param [in] quadrants       Array of quadrants.
+ * \param [in,out] checkarray  Temporary array of elem_size 4.
+ *                             Will be resized to quadrants->elem_count * 3.
+ *                             If it is NULL, will be allocated internally.
+ * \param [in] first_quadrant  Index of the quadrant to start with.
+ *                             Can be between 0 and elem_count (inclusive).
+ */
+unsigned            p4est_quadrant_checksum (p4est_array_t * quadrants,
+                                             p4est_array_t * checkarray,
+                                             int first_quadrant);
 
 /** Test if a tree is sorted in Morton ordering.
  * \return Returns 1 if sorted, 0 otherwise.

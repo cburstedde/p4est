@@ -22,6 +22,14 @@
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 
+/* htonl is in either of these two */
+#ifdef HAVE_ARPA_NET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
 static const int    hash_table_minsize = 1361;
 static const int    hash_table_maxsize = 99133;
 
@@ -561,6 +569,47 @@ p4est_quadrant_print (const p4est_quadrant_t * q, int identifier, FILE * nout)
   }
 
   fprintf (nout, "%sx 0x%x y 0x%x level %d\n", prefix, q->x, q->y, q->level);
+}
+
+unsigned
+p4est_quadrant_checksum (p4est_array_t * quadrants,
+                         p4est_array_t * checkarray, int first_quadrant)
+{
+  int                 own_check;
+  int                 k, qcount;
+  unsigned            crc;
+  uint32_t           *check;
+  p4est_quadrant_t   *q;
+
+  P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
+  P4EST_ASSERT (0 <= first_quadrant &&
+                first_quadrant <= quadrants->elem_count);
+
+  if (checkarray == NULL) {
+    checkarray = p4est_array_new (4);
+    own_check = 1;
+  }
+  else {
+    P4EST_ASSERT (checkarray->elem_size == 4);
+    own_check = 0;
+  }
+
+  qcount = quadrants->elem_count;
+  p4est_array_resize (checkarray, qcount * 3);
+  for (k = 0; k < qcount; ++k) {
+    q = p4est_array_index (quadrants, k);
+    check = p4est_array_index (checkarray, k * 3);
+    check[0] = htonl ((uint32_t) q->x);
+    check[1] = htonl ((uint32_t) q->y);
+    check[2] = htonl ((uint32_t) q->level);
+  }
+  crc = p4est_array_checksum (checkarray, first_quadrant * 3);
+
+  if (own_check) {
+    p4est_array_destroy (checkarray);
+  }
+
+  return crc;
 }
 
 int
