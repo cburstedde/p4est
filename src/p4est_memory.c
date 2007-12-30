@@ -80,9 +80,9 @@ p4est_array_resize (p4est_array_t * array, int new_count)
 {
   char               *ptr;
   int                 newsize;
-  int                 oldoffs, newoffs, minoffs;
+  int                 oldoffs, newoffs;
 #ifdef P4EST_HAVE_DEBUG
-  int                 i, alloffs;
+  int                 i, minoffs;
   const int           padding = 1;
 #else
   const int           padding = 0;
@@ -91,7 +91,6 @@ p4est_array_resize (p4est_array_t * array, int new_count)
   oldoffs = array->elem_count * array->elem_size;
   array->elem_count = new_count;
   newoffs = array->elem_count * array->elem_size;
-  minoffs = P4EST_MIN (oldoffs, newoffs);
 
   if (new_count + padding > array->elem_alloc) {
     array->elem_alloc = P4EST_MAX (8 + 2 * array->elem_alloc,
@@ -102,8 +101,8 @@ p4est_array_resize (p4est_array_t * array, int new_count)
   }
   else {
 #ifdef P4EST_HAVE_DEBUG
-    for (i = newoffs; i < oldoffs; ++i) {
-      array->array[i] = (char) -1;
+    if (newoffs < oldoffs) {
+      memset (array->array + newoffs, (char) -1, oldoffs - newoffs);
     }
     for (i = oldoffs; i < newoffs; ++i) {
       P4EST_ASSERT (array->array[i] == (char) -1);
@@ -120,10 +119,9 @@ p4est_array_resize (p4est_array_t * array, int new_count)
 
   array->array = ptr;
 #ifdef P4EST_HAVE_DEBUG
-  alloffs = array->elem_alloc * array->elem_size;
-  for (i = minoffs; i < alloffs; ++i) {
-    array->array[i] = (char) -1;
-  }
+  minoffs = P4EST_MIN (oldoffs, newoffs);
+  P4EST_ASSERT (minoffs <= newsize);
+  memset (array->array + minoffs, (char) -1, newsize - minoffs);
 #endif
 }
 
