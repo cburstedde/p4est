@@ -107,30 +107,13 @@ main (int argc, char **argv)
   /* partition the forest */
   p4est_partition_given (p4est, num_quadrants_in_proc);
 
-  /* count the actual number of quadrents per proc */
-  num_quadrants_in_proc_check = P4EST_ALLOC (int32_t, num_procs);
-  P4EST_CHECK_ALLOC (num_quadrants_in_proc_check);
-  num_quadrants_in_proc_check[rank] = p4est->local_num_quadrants;
-#ifdef HAVE_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allgather (&p4est->global_last_quad_index, 1, MPI_INT,
-                            num_quadrants_in_proc_check, 1, MPI_INT,
-                            p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
-
-  if (rank == 0) {
-    for (i = 0; i < num_procs - 1; ++i) {
-      P4EST_CHECK_ABORT (num_quadrants_in_proc[i] ==
-                         num_quadrants_in_proc_check[i],
-                         "wrong number of p4est->num_quadrants_in_proc[i]");
-    }
-  }
+  /* count the actual number of quadrants per proc */
+  P4EST_CHECK_ABORT (num_quadrants_in_proc[rank]
+                     == p4est->local_num_quadrants,
+                     "partition failed, wrong number of quadrants");
 
   /* clean up and exit */
   P4EST_FREE (num_quadrants_in_proc);
-  P4EST_FREE (num_quadrants_in_proc_check);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
   p4est_memory_check ();
