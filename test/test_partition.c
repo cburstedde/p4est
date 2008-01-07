@@ -68,6 +68,7 @@ main (int argc, char **argv)
   int32_t             num_quadrants_on_last;
   int32_t            *num_quadrants_in_proc;
   int32_t            *num_quadrants_in_proc_check;
+  unsigned            crc;
 
   mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
@@ -104,8 +105,15 @@ main (int argc, char **argv)
   P4EST_CHECK_ABORT (num_quadrants_on_last > 0,
                      "Negative number of quadrents on the last processor");
 
+  /* Save a checksum of the original forest */
+  crc = p4est_checksum (p4est);
+
   /* partition the forest */
   p4est_partition_given (p4est, num_quadrants_in_proc);
+
+  /* Double check that we didn't loose any quads */
+  P4EST_CHECK_ABORT (crc == p4est_checksum (p4est),
+                     "bad checksum, missing a quad");
 
   /* count the actual number of quadrants per proc */
   P4EST_CHECK_ABORT (num_quadrants_in_proc[rank]
