@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -102,7 +102,7 @@ p4est_array_resize (p4est_array_t * array, int new_count)
   else {
 #ifdef P4EST_HAVE_DEBUG
     if (newoffs < oldoffs) {
-      memset (array->array + newoffs, (char) -1, oldoffs - newoffs);
+      memset (array->array + newoffs, -1, oldoffs - newoffs);
     }
     for (i = oldoffs; i < newoffs; ++i) {
       P4EST_ASSERT (array->array[i] == (char) -1);
@@ -121,7 +121,7 @@ p4est_array_resize (p4est_array_t * array, int new_count)
 #ifdef P4EST_HAVE_DEBUG
   minoffs = P4EST_MIN (oldoffs, newoffs);
   P4EST_ASSERT (minoffs <= newsize);
-  memset (array->array + minoffs, (char) -1, newsize - minoffs);
+  memset (array->array + minoffs, -1, newsize - minoffs);
 #endif
 }
 
@@ -327,14 +327,8 @@ p4est_mempool_alloc (p4est_mempool_t * mempool)
     ret = obstack_alloc (&mempool->obstack, mempool->elem_size);
   }
 
-  /*
-     printf ("mempool_alloc %d %d with %d for %p\n",
-     mempool->elem_count, mempool->freed->elem_count,
-     mempool->elem_size, ret);
-   */
-
 #ifdef P4EST_HAVE_DEBUG
-  memset (ret, (char) -1, mempool->elem_size);
+  memset (ret, -1, mempool->elem_size);
 #endif
 
   return ret;
@@ -345,13 +339,8 @@ p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
 {
   int                 old_count;
 
-  /*
-     printf ("mempool_free %d %d with %d for %p\n",
-     mempool->elem_count, mempool->freed->elem_count,
-     mempool->elem_size, elem);
-   */
 #ifdef P4EST_HAVE_DEBUG
-  memset (elem, (char) -1, mempool->elem_size);
+  memset (elem, -1, mempool->elem_size);
 #endif
 
   --mempool->elem_count;

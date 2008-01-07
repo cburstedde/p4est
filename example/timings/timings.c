@@ -57,7 +57,7 @@ refine_fractal (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 }
 
 static void
-abort_fn (void * data) 
+abort_fn (void *data)
 {
   int                 mpiret;
   mpi_context_t      *mpi = data;
@@ -133,7 +133,7 @@ main (int argc, char **argv)
   elapsed_rebalance = start + MPI_Wtime ();
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
   P4EST_ASSERT (crc == p4est_checksum (p4est));
-  
+
   /* print checksum and timings */
   if (mpi->mpirank == 0) {
     printf ("Processors %d level %d shift %d tree checksum 0x%x\n",
@@ -156,7 +156,7 @@ main (int argc, char **argv)
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
 #else
-  P4EST_CHECK_ABORT (0, "This example requires the --enable-mpi flag to run.");
+  P4EST_CHECK_ABORT (0, "This example requires --enable-mpi to run.");
 #endif
 
   return 0;

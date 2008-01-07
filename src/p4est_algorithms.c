@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
