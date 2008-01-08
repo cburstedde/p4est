@@ -592,3 +592,31 @@ void avl_rebalance(avl_tree_t *avltree, avl_node_t *avlnode) {
 		avlnode = parent;
 	}
 }
+
+/* CB ugly fix for wrong indent level */
+#if(0)
+        }}
+#endif
+
+/* CB foreach functions for inorder traversal */
+
+static void
+avl_foreach_recursion (avl_node_t *node, avl_foreach_t callback)
+{
+  if (node->left != NULL)
+    avl_foreach_recursion (node->left, callback);
+
+  callback (node->item);
+
+  if (node->right != NULL)
+    avl_foreach_recursion (node->right, callback);
+}
+
+void
+avl_foreach(avl_tree_t *avltree, avl_foreach_t callback)
+{
+  if (avltree->top != NULL)
+    avl_foreach_recursion (avltree->top, callback);
+}
+
+/* EOF p4est_avl.c */

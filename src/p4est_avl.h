@@ -56,6 +56,10 @@ typedef int (*avl_compare_t)(const void *, const void *);
  */
 typedef void (*avl_freeitem_t)(void *);
 
+/* User supplied function to call on an item in foreach().
+ */
+typedef void (*avl_foreach_t)(void *);
+
 typedef struct avl_node_t {
 	struct avl_node_t *next;
 	struct avl_node_t *prev;
@@ -174,6 +178,10 @@ extern int avl_search_closest(const avl_tree_t *, const void *item, avl_node_t *
  * or NULL if not.
  * O(lg n) */
 extern avl_node_t *avl_search(const avl_tree_t *, const void *item);
+
+/* Calls the callback function for every item in the tree in order.
+ * O(n) */
+extern void avl_foreach(avl_tree_t *, avl_foreach_t);
 
 #ifdef AVL_COUNT
 /* Returns the number of nodes in the tree.
