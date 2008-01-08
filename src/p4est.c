@@ -41,6 +41,7 @@ p4est_balance_peer_t;
 static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
 static const int    number_peer_windows = 5;
+static const int    twopeerw = 2 * number_peer_windows;
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
@@ -596,11 +597,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                *wait_indices;
   int32_t             prev, start, end;
   int32_t             length, shortest_window, shortest_length;
-  int32_t             peer_windows[2 * number_peer_windows];
+  int32_t             peer_windows[twopeerw];
   int32_t             i, qtree, qcount;
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
-  int32_t             mypb[2], *peer_boundaries;
+  int32_t            *peer_boundaries;
   p4est_quadrant_t    ld, ins[9];       /* insulation layer */
   p4est_quadrant_t   *q, *s, *t;
   p4est_balance_peer_t *peer;
@@ -628,7 +629,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
 #ifdef HAVE_MPI
   /* will contain first and last peer (inclusive) for each processor */
-  peer_boundaries = P4EST_ALLOC (int32_t, 2 * p4est->mpisize);
+  peer_boundaries = P4EST_ALLOC (int32_t, twopeerw * p4est->mpisize);
   P4EST_CHECK_ALLOC (peer_boundaries);
   /* request and status buffers for receive operations */
   requests_first = P4EST_ALLOC (MPI_Request, 6 * p4est->mpisize);
@@ -770,7 +771,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
 #ifdef HAVE_MPI
   /* compute information about peers to inform receivers */
-  for (i = 0; i < 2 * number_peer_windows; ++i) {
+  for (i = 0; i < twopeerw; ++i) {
     peer_windows[i] = -1;
   }
   /* find a maximum of npw-1 empty ranges with (start, end) */
@@ -843,6 +844,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
   }
 #ifdef P4EST_HAVE_DEBUG
+  for (i = 0; i < nwin; ++i) {
+    P4EST_ASSERT (peer_windows[2 * i] <= peer_windows[2 * i + 1]);
+    if (i < nwin - 1) {
+      P4EST_ASSERT (peer_windows[2 * i + 1] < peer_windows[2 * (i + 1)] - 1);
+    }
+  }
+  for (i = nwin; i < number_peer_windows; ++i) {
+    P4EST_ASSERT (peer_windows[2 * i] == -1);
+    P4EST_ASSERT (peer_windows[2 * i + 1] == -1);
+  }
   if (p4est->nout != NULL) {
     for (i = 0; i < nwin; ++i) {
       fprintf (p4est->nout,
@@ -851,10 +862,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
   }
 #endif
-  for (i = nwin; i < number_peer_windows; ++i) {
-    P4EST_ASSERT (peer_windows[2 * i] == -1);
-    P4EST_ASSERT (peer_windows[2 * i + 1] == -1);
-  }
+  /* compute windows from empty ranges */
   peer_windows[2 * nwin + 1] = last_peer;
   for (i = nwin; i > 0; --i) {
     peer_windows[2 * i] = peer_windows[2 * i - 1] + 1;
@@ -863,6 +871,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   peer_windows[0] = first_peer;
   ++nwin;
 #ifdef P4EST_HAVE_DEBUG
+  for (i = 0; i < nwin; ++i) {
+    P4EST_ASSERT (peer_windows[2 * i] <= peer_windows[2 * i + 1]);
+    if (i < nwin - 1) {
+      P4EST_ASSERT (peer_windows[2 * i + 1] < peer_windows[2 * (i + 1)] - 1);
+    }
+  }
+  for (i = nwin; i < number_peer_windows; ++i) {
+    P4EST_ASSERT (peer_windows[2 * i] == -1);
+    P4EST_ASSERT (peer_windows[2 * i + 1] == -1);
+  }
   if (p4est->nout != NULL) {
     for (i = 0; i < nwin; ++i) {
       fprintf (p4est->nout, "[%d] window %d from %d to %d\n",
@@ -871,11 +889,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 #endif
 
-  /* distribute information about first and last peers to inform receivers */
+  /* distribute information about peer windows to inform receivers */
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mypb[0] = first_peer;
-    mypb[1] = last_peer;
-    mpiret = MPI_Allgather (mypb, 2, MPI_INT, peer_boundaries, 2, MPI_INT,
+    mpiret = MPI_Allgather (peer_windows, twopeerw, MPI_INT,
+                            peer_boundaries, twopeerw, MPI_INT,
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
   }
@@ -894,6 +911,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   send_zero[1] = send_load[1] = recv_zero[1] = recv_load[1] = 0;
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == rank) {
+      continue;
+    }
+    /* check windows here for now, eventually remove outer loop */
+    for (i = 0; i < nwin - 1; ++i) {
+      if (j > peer_windows[2 * i + 1] && j < peer_windows[2 * (i + 1)]) {
+        break;
+      }
+    }
+    if (i < nwin - 1) {
       continue;
     }
     peer = p4est_array_index (peers, j);
@@ -948,9 +974,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (j == rank) {
       continue;
     }
-    first_bound = peer_boundaries[2 * j + 0];
-    last_bound = peer_boundaries[2 * j + 1];
-    if (rank < first_bound || rank > last_bound) {
+    for (i = 0; i < number_peer_windows; ++i) {
+      first_bound = peer_boundaries[twopeerw * j + 2 * i];
+      last_bound = peer_boundaries[twopeerw * j + 2 * i + 1];
+      if (first_bound <= rank && rank <= last_bound) {
+        break;
+      }
+    }
+    if (i == number_peer_windows) {
       continue;
     }
     peer = p4est_array_index (peers, j);
@@ -1162,8 +1193,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
 #endif /* P4EST_HAVE_DEBUG */
   }
-  P4EST_ASSERT (send_zero[0] + send_load[0] == over_peer_count);
-  P4EST_ASSERT (recv_zero[1] + recv_load[1] == over_peer_count);
+  if (number_peer_windows == 1) {
+    P4EST_ASSERT (send_zero[0] + send_load[0] == over_peer_count);
+    P4EST_ASSERT (recv_zero[1] + recv_load[1] == over_peer_count);
+  }
 
   /* merge received quadrants */
   for (j = 0; j < p4est->mpisize; ++j) {
