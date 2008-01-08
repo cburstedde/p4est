@@ -79,7 +79,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_corner ();
-  p4est = p4est_new (mpicomm, stderr, connectivity,
+  p4est = p4est_new (mpicomm, NULL, connectivity,
                      sizeof (user_data_t), init_fn);
 
   num_procs = p4est->mpisize;
