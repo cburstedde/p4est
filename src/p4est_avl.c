@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <p4est_avl.h>  /* changed this include directive */ 
+#include <p4est_avl.h>  /* changed this include directive */
 
 static void avl_rebalance(avl_tree_t *, avl_node_t *);
 
