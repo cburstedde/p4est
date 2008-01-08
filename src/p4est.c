@@ -583,10 +583,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif
   int                 mpiret, qbytes, obytes;
   int                 first_index, last_index;
+  int                 first_bound, last_bound;
   int                 k, l;
   int                 which, comp, scount, offset;
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count;
+  int                 send_zero[2], send_load[2];
+  int                 recv_zero[2], recv_load[2];
   int                *wait_indices;
   int32_t             i, qtree, qcount;
   int32_t             qh;
@@ -790,6 +793,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
    */
   request_second_count = 0;
   request_send_count = 0;
+  send_zero[0] = send_load[0] = recv_zero[0] = recv_load[0] = 0;
+  send_zero[1] = send_load[1] = recv_zero[1] = recv_load[1] = 0;
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == rank) {
       continue;
@@ -798,9 +803,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
     /* first send number of quadrants to be expected */
     qcount = peer->send_first.elem_count;
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "[%d] Balance A send %d quadrants to %d\n",
-               rank, qcount, j);
+    if (qcount > 0) {
+      if (p4est->nout != NULL) {
+        fprintf (p4est->nout, "[%d] Balance A send %d quadrants to %d\n",
+                 rank, qcount, j);
+      }
+      ++send_load[0];
+    }
+    else {
+      ++send_zero[0];
     }
     mpiret = MPI_Isend (&qcount, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
@@ -840,9 +851,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (j == rank) {
       continue;
     }
-    first_peer = peer_boundaries[2 * j + 0];
-    last_peer = peer_boundaries[2 * j + 1];
-    if (rank < first_peer || rank > last_peer) {
+    first_bound = peer_boundaries[2 * j + 0];
+    last_bound = peer_boundaries[2 * j + 1];
+    if (rank < first_bound || rank > last_bound) {
       continue;
     }
     peer = p4est_array_index (peers, j);
@@ -874,13 +885,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       if (!peer->have_first_count) {
         peer->have_first_count = 1;
         qcount = peer->first_count;
-        if (p4est->nout != NULL) {
-          fprintf (p4est->nout,
-                   "[%d] Balance A recv %d quadrants from %d\n",
-                   rank, qcount, j);
-        }
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
+          if (p4est->nout != NULL) {
+            fprintf (p4est->nout,
+                     "[%d] Balance A recv %d quadrants from %d\n",
+                     rank, qcount, j);
+          }
           P4EST_ASSERT (peer->recv_both.elem_count == 0);
           p4est_array_resize (&peer->recv_both, qcount);
           qbytes = qcount * sizeof (p4est_quadrant_t);
@@ -888,11 +899,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                               j, P4EST_COMM_BALANCE_FIRST_LOAD,
                               p4est->mpicomm, &requests_first[j]);
           P4EST_CHECK_MPI (mpiret);
+          ++recv_load[0];
         }
         else {
           /* will not receive load, close this request */
           requests_first[j] = MPI_REQUEST_NULL;
           --request_first_count;
+          ++recv_zero[0];
         }
       }
       else {
@@ -931,9 +944,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           s = p4est_array_index (&peer->send_second, k);
           s->user_data = (void *) qtree;
         }
-        if (p4est->nout != NULL) {
-          fprintf (p4est->nout, "[%d] Balance B send %d quadrants to %d\n",
-                   rank, qcount, j);
+        if (qcount > 0) {
+          if (p4est->nout != NULL) {
+            fprintf (p4est->nout, "[%d] Balance B send %d quadrants to %d\n",
+                     rank, qcount, j);
+          }
+          ++send_load[1];
+        }
+        else {
+          ++send_zero[1];
         }
         mpiret = MPI_Isend (&qcount, 1, MPI_INT,
                             j, P4EST_COMM_BALANCE_SECOND_COUNT,
@@ -979,13 +998,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       if (!peer->have_second_count) {
         peer->have_second_count = 1;
         qcount = peer->second_count;
-        if (p4est->nout != NULL) {
-          fprintf (p4est->nout,
-                   "[%d] Balance B recv %d quadrants from %d\n",
-                   rank, qcount, j);
-        }
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
+          if (p4est->nout != NULL) {
+            fprintf (p4est->nout,
+                     "[%d] Balance B recv %d quadrants from %d\n",
+                     rank, qcount, j);
+          }
           offset = peer->recv_both.elem_count;
           P4EST_ASSERT (offset == peer->first_count);
           obytes = offset * sizeof (p4est_quadrant_t);
@@ -995,11 +1014,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                               MPI_CHAR, j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &requests_second[j]);
           P4EST_CHECK_MPI (mpiret);
+          ++recv_load[1];
         }
         else {
           /* will not receive load, close this request */
           requests_second[j] = MPI_REQUEST_NULL;
           --request_second_count;
+          ++recv_zero[1];
         }
       }
       else {
@@ -1021,17 +1042,26 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 
   /* print buffer statistics */
-#ifdef P4EST_HAVE_DEBUG
   if (p4est->nout != NULL) {
+    fprintf (p4est->nout, "[%d] first send Z %d L %d recv Z %d L %d\n",
+             rank, send_zero[0], send_load[0], recv_zero[0], recv_load[0]);
+    fprintf (p4est->nout, "[%d] second send Z %d L %d recv Z %d L %d\n",
+             rank, send_zero[1], send_load[1], recv_zero[1], recv_load[1]);
+#ifdef P4EST_HAVE_DEBUG
     for (j = 0; j < p4est->mpisize; ++j) {
       peer = p4est_array_index (peers, j);
-      fprintf (p4est->nout,
-               "[%d] Peer %d first S %d R %d second S %d R %d\n", rank, j,
-               peer->send_first.elem_count, peer->first_count,
-               peer->send_second.elem_count, peer->second_count);
+      if (peer->send_first.elem_count > 0 || peer->first_count > 0 ||
+          peer->send_second.elem_count > 0 || peer->second_count > 0) {
+        fprintf (p4est->nout,
+                 "[%d] peer %d first S %d R %d second S %d R %d\n", rank, j,
+                 peer->send_first.elem_count, peer->first_count,
+                 peer->send_second.elem_count, peer->second_count);
+      }
     }
-  }
 #endif /* P4EST_HAVE_DEBUG */
+  }
+  P4EST_ASSERT (send_zero[0] + send_load[0] == last_peer - first_peer);
+  P4EST_ASSERT (recv_zero[1] + recv_load[1] == last_peer - first_peer);
 
   /* merge received quadrants */
   for (j = 0; j < p4est->mpisize; ++j) {
