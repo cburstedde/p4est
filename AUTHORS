@@ -25,6 +25,13 @@
 */
 
 /*
+  The files p4est_avl.{c,h} have been copied from libavl,
+  Copyright (C) 1998  Michael H. Buselli <cosine@cosine.org>
+  Copyright (C) 2000-2002  Wessel Dankers <wsl@nl.linux.org>,
+  and modified for p4est. 
+*/
+
+/*
   The source files in src/libb64 have been copied from libb64 and modified.
   libb64 is public domain software, see the LICENSE file in that directory.
 */

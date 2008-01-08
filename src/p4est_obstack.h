@@ -20,7 +20,7 @@
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110-1301, USA.  */
 
-/* renamed from glibc 2.7 to p4est_obstack.h for this project */
+/* renamed from glibc 2.7 to p4est_obstack.h for p4est */
 
 /* Summary:
 
