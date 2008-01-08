@@ -1190,20 +1190,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 
   /* wait for all send operations */
-  while (request_send_count > 0) {
-    mpiret = MPI_Waitsome (4 * p4est->mpisize, send_requests_first_count,
-                           &outcount, wait_indices, MPI_STATUSES_IGNORE);
+  if (request_send_count > 0) {
+    mpiret = MPI_Waitall (4 * p4est->mpisize,
+                          send_requests_first_count, MPI_STATUSES_IGNORE);
     P4EST_CHECK_MPI (mpiret);
-    P4EST_ASSERT (outcount != MPI_UNDEFINED);
-    P4EST_ASSERT (outcount > 0 && outcount < 4 * p4est->mpisize);
-    for (i = 0; i < outcount; ++i) {
-      /* retrieve send request index */
-      j = wait_indices[i];
-      wait_indices[i] = -1;
-      P4EST_ASSERT (0 <= j && j < 4 * p4est->mpisize);
-      send_requests_first_count[j] = MPI_REQUEST_NULL;
-      --request_send_count;
-    }
   }
 #endif /* HAVE_MPI */
 

@@ -109,8 +109,12 @@ main (int argc, char **argv)
   p4est = p4est_new (mpi->mpicomm, stdout, connectivity, 0, NULL);
 
   /* time refine */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
   p4est_refine (p4est, refine_fractal, NULL);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   elapsed_refine = start + MPI_Wtime ();
   if (refine_level <= 8) {
     p4est_vtk_write_file (p4est, "mesh_timings_refined");
@@ -118,8 +122,12 @@ main (int argc, char **argv)
   count_refined = p4est->global_num_quadrants;
 
   /* time balance */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
   p4est_balance (p4est, NULL);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   elapsed_balance = start + MPI_Wtime ();
   if (refine_level <= 8) {
     p4est_vtk_write_file (p4est, "mesh_timings_balanced");
@@ -128,8 +136,12 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
 
   /* time rebalance - is a noop on the tree */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
   p4est_balance (p4est, NULL);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
   elapsed_rebalance = start + MPI_Wtime ();
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
   P4EST_ASSERT (crc == p4est_checksum (p4est));
@@ -151,8 +163,6 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_memory_check ();
 
-  mpiret = MPI_Barrier (mpi->mpicomm);
-  P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
 #else
