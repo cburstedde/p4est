@@ -1573,7 +1573,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
                   p4est->user_data_pool->elem_count + incount);
   }
   P4EST_ASSERT (p4est_tree_is_linear (tree));
-  P4EST_ASSERT (p4est_tree_is_complete (tree));
 }
 
 void

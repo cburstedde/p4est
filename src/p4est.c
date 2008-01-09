@@ -41,7 +41,6 @@ p4est_balance_peer_t;
 static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
 static const int    number_peer_windows = 5;
-static const int    twopeerw = 2 * number_peer_windows;
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
@@ -584,6 +583,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_array_t      *checkarray;
   int32_t             ltotal[2], gtotal[2];
 #endif
+  const int           twopeerw = 2 * number_peer_windows;
   int                 mpiret, qbytes, obytes;
   int                 first_index, last_index;
   int                 first_bound, last_bound;
@@ -913,19 +913,21 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (j == rank) {
       continue;
     }
-    /* check windows here for now, eventually remove outer loop */
+    peer = p4est_array_index (peers, j);
+    qcount = peer->send_first.elem_count;
+
+    /* check windows here for now, eventually merge into outer loop */
     for (i = 0; i < nwin - 1; ++i) {
       if (j > peer_windows[2 * i + 1] && j < peer_windows[2 * (i + 1)]) {
         break;
       }
     }
     if (i < nwin - 1) {
+      P4EST_ASSERT (qcount == 0);
       continue;
     }
-    peer = p4est_array_index (peers, j);
 
     /* first send number of quadrants to be expected */
-    qcount = peer->send_first.elem_count;
     if (qcount > 0) {
       if (p4est->nout != NULL) {
         fprintf (p4est->nout, "[%d] Balance A send %d quadrants to %d\n",
