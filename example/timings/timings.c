@@ -83,6 +83,9 @@ main (int argc, char **argv)
   double              elapsed_balance, elapsed_rebalance;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
 
+  /* set stdout to line buffered */
+  p4est_set_linebuffered (stdout);
+
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);

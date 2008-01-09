@@ -31,6 +31,10 @@
 #include <p4est_config.h>
 #endif
 
+#ifdef HAVE_CTYPE_H
+#include <ctype.h>
+#endif
+
 #ifdef HAVE_STDIO_H
 #include <stdio.h>
 #endif
@@ -41,10 +45,6 @@
 
 #ifdef HAVE_STRING_H
 #include <string.h>
-#endif
-
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
 #endif
 
 #if(defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS)
@@ -89,9 +89,15 @@ void               *p4est_realloc (void *ptr, size_t size);
 void                p4est_free (void *ptr);
 void                p4est_memory_check (void);
 
+/** Sets stream to line buffered. Must be called before writing anything. */
+void                p4est_set_linebuffered (FILE * stream);
+
+/** Installs an abort handler and catches signals INT, SEGV, USR2. */
 void                p4est_set_abort_handler (int identifier,
                                              p4est_handler_t handler,
                                              void *data);
+
+/** Prints a stack trace, calls the abort handler and terminates. */
 void                p4est_abort (void);
 
 #endif /* !__P4EST_BASE_H__ */

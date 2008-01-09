@@ -31,7 +31,8 @@
 #include <p4est_base.h>
 #include <p4est_vtk.h>
 
-enum {
+enum
+{
   P4EST_CONFIG_NULL,
   P4EST_CONFIG_UNIT,
   P4EST_CONFIG_THREE,
@@ -89,7 +90,7 @@ refine_evil_fn (p4est_t * p4est, int32_t which_tree,
   if (p4est->mpirank <= 1) {
     return 1;
   }
-  
+
   return 0;
 }
 
@@ -106,7 +107,7 @@ coarsen_evil_fn (p4est_t * p4est, int32_t which_tree,
 }
 
 static void
-abort_fn (void * data) 
+abort_fn (void *data)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
@@ -137,6 +138,9 @@ main (int argc, char **argv)
   p4est_refine_t      refine_fn;
   p4est_coarsen_t     coarsen_fn;
 
+  /* set stdout to line buffered */
+  p4est_set_linebuffered (stdout);
+
   /* initialize MPI */
   mpi->mpirank = 0;
   mpi->mpicomm = MPI_COMM_NULL;
@@ -149,8 +153,6 @@ main (int argc, char **argv)
     P4EST_CHECK_MPI (mpiret);
   }
 #endif
-
-  /* register MPI abort handler */
   p4est_set_abort_handler (mpi->mpirank, abort_fn, mpi);
 
   /* process command line arguments */
@@ -169,10 +171,10 @@ main (int argc, char **argv)
       config = P4EST_CONFIG_UNIT;
     }
     else if (!strcmp (argv[1], "three")) {
-      config = P4EST_CONFIG_THREE;    
+      config = P4EST_CONFIG_THREE;
     }
     else if (!strcmp (argv[1], "evil")) {
-      config = P4EST_CONFIG_EVIL;    
+      config = P4EST_CONFIG_EVIL;
     }
     else {
       wrongusage = 1;

@@ -53,6 +53,10 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
 
+  /* set stdout to line buffered */
+  p4est_set_linebuffered (stdout);
+
+  /* initialize MPI */
   mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
   if (use_mpi) {
