@@ -1400,6 +1400,30 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_ASSERT (p4est_is_valid (p4est));
 }
 
+void
+p4est_partition (p4est_t * p4est)
+{
+  int                 p, num, mod;
+  int                 num_procs = p4est->mpisize;
+  int32_t            *num_quadrants_in_proc;
+  int64_t             last_quadrant, prev_last_quadrant;
+  int64_t             global_num_quadrants = p4est->global_num_quadrants;
+
+  num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
+  P4EST_CHECK_ALLOC (num_quadrants_in_proc);
+
+  /* Divide up the quadants equally */
+  for (p = 0, last_quadrant = -1; p < num_procs; ++p) {
+    prev_last_quadrant = last_quadrant;
+    last_quadrant = (global_num_quadrants * (p + 1)) / num_procs - 1;
+    num_quadrants_in_proc[p] = (int32_t) (last_quadrant - prev_last_quadrant);
+  }
+
+  p4est_partition_given (p4est, num_quadrants_in_proc);
+
+  P4EST_FREE (num_quadrants_in_proc);
+}
+
 unsigned
 p4est_checksum (p4est_t * p4est)
 {

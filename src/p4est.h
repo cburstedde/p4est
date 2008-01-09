@@ -182,6 +182,16 @@ void                p4est_coarsen (p4est_t * p4est,
  */
 void                p4est_balance (p4est_t * p4est, p4est_init_t init_fn);
 
+/** Equally partition the forest.
+ *
+ * The forest will be partitioned between processors where they each
+ * have an approximately equal number of quadrants.
+ *
+ * \param [in,out] p4est The forest that will be partitioned.
+ *
+ */
+void                p4est_partition (p4est_t * p4est);
+
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
