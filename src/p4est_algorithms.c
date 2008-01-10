@@ -44,8 +44,7 @@ static const int32_t indirect_neighbors[4][3][2] =
 {{{-1, -1}, { 1, -1}, {-1, 1}},
  {{ 0, -1}, { 2, -1}, { 1, 0}},
  {{-1,  0}, {-2,  1}, { 0, 1}},
- {{ 1, -1}, {-1,  1}, { 1, 1}}
-};
+ {{ 1, -1}, {-1,  1}, { 1, 1}}};
 
 /** Indicate which neighbor to omit if edges are balanced, not corners
  * Indexing [cid] where cid is the child id.
