@@ -32,8 +32,6 @@
 
 /* array routines */
 
-static const int    elements_per_chunk = 1024;
-
 p4est_array_t      *
 p4est_array_new (int elem_size)
 {
@@ -61,7 +59,7 @@ p4est_array_init (p4est_array_t * array, int elem_size)
 
   array->elem_size = elem_size;
   array->elem_count = 0;
-  array->elem_alloc = 0;
+  array->byte_alloc = 0;
   array->array = NULL;
 }
 
@@ -72,16 +70,16 @@ p4est_array_reset (p4est_array_t * array)
   array->array = NULL;
 
   array->elem_count = 0;
-  array->elem_alloc = 0;
+  array->byte_alloc = 0;
 }
 
 void
 p4est_array_resize (p4est_array_t * array, int new_count)
 {
   char               *ptr;
-  int                 newsize, roundup;
+  int                 newoffs, roundup, newsize;
 #ifdef P4EST_HAVE_DEBUG
-  int                 oldoffs, newoffs;
+  int                 oldoffs;
   int                 i, minoffs;
 #endif
 
@@ -90,14 +88,12 @@ p4est_array_resize (p4est_array_t * array, int new_count)
   oldoffs = array->elem_count * array->elem_size;
 #endif
   array->elem_count = new_count;
-#ifdef P4EST_HAVE_DEBUG
   newoffs = array->elem_count * array->elem_size;
-#endif
-  roundup = P4EST_ROUNDUP2_32 (new_count);
-  P4EST_ASSERT (roundup >= new_count && roundup <= 2 * new_count);
+  roundup = P4EST_ROUNDUP2_32 (newoffs);
+  P4EST_ASSERT (roundup >= newoffs && roundup <= 2 * newoffs);
 
-  if (new_count > array->elem_alloc || roundup < array->elem_alloc) {
-    array->elem_alloc = roundup;
+  if (newoffs > array->byte_alloc || roundup < array->byte_alloc) {
+    array->byte_alloc = roundup;
   }
   else {
 #ifdef P4EST_HAVE_DEBUG
@@ -110,10 +106,10 @@ p4est_array_resize (p4est_array_t * array, int new_count)
 #endif
     return;
   }
-  P4EST_ASSERT (array->elem_alloc >= 0 &&
-                array->elem_alloc >= new_count);
+  P4EST_ASSERT (array->byte_alloc >= 0 &&
+                array->byte_alloc >= newoffs);
 
-  newsize = array->elem_alloc * array->elem_size;
+  newsize = array->byte_alloc;
   ptr = P4EST_REALLOC (array->array, char, newsize);
   P4EST_CHECK_REALLOC (ptr, newsize);
 
@@ -287,7 +283,6 @@ p4est_mempool_new (int elem_size)
   mempool->elem_count = 0;
 
   obstack_init (&mempool->obstack);
-  obstack_chunk_size (&mempool->obstack) = elements_per_chunk * elem_size;
   mempool->freed = p4est_array_new (sizeof (void *));
 
   return mempool;

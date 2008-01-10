@@ -43,7 +43,7 @@ typedef struct p4est_array
   int                 elem_count;       /* number of valid elements */
 
   /* implementation variables */
-  int                 elem_alloc;       /* number of allocated elements */
+  int                 byte_alloc;       /* number of allocated bytes */
   char               *array;    /* linear array to store elements */
 }
 p4est_array_t;
