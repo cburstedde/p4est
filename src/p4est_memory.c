@@ -79,25 +79,25 @@ void
 p4est_array_resize (p4est_array_t * array, int new_count)
 {
   char               *ptr;
-  int                 newsize;
-  int                 oldoffs, newoffs;
+  int                 newsize, roundup;
 #ifdef P4EST_HAVE_DEBUG
+  int                 oldoffs, newoffs;
   int                 i, minoffs;
-  const int           padding = 1;
-#else
-  const int           padding = 0;
 #endif
 
+  P4EST_ASSERT (new_count >= 0);
+#ifdef P4EST_HAVE_DEBUG
   oldoffs = array->elem_count * array->elem_size;
+#endif
   array->elem_count = new_count;
+#ifdef P4EST_HAVE_DEBUG
   newoffs = array->elem_count * array->elem_size;
+#endif
+  roundup = P4EST_ROUNDUP2_32 (new_count);
+  P4EST_ASSERT (roundup >= new_count && roundup <= 2 * new_count);
 
-  if (new_count + padding > array->elem_alloc) {
-    array->elem_alloc = P4EST_MAX (8 + 2 * array->elem_alloc,
-                                   new_count + padding);
-  }
-  else if (new_count + padding < (array->elem_alloc + 1) / 2) {
-    array->elem_alloc = new_count + padding;
+  if (new_count > array->elem_alloc || roundup < array->elem_alloc) {
+    array->elem_alloc = roundup;
   }
   else {
 #ifdef P4EST_HAVE_DEBUG
@@ -111,7 +111,7 @@ p4est_array_resize (p4est_array_t * array, int new_count)
     return;
   }
   P4EST_ASSERT (array->elem_alloc >= 0 &&
-                array->elem_alloc >= new_count + padding);
+                array->elem_alloc >= new_count);
 
   newsize = array->elem_alloc * array->elem_size;
   ptr = P4EST_REALLOC (array->array, char, newsize);

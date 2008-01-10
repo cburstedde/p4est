@@ -67,7 +67,6 @@ main (int argc, char **argv)
   int32_t             i;
   int32_t             num_quadrants_on_last;
   int32_t            *num_quadrants_in_proc;
-  int32_t            *num_quadrants_in_proc_check;
   unsigned            crc;
 
   mpicomm = MPI_COMM_NULL;

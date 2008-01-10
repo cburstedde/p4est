@@ -82,19 +82,18 @@
 #define P4EST_MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define P4EST_MAX(a,b) (((a) > (b)) ? (a) : (b))
 
-/* hopefully fast binary logarithms */
+/* hopefully fast binary logarithms and binary round up */
 #define P4EST_LOG2_8(x) (p4est_log_lookup_table[(x)])
 #define P4EST_LOG2_16(x) (((x) > 0xff) ? \
                           (P4EST_LOG2_8 ((x) >> 8) + 8) : P4EST_LOG2_8 (x))
 #define P4EST_LOG2_32(x) (((x) > 0xffff) ? \
                           (P4EST_LOG2_16 ((x) >> 16)) + 16 : P4EST_LOG2_16 (x))
+#define P4EST_ROUNDUP2_32(x) \
+                    (((x) <= 0) ? 0 : (1 << (P4EST_LOG2_32 ((x) - 1) + 1)))
 
 typedef void        (*p4est_handler_t) (void *data);
 
 extern const int    p4est_log_lookup_table[256];
-
-/** Round up a 32bit integer to the next power of 2 */
-int                 p4est_roundup_32powerof2 (int count);
 
 void               *p4est_malloc (size_t size);
 void               *p4est_calloc (size_t nmemb, size_t size);

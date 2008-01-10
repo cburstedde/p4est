@@ -98,12 +98,6 @@ p4est_signal_handler (int sig)
   p4est_abort ();
 }
 
-int
-p4est_roundup_32powerof2 (int count) 
-{
-  return (count <= 0) ? 0 : (1 << (P4EST_LOG2_32 (count - 1) + 1));
-}
-
 void               *
 p4est_malloc (size_t size)
 {

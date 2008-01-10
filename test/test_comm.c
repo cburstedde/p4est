@@ -66,7 +66,6 @@ main (int argc, char **argv)
   int64_t             qglobal, qlocal, qbegin, qend;
   int32_t             num_procs;
   int32_t             i, rank;
-  p4est_tree_t       *tree;
 
   mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI

@@ -1685,8 +1685,9 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
   char               *user_data_send_buf;
   char               *user_data_recv_buf;
   size_t              recv_size, send_size;
-  MPI_Comm            comm = p4est->mpicomm;
 #ifdef HAVE_MPI
+  int                 mpiret;
+  MPI_Comm            comm = p4est->mpicomm;
   MPI_Request        *recv_request, *send_request;
   MPI_Status         *recv_status, *send_status;
 #endif
@@ -1821,8 +1822,10 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
       fprintf (nout, "[%d] part recv %d quadrants from %d\n", rank,
                num_recv_from[from_proc], from_proc);
 #endif
-      MPI_Irecv (recv_buf[from_proc], recv_size, MPI_CHAR,
-                 from_proc, P4EST_COMM_PARTITION, comm, recv_request + sk);
+      mpiret = MPI_Irecv (recv_buf[from_proc], recv_size, MPI_CHAR,
+                          from_proc, P4EST_COMM_PARTITION,
+                          comm, recv_request + sk);
+      P4EST_CHECK_MPI (mpiret);
       ++sk;
 #endif
     }
@@ -1981,8 +1984,10 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
       fprintf (nout, "[%d] part send %d quadrants to %d\n", rank,
                num_send_to[to_proc], to_proc);
 #endif
-      MPI_Isend (send_buf[to_proc], send_size, MPI_CHAR,
-                 to_proc, P4EST_COMM_PARTITION, comm, send_request + sk);
+      mpiret = MPI_Isend (send_buf[to_proc], send_size, MPI_CHAR,
+                          to_proc, P4EST_COMM_PARTITION,
+                          comm, send_request + sk);
+      P4EST_CHECK_MPI (mpiret);
       ++sk;
 #endif
     }
@@ -1992,7 +1997,10 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
   }
 
   /* Fill in forest */
-  MPI_Waitall (num_proc_recv_from, recv_request, recv_status);
+#ifdef HAVE_MPI
+  mpiret = MPI_Waitall (num_proc_recv_from, recv_request, recv_status);
+  P4EST_CHECK_MPI (mpiret);
+#endif
 
   /* Loop Through and fill in */
 
@@ -2250,14 +2258,15 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
   p4est->local_num_quadrants = new_local_num_quadrants;
 
   /* Clean up */
-  MPI_Waitall (num_proc_send_to, send_request, send_status);
 
 #ifdef HAVE_MPI
+  mpiret = MPI_Waitall (num_proc_send_to, send_request, send_status);
+  P4EST_CHECK_MPI (mpiret);
+
 #ifdef P4EST_HAVE_DEBUG
   for (i = 0; i < num_proc_recv_from; ++i) {
     P4EST_ASSERT (recv_request[i] == MPI_REQUEST_NULL);
   }
-
   for (i = 0; i < num_proc_send_to; ++i) {
     P4EST_ASSERT (send_request[i] == MPI_REQUEST_NULL);
   }
