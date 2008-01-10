@@ -258,6 +258,15 @@ p4est_destroy (p4est_t * p4est)
 
   for (j = 0; j < p4est->connectivity->num_trees; ++j) {
     tree = p4est_array_index (p4est->trees, j);
+
+#ifdef P4EST_HAVE_DEBUG
+    int                 q;
+    for (q = 0; q < tree->quadrants->elem_count; ++q) {
+      p4est_quadrant_t   *quad = p4est_array_index (tree->quadrants, q);
+      p4est_quadrant_free_data (p4est, quad);
+    }
+#endif
+
     p4est_array_destroy (tree->quadrants);
   }
   p4est_array_destroy (p4est->trees);
