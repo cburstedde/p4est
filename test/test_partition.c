@@ -26,6 +26,7 @@
 typedef struct
 {
   int32_t             a;
+  int64_t             sum;
 }
 user_data_t;
 
@@ -35,6 +36,7 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   user_data_t        *data = quadrant->user_data;
 
   data->a = which_tree;
+  data->sum = quadrant->x + quadrant->y + quadrant->level;
 }
 
 static int
@@ -68,6 +70,11 @@ main (int argc, char **argv)
   int32_t             num_quadrants_on_last;
   int32_t            *num_quadrants_in_proc;
   int32_t            *num_quadrants_in_proc_check;
+  int                 t, q;
+  p4est_quadrant_t   *quad;
+  p4est_tree_t       *tree;
+  user_data_t        *user_data;
+  int64_t             sum;
   unsigned            crc;
 
   mpicomm = MPI_COMM_NULL;
@@ -103,7 +110,7 @@ main (int argc, char **argv)
   }
   num_quadrants_in_proc[num_procs - 1] = num_quadrants_on_last;
   P4EST_CHECK_ABORT (num_quadrants_on_last > 0,
-                     "Negative number of quadrents on the last processor");
+                     "Negative number of quadrants on the last processor");
 
   /* Save a checksum of the original forest */
   crc = p4est_checksum (p4est);
@@ -119,6 +126,18 @@ main (int argc, char **argv)
   P4EST_CHECK_ABORT (num_quadrants_in_proc[rank]
                      == p4est->local_num_quadrants,
                      "partition failed, wrong number of quadrants");
+
+  for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
+    tree = p4est_array_index (p4est->trees, t);
+    for (q = 0; q < tree->quadrants->elem_count; ++q) {
+      quad = p4est_array_index (tree->quadrants, q);
+      user_data = (user_data_t *) quad->user_data;
+      sum = quad->x + quad->y + quad->level;
+
+      P4EST_CHECK_ABORT (user_data->a == t, "bad user_data, a");
+      P4EST_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
+    }
+  }
 
   /* clean up and exit */
   P4EST_FREE (num_quadrants_in_proc);
