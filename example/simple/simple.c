@@ -237,6 +237,10 @@ main (int argc, char **argv)
     }
   }
 
+  /* partition */
+  p4est_partition (p4est);
+  p4est_vtk_write_file (p4est, "mesh_simple_partition");
+
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
