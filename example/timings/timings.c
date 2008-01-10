@@ -81,6 +81,7 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
   double              start, elapsed_refine;
   double              elapsed_balance, elapsed_rebalance;
+  double              elapsed_partition, elapsed_repartition;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
 
   /* set stdout to line buffered */
@@ -149,6 +150,29 @@ main (int argc, char **argv)
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
+  /* time partition */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
+  start = -MPI_Wtime ();
+  p4est_partition (p4est);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
+  elapsed_partition = start + MPI_Wtime ();
+  if (refine_level <= 8) {
+    p4est_vtk_write_file (p4est, "mesh_timings_partitioned");
+  }
+  crc = p4est_checksum (p4est);
+
+  /* time repartition - is a noop on the tree */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
+  start = -MPI_Wtime ();
+  p4est_partition (p4est);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  P4EST_CHECK_MPI (mpiret);
+  elapsed_repartition = start + MPI_Wtime ();
+  P4EST_ASSERT (crc == p4est_checksum (p4est));
+
   /* print checksum and timings */
   if (mpi->mpirank == 0) {
     printf ("Processors %d level %d shift %d tree checksum 0x%x\n",
@@ -157,6 +181,8 @@ main (int argc, char **argv)
             (long long) count_refined, (long long) count_balanced);
     printf ("Level %d refinement %.3gs balance %.3gs rebalance %.3gs\n",
             refine_level, elapsed_refine, elapsed_balance, elapsed_rebalance);
+    printf ("Level %d partition %.3gs repartition %.3gs\n",
+            refine_level, elapsed_partition, elapsed_repartition);
   }
 
   /* destroy the p4est and its connectivity structure */
