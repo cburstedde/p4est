@@ -296,6 +296,8 @@ p4est_mempool_new (int elem_size)
 void
 p4est_mempool_destroy (p4est_mempool_t * mempool)
 {
+  P4EST_ASSERT (mempool->elem_count == 0);
+
   p4est_array_destroy (mempool->freed);
   obstack_free (&mempool->obstack, NULL);
 
@@ -617,6 +619,10 @@ p4est_hash_unlink (p4est_hash_t * hash)
 void
 p4est_hash_unlink_destroy (p4est_hash_t * hash)
 {
+#ifdef P4EST_HAVE_DEBUG
+  p4est_hash_reset (hash);
+#endif
+
   p4est_array_destroy (hash->table);
   if (hash->allocator_owned) {
     p4est_mempool_destroy (hash->allocator);
