@@ -617,7 +617,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             owner, first_owner, last_owner;
   int32_t            *peer_boundaries;
   p4est_quadrant_t    trq, ld, ins[9];  /* insulation layer */
-  p4est_quadrant_t   *q, *s, *t;
+  p4est_quadrant_t   *q, *s, *t, *tosend;
   p4est_balance_peer_t *peer;
   p4est_array_t      *peers, *qarray;
   p4est_connectivity_t *conn = p4est->connectivity;
@@ -764,11 +764,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           *s = *q;
           s->x += (l - 1) * qh;
           s->y += (k - 1) * qh;
+
+          /* check boundary status of s */
+          qtree = -1;
           quad_contact[0] = (s->y < 0);
           quad_contact[1] = (s->x >= rh);
           quad_contact[2] = (s->y >= rh);
           quad_contact[3] = (s->x < 0);
-          qtree = -1;
           if (quad_contact[0] || quad_contact[1] ||
               quad_contact[2] || quad_contact[3]) {
             /* this quadrant is relevant for inter-tree balancing */
@@ -777,6 +779,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               /* this quadrant goes across a corner, ignore for now */
               continue;
             }
+            /* transform quadrant into coordinate system of neighbor */
             for (face = 0; face < 4; ++face) {
               if (quad_contact[face] && face_contact[face]) {
                 qtree = conn->tree_to_tree[4 * j + face];
@@ -804,17 +807,44 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             transform = p4est_find_face_transform (conn, j, face);
             p4est_quadrant_transform (s, &trq, transform);
             s = &trq;
-            /* deactivated for now */
-            continue;
           }
           else {
+            face = -1;
             qtree = j;
           }
+
           /* querying s is equivalent to querying first descendent */
           first_owner = p4est_comm_find_owner (p4est, qtree, s, rank);
           /* querying last descendent */
           p4est_quadrant_last_descendent (s, &ld, P4EST_MAXLEVEL);
           last_owner = p4est_comm_find_owner (p4est, qtree, &ld, rank);
+
+          /* move quadrant back out of the unit square in the neighbor */
+          if (qtree != j) {     /* inter-tree quadrant s */
+            P4EST_ASSERT (face >= 0 && face < 4);
+            tosend = &trq;      /* this changes s, do not use it below */
+            switch (conn->tree_to_face[4 * j + face]) {
+            case 0:
+              tosend->y -= qh;
+              break;
+            case 1:
+              tosend->x += qh;
+              break;
+            case 2:
+              tosend->y += qh;
+              break;
+            case 3:
+              tosend->x -= qh;
+              break;
+            }
+            P4EST_ASSERT (!p4est_quadrant_is_valid (tosend));
+            P4EST_ASSERT (p4est_quadrant_is_extended (tosend));
+            /* deactivated for now */
+            continue;
+          }
+          else {
+            tosend = q;
+          }
 
           /* send q to all processors possibly intersecting s */
           for (owner = first_owner; owner <= last_owner; ++owner) {

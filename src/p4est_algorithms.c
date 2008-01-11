@@ -82,6 +82,21 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 }
 
 int
+p4est_quadrant_compare_piggy (const void *v1, const void *v2)
+{
+  const p4est_quadrant_t *q1 = v1;
+  const p4est_quadrant_t *q2 = v2;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+
+  int32_t             data_diff =
+    (int32_t) q1->user_data - (int32_t) q2->user_data;
+
+  return (data_diff != 0) ? data_diff : p4est_quadrant_compare (v1, v2);
+}
+
+int
 p4est_quadrant_is_equal (const void *v1, const void *v2)
 {
   const p4est_quadrant_t *q1 = v1;
