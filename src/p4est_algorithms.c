@@ -87,13 +87,36 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
-
+  int64_t             x1, y1, x2, y2;
+  int64_t             exclorx, exclory;
   int32_t             data_diff =
     (int32_t) q1->user_data - (int32_t) q2->user_data;
 
-  return (data_diff != 0) ? data_diff : p4est_quadrant_compare (v1, v2);
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+
+  if (data_diff != 0) {
+    return data_diff;
+  }
+
+  x1 = q1->x + (int64_t) (1 << P4EST_MAXLEVEL);
+  y1 = q1->y + (int64_t) (1 << P4EST_MAXLEVEL);
+  x2 = q2->x + (int64_t) (1 << P4EST_MAXLEVEL);
+  y2 = q2->y + (int64_t) (1 << P4EST_MAXLEVEL);
+
+  /* these numbers still fit into an unsigned 32 bit integer for the log */
+  exclorx = x1 ^ x2;
+  exclory = y1 ^ y2;
+
+  if (exclory == 0 && exclorx == 0) {
+    return q1->level - q2->level;
+  }
+  else if (P4EST_LOG2_32 (exclory) >= P4EST_LOG2_32 (exclorx)) {
+    return y1 - y2;
+  }
+  else {
+    return x1 - x2;
+  }
 }
 
 int
@@ -1176,7 +1199,7 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
     inq = tq;
   }
   P4EST_ASSERT (i == outcount);
-  P4EST_ASSERT (j <= outcount);
+  P4EST_ASSERT (j + dupcount + notcount == outcount);
   p4est_array_resize (out, j);
 
   /*

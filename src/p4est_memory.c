@@ -127,6 +127,44 @@ p4est_array_sort (p4est_array_t * array,
   qsort (array->array, array->elem_count, array->elem_size, compar);
 }
 
+void
+p4est_array_uniq (p4est_array_t * array,
+                  int (*compar) (const void *, const void *))
+{
+  int                 incount, dupcount;
+  int                 i, j;
+  void               *elem1, *elem2, *temp;
+
+  incount = array->elem_count;
+  if (incount == 0) {
+    return;
+  }
+
+  dupcount = 0;                 /* count duplicates */
+  i = 0;                        /* read counter */
+  j = 0;                        /* write counter */
+  elem1 = p4est_array_index (array, 0);
+  while (i < incount) {
+    elem2 = ((i < incount - 1) ? p4est_array_index (array, i + 1) : NULL);
+    if (i < incount - 1 && compar (elem1, elem2) == 0) {
+      ++dupcount;
+      ++i;
+    }
+    else {
+      if (i > j) {
+        temp = p4est_array_index (array, j);
+        memcpy (temp, elem1, array->elem_size);
+      }
+      ++i;
+      ++j;
+    }
+    elem1 = elem2;
+  }
+  P4EST_ASSERT (i == incount);
+  P4EST_ASSERT (j + dupcount == incount);
+  p4est_array_resize (array, j);
+}
+
 void               *
 p4est_array_bsearch (p4est_array_t * array, const void *key,
                      int (*compar) (const void *, const void *))

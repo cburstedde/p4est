@@ -84,6 +84,14 @@ void                p4est_array_sort (p4est_array_t * array,
                                       int (*compar) (const void *,
                                                      const void *));
 
+/** Removed duplicate entries from a sorted array.
+ * \param [in,out] array  The array size will be reduced as necessary.
+ * \param [in] compar     The comparison function to be used.
+ */
+void                p4est_array_uniq (p4est_array_t * array,
+                                      int (*compar) (const void *,
+                                                     const void *));
+
 /** Performs a binary search on an array. The array must be sorted.
  * \param [in] key     An element to be searched for.
  * \param [in] compar  The comparison function to be used.
