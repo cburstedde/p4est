@@ -126,6 +126,18 @@ p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 }
 
 int
+p4est_quadrant_is_extended (const p4est_quadrant_t * q)
+{
+  int32_t             qh = (1 << (P4EST_MAXLEVEL - q->level));
+
+  return
+    (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
+    (q->x >= -qh && q->x <= (1 << P4EST_MAXLEVEL)) &&
+    (q->y >= -qh && q->y <= (1 << P4EST_MAXLEVEL)) &&
+    ((q->x & (qh - 1)) == 0) && ((q->y & (qh - 1)) == 0);
+}
+
+int
 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
                            const p4est_quadrant_t * q2)
 {
@@ -467,35 +479,35 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
   th = rh - qh;
 
   switch (transform_type) {
-  case 0:       /* identity */
+  case 0:                      /* identity */
     r->x = q->x;
     r->y = q->y;
     break;
-  case 1:       /* rotate -90 degrees */
+  case 1:                      /* rotate -90 degrees */
     r->x = th - q->y;
     r->y = q->x;
     break;
-  case 2:       /* rotate 180 degrees */
+  case 2:                      /* rotate 180 degrees */
     r->x = th - q->x;
     r->y = th - q->y;
     break;
-  case 3:       /* rotate 90 degrees */
+  case 3:                      /* rotate 90 degrees */
     r->x = q->y;
     r->y = th - q->x;
     break;
-  case 4:       /* mirror across 0 degree axis */ 
+  case 4:                      /* mirror across 0 degree axis */
     r->x = q->x;
     r->y = th - q->y;
     break;
-  case 5:       /* mirror across 45 degree axis */
+  case 5:                      /* mirror across 45 degree axis */
     r->x = q->y;
     r->y = q->x;
     break;
-  case 6:       /* mirror across 90 degree axis */
+  case 6:                      /* mirror across 90 degree axis */
     r->x = th - q->x;
     r->y = q->y;
     break;
-  case 7:       /* mirror across 135 degree axis */
+  case 7:                      /* mirror across 135 degree axis */
     r->x = th - q->y;
     r->y = th - q->x;
     break;

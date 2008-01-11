@@ -159,4 +159,44 @@ p4est_connectivity_new_corner (void)
   return connectivity;
 }
 
+int
+p4est_find_face_transform (p4est_connectivity_t * connectivity,
+                           int32_t itree, int8_t face)
+{
+  int                 orientation;
+  int8_t              neighbor_face;
+  int32_t             neighbor_tree;
+  int32_t             v1, v2;
+  int32_t             n1, n2, w1, w2;
+
+  P4EST_ASSERT (itree >= 0 && itree < connectivity->num_trees);
+  P4EST_ASSERT (face >= 0 && face < 4);
+
+  neighbor_tree = connectivity->tree_to_tree[4 * itree + face];
+  P4EST_ASSERT (neighbor_tree >= 0 &&
+                neighbor_tree < connectivity->num_trees);
+  if (neighbor_tree == itree) {
+    return -1;
+  }
+
+  /* look up my own vertices */
+  neighbor_face = connectivity->tree_to_face[4 * itree + face];
+  P4EST_ASSERT (neighbor_face >= 0 && neighbor_face < 4);
+  v1 = connectivity->tree_to_vertex[4 * itree + face];
+  v2 = connectivity->tree_to_vertex[4 * itree + (face + 1) % 4];
+
+  /* look up my neighbor's vertices */
+  n1 = 4 * neighbor_tree + neighbor_face;
+  n2 = 4 * neighbor_tree + (neighbor_face + 1) % 4;
+  w1 = connectivity->tree_to_vertex[n1];
+  w2 = connectivity->tree_to_vertex[n2];
+
+  /* derive orientation from vertex relations */
+  P4EST_ASSERT (v1 != v2 && w1 != w2);
+  P4EST_ASSERT ((w1 == v1 && w2 == v2) || (w1 == v2 && w2 == v1));
+  orientation = (w1 == v1 && w2 == v2) ? 1 : 0;
+
+  return p4est_transform_table[face][neighbor_face][orientation];
+}
+
 /* EOF p4est_connectivity.c */

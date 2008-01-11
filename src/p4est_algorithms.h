@@ -51,6 +51,12 @@ int8_t              p4est_quadrant_child_id (const p4est_quadrant_t * q);
  */
 int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
+/** Test if a quadrant has valid Morton indices including the outer border.
+ * \param [in] q Quadrant to be tested.
+ * \return Returns 1 if \a q is valid.
+ */
+int                 p4est_quadrant_is_extended (const p4est_quadrant_t * q);
+
 /** Test if two quadrants are siblings.
  * \param [in] q1 First quadrant to be tested.
  * \param [in] q2 Second quadrant to be tested.

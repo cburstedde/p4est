@@ -41,7 +41,6 @@ typedef struct p4est_connectivity
   double             *vertices; /* allocated [0][0]..[0][2]..
                                    [num_vertices-1][0]..
                                    [num_vertices-1][2] */
-
 }
 p4est_connectivity_t;
 
@@ -51,7 +50,7 @@ p4est_connectivity_t;
  * The indices are my_face, neighbor_face, orientation.
  * The orientation index is 0 for same, 1 for opposing sense of rotation.
  */
-extern const int p4est_transform_table[4][4][2];
+extern const int    p4est_transform_table[4][4][2];
 
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.
@@ -74,5 +73,10 @@ p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
  * This is used for testing multi tree forests.
  */
 p4est_connectivity_t *p4est_connectivity_new_corner (void);
+
+/** Returns the transformation number from a tree to a neighbor tree. */
+int                 p4est_find_face_transform (p4est_connectivity_t *
+                                               connectivity,
+                                               int32_t itree, int8_t face);
 
 #endif /* !__P4EST_CONNECTIVITY_H__ */
