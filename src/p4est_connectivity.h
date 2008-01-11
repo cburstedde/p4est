@@ -45,6 +45,14 @@ typedef struct p4est_connectivity
 }
 p4est_connectivity_t;
 
+/** Contains integers 0..7 denoting the type of inter-tree transformation.
+ * The first 4 transformations are rotations about 0, -90, 180, 90.
+ * The second 4 transformations are mirrors along axis 0, 45, 90, 135.
+ * The indices are my_face, neighbor_face, orientation.
+ * The orientation index is 0 for same, 1 for opposing sense of rotation.
+ */
+extern const int p4est_transform_table[4][4][2];
+
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.
  * \param [in] num_vertices Number of total vertices.

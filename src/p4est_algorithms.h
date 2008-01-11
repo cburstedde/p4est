@@ -193,6 +193,15 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
+/** Transforms a quadrant between trees.
+ * \param [in]     q  Input quadrant.
+ * \param [in,out] r  Existing quadrant whose Morton index will be filled.
+ * \param [in] transform_type   Transformation as in p4est_connectivity.h.
+ */
+void                p4est_quadrant_transform (const p4est_quadrant_t * q,
+                                              p4est_quadrant_t * r,
+                                              int transform_type);
+
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.
  * \return Returns the linear position of this quadrant on a grid.

@@ -453,6 +453,61 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   P4EST_ASSERT (p4est_quadrant_is_valid (r));
 }
 
+void
+p4est_quadrant_transform (const p4est_quadrant_t * q,
+                          p4est_quadrant_t * r, int transform_type)
+{
+  int32_t             qh, rh, th;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (0 <= transform_type && transform_type < 8);
+
+  qh = (1 << (P4EST_MAXLEVEL - q->level));
+  rh = (1 << P4EST_MAXLEVEL);
+  th = rh - qh;
+
+  switch (transform_type) {
+  case 0:       /* identity */
+    r->x = q->x;
+    r->y = q->y;
+    break;
+  case 1:       /* rotate -90 degrees */
+    r->x = th - q->y;
+    r->y = q->x;
+    break;
+  case 2:       /* rotate 180 degrees */
+    r->x = th - q->x;
+    r->y = th - q->y;
+    break;
+  case 3:       /* rotate 90 degrees */
+    r->x = q->y;
+    r->y = th - q->x;
+    break;
+  case 4:       /* mirror across 0 degree axis */ 
+    r->x = q->x;
+    r->y = th - q->y;
+    break;
+  case 5:       /* mirror across 45 degree axis */
+    r->x = q->y;
+    r->y = q->x;
+    break;
+  case 6:       /* mirror across 90 degree axis */
+    r->x = th - q->x;
+    r->y = q->y;
+    break;
+  case 7:       /* mirror across 135 degree axis */
+    r->x = th - q->y;
+    r->y = th - q->x;
+    break;
+  default:
+    P4EST_ASSERT_NOT_REACHED ();
+    break;
+  }
+  r->level = q->level;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+}
+
 int64_t
 p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int8_t level)
 {

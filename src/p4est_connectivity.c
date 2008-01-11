@@ -22,6 +22,16 @@
 #include <p4est_connectivity.h>
 #include <p4est_base.h>
 
+/* *INDENT-OFF* */
+
+const int p4est_transform_table[4][4][2] =
+{{{2, 4}, {3, 5}, {0, 6}, {1, 7}},
+ {{1, 5}, {2, 6}, {3, 7}, {0, 4}},
+ {{0, 6}, {1, 7}, {2, 4}, {3, 5}},
+ {{3, 7}, {0, 4}, {1, 5}, {2, 6}}};
+
+/* *INDENT-ON* */
+
 p4est_connectivity_t *
 p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
 {
