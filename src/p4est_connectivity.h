@@ -74,7 +74,9 @@ p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_corner (void);
 
-/** Returns the transformation number from a tree to a neighbor tree. */
+/** Returns the transformation number from a tree to a neighbor tree.
+ * \return  Returns -1 if there is no neighbor at that face, or 0..7.
+ */
 int                 p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
                                                int32_t itree, int8_t face);

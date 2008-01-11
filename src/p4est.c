@@ -599,13 +599,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 mpiret, qbytes, obytes;
   int                 first_index, last_index;
   int                 first_bound, last_bound;
-  int                 k, l;
+  int                 k, l, face;
   int                 which, scount, offset;
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
   int                 lastw, nwin;
+  int                 tree_fully_owned, transform;
   int                 send_zero[2], send_load[2];
   int                 recv_zero[2], recv_load[2];
+  int                 any_face, any_quad, face_contact[4], quad_contact[4];
   int                *wait_indices;
   int32_t             prev, start, end;
   int32_t             length, shortest_window, shortest_length;
@@ -614,10 +616,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
   int32_t            *peer_boundaries;
-  p4est_quadrant_t    ld, ins[9];       /* insulation layer */
+  p4est_quadrant_t    trq, ld, ins[9];  /* insulation layer */
   p4est_quadrant_t   *q, *s, *t;
   p4est_balance_peer_t *peer;
   p4est_array_t      *peers, *qarray;
+  p4est_connectivity_t *conn = p4est->connectivity;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
@@ -633,6 +636,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_QUADRANT_INIT (&mylow);
   P4EST_QUADRANT_INIT (&nextlow);
 #ifdef HAVE_MPI
+  P4EST_QUADRANT_INIT (&trq);
   P4EST_QUADRANT_INIT (&ld);
   for (which = 0; which < 9; ++which) {
     P4EST_QUADRANT_INIT (&ins[which]);
@@ -694,6 +698,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   all_incount = 0;
   p4est->local_num_quadrants = 0;
   for (j = first_tree; j <= last_tree; ++j) {
+    any_face = 0;
+    for (face = 0; face < 4; ++face) {
+      face_contact[face] = (conn->tree_to_tree[4 * j + face] != j);
+      any_face = any_face || face_contact[face];
+    }
     tree = p4est_array_index (p4est->trees, j);
     all_incount += tree->quadrants->elem_count;
 
@@ -717,9 +726,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (p4est->mpicomm == MPI_COMM_NULL) {
       continue;
     }
+    tree_fully_owned = 0;
     if ((j > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
         (j < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
-      continue;
+      /* all quadrants in this tree are owned by me */
+      tree_fully_owned = 1;
+      if (!any_face) {
+        /* this tree is isolated, no balance between trees */
+        continue;
+      }
     }
 
     /* identify boundary quadrants and prepare them to be sent */
@@ -727,6 +742,17 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       /* this quadrant may be on the boundary with a range of processors */
       q = p4est_array_index (tree->quadrants, i);
       qh = (1 << (P4EST_MAXLEVEL - q->level));
+      if (tree_fully_owned) {
+        /* need only to consider boundary quadrants */
+        any_quad =
+          (face_contact[0] && q->y == 0) ||
+          (face_contact[1] && q->x == rh - qh) ||
+          (face_contact[2] && q->y == rh - qh) ||
+          (face_contact[3] && q->x == 0);
+        if (!any_quad) {
+          continue;
+        }
+      }
       for (k = 0; k < 3; ++k) {
         for (l = 0; l < 3; ++l) {
           which = k * 3 + l;    /* 0..8 */
@@ -738,15 +764,57 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           *s = *q;
           s->x += (l - 1) * qh;
           s->y += (k - 1) * qh;
-          if ((s->x < 0 || s->x >= rh) || (s->y < 0 || s->y >= rh)) {
+          quad_contact[0] = (s->y < 0);
+          quad_contact[1] = (s->x >= rh);
+          quad_contact[2] = (s->y >= rh);
+          quad_contact[3] = (s->x < 0);
+          qtree = -1;
+          if (quad_contact[0] || quad_contact[1] ||
+              quad_contact[2] || quad_contact[3]) {
             /* this quadrant is relevant for inter-tree balancing */
+            if ((quad_contact[0] || quad_contact[2]) &&
+                (quad_contact[1] || quad_contact[3])) {
+              /* this quadrant goes across a corner, ignore for now */
+              continue;
+            }
+            for (face = 0; face < 4; ++face) {
+              if (quad_contact[face] && face_contact[face]) {
+                qtree = conn->tree_to_tree[4 * j + face];
+                switch (face) {
+                case 0:
+                  s->y += rh;
+                  break;
+                case 1:
+                  s->x -= rh;
+                  break;
+                case 2:
+                  s->y -= rh;
+                  break;
+                case 3:
+                  s->x += rh;
+                  break;
+                }
+                break;
+              }
+            }
+            if (face == 4) {
+              /* this quadrant ran across a face with no neighbor */
+              continue;
+            }
+            transform = p4est_find_face_transform (conn, j, face);
+            p4est_quadrant_transform (s, &trq, transform);
+            s = &trq;
+            /* deactivated for now */
             continue;
           }
+          else {
+            qtree = j;
+          }
           /* querying s is equivalent to querying first descendent */
-          first_owner = p4est_comm_find_owner (p4est, j, s, rank);
+          first_owner = p4est_comm_find_owner (p4est, qtree, s, rank);
           /* querying last descendent */
           p4est_quadrant_last_descendent (s, &ld, P4EST_MAXLEVEL);
-          last_owner = p4est_comm_find_owner (p4est, j, &ld, rank);
+          last_owner = p4est_comm_find_owner (p4est, qtree, &ld, rank);
 
           /* send q to all processors possibly intersecting s */
           for (owner = first_owner; owner <= last_owner; ++owner) {
@@ -762,7 +830,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             p4est_array_resize (&peer->send_first, scount + 1);
             t = p4est_array_index (&peer->send_first, scount);
             *t = *q;
-            t->user_data = (void *) j;  /* piggy back tree id with quadrant */
+            t->user_data = (void *) qtree;      /* piggy back tree id
+                                                   with quadrant */
             first_peer = P4EST_MIN (owner, first_peer);
             last_peer = P4EST_MAX (owner, last_peer);
           }

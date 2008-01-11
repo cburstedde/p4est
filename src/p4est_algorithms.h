@@ -203,6 +203,7 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
  * \param [in]     q  Input quadrant.
  * \param [in,out] r  Existing quadrant whose Morton index will be filled.
  * \param [in] transform_type   Transformation as in p4est_connectivity.h.
+ * \note \a q and \q r may NOT point to the same quadrant structure.
  */
 void                p4est_quadrant_transform (const p4est_quadrant_t * q,
                                               p4est_quadrant_t * r,
