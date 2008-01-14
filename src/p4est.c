@@ -582,6 +582,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
   int                 data_pool_size, all_incount, all_outcount;
+  int                 face, any_face, face_contact[4];
   int32_t             j;
   int32_t             rh;
   int32_t             treecount;
@@ -589,6 +590,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             first_peer, last_peer, rank_in_peers, over_peer_count;
   p4est_tree_t       *tree;
   p4est_quadrant_t    mylow, nextlow;
+  p4est_connectivity_t *conn = p4est->connectivity;
 #ifdef HAVE_MPI
 #ifdef P4EST_HAVE_DEBUG
   unsigned            checksum;
@@ -599,7 +601,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 mpiret, qbytes, obytes;
   int                 first_index, last_index;
   int                 first_bound, last_bound;
-  int                 k, l, face;
+  int                 k, l;
   int                 which, scount, offset;
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
@@ -607,7 +609,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 tree_fully_owned, transform;
   int                 send_zero[2], send_load[2];
   int                 recv_zero[2], recv_load[2];
-  int                 any_face, any_quad, face_contact[4], quad_contact[4];
+  int                 any_quad, quad_contact[4];
   int                *wait_indices;
   int32_t             prev, start, end;
   int32_t             length, shortest_window, shortest_length;
@@ -620,7 +622,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_quadrant_t   *q, *s, *t, *tosend;
   p4est_balance_peer_t *peer;
   p4est_array_t      *peers, *qarray;
-  p4est_connectivity_t *conn = p4est->connectivity;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
@@ -804,7 +805,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               /* this quadrant ran across a face with no neighbor */
               continue;
             }
-            transform = p4est_find_face_transform (conn, j, face);
+            transform = p4est_find_face_transform (conn, j, (int8_t) face);
             p4est_quadrant_transform (s, &trq, transform);
             s = &trq;
           }
