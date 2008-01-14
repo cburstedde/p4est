@@ -1,0 +1,24 @@
+#! /bin/bash
+
+if [ ! -r "src/p4est.h" ] ; then
+    echo "Call from base directory"
+    exit 1
+fi
+UNMPIFILE="`dirname $0`/unmpifile"
+TD=`mktemp -d /tmp/unmpi.XXXXXXXX` || exit 1
+
+for FILE in src/*.c src/*.h ; do
+    echo "Processing file $FILE" >&2
+    "$UNMPIFILE" < "$FILE" > "$TD/`basename $FILE`" || exit 1
+done
+
+echo
+echo -n "All files processed.  Do you want to overwrite the source (y/N)? "
+read -s -n 1
+if [ $REPLY = "y" -o $REPLY = "Y" ] ; then
+    cp "$TD/"* src/
+    echo "Yes."
+    echo "Files overwritten."
+else
+    echo "No."
+fi

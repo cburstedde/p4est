@@ -1,0 +1,83 @@
+#! /usr/bin/perl
+
+use strict;
+
+my ($level, @defines, @defined, @elses);
+my ($normal, $into, $outo, $prev, $match, $matchlevel, $justout);
+
+$level = 0;
+$matchlevel = 0;
+
+while (<STDIN>) {
+    $normal = 0;
+    $into = 0;
+    $outo = 0;
+    $justout = 0;
+    if ($_ =~ /^\s*#\s*if((n)?def\s+)?\s*[\(!]?(\w+)/) {
+	$level++;
+	$defines[$level] = $3;
+	$defined[$level] = !$2 ? 1 : 0;
+	$elses[$level] = 0;
+	$into = 1;
+	printf (STDERR "%d Into %s %d\n",
+		$level, $defines[$level], $defined[$level]);
+    }
+    elsif ($_ =~ /^\s*#\s*else/) {
+	$prev = $defined[$level];
+	$defined[$level] = !$prev;
+	++$elses[$level];
+	printf (STDERR "%d Else %s %d %d\n",
+		$level, $defines[$level], $prev, $defined[$level]);
+	if ($elses[$level] > 1) {
+	    die ("Invalid else");
+	}
+    }
+    elsif ($_ =~ /^\s*#\s*endif/) {
+	printf (STDERR "%d Out  %s %d\n",
+		$level, $defines[$level], $defined[$level]);
+	$outo = 1;
+	$level--;
+	if ($level < 0) {
+	    die ("Unmatched endif");
+	}
+    }
+    else {
+	$normal = 1;
+    }
+
+    if ($into) {
+	if ($defines[$level] eq 'HAVE_MPI') {
+	    $matchlevel = $level;
+	    printf (STDERR "Set matchlevel to %d\n", $matchlevel);
+	}
+    }
+    elsif ($outo) {
+	if ($matchlevel == $level + 1) {
+	    $matchlevel = 0;
+	    $justout = 1;
+	    printf (STDERR "Set matchlevel to %d\n", 0);
+	}
+    }
+
+    if ($justout) {
+    }
+    elsif ($level >= $matchlevel && $matchlevel > 0) {
+	if ($defined[$matchlevel] == 0) {
+	    if ($level == $matchlevel) {
+		if ($normal) {
+		    print;
+		}
+	    }
+	    else {
+		print;
+	    }
+	}
+    }
+    else {
+	print;
+    }
+}
+
+if ($level != 0) {
+    die ("Level mismatch");
+}
