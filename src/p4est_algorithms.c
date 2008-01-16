@@ -167,12 +167,15 @@ int
 p4est_quadrant_is_extended (const p4est_quadrant_t * q)
 {
   int32_t             qh = (1 << (P4EST_MAXLEVEL - q->level));
+  int32_t             rh = (1 << P4EST_MAXLEVEL);
+  int32_t             th = rh + (rh - qh);      /* watch for overflow */
 
   return
     (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
-    (q->x >= -qh && q->x <= (1 << P4EST_MAXLEVEL)) &&
-    (q->y >= -qh && q->y <= (1 << P4EST_MAXLEVEL)) &&
-    ((q->x & (qh - 1)) == 0) && ((q->y & (qh - 1)) == 0);
+    (q->x >= -rh && q->x <= th) &&
+    (q->y >= -rh && q->y <= th) &&
+    (((int64_t) q->x + rh & (qh - 1)) == 0) &&
+    (((int64_t) q->y + rh & (qh - 1)) == 0);
 }
 
 int
@@ -509,7 +512,8 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
 {
   int32_t             qh, rh, th;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q != r);
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (0 <= transform_type && transform_type < 8);
 
   qh = (1 << (P4EST_MAXLEVEL - q->level));
@@ -555,7 +559,7 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
   }
   r->level = q->level;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
 int64_t

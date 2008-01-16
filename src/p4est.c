@@ -601,12 +601,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 mpiret, qbytes, obytes;
   int                 first_index, last_index;
   int                 first_bound, last_bound;
-  int                 k, l;
-  int                 which, scount, offset;
+  int                 k, l, back;
+  int                 which, scount, offset, pos;
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
   int                 lastw, nwin;
-  int                 tree_fully_owned, transform;
+  int                 tree_fully_owned, inter_tree, transform, found;
   int                 send_zero[2], send_load[2];
   int                 recv_zero[2], recv_load[2];
   int                 any_quad, quad_contact[4];
@@ -618,7 +618,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             qh;
   int32_t             owner, first_owner, last_owner;
   int32_t            *peer_boundaries;
-  p4est_quadrant_t    trq, ld, ins[9];  /* insulation layer */
+  p4est_quadrant_t    insulq, origq, tempq, ld;
   p4est_quadrant_t   *q, *s, *t, *tosend;
   p4est_balance_peer_t *peer;
   p4est_array_t      *peers, *qarray;
@@ -637,11 +637,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_QUADRANT_INIT (&mylow);
   P4EST_QUADRANT_INIT (&nextlow);
 #ifdef HAVE_MPI
-  P4EST_QUADRANT_INIT (&trq);
+  P4EST_QUADRANT_INIT (&insulq);
+  P4EST_QUADRANT_INIT (&origq);
+  P4EST_QUADRANT_INIT (&tempq);
   P4EST_QUADRANT_INIT (&ld);
-  for (which = 0; which < 9; ++which) {
-    P4EST_QUADRANT_INIT (&ins[which]);
-  }
 #endif /* HAVE_MPI */
 
 #ifdef HAVE_MPI
@@ -761,13 +760,17 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           if (which == 4) {
             continue;
           }
-          s = &ins[which];
+          s = &insulq;
           *s = *q;
           s->x += (l - 1) * qh;
           s->y += (k - 1) * qh;
 
           /* check boundary status of s */
-          qtree = -1;
+          face = -1;
+          qtree = j;
+          tosend = q;
+          inter_tree = 0;
+          transform = -1;
           quad_contact[0] = (s->y < 0);
           quad_contact[1] = (s->x >= rh);
           quad_contact[2] = (s->y >= rh);
@@ -775,6 +778,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           if (quad_contact[0] || quad_contact[1] ||
               quad_contact[2] || quad_contact[3]) {
             /* this quadrant is relevant for inter-tree balancing */
+            inter_tree = 1;
             if ((quad_contact[0] || quad_contact[2]) &&
                 (quad_contact[1] || quad_contact[3])) {
               /* this quadrant goes across a corner, ignore for now */
@@ -784,6 +788,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             for (face = 0; face < 4; ++face) {
               if (quad_contact[face] && face_contact[face]) {
                 qtree = conn->tree_to_tree[4 * j + face];
+                P4EST_ASSERT (qtree != j);
                 switch (face) {
                 case 0:
                   s->y += rh;
@@ -806,12 +811,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               continue;
             }
             transform = p4est_find_face_transform (conn, j, (int8_t) face);
-            p4est_quadrant_transform (s, &trq, transform);
-            s = &trq;
-          }
-          else {
-            face = -1;
-            qtree = j;
+            p4est_quadrant_transform (s, &tempq, transform);
+            s = &tempq;
           }
 
           /* querying s is equivalent to querying first descendent */
@@ -820,47 +821,61 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           p4est_quadrant_last_descendent (s, &ld, P4EST_MAXLEVEL);
           last_owner = p4est_comm_find_owner (p4est, qtree, &ld, rank);
 
-          /* move quadrant back out of the unit square in the neighbor */
-          if (qtree != j) {     /* inter-tree quadrant s */
-            P4EST_ASSERT (face >= 0 && face < 4);
-            tosend = &trq;      /* this changes s, do not use it below */
-            switch (conn->tree_to_face[4 * j + face]) {
+          /* transform original quadrant into the neighbor's coordinates */
+          if (inter_tree) {     /* inter-tree shipment */
+            P4EST_ASSERT (face >= 0 && face < 4 && qtree != j);
+            s = &origq;
+            *s = *q;
+            switch (face) {
             case 0:
-              tosend->y -= qh;
+              s->y += rh;
               break;
             case 1:
-              tosend->x += qh;
+              s->x -= rh;
               break;
             case 2:
-              tosend->y += qh;
+              s->y -= rh;
               break;
             case 3:
-              tosend->x -= qh;
+              s->x += rh;
               break;
             }
+            p4est_quadrant_transform (s, &tempq, transform);
+            tosend = &tempq;
             P4EST_ASSERT (!p4est_quadrant_is_valid (tosend));
             P4EST_ASSERT (p4est_quadrant_is_extended (tosend));
             /* deactivated for now */
             continue;
           }
-          else {
-            tosend = q;
-          }
 
-          /* send q to all processors possibly intersecting s */
+          /* send to all processors possibly intersecting insulation */
           for (owner = first_owner; owner <= last_owner; ++owner) {
             if (owner == rank) {
               continue;
             }
             peer = p4est_array_index (peers, owner);
-            if (p4est_array_bsearch (&peer->send_first, q,
-                                     p4est_quadrant_compare) != NULL) {
+            /* avoid duplicates in the send array */
+            found = 0;
+            for (back = 0; back < 8; ++back) {
+              pos = peer->send_first.elem_count - back - 1;
+              if (pos < 0) {
+                break;
+              }
+              s = p4est_array_index (&peer->send_first, pos);
+              if (p4est_quadrant_is_equal (s, tosend) &&
+                  (int32_t) s->user_data == qtree) {
+                found = 1;
+                break;
+              }
+            }
+            if (found) {
               continue;
             }
+            /* copy quadrant into shipping list */
             scount = peer->send_first.elem_count;
             p4est_array_resize (&peer->send_first, scount + 1);
             t = p4est_array_index (&peer->send_first, scount);
-            *t = *q;
+            *t = *tosend;
             t->user_data = (void *) qtree;      /* piggy back tree id
                                                    with quadrant */
             first_peer = P4EST_MIN (owner, first_peer);

@@ -1,11 +1,16 @@
  * Balance Tree
- * Partition Tree
-   * Algo 3
-   * Algo 4 weighted? blocked
-   * Algo 5 weighted linear
+   * inter-tree across faces
+   * inter-tree across corners
+ * Partition Tree (done)
+   ? Algo 3
+   ? Algo 4 weighted? blocked
+   ? Algo 5 weighted linear
  * doxygen
- * test cases
+ * more test cases
  * vtk output
-   * simple
+   * unique vertex indices
    * geometry
-* Tree deep copy
+ * mesh generation
+   ? 2D bilinear elements
+ * Forest deep copy
+ * 3D
