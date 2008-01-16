@@ -30,6 +30,7 @@ enum Section
   ETOV,                         /* [Element to Vertex] */
   ETOE,                         /* [Element to Element] */
   ETOF,                         /* [Element to Face] */
+  VTOE,                         /* [Vertex to Element] */
   ET,                           /* [Element Tags] */
   FT,                           /* [Face Tags] */
   CF,                           /* [Curved Faces] */
@@ -84,12 +85,16 @@ p4est_connectivity_read (const char *filename,
   int                 section_lines_read = 0;
   int                 set_num_trees = 0;
   int                 set_num_vertices = 0;
+  int                 set_num_vtt = 0;
   char               *key = NULL;
   char               *value = NULL;
   int32_t             num_trees = 0;
   int32_t             num_vertices = 0;
+  int32_t             num_vtt = 0;
   int32_t             k, k0, k1, k2, k3, f0, f1, f2, f3, v0, v1, v2, v3;
+  int32_t             i, Nnn;
   int32_t            *tree_to_vertex, *tree_to_tree;
+  int32_t            *vtt_offset, *vertex_to_tree;
   int8_t             *tree_to_face;
   double             *vertices;
   double              vx, vy, vz;
@@ -130,6 +135,10 @@ p4est_connectivity_read (const char *filename,
         P4EST_CHECK_ABORT (section_lines_read == num_trees,
                            "Not enough entries in [Element to Face]");
         break;
+      case VTOE:
+        P4EST_CHECK_ABORT (section_lines_read == num_vertices,
+                           "Not enough entries in [Vertex to Element]");
+        break;
       default:
         ;
       }
@@ -158,6 +167,9 @@ p4est_connectivity_read (const char *filename,
       }
       else if (strcmp (line, "Element to Face") == 0) {
         section = ETOF;
+      }
+      else if (strcmp (line, "Vertex to Element") == 0) {
+        section = VTOE;
       }
       else if (strcmp (line, "Element Tags") == 0) {
         section = ET;
@@ -202,12 +214,22 @@ p4est_connectivity_read (const char *filename,
           set_num_vertices = 1;
         }
 
-        if (set_num_vertices && set_num_trees && *connectivity == NULL) {
-          *connectivity = p4est_connectivity_new (num_trees, num_vertices);
+        else if (strcmp (key, "Nve") == 0) {
+          num_vtt = atoi (value);
+          set_num_vtt = 1;
+        }
+
+        if (set_num_vertices && set_num_trees && set_num_vtt
+            && *connectivity == NULL) {
+          *connectivity = p4est_connectivity_new (num_trees, num_vertices,
+                                                  num_vtt);
           tree_to_vertex = (*connectivity)->tree_to_vertex;
           tree_to_tree = (*connectivity)->tree_to_tree;
           tree_to_face = (*connectivity)->tree_to_face;
           vertices = (*connectivity)->vertices;
+          vtt_offset = (*connectivity)->vtt_offset;
+          vtt_offset[0] = 0;
+          vertex_to_tree = (*connectivity)->vertex_to_tree;
         }
 
         break;
@@ -282,6 +304,19 @@ p4est_connectivity_read (const char *filename,
         tree_to_face[k * 4 + 1] = (int8_t) f1;
         tree_to_face[k * 4 + 2] = (int8_t) f2;
         tree_to_face[k * 4 + 3] = (int8_t) f3;
+
+        break;
+      case VTOE:
+        value = strtok (line, " \t");
+        v0 = atoi (value);
+        --v0;
+        value = strtok (NULL, " \t");
+        Nnn = atoi (value);
+        vtt_offset[v0 + 1] = vtt_offset[v0] + Nnn;
+        for (i = 0; i < Nnn; ++i) {
+          value = strtok (NULL, " \t");
+          vertex_to_tree[vtt_offset[v0] + i] = atoi (value) - 1;
+        }
 
         break;
       case ET:

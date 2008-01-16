@@ -21,6 +21,7 @@
 
 #include <p4est_connectivity.h>
 #include <p4est_base.h>
+#include <p4est_memory.h>
 
 /* *INDENT-OFF* */
 
@@ -33,7 +34,8 @@ const int p4est_transform_table[4][4][2] =
 /* *INDENT-ON* */
 
 p4est_connectivity_t *
-p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
+p4est_connectivity_new (int32_t num_trees, int32_t num_vertices,
+                        int32_t num_vtt)
 {
   p4est_connectivity_t *connectivity;
 
@@ -55,6 +57,12 @@ p4est_connectivity_new (int32_t num_trees, int32_t num_vertices)
   connectivity->vertices = P4EST_ALLOC (double, 3 * num_vertices);
   P4EST_CHECK_ALLOC (connectivity->vertices);
 
+  connectivity->vtt_offset = P4EST_ALLOC (int32_t, num_vertices + 1);
+  P4EST_CHECK_ALLOC (connectivity->vtt_offset);
+
+  connectivity->vertex_to_tree = P4EST_ALLOC (int32_t, num_vtt);
+  P4EST_CHECK_ALLOC (connectivity->vertex_to_tree);
+
   return connectivity;
 }
 
@@ -65,6 +73,8 @@ p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
   P4EST_FREE (connectivity->tree_to_tree);
   P4EST_FREE (connectivity->tree_to_vertex);
   P4EST_FREE (connectivity->vertices);
+  P4EST_FREE (connectivity->vtt_offset);
+  P4EST_FREE (connectivity->vertex_to_tree);
 
   P4EST_FREE (connectivity);
 }
@@ -74,7 +84,7 @@ p4est_connectivity_new_unitsquare (void)
 {
   p4est_connectivity_t *connectivity;
 
-  connectivity = p4est_connectivity_new (1, 4);
+  connectivity = p4est_connectivity_new (1, 4, 4);
 
   /* assign vertex numbers */
   connectivity->tree_to_vertex[0] = 0;
@@ -117,6 +127,17 @@ p4est_connectivity_new_unitsquare (void)
   connectivity->vertices[3 * 3 + 1] = 1.0;
   connectivity->vertices[3 * 3 + 2] = 0.0;
 
+  connectivity->vtt_offset[0] = 0;
+  connectivity->vtt_offset[1] = 1;
+  connectivity->vtt_offset[2] = 2;
+  connectivity->vtt_offset[3] = 3;
+  connectivity->vtt_offset[4] = 4;
+
+  connectivity->vertex_to_tree[0] = 0;
+  connectivity->vertex_to_tree[1] = 0;
+  connectivity->vertex_to_tree[2] = 0;
+  connectivity->vertex_to_tree[3] = 0;
+
   return connectivity;
 }
 
@@ -126,6 +147,7 @@ p4est_connectivity_new_corner (void)
   p4est_connectivity_t *connectivity;
   const int32_t       num_trees = 3;
   const int32_t       num_vertices = 7;
+  const int32_t       num_vtt = 12;
   const int32_t       tree_to_vertex[] = {
     0, 1, 3, 2, 0, 2, 5, 6, 2, 3, 4, 5
   };
@@ -144,8 +166,14 @@ p4est_connectivity_new_corner (void)
     0.00000000000e+00, 1.00000000000e+00, 1.00000000000e+00,
     -1.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00
   };
+  const int32_t       vtt_offset[] = {
+    0, 2, 3, 6, 8, 9, 11, 12
+  };
+  const int32_t       vertex_to_tree[] = {
+    0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1
+  };
 
-  connectivity = p4est_connectivity_new (3, 7);
+  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
           sizeof (int32_t) * 4 * num_trees);
@@ -155,6 +183,10 @@ p4est_connectivity_new_corner (void)
           sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vertices, vertices,
           sizeof (double) * 3 * num_vertices);
+  memcpy (connectivity->vtt_offset, vtt_offset,
+          sizeof (int32_t) * num_vertices + 1);
+  memcpy (connectivity->vertex_to_tree, vertex_to_tree,
+          sizeof (int32_t) * num_vtt);
 
   return connectivity;
 }

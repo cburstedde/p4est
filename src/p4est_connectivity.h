@@ -41,6 +41,29 @@ typedef struct p4est_connectivity
   double             *vertices; /* allocated [0][0]..[0][2]..
                                    [num_vertices-1][0]..
                                    [num_vertices-1][2] */
+  int32_t            *vtt_offset;       /* allocated [0]..[num_vertices]
+
+                                           Given a vertex this stores the
+                                           offset into vertex_to_tree where the
+                                           tree numbers are stored.  The number
+                                           of trees for vertex v can be
+                                           calculated by vtt_offset[v+1] -
+                                           vtt_offset[v].  Thus
+                                           vtt_offset[num_vertices] contains
+                                           the length of vertex_to_tree array.
+                                         */
+  int32_t            *vertex_to_tree;   /* For each vertex it stores the
+                                           tree numbers for the trees that
+                                           are attached to it.
+
+                                           The size of the array is
+                                           vtt_offset[num_vertices].
+
+                                           The trees connected to vertex v
+                                           are:
+                                           vertex_to_tree[vtt_offset[v]]..
+                                           vertex_to_tree[vtt_offset[v+1]-1]
+                                         */
 }
 p4est_connectivity_t;
 
@@ -55,9 +78,11 @@ extern const int    p4est_transform_table[4][4][2];
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.
  * \param [in] num_vertices Number of total vertices.
+ * \param [in] num_vtt      Number of total trees in version to tree.
  */
 p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
-                                              int32_t num_vertices);
+                                              int32_t num_vertices,
+                                              int32_t num_vtt);
 
 /** Destroy a connectivity structure
  */

@@ -50,6 +50,7 @@ main (int argc, char **argv)
     "ver = 0.0.1  # Version of the forest file\n"
     "Nk  = 3      # Number of elements\n"
     "Nv  = 7      # Number of mesh vertices\n"
+    "Nve = 12     # Number of vertex to element elements\n"
     "Net = 0      # Number of element tags\n"
     "Nft = 0      # Number of face tags\n"
     "Ncf = 0      # Number of curved faces\n"
@@ -77,6 +78,14 @@ main (int argc, char **argv)
     "2     4   4   3   4\n"
     "3     3   2   3   2\n"
     "\n"
+    "[Vertex to Element]\n"
+    "1     2   1   2\n"
+    "2     1   1\n"
+    "3     3   1   3   2\n"
+    "4     2   1   3\n"
+    "5     1   3\n"
+    "6     2   2   3\n"
+    "7     1   2\n"
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
   int                 fd;
@@ -89,6 +98,7 @@ main (int argc, char **argv)
   int32_t             i;
   const int32_t       num_trees = 3;
   const int32_t       num_vertices = 7;
+  const int32_t       num_vtt = 12;
   const int32_t       tree_to_vertex[] = {
     0, 1, 3, 2, 0, 2, 5, 6, 2, 3, 4, 5
   };
@@ -106,6 +116,12 @@ main (int argc, char **argv)
     1.00000000000e+00, 1.00000000000e+00, 0.00000000000e+00,
     0.00000000000e+00, 1.00000000000e+00, 0.00000000000e+00,
     -1.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00
+  };
+  const int32_t       vtt_offset[] = {
+    0, 2, 3, 6, 8, 9, 11, 12
+  };
+  const int32_t       vertex_to_tree[] = {
+    0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1
   };
 
 #ifdef HAVE_MPI
@@ -157,6 +173,12 @@ main (int argc, char **argv)
   for (i = 0; i < num_vertices * 3; ++i)
     P4EST_CHECK_ABORT (connectivity->vertices[i] - vertices[i] < EPS,
                        "vertices");
+  for (i = 0; i < num_vertices + 1; ++i)
+    P4EST_CHECK_ABORT (connectivity->vtt_offset[i] == vtt_offset[i],
+                       "vtt_offset");
+  for (i = 0; i < num_vtt; ++i)
+    P4EST_CHECK_ABORT (connectivity->vertex_to_tree[i] == vertex_to_tree[i],
+                       "vertex_to_tree");
 
   /* destroy the p4est and its connectivity structure */
   p4est_connectivity_destroy (connectivity);
