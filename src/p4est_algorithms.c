@@ -2280,6 +2280,13 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
         from_tree = first_from_tree + i;
         num_copy = num_per_tree_recv_buf[i];
 
+        /* We might have sent trees that are not actual trees.  In
+         * this case the num_copy should be zero
+         */
+        P4EST_ASSERT (num_copy == 0
+                      || (num_copy > 0 && from_tree >= 0
+                          && from_tree < trees->elem_count));
+
         if (num_copy > 0 && rank != from_proc) {
           tree = p4est_array_index (p4est->trees, from_tree);
           quadrants = tree->quadrants;
@@ -2317,7 +2324,10 @@ p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
           }
         }
 
-        new_local_tree_elem_count_before[from_tree] += num_copy;
+        if (num_copy > 0) {
+          P4EST_ASSERT (from_tree >= 0 && from_tree < trees->elem_count);
+          new_local_tree_elem_count_before[from_tree] += num_copy;
+        }
 
         /* increment the recv quadrant pointers */
         quad_recv_buf += num_copy;
