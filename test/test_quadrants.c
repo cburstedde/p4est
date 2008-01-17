@@ -87,6 +87,9 @@ main (void)
   p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
   p4est_quadrant_t    c0, c1, c2, c3;
+  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, O;
+  p4est_quadrant_t    a, f, g, h;
+  int64_t             Aid, Fid;
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
@@ -277,6 +280,164 @@ main (void)
   p4est_destroy (p4est1);
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (connectivity);
+
+  /* This will test the ability to address negative quadrants */
+  P4EST_QUADRANT_INIT (&A);
+  P4EST_QUADRANT_INIT (&B);
+  P4EST_QUADRANT_INIT (&C);
+  P4EST_QUADRANT_INIT (&D);
+  P4EST_QUADRANT_INIT (&E);
+  P4EST_QUADRANT_INIT (&F);
+  P4EST_QUADRANT_INIT (&G);
+
+  A.x = -1 << 30;
+  A.y = -1 << 30;
+  A.level = 0;
+
+  B.x = 1 << 30;
+  B.y = -1 << 30;
+  B.level = 0;
+
+  C.x = -1 << 30;
+  C.y = 1 << 30;
+  C.level = 0;
+
+  D.x = 1 << 30;
+  D.y = 1 << 30;
+  D.level = 0;
+
+  E.x = -1 << 31;
+  E.y = 0;
+  E.level = 0;
+
+  F.x = INT32_MAX;
+  F.y = INT32_MAX;
+  F.level = P4EST_MAXLEVEL;
+
+  G.x = -1;
+  G.y = -1;
+  G.level = P4EST_MAXLEVEL;
+
+  H.x = -1 << 29;
+  H.y = -1 << 29;
+  H.level = 1;
+
+  I.x = -1 << 30;
+  I.y = -1 << 29;
+  I.level = 1;
+
+  O.x = 0;
+  O.y = 0;
+  O.level = 0;
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&C) == 1, "is_extended");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&D) == 1, "is_extended");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&E) == 1, "is_extended");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&F) == 1, "is_extended");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&G) == 1, "is_extended");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_compare (&A, &A) == 0, "compare");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare (&A, &B) > 0, "compare");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare (&B, &A) < 0, "compare");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_compare (&F, &F) == 0, "compare");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare (&G, &F) > 0, "compare");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare (&F, &G) < 0, "compare");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &A) == 0,
+                     "compare_piggy");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &B) > 0,
+                     "compare_piggy");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&B, &A) < 0,
+                     "compare_piggy");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
+                     "compare_piggy");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0,
+                     "compare_piggy");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0,
+                     "compare_piggy");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &A) == 1, "is_equal");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&F, &F) == 1, "is_equal");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&G, &G) == 1, "is_equal");
+
+  /* Not sure if these make sense because D, O and A are all level 0 */
+#if 0
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&D, &O) == 1, "is_sibling");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&D, &A) == 0, "is_sibling");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&D, &O) == 1,
+                     "is_sibling_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&D, &A) == 0,
+                     "is_sibling_D");
+#endif
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&I, &H) == 1, "is_sibling");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&I, &G) == 0, "is_sibling");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &H) == 1,
+                     "is_sibling_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &G) == 0,
+                     "is_sibling_D");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &G) == 1, "is_parent");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&G, &A) == 0, "is_parent");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &D) == 0, "is_parent");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &G) == 1, "is_parent_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&G, &A) == 0, "is_parent_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &D) == 0, "is_parent_D");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &G) == 0, "is_ancestor");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&G, &A) == 1, "is_ancestor");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &D) == 1, "is_ancestor");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &G) == 0,
+                     "is_ancestor_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 1,
+                     "is_ancestor_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &D) == 1,
+                     "is_ancestor_D");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_next (&A, &H) == 0, "is_next");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (&A, &H) == 0, "is_next_D");
+
+  p4est_quadrant_parent (&H, &a);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "parent");
+
+  p4est_quadrant_sibling (&I, &h, 3);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&H, &h) == 1, "sibling");
+
+  p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c2, &I) == 1, "children");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &H) == 1, "children");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &G) == 0, "children");
+
+  p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
+  p4est_quadrant_first_descendent (&A, &c1, 1);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
+                     "first_descendent");
+
+  p4est_quadrant_last_descendent (&A, &g, P4EST_MAXLEVEL);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&G, &g) == 1,
+                     "last_descendent");
+
+  Fid = p4est_quadrant_linear_id (&F, P4EST_MAXLEVEL);
+  p4est_quadrant_set_morton (&f, P4EST_MAXLEVEL, Fid);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f) == 1,
+                     "set_morton/linear_id");
+
+  Aid = p4est_quadrant_linear_id (&A, P4EST_MAXLEVEL);
+  p4est_quadrant_set_morton (&a, P4EST_MAXLEVEL, Aid);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1,
+                     "set_morton/linear_id");
+
+  p4est_nearest_common_ancestor (&I, &H, &a);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor");
+
+  p4est_nearest_common_ancestor_D (&I, &H, &a);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor_D");
 
   p4est_memory_check ();
 
