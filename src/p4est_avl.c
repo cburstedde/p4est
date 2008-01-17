@@ -34,7 +34,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <p4est_avl.h>  /* changed this include directive */
+#include <p4est_avl.h>           /* changed this include directive */
+#include <p4est_base.h>          /* using p4est helper functions */
 
 static void avl_rebalance(avl_tree_t *, avl_node_t *);
 
@@ -598,10 +599,24 @@ void avl_rebalance(avl_tree_t *avltree, avl_node_t *avlnode) {
         }}
 #endif
 
-/* CB foreach functions for inorder traversal */
+/* *INDENT-ON* */
+
+static int          avl_to_array_index = -1;
+static p4est_array_t *avl_to_array_array = NULL;
 
 static void
-avl_foreach_recursion (avl_node_t *node, avl_foreach_t callback)
+avl_to_array_foreach (void *item)
+{
+  void              **pp;
+
+  pp = p4est_array_index (avl_to_array_array, avl_to_array_index);
+  *pp = item;
+
+  ++avl_to_array_index;
+}
+
+static void
+avl_foreach_recursion (avl_node_t * node, avl_foreach_t callback)
 {
   if (node->left != NULL)
     avl_foreach_recursion (node->left, callback);
@@ -613,10 +628,29 @@ avl_foreach_recursion (avl_node_t *node, avl_foreach_t callback)
 }
 
 void
-avl_foreach(avl_tree_t *avltree, avl_foreach_t callback)
+avl_foreach (avl_tree_t * avltree, avl_foreach_t callback)
 {
   if (avltree->top != NULL)
     avl_foreach_recursion (avltree->top, callback);
 }
+
+#ifdef AVL_COUNT
+
+void
+avl_to_array (avl_tree_t * avltree, p4est_array_t * array)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (void *));
+
+  p4est_array_resize (array, avl_count (avltree));
+
+  avl_to_array_index = 0;
+  avl_to_array_array = array;
+  avl_foreach (avltree, avl_to_array_foreach);
+  P4EST_ASSERT (avl_to_array_index == avl_to_array_array->elem_count);
+  avl_to_array_index = -1;
+  avl_to_array_array = NULL;
+}
+
+#endif /* AVL_COUNT */
 
 /* EOF p4est_avl.c */

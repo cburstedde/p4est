@@ -98,6 +98,12 @@ p4est_signal_handler (int sig)
   p4est_abort ();
 }
 
+int
+p4est_int32_compare (const void *v1, const void *v2)
+{
+  return (int32_t) v1 - (int32_t) v2;
+}
+
 void               *
 p4est_malloc (size_t size)
 {

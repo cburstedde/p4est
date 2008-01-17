@@ -125,8 +125,8 @@ p4est_quadrant_is_equal (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
   return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
 }
@@ -682,6 +682,7 @@ p4est_quadrant_checksum (p4est_array_t * quadrants,
   p4est_array_resize (checkarray, (qcount - first_quadrant) * 3);
   for (k = first_quadrant; k < qcount; ++k) {
     q = p4est_array_index (quadrants, k);
+    P4EST_ASSERT (p4est_quadrant_is_extended (q));
     check = p4est_array_index (checkarray, (k - first_quadrant) * 3);
     check[0] = htonl ((uint32_t) q->x);
     check[1] = htonl ((uint32_t) q->y);
@@ -1052,12 +1053,12 @@ p4est_find_higher_bound (p4est_array_t * array,
 }
 
 void
-p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
-                            p4est_array_t * not, p4est_array_t * out)
+p4est_tree_compute_overlap (p4est_tree_t * tree, int32_t qtree,
+                            p4est_array_t * in, p4est_array_t * out)
 {
   int                 i, j, guess;
   int                 k, l, which;
-  int                 treecount, incount, dupcount, notcount, outcount;
+  int                 treecount, incount, outcount;
   int                 first_index, last_index;
   int32_t             qh, rh;
   p4est_quadrant_t    treefd, treeld;
@@ -1066,7 +1067,6 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   p4est_quadrant_t   *inq, *outq;
 
   P4EST_ASSERT (p4est_tree_is_complete (tree));
-  P4EST_ASSERT (out->elem_count == 0);
 
   P4EST_QUADRANT_INIT (&treefd);
   P4EST_QUADRANT_INIT (&treeld);
@@ -1079,7 +1079,7 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   /* assign some numbers */
   treecount = tree->quadrants->elem_count;
   incount = in->elem_count;
-  outcount = 0;
+  outcount = out->elem_count;
   rh = (1 << P4EST_MAXLEVEL);
 
   /* return if there is nothing to do */
@@ -1096,6 +1096,13 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   /* loop over input list of quadrants */
   for (i = 0; i < incount; ++i) {
     inq = p4est_array_index (in, i);
+    if ((int32_t) inq->user_data != qtree) {
+      continue;
+    }
+    if (!p4est_quadrant_is_valid (inq)) {
+      P4EST_ASSERT (p4est_quadrant_is_extended (inq));
+      continue;
+    }
     qh = (1 << (P4EST_MAXLEVEL - inq->level));
 
     /* loop over the insulation layer of inq */
@@ -1165,18 +1172,28 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
             p4est_array_resize (out, outcount + 1);
             outq = p4est_array_index (out, outcount);
             *outq = *tq;
+            outq->user_data = (void *) qtree;
             ++outcount;
           }
         }
       }
     }
   }
+}
+
+void
+p4est_tree_uniqify_overlap (p4est_array_t * not, p4est_array_t * out)
+{
+  int                 i, j;
+  int                 outcount, dupcount, notcount;
+  p4est_quadrant_t   *inq, *outq, *tq;
+
+  outcount = out->elem_count;
   if (outcount == 0) {
     return;
   }
 
   /* sort array and remove duplicates */
-  P4EST_ASSERT (outcount == out->elem_count);
   p4est_array_sort (out, p4est_quadrant_compare);
   dupcount = notcount = 0;
   i = 0;                        /* read counter */
@@ -1188,7 +1205,8 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
       ++dupcount;
       ++i;
     }
-    else if (p4est_array_bsearch (not, inq, p4est_quadrant_compare) != NULL) {
+    else if (p4est_array_bsearch (not, inq,
+                                  p4est_quadrant_compare_piggy) != NULL) {
       ++notcount;
       ++i;
     }
@@ -1205,11 +1223,6 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, p4est_array_t * in,
   P4EST_ASSERT (i == outcount);
   P4EST_ASSERT (j + dupcount + notcount == outcount);
   p4est_array_resize (out, j);
-
-  /*
-     printf ("Overlap %d in %d out %d dup %d not %d res %d\n",
-     treecount, incount, outcount, dupcount, notcount, out->elem_count);
-   */
 }
 
 void

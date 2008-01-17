@@ -34,6 +34,9 @@
 #ifndef _AVL_H
 #define _AVL_H
 
+/* modification to use p4est_array and p4est_mempool */
+#include <p4est_memory.h>
+
 /* modification to use count only */
 #define AVL_COUNT
 
@@ -196,6 +199,11 @@ extern avl_node_t *avl_at(const avl_tree_t *, unsigned int);
 /* Returns the rank of a node in the list. Counting starts at 0.
  * O(lg n) */
 extern unsigned int avl_index(const avl_node_t *);
+
+/* Copies all items into an array of void *.
+* O(n) */
+extern void avl_to_array (avl_tree_t *, p4est_array_t *);
+
 #endif
 
 #endif
