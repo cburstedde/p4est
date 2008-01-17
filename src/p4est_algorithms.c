@@ -136,7 +136,7 @@ p4est_quadrant_hash (const void *v)
 {
   const p4est_quadrant_t *q = v;
 
-  return p4est_quadrant_linear_id (q, q->level) % (1LL << 30);
+  return p4est_quadrant_linear_id (q, q->level) % (1ULL << 30);
 }
 
 int8_t
@@ -166,16 +166,10 @@ p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 int
 p4est_quadrant_is_extended (const p4est_quadrant_t * q)
 {
-  int32_t             qh = (1 << (P4EST_MAXLEVEL - q->level));
-  int32_t             rh = (1 << P4EST_MAXLEVEL);
-  int32_t             th = rh + (rh - qh);      /* watch for overflow */
-
   return
     (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
-    (q->x >= -rh && q->x <= th) &&
-    (q->y >= -rh && q->y <= th) &&
-    (((int64_t) q->x + rh & (qh - 1)) == 0) &&
-    (((int64_t) q->y + rh & (qh - 1)) == 0);
+    ((q->x & ((1 << (P4EST_MAXLEVEL - q->level)) - 1)) == 0) &&
+    ((q->y & ((1 << (P4EST_MAXLEVEL - q->level)) - 1)) == 0);
 }
 
 int
@@ -309,7 +303,7 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
 {
   int8_t              minlevel;
   int32_t             mask;
-  int64_t             i1, i2;
+  uint64_t            i1, i2;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (p4est_quadrant_is_valid (r));
@@ -338,7 +332,7 @@ int
 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
-  int64_t             i1, i2;
+  uint64_t            i1, i2;
   p4est_quadrant_t    a, b;
 
   /* validity of q and r is asserted in p4est_quadrant_compare */
@@ -562,23 +556,24 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
-int64_t
+uint64_t
 p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int8_t level)
 {
   int8_t              i;
-  int64_t             x, y;
-  int64_t             id;
+  uint64_t            x, y;
+  uint64_t            id;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level >= level && level >= 0);
 
+  /* this preserves the high bits from negative numbers */
   x = quadrant->x >> (P4EST_MAXLEVEL - level);
   y = quadrant->y >> (P4EST_MAXLEVEL - level);
 
   id = 0;
-  for (i = 0; i < level; ++i) {
-    id |= ((x & (1 << i)) << i);
-    id |= ((y & (1 << i)) << (i + 1));
+  for (i = 0; i < level + (32 - P4EST_MAXLEVEL); ++i) {
+    id |= ((x & (1ULL << i)) << i);
+    id |= ((y & (1ULL << i)) << (i + 1));
   }
 
   return id;
@@ -586,26 +581,29 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int8_t level)
 
 void
 p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
-                           int8_t level, int64_t id)
+                           int8_t level, uint64_t id)
 {
   int8_t              i;
 
   P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
-  P4EST_ASSERT (id < (1LL << (2 * level)));
+  if (level < P4EST_MAXLEVEL) {
+    P4EST_ASSERT (id < (1ULL << 2 * (level + (32 - P4EST_MAXLEVEL))));
+  }
 
   quadrant->level = level;
   quadrant->x = 0;
   quadrant->y = 0;
 
-  for (i = 0; i < level; ++i) {
-    quadrant->x |= (int32_t) ((id & (1LL << (2 * i))) >> i);
-    quadrant->y |= (int32_t) ((id & (1LL << (2 * i + 1))) >> (i + 1));
+  /* this may set the sign bit to create negative numbers */
+  for (i = 0; i < level + (32 - P4EST_MAXLEVEL); ++i) {
+    quadrant->x |= (int32_t) ((id & (1ULL << (2 * i))) >> i);
+    quadrant->y |= (int32_t) ((id & (1ULL << (2 * i + 1))) >> (i + 1));
   }
 
   quadrant->x <<= (P4EST_MAXLEVEL - level);
   quadrant->y <<= (P4EST_MAXLEVEL - level);
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
 }
 
 void

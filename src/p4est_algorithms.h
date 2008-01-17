@@ -47,7 +47,7 @@ int                 p4est_quadrant_compare_piggy (const void *v1,
  */
 int                 p4est_quadrant_is_equal (const void *v1, const void *v2);
 
-/** Computes a hash value for a quadrant.
+/** Computes a hash value for a quadrant in 0..2^30-1.
  */
 int                 p4est_quadrant_hash (const void *v);
 
@@ -56,15 +56,15 @@ int                 p4est_quadrant_hash (const void *v);
  */
 int8_t              p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
-/** Test if a quadrant has valid Morton indices.
+/** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns 1 if \a q is valid.
  */
 int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
-/** Test if a quadrant has valid Morton indices including the outer border.
+/** Test if a quadrant has valid Morton indices in the full index range.
  * \param [in] q Quadrant to be tested.
- * \return Returns 1 if \a q is valid.
+ * \return Returns 1 if \a q is extended.
  */
 int                 p4est_quadrant_is_extended (const p4est_quadrant_t * q);
 
@@ -226,7 +226,7 @@ void                p4est_quadrant_transform (const p4est_quadrant_t * q,
  * \note This is the inverse operation of p4est_quadrant_set_morton.
  *       The user_data of \a quadrant is never modified.
  */
-int64_t             p4est_quadrant_linear_id (const p4est_quadrant_t *
+uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
                                               quadrant, int8_t level);
 
 /** Set quadrant Morton indices based on linear position in uniform grid.
@@ -236,7 +236,7 @@ int64_t             p4est_quadrant_linear_id (const p4est_quadrant_t *
  *       The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
-                                               int8_t level, int64_t id);
+                                               int8_t level, uint64_t id);
 
 /** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.
