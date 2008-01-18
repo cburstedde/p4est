@@ -381,12 +381,10 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &G) == 0,
                      "is_sibling_D");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &G) == 1, "is_parent");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&G, &A) == 0, "is_parent");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &H) == 1, "is_parent");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&H, &A) == 0, "is_parent");
   P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &D) == 0, "is_parent");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &G) == 1, "is_parent_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&G, &A) == 0, "is_parent_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &D) == 0, "is_parent_D");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &H) == 1, "is_parent_D");
 
   P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &G) == 0, "is_ancestor");
   P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&G, &A) == 1, "is_ancestor");

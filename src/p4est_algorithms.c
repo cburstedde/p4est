@@ -165,8 +165,8 @@ p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
 {
   int32_t             exclorx, exclory;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
@@ -225,8 +225,8 @@ int
 p4est_quadrant_is_parent (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 
   return
     (q->level + 1 == r->level) &&
@@ -240,7 +240,7 @@ p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
 {
   p4est_quadrant_t    p;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
   /* validity of r is asserted in p4est_quadrant_parent */
   p4est_quadrant_parent (r, &p);
@@ -344,14 +344,14 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 void
 p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level > 0);
 
   r->x = q->x & ~(1 << (P4EST_MAXLEVEL - q->level));
   r->y = q->y & ~(1 << (P4EST_MAXLEVEL - q->level));
   r->level = (int8_t) (q->level - 1);
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
 void
