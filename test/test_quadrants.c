@@ -386,14 +386,12 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &D) == 0, "is_parent");
   P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &H) == 1, "is_parent_D");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &G) == 0, "is_ancestor");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&G, &A) == 1, "is_ancestor");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &D) == 1, "is_ancestor");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &G) == 0,
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &G) == 1, "is_ancestor");
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&G, &A) == 0, "is_ancestor");
+
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &G) == 1,
                      "is_ancestor_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 1,
-                     "is_ancestor_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &D) == 1,
+  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 0,
                      "is_ancestor_D");
 
   P4EST_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
@@ -413,6 +411,10 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &G) == 0, "children");
 
   p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3) == 1,
+                     "is_family");
+
+  p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
   p4est_quadrant_first_descendent (&A, &c1, 1);
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
                      "first_descendent");
@@ -426,8 +428,8 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f) == 1,
                      "set_morton/linear_id");
 
-  Aid = p4est_quadrant_linear_id (&A, P4EST_MAXLEVEL);
-  p4est_quadrant_set_morton (&a, P4EST_MAXLEVEL, Aid);
+  Aid = p4est_quadrant_linear_id (&A, 0);
+  p4est_quadrant_set_morton (&a, 0, Aid);
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1,
                      "set_morton/linear_id");
 

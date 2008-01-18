@@ -131,7 +131,7 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
   int                 id = 0;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
   id |= ((q->x & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x01 : 0);
   id |= ((q->y & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x02 : 0);
@@ -205,10 +205,10 @@ p4est_quadrant_is_family (const p4est_quadrant_t * q0,
 {
   int32_t             inc;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q0));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q3));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q0));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q3));
 
   if (q0->level != q1->level ||
       q0->level != q2->level || q0->level != q3->level) {
@@ -255,8 +255,8 @@ p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
   int32_t             exclorx;
   int32_t             exclory;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 
   if (q->level >= r->level) {
     return 0;
@@ -292,8 +292,8 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
   int32_t             mask;
   uint64_t            i1, i2;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 
   /* the condition q < r is checked implicitly */
 
@@ -362,7 +362,7 @@ p4est_quadrant_sibling (const p4est_quadrant_t * q, p4est_quadrant_t * r,
   int                 addy = (sibling_id & 0x02) >> 1;
   int                 shift = (1 << (P4EST_MAXLEVEL - q->level));
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level > 0);
   P4EST_ASSERT (sibling_id >= 0 && sibling_id < 4);
 
@@ -376,7 +376,7 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
                          p4est_quadrant_t * c0, p4est_quadrant_t * c1,
                          p4est_quadrant_t * c2, p4est_quadrant_t * c3)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
 
   c0->x = q->x;
@@ -395,17 +395,17 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
   c3->y = c2->y;
   c3->level = c0->level;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (c0));
-  P4EST_ASSERT (p4est_quadrant_is_valid (c1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (c2));
-  P4EST_ASSERT (p4est_quadrant_is_valid (c3));
+  P4EST_ASSERT (p4est_quadrant_is_extended (c0));
+  P4EST_ASSERT (p4est_quadrant_is_extended (c1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (c2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (c3));
 }
 
 void
 p4est_quadrant_first_descendent (const p4est_quadrant_t * q,
                                  p4est_quadrant_t * fd, int8_t level)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
 
   fd->x = q->x;
@@ -419,7 +419,7 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
 {
   int32_t             shift;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
 
   shift =
@@ -438,8 +438,8 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
   int32_t             exclorx, exclory;
   int32_t             maxclor, maxlevel;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
@@ -451,7 +451,7 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
   r->level = (int8_t) P4EST_MIN (P4EST_MAXLEVEL - maxlevel,
                                  P4EST_MIN (q1->level, q2->level));
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
 void
@@ -462,8 +462,8 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   p4est_quadrant_t    s1 = *q1;
   p4est_quadrant_t    s2 = *q2;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
   /* first stage: promote the deepest one to the same level */
   while (s1.level > s2.level) {
@@ -484,7 +484,7 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   r->y = s1.y;
   r->level = s1.level;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
 void
@@ -597,7 +597,7 @@ void
 p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
                           p4est_quadrant_t * quad, p4est_init_t init_fn)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+  P4EST_ASSERT (p4est_quadrant_is_extended (quad));
 
   if (p4est->data_size > 0) {
     quad->user_data = p4est_mempool_alloc (p4est->user_data_pool);
@@ -613,7 +613,7 @@ p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
 void
 p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+  P4EST_ASSERT (p4est_quadrant_is_extended (quad));
 
   if (p4est->data_size > 0) {
     p4est_mempool_free (p4est->user_data_pool, quad->user_data);
