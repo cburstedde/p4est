@@ -89,15 +89,23 @@ p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
 
-/** Create a connectivity structure for thu unit square
+/** Verify a connectivity structure
+ * \return  Returns 1 if structure is correct, 0 on error.
+ */
+int                 p4est_connectivity_verify (p4est_connectivity_t *
+                                               connectivity);
+
+/** Create a connectivity structure for the unit square
  */
 p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
 
-/** Create a connectivity structure for a three element mesh at a corner.
- *
- * This is used for testing multi tree forests.
+/** Create a connectivity structure for a three tree mesh at a corner.
  */
 p4est_connectivity_t *p4est_connectivity_new_corner (void);
+
+/** Create a connectivity structure for a five tree moebius band.
+ */
+p4est_connectivity_t *p4est_connectivity_new_moebius (void);
 
 /** Returns the transformation number from a tree to a neighbor tree.
  * \return  Returns -1 if there is no neighbor at that face, or 0..7.

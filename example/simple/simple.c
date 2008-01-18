@@ -22,9 +22,10 @@
 /*
  * Usage: p4est_simple <configuration> <level>
  *        possible configurations:
- *        o unit    Refinement on the unit square.
- *        o three   Refinement on a forest with three trees.
- *        o evil    Check second round of refinement with np=5 level=7
+ *        o unit     Refinement on the unit square.
+ *        o three    Refinement on a forest with three trees.
+ *        o evil     Check second round of refinement with np=5 level=7
+ *        o moebius  Refinement on a 5-tree Moebius band.
  */
 
 #include <p4est_algorithms.h>
@@ -37,6 +38,7 @@ enum
   P4EST_CONFIG_UNIT,
   P4EST_CONFIG_THREE,
   P4EST_CONFIG_EVIL,
+  P4EST_CONFIG_MOEBIUS,
 };
 
 typedef struct
@@ -68,6 +70,9 @@ refine_normal_fn (p4est_t * p4est, int32_t which_tree,
 {
   if (quadrant->level >= (refine_level - (which_tree % 3))) {
     return 0;
+  }
+  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+    return 1;
   }
   if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&
       quadrant->y == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2))) {
@@ -158,7 +163,7 @@ main (int argc, char **argv)
   /* process command line arguments */
   usage =
     "Arguments: <configuration> <level>\n"
-    "   Configuration can be any of unit|three|evil\n"
+    "   Configuration can be any of unit|three|evil|moebius\n"
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -175,6 +180,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "evil")) {
       config = P4EST_CONFIG_EVIL;
+    }
+    else if (!strcmp (argv[1], "moebius")) {
+      config = P4EST_CONFIG_MOEBIUS;
     }
     else {
       wrongusage = 1;
@@ -208,6 +216,9 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   if (config == P4EST_CONFIG_THREE) {
     connectivity = p4est_connectivity_new_corner ();
+  }
+  else if (config == P4EST_CONFIG_MOEBIUS) {
+    connectivity = p4est_connectivity_new_moebius ();
   }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
