@@ -62,22 +62,30 @@ p4est_quadrant_compare (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 
-  int32_t             exclorx, exclory;
+  uint32_t            exclorx, exclory;
+  int64_t             p1, p2, diff;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-  P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
+  /* these are unsigned variables that inherit the sign bits */
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
 
   if (exclory == 0 && exclorx == 0) {
-    return q1->level - q2->level;
+    return (int) q1->level - (int) q2->level;
   }
   else if (P4EST_LOG2_32 (exclory) >= P4EST_LOG2_32 (exclorx)) {
-    return q1->y - q2->y;
+    p1 = q1->y + ((q1->y >= 0) ? 0 : (1LL << 32));
+    p2 = q2->y + ((q2->y >= 0) ? 0 : (1LL << 32));
+    diff = p1 - p2;
+    return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
   else {
-    return q1->x - q2->x;
+    p1 = q1->x + ((q1->x >= 0) ? 0 : (1LL << 32));
+    p2 = q2->x + ((q2->x >= 0) ? 0 : (1LL << 32));
+    diff = p1 - p2;
+    return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
 }
 
@@ -87,35 +95,14 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 
-  int64_t             x1, y1, x2, y2;
-  int64_t             exclorx, exclory;
-  int32_t             data_diff =
-    (int32_t) q1->user_data - (int32_t) q2->user_data;
-
-  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
-  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+  int64_t             data_diff =
+    (int64_t) q1->user_data - (int64_t) q2->user_data;
 
   if (data_diff != 0) {
-    return data_diff;
-  }
-
-  x1 = q1->x + (int64_t) (1 << P4EST_MAXLEVEL);
-  y1 = q1->y + (int64_t) (1 << P4EST_MAXLEVEL);
-  x2 = q2->x + (int64_t) (1 << P4EST_MAXLEVEL);
-  y2 = q2->y + (int64_t) (1 << P4EST_MAXLEVEL);
-
-  /* these numbers still fit into an unsigned 32 bit integer for the log */
-  exclorx = x1 ^ x2;
-  exclory = y1 ^ y2;
-
-  if (exclory == 0 && exclorx == 0) {
-    return q1->level - q2->level;
-  }
-  else if (P4EST_LOG2_32 (exclory) >= P4EST_LOG2_32 (exclorx)) {
-    return y1 - y2;
+    return (data_diff < 0) ? -1 : 1;
   }
   else {
-    return x1 - x2;
+    return p4est_quadrant_compare (v1, v2);
   }
 }
 
