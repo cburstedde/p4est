@@ -33,7 +33,7 @@
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
 /** Compare two quadrants in their Morton ordering and the data pointer.
- * The data element is compared as (int32_t) v->user_data first.
+ * The data element is compared as non-negative (int32_t) v->user_data.
  * Both quadrants must be extended (superset of valid, see below).
  * \return Returns < 0 if \a v1 < \a v2,
  *                   0 if \a v1 == \a v2,

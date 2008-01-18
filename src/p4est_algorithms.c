@@ -95,11 +95,12 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 
-  int64_t             data_diff =
-    (int64_t) q1->user_data - (int64_t) q2->user_data;
+  /* expect non-negative information in user_data */
+  int32_t             data_diff =
+    (int32_t) q1->user_data - (int32_t) q2->user_data;
 
   if (data_diff != 0) {
-    return (data_diff < 0) ? -1 : 1;
+    return data_diff;
   }
   else {
     return p4est_quadrant_compare (v1, v2);

@@ -79,6 +79,7 @@ main (void)
 {
   int                 i, j, incount;
   int8_t              level, mid, cid;
+  int8_t              id0, id1, id2, id3;
   int64_t             index1, index2;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
@@ -87,7 +88,7 @@ main (void)
   p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
   p4est_quadrant_t    c0, c1, c2, c3;
-  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, O;
+  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, O, P, Q;
   p4est_quadrant_t    a, f, g, h;
   int64_t             Aid, Fid;
 
@@ -289,6 +290,8 @@ main (void)
   P4EST_QUADRANT_INIT (&E);
   P4EST_QUADRANT_INIT (&F);
   P4EST_QUADRANT_INIT (&G);
+  P4EST_QUADRANT_INIT (&P);
+  P4EST_QUADRANT_INIT (&Q);
 
   A.x = -1 << 30;
   A.y = -1 << 30;
@@ -346,6 +349,8 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_compare (&G, &F) > 0, "compare");
   P4EST_CHECK_ABORT (p4est_quadrant_compare (&F, &G) < 0, "compare");
 
+  A.user_data = NULL;
+  B.user_data = NULL;
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &A) == 0,
                      "compare_piggy");
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &B) > 0,
@@ -353,11 +358,22 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&B, &A) < 0,
                      "compare_piggy");
 
+  F.user_data = NULL;
+  G.user_data = NULL;
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
                      "compare_piggy");
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0,
                      "compare_piggy");
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0,
+                     "compare_piggy");
+
+  F.user_data = (void *) 89134529;
+  G.user_data = (void *) 2341333;
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
+                     "compare_piggy");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) < 0,
+                     "compare_piggy");
+  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) > 0,
                      "compare_piggy");
 
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &A) == 1, "is_equal");
@@ -413,6 +429,13 @@ main (void)
   p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
   P4EST_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3) == 1,
                      "is_family");
+  id0 = p4est_quadrant_child_id (&c0);
+  id1 = p4est_quadrant_child_id (&c1);
+  id2 = p4est_quadrant_child_id (&c2);
+  id3 = p4est_quadrant_child_id (&c3);
+  P4EST_CHECK_ABORT (id0 == 0 && id1 == 1 && id2 == 2 && id3 == 3,
+                     "child_id");
+  P4EST_CHECK_ABORT (p4est_quadrant_child_id (&G) == 3, "child_id");
 
   p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
   p4est_quadrant_first_descendent (&A, &c1, 1);
@@ -430,6 +453,7 @@ main (void)
 
   Aid = p4est_quadrant_linear_id (&A, 0);
   p4est_quadrant_set_morton (&a, 0, Aid);
+  P4EST_CHECK_ABORT (Aid == 15, "linear_id");
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1,
                      "set_morton/linear_id");
 
@@ -438,6 +462,11 @@ main (void)
 
   p4est_nearest_common_ancestor_D (&I, &H, &a);
   P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor_D");
+
+  p4est_quadrant_set_morton (&P, 0, 11);
+  p4est_quadrant_set_morton (&Q, 0, 12);
+  P4EST_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
+  P4EST_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 
   p4est_memory_check ();
 
