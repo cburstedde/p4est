@@ -341,6 +341,16 @@ p4est_connectivity_read (const char *filename,
   if (retval) {
     fprintf (stderr, "Failed to close p4est mesh file %s (%d:%d)\n", filename,
              retval, EOF);
+    p4est_connectivity_destroy (*connectivity);
+    *connectivity = NULL;
+    return 1;
+  }
+
+  if (!p4est_connectivity_is_valid (*connectivity)) {
+    fprintf (stderr, "Mesh file %s connectivity strucure is invalid\n",
+             filename);
+    p4est_connectivity_destroy (*connectivity);
+    *connectivity = NULL;
     return 1;
   }
 
@@ -353,6 +363,8 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
   int                 k, num_trees, num_vertices;
   int32_t            *tree_to_vertex, *tree_to_tree;
   int8_t             *tree_to_face;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   num_trees = connectivity->num_trees;
   num_vertices = connectivity->num_vertices;

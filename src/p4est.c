@@ -62,6 +62,8 @@ p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
   p4est_quadrant_t    a;
   p4est_quadrant_t    b;
 
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
+
   P4EST_QUADRANT_INIT (&a);
   P4EST_QUADRANT_INIT (&b);
 

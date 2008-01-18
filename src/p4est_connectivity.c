@@ -61,6 +61,7 @@ p4est_connectivity_new (int32_t num_trees, int32_t num_vertices,
 
   connectivity->vtt_offset = P4EST_ALLOC (int32_t, num_vertices + 1);
   P4EST_CHECK_ALLOC (connectivity->vtt_offset);
+  connectivity->vtt_offset[num_vertices] = -1;  /* catch bugs */
 
   connectivity->vertex_to_tree = P4EST_ALLOC (int32_t, num_vtt);
   P4EST_CHECK_ALLOC (connectivity->vertex_to_tree);
@@ -82,7 +83,7 @@ p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
 }
 
 int
-p4est_connectivity_verify (p4est_connectivity_t * connectivity)
+p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
 {
   int                 found;
   int8_t              face, nface, corner;
@@ -97,6 +98,11 @@ p4est_connectivity_verify (p4est_connectivity_t * connectivity)
   const int8_t       *ttf = connectivity->tree_to_face;
   const int32_t      *vtt = connectivity->vertex_to_tree;
   const int32_t      *voff = connectivity->vtt_offset;
+
+  if (num_trees < 1 || num_vertices < 4) {
+    fprintf (stderr, "Invalid numbers of trees or vertices");
+    return 0;
+  }
 
   for (tree = 0; tree < num_trees; ++tree) {
     for (face = 0; face < 4; ++face) {
@@ -227,7 +233,7 @@ p4est_connectivity_new_unitsquare (void)
   connectivity->vertex_to_tree[2] = 0;
   connectivity->vertex_to_tree[3] = 0;
 
-  P4EST_ASSERT (p4est_connectivity_verify (connectivity));
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   return connectivity;
 }
@@ -279,7 +285,7 @@ p4est_connectivity_new_corner (void)
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
           sizeof (int32_t) * num_vtt);
 
-  P4EST_ASSERT (p4est_connectivity_verify (connectivity));
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   return connectivity;
 }
@@ -351,7 +357,7 @@ p4est_connectivity_new_moebius (void)
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
           sizeof (int32_t) * num_vtt);
 
-  P4EST_ASSERT (p4est_connectivity_verify (connectivity));
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   return connectivity;
 }

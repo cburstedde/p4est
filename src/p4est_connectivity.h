@@ -89,11 +89,11 @@ p4est_connectivity_t *p4est_connectivity_new (int32_t num_trees,
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
 
-/** Verify a connectivity structure
- * \return  Returns 1 if structure is correct, 0 on error.
+/** Examine a connectivity structure
+ * \return  Returns 1 if structure is valid, 0 otherwise.
  */
-int                 p4est_connectivity_verify (p4est_connectivity_t *
-                                               connectivity);
+int                 p4est_connectivity_is_valid (p4est_connectivity_t *
+                                                 connectivity);
 
 /** Create a connectivity structure for the unit square
  */

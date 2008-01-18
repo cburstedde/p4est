@@ -88,7 +88,7 @@ main (void)
   p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
   p4est_quadrant_t    c0, c1, c2, c3;
-  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, O, P, Q;
+  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
   p4est_quadrant_t    a, f, g, h;
   int64_t             Aid, Fid;
 
@@ -328,10 +328,6 @@ main (void)
   I.x = -1 << 30;
   I.y = -1 << 29;
   I.level = 1;
-
-  O.x = 0;
-  O.y = 0;
-  O.level = 0;
 
   P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended");
   P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended");
