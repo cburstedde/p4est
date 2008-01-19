@@ -42,6 +42,9 @@ static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
 static const int    number_peer_windows = 5;
 
+static const int8_t fully_owned_flag = 0x01;
+static const int8_t any_face_flag = 0x02;
+
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, FILE * nout, p4est_connectivity_t * connectivity,
            int data_size, p4est_init_t init_fn)
@@ -585,6 +588,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   const int           rank = p4est->mpirank;
   int                 data_pool_size, all_incount, all_outcount;
   int                 face, any_face, face_contact[4];
+  int8_t             *tree_flags;
   int32_t             j;
   int32_t             rh;
   int32_t             treecount;
@@ -644,6 +648,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_QUADRANT_INIT (&tempq);
   P4EST_QUADRANT_INIT (&ld);
 #endif /* HAVE_MPI */
+
+  /* tree status flags (max 8 per tree) */
+  tree_flags = P4EST_ALLOC (int8_t, conn->num_trees);
+  P4EST_CHECK_ALLOC (tree_flags);
+  for (i = 0; i < conn->num_trees; ++i) {
+    tree_flags[i] = 0;
+  }
 
 #ifdef HAVE_MPI
   /* will contain first and last peer (inclusive) for each processor */
@@ -705,6 +716,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       face_contact[face] = (conn->tree_to_tree[4 * j + face] != j);
       any_face = any_face || face_contact[face];
     }
+    if (any_face) {
+      tree_flags[j] |= any_face_flag;
+    }
     tree = p4est_array_index (p4est->trees, j);
     all_incount += tree->quadrants->elem_count;
 
@@ -725,18 +739,20 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
 #ifdef HAVE_MPI
     /* check if this tree is not shared with other processors */
-    if (p4est->mpicomm == MPI_COMM_NULL) {
-      continue;
-    }
     tree_fully_owned = 0;
     if ((j > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
         (j < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
       /* all quadrants in this tree are owned by me */
       tree_fully_owned = 1;
+      tree_flags[j] |= fully_owned_flag;
       if (!any_face) {
         /* this tree is isolated, no balance between trees */
         continue;
       }
+    }
+    if (p4est->mpicomm == MPI_COMM_NULL) {
+      /* skip all else for single processor */
+      continue;
     }
 
     /* identify boundary quadrants and prepare them to be sent */
@@ -1368,7 +1384,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       if (!p4est_quadrant_is_valid (s)) {
         P4EST_ASSERT (k < peer->first_count);
         P4EST_ASSERT (p4est_quadrant_is_extended (s));
-        continue;
       }
       qtree = (int32_t) s->user_data;
       P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
@@ -1387,10 +1402,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* rebalance and clamp result back to original tree boundaries */
   p4est->local_num_quadrants = 0;
   for (j = first_tree; j <= last_tree; ++j) {
-    /* check if we are the only processor in this tree */
+    /* check if we are the only processor in an isolated tree */
     tree = p4est_array_index (p4est->trees, j);
-    if ((j > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
-        (j < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
+    if ((tree_flags[j] & fully_owned_flag) &&
+        !(tree_flags[j] & any_face_flag)) {
       p4est->local_num_quadrants += tree->quadrants->elem_count;
       continue;
     }
@@ -1405,10 +1420,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     treecount = tree->quadrants->elem_count;
 
     /* figure out the new elements outside the original tree */
-    first_index = 0;
-    last_index = treecount - 1;
+    for (first_index = 0; first_index < treecount; ++first_index) {
+      q = p4est_array_index (tree->quadrants, first_index);
+      P4EST_ASSERT (p4est_quadrant_is_extended (q));
+      if (p4est_quadrant_is_valid (q)) {
+        break;
+      }
+    }
     if (j == first_tree) {
-      for (first_index = 0; first_index < treecount; ++first_index) {
+      for (; first_index < treecount; ++first_index) {
         q = p4est_array_index (tree->quadrants, first_index);
         if (p4est_quadrant_compare (q, &mylow) >= 0 ||
             (q->x == mylow.x && q->y == mylow.y)) {
@@ -1416,8 +1436,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
       }
     }
+    for (last_index = treecount - 1; last_index >= 0; --last_index) {
+      q = p4est_array_index (tree->quadrants, last_index);
+      P4EST_ASSERT (p4est_quadrant_is_extended (q));
+      if (p4est_quadrant_is_valid (q)) {
+        break;
+      }
+    }
     if (j == next_tree) {
-      for (last_index = treecount - 1; last_index >= 0; --last_index) {
+      for (; last_index >= 0; --last_index) {
         q = p4est_array_index (tree->quadrants, last_index);
         if (p4est_quadrant_compare (q, &nextlow) < 0 &&
             (q->x != nextlow.x || q->y != nextlow.y)) {
@@ -1461,6 +1488,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     tree->maxlevel = 0;
     for (k = 0; k < qcount; ++k) {
       q = p4est_array_index (tree->quadrants, k);
+      P4EST_ASSERT (p4est_quadrant_is_valid (q));
       ++tree->quadrants_per_level[q->level];
       tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
     }
@@ -1514,8 +1542,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
   }
 
-#ifdef HAVE_MPI
   /* cleanup temporary storage */
+  P4EST_FREE (tree_flags);
+#ifdef HAVE_MPI
   for (i = 0; i < p4est->mpisize; ++i) {
     peer = p4est_array_index (peers, i);
     p4est_array_reset (&peer->send_first);

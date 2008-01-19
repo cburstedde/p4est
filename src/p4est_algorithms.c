@@ -598,7 +598,7 @@ void
 p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
                           p4est_quadrant_t * quad, p4est_init_t init_fn)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+  P4EST_ASSERT (p4est_quadrant_is_extended (quad));
 
   if (p4est->data_size > 0) {
     quad->user_data = p4est_mempool_alloc (p4est->user_data_pool);
@@ -606,7 +606,7 @@ p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
   else {
     quad->user_data = NULL;
   }
-  if (init_fn != NULL) {
+  if (init_fn != NULL && p4est_quadrant_is_valid (quad)) {
     init_fn (p4est, which_tree, quad);
   }
 }
@@ -614,7 +614,7 @@ p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
 void
 p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+  P4EST_ASSERT (p4est_quadrant_is_extended (quad));
 
   if (p4est->data_size > 0) {
     p4est_mempool_free (p4est->user_data_pool, quad->user_data);
@@ -1646,7 +1646,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 
   /* sort and linearize tree */
   p4est_array_sort (inlist, p4est_quadrant_compare);
-  P4EST_ASSERT (p4est_tree_is_sorted (tree));
   p4est_linearize_subtree (p4est, tree);
 
   /* run sanity checks */
