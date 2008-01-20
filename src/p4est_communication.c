@@ -125,7 +125,9 @@ p4est_comm_find_owner (p4est_t * p4est, int32_t which_tree,
     cur.x = p4est->global_first_indices[3 * (guess + 1) + 1];
     cur.y = p4est->global_first_indices[3 * (guess + 1) + 2];
     if (which_tree > ctree ||
-        (which_tree == ctree && (p4est_quadrant_compare (&cur, q) <= 0))) {
+        (which_tree == ctree &&
+         (p4est_quadrant_compare (&cur, q) <= 0 ||
+          (q->x == cur.x && q->y == cur.y)))) {
       proc_low = guess + 1;
       guess = (proc_low + proc_high) / 2;
       continue;
