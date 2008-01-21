@@ -25,6 +25,7 @@
  *        o unit     Refinement on the unit square.
  *        o three    Refinement on a forest with three trees.
  *        o evil     Check second round of refinement with np=5 level=7
+ *        o evil3    Check second round of refinement on three trees
  *        o moebius  Refinement on a 5-tree Moebius band.
  */
 
@@ -38,6 +39,7 @@ enum
   P4EST_CONFIG_UNIT,
   P4EST_CONFIG_THREE,
   P4EST_CONFIG_EVIL,
+  P4EST_CONFIG_EVIL3,
   P4EST_CONFIG_MOEBIUS,
 };
 
@@ -93,6 +95,39 @@ refine_evil_fn (p4est_t * p4est, int32_t which_tree,
     return 0;
   }
   if (p4est->mpirank <= 1) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static int
+refine_evil3_fn (p4est_t * p4est, int32_t which_tree,
+                 p4est_quadrant_t * quadrant)
+{
+  int32_t             u2;
+  p4est_quadrant_t    ref;
+
+  P4EST_QUADRANT_INIT (&ref);
+
+  u2 = (1 << (P4EST_MAXLEVEL - 2));
+
+  if (which_tree == 0) {
+    ref.x = 3 * u2;
+    ref.y = 2 * u2;
+  }
+  else if (which_tree == 1) {
+    ref.x = 2 * u2;
+    ref.y = 3 * u2;
+  }
+  ref.level = 2;
+
+  if (quadrant->level >= refine_level) {
+    return 0;
+  }
+  if ((which_tree == 0 || which_tree == 1) &&
+      (p4est_quadrant_is_equal (&ref, quadrant) ||
+       p4est_quadrant_is_ancestor (&ref, quadrant))) {
     return 1;
   }
 
@@ -163,7 +198,7 @@ main (int argc, char **argv)
   /* process command line arguments */
   usage =
     "Arguments: <configuration> <level>\n"
-    "   Configuration can be any of unit|three|evil|moebius\n"
+    "   Configuration can be any of unit|three|evil|evil3|moebius\n"
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -180,6 +215,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "evil")) {
       config = P4EST_CONFIG_EVIL;
+    }
+    else if (!strcmp (argv[1], "evil3")) {
+      config = P4EST_CONFIG_EVIL3;
     }
     else if (!strcmp (argv[1], "moebius")) {
       config = P4EST_CONFIG_MOEBIUS;
@@ -208,13 +246,17 @@ main (int argc, char **argv)
     refine_fn = refine_evil_fn;
     coarsen_fn = coarsen_evil_fn;
   }
+  else if (config == P4EST_CONFIG_EVIL3) {
+    refine_fn = refine_evil3_fn;
+    coarsen_fn = NULL;
+  }
   else {
     refine_fn = refine_normal_fn;
     coarsen_fn = NULL;
   }
 
   /* create connectivity and forest structures */
-  if (config == P4EST_CONFIG_THREE) {
+  if (config == P4EST_CONFIG_THREE || config == P4EST_CONFIG_EVIL3) {
     connectivity = p4est_connectivity_new_corner ();
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
