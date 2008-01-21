@@ -27,6 +27,7 @@
  *        o evil     Check second round of refinement with np=5 level=7
  *        o evil3    Check second round of refinement on three trees
  *        o moebius  Refinement on a 5-tree Moebius band.
+ *        o star     Refinement on a 6-tree star shaped domain.
  */
 
 #include <p4est_algorithms.h>
@@ -41,6 +42,7 @@ enum
   P4EST_CONFIG_EVIL,
   P4EST_CONFIG_EVIL3,
   P4EST_CONFIG_MOEBIUS,
+  P4EST_CONFIG_STAR,
 };
 
 typedef struct
@@ -198,7 +200,7 @@ main (int argc, char **argv)
   /* process command line arguments */
   usage =
     "Arguments: <configuration> <level>\n"
-    "   Configuration can be any of unit|three|evil|evil3|moebius\n"
+    "   Configuration can be any of unit|three|evil|evil3|moebius|star\n"
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -221,6 +223,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "moebius")) {
       config = P4EST_CONFIG_MOEBIUS;
+    }
+    else if (!strcmp (argv[1], "star")) {
+      config = P4EST_CONFIG_STAR;
     }
     else {
       wrongusage = 1;
@@ -261,6 +266,9 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
     connectivity = p4est_connectivity_new_moebius ();
+  }
+  else if (config == P4EST_CONFIG_STAR) {
+    connectivity = p4est_connectivity_new_star ();
   }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();

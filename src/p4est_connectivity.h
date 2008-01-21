@@ -107,6 +107,10 @@ p4est_connectivity_t *p4est_connectivity_new_corner (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_moebius (void);
 
+/** Create a connectivity structure for a six tree star.
+ */
+p4est_connectivity_t *p4est_connectivity_new_star (void);
+
 /** Returns the transformation number from a tree to a neighbor tree.
  * \return  Returns -1 if there is no neighbor at that face, or 0..7.
  */

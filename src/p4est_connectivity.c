@@ -92,7 +92,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
   int32_t             v1, v2, w1, w2;
   const int32_t       num_trees = connectivity->num_trees;
   const int32_t       num_vertices = connectivity->num_vertices;
-  /* const int32_t       num_vtt = connectivity->vtt_offset[num_vertices]; */
+  const int32_t       num_vtt = connectivity->vtt_offset[num_vertices];
   const int32_t      *ttv = connectivity->tree_to_vertex;
   const int32_t      *ttt = connectivity->tree_to_tree;
   const int8_t       *ttf = connectivity->tree_to_face;
@@ -147,7 +147,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
 
   for (vertex = 0; vertex < num_vertices; ++vertex) {
     corner_trees = voff[vertex + 1] - voff[vertex];
-    if (corner_trees <= 0) {
+    if (corner_trees <= 0 || voff[vertex + 1] > num_vtt) {
       fprintf (stderr, "Vertex offset mismatch %d\n", vertex);
       return 0;
     }
@@ -352,6 +352,79 @@ p4est_connectivity_new_moebius (void)
           sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vertices, vertices,
           sizeof (double) * 3 * num_vertices);
+  memcpy (connectivity->vtt_offset, vtt_offset,
+          sizeof (int32_t) * (num_vertices + 1));
+  memcpy (connectivity->vertex_to_tree, vertex_to_tree,
+          sizeof (int32_t) * num_vtt);
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
+
+  return connectivity;
+}
+
+p4est_connectivity_t *
+p4est_connectivity_new_star (void)
+{
+  int                 i;
+  p4est_connectivity_t *connectivity;
+  const double        r1 = 1.;
+  const double        r2 = 1.5;
+  const int32_t       num_trees = 6;
+  const int32_t       num_vertices = 13;
+  const int32_t       num_vtt = 24;
+  const int32_t       tree_to_vertex[6 * 4] = {
+    0, 1, 2, 3,
+    0, 3, 4, 5,
+    5, 6, 7, 0,
+    8, 7, 0, 9,
+    9, 0, 11, 10,
+    12, 1, 0, 11,
+  };
+  const int32_t       tree_to_tree[6 * 4] = {
+    5, 0, 0, 1,
+    0, 1, 1, 2,
+    2, 2, 3, 1,
+    3, 2, 4, 3,
+    3, 5, 4, 4,
+    5, 0, 4, 5,
+  };
+  const int8_t        tree_to_face[6 * 4] = {
+    1, 1, 2, 0,
+    3, 1, 2, 3,
+    0, 1, 1, 3,
+    0, 2, 0, 3,
+    2, 2, 2, 3,
+    0, 0, 1, 3,
+  };
+  const int32_t       vtt_offset[13 + 1] = {
+    0, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24,
+  };
+  const int32_t       vertex_to_tree[24] = {
+    0, 1, 2, 3, 4, 5, 5, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5,
+  };
+
+  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
+
+  connectivity->vertices[0 * 3 + 0] = 0;
+  connectivity->vertices[0 * 3 + 1] = 0;
+  connectivity->vertices[0 * 3 + 2] = 0;
+  for (i = 0; i < 6; ++i) {
+    connectivity->vertices[(2 * i + 1) * 3 + 0] = r1 * cos (i * M_PI / 3);
+    connectivity->vertices[(2 * i + 1) * 3 + 1] = r1 * sin (i * M_PI / 3);
+    connectivity->vertices[(2 * i + 1) * 3 + 2] = 0;
+    connectivity->vertices[(2 * i + 2) * 3 + 0] =
+      r2 * cos ((i + .5) * M_PI / 3);
+    connectivity->vertices[(2 * i + 2) * 3 + 1] =
+      r2 * sin ((i + .5) * M_PI / 3);
+    connectivity->vertices[(2 * i + 2) * 3 + 2] = 0;
+  }
+
+  memcpy (connectivity->tree_to_vertex, tree_to_vertex,
+          sizeof (int32_t) * 4 * num_trees);
+  memcpy (connectivity->tree_to_tree, tree_to_tree,
+          sizeof (int32_t) * 4 * num_trees);
+  memcpy (connectivity->tree_to_face, tree_to_face,
+          sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vtt_offset, vtt_offset,
           sizeof (int32_t) * (num_vertices + 1));
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
