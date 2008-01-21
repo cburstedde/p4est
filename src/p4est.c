@@ -595,7 +595,6 @@ p4est_balance_response (p4est_t * p4est, int32_t peer_id,
   int32_t            *pi;
   p4est_array_t      *qarray, *tree_array;
   p4est_quadrant_t   *q;
-  p4est_tree_t       *tree;
 
   qarray = &peer->recv_both;
   qcount = qarray->elem_count;
@@ -628,11 +627,9 @@ p4est_balance_response (p4est_t * p4est, int32_t peer_id,
   for (nt = 0; nt < num_receive_trees; ++nt) {
     pi = p4est_array_index (tree_array, nt);
     qtree = *pi;
-    tree = p4est_array_index (p4est->trees, qtree);
-    P4EST_ASSERT (tree->quadrants->elem_count > 0);
 
     /* compute overlap quadrants */
-    p4est_tree_compute_overlap (tree, qtree, qarray, &peer->send_second);
+    p4est_tree_compute_overlap (p4est, qtree, qarray, &peer->send_second);
   }
   p4est_tree_uniqify_overlap (&peer->send_first, &peer->send_second);
   p4est_array_destroy (tree_array);
@@ -644,11 +641,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   const int           rank = p4est->mpirank;
   int                 data_pool_size, all_incount, all_outcount;
   int                 k, l, back;
-  int                 face, any_face, face_contact[4];
+  int                 any_face, face_contact[4];
   int                 any_quad, quad_contact[4];
   int                 tree_fully_owned, inter_tree, transform, found;
   int                 first_index, last_index;
   int                 which, scount, pos;
+  int8_t              face;
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qh, rh;
@@ -744,6 +742,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     p4est_array_init (&peer->send_second, sizeof (p4est_quadrant_t));
     p4est_array_init (&peer->recv_both, sizeof (p4est_quadrant_t));
     peer->first_count = peer->second_count = 0;
+    peer->have_first_count = peer->have_first_load = 0;
+    peer->have_second_count = peer->have_second_load = 0;
   }
 
   /* compute first quadrants on finest level for comparison for me and next */
@@ -855,20 +855,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               if (quad_contact[face] && face_contact[face]) {
                 qtree = conn->tree_to_tree[4 * j + face];
                 P4EST_ASSERT (qtree != j);
-                switch (face) {
-                case 0:
-                  s->y += rh;
-                  break;
-                case 1:
-                  s->x -= rh;
-                  break;
-                case 2:
-                  s->y -= rh;
-                  break;
-                case 3:
-                  s->x += rh;
-                  break;
-                }
                 break;
               }
             }
@@ -876,7 +862,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               /* this quadrant ran across a face with no neighbor */
               continue;
             }
-            transform = p4est_find_face_transform (conn, j, (int8_t) face);
+            transform = p4est_find_face_transform (conn, j, face);
+            p4est_quadrant_translate (s, face);
             p4est_quadrant_transform (s, &tempq, transform);
             s = &tempq;
           }
@@ -974,7 +961,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   nwin = 0;
   for (j = 0; j < p4est->mpisize; ++j) {
     peer = p4est_array_index (peers, j);
-    if (peer->send_first.elem_count == 0) {
+    if (peer->send_first.elem_count == 0 || j == rank) {
       continue;
     }
     if (prev == -1) {
@@ -1165,12 +1152,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
   /* find out who is sending to me and receive quadrant counts */
   for (j = 0; j < p4est->mpisize; ++j) {
-    peer = p4est_array_index (peers, j);
-    peer->have_first_count = peer->have_first_load = 0;
-    peer->have_second_count = peer->have_second_load = 0;
     if (j == rank) {
       continue;
     }
+    peer = p4est_array_index (peers, j);
     for (i = 0; i < number_peer_windows; ++i) {
       first_bound = peer_boundaries[twopeerw * j + 2 * i];
       last_bound = peer_boundaries[twopeerw * j + 2 * i + 1];
@@ -1407,10 +1392,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* merge received quadrants into correct tree */
     for (k = 0; k < qcount; ++k) {
       s = p4est_array_index (qarray, k);
-      if (!p4est_quadrant_is_valid (s)) {
-        P4EST_ASSERT (k < peer->first_count);
-        P4EST_ASSERT (p4est_quadrant_is_extended (s));
-      }
+      P4EST_ASSERT (p4est_quadrant_is_extended (s));
       qtree = (int32_t) s->user_data;
       P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
       tree = p4est_array_index (p4est->trees, qtree);

@@ -489,18 +489,42 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 }
 
 void
+p4est_quadrant_translate (p4est_quadrant_t * q, int8_t face)
+{
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+
+  switch (face) {
+  case 0:
+    q->y += (1 << P4EST_MAXLEVEL);
+    break;
+  case 1:
+    q->x -= (1 << P4EST_MAXLEVEL);
+    break;
+  case 2:
+    q->y -= (1 << P4EST_MAXLEVEL);
+    break;
+  case 3:
+    q->x += (1 << P4EST_MAXLEVEL);
+    break;
+  default:
+    P4EST_ASSERT_NOT_REACHED ();
+    break;
+  }
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+}
+
+void
 p4est_quadrant_transform (const p4est_quadrant_t * q,
                           p4est_quadrant_t * r, int transform_type)
 {
-  int32_t             qh, rh, th;
+  int32_t             th;
 
   P4EST_ASSERT (q != r);
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (0 <= transform_type && transform_type < 8);
 
-  qh = (1 << (P4EST_MAXLEVEL - q->level));
-  rh = (1 << P4EST_MAXLEVEL);
-  th = rh - qh;
+  th = (1 << P4EST_MAXLEVEL) - (1 << (P4EST_MAXLEVEL - q->level));
 
   switch (transform_type) {
   case 0:                      /* identity */
@@ -1039,31 +1063,39 @@ p4est_find_higher_bound (p4est_array_t * array,
 }
 
 void
-p4est_tree_compute_overlap (p4est_tree_t * tree, int32_t qtree,
+p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
                             p4est_array_t * in, p4est_array_t * out)
 {
   int                 i, j, guess;
   int                 k, l, which;
   int                 treecount, incount, outcount;
   int                 first_index, last_index;
+  int                 inter_tree, transform, outface[4];
+  int8_t              face;
+  int32_t             ntree;
   int32_t             qh, rh;
   p4est_quadrant_t    treefd, treeld;
-  p4est_quadrant_t    fd, ld, ins[9];
+  p4est_quadrant_t    fd, ld, tempq, ins[9];
   p4est_quadrant_t   *tq, *s;
   p4est_quadrant_t   *inq, *outq;
+  p4est_tree_t       *tree;
+  p4est_connectivity_t *conn = p4est->connectivity;
 
+  tree = p4est_array_index (p4est->trees, qtree);
   P4EST_ASSERT (p4est_tree_is_complete (tree));
 
   P4EST_QUADRANT_INIT (&treefd);
   P4EST_QUADRANT_INIT (&treeld);
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
+  P4EST_QUADRANT_INIT (&tempq);
   for (which = 0; which < 9; ++which) {
     P4EST_QUADRANT_INIT (&ins[which]);
   }
 
   /* assign some numbers */
   treecount = tree->quadrants->elem_count;
+  P4EST_ASSERT (treecount > 0);
   incount = in->elem_count;
   outcount = out->elem_count;
   rh = (1 << P4EST_MAXLEVEL);
@@ -1085,9 +1117,29 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, int32_t qtree,
     if ((int32_t) inq->user_data != qtree) {
       continue;
     }
+    face = -1;
+    ntree = qtree;
+    inter_tree = 0;
+    transform = -1;
     if (!p4est_quadrant_is_valid (inq)) {
       P4EST_ASSERT (p4est_quadrant_is_extended (inq));
-      continue;
+      inter_tree = 1;
+      outface[0] = (inq->y < 0);
+      outface[1] = (inq->x >= rh);
+      outface[2] = (inq->y >= rh);
+      outface[3] = (inq->x < 0);
+      if ((outface[0] || outface[2]) && (outface[1] || outface[3])) {
+        /* this quadrant comes across a corner */
+        continue;
+      }
+      for (face = 0; face < 4; ++face) {
+        if (outface[face]) {
+          break;
+        }
+      }
+      P4EST_ASSERT (face < 4);
+      ntree = conn->tree_to_tree[4 * qtree + face];
+      transform = p4est_find_face_transform (conn, qtree, face);
     }
     qh = (1 << (P4EST_MAXLEVEL - inq->level));
 
@@ -1105,7 +1157,7 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, int32_t qtree,
         s->x += (l - 1) * qh;
         s->y += (k - 1) * qh;
         if ((s->x < 0 || s->x >= rh) || (s->y < 0 || s->y >= rh)) {
-          /* this quadrant is relevant for inter-tree balancing */
+          /* this quadrant is outside this tree, no overlap */
           continue;
         }
         p4est_quadrant_first_descendent (s, &fd, P4EST_MAXLEVEL);
@@ -1157,8 +1209,15 @@ p4est_tree_compute_overlap (p4est_tree_t * tree, int32_t qtree,
           if (tq->level > inq->level + 1) {
             p4est_array_resize (out, outcount + 1);
             outq = p4est_array_index (out, outcount);
-            *outq = *tq;
-            outq->user_data = (void *) qtree;
+            if (inter_tree) {
+              tempq = *tq;
+              p4est_quadrant_translate (&tempq, face);
+              p4est_quadrant_transform (&tempq, outq, transform);
+            }
+            else {
+              *outq = *tq;
+            }
+            outq->user_data = (void *) ntree;
             ++outcount;
           }
         }
@@ -1373,9 +1432,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 count_already_inlist, count_already_outlist;
   int                 first_valid, last_valid;
   int                *key, *parent_key;
+  int                 outface[4];
   int8_t              l, inmaxl, bbound;
   int8_t              qid, sid, pid;
-  int8_t              outface[4];
   int32_t             ph, rh;
   void               *vlookup;
   p4est_quadrant_t   *family[4];

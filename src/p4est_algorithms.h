@@ -210,6 +210,13 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
+/** Shift a quadrant by the size of a tree depending on the face.
+ * \param [in]     face  Number of the face to move across, in 0..3.
+ * \param [in,out] q     The quadrant to be modified.
+ */
+void                p4est_quadrant_translate (p4est_quadrant_t * q,
+                                              int8_t face);
+
 /** Transforms a quadrant between trees.
  * \param [in]     q  Input quadrant.
  * \param [in,out] r  Existing quadrant whose Morton index will be filled.
@@ -328,7 +335,7 @@ int                 p4est_is_valid (p4est_t * p4est);
  * \param [in] in       A sorted linear list of quadrants.
  * \param [in,out] out  A sorted subset of tree->quadrants.
  */
-void                p4est_tree_compute_overlap (p4est_tree_t * tree,
+void                p4est_tree_compute_overlap (p4est_t * p4est,
                                                 int32_t qtree,
                                                 p4est_array_t * in,
                                                 p4est_array_t * out);
