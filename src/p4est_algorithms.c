@@ -489,6 +489,41 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 }
 
 void
+p4est_quadrant_corner (p4est_quadrant_t * q, int8_t corner, int inside)
+{
+  int32_t             lshift, rshift;
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+
+  lshift = (inside ? 0 : -(1 << (P4EST_MAXLEVEL - q->level)));
+  rshift = (inside ?
+            ((1 << P4EST_MAXLEVEL) - (1 << (P4EST_MAXLEVEL - q->level))) :
+            (1 << P4EST_MAXLEVEL));
+
+  switch (corner) {
+  case 0:
+    q->x = q->y = lshift;
+    break;
+  case 1:
+    q->x = rshift;
+    q->y = lshift;
+    break;
+  case 2:
+    q->x = q->y = rshift;
+    break;
+  case 3:
+    q->x = lshift;
+    q->y = rshift;
+    break;
+  default:
+    P4EST_ASSERT_NOT_REACHED ();
+    break;
+  }
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+}
+
+void
 p4est_quadrant_translate (p4est_quadrant_t * q, int8_t face)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
@@ -749,6 +784,54 @@ p4est_tree_is_linear (p4est_tree_t * tree)
       return 0;
     }
     q1 = q2;
+  }
+
+  return 1;
+}
+
+/** Check if a tree is sorted/linear except for diagonally outside corners.
+ * \param [in] check_linearity  Boolean for additional check for linearity.
+ */
+static int
+p4est_tree_is_almost_sorted (p4est_tree_t * tree, int check_linearity)
+{
+  int                 i;
+  int                 face_contact1;
+  int                 face_contact2;
+  p4est_quadrant_t   *q1, *q2;
+
+  if (tree->quadrants->elem_count <= 1) {
+    return 1;
+  }
+
+  q1 = p4est_array_index (tree->quadrants, 0);
+  face_contact1 = 0;
+  face_contact1 |= ((q1->y < 0) ? 0x01 : 0);
+  face_contact1 |= ((q1->x >= (1 << P4EST_MAXLEVEL)) ? 0x02 : 0);
+  face_contact1 |= ((q1->y >= (1 << P4EST_MAXLEVEL)) ? 0x04 : 0);
+  face_contact1 |= ((q1->x < 0) ? 0x08 : 0);
+  for (i = 1; i < tree->quadrants->elem_count; ++i) {
+    q2 = p4est_array_index (tree->quadrants, i);
+    face_contact2 = 0;
+    face_contact2 |= ((q2->y < 0) ? 0x01 : 0);
+    face_contact2 |= ((q2->x >= (1 << P4EST_MAXLEVEL)) ? 0x02 : 0);
+    face_contact2 |= ((q2->y >= (1 << P4EST_MAXLEVEL)) ? 0x04 : 0);
+    face_contact2 |= ((q2->x < 0) ? 0x08 : 0);
+
+    if ((face_contact1 & 0x05) && (face_contact1 & 0x0a) &&
+        face_contact1 == face_contact2) {
+      /* both quadrants are outside the same corner and may overlap */
+    }
+    else {
+      if (p4est_quadrant_compare (q1, q2) >= 0) {
+        return 0;
+      }
+      if (check_linearity && p4est_quadrant_is_ancestor (q1, q2)) {
+        return 0;
+      }
+    }
+    q1 = q2;
+    face_contact1 = face_contact2;
   }
 
   return 1;
@@ -1446,7 +1529,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   p4est_hash_t       *hash[P4EST_MAXLEVEL + 1];
   p4est_array_t      *outlist[P4EST_MAXLEVEL + 1];
 
-  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+  P4EST_ASSERT (p4est_tree_is_almost_sorted (tree, 1));
 
   P4EST_QUADRANT_INIT (&ld);
   P4EST_QUADRANT_INIT (&tree_first);
@@ -1786,7 +1869,7 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   int8_t              i, maxlevel;
   p4est_quadrant_t   *q1, *q2;
 
-  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+  P4EST_ASSERT (p4est_tree_is_almost_sorted (tree, 0));
 
   incount = tree->quadrants->elem_count;
   if (incount <= 1) {
@@ -1803,7 +1886,8 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   q1 = p4est_array_index (tree->quadrants, current);
   while (rest < incount) {
     q2 = p4est_array_index (tree->quadrants, rest);
-    if (p4est_quadrant_is_ancestor (q1, q2)) {
+    if (p4est_quadrant_is_equal (q1, q2) ||
+        p4est_quadrant_is_ancestor (q1, q2)) {
       --tree->quadrants_per_level[q1->level];
       p4est_quadrant_free_data (p4est, q1);
       *q1 = *q2;

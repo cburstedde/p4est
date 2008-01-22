@@ -210,9 +210,17 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
+/** Move a quadrant inside or diagonally outside a corner position.
+ * \param [in,out] q       The quadrant to be modified.
+ * \param [in]     corner  Number of the corner, in 0..3.
+ * \param [int]    inside  Boolean flag for inside or diagonally outside.
+ */
+void                p4est_quadrant_corner (p4est_quadrant_t * q,
+                                           int8_t corner, int inside);
+
 /** Shift a quadrant by the size of a tree depending on the face.
- * \param [in]     face  Number of the face to move across, in 0..3.
  * \param [in,out] q     The quadrant to be modified.
+ * \param [in]     face  Number of the face to move across, in 0..3.
  */
 void                p4est_quadrant_translate (p4est_quadrant_t * q,
                                               int8_t face);

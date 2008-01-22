@@ -45,13 +45,13 @@ main (int argc, char **argv)
   /* insert two quadrants */
   p4est_array_resize (tree->quadrants, 4);
   q = p4est_array_index (tree->quadrants, 0);
-  p4est_quadrant_set_morton (q, 1, 0);
-  q = p4est_array_index (tree->quadrants, 1);
   p4est_quadrant_set_morton (q, 3, 13);
-  q = p4est_array_index (tree->quadrants, 2);
+  q = p4est_array_index (tree->quadrants, 1);
   p4est_quadrant_set_morton (q, 1, 1);
-  q = p4est_array_index (tree->quadrants, 3);
+  q = p4est_array_index (tree->quadrants, 2);
   p4est_quadrant_set_morton (q, 1, 2);
+  q = p4est_array_index (tree->quadrants, 3);
+  p4est_quadrant_set_morton (q, 1, 3);
   for (k = 0; k < tree->quadrants->elem_count; ++k) {
     q = p4est_array_index (tree->quadrants, k);
     q->user_data = p4est_mempool_alloc (p4est->user_data_pool);
