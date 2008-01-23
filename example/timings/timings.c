@@ -154,7 +154,7 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_partition (p4est);
+  p4est_partition (p4est, NULL);
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   elapsed_partition = start + MPI_Wtime ();
@@ -167,7 +167,7 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_partition (p4est);
+  p4est_partition (p4est, NULL);
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   elapsed_repartition = start + MPI_Wtime ();

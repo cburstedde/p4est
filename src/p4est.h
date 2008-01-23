@@ -130,6 +130,12 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
                                         p4est_quadrant_t * q2,
                                         p4est_quadrant_t * q3);
 
+/** Callback function prototype to calculate weights for partitioning.
+ * \return Returns a value >= 0.0 as the quadrant weight.
+ */
+typedef double      (*p4est_weight_t) (p4est_t * p4est, int32_t which_tree,
+                                       p4est_quadrant_t * quadrant);
+
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \
   do { memset (q, -1, sizeof (p4est_quadrant_t)); } while (0)
@@ -195,10 +201,12 @@ void                p4est_balance (p4est_t * p4est, p4est_init_t init_fn);
  * The forest will be partitioned between processors where they each
  * have an approximately equal number of quadrants.
  *
- * \param [in,out] p4est The forest that will be partitioned.
- *
+ * \param [in,out] p4est      The forest that will be partitioned.
+ * \param [in]     weight_fn  A weighting function or NULL
+ *                            for uniform partitioning.
  */
-void                p4est_partition (p4est_t * p4est);
+void                p4est_partition (p4est_t * p4est,
+                                     p4est_weight_t weight_fn);
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.

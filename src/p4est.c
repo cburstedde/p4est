@@ -1612,7 +1612,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 }
 
 void
-p4est_partition (p4est_t * p4est)
+p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
   int                 p;
   int                 num_procs = p4est->mpisize;
@@ -1623,11 +1623,17 @@ p4est_partition (p4est_t * p4est)
   num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
   P4EST_CHECK_ALLOC (num_quadrants_in_proc);
 
-  /* Divide up the quadants equally */
-  for (p = 0, next_quadrant = 0; p < num_procs; ++p) {
-    prev_quadrant = next_quadrant;
-    next_quadrant = (global_num_quadrants * (p + 1)) / num_procs;
-    num_quadrants_in_proc[p] = (int32_t) (next_quadrant - prev_quadrant);
+  if (weight_fn == NULL) {
+    /* Divide up the quadants equally */
+    for (p = 0, next_quadrant = 0; p < num_procs; ++p) {
+      prev_quadrant = next_quadrant;
+      next_quadrant = (global_num_quadrants * (p + 1)) / num_procs;
+      num_quadrants_in_proc[p] = (int32_t) (next_quadrant - prev_quadrant);
+    }
+  }
+  else {
+    /* Do a weighted partition */
+    P4EST_ASSERT_NOT_REACHED ();
   }
 
   p4est_partition_given (p4est, num_quadrants_in_proc);
