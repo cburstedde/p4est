@@ -831,10 +831,7 @@ p4est_tree_is_linear (p4est_tree_t * tree)
   return 1;
 }
 
-/** Check if a tree is sorted/linear except for diagonally outside corners.
- * \param [in] check_linearity  Boolean for additional check for linearity.
- */
-static int
+int
 p4est_tree_is_almost_sorted (p4est_tree_t * tree, int check_linearity)
 {
   int                 i;
@@ -1088,10 +1085,7 @@ p4est_is_valid (p4est_t * p4est)
 
 /* here come the heavyweight algorithms */
 
-/** Find the lowest position tq in a quadrant array such that tq >= q.
- * \return  Returns the guess id if found, -1 otherwise.
- */
-static int
+int
 p4est_find_lower_bound (p4est_array_t * array,
                         const p4est_quadrant_t * q, int guess)
 {
@@ -1137,10 +1131,7 @@ p4est_find_lower_bound (p4est_array_t * array,
   return guess;
 }
 
-/** Find the highest position tq in a quadrant array such that tq <= q.
- * \return  Returns the id of the matching quadrant, or -1 if not found.
- */
-static int
+int
 p4est_find_higher_bound (p4est_array_t * array,
                          const p4est_quadrant_t * q, int guess)
 {

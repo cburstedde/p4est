@@ -1420,8 +1420,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner quadrant from the second pass of balance */
         P4EST_ASSERT (k >= peer->first_count);
-        P4EST_ASSERT ((s->x < 0 && s->y < 0) ||
-                      (s->x < 0 && s->y >= rh) ||
+        P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
                       (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
         continue;
       }

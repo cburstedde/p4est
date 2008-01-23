@@ -311,6 +311,13 @@ int                 p4est_tree_is_linear (p4est_tree_t * tree);
  */
 int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
+/** Check if a tree is sorted/linear except for diagonally outside corners.
+ * \param [in]  check_linearity  Boolean for additional check for linearity.
+ * \return Returns 1 if almost sorted/linear, 0 otherwise.
+ */
+int                 p4est_tree_is_almost_sorted (p4est_tree_t * tree,
+                                                 int check_linearity);
+
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
  * The string denotes the relation to the previous quadrant and can be:
@@ -338,6 +345,20 @@ void                p4est_tree_print (p4est_tree_t * tree, int identifier,
  * \return Returns 1 if valid, 0 otherwise.
  */
 int                 p4est_is_valid (p4est_t * p4est);
+
+/** Find the lowest position tq in a quadrant array such that tq >= q.
+ * \return  Returns the id of the matching quadrant, or -1 if not found.
+ */
+int                 p4est_find_lower_bound (p4est_array_t * array,
+                                            const p4est_quadrant_t * q,
+                                            int guess);
+
+/** Find the highest position tq in a quadrant array such that tq <= q.
+ * \return  Returns the id of the matching quadrant, or -1 if not found.
+ */
+int                 p4est_find_higher_bound (p4est_array_t * array,
+                                             const p4est_quadrant_t * q,
+                                             int guess);
 
 /** Compute the overlap of a number of insulation layers with a tree.
  * Every quadrant out of the insulation layer of the quadrants in \a in
