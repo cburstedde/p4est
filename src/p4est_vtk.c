@@ -21,7 +21,7 @@
 
 #include <p4est_base.h>
 #include <p4est_vtk.h>
-#include <p4est_algorithms.h>
+#include <p4est_mesh.h>
 #include <libb64.h>
 #include <zlib.h>
 
