@@ -25,6 +25,15 @@
 /* finest level of the quadtree */
 #define P4EST_MAXLEVEL 30
 
+/* the length of a root quadrant */
+#define P4EST_RH (1 << P4EST_MAXLEVEL)
+
+/* the length of a quadrant of level l */
+#define P4EST_QH(l) (1 << (P4EST_MAXLEVEL - (l)))
+
+/* the offset of the last descendent at level l */
+#define P4EST_LD(l) (P4EST_RH - P4EST_QH (l))
+
 /* this will be changed to 1 by make install */
 #define P4EST_CONFIG_INSTALLED 0
 

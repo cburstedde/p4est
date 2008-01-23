@@ -1934,7 +1934,8 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
 }
 
 void
-p4est_partition_given (p4est_t * p4est, int32_t * new_num_quadrants_in_proc)
+p4est_partition_given (p4est_t * p4est,
+                       const int32_t * new_num_quadrants_in_proc)
 {
   int64_t            *global_last_quad_index = p4est->global_last_quad_index;
   int32_t             num_procs = p4est->mpisize;
