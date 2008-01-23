@@ -2695,4 +2695,24 @@ p4est_partition_given (p4est_t * p4est,
   return total_quadrants_shipped;
 }
 
+void
+p4est_order_local_vertices (p4est_t * p4est,
+                            int32_t *
+                            num_uniq_local_vertices,
+                            int32_t * quadrant_to_local_vertex)
+{
+  int32_t             Ntotal = p4est->local_num_quadrants * 4;
+  int32_t             Ncells = p4est->local_num_quadrants;
+  int32_t             i;
+
+  for (i = 0; i < Ncells; ++i) {
+    quadrant_to_local_vertex[4 * i + 0] = 4 * i + 0;
+    quadrant_to_local_vertex[4 * i + 1] = 4 * i + 1;
+    quadrant_to_local_vertex[4 * i + 2] = 4 * i + 2;
+    quadrant_to_local_vertex[4 * i + 3] = 4 * i + 3;
+  }
+
+  *num_uniq_local_vertices = Ntotal;
+}
+
 /* EOF p4est_algorithms.c */
