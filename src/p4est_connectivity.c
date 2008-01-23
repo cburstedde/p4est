@@ -475,4 +475,53 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   return p4est_transform_table[face][neighbor_face][orientation];
 }
 
+void
+p4est_find_corner_info (p4est_connectivity_t * conn,
+                        int32_t itree, int8_t icorner,
+                        p4est_array_t * corner_info)
+{
+  int                 incount, num_ctrees, ctree, num_found;
+  int8_t              ncorner;
+  int32_t             ntree, ntree1, ntree2;
+  int32_t             vertex;
+  p4est_corner_info_t *ci;
+
+  P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
+  P4EST_ASSERT (0 <= icorner && icorner < 4);
+  P4EST_ASSERT (corner_info->elem_size == sizeof (p4est_corner_info_t));
+  incount = corner_info->elem_count;
+
+  vertex = conn->tree_to_vertex[4 * itree + icorner];
+  P4EST_ASSERT (0 <= vertex && vertex < conn->num_vertices);
+
+  ntree1 = conn->tree_to_tree[4 * itree + (icorner + 3) % 4];
+  ntree2 = conn->tree_to_tree[4 * itree + icorner];
+
+  num_ctrees = conn->vtt_offset[vertex + 1] - conn->vtt_offset[vertex];
+  num_found = 0;
+  for (ctree = 0; ctree < num_ctrees; ++ctree) {
+    ntree = conn->vertex_to_tree[conn->vtt_offset[vertex] + ctree];
+    if (ntree == itree || ntree == ntree1 || ntree == ntree2) {
+      continue;
+    }
+    /* else we have a true corner with ntree, find its id */
+    for (ncorner = 0; ncorner < 4; ++ncorner) {
+      if (vertex == conn->tree_to_vertex[4 * ntree + ncorner]) {
+        break;
+      }
+    }
+    P4EST_ASSERT (ncorner < 4);
+    if (num_found >= incount) {
+      p4est_array_resize (corner_info, num_found + 1);
+    }
+    ci = p4est_array_index (corner_info, num_found);
+    ci->ntree = ntree;
+    ci->ncorner = ncorner;
+    ++num_found;
+  }
+  p4est_array_resize (corner_info, num_found);
+  P4EST_ASSERT (num_ctrees == num_found +
+                1 + (ntree1 != itree) + (ntree2 != itree));
+}
+
 /* EOF p4est_connectivity.c */

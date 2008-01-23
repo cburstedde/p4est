@@ -22,6 +22,8 @@
 #ifndef __P4EST_CONNECTIVITY_H__
 #define __P4EST_CONNECTIVITY_H__
 
+/* include necessary headers */
+#include <p4est_memory.h>
 #include <stdint.h>
 
 typedef struct p4est_connectivity
@@ -66,6 +68,13 @@ typedef struct p4est_connectivity
                                          */
 }
 p4est_connectivity_t;
+
+typedef struct
+{
+  int32_t             ntree;
+  int8_t              ncorner;
+}
+p4est_corner_info_t;
 
 /** Contains integers 0..7 denoting the type of inter-tree transformation.
  * The first 4 transformations are rotations about 0, -90, 180, 90.
@@ -117,5 +126,13 @@ p4est_connectivity_t *p4est_connectivity_new_star (void);
 int                 p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
                                                int32_t itree, int8_t face);
+
+/** Fills an array with information about corner neighbors.
+ * \param [in,out]  corner_info  Array of p4est_corner_info_t members.
+ */
+void                p4est_find_corner_info (p4est_connectivity_t *
+                                            connectivity,
+                                            int32_t itree, int8_t icorner,
+                                            p4est_array_t * corner_info);
 
 #endif /* !__P4EST_CONNECTIVITY_H__ */

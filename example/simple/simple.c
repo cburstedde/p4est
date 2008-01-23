@@ -275,8 +275,6 @@ main (int argc, char **argv)
   }
   p4est = p4est_new (mpi->mpicomm, stdout, connectivity,
                      sizeof (user_data_t), init_fn);
-  p4est_tree_print (p4est_array_index (p4est->trees, 0),
-                    mpi->mpirank, stdout);
   p4est_vtk_write_file (p4est, "mesh_simple_new");
 
   /* refinement and coarsening */

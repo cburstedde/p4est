@@ -69,6 +69,7 @@ main (int argc, char **argv)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
+  unsigned            crc;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
@@ -100,6 +101,14 @@ main (int argc, char **argv)
   /* balance the mesh */
   p4est_balance (p4est, NULL);
   p4est_vtk_write_file (p4est, "mesh_second_balanced");
+
+  /* print forest checksum */
+  crc = p4est_checksum (p4est);
+  if (mpi->mpirank == 0) {
+    if (p4est->nout != NULL) {
+      fprintf (p4est->nout, "Tree checksum 0x%x\n", crc);
+    }
+  }
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

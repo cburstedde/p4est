@@ -60,7 +60,6 @@
 
 /* include necessary headers */
 #include <p4est_connectivity.h>
-#include <p4est_memory.h>
 
 typedef struct p4est_quadrant
 {
