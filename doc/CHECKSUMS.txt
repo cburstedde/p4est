@@ -1,0 +1,12 @@
+
+This files holds various checksums of example runs for reference.
+If they ever change, something is badly wrong!
+
+    np    |   example   |   parameters   |   crc
+----------o-------------o----------------o------------
+        1 | timings     | 10             | 0x6e3e83c4
+        1 | timings     | 11             | 0x334bc3de
+  1, 3, 5 | simple      | moebius 6      | 0x98ab6cb2
+        6 | simple      | moebius 6      | 0x6d2d6d6c
+        5 | simple      | star 6         | 0x38d3736f
+        5 | second      |                | 0x324eb631
