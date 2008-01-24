@@ -1753,10 +1753,10 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   int                 send_lowest, send_highest;
   int                 num_sends;
   int32_t             j, k, qcount;
-  int32_t             cut, my_lowcut, my_highcut;
   int32_t            *num_quadrants_in_proc;
   int64_t             prev_quadrant, next_quadrant;
   int64_t             weight, weight_sum;
+  int64_t             cut, my_lowcut, my_highcut;
   int64_t             send_index, recv_low, recv_high;
   int64_t            *local_weights;    /* cumulative weights by quadrant */
   int64_t            *global_weight_sums;
@@ -1802,7 +1802,6 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     P4EST_ASSERT (k == local_num_quadrants);
     weight_sum = local_weights[local_num_quadrants];
-
 #if(0)
     printf ("[%d] local weight sum %lld\n", rank, weight_sum);
 #endif
@@ -1828,21 +1827,22 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     P4EST_ASSERT (local_weights[local_num_quadrants] ==
                   global_weight_sums[rank + 1]);
     weight_sum = global_weight_sums[num_procs];
+#if(0)
+    if (rank == 0) {
+      for (i = 0; i <= num_procs; ++i) {
+        printf ("   global weight sum [%d] %lld\n",
+                i, global_weight_sums[i]);
+      }
+    }
+#endif
+    
+    /* if all quadrants have zero weight we do nothing */
     if (weight_sum == 0) {
-      /* all quadrants have zero weight, we do nothing */
       P4EST_FREE (local_weights);
       P4EST_FREE (global_weight_sums);
       P4EST_FREE (num_quadrants_in_proc);
       return;
     }
-
-#if(0)
-    if (rank == 0) {
-      for (i = 0; i <= num_procs; ++i) {
-        printf ("global weight sum [%d] %lld\n", i, global_weight_sums[i]);
-      }
-    }
-#endif
 
     /* determine processor ids to send to */
     send_lowest = num_procs;
