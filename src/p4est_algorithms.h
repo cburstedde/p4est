@@ -115,6 +115,7 @@ int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
 
 /** Test if a quadrant is an ancestor of another quadrant.
  * Descriptive, slower version of \a p4est_quadrant_is_ancestor.
+ * Contrary to \a p4est_quadrant_is_ancestor, it aborts for inter-tree q, r.
  * For debugging and educational purposes only.
  */
 int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
@@ -187,7 +188,7 @@ void                p4est_quadrant_last_descendent (const p4est_quadrant_t *
                                                     q, p4est_quadrant_t * ld,
                                                     int8_t level);
 
-/** Computes the nearest common ancestor of two quadrants.
+/** Computes the nearest common ancestor of two quadrants in the same tree.
  * \param [in]     q1 First input quadrant.
  * \param [in]     q2 Second input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled.
@@ -200,7 +201,7 @@ void                p4est_nearest_common_ancestor (const p4est_quadrant_t *
                                                    const p4est_quadrant_t *
                                                    q2, p4est_quadrant_t * r);
 
-/** Computes the nearest common ancestor of two quadrants.
+/** Computes the nearest common ancestor of two quadrants in the same tree.
  * Descriptive, slower version of \a p4est_nearest_common_ancestor.
  * For debugging and educationial purposes only.
  */

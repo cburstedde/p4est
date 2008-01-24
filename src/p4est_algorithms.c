@@ -134,6 +134,10 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
+  if (q->level == 0) {
+    return 0;
+  }
+
   id |= ((q->x & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x01 : 0);
   id |= ((q->y & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x02 : 0);
 
@@ -169,6 +173,10 @@ p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
+  if (q1->level == 0) {
+    return 0;
+  }
+
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
   if (exclorx == 0 && exclory == 0) {
@@ -186,6 +194,11 @@ p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
                              const p4est_quadrant_t * q2)
 {
   p4est_quadrant_t    p1, p2;
+
+  /* make sure the quadrant_parent functions below don't abort */
+  if (q1->level == 0) {
+    return 0;
+  }
 
   /* validity of q1 and q2 is asserted in p4est_quadrant_is_equal */
   if (p4est_quadrant_is_equal (q1, q2)) {
@@ -211,7 +224,7 @@ p4est_quadrant_is_family (const p4est_quadrant_t * q0,
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
   P4EST_ASSERT (p4est_quadrant_is_extended (q3));
 
-  if (q0->level != q1->level ||
+  if (q0->level == 0 || q0->level != q1->level ||
       q0->level != q2->level || q0->level != q3->level) {
     return 0;
   }
@@ -242,6 +255,11 @@ p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
   p4est_quadrant_t    p;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
+
+  /* make sure the quadrant_parent function below doesn't abort */
+  if (r->level == 0) {
+    return 0;
+  }
 
   /* validity of r is asserted in p4est_quadrant_parent */
   p4est_quadrant_parent (r, &p);
@@ -280,6 +298,7 @@ p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
     return 0;
   }
 
+  /* this will abort if q and r are in different trees */
   p4est_nearest_common_ancestor_D (q, r, &s);
 
   return p4est_quadrant_is_equal (q, &s);
@@ -436,8 +455,8 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2,
                                p4est_quadrant_t * r)
 {
-  int32_t             exclorx, exclory;
-  int32_t             maxclor, maxlevel;
+  int                 maxlevel;
+  uint32_t            exclorx, exclory, maxclor;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
@@ -446,6 +465,8 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
   exclory = q1->y ^ q2->y;
   maxclor = exclorx | exclory;
   maxlevel = P4EST_LOG2_32 (maxclor) + 1;
+
+  P4EST_ASSERT (maxlevel <= P4EST_MAXLEVEL);
 
   r->x = q1->x & ~((1 << maxlevel) - 1);
   r->y = q1->y & ~((1 << maxlevel) - 1);

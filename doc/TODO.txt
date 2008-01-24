@@ -1,6 +1,8 @@
+
+ * Improve or replace our hash map
  * Allow zero quadrants on a processor
- * Partition Tree (done)
-   ? Algo 4 weighted? blocked
+ * Partition Tree
+   ? algo 4 (block partition)
  * doxygen
  * more test cases
  * vtk output
