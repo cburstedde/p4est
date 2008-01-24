@@ -56,6 +56,14 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   return 1;
 }
 
+/* not working yet
+static int
+weight_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+{
+  return 1;
+}
+*/
+
 int
 main (int argc, char **argv)
 {
@@ -63,7 +71,7 @@ main (int argc, char **argv)
   int                 mpiret;
 #endif
   MPI_Comm            mpicomm;
-  p4est_t            *p4est;
+  p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
   int32_t             num_procs, rank;
   int32_t             i;
@@ -137,6 +145,15 @@ main (int argc, char **argv)
       P4EST_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
     }
   }
+
+  /* do a weighted partition */
+  /* not working yet
+     p4est_partition (p4est, weight_fn);
+   */
+
+  /* copy the p4est */
+  copy = p4est_copy (p4est, 1);
+  p4est_destroy (copy);
 
   /* clean up and exit */
   P4EST_FREE (num_quadrants_in_proc);

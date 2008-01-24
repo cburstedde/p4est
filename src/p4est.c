@@ -287,6 +287,92 @@ p4est_destroy (p4est_t * p4est)
   P4EST_FREE (p4est);
 }
 
+p4est_t            *
+p4est_copy (p4est_t * input, int copy_data)
+{
+  const int32_t       num_trees = input->connectivity->num_trees;
+  const int32_t       first_tree = input->first_local_tree;
+  const int32_t       last_tree = input->last_local_tree;
+  int                 icount;
+  int8_t              i;
+  int32_t             j, k;
+  p4est_t            *p4est;
+  p4est_tree_t       *itree, *ptree;
+  p4est_quadrant_t   *iq, *pq;
+
+  /* create a shallow copy and zero out dependent fields */
+  p4est = P4EST_ALLOC (p4est_t, 1);
+  P4EST_CHECK_ALLOC (p4est);
+  memcpy (p4est, input, sizeof (p4est_t));
+  p4est->global_last_quad_index = NULL;
+  p4est->global_first_indices = NULL;
+  p4est->trees = NULL;
+  p4est->user_data_pool = NULL;
+  p4est->quadrant_pool = NULL;
+
+  /* allocate a user data pool if necessary and a quadrant pool */
+  if (copy_data && p4est->data_size > 0) {
+    p4est->user_data_pool = p4est_mempool_new (p4est->data_size);
+  }
+  else {
+    p4est->data_size = 0;
+  }
+  p4est->quadrant_pool = p4est_mempool_new (sizeof (p4est_quadrant_t));
+
+  /* copy quadrants for each tree */
+  p4est->trees = p4est_array_new (sizeof (p4est_tree_t));
+  p4est_array_resize (p4est->trees, num_trees);
+  for (j = 0; j < num_trees; ++j) {
+    itree = p4est_array_index (input->trees, j);
+    ptree = p4est_array_index (p4est->trees, j);
+    ptree->quadrants = p4est_array_new (sizeof (p4est_quadrant_t));
+    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+      ptree->quadrants_per_level[i] = itree->quadrants_per_level[i];
+    }
+    ptree->maxlevel = itree->maxlevel;
+  }
+  for (j = first_tree; j <= last_tree; ++j) {
+    itree = p4est_array_index (input->trees, j);
+    icount = itree->quadrants->elem_count;
+    ptree = p4est_array_index (p4est->trees, j);
+    p4est_array_resize (ptree->quadrants, icount);
+    memcpy (ptree->quadrants->array, itree->quadrants->array,
+            icount * sizeof (p4est_quadrant_t));
+    if (p4est->data_size > 0) {
+      for (k = 0; k < icount; ++k) {
+        iq = p4est_array_index (itree->quadrants, k);
+        pq = p4est_array_index (ptree->quadrants, k);
+        pq->user_data = p4est_mempool_alloc (p4est->user_data_pool);
+        memcpy (pq->user_data, iq->user_data, p4est->data_size);
+      }
+    }
+    else {
+      for (k = 0; k < icount; ++k) {
+        pq = p4est_array_index (ptree->quadrants, k);
+        pq->user_data = NULL;
+      }
+    }
+  }
+
+  /* allocate and copy global quadrant count */
+  p4est->global_last_quad_index = P4EST_ALLOC (int64_t, p4est->mpisize);
+  P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
+  memcpy (p4est->global_last_quad_index, input->global_last_quad_index,
+          p4est->mpisize * sizeof (int64_t));
+
+  /* allocate and copy global partition information */
+  p4est->global_first_indices = P4EST_ALLOC (int32_t,
+                                             3 * (p4est->mpisize + 1));
+  P4EST_CHECK_ALLOC (p4est->global_first_indices);
+  memcpy (p4est->global_first_indices, input->global_first_indices,
+          3 * (p4est->mpisize + 1) * sizeof (int32_t));
+
+  /* check for valid p4est and return */
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  return p4est;
+}
+
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
@@ -1614,11 +1700,24 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
-  int                 p;
-  int                 num_procs = p4est->mpisize;
+#ifdef HAVE_MPI
+  int                 mpiret;
+#endif /* HAVE_MPI */
+  const int           num_procs = p4est->mpisize;
+  const int           rank = p4est->mpirank;
+  const int32_t       first_tree = p4est->first_local_tree;
+  const int32_t       last_tree = p4est->last_local_tree;
+  const int32_t       local_num_quadrants = p4est->local_num_quadrants;
+  const int64_t       global_num_quadrants = p4est->global_num_quadrants;
+  int                 i, p;
+  int32_t             j, k;
   int32_t            *num_quadrants_in_proc;
   int64_t             prev_quadrant, next_quadrant;
-  int64_t             global_num_quadrants = p4est->global_num_quadrants;
+  int64_t             weight, weight_sum;
+  int64_t            *local_weights;    /* cumulative weights by quadrant */
+  int64_t            *global_weight_sums;
+  p4est_quadrant_t   *q;
+  p4est_tree_t       *tree;
 
   num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
   P4EST_CHECK_ALLOC (num_quadrants_in_proc);
@@ -1632,7 +1731,54 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
   }
   else {
-    /* Do a weighted partition */
+    /* do a weighted partition */
+    local_weights = P4EST_ALLOC (int64_t, local_num_quadrants);
+    P4EST_CHECK_ALLOC (local_weights);
+    global_weight_sums = P4EST_ALLOC (int64_t, num_procs);
+    P4EST_CHECK_ALLOC (global_weight_sums);
+
+    /* linearly sum weights across all trees */
+    k = 0;
+    weight_sum = 0;
+    for (j = first_tree; j <= last_tree; ++j) {
+      tree = p4est_array_index (p4est->trees, j);
+      for (i = 0; i < tree->quadrants->elem_count; ++i) {
+        q = p4est_array_index (tree->quadrants, i);
+        weight = weight_fn (p4est, j, q);
+        P4EST_ASSERT (weight >= 0);
+        weight_sum += weight;
+        local_weights[k++] = weight_sum;
+      }
+    }
+    P4EST_ASSERT (k == local_num_quadrants);
+
+    /* distribute local weight sums */
+    global_weight_sums[rank] = weight_sum;
+#ifdef HAVE_MPI
+    if (p4est->mpicomm != MPI_COMM_NULL) {
+      mpiret = MPI_Allgather (&weight_sum, 1, MPI_LONG_LONG,
+                              global_weight_sums, 1, MPI_LONG_LONG,
+                              p4est->mpicomm);
+      P4EST_CHECK_MPI (mpiret);
+    }
+#endif
+
+    /* adjust all arrays to reflect the global weight */
+    for (i = 1; i < num_procs; ++i) {
+      global_weight_sums[i] += global_weight_sums[i - 1];
+    }
+    if (rank > 0) {
+      weight_sum = global_weight_sums[rank - 1];
+      for (k = 0; k < local_num_quadrants; ++k) {
+        local_weights[k] += weight_sum;
+      }
+    }
+    weight_sum = global_weight_sums[num_procs - 1];
+
+    /* free temporary memory */
+    P4EST_FREE (local_weights);
+    P4EST_FREE (global_weight_sums);
+
     P4EST_ASSERT_NOT_REACHED ();
   }
 

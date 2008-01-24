@@ -131,9 +131,10 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
                                         p4est_quadrant_t * q3);
 
 /** Callback function prototype to calculate weights for partitioning.
- * \return Returns a value >= 0.0 as the quadrant weight.
+ * \return  Returns a 32bit integer >= 0 as the quadrant weight.
+ * \note    (global sum of weights * mpisize) must fit into a 64bit integer.
  */
-typedef double      (*p4est_weight_t) (p4est_t * p4est, int32_t which_tree,
+typedef int         (*p4est_weight_t) (p4est_t * p4est, int32_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
 /** set statically allocated quadrant to defined values */
@@ -167,6 +168,13 @@ p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
  * \note The connectivity structure is not destroyed with the p4est.
  */
 void                p4est_destroy (p4est_t * p4est);
+
+/** Make a deep copy of a p4est. Copying of user data is optional.
+ * \param [in]  copy_data  If true, data are copied.
+ *                         If false, data_size is set to 0.
+ * \return  Returns a valid p4est that does not depend on the input.
+ */
+p4est_t            *p4est_copy (p4est_t * input, int copy_data);
 
 /** Refine a forest.
  * \param [in] refine_fn Callback function to decide
