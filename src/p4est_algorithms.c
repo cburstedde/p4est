@@ -2197,7 +2197,7 @@ p4est_partition_given (p4est_t * p4est,
                num_recv_from[from_proc], from_proc);
 #endif
       mpiret = MPI_Irecv (recv_buf[from_proc], recv_size, MPI_CHAR,
-                          from_proc, P4EST_COMM_PARTITION,
+                          from_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, recv_request + sk);
       P4EST_CHECK_MPI (mpiret);
       ++sk;
@@ -2359,7 +2359,7 @@ p4est_partition_given (p4est_t * p4est,
                num_send_to[to_proc], to_proc);
 #endif
       mpiret = MPI_Isend (send_buf[to_proc], send_size, MPI_CHAR,
-                          to_proc, P4EST_COMM_PARTITION,
+                          to_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, send_request + sk);
       P4EST_CHECK_MPI (mpiret);
       ++sk;

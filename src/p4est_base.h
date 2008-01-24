@@ -96,6 +96,7 @@ typedef void        (*p4est_handler_t) (void *data);
 extern const int    p4est_log_lookup_table[256];
 
 int                 p4est_int32_compare (const void *v1, const void *v2);
+int                 p4est_int64_compare (const void *v1, const void *v2);
 
 void               *p4est_malloc (size_t size);
 void               *p4est_calloc (size_t nmemb, size_t size);

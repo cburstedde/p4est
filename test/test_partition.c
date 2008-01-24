@@ -56,13 +56,11 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   return 1;
 }
 
-/* not working yet
 static int
 weight_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
   return 1;
 }
-*/
 
 int
 main (int argc, char **argv)
@@ -147,9 +145,7 @@ main (int argc, char **argv)
   }
 
   /* do a weighted partition */
-  /* not working yet
-     p4est_partition (p4est, weight_fn);
-   */
+  p4est_partition (p4est, weight_fn);
 
   /* copy the p4est */
   copy = p4est_copy (p4est, 1);

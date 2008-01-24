@@ -98,11 +98,25 @@ p4est_signal_handler (int sig)
   p4est_abort ();
 }
 
+#if(0)
 int
 p4est_int32_compare (const void *v1, const void *v2)
 {
-  return (int32_t) v1 - (int32_t) v2;
+  const int32_t       i1 = *(int32_t *) v1;
+  const int32_t       i2 = *(int32_t *) v2;
+
+  return (i1 == i2) ? 0 : ((i1 < i2) ? -1 : +1);
 }
+
+int
+p4est_int64_compare (const void *v1, const void *v2)
+{
+  const int64_t       i1 = *(int64_t *) v1;
+  const int64_t       i2 = *(int64_t *) v2;
+
+  return (i1 == i2) ? 0 : ((i1 < i2) ? -1 : +1);
+}
+#endif
 
 void               *
 p4est_malloc (size_t size)
