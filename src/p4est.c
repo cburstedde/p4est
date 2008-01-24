@@ -2043,8 +2043,10 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 
   /* run the partition algorithm with proper quadrant counts */
   p4est_partition_given (p4est, num_quadrants_in_proc);
-
   P4EST_FREE (num_quadrants_in_proc);
+
+  /* check validity of the p4est */
+  P4EST_ASSERT (p4est_is_valid (p4est));
 #endif /* HAVE_MPI */
 }
 
