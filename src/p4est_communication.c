@@ -71,7 +71,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef HAVE_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     tree = p4est_array_index (p4est->trees, p4est->first_local_tree);
-    quadrant = p4est_array_index (tree->quadrants, 0);
+    quadrant = p4est_array_index (&tree->quadrants, 0);
 
     input[0] = p4est->first_local_tree;
     input[1] = quadrant->x;

@@ -320,7 +320,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     v3y = vertices[v3 * 3 + 1];
     v3z = vertices[v3 * 3 + 2];
 
-    quadrants = tree->quadrants;
+    quadrants = &tree->quadrants;
     num_quads = quadrants->elem_count;
 
     /* loop over the elements in the tree */

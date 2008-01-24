@@ -107,8 +107,8 @@ main (void)
 
   /* run a bunch of cross-tests */
   p = NULL;
-  for (i = 0; i < t1->quadrants->elem_count; ++i) {
-    q1 = p4est_array_index (t1->quadrants, i);
+  for (i = 0; i < t1->quadrants.elem_count; ++i) {
+    q1 = p4est_array_index (&t1->quadrants, i);
 
     /* test the index conversion */
     index1 = p4est_quadrant_linear_id (q1, q1->level);
@@ -151,8 +151,8 @@ main (void)
     }
 
     /* test t1 against itself */
-    for (j = 0; j < t1->quadrants->elem_count; ++j) {
-      q2 = p4est_array_index (t1->quadrants, j);
+    for (j = 0; j < t1->quadrants.elem_count; ++j) {
+      q2 = p4est_array_index (&t1->quadrants, j);
 
       /* test the comparison function */
       P4EST_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
@@ -184,8 +184,8 @@ main (void)
     }
 
     /* test t1 against t2 */
-    for (j = 0; j < t2->quadrants->elem_count; ++j) {
-      q2 = p4est_array_index (t2->quadrants, j);
+    for (j = 0; j < t2->quadrants.elem_count; ++j) {
+      q2 = p4est_array_index (&t2->quadrants, j);
 
       /* test the comparison function */
       P4EST_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
@@ -218,8 +218,8 @@ main (void)
   }
 
   p = NULL;
-  for (i = 0; i < t2->quadrants->elem_count; ++i) {
-    q1 = p4est_array_index (t2->quadrants, i);
+  for (i = 0; i < t2->quadrants.elem_count; ++i) {
+    q1 = p4est_array_index (&t2->quadrants, i);
 
     /* test the is_next function */
     if (p != NULL) {
@@ -234,31 +234,31 @@ main (void)
   p4est_coarsen (p4est2, coarsen_some, NULL);
 
   /* test the linearize algorithm */
-  incount = t2->quadrants->elem_count;
+  incount = t2->quadrants.elem_count;
   p4est_linearize_subtree (p4est2, t2);
-  P4EST_CHECK_ABORT (incount == t2->quadrants->elem_count, "linearize");
+  P4EST_CHECK_ABORT (incount == t2->quadrants.elem_count, "linearize");
 
   /* this is user_data neutral only when p4est1->data_size == 0 */
-  tree.quadrants = p4est_array_new (sizeof (p4est_quadrant_t));
-  p4est_array_resize (tree.quadrants, 18);
-  q1 = p4est_array_index (tree.quadrants, 0);
-  q2 = p4est_array_index (t2->quadrants, 0);
+  p4est_array_init (&tree.quadrants, sizeof (p4est_quadrant_t));
+  p4est_array_resize (&tree.quadrants, 18);
+  q1 = p4est_array_index (&tree.quadrants, 0);
+  q2 = p4est_array_index (&t2->quadrants, 0);
   *q1 = *q2;
-  q2 = p4est_array_index (t2->quadrants, 1);
+  q2 = p4est_array_index (&t2->quadrants, 1);
   for (i = 0; i < 3; ++i) {
-    q1 = p4est_array_index (tree.quadrants, i + 1);
+    q1 = p4est_array_index (&tree.quadrants, i + 1);
     *q1 = *q2;
     q1->level = (int8_t) (q1->level + i);
   }
   for (i = 0; i < 10; ++i) {
-    q1 = p4est_array_index (tree.quadrants, i + 4);
-    q2 = p4est_array_index (t2->quadrants, i + 3);
+    q1 = p4est_array_index (&tree.quadrants, i + 4);
+    q2 = p4est_array_index (&t2->quadrants, i + 3);
     *q1 = *q2;
     q1->level = (int8_t) (q1->level + i);
   }
   for (i = 0; i < 4; ++i) {
-    q1 = p4est_array_index (tree.quadrants, i + 14);
-    q2 = p4est_array_index (t2->quadrants, i + 12);
+    q1 = p4est_array_index (&tree.quadrants, i + 14);
+    q2 = p4est_array_index (&t2->quadrants, i + 12);
     *q1 = *q2;
     q1->level = (int8_t) (q1->level + 10 + i);
   }
@@ -266,16 +266,16 @@ main (void)
   for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
     tree.quadrants_per_level[i] = 0;
   }
-  incount = tree.quadrants->elem_count;
+  incount = tree.quadrants.elem_count;
   for (i = 0; i < incount; ++i) {
-    q1 = p4est_array_index (tree.quadrants, i);
+    q1 = p4est_array_index (&tree.quadrants, i);
     ++tree.quadrants_per_level[q1->level];
     tree.maxlevel = (int8_t) P4EST_MAX (tree.maxlevel, q1->level);
   }
   P4EST_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
   p4est_linearize_subtree (p4est1, &tree);
-  P4EST_CHECK_ABORT (incount - 3 == tree.quadrants->elem_count, "linearize");
-  p4est_array_destroy (tree.quadrants);
+  P4EST_CHECK_ABORT (incount - 3 == tree.quadrants.elem_count, "linearize");
+  p4est_array_reset (&tree.quadrants);
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est1);

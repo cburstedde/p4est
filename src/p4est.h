@@ -71,7 +71,7 @@ p4est_quadrant_t;
 
 typedef struct p4est_tree
 {
-  p4est_array_t      *quadrants;        /* locally stored quadrants */
+  p4est_array_t       quadrants;        /* locally stored quadrants */
   int32_t             quadrants_per_level[P4EST_MAXLEVEL + 1];  /* locals only */
   int8_t              maxlevel; /* highest local quadrant level */
 }
