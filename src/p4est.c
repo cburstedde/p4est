@@ -1743,6 +1743,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
+  FILE               *nout = p4est->nout;
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
   const int32_t       first_tree = p4est->first_local_tree;
@@ -1788,6 +1789,13 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     global_weight_sums = P4EST_ALLOC (int64_t, num_procs + 1);
     P4EST_CHECK_ALLOC (global_weight_sums);
 
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+    if (nout != NULL) {
+      fprintf (nout, "[%d] local quadrant count %d\n",
+               rank, p4est->local_num_quadrants);
+    }
+#endif
+
     /* linearly sum weights across all trees */
     k = 0;
     local_weights[0] = 0;
@@ -1802,8 +1810,11 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     P4EST_ASSERT (k == local_num_quadrants);
     weight_sum = local_weights[local_num_quadrants];
-#if(0)
-    printf ("[%d] local weight sum %lld\n", rank, weight_sum);
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+    if (nout != NULL) {
+      fprintf (nout, "[%d] local weight sum %lld\n",
+               rank, (long long) weight_sum);
+    }
 #endif
 
     /* distribute local weight sums */
@@ -1827,15 +1838,15 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     P4EST_ASSERT (local_weights[local_num_quadrants] ==
                   global_weight_sums[rank + 1]);
     weight_sum = global_weight_sums[num_procs];
-#if(0)
-    if (rank == 0) {
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+    if (rank == 0 && nout != NULL) {
       for (i = 0; i <= num_procs; ++i) {
-        printf ("   global weight sum [%d] %lld\n",
-                i, global_weight_sums[i]);
+        fprintf (nout, "   global weight sum [%d] %lld\n",
+                 i, (long long) global_weight_sums[i]);
       }
     }
 #endif
-    
+
     /* if all quadrants have zero weight we do nothing */
     if (weight_sum == 0) {
       P4EST_FREE (local_weights);
@@ -1859,10 +1870,13 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
      * send low cut to send_lowest..send_highest
      * and high cut to send_lowest-1..send_highest-1
      */
-#if(0)
-    printf ("[%d] send bounds low %d high %d\n",
-            rank, send_lowest, send_highest);
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+    if (nout != NULL) {
+      fprintf (nout, "[%d] send bounds low %d high %d\n",
+               rank, send_lowest, send_highest);
+    }
 #endif
+
     num_sends = 2 * (send_highest - send_lowest + 1);
     if (num_sends <= 0) {
       num_sends = 0;
@@ -1873,29 +1887,40 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       P4EST_CHECK_ALLOC (send_requests);
       k = 0;
       for (i = send_lowest; i <= send_highest; ++i) {
-        /* do binary search in the weight array */
-        k = int64_find_lower_bound ((weight_sum * i) / num_procs,
-                                    local_weights, local_num_quadrants + 1,
-                                    k);
-        P4EST_ASSERT (k > 0 && k <= local_num_quadrants);
-        send_index = k +
-          ((rank > 0) ? (p4est->global_last_quad_index[rank - 1] + 1) : -1);
-
-        /* and send the quadrant index as high and low bounds */
-        mpiret = MPI_Isend (&send_index, 1, MPI_LONG_LONG, i - 1,
-                            P4EST_COMM_PARTITION_WEIGHTED_HIGH,
-                            p4est->mpicomm,
-                            &send_requests[2 * (i - send_lowest)]);
-        P4EST_CHECK_MPI (mpiret);
         if (i < num_procs) {
+          /* do binary search in the weight array */
+          k = int64_find_lower_bound ((weight_sum * i) / num_procs,
+                                      local_weights,
+                                      local_num_quadrants + 1, k);
+          P4EST_ASSERT (k > 0 && k <= local_num_quadrants);
+          send_index = k +
+            ((rank > 0) ? (p4est->global_last_quad_index[rank - 1] + 1) : 0);
+
+          /* send low bound */
           mpiret = MPI_Isend (&send_index, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm,
                               &send_requests[2 * (i - send_lowest) + 1]);
+          P4EST_CHECK_MPI (mpiret);
         }
         else {
+          k = 0;
+          send_index = global_num_quadrants;
           send_requests[2 * (i - send_lowest) + 1] = MPI_REQUEST_NULL;
         }
+
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+        if (nout != NULL) {
+          fprintf (nout, "[%d] send pos %d index %lld high %d low %d\n",
+                   rank, k, (long long) send_index, i - 1, i);
+        }
+#endif
+
+        /* send high bound */
+        mpiret = MPI_Isend (&send_index, 1, MPI_LONG_LONG, i - 1,
+                            P4EST_COMM_PARTITION_WEIGHTED_HIGH,
+                            p4est->mpicomm,
+                            &send_requests[2 * (i - send_lowest)]);
         P4EST_CHECK_MPI (mpiret);
       }
     }
@@ -1911,6 +1936,11 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (; i < num_procs; ++i) {
         if (global_weight_sums[i] < my_lowcut &&
             my_lowcut <= global_weight_sums[i + 1]) {
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+          if (nout != NULL) {
+            fprintf (nout, "[%d] receive low cut from %d\n", rank, i);
+          }
+#endif
           mpiret = MPI_Irecv (&recv_low, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm, &recv_requests[0]);
@@ -1928,6 +1958,11 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (; i < num_procs; ++i) {
         if (global_weight_sums[i] < my_highcut &&
             my_highcut <= global_weight_sums[i + 1]) {
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+          if (nout != NULL) {
+            fprintf (nout, "[%d] receive high cut from %d\n", rank, i);
+          }
+#endif
           mpiret = MPI_Irecv (&recv_high, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                               p4est->mpicomm, &recv_requests[1]);
@@ -1936,6 +1971,12 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
         }
       }
     }
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+    if (nout != NULL) {
+      fprintf (nout, "[%d] my cut low %lld high %lld\n",
+               rank, (long long) my_lowcut, (long long) my_highcut);
+    }
+#endif
 
     /* free temporary memory */
     P4EST_FREE (local_weights);
@@ -1950,18 +1991,46 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     mpiret = MPI_Waitall (2, recv_requests, MPI_STATUSES_IGNORE);
     P4EST_CHECK_MPI (mpiret);
 
-    /* and allgather the quadrant ranges */
+    /* communicate the quadrant ranges */
     qcount = recv_high - recv_low;
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "[%d] weighted partition count %d\n",
-               rank, qcount);
+    P4EST_ASSERT (qcount >= 0);
+#ifdef P4EST_HAVE_DEBUG
+    if (nout != NULL) {
+      fprintf (nout, "[%d] weighted partition count %d\n", rank, qcount);
     }
+#endif
     mpiret = MPI_Allgather (&qcount, 1, MPI_INT,
                             num_quadrants_in_proc, 1, MPI_INT,
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
+
+    /* run through the count array and repair zero ranges */
+    for (i = 0; i < num_procs; ++i) {
+      if (num_quadrants_in_proc[i] == 0) {
+        for (p = i - 1; p >= 0; --p) {
+          P4EST_ASSERT (num_quadrants_in_proc[p] > 0);
+          if (num_quadrants_in_proc[p] > 1) {
+            --num_quadrants_in_proc[p];
+            ++num_quadrants_in_proc[i];
+            break;
+          }
+        }
+        if (p < 0) {
+          for (p = i + 1; p < num_procs; ++p) {
+            P4EST_ASSERT (num_quadrants_in_proc[p] >= 0);
+            if (num_quadrants_in_proc[p] > 1) {
+              --num_quadrants_in_proc[p];
+              ++num_quadrants_in_proc[i];
+              break;
+            }
+          }
+          P4EST_ASSERT (p < num_procs);
+        }
+      }
+    }
   }
 
+  /* run the partition algorithm with proper quadrant counts */
   p4est_partition_given (p4est, num_quadrants_in_proc);
 
   P4EST_FREE (num_quadrants_in_proc);

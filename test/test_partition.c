@@ -30,6 +30,9 @@ typedef struct
 }
 user_data_t;
 
+static int          weight_counter;
+static int          weight_index;
+
 static void
 init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
@@ -57,9 +60,19 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 }
 
 static int
-weight_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+weight_one (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
   return 1;
+}
+
+static int
+weight_once (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+{
+  if (weight_counter++ == weight_index) {
+    return 1;
+  }
+
+  return 0;
 }
 
 int
@@ -132,6 +145,7 @@ main (int argc, char **argv)
                      == p4est->local_num_quadrants,
                      "partition failed, wrong number of quadrants");
 
+  /* check user data content */
   for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
     tree = p4est_array_index (p4est->trees, t);
     for (q = 0; q < tree->quadrants->elem_count; ++q) {
@@ -144,16 +158,54 @@ main (int argc, char **argv)
     }
   }
 
-  /* do a weighted partition */
-  p4est_partition (p4est, weight_fn);
+  /* do a weighted partition with uniform weights */
+  p4est_partition (p4est, weight_one);
+  P4EST_CHECK_ABORT (crc == p4est_checksum (p4est),
+                     "bad checksum after uniformly weighted partition");
 
   /* copy the p4est */
   copy = p4est_copy (p4est, 1);
-  p4est_destroy (copy);
+  P4EST_CHECK_ABORT (crc == p4est_checksum (copy), "bad checksum after copy");
+
+  /* do a weighted partition with many zero weights */
+  weight_counter = 0;
+  weight_index = (rank == 1) ? 1342 : 0;
+  p4est_partition (copy, weight_once);
+  P4EST_CHECK_ABORT (crc == p4est_checksum (copy),
+                     "bad checksum after unevenly weighted partition 1");
+
+  /* do a weighted partition with many zero weights */
+  weight_counter = 0;
+  weight_index = 0;
+  p4est_partition (copy, weight_once);
+  P4EST_CHECK_ABORT (crc == p4est_checksum (copy),
+                     "bad checksum after unevenly weighted partition 2");
+
+  /* do a weighted partition with many zero weights */
+  weight_counter = 0;
+  weight_index =
+    (rank == num_procs - 1) ? (copy->local_num_quadrants - 1) : 0;
+  p4est_partition (copy, weight_once);
+  P4EST_CHECK_ABORT (crc == p4est_checksum (copy),
+                     "bad checksum after unevenly weighted partition 3");
+
+  /* check user data content */
+  for (t = copy->first_local_tree; t <= copy->last_local_tree; ++t) {
+    tree = p4est_array_index (copy->trees, t);
+    for (q = 0; q < tree->quadrants->elem_count; ++q) {
+      quad = p4est_array_index (tree->quadrants, q);
+      user_data = (user_data_t *) quad->user_data;
+      sum = quad->x + quad->y + quad->level;
+
+      P4EST_CHECK_ABORT (user_data->a == t, "bad user_data, a");
+      P4EST_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
+    }
+  }
 
   /* clean up and exit */
   P4EST_FREE (num_quadrants_in_proc);
   p4est_destroy (p4est);
+  p4est_destroy (copy);
   p4est_connectivity_destroy (connectivity);
   p4est_memory_check ();
 

@@ -1,16 +1,12 @@
- * Balance Tree
-   * inter-tree across faces
-   * inter-tree across corners
+ * Allow zero quadrants on a processor
  * Partition Tree (done)
-   ? Algo 3
    ? Algo 4 weighted? blocked
-   ? Algo 5 weighted linear
  * doxygen
  * more test cases
  * vtk output
    * unique vertex indices
    * geometry
  * mesh generation
+   2D interface to pfudg
    ? 2D bilinear elements
- * Forest deep copy
  * 3D
