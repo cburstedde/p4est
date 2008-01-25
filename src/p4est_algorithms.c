@@ -2229,8 +2229,8 @@ p4est_partition_given (p4est_t * p4est,
                           from_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, recv_request + sk);
       P4EST_CHECK_MPI (mpiret);
-      ++sk;
 #endif
+      ++sk;
     }
     else {
       recv_buf[from_proc] = NULL;
