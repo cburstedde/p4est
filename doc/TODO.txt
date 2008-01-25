@@ -11,4 +11,6 @@
  * mesh generation
    2D interface to pfudg
    ? 2D bilinear elements
+ * Use the log4c lite version
+ * Make the roots of the forest distributed in parallel
  * 3D
