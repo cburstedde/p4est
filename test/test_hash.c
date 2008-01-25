@@ -46,7 +46,7 @@ main (int argc, char **argv)
   p4est_hash_t       *qhash;
 
   for (k = 0; k < 3; ++k) {
-    ihash = p4est_hash_new (1 + k * 90, int_hash_fn, int_equal_fn, NULL);
+    ihash = p4est_hash_new (int_hash_fn, int_equal_fn, NULL);
 
     inserted = 0;
     for (i = 0; i < 347; ++i) {
@@ -58,8 +58,7 @@ main (int argc, char **argv)
     p4est_hash_destroy (ihash);
   }
 
-  qhash = p4est_hash_new (17, p4est_quadrant_hash,
-                          p4est_quadrant_is_equal, NULL);
+  qhash = p4est_hash_new (p4est_quadrant_hash, p4est_quadrant_is_equal, NULL);
 
   p4est_quadrant_set_morton (&q1, 3, 15);
   p4est_quadrant_set_morton (&q2, 3, 18);

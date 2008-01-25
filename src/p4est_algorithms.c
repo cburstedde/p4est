@@ -31,9 +31,6 @@
 #include <netinet/in.h>
 #endif
 
-static const int    hash_table_minsize = 1361;
-static const int    hash_table_maxsize = 99133;
-
 /* *INDENT-OFF* */
 
 /** The offsets of the 3 indirect neighbors in units of h.
@@ -1616,7 +1613,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 incount, curcount, ocount;
   int                 comp, lookup, inserted, isfamily, isoutroot;
   int                 quadrant_pool_size, data_pool_size;
-  int                 hash_size;
   int                 count_outside_root, count_outside_tree;
   int                 count_already_inlist, count_already_outlist;
   int                 first_valid, last_valid;
@@ -1713,12 +1709,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   /* initialize temporary storage */
   list_alloc = p4est_mempool_new (sizeof (p4est_link_t));
   for (l = 0; l <= inmaxl; ++l) {
-    hash_size = P4EST_MAX (incount / (P4EST_MAXLEVEL * 2),
-                           tree->quadrants_per_level[l] * 2 - 1);
-    hash_size = P4EST_MIN (hash_table_maxsize, hash_size);
-    hash_size = P4EST_MAX (hash_table_minsize, hash_size);
-    hash[l] = p4est_hash_new (hash_size, p4est_quadrant_hash,
-                              p4est_quadrant_is_equal, list_alloc);
+    hash[l] = p4est_hash_new (p4est_quadrant_hash, p4est_quadrant_is_equal,
+                              list_alloc);
     p4est_array_init (&outlist[l], sizeof (p4est_quadrant_t *));
   }
   for (l = (int8_t) (inmaxl + 1); l <= P4EST_MAXLEVEL; ++l) {

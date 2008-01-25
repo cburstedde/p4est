@@ -95,8 +95,21 @@ typedef void        (*p4est_handler_t) (void *data);
 
 extern const int    p4est_log_lookup_table[256];
 
+#if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
 int                 p4est_int64_compare (const void *v1, const void *v2);
+#endif
+
+/** Find the lowest position k in a sorted array such that array[k] >= target.
+ * \param [in]  target  The target lower bound to binary search for.
+ * \param [in]  array   The 64bit integer array to binary search in.
+ * \param [in]  size    The number of int64_t's in the array.
+ * \param [in]  guess   Initial array position to look at.
+ * \return  Returns the matching position, or -1 if array[size-1] < target.
+ */
+int                 p4est_int64_lower_bound (int64_t target,
+                                             const int64_t * array,
+                                             int size, int guess);
 
 void               *p4est_malloc (size_t size);
 void               *p4est_calloc (size_t nmemb, size_t size);

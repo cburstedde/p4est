@@ -284,22 +284,22 @@ typedef struct p4est_hash
   int                 elem_count;       /* total number of objects contained */
 
   /* implementation variables */
-  p4est_array_t       table;    /* the slot number is table->elem_count */
+  p4est_array_t      *slots;    /* the slot count is slots->elem_count */
   p4est_hash_function_t hash_fn;
   p4est_equal_function_t equal_fn;
+  int                 resize_checks, resize_actions;
   int                 allocator_owned;
   p4est_mempool_t    *allocator;        /* must allocate p4est_link_t */
 }
 p4est_hash_t;
 
 /** Create a new hash table.
- * \param [in] table_size  The number of slots in the hash table.
+ * The number of hash slots is chosen dynamically.
  * \param [in] hash_fn     Function to compute the hash value.
  * \param [in] equal_fn    Function to test two objects for equality.
  * \param [in] allocator   Memory allocator for p4est_link_t, can be NULL.
  */
-p4est_hash_t       *p4est_hash_new (int table_size,
-                                    p4est_hash_function_t hash_fn,
+p4est_hash_t       *p4est_hash_new (p4est_hash_function_t hash_fn,
                                     p4est_equal_function_t equal_fn,
                                     p4est_mempool_t * allocator);
 /** Destroy a hash table in O(N).

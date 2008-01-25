@@ -1704,51 +1704,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_ASSERT (p4est_is_valid (p4est));
 }
 
-/** Find the lowest position k in a sorted array such that array[k] >= target.
- * \return  Returns the matching position, or -1 if not found.
- */
-static int
-int64_find_lower_bound (int64_t target, const int64_t * array,
-                        int count, int guess)
-{
-  int                 k_low, k_high;
-  int64_t             cur;
-
-  k_low = 0;
-  k_high = count - 1;
-  for (;;) {
-    P4EST_ASSERT (k_low <= k_high);
-    P4EST_ASSERT (0 <= k_low && k_low < count);
-    P4EST_ASSERT (0 <= k_high && k_high < count);
-    P4EST_ASSERT (k_low <= guess && guess <= k_high);
-
-    /* compare two quadrants */
-    cur = array[guess];
-
-    /* check if guess is higher or equal target and there's room below it */
-    if (target <= cur && (guess > 0 && target <= array[guess - 1])) {
-      k_high = guess - 1;
-      guess = (k_low + k_high + 1) / 2;
-      continue;
-    }
-
-    /* check if guess is lower than target */
-    if (target > cur) {
-      k_low = guess + 1;
-      if (k_low > k_high) {
-        return -1;
-      }
-      guess = (k_low + k_high) / 2;
-      continue;
-    }
-
-    /* otherwise guess is the correct position */
-    break;
-  }
-
-  return guess;
-}
-
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
@@ -1900,9 +1855,9 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (i = send_lowest; i <= send_highest; ++i) {
         if (i < num_procs) {
           /* do binary search in the weight array */
-          k = int64_find_lower_bound ((weight_sum * i) / num_procs,
-                                      local_weights,
-                                      local_num_quadrants + 1, k);
+          k = p4est_int64_lower_bound ((weight_sum * i) / num_procs,
+                                       local_weights,
+                                       local_num_quadrants + 1, k);
           P4EST_ASSERT (k > 0 && k <= local_num_quadrants);
           send_index = k +
             ((rank > 0) ? (p4est->global_last_quad_index[rank - 1] + 1) : 0);

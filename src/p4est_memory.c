@@ -562,13 +562,81 @@ p4est_list_pop (p4est_list_t * list)
 
 /* hash table routines */
 
+static const int    p4est_hash_minimal_size = (1 << 8); /* 256 slots */
+
+static void
+p4est_hash_maybe_resize (p4est_hash_t * hash)
+{
+  int                 i, j;
+  int                 new_size, new_count;
+  p4est_list_t       *old_list, *new_list;
+  p4est_link_t       *link, *temp;
+  p4est_array_t      *new_slots;
+  p4est_array_t      *old_slots = hash->slots;
+
+  /*
+   * powers of 2 may not be a good general slot count,
+   * but for quadrants in Morton ordering this should be fine.
+   */
+  ++hash->resize_checks;
+  if (hash->elem_count >= 4 * old_slots->elem_count) {
+    new_size = 4 * old_slots->elem_count;
+  }
+  else if (hash->elem_count <= old_slots->elem_count / 4) {
+    new_size = old_slots->elem_count / 4;
+    if (new_size < p4est_hash_minimal_size) {
+      return;
+    }
+  }
+  else {
+    return;
+  }
+  ++hash->resize_actions;
+
+  /* allocate new slot array */
+  new_slots = p4est_array_new (sizeof (p4est_list_t));
+  p4est_array_resize (new_slots, new_size);
+  for (i = 0; i < new_size; ++i) {
+    new_list = p4est_array_index (new_slots, i);
+    p4est_list_init (new_list, hash->allocator);
+  }
+
+  /* go through the old slots and move data to the new slots */
+  new_count = 0;
+  for (i = 0; i < old_slots->elem_count; ++i) {
+    old_list = p4est_array_index (old_slots, i);
+    link = old_list->first;
+    while (link != NULL) {
+      /* insert data into new slot list */
+      j = hash->hash_fn (link->data) % new_size;
+      new_list = p4est_array_index (new_slots, j);
+      p4est_list_prepend (new_list, link->data);
+      ++new_count;
+
+      /* remove old list element */
+      temp = link->next;
+      p4est_mempool_free (old_list->allocator, link);
+      link = temp;
+      --old_list->elem_count;
+    }
+    P4EST_ASSERT (old_list->elem_count == 0);
+    old_list->first = old_list->last = NULL;
+  }
+  P4EST_ASSERT (new_count == hash->elem_count);
+
+  /* replace old slots by new slots */
+  p4est_array_destroy (old_slots);
+  hash->slots = new_slots;
+}
+
 p4est_hash_t       *
-p4est_hash_new (int table_size, p4est_hash_function_t hash_fn,
+p4est_hash_new (p4est_hash_function_t hash_fn,
                 p4est_equal_function_t equal_fn, p4est_mempool_t * allocator)
 {
   int                 i;
   p4est_hash_t       *hash;
   p4est_list_t       *list;
+  p4est_array_t      *slots;
 
   hash = P4EST_ALLOC_ZERO (p4est_hash_t, 1);
   P4EST_CHECK_ALLOC (hash);
@@ -584,14 +652,17 @@ p4est_hash_new (int table_size, p4est_hash_function_t hash_fn,
   }
 
   hash->elem_count = 0;
-  p4est_array_init (&hash->table, sizeof (p4est_list_t));
-  p4est_array_resize (&hash->table, table_size);
-  for (i = 0; i < table_size; ++i) {
-    list = p4est_array_index (&hash->table, i);
-    p4est_list_init (list, hash->allocator);
-  }
+  hash->resize_checks = 0;
+  hash->resize_actions = 0;
   hash->hash_fn = hash_fn;
   hash->equal_fn = equal_fn;
+
+  hash->slots = slots = p4est_array_new (sizeof (p4est_list_t));
+  p4est_array_resize (slots, p4est_hash_minimal_size);
+  for (i = 0; i < slots->elem_count; ++i) {
+    list = p4est_array_index (slots, i);
+    p4est_list_init (list, hash->allocator);
+  }
 
   return hash;
 }
@@ -601,7 +672,7 @@ p4est_hash_destroy (p4est_hash_t * hash)
 {
   p4est_hash_reset (hash);
 
-  p4est_array_reset (&hash->table);
+  p4est_array_destroy (hash->slots);
   if (hash->allocator_owned) {
     p4est_mempool_destroy (hash->allocator);
   }
@@ -612,18 +683,18 @@ p4est_hash_destroy (p4est_hash_t * hash)
 void
 p4est_hash_reset (p4est_hash_t * hash)
 {
-  int                 i, size, count;
+  int                 i, count;
   p4est_list_t       *list;
+  p4est_array_t      *slots = hash->slots;
 
   if (hash->elem_count == 0) {
     return;
   }
 
   count = 0;
-  size = hash->table.elem_count;
 
-  for (i = 0; i < size; ++i) {
-    list = p4est_array_index (&hash->table, i);
+  for (i = 0; i < slots->elem_count; ++i) {
+    list = p4est_array_index (slots, i);
     count += list->elem_count;
     p4est_list_reset (list);
   }
@@ -635,13 +706,13 @@ p4est_hash_reset (p4est_hash_t * hash)
 void
 p4est_hash_unlink (p4est_hash_t * hash)
 {
-  int                 i, size, count;
+  int                 i, count;
   p4est_list_t       *list;
+  p4est_array_t      *slots = hash->slots;
 
   count = 0;
-  size = hash->table.elem_count;
-  for (i = 0; i < size; ++i) {
-    list = p4est_array_index (&hash->table, i);
+  for (i = 0; i < slots->elem_count; ++i) {
+    list = p4est_array_index (slots, i);
     count += list->elem_count;
     p4est_list_unlink (list);
   }
@@ -657,7 +728,7 @@ p4est_hash_unlink_destroy (p4est_hash_t * hash)
   p4est_hash_reset (hash);
 #endif
 
-  p4est_array_reset (&hash->table);
+  p4est_array_destroy (hash->slots);
   if (hash->allocator_owned) {
     p4est_mempool_destroy (hash->allocator);
   }
@@ -672,8 +743,8 @@ p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
   p4est_list_t       *list;
   p4est_link_t       *link;
 
-  hval = hash->hash_fn (v) % hash->table.elem_count;
-  list = p4est_array_index (&hash->table, hval);
+  hval = hash->hash_fn (v) % hash->slots->elem_count;
+  list = p4est_array_index (hash->slots, hval);
 
   for (link = list->first; link != NULL; link = link->next) {
     /* check if an equal object is contained in the hash table */
@@ -694,8 +765,8 @@ p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
   p4est_list_t       *list;
   p4est_link_t       *link;
 
-  hval = hash->hash_fn (v) % hash->table.elem_count;
-  list = p4est_array_index (&hash->table, hval);
+  hval = hash->hash_fn (v) % hash->slots->elem_count;
+  list = p4est_array_index (hash->slots, hval);
 
   for (link = list->first; link != NULL; link = link->next) {
     /* check if an equal object is already contained in the hash table */
@@ -709,6 +780,11 @@ p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
   /* append new object to the list */
   p4est_list_append (list, v);
   ++hash->elem_count;
+
+  /* check for resize at specific intervals and return */
+  if (hash->elem_count % hash->slots->elem_count == 0) {
+    p4est_hash_maybe_resize (hash);
+  }
   return 1;
 }
 
@@ -719,8 +795,8 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
   p4est_list_t       *list;
   p4est_link_t       *link, *prev;
 
-  hval = hash->hash_fn (v) % hash->table.elem_count;
-  list = p4est_array_index (&hash->table, hval);
+  hval = hash->hash_fn (v) % hash->slots->elem_count;
+  list = p4est_array_index (hash->slots, hval);
 
   prev = NULL;
   for (link = list->first; link != NULL; link = link->next) {
@@ -731,6 +807,11 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
       }
       p4est_list_remove (list, prev);
       --hash->elem_count;
+
+      /* check for resize at specific intervals and return */
+      if (hash->elem_count % p4est_hash_minimal_size == 0) {
+        p4est_hash_maybe_resize (hash);
+      }
       return 1;
     }
     prev = link;
@@ -745,6 +826,7 @@ p4est_hash_print_statistics (p4est_hash_t * hash, FILE * nout)
   int64_t             a, sum, squaresum;
   double              divide, avg, sqr, std;
   p4est_list_t       *list;
+  p4est_array_t      *slots = hash->slots;
 
   if (nout == NULL) {
     return;
@@ -752,20 +834,21 @@ p4est_hash_print_statistics (p4est_hash_t * hash, FILE * nout)
 
   sum = 0;
   squaresum = 0;
-  for (i = 0; i < hash->table.elem_count; ++i) {
-    list = p4est_array_index (&hash->table, i);
+  for (i = 0; i < slots->elem_count; ++i) {
+    list = p4est_array_index (slots, i);
     a = list->elem_count;
     sum += a;
     squaresum += a * a;
   }
   P4EST_ASSERT (sum == hash->elem_count);
 
-  divide = hash->table.elem_count;
+  divide = slots->elem_count;
   avg = sum / divide;
   sqr = squaresum / divide - avg * avg;
   std = sqrt (sqr);
-  fprintf (nout, "Hash size %d avg %.3g std %.3g\n",
-           hash->table.elem_count, avg, std);
+  fprintf (nout, "Hash size %d avg %.3g std %.3g checks %d %d\n",
+           slots->elem_count, avg, std,
+           hash->resize_checks, hash->resize_actions);
 }
 
 /* EOF p4est_memory.c */

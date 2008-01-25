@@ -118,6 +118,48 @@ p4est_int64_compare (const void *v1, const void *v2)
 }
 #endif
 
+int
+p4est_int64_lower_bound (int64_t target, const int64_t * array,
+                         int size, int guess)
+{
+  int                 k_low, k_high;
+  int64_t             cur;
+
+  k_low = 0;
+  k_high = size - 1;
+  for (;;) {
+    P4EST_ASSERT (k_low <= k_high);
+    P4EST_ASSERT (0 <= k_low && k_low < size);
+    P4EST_ASSERT (0 <= k_high && k_high < size);
+    P4EST_ASSERT (k_low <= guess && guess <= k_high);
+
+    /* compare two quadrants */
+    cur = array[guess];
+
+    /* check if guess is higher or equal target and there's room below it */
+    if (target <= cur && (guess > 0 && target <= array[guess - 1])) {
+      k_high = guess - 1;
+      guess = (k_low + k_high + 1) / 2;
+      continue;
+    }
+
+    /* check if guess is lower than target */
+    if (target > cur) {
+      k_low = guess + 1;
+      if (k_low > k_high) {
+        return -1;
+      }
+      guess = (k_low + k_high) / 2;
+      continue;
+    }
+
+    /* otherwise guess is the correct position */
+    break;
+  }
+
+  return guess;
+}
+
 void               *
 p4est_malloc (size_t size)
 {

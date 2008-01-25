@@ -1,5 +1,4 @@
 
- * Improve or replace our hash map
  * Allow zero quadrants on a processor
  * Partition Tree
    ? algo 4 (block partition)
