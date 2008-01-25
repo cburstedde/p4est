@@ -157,7 +157,7 @@ typedef struct p4est_mempool
 
   /* implementation variables */
   struct obstack      obstack;  /* holds the allocated elements */
-  p4est_array_t      *freed;    /* buffers the freed elements */
+  p4est_array_t       freed;    /* buffers the freed elements */
 }
 p4est_mempool_t;
 
@@ -284,7 +284,7 @@ typedef struct p4est_hash
   int                 elem_count;       /* total number of objects contained */
 
   /* implementation variables */
-  p4est_array_t      *table;
+  p4est_array_t       table;    /* the slot number is table->elem_count */
   p4est_hash_function_t hash_fn;
   p4est_equal_function_t equal_fn;
   int                 allocator_owned;

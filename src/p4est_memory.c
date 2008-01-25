@@ -320,7 +320,7 @@ p4est_mempool_new (int elem_size)
   mempool->elem_count = 0;
 
   obstack_init (&mempool->obstack);
-  mempool->freed = p4est_array_new (sizeof (void *));
+  p4est_array_init (&mempool->freed, sizeof (void *));
 
   return mempool;
 }
@@ -330,7 +330,7 @@ p4est_mempool_destroy (p4est_mempool_t * mempool)
 {
   P4EST_ASSERT (mempool->elem_count == 0);
 
-  p4est_array_destroy (mempool->freed);
+  p4est_array_reset (&mempool->freed);
   obstack_free (&mempool->obstack, NULL);
 
   P4EST_FREE (mempool);
@@ -339,7 +339,7 @@ p4est_mempool_destroy (p4est_mempool_t * mempool)
 void
 p4est_mempool_reset (p4est_mempool_t * mempool)
 {
-  p4est_array_reset (mempool->freed);
+  p4est_array_reset (&mempool->freed);
   obstack_free (&mempool->obstack, NULL);
   mempool->elem_count = 0;
 }
@@ -349,13 +349,14 @@ p4est_mempool_alloc (p4est_mempool_t * mempool)
 {
   int                 new_count;
   void               *ret;
+  p4est_array_t      *freed = &mempool->freed;
 
   ++mempool->elem_count;
 
-  if (mempool->freed->elem_count > 0) {
-    new_count = mempool->freed->elem_count - 1;
-    ret = *(void **) p4est_array_index (mempool->freed, new_count);
-    p4est_array_resize (mempool->freed, new_count);
+  if (freed->elem_count > 0) {
+    new_count = freed->elem_count - 1;
+    ret = *(void **) p4est_array_index (freed, new_count);
+    p4est_array_resize (freed, new_count);
   }
   else {
     ret = obstack_alloc (&mempool->obstack, mempool->elem_size);
@@ -372,6 +373,7 @@ void
 p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
 {
   int                 old_count;
+  p4est_array_t      *freed = &mempool->freed;
 
 #ifdef P4EST_HAVE_DEBUG
   memset (elem, -1, mempool->elem_size);
@@ -379,9 +381,9 @@ p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
 
   --mempool->elem_count;
 
-  old_count = mempool->freed->elem_count;
-  p4est_array_resize (mempool->freed, old_count + 1);
-  *(void **) p4est_array_index (mempool->freed, old_count) = elem;
+  old_count = freed->elem_count;
+  p4est_array_resize (freed, old_count + 1);
+  *(void **) p4est_array_index (freed, old_count) = elem;
 }
 
 /* list routines */
@@ -582,10 +584,10 @@ p4est_hash_new (int table_size, p4est_hash_function_t hash_fn,
   }
 
   hash->elem_count = 0;
-  hash->table = p4est_array_new (sizeof (p4est_list_t));
-  p4est_array_resize (hash->table, table_size);
+  p4est_array_init (&hash->table, sizeof (p4est_list_t));
+  p4est_array_resize (&hash->table, table_size);
   for (i = 0; i < table_size; ++i) {
-    list = p4est_array_index (hash->table, i);
+    list = p4est_array_index (&hash->table, i);
     p4est_list_init (list, hash->allocator);
   }
   hash->hash_fn = hash_fn;
@@ -599,7 +601,7 @@ p4est_hash_destroy (p4est_hash_t * hash)
 {
   p4est_hash_reset (hash);
 
-  p4est_array_destroy (hash->table);
+  p4est_array_reset (&hash->table);
   if (hash->allocator_owned) {
     p4est_mempool_destroy (hash->allocator);
   }
@@ -618,10 +620,10 @@ p4est_hash_reset (p4est_hash_t * hash)
   }
 
   count = 0;
-  size = hash->table->elem_count;
+  size = hash->table.elem_count;
 
   for (i = 0; i < size; ++i) {
-    list = p4est_array_index (hash->table, i);
+    list = p4est_array_index (&hash->table, i);
     count += list->elem_count;
     p4est_list_reset (list);
   }
@@ -637,9 +639,9 @@ p4est_hash_unlink (p4est_hash_t * hash)
   p4est_list_t       *list;
 
   count = 0;
-  size = hash->table->elem_count;
+  size = hash->table.elem_count;
   for (i = 0; i < size; ++i) {
-    list = p4est_array_index (hash->table, i);
+    list = p4est_array_index (&hash->table, i);
     count += list->elem_count;
     p4est_list_unlink (list);
   }
@@ -655,7 +657,7 @@ p4est_hash_unlink_destroy (p4est_hash_t * hash)
   p4est_hash_reset (hash);
 #endif
 
-  p4est_array_destroy (hash->table);
+  p4est_array_reset (&hash->table);
   if (hash->allocator_owned) {
     p4est_mempool_destroy (hash->allocator);
   }
@@ -670,8 +672,8 @@ p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
   p4est_list_t       *list;
   p4est_link_t       *link;
 
-  hval = hash->hash_fn (v) % hash->table->elem_count;
-  list = p4est_array_index (hash->table, hval);
+  hval = hash->hash_fn (v) % hash->table.elem_count;
+  list = p4est_array_index (&hash->table, hval);
 
   for (link = list->first; link != NULL; link = link->next) {
     /* check if an equal object is contained in the hash table */
@@ -692,8 +694,8 @@ p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
   p4est_list_t       *list;
   p4est_link_t       *link;
 
-  hval = hash->hash_fn (v) % hash->table->elem_count;
-  list = p4est_array_index (hash->table, hval);
+  hval = hash->hash_fn (v) % hash->table.elem_count;
+  list = p4est_array_index (&hash->table, hval);
 
   for (link = list->first; link != NULL; link = link->next) {
     /* check if an equal object is already contained in the hash table */
@@ -717,8 +719,8 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
   p4est_list_t       *list;
   p4est_link_t       *link, *prev;
 
-  hval = hash->hash_fn (v) % hash->table->elem_count;
-  list = p4est_array_index (hash->table, hval);
+  hval = hash->hash_fn (v) % hash->table.elem_count;
+  list = p4est_array_index (&hash->table, hval);
 
   prev = NULL;
   for (link = list->first; link != NULL; link = link->next) {
@@ -750,20 +752,20 @@ p4est_hash_print_statistics (p4est_hash_t * hash, FILE * nout)
 
   sum = 0;
   squaresum = 0;
-  for (i = 0; i < hash->table->elem_count; ++i) {
-    list = p4est_array_index (hash->table, i);
+  for (i = 0; i < hash->table.elem_count; ++i) {
+    list = p4est_array_index (&hash->table, i);
     a = list->elem_count;
     sum += a;
     squaresum += a * a;
   }
   P4EST_ASSERT (sum == hash->elem_count);
 
-  divide = hash->table->elem_count;
+  divide = hash->table.elem_count;
   avg = sum / divide;
   sqr = squaresum / divide - avg * avg;
   std = sqrt (sqr);
   fprintf (nout, "Hash size %d avg %.3g std %.3g\n",
-           hash->table->elem_count, avg, std);
+           hash->table.elem_count, avg, std);
 }
 
 /* EOF p4est_memory.c */
