@@ -44,4 +44,73 @@ void                p4est_order_local_vertices (p4est_t * p4est,
                                                 num_uniq_local_vertices,
                                                 int32_t *
                                                 quadrant_to_local_vertex);
+
+/** Generate a neighbor of a quadrant for a given node.
+ *
+ * The neighbor numbering is given below.
+ *
+ * Neighbor numbering for q, node=0:
+ *
+ *      ------+------+
+ *            |  q   |
+ *      nnum=2|nnum=3|
+ *            |      |
+ *      ------+------+
+ *            |      |
+ *      nnum=0|nnum=1|
+ *
+ * Neighbor numbering for q, node=1:
+ *
+ *            +------+------
+ *            |  q   |
+ *            |nnum=2|num=3
+ *            |      |
+ *            +------+------
+ *            |      |
+ *            |nnum=0|nnum=1
+ *
+ * Neighbor numbering for q, node=2:
+ *
+ *            |      |
+ *      nnum=2|nnum=3|
+ *            |      |
+ *      ------+------+
+ *            |  q   |
+ *      nnum=0|nnum=1|
+ *            |      |
+ *      ------+------+
+ *
+ * Neighbor numbering for q, node=3:
+ *
+ *            |      |
+ *            |nnum=2|nnum=3
+ *            |      |
+ *            +------+------
+ *            |  q   |
+ *            |nnum=0|nnum=1
+ *            |      |
+ *            +------+------
+ *
+ *
+ * \param [in]  q             the quadrant whose possible node \a node neighbor
+ *                            list will be built.
+ * \param [in]  node          the node of the quadrant \a q whose possible node
+ *                            neighbor list will be built.  This is given in
+ *                            pixel ordering.
+ * \param [in]  nnum          the neighbor number with the ordering described
+ *                            above, if nnum==0 then it is the corner neighbor.
+ * \param [in]  neighor_rlev  the relative level of the neighbor compared to
+ *                            the level of \a q.
+ * \param [out] neighbor      the neighbor that will be filled.
+ * \param [out] neighbor_node the neighbor's node which shares with \a q
+ *                            the node \a node.
+ *
+ */
+void                p4est_possible_node_neigbors (p4est_quadrant_t * q,
+                                                  int32_t node,
+                                                  int32_t nnum,
+                                                  int8_t neighbor_rlev,
+                                                  p4est_quadrant_t * neighbor,
+                                                  int32_t * neighbor_node);
+
 #endif /* !__P4EST_MESH_H__ */
