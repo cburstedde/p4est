@@ -562,7 +562,8 @@ p4est_list_pop (p4est_list_t * list)
 
 /* hash table routines */
 
-static const int    p4est_hash_minimal_size = (1 << 8); /* 256 slots */
+static const int    p4est_hash_minimal_size = ((1 << 8) - 1);   /* 255 slots */
+static const int    p4est_hash_shrink_interval = (1 << 8);      /* 256 steps */
 
 static void
 p4est_hash_maybe_resize (p4est_hash_t * hash)
@@ -574,16 +575,12 @@ p4est_hash_maybe_resize (p4est_hash_t * hash)
   p4est_array_t      *new_slots;
   p4est_array_t      *old_slots = hash->slots;
 
-  /*
-   * powers of 2 may not be a good general slot count,
-   * but for quadrants in Morton ordering this should be fine.
-   */
   ++hash->resize_checks;
   if (hash->elem_count >= 4 * old_slots->elem_count) {
-    new_size = 4 * old_slots->elem_count;
+    new_size = 4 * old_slots->elem_count - 1;
   }
   else if (hash->elem_count <= old_slots->elem_count / 4) {
-    new_size = old_slots->elem_count / 4;
+    new_size = old_slots->elem_count / 4 + 1;
     if (new_size < p4est_hash_minimal_size) {
       return;
     }
@@ -809,7 +806,7 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
       --hash->elem_count;
 
       /* check for resize at specific intervals and return */
-      if (hash->elem_count % p4est_hash_minimal_size == 0) {
+      if (hash->elem_count % p4est_hash_shrink_interval == 0) {
         p4est_hash_maybe_resize (hash);
       }
       return 1;
