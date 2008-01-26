@@ -811,7 +811,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             qh, rh;
   int32_t             treecount, qcount, qbytes, offset, obytes;
   int32_t             first_tree, last_tree, next_tree;
-  int32_t             first_peer, last_peer, rank_in_peers, over_peer_count;
+  int32_t             first_peer, last_peer;
+  int32_t             rank_in_peers, over_peer_count, eff_peer_count;
   p4est_array_t      *peers, *qarray, *tquadrants, corner_info;
   p4est_balance_peer_t *peer;
   p4est_tree_t       *tree;
@@ -1063,6 +1064,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   rank_in_peers = (first_peer <= rank && rank <= last_peer) ? 1 : 0;
   over_peer_count = last_peer - first_peer + 1 - rank_in_peers;
   P4EST_ASSERT (0 <= over_peer_count && over_peer_count < p4est->mpisize);
+  eff_peer_count = 0;
   if (p4est->mpisize == 1) {
     P4EST_ASSERT (first_peer == rank && last_peer == rank);
   }
@@ -1174,6 +1176,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (i < nwin - 1) {
       P4EST_ASSERT (peer_windows[2 * i + 1] < peer_windows[2 * (i + 1)] - 1);
     }
+    eff_peer_count += peer_windows[2 * i + 1] - peer_windows[2 * i] + 1;
   }
   for (i = nwin; i < number_peer_windows; ++i) {
     P4EST_ASSERT (peer_windows[2 * i] == -1);
@@ -1195,8 +1198,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     P4EST_CHECK_MPI (mpiret);
   }
   if (p4est->nout != NULL) {
-    fprintf (p4est->nout, "[%d] Peers first %d last %d count %d\n",
-             rank, first_peer, last_peer, over_peer_count);
+    fprintf (p4est->nout, "[%d] Peers first %d last %d counts %d %d\n",
+             rank, first_peer, last_peer, over_peer_count, eff_peer_count);
   }
 
   /*
@@ -1712,7 +1715,6 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
-  FILE               *nout = p4est->nout;
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
   const int32_t       first_tree = p4est->first_local_tree;
@@ -1733,6 +1735,9 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   p4est_quadrant_t   *q;
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
+#if defined (P4EST_HAVE_DEBUG) || defined (P4EST_HAVE_VERBOSE_DEBUG)
+  FILE               *nout = p4est->nout;
+#endif
 
   /* this function does nothing in a serial setup */
   if (p4est->mpicomm == MPI_COMM_NULL || p4est->mpisize == 1) {
