@@ -38,6 +38,8 @@ typedef struct
 }
 p4est_balance_peer_t;
 
+const int8_t        p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
+
 static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
 static const int    number_peer_windows = 5;
@@ -802,7 +804,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 tree_fully_owned, transform;
   int                 first_index, last_index;
   int                 which;
-  int8_t              face, corner;
+  int8_t              face, corner, zcorner;
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qtree;
@@ -1009,8 +1011,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               for (ctree = 0; ctree < corner_info.elem_count; ++ctree) {
                 ci = p4est_array_index (&corner_info, ctree);
                 tosend = *q;
-                p4est_quadrant_corner (&tosend, ci->ncorner, 0);
-                p4est_quadrant_corner (&insulq, ci->ncorner, 1);
+                zcorner = p4est_corner_to_zorder[ci->ncorner];
+                p4est_quadrant_corner (&tosend, zcorner, 0);
+                p4est_quadrant_corner (&insulq, zcorner, 1);
                 p4est_balance_schedule (p4est, peers, ci->ntree, 1,
                                         &tosend, &insulq,
                                         &first_peer, &last_peer);

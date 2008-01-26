@@ -508,33 +508,30 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 
 int8_t
 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                             int8_t corner, int8_t level)
+                             int8_t zcorner, int8_t level)
 {
-  int8_t              sid;
   int32_t             th, stepx, stepy;
   p4est_quadrant_t    quad, sibling;
-  const int8_t        corner_sids[4] = { 0, 1, 3, 2 };
-  const int           corner_steps[4][2] =
-    { {-1, -1,}, {1, -1}, {1, 1}, {-1, 1} };
+  const int           zcorner_steps[4][2] =
+    { {-1, -1,}, {1, -1}, {-1, 1}, {1, 1} };
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (corner >= 0 && corner < 4);
+  P4EST_ASSERT (zcorner >= 0 && zcorner < 4);
   P4EST_ASSERT (level >= 0 && level <= P4EST_MAXLEVEL);
 
   P4EST_QUADRANT_INIT (&quad);
   P4EST_QUADRANT_INIT (&sibling);
-  sid = corner_sids[corner];
-  stepx = corner_steps[corner][0];
-  stepy = corner_steps[corner][1];
+  stepx = zcorner_steps[zcorner][0];
+  stepy = zcorner_steps[zcorner][1];
 
   quad = *q;
   while (quad.level > level) {
     th = (1 << P4EST_MAXLEVEL) - (1 << (P4EST_MAXLEVEL - quad.level));
-    p4est_quadrant_sibling (&quad, &sibling, sid);
-    if ((corner == 0 && sibling.x <= 0 && sibling.y <= 0) ||
-        (corner == 1 && sibling.x >= th && sibling.y <= 0) ||
-        (corner == 2 && sibling.x >= th && sibling.y >= th) ||
-        (corner == 3 && sibling.x <= 0 && sibling.y >= th)) {
+    p4est_quadrant_sibling (&quad, &sibling, zcorner);
+    if ((zcorner == 0 && sibling.x <= 0 && sibling.y <= 0) ||
+        (zcorner == 1 && sibling.x >= th && sibling.y <= 0) ||
+        (zcorner == 2 && sibling.x <= 0 && sibling.y >= th) ||
+        (zcorner == 3 && sibling.x >= th && sibling.y >= th)) {
       return quad.level;
     }
     p4est_quadrant_parent (&quad, &quad);
@@ -548,7 +545,7 @@ p4est_quadrant_corner_level (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_corner (p4est_quadrant_t * q, int8_t corner, int inside)
+p4est_quadrant_corner (p4est_quadrant_t * q, int8_t zcorner, int inside)
 {
   int32_t             lshift, rshift;
 
@@ -559,7 +556,7 @@ p4est_quadrant_corner (p4est_quadrant_t * q, int8_t corner, int inside)
             ((1 << P4EST_MAXLEVEL) - (1 << (P4EST_MAXLEVEL - q->level))) :
             (1 << P4EST_MAXLEVEL));
 
-  switch (corner) {
+  switch (zcorner) {
   case 0:
     q->x = q->y = lshift;
     break;
@@ -568,11 +565,11 @@ p4est_quadrant_corner (p4est_quadrant_t * q, int8_t corner, int inside)
     q->y = lshift;
     break;
   case 2:
-    q->x = q->y = rshift;
-    break;
-  case 3:
     q->x = lshift;
     q->y = rshift;
+    break;
+  case 3:
+    q->x = q->y = rshift;
     break;
   default:
     P4EST_ASSERT_NOT_REACHED ();
@@ -1211,7 +1208,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
   int                 treecount, incount, outcount;
   int                 first_index, last_index;
   int                 inter_tree, transform, outface[4];
-  int8_t              face, corner, level;
+  int8_t              face, corner, zcorner, level;
   int32_t             ntree;
   int32_t             qh, rh;
   p4est_array_t       corner_info;
@@ -1283,9 +1280,11 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
           }
         }
         p4est_find_corner_info (conn, qtree, corner, &corner_info);
+
         /* construct highest corner quadrant */
         cq.level = P4EST_MAXLEVEL;
-        p4est_quadrant_corner (&cq, corner, 1);
+        zcorner = p4est_corner_to_zorder[corner];
+        p4est_quadrant_corner (&cq, zcorner, 1);
       }
       else {
         /* this quadrant is a face neighbor */
@@ -1370,8 +1369,9 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
             if (tq->level <= level) {
               continue;
             }
-            level = p4est_quadrant_corner_level (tq, corner, level);
+            level = p4est_quadrant_corner_level (tq, zcorner, level);
           }
+          zcorner = -1;         /* will be recycled below */
 
           /* send this small corner to all neighbor corner trees */
           for (ctree = 0; ctree < corner_info.elem_count; ++ctree) {
@@ -1380,7 +1380,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
             p4est_array_resize (out, outcount + 1);
             outq = p4est_array_index (out, outcount);
             outq->level = level;
-            p4est_quadrant_corner (outq, ci->ncorner, 0);
+            zcorner = p4est_corner_to_zorder[ci->ncorner];
+            p4est_quadrant_corner (outq, zcorner, 0);
             outq->user_data = (void *) ci->ntree;
             ++outcount;
           }

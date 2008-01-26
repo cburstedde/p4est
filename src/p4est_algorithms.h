@@ -212,18 +212,20 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      p4est_quadrant_t * r);
 
 /** Compute the level of balance needed at a specified corner.
+ * \param [in]  zcorner  Corner index in z-ordering.
  * \return  Returns the maximum of level and this quadrants' corner level.
  */
 int8_t              p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                                                 int8_t corner, int8_t level);
+                                                 int8_t zcorner,
+                                                 int8_t level);
 
 /** Move a quadrant inside or diagonally outside a corner position.
- * \param [in,out] q       This quadrant only requires a valid level.
- * \param [in]     corner  Number of the corner, in 0..3.
- * \param [int]    inside  Boolean flag for inside or diagonally outside.
+ * \param [in,out] q        This quadrant only requires a valid level.
+ * \param [in]     zcorner  Number of the corner in z-order, in 0..3.
+ * \param [int]    inside   Boolean flag for inside or diagonally outside.
  */
 void                p4est_quadrant_corner (p4est_quadrant_t * q,
-                                           int8_t corner, int inside);
+                                           int8_t zcorner, int inside);
 
 /** Shift a quadrant by the size of a tree depending on the face.
  * \param [in,out] q     The quadrant to be modified.

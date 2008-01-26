@@ -137,6 +137,9 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
 typedef int         (*p4est_weight_t) (p4est_t * p4est, int32_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
+/** map right-hand corner rule to corner in z-ordering */
+extern const int8_t p4est_corner_to_zorder[5];
+
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \
   do { memset (q, -1, sizeof (p4est_quadrant_t)); } while (0)
