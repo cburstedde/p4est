@@ -927,7 +927,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   for (j = first_tree; j <= last_tree; ++j) {
     any_face = 0;
     for (face = 0; face < 4; ++face) {
-      face_contact[face] = (conn->tree_to_tree[4 * j + face] != j);
+      face_contact[face] = (conn->tree_to_tree[4 * j + face] != j ||
+                            conn->tree_to_face[4 * j + face] != face);
       any_face = any_face || face_contact[face];
     }
     if (any_face) {
@@ -1025,7 +1026,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               for (face = 0; face < 4; ++face) {
                 if (quad_contact[face] && face_contact[face]) {
                   qtree = conn->tree_to_tree[4 * j + face];
-                  P4EST_ASSERT (qtree != j);
                   break;
                 }
               }

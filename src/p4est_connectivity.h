@@ -26,20 +26,22 @@
 #include <p4est_memory.h>
 #include <stdint.h>
 
+/** This structure holds the inter-tree connectivity information.
+ * Identification of separate faces and corners is possible.
+ *
+ * The arrays tree_to_* are stored in right-hand rule ordering.
+ * They are allocated [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ *
+ * The values for tree_to_face are 0..3 for equal orientation
+ * and 4..7 for opposite orientation, both in right-hand rule.
+ */
 typedef struct p4est_connectivity
 {
   int32_t             num_trees;
   int32_t             num_vertices;
-  int32_t            *tree_to_vertex;   /* allocated [0][0]..[0][3]..
-                                           [num_trees-1][0]..[num_trees-1][3]
-
-                                           Note: This is stored in
-                                           right-hand-rule order.
-                                         */
-  int32_t            *tree_to_tree;     /* allocated [0][0]..[0][3]..
-                                           [num_trees-1][0]..[num_trees-1][3] */
-  int8_t             *tree_to_face;     /* allocated [0][0]..[0][3]..
-                                           [num_trees-1][0]..[num_trees-1][3] */
+  int32_t            *tree_to_vertex;
+  int32_t            *tree_to_tree;
+  int8_t             *tree_to_face;
   double             *vertices; /* allocated [0][0]..[0][2]..
                                    [num_vertices-1][0]..
                                    [num_vertices-1][2] */
@@ -120,12 +122,17 @@ p4est_connectivity_t *p4est_connectivity_new_moebius (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_star (void);
 
+/** Create a connectivity structure for an all-periodic unit square.
+ * The left and right faces are identified, and bottom and top opposite.
+ */
+p4est_connectivity_t *p4est_connectivity_new_periodic (void);
+
 /** Returns the transformation number from a tree to a neighbor tree.
  * \return  Returns -1 if there is no neighbor at that face, or 0..7.
  */
 int                 p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
-                                               int32_t itree, int8_t face);
+                                               int32_t itree, int8_t iface);
 
 /** Fills an array with information about corner neighbors.
  * \param [in,out]  corner_info  Array of p4est_corner_info_t members.

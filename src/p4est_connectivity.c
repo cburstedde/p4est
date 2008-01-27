@@ -86,7 +86,8 @@ int
 p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
 {
   int                 found;
-  int8_t              face, nface, corner;
+  int8_t              face, rface, nface, orientation;
+  int8_t              corner;
   int32_t             tree, ntree;
   int32_t             vertex, corner_trees;
   int32_t             v1, v2, w1, w2;
@@ -111,26 +112,28 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         fprintf (stderr, "Tree range A in %d %d\n", tree, face);
         return 0;
       }
-      nface = ttf[tree * 4 + face];
-      if (nface < 0 || nface >= 4) {
+      rface = ttf[tree * 4 + face];
+      if (rface < 0 || rface >= 8) {
         fprintf (stderr, "Face range in %d %d\n", tree, face);
         return 0;
       }
+      nface = rface % 4;        /* clamp to a real face index */
+      orientation = rface / 4;  /* orientation is 0 (same) or 1 (opposite) */
       if (ntree == tree) {
-        /* no neighbor across this face */
-        if (nface != face) {
-          fprintf (stderr, "Face mismatch in %d %d\n", tree, face);
+        /* no neighbor across this face or self-periodic */
+        if (nface == face && orientation != 0) {
+          fprintf (stderr, "Face invalid in %d %d\n", tree, face);
           return 0;
         }
       }
-      else {
+      if (ntree != tree || nface != face) {
         /* check reciprocity */
-        if (ttf[ntree * 4 + nface] != face) {
-          fprintf (stderr, "Face reciprocity in %d %d\n", tree, face);
-          return 0;
-        }
         if (ttt[ntree * 4 + nface] != tree) {
           fprintf (stderr, "Tree reciprocity in %d %d\n", tree, face);
+          return 0;
+        }
+        if (ttf[ntree * 4 + nface] != face + 4 * orientation) {
+          fprintf (stderr, "Face reciprocity in %d %d\n", tree, face);
           return 0;
         }
 
@@ -140,15 +143,15 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         w1 = ttv[ntree * 4 + nface];
         w2 = ttv[ntree * 4 + (nface + 1) % 4];
         if (v1 == v2 || w1 == w2) {
-          fprintf (stderr, "Vertex mismatch A in %d %d\n", tree, face);
+          fprintf (stderr, "Vertex invalid in %d %d\n", tree, face);
           return 0;
         }
-        if ((v1 != w1 && v1 != w2) || (v2 != w1 && v2 != w2)) {
-          fprintf (stderr, "Vertex mismatch B in %d %d\n", tree, face);
+        if ((v1 == w2 && v2 == w1) && orientation != 0) {
+          fprintf (stderr, "Orientation mismatch A in %d %d\n", tree, face);
           return 0;
         }
-        if ((v1 == w1 && v2 != w2) || (v1 == w2 && v2 != w1)) {
-          fprintf (stderr, "Vertex mismatch C in %d %d\n", tree, face);
+        if ((v1 == w1 && v2 == w2) && orientation != 1) {
+          fprintf (stderr, "Orientation mismatch B in %d %d\n", tree, face);
           return 0;
         }
       }
@@ -322,10 +325,10 @@ p4est_connectivity_new_moebius (void)
   };
   const int32_t       tree_to_vertex[5 * 4] = {
     0, 2, 3, 1,
-    3, 5, 4, 2,                 /* left-handed and rotated */
+    3, 5, 4, 2,                 /* left-handed */
     4, 6, 7, 5,
     6, 7, 8, 9,
-    9, 8, 0, 1,                 /* rotated */
+    9, 8, 0, 1,
   };
   const int32_t       tree_to_tree[5 * 4] = {
     0, 1, 0, 4,
@@ -335,10 +338,10 @@ p4est_connectivity_new_moebius (void)
     3, 4, 0, 4,
   };
   const int8_t        tree_to_face[5 * 4] = {
-    0, 3, 2, 2,
-    0, 3, 2, 1,
-    0, 0, 2, 1,
-    1, 1, 0, 3,
+    0, 7, 2, 2,
+    0, 7, 2, 5,
+    0, 4, 2, 5,
+    5, 1, 0, 3,
     2, 1, 3, 3,
   };
   const int32_t       vtt_offset[10 + 1] = {
@@ -386,8 +389,8 @@ p4est_connectivity_new_star (void)
     0, 1, 2, 3,
     0, 3, 4, 5,
     5, 6, 7, 0,
-    8, 7, 0, 9,
-    9, 0, 11, 10,
+    8, 7, 0, 9,                 /* left-handed */
+    9, 0, 11, 10,               /* left-handed */
     12, 1, 0, 11,
   };
   const int32_t       tree_to_tree[6 * 4] = {
@@ -401,10 +404,10 @@ p4est_connectivity_new_star (void)
   const int8_t        tree_to_face[6 * 4] = {
     1, 1, 2, 0,
     3, 1, 2, 3,
-    0, 1, 1, 3,
-    0, 2, 0, 3,
-    2, 2, 2, 3,
-    0, 0, 1, 3,
+    0, 1, 5, 3,
+    0, 6, 0, 3,
+    2, 6, 2, 3,
+    0, 0, 5, 3,
   };
   const int32_t       vtt_offset[13 + 1] = {
     0, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24,
@@ -445,44 +448,79 @@ p4est_connectivity_new_star (void)
   return connectivity;
 }
 
+p4est_connectivity_t *
+p4est_connectivity_new_periodic (void)
+{
+  p4est_connectivity_t *connectivity;
+  const int32_t       num_trees = 1;
+  const int32_t       num_vertices = 4;
+  const int32_t       num_vtt = 4;
+  const int32_t       tree_to_vertex[1 * 4] = {
+    0, 1, 2, 3,
+  };
+  const int32_t       tree_to_tree[1 * 4] = {
+    0, 0, 0, 0,
+  };
+  const int8_t        tree_to_face[1 * 4] = {
+    6, 3, 4, 1,
+  };
+  const double        vertices[4 * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    1, 1, 0,
+    0, 1, 0,
+  };
+  const int32_t       vtt_offset[4 + 1] = {
+    0, 1, 2, 3, 4,
+  };
+  const int32_t       vertex_to_tree[4] = {
+    0, 0, 0, 0,
+  };
+
+  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
+
+  memcpy (connectivity->tree_to_vertex, tree_to_vertex,
+          sizeof (int32_t) * 4 * num_trees);
+  memcpy (connectivity->tree_to_tree, tree_to_tree,
+          sizeof (int32_t) * 4 * num_trees);
+  memcpy (connectivity->tree_to_face, tree_to_face,
+          sizeof (int8_t) * 4 * num_trees);
+  memcpy (connectivity->vertices, vertices,
+          sizeof (double) * 3 * num_vertices);
+  memcpy (connectivity->vtt_offset, vtt_offset,
+          sizeof (int32_t) * (num_vertices + 1));
+  memcpy (connectivity->vertex_to_tree, vertex_to_tree,
+          sizeof (int32_t) * num_vtt);
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
+
+  return connectivity;
+}
+
 int
 p4est_find_face_transform (p4est_connectivity_t * connectivity,
-                           int32_t itree, int8_t face)
+                           int32_t itree, int8_t iface)
 {
-  int                 orientation;
-  int8_t              neighbor_face;
+  int8_t              nrface, neighbor_face, orientation;
   int32_t             neighbor_tree;
-  int32_t             v1, v2;
-  int32_t             n1, n2, w1, w2;
 
   P4EST_ASSERT (itree >= 0 && itree < connectivity->num_trees);
-  P4EST_ASSERT (face >= 0 && face < 4);
+  P4EST_ASSERT (iface >= 0 && iface < 4);
 
-  neighbor_tree = connectivity->tree_to_tree[4 * itree + face];
+  neighbor_tree = connectivity->tree_to_tree[4 * itree + iface];
   P4EST_ASSERT (neighbor_tree >= 0 &&
                 neighbor_tree < connectivity->num_trees);
-  if (neighbor_tree == itree) {
+
+  nrface = connectivity->tree_to_face[4 * itree + iface];
+  P4EST_ASSERT (nrface >= 0 && nrface < 8);
+  neighbor_face = nrface % 4;
+  orientation = nrface / 4;
+
+  if (neighbor_tree == itree && neighbor_face == iface) {
     return -1;
   }
 
-  /* look up my own vertices */
-  neighbor_face = connectivity->tree_to_face[4 * itree + face];
-  P4EST_ASSERT (neighbor_face >= 0 && neighbor_face < 4);
-  v1 = connectivity->tree_to_vertex[4 * itree + face];
-  v2 = connectivity->tree_to_vertex[4 * itree + (face + 1) % 4];
-
-  /* look up my neighbor's vertices */
-  n1 = 4 * neighbor_tree + neighbor_face;
-  n2 = 4 * neighbor_tree + (neighbor_face + 1) % 4;
-  w1 = connectivity->tree_to_vertex[n1];
-  w2 = connectivity->tree_to_vertex[n2];
-
-  /* derive orientation from vertex relations */
-  P4EST_ASSERT (v1 != v2 && w1 != w2);
-  P4EST_ASSERT ((w1 == v1 && w2 == v2) || (w1 == v2 && w2 == v1));
-  orientation = (w1 == v1 && w2 == v2) ? 1 : 0;
-
-  return p4est_transform_table[face][neighbor_face][orientation];
+  return p4est_transform_table[iface][neighbor_face][orientation];
 }
 
 void
