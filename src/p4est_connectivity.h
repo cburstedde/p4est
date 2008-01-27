@@ -34,40 +34,29 @@
  *
  * The values for tree_to_face are 0..3 for equal orientation
  * and 4..7 for opposite orientation, both in right-hand rule.
+ *
+ * The vertex coordinates are stored in the array vertices, allocated
+ * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
+ *
+ * The arrays vertex_to_* store a variable number of entries per vertex.
+ * For vertex v these are at position [vtt_offset[v]]..[vtt_offset[v+1]-1].
+ * Their number for vertex v is vtt_offset[v+1] - vtt_offset[v].
+ * The size of the vertex_to_* arrays is vtt_offset[num_vertices].
  */
 typedef struct p4est_connectivity
 {
   int32_t             num_trees;
   int32_t             num_vertices;
+
   int32_t            *tree_to_vertex;
   int32_t            *tree_to_tree;
   int8_t             *tree_to_face;
-  double             *vertices; /* allocated [0][0]..[0][2]..
-                                   [num_vertices-1][0]..
-                                   [num_vertices-1][2] */
-  int32_t            *vtt_offset;       /* allocated [0]..[num_vertices]
 
-                                           Given a vertex this stores the
-                                           offset into vertex_to_tree where the
-                                           tree numbers are stored.  The number
-                                           of trees for vertex v can be
-                                           calculated by vtt_offset[v+1] -
-                                           vtt_offset[v].  Thus
-                                           vtt_offset[num_vertices] contains
-                                           the length of vertex_to_tree array.
-                                         */
-  int32_t            *vertex_to_tree;   /* For each vertex it stores the
-                                           tree numbers for the trees that
-                                           are attached to it.
+  double             *vertices;
 
-                                           The size of the array is
-                                           vtt_offset[num_vertices].
-
-                                           The trees connected to vertex v
-                                           are:
-                                           vertex_to_tree[vtt_offset[v]]..
-                                           vertex_to_tree[vtt_offset[v+1]-1]
-                                         */
+  int32_t            *vtt_offset;
+  int32_t            *vertex_to_tree;
+  int32_t            *vertex_to_vertex;
 }
 p4est_connectivity_t;
 

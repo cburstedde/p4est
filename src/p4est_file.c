@@ -88,13 +88,14 @@ p4est_connectivity_read (const char *filename,
   int                 set_num_vtt = 0;
   char               *key = NULL;
   char               *value = NULL;
+  int32_t             vertex, corner_trees, ctree;
   int32_t             num_trees = 0;
   int32_t             num_vertices = 0;
   int32_t             num_vtt = 0;
   int32_t             k, k0, k1, k2, k3, f0, f1, f2, f3, v0, v1, v2, v3;
   int32_t             i, Nnn;
   int32_t            *tree_to_vertex, *tree_to_tree;
-  int32_t            *vtt_offset, *vertex_to_tree;
+  int32_t            *vtt_offset, *vertex_to_tree, *vertex_to_vertex;
   int8_t             *tree_to_face;
   double             *vertices;
   double              vx, vy, vz;
@@ -188,7 +189,8 @@ p4est_connectivity_read (const char *filename,
       }
 
       P4EST_CHECK_ABORT (section == INFO || *connectivity != NULL,
-                         "The [Forest Info] setction must come first and set Nv and Nv.");
+                         "The [Forest Info] section must come first"
+                         " and set Nv and Nv.");
 
       section_lines_read = 0;
     }
@@ -230,6 +232,7 @@ p4est_connectivity_read (const char *filename,
           vtt_offset = (*connectivity)->vtt_offset;
           vtt_offset[0] = 0;
           vertex_to_tree = (*connectivity)->vertex_to_tree;
+          vertex_to_vertex = (*connectivity)->vertex_to_vertex;
         }
 
         break;
@@ -334,6 +337,14 @@ p4est_connectivity_read (const char *filename,
       }
 
       ++section_lines_read;
+    }
+  }
+
+  /* populate vertex_to_vertex array since it is not read in currently */
+  for (vertex = 0; vertex < num_vertices; ++vertex) {
+    corner_trees = vtt_offset[vertex + 1] - vtt_offset[vertex];
+    for (ctree = 0; ctree < corner_trees; ++ctree) {
+      vertex_to_vertex[vtt_offset[vertex] + ctree] = vertex;
     }
   }
 
