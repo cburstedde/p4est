@@ -124,6 +124,16 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         }
       }
       else {
+        /* check reciprocity */
+        if (ttf[ntree * 4 + nface] != face) {
+          fprintf (stderr, "Face reciprocity in %d %d\n", tree, face);
+          return 0;
+        }
+        if (ttt[ntree * 4 + nface] != tree) {
+          fprintf (stderr, "Tree reciprocity in %d %d\n", tree, face);
+          return 0;
+        }
+
         /* a neighbor across this face */
         v1 = ttv[tree * 4 + face];
         v2 = ttv[tree * 4 + (face + 1) % 4];
