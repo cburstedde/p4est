@@ -503,7 +503,7 @@ p4est_connectivity_new_periodic (void)
   p4est_connectivity_t *connectivity;
   const int32_t       num_trees = 1;
   const int32_t       num_vertices = 4;
-  const int32_t       num_vtt = 4;
+  const int32_t       num_vtt = 12;
   const int32_t       tree_to_vertex[1 * 4] = {
     0, 1, 2, 3,
   };
@@ -520,13 +520,13 @@ p4est_connectivity_new_periodic (void)
     0, 1, 0,
   };
   const int32_t       vtt_offset[4 + 1] = {
-    0, 1, 2, 3, 4,
+    0, 3, 6, 9, 12,
   };
-  const int32_t       vertex_to_tree[4] = {
-    0, 0, 0, 0,
+  const int32_t       vertex_to_tree[12] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
-  const int32_t       vertex_to_vertex[4] = {
-    0, 1, 2, 3,
+  const int32_t       vertex_to_vertex[12] = {
+    0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3,
   };
 
   connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
@@ -582,10 +582,11 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
                         int32_t itree, int8_t icorner,
                         p4est_array_t * corner_info)
 {
-  int                 incount, num_ctrees, ctree, num_found;
+  int                 incount, num_found;
   int8_t              ncorner;
+  int32_t             corner_trees, ctree;
   int32_t             ntree, ntree1, ntree2;
-  int32_t             vertex;
+  int32_t             ivertex, nvertex;
   p4est_corner_info_t *ci;
 
   P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
@@ -593,22 +594,24 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
   P4EST_ASSERT (corner_info->elem_size == sizeof (p4est_corner_info_t));
   incount = corner_info->elem_count;
 
-  vertex = conn->tree_to_vertex[4 * itree + icorner];
-  P4EST_ASSERT (0 <= vertex && vertex < conn->num_vertices);
+  ivertex = conn->tree_to_vertex[4 * itree + icorner];
+  P4EST_ASSERT (0 <= ivertex && ivertex < conn->num_vertices);
 
   ntree1 = conn->tree_to_tree[4 * itree + (icorner + 3) % 4];
   ntree2 = conn->tree_to_tree[4 * itree + icorner];
 
-  num_ctrees = conn->vtt_offset[vertex + 1] - conn->vtt_offset[vertex];
+  corner_trees = conn->vtt_offset[ivertex + 1] - conn->vtt_offset[ivertex];
   num_found = 0;
-  for (ctree = 0; ctree < num_ctrees; ++ctree) {
-    ntree = conn->vertex_to_tree[conn->vtt_offset[vertex] + ctree];
-    if (ntree == itree || ntree == ntree1 || ntree == ntree2) {
+  for (ctree = 0; ctree < corner_trees; ++ctree) {
+    ntree = conn->vertex_to_tree[conn->vtt_offset[ivertex] + ctree];
+    nvertex = conn->vertex_to_vertex[conn->vtt_offset[ivertex] + ctree];
+    if (nvertex == ivertex &&
+        (ntree == itree || ntree == ntree1 || ntree == ntree2)) {
       continue;
     }
     /* else we have a true corner with ntree, find its id */
     for (ncorner = 0; ncorner < 4; ++ncorner) {
-      if (vertex == conn->tree_to_vertex[4 * ntree + ncorner]) {
+      if (nvertex == conn->tree_to_vertex[4 * ntree + ncorner]) {
         break;
       }
     }
@@ -622,7 +625,7 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
     ++num_found;
   }
   p4est_array_resize (corner_info, num_found);
-  P4EST_ASSERT (num_ctrees == num_found +
+  P4EST_ASSERT (corner_trees == num_found +
                 1 + (ntree1 != itree) + (ntree2 != itree));
 }
 
