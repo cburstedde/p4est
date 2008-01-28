@@ -122,8 +122,8 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         fprintf (stderr, "Face range in %d %d\n", tree, face);
         return 0;
       }
-      nface = rface % 4;        /* clamp to a real face index */
-      orientation = rface / 4;  /* orientation is 0 (same) or 1 (opposite) */
+      nface = (int8_t) (rface % 4);     /* clamp to a real face index */
+      orientation = (int8_t) (rface / 4);       /* 0 (same) or 1 (opposite) */
       if (ntree == tree) {
         /* no neighbor across this face or self-periodic */
         if (nface == face && orientation != 0) {
@@ -567,8 +567,8 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
 
   nrface = connectivity->tree_to_face[4 * itree + iface];
   P4EST_ASSERT (nrface >= 0 && nrface < 8);
-  neighbor_face = nrface % 4;
-  orientation = nrface / 4;
+  neighbor_face = (int8_t) (nrface % 4);
+  orientation = (int8_t) (nrface / 4);
 
   if (neighbor_tree == itree && neighbor_face == iface) {
     return -1;
