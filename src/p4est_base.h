@@ -25,6 +25,8 @@
 /*
  * this header is the only one that includes p4est_config.h
  * it is not installed in the final include directory
+ *
+ * do not include this header from any other .h file
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,6 +35,10 @@
 
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
+#endif
+
+#ifdef HAVE_STDARG_H
+#include <stdarg.h>
 #endif
 
 #ifdef HAVE_STDIO_H
@@ -46,6 +52,9 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+
+/* needs the include p4est_config.h directive from above */
+#include <p4est_log.h>
 
 #if(defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS)
 #define P4EST_BACKTRACE
@@ -91,9 +100,21 @@
 #define P4EST_ROUNDUP2_32(x) \
                     (((x) <= 0) ? 0 : (1 << (P4EST_LOG2_32 ((x) - 1) + 1)))
 
+/* log macros */
+#define P4EST_GLOBAL_LOG(p,s) \
+  _LOG_PRE (p4est_log_category_global, (p), (s)) _LOG_POST
+#define P4EST_GLOBAL_LOGF(p,f,...) \
+  _LOG_PRE (p4est_log_category_global, (p), (f)) , __VA_ARGS__ _LOG_POST
+#define P4EST_LOG(p,s) \
+  _LOG_PRE (p4est_log_category_rank, (p), (s)) _LOG_POST
+#define P4EST_LOGF(p,f,...) \
+  _LOG_PRE (p4est_log_category_rank, (p), (f)) , __VA_ARGS__ _LOG_POST
+
 typedef void        (*p4est_handler_t) (void *data);
 
 extern const int    p4est_log_lookup_table[256];
+extern struct LogCategory p4est_log_category_global;
+extern struct LogCategory p4est_log_category_rank;
 
 #if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
@@ -117,13 +138,19 @@ void               *p4est_realloc (void *ptr, size_t size);
 void                p4est_free (void *ptr);
 void                p4est_memory_check (void);
 
-/** Sets stream to line buffered. Must be called before writing anything. */
-void                p4est_set_linebuffered (FILE * stream);
+/** Initializes p4est_log_category to print to stream.
+ * \param [in]  identifier  Set this to mpirank if available, or -1.
+ */
+void                p4est_init_logging (FILE * stream, int identifier);
 
 /** Installs an abort handler and catches signals INT, SEGV, USR2. */
-void                p4est_set_abort_handler (int identifier,
-                                             p4est_handler_t handler,
+void                p4est_set_abort_handler (p4est_handler_t handler,
                                              void *data);
+
+/** Combines calls to init_logging and set_abort_handler. */
+void                p4est_init (FILE * stream, int identifier,
+                                p4est_handler_t abort_handler,
+                                void *abort_data);
 
 /** Prints a stack trace, calls the abort handler and terminates. */
 void                p4est_abort (void);

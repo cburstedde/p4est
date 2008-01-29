@@ -26,6 +26,24 @@
 
 /* renamed from log4c.h to p4est_log.h and modified for p4est */
 
+#ifndef __P4EST_LOG_H__
+#define __P4EST_LOG_H__
+
+/*
+ * this header is included via p4est_base.h
+ * it is not installed in the final include directory
+ *
+ * do not include this header from any other file
+ */
+
+#ifndef __P4EST_BASE_H__
+#error The file p4est_log.h may only be included from p4est_base.h
+#endif
+
+#ifdef P4EST_LOG_LEVEL
+#define LOG_STATIC_THRESHOLD P4EST_LOG_LEVEL
+#endif
+
 /**
  * @file log4c.h
  * An easy-to-use, fast and flexible message logging architecture.
@@ -217,38 +235,34 @@
  *
  * Category names are global variables.
  */
-#ifndef __P4EST_LOG_H__
-#define __P4EST_LOG_H__
-
-#include <stdarg.h>
 
 /**
  * @name Priority Values
- *
- * These are the same names (except TRACE is new) as used by Unix syslog(), but
- * the numerical values are different.
  *@{
  */
 
-#define LP_NONE           0
-#define LP_TRACE          1
-#define LP_DEBUG          2
-#define LP_INFO           3
-#define LP_NOTICE         4
-#define LP_WARNING	  5
-#define LP_ERROR          6
-#define LP_CRITICAL       7
-#define LP_ALERT          8
-#define LP_EMERGENCY      9
+#define P4EST_LP_NONE        0
+#define P4EST_LP_TRACE       1  /* any information on the internal state */
+#define P4EST_LP_DEBUG       2  /* information on conditions, decisions */
+#define P4EST_LP_INFO        3  /* the main things a function is doing */
+#define P4EST_LP_STATISTICS  4  /* performance related statistics */
+#define P4EST_LP_PRODUCTION  5  /* a few lines for a major api function */
+#define P4EST_LP_SILENT      6  /* this will never log anything */
+/*
+ * We are doing parallel processing.
+ * Nobody reads log files and looks out for warnings.
+ * Abort on warnings or error conditions, don't log them.
+ * Print to stderr by hand on these occasions.
+ */
 
-#define LP_UNINITIALIZED  -1    ///< for internal use only
+#define P4EST_LP_UNINITIALIZED  -1    ///< for internal use only
 
 #ifndef LOG_STATIC_THRESHOLD
 /**
  * All logging with priority < LOG_STATIC_THRESHOLD is disabled at compile
  * time, i.e., compiled out.
  */
-  #define LOG_STATIC_THRESHOLD LP_NONE
+  #define LOG_STATIC_THRESHOLD P4EST_LP_NONE
 #endif
 
 /*@}*/
@@ -265,7 +279,7 @@
     extern struct LogCategory _LOGV(parent);    \
     struct LogCategory _LOGV(catName) = {       \
         &_LOGV(parent), 0, 0,                   \
-        #catName, LP_UNINITIALIZED, 1,          \
+        #catName, P4EST_LP_UNINITIALIZED, 1,    \
         0, 1                                    \
     };
 
@@ -344,10 +358,10 @@ struct LogAppender {
 struct LogEvent {
     struct LogCategory* cat;
     int priority;
-    char* fileName;
-    char* functionName;
+    const char* fileName;
+    const char* functionName;
     int lineNum;
-    char *fmt;
+    const char *fmt;
     va_list ap;
 };
 
@@ -393,7 +407,7 @@ extern struct LogAppender *log_defaultLogAppender;
 #define _LOG_ISENABLEDV(catv, priority)                         \
        (priority >= LOG_STATIC_THRESHOLD                        \
         && priority >= (catv).thresholdPriority                 \
-        && ((catv).thresholdPriority != LP_UNINITIALIZED        \
+        && ((catv).thresholdPriority != P4EST_LP_UNINITIALIZED  \
             || _log_initCat(priority, &(catv))) )
 
 /**
@@ -570,4 +584,5 @@ extern struct LogAppender *log_defaultLogAppender;
 #define ALERT7(f,a1,a2,a3,a4,a5,a6)     _LOG_PRE(*_log_defaultCategory, LP_ALERT, f) ,a1,a2,a3,a4,a5,a6 _LOG_POST
 #define EMERGENCY7(f,a1,a2,a3,a4,a5,a6) _LOG_PRE(*_log_defaultCategory, LP_EMERGENCY, f) ,a1,a2,a3,a4,a5,a6  _LOG_POST
 //@}
+
 #endif /* !__P4EST_LOG_H__ */

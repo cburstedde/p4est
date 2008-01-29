@@ -182,10 +182,7 @@ main (int argc, char **argv)
   p4est_refine_t      refine_fn;
   p4est_coarsen_t     coarsen_fn;
 
-  /* set stdout to line buffered */
-  p4est_set_linebuffered (stdout);
-
-  /* initialize MPI */
+  /* initialize MPI and p4est internals */
   mpi->mpirank = 0;
   mpi->mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
@@ -197,7 +194,7 @@ main (int argc, char **argv)
     P4EST_CHECK_MPI (mpiret);
   }
 #endif
-  p4est_set_abort_handler (mpi->mpirank, abort_fn, mpi);
+  p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
 
   /* process command line arguments */
   usage =

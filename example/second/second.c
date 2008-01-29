@@ -75,10 +75,7 @@ main (int argc, char **argv)
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   const int32_t       given[5] = { 3, 7, 36, 10, 10 };
 
-  /* set stdout to line buffered */
-  p4est_set_linebuffered (stdout);
-
-  /* initialize MPI */
+  /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;
@@ -86,7 +83,7 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   P4EST_CHECK_MPI (mpiret);
-  p4est_set_abort_handler (mpi->mpirank, abort_fn, mpi);
+  p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
   P4EST_CHECK_ABORT (mpi->mpisize == 5, "This example requires np=5.");
 
   /* create connectivity and forest structures */

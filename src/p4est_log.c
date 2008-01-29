@@ -29,22 +29,17 @@
 /**
  * Logging for C - implementation.
  *
- * See log4c.h for documentation.
+ * See p4est_log.h for documentation.
  */
-#include <p4est_log.h>
+
+/*
+ * the header p4est_log.h is included via p4est_base.h
+ */
 #include <p4est_base.h>
-#include <assert.h>
-
-#ifndef NULL
- #define NULL 0L
-#endif
-
-#define TRUE 1
-#define FALSE 0
 
 struct LogCategory _LOGV(LOG_ROOT_CAT) = {
     0, 0, 0,
-    "root", LP_UNINITIALIZED, 0,
+    "root", P4EST_LP_UNINITIALIZED, 0,
     NULL, 0
 };
 
@@ -97,7 +92,7 @@ void _log_logEvent(struct LogCategory* category, struct LogEvent* ev, ...)
 
 static const char * initCategory(struct LogCategory* category) {
     if (category == &_LOGV(LOG_ROOT_CAT)) {
-        category->thresholdPriority = LP_WARNING;
+        category->thresholdPriority = P4EST_LP_SILENT;
         category->appender = log_defaultLogAppender;
     } else {
         log_setParent(category, category->parent);
@@ -119,15 +114,15 @@ int _log_initCat(int priority, struct LogCategory* category) {
 
 void log_setParent(struct LogCategory* cat, struct LogCategory* parent) {
 
-    assert(parent != NULL);
+    P4EST_ASSERT (parent != NULL);
 
     // unlink from current parent
-    if (cat->thresholdPriority != LP_UNINITIALIZED) {
+    if (cat->thresholdPriority != P4EST_LP_UNINITIALIZED) {
         struct LogCategory** cpp = &parent->firstChild;
         while(*cpp != cat && *cpp != NULL) {
             cpp = &(*cpp)->nextSibling;
         }
-        assert(*cpp == cat);
+        P4EST_ASSERT (*cpp == cat);
         *cpp = cat->nextSibling;
     }
 
@@ -137,13 +132,13 @@ void log_setParent(struct LogCategory* cat, struct LogCategory* parent) {
     parent->firstChild = cat;
 
     // Make sure parent is initialized
-    if (parent->thresholdPriority == LP_UNINITIALIZED) {
+    if (parent->thresholdPriority == P4EST_LP_UNINITIALIZED) {
         initCategory(parent);
     }
 
     // Reset priority
     cat->thresholdPriority = parent->thresholdPriority;
-    cat->isThreshInherited = TRUE;
+    cat->isThreshInherited = 1;
 
 } // log_setParent
 
@@ -161,7 +156,7 @@ static void setInheritedThresholds(struct LogCategory* cat)
 
 void log_setThreshold(struct LogCategory* cat, int thresholdPriority) {
     cat->thresholdPriority = thresholdPriority;
-    cat->isThreshInherited = FALSE;
+    cat->isThreshInherited = 0;
     setInheritedThresholds(cat);
 }
 
@@ -176,6 +171,54 @@ const char* log_setControlString(const char* cs) {
 
 void log_setAppender(struct LogCategory* cat, struct LogAppender* app) {
     cat->appender = app;
+}
+
+/**
+ * The root category's default logging function.
+ */
+
+static char *priorityNames[] = {
+    "Zero Priority",
+    "TRACE",
+    "DEBUG",
+    "INFO",
+    "STATISTICS",
+    "PRODUCTION",
+    "SILENT",
+};
+
+static void doAppend(struct LogAppender* this, struct LogEvent* ev);
+
+static struct DefaultLogAppender {
+    struct LogAppender appender;
+    FILE *file;
+} defaultLogAppender = { { doAppend }, NULL } ;
+
+struct LogAppender* log_defaultLogAppender  = &defaultLogAppender.appender;
+
+static void doAppend(struct LogAppender* this0, struct LogEvent* ev) {
+
+    // TODO: define a format field in struct for timestamp, etc.
+    char *pn;
+    char buf[20];
+    struct DefaultLogAppender* this = (struct DefaultLogAppender*)this0;
+    const int spn = sizeof(priorityNames);
+
+    if (this->file == NULL) this->file = stderr;
+
+    if (ev->priority < 0) {
+        pn = "Negative Priority NOT ALLOWED!!";
+    }
+    else if (ev->priority < spn) {
+        pn = priorityNames[ev->priority];
+    } else {
+        sprintf(buf, "%s+%d",
+                priorityNames[spn - 1], ev->priority - spn + 1);
+    }
+    fprintf(stderr, "%-7s ", pn);
+    fprintf(stderr, "%s:%d: ", ev->fileName, ev->lineNum);
+    vfprintf(stderr, ev->fmt, ev->ap);
+    fprintf(stderr, "\n");
 }
 
 /* EOF p4est_log.c */

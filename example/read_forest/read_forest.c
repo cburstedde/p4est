@@ -53,18 +53,18 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
 
-  /* set stdout to line buffered */
-  p4est_set_linebuffered (stdout);
-
-  /* initialize MPI */
+  /* initialize MPI and p4est internals */
   mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
   if (use_mpi) {
     mpiret = MPI_Init (&argc, &argv);
     P4EST_CHECK_MPI (mpiret);
     mpicomm = MPI_COMM_WORLD;
+    mpiret = MPI_Comm_rank (mpicomm, &rank);
+    P4EST_CHECK_MPI (mpiret);
   }
 #endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   char                template[] = "p4est_meshXXXXXX";
   char                mesh[] = "		[Forest Info] # ]] [[ ]]\n"
@@ -105,8 +105,6 @@ main (int argc, char **argv)
 
 #ifdef HAVE_MPI
   size_t              templatelength;
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
 #endif
 
   if (rank == 0) {

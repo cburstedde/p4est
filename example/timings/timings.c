@@ -84,10 +84,7 @@ main (int argc, char **argv)
   double              elapsed_partition, elapsed_repartition;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
 
-  /* set stdout to line buffered */
-  p4est_set_linebuffered (stdout);
-
-  /* initialize MPI */
+  /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;
@@ -95,7 +92,7 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   P4EST_CHECK_MPI (mpiret);
-  p4est_set_abort_handler (mpi->mpirank, abort_fn, mpi);
+  p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
 
   /* get command line argument: maximum refinement level */
   P4EST_CHECK_ABORT (argc == 2, "Give level");

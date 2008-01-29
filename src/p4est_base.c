@@ -231,16 +231,112 @@ p4est_memory_check (void)
   P4EST_CHECK_ABORT (malloc_count == free_count, "Memory balance");
 }
 
-void
+struct p4est_log_appender
+{
+  struct LogAppender  appender;
+  int                 identifier;
+  FILE               *stream;
+};
+
+static void
+p4est_log_append_null (struct LogAppender *this0, struct LogEvent *ev)
+{
+  P4EST_ASSERT (ev->priority >= 0 && ev->priority <= P4EST_LP_SILENT);
+}
+
+static void
+p4est_log_append (struct LogAppender *this0, struct LogEvent *ev)
+{
+  struct p4est_log_appender *this = (struct p4est_log_appender *) this0;
+  int                 identifier = this->identifier;
+  FILE               *stream = this->stream;
+  char                prefix[BUFSIZ];
+
+  P4EST_ASSERT (ev->priority >= 0 && ev->priority <= P4EST_LP_SILENT);
+
+  if (ev->priority == P4EST_LP_SILENT) {
+    return;
+  }
+
+  if (identifier >= 0) {
+    snprintf (prefix, BUFSIZ, "[%d] ", identifier);
+  }
+  else {
+    prefix[0] = '\0';
+  }
+
+  if (ev->priority <= P4EST_LP_DEBUG) {
+    fprintf (stream, "%s%s:%d: ", prefix, ev->fileName, ev->lineNum);
+  }
+  else {
+    fputs (prefix, stream);
+  }
+  vfprintf (stream, ev->fmt, ev->ap);
+}
+
+static struct p4est_log_appender p4est_log_appender_global;
+static struct p4est_log_appender p4est_log_appender_rank;
+
+struct LogCategory  p4est_log_category_global = {
+  &_LOGV (LOG_ROOT_CAT), 0, 0,
+  "P4EST_LOG_CATEGORY_GLOBAL", P4EST_LP_UNINITIALIZED, 1,
+  0, 1
+};
+
+struct LogCategory  p4est_log_category_rank = {
+  &_LOGV (LOG_ROOT_CAT), 0, 0,
+  "P4EST_LOG_CATEGORY_RANK", P4EST_LP_UNINITIALIZED, 1,
+  0, 1
+};
+
+static void
 p4est_set_linebuffered (FILE * stream)
 {
   setvbuf (stream, NULL, _IOLBF, 0);
 }
 
 void
-p4est_set_abort_handler (int identifier, p4est_handler_t handler, void *data)
+p4est_init_logging (FILE * stream, int identifier)
 {
+  if (stream == stdout) {
+    p4est_set_linebuffered (stream);
+  }
   p4est_base_identifier = identifier;
+
+  if (identifier > 0) {
+    p4est_log_appender_global.appender.doAppend = p4est_log_append_null;
+  }
+  else {
+    p4est_log_appender_global.appender.doAppend = p4est_log_append;
+  }
+  p4est_log_appender_global.stream = stream;
+  p4est_log_appender_global.identifier = -1;
+  log_setAppender (&p4est_log_category_global,
+                   (struct LogAppender *) &p4est_log_appender_global);
+
+  p4est_log_appender_rank.appender.doAppend = p4est_log_append;
+  p4est_log_appender_rank.stream = stream;
+  p4est_log_appender_rank.identifier = identifier;
+  log_setAppender (&p4est_log_category_rank,
+                   (struct LogAppender *) &p4est_log_appender_rank);
+
+#ifdef P4EST_HAVE_VERBOSE_DEBUG
+  log_setThreshold (&p4est_log_category_global, P4EST_LP_TRACE);
+  log_setThreshold (&p4est_log_category_rank, P4EST_LP_TRACE);
+#else
+#ifdef P4EST_HAVE_DEBUG
+  log_setThreshold (&p4est_log_category_global, P4EST_LP_DEBUG);
+  log_setThreshold (&p4est_log_category_rank, P4EST_LP_DEBUG);
+#else
+  log_setThreshold (&p4est_log_category_global, P4EST_LP_INFO);
+  log_setThreshold (&p4est_log_category_rank, P4EST_LP_INFO);
+#endif /* !P4EST_HAVE_DEBUG */
+#endif /* !P4EST_HAVE_VERBOSE_DEBUG */
+}
+
+void
+p4est_set_abort_handler (p4est_handler_t handler, void *data)
+{
   p4est_abort_handler = handler;
   p4est_abort_data = data;
 
@@ -262,6 +358,14 @@ p4est_set_abort_handler (int identifier, p4est_handler_t handler, void *data)
     system_usr2_handler = NULL;
     signals_caught = 0;
   }
+}
+
+void
+p4est_init (FILE * stream, int identifier,
+            p4est_handler_t abort_handler, void *abort_data)
+{
+  p4est_init_logging (stream, identifier);
+  p4est_set_abort_handler (abort_handler, abort_data);
 }
 
 void
