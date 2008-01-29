@@ -107,7 +107,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est = p4est_new (mpi->mpicomm, stdout, connectivity, 0, NULL);
+  p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
 
   /* time refine */
   mpiret = MPI_Barrier (mpi->mpicomm);

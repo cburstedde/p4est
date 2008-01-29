@@ -279,7 +279,7 @@ main (int argc, char **argv)
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
-  p4est = p4est_new (mpi->mpicomm, stdout, connectivity,
+  p4est = p4est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn);
   p4est_vtk_write_file (p4est, "mesh_simple_new");
 
@@ -296,11 +296,7 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
 
   /* print forest checksum */
-  if (mpi->mpirank == 0) {
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "Tree checksum 0x%x\n", crc);
-    }
-  }
+  P4EST_GLOBAL_INFOF ("Tree checksum 0x%x\n", crc);
 
   /* partition */
   p4est_partition (p4est, NULL);

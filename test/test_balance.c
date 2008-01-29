@@ -35,7 +35,7 @@ main (int argc, char **argv)
   p4est_init (stdout, 0, NULL, NULL);
 
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est = p4est_new (MPI_COMM_NULL, stdout, connectivity, 4, NULL);
+  p4est = p4est_new (MPI_COMM_NULL, connectivity, 4, NULL);
 
   /* build empty tree */
   p4est_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));

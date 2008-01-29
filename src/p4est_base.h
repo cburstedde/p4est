@@ -117,6 +117,9 @@
 #define P4EST_GLOBAL_DEBUG(s) P4EST_GLOBAL_LOG (P4EST_LP_DEBUG, (s))
 #define P4EST_GLOBAL_DEBUGF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_VERBOSE(s) P4EST_GLOBAL_LOG (P4EST_LP_VERBOSE, (s))
+#define P4EST_GLOBAL_VERBOSE(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (P4EST_LP_INFO, (s))
 #define P4EST_GLOBAL_INFOF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)
@@ -134,6 +137,9 @@
 #define P4EST_DEBUG(s) P4EST_LOG (P4EST_LP_DEBUG, (s))
 #define P4EST_DEBUGF(f,...) \
   P4EST_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_VERBOSE(s) P4EST_GLOBAL_LOG (P4EST_LP_VERBOSE, (s))
+#define P4EST_VERBOSE(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
 #define P4EST_INFO(s) P4EST_LOG (P4EST_LP_INFO, (s))
 #define P4EST_INFOF(f,...) \
   P4EST_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)
@@ -187,6 +193,7 @@ void                p4est_init (FILE * stream, int identifier,
                                 void *abort_data);
 
 /** Prints a stack trace, calls the abort handler and terminates. */
-void                p4est_abort (void);
+void                p4est_abort (void)
+  __attribute__ ((noreturn));
 
 #endif /* !__P4EST_BASE_H__ */

@@ -92,10 +92,12 @@ main (void)
   p4est_quadrant_t    a, f, g, h;
   int64_t             Aid, Fid;
 
+  p4est_init (stdout, 0, NULL, NULL);
+
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est1 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 0, NULL);
-  p4est2 = p4est_new (MPI_COMM_NULL, stdout, connectivity, 8, NULL);
+  p4est1 = p4est_new (MPI_COMM_NULL, connectivity, 0, NULL);
+  p4est2 = p4est_new (MPI_COMM_NULL, connectivity, 8, NULL);
 
   /* refine the second tree to a uniform level */
   p4est_refine (p4est1, refine_none, NULL);

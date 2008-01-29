@@ -242,12 +242,13 @@
  */
 
 #define P4EST_LP_NONE        0
-#define P4EST_LP_TRACE       1  /* any information on the internal state */
-#define P4EST_LP_DEBUG       2  /* information on conditions, decisions */
-#define P4EST_LP_INFO        3  /* the main things a function is doing */
-#define P4EST_LP_STATISTICS  4  /* performance related statistics */
-#define P4EST_LP_PRODUCTION  5  /* a few lines for a major api function */
-#define P4EST_LP_SILENT      6  /* this will never log anything */
+#define P4EST_LP_TRACE       1  /* this will prefix file and line number */
+#define P4EST_LP_DEBUG       2  /* any information on the internal state */
+#define P4EST_LP_VERBOSE     3  /* information on conditions, decisions */
+#define P4EST_LP_INFO        4  /* the main things a function is doing */
+#define P4EST_LP_STATISTICS  5  /* performance related statistics */
+#define P4EST_LP_PRODUCTION  6  /* a few lines for a major api function */
+#define P4EST_LP_SILENT      7  /* this will never log anything */
 /*
  * We are doing parallel processing.
  * Nobody reads log files and looks out for warnings.
@@ -382,7 +383,8 @@ extern void log_setAppender(struct LogCategory* cat, struct LogAppender* app);
 
 // Functions that you shouldn't call.
 extern void _log_logEvent(struct LogCategory* category,
-                          struct LogEvent*ev,...);
+                          struct LogEvent*ev, const char *fmt, ...)
+  __attribute__((format(printf, 3, 4)));
 extern int _log_initCat(int priority, struct LogCategory* category);
 
 extern struct LogCategory _LOGV(LOG_ROOT_CAT);
@@ -427,7 +429,7 @@ extern struct LogAppender *log_defaultLogAppender;
      if (_LOG_ISENABLEDV(catv, priority)) {                             \
          struct LogEvent _log_ev =                                      \
              {&(catv),priority,__FILE__,__FUNCTION__,__LINE__, fmt};    \
-         _log_logEvent(&(catv), &_log_ev
+         _log_logEvent(&(catv), &_log_ev, fmt
 #define _LOG_POST                               \
                         );                      \
      } } while(0)

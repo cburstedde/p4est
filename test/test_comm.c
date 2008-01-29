@@ -57,6 +57,7 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 int
 main (int argc, char **argv)
 {
+  int                 rank = 0;
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
@@ -65,22 +66,23 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
   int64_t             qglobal, qlocal, qbegin, qend;
   int32_t             num_procs;
-  int32_t             i, rank;
+  int32_t             i;
 
   mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  P4EST_CHECK_MPI (mpiret);
 #endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_corner ();
-  p4est = p4est_new (mpicomm, NULL, connectivity,
-                     sizeof (user_data_t), init_fn);
+  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
 
   num_procs = p4est->mpisize;
-  rank = p4est->mpirank;
 
   /* refine and balance to make the number of elements interesting */
   p4est_refine (p4est, refine_fn, init_fn);

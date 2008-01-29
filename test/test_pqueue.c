@@ -36,6 +36,7 @@ compar (const void *p1, const void *p2)
 int
 main (int argc, char **argv)
 {
+  int                 rank = 0;
   int                 i, i1, i2, i3, i3last, i4, i4last, temp, count;
   int                 s, swaps1, swaps2, swaps3, total1, total2, total3;
   int                *pi;
@@ -46,7 +47,10 @@ main (int argc, char **argv)
 
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+  P4EST_CHECK_MPI (mpiret);
 #endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   a1 = p4est_array_new (sizeof (int));
   a2 = p4est_array_new (sizeof (int));

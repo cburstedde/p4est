@@ -78,13 +78,14 @@ weight_once (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 int
 main (int argc, char **argv)
 {
+  int                 rank = 0;
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
   MPI_Comm            mpicomm;
   p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
-  int32_t             num_procs, rank;
+  int32_t             num_procs;
   int32_t             i;
   int32_t             num_quadrants_on_last;
   int32_t            *num_quadrants_in_proc;
@@ -100,15 +101,16 @@ main (int argc, char **argv)
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  P4EST_CHECK_MPI (mpiret);
 #endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_corner ();
-  p4est = p4est_new (mpicomm, NULL, connectivity,
-                     sizeof (user_data_t), init_fn);
+  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
 
   num_procs = p4est->mpisize;
-  rank = p4est->mpirank;
 
   num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
   P4EST_CHECK_ALLOC (num_quadrants_in_proc);

@@ -69,7 +69,6 @@ main (int argc, char **argv)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
-  unsigned            crc;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
@@ -88,7 +87,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
-  p4est = p4est_new (mpi->mpicomm, stdout, connectivity, 0, NULL);
+  p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
 
   /* partition and refine the mesh */
   p4est_partition_given (p4est, given);
@@ -100,12 +99,7 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, "mesh_second_balanced");
 
   /* print forest checksum */
-  crc = p4est_checksum (p4est);
-  if (mpi->mpirank == 0) {
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "Tree checksum 0x%x\n", crc);
-    }
-  }
+  P4EST_GLOBAL_INFOF ("Tree checksum 0x%x\n", p4est_checksum (p4est));
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

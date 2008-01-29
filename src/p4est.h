@@ -82,7 +82,6 @@ typedef struct p4est
   MPI_Comm            mpicomm;
   int                 mpisize, mpirank;
 
-  FILE               *nout;     /* log messages go here if not NULL */
   int                 data_size;        /* size of user_data */
 
   int32_t             first_local_tree; /* 0-based index of first local tree */
@@ -147,8 +146,6 @@ extern const int8_t p4est_corner_to_zorder[5];
 /** Create a new p4est.
  *
  * \param [in] mpicomm A valid MPI_Comm or MPI_COMM_NULL.
- * \param [in] nout    Stream for log messages.  If NULL then no messages
- *                     are logged.
  * \param [in] connectivity This is the connectivity information that
  *                          the forest is build with.  Note the p4est
  *                          does not take ownership of the memory.
@@ -163,7 +160,7 @@ extern const int8_t p4est_corner_to_zorder[5];
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this p4est.
  */
-p4est_t            *p4est_new (MPI_Comm mpicomm, FILE * nout,
+p4est_t            *p4est_new (MPI_Comm mpicomm,
                                p4est_connectivity_t * connectivity,
                                int data_size, p4est_init_t init_fn);
 

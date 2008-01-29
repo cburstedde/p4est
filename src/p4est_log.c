@@ -73,10 +73,11 @@ static const char* applyControlString(struct LogCategory* cat) {
     return "";
 } // applyControlString
 
-void _log_logEvent(struct LogCategory* category, struct LogEvent* ev, ...)
+void _log_logEvent(struct LogCategory* category, struct LogEvent* ev,
+                   const char *fmt, ...)
 {
     struct LogCategory* cat = category;
-    va_start(ev->ap, ev);
+    va_start(ev->ap, fmt);
     while(1) {
         struct LogAppender* appender = cat->appender;
         if (appender != NULL) {
@@ -181,6 +182,7 @@ static char *priorityNames[] = {
     "Zero Priority",
     "TRACE",
     "DEBUG",
+    "VERBOSE",
     "INFO",
     "STATISTICS",
     "PRODUCTION",

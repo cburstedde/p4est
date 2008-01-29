@@ -42,8 +42,11 @@ main (int argc, char **argv)
     mpiret = MPI_Init (&argc, &argv);
     P4EST_CHECK_MPI (mpiret);
     mpicomm = MPI_COMM_WORLD;
+    mpiret = MPI_Comm_rank (mpicomm, &rank);
+    P4EST_CHECK_MPI (mpiret);
   }
 #endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   char                template[] = "p4est_meshXXXXXX";
   char                mesh[] = "		[Forest Info] # ]] [[ ]]\n"
@@ -123,11 +126,6 @@ main (int argc, char **argv)
   const int32_t       vertex_to_tree[] = {
     0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1
   };
-
-#ifdef HAVE_MPI
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
-#endif
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */

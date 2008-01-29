@@ -93,11 +93,10 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   const p4est_quadrant_t *q2 = v2;
 
   /* expect non-negative information in user_data */
-  int32_t             data_diff =
-    (int32_t) q1->user_data - (int32_t) q2->user_data;
+  long                data_diff = (long) q1->user_data - (long) q2->user_data;
 
   if (data_diff != 0) {
-    return data_diff;
+    return (int) data_diff;
   }
   else {
     return p4est_quadrant_compare (v1, v2);
@@ -972,9 +971,7 @@ p4est_is_valid (p4est_t * p4est)
 
   /* check first tree in global partition */
   if (p4est->global_first_indices[3 * rank + 0] != first_tree) {
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "p4est invalid first tree\n");
-    }
+    P4EST_INFO ("p4est invalid first tree\n");
     return 0;
   }
   mylow.x = p4est->global_first_indices[3 * rank + 1];
@@ -984,9 +981,7 @@ p4est_is_valid (p4est_t * p4est)
   if (tree->quadrants.elem_count > 0) {
     q = p4est_array_index (&tree->quadrants, 0);
     if (q->x != mylow.x || q->y != mylow.y) {
-      if (p4est->nout != NULL) {
-        fprintf (p4est->nout, "p4est invalid low quadrant\n");
-      }
+      P4EST_INFO ("p4est invalid low quadrant\n");
       return 0;
     }
   }
@@ -994,9 +989,7 @@ p4est_is_valid (p4est_t * p4est)
   /* check last tree in global partition */
   next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
   if (next_tree != last_tree && next_tree != last_tree + 1) {
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "p4est invalid last tree\n");
-    }
+    P4EST_INFO ("p4est invalid last tree\n");
     return 0;
   }
   nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
@@ -1007,9 +1000,7 @@ p4est_is_valid (p4est_t * p4est)
     q = p4est_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
     if (next_tree == last_tree) {
       if (!p4est_quadrant_is_next (q, &nextlow)) {
-        if (p4est->nout != NULL) {
-          fprintf (p4est->nout, "p4est invalid next quadrant\n");
-        }
+        P4EST_INFO ("p4est invalid next quadrant\n");
         return 0;
       }
     }
@@ -1017,9 +1008,7 @@ p4est_is_valid (p4est_t * p4est)
       p4est_quadrant_last_descendent (q, &s, P4EST_MAXLEVEL);
       rh = (1 << P4EST_MAXLEVEL);
       if (s.x + 1 != rh || s.y + 1 != rh) {
-        if (p4est->nout != NULL) {
-          fprintf (p4est->nout, "p4est invalid last quadrant\n");
-        }
+        P4EST_INFO ("p4est invalid last quadrant\n");
         return 0;
       }
     }
@@ -1030,16 +1019,12 @@ p4est_is_valid (p4est_t * p4est)
   for (j = 0; j < p4est->trees->elem_count; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     if (!p4est_tree_is_complete (tree)) {
-      if (p4est->nout != NULL) {
-        fprintf (p4est->nout, "p4est invalid not complete\n");
-      }
+      P4EST_INFO ("p4est invalid not complete\n");
       return 0;
     }
     if ((j < p4est->first_local_tree || j > p4est->last_local_tree) &&
         tree->quadrants.elem_count > 0) {
-      if (p4est->nout != NULL) {
-        fprintf (p4est->nout, "p4est invalid outside count\n");
-      }
+      P4EST_INFO ("p4est invalid outside count\n");
       return 0;
     }
 
@@ -1057,23 +1042,17 @@ p4est_is_valid (p4est_t * p4est)
     lquadrants += nquadrants;
 
     if (maxlevel != tree->maxlevel) {
-      if (p4est->nout != NULL) {
-        fprintf (p4est->nout, "p4est invalid wrong maxlevel\n");
-      }
+      P4EST_INFO ("p4est invalid wrong maxlevel\n");
       return 0;
     }
     if (nquadrants != tree->quadrants.elem_count) {
-      if (p4est->nout != NULL) {
-        fprintf (p4est->nout, "p4est invalid tree quadrant count\n");
-      }
+      P4EST_INFO ("p4est invalid tree quadrant count\n");
       return 0;
     }
   }
 
   if (lquadrants != p4est->local_num_quadrants) {
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "p4est invalid local quadrant count\n");
-    }
+    P4EST_INFO ("p4est invalid local quadrant count\n");
     return 0;
   }
 
@@ -1234,7 +1213,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
   /* loop over input list of quadrants */
   for (i = 0; i < incount; ++i) {
     inq = p4est_array_index (in, i);
-    if ((int32_t) inq->user_data != qtree) {
+    if ((long) inq->user_data != qtree) {
       continue;
     }
     inter_tree = 0;
@@ -1359,7 +1338,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
             outq->level = level;
             zcorner = p4est_corner_to_zorder[ci->ncorner];
             p4est_quadrant_corner (outq, zcorner, 0);
-            outq->user_data = (void *) ci->ntree;
+            outq->user_data = (void *) (long) ci->ntree;
             ++outcount;
           }
         }
@@ -1378,7 +1357,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
               else {
                 *outq = *tq;
               }
-              outq->user_data = (void *) ntree;
+              outq->user_data = (void *) (long) ntree;
               ++outcount;
             }
           }
@@ -1892,16 +1871,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   p4est_mempool_destroy (list_alloc);
 
   /* print more statistics */
-  if (p4est->nout != NULL) {
-    fprintf (p4est->nout, "[%d] Tree %d Outside root %d tree %d\n",
-             p4est->mpirank, which_tree,
-             count_outside_root, count_outside_tree);
-    fprintf (p4est->nout, "[%d] Tree %d Already in inlist %d outlist %d\n",
-             p4est->mpirank, which_tree,
-             count_already_inlist, count_already_outlist);
-    fprintf (p4est->nout, "[%d] Tree %d Insertions %d\n",
-             p4est->mpirank, which_tree, curcount - incount);
-  }
+  P4EST_INFOF ("Tree %d Outside root %d tree %d\n",
+               which_tree, count_outside_root, count_outside_tree);
+  P4EST_INFOF ("Tree %d Already in inlist %d outlist %d\n",
+               which_tree, count_already_inlist, count_already_outlist);
+  P4EST_INFOF ("Tree %d Insertions %d\n", which_tree, curcount - incount);
 
   /* sort and linearize tree */
   p4est_array_sort (inlist, p4est_quadrant_compare);
@@ -2060,10 +2034,7 @@ p4est_partition_given (p4est_t * p4est,
   MPI_Status         *recv_status, *send_status;
 #endif
 
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-  FILE               *nout = p4est->nout;
-  fprintf (nout, "[%d] part begin\n", rank);
-#endif
+  P4EST_INFO ("partition_given begin\n");
 
 #ifdef P4EST_HAVE_DEBUG
   unsigned            crc;
@@ -2082,8 +2053,8 @@ p4est_partition_given (p4est_t * p4est,
 #ifdef P4EST_HAVE_VERBOSE_DEBUG
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
-      fprintf (nout, "[%d] part global_last_quad_index[%d] = %ld\n",
-               rank, i, global_last_quad_index[i]);
+      P4EST_DEBUGF ("partition global_last_quad_index[%d] = %ld\n",
+                    i, global_last_quad_index[i]);
     }
   }
 #endif
@@ -2100,8 +2071,8 @@ p4est_partition_given (p4est_t * p4est,
 #ifdef P4EST_HAVE_VERBOSE_DEBUG
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
-      fprintf (nout, "[%d] part new_global_last_quad_index[%d] = %ld\n",
-               rank, i, new_global_last_quad_index[i]);
+      P4EST_DEBUGF ("partition new_global_last_quad_index[%d] = %ld\n",
+                    i, new_global_last_quad_index[i]);
     }
   }
 #endif
@@ -2123,9 +2094,9 @@ p4est_partition_given (p4est_t * p4est,
   for (which_tree = first_local_tree; which_tree <= last_local_tree;
        ++which_tree) {
     tree = p4est_array_index (p4est->trees, which_tree);
-    fprintf (nout,
-             "[%d] part tree %d local_tree_last_quad_index[%d] = %ld\n", rank,
-             which_tree, which_tree, local_tree_last_quad_index[which_tree]);
+    P4EST_DEBUGF ("partition tree %d local_tree_last_quad_index[%d] = %ld\n",
+                  which_tree, which_tree,
+                  local_tree_last_quad_index[which_tree]);
   }
 #endif
 
@@ -2157,8 +2128,7 @@ p4est_partition_given (p4est_t * p4est,
 
 #ifdef P4EST_HAVE_VERBOSE_DEBUG
   for (i = 0; i < num_procs; ++i) {
-    fprintf (nout, "[%d] part num_recv_from[%d] = %d\n",
-             rank, i, num_recv_from[i]);
+    P4EST_DEBUGF ("partition num_recv_from[%d] = %d\n", i, num_recv_from[i]);
   }
 #endif
 
@@ -2186,10 +2156,8 @@ p4est_partition_given (p4est_t * p4est,
 
       /* Post receives for the quadrants and their data */
 #ifdef HAVE_MPI
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-      fprintf (nout, "[%d] part recv %d quadrants from %d\n", rank,
-               num_recv_from[from_proc], from_proc);
-#endif
+      P4EST_DEBUGF ("partition recv %d quadrants from %d\n",
+                    num_recv_from[from_proc], from_proc);
       mpiret = MPI_Irecv (recv_buf[from_proc], recv_size, MPI_CHAR,
                           from_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, recv_request + sk);
@@ -2235,12 +2203,10 @@ p4est_partition_given (p4est_t * p4est,
 
 #ifdef P4EST_HAVE_VERBOSE_DEBUG
   for (i = 0; i < num_procs; ++i) {
-    fprintf (nout, "[%d] part num_send_to[%d] = %d\n",
-             rank, i, num_send_to[i]);
+    P4EST_DEBUGF ("partition num_send_to[%d] = %d\n", i, num_send_to[i]);
   }
   for (i = 0; i < num_procs; ++i) {
-    fprintf (nout, "[%d] part begin_send_to[%d] = %ld\n",
-             rank, i, begin_send_to[i]);
+    P4EST_DEBUGF ("partition begin_send_to[%d] = %ld\n", i, begin_send_to[i]);
   }
 #endif
 
@@ -2326,12 +2292,9 @@ p4est_partition_given (p4est_t * p4est,
                   num_copy * sizeof (p4est_quadrant_t));
 
           /* set tree in send buf and copy user data */
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-          fprintf (nout,
-                   "[%d] part send %d [%ld,%ld] quadrants from tree %d to proc %d\n",
-                   rank, num_copy, tree_from_begin, tree_from_end, which_tree,
-                   to_proc);
-#endif
+          P4EST_DEBUGF ("partition send %d [%ld,%ld] quadrants"
+                        " from tree %d to proc %d\n", num_copy,
+                        tree_from_begin, tree_from_end, which_tree, to_proc);
           for (i = 0; i < num_copy; ++i) {
             memcpy (user_data_send_buf + i * data_size,
                     quad_send_buf[i].user_data, data_size);
@@ -2348,10 +2311,8 @@ p4est_partition_given (p4est_t * p4est,
 
       /* Post receives for the quadrants and their data */
 #ifdef HAVE_MPI
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-      fprintf (nout, "[%d] part send %d quadrants to %d\n", rank,
-               num_send_to[to_proc], to_proc);
-#endif
+      P4EST_DEBUGF ("partition send %d quadrants to %d\n",
+                    num_send_to[to_proc], to_proc);
       mpiret = MPI_Isend (send_buf[to_proc], send_size, MPI_CHAR,
                           to_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, send_request + sk);
@@ -2387,14 +2348,12 @@ p4est_partition_given (p4est_t * p4est,
       last_from_tree = p4est->global_first_indices[3 * (from_proc + 1)];
       num_recv_trees = last_from_tree - first_from_tree + 1;
 
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-      fprintf (nout, "[%d] part from %d with trees [%d,%d] get %d trees\n",
-               rank, from_proc, first_from_tree, last_from_tree,
-               num_recv_trees);
-#endif
-
-      num_per_tree_recv_buf = (from_proc == rank) ? num_per_tree_local :
-        (int32_t *) recv_buf[from_proc];
+      P4EST_DEBUGF ("partition from %d with trees [%d,%d] get %d trees\n",
+                    from_proc, first_from_tree, last_from_tree,
+                    num_recv_trees);
+      num_per_tree_recv_buf =
+        (from_proc ==
+         rank) ? num_per_tree_local : (int32_t *) recv_buf[from_proc];
 
       for (i = 0; i < num_recv_trees; ++i) {
 
@@ -2402,15 +2361,12 @@ p4est_partition_given (p4est_t * p4est,
           from_tree = first_from_tree + i;
 
           P4EST_ASSERT (from_tree >= 0 && from_tree < trees->elem_count);
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-          fprintf (nout,
-                   "[%d] part recv %d [%d,%d] quadrants from tree %d from proc %d\n",
-                   rank, num_per_tree_recv_buf[i],
-                   new_local_tree_elem_count[from_tree],
-                   new_local_tree_elem_count[from_tree]
-                   + num_per_tree_recv_buf[i], from_tree, from_proc);
-#endif
-
+          P4EST_DEBUGF ("partition recv %d [%d,%d] quadrants"
+                        " from tree %d from proc %d\n",
+                        num_per_tree_recv_buf[i],
+                        new_local_tree_elem_count[from_tree],
+                        new_local_tree_elem_count[from_tree]
+                        + num_per_tree_recv_buf[i], from_tree, from_proc);
           new_first_local_tree = P4EST_MIN (new_first_local_tree, from_tree);
           new_last_local_tree = P4EST_MAX (new_last_local_tree, from_tree);
           new_local_tree_elem_count[from_tree] += num_per_tree_recv_buf[i];
@@ -2420,11 +2376,8 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
   }
-
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-  fprintf (nout, "[%d] new forest [%d,%d]\n", rank, new_first_local_tree,
-           new_last_local_tree);
-#endif
+  P4EST_DEBUGF ("new forest [%d,%d]\n",
+                new_first_local_tree, new_last_local_tree);
 
   /* Copy the local quadrants */
   first_tree = P4EST_MIN (first_local_tree, new_first_local_tree);
@@ -2470,15 +2423,13 @@ p4est_partition_given (p4est_t * p4est,
           p4est_array_resize (quadrants, num_quadrants);
         }
 
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-        fprintf (nout,
-                 "[%d] copying %d local quads to tree %d with %d(%d) quads from [%ld, %ld] to [%d, %d]\n",
-                 rank, num_copy, which_tree, num_quadrants,
-                 quadrants->elem_count, tree_from_begin, tree_from_end,
-                 new_local_tree_elem_count_before[which_tree],
-                 new_local_tree_elem_count_before[which_tree] + num_copy - 1);
-#endif
-
+        P4EST_DEBUGF ("copying %d local quads to tree %d"
+                      " with %d(%d) quads from [%ld, %ld] to [%d, %d]\n",
+                      num_copy, which_tree, num_quadrants,
+                      quadrants->elem_count, tree_from_begin, tree_from_end,
+                      new_local_tree_elem_count_before[which_tree],
+                      new_local_tree_elem_count_before[which_tree] +
+                      num_copy - 1);
         memmove (quadrants->array +
                  new_local_tree_elem_count_before[which_tree] *
                  sizeof (p4est_quadrant_t),
@@ -2523,14 +2474,11 @@ p4est_partition_given (p4est_t * p4est,
       last_from_tree = p4est->global_first_indices[3 * (from_proc + 1)];
       num_recv_trees = last_from_tree - first_from_tree + 1;
 
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-      fprintf (nout,
-               "[%d] part copy from %d with trees [%d,%d] get %d trees\n",
-               rank, from_proc, first_from_tree, last_from_tree,
-               num_recv_trees);
-#endif
-
-      num_per_tree_recv_buf = (from_proc == rank) ? num_per_tree_local :
+      P4EST_DEBUGF
+        ("partition copy from %d with trees [%d,%d] get %d trees\n",
+         from_proc, first_from_tree, last_from_tree, num_recv_trees);
+      num_per_tree_recv_buf =
+        (from_proc == rank) ? num_per_tree_local :
         (int32_t *) recv_buf[from_proc];
 
       quad_recv_buf = (p4est_quadrant_t *) (recv_buf[from_proc]
@@ -2555,16 +2503,12 @@ p4est_partition_given (p4est_t * p4est,
           tree = p4est_array_index (p4est->trees, from_tree);
           quadrants = &tree->quadrants;
           num_quadrants = new_local_tree_elem_count[from_tree];
-
           p4est_array_resize (quadrants, num_quadrants);
 
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-          fprintf (nout,
-                   "[%d] copying %d remote quads to tree %d with %d quads from proc %d\n",
-                   rank, num_copy, from_tree, num_quadrants, from_proc);
-#endif
-
           /* copy quadrants */
+          P4EST_DEBUGF ("copying %d remote quads to tree %d"
+                        " with %d quads from proc %d\n",
+                        num_copy, from_tree, num_quadrants, from_proc);
           memcpy (quadrants->array +
                   new_local_tree_elem_count_before[from_tree]
                   * sizeof (p4est_quadrant_t), quad_recv_buf,
@@ -2675,13 +2619,8 @@ p4est_partition_given (p4est_t * p4est,
   p4est_comm_global_partition (p4est);
 
   /* Assert that we have a valid partition */
-#ifdef P4EST_HAVE_DEBUG
   P4EST_ASSERT (crc == p4est_checksum (p4est));
-#endif
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-  fprintf (nout, "[%d] part end\n", rank);
-  fflush (nout);
-#endif
+  P4EST_INFO ("partition end\n");
 }
 
 /* EOF p4est_algorithms.c */

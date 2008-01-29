@@ -45,6 +45,8 @@ main (int argc, char **argv)
   p4est_hash_t       *ihash;
   p4est_hash_t       *qhash;
 
+  p4est_init (stdout, 0, NULL, NULL);
+
   for (k = 0; k < 3; ++k) {
     ihash = p4est_hash_new (int_hash_fn, int_equal_fn, NULL);
 
