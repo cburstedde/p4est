@@ -739,22 +739,9 @@ p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
 }
 
 void
-p4est_quadrant_print (const p4est_quadrant_t * q, int identifier, FILE * nout)
+p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 {
-  char                prefix[BUFSIZ];
-
-  if (nout == NULL) {
-    return;
-  }
-
-  if (identifier >= 0) {
-    snprintf (prefix, BUFSIZ, "[%d] ", identifier);
-  }
-  else {
-    prefix[0] = '\0';
-  }
-
-  fprintf (nout, "%sx 0x%x y 0x%x level %d\n", prefix, q->x, q->y, q->level);
+  P4EST_LOGF (log_priority, "x 0x%x y 0x%x level %d\n", q->x, q->y, q->level);
 }
 
 unsigned
@@ -918,59 +905,49 @@ p4est_tree_is_complete (p4est_tree_t * tree)
 }
 
 void
-p4est_tree_print (p4est_tree_t * tree, int identifier, FILE * nout)
+p4est_tree_print (int log_priority, p4est_tree_t * tree)
 {
-  int                 j, childid, comp;
-  char                prefix[BUFSIZ];
+  int                 j, l, childid, comp;
+  char                buffer[BUFSIZ];
   p4est_quadrant_t   *q1, *q2;
   p4est_array_t      *tquadrants = &tree->quadrants;
-
-  if (nout == NULL) {
-    return;
-  }
-
-  if (identifier >= 0) {
-    snprintf (prefix, BUFSIZ, "[%d] ", identifier);
-  }
-  else {
-    prefix[0] = '\0';
-  }
 
   q1 = NULL;
   for (j = 0; j < tquadrants->elem_count; ++j) {
     q2 = p4est_array_index (tquadrants, j);
     childid = p4est_quadrant_child_id (q2);
-    fprintf (nout, "%s0x%x 0x%x %d", prefix, q2->x, q2->y, q2->level);
+    l = snprintf (buffer, BUFSIZ, "0x%x 0x%x %d", q2->x, q2->y, q2->level);
     if (j > 0) {
       comp = p4est_quadrant_compare (q1, q2);
       if (comp > 0) {
-        fputs (" R", nout);
+        l += snprintf (buffer + l, BUFSIZ - l, " R");
       }
       else if (comp == 0) {
-        fputs (" I", nout);
+        l += snprintf (buffer + l, BUFSIZ - l, " I");
       }
       else {
         if (p4est_quadrant_is_sibling (q1, q2)) {
-          fprintf (nout, " S%d", childid);
+          l += snprintf (buffer + l, BUFSIZ - l, " S%d", childid);
         }
         else if (p4est_quadrant_is_parent (q1, q2)) {
-          fprintf (nout, " C%d", childid);
+          l += snprintf (buffer + l, BUFSIZ - l, " C%d", childid);
         }
         else if (p4est_quadrant_is_ancestor (q1, q2)) {
-          fputs (" D", nout);
+          l += snprintf (buffer + l, BUFSIZ - l, " D");
         }
         else if (p4est_quadrant_is_next (q1, q2)) {
-          fprintf (nout, " N%d", childid);
+          l += snprintf (buffer + l, BUFSIZ - l, " N%d", childid);
         }
         else {
-          fprintf (nout, " q%d", childid);
+          l += snprintf (buffer + l, BUFSIZ - l, " q%d", childid);
         }
       }
     }
     else {
-      fprintf (nout, " F%d", childid);
+      l += snprintf (buffer + l, BUFSIZ - l, " F%d", childid);
     }
-    fputs ("\n", nout);
+    l += snprintf (buffer + l, BUFSIZ - l, "\n");
+    P4EST_LOG (log_priority, buffer);
     q1 = q2;
   }
 }
@@ -1877,13 +1854,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   curcount = inlist->elem_count;
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
-#ifdef P4EST_HAVE_DEBUG
-    if (p4est->nout != NULL) {
-      fprintf (p4est->nout, "[%d] Tree %d Level %d ",
-               p4est->mpirank, which_tree, l);
-    }
-    p4est_hash_print_statistics (hash[l], p4est->nout);
-#endif
+    P4EST_DEBUGF ("Tree %d Level %d ", which_tree, l);
+    p4est_hash_print_statistics (P4EST_LP_DEBUG, hash[l]);
     p4est_hash_unlink_destroy (hash[l]);        /* performance optimization */
 
     /* merge valid quadrants from outlist into inlist */

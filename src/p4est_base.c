@@ -265,7 +265,7 @@ p4est_log_append (struct LogAppender *this0, struct LogEvent *ev)
     prefix[0] = '\0';
   }
 
-  if (ev->priority <= P4EST_LP_DEBUG) {
+  if (ev->priority <= P4EST_LP_TRACE) {
     fprintf (stream, "%s%s:%d: ", prefix, ev->fileName, ev->lineNum);
   }
   else {
@@ -278,15 +278,15 @@ static struct p4est_log_appender p4est_log_appender_global;
 static struct p4est_log_appender p4est_log_appender_rank;
 
 struct LogCategory  p4est_log_category_global = {
-  &_LOGV (LOG_ROOT_CAT), 0, 0,
+  &_LOGV (LOG_ROOT_CAT), NULL, NULL,
   "P4EST_LOG_CATEGORY_GLOBAL", P4EST_LP_UNINITIALIZED, 1,
-  0, 1
+  NULL, 1
 };
 
 struct LogCategory  p4est_log_category_rank = {
-  &_LOGV (LOG_ROOT_CAT), 0, 0,
+  &_LOGV (LOG_ROOT_CAT), NULL, NULL,
   "P4EST_LOG_CATEGORY_RANK", P4EST_LP_UNINITIALIZED, 1,
-  0, 1
+  NULL, 1
 };
 
 static void

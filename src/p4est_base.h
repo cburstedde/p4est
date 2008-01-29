@@ -100,7 +100,7 @@
 #define P4EST_ROUNDUP2_32(x) \
                     (((x) <= 0) ? 0 : (1 << (P4EST_LOG2_32 ((x) - 1) + 1)))
 
-/* log macros */
+/* log macros, for priorities see p4est_log.h */
 #define P4EST_GLOBAL_LOG(p,s) \
   _LOG_PRE (p4est_log_category_global, (p), (s)) _LOG_POST
 #define P4EST_GLOBAL_LOGF(p,f,...) \
@@ -109,6 +109,40 @@
   _LOG_PRE (p4est_log_category_rank, (p), (s)) _LOG_POST
 #define P4EST_LOGF(p,f,...) \
   _LOG_PRE (p4est_log_category_rank, (p), (f)) , __VA_ARGS__ _LOG_POST
+
+/* convenience global log macros */
+#define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (P4EST_LP_TRACE, (s))
+#define P4EST_GLOBAL_TRACEF(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_DEBUG(s) P4EST_GLOBAL_LOG (P4EST_LP_DEBUG, (s))
+#define P4EST_GLOBAL_DEBUGF(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (P4EST_LP_INFO, (s))
+#define P4EST_GLOBAL_INFOF(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_STATISTICS(s) P4EST_GLOBAL_LOG (P4EST_LP_STATISTICS, (s))
+#define P4EST_GLOBAL_STATISTICSF(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_STATISTICS, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (P4EST_LP_PRODUCTION, (s))
+#define P4EST_GLOBAL_PRODUCTIONF(f,...) \
+  P4EST_GLOBAL_LOGF (P4EST_LP_PRODUCTION, (f), __VA_ARGS__)
+
+/* convenience normal log macros */
+#define P4EST_TRACE(s) P4EST_LOG (P4EST_LP_TRACE, (s))
+#define P4EST_TRACEF(f,...) \
+  P4EST_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
+#define P4EST_DEBUG(s) P4EST_LOG (P4EST_LP_DEBUG, (s))
+#define P4EST_DEBUGF(f,...) \
+  P4EST_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_INFO(s) P4EST_LOG (P4EST_LP_INFO, (s))
+#define P4EST_INFOF(f,...) \
+  P4EST_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)
+#define P4EST_STATISTICS(s) P4EST_LOG (P4EST_LP_STATISTICS, (s))
+#define P4EST_STATISTICSF(f,...) \
+  P4EST_LOGF (P4EST_LP_STATISTICS, (f), __VA_ARGS__)
+#define P4EST_PRODUCTION(s) P4EST_LOG (P4EST_LP_PRODUCTION, (s))
+#define P4EST_PRODUCTIONF(f,...) \
+  P4EST_LOGF (P4EST_LP_PRODUCTION, (f), __VA_ARGS__)
 
 typedef void        (*p4est_handler_t) (void *data);
 
@@ -139,7 +173,7 @@ void                p4est_free (void *ptr);
 void                p4est_memory_check (void);
 
 /** Initializes p4est_log_category to print to stream.
- * \param [in]  identifier  Set this to mpirank if available, or -1.
+ * \param [in]  identifier  Set this to mpirank, or -1 to avoid number prefix.
  */
 void                p4est_init_logging (FILE * stream, int identifier);
 

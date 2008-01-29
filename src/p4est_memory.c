@@ -817,17 +817,13 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
 }
 
 void
-p4est_hash_print_statistics (p4est_hash_t * hash, FILE * nout)
+p4est_hash_print_statistics (int log_priority, p4est_hash_t * hash)
 {
   int                 i;
   int64_t             a, sum, squaresum;
   double              divide, avg, sqr, std;
   p4est_list_t       *list;
   p4est_array_t      *slots = hash->slots;
-
-  if (nout == NULL) {
-    return;
-  }
 
   sum = 0;
   squaresum = 0;
@@ -843,9 +839,9 @@ p4est_hash_print_statistics (p4est_hash_t * hash, FILE * nout)
   avg = sum / divide;
   sqr = squaresum / divide - avg * avg;
   std = sqrt (sqr);
-  fprintf (nout, "Hash size %d avg %.3g std %.3g checks %d %d\n",
-           slots->elem_count, avg, std,
-           hash->resize_checks, hash->resize_actions);
+  P4EST_LOGF (log_priority, "Hash size %d avg %.3g std %.3g checks %d %d\n",
+              slots->elem_count, avg, std,
+              hash->resize_checks, hash->resize_actions);
 }
 
 /* EOF p4est_memory.c */

@@ -279,10 +279,9 @@ void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
 
 /** Prints one line with quadrant's x, y and level.
- * \param [in]  identifier  If this number is >= 0, it is prepended.
  */
-void                p4est_quadrant_print (const p4est_quadrant_t * q,
-                                          int identifier, FILE * nout);
+void                p4est_quadrant_print (int log_priority,
+                                          const p4est_quadrant_t * q);
 
 /** Computes a machine-independent checksum of a list of quadrants.
  * \param [in] quadrants       Array of quadrants.
@@ -333,11 +332,8 @@ int                 p4est_tree_is_almost_sorted (p4est_tree_t * tree,
  *   Nn   for a next quadrant in the tree with no holes in between and child id n
  *   qn  for a general quadrant whose child id is n
  * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.
- * \param [in] identifier  If >= 0, each line is prefixed by "[identifier] "
- * \param [in] nout        Stream to print to. May be NULL, then nothing happens.
  */
-void                p4est_tree_print (p4est_tree_t * tree, int identifier,
-                                      FILE * nout);
+void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
 
 /** Checks a p4est for validity.
  * A valid p4est has the following properties:
