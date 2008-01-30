@@ -56,6 +56,12 @@ int                 p4est_quadrant_hash (const void *v);
  */
 int8_t              p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
+/** Test if a quadrant is inside the unit tree.
+ * \param [in] q Quadrant to be tested.
+ * \return Returns 1 if \a q is inside the unit tree.
+ */
+int                 p4est_quadrant_is_inside (const p4est_quadrant_t * q);
+
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns 1 if \a q is valid.

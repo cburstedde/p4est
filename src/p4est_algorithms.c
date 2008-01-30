@@ -141,6 +141,14 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 }
 
 int
+p4est_quadrant_is_inside (const p4est_quadrant_t * q)
+{
+  return
+    (q->x >= 0 && q->x < (1 << P4EST_MAXLEVEL)) &&
+    (q->y >= 0 && q->y < (1 << P4EST_MAXLEVEL));
+}
+
+int
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
   return
@@ -721,7 +729,7 @@ p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
   else {
     quad->user_data = NULL;
   }
-  if (init_fn != NULL && p4est_quadrant_is_valid (quad)) {
+  if (init_fn != NULL && p4est_quadrant_is_inside (quad)) {
     init_fn (p4est, which_tree, quad);
   }
 }
@@ -1220,7 +1228,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
     ntree = qtree;
     face = corner = -1;
     transform = -1;
-    if (!p4est_quadrant_is_valid (inq)) {
+    if (!p4est_quadrant_is_inside (inq)) {
       /* this quadrant comes from a different tree */
       P4EST_ASSERT (p4est_quadrant_is_extended (inq));
       inter_tree = 1;
@@ -1572,7 +1580,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 quadrant_pool_size, data_pool_size;
   int                 count_outside_root, count_outside_tree;
   int                 count_already_inlist, count_already_outlist;
-  int                 first_valid, last_valid;
+  int                 first_inside, last_inside;
   int                *key, *parent_key;
   int                 outface[4];
   int8_t              l, inmaxl, bbound;
@@ -1627,12 +1635,12 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   }
 
   /* determine the first and last small quadrants contained in the tree */
-  first_valid = incount;
+  first_inside = incount;
   q = NULL;
   for (i = 0; i < incount; ++i) {
     q = p4est_array_index (inlist, i);
-    if (p4est_quadrant_is_valid (q)) {
-      first_valid = i;
+    if (p4est_quadrant_is_inside (q)) {
+      first_inside = i;
       p4est_quadrant_first_descendent (q, &tree_first, inmaxl);
       break;
     }
@@ -1641,12 +1649,12 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
     /* only extended quadrants in the tree, there is nothing to do */
     return;
   }
-  last_valid = incount - 1;
+  last_inside = incount - 1;
   p4est_quadrant_last_descendent (q, &tree_last, inmaxl);
-  for (i = first_valid + 1; i < incount; ++i) {
+  for (i = first_inside + 1; i < incount; ++i) {
     q = p4est_array_index (inlist, i);
-    if (!p4est_quadrant_is_valid (q)) {
-      last_valid = i - 1;
+    if (!p4est_quadrant_is_inside (q)) {
+      last_inside = i - 1;
       break;
     }
     p4est_quadrant_last_descendent (q, &ld, inmaxl);
@@ -1655,7 +1663,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
       tree_last = ld;
     }
   }
-  P4EST_ASSERT (first_valid <= last_valid && last_valid < incount);
+  P4EST_ASSERT (first_inside <= last_inside && last_inside < incount);
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree_first));
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree_last));
 
@@ -1707,13 +1715,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
         q = *qpointer;
         P4EST_ASSERT (q->level == l);
       }
-      if (p4est_quadrant_is_valid (q)) {
-        isoutroot = 0;
-      }
-      else {
-        P4EST_ASSERT (p4est_quadrant_is_extended (q));
-        isoutroot = 1;
-      }
+      P4EST_ASSERT (p4est_quadrant_is_extended (q));
+      isoutroot = !p4est_quadrant_is_inside (q);
 
       /*
        * check for q and its siblings,
@@ -1784,7 +1787,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
          */
 
         /* stage 2: include qalloc if necessary */
-        if (p4est_quadrant_is_valid (qalloc)) {
+        if (p4est_quadrant_is_inside (qalloc)) {
           p4est_quadrant_last_descendent (qalloc, &ld, inmaxl);
           if ((p4est_quadrant_compare (&tree_first, qalloc) > 0 &&
                (qalloc->x != tree_first.x || qalloc->y != tree_first.y)) ||
@@ -1849,7 +1852,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
       P4EST_ASSERT (qalloc->level == l);
       P4EST_ASSERT (qalloc->user_data == key ||
                     qalloc->user_data == parent_key);
-      if (p4est_quadrant_is_valid (qalloc)) {
+      if (p4est_quadrant_is_inside (qalloc)) {
         /* copy temporary quadrant into final tree */
         p4est_array_resize (inlist, curcount + 1);
         q = p4est_array_index (inlist, curcount);
