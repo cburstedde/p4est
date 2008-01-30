@@ -165,12 +165,22 @@ p4est_array_uniq (p4est_array_t * array,
   p4est_array_resize (array, j);
 }
 
-void               *
+int
 p4est_array_bsearch (p4est_array_t * array, const void *key,
                      int (*compar) (const void *, const void *))
 {
-  return
+  int                 index = -1;
+  char               *retval;
+
+  retval = (char *)
     bsearch (key, array->array, array->elem_count, array->elem_size, compar);
+
+  if (retval != NULL) {
+    index = (retval - array->array) / array->elem_size;
+    P4EST_ASSERT (index >= 0 && index < array->elem_count);
+  }
+
+  return index;
 }
 
 unsigned

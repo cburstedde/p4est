@@ -39,6 +39,7 @@ main (int argc, char **argv)
   int                 rank = 0;
   int                 i, i1, i2, i3, i3last, i4, i4last, temp, count;
   int                 s, swaps1, swaps2, swaps3, total1, total2, total3;
+  int                 index;
   int                *pi;
   p4est_array_t      *a1, *a2, *a3, *a4;
 #ifdef HAVE_MPI
@@ -98,8 +99,10 @@ main (int argc, char **argv)
           swaps1, swaps2, swaps3, total1, total2, total3);
 
   temp = 52;
-  pi = p4est_array_bsearch (a1, &temp, compar);
-  P4EST_CHECK_ABORT (pi != NULL && *pi == temp, "array_bsearch");
+  index = p4est_array_bsearch (a1, &temp, compar);
+  P4EST_CHECK_ABORT (index != -1, "array_bsearch_index");
+  pi = p4est_array_index (a1, index);
+  P4EST_CHECK_ABORT (*pi == temp, "array_bsearch");
 
   i3last = -1;
   swaps1 = swaps2 = swaps3 = 0;

@@ -1419,7 +1419,7 @@ p4est_tree_uniqify_overlap (p4est_array_t * not, p4est_array_t * out)
       ++i;
     }
     else if (p4est_array_bsearch (not, inq,
-                                  p4est_quadrant_compare_piggy) != NULL) {
+                                  p4est_quadrant_compare_piggy) != -1) {
       ++notcount;
       ++i;
     }
@@ -1598,6 +1598,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 count_outside_root, count_outside_tree;
   int                 count_already_inlist, count_already_outlist;
   int                 first_inside, last_inside;
+  int                 rindex;
   int                *key, *parent_key;
   int                 outface[4];
   int8_t              l, inmaxl, bbound;
@@ -1605,7 +1606,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int32_t             ph, rh;
   void               *vlookup;
   p4est_quadrant_t   *family[4];
-  p4est_quadrant_t   *q, *r;
+  p4est_quadrant_t   *q;
   p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
   p4est_quadrant_t    ld, tree_first, tree_last, parent;
   p4est_array_t      *inlist, *olist;
@@ -1824,8 +1825,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           }
           continue;
         }
-        r = p4est_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
-        if (r != NULL) {
+        rindex = p4est_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
+        if (rindex != -1) {
           /* qalloc is included in inlist, this is more expensive to test */
           ++count_already_inlist;
           continue;

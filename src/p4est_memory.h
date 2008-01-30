@@ -95,9 +95,9 @@ void                p4est_array_uniq (p4est_array_t * array,
 /** Performs a binary search on an array. The array must be sorted.
  * \param [in] key     An element to be searched for.
  * \param [in] compar  The comparison function to be used.
- * \return Returns a pointer to the item found, or NULL.
+ * \return Returns the index into array for the item found, or -1.
  */
-void               *p4est_array_bsearch (p4est_array_t * array,
+int                 p4est_array_bsearch (p4est_array_t * array,
                                          const void *key,
                                          int (*compar) (const void *,
                                                         const void *));
