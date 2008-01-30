@@ -296,7 +296,7 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
 
   /* print forest checksum */
-  P4EST_GLOBAL_INFOF ("Tree checksum 0x%x\n", crc);
+  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
 
   /* partition */
   p4est_partition (p4est, NULL);

@@ -110,7 +110,7 @@
 #define P4EST_LOGF(p,f,...) \
   _LOG_PRE (p4est_log_category_rank, (p), (f)) , __VA_ARGS__ _LOG_POST
 
-/* convenience global log macros */
+/* convenience global log macros will only print if identifier <= 0 */
 #define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (P4EST_LP_TRACE, (s))
 #define P4EST_GLOBAL_TRACEF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
@@ -118,7 +118,7 @@
 #define P4EST_GLOBAL_DEBUGF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_VERBOSE(s) P4EST_GLOBAL_LOG (P4EST_LP_VERBOSE, (s))
-#define P4EST_GLOBAL_VERBOSE(f,...) \
+#define P4EST_GLOBAL_VERBOSEF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (P4EST_LP_INFO, (s))
 #define P4EST_GLOBAL_INFOF(f,...) \
@@ -130,16 +130,16 @@
 #define P4EST_GLOBAL_PRODUCTIONF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_PRODUCTION, (f), __VA_ARGS__)
 
-/* convenience normal log macros */
+/* convenience log macros that are active on every processor */
 #define P4EST_TRACE(s) P4EST_LOG (P4EST_LP_TRACE, (s))
 #define P4EST_TRACEF(f,...) \
   P4EST_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
 #define P4EST_DEBUG(s) P4EST_LOG (P4EST_LP_DEBUG, (s))
 #define P4EST_DEBUGF(f,...) \
   P4EST_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
-#define P4EST_VERBOSE(s) P4EST_GLOBAL_LOG (P4EST_LP_VERBOSE, (s))
-#define P4EST_VERBOSE(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
+#define P4EST_VERBOSE(s) P4EST_LOG (P4EST_LP_VERBOSE, (s))
+#define P4EST_VERBOSEF(f,...) \
+  P4EST_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
 #define P4EST_INFO(s) P4EST_LOG (P4EST_LP_INFO, (s))
 #define P4EST_INFOF(f,...) \
   P4EST_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)

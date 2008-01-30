@@ -320,10 +320,6 @@ p4est_init_logging (FILE * stream, int identifier)
   log_setAppender (&p4est_log_category_rank,
                    (struct LogAppender *) &p4est_log_appender_rank);
 
-#ifdef P4EST_HAVE_VERBOSE_DEBUG
-  log_setThreshold (&p4est_log_category_global, P4EST_LP_TRACE);
-  log_setThreshold (&p4est_log_category_rank, P4EST_LP_TRACE);
-#else
 #ifdef P4EST_HAVE_DEBUG
   log_setThreshold (&p4est_log_category_global, P4EST_LP_DEBUG);
   log_setThreshold (&p4est_log_category_rank, P4EST_LP_DEBUG);
@@ -331,7 +327,6 @@ p4est_init_logging (FILE * stream, int identifier)
   log_setThreshold (&p4est_log_category_global, P4EST_LP_INFO);
   log_setThreshold (&p4est_log_category_rank, P4EST_LP_INFO);
 #endif /* !P4EST_HAVE_DEBUG */
-#endif /* !P4EST_HAVE_VERBOSE_DEBUG */
 }
 
 void

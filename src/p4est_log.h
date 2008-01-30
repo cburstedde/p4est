@@ -246,7 +246,7 @@
 #define P4EST_LP_DEBUG       2  /* any information on the internal state */
 #define P4EST_LP_VERBOSE     3  /* information on conditions, decisions */
 #define P4EST_LP_INFO        4  /* the main things a function is doing */
-#define P4EST_LP_STATISTICS  5  /* performance related statistics */
+#define P4EST_LP_STATISTICS  5  /* important for consistency or performance */
 #define P4EST_LP_PRODUCTION  6  /* a few lines for a major api function */
 #define P4EST_LP_SILENT      7  /* this will never log anything */
 /*
@@ -254,6 +254,8 @@
  * Nobody reads log files and looks out for warnings.
  * Abort on warnings or error conditions, don't log them.
  * Print to stderr by hand on these occasions.
+ *
+ * STATISTICS and PRODUCTION should only be used globally (i.e. rank == 0).
  */
 
 #define P4EST_LP_UNINITIALIZED  -1    ///< for internal use only

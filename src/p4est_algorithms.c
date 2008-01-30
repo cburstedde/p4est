@@ -1834,7 +1834,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
     P4EST_DEBUGF ("Tree %d Level %d ", which_tree, l);
+#ifdef P4EST_HAVE_DEBUG
     p4est_hash_print_statistics (P4EST_LP_DEBUG, hash[l]);
+#endif /* P4EST_HAVE_DEBUG */
     p4est_hash_unlink_destroy (hash[l]);        /* performance optimization */
 
     /* merge valid quadrants from outlist into inlist */

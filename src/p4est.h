@@ -82,7 +82,9 @@ typedef struct p4est
   MPI_Comm            mpicomm;
   int                 mpisize, mpirank;
 
-  int                 data_size;        /* size of user_data */
+  int                 data_size;        /* size of per-quadrant user_data */
+  void               *user_global_pointer;      /* convenience pointer for users
+                                                   will never be touched by p4est */
 
   int32_t             first_local_tree; /* 0-based index of first local tree */
   int32_t             last_local_tree;  /* 0-based index of last local tree */
