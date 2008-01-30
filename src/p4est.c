@@ -42,7 +42,9 @@ const int8_t        p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
 static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
+#ifdef HAVE_MPI
 static const int    number_peer_windows = 5;
+#endif
 
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
@@ -231,12 +233,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* print more statistics */
   P4EST_INFOF ("total local quadrants %d\n", p4est->local_num_quadrants);
-  P4EST_GLOBAL_STATISTICSF ("Total global quadrants %lld\n",
-                            (long long) p4est->global_num_quadrants);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
-  P4EST_GLOBAL_PRODUCTION ("Done p4est_new\n");
-
+  P4EST_GLOBAL_PRODUCTIONF ("Done p4est_new with %lld total quadrants\n",
+                            (long long) p4est->global_num_quadrants);
   return p4est;
 }
 
@@ -789,7 +789,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             treecount, qcount, qbytes, offset, obytes;
   int32_t             first_tree, last_tree, next_tree;
   int32_t             first_peer, last_peer;
-  int32_t             rip, over_peer_count, eff_peer_count;
+  int32_t             over_peer_count;
   p4est_array_t      *peers, *qarray, *tquadrants, corner_info;
   p4est_balance_peer_t *peer;
   p4est_tree_t       *tree;
@@ -814,6 +814,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 recv_zero[2], recv_load[2];
   int                *wait_indices;
   int32_t             prev, start, end;
+  int32_t             rip, eff_peer_count;
   int32_t             length, shortest_window, shortest_length;
   int32_t             peer_windows[twopeerw];
   int32_t            *peer_boundaries;
@@ -1034,16 +1035,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   P4EST_ASSERT (first_peer <= last_peer);
   P4EST_ASSERT (0 <= first_peer && last_peer < p4est->mpisize);
-  rip = (first_peer <= rank && rank <= last_peer) ? 1 : 0;
   over_peer_count = last_peer - first_peer + 1;
   P4EST_ASSERT (0 <= over_peer_count && over_peer_count <= p4est->mpisize);
-  eff_peer_count = 0;
   if (p4est->mpisize == 1) {
     P4EST_ASSERT (first_peer == rank && last_peer == rank);
   }
 
 #ifdef HAVE_MPI
   /* compute information about peers to inform receivers */
+  rip = (first_peer <= rank && rank <= last_peer) ? 1 : 0;
   for (i = 0; i < twopeerw; ++i) {
     peer_windows[i] = -1;
   }
@@ -1134,6 +1134,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif /* P4EST_HAVE_DEBUG */
 
   /* compute windows from empty ranges */
+  eff_peer_count = 0;
   peer_windows[2 * nwin + 1] = last_peer;
   for (i = nwin; i > 0; --i) {
     peer_windows[2 * i] = peer_windows[2 * i - 1] + 1;
@@ -1647,6 +1648,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
+  int64_t             global_shipped = 0;
+  const int64_t       global_num_quadrants = p4est->global_num_quadrants;
 #ifdef HAVE_MPI
   int                 mpiret;
   const int           num_procs = p4est->mpisize;
@@ -1654,7 +1657,6 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   const int32_t       first_tree = p4est->first_local_tree;
   const int32_t       last_tree = p4est->last_local_tree;
   const int32_t       local_num_quadrants = p4est->local_num_quadrants;
-  const int64_t       global_num_quadrants = p4est->global_num_quadrants;
   int                 i, p;
   int                 send_lowest, send_highest;
   int                 num_sends;
@@ -1907,14 +1909,17 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   }
 
   /* run the partition algorithm with proper quadrant counts */
-  p4est_partition_given (p4est, num_quadrants_in_proc);
+  global_shipped = p4est_partition_given (p4est, num_quadrants_in_proc);
   P4EST_FREE (num_quadrants_in_proc);
 
   /* check validity of the p4est */
   P4EST_ASSERT (p4est_is_valid (p4est));
 #endif /* HAVE_MPI */
 
-  P4EST_GLOBAL_PRODUCTION ("Done p4est_partition\n");
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done p4est_partition shipped %lld quadrants %.3g%%\n",
+     (long long) global_shipped,
+     global_shipped * 100. / global_num_quadrants);
 }
 
 unsigned

@@ -98,6 +98,13 @@ p4est_signal_handler (int sig)
   p4est_abort ();
 }
 
+void
+p4est_set_log_threshold (int log_priority)
+{
+  log_setThreshold (&p4est_log_category_global, log_priority);
+  log_setThreshold (&p4est_log_category_rank, log_priority);
+}
+
 #if(0)
 int
 p4est_int32_compare (const void *v1, const void *v2)

@@ -1980,7 +1980,7 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   P4EST_ASSERT (p4est_tree_is_linear (tree));
 }
 
-void
+int64_t
 p4est_partition_given (p4est_t * p4est,
                        const int32_t * new_num_quadrants_in_proc)
 {
@@ -2017,6 +2017,7 @@ p4est_partition_given (p4est_t * p4est,
   int64_t             my_base, my_begin, my_end;
   int64_t            *new_global_last_quad_index;
   int64_t            *local_tree_last_quad_index;
+  int64_t             diff64, total_quadrants_shipped;
   char              **recv_buf, **send_buf;
   p4est_array_t      *quadrants;
   int32_t            *num_per_tree_local;
@@ -2052,6 +2053,7 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_ASSERT (total_requested_quadrants == p4est->global_num_quadrants);
 #endif
 
+  /* Print some diagnostics */
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
       P4EST_GLOBAL_VERBOSEF ("partition global_last_quad_index[%d] = %ld\n",
@@ -2067,7 +2069,27 @@ p4est_partition_given (p4est_t * p4est,
     new_global_last_quad_index[i] = new_num_quadrants_in_proc[i] +
       new_global_last_quad_index[i - 1];
   }
+  P4EST_ASSERT (global_last_quad_index[num_procs - 1] ==
+                new_global_last_quad_index[num_procs - 1]);
 
+  /* Calculate the global number of shipped quadrants */
+  total_quadrants_shipped = 0;
+  for (i = 1; i < num_procs; ++i) {
+    diff64 =
+      global_last_quad_index[i - 1] - new_global_last_quad_index[i - 1];
+    if (diff64 >= 0) {
+      total_quadrants_shipped +=
+        P4EST_MIN (diff64, new_num_quadrants_in_proc[i]);
+    }
+    else {
+      total_quadrants_shipped +=
+        P4EST_MIN (-diff64, new_num_quadrants_in_proc[i - 1]);
+    }
+  }
+  P4EST_ASSERT (0 <= total_quadrants_shipped &&
+                total_quadrants_shipped <= p4est->global_num_quadrants);
+
+  /* Print some diagnostics */
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
       P4EST_GLOBAL_VERBOSEF
@@ -2558,7 +2580,8 @@ p4est_partition_given (p4est_t * p4est,
    */
   P4EST_FREE (p4est->global_last_quad_index);
   p4est->global_last_quad_index = new_global_last_quad_index;
-  p4est->global_num_quadrants = new_global_last_quad_index[num_procs - 1] + 1;
+  P4EST_ASSERT (p4est->global_num_quadrants ==
+                new_global_last_quad_index[num_procs - 1] + 1);
 
   p4est->first_local_tree = new_first_local_tree;
   p4est->last_local_tree = new_last_local_tree;
@@ -2626,6 +2649,8 @@ p4est_partition_given (p4est_t * p4est,
   /* Assert that we have a valid partition */
   P4EST_ASSERT (crc == p4est_checksum (p4est));
   P4EST_GLOBAL_INFO ("Done partition_given\n");
+
+  return total_quadrants_shipped;
 }
 
 /* EOF p4est_algorithms.c */

@@ -456,7 +456,9 @@ void                p4est_linearize_subtree (p4est_t * p4est,
  * \param [in,out] p4est the forest that is partitioned.
  * \param [in]     num_quadrants_in_proc  an integer array of the number of
  *                                        quadrants desired per processor.
+ * \return  Returns the global count of shipped quadrants.
  */
-void                p4est_partition_given (p4est_t * p4est, const int32_t *
+int64_t             p4est_partition_given (p4est_t * p4est, const int32_t *
                                            num_quadrants_in_proc);
+
 #endif /* !__P4EST_ALGORITHMS_H__ */

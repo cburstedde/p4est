@@ -32,12 +32,12 @@ main (int argc, char **argv)
 #ifdef HAVE_MPI
   int                 use_mpi = 1;
   int                 mpiret;
-#endif
   MPI_Comm            mpicomm;
+#endif
   p4est_connectivity_t *connectivity;
 
-  mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
+  mpicomm = MPI_COMM_NULL;
   if (use_mpi) {
     mpiret = MPI_Init (&argc, &argv);
     P4EST_CHECK_MPI (mpiret);
@@ -147,8 +147,10 @@ main (int argc, char **argv)
 
 #ifdef HAVE_MPI
   templatelength = strlen (template);
-  mpiret = MPI_Bcast (template, templatelength + 1, MPI_CHAR, 0, mpicomm);
-  P4EST_CHECK_MPI (mpiret);
+  if (mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Bcast (template, templatelength + 1, MPI_CHAR, 0, mpicomm);
+    P4EST_CHECK_MPI (mpiret);
+  }
 #endif
 
   /* Read in the mesh into connectivity information */

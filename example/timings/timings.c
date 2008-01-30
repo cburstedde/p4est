@@ -20,7 +20,13 @@
 */
 
 /*
- * Usage: p4est_timings <level>
+ * Usage: p4est_timings <configuration> <level>
+ *        possible configurations:
+ *        o unit      Refinement on the unit square.
+ *        o three     Refinement on a forest with three trees.
+ *        o moebius   Refinement on a 5-tree Moebius band.
+ *        o star      Refinement on a 6-tree star shaped domain.
+ *        o periodic  Refinement on the unit square with periodic b.c.
  */
 
 #include <p4est_algorithms.h>
@@ -28,6 +34,16 @@
 #include <p4est_vtk.h>
 
 #ifdef HAVE_MPI
+
+enum
+{
+  P4EST_CONFIG_NULL,
+  P4EST_CONFIG_UNIT,
+  P4EST_CONFIG_THREE,
+  P4EST_CONFIG_MOEBIUS,
+  P4EST_CONFIG_STAR,
+  P4EST_CONFIG_PERIODIC,
+};
 
 typedef struct
 {
@@ -75,8 +91,10 @@ main (int argc, char **argv)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
+  int                 wrongusage, config;
   unsigned            crc;
   int32_t             count_refined, count_balanced;
+  const char         *config_name, *usage, *errmsg;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   double              start, elapsed_refine;
@@ -94,19 +112,82 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
   p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
 
+  /* process command line arguments */
+  usage =
+    "Arguments: <configuration> <level>\n"
+    "   Configuration can be any of\n"
+    "      unit|three|moebius|star|periodic\n"
+    "   Level controls the maximum depth of refinement\n";
+  errmsg = NULL;
+  wrongusage = 0;
+  config = P4EST_CONFIG_NULL;
+  config_name = argv[1];
+  if (!wrongusage && argc != 3) {
+    wrongusage = 1;
+  }
+  if (!wrongusage) {
+    if (!strcmp (config_name, "unit")) {
+      config = P4EST_CONFIG_UNIT;
+    }
+    else if (!strcmp (config_name, "three")) {
+      config = P4EST_CONFIG_THREE;
+    }
+    else if (!strcmp (config_name, "moebius")) {
+      config = P4EST_CONFIG_MOEBIUS;
+    }
+    else if (!strcmp (config_name, "star")) {
+      config = P4EST_CONFIG_STAR;
+    }
+    else if (!strcmp (config_name, "periodic")) {
+      config = P4EST_CONFIG_PERIODIC;
+    }
+    else {
+      wrongusage = 1;
+    }
+  }
+  if (wrongusage) {
+    if (mpi->mpirank == 0) {
+      fputs ("Usage error\n", stderr);
+      fputs (usage, stderr);
+      if (errmsg != NULL) {
+        fputs (errmsg, stderr);
+      }
+      p4est_abort ();
+    }
+#ifdef HAVE_MPI
+    MPI_Barrier (mpi->mpicomm);
+#endif
+  }
+
+#ifndef P4EST_HAVE_DEBUG
+  p4est_set_log_threshold (P4EST_LP_STATISTICS);
+#endif
+
   /* get command line argument: maximum refinement level */
-  P4EST_CHECK_ABORT (argc == 2, "Give level");
-  refine_level = atoi (argv[1]);
+  refine_level = atoi (argv[2]);
   level_shift = 4;
 
   /* print general setup information */
-  if (mpi->mpirank == 0) {
-    printf ("Processors %d level %d shift %d\n",
-            mpi->mpisize, refine_level, level_shift);
-  }
+  P4EST_GLOBAL_STATISTICSF
+    ("Processors %d configuration %s level %d shift %d\n", mpi->mpisize,
+     config_name, refine_level, level_shift);
 
   /* create connectivity and forest structures */
-  connectivity = p4est_connectivity_new_unitsquare ();
+  if (config == P4EST_CONFIG_THREE) {
+    connectivity = p4est_connectivity_new_corner ();
+  }
+  else if (config == P4EST_CONFIG_MOEBIUS) {
+    connectivity = p4est_connectivity_new_moebius ();
+  }
+  else if (config == P4EST_CONFIG_STAR) {
+    connectivity = p4est_connectivity_new_star ();
+  }
+  else if (config == P4EST_CONFIG_PERIODIC) {
+    connectivity = p4est_connectivity_new_periodic ();
+  }
+  else {
+    connectivity = p4est_connectivity_new_unitsquare ();
+  }
   p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
 
   /* time refine */
@@ -177,13 +258,11 @@ main (int argc, char **argv)
   P4EST_GLOBAL_STATISTICSF ("Level %d refined to %lld balanced to %lld\n",
                             refine_level, (long long) count_refined,
                             (long long) count_balanced);
-  P4EST_GLOBAL_STATISTICSF ("Level %d refinement %.3gs"
-                            " balance %.3gs rebalance %.3gs\n",
-                            refine_level, elapsed_refine,
+  P4EST_GLOBAL_STATISTICSF ("Time for refinement %.3gs\n", elapsed_refine);
+  P4EST_GLOBAL_STATISTICSF ("Time for balance %.3gs rebalance %.3gs\n",
                             elapsed_balance, elapsed_rebalance);
-  P4EST_GLOBAL_STATISTICSF ("Level %d partition %.3gs repartition %.3gs\n",
-                            refine_level, elapsed_partition,
-                            elapsed_repartition);
+  P4EST_GLOBAL_STATISTICSF ("Time for partition %.3gs repartition %.3gs\n",
+                            elapsed_partition, elapsed_repartition);
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

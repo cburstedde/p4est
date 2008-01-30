@@ -156,6 +156,8 @@ extern const int    p4est_log_lookup_table[256];
 extern struct LogCategory p4est_log_category_global;
 extern struct LogCategory p4est_log_category_rank;
 
+void                p4est_set_log_threshold (int log_priority);
+
 #if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
 int                 p4est_int64_compare (const void *v1, const void *v2);
