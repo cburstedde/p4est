@@ -272,6 +272,10 @@ p4est_log_append (struct LogAppender *this0, struct LogEvent *ev)
     fputs (prefix, stream);
   }
   vfprintf (stream, ev->fmt, ev->ap);
+
+  if (ev->priority >= P4EST_LP_STATISTICS) {
+    fflush (stream);
+  }
 }
 
 static struct p4est_log_appender p4est_log_appender_global;

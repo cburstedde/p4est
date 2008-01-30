@@ -1873,11 +1873,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   p4est_mempool_destroy (list_alloc);
 
   /* print more statistics */
-  P4EST_INFOF ("Tree %d Outside root %d tree %d\n",
-               which_tree, count_outside_root, count_outside_tree);
-  P4EST_INFOF ("Tree %d Already in inlist %d outlist %d\n",
-               which_tree, count_already_inlist, count_already_outlist);
-  P4EST_INFOF ("Tree %d Insertions %d\n", which_tree, curcount - incount);
+  P4EST_VERBOSEF ("Tree %d Outside root %d tree %d\n",
+                  which_tree, count_outside_root, count_outside_tree);
+  P4EST_INFOF ("Tree %d Already in inlist %d outlist %d insertions %d\n",
+               which_tree, count_already_inlist, count_already_outlist,
+               curcount - incount);
 
   /* sort and linearize tree */
   p4est_array_sort (inlist, p4est_quadrant_compare);
