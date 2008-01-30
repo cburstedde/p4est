@@ -453,18 +453,14 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
            " format=\"ascii\">\n");
   for (i = 0; i < Ncells; ++i) {
-    fprintf (vtufile, "          %d %d %d %d\n", 4 * i + 0, 4 * i + 1,
-             4 * i + 2, 4 * i + 3);
+    fprintf (vtufile, "          %d %d %d %d\n",
+             int32_data[4 * i + 0],
+             int32_data[4 * i + 1],
+             int32_data[4 * i + 2], int32_data[4 * i + 3]);
   }
 #else
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
            " format=\"binary\">\n");
-  for (i = 0; i < Ncells; ++i) {
-    int32_data[4 * i + 0] = 4 * i + 0;
-    int32_data[4 * i + 1] = 4 * i + 1;
-    int32_data[4 * i + 2] = 4 * i + 2;
-    int32_data[4 * i + 3] = 4 * i + 3;
-  }
   fprintf (vtufile, "          ");
   retval = p4est_vtk_binary (vtufile, (char *) int32_data,
                              sizeof (*int32_data) * 4 * Ncells);
