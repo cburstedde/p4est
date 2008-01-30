@@ -295,12 +295,12 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, "mesh_simple_balanced");
   crc = p4est_checksum (p4est);
 
-  /* print forest checksum */
-  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
-
   /* partition */
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, "mesh_simple_partition");
+
+  /* print forest checksum */
+  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
