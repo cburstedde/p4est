@@ -250,6 +250,17 @@ void                p4est_quadrant_transform (const p4est_quadrant_t * q,
                                               p4est_quadrant_t * r,
                                               int transform_type);
 
+/** Transforms the node of quadrant between trees.
+ *
+ * This gives the node of the transformed quadrant cooresponding to
+ * the node passed in.
+ *
+ * \param [in]     node The node in z-order of the quadrant that is transformed.
+ * \param [in] transform_type Transformation as in p4est_connectivity.h.
+ * \return The transformed node number coresponding to \a node.
+ */
+int8_t              p4est_node_transform (int8_t node, int transform_type);
+
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.
  * \return Returns the linear position of this quadrant on a grid.

@@ -613,6 +613,103 @@ p4est_quadrant_translate (p4est_quadrant_t * q, int8_t face)
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
 }
 
+int8_t
+p4est_node_transform (int8_t node, int transform_type)
+{
+  int8_t              trans_node;
+
+  switch (transform_type) {
+  case 0:                      /* identity */
+    trans_node = node;
+    break;
+  case 1:                      /* rotate -90 degrees */
+    trans_node = p4est_corner_to_zorder[p4est_corner_to_zorder[node] + 1 % 4];
+    break;
+  case 2:                      /* rotate 180 degrees */
+    trans_node = (int8_t) (3 - node);
+    break;
+  case 3:                      /* rotate 90 degrees */
+    trans_node = p4est_corner_to_zorder[p4est_corner_to_zorder[node] - 1 % 4];
+    break;
+  case 4:                      /* mirror across 0 degree axis */
+    switch (node) {
+    case 0:
+      trans_node = 2;
+      break;
+    case 1:
+      trans_node = 3;
+      break;
+    case 2:
+      trans_node = 0;
+      break;
+    case 3:
+      trans_node = 1;
+      break;
+    default:
+      P4EST_ASSERT_NOT_REACHED ();
+    }
+    break;
+  case 5:                      /* mirror across 45 degree axis */
+    switch (node) {
+    case 0:
+      trans_node = 0;
+      break;
+    case 1:
+      trans_node = 2;
+      break;
+    case 2:
+      trans_node = 1;
+      break;
+    case 3:
+      trans_node = 3;
+      break;
+    default:
+      P4EST_ASSERT_NOT_REACHED ();
+    }
+    break;
+  case 6:                      /* mirror across 90 degree axis */
+    switch (node) {
+    case 0:
+      trans_node = 1;
+      break;
+    case 1:
+      trans_node = 0;
+      break;
+    case 2:
+      trans_node = 3;
+      break;
+    case 3:
+      trans_node = 2;
+      break;
+    default:
+      P4EST_ASSERT_NOT_REACHED ();
+    }
+    break;
+  case 7:                      /* mirror across 135 degree axis */
+    switch (node) {
+    case 0:
+      trans_node = 3;
+      break;
+    case 1:
+      trans_node = 1;
+      break;
+    case 2:
+      trans_node = 2;
+      break;
+    case 3:
+      trans_node = 0;
+      break;
+    default:
+      P4EST_ASSERT_NOT_REACHED ();
+    }
+    break;
+  default:
+    P4EST_ASSERT_NOT_REACHED ();
+    break;
+  }
+  return trans_node;
+}
+
 void
 p4est_quadrant_transform (const p4est_quadrant_t * q,
                           p4est_quadrant_t * r, int transform_type)
