@@ -977,47 +977,72 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
 
-  /* check first tree in global partition */
-  if (p4est->global_first_indices[3 * rank + 0] != first_tree) {
-    P4EST_INFO ("p4est invalid first tree\n");
-    return 0;
-  }
-  mylow.x = p4est->global_first_indices[3 * rank + 1];
-  mylow.y = p4est->global_first_indices[3 * rank + 2];
-  mylow.level = P4EST_MAXLEVEL;
-  tree = p4est_array_index (p4est->trees, first_tree);
-  if (tree->quadrants.elem_count > 0) {
-    q = p4est_array_index (&tree->quadrants, 0);
-    if (q->x != mylow.x || q->y != mylow.y) {
-      P4EST_INFO ("p4est invalid low quadrant\n");
+  /* check for empty processor */
+  if (p4est->local_num_trees == 0) {
+    if (!(first_tree == -1 && last_tree == -2)) {
+      P4EST_INFO ("p4est invalid empty tree range A");
       return 0;
     }
   }
 
-  /* check last tree in global partition */
-  next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
-  if (next_tree != last_tree && next_tree != last_tree + 1) {
-    P4EST_INFO ("p4est invalid last tree\n");
-    return 0;
+  /* check first tree in global partition */
+  if (first_tree < 0) {
+    if (!(first_tree == -1 && last_tree == -2) || p4est->local_num_trees != 0) {
+      P4EST_INFO ("p4est invalid empty tree range B");
+      return 0;
+    }
   }
-  nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
-  nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
-  nextlow.level = P4EST_MAXLEVEL;
-  tree = p4est_array_index (p4est->trees, last_tree);
-  if (tree->quadrants.elem_count > 0) {
-    q = p4est_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
-    if (next_tree == last_tree) {
-      if (!p4est_quadrant_is_next (q, &nextlow)) {
-        P4EST_INFO ("p4est invalid next quadrant\n");
+  else {
+    if (p4est->global_first_indices[3 * rank + 0] != first_tree) {
+      P4EST_INFO ("p4est invalid first tree\n");
+      return 0;
+    }
+    mylow.x = p4est->global_first_indices[3 * rank + 1];
+    mylow.y = p4est->global_first_indices[3 * rank + 2];
+    mylow.level = P4EST_MAXLEVEL;
+    tree = p4est_array_index (p4est->trees, first_tree);
+    if (tree->quadrants.elem_count > 0) {
+      q = p4est_array_index (&tree->quadrants, 0);
+      if (q->x != mylow.x || q->y != mylow.y) {
+        P4EST_INFO ("p4est invalid low quadrant\n");
         return 0;
       }
     }
-    else {
-      p4est_quadrant_last_descendent (q, &s, P4EST_MAXLEVEL);
-      rh = (1 << P4EST_MAXLEVEL);
-      if (s.x + 1 != rh || s.y + 1 != rh) {
-        P4EST_INFO ("p4est invalid last quadrant\n");
-        return 0;
+  }
+
+  /* check last tree in global partition */
+  if (last_tree < 0) {
+    if (!(first_tree == -1 && last_tree == -2) || p4est->local_num_trees != 0) {
+      P4EST_INFO ("p4est invalid empty tree range C");
+      return 0;
+    }
+  }
+  else {
+    next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
+    if (next_tree != last_tree && next_tree != last_tree + 1) {
+      P4EST_INFO ("p4est invalid last tree\n");
+      return 0;
+    }
+    nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
+    nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
+    nextlow.level = P4EST_MAXLEVEL;
+    tree = p4est_array_index (p4est->trees, last_tree);
+    if (tree->quadrants.elem_count > 0) {
+      q = p4est_array_index (&tree->quadrants,
+                             tree->quadrants.elem_count - 1);
+      if (next_tree == last_tree) {
+        if (!p4est_quadrant_is_next (q, &nextlow)) {
+          P4EST_INFO ("p4est invalid next quadrant\n");
+          return 0;
+        }
+      }
+      else {
+        p4est_quadrant_last_descendent (q, &s, P4EST_MAXLEVEL);
+        rh = (1 << P4EST_MAXLEVEL);
+        if (s.x + 1 != rh || s.y + 1 != rh) {
+          P4EST_INFO ("p4est invalid last quadrant\n");
+          return 0;
+        }
       }
     }
   }
@@ -2040,7 +2065,9 @@ p4est_partition_given (p4est_t * p4est,
   MPI_Status         *recv_status, *send_status;
 #endif
 
-  P4EST_GLOBAL_INFO ("Into partition_given\n");
+  P4EST_GLOBAL_INFOF
+    ("Into p4est_partition_given with %lld total quadrants\n",
+     (long long) p4est->global_num_quadrants);
 
 #ifdef P4EST_HAVE_DEBUG
   unsigned            crc;
@@ -2051,7 +2078,7 @@ p4est_partition_given (p4est_t * p4est,
   int64_t             total_requested_quadrants = 0;
   for (i = 0; i < num_procs; ++i) {
     total_requested_quadrants += new_num_quadrants_in_proc[i];
-    P4EST_ASSERT (new_num_quadrants_in_proc[i] > 0);
+    P4EST_ASSERT (new_num_quadrants_in_proc[i] >= 0);
   }
   P4EST_ASSERT (total_requested_quadrants == p4est->global_num_quadrants);
 #endif
@@ -2104,9 +2131,15 @@ p4est_partition_given (p4est_t * p4est,
   /* Calculate the local index of the end of each tree */
   local_tree_last_quad_index = P4EST_ALLOC_ZERO (int64_t, trees->elem_count);
   P4EST_CHECK_ALLOC (local_tree_last_quad_index);
-  tree = p4est_array_index (p4est->trees, first_local_tree);
-  local_tree_last_quad_index[first_local_tree]
-    = tree->quadrants.elem_count - 1;
+  if (first_local_tree >= 0) {
+    tree = p4est_array_index (p4est->trees, first_local_tree);
+    local_tree_last_quad_index[first_local_tree]
+      = tree->quadrants.elem_count - 1;
+  }
+  else {
+    P4EST_ASSERT (first_local_tree == -1 && last_local_tree == -2);
+    tree = NULL;
+  }
   for (which_tree = first_local_tree + 1; which_tree <= last_local_tree;
        ++which_tree) {
     tree = p4est_array_index (p4est->trees, which_tree);
@@ -2649,11 +2682,18 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_FREE (num_send_to);
   P4EST_FREE (begin_send_to);
 
+  if (p4est->local_num_quadrants == 0) {
+    p4est->first_local_tree = -1;
+    p4est->last_local_tree = -2;
+  }
   p4est_comm_global_partition (p4est);
 
   /* Assert that we have a valid partition */
   P4EST_ASSERT (crc == p4est_checksum (p4est));
-  P4EST_GLOBAL_INFO ("Done partition_given\n");
+  P4EST_GLOBAL_INFOF
+    ("Done p4est_partition_given shipped %lld quadrants %.3g%%\n",
+     (long long) total_quadrants_shipped,
+     total_quadrants_shipped * 100. / p4est->global_num_quadrants);
 
   return total_quadrants_shipped;
 }

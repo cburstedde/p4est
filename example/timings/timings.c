@@ -90,10 +90,13 @@ int
 main (int argc, char **argv)
 {
 #ifdef HAVE_MPI
+  int                 i;
   int                 mpiret;
   int                 wrongusage, config;
   unsigned            crc;
   int32_t             count_refined, count_balanced;
+  int32_t            *quadrant_counts;
+  int64_t             prev_quadrant, next_quadrant;
   const char         *config_name, *usage, *errmsg;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
@@ -189,6 +192,8 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_unitsquare ();
   }
   p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
+  quadrant_counts = P4EST_ALLOC (int32_t, p4est->mpisize);
+  P4EST_CHECK_ALLOC (quadrant_counts);
 
   /* time refine */
   mpiret = MPI_Barrier (mpi->mpicomm);
@@ -228,7 +233,7 @@ main (int argc, char **argv)
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
-  /* time partition */
+  /* time a uniform partition */
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
@@ -241,11 +246,20 @@ main (int argc, char **argv)
   }
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
-  /* time repartition - is a noop on the tree */
+  /* time a partition with a shift of all elements by one processor */
+  for (i = 0, next_quadrant = 0; i < p4est->mpisize; ++i) {
+    prev_quadrant = next_quadrant;
+    next_quadrant = (p4est->global_num_quadrants * (i + 1)) / p4est->mpisize;
+    quadrant_counts[i] = (int32_t) (next_quadrant - prev_quadrant);
+  }
+  if (p4est->mpisize > 1) {
+    quadrant_counts[0] += quadrant_counts[p4est->mpisize - 1];
+    quadrant_counts[p4est->mpisize - 1] = 0;
+  }
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_partition (p4est, NULL);
+  p4est_partition_given (p4est, quadrant_counts);
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   elapsed_repartition = start + MPI_Wtime ();
@@ -265,6 +279,7 @@ main (int argc, char **argv)
                             elapsed_partition, elapsed_repartition);
 
   /* destroy the p4est and its connectivity structure */
+  P4EST_FREE (quadrant_counts);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 

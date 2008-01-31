@@ -891,12 +891,22 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   last_peer = -1;
   first_tree = p4est->first_local_tree;
   last_tree = p4est->last_local_tree;
-  P4EST_ASSERT (p4est->global_first_indices[3 * rank + 0] == first_tree);
+  if (first_tree < 0) {
+    P4EST_ASSERT (first_tree == -1 && last_tree == -2);
+  }
+  else {
+    P4EST_ASSERT (p4est->global_first_indices[3 * rank + 0] == first_tree);
+  }
   mylow.x = p4est->global_first_indices[3 * rank + 1];
   mylow.y = p4est->global_first_indices[3 * rank + 2];
   mylow.level = P4EST_MAXLEVEL;
   next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
-  P4EST_ASSERT (next_tree == last_tree || next_tree == last_tree + 1);
+  if (last_tree < 0) {
+    P4EST_ASSERT (first_tree == -1 && last_tree == -2);
+  }
+  else {
+    P4EST_ASSERT (next_tree == last_tree || next_tree == last_tree + 1);
+  }
   nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
   nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
   nextlow.level = P4EST_MAXLEVEL;
@@ -1461,6 +1471,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner quadrant from the second pass of balance */
         P4EST_ASSERT (k >= peer->first_count);
+        P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
         P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
                       (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
         continue;
@@ -1681,7 +1692,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 #ifdef HAVE_MPI
   /* this function does nothing in a serial setup */
   if (p4est->mpicomm == MPI_COMM_NULL || p4est->mpisize == 1) {
-    P4EST_GLOBAL_PRODUCTION ("Done p4est_partition\n");
+    P4EST_GLOBAL_PRODUCTION ("Done p4est_partition no shipping\n");
     return;
   }
 
@@ -1755,7 +1766,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       P4EST_FREE (local_weights);
       P4EST_FREE (global_weight_sums);
       P4EST_FREE (num_quadrants_in_proc);
-      P4EST_GLOBAL_PRODUCTION ("Done p4est_partition\n");
+      P4EST_GLOBAL_PRODUCTION ("Done p4est_partition no shipping\n");
       return;
     }
 
@@ -1882,6 +1893,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
 
+#if(0)
     /* run through the count array and repair zero ranges */
     for (i = 0; i < num_procs; ++i) {
       if (num_quadrants_in_proc[i] == 0) {
@@ -1906,6 +1918,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
         }
       }
     }
+#endif
   }
 
   /* run the partition algorithm with proper quadrant counts */
@@ -1938,16 +1951,11 @@ p4est_checksum (p4est_t * p4est)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   p4est_array_init (&checkarray, 4);
-  crc = 0;
+  crc = adler32 (0L, Z_NULL, 0);
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     treecrc = p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
-    if (j == p4est->first_local_tree) {
-      crc = treecrc;
-    }
-    else {
-      crc = adler32_combine (crc, treecrc, checkarray.elem_count * 4);
-    }
+    crc = adler32_combine (crc, treecrc, checkarray.elem_count * 4);
   }
   p4est_array_reset (&checkarray);
 
