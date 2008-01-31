@@ -220,7 +220,6 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* compute some member variables */
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
-  p4est->local_num_trees = last_tree - first_tree + 1;
   p4est->global_last_quad_index = P4EST_ALLOC (int64_t, p4est->mpisize);
   P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
   p4est_comm_count_quadrants (p4est);

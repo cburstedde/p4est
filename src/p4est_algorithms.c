@@ -977,18 +977,10 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
 
-  /* check for empty processor */
-  if (p4est->local_num_trees == 0) {
-    if (!(first_tree == -1 && last_tree == -2)) {
-      P4EST_INFO ("p4est invalid empty tree range A");
-      return 0;
-    }
-  }
-
   /* check first tree in global partition */
   if (first_tree < 0) {
-    if (!(first_tree == -1 && last_tree == -2) || p4est->local_num_trees != 0) {
-      P4EST_INFO ("p4est invalid empty tree range B");
+    if (!(first_tree == -1 && last_tree == -2)) {
+      P4EST_INFO ("p4est invalid empty tree range A");
       return 0;
     }
   }
@@ -1012,8 +1004,8 @@ p4est_is_valid (p4est_t * p4est)
 
   /* check last tree in global partition */
   if (last_tree < 0) {
-    if (!(first_tree == -1 && last_tree == -2) || p4est->local_num_trees != 0) {
-      P4EST_INFO ("p4est invalid empty tree range C");
+    if (!(first_tree == -1 && last_tree == -2)) {
+      P4EST_INFO ("p4est invalid empty tree range B");
       return 0;
     }
   }
@@ -2138,7 +2130,6 @@ p4est_partition_given (p4est_t * p4est,
   }
   else {
     P4EST_ASSERT (first_local_tree == -1 && last_local_tree == -2);
-    tree = NULL;
   }
   for (which_tree = first_local_tree + 1; which_tree <= last_local_tree;
        ++which_tree) {
@@ -2440,11 +2431,22 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
   }
+  if (new_first_local_tree > new_last_local_tree) {
+    new_first_local_tree = -1;
+    new_last_local_tree = -2;
+  }
   P4EST_INFOF ("partition new forest [%d,%d]\n",
                new_first_local_tree, new_last_local_tree);
 
   /* Copy the local quadrants */
-  first_tree = P4EST_MIN (first_local_tree, new_first_local_tree);
+  if (first_local_tree >= 0 && new_first_local_tree >= 0) {
+    P4EST_ASSERT (last_local_tree >= 0 && new_last_local_tree >= 0);
+    first_tree = P4EST_MIN (first_local_tree, new_first_local_tree);
+  }
+  else {
+    P4EST_ASSERT (last_local_tree == -2 || new_last_local_tree == -2);
+    first_tree = P4EST_MAX (first_local_tree, new_first_local_tree);
+  }
   last_tree = P4EST_MAX (last_local_tree, new_last_local_tree);
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
   my_begin = begin_send_to[rank] - my_base;
@@ -2623,7 +2625,6 @@ p4est_partition_given (p4est_t * p4est,
 
   p4est->first_local_tree = new_first_local_tree;
   p4est->last_local_tree = new_last_local_tree;
-  p4est->local_num_trees = new_last_local_tree - new_first_local_tree;
 
   new_local_num_quadrants = 0;
   for (which_tree = new_first_local_tree; which_tree <= new_last_local_tree;
@@ -2682,10 +2683,6 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_FREE (num_send_to);
   P4EST_FREE (begin_send_to);
 
-  if (p4est->local_num_quadrants == 0) {
-    p4est->first_local_tree = -1;
-    p4est->last_local_tree = -2;
-  }
   p4est_comm_global_partition (p4est);
 
   /* Assert that we have a valid partition */

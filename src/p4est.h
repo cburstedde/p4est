@@ -86,9 +86,10 @@ typedef struct p4est
   void               *user_global_pointer;      /* convenience pointer for users
                                                    will never be touched by p4est */
 
-  int32_t             first_local_tree; /* 0-based index of first local tree */
-  int32_t             last_local_tree;  /* 0-based index of last local tree */
-  int32_t             local_num_trees;  /* number of trees on this processor */
+  int32_t             first_local_tree; /* 0-based index of first local tree,
+                                           must be -1 for an empty processor */
+  int32_t             last_local_tree;  /* 0-based index of last local tree,
+                                           must be -2 for an empty processor */
   int32_t             local_num_quadrants;      /* number of quadrants
                                                    on all trees on this processor */
   int64_t             global_num_quadrants;     /* number of quadrants
