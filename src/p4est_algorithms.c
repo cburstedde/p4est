@@ -2059,8 +2059,8 @@ p4est_partition_given (p4est_t * p4est,
   /* Print some diagnostics */
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
-      P4EST_GLOBAL_VERBOSEF ("partition global_last_quad_index[%d] = %ld\n",
-                             i, global_last_quad_index[i]);
+      P4EST_GLOBAL_VERBOSEF ("partition global_last_quad_index[%d] = %lld\n",
+                             i, (long long) global_last_quad_index[i]);
     }
   }
 
@@ -2096,8 +2096,8 @@ p4est_partition_given (p4est_t * p4est,
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
       P4EST_GLOBAL_VERBOSEF
-        ("partition new_global_last_quad_index[%d] = %ld\n", i,
-         new_global_last_quad_index[i]);
+        ("partition new_global_last_quad_index[%d] = %lld\n",
+         i, (long long) new_global_last_quad_index[i]);
     }
   }
 
@@ -2118,9 +2118,9 @@ p4est_partition_given (p4est_t * p4est,
   for (which_tree = first_local_tree; which_tree <= last_local_tree;
        ++which_tree) {
     tree = p4est_array_index (p4est->trees, which_tree);
-    P4EST_DEBUGF ("partition tree %d local_tree_last_quad_index[%d] = %ld\n",
+    P4EST_DEBUGF ("partition tree %d local_tree_last_quad_index[%d] = %lld\n",
                   which_tree, which_tree,
-                  local_tree_last_quad_index[which_tree]);
+                  (long long) local_tree_last_quad_index[which_tree]);
   }
 #endif
 
@@ -2235,7 +2235,8 @@ p4est_partition_given (p4est_t * p4est,
     }
   }
   for (i = 0; i < num_procs; ++i) {
-    P4EST_DEBUGF ("partition begin_send_to[%d] = %ld\n", i, begin_send_to[i]);
+    P4EST_DEBUGF ("partition begin_send_to[%d] = %lld\n",
+                  i, (long long) begin_send_to[i]);
   }
 #endif
 
@@ -2321,9 +2322,10 @@ p4est_partition_given (p4est_t * p4est,
                   num_copy * sizeof (p4est_quadrant_t));
 
           /* set tree in send buf and copy user data */
-          P4EST_DEBUGF ("partition send %d [%ld,%ld] quadrants"
-                        " from tree %d to proc %d\n", num_copy,
-                        tree_from_begin, tree_from_end, which_tree, to_proc);
+          P4EST_DEBUGF ("partition send %d [%lld,%lld] quadrants"
+                        " from tree %d to proc %d\n",
+                        num_copy, (long long) tree_from_begin,
+                        (long long) tree_from_end, which_tree, to_proc);
           for (i = 0; i < num_copy; ++i) {
             memcpy (user_data_send_buf + i * data_size,
                     quad_send_buf[i].user_data, data_size);
@@ -2454,9 +2456,9 @@ p4est_partition_given (p4est_t * p4est,
 
         P4EST_DEBUGF ("copying %d local quads to tree %d\n",
                       num_copy, which_tree);
-        P4EST_DEBUGF ("   with %d(%d) quads from [%ld, %ld] to [%d, %d]\n",
+        P4EST_DEBUGF ("   with %d(%d) quads from [%lld, %lld] to [%d, %d]\n",
                       num_quadrants, quadrants->elem_count,
-                      tree_from_begin, tree_from_end,
+                      (long long) tree_from_begin, (long long) tree_from_end,
                       new_local_tree_elem_count_before[which_tree],
                       new_local_tree_elem_count_before[which_tree] +
                       num_copy - 1);
