@@ -41,12 +41,10 @@ p4est_order_local_vertices (p4est_t * p4est,
   p4est_array_t      *trees = p4est->trees;
   p4est_connectivity_t *conn = p4est->connectivity;
   int32_t             num_trees = conn->num_trees;
-  int32_t             next_tree;
+  int32_t             next_tree, transform;
   int32_t             i, j;
   int32_t             vertex_num;
-  int32_t             qh;
   int32_t             rh = (1 << P4EST_MAXLEVEL);
-  int32_t             transform;
   int32_t             num_quadrants;
   int32_t             any_face, face_contact[4];
   int32_t             quad_contact[4];
@@ -59,28 +57,14 @@ p4est_order_local_vertices (p4est_t * p4est,
   int8_t              qcid, neighbor_node;
   p4est_tree_t       *tree, *ntree;
   p4est_array_t      *quadrants, corner_info;
-  p4est_quadrant_t    neighbor;
+  p4est_quadrant_t    neighbor, cneighbor;
   p4est_quadrant_t   *q;
-  p4est_quadrant_t    mylow, nextlow;
   p4est_corner_info_t *ci;
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
-  P4EST_QUADRANT_INIT (&mylow);
-  P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&neighbor);
-
-  P4EST_ASSERT (p4est->global_first_indices[3 * rank + 0] ==
-                first_local_tree);
-  mylow.x = p4est->global_first_indices[3 * rank + 1];
-  mylow.y = p4est->global_first_indices[3 * rank + 2];
-  mylow.level = P4EST_MAXLEVEL;
-  next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
-  P4EST_ASSERT (next_tree == last_local_tree
-                || next_tree == last_local_tree + 1);
-  nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
-  nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
-  nextlow.level = P4EST_MAXLEVEL;
+  P4EST_QUADRANT_INIT (&cneighbor);
 
   p4est_array_init (&corner_info, sizeof (p4est_corner_info_t));
 
@@ -128,7 +112,6 @@ p4est_order_local_vertices (p4est_t * p4est,
     for (i = 0; i < num_quadrants; ++i, ++lqid) {
       /* this quadrant may be on the boundary with a range of processors */
       q = p4est_array_index (quadrants, i);
-      qh = (1 << (P4EST_MAXLEVEL - q->level));
 
       /* loop over the corners of the quadrant */
       for (corner = 0; corner < 4; ++corner) {
@@ -182,6 +165,72 @@ p4est_order_local_vertices (p4est_t * p4est,
                 /* the neightbor is in a neighboring tree or multiple
                  * if it is a neighbor across the corner of the tree
                  */
+
+                quad_contact[0] = (neighbor.y < 0);
+                quad_contact[1] = (neighbor.x >= rh);
+                quad_contact[2] = (neighbor.y >= rh);
+                quad_contact[3] = (neighbor.x < 0);
+
+                if ((quad_contact[0] || quad_contact[2]) &&
+                    (quad_contact[1] || quad_contact[3])) {
+                  /* Neighbor is across a corner */
+                  for (tree_corner = 0; tree_corner < 4; ++tree_corner) {
+                    if (quad_contact[(tree_corner + 3) % 4]
+                        && quad_contact[tree_corner]) {
+                      break;
+                    }
+                  }
+                  p4est_find_corner_info (conn, j, tree_corner, &corner_info);
+                  for (ctree = 0; ctree < corner_info.elem_count; ++ctree) {
+                    ci = p4est_array_index (&corner_info, ctree);
+                    neighbor_tree = ci->ntree;
+                    zcorner = p4est_corner_to_zorder[ci->ncorner];
+                    cneighbor = neighbor;
+                    p4est_quadrant_corner (&cneighbor, zcorner, 1);
+
+                    neighbor_proc = p4est_comm_find_owner (p4est,
+                                                           neighbor_tree,
+                                                           &cneighbor, rank);
+
+                    /* Neighbor is remote so we don't number its node */
+                    if (neighbor_proc != rank)
+                      continue;
+
+                    ntree = p4est_array_index (trees, neighbor_tree);
+
+                    lnid = p4est_array_bsearch (&ntree->quadrants, &neighbor,
+                                                p4est_quadrant_compare);
+                    if (lnid != -1) {
+                      lnid += tree_offset[neighbor_tree];
+                      neighbor_node = zcorner;
+                      /* We have found a neighbor in the same tree */
+                      quadrant_to_local_vertex[lnid * 4 + neighbor_node]
+                        = vertex_num;
+                    }
+                  }
+                }
+                else {
+                  /* Neighbor is across a face */
+                  for (face = 0; face < 4; ++face) {
+                    if (quad_contact[face] && face_contact[face]) {
+                      neighbor_tree = conn->tree_to_tree[4 * j + face];
+                      break;
+                    }
+                  }
+                  if (face == 4) {
+                    /* this quadrant ran across a face with no neighbor */
+                    continue;
+                  }
+                  /* transform both q and insulq into the neighbor's
+                   * coordinates
+                   */
+                  /*
+                     transform = p4est_find_face_transform (conn, j, face);
+                     tempq = *q;
+                     p4est_quadrant_translate (&tempq, face);
+                     p4est_quadrant_transform (&tempq, &tosend, transform);
+                   */
+                }
               }
             }
           }
