@@ -4,10 +4,13 @@ If they ever change, something is badly wrong!
 
     np    |   example   |   parameters   |   crc
 ----------o-------------o----------------o------------
-        1 | timings     | 10             | 0x6e3e83c4
-        1 | timings     | 11             | 0x334bc3de
-       64 | timings     | 14             | 0xad908ce4
-      256 | timings     | 15             | 0x9e7da646
+        1 | timings     | unit 10        | 0x6e3e83c4
+        1 | timings     | unit 11        | 0x334bc3de
+       64 | timings     | unit 14        | 0xad908ce4
+      256 | timings     | unit 15        | 0x9e7da646
+     1, 4 | timings     | star 6         | 0x14107b57
+       52 | timings     | star 13        | 0xc86c74d9
+       64 | timings     | star 13        | 0xc86c74d9
   1, 3, 5 | simple      | moebius 6      | 0x98ab6cb2
         6 | simple      | moebius 6      | 0x6d2d6d6c
         5 | simple      | star 6         | 0x38d3736f
