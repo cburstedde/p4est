@@ -108,9 +108,9 @@ void                p4est_order_local_vertices (p4est_t * p4est,
  */
 void                p4est_possible_node_neigbors (p4est_quadrant_t * q,
                                                   int32_t node,
-                                                  int32_t nnum,
+                                                  int8_t nnum,
                                                   int8_t neighbor_rlev,
                                                   p4est_quadrant_t * neighbor,
-                                                  int32_t * neighbor_node);
+                                                  int8_t * neighbor_node);
 
 #endif /* !__P4EST_MESH_H__ */
