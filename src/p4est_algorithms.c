@@ -625,13 +625,15 @@ p4est_node_transform (int node, int transform_type)
     trans_node = node;
     break;
   case 1:                      /* rotate -90 degrees */
-    trans_node = p4est_corner_to_zorder[p4est_corner_to_zorder[node] + 1 % 4];
+    trans_node =
+      p4est_corner_to_zorder[(p4est_corner_to_zorder[node] + 1) % 4];
     break;
   case 2:                      /* rotate 180 degrees */
     trans_node = 3 - node;
     break;
   case 3:                      /* rotate 90 degrees */
-    trans_node = p4est_corner_to_zorder[p4est_corner_to_zorder[node] - 1 % 4];
+    trans_node =
+      p4est_corner_to_zorder[(p4est_corner_to_zorder[node] + 3) % 4];
     break;
   case 4:                      /* mirror across 0 degree axis */
     switch (node) {
@@ -649,6 +651,7 @@ p4est_node_transform (int node, int transform_type)
       break;
     default:
       P4EST_ASSERT_NOT_REACHED ();
+      break;
     }
     break;
   case 5:                      /* mirror across 45 degree axis */
@@ -667,6 +670,7 @@ p4est_node_transform (int node, int transform_type)
       break;
     default:
       P4EST_ASSERT_NOT_REACHED ();
+      break;
     }
     break;
   case 6:                      /* mirror across 90 degree axis */
@@ -685,6 +689,7 @@ p4est_node_transform (int node, int transform_type)
       break;
     default:
       P4EST_ASSERT_NOT_REACHED ();
+      break;
     }
     break;
   case 7:                      /* mirror across 135 degree axis */
@@ -703,6 +708,7 @@ p4est_node_transform (int node, int transform_type)
       break;
     default:
       P4EST_ASSERT_NOT_REACHED ();
+      break;
     }
     break;
   default:

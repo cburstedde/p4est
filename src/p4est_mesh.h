@@ -104,7 +104,7 @@ void                p4est_order_local_vertices (p4est_t * p4est,
  * \param [out] neighbor_node the neighbor's node which shares with \a q
  *                            the node \a node.
  */
-void                p4est_possible_node_neighbor (p4est_quadrant_t * q,
+void                p4est_possible_node_neighbor (const p4est_quadrant_t * q,
                                                   int node, int nnum,
                                                   int neighbor_rlev,
                                                   p4est_quadrant_t * neighbor,

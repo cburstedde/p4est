@@ -257,20 +257,22 @@ p4est_order_local_vertices (p4est_t * p4est,
 }
 
 void
-p4est_possible_node_neighbor (p4est_quadrant_t * q, int node,
+p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
                               int nnum, int neighbor_rlev,
                               p4est_quadrant_t * neighbor, int *neighbor_node)
 {
   int                 nnode;
-  int32_t             qh = (1 << (P4EST_MAXLEVEL - q->level));
-  int32_t             nh =
-    (1 << (P4EST_MAXLEVEL - (q->level + neighbor_rlev)));
-  int32_t             qx = q->x;
-  int32_t             qy = q->y;
+  const int           nlevel = q->level + neighbor_rlev;
+  const int32_t       qh = (1 << (P4EST_MAXLEVEL - q->level));
+  const int32_t       nh = (1 << (P4EST_MAXLEVEL - nlevel));
+  const int32_t       qx = q->x;
+  const int32_t       qy = q->y;
   int32_t             cornerx, cornery;
   p4est_quadrant_t    n;
 
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (-1 <= neighbor_rlev && neighbor_rlev <= 1);
+  P4EST_ASSERT (0 <= nlevel && nlevel <= P4EST_MAXLEVEL);
 
   P4EST_QUADRANT_INIT (&n);
 
@@ -293,6 +295,7 @@ p4est_possible_node_neighbor (p4est_quadrant_t * q, int node,
     break;
   default:
     P4EST_ASSERT_NOT_REACHED ();
+    break;
   }
 
 #ifdef P4EST_HAVE_DEBUG
@@ -302,7 +305,7 @@ p4est_possible_node_neighbor (p4est_quadrant_t * q, int node,
 #endif
 
   nnode = 3 - nnum;
-  n.level = (int8_t) (q->level + neighbor_rlev);
+  n.level = (int8_t) nlevel;
   switch (nnum) {
   case 0:
     n.x = cornerx - nh;
@@ -322,6 +325,7 @@ p4est_possible_node_neighbor (p4est_quadrant_t * q, int node,
     break;
   default:
     P4EST_ASSERT_NOT_REACHED ();
+    break;
   }
 
   *neighbor = n;
