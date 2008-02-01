@@ -11,3 +11,6 @@
    ? 2D bilinear elements
  * Make the roots of the forest distributed in parallel
  * 3D
+ * Large number of elements per proc
+   Create a typedef for the integers for per proc values?
+   Create a typedef for the integers for global values?
