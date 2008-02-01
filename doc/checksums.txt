@@ -11,6 +11,8 @@ If they ever change, something is badly wrong!
      1, 4 | timings     | star 6         | 0x14107b57
        52 | timings     | star 13        | 0xc86c74d9
        64 | timings     | star 13        | 0xc86c74d9
+  1, 2, 3 | simple      | three 7        | 0xa8d85863
+        4 | simple      | three 7        | 0x20fb58ed
   1, 3, 5 | simple      | moebius 6      | 0x98ab6cb2
         6 | simple      | moebius 6      | 0x6d2d6d6c
         5 | simple      | star 6         | 0x38d3736f

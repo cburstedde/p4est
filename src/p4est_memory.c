@@ -33,7 +33,7 @@
 /* array routines */
 
 p4est_array_t      *
-p4est_array_new (int elem_size)
+p4est_array_new (size_t elem_size)
 {
   p4est_array_t      *array;
 
@@ -53,7 +53,7 @@ p4est_array_destroy (p4est_array_t * array)
 }
 
 void
-p4est_array_init (p4est_array_t * array, int elem_size)
+p4est_array_init (p4est_array_t * array, size_t elem_size)
 {
   P4EST_ASSERT (elem_size > 0);
 
@@ -74,16 +74,15 @@ p4est_array_reset (p4est_array_t * array)
 }
 
 void
-p4est_array_resize (p4est_array_t * array, int new_count)
+p4est_array_resize (p4est_array_t * array, size_t new_count)
 {
   char               *ptr;
-  int                 newoffs, roundup, newsize;
+  size_t              newoffs, roundup, newsize;
 #ifdef P4EST_HAVE_DEBUG
-  int                 oldoffs;
-  int                 i, minoffs;
+  size_t              oldoffs;
+  size_t              i, minoffs;
 #endif
 
-  P4EST_ASSERT (new_count >= 0);
 #ifdef P4EST_HAVE_DEBUG
   oldoffs = array->elem_count * array->elem_size;
 #endif
@@ -131,8 +130,8 @@ void
 p4est_array_uniq (p4est_array_t * array,
                   int (*compar) (const void *, const void *))
 {
-  int                 incount, dupcount;
-  int                 i, j;
+  size_t              incount, dupcount;
+  size_t              i, j;
   void               *elem1, *elem2, *temp;
 
   incount = array->elem_count;
@@ -165,11 +164,11 @@ p4est_array_uniq (p4est_array_t * array,
   p4est_array_resize (array, j);
 }
 
-int
+ssize_t
 p4est_array_bsearch (p4est_array_t * array, const void *key,
                      int (*compar) (const void *, const void *))
 {
-  int                 index = -1;
+  ssize_t             index = -1;
   char               *retval;
 
   retval = (char *)
@@ -184,13 +183,13 @@ p4est_array_bsearch (p4est_array_t * array, const void *key,
 }
 
 unsigned
-p4est_array_checksum (p4est_array_t * array, int first_elem)
+p4est_array_checksum (p4est_array_t * array, size_t first_elem)
 {
-  int                 first_byte;
+  size_t              first_byte;
   uInt                bytes;
   uLong               crc;
 
-  P4EST_ASSERT (0 <= first_elem && first_elem <= array->elem_count);
+  P4EST_ASSERT (first_elem <= array->elem_count);
 
   crc = adler32 (0L, Z_NULL, 0);
   if (array->elem_count == 0) {
@@ -204,14 +203,17 @@ p4est_array_checksum (p4est_array_t * array, int first_elem)
   return (unsigned) crc;
 }
 
-int
+size_t
 p4est_array_pqueue_add (p4est_array_t * array, void *temp,
                         int (*compar) (const void *, const void *))
 {
-  int                 parent, child;
-  int                 comp, swaps;
-  const int           size = array->elem_size;
+  int                 comp;
+  size_t              parent, child, swaps;
+  const size_t        size = array->elem_size;
   void               *p, *c;
+
+  /* this works on a pre-allocated array */
+  P4EST_ASSERT (array->elem_count > 0);
 
   swaps = 0;
   child = array->elem_count - 1;
@@ -240,20 +242,22 @@ p4est_array_pqueue_add (p4est_array_t * array, void *temp,
   return swaps;
 }
 
-int
+size_t
 p4est_array_pqueue_pop (p4est_array_t * array, void *result,
                         int (*compar) (const void *, const void *))
 {
-  int                 new_count;
-  int                 parent, child, child1;
-  int                 comp, swaps;
-  const int           size = array->elem_size;
+  int                 comp;
+  size_t              new_count, swaps;
+  size_t              parent, child, child1;
+  const size_t        size = array->elem_size;
   void               *p, *c, *c1;
   void               *temp;
 
+  /* array must not be empty */
+  P4EST_ASSERT (array->elem_count > 0);
+
   swaps = 0;
   new_count = array->elem_count - 1;
-  P4EST_ASSERT (new_count >= 0);
 
   /* extract root */
   parent = 0;
@@ -304,9 +308,9 @@ p4est_array_pqueue_pop (p4est_array_t * array, void *result,
 }
 
 void               *
-p4est_array_index (p4est_array_t * array, int index)
+p4est_array_index (p4est_array_t * array, size_t index)
 {
-  P4EST_ASSERT (index >= 0 && index < array->elem_count);
+  P4EST_ASSERT (index < array->elem_count);
 
   return (void *) (array->array + (array->elem_size * index));
 }
@@ -317,7 +321,7 @@ static void        *(*obstack_chunk_alloc) (size_t) = p4est_malloc;
 static void         (*obstack_chunk_free) (void *) = p4est_free;
 
 p4est_mempool_t    *
-p4est_mempool_new (int elem_size)
+p4est_mempool_new (size_t elem_size)
 {
   p4est_mempool_t    *mempool;
 
@@ -357,7 +361,7 @@ p4est_mempool_reset (p4est_mempool_t * mempool)
 void               *
 p4est_mempool_alloc (p4est_mempool_t * mempool)
 {
-  int                 new_count;
+  size_t              new_count;
   void               *ret;
   p4est_array_t      *freed = &mempool->freed;
 
@@ -382,8 +386,10 @@ p4est_mempool_alloc (p4est_mempool_t * mempool)
 void
 p4est_mempool_free (p4est_mempool_t * mempool, void *elem)
 {
-  int                 old_count;
+  size_t              old_count;
   p4est_array_t      *freed = &mempool->freed;
+
+  P4EST_ASSERT (mempool->elem_count > 0);
 
 #ifdef P4EST_HAVE_DEBUG
   memset (elem, -1, mempool->elem_size);
@@ -572,18 +578,20 @@ p4est_list_pop (p4est_list_t * list)
 
 /* hash table routines */
 
-static const int    p4est_hash_minimal_size = ((1 << 8) - 1);   /* 255 slots */
-static const int    p4est_hash_shrink_interval = (1 << 8);      /* 256 steps */
+static const size_t p4est_hash_minimal_size = ((1 << 8) - 1);   /* 255 slots */
+static const size_t p4est_hash_shrink_interval = (1 << 8);      /* 256 steps */
 
 static void
 p4est_hash_maybe_resize (p4est_hash_t * hash)
 {
-  int                 i, j;
-  int                 new_size, new_count;
+  size_t              i, j;
+  size_t              new_size, new_count;
   p4est_list_t       *old_list, *new_list;
   p4est_link_t       *link, *temp;
   p4est_array_t      *new_slots;
   p4est_array_t      *old_slots = hash->slots;
+
+  P4EST_ASSERT (old_slots->elem_count > 0);
 
   ++hash->resize_checks;
   if (hash->elem_count >= 4 * old_slots->elem_count) {
@@ -640,7 +648,7 @@ p4est_hash_t       *
 p4est_hash_new (p4est_hash_function_t hash_fn,
                 p4est_equal_function_t equal_fn, p4est_mempool_t * allocator)
 {
-  int                 i;
+  size_t              i;
   p4est_hash_t       *hash;
   p4est_list_t       *list;
   p4est_array_t      *slots;
@@ -690,7 +698,7 @@ p4est_hash_destroy (p4est_hash_t * hash)
 void
 p4est_hash_reset (p4est_hash_t * hash)
 {
-  int                 i, count;
+  size_t              i, count;
   p4est_list_t       *list;
   p4est_array_t      *slots = hash->slots;
 
@@ -698,9 +706,7 @@ p4est_hash_reset (p4est_hash_t * hash)
     return;
   }
 
-  count = 0;
-
-  for (i = 0; i < slots->elem_count; ++i) {
+  for (i = 0, count = 0; i < slots->elem_count; ++i) {
     list = p4est_array_index (slots, i);
     count += list->elem_count;
     p4est_list_reset (list);
@@ -713,12 +719,11 @@ p4est_hash_reset (p4est_hash_t * hash)
 void
 p4est_hash_unlink (p4est_hash_t * hash)
 {
-  int                 i, count;
+  size_t              i, count;
   p4est_list_t       *list;
   p4est_array_t      *slots = hash->slots;
 
-  count = 0;
-  for (i = 0; i < slots->elem_count; ++i) {
+  for (i = 0, count = 0; i < slots->elem_count; ++i) {
     list = p4est_array_index (slots, i);
     count += list->elem_count;
     p4est_list_unlink (list);
@@ -746,7 +751,7 @@ p4est_hash_unlink_destroy (p4est_hash_t * hash)
 int
 p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
 {
-  int                 hval;
+  size_t              hval;
   p4est_list_t       *list;
   p4est_link_t       *link;
 
@@ -768,7 +773,7 @@ p4est_hash_lookup (p4est_hash_t * hash, void *v, void **found)
 int
 p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
 {
-  int                 hval;
+  size_t              hval;
   p4est_list_t       *list;
   p4est_link_t       *link;
 
@@ -798,7 +803,7 @@ p4est_hash_insert_unique (p4est_hash_t * hash, void *v, void **found)
 int
 p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
 {
-  int                 hval;
+  size_t              hval;
   p4est_list_t       *list;
   p4est_link_t       *link, *prev;
 
@@ -829,7 +834,7 @@ p4est_hash_remove (p4est_hash_t * hash, void *v, void **found)
 void
 p4est_hash_print_statistics (int log_priority, p4est_hash_t * hash)
 {
-  int                 i;
+  size_t              i;
   int64_t             a, sum, squaresum;
   double              divide, avg, sqr, std;
   p4est_list_t       *list;

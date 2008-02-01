@@ -22,10 +22,10 @@
 #include <p4est_algorithms.h>
 #include <p4est_base.h>
 
-static int
+static unsigned
 int_hash_fn (const void *v)
 {
-  return (int) v;
+  return (unsigned) v;
 }
 
 static int

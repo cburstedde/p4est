@@ -11,7 +11,7 @@
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; wconst int8_t        p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };ithout even the implied warranty of
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 
@@ -41,20 +41,20 @@ p4est_order_local_vertices (p4est_t * p4est,
   p4est_array_t      *trees = p4est->trees;
   p4est_connectivity_t *conn = p4est->connectivity;
   int32_t             num_trees = conn->num_trees;
-  int32_t             next_tree, transform;
+  int32_t             transform;
   int32_t             i, j;
   int32_t             vertex_num;
   int32_t             rh = (1 << P4EST_MAXLEVEL);
   int32_t             num_quadrants;
   int32_t             any_face, face_contact[4];
   int32_t             quad_contact[4];
-  int32_t             found_neighbors;
-  int32_t             lqid, lnid;
+  int32_t             lqid;
   int32_t             neighbor_proc, neighbor_tree, ctree;
   int32_t            *tree_offset;
   int8_t             *tree_flags;
   int8_t              face, corner, nnum, rlev, tree_corner, zcorner;
   int8_t              qcid, neighbor_node;
+  ssize_t             lnid;
   p4est_tree_t       *tree, *ntree;
   p4est_array_t      *quadrants, corner_info;
   p4est_quadrant_t    neighbor, cneighbor;

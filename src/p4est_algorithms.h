@@ -49,7 +49,7 @@ int                 p4est_quadrant_is_equal (const void *v1, const void *v2);
 
 /** Computes a hash value for a quadrant in 0..2^30-1.
  */
-int                 p4est_quadrant_hash (const void *v);
+unsigned            p4est_quadrant_hash (const void *v);
 
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3

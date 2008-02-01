@@ -26,6 +26,7 @@
 
 #include <p4est_obstack.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /** The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.
@@ -39,11 +40,11 @@
 typedef struct p4est_array
 {
   /* interface variables */
-  int                 elem_size;        /* size of a single element */
-  int                 elem_count;       /* number of valid elements */
+  size_t              elem_size;        /* size of a single element */
+  size_t              elem_count;       /* number of valid elements */
 
   /* implementation variables */
-  int                 byte_alloc;       /* number of allocated bytes */
+  size_t              byte_alloc;       /* number of allocated bytes */
   char               *array;    /* linear array to store elements */
 }
 p4est_array_t;
@@ -52,7 +53,7 @@ p4est_array_t;
  * \param [in] elem_size  Size of one array element in bytes.
  * \return Returns an allocated and initialized array.
  */
-p4est_array_t      *p4est_array_new (int elem_size);
+p4est_array_t      *p4est_array_new (size_t elem_size);
 
 /** Destroys an array structure.
  * \param [in] array  The array to be destroyed.
@@ -63,7 +64,8 @@ void                p4est_array_destroy (p4est_array_t * array);
  * \param [in,out]  array       Array structure to be initialized.
  * \param [in] elem_size  Size of one array element in bytes.
  */
-void                p4est_array_init (p4est_array_t * array, int elem_size);
+void                p4est_array_init (p4est_array_t * array,
+                                      size_t elem_size);
 
 /** Sets the array count to zero and frees all elements.
  * \param [in,out]  array       Array structure to be resetted.
@@ -75,7 +77,8 @@ void                p4est_array_reset (p4est_array_t * array);
 /** Sets the element count to new_count.
  * Reallocation takes place only occasionally, so this function is usually fast.
  */
-void                p4est_array_resize (p4est_array_t * array, int new_count);
+void                p4est_array_resize (p4est_array_t * array,
+                                        size_t new_count);
 
 /** Sorts the array in ascending order wrt. the comparison function.
  * \param [in] compar The comparison function to be used.
@@ -97,7 +100,7 @@ void                p4est_array_uniq (p4est_array_t * array,
  * \param [in] compar  The comparison function to be used.
  * \return Returns the index into array for the item found, or -1.
  */
-int                 p4est_array_bsearch (p4est_array_t * array,
+ssize_t             p4est_array_bsearch (p4est_array_t * array,
                                          const void *key,
                                          int (*compar) (const void *,
                                                         const void *));
@@ -108,7 +111,7 @@ int                 p4est_array_bsearch (p4est_array_t * array,
  *                         Can be between 0 and elem_count (inclusive).
  */
 unsigned            p4est_array_checksum (p4est_array_t * array,
-                                          int first_elem);
+                                          size_t first_elem);
 
 /** Adds an element to a priority queue.
  * The priority queue is implemented as a heap in ascending order.
@@ -121,7 +124,7 @@ unsigned            p4est_array_checksum (p4est_array_t * array,
  * \note  If the return value is zero for all elements in an array,
  *        the array is sorted linearly and unchanged.
  */
-int                 p4est_array_pqueue_add (p4est_array_t * array,
+size_t              p4est_array_pqueue_add (p4est_array_t * array,
                                             void *temp,
                                             int (*compar) (const void *,
                                                            const void *));
@@ -133,7 +136,7 @@ int                 p4est_array_pqueue_add (p4est_array_t * array,
  * \return Returns the number of swap operations.
  * \note This function resizes the array to elem_count-1.
  */
-int                 p4est_array_pqueue_pop (p4est_array_t * array,
+size_t              p4est_array_pqueue_pop (p4est_array_t * array,
                                             void *result,
                                             int (*compar) (const void *,
                                                            const void *));
@@ -141,7 +144,7 @@ int                 p4est_array_pqueue_pop (p4est_array_t * array,
 /** Returns a pointer to an array element.
  * \param [in] index needs to be in [0]..[elem_count-1].
  */
-void               *p4est_array_index (p4est_array_t * array, int index);
+void               *p4est_array_index (p4est_array_t * array, size_t index);
 
 /** The p4est_mempool object provides a large pool of equal-size elements.
  * The pool grows dynamically for element allocation.
@@ -152,8 +155,8 @@ void               *p4est_array_index (p4est_array_t * array, int index);
 typedef struct p4est_mempool
 {
   /* interface variables */
-  int                 elem_size;        /* size of a single element */
-  int                 elem_count;       /* number of valid elements */
+  size_t              elem_size;        /* size of a single element */
+  size_t              elem_count;       /* number of valid elements */
 
   /* implementation variables */
   struct obstack      obstack;  /* holds the allocated elements */
@@ -165,7 +168,7 @@ p4est_mempool_t;
  * \param [in] elem_size  Size of one element in bytes.
  * \return Returns an allocated and initialized memory pool.
  */
-p4est_mempool_t    *p4est_mempool_new (int elem_size);
+p4est_mempool_t    *p4est_mempool_new (size_t elem_size);
 
 /** Destroys a mempool structure.
  * All elements that are still in use are invalidated.
@@ -202,7 +205,7 @@ p4est_link_t;
 typedef struct p4est_list
 {
   /* interface variables */
-  int                 elem_count;
+  size_t              elem_count;
   p4est_link_t       *first;
   p4est_link_t       *last;
 
@@ -265,9 +268,9 @@ void               *p4est_list_remove (p4est_list_t * list,
 void               *p4est_list_pop (p4est_list_t * list);
 
 /** Function to compute a hash value of an object.
- * \return Returns a non-negative integer.
+ * \return Returns an unsigned integer.
  */
-typedef int         (*p4est_hash_function_t) (const void *v);
+typedef unsigned    (*p4est_hash_function_t) (const void *v);
 
 /** Function to check equality of two objects.
  * \return Returns 0 if *v1 is unequal *v2 and true otherwise.
@@ -281,13 +284,13 @@ typedef int         (*p4est_equal_function_t) (const void *v1,
 typedef struct p4est_hash
 {
   /* interface variables */
-  int                 elem_count;       /* total number of objects contained */
+  size_t              elem_count;       /* total number of objects contained */
 
   /* implementation variables */
   p4est_array_t      *slots;    /* the slot count is slots->elem_count */
   p4est_hash_function_t hash_fn;
   p4est_equal_function_t equal_fn;
-  int                 resize_checks, resize_actions;
+  size_t              resize_checks, resize_actions;
   int                 allocator_owned;
   p4est_mempool_t    *allocator;        /* must allocate p4est_link_t */
 }

@@ -115,7 +115,7 @@ p4est_quadrant_is_equal (const void *v1, const void *v2)
   return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
 }
 
-int
+unsigned
 p4est_quadrant_hash (const void *v)
 {
   const p4est_quadrant_t *q = v;
@@ -1695,13 +1695,13 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 count_outside_root, count_outside_tree;
   int                 count_already_inlist, count_already_outlist;
   int                 first_inside, last_inside;
-  int                 rindex;
   int                *key, *parent_key;
   int                 outface[4];
+  void               *vlookup;
   int8_t              l, inmaxl, bbound;
   int8_t              qid, sid, pid;
   int32_t             ph, rh;
-  void               *vlookup;
+  ssize_t             rindex;
   p4est_quadrant_t   *family[4];
   p4est_quadrant_t   *q;
   p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
