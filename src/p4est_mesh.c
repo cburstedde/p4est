@@ -198,7 +198,7 @@ p4est_order_local_vertices (p4est_t * p4est,
 
                     ntree = p4est_array_index (trees, neighbor_tree);
 
-                    lnid = p4est_array_bsearch (&ntree->quadrants, &neighbor,
+                    lnid = p4est_array_bsearch (&ntree->quadrants, &cneighbor,
                                                 p4est_quadrant_compare);
                     if (lnid != -1) {
                       lnid += tree_offset[neighbor_tree];
@@ -224,18 +224,36 @@ p4est_order_local_vertices (p4est_t * p4est,
                   /* transform both q and insulq into the neighbor's
                    * coordinates
                    */
-                  /*
-                     transform = p4est_find_face_transform (conn, j, face);
-                     tempq = *q;
-                     p4est_quadrant_translate (&tempq, face);
-                     p4est_quadrant_transform (&tempq, &tosend, transform);
-                   */
+                  transform = p4est_find_face_transform (conn, j, face);
+                  p4est_quadrant_translate (&neighbor, face);
+                  p4est_quadrant_transform (&neighbor, &cneighbor, transform);
+
+                  neighbor_proc = p4est_comm_find_owner (p4est,
+                                                         neighbor_tree,
+                                                         &cneighbor, rank);
+                  /* Neighbor is remote so we don't number its node */
+                  if (neighbor_proc != rank)
+                    continue;
+
+                  ntree = p4est_array_index (trees, neighbor_tree);
+
+                  lnid = p4est_array_bsearch (&ntree->quadrants, &cneighbor,
+                                              p4est_quadrant_compare);
+                  if (lnid != -1) {
+                    lnid += tree_offset[neighbor_tree];
+                    neighbor_node = p4est_node_transform (neighbor_node,
+                                                          transform);
+
+                    /* We have found a neighbor in the same tree */
+                    quadrant_to_local_vertex[lnid * 4 + neighbor_node]
+                      = vertex_num;
+                  }
                 }
               }
             }
           }
+          ++vertex_num;
         }
-        ++vertex_num;
       }
     }
   }
@@ -243,6 +261,7 @@ p4est_order_local_vertices (p4est_t * p4est,
   Ntotal = vertex_num;
   P4EST_FREE (tree_offset);
   P4EST_FREE (tree_flags);
+  p4est_array_reset (&corner_info);
 
 #if 0
   /* ----- Cut Here ---- */
