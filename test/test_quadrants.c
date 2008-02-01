@@ -78,8 +78,8 @@ int
 main (void)
 {
   int                 i, j, incount;
-  int8_t              level, mid, cid;
-  int8_t              id0, id1, id2, id3;
+  int                 level, mid, cid;
+  int                 id0, id1, id2, id3;
   int64_t             index1, index2;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
@@ -117,7 +117,7 @@ main (void)
     p4est_quadrant_set_morton (&r, q1->level, index1);
     index2 = p4est_quadrant_linear_id (&r, r.level);
     P4EST_CHECK_ABORT (index1 == index2, "index conversion");
-    level = (int8_t) (q1->level - 1);
+    level = q1->level - 1;
     if (level >= 0) {
       index1 = p4est_quadrant_linear_id (q1, level);
       p4est_quadrant_set_morton (&r, level, index1);

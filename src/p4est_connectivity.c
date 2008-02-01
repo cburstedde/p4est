@@ -89,8 +89,7 @@ int
 p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
 {
   int                 found;
-  int8_t              face, rface, nface, orientation;
-  int8_t              corner;
+  int                 face, rface, nface, orientation, corner;
   int32_t             tree, ntree, ctree;
   int32_t             vertex, cvertex, corner_trees;
   int32_t             v1, v2, w1, w2;
@@ -121,8 +120,8 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         fprintf (stderr, "Face range in %d %d\n", tree, face);
         return 0;
       }
-      nface = (int8_t) (rface % 4);     /* clamp to a real face index */
-      orientation = (int8_t) (rface / 4);       /* 0 (same) or 1 (opposite) */
+      nface = rface % 4;        /* clamp to a real face index */
+      orientation = rface / 4;  /* 0 (same) or 1 (opposite) */
       if (ntree == tree) {
         /* no neighbor across this face or self-periodic */
         if (nface == face && orientation != 0) {
@@ -552,9 +551,9 @@ p4est_connectivity_new_periodic (void)
 
 int
 p4est_find_face_transform (p4est_connectivity_t * connectivity,
-                           int32_t itree, int8_t iface)
+                           int32_t itree, int iface)
 {
-  int8_t              nrface, neighbor_face, orientation;
+  int                 nrface, neighbor_face, orientation;
   int32_t             neighbor_tree;
 
   P4EST_ASSERT (itree >= 0 && itree < connectivity->num_trees);
@@ -566,8 +565,8 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
 
   nrface = connectivity->tree_to_face[4 * itree + iface];
   P4EST_ASSERT (nrface >= 0 && nrface < 8);
-  neighbor_face = (int8_t) (nrface % 4);
-  orientation = (int8_t) (nrface / 4);
+  neighbor_face = nrface % 4;
+  orientation = nrface / 4;
 
   if (neighbor_tree == itree && neighbor_face == iface) {
     return -1;
@@ -578,11 +577,11 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
 
 void
 p4est_find_corner_info (p4est_connectivity_t * conn,
-                        int32_t itree, int8_t icorner,
+                        int32_t itree, int icorner,
                         p4est_array_t * corner_info)
 {
   int                 incount, num_found;
-  int8_t              ncorner;
+  int                 ncorner;
   int32_t             corner_trees, ctree;
   int32_t             ntree, ntree1, ntree2;
   int32_t             ivertex, nvertex;
@@ -620,7 +619,7 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
     }
     ci = p4est_array_index (corner_info, num_found);
     ci->ntree = ntree;
-    ci->ncorner = ncorner;
+    ci->ncorner = (int8_t) ncorner;
     ++num_found;
   }
   p4est_array_resize (corner_info, num_found);

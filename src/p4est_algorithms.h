@@ -54,7 +54,7 @@ unsigned            p4est_quadrant_hash (const void *v);
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */
-int8_t              p4est_quadrant_child_id (const p4est_quadrant_t * q);
+int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -183,7 +183,7 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
  */
 void                p4est_quadrant_first_descendent (const p4est_quadrant_t *
                                                      q, p4est_quadrant_t * fd,
-                                                     int8_t level);
+                                                     int level);
 
 /** Compute the last descendent of a quadrant on a given level.
  * \param [in]  q      Input quadrant.
@@ -192,7 +192,7 @@ void                p4est_quadrant_first_descendent (const p4est_quadrant_t *
  */
 void                p4est_quadrant_last_descendent (const p4est_quadrant_t *
                                                     q, p4est_quadrant_t * ld,
-                                                    int8_t level);
+                                                    int level);
 
 /** Computes the nearest common ancestor of two quadrants in the same tree.
  * \param [in]     q1 First input quadrant.
@@ -221,8 +221,8 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
  * \param [in]  zcorner  Corner index in z-ordering.
  * \return  Returns the maximum of level and this quadrants' corner level.
  */
-int8_t              p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                                                 int zcorner, int8_t level);
+int                 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
+                                                 int zcorner, int level);
 
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
@@ -236,8 +236,7 @@ void                p4est_quadrant_corner (p4est_quadrant_t * q,
  * \param [in,out] q     The quadrant to be modified.
  * \param [in]     face  Number of the face to move across, in 0..3.
  */
-void                p4est_quadrant_translate (p4est_quadrant_t * q,
-                                              int8_t face);
+void                p4est_quadrant_translate (p4est_quadrant_t * q, int face);
 
 /** Transforms a quadrant between trees.
  * \param [in]     q  Input quadrant.
@@ -267,7 +266,7 @@ int                 p4est_node_transform (int node, int transform_type);
  *       The user_data of \a quadrant is never modified.
  */
 uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
-                                              quadrant, int8_t level);
+                                              quadrant, int level);
 
 /** Set quadrant Morton indices based on linear position in uniform grid.
  * \param [in,out] quadrant  Quadrant whose Morton indices will be set.
@@ -276,7 +275,7 @@ uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
  *       The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
-                                               int8_t level, uint64_t id);
+                                               int level, uint64_t id);
 
 /** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.

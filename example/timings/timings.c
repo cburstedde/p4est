@@ -59,7 +59,7 @@ static int          level_shift = 0;
 static int
 refine_fractal (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 {
-  int8_t              qid;
+  int                 qid;
 
   if (q->level >= refine_level) {
     return 0;

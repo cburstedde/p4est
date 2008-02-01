@@ -56,7 +56,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   int                 mpiret;
 #endif
   int                 i, must_remove_last_quadrant;
-  int8_t              level;
+  int                 level;
   int32_t             j, num_trees;
   int64_t             tree_num_quadrants, global_num_quadrants;
   int64_t             first_tree, first_quadrant, first_tree_quadrant;
@@ -361,7 +361,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   int                 quadrant_pool_size, data_pool_size;
   int                 dorefine;
   int                *key;
-  int8_t              i, maxlevel;
+  int                 i, maxlevel;
   int32_t             j, movecount;
   int32_t             current, restpos, incount;
   p4est_list_t       *list;
@@ -412,7 +412,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       if (dorefine) {
         break;
       }
-      maxlevel = (int8_t) P4EST_MAX (maxlevel, q->level);
+      maxlevel = P4EST_MAX (maxlevel, q->level);
       ++tree->quadrants_per_level[q->level];
     }
     if (!dorefine) {
@@ -477,13 +477,13 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         }
         q = p4est_array_index (tquadrants, current);
         *q = *qpop;
-        maxlevel = (int8_t) P4EST_MAX (maxlevel, qpop->level);
+        maxlevel = P4EST_MAX (maxlevel, qpop->level);
         ++tree->quadrants_per_level[qpop->level];
         ++current;
         p4est_mempool_free (p4est->quadrant_pool, qpop);
       }
     }
-    tree->maxlevel = maxlevel;
+    tree->maxlevel = (int8_t) maxlevel;
     p4est->local_num_quadrants += tquadrants->elem_count;
 
     P4EST_ASSERT (restpos == incount);
@@ -518,7 +518,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   int                 k, couldbegood, data_pool_size;
   int                 incount, removed, num_quadrants;
   int                 first, last, rest, before;
-  int8_t              i, maxlevel;
+  int                 i, maxlevel;
   int32_t             j;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *c[4];
@@ -627,7 +627,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
         maxlevel = i;
       }
     }
-    tree->maxlevel = maxlevel;
+    tree->maxlevel = (int8_t) maxlevel;
 
     /* do some sanity checks */
     P4EST_ASSERT (num_quadrants == tquadrants->elem_count);
@@ -780,8 +780,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 tree_fully_owned, transform;
   int                 first_index, last_index;
   int                 which;
-  int                 zcorner;
-  int8_t              face, corner;
+  int                 face, corner, zcorner;
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qtree;

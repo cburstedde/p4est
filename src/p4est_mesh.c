@@ -31,7 +31,9 @@ p4est_order_local_vertices (p4est_t * p4est,
                             int32_t * quadrant_to_local_vertex)
 {
   const int           rank = p4est->mpirank;
+  int                 qcid;
   int                 zcorner, neighbor_node;
+  int                 face, corner, nnum, rlev, tree_corner;
   int32_t             Ntotal = 0;
   int32_t             Ncells = p4est->local_num_quadrants;
   int32_t             first_local_tree = p4est->first_local_tree;
@@ -49,8 +51,6 @@ p4est_order_local_vertices (p4est_t * p4est,
   int32_t             lqid;
   int32_t             neighbor_proc, neighbor_tree, ctree;
   int32_t            *tree_offset;
-  int8_t              face, corner, nnum, rlev, tree_corner;
-  int8_t              qcid;
   ssize_t             lnid;
   p4est_tree_t       *tree, *ntree;
   p4est_array_t      *quadrants, corner_info;
@@ -251,20 +251,20 @@ p4est_order_local_vertices (p4est_t * p4est,
 }
 
 void
-p4est_possible_node_neigbors (p4est_quadrant_t * q,
-                              int32_t node,
-                              int8_t nnum,
-                              int8_t neighbor_rlev,
+p4est_possible_node_neigbors (p4est_quadrant_t * q, int node,
+                              int nnum, int neighbor_rlev,
                               p4est_quadrant_t * neighbor, int *neighbor_node)
 {
-  p4est_quadrant_t    n;
-  int8_t              nnode;
+  int                 nnode;
   int32_t             qh = (1 << (P4EST_MAXLEVEL - q->level));
   int32_t             nh =
     (1 << (P4EST_MAXLEVEL - (q->level + neighbor_rlev)));
   int32_t             qx = q->x;
   int32_t             qy = q->y;
   int32_t             cornerx, cornery;
+  p4est_quadrant_t    n;
+
+  P4EST_QUADRANT_INIT (&n);
 
   switch (node) {
   case 0:
@@ -289,11 +289,11 @@ p4est_possible_node_neigbors (p4est_quadrant_t * q,
 
 #ifdef P4EST_HAVE_DEBUG
   /* Check to see if it is possible to construct the neighbor */
-  int8_t              qcid = p4est_quadrant_child_id (q);
+  int                 qcid = p4est_quadrant_child_id (q);
   P4EST_ASSERT (neighbor_rlev >= 0 || qcid == node);
 #endif
 
-  nnode = (int8_t) (3 - nnum);
+  nnode = 3 - nnum;
   n.level = (int8_t) (q->level + neighbor_rlev);
   switch (nnum) {
   case 0:

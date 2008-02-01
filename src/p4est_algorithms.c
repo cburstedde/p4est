@@ -123,7 +123,7 @@ p4est_quadrant_hash (const void *v)
   return p4est_quadrant_linear_id (q, q->level) % (1ULL << 30);
 }
 
-int8_t
+int
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
   int                 id = 0;
@@ -137,7 +137,7 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
   id |= ((q->x & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x01 : 0);
   id |= ((q->y & (1 << (P4EST_MAXLEVEL - q->level))) ? 0x02 : 0);
 
-  return (int8_t) id;
+  return id;
 }
 
 int
@@ -312,7 +312,7 @@ int
 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
-  int8_t              minlevel;
+  int                 minlevel;
   int32_t             mask;
   uint64_t            i1, i2;
 
@@ -427,19 +427,19 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
 
 void
 p4est_quadrant_first_descendent (const p4est_quadrant_t * q,
-                                 p4est_quadrant_t * fd, int8_t level)
+                                 p4est_quadrant_t * fd, int level)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
 
   fd->x = q->x;
   fd->y = q->y;
-  fd->level = level;
+  fd->level = (int8_t) level;
 }
 
 void
 p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
-                                p4est_quadrant_t * ld, int8_t level)
+                                p4est_quadrant_t * ld, int level)
 {
   int32_t             shift;
 
@@ -451,7 +451,7 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
 
   ld->x = q->x + shift;
   ld->y = q->y + shift;
-  ld->level = level;
+  ld->level = (int8_t) level;
 }
 
 void
@@ -513,9 +513,9 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
-int8_t
+int
 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                             int zcorner, int8_t level)
+                             int zcorner, int level)
 {
   int32_t             th, stepx, stepy;
   p4est_quadrant_t    quad, sibling;
@@ -588,7 +588,7 @@ p4est_quadrant_corner (p4est_quadrant_t * q, int zcorner, int inside)
 }
 
 void
-p4est_quadrant_translate (p4est_quadrant_t * q, int8_t face)
+p4est_quadrant_translate (p4est_quadrant_t * q, int face)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
@@ -767,9 +767,9 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
 }
 
 uint64_t
-p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int8_t level)
+p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 {
-  int8_t              i;
+  int                 i;
   uint64_t            x, y;
   uint64_t            id;
 
@@ -791,16 +791,16 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int8_t level)
 
 void
 p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
-                           int8_t level, uint64_t id)
+                           int level, uint64_t id)
 {
-  int8_t              i;
+  int                 i;
 
   P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
   if (level < P4EST_MAXLEVEL) {
     P4EST_ASSERT (id < (1ULL << 2 * (level + (32 - P4EST_MAXLEVEL))));
   }
 
-  quadrant->level = level;
+  quadrant->level = (int8_t) level;
   quadrant->x = 0;
   quadrant->y = 0;
 
@@ -1064,8 +1064,7 @@ p4est_is_valid (p4est_t * p4est)
   const int           rank = p4est->mpirank;
   const int32_t       first_tree = p4est->first_local_tree;
   const int32_t       last_tree = p4est->last_local_tree;
-  int                 i;
-  int8_t              maxlevel;
+  int                 i, maxlevel;
   int32_t             next_tree, rh;
   int32_t             j, nquadrants, lquadrants, perlevel;
   p4est_quadrant_t   *q;
@@ -1160,7 +1159,7 @@ p4est_is_valid (p4est_t * p4est)
       P4EST_ASSERT (perlevel >= 0);
       nquadrants += perlevel;
       if (perlevel > 0) {
-        maxlevel = (int8_t) i;
+        maxlevel = i;
       }
     }
     lquadrants += nquadrants;
@@ -1288,8 +1287,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
   int                 treecount, incount, outcount;
   int                 first_index, last_index;
   int                 inter_tree, transform, outface[4];
-  int                 zcorner;
-  int8_t              face, corner, level;
+  int                 face, corner, zcorner, level;
   int32_t             ntree;
   int32_t             qh, rh;
   p4est_array_t       corner_info;
@@ -1460,7 +1458,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
 
             p4est_array_resize (out, outcount + 1);
             outq = p4est_array_index (out, outcount);
-            outq->level = level;
+            outq->level = (int8_t) level;
             zcorner = p4est_corner_to_zorder[ci->ncorner];
             p4est_quadrant_corner (outq, zcorner, 0);
             outq->user_data = (void *) (long) ci->ntree;
@@ -1564,8 +1562,7 @@ p4est_complete_region (p4est_t * p4est,
 
   int                 comp;
   int                 quadrant_pool_size, data_pool_size;
-  int8_t              level;
-  int8_t              maxlevel = 0;
+  int                 level, maxlevel = 0;
   int32_t            *quadrants_per_level;
   int32_t             num_quadrants = 0;
 
@@ -1595,7 +1592,7 @@ p4est_complete_region (p4est_t * p4est,
     p4est_array_resize (quadrants, 1);
     r = p4est_array_index (quadrants, 0);
     *r = a;
-    maxlevel = (int8_t) P4EST_MAX (a.level, maxlevel);
+    maxlevel = P4EST_MAX (a.level, maxlevel);
     ++quadrants_per_level[a.level];
     ++num_quadrants;
   }
@@ -1631,7 +1628,7 @@ p4est_complete_region (p4est_t * p4est,
         r = p4est_array_index (quadrants, num_quadrants);
         *r = *w;
         p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
-        maxlevel = (int8_t) P4EST_MAX (level, maxlevel);
+        maxlevel = P4EST_MAX (level, maxlevel);
         ++quadrants_per_level[level];
         ++num_quadrants;
       }
@@ -1661,13 +1658,13 @@ p4est_complete_region (p4est_t * p4est,
       p4est_array_resize (quadrants, num_quadrants + 1);
       r = p4est_array_index (quadrants, num_quadrants);
       *r = b;
-      maxlevel = (int8_t) P4EST_MAX (b.level, maxlevel);
+      maxlevel = P4EST_MAX (b.level, maxlevel);
       ++quadrants_per_level[b.level];
       ++num_quadrants;
     }
   }
 
-  R->maxlevel = maxlevel;
+  R->maxlevel = (int8_t) maxlevel;
 
   P4EST_ASSERT (W->first == NULL && W->last == NULL);
   p4est_list_destroy (W);
@@ -1698,11 +1695,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 count_outside_root, count_outside_tree;
   int                 count_already_inlist, count_already_outlist;
   int                 first_inside, last_inside;
+  int                 qid, sid, pid, bbound;
   int                *key, *parent_key;
   int                 outface[4];
+  int                 l, inmaxl;
   void               *vlookup;
-  int8_t              l, inmaxl, bbound;
-  int8_t              qid, sid, pid;
   int32_t             ph, rh;
   ssize_t             rindex;
   p4est_quadrant_t   *family[4];
@@ -1733,7 +1730,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
    */
 
   /* assign some shortcut variables */
-  bbound = (int8_t) ((balance == 0) ? 5 : 8);
+  bbound = ((balance == 0) ? 5 : 8);
   inlist = &tree->quadrants;
   incount = inlist->elem_count;
   inmaxl = tree->maxlevel;
@@ -1796,7 +1793,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
                               list_alloc);
     p4est_array_init (&outlist[l], sizeof (p4est_quadrant_t *));
   }
-  for (l = (int8_t) (inmaxl + 1); l <= P4EST_MAXLEVEL; ++l) {
+  for (l = inmaxl + 1; l <= P4EST_MAXLEVEL; ++l) {
     hash[l] = NULL;
   }
 
@@ -1987,7 +1984,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
       p4est_mempool_free (qpool, qalloc);
     }
     if (q != NULL && l > tree->maxlevel) {
-      tree->maxlevel = l;
+      tree->maxlevel = (int8_t) l;
     }
     p4est_array_reset (&outlist[l]);
   }
@@ -2033,7 +2030,7 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   int                 data_pool_size;
   int                 incount, removed;
   int                 current, rest, num_quadrants;
-  int8_t              i, maxlevel;
+  int                 i, maxlevel;
   p4est_quadrant_t   *q1, *q2;
   p4est_array_t      *tquadrants = &tree->quadrants;
 
@@ -2088,7 +2085,7 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
       maxlevel = i;
     }
   }
-  tree->maxlevel = maxlevel;
+  tree->maxlevel = (int8_t) maxlevel;
 
   /* sanity checks */
   P4EST_ASSERT (num_quadrants == tquadrants->elem_count);

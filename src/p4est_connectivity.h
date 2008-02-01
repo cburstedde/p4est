@@ -119,14 +119,14 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
  */
 int                 p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
-                                               int32_t itree, int8_t iface);
+                                               int32_t itree, int iface);
 
 /** Fills an array with information about corner neighbors.
  * \param [in,out]  corner_info  Array of p4est_corner_info_t members.
  */
 void                p4est_find_corner_info (p4est_connectivity_t *
                                             connectivity,
-                                            int32_t itree, int8_t icorner,
+                                            int32_t itree, int icorner,
                                             p4est_array_t * corner_info);
 
 #endif /* !__P4EST_CONNECTIVITY_H__ */
