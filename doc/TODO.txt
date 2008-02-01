@@ -1,15 +1,13 @@
 
- * Allow zero quadrants on a processor
  * Partition Tree
    ? algo 4 (block partition)
  * doxygen
  * more test cases
  * vtk output
-   * unique vertex indices
    * geometry
  * mesh generation
+   gather the ghost elements
    2D interface to pfudg
    ? 2D bilinear elements
- * Use the log4c lite version
  * Make the roots of the forest distributed in parallel
  * 3D
