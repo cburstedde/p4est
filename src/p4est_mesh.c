@@ -109,6 +109,10 @@ p4est_order_local_vertices (p4est_t * p4est,
 
           /* loop over the possible neighbors and set the new vertex */
           for (nnum = 0; nnum < 4; ++nnum) {
+            /* Don't search for the quadrant q */
+            if (3 - nnum == corner)
+              continue;
+
             qcid = p4est_quadrant_child_id (q);
 
             /* loop over possible neighbor sizes */
