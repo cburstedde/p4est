@@ -19,9 +19,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <p4est_base.h>
 #include <p4est_communication.h>
 #include <p4est_algorithms.h>
-#include <p4est_base.h>
 
 void
 p4est_comm_count_quadrants (p4est_t * p4est)

@@ -19,13 +19,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_mesh.h>
 #include <p4est_base.h>
+#include <p4est_mesh.h>
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
-
-static const int8_t fully_owned_flag = 0x01;
-static const int8_t any_face_flag = 0x02;
 
 void
 p4est_order_local_vertices (p4est_t * p4est,
@@ -34,6 +31,7 @@ p4est_order_local_vertices (p4est_t * p4est,
                             int32_t * quadrant_to_local_vertex)
 {
   const int           rank = p4est->mpirank;
+  int                 zcorner, neighbor_node;
   int32_t             Ntotal = 0;
   int32_t             Ncells = p4est->local_num_quadrants;
   int32_t             first_local_tree = p4est->first_local_tree;
@@ -51,8 +49,8 @@ p4est_order_local_vertices (p4est_t * p4est,
   int32_t             lqid;
   int32_t             neighbor_proc, neighbor_tree, ctree;
   int32_t            *tree_offset;
-  int8_t              face, corner, nnum, rlev, tree_corner, zcorner;
-  int8_t              qcid, neighbor_node;
+  int8_t              face, corner, nnum, rlev, tree_corner;
+  int8_t              qcid;
   ssize_t             lnid;
   p4est_tree_t       *tree, *ntree;
   p4est_array_t      *quadrants, corner_info;
@@ -257,8 +255,7 @@ p4est_possible_node_neigbors (p4est_quadrant_t * q,
                               int32_t node,
                               int8_t nnum,
                               int8_t neighbor_rlev,
-                              p4est_quadrant_t * neighbor,
-                              int8_t * neighbor_node)
+                              p4est_quadrant_t * neighbor, int *neighbor_node)
 {
   p4est_quadrant_t    n;
   int8_t              nnode;

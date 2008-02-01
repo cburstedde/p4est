@@ -19,9 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_connectivity.h>
 #include <p4est_base.h>
-#include <p4est_memory.h>
+#include <p4est_connectivity.h>
 
 #include <math.h>
 

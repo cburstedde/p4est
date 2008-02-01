@@ -22,8 +22,8 @@
 
 /* renamed from glibc 2.7 to p4est_obstack.h and modified for p4est */
 
-#include <p4est_obstack.h>
 #include <p4est_base.h>
+#include <p4est_obstack.h>
 
 /* NOTE BEFORE MODIFYING THIS FILE: This version number must be
    incremented whenever callers compiled using an old obstack.h can no
@@ -39,7 +39,6 @@
    program understand `configure --with-gnu-libc' and omit the object
    files, it is simpler to just do this in the source for each such file.  */
 
-#include <stdio.h>		/* Random thing to get __GNU_LIBRARY__.  */
 #if !defined _LIBC && defined __GNU_LIBRARY__ && __GNU_LIBRARY__ > 1
 # include <gnu-versions.h>
 # if _GNU_OBSTACK_INTERFACE_VERSION == OBSTACK_INTERFACE_VERSION
@@ -47,17 +46,7 @@
 # endif
 #endif
 
-#include <stddef.h>
-
 #ifndef ELIDE_CODE
-
-
-# if HAVE_INTTYPES_H
-#  include <inttypes.h>
-# endif
-# if HAVE_STDINT_H || defined _LIBC
-#  include <stdint.h>
-# endif
 
 /* Determine default alignment.  */
 union fooround

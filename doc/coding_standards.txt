@@ -1,0 +1,18 @@
+
+This file contains coding guidelines for the p4est library.
+
+* Indentation
+  All .c and .h files must be indented with the p4estindent script in
+  the main directory. It calls GNU indent with some extra options.
+
+* Comments
+  Use doxygen style for comments whenever possible. Comments should
+  not exceed the 79th column.
+
+* Integer types
+  For processor-local indexing use the p4est_locidx_t data type.
+  For globally unique indexing of potentially large numbers use the
+  p4est_gloidx_t data type. The int_8 data type may be used only to
+  save storage space. Generic integers, booleans and flags should be
+  of int type whenever possible. Function arguments should be of int
+  type whenever possible.

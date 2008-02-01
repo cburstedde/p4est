@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_algorithms.h>
 #include <p4est_base.h>
+#include <p4est_algorithms.h>
 
 static unsigned
 int_hash_fn (const void *v)
@@ -54,7 +54,7 @@ main (int argc, char **argv)
     for (i = 0; i < 347; ++i) {
       inserted += p4est_hash_insert_unique (ihash, (void *) (i % 91), NULL);
     }
-    printf ("Integers inserted %d total %d\n", inserted, ihash->elem_count);
+    printf ("Integers inserted %d total %lu\n", inserted, ihash->elem_count);
     P4EST_CHECK_ABORT (inserted == ihash->elem_count, "Integer hash");
 
     p4est_hash_destroy (ihash);
@@ -76,7 +76,7 @@ main (int argc, char **argv)
   f2 = v2;
   i3 = p4est_hash_insert_unique (qhash, &q3, &v3);
   f3 = v3;
-  printf ("Quadrants inserted %d %d %d total %d\n", i1, i2, i3,
+  printf ("Quadrants inserted %d %d %d total %lu\n", i1, i2, i3,
           qhash->elem_count);
 
   P4EST_CHECK_ABORT (i1 + i2 + i3 == qhash->elem_count, "Quadrant hash");
@@ -89,7 +89,7 @@ main (int argc, char **argv)
   i2 = p4est_hash_lookup (qhash, &q2, NULL);
   i3 = p4est_hash_lookup (qhash, &q3, &v3);
   f3 = v3;
-  printf ("Quadrants lookup %d %d %d total %d\n", i1, i2, i3,
+  printf ("Quadrants lookup %d %d %d total %lu\n", i1, i2, i3,
           qhash->elem_count);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
   P4EST_CHECK_ABORT (f3 == &q2

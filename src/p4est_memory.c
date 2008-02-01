@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_memory.h>
 #include <p4est_base.h>
+#include <p4est_memory.h>
 
 /* using sqrt to compute hash statistics */
 #include <math.h>
@@ -105,7 +105,7 @@ p4est_array_resize (p4est_array_t * array, size_t new_count)
 #endif
     return;
   }
-  P4EST_ASSERT (array->byte_alloc >= 0 && array->byte_alloc >= newoffs);
+  P4EST_ASSERT (array->byte_alloc >= newoffs);
 
   newsize = array->byte_alloc;
   ptr = P4EST_REALLOC (array->array, char, newsize);
@@ -850,13 +850,14 @@ p4est_hash_print_statistics (int log_priority, p4est_hash_t * hash)
   }
   P4EST_ASSERT (sum == hash->elem_count);
 
-  divide = slots->elem_count;
+  divide = (double) slots->elem_count;
   avg = sum / divide;
   sqr = squaresum / divide - avg * avg;
   std = sqrt (sqr);
-  P4EST_LOGF (log_priority, "Hash size %d avg %.3g std %.3g checks %d %d\n",
-              slots->elem_count, avg, std,
-              hash->resize_checks, hash->resize_actions);
+  P4EST_LOGF (log_priority,
+              "Hash size %lu avg %.3g std %.3g checks %lu %lu\n",
+              slots->elem_count, avg, std, hash->resize_checks,
+              hash->resize_actions);
 }
 
 /* EOF p4est_memory.c */

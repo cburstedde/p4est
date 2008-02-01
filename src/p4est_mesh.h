@@ -111,6 +111,6 @@ void                p4est_possible_node_neigbors (p4est_quadrant_t * q,
                                                   int8_t nnum,
                                                   int8_t neighbor_rlev,
                                                   p4est_quadrant_t * neighbor,
-                                                  int8_t * neighbor_node);
+                                                  int *neighbor_node);
 
 #endif /* !__P4EST_MESH_H__ */

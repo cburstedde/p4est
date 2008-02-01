@@ -31,11 +31,9 @@
 
 /* renamed from avl.h to p4est_avl.h for the p4est library and modified */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <p4est_avl.h>           /* changed this include directive */
 #include <p4est_base.h>          /* using p4est helper functions */
+#include <p4est_avl.h>           /* changed this include directive */
+#include <errno.h>
 
 static void avl_rebalance(avl_tree_t *, avl_node_t *);
 

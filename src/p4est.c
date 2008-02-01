@@ -19,10 +19,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est.h>
+#include <p4est_base.h>
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
-#include <p4est_base.h>
 
 /* require zlib header for adler32 checksums */
 #ifdef HAVE_ZLIB_H
@@ -38,7 +37,7 @@ typedef struct
 }
 p4est_balance_peer_t;
 
-const int8_t        p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
+const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
 static const int64_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
@@ -51,7 +50,7 @@ static const int8_t any_face_flag = 0x02;
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
-           int data_size, p4est_init_t init_fn)
+           size_t data_size, p4est_init_t init_fn)
 {
 #ifdef HAVE_MPI
   int                 mpiret;
@@ -213,7 +212,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       p4est_complete_region (p4est, &a, 1, &b, !must_remove_last_quadrant,
                              tree, j, init_fn);
     }
-    P4EST_INFOF ("tree %d quadrants %d\n", j, tree->quadrants.elem_count);
+    P4EST_INFOF ("tree %d quadrants %lu\n", j, tree->quadrants.elem_count);
     p4est->local_num_quadrants += tree->quadrants.elem_count;
   }
 
@@ -395,7 +394,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     }
 
     /* initial log message for this tree */
-    P4EST_INFOF ("Into refine tree %d with %d\n", j, tquadrants->elem_count);
+    P4EST_INFOF ("Into refine tree %d with %lu\n", j, tquadrants->elem_count);
 
     /* reset the quadrant counters */
     maxlevel = 0;
@@ -499,7 +498,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     P4EST_ASSERT (p4est_tree_is_complete (tree));
 
     /* final log message for this tree */
-    P4EST_INFOF ("Done refine tree %d now %d\n", j, tquadrants->elem_count);
+    P4EST_INFOF ("Done refine tree %d now %lu\n", j, tquadrants->elem_count);
   }
 
   p4est_list_destroy (list);
@@ -540,7 +539,8 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     removed = 0;
 
     /* initial log message for this tree */
-    P4EST_INFOF ("Into coarsen tree %d with %d\n", j, tquadrants->elem_count);
+    P4EST_INFOF ("Into coarsen tree %d with %lu\n", j,
+                 tquadrants->elem_count);
 
     /* Initialize array indices.
        If children are coarsened, the array will have an empty window.
@@ -640,7 +640,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     P4EST_ASSERT (p4est_tree_is_complete (tree));
 
     /* final log message for this tree */
-    P4EST_INFOF ("Done coarsen tree %d now %d\n", j, tquadrants->elem_count);
+    P4EST_INFOF ("Done coarsen tree %d now %lu\n", j, tquadrants->elem_count);
   }
 
   /* compute global number of quadrants */
@@ -780,7 +780,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 tree_fully_owned, transform;
   int                 first_index, last_index;
   int                 which;
-  int8_t              face, corner, zcorner;
+  int                 zcorner;
+  int8_t              face, corner;
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qtree;
@@ -928,7 +929,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     all_incount += tquadrants->elem_count;
 
     /* initial log message for this tree */
-    P4EST_INFOF ("Into balance tree %d with %d\n", j, tquadrants->elem_count);
+    P4EST_INFOF ("Into balance tree %d with %lu\n", j,
+                 tquadrants->elem_count);
 
     /* local balance first pass */
     p4est_balance_subtree (p4est, tree, j, init_fn);
@@ -1439,7 +1441,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     peer = p4est_array_index (peers, j);
     if (peer->send_first.elem_count > 0 || peer->first_count > 0 ||
         peer->send_second.elem_count > 0 || peer->second_count > 0) {
-      P4EST_VERBOSEF ("peer %d first S %d R %d second S %d R %d\n",
+      P4EST_VERBOSEF ("peer %d first S %lu R %d second S %lu R %d\n",
                       j, peer->send_first.elem_count, peer->first_count,
                       peer->send_second.elem_count, peer->second_count);
     }
@@ -1502,7 +1504,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* we have most probably received quadrants, run sort and balance */
     p4est_array_sort (tquadrants, p4est_quadrant_compare);
     p4est_balance_subtree (p4est, tree, j, init_fn);
-    P4EST_VERBOSEF ("Balance tree %d B %d\n", j, tquadrants->elem_count);
+    P4EST_VERBOSEF ("Balance tree %d B %lu\n", j, tquadrants->elem_count);
     treecount = tquadrants->elem_count;
 
     /* figure out the new elements outside the original tree */
@@ -1580,7 +1582,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
     p4est->local_num_quadrants += qcount;
 
-    P4EST_VERBOSEF ("Balance tree %d C %d\n", j, tquadrants->elem_count);
+    P4EST_VERBOSEF ("Balance tree %d C %lu\n", j, tquadrants->elem_count);
     tquadrants = NULL;          /* safeguard */
   }
 
@@ -1618,7 +1620,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     all_outcount += tree->quadrants.elem_count;
 
     /* final log message for this tree */
-    P4EST_INFOF ("Done balance tree %d now %d\n", j,
+    P4EST_INFOF ("Done balance tree %d now %lu\n", j,
                  tree->quadrants.elem_count);
   }
 

@@ -61,6 +61,12 @@
 /* include necessary headers */
 #include <p4est_connectivity.h>
 
+/** Typedef for processor-local indexing */
+typedef int32_t     p4est_locidx_t;
+
+/** Typedef for globally unique indexing */
+typedef int64_t     p4est_gloidx_t;
+
 typedef struct p4est_quadrant
 {
   int32_t             x, y;
@@ -82,19 +88,19 @@ typedef struct p4est
   MPI_Comm            mpicomm;
   int                 mpisize, mpirank;
 
-  int                 data_size;        /* size of per-quadrant user_data */
+  size_t              data_size;        /* size of per-quadrant user_data */
   void               *user_global_pointer;      /* convenience pointer for users
                                                    will never be touched by p4est */
 
-  int32_t             first_local_tree; /* 0-based index of first local tree,
+  p4est_locidx_t      first_local_tree; /* 0-based index of first local tree,
                                            must be -1 for an empty processor */
-  int32_t             last_local_tree;  /* 0-based index of last local tree,
+  p4est_locidx_t      last_local_tree;  /* 0-based index of last local tree,
                                            must be -2 for an empty processor */
-  int32_t             local_num_quadrants;      /* number of quadrants
+  p4est_locidx_t      local_num_quadrants;      /* number of quadrants
                                                    on all trees on this processor */
-  int64_t             global_num_quadrants;     /* number of quadrants
+  p4est_gloidx_t      global_num_quadrants;     /* number of quadrants
                                                    on all trees on all processors */
-  int64_t            *global_last_quad_index;   /* Index in the total ordering
+  p4est_gloidx_t     *global_last_quad_index;   /* Index in the total ordering
                                                    of all quadrants of the
                                                    last quadrant on each proc.
                                                  */
@@ -113,20 +119,23 @@ p4est_t;
 
 /** Callback function prototype to initialize the quadrant's user data.
  */
-typedef void        (*p4est_init_t) (p4est_t * p4est, int32_t which_tree,
+typedef void        (*p4est_init_t) (p4est_t * p4est,
+                                     p4est_locidx_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for refinement.
  * \return Returns 1 if the quadrant shall be refined.
  */
-typedef int         (*p4est_refine_t) (p4est_t * p4est, int32_t which_tree,
+typedef int         (*p4est_refine_t) (p4est_t * p4est,
+                                       p4est_locidx_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for coarsening.
  * The quadrants are siblings enumerated in Morton ordering.
  * \return Returns 1 if the quadrants shall be replaced with their parent.
  */
-typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
+typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
+                                        p4est_locidx_t which_tree,
                                         p4est_quadrant_t * q0,
                                         p4est_quadrant_t * q1,
                                         p4est_quadrant_t * q2,
@@ -136,11 +145,12 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est, int32_t which_tree,
  * \return  Returns a 32bit integer >= 0 as the quadrant weight.
  * \note    (global sum of weights * mpisize) must fit into a 64bit integer.
  */
-typedef int         (*p4est_weight_t) (p4est_t * p4est, int32_t which_tree,
+typedef int         (*p4est_weight_t) (p4est_t * p4est,
+                                       p4est_locidx_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
 /** map right-hand corner rule to corner in z-ordering */
-extern const int8_t p4est_corner_to_zorder[5];
+extern const int    p4est_corner_to_zorder[5];
 
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \
@@ -165,7 +175,7 @@ extern const int8_t p4est_corner_to_zorder[5];
  */
 p4est_t            *p4est_new (MPI_Comm mpicomm,
                                p4est_connectivity_t * connectivity,
-                               int data_size, p4est_init_t init_fn);
+                               size_t data_size, p4est_init_t init_fn);
 
 /** Destroy a p4est.
  * \note The connectivity structure is not destroyed with the p4est.

@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_algorithms.h>
 #include <p4est_base.h>
+#include <p4est_algorithms.h>
 #include <p4est_communication.h>
 
 /* htonl is in either of these two */
@@ -380,7 +380,7 @@ p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 
 void
 p4est_quadrant_sibling (const p4est_quadrant_t * q, p4est_quadrant_t * r,
-                        int8_t sibling_id)
+                        int sibling_id)
 {
   int                 addx = (sibling_id & 0x01);
   int                 addy = (sibling_id & 0x02) >> 1;
@@ -515,7 +515,7 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 
 int8_t
 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                             int8_t zcorner, int8_t level)
+                             int zcorner, int8_t level)
 {
   int32_t             th, stepx, stepy;
   p4est_quadrant_t    quad, sibling;
@@ -552,7 +552,7 @@ p4est_quadrant_corner_level (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_corner (p4est_quadrant_t * q, int8_t zcorner, int inside)
+p4est_quadrant_corner (p4est_quadrant_t * q, int zcorner, int inside)
 {
   int32_t             lshift, rshift;
 
@@ -613,10 +613,12 @@ p4est_quadrant_translate (p4est_quadrant_t * q, int8_t face)
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
 }
 
-int8_t
-p4est_node_transform (int8_t node, int transform_type)
+int
+p4est_node_transform (int node, int transform_type)
 {
-  int8_t              trans_node;
+  int                 trans_node;
+
+  P4EST_ASSERT (0 <= node && node < 4);
 
   switch (transform_type) {
   case 0:                      /* identity */
@@ -626,7 +628,7 @@ p4est_node_transform (int8_t node, int transform_type)
     trans_node = p4est_corner_to_zorder[p4est_corner_to_zorder[node] + 1 % 4];
     break;
   case 2:                      /* rotate 180 degrees */
-    trans_node = (int8_t) (3 - node);
+    trans_node = 3 - node;
     break;
   case 3:                      /* rotate 90 degrees */
     trans_node = p4est_corner_to_zorder[p4est_corner_to_zorder[node] - 1 % 4];
@@ -1286,7 +1288,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
   int                 treecount, incount, outcount;
   int                 first_index, last_index;
   int                 inter_tree, transform, outface[4];
-  int8_t              face, corner, zcorner, level;
+  int                 zcorner;
+  int8_t              face, corner, level;
   int32_t             ntree;
   int32_t             qh, rh;
   p4est_array_t       corner_info;
@@ -2589,7 +2592,7 @@ p4est_partition_given (p4est_t * p4est,
 
         P4EST_DEBUGF ("copying %d local quads to tree %d\n",
                       num_copy, which_tree);
-        P4EST_DEBUGF ("   with %d(%d) quads from [%lld, %lld] to [%d, %d]\n",
+        P4EST_DEBUGF ("   with %d(%lu) quads from [%lld, %lld] to [%d, %d]\n",
                       num_quadrants, quadrants->elem_count,
                       (long long) tree_from_begin, (long long) tree_from_end,
                       new_local_tree_elem_count_before[which_tree],

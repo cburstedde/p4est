@@ -162,7 +162,7 @@ void                p4est_quadrant_parent (const p4est_quadrant_t * q,
  */
 void                p4est_quadrant_sibling (const p4est_quadrant_t * q,
                                             p4est_quadrant_t * r,
-                                            int8_t sibling_id);
+                                            int sibling_id);
 
 /** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.
@@ -222,8 +222,7 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
  * \return  Returns the maximum of level and this quadrants' corner level.
  */
 int8_t              p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                                                 int8_t zcorner,
-                                                 int8_t level);
+                                                 int zcorner, int8_t level);
 
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
@@ -231,7 +230,7 @@ int8_t              p4est_quadrant_corner_level (const p4est_quadrant_t * q,
  * \param [int]    inside   Boolean flag for inside or diagonally outside.
  */
 void                p4est_quadrant_corner (p4est_quadrant_t * q,
-                                           int8_t zcorner, int inside);
+                                           int zcorner, int inside);
 
 /** Shift a quadrant by the size of a tree depending on the face.
  * \param [in,out] q     The quadrant to be modified.
@@ -259,7 +258,7 @@ void                p4est_quadrant_transform (const p4est_quadrant_t * q,
  * \param [in] transform_type Transformation as in p4est_connectivity.h.
  * \return The transformed node number coresponding to \a node.
  */
-int8_t              p4est_node_transform (int8_t node, int transform_type);
+int                 p4est_node_transform (int node, int transform_type);
 
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.

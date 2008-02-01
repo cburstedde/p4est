@@ -143,8 +143,6 @@ extern "C" {
   __BPTR_ALIGN (sizeof (PTR_INT_TYPE) < sizeof (void *) ? (B) : (char *) 0, \
 		P, A)
 
-#include <string.h>
-
 struct _obstack_chunk		/* Lives at front of each chunk. */
 {
   char  *limit;			/* 1 past end of this chunk */

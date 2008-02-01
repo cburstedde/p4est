@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_algorithms.h>
 #include <p4est_base.h>
+#include <p4est_algorithms.h>
 
 static int
 refine_none (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)

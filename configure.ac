@@ -60,6 +60,7 @@ P4EST_REQUIRE_FUNCS([memset pow sqrt floor])
 AC_C_CONST
 AC_C_INLINE
 AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
 
 echo "o----------------------------------"
 echo "| Results are"

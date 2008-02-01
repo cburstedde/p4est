@@ -25,8 +25,6 @@
 /* p4est memory management */
 
 #include <p4est_obstack.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 /** The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.

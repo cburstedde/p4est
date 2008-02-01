@@ -1,16 +1,20 @@
 
+ * doxygen
+ * vtk output
+   geometry
+ * mesh generation
+   gather one layer ghost elements
+   geometry
+   2D bilinear elements
+   2D interface to pfudg
+ * Large number of elements per proc
+   Create a typedef for the integers for per proc values
+   Create a typedef for the integers for global values
+   Replace every other integer with int if possible
+ * 3D
+   topology
+   mesh
+ * Make the roots of the forest distributed in parallel
+ * Include a test case for every major functionality
  * Partition Tree
    ? algo 4 (block partition)
- * doxygen
- * more test cases
- * vtk output
-   * geometry
- * mesh generation
-   gather the ghost elements
-   2D interface to pfudg
-   ? 2D bilinear elements
- * Make the roots of the forest distributed in parallel
- * 3D
- * Large number of elements per proc
-   Create a typedef for the integers for per proc values?
-   Create a typedef for the integers for global values?

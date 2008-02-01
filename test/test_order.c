@@ -19,10 +19,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <math.h>
-#include <p4est_algorithms.h>
 #include <p4est_base.h>
+#include <p4est_algorithms.h>
 #include <p4est_mesh.h>
+
+#include <math.h>
 
 typedef struct
 {
@@ -32,9 +33,6 @@ typedef struct
 user_data_t;
 
 static int          refine_level = 6;
-
-static int          weight_counter;
-static int          weight_index;
 
 static void
 init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
@@ -69,16 +67,6 @@ static int
 weight_one (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
   return 1;
-}
-
-static int
-weight_once (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
-{
-  if (weight_counter++ == weight_index) {
-    return 1;
-  }
-
-  return 0;
 }
 
 typedef struct p4est_vert
@@ -132,10 +120,8 @@ main (int argc, char **argv)
   int32_t             i, j;
   int32_t             num_uniq_local_vertices;
   int32_t            *quadrant_to_local_vertex;
-  int                 t, q;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
-  user_data_t        *user_data;
   int32_t            *tree_to_vertex;
   double             *vertices;
   int32_t             first_local_tree;
@@ -168,13 +154,14 @@ main (int argc, char **argv)
   connectivity = p4est_connectivity_new_star ();
   p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
 
-  /* refine and balance to make the number of elements interesting */
+  /* refine to make the number of elements interesting */
   p4est_refine (p4est, refine_fn, init_fn);
 
-  /* do a weighted partition with uniform weights */
-  p4est_partition (p4est, weight_one);
-
+  /* balance the forest */
   p4est_balance (p4est, init_fn);
+
+  /* do a uniform partition, include the weight function for testing */
+  p4est_partition (p4est, weight_one);
 
   quadrant_to_local_vertex = P4EST_ALLOC (int32_t,
                                           4 * p4est->local_num_quadrants);

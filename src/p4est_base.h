@@ -27,6 +27,7 @@
  * it is not installed in the final include directory
  *
  * do not include this header from any other .h file
+ * do include this header topmost in any .c file
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,6 +40,10 @@
 
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
+#endif
+
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
 #endif
 
 #ifdef HAVE_STDIO_H
