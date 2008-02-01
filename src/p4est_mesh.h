@@ -26,7 +26,7 @@
 
 /** Determine unique ordering of vertices for each quadrant.
  *
- * \param [in]  p4est the fortest whos vertices will be ordered.
+ * \param [in]  p4est  The forest whose vertices will be ordered.
  * \param [out] num_uniq_local_vertices will be filled with the total number
  *                                      of unique vertices.
  * \param [out] quadrant_to_local_vertex an array that for each vertex of each
@@ -91,12 +91,11 @@ void                p4est_order_local_vertices (p4est_t * p4est,
  *            |      |
  *            +------+------
  *
- *
  * \param [in]  q             the quadrant whose possible node \a node neighbor
- *                            list will be built.
+ *                            will be built.
  * \param [in]  node          the node of the quadrant \a q whose possible node
  *                            neighbor list will be built.  This is given in
- *                            pixel ordering.
+ *                            pixel (Morton-) ordering.
  * \param [in]  nnum          the neighbor number with the ordering described
  *                            above, if nnum==0 then it is the corner neighbor.
  * \param [in]  neighor_rlev  the relative level of the neighbor compared to
@@ -104,9 +103,8 @@ void                p4est_order_local_vertices (p4est_t * p4est,
  * \param [out] neighbor      the neighbor that will be filled.
  * \param [out] neighbor_node the neighbor's node which shares with \a q
  *                            the node \a node.
- *
  */
-void                p4est_possible_node_neigbors (p4est_quadrant_t * q,
+void                p4est_possible_node_neighbor (p4est_quadrant_t * q,
                                                   int node, int nnum,
                                                   int neighbor_rlev,
                                                   p4est_quadrant_t * neighbor,
