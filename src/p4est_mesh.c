@@ -46,12 +46,11 @@ p4est_order_local_vertices (p4est_t * p4est,
   int32_t             vertex_num;
   int32_t             rh = (1 << P4EST_MAXLEVEL);
   int32_t             num_quadrants;
-  int32_t             any_face, face_contact[4];
+  int32_t             face_contact[4];
   int32_t             quad_contact[4];
   int32_t             lqid;
   int32_t             neighbor_proc, neighbor_tree, ctree;
   int32_t            *tree_offset;
-  int8_t             *tree_flags;
   int8_t              face, corner, nnum, rlev, tree_corner, zcorner;
   int8_t              qcid, neighbor_node;
   ssize_t             lnid;
@@ -79,13 +78,6 @@ p4est_order_local_vertices (p4est_t * p4est,
     }
   }
 
-  /* tree status flags (max 8 per tree) */
-  tree_flags = P4EST_ALLOC (int8_t, num_trees);
-  P4EST_CHECK_ALLOC (tree_flags);
-  for (i = 0; i < num_trees; ++i) {
-    tree_flags[i] = 0x00;
-  }
-
   /* Initialize vertex list to all -1.  This way we know which values
    * get set because legitimate values are >= 0.
    */
@@ -96,13 +88,8 @@ p4est_order_local_vertices (p4est_t * p4est,
   /* loop over all local trees to generate the connetivity list */
   for (j = first_local_tree, vertex_num = 0, lqid = 0;
        j <= last_local_tree; ++j) {
-    any_face = 0;
     for (face = 0; face < 4; ++face) {
       face_contact[face] = (conn->tree_to_tree[4 * j + face] != j);
-      any_face = any_face || face_contact[face];
-    }
-    if (any_face) {
-      tree_flags[j] |= any_face_flag;
     }
     tree = p4est_array_index (p4est->trees, j);
     quadrants = &tree->quadrants;
@@ -260,23 +247,7 @@ p4est_order_local_vertices (p4est_t * p4est,
 
   Ntotal = vertex_num;
   P4EST_FREE (tree_offset);
-  P4EST_FREE (tree_flags);
   p4est_array_reset (&corner_info);
-
-#if 0
-  /* ----- Cut Here ---- */
-
-  Ntotal = p4est->local_num_quadrants * 4;
-
-  for (i = 0; i < Ncells; ++i) {
-    quadrant_to_local_vertex[4 * i + 0] = 4 * i + 0;
-    quadrant_to_local_vertex[4 * i + 1] = 4 * i + 1;
-    quadrant_to_local_vertex[4 * i + 2] = 4 * i + 2;
-    quadrant_to_local_vertex[4 * i + 3] = 4 * i + 3;
-  }
-
-  /* ----- To Cut Here ---- */
-#endif
 
   *num_uniq_local_vertices = Ntotal;
 }
