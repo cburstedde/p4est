@@ -94,10 +94,13 @@ p4est_connectivity_read (const char *filename,
   int32_t             num_vtt = 0;
   int32_t             k, k0, k1, k2, k3, f0, f1, f2, f3, v0, v1, v2, v3;
   int32_t             i, Nnn;
-  int32_t            *tree_to_vertex, *tree_to_tree;
-  int32_t            *vtt_offset, *vertex_to_tree, *vertex_to_vertex;
-  int8_t             *tree_to_face;
-  double             *vertices;
+  int32_t            *tree_to_vertex = NULL;
+  int32_t            *tree_to_tree = NULL;
+  int32_t            *vtt_offset = NULL;
+  int32_t            *vertex_to_tree = NULL;
+  int32_t            *vertex_to_vertex = NULL;
+  int8_t             *tree_to_face = NULL;
+  double             *vertices = NULL;
   double              vx, vy, vz;
 
   *connectivity = NULL;
