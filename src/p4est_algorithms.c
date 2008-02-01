@@ -1287,7 +1287,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
   int                 treecount, incount, outcount;
   int                 first_index, last_index;
   int                 inter_tree, transform, outface[4];
-  int                 face, corner, zcorner, level;
+  int                 face, corner, zcorner = -1, level;
   int32_t             ntree;
   int32_t             qh, rh;
   p4est_array_t       corner_info;
@@ -1561,7 +1561,8 @@ p4est_complete_region (p4est_t * p4est,
   p4est_quadrant_t   *r;
 
   int                 comp;
-  int                 quadrant_pool_size, data_pool_size;
+  int                 quadrant_pool_size;
+  int                 data_pool_size = -1;
   int                 level, maxlevel = 0;
   int32_t            *quadrants_per_level;
   int32_t             num_quadrants = 0;
@@ -1691,7 +1692,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 i, j;
   int                 incount, curcount, ocount;
   int                 comp, lookup, inserted, isfamily, isoutroot;
-  int                 quadrant_pool_size, data_pool_size;
+  int                 quadrant_pool_size;
+  int                 data_pool_size = -1;
   int                 count_outside_root, count_outside_tree;
   int                 count_already_inlist, count_already_outlist;
   int                 first_inside, last_inside;
@@ -2027,7 +2029,7 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
 void
 p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
 {
-  int                 data_pool_size;
+  int                 data_pool_size = -1;
   int                 incount, removed;
   int                 current, rest, num_quadrants;
   int                 i, maxlevel;

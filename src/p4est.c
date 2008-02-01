@@ -358,7 +358,7 @@ p4est_copy (p4est_t * input, int copy_data)
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  int                 quadrant_pool_size, data_pool_size;
+  int                 quadrant_pool_size, data_pool_size = -1;
   int                 dorefine;
   int                *key;
   int                 i, maxlevel;
@@ -515,7 +515,7 @@ void
 p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
                p4est_init_t init_fn)
 {
-  int                 k, couldbegood, data_pool_size;
+  int                 k, couldbegood, data_pool_size = -1;
   int                 incount, removed, num_quadrants;
   int                 first, last, rest, before;
   int                 i, maxlevel;
@@ -773,7 +773,7 @@ void
 p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
-  int                 data_pool_size, all_incount, all_outcount;
+  int                 data_pool_size = -1, all_incount, all_outcount;
   int                 k, l, ctree;
   int                 any_face, face_contact[4];
   int                 any_quad, quad_contact[4];
