@@ -272,7 +272,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   int32_data = P4EST_ALLOC (int32_t, 4 * Ncells);
   P4EST_CHECK_ALLOC (int32_data);
 
-  p4est_order_local_vertices (p4est, &Ntotal, int32_data);
+  p4est_order_local_vertices (p4est, 0, &Ntotal, int32_data);
 
   fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
   fprintf (vtufile, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");

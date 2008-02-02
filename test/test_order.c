@@ -111,6 +111,7 @@ int
 main (int argc, char **argv)
 {
   int                 rank = 0;
+  int                 identify_periodic;
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
@@ -167,7 +168,9 @@ main (int argc, char **argv)
                                           4 * p4est->local_num_quadrants);
   P4EST_CHECK_ALLOC (quadrant_to_local_vertex);
 
-  p4est_order_local_vertices (p4est, &num_uniq_local_vertices,
+  identify_periodic = 0;
+  p4est_order_local_vertices (p4est, identify_periodic,
+                              &num_uniq_local_vertices,
                               quadrant_to_local_vertex);
 
   vert_locations = P4EST_ALLOC (p4est_vert_t, num_uniq_local_vertices);

@@ -26,7 +26,8 @@
 
 /** Determine unique ordering of vertices for each quadrant.
  *
- * \param [in]  p4est  The forest whose vertices will be ordered.
+ * \param [in]  p4est              The forest whose vertices will be ordered.
+ * \param [in]  identify_periodic  Boolean flag to switch on periodic b.c.
  * \param [out] num_uniq_local_vertices will be filled with the total number
  *                                      of unique vertices.
  * \param [out] quadrant_to_local_vertex an array that for each vertex of each
@@ -40,6 +41,7 @@
  *                                       [num_local_quads-1][3]
  */
 void                p4est_order_local_vertices (p4est_t * p4est,
+                                                int identify_periodic,
                                                 int32_t *
                                                 num_uniq_local_vertices,
                                                 int32_t *

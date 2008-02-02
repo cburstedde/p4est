@@ -26,6 +26,7 @@
 
 void
 p4est_order_local_vertices (p4est_t * p4est,
+                            int identify_periodic,
                             int32_t * num_uniq_local_vertices,
                             int32_t * quadrant_to_local_vertex)
 {
@@ -89,7 +90,8 @@ p4est_order_local_vertices (p4est_t * p4est,
        j <= last_local_tree; ++j) {
     for (face = 0; face < 4; ++face) {
       face_contact[face] = (conn->tree_to_tree[4 * j + face] != j ||
-                            conn->tree_to_face[4 * j + face] != face);
+                            (identify_periodic &&
+                             conn->tree_to_face[4 * j + face] != face));
     }
     tree = p4est_array_index (p4est->trees, j);
     quadrants = &tree->quadrants;
@@ -175,6 +177,11 @@ p4est_order_local_vertices (p4est_t * p4est,
                   for (ctree = 0; ctree < corner_info.elem_count; ++ctree) {
                     ci = p4est_array_index (&corner_info, ctree);
                     neighbor_tree = ci->ntree;
+
+                    /* Don't use corner identification in the same tree */
+                    if (!identify_periodic && neighbor_tree == j)
+                      continue;
+
                     zcorner = p4est_corner_to_zorder[ci->ncorner];
                     cneighbor = neighbor;
                     p4est_quadrant_corner (&cneighbor, zcorner, 1);
