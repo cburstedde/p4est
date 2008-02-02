@@ -107,18 +107,10 @@ p4est_vert_compare (const void *a, const void *b)
   return retval;
 }
 
-int
-main (int argc, char **argv)
+static void
+p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 {
-  int                 rank = 0;
-  int                 identify_periodic;
-#ifdef HAVE_MPI
-  int                 mpiret;
-#endif
-  MPI_Comm            mpicomm;
-  p4est_t            *p4est;
-  p4est_connectivity_t *connectivity;
-  int32_t             i, j;
+  int                 i, j;
   int32_t             num_uniq_local_vertices;
   int32_t            *quadrant_to_local_vertex;
   p4est_quadrant_t   *quad;
@@ -139,36 +131,14 @@ main (int argc, char **argv)
   p4est_array_t      *trees;
   p4est_array_t      *quadrants;
   int                 num_quads, quad_count;
+  int                 identify_periodic;
   p4est_vert_t       *vert_locations;
-
-  mpicomm = MPI_COMM_NULL;
-#ifdef HAVE_MPI
-  mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
-
-  /* create connectivity and forest structures */
-  connectivity = p4est_connectivity_new_star ();
-  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
-
-  /* refine to make the number of elements interesting */
-  p4est_refine (p4est, refine_fn, init_fn);
-
-  /* balance the forest */
-  p4est_balance (p4est, init_fn);
-
-  /* do a uniform partition, include the weight function for testing */
-  p4est_partition (p4est, weight_one);
 
   quadrant_to_local_vertex = P4EST_ALLOC (int32_t,
                                           4 * p4est->local_num_quadrants);
   P4EST_CHECK_ALLOC (quadrant_to_local_vertex);
 
-  identify_periodic = 0;
+  identify_periodic = 1;
   p4est_order_local_vertices (p4est, identify_periodic,
                               &num_uniq_local_vertices,
                               quadrant_to_local_vertex);
@@ -310,9 +280,86 @@ main (int argc, char **argv)
                        "local ordering not unique");
   }
 
-  /* clean up and exit */
   P4EST_FREE (quadrant_to_local_vertex);
   P4EST_FREE (vert_locations);
+}
+
+static int          weight_counter;
+static int          weight_index;
+
+static int
+weight_once (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+{
+  if (weight_counter++ == weight_index) {
+    return 1;
+  }
+
+  return 0;
+}
+
+int
+main (int argc, char **argv)
+{
+  int                 rank = 0;
+#ifdef HAVE_MPI
+  int                 mpiret;
+#endif
+  MPI_Comm            mpicomm;
+  p4est_t            *p4est;
+  p4est_connectivity_t *connectivity;
+
+  mpicomm = MPI_COMM_NULL;
+#ifdef HAVE_MPI
+  mpiret = MPI_Init (&argc, &argv);
+  P4EST_CHECK_MPI (mpiret);
+  mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  P4EST_CHECK_MPI (mpiret);
+#endif
+  p4est_init (stdout, rank, NULL, NULL);
+
+  /* create connectivity and forest structures */
+  connectivity = p4est_connectivity_new_star ();
+  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
+
+  /* refine to make the number of elements interesting */
+  p4est_refine (p4est, refine_fn, init_fn);
+
+  /* balance the forest */
+  p4est_balance (p4est, init_fn);
+
+  /* do a uniform partition, include the weight function for testing */
+  p4est_partition (p4est, weight_one);
+
+  p4est_check_local_order (p4est, connectivity);
+
+  /* do a weighted partition with many zero weights */
+  weight_counter = 0;
+  weight_index = (rank == 1) ? 1342 : 0;
+  p4est_partition (p4est, weight_once);
+
+  p4est_check_local_order (p4est, connectivity);
+
+  /* clean up */
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (connectivity);
+
+  /* create connectivity and forest structures */
+  connectivity = p4est_connectivity_new_periodic ();
+  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
+
+  /* refine to make the number of elements interesting */
+  p4est_refine (p4est, refine_fn, init_fn);
+
+  /* balance the forest */
+  p4est_balance (p4est, init_fn);
+
+  /* do a uniform partition, include the weight function for testing */
+  p4est_partition (p4est, weight_one);
+
+  p4est_check_local_order (p4est, connectivity);
+
+  /* clean up and exit */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
   p4est_memory_check ();
