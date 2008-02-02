@@ -73,14 +73,14 @@ p4est_quadrant_compare (const void *v1, const void *v2)
     return (int) q1->level - (int) q2->level;
   }
   else if (P4EST_LOG2_32 (exclory) >= P4EST_LOG2_32 (exclorx)) {
-    p1 = q1->y + ((q1->y >= 0) ? 0 : (1LL << 32));
-    p2 = q2->y + ((q2->y >= 0) ? 0 : (1LL << 32));
+    p1 = q1->y + ((q1->y >= 0) ? 0 : ((int64_t) 1 << 32));
+    p2 = q2->y + ((q2->y >= 0) ? 0 : ((int64_t) 1 << 32));
     diff = p1 - p2;
     return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
   else {
-    p1 = q1->x + ((q1->x >= 0) ? 0 : (1LL << 32));
-    p2 = q2->x + ((q2->x >= 0) ? 0 : (1LL << 32));
+    p1 = q1->x + ((q1->x >= 0) ? 0 : ((int64_t) 1 << 32));
+    p2 = q2->x + ((q2->x >= 0) ? 0 : ((int64_t) 1 << 32));
     diff = p1 - p2;
     return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
@@ -120,7 +120,8 @@ p4est_quadrant_hash (const void *v)
 {
   const p4est_quadrant_t *q = v;
 
-  return p4est_quadrant_linear_id (q, q->level) % (1ULL << 30);
+  return (unsigned) (p4est_quadrant_linear_id (q, q->level) %
+                     ((uint64_t) 1 << 30));
 }
 
 int
@@ -2162,18 +2163,20 @@ p4est_partition_given (p4est_t * p4est,
   MPI_Request        *recv_request, *send_request;
   MPI_Status         *recv_status, *send_status;
 #endif
+#ifdef P4EST_HAVE_DEBUG
+  unsigned            crc;
+  int64_t             total_requested_quadrants = 0;
+#endif
 
   P4EST_GLOBAL_INFOF
     ("Into p4est_partition_given with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);
 
 #ifdef P4EST_HAVE_DEBUG
-  unsigned            crc;
   /* Save a checksum of the original forest */
   crc = p4est_checksum (p4est);
 
   /* Check for a valid requested partition */
-  int64_t             total_requested_quadrants = 0;
   for (i = 0; i < num_procs; ++i) {
     total_requested_quadrants += new_num_quadrants_in_proc[i];
     P4EST_ASSERT (new_num_quadrants_in_proc[i] >= 0);

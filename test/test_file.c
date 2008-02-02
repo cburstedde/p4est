@@ -22,33 +22,26 @@
 #include <p4est_base.h>
 #include <p4est_file.h>
 
+#include <math.h>
+
 int
 main (int argc, char **argv)
 {
-  int                 retval;
   int                 rank = 0;
-
+  int                 retval;
+  int                 fd;
+  int32_t             i;
+  FILE               *outfile;
 #ifdef HAVE_MPI
   int                 use_mpi = 1;
   int                 mpiret;
   MPI_Comm            mpicomm;
+  size_t              templatelength;
 #endif
   p4est_connectivity_t *connectivity;
-
-#ifdef HAVE_MPI
-  mpicomm = MPI_COMM_NULL;
-  if (use_mpi) {
-    mpiret = MPI_Init (&argc, &argv);
-    P4EST_CHECK_MPI (mpiret);
-    mpicomm = MPI_COMM_WORLD;
-    mpiret = MPI_Comm_rank (mpicomm, &rank);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
-
+  const double        EPS = 2.22045e-16;
   char                template[] = "p4est_meshXXXXXX";
-  char                mesh[] = "		[Forest Info] # ]] [[ ]]\n"
+  const char          mesh[] = "		[Forest Info] # ]] [[ ]]\n"
     "ver = 0.0.1  # Version of the forest file\n"
     "Nk  = 3      # Number of elements\n"
     "Nv  = 7      # Number of mesh vertices\n"
@@ -90,14 +83,6 @@ main (int argc, char **argv)
     "7     1   2\n"
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
-  int                 fd;
-  FILE               *outfile;
-#ifdef HAVE_MPI
-  size_t              templatelength;
-#endif
-  const double        EPS = 2.22045e-16;
-
-  int32_t             i;
   const int32_t       num_trees = 3;
   const int32_t       num_vertices = 7;
   const int32_t       num_vtt = 12;
@@ -125,6 +110,18 @@ main (int argc, char **argv)
   const int32_t       vertex_to_tree[] = {
     0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1
   };
+
+#ifdef HAVE_MPI
+  mpicomm = MPI_COMM_NULL;
+  if (use_mpi) {
+    mpiret = MPI_Init (&argc, &argv);
+    P4EST_CHECK_MPI (mpiret);
+    mpicomm = MPI_COMM_WORLD;
+    mpiret = MPI_Comm_rank (mpicomm, &rank);
+    P4EST_CHECK_MPI (mpiret);
+  }
+#endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
@@ -170,7 +167,7 @@ main (int argc, char **argv)
     P4EST_CHECK_ABORT (connectivity->tree_to_face[i] == tree_to_face[i],
                        "tree_to_face");
   for (i = 0; i < num_vertices * 3; ++i)
-    P4EST_CHECK_ABORT (connectivity->vertices[i] - vertices[i] < EPS,
+    P4EST_CHECK_ABORT (fabs (connectivity->vertices[i] - vertices[i]) < EPS,
                        "vertices");
   for (i = 0; i < num_vertices + 1; ++i)
     P4EST_CHECK_ABORT (connectivity->vtt_offset[i] == vtt_offset[i],

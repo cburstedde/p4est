@@ -276,6 +276,9 @@ p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
   const int32_t       qy = q->y;
   int32_t             cornerx, cornery;
   p4est_quadrant_t    n;
+#ifdef P4EST_HAVE_DEBUG
+  int                 qcid;
+#endif
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (-1 <= neighbor_rlev && neighbor_rlev <= 1);
@@ -307,7 +310,7 @@ p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
 
 #ifdef P4EST_HAVE_DEBUG
   /* Check to see if it is possible to construct the neighbor */
-  int                 qcid = p4est_quadrant_child_id (q);
+  qcid = p4est_quadrant_child_id (q);
   P4EST_ASSERT (neighbor_rlev >= 0 || qcid == node);
 #endif
 

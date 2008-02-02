@@ -200,13 +200,13 @@ struct LogAppender* log_defaultLogAppender  = &defaultLogAppender.appender;
 
 static void doAppend(struct LogAppender* this0, struct LogEvent* ev) {
 
-    P4EST_CHECK_ABORT (0, "Default log appender should not be invoked");
-
     // TODO: define a format field in struct for timestamp, etc.
     char *pn;
     char buf[20];
     struct DefaultLogAppender* this = (struct DefaultLogAppender*)this0;
     const int spn = sizeof(priorityNames);
+
+    P4EST_CHECK_ABORT (0, "Default log appender should not be invoked");
 
     if (this->file == NULL) this->file = stderr;
 

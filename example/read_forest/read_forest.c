@@ -41,32 +41,20 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 int
 main (int argc, char **argv)
 {
-  int                 retval;
   int                 rank = 0;
-
+  int                 retval;
+  int                 fd;
+  FILE               *outfile;
 #ifdef HAVE_MPI
   int                 use_mpi = 1;
   int                 mpiret;
-#endif
+  size_t              templatelength;
+#endif  
   MPI_Comm            mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-
-  /* initialize MPI and p4est internals */
-  mpicomm = MPI_COMM_NULL;
-#ifdef HAVE_MPI
-  if (use_mpi) {
-    mpiret = MPI_Init (&argc, &argv);
-    P4EST_CHECK_MPI (mpiret);
-    mpicomm = MPI_COMM_WORLD;
-    mpiret = MPI_Comm_rank (mpicomm, &rank);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
-
   char                template[] = "p4est_meshXXXXXX";
-  char                mesh[] = "		[Forest Info] # ]] [[ ]]\n"
+  const char          mesh[] = "		[Forest Info] # ]] [[ ]]\n"
     "ver = 0.0.1  # Version of the forest file\n"
     "Nk  = 3      # Number of elements\n"
     "Nv  = 7      # Number of mesh vertices\n"
@@ -99,12 +87,18 @@ main (int argc, char **argv)
     "\n"
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
-  int                 fd;
-  FILE               *outfile;
-
+  /* initialize MPI and p4est internals */
+  mpicomm = MPI_COMM_NULL;
 #ifdef HAVE_MPI
-  size_t              templatelength;
+  if (use_mpi) {
+    mpiret = MPI_Init (&argc, &argv);
+    P4EST_CHECK_MPI (mpiret);
+    mpicomm = MPI_COMM_WORLD;
+    mpiret = MPI_Comm_rank (mpicomm, &rank);
+    P4EST_CHECK_MPI (mpiret);
+  }
 #endif
+  p4est_init (stdout, rank, NULL, NULL);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */

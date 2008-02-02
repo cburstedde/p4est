@@ -241,6 +241,9 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 void
 p4est_destroy (p4est_t * p4est)
 {
+#ifdef P4EST_HAVE_DEBUG
+  int                 q;
+#endif
   int32_t             j;
   p4est_tree_t       *tree;
 
@@ -248,7 +251,6 @@ p4est_destroy (p4est_t * p4est)
     tree = p4est_array_index (p4est->trees, j);
 
 #ifdef P4EST_HAVE_DEBUG
-    int                 q;
     for (q = 0; q < tree->quadrants.elem_count; ++q) {
       p4est_quadrant_t   *quad = p4est_array_index (&tree->quadrants, q);
       p4est_quadrant_free_data (p4est, quad);
@@ -1938,7 +1940,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 unsigned
 p4est_checksum (p4est_t * p4est)
 {
-  unsigned            treecrc, crc;
+  uLong               treecrc, crc;
   int32_t             j;
   p4est_tree_t       *tree;
   p4est_array_t       checkarray;
@@ -1951,7 +1953,7 @@ p4est_checksum (p4est_t * p4est)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   p4est_array_init (&checkarray, 4);
-  crc = adler32 (0L, Z_NULL, 0);
+  crc = adler32 (0, Z_NULL, 0);
   for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
     tree = p4est_array_index (p4est->trees, j);
     treecrc = p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
@@ -1967,7 +1969,7 @@ p4est_checksum (p4est_t * p4est)
   else {
     gather = NULL;
   }
-  send[0] = crc;
+  send[0] = (uint32_t) crc;
   send[1] = p4est->local_num_quadrants * 12;
   mpiret = MPI_Gather (send, 2, MPI_UNSIGNED, gather, 2, MPI_UNSIGNED,
                        0, p4est->mpicomm);
@@ -1983,7 +1985,7 @@ p4est_checksum (p4est_t * p4est)
   }
 #endif
 
-  return crc;
+  return (unsigned) crc;
 }
 
 /* EOF p4est.c */

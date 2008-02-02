@@ -430,7 +430,7 @@ extern struct LogAppender *log_defaultLogAppender;
 #define _LOG_PRE(catv, priority, fmt) do {                              \
      if (_LOG_ISENABLEDV(catv, priority)) {                             \
          struct LogEvent _log_ev =                                      \
-             {&(catv),priority,__FILE__,__FUNCTION__,__LINE__, fmt};    \
+             {&(catv),priority,__FILE__,__FUNCTION__,__LINE__,fmt};     \
          _log_logEvent(&(catv), &_log_ev, fmt
 #define _LOG_POST                               \
                         );                      \
