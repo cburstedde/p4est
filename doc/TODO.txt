@@ -1,5 +1,6 @@
 
  * doxygen
+ * add the ability to run splint from make
  * vtk output
    geometry
  * mesh generation
@@ -16,5 +17,6 @@
    mesh
  * Make the roots of the forest distributed in parallel
  * Include a test case for every major functionality
+ * Enforce const correctness
  * Partition Tree
    ? algo 4 (block partition)
