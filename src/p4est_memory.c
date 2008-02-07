@@ -73,6 +73,8 @@ p4est_array_reset (p4est_array_t * array)
   array->byte_alloc = 0;
 }
 
+#ifdef P4EST_RESIZE_REALLOC
+
 void
 p4est_array_resize (p4est_array_t * array, size_t new_count)
 {
@@ -118,6 +120,58 @@ p4est_array_resize (p4est_array_t * array, size_t new_count)
   memset (array->array + minoffs, -1, newsize - minoffs);
 #endif
 }
+
+#else
+
+void
+p4est_array_resize (p4est_array_t * array, size_t new_count)
+{
+  char               *ptr;
+  size_t              oldoffs, newoffs;
+  size_t              roundup, newsize;
+#ifdef P4EST_HAVE_DEBUG
+  size_t              i;
+#endif
+
+  if (new_count == 0) {
+    p4est_array_reset (array);
+    return;
+  }  
+
+  oldoffs = array->elem_count * array->elem_size;
+  array->elem_count = new_count;
+  newoffs = array->elem_count * array->elem_size;
+  roundup = P4EST_ROUNDUP2_32 (newoffs);
+  P4EST_ASSERT (roundup >= newoffs && roundup <= 2 * newoffs);
+
+  if (newoffs > array->byte_alloc) {
+    array->byte_alloc = roundup;
+  }
+  else {
+#ifdef P4EST_HAVE_DEBUG
+    if (newoffs < oldoffs) {
+      memset (array->array + newoffs, -1, oldoffs - newoffs);
+    }
+    for (i = oldoffs; i < newoffs; ++i) {
+      P4EST_ASSERT (array->array[i] == (char) -1);
+    }
+#endif
+    return;
+  }
+  P4EST_ASSERT (array->byte_alloc >= newoffs);
+  P4EST_ASSERT (newoffs > oldoffs);
+
+  newsize = array->byte_alloc;
+  ptr = P4EST_ALLOC (char, newsize);
+  P4EST_CHECK_ALLOC (ptr);
+  memcpy (ptr, array->array, oldoffs);
+  P4EST_FREE (array->array);
+  array->array = ptr;
+
+  memset (array->array + oldoffs, -1, newsize - oldoffs);
+}
+
+#endif /* P4EST_RESIZE_REALLOC */
 
 void
 p4est_array_sort (p4est_array_t * array,

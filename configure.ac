@@ -17,9 +17,11 @@ P4EST_ARG_ENABLE([log-level], [set the log priority [=PRIORITY]],
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [P4EST_VTK_DOUBLES])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
-                 [P4EST_VTK_BINARY])
+                  [P4EST_VTK_BINARY])
 P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
-                 [P4EST_VTK_COMPRESSION])
+                  [P4EST_VTK_COMPRESSION])
+P4EST_ARG_DISABLE([resize-realloc], [avoid realloc in array resize],
+                  [P4EST_RESIZE_REALLOC])
 P4EST_ARG_DISABLE([2d], [don't build the 2D library], [P4EST_BUILD_2D])
 P4EST_ARG_DISABLE([3d], [don't build the 3D library], [P4EST_BUILD_3D])
 
