@@ -94,8 +94,8 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 wrongusage, config;
   unsigned            crc;
-  int32_t             count_refined, count_balanced;
   int32_t            *quadrant_counts;
+  int64_t             count_refined, count_balanced;
   int64_t             prev_quadrant, next_quadrant;
   const char         *config_name, *usage, *errmsg;
   p4est_t            *p4est;

@@ -1,4 +1,4 @@
 #! /bin/sh
 
 splint -DP4EST_SPLINT -preproc -weak -Isrc -Isrc/splint \
-    src/*.c test/*.c example/**/*.c
+    +posixlib src/*.c test/*.c example/**/*.c

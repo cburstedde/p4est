@@ -54,7 +54,8 @@ main (int argc, char **argv)
     for (i = 0; i < 347; ++i) {
       inserted += p4est_hash_insert_unique (ihash, (void *) (i % 91), NULL);
     }
-    printf ("Integers inserted %d total %lu\n", inserted, ihash->elem_count);
+    printf ("Integers inserted %d total %lu\n",
+            inserted, (unsigned long) ihash->elem_count);
     P4EST_CHECK_ABORT (inserted == ihash->elem_count, "Integer hash");
 
     p4est_hash_destroy (ihash);
@@ -76,8 +77,8 @@ main (int argc, char **argv)
   f2 = v2;
   i3 = p4est_hash_insert_unique (qhash, &q3, &v3);
   f3 = v3;
-  printf ("Quadrants inserted %d %d %d total %lu\n", i1, i2, i3,
-          qhash->elem_count);
+  printf ("Quadrants inserted %d %d %d total %lu\n",
+          i1, i2, i3, (unsigned long) qhash->elem_count);
 
   P4EST_CHECK_ABORT (i1 + i2 + i3 == qhash->elem_count, "Quadrant hash");
   P4EST_CHECK_ABORT (f3 == &q2
@@ -89,8 +90,8 @@ main (int argc, char **argv)
   i2 = p4est_hash_lookup (qhash, &q2, NULL);
   i3 = p4est_hash_lookup (qhash, &q3, &v3);
   f3 = v3;
-  printf ("Quadrants lookup %d %d %d total %lu\n", i1, i2, i3,
-          qhash->elem_count);
+  printf ("Quadrants lookup %d %d %d total %lu\n",
+          i1, i2, i3, (unsigned long) qhash->elem_count);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
   P4EST_CHECK_ABORT (f3 == &q2
                      && f3->user_data == (void *) 5, "Lookup return");

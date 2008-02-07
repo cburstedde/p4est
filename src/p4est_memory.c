@@ -856,8 +856,9 @@ p4est_hash_print_statistics (int log_priority, p4est_hash_t * hash)
   std = sqrt (sqr);
   P4EST_LOGF (log_priority,
               "Hash size %lu avg %.3g std %.3g checks %lu %lu\n",
-              slots->elem_count, avg, std, hash->resize_checks,
-              hash->resize_actions);
+              (unsigned long) slots->elem_count, avg, std,
+              (unsigned long) hash->resize_checks,
+              (unsigned long) hash->resize_actions);
 }
 
 /* EOF p4est_memory.c */

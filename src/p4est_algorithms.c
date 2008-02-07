@@ -789,8 +789,8 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 
   id = 0;
   for (i = 0; i < level + (32 - P4EST_MAXLEVEL); ++i) {
-    id |= ((x & (1ULL << i)) << i);
-    id |= ((y & (1ULL << i)) << (i + 1));
+    id |= ((x & ((uint64_t) 1 << i)) << i);
+    id |= ((y & ((uint64_t) 1 << i)) << (i + 1));
   }
 
   return id;
@@ -804,7 +804,7 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 
   P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
   if (level < P4EST_MAXLEVEL) {
-    P4EST_ASSERT (id < (1ULL << 2 * (level + (32 - P4EST_MAXLEVEL))));
+    P4EST_ASSERT (id < ((uint64_t) 1 << 2 * (level + (32 - P4EST_MAXLEVEL))));
   }
 
   quadrant->level = (int8_t) level;
@@ -2601,7 +2601,7 @@ p4est_partition_given (p4est_t * p4est,
         P4EST_DEBUGF ("copying %d local quads to tree %d\n",
                       num_copy, which_tree);
         P4EST_DEBUGF ("   with %d(%lu) quads from [%lld, %lld] to [%d, %d]\n",
-                      num_quadrants, quadrants->elem_count,
+                      num_quadrants, (unsigned long) quadrants->elem_count,
                       (long long) tree_from_begin, (long long) tree_from_end,
                       new_local_tree_elem_count_before[which_tree],
                       new_local_tree_elem_count_before[which_tree] +

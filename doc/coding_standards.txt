@@ -14,5 +14,9 @@ This file contains coding guidelines for the p4est library.
   For globally unique indexing of potentially large numbers use the
   p4est_gloidx_t data type. The int_8 data type may be used only to
   save storage space. Generic integers, booleans and flags should be
-  of int type whenever possible. Function arguments should be of int
-  type whenever possible.
+  of int type whenever possible. Storage sizes should be size_t.
+  Function arguments should be of int type whenever possible.
+  For printf and friends use the following conversions.
+  %lld (long long) int64_t 
+  %llu (unsigned long long) uint64_t
+  %lu (unsigned long) size_t
