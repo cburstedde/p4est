@@ -52,11 +52,11 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
     return 1;
   }
-  if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&
-      quadrant->y == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2))) {
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
     return 1;
   }
-  if (quadrant->x >= (1 << (P4EST_MAXLEVEL - 2))) {
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
     return 0;
   }
 
@@ -127,7 +127,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
     w3z;
   int32_t             v0, v1, v2, v3;
   int32_t             lv0, lv1, lv2, lv3;
-  double              intsize = 1.0 / (1 << P4EST_MAXLEVEL);
+  double              intsize = 1.0 / P4EST_ROOT_LEN;
   p4est_array_t      *trees;
   p4est_array_t      *quadrants;
   int                 num_quads, quad_count;
@@ -182,7 +182,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
     /* loop over the elements in the tree */
     for (i = 0; i < num_quads; ++i, ++quad_count) {
       quad = p4est_array_index (quadrants, i);
-      inth = (1 << (P4EST_MAXLEVEL - quad->level));
+      inth = P4EST_QUADRANT_LEN (quad->level);
       h = intsize * inth;
       eta1 = quad->x * intsize;
       eta2 = quad->y * intsize;

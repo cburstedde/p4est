@@ -136,7 +136,7 @@ p4est_array_resize (p4est_array_t * array, size_t new_count)
   if (new_count == 0) {
     p4est_array_reset (array);
     return;
-  }  
+  }
 
   oldoffs = array->elem_count * array->elem_size;
   array->elem_count = new_count;
@@ -168,7 +168,9 @@ p4est_array_resize (p4est_array_t * array, size_t new_count)
   P4EST_FREE (array->array);
   array->array = ptr;
 
+#ifdef P4EST_HAVE_DEBUG
   memset (array->array + oldoffs, -1, newsize - oldoffs);
+#endif
 }
 
 #endif /* P4EST_RESIZE_REALLOC */

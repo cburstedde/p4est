@@ -361,7 +361,7 @@ p4est_copy (p4est_t * input, int copy_data)
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  int                 quadrant_pool_size, data_pool_size = -1;
+  size_t              quadrant_pool_size, data_pool_size = 0;
   int                 dorefine;
   int                *key;
   int                 i, maxlevel;
@@ -520,7 +520,8 @@ void
 p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
                p4est_init_t init_fn)
 {
-  int                 k, couldbegood, data_pool_size = -1;
+  int                 k, couldbegood;
+  size_t              data_pool_size = 0;
   int                 incount, removed, num_quadrants;
   int                 first, last, rest, before;
   int                 i, maxlevel;
@@ -779,7 +780,8 @@ void
 p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
-  int                 data_pool_size = -1, all_incount, all_outcount;
+  size_t              data_pool_size = 0;
+  size_t              all_incount, all_outcount;
   int                 k, l, ctree;
   int                 any_face, face_contact[4];
   int                 any_quad, quad_contact[4];
@@ -790,7 +792,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qtree;
-  int32_t             qh, rh;
+  p4est_qcoord_t      qh;
+  const p4est_qcoord_t rh = P4EST_ROOT_LEN;
   int32_t             treecount, qcount, qbytes, offset, obytes;
   int32_t             first_tree, last_tree, next_tree;
   int32_t             first_peer, last_peer;
@@ -915,7 +918,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
   nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
   nextlow.level = P4EST_MAXLEVEL;
-  rh = (1 << P4EST_MAXLEVEL);
 
   /* loop over all local trees to assemble first send list */
   all_incount = 0;
@@ -959,7 +961,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (i = 0; i < treecount; ++i) {
       /* this quadrant may be on the boundary with a range of processors */
       q = p4est_array_index (tquadrants, i);
-      qh = (1 << (P4EST_MAXLEVEL - q->level));
+      qh = P4EST_QUADRANT_LEN (q->level);
       if (tree_fully_owned) {
         /* need only to consider boundary quadrants */
         any_quad =
@@ -1657,6 +1659,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
   /* some sanity checks */
   P4EST_ASSERT (all_outcount == p4est->local_num_quadrants);
+  P4EST_ASSERT (all_outcount >= all_incount);
   if (p4est->user_data_pool != NULL) {
     P4EST_ASSERT (data_pool_size + (all_outcount - all_incount) ==
                   p4est->user_data_pool->elem_count);

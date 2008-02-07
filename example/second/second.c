@@ -42,8 +42,8 @@ static int
 refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 {
   if ((which_tree == 0 && q->x != 0 && q->y != 0) ||
-      (which_tree == 2 && q->x >= P4EST_LD (2) &&
-       q->y >= P4EST_QH (1) && q->y < P4EST_LD (2))) {
+      (which_tree == 2 && q->x >= P4EST_LAST_OFFSET (2) &&
+       q->y >= P4EST_QUADRANT_LEN (1) && q->y < P4EST_LAST_OFFSET (2))) {
     return (q->level < 5);
   }
 

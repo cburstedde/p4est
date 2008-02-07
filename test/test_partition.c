@@ -48,11 +48,11 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
   if (quadrant->level >= 6) {
     return 0;
   }
-  if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&
-      quadrant->y == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2))) {
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
     return 1;
   }
-  if (quadrant->x >= (1 << (P4EST_MAXLEVEL - 2))) {
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
     return 0;
   }
 

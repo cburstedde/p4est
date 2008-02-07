@@ -29,17 +29,17 @@ p4est_comm_count_quadrants (p4est_t * p4est)
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
-  int64_t             qlocal = p4est->local_num_quadrants;
-  int64_t            *global_last_quad_index = p4est->global_last_quad_index;
-  int32_t             rank = p4est->mpirank;
-  int32_t             num_procs = p4est->mpisize;
+  p4est_gloidx_t      qlocal = p4est->local_num_quadrants;
+  p4est_gloidx_t     *global_last_quad_index = p4est->global_last_quad_index;
   int                 i;
+  const int           rank = p4est->mpirank;
+  const int           num_procs = p4est->mpisize;
 
   global_last_quad_index[rank] = qlocal;
 #ifdef HAVE_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allgather (&qlocal, 1, MPI_LONG_LONG,
-                            global_last_quad_index, 1, MPI_LONG_LONG,
+    mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
+                            global_last_quad_index, 1, P4EST_MPI_GLOIDX,
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
   }

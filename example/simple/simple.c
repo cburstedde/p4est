@@ -80,11 +80,11 @@ refine_normal_fn (p4est_t * p4est, int32_t which_tree,
   if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
     return 1;
   }
-  if (quadrant->x == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2)) &&
-      quadrant->y == (1 << (P4EST_MAXLEVEL)) - (1 << (P4EST_MAXLEVEL - 2))) {
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
     return 1;
   }
-  if (quadrant->x >= (1 << (P4EST_MAXLEVEL - 2))) {
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
     return 0;
   }
 
@@ -109,12 +109,12 @@ static int
 refine_evil3_fn (p4est_t * p4est, int32_t which_tree,
                  p4est_quadrant_t * quadrant)
 {
-  int32_t             u2;
+  p4est_qcoord_t      u2;
   p4est_quadrant_t    ref;
 
   P4EST_QUADRANT_INIT (&ref);
 
-  u2 = (1 << (P4EST_MAXLEVEL - 2));
+  u2 = P4EST_QUADRANT_LEN (2);
 
   if (which_tree == 0) {
     ref.x = 3 * u2;

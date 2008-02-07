@@ -31,10 +31,10 @@ refine_none (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 static int
 refine_some (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 {
-  if (q->x < (1 << (P4EST_MAXLEVEL - 2))) {
+  if (q->x < P4EST_QUADRANT_LEN (2)) {
     return q->level <= 4;
   }
-  else if (q->x < (1 << (P4EST_MAXLEVEL - 1))) {
+  else if (q->x < P4EST_QUADRANT_LEN (1)) {
     return q->level <= 3;
   }
   else {
@@ -55,10 +55,10 @@ coarsen_some (p4est_t * p4est, int32_t which_tree,
               p4est_quadrant_t * q0, p4est_quadrant_t * q1,
               p4est_quadrant_t * q2, p4est_quadrant_t * q3)
 {
-  if (q0->x < (1 << (P4EST_MAXLEVEL - 2))) {
+  if (q0->x < P4EST_QUADRANT_LEN (2)) {
     return q0->level >= 2;
   }
-  else if (q0->x < (1 << (P4EST_MAXLEVEL - 1))) {
+  else if (q0->x < P4EST_QUADRANT_LEN (1)) {
     return q0->level >= 3;
   }
   else {

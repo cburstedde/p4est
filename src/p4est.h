@@ -26,13 +26,13 @@
 #define P4EST_MAXLEVEL 30
 
 /* the length of a root quadrant */
-#define P4EST_RH (1 << P4EST_MAXLEVEL)
+#define P4EST_ROOT_LEN ((p4est_qcoord_t) 1 << P4EST_MAXLEVEL)
 
 /* the length of a quadrant of level l */
-#define P4EST_QH(l) (1 << (P4EST_MAXLEVEL - (l)))
+#define P4EST_QUADRANT_LEN(l) ((p4est_qcoord_t) 1 << (P4EST_MAXLEVEL - (l)))
 
-/* the offset of the last descendent at level l */
-#define P4EST_LD(l) (P4EST_RH - P4EST_QH (l))
+/* the offset of the highest quadrant at level l */
+#define P4EST_LAST_OFFSET(l) (P4EST_ROOT_LEN - P4EST_QUADRANT_LEN (l))
 
 /* this will be changed to 1 by make install */
 #define P4EST_CONFIG_INSTALLED 0
@@ -61,15 +61,21 @@
 /* include necessary headers */
 #include <p4est_connectivity.h>
 
+/** Typedef for quadrant coordinates */
+typedef int32_t     p4est_qcoord_t;
+#define P4EST_MPI_QCOORD MPI_INT
+
 /** Typedef for processor-local indexing */
 typedef int32_t     p4est_locidx_t;
+#define P4EST_MPI_LOCIDX MPI_INT
 
 /** Typedef for globally unique indexing */
 typedef int64_t     p4est_gloidx_t;
+#define P4EST_MPI_GLOIDX MPI_LONG_LONG
 
 typedef struct p4est_quadrant
 {
-  int32_t             x, y;
+  p4est_qcoord_t      x, y;
   int8_t              level;
   void               *user_data;
 }
@@ -78,7 +84,7 @@ p4est_quadrant_t;
 typedef struct p4est_tree
 {
   p4est_array_t       quadrants;        /* locally stored quadrants */
-  int32_t             quadrants_per_level[P4EST_MAXLEVEL + 1];  /* locals only */
+  p4est_locidx_t      quadrants_per_level[P4EST_MAXLEVEL + 1];  /* locals only */
   int8_t              maxlevel; /* highest local quadrant level */
 }
 p4est_tree_t;
