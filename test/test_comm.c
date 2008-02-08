@@ -57,7 +57,7 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 int
 main (int argc, char **argv)
 {
-  int                 rank = 0;
+  int                 num_procs, rank = 0;
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
@@ -65,7 +65,6 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   int64_t             qglobal, qlocal, qbegin, qend;
-  int32_t             num_procs;
   int32_t             i;
 
   mpicomm = MPI_COMM_NULL;

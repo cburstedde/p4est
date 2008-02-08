@@ -2114,17 +2114,18 @@ int64_t
 p4est_partition_given (p4est_t * p4est,
                        const int32_t * new_num_quadrants_in_proc)
 {
-  int64_t            *global_last_quad_index = p4est->global_last_quad_index;
-  int32_t             num_procs = p4est->mpisize;
-  int32_t             rank = p4est->mpirank;
-  int32_t             first_local_tree = p4est->first_local_tree;
-  int32_t             last_local_tree = p4est->last_local_tree;
-  size_t              data_size = p4est->data_size;
-  size_t              quad_plus_data_size = sizeof (p4est_quadrant_t)
+  const int           num_procs = p4est->mpisize;
+  const int           rank = p4est->mpirank;
+  const p4est_gloidx_t *global_last_quad_index =
+    p4est->global_last_quad_index;
+  const p4est_locidx_t first_local_tree = p4est->first_local_tree;
+  const p4est_locidx_t last_local_tree = p4est->last_local_tree;
+  const size_t        data_size = p4est->data_size;
+  const size_t        quad_plus_data_size = sizeof (p4est_quadrant_t)
     + data_size;
   p4est_array_t      *trees = p4est->trees;
 
-  int32_t             num_send_trees =
+  const p4est_locidx_t num_send_trees =
     p4est->global_first_position[rank + 1].which_tree
     - p4est->global_first_position[rank].which_tree + 1;
 

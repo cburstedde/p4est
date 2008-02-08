@@ -39,7 +39,7 @@ p4est_balance_peer_t;
 
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
-static const int64_t initial_quadrants_per_processor = 15;
+static const p4est_gloidx_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
 #ifdef HAVE_MPI
 static const int    number_peer_windows = 5;
@@ -59,10 +59,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   int                 i, must_remove_last_quadrant;
   int                 level;
   p4est_locidx_t      jl, num_trees;
-  int64_t             tree_num_quadrants, global_num_quadrants;
-  int64_t             first_tree, first_quadrant, first_tree_quadrant;
-  int64_t             last_tree, last_quadrant, last_tree_quadrant;
-  int64_t             quadrant_index;
+  p4est_gloidx_t      tree_num_quadrants, global_num_quadrants;
+  p4est_gloidx_t      first_tree, first_quadrant, first_tree_quadrant;
+  p4est_gloidx_t      last_tree, last_quadrant, last_tree_quadrant;
+  p4est_gloidx_t      quadrant_index;
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
@@ -118,7 +118,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     }
     tree_num_quadrants *= 4;
   }
-  P4EST_ASSERT (level < 16 && tree_num_quadrants <= (int64_t) INT32_MAX);
+  P4EST_ASSERT (level < 16 && tree_num_quadrants <= INT32_MAX);
 
   /* compute index of first tree for this processor */
   global_num_quadrants = tree_num_quadrants * num_trees;
@@ -225,7 +225,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* compute some member variables */
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
-  p4est->global_last_quad_index = P4EST_ALLOC (int64_t, num_procs);
+  p4est->global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
   P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
   p4est_comm_count_quadrants (p4est);
 
@@ -353,10 +353,11 @@ p4est_copy (p4est_t * input, int copy_data)
   }
 
   /* allocate and copy global quadrant count */
-  p4est->global_last_quad_index = P4EST_ALLOC (int64_t, p4est->mpisize);
+  p4est->global_last_quad_index =
+    P4EST_ALLOC (p4est_gloidx_t, p4est->mpisize);
   P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
   memcpy (p4est->global_last_quad_index, input->global_last_quad_index,
-          p4est->mpisize * sizeof (int64_t));
+          p4est->mpisize * sizeof (p4est_gloidx_t));
 
   /* allocate and copy global partition information */
   p4est->global_first_position = P4EST_ALLOC (p4est_position_t,

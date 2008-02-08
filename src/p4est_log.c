@@ -202,7 +202,7 @@ static void doAppend(struct LogAppender* this0, struct LogEvent* ev) {
 
     // TODO: define a format field in struct for timestamp, etc.
     char *pn;
-    char buf[20];
+    char buf[BUFSIZ];
     struct DefaultLogAppender* this = (struct DefaultLogAppender*)this0;
     const int spn = sizeof(priorityNames);
 
@@ -216,8 +216,8 @@ static void doAppend(struct LogAppender* this0, struct LogEvent* ev) {
     else if (ev->priority < spn) {
         pn = priorityNames[ev->priority];
     } else {
-        sprintf(buf, "%s+%d",
-                priorityNames[spn - 1], ev->priority - spn + 1);
+        snprintf(buf, BUFSIZ, "%s+%d",
+                 priorityNames[spn - 1], ev->priority - spn + 1);
     }
     fprintf(stderr, "%-7s ", pn);
     fprintf(stderr, "%s:%d: ", ev->fileName, ev->lineNum);

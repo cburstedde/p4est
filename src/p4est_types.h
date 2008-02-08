@@ -49,6 +49,13 @@
 
 #else /* !P4EST_CONFIG_INSTALLED */
 
+#ifdef P4EST_SPLINT
+typedef void        (*sig_t) (int);
+#define HAVE_ZLIB_H
+#define HAVE_MPI
+#define P4EST_HAVE_DEBUG
+#endif /* P4EST_SPLINT */
+
 #ifdef HAVE_CONFIG_H
 #include <p4est_config.h>
 #endif
@@ -58,13 +65,6 @@
 #else
 #include <p4est_mpi_dummy.h>
 #endif
-
-#ifdef P4EST_SPLINT
-typedef void        (*sig_t) (int);
-#define HAVE_ZLIB_H
-#define HAVE_MPI
-#define P4EST_HAVE_DEBUG
-#endif /* P4EST_SPLINT */
 
 #endif /* !P4EST_CONFIG_INSTALLED */
 

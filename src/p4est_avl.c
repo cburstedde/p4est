@@ -76,7 +76,8 @@ static int avl_check_balance(avl_node_t *avlnode) {
  *	d = d<-1?-1:d>1?1:0;
  */
 #ifdef AVL_COUNT
-	int pl, r;
+	int pl;
+        unsigned r;
 
 	pl = lg(L_COUNT(avlnode));
 	r = R_COUNT(avlnode);
@@ -599,7 +600,7 @@ void avl_rebalance(avl_tree_t *avltree, avl_node_t *avlnode) {
 
 /* *INDENT-ON* */
 
-static int          avl_to_array_index = -1;
+static size_t       avl_to_array_index = 0;
 static p4est_array_t *avl_to_array_array = NULL;
 
 static void
@@ -645,7 +646,6 @@ avl_to_array (avl_tree_t * avltree, p4est_array_t * array)
   avl_to_array_array = array;
   avl_foreach (avltree, avl_to_array_foreach);
   P4EST_ASSERT (avl_to_array_index == avl_to_array_array->elem_count);
-  avl_to_array_index = -1;
   avl_to_array_array = NULL;
 }
 
