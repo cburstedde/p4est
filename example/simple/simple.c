@@ -63,7 +63,8 @@ mpi_context_t;
 static int          refine_level = 0;
 
 static void
-init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+init_fn (p4est_t * p4est, p4est_locidx_t which_tree,
+         p4est_quadrant_t * quadrant)
 {
   user_data_t        *data = quadrant->user_data;
 
@@ -71,7 +72,7 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 }
 
 static int
-refine_normal_fn (p4est_t * p4est, int32_t which_tree,
+refine_normal_fn (p4est_t * p4est, p4est_locidx_t which_tree,
                   p4est_quadrant_t * quadrant)
 {
   if (quadrant->level >= (refine_level - (which_tree % 3))) {
@@ -92,7 +93,7 @@ refine_normal_fn (p4est_t * p4est, int32_t which_tree,
 }
 
 static int
-refine_evil_fn (p4est_t * p4est, int32_t which_tree,
+refine_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
                 p4est_quadrant_t * quadrant)
 {
   if (quadrant->level >= refine_level) {
@@ -106,7 +107,7 @@ refine_evil_fn (p4est_t * p4est, int32_t which_tree,
 }
 
 static int
-refine_evil3_fn (p4est_t * p4est, int32_t which_tree,
+refine_evil3_fn (p4est_t * p4est, p4est_locidx_t which_tree,
                  p4est_quadrant_t * quadrant)
 {
   p4est_qcoord_t      u2;
@@ -139,7 +140,7 @@ refine_evil3_fn (p4est_t * p4est, int32_t which_tree,
 }
 
 static int
-coarsen_evil_fn (p4est_t * p4est, int32_t which_tree,
+coarsen_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
                  p4est_quadrant_t * q0, p4est_quadrant_t * q1,
                  p4est_quadrant_t * q2, p4est_quadrant_t * q3)
 {
@@ -175,7 +176,7 @@ main (int argc, char **argv)
 #endif
   int                 wrongusage, config;
   unsigned            crc;
-  char               *usage, *errmsg;
+  const char         *usage, *errmsg;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;

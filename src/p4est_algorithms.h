@@ -473,7 +473,8 @@ void                p4est_linearize_subtree (p4est_t * p4est,
  *                                        quadrants desired per processor.
  * \return  Returns the global count of shipped quadrants.
  */
-int64_t             p4est_partition_given (p4est_t * p4est, const int32_t *
+p4est_gloidx_t      p4est_partition_given (p4est_t * p4est,
+                                           const p4est_locidx_t *
                                            num_quadrants_in_proc);
 
 #endif /* !__P4EST_ALGORITHMS_H__ */

@@ -1687,15 +1687,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
-  int64_t             global_shipped = 0;
-  const int64_t       global_num_quadrants = p4est->global_num_quadrants;
+  p4est_gloidx_t      global_shipped = 0;
+  const p4est_gloidx_t global_num_quadrants = p4est->global_num_quadrants;
 #ifdef HAVE_MPI
   int                 mpiret;
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  const int32_t       first_tree = p4est->first_local_tree;
-  const int32_t       last_tree = p4est->last_local_tree;
-  const int32_t       local_num_quadrants = p4est->local_num_quadrants;
+  const p4est_locidx_t first_tree = p4est->first_local_tree;
+  const p4est_locidx_t last_tree = p4est->last_local_tree;
+  const p4est_locidx_t local_num_quadrants = p4est->local_num_quadrants;
   int                 i, p;
   int                 send_lowest, send_highest;
   int                 num_sends;

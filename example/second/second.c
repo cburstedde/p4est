@@ -39,7 +39,7 @@ typedef struct
 mpi_context_t;
 
 static int
-refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
+refine_fn (p4est_t * p4est, p4est_locidx_t which_tree, p4est_quadrant_t * q)
 {
   if ((which_tree == 0 && q->x != 0 && q->y != 0) ||
       (which_tree == 2 && q->x >= P4EST_LAST_OFFSET (2) &&
@@ -73,7 +73,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
-  const int32_t       given[5] = { 3, 7, 36, 10, 10 };
+  const p4est_locidx_t given[5] = { 3, 7, 36, 10, 10 };
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);

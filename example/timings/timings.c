@@ -57,7 +57,8 @@ static int          refine_level = 0;
 static int          level_shift = 0;
 
 static int
-refine_fractal (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
+refine_fractal (p4est_t * p4est, p4est_locidx_t which_tree,
+                p4est_quadrant_t * q)
 {
   int                 qid;
 
@@ -94,9 +95,10 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 wrongusage, config;
   unsigned            crc;
-  int32_t            *quadrant_counts;
-  int64_t             count_refined, count_balanced;
-  int64_t             prev_quadrant, next_quadrant;
+  p4est_locidx_t     *quadrant_counts;
+  p4est_gloidx_t      count_refined, count_balanced;
+  p4est_gloidx_t      prev_quadrant, next_quadrant;
+  p4est_gloidx_t      global_shipped;
   const char         *config_name, *usage, *errmsg;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
@@ -192,7 +194,7 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_unitsquare ();
   }
   p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
-  quadrant_counts = P4EST_ALLOC (int32_t, p4est->mpisize);
+  quadrant_counts = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
   P4EST_CHECK_ALLOC (quadrant_counts);
 
   /* time refine */
@@ -250,7 +252,7 @@ main (int argc, char **argv)
   for (i = 0, next_quadrant = 0; i < p4est->mpisize; ++i) {
     prev_quadrant = next_quadrant;
     next_quadrant = (p4est->global_num_quadrants * (i + 1)) / p4est->mpisize;
-    quadrant_counts[i] = (int32_t) (next_quadrant - prev_quadrant);
+    quadrant_counts[i] = (p4est_locidx_t) (next_quadrant - prev_quadrant);
   }
   if (p4est->mpisize > 1) {
     quadrant_counts[0] += quadrant_counts[p4est->mpisize - 1];
@@ -259,7 +261,11 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_partition_given (p4est, quadrant_counts);
+  global_shipped = p4est_partition_given (p4est, quadrant_counts);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done p4est_partition_given shipped %lld quadrants %.3g%%\n",
+     (long long) global_shipped,
+     global_shipped * 100. / p4est->global_num_quadrants);
   mpiret = MPI_Barrier (mpi->mpicomm);
   P4EST_CHECK_MPI (mpiret);
   elapsed_repartition = start + MPI_Wtime ();
