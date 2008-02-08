@@ -37,7 +37,7 @@
  * Indexing [cid][neighbor][xy] where cid is the child id.
  * Neighbors are indexed in z-order.
  */
-static const int32_t indirect_neighbors[4][3][2] =
+static const int    indirect_neighbors[4][3][2] =
 {{{-1, -1}, { 1, -1}, {-1, 1}},
  {{ 0, -1}, { 2, -1}, { 1, 0}},
  {{-1,  0}, {-2,  1}, { 0, 1}},
@@ -46,7 +46,7 @@ static const int32_t indirect_neighbors[4][3][2] =
 /** Indicate which neighbor to omit if edges are balanced, not corners
  * Indexing [cid] where cid is the child id.
  */
-static const int corners_omitted[4] =
+static const int    corners_omitted[4] =
 {0, 1, 1, 2};
 
 /* *INDENT-ON* */
@@ -73,14 +73,14 @@ p4est_quadrant_compare (const void *v1, const void *v2)
     return (int) q1->level - (int) q2->level;
   }
   else if (P4EST_LOG2_32 (exclory) >= P4EST_LOG2_32 (exclorx)) {
-    p1 = q1->y + ((q1->y >= 0) ? 0 : ((int64_t) 1 << 32));
-    p2 = q2->y + ((q2->y >= 0) ? 0 : ((int64_t) 1 << 32));
+    p1 = q1->y + ((q1->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = q2->y + ((q2->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
     diff = p1 - p2;
     return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
   else {
-    p1 = q1->x + ((q1->x >= 0) ? 0 : ((int64_t) 1 << 32));
-    p2 = q2->x + ((q2->x >= 0) ? 0 : ((int64_t) 1 << 32));
+    p1 = q1->x + ((q1->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = q2->x + ((q2->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
     diff = p1 - p2;
     return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
@@ -173,7 +173,7 @@ int
 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
                            const p4est_quadrant_t * q2)
 {
-  int32_t             exclorx, exclory;
+  p4est_qcoord_t      exclorx, exclory;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
@@ -222,7 +222,7 @@ p4est_quadrant_is_family (const p4est_quadrant_t * q0,
                           const p4est_quadrant_t * q2,
                           const p4est_quadrant_t * q3)
 {
-  int32_t             inc;
+  p4est_qcoord_t      inc;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q0));
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
@@ -276,8 +276,8 @@ int
 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                             const p4est_quadrant_t * r)
 {
-  int32_t             exclorx;
-  int32_t             exclory;
+  p4est_qcoord_t      exclorx;
+  p4est_qcoord_t      exclory;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
@@ -314,8 +314,8 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
   int                 minlevel;
-  int32_t             mask;
   uint64_t            i1, i2;
+  p4est_qcoord_t      mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
@@ -441,7 +441,7 @@ void
 p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
                                 p4est_quadrant_t * ld, int level)
 {
-  int32_t             shift;
+  p4est_qcoord_t      shift;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level <= level && level <= P4EST_MAXLEVEL);
@@ -516,7 +516,7 @@ int
 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
                              int zcorner, int level)
 {
-  int32_t             th, stepx, stepy;
+  p4est_qcoord_t      th, stepx, stepy;
   p4est_quadrant_t    quad, sibling;
   const int           zcorner_steps[4][2] =
     { {-1, -1,}, {1, -1}, {-1, 1}, {1, 1} };
@@ -553,7 +553,7 @@ p4est_quadrant_corner_level (const p4est_quadrant_t * q,
 void
 p4est_quadrant_corner (p4est_quadrant_t * q, int zcorner, int inside)
 {
-  int32_t             lshift, rshift;
+  p4est_qcoord_t      lshift, rshift;
 
   P4EST_ASSERT (q->level >= 0 && q->level <= P4EST_MAXLEVEL);
 
@@ -719,7 +719,7 @@ void
 p4est_quadrant_transform (const p4est_quadrant_t * q,
                           p4est_quadrant_t * r, int transform_type)
 {
-  int32_t             th;
+  p4est_qcoord_t      th;
 
   P4EST_ASSERT (q != r);
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
@@ -820,7 +820,7 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 }
 
 void
-p4est_quadrant_init_data (p4est_t * p4est, int32_t which_tree,
+p4est_quadrant_init_data (p4est_t * p4est, p4est_locidx_t which_tree,
                           p4est_quadrant_t * quad, p4est_init_t init_fn)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (quad));
@@ -1067,11 +1067,12 @@ p4est_is_valid (p4est_t * p4est)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  const int32_t       first_tree = p4est->first_local_tree;
-  const int32_t       last_tree = p4est->last_local_tree;
+  const p4est_locidx_t first_tree = p4est->first_local_tree;
+  const p4est_locidx_t last_tree = p4est->last_local_tree;
   int                 i, maxlevel;
-  int32_t             next_tree;
-  int32_t             j, nquadrants, lquadrants, perlevel;
+  size_t              js;
+  p4est_locidx_t      next_tree;
+  p4est_locidx_t      nquadrants, lquadrants, perlevel;
   p4est_quadrant_t   *q;
   p4est_quadrant_t    mylow, nextlow, s;
   p4est_tree_t       *tree;
@@ -1149,13 +1150,13 @@ p4est_is_valid (p4est_t * p4est)
 
   /* check individual trees */
   lquadrants = 0;
-  for (j = 0; j < p4est->trees->elem_count; ++j) {
-    tree = p4est_array_index (p4est->trees, j);
+  for (js = 0; js < p4est->trees->elem_count; ++js) {
+    tree = p4est_array_index (p4est->trees, js);
     if (!p4est_tree_is_complete (tree)) {
       P4EST_INFO ("p4est invalid not complete\n");
       return 0;
     }
-    if ((j < p4est->first_local_tree || j > p4est->last_local_tree) &&
+    if ((js < p4est->first_local_tree || js > p4est->last_local_tree) &&
         tree->quadrants.elem_count > 0) {
       P4EST_INFO ("p4est invalid outside count\n");
       return 0;
@@ -1288,7 +1289,7 @@ p4est_find_higher_bound (p4est_array_t * array,
 }
 
 void
-p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
+p4est_tree_compute_overlap (p4est_t * p4est, p4est_locidx_t qtree,
                             p4est_array_t * in, p4est_array_t * out)
 {
   int                 i, j, guess;
@@ -1345,7 +1346,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, int32_t qtree,
   /* loop over input list of quadrants */
   for (i = 0; i < incount; ++i) {
     inq = p4est_array_index (in, i);
-    if ((long) inq->user_data != qtree) {
+    if ((p4est_locidx_t) (long) inq->user_data != qtree) {
       continue;
     }
     inter_tree = 0;
@@ -1553,7 +1554,7 @@ p4est_complete_region (p4est_t * p4est,
                        const p4est_quadrant_t * q2,
                        int include_q2,
                        p4est_tree_t * tree,
-                       int32_t which_tree, p4est_init_t init_fn)
+                       p4est_locidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_tree_t       *R;
   p4est_list_t       *W;
@@ -1697,7 +1698,7 @@ p4est_complete_region (p4est_t * p4est,
  */
 static void
 p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
-                           int32_t which_tree, p4est_init_t init_fn)
+                           p4est_locidx_t which_tree, p4est_init_t init_fn)
 {
   int                 i, j;
   int                 incount, curcount, ocount;
@@ -1712,8 +1713,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 outface[4];
   int                 l, inmaxl;
   void               *vlookup;
-  int32_t             ph;
   ssize_t             rindex;
+  p4est_qcoord_t      ph;
   p4est_quadrant_t   *family[4];
   p4est_quadrant_t   *q;
   p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
@@ -2023,14 +2024,14 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 
 void
 p4est_complete_subtree (p4est_t * p4est, p4est_tree_t * tree,
-                        int32_t which_tree, p4est_init_t init_fn)
+                        p4est_locidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_complete_or_balance (p4est, tree, 0, which_tree, init_fn);
 }
 
 void
 p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
-                       int32_t which_tree, p4est_init_t init_fn)
+                       p4est_locidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_complete_or_balance (p4est, tree, 2, which_tree, init_fn);
 }

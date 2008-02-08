@@ -23,6 +23,7 @@
 #define __P4EST_CONNECTIVITY_H__
 
 #include <p4est_memory.h>
+#include <p4est_types.h>
 
 /** This structure holds the inter-tree connectivity information.
  * Identification of separate faces and corners is possible.

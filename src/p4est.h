@@ -34,44 +34,8 @@
 /* the offset of the highest quadrant at level l */
 #define P4EST_LAST_OFFSET(l) (P4EST_ROOT_LEN - P4EST_QUADRANT_LEN (l))
 
-/* this will be changed to 1 by make install */
-#define P4EST_CONFIG_INSTALLED 0
-
-/* this will be changed to 1 by make install if mpi is configured in */
-#define P4EST_CONFIG_MPI 0
-
-/* do some magic to avoid using p4est_config.h in the installed header */
-#if P4EST_CONFIG_INSTALLED
-#if P4EST_CONFIG_MPI
-#include <mpi.h>
-#else
-#include <p4est_mpi_dummy.h>
-#endif
-#else
-#ifdef HAVE_CONFIG_H
-#include <p4est_config.h>
-#endif
-#ifdef HAVE_MPI
-#include <mpi.h>
-#else
-#include <p4est_mpi_dummy.h>
-#endif
-#endif
-
-/* include necessary headers */
+/* p4est_connectivity.h includes p4est_memory.h, p4est_types.h */
 #include <p4est_connectivity.h>
-
-/** Typedef for quadrant coordinates */
-typedef int32_t     p4est_qcoord_t;
-#define P4EST_MPI_QCOORD MPI_INT
-
-/** Typedef for processor-local indexing */
-typedef int32_t     p4est_locidx_t;
-#define P4EST_MPI_LOCIDX MPI_INT
-
-/** Typedef for globally unique indexing */
-typedef int64_t     p4est_gloidx_t;
-#define P4EST_MPI_GLOIDX MPI_LONG_LONG
 
 typedef struct p4est_quadrant
 {

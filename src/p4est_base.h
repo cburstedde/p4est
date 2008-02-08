@@ -19,62 +19,27 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_BASE_H__
+#ifdef __P4EST_BASE_H__
+#error The file p4est_base.h may only be included once in every .c file.
+#else
 #define __P4EST_BASE_H__
 
 /*
- * this header is the only one that includes p4est_config.h
- * it is not installed in the final include directory
+ * This header is the only one that pulls in p4est_config.h.
  *
- * do not include this header from any other .h file
- * do include this header topmost in any .c file
+ * Do not include this header from any other .h file.
+ * Do include this header topmost in any .c file using the p4est library.
  */
 
-#ifdef HAVE_CONFIG_H
-#include <p4est_config.h>
-#endif
-
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
-
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
-#ifdef HAVE_STDDEF_H
-#include <stddef.h>
-#endif
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef P4EST_SPLINT
-typedef void        (*sig_t) (int);
-#define HAVE_ZLIB_H
-#define HAVE_MPI
-#define P4EST_HAVE_DEBUG
-#endif /* P4EST_LINT */
-
-/* needs the include p4est_config.h directive from above */
+/*
+ * This includes p4est_config.h if (!P4EST_CONFIG_INSTALLED).
+ * For an installation of this library, the user may define
+ *    P4EST_HAVE_DEBUG, P4EST_LOG_LEVEL if desired.
+ *    Also, various HAVE_ macros need to be provided externally.
+ *    See p4est_types.h for the required configuration macros.
+ */
+#include <p4est_types.h>
 #include <p4est_log.h>
-
-#if(defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS)
-#define P4EST_BACKTRACE
-#endif
 
 #define P4EST_NOOP do { ; } while (0)
 #define P4EST_CHECK_ABORT(c,s)                     \
