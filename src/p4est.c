@@ -225,9 +225,9 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_comm_count_quadrants (p4est);
 
   /* compute global partition information */
-  p4est->global_first_indices = P4EST_ALLOC (int32_t,
-                                             3 * (p4est->mpisize + 1));
-  P4EST_CHECK_ALLOC (p4est->global_first_indices);
+  p4est->global_first_position = P4EST_ALLOC (p4est_position_t,
+                                              p4est->mpisize + 1);
+  P4EST_CHECK_ALLOC (p4est->global_first_position);
   p4est_comm_global_partition (p4est);
 
   /* print more statistics */
@@ -267,7 +267,7 @@ p4est_destroy (p4est_t * p4est)
   }
   p4est_mempool_destroy (p4est->quadrant_pool);
 
-  P4EST_FREE (p4est->global_first_indices);
+  P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est->global_last_quad_index);
 
   P4EST_FREE (p4est);
@@ -291,7 +291,7 @@ p4est_copy (p4est_t * input, int copy_data)
   P4EST_CHECK_ALLOC (p4est);
   memcpy (p4est, input, sizeof (p4est_t));
   p4est->global_last_quad_index = NULL;
-  p4est->global_first_indices = NULL;
+  p4est->global_first_position = NULL;
   p4est->trees = NULL;
   p4est->user_data_pool = NULL;
   p4est->quadrant_pool = NULL;
@@ -346,11 +346,11 @@ p4est_copy (p4est_t * input, int copy_data)
           p4est->mpisize * sizeof (int64_t));
 
   /* allocate and copy global partition information */
-  p4est->global_first_indices = P4EST_ALLOC (int32_t,
-                                             3 * (p4est->mpisize + 1));
-  P4EST_CHECK_ALLOC (p4est->global_first_indices);
-  memcpy (p4est->global_first_indices, input->global_first_indices,
-          3 * (p4est->mpisize + 1) * sizeof (int32_t));
+  p4est->global_first_position = P4EST_ALLOC (p4est_position_t,
+                                              p4est->mpisize + 1);
+  P4EST_CHECK_ALLOC (p4est->global_first_position);
+  memcpy (p4est->global_first_position, input->global_first_position,
+          (p4est->mpisize + 1) * sizeof (p4est_position_t));
 
   /* check for valid p4est and return */
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -903,20 +903,21 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     P4EST_ASSERT (first_tree == -1 && last_tree == -2);
   }
   else {
-    P4EST_ASSERT (p4est->global_first_indices[3 * rank + 0] == first_tree);
+    P4EST_ASSERT (p4est->global_first_position[rank].which_tree ==
+                  first_tree);
   }
-  mylow.x = p4est->global_first_indices[3 * rank + 1];
-  mylow.y = p4est->global_first_indices[3 * rank + 2];
+  mylow.x = p4est->global_first_position[rank].x;
+  mylow.y = p4est->global_first_position[rank].y;
   mylow.level = P4EST_MAXLEVEL;
-  next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
+  next_tree = p4est->global_first_position[rank + 1].which_tree;
   if (last_tree < 0) {
     P4EST_ASSERT (first_tree == -1 && last_tree == -2);
   }
   else {
     P4EST_ASSERT (next_tree == last_tree || next_tree == last_tree + 1);
   }
-  nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
-  nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
+  nextlow.x = p4est->global_first_position[rank + 1].x;
+  nextlow.y = p4est->global_first_position[rank + 1].y;
   nextlow.level = P4EST_MAXLEVEL;
 
   /* loop over all local trees to assemble first send list */

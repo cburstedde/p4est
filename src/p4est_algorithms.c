@@ -1087,12 +1087,12 @@ p4est_is_valid (p4est_t * p4est)
     }
   }
   else {
-    if (p4est->global_first_indices[3 * rank + 0] != first_tree) {
+    if (p4est->global_first_position[rank].which_tree != first_tree) {
       P4EST_INFO ("p4est invalid first tree\n");
       return 0;
     }
-    mylow.x = p4est->global_first_indices[3 * rank + 1];
-    mylow.y = p4est->global_first_indices[3 * rank + 2];
+    mylow.x = p4est->global_first_position[rank].x;
+    mylow.y = p4est->global_first_position[rank].y;
     mylow.level = P4EST_MAXLEVEL;
     tree = p4est_array_index (p4est->trees, first_tree);
     if (tree->quadrants.elem_count > 0) {
@@ -1112,13 +1112,13 @@ p4est_is_valid (p4est_t * p4est)
     }
   }
   else {
-    next_tree = p4est->global_first_indices[3 * (rank + 1) + 0];
+    next_tree = p4est->global_first_position[rank + 1].which_tree;
     if (next_tree != last_tree && next_tree != last_tree + 1) {
       P4EST_INFO ("p4est invalid last tree\n");
       return 0;
     }
-    nextlow.x = p4est->global_first_indices[3 * (rank + 1) + 1];
-    nextlow.y = p4est->global_first_indices[3 * (rank + 1) + 2];
+    nextlow.x = p4est->global_first_position[rank + 1].x;
+    nextlow.y = p4est->global_first_position[rank + 1].y;
     nextlow.level = P4EST_MAXLEVEL;
     tree = p4est_array_index (p4est->trees, last_tree);
     if (tree->quadrants.elem_count > 0) {
@@ -2117,9 +2117,8 @@ p4est_partition_given (p4est_t * p4est,
   p4est_array_t      *trees = p4est->trees;
 
   int32_t             num_send_trees =
-    p4est->global_first_indices[3 * (rank + 1)]
-    - p4est->global_first_indices[3 * (rank)]
-    + 1;
+    p4est->global_first_position[rank + 1].which_tree
+    - p4est->global_first_position[rank].which_tree + 1;
 
   int32_t             i, j, sk, which_tree, num_copy;
   int32_t             first_tree, last_tree;
@@ -2300,9 +2299,8 @@ p4est_partition_given (p4est_t * p4est,
   /* Allocate space for receiving quadrants and user data */
   for (from_proc = 0, sk = 0; from_proc < num_procs; ++from_proc) {
     if (from_proc != rank && num_recv_from[from_proc]) {
-      num_recv_trees = p4est->global_first_indices[3 * (from_proc + 1)]
-        - p4est->global_first_indices[3 * (from_proc)]
-        + 1;
+      num_recv_trees = p4est->global_first_position[from_proc + 1].which_tree
+        - p4est->global_first_position[from_proc].which_tree + 1;
       recv_size = num_recv_trees * sizeof (int32_t)
         + quad_plus_data_size * num_recv_from[from_proc];
 
@@ -2503,8 +2501,8 @@ p4est_partition_given (p4est_t * p4est,
 
   for (from_proc = 0; from_proc < num_procs; ++from_proc) {
     if (num_recv_from[from_proc] > 0) {
-      first_from_tree = p4est->global_first_indices[3 * (from_proc)];
-      last_from_tree = p4est->global_first_indices[3 * (from_proc + 1)];
+      first_from_tree = p4est->global_first_position[from_proc].which_tree;
+      last_from_tree = p4est->global_first_position[from_proc + 1].which_tree;
       num_recv_trees = last_from_tree - first_from_tree + 1;
 
       P4EST_DEBUGF ("partition from %d with trees [%d,%d] get %d trees\n",
@@ -2641,8 +2639,8 @@ p4est_partition_given (p4est_t * p4est,
           trees->elem_count * sizeof (int32_t));
   for (from_proc = 0; from_proc < num_procs; ++from_proc) {
     if (num_recv_from[from_proc] > 0) {
-      first_from_tree = p4est->global_first_indices[3 * (from_proc)];
-      last_from_tree = p4est->global_first_indices[3 * (from_proc + 1)];
+      first_from_tree = p4est->global_first_position[from_proc].which_tree;
+      last_from_tree = p4est->global_first_position[from_proc + 1].which_tree;
       num_recv_trees = last_from_tree - first_from_tree + 1;
 
       P4EST_DEBUGF

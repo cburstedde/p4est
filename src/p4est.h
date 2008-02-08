@@ -89,6 +89,13 @@ typedef struct p4est_tree
 }
 p4est_tree_t;
 
+typedef struct p4est_position
+{
+  p4est_locidx_t      which_tree;
+  p4est_qcoord_t      x, y;
+}
+p4est_position_t;
+
 typedef struct p4est
 {
   MPI_Comm            mpicomm;
@@ -110,7 +117,7 @@ typedef struct p4est
                                                    of all quadrants of the
                                                    last quadrant on each proc.
                                                  */
-  int32_t            *global_first_indices;     /* first_tree, x, y of first quadrant
+  p4est_position_t   *global_first_position;    /* first_tree, x, y of first quadrant
                                                    for each processor and 1 beyond */
   p4est_connectivity_t *connectivity;   /* connectivity structure */
   p4est_array_t      *trees;    /* list of all trees */

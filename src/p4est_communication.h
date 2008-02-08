@@ -44,18 +44,18 @@ p4est_comm_tag_t;
 void                p4est_comm_count_quadrants (p4est_t * p4est);
 
 /** Distribute the global partition boundaries.
- * \param [in,out] p4est  Fills \c p4est->global_first_indices.
+ * \param [in,out] p4est  Fills \c p4est->global_first_position.
  */
 void                p4est_comm_global_partition (p4est_t * p4est);
 
-/** Searches the owner of a quadrant via p4est->global_first_indices.
+/** Searches the owner of a quadrant via p4est->global_first_position.
  * Assumes a tree with no overlaps.
  * \param [in] guess   Initial guess for the search.
  * \return Returns the processor id of the owner.
  */
-int32_t             p4est_comm_find_owner (p4est_t * p4est,
-                                           int32_t which_tree,
+int                 p4est_comm_find_owner (p4est_t * p4est,
+                                           p4est_locidx_t which_tree,
                                            const p4est_quadrant_t * q,
-                                           int32_t guess);
+                                           int guess);
 
 #endif /* !__P4EST_COMMUNICATION_H__ */

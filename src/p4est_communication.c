@@ -62,62 +62,63 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef HAVE_MPI
   int                 i;
   int                 mpiret;
-  int32_t             input[3];
-  int32_t            *pi;
   const int32_t       first_tree = p4est->first_local_tree;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quadrant;
+  p4est_position_t   *pi, input;
 #endif
 
-  p4est->global_first_indices[0] = 0;
-  p4est->global_first_indices[1] = 0;
-  p4est->global_first_indices[2] = 0;
+  memset (&p4est->global_first_position[0], 0, sizeof (p4est_position_t));
+  memset (&input, 0, sizeof (p4est_position_t));
 
 #ifdef HAVE_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     if (first_tree < 0) {
       /* i don't have any quadrants, send negative values */
       P4EST_ASSERT (first_tree == -1 && p4est->last_local_tree == -2);
-      input[0] = input[1] = input[2] = -1;
+      input.which_tree = -1;
+      input.x = input.y = -1;
     }
     else {
       /* send values corresponding to my first quadrant */
       tree = p4est_array_index (p4est->trees, first_tree);
       quadrant = p4est_array_index (&tree->quadrants, 0);
-      input[0] = first_tree;
-      input[1] = quadrant->x;
-      input[2] = quadrant->y;
+      input.which_tree = first_tree;
+      input.x = quadrant->x;
+      input.y = quadrant->y;
     }
-    mpiret = MPI_Allgather (input, 3, MPI_INT,
-                            p4est->global_first_indices, 3, MPI_INT,
+    mpiret = MPI_Allgather (&input, sizeof (p4est_position_t), MPI_CHAR,
+                            p4est->global_first_position,
+                            sizeof (p4est_position_t), MPI_CHAR,
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
 
     /* correct for processors that don't have any quadrants */
     for (i = num_procs - 1; i >= 0; --i) {
-      pi = &p4est->global_first_indices[3 * i];
-      if (pi[0] < 0) {
-        P4EST_ASSERT (pi[1] < 0 && pi[2] < 0);
-        memcpy (pi, &pi[3], 3 * sizeof (*pi));
+      pi = &p4est->global_first_position[i];
+      if (pi->which_tree < 0) {
+        P4EST_ASSERT (pi->x < 0 && pi->y < 0);
+        memcpy (pi, pi + 1, sizeof (p4est_position_t));
       }
-      P4EST_ASSERT (pi[0] >= 0 && pi[1] >= 0 && pi[2] >= 0);
+      P4EST_ASSERT (pi->which_tree >= 0 && pi->x >= 0 && pi->y >= 0);
     }
   }
 #endif
 
-  p4est->global_first_indices[3 * num_procs + 0] = num_trees;
-  p4est->global_first_indices[3 * num_procs + 1] = 0;
-  p4est->global_first_indices[3 * num_procs + 2] = 0;
+  p4est->global_first_position[num_procs].which_tree = num_trees;
+  p4est->global_first_position[num_procs].x = 0;
+  p4est->global_first_position[num_procs].y = 0;
 }
 
-int32_t
-p4est_comm_find_owner (p4est_t * p4est, int32_t which_tree,
-                       const p4est_quadrant_t * q, int32_t guess)
+int
+p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
+                       const p4est_quadrant_t * q, int guess)
 {
   const int           num_procs = p4est->mpisize;
-  const int32_t      *global_first_indices = p4est->global_first_indices;
-  int32_t             proc_low, proc_high;
-  int32_t             ctree;
+  const p4est_position_t *global_first_position =
+    p4est->global_first_position;
+  int                 proc_low, proc_high;
+  p4est_locidx_t      ctree;
   p4est_quadrant_t    cur;
 
   proc_low = 0;
@@ -131,9 +132,9 @@ p4est_comm_find_owner (p4est_t * p4est, int32_t which_tree,
     P4EST_ASSERT (proc_low <= guess && guess <= proc_high);
 
     /* check if q is on a lower processor than guess */
-    ctree = global_first_indices[3 * guess + 0];
-    cur.x = global_first_indices[3 * guess + 1];
-    cur.y = global_first_indices[3 * guess + 2];
+    ctree = global_first_position[guess].which_tree;
+    cur.x = global_first_position[guess].x;
+    cur.y = global_first_position[guess].y;
     if (which_tree < ctree ||
         (which_tree == ctree &&
          (p4est_quadrant_compare (q, &cur) < 0 &&
@@ -144,9 +145,9 @@ p4est_comm_find_owner (p4est_t * p4est, int32_t which_tree,
     }
 
     /* check if q is on a higher processor than guess */
-    ctree = global_first_indices[3 * (guess + 1) + 0];
-    cur.x = global_first_indices[3 * (guess + 1) + 1];
-    cur.y = global_first_indices[3 * (guess + 1) + 2];
+    ctree = global_first_position[guess + 1].which_tree;
+    cur.x = global_first_position[guess + 1].x;
+    cur.y = global_first_position[guess + 1].y;
     if (which_tree > ctree ||
         (which_tree == ctree &&
          (p4est_quadrant_compare (&cur, q) <= 0 ||
@@ -162,9 +163,9 @@ p4est_comm_find_owner (p4est_t * p4est, int32_t which_tree,
 
   /* make sure we found a valid processor with nonzero quadrant count */
   P4EST_ASSERT (0 <= guess && guess < num_procs);
-  P4EST_ASSERT (memcmp (&global_first_indices[3 * guess],
-                        &global_first_indices[3 * (guess + 1)],
-                        3 * sizeof (int32_t)) != 0);
+  P4EST_ASSERT (memcmp (&global_first_position[guess],
+                        &global_first_position[guess + 1],
+                        sizeof (p4est_position_t)) != 0);
   return guess;
 }
 
