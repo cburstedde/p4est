@@ -55,6 +55,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
+  int                 num_procs, rank;
   int                 i, must_remove_last_quadrant;
   int                 level;
   int32_t             j, num_trees;
@@ -65,14 +66,15 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
-  p4est_quadrant_t    a;
-  p4est_quadrant_t    b;
+  p4est_quadrant_t    a, b, c;
+  p4est_position_t   *global_first_position;
 
   P4EST_GLOBAL_PRODUCTION ("Into p4est_new\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   P4EST_QUADRANT_INIT (&a);
   P4EST_QUADRANT_INIT (&b);
+  P4EST_QUADRANT_INIT (&c);
 
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   P4EST_CHECK_ALLOC (p4est);
@@ -95,6 +97,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     P4EST_CHECK_MPI (mpiret);
   }
 #endif
+  num_procs = p4est->mpisize;
+  rank = p4est->mpirank;
 
   /* allocate memory pools */
   if (p4est->data_size > 0) {
@@ -109,7 +113,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   tree_num_quadrants = 1;
   for (level = 0; level < 16; ++level) {
     if (tree_num_quadrants >=
-        (p4est->mpisize * initial_quadrants_per_processor) / num_trees) {
+        (num_procs * initial_quadrants_per_processor) / num_trees) {
       break;
     }
     tree_num_quadrants *= 4;
@@ -118,11 +122,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* compute index of first tree for this processor */
   global_num_quadrants = tree_num_quadrants * num_trees;
-  first_quadrant = (global_num_quadrants * p4est->mpirank) / p4est->mpisize;
+  first_quadrant = (global_num_quadrants * rank) / num_procs;
   first_tree = first_quadrant / tree_num_quadrants;
   first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
-  last_quadrant =
-    (global_num_quadrants * (p4est->mpirank + 1)) / p4est->mpisize - 1;
+  last_quadrant = (global_num_quadrants * (rank + 1)) / num_procs - 1;
   last_tree = last_quadrant / tree_num_quadrants;
   last_tree_quadrant = last_quadrant - last_tree * tree_num_quadrants;
 
@@ -137,7 +140,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* print some diagnostics */
   P4EST_GLOBAL_PRODUCTIONF ("New p4est with %d trees on %d processors\n",
-                            num_trees, p4est->mpisize);
+                            num_trees, num_procs);
   P4EST_GLOBAL_INFOF ("Initial level %d potential global quadrants"
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
@@ -220,15 +223,23 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* compute some member variables */
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
-  p4est->global_last_quad_index = P4EST_ALLOC (int64_t, p4est->mpisize);
+  p4est->global_last_quad_index = P4EST_ALLOC (int64_t, num_procs);
   P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
   p4est_comm_count_quadrants (p4est);
 
-  /* compute global partition information */
-  p4est->global_first_position = P4EST_ALLOC (p4est_position_t,
-                                              p4est->mpisize + 1);
-  P4EST_CHECK_ALLOC (p4est->global_first_position);
-  p4est_comm_global_partition (p4est);
+  /* fill in global partition information */
+  global_first_position = P4EST_ALLOC_ZERO (p4est_position_t, num_procs + 1);
+  P4EST_CHECK_ALLOC (global_first_position);
+  for (i = 0; i <= num_procs; ++i) {
+    first_quadrant = (global_num_quadrants * i) / num_procs;
+    first_tree = first_quadrant / tree_num_quadrants;
+    first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
+    p4est_quadrant_set_morton (&c, level, first_tree_quadrant);
+    global_first_position[i].which_tree = first_tree;
+    global_first_position[i].x = c.x;
+    global_first_position[i].y = c.y;
+  }
+  p4est->global_first_position = global_first_position;
 
   /* print more statistics */
   P4EST_INFOF ("total local quadrants %d\n", p4est->local_num_quadrants);

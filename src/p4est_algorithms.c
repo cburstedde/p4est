@@ -1065,6 +1065,7 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
 int
 p4est_is_valid (p4est_t * p4est)
 {
+  const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
   const int32_t       first_tree = p4est->first_local_tree;
   const int32_t       last_tree = p4est->last_local_tree;
@@ -1078,6 +1079,12 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&mylow);
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
+
+  /* check last item of global partition */
+  P4EST_ASSERT (p4est->global_first_position[num_procs].which_tree ==
+                p4est->connectivity->num_trees &&
+                p4est->global_first_position[num_procs].x == 0 &&
+                p4est->global_first_position[num_procs].y == 0);
 
   /* check first tree in global partition */
   if (first_tree < 0) {
