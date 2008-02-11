@@ -25,6 +25,11 @@
 #include <p4est_mesh.h>
 
 void
+p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t ghost_layer)
+{
+}
+
+void
 p4est_order_local_vertices (p4est_t * p4est,
                             bool identify_periodic,
                             p4est_locidx_t * num_uniq_local_vertices,
