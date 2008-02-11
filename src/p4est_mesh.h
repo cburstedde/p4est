@@ -24,6 +24,12 @@
 
 #include <p4est.h>
 
+/** Checks a p4est to see if it is balanced.
+ * \param [in] p4est  The p4est to be tested.
+ * \return Returns 1 if balanced, 0 otherwise.
+ */
+int                 p4est_is_balanced (p4est_t * p4est);
+
 /** Gets the ghost layer
  *
  * This will gather the quadrants from each neighboring proc to build

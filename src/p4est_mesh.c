@@ -24,6 +24,14 @@
 #include <p4est_communication.h>
 #include <p4est_mesh.h>
 
+int
+p4est_is_balanced (p4est_t * p4est)
+{
+  int                 is_balanced = 1;
+
+  return is_balanced;
+}
+
 void
 p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t ghost_layer)
 {

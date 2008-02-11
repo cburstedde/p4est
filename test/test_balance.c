@@ -21,6 +21,7 @@
 
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
+#include <p4est_mesh.h>
 
 static const int    refine_level = 5;
 
@@ -95,11 +96,12 @@ main (int argc, char **argv)
   /* refine and balance the forest */
   p4est_refine (p4est, refine_fn, NULL);
   p4est_balance (p4est, NULL);
+  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance");
 
   /* checksum and rebalance */
   crc = p4est_checksum (p4est);
   p4est_balance (p4est, NULL);
-  P4EST_ASSERT (p4est_checksum (p4est) == crc);
+  SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Rebalance");
 
   /* clean up memory */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==

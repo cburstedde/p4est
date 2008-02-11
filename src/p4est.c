@@ -1931,6 +1931,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+#if 0
+  P4EST_ASSERT (p4est_is_balanced (p4est));
+#endif
 }
 
 void
