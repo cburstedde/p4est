@@ -65,8 +65,9 @@ p4est_comm_global_partition (p4est_t * p4est)
   const int32_t       first_tree = p4est->first_local_tree;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quadrant;
-  p4est_position_t   *pi, input;
+  p4est_position_t   *pi
 #endif
+                      p4est_position_t input;
 
   memset (&p4est->global_first_position[0], 0, sizeof (p4est_position_t));
   memset (&input, 0, sizeof (p4est_position_t));
