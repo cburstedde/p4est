@@ -65,6 +65,12 @@
 #define P4EST_ALLOC_ZERO(t,n) (t *) p4est_calloc ((n), sizeof(t))
 #define P4EST_REALLOC(p,t,n) (t *) p4est_realloc ((p), (n) * sizeof(t))
 
+/**
+ * Sets n elements of a memory range to zero.
+ * Assumes the pointer p is of the correct type.
+ */
+#define P4EST_BZERO(p,n) do { memset ((p), 0, (n) * sizeof (*(p))); } while (0)
+
 /* it is allowed to call P4EST_FREE (NULL) which does nothing. */
 #define P4EST_FREE(p) p4est_free (p)
 

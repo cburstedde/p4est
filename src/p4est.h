@@ -131,7 +131,7 @@ extern const int    p4est_corner_to_zorder[5];
 
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \
-  do { memset (q, -1, sizeof (p4est_quadrant_t)); } while (0)
+  do { memset ((q), -1, sizeof (p4est_quadrant_t)); } while (0)
 
 /** Create a new p4est.
  *
