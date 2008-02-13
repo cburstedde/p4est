@@ -71,6 +71,10 @@ p4est_comm_global_partition (p4est_t * p4est)
   P4EST_BZERO (&p4est->global_first_position[0], 1);
   P4EST_BZERO (&p4est->global_first_position[num_procs], 1);
 
+  p4est->global_first_position[num_procs].which_tree = num_trees;
+  p4est->global_first_position[num_procs].x = 0;
+  p4est->global_first_position[num_procs].y = 0;
+
 #ifdef HAVE_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     P4EST_BZERO (&input, 1);
@@ -105,10 +109,6 @@ p4est_comm_global_partition (p4est_t * p4est)
     }
   }
 #endif
-
-  p4est->global_first_position[num_procs].which_tree = num_trees;
-  p4est->global_first_position[num_procs].x = 0;
-  p4est->global_first_position[num_procs].y = 0;
 }
 
 int

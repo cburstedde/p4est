@@ -2370,8 +2370,10 @@ p4est_partition_given (p4est_t * p4est,
     }
   }
   for (i = 0; i < num_procs; ++i) {
-    P4EST_DEBUGF ("partition begin_send_to[%d] = %lld\n",
-                  i, (long long) begin_send_to[i]);
+    if (begin_send_to[i] >= 0) {
+      P4EST_DEBUGF ("partition begin_send_to[%d] = %lld\n",
+                    i, (long long) begin_send_to[i]);
+    }
   }
 #endif
 
