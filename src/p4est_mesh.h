@@ -47,7 +47,7 @@ int                 p4est_is_balanced (p4est_t * p4est);
  *
  */
 void                p4est_build_ghost_layer (p4est_t * p4est,
-                                             p4est_array_t ghost_layer);
+                                             p4est_array_t * ghost_layer);
 
 /** Determine unique ordering of vertices for each quadrant.
  *
