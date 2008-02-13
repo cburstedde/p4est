@@ -325,6 +325,13 @@ int
 p4est_is_balanced (p4est_t * p4est)
 {
   int                 is_balanced = 1;
+  p4est_array_t       ghost_layer;
+
+  p4est_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
+
+  p4est_build_ghost_layer (p4est, &ghost_layer);
+
+  p4est_array_reset (&ghost_layer);
 
   return is_balanced;
 }
