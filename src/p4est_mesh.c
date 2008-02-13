@@ -141,6 +141,8 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
     proc = p4est_array_index (q_procs, ctree);
     *proc = cproc;
   }
+
+  p4est_array_reset (&corner_info);
 }
 
 /** Get the smallest corner neighbor of \a q.
@@ -191,8 +193,8 @@ p4est_quadrant_get_half_corner_neighbors (p4est_quadrant_t * q, int corner,
     break;
   }
 
-  n0ur->x = n0->x - th;
-  n0ur->y = n0->y - th;
+  n0ur->x = n0->x + qh_2 - th;
+  n0ur->y = n0->y + qh_2 - th;
   n0ur->level = P4EST_MAXLEVEL;
 }
 
@@ -274,12 +276,12 @@ p4est_quadrant_get_half_face_neighbors (p4est_quadrant_t * q, int face,
     break;
   }
 
-  n0ur->x = n0->x - th;
-  n0ur->y = n0->y - th;
+  n0ur->x = n0->x + qh_2 - th;
+  n0ur->y = n0->y + qh_2 - th;
   n0ur->level = P4EST_MAXLEVEL;
 
-  n1ur->x = n1->x - th;
-  n1ur->y = n1->y - th;
+  n1ur->x = n1->x + qh_2 - th;
+  n1ur->y = n1->y + qh_2 - th;
   n1ur->level = P4EST_MAXLEVEL;
 }
 
@@ -302,10 +304,6 @@ p4est_add_ghost_to_buf (p4est_array_t * buf, p4est_locidx_t treeid,
   int                 add_to_proc = 1;
   p4est_quadrant_t   *qold, *qnew;
 
-  /* Cram the tree id into the user_data pointer */
-  P4EST_ASSERT (sizeof (long) >= sizeof (p4est_locidx_t));
-  q->user_data = (void *) (long) treeid;
-
   /* Check to see if the quadrant already exists in the array */
   if (buf->elem_count > 0) {
     qold = p4est_array_index (buf, buf->elem_count - 1);
@@ -318,6 +316,10 @@ p4est_add_ghost_to_buf (p4est_array_t * buf, p4est_locidx_t treeid,
     p4est_array_resize (buf, buf->elem_count + 1);
     qnew = p4est_array_index (buf, buf->elem_count - 1);
     *qnew = *q;
+
+    /* Cram the tree id into the user_data pointer */
+    P4EST_ASSERT (sizeof (long) >= sizeof (p4est_locidx_t));
+    qnew->user_data = (void *) (long) treeid;
   }
 }
 
@@ -355,6 +357,7 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
   p4est_locidx_t      num_quadrants;
   p4est_locidx_t      num_ghosts;
   p4est_locidx_t     *peer_counts;
+  p4est_locidx_t      count;
   p4est_locidx_t     *peer_offsets;
   p4est_array_t       send_bufs;
   p4est_array_t       procs, urprocs;
@@ -516,7 +519,8 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
     if (buf->elem_count > 0) {
       peer_proc = i;
       P4EST_DEBUGF ("ghost layer post count sent to %d\n", peer_proc);
-      mpiret = MPI_Isend (&buf->elem_count, 1, P4EST_MPI_LOCIDX, peer_proc,
+      count = (p4est_locidx_t) buf->elem_count;
+      mpiret = MPI_Isend (&count, 1, P4EST_MPI_LOCIDX, peer_proc,
                           P4EST_COMM_GHOST_COUNT, comm, send_request + peer);
       P4EST_CHECK_MPI (mpiret);
       ++peer;
@@ -524,8 +528,13 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
   }
 
   /* Wait for the counts */
-  mpiret = MPI_Waitall (peer_proc, recv_request, recv_status);
-  P4EST_CHECK_MPI (mpiret);
+  if (num_peers > 0) {
+    mpiret = MPI_Waitall (num_peers, recv_request, recv_status);
+    P4EST_CHECK_MPI (mpiret);
+
+    mpiret = MPI_Waitall (num_peers, send_request, send_status);
+    P4EST_CHECK_MPI (mpiret);
+  }
 
   /* Allocate space for the ghosts */
 
