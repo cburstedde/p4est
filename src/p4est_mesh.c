@@ -358,7 +358,7 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
   p4est_locidx_t      num_ghosts;
   p4est_locidx_t     *peer_counts;
   p4est_locidx_t      count;
-  p4est_locidx_t     *peer_offsets;
+  p4est_locidx_t      ghost_offset;
   p4est_array_t       send_bufs;
   p4est_array_t       procs, urprocs;
   p4est_array_t      *buf;
@@ -371,6 +371,8 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
   MPI_Comm            comm = p4est->mpicomm;
   MPI_Request        *recv_request, *send_request;
   MPI_Status         *recv_status, *send_status;
+  MPI_Request        *recv_load_request, *send_load_request;
+  MPI_Status         *recv_load_status, *send_load_status;
 
   P4EST_QUADRANT_INIT (&n0);
   P4EST_QUADRANT_INIT (&n0ur);
@@ -486,18 +488,24 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
       ++num_peers;
   }
 
-  recv_request = P4EST_ALLOC (MPI_Request, num_peers);
+  recv_request = P4EST_ALLOC (MPI_Request, 2 * num_peers);
   P4EST_CHECK_ALLOC (recv_request);
-  recv_status = P4EST_ALLOC (MPI_Status, num_peers);
+  recv_status = P4EST_ALLOC (MPI_Status, 2 * num_peers);
   P4EST_CHECK_ALLOC (recv_status);
 
-  send_request = P4EST_ALLOC (MPI_Request, num_peers);
+  send_request = P4EST_ALLOC (MPI_Request, 2 * num_peers);
   P4EST_CHECK_ALLOC (send_request);
-  send_status = P4EST_ALLOC (MPI_Status, num_peers);
+  send_status = P4EST_ALLOC (MPI_Status, 2 * num_peers);
   P4EST_CHECK_ALLOC (send_status);
 
   peer_counts = P4EST_ALLOC (p4est_locidx_t, num_peers);
   P4EST_CHECK_ALLOC (peer_counts);
+
+  recv_load_request = recv_request + num_peers;
+  recv_load_status = recv_status + num_peers;
+
+  send_load_request = send_request + num_peers;
+  send_load_status = send_status + num_peers;
 
   /* Post receives for the counts of ghosts to be received */
   for (i = 0, peer = 0; i < num_procs; ++i) {
@@ -518,7 +526,7 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
     buf = p4est_array_index (&send_bufs, i);
     if (buf->elem_count > 0) {
       peer_proc = i;
-      P4EST_DEBUGF ("ghost layer post count sent to %d\n", peer_proc);
+      P4EST_DEBUGF ("ghost layer post count send to %d\n", peer_proc);
       count = (p4est_locidx_t) buf->elem_count;
       mpiret = MPI_Isend (&count, 1, P4EST_MPI_LOCIDX, peer_proc,
                           P4EST_COMM_GHOST_COUNT, comm, send_request + peer);
@@ -536,15 +544,6 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
     P4EST_CHECK_MPI (mpiret);
   }
 
-  /* Allocate space for the ghosts */
-
-  /* Post receives for the ghosts */
-
-  /* Send the ghosts */
-
-  /* Clean up */
-  P4EST_FREE (peer_counts);
-
 #ifdef P4EST_HAVE_DEBUG
   for (i = 0; i < num_peers; ++i) {
     P4EST_ASSERT (recv_request[i] == MPI_REQUEST_NULL);
@@ -553,6 +552,75 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_array_t * ghost_layer)
     P4EST_ASSERT (send_request[i] == MPI_REQUEST_NULL);
   }
 #endif
+
+  /* Count Ghosts */
+  for (peer = 0, num_ghosts = 0; peer < num_peers; ++peer) {
+    P4EST_ASSERT (peer_counts[peer] > 0);
+    num_ghosts += peer_counts[peer];
+  }
+
+  /* Allocate space for the ghosts */
+  p4est_array_resize (ghost_layer, num_ghosts);
+
+  /* Post receives for the ghosts */
+  for (i = 0, peer = 0, ghost_offset = 0; i < num_procs; ++i) {
+    buf = p4est_array_index (&send_bufs, i);
+    if (buf->elem_count > 0) {
+      peer_proc = i;
+      P4EST_DEBUGF ("ghost layer post ghost receive %lld quadrants from %d\n",
+                    (long long) peer_counts[peer], peer_proc);
+      mpiret = MPI_Irecv (ghost_layer->array
+                          + ghost_offset * sizeof (p4est_quadrant_t),
+                          peer_counts[peer] * sizeof (p4est_quadrant_t),
+                          MPI_CHAR,
+                          peer_proc,
+                          P4EST_COMM_GHOST_LOAD,
+                          comm, recv_load_request + peer);
+      P4EST_CHECK_MPI (mpiret);
+      ghost_offset += peer_counts[peer];
+      ++peer;
+    }
+  }
+
+  /* Send the ghosts */
+  for (i = 0, peer = 0; i < num_procs; ++i) {
+    buf = p4est_array_index (&send_bufs, i);
+    if (buf->elem_count > 0) {
+      peer_proc = i;
+      count = (p4est_locidx_t) buf->elem_count;
+      P4EST_DEBUGF ("ghost layer post ghost send %lld quadrants to %d\n",
+                    (long long) count, peer_proc);
+      mpiret = MPI_Isend (&buf->array, count * sizeof (p4est_quadrant_t),
+                          MPI_CHAR,
+                          peer_proc,
+                          P4EST_COMM_GHOST_LOAD,
+                          comm, send_load_request + peer);
+      P4EST_CHECK_MPI (mpiret);
+      ++peer;
+    }
+  }
+
+  /* Wait for everything */
+  if (num_peers > 0) {
+    mpiret = MPI_Waitall (num_peers, recv_load_request, recv_load_status);
+    P4EST_CHECK_MPI (mpiret);
+
+    mpiret = MPI_Waitall (num_peers, send_load_request, send_load_status);
+    P4EST_CHECK_MPI (mpiret);
+  }
+
+  /* Clean up */
+  P4EST_FREE (peer_counts);
+
+#ifdef P4EST_HAVE_DEBUG
+  for (i = 0; i < num_peers; ++i) {
+    P4EST_ASSERT (recv_load_request[i] == MPI_REQUEST_NULL);
+  }
+  for (i = 0; i < num_peers; ++i) {
+    P4EST_ASSERT (send_load_request[i] == MPI_REQUEST_NULL);
+  }
+#endif
+
   P4EST_FREE (recv_request);
   P4EST_FREE (recv_status);
   P4EST_FREE (send_request);
