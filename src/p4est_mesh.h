@@ -25,6 +25,9 @@
 #include <p4est.h>
 
 /** Checks a p4est to see if it is balanced.
+ *
+ * \warning This function may abort if the forest is not balanced.
+ *
  * \param [in] p4est  The p4est to be tested.
  * \return Returns 1 if balanced, 0 otherwise.
  */
