@@ -33,7 +33,7 @@
 
 #include <p4est_base.h>          /* using p4est helper functions */
 #include <p4est_avl.h>           /* changed this include directive */
-#include <errno.h>
+/* #include <errno.h> */
 
 static void avl_rebalance(avl_tree_t *, avl_node_t *);
 
@@ -191,7 +191,7 @@ avl_tree_t *avl_init_tree(avl_tree_t *rc, avl_compare_t cmp, avl_freeitem_t free
 }
 
 avl_tree_t *avl_alloc_tree(avl_compare_t cmp, avl_freeitem_t freeitem) {
-	return avl_init_tree(malloc(sizeof(avl_tree_t)), cmp, freeitem);
+        return avl_init_tree(P4EST_ALLOC(avl_tree_t, 1), cmp, freeitem);
 }
 
 void avl_clear_tree(avl_tree_t *avltree) {
@@ -208,7 +208,7 @@ void avl_free_nodes(avl_tree_t *avltree) {
 		next = node->next;
 		if(freeitem)
 			freeitem(node->item);
-		free(node);
+		P4EST_FREE(node);
 	}
 
 	avl_clear_tree(avltree);
@@ -222,7 +222,7 @@ void avl_free_nodes(avl_tree_t *avltree) {
  */
 void avl_free_tree(avl_tree_t *avltree) {
 	avl_free_nodes(avltree);
-	free(avltree);
+	P4EST_FREE(avltree);
 }
 
 static void avl_clear_node(avl_node_t *newnode) {
@@ -326,14 +326,16 @@ avl_node_t *avl_insert_node(avl_tree_t *avltree, avl_node_t *newnode) {
 avl_node_t *avl_insert(avl_tree_t *avltree, void *item) {
 	avl_node_t *newnode;
 
-	newnode = avl_init_node(malloc(sizeof(avl_node_t)), item);
+	newnode = avl_init_node(P4EST_ALLOC(avl_node_t, 1), item);
 	if(newnode) {
 		if(avl_insert_node(avltree, newnode))
 			return newnode;
-		free(newnode);
-		errno = EEXIST;
+		P4EST_FREE(newnode);
+		/* errno = EEXIST; */
+                return NULL;
 	}
-	return NULL;
+	P4EST_ASSERT_NOT_REACHED ();
+        return NULL;
 }
 
 /*
@@ -403,7 +405,7 @@ void *avl_delete_node(avl_tree_t *avltree, avl_node_t *avlnode) {
 		avl_unlink_node(avltree, avlnode);
 		if(avltree->freeitem)
 			avltree->freeitem(item);
-		free(avlnode);
+		P4EST_FREE(avlnode);
 	}
 	return item;
 }
@@ -600,37 +602,54 @@ void avl_rebalance(avl_tree_t *avltree, avl_node_t *avlnode) {
 
 /* *INDENT-ON* */
 
-static size_t       avl_to_array_index = 0;
-static p4est_array_t *avl_to_array_array = NULL;
+typedef struct avl_to_array_data
+{
+  size_t              index;
+  p4est_array_t      *array;
+}
+avl_to_array_data_t;
+
+typedef struct avl_foreach_recursion
+{
+  avl_foreach_t       callback;
+  void               *data;
+}
+avl_foreach_recursion_t;
 
 static void
-avl_to_array_foreach (void *item)
+avl_to_array_foreach (void *item, void *data)
 {
   void              **pp;
+  avl_to_array_data_t *adata = data;
 
-  pp = p4est_array_index (avl_to_array_array, avl_to_array_index);
+  pp = p4est_array_index (adata->array, adata->index);
   *pp = item;
 
-  ++avl_to_array_index;
+  ++adata->index;
 }
 
 static void
-avl_foreach_recursion (avl_node_t * node, avl_foreach_t callback)
+avl_foreach_recursion (avl_node_t * node, avl_foreach_recursion_t * rec)
 {
   if (node->left != NULL)
-    avl_foreach_recursion (node->left, callback);
+    avl_foreach_recursion (node->left, rec);
 
-  callback (node->item);
+  rec->callback (node->item, rec->data);
 
   if (node->right != NULL)
-    avl_foreach_recursion (node->right, callback);
+    avl_foreach_recursion (node->right, rec);
 }
 
 void
-avl_foreach (avl_tree_t * avltree, avl_foreach_t callback)
+avl_foreach (avl_tree_t * avltree, avl_foreach_t callback, void *data)
 {
+  avl_foreach_recursion_t rec;
+
+  rec.callback = callback;
+  rec.data = data;
+
   if (avltree->top != NULL)
-    avl_foreach_recursion (avltree->top, callback);
+    avl_foreach_recursion (avltree->top, &rec);
 }
 
 #ifdef AVL_COUNT
@@ -638,15 +657,16 @@ avl_foreach (avl_tree_t * avltree, avl_foreach_t callback)
 void
 avl_to_array (avl_tree_t * avltree, p4est_array_t * array)
 {
+  avl_to_array_data_t adata;
+
   P4EST_ASSERT (array->elem_size == sizeof (void *));
 
   p4est_array_resize (array, avl_count (avltree));
 
-  avl_to_array_index = 0;
-  avl_to_array_array = array;
-  avl_foreach (avltree, avl_to_array_foreach);
-  P4EST_ASSERT (avl_to_array_index == avl_to_array_array->elem_count);
-  avl_to_array_array = NULL;
+  adata.index = 0;
+  adata.array = array;
+  avl_foreach (avltree, avl_to_array_foreach, &adata);
+  P4EST_ASSERT (adata.index == adata.array->elem_count);
 }
 
 #endif /* AVL_COUNT */

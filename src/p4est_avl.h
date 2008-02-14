@@ -61,7 +61,7 @@ typedef void (*avl_freeitem_t)(void *);
 
 /* User supplied function to call on an item in foreach().
  */
-typedef void (*avl_foreach_t)(void *);
+typedef void (*avl_foreach_t)(void *, void *);
 
 typedef struct avl_node_t {
 	struct avl_node_t *next;
@@ -94,7 +94,7 @@ extern avl_tree_t *avl_init_tree(avl_tree_t *avltree, avl_compare_t, avl_freeite
 
 /* Allocates and initializes a new tree for elements that will be
  * ordered using the supplied strcmp()-like function.
- * Returns NULL if memory could not be allocated.
+ * Aborts if memory could not be allocated.
  * O(1) */
 extern avl_tree_t *avl_alloc_tree(avl_compare_t, avl_freeitem_t);
 
@@ -118,8 +118,8 @@ extern void avl_free_nodes(avl_tree_t *);
 extern avl_node_t *avl_init_node(avl_node_t *avlnode, void *item);
 
 /* Insert an item into the tree and return the new node.
- * Returns NULL and sets errno if memory for the new node could not be
- * allocated or if the node is already in the tree (EEXIST).
+ * Aborts if memory for the new node could not be allocated.
+ * Returns NULL if the node is already in the tree, or the new node.
  * O(lg n) */
 extern avl_node_t *avl_insert(avl_tree_t *, void *item);
 
@@ -184,7 +184,7 @@ extern avl_node_t *avl_search(const avl_tree_t *, const void *item);
 
 /* Calls the callback function for every item in the tree in order.
  * O(n) */
-extern void avl_foreach(avl_tree_t *, avl_foreach_t);
+extern void avl_foreach(avl_tree_t *, avl_foreach_t, void *);
 
 #ifdef AVL_COUNT
 /* Returns the number of nodes in the tree.

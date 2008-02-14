@@ -61,3 +61,9 @@ np      level   crc             bal     rebal   part1   part2   strange
 4096	17
 5389	17	0x2c7b8a00	16.9s	11s	0.134s	0.363s
 6144	17	0x2c7b8a00	11.5s	11.2s	0.134s	0.306s
+
+ranger pgi openmpi --disable-resize-realloc
+p4est_timings star
+
+np	level   crc
+4096	17	0x5ba3cce5
