@@ -26,6 +26,17 @@
 
 #include <p4est_obstack.h>
 
+/** Function to compute a hash value of an object.
+ * \return Returns an unsigned integer.
+ */
+typedef unsigned    (*p4est_hash_function_t) (const void *v);
+
+/** Function to check equality of two objects.
+ * \return Returns 0 if *v1 is unequal *v2 and true otherwise.
+ */
+typedef int         (*p4est_equal_function_t) (const void *v1,
+                                               const void *v2);
+
 /** The p4est_array object provides a large array of equal-size elements.
  * The array can be resized.
  * Elements are accessed by their 0-based index, their address may change.
@@ -264,17 +275,6 @@ void               *p4est_list_remove (p4est_list_t * list,
  * \return Returns the data of the removed first list element.
  */
 void               *p4est_list_pop (p4est_list_t * list);
-
-/** Function to compute a hash value of an object.
- * \return Returns an unsigned integer.
- */
-typedef unsigned    (*p4est_hash_function_t) (const void *v);
-
-/** Function to check equality of two objects.
- * \return Returns 0 if *v1 is unequal *v2 and true otherwise.
- */
-typedef int         (*p4est_equal_function_t) (const void *v1,
-                                               const void *v2);
 
 /** The p4est_hash implements a hash table.
  * It uses an array which has linked lists as elements.

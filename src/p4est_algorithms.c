@@ -2000,6 +2000,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
     }
     p4est_array_reset (&outlist[l]);
   }
+#ifdef P4EST_HAVE_DEBUG
+  p4est_mempool_reset (list_alloc);
+#endif
   p4est_mempool_destroy (list_alloc);
 
   /* print more statistics */
