@@ -444,6 +444,7 @@ p4est_abort (void)
 
   fflush (stdout);
   fflush (stderr);
+  sleep (1);
 
   if (p4est_abort_handler != NULL) {
     p4est_abort_handler (p4est_abort_data);

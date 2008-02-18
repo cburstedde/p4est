@@ -1255,7 +1255,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
       total_send_count += qcount;
       qbytes = qcount * sizeof (p4est_quadrant_t);
-      mpiret = MPI_Isend (peer->send_first.array, qbytes, MPI_CHAR,
+      mpiret = MPI_Isend (peer->send_first.array, qbytes, MPI_BYTE,
                           j, P4EST_COMM_BALANCE_FIRST_LOAD,
                           p4est->mpicomm, &send_requests_first_load[j]);
       P4EST_CHECK_MPI (mpiret);
@@ -1320,7 +1320,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           p4est_array_resize (&peer->recv_both, qcount);
           total_recv_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
-          mpiret = MPI_Irecv (peer->recv_both.array, qbytes, MPI_CHAR,
+          mpiret = MPI_Irecv (peer->recv_both.array, qbytes, MPI_BYTE,
                               j, P4EST_COMM_BALANCE_FIRST_LOAD,
                               p4est->mpicomm, &requests_first[j]);
           P4EST_CHECK_MPI (mpiret);
@@ -1370,7 +1370,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
           total_send_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
-          mpiret = MPI_Isend (peer->send_second.array, qbytes, MPI_CHAR,
+          mpiret = MPI_Isend (peer->send_second.array, qbytes, MPI_BYTE,
                               j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &send_requests_second_load[j]);
           P4EST_CHECK_MPI (mpiret);
@@ -1425,7 +1425,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           total_recv_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
           mpiret = MPI_Irecv (peer->recv_both.array + obytes, qbytes,
-                              MPI_CHAR, j, P4EST_COMM_BALANCE_SECOND_LOAD,
+                              MPI_BYTE, j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &requests_second[j]);
           P4EST_CHECK_MPI (mpiret);
           ++recv_load[1];

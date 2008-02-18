@@ -52,7 +52,7 @@ echo "o----------------------------------"
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([ctype.h signal.h stdarg.h stddef.h stdint.h stdio.h stdlib.h])
-AC_CHECK_HEADERS([execinfo.h getopt.h arpa/inet.h netinet/in.h zlib.h])
+AC_CHECK_HEADERS([unistd.h execinfo.h getopt.h arpa/inet.h netinet/in.h zlib.h])
 
 # Checks for functions.
 AC_CHECK_FUNCS([backtrace backtrace_symbols])

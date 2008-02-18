@@ -100,6 +100,10 @@ typedef void        (*sig_t) (int);
 #include <string.h>
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 /** Typedef for quadrant coordinates */
 typedef int32_t     p4est_qcoord_t;
 #define P4EST_MPI_QCOORD MPI_INT

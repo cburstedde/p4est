@@ -1960,11 +1960,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   p4est_mempool_free (qpool, qalloc);
 
   /* merge outlist into input list and free temporary storage */
+  P4EST_DEBUGF ("Hash statistics for tree %d\n", which_tree);
   curcount = inlist->elem_count;
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
 #ifdef P4EST_HAVE_DEBUG
-    P4EST_DEBUGF ("Tree %d Level %d ", which_tree, l);
     p4est_hash_print_statistics (P4EST_LP_DEBUG, hash[l]);
 #endif /* P4EST_HAVE_DEBUG */
     p4est_hash_unlink_destroy (hash[l]);        /* performance optimization */
@@ -2323,7 +2323,7 @@ p4est_partition_given (p4est_t * p4est,
 #ifdef HAVE_MPI
       P4EST_DEBUGF ("partition recv %d quadrants from %d\n",
                     num_recv_from[from_proc], from_proc);
-      mpiret = MPI_Irecv (recv_buf[from_proc], recv_size, MPI_CHAR,
+      mpiret = MPI_Irecv (recv_buf[from_proc], recv_size, MPI_BYTE,
                           from_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, recv_request + sk);
       P4EST_CHECK_MPI (mpiret);
@@ -2484,7 +2484,7 @@ p4est_partition_given (p4est_t * p4est,
 #ifdef HAVE_MPI
       P4EST_DEBUGF ("partition send %d quadrants to %d\n",
                     num_send_to[to_proc], to_proc);
-      mpiret = MPI_Isend (send_buf[to_proc], send_size, MPI_CHAR,
+      mpiret = MPI_Isend (send_buf[to_proc], send_size, MPI_BYTE,
                           to_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, send_request + sk);
       P4EST_CHECK_MPI (mpiret);

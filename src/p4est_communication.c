@@ -92,9 +92,9 @@ p4est_comm_global_partition (p4est_t * p4est)
       input.x = quadrant->x;
       input.y = quadrant->y;
     }
-    mpiret = MPI_Allgather (&input, sizeof (p4est_position_t), MPI_CHAR,
+    mpiret = MPI_Allgather (&input, sizeof (p4est_position_t), MPI_BYTE,
                             p4est->global_first_position,
-                            sizeof (p4est_position_t), MPI_CHAR,
+                            sizeof (p4est_position_t), MPI_BYTE,
                             p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
 
