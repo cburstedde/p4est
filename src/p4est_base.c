@@ -243,47 +243,8 @@ struct p4est_log_appender
   struct LogAppender  appender;
   int                 identifier;
   FILE               *stream;
+  FILE               *backup;
 };
-
-static void
-p4est_log_append_null (struct LogAppender *this0, struct LogEvent *ev)
-{
-  P4EST_ASSERT (ev->priority >= 0 && ev->priority <= P4EST_LP_SILENT);
-}
-
-static void
-p4est_log_append (struct LogAppender *this0, struct LogEvent *ev)
-{
-  struct p4est_log_appender *this = (struct p4est_log_appender *) this0;
-  int                 identifier = this->identifier;
-  FILE               *stream = this->stream;
-  char                prefix[BUFSIZ];
-
-  P4EST_ASSERT (ev->priority >= 0 && ev->priority <= P4EST_LP_SILENT);
-
-  if (ev->priority == P4EST_LP_SILENT) {
-    return;
-  }
-
-  if (identifier >= 0) {
-    snprintf (prefix, BUFSIZ, "[%d] ", identifier);
-  }
-  else {
-    prefix[0] = '\0';
-  }
-
-  if (ev->priority <= P4EST_LP_TRACE) {
-    fprintf (stream, "%s%s:%d: ", prefix, ev->fileName, ev->lineNum);
-  }
-  else {
-    fputs (prefix, stream);
-  }
-  vfprintf (stream, ev->fmt, ev->ap);
-
-  if (ev->priority >= P4EST_LP_STATISTICS) {
-    fflush (stream);
-  }
-}
 
 static struct p4est_log_appender p4est_log_appender_global;
 static struct p4est_log_appender p4est_log_appender_rank;
@@ -301,6 +262,55 @@ struct LogCategory  p4est_log_category_rank = {
 };
 
 static void
+p4est_log_append_null (struct LogAppender *this0, struct LogEvent *ev)
+{
+  P4EST_ASSERT (ev->priority >= 0 && ev->priority <= P4EST_LP_SILENT);
+}
+
+static void
+p4est_log_append (struct LogAppender *this0, struct LogEvent *ev)
+{
+  struct p4est_log_appender *this = (struct p4est_log_appender *) this0;
+  int                 identifier = this->identifier;
+  FILE               *stream = this->stream;
+  char                prefix[BUFSIZ];
+  char                basenm[BUFSIZ];
+  char               *basept;
+  va_list             vacopy;
+
+  P4EST_ASSERT (ev->priority >= 0 && ev->priority <= P4EST_LP_SILENT);
+
+  if (ev->priority == P4EST_LP_SILENT) {
+    return;
+  }
+
+  if (identifier >= 0) {
+    snprintf (prefix, BUFSIZ, "[%d] ", identifier);
+  }
+  else {
+    prefix[0] = '\0';
+  }
+
+  if (this->backup != NULL) {
+    va_copy (vacopy, ev->ap);
+    snprintf (basenm, BUFSIZ, "%s", ev->fileName);
+    basept = basename (basenm);
+    fprintf (this->backup, "%s%s:%d: ", prefix, basept, ev->lineNum);
+    vfprintf (this->backup, ev->fmt, vacopy);
+    fflush (this->backup);
+    va_end (vacopy);
+  }
+
+  if (ev->priority <= P4EST_LP_TRACE) {
+    fprintf (stream, "%s%s:%d: ", prefix, ev->fileName, ev->lineNum);
+  }
+  else {
+    fputs (prefix, stream);
+  }
+  vfprintf (stream, ev->fmt, ev->ap);
+}
+
+static void
 p4est_set_linebuffered (FILE * stream)
 {
   setvbuf (stream, NULL, _IOLBF, 0);
@@ -309,24 +319,38 @@ p4est_set_linebuffered (FILE * stream)
 void
 p4est_init_logging (FILE * stream, int identifier)
 {
+#ifdef P4EST_HAVE_DEBUG
+  char                filename[BUFSIZ];
+#endif
+
   if (stream == stdout) {
     p4est_set_linebuffered (stream);
   }
   p4est_base_identifier = identifier;
 
+  p4est_log_appender_global.stream = stream;
+  p4est_log_appender_global.backup = NULL;
   if (identifier > 0) {
     p4est_log_appender_global.appender.doAppend = p4est_log_append_null;
   }
   else {
+#ifdef P4EST_HAVE_DEBUG
+    snprintf (filename, BUFSIZ, "p4est_log_global");
+    p4est_log_appender_global.backup = fopen (filename, "wb");
+#endif
     p4est_log_appender_global.appender.doAppend = p4est_log_append;
   }
-  p4est_log_appender_global.stream = stream;
   p4est_log_appender_global.identifier = -1;
   log_setAppender (&p4est_log_category_global,
                    (struct LogAppender *) &p4est_log_appender_global);
 
-  p4est_log_appender_rank.appender.doAppend = p4est_log_append;
   p4est_log_appender_rank.stream = stream;
+  p4est_log_appender_rank.backup = NULL;
+#ifdef P4EST_HAVE_DEBUG
+  snprintf (filename, BUFSIZ, "p4est_log_%d", P4EST_MAX (identifier, 0));
+  p4est_log_appender_rank.backup = fopen (filename, "wb");
+#endif
+  p4est_log_appender_rank.appender.doAppend = p4est_log_append;
   p4est_log_appender_rank.identifier = identifier;
   log_setAppender (&p4est_log_category_rank,
                    (struct LogAppender *) &p4est_log_appender_rank);
