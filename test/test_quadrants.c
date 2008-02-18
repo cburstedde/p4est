@@ -74,6 +74,26 @@ coarsen_all (p4est_t * p4est, int32_t which_tree,
   return 1;
 }
 
+static void
+check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
+{
+  int                 comp = p4est_quadrant_compare (q1, q2);
+  int                 level = P4EST_MIN (q1->level, q2->level);
+  uint64_t            id1 = p4est_quadrant_linear_id (q1, level);
+  uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
+
+  if (p4est_quadrant_is_ancestor (q1, q2)) {
+    P4EST_CHECK_ABORT (id1 == id2 && comp < 0, "Ancestor 1");
+  }
+  else if (p4est_quadrant_is_ancestor (q2, q1)) {
+    P4EST_CHECK_ABORT (id1 == id2 && comp > 0, "Ancestor 2");
+  }
+  else {
+    P4EST_CHECK_ABORT ((comp == 0 && id1 == id2) || (comp < 0 && id1 < id2)
+                       || (comp > 0 && id1 > id2), "compare");
+  }
+}
+
 int
 main (void)
 {
@@ -292,6 +312,8 @@ main (void)
   P4EST_QUADRANT_INIT (&E);
   P4EST_QUADRANT_INIT (&F);
   P4EST_QUADRANT_INIT (&G);
+  P4EST_QUADRANT_INIT (&H);
+  P4EST_QUADRANT_INIT (&I);
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
@@ -330,6 +352,56 @@ main (void)
   I.x = -1 << 30;
   I.y = -1 << 29;
   I.level = 1;
+
+  check_linear_id (&A, &A);
+  check_linear_id (&A, &B);
+  check_linear_id (&A, &C);
+  check_linear_id (&A, &D);
+  check_linear_id (&A, &E);
+  check_linear_id (&A, &F);
+  check_linear_id (&A, &G);
+  check_linear_id (&A, &H);
+  check_linear_id (&A, &I);
+
+  check_linear_id (&B, &A);
+  check_linear_id (&B, &B);
+  check_linear_id (&B, &C);
+  check_linear_id (&B, &D);
+  check_linear_id (&B, &E);
+  check_linear_id (&B, &F);
+  check_linear_id (&B, &G);
+  check_linear_id (&B, &H);
+  check_linear_id (&B, &I);
+
+  check_linear_id (&D, &A);
+  check_linear_id (&D, &B);
+  check_linear_id (&D, &C);
+  check_linear_id (&D, &D);
+  check_linear_id (&D, &E);
+  check_linear_id (&D, &F);
+  check_linear_id (&D, &G);
+  check_linear_id (&D, &H);
+  check_linear_id (&D, &I);
+
+  check_linear_id (&G, &A);
+  check_linear_id (&G, &B);
+  check_linear_id (&G, &C);
+  check_linear_id (&G, &D);
+  check_linear_id (&G, &E);
+  check_linear_id (&G, &F);
+  check_linear_id (&G, &G);
+  check_linear_id (&G, &H);
+  check_linear_id (&G, &I);
+
+  check_linear_id (&I, &A);
+  check_linear_id (&I, &B);
+  check_linear_id (&I, &C);
+  check_linear_id (&I, &D);
+  check_linear_id (&I, &E);
+  check_linear_id (&I, &F);
+  check_linear_id (&I, &G);
+  check_linear_id (&I, &H);
+  check_linear_id (&I, &I);
 
   P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended");
   P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended");
