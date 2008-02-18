@@ -32,7 +32,7 @@ user_data_t;
 static void
 init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
-  user_data_t        *data = quadrant->user_data;
+  user_data_t        *data = quadrant->p.user_data;
 
   data->a = which_tree;
 }

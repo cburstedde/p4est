@@ -34,6 +34,9 @@
 /* the offset of the highest quadrant at level l */
 #define P4EST_LAST_OFFSET(l) (P4EST_ROOT_LEN - P4EST_QUADRANT_LEN (l))
 
+/* a negative magic number for consistency checks */
+#define P4EST_NEG_MAGIC = -439623172;
+
 /* p4est_connectivity.h includes p4est_memory.h, p4est_types.h */
 #include <p4est_connectivity.h>
 
@@ -41,7 +44,17 @@ typedef struct p4est_quadrant
 {
   p4est_qcoord_t      x, y;
   int8_t              level;
-  void               *user_data;
+  union
+  {
+    void               *user_data;
+    struct
+    {
+      p4est_locidx_t      which_tree;
+      int                 owner_rank;
+    }
+    piggy;
+  }
+  p;
 }
 p4est_quadrant_t;
 

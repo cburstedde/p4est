@@ -36,7 +36,7 @@ static int          weight_index;
 static void
 init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
-  user_data_t        *data = quadrant->user_data;
+  user_data_t        *data = quadrant->p.user_data;
 
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;
@@ -152,7 +152,7 @@ main (int argc, char **argv)
     tree = p4est_array_index (p4est->trees, t);
     for (q = 0; q < tree->quadrants.elem_count; ++q) {
       quad = p4est_array_index (&tree->quadrants, q);
-      user_data = (user_data_t *) quad->user_data;
+      user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
       P4EST_CHECK_ABORT (user_data->a == t, "bad user_data, a");
@@ -196,7 +196,7 @@ main (int argc, char **argv)
     tree = p4est_array_index (copy->trees, t);
     for (q = 0; q < tree->quadrants.elem_count; ++q) {
       quad = p4est_array_index (&tree->quadrants, q);
-      user_data = (user_data_t *) quad->user_data;
+      user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
       P4EST_CHECK_ABORT (user_data->a == t, "bad user_data, a");

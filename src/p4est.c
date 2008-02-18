@@ -340,14 +340,14 @@ p4est_copy (p4est_t * input, int copy_data)
       for (k = 0; k < icount; ++k) {
         iq = p4est_array_index (iquadrants, k);
         pq = p4est_array_index (pquadrants, k);
-        pq->user_data = p4est_mempool_alloc (p4est->user_data_pool);
-        memcpy (pq->user_data, iq->user_data, p4est->data_size);
+        pq->p.user_data = p4est_mempool_alloc (p4est->user_data_pool);
+        memcpy (pq->p.user_data, iq->p.user_data, p4est->data_size);
       }
     }
     else {
       for (k = 0; k < icount; ++k) {
         pq = p4est_array_index (pquadrants, k);
-        pq->user_data = NULL;
+        pq->p.user_data = NULL;
       }
     }
   }
@@ -458,7 +458,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         p4est_array_resize (tquadrants, tquadrants->elem_count + 3);
 
         /* compute children and prepend them to the list */
-        if (qpop->user_data != key) {
+        if (qpop->p.user_data != key) {
           p4est_quadrant_free_data (p4est, qpop);
         }
         c0 = qpop;
@@ -466,10 +466,10 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         c2 = p4est_mempool_alloc (p4est->quadrant_pool);
         c3 = p4est_mempool_alloc (p4est->quadrant_pool);
         p4est_quadrant_children (qpop, c0, c1, c2, c3);
-        c0->user_data = key;
-        c1->user_data = key;
-        c2->user_data = key;
-        c3->user_data = key;
+        c0->p.user_data = key;
+        c1->p.user_data = key;
+        c2->p.user_data = key;
+        c3->p.user_data = key;
         p4est_list_prepend (list, c3);
         p4est_list_prepend (list, c2);
         p4est_list_prepend (list, c1);
@@ -490,7 +490,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         }
 
         /* store new quadrant and update counters */
-        if (qpop->user_data == key) {
+        if (qpop->p.user_data == key) {
           p4est_quadrant_init_data (p4est, j, qpop, init_fn);
         }
         q = p4est_array_index (tquadrants, current);
@@ -717,7 +717,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_array_t * peers,
         break;
       }
       s = p4est_array_index (&peer->send_first, pos);
-      if (p4est_quadrant_is_equal (s, q) && (long) s->user_data == qtree) {
+      if (p4est_quadrant_is_equal (s, q) && s->p.piggy.which_tree == qtree) {
         found = 1;
         break;
       }
@@ -731,7 +731,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_array_t * peers,
     p4est_array_resize (&peer->send_first, scount + 1);
     s = p4est_array_index (&peer->send_first, scount);
     *s = *q;
-    s->user_data = (void *) (long) qtree;       /* piggy back tree id */
+    s->p.piggy.which_tree = qtree;      /* piggy back tree id */
 
     /* update lowest and highest peer */
     *first_peer = P4EST_MIN (owner, *first_peer);
@@ -763,7 +763,7 @@ p4est_balance_response (p4est_t * p4est, int32_t peer_id,
   p4est_array_init (&tree_array, sizeof (int32_t));
   for (k = 0; k < qcount; ++k) {
     q = p4est_array_index (qarray, k);
-    qtree = (int32_t) (long) q->user_data;
+    qtree = q->p.piggy.which_tree;
     P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
     P4EST_ASSERT (qtree >= prev);
     if (qtree > prev) {
@@ -1492,7 +1492,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (k = 0; k < qcount; ++k) {
       s = p4est_array_index (qarray, k);
       P4EST_ASSERT (p4est_quadrant_is_extended (s));
-      qtree = (int32_t) (long) s->user_data;
+      qtree = s->p.piggy.which_tree;
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner quadrant from the second pass of balance */
         P4EST_ASSERT (k >= peer->first_count);

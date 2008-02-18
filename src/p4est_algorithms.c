@@ -92,15 +92,11 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 
-  /* expect non-negative information in user_data */
-  long                data_diff = (long) q1->user_data - (long) q2->user_data;
+  /* expect non-negative tree information */
+  const p4est_locidx_t diff = q1->p.piggy.which_tree - q2->p.piggy.which_tree;
 
-  if (data_diff != 0) {
-    return (int) data_diff;
-  }
-  else {
-    return p4est_quadrant_compare (v1, v2);
-  }
+  return (diff == 0) ?
+    p4est_quadrant_compare (v1, v2) : ((diff < 0) ? -1 : 1);
 }
 
 int
@@ -826,10 +822,10 @@ p4est_quadrant_init_data (p4est_t * p4est, p4est_locidx_t which_tree,
   P4EST_ASSERT (p4est_quadrant_is_extended (quad));
 
   if (p4est->data_size > 0) {
-    quad->user_data = p4est_mempool_alloc (p4est->user_data_pool);
+    quad->p.user_data = p4est_mempool_alloc (p4est->user_data_pool);
   }
   else {
-    quad->user_data = NULL;
+    quad->p.user_data = NULL;
   }
   if (init_fn != NULL && p4est_quadrant_is_inside (quad)) {
     init_fn (p4est, which_tree, quad);
@@ -842,9 +838,9 @@ p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
   P4EST_ASSERT (p4est_quadrant_is_extended (quad));
 
   if (p4est->data_size > 0) {
-    p4est_mempool_free (p4est->user_data_pool, quad->user_data);
+    p4est_mempool_free (p4est->user_data_pool, quad->p.user_data);
   }
-  quad->user_data = NULL;
+  quad->p.user_data = NULL;
 }
 
 void
@@ -1346,7 +1342,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_locidx_t qtree,
   /* loop over input list of quadrants */
   for (i = 0; i < incount; ++i) {
     inq = p4est_array_index (in, i);
-    if ((p4est_locidx_t) (long) inq->user_data != qtree) {
+    if (inq->p.piggy.which_tree != qtree) {
       continue;
     }
     inter_tree = 0;
@@ -1472,7 +1468,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_locidx_t qtree,
             outq->level = (int8_t) level;
             zcorner = p4est_corner_to_zorder[ci->ncorner];
             p4est_quadrant_corner (outq, zcorner, 0);
-            outq->user_data = (void *) (long) ci->ntree;
+            outq->p.piggy.which_tree = ci->ntree;
             ++outcount;
           }
         }
@@ -1491,7 +1487,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_locidx_t qtree,
               else {
                 *outq = *tq;
               }
-              outq->user_data = (void *) (long) ntree;
+              outq->p.piggy.which_tree = ntree;
               ++outcount;
             }
           }
@@ -1814,7 +1810,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   ph = 0;
   pid = -1;
   qalloc = p4est_mempool_alloc (qpool);
-  qalloc->user_data = key;
+  qalloc->p.user_data = key;
   for (l = inmaxl; l > 0; --l) {
     ocount = outlist[l].elem_count;     /* fix ocount here, it is growing */
     for (i = 0; i < incount + ocount; ++i) {
@@ -1929,7 +1925,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           /* qalloc is already included in output list, this catches most */
           ++count_already_outlist;
           qlookup = vlookup;
-          if (sid == 4 && qlookup->user_data == parent_key) {
+          if (sid == 4 && qlookup->p.user_data == parent_key) {
             break;              /* this parent has been triggered before */
           }
           continue;
@@ -1942,7 +1938,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
         }
         /* insert qalloc into the output list as well */
         if (sid == 4) {
-          qalloc->user_data = parent_key;
+          qalloc->p.user_data = parent_key;
         }
         inserted = p4est_hash_insert_unique (hash[qalloc->level], qalloc,
                                              NULL);
@@ -1953,7 +1949,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
         *qpointer = qalloc;
         /* we need a new quadrant now, the old one is stored away */
         qalloc = p4est_mempool_alloc (qpool);
-        qalloc->user_data = key;
+        qalloc->p.user_data = key;
       }
     }
   }
@@ -1977,8 +1973,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
       qpointer = p4est_array_index (&outlist[l], i);
       qalloc = *qpointer;
       P4EST_ASSERT (qalloc->level == l);
-      P4EST_ASSERT (qalloc->user_data == key ||
-                    qalloc->user_data == parent_key);
+      P4EST_ASSERT (qalloc->p.user_data == key ||
+                    qalloc->p.user_data == parent_key);
       if (p4est_quadrant_is_inside (qalloc)) {
         /* copy temporary quadrant into final tree */
         p4est_array_resize (inlist, curcount + 1);
@@ -2468,8 +2464,8 @@ p4est_partition_given (p4est_t * p4est,
                         (long long) tree_from_end, which_tree, to_proc);
           for (i = 0; i < num_copy; ++i) {
             memcpy (user_data_send_buf + i * data_size,
-                    quad_send_buf[i].user_data, data_size);
-            quad_send_buf[i].user_data = NULL;
+                    quad_send_buf[i].p.user_data, data_size);
+            quad_send_buf[i].p.user_data = NULL;
 
           }
 
@@ -2705,12 +2701,12 @@ p4est_partition_given (p4est_t * p4est,
                                       [from_tree]);
 
             if (data_size > 0) {
-              quad->user_data = p4est_mempool_alloc (p4est->user_data_pool);
-              memcpy (quad->user_data, user_data_recv_buf + j * data_size,
+              quad->p.user_data = p4est_mempool_alloc (p4est->user_data_pool);
+              memcpy (quad->p.user_data, user_data_recv_buf + j * data_size,
                       data_size);
             }
             else {
-              quad->user_data = NULL;
+              quad->p.user_data = NULL;
             }
           }
         }

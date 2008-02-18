@@ -37,7 +37,7 @@ static int          refine_level = 6;
 static void
 init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 {
-  user_data_t        *data = quadrant->user_data;
+  user_data_t        *data = quadrant->p.user_data;
 
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;

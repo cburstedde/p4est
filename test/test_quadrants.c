@@ -347,8 +347,8 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_compare (&G, &F) > 0, "compare");
   P4EST_CHECK_ABORT (p4est_quadrant_compare (&F, &G) < 0, "compare");
 
-  A.user_data = NULL;
-  B.user_data = NULL;
+  A.p.piggy.which_tree = 0;
+  B.p.piggy.which_tree = 0;
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &A) == 0,
                      "compare_piggy");
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &B) > 0,
@@ -356,8 +356,8 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&B, &A) < 0,
                      "compare_piggy");
 
-  F.user_data = NULL;
-  G.user_data = NULL;
+  F.p.piggy.which_tree = 0;
+  G.p.piggy.which_tree = 0;
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
                      "compare_piggy");
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0,
@@ -365,8 +365,8 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0,
                      "compare_piggy");
 
-  F.user_data = (void *) 89134529;
-  G.user_data = (void *) 2341333;
+  F.p.piggy.which_tree = 89134529;
+  G.p.piggy.which_tree = 2341333;
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
                      "compare_piggy");
   P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) < 0,

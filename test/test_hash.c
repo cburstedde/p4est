@@ -66,9 +66,9 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton (&q1, 3, 15);
   p4est_quadrant_set_morton (&q2, 3, 18);
   p4est_quadrant_set_morton (&q3, 3, 18);
-  q1.user_data = NULL;
-  q2.user_data = (void *) 5;
-  q3.user_data = NULL;
+  q1.p.piggy.owner_rank = 0;
+  q2.p.piggy.owner_rank = 5;
+  q3.p.piggy.owner_rank = 0;
 
   f1 = f2 = f3 = NULL;
   i1 = p4est_hash_insert_unique (qhash, &q1, &v1);
@@ -82,7 +82,7 @@ main (int argc, char **argv)
 
   P4EST_CHECK_ABORT (i1 + i2 + i3 == qhash->elem_count, "Quadrant hash");
   P4EST_CHECK_ABORT (f3 == &q2
-                     && f3->user_data == (void *) 5, "Insert return");
+                     && f3->p.piggy.owner_rank == 5, "Insert return");
 
   f1 = f2 = f3 = NULL;
   p4est_quadrant_set_morton (&q1, 3, 19);
@@ -94,7 +94,7 @@ main (int argc, char **argv)
           i1, i2, i3, (unsigned long) qhash->elem_count);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
   P4EST_CHECK_ABORT (f3 == &q2
-                     && f3->user_data == (void *) 5, "Lookup return");
+                     && f3->p.piggy.owner_rank == 5, "Lookup return");
 
   f1 = f2 = f3 = NULL;
   i1 = p4est_hash_remove (qhash, &q1, &v1);
@@ -104,7 +104,7 @@ main (int argc, char **argv)
   i3 = p4est_hash_remove (qhash, &q3, NULL);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
   P4EST_CHECK_ABORT (f2 == &q2
-                     && f2->user_data == (void *) 5, "Remove return");
+                     && f2->p.piggy.owner_rank == 5, "Remove return");
   f2 = f1;
 
   p4est_hash_destroy (qhash);

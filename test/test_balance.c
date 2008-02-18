@@ -56,7 +56,7 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton (q, 1, 3);
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
     q = p4est_array_index (&tree->quadrants, k);
-    q->user_data = p4est_mempool_alloc (p4est->user_data_pool);
+    q->p.user_data = p4est_mempool_alloc (p4est->user_data_pool);
     ++tree->quadrants_per_level[q->level];
     tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
   }
@@ -66,7 +66,7 @@ main (int argc, char **argv)
   p4est_tree_print (P4EST_LP_INFO, tree);
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
     q = p4est_array_index (&tree->quadrants, k);
-    p4est_mempool_free (p4est->user_data_pool, q->user_data);
+    p4est_mempool_free (p4est->user_data_pool, q->p.user_data);
   }
   p4est_array_reset (&tree->quadrants);
 
