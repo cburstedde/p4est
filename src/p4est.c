@@ -1311,6 +1311,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       jstatus = &recv_statuses[i];
       wait_indices[i] = -1;
       P4EST_ASSERT (0 <= j && j < num_procs);
+      P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
 #ifdef P4EST_HAVE_DEBUG
       if (jstatus->MPI_ERROR != MPI_SUCCESS) {
         P4EST_PRODUCTIONF ("Waitsome A failed for %d %d with e %d s %d t %d",
@@ -1339,7 +1340,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           p4est_array_resize (&peer->recv_both, qcount);
           total_recv_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
-          requests_first[j] = MPI_REQUEST_NULL;
+          P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
           mpiret = MPI_Irecv (peer->recv_both.array, qbytes, MPI_BYTE,
                               j, P4EST_COMM_BALANCE_FIRST_LOAD,
                               p4est->mpicomm, &requests_first[j]);
@@ -1348,7 +1349,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
         else {
           /* will not receive load, close this request */
-          requests_first[j] = MPI_REQUEST_NULL;
+          P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
           --request_first_count;
           ++recv_zero[0];
         }
@@ -1364,7 +1365,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
         /* received load, close this request */
         peer->have_first_load = 1;
-        requests_first[j] = MPI_REQUEST_NULL;
+        P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
         --request_first_count;
 
 #ifdef P4EST_HAVE_DEBUG
@@ -1406,6 +1407,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       }
     }
   }
+#ifdef P4EST_HAVE_DEBUG
+  for (j = 0; j < num_procs; ++j) {
+    P4EST_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
+  }
+#endif /* P4EST_HAVE_DEBUG */
 #endif /* HAVE_MPI */
 
   /* simulate send and receive with myself across tree boundaries */
@@ -1436,6 +1442,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       jstatus = &recv_statuses[i];
       wait_indices[i] = -1;
       P4EST_ASSERT (0 <= j && j < num_procs);
+      P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
 #ifdef P4EST_HAVE_DEBUG
       if (jstatus->MPI_ERROR != MPI_SUCCESS) {
         P4EST_PRODUCTIONF ("Waitsome B failed for %d %d with e %d s %d t %d",
@@ -1466,7 +1473,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           p4est_array_resize (&peer->recv_both, offset + qcount);
           total_recv_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
-          requests_second[j] = MPI_REQUEST_NULL;
+          P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
           mpiret = MPI_Irecv (peer->recv_both.array + obytes, qbytes,
                               MPI_BYTE, j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &requests_second[j]);
@@ -1475,7 +1482,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
         else {
           /* will not receive load, close this request */
-          requests_second[j] = MPI_REQUEST_NULL;
+          P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
           --request_second_count;
           ++recv_zero[1];
         }
@@ -1491,7 +1498,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
         /* received load, close this request */
         peer->have_second_load = 1;
-        requests_second[j] = MPI_REQUEST_NULL;
+        P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
         --request_second_count;
 
 #ifdef P4EST_HAVE_DEBUG
@@ -1502,6 +1509,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       }
     }
   }
+#ifdef P4EST_HAVE_DEBUG
+  for (j = 0; j < num_procs; ++j) {
+    P4EST_CHECK_ABORT (requests_second[j] == MPI_REQUEST_NULL, "Request B");
+  }
+#endif /* P4EST_HAVE_DEBUG */
 
   /* print buffer statistics */
   P4EST_VERBOSEF ("first send Z %d L %d recv Z %d L %d\n",
