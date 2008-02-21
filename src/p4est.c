@@ -809,7 +809,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int32_t             qtree;
   p4est_qcoord_t      qh;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
-  int32_t             treecount, qcount, qbytes, offset, obytes;
+  int32_t             treecount, qcount, qbytes, offset, obytes, rcount;
   int32_t             first_tree, last_tree, next_tree;
   int32_t             first_peer, last_peer;
   int32_t             over_peer_count;
@@ -1324,6 +1324,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       peer = p4est_array_index (peers, j);
       P4EST_ASSERT (!peer->have_first_load);
       if (!peer->have_first_count) {
+        /* verify message size */
+        mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
+        P4EST_CHECK_MPI (mpiret);
+        P4EST_CHECK_ABORT (rcount == 1, "Receive count mismatch A");
+
+        /* process the count information received */
         peer->have_first_count = 1;
         qcount = peer->first_count;
         if (qcount > 0) {
@@ -1348,8 +1354,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
       }
       else {
-        /* received load, close this request */
+        /* verify received size */
         P4EST_ASSERT (peer->first_count > 0);
+        mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
+        P4EST_CHECK_MPI (mpiret);
+        P4EST_CHECK_ABORT (rcount ==
+                           peer->first_count * sizeof (p4est_quadrant_t),
+                           "Receive load mismatch A");
+
+        /* received load, close this request */
         peer->have_first_load = 1;
         requests_first[j] = MPI_REQUEST_NULL;
         --request_first_count;
@@ -1436,6 +1449,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       peer = p4est_array_index (peers, j);
       P4EST_ASSERT (!peer->have_second_load);
       if (!peer->have_second_count) {
+        /* verify message size */
+        mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
+        P4EST_CHECK_MPI (mpiret);
+        P4EST_CHECK_ABORT (rcount == 1, "Receive count mismatch B");
+
+        /* process the count information received */
         peer->have_second_count = 1;
         qcount = peer->second_count;
         if (qcount > 0) {
@@ -1462,8 +1481,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
       }
       else {
-        /* received load, close this request */
+        /* verify received size */
         P4EST_ASSERT (peer->second_count > 0);
+        mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
+        P4EST_CHECK_MPI (mpiret);
+        P4EST_CHECK_ABORT (rcount ==
+                           peer->second_count * sizeof (p4est_quadrant_t),
+                           "Receive load mismatch B");
+
+        /* received load, close this request */
         peer->have_second_load = 1;
         requests_second[j] = MPI_REQUEST_NULL;
         --request_second_count;
