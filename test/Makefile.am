@@ -1,6 +1,9 @@
 
 ## Makefile.am in test
 
+noinst_PROGRAMS = \
+	p4est_bug_wp
+
 check_PROGRAMS = \
 	p4est_test_comm p4est_test_pqueue p4est_test_hash \
 	p4est_test_file p4est_test_quadrants p4est_test_balance \
@@ -14,6 +17,8 @@ p4est_test_quadrants_SOURCES = test_quadrants.c
 p4est_test_balance_SOURCES = test_balance.c
 p4est_test_partition_SOURCES = test_partition.c
 p4est_test_order_SOURCES = test_order.c
+
+p4est_bug_wp_SOURCES = bug_weighted_partition.c
 
 TESTS = \
 	p4est_test_comm p4est_test_pqueue p4est_test_hash \

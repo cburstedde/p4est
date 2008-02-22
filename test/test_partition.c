@@ -79,17 +79,17 @@ int
 main (int argc, char **argv)
 {
   int                 rank = 0;
+  int                 num_procs;
 #ifdef HAVE_MPI
   int                 mpiret;
 #endif
   MPI_Comm            mpicomm;
   p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
-  int32_t             num_procs;
-  int32_t             i;
+  int                 i;
+  int                 t, q;
   int32_t             num_quadrants_on_last;
   int32_t            *num_quadrants_in_proc;
-  int                 t, q;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
   user_data_t        *user_data;

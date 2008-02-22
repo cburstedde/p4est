@@ -321,6 +321,11 @@ p4est_init_logging (FILE * stream, int identifier)
 {
 #ifdef P4EST_HAVE_DEBUG
   char                filename[BUFSIZ];
+  char               *job_id;
+  char               *job_name;
+
+  job_id = getenv ("JOB_ID");
+  job_name = getenv ("JOB_NAME");
 #endif
 
   if (stream == stdout) {
@@ -335,7 +340,12 @@ p4est_init_logging (FILE * stream, int identifier)
   }
   else {
 #ifdef P4EST_HAVE_DEBUG
-    snprintf (filename, BUFSIZ, "p4est_log_global");
+    if (job_id != NULL && job_name != NULL) {
+      snprintf (filename, BUFSIZ, "%s.%s_global", job_name, job_id);
+    }
+    else {
+      snprintf (filename, BUFSIZ, "p4est.log_global");
+    }
     p4est_log_appender_global.backup = fopen (filename, "wb");
 #endif
     p4est_log_appender_global.appender.doAppend = p4est_log_append;
@@ -347,7 +357,13 @@ p4est_init_logging (FILE * stream, int identifier)
   p4est_log_appender_rank.stream = stream;
   p4est_log_appender_rank.backup = NULL;
 #ifdef P4EST_HAVE_DEBUG
-  snprintf (filename, BUFSIZ, "p4est_log_%d", P4EST_MAX (identifier, 0));
+  if (job_id != NULL && job_name != NULL) {
+    snprintf (filename, BUFSIZ, "%s.%s_%d",
+              job_name, job_id, P4EST_MAX (identifier, 0));
+  }
+  else {
+    snprintf (filename, BUFSIZ, "p4est.log_%d", P4EST_MAX (identifier, 0));
+  }
   p4est_log_appender_rank.backup = fopen (filename, "wb");
 #endif
   p4est_log_appender_rank.appender.doAppend = p4est_log_append;
