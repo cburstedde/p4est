@@ -32,7 +32,8 @@ typedef struct
 {
   int8_t              have_first_count, have_first_load;
   int8_t              have_second_count, have_second_load;
-  int32_t             first_count, second_count;
+  int                 recv_first_count, recv_second_count;
+  int                 send_first_count, send_second_count;
   p4est_array_t       send_first, send_second, recv_both;
 }
 p4est_balance_peer_t;
@@ -755,7 +756,7 @@ p4est_balance_response (p4est_t * p4est, int32_t peer_id,
 
   qarray = &peer->recv_both;
   qcount = qarray->elem_count;
-  P4EST_ASSERT (peer->first_count == qcount);
+  P4EST_ASSERT (peer->recv_first_count == qcount);
 
   /* build list of received tree ids */
   prev = -1;
@@ -906,7 +907,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     p4est_array_init (&peer->send_first, sizeof (p4est_quadrant_t));
     p4est_array_init (&peer->send_second, sizeof (p4est_quadrant_t));
     p4est_array_init (&peer->recv_both, sizeof (p4est_quadrant_t));
-    peer->first_count = peer->second_count = 0;
+    peer->send_first_count = peer->send_second_count = 0;
+    peer->recv_first_count = peer->recv_second_count = 0;
     peer->have_first_count = peer->have_first_load = 0;
     peer->have_second_count = peer->have_second_load = 0;
   }
@@ -1242,7 +1244,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     else {
       ++send_zero[0];
     }
-    mpiret = MPI_Isend (&qcount, 1, MPI_INT,
+    peer->send_first_count = qcount;
+    mpiret = MPI_Isend (&peer->send_first_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
                         p4est->mpicomm, &send_requests_first_count[j]);
     P4EST_CHECK_MPI (mpiret);
@@ -1264,7 +1267,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                           p4est->mpicomm, &send_requests_first_load[j]);
       P4EST_CHECK_MPI (mpiret);
       ++request_send_count;
-      mpiret = MPI_Irecv (&peer->second_count, 1, MPI_INT,
+      mpiret = MPI_Irecv (&peer->recv_second_count, 1, MPI_INT,
                           j, P4EST_COMM_BALANCE_SECOND_COUNT,
                           p4est->mpicomm, &requests_second[j]);
       P4EST_CHECK_MPI (mpiret);
@@ -1292,7 +1295,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     ++request_first_count;
 
     /* processor j is sending to me */
-    mpiret = MPI_Irecv (&peer->first_count, 1, MPI_INT,
+    mpiret = MPI_Irecv (&peer->recv_first_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
                         p4est->mpicomm, &requests_first[j]);
     P4EST_CHECK_MPI (mpiret);
@@ -1327,7 +1330,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
         /* process the count information received */
         peer->have_first_count = 1;
-        qcount = peer->first_count;
+        qcount = peer->recv_first_count;
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
           P4EST_DEBUGF ("Balance A recv %d quadrants from %d\n", qcount, j);
@@ -1344,6 +1347,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
         else {
           /* will not receive load, close this request */
+          P4EST_ASSERT (qcount == 0);
           P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
           --request_first_count;
           ++recv_zero[0];
@@ -1352,13 +1356,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       else {
         /* verify received size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_LOAD);
-        P4EST_ASSERT (peer->first_count > 0);
+        P4EST_ASSERT (peer->recv_first_count > 0);
         mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
         P4EST_CHECK_MPI (mpiret);
         P4EST_CHECK_ABORTF (rcount ==
-                            peer->first_count * sizeof (p4est_quadrant_t),
+                            peer->recv_first_count *
+                            sizeof (p4est_quadrant_t),
                             "Receive load mismatch A %d %dx%d", rcount,
-                            peer->first_count, sizeof (p4est_quadrant_t));
+                            peer->recv_first_count,
+                            sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_first_load = 1;
@@ -1380,7 +1386,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         else {
           ++send_zero[1];
         }
-        mpiret = MPI_Isend (&qcount, 1, MPI_INT,
+        peer->send_second_count = qcount;
+        mpiret = MPI_Isend (&peer->send_second_count, 1, MPI_INT,
                             j, P4EST_COMM_BALANCE_SECOND_COUNT,
                             p4est->mpicomm, &send_requests_second_count[j]);
         P4EST_CHECK_MPI (mpiret);
@@ -1414,13 +1421,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* simulate send and receive with myself across tree boundaries */
   peer = p4est_array_index (peers, rank);
   p4est_array_sort (&peer->send_first, p4est_quadrant_compare_piggy);
-  offset = peer->first_count = peer->send_first.elem_count;
+  offset = peer->send_first.elem_count;
+  peer->recv_first_count = peer->send_first_count = offset;
   obytes = offset * sizeof (p4est_quadrant_t);
   qarray = &peer->recv_both;
   p4est_array_resize (qarray, offset);
   memcpy (qarray->array, peer->send_first.array, obytes);
   p4est_balance_response (p4est, rank, peer);
-  qcount = peer->second_count = peer->send_second.elem_count;
+  qcount = peer->send_second.elem_count;
+  peer->recv_second_count = peer->send_second_count = qcount;
   qbytes = qcount * sizeof (p4est_quadrant_t);
   p4est_array_resize (qarray, offset + qcount);
   memcpy (qarray->array + obytes, peer->send_second.array, qbytes);
@@ -1455,12 +1464,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
         /* process the count information received */
         peer->have_second_count = 1;
-        qcount = peer->second_count;
+        qcount = peer->recv_second_count;
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
           P4EST_DEBUGF ("Balance B recv %d quadrants from %d\n", qcount, j);
           offset = peer->recv_both.elem_count;
-          P4EST_ASSERT (offset == peer->first_count);
+          P4EST_ASSERT (offset == peer->recv_first_count);
           obytes = offset * sizeof (p4est_quadrant_t);
           p4est_array_resize (&peer->recv_both, offset + qcount);
           total_recv_count += qcount;
@@ -1474,6 +1483,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         }
         else {
           /* will not receive load, close this request */
+          P4EST_ASSERT (qcount == 0);
           P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
           --request_second_count;
           ++recv_zero[1];
@@ -1482,13 +1492,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       else {
         /* verify received size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_LOAD);
-        P4EST_ASSERT (peer->second_count > 0);
+        P4EST_ASSERT (peer->recv_second_count > 0);
         mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
         P4EST_CHECK_MPI (mpiret);
         P4EST_CHECK_ABORTF (rcount ==
-                            peer->second_count * sizeof (p4est_quadrant_t),
+                            peer->recv_second_count *
+                            sizeof (p4est_quadrant_t),
                             "Receive load mismatch B %d %dx%d", rcount,
-                            peer->second_count, sizeof (p4est_quadrant_t));
+                            peer->recv_second_count,
+                            sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_second_load = 1;
@@ -1497,7 +1509,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
 #ifdef P4EST_HAVE_DEBUG
         checksum = p4est_quadrant_checksum (&peer->recv_both, &checkarray,
-                                            peer->first_count);
+                                            peer->recv_first_count);
         P4EST_DEBUGF ("Balance B recv checksum %x from %d\n", checksum, j);
 #endif /* P4EST_HAVE_DEBUG */
       }
@@ -1517,13 +1529,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_INFOF ("total send %d recv %d\n", total_send_count, total_recv_count);
   for (j = 0; j < num_procs; ++j) {
     peer = p4est_array_index (peers, j);
-    if (peer->send_first.elem_count > 0 || peer->first_count > 0 ||
-        peer->send_second.elem_count > 0 || peer->second_count > 0) {
+    if (peer->send_first.elem_count > 0 || peer->recv_first_count > 0 ||
+        peer->send_second.elem_count > 0 || peer->recv_second_count > 0) {
       P4EST_VERBOSEF ("peer %d first S %lu R %d second S %lu R %d\n",
                       j, (unsigned long) peer->send_first.elem_count,
-                      peer->first_count,
+                      peer->recv_first_count,
                       (unsigned long) peer->send_second.elem_count,
-                      peer->second_count);
+                      peer->recv_second_count);
     }
   }
   if (number_peer_windows == 1) {
@@ -1539,7 +1551,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     peer = p4est_array_index (peers, j);
     qarray = &peer->recv_both;
     qcount = qarray->elem_count;
-    P4EST_ASSERT (qcount == peer->first_count + peer->second_count);
+    P4EST_ASSERT (qcount == peer->recv_first_count + peer->recv_second_count);
+    P4EST_ASSERT (peer->send_first_count == peer->send_first.elem_count);
+    P4EST_ASSERT (peer->send_second_count == peer->send_second.elem_count);
     if (qcount == 0) {
       continue;
     }
@@ -1551,7 +1565,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       qtree = s->p.piggy.which_tree;
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner quadrant from the second pass of balance */
-        P4EST_ASSERT (k >= peer->first_count);
+        P4EST_ASSERT (k >= peer->recv_first_count);
         P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
         P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
                       (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
