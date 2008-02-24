@@ -1,4 +1,6 @@
-lonestar intel mvapich no debug 278aefd55642d32305d9c6b4f6c0a0faf0502db5
+All scalings are without --enable-debug unless specified otherwise.
+
+lonestar intel mvapich 278aefd55642d32305d9c6b4f6c0a0faf0502db5
 p4est_timings
 
 np	level	crc		bal	rebal
@@ -14,7 +16,7 @@ np	level	crc		bal	rebal
 208	15	0x9e7da646	10.2s	9.44s
 832	16	0xc0a91859	13s	11.5s
 
-ranger pgi openmpi no debug 42f3eac859d71ab047a8e1da2b409187115f372e
+ranger pgi openmpi 42f3eac859d71ab047a8e1da2b409187115f372e
 p4est_timings
 
 np	level	crc		bal	rebal
@@ -32,7 +34,7 @@ np	level	crc		bal	rebal
 832	16	0xc0a91859	15.7s	12.7s
 3328	17
 
-lonestar intel mvapich no debug 2d03e1eb0fe3b3fa12a15c0e37ba2a902ef3ff12
+lonestar intel mvapich 2d03e1eb0fe3b3fa12a15c0e37ba2a902ef3ff12
 p4est_timings star
 
 np      level   crc		bal	rebal
@@ -43,7 +45,7 @@ np      level   crc		bal	rebal
 256	14	0xc5a57be2	13.2s	12.5s
 1024	15	0x63801485	16s	15s
 
-ranger pgi openmpi no debug b31dc830916870e174b25c6efff4dc1ffd547fa8
+ranger pgi openmpi b31dc830916870e174b25c6efff4dc1ffd547fa8
 p4est_timings unit
 
 np      level   crc             bal     rebal   part1   part2   strange
@@ -62,8 +64,42 @@ np      level   crc             bal     rebal   part1   part2   strange
 5389	17	0x2c7b8a00	16.9s	11s	0.134s	0.363s
 6144	17	0x2c7b8a00	11.5s	11.2s	0.134s	0.306s
 
-ranger pgi openmpi --disable-resize-realloc
-p4est_timings star
+ranger pgi mvapich2
+e5daddfa1ebfc17f60024290f414e12fc9bc846c --disable-resize-realloc
+p4est_timings star (6 trees)
 
-np	level   crc
-4096	17	0x5ba3cce5
+np	level   crc		quadrants	bal	rebal	repart
+1	10	0x61c1405a	1130460		8.27s	7.44s	<1s
+4	11	0xb1a0c369	4521948		14.2s	13.3s	<1s
+16	12	0xf02927bf	18087900	15.8s	14.9s	<1s
+64	13	0xc86c74d9	72351708	16.2s	15.3s	<1s
+256	14	0xc5a57be2	289406940	16.5s	15.5s	<1s
+1024	15	0x63801485	1157627868	19.3s	16.1s	<1s
+4096	16	0x5ba3cce5	4630511580	20.5s	16.6s	<1s
+8192	16	0x5ba3cce5	4630511580	12.1s	8.11s	<1s
+6144	17	0xf111861a	18522046428	51.6s	46.7s	1.73s
+12288	17	0xf111861a	18522046428	25.5s	24.4s	<1s
+12000	18	0x946cbb40	74088185820	107s	102s	3.51s
+12288	18	0x946cbb40	74088185820	108s	106s	6.89s
+
+ranger pgi mvapich1-devel
+e5daddfa1ebfc17f60024290f414e12fc9bc846c --disable-resize-realloc
+p4est_timings star (6 trees)
+
+np	level   crc		quadrants	bal	rebal	repart
+1	10	0x61c1405a	1130460		8.26s	7.32s	<1s
+4	11	0xb1a0c369	4521948		14.2s	13.1s	<1s
+16	12	0xf02927bf	18087900	15.9s	14.9s	<1s
+64	13	0xc86c74d9	72351708	16.2s	15.2s	<1s
+256	14	0xc5a57be2	289406940	16.5s	15.4s	<1s
+1024	15	0x63801485	1157627868	18.8s	16s	<1s
+4096	16	0x5ba3cce5	4630511580	22.2s	16.2s	<1s
+8192	16	0x5ba3cce5	4630511580	10.7s	7.9s	<1s
+6144	17	0xf111861a	18522046428	68.3s	113s	1.7s	(slow!)
+8192	17	0xf111861a	18522046428	47.8s	36.8s	1.63s
+12288	17	0xf111861a	18522046428	96.5s	68.2s	19.9s	(slow!)
+12288	17	0xf111861a	18522046428	116s	104s	51s	(slow!)
+16384	17	0xf111861a	18522046428	62.8s	33.1s	<1s	(slow!)
+12000	18	0x946cbb40	74088185820	240s	191s	21.7s	(slow!)
+12288	18	0x946cbb40	74088185820	174s	147s	33.1s	(slow!)
+16384	18	0x946cbb40	74088185820	110s	95s	1.75s
