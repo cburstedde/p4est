@@ -50,6 +50,14 @@
       p4est_abort ();                              \
     }                                              \
   } while (0)
+#define P4EST_CHECK_ABORTF(c,fmt,...)                   \
+  do {                                                  \
+    if (!(c)) {                                         \
+      fprintf (stderr, "Abort: " fmt "\n   in %s:%d\n", \
+               __VA_ARGS__, __FILE__, __LINE__);        \
+      p4est_abort ();                                   \
+    }                                                   \
+  } while (0)
 #define P4EST_CHECK_ALLOC(p) P4EST_CHECK_ABORT (((p) != NULL), "Allocation")
 #define P4EST_CHECK_REALLOC(p,n) P4EST_CHECK_ABORT (((p) != NULL || (n) == 0), \
                                                     "Allocation")
