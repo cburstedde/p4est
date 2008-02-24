@@ -1756,7 +1756,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   const p4est_locidx_t local_num_quadrants = p4est->local_num_quadrants;
   int                 i, p;
   int                 send_lowest, send_highest;
-  int                 num_sends, rcount;
+  int                 num_sends, rcount, base_index;
   int32_t             j, k, qcount;
   int32_t            *num_quadrants_in_proc;
   int64_t             prev_quadrant, next_quadrant;
@@ -1765,6 +1765,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   int64_t             send_index, recv_low, recv_high;
   int64_t            *local_weights;    /* cumulative weights by quadrant */
   int64_t            *global_weight_sums;
+  int64_t            *send_array;
   p4est_quadrant_t   *q;
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
@@ -1878,41 +1879,45 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     if (num_sends <= 0) {
       num_sends = 0;
       send_requests = NULL;
+      send_array = NULL;
     }
     else {
       send_requests = P4EST_ALLOC (MPI_Request, num_sends);
       P4EST_CHECK_ALLOC (send_requests);
+      send_array = P4EST_ALLOC (int64_t, num_sends);
+      P4EST_CHECK_ALLOC (send_array);
       k = 0;
       for (i = send_lowest; i <= send_highest; ++i) {
+        base_index = 2 * (i - send_lowest);
         if (i < num_procs) {
           /* do binary search in the weight array */
           k = p4est_int64_lower_bound ((weight_sum * i) / num_procs,
                                        local_weights,
                                        local_num_quadrants + 1, k);
           P4EST_ASSERT (k > 0 && k <= local_num_quadrants);
-          send_index = k +
+          send_index = send_array[base_index + 1] = k +
             ((rank > 0) ? (p4est->global_last_quad_index[rank - 1] + 1) : 0);
 
           /* send low bound */
-          mpiret = MPI_Isend (&send_index, 1, MPI_LONG_LONG, i,
-                              P4EST_COMM_PARTITION_WEIGHTED_LOW,
-                              p4est->mpicomm,
-                              &send_requests[2 * (i - send_lowest) + 1]);
+          mpiret = MPI_Isend (&send_array[base_index + 1], 1, MPI_LONG_LONG,
+                              i, P4EST_COMM_PARTITION_WEIGHTED_LOW,
+                              p4est->mpicomm, &send_requests[base_index + 1]);
           P4EST_CHECK_MPI (mpiret);
         }
         else {
           k = 0;
           send_index = global_num_quadrants;
-          send_requests[2 * (i - send_lowest) + 1] = MPI_REQUEST_NULL;
+          send_requests[base_index + 1] = MPI_REQUEST_NULL;
+          send_array[base_index + 1] = -1;
         }
         P4EST_DEBUGF ("send pos %d index %lld high %d low %d\n",
                       k, (long long) send_index, i - 1, i);
 
         /* send high bound */
-        mpiret = MPI_Isend (&send_index, 1, MPI_LONG_LONG, i - 1,
-                            P4EST_COMM_PARTITION_WEIGHTED_HIGH,
-                            p4est->mpicomm,
-                            &send_requests[2 * (i - send_lowest)]);
+        send_array[base_index] = send_index;
+        mpiret = MPI_Isend (&send_array[base_index], 1, MPI_LONG_LONG,
+                            i - 1, P4EST_COMM_PARTITION_WEIGHTED_HIGH,
+                            p4est->mpicomm, &send_requests[base_index]);
         P4EST_CHECK_MPI (mpiret);
       }
     }
@@ -1973,6 +1978,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
       P4EST_CHECK_MPI (mpiret);
       P4EST_FREE (send_requests);
+      P4EST_FREE (send_array);
     }
     mpiret = MPI_Waitall (2, recv_requests, recv_statuses);
     P4EST_CHECK_MPI (mpiret);
