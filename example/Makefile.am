@@ -1,4 +1,4 @@
 
 ## Makefile.am in example
 
-SUBDIRS = read_forest simple timings second
+SUBDIRS = read_forest simple timings options second

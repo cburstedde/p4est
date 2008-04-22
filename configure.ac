@@ -84,6 +84,7 @@ AC_CONFIG_FILES([Makefile
                  example/read_forest/Makefile
                  example/simple/Makefile
                  example/timings/Makefile
+                 example/options/Makefile
                  example/second/Makefile
                  doc/Makefile
                 ])

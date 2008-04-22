@@ -8,7 +8,7 @@ libp4est_a_SOURCES = \
 	p4est_log.h p4est_log.c \
 	p4est_types.h p4est_base.h p4est_base.c p4est_mpi_dummy.h \
 	p4est_obstack.h p4est_obstack.c p4est_avl.h p4est_avl.c \
-	p4est_memory.h p4est_memory.c \
+	p4est_memory.h p4est_memory.c p4est_options.h p4est_options.c \
 	p4est_connectivity.h p4est_connectivity.c p4est.h p4est.c \
 	p4est_algorithms.h p4est_algorithms.c \
 	p4est_communication.h p4est_communication.c \
