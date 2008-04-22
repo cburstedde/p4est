@@ -63,7 +63,7 @@ int parse_ini_file(char * ini_name)
 	double			d ;
 	char		*	s ;
 
-	ini = iniparser_load(ini_name);
+	ini = iniparser_load(ini_name, stderr);
 	if (ini==NULL) {
 		fprintf(stderr, "cannot parse file: %s\n", ini_name);
 		return -1 ;

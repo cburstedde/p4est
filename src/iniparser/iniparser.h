@@ -253,6 +253,7 @@ int iniparser_find_entry(dictionary * ini, char * entry) ;
 /**
   @brief    Parse an ini file and return an allocated dictionary object
   @param    ininame Name of the ini file to read.
+  @param    f   Opened file pointer for error messages.
   @return   Pointer to newly allocated dictionary
 
   This is the parser for ini files. This function is called, providing
@@ -263,7 +264,7 @@ int iniparser_find_entry(dictionary * ini, char * entry) ;
   The returned dictionary must be freed using iniparser_freedict().
  */
 /*--------------------------------------------------------------------------*/
-dictionary * iniparser_load(const char * ininame);
+dictionary * iniparser_load(const char * ininame, FILE * f);
 
 /*-------------------------------------------------------------------------*/
 /**

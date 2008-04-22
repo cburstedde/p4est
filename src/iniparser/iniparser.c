@@ -527,7 +527,7 @@ static line_status iniparser_line(
   The returned dictionary must be freed using iniparser_freedict().
  */
 /*--------------------------------------------------------------------------*/
-dictionary * iniparser_load(const char * ininame)
+dictionary * iniparser_load(const char * ininame, FILE * f)
 {
     FILE * in ;
 
@@ -545,8 +545,10 @@ dictionary * iniparser_load(const char * ininame)
     dictionary * dict ;
 
     if ((in=fopen(ininame, "r"))==NULL) {
-        fprintf(stderr, "iniparser: cannot open %s\n", ininame);
-        return NULL ;
+      if (f != NULL) {
+        fprintf (f, "iniparser: cannot open %s\n", ininame);
+      }
+      return NULL ;
     }
 
     dict = dictionary_new(0) ;
@@ -555,10 +557,10 @@ dictionary * iniparser_load(const char * ininame)
         return NULL ;
     }
 
-    memset(line,    0, ASCIILINESZ);
-    memset(section, 0, ASCIILINESZ);
-    memset(key,     0, ASCIILINESZ);
-    memset(val,     0, ASCIILINESZ);
+    memset(line,    0, ASCIILINESZ+1);
+    memset(section, 0, ASCIILINESZ+1);
+    memset(key,     0, ASCIILINESZ+1);
+    memset(val,     0, ASCIILINESZ+1);
     last=0 ;
 
     while (fgets(line+last, ASCIILINESZ-last, in)!=NULL) {
@@ -566,19 +568,24 @@ dictionary * iniparser_load(const char * ininame)
         len = (int)strlen(line)-1;
         /* Safety check against buffer overflows */
         if (line[len]!='\n') {
-            fprintf(stderr,
-                    "iniparser: input line too long in %s (%d)\n",
-                    ininame,
-                    lineno);
-            dictionary_del(dict);
-            fclose(in);
-            return NULL ;
+          if (f != NULL) {
+            fprintf (f,
+                     "iniparser: input line too long in %s (%d)\n",
+                     ininame,
+                     lineno);
+          }
+          dictionary_del(dict);
+          fclose(in);
+          return NULL ;
         }
         /* Get rid of \n and spaces at end of line */
         while ((len>=0) &&
                 ((line[len]=='\n') || (isspace(line[len])))) {
             line[len]=0 ;
             len-- ;
+        }
+        if (len < 0) {
+          len = 0;
         }
         /* Detect multi-line */
         if (line[len]=='\\') {
@@ -603,11 +610,14 @@ dictionary * iniparser_load(const char * ininame)
             break ;
 
             case LINE_ERROR:
-            fprintf(stderr, "iniparser: syntax error in %s (%d):\n",
-                    ininame,
-                    lineno);
-            fprintf(stderr, "-> %s\n", line);
-            errs++ ;
+              if (f != NULL) {
+                fprintf (f,
+                         "iniparser: syntax error in %s (%d):\n",
+                         ininame,
+                         lineno);
+                fprintf (f, "-> %s\n", line);
+              }
+              errs++;
             break;
 
             default:
@@ -616,8 +626,10 @@ dictionary * iniparser_load(const char * ininame)
         memset(line, 0, ASCIILINESZ);
         last=0;
         if (errs<0) {
-            fprintf(stderr, "iniparser: memory allocation failure\n");
-            break ;
+          if (f != NULL) {
+            fprintf (f, "iniparser: memory allocation failure\n");
+          }
+          break;
         }
     }
     if (errs) {
