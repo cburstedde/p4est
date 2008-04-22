@@ -72,6 +72,7 @@
 #define P4EST_ALLOC(t,n) (t *) p4est_malloc ((n) * sizeof(t))
 #define P4EST_ALLOC_ZERO(t,n) (t *) p4est_calloc ((n), sizeof(t))
 #define P4EST_REALLOC(p,t,n) (t *) p4est_realloc ((p), (n) * sizeof(t))
+#define P4EST_STRDUP(s) p4est_strdup (s)
 
 /**
  * Sets n elements of a memory range to zero.
@@ -169,9 +170,11 @@ int                 p4est_int64_lower_bound (int64_t target,
                                              const int64_t * array,
                                              int size, int guess);
 
+/** these functions deal with NULL pointers */
 void               *p4est_malloc (size_t size);
 void               *p4est_calloc (size_t nmemb, size_t size);
 void               *p4est_realloc (void *ptr, size_t size);
+char               *p4est_strdup (const char *s);
 void                p4est_free (void *ptr);
 void                p4est_memory_check (void);
 

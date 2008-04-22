@@ -223,6 +223,24 @@ p4est_realloc (void *ptr, size_t size)
   return ret;
 }
 
+char               *
+p4est_strdup (const char *s)
+{
+  int                 len;
+  char               *d;
+
+  if (s == NULL) {
+    return NULL;
+  }
+
+  len = strlen (s);
+  d = P4EST_ALLOC (char, len + 1);
+  P4EST_CHECK_ALLOC (d);
+  strncpy (d, s, len + 1);
+
+  return d;
+}
+
 void
 p4est_free (void *ptr)
 {
