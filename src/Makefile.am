@@ -1,7 +1,7 @@
 
 ## Makefile.am in src
 
-SUBDIRS = . libb64
+SUBDIRS = . libb64 iniparser
 
 lib_LIBRARIES = libp4est.a
 libp4est_a_SOURCES = \
@@ -22,7 +22,7 @@ include_HEADERS = \
 	p4est_algorithms.h p4est_communication.h \
 	p4est_file.h p4est_vtk.h p4est_mesh.h
 
-AM_CPPFLAGS = -I@top_srcdir@/src/libb64
+AM_CPPFLAGS = -I@top_srcdir@/src/libb64 -I@top_srcdir@/src/iniparser
 
 install-data-hook:
 	perl -pi -e 's/(#define\s+P4EST_CONFIG_INSTALLED)\s+\d/\1 1/' \

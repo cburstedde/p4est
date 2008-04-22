@@ -32,14 +32,20 @@
 */
 
 /*
+  The files p4est_log.{c,h} have been copied from log4c-lite 1.0 and modified.
+  log4c lite is Copyright (c) 2001, Bit Farm, Inc.
+  See the licence information in the source files.
+*/
+
+/*
   The source files in src/libb64 have been copied from libb64 and modified.
   libb64 is public domain software, see the LICENSE file in that directory.
 */
 
 /*
-  The files p4est_log.{c,h} have been copied from log4c-lite 1.0 and modified.
-  log4c lite is Copyright (c) 2001, Bit Farm, Inc.
-  See the licence information in the source files.
+  The source files in src/iniparser have been copied from iniparser3.0b
+  and modified.  iniparser is licensed unter the MIT license,
+  see the LICENSE and AUTHORS files in that directory.
 */
 
 /*

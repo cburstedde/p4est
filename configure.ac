@@ -79,6 +79,7 @@ echo "o----------------------------------"
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/libb64/Makefile
+                 src/iniparser/Makefile
                  test/Makefile
                  example/Makefile
                  example/read_forest/Makefile
