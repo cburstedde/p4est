@@ -328,7 +328,7 @@ int iniparser_getint(dictionary * d, const char * key, int notfound)
   the notfound value is returned.
  */
 /*--------------------------------------------------------------------------*/
-double iniparser_getdouble(dictionary * d, char * key, double notfound)
+double iniparser_getdouble(dictionary * d, const char * key, double notfound)
 {
     char    *   str ;
 
@@ -423,7 +423,7 @@ int iniparser_find_entry(
   It is Ok to set val to NULL.
  */
 /*--------------------------------------------------------------------------*/
-int iniparser_setstring(dictionary * ini, char * entry, char * val)
+int iniparser_setstring(dictionary * ini, const char * entry, char * val)
 {
     return dictionary_set(ini, strlwc(entry), val) ;
 }
@@ -438,7 +438,7 @@ int iniparser_setstring(dictionary * ini, char * entry, char * val)
   If the given entry can be found, it is deleted from the dictionary.
  */
 /*--------------------------------------------------------------------------*/
-void iniparser_unset(dictionary * ini, char * entry)
+void iniparser_unset(dictionary * ini, const char * entry)
 {
     dictionary_unset(ini, strlwc(entry));
 }
