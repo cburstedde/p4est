@@ -6,4 +6,6 @@ p4est_options_SOURCES = options.c
 
 AM_CPPFLAGS = -I@top_srcdir@/src
 
-LDADD = @top_builddir@/src/libp4est.a
+LDADD = \
+	@top_builddir@/src/libp4est.a \
+	@top_builddir@/src/iniparser/libiniparser.a

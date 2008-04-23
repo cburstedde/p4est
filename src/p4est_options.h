@@ -30,6 +30,7 @@ typedef enum
   P4EST_OPTION_INT,
   P4EST_OPTION_DOUBLE,
   P4EST_OPTION_STRING,
+  P4EST_OPTION_INIFILE,
 }
 p4est_option_type_t;
 
@@ -39,7 +40,9 @@ typedef struct
   int                 opt_char;
   const char         *opt_name;
   void               *opt_var;
+  int                 has_arg;
   const char         *help_string;
+  char               *string_value;
 }
 p4est_option_item_t;
 
@@ -65,15 +68,15 @@ void                p4est_options_destroy (p4est_options_t * opt);
 /**
  * Add a switch option. This option is used without option arguments.
  * Every use increments the variable by one. Its initial value is 0.
- * Either opt_char or opt_long must be valid, that is, not '\0'/NULL.
+ * Either opt_char or opt_name must be valid, that is, not '\0'/NULL.
  * \param [in] opt_char      Short option character, may be '\0'.
- * \param [in] opt_long      Option name without initial dashes, may be NULL.
+ * \param [in] opt_name      Option name without initial dashes, may be NULL.
  * \param [in] variable      Address of the variable to store the option value.
  * \param [in] help_string   Help string for usage message, may be NULL.
  */
 void                p4est_options_add_switch (p4est_options_t * opt,
                                               int opt_char,
-                                              const char *opt_long,
+                                              const char *opt_name,
                                               int *variable,
                                               const char *help_string);
 
@@ -83,7 +86,7 @@ void                p4est_options_add_switch (p4est_options_t * opt,
  */
 void                p4est_options_add_int (p4est_options_t * opt,
                                            int opt_char,
-                                           const char *opt_long,
+                                           const char *opt_name,
                                            int *variable, int init_value,
                                            const char *help_string);
 
@@ -92,7 +95,7 @@ void                p4est_options_add_int (p4est_options_t * opt,
  */
 void                p4est_options_add_double (p4est_options_t * opt,
                                               int opt_char,
-                                              const char *opt_long,
+                                              const char *opt_name,
                                               double *variable,
                                               double init_value,
                                               const char *help_string);
@@ -103,10 +106,18 @@ void                p4est_options_add_double (p4est_options_t * opt,
  */
 void                p4est_options_add_string (p4est_options_t * opt,
                                               int opt_char,
-                                              const char *opt_long,
+                                              const char *opt_name,
                                               const char **variable,
                                               const char *init_value,
                                               const char *help_string);
+
+/**
+ * Add an option to read in a file in .ini format.
+ */
+void                p4est_options_add_inifile (p4est_options_t * opt,
+                                               int opt_char,
+                                               const char *opt_name,
+                                               const char *help_string);
 
 /**
  * Print a usage message.
@@ -133,6 +144,14 @@ void                p4est_options_print_arguments (p4est_options_t * opt,
                                                    int first_arg,
                                                    int argc, char **argv,
                                                    FILE * nout);
+
+/**
+ * Loads a file in .ini format and updates entries found under [Options].
+ * \param [in] nerr       Stream for error output, may be NULL.
+ * \return                Returns 0 on success, -1 on failure.
+ */
+int                 p4est_options_load (p4est_options_t * opt,
+                                        const char *inifile, FILE * nerr);
 
 /**
  * Parse command line options.

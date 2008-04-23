@@ -38,9 +38,18 @@ main (int argc, char **argv)
   p4est_options_add_double (opt, 'd', "double", &d, 0., "Double");
   p4est_options_add_string (opt, 's', "string", &s1, NULL, "String 1");
   p4est_options_add_string (opt, 't', NULL, &s2, NULL, "String 2");
+  p4est_options_add_inifile (opt, 'f', "inifile", ".ini file");
   p4est_options_add_int (opt, '\0', "integer2", &i2, 7, "Integer 2");
 
-  first_arg = p4est_options_parse (opt, argc, argv, stdout);
+  /* this is just to show off the load function */
+  if (!p4est_options_load (opt, "preload.ini", NULL)) {
+    printf ("Preload successful\n");
+  }
+  else {
+    printf ("Preload not found or failed\n");
+  }
+
+  first_arg = p4est_options_parse (opt, argc, argv, stderr);
   if (first_arg < 0) {
     p4est_options_print_help (opt, 1, stdout);
   }
