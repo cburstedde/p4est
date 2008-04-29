@@ -129,6 +129,36 @@ if test "$HAVE_PKG_MPI" = yes ; then
 fi
 ])
 
+dnl ACX_MPI_INCLUDES
+dnl Call the compiler with various --show* options
+dnl to figure out the MPI_INCLUDES directory
+dnl
+AC_DEFUN([ACX_MPI_INCLUDES],
+[
+MPI_INCLUDES=
+if test "$HAVE_PKG_MPI" = yes ; then
+  echo "Trying to determine MPI_INCLUDES"
+  for SHOW in -showme:compile -showme:incdirs -showme -show ; do
+    if test -z "$MPI_INCLUDES" ; then
+      echo -n "   Trying compile argument $SHOW... "
+      if MPI_CC_RESULT=`$CC $SHOW 2> /dev/null` ; then
+        echo "Successful"
+        for CCARG in $MPI_CC_RESULT ; do
+          MPI_INCLUDES="$MPI_INCLUDES `echo $CCARG | grep '^-I'`"
+        done
+      else
+        echo "Failed"
+      fi
+    fi
+  done
+  if test -n "$MPI_INCLUDES" ; then
+    MPI_INCLUDES=`echo $MPI_INCLUDES | sed -e 's/^ *//' -e 's/  */ /g'`
+    echo "   Found MPI_INCLUDES $MPI_INCLUDES"
+  fi
+fi
+AC_SUBST([MPI_INCLUDES])
+])
+
 dnl ACX_MPI
 dnl Configure MPI in one line
 dnl
@@ -137,4 +167,5 @@ AC_DEFUN([ACX_MPI],
 ACX_MPI_CONFIG
 AC_PROG_CC([$1])
 ACX_MPI_VERIFY
+ACX_MPI_INCLUDES
 ])

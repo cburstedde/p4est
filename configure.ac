@@ -9,7 +9,7 @@ AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_CONFIG_LIBOBJ_DIR(src)
-AM_INIT_AUTOMAKE(1.8.2)
+AM_INIT_AUTOMAKE
 
 # Configure switches
 P4EST_ARG_ENABLE([debug], [enable debug mode], [P4EST_HAVE_DEBUG])
@@ -37,6 +37,8 @@ echo "o----------------------------------"
 
 ACX_MPI([icc gcc cc])
 AC_PROG_RANLIB
+AC_CHECK_PROG([HAVE_PROG_SPLINT], [splint], [yes])
+AM_CONDITIONAL([HAVE_SPLINT], [test "$HAVE_PROG_SPLINT" = yes])
 
 # Checks for libraries.
 echo "o----------------------------------"
