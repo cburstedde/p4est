@@ -99,7 +99,7 @@ else
   unset MPI_CC
 fi
 
-AM_CONDITIONAL(HAVE_MPI, [test "$HAVE_PKG_MPI" = yes])
+AM_CONDITIONAL([HAVE_MPI], [test "$HAVE_PKG_MPI" = yes])
 ])
 
 dnl ACX_MPI_C_COMPILE_AND_LINK([action-if-successful], [action-if-failed])

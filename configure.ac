@@ -4,10 +4,11 @@ dnl
 
 AC_PREREQ([2.59])
 AC_INIT([p4est], [0.1], [ccgo@ices.utexas.edu])
-AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_LIBOBJ_DIR(src)
-AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_HEADER([src/p4est_config.h])
+AC_CONFIG_SRCDIR([src/p4est.h])
+AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_MACRO_DIR(config)
+AC_CONFIG_LIBOBJ_DIR(src)
 AM_INIT_AUTOMAKE(1.8.2)
 
 # Configure switches
