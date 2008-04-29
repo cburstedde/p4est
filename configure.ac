@@ -28,7 +28,7 @@ P4EST_ARG_DISABLE([3d], [don't build the 3D library], [P4EST_BUILD_3D])
 
 # General settings.
 AC_CANONICAL_HOST
-AC_GNU_SOURCE
+dnl AC_GNU_SOURCE
 
 # Checks for programs.
 echo "o----------------------------------"
@@ -52,8 +52,9 @@ echo "o----------------------------------"
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([ctype.h signal.h stdarg.h stddef.h stdint.h stdio.h stdlib.h])
-AC_CHECK_HEADERS([unistd.h execinfo.h getopt.h arpa/inet.h netinet/in.h zlib.h])
+AC_CHECK_HEADERS([ctype.h stdarg.h stddef.h stdint.h stdio.h stdlib.h])
+AC_CHECK_HEADERS([execinfo.h getopt.h libgen.h signal.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h netinet/in.h zlib.h])
 
 # Checks for functions.
 AC_CHECK_FUNCS([backtrace backtrace_symbols])

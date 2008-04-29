@@ -76,6 +76,10 @@ typedef void        (*sig_t) (int);
 #include <ctype.h>
 #endif
 
+#ifdef HAVE_LIBGEN_H
+#include <libgen.h>
+#endif
+
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
 #endif

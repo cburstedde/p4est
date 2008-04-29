@@ -805,12 +805,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 first_index, last_index;
   int                 which;
   int                 face, corner, zcorner;
+  int                 rcount;
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qtree;
   p4est_qcoord_t      qh;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
-  int32_t             treecount, qcount, qbytes, offset, obytes, rcount;
+  int32_t             treecount, qcount, qbytes, offset, obytes;
   int32_t             first_tree, last_tree, next_tree;
   int32_t             first_peer, last_peer;
   int32_t             over_peer_count;
@@ -1362,9 +1363,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_CHECK_ABORTF (rcount ==
                             peer->recv_first_count *
                             sizeof (p4est_quadrant_t),
-                            "Receive load mismatch A %d %dx%d", rcount,
+                            "Receive load mismatch A %d %dx%lld", rcount,
                             peer->recv_first_count,
-                            sizeof (p4est_quadrant_t));
+                            (long long) sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_first_load = 1;
@@ -1498,9 +1499,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_CHECK_ABORTF (rcount ==
                             peer->recv_second_count *
                             sizeof (p4est_quadrant_t),
-                            "Receive load mismatch B %d %dx%d", rcount,
+                            "Receive load mismatch B %d %dx%lld", rcount,
                             peer->recv_second_count,
-                            sizeof (p4est_quadrant_t));
+                            (long long) sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_second_load = 1;

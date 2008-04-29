@@ -233,10 +233,10 @@ p4est_strdup (const char *s)
     return NULL;
   }
 
-  len = strlen (s);
-  d = P4EST_ALLOC (char, len + 1);
+  len = strlen (s) + 1;
+  d = P4EST_ALLOC (char, len);
   P4EST_CHECK_ALLOC (d);
-  strncpy (d, s, len + 1);
+  memcpy (d, s, len);
 
   return d;
 }
