@@ -1,0 +1,3 @@
+[submodule "sc"]
+	path = sc
+	url = http://git.ices.utexas.edu/repos/ccgo/libsc.git

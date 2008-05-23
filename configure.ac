@@ -2,8 +2,8 @@ dnl
 dnl p4est configure.ac
 dnl
 
+AC_INIT([p4est], [0.2], [ccgo@ices.utexas.edu])
 AC_PREREQ([2.59])
-AC_INIT([p4est], [0.1], [ccgo@ices.utexas.edu])
 AC_CONFIG_HEADER([src/p4est_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR(config)
