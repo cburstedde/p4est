@@ -22,7 +22,27 @@
 #ifndef P4EST_BASE_H
 #define P4EST_BASE_H
 
-#include <p4est_types.h>
+/* include p4est config header */
+
+#include <p4est_config.h>
+
+/* sc.h includes several headers with proper checks */
+/* see sc.h for the headers included by default */
+/* also includes getopt, obstack, zlib and MPI */
+
+#include <sc.h>
+
+/** Typedef for quadrant coordinates. */
+typedef int32_t     p4est_qcoord_t;
+#define P4EST_MPI_QCOORD MPI_INT
+
+/** Typedef for processor-local indexing. */
+typedef int32_t     p4est_locidx_t;
+#define P4EST_MPI_LOCIDX MPI_INT
+
+/** Typedef for globally unique indexing. */
+typedef int64_t     p4est_gloidx_t;
+#define P4EST_MPI_GLOIDX MPI_LONG_LONG
 
 /* use error checking from libsc */
 #define P4EST_CHECK_MPI(r)              SC_CHECK_MPI (r)
@@ -88,8 +108,6 @@
 #define P4EST_PRODUCTIONF(f,...) \
   P4EST_NORMAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
 
-typedef void        (*p4est_handler_t) (void *data);
-
 #if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
 int                 p4est_int64_compare (const void *v1, const void *v2);
@@ -106,17 +124,9 @@ int                 p4est_int64_lower_bound (int64_t target,
                                              const int64_t * array,
                                              int size, int guess);
 
-/** Installs an abort handler and catches signals INT, SEGV, USR2. */
-void                p4est_set_abort_handler (p4est_handler_t handler,
-                                             void *data);
-
 /** Combines calls to init_logging and set_abort_handler. */
 void                p4est_init (FILE * stream, int identifier,
-                                p4est_handler_t abort_handler,
+                                sc_handler_t abort_handler,
                                 void *abort_data);
-
-/** Prints a stack trace, calls the abort handler and terminates. */
-void                p4est_abort (void)
-  __attribute__ ((noreturn));
 
 #endif /* !P4EST_BASE_H */

@@ -242,7 +242,7 @@ main (int argc, char **argv)
       if (errmsg != NULL) {
         fputs (errmsg, stderr);
       }
-      p4est_abort ();
+      sc_abort ();
     }
 #ifdef P4EST_MPI
     MPI_Barrier (mpi->mpicomm);

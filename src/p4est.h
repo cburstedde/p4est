@@ -37,7 +37,7 @@
 /* a negative magic number for consistency checks */
 #define P4EST_NEG_MAGIC = -439623172;
 
-/* p4est_connectivity.h includes p4est_memory.h, p4est_types.h */
+/* p4est_connectivity.h includes p4est_base.h sc_containers.h */
 #include <p4est_connectivity.h>
 
 typedef struct p4est_quadrant

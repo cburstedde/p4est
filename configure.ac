@@ -56,19 +56,18 @@ if test "$P4EST_WITH_PROVIDE_ZLIB" = "no" ; then
   SC_REQUIRE_LIB([z], [adler32_combine])
 fi
 
-echo "o----------------------------------"
-echo "| Checking headers and functions"
-echo "o----------------------------------"
-
 # Checks for header files.
-AC_CHECK_HEADERS([execinfo.h signal.h])
+echo "o---------------------------------------"
+echo "| Checking headers"
+echo "o---------------------------------------"
+
 AC_CHECK_HEADERS([arpa/inet.h netinet/in.h])
 
-# Checks for functions.
-AC_CHECK_FUNCS([backtrace backtrace_symbols])
-SC_REQUIRE_FUNCS([memset pow sqrt floor])
-
 # Checks for typedefs, structures, and compiler characteristics.
+dnl echo "o---------------------------------------"
+dnl echo "| Checking keywords and types"
+dnl echo "o---------------------------------------"
+dnl
 dnl These are done from SC already.
 dnl AC_C_CONST
 dnl AC_C_INLINE
