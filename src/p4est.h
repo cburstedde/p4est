@@ -22,6 +22,9 @@
 #ifndef P4EST_H
 #define P4EST_H
 
+/* p4est_connectivity.h includes p4est_base.h sc_containers.h */
+#include <p4est_connectivity.h>
+
 /* finest level of the quadtree */
 #define P4EST_MAXLEVEL 30
 
@@ -36,9 +39,6 @@
 
 /* a negative magic number for consistency checks */
 #define P4EST_NEG_MAGIC = -439623172;
-
-/* p4est_connectivity.h includes p4est_base.h sc_containers.h */
-#include <p4est_connectivity.h>
 
 typedef struct p4est_quadrant
 {

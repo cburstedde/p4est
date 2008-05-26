@@ -24,7 +24,6 @@
  * Usage: p4est_second
  */
 
-#include <p4est_base.h>
 #include <p4est_algorithms.h>
 #include <p4est_vtk.h>
 

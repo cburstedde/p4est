@@ -19,7 +19,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_base.h>
 #include <p4est_vtk.h>
 #include <p4est_mesh.h>
 #include <sc_zlib.h>
