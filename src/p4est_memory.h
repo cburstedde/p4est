@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_MEMORY_H__
-#define __P4EST_MEMORY_H__
+#ifndef P4EST_MEMORY_H
+#define P4EST_MEMORY_H
 
 /* p4est memory management */
 
@@ -356,4 +356,4 @@ int                 p4est_hash_remove (p4est_hash_t * hash, void *v,
 void                p4est_hash_print_statistics (int log_priority,
                                                  p4est_hash_t * hash);
 
-#endif /* !__P4EST_MEMORY_H__ */
+#endif /* !P4EST_MEMORY_H */

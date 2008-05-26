@@ -19,94 +19,30 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_TYPES_H__
-#define __P4EST_TYPES_H__
+#ifndef P4EST_TYPES_H
+#define P4EST_TYPES_H
 
-/*
- * This header is included by p4est.h and p4est_base.h.
- * Do not include this header from any other .h file.
- *
- * This includes p4est_config.h if (!P4EST_CONFIG_INSTALLED).
- * For an installation of this library, the user may define
- *    P4EST_HAVE_DEBUG, P4EST_LOG_LEVEL if desired.
- *    Also, various HAVE_ macros need to be provided externally.
- */
+/* include p4est config header */
 
-/* this will be changed to 1 by make install */
-#define P4EST_CONFIG_INSTALLED 0
-
-/* this will be changed to 1 by make install if mpi is configured in */
-#define P4EST_CONFIG_MPI 0
-
-/* do some magic to avoid using p4est_config.h in the installed header */
-#if (P4EST_CONFIG_INSTALLED)
-
-#if (P4EST_CONFIG_MPI)
-#include <mpi.h>
-#else
-#include <p4est_mpi_dummy.h>
-#endif
-
-#else /* !P4EST_CONFIG_INSTALLED */
-
-#ifdef P4EST_SPLINT
-typedef void        (*sig_t) (int);
-#define HAVE_ZLIB_H
-#define HAVE_MPI
-#define P4EST_HAVE_DEBUG
-#endif /* P4EST_SPLINT */
-
-#ifdef HAVE_CONFIG_H
 #include <p4est_config.h>
-#endif
 
-#ifdef HAVE_MPI
-#include <mpi.h>
-#else
-#include <p4est_mpi_dummy.h>
-#endif
+/* sc.h includes several headers with proper checks */
 
-#endif /* !P4EST_CONFIG_INSTALLED */
-
-#if (defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS)
-#define P4EST_BACKTRACE
-#endif
-
-#ifdef HAVE_CTYPE_H
+#include <sc.h>
+#if 0                           /* if present then already included by sc.h */
+#include <math.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
-#endif
-
-#ifdef HAVE_LIBGEN_H
+#include <unistd.h>
 #include <libgen.h>
 #endif
-
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-
-#ifdef HAVE_STDDEF_H
-#include <stddef.h>
-#endif
-
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
+/* also includes getopt, obstack, zlib and MPI */
 
 /** Typedef for quadrant coordinates */
 typedef int32_t     p4est_qcoord_t;
@@ -120,4 +56,4 @@ typedef int32_t     p4est_locidx_t;
 typedef int64_t     p4est_gloidx_t;
 #define P4EST_MPI_GLOIDX MPI_LONG_LONG
 
-#endif /* !__P4EST_TYPES_H__ */
+#endif /* !P4EST_TYPES_H */

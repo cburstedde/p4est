@@ -154,14 +154,14 @@ coarsen_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
 static void
 abort_fn (void *data)
 {
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
 #endif
   mpi_context_t      *mpi = data;
 
   fprintf (stderr, "[%d] p4est_simple abort handler\n", mpi->mpirank);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   mpiret = MPI_Abort (mpi->mpicomm, 1);
   P4EST_CHECK_MPI (mpiret);
 #endif
@@ -170,7 +170,7 @@ abort_fn (void *data)
 int
 main (int argc, char **argv)
 {
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 use_mpi = 1;
   int                 mpiret;
 #endif
@@ -186,7 +186,7 @@ main (int argc, char **argv)
   /* initialize MPI and p4est internals */
   mpi->mpirank = 0;
   mpi->mpicomm = MPI_COMM_NULL;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (use_mpi) {
     mpiret = MPI_Init (&argc, &argv);
     P4EST_CHECK_MPI (mpiret);
@@ -244,7 +244,7 @@ main (int argc, char **argv)
       }
       p4est_abort ();
     }
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
     MPI_Barrier (mpi->mpicomm);
 #endif
   }
@@ -310,7 +310,7 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_memory_check ();
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (use_mpi) {
     mpiret = MPI_Finalize ();
     P4EST_CHECK_MPI (mpiret);

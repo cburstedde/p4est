@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_H__
-#define __P4EST_H__
+#ifndef P4EST_H
+#define P4EST_H
 
 /* finest level of the quadtree */
 #define P4EST_MAXLEVEL 30
@@ -225,4 +225,4 @@ void                p4est_partition (p4est_t * p4est,
  */
 unsigned            p4est_checksum (p4est_t * p4est);
 
-#endif /* !__P4EST_H__ */
+#endif /* !P4EST_H */

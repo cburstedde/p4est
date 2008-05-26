@@ -46,7 +46,7 @@ while (<STDIN>) {
     }
 
     if ($into) {
-	if ($defines[$level] eq 'HAVE_MPI') {
+	if ($defines[$level] eq 'P4EST_MPI') {
 	    $matchlevel = $level;
 	    printf (STDERR "Set matchlevel to %d\n", $matchlevel);
 	}

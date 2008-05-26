@@ -25,5 +25,8 @@ TESTS = \
 	p4est_test_file p4est_test_quadrants p4est_test_balance \
 	p4est_test_partition p4est_test_order
 
-AM_CPPFLAGS = -I@top_srcdir@/src
+AM_CPPFLAGS = \
+        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
+        -I@top_srcdir@/src
+
 LDADD = @top_builddir@/src/libp4est.a

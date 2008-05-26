@@ -33,7 +33,7 @@
 #include <p4est_algorithms.h>
 #include <p4est_vtk.h>
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
 
 enum
 {
@@ -85,12 +85,12 @@ abort_fn (void *data)
   P4EST_CHECK_MPI (mpiret);
 }
 
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
 int
 main (int argc, char **argv)
 {
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 i;
   int                 mpiret;
   int                 wrongusage, config;
@@ -159,7 +159,7 @@ main (int argc, char **argv)
       }
       p4est_abort ();
     }
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
     MPI_Barrier (mpi->mpicomm);
 #endif
   }
@@ -296,7 +296,7 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
 #else
   P4EST_CHECK_ABORT (0, "This example requires --enable-mpi to run.");
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   return 0;
 }

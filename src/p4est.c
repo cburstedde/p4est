@@ -24,7 +24,7 @@
 #include <p4est_communication.h>
 
 /* require zlib header for adler32 checksums */
-#ifdef HAVE_ZLIB_H
+#ifdef P4EST_HAVE_ZLIB_H
 #include <zlib.h>
 #endif
 
@@ -42,7 +42,7 @@ const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
 static const p4est_gloidx_t initial_quadrants_per_processor = 15;
 static const int    number_toread_quadrants = 32;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
 static const int    number_peer_windows = 5;
 #endif
 
@@ -53,7 +53,7 @@ p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            size_t data_size, p4est_init_t init_fn)
 {
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
 #endif
   int                 num_procs, rank;
@@ -89,7 +89,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->mpicomm = mpicomm;
   p4est->mpisize = 1;
   p4est->mpirank = 0;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
     P4EST_CHECK_MPI (mpiret);
@@ -180,8 +180,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     else {
       p4est_quadrant_set_morton (&a, level, 0);
     }
-    P4EST_DEBUGF ("tree %lld first morton 0x%llx 0x%llx\n",
-                  (long long) jl, (long long) a.x, (long long) a.y);
+    P4EST_LDEBUGF ("tree %lld first morton 0x%llx 0x%llx\n",
+                   (long long) jl, (long long) a.x, (long long) a.y);
     p4est_quadrant_init_data (p4est, jl, &a, init_fn);
 
     /* set morton id of last quadrant */
@@ -208,8 +208,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       else {
         p4est_quadrant_set_morton (&b, level, tree_num_quadrants - 1);
       }
-      P4EST_DEBUGF ("tree %lld last morton 0x%llx 0x%llx\n",
-                    (long long) jl, (long long) b.x, (long long) b.y);
+      P4EST_LDEBUGF ("tree %lld last morton 0x%llx 0x%llx\n",
+                     (long long) jl, (long long) b.x, (long long) b.y);
       if (!must_remove_last_quadrant) {
         p4est_quadrant_init_data (p4est, jl, &b, init_fn);
       }
@@ -256,7 +256,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 void
 p4est_destroy (p4est_t * p4est)
 {
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   int                 q;
 #endif
   int32_t             j;
@@ -265,7 +265,7 @@ p4est_destroy (p4est_t * p4est)
   for (j = 0; j < p4est->connectivity->num_trees; ++j) {
     tree = p4est_array_index (p4est->trees, j);
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
     for (q = 0; q < tree->quadrants.elem_count; ++q) {
       p4est_quadrant_t   *quad = p4est_array_index (&tree->quadrants, q);
       p4est_quadrant_free_data (p4est, quad);
@@ -744,10 +744,10 @@ static void
 p4est_balance_response (p4est_t * p4est, int32_t peer_id,
                         p4est_balance_peer_t * peer)
 {
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   const int32_t       first_tree = p4est->first_local_tree;
   const int32_t       last_tree = p4est->last_local_tree;
-#endif /* P4EST_HAVE_DEBUG */
+#endif /* P4EST_DEBUG */
   int32_t             k, qcount, qtree;
   int32_t             prev, num_receive_trees, nt;
   int32_t            *pi;
@@ -775,8 +775,8 @@ p4est_balance_response (p4est_t * p4est, int32_t peer_id,
       prev = qtree;
     }
   }
-  P4EST_DEBUGF ("first load from %d into %d trees\n", peer_id,
-                num_receive_trees);
+  P4EST_LDEBUGF ("first load from %d into %d trees\n", peer_id,
+                 num_receive_trees);
   P4EST_ASSERT (num_receive_trees == tree_array.elem_count);
 
   /* loop to the trees to receive into and update overlap quadrants */
@@ -823,12 +823,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_quadrant_t   *q, *s;
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_corner_info_t *ci;
-#ifdef HAVE_MPI
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_MPI
+#ifdef P4EST_DEBUG
   unsigned            checksum;
   p4est_array_t       checkarray;
   int32_t             ltotal[2], gtotal[2];
-#endif /* P4EST_HAVE_DEBUG */
+#endif /* P4EST_DEBUG */
   const int           twopeerw = 2 * number_peer_windows;
   int                 mpiret;
   int                 first_bound, last_bound;
@@ -847,7 +847,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
   MPI_Status         *recv_statuses, *jstatus;
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p4est_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
@@ -871,7 +871,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     tree_flags[i] = 0x00;
   }
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   /* will contain first and last peer (inclusive) for each processor */
   peer_boundaries = P4EST_ALLOC (int32_t, twopeerw * num_procs);
   P4EST_CHECK_ALLOC (peer_boundaries);
@@ -895,10 +895,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   /* index buffer for call to waitsome */
   wait_indices = P4EST_ALLOC (int, num_procs);
   P4EST_CHECK_ALLOC (wait_indices);
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   p4est_array_init (&checkarray, 4);
-#endif /* P4EST_HAVE_DEBUG */
-#endif /* HAVE_MPI */
+#endif /* P4EST_DEBUG */
+#endif /* P4EST_MPI */
 
   /* allocate per peer storage and initialize requests */
   peers = p4est_array_new (sizeof (p4est_balance_peer_t));
@@ -1081,7 +1081,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     P4EST_ASSERT (first_peer == rank && last_peer == rank);
   }
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   /* compute information about peers to inform receivers */
   rip = (first_peer <= rank && rank <= last_peer) ? 1 : 0;
   for (i = 0; i < twopeerw; ++i) {
@@ -1103,8 +1103,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
     if (prev < j - 1) {
       length = j - 1 - prev;
-      P4EST_DEBUGF ("found empty range prev %d j %d length %d\n",
-                    prev, j, length);
+      P4EST_LDEBUGF ("found empty range prev %d j %d length %d\n",
+                     prev, j, length);
 
       /* claim unused window */
       for (i = 0; i < number_peer_windows; ++i) {
@@ -1156,7 +1156,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
   }
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   for (i = 0; i < nwin; ++i) {
     P4EST_ASSERT (peer_windows[2 * i] <= peer_windows[2 * i + 1]);
     if (i < nwin - 1) {
@@ -1168,10 +1168,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     P4EST_ASSERT (peer_windows[2 * i + 1] == -1);
   }
   for (i = 0; i < nwin; ++i) {
-    P4EST_DEBUGF ("empty range %d from %d to %d\n",
-                  i, peer_windows[2 * i], peer_windows[2 * i + 1]);
+    P4EST_LDEBUGF ("empty range %d from %d to %d\n",
+                   i, peer_windows[2 * i], peer_windows[2 * i + 1]);
   }
-#endif /* P4EST_HAVE_DEBUG */
+#endif /* P4EST_DEBUG */
 
   /* compute windows from empty ranges */
   eff_peer_count = 0;
@@ -1190,16 +1190,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     eff_peer_count += peer_windows[2 * i + 1] - peer_windows[2 * i] + 1;
   }
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   for (i = nwin; i < number_peer_windows; ++i) {
     P4EST_ASSERT (peer_windows[2 * i] == -1);
     P4EST_ASSERT (peer_windows[2 * i + 1] == -1);
   }
   for (i = 0; i < nwin; ++i) {
-    P4EST_DEBUGF ("window %d from %d to %d\n",
-                  i, peer_windows[2 * i], peer_windows[2 * i + 1]);
+    P4EST_LDEBUGF ("window %d from %d to %d\n",
+                   i, peer_windows[2 * i], peer_windows[2 * i + 1]);
   }
-#endif /* P4EST_HAVE_DEBUG */
+#endif /* P4EST_DEBUG */
 
   /* distribute information about peer windows to inform receivers */
   if (p4est->mpicomm != MPI_COMM_NULL) {
@@ -1239,7 +1239,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
     /* first send number of quadrants to be expected */
     if (qcount > 0) {
-      P4EST_DEBUGF ("Balance A send %d quadrants to %d\n", qcount, j);
+      P4EST_LDEBUGF ("Balance A send %d quadrants to %d\n", qcount, j);
       ++send_load[0];
     }
     else {
@@ -1256,10 +1256,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (qcount > 0) {
       p4est_array_sort (&peer->send_first, p4est_quadrant_compare_piggy);
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
       checksum = p4est_quadrant_checksum (&peer->send_first, &checkarray, 0);
-      P4EST_DEBUGF ("Balance A send checksum %x to %d\n", checksum, j);
-#endif /* P4EST_HAVE_DEBUG */
+      P4EST_LDEBUGF ("Balance A send checksum %x to %d\n", checksum, j);
+#endif /* P4EST_DEBUG */
 
       total_send_count += qcount;
       qbytes = qcount * sizeof (p4est_quadrant_t);
@@ -1334,7 +1334,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         qcount = peer->recv_first_count;
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
-          P4EST_DEBUGF ("Balance A recv %d quadrants from %d\n", qcount, j);
+          P4EST_LDEBUGF ("Balance A recv %d quadrants from %d\n", qcount, j);
           P4EST_ASSERT (peer->recv_both.elem_count == 0);
           p4est_array_resize (&peer->recv_both, qcount);
           total_recv_count += qcount;
@@ -1372,16 +1372,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
         --request_first_count;
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
         checksum = p4est_quadrant_checksum (&peer->recv_both, &checkarray, 0);
-        P4EST_DEBUGF ("Balance A recv checksum %x from %d\n", checksum, j);
-#endif /* P4EST_HAVE_DEBUG */
+        P4EST_LDEBUGF ("Balance A recv checksum %x from %d\n", checksum, j);
+#endif /* P4EST_DEBUG */
 
         /* process incoming quadrants to interleave with communication */
         p4est_balance_response (p4est, j, peer);
         qcount = peer->send_second.elem_count;
         if (qcount > 0) {
-          P4EST_DEBUGF ("Balance B send %d quadrants to %d\n", qcount, j);
+          P4EST_LDEBUGF ("Balance B send %d quadrants to %d\n", qcount, j);
           ++send_load[1];
         }
         else {
@@ -1395,11 +1395,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         ++request_send_count;
         if (qcount > 0) {
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
           checksum =
             p4est_quadrant_checksum (&peer->send_second, &checkarray, 0);
-          P4EST_DEBUGF ("Balance B send checksum %x to %d\n", checksum, j);
-#endif /* P4EST_HAVE_DEBUG */
+          P4EST_LDEBUGF ("Balance B send checksum %x to %d\n", checksum, j);
+#endif /* P4EST_DEBUG */
 
           total_send_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
@@ -1412,12 +1412,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       }
     }
   }
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   for (j = 0; j < num_procs; ++j) {
     P4EST_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
   }
-#endif /* P4EST_HAVE_DEBUG */
-#endif /* HAVE_MPI */
+#endif /* P4EST_DEBUG */
+#endif /* P4EST_MPI */
 
   /* simulate send and receive with myself across tree boundaries */
   peer = p4est_array_index (peers, rank);
@@ -1435,7 +1435,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_array_resize (qarray, offset + qcount);
   memcpy (qarray->array + obytes, peer->send_second.array, qbytes);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   /* receive second round appending to the same receive buffer */
   while (request_second_count > 0) {
     mpiret = MPI_Waitsome (num_procs, requests_second,
@@ -1468,7 +1468,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         qcount = peer->recv_second_count;
         if (qcount > 0) {
           /* received nonzero count, post receive for load */
-          P4EST_DEBUGF ("Balance B recv %d quadrants from %d\n", qcount, j);
+          P4EST_LDEBUGF ("Balance B recv %d quadrants from %d\n", qcount, j);
           offset = peer->recv_both.elem_count;
           P4EST_ASSERT (offset == peer->recv_first_count);
           obytes = offset * sizeof (p4est_quadrant_t);
@@ -1508,19 +1508,19 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
         --request_second_count;
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
         checksum = p4est_quadrant_checksum (&peer->recv_both, &checkarray,
                                             peer->recv_first_count);
-        P4EST_DEBUGF ("Balance B recv checksum %x from %d\n", checksum, j);
-#endif /* P4EST_HAVE_DEBUG */
+        P4EST_LDEBUGF ("Balance B recv checksum %x from %d\n", checksum, j);
+#endif /* P4EST_DEBUG */
       }
     }
   }
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   for (j = 0; j < num_procs; ++j) {
     P4EST_CHECK_ABORT (requests_second[j] == MPI_REQUEST_NULL, "Request B");
   }
-#endif /* P4EST_HAVE_DEBUG */
+#endif /* P4EST_DEBUG */
 
   /* print buffer statistics */
   P4EST_VERBOSEF ("first send Z %d L %d recv Z %d L %d\n",
@@ -1544,7 +1544,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     P4EST_ASSERT (send_zero[0] + recv_zero[1] + recv_load[1] ==
                   over_peer_count - rip);
   }
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   /* merge received quadrants */
   for (j = 0; j < num_procs; ++j) {
@@ -1683,9 +1683,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     tquadrants = NULL;          /* safeguard */
   }
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
 /* compute global sum of send and receive counts */
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   gtotal[0] = gtotal[1] = 0;
   ltotal[0] = total_send_count;
   ltotal[1] = total_recv_count;
@@ -1700,7 +1700,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   else {
     P4EST_ASSERT (ltotal[0] == 0 && ltotal[1] == 0);
   }
-#endif /* P4EST_HAVE_DEBUG */
+#endif /* P4EST_DEBUG */
 
   /* wait for all send operations */
   if (request_send_count > 0) {
@@ -1708,7 +1708,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                           send_requests_first_count, MPI_STATUSES_IGNORE);
     P4EST_CHECK_MPI (mpiret);
   }
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   /* loop over all local trees to finalize balance */
   all_outcount = 0;
@@ -1731,15 +1731,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   p4est_array_destroy (peers);
   p4est_array_reset (&corner_info);
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   P4EST_FREE (peer_boundaries);
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
   P4EST_FREE (recv_statuses);
   P4EST_FREE (wait_indices);
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   p4est_array_reset (&checkarray);
-#endif /* P4EST_HAVE_DEBUG */
-#endif /* HAVE_MPI */
+#endif /* P4EST_DEBUG */
+#endif /* P4EST_MPI */
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
@@ -1761,7 +1761,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
   p4est_gloidx_t      global_shipped = 0;
   const p4est_gloidx_t global_num_quadrants = p4est->global_num_quadrants;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
   int                 low_source, high_source;
   const int           num_procs = p4est->mpisize;
@@ -1785,14 +1785,14 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_GLOBAL_PRODUCTIONF
     ("Into p4est_partition with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   /* this function does nothing in a serial setup */
   if (p4est->mpicomm == MPI_COMM_NULL || p4est->mpisize == 1) {
     P4EST_GLOBAL_PRODUCTION ("Done p4est_partition no shipping\n");
@@ -1888,7 +1888,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
      * send low cut to send_lowest..send_highest
      * and high cut to send_lowest-1..send_highest-1
      */
-    P4EST_DEBUGF ("send bounds low %d high %d\n", send_lowest, send_highest);
+    P4EST_LDEBUGF ("send bounds low %d high %d\n", send_lowest, send_highest);
 
     num_sends = 2 * (send_highest - send_lowest + 1);
     if (num_sends <= 0) {
@@ -1925,8 +1925,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
           send_requests[base_index + 1] = MPI_REQUEST_NULL;
           send_array[base_index + 1] = -1;
         }
-        P4EST_DEBUGF ("send pos %d index %lld high %d low %d\n",
-                      k, (long long) send_index, i - 1, i);
+        P4EST_LDEBUGF ("send pos %d index %lld high %d low %d\n",
+                       k, (long long) send_index, i - 1, i);
 
         /* send high bound */
         send_array[base_index] = send_index;
@@ -1949,7 +1949,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (; i < num_procs; ++i) {
         if (global_weight_sums[i] < my_lowcut &&
             my_lowcut <= global_weight_sums[i + 1]) {
-          P4EST_DEBUGF ("receive low cut from %d\n", i);
+          P4EST_LDEBUGF ("receive low cut from %d\n", i);
           mpiret = MPI_Irecv (&recv_low, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm, &recv_requests[0]);
@@ -1970,7 +1970,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (; i < num_procs; ++i) {
         if (global_weight_sums[i] < my_highcut &&
             my_highcut <= global_weight_sums[i + 1]) {
-          P4EST_DEBUGF ("receive high cut from %d\n", i);
+          P4EST_LDEBUGF ("receive high cut from %d\n", i);
           mpiret = MPI_Irecv (&recv_high, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                               p4est->mpicomm, &recv_requests[1]);
@@ -1981,8 +1981,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       P4EST_ASSERT (i < num_procs);
       high_source = i;
     }
-    P4EST_DEBUGF ("my cut low %lld high %lld\n",
-                  (long long) my_lowcut, (long long) my_highcut);
+    P4EST_LDEBUGF ("my cut low %lld high %lld\n",
+                   (long long) my_lowcut, (long long) my_highcut);
 
     /* free temporary memory */
     P4EST_FREE (local_weights);
@@ -2019,7 +2019,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     /* communicate the quadrant ranges */
     qcount = recv_high - recv_low;
     P4EST_ASSERT (qcount >= 0);
-    P4EST_DEBUGF ("weighted partition count %d\n", qcount);
+    P4EST_LDEBUGF ("weighted partition count %d\n", qcount);
     mpiret = MPI_Allgather (&qcount, 1, MPI_INT,
                             num_quadrants_in_proc, 1, MPI_INT,
                             p4est->mpicomm);
@@ -2059,7 +2059,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 
   /* check validity of the p4est */
   P4EST_ASSERT (p4est_is_valid (p4est));
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   P4EST_GLOBAL_PRODUCTIONF
     ("Done p4est_partition shipped %lld quadrants %.3g%%\n",
@@ -2074,7 +2074,7 @@ p4est_checksum (p4est_t * p4est)
   int32_t             j;
   p4est_tree_t       *tree;
   p4est_array_t       checkarray;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
   uint32_t            send[2];
   uint32_t           *gather;
@@ -2091,7 +2091,7 @@ p4est_checksum (p4est_t * p4est)
   }
   p4est_array_reset (&checkarray);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (p4est->mpirank == 0) {
     gather = P4EST_ALLOC (uint32_t, 2 * p4est->mpisize);
     P4EST_CHECK_ALLOC (gather);

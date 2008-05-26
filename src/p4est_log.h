@@ -26,19 +26,8 @@
 
 /* renamed from log4c.h to p4est_log.h and modified for p4est */
 
-#ifndef __P4EST_LOG_H__
-#define __P4EST_LOG_H__
-
-/*
- * this header is included via p4est_base.h
- * it is not installed in the final include directory
- *
- * do not include this header from any other file
- */
-
-#ifndef __P4EST_BASE_H__
-#error The file p4est_log.h may only be included from p4est_base.h
-#endif
+#ifndef P4EST_LOG_H
+#define P4EST_LOG_H
 
 #ifdef P4EST_LOG_LEVEL
 #define LOG_STATIC_THRESHOLD P4EST_LOG_LEVEL
@@ -589,4 +578,4 @@ extern struct LogAppender *log_defaultLogAppender;
 #define EMERGENCY7(f,a1,a2,a3,a4,a5,a6) _LOG_PRE(*_log_defaultCategory, LP_EMERGENCY, f) ,a1,a2,a3,a4,a5,a6  _LOG_POST
 //@}
 
-#endif /* !__P4EST_LOG_H__ */
+#endif /* !P4EST_LOG_H */

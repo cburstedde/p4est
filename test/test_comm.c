@@ -58,7 +58,7 @@ int
 main (int argc, char **argv)
 {
   int                 num_procs, rank = 0;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
 #endif
   MPI_Comm            mpicomm;
@@ -68,7 +68,7 @@ main (int argc, char **argv)
   int32_t             i;
 
   mpicomm = MPI_COMM_NULL;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
@@ -89,7 +89,7 @@ main (int argc, char **argv)
   /* Check the global number of elements */
   qlocal = p4est->local_num_quadrants;
   qglobal = qlocal;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Allreduce (&qlocal, &qglobal, 1, MPI_LONG_LONG, MPI_SUM,
                             p4est->mpicomm);
@@ -109,7 +109,7 @@ main (int argc, char **argv)
     }
 
     qglobal = qlocal;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
     if (p4est->mpicomm != MPI_COMM_NULL) {
       mpiret = MPI_Bcast (&qglobal, 1, MPI_LONG_LONG, i, p4est->mpicomm);
       P4EST_CHECK_MPI (mpiret);
@@ -126,7 +126,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
   p4est_memory_check ();
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
 #endif

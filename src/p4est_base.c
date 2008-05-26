@@ -22,12 +22,12 @@
 #include <p4est_base.h>
 
 #ifdef P4EST_BACKTRACE
-#ifdef HAVE_EXECINFO_H
+#ifdef P4EST_HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif
 #endif
 
-#ifdef HAVE_SIGNAL_H
+#ifdef P4EST_HAVE_SIGNAL_H
 #include <signal.h>
 #endif
 
@@ -337,7 +337,7 @@ p4est_set_linebuffered (FILE * stream)
 void
 p4est_init_logging (FILE * stream, int identifier)
 {
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   char                filename[BUFSIZ];
   char               *job_id;
   char               *job_name;
@@ -357,7 +357,7 @@ p4est_init_logging (FILE * stream, int identifier)
     p4est_log_appender_global.appender.doAppend = p4est_log_append_null;
   }
   else {
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
     if (job_id != NULL && job_name != NULL) {
       snprintf (filename, BUFSIZ, "%s.%s_global", job_name, job_id);
     }
@@ -374,7 +374,7 @@ p4est_init_logging (FILE * stream, int identifier)
 
   p4est_log_appender_rank.stream = stream;
   p4est_log_appender_rank.backup = NULL;
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   if (job_id != NULL && job_name != NULL) {
     snprintf (filename, BUFSIZ, "%s.%s_%d",
               job_name, job_id, P4EST_MAX (identifier, 0));
@@ -389,13 +389,13 @@ p4est_init_logging (FILE * stream, int identifier)
   log_setAppender (&p4est_log_category_rank,
                    (struct LogAppender *) &p4est_log_appender_rank);
 
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
   log_setThreshold (&p4est_log_category_global, P4EST_LP_DEBUG);
   log_setThreshold (&p4est_log_category_rank, P4EST_LP_DEBUG);
 #else
   log_setThreshold (&p4est_log_category_global, P4EST_LP_INFO);
   log_setThreshold (&p4est_log_category_rank, P4EST_LP_INFO);
-#endif /* !P4EST_HAVE_DEBUG */
+#endif /* !P4EST_DEBUG */
 }
 
 void

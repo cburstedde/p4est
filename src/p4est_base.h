@@ -19,25 +19,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef __P4EST_BASE_H__
-#error The file p4est_base.h may only be included once in every .c file.
-#else
-#define __P4EST_BASE_H__
+#ifndef P4EST_BASE_H
+#define P4EST_BASE_H
 
-/*
- * This header is the only one that pulls in p4est_config.h.
- *
- * Do not include this header from any other .h file.
- * Do include this header topmost in any .c file using the p4est library.
- */
-
-/*
- * This includes p4est_config.h if (!P4EST_CONFIG_INSTALLED).
- * For an installation of this library, the user may define
- *    P4EST_HAVE_DEBUG, P4EST_LOG_LEVEL if desired.
- *    Also, various HAVE_ macros need to be provided externally.
- *    See p4est_types.h for the required configuration macros.
- */
 #include <p4est_types.h>
 #include <p4est_log.h>
 
@@ -62,7 +46,7 @@
 #define P4EST_CHECK_REALLOC(p,n) P4EST_CHECK_ABORT (((p) != NULL || (n) == 0), \
                                                     "Allocation")
 #define P4EST_CHECK_MPI(r) P4EST_CHECK_ABORT ((r) == MPI_SUCCESS, "MPI operation")
-#ifdef P4EST_HAVE_DEBUG
+#ifdef P4EST_DEBUG
 #define P4EST_ASSERT(c) P4EST_CHECK_ABORT ((c), "Assertion '" #c "'")
 #else
 #define P4EST_ASSERT(c) P4EST_NOOP
@@ -110,8 +94,8 @@
 #define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (P4EST_LP_TRACE, (s))
 #define P4EST_GLOBAL_TRACEF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_DEBUG(s) P4EST_GLOBAL_LOG (P4EST_LP_DEBUG, (s))
-#define P4EST_GLOBAL_DEBUGF(f,...) \
+#define P4EST_GLOBAL_LDEBUG(s) P4EST_GLOBAL_LOG (P4EST_LP_DEBUG, (s))
+#define P4EST_GLOBAL_LDEBUGF(f,...) \
   P4EST_GLOBAL_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_VERBOSE(s) P4EST_GLOBAL_LOG (P4EST_LP_VERBOSE, (s))
 #define P4EST_GLOBAL_VERBOSEF(f,...) \
@@ -130,8 +114,8 @@
 #define P4EST_TRACE(s) P4EST_LOG (P4EST_LP_TRACE, (s))
 #define P4EST_TRACEF(f,...) \
   P4EST_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
-#define P4EST_DEBUG(s) P4EST_LOG (P4EST_LP_DEBUG, (s))
-#define P4EST_DEBUGF(f,...) \
+#define P4EST_LDEBUG(s) P4EST_LOG (P4EST_LP_DEBUG, (s))
+#define P4EST_LDEBUGF(f,...) \
   P4EST_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
 #define P4EST_VERBOSE(s) P4EST_LOG (P4EST_LP_VERBOSE, (s))
 #define P4EST_VERBOSEF(f,...) \
@@ -196,4 +180,4 @@ void                p4est_init (FILE * stream, int identifier,
 void                p4est_abort (void)
   __attribute__ ((noreturn));
 
-#endif /* !__P4EST_BASE_H__ */
+#endif /* !P4EST_BASE_H */

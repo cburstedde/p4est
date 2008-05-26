@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_ALGORITHMS_H__
-#define __P4EST_ALGORITHMS_H__
+#ifndef P4EST_ALGORITHMS_H
+#define P4EST_ALGORITHMS_H
 
 #include <p4est.h>
 
@@ -476,4 +476,4 @@ p4est_gloidx_t      p4est_partition_given (p4est_t * p4est,
                                            const p4est_locidx_t *
                                            num_quadrants_in_proc);
 
-#endif /* !__P4EST_ALGORITHMS_H__ */
+#endif /* !P4EST_ALGORITHMS_H */

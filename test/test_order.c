@@ -301,7 +301,7 @@ int
 main (int argc, char **argv)
 {
   int                 rank = 0;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
 #endif
   MPI_Comm            mpicomm;
@@ -309,7 +309,7 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
 
   mpicomm = MPI_COMM_NULL;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
@@ -364,7 +364,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
   p4est_memory_check ();
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
 #endif

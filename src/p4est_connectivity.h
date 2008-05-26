@@ -19,11 +19,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_CONNECTIVITY_H__
-#define __P4EST_CONNECTIVITY_H__
+#ifndef P4EST_CONNECTIVITY_H
+#define P4EST_CONNECTIVITY_H
 
-#include <p4est_memory.h>
 #include <p4est_types.h>
+#include <p4est_memory.h>
 
 /** This structure holds the inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
@@ -131,4 +131,4 @@ void                p4est_find_corner_info (p4est_connectivity_t *
                                             p4est_locidx_t itree, int icorner,
                                             p4est_array_t * corner_info);
 
-#endif /* !__P4EST_CONNECTIVITY_H__ */
+#endif /* !P4EST_CONNECTIVITY_H */

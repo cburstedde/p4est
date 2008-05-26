@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_COMMUNICATION_H__
-#define __P4EST_COMMUNICATION_H__
+#ifndef P4EST_COMMUNICATION_H
+#define P4EST_COMMUNICATION_H
 
 #include <p4est.h>
 
@@ -58,4 +58,4 @@ int                 p4est_comm_find_owner (p4est_t * p4est,
                                            const p4est_quadrant_t * q,
                                            int guess);
 
-#endif /* !__P4EST_COMMUNICATION_H__ */
+#endif /* !P4EST_COMMUNICATION_H */

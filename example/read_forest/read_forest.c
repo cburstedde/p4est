@@ -45,7 +45,7 @@ main (int argc, char **argv)
   int                 retval;
   int                 fd;
   FILE               *outfile;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 use_mpi = 1;
   int                 mpiret;
   size_t              templatelength;
@@ -89,7 +89,7 @@ main (int argc, char **argv)
 
   /* initialize MPI and p4est internals */
   mpicomm = MPI_COMM_NULL;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (use_mpi) {
     mpiret = MPI_Init (&argc, &argv);
     P4EST_CHECK_MPI (mpiret);
@@ -118,7 +118,7 @@ main (int argc, char **argv)
     P4EST_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
   }
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   templatelength = strlen (template);
   mpiret = MPI_Bcast (template, templatelength + 1, MPI_CHAR, 0, mpicomm);
   P4EST_CHECK_MPI (mpiret);
@@ -151,7 +151,7 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_memory_check ();
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (use_mpi) {
     mpiret = MPI_Finalize ();
     P4EST_CHECK_MPI (mpiret);

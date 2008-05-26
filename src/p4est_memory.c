@@ -26,7 +26,7 @@
 #include <math.h>
 
 /* require zlib header for adler32 checksums */
-#ifdef HAVE_ZLIB_H
+#ifdef P4EST_HAVE_ZLIB_H
 #include <zlib.h>
 #endif
 

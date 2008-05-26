@@ -1,52 +1,55 @@
 dnl
-dnl p4est configure.ac
+dnl This file is part of the p4est library.
 dnl
 
 AC_INIT([p4est], [0.2], [ccgo@ices.utexas.edu])
 AC_PREREQ([2.59])
-AC_CONFIG_HEADER([src/p4est_config.h])
+AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
-AC_CONFIG_LIBOBJ_DIR(src)
-AM_INIT_AUTOMAKE
+AC_CONFIG_MACRO_DIR(sc/config)
+AM_INIT_AUTOMAKE([subdir-objects])
+AX_PREFIX_CONFIG_H([src/p4est_config.h])
 
 # Configure switches
-P4EST_ARG_ENABLE([debug], [enable debug mode], [P4EST_HAVE_DEBUG])
+P4EST_ARG_ENABLE([debug], [enable debug mode], [DEBUG])
 P4EST_ARG_ENABLE([log-level], [set the log priority [=PRIORITY]],
-                 [P4EST_LOG_LEVEL])
+                 [LOG_LEVEL])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
-                 [P4EST_VTK_DOUBLES])
+                 [VTK_DOUBLES])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
-                  [P4EST_VTK_BINARY])
+                  [VTK_BINARY])
 P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
-                  [P4EST_VTK_COMPRESSION])
+                  [VTK_COMPRESSION])
 P4EST_ARG_DISABLE([resize-realloc], [avoid realloc in array resize],
-                  [P4EST_RESIZE_REALLOC])
-P4EST_ARG_DISABLE([2d], [don't build the 2D library], [P4EST_BUILD_2D])
-P4EST_ARG_DISABLE([3d], [don't build the 3D library], [P4EST_BUILD_3D])
+                  [RESIZE_REALLOC])
+P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
+P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
+P4EST_ARG_WITHOUT([sc], [disable builtin libsc, provide your own], [PROVIDE_SC])
 
-# General settings.
-AC_CANONICAL_HOST
-dnl AC_GNU_SOURCE
+# Configure the SC library recursively.
+if test "$sc_with_PROVIDE_SC" = yes; then
+  AC_CONFIG_SUBDIRS([sc])
+fi
 
 # Checks for programs.
 echo "o----------------------------------"
 echo "| Checking for compilers"
 echo "o----------------------------------"
 
-ACX_MPI([icc gcc cc])
+ACX_MPI([P4EST], [icc gcc cc])
+AM_PROG_CC_C_O
 AC_PROG_RANLIB
-AC_CHECK_PROG([HAVE_PROG_SPLINT], [splint], [yes])
-AM_CONDITIONAL([HAVE_SPLINT], [test "$HAVE_PROG_SPLINT" = yes])
+ACX_WITH_LINT
 
 # Checks for libraries.
 echo "o----------------------------------"
 echo "| Checking for libraries"
 echo "o----------------------------------"
 
-P4EST_REQUIRE_LIB([m], [fabs])
-P4EST_REQUIRE_LIB([z], [adler32_combine])
+SC_REQUIRE_LIB([m], [fabs])
+SC_REQUIRE_LIB([z], [adler32_combine])
 
 echo "o----------------------------------"
 echo "| Checking headers and functions"
@@ -60,13 +63,14 @@ AC_CHECK_HEADERS([arpa/inet.h netinet/in.h zlib.h])
 
 # Checks for functions.
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
-P4EST_REQUIRE_FUNCS([memset pow sqrt floor])
+SC_REQUIRE_FUNCS([memset pow sqrt floor])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_C_INLINE
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
+dnl These are done from SC already.
+dnl AC_C_CONST
+dnl AC_C_INLINE
+dnl AC_TYPE_SIZE_T
+dnl AC_TYPE_SSIZE_T
 
 echo "o----------------------------------"
 echo "| Results are"

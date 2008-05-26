@@ -28,7 +28,7 @@
 #include <p4est_algorithms.h>
 #include <p4est_vtk.h>
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
 
 typedef struct
 {
@@ -62,12 +62,12 @@ abort_fn (void *data)
   P4EST_CHECK_MPI (mpiret);
 }
 
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
 int
 main (int argc, char **argv)
 {
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
   unsigned            crc;
   p4est_t            *p4est;
@@ -114,7 +114,7 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
 #else
   P4EST_CHECK_ABORT (0, "This example requires --enable-mpi to run.");
-#endif /* HAVE_MPI */
+#endif /* P4EST_MPI */
 
   return 0;
 }

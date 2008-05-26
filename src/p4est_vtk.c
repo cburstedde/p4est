@@ -25,7 +25,7 @@
 #include <libb64.h>
 
 /* require zlib header for compression */
-#ifdef HAVE_ZLIB_H
+#ifdef P4EST_HAVE_ZLIB_H
 #include <zlib.h>
 #endif
 

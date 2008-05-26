@@ -24,7 +24,7 @@
 
 #include <iniparser.h>
 
-#ifdef HAVE_GETOPT_H
+#ifdef P4EST_HAVE_GETOPT_H
 #include <getopt.h>
 #endif
 

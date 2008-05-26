@@ -26,7 +26,7 @@
 void
 p4est_comm_count_quadrants (p4est_t * p4est)
 {
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
 #endif
   p4est_gloidx_t      qlocal = p4est->local_num_quadrants;
@@ -36,7 +36,7 @@ p4est_comm_count_quadrants (p4est_t * p4est)
   const int           num_procs = p4est->mpisize;
 
   global_last_quad_index[rank] = qlocal;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
                             global_last_quad_index, 1, P4EST_MPI_GLOIDX,
@@ -59,7 +59,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 {
   const int           num_procs = p4est->mpisize;
   const int32_t       num_trees = p4est->connectivity->num_trees;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 i;
   int                 mpiret;
   const int32_t       first_tree = p4est->first_local_tree;
@@ -75,7 +75,7 @@ p4est_comm_global_partition (p4est_t * p4est)
   p4est->global_first_position[num_procs].x = 0;
   p4est->global_first_position[num_procs].y = 0;
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     P4EST_BZERO (&input, 1);
     if (first_tree < 0) {

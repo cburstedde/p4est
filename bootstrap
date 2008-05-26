@@ -1,6 +1,6 @@
 #!/bin/sh
 
-aclocal -I config
+aclocal -I config -I sc/config
 autoheader
 automake --add-missing --copy
 autoconf

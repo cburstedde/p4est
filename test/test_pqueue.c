@@ -42,7 +42,7 @@ main (int argc, char **argv)
   int                 index;
   int                *pi;
   p4est_array_t      *a1, *a2, *a3, *a4;
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   int                 mpiret;
   double              start, elapsed_pqueue, elapsed_qsort;
 
@@ -65,7 +65,7 @@ main (int argc, char **argv)
 #endif
   printf ("Test pqueue with count %d\n", count);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   start = -MPI_Wtime ();
 #endif
 
@@ -127,7 +127,7 @@ main (int argc, char **argv)
   printf ("   Swaps %d %d %d Total %d %d %d\n",
           swaps1, swaps2, swaps3, total1, total2, total3);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   elapsed_pqueue = start + MPI_Wtime ();
 #endif
 
@@ -137,7 +137,7 @@ main (int argc, char **argv)
 
   printf ("Test array sort with count %d\n", count);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   start = -MPI_Wtime ();
 #endif
 
@@ -159,7 +159,7 @@ main (int argc, char **argv)
   }
   p4est_array_resize (a4, 0);
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   elapsed_qsort = start + MPI_Wtime ();
   printf ("Test timings pqueue %g qsort %g\n",
           elapsed_pqueue, 3. * elapsed_qsort);
@@ -169,7 +169,7 @@ main (int argc, char **argv)
 
   p4est_memory_check ();
 
-#ifdef HAVE_MPI
+#ifdef P4EST_MPI
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
 #endif
