@@ -22,11 +22,7 @@
 #include <p4est_base.h>
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
-
-/* require zlib header for adler32 checksums */
-#ifdef P4EST_HAVE_ZLIB_H
-#include <zlib.h>
-#endif
+#include <sc_zlib.h>
 
 typedef struct
 {
@@ -425,7 +421,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       if (dorefine) {
         break;
       }
-      maxlevel = P4EST_MAX (maxlevel, q->level);
+      maxlevel = SC_MAX (maxlevel, q->level);
       ++tree->quadrants_per_level[q->level];
     }
     if (!dorefine) {
@@ -473,7 +469,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       else {
         /* need to make room in the array to store this new quadrant */
         if (restpos < incount && current == restpos) {
-          movecount = P4EST_MIN (incount - restpos, number_toread_quadrants);
+          movecount = SC_MIN (incount - restpos, number_toread_quadrants);
           while (movecount > 0) {
             q = sc_array_index (tquadrants, restpos);
             qalloc = sc_mempool_alloc (p4est->quadrant_pool);
@@ -490,7 +486,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         }
         q = sc_array_index (tquadrants, current);
         *q = *qpop;
-        maxlevel = P4EST_MAX (maxlevel, qpop->level);
+        maxlevel = SC_MAX (maxlevel, qpop->level);
         ++tree->quadrants_per_level[qpop->level];
         ++current;
         sc_mempool_free (p4est->quadrant_pool, qpop);
@@ -601,7 +597,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
         rest += 4 - before;
         last = first;
         first -= p4est_quadrant_child_id (cfirst);
-        first = P4EST_MAX (first, 0);
+        first = SC_MAX (first, 0);
       }
       else {
         /* do nothing, just move the counters and the hole */
@@ -729,8 +725,8 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
     s->p.piggy.which_tree = qtree;      /* piggy back tree id */
 
     /* update lowest and highest peer */
-    *first_peer = P4EST_MIN (owner, *first_peer);
-    *last_peer = P4EST_MAX (owner, *last_peer);
+    *first_peer = SC_MIN (owner, *first_peer);
+    *last_peer = SC_MAX (owner, *last_peer);
   }
 }
 
@@ -1567,7 +1563,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       q = sc_array_index (&tree->quadrants, treecount);
       *q = *s;
       ++tree->quadrants_per_level[q->level];
-      tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
+      tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
       ++p4est->local_num_quadrants;
       p4est_quadrant_init_data (p4est, qtree, q, init_fn);
     }
@@ -1663,7 +1659,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       q = sc_array_index (tquadrants, k);
       P4EST_ASSERT (p4est_quadrant_is_valid (q));
       ++tree->quadrants_per_level[q->level];
-      tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
+      tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
     }
     p4est->local_num_quadrants += qcount;
 
@@ -1866,8 +1862,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       cut = (weight_sum * i) / num_procs;
       if (global_weight_sums[rank] < cut &&
           cut <= global_weight_sums[rank + 1]) {
-        send_lowest = P4EST_MIN (send_lowest, i);
-        send_highest = P4EST_MAX (send_highest, i);
+        send_lowest = SC_MIN (send_lowest, i);
+        send_highest = SC_MAX (send_highest, i);
       }
     }
     /*

@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_FILE_H__
-#define __P4EST_FILE_H__
+#ifndef P4EST_FILE_H
+#define P4EST_FILE_H
 
 #include <p4est.h>
 
@@ -101,4 +101,4 @@ int                 p4est_connectivity_read (const char *filename,
 void                p4est_connectivity_print (p4est_connectivity_t *
                                               connectivity, FILE * nout);
 
-#endif /* !__P4EST_FILE_H__ */
+#endif /* !P4EST_FILE_H */

@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_MESH_H__
-#define __P4EST_MESH_H__
+#ifndef P4EST_MESH_H
+#define P4EST_MESH_H
 
 #include <p4est.h>
 
@@ -112,4 +112,4 @@ void                p4est_possible_node_neighbor (const p4est_quadrant_t * q,
                                                   p4est_quadrant_t * neighbor,
                                                   int *neighbor_node);
 
-#endif /* !__P4EST_MESH_H__ */
+#endif /* !P4EST_MESH_H */

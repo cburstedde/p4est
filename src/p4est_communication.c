@@ -68,8 +68,8 @@ p4est_comm_global_partition (p4est_t * p4est)
   p4est_position_t   *pi, input;
 #endif
 
-  P4EST_BZERO (&p4est->global_first_position[0], 1);
-  P4EST_BZERO (&p4est->global_first_position[num_procs], 1);
+  SC_BZERO (&p4est->global_first_position[0], 1);
+  SC_BZERO (&p4est->global_first_position[num_procs], 1);
 
   p4est->global_first_position[num_procs].which_tree = num_trees;
   p4est->global_first_position[num_procs].x = 0;
@@ -77,7 +77,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 
 #ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    P4EST_BZERO (&input, 1);
+    SC_BZERO (&input, 1);
     if (first_tree < 0) {
       /* i don't have any quadrants, send negative values */
       P4EST_ASSERT (first_tree == -1 && p4est->last_local_tree == -2);

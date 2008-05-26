@@ -31,29 +31,6 @@
 #include <signal.h>
 #endif
 
-/* *INDENT-OFF* */
-
-const int p4est_log_lookup_table[256] =
-{ -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
-   4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-   5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-   5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-   6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-};
-
-/* *INDENT-ON* */
-
 static int          p4est_base_identifier = -1;
 static p4est_handler_t p4est_abort_handler = NULL;
 static void        *p4est_abort_data = NULL;
@@ -285,10 +262,10 @@ p4est_init_logging (FILE * stream, int identifier)
 #ifdef P4EST_DEBUG
   if (job_id != NULL && job_name != NULL) {
     snprintf (filename, BUFSIZ, "%s.%s_%d",
-              job_name, job_id, P4EST_MAX (identifier, 0));
+              job_name, job_id, SC_MAX (identifier, 0));
   }
   else {
-    snprintf (filename, BUFSIZ, "p4est.log_%d", P4EST_MAX (identifier, 0));
+    snprintf (filename, BUFSIZ, "p4est.log_%d", SC_MAX (identifier, 0));
   }
   p4est_log_appender_rank.backup = fopen (filename, "wb");
 #endif

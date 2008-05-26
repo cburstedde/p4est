@@ -78,7 +78,7 @@ static void
 check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
 {
   int                 comp = p4est_quadrant_compare (q1, q2);
-  int                 level = P4EST_MIN (q1->level, q2->level);
+  int                 level = SC_MIN (q1->level, q2->level);
   uint64_t            id1 = p4est_quadrant_linear_id (q1, level);
   uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
 
@@ -292,7 +292,7 @@ main (void)
   for (i = 0; i < incount; ++i) {
     q1 = sc_array_index (&tree.quadrants, i);
     ++tree.quadrants_per_level[q1->level];
-    tree.maxlevel = (int8_t) P4EST_MAX (tree.maxlevel, q1->level);
+    tree.maxlevel = (int8_t) SC_MAX (tree.maxlevel, q1->level);
   }
   P4EST_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
   p4est_linearize_subtree (p4est1, &tree);

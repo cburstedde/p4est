@@ -22,12 +22,8 @@
 #include <p4est_base.h>
 #include <p4est_vtk.h>
 #include <p4est_mesh.h>
+#include <sc_zlib.h>
 #include <libb64.h>
-
-/* require zlib header for compression */
-#ifdef P4EST_HAVE_ZLIB_H
-#include <zlib.h>
-#endif
 
 #ifndef P4EST_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"

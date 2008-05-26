@@ -58,7 +58,7 @@ main (int argc, char **argv)
     q = sc_array_index (&tree->quadrants, k);
     q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
     ++tree->quadrants_per_level[q->level];
-    tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
+    tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
   }
 
   /* balance the tree, print and destroy */

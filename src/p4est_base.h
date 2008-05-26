@@ -25,58 +25,23 @@
 #include <p4est_types.h>
 #include <p4est_log.h>
 
-#define P4EST_NOOP do { ; } while (0)
-#define P4EST_CHECK_ABORT(c,s)                     \
-  do {                                             \
-    if (!(c)) {                                    \
-      fprintf (stderr, "Abort: %s\n   in %s:%d\n", \
-               (s), __FILE__, __LINE__);           \
-      p4est_abort ();                              \
-    }                                              \
-  } while (0)
-#define P4EST_CHECK_ABORTF(c,fmt,...)                   \
-  do {                                                  \
-    if (!(c)) {                                         \
-      fprintf (stderr, "Abort: " fmt "\n   in %s:%d\n", \
-               __VA_ARGS__, __FILE__, __LINE__);        \
-      p4est_abort ();                                   \
-    }                                                   \
-  } while (0)
-
-#define P4EST_CHECK_MPI(r) P4EST_CHECK_ABORT ((r) == MPI_SUCCESS, "MPI operation")
+/* use error checking from libsc */
+#define P4EST_CHECK_MPI(r)              SC_CHECK_MPI (r)
+#define P4EST_CHECK_ABORT(c,s)          SC_CHECK_ABORT (c, s)
+#define P4EST_CHECK_ABORTF(c,fmt,...)   SC_CHECK_ABORTF (c, fmt, __VA_ARGS__)
 #ifdef P4EST_DEBUG
-#define P4EST_ASSERT(c) P4EST_CHECK_ABORT ((c), "Assertion '" #c "'")
+#define P4EST_ASSERT(c) SC_CHECK_ABORT ((c), "Assertion '" #c "'")
 #else
-#define P4EST_ASSERT(c) P4EST_NOOP
+#define P4EST_ASSERT(c) SC_NOOP ()
 #endif
-#define P4EST_ASSERT_NOT_REACHED() P4EST_CHECK_ABORT (0, "Unreachable code")
+#define P4EST_ASSERT_NOT_REACHED() SC_ASSERT_NOT_REACHED ()
 
-#define P4EST_ALLOC(t,n) (t *) sc_malloc ((n) * sizeof(t))
-#define P4EST_ALLOC_ZERO(t,n) (t *) sc_calloc ((n), sizeof(t))
-#define P4EST_REALLOC(p,t,n) (t *) sc_realloc ((p), (n) * sizeof(t))
-#define P4EST_STRDUP(s) sc_strdup (s)
-
-/**
- * Sets n elements of a memory range to zero.
- * Assumes the pointer p is of the correct type.
- */
-#define P4EST_BZERO(p,n) do { memset ((p), 0, (n) * sizeof (*(p))); } while (0)
-
-/* it is allowed to call P4EST_FREE (NULL) which does nothing. */
-#define P4EST_FREE(p) sc_free (p)
-
-/* min and max helper macros */
-#define P4EST_MIN(a,b) (((a) < (b)) ? (a) : (b))
-#define P4EST_MAX(a,b) (((a) > (b)) ? (a) : (b))
-
-/* hopefully fast binary logarithms and binary round up */
-#define P4EST_LOG2_8(x) (p4est_log_lookup_table[(x)])
-#define P4EST_LOG2_16(x) (((x) > 0xff) ? \
-                          (P4EST_LOG2_8 ((x) >> 8) + 8) : P4EST_LOG2_8 (x))
-#define P4EST_LOG2_32(x) (((x) > 0xffff) ? \
-                          (P4EST_LOG2_16 ((x) >> 16)) + 16 : P4EST_LOG2_16 (x))
-#define P4EST_ROUNDUP2_32(x) \
-                    (((x) <= 0) ? 0 : (1 << (P4EST_LOG2_32 ((x) - 1) + 1)))
+/* use memory allocation from libsc */
+#define P4EST_ALLOC(t,n)        SC_ALLOC (t, n)
+#define P4EST_ALLOC_ZERO(t,n)   SC_ALLOC_ZERO (t, n)
+#define P4EST_REALLOC(p,t,n)    SC_REALLOC (p, t, n)
+#define P4EST_STRDUP(s)         SC_STRDUP (s)
+#define P4EST_FREE(p)           SC_FREE (p)
 
 /* log macros, for priorities see p4est_log.h */
 #define P4EST_GLOBAL_LOG(p,s) \

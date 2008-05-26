@@ -19,8 +19,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __P4EST_VTK_H__
-#define __P4EST_VTK_H__
+#ifndef P4EST_VTK_H
+#define P4EST_VTK_H
 
 #include <p4est.h>
 
@@ -82,4 +82,4 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
 int                 p4est_vtk_write_footer (p4est_t * p4est,
                                             const char *baseName);
 
-#endif /* !__P4EST_VTK_H__ */
+#endif /* !P4EST_VTK_H */
