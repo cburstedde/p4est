@@ -1,11 +1,9 @@
 
-## Makefile.am in example/simple
+# This file is part of the p4est library
+# Makefile.am in example/read_forest
+# included non-recursively from toplevel directory
 
-bin_PROGRAMS = p4est_read_forest
-p4est_read_forest_SOURCES = read_forest.c
+bin_PROGRAMS += example/read_forest/p4est_read_forest
+example_read_forest_p4est_read_forest_SOURCES = example/read_forest/read_forest.c
 
-AM_CPPFLAGS = \
-        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
-        -I@top_srcdir@/src
-
-LDADD = @top_builddir@/src/libp4est.a @top_builddir@/src/libb64/libb64.a
+LINT_CSOURCES += $(example_read_forest_p4est_read_forest_SOURCES)

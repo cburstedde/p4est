@@ -82,19 +82,6 @@ echo "| LDFLAGS:     $LDFLAGS"
 echo "| LIBS:        $LIBS"
 echo "o----------------------------------"
 
-# And the end.
-AC_CONFIG_FILES([Makefile
-                 src/Makefile
-                 src/libb64/Makefile
-                 src/iniparser/Makefile
-                 test/Makefile
-                 example/Makefile
-                 example/read_forest/Makefile
-                 example/simple/Makefile
-                 example/timings/Makefile
-                 example/options/Makefile
-                 example/second/Makefile
-                 doc/Makefile
-                ])
-
+# Create output files.
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

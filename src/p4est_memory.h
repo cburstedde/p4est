@@ -24,8 +24,6 @@
 
 /* p4est memory management */
 
-#include <p4est_obstack.h>
-
 /** Function to compute a hash value of an object.
  * \return Returns an unsigned integer.
  */

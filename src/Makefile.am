@@ -1,28 +1,38 @@
 
-# This file is part of the p4est Library
+# This file is part of the p4est library
 # Makefile.am in src
+# included non-recursively from toplevel directory
 
-SUBDIRS = . libb64 iniparser
+libp4est_internal_headers =
+libp4est_generated_headers = src/p4est_config.h
+libp4est_installed_headers = \
+        src/p4est_log.h src/p4est_types.h src/p4est_base.h \
+        src/p4est_avl.h src/p4est_memory.h \
+        src/p4est_connectivity.h src/p4est.h \
+        src/p4est_algorithms.h src/p4est_communication.h \
+        src/p4est_file.h src/p4est_vtk.h src/p4est_mesh.h
+libp4est_compiled_sources = \
+        src/p4est_log.c src/p4est_base.c \
+        src/p4est_avl.c src/p4est_memory.c \
+        src/p4est_connectivity.c src/p4est.c \
+        src/p4est_algorithms.c src/p4est_communication.c \
+        src/p4est_file.c src/p4est_vtk.c src/p4est_mesh.c
 
-lib_LIBRARIES = libp4est.a
-libp4est_a_SOURCES = \
-        p4est_log.h p4est_log.c \
-        p4est_types.h p4est_base.h p4est_base.c p4est_mpi_dummy.h \
-        p4est_obstack.h p4est_obstack.c p4est_avl.h p4est_avl.c \
-        p4est_memory.h p4est_memory.c p4est_options.h p4est_options.c \
-        p4est_connectivity.h p4est_connectivity.c p4est.h p4est.c \
-        p4est_algorithms.h p4est_algorithms.c \
-        p4est_communication.h p4est_communication.c \
-        p4est_file.h p4est_file.c p4est_vtk.h p4est_vtk.c \
-        p4est_mesh.h p4est_mesh.c
+lib_LIBRARIES += src/libp4est.a
+src_libp4est_a_SOURCES = \
+        $(libp4est_internal_headers) \
+        $(libp4est_installed_headers) \
+        $(libp4est_compiled_sources)
 
-include_HEADERS = \
-        p4est_log.h p4est_types.h p4est_base.h p4est_mpi_dummy.h \
-        p4est_obstack.h p4est_avl.h p4est_memory.h \
-        p4est_connectivity.h p4est.h \
-        p4est_algorithms.h p4est_communication.h \
-        p4est_file.h p4est_vtk.h p4est_mesh.h
+src_libp4est_a_CPPFLAGS = \
+        $(AM_CPPFLAGS) -I@top_srcdir@/sc/libb64
 
-AM_CPPFLAGS = \
-        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
-        -I@top_srcdir@/src/libb64 -I@top_srcdir@/src/iniparser
+nodist_include_HEADERS += $(libp4est_generated_headers)
+include_HEADERS += $(libp4est_installed_headers)
+
+AM_CPPFLAGS += \
+        -I@top_srcdir@/src -I@top_builddir@/sc/src -I@top_srcdir@/sc/src
+
+LDADD += @top_builddir@/src/libp4est.a @top_builddir@/sc/src/libsc.a
+
+LINT_CSOURCES += $(libp4est_compiled_sources)

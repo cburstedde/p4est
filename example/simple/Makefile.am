@@ -1,11 +1,9 @@
 
-## Makefile.am in example/simple
+# This file is part of the p4est library
+# Makefile.am in example/simple
+# included non-recursively from toplevel directory
 
-bin_PROGRAMS = p4est_simple
-p4est_simple_SOURCES = simple.c
+bin_PROGRAMS += example/simple/p4est_simple
+example_simple_p4est_simple_SOURCES = example/simple/simple.c
 
-AM_CPPFLAGS = \
-        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
-        -I@top_srcdir@/src
-
-LDADD = @top_builddir@/src/libp4est.a @top_builddir@/src/libb64/libb64.a
+LINT_CSOURCES += $(example_simple_p4est_simple_SOURCES)

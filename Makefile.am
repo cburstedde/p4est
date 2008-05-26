@@ -1,24 +1,48 @@
 
-# This file is part of the p4est Library
+# This file is part of the p4est library
 # Makefile.am in toplevel directory
 
 ACLOCAL_AMFLAGS = -I config -I sc/config
 
+# initialize empty variables
+AM_CPPFLAGS =
+EXTRA_DIST =
+LDADD =
+LINT_CSOURCES =
+MAINTAINERCLEANFILES =
+TESTS =
+bin_PROGRAMS =
+check_PROGRAMS =
+include_HEADERS =
+lib_LIBRARIES =
+nodist_include_HEADERS =
+noinst_HEADERS =
+noinst_PROGRAMS =
+
+# recurse only into subpackages
 SUBDIRS =
 if P4EST_PROVIDE_SC
 SUBDIRS += sc
 endif
-SUBDIRS += src test example doc
 
-EXTRA_DIST = bootstrap p4estindent
-
-MAINTAINERCLEANFILES = ChangeLog
-
+# handle toplevel directory
+EXTRA_DIST += bootstrap p4estindent
+MAINTAINERCLEANFILES += ChangeLog
 .PHONY: lint ChangeLog
+
+# non-recursive build
+include src/Makefile.am
+include test/Makefile.am
+include example/options/Makefile.am
+include example/read_forest/Makefile.am
+include example/second/Makefile.am
+include example/simple/Makefile.am
+include example/timings/Makefile.am
+include doc/Makefile.am
 
 ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
-                 $(src_libsc_a_CPPFLAGS) -DP4EST_SPLINT
+                 $(src_libp4est_a_CPPFLAGS) -DP4EST_SPLINT
 
 lint:
 if LINT

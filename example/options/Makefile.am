@@ -1,13 +1,9 @@
 
-## Makefile.am in example/options
+# This file is part of the p4est library
+# Makefile.am in example/options
+# included non-recursively from toplevel directory
 
-bin_PROGRAMS = p4est_options
-p4est_options_SOURCES = options.c
+bin_PROGRAMS += example/options/p4est_options
+example_options_p4est_options_SOURCES = example/options/options.c
 
-AM_CPPFLAGS = \
-        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
-        -I@top_srcdir@/src
-
-LDADD = \
-	@top_builddir@/src/libp4est.a \
-	@top_builddir@/src/iniparser/libiniparser.a
+LINT_CSOURCES += $(example_options_p4est_options_SOURCES)

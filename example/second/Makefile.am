@@ -1,11 +1,9 @@
 
-## Makefile.am in example/second
+# This file is part of the p4est library
+# Makefile.am in example/second
+# included non-recursively from toplevel directory
 
-bin_PROGRAMS = p4est_second
-p4est_second_SOURCES = second.c
+bin_PROGRAMS += example/second/p4est_second
+example_second_p4est_second_SOURCES = example/second/second.c
 
-AM_CPPFLAGS = \
-        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
-        -I@top_srcdir@/src
-
-LDADD = @top_builddir@/src/libp4est.a @top_builddir@/src/libb64/libb64.a
+LINT_CSOURCES += $(example_second_p4est_second_SOURCES)

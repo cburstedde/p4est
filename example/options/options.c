@@ -20,7 +20,7 @@
 */
 
 #include <p4est_base.h>
-#include <p4est_options.h>
+#include <sc_options.h>
 
 int
 main (int argc, char **argv)
@@ -30,35 +30,35 @@ main (int argc, char **argv)
   int                 i1, i2;
   double              d;
   const char         *s1, *s2;
-  p4est_options_t    *opt;
+  sc_options_t       *opt;
 
-  opt = p4est_options_new (argv[0]);
-  p4est_options_add_switch (opt, 'w', "switch", &w, "Switch");
-  p4est_options_add_int (opt, 'i', "integer1", &i1, 0, "Integer 1");
-  p4est_options_add_double (opt, 'd', "double", &d, 0., "Double");
-  p4est_options_add_string (opt, 's', "string", &s1, NULL, "String 1");
-  p4est_options_add_string (opt, 't', NULL, &s2, NULL, "String 2");
-  p4est_options_add_inifile (opt, 'f', "inifile", ".ini file");
-  p4est_options_add_int (opt, '\0', "integer2", &i2, 7, "Integer 2");
+  opt = sc_options_new (argv[0]);
+  sc_options_add_switch (opt, 'w', "switch", &w, "Switch");
+  sc_options_add_int (opt, 'i', "integer1", &i1, 0, "Integer 1");
+  sc_options_add_double (opt, 'd', "double", &d, 0., "Double");
+  sc_options_add_string (opt, 's', "string", &s1, NULL, "String 1");
+  sc_options_add_string (opt, 't', NULL, &s2, NULL, "String 2");
+  sc_options_add_inifile (opt, 'f', "inifile", ".ini file");
+  sc_options_add_int (opt, '\0', "integer2", &i2, 7, "Integer 2");
 
   /* this is just to show off the load function */
-  if (!p4est_options_load (opt, "preload.ini", NULL)) {
+  if (!sc_options_load (opt, "preload.ini", NULL)) {
     printf ("Preload successful\n");
   }
   else {
     printf ("Preload not found or failed\n");
   }
 
-  first_arg = p4est_options_parse (opt, argc, argv, stderr);
+  first_arg = sc_options_parse (opt, argc, argv, stderr);
   if (first_arg < 0) {
-    p4est_options_print_help (opt, 1, stdout);
+    sc_options_print_help (opt, 1, stdout);
   }
   else {
-    p4est_options_print_summary (opt, stdout);
-    p4est_options_print_arguments (opt, first_arg, argc, argv, stdout);
+    sc_options_print_summary (opt, stdout);
+    sc_options_print_arguments (opt, first_arg, argc, argv, stdout);
   }
 
-  p4est_options_destroy (opt);
+  sc_options_destroy (opt);
 
   p4est_memory_check ();
 

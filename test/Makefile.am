@@ -1,32 +1,39 @@
 
-## Makefile.am in test
+# This file is part of the p4est library
+# Makefile.am test
+# included non-recursively from toplevel directory
 
-noinst_PROGRAMS = \
-	p4est_bug_wp
+p4est_test_programs = \
+        test/p4est_test_comm test/p4est_test_pqueue test/p4est_test_hash \
+        test/p4est_test_file test/p4est_test_quadrants \
+        test/p4est_test_balance test/p4est_test_partition \
+        test/p4est_test_order
 
-check_PROGRAMS = \
-	p4est_test_comm p4est_test_pqueue p4est_test_hash \
-	p4est_test_file p4est_test_quadrants p4est_test_balance \
-	p4est_test_partition p4est_test_order
+noinst_PROGRAMS += \
+        test/p4est_bug_wp
 
-p4est_test_comm_SOURCES = test_comm.c
-p4est_test_pqueue_SOURCES = test_pqueue.c
-p4est_test_hash_SOURCES = test_hash.c
-p4est_test_file_SOURCES = test_file.c
-p4est_test_quadrants_SOURCES = test_quadrants.c
-p4est_test_balance_SOURCES = test_balance.c
-p4est_test_partition_SOURCES = test_partition.c
-p4est_test_order_SOURCES = test_order.c
+check_PROGRAMS += $(p4est_test_programs)
 
-p4est_bug_wp_SOURCES = bug_weighted_partition.c
+test_p4est_test_comm_SOURCES = test/test_comm.c
+test_p4est_test_pqueue_SOURCES = test/test_pqueue.c
+test_p4est_test_hash_SOURCES = test/test_hash.c
+test_p4est_test_file_SOURCES = test/test_file.c
+test_p4est_test_quadrants_SOURCES = test/test_quadrants.c
+test_p4est_test_balance_SOURCES = test/test_balance.c
+test_p4est_test_partition_SOURCES = test/test_partition.c
+test_p4est_test_order_SOURCES = test/test_order.c
 
-TESTS = \
-	p4est_test_comm p4est_test_pqueue p4est_test_hash \
-	p4est_test_file p4est_test_quadrants p4est_test_balance \
-	p4est_test_partition p4est_test_order
+test_p4est_bug_wp_SOURCES = test/bug_weighted_partition.c
 
-AM_CPPFLAGS = \
-        -I@top_builddir@/sc/src -I@top_srcdir@/sc/src \
-        -I@top_srcdir@/src
+TESTS += $(p4est_test_programs)
 
-LDADD = @top_builddir@/src/libp4est.a
+LINT_CSOURCES += \
+        $(test_p4est_test_comm_SOURCES) \
+        $(test_p4est_test_pqueue_SOURCES) \
+        $(test_p4est_test_hash_SOURCES) \
+        $(test_p4est_test_file_SOURCES) \
+        $(test_p4est_test_quadrants_SOURCES) \
+        $(test_p4est_test_balance_SOURCES) \
+        $(test_p4est_test_partition_SOURCES) \
+        $(test_p4est_test_order_SOURCES) \
+        $(test_p4est_bug_wp_SOURCES)
