@@ -86,8 +86,8 @@ p4est_comm_global_partition (p4est_t * p4est)
     }
     else {
       /* send values corresponding to my first quadrant */
-      tree = p4est_array_index (p4est->trees, first_tree);
-      quadrant = p4est_array_index (&tree->quadrants, 0);
+      tree = sc_array_index (p4est->trees, first_tree);
+      quadrant = sc_array_index (&tree->quadrants, 0);
       input.which_tree = first_tree;
       input.x = quadrant->x;
       input.y = quadrant->y;

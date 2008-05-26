@@ -149,9 +149,9 @@ main (int argc, char **argv)
 
   /* check user data content */
   for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
-    tree = p4est_array_index (p4est->trees, t);
+    tree = sc_array_index (p4est->trees, t);
     for (q = 0; q < tree->quadrants.elem_count; ++q) {
-      quad = p4est_array_index (&tree->quadrants, q);
+      quad = sc_array_index (&tree->quadrants, q);
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
@@ -193,9 +193,9 @@ main (int argc, char **argv)
 
   /* check user data content */
   for (t = copy->first_local_tree; t <= copy->last_local_tree; ++t) {
-    tree = p4est_array_index (copy->trees, t);
+    tree = sc_array_index (copy->trees, t);
     for (q = 0; q < tree->quadrants.elem_count; ++q) {
-      quad = p4est_array_index (&tree->quadrants, q);
+      quad = sc_array_index (&tree->quadrants, q);
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 

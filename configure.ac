@@ -28,6 +28,8 @@ P4EST_ARG_DISABLE([resize-realloc], [avoid realloc in array resize],
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
 P4EST_ARG_WITHOUT([sc], [disable builtin libsc, provide your own], [PROVIDE_SC])
+P4EST_ARG_WITHOUT([zlib], [disable zlib in builtin libsc, provide your own],
+                  [PROVIDE_ZLIB])
 
 # Configure the SC library recursively.
 if test "$P4EST_WITH_PROVIDE_SC" = yes; then
@@ -50,7 +52,9 @@ echo "| Checking for libraries"
 echo "o----------------------------------"
 
 SC_REQUIRE_LIB([m], [fabs])
-SC_REQUIRE_LIB([z], [adler32_combine])
+if test "$P4EST_WITH_PROVIDE_ZLIB" = "no" ; then
+  SC_REQUIRE_LIB([z], [adler32_combine])
+fi
 
 echo "o----------------------------------"
 echo "| Checking headers and functions"

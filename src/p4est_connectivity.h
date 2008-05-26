@@ -23,7 +23,7 @@
 #define P4EST_CONNECTIVITY_H
 
 #include <p4est_types.h>
-#include <p4est_memory.h>
+#include <sc_containers.h>
 
 /** This structure holds the inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
@@ -129,6 +129,6 @@ int                 p4est_find_face_transform (p4est_connectivity_t *
 void                p4est_find_corner_info (p4est_connectivity_t *
                                             connectivity,
                                             p4est_locidx_t itree, int icorner,
-                                            p4est_array_t * corner_info);
+                                            sc_array_t * corner_info);
 
 #endif /* !P4EST_CONNECTIVITY_H */

@@ -41,7 +41,7 @@ main (int argc, char **argv)
   int                 s, swaps1, swaps2, swaps3, total1, total2, total3;
   int                 index;
   int                *pi;
-  p4est_array_t      *a1, *a2, *a3, *a4;
+  sc_array_t         *a1, *a2, *a3, *a4;
 #ifdef P4EST_MPI
   int                 mpiret;
   double              start, elapsed_pqueue, elapsed_qsort;
@@ -53,10 +53,10 @@ main (int argc, char **argv)
 #endif
   p4est_init (stdout, rank, NULL, NULL);
 
-  a1 = p4est_array_new (sizeof (int));
-  a2 = p4est_array_new (sizeof (int));
-  a3 = p4est_array_new (sizeof (int));
-  a4 = p4est_array_new (sizeof (int));
+  a1 = sc_array_new (sizeof (int));
+  a2 = sc_array_new (sizeof (int));
+  a3 = sc_array_new (sizeof (int));
+  a4 = sc_array_new (sizeof (int));
 
 #ifdef THEBIGTEST
   count = 325323;
@@ -72,24 +72,24 @@ main (int argc, char **argv)
   swaps1 = swaps2 = swaps3 = 0;
   total1 = total2 = total3 = 0;
   for (i = 0; i < count; ++i) {
-    p4est_array_resize (a1, i + 1);
-    pi = p4est_array_index (a1, i);
+    sc_array_resize (a1, i + 1);
+    pi = sc_array_index (a1, i);
     *pi = i;
-    s = p4est_array_pqueue_add (a1, &temp, compar);
+    s = sc_array_pqueue_add (a1, &temp, compar);
     swaps1 += ((s > 0) ? 1 : 0);
     total1 += s;
 
-    p4est_array_resize (a2, i + 1);
-    pi = p4est_array_index (a2, i);
+    sc_array_resize (a2, i + 1);
+    pi = sc_array_index (a2, i);
     *pi = count - i - 1;
-    s = p4est_array_pqueue_add (a2, &temp, compar);
+    s = sc_array_pqueue_add (a2, &temp, compar);
     swaps2 += ((s > 0) ? 1 : 0);
     total2 += s;
 
-    p4est_array_resize (a3, i + 1);
-    pi = p4est_array_index (a3, i);
+    sc_array_resize (a3, i + 1);
+    pi = sc_array_index (a3, i);
     *pi = (15 * i) % 172;
-    s = p4est_array_pqueue_add (a3, &temp, compar);
+    s = sc_array_pqueue_add (a3, &temp, compar);
     swaps3 += ((s > 0) ? 1 : 0);
     total3 += s;
   }
@@ -99,24 +99,24 @@ main (int argc, char **argv)
           swaps1, swaps2, swaps3, total1, total2, total3);
 
   temp = 52;
-  index = p4est_array_bsearch (a1, &temp, compar);
+  index = sc_array_bsearch (a1, &temp, compar);
   P4EST_CHECK_ABORT (index != -1, "array_bsearch_index");
-  pi = p4est_array_index (a1, index);
+  pi = sc_array_index (a1, index);
   P4EST_CHECK_ABORT (*pi == temp, "array_bsearch");
 
   i3last = -1;
   swaps1 = swaps2 = swaps3 = 0;
   total1 = total2 = total3 = 0;
   for (i = 0; i < count; ++i) {
-    s = p4est_array_pqueue_pop (a1, &i1, compar);
+    s = sc_array_pqueue_pop (a1, &i1, compar);
     swaps1 += ((s > 0) ? 1 : 0);
     total1 += s;
 
-    s = p4est_array_pqueue_pop (a2, &i2, compar);
+    s = sc_array_pqueue_pop (a2, &i2, compar);
     swaps2 += ((s > 0) ? 1 : 0);
     total2 += s;
 
-    s = p4est_array_pqueue_pop (a3, &i3, compar);
+    s = sc_array_pqueue_pop (a3, &i3, compar);
     swaps3 += ((s > 0) ? 1 : 0);
     total3 += s;
 
@@ -131,9 +131,9 @@ main (int argc, char **argv)
   elapsed_pqueue = start + MPI_Wtime ();
 #endif
 
-  p4est_array_destroy (a1);
-  p4est_array_destroy (a2);
-  p4est_array_destroy (a3);
+  sc_array_destroy (a1);
+  sc_array_destroy (a2);
+  sc_array_destroy (a3);
 
   printf ("Test array sort with count %d\n", count);
 
@@ -143,21 +143,21 @@ main (int argc, char **argv)
 
   /* the resize is done to be comparable with the above procedure */
   for (i = 0; i < count; ++i) {
-    p4est_array_resize (a4, i + 1);
-    pi = p4est_array_index (a4, i);
+    sc_array_resize (a4, i + 1);
+    pi = sc_array_index (a4, i);
     *pi = (15 * i) % 172;
   }
-  p4est_array_sort (a4, compar);
+  sc_array_sort (a4, compar);
 
   i4last = -1;
   for (i = 0; i < count; ++i) {
-    pi = p4est_array_index (a4, i);
+    pi = sc_array_index (a4, i);
     i4 = *pi;
 
     P4EST_CHECK_ABORT (i4 >= i4last, "array_sort");
     i4last = i4;
   }
-  p4est_array_resize (a4, 0);
+  sc_array_resize (a4, 0);
 
 #ifdef P4EST_MPI
   elapsed_qsort = start + MPI_Wtime ();
@@ -165,7 +165,7 @@ main (int argc, char **argv)
           elapsed_pqueue, 3. * elapsed_qsort);
 #endif
 
-  p4est_array_destroy (a4);
+  sc_array_destroy (a4);
 
   p4est_memory_check ();
 

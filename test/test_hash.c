@@ -42,26 +42,26 @@ main (int argc, char **argv)
   void               *v1, *v2, *v3;
   p4est_quadrant_t    q1, q2, q3;
   p4est_quadrant_t   *f1, *f2, *f3;
-  p4est_hash_t       *ihash;
-  p4est_hash_t       *qhash;
+  sc_hash_t       *ihash;
+  sc_hash_t       *qhash;
 
   p4est_init (stdout, 0, NULL, NULL);
 
   for (k = 0; k < 3; ++k) {
-    ihash = p4est_hash_new (int_hash_fn, int_equal_fn, NULL);
+    ihash = sc_hash_new (int_hash_fn, int_equal_fn, NULL);
 
     inserted = 0;
     for (i = 0; i < 347; ++i) {
-      inserted += p4est_hash_insert_unique (ihash, (void *) (i % 91), NULL);
+      inserted += sc_hash_insert_unique (ihash, (void *) (i % 91), NULL);
     }
     printf ("Integers inserted %d total %lu\n",
             inserted, (unsigned long) ihash->elem_count);
     P4EST_CHECK_ABORT (inserted == ihash->elem_count, "Integer hash");
 
-    p4est_hash_destroy (ihash);
+    sc_hash_destroy (ihash);
   }
 
-  qhash = p4est_hash_new (p4est_quadrant_hash, p4est_quadrant_is_equal, NULL);
+  qhash = sc_hash_new (p4est_quadrant_hash, p4est_quadrant_is_equal, NULL);
 
   p4est_quadrant_set_morton (&q1, 3, 15);
   p4est_quadrant_set_morton (&q2, 3, 18);
@@ -71,11 +71,11 @@ main (int argc, char **argv)
   q3.p.piggy.owner_rank = 0;
 
   f1 = f2 = f3 = NULL;
-  i1 = p4est_hash_insert_unique (qhash, &q1, &v1);
+  i1 = sc_hash_insert_unique (qhash, &q1, &v1);
   f1 = v1;
-  i2 = p4est_hash_insert_unique (qhash, &q2, &v2);
+  i2 = sc_hash_insert_unique (qhash, &q2, &v2);
   f2 = v2;
-  i3 = p4est_hash_insert_unique (qhash, &q3, &v3);
+  i3 = sc_hash_insert_unique (qhash, &q3, &v3);
   f3 = v3;
   printf ("Quadrants inserted %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
@@ -86,9 +86,9 @@ main (int argc, char **argv)
 
   f1 = f2 = f3 = NULL;
   p4est_quadrant_set_morton (&q1, 3, 19);
-  i1 = p4est_hash_lookup (qhash, &q1, NULL);
-  i2 = p4est_hash_lookup (qhash, &q2, NULL);
-  i3 = p4est_hash_lookup (qhash, &q3, &v3);
+  i1 = sc_hash_lookup (qhash, &q1, NULL);
+  i2 = sc_hash_lookup (qhash, &q2, NULL);
+  i3 = sc_hash_lookup (qhash, &q3, &v3);
   f3 = v3;
   printf ("Quadrants lookup %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
@@ -97,17 +97,17 @@ main (int argc, char **argv)
                      && f3->p.piggy.owner_rank == 5, "Lookup return");
 
   f1 = f2 = f3 = NULL;
-  i1 = p4est_hash_remove (qhash, &q1, &v1);
+  i1 = sc_hash_remove (qhash, &q1, &v1);
   f1 = v1;
-  i2 = p4est_hash_remove (qhash, &q2, &v2);
+  i2 = sc_hash_remove (qhash, &q2, &v2);
   f2 = v2;
-  i3 = p4est_hash_remove (qhash, &q3, NULL);
+  i3 = sc_hash_remove (qhash, &q3, NULL);
   P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
   P4EST_CHECK_ABORT (f2 == &q2
                      && f2->p.piggy.owner_rank == 5, "Remove return");
   f2 = f1;
 
-  p4est_hash_destroy (qhash);
+  sc_hash_destroy (qhash);
 
   p4est_memory_check ();
 

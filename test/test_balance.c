@@ -38,25 +38,25 @@ main (int argc, char **argv)
   p4est = p4est_new (MPI_COMM_NULL, connectivity, 4, NULL);
 
   /* build empty tree */
-  p4est_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
+  sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
   for (l = 0; l <= P4EST_MAXLEVEL; ++l) {
     tree->quadrants_per_level[l] = 0;
   }
   tree->maxlevel = 0;
 
   /* insert two quadrants */
-  p4est_array_resize (&tree->quadrants, 4);
-  q = p4est_array_index (&tree->quadrants, 0);
+  sc_array_resize (&tree->quadrants, 4);
+  q = sc_array_index (&tree->quadrants, 0);
   p4est_quadrant_set_morton (q, 3, 13);
-  q = p4est_array_index (&tree->quadrants, 1);
+  q = sc_array_index (&tree->quadrants, 1);
   p4est_quadrant_set_morton (q, 1, 1);
-  q = p4est_array_index (&tree->quadrants, 2);
+  q = sc_array_index (&tree->quadrants, 2);
   p4est_quadrant_set_morton (q, 1, 2);
-  q = p4est_array_index (&tree->quadrants, 3);
+  q = sc_array_index (&tree->quadrants, 3);
   p4est_quadrant_set_morton (q, 1, 3);
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
-    q = p4est_array_index (&tree->quadrants, k);
-    q->p.user_data = p4est_mempool_alloc (p4est->user_data_pool);
+    q = sc_array_index (&tree->quadrants, k);
+    q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
     ++tree->quadrants_per_level[q->level];
     tree->maxlevel = (int8_t) P4EST_MAX (tree->maxlevel, q->level);
   }
@@ -65,14 +65,14 @@ main (int argc, char **argv)
   p4est_balance_subtree (p4est, tree, 0, NULL);
   p4est_tree_print (P4EST_LP_INFO, tree);
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
-    q = p4est_array_index (&tree->quadrants, k);
-    p4est_mempool_free (p4est->user_data_pool, q->p.user_data);
+    q = sc_array_index (&tree->quadrants, k);
+    sc_mempool_free (p4est->user_data_pool, q->p.user_data);
   }
-  p4est_array_reset (&tree->quadrants);
+  sc_array_reset (&tree->quadrants);
 
   /* balance the forest */
   p4est_balance (p4est, NULL);
-  tree = p4est_array_index (p4est->trees, 0);
+  tree = sc_array_index (p4est->trees, 0);
   p4est_tree_print (P4EST_LP_INFO, tree);
 
   /* clean up memory */

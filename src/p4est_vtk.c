@@ -251,8 +251,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   int32_t             lv0, lv1, lv2, lv3;
   int32_t             first_local_tree = p4est->first_local_tree;
   int32_t             last_local_tree = p4est->last_local_tree;
-  p4est_array_t      *trees = p4est->trees;
-  p4est_array_t      *quadrants;
+  sc_array_t         *trees = p4est->trees;
+  sc_array_t         *quadrants;
   p4est_tree_t       *tree;
   int                 num_quads;
   int                 quad_count;
@@ -307,7 +307,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #endif
   /* loop over the trees */
   for (j = first_local_tree, quad_count = 0; j <= last_local_tree; ++j) {
-    tree = p4est_array_index (trees, j);
+    tree = sc_array_index (trees, j);
     /*
      * Note that we switch from right-hand-rule order for tree_to_vertex
      * to pixel order for v
@@ -335,7 +335,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 
     /* loop over the elements in the tree */
     for (i = 0; i < num_quads; ++i, ++quad_count) {
-      quad = p4est_array_index (quadrants, i);
+      quad = sc_array_index (quadrants, i);
       inth = (1 << (P4EST_MAXLEVEL - quad->level));
       h = intsize * inth;
       eta1 = quad->x * intsize;

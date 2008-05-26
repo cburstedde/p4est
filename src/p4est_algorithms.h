@@ -305,8 +305,8 @@ void                p4est_quadrant_print (int log_priority,
  * \param [in] first_quadrant  Index of the quadrant to start with.
  *                             Can be between 0 and elem_count (inclusive).
  */
-unsigned            p4est_quadrant_checksum (p4est_array_t * quadrants,
-                                             p4est_array_t * checkarray,
+unsigned            p4est_quadrant_checksum (sc_array_t * quadrants,
+                                             sc_array_t * checkarray,
                                              int first_quadrant);
 
 /** Test if a tree is sorted in Morton ordering.
@@ -362,14 +362,14 @@ int                 p4est_is_valid (p4est_t * p4est);
 /** Find the lowest position tq in a quadrant array such that tq >= q.
  * \return  Returns the id of the matching quadrant, or -1 if not found.
  */
-int                 p4est_find_lower_bound (p4est_array_t * array,
+int                 p4est_find_lower_bound (sc_array_t * array,
                                             const p4est_quadrant_t * q,
                                             int guess);
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant, or -1 if not found.
  */
-int                 p4est_find_higher_bound (p4est_array_t * array,
+int                 p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
                                              int guess);
 
@@ -385,15 +385,15 @@ int                 p4est_find_higher_bound (p4est_array_t * array,
  */
 void                p4est_tree_compute_overlap (p4est_t * p4est,
                                                 p4est_locidx_t qtree,
-                                                p4est_array_t * in,
-                                                p4est_array_t * out);
+                                                sc_array_t * in,
+                                                sc_array_t * out);
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
  * \param [in] not      A sorted list of quadrants to be skipped.
  * \param [in,out] out  A sorted subset of tree->quadrants..
   */
-void                p4est_tree_uniqify_overlap (p4est_array_t * not,
-                                                p4est_array_t * out);
+void                p4est_tree_uniqify_overlap (sc_array_t * not,
+                                                sc_array_t * out);
 
 /** Constructs a minimal linear octree between two octants.
  *

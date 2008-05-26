@@ -588,7 +588,7 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
 void
 p4est_find_corner_info (p4est_connectivity_t * conn,
                         p4est_locidx_t itree, int icorner,
-                        p4est_array_t * corner_info)
+                        sc_array_t * corner_info)
 {
   int                 ncorner;
   p4est_locidx_t      incount, num_found;
@@ -625,14 +625,14 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
     }
     P4EST_ASSERT (ncorner < 4);
     if (num_found >= incount) {
-      p4est_array_resize (corner_info, num_found + 1);
+      sc_array_resize (corner_info, num_found + 1);
     }
-    ci = p4est_array_index (corner_info, num_found);
+    ci = sc_array_index (corner_info, num_found);
     ci->ntree = ntree;
     ci->ncorner = (int8_t) ncorner;
     ++num_found;
   }
-  p4est_array_resize (corner_info, num_found);
+  sc_array_resize (corner_info, num_found);
   P4EST_ASSERT (corner_trees == num_found +
                 1 + (ntree1 != itree) + (ntree2 != itree));
 }

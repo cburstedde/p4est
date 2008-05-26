@@ -60,7 +60,7 @@ p4est_quadrant_t;
 
 typedef struct p4est_tree
 {
-  p4est_array_t       quadrants;        /* locally stored quadrants */
+  sc_array_t          quadrants;        /* locally stored quadrants */
   p4est_locidx_t      quadrants_per_level[P4EST_MAXLEVEL + 1];  /* locals only */
   int8_t              maxlevel; /* highest local quadrant level */
 }
@@ -97,13 +97,13 @@ typedef struct p4est
   p4est_position_t   *global_first_position;    /* first_tree, x, y of first quadrant
                                                    for each processor and 1 beyond */
   p4est_connectivity_t *connectivity;   /* connectivity structure */
-  p4est_array_t      *trees;    /* list of all trees */
+  sc_array_t         *trees;    /* list of all trees */
 
-  p4est_mempool_t    *user_data_pool;   /* memory allocator for user data
+  sc_mempool_t       *user_data_pool;   /* memory allocator for user data
                                          * WARNING: This is NULL if data size
                                          *          equals zero.
                                          */
-  p4est_mempool_t    *quadrant_pool;    /* memory allocator for temporary quadrants */
+  sc_mempool_t       *quadrant_pool;    /* memory allocator for temporary quadrants */
 }
 p4est_t;
 

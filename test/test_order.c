@@ -128,8 +128,8 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   int32_t             v0, v1, v2, v3;
   int32_t             lv0, lv1, lv2, lv3;
   double              intsize = 1.0 / P4EST_ROOT_LEN;
-  p4est_array_t      *trees;
-  p4est_array_t      *quadrants;
+  sc_array_t         *trees;
+  sc_array_t         *quadrants;
   int                 num_quads, quad_count;
   int                 identify_periodic;
   p4est_vert_t       *vert_locations;
@@ -153,7 +153,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   trees = p4est->trees;
 
   for (j = first_local_tree, quad_count = 0; j <= last_local_tree; ++j) {
-    tree = p4est_array_index (trees, j);
+    tree = sc_array_index (trees, j);
     /*
      * Note that we switch from right-hand-rule order for tree_to_vertex
      * to pixel order for v
@@ -181,7 +181,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 
     /* loop over the elements in the tree */
     for (i = 0; i < num_quads; ++i, ++quad_count) {
-      quad = p4est_array_index (quadrants, i);
+      quad = sc_array_index (quadrants, i);
       inth = P4EST_QUADRANT_LEN (quad->level);
       h = intsize * inth;
       eta1 = quad->x * intsize;
