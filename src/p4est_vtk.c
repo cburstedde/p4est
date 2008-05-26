@@ -62,7 +62,6 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
 
   code_length = 2 * chunksize;
   base_data = P4EST_ALLOC (char, code_length);
-  P4EST_CHECK_ALLOC (base_data);
 
   base64_init_encodestate (&encode_state);
   base_length =
@@ -121,14 +120,11 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
   /* allocate compression and base64 arrays */
   code_length = 2 * blocksize;
   comp_data = P4EST_ALLOC (char, code_length);
-  P4EST_CHECK_ALLOC (comp_data);
   base_data = P4EST_ALLOC (char, code_length);
-  P4EST_CHECK_ALLOC (base_data);
 
   /* figure out the size of the header and write a dummy */
   header_entries = 3 + numfullblocks;
   compression_header = P4EST_ALLOC (uint32_t, header_entries);
-  P4EST_CHECK_ALLOC (compression_header);
   compression_header[0] = numfullblocks;
   compression_header[1] = blocksize;
   compression_header[2] = lastsize;
@@ -270,7 +266,6 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   }
 
   int32_data = P4EST_ALLOC (int32_t, 4 * Ncells);
-  P4EST_CHECK_ALLOC (int32_data);
 
   p4est_order_local_vertices (p4est, 0, &Ntotal, int32_data);
 
@@ -291,7 +286,6 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "      <Points>\n");
 
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Ntotal);
-  P4EST_CHECK_ALLOC (float_data);
 
   /* write point position data */
 #ifdef P4EST_VTK_ASCII
@@ -517,7 +511,6 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        <DataArray type=\"UInt8\" Name=\"types\""
            " format=\"binary\">\n");
   uint8_data = P4EST_ALLOC (uint8_t, Ncells);
-  P4EST_CHECK_ALLOC (uint8_data);
   for (i = 0; i < Ncells; ++i) {
     uint8_data[i] = 8;
   }

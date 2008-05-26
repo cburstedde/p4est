@@ -60,7 +60,7 @@ main (int argc, char **argv)
 
   sc_options_destroy (opt);
 
-  p4est_memory_check ();
+  sc_memory_check ();
 
   return 0;
 }

@@ -166,8 +166,7 @@ main (int argc, char **argv)
 #endif
 
   sc_array_destroy (a4);
-
-  p4est_memory_check ();
+  sc_memory_check ();
 
 #ifdef P4EST_MPI
   mpiret = MPI_Finalize ();

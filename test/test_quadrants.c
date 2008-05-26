@@ -538,7 +538,7 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
   P4EST_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 
-  p4est_memory_check ();
+  sc_memory_check ();
 
   return 0;
 }

@@ -42,9 +42,7 @@
       p4est_abort ();                                   \
     }                                                   \
   } while (0)
-#define P4EST_CHECK_ALLOC(p) P4EST_CHECK_ABORT (((p) != NULL), "Allocation")
-#define P4EST_CHECK_REALLOC(p,n) P4EST_CHECK_ABORT (((p) != NULL || (n) == 0), \
-                                                    "Allocation")
+
 #define P4EST_CHECK_MPI(r) P4EST_CHECK_ABORT ((r) == MPI_SUCCESS, "MPI operation")
 #ifdef P4EST_DEBUG
 #define P4EST_ASSERT(c) P4EST_CHECK_ABORT ((c), "Assertion '" #c "'")
@@ -53,10 +51,10 @@
 #endif
 #define P4EST_ASSERT_NOT_REACHED() P4EST_CHECK_ABORT (0, "Unreachable code")
 
-#define P4EST_ALLOC(t,n) (t *) p4est_malloc ((n) * sizeof(t))
-#define P4EST_ALLOC_ZERO(t,n) (t *) p4est_calloc ((n), sizeof(t))
-#define P4EST_REALLOC(p,t,n) (t *) p4est_realloc ((p), (n) * sizeof(t))
-#define P4EST_STRDUP(s) p4est_strdup (s)
+#define P4EST_ALLOC(t,n) (t *) sc_malloc ((n) * sizeof(t))
+#define P4EST_ALLOC_ZERO(t,n) (t *) sc_calloc ((n), sizeof(t))
+#define P4EST_REALLOC(p,t,n) (t *) sc_realloc ((p), (n) * sizeof(t))
+#define P4EST_STRDUP(s) sc_strdup (s)
 
 /**
  * Sets n elements of a memory range to zero.
@@ -65,7 +63,7 @@
 #define P4EST_BZERO(p,n) do { memset ((p), 0, (n) * sizeof (*(p))); } while (0)
 
 /* it is allowed to call P4EST_FREE (NULL) which does nothing. */
-#define P4EST_FREE(p) p4est_free (p)
+#define P4EST_FREE(p) sc_free (p)
 
 /* min and max helper macros */
 #define P4EST_MIN(a,b) (((a) < (b)) ? (a) : (b))
@@ -153,14 +151,6 @@ int                 p4est_int64_compare (const void *v1, const void *v2);
 int                 p4est_int64_lower_bound (int64_t target,
                                              const int64_t * array,
                                              int size, int guess);
-
-/** these functions deal with NULL pointers */
-void               *p4est_malloc (size_t size);
-void               *p4est_calloc (size_t nmemb, size_t size);
-void               *p4est_realloc (void *ptr, size_t size);
-char               *p4est_strdup (const char *s);
-void                p4est_free (void *ptr);
-void                p4est_memory_check (void);
 
 /** Initializes p4est_log_category to print to stream.
  * \param [in]  identifier  Set this to mpirank, or -1 to avoid number prefix.

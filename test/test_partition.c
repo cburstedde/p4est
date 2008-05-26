@@ -111,9 +111,7 @@ main (int argc, char **argv)
   p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
 
   num_procs = p4est->mpisize;
-
   num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
-  P4EST_CHECK_ALLOC (num_quadrants_in_proc);
 
   /* refine and balance to make the number of elements interesting */
   p4est_refine (p4est, refine_fn, init_fn);
@@ -209,7 +207,7 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_destroy (copy);
   p4est_connectivity_destroy (connectivity);
-  p4est_memory_check ();
+  sc_memory_check ();
 
 #ifdef P4EST_MPI
   mpiret = MPI_Finalize ();

@@ -2193,7 +2193,6 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Calculate the global_last_quad_index for the repartitioned forest */
   new_global_last_quad_index = P4EST_ALLOC (int64_t, num_procs);
-  P4EST_CHECK_ALLOC (new_global_last_quad_index);
   new_global_last_quad_index[0] = new_num_quadrants_in_proc[0] - 1;
   for (i = 1; i < num_procs; ++i) {
     new_global_last_quad_index[i] = new_num_quadrants_in_proc[i] +
@@ -2230,7 +2229,6 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Calculate the local index of the end of each tree */
   local_tree_last_quad_index = P4EST_ALLOC_ZERO (int64_t, trees->elem_count);
-  P4EST_CHECK_ALLOC (local_tree_last_quad_index);
   if (first_local_tree >= 0) {
     tree = sc_array_index (p4est->trees, first_local_tree);
     local_tree_last_quad_index[first_local_tree]
@@ -2259,7 +2257,6 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Calculate where the quadrants are coming from */
   num_recv_from = P4EST_ALLOC (int32_t, num_procs);
-  P4EST_CHECK_ALLOC (num_recv_from);
 
   my_begin = (rank == 0) ? 0 : (new_global_last_quad_index[rank - 1] + 1);
   my_end = new_global_last_quad_index[rank];
@@ -2294,12 +2291,9 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Post receives for the quadrants and their data */
   recv_buf = P4EST_ALLOC (char *, num_procs);
-  P4EST_CHECK_ALLOC (recv_buf);
 #ifdef P4EST_MPI
   recv_request = P4EST_ALLOC (MPI_Request, num_proc_recv_from);
-  P4EST_CHECK_ALLOC (recv_request);
   recv_status = P4EST_ALLOC (MPI_Status, num_proc_recv_from);
-  P4EST_CHECK_ALLOC (recv_status);
 #endif
 
   /* Allocate space for receiving quadrants and user data */
@@ -2311,7 +2305,6 @@ p4est_partition_given (p4est_t * p4est,
         + quad_plus_data_size * num_recv_from[from_proc];
 
       recv_buf[from_proc] = P4EST_ALLOC (char, recv_size);
-      P4EST_CHECK_ALLOC (recv_buf[from_proc]);
 
       /* Post receives for the quadrants and their data */
 #ifdef P4EST_MPI
@@ -2331,9 +2324,7 @@ p4est_partition_given (p4est_t * p4est,
 
   /* For each processor calculate the number of quadrants sent */
   num_send_to = P4EST_ALLOC (int32_t, num_procs);
-  P4EST_CHECK_ALLOC (num_send_to);
   begin_send_to = P4EST_ALLOC (int64_t, num_procs);
-  P4EST_CHECK_ALLOC (begin_send_to);
 
   my_begin = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
   my_end = global_last_quad_index[rank];
@@ -2376,17 +2367,13 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Communicate the quadrants and their data */
   send_buf = P4EST_ALLOC (char *, num_procs);
-  P4EST_CHECK_ALLOC (send_buf);
 #ifdef P4EST_MPI
   send_request = P4EST_ALLOC (MPI_Request, num_proc_send_to);
-  P4EST_CHECK_ALLOC (send_request);
   send_status = P4EST_ALLOC (MPI_Status, num_proc_send_to);
-  P4EST_CHECK_ALLOC (send_status);
 #endif
 
   /* Set the num_per_tree_local */
   num_per_tree_local = P4EST_ALLOC_ZERO (int32_t, num_send_trees);
-  P4EST_CHECK_ALLOC (num_per_tree_local);
   to_proc = rank;
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
   my_begin = begin_send_to[to_proc] - my_base;
@@ -2416,7 +2403,6 @@ p4est_partition_given (p4est_t * p4est,
         + quad_plus_data_size * num_send_to[to_proc];
 
       send_buf[to_proc] = P4EST_ALLOC (char, send_size);
-      P4EST_CHECK_ALLOC (send_buf[to_proc]);
 
       num_per_tree_send_buf = (int32_t *) send_buf[to_proc];
       memset (num_per_tree_send_buf, 0, num_send_trees * sizeof (int32_t));
@@ -2500,10 +2486,8 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Calculate the local index of the end of each tree in the repartition */
   new_local_tree_elem_count = P4EST_ALLOC_ZERO (int32_t, trees->elem_count);
-  P4EST_CHECK_ALLOC (new_local_tree_elem_count);
   new_local_tree_elem_count_before = P4EST_ALLOC_ZERO (int32_t,
                                                        trees->elem_count);
-  P4EST_CHECK_ALLOC (new_local_tree_elem_count_before);
   new_first_local_tree = trees->elem_count;
   new_last_local_tree = 0;
 

@@ -195,7 +195,6 @@ main (int argc, char **argv)
   }
   p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
   quadrant_counts = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
-  P4EST_CHECK_ALLOC (quadrant_counts);
 
   /* time refine */
   mpiret = MPI_Barrier (mpi->mpicomm);
@@ -290,7 +289,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
-  p4est_memory_check ();
+  sc_memory_check ();
 
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);

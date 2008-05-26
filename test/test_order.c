@@ -136,7 +136,6 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 
   quadrant_to_local_vertex = P4EST_ALLOC (int32_t,
                                           4 * p4est->local_num_quadrants);
-  P4EST_CHECK_ALLOC (quadrant_to_local_vertex);
 
   identify_periodic = 1;
   p4est_order_local_vertices (p4est, identify_periodic,
@@ -144,7 +143,6 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
                               quadrant_to_local_vertex);
 
   vert_locations = P4EST_ALLOC (p4est_vert_t, num_uniq_local_vertices);
-  P4EST_CHECK_ALLOC (vert_locations);
 
   tree_to_vertex = connectivity->tree_to_vertex;
   vertices = connectivity->vertices;
@@ -362,7 +360,7 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
-  p4est_memory_check ();
+  sc_memory_check ();
 
 #ifdef P4EST_MPI
   mpiret = MPI_Finalize ();

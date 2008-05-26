@@ -108,7 +108,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
-  p4est_memory_check ();
+  sc_memory_check ();
 
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);

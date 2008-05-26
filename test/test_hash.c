@@ -108,8 +108,7 @@ main (int argc, char **argv)
   f2 = f1;
 
   sc_hash_destroy (qhash);
-
-  p4est_memory_check ();
+  sc_memory_check ();
 
   return 0;
 }

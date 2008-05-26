@@ -41,32 +41,19 @@ p4est_connectivity_new (p4est_locidx_t num_trees, p4est_locidx_t num_vertices,
   p4est_connectivity_t *connectivity;
 
   connectivity = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
-  P4EST_CHECK_ALLOC (connectivity);
 
   connectivity->num_trees = num_trees;
   connectivity->num_vertices = num_vertices;
 
   connectivity->tree_to_vertex = P4EST_ALLOC (p4est_locidx_t, 4 * num_trees);
-  P4EST_CHECK_ALLOC (connectivity->tree_to_vertex);
-
   connectivity->tree_to_tree = P4EST_ALLOC (p4est_locidx_t, 4 * num_trees);
-  P4EST_CHECK_ALLOC (connectivity->tree_to_tree);
-
   connectivity->tree_to_face = P4EST_ALLOC (int8_t, 4 * num_trees);
-  P4EST_CHECK_ALLOC (connectivity->tree_to_face);
-
   connectivity->vertices = P4EST_ALLOC (double, 3 * num_vertices);
-  P4EST_CHECK_ALLOC (connectivity->vertices);
-
   connectivity->vtt_offset = P4EST_ALLOC (p4est_locidx_t, num_vertices + 1);
-  P4EST_CHECK_ALLOC (connectivity->vtt_offset);
   connectivity->vtt_offset[num_vertices] = -1;  /* catch bugs */
 
   connectivity->vertex_to_tree = P4EST_ALLOC (p4est_locidx_t, num_vtt);
-  P4EST_CHECK_ALLOC (connectivity->vertex_to_tree);
-
   connectivity->vertex_to_vertex = P4EST_ALLOC (p4est_locidx_t, num_vtt);
-  P4EST_CHECK_ALLOC (connectivity->vertex_to_vertex);
 
   return connectivity;
 }
@@ -74,9 +61,9 @@ p4est_connectivity_new (p4est_locidx_t num_trees, p4est_locidx_t num_vertices,
 void
 p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
 {
-  P4EST_FREE (connectivity->tree_to_face);
-  P4EST_FREE (connectivity->tree_to_tree);
   P4EST_FREE (connectivity->tree_to_vertex);
+  P4EST_FREE (connectivity->tree_to_tree);
+  P4EST_FREE (connectivity->tree_to_face);
   P4EST_FREE (connectivity->vertices);
   P4EST_FREE (connectivity->vtt_offset);
   P4EST_FREE (connectivity->vertex_to_tree);

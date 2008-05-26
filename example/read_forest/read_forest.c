@@ -149,7 +149,7 @@ main (int argc, char **argv)
   }
 
   /* clean up and exit */
-  p4est_memory_check ();
+  sc_memory_check ();
 
 #ifdef P4EST_MPI
   if (use_mpi) {

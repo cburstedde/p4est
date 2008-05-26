@@ -66,7 +66,6 @@ p4est_order_local_vertices (p4est_t * p4est,
 
   /* figure out the offset of each tree into the local element id */
   tree_offset = P4EST_ALLOC_ZERO (int32_t, num_trees);
-  P4EST_CHECK_ALLOC (tree_offset);
   if (first_local_tree >= 0) {
     tree_offset[first_local_tree] = 0;
     for (j = first_local_tree; j < last_local_tree; ++j) {

@@ -81,7 +81,7 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 
-  p4est_memory_check ();
+  sc_memory_check ();
 
   return 0;
 }

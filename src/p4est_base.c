@@ -54,9 +54,6 @@ const int p4est_log_lookup_table[256] =
 
 /* *INDENT-ON* */
 
-static int          malloc_count = 0;
-static int          free_count = 0;
-
 static int          p4est_base_identifier = -1;
 static p4est_handler_t p4est_abort_handler = NULL;
 static void        *p4est_abort_data = NULL;
@@ -165,95 +162,6 @@ p4est_int64_lower_bound (int64_t target, const int64_t * array,
   }
 
   return guess;
-}
-
-void               *
-p4est_malloc (size_t size)
-{
-  void               *ret;
-
-  ret = malloc (size);
-
-  if (size > 0) {
-    ++malloc_count;
-  }
-  else {
-    malloc_count += ((ret == NULL) ? 0 : 1);
-  }
-
-  return ret;
-}
-
-void               *
-p4est_calloc (size_t nmemb, size_t size)
-{
-  void               *ret;
-
-  ret = calloc (nmemb, size);
-
-  if (nmemb * size > 0) {
-    ++malloc_count;
-  }
-  else {
-    malloc_count += ((ret == NULL) ? 0 : 1);
-  }
-
-  return ret;
-}
-
-void               *
-p4est_realloc (void *ptr, size_t size)
-{
-  void               *ret;
-
-  ret = realloc (ptr, size);
-
-  if (ptr == NULL) {
-    if (size > 0) {
-      ++malloc_count;
-    }
-    else {
-      malloc_count += ((ret == NULL) ? 0 : 1);
-    }
-  }
-  else if (size == 0) {
-    free_count += ((ret == NULL) ? 1 : 0);
-  }
-
-  return ret;
-}
-
-char               *
-p4est_strdup (const char *s)
-{
-  int                 len;
-  char               *d;
-
-  if (s == NULL) {
-    return NULL;
-  }
-
-  len = strlen (s) + 1;
-  d = P4EST_ALLOC (char, len);
-  P4EST_CHECK_ALLOC (d);
-  memcpy (d, s, len);
-
-  return d;
-}
-
-void
-p4est_free (void *ptr)
-{
-  if (ptr != NULL) {
-    ++free_count;
-    free (ptr);
-  }
-}
-
-void
-p4est_memory_check (void)
-{
-  P4EST_CHECK_ABORT (malloc_count == free_count, "Memory balance");
 }
 
 struct p4est_log_appender

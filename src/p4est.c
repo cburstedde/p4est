@@ -78,7 +78,6 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_QUADRANT_INIT (&c);
 
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  P4EST_CHECK_ALLOC (p4est);
 
   /* assign some data members */
   p4est->data_size = data_size;
@@ -227,12 +226,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
   p4est->global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
-  P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
   p4est_comm_count_quadrants (p4est);
 
   /* fill in global partition information */
   global_first_position = P4EST_ALLOC_ZERO (p4est_position_t, num_procs + 1);
-  P4EST_CHECK_ALLOC (global_first_position);
   for (i = 0; i <= num_procs; ++i) {
     first_quadrant = (global_num_quadrants * i) / num_procs;
     first_tree = first_quadrant / tree_num_quadrants;
@@ -302,7 +299,6 @@ p4est_copy (p4est_t * input, int copy_data)
 
   /* create a shallow copy and zero out dependent fields */
   p4est = P4EST_ALLOC (p4est_t, 1);
-  P4EST_CHECK_ALLOC (p4est);
   memcpy (p4est, input, sizeof (p4est_t));
   p4est->global_last_quad_index = NULL;
   p4est->global_first_position = NULL;
@@ -356,14 +352,12 @@ p4est_copy (p4est_t * input, int copy_data)
   /* allocate and copy global quadrant count */
   p4est->global_last_quad_index =
     P4EST_ALLOC (p4est_gloidx_t, p4est->mpisize);
-  P4EST_CHECK_ALLOC (p4est->global_last_quad_index);
   memcpy (p4est->global_last_quad_index, input->global_last_quad_index,
           p4est->mpisize * sizeof (p4est_gloidx_t));
 
   /* allocate and copy global partition information */
   p4est->global_first_position = P4EST_ALLOC (p4est_position_t,
                                               p4est->mpisize + 1);
-  P4EST_CHECK_ALLOC (p4est->global_first_position);
   memcpy (p4est->global_first_position, input->global_first_position,
           (p4est->mpisize + 1) * sizeof (p4est_position_t));
 
@@ -866,7 +860,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
   /* tree status flags (max 8 per tree) */
   tree_flags = P4EST_ALLOC (int8_t, conn->num_trees);
-  P4EST_CHECK_ALLOC (tree_flags);
   for (i = 0; i < conn->num_trees; ++i) {
     tree_flags[i] = 0x00;
   }
@@ -874,17 +867,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifdef P4EST_MPI
   /* will contain first and last peer (inclusive) for each processor */
   peer_boundaries = P4EST_ALLOC (int32_t, twopeerw * num_procs);
-  P4EST_CHECK_ALLOC (peer_boundaries);
   /* request and status buffers for receive operations */
   requests_first = P4EST_ALLOC (MPI_Request, 6 * num_procs);
-  P4EST_CHECK_ALLOC (requests_first);
   requests_second = requests_first + 1 * num_procs;
   send_requests_first_count = requests_first + 2 * num_procs;
   send_requests_first_load = requests_first + 3 * num_procs;
   send_requests_second_count = requests_first + 4 * num_procs;
   send_requests_second_load = requests_first + 5 * num_procs;
   recv_statuses = P4EST_ALLOC (MPI_Status, num_procs);
-  P4EST_CHECK_ALLOC (recv_statuses);
   for (i = 0; i < num_procs; ++i) {
     requests_first[i] = requests_second[i] = MPI_REQUEST_NULL;
     send_requests_first_count[i] = MPI_REQUEST_NULL;
@@ -894,7 +884,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   /* index buffer for call to waitsome */
   wait_indices = P4EST_ALLOC (int, num_procs);
-  P4EST_CHECK_ALLOC (wait_indices);
 #ifdef P4EST_DEBUG
   sc_array_init (&checkarray, 4);
 #endif /* P4EST_DEBUG */
@@ -1801,7 +1790,6 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 
   /* allocate new quadrant distribution counts */
   num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
-  P4EST_CHECK_ALLOC (num_quadrants_in_proc);
 
   if (weight_fn == NULL) {
     /* Divide up the quadants equally */
@@ -1814,9 +1802,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   else {
     /* do a weighted partition */
     local_weights = P4EST_ALLOC (int64_t, local_num_quadrants + 1);
-    P4EST_CHECK_ALLOC (local_weights);
     global_weight_sums = P4EST_ALLOC (int64_t, num_procs + 1);
-    P4EST_CHECK_ALLOC (global_weight_sums);
     P4EST_VERBOSEF ("local quadrant count %d\n", p4est->local_num_quadrants);
 
     /* linearly sum weights across all trees */
@@ -1898,9 +1884,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     else {
       send_requests = P4EST_ALLOC (MPI_Request, num_sends);
-      P4EST_CHECK_ALLOC (send_requests);
       send_array = P4EST_ALLOC (int64_t, num_sends);
-      P4EST_CHECK_ALLOC (send_array);
       k = 0;
       for (i = send_lowest; i <= send_highest; ++i) {
         base_index = 2 * (i - send_lowest);
@@ -2094,7 +2078,6 @@ p4est_checksum (p4est_t * p4est)
 #ifdef P4EST_MPI
   if (p4est->mpirank == 0) {
     gather = P4EST_ALLOC (uint32_t, 2 * p4est->mpisize);
-    P4EST_CHECK_ALLOC (gather);
   }
   else {
     gather = NULL;
