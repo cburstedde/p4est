@@ -165,7 +165,7 @@ main (int argc, char **argv)
   }
 
 #ifndef P4EST_HAVE_DEBUG
-  p4est_set_log_threshold (P4EST_LP_STATISTICS);
+  sc_log_threshold (SC_LP_STATISTICS);
 #endif
 
   /* get command line argument: maximum refinement level */

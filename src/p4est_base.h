@@ -23,7 +23,6 @@
 #define P4EST_BASE_H
 
 #include <p4est_types.h>
-#include <p4est_log.h>
 
 /* use error checking from libsc */
 #define P4EST_CHECK_MPI(r)              SC_CHECK_MPI (r)
@@ -43,63 +42,53 @@
 #define P4EST_STRDUP(s)         SC_STRDUP (s)
 #define P4EST_FREE(p)           SC_FREE (p)
 
-/* log macros, for priorities see p4est_log.h */
-#define P4EST_GLOBAL_LOG(p,s) \
-  _LOG_PRE (p4est_log_category_global, (p), (s)) _LOG_POST
-#define P4EST_GLOBAL_LOGF(p,f,...) \
-  _LOG_PRE (p4est_log_category_global, (p), (f)) , __VA_ARGS__ _LOG_POST
-#define P4EST_LOG(p,s) \
-  _LOG_PRE (p4est_log_category_rank, (p), (s)) _LOG_POST
-#define P4EST_LOGF(p,f,...) \
-  _LOG_PRE (p4est_log_category_rank, (p), (f)) , __VA_ARGS__ _LOG_POST
+/* use libsc log macros for now */
+#define P4EST_GLOBAL_LOG(p,s) SC_LOG ((p), SC_LC_GLOBAL, (s))
+#define P4EST_GLOBAL_LOGF(p,f,...) SC_LOGF ((p), SC_LC_GLOBAL, (f), __VA_ARGS__)
+#define P4EST_NORMAL_LOG(p,s) SC_LOG ((p), SC_LC_NORMAL, (s))
+#define P4EST_NORMAL_LOGF(p,f,...) SC_LOGF ((p), SC_LC_NORMAL, (f), __VA_ARGS__)
 
 /* convenience global log macros will only print if identifier <= 0 */
-#define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (P4EST_LP_TRACE, (s))
+#define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (SC_LP_TRACE, (s))
 #define P4EST_GLOBAL_TRACEF(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_LDEBUG(s) P4EST_GLOBAL_LOG (P4EST_LP_DEBUG, (s))
+  P4EST_GLOBAL_LOGF (SC_LP_TRACE, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_LDEBUG(s) P4EST_GLOBAL_LOG (SC_LP_DEBUG, (s))
 #define P4EST_GLOBAL_LDEBUGF(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_VERBOSE(s) P4EST_GLOBAL_LOG (P4EST_LP_VERBOSE, (s))
+  P4EST_GLOBAL_LOGF (SC_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_VERBOSE(s) P4EST_GLOBAL_LOG (SC_LP_VERBOSE, (s))
 #define P4EST_GLOBAL_VERBOSEF(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (P4EST_LP_INFO, (s))
+  P4EST_GLOBAL_LOGF (SC_LP_VERBOSE, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (SC_LP_INFO, (s))
 #define P4EST_GLOBAL_INFOF(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_STATISTICS(s) P4EST_GLOBAL_LOG (P4EST_LP_STATISTICS, (s))
+  P4EST_GLOBAL_LOGF (SC_LP_INFO, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_STATISTICS(s) P4EST_GLOBAL_LOG (SC_LP_STATISTICS, (s))
 #define P4EST_GLOBAL_STATISTICSF(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_STATISTICS, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (P4EST_LP_PRODUCTION, (s))
+  P4EST_GLOBAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (SC_LP_PRODUCTION, (s))
 #define P4EST_GLOBAL_PRODUCTIONF(f,...) \
-  P4EST_GLOBAL_LOGF (P4EST_LP_PRODUCTION, (f), __VA_ARGS__)
+  P4EST_GLOBAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
 
 /* convenience log macros that are active on every processor */
-#define P4EST_TRACE(s) P4EST_LOG (P4EST_LP_TRACE, (s))
+#define P4EST_TRACE(s) P4EST_NORMAL_LOG (SC_LP_TRACE, (s))
 #define P4EST_TRACEF(f,...) \
-  P4EST_LOGF (P4EST_LP_TRACE, (f), __VA_ARGS__)
-#define P4EST_LDEBUG(s) P4EST_LOG (P4EST_LP_DEBUG, (s))
+  P4EST_NORMAL_LOGF (SC_LP_TRACE, (f), __VA_ARGS__)
+#define P4EST_LDEBUG(s) P4EST_NORMAL_LOG (SC_LP_DEBUG, (s))
 #define P4EST_LDEBUGF(f,...) \
-  P4EST_LOGF (P4EST_LP_DEBUG, (f), __VA_ARGS__)
-#define P4EST_VERBOSE(s) P4EST_LOG (P4EST_LP_VERBOSE, (s))
+  P4EST_NORMAL_LOGF (SC_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_VERBOSE(s) P4EST_NORMAL_LOG (SC_LP_VERBOSE, (s))
 #define P4EST_VERBOSEF(f,...) \
-  P4EST_LOGF (P4EST_LP_VERBOSE, (f), __VA_ARGS__)
-#define P4EST_INFO(s) P4EST_LOG (P4EST_LP_INFO, (s))
+  P4EST_NORMAL_LOGF (SC_LP_VERBOSE, (f), __VA_ARGS__)
+#define P4EST_INFO(s) P4EST_NORMAL_LOG (SC_LP_INFO, (s))
 #define P4EST_INFOF(f,...) \
-  P4EST_LOGF (P4EST_LP_INFO, (f), __VA_ARGS__)
-#define P4EST_STATISTICS(s) P4EST_LOG (P4EST_LP_STATISTICS, (s))
+  P4EST_NORMAL_LOGF (SC_LP_INFO, (f), __VA_ARGS__)
+#define P4EST_STATISTICS(s) P4EST_NORMAL_LOG (SC_LP_STATISTICS, (s))
 #define P4EST_STATISTICSF(f,...) \
-  P4EST_LOGF (P4EST_LP_STATISTICS, (f), __VA_ARGS__)
-#define P4EST_PRODUCTION(s) P4EST_LOG (P4EST_LP_PRODUCTION, (s))
+  P4EST_NORMAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
+#define P4EST_PRODUCTION(s) P4EST_NORMAL_LOG (SC_LP_PRODUCTION, (s))
 #define P4EST_PRODUCTIONF(f,...) \
-  P4EST_LOGF (P4EST_LP_PRODUCTION, (f), __VA_ARGS__)
+  P4EST_NORMAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
 
 typedef void        (*p4est_handler_t) (void *data);
-
-extern const int    p4est_log_lookup_table[256];
-extern struct LogCategory p4est_log_category_global;
-extern struct LogCategory p4est_log_category_rank;
-
-void                p4est_set_log_threshold (int log_priority);
 
 #if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
@@ -116,11 +105,6 @@ int                 p4est_int64_compare (const void *v1, const void *v2);
 int                 p4est_int64_lower_bound (int64_t target,
                                              const int64_t * array,
                                              int size, int guess);
-
-/** Initializes p4est_log_category to print to stream.
- * \param [in]  identifier  Set this to mpirank, or -1 to avoid number prefix.
- */
-void                p4est_init_logging (FILE * stream, int identifier);
 
 /** Installs an abort handler and catches signals INT, SEGV, USR2. */
 void                p4est_set_abort_handler (p4est_handler_t handler,

@@ -72,13 +72,6 @@ p4est_signal_handler (int sig)
   p4est_abort ();
 }
 
-void
-p4est_set_log_threshold (int log_priority)
-{
-  log_setThreshold (&p4est_log_category_global, log_priority);
-  log_setThreshold (&p4est_log_category_rank, log_priority);
-}
-
 #if(0)
 int
 p4est_int32_compare (const void *v1, const void *v2)
@@ -141,6 +134,7 @@ p4est_int64_lower_bound (int64_t target, const int64_t * array,
   return guess;
 }
 
+#if 0
 struct p4est_log_appender
 {
   struct LogAppender  appender;
@@ -282,6 +276,7 @@ p4est_init_logging (FILE * stream, int identifier)
   log_setThreshold (&p4est_log_category_rank, P4EST_LP_INFO);
 #endif /* !P4EST_DEBUG */
 }
+#endif /* 0 */
 
 void
 p4est_set_abort_handler (p4est_handler_t handler, void *data)
@@ -313,7 +308,7 @@ void
 p4est_init (FILE * stream, int identifier,
             p4est_handler_t abort_handler, void *abort_data)
 {
-  p4est_init_logging (stream, identifier);
+  sc_log_init (stream, identifier);
   p4est_set_abort_handler (abort_handler, abort_data);
 }
 

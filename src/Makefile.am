@@ -7,12 +7,12 @@ libp4est_internal_headers =
 libp4est_generated_headers = src/p4est_config.h
 libp4est_installed_headers = \
         src/p4est_types.h \
-        src/p4est_log.h src/p4est_base.h \
+        src/p4est_base.h \
         src/p4est_connectivity.h src/p4est.h \
         src/p4est_algorithms.h src/p4est_communication.h \
         src/p4est_file.h src/p4est_vtk.h src/p4est_mesh.h
 libp4est_compiled_sources = \
-        src/p4est_log.c src/p4est_base.c \
+        src/p4est_base.c \
         src/p4est_connectivity.c src/p4est.c \
         src/p4est_algorithms.c src/p4est_communication.c \
         src/p4est_file.c src/p4est_vtk.c src/p4est_mesh.c

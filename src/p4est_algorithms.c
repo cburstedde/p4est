@@ -846,7 +846,8 @@ p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
 void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 {
-  P4EST_LOGF (log_priority, "x 0x%x y 0x%x level %d\n", q->x, q->y, q->level);
+  P4EST_NORMAL_LOGF (log_priority,
+                     "x 0x%x y 0x%x level %d\n", q->x, q->y, q->level);
 }
 
 unsigned
@@ -1053,7 +1054,7 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
       l += snprintf (buffer + l, BUFSIZ - l, " F%d", childid);
     }
     l += snprintf (buffer + l, BUFSIZ - l, "\n");
-    P4EST_LOG (log_priority, buffer);
+    P4EST_NORMAL_LOG (log_priority, buffer);
     q1 = q2;
   }
 }
@@ -1958,7 +1959,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
 #ifdef P4EST_DEBUG
-    sc_hash_print_statistics (P4EST_LP_DEBUG, hash[l]);
+    sc_hash_print_statistics (SC_LP_DEBUG, hash[l]);
 #endif /* P4EST_DEBUG */
     sc_hash_unlink_destroy (hash[l]);   /* performance optimization */
 

@@ -63,7 +63,7 @@ main (int argc, char **argv)
 
   /* balance the tree, print and destroy */
   p4est_balance_subtree (p4est, tree, 0, NULL);
-  p4est_tree_print (P4EST_LP_INFO, tree);
+  p4est_tree_print (SC_LP_INFO, tree);
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
     q = sc_array_index (&tree->quadrants, k);
     sc_mempool_free (p4est->user_data_pool, q->p.user_data);
@@ -73,7 +73,7 @@ main (int argc, char **argv)
   /* balance the forest */
   p4est_balance (p4est, NULL);
   tree = sc_array_index (p4est->trees, 0);
-  p4est_tree_print (P4EST_LP_INFO, tree);
+  p4est_tree_print (SC_LP_INFO, tree);
 
   /* clean up memory */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==
