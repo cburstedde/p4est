@@ -77,7 +77,7 @@ extern const int    p4est_transform_table[4][4][2];
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.
  * \param [in] num_vertices Number of total vertices.
- * \param [in] num_vtt      Number of total trees in version to tree.
+ * \param [in] num_vtt      Number of total trees in vertex_to_tree array.
  */
 p4est_connectivity_t *p4est_connectivity_new (p4est_locidx_t num_trees,
                                               p4est_locidx_t num_vertices,

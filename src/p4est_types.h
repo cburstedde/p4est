@@ -27,22 +27,10 @@
 #include <p4est_config.h>
 
 /* sc.h includes several headers with proper checks */
+/* see sc.h for the headers included by default */
+/* also includes getopt, obstack, zlib and MPI */
 
 #include <sc.h>
-#if 0                           /* if present then already included by sc.h */
-#include <math.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <libgen.h>
-#endif
-/* also includes getopt, obstack, zlib and MPI */
 
 /** Typedef for quadrant coordinates */
 typedef int32_t     p4est_qcoord_t;

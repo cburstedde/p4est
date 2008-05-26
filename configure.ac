@@ -4,11 +4,12 @@ dnl
 
 AC_INIT([p4est], [0.2], [ccgo@ices.utexas.edu])
 AC_PREREQ([2.59])
-AC_CONFIG_HEADER([src/config.h])
+AC_CONFIG_HEADER([src/pre_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_CONFIG_MACRO_DIR(sc/config)
+AC_PREFIX_DEFAULT([$PWD/install])
 AM_INIT_AUTOMAKE([subdir-objects])
 AX_PREFIX_CONFIG_H([src/p4est_config.h])
 
@@ -29,7 +30,7 @@ P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
 P4EST_ARG_WITHOUT([sc], [disable builtin libsc, provide your own], [PROVIDE_SC])
 
 # Configure the SC library recursively.
-if test "$sc_with_PROVIDE_SC" = yes; then
+if test "$P4EST_WITH_PROVIDE_SC" = yes; then
   AC_CONFIG_SUBDIRS([sc])
 fi
 
@@ -56,10 +57,8 @@ echo "| Checking headers and functions"
 echo "o----------------------------------"
 
 # Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS([ctype.h stdarg.h stddef.h stdint.h stdio.h stdlib.h])
-AC_CHECK_HEADERS([execinfo.h getopt.h libgen.h signal.h unistd.h])
-AC_CHECK_HEADERS([arpa/inet.h netinet/in.h zlib.h])
+AC_CHECK_HEADERS([execinfo.h signal.h])
+AC_CHECK_HEADERS([arpa/inet.h netinet/in.h])
 
 # Checks for functions.
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
