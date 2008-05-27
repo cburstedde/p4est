@@ -61,6 +61,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef P4EST_MPI
   int                 i;
   int                 mpiret;
+  const int           size_position = (int) sizeof (p4est_position_t);
   const int32_t       first_tree = p4est->first_local_tree;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quadrant;
@@ -91,10 +92,9 @@ p4est_comm_global_partition (p4est_t * p4est)
       input.x = quadrant->x;
       input.y = quadrant->y;
     }
-    mpiret = MPI_Allgather (&input, sizeof (p4est_position_t), MPI_BYTE,
+    mpiret = MPI_Allgather (&input, size_position, MPI_BYTE,
                             p4est->global_first_position,
-                            sizeof (p4est_position_t), MPI_BYTE,
-                            p4est->mpicomm);
+                            size_position, MPI_BYTE, p4est->mpicomm);
     P4EST_CHECK_MPI (mpiret);
 
     /* correct for processors that don't have any quadrants */

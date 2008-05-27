@@ -54,9 +54,9 @@ main (int argc, char **argv)
     for (i = 0; i < 347; ++i) {
       inserted += sc_hash_insert_unique (ihash, (void *) (i % 91), NULL);
     }
-    printf ("Integers inserted %d total %lu\n",
-            inserted, (unsigned long) ihash->elem_count);
-    P4EST_CHECK_ABORT (inserted == ihash->elem_count, "Integer hash");
+    printf ("Integers inserted %d total %llu\n",
+            inserted, (unsigned long long) ihash->elem_count);
+    P4EST_CHECK_ABORT (inserted == (int) ihash->elem_count, "Integer hash");
 
     sc_hash_destroy (ihash);
   }
@@ -80,7 +80,7 @@ main (int argc, char **argv)
   printf ("Quadrants inserted %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
 
-  P4EST_CHECK_ABORT (i1 + i2 + i3 == qhash->elem_count, "Quadrant hash");
+  P4EST_CHECK_ABORT (i1 + i2 + i3 == (int) qhash->elem_count, "Quadrant hash");
   P4EST_CHECK_ABORT (f3 == &q2
                      && f3->p.piggy.owner_rank == 5, "Insert return");
 

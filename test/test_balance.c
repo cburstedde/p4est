@@ -25,7 +25,7 @@
 int
 main (int argc, char **argv)
 {
-  int                 k;
+  size_t              k;
   int8_t              l;
   p4est_t            *p4est;
   p4est_tree_t        stree, *tree = &stree;

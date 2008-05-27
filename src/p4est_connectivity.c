@@ -101,7 +101,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         fprintf (stderr, "Tree range A in %lld %d\n", (long long) tree, face);
         return 0;
       }
-      rface = ttf[tree * 4 + face];
+      rface = (int) ttf[tree * 4 + face];
       if (rface < 0 || rface >= 8) {
         fprintf (stderr, "Face range in %lld %d\n", (long long) tree, face);
         return 0;
@@ -123,7 +123,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
                    (long long) tree, face);
           return 0;
         }
-        if (ttf[ntree * 4 + nface] != face + 4 * orientation) {
+        if ((int) ttf[ntree * 4 + nface] != face + 4 * orientation) {
           fprintf (stderr, "Face reciprocity in %lld %d\n",
                    (long long) tree, face);
           return 0;
@@ -559,7 +559,7 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   P4EST_ASSERT (neighbor_tree >= 0 &&
                 neighbor_tree < connectivity->num_trees);
 
-  nrface = connectivity->tree_to_face[4 * itree + iface];
+  nrface = (int) connectivity->tree_to_face[4 * itree + iface];
   P4EST_ASSERT (nrface >= 0 && nrface < 8);
   neighbor_face = nrface % 4;
   orientation = nrface / 4;

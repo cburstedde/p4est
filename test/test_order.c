@@ -110,7 +110,7 @@ p4est_vert_compare (const void *a, const void *b)
 static void
 p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 {
-  int                 i, j;
+  int32_t             i, j;
   int32_t             num_uniq_local_vertices;
   int32_t            *quadrant_to_local_vertex;
   p4est_quadrant_t   *quad;
@@ -119,7 +119,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   double             *vertices;
   int32_t             first_local_tree;
   int32_t             last_local_tree;
-  int32_t             inth;
+  p4est_qcoord_t      inth;
   double              h, eta1, eta2;
   double              v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y,
     v3z;
@@ -130,7 +130,8 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   double              intsize = 1.0 / P4EST_ROOT_LEN;
   sc_array_t         *trees;
   sc_array_t         *quadrants;
-  int                 num_quads, quad_count;
+  int32_t             num_quads;
+  int                 quad_count;
   int                 identify_periodic;
   p4est_vert_t       *vert_locations;
 
@@ -182,8 +183,8 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
       quad = sc_array_index (quadrants, i);
       inth = P4EST_QUADRANT_LEN (quad->level);
       h = intsize * inth;
-      eta1 = quad->x * intsize;
-      eta2 = quad->y * intsize;
+      eta1 = intsize * quad->x;
+      eta2 = intsize * quad->y;
 
       w0x = v0x * (1.0 - eta1) * (1.0 - eta2)
         + v1x * (eta1) * (1.0 - eta2)

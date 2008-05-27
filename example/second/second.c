@@ -90,7 +90,7 @@ main (int argc, char **argv)
   p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
 
   /* partition and refine the mesh */
-  p4est_partition_given (p4est, given);
+  (void) p4est_partition_given (p4est, given);
   p4est_refine (p4est, refine_fn, NULL);
   p4est_vtk_write_file (p4est, "mesh_second_refined");
 

@@ -36,7 +36,7 @@ main (int argc, char **argv)
   int                 use_mpi = 1;
   int                 mpiret;
   MPI_Comm            mpicomm;
-  size_t              templatelength;
+  int                 templatelength;
 #endif
   p4est_connectivity_t *connectivity;
   const double        EPS = 2.22045e-16;
@@ -142,9 +142,9 @@ main (int argc, char **argv)
   }
 
 #ifdef P4EST_MPI
-  templatelength = strlen (template);
+  templatelength = (int) strlen (template) + 1;
   if (mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Bcast (template, templatelength + 1, MPI_CHAR, 0, mpicomm);
+    mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
     P4EST_CHECK_MPI (mpiret);
   }
 #endif

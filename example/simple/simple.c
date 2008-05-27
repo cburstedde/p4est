@@ -74,7 +74,7 @@ static int
 refine_normal_fn (p4est_t * p4est, p4est_locidx_t which_tree,
                   p4est_quadrant_t * quadrant)
 {
-  if (quadrant->level >= (refine_level - (which_tree % 3))) {
+  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
   }
   if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
@@ -95,7 +95,7 @@ static int
 refine_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
                 p4est_quadrant_t * quadrant)
 {
-  if (quadrant->level >= refine_level) {
+  if ((int) quadrant->level >= refine_level) {
     return 0;
   }
   if (p4est->mpirank <= 1) {
@@ -126,7 +126,7 @@ refine_evil3_fn (p4est_t * p4est, p4est_locidx_t which_tree,
   }
   ref.level = 2;
 
-  if (quadrant->level >= refine_level) {
+  if ((int) quadrant->level >= refine_level) {
     return 0;
   }
   if ((which_tree == 0 || which_tree == 1) &&

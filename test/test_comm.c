@@ -65,7 +65,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   int64_t             qglobal, qlocal, qbegin, qend;
-  int32_t             i;
+  int                 i;
 
   mpicomm = MPI_COMM_NULL;
 #ifdef P4EST_MPI

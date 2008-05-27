@@ -47,7 +47,7 @@ main (int argc, char **argv)
 #ifdef P4EST_MPI
   int                 use_mpi = 1;
   int                 mpiret;
-  size_t              templatelength;
+  int                 templatelength;
 #endif
   MPI_Comm            mpicomm;
   p4est_t            *p4est;
@@ -118,8 +118,8 @@ main (int argc, char **argv)
   }
 
 #ifdef P4EST_MPI
-  templatelength = strlen (template);
-  mpiret = MPI_Bcast (template, templatelength + 1, MPI_CHAR, 0, mpicomm);
+  templatelength = (int) strlen (template) + 1;
+  mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
   P4EST_CHECK_MPI (mpiret);
 #endif
 

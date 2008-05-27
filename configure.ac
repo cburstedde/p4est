@@ -23,8 +23,6 @@ P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
                   [VTK_BINARY])
 P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
                   [VTK_COMPRESSION])
-P4EST_ARG_DISABLE([resize-realloc], [avoid realloc in array resize],
-                  [RESIZE_REALLOC])
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
 P4EST_ARG_WITHOUT([sc], [disable builtin libsc, provide your own], [PROVIDE_SC])

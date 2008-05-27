@@ -61,10 +61,10 @@ refine_fractal (p4est_t * p4est, p4est_locidx_t which_tree,
 {
   int                 qid;
 
-  if (q->level >= refine_level) {
+  if ((int) q->level >= refine_level) {
     return 0;
   }
-  if (q->level < refine_level - level_shift) {
+  if ((int) q->level < refine_level - level_shift) {
     return 1;
   }
 
