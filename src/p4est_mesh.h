@@ -42,9 +42,9 @@
  */
 void                p4est_order_local_vertices (p4est_t * p4est,
                                                 int identify_periodic,
-                                                int32_t *
+                                                p4est_locidx_t *
                                                 num_uniq_local_vertices,
-                                                int32_t *
+                                                p4est_locidx_t *
                                                 quadrant_to_local_vertex);
 
 /** Generate a neighbor of a quadrant for a given node.
