@@ -108,11 +108,9 @@ main (int argc, char **argv)
     P4EST_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
   }
 
-#ifdef P4EST_MPI
   templatelength = (int) strlen (template) + 1;
   mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
   P4EST_CHECK_MPI (mpiret);
-#endif
 
   /* Read in the mesh into connectivity information */
   retval = p4est_connectivity_read (template, &connectivity);
