@@ -419,6 +419,7 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
     printf ("    %d    %d    %d    %d    %d\n",
             k + 1, tree_to_face[4 * k + 0] + 1, tree_to_face[4 * k + 1] + 1,
             tree_to_face[4 * k + 2] + 1, tree_to_face[4 * k + 3] + 1);
+  fprintf (nout, "[Vertex to Element]\n");
   for (i = 0; i < num_vertices; ++i) {
     Nnn = vtt_offset[i + 1] - vtt_offset[i];
     printf ("    %d   %d", i + 1, Nnn);
