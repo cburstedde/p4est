@@ -217,17 +217,17 @@ p4est_connectivity_read (const char *filename,
         p4est_trim_ending_whitespace (key);
 
         if (strcmp (key, "Nk") == 0) {
-          num_trees = (p4est_locidx_t) atoll (value);
+          num_trees = (p4est_locidx_t) strtoll (value, NULL, 0);
           set_num_trees = 1;
         }
 
         else if (strcmp (key, "Nv") == 0) {
-          num_vertices = (p4est_locidx_t) atoll (value);
+          num_vertices = (p4est_locidx_t) strtoll (value, NULL, 0);
           set_num_vertices = 1;
         }
 
         else if (strcmp (key, "Nve") == 0) {
-          num_vtt = (p4est_locidx_t) atoll (value);
+          num_vtt = (p4est_locidx_t) strtoll (value, NULL, 0);
           set_num_vtt = 1;
         }
 
@@ -323,27 +323,28 @@ p4est_connectivity_read (const char *filename,
         break;
       case VTOE:
         value = strtok (line, " \t");
-        v0 = (p4est_locidx_t) atoll (value);
+        v0 = (p4est_locidx_t) strtoll (value, NULL, 0);
         --v0;
         value = strtok (NULL, " \t");
-        Nnn = (p4est_locidx_t) atoll (value);
+        Nnn = (p4est_locidx_t) strtoll (value, NULL, 0);
         vtt_offset[v0 + 1] = vtt_offset[v0] + Nnn;
         for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
           vertex_to_tree[vtt_offset[v0] + il] =
-            (p4est_locidx_t) (atoll (value) - 1);
+            (p4est_locidx_t) (strtoll (value, NULL, 0) - 1);
         }
 
         break;
       case VTOV:
         value = strtok (line, " \t");
-        v0 = (p4est_locidx_t) atoll (value);
+        v0 = (p4est_locidx_t) strtoll (value, NULL, 0);
         --v0;
         value = strtok (NULL, " \t");
-        Nnn = (p4est_locidx_t) atoll (value);
+        Nnn = (p4est_locidx_t) strtoll (value, NULL, 0);
         for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
-          vertex_to_vertex[vtv_i + il] = (p4est_locidx_t) (atoll (value) - 1);
+          vertex_to_vertex[vtv_i + il] =
+            (p4est_locidx_t) (strtoll (value, NULL, 0) - 1);
         }
         vtv_i = vtv_i + Nnn;
 
