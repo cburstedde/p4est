@@ -53,13 +53,16 @@ p4est_trim_comments (char *line)
 static void
 p4est_trim_ending_whitespace (char *line)
 {
-  int                 n;
+  size_t              n;
+  size_t              length = strlen (line);
 
   /* Trim whitespace from the end of the line */
-  for (n = strlen (line) - 1; n >= 0; n--)
-    if (!isspace (line[n]))
-      break;
-  line[n + 1] = '\0';
+  if (length > 1) {
+    for (n = length - 1; n >= 0; n--)
+      if (!isspace (line[n]))
+        break;
+    line[n + 1] = '\0';
+  }
 }
 
 static char        *
@@ -82,23 +85,25 @@ p4est_connectivity_read (const char *filename,
   char                buf[BUFSIZ];
   char               *line;
   enum Section        section = NONE;
-  int                 section_lines_read = 0;
+  p4est_locidx_t      section_lines_read = 0;
   int                 set_num_trees = 0;
   int                 set_num_vertices = 0;
   int                 set_num_vtt = 0;
   char               *key = NULL;
   char               *value = NULL;
-  int32_t             num_trees = 0;
-  int32_t             num_vertices = 0;
-  int32_t             num_vtt = 0;
-  int32_t             vtv_i = 0;
-  int32_t             k, k0, k1, k2, k3, f0, f1, f2, f3, v0, v1, v2, v3;
-  int32_t             i, Nnn;
-  int32_t            *tree_to_vertex = NULL;
-  int32_t            *tree_to_tree = NULL;
-  int32_t            *vtt_offset = NULL;
-  int32_t            *vertex_to_tree = NULL;
-  int32_t            *vertex_to_vertex = NULL;
+  p4est_locidx_t      num_trees = 0;
+  p4est_locidx_t      num_vertices = 0;
+  p4est_locidx_t      num_vtt = 0;
+  p4est_locidx_t      vtv_i = 0;
+  long long int       llk, llk0, llk1, llk2, llk3, llv0, llv1, llv2, llv3;
+  int                 f0, f1, f2, f3;
+  p4est_locidx_t      k, k0, k1, k2, k3, v0, v1, v2, v3;
+  p4est_locidx_t      il, Nnn;
+  p4est_locidx_t     *tree_to_vertex = NULL;
+  p4est_locidx_t     *tree_to_tree = NULL;
+  p4est_locidx_t     *vtt_offset = NULL;
+  p4est_locidx_t     *vertex_to_tree = NULL;
+  p4est_locidx_t     *vertex_to_vertex = NULL;
   int8_t             *tree_to_face = NULL;
   double             *vertices = NULL;
   double              vx, vy, vz;
@@ -112,7 +117,7 @@ p4est_connectivity_read (const char *filename,
   }
 
   /* loop through the lines of the file */
-  while (fgets (buf, BUFSIZ, file)) {
+  while (fgets (buf, (int) (BUFSIZ), file)) {
     line = buf;
 
     p4est_trim_comments (line);
@@ -212,17 +217,17 @@ p4est_connectivity_read (const char *filename,
         p4est_trim_ending_whitespace (key);
 
         if (strcmp (key, "Nk") == 0) {
-          num_trees = atoi (value);
+          num_trees = (p4est_locidx_t) atoll (value);
           set_num_trees = 1;
         }
 
         else if (strcmp (key, "Nv") == 0) {
-          num_vertices = atoi (value);
+          num_vertices = (p4est_locidx_t) atoll (value);
           set_num_vertices = 1;
         }
 
         else if (strcmp (key, "Nve") == 0) {
-          num_vtt = atoi (value);
+          num_vtt = (p4est_locidx_t) atoll (value);
           set_num_vtt = 1;
         }
 
@@ -242,8 +247,8 @@ p4est_connectivity_read (const char *filename,
 
         break;
       case COORD:
-        sscanf (line, "%d %lf %lf %lf", &k, &vx, &vy, &vz);
-        --k;
+        sscanf (line, "%lld %lf %lf %lf", &llk, &vx, &vy, &vz);
+        k = (p4est_locidx_t) (llk - 1);
 
         SC_CHECK_ABORT (k >= 0 && k < num_vertices, "Bad [] entry");
 
@@ -253,12 +258,13 @@ p4est_connectivity_read (const char *filename,
 
         break;
       case ETOV:
-        sscanf (line, "%d %d %d %d %d", &k, &v0, &v1, &v2, &v3);
-        --k;
-        --v0;
-        --v1;
-        --v2;
-        --v3;
+        sscanf (line, "%lld %lld %lld %lld %lld",
+                &llk, &llv0, &llv1, &llv2, &llv3);
+        k = (p4est_locidx_t) (llk - 1);
+        v0 = (p4est_locidx_t) (llv0 - 1);
+        v1 = (p4est_locidx_t) (llv1 - 1);
+        v2 = (p4est_locidx_t) (llv2 - 1);
+        v3 = (p4est_locidx_t) (llv3 - 1);
 
         SC_CHECK_ABORT (k >= 0 && k < num_trees &&
                         v0 >= 0 && v0 < num_vertices &&
@@ -274,12 +280,13 @@ p4est_connectivity_read (const char *filename,
 
         break;
       case ETOE:
-        sscanf (line, "%d %d %d %d %d", &k, &k0, &k1, &k2, &k3);
-        --k;
-        --k0;
-        --k1;
-        --k2;
-        --k3;
+        sscanf (line, "%lld %lld %lld %lld %lld",
+                &llk, &llk0, &llk1, &llk2, &llk3);
+        k = (p4est_locidx_t) (llk - 1);
+        k0 = (p4est_locidx_t) (llk0 - 1);
+        k1 = (p4est_locidx_t) (llk1 - 1);
+        k2 = (p4est_locidx_t) (llk2 - 1);
+        k3 = (p4est_locidx_t) (llk3 - 1);
 
         SC_CHECK_ABORT (k >= 0 && k < num_trees &&
                         k0 >= 0 && k0 < num_trees &&
@@ -295,8 +302,8 @@ p4est_connectivity_read (const char *filename,
 
         break;
       case ETOF:
-        sscanf (line, "%d %d %d %d %d", &k, &f0, &f1, &f2, &f3);
-        --k;
+        sscanf (line, "%lld %d %d %d %d", &llk, &f0, &f1, &f2, &f3);
+        k = (p4est_locidx_t) (llk - 1);
         --f0;
         --f1;
         --f2;
@@ -316,26 +323,27 @@ p4est_connectivity_read (const char *filename,
         break;
       case VTOE:
         value = strtok (line, " \t");
-        v0 = atoi (value);
+        v0 = (p4est_locidx_t) atoll (value);
         --v0;
         value = strtok (NULL, " \t");
-        Nnn = atoi (value);
+        Nnn = (p4est_locidx_t) atoll (value);
         vtt_offset[v0 + 1] = vtt_offset[v0] + Nnn;
-        for (i = 0; i < Nnn; ++i) {
+        for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
-          vertex_to_tree[vtt_offset[v0] + i] = atoi (value) - 1;
+          vertex_to_tree[vtt_offset[v0] + il] =
+            (p4est_locidx_t) (atoll (value) - 1);
         }
 
         break;
       case VTOV:
         value = strtok (line, " \t");
-        v0 = atoi (value);
+        v0 = (p4est_locidx_t) atoll (value);
         --v0;
         value = strtok (NULL, " \t");
-        Nnn = atoi (value);
-        for (i = 0; i < Nnn; ++i) {
+        Nnn = (p4est_locidx_t) atoll (value);
+        for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
-          vertex_to_vertex[vtv_i + i] = atoi (value) - 1;
+          vertex_to_vertex[vtv_i + il] = (p4est_locidx_t) (atoll (value) - 1);
         }
         vtv_i = vtv_i + Nnn;
 
@@ -381,9 +389,9 @@ p4est_connectivity_read (const char *filename,
 void
 p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
 {
-  int                 i, j, k, Nnn, num_trees, num_vertices, num_vtt;
-  int32_t            *tree_to_vertex, *tree_to_tree, *vtt_offset,
-    *vertex_to_tree, *vertex_to_vertex;
+  p4est_locidx_t      li, lj, lk, Nnn, num_trees, num_vertices, num_vtt;
+  p4est_locidx_t     *tree_to_vertex, *tree_to_tree, *vtt_offset;
+  p4est_locidx_t     *vertex_to_tree, *vertex_to_vertex;
   int8_t             *tree_to_face;
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
@@ -402,11 +410,13 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
 
   fprintf (nout, "[Forest Info]\n");
   fprintf (nout, "ver = 0.0.1  # Version of the forest file\n");
-  fprintf (nout, "Nk  = %d     # Number of elements\n", num_trees);
-  fprintf (nout, "Nv  = %d     # Number of mesh vertices\n", num_vertices);
+  fprintf (nout, "Nk  = %lld     # Number of elements\n",
+           (long long int) num_trees);
+  fprintf (nout, "Nv  = %lld     # Number of mesh vertices\n",
+           (long long int) num_vertices);
   fprintf (nout,
-           "Nve = %d     # Number of trees in the vertex to element list\n",
-           num_vtt);
+           "Nve = %lld     # Number of trees in the vertex to element list\n",
+           (long long int) num_vtt);
   fprintf (nout, "Net = 0      # Number of element tags\n");
   fprintf (nout, "Nft = 0      # Number of face tags\n");
   fprintf (nout, "Ncf = 0      # Number of curved faces\n");
@@ -414,36 +424,46 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
   fprintf (nout, "\n");
   fprintf (nout, "[Coordinates of Element Vertices]\n");
   fprintf (nout, "[Element to Vertex]\n");
-  for (k = 0; k < num_trees; ++k)
-    printf ("    %d    %d    %d    %d    %d\n",
-            k + 1, tree_to_vertex[4 * k + 0] + 1,
-            tree_to_vertex[4 * k + 1] + 1, tree_to_vertex[4 * k + 2] + 1,
-            tree_to_vertex[4 * k + 3] + 1);
+  for (lk = 0; lk < num_trees; ++lk)
+    printf ("    %lld    %lld    %lld    %lld    %lld\n",
+            (long long int) (lk + 1),
+            (long long int) (tree_to_vertex[4 * lk + 0] + 1),
+            (long long int) (tree_to_vertex[4 * lk + 1] + 1),
+            (long long int) (tree_to_vertex[4 * lk + 2] + 1),
+            (long long int) (tree_to_vertex[4 * lk + 3] + 1));
   fprintf (nout, "[Element to Element]\n");
-  for (k = 0; k < num_trees; ++k)
-    printf ("    %d    %d    %d    %d    %d\n",
-            k + 1, tree_to_tree[4 * k + 0] + 1, tree_to_tree[4 * k + 1] + 1,
-            tree_to_tree[4 * k + 2] + 1, tree_to_tree[4 * k + 3] + 1);
+  for (lk = 0; lk < num_trees; ++lk)
+    printf ("    %lld    %lld    %lld    %lld    %lld\n",
+            (long long int) (lk + 1),
+            (long long int) (tree_to_tree[4 * lk + 0] + 1),
+            (long long int) (tree_to_tree[4 * lk + 1] + 1),
+            (long long int) (tree_to_tree[4 * lk + 2] + 1),
+            (long long int) (tree_to_tree[4 * lk + 3] + 1));
   fprintf (nout, "[Element to Face]\n");
-  for (k = 0; k < num_trees; ++k)
-    printf ("    %d    %d    %d    %d    %d\n",
-            k + 1, tree_to_face[4 * k + 0] + 1, tree_to_face[4 * k + 1] + 1,
-            tree_to_face[4 * k + 2] + 1, tree_to_face[4 * k + 3] + 1);
+  for (lk = 0; lk < num_trees; ++lk)
+    printf ("    %lld    %d    %d    %d    %d\n",
+            (long long int) (lk + 1),
+            (int) (tree_to_face[4 * lk + 0] + 1),
+            (int) (tree_to_face[4 * lk + 1] + 1),
+            (int) (tree_to_face[4 * lk + 2] + 1),
+            (int) (tree_to_face[4 * lk + 3] + 1));
   fprintf (nout, "[Vertex to Element]\n");
-  for (i = 0; i < num_vertices; ++i) {
-    Nnn = vtt_offset[i + 1] - vtt_offset[i];
-    printf ("    %d   %d", i + 1, Nnn);
-    for (j = 0; j < Nnn; ++j) {
-      printf ("    %d", vertex_to_tree[vtt_offset[i] + j] + 1);
+  for (li = 0; li < num_vertices; ++li) {
+    Nnn = vtt_offset[li + 1] - vtt_offset[li];
+    printf ("    %lld   %lld", (long long int) (li + 1), (long long int) Nnn);
+    for (lj = 0; lj < Nnn; ++lj) {
+      printf ("    %lld",
+              (long long int) (vertex_to_tree[vtt_offset[li] + lj] + 1));
     }
     printf ("\n");
   }
   fprintf (nout, "[Vertex to Vertex]\n");
-  for (i = 0; i < num_vertices; ++i) {
-    Nnn = vtt_offset[i + 1] - vtt_offset[i];
-    printf ("    %d   %d", i + 1, Nnn);
-    for (j = 0; j < Nnn; ++j) {
-      printf ("    %d", vertex_to_vertex[vtt_offset[i] + j] + 1);
+  for (li = 0; li < num_vertices; ++li) {
+    Nnn = vtt_offset[li + 1] - vtt_offset[li];
+    printf ("    %lld   %lld", (long long int) (li + 1), (long long int) Nnn);
+    for (lj = 0; lj < Nnn; ++lj) {
+      printf ("    %lld",
+              (long long int) (vertex_to_vertex[vtt_offset[li] + lj] + 1));
     }
     printf ("\n");
   }
