@@ -95,11 +95,13 @@ static int
 p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
                   unsigned long byte_length)
 {
-  int                 i, retval;
-  unsigned int        blocksize, lastsize;
-  unsigned int        theblock, numregularblocks, numfullblocks;
-  int                 header_entries;
-  int                 code_length, base_length;
+  int                 retval;
+  size_t              is;
+  size_t              retvals;
+  unsigned long int   blocksize, lastsize;
+  unsigned long int   theblock, numregularblocks, numfullblocks;
+  size_t              header_entries;
+  size_t              code_length, base_length;
   long                header_pos, final_pos;
   char               *comp_data, *base_data;
   uint32_t           *compression_header;
@@ -107,7 +109,7 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
   base64_encodestate  encode_state;
 
   /* compute block sizes */
-  blocksize = 1 << 15;          /* 32768 */
+  blocksize = (unsigned long int) (1 << 15);    /* 32768 */
   lastsize = byte_length % blocksize;
   numregularblocks = byte_length / blocksize;
   numfullblocks = numregularblocks + ((lastsize > 0) ? 1 : 0);
@@ -123,8 +125,8 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
   compression_header[0] = numfullblocks;
   compression_header[1] = blocksize;
   compression_header[2] = lastsize;
-  for (i = 3; i < header_entries; ++i) {
-    compression_header[i] = 0;
+  for (is = 3; is < header_entries; ++is) {
+    compression_header[is] = 0;
   }
   base64_init_encodestate (&encode_state);
   base_length = base64_encode_block ((char *) compression_header,
@@ -136,7 +138,8 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
   base_data[base_length] = '\0';
   P4EST_ASSERT (base_length < code_length);
   header_pos = ftell (vtkfile);
-  fwrite (base_data, 1, base_length, vtkfile);
+  retvals = fwrite (base_data, 1, base_length, vtkfile);
+  P4EST_ASSERT (retvals == base_length);
 
   /* write the regular data blocks */
   base64_init_encodestate (&encode_state);
@@ -151,7 +154,8 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
                                        base_data, &encode_state);
     base_data[base_length] = '\0';
     P4EST_ASSERT (base_length < code_length);
-    fwrite (base_data, 1, base_length, vtkfile);
+    retvals = fwrite (base_data, 1, base_length, vtkfile);
+    P4EST_ASSERT (retvals == base_length);
   }
 
   /* write odd-sized last block if necessary */
@@ -166,12 +170,14 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
                                        base_data, &encode_state);
     base_data[base_length] = '\0';
     P4EST_ASSERT (base_length < code_length);
-    fwrite (base_data, 1, base_length, vtkfile);
+    retvals = fwrite (base_data, 1, base_length, vtkfile);
+    P4EST_ASSERT (retvals == base_length);
   }
 
   /* write base64 end block */
   base_length = base64_encode_blockend (base_data, &encode_state);
-  fwrite (base_data, 1, base_length, vtkfile);
+  retvals = fwrite (base_data, 1, base_length, vtkfile);
+  P4EST_ASSERT (retvals == base_length);
 
   /* seek back, write header block, seek forward */
   final_pos = ftell (vtkfile);
@@ -185,7 +191,8 @@ p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
   base_data[base_length] = '\0';
   P4EST_ASSERT (base_length < code_length);
   fseek (vtkfile, header_pos, SEEK_SET);
-  fwrite (base_data, 1, base_length, vtkfile);
+  retvals = fwrite (base_data, 1, base_length, vtkfile);
+  P4EST_ASSERT (retvals == base_length);
   fseek (vtkfile, final_pos, SEEK_SET);
 
   /* clean up and return */
@@ -216,9 +223,9 @@ p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
 int
 p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 {
-  int                 i, j;
+  p4est_locidx_t      il, jl;
 #ifdef P4EST_VTK_ASCII
-  int                 sk;
+  p4est_locidx_t      sk;
 #else
   int                 retval;
   uint8_t            *uint8_data;
@@ -230,24 +237,24 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   int                 procRank = p4est->mpirank;
   FILE               *vtufile;
   p4est_connectivity_t *connectivity = p4est->connectivity;
-  int                 Ncells = p4est->local_num_quadrants;
-  int                 Ntotal = 0;
-  int32_t             inth;
+  p4est_locidx_t      Ncells = p4est->local_num_quadrants;
+  p4est_locidx_t      Ntotal = 0;
+  p4est_qcoord_t      inth;
   double              h, eta1, eta2;
   double              v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y,
     v3z;
   double              w0x, w0y, w0z, w1x, w1y, w1z, w2x, w2y, w2z, w3x, w3y,
     w3z;
-  int32_t             v0, v1, v2, v3;
-  int32_t             lv0, lv1, lv2, lv3;
-  int32_t             first_local_tree = p4est->first_local_tree;
-  int32_t             last_local_tree = p4est->last_local_tree;
+  p4est_locidx_t      v0, v1, v2, v3;
+  p4est_locidx_t      lv0, lv1, lv2, lv3;
+  p4est_locidx_t      first_local_tree = p4est->first_local_tree;
+  p4est_locidx_t      last_local_tree = p4est->last_local_tree;
   sc_array_t         *trees = p4est->trees;
   sc_array_t         *quadrants;
   p4est_tree_t       *tree;
-  int                 num_quads;
-  int                 quad_count;
-  int32_t            *tree_to_vertex = connectivity->tree_to_vertex;
+  p4est_locidx_t      num_quads;
+  p4est_locidx_t      quad_count;
+  p4est_locidx_t     *tree_to_vertex = connectivity->tree_to_vertex;
   double             *vertices = connectivity->vertices;
   p4est_quadrant_t   *quad;
   double              intsize = 1.0 / (1 << P4EST_MAXLEVEL);
@@ -276,8 +283,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #endif
   fprintf (vtufile, "  <UnstructuredGrid>\n");
   fprintf (vtufile,
-           "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", Ntotal,
-           Ncells);
+           "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
+           (long long) Ntotal, (long long) Ncells);
   fprintf (vtufile, "      <Points>\n");
 
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Ntotal);
@@ -295,16 +302,16 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
            P4EST_VTK_FLOAT_NAME);
 #endif
   /* loop over the trees */
-  for (j = first_local_tree, quad_count = 0; j <= last_local_tree; ++j) {
-    tree = sc_array_index (trees, j);
+  for (jl = first_local_tree, quad_count = 0; jl <= last_local_tree; ++jl) {
+    tree = sc_array_index (trees, jl);
     /*
      * Note that we switch from right-hand-rule order for tree_to_vertex
      * to pixel order for v
      */
-    v0 = tree_to_vertex[j * 4 + 0];
-    v1 = tree_to_vertex[j * 4 + 1];
-    v2 = tree_to_vertex[j * 4 + 3];
-    v3 = tree_to_vertex[j * 4 + 2];
+    v0 = tree_to_vertex[jl * 4 + 0];
+    v1 = tree_to_vertex[jl * 4 + 1];
+    v2 = tree_to_vertex[jl * 4 + 3];
+    v3 = tree_to_vertex[jl * 4 + 2];
 
     v0x = vertices[v0 * 3 + 0];
     v0y = vertices[v0 * 3 + 1];
@@ -323,12 +330,12 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     num_quads = quadrants->elem_count;
 
     /* loop over the elements in the tree */
-    for (i = 0; i < num_quads; ++i, ++quad_count) {
-      quad = sc_array_index (quadrants, i);
-      inth = (1 << (P4EST_MAXLEVEL - quad->level));
+    for (il = 0; il < num_quads; ++il, ++quad_count) {
+      quad = sc_array_index (quadrants, il);
+      inth = (p4est_qcoord_t) (1 << (P4EST_MAXLEVEL - quad->level));
       h = intsize * inth;
-      eta1 = quad->x * intsize;
-      eta2 = quad->y * intsize;
+      eta1 = intsize * quad->x;
+      eta2 = intsize * quad->y;
 
       w0x = v0x * (1.0 - eta1) * (1.0 - eta2)
         + v1x * (eta1) * (1.0 - eta2)
@@ -414,10 +421,10 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   }
 
 #ifdef P4EST_VTK_ASCII
-  for (i = 0; i < Ntotal; ++i) {
-    w0x = float_data[3 * i + 0];
-    w0y = float_data[3 * i + 1];
-    w0z = float_data[3 * i + 2];
+  for (il = 0; il < Ntotal; ++il) {
+    w0x = float_data[3 * il + 0];
+    w0y = float_data[3 * il + 1];
+    w0z = float_data[3 * il + 2];
 
 #ifdef P4EST_VTK_DOUBLES
     fprintf (vtufile, "            %25.16e %25.16e %25.16e\n", w0x, w0y, w0z);
@@ -445,11 +452,12 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #ifdef P4EST_VTK_ASCII
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
            " format=\"ascii\">\n");
-  for (i = 0; i < Ncells; ++i) {
-    fprintf (vtufile, "          %d %d %d %d\n",
-             int32_data[4 * i + 0],
-             int32_data[4 * i + 1],
-             int32_data[4 * i + 2], int32_data[4 * i + 3]);
+  for (il = 0; il < Ncells; ++il) {
+    fprintf (vtufile, "          %lld %lld %lld %lld\n",
+             (long long) int32_data[4 * il + 0],
+             (long long) int32_data[4 * il + 1],
+             (long long) int32_data[4 * il + 2],
+             (long long) int32_data[4 * il + 3]);
   }
 #else
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
@@ -470,14 +478,14 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #ifdef P4EST_VTK_ASCII
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"offsets\""
            " format=\"ascii\">\n");
-  for (i = 1; i <= Ncells; ++i) {
-    fprintf (vtufile, "          %d\n", i * 4);
+  for (il = 1; il <= Ncells; ++il) {
+    fprintf (vtufile, "          %lld\n", (long long) (il * 4));
   }
 #else
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"offsets\""
            " format=\"binary\">\n");
-  for (i = 1; i <= Ncells; ++i) {
-    int32_data[i - 1] = i * 4;
+  for (il = 1; il <= Ncells; ++il) {
+    int32_data[il - 1] = il * 4;
   }
   fprintf (vtufile, "          ");
   retval = p4est_vtk_binary (vtufile, (char *) int32_data,
@@ -496,9 +504,9 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        <DataArray type=\"UInt8\" Name=\"types\""
            " format=\"ascii\">\n");
   fprintf (vtufile, "         ");
-  for (i = 0, sk = 1; i < Ncells; ++i, ++sk) {
+  for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
     fprintf (vtufile, " 8");    /* 0:VTK_PIXEL */
-    if (!(sk % 20) && i != (Ncells - 1))
+    if (!(sk % 20) && il != (Ncells - 1))
       fprintf (vtufile, "\n         ");
   }
   fprintf (vtufile, "\n");
@@ -506,8 +514,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        <DataArray type=\"UInt8\" Name=\"types\""
            " format=\"binary\">\n");
   uint8_data = P4EST_ALLOC (uint8_t, Ncells);
-  for (i = 0; i < Ncells; ++i) {
-    uint8_data[i] = 8;
+  for (il = 0; il < Ncells; ++il) {
+    uint8_data[il] = 8;
   }
   fprintf (vtufile, "          ");
   retval = p4est_vtk_binary (vtufile, (char *) uint8_data,
@@ -527,17 +535,17 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"mpirank\""
            " format=\"ascii\">\n");
   fprintf (vtufile, "         ");
-  for (i = 0, sk = 1; i < Ncells; ++i, ++sk) {
+  for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
     fprintf (vtufile, " %d", procRank);
-    if (!(sk % 20) && i != (Ncells - 1))
+    if (!(sk % 20) && il != (Ncells - 1))
       fprintf (vtufile, "\n         ");
   }
   fprintf (vtufile, "\n");
 #else
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"mpirank\""
            " format=\"binary\">\n");
-  for (i = 0; i < Ncells; ++i) {
-    int32_data[i] = procRank;
+  for (il = 0; il < Ncells; ++il) {
+    int32_data[il] = (int32_t) procRank;
   }
   fprintf (vtufile, "          ");
   retval = p4est_vtk_binary (vtufile, (char *) int32_data,
