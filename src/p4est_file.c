@@ -88,7 +88,6 @@ p4est_connectivity_read (const char *filename,
   int                 set_num_vtt = 0;
   char               *key = NULL;
   char               *value = NULL;
-  int32_t             vertex, corner_trees;
   int32_t             num_trees = 0;
   int32_t             num_vertices = 0;
   int32_t             num_vtt = 0;
