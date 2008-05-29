@@ -12,7 +12,7 @@ p4est Forest Example
 ver = 0.0.1  # Version of the forest file
 Nk  = 3      # Number of elements
 Nv  = 7      # Number of mesh vertices
-Nve = 11     # Number of trees in the vertex to element list
+Nve = 12     # Number of trees in the vertex to element list
 Net = 0      # Number of element tags
 Nft = 0      # Number of face tags
 Ncf = 0      # Number of curved faces

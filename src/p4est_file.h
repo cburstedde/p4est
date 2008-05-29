@@ -36,6 +36,7 @@
  * ver = 0.0.1  # Version of the forest file
  * Nk  = 3      # Number of elements
  * Nv  = 7      # Number of mesh vertices
+ * Nve = 12     # Number of trees in the vertex to element list
  * Net = 0      # Number of element tags
  * Nft = 0      # Number of face tags
  * Ncf = 0      # Number of curved faces
@@ -60,6 +61,14 @@
  * 1     1   2   1   1
  * 2     4   4   3   4
  * 3     3   2   3   2
+ * [Vertex to Element]
+ * 1     2   1   2
+ * 2     1   1
+ * 3     3   1   3   2
+ * 4     2   1   3
+ * 5     1   3
+ * 6     2   2   3
+ * 7     1   2
  * [Element Tags]
  * [Face Tags]
  * [Curved Faces]
