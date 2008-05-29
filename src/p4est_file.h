@@ -69,6 +69,14 @@
  * 5     1   3
  * 6     2   2   3
  * 7     1   2
+ * [Vertex to Vertex]
+ * 1     2   1   1
+ * 2     1   2
+ * 3     3   3   3   3
+ * 4     2   4   4
+ * 5     1   5
+ * 6     2   6   6
+ * 7     1   7
  * [Element Tags]
  * [Face Tags]
  * [Curved Faces]

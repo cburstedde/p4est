@@ -75,6 +75,14 @@ main (int argc, char **argv)
     "5     1   3\n"
     "6     2   2   3\n"
     "7     1   2\n"
+    "[Vertex to Vertex]\n"
+    "1     2   1   1\n"
+    "2     1   2\n"
+    "3     3   3   3   3\n"
+    "4     2   4   4\n"
+    "5     1   5\n"
+    "6     2   6   6\n"
+    "7     1   7\n"
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
   const int32_t       num_trees = 3;

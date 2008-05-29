@@ -39,9 +39,7 @@ Nct = 0      # Number of curved types
 3     3   2   3   2
 [Vertex to Element]
 # Starts with vertex then number of elements then the element numbers.
-# The element numbers should start with the lowest element number and
-# contain all elements connecting to the vertex given in the orientation
-# (e.g, right-hand-rule) of the lowest element.
+# The ordering of the neighboring elements must match [Vertex to Vertex].
 1     2   1   2
 2     1   1
 3     3   1   3   2
@@ -49,6 +47,16 @@ Nct = 0      # Number of curved types
 5     1   3
 6     2   2   3
 7     1   2
+[Vertex to Vertex]
+# Starts with vertex then number of elements then the vertex numbers.
+# The ordering of the neighboring elements must match [Vertex to Element].
+1     2   1   1
+2     1   2
+3     3   3   3   3
+4     2   4   4
+5     1   5
+6     2   6   6
+7     1   7
 [Element Tags]
 [Face Tags]
 [Curved Faces]
