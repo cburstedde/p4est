@@ -191,7 +191,7 @@ p4est_connectivity_read (const char *filename,
 
       SC_CHECK_ABORT (section == INFO || *connectivity != NULL,
                       "The [Forest Info] section must come first"
-                      " and set Nv and Nv.");
+                      " and set Nk, Nv, and Nve.");
 
       section_lines_read = 0;
     }
@@ -372,22 +372,31 @@ p4est_connectivity_read (const char *filename,
 void
 p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
 {
-  int                 k, num_trees, num_vertices;
-  int32_t            *tree_to_vertex, *tree_to_tree;
+  int                 i, j, k, Nnn, num_trees, num_vertices, num_vtt;
+  int32_t            *tree_to_vertex, *tree_to_tree, *vtt_offset,
+    *vertex_to_tree;
   int8_t             *tree_to_face;
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   num_trees = connectivity->num_trees;
   num_vertices = connectivity->num_vertices;
+  num_vtt = connectivity->vtt_offset[num_vertices];
+
   tree_to_vertex = connectivity->tree_to_vertex;
   tree_to_tree = connectivity->tree_to_tree;
   tree_to_face = connectivity->tree_to_face;
 
+  vtt_offset = connectivity->vtt_offset;
+  vertex_to_tree = connectivity->vertex_to_tree;
+
   fprintf (nout, "[Forest Info]\n");
   fprintf (nout, "ver = 0.0.1  # Version of the forest file\n");
-  fprintf (nout, "Nk  = %d      # Number of elements\n", num_trees);
-  fprintf (nout, "Nv  = %d      # Number of mesh vertices\n", num_vertices);
+  fprintf (nout, "Nk  = %d     # Number of elements\n", num_trees);
+  fprintf (nout, "Nv  = %d     # Number of mesh vertices\n", num_vertices);
+  fprintf (nout,
+           "Nve = %d     # Number of trees in the vertex to element list\n",
+           num_vtt);
   fprintf (nout, "Net = 0      # Number of element tags\n");
   fprintf (nout, "Nft = 0      # Number of face tags\n");
   fprintf (nout, "Ncf = 0      # Number of curved faces\n");
@@ -410,6 +419,14 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
     printf ("    %d    %d    %d    %d    %d\n",
             k + 1, tree_to_face[4 * k + 0] + 1, tree_to_face[4 * k + 1] + 1,
             tree_to_face[4 * k + 2] + 1, tree_to_face[4 * k + 3] + 1);
+  for (i = 0; i < num_vertices; ++i) {
+    Nnn = vtt_offset[i + 1] - vtt_offset[i];
+    printf ("    %d   %d", i + 1, Nnn);
+    for (j = 0; j < Nnn; ++j) {
+      printf ("    %d", vertex_to_tree[vtt_offset[i] + j] + 1);
+    }
+    printf ("\n");
+  }
   fprintf (nout, "[Element Tags]\n");
   fprintf (nout, "[Face Tags]\n");
   fprintf (nout, "[Curved Faces]\n");
