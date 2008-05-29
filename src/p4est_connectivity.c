@@ -21,8 +21,6 @@
 
 #include <p4est_connectivity.h>
 
-#include <math.h>
-
 /* *INDENT-OFF* */
 
 const int p4est_transform_table[4][4][2] =

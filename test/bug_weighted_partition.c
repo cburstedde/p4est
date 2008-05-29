@@ -19,7 +19,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_base.h>
 #include <p4est.h>
 
 static int
@@ -67,4 +66,4 @@ main (int argc, char **argv)
   return 0;
 }
 
-/* EOF simple.c */
+/* EOF bug_weighted_partition.c */

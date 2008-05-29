@@ -86,10 +86,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 #ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
 
     mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
   }
 #endif
   num_procs = p4est->mpisize;
@@ -1192,7 +1192,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     mpiret = MPI_Allgather (peer_windows, twopeerw, MPI_INT,
                             peer_boundaries, twopeerw, MPI_INT,
                             p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
   }
   P4EST_INFOF ("Peers first %d last %d counts %d %d\n",
                first_peer, last_peer, over_peer_count, eff_peer_count);
@@ -1235,7 +1235,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     mpiret = MPI_Isend (&peer->send_first_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
                         p4est->mpicomm, &send_requests_first_count[j]);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
     ++request_send_count;
 
     /* sort and send the actual quadrants and post receive for reply */
@@ -1252,12 +1252,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       mpiret = MPI_Isend (peer->send_first.array, qbytes, MPI_BYTE,
                           j, P4EST_COMM_BALANCE_FIRST_LOAD,
                           p4est->mpicomm, &send_requests_first_load[j]);
-      P4EST_CHECK_MPI (mpiret);
+      SC_CHECK_MPI (mpiret);
       ++request_send_count;
       mpiret = MPI_Irecv (&peer->recv_second_count, 1, MPI_INT,
                           j, P4EST_COMM_BALANCE_SECOND_COUNT,
                           p4est->mpicomm, &requests_second[j]);
-      P4EST_CHECK_MPI (mpiret);
+      SC_CHECK_MPI (mpiret);
       ++request_second_count;
     }
   }
@@ -1285,14 +1285,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     mpiret = MPI_Irecv (&peer->recv_first_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
                         p4est->mpicomm, &requests_first[j]);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
   }
 
   /* wait for quadrant counts and post receive and send for quadrants */
   while (request_first_count > 0) {
     mpiret = MPI_Waitsome (num_procs, requests_first,
                            &outcount, wait_indices, recv_statuses);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (outcount != MPI_UNDEFINED);
     P4EST_ASSERT (outcount > 0);
     for (i = 0; i < outcount; ++i) {
@@ -1311,9 +1311,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         /* verify message size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_COUNT);
         mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
-        P4EST_CHECK_MPI (mpiret);
-        P4EST_CHECK_ABORTF (rcount == 1,
-                            "Receive count mismatch A %d", rcount);
+        SC_CHECK_MPI (mpiret);
+        SC_CHECK_ABORTF (rcount == 1, "Receive count mismatch A %d", rcount);
 
         /* process the count information received */
         peer->have_first_count = 1;
@@ -1329,7 +1328,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           mpiret = MPI_Irecv (peer->recv_both.array, qbytes, MPI_BYTE,
                               j, P4EST_COMM_BALANCE_FIRST_LOAD,
                               p4est->mpicomm, &requests_first[j]);
-          P4EST_CHECK_MPI (mpiret);
+          SC_CHECK_MPI (mpiret);
           ++recv_load[0];
         }
         else {
@@ -1345,13 +1344,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_LOAD);
         P4EST_ASSERT (peer->recv_first_count > 0);
         mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
-        P4EST_CHECK_MPI (mpiret);
-        P4EST_CHECK_ABORTF (rcount ==
-                            peer->recv_first_count *
-                            sizeof (p4est_quadrant_t),
-                            "Receive load mismatch A %d %dx%lld", rcount,
-                            peer->recv_first_count,
-                            (long long) sizeof (p4est_quadrant_t));
+        SC_CHECK_MPI (mpiret);
+        SC_CHECK_ABORTF (rcount ==
+                         peer->recv_first_count *
+                         sizeof (p4est_quadrant_t),
+                         "Receive load mismatch A %d %dx%lld", rcount,
+                         peer->recv_first_count,
+                         (long long) sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_first_load = 1;
@@ -1377,7 +1376,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         mpiret = MPI_Isend (&peer->send_second_count, 1, MPI_INT,
                             j, P4EST_COMM_BALANCE_SECOND_COUNT,
                             p4est->mpicomm, &send_requests_second_count[j]);
-        P4EST_CHECK_MPI (mpiret);
+        SC_CHECK_MPI (mpiret);
         ++request_send_count;
         if (qcount > 0) {
 
@@ -1392,7 +1391,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           mpiret = MPI_Isend (peer->send_second.array, qbytes, MPI_BYTE,
                               j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &send_requests_second_load[j]);
-          P4EST_CHECK_MPI (mpiret);
+          SC_CHECK_MPI (mpiret);
           ++request_send_count;
         }
       }
@@ -1400,7 +1399,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 #ifdef P4EST_DEBUG
   for (j = 0; j < num_procs; ++j) {
-    P4EST_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
+    SC_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
   }
 #endif /* P4EST_DEBUG */
 #endif /* P4EST_MPI */
@@ -1426,7 +1425,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   while (request_second_count > 0) {
     mpiret = MPI_Waitsome (num_procs, requests_second,
                            &outcount, wait_indices, recv_statuses);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (outcount != MPI_UNDEFINED);
     P4EST_ASSERT (outcount > 0);
     for (i = 0; i < outcount; ++i) {
@@ -1445,9 +1444,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         /* verify message size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_COUNT);
         mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
-        P4EST_CHECK_MPI (mpiret);
-        P4EST_CHECK_ABORTF (rcount == 1,
-                            "Receive count mismatch B %d", rcount);
+        SC_CHECK_MPI (mpiret);
+        SC_CHECK_ABORTF (rcount == 1, "Receive count mismatch B %d", rcount);
 
         /* process the count information received */
         peer->have_second_count = 1;
@@ -1465,7 +1463,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           mpiret = MPI_Irecv (peer->recv_both.array + obytes, qbytes,
                               MPI_BYTE, j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &requests_second[j]);
-          P4EST_CHECK_MPI (mpiret);
+          SC_CHECK_MPI (mpiret);
           ++recv_load[1];
         }
         else {
@@ -1481,13 +1479,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_LOAD);
         P4EST_ASSERT (peer->recv_second_count > 0);
         mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
-        P4EST_CHECK_MPI (mpiret);
-        P4EST_CHECK_ABORTF (rcount ==
-                            peer->recv_second_count *
-                            sizeof (p4est_quadrant_t),
-                            "Receive load mismatch B %d %dx%lld", rcount,
-                            peer->recv_second_count,
-                            (long long) sizeof (p4est_quadrant_t));
+        SC_CHECK_MPI (mpiret);
+        SC_CHECK_ABORTF (rcount ==
+                         peer->recv_second_count *
+                         sizeof (p4est_quadrant_t),
+                         "Receive load mismatch B %d %dx%lld", rcount,
+                         peer->recv_second_count,
+                         (long long) sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_second_load = 1;
@@ -1504,7 +1502,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 #ifdef P4EST_DEBUG
   for (j = 0; j < num_procs; ++j) {
-    P4EST_CHECK_ABORT (requests_second[j] == MPI_REQUEST_NULL, "Request B");
+    SC_CHECK_ABORT (requests_second[j] == MPI_REQUEST_NULL, "Request B");
   }
 #endif /* P4EST_DEBUG */
 
@@ -1678,7 +1676,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Reduce (ltotal, gtotal, 2, MPI_INT,
                          MPI_SUM, 0, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_STATISTICSF ("Global number of shipped quadrants %d\n",
                               gtotal[0]);
     P4EST_ASSERT (gtotal[0] == gtotal[1]);
@@ -1692,7 +1690,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   if (request_send_count > 0) {
     mpiret = MPI_Waitall (4 * num_procs,
                           send_requests_first_count, MPI_STATUSES_IGNORE);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
   }
 #endif /* P4EST_MPI */
 
@@ -1823,7 +1821,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     mpiret = MPI_Allgather (&weight_sum, 1, MPI_LONG_LONG,
                             &global_weight_sums[1], 1, MPI_LONG_LONG,
                             p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
 
     /* adjust all arrays to reflect the global weight */
     for (i = 0; i < num_procs; ++i) {
@@ -1898,7 +1896,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
           mpiret = MPI_Isend (&send_array[base_index + 1], 1, MPI_LONG_LONG,
                               i, P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm, &send_requests[base_index + 1]);
-          P4EST_CHECK_MPI (mpiret);
+          SC_CHECK_MPI (mpiret);
         }
         else {
           k = 0;
@@ -1914,7 +1912,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
         mpiret = MPI_Isend (&send_array[base_index], 1, MPI_LONG_LONG,
                             i - 1, P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                             p4est->mpicomm, &send_requests[base_index]);
-        P4EST_CHECK_MPI (mpiret);
+        SC_CHECK_MPI (mpiret);
       }
     }
 
@@ -1934,7 +1932,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
           mpiret = MPI_Irecv (&recv_low, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm, &recv_requests[0]);
-          P4EST_CHECK_MPI (mpiret);
+          SC_CHECK_MPI (mpiret);
           break;
         }
       }
@@ -1955,7 +1953,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
           mpiret = MPI_Irecv (&recv_high, 1, MPI_LONG_LONG, i,
                               P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                               p4est->mpicomm, &recv_requests[1]);
-          P4EST_CHECK_MPI (mpiret);
+          SC_CHECK_MPI (mpiret);
           break;
         }
       }
@@ -1972,29 +1970,29 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     /* wait for sends and receives to complete */
     if (num_sends > 0) {
       mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
-      P4EST_CHECK_MPI (mpiret);
+      SC_CHECK_MPI (mpiret);
       P4EST_FREE (send_requests);
       P4EST_FREE (send_array);
     }
     mpiret = MPI_Waitall (2, recv_requests, recv_statuses);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
     if (my_lowcut != 0) {
-      P4EST_CHECK_ABORT (recv_statuses[0].MPI_SOURCE == low_source,
-                         "Wait low source");
-      P4EST_CHECK_ABORT (recv_statuses[0].MPI_TAG ==
-                         P4EST_COMM_PARTITION_WEIGHTED_LOW, "Wait low tag");
+      SC_CHECK_ABORT (recv_statuses[0].MPI_SOURCE == low_source,
+                      "Wait low source");
+      SC_CHECK_ABORT (recv_statuses[0].MPI_TAG ==
+                      P4EST_COMM_PARTITION_WEIGHTED_LOW, "Wait low tag");
       mpiret = MPI_Get_count (&recv_statuses[0], MPI_LONG_LONG, &rcount);
-      P4EST_CHECK_MPI (mpiret);
-      P4EST_CHECK_ABORTF (rcount == 1, "Wait low count %d", rcount);
+      SC_CHECK_MPI (mpiret);
+      SC_CHECK_ABORTF (rcount == 1, "Wait low count %d", rcount);
     }
     if (my_highcut != 0) {
-      P4EST_CHECK_ABORT (recv_statuses[1].MPI_SOURCE == high_source,
-                         "Wait high source");
-      P4EST_CHECK_ABORT (recv_statuses[1].MPI_TAG ==
-                         P4EST_COMM_PARTITION_WEIGHTED_HIGH, "Wait high tag");
+      SC_CHECK_ABORT (recv_statuses[1].MPI_SOURCE == high_source,
+                      "Wait high source");
+      SC_CHECK_ABORT (recv_statuses[1].MPI_TAG ==
+                      P4EST_COMM_PARTITION_WEIGHTED_HIGH, "Wait high tag");
       mpiret = MPI_Get_count (&recv_statuses[1], MPI_LONG_LONG, &rcount);
-      P4EST_CHECK_MPI (mpiret);
-      P4EST_CHECK_ABORTF (rcount == 1, "Wait high count %d", rcount);
+      SC_CHECK_MPI (mpiret);
+      SC_CHECK_ABORTF (rcount == 1, "Wait high count %d", rcount);
     }
 
     /* communicate the quadrant ranges */
@@ -2004,7 +2002,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     mpiret = MPI_Allgather (&qcount, 1, MPI_INT,
                             num_quadrants_in_proc, 1, MPI_INT,
                             p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
 
 #if(0)
     /* run through the count array and repair zero ranges */
@@ -2083,7 +2081,7 @@ p4est_checksum (p4est_t * p4est)
   send[1] = p4est->local_num_quadrants * 12;
   mpiret = MPI_Gather (send, 2, MPI_UNSIGNED, gather, 2, MPI_UNSIGNED,
                        0, p4est->mpicomm);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   crc = 0;
   if (p4est->mpirank == 0) {

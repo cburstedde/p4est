@@ -2313,7 +2313,7 @@ p4est_partition_given (p4est_t * p4est,
       mpiret = MPI_Irecv (recv_buf[from_proc], recv_size, MPI_BYTE,
                           from_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, recv_request + sk);
-      P4EST_CHECK_MPI (mpiret);
+      SC_CHECK_MPI (mpiret);
 #endif
       ++sk;
     }
@@ -2467,7 +2467,7 @@ p4est_partition_given (p4est_t * p4est,
       mpiret = MPI_Isend (send_buf[to_proc], send_size, MPI_BYTE,
                           to_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, send_request + sk);
-      P4EST_CHECK_MPI (mpiret);
+      SC_CHECK_MPI (mpiret);
       ++sk;
 #endif
     }
@@ -2479,7 +2479,7 @@ p4est_partition_given (p4est_t * p4est,
   /* Fill in forest */
 #ifdef P4EST_MPI
   mpiret = MPI_Waitall (num_proc_recv_from, recv_request, recv_status);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 #endif
 
   /* Loop Through and fill in */
@@ -2744,7 +2744,7 @@ p4est_partition_given (p4est_t * p4est,
 
 #ifdef P4EST_MPI
   mpiret = MPI_Waitall (num_proc_send_to, send_request, send_status);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
 #ifdef P4EST_DEBUG
   for (i = 0; i < num_proc_recv_from; ++i) {
