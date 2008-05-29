@@ -127,20 +127,20 @@ p4est_connectivity_read (const char *filename,
       /* call any checks before leaving a section */
       switch (section) {
       case ETOV:
-        P4EST_CHECK_ABORT (section_lines_read == num_trees,
-                           "Not enough entries in [Element to Vertex]");
+        SC_CHECK_ABORT (section_lines_read == num_trees,
+                        "Not enough entries in [Element to Vertex]");
         break;
       case ETOE:
-        P4EST_CHECK_ABORT (section_lines_read == num_trees,
-                           "Not enough entries in [Element to Element]");
+        SC_CHECK_ABORT (section_lines_read == num_trees,
+                        "Not enough entries in [Element to Element]");
         break;
       case ETOF:
-        P4EST_CHECK_ABORT (section_lines_read == num_trees,
-                           "Not enough entries in [Element to Face]");
+        SC_CHECK_ABORT (section_lines_read == num_trees,
+                        "Not enough entries in [Element to Face]");
         break;
       case VTOE:
-        P4EST_CHECK_ABORT (section_lines_read == num_vertices,
-                           "Not enough entries in [Vertex to Element]");
+        SC_CHECK_ABORT (section_lines_read == num_vertices,
+                        "Not enough entries in [Vertex to Element]");
         break;
       default:
         ;
@@ -150,8 +150,7 @@ p4est_connectivity_read (const char *filename,
       length = strlen (line);
 
       /* Sections must end with ']' */
-      P4EST_CHECK_ABORT (line[length - 1] == ']',
-                         "Sections must end with ']'");
+      SC_CHECK_ABORT (line[length - 1] == ']', "Sections must end with ']'");
 
       line[length - 1] = '\0';
       ++line;
@@ -187,12 +186,12 @@ p4est_connectivity_read (const char *filename,
         section = CT;
       }
       else {
-        P4EST_CHECK_ABORT (0, "Unknown section in mesh file");
+        SC_CHECK_ABORT (0, "Unknown section in mesh file");
       }
 
-      P4EST_CHECK_ABORT (section == INFO || *connectivity != NULL,
-                         "The [Forest Info] section must come first"
-                         " and set Nv and Nv.");
+      SC_CHECK_ABORT (section == INFO || *connectivity != NULL,
+                      "The [Forest Info] section must come first"
+                      " and set Nv and Nv.");
 
       section_lines_read = 0;
     }
@@ -202,9 +201,9 @@ p4est_connectivity_read (const char *filename,
         key = strtok (line, "=");
         value = strtok (NULL, "=");
 
-        P4EST_CHECK_ABORT (key != NULL && value != NULL,
-                           "entries in the [Forest Info] setion must be\n"
-                           "key value pairs, i.e. key=value");
+        SC_CHECK_ABORT (key != NULL && value != NULL,
+                        "entries in the [Forest Info] setion must be\n"
+                        "key value pairs, i.e. key=value");
 
         p4est_trim_ending_whitespace (key);
 
@@ -242,7 +241,7 @@ p4est_connectivity_read (const char *filename,
         sscanf (line, "%d %lf %lf %lf", &k, &vx, &vy, &vz);
         --k;
 
-        P4EST_CHECK_ABORT (k >= 0 && k < num_vertices, "Bad [] entry");
+        SC_CHECK_ABORT (k >= 0 && k < num_vertices, "Bad [] entry");
 
         vertices[k * 3 + 0] = vx;
         vertices[k * 3 + 1] = vy;
@@ -257,12 +256,12 @@ p4est_connectivity_read (const char *filename,
         --v2;
         --v3;
 
-        P4EST_CHECK_ABORT (k >= 0 && k < num_trees &&
-                           v0 >= 0 && v0 < num_vertices &&
-                           v1 >= 0 && v1 < num_vertices &&
-                           v2 >= 0 && v2 < num_vertices &&
-                           v3 >= 0 && v3 < num_vertices,
-                           "Bad [Element to Vertex] entry");
+        SC_CHECK_ABORT (k >= 0 && k < num_trees &&
+                        v0 >= 0 && v0 < num_vertices &&
+                        v1 >= 0 && v1 < num_vertices &&
+                        v2 >= 0 && v2 < num_vertices &&
+                        v3 >= 0 && v3 < num_vertices,
+                        "Bad [Element to Vertex] entry");
 
         tree_to_vertex[k * 4 + 0] = v0;
         tree_to_vertex[k * 4 + 1] = v1;
@@ -278,12 +277,12 @@ p4est_connectivity_read (const char *filename,
         --k2;
         --k3;
 
-        P4EST_CHECK_ABORT (k >= 0 && k < num_trees &&
-                           k0 >= 0 && k0 < num_trees &&
-                           k1 >= 0 && k1 < num_trees &&
-                           k2 >= 0 && k2 < num_trees &&
-                           k3 >= 0 && k3 < num_trees,
-                           "Bad [Element to Element] entry");
+        SC_CHECK_ABORT (k >= 0 && k < num_trees &&
+                        k0 >= 0 && k0 < num_trees &&
+                        k1 >= 0 && k1 < num_trees &&
+                        k2 >= 0 && k2 < num_trees &&
+                        k3 >= 0 && k3 < num_trees,
+                        "Bad [Element to Element] entry");
 
         tree_to_tree[k * 4 + 0] = k0;
         tree_to_tree[k * 4 + 1] = k1;
@@ -299,11 +298,11 @@ p4est_connectivity_read (const char *filename,
         --f2;
         --f3;
 
-        P4EST_CHECK_ABORT (k >= 0 && k < num_trees &&
-                           f0 >= 0 && f0 < 4 &&
-                           f1 >= 0 && f1 < 4 &&
-                           f2 >= 0 && f2 < 4 &&
-                           f3 >= 0 && f3 < 4, "Bad [Element to Face] entry");
+        SC_CHECK_ABORT (k >= 0 && k < num_trees &&
+                        f0 >= 0 && f0 < 4 &&
+                        f1 >= 0 && f1 < 4 &&
+                        f2 >= 0 && f2 < 4 &&
+                        f3 >= 0 && f3 < 4, "Bad [Element to Face] entry");
 
         tree_to_face[k * 4 + 0] = (int8_t) f0;
         tree_to_face[k * 4 + 1] = (int8_t) f1;
@@ -333,9 +332,9 @@ p4est_connectivity_read (const char *filename,
       case CT:
         break;
       case NONE:
-        P4EST_CHECK_ABORT (0, "Mesh file must start with a section");
+        SC_CHECK_ABORT (0, "Mesh file must start with a section");
       default:
-        P4EST_CHECK_ABORT (0, "Unknown section in mesh file");
+        SC_CHECK_ABORT (0, "Unknown section in mesh file");
       }
 
       ++section_lines_read;

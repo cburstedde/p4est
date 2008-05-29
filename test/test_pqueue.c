@@ -46,9 +46,9 @@ main (int argc, char **argv)
   double              start, elapsed_pqueue, elapsed_qsort;
 
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (MPI_COMM_WORLD, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
@@ -90,16 +90,16 @@ main (int argc, char **argv)
     swaps3 += ((s > 0) ? 1 : 0);
     total3 += s;
   }
-  P4EST_CHECK_ABORT (swaps1 == 0 && total1 == 0, "pqueue_add");
+  SC_CHECK_ABORT (swaps1 == 0 && total1 == 0, "pqueue_add");
 
   printf ("   Swaps %d %d %d Total %d %d %d\n",
           swaps1, swaps2, swaps3, total1, total2, total3);
 
   temp = 52;
   index = sc_array_bsearch (a1, &temp, compar);
-  P4EST_CHECK_ABORT (index != -1, "array_bsearch_index");
+  SC_CHECK_ABORT (index != -1, "array_bsearch_index");
   pi = sc_array_index (a1, index);
-  P4EST_CHECK_ABORT (*pi == temp, "array_bsearch");
+  SC_CHECK_ABORT (*pi == temp, "array_bsearch");
 
   i3last = -1;
   swaps1 = swaps2 = swaps3 = 0;
@@ -117,8 +117,8 @@ main (int argc, char **argv)
     swaps3 += ((s > 0) ? 1 : 0);
     total3 += s;
 
-    P4EST_CHECK_ABORT (i == i1 && i == i2, "pqueue_pop");
-    P4EST_CHECK_ABORT (i3 >= i3last, "pqueue_pop");
+    SC_CHECK_ABORT (i == i1 && i == i2, "pqueue_pop");
+    SC_CHECK_ABORT (i3 >= i3last, "pqueue_pop");
     i3last = i3;
   }
   printf ("   Swaps %d %d %d Total %d %d %d\n",
@@ -147,7 +147,7 @@ main (int argc, char **argv)
     pi = sc_array_index (a4, i);
     i4 = *pi;
 
-    P4EST_CHECK_ABORT (i4 >= i4last, "array_sort");
+    SC_CHECK_ABORT (i4 >= i4last, "array_sort");
     i4last = i4;
   }
   sc_array_resize (a4, 0);
@@ -160,7 +160,7 @@ main (int argc, char **argv)
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

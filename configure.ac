@@ -15,8 +15,6 @@ AX_PREFIX_CONFIG_H([src/p4est_config.h])
 
 # Configure switches
 P4EST_ARG_ENABLE([debug], [enable debug mode], [DEBUG])
-P4EST_ARG_ENABLE([log-level], [set the log priority [=PRIORITY]],
-                 [LOG_LEVEL])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
@@ -32,6 +30,8 @@ P4EST_ARG_WITHOUT([zlib], [disable zlib in builtin libsc, provide your own],
 # Configure the SC library recursively.
 if test "$P4EST_WITH_PROVIDE_SC" = yes; then
   AC_CONFIG_SUBDIRS([sc])
+else
+  P4EST_WITH_PROVIDE_ZLIB=no
 fi
 
 # Checks for programs.

@@ -83,14 +83,14 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
 
   if (p4est_quadrant_is_ancestor (q1, q2)) {
-    P4EST_CHECK_ABORT (id1 == id2 && comp < 0, "Ancestor 1");
+    SC_CHECK_ABORT (id1 == id2 && comp < 0, "Ancestor 1");
   }
   else if (p4est_quadrant_is_ancestor (q2, q1)) {
-    P4EST_CHECK_ABORT (id1 == id2 && comp > 0, "Ancestor 2");
+    SC_CHECK_ABORT (id1 == id2 && comp > 0, "Ancestor 2");
   }
   else {
-    P4EST_CHECK_ABORT ((comp == 0 && id1 == id2) || (comp < 0 && id1 < id2)
-                       || (comp > 0 && id1 > id2), "compare");
+    SC_CHECK_ABORT ((comp == 0 && id1 == id2) || (comp < 0 && id1 < id2)
+                    || (comp > 0 && id1 > id2), "compare");
   }
 }
 
@@ -122,8 +122,8 @@ main (void)
   p4est_refine (p4est2, refine_some, NULL);
   t1 = sc_array_index (p4est1->trees, 0);
   t2 = sc_array_index (p4est2->trees, 0);
-  P4EST_CHECK_ABORT (p4est_tree_is_sorted (t1), "is_sorted");
-  P4EST_CHECK_ABORT (p4est_tree_is_sorted (t2), "is_sorted");
+  SC_CHECK_ABORT (p4est_tree_is_sorted (t1), "is_sorted");
+  SC_CHECK_ABORT (p4est_tree_is_sorted (t2), "is_sorted");
 
   /* run a bunch of cross-tests */
   p = NULL;
@@ -134,39 +134,39 @@ main (void)
     index1 = p4est_quadrant_linear_id (q1, q1->level);
     p4est_quadrant_set_morton (&r, q1->level, index1);
     index2 = p4est_quadrant_linear_id (&r, r.level);
-    P4EST_CHECK_ABORT (index1 == index2, "index conversion");
+    SC_CHECK_ABORT (index1 == index2, "index conversion");
     level = q1->level - 1;
     if (level >= 0) {
       index1 = p4est_quadrant_linear_id (q1, level);
       p4est_quadrant_set_morton (&r, level, index1);
       index2 = p4est_quadrant_linear_id (&r, level);
-      P4EST_CHECK_ABORT (index1 == index2, "index conversion");
+      SC_CHECK_ABORT (index1 == index2, "index conversion");
     }
 
     /* test the is_next function */
     if (p != NULL) {
-      P4EST_CHECK_ABORT (p4est_quadrant_is_next (p, q1), "is_next");
+      SC_CHECK_ABORT (p4est_quadrant_is_next (p, q1), "is_next");
     }
     p = q1;
 
     /* test the is_family function */
     p4est_quadrant_children (q1, &c0, &c1, &c2, &c3);
-    P4EST_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3),
-                       "is_family");
-    P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c1, &c0, &c2, &c3),
-                       "is_family");
-    P4EST_CHECK_ABORT (!p4est_quadrant_is_family (&c0, &c0, &c1, &c2),
-                       "is_family");
+    SC_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3),
+                    "is_family");
+    SC_CHECK_ABORT (!p4est_quadrant_is_family (&c1, &c0, &c2, &c3),
+                    "is_family");
+    SC_CHECK_ABORT (!p4est_quadrant_is_family (&c0, &c0, &c1, &c2),
+                    "is_family");
 
     /* test the sibling function */
     mid = p4est_quadrant_child_id (q1);
     for (cid = 0; cid < 4; ++cid) {
       p4est_quadrant_sibling (q1, &r, cid);
       if (cid != mid) {
-        P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (q1, &r), "sibling");
+        SC_CHECK_ABORT (p4est_quadrant_is_sibling (q1, &r), "sibling");
       }
       else {
-        P4EST_CHECK_ABORT (p4est_quadrant_is_equal (q1, &r), "sibling");
+        SC_CHECK_ABORT (p4est_quadrant_is_equal (q1, &r), "sibling");
       }
     }
 
@@ -175,32 +175,32 @@ main (void)
       q2 = sc_array_index (&t1->quadrants, j);
 
       /* test the comparison function */
-      P4EST_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
-                         -p4est_quadrant_compare (q2, q1), "compare");
-      P4EST_CHECK_ABORT ((p4est_quadrant_compare (q1, q2) == 0) ==
-                         p4est_quadrant_is_equal (q1, q2), "is_equal");
+      SC_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
+                      -p4est_quadrant_compare (q2, q1), "compare");
+      SC_CHECK_ABORT ((p4est_quadrant_compare (q1, q2) == 0) ==
+                      p4est_quadrant_is_equal (q1, q2), "is_equal");
 
       /* test the descriptive versions of functions */
-      P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (q1, q2) ==
-                         p4est_quadrant_is_sibling (q1, q2), "is_sibling");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (q1, q2) ==
-                         p4est_quadrant_is_parent (q1, q2), "is_parent");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (q2, q1) ==
-                         p4est_quadrant_is_parent (q2, q1), "is_parent");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q1, q2) ==
-                         p4est_quadrant_is_ancestor (q1, q2), "is_ancestor");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q2, q1) ==
-                         p4est_quadrant_is_ancestor (q2, q1), "is_ancestor");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q1, q2) ==
-                         p4est_quadrant_is_next (q1, q2), "is_next");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q2, q1) ==
-                         p4est_quadrant_is_next (q2, q1), "is_next");
+      SC_CHECK_ABORT (p4est_quadrant_is_sibling_D (q1, q2) ==
+                      p4est_quadrant_is_sibling (q1, q2), "is_sibling");
+      SC_CHECK_ABORT (p4est_quadrant_is_parent_D (q1, q2) ==
+                      p4est_quadrant_is_parent (q1, q2), "is_parent");
+      SC_CHECK_ABORT (p4est_quadrant_is_parent_D (q2, q1) ==
+                      p4est_quadrant_is_parent (q2, q1), "is_parent");
+      SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q1, q2) ==
+                      p4est_quadrant_is_ancestor (q1, q2), "is_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q2, q1) ==
+                      p4est_quadrant_is_ancestor (q2, q1), "is_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_next_D (q1, q2) ==
+                      p4est_quadrant_is_next (q1, q2), "is_next");
+      SC_CHECK_ABORT (p4est_quadrant_is_next_D (q2, q1) ==
+                      p4est_quadrant_is_next (q2, q1), "is_next");
       p4est_nearest_common_ancestor_D (q1, q2, &r);
       p4est_nearest_common_ancestor (q1, q2, &s);
-      P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
       p4est_nearest_common_ancestor_D (q2, q1, &r);
       p4est_nearest_common_ancestor (q2, q1, &s);
-      P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
     }
 
     /* test t1 against t2 */
@@ -208,32 +208,32 @@ main (void)
       q2 = sc_array_index (&t2->quadrants, j);
 
       /* test the comparison function */
-      P4EST_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
-                         -p4est_quadrant_compare (q2, q1), "compare");
-      P4EST_CHECK_ABORT ((p4est_quadrant_compare (q1, q2) == 0) ==
-                         p4est_quadrant_is_equal (q1, q2), "is_equal");
+      SC_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
+                      -p4est_quadrant_compare (q2, q1), "compare");
+      SC_CHECK_ABORT ((p4est_quadrant_compare (q1, q2) == 0) ==
+                      p4est_quadrant_is_equal (q1, q2), "is_equal");
 
       /* test the descriptive versions of functions */
-      P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (q1, q2) ==
-                         p4est_quadrant_is_sibling (q1, q2), "is_sibling");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (q1, q2) ==
-                         p4est_quadrant_is_parent (q1, q2), "is_parent");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (q2, q1) ==
-                         p4est_quadrant_is_parent (q2, q1), "is_parent");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q1, q2) ==
-                         p4est_quadrant_is_ancestor (q1, q2), "is_ancestor");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q2, q1) ==
-                         p4est_quadrant_is_ancestor (q2, q1), "is_ancestor");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q1, q2) ==
-                         p4est_quadrant_is_next (q1, q2), "is_next");
-      P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (q2, q1) ==
-                         p4est_quadrant_is_next (q2, q1), "is_next");
+      SC_CHECK_ABORT (p4est_quadrant_is_sibling_D (q1, q2) ==
+                      p4est_quadrant_is_sibling (q1, q2), "is_sibling");
+      SC_CHECK_ABORT (p4est_quadrant_is_parent_D (q1, q2) ==
+                      p4est_quadrant_is_parent (q1, q2), "is_parent");
+      SC_CHECK_ABORT (p4est_quadrant_is_parent_D (q2, q1) ==
+                      p4est_quadrant_is_parent (q2, q1), "is_parent");
+      SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q1, q2) ==
+                      p4est_quadrant_is_ancestor (q1, q2), "is_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (q2, q1) ==
+                      p4est_quadrant_is_ancestor (q2, q1), "is_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_next_D (q1, q2) ==
+                      p4est_quadrant_is_next (q1, q2), "is_next");
+      SC_CHECK_ABORT (p4est_quadrant_is_next_D (q2, q1) ==
+                      p4est_quadrant_is_next (q2, q1), "is_next");
       p4est_nearest_common_ancestor_D (q1, q2, &r);
       p4est_nearest_common_ancestor (q1, q2, &s);
-      P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
       p4est_nearest_common_ancestor_D (q2, q1, &r);
       p4est_nearest_common_ancestor (q2, q1, &s);
-      P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
+      SC_CHECK_ABORT (p4est_quadrant_is_equal (&r, &s), "common_ancestor");
     }
   }
 
@@ -243,7 +243,7 @@ main (void)
 
     /* test the is_next function */
     if (p != NULL) {
-      P4EST_CHECK_ABORT (p4est_quadrant_is_next (p, q1), "is_next");
+      SC_CHECK_ABORT (p4est_quadrant_is_next (p, q1), "is_next");
     }
     p = q1;
   }
@@ -256,7 +256,7 @@ main (void)
   /* test the linearize algorithm */
   incount = t2->quadrants.elem_count;
   p4est_linearize_subtree (p4est2, t2);
-  P4EST_CHECK_ABORT (incount == t2->quadrants.elem_count, "linearize");
+  SC_CHECK_ABORT (incount == t2->quadrants.elem_count, "linearize");
 
   /* this is user_data neutral only when p4est1->data_size == 0 */
   sc_array_init (&tree.quadrants, sizeof (p4est_quadrant_t));
@@ -292,9 +292,9 @@ main (void)
     ++tree.quadrants_per_level[q1->level];
     tree.maxlevel = (int8_t) SC_MAX (tree.maxlevel, q1->level);
   }
-  P4EST_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
+  SC_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
   p4est_linearize_subtree (p4est1, &tree);
-  P4EST_CHECK_ABORT (incount - 3 == tree.quadrants.elem_count, "linearize");
+  SC_CHECK_ABORT (incount - 3 == tree.quadrants.elem_count, "linearize");
   sc_array_reset (&tree.quadrants);
 
   /* destroy the p4est and its connectivity structure */
@@ -401,140 +401,128 @@ main (void)
   check_linear_id (&I, &H);
   check_linear_id (&I, &I);
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&C) == 1, "is_extended");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&D) == 1, "is_extended");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&E) == 1, "is_extended");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&F) == 1, "is_extended");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_extended (&G) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&C) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&D) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&E) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&F) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&G) == 1, "is_extended");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_compare (&A, &A) == 0, "compare");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare (&A, &B) > 0, "compare");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare (&B, &A) < 0, "compare");
+  SC_CHECK_ABORT (p4est_quadrant_compare (&A, &A) == 0, "compare");
+  SC_CHECK_ABORT (p4est_quadrant_compare (&A, &B) > 0, "compare");
+  SC_CHECK_ABORT (p4est_quadrant_compare (&B, &A) < 0, "compare");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_compare (&F, &F) == 0, "compare");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare (&G, &F) > 0, "compare");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare (&F, &G) < 0, "compare");
+  SC_CHECK_ABORT (p4est_quadrant_compare (&F, &F) == 0, "compare");
+  SC_CHECK_ABORT (p4est_quadrant_compare (&G, &F) > 0, "compare");
+  SC_CHECK_ABORT (p4est_quadrant_compare (&F, &G) < 0, "compare");
 
   A.p.piggy.which_tree = 0;
   B.p.piggy.which_tree = 0;
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &A) == 0,
-                     "compare_piggy");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &B) > 0,
-                     "compare_piggy");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&B, &A) < 0,
-                     "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &A) == 0,
+                  "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &B) > 0, "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&B, &A) < 0, "compare_piggy");
 
   F.p.piggy.which_tree = 0;
   G.p.piggy.which_tree = 0;
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
-                     "compare_piggy");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0,
-                     "compare_piggy");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0,
-                     "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
+                  "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0, "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0, "compare_piggy");
 
   F.p.piggy.which_tree = 89134529;
   G.p.piggy.which_tree = 2341333;
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
-                     "compare_piggy");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) < 0,
-                     "compare_piggy");
-  P4EST_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) > 0,
-                     "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
+                  "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) < 0, "compare_piggy");
+  SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) > 0, "compare_piggy");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &A) == 1, "is_equal");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&F, &F) == 1, "is_equal");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&G, &G) == 1, "is_equal");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &A) == 1, "is_equal");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&F, &F) == 1, "is_equal");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&G, &G) == 1, "is_equal");
 
   /* Not sure if these make sense because D, O and A are all level 0 */
 #if 0
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&D, &O) == 1, "is_sibling");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&D, &A) == 0, "is_sibling");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&D, &O) == 1,
-                     "is_sibling_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&D, &A) == 0,
-                     "is_sibling_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling (&D, &O) == 1, "is_sibling");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling (&D, &A) == 0, "is_sibling");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling_D (&D, &O) == 1, "is_sibling_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling_D (&D, &A) == 0, "is_sibling_D");
 #endif
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&I, &H) == 1, "is_sibling");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling (&I, &G) == 0, "is_sibling");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &H) == 1,
-                     "is_sibling_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &G) == 0,
-                     "is_sibling_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling (&I, &H) == 1, "is_sibling");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling (&I, &G) == 0, "is_sibling");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &H) == 1, "is_sibling_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_sibling_D (&I, &G) == 0, "is_sibling_D");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &H) == 1, "is_parent");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&H, &A) == 0, "is_parent");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent (&A, &D) == 0, "is_parent");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &H) == 1, "is_parent_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_parent (&A, &H) == 1, "is_parent");
+  SC_CHECK_ABORT (p4est_quadrant_is_parent (&H, &A) == 0, "is_parent");
+  SC_CHECK_ABORT (p4est_quadrant_is_parent (&A, &D) == 0, "is_parent");
+  SC_CHECK_ABORT (p4est_quadrant_is_parent_D (&A, &H) == 1, "is_parent_D");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &G) == 1, "is_ancestor");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor (&G, &A) == 0, "is_ancestor");
+  SC_CHECK_ABORT (p4est_quadrant_is_ancestor (&A, &G) == 1, "is_ancestor");
+  SC_CHECK_ABORT (p4est_quadrant_is_ancestor (&G, &A) == 0, "is_ancestor");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &G) == 1,
-                     "is_ancestor_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 0,
-                     "is_ancestor_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&A, &G) == 1,
+                  "is_ancestor_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 0,
+                  "is_ancestor_D");
 
-  P4EST_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_next (&A, &H) == 0, "is_next");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_next_D (&A, &H) == 0, "is_next_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
+  SC_CHECK_ABORT (p4est_quadrant_is_next (&A, &H) == 0, "is_next");
+  SC_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_next_D (&A, &H) == 0, "is_next_D");
 
   p4est_quadrant_parent (&H, &a);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "parent");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "parent");
 
   p4est_quadrant_sibling (&I, &h, 3);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&H, &h) == 1, "sibling");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&H, &h) == 1, "sibling");
 
   p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c2, &I) == 1, "children");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &H) == 1, "children");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &G) == 0, "children");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&c2, &I) == 1, "children");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &H) == 1, "children");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &G) == 0, "children");
 
   p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3) == 1,
-                     "is_family");
+  SC_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3) == 1,
+                  "is_family");
   id0 = p4est_quadrant_child_id (&c0);
   id1 = p4est_quadrant_child_id (&c1);
   id2 = p4est_quadrant_child_id (&c2);
   id3 = p4est_quadrant_child_id (&c3);
-  P4EST_CHECK_ABORT (id0 == 0 && id1 == 1 && id2 == 2 && id3 == 3,
-                     "child_id");
-  P4EST_CHECK_ABORT (p4est_quadrant_child_id (&G) == 3, "child_id");
+  SC_CHECK_ABORT (id0 == 0 && id1 == 1 && id2 == 2 && id3 == 3, "child_id");
+  SC_CHECK_ABORT (p4est_quadrant_child_id (&G) == 3, "child_id");
 
   p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
   p4est_quadrant_first_descendent (&A, &c1, 1);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
-                     "first_descendent");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
+                  "first_descendent");
 
   p4est_quadrant_last_descendent (&A, &g, P4EST_MAXLEVEL);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&G, &g) == 1,
-                     "last_descendent");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&G, &g) == 1, "last_descendent");
 
   Fid = p4est_quadrant_linear_id (&F, P4EST_MAXLEVEL);
   p4est_quadrant_set_morton (&f, P4EST_MAXLEVEL, Fid);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f) == 1,
-                     "set_morton/linear_id");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f) == 1,
+                  "set_morton/linear_id");
 
   Aid = p4est_quadrant_linear_id (&A, 0);
   p4est_quadrant_set_morton (&a, 0, Aid);
-  P4EST_CHECK_ABORT (Aid == 15, "linear_id");
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1,
-                     "set_morton/linear_id");
+  SC_CHECK_ABORT (Aid == 15, "linear_id");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1,
+                  "set_morton/linear_id");
 
   p4est_nearest_common_ancestor (&I, &H, &a);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor");
 
   p4est_nearest_common_ancestor_D (&I, &H, &a);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor_D");
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor_D");
 
   p4est_quadrant_set_morton (&P, 0, 11);
   p4est_quadrant_set_morton (&Q, 0, 12);
-  P4EST_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
-  P4EST_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
+  SC_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
+  SC_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 
   sc_finalize ();
 

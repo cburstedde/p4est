@@ -42,8 +42,8 @@ main (int argc, char **argv)
   void               *v1, *v2, *v3;
   p4est_quadrant_t    q1, q2, q3;
   p4est_quadrant_t   *f1, *f2, *f3;
-  sc_hash_t       *ihash;
-  sc_hash_t       *qhash;
+  sc_hash_t          *ihash;
+  sc_hash_t          *qhash;
 
   for (k = 0; k < 3; ++k) {
     ihash = sc_hash_new (int_hash_fn, int_equal_fn, NULL);
@@ -54,7 +54,7 @@ main (int argc, char **argv)
     }
     printf ("Integers inserted %d total %llu\n",
             inserted, (unsigned long long) ihash->elem_count);
-    P4EST_CHECK_ABORT (inserted == (int) ihash->elem_count, "Integer hash");
+    SC_CHECK_ABORT (inserted == (int) ihash->elem_count, "Integer hash");
 
     sc_hash_destroy (ihash);
   }
@@ -78,9 +78,8 @@ main (int argc, char **argv)
   printf ("Quadrants inserted %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
 
-  P4EST_CHECK_ABORT (i1 + i2 + i3 == (int) qhash->elem_count, "Quadrant hash");
-  P4EST_CHECK_ABORT (f3 == &q2
-                     && f3->p.piggy.owner_rank == 5, "Insert return");
+  SC_CHECK_ABORT (i1 + i2 + i3 == (int) qhash->elem_count, "Quadrant hash");
+  SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy.owner_rank == 5, "Insert return");
 
   f1 = f2 = f3 = NULL;
   p4est_quadrant_set_morton (&q1, 3, 19);
@@ -90,9 +89,8 @@ main (int argc, char **argv)
   f3 = v3;
   printf ("Quadrants lookup %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
-  P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
-  P4EST_CHECK_ABORT (f3 == &q2
-                     && f3->p.piggy.owner_rank == 5, "Lookup return");
+  SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
+  SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy.owner_rank == 5, "Lookup return");
 
   f1 = f2 = f3 = NULL;
   i1 = sc_hash_remove (qhash, &q1, &v1);
@@ -100,9 +98,8 @@ main (int argc, char **argv)
   i2 = sc_hash_remove (qhash, &q2, &v2);
   f2 = v2;
   i3 = sc_hash_remove (qhash, &q3, NULL);
-  P4EST_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
-  P4EST_CHECK_ABORT (f2 == &q2
-                     && f2->p.piggy.owner_rank == 5, "Remove return");
+  SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
+  SC_CHECK_ABORT (f2 == &q2 && f2->p.piggy.owner_rank == 5, "Remove return");
   f2 = f1;
 
   sc_hash_destroy (qhash);

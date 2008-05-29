@@ -274,9 +274,9 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 
   /* Check to make sure that we don't have any duplicates in the list */
   for (i = 0; i < num_uniq_local_vertices - 1; ++i) {
-    P4EST_CHECK_ABORT (p4est_vert_compare (vert_locations + i,
-                                           vert_locations + i + 1) != 0,
-                       "local ordering not unique");
+    SC_CHECK_ABORT (p4est_vert_compare (vert_locations + i,
+                                        vert_locations + i + 1) != 0,
+                    "local ordering not unique");
   }
 
   P4EST_FREE (quadrant_to_local_vertex);
@@ -306,10 +306,10 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
 
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
@@ -361,7 +361,7 @@ main (int argc, char **argv)
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

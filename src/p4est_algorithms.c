@@ -469,7 +469,7 @@ p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
   r->x = q1->x & ~((1 << maxlevel) - 1);
   r->y = q1->y & ~((1 << maxlevel) - 1);
   r->level = (int8_t) SC_MIN (P4EST_MAXLEVEL - maxlevel,
-                                 SC_MIN (q1->level, q2->level));
+                              SC_MIN (q1->level, q2->level));
 
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
@@ -571,7 +571,7 @@ p4est_quadrant_corner (p4est_quadrant_t * q, int zcorner, int inside)
     q->x = q->y = rshift;
     break;
   default:
-    P4EST_ASSERT_NOT_REACHED ();
+    SC_CHECK_NOT_REACHED ();
     break;
   }
 
@@ -598,7 +598,7 @@ p4est_quadrant_translate (p4est_quadrant_t * q, int face)
     q->x += P4EST_ROOT_LEN;
     break;
   default:
-    P4EST_ASSERT_NOT_REACHED ();
+    SC_CHECK_NOT_REACHED ();
     break;
   }
 
@@ -642,7 +642,7 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 1;
       break;
     default:
-      P4EST_ASSERT_NOT_REACHED ();
+      SC_CHECK_NOT_REACHED ();
       break;
     }
     break;
@@ -661,7 +661,7 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 3;
       break;
     default:
-      P4EST_ASSERT_NOT_REACHED ();
+      SC_CHECK_NOT_REACHED ();
       break;
     }
     break;
@@ -680,7 +680,7 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 2;
       break;
     default:
-      P4EST_ASSERT_NOT_REACHED ();
+      SC_CHECK_NOT_REACHED ();
       break;
     }
     break;
@@ -699,12 +699,12 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 0;
       break;
     default:
-      P4EST_ASSERT_NOT_REACHED ();
+      SC_CHECK_NOT_REACHED ();
       break;
     }
     break;
   default:
-    P4EST_ASSERT_NOT_REACHED ();
+    SC_CHECK_NOT_REACHED ();
     break;
   }
   return trans_node;
@@ -756,7 +756,7 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
     r->y = th - q->x;
     break;
   default:
-    P4EST_ASSERT_NOT_REACHED ();
+    SC_CHECK_NOT_REACHED ();
     break;
   }
   r->level = q->level;

@@ -794,7 +794,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 first_index, last_index;
   int                 which;
   int                 face, corner, zcorner;
+#ifdef P4EST_MPI
   int                 rcount;
+#endif
   int8_t             *tree_flags;
   int32_t             i, j;
   int32_t             qtree;

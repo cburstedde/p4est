@@ -44,23 +44,22 @@ typedef int32_t     p4est_locidx_t;
 typedef int64_t     p4est_gloidx_t;
 #define P4EST_MPI_GLOIDX MPI_LONG_LONG
 
-/* use error checking from libsc */
-#define P4EST_CHECK_MPI(r)              SC_CHECK_MPI (r)
-#define P4EST_CHECK_ABORT(c,s)          SC_CHECK_ABORT (c, s)
-#define P4EST_CHECK_ABORTF(c,fmt,...)   SC_CHECK_ABORTF (c, fmt, __VA_ARGS__)
+/* some error checking possibly specific to p4est */
 #ifdef P4EST_DEBUG
 #define P4EST_ASSERT(c) SC_CHECK_ABORT ((c), "Assertion '" #c "'")
 #else
 #define P4EST_ASSERT(c) SC_NOOP ()
 #endif
-#define P4EST_ASSERT_NOT_REACHED() SC_ASSERT_NOT_REACHED ()
 
-/* use memory allocation from libsc */
-#define P4EST_ALLOC(t,n)        SC_ALLOC (t, n)
-#define P4EST_ALLOC_ZERO(t,n)   SC_ALLOC_ZERO (t, n)
-#define P4EST_REALLOC(p,t,n)    SC_REALLOC (p, t, n)
-#define P4EST_STRDUP(s)         SC_STRDUP (s)
-#define P4EST_FREE(p)           SC_FREE (p)
+/* macros for memory allocation, will abort if out of memory */
+#define P4EST_ALLOC(t,n)          (t *) sc_malloc (p4est_package_id,    \
+                                                   (n) * sizeof(t))
+#define P4EST_ALLOC_ZERO(t,n)     (t *) sc_calloc (p4est_package_id,    \
+                                                   (n), sizeof(t))
+#define P4EST_REALLOC(p,t,n)      (t *) sc_realloc (p4est_package_id,   \
+                                                    (p), (n) * sizeof(t))
+#define P4EST_STRDUP(s)                 sc_strdup (p4est_package_id, (s))
+#define P4EST_FREE(p)                   sc_free (p4est_package_id, (p))
 
 /* set up p4est log macros */
 #define P4EST_LOGF(category,priority,fmt,...)                           \

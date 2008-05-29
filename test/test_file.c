@@ -109,61 +109,60 @@ main (int argc, char **argv)
   };
 
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
     fd = mkstemp (template);
-    P4EST_CHECK_ABORT (fd != -1, "Unable to create temp mesh file.");
+    SC_CHECK_ABORT (fd != -1, "Unable to create temp mesh file.");
 
     /* Promote the file descriptor to a FILE stream */
     outfile = fdopen (fd, "wb");
-    P4EST_CHECK_ABORT (outfile != NULL, "Unable to fdopen temp mesh file.");
+    SC_CHECK_ABORT (outfile != NULL, "Unable to fdopen temp mesh file.");
 
     /* Write out to the mesh to the temporary file */
     retval = fputs (mesh, outfile);
-    P4EST_CHECK_ABORT (retval != EOF, "Unable to fputs temp mesh file.");
+    SC_CHECK_ABORT (retval != EOF, "Unable to fputs temp mesh file.");
 
     /* Close the temporary file */
     retval = fclose (outfile);
-    P4EST_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
+    SC_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
   }
 
   templatelength = (int) strlen (template) + 1;
   mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   /* Read in the mesh into connectivity information */
   retval = p4est_connectivity_read (template, &connectivity);
-  P4EST_CHECK_ABORT (!retval, "Unable to read the mesh file.");
+  SC_CHECK_ABORT (!retval, "Unable to read the mesh file.");
 
   /* Check what was read in */
-  P4EST_CHECK_ABORT (connectivity->num_trees == num_trees, "num_trees");
-  P4EST_CHECK_ABORT (connectivity->num_vertices == num_vertices,
-                     "num_vertices");
+  SC_CHECK_ABORT (connectivity->num_trees == num_trees, "num_trees");
+  SC_CHECK_ABORT (connectivity->num_vertices == num_vertices, "num_vertices");
   for (i = 0; i < num_trees * 4; ++i)
-    P4EST_CHECK_ABORT (connectivity->tree_to_vertex[i] == tree_to_vertex[i],
-                       "tree_to_vertices");
+    SC_CHECK_ABORT (connectivity->tree_to_vertex[i] == tree_to_vertex[i],
+                    "tree_to_vertices");
   for (i = 0; i < num_trees * 4; ++i)
-    P4EST_CHECK_ABORT (connectivity->tree_to_tree[i] == tree_to_tree[i],
-                       "tree_to_tree");
+    SC_CHECK_ABORT (connectivity->tree_to_tree[i] == tree_to_tree[i],
+                    "tree_to_tree");
   for (i = 0; i < num_trees * 4; ++i)
-    P4EST_CHECK_ABORT (connectivity->tree_to_face[i] == tree_to_face[i],
-                       "tree_to_face");
+    SC_CHECK_ABORT (connectivity->tree_to_face[i] == tree_to_face[i],
+                    "tree_to_face");
   for (i = 0; i < num_vertices * 3; ++i)
-    P4EST_CHECK_ABORT (fabs (connectivity->vertices[i] - vertices[i]) < EPS,
-                       "vertices");
+    SC_CHECK_ABORT (fabs (connectivity->vertices[i] - vertices[i]) < EPS,
+                    "vertices");
   for (i = 0; i < num_vertices + 1; ++i)
-    P4EST_CHECK_ABORT (connectivity->vtt_offset[i] == vtt_offset[i],
-                       "vtt_offset");
+    SC_CHECK_ABORT (connectivity->vtt_offset[i] == vtt_offset[i],
+                    "vtt_offset");
   for (i = 0; i < num_vtt; ++i)
-    P4EST_CHECK_ABORT (connectivity->vertex_to_tree[i] == vertex_to_tree[i],
-                       "vertex_to_tree");
+    SC_CHECK_ABORT (connectivity->vertex_to_tree[i] == vertex_to_tree[i],
+                    "vertex_to_tree");
 
   /* destroy the p4est and its connectivity structure */
   p4est_connectivity_destroy (connectivity);
@@ -171,14 +170,14 @@ main (int argc, char **argv)
   if (rank == 0) {
     /* remove the temporary file */
     retval = remove (template);
-    P4EST_CHECK_ABORT (!retval, "Unable to remove the temp mesh file.");
+    SC_CHECK_ABORT (!retval, "Unable to remove the temp mesh file.");
   }
 
   /* clean up and exit */
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

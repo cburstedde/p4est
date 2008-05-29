@@ -38,10 +38,10 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
 
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
@@ -53,7 +53,7 @@ main (int argc, char **argv)
   p4est_partition (p4est, weight_one);
 
   mpiret = MPI_Barrier (mpicomm);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   /* clean up and exit */
   p4est_destroy (p4est);
@@ -62,7 +62,7 @@ main (int argc, char **argv)
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

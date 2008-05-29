@@ -208,9 +208,9 @@ p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
   int                 retval;
 
   retval = p4est_vtk_write_header (p4est, baseName);
-  P4EST_CHECK_ABORT (!retval, "VTK: write header");
+  SC_CHECK_ABORT (!retval, "VTK: write header");
   retval = p4est_vtk_write_footer (p4est, baseName);
-  P4EST_CHECK_ABORT (!retval, "VTK: write footer");
+  SC_CHECK_ABORT (!retval, "VTK: write footer");
 }
 
 int

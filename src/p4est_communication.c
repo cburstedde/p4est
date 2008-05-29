@@ -25,9 +25,7 @@
 void
 p4est_comm_count_quadrants (p4est_t * p4est)
 {
-#ifdef P4EST_MPI
   int                 mpiret;
-#endif
   p4est_gloidx_t      qlocal = p4est->local_num_quadrants;
   p4est_gloidx_t     *global_last_quad_index = p4est->global_last_quad_index;
   int                 i;
@@ -35,14 +33,13 @@ p4est_comm_count_quadrants (p4est_t * p4est)
   const int           num_procs = p4est->mpisize;
 
   global_last_quad_index[rank] = qlocal;
-#ifdef P4EST_MPI
+
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
                             global_last_quad_index, 1, P4EST_MPI_GLOIDX,
                             p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
   }
-#endif
 
   /* Subtract 1 from the first index since we are zero based */
   --global_last_quad_index[0];
@@ -58,7 +55,6 @@ p4est_comm_global_partition (p4est_t * p4est)
 {
   const int           num_procs = p4est->mpisize;
   const int32_t       num_trees = p4est->connectivity->num_trees;
-#ifdef P4EST_MPI
   int                 i;
   int                 mpiret;
   const int           size_position = (int) sizeof (p4est_position_t);
@@ -66,7 +62,6 @@ p4est_comm_global_partition (p4est_t * p4est)
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quadrant;
   p4est_position_t   *pi, input;
-#endif
 
   SC_BZERO (&p4est->global_first_position[0], 1);
   SC_BZERO (&p4est->global_first_position[num_procs], 1);
@@ -75,7 +70,6 @@ p4est_comm_global_partition (p4est_t * p4est)
   p4est->global_first_position[num_procs].x = 0;
   p4est->global_first_position[num_procs].y = 0;
 
-#ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
     SC_BZERO (&input, 1);
     if (first_tree < 0) {
@@ -95,7 +89,7 @@ p4est_comm_global_partition (p4est_t * p4est)
     mpiret = MPI_Allgather (&input, size_position, MPI_BYTE,
                             p4est->global_first_position,
                             size_position, MPI_BYTE, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
+    SC_CHECK_MPI (mpiret);
 
     /* correct for processors that don't have any quadrants */
     for (i = num_procs - 1; i >= 0; --i) {
@@ -107,7 +101,6 @@ p4est_comm_global_partition (p4est_t * p4est)
       P4EST_ASSERT (pi->which_tree >= 0 && pi->x >= 0 && pi->y >= 0);
     }
   }
-#endif
 }
 
 int

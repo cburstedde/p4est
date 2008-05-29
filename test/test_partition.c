@@ -95,10 +95,10 @@ main (int argc, char **argv)
   unsigned            crc;
 
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
@@ -123,8 +123,8 @@ main (int argc, char **argv)
     num_quadrants_on_last -= i + 1;
   }
   num_quadrants_in_proc[num_procs - 1] = num_quadrants_on_last;
-  P4EST_CHECK_ABORT (num_quadrants_on_last > 0,
-                     "Negative number of quadrants on the last processor");
+  SC_CHECK_ABORT (num_quadrants_on_last > 0,
+                  "Negative number of quadrants on the last processor");
 
   /* Save a checksum of the original forest */
   crc = p4est_checksum (p4est);
@@ -133,13 +133,13 @@ main (int argc, char **argv)
   p4est_partition_given (p4est, num_quadrants_in_proc);
 
   /* Double check that we didn't loose any quads */
-  P4EST_CHECK_ABORT (crc == p4est_checksum (p4est),
-                     "bad checksum, missing a quad");
+  SC_CHECK_ABORT (crc == p4est_checksum (p4est),
+                  "bad checksum, missing a quad");
 
   /* count the actual number of quadrants per proc */
-  P4EST_CHECK_ABORT (num_quadrants_in_proc[rank]
-                     == p4est->local_num_quadrants,
-                     "partition failed, wrong number of quadrants");
+  SC_CHECK_ABORT (num_quadrants_in_proc[rank]
+                  == p4est->local_num_quadrants,
+                  "partition failed, wrong number of quadrants");
 
   /* check user data content */
   for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
@@ -149,41 +149,41 @@ main (int argc, char **argv)
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
-      P4EST_CHECK_ABORT (user_data->a == t, "bad user_data, a");
-      P4EST_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
+      SC_CHECK_ABORT (user_data->a == t, "bad user_data, a");
+      SC_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
     }
   }
 
   /* do a weighted partition with uniform weights */
   p4est_partition (p4est, weight_one);
-  P4EST_CHECK_ABORT (crc == p4est_checksum (p4est),
-                     "bad checksum after uniformly weighted partition");
+  SC_CHECK_ABORT (crc == p4est_checksum (p4est),
+                  "bad checksum after uniformly weighted partition");
 
   /* copy the p4est */
   copy = p4est_copy (p4est, 1);
-  P4EST_CHECK_ABORT (crc == p4est_checksum (copy), "bad checksum after copy");
+  SC_CHECK_ABORT (crc == p4est_checksum (copy), "bad checksum after copy");
 
   /* do a weighted partition with many zero weights */
   weight_counter = 0;
   weight_index = (rank == 1) ? 1342 : 0;
   p4est_partition (copy, weight_once);
-  P4EST_CHECK_ABORT (crc == p4est_checksum (copy),
-                     "bad checksum after unevenly weighted partition 1");
+  SC_CHECK_ABORT (crc == p4est_checksum (copy),
+                  "bad checksum after unevenly weighted partition 1");
 
   /* do a weighted partition with many zero weights */
   weight_counter = 0;
   weight_index = 0;
   p4est_partition (copy, weight_once);
-  P4EST_CHECK_ABORT (crc == p4est_checksum (copy),
-                     "bad checksum after unevenly weighted partition 2");
+  SC_CHECK_ABORT (crc == p4est_checksum (copy),
+                  "bad checksum after unevenly weighted partition 2");
 
   /* do a weighted partition with many zero weights */
   weight_counter = 0;
   weight_index =
     (rank == num_procs - 1) ? (copy->local_num_quadrants - 1) : 0;
   p4est_partition (copy, weight_once);
-  P4EST_CHECK_ABORT (crc == p4est_checksum (copy),
-                     "bad checksum after unevenly weighted partition 3");
+  SC_CHECK_ABORT (crc == p4est_checksum (copy),
+                  "bad checksum after unevenly weighted partition 3");
 
   /* check user data content */
   for (t = copy->first_local_tree; t <= copy->last_local_tree; ++t) {
@@ -193,8 +193,8 @@ main (int argc, char **argv)
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
-      P4EST_CHECK_ABORT (user_data->a == t, "bad user_data, a");
-      P4EST_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
+      SC_CHECK_ABORT (user_data->a == t, "bad user_data, a");
+      SC_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
     }
   }
 
@@ -206,7 +206,7 @@ main (int argc, char **argv)
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

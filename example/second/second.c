@@ -56,7 +56,7 @@ abort_fn (void *data)
   fprintf (stderr, "[%d] p4est_second abort handler\n", mpi->mpirank);
 
   mpiret = MPI_Abort (mpi->mpicomm, 1);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 }
 
 int
@@ -71,18 +71,17 @@ main (int argc, char **argv)
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  P4EST_CHECK_ABORT (mpi->mpisize == 5,
-                     "This example requires MPI with np=5.");
+  SC_CHECK_ABORT (mpi->mpisize == 5, "This example requires MPI with np=5.");
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
@@ -109,7 +108,7 @@ main (int argc, char **argv)
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

@@ -66,10 +66,10 @@ main (int argc, char **argv)
   int                 i;
 
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
@@ -85,13 +85,11 @@ main (int argc, char **argv)
   /* Check the global number of elements */
   qlocal = p4est->local_num_quadrants;
   qglobal = qlocal;
-#ifdef P4EST_MPI
   mpiret = MPI_Allreduce (&qlocal, &qglobal, 1, MPI_LONG_LONG, MPI_SUM,
                           p4est->mpicomm);
-  P4EST_CHECK_MPI (mpiret);
-#endif
-  P4EST_CHECK_ABORT (qglobal == p4est->global_num_quadrants,
-                     "wrong number of p4est->global_num_quadrants");
+  SC_CHECK_MPI (mpiret);
+  SC_CHECK_ABORT (qglobal == p4est->global_num_quadrants,
+                  "wrong number of p4est->global_num_quadrants");
 
   /* Check the number of elements per proc */
   for (i = 0; i < num_procs; ++i) {
@@ -103,14 +101,13 @@ main (int argc, char **argv)
     }
 
     qglobal = qlocal;
-#ifdef P4EST_MPI
     mpiret = MPI_Bcast (&qglobal, 1, MPI_LONG_LONG, i, p4est->mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-#endif
+    SC_CHECK_MPI (mpiret);
+
     qbegin = (i == 0) ? 0 : p4est->global_last_quad_index[i - 1];
     qend = p4est->global_last_quad_index[i];
-    P4EST_CHECK_ABORT (qglobal == qend - qbegin + 1,
-                       "wrong number in p4est->global_last_quad_index");
+    SC_CHECK_ABORT (qglobal == qend - qbegin + 1,
+                    "wrong number in p4est->global_last_quad_index");
   }
 
   /* clean up and exit */
@@ -119,7 +116,7 @@ main (int argc, char **argv)
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

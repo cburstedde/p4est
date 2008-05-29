@@ -84,37 +84,37 @@ main (int argc, char **argv)
   /* initialize MPI and p4est internals */
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Init (&argc, &argv);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpicomm, &rank);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
     fd = mkstemp (template);
-    P4EST_CHECK_ABORT (fd != -1, "Unable to open temp mesh file.");
+    SC_CHECK_ABORT (fd != -1, "Unable to open temp mesh file.");
 
     /* Promote the file descriptor to a FILE stream */
     outfile = fdopen (fd, "wb");
-    P4EST_CHECK_ABORT (outfile != NULL, "Unable to fdopen temp mesh file.");
+    SC_CHECK_ABORT (outfile != NULL, "Unable to fdopen temp mesh file.");
 
     /* Write out to the mesh to the temporary file */
     retval = fputs (mesh, outfile);
-    P4EST_CHECK_ABORT (retval != EOF, "Unable to fputs temp mesh file.");
+    SC_CHECK_ABORT (retval != EOF, "Unable to fputs temp mesh file.");
 
     /* Close the temporary file */
     retval = fclose (outfile);
-    P4EST_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
+    SC_CHECK_ABORT (!retval, "Unable to fclose the temp mesh file.");
   }
 
   templatelength = (int) strlen (template) + 1;
   mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   /* Read in the mesh into connectivity information */
   retval = p4est_connectivity_read (template, &connectivity);
-  P4EST_CHECK_ABORT (!retval, "Unable to read the mesh file.");
+  SC_CHECK_ABORT (!retval, "Unable to read the mesh file.");
 
   /* Print the connectivity */
 
@@ -133,14 +133,14 @@ main (int argc, char **argv)
   if (rank == 0) {
     /* unlink the temporary file */
     retval = remove (template);
-    P4EST_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
+    SC_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
   }
 
   /* clean up and exit */
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
-  P4EST_CHECK_MPI (mpiret);
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }
