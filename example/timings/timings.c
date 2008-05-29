@@ -32,8 +32,6 @@
 #include <p4est_algorithms.h>
 #include <p4est_vtk.h>
 
-#ifdef P4EST_MPI
-
 enum
 {
   P4EST_CONFIG_NULL,
@@ -84,12 +82,9 @@ abort_fn (void *data)
   P4EST_CHECK_MPI (mpiret);
 }
 
-#endif /* P4EST_MPI */
-
 int
 main (int argc, char **argv)
 {
-#ifdef P4EST_MPI
   int                 i;
   int                 mpiret;
   int                 wrongusage, config;
@@ -114,7 +109,9 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   P4EST_CHECK_MPI (mpiret);
-  p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
+  
+  sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
   usage =
@@ -158,13 +155,12 @@ main (int argc, char **argv)
       }
       sc_abort ();
     }
-#ifdef P4EST_MPI
-    MPI_Barrier (mpi->mpicomm);
-#endif
+    mpiret = MPI_Barrier (mpi->mpicomm);
+    P4EST_CHECK_MPI (mpiret);
   }
 
-#ifndef P4EST_HAVE_DEBUG
-  sc_log_threshold (SC_LP_STATISTICS);
+#ifndef P4EST_DEBUG
+  sc_set_log_defaults (NULL, SC_LP_STATISTICS, SC_FP_KEEP);
 #endif
 
   /* get command line argument: maximum refinement level */
@@ -288,13 +284,10 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
-  sc_memory_check ();
+  sc_finalize ();
 
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
-#else
-  P4EST_CHECK_ABORT (0, "This example requires --enable-mpi to run.");
-#endif /* P4EST_MPI */
 
   return 0;
 }

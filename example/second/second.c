@@ -27,8 +27,6 @@
 #include <p4est_algorithms.h>
 #include <p4est_vtk.h>
 
-#ifdef P4EST_MPI
-
 typedef struct
 {
   MPI_Comm            mpicomm;
@@ -61,12 +59,9 @@ abort_fn (void *data)
   P4EST_CHECK_MPI (mpiret);
 }
 
-#endif /* P4EST_MPI */
-
 int
 main (int argc, char **argv)
 {
-#ifdef P4EST_MPI
   int                 mpiret;
   unsigned            crc;
   p4est_t            *p4est;
@@ -82,8 +77,12 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   P4EST_CHECK_MPI (mpiret);
-  p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
-  P4EST_CHECK_ABORT (mpi->mpisize == 5, "This example requires np=5.");
+
+  sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  P4EST_CHECK_ABORT (mpi->mpisize == 5,
+                     "This example requires MPI with np=5.");
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
@@ -107,13 +106,10 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
-  sc_memory_check ();
+  sc_finalize ();
 
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
-#else
-  P4EST_CHECK_ABORT (0, "This example requires --enable-mpi to run.");
-#endif /* P4EST_MPI */
 
   return 0;
 }

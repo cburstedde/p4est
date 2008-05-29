@@ -153,26 +153,19 @@ coarsen_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
 static void
 abort_fn (void *data)
 {
-#ifdef P4EST_MPI
   int                 mpiret;
-#endif
   mpi_context_t      *mpi = data;
 
   fprintf (stderr, "[%d] p4est_simple abort handler\n", mpi->mpirank);
 
-#ifdef P4EST_MPI
   mpiret = MPI_Abort (mpi->mpicomm, 1);
   P4EST_CHECK_MPI (mpiret);
-#endif
 }
 
 int
 main (int argc, char **argv)
 {
-#ifdef P4EST_MPI
-  int                 use_mpi = 1;
   int                 mpiret;
-#endif
   int                 wrongusage, config;
   unsigned            crc;
   const char         *usage, *errmsg;
@@ -183,18 +176,15 @@ main (int argc, char **argv)
   p4est_coarsen_t     coarsen_fn;
 
   /* initialize MPI and p4est internals */
-  mpi->mpirank = 0;
-  mpi->mpicomm = MPI_COMM_NULL;
-#ifdef P4EST_MPI
-  if (use_mpi) {
-    mpiret = MPI_Init (&argc, &argv);
-    P4EST_CHECK_MPI (mpiret);
-    mpi->mpicomm = MPI_COMM_WORLD;
-    mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
-  p4est_init (stdout, mpi->mpirank, abort_fn, mpi);
+  mpi->mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Init (&argc, &argv);
+  P4EST_CHECK_MPI (mpiret);
+  mpi->mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
+  P4EST_CHECK_MPI (mpiret);
+
+  sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
   usage =
@@ -243,9 +233,8 @@ main (int argc, char **argv)
       }
       sc_abort ();
     }
-#ifdef P4EST_MPI
-    MPI_Barrier (mpi->mpicomm);
-#endif
+    mpiret = MPI_Barrier (mpi->mpicomm);
+    SC_CHECK_MPI (mpiret);
   }
 
   /* assign variables based on configuration */
@@ -307,14 +296,10 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
-  sc_memory_check ();
+  sc_finalize ();
 
-#ifdef P4EST_MPI
-  if (use_mpi) {
-    mpiret = MPI_Finalize ();
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
+  mpiret = MPI_Finalize ();
+  P4EST_CHECK_MPI (mpiret);
 
   return 0;
 }

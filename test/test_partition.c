@@ -78,11 +78,9 @@ weight_once (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 int
 main (int argc, char **argv)
 {
-  int                 rank = 0;
+  int                 rank;
   int                 num_procs;
-#ifdef P4EST_MPI
   int                 mpiret;
-#endif
   MPI_Comm            mpicomm;
   p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
@@ -96,15 +94,13 @@ main (int argc, char **argv)
   int64_t             sum;
   unsigned            crc;
 
-  mpicomm = MPI_COMM_NULL;
-#ifdef P4EST_MPI
   mpiret = MPI_Init (&argc, &argv);
   P4EST_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   P4EST_CHECK_MPI (mpiret);
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
+
+  sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_corner ();
@@ -207,12 +203,10 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_destroy (copy);
   p4est_connectivity_destroy (connectivity);
-  sc_memory_check ();
+  sc_finalize ();
 
-#ifdef P4EST_MPI
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
-#endif
 
   return 0;
 }

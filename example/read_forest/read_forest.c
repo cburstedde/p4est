@@ -40,15 +40,10 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 int
 main (int argc, char **argv)
 {
-  int                 rank = 0;
-  int                 retval;
+  int                 mpiret, retval;
+  int                 rank, templatelength;
   int                 fd;
   FILE               *outfile;
-#ifdef P4EST_MPI
-  int                 use_mpi = 1;
-  int                 mpiret;
-  int                 templatelength;
-#endif
   MPI_Comm            mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
@@ -87,17 +82,13 @@ main (int argc, char **argv)
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
   /* initialize MPI and p4est internals */
-  mpicomm = MPI_COMM_NULL;
-#ifdef P4EST_MPI
-  if (use_mpi) {
-    mpiret = MPI_Init (&argc, &argv);
-    P4EST_CHECK_MPI (mpiret);
-    mpicomm = MPI_COMM_WORLD;
-    mpiret = MPI_Comm_rank (mpicomm, &rank);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
+  mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Init (&argc, &argv);
+  P4EST_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  P4EST_CHECK_MPI (mpiret);
+
+  sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
@@ -148,14 +139,10 @@ main (int argc, char **argv)
   }
 
   /* clean up and exit */
-  sc_memory_check ();
+  sc_finalize ();
 
-#ifdef P4EST_MPI
-  if (use_mpi) {
-    mpiret = MPI_Finalize ();
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
+  mpiret = MPI_Finalize ();
+  P4EST_CHECK_MPI (mpiret);
 
   return 0;
 }

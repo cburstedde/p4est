@@ -21,6 +21,8 @@
 
 #include <p4est_base.h>
 
+int                 p4est_package_id = -1;
+
 #if(0)
 int
 p4est_int32_compare (const void *v1, const void *v2)
@@ -228,11 +230,10 @@ p4est_init_logging (FILE * stream, int identifier)
 #endif /* 0 */
 
 void
-p4est_init (FILE * stream, int identifier,
-            sc_handler_t abort_handler, void *abort_data)
+p4est_init (sc_log_handler_t log_handler, int log_threshold)
 {
-  sc_log_init (stream, identifier);
-  sc_set_abort_handler (abort_handler, abort_data);
+  p4est_package_id = sc_package_register (log_handler, log_threshold,
+                                          "p4est", "A forest of octrees");
 }
 
 /* EOF p4est_base.c */

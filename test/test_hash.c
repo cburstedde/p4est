@@ -45,8 +45,6 @@ main (int argc, char **argv)
   sc_hash_t       *ihash;
   sc_hash_t       *qhash;
 
-  p4est_init (stdout, 0, NULL, NULL);
-
   for (k = 0; k < 3; ++k) {
     ihash = sc_hash_new (int_hash_fn, int_equal_fn, NULL);
 
@@ -108,7 +106,7 @@ main (int argc, char **argv)
   f2 = f1;
 
   sc_hash_destroy (qhash);
-  sc_memory_check ();
+  sc_finalize ();
 
   return 0;
 }

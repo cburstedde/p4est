@@ -32,8 +32,6 @@ main (int argc, char **argv)
   p4est_quadrant_t   *q;
   p4est_connectivity_t *connectivity;
 
-  p4est_init (stdout, 0, NULL, NULL);
-
   connectivity = p4est_connectivity_new_unitsquare ();
   p4est = p4est_new (MPI_COMM_NULL, connectivity, 4, NULL);
 
@@ -81,7 +79,7 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 
-  sc_memory_check ();
+  sc_finalize ();
 
   return 0;
 }

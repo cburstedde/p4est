@@ -36,13 +36,12 @@ compar (const void *p1, const void *p2)
 int
 main (int argc, char **argv)
 {
-  int                 rank = 0;
+  int                 rank;
   int                 i, i1, i2, i3, i3last, i4, i4last, temp, count;
   int                 s, swaps1, swaps2, swaps3, total1, total2, total3;
   int                 index;
   int                *pi;
   sc_array_t         *a1, *a2, *a3, *a4;
-#ifdef P4EST_MPI
   int                 mpiret;
   double              start, elapsed_pqueue, elapsed_qsort;
 
@@ -50,8 +49,8 @@ main (int argc, char **argv)
   P4EST_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (MPI_COMM_WORLD, &rank);
   P4EST_CHECK_MPI (mpiret);
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
+
+  sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   a1 = sc_array_new (sizeof (int));
   a2 = sc_array_new (sizeof (int));
@@ -65,9 +64,7 @@ main (int argc, char **argv)
 #endif
   printf ("Test pqueue with count %d\n", count);
 
-#ifdef P4EST_MPI
   start = -MPI_Wtime ();
-#endif
 
   swaps1 = swaps2 = swaps3 = 0;
   total1 = total2 = total3 = 0;
@@ -127,9 +124,7 @@ main (int argc, char **argv)
   printf ("   Swaps %d %d %d Total %d %d %d\n",
           swaps1, swaps2, swaps3, total1, total2, total3);
 
-#ifdef P4EST_MPI
   elapsed_pqueue = start + MPI_Wtime ();
-#endif
 
   sc_array_destroy (a1);
   sc_array_destroy (a2);
@@ -137,9 +132,7 @@ main (int argc, char **argv)
 
   printf ("Test array sort with count %d\n", count);
 
-#ifdef P4EST_MPI
   start = -MPI_Wtime ();
-#endif
 
   /* the resize is done to be comparable with the above procedure */
   for (i = 0; i < count; ++i) {
@@ -159,19 +152,15 @@ main (int argc, char **argv)
   }
   sc_array_resize (a4, 0);
 
-#ifdef P4EST_MPI
   elapsed_qsort = start + MPI_Wtime ();
   printf ("Test timings pqueue %g qsort %g\n",
           elapsed_pqueue, 3. * elapsed_qsort);
-#endif
 
   sc_array_destroy (a4);
-  sc_memory_check ();
+  sc_finalize ();
 
-#ifdef P4EST_MPI
   mpiret = MPI_Finalize ();
   P4EST_CHECK_MPI (mpiret);
-#endif
 
   return 0;
 }

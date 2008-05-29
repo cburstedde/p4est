@@ -62,11 +62,22 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_STRDUP(s)         SC_STRDUP (s)
 #define P4EST_FREE(p)           SC_FREE (p)
 
-/* use libsc log macros for now */
-#define P4EST_GLOBAL_LOG(p,s) SC_LOG ((p), SC_LC_GLOBAL, (s))
-#define P4EST_GLOBAL_LOGF(p,f,...) SC_LOGF ((p), SC_LC_GLOBAL, (f), __VA_ARGS__)
-#define P4EST_NORMAL_LOG(p,s) SC_LOG ((p), SC_LC_NORMAL, (s))
-#define P4EST_NORMAL_LOGF(p,f,...) SC_LOGF ((p), SC_LC_NORMAL, (f), __VA_ARGS__)
+/* set up p4est log macros */
+#define P4EST_LOGF(category,priority,fmt,...)                           \
+  do {                                                                  \
+    if ((priority) >= SC_LP_THRESHOLD) {                                \
+      sc_logf (__FILE__, __LINE__,                                      \
+               p4est_package_id, (category), (priority),                \
+               (fmt), __VA_ARGS__);                                     \
+    }                                                                   \
+  } while (0)
+#define P4EST_LOG(c,p,s) P4EST_LOGF((c), (p), "%s", (s))
+#define P4EST_GLOBAL_LOG(p,s) P4EST_LOG (SC_LC_GLOBAL, (p), (s))
+#define P4EST_GLOBAL_LOGF(p,f,...) \
+  P4EST_LOGF (SC_LC_GLOBAL, (p), (f), __VA_ARGS__)
+#define P4EST_NORMAL_LOG(p,s) P4EST_LOG (SC_LC_NORMAL, (p), (s))
+#define P4EST_NORMAL_LOGF(p,f,...) \
+  P4EST_LOGF (SC_LC_NORMAL, (p), (f), __VA_ARGS__)
 
 /* convenience global log macros will only print if identifier <= 0 */
 #define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (SC_LP_TRACE, (s))
@@ -108,6 +119,9 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_PRODUCTIONF(f,...) \
   P4EST_NORMAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
 
+/* extern declarations */
+extern int          p4est_package_id;
+
 #if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
 int                 p4est_int64_compare (const void *v1, const void *v2);
@@ -124,9 +138,15 @@ int                 p4est_int64_lower_bound (int64_t target,
                                              const int64_t * array,
                                              int size, int guess);
 
-/** Combines calls to init_logging and set_abort_handler. */
-void                p4est_init (FILE * stream, int identifier,
-                                sc_handler_t abort_handler,
-                                void *abort_data);
+/** Registers the p4est library with SC and sets the logging behavior.
+ * This function is optional.
+ * If this function is not called or called with log_handler == NULL,
+ * the default SC log handler will be used.
+ * If this function is not called or called with log_threshold == SC_LP_DEFAULT,
+ * the default SC log threshold will be used.
+ * The default SC log settings can be changed with sc_set_log_defaults ().
+ */
+void                p4est_init (sc_log_handler_t log_handler,
+                                int log_threshold);
 
 #endif /* !P4EST_BASE_H */

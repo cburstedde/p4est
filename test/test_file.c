@@ -27,17 +27,14 @@
 int
 main (int argc, char **argv)
 {
-  int                 rank = 0;
+  int                 rank;
   int                 retval;
   int                 fd;
   int32_t             i;
   FILE               *outfile;
-#ifdef P4EST_MPI
-  int                 use_mpi = 1;
   int                 mpiret;
   MPI_Comm            mpicomm;
   int                 templatelength;
-#endif
   p4est_connectivity_t *connectivity;
   const double        EPS = 2.22045e-16;
   char                template[] = "p4est_meshXXXXXX";
@@ -111,17 +108,13 @@ main (int argc, char **argv)
     0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1
   };
 
-#ifdef P4EST_MPI
-  mpicomm = MPI_COMM_NULL;
-  if (use_mpi) {
-    mpiret = MPI_Init (&argc, &argv);
-    P4EST_CHECK_MPI (mpiret);
-    mpicomm = MPI_COMM_WORLD;
-    mpiret = MPI_Comm_rank (mpicomm, &rank);
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
-  p4est_init (stdout, rank, NULL, NULL);
+  mpiret = MPI_Init (&argc, &argv);
+  P4EST_CHECK_MPI (mpiret);
+  mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  P4EST_CHECK_MPI (mpiret);
+
+  sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
@@ -143,10 +136,8 @@ main (int argc, char **argv)
 
 #ifdef P4EST_MPI
   templatelength = (int) strlen (template) + 1;
-  if (mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
-    P4EST_CHECK_MPI (mpiret);
-  }
+  mpiret = MPI_Bcast (template, templatelength, MPI_CHAR, 0, mpicomm);
+  P4EST_CHECK_MPI (mpiret);
 #endif
 
   /* Read in the mesh into connectivity information */
@@ -186,14 +177,10 @@ main (int argc, char **argv)
   }
 
   /* clean up and exit */
-  sc_memory_check ();
+  sc_finalize ();
 
-#ifdef P4EST_MPI
-  if (use_mpi) {
-    mpiret = MPI_Finalize ();
-    P4EST_CHECK_MPI (mpiret);
-  }
-#endif
+  mpiret = MPI_Finalize ();
+  P4EST_CHECK_MPI (mpiret);
 
   return 0;
 }

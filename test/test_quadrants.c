@@ -112,8 +112,6 @@ main (void)
   p4est_quadrant_t    a, f, g, h;
   int64_t             Aid, Fid;
 
-  p4est_init (stdout, 0, NULL, NULL);
-
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
   p4est1 = p4est_new (MPI_COMM_NULL, connectivity, 0, NULL);
@@ -538,7 +536,7 @@ main (void)
   P4EST_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
   P4EST_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 
-  sc_memory_check ();
+  sc_finalize ();
 
   return 0;
 }
