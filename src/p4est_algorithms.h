@@ -282,7 +282,7 @@ void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
  * \param [in]  init_fn    User-supplied callback function to init data.
  */
 void                p4est_quadrant_init_data (p4est_t * p4est,
-                                              p4est_locidx_t which_tree,
+                                              p4est_topidx_t which_tree,
                                               p4est_quadrant_t * quad,
                                               p4est_init_t init_fn);
 
@@ -384,7 +384,7 @@ int                 p4est_find_higher_bound (sc_array_t * array,
  * \param [in,out] out  A sorted subset of tree->quadrants.
  */
 void                p4est_tree_compute_overlap (p4est_t * p4est,
-                                                p4est_locidx_t qtree,
+                                                p4est_topidx_t qtree,
                                                 sc_array_t * in,
                                                 sc_array_t * out);
 
@@ -420,7 +420,7 @@ void                p4est_complete_region (p4est_t * p4est,
                                            const p4est_quadrant_t * q2,
                                            int include_q2,
                                            p4est_tree_t * tree,
-                                           p4est_locidx_t which_tree,
+                                           p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);
 
 /** Completes a sorted subtree.
@@ -434,7 +434,7 @@ void                p4est_complete_region (p4est_t * p4est,
  */
 void                p4est_complete_subtree (p4est_t * p4est,
                                             p4est_tree_t * tree,
-                                            p4est_locidx_t which_tree,
+                                            p4est_topidx_t which_tree,
                                             p4est_init_t init_fn);
 
 /** Balances a sorted subtree.
@@ -448,7 +448,7 @@ void                p4est_complete_subtree (p4est_t * p4est,
  */
 void                p4est_balance_subtree (p4est_t * p4est,
                                            p4est_tree_t * tree,
-                                           p4est_locidx_t which_tree,
+                                           p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);
 
 /** Remove overlaps from a sorted list of quadrants.

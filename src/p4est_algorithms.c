@@ -92,7 +92,7 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   const p4est_quadrant_t *q2 = v2;
 
   /* expect non-negative tree information */
-  const p4est_locidx_t diff = q1->p.piggy.which_tree - q2->p.piggy.which_tree;
+  const p4est_topidx_t diff = q1->p.piggy.which_tree - q2->p.piggy.which_tree;
 
   return (diff == 0) ?
     p4est_quadrant_compare (v1, v2) : ((diff < 0) ? -1 : 1);
@@ -815,7 +815,7 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 }
 
 void
-p4est_quadrant_init_data (p4est_t * p4est, p4est_locidx_t which_tree,
+p4est_quadrant_init_data (p4est_t * p4est, p4est_topidx_t which_tree,
                           p4est_quadrant_t * quad, p4est_init_t init_fn)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (quad));
@@ -1063,11 +1063,11 @@ p4est_is_valid (p4est_t * p4est)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  const p4est_locidx_t first_tree = p4est->first_local_tree;
-  const p4est_locidx_t last_tree = p4est->last_local_tree;
+  const p4est_topidx_t first_tree = p4est->first_local_tree;
+  const p4est_topidx_t last_tree = p4est->last_local_tree;
   int                 i, maxlevel;
   size_t              js;
-  p4est_locidx_t      next_tree;
+  p4est_topidx_t      next_tree;
   p4est_locidx_t      nquadrants, lquadrants, perlevel;
   p4est_quadrant_t   *q;
   p4est_quadrant_t    mylow, nextlow, s;
@@ -1284,7 +1284,7 @@ p4est_find_higher_bound (sc_array_t * array,
 }
 
 void
-p4est_tree_compute_overlap (p4est_t * p4est, p4est_locidx_t qtree,
+p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
                             sc_array_t * in, sc_array_t * out)
 {
   int                 i, j, guess;
@@ -1548,7 +1548,7 @@ p4est_complete_region (p4est_t * p4est,
                        const p4est_quadrant_t * q2,
                        int include_q2,
                        p4est_tree_t * tree,
-                       p4est_locidx_t which_tree, p4est_init_t init_fn)
+                       p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_tree_t       *R;
   sc_list_t          *W;
@@ -1692,7 +1692,7 @@ p4est_complete_region (p4est_t * p4est,
  */
 static void
 p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
-                           p4est_locidx_t which_tree, p4est_init_t init_fn)
+                           p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
   int                 i, j;
   int                 incount, curcount, ocount;
@@ -2020,14 +2020,14 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 
 void
 p4est_complete_subtree (p4est_t * p4est, p4est_tree_t * tree,
-                        p4est_locidx_t which_tree, p4est_init_t init_fn)
+                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_complete_or_balance (p4est, tree, 0, which_tree, init_fn);
 }
 
 void
 p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
-                       p4est_locidx_t which_tree, p4est_init_t init_fn)
+                       p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_complete_or_balance (p4est, tree, 2, which_tree, init_fn);
 }
@@ -2114,14 +2114,14 @@ p4est_partition_given (p4est_t * p4est,
   const int           rank = p4est->mpirank;
   const p4est_gloidx_t *global_last_quad_index =
     p4est->global_last_quad_index;
-  const p4est_locidx_t first_local_tree = p4est->first_local_tree;
-  const p4est_locidx_t last_local_tree = p4est->last_local_tree;
+  const p4est_topidx_t first_local_tree = p4est->first_local_tree;
+  const p4est_topidx_t last_local_tree = p4est->last_local_tree;
   const size_t        data_size = p4est->data_size;
   const size_t        quad_plus_data_size = sizeof (p4est_quadrant_t)
     + data_size;
   sc_array_t         *trees = p4est->trees;
 
-  const p4est_locidx_t num_send_trees =
+  const p4est_topidx_t num_send_trees =
     p4est->global_first_position[rank + 1].which_tree
     - p4est->global_first_position[rank].which_tree + 1;
 

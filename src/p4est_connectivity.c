@@ -32,8 +32,8 @@ const int p4est_transform_table[4][4][2] =
 /* *INDENT-ON* */
 
 p4est_connectivity_t *
-p4est_connectivity_new (p4est_locidx_t num_trees, p4est_locidx_t num_vertices,
-                        p4est_locidx_t num_vtt)
+p4est_connectivity_new (p4est_topidx_t num_trees, p4est_topidx_t num_vertices,
+                        p4est_topidx_t num_vtt)
 {
   p4est_connectivity_t *connectivity;
 
@@ -42,15 +42,15 @@ p4est_connectivity_new (p4est_locidx_t num_trees, p4est_locidx_t num_vertices,
   connectivity->num_trees = num_trees;
   connectivity->num_vertices = num_vertices;
 
-  connectivity->tree_to_vertex = P4EST_ALLOC (p4est_locidx_t, 4 * num_trees);
-  connectivity->tree_to_tree = P4EST_ALLOC (p4est_locidx_t, 4 * num_trees);
+  connectivity->tree_to_vertex = P4EST_ALLOC (p4est_topidx_t, 4 * num_trees);
+  connectivity->tree_to_tree = P4EST_ALLOC (p4est_topidx_t, 4 * num_trees);
   connectivity->tree_to_face = P4EST_ALLOC (int8_t, 4 * num_trees);
   connectivity->vertices = P4EST_ALLOC (double, 3 * num_vertices);
-  connectivity->vtt_offset = P4EST_ALLOC (p4est_locidx_t, num_vertices + 1);
+  connectivity->vtt_offset = P4EST_ALLOC (p4est_topidx_t, num_vertices + 1);
   connectivity->vtt_offset[num_vertices] = -1;  /* catch bugs */
 
-  connectivity->vertex_to_tree = P4EST_ALLOC (p4est_locidx_t, num_vtt);
-  connectivity->vertex_to_vertex = P4EST_ALLOC (p4est_locidx_t, num_vtt);
+  connectivity->vertex_to_tree = P4EST_ALLOC (p4est_topidx_t, num_vtt);
+  connectivity->vertex_to_vertex = P4EST_ALLOC (p4est_topidx_t, num_vtt);
 
   return connectivity;
 }
@@ -74,18 +74,18 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
 {
   int                 found;
   int                 face, rface, nface, orientation, corner;
-  p4est_locidx_t      tree, ntree, ctree;
-  p4est_locidx_t      vertex, cvertex, corner_trees;
-  p4est_locidx_t      v1, v2, w1, w2;
-  const p4est_locidx_t num_trees = connectivity->num_trees;
-  const p4est_locidx_t num_vertices = connectivity->num_vertices;
-  const p4est_locidx_t num_vtt = connectivity->vtt_offset[num_vertices];
-  const p4est_locidx_t *ttv = connectivity->tree_to_vertex;
-  const p4est_locidx_t *ttt = connectivity->tree_to_tree;
+  p4est_topidx_t      tree, ntree, ctree;
+  p4est_topidx_t      vertex, cvertex, corner_trees;
+  p4est_topidx_t      v1, v2, w1, w2;
+  const p4est_topidx_t num_trees = connectivity->num_trees;
+  const p4est_topidx_t num_vertices = connectivity->num_vertices;
+  const p4est_topidx_t num_vtt = connectivity->vtt_offset[num_vertices];
+  const p4est_topidx_t *ttv = connectivity->tree_to_vertex;
+  const p4est_topidx_t *ttt = connectivity->tree_to_tree;
   const int8_t       *ttf = connectivity->tree_to_face;
-  const p4est_locidx_t *vtt = connectivity->vertex_to_tree;
-  const p4est_locidx_t *vtv = connectivity->vertex_to_vertex;
-  const p4est_locidx_t *voff = connectivity->vtt_offset;
+  const p4est_topidx_t *vtt = connectivity->vertex_to_tree;
+  const p4est_topidx_t *vtv = connectivity->vertex_to_vertex;
+  const p4est_topidx_t *voff = connectivity->vtt_offset;
 
   if (num_trees < 1 || num_vertices < 4) {
     fprintf (stderr, "Invalid numbers of trees or vertices");
@@ -280,13 +280,13 @@ p4est_connectivity_t *
 p4est_connectivity_new_corner (void)
 {
   p4est_connectivity_t *connectivity;
-  const p4est_locidx_t num_trees = 3;
-  const p4est_locidx_t num_vertices = 7;
-  const p4est_locidx_t num_vtt = 12;
-  const p4est_locidx_t tree_to_vertex[3 * 4] = {
+  const p4est_topidx_t num_trees = 3;
+  const p4est_topidx_t num_vertices = 7;
+  const p4est_topidx_t num_vtt = 12;
+  const p4est_topidx_t tree_to_vertex[3 * 4] = {
     0, 1, 3, 2, 0, 2, 5, 6, 2, 3, 4, 5,
   };
-  const p4est_locidx_t tree_to_tree[3 * 4] = {
+  const p4est_topidx_t tree_to_tree[3 * 4] = {
     0, 0, 2, 1, 0, 2, 1, 1, 0, 2, 2, 1,
   };
   const int8_t        tree_to_face[3 * 4] = {
@@ -301,32 +301,32 @@ p4est_connectivity_new_corner (void)
     0, 1, 1,
     -1, 0, 0,
   };
-  const p4est_locidx_t vtt_offset[7 + 1] = {
+  const p4est_topidx_t vtt_offset[7 + 1] = {
     0, 2, 3, 6, 8, 9, 11, 12,
   };
-  const p4est_locidx_t vertex_to_tree[12] = {
+  const p4est_topidx_t vertex_to_tree[12] = {
     0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1,
   };
-  const p4est_locidx_t vertex_to_vertex[12] = {
+  const p4est_topidx_t vertex_to_vertex[12] = {
     0, 0, 1, 2, 2, 2, 3, 3, 4, 5, 5, 6,
   };
 
   connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_tree, tree_to_tree,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_face, tree_to_face,
           sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vertices, vertices,
           sizeof (double) * 3 * num_vertices);
   memcpy (connectivity->vtt_offset, vtt_offset,
-          sizeof (p4est_locidx_t) * (num_vertices + 1));
+          sizeof (p4est_topidx_t) * (num_vertices + 1));
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
   memcpy (connectivity->vertex_to_vertex, vertex_to_vertex,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
@@ -337,9 +337,9 @@ p4est_connectivity_t *
 p4est_connectivity_new_moebius (void)
 {
   p4est_connectivity_t *connectivity;
-  const p4est_locidx_t num_trees = 5;
-  const p4est_locidx_t num_vertices = 10;
-  const p4est_locidx_t num_vtt = 20;
+  const p4est_topidx_t num_trees = 5;
+  const p4est_topidx_t num_vertices = 10;
+  const p4est_topidx_t num_vtt = 20;
   const double        halfsqrt3 = .5 * sqrt (3.);
   const double        vertices[10 * 3] = {
     0, 0, 0,
@@ -353,14 +353,14 @@ p4est_connectivity_new_moebius (void)
     -.5, 0, halfsqrt3,
     -.5, 1, halfsqrt3,
   };
-  const p4est_locidx_t tree_to_vertex[5 * 4] = {
+  const p4est_topidx_t tree_to_vertex[5 * 4] = {
     0, 2, 3, 1,
     3, 5, 4, 2,                 /* left-handed */
     4, 6, 7, 5,
     6, 7, 8, 9,
     9, 8, 0, 1,
   };
-  const p4est_locidx_t tree_to_tree[5 * 4] = {
+  const p4est_topidx_t tree_to_tree[5 * 4] = {
     0, 1, 0, 4,
     1, 2, 1, 0,
     2, 3, 2, 1,
@@ -374,36 +374,36 @@ p4est_connectivity_new_moebius (void)
     5, 1, 0, 3,
     2, 1, 3, 3,
   };
-  const p4est_locidx_t vtt_offset[10 + 1] = {
+  const p4est_topidx_t vtt_offset[10 + 1] = {
     0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20,
   };
-  const p4est_locidx_t vertex_to_tree[20] = {
+  const p4est_topidx_t vertex_to_tree[20] = {
     0, 4, 0, 4,
     0, 1, 0, 1,
     1, 2, 1, 2,
     2, 3, 2, 3,
     3, 4, 3, 4,
   };
-  const p4est_locidx_t vertex_to_vertex[20] = {
+  const p4est_topidx_t vertex_to_vertex[20] = {
     0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9,
   };
 
   connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_tree, tree_to_tree,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_face, tree_to_face,
           sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vertices, vertices,
           sizeof (double) * 3 * num_vertices);
   memcpy (connectivity->vtt_offset, vtt_offset,
-          sizeof (p4est_locidx_t) * (num_vertices + 1));
+          sizeof (p4est_topidx_t) * (num_vertices + 1));
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
   memcpy (connectivity->vertex_to_vertex, vertex_to_vertex,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
@@ -415,13 +415,13 @@ p4est_connectivity_new_star (void)
 {
   int                 i;
   p4est_connectivity_t *connectivity;
-  const double        pi = 4.0*atan(1.0);
+  const double        pi = 4.0 * atan (1.0);
   const double        r1 = 1.;
   const double        r2 = 1.5;
-  const p4est_locidx_t num_trees = 6;
-  const p4est_locidx_t num_vertices = 13;
-  const p4est_locidx_t num_vtt = 24;
-  const p4est_locidx_t tree_to_vertex[6 * 4] = {
+  const p4est_topidx_t num_trees = 6;
+  const p4est_topidx_t num_vertices = 13;
+  const p4est_topidx_t num_vtt = 24;
+  const p4est_topidx_t tree_to_vertex[6 * 4] = {
     0, 1, 2, 3,
     0, 3, 4, 5,
     5, 6, 7, 0,
@@ -429,7 +429,7 @@ p4est_connectivity_new_star (void)
     9, 0, 11, 10,               /* left-handed */
     12, 1, 0, 11,
   };
-  const p4est_locidx_t tree_to_tree[6 * 4] = {
+  const p4est_topidx_t tree_to_tree[6 * 4] = {
     5, 0, 0, 1,
     0, 1, 1, 2,
     2, 2, 3, 1,
@@ -445,13 +445,13 @@ p4est_connectivity_new_star (void)
     2, 6, 2, 3,
     0, 0, 5, 3,
   };
-  const p4est_locidx_t vtt_offset[13 + 1] = {
+  const p4est_topidx_t vtt_offset[13 + 1] = {
     0, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24,
   };
-  const p4est_locidx_t vertex_to_tree[24] = {
+  const p4est_topidx_t vertex_to_tree[24] = {
     0, 1, 2, 3, 4, 5, 5, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5,
   };
-  const p4est_locidx_t vertex_to_vertex[24] = {
+  const p4est_topidx_t vertex_to_vertex[24] = {
     0, 0, 0, 0, 0, 0, 1, 1, 2, 3, 3, 4,
     5, 5, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12,
   };
@@ -473,17 +473,17 @@ p4est_connectivity_new_star (void)
   }
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_tree, tree_to_tree,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_face, tree_to_face,
           sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vtt_offset, vtt_offset,
-          sizeof (p4est_locidx_t) * (num_vertices + 1));
+          sizeof (p4est_topidx_t) * (num_vertices + 1));
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
   memcpy (connectivity->vertex_to_vertex, vertex_to_vertex,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
@@ -494,13 +494,13 @@ p4est_connectivity_t *
 p4est_connectivity_new_periodic (void)
 {
   p4est_connectivity_t *connectivity;
-  const p4est_locidx_t num_trees = 1;
-  const p4est_locidx_t num_vertices = 4;
-  const p4est_locidx_t num_vtt = 12;
-  const p4est_locidx_t tree_to_vertex[1 * 4] = {
+  const p4est_topidx_t num_trees = 1;
+  const p4est_topidx_t num_vertices = 4;
+  const p4est_topidx_t num_vtt = 12;
+  const p4est_topidx_t tree_to_vertex[1 * 4] = {
     0, 1, 2, 3,
   };
-  const p4est_locidx_t tree_to_tree[1 * 4] = {
+  const p4est_topidx_t tree_to_tree[1 * 4] = {
     0, 0, 0, 0,
   };
   const int8_t        tree_to_face[1 * 4] = {
@@ -512,32 +512,32 @@ p4est_connectivity_new_periodic (void)
     1, 1, 0,
     0, 1, 0,
   };
-  const p4est_locidx_t vtt_offset[4 + 1] = {
+  const p4est_topidx_t vtt_offset[4 + 1] = {
     0, 3, 6, 9, 12,
   };
-  const p4est_locidx_t vertex_to_tree[12] = {
+  const p4est_topidx_t vertex_to_tree[12] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
-  const p4est_locidx_t vertex_to_vertex[12] = {
+  const p4est_topidx_t vertex_to_vertex[12] = {
     0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3,
   };
 
   connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_tree, tree_to_tree,
-          sizeof (p4est_locidx_t) * 4 * num_trees);
+          sizeof (p4est_topidx_t) * 4 * num_trees);
   memcpy (connectivity->tree_to_face, tree_to_face,
           sizeof (int8_t) * 4 * num_trees);
   memcpy (connectivity->vertices, vertices,
           sizeof (double) * 3 * num_vertices);
   memcpy (connectivity->vtt_offset, vtt_offset,
-          sizeof (p4est_locidx_t) * (num_vertices + 1));
+          sizeof (p4est_topidx_t) * (num_vertices + 1));
   memcpy (connectivity->vertex_to_tree, vertex_to_tree,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
   memcpy (connectivity->vertex_to_vertex, vertex_to_vertex,
-          sizeof (p4est_locidx_t) * num_vtt);
+          sizeof (p4est_topidx_t) * num_vtt);
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
@@ -546,10 +546,10 @@ p4est_connectivity_new_periodic (void)
 
 int
 p4est_find_face_transform (p4est_connectivity_t * connectivity,
-                           p4est_locidx_t itree, int iface)
+                           p4est_topidx_t itree, int iface)
 {
   int                 nrface, neighbor_face, orientation;
-  p4est_locidx_t      neighbor_tree;
+  p4est_topidx_t      neighbor_tree;
 
   P4EST_ASSERT (itree >= 0 && itree < connectivity->num_trees);
   P4EST_ASSERT (iface >= 0 && iface < 4);
@@ -572,14 +572,14 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
 
 void
 p4est_find_corner_info (p4est_connectivity_t * conn,
-                        p4est_locidx_t itree, int icorner,
+                        p4est_topidx_t itree, int icorner,
                         sc_array_t * corner_info)
 {
   int                 ncorner;
-  p4est_locidx_t      incount, num_found;
-  p4est_locidx_t      corner_trees, ctree;
-  p4est_locidx_t      ntree, ntree1, ntree2;
-  p4est_locidx_t      ivertex, nvertex;
+  p4est_topidx_t      incount, num_found;
+  p4est_topidx_t      corner_trees, ctree;
+  p4est_topidx_t      ntree, ntree1, ntree2;
+  p4est_topidx_t      ivertex, nvertex;
   p4est_corner_info_t *ci;
 
   P4EST_ASSERT (0 <= itree && itree < conn->num_trees);

@@ -49,7 +49,7 @@ typedef struct p4est_quadrant
     void               *user_data;
     struct
     {
-      p4est_locidx_t      which_tree;
+      p4est_topidx_t      which_tree;
       int                 owner_rank;
     }
     piggy;
@@ -68,7 +68,7 @@ p4est_tree_t;
 
 typedef struct p4est_position
 {
-  p4est_locidx_t      which_tree;
+  p4est_topidx_t      which_tree;
   p4est_qcoord_t      x, y;
 }
 p4est_position_t;
@@ -82,9 +82,9 @@ typedef struct p4est
   void               *user_global_pointer;      /* convenience pointer for users
                                                    will never be touched by p4est */
 
-  p4est_locidx_t      first_local_tree; /* 0-based index of first local tree,
+  p4est_topidx_t      first_local_tree; /* 0-based index of first local tree,
                                            must be -1 for an empty processor */
-  p4est_locidx_t      last_local_tree;  /* 0-based index of last local tree,
+  p4est_topidx_t      last_local_tree;  /* 0-based index of last local tree,
                                            must be -2 for an empty processor */
   p4est_locidx_t      local_num_quadrants;      /* number of quadrants
                                                    on all trees on this processor */
@@ -110,14 +110,14 @@ p4est_t;
 /** Callback function prototype to initialize the quadrant's user data.
  */
 typedef void        (*p4est_init_t) (p4est_t * p4est,
-                                     p4est_locidx_t which_tree,
+                                     p4est_topidx_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for refinement.
  * \return Returns 1 if the quadrant shall be refined.
  */
 typedef int         (*p4est_refine_t) (p4est_t * p4est,
-                                       p4est_locidx_t which_tree,
+                                       p4est_topidx_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for coarsening.
@@ -125,7 +125,7 @@ typedef int         (*p4est_refine_t) (p4est_t * p4est,
  * \return Returns 1 if the quadrants shall be replaced with their parent.
  */
 typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
-                                        p4est_locidx_t which_tree,
+                                        p4est_topidx_t which_tree,
                                         p4est_quadrant_t * q0,
                                         p4est_quadrant_t * q1,
                                         p4est_quadrant_t * q2,
@@ -136,7 +136,7 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
  * \note    (global sum of weights * mpisize) must fit into a 64bit integer.
  */
 typedef int         (*p4est_weight_t) (p4est_t * p4est,
-                                       p4est_locidx_t which_tree,
+                                       p4est_topidx_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
 /** map right-hand corner rule to corner in z-ordering */

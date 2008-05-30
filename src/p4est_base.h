@@ -36,15 +36,15 @@
 typedef int32_t     p4est_qcoord_t;
 #define P4EST_MPI_QCOORD MPI_INT
 
-/** Typedef for counting trees. */
-typedef int32_t     p4est_treeid_t;
-#define P4EST_MPI_TREEID MPI_INT
+/** Typedef for counting topological entities (trees, vertices). */
+typedef int32_t     p4est_topidx_t;
+#define P4EST_MPI_TOPIDX MPI_INT
 
-/** Typedef for processor-local indexing. */
+/** Typedef for processor-local indexing of quadrants. */
 typedef int32_t     p4est_locidx_t;
 #define P4EST_MPI_LOCIDX MPI_INT
 
-/** Typedef for globally unique indexing. */
+/** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
 #define P4EST_MPI_GLOIDX MPI_LONG_LONG
 

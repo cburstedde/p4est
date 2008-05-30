@@ -44,24 +44,24 @@
  */
 typedef struct p4est_connectivity
 {
-  p4est_locidx_t      num_trees;
-  p4est_locidx_t      num_vertices;
+  p4est_topidx_t      num_trees;
+  p4est_topidx_t      num_vertices;
 
-  p4est_locidx_t     *tree_to_vertex;
-  p4est_locidx_t     *tree_to_tree;
+  p4est_topidx_t     *tree_to_vertex;
+  p4est_topidx_t     *tree_to_tree;
   int8_t             *tree_to_face;
 
   double             *vertices;
 
-  p4est_locidx_t     *vtt_offset;
-  p4est_locidx_t     *vertex_to_tree;
-  p4est_locidx_t     *vertex_to_vertex;
+  p4est_topidx_t     *vtt_offset;
+  p4est_topidx_t     *vertex_to_tree;
+  p4est_topidx_t     *vertex_to_vertex;
 }
 p4est_connectivity_t;
 
 typedef struct
 {
-  p4est_locidx_t      ntree;
+  p4est_topidx_t      ntree;
   int8_t              ncorner;
 }
 p4est_corner_info_t;
@@ -79,9 +79,9 @@ extern const int    p4est_transform_table[4][4][2];
  * \param [in] num_vertices Number of total vertices.
  * \param [in] num_vtt      Number of total trees in vertex_to_tree array.
  */
-p4est_connectivity_t *p4est_connectivity_new (p4est_locidx_t num_trees,
-                                              p4est_locidx_t num_vertices,
-                                              p4est_locidx_t num_vtt);
+p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_trees,
+                                              p4est_topidx_t num_vertices,
+                                              p4est_topidx_t num_vtt);
 
 /** Destroy a connectivity structure
  */
@@ -120,7 +120,7 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
  */
 int                 p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
-                                               p4est_locidx_t itree,
+                                               p4est_topidx_t itree,
                                                int iface);
 
 /** Fills an array with information about corner neighbors.
@@ -128,7 +128,7 @@ int                 p4est_find_face_transform (p4est_connectivity_t *
  */
 void                p4est_find_corner_info (p4est_connectivity_t *
                                             connectivity,
-                                            p4est_locidx_t itree, int icorner,
+                                            p4est_topidx_t itree, int icorner,
                                             sc_array_t * corner_info);
 
 #endif /* !P4EST_CONNECTIVITY_H */

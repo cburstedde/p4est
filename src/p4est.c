@@ -54,7 +54,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   int                 num_procs, rank;
   int                 i, must_remove_last_quadrant;
   int                 level;
-  p4est_locidx_t      jl, num_trees;
+  p4est_topidx_t      jl, num_trees;
   p4est_gloidx_t      tree_num_quadrants, global_num_quadrants;
   p4est_gloidx_t      first_tree, first_quadrant, first_tree_quadrant;
   p4est_gloidx_t      last_tree, last_quadrant, last_tree_quadrant;
@@ -1750,8 +1750,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   int                 low_source, high_source;
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  const p4est_locidx_t first_tree = p4est->first_local_tree;
-  const p4est_locidx_t last_tree = p4est->last_local_tree;
+  const p4est_topidx_t first_tree = p4est->first_local_tree;
+  const p4est_topidx_t last_tree = p4est->last_local_tree;
   const p4est_locidx_t local_num_quadrants = p4est->local_num_quadrants;
   int                 i, p;
   int                 send_lowest, send_highest;

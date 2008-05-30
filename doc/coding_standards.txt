@@ -27,6 +27,6 @@ tries to adhere to.
    Loop variables of type int can be named as usual: i, j, etc.
    Loop variables of type size_t should be named iz, jz, etc.
    Loop variables of type ssize_t should be named is, js, etc.
-   Loop variables of type p4est_treeid_t should be named it, jt, etc.
+   Loop variables of type p4est_topidx_t should be named it, jt, etc.
    Loop variables of type p4est_locidx_t should be named il, jl, etc.
    Loop variables of type p4est_gloidx_t should be named ig, jg, etc.
