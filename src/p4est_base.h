@@ -36,6 +36,10 @@
 typedef int32_t     p4est_qcoord_t;
 #define P4EST_MPI_QCOORD MPI_INT
 
+/** Typedef for counting trees. */
+typedef int32_t     p4est_treeid_t;
+#define P4EST_MPI_TREEID MPI_INT
+
 /** Typedef for processor-local indexing. */
 typedef int32_t     p4est_locidx_t;
 #define P4EST_MPI_LOCIDX MPI_INT
@@ -131,11 +135,12 @@ int                 p4est_int64_compare (const void *v1, const void *v2);
  * \param [in]  array   The 64bit integer array to binary search in.
  * \param [in]  size    The number of int64_t's in the array.
  * \param [in]  guess   Initial array position to look at.
- * \return  Returns the matching position, or -1 if array[size-1] < target.
+ * \return  Returns the matching position
+ *          or -1 if array[size-1] < target or if size == 0.
  */
-int                 p4est_int64_lower_bound (int64_t target,
+ssize_t             p4est_int64_lower_bound (int64_t target,
                                              const int64_t * array,
-                                             int size, int guess);
+                                             size_t size, size_t guess);
 
 /** Registers the p4est library with SC and sets the logging behavior.
  * This function is optional.

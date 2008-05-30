@@ -43,19 +43,21 @@ p4est_int64_compare (const void *v1, const void *v2)
 }
 #endif
 
-int
+ssize_t
 p4est_int64_lower_bound (int64_t target, const int64_t * array,
-                         int size, int guess)
+                         size_t size, size_t guess)
 {
-  int                 k_low, k_high;
+  size_t              k_low, k_high;
   int64_t             cur;
+
+  if (size == 0)
+    return -1;
 
   k_low = 0;
   k_high = size - 1;
   for (;;) {
     P4EST_ASSERT (k_low <= k_high);
-    P4EST_ASSERT (0 <= k_low && k_low < size);
-    P4EST_ASSERT (0 <= k_high && k_high < size);
+    P4EST_ASSERT (k_low < size && k_high < size);
     P4EST_ASSERT (k_low <= guess && guess <= k_high);
 
     /* compare two quadrants */
@@ -71,9 +73,9 @@ p4est_int64_lower_bound (int64_t target, const int64_t * array,
     /* check if guess is lower than target */
     if (target > cur) {
       k_low = guess + 1;
-      if (k_low > k_high) {
+      if (k_low > k_high)
         return -1;
-      }
+
       guess = (k_low + k_high) / 2;
       continue;
     }
@@ -82,7 +84,7 @@ p4est_int64_lower_bound (int64_t target, const int64_t * array,
     break;
   }
 
-  return guess;
+  return (ssize_t) guess;
 }
 
 #if 0

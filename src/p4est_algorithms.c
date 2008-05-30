@@ -1707,7 +1707,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   int                 outface[4];
   int                 l, inmaxl;
   void               *vlookup;
-  ssize_t             rindex;
+  ssize_t             srindex;
   p4est_qcoord_t      ph;
   p4est_quadrant_t   *family[4];
   p4est_quadrant_t   *q;
@@ -1928,8 +1928,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           }
           continue;
         }
-        rindex = sc_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
-        if (rindex != -1) {
+        srindex = sc_array_bsearch (inlist, qalloc, p4est_quadrant_compare);
+        if (srindex != -1) {
           /* qalloc is included in inlist, this is more expensive to test */
           ++count_already_inlist;
           continue;
