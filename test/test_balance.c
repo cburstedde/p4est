@@ -74,7 +74,7 @@ main (int argc, char **argv)
 
   /* clean up memory */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==
-                p4est->local_num_quadrants);
+                (size_t) p4est->local_num_quadrants);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 

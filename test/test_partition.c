@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -84,9 +84,10 @@ main (int argc, char **argv)
   p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
   int                 i;
-  int                 t, q;
-  int32_t             num_quadrants_on_last;
-  int32_t            *num_quadrants_in_proc;
+  p4est_topidx_t      t;
+  size_t              qz;
+  p4est_locidx_t      num_quadrants_on_last;
+  p4est_locidx_t     *num_quadrants_in_proc;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
   user_data_t        *user_data;
@@ -106,7 +107,7 @@ main (int argc, char **argv)
   p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
 
   num_procs = p4est->mpisize;
-  num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
+  num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   /* refine and balance to make the number of elements interesting */
   p4est_refine (p4est, refine_fn, init_fn);
@@ -116,10 +117,10 @@ main (int argc, char **argv)
    * Since this is just a test we assume the global number of
    * quadrants will fit in an int32_t
    */
-  num_quadrants_on_last = (int32_t) p4est->global_num_quadrants;
+  num_quadrants_on_last = (p4est_locidx_t) p4est->global_num_quadrants;
   for (i = 0; i < num_procs - 1; ++i) {
-    num_quadrants_in_proc[i] = i + 1;
-    num_quadrants_on_last -= i + 1;
+    num_quadrants_in_proc[i] = (p4est_locidx_t) i + 1;
+    num_quadrants_on_last -= (p4est_locidx_t) i + 1;
   }
   num_quadrants_in_proc[num_procs - 1] = num_quadrants_on_last;
   SC_CHECK_ABORT (num_quadrants_on_last > 0,
@@ -129,7 +130,7 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
 
   /* partition the forest */
-  p4est_partition_given (p4est, num_quadrants_in_proc);
+  (void) p4est_partition_given (p4est, num_quadrants_in_proc);
 
   /* Double check that we didn't loose any quads */
   SC_CHECK_ABORT (crc == p4est_checksum (p4est),
@@ -143,8 +144,8 @@ main (int argc, char **argv)
   /* check user data content */
   for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
     tree = sc_array_index (p4est->trees, t);
-    for (q = 0; q < tree->quadrants.elem_count; ++q) {
-      quad = sc_array_index (&tree->quadrants, q);
+    for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
+      quad = sc_array_index (&tree->quadrants, qz);
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
@@ -176,10 +177,14 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 2");
 
-  /* do a weighted partition with many zero weights */
+  /* do a weighted partition with many zero weights
+   *
+   * Since this is just a test we assume the local number of
+   * quadrants will fit in an int
+   */
   weight_counter = 0;
   weight_index =
-    (rank == num_procs - 1) ? (copy->local_num_quadrants - 1) : 0;
+    (rank == num_procs - 1) ? ((int) copy->local_num_quadrants - 1) : 0;
   p4est_partition (copy, weight_once);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 3");
@@ -187,8 +192,8 @@ main (int argc, char **argv)
   /* check user data content */
   for (t = copy->first_local_tree; t <= copy->last_local_tree; ++t) {
     tree = sc_array_index (copy->trees, t);
-    for (q = 0; q < tree->quadrants.elem_count; ++q) {
-      quad = sc_array_index (&tree->quadrants, q);
+    for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
+      quad = sc_array_index (&tree->quadrants, qz);
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 

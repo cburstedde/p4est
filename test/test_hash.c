@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -24,13 +24,13 @@
 static unsigned
 int_hash_fn (const void *v)
 {
-  return (unsigned) v;
+  return (unsigned) (unsigned long) v;
 }
 
 static int
 int_equal_fn (const void *v1, const void *v2)
 {
-  return (int) v1 == (int) v2;
+  return (long) v1 == (long) v2;
 }
 
 int
@@ -49,7 +49,8 @@ main (int argc, char **argv)
 
     inserted = 0;
     for (i = 0; i < 347; ++i) {
-      inserted += sc_hash_insert_unique (ihash, (void *) (i % 91), NULL);
+      inserted +=
+        sc_hash_insert_unique (ihash, (void *) ((long) i % 91), NULL);
     }
     printf ("Integers inserted %d total %llu\n",
             inserted, (unsigned long long) ihash->elem_count);

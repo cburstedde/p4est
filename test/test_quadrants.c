@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,13 +22,13 @@
 #include <p4est_algorithms.h>
 
 static int
-refine_none (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
+refine_none (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
 {
   return 0;
 }
 
 static int
-refine_some (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
+refine_some (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
 {
   if (q->x < P4EST_QUADRANT_LEN (2)) {
     return q->level <= 4;
@@ -42,7 +42,7 @@ refine_some (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * q)
 }
 
 static int
-coarsen_none (p4est_t * p4est, int32_t which_tree,
+coarsen_none (p4est_t * p4est, p4est_topidx_t which_tree,
               p4est_quadrant_t * q0, p4est_quadrant_t * q1,
               p4est_quadrant_t * q2, p4est_quadrant_t * q3)
 {
@@ -50,7 +50,7 @@ coarsen_none (p4est_t * p4est, int32_t which_tree,
 }
 
 static int
-coarsen_some (p4est_t * p4est, int32_t which_tree,
+coarsen_some (p4est_t * p4est, p4est_topidx_t which_tree,
               p4est_quadrant_t * q0, p4est_quadrant_t * q1,
               p4est_quadrant_t * q2, p4est_quadrant_t * q3)
 {
@@ -66,7 +66,7 @@ coarsen_some (p4est_t * p4est, int32_t which_tree,
 }
 
 static int
-coarsen_all (p4est_t * p4est, int32_t which_tree,
+coarsen_all (p4est_t * p4est, p4est_topidx_t which_tree,
              p4est_quadrant_t * q0, p4est_quadrant_t * q1,
              p4est_quadrant_t * q2, p4est_quadrant_t * q3)
 {
@@ -77,7 +77,7 @@ static void
 check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
 {
   int                 comp = p4est_quadrant_compare (q1, q2);
-  int                 level = SC_MIN (q1->level, q2->level);
+  int                 level = (int) SC_MIN (q1->level, q2->level);
   uint64_t            id1 = p4est_quadrant_linear_id (q1, level);
   uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
 
@@ -96,7 +96,9 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
 int
 main (void)
 {
-  int                 i, j, incount;
+  const p4est_qcoord_t qone = 1;
+  int                 k;
+  size_t              iz, jz, incount;
   int                 level, mid, cid;
   int                 id0, id1, id2, id3;
   int64_t             index1, index2;
@@ -126,15 +128,15 @@ main (void)
 
   /* run a bunch of cross-tests */
   p = NULL;
-  for (i = 0; i < t1->quadrants.elem_count; ++i) {
-    q1 = sc_array_index (&t1->quadrants, i);
+  for (iz = 0; iz < t1->quadrants.elem_count; ++iz) {
+    q1 = sc_array_index (&t1->quadrants, iz);
 
     /* test the index conversion */
-    index1 = p4est_quadrant_linear_id (q1, q1->level);
-    p4est_quadrant_set_morton (&r, q1->level, index1);
-    index2 = p4est_quadrant_linear_id (&r, r.level);
+    index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
+    p4est_quadrant_set_morton (&r, (int) q1->level, index1);
+    index2 = p4est_quadrant_linear_id (&r, (int) r.level);
     SC_CHECK_ABORT (index1 == index2, "index conversion");
-    level = q1->level - 1;
+    level = (int) q1->level - 1;
     if (level >= 0) {
       index1 = p4est_quadrant_linear_id (q1, level);
       p4est_quadrant_set_morton (&r, level, index1);
@@ -170,8 +172,8 @@ main (void)
     }
 
     /* test t1 against itself */
-    for (j = 0; j < t1->quadrants.elem_count; ++j) {
-      q2 = sc_array_index (&t1->quadrants, j);
+    for (jz = 0; jz < t1->quadrants.elem_count; ++jz) {
+      q2 = sc_array_index (&t1->quadrants, jz);
 
       /* test the comparison function */
       SC_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
@@ -203,8 +205,8 @@ main (void)
     }
 
     /* test t1 against t2 */
-    for (j = 0; j < t2->quadrants.elem_count; ++j) {
-      q2 = sc_array_index (&t2->quadrants, j);
+    for (jz = 0; jz < t2->quadrants.elem_count; ++jz) {
+      q2 = sc_array_index (&t2->quadrants, jz);
 
       /* test the comparison function */
       SC_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
@@ -237,8 +239,8 @@ main (void)
   }
 
   p = NULL;
-  for (i = 0; i < t2->quadrants.elem_count; ++i) {
-    q1 = sc_array_index (&t2->quadrants, i);
+  for (iz = 0; iz < t2->quadrants.elem_count; ++iz) {
+    q1 = sc_array_index (&t2->quadrants, iz);
 
     /* test the is_next function */
     if (p != NULL) {
@@ -264,30 +266,30 @@ main (void)
   q2 = sc_array_index (&t2->quadrants, 0);
   *q1 = *q2;
   q2 = sc_array_index (&t2->quadrants, 1);
-  for (i = 0; i < 3; ++i) {
-    q1 = sc_array_index (&tree.quadrants, i + 1);
+  for (k = 0; k < 3; ++k) {
+    q1 = sc_array_index_int (&tree.quadrants, k + 1);
     *q1 = *q2;
-    q1->level = (int8_t) (q1->level + i);
+    q1->level = (int8_t) (q1->level + k);
   }
-  for (i = 0; i < 10; ++i) {
-    q1 = sc_array_index (&tree.quadrants, i + 4);
-    q2 = sc_array_index (&t2->quadrants, i + 3);
+  for (k = 0; k < 10; ++k) {
+    q1 = sc_array_index_int (&tree.quadrants, k + 4);
+    q2 = sc_array_index_int (&t2->quadrants, k + 3);
     *q1 = *q2;
-    q1->level = (int8_t) (q1->level + i);
+    q1->level = (int8_t) (q1->level + k);
   }
-  for (i = 0; i < 4; ++i) {
-    q1 = sc_array_index (&tree.quadrants, i + 14);
-    q2 = sc_array_index (&t2->quadrants, i + 12);
+  for (k = 0; k < 4; ++k) {
+    q1 = sc_array_index_int (&tree.quadrants, k + 14);
+    q2 = sc_array_index_int (&t2->quadrants, k + 12);
     *q1 = *q2;
-    q1->level = (int8_t) (q1->level + 10 + i);
+    q1->level = (int8_t) (q1->level + 10 + k);
   }
   tree.maxlevel = 0;
-  for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
-    tree.quadrants_per_level[i] = 0;
+  for (k = 0; k <= P4EST_MAXLEVEL; ++k) {
+    tree.quadrants_per_level[k] = 0;
   }
   incount = tree.quadrants.elem_count;
-  for (i = 0; i < incount; ++i) {
-    q1 = sc_array_index (&tree.quadrants, i);
+  for (iz = 0; iz < incount; ++iz) {
+    q1 = sc_array_index (&tree.quadrants, iz);
     ++tree.quadrants_per_level[q1->level];
     tree.maxlevel = (int8_t) SC_MAX (tree.maxlevel, q1->level);
   }
@@ -314,40 +316,40 @@ main (void)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
-  A.x = -1 << 30;
-  A.y = -1 << 30;
+  A.x = -qone << 30;
+  A.y = -qone << 30;
   A.level = 0;
 
-  B.x = 1 << 30;
-  B.y = -1 << 30;
+  B.x = qone << 30;
+  B.y = -qone << 30;
   B.level = 0;
 
-  C.x = -1 << 30;
-  C.y = 1 << 30;
+  C.x = -qone << 30;
+  C.y = qone << 30;
   C.level = 0;
 
-  D.x = 1 << 30;
-  D.y = 1 << 30;
+  D.x = qone << 30;
+  D.y = qone << 30;
   D.level = 0;
 
-  E.x = -1 << 31;
+  E.x = -qone << 31;
   E.y = 0;
   E.level = 0;
 
-  F.x = INT32_MAX;
-  F.y = INT32_MAX;
+  F.x = (p4est_qcoord_t) INT32_MAX;
+  F.y = (p4est_qcoord_t) INT32_MAX;
   F.level = P4EST_MAXLEVEL;
 
-  G.x = -1;
-  G.y = -1;
+  G.x = -qone;
+  G.y = -qone;
   G.level = P4EST_MAXLEVEL;
 
-  H.x = -1 << 29;
-  H.y = -1 << 29;
+  H.x = -qone << 29;
+  H.y = -qone << 29;
   H.level = 1;
 
-  I.x = -1 << 30;
-  I.y = -1 << 29;
+  I.x = -qone << 30;
+  I.y = -qone << 29;
   I.level = 1;
 
   check_linear_id (&A, &A);
