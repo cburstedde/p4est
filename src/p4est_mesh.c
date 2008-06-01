@@ -48,7 +48,8 @@ p4est_order_local_vertices (p4est_t * p4est,
   p4est_locidx_t      num_quadrants;
   p4est_locidx_t      lqid;
   int                 neighbor_proc;
-  p4est_locidx_t      neighbor_tree, ctree;
+  p4est_locidx_t      neighbor_tree;
+  size_t              ctree;
   p4est_locidx_t     *tree_offset;
   ssize_t             lnid;
   p4est_tree_t       *tree, *ntree;

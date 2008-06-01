@@ -22,7 +22,8 @@
 #include <p4est.h>
 
 static int
-weight_one (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+weight_one (p4est_t * p4est, p4est_topidx_t which_tree,
+            p4est_quadrant_t * quadrant)
 {
   return 1;
 }

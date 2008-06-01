@@ -48,7 +48,7 @@ enum
 
 typedef struct
 {
-  int32_t             a;
+  p4est_topidx_t      a;
 }
 user_data_t;
 
@@ -62,7 +62,7 @@ mpi_context_t;
 static int          refine_level = 0;
 
 static void
-init_fn (p4est_t * p4est, p4est_locidx_t which_tree,
+init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
 {
   user_data_t        *data = quadrant->p.user_data;
@@ -71,7 +71,7 @@ init_fn (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 static int
-refine_normal_fn (p4est_t * p4est, p4est_locidx_t which_tree,
+refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                   p4est_quadrant_t * quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
@@ -92,7 +92,7 @@ refine_normal_fn (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 static int
-refine_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
+refine_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * quadrant)
 {
   if ((int) quadrant->level >= refine_level) {
@@ -106,7 +106,7 @@ refine_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 static int
-refine_evil3_fn (p4est_t * p4est, p4est_locidx_t which_tree,
+refine_evil3_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                  p4est_quadrant_t * quadrant)
 {
   p4est_qcoord_t      u2;
@@ -139,7 +139,7 @@ refine_evil3_fn (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 static int
-coarsen_evil_fn (p4est_t * p4est, p4est_locidx_t which_tree,
+coarsen_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                  p4est_quadrant_t * q0, p4est_quadrant_t * q1,
                  p4est_quadrant_t * q2, p4est_quadrant_t * q3)
 {

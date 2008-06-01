@@ -31,6 +31,7 @@
 /* also includes getopt, obstack, zlib and MPI */
 
 #include <sc.h>
+#include <sc_containers.h>
 
 /** Typedef for quadrant coordinates. */
 typedef int32_t     p4est_qcoord_t;
@@ -124,6 +125,18 @@ typedef int64_t     p4est_gloidx_t;
 
 /* extern declarations */
 extern int          p4est_package_id;
+
+/** Returns a pointer to an array element indexed by a p4est_topidx_t.
+ * \param [in] index needs to be in [0]..[elem_count-1].
+ */
+/*@unused@*/
+static inline void *
+p4est_array_index_topidx (sc_array_t * array, p4est_topidx_t it)
+{
+  P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
+
+  return (void *) (array->array + (array->elem_size * (size_t) it));
+}
 
 #if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);

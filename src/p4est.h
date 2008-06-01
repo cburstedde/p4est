@@ -177,7 +177,7 @@ void                p4est_destroy (p4est_t * p4est);
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p4est that does not depend on the input.
  */
-p4est_t            *p4est_copy (p4est_t * input, int copy_data);
+p4est_t            *p4est_copy (p4est_t * input, bool copy_data);
 
 /** Refine a forest.
  * \param [in] refine_fn Callback function to decide

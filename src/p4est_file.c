@@ -53,8 +53,8 @@ p4est_trim_comments (char *line)
 static void
 p4est_trim_ending_whitespace (char *line)
 {
-  size_t              n;
-  size_t              length = strlen (line);
+  ssize_t             n;
+  ssize_t             length = (ssize_t) strlen (line);
 
   /* Trim whitespace from the end of the line */
   if (length > 1) {

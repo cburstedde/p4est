@@ -36,7 +36,7 @@ typedef struct
 mpi_context_t;
 
 static int
-refine_fn (p4est_t * p4est, p4est_locidx_t which_tree, p4est_quadrant_t * q)
+refine_fn (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
 {
   if ((which_tree == 0 && q->x != 0 && q->y != 0) ||
       (which_tree == 2 && q->x >= P4EST_LAST_OFFSET (2) &&

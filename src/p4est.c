@@ -36,7 +36,7 @@ p4est_balance_peer_t;
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
 static const p4est_gloidx_t initial_quadrants_per_processor = 15;
-static const int    number_toread_quadrants = 32;
+static const size_t number_toread_quadrants = 32;
 #ifdef P4EST_MPI
 static const int    number_peer_windows = 5;
 #endif
@@ -249,17 +249,17 @@ void
 p4est_destroy (p4est_t * p4est)
 {
 #ifdef P4EST_DEBUG
-  int                 q;
+  size_t              qz;
 #endif
-  int32_t             j;
+  p4est_topidx_t      jt;
   p4est_tree_t       *tree;
 
-  for (j = 0; j < p4est->connectivity->num_trees; ++j) {
-    tree = sc_array_index (p4est->trees, j);
+  for (jt = 0; jt < p4est->connectivity->num_trees; ++jt) {
+    tree = p4est_array_index_topidx (p4est->trees, jt);
 
 #ifdef P4EST_DEBUG
-    for (q = 0; q < tree->quadrants.elem_count; ++q) {
-      p4est_quadrant_t   *quad = sc_array_index (&tree->quadrants, q);
+    for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
+      p4est_quadrant_t   *quad = sc_array_index (&tree->quadrants, qz);
       p4est_quadrant_free_data (p4est, quad);
     }
 #endif
@@ -280,7 +280,7 @@ p4est_destroy (p4est_t * p4est)
 }
 
 p4est_t            *
-p4est_copy (p4est_t * input, int copy_data)
+p4est_copy (p4est_t * input, bool copy_data)
 {
   const int32_t       num_trees = input->connectivity->num_trees;
   const int32_t       first_tree = input->first_local_tree;
@@ -365,12 +365,12 @@ p4est_copy (p4est_t * input, int copy_data)
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  size_t              quadrant_pool_size, data_pool_size = 0;
+  size_t              quadrant_pool_size, data_pool_size;
   int                 dorefine;
   int                *key;
   int                 i, maxlevel;
-  int32_t             j, movecount;
-  int32_t             current, restpos, incount;
+  int32_t             j;
+  size_t              incount, current, restpos, movecount;
   sc_list_t          *list;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q, *qalloc, *qpop;
@@ -396,6 +396,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     tree = sc_array_index (p4est->trees, j);
     tquadrants = &tree->quadrants;
     quadrant_pool_size = p4est->quadrant_pool->elem_count;
+    data_pool_size = 0;
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
     }
@@ -524,12 +525,14 @@ void
 p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
                p4est_init_t init_fn)
 {
-  int                 k, couldbegood;
-  size_t              data_pool_size = 0;
-  int                 incount, removed, num_quadrants;
-  int                 first, last, rest, before;
   int                 i, maxlevel;
-  int32_t             j;
+  bool                couldbegood;
+  size_t              kz;
+  size_t              data_pool_size;
+  size_t              incount, removed;
+  size_t              cidz, first, last, rest, before;
+  p4est_locidx_t      num_quadrants;
+  p4est_topidx_t      jt;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *c[4];
   p4est_quadrant_t   *cfirst, *clast;
@@ -540,17 +543,18 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   /* loop over all local trees */
-  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
-    tree = sc_array_index (p4est->trees, j);
+  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+    tree = p4est_array_index_topidx (p4est->trees, jt);
     tquadrants = &tree->quadrants;
+    data_pool_size = 0;
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
     }
     removed = 0;
 
     /* initial log message for this tree */
-    P4EST_INFOF ("Into coarsen tree %d with %lu\n",
-                 j, (unsigned long) tquadrants->elem_count);
+    P4EST_INFOF ("Into coarsen tree %lld with %llu\n",
+                 (long long) jt, (unsigned long long) tquadrants->elem_count);
 
     /* Initialize array indices.
        If children are coarsened, the array will have an empty window.
@@ -565,38 +569,42 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     /* run through the array and coarsen recursively */
     incount = tquadrants->elem_count;
     while (rest + 3 - before < incount) {
-      couldbegood = 1;
-      for (k = 0; k < 4; ++k) {
-        if (k < before) {
-          c[k] = sc_array_index (tquadrants, first + k);
-          if (k != p4est_quadrant_child_id (c[k])) {
-            couldbegood = 0;
+      couldbegood = true;
+      for (kz = 0; kz < 4; ++kz) {
+        if (kz < before) {
+          c[kz] = sc_array_index (tquadrants, first + kz);
+          if (kz != (size_t) p4est_quadrant_child_id (c[kz])) {
+            couldbegood = false;
             break;
           }
         }
         else {
-          c[k] = sc_array_index (tquadrants, rest + k - before);
+          c[kz] = sc_array_index (tquadrants, rest + kz - before);
         }
       }
       if (couldbegood &&
           p4est_quadrant_is_family (c[0], c[1], c[2], c[3]) &&
-          coarsen_fn (p4est, j, c[0], c[1], c[2], c[3])) {
+          coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3])) {
         /* coarsen now */
-        for (k = 0; k < 4; ++k) {
-          p4est_quadrant_free_data (p4est, c[k]);
+        for (kz = 0; kz < 4; ++kz) {
+          p4est_quadrant_free_data (p4est, c[kz]);
         }
         tree->quadrants_per_level[c[0]->level] -= 4;
         cfirst = c[0];
         p4est_quadrant_parent (c[0], cfirst);
-        p4est_quadrant_init_data (p4est, j, cfirst, init_fn);
+        p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
         tree->quadrants_per_level[cfirst->level] += 1;
         p4est->local_num_quadrants -= 3;
         removed += 3;
 
         rest += 4 - before;
         last = first;
-        first -= p4est_quadrant_child_id (cfirst);
-        first = SC_MAX (first, 0);
+
+        cidz = (size_t) p4est_quadrant_child_id (cfirst);
+        if (cidz > first)
+          first = 0;
+        else
+          first -= cidz;
       }
       else {
         /* do nothing, just move the counters and the hole */
@@ -640,7 +648,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     tree->maxlevel = (int8_t) maxlevel;
 
     /* do some sanity checks */
-    P4EST_ASSERT (num_quadrants == tquadrants->elem_count);
+    P4EST_ASSERT (num_quadrants == (p4est_locidx_t) tquadrants->elem_count);
     P4EST_ASSERT (tquadrants->elem_count == incount - removed);
     if (p4est->user_data_pool != NULL) {
       P4EST_ASSERT (data_pool_size - removed ==
@@ -650,8 +658,8 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     P4EST_ASSERT (p4est_tree_is_complete (tree));
 
     /* final log message for this tree */
-    P4EST_INFOF ("Done coarsen tree %d now %lu\n",
-                 j, (unsigned long) tquadrants->elem_count);
+    P4EST_INFOF ("Done coarsen tree %lld now %llu\n",
+                 (long long) jt, (unsigned long long) tquadrants->elem_count);
   }
 
   /* compute global number of quadrants */
@@ -730,16 +738,17 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
 }
 
 static void
-p4est_balance_response (p4est_t * p4est, int32_t peer_id,
+p4est_balance_response (p4est_t * p4est, int peer_id,
                         p4est_balance_peer_t * peer)
 {
 #ifdef P4EST_DEBUG
-  const int32_t       first_tree = p4est->first_local_tree;
-  const int32_t       last_tree = p4est->last_local_tree;
+  const p4est_topidx_t first_tree = p4est->first_local_tree;
+  const p4est_topidx_t last_tree = p4est->last_local_tree;
 #endif /* P4EST_DEBUG */
-  int32_t             k, qcount, qtree;
-  int32_t             prev, num_receive_trees, nt;
-  int32_t            *pi;
+  int32_t             k, qcount;
+  p4est_topidx_t      prev, qtree;
+  p4est_topidx_t      num_receive_trees, nt;
+  p4est_topidx_t     *pi;
   sc_array_t         *qarray, tree_array;
   p4est_quadrant_t   *q;
 
@@ -750,27 +759,27 @@ p4est_balance_response (p4est_t * p4est, int32_t peer_id,
   /* build list of received tree ids */
   prev = -1;
   num_receive_trees = 0;
-  sc_array_init (&tree_array, sizeof (int32_t));
+  sc_array_init (&tree_array, sizeof (p4est_topidx_t));
   for (k = 0; k < qcount; ++k) {
     q = sc_array_index (qarray, k);
     qtree = q->p.piggy.which_tree;
     P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
     P4EST_ASSERT (qtree >= prev);
     if (qtree > prev) {
-      sc_array_resize (&tree_array, num_receive_trees + 1);
-      pi = sc_array_index (&tree_array, num_receive_trees);
+      sc_array_resize (&tree_array, (size_t) num_receive_trees + 1);
+      pi = p4est_array_index_topidx (&tree_array, num_receive_trees);
       *pi = qtree;
       ++num_receive_trees;
       prev = qtree;
     }
   }
-  P4EST_LDEBUGF ("first load from %d into %d trees\n", peer_id,
-                 num_receive_trees);
-  P4EST_ASSERT (num_receive_trees == tree_array.elem_count);
+  P4EST_LDEBUGF ("first load from %d into %lld trees\n", peer_id,
+                 (long long) num_receive_trees);
+  P4EST_ASSERT (num_receive_trees == (p4est_topidx_t) tree_array.elem_count);
 
   /* loop to the trees to receive into and update overlap quadrants */
   for (nt = 0; nt < num_receive_trees; ++nt) {
-    pi = sc_array_index (&tree_array, nt);
+    pi = p4est_array_index_topidx (&tree_array, nt);
     qtree = *pi;
 
     /* compute overlap quadrants */
@@ -785,9 +794,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
-  size_t              data_pool_size = 0;
+  size_t              data_pool_size;
   size_t              all_incount, all_outcount;
-  int                 k, l, ctree;
+  int                 k, l;
+  size_t              ctree;
   int                 any_face, face_contact[4];
   int                 any_quad, quad_contact[4];
   int                 tree_fully_owned, transform;
@@ -845,6 +855,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   /* prepare sanity checks */
+  data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
   }
@@ -1347,10 +1358,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount ==
                          peer->recv_first_count *
-                         sizeof (p4est_quadrant_t),
-                         "Receive load mismatch A %d %dx%lld", rcount,
+                         (int) sizeof (p4est_quadrant_t),
+                         "Receive load mismatch A %d %dx%llu", rcount,
                          peer->recv_first_count,
-                         (long long) sizeof (p4est_quadrant_t));
+                         (unsigned long long) sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_first_load = 1;
@@ -1482,10 +1493,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount ==
                          peer->recv_second_count *
-                         sizeof (p4est_quadrant_t),
-                         "Receive load mismatch B %d %dx%lld", rcount,
+                         (int) sizeof (p4est_quadrant_t),
+                         "Receive load mismatch B %d %dx%llu", rcount,
                          peer->recv_second_count,
-                         (long long) sizeof (p4est_quadrant_t));
+                         (unsigned long long) sizeof (p4est_quadrant_t));
 
         /* received load, close this request */
         peer->have_second_load = 1;
@@ -1537,8 +1548,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     qarray = &peer->recv_both;
     qcount = qarray->elem_count;
     P4EST_ASSERT (qcount == peer->recv_first_count + peer->recv_second_count);
-    P4EST_ASSERT (peer->send_first_count == peer->send_first.elem_count);
-    P4EST_ASSERT (peer->send_second_count == peer->send_second.elem_count);
+    P4EST_ASSERT (peer->send_first_count ==
+                  (int) peer->send_first.elem_count);
+    P4EST_ASSERT (peer->send_second_count ==
+                  (int) peer->send_second.elem_count);
     if (qcount == 0) {
       continue;
     }
@@ -1729,10 +1742,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_comm_count_quadrants (p4est);
 
   /* some sanity checks */
-  P4EST_ASSERT (all_outcount == p4est->local_num_quadrants);
+  P4EST_ASSERT ((p4est_locidx_t) all_outcount == p4est->local_num_quadrants);
   P4EST_ASSERT (all_outcount >= all_incount);
   if (p4est->user_data_pool != NULL) {
-    P4EST_ASSERT (data_pool_size + (all_outcount - all_incount) ==
+    P4EST_ASSERT (data_pool_size + all_outcount - all_incount ==
                   p4est->user_data_pool->elem_count);
   }
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -1756,7 +1769,9 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   int                 i, p;
   int                 send_lowest, send_highest;
   int                 num_sends, rcount, base_index;
-  int32_t             j, k, qcount;
+  size_t              lz;
+  p4est_topidx_t      nt;
+  int32_t             k, qcount;
   int32_t            *num_quadrants_in_proc;
   int64_t             prev_quadrant, next_quadrant;
   int64_t             weight, weight_sum;
@@ -1803,11 +1818,11 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     /* linearly sum weights across all trees */
     k = 0;
     local_weights[0] = 0;
-    for (j = first_tree; j <= last_tree; ++j) {
-      tree = sc_array_index (p4est->trees, j);
-      for (i = 0; i < tree->quadrants.elem_count; ++i, ++k) {
-        q = sc_array_index (&tree->quadrants, i);
-        weight = weight_fn (p4est, j, q);
+    for (nt = first_tree; nt <= last_tree; ++nt) {
+      tree = p4est_array_index_topidx (p4est->trees, nt);
+      for (lz = 0; lz < tree->quadrants.elem_count; ++lz, ++k) {
+        q = sc_array_index (&tree->quadrants, lz);
+        weight = weight_fn (p4est, nt, q);
         P4EST_ASSERT (weight >= 0);
         local_weights[k + 1] = local_weights[k] + weight;
       }
@@ -2050,44 +2065,46 @@ unsigned
 p4est_checksum (p4est_t * p4est)
 {
   uLong               treecrc, crc;
-  int32_t             j;
+  int                 p;
+  p4est_topidx_t      nt;
   p4est_tree_t       *tree;
   sc_array_t          checkarray;
 #ifdef P4EST_MPI
   int                 mpiret;
-  uint32_t            send[2];
-  uint32_t           *gather;
+  uint64_t            send[2];
+  uint64_t           *gather;
 #endif
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   sc_array_init (&checkarray, 4);
   crc = adler32 (0, Z_NULL, 0);
-  for (j = p4est->first_local_tree; j <= p4est->last_local_tree; ++j) {
-    tree = sc_array_index (p4est->trees, j);
+  for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
+    tree = p4est_array_index_topidx (p4est->trees, nt);
     treecrc = p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
-    crc = adler32_combine (crc, treecrc, checkarray.elem_count * 4);
+    crc = adler32_combine (crc, treecrc, (z_off_t) checkarray.elem_count * 4);
   }
   sc_array_reset (&checkarray);
 
 #ifdef P4EST_MPI
   if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint32_t, 2 * p4est->mpisize);
+    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
   }
   else {
     gather = NULL;
   }
-  send[0] = (uint32_t) crc;
-  send[1] = p4est->local_num_quadrants * 12;
-  mpiret = MPI_Gather (send, 2, MPI_UNSIGNED, gather, 2, MPI_UNSIGNED,
-                       0, p4est->mpicomm);
+  send[0] = (uint64_t) crc;
+  send[1] = (uint64_t) p4est->local_num_quadrants * 12;
+  mpiret = MPI_Gather (send, 2, MPI_UNSIGNED_LONG_LONG,
+                       gather, 2, MPI_UNSIGNED_LONG_LONG, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   crc = 0;
   if (p4est->mpirank == 0) {
     crc = gather[0];
-    for (j = 1; j < p4est->mpisize; ++j) {
-      crc = adler32_combine (crc, gather[2 * j + 0], gather[2 * j + 1]);
+    for (p = 1; p < p4est->mpisize; ++p) {
+      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
+                             (z_off_t) gather[2 * p + 1]);
     }
     P4EST_FREE (gather);
   }
