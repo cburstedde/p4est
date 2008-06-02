@@ -234,7 +234,7 @@ p4est_connectivity_read (const char *filename,
         if (set_num_vertices && set_num_trees && set_num_vtt
             && *connectivity == NULL) {
           *connectivity = p4est_connectivity_new (num_trees, num_vertices,
-                                                  num_vtt);
+                                                  num_vtt, true);
           tree_to_vertex = (*connectivity)->tree_to_vertex;
           tree_to_tree = (*connectivity)->tree_to_tree;
           tree_to_face = (*connectivity)->tree_to_face;

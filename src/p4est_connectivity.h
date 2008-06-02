@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 
 #include <p4est_base.h>
 
-/** This structure holds the inter-tree connectivity information.
+/** This structure holds the 2D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
  *
  * The arrays tree_to_* are stored in right-hand rule ordering.
@@ -77,10 +77,12 @@ extern const int    p4est_transform_table[4][4][2];
  * \param [in] num_trees    Number of trees in the forest.
  * \param [in] num_vertices Number of total vertices.
  * \param [in] num_vtt      Number of total trees in vertex_to_tree array.
+ * \param [in] alloc_vertices   Flag for vertex coordinate allocation.
  */
 p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_trees,
                                               p4est_topidx_t num_vertices,
-                                              p4est_topidx_t num_vtt);
+                                              p4est_topidx_t num_vtt,
+                                              bool alloc_vxyz);
 
 /** Destroy a connectivity structure
  */

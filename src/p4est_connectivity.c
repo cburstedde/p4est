@@ -33,7 +33,7 @@ const int p4est_transform_table[4][4][2] =
 
 p4est_connectivity_t *
 p4est_connectivity_new (p4est_topidx_t num_trees, p4est_topidx_t num_vertices,
-                        p4est_topidx_t num_vtt)
+                        p4est_topidx_t num_vtt, bool alloc_vxyz)
 {
   p4est_connectivity_t *connectivity;
 
@@ -45,7 +45,12 @@ p4est_connectivity_new (p4est_topidx_t num_trees, p4est_topidx_t num_vertices,
   connectivity->tree_to_vertex = P4EST_ALLOC (p4est_topidx_t, 4 * num_trees);
   connectivity->tree_to_tree = P4EST_ALLOC (p4est_topidx_t, 4 * num_trees);
   connectivity->tree_to_face = P4EST_ALLOC (int8_t, 4 * num_trees);
-  connectivity->vertices = P4EST_ALLOC (double, 3 * num_vertices);
+
+  if (alloc_vxyz)
+    connectivity->vertices = P4EST_ALLOC (double, 3 * num_vertices);
+  else
+    connectivity->vertices = NULL;
+
   connectivity->vtt_offset = P4EST_ALLOC (p4est_topidx_t, num_vertices + 1);
   connectivity->vtt_offset[num_vertices] = -1;  /* catch bugs */
 
@@ -212,7 +217,7 @@ p4est_connectivity_new_unitsquare (void)
 {
   p4est_connectivity_t *connectivity;
 
-  connectivity = p4est_connectivity_new (1, 4, 4);
+  connectivity = p4est_connectivity_new (1, 4, 4, true);
 
   /* assign vertex numbers */
   connectivity->tree_to_vertex[0] = 0;
@@ -311,7 +316,8 @@ p4est_connectivity_new_corner (void)
     0, 0, 1, 2, 2, 2, 3, 3, 4, 5, 5, 6,
   };
 
-  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
+  connectivity =
+    p4est_connectivity_new (num_trees, num_vertices, num_vtt, true);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
           sizeof (p4est_topidx_t) * 4 * num_trees);
@@ -388,7 +394,8 @@ p4est_connectivity_new_moebius (void)
     0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9,
   };
 
-  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
+  connectivity =
+    p4est_connectivity_new (num_trees, num_vertices, num_vtt, true);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
           sizeof (p4est_topidx_t) * 4 * num_trees);
@@ -456,7 +463,8 @@ p4est_connectivity_new_star (void)
     5, 5, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12,
   };
 
-  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
+  connectivity =
+    p4est_connectivity_new (num_trees, num_vertices, num_vtt, true);
 
   connectivity->vertices[0 * 3 + 0] = 0;
   connectivity->vertices[0 * 3 + 1] = 0;
@@ -522,7 +530,8 @@ p4est_connectivity_new_periodic (void)
     0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3,
   };
 
-  connectivity = p4est_connectivity_new (num_trees, num_vertices, num_vtt);
+  connectivity =
+    p4est_connectivity_new (num_trees, num_vertices, num_vtt, true);
 
   memcpy (connectivity->tree_to_vertex, tree_to_vertex,
           sizeof (p4est_topidx_t) * 4 * num_trees);
