@@ -54,11 +54,11 @@ void
 p4est_comm_global_partition (p4est_t * p4est)
 {
   const int           num_procs = p4est->mpisize;
-  const int32_t       num_trees = p4est->connectivity->num_trees;
+  const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
   int                 i;
   int                 mpiret;
   const int           size_position = (int) sizeof (p4est_position_t);
-  const int32_t       first_tree = p4est->first_local_tree;
+  const p4est_topidx_t first_tree = p4est->first_local_tree;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quadrant;
   p4est_position_t   *pi, input;
@@ -111,7 +111,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
   const p4est_position_t *global_first_position =
     p4est->global_first_position;
   int                 proc_low, proc_high;
-  p4est_locidx_t      ctree;
+  p4est_topidx_t      ctree;
   p4est_quadrant_t    cur;
 
   proc_low = 0;

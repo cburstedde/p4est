@@ -54,7 +54,7 @@ static int          refine_level = 0;
 static int          level_shift = 0;
 
 static int
-refine_fractal (p4est_t * p4est, p4est_locidx_t which_tree,
+refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * q)
 {
   int                 qid;

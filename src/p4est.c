@@ -113,7 +113,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     }
     tree_num_quadrants *= 4;
   }
-  P4EST_ASSERT (level < 16 && tree_num_quadrants <= INT32_MAX);
+  P4EST_ASSERT (level < 16
+                && tree_num_quadrants <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
 
   /* compute index of first tree for this processor */
   global_num_quadrants = tree_num_quadrants * num_trees;
@@ -224,7 +225,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_comm_count_quadrants (p4est);
 
   /* fill in global partition information */
-  global_first_position = P4EST_ALLOC_ZERO (p4est_position_t, num_procs + 1);
+  global_first_position =
+    P4EST_ALLOC_ZERO (p4est_position_t, (size_t) num_procs + 1);
   for (i = 0; i <= num_procs; ++i) {
     first_quadrant = (global_num_quadrants * i) / num_procs;
     first_tree = first_quadrant / tree_num_quadrants;
@@ -282,11 +284,12 @@ p4est_destroy (p4est_t * p4est)
 p4est_t            *
 p4est_copy (p4est_t * input, bool copy_data)
 {
-  const int32_t       num_trees = input->connectivity->num_trees;
-  const int32_t       first_tree = input->first_local_tree;
-  const int32_t       last_tree = input->last_local_tree;
-  int                 icount;
-  int32_t             j, k;
+  const p4est_topidx_t num_trees = input->connectivity->num_trees;
+  const p4est_topidx_t first_tree = input->first_local_tree;
+  const p4est_topidx_t last_tree = input->last_local_tree;
+  size_t              icount;
+  size_t              kz;
+  p4est_topidx_t      jt;
   p4est_t            *p4est;
   p4est_tree_t       *itree, *ptree;
   p4est_quadrant_t   *iq, *pq;
@@ -313,32 +316,32 @@ p4est_copy (p4est_t * input, bool copy_data)
   /* copy quadrants for each tree */
   p4est->trees = sc_array_new (sizeof (p4est_tree_t));
   sc_array_resize (p4est->trees, num_trees);
-  for (j = 0; j < num_trees; ++j) {
-    itree = sc_array_index (input->trees, j);
-    ptree = sc_array_index (p4est->trees, j);
+  for (jt = 0; jt < num_trees; ++jt) {
+    itree = p4est_array_index_topidx (input->trees, jt);
+    ptree = p4est_array_index_topidx (p4est->trees, jt);
     memcpy (ptree, itree, sizeof (p4est_tree_t));
     sc_array_init (&ptree->quadrants, sizeof (p4est_quadrant_t));
   }
-  for (j = first_tree; j <= last_tree; ++j) {
-    itree = sc_array_index (input->trees, j);
+  for (jt = first_tree; jt <= last_tree; ++jt) {
+    itree = p4est_array_index_topidx (input->trees, jt);
     iquadrants = &itree->quadrants;
     icount = iquadrants->elem_count;
-    ptree = sc_array_index (p4est->trees, j);
+    ptree = p4est_array_index_topidx (p4est->trees, jt);
     pquadrants = &ptree->quadrants;
     sc_array_resize (pquadrants, icount);
     memcpy (pquadrants->array, iquadrants->array,
             icount * sizeof (p4est_quadrant_t));
     if (p4est->data_size > 0) {
-      for (k = 0; k < icount; ++k) {
-        iq = sc_array_index (iquadrants, k);
-        pq = sc_array_index (pquadrants, k);
+      for (kz = 0; kz < icount; ++kz) {
+        iq = sc_array_index (iquadrants, kz);
+        pq = sc_array_index (pquadrants, kz);
         pq->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
         memcpy (pq->p.user_data, iq->p.user_data, p4est->data_size);
       }
     }
     else {
-      for (k = 0; k < icount; ++k) {
-        pq = sc_array_index (pquadrants, k);
+      for (kz = 0; kz < icount; ++kz) {
+        pq = sc_array_index (pquadrants, kz);
         pq->p.user_data = NULL;
       }
     }
@@ -421,7 +424,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       if (dorefine) {
         break;
       }
-      maxlevel = SC_MAX (maxlevel, q->level);
+      maxlevel = SC_MAX (maxlevel, (int) q->level);
       ++tree->quadrants_per_level[q->level];
     }
     if (!dorefine) {
@@ -486,7 +489,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         }
         q = sc_array_index (tquadrants, current);
         *q = *qpop;
-        maxlevel = SC_MAX (maxlevel, qpop->level);
+        maxlevel = SC_MAX (maxlevel, (int) qpop->level);
         ++tree->quadrants_per_level[qpop->level];
         ++current;
         sc_mempool_free (p4est->quadrant_pool, qpop);
@@ -682,14 +685,16 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
  */
 static void
 p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
-                        int32_t qtree, int inter_tree,
+                        p4est_topidx_t qtree, bool inter_tree,
                         const p4est_quadrant_t * q,
                         const p4est_quadrant_t * insul,
                         int *first_peer, int *last_peer)
 {
   const int           rank = p4est->mpirank;
-  int                 found, back, pos, scount;
-  int32_t             owner, first_owner, last_owner;
+  bool                found;
+  int                 back, pos;
+  size_t              scount;
+  int                 owner, first_owner, last_owner;
   p4est_quadrant_t    ld, *s;
   p4est_balance_peer_t *peer;
 
@@ -706,17 +711,17 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
     if (owner == rank && !inter_tree) {
       continue;
     }
-    peer = sc_array_index (peers, owner);
+    peer = sc_array_index_int (peers, owner);
     /* avoid duplicates in the send array */
-    found = 0;
+    found = false;
     for (back = 0; back < 8; ++back) {
-      pos = peer->send_first.elem_count - back - 1;
+      pos = (int) peer->send_first.elem_count - back - 1;
       if (pos < 0) {
         break;
       }
-      s = sc_array_index (&peer->send_first, pos);
+      s = sc_array_index_int (&peer->send_first, pos);
       if (p4est_quadrant_is_equal (s, q) && s->p.piggy.which_tree == qtree) {
-        found = 1;
+        found = true;
         break;
       }
     }
@@ -1027,7 +1032,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                 zcorner = p4est_corner_to_zorder[ci->ncorner];
                 p4est_quadrant_corner (&tosend, zcorner, 0);
                 p4est_quadrant_corner (&insulq, zcorner, 1);
-                p4est_balance_schedule (p4est, peers, ci->ntree, 1,
+                p4est_balance_schedule (p4est, peers, ci->ntree, true,
                                         &tosend, &insulq,
                                         &first_peer, &last_peer);
               }
@@ -1051,14 +1056,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               p4est_quadrant_transform (&tempq, &tosend, transform);
               p4est_quadrant_translate (&insulq, face);
               p4est_quadrant_transform (&insulq, &tempq, transform);
-              p4est_balance_schedule (p4est, peers, qtree, 1,
+              p4est_balance_schedule (p4est, peers, qtree, true,
                                       &tosend, &tempq,
                                       &first_peer, &last_peer);
             }
           }
           else {
             /* no inter-tree contact */
-            p4est_balance_schedule (p4est, peers, j, 0,
+            p4est_balance_schedule (p4est, peers, j, false,
                                     q, &insulq, &first_peer, &last_peer);
           }
         }
@@ -1770,16 +1775,17 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   int                 send_lowest, send_highest;
   int                 num_sends, rcount, base_index;
   size_t              lz;
+  ssize_t             lowers;
   p4est_topidx_t      nt;
-  int32_t             k, qcount;
-  int32_t            *num_quadrants_in_proc;
-  int64_t             prev_quadrant, next_quadrant;
+  p4est_locidx_t      kl, qlocal;
+  p4est_locidx_t     *num_quadrants_in_proc;
+  p4est_gloidx_t      prev_quadrant, next_quadrant;
+  p4est_gloidx_t      send_index, recv_low, recv_high, qcount;
+  p4est_gloidx_t     *send_array;
   int64_t             weight, weight_sum;
   int64_t             cut, my_lowcut, my_highcut;
-  int64_t             send_index, recv_low, recv_high;
   int64_t            *local_weights;    /* cumulative weights by quadrant */
   int64_t            *global_weight_sums;
-  int64_t            *send_array;
   p4est_quadrant_t   *q;
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
@@ -1799,35 +1805,38 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   }
 
   /* allocate new quadrant distribution counts */
-  num_quadrants_in_proc = P4EST_ALLOC (int32_t, num_procs);
+  num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   if (weight_fn == NULL) {
     /* Divide up the quadants equally */
     for (p = 0, next_quadrant = 0; p < num_procs; ++p) {
       prev_quadrant = next_quadrant;
       next_quadrant = (global_num_quadrants * (p + 1)) / num_procs;
-      num_quadrants_in_proc[p] = (int32_t) (next_quadrant - prev_quadrant);
+      qcount = next_quadrant - prev_quadrant;
+      P4EST_ASSERT (0 <= qcount && qcount <= P4EST_LOCIDX_MAX);
+      num_quadrants_in_proc[p] = (p4est_locidx_t) (qcount);
     }
   }
   else {
     /* do a weighted partition */
     local_weights = P4EST_ALLOC (int64_t, local_num_quadrants + 1);
     global_weight_sums = P4EST_ALLOC (int64_t, num_procs + 1);
-    P4EST_VERBOSEF ("local quadrant count %d\n", p4est->local_num_quadrants);
+    P4EST_VERBOSEF ("local quadrant count %lld\n",
+                    (long long) local_num_quadrants);
 
     /* linearly sum weights across all trees */
-    k = 0;
+    kl = 0;
     local_weights[0] = 0;
     for (nt = first_tree; nt <= last_tree; ++nt) {
       tree = p4est_array_index_topidx (p4est->trees, nt);
-      for (lz = 0; lz < tree->quadrants.elem_count; ++lz, ++k) {
+      for (lz = 0; lz < tree->quadrants.elem_count; ++lz, ++kl) {
         q = sc_array_index (&tree->quadrants, lz);
         weight = weight_fn (p4est, nt, q);
         P4EST_ASSERT (weight >= 0);
-        local_weights[k + 1] = local_weights[k] + weight;
+        local_weights[kl + 1] = local_weights[kl] + weight;
       }
     }
-    P4EST_ASSERT (k == local_num_quadrants);
+    P4EST_ASSERT (kl == local_num_quadrants);
     weight_sum = local_weights[local_num_quadrants];
     P4EST_VERBOSEF ("local weight sum %lld\n", (long long) weight_sum);
 
@@ -1844,8 +1853,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     if (rank > 0) {
       weight_sum = global_weight_sums[rank];
-      for (k = 0; k <= local_num_quadrants; ++k) {
-        local_weights[k] += weight_sum;
+      for (kl = 0; kl <= local_num_quadrants; ++kl) {
+        local_weights[kl] += weight_sum;
       }
     }
     P4EST_ASSERT (local_weights[0] == global_weight_sums[rank]);
@@ -1894,37 +1903,41 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     else {
       send_requests = P4EST_ALLOC (MPI_Request, num_sends);
-      send_array = P4EST_ALLOC (int64_t, num_sends);
-      k = 0;
+      send_array = P4EST_ALLOC (p4est_gloidx_t, num_sends);
+      lowers = 0;
       for (i = send_lowest; i <= send_highest; ++i) {
         base_index = 2 * (i - send_lowest);
         if (i < num_procs) {
           /* do binary search in the weight array */
-          k = p4est_int64_lower_bound ((weight_sum * i) / num_procs,
-                                       local_weights,
-                                       local_num_quadrants + 1, k);
-          P4EST_ASSERT (k > 0 && k <= local_num_quadrants);
-          send_index = send_array[base_index + 1] = k +
+          lowers = p4est_int64_lower_bound ((weight_sum * i) / num_procs,
+                                            local_weights,
+                                            (size_t) local_num_quadrants + 1,
+                                            (size_t) lowers);
+          P4EST_ASSERT (lowers > 0
+                        && (p4est_locidx_t) lowers <= local_num_quadrants);
+          send_index = send_array[base_index + 1] =
+            (p4est_gloidx_t) lowers +
             ((rank > 0) ? (p4est->global_last_quad_index[rank - 1] + 1) : 0);
 
           /* send low bound */
-          mpiret = MPI_Isend (&send_array[base_index + 1], 1, MPI_LONG_LONG,
-                              i, P4EST_COMM_PARTITION_WEIGHTED_LOW,
-                              p4est->mpicomm, &send_requests[base_index + 1]);
+          mpiret =
+            MPI_Isend (&send_array[base_index + 1], 1, P4EST_MPI_GLOIDX, i,
+                       P4EST_COMM_PARTITION_WEIGHTED_LOW, p4est->mpicomm,
+                       &send_requests[base_index + 1]);
           SC_CHECK_MPI (mpiret);
         }
         else {
-          k = 0;
+          lowers = 0;
           send_index = global_num_quadrants;
           send_requests[base_index + 1] = MPI_REQUEST_NULL;
           send_array[base_index + 1] = -1;
         }
-        P4EST_LDEBUGF ("send pos %d index %lld high %d low %d\n",
-                       k, (long long) send_index, i - 1, i);
+        P4EST_LDEBUGF ("send pos %lld index %lld high %d low %d\n",
+                       (long long) lowers, (long long) send_index, i - 1, i);
 
         /* send high bound */
         send_array[base_index] = send_index;
-        mpiret = MPI_Isend (&send_array[base_index], 1, MPI_LONG_LONG,
+        mpiret = MPI_Isend (&send_array[base_index], 1, P4EST_MPI_GLOIDX,
                             i - 1, P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                             p4est->mpicomm, &send_requests[base_index]);
         SC_CHECK_MPI (mpiret);
@@ -1944,7 +1957,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
         if (global_weight_sums[i] < my_lowcut &&
             my_lowcut <= global_weight_sums[i + 1]) {
           P4EST_LDEBUGF ("receive low cut from %d\n", i);
-          mpiret = MPI_Irecv (&recv_low, 1, MPI_LONG_LONG, i,
+          mpiret = MPI_Irecv (&recv_low, 1, P4EST_MPI_GLOIDX, i,
                               P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm, &recv_requests[0]);
           SC_CHECK_MPI (mpiret);
@@ -1965,7 +1978,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
         if (global_weight_sums[i] < my_highcut &&
             my_highcut <= global_weight_sums[i + 1]) {
           P4EST_LDEBUGF ("receive high cut from %d\n", i);
-          mpiret = MPI_Irecv (&recv_high, 1, MPI_LONG_LONG, i,
+          mpiret = MPI_Irecv (&recv_high, 1, P4EST_MPI_GLOIDX, i,
                               P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                               p4est->mpicomm, &recv_requests[1]);
           SC_CHECK_MPI (mpiret);
@@ -1996,7 +2009,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
                       "Wait low source");
       SC_CHECK_ABORT (recv_statuses[0].MPI_TAG ==
                       P4EST_COMM_PARTITION_WEIGHTED_LOW, "Wait low tag");
-      mpiret = MPI_Get_count (&recv_statuses[0], MPI_LONG_LONG, &rcount);
+      mpiret = MPI_Get_count (&recv_statuses[0], P4EST_MPI_GLOIDX, &rcount);
       SC_CHECK_MPI (mpiret);
       SC_CHECK_ABORTF (rcount == 1, "Wait low count %d", rcount);
     }
@@ -2005,17 +2018,18 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
                       "Wait high source");
       SC_CHECK_ABORT (recv_statuses[1].MPI_TAG ==
                       P4EST_COMM_PARTITION_WEIGHTED_HIGH, "Wait high tag");
-      mpiret = MPI_Get_count (&recv_statuses[1], MPI_LONG_LONG, &rcount);
+      mpiret = MPI_Get_count (&recv_statuses[1], P4EST_MPI_GLOIDX, &rcount);
       SC_CHECK_MPI (mpiret);
       SC_CHECK_ABORTF (rcount == 1, "Wait high count %d", rcount);
     }
 
     /* communicate the quadrant ranges */
     qcount = recv_high - recv_low;
-    P4EST_ASSERT (qcount >= 0);
-    P4EST_LDEBUGF ("weighted partition count %d\n", qcount);
-    mpiret = MPI_Allgather (&qcount, 1, MPI_INT,
-                            num_quadrants_in_proc, 1, MPI_INT,
+    P4EST_LDEBUGF ("weighted partition count %lld\n", (long long) qcount);
+    P4EST_ASSERT (qcount >= 0 && qcount <= P4EST_LOCIDX_MAX);
+    qlocal = (p4est_locidx_t) qcount;
+    mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_LOCIDX,
+                            num_quadrants_in_proc, 1, P4EST_MPI_LOCIDX,
                             p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
 

@@ -25,9 +25,9 @@
 
 void
 p4est_order_local_vertices (p4est_t * p4est,
-                            int identify_periodic,
-                            p4est_locidx_t * num_uniq_local_vertices,
-                            p4est_locidx_t * quadrant_to_local_vertex)
+                            bool identify_periodic,
+                            p4est_topidx_t * num_uniq_local_vertices,
+                            p4est_topidx_t * quadrant_to_local_vertex)
 {
   const int           rank = p4est->mpirank;
   int                 qcid, transform;
@@ -37,13 +37,13 @@ p4est_order_local_vertices (p4est_t * p4est,
   int                 quad_contact[4];
   p4est_locidx_t      Ntotal = 0;
   p4est_locidx_t      Ncells = p4est->local_num_quadrants;
-  p4est_locidx_t      first_local_tree = p4est->first_local_tree;
-  p4est_locidx_t      last_local_tree = p4est->last_local_tree;
+  p4est_topidx_t      first_local_tree = p4est->first_local_tree;
+  p4est_topidx_t      last_local_tree = p4est->last_local_tree;
   sc_array_t         *trees = p4est->trees;
   p4est_connectivity_t *conn = p4est->connectivity;
-  p4est_locidx_t      num_trees = conn->num_trees;
+  p4est_topidx_t      num_trees = conn->num_trees;
   p4est_locidx_t      il, jl;
-  p4est_locidx_t      vertex_num;
+  p4est_topidx_t      vertex_num;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
   p4est_locidx_t      num_quadrants;
   p4est_locidx_t      lqid;

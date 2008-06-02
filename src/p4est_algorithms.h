@@ -44,7 +44,7 @@ int                 p4est_quadrant_compare_piggy (const void *v1,
 /** Test if two quadrants have equal Morton indices.
  * \return 1 if \a v1 describes the same quadrant as \a v2.
  */
-int                 p4est_quadrant_is_equal (const void *v1, const void *v2);
+bool                p4est_quadrant_is_equal (const void *v1, const void *v2);
 
 /** Computes a hash value for a quadrant in 0..2^30-1.
  */
@@ -57,40 +57,40 @@ int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
- * \return Returns 1 if \a q is inside the unit tree.
+ * \return Returns true if \a q is inside the unit tree.
  */
-int                 p4est_quadrant_is_inside (const p4est_quadrant_t * q);
+bool                p4est_quadrant_is_inside (const p4est_quadrant_t * q);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
- * \return Returns 1 if \a q is valid.
+ * \return Returns true if \a q is valid.
  */
-int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
+bool                p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
 /** Test if a quadrant has valid Morton indices in the full index range.
  * \param [in] q Quadrant to be tested.
- * \return Returns 1 if \a q is extended.
+ * \return Returns true if \a q is extended.
  */
-int                 p4est_quadrant_is_extended (const p4est_quadrant_t * q);
+bool                p4est_quadrant_is_extended (const p4est_quadrant_t * q);
 
 /** Test if two quadrants are siblings.
  * \param [in] q1 First quadrant to be tested.
  * \param [in] q2 Second quadrant to be tested.
- * \return 1 if \a q1 is unequal to and a sibling of \a q2.
+ * \return true if \a q1 is unequal to and a sibling of \a q2.
  */
-int                 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
+bool                p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
                                                const p4est_quadrant_t * q2);
 
 /** Test if two quadrants are siblings.
  * Descriptive, slower version of \a p4est_quadrant_is_sibling.
  * For debugging and educational purposes only.
  */
-int                 p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
+bool                p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
                                                  const p4est_quadrant_t * q2);
 
 /** Test if four quadrants are siblings in Morton ordering.
  */
-int                 p4est_quadrant_is_family (const p4est_quadrant_t * q0,
+bool                p4est_quadrant_is_family (const p4est_quadrant_t * q0,
                                               const p4est_quadrant_t * q1,
                                               const p4est_quadrant_t * q2,
                                               const p4est_quadrant_t * q3);
@@ -98,24 +98,24 @@ int                 p4est_quadrant_is_family (const p4est_quadrant_t * q0,
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Possible child quadrant.
- * \return 1 if \a q is the parent of \a r.
+ * \return true if \a q is the parent of \a r.
  */
-int                 p4est_quadrant_is_parent (const p4est_quadrant_t * q,
+bool                p4est_quadrant_is_parent (const p4est_quadrant_t * q,
                                               const p4est_quadrant_t * r);
 
 /** Test if a quadrant it the parent of another quadrant.
  * Descriptive, slower version of \a p4est_quadrant_is_parent.
  * For debugging and educational purposes only.
  */
-int                 p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
+bool                p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
                                                 const p4est_quadrant_t * r);
 
 /** Test if a quadrant is an ancestor of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Descendent quadrant.
- * \return 1 if \a q is unequal to and an ancestor of \a r.
+ * \return true if \a q is unequal to and an ancestor of \a r.
  */
-int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
+bool                p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                                                 const p4est_quadrant_t * r);
 
 /** Test if a quadrant is an ancestor of another quadrant.
@@ -123,23 +123,23 @@ int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
  * Contrary to \a p4est_quadrant_is_ancestor, it aborts for inter-tree q, r.
  * For debugging and educational purposes only.
  */
-int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
+bool                p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * r);
 
 /** Test if two quadrants follow each other in the tree with no holes.
  * \param [in] q A quadrant
  * \param [in] r Another quadrant
- * \return 1 if \a q is immediately before \a r in the tree.
+ * \return true if \a q is immediately before \a r in the tree.
  * \note for every \a q there are between 0 and P4EST_MAXLEVEL+1 possible nexts.
  */
-int                 p4est_quadrant_is_next (const p4est_quadrant_t * q,
+bool                p4est_quadrant_is_next (const p4est_quadrant_t * q,
                                             const p4est_quadrant_t * r);
 
 /** Test if two quadrants follow each other in the tree with no holes.
  * Descriptive, slower version of \a p4est_quadrant_is_next.
  * For debugging and educational purposes only.
  */
-int                 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
+bool                p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                                               const p4est_quadrant_t * r);
 
 /** Compute the parent of a quadrant.
@@ -310,29 +310,29 @@ unsigned            p4est_quadrant_checksum (sc_array_t * quadrants,
                                              int first_quadrant);
 
 /** Test if a tree is sorted in Morton ordering.
- * \return Returns 1 if sorted, 0 otherwise.
+ * \return Returns true if sorted, false otherwise.
  * \note Duplicate quadrants are not allowed.
  */
-int                 p4est_tree_is_sorted (p4est_tree_t * tree);
+bool                p4est_tree_is_sorted (p4est_tree_t * tree);
 
 /** Test if a tree is sorted in Morton ordering and linear.
- * \return Returns 1 if linear, 0 otherwise.
+ * \return Returns true if linear, false otherwise.
  * \note Linear means that the tree has no overlaps.
  */
-int                 p4est_tree_is_linear (p4est_tree_t * tree);
+bool                p4est_tree_is_linear (p4est_tree_t * tree);
 
 /** Test if a tree is sorted in Morton ordering and complete.
- * \return Returns 1 if complete, 0 otherwise.
+ * \return Returns true if complete, false otherwise.
  * \note Complete means that the tree has no holes and no overlaps.
  */
-int                 p4est_tree_is_complete (p4est_tree_t * tree);
+bool                p4est_tree_is_complete (p4est_tree_t * tree);
 
 /** Check if a tree is sorted/linear except for diagonally outside corners.
  * \param [in]  check_linearity  Boolean for additional check for linearity.
- * \return Returns 1 if almost sorted/linear, 0 otherwise.
+ * \return Returns true if almost sorted/linear, false otherwise.
  */
-int                 p4est_tree_is_almost_sorted (p4est_tree_t * tree,
-                                                 int check_linearity);
+bool                p4est_tree_is_almost_sorted (p4est_tree_t * tree,
+                                                 bool check_linearity);
 
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
@@ -355,23 +355,25 @@ void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
  *    all trees are complete
  *    all non-local trees are empty
  * \param [in] p4est  The p4est to be tested.
- * \return Returns 1 if valid, 0 otherwise.
+ * \return Returns true if valid, false otherwise.
  */
-int                 p4est_is_valid (p4est_t * p4est);
+bool                p4est_is_valid (p4est_t * p4est);
 
 /** Find the lowest position tq in a quadrant array such that tq >= q.
- * \return  Returns the id of the matching quadrant, or -1 if not found.
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
  */
-int                 p4est_find_lower_bound (sc_array_t * array,
+ssize_t             p4est_find_lower_bound (sc_array_t * array,
                                             const p4est_quadrant_t * q,
-                                            int guess);
+                                            size_t guess);
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
- * \return  Returns the id of the matching quadrant, or -1 if not found.
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
  */
-int                 p4est_find_higher_bound (sc_array_t * array,
+ssize_t             p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
-                                             int guess);
+                                             size_t guess);
 
 /** Compute the overlap of a number of insulation layers with a tree.
  * Every quadrant out of the insulation layer of the quadrants in \a in
@@ -416,9 +418,9 @@ void                p4est_tree_uniqify_overlap (sc_array_t * not,
  */
 void                p4est_complete_region (p4est_t * p4est,
                                            const p4est_quadrant_t * q1,
-                                           int include_q1,
+                                           bool include_q1,
                                            const p4est_quadrant_t * q2,
-                                           int include_q2,
+                                           bool include_q2,
                                            p4est_tree_t * tree,
                                            p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);

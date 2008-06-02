@@ -24,12 +24,13 @@
 
 typedef struct
 {
-  int32_t             a;
+  p4est_topidx_t      a;
 }
 user_data_t;
 
 static void
-init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t * quadrant)
 {
   user_data_t        *data = quadrant->p.user_data;
 
@@ -37,7 +38,8 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 }
 
 static int
-refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * quadrant)
 {
   if (quadrant->level >= 6) {
     return 0;
@@ -61,7 +63,7 @@ main (int argc, char **argv)
   MPI_Comm            mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  int64_t             qglobal, qlocal, qbegin, qend;
+  p4est_gloidx_t      qglobal, qlocal, qbegin, qend;
   int                 i;
 
   mpiret = MPI_Init (&argc, &argv);
@@ -83,8 +85,8 @@ main (int argc, char **argv)
 
   /* Check the global number of elements */
   qlocal = p4est->local_num_quadrants;
-  qglobal = qlocal;
-  mpiret = MPI_Allreduce (&qlocal, &qglobal, 1, MPI_LONG_LONG, MPI_SUM,
+  qglobal = -13473829;
+  mpiret = MPI_Allreduce (&qlocal, &qglobal, 1, P4EST_MPI_GLOIDX, MPI_SUM,
                           p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   SC_CHECK_ABORT (qglobal == p4est->global_num_quadrants,
@@ -100,7 +102,7 @@ main (int argc, char **argv)
     }
 
     qglobal = qlocal;
-    mpiret = MPI_Bcast (&qglobal, 1, MPI_LONG_LONG, i, p4est->mpicomm);
+    mpiret = MPI_Bcast (&qglobal, 1, P4EST_MPI_GLOIDX, i, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
 
     qbegin = (i == 0) ? 0 : p4est->global_last_quad_index[i - 1];

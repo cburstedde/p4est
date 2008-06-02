@@ -24,7 +24,7 @@
 
 typedef struct
 {
-  int32_t             a;
+  p4est_topidx_t      a;
   int64_t             sum;
 }
 user_data_t;
@@ -33,7 +33,8 @@ static int          weight_counter;
 static int          weight_index;
 
 static void
-init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t * quadrant)
 {
   user_data_t        *data = quadrant->p.user_data;
 
@@ -42,7 +43,8 @@ init_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 }
 
 static int
-refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * quadrant)
 {
   if (quadrant->level >= 6) {
     return 0;
@@ -59,13 +61,15 @@ refine_fn (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
 }
 
 static int
-weight_one (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+weight_one (p4est_t * p4est, p4est_topidx_t which_tree,
+            p4est_quadrant_t * quadrant)
 {
   return 1;
 }
 
 static int
-weight_once (p4est_t * p4est, int32_t which_tree, p4est_quadrant_t * quadrant)
+weight_once (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrant)
 {
   if (weight_counter++ == weight_index) {
     return 1;
@@ -143,7 +147,7 @@ main (int argc, char **argv)
 
   /* check user data content */
   for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
-    tree = sc_array_index (p4est->trees, t);
+    tree = p4est_array_index_topidx (p4est->trees, t);
     for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
       quad = sc_array_index (&tree->quadrants, qz);
       user_data = (user_data_t *) quad->p.user_data;
@@ -191,7 +195,7 @@ main (int argc, char **argv)
 
   /* check user data content */
   for (t = copy->first_local_tree; t <= copy->last_local_tree; ++t) {
-    tree = sc_array_index (copy->trees, t);
+    tree = p4est_array_index_topidx (copy->trees, t);
     for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
       quad = sc_array_index (&tree->quadrants, qz);
       user_data = (user_data_t *) quad->p.user_data;
