@@ -307,7 +307,7 @@ void                p4est_quadrant_print (int log_priority,
  */
 unsigned            p4est_quadrant_checksum (sc_array_t * quadrants,
                                              sc_array_t * checkarray,
-                                             int first_quadrant);
+                                             size_t first_quadrant);
 
 /** Test if a tree is sorted in Morton ordering.
  * \return Returns true if sorted, false otherwise.
