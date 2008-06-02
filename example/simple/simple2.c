@@ -304,4 +304,4 @@ main (int argc, char **argv)
   return 0;
 }
 
-/* EOF simple.c */
+/* EOF simple2.c */
