@@ -1451,7 +1451,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
           /* do a binary search for the highest tree quadrant <= ld */
           last_index = p4est_find_higher_bound (tquadrants, &ld, guess);
           if (last_index < 0) {
-            printf ("Last index < 0\n");
+            P4EST_VERBOSE ("Last index < 0\n");
             continue;
           }
         }
@@ -1922,7 +1922,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
           }
         }
         /*
-           printf ("Candidate level %d qxy 0x%x 0x%x at sid %d\n",
+           P4EST_DEBUGF ("Candidate level %d qxy 0x%x 0x%x at sid %d\n",
            qalloc->level, qalloc->x, qalloc->y, sid);
          */
 

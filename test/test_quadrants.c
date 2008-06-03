@@ -432,8 +432,8 @@ main (void)
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0, "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0, "compare_piggy");
 
-  F.p.piggy.which_tree = 89134529;
-  G.p.piggy.which_tree = 2341333;
+  F.p.piggy.which_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX - 3;
+  G.p.piggy.which_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX / 2;
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
                   "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) < 0, "compare_piggy");

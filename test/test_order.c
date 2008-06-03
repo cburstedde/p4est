@@ -126,8 +126,8 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
     v3z;
   double              w0x, w0y, w0z, w1x, w1y, w1z, w2x, w2y, w2z, w3x, w3y,
     w3z;
-  int32_t             v0, v1, v2, v3;
-  int32_t             lv0, lv1, lv2, lv3;
+  p4est_topidx_t      v0, v1, v2, v3;
+  p4est_topidx_t      lv0, lv1, lv2, lv3;
   double              intsize = 1.0 / P4EST_ROOT_LEN;
   sc_array_t         *trees;
   sc_array_t         *quadrants;
@@ -143,6 +143,8 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   p4est_order_local_vertices (p4est, identify_periodic,
                               &num_uniq_local_vertices,
                               quadrant_to_local_vertex);
+  P4EST_INFOF ("Unique local vertices %lld\n",
+               (long long) num_uniq_local_vertices);
 
   vert_locations = P4EST_ALLOC (p4est_vert_t, num_uniq_local_vertices);
 
@@ -158,10 +160,18 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
      * Note that we switch from right-hand-rule order for tree_to_vertex
      * to pixel order for v
      */
+
+    P4EST_ASSERT (0 <= jt && jt < connectivity->num_trees);
+
     v0 = tree_to_vertex[jt * 4 + 0];
     v1 = tree_to_vertex[jt * 4 + 1];
     v2 = tree_to_vertex[jt * 4 + 3];
     v3 = tree_to_vertex[jt * 4 + 2];
+
+    P4EST_ASSERT (0 <= v0 && v0 < connectivity->num_vertices);
+    P4EST_ASSERT (0 <= v1 && v1 < connectivity->num_vertices);
+    P4EST_ASSERT (0 <= v2 && v2 < connectivity->num_vertices);
+    P4EST_ASSERT (0 <= v3 && v3 < connectivity->num_vertices);
 
     v0x = vertices[v0 * 3 + 0];
     v0y = vertices[v0 * 3 + 1];
@@ -247,10 +257,19 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
         + v2z * (1.0 - eta1 - h) * (eta2 + h)
         + v3z * (eta1 + h) * (eta2 + h);
 
+      P4EST_ASSERT ((p4est_locidx_t) quad_count < p4est->local_num_quadrants);
+
       lv0 = quadrant_to_local_vertex[4 * quad_count + 0];
       lv1 = quadrant_to_local_vertex[4 * quad_count + 1];
       lv2 = quadrant_to_local_vertex[4 * quad_count + 2];
       lv3 = quadrant_to_local_vertex[4 * quad_count + 3];
+
+      P4EST_LDEBUGF ("%lld %lld\n",
+                     (long long) lv3, (long long) num_uniq_local_vertices);
+      P4EST_ASSERT (0 <= lv0 && lv0 < num_uniq_local_vertices);
+      P4EST_ASSERT (0 <= lv1 && lv1 < num_uniq_local_vertices);
+      P4EST_ASSERT (0 <= lv2 && lv2 < num_uniq_local_vertices);
+      P4EST_ASSERT (0 <= lv3 && lv3 < num_uniq_local_vertices);
 
       vert_locations[lv0].x = w0x;
       vert_locations[lv0].y = w0y;

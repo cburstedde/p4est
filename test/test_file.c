@@ -27,7 +27,7 @@ main (int argc, char **argv)
   int                 rank;
   int                 retval;
   int                 fd;
-  int32_t             i;
+  p4est_topidx_t      it;
   FILE               *outfile;
   int                 mpiret;
   MPI_Comm            mpicomm;
@@ -85,16 +85,16 @@ main (int argc, char **argv)
     "7     1   7\n"
     "[Element Tags]\n" "[Face Tags]\n" "[Curved Faces]\n" "[Curved Types]\n";
 
-  const int32_t       num_trees = 3;
-  const int32_t       num_vertices = 7;
-  const int32_t       num_vtt = 12;
-  const int32_t       tree_to_vertex[] = {
+  const p4est_topidx_t num_trees = 3;
+  const p4est_topidx_t num_vertices = 7;
+  const p4est_topidx_t num_vtt = 12;
+  const p4est_topidx_t tree_to_vertex[] = {
     0, 1, 3, 2, 0, 2, 5, 6, 2, 3, 4, 5
   };
-  const int32_t       tree_to_tree[] = {
+  const p4est_topidx_t tree_to_tree[] = {
     0, 0, 2, 1, 0, 2, 1, 1, 0, 2, 2, 1
   };
-  const int32_t       tree_to_face[] = {
+  const int8_t        tree_to_face[] = {
     0, 1, 0, 0, 3, 3, 2, 3, 2, 1, 2, 1
   };
   const double        vertices[] = {
@@ -106,10 +106,10 @@ main (int argc, char **argv)
     0.00000000000e+00, 1.00000000000e+00, 0.00000000000e+00,
     -1.00000000000e+00, 0.00000000000e+00, 0.00000000000e+00
   };
-  const int32_t       vtt_offset[] = {
+  const p4est_topidx_t vtt_offset[] = {
     0, 2, 3, 6, 8, 9, 11, 12
   };
-  const int32_t       vertex_to_tree[] = {
+  const p4est_topidx_t vertex_to_tree[] = {
     0, 1, 0, 0, 2, 1, 0, 2, 2, 1, 2, 1
   };
 
@@ -150,23 +150,23 @@ main (int argc, char **argv)
   /* Check what was read in */
   SC_CHECK_ABORT (connectivity->num_trees == num_trees, "num_trees");
   SC_CHECK_ABORT (connectivity->num_vertices == num_vertices, "num_vertices");
-  for (i = 0; i < num_trees * 4; ++i)
-    SC_CHECK_ABORT (connectivity->tree_to_vertex[i] == tree_to_vertex[i],
+  for (it = 0; it < num_trees * 4; ++it)
+    SC_CHECK_ABORT (connectivity->tree_to_vertex[it] == tree_to_vertex[it],
                     "tree_to_vertices");
-  for (i = 0; i < num_trees * 4; ++i)
-    SC_CHECK_ABORT (connectivity->tree_to_tree[i] == tree_to_tree[i],
+  for (it = 0; it < num_trees * 4; ++it)
+    SC_CHECK_ABORT (connectivity->tree_to_tree[it] == tree_to_tree[it],
                     "tree_to_tree");
-  for (i = 0; i < num_trees * 4; ++i)
-    SC_CHECK_ABORT (connectivity->tree_to_face[i] == tree_to_face[i],
+  for (it = 0; it < num_trees * 4; ++it)
+    SC_CHECK_ABORT (connectivity->tree_to_face[it] == tree_to_face[it],
                     "tree_to_face");
-  for (i = 0; i < num_vertices * 3; ++i)
-    SC_CHECK_ABORT (fabs (connectivity->vertices[i] - vertices[i]) < EPS,
+  for (it = 0; it < num_vertices * 3; ++it)
+    SC_CHECK_ABORT (fabs (connectivity->vertices[it] - vertices[it]) < EPS,
                     "vertices");
-  for (i = 0; i < num_vertices + 1; ++i)
-    SC_CHECK_ABORT (connectivity->vtt_offset[i] == vtt_offset[i],
+  for (it = 0; it < num_vertices + 1; ++it)
+    SC_CHECK_ABORT (connectivity->vtt_offset[it] == vtt_offset[it],
                     "vtt_offset");
-  for (i = 0; i < num_vtt; ++i)
-    SC_CHECK_ABORT (connectivity->vertex_to_tree[i] == vertex_to_tree[i],
+  for (it = 0; it < num_vtt; ++it)
+    SC_CHECK_ABORT (connectivity->vertex_to_tree[it] == vertex_to_tree[it],
                     "vertex_to_tree");
 
   /* destroy the p4est and its connectivity structure */
