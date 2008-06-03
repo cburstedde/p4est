@@ -112,8 +112,9 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 {
   size_t              iz;
   p4est_topidx_t      jt;
-  p4est_topidx_t      num_uniq_local_vertices;
-  p4est_topidx_t     *quadrant_to_local_vertex;
+  p4est_locidx_t      kl;
+  p4est_locidx_t      num_uniq_local_vertices;
+  p4est_locidx_t     *quadrant_to_local_vertex;
   p4est_topidx_t     *tree_to_vertex;
   double             *vertices;
   p4est_tree_t       *tree;
@@ -127,7 +128,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   double              w0x, w0y, w0z, w1x, w1y, w1z, w2x, w2y, w2z, w3x, w3y,
     w3z;
   p4est_topidx_t      v0, v1, v2, v3;
-  p4est_topidx_t      lv0, lv1, lv2, lv3;
+  p4est_locidx_t      lv0, lv1, lv2, lv3;
   double              intsize = 1.0 / P4EST_ROOT_LEN;
   sc_array_t         *trees;
   sc_array_t         *quadrants;
@@ -136,7 +137,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   bool                identify_periodic;
   p4est_vert_t       *vert_locations;
 
-  quadrant_to_local_vertex = P4EST_ALLOC (p4est_topidx_t,
+  quadrant_to_local_vertex = P4EST_ALLOC (p4est_locidx_t,
                                           4 * p4est->local_num_quadrants);
 
   identify_periodic = true;
@@ -264,8 +265,6 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
       lv2 = quadrant_to_local_vertex[4 * quad_count + 2];
       lv3 = quadrant_to_local_vertex[4 * quad_count + 3];
 
-      P4EST_LDEBUGF ("%lld %lld\n",
-                     (long long) lv3, (long long) num_uniq_local_vertices);
       P4EST_ASSERT (0 <= lv0 && lv0 < num_uniq_local_vertices);
       P4EST_ASSERT (0 <= lv1 && lv1 < num_uniq_local_vertices);
       P4EST_ASSERT (0 <= lv2 && lv2 < num_uniq_local_vertices);
@@ -293,9 +292,9 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
          p4est_vert_compare);
 
   /* Check to make sure that we don't have any duplicates in the list */
-  for (jt = 0; jt < num_uniq_local_vertices - 1; ++jt) {
-    SC_CHECK_ABORT (p4est_vert_compare (vert_locations + jt,
-                                        vert_locations + jt + 1) != 0,
+  for (kl = 0; kl < num_uniq_local_vertices - 1; ++kl) {
+    SC_CHECK_ABORT (p4est_vert_compare (vert_locations + kl,
+                                        vert_locations + kl + 1) != 0,
                     "local ordering not unique");
   }
 

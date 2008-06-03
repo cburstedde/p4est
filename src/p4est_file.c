@@ -426,47 +426,49 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
   fprintf (nout, "[Coordinates of Element Vertices]\n");
   fprintf (nout, "[Element to Vertex]\n");
   for (lk = 0; lk < num_trees; ++lk)
-    printf ("    %lld    %lld    %lld    %lld    %lld\n",
-            (long long int) (lk + 1),
-            (long long int) (tree_to_vertex[4 * lk + 0] + 1),
-            (long long int) (tree_to_vertex[4 * lk + 1] + 1),
-            (long long int) (tree_to_vertex[4 * lk + 2] + 1),
-            (long long int) (tree_to_vertex[4 * lk + 3] + 1));
+    fprintf (nout, "    %lld    %lld    %lld    %lld    %lld\n",
+             (long long int) (lk + 1),
+             (long long int) (tree_to_vertex[4 * lk + 0] + 1),
+             (long long int) (tree_to_vertex[4 * lk + 1] + 1),
+             (long long int) (tree_to_vertex[4 * lk + 2] + 1),
+             (long long int) (tree_to_vertex[4 * lk + 3] + 1));
   fprintf (nout, "[Element to Element]\n");
   for (lk = 0; lk < num_trees; ++lk)
-    printf ("    %lld    %lld    %lld    %lld    %lld\n",
-            (long long int) (lk + 1),
-            (long long int) (tree_to_tree[4 * lk + 0] + 1),
-            (long long int) (tree_to_tree[4 * lk + 1] + 1),
-            (long long int) (tree_to_tree[4 * lk + 2] + 1),
-            (long long int) (tree_to_tree[4 * lk + 3] + 1));
+    fprintf (nout, "    %lld    %lld    %lld    %lld    %lld\n",
+             (long long int) (lk + 1),
+             (long long int) (tree_to_tree[4 * lk + 0] + 1),
+             (long long int) (tree_to_tree[4 * lk + 1] + 1),
+             (long long int) (tree_to_tree[4 * lk + 2] + 1),
+             (long long int) (tree_to_tree[4 * lk + 3] + 1));
   fprintf (nout, "[Element to Face]\n");
   for (lk = 0; lk < num_trees; ++lk)
-    printf ("    %lld    %d    %d    %d    %d\n",
-            (long long int) (lk + 1),
-            (int) (tree_to_face[4 * lk + 0] + 1),
-            (int) (tree_to_face[4 * lk + 1] + 1),
-            (int) (tree_to_face[4 * lk + 2] + 1),
-            (int) (tree_to_face[4 * lk + 3] + 1));
+    fprintf (nout, "    %lld    %d    %d    %d    %d\n",
+             (long long int) (lk + 1),
+             (int) (tree_to_face[4 * lk + 0] + 1),
+             (int) (tree_to_face[4 * lk + 1] + 1),
+             (int) (tree_to_face[4 * lk + 2] + 1),
+             (int) (tree_to_face[4 * lk + 3] + 1));
   fprintf (nout, "[Vertex to Element]\n");
   for (li = 0; li < num_vertices; ++li) {
     Nnn = vtt_offset[li + 1] - vtt_offset[li];
-    printf ("    %lld   %lld", (long long int) (li + 1), (long long int) Nnn);
+    fprintf (nout, "    %lld   %lld", (long long int) (li + 1),
+             (long long int) Nnn);
     for (lj = 0; lj < Nnn; ++lj) {
-      printf ("    %lld",
-              (long long int) (vertex_to_tree[vtt_offset[li] + lj] + 1));
+      fprintf (nout, "    %lld",
+               (long long int) (vertex_to_tree[vtt_offset[li] + lj] + 1));
     }
-    printf ("\n");
+    fprintf (nout, "\n");
   }
   fprintf (nout, "[Vertex to Vertex]\n");
   for (li = 0; li < num_vertices; ++li) {
     Nnn = vtt_offset[li + 1] - vtt_offset[li];
-    printf ("    %lld   %lld", (long long int) (li + 1), (long long int) Nnn);
+    fprintf (nout, "    %lld   %lld", (long long int) (li + 1),
+             (long long int) Nnn);
     for (lj = 0; lj < Nnn; ++lj) {
-      printf ("    %lld",
-              (long long int) (vertex_to_vertex[vtt_offset[li] + lj] + 1));
+      fprintf (nout, "    %lld",
+               (long long int) (vertex_to_vertex[vtt_offset[li] + lj] + 1));
     }
-    printf ("\n");
+    fprintf (nout, "\n");
   }
   fprintf (nout, "[Element Tags]\n");
   fprintf (nout, "[Face Tags]\n");
