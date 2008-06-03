@@ -85,25 +85,25 @@ p4est_connectivity_read (const char *filename,
   char                buf[BUFSIZ];
   char               *line;
   enum Section        section = NONE;
-  p4est_locidx_t      section_lines_read = 0;
+  p4est_topidx_t      section_lines_read = 0;
   int                 set_num_trees = 0;
   int                 set_num_vertices = 0;
   int                 set_num_vtt = 0;
   char               *key = NULL;
   char               *value = NULL;
-  p4est_locidx_t      num_trees = 0;
-  p4est_locidx_t      num_vertices = 0;
-  p4est_locidx_t      num_vtt = 0;
-  p4est_locidx_t      vtv_i = 0;
+  p4est_topidx_t      num_trees = 0;
+  p4est_topidx_t      num_vertices = 0;
+  p4est_topidx_t      num_vtt = 0;
+  p4est_topidx_t      vtv_i = 0;
   long long int       llk, llk0, llk1, llk2, llk3, llv0, llv1, llv2, llv3;
   int                 f0, f1, f2, f3;
-  p4est_locidx_t      k, k0, k1, k2, k3, v0, v1, v2, v3;
-  p4est_locidx_t      il, Nnn;
-  p4est_locidx_t     *tree_to_vertex = NULL;
-  p4est_locidx_t     *tree_to_tree = NULL;
-  p4est_locidx_t     *vtt_offset = NULL;
-  p4est_locidx_t     *vertex_to_tree = NULL;
-  p4est_locidx_t     *vertex_to_vertex = NULL;
+  p4est_topidx_t      k, k0, k1, k2, k3, v0, v1, v2, v3;
+  p4est_topidx_t      il, Nnn;
+  p4est_topidx_t     *tree_to_vertex = NULL;
+  p4est_topidx_t     *tree_to_tree = NULL;
+  p4est_topidx_t     *vtt_offset = NULL;
+  p4est_topidx_t     *vertex_to_tree = NULL;
+  p4est_topidx_t     *vertex_to_vertex = NULL;
   int8_t             *tree_to_face = NULL;
   double             *vertices = NULL;
   double              vx, vy, vz;
@@ -217,17 +217,17 @@ p4est_connectivity_read (const char *filename,
         p4est_trim_ending_whitespace (key);
 
         if (strcmp (key, "Nk") == 0) {
-          num_trees = (p4est_locidx_t) strtoll (value, NULL, 0);
+          num_trees = (p4est_topidx_t) strtoll (value, NULL, 0);
           set_num_trees = 1;
         }
 
         else if (strcmp (key, "Nv") == 0) {
-          num_vertices = (p4est_locidx_t) strtoll (value, NULL, 0);
+          num_vertices = (p4est_topidx_t) strtoll (value, NULL, 0);
           set_num_vertices = 1;
         }
 
         else if (strcmp (key, "Nve") == 0) {
-          num_vtt = (p4est_locidx_t) strtoll (value, NULL, 0);
+          num_vtt = (p4est_topidx_t) strtoll (value, NULL, 0);
           set_num_vtt = 1;
         }
 
@@ -248,7 +248,7 @@ p4est_connectivity_read (const char *filename,
         break;
       case COORD:
         sscanf (line, "%lld %lf %lf %lf", &llk, &vx, &vy, &vz);
-        k = (p4est_locidx_t) (llk - 1);
+        k = (p4est_topidx_t) (llk - 1);
 
         SC_CHECK_ABORT (k >= 0 && k < num_vertices, "Bad [] entry");
 
@@ -260,11 +260,11 @@ p4est_connectivity_read (const char *filename,
       case ETOV:
         sscanf (line, "%lld %lld %lld %lld %lld",
                 &llk, &llv0, &llv1, &llv2, &llv3);
-        k = (p4est_locidx_t) (llk - 1);
-        v0 = (p4est_locidx_t) (llv0 - 1);
-        v1 = (p4est_locidx_t) (llv1 - 1);
-        v2 = (p4est_locidx_t) (llv2 - 1);
-        v3 = (p4est_locidx_t) (llv3 - 1);
+        k = (p4est_topidx_t) (llk - 1);
+        v0 = (p4est_topidx_t) (llv0 - 1);
+        v1 = (p4est_topidx_t) (llv1 - 1);
+        v2 = (p4est_topidx_t) (llv2 - 1);
+        v3 = (p4est_topidx_t) (llv3 - 1);
 
         SC_CHECK_ABORT (k >= 0 && k < num_trees &&
                         v0 >= 0 && v0 < num_vertices &&
@@ -282,11 +282,11 @@ p4est_connectivity_read (const char *filename,
       case ETOE:
         sscanf (line, "%lld %lld %lld %lld %lld",
                 &llk, &llk0, &llk1, &llk2, &llk3);
-        k = (p4est_locidx_t) (llk - 1);
-        k0 = (p4est_locidx_t) (llk0 - 1);
-        k1 = (p4est_locidx_t) (llk1 - 1);
-        k2 = (p4est_locidx_t) (llk2 - 1);
-        k3 = (p4est_locidx_t) (llk3 - 1);
+        k = (p4est_topidx_t) (llk - 1);
+        k0 = (p4est_topidx_t) (llk0 - 1);
+        k1 = (p4est_topidx_t) (llk1 - 1);
+        k2 = (p4est_topidx_t) (llk2 - 1);
+        k3 = (p4est_topidx_t) (llk3 - 1);
 
         SC_CHECK_ABORT (k >= 0 && k < num_trees &&
                         k0 >= 0 && k0 < num_trees &&
@@ -303,7 +303,7 @@ p4est_connectivity_read (const char *filename,
         break;
       case ETOF:
         sscanf (line, "%lld %d %d %d %d", &llk, &f0, &f1, &f2, &f3);
-        k = (p4est_locidx_t) (llk - 1);
+        k = (p4est_topidx_t) (llk - 1);
         --f0;
         --f1;
         --f2;
@@ -323,28 +323,28 @@ p4est_connectivity_read (const char *filename,
         break;
       case VTOE:
         value = strtok (line, " \t");
-        v0 = (p4est_locidx_t) strtoll (value, NULL, 0);
+        v0 = (p4est_topidx_t) strtoll (value, NULL, 0);
         --v0;
         value = strtok (NULL, " \t");
-        Nnn = (p4est_locidx_t) strtoll (value, NULL, 0);
+        Nnn = (p4est_topidx_t) strtoll (value, NULL, 0);
         vtt_offset[v0 + 1] = vtt_offset[v0] + Nnn;
         for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
           vertex_to_tree[vtt_offset[v0] + il] =
-            (p4est_locidx_t) (strtoll (value, NULL, 0) - 1);
+            (p4est_topidx_t) (strtoll (value, NULL, 0) - 1);
         }
 
         break;
       case VTOV:
         value = strtok (line, " \t");
-        v0 = (p4est_locidx_t) strtoll (value, NULL, 0);
+        v0 = (p4est_topidx_t) strtoll (value, NULL, 0);
         --v0;
         value = strtok (NULL, " \t");
-        Nnn = (p4est_locidx_t) strtoll (value, NULL, 0);
+        Nnn = (p4est_topidx_t) strtoll (value, NULL, 0);
         for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
           vertex_to_vertex[vtv_i + il] =
-            (p4est_locidx_t) (strtoll (value, NULL, 0) - 1);
+            (p4est_topidx_t) (strtoll (value, NULL, 0) - 1);
         }
         vtv_i = vtv_i + Nnn;
 
@@ -390,9 +390,9 @@ p4est_connectivity_read (const char *filename,
 void
 p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
 {
-  p4est_locidx_t      li, lj, lk, Nnn, num_trees, num_vertices, num_vtt;
-  p4est_locidx_t     *tree_to_vertex, *tree_to_tree, *vtt_offset;
-  p4est_locidx_t     *vertex_to_tree, *vertex_to_vertex;
+  p4est_topidx_t      li, lj, lk, Nnn, num_trees, num_vertices, num_vtt;
+  p4est_topidx_t     *tree_to_vertex, *tree_to_tree, *vtt_offset;
+  p4est_topidx_t     *vertex_to_tree, *vertex_to_vertex;
   int8_t             *tree_to_face;
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
