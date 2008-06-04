@@ -230,7 +230,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   int                 retval;
   uint8_t            *uint8_data;
 #endif
-  int32_t            *int32_data;
+  p4est_locidx_t     *locidx_data;
   P4EST_VTK_FLOAT_TYPE *float_data;
   char                vtufilename[BUFSIZ];
   int                 rootRank = 0;
@@ -245,16 +245,16 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     v3z;
   double              w0x, w0y, w0z, w1x, w1y, w1z, w2x, w2y, w2z, w3x, w3y,
     w3z;
-  p4est_locidx_t      v0, v1, v2, v3;
+  p4est_topidx_t      v0, v1, v2, v3;
   p4est_locidx_t      lv0, lv1, lv2, lv3;
-  p4est_locidx_t      first_local_tree = p4est->first_local_tree;
-  p4est_locidx_t      last_local_tree = p4est->last_local_tree;
+  p4est_topidx_t      first_local_tree = p4est->first_local_tree;
+  p4est_topidx_t      last_local_tree = p4est->last_local_tree;
   sc_array_t         *trees = p4est->trees;
   sc_array_t         *quadrants;
   p4est_tree_t       *tree;
   p4est_locidx_t      num_quads;
   p4est_locidx_t      quad_count;
-  p4est_locidx_t     *tree_to_vertex = connectivity->tree_to_vertex;
+  p4est_topidx_t     *tree_to_vertex = connectivity->tree_to_vertex;
   double             *vertices = connectivity->vertices;
   p4est_quadrant_t   *quad;
   double              intsize = 1.0 / (1 << P4EST_MAXLEVEL);
@@ -267,9 +267,9 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     return -1;
   }
 
-  int32_data = P4EST_ALLOC (int32_t, 4 * Ncells);
+  locidx_data = P4EST_ALLOC (p4est_locidx_t, 4 * Ncells);
 
-  p4est_order_local_vertices (p4est, 0, &Ntotal, int32_data);
+  p4est_order_local_vertices (p4est, 0, &Ntotal, locidx_data);
 
   fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
   fprintf (vtufile, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
@@ -397,10 +397,10 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
         + v2z * (1.0 - eta1 - h) * (eta2 + h)
         + v3z * (eta1 + h) * (eta2 + h);
 
-      lv0 = int32_data[4 * quad_count + 0];
-      lv1 = int32_data[4 * quad_count + 1];
-      lv2 = int32_data[4 * quad_count + 2];
-      lv3 = int32_data[4 * quad_count + 3];
+      lv0 = locidx_data[4 * quad_count + 0];
+      lv1 = locidx_data[4 * quad_count + 1];
+      lv2 = locidx_data[4 * quad_count + 2];
+      lv3 = locidx_data[4 * quad_count + 3];
 
       float_data[3 * lv0 + 0] = (P4EST_VTK_FLOAT_TYPE) w0x;
       float_data[3 * lv0 + 1] = (P4EST_VTK_FLOAT_TYPE) w0y;
@@ -450,21 +450,21 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 
   /* write connectivity data */
 #ifdef P4EST_VTK_ASCII
-  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
-           " format=\"ascii\">\n");
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"connectivity\""
+           " format=\"ascii\">\n", P4EST_VTK_LOCIDX);
   for (il = 0; il < Ncells; ++il) {
     fprintf (vtufile, "          %lld %lld %lld %lld\n",
-             (long long) int32_data[4 * il + 0],
-             (long long) int32_data[4 * il + 1],
-             (long long) int32_data[4 * il + 2],
-             (long long) int32_data[4 * il + 3]);
+             (long long) locidx_data[4 * il + 0],
+             (long long) locidx_data[4 * il + 1],
+             (long long) locidx_data[4 * il + 2],
+             (long long) locidx_data[4 * il + 3]);
   }
 #else
-  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
-           " format=\"binary\">\n");
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"connectivity\""
+           " format=\"binary\">\n", P4EST_VTK_LOCIDX);
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) int32_data,
-                             sizeof (*int32_data) * 4 * Ncells);
+  retval = p4est_vtk_binary (vtufile, (char *) locidx_data,
+                             sizeof (*locidx_data) * 4 * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding connectivity\n");
@@ -476,20 +476,20 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 
   /* write offset data */
 #ifdef P4EST_VTK_ASCII
-  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"offsets\""
-           " format=\"ascii\">\n");
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
+           " format=\"ascii\">\n", P4EST_VTK_LOCIDX);
   for (il = 1; il <= Ncells; ++il) {
     fprintf (vtufile, "          %lld\n", (long long) (il * 4));
   }
 #else
-  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"offsets\""
-           " format=\"binary\">\n");
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
+           " format=\"binary\">\n", P4EST_VTK_LOCIDX);
   for (il = 1; il <= Ncells; ++il) {
-    int32_data[il - 1] = il * 4;
+    locidx_data[il - 1] = il * 4;       /* same type */
   }
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) int32_data,
-                             sizeof (*int32_data) * Ncells);
+  retval = p4est_vtk_binary (vtufile, (char *) locidx_data,
+                             sizeof (*locidx_data) * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding offsets\n");
@@ -532,8 +532,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "      </Cells>\n");
   fprintf (vtufile, "      <CellData Scalars=\"mpirank\">\n");
 #ifdef P4EST_VTK_ASCII
-  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"mpirank\""
-           " format=\"ascii\">\n");
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
+           " format=\"ascii\">\n", P4EST_VTK_LOCIDX);
   fprintf (vtufile, "         ");
   for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
     fprintf (vtufile, " %d", procRank);
@@ -542,14 +542,14 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   }
   fprintf (vtufile, "\n");
 #else
-  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"mpirank\""
-           " format=\"binary\">\n");
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
+           " format=\"binary\">\n", P4EST_VTK_LOCIDX);
   for (il = 0; il < Ncells; ++il) {
-    int32_data[il] = (int32_t) procRank;
+    locidx_data[il] = (p4est_locidx_t) procRank;
   }
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) int32_data,
-                             sizeof (*int32_data) * Ncells);
+  retval = p4est_vtk_binary (vtufile, (char *) locidx_data,
+                             sizeof (*locidx_data) * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding types\n");
@@ -560,7 +560,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </CellData>\n");
   fprintf (vtufile, "      <PointData>\n");
-  P4EST_FREE (int32_data);
+  P4EST_FREE (locidx_data);
 
   if (ferror (vtufile)) {
     fprintf (stderr, "p4est_vtk: Error writing header\n");
@@ -662,7 +662,8 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
     fprintf (pvtufile, "    </PPointData>\n");
     fprintf (pvtufile, "    <PCellData Scalars=\"mpirank\">\n");
     fprintf (pvtufile,
-             "      <PDataArray type=\"Int32\" Name=\"mpirank\"/>\n");
+             "      <PDataArray type=\"%s\" Name=\"mpirank\"/>\n",
+             P4EST_VTK_LOCIDX);
     fprintf (pvtufile, "    </PCellData>\n");
     fprintf (pvtufile, "    <PPoints>\n");
     fprintf (pvtufile, "      <PDataArray type=\"%s\""
