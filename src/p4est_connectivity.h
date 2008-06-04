@@ -22,6 +22,10 @@
 #ifndef P4EST_CONNECTIVITY_H
 #define P4EST_CONNECTIVITY_H
 
+#ifdef P4_TO_P8
+#error "Including a p4est header with P4_TO_P8 defined"
+#endif
+
 #include <p4est_base.h>
 
 /** This structure holds the 2D inter-tree connectivity information.

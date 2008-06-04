@@ -19,8 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_communication.h>
+#include <p8est_algorithms.h>
+#else
 #include <p4est_communication.h>
 #include <p4est_algorithms.h>
+#endif /* !P4_TO_P8 */
 
 void
 p4est_comm_count_quadrants (p4est_t * p4est)
@@ -69,6 +74,9 @@ p4est_comm_global_partition (p4est_t * p4est)
   p4est->global_first_position[num_procs].which_tree = num_trees;
   p4est->global_first_position[num_procs].x = 0;
   p4est->global_first_position[num_procs].y = 0;
+#ifdef P4_TO_P8
+  p4est->global_first_position[num_procs].z = 0;
+#endif
 
   if (p4est->mpicomm != MPI_COMM_NULL) {
     SC_BZERO (&input, 1);
@@ -77,6 +85,9 @@ p4est_comm_global_partition (p4est_t * p4est)
       P4EST_ASSERT (first_tree == -1 && p4est->last_local_tree == -2);
       input.which_tree = -1;
       input.x = input.y = -1;
+#ifdef P4_TO_P8
+      input.z = -1;
+#endif
     }
     else {
       /* send values corresponding to my first quadrant */
@@ -85,6 +96,9 @@ p4est_comm_global_partition (p4est_t * p4est)
       input.which_tree = first_tree;
       input.x = quadrant->x;
       input.y = quadrant->y;
+#ifdef P4_TO_P8
+      input.z = quadrant->z;
+#endif
     }
     mpiret = MPI_Allgather (&input, size_position, MPI_BYTE,
                             p4est->global_first_position,
@@ -96,9 +110,15 @@ p4est_comm_global_partition (p4est_t * p4est)
       pi = &p4est->global_first_position[i];
       if (pi->which_tree < 0) {
         P4EST_ASSERT (pi->x == -1 && pi->y == -1);
+#ifdef P4_TO_P8
+        P4EST_ASSERT (pi->z == -1);
+#endif
         memcpy (pi, pi + 1, sizeof (p4est_position_t));
       }
       P4EST_ASSERT (pi->which_tree >= 0 && pi->x >= 0 && pi->y >= 0);
+#ifdef P4_TO_P8
+      P4EST_ASSERT (pi->z >= 0);
+#endif
     }
   }
 }
@@ -131,7 +151,11 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
     if (which_tree < ctree ||
         (which_tree == ctree &&
          (p4est_quadrant_compare (q, &cur) < 0 &&
-          (q->x != cur.x || q->y != cur.y)))) {
+          (q->x != cur.x || q->y != cur.y
+#ifdef P4_TO_P8
+           || q->z != cur.z
+#endif
+          )))) {
       proc_high = guess - 1;
       guess = (proc_low + proc_high + 1) / 2;
       continue;
@@ -141,10 +165,17 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
     ctree = global_first_position[guess + 1].which_tree;
     cur.x = global_first_position[guess + 1].x;
     cur.y = global_first_position[guess + 1].y;
+#ifdef P4_TO_P8
+    cur.z = global_first_position[guess + 1].z;
+#endif
     if (which_tree > ctree ||
         (which_tree == ctree &&
          (p4est_quadrant_compare (&cur, q) <= 0 ||
-          (q->x == cur.x && q->y == cur.y)))) {
+          (q->x == cur.x && q->y == cur.y
+#ifdef P4_TO_P8
+           && q->z == cur.z
+#endif
+          )))) {
       proc_low = guess + 1;
       guess = (proc_low + proc_high) / 2;
       continue;

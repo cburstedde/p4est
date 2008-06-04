@@ -19,8 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_algorithms.h>
+#include <p8est_communication.h>
+#else
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
+#endif /* !P4_TO_P8 */
 
 typedef struct
 {
@@ -32,16 +37,25 @@ typedef struct
 }
 p4est_balance_peer_t;
 
+#ifndef P4_TO_P8
+
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
+#endif /* !P4_TO_P8 */
+
 static const p4est_gloidx_t initial_quadrants_per_processor = 15;
+
+#ifndef P4_TO_P8
+
 static const size_t number_toread_quadrants = 32;
 #ifdef P4EST_MPI
 static const int    number_peer_windows = 5;
-#endif
+#endif /* P4EST_MPI */
 
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
+
+#endif /* !P4_TO_P8 */
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
@@ -246,6 +260,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                             (long long) p4est->global_num_quadrants);
   return p4est;
 }
+
+#ifndef P4_TO_P8
 
 void
 p4est_destroy (p4est_t * p4est)
@@ -2135,5 +2151,7 @@ p4est_checksum (p4est_t * p4est)
 
   return (unsigned) crc;
 }
+
+#endif /* !P4_TO_P8 */
 
 /* EOF p4est.c */

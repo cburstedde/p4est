@@ -20,6 +20,6 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "p4est_algorithms.c"
+#include "p4est_communication.c"
 
-/* EOF p8est_algorithms.c */
+/* EOF p8est_communication.c */

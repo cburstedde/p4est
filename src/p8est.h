@@ -25,8 +25,11 @@
 /* p8est_connectivity.h includes p4est_base.h sc_containers.h */
 #include <p8est_connectivity.h>
 
+/* the spatial dimension */
+#define P8EST_DIM 3
+
 /* finest level of the quadtree */
-#define P8EST_MAXLEVEL 20
+#define P8EST_MAXLEVEL 19
 
 /* the length of a root quadrant */
 #define P8EST_ROOT_LEN ((p4est_qcoord_t) 1 << P8EST_MAXLEVEL)

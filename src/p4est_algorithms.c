@@ -19,8 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_algorithms.h>
+#include <p8est_communication.h>
+#else
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
+#endif /* !P4_TO_P8 */
 
 /* htonl is in either of these two */
 #ifdef P4EST_HAVE_ARPA_NET_H
@@ -29,6 +34,8 @@
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+
+#ifndef P4_TO_P8
 
 /* *INDENT-OFF* */
 
@@ -101,6 +108,8 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
     p4est_quadrant_compare (v1, v2) : ((diff < 0) ? -1 : 1);
 }
 
+#endif /* !P4_TO_P8 */
+
 bool
 p4est_quadrant_is_equal (const void *v1, const void *v2)
 {
@@ -110,7 +119,11 @@ p4est_quadrant_is_equal (const void *v1, const void *v2)
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
-  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y);
+  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y)
+#ifdef P4_TO_P8
+    && (q1->z == q2->z)
+#endif
+    ;
 }
 
 unsigned
@@ -135,6 +148,9 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 
   id |= ((q->x & P4EST_QUADRANT_LEN (q->level)) ? 0x01 : 0);
   id |= ((q->y & P4EST_QUADRANT_LEN (q->level)) ? 0x02 : 0);
+#ifdef P4_TO_P8
+  id |= ((q->z & P4EST_QUADRANT_LEN (q->level)) ? 0x04 : 0);
+#endif
 
   return id;
 }
@@ -144,7 +160,11 @@ p4est_quadrant_is_inside (const p4est_quadrant_t * q)
 {
   return
     (q->x >= 0 && q->x < P4EST_ROOT_LEN) &&
-    (q->y >= 0 && q->y < P4EST_ROOT_LEN);
+    (q->y >= 0 && q->y < P4EST_ROOT_LEN) &&
+#ifdef P4_TO_P8
+    (q->z >= 0 && q->z < P4EST_ROOT_LEN) &&
+#endif
+    true;
 }
 
 bool
@@ -154,8 +174,15 @@ p4est_quadrant_is_valid (const p4est_quadrant_t * q)
     (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
     (q->x >= 0 && q->x < P4EST_ROOT_LEN) &&
     (q->y >= 0 && q->y < P4EST_ROOT_LEN) &&
+#ifdef P4_TO_P8
+    (q->z >= 0 && q->z < P4EST_ROOT_LEN) &&
+#endif
     ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
-    ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0);
+    ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+#ifdef P4_TO_P8
+    ((q->z & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+#endif
+    true;
 }
 
 bool
@@ -164,8 +191,14 @@ p4est_quadrant_is_extended (const p4est_quadrant_t * q)
   return
     (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
     ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
-    ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0);
+    ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+#ifdef P4_TO_P8
+    ((q->z & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+#endif
+    true;
 }
+
+#ifndef P4_TO_P8
 
 bool
 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
@@ -767,12 +800,17 @@ p4est_quadrant_transform (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
+#endif /* !P4_TO_P8 */
+
 uint64_t
 p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 {
   int                 i;
-  uint64_t            x, y;
   uint64_t            id;
+  uint64_t            x, y;
+#ifdef P4_TO_P8
+  uint64_t            z;
+#endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT ((int) quadrant->level >= level && level >= 0);
@@ -780,11 +818,17 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
   /* this preserves the high bits from negative numbers */
   x = quadrant->x >> (P4EST_MAXLEVEL - level);
   y = quadrant->y >> (P4EST_MAXLEVEL - level);
+#ifdef P4_TO_P8
+  z = quadrant->z >> (P4EST_MAXLEVEL - level);
+#endif
 
   id = 0;
-  for (i = 0; i < level + (32 - P4EST_MAXLEVEL); ++i) {
-    id |= ((x & ((uint64_t) 1 << i)) << i);
-    id |= ((y & ((uint64_t) 1 << i)) << (i + 1));
+  for (i = 0; i < level + 2; ++i) {
+    id |= ((x & ((uint64_t) 1 << i)) << ((P4EST_DIM - 1) * i));
+    id |= ((y & ((uint64_t) 1 << i)) << ((P4EST_DIM - 1) * i + 1));
+#ifdef P4_TO_P8
+    id |= ((z & ((uint64_t) 1 << i)) << ((P4EST_DIM - 1) * i + 2));
+#endif
   }
 
   return id;
@@ -798,21 +842,33 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 
   P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
   if (level < P4EST_MAXLEVEL) {
-    P4EST_ASSERT (id < ((uint64_t) 1 << 2 * (level + (32 - P4EST_MAXLEVEL))));
+    P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
   }
 
   quadrant->level = (int8_t) level;
   quadrant->x = 0;
   quadrant->y = 0;
+#ifdef P4_TO_P8
+  quadrant->z = 0;
+#endif
 
   /* this may set the sign bit to create negative numbers */
-  for (i = 0; i < level + (32 - P4EST_MAXLEVEL); ++i) {
-    quadrant->x |= (int32_t) ((id & (1ULL << (2 * i))) >> i);
-    quadrant->y |= (int32_t) ((id & (1ULL << (2 * i + 1))) >> (i + 1));
+  for (i = 0; i < level + 2; ++i) {
+    quadrant->x |= (int32_t) ((id & (1ULL << (P4EST_DIM * i)))
+                              >> ((P4EST_DIM - 1) * i));
+    quadrant->y |= (int32_t) ((id & (1ULL << (P4EST_DIM * i + 1)))
+                              >> ((P4EST_DIM - 1) * i + 1));
+#ifdef P4_TO_P8
+    quadrant->z |= (int32_t) ((id & (1ULL << (P4EST_DIM * i + 2)))
+                              >> ((P4EST_DIM - 1) * i + 2));
+#endif
   }
 
   quadrant->x <<= (P4EST_MAXLEVEL - level);
   quadrant->y <<= (P4EST_MAXLEVEL - level);
+#ifdef P4_TO_P8
+  quadrant->z <<= (P4EST_MAXLEVEL - level);
+#endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
 }
@@ -844,6 +900,8 @@ p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
   }
   quad->p.user_data = NULL;
 }
+
+#ifndef P4_TO_P8
 
 void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
@@ -2849,5 +2907,7 @@ p4est_partition_given (p4est_t * p4est,
 
   return total_quadrants_shipped;
 }
+
+#endif /* !P4_TO_P8 */
 
 /* EOF p4est_algorithms.c */

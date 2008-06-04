@@ -25,6 +25,9 @@
 /* p4est_connectivity.h includes p4est_base.h sc_containers.h */
 #include <p4est_connectivity.h>
 
+/* the spatial dimension */
+#define P4EST_DIM 2
+
 /* finest level of the quadtree */
 #define P4EST_MAXLEVEL 30
 
