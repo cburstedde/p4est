@@ -26,9 +26,7 @@ src_libp4est_a_CPPFLAGS = \
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
 
-AM_CPPFLAGS += \
-        -I@top_srcdir@/src -I@top_builddir@/sc/src -I@top_srcdir@/sc/src
-
-LDADD += @top_builddir@/src/libp4est.a @top_builddir@/sc/src/libsc.a
+AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
+LDADD += @top_builddir@/src/libp4est.a @P4EST_SC_LDADD@
 
 LINT_CSOURCES += $(libp4est_compiled_sources)

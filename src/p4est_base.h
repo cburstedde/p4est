@@ -32,6 +32,11 @@
 
 #include <sc.h>
 #include <sc_containers.h>
+#if \
+  (defined (P4EST_MPI) && !defined (SC_MPI)) || \
+  (!defined (P4EST_MPI) && defined (SC_MPI))
+#error "MPI configured differently in p4est and libsc"
+#endif
 
 /** Typedef for quadrant coordinates. */
 typedef int32_t     p4est_qcoord_t;

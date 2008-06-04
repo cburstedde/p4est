@@ -23,16 +23,37 @@ P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
                   [VTK_COMPRESSION])
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
-P4EST_ARG_WITHOUT([sc], [disable builtin libsc, provide your own], [PROVIDE_SC])
+
+dnl does not AC_DEFINE and AC_CONDITIONAL if --with-sc=<dir> is given
+P4EST_ARG_WITHOUT_YES([sc], [\
+disable builtin libsc, provide your own. Can use\
+ --with-sc=<dir> for <dir>/include, <dir>/lib/libsc.a],
+                  [PROVIDE_SC])
 P4EST_ARG_WITHOUT([zlib], [disable zlib in builtin libsc, provide your own],
                   [PROVIDE_ZLIB])
 
 # Configure the SC library recursively.
-if test "$P4EST_WITH_PROVIDE_SC" = yes; then
+if test "$P4EST_WITH_PROVIDE_SC" = yes ; then
   AC_CONFIG_SUBDIRS([sc])
+  P4EST_SC_CPPFLAGS="-I\$(top_builddir)/sc/src -I\$(top_srcdir)/sc/src"
+  P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.a"
 else
-  P4EST_WITH_PROVIDE_ZLIB=no
+  if test "$P4EST_WITH_PROVIDE_SC" != no ; then
+    P4EST_SC_DIR="$P4EST_WITH_PROVIDE_SC"
+    if test ! -d "$P4EST_SC_DIR" ; then
+      AC_MSG_ERROR([Directory "$P4EST_SC_DIR" does not exist])
+    fi
+    if test ! -f "$P4EST_SC_DIR/include/sc_zlib.h" ; then
+      P4EST_WITH_PROVIDE_ZLIB=no
+    fi
+    P4EST_SC_CPPFLAGS="-I$P4EST_SC_DIR/include"
+    P4EST_SC_LDADD="-L$P4EST_SC_DIR/lib -lsc"
+  else
+    P4EST_WITH_PROVIDE_ZLIB=no
+  fi
 fi
+AC_SUBST([P4EST_SC_CPPFLAGS])
+AC_SUBST([P4EST_SC_LDADD])
 
 # Checks for programs.
 echo "o----------------------------------"
