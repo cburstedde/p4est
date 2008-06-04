@@ -42,7 +42,7 @@ int                 p4est_quadrant_compare_piggy (const void *v1,
                                                   const void *v2);
 
 /** Test if two quadrants have equal Morton indices.
- * \return 1 if \a v1 describes the same quadrant as \a v2.
+ * \return true if \a v1 describes the same quadrant as \a v2.
  */
 bool                p4est_quadrant_is_equal (const void *v1, const void *v2);
 

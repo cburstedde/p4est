@@ -92,7 +92,7 @@ void                p4est_connectivity_destroy (p4est_connectivity_t *
 /** Examine a connectivity structure
  * \return  Returns 1 if structure is valid, 0 otherwise.
  */
-int                 p4est_connectivity_is_valid (p4est_connectivity_t *
+bool                p4est_connectivity_is_valid (p4est_connectivity_t *
                                                  connectivity);
 
 /** Create a connectivity structure for the unit square
