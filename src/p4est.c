@@ -135,8 +135,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   }
 
   /* print some diagnostics */
-  P4EST_GLOBAL_PRODUCTIONF ("New p4est with %d trees on %d processors\n",
-                            num_trees, num_procs);
+  P4EST_GLOBAL_PRODUCTIONF ("New p4est with %lld trees on %d processors\n",
+                            (long long) num_trees, num_procs);
   P4EST_GLOBAL_INFOF ("Initial level %d potential global quadrants"
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
@@ -239,7 +239,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->global_first_position = global_first_position;
 
   /* print more statistics */
-  P4EST_INFOF ("total local quadrants %d\n", p4est->local_num_quadrants);
+  P4EST_INFOF ("total local quadrants %lld\n",
+               (long long) p4est->local_num_quadrants);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_GLOBAL_PRODUCTIONF ("Done p4est_new with %lld total quadrants\n",
@@ -643,7 +644,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     num_quadrants = 0;
     for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
       P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
-      num_quadrants += tree->quadrants_per_level[i];
+      num_quadrants += tree->quadrants_per_level[i];    /* same type */
       if (tree->quadrants_per_level[i] > 0) {
         maxlevel = i;
       }
@@ -1606,8 +1607,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* we have most probably received quadrants, run sort and balance */
     sc_array_sort (tquadrants, p4est_quadrant_compare);
     p4est_balance_subtree (p4est, tree, nt, init_fn);
-    P4EST_VERBOSEF ("Balance tree %d B %lu\n",
-                    nt, (unsigned long) tquadrants->elem_count);
+    P4EST_VERBOSEF ("Balance tree %lld B %llu\n",
+                    (long long) nt,
+                    (unsigned long long) tquadrants->elem_count);
     treecount = tquadrants->elem_count;
 
     /* figure out the new elements outside the original tree */
@@ -1685,8 +1687,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
     p4est->local_num_quadrants += qcount;
 
-    P4EST_VERBOSEF ("Balance tree %d C %lu\n",
-                    nt, (unsigned long) tquadrants->elem_count);
+    P4EST_VERBOSEF ("Balance tree %lld C %llu\n",
+                    (long long) nt,
+                    (unsigned long long) tquadrants->elem_count);
     tquadrants = NULL;          /* safeguard */
   }
 
@@ -1724,8 +1727,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     all_outcount += tree->quadrants.elem_count;
 
     /* final log message for this tree */
-    P4EST_INFOF ("Done balance tree %d now %lu\n",
-                 nt, (unsigned long) tree->quadrants.elem_count);
+    P4EST_INFOF ("Done balance tree %lld now %llu\n",
+                 (long long) nt,
+                 (unsigned long long) tree->quadrants.elem_count);
   }
 
   /* cleanup temporary storage */

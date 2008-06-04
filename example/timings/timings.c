@@ -249,7 +249,7 @@ main (int argc, char **argv)
     quadrant_counts[i] = (p4est_locidx_t) (next_quadrant - prev_quadrant);
   }
   if (p4est->mpisize > 1) {
-    quadrant_counts[0] += quadrant_counts[p4est->mpisize - 1];
+    quadrant_counts[0] += quadrant_counts[p4est->mpisize - 1];  /* same type */
     quadrant_counts[p4est->mpisize - 1] = 0;
   }
   mpiret = MPI_Barrier (mpi->mpicomm);

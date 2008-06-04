@@ -123,8 +123,8 @@ main (int argc, char **argv)
    */
   num_quadrants_on_last = (p4est_locidx_t) p4est->global_num_quadrants;
   for (i = 0; i < num_procs - 1; ++i) {
-    num_quadrants_in_proc[i] = (p4est_locidx_t) i + 1;
-    num_quadrants_on_last -= (p4est_locidx_t) i + 1;
+    num_quadrants_in_proc[i] = (p4est_locidx_t) i + 1;  /* type ok */
+    num_quadrants_on_last -= (p4est_locidx_t) i + 1;    /* type ok */
   }
   num_quadrants_in_proc[num_procs - 1] = num_quadrants_on_last;
   SC_CHECK_ABORT (num_quadrants_on_last > 0,

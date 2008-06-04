@@ -77,7 +77,7 @@ p4est_connectivity_destroy (p4est_connectivity_t * connectivity)
 int
 p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
 {
-  int                 found;
+  int                 num_found;
   int                 face, rface, nface, orientation, corner;
   p4est_topidx_t      tree, ntree, ctree;
   p4est_topidx_t      vertex, cvertex, corner_trees;
@@ -157,7 +157,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
   }
 
   for (vertex = 0; vertex < num_vertices; ++vertex) {
-    corner_trees = voff[vertex + 1] - voff[vertex];
+    corner_trees = voff[vertex + 1] - voff[vertex];     /* same type */
     if (corner_trees <= 0 || voff[vertex + 1] > num_vtt) {
       fprintf (stderr, "Vertex offset mismatch %lld\n", (long long) vertex);
       return 0;
@@ -169,14 +169,14 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
                  (long long) vertex, (long long) ntree);
         return 0;
       }
-      found = 0;
+      num_found = 0;
       for (corner = 0; corner < 4; ++corner) {
         if (ttv[4 * ntree + corner] == vertex) {
-          found = 1;
+          num_found = 1;
           break;
         }
       }
-      if (!found) {
+      if (!num_found) {
         fprintf (stderr, "Corner mismatch in %lld %lld\n",
                  (long long) vertex, (long long) ntree);
         return 0;
@@ -193,15 +193,15 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
   for (tree = 0; tree < num_trees; ++tree) {
     for (corner = 0; corner < 4; ++corner) {
       vertex = ttv[tree * 4 + corner];
-      corner_trees = voff[vertex + 1] - voff[vertex];
-      found = 0;
+      corner_trees = voff[vertex + 1] - voff[vertex];   /* same type */
+      num_found = 0;
       for (ctree = 0; ctree < corner_trees; ++ctree) {
         if (vtt[voff[vertex] + ctree] == tree &&
             vtv[voff[vertex] + ctree] == vertex) {
-          ++found;
+          ++num_found;
         }
       }
-      if (found != 1) {
+      if (num_found != 1) {
         fprintf (stderr, "Tree and vertex count in %lld %d\n",
                  (long long) tree, corner);
         return 0;
@@ -602,7 +602,11 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
   ntree1 = conn->tree_to_tree[4 * itree + (icorner + 3) % 4];
   ntree2 = conn->tree_to_tree[4 * itree + icorner];
 
-  corner_trees = conn->vtt_offset[ivertex + 1] - conn->vtt_offset[ivertex];
+  /* *INDENT-OFF* horrible indent bug */
+  corner_trees =
+    conn->vtt_offset[ivertex + 1] - conn->vtt_offset[ivertex];  /* same type */
+  /* *INDENT-ON */
+
   num_found = 0;
   for (ctree = 0; ctree < corner_trees; ++ctree) {
     ntree = conn->vertex_to_tree[conn->vtt_offset[ivertex] + ctree];

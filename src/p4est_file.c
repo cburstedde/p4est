@@ -327,7 +327,7 @@ p4est_connectivity_read (const char *filename,
         --v0;
         value = strtok (NULL, " \t");
         Nnn = (p4est_topidx_t) strtoll (value, NULL, 0);
-        vtt_offset[v0 + 1] = vtt_offset[v0] + Nnn;
+        vtt_offset[v0 + 1] = vtt_offset[v0] + Nnn;      /* same type */
         for (il = 0; il < Nnn; ++il) {
           value = strtok (NULL, " \t");
           vertex_to_tree[vtt_offset[v0] + il] =
@@ -346,7 +346,7 @@ p4est_connectivity_read (const char *filename,
           vertex_to_vertex[vtv_i + il] =
             (p4est_topidx_t) (strtoll (value, NULL, 0) - 1);
         }
-        vtv_i = vtv_i + Nnn;
+        vtv_i = vtv_i + Nnn;    /* same type */
 
         break;
       case ET:
@@ -450,7 +450,7 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
              (int) (tree_to_face[4 * lk + 3] + 1));
   fprintf (nout, "[Vertex to Element]\n");
   for (li = 0; li < num_vertices; ++li) {
-    Nnn = vtt_offset[li + 1] - vtt_offset[li];
+    Nnn = vtt_offset[li + 1] - vtt_offset[li];  /* same type */
     fprintf (nout, "    %lld   %lld", (long long int) (li + 1),
              (long long int) Nnn);
     for (lj = 0; lj < Nnn; ++lj) {
@@ -461,7 +461,7 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
   }
   fprintf (nout, "[Vertex to Vertex]\n");
   for (li = 0; li < num_vertices; ++li) {
-    Nnn = vtt_offset[li + 1] - vtt_offset[li];
+    Nnn = vtt_offset[li + 1] - vtt_offset[li];  /* same type */
     fprintf (nout, "    %lld   %lld", (long long int) (li + 1),
              (long long int) Nnn);
     for (lj = 0; lj < Nnn; ++lj) {
