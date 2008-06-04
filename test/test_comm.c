@@ -63,7 +63,7 @@ main (int argc, char **argv)
   MPI_Comm            mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  p4est_gloidx_t      qglobal, qlocal, qbegin, qend;
+  p4est_gloidx_t      qglobal, qlocal, qbegin, qend, qsum;
   int                 i;
 
   mpiret = MPI_Init (&argc, &argv);
@@ -93,6 +93,7 @@ main (int argc, char **argv)
                   "wrong number of p4est->global_num_quadrants");
 
   /* Check the number of elements per proc */
+  qsum = 0;
   for (i = 0; i < num_procs; ++i) {
     if (i == rank) {
       qlocal = p4est->local_num_quadrants;
@@ -105,11 +106,14 @@ main (int argc, char **argv)
     mpiret = MPI_Bcast (&qglobal, 1, P4EST_MPI_GLOIDX, i, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
 
-    qbegin = (i == 0) ? 0 : p4est->global_last_quad_index[i - 1];
+    qsum += qglobal;
+    qbegin = (i == 0) ? 0 : (p4est->global_last_quad_index[i - 1] + 1);
     qend = p4est->global_last_quad_index[i];
     SC_CHECK_ABORT (qglobal == qend - qbegin + 1,
                     "wrong number in p4est->global_last_quad_index");
   }
+  SC_CHECK_ABORT (qsum == p4est->global_num_quadrants,
+                  "Wrong number after quadrant counting");
 
   /* clean up and exit */
   p4est_destroy (p4est);
