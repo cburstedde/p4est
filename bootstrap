@@ -1,6 +1,6 @@
 #!/bin/sh
 
-aclocal -I config -I sc/config
-autoheader
-automake --add-missing --copy
-autoconf
+aclocal -Wall -I config -I sc/config
+autoheader -Wall
+automake -Wall --add-missing --copy
+autoconf -Wall
