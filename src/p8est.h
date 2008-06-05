@@ -133,7 +133,11 @@ typedef int         (*p8est_coarsen_t) (p8est_t * p8est,
                                         p8est_quadrant_t * q0,
                                         p8est_quadrant_t * q1,
                                         p8est_quadrant_t * q2,
-                                        p8est_quadrant_t * q3);
+                                        p8est_quadrant_t * q3,
+                                        p8est_quadrant_t * q4,
+                                        p8est_quadrant_t * q5,
+                                        p8est_quadrant_t * q6,
+                                        p8est_quadrant_t * q7);
 
 /** Callback function prototype to calculate weights for partitioning.
  * \return  Returns a 32bit integer >= 0 as the quadrant weight.

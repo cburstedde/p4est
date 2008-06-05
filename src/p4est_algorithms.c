@@ -2364,6 +2364,8 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   P4EST_ASSERT (p4est_tree_is_linear (tree));
 }
 
+#endif /* !P4_TO_P8 */
+
 p4est_gloidx_t
 p4est_partition_given (p4est_t * p4est,
                        const p4est_locidx_t * new_num_quadrants_in_proc)
@@ -3078,7 +3080,5 @@ p4est_partition_given (p4est_t * p4est,
 
   return total_quadrants_shipped;
 }
-
-#endif /* !P4_TO_P8 */
 
 /* EOF p4est_algorithms.c */

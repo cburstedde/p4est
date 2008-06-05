@@ -44,10 +44,10 @@ const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 #endif /* !P4_TO_P8 */
 
 static const p4est_gloidx_t initial_quadrants_per_processor = 15;
+static const size_t number_toread_quadrants = 32;
 
 #ifndef P4_TO_P8
 
-static const size_t number_toread_quadrants = 32;
 #ifdef P4EST_MPI
 static const int    number_peer_windows = 5;
 #endif /* P4EST_MPI */
@@ -395,8 +395,6 @@ p4est_copy (p4est_t * input, bool copy_data)
   return p4est;
 }
 
-#ifndef P4_TO_P8
-
 void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
@@ -410,6 +408,9 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q, *qalloc, *qpop;
   p4est_quadrant_t   *c0, *c1, *c2, *c3;
+#ifdef P4_TO_P8
+  p4est_quadrant_t   *c4, *c5, *c6, *c7;
+#endif
   sc_array_t         *tquadrants;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p4est_refine with %lld total quadrants\n",
@@ -481,7 +482,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       if (dorefine ||
           ((qpop->level < P4EST_MAXLEVEL) && refine_fn (p4est, nt, qpop))) {
         dorefine = 0;           /* a marker so that refine_fn is never called twice */
-        sc_array_resize (tquadrants, tquadrants->elem_count + 3);
+        sc_array_resize (tquadrants,
+                         tquadrants->elem_count + P4EST_CHILDREN - 1);
 
         /* compute children and prepend them to the list */
         if (qpop->p.user_data != key) {
@@ -491,11 +493,32 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
         c1 = sc_mempool_alloc (p4est->quadrant_pool);
         c2 = sc_mempool_alloc (p4est->quadrant_pool);
         c3 = sc_mempool_alloc (p4est->quadrant_pool);
+#ifdef P4_TO_P8
+        c4 = sc_mempool_alloc (p4est->quadrant_pool);
+        c5 = sc_mempool_alloc (p4est->quadrant_pool);
+        c6 = sc_mempool_alloc (p4est->quadrant_pool);
+        c7 = sc_mempool_alloc (p4est->quadrant_pool);
+
+        p8est_quadrant_children (qpop, c0, c1, c2, c3, c4, c5, c6, c7);
+#else
         p4est_quadrant_children (qpop, c0, c1, c2, c3);
+#endif
+
         c0->p.user_data = key;
         c1->p.user_data = key;
         c2->p.user_data = key;
         c3->p.user_data = key;
+#ifdef P4_TO_P8
+        c4->p.user_data = key;
+        c5->p.user_data = key;
+        c6->p.user_data = key;
+        c7->p.user_data = key;
+
+        sc_list_prepend (list, c7);
+        sc_list_prepend (list, c6);
+        sc_list_prepend (list, c5);
+        sc_list_prepend (list, c4);
+#endif
         sc_list_prepend (list, c3);
         sc_list_prepend (list, c2);
         sc_list_prepend (list, c1);
@@ -569,7 +592,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   p4est_locidx_t      num_quadrants;
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
-  p4est_quadrant_t   *c[4];
+  p4est_quadrant_t   *c[P4EST_CHILDREN];
   p4est_quadrant_t   *cfirst, *clast;
   sc_array_t         *tquadrants;
 
@@ -603,9 +626,9 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
 
     /* run through the array and coarsen recursively */
     incount = tquadrants->elem_count;
-    while (rest + 3 - before < incount) {
+    while (rest + P4EST_CHILDREN - 1 - before < incount) {
       couldbegood = true;
-      for (zz = 0; zz < 4; ++zz) {
+      for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
         if (zz < before) {
           c[zz] = sc_array_index (tquadrants, first + zz);
           if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
@@ -618,21 +641,29 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
         }
       }
       if (couldbegood &&
+#ifdef P4_TO_P8
+          p8est_quadrant_is_family (c[0], c[1], c[2], c[3],
+                                    c[4], c[5], c[6], c[7]) &&
+          coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3],
+                      c[4], c[5], c[6], c[7]) &&
+#else
           p4est_quadrant_is_family (c[0], c[1], c[2], c[3]) &&
-          coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3])) {
+          coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3]) &&
+#endif
+          true) {
         /* coarsen now */
-        for (zz = 0; zz < 4; ++zz) {
+        for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
           p4est_quadrant_free_data (p4est, c[zz]);
         }
-        tree->quadrants_per_level[c[0]->level] -= 4;
+        tree->quadrants_per_level[c[0]->level] -= P4EST_CHILDREN;
         cfirst = c[0];
         p4est_quadrant_parent (c[0], cfirst);
         p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
         tree->quadrants_per_level[cfirst->level] += 1;
-        p4est->local_num_quadrants -= 3;
-        removed += 3;
+        p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
+        removed += P4EST_CHILDREN - 1;
 
-        rest += 4 - before;
+        rest += P4EST_CHILDREN - before;
         last = first;
 
         cidz = (size_t) p4est_quadrant_child_id (cfirst);
@@ -704,6 +735,8 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   P4EST_GLOBAL_PRODUCTIONF ("Done p4est_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
 }
+
+#ifndef P4_TO_P8
 
 /** Check if the insulation layer of a quadrant overlaps anybody.
  * If yes, the quadrant itself is scheduled for sending.
@@ -1798,6 +1831,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                             (long long) p4est->global_num_quadrants);
 }
 
+#endif /* !P4_TO_P8 */
+
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
@@ -2115,8 +2150,6 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
      (long long) global_shipped,
      global_shipped * 100. / global_num_quadrants);
 }
-
-#endif /* !P4_TO_P8 */
 
 unsigned
 p4est_checksum (p4est_t * p4est)

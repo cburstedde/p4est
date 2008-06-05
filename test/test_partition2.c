@@ -19,8 +19,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_algorithms.h>
+#else
 #include <p4est_algorithms.h>
-#include <p4est_vtk.h>
+#endif
 
 typedef struct
 {
@@ -49,6 +52,12 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   if (quadrant->level >= 6) {
     return 0;
   }
+#ifdef P4_TO_P8
+  if (quadrant->level >= 5 && quadrant->z <= P4EST_QUADRANT_LEN (3)) {
+    return 0;
+  }
+#endif
+
   if (quadrant->x == P4EST_LAST_OFFSET (2) &&
       quadrant->y == P4EST_LAST_OFFSET (2)) {
     return 1;
@@ -107,7 +116,11 @@ main (int argc, char **argv)
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
+#ifdef P4_TO_P8
+  connectivity = p8est_connectivity_new_unitcube ();
+#else
   connectivity = p4est_connectivity_new_corner ();
+#endif
   p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
 
   num_procs = p4est->mpisize;

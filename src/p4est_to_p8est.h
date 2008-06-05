@@ -30,7 +30,15 @@
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_ROOT_LEN                  P8EST_ROOT_LEN
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
+#define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
+#define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
+#define P4EST_COMM_BALANCE_FIRST_LOAD   P8EST_COMM_BALANCE_FIRST_LOAD
+#define P4EST_COMM_BALANCE_SECOND_COUNT P8EST_COMM_BALANCE_SECOND_COUNT
+#define P4EST_COMM_BALANCE_SECOND_LOAD  P8EST_COMM_BALANCE_SECOND_LOAD
+#define P4EST_COMM_PARTITION_GIVEN      P8EST_COMM_PARTITION_GIVEN
+#define P4EST_COMM_PARTITION_WEIGHTED_LOW P8EST_COMM_PARTITION_WEIGHTED_LOW
+#define P4EST_COMM_PARTITION_WEIGHTED_HIGH P8EST_COMM_PARTITION_WEIGHTED_HIGH
 
 /* redefine types */
 #define p4est_t                         p8est_t
@@ -39,13 +47,20 @@
 #define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_position_t                p8est_position_t
 #define p4est_init_t                    p8est_init_t
+#define p4est_refine_t                  p8est_refine_t
+#define p4est_coarsen_t                 p8est_coarsen_t
+#define p4est_weight_t                  p8est_weight_t
 
 /* redefine functions */
-#define p4est_new                       p8est_new
-#define p4est_copy                      p8est_copy
-#define p4est_destroy                   p8est_destroy
-#define p4est_checksum                  p8est_checksum
+#define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
+#define p4est_new                       p8est_new
+#define p4est_destroy                   p8est_destroy
+#define p4est_copy                      p8est_copy
+#define p4est_refine                    p8est_refine
+#define p4est_coarsen                   p8est_coarsen
+#define p4est_partition                 p8est_partition
+#define p4est_checksum                  p8est_checksum
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
@@ -86,6 +101,7 @@
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_complete_region           p8est_complete_region
+#define p4est_partition_given           p8est_partition_given
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_find_owner           p8est_comm_find_owner

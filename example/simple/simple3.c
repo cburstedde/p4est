@@ -79,7 +79,7 @@ refine_normal_fn (p8est_t * p8est, p4est_topidx_t which_tree,
       quadrant->y == P8EST_LAST_OFFSET (2)) {
     return 1;
   }
-  if (quadrant->x >= P8EST_QUADRANT_LEN (2)) {
+  if (quadrant->z >= P8EST_QUADRANT_LEN (2)) {
     return 0;
   }
 
@@ -176,7 +176,6 @@ main (int argc, char **argv)
   p8est_vtk_write_file (p8est, "mesh_simple_new");
 #endif
 
-#if 0
   /* refinement and coarsening */
   p8est_refine (p8est, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
@@ -186,18 +185,20 @@ main (int argc, char **argv)
   p8est_vtk_write_file (p8est, "mesh_simple_refined");
 #endif
 
+#if 0
   /* balance */
   p8est_balance (p8est, init_fn);
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple_balanced");
 #endif
+#endif
+
   crc = p8est_checksum (p8est);
 
   /* partition */
   p8est_partition (p8est, NULL);
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple_partition");
-#endif
 #endif
 
   /* print forest checksum */
