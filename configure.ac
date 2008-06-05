@@ -2,8 +2,8 @@ dnl
 dnl This file is part of the p4est library.
 dnl
 
-AC_INIT([p4est], [0.2], [ccgo@ices.utexas.edu])
-AC_PREREQ([2.59])
+AC_INIT([p4est],[0.2],[ccgo@ices.utexas.edu])
+AC_PREREQ(2.61)
 AC_CONFIG_HEADER([src/pre_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR(config)

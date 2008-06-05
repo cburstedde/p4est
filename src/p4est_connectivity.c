@@ -602,10 +602,8 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
   ntree1 = conn->tree_to_tree[4 * itree + (icorner + 3) % 4];
   ntree2 = conn->tree_to_tree[4 * itree + icorner];
 
-  /* *INDENT-OFF* horrible indent bug */
-  corner_trees =
-    conn->vtt_offset[ivertex + 1] - conn->vtt_offset[ivertex];  /* same type */
-  /* *INDENT-ON */
+  corner_trees =                /* same type */
+    conn->vtt_offset[ivertex + 1] - conn->vtt_offset[ivertex];
 
   num_found = 0;
   for (ctree = 0; ctree < corner_trees; ++ctree) {
