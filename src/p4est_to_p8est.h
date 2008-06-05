@@ -42,7 +42,9 @@
 
 /* redefine functions */
 #define p4est_new                       p8est_new
-#define p4est_is_valid                  p8est_is_valid
+#define p4est_copy                      p8est_copy
+#define p4est_destroy                   p8est_destroy
+#define p4est_checksum                  p8est_checksum
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
@@ -74,6 +76,15 @@
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
 #define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_checksum         p8est_quadrant_checksum
+#define p4est_tree_is_sorted            p8est_tree_is_sorted
+#define p4est_tree_is_linear            p8est_tree_is_linear
+/* p4est_tree_is_almost_sorted not implemented yet */
+#define p4est_tree_is_complete          p8est_tree_is_complete
+#define p4est_tree_print                p8est_tree_print
+#define p4est_is_valid                  p8est_is_valid
+#define p4est_find_lower_bound          p8est_find_lower_bound
+#define p4est_find_higher_bound         p8est_find_higher_bound
+#define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_complete_region           p8est_complete_region
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition

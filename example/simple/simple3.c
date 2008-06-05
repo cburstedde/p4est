@@ -176,6 +176,7 @@ main (int argc, char **argv)
   p8est_vtk_write_file (p8est, "mesh_simple_new");
 #endif
 
+#if 0
   /* refinement and coarsening */
   p8est_refine (p8est, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
@@ -196,6 +197,7 @@ main (int argc, char **argv)
   p8est_partition (p8est, NULL);
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple_partition");
+#endif
 #endif
 
   /* print forest checksum */

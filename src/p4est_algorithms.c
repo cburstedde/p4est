@@ -1058,8 +1058,6 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
   return crc;
 }
 
-#ifndef P4_TO_P8
-
 bool
 p4est_tree_is_sorted (p4est_tree_t * tree)
 {
@@ -1109,6 +1107,8 @@ p4est_tree_is_linear (p4est_tree_t * tree)
   return true;
 }
 
+#ifndef P4_TO_P8
+
 bool
 p4est_tree_is_almost_sorted (p4est_tree_t * tree, bool check_linearity)
 {
@@ -1155,6 +1155,8 @@ p4est_tree_is_almost_sorted (p4est_tree_t * tree, bool check_linearity)
   return true;
 }
 
+#endif /* !P4_TO_P8 */
+
 bool
 p4est_tree_is_complete (p4est_tree_t * tree)
 {
@@ -1191,9 +1193,15 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
   for (jz = 0; jz < tquadrants->elem_count; ++jz) {
     q2 = sc_array_index (tquadrants, jz);
     childid = p4est_quadrant_child_id (q2);
+#ifdef P4_TO_P8
+    l = snprintf (buffer, BUFSIZ, "0x%llx 0x%llx 0x%llx %d",
+                  (unsigned long long) q2->x, (unsigned long long) q2->y,
+                  (unsigned long long) q2->z, (int) q2->level);
+#else
     l = snprintf (buffer, BUFSIZ, "0x%llx 0x%llx %d",
                   (unsigned long long) q2->x, (unsigned long long) q2->y,
                   (int) q2->level);
+#endif
     if (jz > 0) {
       comp = p4est_quadrant_compare (q1, q2);
       if (comp > 0) {
@@ -1252,7 +1260,11 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_ASSERT (p4est->global_first_position[num_procs].which_tree ==
                 p4est->connectivity->num_trees &&
                 p4est->global_first_position[num_procs].x == 0 &&
-                p4est->global_first_position[num_procs].y == 0);
+                p4est->global_first_position[num_procs].y == 0 &&
+#ifdef P4_TO_P8
+                p4est->global_first_position[num_procs].z == 0 &&
+#endif
+                true);
   P4EST_ASSERT (p4est->connectivity->num_trees ==
                 (p4est_topidx_t) p4est->trees->elem_count);
 
@@ -1270,11 +1282,18 @@ p4est_is_valid (p4est_t * p4est)
     }
     mylow.x = p4est->global_first_position[rank].x;
     mylow.y = p4est->global_first_position[rank].y;
+#ifdef P4_TO_P8
+    mylow.z = p4est->global_first_position[rank].z;
+#endif
     mylow.level = P4EST_MAXLEVEL;
     tree = sc_array_index (p4est->trees, first_tree);
     if (tree->quadrants.elem_count > 0) {
       q = sc_array_index (&tree->quadrants, 0);
-      if (q->x != mylow.x || q->y != mylow.y) {
+      if (q->x != mylow.x || q->y != mylow.y ||
+#ifdef P4_TO_P8
+          q->z != mylow.z ||
+#endif
+          false) {
         P4EST_INFO ("p4est invalid low quadrant\n");
         return false;
       }
@@ -1296,6 +1315,9 @@ p4est_is_valid (p4est_t * p4est)
     }
     nextlow.x = p4est->global_first_position[rank + 1].x;
     nextlow.y = p4est->global_first_position[rank + 1].y;
+#ifdef P4_TO_P8
+    nextlow.z = p4est->global_first_position[rank + 1].z;
+#endif
     nextlow.level = P4EST_MAXLEVEL;
     tree = sc_array_index (p4est->trees, last_tree);
     if (tree->quadrants.elem_count > 0) {
@@ -1308,7 +1330,11 @@ p4est_is_valid (p4est_t * p4est)
       }
       else {
         p4est_quadrant_last_descendent (q, &s, P4EST_MAXLEVEL);
-        if (s.x + 1 != P4EST_ROOT_LEN || s.y + 1 != P4EST_ROOT_LEN) {
+        if (s.x + 1 != P4EST_ROOT_LEN || s.y + 1 != P4EST_ROOT_LEN ||
+#ifdef P4_TO_P8
+            s.z + 1 != P4EST_ROOT_LEN ||
+#endif
+            false) {
           P4EST_INFO ("p4est invalid last quadrant\n");
           return false;
         }
@@ -1465,6 +1491,8 @@ p4est_find_higher_bound (sc_array_t * array,
 
   return (ssize_t) guess;
 }
+
+#ifndef P4_TO_P8
 
 void
 p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
@@ -1683,6 +1711,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   sc_array_reset (&corner_info);
 }
 
+#endif /* !P4_TO_P8 */
+
 void
 p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
 {
@@ -1743,6 +1773,9 @@ p4est_complete_region (p4est_t * p4est,
 
   p4est_quadrant_t    Afinest;
   p4est_quadrant_t   *c0, *c1, *c2, *c3;
+#ifdef P4_TO_P8
+  p4est_quadrant_t   *c4, *c5, *c6, *c7;
+#endif
 
   sc_array_t         *quadrants;
   sc_mempool_t       *quadrant_pool = p4est->quadrant_pool;
@@ -1797,13 +1830,27 @@ p4est_complete_region (p4est_t * p4est,
     c1 = sc_mempool_alloc (quadrant_pool);
     c2 = sc_mempool_alloc (quadrant_pool);
     c3 = sc_mempool_alloc (quadrant_pool);
+#ifdef P4_TO_P8
+    c4 = sc_mempool_alloc (quadrant_pool);
+    c5 = sc_mempool_alloc (quadrant_pool);
+    c6 = sc_mempool_alloc (quadrant_pool);
+    c7 = sc_mempool_alloc (quadrant_pool);
 
+    p8est_quadrant_children (&Afinest, c0, c1, c2, c3, c4, c5, c6, c7);
+#else
     p4est_quadrant_children (&Afinest, c0, c1, c2, c3);
+#endif
 
     sc_list_append (W, c0);
     sc_list_append (W, c1);
     sc_list_append (W, c2);
     sc_list_append (W, c3);
+#ifdef P4_TO_P8
+    sc_list_append (W, c4);
+    sc_list_append (W, c5);
+    sc_list_append (W, c6);
+    sc_list_append (W, c7);
+#endif
 
     /* for each w in W */
     while (W->elem_count > 0) {
@@ -1832,9 +1879,23 @@ p4est_complete_region (p4est_t * p4est,
         c1 = sc_mempool_alloc (quadrant_pool);
         c2 = sc_mempool_alloc (quadrant_pool);
         c3 = sc_mempool_alloc (quadrant_pool);
+#ifdef P4_TO_P8
+        c4 = sc_mempool_alloc (quadrant_pool);
+        c5 = sc_mempool_alloc (quadrant_pool);
+        c6 = sc_mempool_alloc (quadrant_pool);
+        c7 = sc_mempool_alloc (quadrant_pool);
 
+        p8est_quadrant_children (w, c0, c1, c2, c3, c4, c5, c6, c7);
+#else
         p4est_quadrant_children (w, c0, c1, c2, c3);
+#endif
 
+#ifdef P4_TO_P8
+        sc_list_prepend (W, c7);
+        sc_list_prepend (W, c6);
+        sc_list_prepend (W, c5);
+        sc_list_prepend (W, c4);
+#endif
         sc_list_prepend (W, c3);
         sc_list_prepend (W, c2);
         sc_list_prepend (W, c1);
@@ -1870,6 +1931,8 @@ p4est_complete_region (p4est_t * p4est,
                   + (include_q2 ? 1 : 0));
   }
 }
+
+#ifndef P4_TO_P8
 
 /** Internal function to realize local completion / balancing.
  * \param [in] balance  can be 0: no balancing
