@@ -88,12 +88,16 @@ bool                p8est_quadrant_is_sibling (const p8est_quadrant_t * q1,
 bool                p8est_quadrant_is_sibling_D (const p8est_quadrant_t * q1,
                                                  const p8est_quadrant_t * q2);
 
-/** Test if four quadrants are siblings in Morton ordering.
+/** Test if eight quadrants are siblings in Morton ordering.
  */
 bool                p8est_quadrant_is_family (const p8est_quadrant_t * q0,
                                               const p8est_quadrant_t * q1,
                                               const p8est_quadrant_t * q2,
-                                              const p8est_quadrant_t * q3);
+                                              const p8est_quadrant_t * q3,
+                                              const p8est_quadrant_t * q4,
+                                              const p8est_quadrant_t * q5,
+                                              const p8est_quadrant_t * q6,
+                                              const p8est_quadrant_t * q7);
 
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
@@ -163,17 +167,21 @@ void                p8est_quadrant_sibling (const p8est_quadrant_t * q,
                                             p8est_quadrant_t * r,
                                             int sibling_id);
 
-/** Compute the 4 children of a quadrant.
+/** Compute the 8 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
  *                    \a q may point to the same quadrant as \a c0.
- * \note The user_data of \a c0, c1, c2, c3 is never modified.
+ * \note The user_data of \a c0, c1, c2, c3, c4, c5, c6, c7 is never modified.
  */
 void                p8est_quadrant_children (const p8est_quadrant_t * q,
                                              p8est_quadrant_t * c0,
                                              p8est_quadrant_t * c1,
                                              p8est_quadrant_t * c2,
-                                             p8est_quadrant_t * c3);
+                                             p8est_quadrant_t * c3,
+                                             p8est_quadrant_t * c4,
+                                             p8est_quadrant_t * c5,
+                                             p8est_quadrant_t * c6,
+                                             p8est_quadrant_t * c7);
 
 /** Compute the first descendent of a quadrant on a given level.
  * \param [in]  q      Input quadrant.

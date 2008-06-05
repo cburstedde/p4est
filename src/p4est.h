@@ -27,6 +27,7 @@
 
 /* the spatial dimension */
 #define P4EST_DIM 2
+#define P4EST_CHILDREN 4
 
 /* finest level of the quadtree */
 #define P4EST_MAXLEVEL 30

@@ -26,6 +26,7 @@
 
 /* redefine macros */
 #define P4EST_DIM                       P8EST_DIM
+#define P4EST_CHILDREN                  P8EST_CHILDREN
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_ROOT_LEN                  P8EST_ROOT_LEN
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
@@ -44,16 +45,35 @@
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
 #define p4est_quadrant_compare          p8est_quadrant_compare
-#define p4est_quadrant_is_valid         p8est_quadrant_is_valid
-#define p4est_quadrant_is_inside        p8est_quadrant_is_inside
-#define p4est_quadrant_is_extended      p8est_quadrant_is_extended
+#define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
 #define p4est_quadrant_hash             p8est_quadrant_hash
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
+#define p4est_quadrant_is_inside        p8est_quadrant_is_inside
+#define p4est_quadrant_is_valid         p8est_quadrant_is_valid
+#define p4est_quadrant_is_extended      p8est_quadrant_is_extended
+#define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling
+#define p4est_quadrant_is_sibling_D     p8est_quadrant_is_sibling_D
+/* p8est_quadrant_is_family is implemented in p8est_algorithms.c */
+#define p4est_quadrant_is_parent        p8est_quadrant_is_parent
+#define p4est_quadrant_is_parent_D      p8est_quadrant_is_parent_D
+#define p4est_quadrant_is_ancestor      p8est_quadrant_is_ancestor
+#define p4est_quadrant_is_ancestor_D    p8est_quadrant_is_ancestor_D
+#define p4est_quadrant_is_next          p8est_quadrant_is_next
+#define p4est_quadrant_is_next_D        p8est_quadrant_is_next_D
+#define p4est_quadrant_parent           p8est_quadrant_parent
+#define p4est_quadrant_sibling          p8est_quadrant_sibling
+/* p8est_quadrant_children is implemented in p8est_algorithms.c */
+#define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
+#define p4est_quadrant_last_descendent p8est_quadrant_last_descendent
+#define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
+#define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
+#define p4est_quadrant_print            p8est_quadrant_print
+#define p4est_quadrant_checksum         p8est_quadrant_checksum
 #define p4est_complete_region           p8est_complete_region
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
