@@ -32,6 +32,8 @@
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
+
+/* redefine enums */
 #define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
 #define P4EST_COMM_BALANCE_FIRST_LOAD   P8EST_COMM_BALANCE_FIRST_LOAD
 #define P4EST_COMM_BALANCE_SECOND_COUNT P8EST_COMM_BALANCE_SECOND_COUNT
@@ -82,7 +84,7 @@
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 /* p8est_quadrant_children is implemented in p8est_algorithms.c */
 #define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
-#define p4est_quadrant_last_descendent p8est_quadrant_last_descendent
+#define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent
 #define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
 #define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
