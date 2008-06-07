@@ -21,7 +21,6 @@
 
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
-#include <sc_zlib.h>
 
 typedef struct
 {

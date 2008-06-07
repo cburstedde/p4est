@@ -21,7 +21,6 @@
 
 #include <p4est_vtk.h>
 #include <p4est_mesh.h>
-#include <sc_zlib.h>
 #include <libb64.h>
 
 #ifndef P4EST_VTK_DOUBLES

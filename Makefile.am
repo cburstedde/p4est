@@ -24,6 +24,7 @@ SUBDIRS =
 if P4EST_PROVIDE_SC
 SUBDIRS += sc
 endif
+DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
 EXTRA_DIST += bootstrap p4estindent
@@ -52,10 +53,16 @@ if LINT
 endif LINT
 
 ChangeLog:
-	(GIT_DIR=@top_srcdir@/.git git-log | @top_srcdir@/git2cl \
+	@(GIT_DIR=@top_srcdir@/.git git-log | @top_srcdir@/sc/git2cl \
 		> .ChangeLog.tmp && \
 		mv .ChangeLog.tmp ChangeLog; rm -f .ChangeLog.tmp) || \
 	(touch ChangeLog; \
 		echo 'Warning not in git dir; ChangeLog could be wrong.' >&2)
 
 dist-hook: ChangeLog
+if !P4EST_PROVIDE_SC
+	@echo "-----------------------------------------------------"
+	@echo "make dist requires the builtin libsc to be configured"
+	@echo "-----------------------------------------------------"
+	@exit 1
+endif
