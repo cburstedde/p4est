@@ -68,7 +68,7 @@ p8est_quadrant_children (const p4est_quadrant_t * q,
                          p4est_quadrant_t * c4, p4est_quadrant_t * c5,
                          p4est_quadrant_t * c6, p4est_quadrant_t * c7)
 {
-  const int8_t        level = q->level + 1;     /* same type */
+  const int8_t        level = (int8_t) (q->level + 1);
   const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));

@@ -21,7 +21,7 @@
 
 #include <p4est_vtk.h>
 #include <p4est_mesh.h>
-#include <libb64.h>
+#include <sc_vtk.h>
 
 #ifndef P4EST_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"
@@ -36,176 +36,18 @@
 #define P4EST_VTK_FORMAT_STRING "ascii"
 #else
 #define P4EST_VTK_FORMAT_STRING "binary"
+
+static int
+p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
+                        size_t byte_length)
+{
 #ifndef P4EST_VTK_COMPRESSION
-
-static int
-p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
-                  unsigned long byte_length)
-{
-  int                 chunks;
-  unsigned int        chunksize, remaining, writenow;
-  int                 code_length, base_length;
-  uint32_t            int_header;
-  char               *base_data;
-  base64_encodestate  encode_state;
-
-  P4EST_ASSERT (byte_length <= UINT32_MAX);
-
-  chunksize = 1 << 15;          /* 32768 */
-  int_header = byte_length;
-
-  code_length = 2 * chunksize;
-  base_data = P4EST_ALLOC (char, code_length);
-
-  base64_init_encodestate (&encode_state);
-  base_length =
-    base64_encode_block ((char *) &int_header, sizeof (int_header), base_data,
-                         &encode_state);
-  base_data[base_length] = '\0';
-  fwrite (base_data, 1, base_length, vtkfile);
-
-  chunks = 0;
-  remaining = byte_length;
-  while (remaining > 0) {
-    writenow = P4EST_MIN (remaining, chunksize);
-    base_length = base64_encode_block (numeric_data + chunks * chunksize,
-                                       writenow, base_data, &encode_state);
-    base_data[base_length] = '\0';
-    P4EST_ASSERT (base_length < code_length);
-    fwrite (base_data, 1, base_length, vtkfile);
-    remaining -= writenow;
-    ++chunks;
-  }
-
-  base_length = base64_encode_blockend (base_data, &encode_state);
-  fwrite (base_data, 1, base_length, vtkfile);
-
-  P4EST_FREE (base_data);
-  if (ferror (vtkfile)) {
-    fprintf (stderr, "p4est_vtk: error encoding numeric data\n");
-    return -1;
-  }
-  return 0;
-}
-
+  return sc_vtk_write_binary (vtkfile, numeric_data, byte_length);
 #else
-
-static int
-p4est_vtk_binary (FILE * vtkfile, char *numeric_data,
-                  unsigned long byte_length)
-{
-  int                 retval;
-  size_t              is;
-  size_t              retvals;
-  unsigned long int   blocksize, lastsize;
-  unsigned long int   theblock, numregularblocks, numfullblocks;
-  size_t              header_entries;
-  size_t              code_length, base_length;
-  long                header_pos, final_pos;
-  char               *comp_data, *base_data;
-  uint32_t           *compression_header;
-  uLongf              comp_length;
-  base64_encodestate  encode_state;
-
-  /* compute block sizes */
-  blocksize = (unsigned long int) (1 << 15);    /* 32768 */
-  lastsize = byte_length % blocksize;
-  numregularblocks = byte_length / blocksize;
-  numfullblocks = numregularblocks + ((lastsize > 0) ? 1 : 0);
-
-  /* allocate compression and base64 arrays */
-  code_length = 2 * blocksize;
-  comp_data = P4EST_ALLOC (char, code_length);
-  base_data = P4EST_ALLOC (char, code_length);
-
-  /* figure out the size of the header and write a dummy */
-  header_entries = 3 + numfullblocks;
-  compression_header = P4EST_ALLOC (uint32_t, header_entries);
-  compression_header[0] = numfullblocks;
-  compression_header[1] = blocksize;
-  compression_header[2] = lastsize;
-  for (is = 3; is < header_entries; ++is) {
-    compression_header[is] = 0;
-  }
-  base64_init_encodestate (&encode_state);
-  base_length = base64_encode_block ((char *) compression_header,
-                                     sizeof (*compression_header) *
-                                     header_entries, base_data,
-                                     &encode_state);
-  base_length +=
-    base64_encode_blockend (base_data + base_length, &encode_state);
-  base_data[base_length] = '\0';
-  P4EST_ASSERT (base_length < code_length);
-  header_pos = ftell (vtkfile);
-  retvals = fwrite (base_data, 1, base_length, vtkfile);
-  P4EST_ASSERT (retvals == base_length);
-
-  /* write the regular data blocks */
-  base64_init_encodestate (&encode_state);
-  for (theblock = 0; theblock < numregularblocks; ++theblock) {
-    comp_length = code_length;
-    retval = compress2 ((Bytef *) comp_data, &comp_length,
-                        (const Bytef *) (numeric_data + theblock * blocksize),
-                        blocksize, Z_BEST_COMPRESSION);
-    P4EST_ASSERT (retval == Z_OK);
-    compression_header[3 + theblock] = comp_length;
-    base_length = base64_encode_block (comp_data, comp_length,
-                                       base_data, &encode_state);
-    base_data[base_length] = '\0';
-    P4EST_ASSERT (base_length < code_length);
-    retvals = fwrite (base_data, 1, base_length, vtkfile);
-    P4EST_ASSERT (retvals == base_length);
-  }
-
-  /* write odd-sized last block if necessary */
-  if (lastsize > 0) {
-    comp_length = code_length;
-    retval = compress2 ((Bytef *) comp_data, &comp_length,
-                        (const Bytef *) (numeric_data + theblock * blocksize),
-                        lastsize, Z_BEST_COMPRESSION);
-    P4EST_ASSERT (retval == Z_OK);
-    compression_header[3 + theblock] = comp_length;
-    base_length = base64_encode_block (comp_data, comp_length,
-                                       base_data, &encode_state);
-    base_data[base_length] = '\0';
-    P4EST_ASSERT (base_length < code_length);
-    retvals = fwrite (base_data, 1, base_length, vtkfile);
-    P4EST_ASSERT (retvals == base_length);
-  }
-
-  /* write base64 end block */
-  base_length = base64_encode_blockend (base_data, &encode_state);
-  retvals = fwrite (base_data, 1, base_length, vtkfile);
-  P4EST_ASSERT (retvals == base_length);
-
-  /* seek back, write header block, seek forward */
-  final_pos = ftell (vtkfile);
-  base64_init_encodestate (&encode_state);
-  base_length = base64_encode_block ((char *) compression_header,
-                                     sizeof (*compression_header) *
-                                     header_entries, base_data,
-                                     &encode_state);
-  base_length +=
-    base64_encode_blockend (base_data + base_length, &encode_state);
-  base_data[base_length] = '\0';
-  P4EST_ASSERT (base_length < code_length);
-  fseek (vtkfile, header_pos, SEEK_SET);
-  retvals = fwrite (base_data, 1, base_length, vtkfile);
-  P4EST_ASSERT (retvals == base_length);
-  fseek (vtkfile, final_pos, SEEK_SET);
-
-  /* clean up and return */
-  P4EST_FREE (compression_header);
-  P4EST_FREE (comp_data);
-  P4EST_FREE (base_data);
-  if (ferror (vtkfile)) {
-    fprintf (stderr, "p4est_vtk: error compressing numeric data\n");
-    return -1;
-  }
-  return 0;
+  return sc_vtk_write_compressed (vtkfile, numeric_data, byte_length);
+#endif /* P4EST_VTK_COMPRESSION */
 }
 
-#endif /* P4EST_VTK_COMPRESSION */
 #endif /* P4EST_VTK_BINARY */
 
 void
@@ -272,10 +114,10 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 
   fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
   fprintf (vtufile, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
-#if(defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION)
+#if defined(P4EST_VTK_BINARY) && defined(P4EST_VTK_COMPRESSION)
   fprintf (vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef WORDS_BIGENDIAN
+#ifdef SC_WORDS_BIGENDIAN
   fprintf (vtufile, " byte_order=\"BigEndian\">\n");
 #else
   fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
@@ -433,8 +275,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   }
 #else
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) float_data,
-                             sizeof (*float_data) * 3 * Ntotal);
+  retval = p4est_vtk_write_binary (vtufile, (char *) float_data,
+                                   sizeof (*float_data) * 3 * Ntotal);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding points\n");
@@ -462,8 +304,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"connectivity\""
            " format=\"binary\">\n", P4EST_VTK_LOCIDX);
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) locidx_data,
-                             sizeof (*locidx_data) * 4 * Ncells);
+  retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
+                                   sizeof (*locidx_data) * 4 * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding connectivity\n");
@@ -487,8 +329,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     locidx_data[il - 1] = il * 4;       /* same type */
   }
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) locidx_data,
-                             sizeof (*locidx_data) * Ncells);
+  retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
+                                   sizeof (*locidx_data) * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding offsets\n");
@@ -517,8 +359,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     uint8_data[il] = 8;
   }
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) uint8_data,
-                             sizeof (*uint8_data) * Ncells);
+  retval = p4est_vtk_write_binary (vtufile, (char *) uint8_data,
+                                   sizeof (*uint8_data) * Ncells);
   P4EST_FREE (uint8_data);
   fprintf (vtufile, "\n");
   if (retval) {
@@ -547,8 +389,8 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     locidx_data[il] = (p4est_locidx_t) procRank;
   }
   fprintf (vtufile, "          ");
-  retval = p4est_vtk_binary (vtufile, (char *) locidx_data,
-                             sizeof (*locidx_data) * Ncells);
+  retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
+                                   sizeof (*locidx_data) * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
     fprintf (stderr, "p4est_vtk: Error encoding types\n");
@@ -586,10 +428,10 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 
     fprintf (pvtufile, "<?xml version=\"1.0\"?>\n");
     fprintf (pvtufile, "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\"");
-#if(defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION)
+#if defined(P4EST_VTK_BINARY) && defined(P4EST_VTK_COMPRESSION)
     fprintf (pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef WORDS_BIGENDIAN
+#ifdef SC_WORDS_BIGENDIAN
     fprintf (pvtufile, " byte_order=\"BigEndian\">\n");
 #else
     fprintf (pvtufile, " byte_order=\"LittleEndian\">\n");
