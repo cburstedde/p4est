@@ -19,12 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P4EST_VTK_H
-#define P4EST_VTK_H
+#ifndef P8EST_VTK_H
+#define P8EST_VTK_H
 
-#include <p4est.h>
+#include <p8est.h>
 
-extern bool         p4est_vtk_default_write_rank;
+extern double       p8est_vtk_default_scale;
+extern bool         p8est_vtk_default_write_rank;
 
 /** This will write out the MPI rank in VTK format.
  *
@@ -32,28 +33,29 @@ extern bool         p4est_vtk_default_write_rank;
  * case of writing out the MPI rank only.  Note this
  * function will abort if there is a file error.
  *
- *  \param p4est     The p4est to be output.
+ *  \param p8est     The p8est to be output.
  *  \param baseName  The first part of the name which will have
  *                   the proc number appended to it (i.e., the
  *                   output file will be baseName_procNum.vtu).
  */
-void                p4est_vtk_write_file (p4est_t * p4est,
+void                p8est_vtk_write_file (p8est_t * p8est,
                                           const char *baseName);
 
 /** This will write the header of the vtu file.
  *
  * Writing a VTK file is split into a couple of routines.
  * The allows there to be an arbitrary number of
- * fields.  To write out two fields the
- * calling sequence would be something like
+ * fields.  The calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header(p4est, true, "output");
+ * p8est_vtk_write_header(p8est, 1., true, "output");
  * write_data_fields ();
- * p4est_vtk_write_footer(p4est, "output");
+ * p8est_vtk_write_footer(p8est, "output");
  * \endcode
  *
- *  \param p4est    The p4est to be output.
+ *  \param p8est    The p8est to be outputted.
+ *  \param scale     The relative length factor of the quadrants.
+ *                   Use 1.0 to fit quadrants exactly, less for gaps.
  *  \param write_rank   Boolean to determine if the MPI rank should be output.
  *  \param baseName The first part of the name which will have
  *                  the proc number appended to it (i.e., the
@@ -61,7 +63,7 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  *
  *  \return         This returns 0 if no error and -1 if there is an error.
  */
-int                 p4est_vtk_write_header (p4est_t * p4est,
+int                 p8est_vtk_write_header (p8est_t * p8est, double scale,
                                             bool write_rank,
                                             const char *baseName);
 
@@ -73,18 +75,18 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  * calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header(p4est, "output");
- * p4est_vtk_write_footer(p4est, "output");
+ * p8est_vtk_write_header(p8est, "output");
+ * p8est_vtk_write_footer(p8est, "output");
  * \endcode
  *
- *  \param p4est    The p4est to be outputted.
+ *  \param p8est    The p8est to be outputted.
  *  \param baseName The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be baseName_procNum.vtu).
  *
  *  \return         This returns 0 if no error and -1 if there is an error.
  */
-int                 p4est_vtk_write_footer (p4est_t * p4est,
+int                 p8est_vtk_write_footer (p8est_t * p8est,
                                             const char *baseName);
 
-#endif /* !P4EST_VTK_H */
+#endif /* !P8EST_VTK_H */

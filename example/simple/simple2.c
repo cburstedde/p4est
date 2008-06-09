@@ -270,23 +270,23 @@ main (int argc, char **argv)
   }
   p4est = p4est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn);
-  p4est_vtk_write_file (p4est, "mesh_simple_new");
+  p4est_vtk_write_file (p4est, "mesh_simple2_new");
 
   /* refinement and coarsening */
   p4est_refine (p4est, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
     p4est_coarsen (p4est, coarsen_fn, init_fn);
   }
-  p4est_vtk_write_file (p4est, "mesh_simple_refined");
+  p4est_vtk_write_file (p4est, "mesh_simple2_refined");
 
   /* balance */
   p4est_balance (p4est, init_fn);
-  p4est_vtk_write_file (p4est, "mesh_simple_balanced");
+  p4est_vtk_write_file (p4est, "mesh_simple2_balanced");
   crc = p4est_checksum (p4est);
 
   /* partition */
   p4est_partition (p4est, NULL);
-  p4est_vtk_write_file (p4est, "mesh_simple_partition");
+  p4est_vtk_write_file (p4est, "mesh_simple2_partition");
 
   /* print forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);

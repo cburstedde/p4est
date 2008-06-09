@@ -26,7 +26,7 @@
  *        o periodic  Refinement on the unit square with periodic b.c.
  */
 
-/* #define VTK_OUTPUT 1 */
+#define VTK_OUTPUT 1
 
 #include <p8est_algorithms.h>
 
@@ -173,7 +173,7 @@ main (int argc, char **argv)
   p8est = p8est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, "mesh_simple_new");
+  p8est_vtk_write_file (p8est, "mesh_simple3_new");
 #endif
 
   /* refinement and coarsening */
@@ -182,14 +182,14 @@ main (int argc, char **argv)
     p8est_coarsen (p8est, coarsen_fn, init_fn);
   }
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, "mesh_simple_refined");
+  p8est_vtk_write_file (p8est, "mesh_simple3_refined");
 #endif
 
 #if 0
   /* balance */
   p8est_balance (p8est, init_fn);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, "mesh_simple_balanced");
+  p8est_vtk_write_file (p8est, "mesh_simple3_balanced");
 #endif
 #endif
 
@@ -198,7 +198,7 @@ main (int argc, char **argv)
   /* partition */
   p8est_partition (p8est, NULL);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, "mesh_simple_partition");
+  p8est_vtk_write_file (p8est, "mesh_simple3_partition");
 #endif
 
   /* print forest checksum */

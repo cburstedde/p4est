@@ -53,9 +53,11 @@
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
 
-/* redefine functions */
+/* functions in p4est_connectivity */
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
+
+/* functions in p4est */
 #define p4est_new                       p8est_new
 #define p4est_destroy                   p8est_destroy
 #define p4est_copy                      p8est_copy
@@ -63,6 +65,8 @@
 #define p4est_coarsen                   p8est_coarsen
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
+
+/* functions in p4est_algorithms */
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
@@ -104,8 +108,13 @@
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_complete_region           p8est_complete_region
 #define p4est_partition_given           p8est_partition_given
+
+/* functions in p4est_communication */
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_find_owner           p8est_comm_find_owner
+
+/* functions in p4est_vtk */
+#define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 #endif /* !__P4EST_TO_P8EST_H */

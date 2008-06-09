@@ -19,8 +19,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_vtk.h>
+#else
 #include <p4est_vtk.h>
 #include <p4est_mesh.h>
+
+bool                p4est_vtk_default_write_rank = true;
+#endif /* !P4_TO_P8 */
+
 #include <sc_vtk.h>
 
 #ifndef P4EST_VTK_DOUBLES
@@ -50,19 +57,23 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
 
 #endif /* P4EST_VTK_BINARY */
 
+#ifndef P4_TO_P8
+
 void
 p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
 {
   int                 retval;
 
-  retval = p4est_vtk_write_header (p4est, baseName);
+  retval =
+    p4est_vtk_write_header (p4est, p4est_vtk_default_write_rank, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write header");
   retval = p4est_vtk_write_footer (p4est, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write footer");
 }
 
 int
-p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
+p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
+                        const char *baseName)
 {
   p4est_locidx_t      il, jl;
 #ifdef P4EST_VTK_ASCII
@@ -104,7 +115,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
   vtufile = fopen (vtufilename, "w");
   if (vtufile == NULL) {
-    fprintf (stderr, "Could no open %s for output!\n", vtufilename);
+    fprintf (stderr, "Could not open %s for output!\n", vtufilename);
     return -1;
   }
 
@@ -268,9 +279,9 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
     w0z = float_data[3 * il + 2];
 
 #ifdef P4EST_VTK_DOUBLES
-    fprintf (vtufile, "            %25.16e %25.16e %25.16e\n", w0x, w0y, w0z);
+    fprintf (vtufile, "     %24.16e %24.16e %24.16e\n", w0x, w0y, w0z);
 #else
-    fprintf (vtufile, "            %16.8e %16.8e %16.8e\n", w0x, w0y, w0z);
+    fprintf (vtufile, "          %16.8e %16.8e %16.8e\n", w0x, w0y, w0z);
 #endif
   }
 #else
@@ -316,18 +327,20 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "        </DataArray>\n");
 
   /* write offset data */
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
+           " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
-  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
-           " format=\"ascii\">\n", P4EST_VTK_LOCIDX);
-  for (il = 1; il <= Ncells; ++il) {
-    fprintf (vtufile, "          %lld\n", (long long) (il * 4));
+  fprintf (vtufile, "         ");
+  for (il = 1, sk = 1; il <= Ncells; ++il, ++sk) {
+    fprintf (vtufile, " %lld", (long long) (P4EST_CHILDREN * il));
+    if (!(sk % 8) && il != Ncells)
+      fprintf (vtufile, "\n         ");
   }
+  fprintf (vtufile, "\n");
 #else
-  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
-           " format=\"binary\">\n", P4EST_VTK_LOCIDX);
-  for (il = 1; il <= Ncells; ++il) {
-    locidx_data[il - 1] = il * 4;       /* same type */
-  }
+  for (il = 1; il <= Ncells; ++il)
+    locidx_data[il - 1] = P4EST_CHILDREN * il;  /* same type */
+
   fprintf (vtufile, "          ");
   retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
                                    sizeof (*locidx_data) * Ncells);
@@ -371,35 +384,39 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #endif
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </Cells>\n");
-  fprintf (vtufile, "      <CellData Scalars=\"mpirank\">\n");
+
+  if (write_rank) {
+    fprintf (vtufile, "      <CellData Scalars=\"mpirank\">\n");
 #ifdef P4EST_VTK_ASCII
-  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
-           " format=\"ascii\">\n", P4EST_VTK_LOCIDX);
-  fprintf (vtufile, "         ");
-  for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
-    fprintf (vtufile, " %d", procRank);
-    if (!(sk % 20) && il != (Ncells - 1))
-      fprintf (vtufile, "\n         ");
-  }
-  fprintf (vtufile, "\n");
+    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
+             " format=\"ascii\">\n", P4EST_VTK_LOCIDX);
+    fprintf (vtufile, "         ");
+    for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
+      fprintf (vtufile, " %d", procRank);
+      if (!(sk % 20) && il != (Ncells - 1))
+        fprintf (vtufile, "\n         ");
+    }
+    fprintf (vtufile, "\n");
 #else
-  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
-           " format=\"binary\">\n", P4EST_VTK_LOCIDX);
-  for (il = 0; il < Ncells; ++il) {
-    locidx_data[il] = (p4est_locidx_t) procRank;
-  }
-  fprintf (vtufile, "          ");
-  retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
-                                   sizeof (*locidx_data) * Ncells);
-  fprintf (vtufile, "\n");
-  if (retval) {
-    fprintf (stderr, "p4est_vtk: Error encoding types\n");
-    fclose (vtufile);
-    return -1;
-  }
+    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
+             " format=\"binary\">\n", P4EST_VTK_LOCIDX);
+    for (il = 0; il < Ncells; ++il) {
+      locidx_data[il] = (p4est_locidx_t) procRank;
+    }
+    fprintf (vtufile, "          ");
+    retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
+                                     sizeof (*locidx_data) * Ncells);
+    fprintf (vtufile, "\n");
+    if (retval) {
+      fprintf (stderr, "p4est_vtk: Error encoding types\n");
+      fclose (vtufile);
+      return -1;
+    }
 #endif
-  fprintf (vtufile, "        </DataArray>\n");
-  fprintf (vtufile, "      </CellData>\n");
+    fprintf (vtufile, "        </DataArray>\n");
+    fprintf (vtufile, "      </CellData>\n");
+  }
+
   fprintf (vtufile, "      <PointData>\n");
   P4EST_FREE (locidx_data);
 
@@ -422,7 +439,7 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 
     pvtufile = fopen (pvtufilename, "w");
     if (!pvtufile) {
-      fprintf (stderr, "Could no open %s for output!\n", vtufilename);
+      fprintf (stderr, "Could not open %s for output!\n", vtufilename);
       return -1;
     }
 
@@ -438,6 +455,18 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
 #endif
 
     fprintf (pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
+    fprintf (pvtufile, "    <PPoints>\n");
+    fprintf (pvtufile, "      <PDataArray type=\"%s\" Name=\"Position\""
+             " NumberOfComponents=\"3\" format=\"%s\"/>\n",
+             P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
+    fprintf (pvtufile, "    </PPoints>\n");
+    if (write_rank) {
+      fprintf (pvtufile, "    <PCellData Scalars=\"mpirank\">\n");
+      fprintf (pvtufile,
+               "      <PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
+               P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+      fprintf (pvtufile, "    </PCellData>\n");
+    }
     fprintf (pvtufile, "    <PPointData>\n");
 
     if (ferror (pvtufile)) {
@@ -454,12 +483,13 @@ p4est_vtk_write_header (p4est_t * p4est, const char *baseName)
   return 0;
 }
 
+#endif /* !P4_TO_P8 */
+
 int
 p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
 {
   char                vtufilename[BUFSIZ];
   int                 p;
-  int                 rootRank = 0;
   int                 procRank = p4est->mpirank;
   int                 numProcs = p4est->mpisize;
   FILE               *vtufile;
@@ -468,7 +498,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
   vtufile = fopen (vtufilename, "a");
   if (vtufile == NULL) {
-    fprintf (stderr, "Could no open %s for output!\n", vtufilename);
+    fprintf (stderr, "Could not open %s for output!\n", vtufilename);
     return -1;
   }
 
@@ -489,28 +519,18 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
   vtufile = NULL;
 
   /* Only have the root write to the parallel vtk file */
-  if (procRank == rootRank) {
+  if (procRank == 0) {
     char                pvtufilename[BUFSIZ];
     FILE               *pvtufile;
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", baseName);
 
     pvtufile = fopen (pvtufilename, "a");
     if (!pvtufile) {
-      fprintf (stderr, "Could no open %s for output!\n", vtufilename);
+      fprintf (stderr, "Could not open %s for output!\n", vtufilename);
       return -1;
     }
 
     fprintf (pvtufile, "    </PPointData>\n");
-    fprintf (pvtufile, "    <PCellData Scalars=\"mpirank\">\n");
-    fprintf (pvtufile,
-             "      <PDataArray type=\"%s\" Name=\"mpirank\"/>\n",
-             P4EST_VTK_LOCIDX);
-    fprintf (pvtufile, "    </PCellData>\n");
-    fprintf (pvtufile, "    <PPoints>\n");
-    fprintf (pvtufile, "      <PDataArray type=\"%s\""
-             " NumberOfComponents=\"3\" format=\"%s\"/>\n",
-             P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
-    fprintf (pvtufile, "    </PPoints>\n");
     for (p = 0; p < numProcs; ++p) {
       fprintf (pvtufile, "    <Piece Source=\"%s_%04d.vtu\"/>\n", baseName,
                p);
