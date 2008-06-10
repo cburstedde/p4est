@@ -107,6 +107,7 @@
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_complete_region           p8est_complete_region
+#define p4est_linearize_subtree         p8est_linearize_subtree
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */

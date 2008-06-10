@@ -1035,7 +1035,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 {
   size_t              iz, jz;
   size_t              incount, curcount, ocount;
-  int                 comp, lookup, inserted;
+  int                 comp;
+  bool                lookup, inserted;
   bool                isfamily, isoutroot;
   size_t              quadrant_pool_size;
   size_t              data_pool_size;
@@ -1043,7 +1044,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   size_t              count_already_inlist, count_already_outlist;
   size_t              first_inside, last_inside;
   int                 qid, sid, pid, bbound;
-  int                *key, *parent_key;
+  int                 skey, *key = &skey;
+  int                 pkey, *parent_key = &pkey;
   int                 outface[4];
   int                 l, inmaxl;
   void               *vlookup;
@@ -1082,8 +1084,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   incount = inlist->elem_count;
   inmaxl = (int) tree->maxlevel;
   qpool = p4est->quadrant_pool;
-  key = &comp;                  /* unique user_data pointer */
-  parent_key = &lookup;
 
   /* needed for sanity check */
   quadrant_pool_size = qpool->elem_count;
@@ -1378,6 +1378,8 @@ p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
   p4est_complete_or_balance (p4est, tree, 2, which_tree, init_fn);
 }
 
+#endif /* !P4_TO_P8 */
+
 void
 p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
 {
@@ -1389,7 +1391,12 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   p4est_quadrant_t   *q1, *q2;
   sc_array_t         *tquadrants = &tree->quadrants;
 
+#ifdef P4_TO_P8
+  /* TODO: need some variant of is_almost_sorted */
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+#else
   P4EST_ASSERT (p4est_tree_is_almost_sorted (tree, 0));
+#endif
 
   incount = tquadrants->elem_count;
   if (incount <= 1) {
@@ -1453,8 +1460,6 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
   P4EST_ASSERT (p4est_tree_is_linear (tree));
 }
-
-#endif /* !P4_TO_P8 */
 
 p4est_gloidx_t
 p4est_partition_given (p4est_t * p4est,

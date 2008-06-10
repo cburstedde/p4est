@@ -100,6 +100,106 @@ p8est_connectivity_destroy (p8est_connectivity_t * conn)
 bool
 p8est_connectivity_is_valid (p8est_connectivity_t * conn)
 {
+#if 0
+  int                 num_found;
+#endif
+  int                 face, rface, nface, orientation; /*, corner; */
+  p4est_topidx_t      tree, ntree; /*, ctree; */
+#if 0
+  p4est_topidx_t      vertex, cvertex, corner_trees;
+  p4est_topidx_t      v1, v2, w1, w2;
+#endif
+  p4est_topidx_t      nvtt;
+  const p4est_topidx_t num_trees = conn->num_trees;
+  const p4est_topidx_t num_vertices = conn->num_vertices;
+  const p4est_topidx_t num_vtt = conn->vtt_offset[num_vertices];
+#if 0
+  const p4est_topidx_t *ttv = conn->tree_to_vertex;
+#endif
+  const p4est_topidx_t *ttt = conn->tree_to_tree;
+  const int8_t       *ttf = conn->tree_to_face;
+  const p4est_topidx_t *vtt = conn->vertex_to_tree;
+  const p4est_topidx_t *vtv = conn->vertex_to_vertex;
+#if 0
+  const p4est_topidx_t *voff = conn->vtt_offset;
+#endif
+
+  if (num_trees < 1 || num_vertices < 8) {
+    fprintf (stderr, "Invalid numbers of trees or vertices");
+    return false;
+  }
+
+  for (tree = 0; tree < num_trees; ++tree) {
+    for (face = 0; face < 6; ++face) {
+      ntree = ttt[tree * 6 + face];
+      if (ntree < 0 || ntree >= num_trees) {
+        fprintf (stderr, "Tree range A in %lld %d\n", (long long) tree, face);
+        return false;
+      }
+      rface = (int) ttf[tree * 6 + face];
+      if (rface < 0 || rface >= 24) {
+        fprintf (stderr, "Face range in %lld %d\n", (long long) tree, face);
+        return false;
+      }
+      nface = rface % 4;        /* clamp to a real face index */
+      orientation = rface / 4;  /* 0..3 for relative rotation */
+      if (ntree == tree) {
+        /* no neighbor across this face or self-periodic */
+        if (nface == face && orientation != 0) {
+          fprintf (stderr, "Face invalid in %lld %d\n",
+                   (long long) tree, face);
+          return false;
+        }
+      }
+      if (ntree != tree || nface != face) {
+        /* check reciprocity */
+        if (ttt[ntree * 6 + nface] != tree) {
+          fprintf (stderr, "Tree reciprocity in %lld %d\n",
+                   (long long) tree, face);
+          return false;
+        }
+        /* TODO: everything below here needs to be adapted for 3D */
+#if 0
+        if ((int) ttf[ntree * 6 + nface] != face + 4 * orientation) {
+          fprintf (stderr, "Face reciprocity in %lld %d\n",
+                   (long long) tree, face);
+          return false;
+        }
+
+        /* a neighbor across this face */
+        v1 = ttv[tree * 8 + face];
+        v2 = ttv[tree * 8 + (face + 1) % 4];
+        w1 = ttv[ntree * 8 + nface];
+        w2 = ttv[ntree * 8 + (nface + 1) % 4];
+        if (v1 == v2 || w1 == w2) {
+          fprintf (stderr, "Vertex invalid in %lld %d\n",
+                   (long long) tree, face);
+          return false;
+        }
+        if ((v1 == w2 && v2 == w1) && orientation != 0) {
+          fprintf (stderr, "Orientation mismatch A in %lld %d\n",
+                   (long long) tree, face);
+          return false;
+        }
+        if ((v1 == w1 && v2 == w2) && orientation != 1) {
+          fprintf (stderr, "Orientation mismatch B in %lld %d\n",
+                   (long long) tree, face);
+          return false;
+        }
+#endif
+      }
+    }
+  }
+
+  for (nvtt = 0; nvtt < num_vtt; ++nvtt) {
+    if (vtt[nvtt] < 0 || vtt[nvtt] >= num_trees) {
+      fprintf (stderr, "Vertex to tree %d out of range", nvtt);
+    }
+    if (vtv[nvtt] < 0 || vtv[nvtt] >= num_vertices) {
+      fprintf (stderr, "Vertex to vertex %d out of range", nvtt);
+    }
+  }
+  
   return true;
 }
 
