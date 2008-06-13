@@ -28,7 +28,7 @@
 
 #define VTK_OUTPUT 1
 
-#include <p8est_algorithms.h>
+#include <p8est_bits.h>
 
 #ifdef VTK_OUTPUT
 #include <p8est_vtk.h>

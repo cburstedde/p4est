@@ -31,7 +31,7 @@
  *        o periodic  Refinement on the unit square with periodic b.c.
  */
 
-#include <p4est_algorithms.h>
+#include <p4est_bits.h>
 #include <p4est_vtk.h>
 
 enum

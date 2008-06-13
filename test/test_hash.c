@@ -19,7 +19,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p4est_algorithms.h>
+#include <p4est_bits.h>
 
 static unsigned
 int_hash_fn (const void *v)

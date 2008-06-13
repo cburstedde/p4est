@@ -20,6 +20,7 @@
 */
 
 #include <p4est_algorithms.h>
+#include <p4est_bits.h>
 
 int
 main (int argc, char **argv)
