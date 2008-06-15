@@ -582,12 +582,11 @@ p4est_find_higher_bound (sc_array_t * array,
   return (ssize_t) guess;
 }
 
-#ifndef P4_TO_P8
-
 void
 p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
                             sc_array_t * in, sc_array_t * out)
 {
+#ifndef P4_TO_P8
   int                 k, l, which;
   size_t              iz;
   size_t              ctree;
@@ -799,9 +798,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   }
 
   sc_array_reset (&corner_info);
-}
-
 #endif /* !P4_TO_P8 */
+}
 
 void
 p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
@@ -1022,8 +1020,6 @@ p4est_complete_region (p4est_t * p4est,
   }
 }
 
-#ifndef P4_TO_P8
-
 /** Internal function to realize local completion / balancing.
  * \param [in] balance  can be 0: no balancing
  *                             1: balance across edges
@@ -1033,6 +1029,7 @@ static void
 p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
                            p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
+#ifndef P4_TO_P8
   size_t              iz, jz;
   size_t              incount, curcount, ocount;
   int                 comp;
@@ -1059,7 +1056,13 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   sc_mempool_t       *list_alloc, *qpool;
   sc_hash_t          *hash[P4EST_MAXLEVEL + 1];
   sc_array_t          outlist[P4EST_MAXLEVEL + 1];
+#endif /* P4_TO_P8 */
 
+#ifdef P4_TO_P8
+  /* TODO: need some variant of is_almost_sorted */
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+  P4EST_ASSERT (p4est_tree_is_linear (tree));
+#else
   P4EST_ASSERT (p4est_tree_is_almost_sorted (tree, 1));
 
   P4EST_QUADRANT_INIT (&ld);
@@ -1361,6 +1364,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
     P4EST_ASSERT (data_pool_size + inlist->elem_count ==
                   p4est->user_data_pool->elem_count + incount);
   }
+
+#endif /* !P4_TO_P8 */
+
   P4EST_ASSERT (p4est_tree_is_linear (tree));
 }
 
@@ -1375,10 +1381,8 @@ void
 p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
-  p4est_complete_or_balance (p4est, tree, 2, which_tree, init_fn);
+  p4est_complete_or_balance (p4est, tree, P4EST_DIM, which_tree, init_fn);
 }
-
-#endif /* !P4_TO_P8 */
 
 void
 p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
@@ -1530,7 +1534,7 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   P4EST_GLOBAL_INFOF
-    ("Into p4est_partition_given with %lld total quadrants\n",
+    ("Into " P4EST_STRING "_partition_given with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);
 
 #ifdef P4EST_DEBUG
@@ -2169,7 +2173,8 @@ p4est_partition_given (p4est_t * p4est,
   /* Assert that we have a valid partition */
   P4EST_ASSERT (crc == p4est_checksum (p4est));
   P4EST_GLOBAL_INFOF
-    ("Done p4est_partition_given shipped %lld quadrants %.3g%%\n",
+    ("Done " P4EST_STRING
+     "_partition_given shipped %lld quadrants %.3g%%\n",
      (long long) total_quadrants_shipped,
      total_quadrants_shipped * 100. / p4est->global_num_quadrants);
 

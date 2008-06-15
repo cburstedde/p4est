@@ -27,6 +27,8 @@
 /* redefine macros */
 #define P4EST_DIM                       P8EST_DIM
 #define P4EST_CHILDREN                  P8EST_CHILDREN
+#define P4EST_INSUL                     P8EST_INSUL
+#define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_ROOT_LEN                  P8EST_ROOT_LEN
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
@@ -63,6 +65,7 @@
 #define p4est_copy                      p8est_copy
 #define p4est_refine                    p8est_refine
 #define p4est_coarsen                   p8est_coarsen
+#define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
 
@@ -105,8 +108,11 @@
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
+#define p4est_tree_compute_overlap      p8est_tree_compute_overlap
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_complete_region           p8est_complete_region
+#define p4est_complete_subtree          p8est_complete_subtree
+#define p4est_balance_subtree           p8est_balance_subtree
 #define p4est_linearize_subtree         p8est_linearize_subtree
 #define p4est_partition_given           p8est_partition_given
 

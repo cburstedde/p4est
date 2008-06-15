@@ -103,8 +103,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
 #if 0
   int                 num_found;
 #endif
-  int                 face, rface, nface, orientation; /*, corner; */
-  p4est_topidx_t      tree, ntree; /*, ctree; */
+  int                 face, rface, nface, orientation;  /*, corner; */
+  p4est_topidx_t      tree, ntree;      /*, ctree; */
 #if 0
   p4est_topidx_t      vertex, cvertex, corner_trees;
   p4est_topidx_t      v1, v2, w1, w2;
@@ -199,7 +199,7 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
       fprintf (stderr, "Vertex to vertex %d out of range", nvtt);
     }
   }
-  
+
   return true;
 }
 

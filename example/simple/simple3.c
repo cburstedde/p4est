@@ -185,12 +185,10 @@ main (int argc, char **argv)
   p8est_vtk_write_file (p8est, "mesh_simple3_refined");
 #endif
 
-#if 0
   /* balance */
   p8est_balance (p8est, init_fn);
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple3_balanced");
-#endif
 #endif
 
   crc = p8est_checksum (p8est);

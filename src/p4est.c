@@ -48,16 +48,12 @@ const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 static const p4est_gloidx_t initial_quadrants_per_processor = 15;
 static const size_t number_toread_quadrants = 32;
 
-#ifndef P4_TO_P8
-
 #ifdef P4EST_MPI
 static const int    number_peer_windows = 5;
 #endif /* P4EST_MPI */
 
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
-
-#endif /* !P4_TO_P8 */
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
@@ -80,7 +76,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_quadrant_t    a, b, c;
   p4est_position_t   *global_first_position;
 
-  P4EST_GLOBAL_PRODUCTION ("Into p4est_new\n");
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   P4EST_QUADRANT_INIT (&a);
@@ -151,7 +147,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   }
 
   /* print some diagnostics */
-  P4EST_GLOBAL_PRODUCTIONF ("New p4est with %lld trees on %d processors\n",
+  P4EST_GLOBAL_PRODUCTIONF ("New " P4EST_STRING
+                            " with %lld trees on %d processors\n",
                             (long long) num_trees, num_procs);
   P4EST_GLOBAL_INFOF ("Initial level %d potential global quadrants"
                       " %lld per tree %lld\n",
@@ -274,7 +271,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                (long long) p4est->local_num_quadrants);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
-  P4EST_GLOBAL_PRODUCTIONF ("Done p4est_new with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
+                            "_new with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   return p4est;
 }
@@ -415,7 +413,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 #endif
   sc_array_t         *tquadrants;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into p4est_refine with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
+                            "_refine with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -577,7 +576,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
   p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
-  P4EST_GLOBAL_PRODUCTIONF ("Done p4est_refine with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
+                            "_refine with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
 }
 
@@ -598,7 +598,8 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   p4est_quadrant_t   *cfirst, *clast;
   sc_array_t         *tquadrants;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into p4est_coarsen with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
+                            "_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -734,11 +735,10 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
   p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
-  P4EST_GLOBAL_PRODUCTIONF ("Done p4est_coarsen with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
+                            "_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
 }
-
-#ifndef P4_TO_P8
 
 /** Check if the insulation layer of a quadrant overlaps anybody.
  * If yes, the quadrant itself is scheduled for sending.
@@ -781,7 +781,7 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
     peer = sc_array_index_int (peers, owner);
     /* avoid duplicates in the send array */
     found = false;
-    for (back = 0; back < 8; ++back) {
+    for (back = 0; back < P4EST_INSUL - 1; ++back) {
       pos = (int) peer->send_first.elem_count - back - 1;
       if (pos < 0) {
         break;
@@ -868,14 +868,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   const int           num_procs = p4est->mpisize;
   size_t              data_pool_size;
   size_t              all_incount, all_outcount;
-  int                 k, l, which;
-  size_t              ctree;
-  bool                any_face, face_contact[4];
-  bool                any_quad, quad_contact[4];
+  int                 k, l, m, which;
+  bool                any_face, face_contact[2 * P4EST_DIM];
+  bool                any_quad, quad_contact[2 * P4EST_DIM];
   bool                tree_fully_owned;
-  int                 transform;
   ssize_t             sss, first_index, last_index;
-  int                 face, corner, zcorner;
+  int                 face;
   int8_t             *tree_flags;
   int                 i, j;
   p4est_qcoord_t      qh;
@@ -886,14 +884,19 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_topidx_t      first_tree, last_tree, next_tree;
   int                 first_peer, last_peer;
   int                 over_peer_count;
-  sc_array_t         *peers, *qarray, *tquadrants, corner_info;
+  sc_array_t         *peers, *qarray, *tquadrants;
   p4est_balance_peer_t *peer;
   p4est_tree_t       *tree;
   p4est_quadrant_t    mylow, nextlow;
   p4est_quadrant_t    tosend, insulq, tempq;
   p4est_quadrant_t   *q, *s;
   p4est_connectivity_t *conn = p4est->connectivity;
+#ifndef P4_TO_P8
+  int                 transform, corner, zcorner;
+  size_t              ctree;
+  sc_array_t          corner_info;
   p4est_corner_info_t *ci;
+#endif
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
   unsigned            checksum;
@@ -902,7 +905,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif /* P4EST_DEBUG */
   const int           twopeerw = 2 * number_peer_windows;
   int                 mpiret, rcount;
+#ifndef P4_TO_P8
   int                 first_bound, last_bound;
+#endif
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
   int                 lastw, nwin;
@@ -920,7 +925,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   MPI_Status         *recv_statuses, *jstatus;
 #endif /* P4EST_MPI */
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into p4est_balance with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
+                            "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -980,7 +986,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     peer->have_first_count = peer->have_first_load = 0;
     peer->have_second_count = peer->have_second_load = 0;
   }
+#ifndef P4_TO_P8
   sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
+#endif
 
   /* compute first quadrants on finest level for comparison for me and next */
   first_peer = num_procs;
@@ -996,6 +1004,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   mylow.x = p4est->global_first_position[rank].x;
   mylow.y = p4est->global_first_position[rank].y;
+#ifdef P4_TO_P8
+  mylow.z = p4est->global_first_position[rank].z;
+#endif
   mylow.level = P4EST_MAXLEVEL;
   next_tree = p4est->global_first_position[rank + 1].which_tree;
   if (last_tree < 0) {
@@ -1006,15 +1017,19 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   nextlow.x = p4est->global_first_position[rank + 1].x;
   nextlow.y = p4est->global_first_position[rank + 1].y;
+#ifdef P4_TO_P8
+  nextlow.z = p4est->global_first_position[rank + 1].z;
+#endif
   nextlow.level = P4EST_MAXLEVEL;
 
   /* loop over all local trees to assemble first send list */
   all_incount = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
     any_face = false;
-    for (face = 0; face < 4; ++face) {
-      face_contact[face] = (conn->tree_to_tree[4 * nt + face] != nt ||
-                            (int) conn->tree_to_face[4 * nt + face] != face);
+    for (face = 0; face < 2 * P4EST_DIM; ++face) {
+      face_contact[face] =
+        (conn->tree_to_tree[2 * P4EST_DIM * nt + face] != nt
+         || (int) conn->tree_to_face[2 * P4EST_DIM * nt + face] != face);
       any_face = any_face || face_contact[face];
     }
     if (any_face) {
@@ -1036,8 +1051,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
     /* check if this tree is not shared with other processors */
     tree_fully_owned = false;
-    if ((nt > first_tree || (mylow.x == 0 && mylow.y == 0)) &&
-        (nt < last_tree || (nextlow.x == 0 && nextlow.y == 0))) {
+    if ((nt > first_tree || (mylow.x == 0 && mylow.y == 0 &&
+#ifdef P4_TO_P8
+                             mylow.z == 0 &&
+#endif
+                             true)) &&
+        (nt < last_tree || (nextlow.x == 0 && nextlow.y == 0 &&
+#ifdef P4_TO_P8
+                            nextlow.z == 0 &&
+#endif
+                            true))) {
       /* all quadrants in this tree are owned by me */
       tree_fully_owned = true;
       tree_flags[nt] |= fully_owned_flag;
@@ -1054,28 +1077,50 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       qh = P4EST_QUADRANT_LEN (q->level);
       if (tree_fully_owned) {
         /* need only to consider boundary quadrants */
+#ifndef P4_TO_P8
         any_quad =
           (face_contact[0] && q->y == 0) ||
           (face_contact[1] && q->x == rh - qh) ||
           (face_contact[2] && q->y == rh - qh) ||
           (face_contact[3] && q->x == 0);
+#else
+        any_quad =
+          (face_contact[0] && q->x == 0) ||
+          (face_contact[1] && q->x == rh - qh) ||
+          (face_contact[2] && q->y == 0) ||
+          (face_contact[3] && q->y == rh - qh) ||
+          (face_contact[4] && q->z == 0) ||
+          (face_contact[5] && q->z == rh - qh);
+#endif
         if (!any_quad) {
           continue;
         }
       }
+#ifdef P4_TO_P8
+      for (m = 0; m < 3; ++m) {
+#if 0
+      }
+#endif
+#else
+      m = 0;
+#endif
       for (k = 0; k < 3; ++k) {
         for (l = 0; l < 3; ++l) {
-          which = k * 3 + l;    /* 0..8 */
+          which = m * 9 + k * 3 + l;    /* 0..8 */
           /* exclude myself from the queries */
-          if (which == 4) {
+          if (which == P4EST_INSUL / 2) {
             continue;
           }
           /* may modify insulq below, never modify q itself! */
           insulq = *q;
           insulq.x += (l - 1) * qh;
           insulq.y += (k - 1) * qh;
+#ifdef P4_TO_P8
+          insulq.z += (m - 1) * qh;
+#endif
 
           /* check boundary status of s */
+#ifndef P4_TO_P8
           quad_contact[0] = (insulq.y < 0);
           quad_contact[1] = (insulq.x >= rh);
           quad_contact[2] = (insulq.y >= rh);
@@ -1127,6 +1172,19 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                                       &first_peer, &last_peer);
             }
           }
+#else /* P4_TO_P8 */
+          quad_contact[0] = (insulq.x < 0);
+          quad_contact[1] = (insulq.x >= rh);
+          quad_contact[2] = (insulq.y < 0);
+          quad_contact[3] = (insulq.y >= rh);
+          quad_contact[4] = (insulq.z < 0);
+          quad_contact[5] = (insulq.z >= rh);
+          if (quad_contact[0] || quad_contact[1] ||
+              quad_contact[2] || quad_contact[3] ||
+              quad_contact[4] || quad_contact[5]) {
+            /* this quadrant is relevant for inter-tree balancing */
+          }
+#endif /* !P4_TO_P8 */
           else {
             /* no inter-tree contact */
             p4est_balance_schedule (p4est, peers, nt, false,
@@ -1134,6 +1192,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           }
         }
       }
+#ifdef P4_TO_P8
+#if 0
+      {
+#endif
+      }
+#endif
     }
     tquadrants = NULL;          /* safeguard */
   }
@@ -1287,6 +1351,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   request_first_count = request_second_count = request_send_count = 0;
   send_zero[0] = send_load[0] = recv_zero[0] = recv_load[0] = 0;
   send_zero[1] = send_load[1] = recv_zero[1] = recv_load[1] = 0;
+
+#ifndef P4_TO_P8
+
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == rank) {
       continue;
@@ -1798,6 +1865,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                  (unsigned long long) tree->quadrants.elem_count);
   }
 
+#endif /* !P4_TO_P8 */
+
   /* cleanup temporary storage */
   P4EST_FREE (tree_flags);
   for (i = 0; i < num_procs; ++i) {
@@ -1807,7 +1876,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     sc_array_reset (&peer->recv_both);
   }
   sc_array_destroy (peers);
+
+#ifndef P4_TO_P8
   sc_array_reset (&corner_info);
+#endif
+
 #ifdef P4EST_MPI
   P4EST_FREE (peer_boundaries);
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
@@ -1829,11 +1902,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                   p4est->user_data_pool->elem_count);
   }
   P4EST_ASSERT (p4est_is_valid (p4est));
-  P4EST_GLOBAL_PRODUCTIONF ("Done p4est_balance with %lld total quadrants\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
+                            "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
 }
-
-#endif /* !P4_TO_P8 */
 
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
@@ -1871,13 +1943,14 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_GLOBAL_PRODUCTIONF
-    ("Into p4est_partition with %lld total quadrants\n",
+    ("Into " P4EST_STRING
+     "_partition with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);
 
 #ifdef P4EST_MPI
   /* this function does nothing in a serial setup */
   if (p4est->mpicomm == MPI_COMM_NULL || p4est->mpisize == 1) {
-    P4EST_GLOBAL_PRODUCTION ("Done p4est_partition no shipping\n");
+    P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
     return;
   }
 
@@ -1952,7 +2025,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       P4EST_FREE (local_weights);
       P4EST_FREE (global_weight_sums);
       P4EST_FREE (num_quadrants_in_proc);
-      P4EST_GLOBAL_PRODUCTION ("Done p4est_partition no shipping\n");
+      P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING
+                               "_partition no shipping\n");
       return;
     }
 
@@ -2148,7 +2222,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 #endif /* P4EST_MPI */
 
   P4EST_GLOBAL_PRODUCTIONF
-    ("Done p4est_partition shipped %lld quadrants %.3g%%\n",
+    ("Done " P4EST_STRING "_partition shipped %lld quadrants %.3g%%\n",
      (long long) global_shipped,
      global_shipped * 100. / global_num_quadrants);
 }

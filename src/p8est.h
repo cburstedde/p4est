@@ -28,6 +28,8 @@
 /* the spatial dimension */
 #define P8EST_DIM 3
 #define P8EST_CHILDREN 8
+#define P8EST_INSUL 27
+#define P8EST_STRING "p8est"
 
 /* finest level of the quadtree */
 #define P8EST_MAXLEVEL 19
