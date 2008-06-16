@@ -6,6 +6,7 @@ dnl Documentation for macro names: brackets indicate optional arguments
 
 dnl P4EST_ARG_ENABLE(NAME, COMMENT, TOKEN)
 dnl Check for --enable/disable-NAME using shell variable P4EST_ENABLE_TOKEN
+dnl If shell variable is set beforehand it overrides the option
 dnl If enabled, define TOKEN to 1 and set conditional P4EST_TOKEN
 dnl Default is disabled
 dnl
@@ -14,6 +15,7 @@ AC_DEFUN([P4EST_ARG_ENABLE],
 
 dnl P4EST_ARG_DISABLE(NAME, COMMENT, TOKEN)
 dnl Check for --enable/disable-NAME using shell variable P4EST_ENABLE_TOKEN
+dnl If shell variable is set beforehand it overrides the option
 dnl If enabled, define TOKEN to 1 and set conditional P4EST_TOKEN
 dnl Default is enabled
 dnl
@@ -22,6 +24,7 @@ AC_DEFUN([P4EST_ARG_DISABLE],
 
 dnl P4EST_ARG_WITH(NAME, COMMENT, TOKEN)
 dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
+dnl If shell variable is set beforehand it overrides the option
 dnl If with, define TOKEN to 1 and set conditional P4EST_TOKEN
 dnl Default is without
 dnl
@@ -30,6 +33,7 @@ AC_DEFUN([P4EST_ARG_WITH],
 
 dnl P4EST_ARG_WITHOUT(NAME, COMMENT, TOKEN)
 dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
+dnl If shell variable is set beforehand it overrides the option
 dnl If with, define TOKEN to 1 and set conditional P4EST_TOKEN
 dnl Default is with
 dnl
@@ -38,6 +42,7 @@ AC_DEFUN([P4EST_ARG_WITHOUT],
 
 dnl P4EST_ARG_WITH_YES(NAME, COMMENT, TOKEN)
 dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
+dnl If shell variable is set beforehand it overrides the option
 dnl If with = yes, define TOKEN to 1 and set conditional P4EST_TOKEN
 dnl Default is no
 dnl
@@ -46,6 +51,7 @@ AC_DEFUN([P4EST_ARG_WITH_YES],
 
 dnl P4EST_ARG_WITHOUT_YES(NAME, COMMENT, TOKEN)
 dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
+dnl If shell variable is set beforehand it overrides the option
 dnl If with = yes, define TOKEN to 1 and set conditional P4EST_TOKEN
 dnl Default is yes
 dnl

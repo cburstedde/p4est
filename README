@@ -1,10 +1,12 @@
 
-This is the README file for p4est-0.2.0.
+This is the README file for p4est-0.2.x.
 p4est is a C library to manage a parallel collection of quadtrees and/or
 octrees.
 
 See more documentation in the doc subdirectory.
 
+Version 0.2.2 includes libsc 0.5.2.
+Version 0.2.1 includes libsc 0.5.1.
 Version 0.2.0 includes libsc 0.5.0.
 
 ------------------------------------------------------------------------
