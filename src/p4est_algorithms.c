@@ -363,6 +363,36 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
   return (i1 + 1 == i2);
 }
 
+bool
+p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
+                              const p4est_quadrant_t * q)
+{
+  int                 maxl;
+  p4est_quadrant_t    desc;
+  p4est_quadrant_t   *treeq;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (tree->quadrants.elem_count == 0)
+    return false;
+
+  maxl = SC_MAX (tree->maxlevel, q->level);
+
+  /* check if q is before the first tree quadrant */
+  treeq = sc_array_index (&tree->quadrants, 0);
+  p4est_quadrant_last_descendent (q, &desc, maxl);
+  if (p4est_quadrant_compare (&desc, treeq) < 0)
+    return false;
+
+  /* check if q is after the last tree quadrant */
+  treeq = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
+  p4est_quadrant_last_descendent (treeq, &desc, maxl);
+  if (p4est_quadrant_compare (&desc, q) < 0)
+    return false;
+  
+  return true;
+}
+
 void
 p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 {
@@ -1518,10 +1548,10 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
 }
 
 void
-p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
+p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 {
   size_t              i, j;
-  size_t              outcount, dupcount, notcount;
+  size_t              outcount, dupcount, skipcount;
   p4est_quadrant_t   *inq, *outq, *tq;
 
   outcount = out->elem_count;
@@ -1531,7 +1561,7 @@ p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
 
   /* sort array and remove duplicates */
   sc_array_sort (out, p4est_quadrant_compare);
-  dupcount = notcount = 0;
+  dupcount = skipcount = 0;
   i = 0;                        /* read counter */
   j = 0;                        /* write counter */
   inq = sc_array_index (out, i);
@@ -1541,8 +1571,8 @@ p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
       ++dupcount;
       ++i;
     }
-    else if (sc_array_bsearch (not, inq, p4est_quadrant_compare_piggy) != -1) {
-      ++notcount;
+    else if (sc_array_bsearch (skip, inq, p4est_quadrant_compare_piggy) != -1) {
+      ++skipcount;
       ++i;
     }
     else {
@@ -1556,7 +1586,7 @@ p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
     inq = tq;
   }
   P4EST_ASSERT (i == outcount);
-  P4EST_ASSERT (j + dupcount + notcount == outcount);
+  P4EST_ASSERT (j + dupcount + skipcount == outcount);
   sc_array_resize (out, j);
 }
 
