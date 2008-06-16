@@ -33,8 +33,8 @@ typedef struct
 p4est_balance_peer_t;
 
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
+p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
 
-static const p4est_gloidx_t initial_quadrants_per_processor = 15;
 static const size_t number_toread_quadrants = 32;
 #ifdef P4EST_MPI
 static const int    number_peer_windows = 5;
@@ -107,7 +107,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   tree_num_quadrants = 1;
   for (level = 0; level < 16; ++level) {
     if (tree_num_quadrants >=
-        (num_procs * initial_quadrants_per_processor) / num_trees) {
+        (num_procs * (p4est_gloidx_t) p4est_initial_quadrants_per_processor)
+        / num_trees) {
       break;
     }
     tree_num_quadrants *= 4;

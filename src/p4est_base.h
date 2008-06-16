@@ -79,7 +79,10 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_STRDUP(s)                 sc_strdup (p4est_package_id, (s))
 #define P4EST_FREE(p)                   sc_free (p4est_package_id, (p))
 
-/* set up p4est log macros */
+/* Only include the p4est log macros in C, not C++, since C++98
+   does not allow variadic macros. */
+#ifndef __cplusplus
+
 #define P4EST_LOGF(category,priority,fmt,...)                           \
   do {                                                                  \
     if ((priority) >= SC_LP_THRESHOLD) {                                \
@@ -135,6 +138,8 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_PRODUCTION(s) P4EST_NORMAL_LOG (SC_LP_PRODUCTION, (s))
 #define P4EST_PRODUCTIONF(f,...) \
   P4EST_NORMAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+
+#endif /* !__cplusplus */
 
 /* extern declarations */
 extern int          p4est_package_id;
