@@ -268,6 +268,7 @@ main (int argc, char **argv)
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
+  /* p4est_initial_quadrants_per_processor = 0; */
   p4est = p4est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn);
   p4est_vtk_write_file (p4est, "mesh_simple2_new");

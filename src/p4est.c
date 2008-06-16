@@ -133,25 +133,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (level < P4EST_MAXLEVEL
                 && tree_num_quadrants <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
 
-  /* compute index of first tree for this processor */
+  /* compute global number of quadrants */
   global_num_quadrants = tree_num_quadrants * num_trees;
-  first_quadrant = (global_num_quadrants * rank) / num_procs;
-  first_tree = first_quadrant / tree_num_quadrants;
-  first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
-  last_quadrant = (global_num_quadrants * (rank + 1)) / num_procs - 1;
-  last_tree = last_quadrant / tree_num_quadrants;
-  last_tree_quadrant = last_quadrant - last_tree * tree_num_quadrants;
-
-  /* check ranges of various integers to be 32bit compatible */
-  P4EST_ASSERT (first_tree <= last_tree && last_tree < num_trees);
-  P4EST_ASSERT (0 <= first_tree_quadrant && 0 <= last_tree_quadrant);
-  P4EST_ASSERT (first_tree_quadrant < tree_num_quadrants);
-  P4EST_ASSERT (last_tree_quadrant < tree_num_quadrants);
-  if (first_tree == last_tree) {
-    P4EST_ASSERT (first_tree_quadrant < last_tree_quadrant);
-  }
-
-  /* print some diagnostics */
   P4EST_GLOBAL_PRODUCTIONF ("New " P4EST_STRING
                             " with %lld trees on %d processors\n",
                             (long long) num_trees, num_procs);
@@ -159,13 +142,41 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
                       (long long) tree_num_quadrants);
+  
+  /* compute index of first tree for this processor */
+  first_quadrant = (global_num_quadrants * rank) / num_procs;
+  first_tree = first_quadrant / tree_num_quadrants;
+  first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
+  last_quadrant = (global_num_quadrants * (rank + 1)) / num_procs - 1;
   P4EST_VERBOSEF
     ("first tree %lld first quadrant %lld global quadrant %lld\n",
      (long long) first_tree, (long long) first_tree_quadrant,
      (long long) first_quadrant);
-  P4EST_VERBOSEF ("last tree %lld last quadrant %lld global quadrant %lld\n",
-                  (long long) last_tree, (long long) last_tree_quadrant,
-                  (long long) last_quadrant);
+  P4EST_ASSERT (first_tree_quadrant < tree_num_quadrants);
+
+  /* compute index of last tree for this processor */
+  if (first_quadrant <= last_quadrant) {
+    last_tree = last_quadrant / tree_num_quadrants;
+    last_tree_quadrant = last_quadrant - last_tree * tree_num_quadrants;
+    P4EST_VERBOSEF ("last tree %lld last quadrant %lld global quadrant %lld\n",
+                    (long long) last_tree, (long long) last_tree_quadrant,
+                    (long long) last_quadrant);  
+
+    /* check ranges of various integers to be 32bit compatible */
+    P4EST_ASSERT (first_tree <= last_tree && last_tree < num_trees);
+    P4EST_ASSERT (0 <= first_tree_quadrant && 0 <= last_tree_quadrant);
+    P4EST_ASSERT (last_tree_quadrant < tree_num_quadrants);
+    if (first_tree == last_tree) {
+      P4EST_ASSERT (first_tree_quadrant <= last_tree_quadrant);
+    }
+  }
+  else {
+    P4EST_VERBOSE ("Empty processor");
+    P4EST_ASSERT (0 <= first_tree && 0 <= first_tree_quadrant);
+    first_tree = -1;
+    last_tree = -2;
+    last_tree_quadrant = -1;
+  }
 
   /* allocate trees and quadrants */
   p4est->trees = sc_array_new (sizeof (p4est_tree_t));
