@@ -42,10 +42,14 @@ p4est_balance_peer_t;
 #ifndef P4_TO_P8
 
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
+p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
 
-#endif /* !P4_TO_P8 */
+#else /* P4_TO_P8 */
 
-static const p4est_gloidx_t initial_quadrants_per_processor = 15;
+p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
+
+#endif /* P4_TO_P8 */
+
 static const size_t number_toread_quadrants = 32;
 
 #ifdef P4EST_MPI
@@ -119,7 +123,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   tree_num_quadrants = 1;
   for (level = 0; level < P4EST_MAXLEVEL; ++level) {
     if (tree_num_quadrants >=
-        (num_procs * initial_quadrants_per_processor) / num_trees) {
+        (num_procs * (p4est_gloidx_t) p4est_initial_quadrants_per_processor)
+        / num_trees) {
       break;
     }
     tree_num_quadrants *= P4EST_CHILDREN;

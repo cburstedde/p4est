@@ -149,8 +149,8 @@ typedef int         (*p8est_weight_t) (p8est_t * p8est,
                                        p4est_topidx_t which_tree,
                                        p8est_quadrant_t * quadrant);
 
-/** map right-hand corner rule to corner in z-ordering */
-extern const int    p8est_corner_to_zorder[5];
+/** minimum initial quadrants per core in p4est_new */
+extern p4est_locidx_t p8est_initial_quadrants_per_processor;
 
 /** set statically allocated quadrant to defined values */
 #define P8EST_QUADRANT_INIT(q) \

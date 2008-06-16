@@ -55,6 +55,10 @@
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
 
+/* redefine external variables */
+#define p4est_initial_quadrants_per_processor \
+                                        p8est_initial_quadrants_per_processor
+
 /* functions in p4est_connectivity */
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
