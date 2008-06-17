@@ -420,6 +420,36 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
   return (i1 + 1 == i2);
 }
 
+bool
+p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
+                              const p4est_quadrant_t * q)
+{
+  int                 maxl;
+  p4est_quadrant_t    desc;
+  p4est_quadrant_t   *treeq;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (tree->quadrants.elem_count == 0)
+    return false;
+
+  maxl = SC_MAX (tree->maxlevel, q->level);
+
+  /* check if q is before the first tree quadrant */
+  treeq = sc_array_index (&tree->quadrants, 0);
+  p4est_quadrant_last_descendent (q, &desc, maxl);
+  if (p4est_quadrant_compare (&desc, treeq) < 0)
+    return false;
+
+  /* check if q is after the last tree quadrant */
+  treeq = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
+  p4est_quadrant_last_descendent (treeq, &desc, maxl);
+  if (p4est_quadrant_compare (&desc, q) < 0)
+    return false;
+  
+  return true;
+}
+
 void
 p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 {

@@ -91,6 +91,7 @@
 #define p4est_quadrant_is_ancestor_D    p8est_quadrant_is_ancestor_D
 #define p4est_quadrant_is_next          p8est_quadrant_is_next
 #define p4est_quadrant_is_next_D        p8est_quadrant_is_next_D
+#define p4est_quadrant_overlaps_tree    p8est_quadrant_overlaps_tree
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 /* p8est_quadrant_children is implemented in p8est_algorithms.c */

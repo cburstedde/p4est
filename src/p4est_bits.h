@@ -142,6 +142,11 @@ bool                p4est_quadrant_is_next (const p4est_quadrant_t * q,
 bool                p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                                               const p4est_quadrant_t * r);
 
+/** Test if a quadrant has at least partial overlap with a tree.
+ */
+bool                p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
+                                                  const p4est_quadrant_t * q);
+
 /** Compute the parent of a quadrant.
  * \param [in]  q Input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled

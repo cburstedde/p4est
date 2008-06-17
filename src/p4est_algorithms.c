@@ -851,10 +851,10 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
 }
 
 void
-p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
+p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 {
   size_t              i, j;
-  size_t              outcount, dupcount, notcount;
+  size_t              outcount, dupcount, skipcount;
   p4est_quadrant_t   *inq, *outq, *tq;
 
   outcount = out->elem_count;
@@ -864,7 +864,7 @@ p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
 
   /* sort array and remove duplicates */
   sc_array_sort (out, p4est_quadrant_compare);
-  dupcount = notcount = 0;
+  dupcount = skipcount = 0;
   i = 0;                        /* read counter */
   j = 0;                        /* write counter */
   inq = sc_array_index (out, i);
@@ -874,8 +874,8 @@ p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
       ++dupcount;
       ++i;
     }
-    else if (sc_array_bsearch (not, inq, p4est_quadrant_compare_piggy) != -1) {
-      ++notcount;
+    else if (sc_array_bsearch (skip, inq, p4est_quadrant_compare_piggy) != -1) {
+      ++skipcount;
       ++i;
     }
     else {
@@ -889,7 +889,7 @@ p4est_tree_uniqify_overlap (sc_array_t * not, sc_array_t * out)
     inq = tq;
   }
   P4EST_ASSERT (i == outcount);
-  P4EST_ASSERT (j + dupcount + notcount == outcount);
+  P4EST_ASSERT (j + dupcount + skipcount == outcount);
   sc_array_resize (out, j);
 }
 

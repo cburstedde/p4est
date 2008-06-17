@@ -139,10 +139,10 @@ void                p4est_tree_compute_overlap (p4est_t * p4est,
                                                 sc_array_t * out);
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
- * \param [in] not      A sorted list of quadrants to be skipped.
+ * \param [in] skip     A sorted list of quadrants to be skipped.
  * \param [in,out] out  A sorted subset of tree->quadrants..
   */
-void                p4est_tree_uniqify_overlap (sc_array_t * not,
+void                p4est_tree_uniqify_overlap (sc_array_t * skip,
                                                 sc_array_t * out);
 
 /** Constructs a minimal linear octree between two octants.
