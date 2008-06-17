@@ -299,6 +299,48 @@ main (void)
   SC_CHECK_ABORT (incount - 3 == tree.quadrants.elem_count, "linearize");
   sc_array_reset (&tree.quadrants);
 
+  /* create a partial tree and check overlap */
+  sc_array_resize (&tree.quadrants, 3);
+  q1 = sc_array_index (&tree.quadrants, 0);
+  p4est_quadrant_set_morton (q1, 1, 1);
+  q1 = sc_array_index (&tree.quadrants, 1);
+  p4est_quadrant_set_morton (q1, 2, 8);
+  q1 = sc_array_index (&tree.quadrants, 2);
+  p4est_quadrant_set_morton (q1, 2, 9);
+  for (k = 0; k <= P4EST_MAXLEVEL; ++k) {
+    tree.quadrants_per_level[k] = 0;
+  }
+  tree.quadrants_per_level[1] = 1;
+  tree.quadrants_per_level[2] = 2;
+  tree.maxlevel = 2;
+  SC_CHECK_ABORT (p4est_tree_is_complete (&tree), "is_complete");
+
+  p4est_quadrant_set_morton (&D, 0, 0);
+  SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &D), "overlaps 0");
+
+  p4est_quadrant_set_morton (&A, 1, 0);
+  SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 1");
+  p4est_quadrant_set_morton (&A, 1, 1);
+  SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 2");
+  p4est_quadrant_set_morton (&A, 1, 2);
+  SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 3");
+  p4est_quadrant_set_morton (&A, 1, 3);
+  SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 4");
+
+  p4est_quadrant_set_morton (&B, 3, 13);
+  SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 5");
+  p4est_quadrant_set_morton (&B, 3, 25);
+  SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 6");
+  p4est_quadrant_set_morton (&B, 3, 39);
+  SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 7");
+  p4est_quadrant_set_morton (&B, 3, 40);
+  SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 8");
+
+  p4est_quadrant_set_morton (&C, 4, 219);
+  SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &C), "overlaps 9");
+
+  sc_array_reset (&tree.quadrants);
+
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est1);
   p4est_destroy (p4est2);

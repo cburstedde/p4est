@@ -421,8 +421,7 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 }
 
 bool
-p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
-                              const p4est_quadrant_t * q)
+p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
 {
   int                 maxl;
   p4est_quadrant_t    desc;
@@ -446,7 +445,7 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
   p4est_quadrant_last_descendent (treeq, &desc, maxl);
   if (p4est_quadrant_compare (&desc, q) < 0)
     return false;
-  
+
   return true;
 }
 
