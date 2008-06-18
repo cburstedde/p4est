@@ -112,7 +112,6 @@ main (int argc, char **argv)
   p8est_coarsen_t     coarsen_fn;
 
   /* initialize MPI and p4est internals */
-  mpi->mpicomm = MPI_COMM_WORLD;
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;

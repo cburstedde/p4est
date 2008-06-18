@@ -21,6 +21,39 @@
 
 #include <p8est_connectivity.h>
 
+/* *INDENT-OFF* */
+const int           p8est_face_vertices[6][4] =
+{{ 0, 2, 4, 6 },
+ { 1, 3, 5, 7 },
+ { 0, 1, 4, 5 },
+ { 2, 3, 6, 7 },
+ { 0, 1, 2, 3 },
+ { 4, 5, 6, 7 }};
+
+const int           p8est_face_permutations[8][4] =
+{{ 0, 1, 2, 3 },                /* no.  0 of 0..23 */
+ { 0, 2, 1, 3 },                /* no.  2 of 0..23 */
+ { 1, 0, 3, 2 },                /* no.  7 of 0..23 */
+ { 1, 3, 0, 2 },                /* no. 10 of 0..23 */
+ { 2, 0, 3, 1 },                /* no. 13 of 0..23 */
+ { 2, 3, 0, 1 },                /* no. 16 of 0..23 */
+ { 3, 1, 2, 0 },                /* no. 21 of 0..23 */
+ { 3, 2, 1, 0 }};               /* no. 23 of 0..23 */
+
+const int           p8est_face_permutation_sets[3][4] =
+{{ 1, 2, 5, 6 },
+ { 0, 3, 4, 7 },
+ { 0, 4, 3, 7 }};
+
+const int           p8est_face_permutation_refs[6][6] =
+{{ 0, 1, 1, 0, 0, 1 },
+ { 2, 0, 0, 1, 1, 0 },
+ { 2, 0, 0, 1, 1, 0 },
+ { 0, 2, 2, 0, 0, 1 },
+ { 0, 2, 2, 0, 0, 1 },
+ { 2, 0, 0, 2, 2, 0 }};
+/* *INDENT-ON* */
+
 static p8est_connectivity_t *
 p8est_connectivity_new_copy (p4est_topidx_t num_trees,
                              p4est_topidx_t num_vertices,
@@ -104,18 +137,18 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
   int                 num_found;
 #endif
   int                 face, rface, nface, orientation;  /*, corner; */
+  int                 fvert, face_ref, face_perm, nvert;
   p4est_topidx_t      tree, ntree;      /*, ctree; */
+  p4est_topidx_t      vertex, nvertex;
 #if 0
-  p4est_topidx_t      vertex, cvertex, corner_trees;
+  /* , cvertex, corner_trees; */
   p4est_topidx_t      v1, v2, w1, w2;
 #endif
   p4est_topidx_t      nvtt;
   const p4est_topidx_t num_trees = conn->num_trees;
   const p4est_topidx_t num_vertices = conn->num_vertices;
   const p4est_topidx_t num_vtt = conn->vtt_offset[num_vertices];
-#if 0
   const p4est_topidx_t *ttv = conn->tree_to_vertex;
-#endif
   const p4est_topidx_t *ttt = conn->tree_to_tree;
   const int8_t       *ttf = conn->tree_to_face;
   const p4est_topidx_t *vtt = conn->vertex_to_tree;
@@ -141,8 +174,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         fprintf (stderr, "Face range in %lld %d\n", (long long) tree, face);
         return false;
       }
-      nface = rface % 4;        /* clamp to a real face index */
-      orientation = rface / 4;  /* 0..3 for relative rotation */
+      nface = rface % 6;        /* clamp to a real face index */
+      orientation = rface / 6;  /* 0..3 for relative rotation */
       if (ntree == tree) {
         /* no neighbor across this face or self-periodic */
         if (nface == face && orientation != 0) {
@@ -158,14 +191,50 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
                    (long long) tree, face);
           return false;
         }
-        /* TODO: everything below here needs to be adapted for 3D */
-#if 0
-        if ((int) ttf[ntree * 6 + nface] != face + 4 * orientation) {
+        if ((int) ttf[ntree * 6 + nface] != face + 6 * orientation) {
           fprintf (stderr, "Face reciprocity in %lld %d\n",
                    (long long) tree, face);
           return false;
         }
 
+        /* check vertex consistency across faces */
+        for (fvert = 0; fvert < 4; ++fvert) {
+          vertex = ttv[tree * 8 + p8est_face_vertices[face][fvert]];
+          if (vertex < 0 || vertex >= num_vertices) {
+            fprintf (stderr, "Invalid vertex in %lld %d %d\n",
+                     (long long) tree, face, fvert);
+            return false;
+          }
+          for (nvert = fvert + 1; nvert < 4; ++nvert) {
+            nvertex = ttv[tree * 8 + p8est_face_vertices[face][nvert]];
+            if (vertex == nvertex) {
+              fprintf (stderr, "Duplicate vertex in %lld %d %d %d",
+                       (long long) tree, face, fvert, nvert);
+              return false;
+            }
+          }
+          face_ref = p8est_face_permutation_refs[face][nface];
+          face_perm = p8est_face_permutation_sets[face_ref][orientation];
+          nvert = p8est_face_permutations[face_perm][fvert];
+          nvertex = ttv[ntree * 8 + p8est_face_vertices[nface][nvert]];
+#if 0
+          P4EST_VERBOSEF ("Me %lld %d %d %lld Other %lld %d %d %lld",
+                          (long long) tree, face, fvert,
+                          (long long) vertex,
+                          (long long) ntree, nface, nvert,
+                          (long long) nvertex);
+          P4EST_VERBOSEF (" Perm %d %d %d\n",
+                          orientation, face_ref, face_perm);
+#endif
+          if (ntree != tree && nvertex != vertex) {
+            fprintf (stderr, "Vertex reciprocity in %lld %d %d\n",
+                     (long long) tree, face, fvert);
+            return false;
+          }
+        }
+
+        /* TODO: everything below here needs to be adapted for 3D */
+#if 0
         /* a neighbor across this face */
         v1 = ttv[tree * 8 + face];
         v2 = ttv[tree * 8 + (face + 1) % 4];
@@ -193,10 +262,12 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
 
   for (nvtt = 0; nvtt < num_vtt; ++nvtt) {
     if (vtt[nvtt] < 0 || vtt[nvtt] >= num_trees) {
-      fprintf (stderr, "Vertex to tree %d out of range", nvtt);
+      fprintf (stderr, "Vertex to tree %d out of range\n", nvtt);
+      return false;
     }
     if (vtv[nvtt] < 0 || vtv[nvtt] >= num_vertices) {
-      fprintf (stderr, "Vertex to vertex %d out of range", nvtt);
+      fprintf (stderr, "Vertex to vertex %d out of range\n", nvtt);
+      return false;
     }
   }
 
@@ -247,7 +318,105 @@ p8est_connectivity_new_unitcube (void)
 p8est_connectivity_t *
 p8est_connectivity_new_periodic (void)
 {
-  return NULL;
+  const p4est_topidx_t num_trees = 1;
+  const p4est_topidx_t num_vertices = 8;
+  const p4est_topidx_t num_vtt = 8;
+  const p4est_topidx_t tree_to_vertex[1 * 8] = {
+    0, 1, 2, 3, 4, 5, 6, 7,
+  };
+  const p4est_topidx_t tree_to_tree[1 * 6] = {
+    0, 0, 0, 0, 0, 0,
+  };
+  const int8_t        tree_to_face[1 * 6] = {
+    1, 0, 2, 3, 11, 10,
+  };
+  const double        vertices[3 * 8] = {
+    0, 0, 0,
+    0, 0, 1,
+    0, 1, 0,
+    0, 1, 1,
+    1, 0, 0,
+    1, 0, 1,
+    1, 1, 0,
+    1, 1, 1,
+  };
+  const p4est_topidx_t vtt_offset[8 + 1] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8,
+  };
+  const p4est_topidx_t vertex_to_tree[8] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+  };
+  const p4est_topidx_t vertex_to_vertex[8] = {
+    0, 1, 2, 3, 4, 5, 6, 7,
+  };
+
+  return p8est_connectivity_new_copy (num_trees, num_vertices, num_vtt,
+                                      tree_to_vertex, tree_to_tree,
+                                      tree_to_face, vertices, vtt_offset,
+                                      vertex_to_tree, vertex_to_vertex);
+}
+
+p8est_connectivity_t *
+p8est_connectivity_new_rotcubes (void)
+{
+  const p4est_topidx_t num_trees = 4;
+  const p4est_topidx_t num_vertices = 20;
+  const p4est_topidx_t num_vtt = 20;
+  const p4est_topidx_t tree_to_vertex[4 * 8] = {
+    0, 17, 3, 4, 15, 11, 13, 14,
+    7, 2, 6, 17, 9, 12, 8, 11,
+    2, 12, 5, 10, 17, 11, 4, 14,
+    19, 13, 18, 14, 16, 15, 1, 11,
+  };
+  const p4est_topidx_t tree_to_tree[4 * 6] = {
+    0, 2, 0, 0, 0, 3,
+    1, 2, 1, 1, 1, 1,
+    2, 2, 1, 2, 2, 0,
+    3, 0, 3, 3, 3, 3,
+  };
+  const int8_t        tree_to_face[4 * 6] = {
+    0, 5, 2, 3, 4, 13,
+    0, 2, 2, 3, 4, 5,
+    0, 1, 1, 3, 4, 1,
+    0, 17, 2, 3, 4, 5,
+  };
+  const double        vertices[3 * 20] = {
+    0, 0, 0,
+    1, 0, 2,
+    2, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    2, 1, 0,
+    1, -1, 0,
+    2, -1, 0,
+    1, -1, 1,
+    2, -1, 1,
+    2, 1, 1,
+    1, 0, 1,
+    2, 0, 1,
+    0, 1, 1,
+    1, 1, 1,
+    0, 0, 1,
+    0, 0, 2,
+    1, 0, 0,
+    1, 1, 2,
+    0, 1, 2,
+  };
+
+  const p4est_topidx_t vtt_offset[20 + 1] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+  };
+  const p4est_topidx_t vertex_to_tree[20] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  };
+  const p4est_topidx_t vertex_to_vertex[20] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+  };
+
+  return p8est_connectivity_new_copy (num_trees, num_vertices, num_vtt,
+                                      tree_to_vertex, tree_to_tree,
+                                      tree_to_face, vertices, vtt_offset,
+                                      vertex_to_tree, vertex_to_vertex);
 }
 
 /* EOF p8est_connectivity.h */

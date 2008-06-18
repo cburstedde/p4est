@@ -15,7 +15,7 @@ noinst_PROGRAMS += \
 endif
 if P4EST_BUILD_3D
 p4est_test_programs += \
-	test/p8est_test_partition
+	test/p8est_test_partition test/p8est_test_valid
 endif
 
 check_PROGRAMS += $(p4est_test_programs)
@@ -31,6 +31,7 @@ test_p4est_test_order_SOURCES = test/test_order.c
 test_p4est_bug_wp_SOURCES = test/bug_weighted_partition.c
 
 test_p8est_test_partition_SOURCES = test/test_partition3.c
+test_p8est_test_valid_SOURCES = test/test_valid3.c
 
 TESTS += $(p4est_test_programs)
 
@@ -43,4 +44,5 @@ LINT_CSOURCES += \
         $(test_p4est_test_partition_SOURCES) \
         $(test_p4est_test_order_SOURCES) \
         $(test_p4est_bug_wp_SOURCES) \
-        $(test_p8est_test_partition_SOURCES)
+        $(test_p8est_test_partition_SOURCES) \
+        $(test_p8est_test_valid_SOURCES)

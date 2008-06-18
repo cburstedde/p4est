@@ -67,6 +67,7 @@ typedef struct
 }
 p8est_corner_info_t;
 
+#if 0                           /* this was 2D stuff may be useful later */
 /** Contains integers 0..7 denoting the type of inter-tree transformation.
  * The first 4 transformations are rotations about 0, -90, 180, 90.
  * The second 4 transformations are mirrors along axis 0, 45, 90, 135.
@@ -74,6 +75,21 @@ p8est_corner_info_t;
  * The orientation index is 0 for same, 1 for opposing sense of rotation.
  */
 extern const int    p8est_transform_table[4][4][2];
+#endif
+
+/** Store the vertex numbers 0..7 for each tree face. */
+extern const int    p8est_face_vertices[6][4];
+
+/** Store only the 8 out of 24 possible permutations that occur. */
+extern const int    p8est_face_permutations[8][4];
+
+/** Store the 3 occurring sets of 4 permutations per face. */
+extern const int    p8est_face_permutation_sets[3][4];
+
+/** For each face combination store the permutation set.
+ * The order is [my_face][neighbor_face]
+ */
+extern const int    p8est_face_permutation_refs[6][6];
 
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.
@@ -97,7 +113,7 @@ void                p8est_connectivity_destroy (p8est_connectivity_t *
 bool                p8est_connectivity_is_valid (p8est_connectivity_t *
                                                  connectivity);
 
-/** Create a connectivity structure for the unit cube
+/** Create a connectivity structure for the unit cube.
  */
 p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
 
@@ -106,6 +122,11 @@ p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
  * Front and back are not identified.
  */
 p8est_connectivity_t *p8est_connectivity_new_periodic (void);
+
+/** Create a connectivity structure that contains a few cubes.
+ * These are rotated against each other to stress the topology routines.
+ */
+p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
 /** Returns the transformation number from a tree to a neighbor tree.
  * \return  Returns -1 if there is no neighbor at that face, or 0..7.

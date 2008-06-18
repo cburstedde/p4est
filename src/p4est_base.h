@@ -50,7 +50,7 @@ typedef int32_t     p4est_topidx_t;
 #define P4EST_VTK_TOPIDX "Int32"
 #define P4EST_TOPIDX_MAX INT32_MAX
 
-/** Typedef for processor-local indexing of quadrants. */
+/** Typedef for processor-local indexing of quadrants and nodes. */
 typedef int32_t     p4est_locidx_t;
 #define P4EST_MPI_LOCIDX MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
