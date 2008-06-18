@@ -22,8 +22,9 @@
 /*
  * Usage: p8est_simple <configuration> <level>
  *        possible configurations:
- *        o unit      Refinement on the unit cube.
- *        o periodic  Refinement on the unit square with periodic b.c.
+ *           unit       The unit cube.
+ *           periodic   The unit cube with various self-periodic b.c.
+ *           rotcubes   A collection of four connected rotated cubes.
  */
 
 #define VTK_OUTPUT 1
@@ -39,6 +40,7 @@ enum
   P8EST_CONFIG_NULL,
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
+  P8EST_CONFIG_ROTCUBES,
 };
 
 typedef struct
@@ -125,7 +127,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic\n"
+    "      unit|periodic|rotcubes\n"
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -139,6 +141,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P8EST_CONFIG_PERIODIC;
+    }
+    else if (!strcmp (argv[1], "rotcubes")) {
+      config = P8EST_CONFIG_ROTCUBES;
     }
     else {
       wrongusage = 1;
@@ -166,11 +171,15 @@ main (int argc, char **argv)
   if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
   }
+  else if (config == P8EST_CONFIG_ROTCUBES) {
+    connectivity = p8est_connectivity_new_rotcubes ();
+  }
   else {
     connectivity = p8est_connectivity_new_unitcube ();
   }
   p8est = p8est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn);
+
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple3_new");
 #endif

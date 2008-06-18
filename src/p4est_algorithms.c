@@ -59,11 +59,11 @@ static const int    corners_omitted[4] =
 
 #else /* P4_TO_P8 */
 
-/**/
+/** Store the number of quadrants to add for complete and balance stages. */
 static const int    p8est_balance_count[P4EST_DIM + 1] =
 { 9, 12, 15, 16 };
 
-/* face and edge balance indices into coordinate table */
+/** Store face and edge balance indices into coordinate table. */
 static const int    p8est_balance_index[P4EST_CHILDREN][6] =
 {{ 0, 2, 4, 6, 10, 14 },
  { 1, 2, 4, 6, 11, 15 },
@@ -74,7 +74,7 @@ static const int    p8est_balance_index[P4EST_CHILDREN][6] =
  { 0, 3, 5, 9, 12, 16 },
  { 1, 3, 5, 9, 13, 17 }};
 
-/* coordinates of quadrants to add for balancing */
+/** Store coordinates of quadrants to add for balancing. */
 static const p4est_qcoord_t p8est_balance_coord[26][P4EST_DIM] =
 { /* faces */
   { -1,  1,  1 },

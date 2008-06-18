@@ -142,7 +142,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
                       (long long) tree_num_quadrants);
-  
+
   /* compute index of first tree for this processor */
   first_quadrant = (global_num_quadrants * rank) / num_procs;
   first_tree = first_quadrant / tree_num_quadrants;
@@ -158,9 +158,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   if (first_quadrant <= last_quadrant) {
     last_tree = last_quadrant / tree_num_quadrants;
     last_tree_quadrant = last_quadrant - last_tree * tree_num_quadrants;
-    P4EST_VERBOSEF ("last tree %lld last quadrant %lld global quadrant %lld\n",
-                    (long long) last_tree, (long long) last_tree_quadrant,
-                    (long long) last_quadrant);  
+    P4EST_VERBOSEF
+      ("last tree %lld last quadrant %lld global quadrant %lld\n",
+       (long long) last_tree, (long long) last_tree_quadrant,
+       (long long) last_quadrant);
 
     /* check ranges of various integers to be 32bit compatible */
     P4EST_ASSERT (first_tree <= last_tree && last_tree < num_trees);
@@ -776,7 +777,6 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
   const int           rank = p4est->mpirank;
   bool                found;
   int                 back, pos;
-  size_t              scount;
   int                 owner, first_owner, last_owner;
   p4est_quadrant_t    ld, *s;
   p4est_balance_peer_t *peer;
@@ -813,9 +813,7 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
     }
 
     /* copy quadrant into shipping list */
-    scount = peer->send_first.elem_count;
-    sc_array_resize (&peer->send_first, scount + 1);
-    s = sc_array_index (&peer->send_first, scount);
+    s = sc_array_push (&peer->send_first);
     *s = *q;
     s->p.piggy.which_tree = qtree;      /* piggy back tree id */
 
@@ -1122,7 +1120,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif
       for (k = 0; k < 3; ++k) {
         for (l = 0; l < 3; ++l) {
-          which = m * 9 + k * 3 + l;    /* 0..8 */
+          which = m * 9 + k * 3 + l;    /* 2D: 0..8, 3D: 0..26 */
           /* exclude myself from the queries */
           if (which == P4EST_INSUL / 2) {
             continue;
@@ -1135,7 +1133,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           insulq.z += (m - 1) * qh;
 #endif
 
-          /* check boundary status of s */
+          /* check boundary status of insulation quadrant */
 #ifndef P4_TO_P8
           quad_contact[0] = (insulq.y < 0);
           quad_contact[1] = (insulq.x >= rh);
