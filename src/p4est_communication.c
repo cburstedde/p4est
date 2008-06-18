@@ -148,6 +148,9 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
     ctree = global_first_position[guess].which_tree;
     cur.x = global_first_position[guess].x;
     cur.y = global_first_position[guess].y;
+#ifdef P4_TO_P8
+    cur.z = global_first_position[guess].z;
+#endif
     if (which_tree < ctree ||
         (which_tree == ctree &&
          (p4est_quadrant_compare (q, &cur) < 0 &&
