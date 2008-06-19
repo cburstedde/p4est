@@ -133,7 +133,7 @@ p4est_order_local_vertices (p4est_t * p4est,
               p4est_possible_node_neighbor (q, corner, nnum, rlev,
                                             &neighbor, &neighbor_node);
 
-              if (p4est_quadrant_is_inside (&neighbor)) {
+              if (p4est_quadrant_is_inside_root (&neighbor)) {
                 /* neighbor is in the same tree */
 
                 neighbor_proc = p4est_comm_find_owner (p4est, jt, &neighbor,

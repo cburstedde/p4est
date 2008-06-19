@@ -79,7 +79,8 @@
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
 #define p4est_quadrant_hash             p8est_quadrant_hash
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
-#define p4est_quadrant_is_inside        p8est_quadrant_is_inside
+#define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
+#define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_valid         p8est_quadrant_is_valid
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling

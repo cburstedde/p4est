@@ -59,7 +59,14 @@ int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
  */
-bool                p4est_quadrant_is_inside (const p4est_quadrant_t * q);
+bool                p4est_quadrant_is_inside_root (const p4est_quadrant_t *
+                                                   q);
+
+/** Test if a quadrant is inside the 3x3 box around the root tree.
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is inside the unit tree.
+ */
+bool                p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -67,7 +74,7 @@ bool                p4est_quadrant_is_inside (const p4est_quadrant_t * q);
  */
 bool                p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
-/** Test if a quadrant has valid Morton indices in the full index range.
+/** Test if a quadrant has valid Morton indices in the 3x3 box around root.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is extended.
  */

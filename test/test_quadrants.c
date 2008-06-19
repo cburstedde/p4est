@@ -359,47 +359,48 @@ main (void)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
-  A.x = -qone << 30;
-  A.y = -qone << 30;
+  A.x = -qone << P4EST_MAXLEVEL;
+  A.y = -qone << P4EST_MAXLEVEL;
   A.level = 0;
 
-  B.x = qone << 30;
-  B.y = -qone << 30;
+  B.x = qone << P4EST_MAXLEVEL;
+  B.y = -qone << P4EST_MAXLEVEL;
   B.level = 0;
 
-  C.x = -qone << 30;
-  C.y = qone << 30;
+  C.x = -qone << P4EST_MAXLEVEL;
+  C.y = qone << P4EST_MAXLEVEL;
   C.level = 0;
 
-  D.x = qone << 30;
-  D.y = qone << 30;
+  D.x = qone << P4EST_MAXLEVEL;
+  D.y = qone << P4EST_MAXLEVEL;
   D.level = 0;
 
-  E.x = -qone << 31;
-  E.y = 0;
+  /* this one is outside the 3x3 box */
+  E.x = -qone << (P4EST_MAXLEVEL + 1);
+  E.y = -qone;
   E.level = 0;
 
-  F.x = (p4est_qcoord_t) INT32_MAX;
-  F.y = (p4est_qcoord_t) INT32_MAX;
+  F.x = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1);
+  F.y = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1);
   F.level = P4EST_MAXLEVEL;
 
   G.x = -qone;
   G.y = -qone;
   G.level = P4EST_MAXLEVEL;
 
-  H.x = -qone << 29;
-  H.y = -qone << 29;
+  H.x = -qone << (P4EST_MAXLEVEL - 1);
+  H.y = -qone << (P4EST_MAXLEVEL - 1);
   H.level = 1;
 
-  I.x = -qone << 30;
-  I.y = -qone << 29;
+  I.x = -qone << P4EST_MAXLEVEL;
+  I.y = -qone << (P4EST_MAXLEVEL - 1);
   I.level = 1;
 
   check_linear_id (&A, &A);
   check_linear_id (&A, &B);
   check_linear_id (&A, &C);
   check_linear_id (&A, &D);
-  check_linear_id (&A, &E);
+  // check_linear_id (&A, &E);
   check_linear_id (&A, &F);
   check_linear_id (&A, &G);
   check_linear_id (&A, &H);
@@ -409,7 +410,7 @@ main (void)
   check_linear_id (&B, &B);
   check_linear_id (&B, &C);
   check_linear_id (&B, &D);
-  check_linear_id (&B, &E);
+  // check_linear_id (&B, &E);
   check_linear_id (&B, &F);
   check_linear_id (&B, &G);
   check_linear_id (&B, &H);
@@ -419,7 +420,7 @@ main (void)
   check_linear_id (&D, &B);
   check_linear_id (&D, &C);
   check_linear_id (&D, &D);
-  check_linear_id (&D, &E);
+  // check_linear_id (&D, &E);
   check_linear_id (&D, &F);
   check_linear_id (&D, &G);
   check_linear_id (&D, &H);
@@ -429,7 +430,7 @@ main (void)
   check_linear_id (&G, &B);
   check_linear_id (&G, &C);
   check_linear_id (&G, &D);
-  check_linear_id (&G, &E);
+  // check_linear_id (&G, &E);
   check_linear_id (&G, &F);
   check_linear_id (&G, &G);
   check_linear_id (&G, &H);
@@ -439,19 +440,19 @@ main (void)
   check_linear_id (&I, &B);
   check_linear_id (&I, &C);
   check_linear_id (&I, &D);
-  check_linear_id (&I, &E);
+  // check_linear_id (&I, &E);
   check_linear_id (&I, &F);
   check_linear_id (&I, &G);
   check_linear_id (&I, &H);
   check_linear_id (&I, &I);
 
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended");
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended");
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&C) == 1, "is_extended");
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&D) == 1, "is_extended");
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&E) == 1, "is_extended");
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&F) == 1, "is_extended");
-  SC_CHECK_ABORT (p4est_quadrant_is_extended (&G) == 1, "is_extended");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&A) == 1, "is_extended A");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&B) == 1, "is_extended B");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&C) == 1, "is_extended C");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&D) == 1, "is_extended D");
+  SC_CHECK_ABORT (!p4est_quadrant_is_extended (&E) == 1, "!is_extended E");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&F) == 1, "is_extended F");
+  SC_CHECK_ABORT (p4est_quadrant_is_extended (&G) == 1, "is_extended G");
 
   SC_CHECK_ABORT (p4est_quadrant_compare (&A, &A) == 0, "compare");
   SC_CHECK_ABORT (p4est_quadrant_compare (&A, &B) > 0, "compare");
@@ -512,9 +513,9 @@ main (void)
   SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 0,
                   "is_ancestor_D");
 
-  SC_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
+  // SC_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
   SC_CHECK_ABORT (p4est_quadrant_is_next (&A, &H) == 0, "is_next");
-  SC_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D");
+  // SC_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D");
   SC_CHECK_ABORT (p4est_quadrant_is_next_D (&A, &H) == 0, "is_next_D");
 
   p4est_quadrant_parent (&H, &a);
@@ -563,8 +564,13 @@ main (void)
   p4est_nearest_common_ancestor_D (&I, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a) == 1, "ancestor_D");
 
-  p4est_quadrant_set_morton (&P, 0, 11);
-  p4est_quadrant_set_morton (&Q, 0, 12);
+  for (k = 0; k < 16; ++k) {
+    if (k != 4 && k != 6 && k != 8 && k != 9 && k != 12 && k != 13 && k != 14) {
+      p4est_quadrant_set_morton (&E, 0, k);
+    }
+  }
+  p4est_quadrant_set_morton (&P, 0, 10);
+  p4est_quadrant_set_morton (&Q, 0, 11);
   SC_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
   SC_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 

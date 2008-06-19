@@ -1763,7 +1763,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (first_index = 0; first_index < (ssize_t) treecount; ++first_index) {
       q = sc_array_index_ssize_t (tquadrants, first_index);
       P4EST_ASSERT (p4est_quadrant_is_extended (q));
-      if (p4est_quadrant_is_inside (q)) {
+      if (p4est_quadrant_is_inside_root (q)) {
         break;
       }
     }
@@ -1779,7 +1779,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (last_index = (ssize_t) treecount - 1; last_index >= 0; --last_index) {
       q = sc_array_index_ssize_t (tquadrants, last_index);
       P4EST_ASSERT (p4est_quadrant_is_extended (q));
-      if (p4est_quadrant_is_inside (q)) {
+      if (p4est_quadrant_is_inside_root (q)) {
         break;
       }
     }

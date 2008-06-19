@@ -146,7 +146,7 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 }
 
 bool
-p4est_quadrant_is_inside (const p4est_quadrant_t * q)
+p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 {
   return
     (q->x >= 0 && q->x < P4EST_ROOT_LEN) &&
@@ -158,21 +158,31 @@ p4est_quadrant_is_inside (const p4est_quadrant_t * q)
 }
 
 bool
+p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q)
+{
+  return
+    (q->x >= -P4EST_ROOT_LEN &&
+     q->x <= P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1)) &&
+    (q->y >= -P4EST_ROOT_LEN &&
+     q->y <= P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1)) &&
+#ifdef P4_TO_P8
+    (q->z >= -P4EST_ROOT_LEN &&
+     q->z <= P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1)) &&
+#endif
+    true;
+}
+
+bool
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
   return
     (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
-    (q->x >= 0 && q->x < P4EST_ROOT_LEN) &&
-    (q->y >= 0 && q->y < P4EST_ROOT_LEN) &&
-#ifdef P4_TO_P8
-    (q->z >= 0 && q->z < P4EST_ROOT_LEN) &&
-#endif
     ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
     ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #ifdef P4_TO_P8
     ((q->z & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #endif
-    true;
+    p4est_quadrant_is_inside_root (q);
 }
 
 bool
@@ -185,7 +195,7 @@ p4est_quadrant_is_extended (const p4est_quadrant_t * q)
 #ifdef P4_TO_P8
     ((q->z & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #endif
-    true;
+    p4est_quadrant_is_inside_3x3 (q);
 }
 
 bool
@@ -436,12 +446,14 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
 
   /* check if q is before the first tree quadrant */
   treeq = sc_array_index (&tree->quadrants, 0);
+  P4EST_ASSERT (p4est_quadrant_is_inside_root (treeq));
   p4est_quadrant_last_descendent (q, &desc, maxl);
   if (p4est_quadrant_compare (&desc, treeq) < 0)
     return false;
 
   /* check if q is after the last tree quadrant */
   treeq = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
+  P4EST_ASSERT (p4est_quadrant_is_inside_root (treeq));
   p4est_quadrant_last_descendent (treeq, &desc, maxl);
   if (p4est_quadrant_compare (&desc, q) < 0)
     return false;
