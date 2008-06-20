@@ -109,7 +109,8 @@ main (void)
   p4est_tree_t       *t1, *t2, tree;
   p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
-  p4est_quadrant_t    c0, c1, c2, c3, cv[P4EST_CHILDREN];
+  p4est_quadrant_t    c0, c1, c2, c3;
+  p4est_quadrant_t    cv[P4EST_CHILDREN], *cp[P4EST_CHILDREN];
   p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
   p4est_quadrant_t    a, f, g, h;
   uint64_t            Aid, Fid;
@@ -166,8 +167,17 @@ main (void)
     SC_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &cv[3]), "is_family");
     SC_CHECK_ABORT (p4est_quadrant_is_family (&cv[0], &cv[1], &cv[2], &cv[3]),
                     "is_family");
+    cp[0] = &cv[0];
+    cp[1] = &cv[1];
+    cp[2] = &cv[2];
+    cp[3] = &cv[3];
+    SC_CHECK_ABORT (p4est_quadrant_is_familypv (cp), "is_family");
     cv[1] = cv[0];
     SC_CHECK_ABORT (!p4est_quadrant_is_familyv (cv), "is_family");
+    cp[1] = &c1;
+    SC_CHECK_ABORT (p4est_quadrant_is_familypv (cp), "is_family");
+    cp[2] = &c3;
+    SC_CHECK_ABORT (!p4est_quadrant_is_familypv (cp), "is_family");
 
     /* test the sibling function */
     mid = p4est_quadrant_child_id (q1);

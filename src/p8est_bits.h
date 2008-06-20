@@ -111,6 +111,11 @@ bool                p8est_quadrant_is_family (const p8est_quadrant_t * q0,
  */
 bool                p8est_quadrant_is_familyv (const p8est_quadrant_t q[]);
 
+/** Test if 4 quadrants are siblings in Morton ordering, array version.
+ * \param [in] q   Array of 8 pointers to quadrants.
+ */
+bool                p8est_quadrant_is_familypv (p8est_quadrant_t * q[]);
+
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Possible child quadrant.

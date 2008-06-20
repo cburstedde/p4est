@@ -88,6 +88,7 @@
 #define p4est_quadrant_is_sibling_D     p8est_quadrant_is_sibling_D
 /* p8est_quadrant_is_family is implemented in p8est_algorithms.c */
 #define p4est_quadrant_is_familyv       p8est_quadrant_is_familyv
+#define p4est_quadrant_is_familypv      p8est_quadrant_is_familypv
 #define p4est_quadrant_is_parent        p8est_quadrant_is_parent
 #define p4est_quadrant_is_parent_D      p8est_quadrant_is_parent_D
 #define p4est_quadrant_is_ancestor      p8est_quadrant_is_ancestor

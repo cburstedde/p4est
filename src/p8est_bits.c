@@ -93,6 +93,43 @@ p8est_quadrant_is_familyv (const p4est_quadrant_t q[])
           (q[3].x == q[7].x && q[3].y == q[7].y && q[4].z == q[7].z));
 }
 
+bool
+p8est_quadrant_is_familypv (p4est_quadrant_t * q[])
+{
+  const int8_t        level = q[0]->level;
+  p4est_qcoord_t      inc;
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[0]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[1]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[2]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[3]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[4]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[5]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[6]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q[7]));
+
+  if (level == 0 || level != q[1]->level ||
+      level != q[2]->level || level != q[3]->level ||
+      level != q[4]->level || level != q[5]->level ||
+      level != q[6]->level || level != q[7]->level) {
+    return false;
+  }
+
+  inc = P4EST_QUADRANT_LEN (level);
+  return ((q[0]->x + inc == q[1]->x && q[0]->y == q[1]->y
+           && q[0]->z == q[1]->z) && (q[0]->x == q[2]->x
+                                      && q[0]->y + inc == q[2]->y
+                                      && q[0]->z == q[2]->z)
+          && (q[1]->x == q[3]->x && q[2]->y == q[3]->y && q[0]->z == q[3]->z)
+          && (q[0]->x == q[4]->x && q[0]->y == q[4]->y
+              && q[0]->z + inc == q[4]->z) && (q[1]->x == q[5]->x
+                                               && q[1]->y == q[5]->y
+                                               && q[4]->z == q[5]->z)
+          && (q[2]->x == q[6]->x && q[2]->y == q[6]->y && q[4]->z == q[6]->z)
+          && (q[3]->x == q[7]->x && q[3]->y == q[7]->y
+              && q[4]->z == q[7]->z));
+}
+
 void
 p8est_quadrant_children (const p4est_quadrant_t * q,
                          p4est_quadrant_t * c0, p4est_quadrant_t * c1,

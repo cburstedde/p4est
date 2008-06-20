@@ -1329,20 +1329,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
           for (jz = 1; jz < P4EST_CHILDREN; ++jz) {
             family[jz] = sc_array_index (inlist, iz + jz);
           }
-#ifndef P4_TO_P8
-          if (p4est_quadrant_is_family (family[0], family[1],
-                                        family[2], family[3])) {
-#else
-            /* *INDENT-OFF* stupid indent chokes on this one */
-#if 0
-          }
-#endif
-          /* *INDENT-ON* */
-          if (p8est_quadrant_is_family (family[0], family[1],
-                                        family[2], family[3],
-                                        family[4], family[5],
-                                        family[6], family[7])) {
-#endif
+          if (p4est_quadrant_is_familypv (family)) {
             isfamily = true;
             iz += P4EST_CHILDREN - 1;   /* skip siblings */
           }

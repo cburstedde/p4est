@@ -662,14 +662,11 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
           c[zz] = sc_array_index (tquadrants, rest + zz - before);
         }
       }
-      if (couldbegood &&
+      if (couldbegood && p4est_quadrant_is_familypv (c) &&
 #ifdef P4_TO_P8
-          p8est_quadrant_is_family (c[0], c[1], c[2], c[3],
-                                    c[4], c[5], c[6], c[7]) &&
           coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3],
                       c[4], c[5], c[6], c[7]) &&
 #else
-          p4est_quadrant_is_family (c[0], c[1], c[2], c[3]) &&
           coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3]) &&
 #endif
           true) {
