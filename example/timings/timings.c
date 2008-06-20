@@ -33,7 +33,7 @@
 #include <p4est_bits.h>
 #include <p4est_vtk.h>
 
-enum
+typedef enum
 {
   P4EST_CONFIG_NULL,
   P4EST_CONFIG_UNIT,
@@ -41,7 +41,17 @@ enum
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_PERIODIC,
-};
+}
+timings_config_t;
+
+typedef struct
+{
+  timings_config_t    config;
+  int                 mpisize;
+  int                 level;
+  unsigned            checksum;
+}
+timings_regression_t;
 
 typedef struct
 {
@@ -53,6 +63,19 @@ mpi_context_t;
 
 static int          refine_level = 0;
 static int          level_shift = 0;
+
+/* *INDENT-OFF* */
+static const timings_regression_t regression[] =
+{{ P4EST_CONFIG_UNIT, 1, 10, 0x6e3e83c4U },
+ { P4EST_CONFIG_UNIT, 1, 11, 0x334bc3deU },
+ { P4EST_CONFIG_UNIT, 64, 14, 0xad908ce4U },
+ { P4EST_CONFIG_UNIT, 256, 15, 0x9e7da646U },
+ { P4EST_CONFIG_STAR, 1, 6, 0x14107b57U },
+ { P4EST_CONFIG_STAR, 4, 6, 0x14107b57U },
+ { P4EST_CONFIG_STAR, 52, 13, 0xc86c74d9U },
+ { P4EST_CONFIG_STAR, 64, 13, 0xc86c74d9U },
+ { P4EST_CONFIG_NULL, 0, 0, 0 }};
+/* *INDENT-ON* */
 
 static int
 refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -88,7 +111,7 @@ main (int argc, char **argv)
 {
   int                 i;
   int                 mpiret;
-  int                 wrongusage, config;
+  int                 wrongusage;
   unsigned            crc;
   p4est_locidx_t     *quadrant_counts;
   p4est_gloidx_t      count_refined, count_balanced;
@@ -101,6 +124,8 @@ main (int argc, char **argv)
   double              elapsed_balance, elapsed_rebalance;
   double              elapsed_partition, elapsed_repartition;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
+  timings_config_t    config;
+  const timings_regression_t *r;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -265,6 +290,18 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   elapsed_repartition = start + MPI_Wtime ();
   P4EST_ASSERT (crc == p4est_checksum (p4est));
+
+  /* verify forest checksum */
+  if (mpi->mpirank == 0) {
+    for (r = regression; r->config != P4EST_CONFIG_NULL; ++r) {
+      if (r->config != config || r->mpisize != mpi->mpisize
+          || r->level != refine_level)
+        continue;
+      SC_CHECK_ABORT (crc == r->checksum, "Checksum mismatch");
+      P4EST_GLOBAL_INFO ("Checksum regression OK\n");
+      break;
+    }
+  }
 
   /* print checksum and timings */
   P4EST_GLOBAL_STATISTICSF ("Processors %d level %d shift %d"

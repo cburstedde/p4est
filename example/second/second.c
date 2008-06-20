@@ -97,8 +97,10 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, "mesh_second_balanced");
   crc = p4est_checksum (p4est);
 
-  /* print forest checksum */
+  /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
+  if (mpi->mpirank == 0)
+    SC_CHECK_ABORT (crc == 0x324eb631U, "Checksum mismatch");
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

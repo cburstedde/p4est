@@ -34,7 +34,7 @@
 #include <p4est_bits.h>
 #include <p4est_vtk.h>
 
-enum
+typedef enum
 {
   P4EST_CONFIG_NULL,
   P4EST_CONFIG_UNIT,
@@ -44,7 +44,17 @@ enum
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_PERIODIC,
-};
+}
+simple_config_t;
+
+typedef struct
+{
+  simple_config_t     config;
+  int                 mpisize;
+  int                 level;
+  unsigned            checksum;
+}
+simple_regression_t;
 
 typedef struct
 {
@@ -55,11 +65,28 @@ user_data_t;
 typedef struct
 {
   MPI_Comm            mpicomm;
+  int                 mpisize;
   int                 mpirank;
 }
 mpi_context_t;
 
 static int          refine_level = 0;
+
+/* *INDENT-OFF* */
+static const simple_regression_t regression[] =
+{{ P4EST_CONFIG_THREE, 1, 7, 0xa8d85863U },
+ { P4EST_CONFIG_THREE, 2, 7, 0xa8d85863U },
+ { P4EST_CONFIG_THREE, 3, 7, 0xa8d85863U },
+ { P4EST_CONFIG_THREE, 4, 7, 0x20fb58edU },
+ { P4EST_CONFIG_MOEBIUS, 1, 6, 0x98ab6cb2U },
+ { P4EST_CONFIG_MOEBIUS, 3, 6, 0x98ab6cb2U },
+ { P4EST_CONFIG_MOEBIUS, 5, 6, 0x98ab6cb2U },
+ { P4EST_CONFIG_MOEBIUS, 6, 6, 0x6d2d6d6cU },
+ { P4EST_CONFIG_STAR, 5, 6, 0x38d3736fU },
+ { P4EST_CONFIG_PERIODIC, 1, 6, 0x9dd600c5U },
+ { P4EST_CONFIG_PERIODIC, 3, 6, 0x9dd600c5U },
+ { P4EST_CONFIG_NULL, 0, 0, 0 }};
+/* *INDENT-ON* */
 
 static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -166,7 +193,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 wrongusage, config;
+  int                 wrongusage;
   unsigned            crc;
   const char         *usage, *errmsg;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
@@ -174,11 +201,15 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
   p4est_refine_t      refine_fn;
   p4est_coarsen_t     coarsen_fn;
+  simple_config_t     config;
+  const simple_regression_t *r;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
@@ -288,8 +319,18 @@ main (int argc, char **argv)
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, "mesh_simple2_partition");
 
-  /* print forest checksum */
+  /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
+  if (mpi->mpirank == 0) {
+    for (r = regression; r->config != P4EST_CONFIG_NULL; ++r) {
+      if (r->config != config || r->mpisize != mpi->mpisize
+          || r->level != refine_level)
+        continue;
+      SC_CHECK_ABORT (crc == r->checksum, "Checksum mismatch");
+      P4EST_GLOBAL_INFO ("Checksum regression OK\n");
+      break;
+    }
+  }
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
