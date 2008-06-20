@@ -888,7 +888,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   bool                any_face, face_contact[2 * P4EST_DIM];
   bool                any_quad, quad_contact[2 * P4EST_DIM];
   bool                tree_fully_owned;
-  ssize_t             sss, first_index, last_index;
   int                 face;
   int8_t             *tree_flags;
   int                 i, j;
@@ -1760,85 +1759,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                     (long long) nt,
                     (unsigned long long) tquadrants->elem_count);
     treecount = tquadrants->elem_count;
-
-    /* figure out the new elements outside the original tree */
-    for (first_index = 0; first_index < (ssize_t) treecount; ++first_index) {
-      q = sc_array_index_ssize_t (tquadrants, first_index);
-      P4EST_ASSERT (p4est_quadrant_is_extended (q));
-      if (p4est_quadrant_is_inside_root (q)) {
-        break;
-      }
-    }
-    if (nt == first_tree) {
-      for (; first_index < (ssize_t) treecount; ++first_index) {
-        q = sc_array_index_ssize_t (tquadrants, first_index);
-        if (p4est_quadrant_compare (q, &mylow) >= 0 ||
-            (q->x == mylow.x && q->y == mylow.y)) {
-          break;
-        }
-      }
-    }
-    for (last_index = (ssize_t) treecount - 1; last_index >= 0; --last_index) {
-      q = sc_array_index_ssize_t (tquadrants, last_index);
-      P4EST_ASSERT (p4est_quadrant_is_extended (q));
-      if (p4est_quadrant_is_inside_root (q)) {
-        break;
-      }
-    }
-    if (nt == next_tree) {
-      for (; last_index >= 0; --last_index) {
-        q = sc_array_index_ssize_t (tquadrants, last_index);
-        if (p4est_quadrant_compare (q, &nextlow) < 0 &&
-            (q->x != nextlow.x || q->y != nextlow.y)) {
-          break;
-        }
-      }
-    }
-    P4EST_ASSERT (first_index <= last_index);
-
-    /* remove first part of tree */
-    if (first_index > 0) {
-      sss = 0;
-      while (first_index + sss <= last_index) {
-        q = sc_array_index_ssize_t (tquadrants, sss);
-        s = sc_array_index_ssize_t (tquadrants, first_index + sss);
-        if (sss < first_index) {
-          p4est_quadrant_free_data (p4est, q);
-        }
-        *q = *s;
-        ++sss;
-      }
-      while (sss < first_index) {
-        q = sc_array_index_ssize_t (tquadrants, sss);
-        p4est_quadrant_free_data (p4est, q);
-        ++sss;
-      }
-    }
-
-    /* remove last part of tree */
-    qcount = (size_t) (last_index - first_index + 1);
-    for (zz = (size_t) last_index + 1; zz < treecount; ++zz) {
-      q = sc_array_index (tquadrants, zz);
-      p4est_quadrant_free_data (p4est, q);
-    }
-
-    P4EST_ASSERT (qcount <= treecount);
-    sc_array_resize (tquadrants, qcount);
-    for (l = 0; l <= P4EST_MAXLEVEL; ++l) {
-      tree->quadrants_per_level[l] = 0;
-    }
-    tree->maxlevel = 0;
-    for (zz = 0; zz < qcount; ++zz) {
-      q = sc_array_index (tquadrants, zz);
-      P4EST_ASSERT (p4est_quadrant_is_valid (q));
-      ++tree->quadrants_per_level[q->level];
-      tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
-    }
-    p4est->local_num_quadrants += qcount;
+    p4est->local_num_quadrants += treecount;
 
     P4EST_VERBOSEF ("Balance tree %lld C %llu\n",
-                    (long long) nt,
-                    (unsigned long long) tquadrants->elem_count);
+                    (long long) nt, (unsigned long long) treecount);
     tquadrants = NULL;          /* safeguard */
   }
 

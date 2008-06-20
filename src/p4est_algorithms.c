@@ -896,7 +896,6 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 void
 p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 {
-  int                 l;
   bool                full_begin, full_end;
   size_t              zz, incount, prev_good, removed;
   const p4est_topidx_t first_tree = p4est->first_local_tree;
@@ -976,9 +975,12 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
            ))))) {
       /* quadrant is outside of the root tree
          or at least partially outside of its bounds */
+      --tree->quadrants_per_level[q2->level];
       p4est_quadrant_free_data (p4est, q2);
-      P4EST_QUADRANT_INIT (q2);
       ++removed;
+#ifdef P4EST_DEBUG
+      P4EST_QUADRANT_INIT (q2);
+#endif
     }
     else {
       if (prev_good == incount) {
@@ -993,7 +995,9 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
       q1 = sc_array_index (quadrants, prev_good);
       if (zz > prev_good) {
         *q1 = *q2;
+#ifdef P4EST_DEBUG
         P4EST_QUADRANT_INIT (q2);
+#endif
       }
     }
   }
@@ -1009,14 +1013,10 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
   }
   sc_array_resize (quadrants, incount);
 
-  for (l = 0; l <= P4EST_MAXLEVEL; ++l) {
-    tree->quadrants_per_level[l] = 0;
-  }
   tree->maxlevel = 0;
   for (zz = 0; zz < incount; ++zz) {
     q1 = sc_array_index (quadrants, zz);
     P4EST_ASSERT (p4est_quadrant_is_valid (q1));
-    ++tree->quadrants_per_level[q1->level];
     tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q1->level);
   }
 
@@ -1567,7 +1567,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                   p4est->user_data_pool->elem_count + incount);
   }
 
-  P4EST_ASSERT (p4est_tree_is_linear (tree));
+  P4EST_ASSERT (p4est_tree_is_complete (tree));
 }
 
 void
