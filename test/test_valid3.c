@@ -19,7 +19,44 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <p8est_bits.h>
 #include <p8est_vtk.h>
+
+static int
+refine_fn (p8est_t * p8est, p4est_topidx_t which_tree,
+           p8est_quadrant_t * quadrant)
+{
+  int                 cid;
+  int                 endlevel = 2 + (int) (which_tree % 3);
+
+  if (quadrant->level >= endlevel)
+    return 0;
+
+  cid = p8est_quadrant_child_id (quadrant);
+  if (cid == 0 || cid == 3 || cid == 5 || cid == 6)
+    return 1;
+
+  return 0;
+}
+
+static int
+coarsen_fn (p8est_t * p4est, p4est_topidx_t which_tree,
+            p8est_quadrant_t * q0, p8est_quadrant_t * q1,
+            p8est_quadrant_t * q2, p8est_quadrant_t * q3,
+            p8est_quadrant_t * q4, p8est_quadrant_t * q5,
+            p8est_quadrant_t * q6, p8est_quadrant_t * q7)
+{
+  int                 pid;
+  p8est_quadrant_t    p;
+
+  if (q0->level <= 2)
+    return 0;
+
+  p8est_quadrant_parent (q0, &p);
+  pid = p8est_quadrant_child_id (&p);
+
+  return pid == 3;
+}
 
 static void
 check_all (MPI_Comm mpicomm, p8est_connectivity_t * conn, const char *vtkname)
@@ -27,6 +64,9 @@ check_all (MPI_Comm mpicomm, p8est_connectivity_t * conn, const char *vtkname)
   p8est_t            *p8est;
 
   p8est = p8est_new (mpicomm, conn, 0, NULL);
+  p8est_refine (p8est, refine_fn, NULL);
+  p8est_coarsen (p8est, coarsen_fn, NULL);
+  p8est_balance (p8est, NULL);
   p8est_vtk_write_file (p8est, vtkname);
   p8est_destroy (p8est);
   p8est_connectivity_destroy (conn);
@@ -46,6 +86,9 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
+
+  sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
 
   p8est_initial_quadrants_per_processor = 0;
 

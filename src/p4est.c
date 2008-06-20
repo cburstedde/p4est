@@ -862,7 +862,7 @@ p4est_balance_response (p4est_t * p4est, int peer_id,
                  (long long) num_receive_trees);
   P4EST_ASSERT (num_receive_trees == (p4est_topidx_t) tree_array.elem_count);
 
-  /* loop to the trees to receive into and update overlap quadrants */
+  /* loop over the trees to receive into and update overlap quadrants */
   for (nt = 0; nt < num_receive_trees; ++nt) {
     pi = p4est_array_index_topidx (&tree_array, nt);
     qtree = *pi;
@@ -893,7 +893,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   size_t              zz, treecount;
   size_t              qcount, qbytes, offset, obytes;
   p4est_topidx_t      qtree, nt;
-  p4est_topidx_t      first_tree, last_tree, next_tree;
+  p4est_topidx_t      first_tree, last_tree;
   int                 first_peer, last_peer;
   int                 over_peer_count;
   sc_array_t         *peers, *qarray, *tquadrants;
@@ -917,9 +917,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif /* P4EST_DEBUG */
   const int           twopeerw = 2 * number_peer_windows;
   int                 mpiret, rcount;
-#ifndef P4_TO_P8
   int                 first_bound, last_bound;
-#endif /* !P4_TO_P8 */
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
   int                 lastw, nwin;
@@ -1011,7 +1009,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   mylow.level = P4EST_MAXLEVEL;
 
   /* and the first finest quadrant of the next processor */
-  next_tree = p4est->global_first_position[rank + 1].which_tree;
   nextlow.x = p4est->global_first_position[rank + 1].x;
   nextlow.y = p4est->global_first_position[rank + 1].y;
 #ifdef P4_TO_P8
@@ -1351,9 +1348,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   request_first_count = request_second_count = request_send_count = 0;
   send_zero[0] = send_load[0] = recv_zero[0] = recv_load[0] = 0;
   send_zero[1] = send_load[1] = recv_zero[1] = recv_load[1] = 0;
-
-#ifndef P4_TO_P8
-
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == rank) {
       continue;
@@ -1554,10 +1548,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     SC_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
   }
 #endif /* P4EST_DEBUG */
-#endif /* !P4_TO_P8 */
 #endif /* P4EST_MPI */
-
-#ifndef P4_TO_P8
 
   /* simulate send and receive with myself across tree boundaries */
   peer = sc_array_index_int (peers, rank);
@@ -1712,8 +1703,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         /* this is a corner quadrant from the second pass of balance */
         P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);
         P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
+#ifndef P4_TO_P8
         P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
                       (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
+#else
+        /* TODO check this situation later */
+#endif
         continue;
       }
       tree = sc_array_index (p4est->trees, qtree);
@@ -1775,8 +1770,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     SC_CHECK_MPI (mpiret);
   }
 #endif /* P4EST_MPI */
-
-#endif /* !P4_TO_P8 */
 
   /* loop over all local trees to finalize balance */
   all_outcount = 0;
