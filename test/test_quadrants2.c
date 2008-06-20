@@ -109,10 +109,10 @@ main (void)
   p4est_tree_t       *t1, *t2, tree;
   p4est_quadrant_t   *p, *q1, *q2;
   p4est_quadrant_t    r, s;
-  p4est_quadrant_t    c0, c1, c2, c3, cv[4];
+  p4est_quadrant_t    c0, c1, c2, c3, cv[P4EST_CHILDREN];
   p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
   p4est_quadrant_t    a, f, g, h;
-  int64_t             Aid, Fid;
+  uint64_t            Aid, Fid;
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
@@ -538,7 +538,6 @@ main (void)
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &H) == 1, "children");
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&c3, &G) == 0, "children");
 
-  p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
   SC_CHECK_ABORT (p4est_quadrant_is_family (&c0, &c1, &c2, &c3) == 1,
                   "is_family");
   id0 = p4est_quadrant_child_id (&c0);
@@ -548,7 +547,6 @@ main (void)
   SC_CHECK_ABORT (id0 == 0 && id1 == 1 && id2 == 2 && id3 == 3, "child_id");
   SC_CHECK_ABORT (p4est_quadrant_child_id (&G) == 3, "child_id");
 
-  p4est_quadrant_children (&A, &c0, &c1, &c2, &c3);
   p4est_quadrant_first_descendent (&A, &c1, 1);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
                   "first_descendent");

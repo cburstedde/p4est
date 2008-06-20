@@ -15,7 +15,8 @@ noinst_PROGRAMS += \
 endif
 if P4EST_BUILD_3D
 p4est_test_programs += \
-	test/p8est_test_partition test/p8est_test_valid
+        test/p8est_test_quadrants test/p8est_test_partition \
+        test/p8est_test_valid
 endif
 
 check_PROGRAMS += $(p4est_test_programs)
@@ -23,13 +24,14 @@ check_PROGRAMS += $(p4est_test_programs)
 test_p4est_test_comm_SOURCES = test/test_comm.c
 test_p4est_test_hash_SOURCES = test/test_hash.c
 test_p4est_test_file_SOURCES = test/test_file.c
-test_p4est_test_quadrants_SOURCES = test/test_quadrants.c
+test_p4est_test_quadrants_SOURCES = test/test_quadrants2.c
 test_p4est_test_balance_SOURCES = test/test_balance.c
 test_p4est_test_partition_SOURCES = test/test_partition2.c
 test_p4est_test_order_SOURCES = test/test_order.c
 
 test_p4est_bug_wp_SOURCES = test/bug_weighted_partition.c
 
+test_p8est_test_quadrants_SOURCES = test/test_quadrants3.c
 test_p8est_test_partition_SOURCES = test/test_partition3.c
 test_p8est_test_valid_SOURCES = test/test_valid3.c
 
@@ -44,5 +46,6 @@ LINT_CSOURCES += \
         $(test_p4est_test_partition_SOURCES) \
         $(test_p4est_test_order_SOURCES) \
         $(test_p4est_bug_wp_SOURCES) \
+        $(test_p8est_test_quadrants_SOURCES) \
         $(test_p8est_test_partition_SOURCES) \
         $(test_p8est_test_valid_SOURCES)
