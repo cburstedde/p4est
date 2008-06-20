@@ -671,6 +671,7 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   while (s1.level < s2.level) {
     p4est_quadrant_parent (&s2, &s2);
   }
+  P4EST_ASSERT (s1.level == s2.level);
 
   /* second stage: simultaneously go through their parents */
   while (!p4est_quadrant_is_equal (&s1, &s2)) {
@@ -1016,6 +1017,14 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
   quadrant->y <<= (P4EST_MAXLEVEL - level);
 #ifdef P4_TO_P8
   quadrant->z <<= (P4EST_MAXLEVEL - level);
+
+  /* this is needed whenever the number of bits is more than MAXLEVEL + 2 */
+  if (quadrant->x >= 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->x -= 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->y >= 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->y -= 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->z >= 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->z -= 1 << (P4EST_MAXLEVEL + 2);
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
