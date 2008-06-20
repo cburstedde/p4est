@@ -458,6 +458,16 @@ p4est_is_valid (p4est_t * p4est)
     nextlow.z = p4est->global_first_position[rank + 1].z;
 #endif
     nextlow.level = P4EST_MAXLEVEL;
+    if (next_tree == last_tree + 1) {
+      if (nextlow.x != 0 || nextlow.y != 0
+#ifdef P4_TO_P8
+          || nextlow.z != 0
+#endif
+        ) {
+        P4EST_INFO ("p4est invalid next coordinates\n");
+        return false;
+      }
+    }
     tree = sc_array_index (p4est->trees, last_tree);
     if (tree->quadrants.elem_count > 0) {
       q = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
@@ -893,7 +903,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
   sc_array_resize (out, j);
 }
 
-void
+size_t
 p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 {
   bool                full_begin, full_end;
@@ -919,7 +929,7 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 
   incount = quadrants->elem_count;
   if (incount == 0) {
-    return;
+    return 0;
   }
 
   P4EST_QUADRANT_INIT (&fd);
@@ -928,11 +938,11 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 
   first_pos = &p4est->global_first_position[p4est->mpirank];
   full_begin = (which_tree > first_tree ||
-                (first_pos->x == 0 && first_pos->y == 0 &&
+                (first_pos->x == 0 && first_pos->y == 0
 #ifdef P4_TO_P8
-                 first_pos->z == 0 &&
+                 && first_pos->z == 0
 #endif
-                 true));
+                ));
   fd.x = first_pos->x;
   fd.y = first_pos->y;
 #ifdef P4_TO_P8
@@ -941,8 +951,11 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
   fd.level = P4EST_MAXLEVEL;
 
   next_pos = &p4est->global_first_position[p4est->mpirank + 1];
-  full_end = (which_tree < last_tree ||
-              next_pos->which_tree == last_tree + 1);
+  full_end = (which_tree < last_tree || (next_pos->x == 0 && next_pos->y == 0
+#ifdef P4_TO_P8
+                                         && next_pos->z == 0
+#endif
+              ));
   nd.x = next_pos->x;
   nd.y = next_pos->y;
 #ifdef P4_TO_P8
@@ -1021,6 +1034,8 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
   }
 
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
+
+  return removed;
 }
 
 void
@@ -1216,11 +1231,12 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   bool                lookup, inserted;
   bool                isfamily, isoutroot;
   size_t              iz, jz;
-  size_t              incount, curcount, ocount;
+  size_t              incount, ocount;
   size_t              quadrant_pool_size;
   size_t              data_pool_size;
   size_t              count_outside_root, count_outside_tree;
   size_t              count_already_inlist, count_already_outlist;
+  size_t              num_added, num_nonowned, num_linearized;
   int                 qid, sid, pid, bbound;
   int                 skey, *key = &skey;
   int                 pkey, *parent_key = &pkey;
@@ -1485,7 +1501,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* merge outlist into input list and free temporary storage */
   P4EST_LDEBUGF ("Hash statistics for tree %lld\n", (long long) which_tree);
-  curcount = incount;
+  num_added = 0;
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
 #ifdef P4EST_DEBUG
@@ -1509,7 +1525,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
         /* copy temporary quadrant into final tree */
         q = sc_array_push (inlist);
         *q = *qalloc;
-        ++curcount;
+        ++num_added;
         ++tree->quadrants_per_level[l];
 
         /* complete quadrant initialization */
@@ -1529,7 +1545,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   sc_mempool_reset (list_alloc);
 #endif
   sc_mempool_destroy (list_alloc);
-  P4EST_ASSERT (curcount == inlist->elem_count);
+  P4EST_ASSERT (incount + num_added == inlist->elem_count);
 
   /* print more statistics */
   P4EST_VERBOSEF ("Tree %lld Outside root %llu tree %llu\n",
@@ -1540,12 +1556,12 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     ("Tree %lld Already in inlist %llu outlist %llu insertions %llu\n",
      (long long) which_tree, (unsigned long long) count_already_inlist,
      (unsigned long long) count_already_outlist,
-     (unsigned long long) curcount - incount);
+     (unsigned long long) num_added);
 
   /* sort and linearize tree */
   sc_array_sort (inlist, p4est_quadrant_compare);
-  p4est_tree_remove_nonowned (p4est, which_tree);
-  p4est_linearize_tree (p4est, tree);
+  num_nonowned = p4est_tree_remove_nonowned (p4est, which_tree);
+  num_linearized = p4est_linearize_tree (p4est, tree);
 
   /* run sanity checks */
   P4EST_ASSERT (quadrant_pool_size == qpool->elem_count);
@@ -1553,6 +1569,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (data_pool_size + inlist->elem_count ==
                   p4est->user_data_pool->elem_count + incount);
   }
+  P4EST_ASSERT (incount + num_added - num_nonowned - num_linearized ==
+                tree->quadrants.elem_count);
 
   P4EST_ASSERT (p4est_tree_is_complete (tree));
 }
@@ -1571,7 +1589,7 @@ p4est_balance_subtree (p4est_t * p4est,
   p4est_complete_or_balance (p4est, which_tree, init_fn, P4EST_DIM);
 }
 
-void
+size_t
 p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 {
   size_t              data_pool_size;
@@ -1586,7 +1604,7 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 
   incount = tquadrants->elem_count;
   if (incount <= 1) {
-    return;
+    return 0;
   }
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
@@ -1645,6 +1663,8 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
   }
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
   P4EST_ASSERT (p4est_tree_is_linear (tree));
+
+  return removed;
 }
 
 p4est_gloidx_t

@@ -148,8 +148,9 @@ void                p4est_tree_uniqify_overlap (sc_array_t * skip,
 /** Removes quadrants that are outside the owned tree boundaries from a tree.
  * \param [in,out] p4est    The p4est to work on.
  * \param [in] which_tree   Index to a sorted owned tree in the p4est.
+ * \return                  Returns the number of removed quadrants.
  */
-void                p4est_tree_remove_nonowned (p4est_t * p4est,
+size_t              p4est_tree_remove_nonowned (p4est_t * p4est,
                                                 p4est_topidx_t which_tree);
 
 /** Constructs a minimal linear octree between two octants.
@@ -209,8 +210,9 @@ void                p4est_balance_subtree (p4est_t * p4est,
  *
  * \param [in]     p4est used for the memory pool and quadrant free.
  * \param [in,out] tree   A sorted tree to be linearized in-place.
+ * \return                Returns the number of removed quadrants.
  */
-void                p4est_linearize_tree (p4est_t * p4est,
+size_t              p4est_linearize_tree (p4est_t * p4est,
                                           p4est_tree_t * tree);
 
 /** Partition \a p4est given the number of quadrants per proc.

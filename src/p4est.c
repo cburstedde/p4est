@@ -1002,31 +1002,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
 #endif /* !P4_TO_P8 */
 
-  /* compute first quadrants on finest level for comparison for me and next */
-  first_peer = num_procs;
-  last_peer = -1;
-  first_tree = p4est->first_local_tree;
-  last_tree = p4est->last_local_tree;
-  if (first_tree < 0) {
-    P4EST_ASSERT (first_tree == -1 && last_tree == -2);
-  }
-  else {
-    P4EST_ASSERT (p4est->global_first_position[rank].which_tree ==
-                  first_tree);
-  }
+  /* compute first quadrant on finest level */
   mylow.x = p4est->global_first_position[rank].x;
   mylow.y = p4est->global_first_position[rank].y;
 #ifdef P4_TO_P8
   mylow.z = p4est->global_first_position[rank].z;
 #endif
   mylow.level = P4EST_MAXLEVEL;
+
+  /* and the first finest quadrant of the next processor */
   next_tree = p4est->global_first_position[rank + 1].which_tree;
-  if (last_tree < 0) {
-    P4EST_ASSERT (first_tree == -1 && last_tree == -2);
-  }
-  else {
-    P4EST_ASSERT (next_tree == last_tree || next_tree == last_tree + 1);
-  }
   nextlow.x = p4est->global_first_position[rank + 1].x;
   nextlow.y = p4est->global_first_position[rank + 1].y;
 #ifdef P4_TO_P8
@@ -1035,6 +1020,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   nextlow.level = P4EST_MAXLEVEL;
 
   /* loop over all local trees to assemble first send list */
+  first_tree = p4est->first_local_tree;
+  last_tree = p4est->last_local_tree;
+  first_peer = num_procs;
+  last_peer = -1;
   all_incount = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
     any_face = false;
@@ -1063,16 +1052,15 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
     /* check if this tree is not shared with other processors */
     tree_fully_owned = false;
-    if ((nt > first_tree || (mylow.x == 0 && mylow.y == 0 &&
+    if ((nt > first_tree || (mylow.x == 0 && mylow.y == 0
 #ifdef P4_TO_P8
-                             mylow.z == 0 &&
+                             && mylow.z == 0
 #endif
-                             true)) &&
-        (nt < last_tree || (nextlow.x == 0 && nextlow.y == 0 &&
+         )) && (nt < last_tree || (nextlow.x == 0 && nextlow.y == 0
 #ifdef P4_TO_P8
-                            nextlow.z == 0 &&
+                                   && nextlow.z == 0
 #endif
-                            true))) {
+                ))) {
       /* all quadrants in this tree are owned by me */
       tree_fully_owned = true;
       tree_flags[nt] |= fully_owned_flag;
