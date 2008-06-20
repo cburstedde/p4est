@@ -128,8 +128,8 @@ ssize_t             p8est_find_higher_bound (sc_array_t * array,
  * except the quadrant itself is checked for overlap of quadrants
  * from \a tree that are smaller by at least two levels and thus can cause
  * a split. Those elements from tree that overlap are put into \a out.
- * \param [in] tree     A sorted complete linear tree to be checked against.
- * \param [in] qtree    Tree id of the quadrants to include.
+ * \param [in] p8est    The p8est to work on.
+ * \param [in] qtree    Index of a sorted complete tree to include.
  * \param [in] in       A sorted linear list of quadrants.
  * \param [in,out] out  A sorted subset of tree->quadrants.
  */
@@ -139,11 +139,18 @@ void                p8est_tree_compute_overlap (p8est_t * p8est,
                                                 sc_array_t * out);
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
- * \param [in] not      A sorted list of quadrants to be skipped.
- * \param [in,out] out  A sorted subset of tree->quadrants..
+ * \param [in] skip     A sorted list of quadrants to be skipped.
+ * \param [in,out] out  A sorted subset of tree->quadrants.
   */
-void                p8est_tree_uniqify_overlap (sc_array_t * not,
+void                p8est_tree_uniqify_overlap (sc_array_t * skip,
                                                 sc_array_t * out);
+
+/** Removes quadrants that are outside the owned tree boundaries from a tree.
+ * \param [in]   p8est   The p8est to work on.
+ * \param [in]   qtree   Index to an owned tree in the p8est.
+ */
+void                p8est_tree_remove_nonowned (p8est_t * p8est,
+                                                p4est_topidx_t qtree);
 
 /** Constructs a minimal linear octree between two octants.
  *
@@ -173,31 +180,25 @@ void                p8est_complete_region (p8est_t * p8est,
                                            p4est_topidx_t which_tree,
                                            p8est_init_t init_fn);
 
-/** Completes a sorted subtree.
- * \param [in]     p8est used for the memory pools and quadrant init.
- * \param [in,out] tree       On input, a sorted tree. On output,
- *                            a sorted complete linear tree.
- * \param [in]     which_tree The 0-based index of \a tree which is needed for
- *                            the \c p8est_quadrant_init_data routine.
+/** Completes a sorted tree within a p8est. It may have exterior quadrants.
+ * The completed tree will have only owned quadrants and no overlap.
+ * \param [in,out] p8est      The p8est to work on.
+ * \param [in]     which_tree The 0-based index of the subtree to complete.
  * \param [in]     init_fn    Callback function to initialize the user_data
  *                            which is already allocated automatically.
  */
 void                p8est_complete_subtree (p8est_t * p8est,
-                                            p8est_tree_t * tree,
                                             p4est_topidx_t which_tree,
                                             p8est_init_t init_fn);
 
-/** Balances a sorted subtree.
- * \param [in]     p8est used for the memory pools and quadrant init.
- * \param [in,out] tree       On input, a sorted tree. On output,
- *                            a sorted complete linear balanced tree.
- * \param [in]     which_tree The 0-based index of \a tree which is needed for
- *                            the \c p8est_quadrant_init_data routine.
+/** Balances a sorted tree within a p8est. It may have exterior quadrants.
+ * The completed tree will have only owned quadrants and no overlap.
+ * \param [in,out] p8est      The p8est to work on.
+ * \param [in]     which_tree The 0-based index of the subtree to balance.
  * \param [in]     init_fn    Callback function to initialize the user_data
  *                            which is already allocated automatically.
  */
 void                p8est_balance_subtree (p8est_t * p8est,
-                                           p8est_tree_t * tree,
                                            p4est_topidx_t which_tree,
                                            p8est_init_t init_fn);
 
@@ -209,8 +210,8 @@ void                p8est_balance_subtree (p8est_t * p8est,
  * \param [in]     p8est used for the memory pool and quadrant free.
  * \param [in,out] tree   A sorted tree to be linearized in-place.
  */
-void                p8est_linearize_subtree (p8est_t * p8est,
-                                             p8est_tree_t * tree);
+void                p8est_linearize_tree (p8est_t * p8est,
+                                          p8est_tree_t * tree);
 
 /** Partition \a p8est given the number of quadrants per proc.
  *

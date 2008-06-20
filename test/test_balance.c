@@ -60,7 +60,7 @@ main (int argc, char **argv)
   }
 
   /* balance the tree, print and destroy */
-  p4est_balance_subtree (p4est, tree, 0, NULL);
+  p4est_balance_subtree (p4est, 0, NULL);
   p4est_tree_print (SC_LP_INFO, tree);
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
     q = sc_array_index (&tree->quadrants, k);

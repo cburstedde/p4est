@@ -22,4 +22,7 @@
 #include <p4est_to_p8est.h>
 #include "p4est.c"
 
+static int          p8est_uninitialized_key;
+void               *P8EST_DATA_UNINITIALIZED = &p8est_uninitialized_key;
+
 /* EOF p8est.c */

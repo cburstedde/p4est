@@ -43,6 +43,8 @@ p4est_balance_peer_t;
 
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
+static int          p4est_uninitialized_key;
+void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
 
 #else /* P4_TO_P8 */
 
@@ -1058,7 +1060,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                  (long long) nt, (unsigned long long) tquadrants->elem_count);
 
     /* local balance first pass */
-    p4est_balance_subtree (p4est, tree, nt, init_fn);
+    p4est_balance_subtree (p4est, nt, init_fn);
     treecount = tquadrants->elem_count;
     P4EST_VERBOSEF ("Balance tree %lld A %llu\n",
                     (long long) nt, (unsigned long long) treecount);
@@ -1753,7 +1755,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
     /* we have most probably received quadrants, run sort and balance */
     sc_array_sort (tquadrants, p4est_quadrant_compare);
-    p4est_balance_subtree (p4est, tree, nt, init_fn);
+    p4est_balance_subtree (p4est, nt, init_fn);
     P4EST_VERBOSEF ("Balance tree %lld B %llu\n",
                     (long long) nt,
                     (unsigned long long) tquadrants->elem_count);

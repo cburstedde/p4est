@@ -894,6 +894,136 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 }
 
 void
+p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
+{
+  int                 l;
+  bool                full_begin, full_end;
+  size_t              zz, incount, prev_good, removed;
+  const p4est_topidx_t first_tree = p4est->first_local_tree;
+  const p4est_topidx_t last_tree = p4est->last_local_tree;
+  p4est_position_t   *first_pos, *next_pos;
+  p4est_quadrant_t   *q1, *q2;
+  p4est_quadrant_t    fd, nd, ld;
+  p4est_tree_t       *tree;
+  sc_array_t         *quadrants;
+
+  P4EST_ASSERT (first_tree <= which_tree && which_tree <= last_tree);
+  tree = p4est_array_index_topidx (p4est->trees, which_tree);
+
+#ifdef P4_TO_P8
+  /* TODO: need analogon to almost_sorted */
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+#else
+  P4EST_ASSERT (p4est_tree_is_almost_sorted (tree, 0));
+#endif
+  quadrants = &tree->quadrants;
+
+  incount = quadrants->elem_count;
+  if (incount == 0) {
+    return;
+  }
+
+  P4EST_QUADRANT_INIT (&fd);
+  P4EST_QUADRANT_INIT (&nd);
+  P4EST_QUADRANT_INIT (&ld);
+
+  first_pos = &p4est->global_first_position[p4est->mpirank];
+  full_begin = (which_tree > first_tree ||
+                (first_pos->x == 0 && first_pos->y == 0 &&
+#ifdef P4_TO_P8
+                 first_pos->z == 0 &&
+#endif
+                 true));
+  fd.x = first_pos->x;
+  fd.y = first_pos->y;
+#ifdef P4_TO_P8
+  fd.z = first_pos->z;
+#endif
+  fd.level = P4EST_MAXLEVEL;
+
+  next_pos = &p4est->global_first_position[p4est->mpirank + 1];
+  full_end = (which_tree < last_tree ||
+              next_pos->which_tree == last_tree + 1);
+  nd.x = next_pos->x;
+  nd.y = next_pos->y;
+#ifdef P4_TO_P8
+  nd.z = next_pos->z;
+#endif
+  nd.level = P4EST_MAXLEVEL;
+
+  /* q1 is the last known good quadrant */
+  q1 = NULL;
+  prev_good = incount;
+  removed = 0;
+  for (zz = 0; zz < incount; ++zz) {
+    q2 = sc_array_index (quadrants, zz);
+    P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+    if (!p4est_quadrant_is_inside_root (q2) ||
+        (!full_begin &&
+         (p4est_quadrant_compare (q2, &fd) < 0 &&
+          (q2->x != fd.x || q2->y != fd.y
+#ifdef P4_TO_P8
+           || q2->z != fd.z
+#endif
+          ))) ||
+        (!full_end &&
+         (p4est_quadrant_last_descendent (q2, &ld, P4EST_MAXLEVEL),
+          (p4est_quadrant_compare (&nd, &ld) <= 0 ||
+           (q2->x == nd.x && q2->y == nd.y
+#ifdef P4_TO_P8
+            && q2->z == nd.z
+#endif
+           ))))) {
+      /* quadrant is outside of the root tree
+         or at least partially outside of its bounds */
+      p4est_quadrant_free_data (p4est, q2);
+      P4EST_QUADRANT_INIT (q2);
+      ++removed;
+    }
+    else {
+      if (prev_good == incount) {
+        /* this is the first good quadrant we find */
+        prev_good = 0;
+      }
+      else {
+        /* q1 at prev_good was the last known good */
+        ++prev_good;
+      }
+      P4EST_ASSERT (prev_good <= zz);
+      q1 = sc_array_index (quadrants, prev_good);
+      if (zz > prev_good) {
+        *q1 = *q2;
+        P4EST_QUADRANT_INIT (q2);
+      }
+    }
+  }
+
+  if (prev_good == incount) {
+    P4EST_ASSERT (removed == incount);
+    incount = 0;
+  }
+  else {
+    P4EST_ASSERT (prev_good + 1 + removed == incount);
+    incount = prev_good + 1;
+    q1 = sc_array_index (quadrants, 0);
+  }
+  sc_array_resize (quadrants, incount);
+
+  for (l = 0; l <= P4EST_MAXLEVEL; ++l) {
+    tree->quadrants_per_level[l] = 0;
+  }
+  tree->maxlevel = 0;
+  for (zz = 0; zz < incount; ++zz) {
+    q1 = sc_array_index (quadrants, zz);
+    P4EST_ASSERT (p4est_quadrant_is_valid (q1));
+    ++tree->quadrants_per_level[q1->level];
+    tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q1->level);
+  }
+
+  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+}
+
+void
 p4est_complete_region (p4est_t * p4est,
                        const p4est_quadrant_t * q1,
                        bool include_q1,
@@ -1080,19 +1210,17 @@ p4est_complete_region (p4est_t * p4est,
  *                             3: balance across faces, edges and corners
  */
 static void
-p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
-                           p4est_topidx_t which_tree, p4est_init_t init_fn)
+p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
+                           p4est_init_t init_fn, int balance)
 {
-  size_t              iz, jz;
-  size_t              incount, curcount, ocount;
-  int                 comp;
   bool                lookup, inserted;
   bool                isfamily, isoutroot;
+  size_t              iz, jz;
+  size_t              incount, curcount, ocount;
   size_t              quadrant_pool_size;
   size_t              data_pool_size;
   size_t              count_outside_root, count_outside_tree;
   size_t              count_already_inlist, count_already_outlist;
-  size_t              first_inside, last_inside;
   int                 qid, sid, pid, bbound;
   int                 skey, *key = &skey;
   int                 pkey, *parent_key = &pkey;
@@ -1103,7 +1231,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
   p4est_quadrant_t   *family[P4EST_CHILDREN];
   p4est_quadrant_t   *q;
   p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
-  p4est_quadrant_t    ld, tree_first, tree_last, pshift;
+  p4est_quadrant_t    ld, pshift;
+  p4est_tree_t       *tree;
   sc_array_t         *inlist, *olist;
   sc_mempool_t       *list_alloc, *qpool;
   sc_hash_t          *hash[P4EST_MAXLEVEL + 1];
@@ -1111,6 +1240,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 #ifdef P4_TO_P8
   int                 sindex;
 #endif
+
+  P4EST_ASSERT (which_tree >= p4est->first_local_tree);
+  P4EST_ASSERT (which_tree <= p4est->last_local_tree);
+  tree = p4est_array_index_topidx (p4est->trees, which_tree);
 
   P4EST_ASSERT (0 <= balance && balance <= P4EST_DIM);
 
@@ -1122,8 +1255,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 #endif
 
   P4EST_QUADRANT_INIT (&ld);
-  P4EST_QUADRANT_INIT (&tree_first);
-  P4EST_QUADRANT_INIT (&tree_last);
   P4EST_QUADRANT_INIT (&pshift);
 #ifdef P4_TO_P8
   P4EST_QUADRANT_INIT (&pshift);
@@ -1158,44 +1289,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
     data_pool_size = p4est->user_data_pool->elem_count;
   }
 
-  /* if tree is empty or a single block, there is nothing to do */
-  if (incount <= 1) {
+  /* if tree is empty, there is nothing to do */
+  if (incount == 0) {
     return;
   }
-
-  /* determine the first and last small quadrants contained in the tree */
-  first_inside = incount;
-  q = NULL;
-  for (iz = 0; iz < incount; ++iz) {
-    q = sc_array_index (inlist, iz);
-    if (p4est_quadrant_is_inside_root (q)) {
-      first_inside = iz;
-      p4est_quadrant_first_descendent (q, &tree_first, inmaxl);
-      break;
-    }
-  }
-  if (iz == incount) {
-    /* only extended quadrants in the tree, there is nothing to do */
-    return;
-  }
-  last_inside = incount - 1;
-  p4est_quadrant_last_descendent (q, &tree_last, inmaxl);
-  for (iz = first_inside + 1; iz < incount; ++iz) {
-    q = sc_array_index (inlist, iz);
-    if (!p4est_quadrant_is_inside_root (q)) {
-      last_inside = iz - 1;
-      break;
-    }
-    p4est_quadrant_last_descendent (q, &ld, inmaxl);
-    comp = p4est_quadrant_compare (&tree_last, &ld);
-    if (comp < 0) {
-      tree_last = ld;
-    }
-    P4EST_ASSERT (comp < 0);
-  }
-  P4EST_ASSERT (first_inside <= last_inside && last_inside < incount);
-  P4EST_ASSERT (p4est_quadrant_is_valid (&tree_first));
-  P4EST_ASSERT (p4est_quadrant_is_valid (&tree_last));
 
   /* initialize some counters */
   count_outside_root = count_outside_tree = 0;
@@ -1364,23 +1461,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
            qalloc->level, qalloc->x, qalloc->y, sid);
          */
 
-        /* stage 2: include qalloc if necessary */
-        /* TODO we will need these quadrants outside the owned part of tree */
-#if 1
-        if (p4est_quadrant_is_inside_root (qalloc)) {
-          p4est_quadrant_last_descendent (qalloc, &ld, inmaxl);
-          if ((p4est_quadrant_compare (&tree_first, qalloc) > 0 &&
-               (qalloc->x != tree_first.x || qalloc->y != tree_first.y ||
-#ifdef P4_TO_P8
-                qalloc->z != tree_first.z ||
-#endif
-                false)) || p4est_quadrant_compare (&ld, &tree_last) > 0) {
-            /* qalloc is outside the tree */
-            ++count_outside_tree;
-            continue;
-          }
-        }
-#endif
+        /* stage 2: include qalloc */
         lookup = sc_hash_lookup (hash[qalloc->level], qalloc, &vlookup);
         if (lookup) {
           /* qalloc is already included in output list, this catches most */
@@ -1417,13 +1498,15 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 
   /* merge outlist into input list and free temporary storage */
   P4EST_LDEBUGF ("Hash statistics for tree %lld\n", (long long) which_tree);
-  curcount = inlist->elem_count;
+  curcount = incount;
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
 #ifdef P4EST_DEBUG
     sc_hash_print_statistics (SC_LP_DEBUG, hash[l]);
-#endif /* P4EST_DEBUG */
+    sc_hash_destroy (hash[l]);
+#else
     sc_hash_unlink_destroy (hash[l]);   /* performance optimization */
+#endif
 
     /* merge valid quadrants from outlist into inlist */
     ocount = outlist[l].elem_count;
@@ -1437,8 +1520,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
                     qalloc->p.user_data == parent_key);
       if (p4est_quadrant_is_inside_root (qalloc)) {
         /* copy temporary quadrant into final tree */
-        sc_array_resize (inlist, curcount + 1);
-        q = sc_array_index (inlist, curcount);
+        q = sc_array_push (inlist);
         *q = *qalloc;
         ++curcount;
         ++tree->quadrants_per_level[l];
@@ -1456,11 +1538,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
     }
     sc_array_reset (&outlist[l]);
   }
-#ifdef P4EST_DEBUG
+#ifndef P4EST_DEBUG
   sc_mempool_reset (list_alloc);
 #endif
   sc_mempool_destroy (list_alloc);
-  P4EST_ASSERT (curcount >= incount);
+  P4EST_ASSERT (curcount == inlist->elem_count);
 
   /* print more statistics */
   P4EST_VERBOSEF ("Tree %lld Outside root %llu tree %llu\n",
@@ -1475,7 +1557,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 
   /* sort and linearize tree */
   sc_array_sort (inlist, p4est_quadrant_compare);
-  p4est_linearize_subtree (p4est, tree);
+  p4est_tree_remove_nonowned (p4est, which_tree);
+  p4est_linearize_tree (p4est, tree);
 
   /* run sanity checks */
   P4EST_ASSERT (quadrant_pool_size == qpool->elem_count);
@@ -1488,21 +1571,21 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_tree_t * tree, int balance,
 }
 
 void
-p4est_complete_subtree (p4est_t * p4est, p4est_tree_t * tree,
+p4est_complete_subtree (p4est_t * p4est,
                         p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
-  p4est_complete_or_balance (p4est, tree, 0, which_tree, init_fn);
+  p4est_complete_or_balance (p4est, which_tree, init_fn, 0);
 }
 
 void
-p4est_balance_subtree (p4est_t * p4est, p4est_tree_t * tree,
+p4est_balance_subtree (p4est_t * p4est,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
-  p4est_complete_or_balance (p4est, tree, P4EST_DIM, which_tree, init_fn);
+  p4est_complete_or_balance (p4est, which_tree, init_fn, P4EST_DIM);
 }
 
 void
-p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
+p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 {
   size_t              data_pool_size;
   size_t              incount, removed;
@@ -1512,12 +1595,7 @@ p4est_linearize_subtree (p4est_t * p4est, p4est_tree_t * tree)
   p4est_quadrant_t   *q1, *q2;
   sc_array_t         *tquadrants = &tree->quadrants;
 
-#ifdef P4_TO_P8
-  /* TODO: need some variant of is_almost_sorted */
   P4EST_ASSERT (p4est_tree_is_sorted (tree));
-#else
-  P4EST_ASSERT (p4est_tree_is_almost_sorted (tree, 0));
-#endif
 
   incount = tquadrants->elem_count;
   if (incount <= 1) {

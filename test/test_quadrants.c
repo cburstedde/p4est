@@ -257,7 +257,7 @@ main (void)
 
   /* test the linearize algorithm */
   incount = t2->quadrants.elem_count;
-  p4est_linearize_subtree (p4est2, t2);
+  p4est_linearize_tree (p4est2, t2);
   SC_CHECK_ABORT (incount == t2->quadrants.elem_count, "linearize");
 
   /* this is user_data neutral only when p4est1->data_size == 0 */
@@ -295,7 +295,7 @@ main (void)
     tree.maxlevel = (int8_t) SC_MAX (tree.maxlevel, q1->level);
   }
   SC_CHECK_ABORT (!p4est_tree_is_linear (&tree), "is_linear");
-  p4est_linearize_subtree (p4est1, &tree);
+  p4est_linearize_tree (p4est1, &tree);
   SC_CHECK_ABORT (incount - 3 == tree.quadrants.elem_count, "linearize");
   sc_array_reset (&tree.quadrants);
 

@@ -34,6 +34,7 @@
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
+#define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* redefine enums */
 #define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
@@ -116,10 +117,11 @@
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
+#define p4est_tree_remove_nonowned      p8est_tree_remove_nonowned
 #define p4est_complete_region           p8est_complete_region
 #define p4est_complete_subtree          p8est_complete_subtree
 #define p4est_balance_subtree           p8est_balance_subtree
-#define p4est_linearize_subtree         p8est_linearize_subtree
+#define p4est_linearize_tree            p8est_linearize_tree
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */

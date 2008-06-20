@@ -128,8 +128,8 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
  * except the quadrant itself is checked for overlap of quadrants
  * from \a tree that are smaller by at least two levels and thus can cause
  * a split. Those elements from tree that overlap are put into \a out.
- * \param [in] tree     A sorted complete linear tree to be checked against.
- * \param [in] qtree    Tree id of the quadrants to include.
+ * \param [in] p4est    The p4est to work on.
+ * \param [in] qtree    Index of a sorted complete tree to include.
  * \param [in] in       A sorted linear list of quadrants.
  * \param [in,out] out  A sorted subset of tree->quadrants.
  */
@@ -140,10 +140,17 @@ void                p4est_tree_compute_overlap (p4est_t * p4est,
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
  * \param [in] skip     A sorted list of quadrants to be skipped.
- * \param [in,out] out  A sorted subset of tree->quadrants..
+ * \param [in,out] out  A sorted subset of tree->quadrants.
   */
 void                p4est_tree_uniqify_overlap (sc_array_t * skip,
                                                 sc_array_t * out);
+
+/** Removes quadrants that are outside the owned tree boundaries from a tree.
+ * \param [in,out] p4est    The p4est to work on.
+ * \param [in] which_tree   Index to a sorted owned tree in the p4est.
+ */
+void                p4est_tree_remove_nonowned (p4est_t * p4est,
+                                                p4est_topidx_t which_tree);
 
 /** Constructs a minimal linear octree between two octants.
  *
@@ -173,31 +180,25 @@ void                p4est_complete_region (p4est_t * p4est,
                                            p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);
 
-/** Completes a sorted subtree.
- * \param [in]     p4est used for the memory pools and quadrant init.
- * \param [in,out] tree       On input, a sorted tree. On output,
- *                            a sorted complete linear tree.
- * \param [in]     which_tree The 0-based index of \a tree which is needed for
- *                            the \c p4est_quadrant_init_data routine.
+/** Completes a sorted tree within a p4est. It may have exterior quadrants.
+ * The completed tree will have only owned quadrants and no overlap.
+ * \param [in,out] p4est      The p4est to work on.
+ * \param [in]     which_tree The 0-based index of the subtree to complete.
  * \param [in]     init_fn    Callback function to initialize the user_data
  *                            which is already allocated automatically.
  */
 void                p4est_complete_subtree (p4est_t * p4est,
-                                            p4est_tree_t * tree,
                                             p4est_topidx_t which_tree,
                                             p4est_init_t init_fn);
 
-/** Balances a sorted subtree.
- * \param [in]     p4est used for the memory pools and quadrant init.
- * \param [in,out] tree       On input, a sorted tree. On output,
- *                            a sorted complete linear balanced tree.
- * \param [in]     which_tree The 0-based index of \a tree which is needed for
- *                            the \c p4est_quadrant_init_data routine.
+/** Balances a sorted tree within a p4est. It may have exterior quadrants.
+ * The completed tree will have only owned quadrants and no overlap.
+ * \param [in,out] p4est      The p4est to work on.
+ * \param [in]     which_tree The 0-based index of the subtree to balance.
  * \param [in]     init_fn    Callback function to initialize the user_data
  *                            which is already allocated automatically.
  */
 void                p4est_balance_subtree (p4est_t * p4est,
-                                           p4est_tree_t * tree,
                                            p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);
 
@@ -209,8 +210,8 @@ void                p4est_balance_subtree (p4est_t * p4est,
  * \param [in]     p4est used for the memory pool and quadrant free.
  * \param [in,out] tree   A sorted tree to be linearized in-place.
  */
-void                p4est_linearize_subtree (p4est_t * p4est,
-                                             p4est_tree_t * tree);
+void                p4est_linearize_tree (p4est_t * p4est,
+                                          p4est_tree_t * tree);
 
 /** Partition \a p4est given the number of quadrants per proc.
  *
