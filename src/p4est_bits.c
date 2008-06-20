@@ -442,7 +442,7 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
   if (tree->quadrants.elem_count == 0)
     return false;
 
-  maxl = SC_MAX (tree->maxlevel, q->level);
+  maxl = (int) SC_MAX (tree->maxlevel, q->level);
 
   /* check if q is before the first tree quadrant */
   treeq = sc_array_index (&tree->quadrants, 0);

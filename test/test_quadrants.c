@@ -566,7 +566,7 @@ main (void)
 
   for (k = 0; k < 16; ++k) {
     if (k != 4 && k != 6 && k != 8 && k != 9 && k != 12 && k != 13 && k != 14) {
-      p4est_quadrant_set_morton (&E, 0, k);
+      p4est_quadrant_set_morton (&E, 0, (uint64_t) k);
     }
   }
   p4est_quadrant_set_morton (&P, 0, 10);

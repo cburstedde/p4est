@@ -922,7 +922,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 mpiret, rcount;
 #ifndef P4_TO_P8
   int                 first_bound, last_bound;
-#endif
+#endif /* !P4_TO_P8 */
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
   int                 lastw, nwin;
@@ -1003,7 +1003,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 #ifndef P4_TO_P8
   sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
-#endif
+#endif /* !P4_TO_P8 */
 
   /* compute first quadrants on finest level for comparison for me and next */
   first_peer = num_procs;
@@ -1569,7 +1569,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     SC_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
   }
 #endif /* P4EST_DEBUG */
+#endif /* !P4_TO_P8 */
 #endif /* P4EST_MPI */
+
+#ifndef P4_TO_P8
 
   /* simulate send and receive with myself across tree boundaries */
   peer = sc_array_index_int (peers, rank);
@@ -1746,23 +1749,18 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     /* check if we are the only processor in an isolated tree */
     tree = p4est_array_index_topidx (p4est->trees, nt);
     tquadrants = &tree->quadrants;
-    if ((tree_flags[nt] & fully_owned_flag) &&
-        !(tree_flags[nt] & any_face_flag)) {
-      p4est->local_num_quadrants += tquadrants->elem_count;
-      continue;
-    }
-
-    /* we have most probably received quadrants, run sort and balance */
-    sc_array_sort (tquadrants, p4est_quadrant_compare);
-    p4est_balance_subtree (p4est, nt, init_fn);
-    P4EST_VERBOSEF ("Balance tree %lld B %llu\n",
-                    (long long) nt,
-                    (unsigned long long) tquadrants->elem_count);
     treecount = tquadrants->elem_count;
-    p4est->local_num_quadrants += treecount;
-
-    P4EST_VERBOSEF ("Balance tree %lld C %llu\n",
-                    (long long) nt, (unsigned long long) treecount);
+    if (!(tree_flags[nt] & fully_owned_flag) ||
+        (tree_flags[nt] & any_face_flag)) {
+      /* we have most probably received quadrants, run sort and balance */
+      sc_array_sort (tquadrants, p4est_quadrant_compare);
+      p4est_balance_subtree (p4est, nt, init_fn);
+      P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
+                      (long long) nt,
+                      (unsigned long long) treecount,
+                      (unsigned long long) tquadrants->elem_count);
+    }
+    p4est->local_num_quadrants += tquadrants->elem_count;
     tquadrants = NULL;          /* safeguard */
   }
 
@@ -1793,10 +1791,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 #endif /* P4EST_MPI */
 
+#endif /* !P4_TO_P8 */
+
   /* loop over all local trees to finalize balance */
   all_outcount = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
-    tree = sc_array_index (p4est->trees, nt);
+    tree = p4est_array_index_topidx (p4est->trees, nt);
     all_outcount += tree->quadrants.elem_count;
 
     /* final log message for this tree */
@@ -1804,8 +1804,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                  (long long) nt,
                  (unsigned long long) tree->quadrants.elem_count);
   }
-
-#endif /* !P4_TO_P8 */
 
   /* cleanup temporary storage */
   P4EST_FREE (tree_flags);

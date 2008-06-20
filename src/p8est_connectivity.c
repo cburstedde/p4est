@@ -262,11 +262,13 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
 
   for (nvtt = 0; nvtt < num_vtt; ++nvtt) {
     if (vtt[nvtt] < 0 || vtt[nvtt] >= num_trees) {
-      fprintf (stderr, "Vertex to tree %d out of range\n", nvtt);
+      fprintf (stderr, "Vertex to tree %lld out of range\n",
+               (long long) nvtt);
       return false;
     }
     if (vtv[nvtt] < 0 || vtv[nvtt] >= num_vertices) {
-      fprintf (stderr, "Vertex to vertex %d out of range\n", nvtt);
+      fprintf (stderr, "Vertex to vertex %lld out of range\n",
+               (long long) nvtt);
       return false;
     }
   }
