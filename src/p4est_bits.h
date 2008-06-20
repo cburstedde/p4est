@@ -95,12 +95,17 @@ bool                p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
 bool                p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
                                                  const p4est_quadrant_t * q2);
 
-/** Test if four quadrants are siblings in Morton ordering.
+/** Test if 4 quadrants are siblings in Morton ordering.
  */
 bool                p4est_quadrant_is_family (const p4est_quadrant_t * q0,
                                               const p4est_quadrant_t * q1,
                                               const p4est_quadrant_t * q2,
                                               const p4est_quadrant_t * q3);
+
+/** Test if 4 quadrants are siblings in Morton ordering, array version.
+ * \param [in] q   Array of 4 quadrants.
+ */
+bool                p4est_quadrant_is_familyv (const p4est_quadrant_t q[]);
 
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
@@ -186,6 +191,15 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
                                              p4est_quadrant_t * c1,
                                              p4est_quadrant_t * c2,
                                              p4est_quadrant_t * c3);
+
+/** Compute the 4 children of a quadrant, array version.
+ * \param [in]     q  Input quadrant.
+ * \param [in,out] c  The 4 computed children in z-order.
+ *                    q may point to the same quadrant as c[0].
+ * \note The user_data of c[i] is never modified.
+ */
+void                p4est_quadrant_childrenv (const p4est_quadrant_t * q,
+                                              p4est_quadrant_t c[]);
 
 /** Compute the first descendent of a quadrant on a given level.
  * \param [in]  q      Input quadrant.

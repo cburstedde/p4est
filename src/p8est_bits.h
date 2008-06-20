@@ -95,7 +95,7 @@ bool                p8est_quadrant_is_sibling (const p8est_quadrant_t * q1,
 bool                p8est_quadrant_is_sibling_D (const p8est_quadrant_t * q1,
                                                  const p8est_quadrant_t * q2);
 
-/** Test if eight quadrants are siblings in Morton ordering.
+/** Test if 8 quadrants are siblings in Morton ordering.
  */
 bool                p8est_quadrant_is_family (const p8est_quadrant_t * q0,
                                               const p8est_quadrant_t * q1,
@@ -105,6 +105,11 @@ bool                p8est_quadrant_is_family (const p8est_quadrant_t * q0,
                                               const p8est_quadrant_t * q5,
                                               const p8est_quadrant_t * q6,
                                               const p8est_quadrant_t * q7);
+
+/** Test if 8 quadrants are siblings in Morton ordering, array version.
+ * \param [in] q   Array of 8 quadrants.
+ */
+bool                p8est_quadrant_is_familyv (const p8est_quadrant_t q[]);
 
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
@@ -194,6 +199,15 @@ void                p8est_quadrant_children (const p8est_quadrant_t * q,
                                              p8est_quadrant_t * c5,
                                              p8est_quadrant_t * c6,
                                              p8est_quadrant_t * c7);
+
+/** Compute the 8 children of a quadrant, array version.
+ * \param [in]     q  Input quadrant.
+ * \param [in,out] c  The 8 computed children in z-order.
+ *                    q may point to the same quadrant as c[0].
+ * \note The user_data of c[i] is never modified.
+ */
+void                p8est_quadrant_childrenv (const p8est_quadrant_t * q,
+                                              p8est_quadrant_t c[]);
 
 /** Compute the first descendent of a quadrant on a given level.
  * \param [in]  q      Input quadrant.
