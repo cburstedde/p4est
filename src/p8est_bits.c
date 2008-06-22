@@ -278,7 +278,7 @@ p8est_quadrant_transform (const p8est_quadrant_t * q, p8est_quadrant_t * r,
   target_xyz[1] = &r->y;
   target_xyz[2] = &r->z;
 #ifdef P4EST_DEBUG
-  r->x = r->y = r->z = P4EST_QCOORD_MIN;        /* invalid coordinates */
+  r->x = r->y = r->z = (p4est_qcoord_t) P4EST_QCOORD_MIN;
 #endif
 
   *target_xyz[target_axis[0]] =

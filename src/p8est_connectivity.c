@@ -456,7 +456,7 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
   p4est_topidx_t      target_tree;
 
   target_tree = connectivity->tree_to_tree[6 * my_tree + my_face];
-  target_code = connectivity->tree_to_face[6 * my_tree + my_face];
+  target_code = (int) connectivity->tree_to_face[6 * my_tree + my_face];
   target_face = target_code % 6;
   orientation = target_code / 6;
 

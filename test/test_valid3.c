@@ -29,7 +29,7 @@ refine_fn (p8est_t * p8est, p4est_topidx_t which_tree,
   int                 cid;
   int                 endlevel = 2 + (int) (which_tree % 3);
 
-  if (quadrant->level >= endlevel)
+  if ((int) quadrant->level >= endlevel)
     return 0;
 
   cid = p8est_quadrant_child_id (quadrant);
