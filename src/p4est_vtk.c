@@ -64,6 +64,9 @@ p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
 {
   int                 retval;
 
+  SC_CHECK_ABORT (p4est->connectivity->vertices != NULL,
+                  "Must provide connectivity with vertex information");
+
   retval =
     p4est_vtk_write_header (p4est, p4est_vtk_default_write_rank, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write header");
@@ -110,6 +113,8 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
   double             *vertices = connectivity->vertices;
   p4est_quadrant_t   *quad;
   double              intsize = 1.0 / (1 << P4EST_MAXLEVEL);
+
+  P4EST_ASSERT (connectivity->vertices != NULL);
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
@@ -493,6 +498,8 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
   int                 procRank = p4est->mpirank;
   int                 numProcs = p4est->mpisize;
   FILE               *vtufile;
+
+  P4EST_ASSERT (p4est->connectivity->vertices != NULL);
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);

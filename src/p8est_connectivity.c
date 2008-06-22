@@ -315,12 +315,12 @@ p8est_connectivity_new_unitcube (void)
   };
   const double        vertices[3 * 8] = {
     0, 0, 0,
-    0, 0, 1,
-    0, 1, 0,
-    0, 1, 1,
     1, 0, 0,
-    1, 0, 1,
+    0, 1, 0,
     1, 1, 0,
+    0, 0, 1,
+    1, 0, 1,
+    0, 1, 1,
     1, 1, 1,
   };
   const p4est_topidx_t vtt_offset[8 + 1] = {
@@ -356,12 +356,12 @@ p8est_connectivity_new_periodic (void)
   };
   const double        vertices[3 * 8] = {
     0, 0, 0,
-    0, 0, 1,
-    0, 1, 0,
-    0, 1, 1,
     1, 0, 0,
-    1, 0, 1,
+    0, 1, 0,
     1, 1, 0,
+    0, 0, 1,
+    1, 0, 1,
+    0, 1, 1,
     1, 1, 1,
   };
   const p4est_topidx_t vtt_offset[8 + 1] = {
