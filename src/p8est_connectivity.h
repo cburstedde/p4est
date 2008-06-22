@@ -80,6 +80,9 @@ extern const int    p8est_transform_table[4][4][2];
 /** Store the vertex numbers 0..7 for each tree face. */
 extern const int    p8est_face_vertices[6][4];
 
+/** Store the face numbers 0..12 for each tree face. */
+extern const int    p8est_face_edges[6][4];
+
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_permutations[8][4];
 
@@ -90,6 +93,9 @@ extern const int    p8est_face_permutation_sets[3][4];
  * The order is [my_face][neighbor_face]
  */
 extern const int    p8est_face_permutation_refs[6][6];
+
+/** Store the vertex numbers 0..8 for each tree edge. */
+extern const int    p8est_edge_vertices[12][2];
 
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.
@@ -128,14 +134,7 @@ p8est_connectivity_t *p8est_connectivity_new_periodic (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
-/** Returns the transformation number from a tree to a neighbor tree.
- * \return  Returns -1 if there is no neighbor at that face, or 0..7.
- */
-int                 p8est_find_face_transform (p8est_connectivity_t *
-                                               connectivity,
-                                               p4est_topidx_t itree,
-                                               int iface);
-
+#if 0
 /** Fills an array with information about corner neighbors.
  * \param [in,out]  corner_info  Array of p8est_corner_info_t members.
  */
@@ -143,5 +142,19 @@ void                p8est_find_corner_info (p8est_connectivity_t *
                                             connectivity,
                                             p4est_topidx_t itree, int icorner,
                                             sc_array_t * corner_info);
+#endif
+
+/** Fills arrays encoding the axis combinations for a face transform.
+ * \param [out] my_axis        The coordinate axis sequence of the origin face.
+ * \param [out] target_axis    The coordinate axis sequence of the target face.
+ * \param [out] edge_reverse   Edge reverse flag for axes 0, 1; face code for 2.
+ * \return   Returns the face neighbor tree if it exists, -1 otherwise.
+ */
+p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
+                                               connectivity,
+                                               p4est_topidx_t itree,
+                                               int iface, int my_axis[3],
+                                               int target_axis[3],
+                                               int edge_reverse[3]);
 
 #endif /* !P8EST_CONNECTIVITY_H */

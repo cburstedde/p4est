@@ -42,6 +42,7 @@
 typedef int32_t     p4est_qcoord_t;
 #define P4EST_MPI_QCOORD MPI_INT
 #define P4EST_VTK_QCOORD "Int32"
+#define P4EST_QCOORD_MIN INT32_MIN
 #define P4EST_QCOORD_MAX INT32_MAX
 
 /** Typedef for counting topological entities (trees, vertices). */

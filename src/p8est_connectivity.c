@@ -30,6 +30,14 @@ const int           p8est_face_vertices[6][4] =
  { 0, 1, 2, 3 },
  { 4, 5, 6, 7 }};
 
+const int           p8est_face_edges[6][4] =
+{{ 4, 6,  8, 10 },
+ { 5, 7,  9, 11 },
+ { 0, 2,  8,  9 },
+ { 1, 3, 10, 11 },
+ { 0, 1,  4,  5 },
+ { 2, 3,  6,  7 }};
+
 const int           p8est_face_permutations[8][4] =
 {{ 0, 1, 2, 3 },                /* no.  0 of 0..23 */
  { 0, 2, 1, 3 },                /* no.  2 of 0..23 */
@@ -52,6 +60,20 @@ const int           p8est_face_permutation_refs[6][6] =
  { 0, 2, 2, 0, 0, 1 },
  { 0, 2, 2, 0, 0, 1 },
  { 2, 0, 0, 2, 2, 0 }};
+
+const int           p8est_edge_vertices[12][2] =
+{{ 0, 1 },
+ { 2, 3 },
+ { 4, 5 },
+ { 6, 7 },
+ { 0, 2 },
+ { 1, 3 },
+ { 4, 6 },
+ { 5, 7 },
+ { 0, 4 },
+ { 1, 5 },
+ { 2, 6 },
+ { 3, 7 }};
 /* *INDENT-ON* */
 
 static p8est_connectivity_t *
@@ -419,6 +441,116 @@ p8est_connectivity_new_rotcubes (void)
                                       tree_to_vertex, tree_to_tree,
                                       tree_to_face, vertices, vtt_offset,
                                       vertex_to_tree, vertex_to_vertex);
+}
+
+p4est_topidx_t
+p8est_find_face_transform (p8est_connectivity_t * connectivity,
+                           p4est_topidx_t my_tree, int my_face,
+                           int my_axis[3], int target_axis[3],
+                           int edge_reverse[3])
+{
+  int                 i;
+  int                 target_code, target_face, orientation;
+  int                 face_ref, face_perm;
+  int                 target_edge_vertex[3];
+  p4est_topidx_t      target_tree;
+
+  target_tree = connectivity->tree_to_tree[6 * my_tree + my_face];
+  target_code = connectivity->tree_to_face[6 * my_tree + my_face];
+  target_face = target_code % 6;
+  orientation = target_code / 6;
+
+  P4EST_ASSERT (0 <= my_face && my_face < 6);
+  P4EST_ASSERT (0 <= target_face && target_face < 6);
+  P4EST_ASSERT (0 <= orientation && orientation < 4);
+
+  if (target_tree == my_tree && target_face == my_face) {
+    P4EST_ASSERT (orientation == 0);
+    return -1;
+  }
+
+  /* find if my edges 0 and 2 are parallel to the x, y, or z-axis */
+  my_axis[0] = p8est_face_edges[my_face][0] / 4;
+  my_axis[1] = p8est_face_edges[my_face][2] / 4;
+
+  /* find matching target vertices */
+  face_ref = p8est_face_permutation_refs[my_face][target_face];
+  face_perm = p8est_face_permutation_sets[face_ref][orientation];
+  target_edge_vertex[0] =
+    p8est_face_vertices[target_face][p8est_face_permutations[face_perm][0]];
+  target_edge_vertex[1] =
+    p8est_face_vertices[target_face][p8est_face_permutations[face_perm][1]];
+  target_edge_vertex[2] =
+    p8est_face_vertices[target_face][p8est_face_permutations[face_perm][2]];
+
+  /* find matching target edges */
+  target_axis[0] = target_axis[1] = -1;
+  edge_reverse[0] = edge_reverse[1] = -1;
+  for (i = 0; i < 12; ++i) {
+    if (target_edge_vertex[0] == p8est_edge_vertices[i][0] &&
+        target_edge_vertex[1] == p8est_edge_vertices[i][1]) {
+      P4EST_ASSERT (target_axis[0] == -1);
+      target_axis[0] = i / 4;
+      edge_reverse[0] = 0;
+#ifndef P4EST_DEBUG
+      if (target_axis[1] >= 0)
+        break;
+      continue;
+#endif
+    }
+    if (target_edge_vertex[0] == p8est_edge_vertices[i][1] &&
+        target_edge_vertex[1] == p8est_edge_vertices[i][0]) {
+      P4EST_ASSERT (target_axis[0] == -1);
+      target_axis[0] = i / 4;
+      edge_reverse[0] = 1;
+#ifndef P4EST_DEBUG
+      if (target_axis[1] >= 0)
+        break;
+      continue;
+#endif
+    }
+    if (target_edge_vertex[0] == p8est_edge_vertices[i][0] &&
+        target_edge_vertex[2] == p8est_edge_vertices[i][1]) {
+      P4EST_ASSERT (target_axis[1] == -1);
+      target_axis[1] = i / 4;
+      edge_reverse[1] = 0;
+#ifndef P4EST_DEBUG
+      if (target_axis[0] >= 0)
+        break;
+      continue;
+#endif
+    }
+    if (target_edge_vertex[0] == p8est_edge_vertices[i][1] &&
+        target_edge_vertex[2] == p8est_edge_vertices[i][0]) {
+      P4EST_ASSERT (target_axis[1] == -1);
+      target_axis[1] = i / 4;
+      edge_reverse[1] = 1;
+#ifndef P4EST_DEBUG
+      if (target_axis[0] >= 0)
+        break;
+      continue;
+#endif
+    }
+  }
+
+  /* find what axis is normal to the faces */
+  my_axis[2] = my_face / 2;
+  target_axis[2] = target_face / 2;
+  edge_reverse[2] = 2 * (my_face % 2) + target_face % 2;
+
+#ifdef P4EST_DEBUG
+  for (i = 0; i < 3; ++i) {
+    P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
+    P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);
+    P4EST_ASSERT (my_axis[0] != my_axis[1] &&
+                  my_axis[0] != my_axis[2] && my_axis[1] != my_axis[2]);
+    P4EST_ASSERT (target_axis[0] != target_axis[1] &&
+                  target_axis[0] != target_axis[2] &&
+                  target_axis[1] != target_axis[2]);
+  }
+#endif
+
+  return target_tree;
 }
 
 /* EOF p8est_connectivity.h */

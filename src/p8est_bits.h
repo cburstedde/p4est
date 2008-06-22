@@ -255,6 +255,7 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
                                                      q2,
                                                      p8est_quadrant_t * r);
 
+#if 0
 /** Compute the level of balance needed at a specified corner.
  * \param [in]  zcorner  Corner index in z-ordering.
  * \return  Returns the maximum of level and this quadrants' corner level.
@@ -276,16 +277,6 @@ void                p8est_quadrant_corner (p8est_quadrant_t * q,
  */
 void                p8est_quadrant_translate (p8est_quadrant_t * q, int face);
 
-/** Transforms a quadrant between trees.
- * \param [in]     q  Input quadrant.
- * \param [in,out] r  Existing quadrant whose Morton index will be filled.
- * \param [in] transform_type   Transformation as in p8est_connectivity.h.
- * \note \a q and \q r may NOT point to the same quadrant structure.
- */
-void                p8est_quadrant_transform (const p8est_quadrant_t * q,
-                                              p8est_quadrant_t * r,
-                                              int transform_type);
-
 /** Transforms the node of quadrant between trees.
  *
  * This gives the node of the transformed quadrant cooresponding to
@@ -296,6 +287,21 @@ void                p8est_quadrant_transform (const p8est_quadrant_t * q,
  * \return The transformed node number coresponding to \a node.
  */
 int                 p8est_node_transform (int node, int transform_type);
+#endif
+
+/** Transforms a quadrant between trees.
+ * \param [in]     q          Input quadrant.
+ * \param [in,out] r          Quadrant whose Morton index will be filled.
+ * \param [in] my_axis        The coordinate axis sequence of the origin face.
+ * \param [in] target_axis    The coordinate axis sequence of the target face.
+ * \param [in] edge_reverse   Edge reverse flag for axes 0, 1; face code for 2.
+ * \note \a q and \q r may NOT point to the same quadrant structure.
+ */
+void                p8est_quadrant_transform (const p8est_quadrant_t * q,
+                                              p8est_quadrant_t * r,
+                                              int my_axis[3],
+                                              int target_axis[3],
+                                              int edge_reverse[3]);
 
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.

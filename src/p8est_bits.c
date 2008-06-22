@@ -240,4 +240,70 @@ p8est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
   P4EST_ASSERT (p8est_quadrant_is_familyv (c));
 }
 
+void
+p8est_quadrant_transform (const p8est_quadrant_t * q, p8est_quadrant_t * r,
+                          int my_axis[3], int target_axis[3],
+                          int edge_reverse[3])
+{
+  p4est_qcoord_t      mh, tRmh, Rmh;
+  p4est_qcoord_t     *target_xyz[3];
+  const p4est_qcoord_t *my_xyz[3];
+
+#ifdef P4EST_DEBUG
+  int                 i;
+
+  for (i = 0; i < 3; ++i) {
+    P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
+    P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);
+    P4EST_ASSERT (my_axis[0] != my_axis[1] &&
+                  my_axis[0] != my_axis[2] && my_axis[1] != my_axis[2]);
+    P4EST_ASSERT (target_axis[0] != target_axis[1] &&
+                  target_axis[0] != target_axis[2] &&
+                  target_axis[1] != target_axis[2]);
+  }
+  P4EST_ASSERT (0 <= edge_reverse[0] && edge_reverse[0] < 2);
+  P4EST_ASSERT (0 <= edge_reverse[1] && edge_reverse[1] < 2);
+  P4EST_ASSERT (0 <= edge_reverse[2] && edge_reverse[2] < 4);
+#endif
+
+  mh = -P4EST_QUADRANT_LEN (q->level);
+  Rmh = P4EST_ROOT_LEN + mh;
+  tRmh = P4EST_ROOT_LEN + Rmh;
+
+  my_xyz[0] = &q->x;
+  my_xyz[1] = &q->y;
+  my_xyz[2] = &q->z;
+
+  target_xyz[0] = &r->x;
+  target_xyz[1] = &r->y;
+  target_xyz[2] = &r->z;
+#ifdef P4EST_DEBUG
+  r->x = r->y = r->z = P4EST_QCOORD_MIN;        /* invalid coordinates */
+#endif
+
+  *target_xyz[target_axis[0]] =
+    !edge_reverse[0] ? *my_xyz[my_axis[0]] : Rmh - *my_xyz[my_axis[0]];
+  *target_xyz[target_axis[1]] =
+    !edge_reverse[1] ? *my_xyz[my_axis[1]] : Rmh - *my_xyz[my_axis[1]];
+  switch (edge_reverse[2]) {
+  case 0:
+    *target_xyz[target_axis[2]] = mh - *my_xyz[my_axis[2]];
+    break;
+  case 1:
+    *target_xyz[target_axis[2]] = *my_xyz[my_axis[2]] + P4EST_ROOT_LEN;
+    break;
+  case 2:
+    *target_xyz[target_axis[2]] = *my_xyz[my_axis[2]] - P4EST_ROOT_LEN;
+    break;
+  case 3:
+    *target_xyz[target_axis[2]] = tRmh - *my_xyz[my_axis[2]];
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+
+  r->level = q->level;
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
 /* EOF p8est_bits.h */
