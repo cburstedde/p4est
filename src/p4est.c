@@ -908,6 +908,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   size_t              ctree;
   sc_array_t          corner_info;
   p4est_corner_info_t *ci;
+#else
+  bool                face_axis[3], contact_face_only;
+  int                 my_axis[3], target_axis[3], edge_reverse[2];
 #endif
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
@@ -1176,10 +1179,49 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           quad_contact[3] = (insulq.y >= rh);
           quad_contact[4] = (insulq.z < 0);
           quad_contact[5] = (insulq.z >= rh);
-          if (quad_contact[0] || quad_contact[1] ||
-              quad_contact[2] || quad_contact[3] ||
-              quad_contact[4] || quad_contact[5]) {
+          face_axis[0] = quad_contact[0] || quad_contact[1];
+          face_axis[1] = quad_contact[2] || quad_contact[3];
+          face_axis[2] = quad_contact[4] || quad_contact[5];
+          contact_face_only = false;
+          if (face_axis[0] || face_axis[1] || face_axis[2]) {
             /* this quadrant is relevant for inter-tree balancing */
+            if (!face_axis[0] && !face_axis[1]) {
+              contact_face_only = true;
+              face = quad_contact[4] ? 4 : 5;
+            }
+            else if (!face_axis[0] && !face_axis[2]) {
+              contact_face_only = true;
+              face = quad_contact[2] ? 2 : 3;
+            }
+            else if (!face_axis[1] && !face_axis[2]) {
+              contact_face_only = true;
+              face = quad_contact[0] ? 0 : 1;
+            }
+            if (contact_face_only) {
+              /* square contact across a face */
+              P4EST_ASSERT (quad_contact[face]);
+              qtree = p8est_find_face_transform (conn, nt, face,
+                                                 my_axis, target_axis,
+                                                 edge_reverse);
+              if (qtree >= 0) {
+                P4EST_ASSERT (face_contact[face]);
+                p8est_quadrant_transform (q, &tosend,
+                                          my_axis, target_axis, edge_reverse);
+                p8est_quadrant_transform (&insulq, &tempq,
+                                          my_axis, target_axis, edge_reverse);
+                p4est_balance_schedule (p4est, peers, qtree, true,
+                                        &tosend, &tempq,
+                                        &first_peer, &last_peer);
+              }
+              else {
+                /* goes across a face with no neighbor */
+                P4EST_ASSERT (!face_contact[face]);
+              }
+            }
+            else {
+              /* edge and corner balance not implemented yet */
+              continue;
+            }
           }
 #endif /* !P4_TO_P8 */
           else {

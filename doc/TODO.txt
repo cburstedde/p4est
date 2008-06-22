@@ -1,22 +1,18 @@
 
- * doxygen
- * add the ability to run splint from make
- * vtk output
-   geometry
- * mesh generation
-   gather one layer ghost elements
-   geometry
+ * 3D
+   topology: edges and corners
+   edge balance
+   corner balance
+   replace p8est_find_face_transform by lookup tables
+ * Mesh generation
+   gather one layer of ghost elements
    2D bilinear elements
    2D interface to pfudg
- * Large number of elements per proc
-   Create a typedef for the integers for per proc values
-   Create a typedef for the integers for global values
-   Replace every other integer with int if possible
- * 3D
-   topology
-   mesh
- * Make the roots of the forest distributed in parallel
+   3D trilinear mesh
+   3D mangll mesh
+ * vtk output
+   geometry
  * Include a test case for every major functionality
+ * Documentation using doxygen
  * Enforce const correctness
- * Partition Tree
-   ? algo 4 (block partition)
+ * Make the roots of the forest distributed in parallel
