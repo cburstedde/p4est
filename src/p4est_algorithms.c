@@ -669,7 +669,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   sc_array_t          corner_info;
 #else
   bool                face_axis[3], contact_face_only;
-  int                 my_axis[3], target_axis[3], edge_reverse[2];
+  int                 my_axis[3], target_axis[3], edge_reverse[3];
 #endif
   sc_array_t         *tquadrants;
 

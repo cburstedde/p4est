@@ -542,12 +542,12 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
   for (i = 0; i < 3; ++i) {
     P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
     P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);
-    P4EST_ASSERT (my_axis[0] != my_axis[1] &&
-                  my_axis[0] != my_axis[2] && my_axis[1] != my_axis[2]);
-    P4EST_ASSERT (target_axis[0] != target_axis[1] &&
-                  target_axis[0] != target_axis[2] &&
-                  target_axis[1] != target_axis[2]);
   }
+  P4EST_ASSERT (my_axis[0] != my_axis[1] &&
+                my_axis[0] != my_axis[2] && my_axis[1] != my_axis[2]);
+  P4EST_ASSERT (target_axis[0] != target_axis[1] &&
+                target_axis[0] != target_axis[2] &&
+                target_axis[1] != target_axis[2]);
 #endif
 
   return target_tree;

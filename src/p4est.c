@@ -910,7 +910,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_corner_info_t *ci;
 #else
   bool                face_axis[3], contact_face_only;
-  int                 my_axis[3], target_axis[3], edge_reverse[2];
+  int                 my_axis[3], target_axis[3], edge_reverse[3];
 #endif
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
