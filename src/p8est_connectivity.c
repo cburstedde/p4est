@@ -452,7 +452,7 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
   int                 i;
   int                 target_code, target_face, orientation;
   int                 face_ref, face_perm;
-  int                 target_edge_vertex[3];
+  int                 low[2], high[2], swap;
   p4est_topidx_t      target_tree;
 
   target_tree = connectivity->tree_to_tree[6 * my_tree + my_face];
@@ -472,63 +472,49 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
   /* find if my edges 0 and 2 are parallel to the x, y, or z-axis */
   my_axis[0] = p8est_face_edges[my_face][0] / 4;
   my_axis[1] = p8est_face_edges[my_face][2] / 4;
+  target_axis[0] = target_axis[1] = -1;
+  edge_reverse[0] = edge_reverse[1] = 0;
 
-  /* find matching target vertices */
+  /* find matching target vertices. TODO: precompute this */
   face_ref = p8est_face_permutation_refs[my_face][target_face];
   face_perm = p8est_face_permutation_sets[face_ref][orientation];
-  target_edge_vertex[0] =
+  low[0] = low[1] =
     p8est_face_vertices[target_face][p8est_face_permutations[face_perm][0]];
-  target_edge_vertex[1] =
+  high[0] =
     p8est_face_vertices[target_face][p8est_face_permutations[face_perm][1]];
-  target_edge_vertex[2] =
+  high[1] =
     p8est_face_vertices[target_face][p8est_face_permutations[face_perm][2]];
+  if (low[0] > high[0]) {
+    swap = low[0];
+    low[0] = high[0];
+    high[0] = swap;
+    edge_reverse[0] = 1;
+  }
+  if (low[1] > high[1]) {
+    swap = low[1];
+    low[1] = high[1];
+    high[1] = swap;
+    edge_reverse[1] = 1;
+  }
 
   /* find matching target edges */
-  target_axis[0] = target_axis[1] = -1;
-  edge_reverse[0] = edge_reverse[1] = -1;
   for (i = 0; i < 12; ++i) {
-    if (target_edge_vertex[0] == p8est_edge_vertices[i][0] &&
-        target_edge_vertex[1] == p8est_edge_vertices[i][1]) {
+    if (low[0] == p8est_edge_vertices[i][0] &&
+        high[0] == p8est_edge_vertices[i][1]) {
       P4EST_ASSERT (target_axis[0] == -1);
       target_axis[0] = i / 4;
-      edge_reverse[0] = 0;
 #ifndef P4EST_DEBUG
       if (target_axis[1] >= 0)
         break;
-      continue;
 #endif
     }
-    if (target_edge_vertex[0] == p8est_edge_vertices[i][1] &&
-        target_edge_vertex[1] == p8est_edge_vertices[i][0]) {
-      P4EST_ASSERT (target_axis[0] == -1);
-      target_axis[0] = i / 4;
-      edge_reverse[0] = 1;
-#ifndef P4EST_DEBUG
-      if (target_axis[1] >= 0)
-        break;
-      continue;
-#endif
-    }
-    if (target_edge_vertex[0] == p8est_edge_vertices[i][0] &&
-        target_edge_vertex[2] == p8est_edge_vertices[i][1]) {
+    else if (low[1] == p8est_edge_vertices[i][0] &&
+             high[1] == p8est_edge_vertices[i][1]) {
       P4EST_ASSERT (target_axis[1] == -1);
       target_axis[1] = i / 4;
-      edge_reverse[1] = 0;
 #ifndef P4EST_DEBUG
       if (target_axis[0] >= 0)
         break;
-      continue;
-#endif
-    }
-    if (target_edge_vertex[0] == p8est_edge_vertices[i][1] &&
-        target_edge_vertex[2] == p8est_edge_vertices[i][0]) {
-      P4EST_ASSERT (target_axis[1] == -1);
-      target_axis[1] = i / 4;
-      edge_reverse[1] = 1;
-#ifndef P4EST_DEBUG
-      if (target_axis[0] >= 0)
-        break;
-      continue;
 #endif
     }
   }
