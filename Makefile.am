@@ -6,6 +6,7 @@ ACLOCAL_AMFLAGS = -I config -I sc/config
 
 # initialize empty variables
 AM_CPPFLAGS =
+DISTCLEANFILES =
 EXTRA_DIST =
 LDADD =
 LINT_CSOURCES =
@@ -28,6 +29,7 @@ DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
 EXTRA_DIST += bootstrap p4estindent
+DISTCLEANFILES += _configs.sed src/p4est_config.h
 MAINTAINERCLEANFILES += ChangeLog
 .PHONY: lint ChangeLog
 
@@ -66,3 +68,6 @@ if !P4EST_PROVIDE_SC
 	@echo "-----------------------------------------------------"
 	@exit 1
 endif
+
+clean-local:
+	rm -f *vtu
