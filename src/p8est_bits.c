@@ -248,23 +248,23 @@ p8est_quadrant_transform (const p8est_quadrant_t * q, p8est_quadrant_t * r,
   p4est_qcoord_t      mh, tRmh, Rmh;
   p4est_qcoord_t     *target_xyz[3];
   const p4est_qcoord_t *my_xyz[3];
-
 #ifdef P4EST_DEBUG
   int                 i;
 
   for (i = 0; i < 3; ++i) {
     P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
     P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);
-    P4EST_ASSERT (my_axis[0] != my_axis[1] &&
-                  my_axis[0] != my_axis[2] && my_axis[1] != my_axis[2]);
-    P4EST_ASSERT (target_axis[0] != target_axis[1] &&
-                  target_axis[0] != target_axis[2] &&
-                  target_axis[1] != target_axis[2]);
   }
+#endif
+  P4EST_ASSERT (my_axis[0] != my_axis[1] &&
+                my_axis[0] != my_axis[2] && my_axis[1] != my_axis[2]);
+  P4EST_ASSERT (target_axis[0] != target_axis[1] &&
+                target_axis[0] != target_axis[2] &&
+                target_axis[1] != target_axis[2]);
   P4EST_ASSERT (0 <= edge_reverse[0] && edge_reverse[0] < 2);
   P4EST_ASSERT (0 <= edge_reverse[1] && edge_reverse[1] < 2);
   P4EST_ASSERT (0 <= edge_reverse[2] && edge_reverse[2] < 4);
-#endif
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
   mh = -P4EST_QUADRANT_LEN (q->level);
   Rmh = P4EST_ROOT_LEN + mh;
@@ -304,6 +304,10 @@ p8est_quadrant_transform (const p8est_quadrant_t * q, p8est_quadrant_t * r,
 
   r->level = q->level;
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
+  P4EST_ASSERT ((p4est_quadrant_is_inside_root (q) &&
+                 !p4est_quadrant_is_inside_root (r)) ||
+                (!p4est_quadrant_is_inside_root (q) &&
+                 p4est_quadrant_is_inside_root (r)));
 }
 
 /* EOF p8est_bits.h */

@@ -719,6 +719,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
     face = -1;
 #ifndef P4_TO_P8
     transform = -1;
+#else
+    edge_reverse[2] = -1;
 #endif
     if (!p4est_quadrant_is_inside_root (inq)) {
       /* this quadrant comes from a different tree */
@@ -901,6 +903,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
           for (js = first_index; js <= last_index; ++js) {
             tq = sc_array_index_ssize_t (tquadrants, js);
             if (tq->level > inq->level + 1) {
+              P4EST_ASSERT (p4est_quadrant_is_ancestor (s, tq));
               outq = sc_array_push (out);
               if (inter_tree) {
 #ifndef P4_TO_P8
