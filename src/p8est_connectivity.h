@@ -30,36 +30,56 @@
  * The arrays tree_to_* are stored in z ordering.
  * For vertices the order is 000 001 010 011 100 101 110 111.
  * For faces the order is -x +x -y +y -z +z.
- * They are allocated [0][0]..[0][8 or 6, resp.]..[num_trees-1][0]...
+ * They are allocated [0][0]..[0][N-1]..[num_trees-1][0]..[num_trees-1][N-1].
+ * where N is 6 for tree and face, 8 for vertex, 12 for edge.
  *
- * The values for tree_to_face are 0..5 for equal orientation
- * and 6..11 for opposite orientation.
+ * The values for tree_to_face are in 0..23
+ * where ttf % 6 gives the face number and ttf / 6 the orientation code.
  *
  * The vertex coordinates are stored in the array vertices, allocated
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
+ * The edges are only stored and counted when they are relevant for balance.
+ * Otherwise the tree_to_edge entry must be -1 and this edge will be ignored.
+ *
+ * The arrays edge_to_* store a variable number of entries per edge.
+ * For edge e these are at position [ett_offset[e]]..[ett_offset[e+1]-1].
+ * Their number for edge e is ett_offset[e+1] - ett_offset[e].
+ * The size of the edge_to_* arrays is num_ett = ett_offset[num_edges].
+ * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
+ * one orientation and the higher 12 the opposite orientation.
+ *
  * The arrays vertex_to_* store a variable number of entries per vertex.
  * For vertex v these are at position [vtt_offset[v]]..[vtt_offset[v+1]-1].
  * Their number for vertex v is vtt_offset[v+1] - vtt_offset[v].
- * The size of the vertex_to_* arrays is vtt_offset[num_vertices].
+ * The size of the vertex_to_* arrays is num_vtt = vtt_offset[num_vertices].
  */
 typedef struct p8est_connectivity
 {
-  p4est_topidx_t      num_trees;
   p4est_topidx_t      num_vertices;
+  p4est_topidx_t      num_trees;
+  p4est_topidx_t      num_edges;
+  p4est_topidx_t      num_corners;
 
+  double             *vertices;
   p4est_topidx_t     *tree_to_vertex;
+
   p4est_topidx_t     *tree_to_tree;
   int8_t             *tree_to_face;
 
-  double             *vertices;
+  p4est_topidx_t     *tree_to_edge;
+  p4est_topidx_t     *ett_offset;
+  p4est_topidx_t     *edge_to_tree;
+  int8_t             *edge_to_edge;
 
-  p4est_topidx_t     *vtt_offset;
-  p4est_topidx_t     *vertex_to_tree;
-  p4est_topidx_t     *vertex_to_vertex;
+  p4est_topidx_t     *tree_to_corner;
+  p4est_topidx_t     *ctt_offset;
+  p4est_topidx_t     *corner_to_tree;
+  int8_t             *corner_to_corner;
 }
 p8est_connectivity_t;
 
+#if 0                           /* this was 2D stuff may be useful later */
 typedef struct
 {
   p4est_topidx_t      ntree;
@@ -67,7 +87,6 @@ typedef struct
 }
 p8est_corner_info_t;
 
-#if 0                           /* this was 2D stuff may be useful later */
 /** Contains integers 0..7 denoting the type of inter-tree transformation.
  * The first 4 transformations are rotations about 0, -90, 180, 90.
  * The second 4 transformations are mirrors along axis 0, 45, 90, 135.
@@ -98,15 +117,19 @@ extern const int    p8est_face_permutation_refs[6][6];
 extern const int    p8est_edge_vertices[12][2];
 
 /** Allocate a connectivity structure
- * \param [in] num_trees    Number of trees in the forest.
- * \param [in] num_vertices Number of total vertices.
- * \param [in] num_vtt      Number of total trees in vertex_to_tree array.
- * \param [in] alloc_vertices   Boolean flag for vertex memory allocation.
+ * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
+ * \param [in] num_trees      Number of trees in the forest.
+ * \param [in] num_edges      Number of balance-relevant identified edges.
+ * \param [in] num_ett        Number of total trees in edge_to_tree array.
+ * \param [in] num_corners    Number of balance-relevant identified corners.
+ * \param [in] num_ctt        Number of total trees in corner_to_tree array.
  */
-p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_trees,
-                                              p4est_topidx_t num_vertices,
-                                              p4est_topidx_t num_vtt,
-                                              bool alloc_vertices);
+p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
+                                              p4est_topidx_t num_trees,
+                                              p4est_topidx_t num_edges,
+                                              p4est_topidx_t num_ett,
+                                              p4est_topidx_t num_corners,
+                                              p4est_topidx_t num_ctt);
 
 /** Destroy a connectivity structure
  */
@@ -124,7 +147,7 @@ bool                p8est_connectivity_is_valid (p8est_connectivity_t *
 p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
 
 /** Create a connectivity structure for a mostly periodic unit cube.
- * The left and right faces are identified, and bottom and top opposite.
+ * The left and right faces are identified, and bottom and top rotated.
  * Front and back are not identified.
  */
 p8est_connectivity_t *p8est_connectivity_new_periodic (void);
