@@ -97,6 +97,7 @@ p8est_connectivity_new_copy (p4est_topidx_t num_vertices,
                              const p4est_topidx_t * coff,
                              const p4est_topidx_t * ctt, const int8_t * ctc)
 {
+  const bool          alloc_vertices = (vertices != NULL);
   p4est_topidx_t      num_ett;
   p4est_topidx_t      num_ctt;
   p8est_connectivity_t *conn;
@@ -104,14 +105,16 @@ p8est_connectivity_new_copy (p4est_topidx_t num_vertices,
   num_ett = eoff[num_edges];
   num_ctt = coff[num_corners];
   conn = p8est_connectivity_new (num_vertices, num_trees,
-                                 num_edges, num_ett, num_corners, num_ctt);
+                                 num_edges, num_ett, num_corners, num_ctt,
+                                 alloc_vertices);
 
-  if (num_vertices > 0) {
+  if (alloc_vertices) {
     memcpy (conn->vertices, vertices, sizeof (double) * 3 * num_vertices);
-    memcpy (conn->tree_to_vertex, ttv,
-            sizeof (p4est_topidx_t) * 8 * num_trees);
   }
-
+  else {
+    conn->vertices = NULL;
+  }
+  memcpy (conn->tree_to_vertex, ttv, sizeof (p4est_topidx_t) * 8 * num_trees);
   memcpy (conn->tree_to_tree, ttt, sizeof (p4est_topidx_t) * 6 * num_trees);
   memcpy (conn->tree_to_face, ttf, sizeof (int8_t) * 6 * num_trees);
 
@@ -142,7 +145,8 @@ p8est_connectivity_new (p4est_topidx_t num_vertices,
                         p4est_topidx_t num_trees,
                         p4est_topidx_t num_edges,
                         p4est_topidx_t num_ett,
-                        p4est_topidx_t num_corners, p4est_topidx_t num_ctt)
+                        p4est_topidx_t num_corners, p4est_topidx_t num_ctt,
+                        bool alloc_vertices)
 {
   p8est_connectivity_t *conn;
 
@@ -150,15 +154,13 @@ p8est_connectivity_new (p4est_topidx_t num_vertices,
 
   conn->num_vertices = num_vertices;
   conn->num_trees = num_trees;
-  if (num_vertices > 0) {
+  if (alloc_vertices) {
     conn->vertices = P4EST_ALLOC (double, 3 * num_vertices);
-    conn->tree_to_vertex = P4EST_ALLOC (p4est_topidx_t, 8 * num_trees);
   }
   else {
     conn->vertices = NULL;
-    conn->tree_to_vertex = NULL;
   }
-
+  conn->tree_to_vertex = P4EST_ALLOC (p4est_topidx_t, 8 * num_trees);
   conn->tree_to_tree = P4EST_ALLOC (p4est_topidx_t, 6 * num_trees);
   conn->tree_to_face = P4EST_ALLOC (int8_t, 6 * num_trees);
 
@@ -268,14 +270,12 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
   }
 
   for (tree = 0; tree < num_trees; ++tree) {
-    if (num_vertices > 0) {
-      for (nvert = 0; nvert < 8; ++nvert) {
-        vertex = ttv[tree * 8 + nvert];
-        if (vertex < 0 || vertex >= num_vertices) {
-          fprintf (stderr, "Tree to vertex out of range %lld %d",
-                   (long long) tree, nvert);
-          return false;
-        }
+    for (nvert = 0; nvert < 8; ++nvert) {
+      vertex = ttv[tree * 8 + nvert];
+      if (vertex < 0 || vertex >= num_vertices) {
+        fprintf (stderr, "Tree to vertex out of range %lld %d",
+                 (long long) tree, nvert);
+        return false;
       }
     }
 
@@ -677,6 +677,106 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
 #endif
 
   return target_tree;
+}
+
+bool
+p8est_find_edge_info (p8est_connectivity_t * conn,
+                      p4est_topidx_t itree, int iedge, sc_array_t * edge_info)
+{
+#ifdef P4EST_DEBUG
+  int                 nflip1, nflip2;
+#endif
+  int                 redge, nedge, iflip, nflip;
+  p4est_topidx_t      edge_trees, etree;
+  p4est_topidx_t      aedge, ntree, ntree1, ntree2;
+  p4est_topidx_t      v0, v1, nv0, nv1;
+  p8est_edge_info_t  *ei;
+
+  P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
+  P4EST_ASSERT (0 <= iedge && iedge < 12);
+  P4EST_ASSERT (edge_info->elem_size == sizeof (p8est_edge_info_t));
+
+  if (conn->num_edges == 0) {
+    return false;
+  }
+  aedge = conn->tree_to_edge[12 * itree + iedge];
+  if (aedge == -1) {
+    return false;
+  }
+  sc_array_resize (edge_info, 0);
+
+  v0 = conn->tree_to_vertex[8 * itree + p8est_edge_vertices[iedge][0]];
+  v1 = conn->tree_to_vertex[8 * itree + p8est_edge_vertices[iedge][1]];
+
+  ntree1 = conn->tree_to_tree[6 * itree + ((iedge < 4) ? 2 : 0) + iedge % 2];
+  ntree2 =
+    conn->tree_to_tree[6 * itree + ((iedge < 8) ? 4 : 2) + (iedge / 2) % 2];
+
+  edge_trees =                  /* same type */
+    conn->ett_offset[aedge + 1] - conn->ett_offset[aedge];
+
+#ifdef P4EST_DEBUG
+  nflip1 = nflip2 = -1;
+#endif
+  iflip = -1;
+  for (etree = 0; etree < edge_trees; ++etree) {
+    ntree = conn->edge_to_tree[conn->ett_offset[aedge] + etree];
+    redge = (int) conn->edge_to_edge[conn->ett_offset[aedge] + etree];
+    nedge = redge % 12;
+    nflip = redge / 12;
+    if (nedge == iedge && ntree == itree) {
+      P4EST_ASSERT (iflip == -1);
+      iflip = nflip;
+      continue;
+    }
+    if (ntree == ntree1 || ntree == ntree2) {
+      nv0 = conn->tree_to_vertex[8 * ntree + p8est_edge_vertices[nedge][0]];
+      nv1 = conn->tree_to_vertex[8 * ntree + p8est_edge_vertices[nedge][1]];
+      if (nv0 == v0 && nv1 == v1) {
+#ifdef P4EST_DEBUG
+        if (ntree == ntree1) {
+          P4EST_ASSERT (nflip1 == -1);
+          nflip1 = nflip;
+        }
+        else {
+          P4EST_ASSERT (nflip2 == -1);
+          nflip2 = nflip;
+        }
+#endif
+        continue;
+      }
+      else if (nv0 == v1 && nv1 == v0) {
+#ifdef P4EST_DEBUG
+        if (ntree == ntree1) {
+          P4EST_ASSERT (nflip1 == -1);
+          nflip1 = 1 - nflip;
+        }
+        else {
+          P4EST_ASSERT (nflip2 == -1);
+          nflip2 = 1 - nflip;
+        }
+#endif
+        continue;
+      }
+    }
+
+    /* else we have a true diagonal edge with ntree */
+    ei = sc_array_push (edge_info);
+    ei->ntree = ntree;
+    ei->nedge = (int8_t) nedge;
+    ei->nflip = (int8_t) nflip;
+    ei->naxis[0] = (int8_t) (nedge / 4);
+    ei->naxis[1] = (int8_t) (nedge < 4 ? 1 : 0);
+    ei->naxis[2] = (int8_t) (nedge < 8 ? 2 : 1);
+    ei->corners = (int8_t) (2 * ((nedge / 2) % 2) + nedge % 2);
+  }
+  P4EST_ASSERT (edge_trees == (p4est_topidx_t) edge_info->elem_count
+                + 1 + (ntree1 != itree) + (ntree2 != itree));
+  P4EST_ASSERT (iflip >= 0);
+  P4EST_ASSERT (nflip1 == -1 || nflip1 == iflip);
+  P4EST_ASSERT (nflip2 == -1 || nflip2 == iflip);
+
+  return true;
 }
 
 /* EOF p8est_connectivity.h */

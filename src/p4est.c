@@ -879,38 +879,39 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
-  size_t              data_pool_size;
-  size_t              all_incount, all_outcount;
-  int                 k, l, m, which;
-  bool                any_face, face_contact[2 * P4EST_DIM];
-  bool                any_quad, quad_contact[2 * P4EST_DIM];
-  bool                tree_fully_owned;
+  int                 i, j, k, l, m, which;
+  int                 quad_contact[2 * P4EST_DIM];
   int                 face;
-  int8_t             *tree_flags;
-  int                 i, j;
-  p4est_qcoord_t      qh;
-  const p4est_qcoord_t rh = P4EST_ROOT_LEN;
-  size_t              zz, treecount;
-  size_t              qcount, qbytes, offset, obytes;
-  p4est_topidx_t      qtree, nt;
-  p4est_topidx_t      first_tree, last_tree;
   int                 first_peer, last_peer;
   int                 over_peer_count;
-  sc_array_t         *peers, *qarray, *tquadrants;
+  bool                any_face, face_contact[2 * P4EST_DIM];
+  bool                any_quad;
+  bool                tree_fully_owned;
+  int8_t             *tree_flags;
+  size_t              zz, treecount, ctree;
+  size_t              qcount, qbytes, offset, obytes;
+  size_t              data_pool_size;
+  size_t              all_incount, all_outcount;
+  p4est_qcoord_t      qh;
+  const p4est_qcoord_t rh = P4EST_ROOT_LEN;
+  p4est_topidx_t      qtree, nt;
+  p4est_topidx_t      first_tree, last_tree;
   p4est_balance_peer_t *peer;
   p4est_tree_t       *tree;
   p4est_quadrant_t    mylow, nextlow;
   p4est_quadrant_t    tosend, insulq, tempq;
   p4est_quadrant_t   *q, *s;
   p4est_connectivity_t *conn = p4est->connectivity;
+  sc_array_t         *peers, *qarray, *tquadrants;
 #ifndef P4_TO_P8
   int                 transform, corner, zcorner;
-  size_t              ctree;
   sc_array_t          corner_info;
   p4est_corner_info_t *ci;
 #else
-  bool                face_axis[3], contact_face_only;
-  int                 my_axis[3], target_axis[3], edge_reverse[3];
+  bool                face_axis[3], contact_face_only, contact_edge_only;
+  int                 my_axis[3], target_axis[3], edge_reverse[3], edge;
+  sc_array_t          edge_info;
+  p8est_edge_info_t  *ei;
 #endif
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
@@ -1001,6 +1002,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 #ifndef P4_TO_P8
   sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
+#else
+  sc_array_init (&edge_info, sizeof (p8est_edge_info_t));
 #endif /* !P4_TO_P8 */
 
   /* compute first quadrant on finest level */
@@ -1182,23 +1185,37 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
           face_axis[0] = quad_contact[0] || quad_contact[1];
           face_axis[1] = quad_contact[2] || quad_contact[3];
           face_axis[2] = quad_contact[4] || quad_contact[5];
-          contact_face_only = false;
+          contact_face_only = contact_edge_only = false;
+          face = edge = -1;
           if (face_axis[0] || face_axis[1] || face_axis[2]) {
             /* this quadrant is relevant for inter-tree balancing */
-            if (!face_axis[0] && !face_axis[1]) {
+            if (!face_axis[1] && !face_axis[2]) {
               contact_face_only = true;
-              face = quad_contact[4] ? 4 : 5;
+              face = 0 + quad_contact[1];
             }
             else if (!face_axis[0] && !face_axis[2]) {
               contact_face_only = true;
-              face = quad_contact[2] ? 2 : 3;
+              face = 2 + quad_contact[3];
             }
-            else if (!face_axis[1] && !face_axis[2]) {
+            else if (!face_axis[0] && !face_axis[1]) {
               contact_face_only = true;
-              face = quad_contact[0] ? 0 : 1;
+              face = 4 + quad_contact[5];
+            }
+            else if (!face_axis[0]) {
+              contact_edge_only = true;
+              edge = 0 + 2 * quad_contact[5] + quad_contact[3];
+            }
+            else if (!face_axis[1]) {
+              contact_edge_only = true;
+              edge = 4 + 2 * quad_contact[5] + quad_contact[1];
+            }
+            else if (!face_axis[2]) {
+              contact_edge_only = true;
+              edge = 8 + 2 * quad_contact[3] + quad_contact[1];
             }
             if (contact_face_only) {
               /* square contact across a face */
+              P4EST_ASSERT (!contact_edge_only && face >= 0 && face < 6);
               P4EST_ASSERT (quad_contact[face]);
               qtree = p8est_find_face_transform (conn, nt, face,
                                                  my_axis, target_axis,
@@ -1218,8 +1235,27 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                 P4EST_ASSERT (!face_contact[face]);
               }
             }
+            else if (contact_edge_only) {
+              /* this quadrant crosses an edge */
+              P4EST_ASSERT (!contact_face_only && edge >= 0 && edge < 12);
+              p8est_find_edge_info (conn, nt, edge, &edge_info);
+              for (ctree = 0; ctree < edge_info.elem_count; ++ctree) {
+                ei = sc_array_index (&edge_info, ctree);
+#if 0
+                tosend = *q;
+                zcorner = p4est_corner_to_zorder[ci->ncorner];
+                p4est_quadrant_corner (&tosend, zcorner, 0);
+                p4est_quadrant_corner (&insulq, zcorner, 1);
+                p4est_balance_schedule (p4est, peers, ci->ntree, true,
+                                        &tosend, &insulq,
+                                        &first_peer, &last_peer);
+#endif /* 0 */
+              }
+              continue;
+            }
             else {
-              /* edge and corner balance not implemented yet */
+              /* corner balance not implemented yet */
+              P4EST_ASSERT (face_axis[0] && face_axis[1] && face_axis[2]);
               continue;
             }
           }
@@ -1837,6 +1873,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 
 #ifndef P4_TO_P8
   sc_array_reset (&corner_info);
+#else
+  sc_array_reset (&edge_info);
 #endif
 
 #ifdef P4EST_MPI

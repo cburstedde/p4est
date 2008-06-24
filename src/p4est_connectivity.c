@@ -585,7 +585,6 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
                         sc_array_t * corner_info)
 {
   int                 ncorner;
-  p4est_topidx_t      incount, num_found;
   p4est_topidx_t      corner_trees, ctree;
   p4est_topidx_t      ntree, ntree1, ntree2;
   p4est_topidx_t      ivertex, nvertex;
@@ -594,7 +593,7 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
   P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
   P4EST_ASSERT (0 <= icorner && icorner < 4);
   P4EST_ASSERT (corner_info->elem_size == sizeof (p4est_corner_info_t));
-  incount = corner_info->elem_count;
+  sc_array_resize (corner_info, 0);
 
   ivertex = conn->tree_to_vertex[4 * itree + icorner];
   P4EST_ASSERT (0 <= ivertex && ivertex < conn->num_vertices);
@@ -605,7 +604,6 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
   corner_trees =                /* same type */
     conn->vtt_offset[ivertex + 1] - conn->vtt_offset[ivertex];
 
-  num_found = 0;
   for (ctree = 0; ctree < corner_trees; ++ctree) {
     ntree = conn->vertex_to_tree[conn->vtt_offset[ivertex] + ctree];
     nvertex = conn->vertex_to_vertex[conn->vtt_offset[ivertex] + ctree];
@@ -620,17 +618,12 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
       }
     }
     P4EST_ASSERT (ncorner < 4);
-    if (num_found >= incount) {
-      sc_array_resize (corner_info, num_found + 1);
-    }
-    ci = sc_array_index (corner_info, num_found);
+    ci = sc_array_push (corner_info);
     ci->ntree = ntree;
     ci->ncorner = (int8_t) ncorner;
-    ++num_found;
   }
-  sc_array_resize (corner_info, num_found);
-  P4EST_ASSERT (corner_trees == num_found +
-                1 + (ntree1 != itree) + (ntree2 != itree));
+  P4EST_ASSERT (corner_trees == (p4est_topidx_t) corner_info->elem_count
+                + 1 + (ntree1 != itree) + (ntree2 != itree));
 }
 
 /* EOF p4est_connectivity.c */

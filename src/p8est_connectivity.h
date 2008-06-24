@@ -79,21 +79,21 @@ typedef struct p8est_connectivity
 }
 p8est_connectivity_t;
 
-#if 0                           /* this was 2D stuff may be useful later */
+typedef struct
+{
+  p4est_topidx_t      ntree;
+  int8_t              nedge, nflip;
+  int8_t              naxis[3], corners;
+}
+p8est_edge_info_t;
+
+#if 0
 typedef struct
 {
   p4est_topidx_t      ntree;
   int8_t              ncorner;
 }
 p8est_corner_info_t;
-
-/** Contains integers 0..7 denoting the type of inter-tree transformation.
- * The first 4 transformations are rotations about 0, -90, 180, 90.
- * The second 4 transformations are mirrors along axis 0, 45, 90, 135.
- * The indices are my_face, neighbor_face, orientation.
- * The orientation index is 0 for same, 1 for opposing sense of rotation.
- */
-extern const int    p8est_transform_table[4][4][2];
 #endif
 
 /** Store the vertex numbers 0..7 for each tree face. */
@@ -123,13 +123,15 @@ extern const int    p8est_edge_vertices[12][2];
  * \param [in] num_ett        Number of total trees in edge_to_tree array.
  * \param [in] num_corners    Number of balance-relevant identified corners.
  * \param [in] num_ctt        Number of total trees in corner_to_tree array.
+ * \param [in] alloc_vertices   Specify if coordinate array should be alloced.
  */
 p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
                                               p4est_topidx_t num_trees,
                                               p4est_topidx_t num_edges,
                                               p4est_topidx_t num_ett,
                                               p4est_topidx_t num_corners,
-                                              p4est_topidx_t num_ctt);
+                                              p4est_topidx_t num_ctt,
+                                              bool alloc_vertices);
 
 /** Destroy a connectivity structure
  */
@@ -179,5 +181,14 @@ p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
                                                int iface, int my_axis[3],
                                                int target_axis[3],
                                                int edge_reverse[3]);
+
+/** Fills an array with information about edge neighbors.
+ * \param [in,out]  edge_info    Array of p8est_edge_info_t members.
+ * \return                       Returns if the edge has connectivity.
+ */
+bool                p8est_find_edge_info (p8est_connectivity_t *
+                                          connectivity,
+                                          p4est_topidx_t itree, int iedge,
+                                          sc_array_t * edge_info);
 
 #endif /* !P8EST_CONNECTIVITY_H */
