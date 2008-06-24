@@ -1222,10 +1222,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                                                  edge_reverse);
               if (qtree >= 0) {
                 P4EST_ASSERT (face_contact[face]);
-                p8est_quadrant_transform (q, &tosend,
-                                          my_axis, target_axis, edge_reverse);
-                p8est_quadrant_transform (&insulq, &tempq,
-                                          my_axis, target_axis, edge_reverse);
+                p8est_quadrant_transform_face (q, &tosend, my_axis,
+                                               target_axis, edge_reverse);
+                p8est_quadrant_transform_face (&insulq, &tempq, my_axis,
+                                               target_axis, edge_reverse);
                 p4est_balance_schedule (p4est, peers, qtree, true,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);
@@ -1238,7 +1238,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             else if (contact_edge_only) {
               /* this quadrant crosses an edge */
               P4EST_ASSERT (!contact_face_only && edge >= 0 && edge < 12);
-              p8est_find_edge_info (conn, nt, edge, &edge_info);
+              p8est_find_edge_transform (conn, nt, edge, &edge_info);
               for (ctree = 0; ctree < edge_info.elem_count; ++ctree) {
                 ei = sc_array_index (&edge_info, ctree);
 #if 0
@@ -1246,8 +1246,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                 zcorner = p4est_corner_to_zorder[ci->ncorner];
                 p4est_quadrant_corner (&tosend, zcorner, 0);
                 p4est_quadrant_corner (&insulq, zcorner, 1);
-                p4est_balance_schedule (p4est, peers, ci->ntree, true,
-                                        &tosend, &insulq,
+                p4est_balance_schedule (p4est, peers, ei->ntree, true,
+                                        &tosend, &tempq,
                                         &first_peer, &last_peer);
 #endif /* 0 */
               }

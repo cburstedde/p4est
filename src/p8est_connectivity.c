@@ -679,9 +679,10 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
   return target_tree;
 }
 
-bool
-p8est_find_edge_info (p8est_connectivity_t * conn,
-                      p4est_topidx_t itree, int iedge, sc_array_t * edge_info)
+void
+p8est_find_edge_transform (p8est_connectivity_t * conn,
+                           p4est_topidx_t itree, int iedge,
+                           sc_array_t * edge_info)
 {
 #ifdef P4EST_DEBUG
   int                 nflip1, nflip2;
@@ -696,14 +697,14 @@ p8est_find_edge_info (p8est_connectivity_t * conn,
   P4EST_ASSERT (0 <= iedge && iedge < 12);
   P4EST_ASSERT (edge_info->elem_size == sizeof (p8est_edge_info_t));
 
+  sc_array_resize (edge_info, 0);
   if (conn->num_edges == 0) {
-    return false;
+    return;
   }
   aedge = conn->tree_to_edge[12 * itree + iedge];
   if (aedge == -1) {
-    return false;
+    return;
   }
-  sc_array_resize (edge_info, 0);
 
   v0 = conn->tree_to_vertex[8 * itree + p8est_edge_vertices[iedge][0]];
   v1 = conn->tree_to_vertex[8 * itree + p8est_edge_vertices[iedge][1]];
@@ -775,8 +776,6 @@ p8est_find_edge_info (p8est_connectivity_t * conn,
   P4EST_ASSERT (iflip >= 0);
   P4EST_ASSERT (nflip1 == -1 || nflip1 == iflip);
   P4EST_ASSERT (nflip2 == -1 || nflip2 == iflip);
-
-  return true;
 }
 
 /* EOF p8est_connectivity.h */

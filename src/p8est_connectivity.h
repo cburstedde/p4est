@@ -184,11 +184,11 @@ p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
 
 /** Fills an array with information about edge neighbors.
  * \param [in,out]  edge_info    Array of p8est_edge_info_t members.
- * \return                       Returns if the edge has connectivity.
  */
-bool                p8est_find_edge_info (p8est_connectivity_t *
-                                          connectivity,
-                                          p4est_topidx_t itree, int iedge,
-                                          sc_array_t * edge_info);
+void                p8est_find_edge_transform (p8est_connectivity_t *
+                                               connectivity,
+                                               p4est_topidx_t itree,
+                                               int iedge,
+                                               sc_array_t * edge_info);
 
 #endif /* !P8EST_CONNECTIVITY_H */

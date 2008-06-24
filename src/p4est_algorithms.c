@@ -911,8 +911,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
                 p4est_quadrant_translate (&tempq, face);
                 p4est_quadrant_transform (&tempq, outq, transform);
 #else
-                p8est_quadrant_transform (tq, outq,
-                                          my_axis, target_axis, edge_reverse);
+                p8est_quadrant_transform_face (tq, outq, my_axis,
+                                               target_axis, edge_reverse);
 #endif
               }
               else {

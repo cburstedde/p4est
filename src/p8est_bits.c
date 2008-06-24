@@ -241,9 +241,10 @@ p8est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 }
 
 void
-p8est_quadrant_transform (const p8est_quadrant_t * q, p8est_quadrant_t * r,
-                          int my_axis[3], int target_axis[3],
-                          int edge_reverse[3])
+p8est_quadrant_transform_face (const p8est_quadrant_t * q,
+                               p8est_quadrant_t * r,
+                               int my_axis[3], int target_axis[3],
+                               int edge_reverse[3])
 {
   p4est_qcoord_t      mh, tRmh, Rmh;
   p4est_qcoord_t     *target_xyz[3];
