@@ -86,7 +86,6 @@
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling
 #define p4est_quadrant_is_sibling_D     p8est_quadrant_is_sibling_D
-/* p8est_quadrant_is_family is implemented in p8est_algorithms.c */
 #define p4est_quadrant_is_familyv       p8est_quadrant_is_familyv
 #define p4est_quadrant_is_familypv      p8est_quadrant_is_familypv
 #define p4est_quadrant_is_parent        p8est_quadrant_is_parent
@@ -98,7 +97,6 @@
 #define p4est_quadrant_overlaps_tree    p8est_quadrant_overlaps_tree
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
-/* p8est_quadrant_children is implemented in p8est_algorithms.c */
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
 #define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
 #define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent
@@ -112,7 +110,7 @@
 #define p4est_quadrant_checksum         p8est_quadrant_checksum
 #define p4est_tree_is_sorted            p8est_tree_is_sorted
 #define p4est_tree_is_linear            p8est_tree_is_linear
-/* p4est_tree_is_almost_sorted not implemented yet */
+#define p4est_tree_is_almost_sorted     p8est_tree_is_almost_sorted
 #define p4est_tree_is_complete          p8est_tree_is_complete
 #define p4est_tree_print                p8est_tree_print
 #define p4est_is_valid                  p8est_is_valid

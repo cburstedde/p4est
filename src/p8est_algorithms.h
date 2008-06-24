@@ -75,7 +75,7 @@ bool                p8est_tree_is_linear (p8est_tree_t * tree);
  */
 bool                p8est_tree_is_complete (p8est_tree_t * tree);
 
-/** Check if a tree is sorted/linear except for diagonally outside corners.
+/** Check if a tree is sorted/linear except across edges or corners.
  * \param [in]  check_linearity  Boolean for additional check for linearity.
  * \return Returns true if almost sorted/linear, false otherwise.
  */

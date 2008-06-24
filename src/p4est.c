@@ -1246,18 +1246,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                 p8est_quadrant_transform_edge (q, &tosend, &ei, et, false);
                 p8est_quadrant_transform_edge (&insulq, &tempq, &ei, et,
                                                true);
-#if 0
                 p4est_balance_schedule (p4est, peers, et->ntree, true,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);
-#endif
               }
-              continue;
             }
             else {
               /* corner balance not implemented yet */
               P4EST_ASSERT (face_axis[0] && face_axis[1] && face_axis[2]);
-              continue;
             }
           }
 #endif /* !P4_TO_P8 */
@@ -1786,7 +1782,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
                       (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
 #else
-        /* TODO check this situation later */
+        /* TODO: check this situation later */
+        SC_CHECK_NOT_REACHED ();
 #endif
         continue;
       }
