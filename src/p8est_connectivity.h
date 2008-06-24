@@ -82,8 +82,14 @@ p8est_connectivity_t;
 typedef struct
 {
   p4est_topidx_t      ntree;
-  int8_t              nedge, nflip;
-  int8_t              naxis[3], corners;
+  int8_t              naxis[3], nflip, corners;
+}
+p8est_edge_transform_t;
+
+typedef struct
+{
+  int                 iaxis[1], iflip;
+  sc_array_t          edge_transforms;
 }
 p8est_edge_info_t;
 
@@ -183,12 +189,14 @@ p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
                                                int edge_reverse[3]);
 
 /** Fills an array with information about edge neighbors.
- * \param [in,out]  edge_info    Array of p8est_edge_info_t members.
+ * \param [in] itree    The number of the originating tree.
+ * \param [in] iedge    The number of the originating edge.
+ * \param [in,out] ei   A p8est_edge_info_t structure with initialized array.
  */
 void                p8est_find_edge_transform (p8est_connectivity_t *
                                                connectivity,
                                                p4est_topidx_t itree,
                                                int iedge,
-                                               sc_array_t * edge_info);
+                                               p8est_edge_info_t * ei);
 
 #endif /* !P8EST_CONNECTIVITY_H */

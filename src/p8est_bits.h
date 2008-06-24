@@ -303,6 +303,21 @@ void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                                                    int target_axis[3],
                                                    int edge_reverse[3]);
 
+/** Transforms a quadrant across aedge between trees.
+ * \param [in]     q          Input quadrant.
+ * \param [in,out] r          Quadrant whose Morton index will be filled.
+ * \param [in]     edge       Edge index of the originating quadrant.
+ * \param [in]     ei         Edge information computed previously.
+ * \param [in]     inside     The quadrant will be placed inside or outside.
+ */
+void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
+                                                   p8est_quadrant_t * r,
+                                                   const p8est_edge_info_t *
+                                                   ei,
+                                                   const
+                                                   p8est_edge_transform_t *
+                                                   et, bool inside);
+
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.
  * \return Returns the linear position of this quadrant on a grid.

@@ -905,13 +905,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   sc_array_t         *peers, *qarray, *tquadrants;
 #ifndef P4_TO_P8
   int                 transform, corner, zcorner;
-  sc_array_t          corner_info;
   p4est_corner_info_t *ci;
+  sc_array_t          corner_info;
 #else
   bool                face_axis[3], contact_face_only, contact_edge_only;
   int                 my_axis[3], target_axis[3], edge_reverse[3], edge;
-  sc_array_t          edge_info;
-  p8est_edge_info_t  *ei;
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  sc_array_t         *ta;
 #endif
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
@@ -1003,7 +1004,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifndef P4_TO_P8
   sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
 #else
-  sc_array_init (&edge_info, sizeof (p8est_edge_info_t));
+  ta = &ei.edge_transforms;
+  sc_array_init (ta, sizeof (p8est_edge_transform_t));
 #endif /* !P4_TO_P8 */
 
   /* compute first quadrant on finest level */
@@ -1238,18 +1240,17 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             else if (contact_edge_only) {
               /* this quadrant crosses an edge */
               P4EST_ASSERT (!contact_face_only && edge >= 0 && edge < 12);
-              p8est_find_edge_transform (conn, nt, edge, &edge_info);
-              for (ctree = 0; ctree < edge_info.elem_count; ++ctree) {
-                ei = sc_array_index (&edge_info, ctree);
+              p8est_find_edge_transform (conn, nt, edge, &ei);
+              for (ctree = 0; ctree < ta->elem_count; ++ctree) {
+                et = sc_array_index (ta, ctree);
+                p8est_quadrant_transform_edge (q, &tosend, &ei, et, false);
+                p8est_quadrant_transform_edge (&insulq, &tempq, &ei, et,
+                                               true);
 #if 0
-                tosend = *q;
-                zcorner = p4est_corner_to_zorder[ci->ncorner];
-                p4est_quadrant_corner (&tosend, zcorner, 0);
-                p4est_quadrant_corner (&insulq, zcorner, 1);
-                p4est_balance_schedule (p4est, peers, ei->ntree, true,
+                p4est_balance_schedule (p4est, peers, et->ntree, true,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);
-#endif /* 0 */
+#endif
               }
               continue;
             }
@@ -1874,7 +1875,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifndef P4_TO_P8
   sc_array_reset (&corner_info);
 #else
-  sc_array_reset (&edge_info);
+  sc_array_reset (ta);
 #endif
 
 #ifdef P4EST_MPI

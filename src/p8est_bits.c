@@ -266,6 +266,7 @@ p8est_quadrant_transform_face (const p8est_quadrant_t * q,
   P4EST_ASSERT (0 <= edge_reverse[1] && edge_reverse[1] < 2);
   P4EST_ASSERT (0 <= edge_reverse[2] && edge_reverse[2] < 4);
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (q != r);
 
   mh = -P4EST_QUADRANT_LEN (q->level);
   Rmh = P4EST_ROOT_LEN + mh;
@@ -309,6 +310,83 @@ p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                  !p4est_quadrant_is_inside_root (r)) ||
                 (!p4est_quadrant_is_inside_root (q) &&
                  p4est_quadrant_is_inside_root (r)));
+}
+
+void
+p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
+                               p8est_quadrant_t * r,
+                               const p8est_edge_info_t * ei,
+                               const p8est_edge_transform_t * et, bool inside)
+{
+  p4est_qcoord_t      mh, Rmh;
+  p4est_qcoord_t      lshift, rshift;
+  p4est_qcoord_t      my_xyz, *target_xyz[3];
+
+  P4EST_ASSERT (0 <= ei->iaxis[0] && ei->iaxis[0] < 3);
+  P4EST_ASSERT (0 <= ei->iflip && ei->iflip < 2);
+  P4EST_ASSERT (0 <= et->naxis[0] && et->naxis[0] < 3);
+  P4EST_ASSERT (0 <= et->naxis[1] && et->naxis[1] < 3);
+  P4EST_ASSERT (0 <= et->naxis[2] && et->naxis[2] < 3);
+  P4EST_ASSERT (et->naxis[0] != et->naxis[1] &&
+                et->naxis[0] != et->naxis[2] && et->naxis[1] != et->naxis[2]);
+  P4EST_ASSERT (0 <= et->nflip && et->nflip < 2);
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (q != r);
+
+  mh = -P4EST_QUADRANT_LEN (q->level);
+  Rmh = P4EST_ROOT_LEN + mh;
+  lshift = (inside ? 0 : mh);
+  rshift = (inside ? Rmh : P4EST_ROOT_LEN);
+  target_xyz[0] = &r->x;
+  target_xyz[1] = &r->y;
+  target_xyz[2] = &r->z;
+
+  /* transform coordinate axis parallel to edge */
+  switch (ei->iaxis[0]) {
+  case 0:
+    my_xyz = q->x;
+    break;
+  case 1:
+    my_xyz = q->y;
+    break;
+  case 2:
+    my_xyz = q->z;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+  if (et->nflip == ei->iflip) {
+    *target_xyz[et->naxis[0]] = my_xyz;
+  }
+  else {
+    *target_xyz[et->naxis[0]] = Rmh - my_xyz;
+  }
+
+  /* create the other two coordinates */
+  switch (et->corners) {
+  case 0:
+    *target_xyz[et->naxis[1]] = lshift;
+    *target_xyz[et->naxis[2]] = lshift;
+    break;
+  case 1:
+    *target_xyz[et->naxis[1]] = rshift;
+    *target_xyz[et->naxis[2]] = lshift;
+    break;
+  case 2:
+    *target_xyz[et->naxis[1]] = lshift;
+    *target_xyz[et->naxis[2]] = rshift;
+    break;
+  case 3:
+    *target_xyz[et->naxis[1]] = rshift;
+    *target_xyz[et->naxis[2]] = rshift;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+
+  r->level = q->level;
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+  P4EST_ASSERT (!inside || p4est_quadrant_is_inside_root (r));
 }
 
 /* EOF p8est_bits.h */
