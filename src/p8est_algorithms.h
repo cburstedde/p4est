@@ -40,11 +40,6 @@ void                p8est_quadrant_init_data (p8est_t * p8est,
 void                p8est_quadrant_free_data (p8est_t * p8est,
                                               p8est_quadrant_t * quad);
 
-/** Prints one line with quadrant's x, y and level.
- */
-void                p8est_quadrant_print (int log_priority,
-                                          const p8est_quadrant_t * q);
-
 /** Computes a machine-independent checksum of a list of quadrants.
  * \param [in] quadrants       Array of quadrants.
  * \param [in,out] checkarray  Temporary array of elem_size 4.

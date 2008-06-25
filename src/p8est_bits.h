@@ -24,6 +24,11 @@
 
 #include <p8est.h>
 
+/** Prints one line with quadrant's x, y, z and level.
+ */
+void                p8est_quadrant_print (int log_priority,
+                                          const p8est_quadrant_t * q);
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,
@@ -255,14 +260,14 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
                                                      q2,
                                                      p8est_quadrant_t * r);
 
-#if 0
-/** Compute the level of balance needed at a specified corner.
- * \param [in]  zcorner  Corner index in z-ordering.
- * \return  Returns the maximum of level and this quadrants' corner level.
+/** Compute the level of balance needed at a specified edge.
+ * \param [in] edge   Edge index.
+ * \return  Returns the maximum of level and this quadrants' edge level.
  */
-int                 p8est_quadrant_corner_level (const p8est_quadrant_t * q,
-                                                 int zcorner, int level);
+int                 p8est_quadrant_edge_level (const p8est_quadrant_t * q,
+                                               int edge, int level);
 
+#if 0
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
  * \param [in]     zcorner  Number of the corner in z-order, in 0..3.
@@ -270,23 +275,6 @@ int                 p8est_quadrant_corner_level (const p8est_quadrant_t * q,
  */
 void                p8est_quadrant_corner (p8est_quadrant_t * q,
                                            int zcorner, int inside);
-
-/** Shift a quadrant by the size of a tree depending on the face.
- * \param [in,out] q     The quadrant to be modified.
- * \param [in]     face  Number of the face to move across, in 0..3.
- */
-void                p8est_quadrant_translate (p8est_quadrant_t * q, int face);
-
-/** Transforms the node of quadrant between trees.
- *
- * This gives the node of the transformed quadrant cooresponding to
- * the node passed in.
- *
- * \param [in]     node The node in z-order of the quadrant that is transformed.
- * \param [in] transform_type Transformation as in p8est_connectivity.h.
- * \return The transformed node number coresponding to \a node.
- */
-int                 p8est_node_transform (int node, int transform_type);
 #endif
 
 /** Transforms a quadrant across a face between trees.

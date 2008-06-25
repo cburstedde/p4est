@@ -24,6 +24,11 @@
 
 #include <p4est.h>
 
+/** Prints one line with quadrant's x, y and level.
+ */
+void                p4est_quadrant_print (int log_priority,
+                                          const p4est_quadrant_t * q);
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,

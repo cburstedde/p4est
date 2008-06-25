@@ -138,19 +138,6 @@ p4est_quadrant_free_data (p4est_t * p4est, p4est_quadrant_t * quad)
   quad->p.user_data = NULL;
 }
 
-void
-p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
-{
-#ifdef P4_TO_P8
-  P4EST_NORMAL_LOGF (log_priority,
-                     "x 0x%x y 0x%x z 0x%x level %d\n",
-                     q->x, q->y, q->z, q->level);
-#else
-  P4EST_NORMAL_LOGF (log_priority,
-                     "x 0x%x y 0x%x level %d\n", q->x, q->y, q->level);
-#endif
-}
-
 unsigned
 p4est_quadrant_checksum (sc_array_t * quadrants,
                          sc_array_t * checkarray, size_t first_quadrant)
@@ -919,7 +906,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
 #ifndef P4_TO_P8
             level = p4est_quadrant_corner_level (tq, zcorner, level);
 #else
-            /* TODO: second pass of edge balance not implemented yet */
+            level = p8est_quadrant_edge_level (tq, edge, level);
 #endif
           }
 #ifndef P4_TO_P8
