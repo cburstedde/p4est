@@ -93,7 +93,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
   const p4est_topidx_t *voff = connectivity->vtt_offset;
 
   if (num_trees < 1 || num_vertices < 4) {
-    fprintf (stderr, "Invalid numbers of trees or vertices");
+    P4EST_NOTICE ("Invalid numbers of trees or vertices");
     return false;
   }
 
@@ -101,12 +101,12 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
     for (face = 0; face < 4; ++face) {
       ntree = ttt[tree * 4 + face];
       if (ntree < 0 || ntree >= num_trees) {
-        fprintf (stderr, "Tree range A in %lld %d\n", (long long) tree, face);
+        P4EST_NOTICEF ("Tree range A in %lld %d\n", (long long) tree, face);
         return false;
       }
       rface = (int) ttf[tree * 4 + face];
       if (rface < 0 || rface >= 8) {
-        fprintf (stderr, "Face range in %lld %d\n", (long long) tree, face);
+        P4EST_NOTICEF ("Face range in %lld %d\n", (long long) tree, face);
         return false;
       }
       nface = rface % 4;        /* clamp to a real face index */
@@ -114,21 +114,20 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
       if (ntree == tree) {
         /* no neighbor across this face or self-periodic */
         if (nface == face && orientation != 0) {
-          fprintf (stderr, "Face invalid in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Face invalid in %lld %d\n", (long long) tree, face);
           return false;
         }
       }
       if (ntree != tree || nface != face) {
         /* check reciprocity */
         if (ttt[ntree * 4 + nface] != tree) {
-          fprintf (stderr, "Tree reciprocity in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Tree reciprocity in %lld %d\n",
+                         (long long) tree, face);
           return false;
         }
         if ((int) ttf[ntree * 4 + nface] != face + 4 * orientation) {
-          fprintf (stderr, "Face reciprocity in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Face reciprocity in %lld %d\n",
+                         (long long) tree, face);
           return false;
         }
 
@@ -138,18 +137,18 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         w1 = ttv[ntree * 4 + nface];
         w2 = ttv[ntree * 4 + (nface + 1) % 4];
         if (v1 == v2 || w1 == w2) {
-          fprintf (stderr, "Vertex invalid in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Vertex invalid in %lld %d\n", (long long) tree,
+                         face);
           return false;
         }
         if ((v1 == w2 && v2 == w1) && orientation != 0) {
-          fprintf (stderr, "Orientation mismatch A in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Orientation mismatch A in %lld %d\n",
+                         (long long) tree, face);
           return false;
         }
         if ((v1 == w1 && v2 == w2) && orientation != 1) {
-          fprintf (stderr, "Orientation mismatch B in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Orientation mismatch B in %lld %d\n",
+                         (long long) tree, face);
           return false;
         }
       }
@@ -159,14 +158,14 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
   for (vertex = 0; vertex < num_vertices; ++vertex) {
     corner_trees = voff[vertex + 1] - voff[vertex];     /* same type */
     if (corner_trees <= 0 || voff[vertex + 1] > num_vtt) {
-      fprintf (stderr, "Vertex offset mismatch %lld\n", (long long) vertex);
+      P4EST_NOTICEF ("Vertex offset mismatch %lld\n", (long long) vertex);
       return false;
     }
     for (ctree = 0; ctree < corner_trees; ++ctree) {
       ntree = vtt[voff[vertex] + ctree];
       if (ntree < 0 || ntree >= num_trees) {
-        fprintf (stderr, "Tree range B in %lld %lld\n",
-                 (long long) vertex, (long long) ntree);
+        P4EST_NOTICEF ("Tree range B in %lld %lld\n",
+                       (long long) vertex, (long long) ntree);
         return false;
       }
       num_found = 0;
@@ -177,14 +176,14 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         }
       }
       if (!num_found) {
-        fprintf (stderr, "Corner mismatch in %lld %lld\n",
-                 (long long) vertex, (long long) ntree);
+        P4EST_NOTICEF ("Corner mismatch in %lld %lld\n",
+                       (long long) vertex, (long long) ntree);
         return false;
       }
       cvertex = vtv[voff[vertex] + ctree];
       if (cvertex < 0 || cvertex >= num_vertices) {
-        fprintf (stderr, "Vertex mismatch in %lld %lld\n",
-                 (long long) vertex, (long long) ntree);
+        P4EST_NOTICEF ("Vertex mismatch in %lld %lld\n",
+                       (long long) vertex, (long long) ntree);
         return false;
       }
     }
@@ -202,8 +201,8 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
         }
       }
       if (num_found != 1) {
-        fprintf (stderr, "Tree and vertex count in %lld %d\n",
-                 (long long) tree, corner);
+        P4EST_NOTICEF ("Tree and vertex count in %lld %d\n",
+                       (long long) tree, corner);
         return false;
       }
     }

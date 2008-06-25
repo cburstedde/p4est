@@ -120,7 +120,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
   vtufile = fopen (vtufilename, "w");
   if (vtufile == NULL) {
-    fprintf (stderr, "Could not open %s for output!\n", vtufilename);
+    P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
     return -1;
   }
 
@@ -295,7 +295,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
                                    sizeof (*float_data) * 3 * Ntotal);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p4est_vtk: Error encoding points\n");
+    P4EST_LERROR ("p4est_vtk: Error encoding points\n");
     fclose (vtufile);
     return -1;
   }
@@ -324,7 +324,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
                                    sizeof (*locidx_data) * 4 * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p4est_vtk: Error encoding connectivity\n");
+    P4EST_LERROR ("p4est_vtk: Error encoding connectivity\n");
     fclose (vtufile);
     return -1;
   }
@@ -351,7 +351,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
                                    sizeof (*locidx_data) * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p4est_vtk: Error encoding offsets\n");
+    P4EST_LERROR ("p4est_vtk: Error encoding offsets\n");
     fclose (vtufile);
     return -1;
   }
@@ -382,7 +382,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
   P4EST_FREE (uint8_data);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p4est_vtk: Error encoding types\n");
+    P4EST_LERROR ("p4est_vtk: Error encoding types\n");
     fclose (vtufile);
     return -1;
   }
@@ -413,7 +413,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
                                      sizeof (*locidx_data) * Ncells);
     fprintf (vtufile, "\n");
     if (retval) {
-      fprintf (stderr, "p4est_vtk: Error encoding types\n");
+      P4EST_LERROR ("p4est_vtk: Error encoding types\n");
       fclose (vtufile);
       return -1;
     }
@@ -426,12 +426,12 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
   P4EST_FREE (locidx_data);
 
   if (ferror (vtufile)) {
-    fprintf (stderr, "p4est_vtk: Error writing header\n");
+    P4EST_LERROR ("p4est_vtk: Error writing header\n");
     fclose (vtufile);
     return -1;
   }
   if (fclose (vtufile)) {
-    fprintf (stderr, "p4est_vtk: Error closing header\n");
+    P4EST_LERROR ("p4est_vtk: Error closing header\n");
     return -1;
   }
   vtufile = NULL;
@@ -444,7 +444,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
 
     pvtufile = fopen (pvtufilename, "w");
     if (!pvtufile) {
-      fprintf (stderr, "Could not open %s for output!\n", vtufilename);
+      P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
     }
 
@@ -475,12 +475,12 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
     fprintf (pvtufile, "    <PPointData>\n");
 
     if (ferror (pvtufile)) {
-      fprintf (stderr, "p4est_vtk: Error writing parallel header\n");
+      P4EST_LERROR ("p4est_vtk: Error writing parallel header\n");
       fclose (pvtufile);
       return -1;
     }
     if (fclose (pvtufile)) {
-      fprintf (stderr, "p4est_vtk: Error closing parallel header\n");
+      P4EST_LERROR ("p4est_vtk: Error closing parallel header\n");
       return -1;
     }
   }
@@ -505,7 +505,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
   vtufile = fopen (vtufilename, "a");
   if (vtufile == NULL) {
-    fprintf (stderr, "Could not open %s for output!\n", vtufilename);
+    P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
     return -1;
   }
 
@@ -515,12 +515,12 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
   fprintf (vtufile, "</VTKFile>\n");
 
   if (ferror (vtufile)) {
-    fprintf (stderr, "p4est_vtk: Error writing footer\n");
+    P4EST_LERROR ("p4est_vtk: Error writing footer\n");
     fclose (vtufile);
     return -1;
   }
   if (fclose (vtufile)) {
-    fprintf (stderr, "p4est_vtk: Error closing footer\n");
+    P4EST_LERROR ("p4est_vtk: Error closing footer\n");
     return -1;
   }
   vtufile = NULL;
@@ -533,7 +533,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
 
     pvtufile = fopen (pvtufilename, "a");
     if (!pvtufile) {
-      fprintf (stderr, "Could not open %s for output!\n", vtufilename);
+      P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
     }
 
@@ -546,12 +546,12 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
     fprintf (pvtufile, "</VTKFile>\n");
 
     if (ferror (pvtufile)) {
-      fprintf (stderr, "p4est_vtk: Error writing parallel footer\n");
+      P4EST_LERROR ("p4est_vtk: Error writing parallel footer\n");
       fclose (pvtufile);
       return -1;
     }
     if (fclose (pvtufile)) {
-      fprintf (stderr, "p4est_vtk: Error closing parallel footer\n");
+      P4EST_LERROR ("p4est_vtk: Error closing parallel footer\n");
       return -1;
     }
   }

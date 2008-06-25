@@ -250,24 +250,23 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
 
   for (nett = 0; nett < num_ett; ++nett) {
     if (ett[nett] < 0 || ett[nett] >= num_trees) {
-      fprintf (stderr, "Edge to tree %lld out of range\n", (long long) nett);
+      P4EST_NOTICEF ("Edge to tree %lld out of range\n", (long long) nett);
       return false;
     }
     if (ete[nett] < 0 || ete[nett] >= 24) {
-      fprintf (stderr, "Edge to edge %lld out of range\n", (long long) nett);
+      P4EST_NOTICEF ("Edge to edge %lld out of range\n", (long long) nett);
       return false;
     }
   }
 
   for (nctt = 0; nctt < num_ctt; ++nctt) {
     if (ctt[nctt] < 0 || ctt[nctt] >= num_trees) {
-      fprintf (stderr, "Corner to tree %lld out of range\n",
-               (long long) nctt);
+      P4EST_NOTICEF ("Corner to tree %lld out of range\n", (long long) nctt);
       return false;
     }
     if (ctc[nctt] < 0 || ctc[nctt] >= 8) {
-      fprintf (stderr, "Corner to corner %lld out of range\n",
-               (long long) nctt);
+      P4EST_NOTICEF ("Corner to corner %lld out of range\n",
+                     (long long) nctt);
       return false;
     }
   }
@@ -276,8 +275,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
     for (nvert = 0; nvert < 8; ++nvert) {
       vertex = ttv[tree * 8 + nvert];
       if (vertex < 0 || vertex >= num_vertices) {
-        fprintf (stderr, "Tree to vertex out of range %lld %d",
-                 (long long) tree, nvert);
+        P4EST_NOTICEF ("Tree to vertex out of range %lld %d",
+                       (long long) tree, nvert);
         return false;
       }
     }
@@ -285,14 +284,14 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
     for (face = 0; face < 6; ++face) {
       ntree = ttt[tree * 6 + face];
       if (ntree < 0 || ntree >= num_trees) {
-        fprintf (stderr, "Tree to tree out of range %lld %d\n",
-                 (long long) tree, face);
+        P4EST_NOTICEF ("Tree to tree out of range %lld %d\n",
+                       (long long) tree, face);
         return false;
       }
       rface = (int) ttf[tree * 6 + face];
       if (rface < 0 || rface >= 24) {
-        fprintf (stderr, "Tree to face out of range %lld %d\n",
-                 (long long) tree, face);
+        P4EST_NOTICEF ("Tree to face out of range %lld %d\n",
+                       (long long) tree, face);
         return false;
       }
       nface = rface % 6;        /* clamp to a real face index */
@@ -300,21 +299,20 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
       if (ntree == tree) {
         /* no neighbor across this face or self-periodic */
         if (nface == face && orientation != 0) {
-          fprintf (stderr, "Face invalid in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Face invalid in %lld %d\n", (long long) tree, face);
           return false;
         }
       }
       if (ntree != tree || nface != face) {
         /* check reciprocity */
         if (ttt[ntree * 6 + nface] != tree) {
-          fprintf (stderr, "Tree to tree reciprocity in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Tree to tree reciprocity in %lld %d\n",
+                         (long long) tree, face);
           return false;
         }
         if ((int) ttf[ntree * 6 + nface] != face + 6 * orientation) {
-          fprintf (stderr, "Tree to face reciprocity in %lld %d\n",
-                   (long long) tree, face);
+          P4EST_NOTICEF ("Tree to face reciprocity in %lld %d\n",
+                         (long long) tree, face);
           return false;
         }
 
@@ -322,15 +320,15 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         for (fvert = 0; fvert < 4; ++fvert) {
           vertex = ttv[tree * 8 + p8est_face_vertices[face][fvert]];
           if (vertex < 0 || vertex >= num_vertices) {
-            fprintf (stderr, "Invalid vertex in %lld %d %d\n",
-                     (long long) tree, face, fvert);
+            P4EST_NOTICEF ("Invalid vertex in %lld %d %d\n",
+                           (long long) tree, face, fvert);
             return false;
           }
           for (nvert = fvert + 1; nvert < 4; ++nvert) {
             nvertex = ttv[tree * 8 + p8est_face_vertices[face][nvert]];
             if (vertex == nvertex) {
-              fprintf (stderr, "Duplicate vertex in %lld %d %d %d",
-                       (long long) tree, face, fvert, nvert);
+              P4EST_NOTICEF ("Duplicate vertex in %lld %d %d %d",
+                             (long long) tree, face, fvert, nvert);
               return false;
             }
           }
@@ -339,8 +337,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
           nvert = p8est_face_permutations[face_perm][fvert];
           nvertex = ttv[ntree * 8 + p8est_face_vertices[nface][nvert]];
           if (ntree != tree && nvertex != vertex) {
-            fprintf (stderr, "Vertex reciprocity in %lld %d %d\n",
-                     (long long) tree, face, fvert);
+            P4EST_NOTICEF ("Vertex reciprocity in %lld %d %d\n",
+                           (long long) tree, face, fvert);
             return false;
           }
         }
@@ -351,8 +349,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
       for (edge = 0; edge < 12; ++edge) {
         aedge = tte[tree * 12 + edge];
         if (aedge < -1 || aedge >= num_edges) {
-          fprintf (stderr, "Tree to edge out of range %lld %d\n",
-                   (long long) tree, edge);
+          P4EST_NOTICEF ("Tree to edge out of range %lld %d\n",
+                         (long long) tree, edge);
           return false;
         }
         if (aedge == -1) {
@@ -368,16 +366,16 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         edge_end = eoff[aedge + 1];
         if (edge_begin < 0 || edge_begin >= num_ett ||
             edge_end < 0 || edge_end > num_ett) {
-          fprintf (stderr, "Invalid edge range %lld %d\n",
-                   (long long) tree, edge);
+          P4EST_NOTICEF ("Invalid edge range %lld %d\n",
+                         (long long) tree, edge);
           return false;
         }
         for (nett = edge_begin; nett < edge_end; ++nett) {
           ntree = ett[nett];
           nedge = (int) ete[nett] % 12;
           if (tte[ntree * 12 + nedge] != aedge) {
-            fprintf (stderr, "Edge to edge reciprocity in %lld %d %lld\n",
-                     (long long) tree, edge, (long long) nett);
+            P4EST_NOTICEF ("Edge to edge reciprocity in %lld %d %lld\n",
+                           (long long) tree, edge, (long long) nett);
           }
           nflip = (int) ete[nett] / 12;
           if (ntree == tree && nedge == edge) {
@@ -429,21 +427,21 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
           ++ecount;
         }
         if (ecode > 0) {
-          fprintf (stderr, "Shared edge %lld %d %lld inconsistency %d\n",
-                   (long long) tree, edge, (long long) nett, ecode);
+          P4EST_NOTICEF ("Shared edge %lld %d %lld inconsistency %d\n",
+                         (long long) tree, edge, (long long) nett, ecode);
           return false;
         }
         if (edge_end - edge_begin !=
             ecount + 1 + (ntree1 != tree) + (ntree2 != tree)) {
-          fprintf (stderr, "Shared edge %lld %d inconsistent count\n",
-                   (long long) tree, edge);
+          P4EST_NOTICEF ("Shared edge %lld %d inconsistent count\n",
+                         (long long) tree, edge);
           return false;
         }
         if (flip == -1 ||
             !(nflip1 == -1 || nflip1 == flip) ||
             !(nflip2 == -1 || nflip2 == flip)) {
-          fprintf (stderr, "Shared edge %lld %d inconsistent flip\n",
-                   (long long) tree, edge);
+          P4EST_NOTICEF ("Shared edge %lld %d inconsistent flip\n",
+                         (long long) tree, edge);
           return false;
         }
       }
@@ -453,8 +451,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
       for (corner = 0; corner < 8; ++corner) {
         acorner = ttc[tree * 8 + corner];
         if (acorner < -1 || acorner >= num_corners) {
-          fprintf (stderr, "Tree to corner out of range %lld %d\n",
-                   (long long) tree, corner);
+          P4EST_NOTICEF ("Tree to corner out of range %lld %d\n",
+                         (long long) tree, corner);
           return false;
         }
         if (acorner == -1) {
@@ -464,16 +462,16 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         corner_end = eoff[acorner + 1];
         if (corner_begin < 0 || corner_begin >= num_ctt ||
             corner_end < 0 || corner_end > num_ctt) {
-          fprintf (stderr, "Invalid corner range %lld %d\n",
-                   (long long) tree, corner);
+          P4EST_NOTICEF ("Invalid corner range %lld %d\n",
+                         (long long) tree, corner);
           return false;
         }
         for (nctt = corner_begin; nctt < corner_end; ++nctt) {
           ntree = ctt[nctt];
           ncorner = (int) ctc[nctt];
           if (ttc[ntree * 8 + ncorner] != acorner) {
-            fprintf (stderr, "Corner to corner reciprocity in %lld %d %lld\n",
-                     (long long) tree, corner, (long long) nctt);
+            P4EST_NOTICEF ("Corner to corner reciprocity in %lld %d %lld\n",
+                           (long long) tree, corner, (long long) nctt);
           }
         }
       }

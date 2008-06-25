@@ -83,7 +83,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, mpirank);
   vtufile = fopen (vtufilename, "w");
   if (vtufile == NULL) {
-    fprintf (stderr, "Could not open %s for output!\n", vtufilename);
+    P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
     return -1;
   }
 
@@ -172,7 +172,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
                                    sizeof (*float_data) * P4EST_DIM * Ntotal);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p8est_vtk: Error encoding points\n");
+    P4EST_LERROR ("p8est_vtk: Error encoding points\n");
     fclose (vtufile);
     return -1;
   }
@@ -204,7 +204,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
                                    sizeof (*locidx_data) * Ntotal);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p8est_vtk: Error encoding connectivity\n");
+    P4EST_LERROR ("p8est_vtk: Error encoding connectivity\n");
     fclose (vtufile);
     return -1;
   }
@@ -231,7 +231,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
                                    sizeof (*locidx_data) * Ncells);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p8est_vtk: Error encoding offsets\n");
+    P4EST_LERROR ("p8est_vtk: Error encoding offsets\n");
     fclose (vtufile);
     return -1;
   }
@@ -260,7 +260,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
   P4EST_FREE (uint8_data);
   fprintf (vtufile, "\n");
   if (retval) {
-    fprintf (stderr, "p8est_vtk: Error encoding types\n");
+    P4EST_LERROR ("p8est_vtk: Error encoding types\n");
     fclose (vtufile);
     return -1;
   }
@@ -289,7 +289,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
                                      sizeof (*locidx_data) * Ncells);
     fprintf (vtufile, "\n");
     if (retval) {
-      fprintf (stderr, "p8est_vtk: Error encoding types\n");
+      P4EST_LERROR ("p8est_vtk: Error encoding types\n");
       fclose (vtufile);
       return -1;
     }
@@ -304,12 +304,12 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
   fprintf (vtufile, "      <PointData>\n");
 
   if (ferror (vtufile)) {
-    fprintf (stderr, "p8est_vtk: Error writing header\n");
+    P4EST_LERROR ("p8est_vtk: Error writing header\n");
     fclose (vtufile);
     return -1;
   }
   if (fclose (vtufile)) {
-    fprintf (stderr, "p8est_vtk: Error closing header\n");
+    P4EST_LERROR ("p8est_vtk: Error closing header\n");
     return -1;
   }
   vtufile = NULL;
@@ -322,7 +322,7 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
 
     pvtufile = fopen (pvtufilename, "w");
     if (!pvtufile) {
-      fprintf (stderr, "Could not open %s for output!\n", vtufilename);
+      P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
     }
 
@@ -353,12 +353,12 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
     fprintf (pvtufile, "    <PPointData>\n");
 
     if (ferror (pvtufile)) {
-      fprintf (stderr, "p4est_vtk: Error writing parallel header\n");
+      P4EST_LERROR ("p4est_vtk: Error writing parallel header\n");
       fclose (pvtufile);
       return -1;
     }
     if (fclose (pvtufile)) {
-      fprintf (stderr, "p4est_vtk: Error closing parallel header\n");
+      P4EST_LERROR ("p4est_vtk: Error closing parallel header\n");
       return -1;
     }
   }

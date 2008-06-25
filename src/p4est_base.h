@@ -119,6 +119,10 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (SC_LP_PRODUCTION, (s))
 #define P4EST_GLOBAL_PRODUCTIONF(f,...) \
   P4EST_GLOBAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_NOTICE(s)      P4EST_GLOBAL_STATISTICS (s)
+#define P4EST_GLOBAL_NOTICEF(f,...) P4EST_GLOBAL_STATISTICSF (f, __VA_ARGS__)
+#define P4EST_GLOBAL_LERROR(s)      P4EST_GLOBAL_PRODUCTION (s)
+#define P4EST_GLOBAL_LERRORF(f,...) P4EST_GLOBAL_PRODUCTIONF (f, __VA_ARGS__)
 
 /* convenience log macros that are active on every processor */
 #define P4EST_TRACE(s) P4EST_NORMAL_LOG (SC_LP_TRACE, (s))
@@ -139,6 +143,10 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_PRODUCTION(s) P4EST_NORMAL_LOG (SC_LP_PRODUCTION, (s))
 #define P4EST_PRODUCTIONF(f,...) \
   P4EST_NORMAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+#define P4EST_NOTICE(s)      P4EST_STATISTICS (s)
+#define P4EST_NOTICEF(f,...) P4EST_STATISTICSF (f, __VA_ARGS__)
+#define P4EST_LERROR(s)      P4EST_PRODUCTION (s)
+#define P4EST_LERRORF(f,...) P4EST_PRODUCTIONF (f, __VA_ARGS__)
 
 #endif /* !__cplusplus */
 
