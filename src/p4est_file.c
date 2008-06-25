@@ -112,7 +112,7 @@ p4est_connectivity_read (const char *filename,
 
   file = fopen (filename, "rb");
   if (!file) {
-    fprintf (stderr, "Failed to open p4est mesh file %s\n", filename);
+    P4EST_LERRORF ("Failed to open p4est mesh file %s\n", filename);
     return 1;
   }
 
@@ -369,16 +369,16 @@ p4est_connectivity_read (const char *filename,
 
   retval = fclose (file);
   if (retval) {
-    fprintf (stderr, "Failed to close p4est mesh file %s (%d:%d)\n", filename,
-             retval, EOF);
+    P4EST_LERRORF ("Failed to close p4est mesh file %s (%d:%d)\n",
+                   filename, retval, EOF);
     p4est_connectivity_destroy (*connectivity);
     *connectivity = NULL;
     return 1;
   }
 
   if (!p4est_connectivity_is_valid (*connectivity)) {
-    fprintf (stderr, "Mesh file %s connectivity strucure is invalid\n",
-             filename);
+    P4EST_LERRORF ("Mesh file %s connectivity strucure is invalid\n",
+                   filename);
     p4est_connectivity_destroy (*connectivity);
     *connectivity = NULL;
     return 1;

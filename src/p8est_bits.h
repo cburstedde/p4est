@@ -273,16 +273,15 @@ void                p8est_quadrant_corner (p8est_quadrant_t * q,
 /** Transforms a quadrant across a face between trees.
  * \param [in]     q          Input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
- * \param [in] my_axis        The coordinate axis sequence of the origin face.
- * \param [in] target_axis    The coordinate axis sequence of the target face.
- * \param [in] edge_reverse   Edge reverse flag for axes 0, 1; face code for 2.
+ * \param [in] ftransform     This array holds 9 integers.
+ *             [0]..[2]       The coordinate axis sequence of the origin face.
+ *             [3]..[5]       The coordinate axis sequence of the target face.
+ *             [6]..[8]       Edge reverse flag for axes 0, 1; face code for 2.
  * \note \a q and \q r may NOT point to the same quadrant structure.
  */
 void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                                                    p8est_quadrant_t * r,
-                                                   int my_axis[3],
-                                                   int target_axis[3],
-                                                   int edge_reverse[3]);
+                                                   const int ftransform[]);
 
 /** Checks if a quadrant touches an edge (diagonally inside or outside).
  */

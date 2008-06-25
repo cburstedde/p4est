@@ -431,7 +431,7 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
                          (long long) tree, edge, (long long) nett, ecode);
           return false;
         }
-        if (edge_end - edge_begin !=
+        if ((int) (edge_end - edge_begin) !=
             ecount + 1 + (ntree1 != tree) + (ntree2 != tree)) {
           P4EST_NOTICEF ("Shared edge %lld %d inconsistent count\n",
                          (long long) tree, edge);
@@ -653,13 +653,15 @@ p8est_connectivity_new_rotcubes (void)
 p4est_topidx_t
 p8est_find_face_transform (p8est_connectivity_t * connectivity,
                            p4est_topidx_t my_tree, int my_face,
-                           int my_axis[3], int target_axis[3],
-                           int edge_reverse[3])
+                           int ftransform[])
 {
   int                 i;
   int                 target_code, target_face, orientation;
   int                 face_ref, face_perm;
   int                 low[2], high[2], swap;
+  int                *my_axis = &ftransform[0];
+  int                *target_axis = &ftransform[3];
+  int                *edge_reverse = &ftransform[6];
   p4est_topidx_t      target_tree;
 
   target_tree = connectivity->tree_to_tree[6 * my_tree + my_face];

@@ -668,7 +668,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   sc_array_t          corner_info;
 #else
   bool                face_axis[3], contact_face_only, contact_edge_only;
-  int                 my_axis[3], target_axis[3], edge_reverse[3], edge;
+  int                 ftransform[9], edge;
   size_t              etree;
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
@@ -725,7 +725,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
     transform = zcorner = -1;
 #else
     edge = -1;
-    edge_reverse[2] = -1;
+    ftransform[8] = -1;
     ei.iflip = -1;
     contact_face_only = contact_edge_only = false;
 #endif
@@ -797,9 +797,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
         /* square contact across a face */
         P4EST_ASSERT (!contact_edge_only && face >= 0 && face < 6);
         P4EST_ASSERT (outface[face]);
-        ntree = p8est_find_face_transform (conn, qtree, face,
-                                           my_axis, target_axis,
-                                           edge_reverse);
+        ntree = p8est_find_face_transform (conn, qtree, face, ftransform);
         P4EST_ASSERT (ntree >= 0);
       }
       else if (contact_edge_only) {
@@ -934,8 +932,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
                 if (contact_face_only) {
                   P4EST_ASSERT (!contact_edge_only);
                   outq = sc_array_push (out);
-                  p8est_quadrant_transform_face (tq, outq, my_axis,
-                                                 target_axis, edge_reverse);
+                  p8est_quadrant_transform_face (tq, outq, ftransform);
                   outq->p.piggy.which_tree = ntree;
                 }
                 else {

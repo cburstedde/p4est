@@ -908,7 +908,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   sc_array_t          corner_info;
 #else
   bool                face_axis[3], contact_face_only, contact_edge_only;
-  int                 my_axis[3], target_axis[3], edge_reverse[3], edge;
+  int                 ftransform[9], edge;
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
   sc_array_t         *ta;
@@ -1218,15 +1218,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               /* square contact across a face */
               P4EST_ASSERT (!contact_edge_only && face >= 0 && face < 6);
               P4EST_ASSERT (quad_contact[face]);
-              qtree = p8est_find_face_transform (conn, nt, face,
-                                                 my_axis, target_axis,
-                                                 edge_reverse);
+              qtree = p8est_find_face_transform (conn, nt, face, ftransform);
               if (qtree >= 0) {
                 P4EST_ASSERT (face_contact[face]);
-                p8est_quadrant_transform_face (q, &tosend, my_axis,
-                                               target_axis, edge_reverse);
-                p8est_quadrant_transform_face (&insulq, &tempq, my_axis,
-                                               target_axis, edge_reverse);
+                p8est_quadrant_transform_face (q, &tosend, ftransform);
+                p8est_quadrant_transform_face (&insulq, &tempq, ftransform);
                 p4est_balance_schedule (p4est, peers, qtree, true,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);

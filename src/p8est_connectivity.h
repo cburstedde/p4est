@@ -176,17 +176,18 @@ void                p8est_find_corner_info (p8est_connectivity_t *
 #endif
 
 /** Fills arrays encoding the axis combinations for a face transform.
- * \param [out] my_axis      The coordinate axis sequence of the origin face.
- * \param [out] target_axis  The coordinate axis sequence of the target face.
- * \param [out] edge_reverse Edge reverse flag for axes 0, 1; face code for 2.
+ * \param [in]  itree        The number of the originating tree.
+ * \param [in]  iface        The number of the originating face.
+ * \param [out] ftransform   This array holds 9 integers.
+ *              [0]..[2]     The coordinate axis sequence of the origin face.
+ *              [3]..[5]     The coordinate axis sequence of the target face.
+ *              [6]..[8]     Edge reverse flag for axes 0, 1; face code for 2.
  * \return   Returns the face neighbor tree if it exists, -1 otherwise.
  */
 p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
                                                connectivity,
                                                p4est_topidx_t itree,
-                                               int iface, int my_axis[3],
-                                               int target_axis[3],
-                                               int edge_reverse[3]);
+                                               int iface, int ftransform[]);
 
 /** Fills an array with information about edge neighbors.
  * \param [in] itree    The number of the originating tree.
