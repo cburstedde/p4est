@@ -186,7 +186,7 @@ p4est_order_local_vertices (p4est_t * p4est,
 
                     zcorner = p4est_corner_to_zorder[ci->ncorner];
                     cneighbor = neighbor;
-                    p4est_quadrant_corner (&cneighbor, zcorner, 1);
+                    p4est_quadrant_corner (&cneighbor, zcorner, true);
 
                     neighbor_proc = p4est_comm_find_owner (p4est,
                                                            neighbor_tree,

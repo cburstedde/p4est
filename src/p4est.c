@@ -880,12 +880,11 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
   int                 i, j, k, l, m, which;
-  int                 quad_contact[2 * P4EST_DIM];
   int                 face;
   int                 first_peer, last_peer;
   int                 over_peer_count;
+  bool                any_quad, quad_contact[2 * P4EST_DIM];
   bool                any_face, face_contact[2 * P4EST_DIM];
-  bool                any_quad;
   bool                tree_fully_owned;
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
@@ -1146,8 +1145,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                 ci = sc_array_index (&corner_info, ctree);
                 tosend = *q;
                 zcorner = p4est_corner_to_zorder[ci->ncorner];
-                p4est_quadrant_corner (&tosend, zcorner, 0);
-                p4est_quadrant_corner (&insulq, zcorner, 1);
+                p4est_quadrant_corner (&tosend, zcorner, false);
+                p4est_quadrant_corner (&insulq, zcorner, true);
                 p4est_balance_schedule (p4est, peers, ci->ntree, true,
                                         &tosend, &insulq,
                                         &first_peer, &last_peer);

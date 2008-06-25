@@ -240,86 +240,6 @@ p8est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
   P4EST_ASSERT (p8est_quadrant_is_familyv (c));
 }
 
-int
-p8est_quadrant_edge_level (const p8est_quadrant_t * q, int edge, int level)
-{
-  int                 outface;
-  int                 cid, sid;
-  p4est_qcoord_t      th, step[P4EST_DIM];
-  p4est_quadrant_t    quad, sibling;
-  /* *INDENT-OFF* */
-  const int           contact[12] = {
-    0x14, 0x18, 0x24, 0x28,
-    0x11, 0x12, 0x21, 0x22,
-    0x05, 0x06, 0x09, 0x0a
-  };
-  /* *INDENT-ON* */
-
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (edge >= 0 && edge < 12);
-  P4EST_ASSERT (level >= 0 && level <= P4EST_MAXLEVEL);
-
-  P4EST_QUADRANT_INIT (&quad);
-  P4EST_QUADRANT_INIT (&sibling);
-
-  quad = *q;
-  while ((int) quad.level > level) {
-    th = P4EST_LAST_OFFSET (quad.level);
-    cid = p4est_quadrant_child_id (&quad);
-    switch (edge / 4) {
-    case 0:
-      sid = 2 * edge + (cid & 0x01);
-      step[0] = 0;
-      step[1] = 2 * (edge & 0x01) - 1;
-      step[2] = (edge & 0x02) - 1;
-      break;
-    case 1:
-      sid = 2 * (edge & 0x02) + (edge & 0x01) + (cid & 0x02);
-      step[0] = 2 * (edge & 0x01) - 1;
-      step[1] = 0;
-      step[2] = (edge & 0x02) - 1;
-      break;
-    case 2:
-      sid = edge - 8 + (cid & 0x04);
-      step[0] = 2 * (edge & 0x01) - 1;
-      step[1] = (edge & 0x02) - 1;
-      step[2] = 0;
-      break;
-    default:
-      SC_CHECK_NOT_REACHED ();
-    }
-    p4est_quadrant_sibling (&quad, &sibling, sid);
-    P4EST_ASSERT (-1 <= step[0] && step[0] <= 1);
-    P4EST_ASSERT (-1 <= step[1] && step[1] <= 1);
-    P4EST_ASSERT (-1 <= step[2] && step[2] <= 1);
-
-    outface = 0;
-    if (step[0] != 0) {
-      outface |= ((sibling.x <= 0) ? 0x01 : 0);
-      outface |= ((sibling.x >= th) ? 0x02 : 0);
-    }
-    if (step[1] != 0) {
-      outface |= ((sibling.y <= 0) ? 0x04 : 0);
-      outface |= ((sibling.y >= th) ? 0x08 : 0);
-    }
-    if (step[2] != 0) {
-      outface |= ((sibling.z <= 0) ? 0x10 : 0);
-      outface |= ((sibling.z >= th) ? 0x20 : 0);
-    }
-    if (outface == contact[edge]) {
-      return (int) quad.level;
-    }
-    p4est_quadrant_parent (&quad, &quad);
-    quad.x += step[0] * P4EST_QUADRANT_LEN (quad.level);
-    quad.y += step[1] * P4EST_QUADRANT_LEN (quad.level);
-    quad.z += step[2] * P4EST_QUADRANT_LEN (quad.level);
-    P4EST_ASSERT (p4est_quadrant_is_extended (&quad));
-  }
-  P4EST_ASSERT ((int) quad.level == level);
-
-  return level;
-}
-
 void
 p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                                p8est_quadrant_t * r,
@@ -392,17 +312,83 @@ p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                  p4est_quadrant_is_inside_root (r)));
 }
 
+bool
+p8est_quadrant_touches_edge (const p8est_quadrant_t * q, int edge)
+{
+  bool                touch;
+  bool                inside[2 * P4EST_DIM];
+  bool                outside[2 * P4EST_DIM];
+  int                 axis, side;
+#ifdef P4EST_DEBUG
+  int                 incount;
+#endif
+  p4est_qcoord_t      mh, Rmh;
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (0 <= edge && edge < 12);
+
+  axis = edge / 4;
+  mh = -P4EST_QUADRANT_LEN (q->level);
+  Rmh = P4EST_ROOT_LEN + mh;
+
+  inside[0] = (q->x == 0);
+  inside[1] = (q->x == Rmh);
+  inside[2] = (q->y == 0);
+  inside[3] = (q->y == Rmh);
+  inside[4] = (q->z == 0);
+  inside[5] = (q->z == Rmh);
+  outside[0] = (q->x == mh);
+  outside[1] = (q->x == P4EST_ROOT_LEN);
+  outside[2] = (q->y == mh);
+  outside[3] = (q->y == P4EST_ROOT_LEN);
+  outside[4] = (q->z == mh);
+  outside[5] = (q->z == P4EST_ROOT_LEN);
+
+  touch = true;
+#ifdef P4EST_DEBUG
+  incount = 0;
+#endif
+  if (axis != 0) {
+    side = edge % 2;
+    touch &= inside[side] || outside[side];
+#ifdef P4EST_DEBUG
+    incount += inside[side];
+#endif
+  }
+  if (axis != 1) {
+    side = (axis == 0) ? (edge % 2) : ((edge / 2) % 2);
+    touch &= inside[2 + side] || outside[2 + side];
+#ifdef P4EST_DEBUG
+    incount += inside[2 + side];
+#endif
+  }
+  if (axis != 2) {
+    side = (edge / 2) % 2;
+    touch &= inside[4 + side] || outside[4 + side];
+#ifdef P4EST_DEBUG
+    incount += inside[4 + side];
+#endif
+  }
+  P4EST_ASSERT (!touch || (incount == 0 || incount == 2));
+  P4EST_ASSERT (axis != 0 || (q->x >= 0 && q->x < P4EST_ROOT_LEN));
+  P4EST_ASSERT (axis != 1 || (q->y >= 0 && q->y < P4EST_ROOT_LEN));
+  P4EST_ASSERT (axis != 2 || (q->z >= 0 && q->z < P4EST_ROOT_LEN));
+
+  return touch;
+}
+
 void
 p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
                                p8est_quadrant_t * r,
                                const p8est_edge_info_t * ei,
                                const p8est_edge_transform_t * et, bool inside)
 {
+  int                 iaxis;
   p4est_qcoord_t      mh, Rmh;
   p4est_qcoord_t      lshift, rshift;
   p4est_qcoord_t      my_xyz, *target_xyz[3];
 
-  P4EST_ASSERT (0 <= ei->iaxis[0] && ei->iaxis[0] < 3);
+  iaxis = ei->iedge / 4;
   P4EST_ASSERT (0 <= ei->iflip && ei->iflip < 2);
   P4EST_ASSERT (0 <= et->naxis[0] && et->naxis[0] < 3);
   P4EST_ASSERT (0 <= et->naxis[1] && et->naxis[1] < 3);
@@ -410,7 +396,7 @@ p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
   P4EST_ASSERT (et->naxis[0] != et->naxis[1] &&
                 et->naxis[0] != et->naxis[2] && et->naxis[1] != et->naxis[2]);
   P4EST_ASSERT (0 <= et->nflip && et->nflip < 2);
-  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (p8est_quadrant_touches_edge (q, ei->iedge));
   P4EST_ASSERT (q != r);
 
   mh = -P4EST_QUADRANT_LEN (q->level);
@@ -422,7 +408,7 @@ p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
   target_xyz[2] = &r->z;
 
   /* transform coordinate axis parallel to edge */
-  switch (ei->iaxis[0]) {
+  switch (iaxis) {
   case 0:
     my_xyz = q->x;
     break;
@@ -465,8 +451,105 @@ p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
   }
 
   r->level = q->level;
-  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+  P4EST_ASSERT (p8est_quadrant_touches_edge (r, et->nedge));
   P4EST_ASSERT (!inside || p4est_quadrant_is_inside_root (r));
+}
+
+void
+p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
+                           p8est_quadrant_t * r, int edge)
+{
+  int                 outface;
+  int                 cid, sid;
+  p4est_qcoord_t      th, step[P4EST_DIM];
+  p4est_quadrant_t    quad;
+  /* *INDENT-OFF* */
+  const int           contact[12] = {
+    0x14, 0x18, 0x24, 0x28,
+    0x11, 0x12, 0x21, 0x22,
+    0x05, 0x06, 0x09, 0x0a
+  };
+  /* *INDENT-ON* */
+
+  P4EST_ASSERT (q != r);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (edge >= 0 && edge < 12);
+
+  P4EST_QUADRANT_INIT (&quad);
+
+  quad = *q;
+  for (;;) {
+    th = P4EST_LAST_OFFSET (quad.level);
+    cid = p4est_quadrant_child_id (&quad);
+    switch (edge / 4) {
+    case 0:
+      sid = 2 * edge + (cid & 0x01);
+      step[0] = 0;
+      step[1] = 2 * (edge & 0x01) - 1;
+      step[2] = (edge & 0x02) - 1;
+      break;
+    case 1:
+      sid = 2 * (edge & 0x02) + (edge & 0x01) + (cid & 0x02);
+      step[0] = 2 * (edge & 0x01) - 1;
+      step[1] = 0;
+      step[2] = (edge & 0x02) - 1;
+      break;
+    case 2:
+      sid = edge - 8 + (cid & 0x04);
+      step[0] = 2 * (edge & 0x01) - 1;
+      step[1] = (edge & 0x02) - 1;
+      step[2] = 0;
+      break;
+    default:
+      SC_CHECK_NOT_REACHED ();
+    }
+    p4est_quadrant_sibling (&quad, r, sid);
+    P4EST_ASSERT (-1 <= step[0] && step[0] <= 1);
+    P4EST_ASSERT (-1 <= step[1] && step[1] <= 1);
+    P4EST_ASSERT (-1 <= step[2] && step[2] <= 1);
+
+    outface = 0;
+    if (step[0] != 0) {
+      outface |= ((r->x <= 0) ? 0x01 : 0);
+      outface |= ((r->x >= th) ? 0x02 : 0);
+    }
+    if (step[1] != 0) {
+      outface |= ((r->y <= 0) ? 0x04 : 0);
+      outface |= ((r->y >= th) ? 0x08 : 0);
+    }
+    if (step[2] != 0) {
+      outface |= ((r->z <= 0) ? 0x10 : 0);
+      outface |= ((r->z >= th) ? 0x20 : 0);
+    }
+    if (outface == contact[edge]) {
+      break;
+    }
+    p4est_quadrant_parent (&quad, &quad);
+    quad.x += step[0] * P4EST_QUADRANT_LEN (quad.level);
+    quad.y += step[1] * P4EST_QUADRANT_LEN (quad.level);
+    quad.z += step[2] * P4EST_QUADRANT_LEN (quad.level);
+    P4EST_ASSERT (p4est_quadrant_is_extended (&quad));
+  }
+
+  if (step[0] != 0) {
+    if (r->x < 0)
+      r->x = 0;
+    if (r->x >= P4EST_ROOT_LEN)
+      r->x = th;
+  }
+  if (step[1] != 0) {
+    if (r->y < 0)
+      r->y = 0;
+    if (r->y >= P4EST_ROOT_LEN)
+      r->y = th;
+  }
+  if (step[2] != 0) {
+    if (r->z < 0)
+      r->z = 0;
+    if (r->z >= P4EST_ROOT_LEN)
+      r->z = th;
+  }
+  P4EST_ASSERT (p4est_quadrant_is_valid (r));
 }
 
 /* EOF p8est_bits.h */

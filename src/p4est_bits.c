@@ -766,7 +766,7 @@ p4est_quadrant_corner_level (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_corner (p4est_quadrant_t * q, int zcorner, int inside)
+p4est_quadrant_corner (p4est_quadrant_t * q, int zcorner, bool inside)
 {
   p4est_qcoord_t      lshift, rshift;
 

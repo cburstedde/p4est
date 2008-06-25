@@ -265,7 +265,7 @@ int                 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
  * \param [int]    inside   Boolean flag for inside or diagonally outside.
  */
 void                p4est_quadrant_corner (p4est_quadrant_t * q,
-                                           int zcorner, int inside);
+                                           int zcorner, bool inside);
 
 /** Shift a quadrant by the size of a tree depending on the face.
  * \param [in,out] q     The quadrant to be modified.

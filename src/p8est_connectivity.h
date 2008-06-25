@@ -82,13 +82,13 @@ p8est_connectivity_t;
 typedef struct
 {
   p4est_topidx_t      ntree;
-  int8_t              naxis[3], nflip, corners;
+  int8_t              nedge, naxis[3], nflip, corners;
 }
 p8est_edge_transform_t;
 
 typedef struct
 {
-  int                 iaxis[1], iflip;
+  int8_t              iedge, iflip;
   sc_array_t          edge_transforms;
 }
 p8est_edge_info_t;

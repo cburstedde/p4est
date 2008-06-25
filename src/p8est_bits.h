@@ -260,13 +260,6 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
                                                      q2,
                                                      p8est_quadrant_t * r);
 
-/** Compute the level of balance needed at a specified edge.
- * \param [in] edge   Edge index.
- * \return  Returns the maximum of level and this quadrants' edge level.
- */
-int                 p8est_quadrant_edge_level (const p8est_quadrant_t * q,
-                                               int edge, int level);
-
 #if 0
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
@@ -274,7 +267,7 @@ int                 p8est_quadrant_edge_level (const p8est_quadrant_t * q,
  * \param [int]    inside   Boolean flag for inside or diagonally outside.
  */
 void                p8est_quadrant_corner (p8est_quadrant_t * q,
-                                           int zcorner, int inside);
+                                           int zcorner, bool inside);
 #endif
 
 /** Transforms a quadrant across a face between trees.
@@ -291,6 +284,11 @@ void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                                                    int target_axis[3],
                                                    int edge_reverse[3]);
 
+/** Checks if a quadrant touches an edge (diagonally inside or outside).
+ */
+bool                p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
+                                                 int edge);
+
 /** Transforms a quadrant across aedge between trees.
  * \param [in]     q          Input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
@@ -305,6 +303,15 @@ void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
                                                    const
                                                    p8est_edge_transform_t *
                                                    et, bool inside);
+
+/** Shifts a quadrant until it touches the specified edge from the inside.
+ * \param [in]     q          Valid input quadrant.
+ * \param [in,out] r          Quadrant whose Morton index will be filled.
+ * \param [in]     edge       Edge index.
+ */
+void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
+                                               p8est_quadrant_t * r,
+                                               int edge);
 
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.
