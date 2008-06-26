@@ -26,6 +26,7 @@
 
 extern double       p8est_vtk_default_scale;
 extern bool         p8est_vtk_default_write_rank;
+extern bool         p8est_vtk_default_write_tree;
 
 /** This will write out the MPI rank in VTK format.
  *
@@ -57,6 +58,7 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  *  \param scale     The relative length factor of the quadrants.
  *                   Use 1.0 to fit quadrants exactly, less for gaps.
  *  \param write_rank   Boolean to determine if the MPI rank should be output.
+ *  \param write_tree   Boolean to determine if the tree id should be output.
  *  \param baseName The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be baseName_procNum.vtu).
@@ -64,7 +66,7 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  *  \return         This returns 0 if no error and -1 if there is an error.
  */
 int                 p8est_vtk_write_header (p8est_t * p8est, double scale,
-                                            bool write_rank,
+                                            bool write_rank, bool write_tree,
                                             const char *baseName);
 
 /** This will write the footer of the vtu file.

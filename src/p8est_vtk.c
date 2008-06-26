@@ -24,6 +24,7 @@
 
 double              p8est_vtk_default_scale = 0.97;
 bool                p8est_vtk_default_write_rank = true;
+bool                p8est_vtk_default_write_tree = true;
 
 void
 p8est_vtk_write_file (p4est_t * p4est, const char *baseName)
@@ -34,7 +35,8 @@ p8est_vtk_write_file (p4est_t * p4est, const char *baseName)
                   "Must provide connectivity with vertex information");
 
   retval = p8est_vtk_write_header (p4est, p8est_vtk_default_scale,
-                                   p8est_vtk_default_write_rank, baseName);
+                                   p8est_vtk_default_write_rank,
+                                   p8est_vtk_default_write_tree, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write header");
   retval = p4est_vtk_write_footer (p4est, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write footer");
@@ -42,7 +44,7 @@ p8est_vtk_write_file (p4est_t * p4est, const char *baseName)
 
 int
 p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
-                        const char *baseName)
+                        bool write_tree, const char *baseName)
 {
   p4est_connectivity_t *connectivity = p4est->connectivity;
   sc_array_t         *trees = p4est->trees;
@@ -268,8 +270,12 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </Cells>\n");
 
+  if (write_rank || write_tree) {
+    fprintf (vtufile, "      <CellData Scalars=\"%s\">\n",
+             !write_tree ? "mpirank" : !write_rank ? "treeid" :
+             "mpirank,treeid");
+  }
   if (write_rank) {
-    fprintf (vtufile, "      <CellData Scalars=\"mpirank\">\n");
     fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
              " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
@@ -295,6 +301,47 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
     }
 #endif
     fprintf (vtufile, "        </DataArray>\n");
+  }
+  if (write_tree) {
+    il = 0;
+    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"treeid\""
+             " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+    fprintf (vtufile, "         ");
+
+    sk = 1;
+    for (jt = first_local_tree; jt <= last_local_tree; ++jt) {
+      tree = p4est_array_index_topidx (trees, jt);
+      num_quads = tree->quadrants.elem_count;
+      for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
+        fprintf (vtufile, " %lld", (long long) jt);
+        if (!(sk % 20) && il != (Ncells - 1))
+          fprintf (vtufile, "\n         ");
+      }
+    }
+    fprintf (vtufile, "\n");
+#else
+    for (jt = first_local_tree; jt <= last_local_tree; ++jt) {
+      tree = p4est_array_index_topidx (trees, jt);
+      num_quads = tree->quadrants.elem_count;
+      for (zz = 0; zz < num_quads; ++zz, ++il) {
+        locidx_data[il] = (p4est_locidx_t) jt;
+      }
+    }
+    fprintf (vtufile, "          ");
+    retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
+                                     sizeof (*locidx_data) * Ncells);
+    fprintf (vtufile, "\n");
+    if (retval) {
+      P4EST_LERROR ("p8est_vtk: Error encoding types\n");
+      fclose (vtufile);
+      return -1;
+    }
+#endif
+    fprintf (vtufile, "        </DataArray>\n");
+    P4EST_ASSERT (il == Ncells);
+  }
+  if (write_rank || write_tree) {
     fprintf (vtufile, "      </CellData>\n");
   }
 #ifndef P4EST_VTK_ASCII
@@ -343,11 +390,22 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
              " NumberOfComponents=\"3\" format=\"%s\"/>\n",
              P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
     fprintf (pvtufile, "    </PPoints>\n");
+    if (write_rank || write_tree) {
+      fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n",
+               !write_tree ? "mpirank" : !write_rank ? "treeid" :
+               "mpirank,treeid");
+    }
     if (write_rank) {
-      fprintf (pvtufile, "    <PCellData Scalars=\"mpirank\">\n");
       fprintf (pvtufile,
                "      <PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+    }
+    if (write_tree) {
+      fprintf (pvtufile,
+               "      <PDataArray type=\"%s\" Name=\"treeid\" format=\"%s\"/>\n",
+               P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+    }
+    if (write_rank || write_tree) {
       fprintf (pvtufile, "    </PCellData>\n");
     }
     fprintf (pvtufile, "    <PPointData>\n");
