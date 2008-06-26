@@ -67,6 +67,7 @@ check_all (MPI_Comm mpicomm, p8est_connectivity_t * conn, const char *vtkname)
   p8est_refine (p8est, refine_fn, NULL);
   p8est_coarsen (p8est, coarsen_fn, NULL);
   p8est_balance (p8est, NULL);
+  p8est_partition (p8est, NULL);
   p8est_vtk_write_file (p8est, vtkname);
   p8est_destroy (p8est);
   p8est_connectivity_destroy (conn);
@@ -94,6 +95,7 @@ main (int argc, char **argv)
 
   check_all (mpicomm, p8est_connectivity_new_unitcube (), "test_unitcube");
   check_all (mpicomm, p8est_connectivity_new_periodic (), "test_periodic");
+  check_all (mpicomm, p8est_connectivity_new_twocubes (), "test_twocubes");
   check_all (mpicomm, p8est_connectivity_new_rotcubes (), "test_rotcubes");
 
   /* clean up and exit */

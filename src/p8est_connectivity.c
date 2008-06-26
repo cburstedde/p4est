@@ -280,7 +280,9 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         return false;
       }
     }
+  }
 
+  for (tree = 0; tree < num_trees; ++tree) {
     for (face = 0; face < 6; ++face) {
       ntree = ttt[tree * 6 + face];
       if (ntree < 0 || ntree >= num_trees) {
@@ -574,6 +576,47 @@ p8est_connectivity_new_periodic (void)
                                       edge_to_tree, edge_to_edge,
                                       tree_to_corner, ctt_offset,
                                       corner_to_tree, corner_to_corner);
+}
+
+p8est_connectivity_t *
+p8est_connectivity_new_twocubes (void)
+{
+  const p4est_topidx_t num_vertices = 12;
+  const p4est_topidx_t num_trees = 2;
+  const p4est_topidx_t num_ett = 0;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[3 * 12] = {
+    0, 0, 0,
+    1, 0, 0,
+    2, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    2, 1, 0,
+    0, 0, 1,
+    1, 0, 1,
+    2, 0, 1,
+    0, 1, 1,
+    1, 1, 1,
+    2, 1, 1,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 8] = {
+    0, 1, 3, 4, 6, 7, 9, 10,
+    1, 2, 4, 5, 7, 8, 10, 11,
+  };
+  const p4est_topidx_t tree_to_tree[2 * 6] = {
+    0, 1, 0, 0, 0, 0,
+    0, 1, 1, 1, 1, 1,
+  };
+  const int8_t        tree_to_face[2 * 6] = {
+    0, 0, 2, 3, 4, 5,
+    1, 1, 2, 3, 4, 5,
+  };
+
+  return p8est_connectivity_new_copy (num_vertices, num_trees, 0, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ett, NULL, NULL,
+                                      NULL, &num_ctt, NULL, NULL);
 }
 
 p8est_connectivity_t *

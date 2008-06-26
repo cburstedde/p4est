@@ -24,6 +24,7 @@
  *        possible configurations:
  *           unit       The unit cube.
  *           periodic   The unit cube with various self-periodic b.c.
+ *           twocubes   Two connected cubes.
  *           rotcubes   A collection of four connected rotated cubes.
  */
 
@@ -40,6 +41,7 @@ enum
   P8EST_CONFIG_NULL,
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
+  P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_ROTCUBES,
 };
 
@@ -127,7 +129,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|rotcubes\n"
+    "      unit|periodic|twocubes|rotcubes\n"
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -141,6 +143,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P8EST_CONFIG_PERIODIC;
+    }
+    else if (!strcmp (argv[1], "twocubes")) {
+      config = P8EST_CONFIG_TWOCUBES;
     }
     else if (!strcmp (argv[1], "rotcubes")) {
       config = P8EST_CONFIG_ROTCUBES;
@@ -170,6 +175,9 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
+  }
+  else if (config == P8EST_CONFIG_TWOCUBES) {
+    connectivity = p8est_connectivity_new_twocubes ();
   }
   else if (config == P8EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();

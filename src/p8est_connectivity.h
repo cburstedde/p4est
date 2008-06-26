@@ -160,6 +160,10 @@ p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_periodic (void);
 
+/** Create a connectivity structure that contains two cubes.
+ */
+p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
+
 /** Create a connectivity structure that contains a few cubes.
  * These are rotated against each other to stress the topology routines.
  */
