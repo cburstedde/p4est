@@ -579,11 +579,11 @@ p8est_connectivity_new_periodic (void)
 p8est_connectivity_t *
 p8est_connectivity_new_rotcubes (void)
 {
-  const p4est_topidx_t num_vertices = 20;
-  const p4est_topidx_t num_trees = 4;
-  const p4est_topidx_t num_edges = 1;
+  const p4est_topidx_t num_vertices = 26;
+  const p4est_topidx_t num_trees = 6;
+  const p4est_topidx_t num_edges = 2;
   const p4est_topidx_t num_corners = 0;
-  const double        vertices[3 * 20] = {
+  const double        vertices[3 * 26] = {
     0, 0, 0,
     1, 0, 2,
     2, 0, 0,
@@ -604,35 +604,51 @@ p8est_connectivity_new_rotcubes (void)
     1, 0, 0,
     1, 1, 2,
     0, 1, 2,
+    2.5, 1.5, 2,
+    2, 1.5, 2,
+    2, 1.5, 2.5,
+    2, .5, 2.5,
+    2.5, .5, 2,
+    2, .5, 2,
   };
-  const p4est_topidx_t tree_to_vertex[4 * 8] = {
+  const p4est_topidx_t tree_to_vertex[6 * 8] = {
     0, 17, 3, 4, 15, 11, 13, 14,
     7, 2, 6, 17, 9, 12, 8, 11,
     2, 12, 5, 10, 17, 11, 4, 14,
     19, 13, 18, 14, 16, 15, 1, 11,
+    14, 11, 21, 25, 18, 1, 22, 23,
+    21, 20, 25, 24, 14, 10, 11, 12,
   };
-  const p4est_topidx_t tree_to_tree[4 * 6] = {
+  const p4est_topidx_t tree_to_tree[6 * 6] = {
     0, 2, 0, 0, 0, 3,
     1, 2, 1, 1, 1, 1,
-    2, 2, 1, 2, 2, 0,
-    3, 0, 3, 3, 3, 3,
+    2, 5, 1, 2, 2, 0,
+    3, 0, 3, 4, 3, 3,
+    4, 4, 3, 4, 5, 4,
+    4, 5, 5, 5, 5, 2,
   };
-  const int8_t        tree_to_face[4 * 6] = {
+  const int8_t        tree_to_face[6 * 6] = {
     0, 5, 2, 3, 4, 13,
     0, 2, 2, 3, 4, 5,
-    0, 1, 1, 3, 4, 1,
-    0, 17, 2, 3, 4, 5,
+    0, 23, 1, 3, 4, 1,
+    0, 17, 2, 8, 4, 5,
+    0, 1, 9, 3, 12, 5,
+    16, 1, 2, 3, 4, 19,
   };
-  const p4est_topidx_t tree_to_edge[4 * 12] = {
+  const p4est_topidx_t tree_to_edge[6 * 12] = {
     -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,
+    0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1,
   };
-  const p4est_topidx_t ett_offset[1 + 1] = { 0, 3 };
-  const p4est_topidx_t edge_to_tree[3] = { 0, 2, 3 };
-  const int8_t        edge_to_edge[3] = { 7, 7, 23 };
-  const p4est_topidx_t tree_to_corner[4 * 8] = {
+  const p4est_topidx_t ett_offset[2 + 1] = { 0, 5, 8 };
+  const p4est_topidx_t edge_to_tree[8] = { 0, 2, 3, 4, 5, 1, 2, 5 };
+  const int8_t        edge_to_edge[8] = { 7, 7, 23, 12, 18, 7, 11, 15 };
+  const p4est_topidx_t tree_to_corner[6 * 8] = {
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1,
