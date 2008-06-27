@@ -36,14 +36,24 @@
 #include <p8est_vtk.h>
 #endif
 
-enum
+typedef enum
 {
   P8EST_CONFIG_NULL,
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
   P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_ROTCUBES,
-};
+}
+simple_config_t;
+
+typedef struct
+{
+  simple_config_t     config;
+  int                 mpisize;
+  int                 level;
+  unsigned            checksum;
+}
+simple_regression_t;
 
 typedef struct
 {
@@ -54,11 +64,31 @@ user_data_t;
 typedef struct
 {
   MPI_Comm            mpicomm;
+  int                 mpisize;
   int                 mpirank;
 }
 mpi_context_t;
 
 static int          refine_level = 0;
+
+/* *INDENT-OFF* */
+static const simple_regression_t regression[] =
+{{ P8EST_CONFIG_UNIT, 1, 7, 0x88fc2229 },
+ { P8EST_CONFIG_UNIT, 3, 6, 0xce19fee3 },
+ { P8EST_CONFIG_TWOCUBES, 1, 4, 0xd9e96b31U },
+ { P8EST_CONFIG_TWOCUBES, 3, 5, 0xe8b16b4aU },
+ { P8EST_CONFIG_PERIODIC, 1, 5, 0xe4d123b2U },
+ { P8EST_CONFIG_PERIODIC, 3, 5, 0xe4d123b2U },
+ { P8EST_CONFIG_PERIODIC, 5, 6, 0x81c22cc6U },
+ { P8EST_CONFIG_ROTCUBES, 1, 5, 0x5c497bdaU },
+ { P8EST_CONFIG_ROTCUBES, 3, 5, 0x5c497bdaU },
+ { P8EST_CONFIG_ROTCUBES, 5, 6, 0x00530556U },
+ { P8EST_CONFIG_ROTCUBES, 7, 1, 0x47f00071U },
+ { P8EST_CONFIG_ROTCUBES, 7, 6, 0x00530556U },
+ { P8EST_CONFIG_ROTCUBES, 7, 7, 0x84730f31U },
+ { P8EST_CONFIG_ROTCUBES, 9, 1, 0x00600001U },
+ { P8EST_CONFIG_NULL, 0, 0, 0 }};
+/* *INDENT-ON* */
 
 static void
 init_fn (p8est_t * p8est, p4est_topidx_t which_tree,
@@ -127,7 +157,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 wrongusage, config;
+  int                 wrongusage;
   unsigned            crc;
   const char         *usage, *errmsg;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
@@ -135,11 +165,15 @@ main (int argc, char **argv)
   p8est_connectivity_t *connectivity;
   p8est_refine_t      refine_fn;
   p8est_coarsen_t     coarsen_fn;
+  simple_config_t     config;
+  const simple_regression_t *r;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
@@ -244,8 +278,18 @@ main (int argc, char **argv)
   P4EST_ASSERT (p8est_checksum (p8est) == crc);
 #endif
 
-  /* print forest checksum */
+  /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
+  if (mpi->mpirank == 0) {
+    for (r = regression; r->config != P8EST_CONFIG_NULL; ++r) {
+      if (r->config != config || r->mpisize != mpi->mpisize
+          || r->level != refine_level)
+        continue;
+      SC_CHECK_ABORT (crc == r->checksum, "Checksum mismatch");
+      P4EST_GLOBAL_INFO ("Checksum regression OK\n");
+      break;
+    }
+  }
 
   /* destroy the p8est and its connectivity structure */
   p8est_destroy (p8est);
