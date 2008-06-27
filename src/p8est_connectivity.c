@@ -378,6 +378,7 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
           if (tte[ntree * 12 + nedge] != aedge) {
             P4EST_NOTICEF ("Edge to edge reciprocity in %lld %d %lld\n",
                            (long long) tree, edge, (long long) nett);
+            return false;
           }
           nflip = (int) ete[nett] / 12;
           if (ntree == tree && nedge == edge) {
@@ -624,7 +625,7 @@ p8est_connectivity_new_rotcubes (void)
 {
   const p4est_topidx_t num_vertices = 26;
   const p4est_topidx_t num_trees = 6;
-  const p4est_topidx_t num_edges = 2;
+  const p4est_topidx_t num_edges = 3;
   const p4est_topidx_t num_corners = 0;
   const double        vertices[3 * 26] = {
     0, 0, 0,
@@ -679,16 +680,20 @@ p8est_connectivity_new_rotcubes (void)
     16, 1, 2, 3, 4, 19,
   };
   const p4est_topidx_t tree_to_edge[6 * 12] = {
-    -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 0, -1, 2, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 2,
+    -1, -1, 2, -1, -1, -1, -1, 0, -1, 1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,
     0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1,
+    -1, -1, -1, 1, -1, -1, 0, -1, -1, -1, -1, -1,
   };
-  const p4est_topidx_t ett_offset[2 + 1] = { 0, 5, 8 };
-  const p4est_topidx_t edge_to_tree[8] = { 0, 2, 3, 4, 5, 1, 2, 5 };
-  const int8_t        edge_to_edge[8] = { 7, 7, 23, 12, 18, 7, 11, 15 };
+  const p4est_topidx_t ett_offset[3 + 1] = { 0, 5, 8, 11 };
+  const p4est_topidx_t edge_to_tree[11] = {
+    0, 2, 3, 4, 5, 1, 2, 5, 0, 1, 2
+  };
+  const int8_t        edge_to_edge[11] = {
+    7, 7, 23, 12, 18, 7, 9, 15, 9, 11, 2
+  };
   const p4est_topidx_t tree_to_corner[6 * 8] = {
     -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1,
