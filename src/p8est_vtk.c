@@ -22,7 +22,7 @@
 #include <p4est_to_p8est.h>
 #include "p4est_vtk.c"
 
-double              p8est_vtk_default_scale = 0.97;
+double              p8est_vtk_default_scale = 0.95;
 bool                p8est_vtk_default_write_rank = true;
 bool                p8est_vtk_default_write_tree = true;
 

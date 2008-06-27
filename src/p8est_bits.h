@@ -260,16 +260,6 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
                                                      q2,
                                                      p8est_quadrant_t * r);
 
-#if 0
-/** Move a quadrant inside or diagonally outside a corner position.
- * \param [in,out] q        This quadrant only requires a valid level.
- * \param [in]     zcorner  Number of the corner in z-order, in 0..3.
- * \param [int]    inside   Boolean flag for inside or diagonally outside.
- */
-void                p8est_quadrant_corner (p8est_quadrant_t * q,
-                                           int zcorner, bool inside);
-#endif
-
 /** Transforms a quadrant across a face between trees.
  * \param [in]     q          Input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
@@ -288,7 +278,7 @@ void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
 bool                p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
                                                  int edge);
 
-/** Transforms a quadrant across aedge between trees.
+/** Transforms a quadrant across an edge between trees.
  * \param [in]     q          Input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
  * \param [in]     edge       Edge index of the originating quadrant.
@@ -311,6 +301,28 @@ void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
 void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
                                                p8est_quadrant_t * r,
                                                int edge);
+
+/** Checks if a quadrant touches a corner (diagonally inside or outside).
+ */
+bool                p8est_quadrant_touches_corner (const p8est_quadrant_t * q,
+                                                   int corner);
+
+/** Move a quadrant inside or diagonally outside a corner position.
+ * \param [in,out] q        This quadrant only requires a valid level.
+ * \param [in]     icorner  Number of the corner in 0..7.
+ * \param [int]    inside   Boolean flag for inside or diagonally outside.
+ */
+void                p8est_quadrant_transform_corner (p8est_quadrant_t * r,
+                                                     int corner, bool inside);
+
+/** Shifts a quadrant until it touches the specified corner from the inside.
+ * \param [in]     q          Valid input quadrant.
+ * \param [in,out] r          Quadrant whose Morton index will be filled.
+ * \param [in]     corner     Corner index.
+ */
+void                p8est_quadrant_shift_corner (const p8est_quadrant_t * q,
+                                                 p8est_quadrant_t * r,
+                                                 int corner);
 
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.

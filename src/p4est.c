@@ -907,11 +907,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_corner_info_t *ci;
   sc_array_t          corner_info;
 #else
+  int                 ftransform[9], edge, corner;
   bool                face_axis[3], contact_face_only, contact_edge_only;
-  int                 ftransform[9], edge;
+  size_t              etree;
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
-  sc_array_t         *ta;
+  p8est_corner_info_t ci;
+  p8est_corner_transform_t *ct;
+  sc_array_t         *eta, *cta;
 #endif
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
@@ -1003,8 +1006,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifndef P4_TO_P8
   sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
 #else
-  ta = &ei.edge_transforms;
-  sc_array_init (ta, sizeof (p8est_edge_transform_t));
+  eta = &ei.edge_transforms;
+  sc_array_init (eta, sizeof (p8est_edge_transform_t));
+  cta = &ci.corner_transforms;
+  sc_array_init (cta, sizeof (p8est_corner_transform_t));
 #endif /* !P4_TO_P8 */
 
   /* compute first quadrant on finest level */
@@ -1150,6 +1155,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                 p4est_balance_schedule (p4est, peers, ci->ntree, true,
                                         &tosend, &insulq,
                                         &first_peer, &last_peer);
+                /* insulq is now invalid don't use it below */
               }
             }
             else {
@@ -1236,8 +1242,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               /* this quadrant crosses an edge */
               P4EST_ASSERT (!contact_face_only && edge >= 0 && edge < 12);
               p8est_find_edge_transform (conn, nt, edge, &ei);
-              for (ctree = 0; ctree < ta->elem_count; ++ctree) {
-                et = sc_array_index (ta, ctree);
+              for (etree = 0; etree < eta->elem_count; ++etree) {
+                et = sc_array_index (eta, etree);
                 p8est_quadrant_transform_edge (q, &tosend, &ei, et, false);
                 p8est_quadrant_transform_edge (&insulq, &tempq, &ei, et,
                                                true);
@@ -1247,8 +1253,23 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               }
             }
             else {
-              /* corner balance not implemented yet */
+              /* this quadrant crosses a corner */
               P4EST_ASSERT (face_axis[0] && face_axis[1] && face_axis[2]);
+              corner =
+                4 * quad_contact[5] + 2 * quad_contact[3] + quad_contact[1];
+              P4EST_ASSERT (p8est_quadrant_touches_corner (q, corner));
+              P4EST_ASSERT (p8est_quadrant_touches_corner (&insulq, corner));
+              p8est_find_corner_transform (conn, nt, corner, &ci);
+              for (ctree = 0; ctree < cta->elem_count; ++ctree) {
+                ct = sc_array_index (cta, ctree);
+                tosend = *q;
+                p8est_quadrant_transform_corner (&tosend, ct->ncorner, false);
+                tempq = insulq;
+                p8est_quadrant_transform_corner (&tempq, ct->ncorner, true);
+                p4est_balance_schedule (p4est, peers, ct->ntree, true,
+                                        &tosend, &tempq,
+                                        &first_peer, &last_peer);
+              }
             }
           }
 #endif /* !P4_TO_P8 */
@@ -1869,7 +1890,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifndef P4_TO_P8
   sc_array_reset (&corner_info);
 #else
-  sc_array_reset (ta);
+  sc_array_reset (eta);
+  sc_array_reset (cta);
 #endif
 
 #ifdef P4EST_MPI

@@ -551,7 +551,151 @@ p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
     if (r->z >= P4EST_ROOT_LEN)
       r->z = th;
   }
-  P4EST_ASSERT (p4est_quadrant_is_valid (r));
+  P4EST_ASSERT (p8est_quadrant_touches_edge (r, edge));
+  P4EST_ASSERT (p4est_quadrant_is_inside_root (r));
+}
+
+bool
+p8est_quadrant_touches_corner (const p8est_quadrant_t * q, int corner)
+{
+#ifdef P4EST_DEBUG
+  int                 incount;
+#endif
+  int                 side;
+  bool                inside[6], outside[6], touch;
+  p4est_qcoord_t      mh, Rmh;
+
+  P4EST_ASSERT (0 <= corner && corner < 8);
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+
+  mh = -P4EST_QUADRANT_LEN (q->level);
+  Rmh = P4EST_ROOT_LEN + mh;
+
+  inside[0] = (q->x == 0);
+  inside[1] = (q->x == Rmh);
+  inside[2] = (q->y == 0);
+  inside[3] = (q->y == Rmh);
+  inside[4] = (q->z == 0);
+  inside[5] = (q->z == Rmh);
+  outside[0] = (q->x == mh);
+  outside[1] = (q->x == P4EST_ROOT_LEN);
+  outside[2] = (q->y == mh);
+  outside[3] = (q->y == P4EST_ROOT_LEN);
+  outside[4] = (q->z == mh);
+  outside[5] = (q->z == P4EST_ROOT_LEN);
+
+  touch = true;
+#ifdef P4EST_DEBUG
+  incount = 0;
+#endif
+
+  side = corner % 2;
+  touch &= inside[side] || outside[side];
+#ifdef P4EST_DEBUG
+  incount += inside[side];
+#endif
+
+  side = (corner / 2) % 2;
+  touch &= inside[2 + side] || outside[2 + side];
+#ifdef P4EST_DEBUG
+  incount += inside[2 + side];
+#endif
+
+  side = corner / 4;
+  touch &= inside[4 + side] || outside[4 + side];
+#ifdef P4EST_DEBUG
+  incount += inside[4 + side];
+#endif
+
+  P4EST_ASSERT (!touch || (incount == 0 || incount == 3));
+
+  return touch;
+}
+
+void
+p8est_quadrant_transform_corner (p8est_quadrant_t * q,
+                                 int corner, bool inside)
+{
+  p4est_qcoord_t      shift[2];
+
+  P4EST_ASSERT (0 <= corner && corner < 8);
+  P4EST_ASSERT (0 <= q->level && q->level <= P4EST_MAXLEVEL);
+
+  shift[0] = (inside ? 0 : -P4EST_QUADRANT_LEN (q->level));
+  shift[1] = (inside ? P4EST_LAST_OFFSET (q->level) : P4EST_ROOT_LEN);
+
+  q->x = shift[corner % 2];
+  q->y = shift[(corner / 2) % 2];
+  q->z = shift[corner / 4];
+
+  P4EST_ASSERT (p8est_quadrant_touches_corner (q, corner));
+  P4EST_ASSERT (!inside || p4est_quadrant_is_inside_root (q));
+}
+
+void
+p8est_quadrant_shift_corner (const p8est_quadrant_t * q,
+                             p8est_quadrant_t * r, int corner)
+{
+  int                 outface;
+  int                 step[P4EST_DIM];
+  p4est_qcoord_t      th;
+  p4est_quadrant_t    quad;
+  /* *INDENT-OFF* */
+  const int           contact[8] = {
+    0x15, 0x16, 0x19, 0x1a,
+    0x25, 0x26, 0x29, 0x2a,
+  };
+  /* *INDENT-ON* */
+
+  P4EST_ASSERT (q != r);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (corner >= 0 && corner < 8);
+
+  P4EST_QUADRANT_INIT (&quad);
+
+  quad = *q;
+  for (;;) {
+    th = P4EST_LAST_OFFSET (quad.level);
+    step[0] = 2 * (corner & 0x01) - 1;
+    step[1] = (corner & 0x02) - 1;
+    step[2] = (corner & 0x04) / 2 - 1;
+    p4est_quadrant_sibling (&quad, r, corner);
+    P4EST_ASSERT (-1 == step[0] || step[0] == 1);
+    P4EST_ASSERT (-1 == step[1] || step[1] == 1);
+    P4EST_ASSERT (-1 == step[2] || step[2] == 1);
+
+    outface = 0;
+    outface |= ((r->x <= 0) ? 0x01 : 0);
+    outface |= ((r->x >= th) ? 0x02 : 0);
+    outface |= ((r->y <= 0) ? 0x04 : 0);
+    outface |= ((r->y >= th) ? 0x08 : 0);
+    outface |= ((r->z <= 0) ? 0x10 : 0);
+    outface |= ((r->z >= th) ? 0x20 : 0);
+
+    if (outface == contact[corner]) {
+      break;
+    }
+    p4est_quadrant_parent (&quad, &quad);
+    quad.x += (p4est_qcoord_t) step[0] * P4EST_QUADRANT_LEN (quad.level);
+    quad.y += (p4est_qcoord_t) step[1] * P4EST_QUADRANT_LEN (quad.level);
+    quad.z += (p4est_qcoord_t) step[2] * P4EST_QUADRANT_LEN (quad.level);
+    P4EST_ASSERT (p4est_quadrant_is_extended (&quad));
+  }
+
+  if (r->x < 0)
+    r->x = 0;
+  if (r->x >= P4EST_ROOT_LEN)
+    r->x = th;
+  if (r->y < 0)
+    r->y = 0;
+  if (r->y >= P4EST_ROOT_LEN)
+    r->y = th;
+  if (r->z < 0)
+    r->z = 0;
+  if (r->z >= P4EST_ROOT_LEN)
+    r->z = th;
+  P4EST_ASSERT (p8est_quadrant_touches_corner (r, corner));
+  P4EST_ASSERT (p4est_quadrant_is_inside_root (r));
 }
 
 /* EOF p8est_bits.h */
