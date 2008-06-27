@@ -70,6 +70,27 @@ init_fn (p8est_t * p8est, p4est_topidx_t which_tree,
 }
 
 static int
+refine_sparse_fn (p8est_t * p8est, p4est_topidx_t which_tree,
+                  p8est_quadrant_t * quadrant)
+{
+  if (which_tree != 0) {
+    return 0;
+  }
+  if ((int) quadrant->level >= refine_level) {
+    return 0;
+  }
+  if (quadrant->level == 0) {
+    return 1;
+  }
+  if (quadrant->x < P8EST_QUADRANT_LEN (2) &&
+      quadrant->y > 0 && quadrant->z < P8EST_QUADRANT_LEN (2)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static int
 refine_normal_fn (p8est_t * p8est, p4est_topidx_t which_tree,
                   p8est_quadrant_t * quadrant)
 {
@@ -124,6 +145,7 @@ main (int argc, char **argv)
 
   sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+  p8est_initial_quadrants_per_processor = 1;
 
   /* process command line arguments */
   usage =
@@ -178,6 +200,7 @@ main (int argc, char **argv)
   }
   else if (config == P8EST_CONFIG_TWOCUBES) {
     connectivity = p8est_connectivity_new_twocubes ();
+    refine_fn = refine_sparse_fn;
   }
   else if (config == P8EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();

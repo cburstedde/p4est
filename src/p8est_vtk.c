@@ -139,14 +139,14 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
               /* *INDENT-OFF* */
               float_data[P4EST_DIM * (P4EST_CHILDREN * quad_count + k) + j] =
                 (P4EST_VTK_FLOAT_TYPE)
-                (eta_x * (eta_y * (eta_z * v[3 * vt[0] + j] +
-                                   (1. - eta_z) * v[3 * vt[4] + j]) +
-                          (1. - eta_y) * (eta_z * v[3 * vt[2] + j] +
-                                          (1. - eta_z) * v[3 * vt[6] + j])) +
-                 (1. - eta_x) * (eta_y * (eta_z * v[3 * vt[1] + j] +
-                                          (1. - eta_z) * v[3 * vt[5] + j]) +
-                                 (1. - eta_y) * (eta_z * v[3 * vt[3] + j] +
-                                                 (1. - eta_z) * v[3 * vt[7] + j])));
+                ((1. - eta_x) * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[0] + j] +
+                                                 eta_z * v[3 * vt[4] + j]) +
+                                 eta_y * ((1. - eta_z) * v[3 * vt[2] + j] +
+                                          eta_z * v[3 * vt[6] + j])) +
+                 eta_x * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[1] + j] +
+                                          eta_z * v[3 * vt[5] + j]) +
+                          eta_y * ((1. - eta_z) * v[3 * vt[3] + j] +
+                                   eta_z * v[3 * vt[7] + j])));
               /* *INDENT-ON* */
             }
             ++k;
