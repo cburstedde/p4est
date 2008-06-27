@@ -319,6 +319,12 @@ main (int argc, char **argv)
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, "mesh_simple2_partition");
 
+#ifdef P4EST_DEBUG
+  /* rebalance should not change checksum */
+  p4est_balance (p4est, init_fn);
+  P4EST_ASSERT (p4est_checksum (p4est) == crc);
+#endif
+
   /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
   if (mpi->mpirank == 0) {

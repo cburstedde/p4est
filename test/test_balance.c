@@ -22,9 +22,33 @@
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 
+static const int    refine_level = 5;
+
+static int
+refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * quadrant)
+{
+  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
+    return 0;
+  }
+  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+    return 1;
+  }
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+  if (quadrant->y >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
+  unsigned            crc;
   size_t              k;
   int8_t              l;
   p4est_t            *p4est;
@@ -68,10 +92,14 @@ main (int argc, char **argv)
   }
   sc_array_reset (&tree->quadrants);
 
-  /* balance the forest */
+  /* refine and balance the forest */
+  p4est_refine (p4est, refine_fn, NULL);
   p4est_balance (p4est, NULL);
-  tree = sc_array_index (p4est->trees, 0);
-  p4est_tree_print (SC_LP_INFO, tree);
+
+  /* checksum and rebalance */
+  crc = p4est_checksum (p4est);
+  p4est_balance (p4est, NULL);
+  P4EST_ASSERT (p4est_checksum (p4est) == crc);
 
   /* clean up memory */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==

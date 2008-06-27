@@ -238,6 +238,12 @@ main (int argc, char **argv)
   p8est_vtk_write_file (p8est, "mesh_simple3_partition");
 #endif
 
+#ifdef P4EST_DEBUG
+  /* rebalance should not change checksum */
+  p8est_balance (p8est, init_fn);
+  P4EST_ASSERT (p8est_checksum (p8est) == crc);
+#endif
+
   /* print forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
 
