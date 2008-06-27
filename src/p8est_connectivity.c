@@ -22,7 +22,7 @@
 #include <p8est_connectivity.h>
 
 /* *INDENT-OFF* */
-const int           p8est_face_vertices[6][4] =
+const int           p8est_face_corners[6][4] =
 {{ 0, 2, 4, 6 },
  { 1, 3, 5, 7 },
  { 0, 1, 4, 5 },
@@ -61,7 +61,21 @@ const int           p8est_face_permutation_refs[6][6] =
  { 0, 2, 2, 0, 0, 1 },
  { 2, 0, 0, 2, 2, 0 }};
 
-const int           p8est_edge_vertices[12][2] =
+const int           p8est_edge_faces[12][2] =
+{{ 2, 4 },
+ { 3, 4 },
+ { 2, 5 },
+ { 3, 5 },
+ { 0, 4 },
+ { 1, 4 },
+ { 0, 5 },
+ { 1, 5 },
+ { 0, 2 },
+ { 1, 2 },
+ { 0, 3 },
+ { 1, 3 }};
+
+const int           p8est_edge_corners[12][2] =
 {{ 0, 1 },
  { 2, 3 },
  { 4, 5 },
@@ -74,6 +88,26 @@ const int           p8est_edge_vertices[12][2] =
  { 1, 5 },
  { 2, 6 },
  { 3, 7 }};
+
+const int           p8est_corner_faces[8][3] =
+{{ 0, 2, 4 },
+ { 1, 2, 4 },
+ { 0, 3, 4 },
+ { 1, 3, 4 },
+ { 0, 2, 5 },
+ { 1, 2, 5 },
+ { 0, 3, 5 },
+ { 1, 3, 5 }};
+
+const int           p8est_corner_edges[8][3] =
+{{ 0, 4,  8 },
+ { 0, 5,  9 },
+ { 1, 4, 10 },
+ { 1, 5, 11 },
+ { 2, 6,  8 },
+ { 2, 7,  9 },
+ { 3, 6, 10 },
+ { 3, 7, 11 }};
 /* *INDENT-ON* */
 
 /*
@@ -225,7 +259,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
   int                 edge, nedge, corner, ncorner;
   int                 flip, nflip, nflip1, nflip2;
   int                 ecode, ecount;
-  p4est_topidx_t      v0, v1, nv0, nv1, ntree1, ntree2;
+  bool                cfound[4];
+  p4est_topidx_t      v0, v1, nv0, nv1, ntree1, ntree2, ntree3;
   p4est_topidx_t      vertex, nvertex, tree, ntree;
   p4est_topidx_t      aedge, edge_begin, edge_end;
   p4est_topidx_t      acorner, corner_begin, corner_end;
@@ -320,14 +355,14 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
 
         /* check vertex consistency across faces */
         for (fvert = 0; fvert < 4; ++fvert) {
-          vertex = ttv[tree * 8 + p8est_face_vertices[face][fvert]];
+          vertex = ttv[tree * 8 + p8est_face_corners[face][fvert]];
           if (vertex < 0 || vertex >= num_vertices) {
             P4EST_NOTICEF ("Invalid vertex in %lld %d %d\n",
                            (long long) tree, face, fvert);
             return false;
           }
           for (nvert = fvert + 1; nvert < 4; ++nvert) {
-            nvertex = ttv[tree * 8 + p8est_face_vertices[face][nvert]];
+            nvertex = ttv[tree * 8 + p8est_face_corners[face][nvert]];
             if (vertex == nvertex) {
               P4EST_NOTICEF ("Duplicate vertex in %lld %d %d %d",
                              (long long) tree, face, fvert, nvert);
@@ -337,7 +372,7 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
           face_ref = p8est_face_permutation_refs[face][nface];
           face_perm = p8est_face_permutation_sets[face_ref][orientation];
           nvert = p8est_face_permutations[face_perm][fvert];
-          nvertex = ttv[ntree * 8 + p8est_face_vertices[nface][nvert]];
+          nvertex = ttv[ntree * 8 + p8est_face_corners[nface][nvert]];
           if (ntree != tree && nvertex != vertex) {
             P4EST_NOTICEF ("Vertex reciprocity in %lld %d %d\n",
                            (long long) tree, face, fvert);
@@ -360,10 +395,10 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         }
         ecode = ecount = 0;
         flip = nflip1 = nflip2 = -1;
-        v0 = ttv[8 * tree + p8est_edge_vertices[edge][0]];
-        v1 = ttv[8 * tree + p8est_edge_vertices[edge][1]];
-        ntree1 = ttt[6 * tree + ((edge < 4) ? 2 : 0) + edge % 2];
-        ntree2 = ttt[6 * tree + ((edge < 8) ? 4 : 2) + (edge / 2) % 2];
+        v0 = ttv[8 * tree + p8est_edge_corners[edge][0]];
+        v1 = ttv[8 * tree + p8est_edge_corners[edge][1]];
+        ntree1 = ttt[6 * tree + p8est_edge_faces[edge][0]];
+        ntree2 = ttt[6 * tree + p8est_edge_faces[edge][1]];
         edge_begin = eoff[aedge];
         edge_end = eoff[aedge + 1];
         if (edge_begin < 0 || edge_begin >= num_ett ||
@@ -390,8 +425,8 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
             continue;
           }
           if (ntree == ntree1 || ntree == ntree2) {
-            nv0 = ttv[8 * ntree + p8est_edge_vertices[nedge][0]];
-            nv1 = ttv[8 * ntree + p8est_edge_vertices[nedge][1]];
+            nv0 = ttv[8 * ntree + p8est_edge_corners[nedge][0]];
+            nv1 = ttv[8 * ntree + p8est_edge_corners[nedge][1]];
             if (nv0 == v0 && nv1 == v1) {
               if (ntree == ntree1) {
                 if (nflip1 != -1) {
@@ -461,8 +496,14 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         if (acorner == -1) {
           continue;
         }
-        corner_begin = eoff[acorner];
-        corner_end = eoff[acorner + 1];
+        ecode = ecount = 0;
+        cfound[0] = cfound[1] = cfound[2] = cfound[3] = false;
+        v0 = ttv[8 * tree + corner];
+        ntree1 = ttt[6 * tree + p8est_corner_faces[corner][0]];
+        ntree2 = ttt[6 * tree + p8est_corner_faces[corner][1]];
+        ntree3 = ttt[6 * tree + p8est_corner_faces[corner][2]];
+        corner_begin = coff[acorner];
+        corner_end = coff[acorner + 1];
         if (corner_begin < 0 || corner_begin >= num_ctt ||
             corner_end < 0 || corner_end > num_ctt) {
           P4EST_NOTICEF ("Invalid corner range %lld %d\n",
@@ -475,7 +516,63 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
           if (ttc[ntree * 8 + ncorner] != acorner) {
             P4EST_NOTICEF ("Corner to corner reciprocity in %lld %d %lld\n",
                            (long long) tree, corner, (long long) nctt);
+            return false;
           }
+          if (ntree == tree && ncorner == corner) {
+            if (cfound[0]) {
+              ecode = 1;
+              break;
+            }
+            cfound[0] = true;
+            continue;
+          }
+          if (ntree == ntree1 || ntree == ntree2 || ntree == ntree3) {
+            nv0 = ttv[8 * ntree + ncorner];
+            if (nv0 == v0) {
+              if (ntree == ntree1) {
+                if (cfound[1]) {
+                  ecode = 2;
+                  break;
+                }
+                cfound[1] = true;
+              }
+              else if (ntree == ntree2) {
+                if (cfound[2]) {
+                  ecode = 3;
+                  break;
+                }
+                cfound[2] = true;
+              }
+              else if (ntree == ntree3) {
+                if (cfound[3]) {
+                  ecode = 4;
+                  break;
+                }
+                cfound[3] = true;
+              }
+              continue;
+            }
+          }
+          ++ecount;
+        }
+        if (ecode > 0) {
+          P4EST_NOTICEF ("Shared corner %lld %d %lld inconsistency %d\n",
+                         (long long) tree, corner, (long long) nctt, ecode);
+          return false;
+        }
+        if ((int) (corner_end - corner_begin) != ecount + 1 +
+            (ntree1 != tree) + (ntree2 != tree) + (ntree3 != tree)) {
+          P4EST_NOTICEF ("Shared corner %lld %d inconsistent count A\n",
+                         (long long) tree, corner);
+          return false;
+        }
+        if (!cfound[0] ||
+            (tree != ntree1 && !cfound[1]) ||
+            (tree != ntree2 && !cfound[2]) ||
+            (tree != ntree3 && !cfound[3])) {
+          P4EST_NOTICEF ("Shared corner %lld %d inconsistent count B\n",
+                         (long long) tree, corner);
+          return false;
         }
       }
     }
@@ -626,7 +723,7 @@ p8est_connectivity_new_rotcubes (void)
   const p4est_topidx_t num_vertices = 26;
   const p4est_topidx_t num_trees = 6;
   const p4est_topidx_t num_edges = 3;
-  const p4est_topidx_t num_corners = 0;
+  const p4est_topidx_t num_corners = 1;
   const double        vertices[3 * 26] = {
     0, 0, 0,
     1, 0, 2,
@@ -695,14 +792,16 @@ p8est_connectivity_new_rotcubes (void)
     7, 7, 23, 12, 18, 7, 9, 15, 9, 11, 2
   };
   const p4est_topidx_t tree_to_corner[6 * 8] = {
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 0, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 0,
+    -1, -1, -1, -1, -1, 0, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 0,
+    -1, 0, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 0, -1,
   };
-  const p4est_topidx_t ctt_offset = 0;
+  const p4est_topidx_t ctt_offset[1 + 1] = { 0, 6 };
+  const p4est_topidx_t corner_to_tree[6] = { 0, 1, 2, 3, 4, 5 };
+  const int8_t        corner_to_corner[6] = { 5, 7, 5, 7, 1, 6 };
 
   return p8est_connectivity_new_copy (num_vertices, num_trees,
                                       num_edges, num_corners,
@@ -710,8 +809,8 @@ p8est_connectivity_new_rotcubes (void)
                                       tree_to_tree, tree_to_face,
                                       tree_to_edge, ett_offset,
                                       edge_to_tree, edge_to_edge,
-                                      tree_to_corner, &ctt_offset,
-                                      NULL, NULL);
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
 }
 
 p4est_topidx_t
@@ -752,11 +851,11 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
   face_ref = p8est_face_permutation_refs[my_face][target_face];
   face_perm = p8est_face_permutation_sets[face_ref][orientation];
   low[0] = low[1] =
-    p8est_face_vertices[target_face][p8est_face_permutations[face_perm][0]];
+    p8est_face_corners[target_face][p8est_face_permutations[face_perm][0]];
   high[0] =
-    p8est_face_vertices[target_face][p8est_face_permutations[face_perm][1]];
+    p8est_face_corners[target_face][p8est_face_permutations[face_perm][1]];
   high[1] =
-    p8est_face_vertices[target_face][p8est_face_permutations[face_perm][2]];
+    p8est_face_corners[target_face][p8est_face_permutations[face_perm][2]];
   if (low[0] > high[0]) {
     swap = low[0];
     low[0] = high[0];
@@ -772,8 +871,8 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
 
   /* find matching target edges */
   for (i = 0; i < 12; ++i) {
-    if (low[0] == p8est_edge_vertices[i][0] &&
-        high[0] == p8est_edge_vertices[i][1]) {
+    if (low[0] == p8est_edge_corners[i][0] &&
+        high[0] == p8est_edge_corners[i][1]) {
       P4EST_ASSERT (target_axis[0] == -1);
       target_axis[0] = i / 4;
 #ifndef P4EST_DEBUG
@@ -781,8 +880,8 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
         break;
 #endif
     }
-    else if (low[1] == p8est_edge_vertices[i][0] &&
-             high[1] == p8est_edge_vertices[i][1]) {
+    else if (low[1] == p8est_edge_corners[i][0] &&
+             high[1] == p8est_edge_corners[i][1]) {
       P4EST_ASSERT (target_axis[1] == -1);
       target_axis[1] = i / 4;
 #ifndef P4EST_DEBUG
@@ -839,11 +938,10 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
     return;
   }
 
-  v0 = conn->tree_to_vertex[8 * itree + p8est_edge_vertices[iedge][0]];
-  v1 = conn->tree_to_vertex[8 * itree + p8est_edge_vertices[iedge][1]];
-  ntree1 = conn->tree_to_tree[6 * itree + ((iedge < 4) ? 2 : 0) + iedge % 2];
-  ntree2 =
-    conn->tree_to_tree[6 * itree + ((iedge < 8) ? 4 : 2) + (iedge / 2) % 2];
+  v0 = conn->tree_to_vertex[8 * itree + p8est_edge_corners[iedge][0]];
+  v1 = conn->tree_to_vertex[8 * itree + p8est_edge_corners[iedge][1]];
+  ntree1 = conn->tree_to_tree[6 * itree + p8est_edge_faces[iedge][0]];
+  ntree2 = conn->tree_to_tree[6 * itree + p8est_edge_faces[iedge][1]];
   edge_trees =                  /* same type */
     conn->ett_offset[aedge + 1] - conn->ett_offset[aedge];
 
@@ -858,11 +956,10 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
       continue;
     }
     if (ntree == ntree1 || ntree == ntree2) {
-      nv0 = conn->tree_to_vertex[8 * ntree + p8est_edge_vertices[nedge][0]];
-      nv1 = conn->tree_to_vertex[8 * ntree + p8est_edge_vertices[nedge][1]];
-      if ((nv0 == v0 && nv1 == v1) || (nv0 == v1 && nv1 == v0)) {
+      nv0 = conn->tree_to_vertex[8 * ntree + p8est_edge_corners[nedge][0]];
+      nv1 = conn->tree_to_vertex[8 * ntree + p8est_edge_corners[nedge][1]];
+      if ((nv0 == v0 && nv1 == v1) || (nv0 == v1 && nv1 == v0))
         continue;
-      }
     }
 
     /* else we have a true diagonal edge with ntree */
@@ -878,6 +975,119 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
   P4EST_ASSERT (edge_trees == (p4est_topidx_t) ta->elem_count
                 + 1 + (ntree1 != itree) + (ntree2 != itree));
   P4EST_ASSERT (ei->iflip >= 0);
+}
+
+void
+p8est_find_corner_transform (p8est_connectivity_t * conn,
+                             p4est_topidx_t itree, int icorner,
+                             p8est_corner_info_t * ci)
+{
+  int                 i, edge_ignored;
+  int                 ncorner, ecorner, ewhich;
+  int                 iedge[3], iwhich[3];
+  bool                edge_found;
+  size_t              jz;
+  p4est_topidx_t      aedge[3];
+  p4est_topidx_t      corner_trees, ctree;
+  p4est_topidx_t      acorner, ntree, ntree1, ntree2, ntree3;
+  p4est_topidx_t      ivertex, nvertex;
+  p8est_edge_info_t   ei[3];
+  sc_array_t         *eta[3];
+  p8est_edge_transform_t *et;
+  sc_array_t         *cta = &ci->corner_transforms;
+  p8est_corner_transform_t *ct;
+
+  P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
+  P4EST_ASSERT (0 <= icorner && icorner < 8);
+  P4EST_ASSERT (cta->elem_size == sizeof (p8est_corner_transform_t));
+
+  ci->icorner = (int8_t) icorner;
+  sc_array_resize (cta, 0);
+  if (conn->num_corners == 0) {
+    return;
+  }
+  acorner = conn->tree_to_corner[8 * itree + icorner];
+  if (acorner == -1) {
+    return;
+  }
+
+  /* find vertex and the three face neighbors */
+  ivertex = conn->tree_to_vertex[8 * itree + icorner];
+  ntree1 = conn->tree_to_tree[6 * itree + p8est_corner_faces[icorner][0]];
+  ntree2 = conn->tree_to_tree[6 * itree + p8est_corner_faces[icorner][1]];
+  ntree3 = conn->tree_to_tree[6 * itree + p8est_corner_faces[icorner][2]];
+  corner_trees =                /* same type */
+    conn->ctt_offset[acorner + 1] - conn->ctt_offset[acorner];
+
+  /* find the edge transforms that we do not need to handle */
+  for (i = 0; i < 3; ++i) {
+    iedge[i] = p8est_corner_edges[icorner][i];
+    aedge[i] = conn->tree_to_edge[12 * itree + iedge[i]];
+    if (aedge[i] == -1) {
+      eta[i] = NULL;
+      continue;
+    }
+    iwhich[i] = (p8est_edge_corners[iedge[i]][1] == icorner);
+    P4EST_ASSERT (p8est_edge_corners[iedge[i]][iwhich[i]] == icorner);
+
+    eta[i] = &ei[i].edge_transforms;
+    sc_array_init (eta[i], sizeof (p8est_edge_transform_t));
+    p8est_find_edge_transform (conn, itree, iedge[i], &ei[i]);
+  }
+
+  /* collect the remaining relevant corners */
+  edge_ignored = 0;
+  for (ctree = 0; ctree < corner_trees; ++ctree) {
+    ntree = conn->corner_to_tree[conn->ctt_offset[acorner] + ctree];
+    ncorner = (int) conn->corner_to_corner[conn->ctt_offset[acorner] + ctree];
+    if (ncorner == icorner && ntree == itree) {
+      continue;
+    }
+    if (ntree == ntree1 || ntree == ntree2 || ntree == ntree3) {
+      nvertex = conn->tree_to_vertex[8 * ntree + ncorner];
+      if (nvertex == ivertex)
+        continue;
+    }
+
+    /* rule out edge neighbors */
+    edge_found = false;
+    for (i = 0; i < 3 && !edge_found; ++i) {
+      if (aedge[i] == -1) {
+        continue;
+      }
+      for (jz = 0; jz < eta[i]->elem_count; ++jz) {
+        et = sc_array_index (eta[i], jz);
+        if (ntree == et->ntree) {
+          ewhich = (ei[i].iflip == et->nflip) ? iwhich[i] : (1 - iwhich[i]);
+          ecorner = p8est_edge_corners[et->nedge][ewhich];
+          nvertex = conn->tree_to_vertex[8 * ntree + ecorner];
+          if (ivertex == nvertex) {
+            edge_found = true;
+            break;
+          }
+        }
+      }
+    }
+    if (edge_found) {
+      ++edge_ignored;
+      continue;
+    }
+
+    /* else we have a true all-diagonal corner with ntree */
+    ct = sc_array_push (cta);
+    ct->ntree = ntree;
+    ct->ncorner = (int8_t) ncorner;
+  }
+  P4EST_ASSERT (corner_trees == (p4est_topidx_t) cta->elem_count +
+                1 + edge_ignored +
+                (ntree1 != itree) + (ntree2 != itree) + (ntree3 != itree));
+
+  for (i = 0; i < 3; ++i) {
+    if (aedge[i] == -1) {
+      continue;
+    }
+    sc_array_reset (eta[i]);
+  }
 }
 
 /* EOF p8est_connectivity.h */

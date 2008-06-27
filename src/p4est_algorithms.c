@@ -63,17 +63,6 @@ static const int    corners_omitted[4] =
 static const int    p8est_balance_count[P4EST_DIM + 1] =
 { 9, 12, 15, 16 };
 
-/** Store face and edge balance indices into coordinate table. */
-static const int    p8est_balance_index[P4EST_CHILDREN][6] =
-{{ 0, 2, 4, 6, 10, 14 },
- { 1, 2, 4, 6, 11, 15 },
- { 0, 3, 4, 7, 10, 16 },
- { 1, 3, 4, 7, 11, 17 },
- { 0, 2, 5, 8, 12, 14 },
- { 1, 2, 5, 8, 13, 15 },
- { 0, 3, 5, 9, 12, 16 },
- { 1, 3, 5, 9, 13, 17 }};
-
 /** Store coordinates of quadrants to add for balancing. */
 static const p4est_qcoord_t p8est_balance_coord[26][P4EST_DIM] =
 { /* faces */
@@ -1526,7 +1515,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
           P4EST_ASSERT (sid >= p8est_balance_count[0]);
           if (sid < p8est_balance_count[1]) {
             /* face balance */
-            sindex = p8est_balance_index[pid][sid - p8est_balance_count[0]];
+            sindex = p8est_corner_faces[pid][sid - p8est_balance_count[0]];
             P4EST_ASSERT (0 <= sindex && sindex < 6);
             qalloc->x = pshift.x + p8est_balance_coord[sindex][0] * ph;
             qalloc->y = pshift.y + p8est_balance_coord[sindex][1] * ph;
@@ -1534,11 +1523,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
           }
           else if (sid < p8est_balance_count[2]) {
             /* edge balance */
-            sindex = p8est_balance_index[pid][sid - p8est_balance_count[0]];
-            P4EST_ASSERT (6 <= sindex && sindex < 18);
-            qalloc->x = pshift.x + p8est_balance_coord[sindex][0] * ph;
-            qalloc->y = pshift.y + p8est_balance_coord[sindex][1] * ph;
-            qalloc->z = pshift.z + p8est_balance_coord[sindex][2] * ph;
+            sindex = p8est_corner_edges[pid][sid - p8est_balance_count[1]];
+            P4EST_ASSERT (0 <= sindex && sindex < 12);
+            qalloc->x = pshift.x + p8est_balance_coord[6 + sindex][0] * ph;
+            qalloc->y = pshift.y + p8est_balance_coord[6 + sindex][1] * ph;
+            qalloc->z = pshift.z + p8est_balance_coord[6 + sindex][2] * ph;
           }
           else {
             P4EST_ASSERT (sid == p8est_balance_count[3] - 1);

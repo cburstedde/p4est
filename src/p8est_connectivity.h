@@ -28,10 +28,10 @@
  * Identification of separate faces and corners is possible.
  *
  * The arrays tree_to_* are stored in z ordering.
- * For vertices the order is 000 001 010 011 100 101 110 111.
+ * For corners the order is 000 001 010 011 100 101 110 111.
  * For faces the order is -x +x -y +y -z +z.
  * They are allocated [0][0]..[0][N-1]..[num_trees-1][0]..[num_trees-1][N-1].
- * where N is 6 for tree and face, 8 for vertex, 12 for edge.
+ * where N is 6 for tree and face, 8 for corner, 12 for edge.
  *
  * The values for tree_to_face are in 0..23
  * where ttf % 6 gives the face number and ttf / 6 the orientation code.
@@ -49,10 +49,10 @@
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
  * one orientation and the higher 12 the opposite orientation.
  *
- * The arrays vertex_to_* store a variable number of entries per vertex.
- * For vertex v these are at position [vtt_offset[v]]..[vtt_offset[v+1]-1].
- * Their number for vertex v is vtt_offset[v+1] - vtt_offset[v].
- * The size of the vertex_to_* arrays is num_vtt = vtt_offset[num_vertices].
+ * The arrays corner_to_* store a variable number of entries per corner.
+ * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
+ * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
+ * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  */
 typedef struct p8est_connectivity
 {
@@ -93,17 +93,22 @@ typedef struct
 }
 p8est_edge_info_t;
 
-#if 0
 typedef struct
 {
   p4est_topidx_t      ntree;
   int8_t              ncorner;
 }
+p8est_corner_transform_t;
+
+typedef struct
+{
+  p4est_topidx_t      icorner;
+  sc_array_t          corner_transforms;
+}
 p8est_corner_info_t;
-#endif
 
 /** Store the vertex numbers 0..7 for each tree face. */
-extern const int    p8est_face_vertices[6][4];
+extern const int    p8est_face_corners[6][4];
 
 /** Store the face numbers 0..12 for each tree face. */
 extern const int    p8est_face_edges[6][4];
@@ -119,8 +124,17 @@ extern const int    p8est_face_permutation_sets[3][4];
  */
 extern const int    p8est_face_permutation_refs[6][6];
 
+/** Store the face numbers 0..5 for each tree edge. */
+extern const int    p8est_edge_faces[12][2];
+
 /** Store the vertex numbers 0..8 for each tree edge. */
-extern const int    p8est_edge_vertices[12][2];
+extern const int    p8est_edge_corners[12][2];
+
+/** Store the face numbers 0..5 for each tree corner. */
+extern const int    p8est_corner_faces[8][3];
+
+/** Store the edge numbers 0..11 for each tree corner. */
+extern const int    p8est_corner_edges[8][3];
 
 /** Allocate a connectivity structure
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
@@ -203,5 +217,16 @@ void                p8est_find_edge_transform (p8est_connectivity_t *
                                                p4est_topidx_t itree,
                                                int iedge,
                                                p8est_edge_info_t * ei);
+
+/** Fills an array with information about corner neighbors.
+ * \param [in] itree    The number of the originating tree.
+ * \param [in] icorner  The number of the originating corner.
+ * \param [in,out] ci   A p8est_corner_info_t structure with initialized array.
+ */
+void                p8est_find_corner_transform (p8est_connectivity_t *
+                                                 connectivity,
+                                                 p4est_topidx_t itree,
+                                                 int iedge,
+                                                 p8est_corner_info_t * ci);
 
 #endif /* !P8EST_CONNECTIVITY_H */
