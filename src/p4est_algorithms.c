@@ -88,7 +88,7 @@ static const p4est_qcoord_t p8est_balance_coord[26][P4EST_DIM] =
   {  1,  2, -1 },
   {  0, -1,  2 },
   {  0,  2,  2 },
-  { -1,  1,  1 },
+  { -1,  1, -1 },
   {  2,  1, -1 },
   { -1,  0,  2 },
   {  2,  0,  2 },
@@ -1533,12 +1533,12 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
             qalloc->z = pshift.z + p8est_balance_coord[sindex][2] * ph;
           }
           else if (sid < p8est_balance_count[2]) {
+            /* edge balance */
             sindex = p8est_balance_index[pid][sid - p8est_balance_count[0]];
             P4EST_ASSERT (6 <= sindex && sindex < 18);
             qalloc->x = pshift.x + p8est_balance_coord[sindex][0] * ph;
             qalloc->y = pshift.y + p8est_balance_coord[sindex][1] * ph;
             qalloc->z = pshift.z + p8est_balance_coord[sindex][2] * ph;
-            /* edge balance */
           }
           else {
             P4EST_ASSERT (sid == p8est_balance_count[3] - 1);
@@ -1592,8 +1592,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
         inserted = sc_hash_insert_unique (hash[qalloc->level], qalloc, NULL);
         P4EST_ASSERT (inserted);
         olist = &outlist[qalloc->level];
-        sc_array_resize (olist, olist->elem_count + 1);
-        qpointer = sc_array_index (olist, olist->elem_count - 1);
+        qpointer = sc_array_push (olist);
         *qpointer = qalloc;
         /* we need a new quadrant now, the old one is stored away */
         qalloc = sc_mempool_alloc (qpool);

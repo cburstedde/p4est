@@ -1770,22 +1770,24 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       P4EST_ASSERT (p4est_quadrant_is_extended (s));
       qtree = s->p.piggy.which_tree;
       if (qtree < first_tree || qtree > last_tree) {
-        /* this is a corner quadrant from the second pass of balance */
+        /* this is a corner/edge quadrant from the second pass of balance */
         P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);
         P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
 #ifndef P4_TO_P8
         P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
                       (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
 #else
-        /* TODO: check this situation later */
-        SC_CHECK_NOT_REACHED ();
+        face_axis[0] = (s->x < 0 || s->x >= rh);
+        face_axis[1] = (s->y < 0 || s->y >= rh);
+        face_axis[2] = (s->z < 0 || s->z >= rh);
+        P4EST_ASSERT ((face_axis[0] && face_axis[1]) ||
+                      (face_axis[0] && face_axis[2]) ||
+                      (face_axis[1] && face_axis[2]));
 #endif
         continue;
       }
       tree = sc_array_index (p4est->trees, qtree);
-      treecount = tree->quadrants.elem_count;
-      sc_array_resize (&tree->quadrants, treecount + 1);
-      q = sc_array_index (&tree->quadrants, treecount);
+      q = sc_array_push (&tree->quadrants);
       *q = *s;
       ++tree->quadrants_per_level[q->level];
       tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
