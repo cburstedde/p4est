@@ -2250,17 +2250,20 @@ p4est_checksum (p4est_t * p4est)
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
 
 #ifdef P4EST_MPI
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  else {
-    gather = NULL;
-  }
   send[0] = (uint64_t) crc;
   send[1] = (uint64_t) ssum;
-  mpiret = MPI_Gather (send, 2, MPI_UNSIGNED_LONG_LONG,
-                       gather, 2, MPI_UNSIGNED_LONG_LONG, 0, p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
+  gather = NULL;
+  if (p4est->mpirank == 0) {
+    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
+    if (p4est->mpicomm == MPI_COMM_NULL)
+      memcpy (gather, send, 2 * sizeof (uint64_t));
+  }
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Gather (send, 2, MPI_UNSIGNED_LONG_LONG,
+                         gather, 2, MPI_UNSIGNED_LONG_LONG, 0,
+                         p4est->mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
 
   crc = 0;
   if (p4est->mpirank == 0) {
