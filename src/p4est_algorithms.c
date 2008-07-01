@@ -1345,7 +1345,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   size_t              count_outside_root, count_outside_tree;
   size_t              count_already_inlist, count_already_outlist;
   size_t              num_added, num_nonowned, num_linearized;
-  int                 qid, sid, pid, bbound;
+  int                 qid, sid, pid;
+  int                 bbound, fbound, rbound;
   int                 skey, *key = &skey;
   int                 pkey, *parent_key = &pkey;
   int                 l, inmaxl;
@@ -1391,8 +1392,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* assign some shortcut variables */
 #ifndef P4_TO_P8
-  bbound = ((balance == 0) ? 5 : 8);
+  fbound = 8;
+  bbound = ((balance == 0) ? 5 : fbound);
 #else
+  fbound = p8est_balance_count[P4EST_DIM];
   bbound = p8est_balance_count[balance];
 #endif
   inlist = &tree->quadrants;
@@ -1460,6 +1463,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       }
       P4EST_ASSERT (p4est_quadrant_is_extended (q));
       isoutroot = !p4est_quadrant_is_inside_root (q);
+      rbound = (isoutroot ? fbound : bbound);
 
       /*
        * check for q and its siblings,
@@ -1480,7 +1484,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
        * if q is outside the tree, include only its parent and the neighbors.
        */
       qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 */
-      for (sid = 0; sid < bbound; ++sid) {
+      for (sid = 0; sid < rbound; ++sid) {
         /* stage 1: determine candidate qalloc */
         if (sid < P4EST_CHILDREN) {
           if (qid == sid || isfamily) {
@@ -1555,6 +1559,16 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
           }
           else {
             if (!p4est_quadrant_is_inside_3x3 (qalloc)) {
+              ++count_outside_root;
+              continue;
+            }
+            if (!p4est_quadrant_is_inside_root (qalloc) &&
+                (q->x / P4EST_ROOT_LEN != qalloc->x / P4EST_ROOT_LEN ||
+                 q->y / P4EST_ROOT_LEN != qalloc->y / P4EST_ROOT_LEN ||
+#ifdef P4_TO_P8
+                 q->z / P4EST_ROOT_LEN != qalloc->z / P4EST_ROOT_LEN ||
+#endif
+                 false)) {
               ++count_outside_root;
               continue;
             }
