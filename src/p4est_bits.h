@@ -252,26 +252,12 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/** Compute the level of balance needed at a specified corner.
- * \param [in]  zcorner  Corner index in z-ordering.
- * \return  Returns the maximum of level and this quadrants' corner level.
- */
-int                 p4est_quadrant_corner_level (const p4est_quadrant_t * q,
-                                                 int zcorner, int level);
-
-/** Move a quadrant inside or diagonally outside a corner position.
- * \param [in,out] q        This quadrant only requires a valid level.
- * \param [in]     zcorner  Number of the corner in z-order, in 0..3.
- * \param [int]    inside   Boolean flag for inside or diagonally outside.
- */
-void                p4est_quadrant_corner (p4est_quadrant_t * q,
-                                           int zcorner, bool inside);
-
 /** Shift a quadrant by the size of a tree depending on the face.
  * \param [in,out] q     The quadrant to be modified.
  * \param [in]     face  Number of the face to move across, in 0..3.
  */
-void                p4est_quadrant_translate (p4est_quadrant_t * q, int face);
+void                p4est_quadrant_translate_face (p4est_quadrant_t * q,
+                                                   int face);
 
 /** Transforms a quadrant between trees.
  * \param [in]     q  Input quadrant.
@@ -279,9 +265,33 @@ void                p4est_quadrant_translate (p4est_quadrant_t * q, int face);
  * \param [in] transform_type   Transformation as in p4est_connectivity.h.
  * \note \a q and \q r may NOT point to the same quadrant structure.
  */
-void                p4est_quadrant_transform (const p4est_quadrant_t * q,
-                                              p4est_quadrant_t * r,
-                                              int transform_type);
+void                p4est_quadrant_transform_face (const p4est_quadrant_t * q,
+                                                   p4est_quadrant_t * r,
+                                                   int transform_type);
+
+/** Checks if a quadrant touches a corner (diagonally inside or outside).
+ * \param [in]     corner     Corner index in z-order.
+ */
+bool                p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
+                                                   int corner);
+
+/** Move a quadrant inside or diagonally outside a corner position.
+ * \param [in,out] q        This quadrant only requires a valid level.
+ * \param [in]     icorner  Number of the corner in z-order, in 0..3.
+ * \param [int]    inside   Boolean flag for inside or diagonally outside.
+ */
+void                p4est_quadrant_transform_corner (p4est_quadrant_t * q,
+                                                     int icorner,
+                                                     bool inside);
+
+/** Shifts a quadrant until it touches the specified corner from the inside.
+ * \param [in]     q          Valid input quadrant.
+ * \param [in,out] r          Quadrant whose Morton index will be filled.
+ * \param [in]     corner     Corner index in z-order.
+ */
+void                p4est_quadrant_shift_corner (const p4est_quadrant_t * q,
+                                                 p4est_quadrant_t * r,
+                                                 int corner);
 
 /** Transforms the node of quadrant between trees.
  *

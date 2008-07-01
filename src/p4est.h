@@ -145,8 +145,6 @@ typedef int         (*p4est_weight_t) (p4est_t * p4est,
                                        p4est_topidx_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
-/** map right-hand corner rule to corner in z-ordering */
-extern const int    p4est_corner_to_zorder[5];
 extern p4est_locidx_t p4est_initial_quadrants_per_processor;
 extern void        *P4EST_DATA_UNINITIALIZED;
 

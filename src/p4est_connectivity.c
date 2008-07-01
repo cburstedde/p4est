@@ -22,13 +22,13 @@
 #include <p4est_connectivity.h>
 
 /* *INDENT-OFF* */
+const int p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 
 const int p4est_transform_table[4][4][2] =
 {{{2, 4}, {3, 5}, {0, 6}, {1, 7}},
  {{1, 5}, {2, 6}, {3, 7}, {0, 4}},
  {{0, 6}, {1, 7}, {2, 4}, {3, 5}},
  {{3, 7}, {0, 4}, {1, 5}, {2, 6}}};
-
 /* *INDENT-ON* */
 
 p4est_connectivity_t *
@@ -579,20 +579,20 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
 }
 
 void
-p4est_find_corner_info (p4est_connectivity_t * conn,
-                        p4est_topidx_t itree, int icorner,
-                        sc_array_t * corner_info)
+p4est_find_corner_transform (p4est_connectivity_t * conn,
+                             p4est_topidx_t itree, int icorner,
+                             sc_array_t * ctransforms)
 {
   int                 ncorner;
   p4est_topidx_t      corner_trees, ctree;
   p4est_topidx_t      ntree, ntree1, ntree2;
   p4est_topidx_t      ivertex, nvertex;
-  p4est_corner_info_t *ci;
+  p4est_corner_transform_t *ct;
 
   P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
   P4EST_ASSERT (0 <= icorner && icorner < 4);
-  P4EST_ASSERT (corner_info->elem_size == sizeof (p4est_corner_info_t));
-  sc_array_resize (corner_info, 0);
+  P4EST_ASSERT (ctransforms->elem_size == sizeof (p4est_corner_transform_t));
+  sc_array_resize (ctransforms, 0);
 
   ivertex = conn->tree_to_vertex[4 * itree + icorner];
   P4EST_ASSERT (0 <= ivertex && ivertex < conn->num_vertices);
@@ -617,11 +617,11 @@ p4est_find_corner_info (p4est_connectivity_t * conn,
       }
     }
     P4EST_ASSERT (ncorner < 4);
-    ci = sc_array_push (corner_info);
-    ci->ntree = ntree;
-    ci->ncorner = (int8_t) ncorner;
+    ct = sc_array_push (ctransforms);
+    ct->ntree = ntree;
+    ct->ncorner = (int8_t) p4est_corner_to_zorder[ncorner];
   }
-  P4EST_ASSERT (corner_trees == (p4est_topidx_t) corner_info->elem_count
+  P4EST_ASSERT (corner_trees == (p4est_topidx_t) ctransforms->elem_count
                 + 1 + (ntree1 != itree) + (ntree2 != itree));
 }
 

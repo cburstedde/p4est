@@ -65,9 +65,12 @@ p4est_connectivity_t;
 typedef struct
 {
   p4est_topidx_t      ntree;
-  int8_t              ncorner;
+  int8_t              ncorner;  /* this corner is in z-order */
 }
-p4est_corner_info_t;
+p4est_corner_transform_t;
+
+/** map right-hand corner rule to corner in z-ordering */
+extern const int    p4est_corner_to_zorder[5];
 
 /** Contains integers 0..7 denoting the type of inter-tree transformation.
  * The first 4 transformations are rotations about 0, -90, 180, 90.
@@ -131,9 +134,10 @@ int                 p4est_find_face_transform (p4est_connectivity_t *
 /** Fills an array with information about corner neighbors.
  * \param [in,out]  corner_info  Array of p4est_corner_info_t members.
  */
-void                p4est_find_corner_info (p4est_connectivity_t *
-                                            connectivity,
-                                            p4est_topidx_t itree, int icorner,
-                                            sc_array_t * corner_info);
+void                p4est_find_corner_transform (p4est_connectivity_t *
+                                                 connectivity,
+                                                 p4est_topidx_t itree,
+                                                 int icorner,
+                                                 sc_array_t * ctransforms);
 
 #endif /* !P4EST_CONNECTIVITY_H */

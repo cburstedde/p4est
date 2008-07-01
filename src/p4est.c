@@ -41,7 +41,6 @@ p4est_balance_peer_t;
 
 #ifndef P4_TO_P8
 
-const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
 static int          p4est_uninitialized_key;
 void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
@@ -903,9 +902,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_connectivity_t *conn = p4est->connectivity;
   sc_array_t         *peers, *qarray, *tquadrants;
 #ifndef P4_TO_P8
-  int                 transform, corner, zcorner;
-  p4est_corner_info_t *ci;
-  sc_array_t          corner_info;
+  int                 transform, corner;
+  p4est_corner_transform_t *ct;
+  sc_array_t          ctransforms, *cta;
 #else
   int                 ftransform[9], edge, corner;
   bool                face_axis[3], contact_face_only, contact_edge_only;
@@ -1004,7 +1003,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     peer->have_second_count = peer->have_second_load = 0;
   }
 #ifndef P4_TO_P8
-  sc_array_init (&corner_info, sizeof (p4est_corner_info_t));
+  cta = &ctransforms;
+  sc_array_init (cta, sizeof (p4est_corner_transform_t));
 #else
   eta = &ei.edge_transforms;
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
@@ -1145,16 +1145,17 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                   break;
                 }
               }
-              p4est_find_corner_info (conn, nt, corner, &corner_info);
-              for (ctree = 0; ctree < corner_info.elem_count; ++ctree) {
-                ci = sc_array_index (&corner_info, ctree);
+              p4est_find_corner_transform (conn, nt, corner, cta);
+              for (ctree = 0; ctree < cta->elem_count; ++ctree) {
+                ct = sc_array_index (cta, ctree);
                 tosend = *q;
-                zcorner = p4est_corner_to_zorder[ci->ncorner];
-                p4est_quadrant_corner (&tosend, zcorner, false);
-                p4est_quadrant_corner (&insulq, zcorner, true);
-                p4est_balance_schedule (p4est, peers, ci->ntree, true,
-                                        &tosend, &insulq,
-                                        &first_peer, &last_peer);
+                p4est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
+                                                 false);
+                p4est_quadrant_transform_corner (&insulq, (int) ct->ncorner,
+                                                 true);
+                p4est_balance_schedule (p4est, peers, ct->ntree, true,
+                                        &tosend, &insulq, &first_peer,
+                                        &last_peer);
                 /* insulq is now invalid don't use it below */
               }
             }
@@ -1173,10 +1174,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               /* transform both q and insulq into the neighbor's coordinates */
               transform = p4est_find_face_transform (conn, nt, face);
               tempq = *q;
-              p4est_quadrant_translate (&tempq, face);
-              p4est_quadrant_transform (&tempq, &tosend, transform);
-              p4est_quadrant_translate (&insulq, face);
-              p4est_quadrant_transform (&insulq, &tempq, transform);
+              p4est_quadrant_translate_face (&tempq, face);
+              p4est_quadrant_transform_face (&tempq, &tosend, transform);
+              p4est_quadrant_translate_face (&insulq, face);
+              p4est_quadrant_transform_face (&insulq, &tempq, transform);
               p4est_balance_schedule (p4est, peers, qtree, true,
                                       &tosend, &tempq,
                                       &first_peer, &last_peer);
@@ -1263,12 +1264,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               for (ctree = 0; ctree < cta->elem_count; ++ctree) {
                 ct = sc_array_index (cta, ctree);
                 tosend = *q;
-                p8est_quadrant_transform_corner (&tosend, ct->ncorner, false);
+                p8est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
+                                                 false);
                 tempq = insulq;
-                p8est_quadrant_transform_corner (&tempq, ct->ncorner, true);
+                p8est_quadrant_transform_corner (&tempq, (int) ct->ncorner,
+                                                 true);
                 p4est_balance_schedule (p4est, peers, ct->ntree, true,
-                                        &tosend, &tempq,
-                                        &first_peer, &last_peer);
+                                        &tosend, &tempq, &first_peer,
+                                        &last_peer);
               }
             }
           }
@@ -1887,12 +1890,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   sc_array_destroy (peers);
 
-#ifndef P4_TO_P8
-  sc_array_reset (&corner_info);
-#else
+#ifdef P4_TO_P8
   sc_array_reset (eta);
-  sc_array_reset (cta);
 #endif
+  sc_array_reset (cta);
 
 #ifdef P4EST_MPI
   P4EST_FREE (peer_boundaries);

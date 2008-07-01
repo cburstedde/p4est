@@ -74,7 +74,8 @@
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
 
-/* functions in p4est_algorithms */
+/* functions in p4est_bits */
+#define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
@@ -102,11 +103,15 @@
 #define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent
 #define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
 #define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
+#define p4est_quadrant_touches_corner   p8est_quadrant_touches_corner
+#define p4est_quadrant_transform_corner p8est_quadrant_transform_corner
+#define p4est_quadrant_shift_corner     p8est_quadrant_shift_corner
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
+
+/* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
-#define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_checksum         p8est_quadrant_checksum
 #define p4est_tree_is_sorted            p8est_tree_is_sorted
 #define p4est_tree_is_linear            p8est_tree_is_linear

@@ -83,6 +83,7 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_MOEBIUS, 5, 6, 0x98ab6cb2U },
  { P4EST_CONFIG_MOEBIUS, 6, 6, 0x6d2d6d6cU },
  { P4EST_CONFIG_STAR, 5, 6, 0x38d3736fU },
+ { P4EST_CONFIG_STAR, 5, 7, 0xfb97aadfU },
  { P4EST_CONFIG_PERIODIC, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_PERIODIC, 3, 6, 0x9dd600c5U },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
