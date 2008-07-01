@@ -138,4 +138,4 @@
 /* functions in p4est_vtk */
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
-#endif /* !__P4EST_TO_P8EST_H */
+#endif /* !P4EST_TO_P8EST_H */

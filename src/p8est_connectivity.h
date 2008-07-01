@@ -183,16 +183,6 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
-#if 0
-/** Fills an array with information about corner neighbors.
- * \param [in,out]  corner_info  Array of p8est_corner_info_t members.
- */
-void                p8est_find_corner_info (p8est_connectivity_t *
-                                            connectivity,
-                                            p4est_topidx_t itree, int icorner,
-                                            sc_array_t * corner_info);
-#endif
-
 /** Fills arrays encoding the axis combinations for a face transform.
  * \param [in]  itree        The number of the originating tree.
  * \param [in]  iface        The number of the originating face.

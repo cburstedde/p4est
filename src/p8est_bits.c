@@ -555,4 +555,4 @@ p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_inside_root (r));
 }
 
-/* EOF p8est_bits.h */
+/* EOF p8est_bits.c */

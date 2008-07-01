@@ -1090,4 +1090,4 @@ p8est_find_corner_transform (p8est_connectivity_t * conn,
   }
 }
 
-/* EOF p8est_connectivity.h */
+/* EOF p8est_connectivity.c */

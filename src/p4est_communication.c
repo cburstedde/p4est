@@ -196,4 +196,4 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
   return guess;
 }
 
-/* EOF p4est_communication.h */
+/* EOF p4est_communication.c */

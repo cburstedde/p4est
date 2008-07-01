@@ -368,7 +368,9 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
 bool
 p4est_is_valid (p4est_t * p4est)
 {
+#ifdef P4EST_DEBUG
   const int           num_procs = p4est->mpisize;
+#endif
   const int           rank = p4est->mpirank;
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;

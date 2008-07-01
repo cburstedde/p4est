@@ -132,7 +132,7 @@ int                 p4est_find_face_transform (p4est_connectivity_t *
                                                int iface);
 
 /** Fills an array with information about corner neighbors.
- * \param [in,out]  corner_info  Array of p4est_corner_info_t members.
+ * \param [in,out]  ctransforms  Array of p4est_corner_transform_t members.
  */
 void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  connectivity,
