@@ -142,6 +142,8 @@ typedef int         (*p4est_weight_t) (p4est_t * p4est,
 /** map right-hand corner rule to corner in z-ordering */
 extern const int    p4est_corner_to_zorder[5];
 extern p4est_locidx_t p4est_initial_quadrants_per_processor;
+extern int          p4est_refine_recursive;
+extern int          p4est_coarsen_recursive;
 
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \

@@ -34,6 +34,8 @@ p4est_balance_peer_t;
 
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
+int                 p4est_refine_recursive = 0;
+int                 p4est_coarsen_recursive = 0;
 
 static const size_t number_toread_quadrants = 32;
 #ifdef P4EST_MPI
@@ -124,7 +126,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
                       (long long) tree_num_quadrants);
-  
+
   /* compute index of first tree for this processor */
   first_quadrant = (global_num_quadrants * rank) / num_procs;
   first_tree = first_quadrant / tree_num_quadrants;
@@ -140,9 +142,10 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   if (first_quadrant <= last_quadrant) {
     last_tree = last_quadrant / tree_num_quadrants;
     last_tree_quadrant = last_quadrant - last_tree * tree_num_quadrants;
-    P4EST_VERBOSEF ("last tree %lld last quadrant %lld global quadrant %lld\n",
-                    (long long) last_tree, (long long) last_tree_quadrant,
-                    (long long) last_quadrant);  
+    P4EST_VERBOSEF
+      ("last tree %lld last quadrant %lld global quadrant %lld\n",
+       (long long) last_tree, (long long) last_tree_quadrant,
+       (long long) last_quadrant);
 
     /* check ranges of various integers to be 32bit compatible */
     P4EST_ASSERT (first_tree <= last_tree && last_tree < num_trees);
@@ -459,7 +462,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     while (list->elem_count > 0) {
       qpop = sc_list_pop (list);
       if (dorefine ||
-          ((qpop->level < P4EST_MAXLEVEL) && refine_fn (p4est, nt, qpop))) {
+          ((p4est_refine_recursive || qpop->p.user_data != key) &&
+           qpop->level < P4EST_MAXLEVEL && refine_fn (p4est, nt, qpop))) {
         dorefine = 0;           /* a marker so that refine_fn is never called twice */
         sc_array_resize (tquadrants, tquadrants->elem_count + 3);
 
@@ -613,13 +617,27 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
         removed += 3;
 
         rest += 4 - before;
-        last = first;
 
-        cidz = (size_t) p4est_quadrant_child_id (cfirst);
-        if (cidz > first)
-          first = 0;
-        else
-          first -= cidz;
+        if (p4est_coarsen_recursive) {
+          last = first;
+          cidz = (size_t) p4est_quadrant_child_id (cfirst);
+          if (cidz > first)
+            first = 0;
+          else
+            first -= cidz;
+        }
+        else {
+          /* don't coarsen again, move the counters and the hole */
+          P4EST_ASSERT (first == last && before == 1);
+          if (rest < incount) {
+            ++first;
+            cfirst = sc_array_index (tquadrants, first);
+            clast = sc_array_index (tquadrants, rest);
+            *cfirst = *clast;
+            last = first;
+            ++rest;
+          }
+        }
       }
       else {
         /* do nothing, just move the counters and the hole */
