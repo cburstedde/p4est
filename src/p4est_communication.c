@@ -162,4 +162,29 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
   return guess;
 }
 
+void
+p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
+                      bool full_tree[2], p4est_quadrant_t * firstq,
+                      p4est_quadrant_t * nextq)
+{
+  p4est_position_t   *gfp;
+
+  P4EST_ASSERT (p4est->first_local_tree <= which_tree);
+  P4EST_ASSERT (which_tree <= p4est->last_local_tree);
+
+  gfp = &p4est->global_first_position[p4est->mpirank];
+  firstq->x = gfp->x;
+  firstq->y = gfp->y;
+  firstq->level = P4EST_MAXLEVEL;
+  full_tree[0] = (which_tree > p4est->first_local_tree ||
+                  (firstq->x == 0 && firstq->y == 0));
+
+  ++gfp;
+  nextq->x = gfp->x;
+  nextq->y = gfp->y;
+  nextq->level = P4EST_MAXLEVEL;
+  full_tree[1] = (which_tree < p4est->last_local_tree ||
+                  (nextq->x == 0 && nextq->y == 0));
+}
+
 /* EOF p4est_communication.h */
