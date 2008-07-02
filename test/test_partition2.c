@@ -117,7 +117,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
-  connectivity = p8est_connectivity_new_unitcube ();
+  connectivity = p8est_connectivity_new_twocubes ();
 #else
   connectivity = p4est_connectivity_new_corner ();
 #endif

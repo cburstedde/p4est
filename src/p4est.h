@@ -146,6 +146,8 @@ typedef int         (*p4est_weight_t) (p4est_t * p4est,
                                        p4est_quadrant_t * quadrant);
 
 extern p4est_locidx_t p4est_initial_quadrants_per_processor;
+extern bool         p4est_refine_recursive;
+extern bool         p4est_coarsen_recursive;
 extern void        *P4EST_DATA_UNINITIALIZED;
 
 /** set statically allocated quadrant to defined values */

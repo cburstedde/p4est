@@ -42,12 +42,10 @@ p4est_balance_peer_t;
 #ifndef P4_TO_P8
 
 p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
+bool                p4est_refine_recursive = true;
+bool                p4est_coarsen_recursive = true;
 static int          p4est_uninitialized_key;
 void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
-
-#else /* P4_TO_P8 */
-
-p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
 
 #endif /* P4_TO_P8 */
 
@@ -418,8 +416,8 @@ void
 p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
   size_t              quadrant_pool_size, data_pool_size;
-  int                 dorefine;
-  int                *key;
+  bool                dorefine;
+  int                 skey, *key = &skey;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
   size_t              incount, current, restpos, movecount;
@@ -443,7 +441,6 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
      qpop is a quadrant that has been allocated through quadrant_pool
      never mix these two types of quadrant pointers
    */
-  key = &dorefine;              /* use this to create a unique user_data pointer */
   list = sc_list_new (NULL);
   p4est->local_num_quadrants = 0;
 
@@ -469,7 +466,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 
     /* run through the array to find first quadrant to be refined */
     q = NULL;
-    dorefine = 0;
+    dorefine = false;
     incount = tquadrants->elem_count;
     for (current = 0; current < incount; ++current) {
       q = sc_array_index (tquadrants, current);
@@ -500,8 +497,9 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     while (list->elem_count > 0) {
       qpop = sc_list_pop (list);
       if (dorefine ||
-          ((qpop->level < P4EST_MAXLEVEL) && refine_fn (p4est, nt, qpop))) {
-        dorefine = 0;           /* a marker so that refine_fn is never called twice */
+          ((p4est_refine_recursive || qpop->p.user_data != key) &&
+           qpop->level < P4EST_MAXLEVEL && refine_fn (p4est, nt, qpop))) {
+        dorefine = false;
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
 
@@ -683,13 +681,26 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
         removed += P4EST_CHILDREN - 1;
 
         rest += P4EST_CHILDREN - before;
-        last = first;
-
-        cidz = (size_t) p4est_quadrant_child_id (cfirst);
-        if (cidz > first)
-          first = 0;
-        else
-          first -= cidz;
+        if (p4est_coarsen_recursive) {
+          last = first;
+          cidz = (size_t) p4est_quadrant_child_id (cfirst);
+          if (cidz > first)
+            first = 0;
+          else
+            first -= cidz;
+        }
+        else {
+          /* don't coarsen again, move the counters and the hole */
+          P4EST_ASSERT (first == last && before == 1);
+          if (rest < incount) {
+            ++first;
+            cfirst = sc_array_index (tquadrants, first);
+            clast = sc_array_index (tquadrants, rest);
+            *cfirst = *clast;
+            last = first;
+            ++rest;
+          }
+        }
       }
       else {
         /* do nothing, just move the counters and the hole */

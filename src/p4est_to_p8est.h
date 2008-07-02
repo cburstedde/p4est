@@ -34,7 +34,6 @@
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
-#define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* redefine enums */
 #define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
@@ -59,6 +58,9 @@
 /* redefine external variables */
 #define p4est_initial_quadrants_per_processor \
                                         p8est_initial_quadrants_per_processor
+#define p4est_refine_recursive          p8est_refine_recursive
+#define p4est_coarsen_recursive         p8est_coarsen_recursive
+#define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
@@ -137,6 +139,7 @@
 #define p4est_comm_tree_info            p8est_comm_tree_info
 
 /* functions in p4est_vtk */
+#define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 #endif /* !P4EST_TO_P8EST_H */

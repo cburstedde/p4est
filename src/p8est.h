@@ -151,6 +151,8 @@ typedef int         (*p8est_weight_t) (p8est_t * p8est,
 
 /** minimum initial quadrants per core in p4est_new */
 extern p4est_locidx_t p8est_initial_quadrants_per_processor;
+extern bool         p8est_refine_recursive;
+extern bool         p8est_coarsen_recursive;
 extern void        *P8EST_DATA_UNINITIALIZED;
 
 /** set statically allocated quadrant to defined values */

@@ -20,12 +20,6 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "p4est.c"
+#include <test/test_coarsen2.c>
 
-p4est_locidx_t      p8est_initial_quadrants_per_processor = 15;
-bool                p8est_refine_recursive = true;
-bool                p8est_coarsen_recursive = true;
-static int          p8est_uninitialized_key;
-void               *P8EST_DATA_UNINITIALIZED = &p8est_uninitialized_key;
-
-/* EOF p8est.c */
+/* EOF test_coarsen3.c */
