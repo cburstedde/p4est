@@ -545,22 +545,22 @@ main (void)
   SC_CHECK_ABORT (p4est_quadrant_compare (&G, &F) > 0, "compare");
   SC_CHECK_ABORT (p4est_quadrant_compare (&F, &G) < 0, "compare");
 
-  A.p.piggy.which_tree = 0;
-  B.p.piggy.which_tree = 0;
+  A.p.piggy1.which_tree = 0;
+  B.p.piggy2.which_tree = 0;
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &A) == 0,
                   "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&A, &B) > 0, "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&B, &A) < 0, "compare_piggy");
 
-  F.p.piggy.which_tree = 0;
-  G.p.piggy.which_tree = 0;
+  F.p.which_tree = 0;
+  G.p.piggy1.which_tree = 0;
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
                   "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) > 0, "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &G) < 0, "compare_piggy");
 
-  F.p.piggy.which_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX - 3;
-  G.p.piggy.which_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX / 2;
+  F.p.piggy2.which_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX - 3;
+  G.p.which_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX / 2;
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&F, &F) == 0,
                   "compare_piggy");
   SC_CHECK_ABORT (p4est_quadrant_compare_piggy (&G, &F) < 0, "compare_piggy");

@@ -79,7 +79,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   p4est_quadrant_t    a, b, c;
-  p4est_position_t   *global_first_position;
+  p4est_quadrant_t   *global_first_position;
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
@@ -269,18 +269,19 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* fill in global partition information */
   global_first_position =
-    P4EST_ALLOC_ZERO (p4est_position_t, (size_t) num_procs + 1);
+    P4EST_ALLOC_ZERO (p4est_quadrant_t, (size_t) num_procs + 1);
   for (i = 0; i <= num_procs; ++i) {
     first_quadrant = (global_num_quadrants * i) / num_procs;
     first_tree = first_quadrant / tree_num_quadrants;
     first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
     p4est_quadrant_set_morton (&c, level, first_tree_quadrant);
-    global_first_position[i].which_tree = first_tree;
     global_first_position[i].x = c.x;
     global_first_position[i].y = c.y;
 #ifdef P4_TO_P8
     global_first_position[i].z = c.z;
 #endif
+    global_first_position[i].level = P4EST_MAXLEVEL;
+    global_first_position[i].p.which_tree = first_tree;
   }
   p4est->global_first_position = global_first_position;
 
@@ -402,10 +403,10 @@ p4est_copy (p4est_t * input, bool copy_data)
           p4est->mpisize * sizeof (p4est_gloidx_t));
 
   /* allocate and copy global partition information */
-  p4est->global_first_position = P4EST_ALLOC (p4est_position_t,
+  p4est->global_first_position = P4EST_ALLOC (p4est_quadrant_t,
                                               p4est->mpisize + 1);
   memcpy (p4est->global_first_position, input->global_first_position,
-          (p4est->mpisize + 1) * sizeof (p4est_position_t));
+          (p4est->mpisize + 1) * sizeof (p4est_quadrant_t));
 
   /* check for valid p4est and return */
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -801,7 +802,7 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
         break;
       }
       s = sc_array_index_int (&peer->send_first, pos);
-      if (p4est_quadrant_is_equal (s, q) && s->p.piggy.which_tree == qtree) {
+      if (p4est_quadrant_is_equal (s, q) && s->p.piggy2.which_tree == qtree) {
         found = true;
         break;
       }
@@ -813,7 +814,7 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
     /* copy quadrant into shipping list */
     s = sc_array_push (&peer->send_first);
     *s = *q;
-    s->p.piggy.which_tree = qtree;      /* piggy back tree id */
+    s->p.piggy2.which_tree = qtree;     /* piggy back tree id */
 
     /* update lowest and highest peer */
     *first_peer = SC_MIN (owner, *first_peer);
@@ -846,7 +847,7 @@ p4est_balance_response (p4est_t * p4est, int peer_id,
   sc_array_init (&tree_array, sizeof (p4est_topidx_t));
   for (zz = 0; zz < qcount; ++zz) {
     q = sc_array_index (qarray, zz);
-    qtree = q->p.piggy.which_tree;
+    qtree = q->p.piggy2.which_tree;
     P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
     P4EST_ASSERT (qtree >= prev);
     if (qtree > prev) {
@@ -1792,7 +1793,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     for (zz = 0; zz < qcount; ++zz) {
       s = sc_array_index (qarray, zz);
       P4EST_ASSERT (p4est_quadrant_is_extended (s));
-      qtree = s->p.piggy.which_tree;
+      qtree = s->p.piggy2.which_tree;
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner/edge quadrant from the second pass of balance */
         P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);

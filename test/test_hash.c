@@ -64,9 +64,9 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton (&q1, 3, 15);
   p4est_quadrant_set_morton (&q2, 3, 18);
   p4est_quadrant_set_morton (&q3, 3, 18);
-  q1.p.piggy.owner_rank = 0;
-  q2.p.piggy.owner_rank = 5;
-  q3.p.piggy.owner_rank = 0;
+  q1.p.piggy1.owner_rank = 0;
+  q2.p.piggy1.owner_rank = 5;
+  q3.p.piggy1.owner_rank = 0;
 
   f1 = f2 = f3 = NULL;
   i1 = sc_hash_insert_unique (qhash, &q1, &v1);
@@ -79,7 +79,7 @@ main (int argc, char **argv)
           i1, i2, i3, (unsigned long) qhash->elem_count);
 
   SC_CHECK_ABORT (i1 + i2 + i3 == (int) qhash->elem_count, "Quadrant hash");
-  SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy.owner_rank == 5, "Insert return");
+  SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy1.owner_rank == 5, "Insert return");
 
   f1 = f2 = f3 = NULL;
   p4est_quadrant_set_morton (&q1, 3, 19);
@@ -90,7 +90,7 @@ main (int argc, char **argv)
   printf ("Quadrants lookup %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
   SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
-  SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy.owner_rank == 5, "Lookup return");
+  SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy1.owner_rank == 5, "Lookup return");
 
   f1 = f2 = f3 = NULL;
   i1 = sc_hash_remove (qhash, &q1, &v1);
@@ -99,7 +99,7 @@ main (int argc, char **argv)
   f2 = v2;
   i3 = sc_hash_remove (qhash, &q3, NULL);
   SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
-  SC_CHECK_ABORT (f2 == &q2 && f2->p.piggy.owner_rank == 5, "Remove return");
+  SC_CHECK_ABORT (f2 == &q2 && f2->p.piggy1.owner_rank == 5, "Remove return");
   f2 = f1;
 
   sc_hash_destroy (qhash);

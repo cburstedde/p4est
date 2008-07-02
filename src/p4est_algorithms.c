@@ -386,8 +386,9 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
 
+#ifdef P4EST_DEBUG
   /* check last item of global partition */
-  P4EST_ASSERT (p4est->global_first_position[num_procs].which_tree ==
+  P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
                 p4est->connectivity->num_trees &&
                 p4est->global_first_position[num_procs].x == 0 &&
                 p4est->global_first_position[num_procs].y == 0 &&
@@ -397,6 +398,10 @@ p4est_is_valid (p4est_t * p4est)
                 true);
   P4EST_ASSERT (p4est->connectivity->num_trees ==
                 (p4est_topidx_t) p4est->trees->elem_count);
+  for (i = 0; i <= num_procs; ++i) {
+    P4EST_ASSERT (p4est->global_first_position[i].level == P4EST_MAXLEVEL);
+  }
+#endif /* P4EST_DEBUG */
 
   /* check first tree in global partition */
   if (first_tree < 0) {
@@ -406,7 +411,7 @@ p4est_is_valid (p4est_t * p4est)
     }
   }
   else {
-    if (p4est->global_first_position[rank].which_tree != first_tree) {
+    if (p4est->global_first_position[rank].p.which_tree != first_tree) {
       P4EST_INFO ("p4est invalid first tree\n");
       return false;
     }
@@ -438,7 +443,7 @@ p4est_is_valid (p4est_t * p4est)
     }
   }
   else {
-    next_tree = p4est->global_first_position[rank + 1].which_tree;
+    next_tree = p4est->global_first_position[rank + 1].p.which_tree;
     if (next_tree != last_tree && next_tree != last_tree + 1) {
       P4EST_INFO ("p4est invalid last tree\n");
       return false;
@@ -710,8 +715,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   /* loop over input list of quadrants */
   for (iz = 0; iz < incount; ++iz) {
     inq = sc_array_index (in, iz);
-    P4EST_ASSERT (0 <= inq->p.piggy.which_tree);
-    if (inq->p.piggy.which_tree != qtree) {
+    P4EST_ASSERT (0 <= inq->p.piggy2.which_tree);
+    if (inq->p.piggy2.which_tree != qtree) {
       continue;
     }
     inter_tree = false;
@@ -909,7 +914,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
               ct = sc_array_index (cta, ctree);
               p4est_quadrant_transform_corner (outq, (int) ct->ncorner,
                                                false);
-              outq->p.piggy.which_tree = ct->ntree;
+              outq->p.piggy2.which_tree = ct->ntree;
             }
             ct = NULL;
           }
@@ -927,13 +932,13 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
                 tempq = *tq;
                 p4est_quadrant_translate_face (&tempq, face);
                 p4est_quadrant_transform_face (&tempq, outq, transform);
-                outq->p.piggy.which_tree = ntree;
+                outq->p.piggy2.which_tree = ntree;
 #else
                 if (contact_face_only) {
                   P4EST_ASSERT (!contact_edge_only);
                   outq = sc_array_push (out);
                   p8est_quadrant_transform_face (tq, outq, ftransform);
-                  outq->p.piggy.which_tree = ntree;
+                  outq->p.piggy2.which_tree = ntree;
                 }
                 else {
                   P4EST_ASSERT (contact_edge_only);
@@ -945,7 +950,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
                       et = sc_array_index (eta, etree);
                       p8est_quadrant_transform_edge (&tempq, outq, &ei, et,
                                                      false);
-                      outq->p.piggy.which_tree = et->ntree;
+                      outq->p.piggy2.which_tree = et->ntree;
                     }
                   }
                   et = NULL;
@@ -955,7 +960,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
               else {
                 outq = sc_array_push (out);
                 *outq = *tq;
-                outq->p.piggy.which_tree = qtree;
+                outq->p.piggy2.which_tree = qtree;
               }
             }
           }
@@ -1026,9 +1031,9 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
   size_t              zz, incount, prev_good, removed;
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;
-  p4est_position_t   *first_pos, *next_pos;
+  const p4est_quadrant_t *first_pos, *next_pos;
   p4est_quadrant_t   *q1, *q2;
-  p4est_quadrant_t    fd, nd, ld;
+  p4est_quadrant_t    ld;
   p4est_tree_t       *tree;
   sc_array_t         *quadrants;
 
@@ -1042,8 +1047,6 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
     return 0;
   }
 
-  P4EST_QUADRANT_INIT (&fd);
-  P4EST_QUADRANT_INIT (&nd);
   P4EST_QUADRANT_INIT (&ld);
 
   first_pos = &p4est->global_first_position[p4est->mpirank];
@@ -1053,12 +1056,6 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
                  && first_pos->z == 0
 #endif
                 ));
-  fd.x = first_pos->x;
-  fd.y = first_pos->y;
-#ifdef P4_TO_P8
-  fd.z = first_pos->z;
-#endif
-  fd.level = P4EST_MAXLEVEL;
 
   next_pos = &p4est->global_first_position[p4est->mpirank + 1];
   full_end = (which_tree < last_tree || (next_pos->x == 0 && next_pos->y == 0
@@ -1066,12 +1063,6 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
                                          && next_pos->z == 0
 #endif
               ));
-  nd.x = next_pos->x;
-  nd.y = next_pos->y;
-#ifdef P4_TO_P8
-  nd.z = next_pos->z;
-#endif
-  nd.level = P4EST_MAXLEVEL;
 
   /* q1 is the last known good quadrant */
   q1 = NULL;
@@ -1082,18 +1073,18 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
     P4EST_ASSERT (p4est_quadrant_is_extended (q2));
     if (!p4est_quadrant_is_inside_root (q2) ||
         (!full_begin &&
-         (p4est_quadrant_compare (q2, &fd) < 0 &&
-          (q2->x != fd.x || q2->y != fd.y
+         (p4est_quadrant_compare (q2, first_pos) < 0 &&
+          (q2->x != first_pos->x || q2->y != first_pos->y
 #ifdef P4_TO_P8
-           || q2->z != fd.z
+           || q2->z != first_pos->z
 #endif
           ))) ||
         (!full_end &&
          (p4est_quadrant_last_descendent (q2, &ld, P4EST_MAXLEVEL),
-          (p4est_quadrant_compare (&nd, &ld) <= 0 ||
-           (q2->x == nd.x && q2->y == nd.y
+          (p4est_quadrant_compare (next_pos, &ld) <= 0 ||
+           (q2->x == next_pos->x && q2->y == next_pos->y
 #ifdef P4_TO_P8
-            && q2->z == nd.z
+            && q2->z == next_pos->z
 #endif
            ))))) {
       /* quadrant is outside of the root tree
@@ -1801,8 +1792,8 @@ p4est_partition_given (p4est_t * p4est,
 
   /* *INDENT-OFF* horrible indent bug */
   const p4est_topidx_t num_send_trees =
-    p4est->global_first_position[rank + 1].which_tree - /* same type */
-    p4est->global_first_position[rank].which_tree + 1;
+    p4est->global_first_position[rank + 1].p.which_tree - /* same type */
+    p4est->global_first_position[rank].p.which_tree + 1;
   /* *INDENT-ON* */
 
   int                 i, sk;
@@ -1986,8 +1977,8 @@ p4est_partition_given (p4est_t * p4est,
   for (from_proc = 0, sk = 0; from_proc < num_procs; ++from_proc) {
     if (from_proc != rank && num_recv_from[from_proc]) {
       num_recv_trees =          /* same type */
-        p4est->global_first_position[from_proc + 1].which_tree
-        - p4est->global_first_position[from_proc].which_tree + 1;
+        p4est->global_first_position[from_proc + 1].p.which_tree
+        - p4est->global_first_position[from_proc].p.which_tree + 1;
       recv_size = num_recv_trees * sizeof (p4est_locidx_t)
         + quad_plus_data_size * num_recv_from[from_proc];
 
@@ -2184,8 +2175,9 @@ p4est_partition_given (p4est_t * p4est,
 
   for (from_proc = 0; from_proc < num_procs; ++from_proc) {
     if (num_recv_from[from_proc] > 0) {
-      first_from_tree = p4est->global_first_position[from_proc].which_tree;
-      last_from_tree = p4est->global_first_position[from_proc + 1].which_tree;
+      first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
+      last_from_tree =
+        p4est->global_first_position[from_proc + 1].p.which_tree;
       num_recv_trees =          /* same type */
         last_from_tree - first_from_tree + 1;
 
@@ -2335,8 +2327,9 @@ p4est_partition_given (p4est_t * p4est,
           trees->elem_count * sizeof (p4est_locidx_t));
   for (from_proc = 0; from_proc < num_procs; ++from_proc) {
     if (num_recv_from[from_proc] > 0) {
-      first_from_tree = p4est->global_first_position[from_proc].which_tree;
-      last_from_tree = p4est->global_first_position[from_proc + 1].which_tree;
+      first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
+      last_from_tree =
+        p4est->global_first_position[from_proc + 1].p.which_tree;
       num_recv_trees =          /* same type */
         last_from_tree - first_from_tree + 1;
 

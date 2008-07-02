@@ -106,7 +106,7 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
   /* expect non-negative tree information */
   /* *INDENT-OFF* horrible indent bug */
   const p4est_topidx_t diff =
-    q1->p.piggy.which_tree - q2->p.piggy.which_tree;  /* same type */
+    q1->p.which_tree - q2->p.which_tree;        /* same type */
   /* *INDENT-ON* */
 
   return (diff == 0) ?

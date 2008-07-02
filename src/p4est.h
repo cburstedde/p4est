@@ -50,15 +50,22 @@ typedef struct p4est_quadrant
 {
   p4est_qcoord_t      x, y;
   int8_t              level;
-  union
+  union p4est_quadrant_data
   {
     void               *user_data;
+    p4est_topidx_t      which_tree;
     struct
     {
       p4est_topidx_t      which_tree;
       int                 owner_rank;
     }
-    piggy;
+    piggy1;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      p4est_topidx_t      from_tree;
+    }
+    piggy2;
   }
   p;
 }
@@ -71,13 +78,6 @@ typedef struct p4est_tree
   int8_t              maxlevel; /* highest local quadrant level */
 }
 p4est_tree_t;
-
-typedef struct p4est_position
-{
-  p4est_topidx_t      which_tree;
-  p4est_qcoord_t      x, y;
-}
-p4est_position_t;
 
 typedef struct p4est
 {
@@ -100,7 +100,7 @@ typedef struct p4est
                                                    of all quadrants of the
                                                    last quadrant on each proc.
                                                  */
-  p4est_position_t   *global_first_position;    /* first_tree, x, y of first quadrant
+  p4est_quadrant_t   *global_first_position;    /* first smallest possible quadrant
                                                    for each processor and 1 beyond */
   p4est_connectivity_t *connectivity;   /* connectivity structure */
   sc_array_t         *trees;    /* list of all trees */
