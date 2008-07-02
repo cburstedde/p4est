@@ -134,6 +134,7 @@
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_find_owner           p8est_comm_find_owner
+#define p4est_comm_tree_info            p8est_comm_tree_info
 
 /* functions in p4est_vtk */
 #define p4est_vtk_write_footer          p8est_vtk_write_footer

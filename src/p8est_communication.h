@@ -58,4 +58,18 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
                                            const p8est_quadrant_t * q,
                                            int guess);
 
+/** Computes information about a tree being fully owned.
+ * This is determined separately for the beginning and end of the tree.
+ * \param [in] p8est      The p8est to work on.
+ * \param [in] which_tree The tree in question must be partially owned.
+ * \param [out] full_tree Full ownership of beginning and end of tree.
+ * \param [out] firstq    Smallest possible first quadrant on this core.
+ * \param [out] nextq     Smallest possible first quadrant on next core.
+ */
+void                p8est_comm_tree_info (p8est_t * p8est,
+                                          p4est_locidx_t which_tree,
+                                          bool full_tree[2],
+                                          const p8est_quadrant_t ** firstq,
+                                          const p8est_quadrant_t ** nextq);
+
 #endif /* !P8EST_COMMUNICATION_H */

@@ -1027,7 +1027,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 size_t
 p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 {
-  bool                full_begin, full_end;
+  bool                full_tree[2];
   size_t              zz, incount, prev_good, removed;
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;
@@ -1048,21 +1048,7 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
   }
 
   P4EST_QUADRANT_INIT (&ld);
-
-  first_pos = &p4est->global_first_position[p4est->mpirank];
-  full_begin = (which_tree > first_tree ||
-                (first_pos->x == 0 && first_pos->y == 0
-#ifdef P4_TO_P8
-                 && first_pos->z == 0
-#endif
-                ));
-
-  next_pos = &p4est->global_first_position[p4est->mpirank + 1];
-  full_end = (which_tree < last_tree || (next_pos->x == 0 && next_pos->y == 0
-#ifdef P4_TO_P8
-                                         && next_pos->z == 0
-#endif
-              ));
+  p4est_comm_tree_info (p4est, which_tree, full_tree, &first_pos, &next_pos);
 
   /* q1 is the last known good quadrant */
   q1 = NULL;
@@ -1072,14 +1058,14 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
     q2 = sc_array_index (quadrants, zz);
     P4EST_ASSERT (p4est_quadrant_is_extended (q2));
     if (!p4est_quadrant_is_inside_root (q2) ||
-        (!full_begin &&
+        (!full_tree[0] &&
          (p4est_quadrant_compare (q2, first_pos) < 0 &&
           (q2->x != first_pos->x || q2->y != first_pos->y
 #ifdef P4_TO_P8
            || q2->z != first_pos->z
 #endif
           ))) ||
-        (!full_end &&
+        (!full_tree[1] &&
          (p4est_quadrant_last_descendent (q2, &ld, P4EST_MAXLEVEL),
           (p4est_quadrant_compare (next_pos, &ld) <= 0 ||
            (q2->x == next_pos->x && q2->y == next_pos->y
