@@ -29,9 +29,9 @@
  * \warning This function may abort if the forest is not balanced.
  *
  * \param [in] p4est  The p4est to be tested.
- * \return Returns 1 if balanced, 0 otherwise.
+ * \return Returns true if balanced, false otherwise.
  */
-int                 p4est_is_balanced (p4est_t * p4est);
+bool                p4est_is_balanced (p4est_t * p4est);
 
 /** Gets the ghost layer
  *
@@ -50,7 +50,7 @@ int                 p4est_is_balanced (p4est_t * p4est);
  *
  */
 void                p4est_build_ghost_layer (p4est_t * p4est,
-                                             p4est_array_t * ghost_layer);
+                                             sc_array_t * ghost_layer);
 
 /** Determine unique ordering of vertices for each quadrant.
  *
