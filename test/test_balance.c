@@ -95,6 +95,7 @@ main (int argc, char **argv)
 
   /* refine and balance the forest */
   p4est_refine (p4est, refine_fn, NULL);
+  SC_CHECK_ABORT (!p4est_is_balanced (p4est), "!Balance");
   p4est_balance (p4est, NULL);
   SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance");
 

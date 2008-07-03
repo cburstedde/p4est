@@ -23,10 +23,12 @@
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_communication.h>
+#include <p8est_mesh.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
+#include <p4est_mesh.h>
 #endif /* !P4_TO_P8 */
 
 typedef struct
@@ -1928,12 +1930,10 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                   p4est->user_data_pool->elem_count);
   }
   P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (p4est_is_balanced (p4est));
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
-#if 0
-  P4EST_ASSERT (p4est_is_balanced (p4est));
-#endif
 }
 
 void

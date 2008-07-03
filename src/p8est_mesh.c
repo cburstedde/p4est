@@ -24,6 +24,12 @@
 
 #include <p4est_to_p8est.h>
 
+bool
+p4est_is_balanced (p4est_t * p4est)
+{
+  return true;
+}
+
 p4est_neighborhood_t *
 p4est_neighborhood_new (p4est_t * p4est)
 {

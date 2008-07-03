@@ -24,6 +24,19 @@
 #include <p4est_communication.h>
 #include <p4est_mesh.h>
 
+/* *INDENT-OFF* */
+static const int hanging_corners[4][2] = {
+  { 1, 2 },
+  { 0, 3 },
+  { 0, 3 },
+  { 1, 2 }};
+static const int hanging_skip[4][2] = {
+  { 0, 3 },
+  { 0, 1 },
+  { 3, 2 },
+  { 1, 2 }};
+/* *INDENT-ON* */
+
 /** Gets the procid of the owner of \a q.
  *
  * \param [in] p4est  The forest in which to search for \a q
@@ -810,6 +823,7 @@ p4est_is_balanced (p4est_t * p4est)
   bool                e0, e1, e2, e3;
   bool                is_face_balanced = true;
   bool                is_corner_balanced = true;
+  bool                bigger_face[4];
   size_t              cez;
   p4est_topidx_t      nt;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
@@ -837,21 +851,29 @@ p4est_is_balanced (p4est_t * p4est)
 
   /* loop over all local trees */
   for (nt = first_local_tree; nt <= last_local_tree; ++nt) {
+    if (!is_face_balanced && !is_corner_balanced) {
+      break;
+    }
     tree = p4est_array_index_topidx (p4est->trees, nt);
     quadrants = &tree->quadrants;
     num_quadrants = (p4est_locidx_t) quadrants->elem_count;
 
     /* Find the neighboring processors of each quadrant */
     for (li = 0; li < num_quadrants; ++li) {
+      if (!is_face_balanced && !is_corner_balanced) {
+        break;
+      }
       q = sc_array_index (quadrants, (size_t) li);
       qcid = p4est_quadrant_child_id (q);
+#if 0
+      P4EST_VERBOSEF ("Is_balance tree %lld quadrant %lld cid %d\n",
+                      (long long) nt, (long long) li, qcid);
+#endif
 
       /* Find face neighbors */
       for (face = 0; face < 4; ++face) {
-        /* Cut this short if face balance is already violated */
-        if (!is_face_balanced) {
-          break;
-        }
+        bigger_face[face] = false;
+
         /* If q is at a boundary then it is automatically balanced */
         if (p4est_quadrant_on_face_boundary (p4est, nt, q, face)) {
           continue;
@@ -863,15 +885,16 @@ p4est_is_balanced (p4est_t * p4est)
         e0 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n0, NULL);
         e1 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n1, NULL);
         if (e0 != e1) {
+          P4EST_NOTICE ("Two contradicting small face neighbors\n");
           is_face_balanced = false;
-          break;
         }
         e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n2, NULL);
         e3 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n3, NULL);
         if ((int) e0 + (int) e2 + (int) e3 != 1) {
+          P4EST_NOTICE ("Face balance failed\n");
           is_face_balanced = false;
-          break;
         }
+        bigger_face[face] = e3;
       }
 
       /* Find corner neighbors, corner is in z-order here */
@@ -893,21 +916,37 @@ p4est_is_balanced (p4est_t * p4est)
         e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n2, &e2_a);
         P4EST_ASSERT (e0_a.elem_count == e1_a.elem_count
                       && e0_a.elem_count == e2_a.elem_count);
-        if (!e0 && !e1 && !e2) {
-          is_corner_balanced = false;
-          break;
-        }
-        if (e0_a.elem_count == 0 && e0 + e1 + e2 != 1) {
-          is_corner_balanced = false;
-          break;
-        }
-        for (cez = 0; cez < e0_a.elem_count; ++cez) {
-          pe0 = sc_array_index (&e0_a, cez);
-          pe1 = sc_array_index (&e1_a, cez);
-          pe2 = sc_array_index (&e2_a, cez);
-          if (*pe0 + *pe1 + *pe2 != 1) {
+
+        if ((corner == hanging_corners[qcid][0] &&
+             bigger_face[hanging_skip[qcid][0]]) ||
+            (corner == hanging_corners[qcid][1] &&
+             bigger_face[hanging_skip[qcid][1]])) {
+          if (e0_a.elem_count > 0 || e0 || e1 || e2) {
+            P4EST_NOTICE ("Duplicate corners across hanging face\n");
             is_corner_balanced = false;
             break;
+          }
+        }
+        else {
+          if (!e0 && !e1 && !e2) {
+            P4EST_NOTICE ("Corner balance missing quadrants\n");
+            is_corner_balanced = false;
+            break;
+          }
+          if (e0_a.elem_count == 0 && e0 + e1 + e2 != 1) {
+            P4EST_NOTICE ("Corner balance duplicate quadarants\n");
+            is_corner_balanced = false;
+            break;
+          }
+          for (cez = 0; cez < e0_a.elem_count; ++cez) {
+            pe0 = sc_array_index (&e0_a, cez);
+            pe1 = sc_array_index (&e1_a, cez);
+            pe2 = sc_array_index (&e2_a, cez);
+            if (*pe0 + *pe1 + *pe2 != 1) {
+              P4EST_NOTICE ("Star corner balance violated\n");
+              is_corner_balanced = false;
+              break;
+            }
           }
         }
       }

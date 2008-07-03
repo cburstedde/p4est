@@ -39,6 +39,15 @@ typedef struct
 }
 p8est_neighborhood_t;
 
+/** Checks a p8est to see if it is balanced.
+ *
+ * \warning This function may abort if the forest is not balanced.
+ *
+ * \param [in] p8est  The p8est to be tested.
+ * \return Returns true if balanced, false otherwise.
+ */
+bool                p8est_is_balanced (p8est_t * p8est);
+
 p8est_neighborhood_t *p8est_neighborhood_new (p8est_t * p8est);
 void                p8est_neighborhood_destroy (p8est_neighborhood_t * nhood);
 

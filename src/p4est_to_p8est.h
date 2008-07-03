@@ -144,6 +144,7 @@
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_mesh */
+#define p4est_is_balanced               p8est_is_balanced
 #define p4est_neighborhood_new          p8est_neighborhood_new
 #define p4est_neighborhood_destroy      p8est_neighborhood_destroy
 
