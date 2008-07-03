@@ -1067,14 +1067,9 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
           ))) ||
         (!full_tree[1] &&
          (p4est_quadrant_last_descendent (q2, &ld, P4EST_MAXLEVEL),
-          (p4est_quadrant_compare (next_pos, &ld) <= 0 ||
-           (q2->x == next_pos->x && q2->y == next_pos->y
-#ifdef P4_TO_P8
-            && q2->z == next_pos->z
-#endif
-           ))))) {
-      /* quadrant is outside of the root tree
-         or at least partially outside of its bounds */
+          p4est_quadrant_compare (next_pos, &ld) <= 0))) {
+      /* quadrant is outside of the unit square
+         or at least partially outside of the tree bounds */
       --tree->quadrants_per_level[q2->level];
       p4est_quadrant_free_data (p4est, q2);
       ++removed;
