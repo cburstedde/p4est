@@ -20,6 +20,7 @@
 */
 
 #include <p8est_bits.h>
+#include <p8est_mesh.h>
 #include <p8est_vtk.h>
 
 static int
@@ -62,6 +63,7 @@ static void
 check_all (MPI_Comm mpicomm, p8est_connectivity_t * conn, const char *vtkname)
 {
   p8est_t            *p8est;
+  p8est_neighborhood_t *nhood;
 
   p8est = p8est_new (mpicomm, conn, 0, NULL);
   p8est_refine (p8est, refine_fn, NULL);
@@ -69,6 +71,10 @@ check_all (MPI_Comm mpicomm, p8est_connectivity_t * conn, const char *vtkname)
   p8est_balance (p8est, NULL);
   p8est_partition (p8est, NULL);
   p8est_vtk_write_file (p8est, vtkname);
+
+  nhood = p8est_neighborhood_new (p8est);
+  p8est_neighborhood_destroy (nhood);
+
   p8est_destroy (p8est);
   p8est_connectivity_destroy (conn);
 }

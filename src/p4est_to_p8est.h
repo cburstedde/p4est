@@ -54,6 +54,7 @@
 #define p4est_refine_t                  p8est_refine_t
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
+#define p4est_neighborhood_t            p8est_neighborhood_t
 
 /* redefine external variables */
 #define p4est_initial_quadrants_per_processor \
@@ -141,5 +142,9 @@
 /* functions in p4est_vtk */
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
+
+/* functions in p4est_mesh */
+#define p4est_neighborhood_new          p8est_neighborhood_new
+#define p4est_neighborhood_destroy      p8est_neighborhood_destroy
 
 #endif /* !P4EST_TO_P8EST_H */
