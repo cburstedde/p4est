@@ -124,7 +124,8 @@ p4est_connectivity_t *p4est_connectivity_new_star (void);
 p4est_connectivity_t *p4est_connectivity_new_periodic (void);
 
 /** Returns the transformation number from a tree to a neighbor tree.
- * \return  Returns -1 if there is no neighbor at that face, or 0..7.
+ * \param [int] iface   Face id in right-hand-rule order.
+ * \return   Returns -1 if there is no neighbor at that face, or 0..7.
  */
 int                 p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
@@ -132,7 +133,8 @@ int                 p4est_find_face_transform (p4est_connectivity_t *
                                                int iface);
 
 /** Fills an array with information about corner neighbors.
- * \param [in,out]  ctransforms  Array of p4est_corner_transform_t members.
+ * \param [int] icorner          Corner id in right-hand-rule order.
+ * \param [in,out] ctransforms   Array of p4est_corner_transform_t members.
  */
 void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  connectivity,

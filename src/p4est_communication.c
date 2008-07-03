@@ -138,6 +138,9 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
   p4est_topidx_t      ctree;
   p4est_quadrant_t    cur;
 
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+
   proc_low = 0;
   proc_high = num_procs - 1;
   cur.level = P4EST_MAXLEVEL;
