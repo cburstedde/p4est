@@ -202,7 +202,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
 void
 p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
-                      bool full_tree[2], const p4est_quadrant_t ** pfirst_pos,
+                      bool full_tree[], const p4est_quadrant_t ** pfirst_pos,
                       const p4est_quadrant_t ** pnext_pos)
 {
   const p4est_quadrant_t *first_pos, *next_pos;

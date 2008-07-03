@@ -62,13 +62,13 @@ int                 p4est_comm_find_owner (p4est_t * p4est,
  * This is determined separately for the beginning and end of the tree.
  * \param [in] p4est      The p4est to work on.
  * \param [in] which_tree The tree in question must be partially owned.
- * \param [out] full_tree Full ownership of beginning and end of tree.
+ * \param [out] full_tree[2] Full ownership of beginning and end of tree.
  * \param [out] firstq    Smallest possible first quadrant on this core.
  * \param [out] nextq     Smallest possible first quadrant on next core.
  */
 void                p4est_comm_tree_info (p4est_t * p4est,
                                           p4est_locidx_t which_tree,
-                                          bool full_tree[2],
+                                          bool full_tree[],
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 
