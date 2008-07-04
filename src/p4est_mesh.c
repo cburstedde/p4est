@@ -118,7 +118,9 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
                                         sc_array_t * q_procs)
 {
   const int           rank = p4est->mpirank;
+#ifdef P4EST_DEBUG
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
+#endif
   int                 cproc, *proc;
   size_t              ctree;
   p4est_connectivity_t *conn = p4est->connectivity;
@@ -188,6 +190,9 @@ p4est_quadrant_exists (p4est_t * p4est,
   p4est_tree_t       *tree = p4est_array_index_topidx (p4est->trees, treeid);
   p4est_tree_t       *tqtree;
   p4est_quadrant_t    tempq, tq, non_existent;
+#ifdef P4EST_DEBUG
+  p4est_quadrant_t   *q2;
+#endif
   sc_array_t         *quadrants = &tree->quadrants;
   sc_array_t          ctransforms, *cta = &ctransforms;
   p4est_corner_transform_t *ct;
@@ -213,6 +218,9 @@ p4est_quadrant_exists (p4est_t * p4est,
       tq.p.piggy1.which_tree = treeid;
       lnid = sc_array_bsearch (ghost_layer, &tq,
                                p4est_quadrant_compare_piggy);
+      P4EST_ASSERT (lnid == -1 ||
+                    (q2 = sc_array_index_ssize_t (ghost_layer, lnid),
+                     q2->p.piggy1.owner_rank == qproc));
     }
     return (lnid != -1);
   }
@@ -258,6 +266,9 @@ p4est_quadrant_exists (p4est_t * p4est,
         tq.p.piggy1.which_tree = tqtreeid;
         lnid = sc_array_bsearch (ghost_layer, &tq,
                                  p4est_quadrant_compare_piggy);
+        P4EST_ASSERT (lnid == -1 ||
+                      (q2 = sc_array_index_ssize_t (ghost_layer, lnid),
+                       q2->p.piggy1.owner_rank == qproc));
       }
 
       /* add the existence value */
@@ -306,6 +317,9 @@ p4est_quadrant_exists (p4est_t * p4est,
       tq.p.piggy1.which_tree = tqtreeid;
       lnid = sc_array_bsearch (ghost_layer, &tq,
                                p4est_quadrant_compare_piggy);
+      P4EST_ASSERT (lnid == -1 ||
+                    (q2 = sc_array_index_ssize_t (ghost_layer, lnid),
+                     q2->p.piggy1.owner_rank == qproc));
     }
     return (lnid != -1);
   }
@@ -792,7 +806,7 @@ p4est_quadrant_get_possible_face_neighbors (p4est_quadrant_t * q,
  */
 static void
 p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
-                        p4est_quadrant_t * q)
+                        int owner_rank, p4est_quadrant_t * q)
 {
   p4est_quadrant_t   *qold, *qnew;
 
@@ -810,6 +824,7 @@ p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
 
   /* Cram the tree id into the user_data pointer */
   qnew->p.piggy1.which_tree = treeid;
+  qnew->p.piggy1.owner_rank = owner_rank;
 }
 
 bool
@@ -1046,12 +1061,12 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 
         if (n0_proc != rank && n0_proc >= 0) {
           buf = sc_array_index_int (&send_bufs, n0_proc);
-          p4est_add_ghost_to_buf (buf, nt, q);
+          p4est_add_ghost_to_buf (buf, nt, rank, q);
         }
 
         if (n1_proc != rank && n1_proc >= 0 && n0_proc != n1_proc) {
           buf = sc_array_index_int (&send_bufs, n1_proc);
-          p4est_add_ghost_to_buf (buf, nt, q);
+          p4est_add_ghost_to_buf (buf, nt, rank, q);
         }
       }
 
@@ -1079,7 +1094,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 
             if (n0_proc != rank) {
               buf = sc_array_index_int (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, q);
+              p4est_add_ghost_to_buf (buf, nt, rank, q);
             }
           }
         }
@@ -1098,7 +1113,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 
           if (n0_proc != rank && n0_proc >= 0) {
             buf = sc_array_index_int (&send_bufs, n0_proc);
-            p4est_add_ghost_to_buf (buf, nt, q);
+            p4est_add_ghost_to_buf (buf, nt, rank, q);
           }
         }
       }
@@ -1250,7 +1265,13 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (p4est_quadrant_is_valid (q));
     P4EST_ASSERT (q->p.piggy1.which_tree >= 0 &&
                   q->p.piggy1.which_tree < p4est->connectivity->num_trees);
-    P4EST_ASSERT (q2 == NULL || p4est_quadrant_compare_piggy (q2, q) < 0);
+    P4EST_ASSERT (q->p.piggy1.owner_rank >= 0 &&
+                  q->p.piggy1.owner_rank < num_procs);
+    P4EST_ASSERT (q->p.piggy1.owner_rank != rank);
+    if (q2 != NULL) {
+      P4EST_ASSERT (p4est_quadrant_compare_piggy (q2, q) < 0);
+      P4EST_ASSERT (q2->p.piggy1.owner_rank <= q->p.piggy1.owner_rank);
+    }
     q2 = q;
   }
 #endif

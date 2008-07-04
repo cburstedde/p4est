@@ -1029,8 +1029,10 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 {
   bool                full_tree[2];
   size_t              zz, incount, prev_good, removed;
+#ifdef P4EST_DEBUG
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;
+#endif
   const p4est_quadrant_t *first_pos, *next_pos;
   p4est_quadrant_t   *q1, *q2;
   p4est_quadrant_t    ld;

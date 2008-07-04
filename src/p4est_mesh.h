@@ -41,10 +41,12 @@ bool                p4est_is_balanced (p4est_t * p4est);
  * \param [in] p4est              The forest for which the ghost layer will
  *                                be generated.
  * \param [out] ghost_layer       An array of quadrants which make up the
- *                                ghost layer around \a p4est.  These will be
+ *                                ghost layer around \a p4est.  Their piggy1
+ *                                data member is filled with their owner's
+ *                                tree and processor ids.  Quadrants will be
  *                                ordered in \c p4est_quadrant_compare_piggy
  *                                order.  These will be quadrants inside the
- *                                neightboring tree i.e., \c
+ *                                neighboring tree i.e., \c
  *                                p4est_quadrant_is_inside is true for the
  *                                quadrant and the neighboring tree.
  */
