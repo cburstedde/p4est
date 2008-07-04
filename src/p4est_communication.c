@@ -140,6 +140,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
   P4EST_ASSERT (0 <= which_tree &&
                 which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
   proc_low = 0;
   proc_high = num_procs - 1;
@@ -231,8 +232,12 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 #endif
                   ));
 
-  *pfirst_pos = first_pos;
-  *pnext_pos = next_pos;
+  if (pfirst_pos != NULL) {
+    *pfirst_pos = first_pos;
+  }
+  if (pnext_pos != NULL) {
+    *pnext_pos = next_pos;
+  }
 }
 
 bool

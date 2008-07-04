@@ -60,11 +60,11 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   p4est_topidx_t      ntreeid;
   p4est_quadrant_t    tmpq, nq;
 
-  P4EST_QUADRANT_INIT (&nq);
-
   if (p4est_quadrant_is_inside_root (q)) {
     return p4est_comm_find_owner (p4est, treeid, q, rank);
   }
+
+  P4EST_QUADRANT_INIT (&nq);
 
   /* We are outside of the unit tree */
   quad_contact[0] = (q->y < 0);
@@ -974,19 +974,21 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
+  const p4est_qcoord_t th = P4EST_QUADRANT_LEN (P4EST_MAXLEVEL);
   int                 face, corner, zcorner;
   int                 i;
   int                 n0_proc, n0ur_proc, n1_proc, n1ur_proc;
   int                 num_peers, peer, peer_proc;
   int                 mpiret;
   bool                failed;
+  bool                full_tree[2], fully_owned;
   size_t              pz;
   p4est_topidx_t      nt;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
   p4est_locidx_t      li;
   p4est_locidx_t      num_quadrants;
-  p4est_locidx_t      num_ghosts;
+  p4est_locidx_t      num_ghosts, num_skip1, num_skip2;
   p4est_locidx_t     *send_counts, *recv_counts;
   p4est_locidx_t      ghost_offset;
   p4est_tree_t       *tree;
@@ -1015,6 +1017,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   failed = false;
   sc_array_init (&procs, sizeof (int));
   sc_array_init (&urprocs, sizeof (int));
+  num_skip1 = num_skip2 = 0;
 
   /* allocate empty send buffers */
   sc_array_init (&send_bufs, sizeof (sc_array_t));
@@ -1029,12 +1032,44 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
     tree = p4est_array_index_topidx (p4est->trees, nt);
     quadrants = &tree->quadrants;
     num_quadrants = (p4est_locidx_t) quadrants->elem_count;
+    p4est_comm_tree_info (p4est, nt, full_tree, NULL, NULL);
+    fully_owned = full_tree[0] && full_tree[1];
 
     /* Find the smaller neighboring processors of each quadrant */
     for (li = 0; li < num_quadrants; ++li) {
       q = sc_array_index (quadrants, li);
       if (q->level == P4EST_MAXLEVEL) {
         continue;
+      }
+
+      /* Optimization: build and test predecessor and successor */
+      n0.x = q->x - th;
+      n0.y = q->y - th;
+      n0.level = P4EST_MAXLEVEL;
+      if (n0.x >= 0 && n0.y >= 0) {
+        n1.x = q->x + P4EST_QUADRANT_LEN (q->level);
+        n1.y = q->y + P4EST_QUADRANT_LEN (q->level);
+        n1.level = P4EST_MAXLEVEL;
+        if (n1.x < P4EST_ROOT_LEN && n1.y < P4EST_ROOT_LEN) {
+          if (fully_owned) {
+            /* we own all of the tree and the quadrant q does
+             * not touch its border.
+             */
+            ++num_skip1;
+            continue;
+          }
+          n0_proc = p4est_comm_find_owner (p4est, nt, &n0, rank);
+          if (n0_proc == rank) {
+            n1_proc = p4est_comm_find_owner (p4est, nt, &n1, rank);
+            if (n1_proc == rank) {
+              /* we do not own all of the tree but the neighborhood
+               * of the quadrant q belongs to us.
+               */
+              ++num_skip2;
+              continue;
+            }
+          }
+        }
       }
 
       /* Find smaller face neighbors */
@@ -1214,7 +1249,9 @@ failtest:
     P4EST_ASSERT (recv_counts[peer] > 0);
     num_ghosts += recv_counts[peer];
   }
-  P4EST_VERBOSEF ("Total ghosts to receive %lld\n", (long long) num_ghosts);
+  P4EST_VERBOSEF
+    ("Total quadrants skipped %lld %lld ghosts to receive %lld\n",
+     (long long) num_skip1, (long long) num_skip2, (long long) num_ghosts);
 
   /* Allocate space for the ghosts */
   sc_array_resize (ghost_layer, (size_t) num_ghosts);
