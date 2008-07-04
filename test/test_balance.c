@@ -49,6 +49,9 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 int
 main (int argc, char **argv)
 {
+  MPI_Comm            mpicomm;
+  int                 mpiret;
+  int                 mpisize, mpirank;
   unsigned            crc;
   size_t              k;
   int8_t              l;
@@ -57,8 +60,20 @@ main (int argc, char **argv)
   p4est_quadrant_t   *q;
   p4est_connectivity_t *connectivity;
 
+  /* initialize MPI */
+  mpiret = MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+  mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_size (mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+
+  sc_init (mpirank, NULL, NULL, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est = p4est_new (MPI_COMM_NULL, connectivity, 4, NULL);
+  p4est = p4est_new (mpicomm, connectivity, 4, NULL);
 
   /* build empty tree */
   sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
@@ -85,8 +100,10 @@ main (int argc, char **argv)
   }
 
   /* balance the tree, print and destroy */
+#if 0
   p4est_balance_subtree (p4est, 0, NULL);
   p4est_tree_print (SC_LP_INFO, tree);
+#endif
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
     q = sc_array_index (&tree->quadrants, k);
     sc_mempool_free (p4est->user_data_pool, q->p.user_data);
@@ -104,13 +121,16 @@ main (int argc, char **argv)
   p4est_balance (p4est, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Rebalance");
 
-  /* clean up memory */
+  /* clean up and exit */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==
                 (size_t) p4est->local_num_quadrants);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 
   sc_finalize ();
+
+  mpiret = MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

@@ -1,11 +1,10 @@
 
- * 3D
-   topology: edges and corners
-   edge balance
-   corner balance
-   replace p8est_find_face_transform by lookup tables
+ * Balance
+   Deal with p4est counters modified by balance_subtree
+   Replace p8est_find_face_transform by lookup tables
  * Mesh generation
-   gather one layer of ghost elements
+   Make build_ghost_layer abort cleanly on non-2:1 meshes
+   Don't put duplicates into ghost layer
    2D bilinear elements
    2D interface to pfudg
    3D trilinear mesh
