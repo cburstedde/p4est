@@ -833,9 +833,8 @@ p4est_is_balanced (p4est_t * p4est)
   int                 face, corner;
   int                 qcid;
   int                *pe0, *pe1, *pe2;
+  bool                failed;
   bool                e0, e1, e2, e3;
-  bool                is_face_balanced = true;
-  bool                is_corner_balanced = true;
   bool                bigger_face[4];
   size_t              cez;
   p4est_topidx_t      nt;
@@ -850,38 +849,32 @@ p4est_is_balanced (p4est_t * p4est)
   sc_array_t         *quadrants;
   sc_array_t          e0_a, e1_a, e2_a;
 
+  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
+  if (!p4est_build_ghost_layer (p4est, &ghost_layer)) {
+    P4EST_NOTICE ("Ghost layer could not be built\n");
+    return false;
+  }
+
   P4EST_QUADRANT_INIT (&n0);
   P4EST_QUADRANT_INIT (&n1);
   P4EST_QUADRANT_INIT (&n2);
   P4EST_QUADRANT_INIT (&n3);
 
-  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
+  failed = false;
   sc_array_init (&e0_a, sizeof (int));
   sc_array_init (&e1_a, sizeof (int));
   sc_array_init (&e2_a, sizeof (int));
 
-  p4est_build_ghost_layer (p4est, &ghost_layer);
-
   /* loop over all local trees */
   for (nt = first_local_tree; nt <= last_local_tree; ++nt) {
-    if (!is_face_balanced && !is_corner_balanced) {
-      break;
-    }
     tree = p4est_array_index_topidx (p4est->trees, nt);
     quadrants = &tree->quadrants;
     num_quadrants = (p4est_locidx_t) quadrants->elem_count;
 
     /* Find the neighboring processors of each quadrant */
     for (li = 0; li < num_quadrants; ++li) {
-      if (!is_face_balanced && !is_corner_balanced) {
-        break;
-      }
       q = sc_array_index (quadrants, (size_t) li);
       qcid = p4est_quadrant_child_id (q);
-#if 0
-      P4EST_VERBOSEF ("Is_balance tree %lld quadrant %lld cid %d\n",
-                      (long long) nt, (long long) li, qcid);
-#endif
 
       /* Find face neighbors */
       for (face = 0; face < 4; ++face) {
@@ -899,23 +892,22 @@ p4est_is_balanced (p4est_t * p4est)
         e1 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n1, NULL);
         if (e0 != e1) {
           P4EST_NOTICE ("Two contradicting small face neighbors\n");
-          is_face_balanced = false;
+          failed = true;
+          goto failtest;
         }
         e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n2, NULL);
         e3 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n3, NULL);
         if ((int) e0 + (int) e2 + (int) e3 != 1) {
           P4EST_NOTICE ("Face balance failed\n");
-          is_face_balanced = false;
+          failed = true;
+          goto failtest;
         }
         bigger_face[face] = e3;
       }
 
       /* Find corner neighbors, corner is in z-order here */
       for (corner = 0; corner < 4; ++corner) {
-        /* Cut this short if corner balance is already violated */
-        if (!is_corner_balanced) {
-          break;
-        }
+
         /* If q is at a boundary then it is automatically balanced */
         if (p4est_quadrant_on_corner_boundary (p4est, nt, q, corner)) {
           continue;
@@ -936,20 +928,20 @@ p4est_is_balanced (p4est_t * p4est)
              bigger_face[p4est_hanging_skip[qcid][1]])) {
           if (e0_a.elem_count > 0 || e0 || e1 || e2) {
             P4EST_NOTICE ("Duplicate corners across hanging face\n");
-            is_corner_balanced = false;
-            break;
+            failed = true;
+            goto failtest;
           }
         }
         else {
           if (!e0 && !e1 && !e2) {
             P4EST_NOTICE ("Corner balance missing quadrants\n");
-            is_corner_balanced = false;
-            break;
+            failed = true;
+            goto failtest;
           }
           if (e0_a.elem_count == 0 && e0 + e1 + e2 != 1) {
             P4EST_NOTICE ("Corner balance duplicate quadarants\n");
-            is_corner_balanced = false;
-            break;
+            failed = true;
+            goto failtest;
           }
           for (cez = 0; cez < e0_a.elem_count; ++cez) {
             pe0 = sc_array_index (&e0_a, cez);
@@ -957,8 +949,8 @@ p4est_is_balanced (p4est_t * p4est)
             pe2 = sc_array_index (&e2_a, cez);
             if (*pe0 + *pe1 + *pe2 != 1) {
               P4EST_NOTICE ("Star corner balance violated\n");
-              is_corner_balanced = false;
-              break;
+              failed = true;
+              goto failtest;
             }
           }
         }
@@ -966,15 +958,16 @@ p4est_is_balanced (p4est_t * p4est)
     }
   }
 
+failtest:
   sc_array_reset (&ghost_layer);
   sc_array_reset (&e0_a);
   sc_array_reset (&e1_a);
   sc_array_reset (&e2_a);
 
-  return (is_face_balanced && is_corner_balanced);
+  return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
 }
 
-void
+bool
 p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 {
 #ifdef P4EST_MPI
@@ -986,6 +979,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   int                 n0_proc, n0ur_proc, n1_proc, n1ur_proc;
   int                 num_peers, peer, peer_proc;
   int                 mpiret;
+  bool                failed;
   size_t              pz;
   p4est_topidx_t      nt;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
@@ -1018,6 +1012,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   P4EST_QUADRANT_INIT (&n1);
   P4EST_QUADRANT_INIT (&n1ur);
 
+  failed = false;
   sc_array_init (&procs, sizeof (int));
   sc_array_init (&urprocs, sizeof (int));
 
@@ -1056,8 +1051,11 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
         /* Note that we will always check this because it is cheap
          * and prevents deadlocks
          */
-        SC_CHECK_ABORT (n0_proc == n0ur_proc, "Non reciprocal communication");
-        SC_CHECK_ABORT (n1_proc == n1ur_proc, "Non reciprocal communication");
+        if (n0_proc != n0ur_proc || n1_proc != n1ur_proc) {
+          P4EST_NOTICE ("Small face owner inconsistency\n");
+          failed = true;
+          goto failtest;
+        }
 
         if (n0_proc != rank && n0_proc >= 0) {
           buf = sc_array_index_int (&send_bufs, n0_proc);
@@ -1089,8 +1087,11 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
             /* Note that we will always check this because it is cheap
              * and prevents deadlocks
              */
-            SC_CHECK_ABORT (n0_proc == n0ur_proc,
-                            "Non reciprocal communication");
+            if (n0_proc != n0ur_proc) {
+              P4EST_NOTICE ("Tree corner owner inconsistency\n");
+              failed = true;
+              goto failtest;
+            }
 
             if (n0_proc != rank) {
               buf = sc_array_index_int (&send_bufs, n0_proc);
@@ -1108,8 +1109,11 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
           /* Note that we will always check this because it is cheap
            * and prevents deadlocks
            */
-          SC_CHECK_ABORT (n0_proc == n0ur_proc,
-                          "Non reciprocal communication");
+          if (n0_proc != n0ur_proc) {
+            P4EST_NOTICE ("Small corner owner inconsistency\n");
+            failed = true;
+            goto failtest;
+          }
 
           if (n0_proc != rank && n0_proc >= 0) {
             buf = sc_array_index_int (&send_bufs, n0_proc);
@@ -1118,6 +1122,20 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
         }
       }
     }
+  }
+
+failtest:
+  if (p4est_comm_sync_flag (p4est, failed, MPI_BOR)) {
+    for (i = 0; i < num_procs; ++i) {
+      buf = sc_array_index_int (&send_bufs, i);
+      sc_array_reset (buf);
+    }
+    sc_array_reset (&send_bufs);
+    sc_array_reset (&procs);
+    sc_array_reset (&urprocs);
+    sc_array_reset (ghost_layer);
+
+    return false;
   }
 
   /* Count the number of peers that I send to and receive from */
@@ -1196,7 +1214,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (recv_counts[peer] > 0);
     num_ghosts += recv_counts[peer];
   }
-  P4EST_LDEBUGF ("Total ghosts to receive %lld\n", (long long) num_ghosts);
+  P4EST_VERBOSEF ("Total ghosts to receive %lld\n", (long long) num_ghosts);
 
   /* Allocate space for the ghosts */
   sc_array_resize (ghost_layer, (size_t) num_ghosts);
@@ -1293,6 +1311,8 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   /* If we are not running with mpi then we don't need to do anything */
   sc_array_reset (ghost_layer);
 #endif
+
+  return true;
 }
 
 void

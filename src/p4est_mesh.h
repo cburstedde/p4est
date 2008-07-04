@@ -26,8 +26,6 @@
 
 /** Checks a p4est to see if it is balanced.
  *
- * \warning This function may abort if the forest is not balanced.
- *
  * \param [in] p4est  The p4est to be tested.
  * \return Returns true if balanced, false otherwise.
  */
@@ -49,8 +47,10 @@ bool                p4est_is_balanced (p4est_t * p4est);
  *                                neighboring tree i.e., \c
  *                                p4est_quadrant_is_inside is true for the
  *                                quadrant and the neighboring tree.
+ * \return                        Returns false if it fails due to violated
+ *                                2:1 constraints, true otherwise.
  */
-void                p4est_build_ghost_layer (p4est_t * p4est,
+bool                p4est_build_ghost_layer (p4est_t * p4est,
                                              sc_array_t * ghost_layer);
 
 /** Determine unique ordering of vertices for each quadrant.
