@@ -4,7 +4,6 @@
    Replace p8est_find_face_transform by lookup tables
  * Mesh generation
    Make build_ghost_layer abort cleanly on non-2:1 meshes
-   Don't put duplicates into ghost layer
    2D bilinear elements
    2D interface to pfudg
    3D trilinear mesh

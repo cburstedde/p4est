@@ -25,12 +25,12 @@
 #include <p4est_mesh.h>
 
 /* *INDENT-OFF* */
-static const int hanging_corners[4][2] = {
+static const int p4est_hanging_corners[4][2] = {
   { 1, 2 },
   { 0, 3 },
   { 0, 3 },
   { 1, 2 }};
-static const int hanging_skip[4][2] = {
+static const int p4est_hanging_skip[4][2] = {
   { 0, 3 },
   { 0, 1 },
   { 3, 2 },
@@ -794,24 +794,22 @@ static void
 p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
                         p4est_quadrant_t * q)
 {
-  bool                add_to_proc = true;
   p4est_quadrant_t   *qold, *qnew;
 
   /* Check to see if the quadrant already is last in the array */
   if (buf->elem_count > 0) {
     qold = sc_array_index (buf, buf->elem_count - 1);
-    if (p4est_quadrant_compare_piggy (q, qold) == 0) {
-      add_to_proc = false;
+    if (treeid == qold->p.piggy1.which_tree &&
+        p4est_quadrant_compare (q, qold) == 0) {
+      return;
     }
   }
 
-  if (add_to_proc) {
-    qnew = sc_array_push (buf);
-    *qnew = *q;
+  qnew = sc_array_push (buf);
+  *qnew = *q;
 
-    /* Cram the tree id into the user_data pointer */
-    qnew->p.piggy1.which_tree = treeid;
-  }
+  /* Cram the tree id into the user_data pointer */
+  qnew->p.piggy1.which_tree = treeid;
 }
 
 bool
@@ -917,10 +915,10 @@ p4est_is_balanced (p4est_t * p4est)
         P4EST_ASSERT (e0_a.elem_count == e1_a.elem_count
                       && e0_a.elem_count == e2_a.elem_count);
 
-        if ((corner == hanging_corners[qcid][0] &&
-             bigger_face[hanging_skip[qcid][0]]) ||
-            (corner == hanging_corners[qcid][1] &&
-             bigger_face[hanging_skip[qcid][1]])) {
+        if ((corner == p4est_hanging_corners[qcid][0] &&
+             bigger_face[p4est_hanging_skip[qcid][0]]) ||
+            (corner == p4est_hanging_corners[qcid][1] &&
+             bigger_face[p4est_hanging_skip[qcid][1]])) {
           if (e0_a.elem_count > 0 || e0 || e1 || e2) {
             P4EST_NOTICE ("Duplicate corners across hanging face\n");
             is_corner_balanced = false;
@@ -1252,7 +1250,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (p4est_quadrant_is_valid (q));
     P4EST_ASSERT (q->p.piggy1.which_tree >= 0 &&
                   q->p.piggy1.which_tree < p4est->connectivity->num_trees);
-    P4EST_ASSERT (q2 == NULL || p4est_quadrant_compare_piggy (q2, q) <= 0);
+    P4EST_ASSERT (q2 == NULL || p4est_quadrant_compare_piggy (q2, q) < 0);
     q2 = q;
   }
 #endif
