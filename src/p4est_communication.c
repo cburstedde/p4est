@@ -235,4 +235,20 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
   *pnext_pos = next_pos;
 }
 
+bool
+p4est_comm_sync_flag (p4est_t * p4est, bool flag, MPI_Op operation)
+{
+  int8_t              lbyte, gbyte;
+  int                 mpiret;
+
+  P4EST_ASSERT (operation == MPI_BAND || operation == MPI_BOR);
+
+  lbyte = (int8_t) (flag ? 1 : 0);
+  mpiret = MPI_Allreduce (&lbyte, &gbyte, 1, MPI_BYTE, operation,
+                          p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  return (bool) gbyte;
+}
+
 /* EOF p4est_communication.c */

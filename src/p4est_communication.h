@@ -74,4 +74,13 @@ void                p4est_comm_tree_info (p4est_t * p4est,
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 
+/** Evaluates a boolean flag among processors.
+ * \param [in] p4est       The MPI communicator of this p4est will be used.
+ * \param [in] flag        The boolean flag to communicate.
+ * \param [in] operation   Either MPI_BAND or MPI_BOR.
+ * \return     Returns the AND resp. OR of all processors' boolean flags.
+ */
+bool                p4est_comm_sync_flag (p4est_t * p4est,
+                                          bool flag, MPI_Op operation);
+
 #endif /* !P4EST_COMMUNICATION_H */
