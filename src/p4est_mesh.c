@@ -426,7 +426,8 @@ p4est_quadrant_on_corner_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   if (((cy < 0) || (cy >= rh)) && ((cx >= rh) || (cx < 0))) {
 
     vertex = conn->tree_to_vertex[4 * treeid + rcorner];
-    corner_trees = conn->vtt_offset[vertex + 1] - conn->vtt_offset[vertex];
+    corner_trees =              /* same type */
+      conn->vtt_offset[vertex + 1] - conn->vtt_offset[vertex];
 
     ntree1 = conn->tree_to_tree[4 * treeid + (rcorner + 3) % 4];
     ntree2 = conn->tree_to_tree[4 * treeid + rcorner];
@@ -1064,9 +1065,8 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
   p4est_locidx_t      li;
   p4est_locidx_t      num_quadrants;
-  p4est_locidx_t      num_ghosts, skipped;
+  p4est_locidx_t      num_ghosts, ghost_offset, skipped;
   p4est_locidx_t     *send_counts, *recv_counts;
-  p4est_locidx_t      ghost_offset;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
 #ifdef P4EST_DEBUG
@@ -1319,7 +1319,7 @@ failtest:
   /* Count ghosts */
   for (peer = 0, num_ghosts = 0; peer < num_peers; ++peer) {
     P4EST_ASSERT (recv_counts[peer] > 0);
-    num_ghosts += recv_counts[peer];
+    num_ghosts += recv_counts[peer];    /* same type */
   }
   P4EST_VERBOSEF ("Total quadrants skipped %lld ghosts to receive %lld\n",
                   (long long) skipped, (long long) num_ghosts);
@@ -1342,7 +1342,7 @@ failtest:
                    MPI_BYTE, peer_proc, P4EST_COMM_GHOST_LOAD, comm,
                    recv_load_request + peer);
       SC_CHECK_MPI (mpiret);
-      ghost_offset += recv_counts[peer];
+      ghost_offset += recv_counts[peer];        /* same type */
       ++peer;
     }
   }

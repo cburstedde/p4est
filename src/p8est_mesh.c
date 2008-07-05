@@ -46,7 +46,7 @@ p4est_neighborhood_new (p4est_t * p4est)
   }
   else {
     flt = p4est->first_local_tree;
-    local_num_trees = p4est->last_local_tree - flt + 1;
+    local_num_trees = p4est->last_local_tree - flt + 1; /* type ok */
   }
   local_num_quadrants = p4est->local_num_quadrants;
 
@@ -59,8 +59,8 @@ p4est_neighborhood_new (p4est_t * p4est)
   lsum = 0;
   for (nt = 0; nt < local_num_trees; ++nt) {
     nhood->cumulative_count[nt] = lsum;
-    tree = p4est_array_index_topidx (p4est->trees, flt + nt);
-    lsum += (p4est_locidx_t) tree->quadrants.elem_count;
+    tree = p4est_array_index_topidx (p4est->trees, flt + nt);   /* type ok */
+    lsum += (p4est_locidx_t) tree->quadrants.elem_count;        /* type ok */
   }
   P4EST_ASSERT (lsum == local_num_quadrants);
   nhood->cumulative_count[nt] = lsum;
