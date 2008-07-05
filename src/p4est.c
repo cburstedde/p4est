@@ -896,9 +896,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 face;
   int                 first_peer, last_peer;
   int                 over_peer_count;
-  bool                any_quad, quad_contact[2 * P4EST_DIM];
-  bool                any_face, face_contact[2 * P4EST_DIM];
-  bool                tree_fully_owned;
+  bool                quad_contact[2 * P4EST_DIM];
+  bool                any_face, tree_contact[2 * P4EST_DIM];
+  bool                tree_fully_owned, full_tree[2];
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
   size_t              qcount, qbytes, offset, obytes;
@@ -908,6 +908,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
   p4est_topidx_t      qtree, nt;
   p4est_topidx_t      first_tree, last_tree;
+  p4est_locidx_t      skipped;
   p4est_balance_peer_t *peer;
   p4est_tree_t       *tree;
   p4est_quadrant_t    mylow, nextlow;
@@ -1048,13 +1049,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   first_peer = num_procs;
   last_peer = -1;
   all_incount = 0;
+  skipped = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
+    p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
+    tree_fully_owned = full_tree[0] && full_tree[1];
     any_face = false;
     for (face = 0; face < 2 * P4EST_DIM; ++face) {
-      face_contact[face] =
-        (conn->tree_to_tree[2 * P4EST_DIM * nt + face] != nt
-         || (int) conn->tree_to_face[2 * P4EST_DIM * nt + face] != face);
-      any_face = any_face || face_contact[face];
+      any_face = any_face || tree_contact[face];
     }
     if (any_face) {
       tree_flags[nt] |= any_face_flag;
@@ -1074,18 +1075,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                     (long long) nt, (unsigned long long) treecount);
 
     /* check if this tree is not shared with other processors */
-    tree_fully_owned = false;
-    if ((nt > first_tree || (mylow.x == 0 && mylow.y == 0
-#ifdef P4_TO_P8
-                             && mylow.z == 0
-#endif
-         )) && (nt < last_tree || (nextlow.x == 0 && nextlow.y == 0
-#ifdef P4_TO_P8
-                                   && nextlow.z == 0
-#endif
-                ))) {
+    if (tree_fully_owned) {
       /* all quadrants in this tree are owned by me */
-      tree_fully_owned = true;
       tree_flags[nt] |= fully_owned_flag;
       if (!any_face) {
         /* this tree is isolated, no balance between trees */
@@ -1098,27 +1089,13 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       /* this quadrant may be on the boundary with a range of processors */
       q = sc_array_index (tquadrants, zz);
       qh = P4EST_QUADRANT_LEN (q->level);
-      if (tree_fully_owned) {
-        /* need only to consider boundary quadrants */
-#ifndef P4_TO_P8
-        any_quad =
-          (face_contact[0] && q->y == 0) ||
-          (face_contact[1] && q->x == rh - qh) ||
-          (face_contact[2] && q->y == rh - qh) ||
-          (face_contact[3] && q->x == 0);
-#else
-        any_quad =
-          (face_contact[0] && q->x == 0) ||
-          (face_contact[1] && q->x == rh - qh) ||
-          (face_contact[2] && q->y == 0) ||
-          (face_contact[3] && q->y == rh - qh) ||
-          (face_contact[4] && q->z == 0) ||
-          (face_contact[5] && q->z == rh - qh);
-#endif
-        if (!any_quad) {
-          continue;
-        }
+      if (p4est_comm_neighborhood_owned (p4est, nt,
+                                         full_tree, tree_contact, q)) {
+        /* this quadrant's 3x3 neighborhood is onwed by this processor */
+        ++skipped;
+        continue;
       }
+
 #ifdef P4_TO_P8
       for (m = 0; m < 3; ++m) {
 #if 0
@@ -1176,7 +1153,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             else {
               /* this quadrant goes across a face */
               for (face = 0; face < 4; ++face) {
-                if (quad_contact[face] && face_contact[face]) {
+                if (quad_contact[face] && tree_contact[face]) {
                   qtree = conn->tree_to_tree[4 * nt + face];
                   break;
                 }
@@ -1241,7 +1218,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               P4EST_ASSERT (quad_contact[face]);
               qtree = p8est_find_face_transform (conn, nt, face, ftransform);
               if (qtree >= 0) {
-                P4EST_ASSERT (face_contact[face]);
+                P4EST_ASSERT (tree_contact[face]);
                 p8est_quadrant_transform_face (q, &tosend, ftransform);
                 p8est_quadrant_transform_face (&insulq, &tempq, ftransform);
                 p4est_balance_schedule (p4est, peers, qtree, true,
@@ -1250,7 +1227,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               }
               else {
                 /* goes across a face with no neighbor */
-                P4EST_ASSERT (!face_contact[face]);
+                P4EST_ASSERT (!tree_contact[face]);
               }
             }
             else if (contact_edge_only) {
@@ -1931,6 +1908,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (p4est_is_balanced (p4est));
+  P4EST_VERBOSEF ("Balance skipped %lld\n", (long long) skipped);
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);

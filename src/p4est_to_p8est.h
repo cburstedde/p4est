@@ -138,6 +138,7 @@
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
+#define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 
 /* functions in p4est_vtk */
