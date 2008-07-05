@@ -131,6 +131,12 @@ main (int argc, char **argv)
   p4est_balance (p4est, NULL);
   SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 3");
 
+  /* checksum and partition */
+  crc = p4est_checksum (p4est);
+  p4est_partition (p4est, NULL);
+  SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Partition");
+  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 4");
+
   /* checksum and rebalance */
   crc = p4est_checksum (p4est);
   p4est_balance (p4est, NULL);

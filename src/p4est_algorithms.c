@@ -1998,6 +1998,11 @@ p4est_partition_given (p4est_t * p4est,
       recv_buf[from_proc] = NULL;
     }
   }
+#ifdef P4EST_MPI
+  for (; sk < num_proc_recv_from; ++sk) {
+    recv_request[sk] = MPI_REQUEST_NULL;
+  }
+#endif
 
   /* For each processor calculate the number of quadrants sent */
   num_send_to = P4EST_ALLOC (p4est_locidx_t, num_procs);
@@ -2155,9 +2160,12 @@ p4est_partition_given (p4est_t * p4est,
       send_buf[to_proc] = NULL;
     }
   }
+#ifdef P4EST_MPI
+  for (; sk < num_proc_send_to; ++sk) {
+    send_request[sk] = MPI_REQUEST_NULL;
+  }
 
   /* Fill in forest */
-#ifdef P4EST_MPI
   mpiret = MPI_Waitall (num_proc_recv_from, recv_request, recv_status);
   SC_CHECK_MPI (mpiret);
 #endif
