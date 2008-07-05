@@ -29,13 +29,26 @@ static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
 {
+  int                 cid;
+
+  if (which_tree == 2 || which_tree == 3) {
+    return 0;
+  }
+
+  cid = p4est_quadrant_child_id (quadrant);
+
+  if (cid == 3 ||
+      (quadrant->x >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2) &&
+       quadrant->y >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2))) {
+    return 1;
+  }
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
   }
-  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+  if (quadrant->level == 1 && cid == 2) {
     return 1;
   }
-  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+  if (quadrant->x == P4EST_QUADRANT_LEN (2) &&
       quadrant->y == P4EST_LAST_OFFSET (2)) {
     return 1;
   }
@@ -71,8 +84,9 @@ main (int argc, char **argv)
 
   sc_init (mpirank, NULL, NULL, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+  p4est_initial_quadrants_per_processor = 0;
 
-  connectivity = p4est_connectivity_new_unitsquare ();
+  connectivity = p4est_connectivity_new_star ();
   p4est = p4est_new (mpicomm, connectivity, 4, NULL);
 
   /* build empty tree */
@@ -111,10 +125,11 @@ main (int argc, char **argv)
   sc_array_reset (&tree->quadrants);
 
   /* refine and balance the forest */
+  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 1");
   p4est_refine (p4est, refine_fn, NULL);
-  SC_CHECK_ABORT (!p4est_is_balanced (p4est), "!Balance");
+  SC_CHECK_ABORT (!p4est_is_balanced (p4est), "Balance 2");
   p4est_balance (p4est, NULL);
-  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance");
+  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 3");
 
   /* checksum and rebalance */
   crc = p4est_checksum (p4est);
