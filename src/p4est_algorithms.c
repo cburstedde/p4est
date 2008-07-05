@@ -375,6 +375,7 @@ p4est_is_valid (p4est_t * p4est)
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;
   int                 i, maxlevel;
+  bool                failed;
   size_t              jz;
   p4est_topidx_t      next_tree;
   p4est_locidx_t      nquadrants, lquadrants, perlevel;
@@ -382,6 +383,7 @@ p4est_is_valid (p4est_t * p4est)
   p4est_quadrant_t    mylow, nextlow, s;
   p4est_tree_t       *tree;
 
+  failed = false;
   P4EST_QUADRANT_INIT (&mylow);
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
@@ -406,14 +408,16 @@ p4est_is_valid (p4est_t * p4est)
   /* check first tree in global partition */
   if (first_tree < 0) {
     if (!(first_tree == -1 && last_tree == -2)) {
-      P4EST_INFO ("p4est invalid empty tree range A");
-      return false;
+      P4EST_NOTICE ("p4est invalid empty tree range A");
+      failed = true;
+      goto failtest;
     }
   }
   else {
     if (p4est->global_first_position[rank].p.which_tree != first_tree) {
-      P4EST_INFO ("p4est invalid first tree\n");
-      return false;
+      P4EST_NOTICE ("p4est invalid first tree\n");
+      failed = true;
+      goto failtest;
     }
     mylow.x = p4est->global_first_position[rank].x;
     mylow.y = p4est->global_first_position[rank].y;
@@ -429,8 +433,9 @@ p4est_is_valid (p4est_t * p4est)
           q->z != mylow.z ||
 #endif
           false) {
-        P4EST_INFO ("p4est invalid low quadrant\n");
-        return false;
+        P4EST_NOTICE ("p4est invalid low quadrant\n");
+        failed = true;
+        goto failtest;
       }
     }
   }
@@ -438,15 +443,17 @@ p4est_is_valid (p4est_t * p4est)
   /* check last tree in global partition */
   if (last_tree < 0) {
     if (!(first_tree == -1 && last_tree == -2)) {
-      P4EST_INFO ("p4est invalid empty tree range B");
-      return false;
+      P4EST_NOTICE ("p4est invalid empty tree range B");
+      failed = true;
+      goto failtest;
     }
   }
   else {
     next_tree = p4est->global_first_position[rank + 1].p.which_tree;
     if (next_tree != last_tree && next_tree != last_tree + 1) {
-      P4EST_INFO ("p4est invalid last tree\n");
-      return false;
+      P4EST_NOTICE ("p4est invalid last tree\n");
+      failed = true;
+      goto failtest;
     }
     nextlow.x = p4est->global_first_position[rank + 1].x;
     nextlow.y = p4est->global_first_position[rank + 1].y;
@@ -460,8 +467,9 @@ p4est_is_valid (p4est_t * p4est)
           || nextlow.z != 0
 #endif
         ) {
-        P4EST_INFO ("p4est invalid next coordinates\n");
-        return false;
+        P4EST_NOTICE ("p4est invalid next coordinates\n");
+        failed = true;
+        goto failtest;
       }
     }
     tree = sc_array_index (p4est->trees, last_tree);
@@ -469,8 +477,9 @@ p4est_is_valid (p4est_t * p4est)
       q = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
       if (next_tree == last_tree) {
         if (!p4est_quadrant_is_next (q, &nextlow)) {
-          P4EST_INFO ("p4est invalid next quadrant\n");
-          return false;
+          P4EST_NOTICE ("p4est invalid next quadrant\n");
+          failed = true;
+          goto failtest;
         }
       }
       else {
@@ -480,8 +489,9 @@ p4est_is_valid (p4est_t * p4est)
             s.z + 1 != P4EST_ROOT_LEN ||
 #endif
             false) {
-          P4EST_INFO ("p4est invalid last quadrant\n");
-          return false;
+          P4EST_NOTICE ("p4est invalid last quadrant\n");
+          failed = true;
+          goto failtest;
         }
       }
     }
@@ -492,14 +502,16 @@ p4est_is_valid (p4est_t * p4est)
   for (jz = 0; jz < p4est->trees->elem_count; ++jz) {
     tree = sc_array_index (p4est->trees, jz);
     if (!p4est_tree_is_complete (tree)) {
-      P4EST_INFO ("p4est invalid not complete\n");
-      return false;
+      P4EST_NOTICE ("p4est invalid not complete\n");
+      failed = true;
+      goto failtest;
     }
     if (((p4est_topidx_t) jz < p4est->first_local_tree ||
          (p4est_topidx_t) jz > p4est->last_local_tree) &&
         tree->quadrants.elem_count > 0) {
-      P4EST_INFO ("p4est invalid outside count\n");
-      return false;
+      P4EST_NOTICE ("p4est invalid outside count\n");
+      failed = true;
+      goto failtest;
     }
 
     maxlevel = 0;
@@ -516,21 +528,25 @@ p4est_is_valid (p4est_t * p4est)
     lquadrants += nquadrants;   /* same type */
 
     if (maxlevel != (int) tree->maxlevel) {
-      P4EST_INFO ("p4est invalid wrong maxlevel\n");
-      return false;
+      P4EST_NOTICE ("p4est invalid wrong maxlevel\n");
+      failed = true;
+      goto failtest;
     }
     if (nquadrants != (p4est_locidx_t) tree->quadrants.elem_count) {
-      P4EST_INFO ("p4est invalid tree quadrant count\n");
-      return false;
+      P4EST_NOTICE ("p4est invalid tree quadrant count\n");
+      failed = true;
+      goto failtest;
     }
   }
 
   if (lquadrants != p4est->local_num_quadrants) {
-    P4EST_INFO ("p4est invalid local quadrant count\n");
-    return false;
+    P4EST_NOTICE ("p4est invalid local quadrant count\n");
+    failed = true;
+    goto failtest;
   }
 
-  return true;
+failtest:
+  return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
 }
 
 /* here come the heavyweight algorithms */

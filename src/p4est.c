@@ -2260,12 +2260,12 @@ unsigned
 p4est_checksum (p4est_t * p4est)
 {
   uLong               treecrc, crc;
-  int                 p;
   size_t              scount, ssum;
   p4est_topidx_t      nt;
   p4est_tree_t       *tree;
   sc_array_t          checkarray;
 #ifdef P4EST_MPI
+  int                 p;
   int                 mpiret;
   uint64_t            send[2];
   uint64_t           *gather;

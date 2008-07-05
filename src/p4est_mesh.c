@@ -37,6 +37,8 @@ static const int p4est_hanging_skip[4][2] = {
   { 1, 2 }};
 /* *INDENT-ON* */
 
+#ifdef P4EST_MPI
+
 /** Gets the procid of the owner of \a q.
  *
  * \param [in] p4est  The forest in which to search for \a q
@@ -152,6 +154,8 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
 
   sc_array_reset (cta);
 }
+
+#endif /* P4EST_MPI */
 
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *
@@ -792,6 +796,8 @@ p4est_quadrant_get_possible_face_neighbors (p4est_quadrant_t * q,
   }
 }
 
+#ifdef P4EST_MPI
+
 /** This adds a quadrant to the end of a buffer.
  *
  * It crams the tree id into the user_data field of the quadrant in
@@ -826,6 +832,8 @@ p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
   qnew->p.piggy1.which_tree = treeid;
   qnew->p.piggy1.owner_rank = owner_rank;
 }
+
+#endif /* P4EST_MPI */
 
 bool
 p4est_is_balanced (p4est_t * p4est)

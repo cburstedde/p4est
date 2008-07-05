@@ -248,6 +248,10 @@ p4est_comm_sync_flag (p4est_t * p4est, bool flag, MPI_Op operation)
 
   P4EST_ASSERT (operation == MPI_BAND || operation == MPI_BOR);
 
+  if (p4est->mpicomm == MPI_COMM_NULL) {
+    return flag;
+  }
+
   lbyte = (int8_t) (flag ? 1 : 0);
   mpiret = MPI_Allreduce (&lbyte, &gbyte, 1, MPI_BYTE, operation,
                           p4est->mpicomm);
