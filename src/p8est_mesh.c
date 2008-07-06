@@ -35,9 +35,9 @@
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
  * \param [in]  face   The face across which to generate the neighbors.
- * \param [out] n[4]   Filled with the small possible face neighbors
- * \param [out] nur[4] If not NULL, filled with smallest quadrant that fits
- *                     in the upper right corner of \a n[i].
+ * \param [out] n[4]   Filled with the four smaller face neighbors.
+ * \param [out] nur[4] If not NULL, filled with smallest quadrants that fit
+ *                     in the upper right corners of \a n.
  */
 static void
 p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
