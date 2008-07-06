@@ -40,8 +40,8 @@
  *                     in the upper right corner of \a n[i].
  */
 static void
-p4est_quadrant_get_half_face_neighbors (p4est_quadrant_t * q, int face,
-                                        p4est_quadrant_t n[],
+p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
+                                        int face, p4est_quadrant_t n[],
                                         p4est_quadrant_t nur[])
 {
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
