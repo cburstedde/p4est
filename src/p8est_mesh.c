@@ -21,8 +21,85 @@
 
 #include <p8est_mesh.h>
 #include <p8est_algorithms.h>
+#include <p8est_bits.h>
+#include <p8est_communication.h>
 
 #include <p4est_to_p8est.h>
+
+/** Get the small face neighbors of \a q.
+ *
+ * Gets the smallest face neighbors, which are half of the size assuming the
+ * 2-1 constant.
+ *
+ * The order of the \a n[i] is given in the morton ordering.
+ *
+ * \param [in]  q      The quadrant whose face neighbors will be constructed.
+ * \param [in]  face   The face across which to generate the neighbors.
+ * \param [out] n[4]   Filled with the small possible face neighbors
+ * \param [out] nur[4] If not NULL, filled with smallest quadrant that fits
+ *                     in the upper right corner of \a n[i].
+ */
+static void
+p4est_quadrant_get_half_face_neighbors (p4est_quadrant_t * q, int face,
+                                        p4est_quadrant_t n[],
+                                        p4est_quadrant_t nur[])
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
+  int                 i;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (0 <= face && face < 2 * P4EST_DIM);
+
+  n[0].x = q->x + ((face == 0) ? -qh_2 : (face == 1) ? qh : 0);
+  n[0].y = q->y + ((face == 2) ? -qh_2 : (face == 3) ? qh : 0);
+  n[0].z = q->z + ((face == 4) ? -qh_2 : (face == 5) ? qh : 0);
+  switch (face / 2) {
+  case 0:
+    for (i = 1; i < 4; ++i) {
+      n[i].x = n[0].x;
+      n[i].y = n[0].y + (i & 0x01) * qh_2;
+      n[i].z = n[0].z + ((i & 0x02) / 2) * qh_2;
+    }
+    break;
+  case 2:
+    for (i = 1; i < 4; ++i) {
+      n[i].x = n[0].x + (i & 0x01) * qh_2;
+      n[i].y = n[0].y;
+      n[i].z = n[0].z + ((i & 0x02) / 2) * qh_2;
+    }
+    break;
+  case 3:
+    for (i = 1; i < 4; ++i) {
+      n[i].x = n[0].x + (i & 0x01) * qh_2;
+      n[i].y = n[0].y + ((i & 0x02) / 2) * qh_2;
+      n[i].z = n[0].z;
+    }
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+  for (i = 0; i < 4; ++i) {
+    n[i].level = (int8_t) (q->level + 1);
+    P4EST_ASSERT (p4est_quadrant_is_extended (&n[i]));
+  }
+
+  if (nur != NULL) {
+    const p4est_qcoord_t th = P4EST_QUADRANT_LEN (P4EST_MAXLEVEL);
+
+    for (i = 0; i < 4; ++i) {
+      nur[i].x = n[i].x + qh_2 - th;
+      nur[i].y = n[i].y + qh_2 - th;
+      nur[i].z = n[i].z + qh_2 - th;
+      nur[i].level = P4EST_MAXLEVEL;
+      P4EST_ASSERT (p4est_quadrant_is_extended (&nur[i]));
+    }
+  }
+}
+
+#include "p4est_mesh.c"
 
 bool
 p4est_is_balanced (p4est_t * p4est)

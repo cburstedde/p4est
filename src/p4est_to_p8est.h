@@ -43,6 +43,8 @@
 #define P4EST_COMM_PARTITION_GIVEN      P8EST_COMM_PARTITION_GIVEN
 #define P4EST_COMM_PARTITION_WEIGHTED_LOW P8EST_COMM_PARTITION_WEIGHTED_LOW
 #define P4EST_COMM_PARTITION_WEIGHTED_HIGH P8EST_COMM_PARTITION_WEIGHTED_HIGH
+#define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
+#define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
 
 /* redefine types */
 #define p4est_t                         p8est_t
@@ -147,6 +149,7 @@
 
 /* functions in p4est_mesh */
 #define p4est_is_balanced               p8est_is_balanced
+#define p4est_build_ghost_layer         p8est_build_ghost_layer
 #define p4est_neighborhood_new          p8est_neighborhood_new
 #define p4est_neighborhood_destroy      p8est_neighborhood_destroy
 
