@@ -557,6 +557,46 @@ p4est_quadrant_sibling (const p4est_quadrant_t * q, p4est_quadrant_t * r,
   r->level = q->level;
 }
 
+void
+p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
+                              int face, p4est_quadrant_t * r)
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+
+  P4EST_ASSERT (0 <= face && face < 2 * P4EST_DIM);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+#ifndef P4_TO_P8
+  switch (face) {
+  case 0:
+    r->x = q->x;
+    r->y = q->y - qh;
+    break;
+  case 1:
+    r->x = q->x + qh;
+    r->y = q->y;
+    break;
+  case 2:
+    r->x = q->x;
+    r->y = q->y + qh;
+    break;
+  case 3:
+    r->x = q->x - qh;
+    r->y = q->y;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+#else
+  r->x = q->x + ((face == 0) ? -qh : (face == 1) ? qh : 0);
+  r->y = q->y + ((face == 2) ? -qh : (face == 3) ? qh : 0);
+  r->z = q->z + ((face == 4) ? -qh : (face == 5) ? qh : 0);
+#endif
+  r->level = q->level;
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
 #ifndef P4_TO_P8
 
 void
