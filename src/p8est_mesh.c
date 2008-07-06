@@ -28,16 +28,16 @@
 
 /** Get the small face neighbors of \a q.
  *
- * Gets the smallest face neighbors, which are half of the size assuming the
+ * Gets the small face neighbors, which are half of the size assuming the
  * 2-1 constant.
  *
- * The order of the \a n[i] is given in the morton ordering.
+ * The order of the \a n[i] is given in the Morton ordering.
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
  * \param [in]  face   The face across which to generate the neighbors.
- * \param [out] n[4]   Filled with the four smaller face neighbors.
- * \param [out] nur[4] If not NULL, filled with smallest quadrants that fit
- *                     in the upper right corners of \a n.
+ * \param [out] n[0]..n[3] Filled with the four smaller face neighbors.
+ * \param [out] nur[0]..nur[3] If not NULL, filled with smallest quadrants
+ *                     that fit in the upper right corners of \a n.
  */
 static void
 p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
@@ -63,14 +63,14 @@ p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
       n[i].z = n[0].z + ((i & 0x02) / 2) * qh_2;
     }
     break;
-  case 2:
+  case 1:
     for (i = 1; i < 4; ++i) {
       n[i].x = n[0].x + (i & 0x01) * qh_2;
       n[i].y = n[0].y;
       n[i].z = n[0].z + ((i & 0x02) / 2) * qh_2;
     }
     break;
-  case 3:
+  case 2:
     for (i = 1; i < 4; ++i) {
       n[i].x = n[0].x + (i & 0x01) * qh_2;
       n[i].y = n[0].y + ((i & 0x02) / 2) * qh_2;
@@ -99,13 +99,53 @@ p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
   }
 }
 
-#include "p4est_mesh.c"
-
-bool
-p4est_is_balanced (p4est_t * p4est)
+/** Get all possible face neighbors of \a q.
+ *
+ * Gets the face neighbors, possible assuming the 2-1 constraint.
+ * If the larger quadrant doesn't exist than it is returned
+ * as initialized by P4EST_QUADRANT_INIT.
+ *
+ * The order of \a n[0] through \a n[3] are given in Morton ordering.
+ *
+ * \param [in]  q      The quadrant whose face neighbors will be constructed.
+ * \param [in]  face   The face across which to generate the neighbors.
+ * \param [out] n[0]..n[3] Filled with the smaller possible face neighbors,
+ *                     which are half of the size if they exist
+ *                     or initialized to P4EST_QUADRANT_INIT.
+ * \param [out] n[4]   Filled with the face neighbor, which is the same size.
+ * \param [out] n[5]   Filled with the face neighbor, which is twice the size
+ *                     if it exists or initialized to P4EST_QUADRANT_INIT.
+ */
+static void
+p4est_quadrant_get_possible_face_neighbors (const p4est_quadrant_t * q,
+                                            int face, p4est_quadrant_t n[])
 {
-  return true;
+  const int           qcid = p4est_quadrant_child_id (q);
+  p4est_quadrant_t   *r = &n[5];
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (q->level == P4EST_MAXLEVEL) {
+    P4EST_QUADRANT_INIT (&n[0]);
+    P4EST_QUADRANT_INIT (&n[1]);
+  }
+  else {
+    p4est_quadrant_get_half_face_neighbors (q, face, n, NULL);
+  }
+
+  p4est_quadrant_face_neighbor (q, face, &n[4]);
+
+  /* Check to see if the larger neighbor exists */
+  if (((qcid >> (face / 2)) & 0x01) != (face & 0x01) || q->level == 0) {
+    P4EST_QUADRANT_INIT (r);
+  }
+  else {
+    p4est_quadrant_parent (q, r);
+    p4est_quadrant_face_neighbor (r, face, r);
+  }
 }
+
+#include "p4est_mesh.c"
 
 p4est_neighborhood_t *
 p4est_neighborhood_new (p4est_t * p4est)
