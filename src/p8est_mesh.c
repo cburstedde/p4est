@@ -303,14 +303,81 @@ p8est_quadrant_get_possible_edge_neighbors (const p4est_quadrant_t * q,
   p8est_quadrant_edge_neighbor (q, edge, &n[2]);
 
   /* Check to see if the larger neighbor exists */
-  if (qcid != p8est_edge_corners[edge][0] &&
-      qcid != p8est_edge_corners[edge][1]) {
+  if ((qcid != p8est_edge_corners[edge][0] &&
+       qcid != p8est_edge_corners[edge][1]) || q->level == 0) {
     P4EST_QUADRANT_INIT (r);
   }
   else {
     p4est_quadrant_parent (q, r);
     p8est_quadrant_edge_neighbor (r, edge, r);
   }
+}
+
+/** Checks if a quadrant's edge is on the boundary of the forest.
+ *
+ * This means that the quadrant's tree doesn't have any non face neighbors.
+ *
+ * \param [in] p4est  The forest in which to search for \a q
+ * \param [in] treeid The tree id for which \a q belongs.
+ * \param [in] q      The quadrant that is in questioned.
+ * \param [in] edge   The edge of quadrant that is in question.
+ *
+ * \return true if the quadrant's edge is on the boundary of the forest and
+ *         false otherwise.
+ */
+static              bool
+p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
+                                 int edge, const p4est_quadrant_t * q)
+{
+  int                 face;
+  bool                on_boundary;
+  p4est_quadrant_t    q2;
+  p4est_connectivity_t *conn = p4est->connectivity;
+  p8est_edge_info_t   ei;
+  sc_array_t         *eta;
+
+  P4EST_ASSERT (p4est_quadrant_is_inside_root (q));
+
+  if (p8est_quadrant_touches_edge (q, edge)) {
+    eta = &ei.edge_transforms;
+    sc_array_init (eta, sizeof (p8est_edge_transform_t));
+    p8est_find_edge_transform (conn, treeid, edge, &ei);
+
+    on_boundary = (eta->elem_count == 0);
+    sc_array_reset (eta);
+
+    return on_boundary;
+  }
+
+  P4EST_QUADRANT_INIT (&q2);
+  p8est_quadrant_edge_neighbor (q, edge, &q2);
+  P4EST_ASSERT (!p4est_quadrant_is_outside_corner (&q2));
+  P4EST_ASSERT (!p8est_quadrant_is_outside_edge (&q2));
+  if (q2.x < 0) {
+    face = 0;
+  }
+  else if (q2.x >= P4EST_ROOT_LEN) {
+    face = 1;
+  }
+  else if (q2.y < 0) {
+    face = 2;
+  }
+  else if (q2.y >= P4EST_ROOT_LEN) {
+    face = 3;
+  }
+  else if (q2.z < 0) {
+    face = 4;
+  }
+  else if (q2.z >= P4EST_ROOT_LEN) {
+    face = 5;
+  }
+  else {
+    return false;
+  }
+
+  return
+    (conn->tree_to_tree[2 * P4EST_DIM * treeid + face] == treeid &&
+     (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] == face);
 }
 
 #include "p4est_mesh.c"
