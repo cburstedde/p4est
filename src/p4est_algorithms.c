@@ -364,8 +364,7 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 }
 
 bool
-p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
-                              const p4est_quadrant_t * q)
+p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
 {
   int                 maxl;
   p4est_quadrant_t    desc;
@@ -389,7 +388,7 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
   p4est_quadrant_last_descendent (treeq, &desc, maxl);
   if (p4est_quadrant_compare (&desc, q) < 0)
     return false;
-  
+
   return true;
 }
 
@@ -2389,6 +2388,11 @@ p4est_partition_given (p4est_t * p4est,
       recv_buf[from_proc] = NULL;
     }
   }
+#ifdef P4EST_MPI
+  for (; sk < num_proc_recv_from; ++sk) {
+    recv_request[sk] = MPI_REQUEST_NULL;
+  }
+#endif
 
   /* For each processor calculate the number of quadrants sent */
   num_send_to = P4EST_ALLOC (p4est_locidx_t, num_procs);
@@ -2546,9 +2550,12 @@ p4est_partition_given (p4est_t * p4est,
       send_buf[to_proc] = NULL;
     }
   }
+#ifdef P4EST_MPI
+  for (; sk < num_proc_send_to; ++sk) {
+    send_request[sk] = MPI_REQUEST_NULL;
+  }
 
   /* Fill in forest */
-#ifdef P4EST_MPI
   mpiret = MPI_Waitall (num_proc_recv_from, recv_request, recv_status);
   SC_CHECK_MPI (mpiret);
 #endif
