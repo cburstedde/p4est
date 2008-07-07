@@ -543,46 +543,6 @@ p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   return on_boundary;
 }
 
-/** Get the same-size corner neighbor of \a q.
- *
- * \param [in]  q      The quadrant whose corner neighbor will be constructed.
- * \param [in]  corner The z-corner across which to generate the neighbor.
- * \param [out] n0     Filled with the same-size corner neighbor.
- * \param [out] n0ur   If not NULL, it is filled with smallest quadrant
- *                     that fits in the upper right corner of \a n0.
- */
-static void
-p4est_quadrant_get_full_corner_neighbor (const p4est_quadrant_t * q,
-                                         int corner,
-                                         p4est_quadrant_t * n0,
-                                         p4est_quadrant_t * n0ur)
-{
-  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
-
-  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-
-  n0->x = q->x + (2 * (corner & 0x01) - 1) * qh;
-  n0->y = q->y + ((corner & 0x02) - 1) * qh;
-#ifdef P4_TO_P8
-  n0->z = q->z + ((corner & 0x04) / 2 - 1) * qh;
-#endif
-  n0->level = q->level;
-  P4EST_ASSERT (p4est_quadrant_is_extended (n0));
-
-  if (n0ur != NULL) {
-    const p4est_qcoord_t dh = qh - P4EST_QUADRANT_LEN (P4EST_MAXLEVEL);
-
-    n0ur->x = n0->x + dh;
-    n0ur->y = n0->y + dh;
-#ifdef P4_TO_P8
-    n0ur->z = n0->z + dh;
-#endif
-    n0ur->level = P4EST_MAXLEVEL;
-    P4EST_ASSERT (p4est_quadrant_is_extended (n0ur));
-  }
-}
-
 /** Get the smallest corner neighbor of \a q.
  *
  * Gets the smallest corner neighbor, which is half of the size assuming the
@@ -660,6 +620,7 @@ p4est_quadrant_get_possible_corner_neighbors (const p4est_quadrant_t * q,
                                               p4est_quadrant_t n[])
 {
   const int           qcid = p4est_quadrant_child_id (q);
+  p4est_quadrant_t   *r = &n[2];
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
@@ -670,22 +631,15 @@ p4est_quadrant_get_possible_corner_neighbors (const p4est_quadrant_t * q,
     p4est_quadrant_get_half_corner_neighbor (q, corner, &n[0], NULL);
   }
 
-  p4est_quadrant_get_full_corner_neighbor (q, corner, &n[1], NULL);
+  p4est_quadrant_corner_neighbor (q, corner, &n[1]);
 
-  /* Check to see if the larger element exists */
+  /* Check to see if the larger neighbor exists */
   if ((corner != qcid) || (q->level == 0)) {
-    P4EST_QUADRANT_INIT (&n[2]);
+    P4EST_QUADRANT_INIT (r);
   }
   else {
-    p4est_qcoord_t      ph = P4EST_QUADRANT_LEN (q->level - 1);
-
-    p4est_quadrant_parent (q, &n[2]);
-    n[2].x += (2 * (corner & 0x01) - 1) * ph;
-    n[2].y += ((corner & 0x02) - 1) * ph;
-#ifdef P4_TO_P8
-    n[2].z += ((corner & 0x04) / 2 - 1) * ph;
-#endif
-    P4EST_ASSERT (p4est_quadrant_is_extended (&n[2]));
+    p4est_quadrant_parent (q, r);
+    p4est_quadrant_corner_neighbor (r, corner, r);
   }
 }
 
@@ -737,7 +691,7 @@ p4est_quadrant_on_corner_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   }
 
   P4EST_QUADRANT_INIT (&q2);
-  p4est_quadrant_get_full_corner_neighbor (q, corner, &q2, NULL);
+  p4est_quadrant_corner_neighbor (q, corner, &q2);
 
 #ifndef P4_TO_P8
   if (q2.y < 0) {
@@ -1188,7 +1142,6 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 #ifdef P4EST_MPI
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  const p4est_qcoord_t rh = P4EST_ROOT_LEN;
   int                 face, corner, zcorner;
   int                 i, ncheck, ncount;
   int                 n0_proc, n0ur_proc, n1_proc;
@@ -1280,8 +1233,8 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
         for (i = 0; i < ncount; ++i) {
           n0_proc = p4est_quadrant_find_owner (p4est, nt, &n[i]);
           if (i < ncheck) {
-            /* Note that we will always check this because it is cheap
-             * and prevents deadlocks
+            /* Note that we will always check this
+             * because it prevents deadlocks
              */
             n0ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[i]);
             if (n0_proc != n0ur_proc) {
@@ -1290,6 +1243,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
               goto failtest;
             }
           }
+
           if (n0_proc != rank && n0_proc >= 0 && n0_proc != n1_proc) {
             buf = sc_array_index_int (&send_bufs, n0_proc);
             p4est_add_ghost_to_buf (buf, nt, rank, q);
@@ -1319,28 +1273,30 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
             p8est_quadrant_find_tree_edge_owners (p4est, nt, edge,
                                                   &n[1], &procs[1], &urg[1]);
             P4EST_ASSERT (procs[0].elem_count == procs[1].elem_count);
+
+            if (!urg[0] || !urg[1]) {
+              P4EST_NOTICE ("Tree edge owner inconsistency\n");
+              failed = true;
+              goto failtest;
+            }
           }
 
           /* Then we have to loop over multiple neighbors */
           for (pz = 0; pz < procs[0].elem_count; ++pz) {
-            n0_proc = n1_proc = *((int *) sc_array_index (&procs[0], pz));
-            if (!maxed) {
-              n1_proc = *((int *) sc_array_index (&procs[1], pz));
-              if (!urg[0] || !urg[1]) {
-                P4EST_NOTICE ("Tree edge owner inconsistency\n");
-                failed = true;
-                goto failtest;
-              }
-            }
+            n0_proc = *((int *) sc_array_index (&procs[0], pz));
 
             if (n0_proc != rank) {
               buf = sc_array_index_int (&send_bufs, n0_proc);
               p4est_add_ghost_to_buf (buf, nt, rank, q);
             }
 
-            if (n1_proc != n0_proc && n1_proc != rank) {
-              buf = sc_array_index_int (&send_bufs, n1_proc);
-              p4est_add_ghost_to_buf (buf, nt, rank, q);
+            if (!maxed) {
+              n1_proc = *((int *) sc_array_index (&procs[1], pz));
+
+              if (n1_proc != n0_proc && n1_proc != rank) {
+                buf = sc_array_index_int (&send_bufs, n1_proc);
+                p4est_add_ghost_to_buf (buf, nt, rank, q);
+              }
             }
           }
         }
@@ -1354,8 +1310,8 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
             n0ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[0]);
             n1ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[1]);
 
-            /* Note that we will always check this because it is cheap
-             * and prevents deadlocks
+            /* Note that we will always check this
+             * because it prevents deadlocks
              */
             if (n0_proc != n0ur_proc || n1_proc != n1ur_proc) {
               P4EST_NOTICE ("Small edge owner inconsistency\n");
@@ -1377,7 +1333,6 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
       }
 #endif
 
-#ifndef P4_TO_P8
       /* Find smaller corner neighbors */
       for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
 #ifndef P4_TO_P8
@@ -1386,7 +1341,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
         zcorner = corner;
 #endif
         if (q->level == P4EST_MAXLEVEL) {
-          p4est_quadrant_get_full_corner_neighbor (q, zcorner, &n[0], NULL);
+          p4est_quadrant_corner_neighbor (q, zcorner, &n[0]);
           maxed = true;
         }
         else {
@@ -1397,16 +1352,17 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 
         /* Check to see if we are a tree corner neighbor */
         if (p4est_quadrant_is_outside_corner (&n[0])) {
-          /* Then we have to loop over multiple neighbors */
+          /* Then we have to loop over multiple corner neighbors */
           p4est_quadrant_find_tree_corner_owners (p4est, nt, corner,
                                                   &n[0], &procs[0], &urg[0]);
+          if (!urg[0]) {
+            P4EST_NOTICE ("Tree corner owner inconsistency\n");
+            failed = true;
+            goto failtest;
+          }
+
           for (pz = 0; pz < procs[0].elem_count; ++pz) {
             n0_proc = *((int *) sc_array_index (&procs[0], pz));
-            if (!urg[0]) {
-              P4EST_NOTICE ("Tree corner owner inconsistency\n");
-              failed = true;
-              goto failtest;
-            }
 
             if (n0_proc != rank) {
               buf = sc_array_index_int (&send_bufs, n0_proc);
@@ -1414,16 +1370,38 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
             }
           }
         }
+#ifdef P4_TO_P8
+        /* Check to see if we are a tree edge neighbor */
+        else if (p8est_quadrant_is_outside_edge_extra (&n[0], &edge)) {
+          p8est_quadrant_find_tree_edge_owners (p4est, nt, edge,
+                                                &n[0], &procs[0], &urg[0]);
+          if (!urg[0]) {
+            P4EST_NOTICE ("Tree corner/edge owner inconsistency\n");
+            failed = true;
+            goto failtest;
+          }
+
+          /* Then we have to loop over multiple edge neighbors */
+          for (pz = 0; pz < procs[0].elem_count; ++pz) {
+            n0_proc = *((int *) sc_array_index (&procs[0], pz));
+
+            if (n0_proc != rank) {
+              buf = sc_array_index_int (&send_bufs, n0_proc);
+              p4est_add_ghost_to_buf (buf, nt, rank, q);
+            }
+          }
+        }
+#endif
         else {
-          /* We are not at a tree corner so we only have one
-           * corner neighbor
+          /* We are not at a tree edge or corner so
+           * we only have one corner neighbor
            */
           n0_proc = p4est_quadrant_find_owner (p4est, nt, &n[0]);
           if (!maxed) {
             n0ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[0]);
 
-            /* Note that we will always check this because it is cheap
-             * and prevents deadlocks
+            /* Note that we will always check this
+             * because it prevents deadlocks
              */
             if (n0_proc != n0ur_proc) {
               P4EST_NOTICE ("Small corner owner inconsistency\n");
@@ -1438,7 +1416,6 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
           }
         }
       }
-#endif
     }
   }
 
