@@ -29,18 +29,18 @@
 
 /* *INDENT-OFF* */
 #ifndef P4_TO_P8
-static const int p4est_hanging_corners[4][2] = {
+static const int    p4est_hanging_corner[4][2] = {
   { 1, 2 },
   { 0, 3 },
   { 0, 3 },
   { 1, 2 }};
-static const int p4est_hanging_skip[4][2] = {
+static const int    p4est_hanging_skip[4][2] = {
   { 0, 3 },
   { 0, 1 },
   { 3, 2 },
   { 1, 2 }};
 #else
-static const int p8est_corner_edge_faces[8][12] = {
+static const int    p8est_child_edge_face[8][12] = {
   { -1,  4,  2, -1, -1,  4,  0, -1, -1,  2,  0, -1 },
   { -1,  4,  2, -1,  4, -1, -1,  1,  2, -1, -1,  1 },
   {  4, -1, -1,  3, -1,  4,  0, -1,  0, -1, -1,  3 },
@@ -49,6 +49,24 @@ static const int p8est_corner_edge_faces[8][12] = {
   {  2, -1, -1,  5, -1,  1,  5, -1,  2, -1, -1,  1 },
   { -1,  3,  5, -1,  0, -1, -1,  5,  0, -1, -1,  3 },
   { -1,  3,  5, -1, -1,  1,  5, -1, -1,  1,  3, -1 }};
+static const int    p8est_child_corner_face[8][8] = {
+  { -1, -1, -1,  4, -1,  2,  0, -1 },
+  { -1, -1,  4, -1,  2, -1, -1,  1 },
+  { -1,  4, -1, -1,  0, -1, -1,  3 },
+  {  4, -1, -1, -1, -1,  1,  3, -1 },
+  { -1,  2,  0, -1, -1, -1, -1,  5 },
+  {  2, -1, -1,  1, -1, -1,  5, -1 },
+  {  0, -1, -1,  3, -1,  5, -1, -1 },
+  { -1,  1,  3, -1,  5, -1, -1, -1 }};
+static const int    p8est_child_corner_edge[8][8] = {
+  { -1,  0,  4, -1,  8, -1, -1, -1 },
+  {  0, -1, -1,  5, -1,  9, -1, -1 },
+  {  4, -1, -1,  1, -1, -1, 10, -1 },
+  { -1,  5,  1, -1, -1, -1, -1, 11 },
+  {  8, -1, -1, -1, -1,  2,  6, -1 },
+  { -1,  9, -1, -1,  2, -1, -1,  7 },
+  { -1, -1, 10, -1,  6, -1, -1,  3 },
+  { -1, -1, -1, 11, -1,  7,  3, -1 }};
 #endif
 /* *INDENT-ON* */
 
@@ -63,7 +81,7 @@ static const int p8est_corner_edge_faces[8][12] = {
  * \return Procid of the owner of \a q
  *                or -1 if the quadrant lies outside of the mesh.
  *
- * \warning Does not work for tree corner neighbors.
+ * \warning Does not work for tree edge or corner neighbors.
  */
 static int
 p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
@@ -80,7 +98,6 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   int                 transform;
   p4est_quadrant_t    tmpq;
 #else
-  int                 contacts;
   int                 ftransform[9];
   p4est_topidx_t      ntreeid2;
 #endif
@@ -108,13 +125,9 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   quad_contact[3] = (q->y >= rh);
   quad_contact[4] = (q->z < 0);
   quad_contact[5] = (q->z >= rh);
-  contacts =
-    ((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
-    ((quad_contact[2] || quad_contact[3]) ? 1 : 0) +
-    ((quad_contact[4] || quad_contact[5]) ? 1 : 0);
-
-  /* Make sure we are not a tree corner */
-  P4EST_ASSERT (contacts == 1); /* edges not implemented yet */
+  P4EST_ASSERT (((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
+                ((quad_contact[2] || quad_contact[3]) ? 1 : 0) +
+                ((quad_contact[4] || quad_contact[5]) ? 1 : 0) == 1);
 #endif
 
   ntreeid = -1;
@@ -275,6 +288,8 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   bool                face_axis[3];
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
+  p8est_corner_info_t ci;
+  p8est_corner_transform_t *ct;
 #endif
 #ifdef P4EST_DEBUG
   p4est_quadrant_t   *q2;
@@ -284,6 +299,7 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
     sc_array_resize (exists_arr, 0);
   }
   P4EST_QUADRANT_INIT (&non_existent);
+  ta = NULL;
 
   if (non_existent.level == q->level) {
     return false;
@@ -371,11 +387,18 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
     sc_array_init (ta, sizeof (p4est_corner_transform_t));
     p4est_find_corner_transform (conn, treeid, tree_corner, ta);
 #else
-    P4EST_ASSERT (face == -1 && edge >= 0 && corner == -1);
+    P4EST_ASSERT (face == -1 &&
+                  ((edge >= 0 && corner == -1) ||
+                   (edge == -1 && corner >= 0)));
     if (edge >= 0) {
       ta = &ei.edge_transforms;
       sc_array_init (ta, sizeof (p8est_edge_transform_t));
       p8est_find_edge_transform (conn, treeid, edge, &ei);
+    }
+    else {
+      ta = &ci.corner_transforms;
+      sc_array_init (ta, sizeof (p8est_corner_transform_t));
+      p8est_find_corner_transform (conn, treeid, corner, &ci);
     }
 #endif
     sc_array_resize (exists_arr, ta->elem_count);
@@ -394,6 +417,15 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
         tqtreeid = et->ntree;
         p8est_quadrant_transform_edge (q, &tq, &ei, et, true);
       }
+      else {
+        ct = sc_array_index (ta, ctreeidz);
+        tqtreeid = ct->ntree;
+
+        tq = *q;
+        p4est_quadrant_transform_corner (&tq, (int) ct->ncorner, true);
+      }
+      et = NULL;
+      ct = NULL;
 #endif
 
       qproc = p4est_comm_find_owner (p4est, tqtreeid, &tq, rank);
@@ -950,9 +982,10 @@ p4est_is_balanced (p4est_t * p4est)
   sc_array_t          e0_a, e1_a, e2_a;
 #ifdef P4_TO_P8
   int                 edge;
-  int                *pe0b;
+  int                *pe3;
   bool                bigger_edge[12];
-  sc_array_t          e0b_a;
+  size_t              big_count[12];
+  sc_array_t          e3_a;
 #endif
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
@@ -970,7 +1003,7 @@ p4est_is_balanced (p4est_t * p4est)
   sc_array_init (&e1_a, sizeof (int));
   sc_array_init (&e2_a, sizeof (int));
 #ifdef P4_TO_P8
-  sc_array_init (&e0b_a, sizeof (int));
+  sc_array_init (&e3_a, sizeof (int));
 #endif
 
   /* loop over all local trees */
@@ -1013,7 +1046,7 @@ p4est_is_balanced (p4est_t * p4est)
         e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[i], NULL);
         e3 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[i + 1], NULL);
         if ((int) e0 + (int) e2 + (int) e3 != 1) {
-          P4EST_NOTICE ("Face balance failed\n");
+          P4EST_NOTICE ("Face balance quadrant mismatch\n");
           failed = true;
           goto failtest;
         }
@@ -1024,6 +1057,7 @@ p4est_is_balanced (p4est_t * p4est)
       /* Find edge neighbors */
       for (edge = 0; edge < 12; ++edge) {
         bigger_edge[edge] = false;
+        big_count[edge] = 0;
 
         /* If q is at a boundary then it is automatically balanced */
         if (p8est_quadrant_on_edge_boundary (p4est, nt, edge, q)) {
@@ -1033,52 +1067,53 @@ p4est_is_balanced (p4est_t * p4est)
         /* Do more expensive edge balance checks */
         p8est_quadrant_get_possible_edge_neighbors (q, edge, n);
         e0 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[0], &e0_a);
-        e0b = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[1], &e0b_a);
-        if (e0 != e0b || e0_a.elem_count != e0b_a.elem_count) {
+        e1 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[1], &e1_a);
+        if (e0 != e1 || e0_a.elem_count != e1_a.elem_count) {
           P4EST_NOTICE ("Contradicting small edge neighbors\n");
           failed = true;
           goto failtest;
         }
-        e1 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[2], &e1_a);
-        e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[3], &e2_a);
+        e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[2], &e2_a);
+        e3 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[3], &e3_a);
         P4EST_ASSERT (((e0_a.elem_count == 0 && q->level == P4EST_MAXLEVEL) ||
-                       e0_a.elem_count == e1_a.elem_count) &&
-                      ((e2_a.elem_count == 0 && q->level == 0) ||
-                       e2_a.elem_count == e1_a.elem_count));
+                       e0_a.elem_count == e2_a.elem_count) &&
+                      ((e3_a.elem_count == 0 && (!e3 || q->level == 0)) ||
+                       e3_a.elem_count == e2_a.elem_count));
 
-        face = p8est_corner_edge_faces[qcid][edge];
+        face = p8est_child_edge_face[qcid][edge];
         if (face >= 0 && bigger_face[face]) {
-          if (e1_a.elem_count > 0 || e0 || e1 || e2) {
-            P4EST_NOTICE ("Duplicate edges across hanging face\n");
+          P4EST_ASSERT (e2_a.elem_count == 0);
+          if (e0 || e2 || e3) {
+            P4EST_NOTICE ("Invalid edges across hanging face\n");
             failed = true;
             goto failtest;
           }
         }
         else {
-          if (!e0 && !e1 && !e2) {
+          if (!e0 && !e2 && !e3) {
             P4EST_NOTICE ("Edge balance missing quadrants\n");
             failed = true;
             goto failtest;
           }
-          if (e1_a.elem_count == 0 && (int) e0 + (int) e1 + (int) e2 != 1) {
+          if (e2_a.elem_count == 0 && (int) e0 + (int) e2 + (int) e3 != 1) {
             P4EST_NOTICE ("Edge balance duplicate quadrants\n");
             failed = true;
             goto failtest;
           }
-          for (cez = 0; cez < e1_a.elem_count; ++cez) {
+          for (cez = 0; cez < e2_a.elem_count; ++cez) {
             pe0 = (e0_a.elem_count > 0) ? sc_array_index (&e0_a, cez) : &zero;
-            pe0b =
-              (e0b_a.elem_count > 0) ? sc_array_index (&e0b_a, cez) : &zero;
-            pe1 = sc_array_index (&e1_a, cez);
-            pe2 = (e2_a.elem_count > 0) ? sc_array_index (&e2_a, cez) : &zero;
-            if (*pe0 + *pe1 + *pe2 != 1 || *pe0 != *pe0b) {
-              P4EST_NOTICE ("Star edge balance violated\n");
+            pe1 = (e1_a.elem_count > 0) ? sc_array_index (&e1_a, cez) : &zero;
+            pe2 = sc_array_index (&e2_a, cez);
+            pe3 = (e3_a.elem_count > 0) ? sc_array_index (&e3_a, cez) : &zero;
+            if (*pe0 + *pe2 + *pe3 != 1 || *pe0 != *pe1) {
+              P4EST_NOTICE ("Edge balance quadrant mismatch\n");
               failed = true;
               goto failtest;
             }
           }
         }
-        bigger_edge[edge] = e2;
+        bigger_edge[edge] = e3;
+        big_count[edge] = e3_a.elem_count;
       }
 #endif
 
@@ -1090,7 +1125,6 @@ p4est_is_balanced (p4est_t * p4est)
           continue;
         }
 
-#ifndef P4_TO_P8
         /* Do more expensive corner balance checks */
         p4est_quadrant_get_possible_corner_neighbors (q, corner, n);
         e0 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[0], &e0_a);
@@ -1098,42 +1132,96 @@ p4est_is_balanced (p4est_t * p4est)
         e2 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[2], &e2_a);
         P4EST_ASSERT (((e0_a.elem_count == 0 && q->level == P4EST_MAXLEVEL) ||
                        e0_a.elem_count == e1_a.elem_count) &&
-                      ((e2_a.elem_count == 0 && q->level == 0) ||
+                      ((e2_a.elem_count == 0 && (!e2 || q->level == 0)) ||
                        e2_a.elem_count == e1_a.elem_count));
 
-        if ((corner == p4est_hanging_corners[qcid][0] &&
+#ifndef P4_TO_P8
+        if ((corner == p4est_hanging_corner[qcid][0] &&
              bigger_face[p4est_hanging_skip[qcid][0]]) ||
-            (corner == p4est_hanging_corners[qcid][1] &&
+            (corner == p4est_hanging_corner[qcid][1] &&
              bigger_face[p4est_hanging_skip[qcid][1]])) {
-          if (e1_a.elem_count > 0 || e0 || e1 || e2) {
-            P4EST_NOTICE ("Duplicate corners across hanging face\n");
+          P4EST_ASSERT (e1_a.elem_count == 0);
+          if (e0 || e1 || e2) {
+            P4EST_NOTICE ("Invalid corners across hanging face\n");
             failed = true;
             goto failtest;
           }
         }
+        else if (!e0 && !e1 && !e2) {
+          P4EST_NOTICE ("Corner balance missing quadrants\n");
+          failed = true;
+          goto failtest;
+        }
+        else if (e1_a.elem_count == 0 && (int) e0 + (int) e1 + (int) e2 != 1) {
+          P4EST_NOTICE ("Corner balance duplicate quadrants\n");
+          failed = true;
+          goto failtest;
+        }
+#else
+        face = p8est_child_corner_face[qcid][corner];
+        edge = p8est_child_corner_edge[qcid][corner];
+        if (face >= 0 && bigger_face[face]) {
+          P4EST_ASSERT (e1_a.elem_count == 0);
+          if (e0 || e1 || e2) {
+            P4EST_NOTICE ("Invalid corners across hanging face\n");
+            failed = true;
+            goto failtest;
+          }
+        }
+        else if (e1_a.elem_count == 0) {
+          if (edge >= 0 && bigger_edge[edge]) {
+            P4EST_ASSERT (big_count[edge] == 0);
+            if (e0 || e1 || e2) {
+              P4EST_NOTICE ("Invalid corners across hanging edge\n");
+              failed = true;
+              goto failtest;
+            }
+          }
+          else if ((int) e0 + (int) e1 + (int) e2 != 1) {
+            P4EST_NOTICE ("Corner balance quadrant mismatch\n");
+            failed = true;
+            goto failtest;
+          }
+        }
+#endif
         else {
-          if (!e0 && !e1 && !e2) {
-            P4EST_NOTICE ("Corner balance missing quadrants\n");
-            failed = true;
-            goto failtest;
+#ifdef P4_TO_P8
+          e3 = false;
+          if (edge >= 0 && bigger_edge[edge]) {
+            P4EST_ASSERT (big_count[edge] == e1_a.elem_count);
+
+            /* recreate the edge neighbor information */
+            p4est_quadrant_parent (q, &n[3]);
+            p8est_quadrant_edge_neighbor (&n[3], edge, &n[3]);
+            e3 =
+              p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[3], &e3_a);
+            P4EST_ASSERT (e3 && big_count[edge] == e3_a.elem_count);
           }
-          if (e1_a.elem_count == 0 && (int) e0 + (int) e1 + (int) e2 != 1) {
-            P4EST_NOTICE ("Corner balance duplicate quadrants\n");
-            failed = true;
-            goto failtest;
-          }
+#endif
           for (cez = 0; cez < e1_a.elem_count; ++cez) {
             pe0 = (e0_a.elem_count > 0) ? sc_array_index (&e0_a, cez) : &zero;
             pe1 = sc_array_index (&e1_a, cez);
             pe2 = (e2_a.elem_count > 0) ? sc_array_index (&e2_a, cez) : &zero;
+#ifdef P4_TO_P8
+            if (e3) {
+              pe3 = sc_array_index (&e3_a, cez);
+              if (*pe3) {
+                if (*pe0 || *pe1 || *pe2) {
+                  P4EST_NOTICE ("Invalid corners across hanging edge\n");
+                  failed = true;
+                  goto failtest;
+                }
+                continue;
+              }
+            }
+#endif
             if (*pe0 + *pe1 + *pe2 != 1) {
-              P4EST_NOTICE ("Star corner balance violated\n");
+              P4EST_NOTICE ("Corner balance quadrant mismatch\n");
               failed = true;
               goto failtest;
             }
           }
         }
-#endif
       }
     }
   }
@@ -1144,7 +1232,7 @@ failtest:
   sc_array_reset (&e1_a);
   sc_array_reset (&e2_a);
 #ifdef P4_TO_P8
-  sc_array_reset (&e0b_a);
+  sc_array_reset (&e3_a);
 #endif
 
   return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
