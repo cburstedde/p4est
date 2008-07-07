@@ -20,6 +20,6 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "test_coarsen2.c"
+#include "test_balance2.c"
 
-/* EOF test_coarsen3.c */
+/* EOF test_balance3.c */
