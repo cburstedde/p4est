@@ -69,8 +69,9 @@ typedef struct
 }
 p4est_corner_transform_t;
 
-/** map right-hand corner rule to corner in z-ordering */
+/** mappings between right-hand rule and z-ordering */
 extern const int    p4est_corner_to_zorder[5];
+extern const int    p4est_zface_to_rface[4];
 
 /** Contains integers 0..7 denoting the type of inter-tree transformation.
  * The first 4 transformations are rotations about 0, -90, 180, 90.

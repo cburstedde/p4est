@@ -67,6 +67,7 @@ p8est_quadrant_is_outside_edge_extra (const p8est_quadrant_t * q, int *edge)
     else {
       SC_CHECK_NOT_REACHED ();
     }
+    P4EST_ASSERT (p8est_quadrant_touches_edge (q, *edge));
   }
 
   return true;
