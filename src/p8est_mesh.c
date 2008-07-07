@@ -147,6 +147,8 @@ p4est_quadrant_get_possible_face_neighbors (const p4est_quadrant_t * q,
   }
 }
 
+#ifdef P4EST_MPI
+
 /** Gets the procids of the owners of \a q.
  *
  * For a quadrant across the edge of a tree has possibly multiple
@@ -158,16 +160,19 @@ p4est_quadrant_get_possible_face_neighbors (const p4est_quadrant_t * q,
  * \param [in]     q        The quadrant that is being searched for.
  * \param [in,out] qprocs   Starts as an initialized array and ends with
  *                          the list of processors that \a q belongs too.
+ * \param [out]    nurgood  If not NULL, check if the smallest quadrant
+ *                          in the upper right corner of q after transform
+ *                          has the same owner.
  */
 static void
 p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
                                       p4est_topidx_t treeid,
                                       int edge,
                                       const p4est_quadrant_t * q,
-                                      sc_array_t * q_procs)
+                                      sc_array_t * q_procs, bool * nurgood)
 {
   const int           rank = p4est->mpirank;
-  int                *proc;
+  int                *proc, nurproc;
   size_t              etree;
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_quadrant_t    eq;
@@ -185,6 +190,11 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
   p8est_find_edge_transform (conn, treeid, edge, &ei);
 
   sc_array_resize (q_procs, 0);
+  if (nurgood != NULL) {
+    *nurgood = true;
+    if (q->level == P4EST_MAXLEVEL)
+      nurgood = NULL;
+  }
 
   for (etree = 0; etree < eta->elem_count; ++etree) {
     et = sc_array_index (eta, etree);
@@ -193,10 +203,18 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
 
     proc = sc_array_push (q_procs);
     *proc = p4est_comm_find_owner (p4est, et->ntree, &eq, rank);
+
+    if (nurgood != NULL) {
+      p4est_quadrant_last_descendent (&eq, &eq, P4EST_MAXLEVEL);
+      nurproc = p4est_comm_find_owner (p4est, et->ntree, &eq, *proc);
+      *nurgood = *nurgood && (nurproc == *proc);
+    }
   }
 
   sc_array_reset (eta);
 }
+
+#endif /* P4EST_MPI */
 
 /** Get the small edge neighbors of \a q.
  *
