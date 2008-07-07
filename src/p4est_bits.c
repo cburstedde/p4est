@@ -186,6 +186,36 @@ p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q)
 }
 
 bool
+p4est_quadrant_is_outside_face (const p4est_quadrant_t * q)
+{
+  int                 outface[P4EST_DIM];
+
+  outface[0] = (int) (q->x < 0 || q->x >= P4EST_ROOT_LEN);
+  outface[1] = (int) (q->y < 0 || q->y >= P4EST_ROOT_LEN);
+#ifdef P4_TO_P8
+  outface[2] = (int) (q->z < 0 || q->z >= P4EST_ROOT_LEN);
+#endif
+
+  return outface[0] + outface[1]
+#ifdef P4_TO_P8
+    + outface[2]
+#endif
+    == 1;
+}
+
+bool
+p4est_quadrant_is_outside_corner (const p4est_quadrant_t * q)
+{
+  return
+    (q->x < 0 || q->x >= P4EST_ROOT_LEN) &&
+    (q->y < 0 || q->y >= P4EST_ROOT_LEN) &&
+#ifdef P4_TO_P8
+    (q->z < 0 || q->z >= P4EST_ROOT_LEN) &&
+#endif
+    true;
+}
+
+bool
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
   return
@@ -530,7 +560,6 @@ p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
   r->z = q->z & ~P4EST_QUADRANT_LEN (q->level);
 #endif
   r->level = (int8_t) (q->level - 1);
-
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
@@ -555,6 +584,7 @@ p4est_quadrant_sibling (const p4est_quadrant_t * q, p4est_quadrant_t * r,
   r->z = (addz ? (q->z | shift) : (q->z & ~shift));
 #endif
   r->level = q->level;
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
 void

@@ -73,6 +73,20 @@ bool                p4est_quadrant_is_inside_root (const p4est_quadrant_t *
  */
 bool                p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q);
 
+/** Test if a quadrant is outside a tree face boundary (no corner).
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is outside across a unit tree face.
+ */
+bool                p4est_quadrant_is_outside_face (const p4est_quadrant_t *
+                                                    q);
+
+/** Test if a quadrant is outside a tree corner boundary.
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is outside across a unit tree corner.
+ */
+bool                p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
+                                                      q);
+
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is valid.

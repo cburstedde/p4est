@@ -73,6 +73,27 @@ bool                p8est_quadrant_is_inside_root (const p8est_quadrant_t *
  */
 bool                p8est_quadrant_is_inside_3x3 (const p8est_quadrant_t * q);
 
+/** Test if a quadrant is outside a tree face boundary (no edge or corner).
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is outside across a unit tree face.
+ */
+bool                p8est_quadrant_is_outside_face (const p8est_quadrant_t *
+                                                    q);
+
+/** Test if a quadrant is outside a tree edge boundary (no corner).
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is outside across a unit tree edge.
+ */
+bool                p8est_quadrant_is_outside_edge (const p8est_quadrant_t *
+                                                    q);
+
+/** Test if a quadrant is outside a tree corner boundary.
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is outside across a unit tree corner.
+ */
+bool                p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
+                                                      q);
+
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is valid.
@@ -202,6 +223,16 @@ void                p8est_quadrant_sibling (const p8est_quadrant_t * q,
  */
 void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
                                                   int face,
+                                                  p8est_quadrant_t * r);
+
+/** Compute the edge neighbor of a quadrant.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     edge   The edge across which to generate the neighbor.
+ * \param [in,out] r      Existing quadrant whose Morton index will be filled.
+ * \note \a q may point to the same quadrant as \a r.
+ */
+void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
+                                                  int edge,
                                                   p8est_quadrant_t * r);
 
 /** Compute the 8 children of a quadrant.

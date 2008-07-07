@@ -23,6 +23,18 @@
 #include "p4est_bits.c"
 
 bool
+p8est_quadrant_is_outside_edge (const p8est_quadrant_t * q)
+{
+  int                 outface[P4EST_DIM];
+
+  outface[0] = (int) (q->x < 0 || q->x >= P4EST_ROOT_LEN);
+  outface[1] = (int) (q->y < 0 || q->y >= P4EST_ROOT_LEN);
+  outface[2] = (int) (q->z < 0 || q->z >= P4EST_ROOT_LEN);
+
+  return outface[0] + outface[1] + outface[2] == 2;
+}
+
+bool
 p8est_quadrant_is_family (const p4est_quadrant_t * q0,
                           const p4est_quadrant_t * q1,
                           const p4est_quadrant_t * q2,
@@ -128,6 +140,39 @@ p8est_quadrant_is_familypv (p4est_quadrant_t * q[])
           && (q[2]->x == q[6]->x && q[2]->y == q[6]->y && q[4]->z == q[6]->z)
           && (q[3]->x == q[7]->x && q[3]->y == q[7]->y
               && q[4]->z == q[7]->z));
+}
+
+void
+p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
+                              int edge, p8est_quadrant_t * r)
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+
+  P4EST_ASSERT (0 <= edge && edge < 12);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  switch (edge / 4) {
+  case 0:
+    r->x = q->x;
+    r->y = q->y + (2 * (edge & 0x01) - 1) * qh;
+    r->z = q->z + ((edge & 0x02) - 1) * qh;
+    break;
+  case 1:
+    r->x = q->x + (2 * (edge & 0x01) - 1) * qh;
+    r->y = q->y;
+    r->z = q->z + ((edge & 0x02) - 1) * qh;
+    break;
+  case 2:
+    r->x = q->x + (2 * (edge & 0x01) - 1) * qh;
+    r->y = q->y + ((edge & 0x02) - 1) * qh;
+    r->z = q->z;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+  r->level = q->level;
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
 void
