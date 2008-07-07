@@ -214,6 +214,16 @@ void                p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
                                                   int face,
                                                   p4est_quadrant_t * r);
 
+/** Compute the corner neighbor of a quadrant.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner across which to generate the neighbor.
+ * \param [in,out] r      Existing quadrant whose Morton index will be filled.
+ * \note \a q may point to the same quadrant as \a r.
+ */
+void                p4est_quadrant_corner_neighbor (const p4est_quadrant_t *
+                                                    q, int corner,
+                                                    p4est_quadrant_t * r);
+
 /** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.

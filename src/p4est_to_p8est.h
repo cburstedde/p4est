@@ -106,6 +106,7 @@
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor
+#define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
 #define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
 #define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent

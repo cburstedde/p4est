@@ -87,6 +87,16 @@ bool                p8est_quadrant_is_outside_face (const p8est_quadrant_t *
 bool                p8est_quadrant_is_outside_edge (const p8est_quadrant_t *
                                                     q);
 
+/** Test if a quadrant is outside a tree edge boundary (no corner).
+ * \param [in] q       Quadrant to be tested.
+ * \param [out] edge   The tree edge number is computed if outside edge.
+ *                     This pointer may be NULL.
+ * \return Returns true if \a q is outside across a unit tree edge.
+ */
+bool                p8est_quadrant_is_outside_edge_extra (const
+                                                          p8est_quadrant_t *
+                                                          q, int *edge);
+
 /** Test if a quadrant is outside a tree corner boundary.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is outside across a unit tree corner.
@@ -234,6 +244,16 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
 void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
                                                   int edge,
                                                   p8est_quadrant_t * r);
+
+/** Compute the corner neighbor of a quadrant.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner across which to generate the neighbor.
+ * \param [in,out] r      Existing quadrant whose Morton index will be filled.
+ * \note \a q may point to the same quadrant as \a r.
+ */
+void                p8est_quadrant_corner_neighbor (const p8est_quadrant_t *
+                                                    q, int corner,
+                                                    p8est_quadrant_t * r);
 
 /** Compute the 8 children of a quadrant.
  * \param [in]     q  Input quadrant.

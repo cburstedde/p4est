@@ -35,6 +35,44 @@ p8est_quadrant_is_outside_edge (const p8est_quadrant_t * q)
 }
 
 bool
+p8est_quadrant_is_outside_edge_extra (const p8est_quadrant_t * q, int *edge)
+{
+  int                 quad_contact[2 * P4EST_DIM];
+  int                 face_axis[P4EST_DIM];
+
+  quad_contact[0] = (int) (q->x < 0);
+  quad_contact[1] = (int) (q->x >= P4EST_ROOT_LEN);
+  quad_contact[2] = (int) (q->y < 0);
+  quad_contact[3] = (int) (q->y >= P4EST_ROOT_LEN);
+  quad_contact[4] = (int) (q->z < 0);
+  quad_contact[5] = (int) (q->z >= P4EST_ROOT_LEN);
+  face_axis[0] = quad_contact[0] || quad_contact[1];
+  face_axis[1] = quad_contact[2] || quad_contact[3];
+  face_axis[2] = quad_contact[4] || quad_contact[5];
+
+  if (face_axis[0] + face_axis[1] + face_axis[2] != 2) {
+    return false;
+  }
+
+  if (edge != NULL) {
+    if (!face_axis[0]) {
+      *edge = 0 + 2 * quad_contact[5] + quad_contact[3];
+    }
+    else if (!face_axis[1]) {
+      *edge = 4 + 2 * quad_contact[5] + quad_contact[1];
+    }
+    else if (!face_axis[2]) {
+      *edge = 8 + 2 * quad_contact[3] + quad_contact[1];
+    }
+    else {
+      SC_CHECK_NOT_REACHED ();
+    }
+  }
+
+  return true;
+}
+
+bool
 p8est_quadrant_is_family (const p4est_quadrant_t * q0,
                           const p4est_quadrant_t * q1,
                           const p4est_quadrant_t * q2,
