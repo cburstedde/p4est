@@ -393,11 +393,10 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
                 p4est->connectivity->num_trees &&
                 p4est->global_first_position[num_procs].x == 0 &&
-                p4est->global_first_position[num_procs].y == 0 &&
+                p4est->global_first_position[num_procs].y == 0);
 #ifdef P4_TO_P8
-                p4est->global_first_position[num_procs].z == 0 &&
+  P4EST_ASSERT (p4est->global_first_position[num_procs].z == 0);
 #endif
-                true);
   P4EST_ASSERT (p4est->connectivity->num_trees ==
                 (p4est_topidx_t) p4est->trees->elem_count);
   for (i = 0; i <= num_procs; ++i) {
