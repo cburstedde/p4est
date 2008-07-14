@@ -129,13 +129,50 @@ p4est_quadrant_is_equal (const void *v1, const void *v2)
     ;
 }
 
+/* Hash macros from lookup3.c by Bob Jenkins, May 2006, public domain. */
+#define p4est_hash_rot(x,k) (((x) << (k)) | ((x) >> (32 - (k))))
+#define p4est_hash_mix(a,b,c) do {                         \
+    a -= c; a ^= p4est_hash_rot(c, 4); c += b;             \
+    b -= a; b ^= p4est_hash_rot(a, 6); a += c;             \
+    c -= b; c ^= p4est_hash_rot(b, 8); b += a;             \
+    a -= c; a ^= p4est_hash_rot(c,16); c += b;             \
+    b -= a; b ^= p4est_hash_rot(a,19); a += c;             \
+    c -= b; c ^= p4est_hash_rot(b, 4); b += a;             \
+  } while (0)
+#define p4est_hash_final(a,b,c) do {                       \
+    c ^= b; c -= p4est_hash_rot(b,14);                     \
+    a ^= c; a -= p4est_hash_rot(c,11);                     \
+    b ^= a; b -= p4est_hash_rot(a,25);                     \
+    c ^= b; c -= p4est_hash_rot(b,16);                     \
+    a ^= c; a -= p4est_hash_rot(c, 4);                     \
+    b ^= a; b -= p4est_hash_rot(a,14);                     \
+    c ^= b; c -= p4est_hash_rot(b,24);                     \
+  } while (0)
+
 unsigned
 p4est_quadrant_hash (const void *v)
 {
   const p4est_quadrant_t *q = v;
 
+#if 1
+  uint32_t            a, b, c;
+
+  a = (uint32_t) q->x;
+  b = (uint32_t) q->y;
+#ifndef P4_TO_P8
+  c = 0xdeadbeefU;
+#else
+  c = (uint32_t) q->z;
+#endif
+  p4est_hash_mix (a, b, c);
+  a += (uint32_t) q->level;
+  p4est_hash_final (a, b, c);
+
+  return (unsigned) c;
+#else
   return (unsigned) (p4est_quadrant_linear_id (q, (int) q->level) %
                      ((uint64_t) 1 << 30));
+#endif
 }
 
 int
