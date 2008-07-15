@@ -23,24 +23,44 @@
  * Usage: p4est_timings <configuration> <level>
  *        possible configurations:
  *        o unit      Refinement on the unit square.
+ *        o periodic  Refinement on the unit square with periodic b.c.
  *        o three     Refinement on a forest with three trees.
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
- *        o periodic  Refinement on the unit square with periodic b.c.
+ *
+ * Usage: p8est_timings <configuration> <level>
+ *        possible configurations:
+ *        o unit      Refinement on the unit cube.
+ *        o periodic  Refinement on the unit cube with periodic b.c.
+ *        o two       Refinement on a forest with two trees.
+ *        o rot       Refinement on a forest with six rotated trees.
  */
 
+#ifndef P4_TO_P8
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_vtk.h>
+#else
+#include <p8est_algorithms.h>
+#include <p8est_bits.h>
+#include <p8est_vtk.h>
+#endif
+
+/* #define P4EST_TIMINGS_VTK */
 
 typedef enum
 {
   P4EST_CONFIG_NULL,
   P4EST_CONFIG_UNIT,
+  P4EST_CONFIG_PERIODIC,
+#ifndef P4_TO_P8
   P4EST_CONFIG_THREE,
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
-  P4EST_CONFIG_PERIODIC,
+#else
+  P4EST_CONFIG_TWO,
+  P4EST_CONFIG_ROT,
+#endif
 }
 timings_config_t;
 
@@ -66,15 +86,29 @@ static int          level_shift = 0;
 
 /* *INDENT-OFF* */
 static const timings_regression_t regression[] =
-{{ P4EST_CONFIG_UNIT, 1, 10, 0x6e3e83c4U },
- { P4EST_CONFIG_UNIT, 1, 11, 0x334bc3deU },
- { P4EST_CONFIG_UNIT, 64, 14, 0xad908ce4U },
- { P4EST_CONFIG_UNIT, 256, 15, 0x9e7da646U },
- { P4EST_CONFIG_STAR, 1, 6, 0x14107b57U },
- { P4EST_CONFIG_STAR, 4, 6, 0x14107b57U },
- { P4EST_CONFIG_STAR, 52, 13, 0xc86c74d9U },
- { P4EST_CONFIG_STAR, 64, 13, 0xc86c74d9U },
- { P4EST_CONFIG_NULL, 0, 0, 0 }};
+{
+#ifndef P4_TO_P8
+  { P4EST_CONFIG_UNIT, 1, 10, 0x6e3e83c4U },
+  { P4EST_CONFIG_UNIT, 1, 11, 0x334bc3deU },
+  { P4EST_CONFIG_UNIT, 64, 14, 0xad908ce4U },
+  { P4EST_CONFIG_UNIT, 256, 15, 0x9e7da646U },
+  { P4EST_CONFIG_STAR, 1, 6, 0x14107b57U },
+  { P4EST_CONFIG_STAR, 4, 6, 0x14107b57U },
+  { P4EST_CONFIG_STAR, 52, 13, 0xc86c74d9U },
+  { P4EST_CONFIG_STAR, 64, 13, 0xc86c74d9U },
+#else
+  { P4EST_CONFIG_UNIT, 1, 5, 0xe1ffa67b },
+  { P4EST_CONFIG_UNIT, 1, 6, 0x2cad814d },
+  { P4EST_CONFIG_UNIT, 3, 8, 0xeb252238 },
+  { P4EST_CONFIG_PERIODIC, 2, 6, 0x372f7402 },
+  { P4EST_CONFIG_PERIODIC, 7, 6, 0xa2f1ee48U },
+  { P4EST_CONFIG_TWO, 5, 6, 0xa8b1f54e },
+  { P4EST_CONFIG_TWO, 8, 5, 0x98d3579d },
+  { P4EST_CONFIG_ROT, 1, 5, 0x404e4aa8 },
+  { P4EST_CONFIG_ROT, 7, 6, 0x4c381706 },
+#endif
+  { P4EST_CONFIG_NULL, 0, 0, 0 }
+};
 /* *INDENT-ON* */
 
 static int
@@ -91,7 +125,11 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   qid = p4est_quadrant_child_id (q);
-  return (qid == 0 || qid == 3);
+  return (qid == 0 || qid == 3
+#ifdef P4_TO_P8
+          || qid == 5 || qid == 6
+#endif
+    );
 }
 
 static void
@@ -100,7 +138,8 @@ abort_fn (void *data)
   int                 mpiret;
   mpi_context_t      *mpi = data;
 
-  fprintf (stderr, "[%d] p4est_timings abort handler\n", mpi->mpirank);
+  fprintf (stderr, "[%d] " P4EST_STRING "_timings abort handler\n",
+           mpi->mpirank);
 
   mpiret = MPI_Abort (mpi->mpicomm, 1);
   SC_CHECK_MPI (mpiret);
@@ -141,9 +180,12 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <configuration> <level>\n"
-    "   Configuration can be any of\n"
-    "      unit|three|moebius|star|periodic\n"
+    "Arguments: <configuration> <level>\n   Configuration can be any of\n"
+#ifndef P4_TO_P8
+    "      unit|periodic|three|moebius|star\n"
+#else
+    "      unit|periodic|two|rot\n"
+#endif
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -156,6 +198,10 @@ main (int argc, char **argv)
     if (!strcmp (config_name, "unit")) {
       config = P4EST_CONFIG_UNIT;
     }
+    else if (!strcmp (config_name, "periodic")) {
+      config = P4EST_CONFIG_PERIODIC;
+    }
+#ifndef P4_TO_P8
     else if (!strcmp (config_name, "three")) {
       config = P4EST_CONFIG_THREE;
     }
@@ -165,9 +211,14 @@ main (int argc, char **argv)
     else if (!strcmp (config_name, "star")) {
       config = P4EST_CONFIG_STAR;
     }
-    else if (!strcmp (config_name, "periodic")) {
-      config = P4EST_CONFIG_PERIODIC;
+#else
+    else if (!strcmp (config_name, "two")) {
+      config = P4EST_CONFIG_TWO;
     }
+    else if (!strcmp (config_name, "rot")) {
+      config = P4EST_CONFIG_ROT;
+    }
+#endif
     else {
       wrongusage = 1;
     }
@@ -199,6 +250,7 @@ main (int argc, char **argv)
      config_name, refine_level, level_shift);
 
   /* create connectivity and forest structures */
+#ifndef P4_TO_P8
   if (config == P4EST_CONFIG_THREE) {
     connectivity = p4est_connectivity_new_corner ();
   }
@@ -214,6 +266,20 @@ main (int argc, char **argv)
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
+#else
+  if (config == P4EST_CONFIG_TWO) {
+    connectivity = p8est_connectivity_new_twocubes ();
+  }
+  else if (config == P4EST_CONFIG_ROT) {
+    connectivity = p8est_connectivity_new_rotcubes ();
+  }
+  else if (config == P4EST_CONFIG_PERIODIC) {
+    connectivity = p8est_connectivity_new_periodic ();
+  }
+  else {
+    connectivity = p8est_connectivity_new_unitcube ();
+  }
+#endif
   p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
   quadrant_counts = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
 
@@ -225,9 +291,9 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_refine = start + MPI_Wtime ();
-  if (refine_level <= 8) {
-    p4est_vtk_write_file (p4est, "mesh_timings_refined");
-  }
+#ifdef P4EST_TIMINGS_VTK
+  p4est_vtk_write_file (p4est, "mesh_timings_refined");
+#endif
   count_refined = p4est->global_num_quadrants;
 
   /* time balance */
@@ -238,9 +304,9 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_balance = start + MPI_Wtime ();
-  if (refine_level <= 8) {
-    p4est_vtk_write_file (p4est, "mesh_timings_balanced");
-  }
+#ifdef P4EST_TIMINGS_VTK
+  p4est_vtk_write_file (p4est, "mesh_timings_balanced");
+#endif
   count_balanced = p4est->global_num_quadrants;
   crc = p4est_checksum (p4est);
 
@@ -263,9 +329,9 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_partition = start + MPI_Wtime ();
-  if (refine_level <= 8) {
-    p4est_vtk_write_file (p4est, "mesh_timings_partitioned");
-  }
+#ifdef P4EST_TIMINGS_VTK
+  p4est_vtk_write_file (p4est, "mesh_timings_partitioned");
+#endif
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
   /* time a partition with a shift of all elements by one processor */
@@ -283,7 +349,7 @@ main (int argc, char **argv)
   start = -MPI_Wtime ();
   global_shipped = p4est_partition_given (p4est, quadrant_counts);
   P4EST_GLOBAL_PRODUCTIONF
-    ("Done p4est_partition_given shipped %lld quadrants %.3g%%\n",
+    ("Done " P4EST_STRING "_partition_given shipped %lld quadrants %.3g%%\n",
      (long long) global_shipped,
      global_shipped * 100. / p4est->global_num_quadrants);
   mpiret = MPI_Barrier (mpi->mpicomm);
