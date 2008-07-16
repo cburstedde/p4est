@@ -32,8 +32,8 @@
  *        possible configurations:
  *        o unit      Refinement on the unit cube.
  *        o periodic  Refinement on the unit cube with periodic b.c.
- *        o two       Refinement on a forest with two trees.
- *        o rot       Refinement on a forest with six rotated trees.
+ *        o twocubes  Refinement on a forest with two trees.
+ *        o rotcubes  Refinement on a forest with six rotated trees.
  */
 
 #ifndef P4_TO_P8
@@ -58,8 +58,8 @@ typedef enum
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
 #else
-  P4EST_CONFIG_TWO,
-  P4EST_CONFIG_ROT,
+  P4EST_CONFIG_TWOCUBES,
+  P4EST_CONFIG_ROTCUBES,
 #endif
 }
 timings_config_t;
@@ -102,10 +102,10 @@ static const timings_regression_t regression[] =
   { P4EST_CONFIG_UNIT, 3, 8, 0xeb252238 },
   { P4EST_CONFIG_PERIODIC, 2, 6, 0x372f7402 },
   { P4EST_CONFIG_PERIODIC, 7, 6, 0xa2f1ee48U },
-  { P4EST_CONFIG_TWO, 5, 6, 0xa8b1f54e },
-  { P4EST_CONFIG_TWO, 8, 5, 0x98d3579d },
-  { P4EST_CONFIG_ROT, 1, 5, 0x404e4aa8 },
-  { P4EST_CONFIG_ROT, 7, 6, 0x4c381706 },
+  { P4EST_CONFIG_TWOCUBES, 5, 6, 0xa8b1f54e },
+  { P4EST_CONFIG_TWOCUBES, 8, 5, 0x98d3579d },
+  { P4EST_CONFIG_ROTCUBES, 1, 5, 0x404e4aa8 },
+  { P4EST_CONFIG_ROTCUBES, 7, 6, 0x4c381706 },
 #endif
   { P4EST_CONFIG_NULL, 0, 0, 0 }
 };
@@ -184,7 +184,7 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
     "      unit|periodic|three|moebius|star\n"
 #else
-    "      unit|periodic|two|rot\n"
+    "      unit|periodic|twocubes|rotcubes\n"
 #endif
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
@@ -212,11 +212,11 @@ main (int argc, char **argv)
       config = P4EST_CONFIG_STAR;
     }
 #else
-    else if (!strcmp (config_name, "two")) {
-      config = P4EST_CONFIG_TWO;
+    else if (!strcmp (config_name, "twocubes")) {
+      config = P4EST_CONFIG_TWOCUBES;
     }
-    else if (!strcmp (config_name, "rot")) {
-      config = P4EST_CONFIG_ROT;
+    else if (!strcmp (config_name, "rotcubes")) {
+      config = P4EST_CONFIG_ROTCUBES;
     }
 #endif
     else {
@@ -267,10 +267,10 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_unitsquare ();
   }
 #else
-  if (config == P4EST_CONFIG_TWO) {
+  if (config == P4EST_CONFIG_TWOCUBES) {
     connectivity = p8est_connectivity_new_twocubes ();
   }
-  else if (config == P4EST_CONFIG_ROT) {
+  else if (config == P4EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();
   }
   else if (config == P4EST_CONFIG_PERIODIC) {

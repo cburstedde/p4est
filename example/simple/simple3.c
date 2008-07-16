@@ -22,10 +22,10 @@
 /*
  * Usage: p8est_simple <configuration> <level>
  *        possible configurations:
- *           unit       The unit cube.
- *           periodic   The unit cube with various self-periodic b.c.
- *           twocubes   Two connected cubes.
- *           rotcubes   A collection of four connected rotated cubes.
+ *        o unit      The unit cube.
+ *        o periodic  The unit cube with various self-periodic b.c.
+ *        o twocubes  Two connected cubes.
+ *        o rotcubes  A collection of four connected rotated cubes.
  */
 
 #define VTK_OUTPUT 1
