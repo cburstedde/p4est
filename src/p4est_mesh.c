@@ -1717,6 +1717,146 @@ failtest:
 
 #ifndef P4_TO_P8
 
+/** Generate a neighbor of a quadrant for a given node.
+ *
+ * The neighbor numbering is given below.
+ *
+ * Neighbor numbering for q, node=0:
+ *
+ *      ------+------+
+ *            |  q   |
+ *      nnum=2|nnum=3|
+ *            |      |
+ *      ------+------+
+ *            |      |
+ *      nnum=0|nnum=1|
+ *
+ * Neighbor numbering for q, node=1:
+ *
+ *            +------+------
+ *            |  q   |
+ *            |nnum=2|num=3
+ *            |      |
+ *            +------+------
+ *            |      |
+ *            |nnum=0|nnum=1
+ *
+ * Neighbor numbering for q, node=2:
+ *
+ *            |      |
+ *      nnum=2|nnum=3|
+ *            |      |
+ *      ------+------+
+ *            |  q   |
+ *      nnum=0|nnum=1|
+ *            |      |
+ *      ------+------+
+ *
+ * Neighbor numbering for q, node=3:
+ *
+ *            |      |
+ *            |nnum=2|nnum=3
+ *            |      |
+ *            +------+------
+ *            |  q   |
+ *            |nnum=0|nnum=1
+ *            |      |
+ *            +------+------
+ *
+ * \param [in]  q             the quadrant whose possible node \a node neighbor
+ *                            will be built.
+ * \param [in]  node          the node of the quadrant \a q whose possible node
+ *                            neighbor list will be built.  This is given in
+ *                            pixel (Morton-) ordering.
+ * \param [in]  nnum          the neighbor number with the ordering described
+ *                            above, if nnum==0 then it is the corner neighbor.
+ * \param [in]  neighor_rlev  the relative level of the neighbor compared to
+ *                            the level of \a q.
+ * \param [out] neighbor      the neighbor that will be filled.
+ * \param [out] neighbor_node the neighbor's node which shares with \a q
+ *                            the node \a node.
+ */
+static void
+p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
+                              int nnum, int neighbor_rlev,
+                              p4est_quadrant_t * neighbor, int *neighbor_node)
+{
+  int                 nnode;
+  const int           nlevel = (int) q->level + neighbor_rlev;
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t nh = P4EST_QUADRANT_LEN (nlevel);
+  const p4est_qcoord_t qx = q->x;
+  const p4est_qcoord_t qy = q->y;
+  p4est_qcoord_t      cornerx, cornery;
+  p4est_quadrant_t    n;
+#ifdef P4EST_DEBUG
+  int                 qcid;
+#endif
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (-1 <= neighbor_rlev && neighbor_rlev <= 1);
+  P4EST_ASSERT (0 <= nlevel && nlevel <= P4EST_QMAXLEVEL);
+
+  P4EST_QUADRANT_INIT (&n);
+
+  switch (node) {
+  case 0:
+    cornerx = qx;
+    cornery = qy;
+    break;
+  case 1:
+    cornerx = qx + qh;
+    cornery = qy;
+    break;
+  case 2:
+    cornerx = qx;
+    cornery = qy + qh;
+    break;
+  case 3:
+    cornerx = qx + qh;
+    cornery = qy + qh;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+
+#ifdef P4EST_DEBUG
+  /* Check to see if it is possible to construct the neighbor */
+  qcid = p4est_quadrant_child_id (q);
+  P4EST_ASSERT (neighbor_rlev >= 0 || qcid == node);
+#endif
+
+  nnode = 3 - nnum;
+  n.level = (int8_t) nlevel;
+  switch (nnum) {
+  case 0:
+    n.x = cornerx - nh;
+    n.y = cornery - nh;
+    break;
+  case 1:
+    n.x = cornerx;
+    n.y = cornery - nh;
+    break;
+  case 2:
+    n.x = cornerx - nh;
+    n.y = cornery;
+    break;
+  case 3:
+    n.x = cornerx;
+    n.y = cornery;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+
+  *neighbor = n;
+  *neighbor_node = nnode;
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (neighbor));
+}
+
 void
 p4est_order_local_vertices (p4est_t * p4est,
                             bool identify_periodic,
@@ -1957,87 +2097,6 @@ p4est_order_local_vertices (p4est_t * p4est,
   sc_array_reset (&ctransforms);
 
   *num_uniq_local_vertices = Ntotal;
-}
-
-void
-p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
-                              int nnum, int neighbor_rlev,
-                              p4est_quadrant_t * neighbor, int *neighbor_node)
-{
-  int                 nnode;
-  const int           nlevel = (int) q->level + neighbor_rlev;
-  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
-  const p4est_qcoord_t nh = P4EST_QUADRANT_LEN (nlevel);
-  const p4est_qcoord_t qx = q->x;
-  const p4est_qcoord_t qy = q->y;
-  p4est_qcoord_t      cornerx, cornery;
-  p4est_quadrant_t    n;
-#ifdef P4EST_DEBUG
-  int                 qcid;
-#endif
-
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (-1 <= neighbor_rlev && neighbor_rlev <= 1);
-  P4EST_ASSERT (0 <= nlevel && nlevel <= P4EST_QMAXLEVEL);
-
-  P4EST_QUADRANT_INIT (&n);
-
-  switch (node) {
-  case 0:
-    cornerx = qx;
-    cornery = qy;
-    break;
-  case 1:
-    cornerx = qx + qh;
-    cornery = qy;
-    break;
-  case 2:
-    cornerx = qx;
-    cornery = qy + qh;
-    break;
-  case 3:
-    cornerx = qx + qh;
-    cornery = qy + qh;
-    break;
-  default:
-    SC_CHECK_NOT_REACHED ();
-    break;
-  }
-
-#ifdef P4EST_DEBUG
-  /* Check to see if it is possible to construct the neighbor */
-  qcid = p4est_quadrant_child_id (q);
-  P4EST_ASSERT (neighbor_rlev >= 0 || qcid == node);
-#endif
-
-  nnode = 3 - nnum;
-  n.level = (int8_t) nlevel;
-  switch (nnum) {
-  case 0:
-    n.x = cornerx - nh;
-    n.y = cornery - nh;
-    break;
-  case 1:
-    n.x = cornerx;
-    n.y = cornery - nh;
-    break;
-  case 2:
-    n.x = cornerx - nh;
-    n.y = cornery;
-    break;
-  case 3:
-    n.x = cornerx;
-    n.y = cornery;
-    break;
-  default:
-    SC_CHECK_NOT_REACHED ();
-    break;
-  }
-
-  *neighbor = n;
-  *neighbor_node = nnode;
-
-  P4EST_ASSERT (p4est_quadrant_is_extended (neighbor));
 }
 
 #endif /* !P4_TO_P8 */
