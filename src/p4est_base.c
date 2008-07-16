@@ -236,6 +236,9 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
 {
   p4est_package_id = sc_package_register (log_handler, log_threshold,
                                           "p4est", "A forest of octrees");
+#ifdef P4EST_DEBUG
+  P4EST_GLOBAL_PRODUCTION ("P4EST_DEBUG is ON\n");
+#endif
 }
 
 /* EOF p4est_base.c */
