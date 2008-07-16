@@ -31,8 +31,11 @@
 #define P4EST_INSUL 9
 #define P4EST_STRING "p4est"
 
-/* finest level of the quadtree */
+/** Finest level of the quadtree for representing nodes */
 #define P4EST_MAXLEVEL 30
+
+/** Finest level of the quadtree for representing quadrants */
+#define P4EST_QMAXLEVEL 29
 
 /* the length of a root quadrant */
 #define P4EST_ROOT_LEN ((p4est_qcoord_t) 1 << P4EST_MAXLEVEL)

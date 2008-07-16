@@ -31,8 +31,11 @@
 #define P8EST_INSUL 27
 #define P8EST_STRING "p8est"
 
-/* finest level of the quadtree */
+/** Finest level of the octree for representing nodes */
 #define P8EST_MAXLEVEL 19
+
+/** Finest level of the octree for representing octants */
+#define P8EST_QMAXLEVEL 18
 
 /* the length of a root quadrant */
 #define P8EST_ROOT_LEN ((p4est_qcoord_t) 1 << P8EST_MAXLEVEL)

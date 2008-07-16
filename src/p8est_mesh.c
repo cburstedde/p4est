@@ -49,7 +49,7 @@ p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
   int                 i;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
   P4EST_ASSERT (0 <= face && face < 2 * P4EST_DIM);
 
   n[0].x = q->x + ((face == 0) ? -qh_2 : (face == 1) ? qh : 0);
@@ -87,13 +87,13 @@ p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
   }
 
   if (nur != NULL) {
-    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_MAXLEVEL);
+    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
 
     for (i = 0; i < 4; ++i) {
       nur[i].x = n[i].x + dh;
       nur[i].y = n[i].y + dh;
       nur[i].z = n[i].z + dh;
-      nur[i].level = P4EST_MAXLEVEL;
+      nur[i].level = P4EST_QMAXLEVEL;
       P4EST_ASSERT (p4est_quadrant_is_extended (&nur[i]));
     }
   }
@@ -125,7 +125,7 @@ p4est_quadrant_get_possible_face_neighbors (const p4est_quadrant_t * q,
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
-  if (q->level == P4EST_MAXLEVEL) {
+  if (q->level == P4EST_QMAXLEVEL) {
     P4EST_QUADRANT_INIT (&n[0]);
     P4EST_QUADRANT_INIT (&n[1]);
     P4EST_QUADRANT_INIT (&n[2]);
@@ -192,7 +192,7 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
   sc_array_resize (q_procs, 0);
   if (nurgood != NULL) {
     *nurgood = true;
-    if (q->level == P4EST_MAXLEVEL)
+    if (q->level == P4EST_QMAXLEVEL)
       nurgood = NULL;
   }
 
@@ -205,7 +205,7 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
     *proc = p4est_comm_find_owner (p4est, et->ntree, &eq, rank);
 
     if (nurgood != NULL) {
-      p4est_quadrant_last_descendent (&eq, &eq, P4EST_MAXLEVEL);
+      p4est_quadrant_last_descendent (&eq, &eq, P4EST_QMAXLEVEL);
       nurproc = p4est_comm_find_owner (p4est, et->ntree, &eq, *proc);
       *nurgood = *nurgood && (nurproc == *proc);
     }
@@ -238,7 +238,7 @@ p8est_quadrant_get_half_edge_neighbors (const p4est_quadrant_t * q,
   const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
   P4EST_ASSERT (0 <= edge && edge < 12);
 
   switch (edge / 4) {
@@ -269,17 +269,17 @@ p8est_quadrant_get_half_edge_neighbors (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (&n[1]));
 
   if (nur != NULL) {
-    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_MAXLEVEL);
+    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
 
     nur[0].x = n[0].x + dh;
     nur[0].y = n[0].y + dh;
     nur[0].z = n[0].z + dh;
-    nur[0].level = P4EST_MAXLEVEL;
+    nur[0].level = P4EST_QMAXLEVEL;
     P4EST_ASSERT (p4est_quadrant_is_extended (&nur[0]));
     nur[1].x = n[1].x + dh;
     nur[1].y = n[1].y + dh;
     nur[1].z = n[1].z + dh;
-    nur[1].level = P4EST_MAXLEVEL;
+    nur[1].level = P4EST_QMAXLEVEL;
     P4EST_ASSERT (p4est_quadrant_is_extended (&nur[1]));
   }
 }
@@ -310,7 +310,7 @@ p8est_quadrant_get_possible_edge_neighbors (const p4est_quadrant_t * q,
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
-  if (q->level == P4EST_MAXLEVEL) {
+  if (q->level == P4EST_QMAXLEVEL) {
     P4EST_QUADRANT_INIT (&n[0]);
     P4EST_QUADRANT_INIT (&n[1]);
   }

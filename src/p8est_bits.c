@@ -225,7 +225,7 @@ p8est_quadrant_children (const p4est_quadrant_t * q,
   const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
 
   c0->x = q->x;
   c0->y = q->y;
@@ -278,7 +278,7 @@ p8est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
   const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
 
   c[0].x = q->x;
   c[0].y = q->y;

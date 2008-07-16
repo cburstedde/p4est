@@ -103,6 +103,7 @@ main (void)
   int                 level, mid, cid;
   int                 id0, id1, id2, id3;
   int64_t             index1, index2;
+  p4est_qcoord_t      mh = P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
   p4est_t            *p4est2;
@@ -304,8 +305,11 @@ main (void)
     q1->level = (int8_t) (q1->level + 10 + k);
   }
   tree.maxlevel = 0;
-  for (k = 0; k <= P4EST_MAXLEVEL; ++k) {
+  for (k = 0; k <= P4EST_QMAXLEVEL; ++k) {
     tree.quadrants_per_level[k] = 0;
+  }
+  for (; k <= P4EST_MAXLEVEL; ++k) {
+    tree.quadrants_per_level[k] = -1;
   }
   incount = tree.quadrants.elem_count;
   for (iz = 0; iz < incount; ++iz) {
@@ -326,8 +330,11 @@ main (void)
   p4est_quadrant_set_morton (q1, 2, 8);
   q1 = sc_array_index (&tree.quadrants, 2);
   p4est_quadrant_set_morton (q1, 2, 9);
-  for (k = 0; k <= P4EST_MAXLEVEL; ++k) {
+  for (k = 0; k <= P4EST_QMAXLEVEL; ++k) {
     tree.quadrants_per_level[k] = 0;
+  }
+  for (; k <= P4EST_MAXLEVEL; ++k) {
+    tree.quadrants_per_level[k] = -1;
   }
   tree.quadrants_per_level[1] = 1;
   tree.quadrants_per_level[2] = 2;
@@ -399,13 +406,13 @@ main (void)
   E.y = -qone;
   E.level = 0;
 
-  F.x = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1);
-  F.y = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1);
-  F.level = P4EST_MAXLEVEL;
+  F.x = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
+  F.y = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
+  F.level = P4EST_QMAXLEVEL;
 
-  G.x = -qone;
-  G.y = -qone;
-  G.level = P4EST_MAXLEVEL;
+  G.x = -mh;
+  G.y = -mh;
+  G.level = P4EST_QMAXLEVEL;
 
   H.x = -qone << (P4EST_MAXLEVEL - 1);
   H.y = -qone << (P4EST_MAXLEVEL - 1);
@@ -561,11 +568,11 @@ main (void)
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
                   "first_descendent");
 
-  p4est_quadrant_last_descendent (&A, &g, P4EST_MAXLEVEL);
+  p4est_quadrant_last_descendent (&A, &g, P4EST_QMAXLEVEL);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&G, &g) == 1, "last_descendent");
 
-  Fid = p4est_quadrant_linear_id (&F, P4EST_MAXLEVEL);
-  p4est_quadrant_set_morton (&f, P4EST_MAXLEVEL, Fid);
+  Fid = p4est_quadrant_linear_id (&F, P4EST_QMAXLEVEL);
+  p4est_quadrant_set_morton (&f, P4EST_QMAXLEVEL, Fid);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f) == 1,
                   "set_morton/linear_id");
 

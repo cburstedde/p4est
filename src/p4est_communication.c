@@ -75,7 +75,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef P4_TO_P8
   p4est->global_first_position[num_procs].z = 0;
 #endif
-  p4est->global_first_position[num_procs].level = P4EST_MAXLEVEL;
+  p4est->global_first_position[num_procs].level = P4EST_QMAXLEVEL;
   p4est->global_first_position[num_procs].p.which_tree = num_trees;
 
   if (p4est->mpicomm != MPI_COMM_NULL) {
@@ -87,7 +87,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef P4_TO_P8
       input.z = -1;
 #endif
-      input.level = P4EST_MAXLEVEL;
+      input.level = P4EST_QMAXLEVEL;
       input.p.which_tree = -1;
     }
     else {
@@ -99,7 +99,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef P4_TO_P8
       input.z = quadrant->z;
 #endif
-      input.level = P4EST_MAXLEVEL;
+      input.level = P4EST_QMAXLEVEL;
       input.p.which_tree = first_tree;
     }
     mpiret = MPI_Allgather (&input, (int) sizeof (p4est_quadrant_t), MPI_BYTE,
@@ -122,7 +122,7 @@ p4est_comm_global_partition (p4est_t * p4est)
 #ifdef P4_TO_P8
       P4EST_ASSERT (pi->z >= 0);
 #endif
-      P4EST_ASSERT (pi->p.which_tree >= 0 && pi->level == P4EST_MAXLEVEL);
+      P4EST_ASSERT (pi->p.which_tree >= 0 && pi->level == P4EST_QMAXLEVEL);
     }
   }
 }
@@ -144,7 +144,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
   proc_low = 0;
   proc_high = num_procs - 1;
-  cur.level = P4EST_MAXLEVEL;
+  cur.level = P4EST_QMAXLEVEL;
 
   for (;;) {
     P4EST_ASSERT (proc_low <= proc_high);
@@ -218,7 +218,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
   first_pos = &p4est->global_first_position[p4est->mpirank];
-  P4EST_ASSERT (first_pos->level == P4EST_MAXLEVEL);
+  P4EST_ASSERT (first_pos->level == P4EST_QMAXLEVEL);
   full_tree[0] = (which_tree > p4est->first_local_tree ||
                   (first_pos->x == 0 && first_pos->y == 0
 #ifdef P4_TO_P8
@@ -227,7 +227,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
                   ));
 
   next_pos = &p4est->global_first_position[p4est->mpirank + 1];
-  P4EST_ASSERT (next_pos->level == P4EST_MAXLEVEL);
+  P4EST_ASSERT (next_pos->level == P4EST_QMAXLEVEL);
   full_tree[1] = (which_tree < p4est->last_local_tree ||
                   (next_pos->x == 0 && next_pos->y == 0
 #ifdef P4_TO_P8

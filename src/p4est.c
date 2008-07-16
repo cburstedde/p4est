@@ -122,7 +122,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* determine uniform level of initial tree */
   tree_num_quadrants = 1;
-  for (level = 0; level < P4EST_MAXLEVEL; ++level) {
+  for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
     if (tree_num_quadrants >=
         (num_procs * (p4est_gloidx_t) p4est_initial_quadrants_per_processor)
         / num_trees) {
@@ -131,7 +131,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     tree_num_quadrants *= P4EST_CHILDREN;
     P4EST_ASSERT (tree_num_quadrants > 0);
   }
-  P4EST_ASSERT (level < P4EST_MAXLEVEL
+  P4EST_ASSERT (level < P4EST_QMAXLEVEL
                 && tree_num_quadrants <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
 
   /* compute global number of quadrants */
@@ -186,8 +186,11 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   for (jl = 0; jl < num_trees; ++jl) {
     tree = sc_array_index (p4est->trees, jl);
     sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
-    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+    for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       tree->quadrants_per_level[i] = 0;
+    }
+    for (; i <= P4EST_MAXLEVEL; ++i) {
+      tree->quadrants_per_level[i] = -1;
     }
     tree->maxlevel = 0;
   }
@@ -280,7 +283,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 #ifdef P4_TO_P8
     global_first_position[i].z = c.z;
 #endif
-    global_first_position[i].level = P4EST_MAXLEVEL;
+    global_first_position[i].level = P4EST_QMAXLEVEL;
     global_first_position[i].p.which_tree = first_tree;
   }
   p4est->global_first_position = global_first_position;
@@ -462,7 +465,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 
     /* reset the quadrant counters */
     maxlevel = 0;
-    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+    for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       tree->quadrants_per_level[i] = 0;
     }
 
@@ -472,7 +475,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     incount = tquadrants->elem_count;
     for (current = 0; current < incount; ++current) {
       q = sc_array_index (tquadrants, current);
-      dorefine = ((q->level < P4EST_MAXLEVEL) && refine_fn (p4est, nt, q));
+      dorefine = ((q->level < P4EST_QMAXLEVEL) && refine_fn (p4est, nt, q));
       if (dorefine) {
         break;
       }
@@ -500,7 +503,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
       qpop = sc_list_pop (list);
       if (dorefine ||
           ((p4est_refine_recursive || qpop->p.user_data != key) &&
-           qpop->level < P4EST_MAXLEVEL && refine_fn (p4est, nt, qpop))) {
+           qpop->level < P4EST_QMAXLEVEL && refine_fn (p4est, nt, qpop))) {
         dorefine = false;
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
@@ -736,7 +739,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
     /* compute maximum level */
     maxlevel = 0;
     num_quadrants = 0;
-    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+    for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
       num_quadrants += tree->quadrants_per_level[i];    /* same type */
       if (tree->quadrants_per_level[i] > 0) {
@@ -798,7 +801,7 @@ p4est_balance_schedule (p4est_t * p4est, sc_array_t * peers,
   /* querying insul is equivalent to querying first descendent */
   first_owner = p4est_comm_find_owner (p4est, qtree, insul, rank);
   /* querying last descendent */
-  p4est_quadrant_last_descendent (insul, &ld, P4EST_MAXLEVEL);
+  p4est_quadrant_last_descendent (insul, &ld, P4EST_QMAXLEVEL);
   last_owner = p4est_comm_find_owner (p4est, qtree, &ld, rank);
 
   /* send to all processors possibly intersecting insulation */
@@ -1033,7 +1036,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifdef P4_TO_P8
   mylow.z = p4est->global_first_position[rank].z;
 #endif
-  mylow.level = P4EST_MAXLEVEL;
+  mylow.level = P4EST_QMAXLEVEL;
 
   /* and the first finest quadrant of the next processor */
   nextlow.x = p4est->global_first_position[rank + 1].x;
@@ -1041,7 +1044,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifdef P4_TO_P8
   nextlow.z = p4est->global_first_position[rank + 1].z;
 #endif
-  nextlow.level = P4EST_MAXLEVEL;
+  nextlow.level = P4EST_QMAXLEVEL;
 
   /* loop over all local trees to assemble first send list */
   first_tree = p4est->first_local_tree;

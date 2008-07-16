@@ -30,6 +30,7 @@
 #define P4EST_INSUL                     P8EST_INSUL
 #define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
+#define P4EST_QMAXLEVEL                 P8EST_QMAXLEVEL
 #define P4EST_ROOT_LEN                  P8EST_ROOT_LEN
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
@@ -90,6 +91,7 @@
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_outside_face  p8est_quadrant_is_outside_face
 #define p4est_quadrant_is_outside_corner p8est_quadrant_is_outside_corner
+#define p4est_quadrant_is_node          p8est_quadrant_is_node
 #define p4est_quadrant_is_valid         p8est_quadrant_is_valid
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling

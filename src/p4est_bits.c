@@ -253,10 +253,23 @@ p4est_quadrant_is_outside_corner (const p4est_quadrant_t * q)
 }
 
 bool
+p4est_quadrant_is_node (const p4est_quadrant_t * q)
+{
+  return
+    q->level == P4EST_MAXLEVEL &&
+    q->x >= 0 && q->x <= P4EST_ROOT_LEN &&
+    q->y >= 0 && q->y <= P4EST_ROOT_LEN &&
+#ifdef P4_TO_P8
+    q->z >= 0 && q->z <= P4EST_ROOT_LEN &&
+#endif
+    true;
+}
+
+bool
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
   return
-    (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
+    (q->level >= 0 && q->level <= P4EST_QMAXLEVEL) &&
     ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
     ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #ifdef P4_TO_P8
@@ -269,7 +282,7 @@ bool
 p4est_quadrant_is_extended (const p4est_quadrant_t * q)
 {
   return
-    (q->level >= 0 && q->level <= P4EST_MAXLEVEL) &&
+    (q->level >= 0 && q->level <= P4EST_QMAXLEVEL) &&
     ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
     ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #ifdef P4_TO_P8
@@ -690,7 +703,7 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
                          p4est_quadrant_t * c2, p4est_quadrant_t * c3)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
 
   c0->x = q->x;
   c0->y = q->y;
@@ -716,7 +729,7 @@ void
 p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
 
   c[0].x = q->x;
   c[0].y = q->y;
@@ -745,7 +758,7 @@ p4est_quadrant_first_descendent (const p4est_quadrant_t * q,
                                  p4est_quadrant_t * fd, int level)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT ((int) q->level <= level && level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT ((int) q->level <= level && level <= P4EST_QMAXLEVEL);
 
   fd->x = q->x;
   fd->y = q->y;
@@ -762,7 +775,7 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
   p4est_qcoord_t      shift;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT ((int) q->level <= level && level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT ((int) q->level <= level && level <= P4EST_QMAXLEVEL);
 
   shift = P4EST_QUADRANT_LEN (q->level) - P4EST_QUADRANT_LEN (level);
 
@@ -1004,7 +1017,7 @@ p4est_quadrant_transform_corner (p4est_quadrant_t * q,
   p4est_qcoord_t      shift[2];
 
   P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
-  P4EST_ASSERT (0 <= q->level && q->level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT (0 <= q->level && q->level <= P4EST_QMAXLEVEL);
 
   shift[0] = (inside ? 0 : -P4EST_QUADRANT_LEN (q->level));
   shift[1] = (inside ? P4EST_LAST_OFFSET (q->level) : P4EST_ROOT_LEN);
@@ -1247,8 +1260,8 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 {
   int                 i;
 
-  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
-  if (level < P4EST_MAXLEVEL) {
+  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
+  if (level < P4EST_QMAXLEVEL) {
     P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
   }
 

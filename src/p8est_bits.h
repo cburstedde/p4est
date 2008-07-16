@@ -104,6 +104,12 @@ bool                p8est_quadrant_is_outside_edge_extra (const
 bool                p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
                                                       q);
 
+/** Test if a quadrant is used to represent a mesh node.
+ * \param [in] q Quadrant to be tested.
+ * \return Returns true if \a q is a node.
+ */
+bool                p8est_quadrant_is_node (const p8est_quadrant_t * q);
+
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is valid.
