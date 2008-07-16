@@ -68,7 +68,17 @@ bool                p8est_is_balanced (p8est_t * p8est);
 bool                p8est_build_ghost_layer (p8est_t * p8est,
                                              sc_array_t * ghost_layer);
 
+/** Populate lists of hanging and anchored nodes.
+ */
+void                p8est_collect_nodes (p8est_t * p8est,
+                                         sc_array_t * ghost_layer);
+
+/** Create neighborhood information.
+ */
 p8est_neighborhood_t *p8est_neighborhood_new (p8est_t * p8est);
+
+/** Destroy neighborhood information.
+ */
 void                p8est_neighborhood_destroy (p8est_neighborhood_t * nhood);
 
 #endif /* P8EST_MESH_H */

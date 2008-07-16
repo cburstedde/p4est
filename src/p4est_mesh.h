@@ -24,6 +24,21 @@
 
 #include <p4est.h>
 
+/** This mesh structure holds complete neighborhood information.
+ * cumulative_count[i]   is the sum of local quadrants in the
+ *                       local trees 0..i-1. i == local_num_trees is allowed.
+ * element_offsets[i]    is the offset into local_neighbors for local
+ *                       element i. i == local_num_quadrants is allowed
+ *                       and contains the number of stored local neighbors.
+ */
+typedef struct
+{
+  p4est_locidx_t     *cumulative_count;
+  p4est_locidx_t     *element_offsets;
+  sc_array_t         *local_neighbors;
+}
+p4est_neighborhood_t;
+
 /** Checks a p4est to see if it is balanced.
  *
  * \param [in] p4est  The p4est to be tested.
@@ -75,5 +90,18 @@ void                p4est_order_local_vertices (p4est_t * p4est,
                                                 num_uniq_local_vertices,
                                                 p4est_locidx_t *
                                                 quadrant_to_local_vertex);
+
+/** Populate lists of hanging and anchored nodes.
+ */
+void                p4est_collect_nodes (p4est_t * p4est,
+                                         sc_array_t * ghost_layer);
+
+/** Create neighborhood information.
+ */
+p4est_neighborhood_t *p4est_neighborhood_new (p4est_t * p4est);
+
+/** Destroy neighborhood information.
+ */
+void                p4est_neighborhood_destroy (p4est_neighborhood_t * nhood);
 
 #endif /* !P4EST_MESH_H */
