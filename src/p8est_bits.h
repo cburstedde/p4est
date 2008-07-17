@@ -29,6 +29,12 @@
 void                p8est_quadrant_print (int log_priority,
                                           const p8est_quadrant_t * q);
 
+/** Test if two quadrants have equal Morton indices.
+ * \return true if \a q1 describes the same quadrant as \a q2.
+ */
+bool                p8est_quadrant_is_equal (const p8est_quadrant_t * q1,
+                                             const p8est_quadrant_t * q2);
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,
@@ -46,19 +52,29 @@ int                 p8est_quadrant_compare (const void *v1, const void *v2);
 int                 p8est_quadrant_compare_piggy (const void *v1,
                                                   const void *v2);
 
-/** Test if two quadrants have equal Morton indices.
+/** Test if two quadrants have equal Morton indices, callback version.
  * \return true if \a v1 describes the same quadrant as \a v2.
  */
-bool                p8est_quadrant_is_equal (const void *v1, const void *v2);
+bool                p8est_quadrant_equal_fn (const void *v1, const void *v2,
+                                             const void *u);
 
-/** Computes a hash value for a quadrant in 0..2^30-1.
+/** Computes a hash value for a quadrant by the lookup3 method.
  */
-unsigned            p8est_quadrant_hash (const void *v);
+unsigned            p8est_quadrant_hash_fn (const void *v, const void *u);
 
-/** Compute the position of this child within its siblings.
- * \return Returns its child id in 0..3
+/** Test if two nodes are in the same tree and have equal Morton indices.
+ * \param [in] v1   Pointer to a clamped node.
+ * \param [in] v2   Pointer to a clamped node.
+ * \param [in] u    User data, ignored.
  */
-int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
+bool                p8est_node_equal_piggy_fn (const void *v1,
+                                               const void *v2, const void *u);
+
+/** Compute hash value of a node based on its tree and Morton index.
+ * \param [in] v    Pointer to a clamped node.
+ * \param [in] u    User data, ignored.
+ */
+unsigned            p8est_node_hash_piggy_fn (const void *v, const void *u);
 
 /** Clamp a node inside the unit tree if it sits on a high border.
  * \param [in] n    Node to be clamped. Must not yet be clamped.
@@ -66,6 +82,11 @@ int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
  */
 void                p8est_node_clamp_inside (const p8est_quadrant_t * n,
                                              p8est_quadrant_t * r);
+
+/** Compute the position of this child within its siblings.
+ * \return Returns its child id in 0..3
+ */
+int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
 
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.

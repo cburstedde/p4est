@@ -22,15 +22,25 @@
 #include <p4est_bits.h>
 
 static unsigned
-int_hash_fn (const void *v)
+int_hash_fn (const void *v, const void *u)
 {
   return (unsigned) (unsigned long) v;
 }
 
 static              bool
-int_equal_fn (const void *v1, const void *v2)
+int_equal_fn (const void *v1, const void *v2, const void *u)
 {
   return (long) v1 == (long) v2;
+}
+
+static void
+check_hash_array (void)
+{
+  sc_hash_array_t    *ha;
+
+  ha = sc_hash_array_new (sizeof (int), NULL, NULL, NULL);
+
+  sc_hash_array_destroy (ha);
 }
 
 int
@@ -38,14 +48,15 @@ main (int argc, char **argv)
 {
   int                 i, k, inserted;
   int                 i1, i2, i3;
-  void               *v1, *v2, *v3;
+  void              **vv1, **vv2, **vv3;
+  void               *v1, *v2;
   p4est_quadrant_t    q1, q2, q3;
   p4est_quadrant_t   *f1, *f2, *f3;
   sc_hash_t          *ihash;
   sc_hash_t          *qhash;
 
   for (k = 0; k < 3; ++k) {
-    ihash = sc_hash_new (int_hash_fn, int_equal_fn, NULL);
+    ihash = sc_hash_new (int_hash_fn, int_equal_fn, NULL, NULL);
 
     inserted = 0;
     for (i = 0; i < 347; ++i) {
@@ -59,7 +70,8 @@ main (int argc, char **argv)
     sc_hash_destroy (ihash);
   }
 
-  qhash = sc_hash_new (p4est_quadrant_hash, p4est_quadrant_is_equal, NULL);
+  qhash = sc_hash_new (p4est_quadrant_hash_fn, p4est_quadrant_equal_fn,
+                       NULL, NULL);
 
   p4est_quadrant_set_morton (&q1, 3, 15);
   p4est_quadrant_set_morton (&q2, 3, 18);
@@ -69,12 +81,12 @@ main (int argc, char **argv)
   q3.p.piggy1.owner_rank = 0;
 
   f1 = f2 = f3 = NULL;
-  i1 = sc_hash_insert_unique (qhash, &q1, &v1);
-  f1 = v1;
-  i2 = sc_hash_insert_unique (qhash, &q2, &v2);
-  f2 = v2;
-  i3 = sc_hash_insert_unique (qhash, &q3, &v3);
-  f3 = v3;
+  i1 = sc_hash_insert_unique (qhash, &q1, &vv1);
+  f1 = *vv1;
+  i2 = sc_hash_insert_unique (qhash, &q2, &vv2);
+  f2 = *vv2;
+  i3 = sc_hash_insert_unique (qhash, &q3, &vv3);
+  f3 = *vv3;
   printf ("Quadrants inserted %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
 
@@ -85,8 +97,8 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton (&q1, 3, 19);
   i1 = sc_hash_lookup (qhash, &q1, NULL);
   i2 = sc_hash_lookup (qhash, &q2, NULL);
-  i3 = sc_hash_lookup (qhash, &q3, &v3);
-  f3 = v3;
+  i3 = sc_hash_lookup (qhash, &q3, &vv3);
+  f3 = *vv3;
   printf ("Quadrants lookup %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
   SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
@@ -103,6 +115,9 @@ main (int argc, char **argv)
   f2 = f1;
 
   sc_hash_destroy (qhash);
+
+  check_hash_array ();
+
   sc_finalize ();
 
   return 0;

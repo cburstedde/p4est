@@ -1346,7 +1346,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   int                 skey, *key = &skey;
   int                 pkey, *parent_key = &pkey;
   int                 l, inmaxl;
-  void               *vlookup;
+  void              **vlookup;
   ssize_t             srindex;
   p4est_qcoord_t      ph;
   p4est_quadrant_t   *family[P4EST_CHILDREN];
@@ -1418,8 +1418,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   /* initialize temporary storage */
   list_alloc = sc_mempool_new (sizeof (sc_link_t));
   for (l = 0; l <= inmaxl; ++l) {
-    hash[l] = sc_hash_new (p4est_quadrant_hash, p4est_quadrant_is_equal,
-                           list_alloc);
+    hash[l] = sc_hash_new (p4est_quadrant_hash_fn, p4est_quadrant_equal_fn,
+                           NULL, list_alloc);
     sc_array_init (&outlist[l], sizeof (p4est_quadrant_t *));
   }
   for (; l <= P4EST_MAXLEVEL; ++l) {
@@ -1582,7 +1582,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
         if (lookup) {
           /* qalloc is already included in output list, this catches most */
           ++count_already_outlist;
-          qlookup = vlookup;
+          qlookup = *vlookup;
           if (sid == P4EST_CHILDREN && qlookup->p.user_data == parent_key) {
             break;              /* this parent has been triggered before */
           }
@@ -1618,10 +1618,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     /* print statistics and free hash tables */
 #ifdef P4EST_DEBUG
     sc_hash_print_statistics (SC_LP_DEBUG, hash[l]);
-    sc_hash_destroy (hash[l]);
-#else
-    sc_hash_unlink_destroy (hash[l]);   /* performance optimization */
 #endif
+    sc_hash_unlink_destroy (hash[l]);
 
     /* merge valid quadrants from outlist into inlist */
     ocount = outlist[l].elem_count;
@@ -1653,9 +1651,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     }
     sc_array_reset (&outlist[l]);
   }
-#ifndef P4EST_DEBUG
-  sc_mempool_reset (list_alloc);
-#endif
   sc_mempool_destroy (list_alloc);
   P4EST_ASSERT (incount + num_added == inlist->elem_count);
 

@@ -82,12 +82,15 @@
 
 /* functions in p4est_bits */
 #define p4est_quadrant_print            p8est_quadrant_print
+#define p4est_quadrant_is_equal         p8est_quadrant_is_equal
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
-#define p4est_quadrant_is_equal         p8est_quadrant_is_equal
-#define p4est_quadrant_hash             p8est_quadrant_hash
-#define p4est_quadrant_child_id         p8est_quadrant_child_id
+#define p4est_quadrant_equal_fn         p8est_quadrant_equal_fn
+#define p4est_quadrant_hash_fn          p8est_quadrant_hash_fn
+#define p4est_node_equal_piggy_fn       p8est_node_equal_piggy_fn
+#define p4est_node_hash_piggy_fn        p8est_node_hash_piggy_fn
 #define p4est_node_clamp_inside         p8est_node_clamp_inside
+#define p4est_quadrant_child_id         p8est_quadrant_child_id
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_outside_face  p8est_quadrant_is_outside_face

@@ -38,6 +38,20 @@ p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 #endif
 }
 
+bool
+p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
+                         const p4est_quadrant_t * q2)
+{
+  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+
+  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y)
+#ifdef P4_TO_P8
+    && (q1->z == q2->z)
+#endif
+    ;
+}
+
 int
 p4est_quadrant_compare (const void *v1, const void *v2)
 {
@@ -116,7 +130,7 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
 }
 
 bool
-p4est_quadrant_is_equal (const void *v1, const void *v2)
+p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
@@ -124,40 +138,20 @@ p4est_quadrant_is_equal (const void *v1, const void *v2)
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
-  return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y)
+  return q1->level == q2->level && q1->x == q2->x && q1->y == q2->y
 #ifdef P4_TO_P8
-    && (q1->z == q2->z)
+    && q1->z == q2->z
 #endif
     ;
 }
 
-/* Hash macros from lookup3.c by Bob Jenkins, May 2006, public domain. */
-#define p4est_hash_rot(x,k) (((x) << (k)) | ((x) >> (32 - (k))))
-#define p4est_hash_mix(a,b,c) do {                         \
-    a -= c; a ^= p4est_hash_rot(c, 4); c += b;             \
-    b -= a; b ^= p4est_hash_rot(a, 6); a += c;             \
-    c -= b; c ^= p4est_hash_rot(b, 8); b += a;             \
-    a -= c; a ^= p4est_hash_rot(c,16); c += b;             \
-    b -= a; b ^= p4est_hash_rot(a,19); a += c;             \
-    c -= b; c ^= p4est_hash_rot(b, 4); b += a;             \
-  } while (0)
-#define p4est_hash_final(a,b,c) do {                       \
-    c ^= b; c -= p4est_hash_rot(b,14);                     \
-    a ^= c; a -= p4est_hash_rot(c,11);                     \
-    b ^= a; b -= p4est_hash_rot(a,25);                     \
-    c ^= b; c -= p4est_hash_rot(b,16);                     \
-    a ^= c; a -= p4est_hash_rot(c, 4);                     \
-    b ^= a; b -= p4est_hash_rot(a,14);                     \
-    c ^= b; c -= p4est_hash_rot(b,24);                     \
-  } while (0)
-
 unsigned
-p4est_quadrant_hash (const void *v)
+p4est_quadrant_hash_fn (const void *v, const void *u)
 {
   const p4est_quadrant_t *q = v;
-
-#if 1
   uint32_t            a, b, c;
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
   a = (uint32_t) q->x;
   b = (uint32_t) q->y;
@@ -166,15 +160,64 @@ p4est_quadrant_hash (const void *v)
 #else
   c = (uint32_t) q->z;
 #endif
-  p4est_hash_mix (a, b, c);
+  sc_hash_mix (a, b, c);
   a += (uint32_t) q->level;
-  p4est_hash_final (a, b, c);
+  sc_hash_final (a, b, c);
 
   return (unsigned) c;
-#else
-  return (unsigned) (p4est_quadrant_linear_id (q, (int) q->level) %
-                     ((uint64_t) 1 << 30));
+}
+
+bool
+p4est_node_equal_piggy_fn (const void *v1, const void *v2, const void *u)
+{
+  const p4est_quadrant_t *q1 = v1;
+  const p4est_quadrant_t *q2 = v2;
+
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, true));
+
+  return
+    q1->p.which_tree == q2->p.which_tree && q1->x == q2->x && q1->y == q2->y
+#ifdef P4_TO_P8
+    && q1->z == q2->z
 #endif
+    ;
+}
+
+unsigned
+p4est_node_hash_piggy_fn (const void *v, const void *u)
+{
+  const p4est_quadrant_t *q = v;
+  uint32_t            a, b, c;
+
+  P4EST_ASSERT (p4est_quadrant_is_node (q, true));
+
+  a = (uint32_t) q->x;
+  b = (uint32_t) q->y;
+#ifndef P4_TO_P8
+  c = 0xdeadbeefU;
+#else
+  c = (uint32_t) q->z;
+#endif
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) q->p.which_tree;
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
+void
+p4est_node_clamp_inside (const p4est_quadrant_t * n, p4est_quadrant_t * r)
+{
+  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+
+  r->x = (n->x == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->x;
+  r->y = (n->y == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->y;
+#ifdef P4_TO_P8
+  r->z = (n->z == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->z;
+#endif
+  r->level = P4EST_MAXLEVEL;
+  P4EST_ASSERT (p4est_quadrant_is_node (r, true));
 }
 
 int
@@ -195,20 +238,6 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 #endif
 
   return id;
-}
-
-void
-p4est_node_clamp_inside (const p4est_quadrant_t * n, p4est_quadrant_t * r)
-{
-  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
-
-  r->x = (n->x == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->x;
-  r->y = (n->y == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->y;
-#ifdef P4_TO_P8
-  r->z = (n->z == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->z;
-#endif
-  r->level = P4EST_MAXLEVEL;
-  P4EST_ASSERT (p4est_quadrant_is_node (r, true));
 }
 
 bool
