@@ -829,7 +829,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
       }
       else {
         corner = 4 * outface[5] + 2 * outface[3] + outface[1];
-        P4EST_ASSERT (p8est_quadrant_touches_corner (inq, corner));
+        P4EST_ASSERT (p8est_quadrant_touches_corner (inq, corner, false));
         p8est_find_corner_transform (conn, qtree, corner, &ci);
         P4EST_ASSERT (ci.corner_transforms.elem_count > 0);
       }

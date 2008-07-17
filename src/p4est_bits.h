@@ -333,7 +333,7 @@ void                p4est_quadrant_transform_face (const p4est_quadrant_t * q,
  * \param [in]     corner     Corner index in z-order.
  */
 bool                p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
-                                                   int corner);
+                                                   int corner, bool inside);
 
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.

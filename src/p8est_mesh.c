@@ -355,9 +355,9 @@ p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   sc_array_t         *eta;
 
   P4EST_ASSERT (0 <= edge && edge < 12);
-  P4EST_ASSERT (p4est_quadrant_is_inside_root (q));
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
-  if (p8est_quadrant_touches_edge (q, edge)) {
+  if (p8est_quadrant_touches_edge (q, edge, true)) {
     eta = &ei.edge_transforms;
     sc_array_init (eta, sizeof (p8est_edge_transform_t));
     p8est_find_edge_transform (conn, treeid, edge, &ei);

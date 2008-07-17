@@ -1252,8 +1252,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
               P4EST_ASSERT (face_axis[0] && face_axis[1] && face_axis[2]);
               corner =
                 4 * quad_contact[5] + 2 * quad_contact[3] + quad_contact[1];
-              P4EST_ASSERT (p8est_quadrant_touches_corner (q, corner));
-              P4EST_ASSERT (p8est_quadrant_touches_corner (&insulq, corner));
+              P4EST_ASSERT (p8est_quadrant_touches_corner (q, corner, true));
+              P4EST_ASSERT (p8est_quadrant_touches_corner
+                            (&insulq, corner, false));
               p8est_find_corner_transform (conn, nt, corner, &ci);
               for (ctree = 0; ctree < cta->elem_count; ++ctree) {
                 ct = sc_array_index (cta, ctree);

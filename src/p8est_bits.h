@@ -363,7 +363,7 @@ void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
 /** Checks if a quadrant touches an edge (diagonally inside or outside).
  */
 bool                p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
-                                                 int edge);
+                                                 int edge, bool inside);
 
 /** Transforms a quadrant across an edge between trees.
  * \param [in]     q          Input quadrant.
@@ -392,7 +392,7 @@ void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
  */
 bool                p8est_quadrant_touches_corner (const p8est_quadrant_t * q,
-                                                   int corner);
+                                                   int corner, bool inside);
 
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
