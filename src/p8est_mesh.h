@@ -39,35 +39,6 @@ typedef struct
 }
 p8est_neighborhood_t;
 
-/** Checks a p8est to see if it is balanced.
- *
- * \param [in] p8est  The p8est to be tested.
- * \return Returns true if balanced, false otherwise.
- */
-bool                p8est_is_balanced (p8est_t * p8est);
-
-/** Gets the ghost layer
- *
- * This will gather the quadrants from each neighboring proc to build one layer
- * of face, edge and corner based ghost elements around the ones they own.
- *
- * \param [in] p8est              The forest for which the ghost layer will
- *                                be generated.
- * \param [out] ghost_layer       An array of quadrants which make up the
- *                                ghost layer around \a p4est.  Their piggy1
- *                                data member is filled with their owner's
- *                                tree and processor ids.  Quadrants will be
- *                                ordered in \c p8est_quadrant_compare_piggy
- *                                order.  These will be quadrants inside the
- *                                neighboring tree i.e., \c
- *                                p4est_quadrant_is_inside is true for the
- *                                quadrant and the neighboring tree.
- * \return                        Returns false if it fails due to violated
- *                                2:1 constraints, true otherwise.
- */
-bool                p8est_build_ghost_layer (p8est_t * p8est,
-                                             sc_array_t * ghost_layer);
-
 /** Populate lists of hanging and anchored nodes.
  */
 void                p8est_collect_nodes (p8est_t * p8est,

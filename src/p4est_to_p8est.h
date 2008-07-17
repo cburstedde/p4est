@@ -155,9 +155,12 @@
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
-/* functions in p4est_mesh */
-#define p4est_is_balanced               p8est_is_balanced
+/* functions in p4est_ghost */
 #define p4est_build_ghost_layer         p8est_build_ghost_layer
+#define p4est_quadrant_exists           p8est_quadrant_exists
+#define p4est_is_balanced               p8est_is_balanced
+
+/* functions in p4est_mesh */
 #define p4est_collect_nodes             p8est_collect_nodes
 #define p4est_neighborhood_new          p8est_neighborhood_new
 #define p4est_neighborhood_destroy      p8est_neighborhood_destroy

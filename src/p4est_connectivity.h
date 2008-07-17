@@ -69,7 +69,7 @@ typedef struct
 }
 p4est_corner_transform_t;
 
-/** mappings between right-hand rule and z-ordering */
+/** Mappings between right-hand rule and z-ordering. */
 extern const int    p4est_corner_to_zorder[5];
 extern const int    p4est_zface_to_rface[4];
 
@@ -80,6 +80,10 @@ extern const int    p4est_zface_to_rface[4];
  * The orientation index is 0 for same, 1 for opposing sense of rotation.
  */
 extern const int    p4est_transform_table[4][4][2];
+
+/** Hanging corners and faces indexed by child id, two each. */
+extern const int    p4est_hanging_corner[4][2];
+extern const int    p4est_hanging_face[4][2];
 
 /** Allocate a connectivity structure
  * \param [in] num_trees    Number of trees in the forest.

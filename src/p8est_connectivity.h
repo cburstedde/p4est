@@ -136,6 +136,15 @@ extern const int    p8est_corner_faces[8][3];
 /** Store the edge numbers 0..11 for each tree corner. */
 extern const int    p8est_corner_edges[8][3];
 
+/** Store the faces for each child and edge, can be -1. */
+extern const int    p8est_child_edge_faces[8][12];
+
+/** Store the faces for each child and corner, can be -1. */
+extern const int    p8est_child_corner_faces[8][8];
+
+/** Store the edges for each child and corner, can be -1. */
+extern const int    p8est_child_corner_edges[8][8];
+
 /** Allocate a connectivity structure
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.

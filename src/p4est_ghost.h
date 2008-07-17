@@ -1,0 +1,80 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a parallel collection of quadtrees and/or
+  octrees.
+
+  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef P4EST_GHOST_H
+#define P4EST_GHOST_H
+
+#include <p4est.h>
+
+/** Builds the ghost layer.
+ *
+ * This will gather the quadrants from each neighboring proc to build
+ * one layer of face and corner based ghost elements around the ones they own.
+ *
+ * \param [in] p4est              The forest for which the ghost layer will
+ *                                be generated.
+ * \param [out] ghost_layer       An array of quadrants which make up the
+ *                                ghost layer around \a p4est.  Their piggy1
+ *                                data member is filled with their owner's
+ *                                tree and processor ids.  Quadrants will be
+ *                                ordered in \c p4est_quadrant_compare_piggy
+ *                                order.  These will be quadrants inside the
+ *                                neighboring tree i.e., \c
+ *                                p4est_quadrant_is_inside is true for the
+ *                                quadrant and the neighboring tree.
+ * \return                        Returns false if it fails due to violated
+ *                                2:1 constraints, true otherwise.
+ */
+bool                p4est_build_ghost_layer (p4est_t * p4est,
+                                             sc_array_t * ghost_layer);
+
+/** Checks if quadrant exists in the local forest or the ghost layer.
+ *
+ * For quadrants across tree corners it checks if the quadrant exists
+ * in any of the corner neighbors.
+ *
+ * \param [in]  p4est        The forest in which to search for \a q
+ * \param [in]  ghost_layer  The ghost layer in which to search for \a q
+ * \param [in]  treeid       The tree id for which \a q belongs.
+ * \param [in]  q            The quadrant that is being searched for.
+ * \param [out] exists_arr   Filled for tree corner cases.  An entry
+ *                           for each corner neighbor is set to 1 if
+ *                           it exists in the local forest or ghost_layer.
+ *
+ * \return true if the quadrant exists in the local forest or in the
+ *              ghost_layer, and false if doesn't exist in either.
+ */
+bool                p4est_quadrant_exists (p4est_t * p4est,
+                                           sc_array_t * ghost_layer,
+                                           p4est_topidx_t treeid,
+                                           const p4est_quadrant_t * q,
+                                           sc_array_t * exists_arr);
+
+/** Checks a p4est to see if it is balanced.
+ *
+ * This function builds the ghost layer and discards it when done.
+ *
+ * \param [in] p4est  The p4est to be tested.
+ * \return Returns true if balanced, false otherwise.
+ */
+bool                p4est_is_balanced (p4est_t * p4est);
+
+#endif /* !P4EST_GHOST_H */

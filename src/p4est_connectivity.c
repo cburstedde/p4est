@@ -23,7 +23,6 @@
 
 /* *INDENT-OFF* */
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
-
 const int           p4est_zface_to_rface[4] = { 3, 1, 0, 2 };
 
 const int           p4est_transform_table[4][4][2] =
@@ -31,6 +30,17 @@ const int           p4est_transform_table[4][4][2] =
  {{1, 5}, {2, 6}, {3, 7}, {0, 4}},
  {{0, 6}, {1, 7}, {2, 4}, {3, 5}},
  {{3, 7}, {0, 4}, {1, 5}, {2, 6}}};
+
+const int           p4est_hanging_corner[4][2] =
+{{ 1, 2 },
+ { 0, 3 },
+ { 0, 3 },
+ { 1, 2 }};
+const int           p4est_hanging_face[4][2] =
+{{ 0, 3 },
+ { 0, 1 },
+ { 3, 2 },
+ { 1, 2 }};
 /* *INDENT-ON* */
 
 p4est_connectivity_t *
