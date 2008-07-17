@@ -60,6 +60,13 @@ unsigned            p4est_quadrant_hash (const void *v);
  */
 int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
+/** Clamp a node inside the unit tree if it sits on a high border.
+ * \param [in] n    Node to be clamped. Must not yet be clamped.
+ * \param [out] r   Existing node overwritten by the clamped result.
+ */
+void                p4est_node_clamp_inside (const p4est_quadrant_t * n,
+                                             p4est_quadrant_t * r);
+
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
@@ -88,10 +95,13 @@ bool                p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
                                                       q);
 
 /** Test if a quadrant is used to represent a mesh node.
- * \param [in] q Quadrant to be tested.
+ * \param [in] q        Quadrant to be tested.
+ * \param [in] inside   If true, boundary nodes must be clamped inside.
+ *                      If false, nodes must align with the quadrant grid.
  * \return Returns true if \a q is a node.
  */
-bool                p4est_quadrant_is_node (const p4est_quadrant_t * q);
+bool                p4est_quadrant_is_node (const p4est_quadrant_t * q,
+                                            bool inside);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -230,6 +240,16 @@ void                p4est_quadrant_corner_neighbor (const p4est_quadrant_t *
                                                     q, int corner,
                                                     p4est_quadrant_t * r);
 
+/** Compute the corner node of a quadrant.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner across which to generate the neighbor.
+ * \param [in,out] r      Node that will not be clamped inside.
+ * \note \a q may point to the same quadrant as \a r.
+ */
+void                p4est_quadrant_corner_node (const p4est_quadrant_t * q,
+                                                int corner,
+                                                p4est_quadrant_t * r);
+
 /** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
@@ -292,16 +312,16 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/** Shift a quadrant by the size of a tree depending on the face.
- * \param [in,out] q     The quadrant to be modified.
+/** Shift a quadrant/node by the size of a tree depending on the face.
+ * \param [in,out] q     The quadrant/non-clamped node to be modified.
  * \param [in]     face  Number of the face to move across, in 0..3.
  */
 void                p4est_quadrant_translate_face (p4est_quadrant_t * q,
                                                    int face);
 
-/** Transforms a quadrant between trees.
- * \param [in]     q  Input quadrant.
- * \param [in,out] r  Existing quadrant whose Morton index will be filled.
+/** Transforms a quadrant/node between trees.
+ * \param [in]     q  Input quadrant/non-clamped node.
+ * \param [in,out] r  Existing quadrant/node whose Morton index will be filled.
  * \param [in] transform_type   Transformation as in p4est_connectivity.h.
  * \note \a q and \q r may NOT point to the same quadrant structure.
  */

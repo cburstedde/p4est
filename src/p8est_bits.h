@@ -60,6 +60,13 @@ unsigned            p8est_quadrant_hash (const void *v);
  */
 int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
 
+/** Clamp a node inside the unit tree if it sits on a high border.
+ * \param [in] n    Node to be clamped. Must not yet be clamped.
+ * \param [out] r   Existing node overwritten by the clamped result.
+ */
+void                p8est_node_clamp_inside (const p8est_quadrant_t * n,
+                                             p8est_quadrant_t * r);
+
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
@@ -105,10 +112,13 @@ bool                p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
                                                       q);
 
 /** Test if a quadrant is used to represent a mesh node.
- * \param [in] q Quadrant to be tested.
+ * \param [in] q        Quadrant to be tested.
+ * \param [in] inside   If true, boundary nodes must be clamped inside.
+ *                      If false, nodes must align with the quadrant grid.
  * \return Returns true if \a q is a node.
  */
-bool                p8est_quadrant_is_node (const p8est_quadrant_t * q);
+bool                p8est_quadrant_is_node (const p8est_quadrant_t * q,
+                                            bool inside);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -261,6 +271,16 @@ void                p8est_quadrant_corner_neighbor (const p8est_quadrant_t *
                                                     q, int corner,
                                                     p8est_quadrant_t * r);
 
+/** Compute the corner node of a quadrant.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner across which to generate the neighbor.
+ * \param [in,out] r      Node that will not be clamped inside.
+ * \note \a q may point to the same quadrant as \a r.
+ */
+void                p8est_quadrant_corner_node (const p8est_quadrant_t * q,
+                                                int corner,
+                                                p8est_quadrant_t * r);
+
 /** Compute the 8 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
@@ -327,9 +347,9 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
                                                      q2,
                                                      p8est_quadrant_t * r);
 
-/** Transforms a quadrant across a face between trees.
- * \param [in]     q          Input quadrant.
- * \param [in,out] r          Quadrant whose Morton index will be filled.
+/** Transforms a quadrant/node across a face between trees.
+ * \param [in]     q          Input quadrant/non-clamped node.
+ * \param [in,out] r          Quadrant/node whose Morton index will be filled.
  * \param [in] ftransform     This array holds 9 integers.
  *             [0]..[2]       The coordinate axis sequence of the origin face.
  *             [3]..[5]       The coordinate axis sequence of the target face.

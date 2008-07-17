@@ -351,10 +351,16 @@ p8est_quadrant_transform_face (const p8est_quadrant_t * q,
   P4EST_ASSERT (0 <= edge_reverse[0] && edge_reverse[0] < 2);
   P4EST_ASSERT (0 <= edge_reverse[1] && edge_reverse[1] < 2);
   P4EST_ASSERT (0 <= edge_reverse[2] && edge_reverse[2] < 4);
-  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q != r);
 
-  mh = -P4EST_QUADRANT_LEN (q->level);
+  if (p4est_quadrant_is_node (q, false)) {
+    mh = 0;
+    /* if (P4EST_MAXLEVEL == 30) tRmh will overflow to INT32_MIN < 0 */
+  }
+  else {
+    P4EST_ASSERT (p4est_quadrant_is_extended (q));
+    mh = -P4EST_QUADRANT_LEN (q->level);
+  }
   Rmh = P4EST_ROOT_LEN + mh;
   tRmh = P4EST_ROOT_LEN + Rmh;
 
@@ -391,11 +397,15 @@ p8est_quadrant_transform_face (const p8est_quadrant_t * q,
   }
 
   r->level = q->level;
-  P4EST_ASSERT (p4est_quadrant_is_extended (r));
-  P4EST_ASSERT ((p4est_quadrant_is_inside_root (q) &&
-                 !p4est_quadrant_is_inside_root (r)) ||
-                (!p4est_quadrant_is_inside_root (q) &&
-                 p4est_quadrant_is_inside_root (r)));
+#ifdef P4EST_DEBUG
+  if (!p4est_quadrant_is_node (r, false)) {
+    P4EST_ASSERT (p4est_quadrant_is_extended (r));
+    P4EST_ASSERT ((p4est_quadrant_is_inside_root (q) &&
+                   !p4est_quadrant_is_inside_root (r)) ||
+                  (!p4est_quadrant_is_inside_root (q) &&
+                   p4est_quadrant_is_inside_root (r)));
+  }
+#endif
 }
 
 bool

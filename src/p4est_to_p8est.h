@@ -87,6 +87,7 @@
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
 #define p4est_quadrant_hash             p8est_quadrant_hash
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
+#define p4est_node_clamp_inside         p8est_node_clamp_inside
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_outside_face  p8est_quadrant_is_outside_face
@@ -109,6 +110,7 @@
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
+#define p4est_quadrant_corner_node      p8est_quadrant_corner_node
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
 #define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
 #define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent

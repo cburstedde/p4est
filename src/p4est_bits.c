@@ -52,8 +52,10 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 #endif
   int64_t             p1, p2, diff;
 
-  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
-  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, true) ||
+                p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, true) ||
+                p4est_quadrant_is_extended (q2));
 
   /* these are unsigned variables that inherit the sign bits */
   exclorx = q1->x ^ q2->x;
@@ -195,6 +197,20 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
   return id;
 }
 
+void
+p4est_node_clamp_inside (const p4est_quadrant_t * n, p4est_quadrant_t * r)
+{
+  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+
+  r->x = (n->x == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->x;
+  r->y = (n->y == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->y;
+#ifdef P4_TO_P8
+  r->z = (n->z == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->z;
+#endif
+  r->level = P4EST_MAXLEVEL;
+  P4EST_ASSERT (p4est_quadrant_is_node (r, true));
+}
+
 bool
 p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 {
@@ -253,14 +269,22 @@ p4est_quadrant_is_outside_corner (const p4est_quadrant_t * q)
 }
 
 bool
-p4est_quadrant_is_node (const p4est_quadrant_t * q)
+p4est_quadrant_is_node (const p4est_quadrant_t * q, bool inside)
 {
   return
     q->level == P4EST_MAXLEVEL &&
-    q->x >= 0 && q->x <= P4EST_ROOT_LEN &&
-    q->y >= 0 && q->y <= P4EST_ROOT_LEN &&
+    q->x >= 0 && q->x <= P4EST_ROOT_LEN - (int) inside &&
+    q->y >= 0 && q->y <= P4EST_ROOT_LEN - (int) inside &&
 #ifdef P4_TO_P8
-    q->z >= 0 && q->z <= P4EST_ROOT_LEN &&
+    q->z >= 0 && q->z <= P4EST_ROOT_LEN - (int) inside &&
+#endif
+    (!(q->x & ((1 << (P4EST_MAXLEVEL - P4EST_QMAXLEVEL)) - 1))
+     || (inside && q->x == P4EST_ROOT_LEN - 1)) &&
+    (!(q->y & ((1 << (P4EST_MAXLEVEL - P4EST_QMAXLEVEL)) - 1))
+     || (inside && q->y == P4EST_ROOT_LEN - 1)) &&
+#ifdef P4_TO_P8
+    (!(q->z & ((1 << (P4EST_MAXLEVEL - P4EST_QMAXLEVEL)) - 1))
+     || (inside && q->z == P4EST_ROOT_LEN - 1)) &&
 #endif
     true;
 }
@@ -695,6 +719,24 @@ p4est_quadrant_corner_neighbor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
+void
+p4est_quadrant_corner_node (const p4est_quadrant_t * q,
+                            int corner, p4est_quadrant_t * r)
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  r->x = q->x + (corner & 0x01) * qh;
+  r->y = q->y + ((corner & 0x02) >> 1) * qh;
+#ifdef P4_TO_P8
+  r->z = q->z + ((corner & 0x04) >> 2) * qh;
+#endif
+  r->level = P4EST_MAXLEVEL;
+  P4EST_ASSERT (p4est_quadrant_is_node (r, false));
+}
+
 #ifndef P4_TO_P8
 
 void
@@ -868,7 +910,8 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
 void
 p4est_quadrant_translate_face (p4est_quadrant_t * q, int face)
 {
-  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (p4est_quadrant_is_node (q, false) ||
+                p4est_quadrant_is_extended (q));
 
   switch (face) {
   case 0:
@@ -888,7 +931,8 @@ p4est_quadrant_translate_face (p4est_quadrant_t * q, int face)
     break;
   }
 
-  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (p4est_quadrant_is_node (q, false) ||
+                p4est_quadrant_is_extended (q));
 }
 
 void
@@ -898,10 +942,15 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
   p4est_qcoord_t      th;
 
   P4EST_ASSERT (q != r);
-  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (0 <= transform_type && transform_type < 8);
 
-  th = P4EST_LAST_OFFSET (q->level);
+  if (p4est_quadrant_is_node (q, false)) {
+    th = P4EST_ROOT_LEN;
+  }
+  else {
+    P4EST_ASSERT (p4est_quadrant_is_extended (q));
+    th = P4EST_LAST_OFFSET (q->level);
+  }
 
   switch (transform_type) {
   case 0:                      /* identity */
@@ -942,7 +991,8 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
   }
   r->level = q->level;
 
-  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+  P4EST_ASSERT (p4est_quadrant_is_node (r, false) ||
+                p4est_quadrant_is_extended (r));
 }
 
 #endif
