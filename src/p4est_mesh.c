@@ -512,7 +512,7 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
  *
  * \param [in] p4est  The forest in which to search for \a q
  * \param [in] treeid The tree id for which \a q belongs.
- * \param [in] q      The quadrant that is in questioned.
+ * \param [in] q      The quadrant or node that is in question.
  * \param [in] face   The face of quadrant that is in question.
  *
  * \return true if the quadrant's face is on the boundary of the forest and
@@ -522,14 +522,20 @@ static              bool
 p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
                                  int face, const p4est_quadrant_t * q)
 {
-  const p4est_qcoord_t dh = P4EST_LAST_OFFSET (q->level);
+  p4est_qcoord_t      dh;
   p4est_connectivity_t *conn = p4est->connectivity;
 #ifdef P4_TO_P8
   p4est_qcoord_t      xyz;
 #endif
 
   P4EST_ASSERT (0 <= face && face < 2 * P4EST_DIM);
-  P4EST_ASSERT (p4est_quadrant_is_inside_root (q));
+  if (p4est_quadrant_is_node (q, false)) {
+    dh = P4EST_ROOT_LEN;
+  }
+  else {
+    P4EST_ASSERT (p4est_quadrant_is_valid (q));
+    dh = P4EST_LAST_OFFSET (q->level);
+  }
 
   if (conn->tree_to_tree[2 * P4EST_DIM * treeid + face] != treeid ||
       (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] != face) {
@@ -675,7 +681,7 @@ p4est_quadrant_get_possible_corner_neighbors (const p4est_quadrant_t * q,
  *
  * \param [in] p4est  The forest in which to search for \a q
  * \param [in] treeid The tree id for which \a q belongs.
- * \param [in] q      The quadrant that is in questioned.
+ * \param [in] q      The quadrant that is in question.
  * \param [in] corner The z-corner of quadrant that is in question.
  *
  * \return true if the quadrant's corner is on the boundary of the forest and
@@ -2101,6 +2107,103 @@ p4est_order_local_vertices (p4est_t * p4est,
 
 #endif /* !P4_TO_P8 */
 
+/** Determine the right tree for a node and clamp it inside the domain.
+ *
+ * If the node is on the boundary, assign the lowest tree to own it.
+ * Clamp it just inside the tree bounds if necessary.
+ *
+ * \param [in] p4est    The p4est to work on.
+ * \param [in] treeid   Original tree index for this node.
+ * \param [in] n        The node to work on.
+ * \param [out] c       The clamped node in owning tree coordinates.
+ *                      Its user data will be filled with owning tree id.
+ * \return              Returns the owning tree id.
+ */
+static              p4est_topidx_t
+p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
+                         const p4est_quadrant_t * n, p4est_quadrant_t * c)
+{
+  bool                quad_contact[2 * P4EST_DIM];
+  int                 face;
+  p4est_topidx_t      ntreeid, lowest;
+  p4est_connectivity_t *conn = p4est->connectivity;
+  p4est_quadrant_t    tmpq, o;
+#ifndef P4_TO_P8
+  int                 transform;
+#else
+  int                 ftransform[9];
+  p4est_topidx_t      ntreeid2;
+#endif
+
+  P4EST_ASSERT (treeid >= 0 && treeid < conn->num_trees);
+  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+
+  P4EST_QUADRANT_INIT (&tmpq);
+  P4EST_QUADRANT_INIT (&o);
+
+  p4est_node_clamp_inside (n, c);
+  c->p.which_tree = lowest = treeid;
+
+#ifndef P4_TO_P8
+  quad_contact[0] = (n->y == 0);
+  quad_contact[1] = (n->x == P4EST_ROOT_LEN);
+  quad_contact[2] = (n->y == P4EST_ROOT_LEN);
+  quad_contact[3] = (n->x == 0);
+#else
+  quad_contact[0] = (n->x == 0);
+  quad_contact[1] = (n->x == P4EST_ROOT_LEN);
+  quad_contact[2] = (n->y == 0);
+  quad_contact[3] = (n->y == P4EST_ROOT_LEN);
+  quad_contact[4] = (n->z == 0);
+  quad_contact[5] = (n->z == P4EST_ROOT_LEN);
+#endif
+
+  for (face = 0; face < 2 * P4EST_DIM; ++face) {
+    if (!quad_contact[face]) {
+      /* The node is not touching this face */
+      continue;
+    }
+    ntreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
+    if (ntreeid == treeid
+        && ((int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] ==
+            face)) {
+      /* The node touches a face with no neighbor */
+      continue;
+    }
+    if (ntreeid > lowest) {
+      /* This neighbor tree is higher, so we keep the ownership */
+      continue;
+    }
+#ifndef P4_TO_P8
+    /* Transform the node into the other tree's coordinates */
+    transform = p4est_find_face_transform (conn, treeid, face);
+    tmpq = *n;
+    p4est_quadrant_translate_face (&tmpq, face);
+    p4est_quadrant_transform_face (&tmpq, &o, transform);
+#else
+    ntreeid2 = p8est_find_face_transform (conn, treeid, face, ftransform);
+    P4EST_ASSERT (ntreeid2 == ntreeid);
+    p8est_quadrant_transform_face (n, &o, ftransform);
+#endif
+    if (ntreeid < lowest) {
+      /* we have found a new owning tree */
+      p4est_node_clamp_inside (&o, c);
+      c->p.which_tree = lowest = ntreeid;
+    }
+    else {
+      P4EST_ASSERT (lowest == ntreeid);
+      p4est_node_clamp_inside (&o, &tmpq);
+      if (p4est_quadrant_compare (&tmpq, c) < 0) {
+        /* same tree (periodic) and the new position is lower than the old */
+        *c = tmpq;
+        c->p.which_tree = lowest;
+      }
+    }
+  }
+
+  return lowest;
+}
+
 void
 p4est_collect_nodes (p4est_t * p4est, sc_array_t * ghost_layer)
 {
@@ -2113,8 +2216,8 @@ p4est_collect_nodes (p4est_t * p4est, sc_array_t * ghost_layer)
   p4est_locidx_t      num_local_nodes;
   p4est_locidx_t     *local_nodes, *quad_nodes;
   p4est_tree_t       *tree;
-  p4est_quadrant_t    p, n;
-  p4est_quadrant_t   *q;
+  p4est_quadrant_t    p, n, c;
+  p4est_quadrant_t   *q, *qp[2];
   sc_array_t         *quadrants;
   sc_array_t          exist_array;
 #ifdef P4_TO_P8
@@ -2130,6 +2233,9 @@ p4est_collect_nodes (p4est_t * p4est, sc_array_t * ghost_layer)
   sc_array_init (&exist_array, sizeof (int));
   P4EST_QUADRANT_INIT (&p);
   P4EST_QUADRANT_INIT (&n);
+  P4EST_QUADRANT_INIT (&c);
+  qp[0] = NULL;
+  qp[1] = &p;
   num_local_nodes = P4EST_CHILDREN * p4est->local_num_quadrants;
   local_nodes = P4EST_ALLOC (p4est_locidx_t, num_local_nodes);
 
@@ -2140,7 +2246,7 @@ p4est_collect_nodes (p4est_t * p4est, sc_array_t * ghost_layer)
 
     for (zz = 0; zz < quadrants->elem_count;
          quad_nodes += P4EST_CHILDREN, ++zz) {
-      q = sc_array_index (quadrants, zz);
+      qp[0] = q = sc_array_index (quadrants, zz);
       qcid = p4est_quadrant_child_id (q);
       if (q->level > 0) {
         p4est_quadrant_parent (q, &p);
@@ -2208,13 +2314,8 @@ p4est_collect_nodes (p4est_t * p4est, sc_array_t * ghost_layer)
           edge = p8est_child_corner_edge[qcid][k];
           P4EST_ASSERT (edge >= 0 && edge < 12);
           p8est_quadrant_edge_neighbor (&p, edge, &n);
-          if (p4est_quadrant_exists
-              (p4est, ghost_layer, jt, &n, &exist_array)) {
-            hanging[k] = 1;
-          }
-          else {
-            hanging[k] = 0;
-          }
+          hanging[k] = (int) p4est_quadrant_exists
+            (p4est, ghost_layer, jt, &n, &exist_array);
 #ifdef P4EST_DEBUG
           ++check;
 #endif
@@ -2222,13 +2323,14 @@ p4est_collect_nodes (p4est_t * p4est, sc_array_t * ghost_layer)
       }
       P4EST_ASSERT (check <= 3);
 #endif
-#ifdef P4EST_DEBUG
-      for (k = 0; k < P4EST_CHILDREN; ++k) {
-        P4EST_ASSERT (hanging[k] == 0 || hanging[k] == 1);
-      }
-#endif
 
       /* assign all independent and hanging nodes to the element */
+      for (k = 0; k < P4EST_CHILDREN; ++k) {
+        P4EST_ASSERT (hanging[k] == 0 || hanging[k] == 1);
+        p4est_quadrant_corner_node (qp[hanging[k]], k, &n);
+        p4est_node_canonicalize (p4est, jt, &n, &c);
+
+      }
     }
   }
 

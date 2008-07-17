@@ -337,7 +337,7 @@ p8est_quadrant_get_possible_edge_neighbors (const p4est_quadrant_t * q,
  *
  * \param [in] p4est  The forest in which to search for \a q
  * \param [in] treeid The tree id for which \a q belongs.
- * \param [in] q      The quadrant that is in questioned.
+ * \param [in] q      The quadrant that is in question.
  * \param [in] edge   The edge of quadrant that is in question.
  *
  * \return true if the quadrant's edge is on the boundary of the forest and
