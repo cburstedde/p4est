@@ -24,7 +24,95 @@
 
 #include <p4est.h>
 
-/** This mesh structure holds complete neighborhood information.
+/** Store an independent node.
+ * Keep this in sync with the p4est_t data structure.
+ */
+typedef struct p4est_indep
+{
+  p4est_qcoord_t      x, y;
+  int8_t              level;
+  union p4est_indep_data
+  {
+    void               *unused;
+    p4est_topidx_t      which_tree;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      int                 owner_rank;
+    }
+    piggy_unused1;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      p4est_topidx_t      from_tree;
+    }
+    piggy_unused2;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      p4est_locidx_t      local_num;
+    }
+    piggy;
+  }
+  p;
+}
+p4est_indep_t;
+
+/** Store a hanging node that depends on two independent nodes.
+ * Keep this in sync with the p4est_t data structure.
+ */
+typedef struct p4est_hang2
+{
+  p4est_qcoord_t      x, y;
+  int8_t              level;
+  union p4est_hang2_data
+  {
+    void               *unused;
+    p4est_topidx_t      which_tree;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      int                 owner_rank;
+    }
+    piggy_unused1;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      p4est_topidx_t      from_tree;
+    }
+    piggy_unused2;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      p4est_locidx_t      depends[2];
+    }
+    piggy;
+  }
+  p;
+}
+p4est_hang2_t;
+
+/** This structure holds complete node information.
+ * All nodes are canonicalized and store a tree id.  There are no duplicates.
+ * \a local_nodes is of dimension P4EST_CHILDREN * num_local_quadrants
+ * and encodes the node indexes for all corners of all quadrants.  Let
+ * ni := indep_nodes.elem_count,
+ * fi := face_hangings.elem_count,
+ * If for l := local_nodes[k]
+ * l >= 0 && l < ni: l indexes into indep_nodes.
+ * l >= ni && l < ni + fi: l - ni indexes into face_hangings.
+ * No other values for l are permitted.
+ */
+typedef struct p4est_nodes
+{
+  p4est_locidx_t      num_local_quadrants;
+  sc_array_t          indep_nodes;
+  sc_array_t          face_hangings;
+  p4est_locidx_t     *local_nodes;
+}
+p4est_nodes_t;
+
+/** This structure holds complete neighborhood information.
  * cumulative_count[i]   is the sum of local quadrants in the
  *                       local trees 0..i-1. i == local_num_trees is allowed.
  * element_offsets[i]    is the offset into local_neighbors for local
@@ -62,10 +150,12 @@ void                p4est_order_local_vertices (p4est_t * p4est,
                                                 p4est_locidx_t *
                                                 quadrant_to_local_vertex);
 
-/** Populate lists of hanging and anchored nodes.
- */
-void                p4est_collect_nodes (p4est_t * p4est,
-                                         sc_array_t * ghost_layer);
+/** Create node information. */
+p4est_nodes_t      *p4est_nodes_new (p4est_t * p4est,
+                                     sc_array_t * ghost_layer);
+
+/** Destroy node information. */
+void                p4est_nodes_destroy (p4est_nodes_t * nodes);
 
 /** Create neighborhood information.
  */

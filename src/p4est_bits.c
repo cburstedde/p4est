@@ -125,6 +125,8 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
     q1->p.which_tree - q2->p.which_tree;        /* same type */
   /* *INDENT-ON* */
 
+  P4EST_ASSERT (q1->p.which_tree >= 0 && q2->p.which_tree >= 0);
+
   return (diff == 0) ?
     p4est_quadrant_compare (v1, v2) : ((diff < 0) ? -1 : 1);
 }

@@ -53,6 +53,7 @@ typedef int32_t     p4est_topidx_t;
 
 /** Typedef for processor-local indexing of quadrants and nodes. */
 typedef int32_t     p4est_locidx_t;
+#define p4est_locidx_compare p4est_int32_compare
 #define P4EST_MPI_LOCIDX MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
 #define P4EST_LOCIDX_MAX INT32_MAX
@@ -165,10 +166,8 @@ p4est_array_index_topidx (sc_array_t * array, p4est_topidx_t it)
   return (void *) (array->array + (array->elem_size * (size_t) it));
 }
 
-#if(0)
 int                 p4est_int32_compare (const void *v1, const void *v2);
 int                 p4est_int64_compare (const void *v1, const void *v2);
-#endif
 
 /** Find the lowest position k in a sorted array such that array[k] >= target.
  * \param [in]  target  The target lower bound to binary search for.

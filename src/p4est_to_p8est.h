@@ -48,15 +48,17 @@
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
 
 /* redefine types */
+#define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
-#define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_position_t                p8est_position_t
 #define p4est_init_t                    p8est_init_t
 #define p4est_refine_t                  p8est_refine_t
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
+#define p4est_indep_t                   p8est_indep_t
+#define p4est_nodes_t                   p8est_nodes_t
 #define p4est_neighborhood_t            p8est_neighborhood_t
 
 /* redefine external variables */
@@ -164,7 +166,8 @@
 #define p4est_is_balanced               p8est_is_balanced
 
 /* functions in p4est_mesh */
-#define p4est_collect_nodes             p8est_collect_nodes
+#define p4est_nodes_new                 p8est_nodes_new
+#define p4est_nodes_destroy             p8est_nodes_destroy
 #define p4est_neighborhood_new          p8est_neighborhood_new
 #define p4est_neighborhood_destroy      p8est_neighborhood_destroy
 

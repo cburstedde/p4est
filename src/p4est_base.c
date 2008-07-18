@@ -23,7 +23,6 @@
 
 int                 p4est_package_id = -1;
 
-#if(0)
 int
 p4est_int32_compare (const void *v1, const void *v2)
 {
@@ -41,7 +40,6 @@ p4est_int64_compare (const void *v1, const void *v2)
 
   return (i1 == i2) ? 0 : ((i1 < i2) ? -1 : +1);
 }
-#endif
 
 ssize_t
 p4est_int64_lower_bound (int64_t target, const int64_t * array,
