@@ -24,6 +24,15 @@
 int                 p4est_package_id = -1;
 
 int
+p4est_int16_compare (const void *v1, const void *v2)
+{
+  const int16_t       i1 = *(int16_t *) v1;
+  const int16_t       i2 = *(int16_t *) v2;
+
+  return (i1 == i2) ? 0 : ((i1 < i2) ? -1 : +1);
+}
+
+int
 p4est_int32_compare (const void *v1, const void *v2)
 {
   const int32_t       i1 = *(int32_t *) v1;

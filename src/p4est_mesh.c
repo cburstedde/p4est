@@ -691,7 +691,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 
   /* compute number of local quadrant corners */
   nodes->num_local_quadrants = p4est->local_num_quadrants;
-  num_local_nodes = P4EST_CHILDREN * nodes->num_local_quadrants;
+  num_local_nodes =             /* same type */
+    P4EST_CHILDREN * nodes->num_local_quadrants;
 
   /* Store hanging node status:
    * 0 for independent, 1 for face hanging, 2 for edge hanging.
@@ -817,7 +818,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     }
   }
   P4EST_ASSERT (all_face_hangings % (P4EST_CHILDREN / 2) == 0);
-  num_face_hangings = all_face_hangings / (P4EST_CHILDREN / 2);
+  num_face_hangings = all_face_hangings / (P4EST_CHILDREN / 2); /* type ok */
 #ifdef P4_TO_P8
   sc_array_reset (&exist_array);
 #endif
@@ -913,7 +914,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
           else {
             ++dup_face_hangings;
           }
-          quad_nodes[k] = num_indep_nodes + (p4est_locidx_t) position;
+          quad_nodes[k] =       /* same type */
+            num_indep_nodes + (p4est_locidx_t) position;
         }
 #ifdef P4_TO_P8
         else if (quad_status[k] == 2) {
@@ -946,7 +948,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 #endif
             ++dup_edge_hangings;
           }
-          quad_nodes[k] =
+          quad_nodes[k] =       /* same type */
             num_indep_nodes + num_face_hangings + (p4est_locidx_t) position;
         }
 #endif

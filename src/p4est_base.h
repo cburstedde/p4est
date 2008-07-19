@@ -166,6 +166,7 @@ p4est_array_index_topidx (sc_array_t * array, p4est_topidx_t it)
   return (void *) (array->array + (array->elem_size * (size_t) it));
 }
 
+int                 p4est_int16_compare (const void *v1, const void *v2);
 int                 p4est_int32_compare (const void *v1, const void *v2);
 int                 p4est_int64_compare (const void *v1, const void *v2);
 

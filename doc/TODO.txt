@@ -3,13 +3,16 @@
    Deal with p4est counters modified by balance_subtree
    Replace p8est_find_face_transform by lookup tables
  * Mesh generation
-   Make build_ghost_layer abort cleanly on non-2:1 meshes
    2D bilinear elements
    2D interface to pfudg
    3D trilinear mesh
    3D mangll mesh
  * vtk output
    geometry
+ * Optimization
+   Speed up p4est_quadrant_compare
+   Speed up p4est_intxx_t_compare
+   Speed up the 4-element qsort in p4est_mesh.c
  * Include a test case for every major functionality
  * Documentation using doxygen
  * Enforce const correctness
