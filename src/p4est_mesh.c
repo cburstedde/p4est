@@ -639,21 +639,19 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   int                 k;
   int                 qcid;
   int                 face;
-  bool                added;
   size_t              zz, position;
   int8_t             *local_status, *quad_status;
   p4est_topidx_t      jt;
   p4est_locidx_t      il, first, second;
   p4est_locidx_t      num_local_nodes, quad_indeps[P4EST_CHILDREN];
-  p4est_locidx_t      num_indep_nodes, dup_indep_nodes;
-  p4est_locidx_t      all_face_hangings, cur_face_hangings;
+  p4est_locidx_t      num_indep_nodes, dup_indep_nodes, all_face_hangings;
   p4est_locidx_t      num_face_hangings, dup_face_hangings;
   p4est_locidx_t     *local_nodes, *quad_nodes;
   p4est_locidx_t     *new_node_number;
   p4est_tree_t       *tree;
   p4est_nodes_t      *nodes;
   p4est_quadrant_t    c, n, p;
-  p4est_quadrant_t   *q, *qpp[3];
+  p4est_quadrant_t   *q, *qpp[3], *r;
   p4est_indep_t      *in;
   sc_array_t         *quadrants;
   sc_array_t         *inda, *faha;
@@ -663,6 +661,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   p4est_hang2_t      *fh;
 #else
   int                 l, edge, corner;
+  p4est_locidx_t      num_face_hangings_end, num_edge_hangings_begin;
   p4est_locidx_t      num_edge_hangings, dup_edge_hangings;
   p8est_hang4_t      *fh;
   p8est_hang2_t      *eh;
@@ -805,8 +804,10 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
         P4EST_ASSERT (quad_status[k] >= 0 || quad_status[k] <= 2);
         p4est_quadrant_corner_node (qpp[quad_status[k]], k, &n);
         p4est_node_canonicalize (p4est, jt, &n, &c);
-        added = sc_hash_array_insert_unique (indep_nodes, &c, &position);
-        if (added) {
+        r = sc_hash_array_insert_unique (indep_nodes, &c, &position);
+        if (r != NULL) {
+          *r = c;
+          P4EST_ASSERT (num_indep_nodes == (p4est_locidx_t) position);
           ++num_indep_nodes;
         }
         else {
@@ -817,8 +818,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
       }
     }
   }
-  P4EST_ASSERT (all_face_hangings % (P4EST_CHILDREN / 2) == 0);
-  num_face_hangings = all_face_hangings / (P4EST_CHILDREN / 2); /* type ok */
+  P4EST_ASSERT (num_indep_nodes + dup_indep_nodes == num_local_nodes);
 #ifdef P4_TO_P8
   sc_array_reset (&exist_array);
 #endif
@@ -844,10 +844,11 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 
   /* TODO: overlap wich communication. Post recv and send for ownership. */
 
-  /* This second loop will fill collect and assign all hanging nodes. */
-  cur_face_hangings = dup_face_hangings = 0;
+  /* This second loop will collect and assign all hanging nodes. */
+  num_face_hangings = dup_face_hangings = 0;    /* still unknown */
 #ifdef P4_TO_P8
-  num_edge_hangings = dup_edge_hangings = 0;
+  num_edge_hangings = dup_edge_hangings = 0;    /* still unknown */
+  num_edge_hangings_begin = num_indep_nodes + all_face_hangings;
 #endif
   quad_nodes = local_nodes;
   quad_status = local_status;
@@ -874,10 +875,12 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 #endif
           p4est_quadrant_corner_node (q, k, &n);
           p4est_node_canonicalize (p4est, jt, &n, &c);
-          added = sc_hash_array_insert_unique (face_hangings, &c, &position);
-          if (added) {
-            fh = sc_array_index (&face_hangings->a, position);
+          r = sc_hash_array_insert_unique (face_hangings, &c, &position);
+          if (r != NULL) {
+            *r = c;
+            P4EST_ASSERT (num_face_hangings == (p4est_locidx_t) position);            
 #ifndef P4_TO_P8
+            fh = (p4est_hang2_t *) r;
             first = quad_indeps[qcid];
             second = quad_indeps[k];
             if (first < second) {
@@ -889,6 +892,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
               fh->p.piggy.depends[1] = first;
             }
 #else
+            fh = (p8est_hang4_t *) r;
             fh->p.piggy.depends[0] = quad_indeps[qcid];
             fh->p.piggy.depends[1] = quad_indeps[k];
             fh->p.piggy.depends[2] = -1;
@@ -909,7 +913,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
             qsort (fh->p.piggy.depends,
                    4, sizeof (p4est_locidx_t), p4est_locidx_compare);
 #endif
-            ++cur_face_hangings;
+            ++num_face_hangings;
           }
           else {
             ++dup_face_hangings;
@@ -923,9 +927,11 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
           P4EST_ASSERT (p8est_child_corner_edges[qcid][k] >= 0);
           p4est_quadrant_corner_node (q, k, &n);
           p4est_node_canonicalize (p4est, jt, &n, &c);
-          added = sc_hash_array_insert_unique (edge_hangings, &c, &position);
-          if (added) {
-            eh = sc_array_index (&edge_hangings->a, position);
+          r = sc_hash_array_insert_unique (edge_hangings, &c, &position);
+          if (r != NULL) {
+            *r = c;
+            P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) position);            
+            eh = (p8est_hang2_t *) r;
             first = quad_indeps[qcid];
             second = quad_indeps[k];
             if (first < second) {
@@ -939,23 +945,15 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
             ++num_edge_hangings;
           }
           else {
-#ifdef P4EST_DEBUG
-            eh = sc_array_index (&edge_hangings->a, position);
-            P4EST_ASSERT (eh->p.piggy.depends[0] ==
-                          SC_MIN (quad_indeps[qcid], quad_indeps[k]));
-            P4EST_ASSERT (eh->p.piggy.depends[1] ==
-                          SC_MAX (quad_indeps[qcid], quad_indeps[k]));
-#endif
             ++dup_edge_hangings;
           }
           quad_nodes[k] =       /* same type */
-            num_indep_nodes + num_face_hangings + (p4est_locidx_t) position;
+            num_edge_hangings_begin + (p4est_locidx_t) position;
         }
 #endif
       }
     }
   }
-  P4EST_ASSERT (num_face_hangings == cur_face_hangings);
   P4EST_ASSERT (num_face_hangings + dup_face_hangings == all_face_hangings);
   P4EST_FREE (local_status);
   sc_hash_array_rip (face_hangings, faha);
@@ -963,13 +961,24 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 #ifdef P4_TO_P8
   sc_hash_array_rip (edge_hangings, edha);
   P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) edha->elem_count);
+
+  /* Correct the offsets of edge hanging nodes */
+  num_face_hangings_end = num_indep_nodes + num_face_hangings;
+  for (il = 0; il < num_local_nodes; ++il) {
+    if (local_nodes[il] >= num_edge_hangings_begin) {
+      local_nodes[il] -= dup_face_hangings;
+      P4EST_ASSERT (local_nodes[il] >= num_face_hangings_end);
+    }
+    else {
+      P4EST_ASSERT (local_nodes[il] >= 0 &&
+                    local_nodes[il] < num_face_hangings_end);
+    }
+  }
 #endif
 
   /* TODO: overlap wich communication. Wait for and process ownership. */
 
   /* Print some statistics and clean up. */
-  P4EST_VERBOSEF ("Collected node information for %lld corners\n",
-                  (long long) num_local_nodes);
   P4EST_VERBOSEF ("Collected %lld independent nodes with %lld duplicates\n",
                   (long long) num_indep_nodes, (long long) dup_indep_nodes);
   P4EST_VERBOSEF ("Collected %lld face hangings with %lld duplicates\n",
