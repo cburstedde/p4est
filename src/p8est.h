@@ -157,6 +157,7 @@ extern p4est_locidx_t p8est_initial_quadrants_per_processor;
 extern bool         p8est_refine_recursive;
 extern bool         p8est_coarsen_recursive;
 extern void        *P8EST_DATA_UNINITIALIZED;
+extern const int    p8est_num_ranges;
 
 /** set statically allocated quadrant to defined values */
 #define P8EST_QUADRANT_INIT(q) \
