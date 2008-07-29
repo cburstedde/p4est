@@ -20,12 +20,26 @@
 */
 
 #ifndef P4_TO_P8
-
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
 #include <p4est_ghost.h>
 #include <p4est_mesh.h>
+#endif
+#include <sc_ranges.h>
+
+#ifdef P4EST_MPI
+
+typedef struct
+{
+  bool                expect_receive;
+  sc_array_t          send_first, send_second, recv_array;
+}
+p4est_node_peer_t;
+
+#endif
+
+#ifndef P4_TO_P8
 
 /** Generate a neighbor of a quadrant for a given node.
  *
@@ -633,17 +647,55 @@ endfunction:
 #endif
 }
 
+static              bool
+p4est_nodes_foreach (void **item, const void *u)
+{
+  const sc_hash_array_data_t *internal_data = u;
+  const p4est_locidx_t *new_node_number = internal_data->user_data;
+
+  *item = (void *) (long) new_node_number[(long) *item];
+
+  return true;
+}
+
 p4est_nodes_t      *
 p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 {
+#ifdef P4EST_MPI
+  const int           num_procs = p4est->mpisize;
+  const int           rank = p4est->mpirank;
+  const int           twopeerw = 2 * p4est_num_ranges;
+  int                 mpiret;
+  int                 owner, prev, start;
+  int                 first_peer, last_peer, nwin;
+  int                 num_send_queries, num_recv_queries;
+  int                 byte_count, elem_count;
+  int                 local_send_count, local_recv_count;
+  int                 my_ranges[twopeerw];
+  int                *procs;
+  int                *all_ranges;
+  bool                found;
+  size_t              first_size;
+  p4est_locidx_t     *xyz;
+  p4est_topidx_t     *ttt;
+  p4est_node_peer_t  *peers, *peer;
+  p4est_indep_t       indep;
+  sc_array_t          send_requests;
+  sc_array_t          shared_nodes, *shared_slot;
+  MPI_Request        *send_request;
+  MPI_Status          probe_status, recv_status;
+#endif
+#if defined (P4EST_MPI) || defined (P4_TO_P8)
+  int                 l;
+#endif
   int                 k;
-  int                 qcid;
-  int                 face;
+  int                 qcid, face;
   size_t              zz, position;
   int8_t             *local_status, *quad_status;
   p4est_topidx_t      jt;
   p4est_locidx_t      il, first, second;
   p4est_locidx_t      num_local_nodes, quad_indeps[P4EST_CHILDREN];
+  p4est_locidx_t      num_local_indeps, offset_local_indeps;
   p4est_locidx_t      num_indep_nodes, dup_indep_nodes, all_face_hangings;
   p4est_locidx_t      num_face_hangings, dup_face_hangings;
   p4est_locidx_t     *local_nodes, *quad_nodes;
@@ -660,7 +712,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 #ifndef P4_TO_P8
   p4est_hang2_t      *fh;
 #else
-  int                 l, edge, corner;
+  int                 edge, corner;
   p4est_locidx_t      num_face_hangings_end, num_edge_hangings_begin;
   p4est_locidx_t      num_edge_hangings, dup_edge_hangings;
   p8est_hang4_t      *fh;
@@ -682,7 +734,6 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   /* initialize the node structure to return */
   nodes = P4EST_ALLOC (p4est_nodes_t, 1);
   memset (nodes, -1, sizeof (*nodes));
-  inda = &nodes->indep_nodes;
   faha = &nodes->face_hangings;
 #ifdef P4_TO_P8
   edha = &nodes->edge_hangings;
@@ -822,7 +873,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 #ifdef P4_TO_P8
   sc_array_reset (&exist_array);
 #endif
-  sc_hash_array_rip (indep_nodes, inda);
+  inda = &indep_nodes->a;
   P4EST_ASSERT (num_indep_nodes == (p4est_locidx_t) inda->elem_count);
 
   /* Reorder independent nodes by their global treeid and z-order index. */
@@ -835,14 +886,180 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (inda, (size_t) il);
     new_node_number[in->p.piggy.local_num] = il;
+#ifndef P4EST_MPI
+    in->p.piggy.local_num = il;
+#endif
   }
+
+  /* Re-synchronize hash array and local nodes */
+  indep_nodes->internal_data.user_data = new_node_number;
+  sc_hash_foreach (indep_nodes->h, p4est_nodes_foreach);
+  indep_nodes->internal_data.user_data = NULL;
   for (il = 0; il < num_local_nodes; ++il) {
     P4EST_ASSERT (local_nodes[il] >= 0 && local_nodes[il] < num_indep_nodes);
     local_nodes[il] = new_node_number[local_nodes[il]];
   }
+#ifndef P4EST_MPI
+  num_local_indeps = num_indep_nodes;
+  offset_local_indeps = 0;
+#else
+  num_local_indeps = 0;         /* will be computed below */
+  offset_local_indeps = -1;     /* will be computed below */
+#endif
   P4EST_FREE (new_node_number);
 
-  /* TODO: overlap wich communication. Post recv and send for ownership. */
+  /* Fill send buffers and number owned nodes. */
+#ifdef P4EST_MPI
+  first_size = P4EST_DIM * sizeof (p4est_locidx_t) + sizeof (p4est_topidx_t);
+  procs = P4EST_ALLOC_ZERO (int, (size_t) num_procs);
+  all_ranges = P4EST_ALLOC (int, twopeerw * num_procs);
+  peers = P4EST_ALLOC (p4est_node_peer_t, num_procs);
+  sc_array_init (&send_requests, sizeof (MPI_Request));
+  for (k = 0; k < num_procs; ++k) {
+    peer = peers + k;
+    peer->expect_receive = false;
+    sc_array_init (&peer->send_first, first_size);
+    sc_array_init (&peer->recv_array, first_size);
+  }
+  first_peer = num_procs;
+  last_peer = -1;
+  prev = 0;
+  for (il = 0; il < num_indep_nodes; ++il) {
+    in = sc_array_index (inda, (size_t) il);
+    owner = p4est_comm_find_owner (p4est, in->p.piggy.which_tree,
+                                   (p4est_quadrant_t *) in, prev);
+    if (owner != rank) {
+      peer = peers + owner;
+      xyz = sc_array_push (&peer->send_first);
+      xyz[0] = in->x;
+      xyz[1] = in->y;
+#ifdef P4_TO_P8
+      xyz[2] = in->z;
+#endif
+      ttt = (p4est_topidx_t *) (&xyz[P4EST_DIM]);
+      *ttt = in->p.piggy.which_tree;
+      in->p.piggy.local_num = -1;
+      if (first_peer == num_procs) {
+        first_peer = owner;
+      }
+      last_peer = owner;
+      ++procs[owner];
+    }
+    else {
+      if (offset_local_indeps == -1) {
+        offset_local_indeps = il;
+      }
+      in->p.piggy.local_num = num_local_indeps++;
+    }
+    P4EST_ASSERT (prev <= owner);
+    prev = owner;
+  }
+  if (offset_local_indeps == -1) {
+    P4EST_ASSERT (num_local_indeps == 0);
+    offset_local_indeps = 0;
+  }
+
+  /* Distribute global information about who is sending to who. */
+  nwin = sc_ranges_compute (num_procs, procs, rank, first_peer, last_peer,
+                            p4est_num_ranges, my_ranges);
+#ifdef P4EST_STATS
+  sc_ranges_statistics (SC_LP_STATISTICS, p4est->mpicomm, num_procs, procs,
+                        rank, p4est_num_ranges, my_ranges);
+#endif
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Allgather (my_ranges, twopeerw, MPI_INT,
+                            all_ranges, twopeerw, MPI_INT, p4est->mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  P4EST_VERBOSEF ("Peer ranges %d/%d first %d last %d owned %d\n",
+                  nwin, p4est_num_ranges, first_peer, last_peer,
+                  num_local_indeps);
+
+  /* Send queries to the owners of the independent nodes that I share. */
+  num_send_queries = local_send_count = 0;
+  for (l = 0; l < nwin; ++l) {
+    for (k = my_ranges[2 * l]; k <= my_ranges[2 * l + 1]; ++k) {
+      peer = peers + k;
+      if (k == rank) {
+        P4EST_ASSERT (peer->send_first.elem_count == 0);
+        continue;
+      }
+      send_request = sc_array_push (&send_requests);
+      mpiret = MPI_Isend (peer->send_first.array,
+                          (int) (peer->send_first.elem_count * first_size),
+                          MPI_BYTE, k, P4EST_COMM_NODES_QUERY,
+                          p4est->mpicomm, send_request);
+      SC_CHECK_MPI (mpiret);
+      local_send_count += (int) peer->send_first.elem_count;
+      ++num_send_queries;
+    }
+  }
+
+  /* Prepare to receive queries */
+  num_recv_queries = local_recv_count = 0;
+  sc_array_init (&shared_nodes, sizeof (sc_array_t));
+  for (k = 0; k < num_procs; ++k) {
+    if (k == rank) {
+      continue;
+    }
+    for (l = 0; l < p4est_num_ranges; ++l) {
+      start = all_ranges[k * twopeerw + 2 * l];
+      if (start == -1 || start > rank) {
+        break;
+      }
+      if (rank <= all_ranges[k * twopeerw + 2 * l + 1]) {
+        peers[k].expect_receive = true;
+        ++num_recv_queries;
+        break;
+      }
+    }
+  }
+  P4EST_VERBOSEF ("Node queries send %d recv %d\n",
+                  num_send_queries, num_recv_queries);
+
+  /* Receive queries and look up the reply information */
+  in = &indep;
+  P4EST_QUADRANT_INIT (in);
+  in->level = P4EST_MAXLEVEL;
+  for (l = 0; l < num_recv_queries; ++l) {
+    mpiret = MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_NODES_QUERY,
+                        p4est->mpicomm, &probe_status);
+    SC_CHECK_MPI (mpiret);
+    k = probe_status.MPI_SOURCE;
+    peer = peers + k;
+    P4EST_ASSERT (peer->expect_receive);
+    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (byte_count % first_size == 0);
+    elem_count = byte_count / (int) first_size;
+    local_recv_count += elem_count;
+    sc_array_resize (&peer->recv_array, (size_t) elem_count);
+    mpiret = MPI_Recv (peer->recv_array.array, byte_count, MPI_BYTE,
+                       k, P4EST_COMM_NODES_QUERY,
+                       p4est->mpicomm, &recv_status);
+    SC_CHECK_MPI (mpiret);
+    peer->expect_receive = false;
+    for (zz = 0; zz < peer->recv_array.elem_count; ++zz) {
+      xyz = sc_array_index (&peer->recv_array, zz);
+      in->x = xyz[0];
+      in->y = xyz[1];
+#ifdef P4_TO_P8
+      in->z = xyz[2];
+#endif
+      ttt = (p4est_topidx_t *) (&xyz[P4EST_DIM]);
+      in->p.piggy.which_tree = *ttt;
+      found = sc_hash_array_lookup (indep_nodes, in, &position);
+      P4EST_ASSERT (found);
+      P4EST_ASSERT (p4est_node_equal_piggy_fn
+                    (sc_array_index (inda, position), in, NULL));
+      P4EST_ASSERT (position >= offset_local_indeps &&
+                    position < offset_local_indeps + num_local_indeps);
+    }
+  }
+
+  /* Assemble and send reply information */
+
+#endif /* P4EST_MPI */
 
   /* This second loop will collect and assign all hanging nodes. */
   num_face_hangings = dup_face_hangings = 0;    /* still unknown */
@@ -878,7 +1095,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
           r = sc_hash_array_insert_unique (face_hangings, &c, &position);
           if (r != NULL) {
             *r = c;
-            P4EST_ASSERT (num_face_hangings == (p4est_locidx_t) position);            
+            P4EST_ASSERT (num_face_hangings == (p4est_locidx_t) position);
 #ifndef P4_TO_P8
             fh = (p4est_hang2_t *) r;
             first = quad_indeps[qcid];
@@ -930,7 +1147,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
           r = sc_hash_array_insert_unique (edge_hangings, &c, &position);
           if (r != NULL) {
             *r = c;
-            P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) position);            
+            P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) position);
             eh = (p8est_hang2_t *) r;
             first = quad_indeps[qcid];
             second = quad_indeps[k];
@@ -976,7 +1193,35 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   }
 #endif
 
-  /* TODO: overlap wich communication. Wait for and process ownership. */
+  /* Receive the replies. */
+
+  /* Wait and close all send requests. */
+#ifdef P4EST_MPI
+  if (send_requests.elem_count > 0) {
+    mpiret = MPI_Waitall ((int) send_requests.elem_count,
+                          (MPI_Request *) send_requests.array,
+                          MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
+#endif
+
+  /* Clean up allocated memory. */
+#ifdef P4EST_MPI
+  for (zz = 0; zz < shared_nodes.elem_count; ++zz) {
+    shared_slot = sc_array_index (&shared_nodes, zz);
+    sc_array_reset (shared_slot);
+  }
+  sc_array_reset (&shared_nodes);
+  sc_array_reset (&send_requests);
+  for (k = 0; k < num_procs; ++k) {
+    peer = peers + k;
+    sc_array_reset (&peer->send_first);
+    sc_array_reset (&peer->recv_array);
+  }
+  P4EST_FREE (peers);
+  P4EST_FREE (all_ranges);
+  P4EST_FREE (procs);
+#endif
 
   /* Print some statistics and clean up. */
   P4EST_VERBOSEF ("Collected %lld independent nodes with %lld duplicates\n",
@@ -989,6 +1234,10 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
                   (long long) num_edge_hangings,
                   (long long) dup_edge_hangings);
 #endif
+
+  nodes->num_local_indeps = num_local_indeps;
+  nodes->offset_local_indeps = offset_local_indeps;
+  sc_hash_array_rip (indep_nodes, &nodes->indep_nodes);
 
   return nodes;
 }

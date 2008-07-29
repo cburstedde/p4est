@@ -46,6 +46,8 @@
 #define P4EST_COMM_PARTITION_WEIGHTED_HIGH P8EST_COMM_PARTITION_WEIGHTED_HIGH
 #define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
+#define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
+#define P4EST_COMM_NODES_REPLY          P4EST_COMM_NODES_REPLY
 
 /* redefine types */
 #define p4est_connectivity_t            p8est_connectivity_t
