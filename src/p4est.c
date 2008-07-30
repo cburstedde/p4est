@@ -49,7 +49,7 @@ bool                p4est_refine_recursive = true;
 bool                p4est_coarsen_recursive = true;
 static int          p4est_uninitialized_key;
 void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
-const int           p4est_num_ranges = 5;
+const int           p4est_num_ranges = 25;
 
 #endif /* P4_TO_P8 */
 
@@ -940,22 +940,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   int                 ltotal[2], gtotal[2];
 #endif /* P4EST_STATS */
   const int           number_peer_windows = p4est_num_ranges;
-  const int           twopeerw = 2 * number_peer_windows;
   int                 mpiret, rcount;
-  int                 first_bound, last_bound;
+  int                 first_bound;
   int                 request_first_count, request_second_count, outcount;
   int                 request_send_count, total_send_count, total_recv_count;
-  int                 nwin;
+  int                 nwin, maxwin, twomaxwin;
+  int                 local_peer_nwin[2], max_peer_nwin[2];
   int                 send_zero[2], send_load[2];
   int                 recv_zero[2], recv_load[2];
+  int                 peer_windows[2 * number_peer_windows];
   int                *wait_indices;
-#if 0
-  int                 prev, start, end;
-  int                 rip, eff_peer_count;
-  int                 over_peer_count;
-  int                 length, shortest_window, shortest_length;
-#endif
-  int                 peer_windows[twopeerw];
   int                *peer_boundaries, *procs;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
@@ -987,10 +981,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 
 #ifdef P4EST_MPI
-  /* will contain first and last peer (inclusive) for each processor */
-  peer_boundaries = P4EST_ALLOC (int, (twopeerw + 1) * num_procs);
-  procs = peer_boundaries + twopeerw * num_procs;
-  /* request and status buffers for receive operations */
+  procs = P4EST_ALLOC (int, num_procs);
   requests_first = P4EST_ALLOC (MPI_Request, 6 * num_procs);
   requests_second = requests_first + 1 * num_procs;
   send_requests_first_count = requests_first + 2 * num_procs;
@@ -1005,7 +996,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     send_requests_second_count[i] = MPI_REQUEST_NULL;
     send_requests_second_load[i] = MPI_REQUEST_NULL;
   }
-  /* index buffer for call to waitsome */
   wait_indices = P4EST_ALLOC (int, num_procs);
 #ifdef P4EST_DEBUG
   sc_array_init (&checkarray, 4);
@@ -1291,34 +1281,41 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
     tquadrants = NULL;          /* safeguard */
   }
-#if 0
-  over_peer_count = last_peer - first_peer + 1;
-  P4EST_ASSERT (0 <= over_peer_count && over_peer_count <= num_procs);
-  if (num_procs == 1) {
-    P4EST_ASSERT (first_peer == num_procs && last_peer == -1);
-  }
-#endif
 
 #ifdef P4EST_MPI
+  /* encode and distribute the asymmetric communication pattern */
+  local_peer_nwin[0] = 0;
   for (j = 0; j < num_procs; ++j) {
     procs[j] = (int) peers[j].send_first.elem_count;
+    local_peer_nwin[0] += (procs[j] > 0 && j != rank);
   }
-  nwin = sc_ranges_compute (num_procs, procs, rank, first_peer, last_peer,
-                            number_peer_windows, peer_windows);
+  max_peer_nwin[0] = local_peer_nwin[0];
+  max_peer_nwin[1] = local_peer_nwin[1] = nwin =
+    sc_ranges_compute (num_procs, procs, rank, first_peer, last_peer,
+                       number_peer_windows, peer_windows);
+  P4EST_VERBOSEF ("Peer ranges %d/%d first %d last %d\n",
+                  nwin, number_peer_windows, first_peer, last_peer);
+  if (p4est->mpicomm != MPI_COMM_NULL) {
+    mpiret = MPI_Allreduce (local_peer_nwin, max_peer_nwin, 2, MPI_INT,
+                            MPI_MAX, p4est->mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  maxwin = max_peer_nwin[1];
+  twomaxwin = 2 * maxwin;
+  P4EST_ASSERT (nwin <= maxwin && maxwin <= number_peer_windows);
 #ifdef P4EST_STATS
+  P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n", max_peer_nwin[0],
+                            max_peer_nwin[1], number_peer_windows);
   sc_ranges_statistics (SC_LP_STATISTICS, p4est->mpicomm, num_procs, procs,
                         rank, number_peer_windows, peer_windows);
 #endif
-
-  /* distribute information about peer ranges to inform receivers */
+  peer_boundaries = P4EST_ALLOC (int, twomaxwin * num_procs);
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allgather (peer_windows, twopeerw, MPI_INT,
-                            peer_boundaries, twopeerw, MPI_INT,
+    mpiret = MPI_Allgather (peer_windows, twomaxwin, MPI_INT,
+                            peer_boundaries, twomaxwin, MPI_INT,
                             p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
   }
-  P4EST_VERBOSEF ("Peer ranges %d/%d first %d last %d\n",
-                  nwin, number_peer_windows, first_peer, last_peer);
 
   /*
    * loop over all peers and send first round of quadrants
@@ -1392,23 +1389,21 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     if (j == rank) {
       continue;
     }
-    for (i = 0; i < number_peer_windows; ++i) {
-      first_bound = peer_boundaries[twopeerw * j + 2 * i];
-      last_bound = peer_boundaries[twopeerw * j + 2 * i + 1];
-      if (first_bound <= rank && rank <= last_bound) {
+    for (i = 0; i < maxwin; ++i) {
+      first_bound = peer_boundaries[twomaxwin * j + 2 * i];
+      if (first_bound == -1 || first_bound > rank) {
+        break;
+      }
+      if (rank <= peer_boundaries[twomaxwin * j + 2 * i + 1]) {
+        /* processor j is sending to me */
+        ++request_first_count;
+        mpiret = MPI_Irecv (&peers[j].recv_first_count, 1, MPI_INT,
+                            j, P4EST_COMM_BALANCE_FIRST_COUNT,
+                            p4est->mpicomm, &requests_first[j]);
+        SC_CHECK_MPI (mpiret);
         break;
       }
     }
-    if (i == number_peer_windows) {
-      continue;
-    }
-    ++request_first_count;
-
-    /* processor j is sending to me */
-    mpiret = MPI_Irecv (&peers[j].recv_first_count, 1, MPI_INT,
-                        j, P4EST_COMM_BALANCE_FIRST_COUNT,
-                        p4est->mpicomm, &requests_first[j]);
-    SC_CHECK_MPI (mpiret);
   }
 
   /* wait for quadrant counts and post receive and send for quadrants */
@@ -1650,13 +1645,6 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                       peer->recv_second_count);
     }
   }
-#if 0
-  if (number_peer_windows == 1) {
-    P4EST_ASSERT (send_zero[0] + send_load[0] == over_peer_count - rip);
-    P4EST_ASSERT (send_zero[0] + recv_zero[1] + recv_load[1] ==
-                  over_peer_count - rip);
-  }
-#endif
 #endif /* P4EST_MPI */
 
   /* merge received quadrants */
@@ -1787,6 +1775,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
   P4EST_FREE (recv_statuses);
   P4EST_FREE (wait_indices);
+  P4EST_FREE (procs);
 #ifdef P4EST_DEBUG
   sc_array_reset (&checkarray);
 #endif /* P4EST_DEBUG */

@@ -27,6 +27,6 @@ bool                p8est_refine_recursive = true;
 bool                p8est_coarsen_recursive = true;
 static int          p8est_uninitialized_key;
 void               *P8EST_DATA_UNINITIALIZED = &p8est_uninitialized_key;
-const int           p8est_num_ranges = 5;
+const int           p8est_num_ranges = 25;
 
 /* EOF p8est.c */
