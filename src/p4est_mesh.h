@@ -30,7 +30,8 @@
 typedef struct p4est_indep
 {
   p4est_qcoord_t      x, y;
-  int8_t              level;
+  int8_t              level, pad8;
+  int16_t             pad16;
   union p4est_indep_data
   {
     void               *unused;
@@ -64,7 +65,8 @@ p4est_indep_t;
 typedef struct p4est_hang2
 {
   p4est_qcoord_t      x, y;
-  int8_t              level;
+  int8_t              level, pad8;
+  int16_t             pad16;
   union p4est_hang2_data
   {
     void               *unused;

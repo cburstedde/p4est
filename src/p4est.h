@@ -52,7 +52,8 @@
 typedef struct p4est_quadrant
 {
   p4est_qcoord_t      x, y;
-  int8_t              level;
+  int8_t              level, pad8;
+  int16_t             pad16;
   union p4est_quadrant_data
   {
     void               *user_data;
