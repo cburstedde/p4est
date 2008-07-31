@@ -105,7 +105,7 @@ np	level   crc		quadrants	bal	rebal	repart
 16384	18	0x946cbb40	74088185820	110s	95s	1.75s
 32768	18	0x946cbb40	74088185820	155s	113s	<1s
 
-ranger pgi mvapich-devel/1.0 2008-08-14
+ranger pgi mvapich-devel/1.0 2008-07-14
 b507affe8093d0f2a6e9558fda7a07cfc7c76bc1
 
 p4est_timings star (6 trees)
@@ -131,4 +131,32 @@ np	level   crc             quadrants       bal     rebal   repart
 4096	11	0x4e416393	8020994946	31.8s	26.7s	1.06s
 16384	11	0x4e416393	8020994946	35.9s	36.1s	<1s
 16384	12	0x65b86a41	64195614594	105s	80.3s	2.96s
-32768	12
+
+ranger pgi mvapich-devel/1.0 2008-07-30
+872d0489174fb64da3be4fda06baaeb90a01abed
+
+p4est_timings star (6 trees)
+np	level   crc             quadrants       bal     rebal   repart  p/w
+16	12	0xf02927bf	18087900	14.2s	12.9s	<1s
+64	13	0xc86c74d9	72351708	14.3s	13.1s	<1s
+256	14	0xc5a57be2	289406940	14.6s	13.2s	<1s
+1024	15	0x63801485	1157627868	14.8s	13.5s	<1s
+4096	16	0x5ba3cce5	4630511580	15s	13.7s	<1s	14/8
+16384	17	0xf111861a	18522046428	25.3s	21.5s	<1s	14/8
+
+p8est_timings unit (1 tree)
+np	level   crc             quadrants       bal     rebal   repart	p/w
+256	10	0xf084cafa	166901064	9.67s	8.35s	<1s	26/15
+2048	11	0x627f17b7	1336601288	9.87s	8.61s	<1s	26/15
+16384	12	0x63c63fe6	10698347976	23.5s	17.3s	<1s	26/15
+
+p8est_timings rotcubes (6 trees)
+np	level   crc             quadrants       bal     rebal   repart	p/w
+1	7	0x885d9c4	1931586		11.6s	9.51s	<1s	0/0
+8	8	0xf7eefcea	15569154	22.8s	19s	<1s	7/4
+64	9	0x715df906	125000322	27.6s	23.3s	<1s	26/13
+512	10	0x535075e5	1001756034	30.5s	26.4s	1.03s	38/21
+4096	11	0x4e416393	8020994946	31.3s	27.1s	<1s	45/25
+8192	11	0x4e416393	8020994946	21s	14s	<1s	45/25
+16384	11	0x4e416393	8020994946	25.6s	16.1s	<1s	45/22
+16384	12	0x65b86a41	64195614594	82.4s	66.1s	3.51s	45/22
