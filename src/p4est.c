@@ -937,7 +937,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   sc_array_t          checkarray;
 #endif /* P4EST_DEBUG */
 #ifdef P4EST_STATS
-  int                 ltotal[2], gtotal[2];
+  p4est_gloidx_t      ltotal[2], gtotal[2];
 #endif /* P4EST_STATS */
   const int           number_peer_windows = p4est_num_ranges;
   int                 mpiret, rcount;
@@ -1721,14 +1721,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 /* compute global sum of send and receive counts */
 #ifdef P4EST_STATS
   gtotal[0] = gtotal[1] = 0;
-  ltotal[0] = total_send_count;
-  ltotal[1] = total_recv_count;
+  ltotal[0] = (p4est_gloidx_t) total_send_count;
+  ltotal[1] = (p4est_gloidx_t) total_recv_count;
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Reduce (ltotal, gtotal, 2, MPI_INT,
+    mpiret = MPI_Reduce (ltotal, gtotal, 2, P4EST_MPI_GLOIDX,
                          MPI_SUM, 0, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
-    P4EST_GLOBAL_STATISTICSF ("Global number of shipped quadrants %d\n",
-                              gtotal[0]);
+    P4EST_GLOBAL_STATISTICSF ("Global number of shipped quadrants %lld\n",
+                              (long long) gtotal[0]);
     P4EST_ASSERT (gtotal[0] == gtotal[1]);
   }
   else {
