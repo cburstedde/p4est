@@ -625,29 +625,50 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 bool
 p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
 {
-  int                 maxl;
   p4est_quadrant_t    desc;
-  p4est_quadrant_t   *treeq;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
   if (tree->quadrants.elem_count == 0)
     return false;
 
-  maxl = (int) SC_MAX (tree->maxlevel, q->level);
+  P4EST_ASSERT (p4est_quadrant_is_valid (&tree->first_desc));
+  P4EST_ASSERT (p4est_quadrant_is_valid (&tree->last_desc));
 
-  /* check if q is before the first tree quadrant */
-  treeq = sc_array_index (&tree->quadrants, 0);
-  P4EST_ASSERT (p4est_quadrant_is_inside_root (treeq));
-  p4est_quadrant_last_descendent (q, &desc, maxl);
-  if (p4est_quadrant_compare (&desc, treeq) < 0)
+  /* check if the end of q is before the first tree quadrant */
+  p4est_quadrant_last_descendent (q, &desc, P4EST_QMAXLEVEL);
+  if (p4est_quadrant_compare (&desc, &tree->first_desc) < 0)
     return false;
 
   /* check if q is after the last tree quadrant */
-  treeq = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
-  P4EST_ASSERT (p4est_quadrant_is_inside_root (treeq));
-  p4est_quadrant_last_descendent (treeq, &desc, maxl);
-  if (p4est_quadrant_compare (&desc, q) < 0)
+  if (p4est_quadrant_compare (&tree->last_desc, q) < 0)
+    return false;
+
+  return true;
+}
+
+bool
+p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
+                               const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    desc;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (tree->quadrants.elem_count == 0)
+    return false;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (&tree->first_desc));
+  P4EST_ASSERT (p4est_quadrant_is_valid (&tree->last_desc));
+
+  /* check if q is not before the first tree quadrant */
+  p4est_quadrant_first_descendent (q, &desc, P4EST_QMAXLEVEL);
+  if (p4est_quadrant_compare (&desc, &tree->first_desc) < 0)
+    return false;
+
+  /* check if the end of q is not after the last tree quadrant */
+  p4est_quadrant_last_descendent (q, &desc, P4EST_QMAXLEVEL);
+  if (p4est_quadrant_compare (&tree->last_desc, q) < 0)
     return false;
 
   return true;

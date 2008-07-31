@@ -1,6 +1,8 @@
 
  * Integer sizes
-   Ensure that balance (and possibly others) use the p4est integer typedefs.
+   Ensure that balance (and possibly others) use p4est_*idx_t.
+ * Helper functions / algorithms
+   Isolate a p4est_tree_is_valid function.
  * Balance
    Deal with p4est counters modified by balance_subtree
    Replace p8est_find_face_transform by lookup tables

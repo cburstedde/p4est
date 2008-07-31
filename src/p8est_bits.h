@@ -241,6 +241,12 @@ bool                p8est_quadrant_is_next_D (const p8est_quadrant_t * q,
 bool                p8est_quadrant_overlaps_tree (p8est_tree_t * tree,
                                                   const p8est_quadrant_t * q);
 
+/** Test if a quadrant is completely contained within a tree.
+ */
+bool                p8est_quadrant_is_inside_tree (p8est_tree_t * tree,
+                                                   const p8est_quadrant_t *
+                                                   q);
+
 /** Compute the parent of a quadrant.
  * \param [in]  q Input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled

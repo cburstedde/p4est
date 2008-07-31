@@ -362,6 +362,12 @@ main (void)
   tree.quadrants_per_level[2] = 2;
   tree.quadrants_per_level[3] = 1;
   tree.maxlevel = 3;
+  p4est_quadrant_first_descendent (sc_array_index (&tree.quadrants, 0),
+                                   &tree.first_desc, P4EST_QMAXLEVEL);
+  p4est_quadrant_last_descendent (sc_array_index (&tree.quadrants,
+                                                  tree.quadrants.elem_count -
+                                                  1), &tree.last_desc,
+                                  P4EST_QMAXLEVEL);
   SC_CHECK_ABORT (p4est_tree_is_complete (&tree), "is_complete");
 
   p4est_quadrant_set_morton (&D, 0, 0);

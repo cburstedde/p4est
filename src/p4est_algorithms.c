@@ -506,12 +506,36 @@ p4est_is_valid (p4est_t * p4est)
       failed = true;
       goto failtest;
     }
-    if (((p4est_topidx_t) jz < p4est->first_local_tree ||
-         (p4est_topidx_t) jz > p4est->last_local_tree) &&
-        tree->quadrants.elem_count > 0) {
-      P4EST_NOTICE ("p4est invalid outside count\n");
-      failed = true;
-      goto failtest;
+    if (tree->quadrants.elem_count > 0) {
+      if (((p4est_topidx_t) jz < p4est->first_local_tree ||
+           (p4est_topidx_t) jz > p4est->last_local_tree)) {
+        P4EST_NOTICE ("p4est invalid outside count\n");
+        failed = true;
+        goto failtest;
+      }
+      q = sc_array_index (&tree->quadrants, 0);
+      p4est_quadrant_first_descendent (q, &s, P4EST_QMAXLEVEL);
+      if (!p4est_quadrant_is_equal (&s, &tree->first_desc)) {
+        P4EST_NOTICE ("p4est invalid first tree descendent\n");
+        failed = true;
+        goto failtest;
+      }
+      q = sc_array_index (&tree->quadrants, tree->quadrants.elem_count - 1);
+      p4est_quadrant_last_descendent (q, &s, P4EST_QMAXLEVEL);
+      if (!p4est_quadrant_is_equal (&s, &tree->last_desc)) {
+        P4EST_NOTICE ("p4est invalid last tree descendent\n");
+        failed = true;
+        goto failtest;
+      }
+    }
+    else {
+      P4EST_QUADRANT_INIT (&s);
+      if (s.level != tree->first_desc.level ||
+          s.level != tree->last_desc.level) {
+        P4EST_NOTICE ("p4est invalid empty descendent\n");
+        failed = true;
+        goto failtest;
+      }
     }
 
     maxlevel = 0;
@@ -2430,10 +2454,15 @@ p4est_partition_given (p4est_t * p4est,
   p4est->last_local_tree = new_last_local_tree;
 
   new_local_num_quadrants = 0;
-  for (which_tree = new_first_local_tree; which_tree <= new_last_local_tree;
-       ++which_tree) {
+  for (which_tree = 0; which_tree < new_first_local_tree; ++which_tree) {
+    tree = sc_array_index (p4est->trees, which_tree);
+    P4EST_QUADRANT_INIT (&tree->first_desc);
+    P4EST_QUADRANT_INIT (&tree->last_desc);
+  }
+  for (; which_tree <= new_last_local_tree; ++which_tree) {
     tree = sc_array_index (p4est->trees, which_tree);
     quadrants = &tree->quadrants;
+    P4EST_ASSERT (quadrants->elem_count > 0);
 
     new_local_num_quadrants +=  /* same type */
       (p4est_locidx_t) quadrants->elem_count;
@@ -2447,6 +2476,17 @@ p4est_partition_given (p4est_t * p4est,
       ++tree->quadrants_per_level[quad->level];
       tree->maxlevel = (int8_t) SC_MAX (quad->level, tree->maxlevel);
     }
+
+    quad = sc_array_index (quadrants, 0);
+    p4est_quadrant_first_descendent (quad, &tree->first_desc,
+                                     P4EST_QMAXLEVEL);
+    quad = sc_array_index (quadrants, quadrants->elem_count - 1);
+    p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
+  }
+  for (; which_tree < p4est->connectivity->num_trees; ++which_tree) {
+    tree = sc_array_index (p4est->trees, which_tree);
+    P4EST_QUADRANT_INIT (&tree->first_desc);
+    P4EST_QUADRANT_INIT (&tree->last_desc);
   }
   p4est->local_num_quadrants = new_local_num_quadrants;
 

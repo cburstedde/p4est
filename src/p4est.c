@@ -183,6 +183,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   for (jl = 0; jl < num_trees; ++jl) {
     tree = sc_array_index (p4est->trees, jl);
     sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
+    P4EST_QUADRANT_INIT (&tree->first_desc);
+    P4EST_QUADRANT_INIT (&tree->last_desc);
     for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       tree->quadrants_per_level[i] = 0;
     }
@@ -215,6 +217,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                    (long long) jl, (long long) a.x, (long long) a.y);
 #endif
     p4est_quadrant_init_data (p4est, jl, &a, init_fn);
+    p4est_quadrant_first_descendent (&a, &tree->first_desc, P4EST_QMAXLEVEL);
 
     /* set morton id of last quadrant */
     if (tree_num_quadrants == 1 ||
@@ -255,10 +258,13 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       /* now run algorithm CompleteRegion (&tree->quadrants) here */
       p4est_complete_region (p4est, &a, 1, &b, !must_remove_last_quadrant,
                              tree, jl, init_fn);
+      quad = sc_array_index (&tree->quadrants,
+                             tree->quadrants.elem_count - 1);
     }
     P4EST_VERBOSEF ("tree %lld quadrants %lu\n", (long long) jl,
                     (unsigned long) tree->quadrants.elem_count);
     p4est->local_num_quadrants += tree->quadrants.elem_count;
+    p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
   }
 
   /* compute some member variables */
