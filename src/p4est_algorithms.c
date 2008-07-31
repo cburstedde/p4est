@@ -1357,13 +1357,14 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                            p4est_init_t init_fn, int balance)
 {
   bool                lookup, inserted;
-  bool                isfamily, isoutroot;
+  bool                isfamily, isoutroot, isintree;
   size_t              iz, jz;
   size_t              incount, ocount;
   size_t              quadrant_pool_size;
   size_t              data_pool_size;
   size_t              count_outside_root, count_outside_tree;
   size_t              count_already_inlist, count_already_outlist;
+  size_t              count_moved1_outside, count_moved2_outside;
   size_t              num_added, num_nonowned, num_linearized;
   int                 qid, sid, pid;
   int                 bbound, fbound, rbound;
@@ -1438,6 +1439,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   /* initialize some counters */
   count_outside_root = count_outside_tree = 0;
   count_already_inlist = count_already_outlist = 0;
+  count_moved1_outside = count_moved2_outside = 0;
 
   /* initialize temporary storage */
   list_alloc = sc_mempool_new (sizeof (sc_link_t));
@@ -1484,6 +1486,16 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       }
       P4EST_ASSERT (p4est_quadrant_is_extended (q));
       isoutroot = !p4est_quadrant_is_inside_root (q);
+      if (isoutroot) {
+        isintree = false;
+      }
+      else {
+        isintree = p4est_quadrant_is_inside_tree (tree, q);
+        if (!isintree && p4est_quadrant_overlaps_tree (tree, q)) {
+          ++count_moved1_outside;
+          continue;
+        }
+      }
       rbound = (isoutroot ? fbound : bbound);
 
       /*
@@ -1602,6 +1614,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
          */
 
         /* stage 2: include qalloc */
+        if (isintree && p4est_quadrant_is_inside_root (qalloc) &&
+            !p4est_quadrant_is_inside_tree (tree, qalloc)) {
+          ++count_moved2_outside;
+          continue;
+        }
         lookup = sc_hash_lookup (hash[qalloc->level], qalloc, &vlookup);
         if (lookup) {
           /* qalloc is already included in output list, this catches most */
@@ -1684,8 +1701,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                   (unsigned long long) count_outside_root,
                   (unsigned long long) count_outside_tree);
   P4EST_INFOF
-    ("Tree %lld Already in inlist %llu outlist %llu insertions %llu\n",
+    ("Tree %lld inlist %llu outlist %llu moved %llu %llu insert %llu\n",
      (long long) which_tree, (unsigned long long) count_already_inlist,
+     (unsigned long long) count_moved1_outside,
+     (unsigned long long) count_moved2_outside,
      (unsigned long long) count_already_outlist,
      (unsigned long long) num_added);
 
