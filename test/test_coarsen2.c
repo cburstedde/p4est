@@ -74,7 +74,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpirank, NULL, NULL, NULL, SC_LP_DEFAULT);
+  sc_init (mpirank, sc_generic_abort_fn, &mpicomm, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */

@@ -135,14 +135,13 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 abort_fn (void *data)
 {
-  int                 mpiret;
   mpi_context_t      *mpi = data;
 
   fprintf (stderr, "[%d] " P4EST_STRING "_timings abort handler\n",
            mpi->mpirank);
 
-  mpiret = MPI_Abort (mpi->mpicomm, 1);
-  SC_CHECK_MPI (mpiret);
+  /* Don't check the return value */
+  MPI_Abort (mpi->mpicomm, 1);
 }
 
 int
