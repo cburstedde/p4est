@@ -20,6 +20,9 @@ nodist_include_HEADERS =
 noinst_HEADERS =
 noinst_PROGRAMS =
 
+# set test environment
+TESTS_ENVIRONMENT = @P4EST_MPI_TESTS_ENVIRONMENT@
+
 # recurse only into subpackages
 SUBDIRS =
 if P4EST_PROVIDE_SC
