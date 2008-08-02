@@ -673,7 +673,7 @@ p8est_connectivity_new_periodic (void)
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
   const int8_t        edge_to_edge[12] = {
-    0, 7, 1, 6, 2, 4, 3, 5, 8, 9, 10, 11,
+    0, 7, 1, 6, 2, 16, 3, 17, 8, 9, 10, 11,
   };
   const p4est_topidx_t tree_to_corner[1 * 8] = {
     0, 0, 0, 0, 0, 0, 0, 0,

@@ -515,7 +515,7 @@ p4est_connectivity_new_periodic (void)
   p4est_connectivity_t *connectivity;
   const p4est_topidx_t num_trees = 1;
   const p4est_topidx_t num_vertices = 4;
-  const p4est_topidx_t num_vtt = 12;
+  const p4est_topidx_t num_vtt = 16;
   const p4est_topidx_t tree_to_vertex[1 * 4] = {
     0, 1, 2, 3,
   };
@@ -532,13 +532,13 @@ p4est_connectivity_new_periodic (void)
     0, 1, 0,
   };
   const p4est_topidx_t vtt_offset[4 + 1] = {
-    0, 3, 6, 9, 12,
+    0, 4, 8, 12, 16,
   };
-  const p4est_topidx_t vertex_to_tree[12] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  const p4est_topidx_t vertex_to_tree[16] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   };
-  const p4est_topidx_t vertex_to_vertex[12] = {
-    0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3,
+  const p4est_topidx_t vertex_to_vertex[16] = {
+    0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
   };
 
   connectivity =
