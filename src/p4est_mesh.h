@@ -41,7 +41,7 @@ typedef struct p4est_indep
       p4est_topidx_t      which_tree;
       int                 owner_rank;
     }
-    piggy_unused1;
+    piggy1;
     struct
     {
       p4est_topidx_t      which_tree;
@@ -53,7 +53,7 @@ typedef struct p4est_indep
       p4est_topidx_t      which_tree;
       p4est_locidx_t      local_num;
     }
-    piggy;
+    piggy3;
   }
   p;
 }
