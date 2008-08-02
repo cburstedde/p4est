@@ -172,8 +172,10 @@ main (int argc, char **argv)
   /* destroy the p4est and its connectivity structure */
   p4est_connectivity_destroy (connectivity);
 
+  /* remove the temporary file */
+  mpiret = MPI_Barrier (mpicomm);
+  SC_CHECK_MPI (mpiret);
   if (rank == 0) {
-    /* remove the temporary file */
     retval = remove (template);
     SC_CHECK_ABORT (!retval, "Unable to remove the temp mesh file.");
   }

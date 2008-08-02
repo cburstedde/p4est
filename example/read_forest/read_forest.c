@@ -148,8 +148,10 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 
+  /* remove the temporary file */
+  mpiret = MPI_Barrier (mpicomm);
+  SC_CHECK_MPI (mpiret);
   if (rank == 0) {
-    /* unlink the temporary file */
     retval = remove (template);
     SC_CHECK_ABORT (!retval, "Unable to close the temp mesh file.");
   }
