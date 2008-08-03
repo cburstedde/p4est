@@ -1315,7 +1315,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
                   peer->recv_second.elem_count);
     this_base = sc_array_index (&peer->recv_second, peer->recv_offset);
     in->p.piggy3.local_num = *(p4est_locidx_t *) this_base;
-    num_sharers = (size_t) *(int8_t *) (this_base + sizeof (p4est_locidx_t));
+    num_sharers = (size_t) (*(int8_t *) (this_base + sizeof (p4est_locidx_t)));
     P4EST_ASSERT (num_sharers > 0);
     this_size = second_size + num_sharers * sizeof (int);
     P4EST_ASSERT (peer->recv_offset + this_size <=
@@ -1443,6 +1443,12 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   failed = false;
   sorted = P4EST_ALLOC (int, INT8_MAX);
 
+  if (nodes->num_local_quadrants != p4est->local_num_quadrants) {
+    P4EST_NOTICE ("p4est nodes invalid quadrant count\n");
+    failed = true;
+    goto failtest;
+  }
+
   max_sharers = nodes->shared_indeps.elem_count;
   for (zz = 0; zz < max_sharers; ++zz) {
     rarr = sc_array_index (&nodes->shared_indeps, zz);
@@ -1543,7 +1549,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
       goto failtest;
     }
   }
-  if (nodes->nonlocal_ranks [k] != -1) {
+  if (nodes->nonlocal_ranks[k] != -1) {
     P4EST_NOTICE ("p4est nodes invalid safeguard\n");
     failed = true;
     goto failtest;

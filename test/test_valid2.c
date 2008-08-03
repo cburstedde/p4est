@@ -21,11 +21,14 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_ghost.h>
 #include <p4est_mesh.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_ghost.h>
 #include <p8est_mesh.h>
+#include <p8est_trilinear.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -84,7 +87,11 @@ static void
 check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
 {
   p4est_t            *p4est;
-  p4est_neighborhood_t *nhood;
+  p4est_nodes_t      *nodes;
+#ifdef P4_TO_P8
+  trilinear_mesh_t   *mesh;
+#endif
+  sc_array_t          ghost_layer;
 
   p4est = p4est_new (mpicomm, conn, 0, NULL);
   p4est_refine (p4est, refine_fn, NULL);
@@ -93,8 +100,15 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, vtkname);
 
-  nhood = p4est_neighborhood_new (p4est);
-  p4est_neighborhood_destroy (nhood);
+  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
+  p4est_build_ghost_layer (p4est, &ghost_layer);
+  nodes = p4est_nodes_new (p4est, &ghost_layer);
+#ifdef P4_TO_P8
+  mesh = trilinear_mesh_extract (p4est, nodes);
+  trilinear_mesh_delete (mesh);
+#endif
+  p4est_nodes_destroy (nodes);
+  sc_array_reset (&ghost_layer);
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
