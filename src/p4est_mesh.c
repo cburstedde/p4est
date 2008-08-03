@@ -883,6 +883,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   new_node_number = P4EST_ALLOC (p4est_locidx_t, num_indep_nodes);
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (inda, (size_t) il);
+    in->pad8 = 0;               /* shared by 0 other processors so far */
+    in->pad16 = (int16_t) (-1);
     in->p.piggy3.local_num = il;
   }
   sc_array_sort (inda, p4est_quadrant_compare_piggy);
@@ -933,8 +935,6 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   prev = 0;
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (inda, (size_t) il);
-    in->pad8 = 0;               /* shared by 0 other processors so far */
-    in->pad16 = (int16_t) (-1);
     owner = p4est_comm_find_owner (p4est, in->p.which_tree,
                                    (p4est_quadrant_t *) in, prev);
     if (owner != rank) {
@@ -1290,9 +1290,6 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (k != rank && peer->expect_reply);
     mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
     SC_CHECK_MPI (mpiret);
-
-    P4EST_VERBOSEF ("Receive %d %d count %d\n", l, k, byte_count);
-
     sc_array_resize (&peer->recv_second, byte_count);
     mpiret = MPI_Recv (peer->recv_second.array, byte_count, MPI_BYTE,
                        k, P4EST_COMM_NODES_REPLY,
@@ -1301,7 +1298,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     peer->expect_reply = false;
   }
 
-  /* Convert the receive buffers into usable form. */
+  /* Convert the receive buffers into the output data structures. */
   for (il = 0; il < num_indep_nodes; ++il) {
     if (il == offset_owned_indeps) {
       il += num_owned_indeps;
@@ -1433,18 +1430,21 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  int                 k, prev;
+  int                 k, prev, owner, pshare, ocount;
   int                *sharers, *sorted;
   bool                failed;
-  size_t              zz, position, sharez, num_sharers;
-  p4est_locidx_t      il, num_indep_nodes;
+  size_t              zz, position, sharez, num_sharers, max_sharers;
+  p4est_topidx_t      otree, ntree;
+  p4est_locidx_t      il, num_indep_nodes, local_num;
+  p4est_locidx_t      num_owned_indeps, offset_owned_indeps, end_owned_indeps;
   p4est_indep_t      *in;
   sc_recycle_array_t *rarr;
 
   failed = false;
   sorted = P4EST_ALLOC (int, INT8_MAX);
 
-  for (zz = 0; zz < nodes->shared_indeps.elem_count; ++zz) {
+  max_sharers = nodes->shared_indeps.elem_count;
+  for (zz = 0; zz < max_sharers; ++zz) {
     rarr = sc_array_index (&nodes->shared_indeps, zz);
     num_sharers = zz + 1;
     for (position = 0; position < rarr->a.elem_count; ++position) {
@@ -1453,9 +1453,9 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
       qsort (sorted, num_sharers, sizeof (int), sc_int_compare);
       prev = -1;
       for (sharez = 0; sharez < num_sharers; ++sharez) {
-        k = sharers[sharez];
+        k = sorted[sharez];
         if (prev >= k || k == rank || k >= num_procs) {
-          P4EST_NOTICE ("p4est nodes invalid sharers\n");
+          P4EST_NOTICE ("p4est nodes invalid sharers 1\n");
           failed = true;
           goto failtest;
         }
@@ -1465,18 +1465,91 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   }
 
   num_indep_nodes = (p4est_locidx_t) nodes->indep_nodes.elem_count;
+  num_owned_indeps = nodes->num_owned_indeps;
+  offset_owned_indeps = nodes->offset_owned_indeps;
+  end_owned_indeps = offset_owned_indeps + num_owned_indeps;
+  k = prev = 0;
+  otree = 0;
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (&nodes->indep_nodes, (size_t) il);
-
-    /* TODO: complete this function */
+    ntree = in->p.piggy3.which_tree;
+    local_num = in->p.piggy3.local_num;
+    if (ntree < otree || ntree >= p4est->connectivity->num_trees) {
+      P4EST_NOTICE ("p4est nodes invalid tree\n");
+      failed = true;
+      goto failtest;
+    }
+    otree = ntree;
+    if (in->pad8 < 0 || (num_sharers = (size_t) in->pad8) > max_sharers) {
+      P4EST_NOTICE ("p4est nodes invalid sharer count\n");
+      failed = true;
+      goto failtest;
+    }
+    if (il < offset_owned_indeps || il >= end_owned_indeps) {
+      owner = nodes->nonlocal_ranks[k++];
+      if (owner < prev || owner == rank || owner >= num_procs) {
+        P4EST_NOTICE ("p4est nodes invalid owner\n");
+        failed = true;
+        goto failtest;
+      }
+      if (local_num < 0 || local_num >= nodes->global_owned_indeps[owner]) {
+        P4EST_NOTICE ("p4est nodes invalid non-owned index\n");
+        failed = true;
+        goto failtest;
+      }
+      prev = owner;
+      if (num_sharers < 1) {
+        P4EST_NOTICE ("p4est nodes invalid non-owned sharing 1\n");
+        failed = true;
+        goto failtest;
+      }
+    }
+    else {
+      if (local_num != il - offset_owned_indeps) {
+        P4EST_NOTICE ("p4est nodes invalid owned index\n");
+        failed = true;
+        goto failtest;
+      }
+      owner = prev = rank;
+    }
+    ocount = 0;
+    if (num_sharers > 0) {
+      rarr = sc_array_index (&nodes->shared_indeps, num_sharers - 1);
+      if (in->pad16 < 0 ||
+          (position = (size_t) in->pad16) >= rarr->a.elem_count) {
+        P4EST_NOTICE ("p4est nodes invalid sharer position\n");
+        failed = true;
+        goto failtest;
+      }
+      sharers = sc_array_index (&rarr->a, position);
+      memcpy (sorted, sharers, num_sharers * sizeof (int));
+      qsort (sorted, num_sharers, sizeof (int), sc_int_compare);
+      pshare = -1;
+      for (zz = 0; zz < num_sharers; ++zz) {
+        if (sorted[zz] <= pshare || sorted[zz] == rank) {
+          P4EST_NOTICE ("p4est nodes invalid sharers 2\n");
+          failed = true;
+          goto failtest;
+        }
+        if (sorted[zz] == owner) {
+          ++ocount;
+        }
+        pshare = sorted[zz];
+      }
+    }
+    if (owner != rank && ocount != 1) {
+      P4EST_NOTICE ("p4est nodes invalid non-owned sharing 2\n");
+      failed = true;
+      goto failtest;
+    }
   }
-
-  if (nodes->nonlocal_ranks
-      [nodes->indep_nodes.elem_count - nodes->num_owned_indeps] != -1) {
+  if (nodes->nonlocal_ranks [k] != -1) {
     P4EST_NOTICE ("p4est nodes invalid safeguard\n");
     failed = true;
     goto failtest;
   }
+
+  /* TODO: Test hanging nodes and local corners. */
 
 failtest:
   P4EST_FREE (sorted);

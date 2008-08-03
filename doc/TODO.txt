@@ -1,16 +1,18 @@
 
- * Integer sizes
-   Ensure that balance (and possibly others) use p4est_*idx_t.
- * Helper functions / algorithms
-   Isolate a p4est_tree_is_valid function.
- * Balance
-   Deal with p4est counters modified by balance_subtree
-   Replace p8est_find_face_transform by lookup tables
  * Mesh generation
    2D bilinear elements
    2D interface to pfudg
    3D trilinear mesh
    3D mangll mesh
+ * Integer sizes
+   Ensure that balance (and possibly others) use p4est_*idx_t.
+ * Connectivity
+   Replace p8est_find_face_transform by lookup tables
+   Implement periodic connections between different trees
+ * Helper functions / algorithms
+   Isolate a p4est_tree_is_valid function.
+ * Balance
+   Deal with p4est counters modified by balance_subtree
  * vtk output
    geometry
  * Optimization
