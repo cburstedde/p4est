@@ -94,9 +94,13 @@ typedef struct p4est_hang2
 }
 p4est_hang2_t;
 
-/** This structure holds complete node information.
- * All nodes are canonicalized and store a tree id.  There are no duplicates.
- * \a local_nodes is of dimension P4EST_CHILDREN * num_local_quadrants
+/** This structure holds complete parallel node information.
+ *
+ * All nodes are canonicalized and store their tree id in piggy3.which_tree.
+ * Their index in their owner's ordering is stored in piggy3.local_num.
+ *
+ * Canonicalized nodes are unique and either independent or face hanging.
+ * The local_nodes table is of dimension 4 * num_local_quadrants
  * and encodes the node indexes for all corners of all quadrants.  Let
  * ni := indep_nodes.elem_count,
  * fi := face_hangings.elem_count,
@@ -104,15 +108,29 @@ p4est_hang2_t;
  * l >= 0 && l < ni: l indexes into indep_nodes.
  * l >= ni && l < ni + fi: l - ni indexes into face_hangings.
  * No other values for l are permitted.
+ *
+ * The array shared_indeps holds lists of node sharers (not including rank).
+ * The entry shared_indeps[i] is of type sc_recycle_array_t
+ * and holds the list of nodes with i + 1 sharers.
+ * For each independent node, its member pad8 holds the number of sharers
+ * and its member pad16 holds the position in the assigned recycle array.
+ *
+ * Each processor owns num_owned_indeps of the stored independent nodes.
+ * The first independent owned node is at index offset_owned_indeps.
+ * The table nonlocal_ranks contains the ranks of all stored non-owned nodes.
+ * The table global_owned_nodes holds the number of owned nodes for each rank.
  */
 typedef struct p4est_nodes
 {
   p4est_locidx_t      num_local_quadrants;
-  p4est_locidx_t      num_local_indeps;
-  p4est_locidx_t      offset_local_indeps;
+  p4est_locidx_t      num_owned_indeps;
+  p4est_locidx_t      offset_owned_indeps;
   sc_array_t          indep_nodes;
   sc_array_t          face_hangings;
   p4est_locidx_t     *local_nodes;
+  sc_array_t          shared_indeps;
+  int                *nonlocal_ranks;
+  p4est_locidx_t     *global_owned_indeps;
 }
 p4est_nodes_t;
 
@@ -160,6 +178,10 @@ p4est_nodes_t      *p4est_nodes_new (p4est_t * p4est,
 
 /** Destroy node information. */
 void                p4est_nodes_destroy (p4est_nodes_t * nodes);
+
+/** Check node information for internal consistency. */
+bool                p4est_nodes_is_valid (p4est_t * p4est,
+                                          p4est_nodes_t * nodes);
 
 /** Create neighborhood information.
  */

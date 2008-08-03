@@ -172,6 +172,7 @@
 /* functions in p4est_mesh */
 #define p4est_nodes_new                 p8est_nodes_new
 #define p4est_nodes_destroy             p8est_nodes_destroy
+#define p4est_nodes_is_valid            p8est_nodes_is_valid
 #define p4est_neighborhood_new          p8est_neighborhood_new
 #define p4est_neighborhood_destroy      p8est_neighborhood_destroy
 
