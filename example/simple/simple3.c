@@ -73,8 +73,8 @@ static int          refine_level = 0;
 
 /* *INDENT-OFF* */
 static const simple_regression_t regression[] =
-{{ P8EST_CONFIG_UNIT, 1, 7, 0x88fc2229 },
- { P8EST_CONFIG_UNIT, 3, 6, 0xce19fee3 },
+{{ P8EST_CONFIG_UNIT, 1, 7, 0x88fc2229U },
+ { P8EST_CONFIG_UNIT, 3, 6, 0xce19fee3U },
  { P8EST_CONFIG_TWOCUBES, 1, 4, 0xd9e96b31U },
  { P8EST_CONFIG_TWOCUBES, 3, 5, 0xe8b16b4aU },
  { P8EST_CONFIG_PERIODIC, 1, 5, 0xe4d123b2U },

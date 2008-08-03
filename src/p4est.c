@@ -900,7 +900,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
-  int                 i, j, k, l, m, which;
+  int                 j, k, l, m, which;
   int                 face;
   int                 first_peer, last_peer;
   bool                quad_contact[2 * P4EST_DIM];
@@ -946,6 +946,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   p4est_gloidx_t      ltotal[2], gtotal[2];
 #endif /* P4EST_STATS */
   const int           number_peer_windows = p4est_num_ranges;
+  int                 i;
   int                 mpiret, rcount;
   int                 first_bound;
   int                 request_first_count, request_second_count, outcount;
