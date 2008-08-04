@@ -39,10 +39,15 @@
 #ifndef P4_TO_P8
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
+#include <p4est_ghost.h>
+#include <p4est_mesh.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
+#include <p8est_ghost.h>
+#include <p8est_mesh.h>
+#include <p8est_trilinear.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -151,19 +156,26 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 wrongusage;
   unsigned            crc;
+  double              start, elapsed_refine;
+  double              elapsed_balance, elapsed_rebalance;
+  double              elapsed_partition, elapsed_repartition;
+  double              elapsed_ghosts, elapsed_nodes;
+  const char         *config_name, *usage, *errmsg;
   p4est_locidx_t     *quadrant_counts;
   p4est_gloidx_t      count_refined, count_balanced;
   p4est_gloidx_t      prev_quadrant, next_quadrant;
   p4est_gloidx_t      global_shipped;
-  const char         *config_name, *usage, *errmsg;
-  p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  double              start, elapsed_refine;
-  double              elapsed_balance, elapsed_rebalance;
-  double              elapsed_partition, elapsed_repartition;
-  mpi_context_t       mpi_context, *mpi = &mpi_context;
-  timings_config_t    config;
+  p4est_t            *p4est;
+  p4est_nodes_t      *nodes;
+  sc_array_t          ghost_layer;
+#ifdef P4_TO_P8
+  double              elapsed_trilinear;
+  trilinear_mesh_t   *mesh;
+#endif
   const timings_regression_t *r;
+  timings_config_t    config;
+  mpi_context_t       mpi_context, *mpi = &mpi_context;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -291,7 +303,7 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   elapsed_refine = start + MPI_Wtime ();
 #ifdef P4EST_TIMINGS_VTK
-  p4est_vtk_write_file (p4est, "mesh_timings_refined");
+  p4est_vtk_write_file (p4est, "timings_refined");
 #endif
   count_refined = p4est->global_num_quadrants;
 
@@ -304,7 +316,7 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   elapsed_balance = start + MPI_Wtime ();
 #ifdef P4EST_TIMINGS_VTK
-  p4est_vtk_write_file (p4est, "mesh_timings_balanced");
+  p4est_vtk_write_file (p4est, "timings_balanced");
 #endif
   count_balanced = p4est->global_num_quadrants;
   crc = p4est_checksum (p4est);
@@ -329,9 +341,44 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   elapsed_partition = start + MPI_Wtime ();
 #ifdef P4EST_TIMINGS_VTK
-  p4est_vtk_write_file (p4est, "mesh_timings_partitioned");
+  p4est_vtk_write_file (p4est, "timings_partitioned");
 #endif
   P4EST_ASSERT (crc == p4est_checksum (p4est));
+
+  /* time building the ghost layer */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  start = -MPI_Wtime ();
+  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
+  p4est_build_ghost_layer (p4est, &ghost_layer);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  elapsed_ghosts = start + MPI_Wtime ();
+
+  /* time the node numbering */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  start = -MPI_Wtime ();
+  nodes = p4est_nodes_new (p4est, &ghost_layer);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  elapsed_nodes = start + MPI_Wtime ();
+
+#ifdef P4_TO_P8
+  /* time trilinear mesh extraction */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  start = -MPI_Wtime ();
+  mesh = trilinear_mesh_extract (p4est, nodes);
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  elapsed_trilinear = start + MPI_Wtime ();
+
+  /* destroy mesh related memory */
+  trilinear_mesh_delete (mesh);
+#endif
+  p4est_nodes_destroy (nodes);
+  sc_array_reset (&ghost_layer);
 
   /* time a partition with a shift of all elements by one processor */
   for (i = 0, next_quadrant = 0; i < p4est->mpisize; ++i) {
@@ -380,6 +427,14 @@ main (int argc, char **argv)
                             elapsed_balance, elapsed_rebalance);
   P4EST_GLOBAL_STATISTICSF ("Time for partition %.3gs repartition %.3gs\n",
                             elapsed_partition, elapsed_repartition);
+#ifndef P4_TO_P8
+  P4EST_GLOBAL_STATISTICSF ("Time for ghosts %.3gs nodes %.3gs\n",
+                            elapsed_ghosts, elapsed_nodes);
+#else
+  P4EST_GLOBAL_STATISTICSF
+    ("Time for ghosts %.3gs nodes %.3gs trilinear %.3g\n",
+     elapsed_ghosts, elapsed_nodes, elapsed_trilinear);
+#endif
 
   /* destroy the p4est and its connectivity structure */
   P4EST_FREE (quadrant_counts);
