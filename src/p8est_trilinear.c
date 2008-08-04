@@ -34,7 +34,8 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
   int                *sharers;
   size_t              current, zz, num_sharers;
   int32_t             e, n, local_owned_end;
-  int64_t             local_counts[3], global_counts[3], prev_fvnid;
+  int64_t             global_borrowed, global_shared, prev_fvnid;
+  int64_t             local_counts[5], global_counts[5];
   int32link_t        *lynk, **tail;
   p4est_topidx_t      which_tree;
   p4est_locidx_t     *local_node;
@@ -49,7 +50,13 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
   trilinear_mesh_t   *mesh;
   sc_recycle_array_t *rarr;
 
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Into trilinear_mesh_extract with %lld total elements\n",
+     (long long) p4est->global_num_quadrants);
+
+  /* Allocate output data structure. */
   mesh = P4EST_ALLOC_ZERO (trilinear_mesh_t, 1);
+  memset (mesh, -1, sizeof (*mesh));
 
   /* Assign local counts. */
   P4EST_ASSERT (nodes->num_local_quadrants == p4est->local_num_quadrants);
@@ -64,20 +71,24 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
 
   /* Communicate global counts. */
   local_counts[0] = mesh->local_elem_num;
-  local_counts[1] = mesh->local_onode_num;
-  local_counts[2] = mesh->local_dnode_num;
-  memcpy (global_counts, local_counts, 3 * sizeof (int64_t));
+  local_counts[1] = mesh->local_anode_num;
+  local_counts[2] = mesh->local_onode_num;
+  local_counts[3] = mesh->local_dnode_num;
+  local_counts[4] = nodes->num_owned_shared;
+  memcpy (global_counts, local_counts, 5 * sizeof (int64_t));
 #ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (local_counts, global_counts, 3, MPI_LONG_LONG,
+    mpiret = MPI_Allreduce (local_counts, global_counts, 5, MPI_LONG_LONG,
                             MPI_SUM, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
   }
 #endif
   P4EST_ASSERT (global_counts[0] == p4est->global_num_quadrants);
   mesh->total_elem_num = global_counts[0];
-  mesh->total_anode_num = global_counts[1];
-  mesh->total_dnode_num = global_counts[2];
+  global_borrowed = global_counts[1] - global_counts[2];
+  mesh->total_anode_num = global_counts[2];
+  mesh->total_dnode_num = global_counts[3];
+  global_shared = global_counts[4];
   mesh->total_node_num = mesh->total_anode_num + mesh->total_dnode_num;
 
   /* Allocate the mesh memory. */
@@ -94,6 +105,7 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
     mesh->fvnid_interval_table[k + 1] = mesh->fvnid_interval_table[k] +
       (mesh->fvnid_count_table[k] = nodes->global_owned_indeps[k]);
   }
+  mesh->fvnid_count_table[num_procs] = -1;
   mesh->global_fvnid_num = mesh->fvnid_interval_table[num_procs];
   mesh->global_fvnid_start = 0;
   mesh->global_fvnid_end = mesh->global_fvnid_num - 1;
@@ -210,6 +222,12 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->minsize = mesh->maxsize = 0;
   mesh->ticksize = mesh->volume = 0.;
   mesh->extra_info = NULL;
+
+  P4EST_GLOBAL_PRODUCTIONF ("Done trilinear_mesh_extract"
+                            " with %lld anodes %lld %lld\n",
+                            (long long) mesh->total_anode_num,
+                            (long long) global_borrowed,
+                            (long long) global_shared);
 
   return mesh;
 }

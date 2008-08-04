@@ -160,7 +160,7 @@ p8est_hang4_t;
 typedef struct p8est_nodes
 {
   p4est_locidx_t      num_local_quadrants;
-  p4est_locidx_t      num_owned_indeps;
+  p4est_locidx_t      num_owned_indeps, num_owned_shared;
   p4est_locidx_t      offset_owned_indeps;
   sc_array_t          indep_nodes;
   sc_array_t          face_hangings;

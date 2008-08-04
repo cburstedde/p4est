@@ -1222,6 +1222,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
   p4est_quadrant_t   *q2;
 #endif
 
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_build_ghost_layer\n");
   P4EST_ASSERT (ghost_layer->elem_size == sizeof (p4est_quadrant_t));
 
   for (i = 0; i < P4EST_CHILDREN / 2; ++i) {
@@ -1648,6 +1649,8 @@ failtest:
   for (i = 0; i < P4EST_DIM - 1; ++i) {
     sc_array_reset (&procs[i]);
   }
+
+  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_build_ghost_layer\n");
 
 #else /* !P4EST_MPI */
   /* If we are not running with mpi then we don't need to do anything */
