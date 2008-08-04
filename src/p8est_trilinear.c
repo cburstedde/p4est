@@ -174,9 +174,9 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
   for (zz = 0; zz < nodes->face_hangings.elem_count; ++n, ++zz) {
     dnode = &mesh->node_table[n].dangling;
     fh = sc_array_index (&nodes->face_hangings, zz);
-    dnode->point.x = in->x;
-    dnode->point.y = in->y;
-    dnode->point.z = in->z;
+    dnode->point.x = fh->x;
+    dnode->point.y = fh->y;
+    dnode->point.z = fh->z;
     dnode->type = 0;            /* Not used in Rhea. */
     dnode->local_anode_id[0] = fh->p.piggy.depends[0];
     dnode->local_anode_id[1] = fh->p.piggy.depends[1];
@@ -188,12 +188,12 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
   for (zz = 0; zz < nodes->edge_hangings.elem_count; ++n, ++zz) {
     dnode = &mesh->node_table[n].dangling;
     eh = sc_array_index (&nodes->edge_hangings, zz);
-    dnode->point.x = in->x;
-    dnode->point.y = in->y;
-    dnode->point.z = in->z;
+    dnode->point.x = eh->x;
+    dnode->point.y = eh->y;
+    dnode->point.z = eh->z;
     dnode->type = 0;            /* Not used in Rhea. */
-    dnode->local_anode_id[0] = fh->p.piggy.depends[0];
-    dnode->local_anode_id[1] = fh->p.piggy.depends[1];
+    dnode->local_anode_id[0] = eh->p.piggy.depends[0];
+    dnode->local_anode_id[1] = eh->p.piggy.depends[1];
     dnode->local_anode_id[2] = dnode->local_anode_id[3] = -1;
   }
 
