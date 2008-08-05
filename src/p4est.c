@@ -996,12 +996,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   send_requests_second_count = requests_first + 4 * num_procs;
   send_requests_second_load = requests_first + 5 * num_procs;
   recv_statuses = P4EST_ALLOC (MPI_Status, num_procs);
-  for (i = 0; i < num_procs; ++i) {
-    requests_first[i] = requests_second[i] = MPI_REQUEST_NULL;
-    send_requests_first_count[i] = MPI_REQUEST_NULL;
-    send_requests_first_load[i] = MPI_REQUEST_NULL;
-    send_requests_second_count[i] = MPI_REQUEST_NULL;
-    send_requests_second_load[i] = MPI_REQUEST_NULL;
+  for (j = 0; j < num_procs; ++j) {
+    requests_first[j] = requests_second[j] = MPI_REQUEST_NULL;
+    send_requests_first_count[j] = MPI_REQUEST_NULL;
+    send_requests_first_load[j] = MPI_REQUEST_NULL;
+    send_requests_second_count[j] = MPI_REQUEST_NULL;
+    send_requests_second_load[j] = MPI_REQUEST_NULL;
   }
   wait_indices = P4EST_ALLOC (int, num_procs);
 #ifdef P4EST_DEBUG
@@ -1425,7 +1425,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       j = wait_indices[i];
       jstatus = &recv_statuses[i];
       wait_indices[i] = -1;
-      P4EST_ASSERT (0 <= j && j < num_procs);
+      P4EST_ASSERT (j != rank && 0 <= j && j < num_procs);
       P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
       P4EST_ASSERT (jstatus->MPI_SOURCE == j);
 
@@ -1524,11 +1524,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       }
     }
   }
-#ifdef P4EST_DEBUG
   for (j = 0; j < num_procs; ++j) {
-    SC_CHECK_ABORT (requests_first[j] == MPI_REQUEST_NULL, "Request A");
+    P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
   }
-#endif /* P4EST_DEBUG */
 #endif /* P4EST_MPI */
 
   /* simulate send and receive with myself across tree boundaries */
@@ -1560,7 +1558,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       j = wait_indices[i];
       jstatus = &recv_statuses[i];
       wait_indices[i] = -1;
-      P4EST_ASSERT (0 <= j && j < num_procs);
+      P4EST_ASSERT (j != rank && 0 <= j && j < num_procs);
       P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
       P4EST_ASSERT (jstatus->MPI_SOURCE == j);
 
@@ -1628,11 +1626,9 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
       }
     }
   }
-#ifdef P4EST_DEBUG
   for (j = 0; j < num_procs; ++j) {
-    SC_CHECK_ABORT (requests_second[j] == MPI_REQUEST_NULL, "Request B");
+    P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
   }
-#endif /* P4EST_DEBUG */
 
   /* print buffer statistics */
   P4EST_VERBOSEF ("first send Z %d L %d recv Z %d L %d\n",
@@ -1725,7 +1721,14 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   }
 
 #ifdef P4EST_MPI
-/* compute global sum of send and receive counts */
+  /* wait for all send operations */
+  if (request_send_count > 0) {
+    mpiret = MPI_Waitall (4 * num_procs,
+                          send_requests_first_count, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  /* compute global sum of send and receive counts */
 #ifdef P4EST_STATS
   gtotal[0] = gtotal[1] = 0;
   ltotal[0] = (p4est_gloidx_t) total_send_count;
@@ -1741,14 +1744,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   else {
     P4EST_ASSERT (ltotal[0] == 0 && ltotal[1] == 0);
   }
-#endif /* P4EST_DEBUG */
-
-  /* wait for all send operations */
-  if (request_send_count > 0) {
-    mpiret = MPI_Waitall (4 * num_procs,
-                          send_requests_first_count, MPI_STATUSES_IGNORE);
-    SC_CHECK_MPI (mpiret);
-  }
+#endif /* P4EST_STATS */
 #endif /* P4EST_MPI */
 
   /* loop over all local trees to finalize balance */

@@ -694,8 +694,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   bool                outface[2 * P4EST_DIM];
   p4est_topidx_t      ntree;
   p4est_qcoord_t      qh;
-  p4est_quadrant_t    treefd, treeld;
   p4est_quadrant_t    fd, ld, tempq, ins[P4EST_INSUL];
+  p4est_quadrant_t   *treefd, *treeld;
   p4est_quadrant_t   *tq, *s;
   p4est_quadrant_t   *inq, *outq;
   p4est_tree_t       *tree;
@@ -721,8 +721,6 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   P4EST_ASSERT (p4est_tree_is_complete (tree));
   tquadrants = &tree->quadrants;
 
-  P4EST_QUADRANT_INIT (&treefd);
-  P4EST_QUADRANT_INIT (&treeld);
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
   P4EST_QUADRANT_INIT (&tempq);
@@ -749,11 +747,9 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
     return;
   }
 
-  /* compute first and last descendants in the tree */
-  tq = sc_array_index (tquadrants, 0);
-  p4est_quadrant_first_descendent (tq, &treefd, P4EST_QMAXLEVEL);
-  tq = sc_array_index (tquadrants, treecount - 1);
-  p4est_quadrant_last_descendent (tq, &treeld, P4EST_QMAXLEVEL);
+  /* retrieve first and last descendants in the tree */
+  treefd = &tree->first_desc;
+  treeld = &tree->last_desc;
 
   /* loop over input list of quadrants */
   for (iz = 0; iz < incount; ++iz) {
@@ -898,14 +894,14 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
         p4est_quadrant_last_descendent (s, &ld, P4EST_QMAXLEVEL);
 
         /* skip this insulation quadrant if there is no overlap */
-        if (p4est_quadrant_compare (&ld, &treefd) < 0 ||
-            p4est_quadrant_compare (&treeld, &fd) < 0) {
+        if (p4est_quadrant_compare (&ld, treefd) < 0 ||
+            p4est_quadrant_compare (treeld, &fd) < 0) {
           continue;
         }
 
         /* find first quadrant in tree that fits between fd and ld */
         guess = treecount / 2;
-        if (p4est_quadrant_compare (&fd, &treefd) <= 0) {
+        if (p4est_quadrant_compare (&fd, treefd) <= 0) {
           /* the first tree quadrant overlaps an insulation quadrant */
           first_index = 0;
         }
@@ -919,7 +915,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
         }
 
         /* find last quadrant in tree that fits between fd and ld */
-        if (p4est_quadrant_compare (&treeld, &ld) <= 0) {
+        if (p4est_quadrant_compare (treeld, &ld) <= 0) {
           /* the last tree quadrant overlaps an insulation quadrant */
           last_index = (ssize_t) treecount - 1;
         }

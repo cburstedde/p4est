@@ -1,0 +1,20 @@
+
+ * Hang on make check on Carsten's laptop.
+   32-bit Ubuntu Hardy Heron, mpich-mpd-bin 1.2.7-8, mpichboot
+   p4est revision e62f33bdd315adf0b7743bc8346800c62d5bb3c6
+   configure CFLAGS=-Wall -g -O0 -rdynamic --enable-debug --enable-mpi \
+      --enable-stats --with-lint --without-blas
+   mpirun -np 2 test/p8est_test_balance
+      hangs in the first call to p4est_balance.
+   Commenting out balance_response and changing
+      p4est_quadrant_checksum into sc_array_checksum resolves the hang.
+   The hang occurs intermittently when balance_response is prepended with
+
+   for (zz = 0; zz < 10000; ++zz) {
+     sc_array_push (&peer->send_second);
+   }
+   usleep (200 * 1000 * (1 - p4est->mpirank));
+   return;
+
+   So the cause is not inside the balance_response function.
+   Seems more like a timings issue / race condition.
