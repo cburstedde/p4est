@@ -659,16 +659,15 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
 #ifdef P4EST_MPI
-  const int           twopeerw = 2 * p4est_num_ranges;
   int                 mpiret;
   int                 owner, prev, start;
-  int                 first_peer, last_peer, nwin;
+  int                 first_peer, last_peer;
   int                 num_send_queries, num_send_nonzero, num_recv_queries;
   int                 byte_count, elem_count;
   int                 local_send_count, local_recv_count;
-  int                 my_ranges[twopeerw];
-  int                *procs;
-  int                *all_ranges;
+  int                 nwin, maxpeers, maxwin, twomaxwin;
+  int                 my_ranges[2 * p4est_num_ranges];
+  int                *procs, *all_ranges;
   int                *old_sharers, *new_sharers;
   char               *this_base;
   bool                found;
@@ -920,7 +919,6 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   first_size = P4EST_DIM * sizeof (p4est_qcoord_t) + sizeof (p4est_topidx_t);
   first_size = SC_MAX (first_size, sizeof (p4est_locidx_t));
   procs = P4EST_ALLOC_ZERO (int, (size_t) num_procs);
-  all_ranges = P4EST_ALLOC (int, twopeerw * num_procs);
   peers = P4EST_ALLOC (p4est_node_peer_t, num_procs);
   sc_array_init (&send_requests, sizeof (MPI_Request));
   for (k = 0; k < num_procs; ++k) {
@@ -971,19 +969,19 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   }
 
   /* Distribute global information about who is sending to who. */
-  nwin = sc_ranges_compute (num_procs, procs, rank, first_peer, last_peer,
-                            p4est_num_ranges, my_ranges);
+  maxpeers = first_peer;
+  maxwin = last_peer;
+  nwin = sc_ranges_adaptive (p4est->mpicomm, procs, &maxpeers, &maxwin,
+                             p4est_num_ranges, my_ranges, &all_ranges);
+  twomaxwin = 2 * maxwin;
 #ifdef P4EST_STATS
+  P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
+                            maxpeers, maxwin, p4est_num_ranges);
   sc_ranges_statistics (SC_LP_STATISTICS, p4est->mpicomm, num_procs, procs,
                         rank, p4est_num_ranges, my_ranges);
 #endif
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allgather (my_ranges, twopeerw, MPI_INT,
-                            all_ranges, twopeerw, MPI_INT, p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-  }
-  P4EST_VERBOSEF ("Peer ranges %d/%d first %d last %d owned %lld/%lld\n",
-                  nwin, p4est_num_ranges, first_peer, last_peer,
+  P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d owned %lld/%lld\n",
+                  nwin, maxwin, p4est_num_ranges, first_peer, last_peer,
                   (long long) num_owned_indeps, (long long) num_indep_nodes);
 
   /* Send queries to the owners of the independent nodes that I share. */
@@ -1016,12 +1014,12 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     if (k == rank) {
       continue;
     }
-    for (l = 0; l < p4est_num_ranges; ++l) {
-      start = all_ranges[k * twopeerw + 2 * l];
+    for (l = 0; l < maxwin; ++l) {
+      start = all_ranges[k * twomaxwin + 2 * l];
       if (start == -1 || start > rank) {
         break;
       }
-      if (rank <= all_ranges[k * twopeerw + 2 * l + 1]) {
+      if (rank <= all_ranges[k * twomaxwin + 2 * l + 1]) {
         peers[k].expect_query = true;
         ++num_recv_queries;
         break;
@@ -1363,6 +1361,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   }
 
   /* Clean up allocated communications memory. */
+  SC_FREE (all_ranges);
   sc_array_reset (&send_requests);
   for (k = 0; k < num_procs; ++k) {
     peer = peers + k;
@@ -1373,7 +1372,6 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     sc_array_reset (&peer->recv_second);
   }
   P4EST_FREE (peers);
-  P4EST_FREE (all_ranges);
   P4EST_FREE (procs);
 
   if (p4est->mpicomm != MPI_COMM_NULL) {
