@@ -1296,7 +1296,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (k != rank && peer->expect_reply);
     mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
     SC_CHECK_MPI (mpiret);
-    sc_array_resize (&peer->recv_second, byte_count);
+    sc_array_resize (&peer->recv_second, (size_t) byte_count);
     mpiret = MPI_Recv (peer->recv_second.array, byte_count, MPI_BYTE,
                        k, P4EST_COMM_NODES_REPLY,
                        p4est->mpicomm, &recv_status);

@@ -173,7 +173,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
       tail = &anode->share;
       for (zz = 0; zz < num_sharers; ++zz) {
         *tail = lynk = sc_mempool_alloc (mesh->sharer_pool);
-        lynk->id = sharers[zz];
+        lynk->id = (int32_t) sharers[zz];
         tail = &lynk->next;
       }
       *tail = NULL;
@@ -211,9 +211,9 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
 
   /* Assign the remaining variables. */
   mesh->mpicomm = p4est->mpicomm;
-  mesh->mpisize = num_procs;
-  mesh->mpirank = rank;
-  mesh->recsize = p4est->data_size;
+  mesh->mpisize = (int32_t) num_procs;
+  mesh->mpirank = (int32_t) rank;
+  mesh->recsize = (int32_t) p4est->data_size;
   mesh->destructor = p8est_trilinear_mesh_destroy;
 
   /* These members are incomplete and need to be filled later. */

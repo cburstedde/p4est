@@ -217,8 +217,7 @@ trilinear_mesh_t   *p8est_trilinear_mesh_new (p8est_t * p8est,
  */
 void                p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh);
 
-/**
- * p8est_trilinear_neighbor_t
+/** p8est_trilinear_neighbor_t
  *
  * The face neighbors are ordered in -x, +x, -y, +y, -z, and +z directions.
  *
