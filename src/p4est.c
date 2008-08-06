@@ -667,13 +667,7 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
         }
       }
       if (couldbegood && p4est_quadrant_is_familypv (c) &&
-#ifdef P4_TO_P8
-          coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3],
-                      c[4], c[5], c[6], c[7]) &&
-#else
-          coarsen_fn (p4est, jt, c[0], c[1], c[2], c[3]) &&
-#endif
-          true) {
+          coarsen_fn (p4est, jt, c)) {
         /* coarsen now */
         for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
           p4est_quadrant_free_data (p4est, c[zz]);

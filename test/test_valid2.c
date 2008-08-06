@@ -62,22 +62,17 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static int
 coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-            p4est_quadrant_t * q0, p4est_quadrant_t * q1,
-            p4est_quadrant_t * q2, p4est_quadrant_t * q3
-#ifdef P4_TO_P8
-            ,
-            p4est_quadrant_t * q4, p4est_quadrant_t * q5,
-            p4est_quadrant_t * q6, p4est_quadrant_t * q7
-#endif
-  )
+            p4est_quadrant_t * q[])
 {
   int                 pid;
   p4est_quadrant_t    p;
 
-  if (q0->level <= 2)
+  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
+
+  if (q[0]->level <= 2)
     return 0;
 
-  p4est_quadrant_parent (q0, &p);
+  p4est_quadrant_parent (q[0], &p);
   pid = p4est_quadrant_child_id (&p);
 
   return pid == 3;

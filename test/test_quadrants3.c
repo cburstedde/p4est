@@ -45,39 +45,36 @@ refine_some (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
 
 static int
 coarsen_none (p4est_t * p4est, p4est_topidx_t which_tree,
-              p4est_quadrant_t * q0, p4est_quadrant_t * q1,
-              p4est_quadrant_t * q2, p4est_quadrant_t * q3,
-              p4est_quadrant_t * q4, p4est_quadrant_t * q5,
-              p4est_quadrant_t * q6, p4est_quadrant_t * q7)
+              p4est_quadrant_t * q[])
 {
+  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
+
   return 0;
 }
 
 static int
 coarsen_some (p4est_t * p4est, p4est_topidx_t which_tree,
-              p4est_quadrant_t * q0, p4est_quadrant_t * q1,
-              p4est_quadrant_t * q2, p4est_quadrant_t * q3,
-              p4est_quadrant_t * q4, p4est_quadrant_t * q5,
-              p4est_quadrant_t * q6, p4est_quadrant_t * q7)
+              p4est_quadrant_t * q[])
 {
-  if (q0->x < P4EST_QUADRANT_LEN (2)) {
-    return q0->level >= 2;
+  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
+
+  if (q[0]->x < P4EST_QUADRANT_LEN (2)) {
+    return q[0]->level >= 2;
   }
-  else if (q0->x < P4EST_QUADRANT_LEN (1)) {
-    return q0->level >= 3;
+  else if (q[0]->x < P4EST_QUADRANT_LEN (1)) {
+    return q[0]->level >= 3;
   }
   else {
-    return q0->level >= 4;
+    return q[0]->level >= 4;
   }
 }
 
 static int
 coarsen_all (p4est_t * p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t * q0, p4est_quadrant_t * q1,
-             p4est_quadrant_t * q2, p4est_quadrant_t * q3,
-             p4est_quadrant_t * q4, p4est_quadrant_t * q5,
-             p4est_quadrant_t * q6, p4est_quadrant_t * q7)
+             p4est_quadrant_t * q[])
 {
+  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
+
   return 1;
 }
 
@@ -664,4 +661,4 @@ main (void)
   return 0;
 }
 
-/* EOF test_quadrants.c */
+/* EOF test_quadrants3.c */

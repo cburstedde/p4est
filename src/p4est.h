@@ -132,15 +132,12 @@ typedef int         (*p4est_refine_t) (p4est_t * p4est,
                                        p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for coarsening.
- * The quadrants are siblings enumerated in Morton ordering.
+ * \param [in] quadrants   Pointers to 4 siblings in Morton ordering.
  * \return nonzero if the quadrants shall be replaced with their parent.
  */
 typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
                                         p4est_topidx_t which_tree,
-                                        p4est_quadrant_t * q0,
-                                        p4est_quadrant_t * q1,
-                                        p4est_quadrant_t * q2,
-                                        p4est_quadrant_t * q3);
+                                        p4est_quadrant_t * quadrants[]);
 
 /** Callback function prototype to calculate weights for partitioning.
  * \return a 32bit integer >= 0 as the quadrant weight.

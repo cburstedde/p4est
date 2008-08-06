@@ -20,9 +20,9 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est.h>
+#include <p4est_bits.h>
 #else
-#include <p8est.h>
+#include <p8est_bits.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -45,16 +45,11 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static int
 coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-            p4est_quadrant_t * q0, p4est_quadrant_t * q1,
-            p4est_quadrant_t * q2, p4est_quadrant_t * q3
-#ifdef P4_TO_P8
-            ,
-            p4est_quadrant_t * q4, p4est_quadrant_t * q5,
-            p4est_quadrant_t * q6, p4est_quadrant_t * q7
-#endif
-  )
+            p4est_quadrant_t * q[])
 {
-  return coarsen_all || q0->y >= P4EST_ROOT_LEN / 2;
+  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
+
+  return coarsen_all || q[0]->y >= P4EST_ROOT_LEN / 2;
 }
 
 int
