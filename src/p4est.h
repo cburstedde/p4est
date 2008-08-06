@@ -125,7 +125,7 @@ typedef void        (*p4est_init_t) (p4est_t * p4est,
                                      p4est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for refinement.
- * \return Returns 1 if the quadrant shall be refined.
+ * \return nonzero if the quadrant shall be refined.
  */
 typedef int         (*p4est_refine_t) (p4est_t * p4est,
                                        p4est_topidx_t which_tree,
@@ -133,7 +133,7 @@ typedef int         (*p4est_refine_t) (p4est_t * p4est,
 
 /** Callback function prototype to decide for coarsening.
  * The quadrants are siblings enumerated in Morton ordering.
- * \return Returns 1 if the quadrants shall be replaced with their parent.
+ * \return nonzero if the quadrants shall be replaced with their parent.
  */
 typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
                                         p4est_topidx_t which_tree,
@@ -143,7 +143,7 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
                                         p4est_quadrant_t * q3);
 
 /** Callback function prototype to calculate weights for partitioning.
- * \return  Returns a 32bit integer >= 0 as the quadrant weight.
+ * \return a 32bit integer >= 0 as the quadrant weight.
  * \note    (global sum of weights * mpisize) must fit into a 64bit integer.
  */
 typedef int         (*p4est_weight_t) (p4est_t * p4est,

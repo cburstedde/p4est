@@ -34,7 +34,13 @@
  * where N is 6 for tree and face, 8 for corner, 12 for edge.
  *
  * The values for tree_to_face are in 0..23
- * where ttf % 6 gives the face number and ttf / 6 the orientation code.
+ * where ttf % 6 gives the face number and ttf / 6 the face orientation code.
+ * The orientation is determined as follows.  Let my_face and other_face
+ * be the two face numbers of the connecting trees in 0..5.  Then the first
+ * face vertex of the lower of my_face and other_face connects to a face
+ * vertex numbered 0..3 in the higher of my_face and other_face.  The face
+ * orientation is defined as this number.  If my_face == other_face, treating
+ * either of both faces as the lower one leads to the same result.
  *
  * The vertex coordinates are stored in the array vertices, allocated
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
@@ -47,7 +53,7 @@
  * Their number for edge e is ett_offset[e+1] - ett_offset[e].
  * The size of the edge_to_* arrays is num_ett = ett_offset[num_edges].
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
- * one orientation and the higher 12 the opposite orientation.
+ * one edge orientation and the higher 12 the opposite edge orientation.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
