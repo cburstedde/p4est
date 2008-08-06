@@ -694,7 +694,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   p4est_topidx_t      jt;
   p4est_locidx_t      il, first, second;
   p4est_locidx_t      num_local_nodes, quad_indeps[P4EST_CHILDREN];
-  p4est_locidx_t      num_owned_shared, num_owned_indeps, offset_owned_indeps;
+  p4est_locidx_t      num_owned_shared, num_owned_indeps;
+  p4est_locidx_t      offset_owned_indeps, end_owned_indeps;
   p4est_locidx_t      num_indep_nodes, dup_indep_nodes, all_face_hangings;
   p4est_locidx_t      num_face_hangings, dup_face_hangings;
   p4est_locidx_t     *local_nodes, *quad_nodes;
@@ -967,6 +968,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (num_owned_indeps == 0);
     offset_owned_indeps = 0;
   }
+  end_owned_indeps = offset_owned_indeps + num_owned_indeps;
 
   /* Distribute global information about who is sending to who. */
   maxpeers = first_peer;
@@ -1062,7 +1064,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
       found = sc_hash_array_lookup (indep_nodes, &inkey, &position);
       P4EST_ASSERT (found);
       P4EST_ASSERT (position >= offset_owned_indeps &&
-                    position < offset_owned_indeps + num_owned_indeps);
+                    position < end_owned_indeps);
       node_number = (p4est_locidx_t *) xyz;
       *node_number = (p4est_locidx_t) position - offset_owned_indeps;
       in = sc_array_index (inda, position);
@@ -1304,15 +1306,14 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 
   /* Convert the receive buffers into the output data structures. */
   for (il = 0; il < num_indep_nodes; ++il) {
-    if (il == offset_owned_indeps) {
-      il += num_owned_indeps;
-      if (il == num_indep_nodes) {
-        break;
-      }
-    }
     in = sc_array_index (inda, (size_t) il);
+    p4est_node_unclamp ((p4est_quadrant_t *) in);
+    if (il >= offset_owned_indeps && il < end_owned_indeps) {
+      continue;
+    }
     k = in->p.piggy1.owner_rank;
-    P4EST_ASSERT (k >= 0 && k != rank && k < num_procs);
+    P4EST_ASSERT ((k < rank && il < offset_owned_indeps) ||
+                  (k > rank && il >= end_owned_indeps));
     *nonlocal_ranks++ = k;
     peer = peers + k;
     P4EST_ASSERT (peer->recv_offset + second_size <=
@@ -1351,6 +1352,18 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     in->pad16 = (int16_t) new_position;
     peer->recv_offset += this_size;
   }
+
+  /* Unclamp the hanging nodes as well. */
+  for (zz = 0; zz < faha->elem_count; ++zz) {
+    fh = sc_array_index (faha, zz);
+    p4est_node_unclamp ((p4est_quadrant_t *) fh);
+  }
+#ifdef P4_TO_P8
+  for (zz = 0; zz < edha->elem_count; ++zz) {
+    eh = sc_array_index (edha, zz);
+    p4est_node_unclamp ((p4est_quadrant_t *) eh);
+  }
+#endif
 
   /* Wait and close all send requests. */
   if (send_requests.elem_count > 0) {

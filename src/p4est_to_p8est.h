@@ -95,6 +95,7 @@
 #define p4est_node_equal_piggy_fn       p8est_node_equal_piggy_fn
 #define p4est_node_hash_piggy_fn        p8est_node_hash_piggy_fn
 #define p4est_node_clamp_inside         p8est_node_clamp_inside
+#define p4est_node_unclamp              p8est_node_unclamp
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3

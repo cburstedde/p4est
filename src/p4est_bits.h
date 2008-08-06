@@ -83,6 +83,11 @@ unsigned            p4est_node_hash_piggy_fn (const void *v, const void *u);
 void                p4est_node_clamp_inside (const p4est_quadrant_t * n,
                                              p4est_quadrant_t * r);
 
+/** Move a clamped node out on the border.
+ * \param [in] n    Node to be unclamped in-place.
+ */
+void                p4est_node_unclamp (p4est_quadrant_t * n);
+
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */

@@ -222,6 +222,19 @@ p4est_node_clamp_inside (const p4est_quadrant_t * n, p4est_quadrant_t * r)
   P4EST_ASSERT (p4est_quadrant_is_node (r, true));
 }
 
+void
+p4est_node_unclamp (p4est_quadrant_t * n)
+{
+  P4EST_ASSERT (p4est_quadrant_is_node (n, true));
+
+  if (n->x == P4EST_ROOT_LEN - 1) n->x = P4EST_ROOT_LEN;
+  if (n->y == P4EST_ROOT_LEN - 1) n->y = P4EST_ROOT_LEN;
+#ifdef P4_TO_P8
+  if (n->z == P4EST_ROOT_LEN - 1) n->z = P4EST_ROOT_LEN;
+#endif
+  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+}
+
 int
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
