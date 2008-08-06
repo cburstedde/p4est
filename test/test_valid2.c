@@ -104,8 +104,8 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
   p4est_build_ghost_layer (p4est, &ghost_layer);
   nodes = p4est_nodes_new (p4est, &ghost_layer);
 #ifdef P4_TO_P8
-  mesh = trilinear_mesh_extract (p4est, nodes);
-  trilinear_mesh_delete (mesh);
+  mesh = p8est_trilinear_mesh_new (p4est, nodes);
+  p8est_trilinear_mesh_destroy (mesh);
 #endif
   p4est_nodes_destroy (nodes);
   sc_array_reset (&ghost_layer);

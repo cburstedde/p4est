@@ -23,7 +23,7 @@
 #include <p8est_trilinear.h>
 
 trilinear_mesh_t   *
-trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
+p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
@@ -214,7 +214,7 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->mpisize = num_procs;
   mesh->mpirank = rank;
   mesh->recsize = p4est->data_size;
-  mesh->destructor = trilinear_mesh_delete;
+  mesh->destructor = p8est_trilinear_mesh_destroy;
 
   /* These members are incomplete and need to be filled later. */
   memset (mesh->bounds, 0, 6 * sizeof (int));
@@ -233,8 +233,10 @@ trilinear_mesh_extract (p4est_t * p4est, p4est_nodes_t * nodes)
 }
 
 void
-trilinear_mesh_delete (trilinear_mesh_t * mesh)
+p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh)
 {
+  P4EST_ASSERT (mesh->destructor == p8est_trilinear_mesh_destroy);
+
   P4EST_FREE (mesh->elem_table);
   P4EST_FREE (mesh->node_table);
   P4EST_FREE (mesh->fvnid_count_table);

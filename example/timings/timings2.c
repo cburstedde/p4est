@@ -369,13 +369,13 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  mesh = trilinear_mesh_extract (p4est, nodes);
+  mesh = p8est_trilinear_mesh_new (p4est, nodes);
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_trilinear = start + MPI_Wtime ();
 
   /* destroy mesh related memory */
-  trilinear_mesh_delete (mesh);
+  p8est_trilinear_mesh_destroy (mesh);
 #endif
   p4est_nodes_destroy (nodes);
   sc_array_reset (&ghost_layer);

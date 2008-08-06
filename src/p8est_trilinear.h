@@ -82,7 +82,7 @@ typedef struct trilinear_elem
 {
   int32_t             local_node_id[8]; /* indices into local node table */
   tick_t              size;     /* size of the element in ticks */
-  void               *data;     /* pointer to its record, managed by octor */
+  void               *data;     /* pointer to its data record */
 }
 trilinear_elem_t;
 
@@ -169,23 +169,24 @@ typedef struct trilinear_mesh
   int32_t             local_owned_offset;       /* offset to the first
                                                    owned anchored node */
 
-  /* Memory allocated by Octor to hold the trilinear elements and nodes */
+  /* Memory allocated to hold the trilinear elements and nodes */
   trilinear_elem_t   *elem_table;
   trilinear_node_t   *node_table;
 
-  /* Memory allocated for free variable interval table. Has
-     (groupsize + 1) entries. all_fvnid_start is a convenience pointer. */
+  /* Memory allocated for free variable interval table.
+   * The first two are allocated with (num_procs + 1) entries each.
+   * The third (all_fvnid_start) is a convenience pointer.
+   */
   int64_t            *fvnid_count_table;
   int64_t            *fvnid_interval_table;
   int64_t            *all_fvnid_start;
 
-  /* convenience variables pointing to the node table. Don't try
-     to free the memory pointed to */
+  /* Convenience pointers into the node table. */
   trilinear_node_t   *anode_table;
   trilinear_node_t   *onode_table;
   trilinear_node_t   *dnode_table;
 
-  /* convenience variables recording the total number of free variables,
+  /* Convenience variables recording the total number of free variables,
      the starting id and the ending id. identical on all processors */
   int64_t             global_fvnid_num; /* total number of fvnids */
   int64_t             global_fvnid_start;       /* first global fvnid */
@@ -208,15 +209,13 @@ typedef struct trilinear_mesh
 trilinear_mesh_t;
 
 /** Creates a trilinear mesh structure from a p8est and its node data.
- * This function is called _extract to conform with Rhea terminology.
  */
-trilinear_mesh_t   *trilinear_mesh_extract (p8est_t * p8est,
-                                            p8est_nodes_t * nodes);
+trilinear_mesh_t   *p8est_trilinear_mesh_new (p8est_t * p8est,
+                                              p8est_nodes_t * nodes);
 
 /** Frees a trilinear mesh structure.
- * This function is called _delete because _destroy is used within Rhea.
  */
-void                trilinear_mesh_delete (trilinear_mesh_t * mesh);
+void                p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh);
 
 /**
  * p8est_trilinear_neighbor_t
@@ -237,7 +236,7 @@ void                trilinear_mesh_delete (trilinear_mesh_t * mesh);
  *    where ((index >= 0) && (index < local_elem_num)) if the neighbor is
  *    LOCAL, or
  *    ((index >= local_elem_num) &&
- *    (index < (local_elem_num + phantom_elem_num))) if the neighor is
+ *    (index < (local_elem_num + ghost_elem_num))) if the neighor is
  *    REMOTE.
  *
  *      face_neighbor_eid[direction][1--3] are undefined.
@@ -256,19 +255,19 @@ typedef struct local_neighbor
 }
 local_neighbor_t;
 
-typedef struct phantom_elem
+typedef struct ghost_elem
 {
   tick_t              lx, ly, lz;
   tick_t              size;
   int32_t             owner_procid;     /* remote processor id */
   int32_t             reid;     /* remote processor element index */
 }
-phantom_elem_t;
+ghost_elem_t;
 
 typedef struct trilinear_neighborhood
 {
-  int32_t             phantom_elem_num;
-  phantom_elem_t     *phantom_elem_table;
+  int32_t             ghost_elem_num;
+  ghost_elem_t       *ghost_elem_table;
   local_neighbor_t   *local_elem_neighbor_table;
 }
 trilinear_neighborhood_t;
