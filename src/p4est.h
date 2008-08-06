@@ -90,8 +90,8 @@ typedef struct p4est
   int                 mpisize, mpirank;
 
   size_t              data_size;        /* size of per-quadrant user_data */
-  void               *user_global_pointer;      /* convenience pointer for users
-                                                   will never be touched by p4est */
+  void               *user_pointer;     /* convenience pointer for users,
+                                           will never be touched by p4est */
 
   p4est_topidx_t      first_local_tree; /* 0-based index of first local tree,
                                            must be -1 for an empty processor */
@@ -150,9 +150,6 @@ typedef int         (*p4est_weight_t) (p4est_t * p4est,
                                        p4est_topidx_t which_tree,
                                        p4est_quadrant_t * quadrant);
 
-extern p4est_locidx_t p4est_initial_quadrants_per_processor;
-extern bool         p4est_refine_recursive;
-extern bool         p4est_coarsen_recursive;
 extern void        *P4EST_DATA_UNINITIALIZED;
 extern const int    p4est_num_ranges;
 
@@ -162,15 +159,17 @@ extern const int    p4est_num_ranges;
 
 /** Create a new p4est.
  *
- * \param [in] mpicomm A valid MPI_Comm or MPI_COMM_NULL.
- * \param [in] connectivity This is the connectivity information that
- *                          the forest is build with.  Note the p4est
- *                          does not take ownership of the memory.
- * \param [in] data_size This is the size of data for each quadrant which
- *                       can be zero.  If zero the \c user_data_pool is
- *                       set to \c NULL.
- * \param [in] init_fn Callback function to initialize the user_data
- *                     which is already allocated automatically.
+ * \param [in] mpicomm       A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] connectivity  This is the connectivity information that
+ *                           the forest is built with.  Note the p4est
+ *                           does not take ownership of the memory.
+ * \param [in] min_quadrants Minimum initial number of quadrants per processor.
+ * \param [in] data_size     This is the size of data for each quadrant which
+ *                           can be zero.  Then user_data_pool is set to NULL.
+ * \param [in] init_fn       Callback function to initialize the user_data
+ *                           which is already allocated automatically.
+ * \param [in] user_pointer  Assign to the user_pointer member of the p4est
+ *                           before init_fn is called the first time.
  *
  * \return This returns a vaild forest.
  *
@@ -179,14 +178,15 @@ extern const int    p4est_num_ranges;
  */
 p4est_t            *p4est_new (MPI_Comm mpicomm,
                                p4est_connectivity_t * connectivity,
-                               size_t data_size, p4est_init_t init_fn);
+                               p4est_locidx_t min_quadrants, size_t data_size,
+                               p4est_init_t init_fn, void *user_pointer);
 
 /** Destroy a p4est.
  * \note The connectivity structure is not destroyed with the p4est.
  */
 void                p4est_destroy (p4est_t * p4est);
 
-/** Make a deep copy of a p4est. Copying of user data is optional.
+/** Make a deep copy of a p4est.  Copying of quadrant user data is optional.
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p4est that does not depend on the input.
@@ -194,22 +194,24 @@ void                p4est_destroy (p4est_t * p4est);
 p4est_t            *p4est_copy (p4est_t * input, bool copy_data);
 
 /** Refine a forest.
- * \param [in] refine_fn Callback function to decide
- *                       if a quadrant gets refined
+ * \param [in] refine_fn Callback function that returns true
+ *                       if a quadrant shall be refined
  * \param [in] init_fn   Callback function to initialize the user_data
  *                       which is already allocated automatically.
  */
 void                p4est_refine (p4est_t * p4est,
+                                  bool refine_recursive,
                                   p4est_refine_t refine_fn,
                                   p4est_init_t init_fn);
 
 /** Coarsen a forest.
- * \param [in] coarsen_fn Callback function to decide
- *                        if quadrants get coarsened
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is already allocated automatically.
+ * \param [in] coarsen_fn Callback function that returns true if a
+ *                        family of quadrants shall be coarsened
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
  */
 void                p4est_coarsen (p4est_t * p4est,
+                                   bool coarsen_recursive,
                                    p4est_coarsen_t coarsen_fn,
                                    p4est_init_t init_fn);
 

@@ -44,9 +44,6 @@ p4est_balance_peer_t;
 
 #ifndef P4_TO_P8
 
-p4est_locidx_t      p4est_initial_quadrants_per_processor = 15;
-bool                p4est_refine_recursive = true;
-bool                p4est_coarsen_recursive = true;
 static int          p4est_uninitialized_key;
 void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
 const int           p4est_num_ranges = 25;
@@ -59,7 +56,8 @@ static const int8_t any_face_flag = 0x02;
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
-           size_t data_size, p4est_init_t init_fn)
+           p4est_locidx_t min_quadrants, size_t data_size,
+           p4est_init_t init_fn, void * user_pointer)
 {
 #ifdef P4EST_MPI
   int                 mpiret;
@@ -89,7 +87,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* assign some data members */
   p4est->data_size = data_size;
-  p4est->user_global_pointer = NULL;
+  p4est->user_pointer = user_pointer;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
@@ -100,7 +98,6 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
     SC_CHECK_MPI (mpiret);
-
     mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
     SC_CHECK_MPI (mpiret);
   }
@@ -121,7 +118,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   tree_num_quadrants = 1;
   for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
     if (tree_num_quadrants >=
-        (num_procs * (p4est_gloidx_t) p4est_initial_quadrants_per_processor)
+        (num_procs * (p4est_gloidx_t) min_quadrants + (num_trees - 1))
         / num_trees) {
       break;
     }
@@ -421,7 +418,8 @@ p4est_copy (p4est_t * input, bool copy_data)
 }
 
 void
-p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
+p4est_refine (p4est_t * p4est, bool refine_recursive,
+              p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
   size_t              quadrant_pool_size, data_pool_size;
   bool                dorefine;
@@ -505,7 +503,7 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
     while (list->elem_count > 0) {
       qpop = sc_list_pop (list);
       if (dorefine ||
-          ((p4est_refine_recursive || qpop->p.user_data != key) &&
+          ((refine_recursive || qpop->p.user_data != key) &&
            qpop->level < P4EST_QMAXLEVEL && refine_fn (p4est, nt, qpop))) {
         dorefine = false;
         sc_array_resize (tquadrants,
@@ -607,8 +605,8 @@ p4est_refine (p4est_t * p4est, p4est_refine_t refine_fn, p4est_init_t init_fn)
 }
 
 void
-p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
-               p4est_init_t init_fn)
+p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
+               p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
   int                 i, maxlevel;
   bool                couldbegood;
@@ -689,7 +687,7 @@ p4est_coarsen (p4est_t * p4est, p4est_coarsen_t coarsen_fn,
         removed += P4EST_CHILDREN - 1;
 
         rest += P4EST_CHILDREN - before;
-        if (p4est_coarsen_recursive) {
+        if (coarsen_recursive) {
           last = first;
           cidz = (size_t) p4est_quadrant_child_id (cfirst);
           if (cidz > first)

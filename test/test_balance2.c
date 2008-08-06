@@ -103,14 +103,13 @@ main (int argc, char **argv)
 
   sc_init (mpirank, sc_generic_abort_fn, &mpicomm, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
-  p4est_initial_quadrants_per_processor = 0;
 
 #ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_star ();
 #else
   connectivity = p8est_connectivity_new_rotcubes ();
 #endif
-  p4est = p4est_new (mpicomm, connectivity, 4, NULL);
+  p4est = p4est_new (mpicomm, connectivity, 0, 4, NULL, NULL);
 
 #ifndef P4_TO_P8
   /* build empty tree */
@@ -151,7 +150,7 @@ main (int argc, char **argv)
 
   /* refine and balance the forest */
   SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 1");
-  p4est_refine (p4est, refine_fn, NULL);
+  p4est_refine (p4est, true, refine_fn, NULL);
   SC_CHECK_ABORT (!p4est_is_balanced (p4est), "Balance 2");
   p4est_balance (p4est, NULL);
   SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 3");

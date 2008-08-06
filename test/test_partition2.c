@@ -121,13 +121,14 @@ main (int argc, char **argv)
 #else
   connectivity = p4est_connectivity_new_corner ();
 #endif
-  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
+  p4est = p4est_new (mpicomm, connectivity, 15,
+                     sizeof (user_data_t), init_fn, NULL);
 
   num_procs = p4est->mpisize;
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   /* refine and balance to make the number of elements interesting */
-  p4est_refine (p4est, refine_fn, init_fn);
+  p4est_refine (p4est, true, refine_fn, init_fn);
 
   /* Set an arbitrary partition.
    *

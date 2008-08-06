@@ -90,8 +90,8 @@ typedef struct p8est
   int                 mpisize, mpirank;
 
   size_t              data_size;        /* size of per-quadrant user_data */
-  void               *user_global_pointer;      /* convenience pointer for users
-                                                   will never be touched by p8est */
+  void               *user_pointer;     /* convenience pointer for users,
+                                           will never be touched by p8est */
 
   p4est_topidx_t      first_local_tree; /* 0-based index of first local tree,
                                            must be -1 for an empty processor */
@@ -154,10 +154,6 @@ typedef int         (*p8est_weight_t) (p8est_t * p8est,
                                        p4est_topidx_t which_tree,
                                        p8est_quadrant_t * quadrant);
 
-/** minimum initial quadrants per core in p4est_new */
-extern p4est_locidx_t p8est_initial_quadrants_per_processor;
-extern bool         p8est_refine_recursive;
-extern bool         p8est_coarsen_recursive;
 extern void        *P8EST_DATA_UNINITIALIZED;
 extern const int    p8est_num_ranges;
 
@@ -167,15 +163,17 @@ extern const int    p8est_num_ranges;
 
 /** Create a new p8est.
  *
- * \param [in] mpicomm A valid MPI_Comm or MPI_COMM_NULL.
- * \param [in] connectivity This is the connectivity information that
- *                          the forest is build with.  Note the p8est
- *                          does not take ownership of the memory.
- * \param [in] data_size This is the size of data for each quadrant which
- *                       can be zero.  If zero the \c user_data_pool is
- *                       set to \c NULL.
- * \param [in] init_fn Callback function to initialize the user_data
- *                     which is already allocated automatically.
+ * \param [in] mpicomm       A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] connectivity  This is the connectivity information that
+ *                           the forest is built with.  Note the p8est
+ *                           does not take ownership of the memory.
+ * \param [in] min_quadrants Minimum initial number of quadrants per processor.
+ * \param [in] data_size     This is the size of data for each quadrant which
+ *                           can be zero.  Then user_data_pool is set to NULL.
+ * \param [in] init_fn       Callback function to initialize the user_data
+ *                           which is already allocated automatically.
+ * \param [in] user_pointer  Assign to the user_pointer member of the p8est
+ *                           before init_fn is called the first time.
  *
  * \return This returns a vaild forest.
  *
@@ -184,14 +182,15 @@ extern const int    p8est_num_ranges;
  */
 p8est_t            *p8est_new (MPI_Comm mpicomm,
                                p8est_connectivity_t * connectivity,
-                               size_t data_size, p8est_init_t init_fn);
+                               p4est_locidx_t min_quadrants, size_t data_size,
+                               p8est_init_t init_fn, void *user_pointer);
 
 /** Destroy a p8est.
  * \note The connectivity structure is not destroyed with the p8est.
  */
 void                p8est_destroy (p8est_t * p8est);
 
-/** Make a deep copy of a p8est. Copying of user data is optional.
+/** Make a deep copy of a p8est.  Copying of quadrant user data is optional.
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p8est that does not depend on the input.
@@ -199,22 +198,24 @@ void                p8est_destroy (p8est_t * p8est);
 p8est_t            *p8est_copy (p8est_t * input, bool copy_data);
 
 /** Refine a forest.
- * \param [in] refine_fn Callback function to decide
- *                       if a quadrant gets refined
+ * \param [in] refine_fn Callback function that returns true
+ *                       if a quadrant shall be refined
  * \param [in] init_fn   Callback function to initialize the user_data
  *                       which is already allocated automatically.
  */
 void                p8est_refine (p8est_t * p8est,
+                                  bool refine_recursive,
                                   p8est_refine_t refine_fn,
                                   p8est_init_t init_fn);
 
 /** Coarsen a forest.
- * \param [in] coarsen_fn Callback function to decide
- *                        if quadrants get coarsened
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is already allocated automatically.
+ * \param [in] coarsen_fn Callback function that returns true if a
+ *                        family of quadrants shall be coarsened
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
  */
 void                p8est_coarsen (p8est_t * p8est,
+                                   bool coarsen_recursive,
                                    p8est_coarsen_t coarsen_fn,
                                    p8est_init_t init_fn);
 

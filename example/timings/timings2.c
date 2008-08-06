@@ -291,14 +291,14 @@ main (int argc, char **argv)
     connectivity = p8est_connectivity_new_unitcube ();
   }
 #endif
-  p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
+  p4est = p4est_new (mpi->mpicomm, connectivity, 15, 0, NULL, NULL);
   quadrant_counts = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
 
   /* time refine */
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_refine (p4est, refine_fractal, NULL);
+  p4est_refine (p4est, true, refine_fractal, NULL);
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_refine = start + MPI_Wtime ();

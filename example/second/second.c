@@ -84,11 +84,11 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
-  p4est = p4est_new (mpi->mpicomm, connectivity, 0, NULL);
+  p4est = p4est_new (mpi->mpicomm, connectivity, 15, 0, NULL, NULL);
 
   /* partition and refine the mesh */
   (void) p4est_partition_given (p4est, given);
-  p4est_refine (p4est, refine_fn, NULL);
+  p4est_refine (p4est, true, refine_fn, NULL);
   p4est_vtk_write_file (p4est, "mesh_second_refined");
 
   /* balance the mesh */

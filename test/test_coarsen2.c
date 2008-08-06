@@ -83,18 +83,16 @@ main (int argc, char **argv)
 #else
   connectivity = p4est_connectivity_new_corner ();
 #endif
-  p4est = p4est_new (mpicomm, connectivity, 0, NULL);
-  p4est_refine (p4est, refine_fn, NULL);
+  p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
+  p4est_refine (p4est, true, refine_fn, NULL);
 
-  p4est_coarsen_recursive = false;
   coarsen_all = true;
-  p4est_coarsen (p4est, coarsen_fn, NULL);
-  p4est_coarsen_recursive = true;
+  p4est_coarsen (p4est, false, coarsen_fn, NULL);
   coarsen_all = false;
-  p4est_coarsen (p4est, coarsen_fn, NULL);
+  p4est_coarsen (p4est, true, coarsen_fn, NULL);
   p4est_balance (p4est, NULL);
   coarsen_all = true;
-  p4est_coarsen (p4est, coarsen_fn, NULL);
+  p4est_coarsen (p4est, true, coarsen_fn, NULL);
 
   if (mpisize == 1) {
     SC_CHECK_ABORT (p4est->global_num_quadrants ==

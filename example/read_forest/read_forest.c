@@ -140,7 +140,8 @@ main (int argc, char **argv)
     p4est_connectivity_print (connectivity, stdout);
   }
 
-  p4est = p4est_new (mpicomm, connectivity, sizeof (user_data_t), init_fn);
+  p4est = p4est_new (mpicomm, connectivity, 15,
+                     sizeof (user_data_t), init_fn, NULL);
   p4est_tree_print (SC_LP_INFO, sc_array_index (p4est->trees, 0));
   p4est_vtk_write_file (p4est, "mesh");
 

@@ -93,9 +93,9 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
 #endif
   sc_array_t          ghost_layer;
 
-  p4est = p4est_new (mpicomm, conn, 0, NULL);
-  p4est_refine (p4est, refine_fn, NULL);
-  p4est_coarsen (p4est, coarsen_fn, NULL);
+  p4est = p4est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p4est_refine (p4est, true, refine_fn, NULL);
+  p4est_coarsen (p4est, true, coarsen_fn, NULL);
   p4est_balance (p4est, NULL);
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, vtkname);
@@ -131,8 +131,6 @@ main (int argc, char **argv)
 
   sc_init (rank, sc_generic_abort_fn, &mpicomm, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
-
-  p4est_initial_quadrants_per_processor = 0;
 
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),

@@ -178,7 +178,6 @@ main (int argc, char **argv)
 
   sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
-  p8est_initial_quadrants_per_processor = 1;
 
   /* process command line arguments */
   usage =
@@ -241,17 +240,17 @@ main (int argc, char **argv)
   else {
     connectivity = p8est_connectivity_new_unitcube ();
   }
-  p8est = p8est_new (mpi->mpicomm, connectivity,
-                     sizeof (user_data_t), init_fn);
+  p8est = p8est_new (mpi->mpicomm, connectivity, 1,
+                     sizeof (user_data_t), init_fn, NULL);
 
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple3_new");
 #endif
 
   /* refinement and coarsening */
-  p8est_refine (p8est, refine_fn, init_fn);
+  p8est_refine (p8est, true, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
-    p8est_coarsen (p8est, coarsen_fn, init_fn);
+    p8est_coarsen (p8est, true, coarsen_fn, init_fn);
   }
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple3_refined");

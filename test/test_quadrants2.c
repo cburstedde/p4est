@@ -118,12 +118,12 @@ main (void)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est1 = p4est_new (MPI_COMM_NULL, connectivity, 0, NULL);
-  p4est2 = p4est_new (MPI_COMM_NULL, connectivity, 8, NULL);
+  p4est1 = p4est_new (MPI_COMM_NULL, connectivity, 15, 0, NULL, NULL);
+  p4est2 = p4est_new (MPI_COMM_NULL, connectivity, 15, 8, NULL, NULL);
 
   /* refine the second tree to a uniform level */
-  p4est_refine (p4est1, refine_none, NULL);
-  p4est_refine (p4est2, refine_some, NULL);
+  p4est_refine (p4est1, true, refine_none, NULL);
+  p4est_refine (p4est2, true, refine_some, NULL);
   t1 = sc_array_index (p4est1->trees, 0);
   t2 = sc_array_index (p4est2->trees, 0);
   SC_CHECK_ABORT (p4est_tree_is_sorted (t1), "is_sorted");
@@ -271,9 +271,9 @@ main (void)
   }
 
   /* test the coarsen function */
-  p4est_coarsen (p4est1, coarsen_none, NULL);
-  p4est_coarsen (p4est1, coarsen_all, NULL);
-  p4est_coarsen (p4est2, coarsen_some, NULL);
+  p4est_coarsen (p4est1, true, coarsen_none, NULL);
+  p4est_coarsen (p4est1, true, coarsen_all, NULL);
+  p4est_coarsen (p4est2, true, coarsen_some, NULL);
 
   /* test the linearize algorithm */
   incount = t2->quadrants.elem_count;

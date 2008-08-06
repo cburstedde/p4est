@@ -47,7 +47,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_corner ();
-  p4est = p4est_new (mpicomm, connectivity, 0, NULL);
+  p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
 
   /* do a weighted partition with uniform weights */
   p4est_partition (p4est, weight_one);
