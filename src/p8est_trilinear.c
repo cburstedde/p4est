@@ -38,7 +38,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   int64_t             local_counts[5], global_counts[5];
   int32link_t        *lynk, **tail;
   p4est_topidx_t      which_tree;
-  p4est_locidx_t     *local_node;
+  p4est_locidx_t     *local_node, *shared_offsets;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
   p4est_indep_t      *in;
@@ -57,6 +57,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   /* Allocate output data structure. */
   mesh = P4EST_ALLOC_ZERO (trilinear_mesh_t, 1);
   memset (mesh, -1, sizeof (*mesh));
+  shared_offsets = nodes->shared_offsets;
 
   /* Assign local counts. */
   P4EST_ASSERT (nodes->num_local_quadrants == p4est->local_num_quadrants);
@@ -163,13 +164,22 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
     P4EST_ASSERT (anode->fvnid > prev_fvnid);
     if (in->pad8 == 0) {
       P4EST_ASSERT (in->pad16 == -1);
+      P4EST_ASSERT (shared_offsets == NULL || shared_offsets[n] == -1);
       anode->share = NULL;
     }
     else {
       P4EST_ASSERT (in->pad8 > 0);
       num_sharers = (size_t) in->pad8;
       rarr = sc_array_index (&nodes->shared_indeps, num_sharers - 1);
-      sharers = sc_array_index_int16 (&rarr->a, in->pad16);
+      if (nodes->shared_offsets == NULL) {
+        P4EST_ASSERT (in->pad16 >= 0);
+        zz = (size_t) in->pad16;
+      }
+      else {
+        P4EST_ASSERT (in->pad16 == -1);
+        zz = (size_t) shared_offsets[n];
+      }
+      sharers = sc_array_index (&rarr->a, zz);
       tail = &anode->share;
       for (zz = 0; zz < num_sharers; ++zz) {
         *tail = lynk = sc_mempool_alloc (mesh->sharer_pool);

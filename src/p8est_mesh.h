@@ -150,7 +150,11 @@ p8est_hang4_t;
  * The entry shared_indeps[i] is of type sc_recycle_array_t
  * and holds the list of nodes with i + 1 sharers.
  * For each independent node, its member pad8 holds the number of sharers
- * and its member pad16 holds the position in the assigned recycle array.
+ * and its member pad16 holds the position in the assigned recycle array
+ * if this number fits into an int16_t.  If this limit is exceeded, the
+ * array shared_offsets is filled with these positions as one p4est_locidx_t
+ * per independent node, and all pad16 members are set to -1.  To recognize
+ * the latter situation you can check for shared_offsets != NULL.
  *
  * Each processor owns num_owned_indeps of the stored independent nodes.
  * The first independent owned node is at index offset_owned_indeps.
@@ -167,6 +171,7 @@ typedef struct p8est_nodes
   sc_array_t          edge_hangings;
   p4est_locidx_t     *local_nodes;
   sc_array_t          shared_indeps;
+  p4est_locidx_t     *shared_offsets;
   int                *nonlocal_ranks;
   p4est_locidx_t     *global_owned_indeps;
 }
