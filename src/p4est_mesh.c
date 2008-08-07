@@ -1327,6 +1327,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     P4EST_ASSERT (peer->recv_offset + this_size <=
                   peer->recv_second.elem_count);
     if (shared_indeps->elem_count < num_sharers) {
+      nrarr = NULL;
       position = shared_indeps->elem_count;
       sc_array_resize (shared_indeps, num_sharers);
       for (zz = position; zz < num_sharers; ++zz) {
