@@ -1,6 +1,26 @@
-#!/bin/sh
+#! /bin/sh
 
-aclocal -Wall -I config -I sc/config
+echo "This is the bootstrap script for p4est"
+echo "Current directory is $PWD"
+
+# override by option argument
+SC_CONFIG="sc/config"
+if test -n "$1" ; then
+  SC_CONFIG="$1"
+  if test ! -d "$SC_CONFIG" ; then
+    echo "Cannot find directory $SC_CONFIG"
+    exit 1
+  fi
+fi
+# convert into an absolute path
+SC_CONFIG=`cd "$SC_CONFIG" && pwd`
+
+aclocal -Wall -I config -I "$SC_CONFIG"
 autoheader -Wall
 automake -Wall --add-missing --copy
 autoconf -Wall
+
+if test -x "sc/bootstrap" ; then
+  echo "Running bootstrap in directory sc"
+  (cd sc && ./bootstrap)
+fi

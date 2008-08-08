@@ -2,7 +2,7 @@
 # This file is part of the p4est library
 # Makefile.am in toplevel directory
 
-ACLOCAL_AMFLAGS = -I config -I sc/config
+ACLOCAL_AMFLAGS = -I config -I @P4EST_SC_CONFIG@
 
 # initialize empty variables
 AM_CPPFLAGS =

@@ -34,27 +34,28 @@ P4EST_ARG_WITHOUT([zlib], [disable zlib in builtin libsc, provide your own],
                   [PROVIDE_ZLIB])
 
 # Configure the SC library recursively.
+P4EST_SC_CONFIG=sc/config
 if test "$P4EST_WITH_PROVIDE_SC" = yes ; then
   AC_CONFIG_SUBDIRS([sc])
   P4EST_SC_CPPFLAGS="-I\$(top_builddir)/sc/src -I\$(top_srcdir)/sc/src"
   P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.a"
 else
+  P4EST_WITH_PROVIDE_ZLIB=no
   if test "$P4EST_WITH_PROVIDE_SC" != no ; then
     P4EST_SC_DIR="$P4EST_WITH_PROVIDE_SC"
     if test ! -d "$P4EST_SC_DIR" ; then
       AC_MSG_ERROR([Directory "$P4EST_SC_DIR" does not exist])
     fi
-    if test ! -f "$P4EST_SC_DIR/include/sc_zlib.h" ; then
-      P4EST_WITH_PROVIDE_ZLIB=no
-    fi
-    P4EST_SC_CPPFLAGS="-I$P4EST_SC_DIR/include"
-    P4EST_SC_LDADD="-L$P4EST_SC_DIR/lib -lsc"
-  else
-    P4EST_WITH_PROVIDE_ZLIB=no
+    SC_DETERMINE_INCLUDE_PATH([P4EST_SC],
+                              [$P4EST_WITH_PROVIDE_SC_CPPFLAGS])
+    SC_DETERMINE_LIBRARY_PATH([P4EST_SC],
+                              [$P4EST_WITH_PROVIDE_SC_LDADD -lsc])
+    SC_DETERMINE_CONFIG_PATH([P4EST_SC])
   fi
 fi
 AC_SUBST([P4EST_SC_CPPFLAGS])
 AC_SUBST([P4EST_SC_LDADD])
+AC_SUBST([P4EST_SC_CONFIG])
 
 # Checks for programs.
 echo "o----------------------------------"
