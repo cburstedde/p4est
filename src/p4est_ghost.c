@@ -443,6 +443,98 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   }
 }
 
+p4est_locidx_t
+p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
+                            p4est_topidx_t treeid, int *pface,
+                            const p4est_quadrant_t * q, int *owner_rank)
+{
+  const int           rank = p4est->mpirank;
+  int                 qproc;
+  int                 nface, face = *pface;
+  ssize_t             lnid;
+  p4est_topidx_t      tqtreeid;
+  p4est_connectivity_t *conn = p4est->connectivity;
+  p4est_quadrant_t    tq, non_existent;
+  sc_array_t         *ta;
+#ifndef P4_TO_P8
+  int                 transform;
+  p4est_quadrant_t    tempq;
+#else
+  int                 ftransform[9];
+  p4est_topidx_t      tqtreeid2;
+#endif
+
+  P4EST_ASSERT (treeid >= 0 && 0 <= face && face < 2 * P4EST_DIM);
+
+  P4EST_QUADRANT_INIT (&non_existent);
+  if (non_existent.level == q->level) {
+    return -1;
+  }
+  ta = NULL;
+
+  /* q is in the unit domain */
+  if (p4est_quadrant_is_inside_root (q)) {
+    *pface = p4est_face_dual[face];
+    *owner_rank = qproc = p4est_comm_find_owner (p4est, treeid, q, rank);
+    if (qproc == rank) {
+      p4est_tree_t       *tree;
+
+      tree = p4est_array_index_topidx (p4est->trees, treeid);
+      lnid = sc_array_bsearch (&tree->quadrants, q, p4est_quadrant_compare);
+      return (lnid == -1) ? (p4est_locidx_t) (-1) :
+        (tree->quadrants_offset + (p4est_locidx_t) lnid);
+    }
+    else {
+      /* off processor so search in the ghost layer */
+      tq = *q;
+      tq.p.piggy1.which_tree = treeid;
+      lnid =
+        sc_array_bsearch (ghost_layer, &tq, p4est_quadrant_compare_piggy);
+      return (lnid == -1) ? (p4est_locidx_t) (-1) :
+        (q = sc_array_index_ssize_t (ghost_layer, lnid),
+         q->p.piggy3.local_num);
+    }
+  }
+
+  /* neighbor is across a tree face */
+  tqtreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
+  nface = (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face];
+  *pface = nface % 6;
+  if (tqtreeid == treeid && nface == face) {
+    return -2;
+  }
+
+  /* transform quadrant */
+#ifndef P4_TO_P8
+  tempq = *q;
+  transform = p4est_find_face_transform (conn, treeid, face);
+  p4est_quadrant_translate_face (&tempq, face);
+  p4est_quadrant_transform_face (&tempq, &tq, transform);
+#else
+  tqtreeid2 = p8est_find_face_transform (conn, treeid, face, ftransform);
+  P4EST_ASSERT (tqtreeid == tqtreeid2);
+  p8est_quadrant_transform_face (q, &tq, ftransform);
+#endif
+
+  /* find its owner and local number */
+  *owner_rank = qproc = p4est_comm_find_owner (p4est, tqtreeid, &tq, rank);
+  if (qproc == rank) {
+    p4est_tree_t       *tqtree;
+
+    tqtree = p4est_array_index_topidx (p4est->trees, tqtreeid);
+    lnid = sc_array_bsearch (&tqtree->quadrants, &tq, p4est_quadrant_compare);
+    return (lnid == -1) ? (p4est_locidx_t) (-1) :
+      (tqtree->quadrants_offset + (p4est_locidx_t) lnid);
+  }
+  else {
+    /* off processor so search in the ghost layer */
+    tq.p.piggy1.which_tree = tqtreeid;
+    lnid = sc_array_bsearch (ghost_layer, &tq, p4est_quadrant_compare_piggy);
+    return (lnid == -1) ? (p4est_locidx_t) (-1) :
+      (q = sc_array_index_ssize_t (ghost_layer, lnid), q->p.piggy3.local_num);
+  }
+}
+
 /** Checks if a quadrant's face is on the boundary of the forest.
  *
  * \param [in] p4est  The forest in which to search for \a q
@@ -1318,6 +1410,7 @@ p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
       }
     }
   }
+  P4EST_ASSERT (local_num == p4est->local_num_quadrants);
 
 failtest:
   if (p4est_comm_sync_flag (p4est, failed, MPI_BOR)) {

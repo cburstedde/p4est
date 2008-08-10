@@ -71,6 +71,31 @@ bool                p4est_build_ghost_layer (p4est_t * p4est,
 
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *
+ * For quadrants across tree boundaries it checks if the quadrant exists
+ * across any face, but not across corners.
+ *
+ * \param [in]  p4est        The forest in which to search for \a q.
+ * \param [in]  ghost_layer  The ghost layer in which to search for \a q.
+ * \param [in]  treeid       The tree id for which \a q belongs.
+ * \param [in,out] face      On input, the face id across which to search.
+ *                           On output, face number in the neighbor's system.
+ * \param [in]  q            The quadrant that is being searched for.
+ * \param [out] owner_rank   Filled with the rank of the owner
+ *                           if it is found and undefined otherwise.
+ *
+ * \return      Returns the local number of \a q if the quadrant exists
+ *              in the local forest or in the ghost_layer.  Otherwise,
+ *              returns -2 for a domain boundary and -1 if not found.
+ */
+p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
+                                                sc_array_t * ghost_layer,
+                                                p4est_topidx_t treeid,
+                                                int *face,
+                                                const p4est_quadrant_t * q,
+                                                int *owner_rank);
+
+/** Checks if quadrant exists in the local forest or the ghost layer.
+ *
  * For quadrants across tree corners it checks if the quadrant exists
  * in any of the corner neighbors.
  *
