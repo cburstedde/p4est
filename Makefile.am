@@ -58,16 +58,16 @@ if LINT
 endif LINT
 
 ChangeLog:
-	@(GIT_DIR=@top_srcdir@/.git git-log | @top_srcdir@/sc/git2cl \
+	(GIT_DIR=@top_srcdir@/.git git-log | @P4EST_SC_DIR@/git2cl \
 		> .ChangeLog.tmp && \
 		mv .ChangeLog.tmp ChangeLog; rm -f .ChangeLog.tmp) || \
 	(touch ChangeLog; \
 		echo 'Warning not in git dir; ChangeLog could be wrong.' >&2)
 
 dist-hook: ChangeLog
-if !P4EST_PROVIDE_SC
+if !P4EST_WITH_SC
 	@echo "-----------------------------------------------------"
-	@echo "make dist requires the builtin libsc to be configured"
+	@echo "make dist does not work with --without-sc"
 	@echo "-----------------------------------------------------"
 	@exit 1
 endif

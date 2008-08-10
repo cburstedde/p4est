@@ -37,6 +37,7 @@ P4EST_ARG_WITHOUT([zlib], [disable zlib in builtin libsc, provide your own],
 P4EST_SC_CONFIG=sc/config
 if test "$P4EST_WITH_PROVIDE_SC" = yes ; then
   AC_CONFIG_SUBDIRS([sc])
+  P4EST_SC_DIR="\$(top_srcdir)/sc"
   P4EST_SC_CPPFLAGS="-I\$(top_builddir)/sc/src -I\$(top_srcdir)/sc/src"
   P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.a"
 else
@@ -53,9 +54,11 @@ else
     SC_DETERMINE_CONFIG_PATH([P4EST_SC])
   fi
 fi
+AC_SUBST([P4EST_SC_DIR])
 AC_SUBST([P4EST_SC_CPPFLAGS])
 AC_SUBST([P4EST_SC_LDADD])
 AC_SUBST([P4EST_SC_CONFIG])
+AM_CONDITIONAL([P4EST_WITH_SC], [test "$P4EST_WITH_PROVIDE_SC" != "no"])
 
 # Checks for programs.
 echo "o----------------------------------"
