@@ -85,6 +85,7 @@ typedef struct p8est_tree
 {
   sc_array_t          quadrants;        /* locally stored quadrants */
   p8est_quadrant_t    first_desc, last_desc;    /* first and last descendent */
+  p4est_locidx_t      quadrants_offset; /* cumulative sum over earlier tress */
   p4est_locidx_t      quadrants_per_level[P8EST_MAXLEVEL + 1];  /* locals only */
   int8_t              maxlevel; /* highest local quadrant level */
 }

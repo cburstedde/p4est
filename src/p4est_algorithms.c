@@ -501,6 +501,11 @@ p4est_is_valid (p4est_t * p4est)
   lquadrants = 0;
   for (jz = 0; jz < p4est->trees->elem_count; ++jz) {
     tree = sc_array_index (p4est->trees, jz);
+    if (tree->quadrants_offset != lquadrants) {
+      P4EST_NOTICE ("p4est invalid quadrants offset\n");
+      failed = true;
+      goto failtest;
+    }
     if (!p4est_tree_is_complete (tree)) {
       P4EST_NOTICE ("p4est invalid not complete\n");
       failed = true;
@@ -2358,7 +2363,10 @@ p4est_partition_given (p4est_t * p4est,
         }
 
         /* The whole tree is dropped */
+        P4EST_QUADRANT_INIT (&tree->first_desc);
+        P4EST_QUADRANT_INIT (&tree->last_desc);
         sc_array_reset (quadrants);
+        tree->quadrants_offset = 0;
         for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
           tree->quadrants_per_level[i] = 0;
         }
@@ -2471,11 +2479,13 @@ p4est_partition_given (p4est_t * p4est,
   new_local_num_quadrants = 0;
   for (which_tree = 0; which_tree < new_first_local_tree; ++which_tree) {
     tree = sc_array_index (p4est->trees, which_tree);
+    tree->quadrants_offset = 0;
     P4EST_QUADRANT_INIT (&tree->first_desc);
     P4EST_QUADRANT_INIT (&tree->last_desc);
   }
   for (; which_tree <= new_last_local_tree; ++which_tree) {
     tree = sc_array_index (p4est->trees, which_tree);
+    tree->quadrants_offset = new_local_num_quadrants;
     quadrants = &tree->quadrants;
     P4EST_ASSERT (quadrants->elem_count > 0);
 
@@ -2500,6 +2510,7 @@ p4est_partition_given (p4est_t * p4est,
   }
   for (; which_tree < p4est->connectivity->num_trees; ++which_tree) {
     tree = sc_array_index (p4est->trees, which_tree);
+    tree->quadrants_offset = new_local_num_quadrants;
     P4EST_QUADRANT_INIT (&tree->first_desc);
     P4EST_QUADRANT_INIT (&tree->last_desc);
   }

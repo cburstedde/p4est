@@ -182,6 +182,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
     P4EST_QUADRANT_INIT (&tree->first_desc);
     P4EST_QUADRANT_INIT (&tree->last_desc);
+    tree->quadrants_offset = 0;
     for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       tree->quadrants_per_level[i] = 0;
     }
@@ -260,8 +261,16 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     }
     P4EST_VERBOSEF ("tree %lld quadrants %lu\n", (long long) jl,
                     (unsigned long) tree->quadrants.elem_count);
+
+    tree->quadrants_offset = p4est->local_num_quadrants;
     p4est->local_num_quadrants += tree->quadrants.elem_count;
     p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
+  }
+  if (last_tree >= 0) {
+    for (; jl < num_trees; ++jl) {
+      tree = sc_array_index (p4est->trees, jl);
+      tree->quadrants_offset = p4est->local_num_quadrants;
+    }
   }
 
   /* compute some member variables */
@@ -453,6 +462,7 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
   /* loop over all local trees */
   for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
     tree = p4est_array_index_topidx (p4est->trees, nt);
+    tree->quadrants_offset = p4est->local_num_quadrants;
     tquadrants = &tree->quadrants;
     quadrant_pool_size = p4est->quadrant_pool->elem_count;
     data_pool_size = 0;
@@ -592,6 +602,12 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
     P4EST_VERBOSEF ("Done refine tree %lld now %llu\n", (long long) nt,
                     (unsigned long long) tquadrants->elem_count);
   }
+  if (p4est->last_local_tree >= 0) {
+    for (; nt < p4est->connectivity->num_trees; ++nt) {
+      tree = p4est_array_index_topidx (p4est->trees, nt);
+      tree->quadrants_offset = p4est->local_num_quadrants;
+    }
+  }
 
   sc_list_destroy (list);
 
@@ -614,7 +630,7 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
   size_t              data_pool_size;
   size_t              incount, removed;
   size_t              cidz, first, last, rest, before;
-  p4est_locidx_t      num_quadrants;
+  p4est_locidx_t      num_quadrants, prev_offset;
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *c[P4EST_CHILDREN];
@@ -627,6 +643,7 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   /* loop over all local trees */
+  prev_offset = 0;
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
     tree = p4est_array_index_topidx (p4est->trees, jt);
     tquadrants = &tree->quadrants;
@@ -742,6 +759,8 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
       }
     }
     tree->maxlevel = (int8_t) maxlevel;
+    tree->quadrants_offset = prev_offset;
+    prev_offset += num_quadrants;
 
     /* do some sanity checks */
     P4EST_ASSERT (num_quadrants == (p4est_locidx_t) tquadrants->elem_count);
@@ -756,6 +775,12 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
     /* final log message for this tree */
     P4EST_VERBOSEF ("Done coarsen tree %lld now %llu\n", (long long) jt,
                     (unsigned long long) tquadrants->elem_count);
+  }
+  if (p4est->last_local_tree >= 0) {
+    for (; jt < p4est->connectivity->num_trees; ++jt) {
+      tree = p4est_array_index_topidx (p4est->trees, jt);
+      tree->quadrants_offset = p4est->local_num_quadrants;
+    }
   }
 
   /* compute global number of quadrants */
@@ -1678,6 +1703,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
   for (nt = first_tree; nt <= last_tree; ++nt) {
     /* check if we are the only processor in an isolated tree */
     tree = p4est_array_index_topidx (p4est->trees, nt);
+    tree->quadrants_offset = p4est->local_num_quadrants;
     tquadrants = &tree->quadrants;
     treecount = tquadrants->elem_count;
     if (!(tree_flags[nt] & fully_owned_flag) ||
@@ -1692,6 +1718,12 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
     }
     p4est->local_num_quadrants += tquadrants->elem_count;
     tquadrants = NULL;          /* safeguard */
+  }
+  if (last_tree >= 0) {
+    for (; nt < conn->num_trees; ++nt) {
+      tree = p4est_array_index_topidx (p4est->trees, nt);
+      tree->quadrants_offset = p4est->local_num_quadrants;
+    }
   }
 
 #ifdef P4EST_MPI
