@@ -174,9 +174,12 @@ p4est_node_equal_piggy_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
+#ifdef P4EST_DEBUG
+  const bool          clamped = *(bool *) u;
+#endif
 
-  P4EST_ASSERT (p4est_quadrant_is_node (q1, true));
-  P4EST_ASSERT (p4est_quadrant_is_node (q2, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, clamped));
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, clamped));
 
   return
     q1->p.which_tree == q2->p.which_tree && q1->x == q2->x && q1->y == q2->y
@@ -190,19 +193,22 @@ unsigned
 p4est_node_hash_piggy_fn (const void *v, const void *u)
 {
   const p4est_quadrant_t *q = v;
+#ifdef P4EST_DEBUG
+  const bool          clamped = *(bool *) u;
+#endif
   uint32_t            a, b, c;
 
-  P4EST_ASSERT (p4est_quadrant_is_node (q, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (q, clamped));
 
   a = (uint32_t) q->x;
   b = (uint32_t) q->y;
 #ifndef P4_TO_P8
-  c = 0xdeadbeefU;
+  c = (uint32_t) q->p.which_tree;
 #else
   c = (uint32_t) q->z;
-#endif
   sc_hash_mix (a, b, c);
   a += (uint32_t) q->p.which_tree;
+#endif
   sc_hash_final (a, b, c);
 
   return (unsigned) c;
@@ -227,10 +233,13 @@ p4est_node_unclamp (p4est_quadrant_t * n)
 {
   P4EST_ASSERT (p4est_quadrant_is_node (n, true));
 
-  if (n->x == P4EST_ROOT_LEN - 1) n->x = P4EST_ROOT_LEN;
-  if (n->y == P4EST_ROOT_LEN - 1) n->y = P4EST_ROOT_LEN;
+  if (n->x == P4EST_ROOT_LEN - 1)
+    n->x = P4EST_ROOT_LEN;
+  if (n->y == P4EST_ROOT_LEN - 1)
+    n->y = P4EST_ROOT_LEN;
 #ifdef P4_TO_P8
-  if (n->z == P4EST_ROOT_LEN - 1) n->z = P4EST_ROOT_LEN;
+  if (n->z == P4EST_ROOT_LEN - 1)
+    n->z = P4EST_ROOT_LEN;
 #endif
   P4EST_ASSERT (p4est_quadrant_is_node (n, false));
 }

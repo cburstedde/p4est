@@ -57,7 +57,7 @@ static const int8_t any_face_flag = 0x02;
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            p4est_locidx_t min_quadrants, size_t data_size,
-           p4est_init_t init_fn, void * user_pointer)
+           p4est_init_t init_fn, void *user_pointer)
 {
 #ifdef P4EST_MPI
   int                 mpiret;

@@ -689,7 +689,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   int                *procs, *all_ranges;
   int                *old_sharers, *new_sharers;
   char               *this_base;
-  bool                found;
+  bool                found, clamped = true;
+  void               *save_user_data;
   size_t              first_size, second_size, this_size;
   size_t              num_sharers, old_position, new_position;
   p4est_qcoord_t     *xyz;
@@ -782,18 +783,18 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
 
   indep_nodes = sc_hash_array_new (sizeof (p4est_indep_t),
                                    p4est_node_hash_piggy_fn,
-                                   p4est_node_equal_piggy_fn, NULL);
+                                   p4est_node_equal_piggy_fn, &clamped);
 #ifndef P4_TO_P8
   face_hangings = sc_hash_array_new (sizeof (p4est_hang2_t),
                                      p4est_node_hash_piggy_fn,
-                                     p4est_node_equal_piggy_fn, NULL);
+                                     p4est_node_equal_piggy_fn, &clamped);
 #else
   face_hangings = sc_hash_array_new (sizeof (p8est_hang4_t),
                                      p4est_node_hash_piggy_fn,
-                                     p4est_node_equal_piggy_fn, NULL);
+                                     p4est_node_equal_piggy_fn, &clamped);
   edge_hangings = sc_hash_array_new (sizeof (p8est_hang2_t),
                                      p4est_node_hash_piggy_fn,
-                                     p4est_node_equal_piggy_fn, NULL);
+                                     p4est_node_equal_piggy_fn, &clamped);
   sc_array_init (&exist_array, sizeof (int));
 #endif
 
@@ -918,9 +919,10 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   }
 
   /* Re-synchronize hash array and local nodes */
+  save_user_data = indep_nodes->internal_data.user_data;
   indep_nodes->internal_data.user_data = new_node_number;
   sc_hash_foreach (indep_nodes->h, p4est_nodes_foreach);
-  indep_nodes->internal_data.user_data = NULL;
+  indep_nodes->internal_data.user_data = save_user_data;
   for (il = 0; il < num_local_nodes; ++il) {
     P4EST_ASSERT (local_nodes[il] >= 0 && local_nodes[il] < num_indep_nodes);
     local_nodes[il] = new_node_number[local_nodes[il]];
@@ -1088,7 +1090,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
       node_number = (p4est_locidx_t *) xyz;
       *node_number = (p4est_locidx_t) position - offset_owned_indeps;
       in = sc_array_index (inda, position);
-      P4EST_ASSERT (p4est_node_equal_piggy_fn (&inkey, in, NULL));
+      P4EST_ASSERT (p4est_node_equal_piggy_fn (&inkey, in, &clamped));
       P4EST_ASSERT (in->pad8 >= 0);
       num_sharers = (size_t) in->pad8;
       P4EST_ASSERT (num_sharers <= shared_indeps->elem_count);

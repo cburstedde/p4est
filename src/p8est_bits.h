@@ -63,16 +63,16 @@ bool                p8est_quadrant_equal_fn (const void *v1, const void *v2,
 unsigned            p8est_quadrant_hash_fn (const void *v, const void *u);
 
 /** Test if two nodes are in the same tree and have equal Morton indices.
- * \param [in] v1   Pointer to a clamped node.
- * \param [in] v2   Pointer to a clamped node.
- * \param [in] u    User data, ignored.
+ * \param [in] v1   Pointer to a clamped or unclamped node, depending on u.
+ * \param [in] v2   Pointer to a clamped or unclamped node, depending on u.
+ * \param [in] u    User data, points to a bool holding the clamped flag.
  */
 bool                p8est_node_equal_piggy_fn (const void *v1,
                                                const void *v2, const void *u);
 
 /** Compute hash value of a node based on its tree and Morton index.
- * \param [in] v    Pointer to a clamped node.
- * \param [in] u    User data, ignored.
+ * \param [in] v    Pointer to a clamped or unclamped node, depending on u.
+ * \param [in] u    User data, points to a bool holding the clamped flag.
  */
 unsigned            p8est_node_hash_piggy_fn (const void *v, const void *u);
 
