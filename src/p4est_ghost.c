@@ -28,28 +28,12 @@
 
 #endif /* !P4_TO_P8 */
 
-#ifdef P4EST_MPI
-
-/** Gets the procid of the owner of \a q.
- *
- * \param [in] p4est  The forest in which to search for \a q
- * \param [in] treeid The tree id for which \a q belongs.
- * \param [in] q      The quadrant that is being searched for.
- *
- * \return Procid of the owner of \a q
- *                or -1 if the quadrant lies outside of the mesh.
- *
- * \warning Does not work for tree edge or corner neighbors.
- */
-static int
+int
 p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
-                           const p4est_quadrant_t * q)
+                           int face, const p4est_quadrant_t * q)
 {
   const int           rank = p4est->mpirank;
-  const p4est_qcoord_t rh = P4EST_ROOT_LEN;
   p4est_connectivity_t *conn = p4est->connectivity;
-  bool                quad_contact[2 * P4EST_DIM];
-  int                 face;
   p4est_topidx_t      ntreeid;
   p4est_quadrant_t    nq;
 #ifndef P4_TO_P8
@@ -67,41 +51,60 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   P4EST_QUADRANT_INIT (&nq);
 
   /* We are outside of the unit tree */
-#ifndef P4_TO_P8
-  quad_contact[0] = (q->y < 0);
-  quad_contact[1] = (q->x >= rh);
-  quad_contact[2] = (q->y >= rh);
-  quad_contact[3] = (q->x < 0);
-
-  /* Make sure we are not a tree corner */
-  P4EST_ASSERT (!((quad_contact[0] || quad_contact[2]) &&
-                  (quad_contact[1] || quad_contact[3])));
-#else
-  quad_contact[0] = (q->x < 0);
-  quad_contact[1] = (q->x >= rh);
-  quad_contact[2] = (q->y < 0);
-  quad_contact[3] = (q->y >= rh);
-  quad_contact[4] = (q->z < 0);
-  quad_contact[5] = (q->z >= rh);
-  P4EST_ASSERT (((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
-                ((quad_contact[2] || quad_contact[3]) ? 1 : 0) +
-                ((quad_contact[4] || quad_contact[5]) ? 1 : 0) == 1);
-#endif
-
-  ntreeid = -1;
-  for (face = 0; face < 2 * P4EST_DIM; ++face) {
-    if (quad_contact[face]) {
-      ntreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
-      if (ntreeid == treeid
-          && ((int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] ==
-              face)) {
-        /* This quadrant goes across a face with no neighbor */
-        return -1;
-      }
-      break;
+  if (face != -1) {
+    P4EST_ASSERT (face >= 0 && face < 2 * P4EST_DIM);
+    P4EST_ASSERT (treeid >= 0 && treeid < conn->num_trees);
+    ntreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
+    if (ntreeid == treeid
+        && ((int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] ==
+            face)) {
+      /* This quadrant goes across a face with no neighbor */
+      return -1;
     }
   }
-  P4EST_ASSERT (face < 2 * P4EST_DIM && ntreeid >= 0);
+  else {
+    /* We need to determine the face ourselves */
+    const p4est_qcoord_t rh = P4EST_ROOT_LEN;
+    bool                quad_contact[2 * P4EST_DIM];
+
+#ifndef P4_TO_P8
+    quad_contact[0] = (q->y < 0);
+    quad_contact[1] = (q->x >= rh);
+    quad_contact[2] = (q->y >= rh);
+    quad_contact[3] = (q->x < 0);
+
+    /* Make sure we are not a tree corner */
+    P4EST_ASSERT (!((quad_contact[0] || quad_contact[2]) &&
+                    (quad_contact[1] || quad_contact[3])));
+#else
+    quad_contact[0] = (q->x < 0);
+    quad_contact[1] = (q->x >= rh);
+    quad_contact[2] = (q->y < 0);
+    quad_contact[3] = (q->y >= rh);
+    quad_contact[4] = (q->z < 0);
+    quad_contact[5] = (q->z >= rh);
+
+    /* Make sure we are neither tree edge nor tree corner */
+    P4EST_ASSERT (((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
+                  ((quad_contact[2] || quad_contact[3]) ? 1 : 0) +
+                  ((quad_contact[4] || quad_contact[5]) ? 1 : 0) == 1);
+#endif
+
+    ntreeid = -1;
+    for (face = 0; face < 2 * P4EST_DIM; ++face) {
+      if (quad_contact[face]) {
+        ntreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
+        if (ntreeid == treeid
+            && ((int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] ==
+                face)) {
+          /* This quadrant goes across a face with no neighbor */
+          return -1;
+        }
+        break;
+      }
+    }
+    P4EST_ASSERT (face < 2 * P4EST_DIM && ntreeid >= 0);
+  }
 
 #ifndef P4_TO_P8
   transform = p4est_find_face_transform (conn, treeid, face);
@@ -116,6 +119,8 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
 
   return p4est_comm_find_owner (p4est, ntreeid, &nq, rank);
 }
+
+#ifdef P4EST_MPI
 
 /** Gets the procids of the owners of \a q.
  *
@@ -1131,12 +1136,12 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
 
         n1_proc = -1;
         for (i = 0; i < ncount; ++i) {
-          n0_proc = p4est_quadrant_find_owner (p4est, nt, &n[i]);
+          n0_proc = p4est_quadrant_find_owner (p4est, nt, face, &n[i]);
           if (i < ncheck) {
             /* Note that we will always check this
              * because it prevents deadlocks
              */
-            n0ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[i]);
+            n0ur_proc = p4est_quadrant_find_owner (p4est, nt, face, &nur[i]);
             if (n0_proc != n0ur_proc) {
               P4EST_NOTICE ("Small face owner inconsistency\n");
               failed = true;
@@ -1204,11 +1209,12 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
           /* We are not at a tree edge so we only have two neighbors
            * either inside the tree or across a face
            */
-          n0_proc = n1_proc = p4est_quadrant_find_owner (p4est, nt, &n[0]);
+          n0_proc = n1_proc =
+            p4est_quadrant_find_owner (p4est, nt, -1, &n[0]);
           if (!maxed) {
-            n1_proc = p4est_quadrant_find_owner (p4est, nt, &n[1]);
-            n0ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[0]);
-            n1ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[1]);
+            n1_proc = p4est_quadrant_find_owner (p4est, nt, -1, &n[1]);
+            n0ur_proc = p4est_quadrant_find_owner (p4est, nt, -1, &nur[0]);
+            n1ur_proc = p4est_quadrant_find_owner (p4est, nt, -1, &nur[1]);
 
             /* Note that we will always check this
              * because it prevents deadlocks
@@ -1296,9 +1302,9 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
           /* We are not at a tree edge or corner so
            * we only have one corner neighbor
            */
-          n0_proc = p4est_quadrant_find_owner (p4est, nt, &n[0]);
+          n0_proc = p4est_quadrant_find_owner (p4est, nt, -1, &n[0]);
           if (!maxed) {
-            n0ur_proc = p4est_quadrant_find_owner (p4est, nt, &nur[0]);
+            n0ur_proc = p4est_quadrant_find_owner (p4est, nt, -1, &nur[0]);
 
             /* Note that we will always check this
              * because it prevents deadlocks

@@ -24,6 +24,24 @@
 
 #include <p8est.h>
 
+/** Gets the processor id of a quadrant's owner.
+ * The quadrant can lie outside of a tree across faces (and only faces).
+ *
+ * \param [in] p8est  The forest in which to search for a quadrant.
+ * \param [in] treeid The tree id for which the quadrant belongs.
+ * \param [in] face   Supply a face direction if known, or -1 otherwise.
+ * \param [in] q      The quadrant that is being searched for.
+ *
+ * \return Processor id of the owner
+ *                or -1 if the quadrant lies outside of the mesh.
+ *
+ * \warning Does not work for tree edge or corner neighbors.
+ */
+int                 p8est_quadrant_find_owner (p8est_t * p8est,
+                                               p4est_topidx_t treeid,
+                                               int face,
+                                               const p8est_quadrant_t * q);
+
 /** Builds the ghost layer.
  *
  * This will gather the quadrants from each neighboring proc to build one layer
