@@ -49,7 +49,8 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
  *
  * \param [in] p4est              The forest for which the ghost layer will
  *                                be generated.
- * \param [out] ghost_layer       An array of quadrants which make up the
+ * \param [in] include_diagonals  Include neighbors across corners.
+ * \param [in,out] ghost_layer    An array of quadrants which make up the
  *                                ghost layer around \a p4est.  Their piggy1
  *                                data member is filled with their owner's
  *                                tree and processor ids.  Quadrants will be
@@ -58,11 +59,15 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
  *                                neighboring tree i.e., \c
  *                                p4est_quadrant_is_inside is true for the
  *                                quadrant and the neighboring tree.
+ * \param [out] ghost_owner       If not NULL, this array is allocated and
+ *                                filled with one rank per ghost.
  * \return                        Returns false if it fails due to violated
  *                                2:1 constraints, true otherwise.
  */
 bool                p4est_build_ghost_layer (p4est_t * p4est,
-                                             sc_array_t * ghost_layer);
+                                             bool include_diagonals,
+                                             sc_array_t * ghost_layer,
+                                             int **ghost_owner);
 
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *

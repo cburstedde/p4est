@@ -155,6 +155,7 @@ main (int argc, char **argv)
   int                 i;
   int                 mpiret;
   int                 wrongusage;
+  int                *ghost_owner;
   unsigned            crc;
   double              start, elapsed_refine;
   double              elapsed_balance, elapsed_rebalance;
@@ -350,10 +351,11 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  p4est_build_ghost_layer (p4est, &ghost_layer);
+  p4est_build_ghost_layer (p4est, true, &ghost_layer, &ghost_owner);
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_ghosts = start + MPI_Wtime ();
+  P4EST_FREE (ghost_owner);
 
   /* time the node numbering */
   mpiret = MPI_Barrier (mpi->mpicomm);

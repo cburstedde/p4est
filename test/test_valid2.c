@@ -81,6 +81,7 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
 {
+  int                *ghost_owner;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
 #ifdef P4_TO_P8
@@ -96,7 +97,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
   p4est_vtk_write_file (p4est, vtkname);
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  p4est_build_ghost_layer (p4est, &ghost_layer);
+  p4est_build_ghost_layer (p4est, true, &ghost_layer, &ghost_owner);
   nodes = p4est_nodes_new (p4est, &ghost_layer);
 #ifdef P4_TO_P8
   mesh = p8est_trilinear_mesh_new (p4est, nodes);
@@ -104,6 +105,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
 #endif
   p4est_nodes_destroy (nodes);
   sc_array_reset (&ghost_layer);
+  P4EST_FREE (ghost_owner);
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);

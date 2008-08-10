@@ -86,6 +86,12 @@ typedef struct p8est_hang2
     struct
     {
       p4est_topidx_t      which_tree;
+      p4est_locidx_t      local_num;
+    }
+    piggy_unused3;
+    struct
+    {
+      p4est_topidx_t      which_tree;
       p4est_locidx_t      depends[2];
     }
     piggy;
@@ -118,6 +124,12 @@ typedef struct p8est_hang4
       p4est_topidx_t      from_tree;
     }
     piggy_unused2;
+    struct
+    {
+      p4est_topidx_t      which_tree;
+      p4est_locidx_t      local_num;
+    }
+    piggy_unused3;
     struct
     {
       p4est_topidx_t      which_tree;

@@ -1650,6 +1650,7 @@ p4est_neighborhood_t *
 p4est_neighborhood_new (p4est_t * p4est)
 {
   bool                success;
+  int                *ghost_owner;
   p4est_topidx_t      local_num_trees, flt, nt;
   p4est_locidx_t      local_num_quadrants, lsum;
   p4est_tree_t       *tree;
@@ -1660,12 +1661,13 @@ p4est_neighborhood_new (p4est_t * p4est)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  success = p4est_build_ghost_layer (p4est, &ghost_layer);
+  success = p4est_build_ghost_layer (p4est, true, &ghost_layer, &ghost_owner);
   P4EST_ASSERT (success);
 
   nodes = p4est_nodes_new (p4est, &ghost_layer);
   p4est_nodes_destroy (nodes);
   sc_array_reset (&ghost_layer);
+  P4EST_FREE (ghost_owner);
 
   if (p4est->first_local_tree < 0) {
     flt = 0;

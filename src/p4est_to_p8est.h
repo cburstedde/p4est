@@ -168,6 +168,7 @@
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */
+#define p4est_quadrant_find_owner       p8est_quadrant_find_owner
 #define p4est_build_ghost_layer         p8est_build_ghost_layer
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced
