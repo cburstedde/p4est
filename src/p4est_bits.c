@@ -775,6 +775,96 @@ p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
+#ifndef P4_TO_P8
+
+void
+p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
+                                    int face, p4est_quadrant_t n[],
+                                    p4est_quadrant_t nur[])
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
+
+  n[0].level = (int8_t) (q->level + 1);
+  n[1].level = (int8_t) (q->level + 1);
+
+  switch (face) {
+  case 0:
+    n[0].x = q->x;
+    n[0].y = n[1].y = q->y - qh_2;
+    n[1].x = n[0].x + qh_2;
+    break;
+  case 1:
+    n[0].x = n[1].x = q->x + qh;
+    n[0].y = q->y;
+    n[1].y = n[0].y + qh_2;
+    break;
+  case 2:
+    n[0].x = q->x;
+    n[0].y = n[1].y = q->y + qh;
+    n[1].x = n[0].x + qh_2;
+    break;
+  case 3:
+    n[0].x = n[1].x = q->x - qh_2;
+    n[0].y = q->y;
+    n[1].y = n[0].y + qh_2;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+  P4EST_ASSERT (p4est_quadrant_is_extended (&n[0]));
+  P4EST_ASSERT (p4est_quadrant_is_extended (&n[1]));
+
+  if (nur != NULL) {
+    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
+
+    nur[0].x = n[0].x + dh;
+    nur[0].y = n[0].y + dh;
+    nur[0].level = P4EST_QMAXLEVEL;
+    P4EST_ASSERT (p4est_quadrant_is_extended (&nur[0]));
+    nur[1].x = n[1].x + dh;
+    nur[1].y = n[1].y + dh;
+    nur[1].level = P4EST_QMAXLEVEL;
+    P4EST_ASSERT (p4est_quadrant_is_extended (&nur[1]));
+  }
+}
+
+void
+p4est_quadrant_all_face_neighbors (const p4est_quadrant_t * q,
+                                   int face, p4est_quadrant_t n[])
+{
+  const int           qcid = p4est_quadrant_child_id (q);
+  const int           rqcid = p4est_corner_to_zorder[qcid];
+  p4est_quadrant_t   *r = &n[3];
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (q->level == P4EST_QMAXLEVEL) {
+    P4EST_QUADRANT_INIT (&n[0]);
+    P4EST_QUADRANT_INIT (&n[1]);
+  }
+  else {
+    p4est_quadrant_half_face_neighbors (q, face, n, NULL);
+  }
+
+  p4est_quadrant_face_neighbor (q, face, &n[2]);
+
+  /* Check to see if the larger element exists */
+  if (((face != rqcid) && (face != ((rqcid + 3) % 4))) || (q->level == 0)) {
+    P4EST_QUADRANT_INIT (r);
+  }
+  else {
+    p4est_quadrant_parent (q, r);
+    p4est_quadrant_face_neighbor (r, face, r);
+  }
+}
+
+#endif /* !P4_TO_P8 */
+
 void
 p4est_quadrant_corner_neighbor (const p4est_quadrant_t * q,
                                 int corner, p4est_quadrant_t * r)

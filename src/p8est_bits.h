@@ -283,6 +283,46 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
                                                   int face,
                                                   p8est_quadrant_t * r);
 
+/** Get the smaller face neighbors of \a q.
+ *
+ * Gets the smaller face neighbors, which are half of the size assuming the
+ * 2-1 constant.
+ *
+ * The order of the \a n[i] is given in the Morton ordering.
+ *
+ * \param [in]  q      The quadrant whose face neighbors will be constructed.
+ * \param [in]  face   The face across which to generate the neighbors.
+ * \param [out] n[0]..n[3] Filled with the four smaller face neighbors.
+ * \param [out] nur[0]..nur[3] If not NULL, filled with smallest quadrants
+ *                     that fit in the upper right corners of \a n.
+ */
+void                p8est_quadrant_half_face_neighbors (const p8est_quadrant_t
+                                                        * q, int face,
+                                                        p8est_quadrant_t n[],
+                                                        p8est_quadrant_t
+                                                        nur[]);
+
+/** Create all possible face neighbors of \a q.
+ *
+ * Gets the face neighbors, possible assuming the 2-1 constraint.
+ * If the larger or smaller quadrants do not exist than they are returned
+ * as initialized by P4EST_QUADRANT_INIT.
+ *
+ * The order of \a n[0] through \a n[3] are given in Morton ordering.
+ *
+ * \param [in]  q      The quadrant whose face neighbors will be constructed.
+ * \param [in]  face   The face across which to generate the neighbors.
+ * \param [out] n[0]..n[3] Filled with the smaller possible face neighbors,
+ *                     which are half of the size if they exist
+ *                     or initialized to P4EST_QUADRANT_INIT.
+ * \param [out] n[4]   Filled with the face neighbor, which is the same size.
+ * \param [out] n[5]   Filled with the face neighbor, which is twice the size
+ *                     if it exists or initialized to P4EST_QUADRANT_INIT.
+ */
+void                p8est_quadrant_all_face_neighbors (const p8est_quadrant_t
+                                                       * q, int face,
+                                                       p8est_quadrant_t n[]);
+
 /** Compute the edge neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     edge   The edge across which to generate the neighbor.

@@ -713,151 +713,6 @@ p4est_quadrant_on_corner_boundary (p4est_t * p4est, p4est_topidx_t treeid,
      (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] == face);
 }
 
-#ifndef P4_TO_P8
-
-/** Get the smallest face neighbors of \a q.
- *
- * Gets the smallest face neighbors, which are half of the size assuming the
- * 2-1 constant.
- *
- * The order of \a n0 and \a n1 are given in the morton ordering.
- *
- * \param [in]  q      The quadrant whose face neighbors will be constructed.
- * \param [in]  face   The face across which to generate the neighbors.  The
- *                     face is given in right hand order. So
- *                                2
- *                           +----------+
- *                           |          |
- *                           |          |
- *                          3|          |1
- *                           |          |
- *                           |          |
- *                           +----------+
- *                                0
- * \param [out] n[2]   Filled with the two possible face neighbors, which are
- *                     half of the size assuming the 2-1 constaint.
- * \param [out] nur[2] If not NULL, filled with smallest quadrants that fit
- *                     in the upper right corners of \a n.
- */
-static void
-p4est_quadrant_get_half_face_neighbors (const p4est_quadrant_t * q,
-                                        int face,
-                                        p4est_quadrant_t n[],
-                                        p4est_quadrant_t nur[])
-{
-  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
-  const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
-
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
-
-  n[0].level = (int8_t) (q->level + 1);
-  n[1].level = (int8_t) (q->level + 1);
-
-  switch (face) {
-  case 0:
-    n[0].x = q->x;
-    n[0].y = n[1].y = q->y - qh_2;
-    n[1].x = n[0].x + qh_2;
-    break;
-  case 1:
-    n[0].x = n[1].x = q->x + qh;
-    n[0].y = q->y;
-    n[1].y = n[0].y + qh_2;
-    break;
-  case 2:
-    n[0].x = q->x;
-    n[0].y = n[1].y = q->y + qh;
-    n[1].x = n[0].x + qh_2;
-    break;
-  case 3:
-    n[0].x = n[1].x = q->x - qh_2;
-    n[0].y = q->y;
-    n[1].y = n[0].y + qh_2;
-    break;
-  default:
-    SC_CHECK_NOT_REACHED ();
-    break;
-  }
-  P4EST_ASSERT (p4est_quadrant_is_extended (&n[0]));
-  P4EST_ASSERT (p4est_quadrant_is_extended (&n[1]));
-
-  if (nur != NULL) {
-    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
-
-    nur[0].x = n[0].x + dh;
-    nur[0].y = n[0].y + dh;
-    nur[0].level = P4EST_QMAXLEVEL;
-    P4EST_ASSERT (p4est_quadrant_is_extended (&nur[0]));
-    nur[1].x = n[1].x + dh;
-    nur[1].y = n[1].y + dh;
-    nur[1].level = P4EST_QMAXLEVEL;
-    P4EST_ASSERT (p4est_quadrant_is_extended (&nur[1]));
-  }
-}
-
-/** Get the possible face neighbors of \a q.
- *
- * Gets the all face neighbors, possible assuming the 2-1 constraint.
- * If the larger quadrant doesn't exist than it is returned
- * as initialized by P4EST_QUADRANT_INIT.
- *
- * The order of \a n0 and \a n1 are given in the morton ordering.
- *
- * \param [in]  q      The quadrant whose face neighbors will be constructed.
- * \param [in]  face   The face across which to generate the neighbors.  The
- *                     face is given in right hand order. So
- *                                2
- *                           +----------+
- *                           |          |
- *                           |          |
- *                          3|          |1
- *                           |          |
- *                           |          |
- *                           +----------+
- *                                0
- * \param [out] n[0]   Filled with the first possible face neighbor, which is
- *                     half of the size if it exists or initialized to
- *                     P4EST_QUADRANT_INIT.
- * \param [out] n[1]   Filled with the second possible face neighbor, which is
- *                     half of the size if it exists or initialized to
- *                     P4EST_QUADRANT_INIT.
- * \param [out] n[2]   Filled with the face neighbor, which is the same size.
- * \param [out] n[3]   Filled with the face neighbor, which is twice the size
- *                     if it exists or initialized to P4EST_QUADRANT_INIT.
- */
-static void
-p4est_quadrant_get_possible_face_neighbors (const p4est_quadrant_t * q,
-                                            int face, p4est_quadrant_t n[])
-{
-  const int           qcid = p4est_quadrant_child_id (q);
-  const int           rqcid = p4est_corner_to_zorder[qcid];
-  p4est_quadrant_t   *r = &n[3];
-
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-
-  if (q->level == P4EST_QMAXLEVEL) {
-    P4EST_QUADRANT_INIT (&n[0]);
-    P4EST_QUADRANT_INIT (&n[1]);
-  }
-  else {
-    p4est_quadrant_get_half_face_neighbors (q, face, n, NULL);
-  }
-
-  p4est_quadrant_face_neighbor (q, face, &n[2]);
-
-  /* Check to see if the larger element exists */
-  if (((face != rqcid) && (face != ((rqcid + 3) % 4))) || (q->level == 0)) {
-    P4EST_QUADRANT_INIT (r);
-  }
-  else {
-    p4est_quadrant_parent (q, r);
-    p4est_quadrant_face_neighbor (r, face, r);
-  }
-}
-
-#endif /* !P4_TO_P8 */
-
 #ifdef P4EST_MPI
 
 /** This adds a quadrant to the end of a buffer.
@@ -969,7 +824,7 @@ p4est_is_balanced (p4est_t * p4est)
         }
 
         /* Do more expensive face balance checks */
-        p4est_quadrant_get_possible_face_neighbors (q, face, n);
+        p4est_quadrant_all_face_neighbors (q, face, n);
         e0 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[0], NULL);
         e1 = p4est_quadrant_exists (p4est, &ghost_layer, nt, &n[1], NULL);
 #ifndef P4_TO_P8
@@ -1270,7 +1125,7 @@ p4est_build_ghost_layer (p4est_t * p4est, sc_array_t * ghost_layer)
           ncount = 1;
         }
         else {
-          p4est_quadrant_get_half_face_neighbors (q, face, n, nur);
+          p4est_quadrant_half_face_neighbors (q, face, n, nur);
           ncheck = ncount = P4EST_CHILDREN / 2;
         }
 

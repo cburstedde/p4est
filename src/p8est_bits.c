@@ -23,7 +23,7 @@
 #include "p4est_bits.c"
 
 bool
-p8est_quadrant_is_outside_edge (const p8est_quadrant_t * q)
+p8est_quadrant_is_outside_edge (const p4est_quadrant_t * q)
 {
   int                 outface[P4EST_DIM];
 
@@ -35,7 +35,7 @@ p8est_quadrant_is_outside_edge (const p8est_quadrant_t * q)
 }
 
 bool
-p8est_quadrant_is_outside_edge_extra (const p8est_quadrant_t * q, int *edge)
+p8est_quadrant_is_outside_edge_extra (const p4est_quadrant_t * q, int *edge)
 {
   int                 quad_contact[2 * P4EST_DIM];
   int                 face_axis[P4EST_DIM];
@@ -115,7 +115,7 @@ p8est_quadrant_is_family (const p4est_quadrant_t * q0,
 }
 
 bool
-p8est_quadrant_is_familyv (const p4est_quadrant_t q[])
+p4est_quadrant_is_familyv (const p4est_quadrant_t q[])
 {
   const int8_t        level = q[0].level;
   p4est_qcoord_t      inc;
@@ -147,7 +147,7 @@ p8est_quadrant_is_familyv (const p4est_quadrant_t q[])
 }
 
 bool
-p8est_quadrant_is_familypv (p4est_quadrant_t * q[])
+p4est_quadrant_is_familypv (p4est_quadrant_t * q[])
 {
   const int8_t        level = q[0]->level;
   p4est_qcoord_t      inc;
@@ -184,8 +184,99 @@ p8est_quadrant_is_familypv (p4est_quadrant_t * q[])
 }
 
 void
-p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
-                              int edge, p8est_quadrant_t * r)
+p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
+                                    int face, p4est_quadrant_t n[],
+                                    p4est_quadrant_t nur[])
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
+  int                 i;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
+  P4EST_ASSERT (0 <= face && face < 2 * P4EST_DIM);
+
+  n[0].x = q->x + ((face == 0) ? -qh_2 : (face == 1) ? qh : 0);
+  n[0].y = q->y + ((face == 2) ? -qh_2 : (face == 3) ? qh : 0);
+  n[0].z = q->z + ((face == 4) ? -qh_2 : (face == 5) ? qh : 0);
+  switch (face / 2) {
+  case 0:
+    for (i = 1; i < 4; ++i) {
+      n[i].x = n[0].x;
+      n[i].y = n[0].y + (i & 0x01) * qh_2;
+      n[i].z = n[0].z + ((i & 0x02) / 2) * qh_2;
+    }
+    break;
+  case 1:
+    for (i = 1; i < 4; ++i) {
+      n[i].x = n[0].x + (i & 0x01) * qh_2;
+      n[i].y = n[0].y;
+      n[i].z = n[0].z + ((i & 0x02) / 2) * qh_2;
+    }
+    break;
+  case 2:
+    for (i = 1; i < 4; ++i) {
+      n[i].x = n[0].x + (i & 0x01) * qh_2;
+      n[i].y = n[0].y + ((i & 0x02) / 2) * qh_2;
+      n[i].z = n[0].z;
+    }
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+    break;
+  }
+  for (i = 0; i < 4; ++i) {
+    n[i].level = (int8_t) (q->level + 1);
+    P4EST_ASSERT (p4est_quadrant_is_extended (&n[i]));
+  }
+
+  if (nur != NULL) {
+    const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
+
+    for (i = 0; i < 4; ++i) {
+      nur[i].x = n[i].x + dh;
+      nur[i].y = n[i].y + dh;
+      nur[i].z = n[i].z + dh;
+      nur[i].level = P4EST_QMAXLEVEL;
+      P4EST_ASSERT (p4est_quadrant_is_extended (&nur[i]));
+    }
+  }
+}
+
+void
+p4est_quadrant_all_face_neighbors (const p4est_quadrant_t * q,
+                                   int face, p4est_quadrant_t n[])
+{
+  const int           qcid = p4est_quadrant_child_id (q);
+  p4est_quadrant_t   *r = &n[5];
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (q->level == P4EST_QMAXLEVEL) {
+    P4EST_QUADRANT_INIT (&n[0]);
+    P4EST_QUADRANT_INIT (&n[1]);
+    P4EST_QUADRANT_INIT (&n[2]);
+    P4EST_QUADRANT_INIT (&n[3]);
+  }
+  else {
+    p4est_quadrant_half_face_neighbors (q, face, n, NULL);
+  }
+
+  p4est_quadrant_face_neighbor (q, face, &n[4]);
+
+  /* Check to see if the larger neighbor exists */
+  if (((qcid >> (face / 2)) & 0x01) != (face & 0x01) || q->level == 0) {
+    P4EST_QUADRANT_INIT (r);
+  }
+  else {
+    p4est_quadrant_parent (q, r);
+    p4est_quadrant_face_neighbor (r, face, r);
+  }
+}
+
+void
+p8est_quadrant_edge_neighbor (const p4est_quadrant_t * q,
+                              int edge, p4est_quadrant_t * r)
 {
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
 
@@ -274,7 +365,7 @@ p8est_quadrant_children (const p4est_quadrant_t * q,
 }
 
 void
-p8est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
+p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 {
   const int8_t        level = (int8_t) (q->level + 1);
   const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
@@ -323,12 +414,12 @@ p8est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
   c[7].level = level;
 
   /* this also verifies p4est_quadrant_is_extended (c[i]) */
-  P4EST_ASSERT (p8est_quadrant_is_familyv (c));
+  P4EST_ASSERT (p4est_quadrant_is_familyv (c));
 }
 
 void
-p8est_quadrant_transform_face (const p8est_quadrant_t * q,
-                               p8est_quadrant_t * r, const int ftransform[])
+p8est_quadrant_transform_face (const p4est_quadrant_t * q,
+                               p4est_quadrant_t * r, const int ftransform[])
 {
   p4est_qcoord_t      mh, tRmh, Rmh;
   p4est_qcoord_t     *target_xyz[3];
@@ -415,7 +506,7 @@ p8est_quadrant_transform_face (const p8est_quadrant_t * q,
 }
 
 bool
-p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
+p8est_quadrant_touches_edge (const p4est_quadrant_t * q,
                              int edge, bool inside)
 {
   int                 quad_contact[2 * P4EST_DIM];
@@ -426,7 +517,7 @@ p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
 
   axis = edge / 4;
   if (q->level == P4EST_MAXLEVEL) {
-    P4EST_ASSERT (p8est_quadrant_is_node (q, inside));
+    P4EST_ASSERT (p4est_quadrant_is_node (q, inside));
     lower = 0;
     upper = P4EST_ROOT_LEN - (int) inside;
   }
@@ -474,8 +565,8 @@ p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
 }
 
 void
-p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
-                               p8est_quadrant_t * r,
+p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
+                               p4est_quadrant_t * r,
                                const p8est_edge_info_t * ei,
                                const p8est_edge_transform_t * et, bool inside)
 {
@@ -559,8 +650,8 @@ p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
 }
 
 void
-p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
-                           p8est_quadrant_t * r, int edge)
+p8est_quadrant_shift_edge (const p4est_quadrant_t * q,
+                           p4est_quadrant_t * r, int edge)
 {
   int                 outface;
   int                 cid, sid, step[P4EST_DIM];
