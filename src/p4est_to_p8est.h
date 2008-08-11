@@ -64,10 +64,7 @@
 #define p4est_neighborhood_t            p8est_neighborhood_t
 
 /* redefine external variables */
-#define p4est_initial_quadrants_per_processor \
-                                        p8est_initial_quadrants_per_processor
-#define p4est_refine_recursive          p8est_refine_recursive
-#define p4est_coarsen_recursive         p8est_coarsen_recursive
+#define p4est_face_dual                 p8est_face_dual
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 #define p4est_num_ranges                p8est_num_ranges
 

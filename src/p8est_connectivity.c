@@ -36,6 +36,7 @@ const int           p8est_face_edges[6][4] =
  { 1, 3, 10, 11 },
  { 0, 1,  4,  5 },
  { 2, 3,  6,  7 }};
+const int           p8est_face_dual[6] = { 1, 0, 3, 2, 5, 4 };
 const int           p8est_face_permutations[8][4] =
 {{ 0, 1, 2, 3 },                /* no.  0 of 0..23 */
  { 0, 2, 1, 3 },                /* no.  2 of 0..23 */
