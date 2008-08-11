@@ -445,8 +445,8 @@ p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
 
 p4est_locidx_t
 p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
-                            p4est_topidx_t treeid, int *pface,
-                            const p4est_quadrant_t * q, int *owner_rank)
+                            p4est_topidx_t treeid, const p4est_quadrant_t * q,
+                            int *pface, int *phang, int *owner_rank)
 {
   const int           rank = p4est->mpirank;
   int                 qproc;
@@ -460,6 +460,7 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   int                 transform;
   p4est_quadrant_t    tempq;
 #else
+  int                 face_ref, face_perm;
   int                 ftransform[9];
   p4est_topidx_t      tqtreeid2;
 #endif
@@ -471,6 +472,13 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
     return -1;
   }
   ta = NULL;
+
+  /* determine the hanging face number */
+  if (phang != NULL) {
+    P4EST_ASSERT (*phang >= 0 && *phang < P4EST_CHILDREN);
+    *phang = p4est_face_child_hang[face][*phang];
+    P4EST_ASSERT (*phang >= 0 && *phang < P4EST_CHILDREN / 2);
+  }
 
   /* q is in the unit domain */
   if (p4est_quadrant_is_inside_root (q)) {
@@ -499,9 +507,20 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   /* neighbor is across a tree face */
   tqtreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
   nface = (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face];
-  *pface = nface % 6;
   if (tqtreeid == treeid && nface == face) {
     return -2;
+  }
+
+  /* transform the hanging face number */
+  *pface = nface % (2 * P4EST_DIM);
+  if (phang != NULL) {
+#ifndef P4_TO_P8
+    SC_CHECK_ABORT (false, "Not implemented in 2D\n");
+#else
+    face_ref = p8est_face_permutation_refs[face][*pface];
+    face_perm = p8est_face_permutation_sets[face_ref][nface / 6];
+    *phang = p8est_face_permutations[face_perm][*phang];
+#endif
   }
 
   /* transform quadrant */
