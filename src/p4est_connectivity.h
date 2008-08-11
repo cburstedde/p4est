@@ -84,6 +84,9 @@ extern const int    p4est_transform_table[4][4][2];
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p4est_face_dual[4];
 
+/** Store the hanging face number in the big neighbor of a small quadrant. */
+extern const int    p4est_face_child_hang[4][4];
+
 /** Hanging corners and faces indexed by child id, two each. */
 extern const int    p4est_hanging_corner[4][2];
 extern const int    p4est_hanging_face[4][2];

@@ -26,6 +26,11 @@ const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 const int           p4est_zface_to_rface[4] = { 3, 1, 0, 2 };
 
 const int           p4est_face_dual[4] = { 2, 3, 0, 1 };
+const int           p4est_face_child_hang[4][4] =
+{{  0,  1, -1, -1 },
+ { -1,  0, -1,  1 },
+ { -1, -1,  0,  1 },
+ {  0, -1,  1, -1 }};
 
 const int           p4est_transform_table[4][4][2] =
 {{{2, 4}, {3, 5}, {0, 6}, {1, 7}},

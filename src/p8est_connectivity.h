@@ -122,6 +122,9 @@ extern const int    p8est_face_edges[6][4];
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
 
+/** Store the hanging face number in the big neighbor of a small quadrant. */
+extern const int    p8est_face_child_hang[6][8];
+
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_permutations[8][4];
 
