@@ -79,7 +79,8 @@ bool                p8est_build_ghost_layer (p8est_t * p8est,
  * \param [in]  treeid       The tree id for which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
  * \param [in,out] face      On input, face id across which \a q was created.
- *                           On output, face number in the neighbor's system.
+ *                           On output, the neighbor's face number augmented
+ *                           by orientation, so face is in 0..23.
  * \param [out] hang         If not NULL, signals that q is bigger than
  *                           the quadrant it came from.  The child id
  *                           of that originating quadrant is passed in hang.

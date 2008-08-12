@@ -508,20 +508,25 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   tqtreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
   nface = (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face];
   if (tqtreeid == treeid && nface == face) {
+    *owner_rank = -1;
+    *pface = -1;
+    if (phang) {
+      *phang = -1;
+    }
     return -2;
   }
 
   /* transform the hanging face number */
-  *pface = nface % (2 * P4EST_DIM);
-  if (phang != NULL) {
 #ifndef P4_TO_P8
-    SC_CHECK_ABORT (false, "Not implemented in 2D\n");
+  SC_CHECK_ABORT (false, "Not implemented in 2D\n");
 #else
-    face_ref = p8est_face_permutation_refs[face][*pface];
+  *pface = nface;
+  if (phang != NULL) {
+    face_ref = p8est_face_permutation_refs[face][nface % 6];
     face_perm = p8est_face_permutation_sets[face_ref][nface / 6];
     *phang = p8est_face_permutations[face_perm][*phang];
-#endif
   }
+#endif
 
   /* transform quadrant */
 #ifndef P4_TO_P8
