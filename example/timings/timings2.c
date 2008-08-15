@@ -31,7 +31,8 @@
  * Usage: p8est_timings <configuration> <level>
  *        possible configurations:
  *        o unit      Refinement on the unit cube.
- *        o periodic  Refinement on the unit cube with periodic b.c.
+ *        o periodic  Refinement on the unit cube with all-periodic b.c.
+ *        o rotwrap   Refinement on the unit cube with weird periodic b.c.
  *        o twocubes  Refinement on a forest with two trees.
  *        o rotcubes  Refinement on a forest with six rotated trees.
  */
@@ -63,6 +64,7 @@ typedef enum
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
 #else
+  P4EST_CONFIG_ROTWRAP,
   P4EST_CONFIG_TWOCUBES,
   P4EST_CONFIG_ROTCUBES,
 #endif
@@ -105,8 +107,11 @@ static const timings_regression_t regression[] =
   { P4EST_CONFIG_UNIT, 1, 5, 0xe1ffa67bU },
   { P4EST_CONFIG_UNIT, 1, 6, 0x2cad814dU },
   { P4EST_CONFIG_UNIT, 3, 8, 0xeb252238U },
-  { P4EST_CONFIG_PERIODIC, 2, 6, 0x372f7402U },
-  { P4EST_CONFIG_PERIODIC, 7, 6, 0xa2f1ee48U },
+  { P4EST_CONFIG_PERIODIC, 1, 5, 0x99874fedU },
+  { P4EST_CONFIG_PERIODIC, 2, 5, 0x575af6d5U },
+  { P4EST_CONFIG_PERIODIC, 7, 6, 0xbc35524aU },
+  { P4EST_CONFIG_ROTWRAP, 2, 6, 0x372f7402U },
+  { P4EST_CONFIG_ROTWRAP, 7, 6, 0xa2f1ee48U },
   { P4EST_CONFIG_TWOCUBES, 5, 6, 0xa8b1f54eU },
   { P4EST_CONFIG_TWOCUBES, 8, 5, 0x98d3579dU },
   { P4EST_CONFIG_ROTCUBES, 1, 5, 0x404e4aa8U },
@@ -196,7 +201,7 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
     "      unit|periodic|three|moebius|star\n"
 #else
-    "      unit|periodic|twocubes|rotcubes\n"
+    "      unit|periodic|rotwrap|twocubes|rotcubes\n"
 #endif
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
@@ -224,6 +229,9 @@ main (int argc, char **argv)
       config = P4EST_CONFIG_STAR;
     }
 #else
+    else if (!strcmp (config_name, "rotwrap")) {
+      config = P4EST_CONFIG_ROTWRAP;
+    }
     else if (!strcmp (config_name, "twocubes")) {
       config = P4EST_CONFIG_TWOCUBES;
     }
@@ -263,7 +271,10 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
 #ifndef P4_TO_P8
-  if (config == P4EST_CONFIG_THREE) {
+  if (config == P4EST_CONFIG_PERIODIC) {
+    connectivity = p4est_connectivity_new_periodic ();
+  }
+  else if (config == P4EST_CONFIG_THREE) {
     connectivity = p4est_connectivity_new_corner ();
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
@@ -272,21 +283,21 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_STAR) {
     connectivity = p4est_connectivity_new_star ();
   }
-  else if (config == P4EST_CONFIG_PERIODIC) {
-    connectivity = p4est_connectivity_new_periodic ();
-  }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
 #else
-  if (config == P4EST_CONFIG_TWOCUBES) {
+  if (config == P4EST_CONFIG_PERIODIC) {
+    connectivity = p8est_connectivity_new_periodic ();
+  }
+  else if (config == P4EST_CONFIG_ROTWRAP) {
+    connectivity = p8est_connectivity_new_rotwrap ();
+  }
+  else if (config == P4EST_CONFIG_TWOCUBES) {
     connectivity = p8est_connectivity_new_twocubes ();
   }
   else if (config == P4EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();
-  }
-  else if (config == P4EST_CONFIG_PERIODIC) {
-    connectivity = p8est_connectivity_new_periodic ();
   }
   else {
     connectivity = p8est_connectivity_new_unitcube ();

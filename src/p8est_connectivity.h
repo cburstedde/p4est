@@ -189,11 +189,15 @@ bool                p8est_connectivity_is_valid (p8est_connectivity_t *
  */
 p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
 
+/** Create a connectivity structure for an all-periodic unit cube.
+ */
+p8est_connectivity_t *p8est_connectivity_new_periodic (void);
+
 /** Create a connectivity structure for a mostly periodic unit cube.
  * The left and right faces are identified, and bottom and top rotated.
  * Front and back are not identified.
  */
-p8est_connectivity_t *p8est_connectivity_new_periodic (void);
+p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
 
 /** Create a connectivity structure that contains two cubes.
  */

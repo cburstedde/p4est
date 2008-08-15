@@ -23,7 +23,8 @@
  * Usage: p8est_simple <configuration> <level>
  *        possible configurations:
  *        o unit      The unit cube.
- *        o periodic  The unit cube with various self-periodic b.c.
+ *        o periodic  The unit cube with all-periodic boundary conditions.
+ *        o rotwrap   The unit cube with various self-periodic b.c.
  *        o twocubes  Two connected cubes.
  *        o rotcubes  A collection of four connected rotated cubes.
  */
@@ -41,6 +42,7 @@ typedef enum
   P8EST_CONFIG_NULL,
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
+  P8EST_CONFIG_ROTWRAP,
   P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_ROTCUBES,
 }
@@ -77,9 +79,13 @@ static const simple_regression_t regression[] =
  { P8EST_CONFIG_UNIT, 3, 6, 0xce19fee3U },
  { P8EST_CONFIG_TWOCUBES, 1, 4, 0xd9e96b31U },
  { P8EST_CONFIG_TWOCUBES, 3, 5, 0xe8b16b4aU },
- { P8EST_CONFIG_PERIODIC, 1, 5, 0xe4d123b2U },
+ { P8EST_CONFIG_PERIODIC, 1, 4, 0x28304c83U },
+ { P8EST_CONFIG_PERIODIC, 7, 4, 0x28304c83U },
  { P8EST_CONFIG_PERIODIC, 3, 5, 0xe4d123b2U },
- { P8EST_CONFIG_PERIODIC, 5, 6, 0x81c22cc6U },
+ { P8EST_CONFIG_PERIODIC, 6, 6, 0x81c22cc6U },
+ { P8EST_CONFIG_ROTWRAP, 1, 5, 0xe4d123b2U },
+ { P8EST_CONFIG_ROTWRAP, 3, 5, 0xe4d123b2U },
+ { P8EST_CONFIG_ROTWRAP, 5, 6, 0x81c22cc6U },
  { P8EST_CONFIG_ROTCUBES, 1, 5, 0x5c497bdaU },
  { P8EST_CONFIG_ROTCUBES, 3, 5, 0x5c497bdaU },
  { P8EST_CONFIG_ROTCUBES, 5, 6, 0x00530556U },
@@ -183,7 +189,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|twocubes|rotcubes\n"
+    "      unit|periodic|rotwrap|twocubes|rotcubes\n"
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
@@ -197,6 +203,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P8EST_CONFIG_PERIODIC;
+    }
+    else if (!strcmp (argv[1], "rotwrap")) {
+      config = P8EST_CONFIG_ROTWRAP;
     }
     else if (!strcmp (argv[1], "twocubes")) {
       config = P8EST_CONFIG_TWOCUBES;
@@ -229,6 +238,9 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
+  }
+  else if (config == P8EST_CONFIG_ROTWRAP) {
+    connectivity = p8est_connectivity_new_rotwrap ();
   }
   else if (config == P8EST_CONFIG_TWOCUBES) {
     connectivity = p8est_connectivity_new_twocubes ();
