@@ -51,7 +51,7 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   cid = p4est_quadrant_child_id (quadrant);
   if (cid == 0 || cid == 3
 #ifdef P4_TO_P8
-      || cid == 5 || cid == 6
+      || cid == 6
 #endif
     ) {
     return 1;
@@ -79,9 +79,11 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
+check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
+           const char *vtkname, unsigned crc_expected)
 {
   int                *ghost_owner;
+  unsigned            crc_computed;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
 #ifdef P4_TO_P8
@@ -95,6 +97,11 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn, const char *vtkname)
   p4est_balance (p4est, NULL);
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, vtkname);
+  crc_computed = p4est_checksum (p4est);
+
+  if (p4est->mpisize == 2 && p4est->mpirank == 0) {
+    SC_CHECK_ABORT (crc_computed == crc_expected, "Checksum mismatch");
+  }
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
   p4est_build_ghost_layer (p4est, true, &ghost_layer, &ghost_owner);
@@ -131,16 +138,26 @@ main (int argc, char **argv)
 
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),
-             "test_unitsquare");
-  check_all (mpicomm, p4est_connectivity_new_corner (), "test_corner");
-  check_all (mpicomm, p4est_connectivity_new_moebius (), "test_moebius");
-  check_all (mpicomm, p4est_connectivity_new_star (), "test_star");
-  check_all (mpicomm, p4est_connectivity_new_periodic (), "test_periodic2");
+             "test_unitsquare", 0xef45243bU);
+  check_all (mpicomm, p4est_connectivity_new_periodic (),
+             "test_periodic2", 0x266d2739U);
+  check_all (mpicomm, p4est_connectivity_new_corner (),
+             "test_corner", 0x9dad92ccU);
+  check_all (mpicomm, p4est_connectivity_new_moebius (),
+             "test_moebius", 0xbbc10f7fU);
+  check_all (mpicomm, p4est_connectivity_new_star (),
+             "test_star", 0xfb28233fU);
 #else
-  check_all (mpicomm, p8est_connectivity_new_unitcube (), "test_unitcube");
-  check_all (mpicomm, p8est_connectivity_new_periodic (), "test_periodic3");
-  check_all (mpicomm, p8est_connectivity_new_twocubes (), "test_twocubes");
-  check_all (mpicomm, p8est_connectivity_new_rotcubes (), "test_rotcubes");
+  check_all (mpicomm, p8est_connectivity_new_unitcube (),
+             "test_unitcube", 0x2574801fU);
+  check_all (mpicomm, p8est_connectivity_new_periodic (),
+             "test_periodic3", 0xdc7e8a93U);
+  check_all (mpicomm, p8est_connectivity_new_rotwrap (),
+             "test_rotwrap", 0xa675888dU);
+  check_all (mpicomm, p8est_connectivity_new_twocubes (),
+             "test_twocubes", 0x7188978aU);
+  check_all (mpicomm, p8est_connectivity_new_rotcubes (),
+             "test_rotcubes", 0xc0e1b235U);
 #endif
 
   /* clean up and exit */
