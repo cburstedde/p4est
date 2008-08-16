@@ -41,7 +41,6 @@ if test "$P4EST_WITH_PROVIDE_SC" = yes ; then
   P4EST_SC_CPPFLAGS="-I\$(top_builddir)/sc/src -I\$(top_srcdir)/sc/src"
   P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.a"
 else
-  P4EST_WITH_PROVIDE_ZLIB=no
   if test "$P4EST_WITH_PROVIDE_SC" != no ; then
     P4EST_SC_DIR="$P4EST_WITH_PROVIDE_SC"
     if test ! -d "$P4EST_SC_DIR" ; then
@@ -52,6 +51,12 @@ else
     SC_DETERMINE_LIBRARY_PATH([P4EST_SC],
                               [$P4EST_WITH_PROVIDE_SC_LDADD -lsc])
     SC_DETERMINE_CONFIG_PATH([P4EST_SC])
+    # If the specified SC is an installation path, search for zlib there.
+    if test -d "$P4EST_SC_DIR/include" -a ! -f "$P4EST_SC_INC/sc_zlib.h" ; then
+      P4EST_WITH_PROVIDE_ZLIB=no
+    fi
+  else
+    P4EST_WITH_PROVIDE_ZLIB=no
   fi
 fi
 AC_SUBST([P4EST_SC_DIR])
