@@ -106,7 +106,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (rank, sc_generic_abort_fn, &mpicomm, NULL, SC_LP_DEFAULT);
+  sc_init (rank, sc_generic_abort, &mpicomm, NULL, SC_LP_DEFAULT);
 
   if (rank == 0) {
     /* Make a temporary file to hold the mesh */
