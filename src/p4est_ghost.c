@@ -1632,6 +1632,9 @@ failtest:
 #else /* !P4EST_MPI */
   /* If we are not running with mpi then we don't need to do anything */
   sc_array_reset (ghost_layer);
+  if (ghost_owner != NULL) {
+    *ghost_owner = NULL;
+  }
 #endif /* !PEST_MPI */
 
   return true;
