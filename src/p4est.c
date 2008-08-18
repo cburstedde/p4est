@@ -432,7 +432,6 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
 {
   size_t              quadrant_pool_size, data_pool_size;
   bool                dorefine;
-  int                 skey, *key = &skey;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
   size_t              incount, current, restpos, movecount;
@@ -455,6 +454,9 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
      qalloc is a quadrant that has been allocated through quadrant_pool
      qpop is a quadrant that has been allocated through quadrant_pool
      never mix these two types of quadrant pointers
+
+     The quadrant->pad8 field of list quadrants is interpreted as boolean
+     and set to true for quadrants that have already been refined.
    */
   list = sc_list_new (NULL);
   p4est->local_num_quadrants = 0;
@@ -500,7 +502,8 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
 
     /* now we have a quadrant to refine, prepend it to the list */
     qalloc = sc_mempool_alloc (p4est->quadrant_pool);
-    *qalloc = *q;               /* never prepend array members */
+    *qalloc = *q;               /* never prepend array members directly */
+    qalloc->pad8 = false;       /* this quadrant has not been refined yet */
     sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
 
     /*
@@ -513,20 +516,19 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
     while (list->elem_count > 0) {
       qpop = sc_list_pop (list);
       if (dorefine ||
-          ((refine_recursive || qpop->p.user_data != key) &&
+          ((refine_recursive || !qpop->pad8) &&
            qpop->level < P4EST_QMAXLEVEL && refine_fn (p4est, nt, qpop))) {
         dorefine = false;
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
 
         /* compute children and prepend them to the list */
-        if (qpop->p.user_data != key) {
-          p4est_quadrant_free_data (p4est, qpop);
-        }
+        p4est_quadrant_free_data (p4est, qpop);
         c0 = qpop;
         c1 = sc_mempool_alloc (p4est->quadrant_pool);
         c2 = sc_mempool_alloc (p4est->quadrant_pool);
         c3 = sc_mempool_alloc (p4est->quadrant_pool);
+
 #ifdef P4_TO_P8
         c4 = sc_mempool_alloc (p4est->quadrant_pool);
         c5 = sc_mempool_alloc (p4est->quadrant_pool);
@@ -537,16 +539,18 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
 #else
         p4est_quadrant_children (qpop, c0, c1, c2, c3);
 #endif
+        p4est_quadrant_init_data (p4est, nt, c0, init_fn);
+        p4est_quadrant_init_data (p4est, nt, c1, init_fn);
+        p4est_quadrant_init_data (p4est, nt, c2, init_fn);
+        p4est_quadrant_init_data (p4est, nt, c3, init_fn);
+        c0->pad8 = c1->pad8 = c2->pad8 = c3->pad8 = true;
 
-        c0->p.user_data = key;
-        c1->p.user_data = key;
-        c2->p.user_data = key;
-        c3->p.user_data = key;
 #ifdef P4_TO_P8
-        c4->p.user_data = key;
-        c5->p.user_data = key;
-        c6->p.user_data = key;
-        c7->p.user_data = key;
+        p4est_quadrant_init_data (p4est, nt, c4, init_fn);
+        p4est_quadrant_init_data (p4est, nt, c5, init_fn);
+        p4est_quadrant_init_data (p4est, nt, c6, init_fn);
+        p4est_quadrant_init_data (p4est, nt, c7, init_fn);
+        c4->pad8 = c5->pad8 = c6->pad8 = c7->pad8 = true;
 
         sc_list_prepend (list, c7);
         sc_list_prepend (list, c6);
@@ -565,7 +569,8 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
           while (movecount > 0) {
             q = sc_array_index (tquadrants, restpos);
             qalloc = sc_mempool_alloc (p4est->quadrant_pool);
-            *qalloc = *q;       /* never append array members */
+            *qalloc = *q;       /* never append array members directly */
+            qalloc->pad8 = false;       /* has not been refined yet */
             sc_list_append (list, qalloc);      /* only newly allocated quadrants */
             --movecount;
             ++restpos;
@@ -573,9 +578,6 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
         }
 
         /* store new quadrant and update counters */
-        if (qpop->p.user_data == key) {
-          p4est_quadrant_init_data (p4est, nt, qpop, init_fn);
-        }
         q = sc_array_index (tquadrants, current);
         *q = *qpop;
         maxlevel = SC_MAX (maxlevel, (int) qpop->level);
