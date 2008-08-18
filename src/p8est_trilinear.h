@@ -29,6 +29,8 @@
 
 #include <p8est_mesh.h>
 
+#ifndef TRILINEAR_MESH_H
+
 /** tick_t: The unit of the embeded integer domain. */
 typedef int32_t     tick_t;
 
@@ -208,6 +210,8 @@ typedef struct trilinear_mesh
 }
 trilinear_mesh_t;
 
+#endif /* !TRILINEAR_MESH_H */
+
 /** Creates a trilinear mesh structure from a p8est and its node data.
  */
 trilinear_mesh_t   *p8est_trilinear_mesh_new (p8est_t * p8est,
@@ -216,66 +220,5 @@ trilinear_mesh_t   *p8est_trilinear_mesh_new (p8est_t * p8est,
 /** Frees a trilinear mesh structure.
  */
 void                p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh);
-
-/** p8est_trilinear_neighbor_t
- *
- * The face neighbors are ordered in -x, +x, -y, +y, -z, and +z directions.
- *
- * For each direction, the neighbor(s) may be:
- *
- * 1. Out of the domain.
- *
- *      face_neighbor_eid[direction][0] = -1.
- *      face_neighbor_eid[direction][1--3] are undefined.
- *
- * 2. As large or twice as large as the current element:
- *
- *      face_neighbor_eid[direction][0] = index
- *
- *    where ((index >= 0) && (index < local_elem_num)) if the neighbor is
- *    LOCAL, or
- *    ((index >= local_elem_num) &&
- *    (index < (local_elem_num + ghost_elem_num))) if the neighor is
- *    REMOTE.
- *
- *      face_neighbor_eid[direction][1--3] are undefined.
- *
- * 3. Half as large as the current element:
- *
- *      face_neighbor_eid[direction][i] = index
- *
- *    where index is defined as above. Note that in this case all four
- *    neighbors (half as large) must exist.
- */
-
-typedef struct local_neighbor
-{
-  int32_t             face_neighbor_eid[6][4];
-}
-local_neighbor_t;
-
-typedef struct ghost_elem
-{
-  tick_t              lx, ly, lz;
-  tick_t              size;
-  int32_t             owner_procid;     /* remote processor id */
-  int32_t             reid;     /* remote processor element index */
-}
-ghost_elem_t;
-
-typedef struct trilinear_neighborhood
-{
-  int32_t             ghost_elem_num;
-  ghost_elem_t       *ghost_elem_table;
-  local_neighbor_t   *local_elem_neighbor_table;
-}
-trilinear_neighborhood_t;
-
-trilinear_neighborhood_t *trilinear_neighborhood_new (p8est_t * p8est);
-
-/* *INDENT-OFF* */
-void
-trilinear_neighborhood_destroy (trilinear_neighborhood_t * neighborhood);
-/* *INDENT-ON* */
 
 #endif /* !P8EST_TRILINEAR_H */
