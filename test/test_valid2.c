@@ -91,6 +91,8 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
 #endif
   sc_array_t          ghost_layer;
 
+  P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
+
   p4est = p4est_new (mpicomm, conn, 0, 0, NULL, NULL);
   p4est_refine (p4est, true, refine_fn, NULL);
   p4est_coarsen (p4est, true, coarsen_fn, NULL);
@@ -158,6 +160,8 @@ main (int argc, char **argv)
              "test_twocubes", 0x7188978aU);
   check_all (mpicomm, p8est_connectivity_new_rotcubes (),
              "test_rotcubes", 0xc0e1b235U);
+  check_all (mpicomm, p8est_connectivity_new_shell (),
+             "test_shell", 0x558723a2U);
 #endif
 
   /* clean up and exit */

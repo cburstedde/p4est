@@ -113,7 +113,7 @@ typedef struct
 }
 p8est_corner_info_t;
 
-/** Store the vertex numbers 0..7 for each tree face. */
+/** Store the corner numbers 0..7 for each tree face. */
 extern const int    p8est_face_corners[6][4];
 
 /** Store the face numbers 0..12 for each tree face. */
@@ -139,7 +139,7 @@ extern const int    p8est_face_permutation_refs[6][6];
 /** Store the face numbers 0..5 for each tree edge. */
 extern const int    p8est_edge_faces[12][2];
 
-/** Store the vertex numbers 0..8 for each tree edge. */
+/** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
 
 /** Store the face numbers 0..5 for each tree corner. */
@@ -207,6 +207,11 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
  * These are rotated against each other to stress the topology routines.
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
+
+/** Create a connectivity structure that builds a spherical shell.
+ * It is made up of six connected parts [-1,1]x[-1,1]x[1,2].
+ */
+p8est_connectivity_t *p8est_connectivity_new_shell (void);
 
 /** Fills arrays encoding the axis combinations for a face transform.
  * \param [in]  itree        The number of the originating tree.
