@@ -430,6 +430,15 @@ void
 p4est_refine (p4est_t * p4est, bool refine_recursive,
               p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
+  p4est_refine_level (p4est, refine_recursive, refine_fn, init_fn,
+                      P4EST_QMAXLEVEL);
+}
+
+void
+p4est_refine_level (p4est_t * p4est, bool refine_recursive,
+                    p4est_refine_t refine_fn, p4est_init_t init_fn,
+                    int allowed_level)
+{
   size_t              quadrant_pool_size, data_pool_size;
   bool                dorefine;
   int                 i, maxlevel;
@@ -448,6 +457,7 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
                             "_refine with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (0 <= allowed_level && allowed_level <= P4EST_QMAXLEVEL);
 
   /*
      q points to a quadrant that is an array member
@@ -488,7 +498,8 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
     incount = tquadrants->elem_count;
     for (current = 0; current < incount; ++current) {
       q = sc_array_index (tquadrants, current);
-      dorefine = ((q->level < P4EST_QMAXLEVEL) && refine_fn (p4est, nt, q));
+      dorefine = (((int) q->level < allowed_level) &&
+                  refine_fn (p4est, nt, q));
       if (dorefine) {
         break;
       }
@@ -517,7 +528,8 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
       qpop = sc_list_pop (list);
       if (dorefine ||
           ((refine_recursive || !qpop->pad8) &&
-           qpop->level < P4EST_QMAXLEVEL && refine_fn (p4est, nt, qpop))) {
+           (int) qpop->level < allowed_level &&
+           refine_fn (p4est, nt, qpop))) {
         dorefine = false;
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);

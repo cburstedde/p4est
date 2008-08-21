@@ -78,6 +78,7 @@
 #define p4est_destroy                   p8est_destroy
 #define p4est_copy                      p8est_copy
 #define p4est_refine                    p8est_refine
+#define p4est_refine_level              p8est_refine_level
 #define p4est_coarsen                   p8est_coarsen
 #define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition

@@ -208,6 +208,19 @@ void                p4est_refine (p4est_t * p4est,
                                   p4est_refine_t refine_fn,
                                   p4est_init_t init_fn);
 
+/** Refine a forest with a bounded maximum refinement level.
+ * \param [in] refine_fn Callback function that returns true
+ *                       if a quadrant shall be refined
+ * \param [in] init_fn   Callback function to initialize the user_data
+ *                       which is already allocated automatically.
+ * \param [in] maxlevel  Maximum allowed level (inclusive) of quadrants.
+ */
+void                p4est_refine_level (p4est_t * p4est,
+                                        bool refine_recursive,
+                                        p4est_refine_t refine_fn,
+                                        p4est_init_t init_fn,
+                                        int allowed_level);
+
 /** Coarsen a forest.
  * \param [in] coarsen_fn Callback function that returns true if a
  *                        family of quadrants shall be coarsened
