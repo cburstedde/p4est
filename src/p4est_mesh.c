@@ -997,7 +997,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   /* Distribute global information about who is sending to who. */
   maxpeers = first_peer;
   maxwin = last_peer;
-  nwin = sc_ranges_adaptive (p4est->mpicomm, procs, &maxpeers, &maxwin,
+  nwin = sc_ranges_adaptive (p4est_package_id,
+                             p4est->mpicomm, procs, &maxpeers, &maxwin,
                              p4est_num_ranges, my_ranges, &all_ranges);
   twomaxwin = 2 * maxwin;
 #ifdef P4EST_STATS
