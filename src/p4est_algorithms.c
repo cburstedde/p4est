@@ -1659,7 +1659,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   for (l = 0; l <= inmaxl; ++l) {
     /* print statistics and free hash tables */
 #ifdef P4EST_DEBUG
-    sc_hash_print_statistics (SC_LP_DEBUG, hash[l]);
+    sc_hash_print_statistics (p4est_package_id, SC_LP_DEBUG, hash[l]);
 #endif
     sc_hash_unlink_destroy (hash[l]);
 

@@ -1331,7 +1331,8 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #ifdef P4EST_STATS
   P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                             maxpeers, maxwin, p4est_num_ranges);
-  sc_ranges_statistics (SC_LP_STATISTICS, p4est->mpicomm, num_procs, procs,
+  sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
+                        p4est->mpicomm, num_procs, procs,
                         rank, p4est_num_ranges, my_ranges);
 #endif
   P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
