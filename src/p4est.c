@@ -32,6 +32,11 @@
 #endif /* !P4_TO_P8 */
 #include <sc_ranges.h>
 
+#ifdef SC_ALLGATHER
+#include <sc_allgather.h>
+#define MPI_Allgather sc_allgather
+#endif
+
 typedef struct
 {
   int8_t              have_first_count, have_first_load;

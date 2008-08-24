@@ -27,6 +27,11 @@
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
 
+#ifdef SC_ALLGATHER
+#include <sc_allgather.h>
+#define MPI_Allgather sc_allgather
+#endif
+
 void
 p4est_comm_count_quadrants (p4est_t * p4est)
 {
