@@ -1155,7 +1155,7 @@ p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
   int                 n0_proc, n0ur_proc, n1_proc;
   int                 num_peers, peer, peer_proc;
   int                 mpiret;
-  int                *gown;
+  int                *gown = NULL;
   bool                maxed, failed;
   bool                full_tree[2], tree_contact[2 * P4EST_DIM];
   bool                urg[P4EST_DIM - 1];
