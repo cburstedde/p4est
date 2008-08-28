@@ -376,6 +376,7 @@ p4est_order_local_vertices (p4est_t * p4est,
                 }
                 else {
                   /* Neighbor is across a face */
+                  neighbor_tree = -1;
                   for (face = 0; face < 4; ++face) {
                     if (quad_contact[face] && face_contact[face]) {
                       neighbor_tree = conn->tree_to_tree[4 * jt + face];

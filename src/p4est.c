@@ -1190,6 +1190,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
             }
             else {
               /* this quadrant goes across a face */
+              qtree = -1;
               for (face = 0; face < 4; ++face) {
                 if (quad_contact[face] && tree_contact[face]) {
                   qtree = conn->tree_to_tree[4 * nt + face];
