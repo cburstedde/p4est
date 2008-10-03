@@ -1,6 +1,5 @@
 
  * doxygen
- * add the ability to run splint from make
  * vtk output
    geometry
  * mesh generation

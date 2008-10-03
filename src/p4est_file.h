@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Read in forest connectivity info from a file
  *
  * This function fills an allocated connectivity structure
@@ -117,5 +119,7 @@ int                 p4est_connectivity_read (const char *filename,
  */
 void                p4est_connectivity_print (p4est_connectivity_t *
                                               connectivity, FILE * nout);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_FILE_H */

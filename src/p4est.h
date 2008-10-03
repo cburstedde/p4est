@@ -25,6 +25,8 @@
 /* p4est_connectivity.h includes p4est_base.h sc_containers.h */
 #include <p4est_connectivity.h>
 
+SC_EXTERN_C_BEGIN;
+
 /* finest level of the quadtree */
 #define P4EST_MAXLEVEL 30
 
@@ -227,5 +229,7 @@ void                p4est_partition (p4est_t * p4est,
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p4est_checksum (p4est_t * p4est);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_H */

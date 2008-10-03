@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,
@@ -482,5 +484,7 @@ void                p4est_linearize_subtree (p4est_t * p4est,
 p4est_gloidx_t      p4est_partition_given (p4est_t * p4est,
                                            const p4est_locidx_t *
                                            num_quadrants_in_proc);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_ALGORITHMS_H */

@@ -24,6 +24,8 @@
 
 #include <p4est_base.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** This structure holds the 2D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
  *
@@ -131,5 +133,7 @@ void                p4est_find_corner_info (p4est_connectivity_t *
                                             connectivity,
                                             p4est_topidx_t itree, int icorner,
                                             sc_array_t * corner_info);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_CONNECTIVITY_H */

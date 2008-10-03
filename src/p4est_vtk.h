@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** This will write out one field in VTK format.
  *
  * This is a convenience function for the special
@@ -81,5 +83,7 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  */
 int                 p4est_vtk_write_footer (p4est_t * p4est,
                                             const char *baseName);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_VTK_H */

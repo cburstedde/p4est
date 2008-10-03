@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 typedef enum
 {
   P4EST_COMM_BALANCE_FIRST_COUNT = 1,
@@ -71,5 +73,7 @@ void                p4est_comm_tree_info (p4est_t * p4est,
                                           bool full_tree[2],
                                           p4est_quadrant_t * firstq,
                                           p4est_quadrant_t * nextq);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_COMMUNICATION_H */

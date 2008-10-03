@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Determine unique ordering of vertices for each quadrant.
  *
  * \param [in]  p4est              The forest whose vertices will be ordered.
@@ -111,5 +113,7 @@ void                p4est_possible_node_neighbor (const p4est_quadrant_t * q,
                                                   int neighbor_rlev,
                                                   p4est_quadrant_t * neighbor,
                                                   int *neighbor_node);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_MESH_H */
