@@ -24,6 +24,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Store an independent node.
  * Keep this in sync with the p8est_t data structure.
  */
@@ -222,5 +224,7 @@ p8est_neighborhood_t *p8est_neighborhood_new (p8est_t * p8est);
 /** Destroy neighborhood information.
  */
 void                p8est_neighborhood_destroy (p8est_neighborhood_t * nhood);
+
+SC_EXTERN_C_END;
 
 #endif /* P8EST_MESH_H */

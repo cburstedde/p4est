@@ -24,6 +24,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.
  * \param [in,out]  quad       The quadrant to be initialized.
@@ -223,5 +225,7 @@ size_t              p8est_linearize_tree (p8est_t * p8est,
 p4est_gloidx_t      p8est_partition_given (p8est_t * p8est,
                                            const p4est_locidx_t *
                                            num_quadrants_in_proc);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_ALGORITHMS_H */

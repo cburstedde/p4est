@@ -38,6 +38,8 @@
 #error "MPI configured differently in p4est and libsc"
 #endif
 
+SC_EXTERN_C_BEGIN;
+
 /** Typedef for quadrant coordinates. */
 typedef int32_t     p4est_qcoord_t;
 #define P4EST_MPI_QCOORD MPI_INT
@@ -188,5 +190,7 @@ ssize_t             p4est_int64_lower_bound (int64_t target,
  */
 void                p4est_init (sc_log_handler_t log_handler,
                                 int log_threshold);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_BASE_H */

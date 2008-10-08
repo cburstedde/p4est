@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Gets the processor id of a quadrant's owner.
  * The quadrant can lie outside of a tree across faces (and only faces).
  *
@@ -129,5 +131,7 @@ bool                p4est_quadrant_exists (p4est_t * p4est,
  * \return Returns true if balanced, false otherwise.
  */
 bool                p4est_is_balanced (p4est_t * p4est);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_GHOST_H */

@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 extern bool         p4est_vtk_default_write_rank;
 
 /** This will write out the MPI rank in VTK format.
@@ -86,5 +88,7 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  */
 int                 p4est_vtk_write_footer (p4est_t * p4est,
                                             const char *baseName);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_VTK_H */

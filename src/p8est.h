@@ -25,6 +25,8 @@
 /* p8est_connectivity.h includes p4est_base.h sc_containers.h */
 #include <p8est_connectivity.h>
 
+SC_EXTERN_C_BEGIN;
+
 /* the spatial dimension */
 #define P8EST_DIM 3
 #define P8EST_CHILDREN 8
@@ -257,5 +259,7 @@ void                p8est_partition (p8est_t * p8est,
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p8est_checksum (p8est_t * p8est);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_H */

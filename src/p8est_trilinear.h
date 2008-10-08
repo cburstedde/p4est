@@ -29,6 +29,8 @@
 
 #include <p8est_mesh.h>
 
+SC_EXTERN_C_BEGIN;
+
 #ifndef TRILINEAR_MESH_H
 
 /** tick_t: The unit of the embeded integer domain. */
@@ -220,5 +222,7 @@ trilinear_mesh_t   *p8est_trilinear_mesh_new (p8est_t * p8est,
 /** Frees a trilinear mesh structure.
  */
 void                p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_TRILINEAR_H */

@@ -24,6 +24,8 @@
 
 #include <p4est_base.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** This structure holds the 3D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
  *
@@ -248,5 +250,7 @@ void                p8est_find_corner_transform (p8est_connectivity_t *
                                                  p4est_topidx_t itree,
                                                  int iedge,
                                                  p8est_corner_info_t * ci);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_CONNECTIVITY_H */

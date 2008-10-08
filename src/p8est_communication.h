@@ -24,6 +24,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 typedef enum
 {
   P8EST_COMM_BALANCE_FIRST_COUNT = 1,
@@ -101,5 +103,7 @@ bool                p8est_comm_neighborhood_owned (p8est_t * p8est,
  */
 bool                p8est_comm_sync_flag (p8est_t * p8est,
                                           bool flag, MPI_Op operation);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_COMMUNICATION_H */

@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 typedef enum
 {
   P4EST_COMM_BALANCE_FIRST_COUNT = 1,
@@ -101,5 +103,7 @@ bool                p4est_comm_neighborhood_owned (p4est_t * p4est,
  */
 bool                p4est_comm_sync_flag (p4est_t * p4est,
                                           bool flag, MPI_Op operation);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_COMMUNICATION_H */

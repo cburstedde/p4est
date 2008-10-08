@@ -24,6 +24,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Prints one line with quadrant's x, y and level.
  */
 void                p4est_quadrant_print (int log_priority,
@@ -477,5 +479,7 @@ uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int level, uint64_t id);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_BITS_H */

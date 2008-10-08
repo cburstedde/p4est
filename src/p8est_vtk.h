@@ -24,6 +24,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 extern double       p8est_vtk_default_scale;
 extern bool         p8est_vtk_default_write_rank;
 extern bool         p8est_vtk_default_write_tree;
@@ -90,5 +92,7 @@ int                 p8est_vtk_write_header (p8est_t * p8est, double scale,
  */
 int                 p8est_vtk_write_footer (p8est_t * p8est,
                                             const char *baseName);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_VTK_H */
