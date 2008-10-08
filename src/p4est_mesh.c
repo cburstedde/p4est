@@ -659,6 +659,8 @@ p4est_nodes_foreach (void **item, const void *u)
   return true;
 }
 
+#ifdef P4EST_MPI
+
 static p4est_locidx_t *
 p4est_shared_offsets (sc_array_t * inda)
 {
@@ -677,6 +679,8 @@ p4est_shared_offsets (sc_array_t * inda)
 
   return shared_offsets;
 }
+
+#endif
 
 p4est_nodes_t      *
 p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)

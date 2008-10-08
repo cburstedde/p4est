@@ -2159,8 +2159,8 @@ p4est_checksum (p4est_t * p4est)
   p4est_tree_t       *tree;
   sc_array_t          checkarray;
 #ifdef P4EST_MPI
-  int                 p;
   int                 mpiret;
+  int                 p;
   uint64_t            send[2];
   uint64_t           *gather;
 #endif
