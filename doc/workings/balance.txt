@@ -1,0 +1,68 @@
+1. Assemble list of quadrants to send.
+Loop over trees: t
+	Locally balance tree
+	If tree completely on this processor and no tree contact
+		skip t
+	Loop over quadrants: q
+		If 3x3 nbrhood of q is inside unit cube and on this processor
+			skip q
+		Loop over nbrhood quadrants of q: s
+			skip s if s == q
+			If s is outside unit cube
+				If s is across face
+					Transf/sched q/s across face
+				Else if s is across edge
+					Transf/sched q/s for all edges
+				Else (s is across corner)
+					Transf/sched q/s for all corners
+			Else
+				Schedule q/s for same tree
+
+2. Find communication pattern via sc_ranges_* functions (allgather)
+
+3. Process first round of quadrants
+Loop over all peers p excluding myself
+	Isend first count
+	If count > 0
+		Sort send array
+		Isend first load
+		Irecv second count
+Loop over all peers from which to possibly receive
+	Irecv first count
+While pending first receives
+	For all peers in Waitsome p
+		If receiving first count
+			If first count > 0
+				Irecv first load
+		Else (receiving first load)
+			Compute response quadrants for p
+			Isend second count
+			If second count > 0
+				Isend second load
+Emulate send and receive operations for myself (across trees)
+
+4. Process second round of quadrants
+While pending second receives
+	For all peers in Waitsome
+		If receiving second count
+			If count > 0
+				Irecv second load
+		Else (receiving second load)
+
+5. Merge received quadrants from both rounds
+Loop over peers p (including myself)
+	If count == 0
+		skip p
+	Loop over received quadrants q
+		If q not in my tree range
+			Skip q (came from corner/edge cross bounce)
+		Append q to the quadrants of q->piggy_tree
+Loop over local trees t
+	If tree not fully owned or any cross-tree contact
+		Sort quadrants
+		Locally balance tree
+
+6. Cleanup
+Waitall
+Update quadrant statistics
+Free memory

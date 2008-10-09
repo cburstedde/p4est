@@ -1,0 +1,37 @@
+1. Balance schedule (q my quadrant, s insulation quadrant != q)
+Find owners of first and last descendents of s
+	(i.e. what peers intersect my insulation zone?)
+For all owners between and including these two processors p
+	Schedule q to be sent to p (don't include duplicates)
+
+2. Balance response (after receiving first load)
+Loop over all received quadrants
+	Append each tree id uniquely to an array (will be in tree order)
+Loop over all received tree ids
+	Compute tree overlap (this is slow when called once per tree!)
+Uniqify tree overlap
+
+3. Compute tree overlap (currently called once per tree t)
+Loop over all received quadrants q
+	If q not in t, skip q (this consumes the majority of cycles)
+	If q is not in unit cube (comes from a different tree)
+	Loop over 3x3 neighborhood of q: s
+		If s is outside the unit cube, skip s
+		Compute first and last descendents of s: fd, ld
+		If ld < t->fd or t->ld < fd (no intersection), skip s
+		If fd <= t->fd (s overlaps beginning of t)
+			first_index = 0
+		Else
+			Find lowest quadrant >= s: first_index
+			If not found, skip s
+		If t->ld <= ld (s overlaps end of t)
+			last_index = last quadrant of t
+		Else
+			Find highest quadrant <= ld: last_index (must exist)
+		If first_index > last_index, skip s
+		Copy everything between first_index, last_index into output
+			(This is done multiply for edges and corners)
+
+4. Uniqify tree overlap
+	Sort output list
+	Remove duplicates

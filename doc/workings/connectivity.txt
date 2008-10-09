@@ -1,0 +1,24 @@
+This file covers the 3D connectivity logic and the transforms from _bits.
+
+1. p8est_find_face_transform (given my tree and my face)
+Compute target tree, face and orientation from connectivity.
+If ttree == tree and tface == face (domain boundary), return -1
+Compute my_axis[0] and [1] in 0..2 parallel to the face edges
+Compute permuted corners for face corners 0, 1 and 2
+Determine if either or both axis connections are flipped
+Loop over all 12 edges e
+	If corners of e match corners of axis 0, save e as target axis 0
+	If corners of e match corners of axis 1, save e as target axis 1
+Store face combination in transform[8]
+
+2. p8est_quadrant_transform_face q into r
+If q is an unclamped node, set mh to 0
+Else set mh to negative length of q
+Assign root_length + mh and 2 * root_length + mh (which can overflow ok)
+Compute axis 0 and axis 1 coordinates of r (flipping if applicable)
+Based on the axis 2 combination, transform axis 2 (4 cases possible)
+Copy level from q to r
+
+3. p8est_find_edge_transform
+
+5. p8est_find_corner_transform
