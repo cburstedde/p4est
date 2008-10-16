@@ -958,7 +958,13 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
         bigger_face[face] = e3;
       }
 
-#ifdef P4_TO_P8
+#ifndef P4_TO_P8
+      if (btype == P4EST_BALANCE_FACE)
+        continue;
+#else
+      if (btype == P8EST_BALANCE_FACE)
+        continue;
+
       /* Find edge neighbors */
       for (edge = 0; edge < 12; ++edge) {
         bigger_edge[edge] = false;
@@ -1020,6 +1026,9 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
         bigger_edge[edge] = e3;
         big_count[edge] = e3_a.elem_count;
       }
+
+      if (btype == P8EST_BALANCE_EDGE)
+        continue;
 #endif
 
       /* Find corner neighbors, corner is in z-order here */
@@ -1128,6 +1137,8 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
           }
         }
       }
+
+      P4EST_ASSERT (btype == P4EST_BALANCE_FULL);
     }
   }
 
@@ -1264,9 +1275,13 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_balance_type_t btype,
         }
       }
 
-      /* TODO: continue for face only balance */
+#ifndef P4_TO_P8
+      if (btype == P4EST_BALANCE_FACE)
+        continue;
+#else
+      if (btype == P8EST_BALANCE_FACE)
+        continue;
 
-#ifdef P4_TO_P8
       /* Find smaller edge neighbors */
       for (edge = 0; edge < 12; ++edge) {
         if (q->level == P4EST_QMAXLEVEL) {
@@ -1347,7 +1362,8 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_balance_type_t btype,
         }
       }
 
-      /* TODO: continue for face and edge only balance */
+      if (btype == P8EST_BALANCE_EDGE)
+        continue;
 #endif
 
       /* Find smaller corner neighbors */
@@ -1434,7 +1450,7 @@ p4est_build_ghost_layer (p4est_t * p4est, p4est_balance_type_t btype,
         }
       }
 
-      /* TODO: Assert corner balance */
+      P4EST_ASSERT (btype == P4EST_BALANCE_FULL);
     }
   }
   P4EST_ASSERT (local_num == p4est->local_num_quadrants);

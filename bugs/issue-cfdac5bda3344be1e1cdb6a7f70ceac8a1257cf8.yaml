@@ -1,4 +1,4 @@
---- !ditz.rubyforge.org,2008-03-06/issue
+--- !ditz.rubyforge.org,2008-03-06/issue 
 title: Make edge/face only balance optimal and configurable
 desc: |-
   Optimal refers to inter-tree balance where currently full face, edge and
@@ -8,13 +8,13 @@ type: :feature
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :in_progress
-disposition:
+status: :paused
+disposition: 
 creation_time: 2008-10-16 17:40:03.876875 Z
 references: []
 
 id: cfdac5bda3344be1e1cdb6a7f70ceac8a1257cf8
-log_events:
+log_events: 
 - - 2008-10-16 17:40:07.204566 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
@@ -27,3 +27,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - commented
   - The flags are in place now but without any effect yet.
+- - 2008-10-16 23:04:52.264246 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - changed status from in_progress to paused
+  - |-
+    Balance, ghost layer and balance check are now configurable.
+    Inter-tree balance always does edges and corners, may not be necessary.
