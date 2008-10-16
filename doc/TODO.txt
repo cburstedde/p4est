@@ -1,21 +1,27 @@
 
  * Connectivity
    Implement periodic connections between different trees
+   Use vertex-free computation of corner connectivity
    Replace p8est_find_face_transform by lookup tables
  * Interface
    Change global_last_quad_index to global_quadrant_offset
  * Mesh generation
    2D bilinear elements
    2D interface to pfudg
+   Verify trilinear mesh extraction
  * Integer sizes
    Ensure that balance (and possibly others) use p4est_*idx_t.
  * Helper functions / algorithms
-   Isolate a p4est_tree_is_valid function.
+   Verify p4est_quadrant_is_inside_tree function
+   Isolate a p4est_tree_is_valid function
  * Balance
+   Make edge/face only balance optimal and configurable
    Deal with p4est counters modified by balance_subtree
+   Check the inter-tree face-only/edge-only local balance
  * vtk output
    geometry
  * Optimization
+   Remove the speed penalty for balancing many trees
    Speed up p4est_quadrant_compare
    Speed up p4est_intxx_t_compare
  * Include a test case for every major functionality

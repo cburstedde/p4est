@@ -1358,7 +1358,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                            p4est_init_t init_fn, int balance)
 {
   bool                lookup, inserted;
-  bool                isfamily, isoutroot, isintree;
+  bool                isfamily, isoutroot;
+#ifdef P4EST_BALANCE_OPTIMIZE
+  bool                isintree;
+#endif
   size_t              iz, jz;
   size_t              incount, ocount;
   size_t              quadrant_pool_size;
@@ -1487,16 +1490,22 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       }
       P4EST_ASSERT (p4est_quadrant_is_extended (q));
       isoutroot = !p4est_quadrant_is_inside_root (q);
+#ifdef P4EST_BALANCE_OPTIMIZE
       if (isoutroot) {
         isintree = false;
       }
       else {
+        /* TODO: verify p4est_quadarant_is_inside_tree function */
         isintree = p4est_quadrant_is_inside_tree (tree, q);
         if (!isintree && p4est_quadrant_overlaps_tree (tree, q)) {
           ++count_moved1_outside;
           continue;
         }
       }
+#endif
+      /* TODO:
+         For inter-tree quadrants always do full edge/corner balance
+         May not be necessary and lead to too many quadrants */
       rbound = (isoutroot ? fbound : bbound);
 
       /*
@@ -1517,7 +1526,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
        * if q is inside the tree, include all of the above.
        * if q is outside the tree, include only its parent and the neighbors.
        */
-      qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 */
+      qid = p4est_quadrant_child_id (q);        /* 0 <= qid < 4 resp. 6 */
       for (sid = 0; sid < rbound; ++sid) {
         /* stage 1: determine candidate qalloc */
         if (sid < P4EST_CHILDREN) {
@@ -1585,6 +1594,8 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
           }
 #endif /* P4_TO_P8 */
           qalloc->level = pshift.level;
+
+          /* TODO: Verify optimizations which may omit necessary quadrants */
           if (!isoutroot) {
             if (!p4est_quadrant_is_inside_root (qalloc)) {
               ++count_outside_root;
@@ -1596,6 +1607,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
               ++count_outside_root;
               continue;
             }
+#ifdef P4EST_BALANCE_OPTIMIZE
             if (!p4est_quadrant_is_inside_root (qalloc) &&
                 (q->x / P4EST_ROOT_LEN != qalloc->x / P4EST_ROOT_LEN ||
                  q->y / P4EST_ROOT_LEN != qalloc->y / P4EST_ROOT_LEN ||
@@ -1606,6 +1618,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
               ++count_outside_root;
               continue;
             }
+#endif
           }
         }
         P4EST_ASSERT (p4est_quadrant_is_extended (qalloc));
@@ -1615,11 +1628,14 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
          */
 
         /* stage 2: include qalloc */
+#if defined P4EST_BALANCE_WRONG && defined P4EST_BALANCE_OPTIMIZE
         if (isintree && p4est_quadrant_is_inside_root (qalloc) &&
             !p4est_quadrant_is_inside_tree (tree, qalloc)) {
           ++count_moved2_outside;
           continue;
         }
+#endif
+        /* make sure that qalloc is not included more than once */
         lookup = sc_hash_lookup (hash[qalloc->level], qalloc, &vlookup);
         if (lookup) {
           /* qalloc is already included in output list, this catches most */
