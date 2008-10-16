@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue
+title: Make edge/face only balance optimal and configurable
+desc: |-
+  Optimal refers to inter-tree balance where currently full face, edge and
+  corner balance is performed always.
+  Configurable means to make edge and/or corner balance optional.
+type: :feature
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition:
+creation_time: 2008-10-16 17:40:03.876875 Z
+references: []
+
+id: cfdac5bda3344be1e1cdb6a7f70ceac8a1257cf8
+log_events:
+- - 2008-10-16 17:40:07.204566 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

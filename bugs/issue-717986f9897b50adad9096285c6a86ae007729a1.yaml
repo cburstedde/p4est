@@ -1,0 +1,25 @@
+--- !ditz.rubyforge.org,2008-03-06/issue
+title: Vertex-free corner connectivity
+desc: |-
+  Currently the corner neighbors are identified using vertices.
+  This does not work for periodic or overlapping vertex coordinates.
+  Use topological relations instead, as in 3D edge connectivity.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition:
+creation_time: 2008-10-16 17:31:22.710949 Z
+references: []
+
+id: 717986f9897b50adad9096285c6a86ae007729a1
+log_events:
+- - 2008-10-16 17:31:25.974658 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
+- - 2008-10-16 17:36:34.075966 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - assigned to release 0.3 from unassigned
+  - ""

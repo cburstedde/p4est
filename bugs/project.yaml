@@ -1,0 +1,16 @@
+--- !ditz.rubyforge.org,2008-03-06/project
+name: p4est
+version: "0.4"
+components:
+- !ditz.rubyforge.org,2008-03-06/component
+  name: p4est
+releases:
+- !ditz.rubyforge.org,2008-03-06/release
+  name: "0.3"
+  status: :unreleased
+  release_time:
+  log_events:
+  - - 2008-10-16 17:36:04.252955 Z
+    - Carsten Burstedde <carsten@ices.utexas.edu>
+    - created
+    - Release 0.3 should have full 2D and 3D functionality.
