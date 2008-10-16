@@ -1675,7 +1675,13 @@ p4est_neighborhood_new (p4est_t * p4est)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  success = p4est_build_ghost_layer (p4est, true, &ghost_layer, &ghost_owner);
+  success = p4est_build_ghost_layer (p4est,
+#ifndef P4_TO_P8
+                                     P4EST_BALANCE_FACE,
+#else
+                                     P8EST_BALANCE_FACE,
+#endif
+                                     &ghost_layer, &ghost_owner);
   P4EST_ASSERT (success);
 
   nodes = p4est_nodes_new (p4est, &ghost_layer);

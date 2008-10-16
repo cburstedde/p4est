@@ -51,6 +51,16 @@ SC_EXTERN_C_BEGIN;
 /* a negative magic number for consistency checks */
 #define P4EST_NEG_MAGIC = -439623172;
 
+typedef enum
+{
+  /* make sure to have different values 2D and 3D */
+  P4EST_BALANCE_FACE = 21,
+  P4EST_BALANCE_CORNER = 22,
+  P4EST_BALANCE_DEFAULT = P4EST_BALANCE_CORNER,
+  P4EST_BALANCE_FULL = P4EST_BALANCE_CORNER,
+}
+p4est_balance_type_t;
+
 typedef struct p4est_quadrant
 {
   p4est_qcoord_t      x, y;
@@ -234,13 +244,15 @@ void                p4est_coarsen (p4est_t * p4est,
                                    p4est_coarsen_t coarsen_fn,
                                    p4est_init_t init_fn);
 
-/** Balance a forest. Currently only doing local balance.
+/** Balance a forest.
+ * \param [in] p4est     The p4est to be worked on.
+ * \param [in] btype     Balance type (face, corner or default, full).
  * \param [in] init_fn   Callback function to initialize the user_data
  *                       which is already allocated automatically.
- * \note Balances edges and corners.
- *       Can be easily changed to edges only in p4est_algorithms.c.
  */
-void                p4est_balance (p4est_t * p4est, p4est_init_t init_fn);
+void                p4est_balance (p4est_t * p4est,
+                                   p4est_balance_type_t btype,
+                                   p4est_init_t init_fn);
 
 /** Equally partition the forest.
  *
@@ -259,6 +271,18 @@ void                p4est_partition (p4est_t * p4est,
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p4est_checksum (p4est_t * p4est);
+
+/** Convert the p4est_balance_type_t into a number.
+ * \param [in] btype    The balance type to convert.
+ * \return              Returns 1 or 2.
+ */
+int                 p4est_balance_type_int (p4est_balance_type_t btype);
+
+/** Convert the p4est_balance_type_t into a const string.
+ * \param [in] btype    The balance type to convert.
+ * \return              Returns a pointer to a constant string.
+ */
+const char         *p4est_balance_type_string (p4est_balance_type_t btype);
 
 SC_EXTERN_C_END;
 

@@ -864,7 +864,7 @@ p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
 #endif /* P4EST_MPI */
 
 bool
-p4est_is_balanced (p4est_t * p4est)
+p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
 {
   int                 zero = 0;
   int                 face, corner;
@@ -894,7 +894,7 @@ p4est_is_balanced (p4est_t * p4est)
 #endif
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  if (!p4est_build_ghost_layer (p4est, true, &ghost_layer, NULL)) {
+  if (!p4est_build_ghost_layer (p4est, btype, &ghost_layer, NULL)) {
     P4EST_NOTICE ("Ghost layer could not be built\n");
     return false;
   }
@@ -1144,7 +1144,7 @@ failtest:
 }
 
 bool
-p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
+p4est_build_ghost_layer (p4est_t * p4est, p4est_balance_type_t btype,
                          sc_array_t * ghost_layer, int **ghost_owner)
 {
 #ifdef P4EST_MPI
@@ -1187,7 +1187,8 @@ p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
   p4est_quadrant_t   *q2;
 #endif
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_build_ghost_layer\n");
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_build_ghost_layer %s\n",
+                            p4est_balance_type_string (btype));
   P4EST_ASSERT (ghost_layer->elem_size == sizeof (p4est_quadrant_t));
 
   for (i = 0; i < P4EST_CHILDREN / 2; ++i) {
@@ -1263,9 +1264,7 @@ p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
         }
       }
 
-      /* Optionally skip edges and corners */
-      if (!include_diagonals)
-        continue;
+      /* TODO: continue for face only balance */
 
 #ifdef P4_TO_P8
       /* Find smaller edge neighbors */
@@ -1347,6 +1346,8 @@ p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
           }
         }
       }
+
+      /* TODO: continue for face and edge only balance */
 #endif
 
       /* Find smaller corner neighbors */
@@ -1432,6 +1433,8 @@ p4est_build_ghost_layer (p4est_t * p4est, bool include_diagonals,
           }
         }
       }
+
+      /* TODO: Assert corner balance */
     }
   }
   P4EST_ASSERT (local_num == p4est->local_num_quadrants);

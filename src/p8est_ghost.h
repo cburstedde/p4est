@@ -49,25 +49,25 @@ int                 p8est_quadrant_find_owner (p8est_t * p8est,
  * This will gather the quadrants from each neighboring proc to build one layer
  * of face, edge and corner based ghost elements around the ones they own.
  *
- * \param [in] p8est              The forest for which the ghost layer will
- *                                be generated.
- * \param [in] include_diagonals  Include neighbors across edges and corners.
- * \param [in,out] ghost_layer    An array of quadrants which make up the
- *                                ghost layer around \a p4est.  Their piggy1
- *                                data member is filled with their owner's
- *                                tree and processor ids.  Quadrants will be
- *                                ordered in \c p8est_quadrant_compare_piggy
- *                                order.  These will be quadrants inside the
- *                                neighboring tree i.e., \c
- *                                p4est_quadrant_is_inside is true for the
- *                                quadrant and the neighboring tree.
- * \param [out] ghost_owner       If not NULL, this array is allocated and
- *                                filled with one rank per ghost.
- * \return                        Returns false if it fails due to violated
- *                                2:1 constraints, true otherwise.
+ * \param [in] p8est            The forest for which the ghost layer will be
+ *                              generated.
+ * \param [in] btype            Balance type (face, edge, corner or default, full).
+ * \param [in,out] ghost_layer  An array of quadrants which make up the
+ *                              ghost layer around \a p4est.  Their piggy1
+ *                              data member is filled with their owner's
+ *                              tree and processor ids.  Quadrants will be
+ *                              ordered in \c p8est_quadrant_compare_piggy
+ *                              order.  These will be quadrants inside the
+ *                              neighboring tree i.e., \c
+ *                              p4est_quadrant_is_inside is true for the
+ *                              quadrant and the neighboring tree.
+ * \param [out] ghost_owner     If not NULL, this array is allocated and
+ *                              filled with one rank per ghost.
+ * \return                      Returns false if it fails due to violated
+ *                              2:1 constraints, true otherwise.
  */
 bool                p8est_build_ghost_layer (p8est_t * p8est,
-                                             bool include_diagonals,
+                                             p8est_balance_type_t btype,
                                              sc_array_t * ghost_layer,
                                              int **ghost_owner);
 
@@ -124,14 +124,16 @@ bool                p8est_quadrant_exists (p8est_t * p8est,
                                            const p8est_quadrant_t * q,
                                            sc_array_t * exists_arr);
 
-/** Checks a p8est to see if it is balanced.
+/** Check a forest to see if it is balanced.
  *
  * This function builds the ghost layer and discards it when done.
  *
- * \param [in] p8est  The p8est to be tested.
+ * \param [in] p8est    The p8est to be tested.
+ * \param [in] btype    Balance type (face, edge, corner or default, full).
  * \return Returns true if balanced, false otherwise.
  */
-bool                p8est_is_balanced (p8est_t * p8est);
+bool                p8est_is_balanced (p8est_t * p8est,
+                                       p8est_balance_type_t btype);
 
 SC_EXTERN_C_END;
 

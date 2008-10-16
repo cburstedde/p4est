@@ -96,7 +96,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est = p4est_new (mpicomm, conn, 0, 0, NULL, NULL);
   p4est_refine (p4est, true, refine_fn, NULL);
   p4est_coarsen (p4est, true, coarsen_fn, NULL);
-  p4est_balance (p4est, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, vtkname);
   crc_computed = p4est_checksum (p4est);
@@ -106,7 +106,8 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   }
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  p4est_build_ghost_layer (p4est, true, &ghost_layer, &ghost_owner);
+  p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
+                           &ghost_layer, &ghost_owner);
   nodes = p4est_nodes_new (p4est, &ghost_layer);
 #ifdef P4_TO_P8
   mesh = p8est_trilinear_mesh_new (p4est, nodes);

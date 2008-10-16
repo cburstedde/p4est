@@ -309,7 +309,7 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, "mesh_simple2_refined");
 
   /* balance */
-  p4est_balance (p4est, init_fn);
+  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);
   p4est_vtk_write_file (p4est, "mesh_simple2_balanced");
   crc = p4est_checksum (p4est);
 
@@ -319,7 +319,7 @@ main (int argc, char **argv)
 
 #ifdef P4EST_DEBUG
   /* rebalance should not change checksum */
-  p4est_balance (p4est, init_fn);
+  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);
   P4EST_ASSERT (p4est_checksum (p4est) == crc);
 #endif
 

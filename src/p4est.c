@@ -932,7 +932,8 @@ p4est_balance_response (p4est_t * p4est, int peer_id,
 }
 
 void
-p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
+p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
+               p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
@@ -999,9 +1000,16 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
 #endif /* P4EST_MPI */
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
-                            "_balance with %lld total quadrants\n",
+                            "_balance %s with %lld total quadrants\n",
+                            p4est_balance_type_string (btype),
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
+#ifndef P4_TO_P8
+  P4EST_ASSERT (btype == P4EST_BALANCE_FACE || btype == P4EST_BALANCE_CORNER);
+#else
+  P4EST_ASSERT (btype == P8EST_BALANCE_FACE || btype == P8EST_BALANCE_EDGE ||
+                btype == P8EST_BALANCE_CORNER);
+#endif
 
   /* prepare sanity checks */
   data_pool_size = 0;
@@ -1107,7 +1115,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                     (unsigned long long) tquadrants->elem_count);
 
     /* local balance first pass */
-    p4est_balance_subtree (p4est, nt, init_fn);
+    p4est_balance_subtree (p4est, btype, nt, init_fn);
     treecount = tquadrants->elem_count;
     P4EST_VERBOSEF ("Balance tree %lld A %llu\n",
                     (long long) nt, (unsigned long long) treecount);
@@ -1732,7 +1740,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
         (tree_flags[nt] & any_face_flag)) {
       /* we have most probably received quadrants, run sort and balance */
       sc_array_sort (tquadrants, p4est_quadrant_compare);
-      p4est_balance_subtree (p4est, nt, init_fn);
+      p4est_balance_subtree (p4est, btype, nt, init_fn);
       P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
                       (long long) nt,
                       (unsigned long long) treecount,
@@ -1823,7 +1831,7 @@ p4est_balance (p4est_t * p4est, p4est_init_t init_fn)
                   p4est->user_data_pool->elem_count);
   }
   P4EST_ASSERT (p4est_is_valid (p4est));
-  P4EST_ASSERT (p4est_is_balanced (p4est));
+  P4EST_ASSERT (p4est_is_balanced (p4est, btype));
   P4EST_VERBOSEF ("Balance skipped %lld\n", (long long) skipped);
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
@@ -2210,5 +2218,35 @@ p4est_checksum (p4est_t * p4est)
 
   return (unsigned) crc;
 }
+
+#ifndef P4_TO_P8
+
+int
+p4est_balance_type_int (p4est_balance_type_t btype)
+{
+  switch (btype) {
+  case P4EST_BALANCE_FACE:
+    return 1;
+  case P4EST_BALANCE_CORNER:
+    return 2;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+}
+
+const char         *
+p4est_balance_type_string (p4est_balance_type_t btype)
+{
+  switch (btype) {
+  case P4EST_BALANCE_FACE:
+    return "FACE";
+  case P4EST_BALANCE_CORNER:
+    return "CORNER";
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+}
+
+#endif /* !P4_TO_P8 */
 
 /* EOF p4est.c */

@@ -8,7 +8,7 @@ type: :feature
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
+status: :in_progress
 disposition:
 creation_time: 2008-10-16 17:40:03.876875 Z
 references: []
@@ -19,3 +19,11 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2008-10-16 18:39:39.064627 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - changed status from unstarted to in_progress
+  - Implementing flags for the balance and is_balanced API functions.
+- - 2008-10-16 20:56:45.657798 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - commented
+  - The flags are in place now but without any effect yet.

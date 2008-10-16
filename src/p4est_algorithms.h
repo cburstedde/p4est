@@ -192,11 +192,13 @@ void                p4est_complete_subtree (p4est_t * p4est,
 /** Balances a sorted tree within a p4est. It may have exterior quadrants.
  * The completed tree will have only owned quadrants and no overlap.
  * \param [in,out] p4est      The p4est to work on.
+ * \param [in]     btype      The balance type (face or corner).
  * \param [in]     which_tree The 0-based index of the subtree to balance.
  * \param [in]     init_fn    Callback function to initialize the user_data
  *                            which is already allocated automatically.
  */
 void                p4est_balance_subtree (p4est_t * p4est,
+                                           p4est_balance_type_t btype,
                                            p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);
 

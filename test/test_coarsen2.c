@@ -85,7 +85,7 @@ main (int argc, char **argv)
   p4est_coarsen (p4est, false, coarsen_fn, NULL);
   coarsen_all = false;
   p4est_coarsen (p4est, true, coarsen_fn, NULL);
-  p4est_balance (p4est, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   coarsen_all = true;
   p4est_coarsen (p4est, true, coarsen_fn, NULL);
 

@@ -19,11 +19,42 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <p8est.h>
 #include <p4est_to_p8est.h>
 #include "p4est.c"
 
 static int          p8est_uninitialized_key;
 void               *P8EST_DATA_UNINITIALIZED = &p8est_uninitialized_key;
 const int           p8est_num_ranges = 25;
+
+int
+p8est_balance_type_int (p8est_balance_type_t btype)
+{
+  switch (btype) {
+  case P8EST_BALANCE_FACE:
+    return 1;
+  case P8EST_BALANCE_EDGE:
+    return 2;
+  case P8EST_BALANCE_CORNER:
+    return 3;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+}
+
+const char         *
+p8est_balance_type_string (p8est_balance_type_t btype)
+{
+  switch (btype) {
+  case P8EST_BALANCE_FACE:
+    return "FACE";
+  case P8EST_BALANCE_EDGE:
+    return "EDGE";
+  case P8EST_BALANCE_CORNER:
+    return "CORNER";
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+}
 
 /* EOF p8est.c */

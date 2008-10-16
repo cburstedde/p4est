@@ -1750,10 +1750,11 @@ p4est_complete_subtree (p4est_t * p4est,
 }
 
 void
-p4est_balance_subtree (p4est_t * p4est,
+p4est_balance_subtree (p4est_t * p4est, p4est_balance_type_t btype,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
-  p4est_complete_or_balance (p4est, which_tree, init_fn, P4EST_DIM);
+  p4est_complete_or_balance (p4est, which_tree, init_fn,
+                             p4est_balance_type_int (btype));
 }
 
 size_t

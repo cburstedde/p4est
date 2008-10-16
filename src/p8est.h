@@ -51,6 +51,17 @@ SC_EXTERN_C_BEGIN;
 /* a negative magic number for consistency checks */
 #define P8EST_NEG_MAGIC = -439623173;
 
+typedef enum
+{
+  /* make sure to have different values for 2D and 3D */
+  P8EST_BALANCE_FACE = 31,
+  P8EST_BALANCE_EDGE = 32,
+  P8EST_BALANCE_CORNER = 33,
+  P8EST_BALANCE_DEFAULT = P8EST_BALANCE_EDGE,
+  P8EST_BALANCE_FULL = P8EST_BALANCE_CORNER,
+}
+p8est_balance_type_t;
+
 typedef struct p8est_quadrant
 {
   p4est_qcoord_t      x, y, z;
@@ -234,13 +245,15 @@ void                p8est_coarsen (p8est_t * p8est,
                                    p8est_coarsen_t coarsen_fn,
                                    p8est_init_t init_fn);
 
-/** Balance a forest. Currently only doing local balance.
+/** Balance a forest.
+ * \param [in] p8est     The p8est to be worked on.
+ * \param [in] btype     Balance type (face, edge, corner or default, full).
  * \param [in] init_fn   Callback function to initialize the user_data
  *                       which is already allocated automatically.
- * \note Balances edges and corners.
- *       Can be easily changed to edges only in p8est_algorithms.c.
  */
-void                p8est_balance (p8est_t * p8est, p8est_init_t init_fn);
+void                p8est_balance (p8est_t * p8est,
+                                   p8est_balance_type_t btype,
+                                   p8est_init_t init_fn);
 
 /** Equally partition the forest.
  *
@@ -259,6 +272,18 @@ void                p8est_partition (p8est_t * p8est,
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p8est_checksum (p8est_t * p8est);
+
+/** Convert the p8est_balance_type_t into a number.
+ * \param [in] btype    The balance type to convert.
+ * \return              Returns 1, 2 or 3.
+ */
+int                 p8est_balance_type_int (p8est_balance_type_t btype);
+
+/** Convert the p8est_balance_type_t into a const string.
+ * \param [in] btype    The balance type to convert.
+ * \return              Returns a pointer to a constant string.
+ */
+const char         *p8est_balance_type_string (p8est_balance_type_t btype);
 
 SC_EXTERN_C_END;
 

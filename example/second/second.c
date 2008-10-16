@@ -92,7 +92,7 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, "mesh_second_refined");
 
   /* balance the mesh */
-  p4est_balance (p4est, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, NULL);
   p4est_vtk_write_file (p4est, "mesh_second_balanced");
   crc = p4est_checksum (p4est);
 

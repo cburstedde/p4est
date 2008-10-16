@@ -138,7 +138,7 @@ main (int argc, char **argv)
 
   /* balance the tree, print and destroy */
 #if 0
-  p4est_balance_subtree (p4est, 0, NULL);
+  p4est_balance_subtree (p4est, P4EST_BALANCE_FULL, 0, NULL);
   p4est_tree_print (SC_LP_INFO, tree);
 #endif
   for (k = 0; k < tree->quadrants.elem_count; ++k) {
@@ -149,21 +149,22 @@ main (int argc, char **argv)
 #endif /* !P4_TO_P8 */
 
   /* refine and balance the forest */
-  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 1");
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 1");
   p4est_refine (p4est, true, refine_fn, NULL);
-  SC_CHECK_ABORT (!p4est_is_balanced (p4est), "Balance 2");
-  p4est_balance (p4est, NULL);
-  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 3");
+  SC_CHECK_ABORT (!p4est_is_balanced (p4est, P4EST_BALANCE_FULL),
+                  "Balance 2");
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 3");
 
   /* checksum and partition */
   crc = p4est_checksum (p4est);
   p4est_partition (p4est, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Partition");
-  SC_CHECK_ABORT (p4est_is_balanced (p4est), "Balance 4");
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 4");
 
   /* checksum and rebalance */
   crc = p4est_checksum (p4est);
-  p4est_balance (p4est, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Rebalance");
 
   /* create neighborhood */

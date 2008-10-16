@@ -192,11 +192,13 @@ void                p8est_complete_subtree (p8est_t * p8est,
 /** Balances a sorted tree within a p8est. It may have exterior quadrants.
  * The completed tree will have only owned quadrants and no overlap.
  * \param [in,out] p8est      The p8est to work on.
+ * \param [in]     btype      The balance type (face, edge or corner).
  * \param [in]     which_tree The 0-based index of the subtree to balance.
  * \param [in]     init_fn    Callback function to initialize the user_data
  *                            which is already allocated automatically.
  */
 void                p8est_balance_subtree (p8est_t * p8est,
+                                           p8est_balance_type_t btype,
                                            p4est_topidx_t which_tree,
                                            p8est_init_t init_fn);
 

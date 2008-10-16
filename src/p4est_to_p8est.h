@@ -48,9 +48,12 @@
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
 #define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
 #define P4EST_COMM_NODES_REPLY          P8EST_COMM_NODES_REPLY
+#define P4EST_BALANCE_DEFAULT           P8EST_BALANCE_DEFAULT
+#define P4EST_BALANCE_FULL              P8EST_BALANCE_FULL
 
 /* redefine types */
 #define p4est_connectivity_t            p8est_connectivity_t
+#define p4est_balance_type_t            p8est_balance_type_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
@@ -83,6 +86,8 @@
 #define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
+#define p4est_balance_type_int          p8est_balance_type_int
+#define p4est_balance_type_string       p8est_balance_type_string
 
 /* functions in p4est_bits */
 #define p4est_quadrant_print            p8est_quadrant_print
