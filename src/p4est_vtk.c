@@ -28,7 +28,7 @@
 bool                p4est_vtk_default_write_rank = true;
 #endif /* !P4_TO_P8 */
 
-#include <sc_vtk.h>
+#include <sc_io.h>
 
 #ifndef P4EST_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"

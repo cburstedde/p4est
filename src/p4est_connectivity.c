@@ -20,6 +20,7 @@
 */
 
 #include <p4est_connectivity.h>
+#include <sc_io.h>
 
 /* *INDENT-OFF* */
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
@@ -272,26 +273,6 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
     return false;
 
   return true;
-}
-
-static void
-sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file,
-           const char *errmsg)
-{
-  size_t              nwritten;
-
-  nwritten = fwrite (ptr, size, nmemb, file);
-  SC_CHECK_ABORT (nwritten == nmemb, errmsg);
-}
-
-static void
-sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file,
-          const char *errmsg)
-{
-  size_t              nread;
-
-  nread = fread (ptr, size, nmemb, file);
-  SC_CHECK_ABORT (nread == nmemb, errmsg);
 }
 
 void

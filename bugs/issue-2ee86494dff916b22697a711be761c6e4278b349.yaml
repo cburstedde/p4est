@@ -7,8 +7,8 @@ type: :bugfix
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-17 01:45:43.157666 Z
 references: []
 
@@ -18,3 +18,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2008-10-17 16:40:51.694722 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - The functions are now in sc_io.{c,h}.

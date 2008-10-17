@@ -20,6 +20,7 @@
 */
 
 #include <p8est_connectivity.h>
+#include <sc_io.h>
 
 /* *INDENT-OFF* */
 const int           p8est_face_corners[6][4] =
@@ -719,26 +720,6 @@ p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
     return false;
 
   return true;
-}
-
-static void
-sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file,
-           const char *errmsg)
-{
-  size_t              nwritten;
-
-  nwritten = fwrite (ptr, size, nmemb, file);
-  SC_CHECK_ABORT (nwritten == nmemb, errmsg);
-}
-
-static void
-sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file,
-          const char *errmsg)
-{
-  size_t              nread;
-
-  nread = fread (ptr, size, nmemb, file);
-  SC_CHECK_ABORT (nread == nmemb, errmsg);
 }
 
 void
