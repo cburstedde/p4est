@@ -19,7 +19,8 @@ if P4EST_BUILD_3D
 p4est_test_programs += \
         test/p8est_test_quadrants test/p8est_test_balance \
         test/p8est_test_partition test/p8est_test_coarsen \
-        test/p8est_test_valid test/p8est_test_balance_type
+        test/p8est_test_valid test/p8est_test_balance_type \
+        test/p8est_test_loadsave
 endif
 
 check_PROGRAMS += $(p4est_test_programs)
@@ -44,6 +45,7 @@ test_p8est_test_partition_SOURCES = test/test_partition3.c
 test_p8est_test_coarsen_SOURCES = test/test_coarsen3.c
 test_p8est_test_valid_SOURCES = test/test_valid3.c
 test_p8est_test_balance_type_SOURCES = test/test_balance_type3.c
+test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 
 TESTS += $(p4est_test_programs)
 
@@ -65,4 +67,5 @@ LINT_CSOURCES += \
         $(test_p8est_test_partition_SOURCES) \
         $(test_p8est_test_coarsen_SOURCES) \
         $(test_p8est_test_valid_SOURCES) \
-        $(test_p8est_test_balance_type_SOURCES)
+        $(test_p8est_test_balance_type_SOURCES) \
+        $(test_p8est_test_loadsave_SOURCES)

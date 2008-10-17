@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Move sc_fread and sc_fwrite into libsc
+desc: |-
+  The files p4est_connectivity.c and p8est_connectivity.c contain
+  static functions sc_fread and sc_fwrite. These shoule be in libsc.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-17 01:45:43.157666 Z
+references: []
+
+id: 2ee86494dff916b22697a711be761c6e4278b349
+log_events: 
+- - 2008-10-17 01:45:44.917608 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

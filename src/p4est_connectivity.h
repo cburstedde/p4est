@@ -34,7 +34,7 @@ SC_EXTERN_C_BEGIN;
  * p4est_connectivity, p4est, or any other 2D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P4EST_ONDISK_FORMAT 1
+#define P4EST_ONDISK_FORMAT 0x2000002
 
 /** This structure holds the 2D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.

@@ -7,8 +7,8 @@ type: :feature
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :in_progress
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-16 23:13:44.469521 Z
 references: []
 
@@ -26,3 +26,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - commented
   - Implemented 2D connectivity save/load/is_equal and added a test.
+- - 2008-10-17 01:44:45.383637 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - Connectivity load/save seems working for 2D and 3D.

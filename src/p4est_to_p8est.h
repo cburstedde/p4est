@@ -75,6 +75,9 @@
 /* functions in p4est_connectivity */
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
+#define p4est_connectivity_is_equal     p8est_connectivity_is_equal
+#define p4est_connectivity_save         p8est_connectivity_save
+#define p4est_connectivity_load         p8est_connectivity_load
 
 /* functions in p4est */
 #define p4est_new                       p8est_new

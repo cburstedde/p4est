@@ -26,6 +26,12 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* Increase this number whenever the on-disk format for
+ * p8est_connectivity, p8est, or any other 3D data structure changes.
+ * The format for reading and writing must be the same.
+ */
+#define P8EST_ONDISK_FORMAT 0x3000001
+
 /** This structure holds the 3D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
  *
@@ -176,16 +182,38 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
                                               p4est_topidx_t num_ctt,
                                               bool alloc_vertices);
 
-/** Destroy a connectivity structure
+/** Destroy a connectivity structure.
  */
 void                p8est_connectivity_destroy (p8est_connectivity_t *
                                                 connectivity);
 
-/** Examine a connectivity structure
- * \return  Returns 1 if structure is valid, 0 otherwise.
+/** Examine a connectivity structure.
+ * \return  Returns true if structure is valid, false otherwise.
  */
 bool                p8est_connectivity_is_valid (p8est_connectivity_t *
                                                  connectivity);
+
+/** Check two connectivity structures for equality.
+ * \return          Returns true if structures are equal, false otherwise.
+ */
+bool                p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
+                                                 p8est_connectivity_t *
+                                                 conn2);
+
+/** Save a connectivity structure to disk.
+ * \param [in]      Valid connectivity structure.
+ * \param [in]      Name of the file to write.
+ * \note            Aborts on file errors.
+ */
+void                p8est_connectivity_save (p8est_connectivity_t * conn,
+                                             const char *filename);
+
+/** Load a connectivity structure from disk.
+ * \param [in]      Name of the file to read.
+ * \return          Returns a valid connectivity structure.
+ * \note            Aborts on file errors or invalid connectivity.
+ */
+p8est_connectivity_t *p8est_connectivity_load (const char *filename);
 
 /** Create a connectivity structure for the unit cube.
  */

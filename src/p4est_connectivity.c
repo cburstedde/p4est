@@ -317,7 +317,7 @@ p4est_connectivity_save (p4est_connectivity_t * conn, const char *filename)
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);
   int8size = sizeof (int8_t);
-  array6[0] = (uint64_t) P4EST_ONDISK_FORMAT;
+  array6[0] = P4EST_ONDISK_FORMAT;
   array6[1] = (uint64_t) topsize;
   array6[2] = (uint64_t) conn->num_trees;
   array6[3] = (uint64_t) num_vertices;
@@ -364,7 +364,7 @@ p4est_connectivity_load (const char *filename)
   int8size = sizeof (int8_t);
   sc_fread (array6, u64z, 6, file, "read header");
 
-  SC_CHECK_ABORT (array6[0] == (uint64_t) P4EST_ONDISK_FORMAT,
+  SC_CHECK_ABORT (array6[0] == P4EST_ONDISK_FORMAT,
                   "on-disk format mismatch");
   SC_CHECK_ABORT (array6[1] == (uint64_t) topsize,
                   "p4est_topidx_t size mismatch");
@@ -394,7 +394,6 @@ p4est_connectivity_load (const char *filename)
             "read vtt_offset");
   SC_CHECK_ABORT (num_vtt == conn->vtt_offset[num_vertices],
                   "num_vtt mismatch");
-
   sc_fread (conn->vertex_to_tree, topsize, num_vtt, file, "read vtt");
   sc_fread (conn->vertex_to_vertex, topsize, num_vtt, file, "read vtv");
 
