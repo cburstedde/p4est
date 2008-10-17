@@ -54,11 +54,11 @@ main (int argc, char **argv)
 
   /* save, synchronize, load and compare */
   if (mpirank == 0) {
-    p4est_connectivity_save (connectivity, P4EST_STRING "_conn.bin");
+    p4est_connectivity_save (connectivity, P4EST_STRING "_conn.p4c");
   }
   mpiret = MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
-  conn2 = p4est_connectivity_load (P4EST_STRING "_conn.bin");
+  conn2 = p4est_connectivity_load (P4EST_STRING "_conn.p4c");
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save mismatch");
 

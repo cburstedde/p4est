@@ -25,8 +25,10 @@ TESTS_ENVIRONMENT = @P4EST_MPI_TESTS_ENVIRONMENT@
 
 # recurse only into subpackages
 SUBDIRS =
+LINT_SUBDIRS =
 if P4EST_PROVIDE_SC
 SUBDIRS += sc
+LINT_SUBDIRS += sc
 endif
 DIST_SUBDIRS = $(SUBDIRS)
 
@@ -51,6 +53,10 @@ ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 
 lint:
 if LINT
+	@for subdir in $(LINT_SUBDIRS) ; do \
+		echo "Making $@ in $$subdir"; \
+		(cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) lint) ; \
+	done
 	for f in $(LINT_CSOURCES) ; do \
 		$(LINT) $(ALL_LINT_FLAGS) $(top_srcdir)/$$f || \
 		echo "Lint check failed for $$f" ; \
@@ -73,4 +79,4 @@ if !P4EST_WITH_SC
 endif
 
 clean-local:
-	rm -f *vtu
+	rm -f *vtu *.p4c
