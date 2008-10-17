@@ -30,6 +30,12 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* Increase this number whenever the on-disk format for
+ * p4est_connectivity, p4est, or any other 2D data structure changes.
+ * The format for reading and writing must be the same.
+ */
+#define P4EST_ONDISK_FORMAT 1
+
 /** This structure holds the 2D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
  *
@@ -104,16 +110,38 @@ p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_trees,
                                               p4est_topidx_t num_vtt,
                                               bool alloc_vxyz);
 
-/** Destroy a connectivity structure
+/** Destroy a connectivity structure.
  */
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
 
-/** Examine a connectivity structure
- * \return  Returns 1 if structure is valid, 0 otherwise.
+/** Examine a connectivity structure.
+ * \return          Returns true if structure is valid, false otherwise.
  */
 bool                p4est_connectivity_is_valid (p4est_connectivity_t *
                                                  connectivity);
+
+/** Check two connectivity structures for equality.
+ * \return          Returns true if structures are equal, false otherwise.
+ */
+bool                p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
+                                                 p4est_connectivity_t *
+                                                 conn2);
+
+/** Save a connectivity structure to disk.
+ * \param [in]      Valid connectivity structure.
+ * \param [in]      Name of the file to write.
+ * \note            Aborts on file errors.
+ */
+void                p4est_connectivity_save (p4est_connectivity_t * conn,
+                                             const char *filename);
+
+/** Load a connectivity structure from disk.
+ * \param [in]      Name of the file to read.
+ * \return          Returns a valid connectivity structure.
+ * \note            Aborts on file errors or invalid connectivity.
+ */
+p4est_connectivity_t *p4est_connectivity_load (const char *filename);
 
 /** Create a connectivity structure for the unit square
  */

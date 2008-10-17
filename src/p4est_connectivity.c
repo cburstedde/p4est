@@ -230,6 +230,182 @@ p4est_connectivity_is_valid (p4est_connectivity_t * connectivity)
   return true;
 }
 
+bool
+p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
+                             p4est_connectivity_t * conn2)
+{
+  size_t              topsize, int8size;
+  size_t              tcount;
+  p4est_topidx_t      num_vertices, num_vtt;
+
+  topsize = sizeof (p4est_topidx_t);
+  int8size = sizeof (int8_t);
+
+  if (conn1->num_trees != conn2->num_trees ||
+      conn1->num_vertices != conn2->num_vertices)
+    return false;
+  if ((conn1->vertices == NULL) != (conn2->vertices == NULL))
+    return false;
+
+  tcount = (size_t) (4 * conn1->num_trees);
+  if (memcmp (conn1->tree_to_vertex, conn2->tree_to_vertex,
+              tcount * topsize) ||
+      memcmp (conn1->tree_to_tree, conn2->tree_to_tree,
+              tcount * topsize) ||
+      memcmp (conn1->tree_to_face, conn2->tree_to_face, tcount * int8size))
+    return false;
+
+  num_vertices = conn1->num_vertices;
+  num_vtt = conn1->vtt_offset[num_vertices];
+
+  if (conn1->vertices != NULL &&
+      memcmp (conn1->vertices, conn2->vertices,
+              sizeof (double) * 3 * num_vertices))
+    return false;
+
+  if (memcmp (conn1->vtt_offset, conn2->vtt_offset,
+              topsize * (num_vertices + 1)) ||
+      memcmp (conn1->vertex_to_tree, conn2->vertex_to_tree,
+              topsize * num_vtt) ||
+      memcmp (conn1->vertex_to_vertex, conn2->vertex_to_vertex,
+              topsize * num_vtt))
+    return false;
+
+  return true;
+}
+
+static void
+sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file,
+           const char *errmsg)
+{
+  size_t              nwritten;
+
+  nwritten = fwrite (ptr, size, nmemb, file);
+  SC_CHECK_ABORT (nwritten == nmemb, errmsg);
+}
+
+static void
+sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file,
+          const char *errmsg)
+{
+  size_t              nread;
+
+  nread = fread (ptr, size, nmemb, file);
+  SC_CHECK_ABORT (nread == nmemb, errmsg);
+}
+
+void
+p4est_connectivity_save (p4est_connectivity_t * conn, const char *filename)
+{
+  int                 retval;
+  bool                alloc_vxyz;
+  size_t              u64z, topsize, int8size;
+  size_t              tcount;
+  uint64_t            array6[6];
+  p4est_topidx_t      num_vertices, num_vtt;
+  FILE               *file;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  file = fopen (filename, "wb");
+  SC_CHECK_ABORT (file != NULL, "file open");
+
+  alloc_vxyz = (conn->vertices != NULL);
+  num_vertices = conn->num_vertices;
+  num_vtt = conn->vtt_offset[num_vertices];
+
+  u64z = sizeof (uint64_t);
+  topsize = sizeof (p4est_topidx_t);
+  int8size = sizeof (int8_t);
+  array6[0] = (uint64_t) P4EST_ONDISK_FORMAT;
+  array6[1] = (uint64_t) topsize;
+  array6[2] = (uint64_t) conn->num_trees;
+  array6[3] = (uint64_t) num_vertices;
+  array6[4] = (uint64_t) num_vtt;
+  array6[5] = (uint64_t) alloc_vxyz;
+  sc_fwrite (array6, u64z, 6, file, "write header");
+
+  tcount = (size_t) (4 * conn->num_trees);
+  sc_fwrite (conn->tree_to_vertex, topsize, tcount, file, "write ttv");
+  sc_fwrite (conn->tree_to_tree, topsize, tcount, file, "write ttt");
+  sc_fwrite (conn->tree_to_face, int8size, tcount, file, "write ttf");
+
+  if (alloc_vxyz) {
+    sc_fwrite (conn->vertices, sizeof (double), 3 * num_vertices, file,
+               "write vertices");
+  }
+
+  sc_fwrite (conn->vtt_offset, topsize, num_vertices + 1, file,
+             "write vtt_offset");
+  sc_fwrite (conn->vertex_to_tree, topsize, num_vtt, file, "write vtt");
+  sc_fwrite (conn->vertex_to_vertex, topsize, num_vtt, file, "write vtv");
+
+  retval = fclose (file);
+  SC_CHECK_ABORT (retval == 0, "file close");
+}
+
+p4est_connectivity_t *
+p4est_connectivity_load (const char *filename)
+{
+  int                 retval;
+  bool                alloc_vxyz;
+  size_t              u64z, topsize, int8size;
+  size_t              tcount;
+  uint64_t            array6[6];
+  p4est_topidx_t      num_trees, num_vertices, num_vtt;
+  FILE               *file;
+  p4est_connectivity_t *conn = NULL;
+
+  file = fopen (filename, "rb");
+  SC_CHECK_ABORT (file != NULL, "file open");
+
+  u64z = sizeof (uint64_t);
+  topsize = sizeof (p4est_topidx_t);
+  int8size = sizeof (int8_t);
+  sc_fread (array6, u64z, 6, file, "read header");
+
+  SC_CHECK_ABORT (array6[0] == (uint64_t) P4EST_ONDISK_FORMAT,
+                  "on-disk format mismatch");
+  SC_CHECK_ABORT (array6[1] == (uint64_t) topsize,
+                  "p4est_topidx_t size mismatch");
+
+  num_trees = (p4est_topidx_t) array6[2];
+  num_vertices = (p4est_topidx_t) array6[3];
+  num_vtt = (p4est_topidx_t) array6[4];
+  alloc_vxyz = (bool) array6[5];
+  SC_CHECK_ABORT (num_trees >= 0, "negative num_trees");
+  SC_CHECK_ABORT (num_vertices >= 0, "negative num_vertices");
+  SC_CHECK_ABORT (num_vtt >= 0, "negative num_vtt");
+
+  conn =
+    p4est_connectivity_new (num_trees, num_vertices, num_vtt, alloc_vxyz);
+
+  tcount = (size_t) (4 * conn->num_trees);
+  sc_fread (conn->tree_to_vertex, topsize, tcount, file, "read ttv");
+  sc_fread (conn->tree_to_tree, topsize, tcount, file, "read ttt");
+  sc_fread (conn->tree_to_face, int8size, tcount, file, "read ttf");
+
+  if (alloc_vxyz) {
+    sc_fread (conn->vertices, sizeof (double), 3 * num_vertices, file,
+              "read vertices");
+  }
+
+  sc_fread (conn->vtt_offset, topsize, num_vertices + 1, file,
+            "read vtt_offset");
+  SC_CHECK_ABORT (num_vtt == conn->vtt_offset[num_vertices],
+                  "num_vtt mismatch");
+
+  sc_fread (conn->vertex_to_tree, topsize, num_vtt, file, "read vtt");
+  sc_fread (conn->vertex_to_vertex, topsize, num_vtt, file, "read vtv");
+
+  retval = fclose (file);
+  SC_CHECK_ABORT (retval == 0, "file close");
+
+  SC_CHECK_ABORT (p4est_connectivity_is_valid (conn), "invalid connectivity");
+
+  return conn;
+}
+
 p4est_connectivity_t *
 p4est_connectivity_new_unitsquare (void)
 {

@@ -10,7 +10,8 @@ p4est_test_programs += \
         test/p4est_test_file test/p4est_test_quadrants \
         test/p4est_test_balance test/p4est_test_partition \
         test/p4est_test_order test/p4est_test_coarsen \
-        test/p4est_test_valid test/p4est_test_balance_type
+        test/p4est_test_valid test/p4est_test_balance_type \
+        test/p4est_test_loadsave
 noinst_PROGRAMS += \
         test/p4est_bug_wp
 endif
@@ -33,6 +34,7 @@ test_p4est_test_order_SOURCES = test/test_order.c
 test_p4est_test_coarsen_SOURCES = test/test_coarsen2.c
 test_p4est_test_valid_SOURCES = test/test_valid2.c
 test_p4est_test_balance_type_SOURCES = test/test_balance_type2.c
+test_p4est_test_loadsave_SOURCES = test/test_loadsave2.c
 
 test_p4est_bug_wp_SOURCES = test/bug_weighted_partition.c
 
@@ -56,6 +58,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_coarsen_SOURCES) \
         $(test_p4est_test_valid_SOURCES) \
         $(test_p4est_test_balance_type_SOURCES) \
+        $(test_p4est_test_loadsave_SOURCES) \
         $(test_p4est_bug_wp_SOURCES) \
         $(test_p8est_test_quadrants_SOURCES) \
         $(test_p8est_test_balance_SOURCES) \

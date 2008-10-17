@@ -1,0 +1,28 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Implement load/save functionality for the connectivity
+desc: |-
+  The connectivity structure is identical on all cores and needs only
+  to be saved once.
+type: :feature
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :in_progress
+disposition: 
+creation_time: 2008-10-16 23:13:44.469521 Z
+references: []
+
+id: a45b59075f1c1830366c414703090e6ed4875a45
+log_events: 
+- - 2008-10-16 23:13:59.620707 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
+- - 2008-10-16 23:14:53.378858 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - changed status from unstarted to in_progress
+  - ""
+- - 2008-10-17 00:56:44.876361 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - commented
+  - Implemented 2D connectivity save/load/is_equal and added a test.

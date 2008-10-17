@@ -55,7 +55,7 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
        && quadrant->z >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2)
 #endif
       )) {
-    return quadrant->level < ueber_level;
+    return (int) quadrant->level < ueber_level;
   }
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
