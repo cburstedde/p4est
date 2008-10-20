@@ -232,7 +232,9 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->minsize = mesh->maxsize = 0;
   mesh->ticksize = mesh->volume = 0.;
   mesh->extra_info = NULL;
+  mesh->patch_ids = NULL;
 
+  /* We are done */
   P4EST_GLOBAL_PRODUCTIONF ("Done trilinear_mesh_extract"
                             " with %lld anodes %lld %lld\n",
                             (long long) mesh->total_anode_num,
@@ -252,6 +254,8 @@ p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh)
   P4EST_FREE (mesh->fvnid_count_table);
   P4EST_FREE (mesh->fvnid_interval_table);
   sc_mempool_destroy (mesh->sharer_pool);
+
+  P4EST_FREE (mesh->patch_ids);
 
   P4EST_FREE (mesh);
 }
