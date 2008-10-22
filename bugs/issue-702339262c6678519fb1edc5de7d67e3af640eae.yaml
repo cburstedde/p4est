@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Implement brick-shaped configurable connectivity
+desc: |-
+  Create a connectivity structure composed of L x M x N trees
+  in cartesian order. Number the trees in z-order.
+type: :feature
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-22 02:11:49.256229 Z
+references: []
+
+id: 702339262c6678519fb1edc5de7d67e3af640eae
+log_events: 
+- - 2008-10-22 02:11:50.136083 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
