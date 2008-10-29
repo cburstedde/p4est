@@ -11,7 +11,7 @@ AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
 AC_CONFIG_MACRO_DIR(sc/config)
-AC_PREFIX_DEFAULT([$PWD/install])
+AC_PREFIX_DEFAULT([$PWD/local])
 AM_INIT_AUTOMAKE([subdir-objects])
 AX_PREFIX_CONFIG_H([src/p4est_config.h])
 
