@@ -18,7 +18,7 @@ SC_CONFIG=`cd "$SC_CONFIG" && pwd`
 aclocal -Wall -I config -I "$SC_CONFIG"
 autoheader -Wall
 automake -Wall --add-missing --copy
-autoconf -Wall
+autoconf -Wall -f
 
 if test -x "sc/bootstrap" ; then
   echo "Running bootstrap in directory sc"

@@ -71,6 +71,8 @@ ChangeLog:
 		echo 'Warning not in git dir; ChangeLog could be wrong.' >&2)
 
 dist-hook: ChangeLog
+	echo $(VERSION) > $(distdir)/.tarball-version
+	(test "x$(VERSION)" = "x`@top_srcdir@/sc/config/git-version-gen @top_srcdir@/.tarball-version`" || (echo "Stale version;" && echo "Please run:" && echo "     cd @top_srcdir@ && ./bootstrap" && echo "before make dist" && exit 1 ))
 if !P4EST_WITH_SC
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with --without-sc"
