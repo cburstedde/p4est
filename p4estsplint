@@ -1,4 +1,0 @@
-#! /bin/sh
-
-splint -DP4EST_SPLINT -preproc -weak -Isrc -Isrc/splint \
-    +posixlib src/*.c test/*.c example/**/*.c
