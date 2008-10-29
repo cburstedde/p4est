@@ -33,7 +33,7 @@ endif
 DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
-EXTRA_DIST += bootstrap p4estindent
+EXTRA_DIST += bootstrap p4estindent config/git-version-gen
 DISTCLEANFILES += _configs.sed src/p4est_config.h
 MAINTAINERCLEANFILES += ChangeLog
 .PHONY: lint ChangeLog
@@ -64,7 +64,7 @@ if LINT
 endif LINT
 
 ChangeLog:
-	(GIT_DIR=@top_srcdir@/.git git log | @P4EST_SC_DIR@/git2cl \
+	(GIT_DIR=@top_srcdir@/.git git log | @P4EST_SC_DIR@/config/git2cl \
 		> .ChangeLog.tmp && \
 		mv .ChangeLog.tmp ChangeLog; rm -f .ChangeLog.tmp) || \
 	(touch ChangeLog; \
@@ -72,7 +72,7 @@ ChangeLog:
 
 dist-hook: ChangeLog
 	echo $(VERSION) > $(distdir)/.tarball-version
-	(test "x$(VERSION)" = "x`@top_srcdir@/sc/config/git-version-gen @top_srcdir@/.tarball-version`" || (echo "Stale version;" && echo "Please run:" && echo "     cd @top_srcdir@ && ./bootstrap" && echo "before make dist" && exit 1 ))
+	(test "x$(VERSION)" = "x`@top_srcdir@/config/git-version-gen @top_srcdir@/.tarball-version`" || (echo "Stale version;" && echo "Please run:" && echo "     cd @top_srcdir@ && ./bootstrap" && echo "before make dist" && exit 1 ))
 if !P4EST_WITH_SC
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with --without-sc"
