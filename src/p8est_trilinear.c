@@ -79,7 +79,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   memcpy (global_counts, local_counts, 5 * sizeof (int64_t));
 #ifdef P4EST_MPI
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (local_counts, global_counts, 5, MPI_LONG_LONG,
+    mpiret = MPI_Allreduce (local_counts, global_counts, 5, MPI_LONG_LONG_INT,
                             MPI_SUM, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
   }

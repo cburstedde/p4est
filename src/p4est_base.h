@@ -62,7 +62,7 @@ typedef int32_t     p4est_locidx_t;
 
 /** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
-#define P4EST_MPI_GLOIDX MPI_LONG_LONG
+#define P4EST_MPI_GLOIDX MPI_LONG_LONG_INT
 #define P4EST_VTK_GLOIDX "Int64"
 #define P4EST_GLOIDX_MAX INT64_MAX
 

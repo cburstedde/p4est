@@ -1924,8 +1924,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 
     /* distribute local weight sums */
     global_weight_sums[0] = 0;
-    mpiret = MPI_Allgather (&weight_sum, 1, MPI_LONG_LONG,
-                            &global_weight_sums[1], 1, MPI_LONG_LONG,
+    mpiret = MPI_Allgather (&weight_sum, 1, MPI_LONG_LONG_INT,
+                            &global_weight_sums[1], 1, MPI_LONG_LONG_INT,
                             p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
 
@@ -2199,9 +2199,8 @@ p4est_checksum (p4est_t * p4est)
       memcpy (gather, send, 2 * sizeof (uint64_t));
   }
   if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Gather (send, 2, MPI_UNSIGNED_LONG_LONG,
-                         gather, 2, MPI_UNSIGNED_LONG_LONG, 0,
-                         p4est->mpicomm);
+    mpiret = MPI_Gather (send, 2, MPI_LONG_LONG_INT,
+                         gather, 2, MPI_LONG_LONG_INT, 0, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
   }
 
