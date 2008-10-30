@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Make inter-tree face-only and edge-only balance work
+desc: |-
+  While face and edge only balance works correctly inside each tree,
+  across trees we do full balance always. This can lead to situations
+  where element lengths before and after balance differ in a factor of 4.
+  This in turn must not happen for e.g. rhea and mangll which expect 2:1.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-30 23:27:32.641358 Z
+references: []
+
+id: e83652f1ee3e88a3ee7917ea288139cb7245f937
+log_events: 
+- - 2008-10-30 23:27:33.377241 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

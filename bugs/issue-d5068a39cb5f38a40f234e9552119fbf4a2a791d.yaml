@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Make vtk header fields configurable
+desc: |-
+  Both the 2D and 3D vtk output routines should accept parameters
+  for selectively writing the tree id, mpi rank, and a wrapped mpi rank.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-30 22:03:51.715030 Z
+references: []
+
+id: d5068a39cb5f38a40f234e9552119fbf4a2a791d
+log_events: 
+- - 2008-10-30 22:03:53.186897 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
