@@ -214,6 +214,30 @@ typedef struct trilinear_mesh
 }
 trilinear_mesh_t;
 
+typedef struct octor_neighor_t
+{
+  int32_t             face_neighbor_eid[6][4];
+}
+octor_neighbor_t;
+
+typedef struct phantom_elem_t
+{
+  tick_t              lx, ly, lz;
+  tick_t              size;
+  int32_t             owner_procid;     /* remote processor id */
+  int32_t             reid;     /* element index on the remote processor  */
+}
+phantom_elem_t;
+
+typedef struct octor_neighborhood_t
+{
+  int32_t             phantom_elem_num;
+  phantom_elem_t     *phantom_elem_table;
+
+  octor_neighbor_t   *local_elem_neighbor_table;
+}
+octor_neighborhood_t;
+
 #endif /* !TRILINEAR_MESH_H */
 
 /** Creates a trilinear mesh structure from a p8est and its node data.
