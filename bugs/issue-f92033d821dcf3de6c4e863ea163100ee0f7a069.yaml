@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Implement human-readable machine-independent load and save
+desc: |-
+  Based on JSON or YAML, write text-based load/save code.
+  Possibly add a zlib compression option.
+  This makes the p4est and connectivity files machine independent.
+type: :feature
+component: p4est
+release: "0.5"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-30 17:04:56.578890 Z
+references: []
+
+id: f92033d821dcf3de6c4e863ea163100ee0f7a069
+log_events: 
+- - 2008-10-30 17:04:57.634788 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
