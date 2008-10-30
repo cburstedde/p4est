@@ -158,12 +158,12 @@ p4est_quadrant_hash_fn (const void *v, const void *u)
   a = (uint32_t) q->x;
   b = (uint32_t) q->y;
 #ifndef P4_TO_P8
-  c = 0xdeadbeefU;
+  c = (uint32_t) q->level;
 #else
   c = (uint32_t) q->z;
-#endif
   sc_hash_mix (a, b, c);
   a += (uint32_t) q->level;
+#endif
   sc_hash_final (a, b, c);
 
   return (unsigned) c;
