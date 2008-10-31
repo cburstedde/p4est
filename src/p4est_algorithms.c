@@ -686,8 +686,8 @@ p4est_find_higher_bound (sc_array_t * array,
 }
 
 void
-p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
-                            sc_array_t * in, sc_array_t * out)
+p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
+                            sc_array_t * out)
 {
   int                 k, l, m, which;
   int                 face, corner, level;
@@ -697,7 +697,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   ssize_t             first_index, last_index, js;
   bool                inter_tree;
   bool                outface[2 * P4EST_DIM];
-  p4est_topidx_t      ntree;
+  p4est_topidx_t      qtree, ntree;
   p4est_qcoord_t      qh;
   p4est_quadrant_t    fd, ld, tempq, ins[P4EST_INSUL];
   p4est_quadrant_t   *treefd, *treeld;
@@ -722,10 +722,6 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
 #endif
   sc_array_t         *tquadrants;
 
-  tree = sc_array_index (p4est->trees, qtree);
-  P4EST_ASSERT (p4est_tree_is_complete (tree));
-  tquadrants = &tree->quadrants;
-
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
   P4EST_QUADRANT_INIT (&tempq);
@@ -742,27 +738,33 @@ p4est_tree_compute_overlap (p4est_t * p4est, p4est_topidx_t qtree,
   sc_array_init (cta, sizeof (p8est_corner_transform_t));
 #endif
 
-  /* assign some numbers */
-  treecount = tquadrants->elem_count;
-  P4EST_ASSERT (treecount > 0);
+  /* assign incoming quadrant count */
   incount = in->elem_count;
 
-  /* return if there is nothing to do */
-  if (treecount == 0 || incount == 0) {
-    return;
-  }
-
-  /* retrieve first and last descendants in the tree */
-  treefd = &tree->first_desc;
-  treeld = &tree->last_desc;
+  /* initialize the tracking of trees */
+  qtree = -1;
+  tree = NULL;
+  treefd = treeld = NULL;
+  tquadrants = NULL;
+  treecount = -1;
 
   /* loop over input list of quadrants */
   for (iz = 0; iz < incount; ++iz) {
     inq = sc_array_index (in, iz);
-    P4EST_ASSERT (0 <= inq->p.piggy2.which_tree);
+
+    /* potentially grab new tree */
     if (inq->p.piggy2.which_tree != qtree) {
-      continue;
+      P4EST_ASSERT (qtree < inq->p.piggy2.which_tree);
+      qtree = inq->p.piggy2.which_tree;
+
+      tree = sc_array_index (p4est->trees, qtree);
+      treefd = &tree->first_desc;
+      treeld = &tree->last_desc;
+      tquadrants = &tree->quadrants;
+      treecount = tquadrants->elem_count;
+      P4EST_ASSERT (treecount > 0);
     }
+
     inter_tree = false;
     ntree = -1;
     face = corner = -1;

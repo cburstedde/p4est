@@ -880,55 +880,11 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
 }
 
 static void
-p4est_balance_response (p4est_t * p4est, int peer_id,
-                        p4est_balance_peer_t * peer)
+p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer)
 {
-#ifdef P4EST_DEBUG
-  const p4est_topidx_t first_tree = p4est->first_local_tree;
-  const p4est_topidx_t last_tree = p4est->last_local_tree;
-#endif /* P4EST_DEBUG */
-  size_t              zz, qcount;
-  p4est_topidx_t      prev, qtree;
-  p4est_topidx_t      num_receive_trees, nt;
-  p4est_topidx_t     *pi;
-  sc_array_t         *qarray, tree_array;
-  p4est_quadrant_t   *q;
-
-  qarray = &peer->recv_both;
-  qcount = qarray->elem_count;
-  P4EST_ASSERT ((size_t) peer->recv_first_count == qcount);
-
-  /* build list of received tree ids */
-  prev = -1;
-  num_receive_trees = 0;
-  sc_array_init (&tree_array, sizeof (p4est_topidx_t));
-  for (zz = 0; zz < qcount; ++zz) {
-    q = sc_array_index (qarray, zz);
-    qtree = q->p.piggy2.which_tree;
-    P4EST_ASSERT (first_tree <= qtree && qtree <= last_tree);
-    P4EST_ASSERT (qtree >= prev);
-    if (qtree > prev) {
-      sc_array_resize (&tree_array, (size_t) num_receive_trees + 1);
-      pi = p4est_array_index_topidx (&tree_array, num_receive_trees);
-      *pi = qtree;
-      ++num_receive_trees;
-      prev = qtree;
-    }
-  }
-  P4EST_LDEBUGF ("first load from %d into %lld trees\n", peer_id,
-                 (long long) num_receive_trees);
-  P4EST_ASSERT (num_receive_trees == (p4est_topidx_t) tree_array.elem_count);
-
-  /* loop over the trees to receive into and update overlap quadrants */
-  for (nt = 0; nt < num_receive_trees; ++nt) {
-    pi = p4est_array_index_topidx (&tree_array, nt);
-    qtree = *pi;
-
-    /* compute overlap quadrants */
-    p4est_tree_compute_overlap (p4est, qtree, qarray, &peer->send_second);
-  }
+  /* compute and uniqify overlap quadrants */
+  p4est_tree_compute_overlap (p4est, &peer->recv_both, &peer->send_second);
   p4est_tree_uniqify_overlap (&peer->send_first, &peer->send_second);
-  sc_array_reset (&tree_array);
 }
 
 void
@@ -1518,7 +1474,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #endif /* P4EST_DEBUG */
 
         /* process incoming quadrants to interleave with communication */
-        p4est_balance_response (p4est, j, peer);
+        p4est_balance_response (p4est, peer);
         qcount = peer->send_second.elem_count;
         if (qcount > 0) {
           P4EST_LDEBUGF ("Balance B send %llu quadrants to %d\n",
@@ -1567,7 +1523,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   qarray = &peer->recv_both;
   sc_array_resize (qarray, offset);
   memcpy (qarray->array, peer->send_first.array, obytes);
-  p4est_balance_response (p4est, rank, peer);
+  p4est_balance_response (p4est, peer);
   qcount = peer->send_second.elem_count;
   peer->recv_second_count = peer->send_second_count = (int) qcount;
   qbytes = qcount * sizeof (p4est_quadrant_t);

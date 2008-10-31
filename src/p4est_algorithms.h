@@ -123,21 +123,19 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
 /** Compute the overlap of a number of insulation layers with a tree.
  * Every quadrant out of the insulation layer of the quadrants in \a in
  * except the quadrant itself is checked for overlap of quadrants
- * from \a tree that are smaller by at least two levels and thus can cause
- * a split. Those elements from tree that overlap are put into \a out.
+ * from all trees that are smaller by at least two levels and thus
+ * can cause a split. Those elements that overlap are put into \a out.
  * \param [in] p4est    The p4est to work on.
- * \param [in] qtree    Index of a sorted complete tree to include.
- * \param [in] in       A sorted linear list of quadrants.
- * \param [in,out] out  A sorted subset of tree->quadrants.
+ * \param [in] in       A piggy-sorted linear list of quadrants.
+ * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
  */
 void                p4est_tree_compute_overlap (p4est_t * p4est,
-                                                p4est_topidx_t qtree,
                                                 sc_array_t * in,
                                                 sc_array_t * out);
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
- * \param [in] skip     A sorted list of quadrants to be skipped.
- * \param [in,out] out  A sorted subset of tree->quadrants.
+ * \param [in] skip     A piggy-sorted list of quadrants to be skipped.
+ * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
   */
 void                p4est_tree_uniqify_overlap (sc_array_t * skip,
                                                 sc_array_t * out);
