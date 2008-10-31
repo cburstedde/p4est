@@ -1719,7 +1719,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                   (long long) which_tree,
                   (unsigned long long) count_outside_root,
                   (unsigned long long) count_outside_tree);
-  P4EST_INFOF
+  P4EST_VERBOSEF
     ("Tree %lld inlist %llu outlist %llu moved %llu %llu insert %llu\n",
      (long long) which_tree, (unsigned long long) count_already_inlist,
      (unsigned long long) count_moved1_outside,
