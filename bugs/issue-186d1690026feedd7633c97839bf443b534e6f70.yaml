@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Compute minimal required edge and corner connectivity from faces
+desc: |-
+  Currently edge and corner connectivities need to be specified manually.
+  It is possible to infer this information from the face connectivity.
+  Only for weird setups the manual information could be a superset of this.
+type: :feature
+component: p4est
+release: "0.4"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-31 02:42:27.098035 Z
+references: []
+
+id: 186d1690026feedd7633c97839bf443b534e6f70
+log_events: 
+- - 2008-10-31 02:42:28.402874 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

@@ -20,3 +20,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2008-10-31 02:45:09.385321 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - commented
+  - |-
+    The inter-tree balance can be relaxed to face or edge only
+    once the edge and corner minimum connectivity is ensured.

@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Check edge and corner connectivity for minimum requirements
+desc: |-
+  The minimum required edge and corner connectivities can be computed
+  from the face connectivity alone. Make this a standard assertion.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-10-31 02:44:12.628192 Z
+references: []
+
+id: 1fa6eb95c70d012c57d06e3683c0ac6a393ccc7b
+log_events: 
+- - 2008-10-31 02:44:13.179011 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
