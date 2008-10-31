@@ -204,7 +204,8 @@ typedef struct trilinear_mesh
   int32_t             mpisize, mpirank;
   int32_t             recsize;
 
-  int8_t             *patch_ids;
+  int8_t             *elem_pids;
+  int8_t             *node_pids;
 
   void                (*destructor) (struct trilinear_mesh *);
   trilinear_mesh_extra_t *extra_info;
