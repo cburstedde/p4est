@@ -269,7 +269,7 @@ main (int argc, char **argv)
 #endif
 
   /* balance */
-  p8est_balance (p8est, P8EST_BALANCE_DEFAULT, init_fn);
+  p8est_balance (p8est, P8EST_BALANCE_FULL, init_fn);
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, "mesh_simple3_balanced");
 #endif
@@ -284,7 +284,7 @@ main (int argc, char **argv)
 
 #ifdef P4EST_DEBUG
   /* rebalance should not change checksum */
-  p8est_balance (p8est, P8EST_BALANCE_DEFAULT, init_fn);
+  p8est_balance (p8est, P8EST_BALANCE_FULL, init_fn);
   P4EST_ASSERT (p8est_checksum (p8est) == crc);
 #endif
 

@@ -323,7 +323,7 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_balance = start + MPI_Wtime ();
@@ -337,7 +337,7 @@ main (int argc, char **argv)
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
-  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   elapsed_rebalance = start + MPI_Wtime ();
@@ -362,7 +362,7 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   start = -MPI_Wtime ();
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  p4est_build_ghost_layer (p4est, P4EST_BALANCE_DEFAULT,
+  p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
                            &ghost_layer, &ghost_owner);
   mpiret = MPI_Barrier (mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
