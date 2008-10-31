@@ -33,7 +33,7 @@ endif
 DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
-EXTRA_DIST += bootstrap p4estindent config/git-version-gen
+EXTRA_DIST += bootstrap p4estindent config/git-version-gen bugs
 DISTCLEANFILES += _configs.sed src/p4est_config.h
 MAINTAINERCLEANFILES += ChangeLog
 .PHONY: lint ChangeLog
