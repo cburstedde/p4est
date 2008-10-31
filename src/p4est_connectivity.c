@@ -276,7 +276,7 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
 }
 
 void
-p4est_connectivity_save (p4est_connectivity_t * conn, const char *filename)
+p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {
   int                 retval;
   bool                alloc_vxyz;

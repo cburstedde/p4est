@@ -723,7 +723,7 @@ p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
 }
 
 void
-p8est_connectivity_save (p8est_connectivity_t * conn, const char *filename)
+p8est_connectivity_save (const char *filename, p8est_connectivity_t * conn)
 {
   int                 retval;
   size_t              u64z, topsize, int8size;

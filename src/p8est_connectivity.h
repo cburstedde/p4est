@@ -201,17 +201,18 @@ bool                p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
                                                  conn2);
 
 /** Save a connectivity structure to disk.
- * \param [in]      Valid connectivity structure.
- * \param [in]      Name of the file to write.
+ * \param [in] filename         Name of the file to write.
+ * \param [in] connectivity     Valid connectivity structure.
  * \note            Aborts on file errors.
  */
-void                p8est_connectivity_save (p8est_connectivity_t * conn,
-                                             const char *filename);
+void                p8est_connectivity_save (const char *filename,
+                                             p8est_connectivity_t *
+                                             connectivity);
 
 /** Load a connectivity structure from disk.
- * \param [in]      Name of the file to read.
- * \return          Returns a valid connectivity structure.
- * \note            Aborts on file errors or invalid connectivity.
+ * \param [in] filename Name of the file to read.
+ * \return              Returns a valid connectivity structure.
+ * \note                Aborts on file errors or invalid data.
  */
 p8est_connectivity_t *p8est_connectivity_load (const char *filename);
 

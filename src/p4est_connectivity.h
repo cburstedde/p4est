@@ -129,17 +129,18 @@ bool                p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
                                                  conn2);
 
 /** Save a connectivity structure to disk.
- * \param [in]      Valid connectivity structure.
- * \param [in]      Name of the file to write.
+ * \param [in] filename         Name of the file to write.
+ * \param [in] connectivity     Valid connectivity structure.
  * \note            Aborts on file errors.
  */
-void                p4est_connectivity_save (p4est_connectivity_t * conn,
-                                             const char *filename);
+void                p4est_connectivity_save (const char *filename,
+                                             p4est_connectivity_t *
+                                             connectivity);
 
 /** Load a connectivity structure from disk.
- * \param [in]      Name of the file to read.
- * \return          Returns a valid connectivity structure.
- * \note            Aborts on file errors or invalid connectivity.
+ * \param [in] filename Name of the file to read.
+ * \return              Returns a valid connectivity structure.
+ * \note                Aborts on file errors or invalid data.
  */
 p4est_connectivity_t *p4est_connectivity_load (const char *filename);
 

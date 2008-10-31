@@ -54,7 +54,7 @@ main (int argc, char **argv)
 
   /* save, synchronize, load and compare */
   if (mpirank == 0) {
-    p4est_connectivity_save (connectivity, P4EST_STRING "_conn.p4c");
+    p4est_connectivity_save (P4EST_STRING "_conn.p4c", connectivity);
   }
   mpiret = MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
