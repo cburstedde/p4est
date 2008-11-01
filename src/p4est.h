@@ -272,6 +272,22 @@ void                p4est_partition (p4est_t * p4est,
  */
 unsigned            p4est_checksum (p4est_t * p4est);
 
+/** Save the complete connectivity/p4est data to disk.
+ * \param [in] filename Name of the file to write.
+ * \param [in] p4est    Valid forest structure.
+ * \note            Aborts on file errors.
+ */
+void                p4est_save (const char *filename, p4est_t * p4est);
+
+/** Load the complete connectivity/p4est structure from disk.
+ * \param [in] filename         Name of the file to read.
+ * \param [out] connectivity    Connectivity must be destroyd separately.
+ * \return          Returns a valid forest structure.
+ * \note            Aborts on file errors or invalid file contents.
+ */
+p4est_t            *p4est_load (const char *filename,
+                                p4est_connectivity_t ** connectivity);
+
 /** Convert the p4est_balance_type_t into a number.
  * \param [in] btype    The balance type to convert.
  * \return              Returns 1 or 2.

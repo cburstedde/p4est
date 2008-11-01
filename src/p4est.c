@@ -30,11 +30,16 @@
 #include <p4est_communication.h>
 #include <p4est_ghost.h>
 #endif /* !P4_TO_P8 */
+#include <sc_io.h>
 #include <sc_ranges.h>
 
 #ifdef SC_ALLGATHER
 #include <sc_allgather.h>
 #define MPI_Allgather sc_allgather
+#endif
+
+#ifdef P4EST_HAVE_UNISTD_H
+#include <unistd.h>
 #endif
 
 typedef struct
@@ -2172,6 +2177,100 @@ p4est_checksum (p4est_t * p4est)
 #endif
 
   return (unsigned) crc;
+}
+
+void
+p4est_save (const char *filename, p4est_t * p4est)
+{
+  int                 retval, mpiret;
+  int                 i;
+  long                fpos = -1;
+  uint64_t           *u64a;
+  FILE               *file;
+  p4est_topidx_t      nt;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t    lq;
+  sc_array_t         *tquadrants;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (p4est->connectivity));
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  P4EST_QUADRANT_INIT (&lq);
+
+  if (p4est->mpirank == 0) {
+    p4est_connectivity_save (filename, p4est->connectivity);
+
+    /* open file after writing connectivity to it */
+    file = fopen (filename, "ab");
+    SC_CHECK_ABORT (file != NULL, "file open");
+
+    /* write format and partition information */
+    u64a = P4EST_ALLOC (uint64_t, p4est->mpisize + 3);
+    u64a[0] = P4EST_ONDISK_FORMAT;
+    u64a[1] = (uint64_t) sizeof (p4est_quadrant_t);
+    u64a[2] = (uint64_t) p4est->mpisize;
+    for (i = 0; i < p4est->mpisize; ++i) {
+      u64a[i + 3] = (uint64_t) p4est->global_last_quad_index[i] + 1;
+    }
+    sc_fwrite (u64a, sizeof (uint64_t), (size_t) (p4est->mpisize + 3),
+               file, "write quadrant partition");
+    sc_fwrite (p4est->global_first_position, sizeof (p4est_quadrant_t),
+               (size_t) (p4est->mpisize + 1), file, "write tree partition");
+    P4EST_FREE (u64a);
+
+    /* determine file position */
+    fpos = ftell (file);
+    SC_CHECK_ABORT (fpos > 0, "file tell");
+
+    /* best attempt to synchronize file to disk */
+    retval = fflush (file);
+    SC_CHECK_ABORT (retval == 0, "file flush");
+#ifdef P4EST_HAVE_FSYNC
+    retval = fsync (fileno (file));
+    SC_CHECK_ABORT (retval == 0, "file fsync");
+#endif
+  }
+
+  /* broadcast the file header size (also serves as synchronization) */
+  mpiret = MPI_Bcast (&fpos, 1, MPI_LONG, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  if (p4est->mpirank != 0) {
+    /* open file after connectivity has been written to it */
+    file = fopen (filename, "rb+");
+    SC_CHECK_ABORT (file != NULL, "file open");
+
+    /* seek to the beginning of this processor's storage */
+    if (p4est->mpirank > 0) {
+      fpos +=
+        (p4est->global_last_quad_index[p4est->mpirank - 1] + 1 +
+         p4est->mpirank) * sizeof (p4est_quadrant_t);
+
+      retval = fseek (file, fpos, SEEK_SET);
+      SC_CHECK_ABORT (retval == 0, "file seek");
+    }
+  }
+
+  /* write local quadrant and last tree information */
+  for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
+    tree = p4est_array_index_topidx (p4est->trees, nt);
+    tquadrants = &tree->quadrants;
+    sc_fwrite (tquadrants->array, sizeof (p4est_quadrant_t),
+               tquadrants->elem_count, file, "write quadrants");
+  }
+  lq.p.which_tree = p4est->last_local_tree;
+  sc_fwrite (&lq, sizeof (p4est_quadrant_t), 1, file, "write last tree");
+
+  retval = fclose (file);
+  SC_CHECK_ABORT (retval == 0, "file close");
+}
+
+p4est_t            *
+p4est_load (const char *filename, p4est_connectivity_t ** connectivity)
+{
+  *connectivity = p4est_connectivity_load (filename);
+
+  return NULL;
 }
 
 #ifndef P4_TO_P8

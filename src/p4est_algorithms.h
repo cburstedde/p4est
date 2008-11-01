@@ -94,6 +94,11 @@ bool                p4est_tree_is_almost_sorted (p4est_tree_t * tree,
  */
 void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
 
+/** Check two forest/connectivity structures for equality.
+ * \return          Returns true if p4est and its connectivity are equal.
+ */
+bool                p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2);
+
 /** Checks a p4est for validity.
  * A valid p4est has the following properties:
  *    the quadrant counters are consistent

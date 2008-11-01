@@ -1,4 +1,4 @@
---- !ditz.rubyforge.org,2008-03-06/issue
+--- !ditz.rubyforge.org,2008-03-06/issue 
 title: Implement load/save functionality for the p4est
 desc: |-
   Write load and save functions that read or write the p4est state to disk.
@@ -8,14 +8,18 @@ type: :feature
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition:
+status: :in_progress
+disposition: 
 creation_time: 2008-10-16 17:44:00.172599 Z
 references: []
 
 id: 78e0a8c03a44fca337602cf71cc983d2eef93290
-log_events:
+log_events: 
 - - 2008-10-16 17:44:01.388406 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2008-11-01 00:44:50.597206 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - changed status from unstarted to in_progress
+  - Implemented synchronized file creation and concurrent data write.

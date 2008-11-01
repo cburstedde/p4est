@@ -93,7 +93,14 @@ echo "o---------------------------------------"
 echo "| Checking headers"
 echo "o---------------------------------------"
 
-AC_CHECK_HEADERS([arpa/inet.h netinet/in.h])
+AC_CHECK_HEADERS([arpa/inet.h netinet/in.h unistd.h])
+
+# Checks for functions.
+echo "o---------------------------------------"
+echo "| Checking functions"
+echo "o---------------------------------------"
+
+AC_CHECK_FUNCS([fsync])
 
 # Checks for typedefs, structures, and compiler characteristics.
 dnl echo "o---------------------------------------"

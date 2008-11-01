@@ -81,4 +81,4 @@ if !P4EST_WITH_SC
 endif
 
 clean-local:
-	rm -f *vtu *.p4c
+	rm -f *vtu *.p4c *.p4p *.p8c *.p8p

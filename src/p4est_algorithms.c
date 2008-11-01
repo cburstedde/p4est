@@ -366,6 +366,12 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
 }
 
 bool
+p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2)
+{
+  return true;
+}
+
+bool
 p4est_is_valid (p4est_t * p4est)
 {
 #ifdef P4EST_DEBUG

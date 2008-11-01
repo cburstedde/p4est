@@ -25,6 +25,7 @@
 #define P4_TO_P8
 
 /* redefine macros */
+#define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
 #define P4EST_CHILDREN                  P8EST_CHILDREN
 #define P4EST_INSUL                     P8EST_INSUL
@@ -89,6 +90,8 @@
 #define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
+#define p4est_save                      p8est_save
+#define p4est_load                      p8est_load
 #define p4est_balance_type_int          p8est_balance_type_int
 #define p4est_balance_type_string       p8est_balance_type_string
 
@@ -150,6 +153,7 @@
 #define p4est_tree_is_almost_sorted     p8est_tree_is_almost_sorted
 #define p4est_tree_is_complete          p8est_tree_is_complete
 #define p4est_tree_print                p8est_tree_print
+#define p4est_is_equal                  p8est_is_equal
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound

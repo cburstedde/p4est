@@ -273,6 +273,22 @@ void                p8est_partition (p8est_t * p8est,
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
+/** Save the complete connectivity/p4est data to disk.
+ * \param [in] filename Name of the file to write.
+ * \param [in] p8est    Valid forest structure.
+ * \note            Aborts on file errors.
+ */
+void                p8est_save (const char *filename, p8est_t * p8est);
+
+/** Load the complete connectivity/p4est structure from disk.
+ * \param [in] filename         Name of the file to read.
+ * \param [out] connectivity    Connectivity must be destroyd separately.
+ * \return          Returns a valid forest structure.
+ * \note            Aborts on file errors or invalid file contents.
+ */
+p8est_t            *p8est_load (const char *filename,
+                                p8est_connectivity_t ** connectivity);
+
 /** Convert the p8est_balance_type_t into a number.
  * \param [in] btype    The balance type to convert.
  * \return              Returns 1, 2 or 3.
