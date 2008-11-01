@@ -368,6 +368,66 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
 bool
 p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2)
 {
+  int                 i;
+  size_t              zz;
+  p4est_topidx_t      jt;
+  p4est_tree_t       *tree1, *tree2;
+  p4est_quadrant_t   *q1, *q2;
+  sc_array_t         *tqs1, *tqs2;
+
+  if (p4est1->mpisize != p4est2->mpisize)
+    return false;
+  if (p4est1->mpirank != p4est2->mpirank)
+    return false;
+  if (p4est1->data_size != p4est2->data_size)
+    return false;
+
+  if (p4est1->first_local_tree != p4est2->first_local_tree)
+    return false;
+  if (p4est1->last_local_tree != p4est2->last_local_tree)
+    return false;
+  if (p4est1->local_num_quadrants != p4est2->local_num_quadrants)
+    return false;
+  if (p4est1->global_num_quadrants != p4est2->global_num_quadrants)
+    return false;
+
+  if (memcmp (p4est1->global_last_quad_index, p4est2->global_last_quad_index,
+              p4est1->mpisize * sizeof (p4est_gloidx_t)))
+    return false;
+  if (memcmp (p4est1->global_first_position, p4est2->global_first_position,
+              (p4est1->mpisize + 1) * sizeof (p4est_quadrant_t)))
+    return false;
+
+  for (jt = p4est1->first_local_tree; jt <= p4est1->last_local_tree; ++jt) {
+    tree1 = p4est_array_index_topidx (p4est1->trees, jt);
+    tqs1 = &tree1->quadrants;
+    tree2 = p4est_array_index_topidx (p4est2->trees, jt);
+    tqs2 = &tree2->quadrants;
+
+    if (!p4est_quadrant_is_equal (&tree1->first_desc, &tree2->first_desc))
+      return false;
+    if (!p4est_quadrant_is_equal (&tree1->last_desc, &tree2->last_desc))
+      return false;
+    if (tree1->quadrants_offset != tree2->quadrants_offset)
+      return false;
+
+    for (i = 0; i <= P4EST_MAXLEVEL; ++i) {
+      if (tree1->quadrants_per_level[i] != tree2->quadrants_per_level[i])
+        return false;
+    }
+    if (tree1->maxlevel != tree2->maxlevel)
+      return false;
+
+    if (tqs1->elem_count != tqs2->elem_count)
+      return false;
+    for (zz = 0; zz < tqs1->elem_count; ++zz) {
+      q1 = sc_array_index (tqs1, zz);
+      q2 = sc_array_index (tqs2, zz);
+      if (!p4est_quadrant_is_equal (q1, q2))
+        return false;
+    }
+  }
+
   return true;
 }
 

@@ -21,19 +21,61 @@
 
 #ifndef P4_TO_P8
 #include <p4est.h>
+#include <p4est_bits.h>
 #include <p4est_algorithms.h>
 #else
 #include <p8est.h>
+#include <p8est_bits.h>
 #include <p8est_algorithms.h>
 #endif
 
 #ifndef P4_TO_P8
 #define P4EST_CONN_SUFFIX "p4c"
 #define P4EST_FOREST_SUFFIX "p4p"
+static const int    refine_level = 8;
 #else
 #define P4EST_CONN_SUFFIX "p8c"
 #define P4EST_FOREST_SUFFIX "p8p"
+static const int    refine_level = 5;
 #endif
+
+static int
+refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * quadrant)
+{
+  int                 cid;
+
+  if (which_tree == 2 || which_tree == 3) {
+    return 0;
+  }
+
+  cid = p4est_quadrant_child_id (quadrant);
+
+  if (cid == P4EST_CHILDREN - 1 ||
+      (quadrant->x >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2) &&
+       quadrant->y >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2)
+#ifdef P4_TO_P8
+       && quadrant->z >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2)
+#endif
+      )) {
+    return 1;
+  }
+  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
+    return 0;
+  }
+  if (quadrant->level == 1 && cid == 2) {
+    return 1;
+  }
+  if (quadrant->y == P4EST_QUADRANT_LEN (2) &&
+      quadrant->x == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+  if (quadrant->y >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+
+  return 1;
+}
 
 int
 main (int argc, char **argv)
@@ -56,13 +98,14 @@ main (int argc, char **argv)
   sc_init (mpirank, sc_generic_abort, &mpicomm, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  /* create connectivity and p4est structures */
+  /* create connectivity and p4est (not balanced) */
 #ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_star ();
 #else
   connectivity = p8est_connectivity_new_rotcubes ();
 #endif
   p4est = p4est_new (mpicomm, connectivity, 0, 0, NULL, NULL);
+  p4est_refine (p4est, true, refine_fn, NULL);
 
   /* save, synchronize, load connectivity and compare */
   if (mpirank == 0) {
@@ -71,20 +114,32 @@ main (int argc, char **argv)
   }
   mpiret = MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
-  conn2 = p4est_connectivity_load (P4EST_STRING "." P4EST_CONN_SUFFIX);
+  conn2 = p4est_connectivity_load (P4EST_STRING "." P4EST_CONN_SUFFIX, NULL);
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch A");
   p4est_connectivity_destroy (conn2);
 
   /* save, synchronize, load p4est and compare */
   p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est);
-  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX, &conn2);
+  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
+                       mpicomm, 0, NULL, &conn2);
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch B");
-#if 0
   SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2), "load/save p4est mismatch");
   p4est_destroy (p4est2);
-#endif
+  p4est_connectivity_destroy (conn2);
+
+  /* partition (still not balanced) */
+  p4est_partition (p4est, NULL);
+
+  /* save, synchronize, load p4est and compare */
+  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est);
+  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
+                       mpicomm, 0, NULL, &conn2);
+  SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
+                  "load/save connectivity mismatch B");
+  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2), "load/save p4est mismatch");
+  p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 
   /* destroy data structures */

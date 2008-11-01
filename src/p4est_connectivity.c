@@ -326,7 +326,7 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_load (const char *filename)
+p4est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
   bool                alloc_vxyz;
@@ -377,6 +377,11 @@ p4est_connectivity_load (const char *filename)
                   "num_vtt mismatch");
   sc_fread (conn->vertex_to_tree, topsize, num_vtt, file, "read vtt");
   sc_fread (conn->vertex_to_vertex, topsize, num_vtt, file, "read vtv");
+
+  if (length != NULL) {
+    *length = ftell (file);
+    SC_CHECK_ABORT (*length > 0, "file tell");
+  }
 
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");

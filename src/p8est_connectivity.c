@@ -787,7 +787,7 @@ p8est_connectivity_save (const char *filename, p8est_connectivity_t * conn)
 }
 
 p8est_connectivity_t *
-p8est_connectivity_load (const char *filename)
+p8est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
   size_t              u64z, topsize, int8size;
@@ -853,6 +853,11 @@ p8est_connectivity_load (const char *filename)
                   "num_ctt mismatch");
   sc_fread (conn->corner_to_tree, topsize, num_ctt, file, "read ctt");
   sc_fread (conn->corner_to_corner, int8size, num_ctt, file, "read ctc");
+
+  if (length != NULL) {
+    *length = ftell (file);
+    SC_CHECK_ABORT (*length > 0, "file tell");
+  }
 
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");

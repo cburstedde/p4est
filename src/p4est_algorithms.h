@@ -94,18 +94,18 @@ bool                p4est_tree_is_almost_sorted (p4est_tree_t * tree,
  */
 void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
 
-/** Check two forest/connectivity structures for equality.
- * \return          Returns true if p4est and its connectivity are equal.
+/** Locally check forest/connectivity structures for equality.
+ * \return          Returns true if forests and their connectivities are equal.
  */
 bool                p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2);
 
-/** Checks a p4est for validity.
- * A valid p4est has the following properties:
+/** Check a forest for validity and allreduce the result.
+ * Some properties of a valid forest are:
  *    the quadrant counters are consistent
  *    all trees are complete
  *    all non-local trees are empty
- * \param [in] p4est  The p4est to be tested.
- * \return Returns true if valid, false otherwise.
+ * \param [in] p4est    The forest to be tested.
+ * \return              Returns true if valid, false otherwise.
  */
 bool                p4est_is_valid (p4est_t * p4est);
 

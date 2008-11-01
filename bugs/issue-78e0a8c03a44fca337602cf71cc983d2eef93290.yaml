@@ -23,3 +23,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - changed status from unstarted to in_progress
   - Implemented synchronized file creation and concurrent data write.
+- - 2008-11-01 03:04:58.782661 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - commented
+  - |-
+    Now stores all necessary tree information. Data content still missing
+    as well as optional one-by-one synchronization.

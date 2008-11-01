@@ -34,7 +34,7 @@ SC_EXTERN_C_BEGIN;
  * p4est_connectivity, p4est, or any other 2D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P4EST_ONDISK_FORMAT 0x2000002
+#define P4EST_ONDISK_FORMAT 0x2000003
 
 /** This structure holds the 2D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
@@ -139,10 +139,12 @@ void                p4est_connectivity_save (const char *filename,
 
 /** Load a connectivity structure from disk.
  * \param [in] filename Name of the file to read.
+ * \param [out] length  Size in bytes of connectivity on disk or NULL.
  * \return              Returns a valid connectivity structure.
  * \note                Aborts on file errors or invalid data.
  */
-p4est_connectivity_t *p4est_connectivity_load (const char *filename);
+p4est_connectivity_t *p4est_connectivity_load (const char *filename,
+                                               long *length);
 
 /** Create a connectivity structure for the unit square
  */

@@ -282,11 +282,17 @@ void                p8est_save (const char *filename, p8est_t * p8est);
 
 /** Load the complete connectivity/p4est structure from disk.
  * \param [in] filename         Name of the file to read.
+ * \param [in] mpicomm          A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] data_size        Size of data for each quadrant which can be
+ *                              zero.  Then user_data_pool is set to NULL.
+ * \param [in] user_pointer     Assign to the user_pointer member of the p4est
+ *                              before init_fn is called the first time.
  * \param [out] connectivity    Connectivity must be destroyd separately.
  * \return          Returns a valid forest structure.
  * \note            Aborts on file errors or invalid file contents.
  */
-p8est_t            *p8est_load (const char *filename,
+p8est_t            *p8est_load (const char *filename, MPI_Comm mpicomm,
+                                size_t data_size, void *user_pointer,
                                 p8est_connectivity_t ** connectivity);
 
 /** Convert the p8est_balance_type_t into a number.

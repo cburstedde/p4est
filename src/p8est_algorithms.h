@@ -94,18 +94,18 @@ bool                p8est_tree_is_almost_sorted (p8est_tree_t * tree,
  */
 void                p8est_tree_print (int log_priority, p8est_tree_t * tree);
 
-/** Check two forest/connectivity structures for equality.
- * \return          Returns true if p4est and its connectivity are equal.
+/** Locally check forest/connectivity structures for equality.
+ * \return          Returns true if forests and their connectivities are equal.
  */
 bool                p8est_is_equal (p8est_t * p8est1, p8est_t * p8est2);
 
-/** Checks a p8est for validity.
- * A valid p8est has the following properties:
+/** Check a forest for validity and allreduce the result.
+ * Some properties of a valid forest are:
  *    the quadrant counters are consistent
  *    all trees are complete
  *    all non-local trees are empty
- * \param [in] p8est  The p8est to be tested.
- * \return Returns true if valid, false otherwise.
+ * \param [in] p8est    The forest to be tested.
+ * \return              Returns true if valid, false otherwise.
  */
 bool                p8est_is_valid (p8est_t * p8est);
 
