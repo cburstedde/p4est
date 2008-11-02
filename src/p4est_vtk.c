@@ -118,7 +118,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
-  vtufile = fopen (vtufilename, "w");
+  vtufile = fopen (vtufilename, "wb");
   if (vtufile == NULL) {
     P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
     return -1;
@@ -442,7 +442,7 @@ p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
     FILE               *pvtufile;
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", baseName);
 
-    pvtufile = fopen (pvtufilename, "w");
+    pvtufile = fopen (pvtufilename, "wb");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
@@ -503,7 +503,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, procRank);
-  vtufile = fopen (vtufilename, "a");
+  vtufile = fopen (vtufilename, "ab");
   if (vtufile == NULL) {
     P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
     return -1;
@@ -531,7 +531,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
     FILE               *pvtufile;
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", baseName);
 
-    pvtufile = fopen (pvtufilename, "a");
+    pvtufile = fopen (pvtufilename, "ab");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
