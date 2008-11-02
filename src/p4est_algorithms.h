@@ -95,9 +95,13 @@ bool                p4est_tree_is_almost_sorted (p4est_tree_t * tree,
 void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
 
 /** Locally check forest/connectivity structures for equality.
+ * \param [in] p4est1    The first forest to be compared.
+ * \param [in] p4est2    The second forest to be compared.
+ * \param [in] compare_data     Also check if quadrant data are identical.
  * \return          Returns true if forests and their connectivities are equal.
  */
-bool                p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2);
+bool                p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2,
+                                    bool compare_data);
 
 /** Check a forest for validity and allreduce the result.
  * Some properties of a valid forest are:

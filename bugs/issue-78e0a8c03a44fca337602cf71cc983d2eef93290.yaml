@@ -8,8 +8,8 @@ type: :feature
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :in_progress
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-16 17:44:00.172599 Z
 references: []
 
@@ -29,3 +29,9 @@ log_events:
   - |-
     Now stores all necessary tree information. Data content still missing
     as well as optional one-by-one synchronization.
+- - 2008-11-02 05:44:12.103743 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - |-
+    One-by-one synchronization implemented, necessary in all cases.
+    Element data is saved and loaded if so desired.

@@ -279,6 +279,7 @@ void
 p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {
   int                 retval;
+  char                magic6[6];
   bool                alloc_vxyz;
   size_t              u64z, topsize, int8size;
   size_t              tcount;
@@ -294,6 +295,9 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
   alloc_vxyz = (conn->vertices != NULL);
   num_vertices = conn->num_vertices;
   num_vtt = conn->vtt_offset[num_vertices];
+
+  strncpy (magic6, P4EST_STRING, 6);
+  sc_fwrite (magic6, 6, 1, file, "write magic");
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);
@@ -329,6 +333,7 @@ p4est_connectivity_t *
 p4est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
+  char                magic6[6];
   bool                alloc_vxyz;
   size_t              u64z, topsize, int8size;
   size_t              tcount;
@@ -339,6 +344,9 @@ p4est_connectivity_load (const char *filename, long *length)
 
   file = fopen (filename, "rb");
   SC_CHECK_ABORT (file != NULL, "file open");
+
+  sc_fread (magic6, 6, 1, file, "read magic");
+  SC_CHECK_ABORT (strncmp (magic6, P4EST_STRING, 6) == 0, "invalid magic");
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);

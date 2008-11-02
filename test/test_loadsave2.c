@@ -39,6 +39,17 @@ static const int    refine_level = 8;
 static const int    refine_level = 5;
 #endif
 
+static int          counter = 0;
+
+static void
+init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t * quadrant)
+{
+  int                *data = quadrant->p.user_data;
+
+  *data = (counter = counter * 1664525 + 1013904223) + (int) which_tree;
+}
+
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
@@ -104,8 +115,8 @@ main (int argc, char **argv)
 #else
   connectivity = p8est_connectivity_new_rotcubes ();
 #endif
-  p4est = p4est_new (mpicomm, connectivity, 0, 0, NULL, NULL);
-  p4est_refine (p4est, true, refine_fn, NULL);
+  p4est = p4est_new (mpicomm, connectivity, 0, sizeof (int), init_fn, NULL);
+  p4est_refine (p4est, true, refine_fn, init_fn);
 
   /* save, synchronize, load connectivity and compare */
   if (mpirank == 0) {
@@ -120,12 +131,13 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (conn2);
 
   /* save, synchronize, load p4est and compare */
-  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est);
+  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, true);
   p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
-                       mpicomm, 0, NULL, &conn2);
+                       mpicomm, sizeof (int), true, NULL, &conn2);
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch B");
-  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2), "load/save p4est mismatch");
+  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, true),
+                  "load/save p4est mismatch B");
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 
@@ -133,12 +145,24 @@ main (int argc, char **argv)
   p4est_partition (p4est, NULL);
 
   /* save, synchronize, load p4est and compare */
-  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est);
+  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, false);
   p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
-                       mpicomm, 0, NULL, &conn2);
+                       mpicomm, sizeof (int), false, NULL, &conn2);
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
-                  "load/save connectivity mismatch B");
-  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2), "load/save p4est mismatch");
+                  "load/save connectivity mismatch C");
+  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, false),
+                  "load/save p4est mismatch C");
+  p4est_destroy (p4est2);
+  p4est_connectivity_destroy (conn2);
+
+  /* save, synchronize, load p4est and compare */
+  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, true);
+  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
+                       mpicomm, sizeof (int), false, NULL, &conn2);
+  SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
+                  "load/save connectivity mismatch D");
+  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, false),
+                  "load/save p4est mismatch D");
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 

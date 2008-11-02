@@ -39,6 +39,7 @@ typedef enum
   P8EST_COMM_GHOST_LOAD,
   P8EST_COMM_NODES_QUERY,
   P8EST_COMM_NODES_REPLY,
+  P8EST_COMM_SAVE
 }
 p8est_comm_tag_t;
 

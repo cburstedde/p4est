@@ -30,11 +30,14 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* p4est identification string */
+#define P4EST_STRING "p4est"
+
 /* Increase this number whenever the on-disk format for
  * p4est_connectivity, p4est, or any other 2D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P4EST_ONDISK_FORMAT 0x2000003
+#define P4EST_ONDISK_FORMAT 0x2000004
 
 /** This structure holds the 2D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.

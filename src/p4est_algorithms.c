@@ -366,10 +366,11 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
 }
 
 bool
-p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2)
+p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2, bool compare_data)
 {
   int                 i;
   size_t              zz;
+  size_t              data_size;
   p4est_topidx_t      jt;
   p4est_tree_t       *tree1, *tree2;
   p4est_quadrant_t   *q1, *q2;
@@ -381,6 +382,7 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2)
     return false;
   if (p4est1->data_size != p4est2->data_size)
     return false;
+  data_size = p4est1->data_size;
 
   if (p4est1->first_local_tree != p4est2->first_local_tree)
     return false;
@@ -424,6 +426,9 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2)
       q1 = sc_array_index (tqs1, zz);
       q2 = sc_array_index (tqs2, zz);
       if (!p4est_quadrant_is_equal (q1, q2))
+        return false;
+      if (compare_data
+          && memcmp (q1->p.user_data, q2->p.user_data, data_size))
         return false;
     }
   }

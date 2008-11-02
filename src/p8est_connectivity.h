@@ -26,11 +26,14 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* p8est identification string */
+#define P8EST_STRING "p8est"
+
 /* Increase this number whenever the on-disk format for
  * p8est_connectivity, p8est, or any other 3D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P8EST_ONDISK_FORMAT 0x3000002
+#define P8EST_ONDISK_FORMAT 0x3000003
 
 /** This structure holds the 3D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.

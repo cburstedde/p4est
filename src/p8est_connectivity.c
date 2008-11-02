@@ -726,6 +726,7 @@ void
 p8est_connectivity_save (const char *filename, p8est_connectivity_t * conn)
 {
   int                 retval;
+  char                magic6[6];
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array8[8];
@@ -744,6 +745,9 @@ p8est_connectivity_save (const char *filename, p8est_connectivity_t * conn)
   num_ett = conn->ett_offset[num_edges];
   num_corners = conn->num_corners;
   num_ctt = conn->ctt_offset[num_corners];
+
+  strncpy (magic6, P8EST_STRING, 6);
+  sc_fwrite (magic6, 6, 1, file, "write magic");
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);
@@ -790,6 +794,7 @@ p8est_connectivity_t *
 p8est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
+  char                magic6[6];
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array8[8];
@@ -800,6 +805,9 @@ p8est_connectivity_load (const char *filename, long *length)
 
   file = fopen (filename, "rb");
   SC_CHECK_ABORT (file != NULL, "file open");
+
+  sc_fread (magic6, 6, 1, file, "read magic");
+  SC_CHECK_ABORT (strncmp (magic6, P8EST_STRING, 6) == 0, "invalid magic");
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);

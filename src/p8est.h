@@ -31,7 +31,6 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_DIM 3
 #define P8EST_CHILDREN 8
 #define P8EST_INSUL 27
-#define P8EST_STRING "p8est"
 
 /** Finest level of the octree for representing nodes */
 #define P8EST_MAXLEVEL 19
@@ -276,15 +275,20 @@ unsigned            p8est_checksum (p8est_t * p8est);
 /** Save the complete connectivity/p4est data to disk.
  * \param [in] filename Name of the file to write.
  * \param [in] p8est    Valid forest structure.
+ * \param [in] save_data        If true, the element data is saved.
  * \note            Aborts on file errors.
  */
-void                p8est_save (const char *filename, p8est_t * p8est);
+void                p8est_save (const char *filename, p8est_t * p8est,
+                                bool save_data);
 
 /** Load the complete connectivity/p4est structure from disk.
  * \param [in] filename         Name of the file to read.
  * \param [in] mpicomm          A valid MPI_Comm or MPI_COMM_NULL.
  * \param [in] data_size        Size of data for each quadrant which can be
  *                              zero.  Then user_data_pool is set to NULL.
+ * \param [in] load_data        If true, the element data is loaded.  If also
+ *                              no element data was saved and data_size > 0,
+ *                              this is an error and the function aborts.
  * \param [in] user_pointer     Assign to the user_pointer member of the p4est
  *                              before init_fn is called the first time.
  * \param [out] connectivity    Connectivity must be destroyd separately.
@@ -292,7 +296,8 @@ void                p8est_save (const char *filename, p8est_t * p8est);
  * \note            Aborts on file errors or invalid file contents.
  */
 p8est_t            *p8est_load (const char *filename, MPI_Comm mpicomm,
-                                size_t data_size, void *user_pointer,
+                                size_t data_size, bool load_data,
+                                void *user_pointer,
                                 p8est_connectivity_t ** connectivity);
 
 /** Convert the p8est_balance_type_t into a number.
