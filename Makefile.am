@@ -33,7 +33,7 @@ endif
 DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
-EXTRA_DIST += bootstrap p4estindent config/git-version-gen bugs
+EXTRA_DIST += bootstrap p4estindent config/git-version-gen bugs doc
 DISTCLEANFILES += _configs.sed src/p4est_config.h
 MAINTAINERCLEANFILES += ChangeLog
 .PHONY: lint ChangeLog
@@ -45,7 +45,6 @@ include example/read_forest/Makefile.am
 include example/second/Makefile.am
 include example/simple/Makefile.am
 include example/timings/Makefile.am
-include doc/Makefile.am
 
 ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
