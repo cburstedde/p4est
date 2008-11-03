@@ -1,0 +1,33 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: hot induced Assertion 'found'
+desc: |-
+  If rhea r4865 is comiled with p4est then the following run
+  of hot will crash.
+  
+    mpirun -np 4 ./hot sphere 3 uniform 0 6 1
+  
+  It crashes with the following message
+  
+  ...
+  [p4est 3] Peer ranges 1/2/25 first 0 last 2 owned 2900/3460
+  [p4est 3] Node queries send 3 nonz 3 recv 1
+  Abort: Assertion 'found'   in src/p4est_mesh.c:1101
+  Abort: Assertion 'found'   in src/p4est_mesh.c:1101
+  Abort: Assertion 'found'   in src/p4est_mesh.c:1101
+  Abort: Assertion 'found'   in src/p4est_mesh.c:1101
+  ...
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Lucas C Wilcox <lucasw@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-11-03 21:30:41.329341 Z
+references: []
+
+id: 1bcc4bde086f347681a9c33d7e395d6718ae1883
+log_events: 
+- - 2008-11-03 21:30:43.150090 Z
+  - Lucas C Wilcox <lucasw@ices.utexas.edu>
+  - created
+  - ""
