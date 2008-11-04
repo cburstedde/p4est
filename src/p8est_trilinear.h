@@ -206,6 +206,7 @@ typedef struct trilinear_mesh
 
   int8_t             *elem_pids;
   int8_t             *node_pids;
+  int                 isshell;  /* boolean set if geo is the shell */
 
   void                (*destructor) (struct trilinear_mesh *);
   trilinear_mesh_extra_t *extra_info;
