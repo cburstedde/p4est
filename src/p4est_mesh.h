@@ -104,10 +104,10 @@ p4est_hang2_t;
 
 /** This structure holds complete parallel node information.
  *
- * All nodes are canonicalized and store their tree id in piggy3.which_tree.
- * Their index in their owner's ordering is stored in piggy3.local_num.
+ * All nodes store their owner's tree id in piggy3.which_tree.
+ * The index in their owner's ordering is stored in piggy3.local_num.
  *
- * Canonicalized nodes are unique and either independent or face hanging.
+ * Nodes are unique and either independent or face hanging.
  * The local_nodes table is of dimension 4 * num_local_quadrants
  * and encodes the node indexes for all corners of all quadrants.  Let
  * ni := indep_nodes.elem_count,

@@ -646,6 +646,9 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
 
 endfunction:
   c->p.which_tree = lowest;
+
+  P4EST_ASSERT (p4est_quadrant_is_node (c, true));
+  P4EST_ASSERT (c->p.which_tree >= 0 && c->p.which_tree < conn->num_trees);
 }
 
 static              bool
@@ -1361,11 +1364,13 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
     SC_CHECK_MPI (mpiret);
     peer->expect_reply = false;
   }
+#endif /* P4EST_MPI */
 
-  /* Convert the receive buffers into the output data structures. */
+  /* Convert receive buffers into the output data structures and unclamp. */
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (inda, (size_t) il);
     p4est_node_unclamp ((p4est_quadrant_t *) in);
+#ifdef P4EST_MPI
     if (il >= offset_owned_indeps && il < end_owned_indeps) {
       continue;
     }
@@ -1419,8 +1424,8 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
       shared_offsets[il] = (p4est_locidx_t) new_position;
     }
     peer->recv_offset += this_size;
+#endif /* P4EST_MPI */
   }
-  nodes->shared_offsets = shared_offsets;
 
   /* Unclamp the hanging nodes as well. */
   for (zz = 0; zz < faha->elem_count; ++zz) {
@@ -1434,6 +1439,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   }
 #endif
 
+#ifdef P4EST_MPI
   /* Wait and close all send requests. */
   if (send_requests.elem_count > 0) {
     mpiret = MPI_Waitall ((int) send_requests.elem_count,
@@ -1441,6 +1447,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
                           MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
+  nodes->shared_offsets = shared_offsets;
 
   /* Clean up allocated communications memory. */
   SC_FREE (all_ranges);
@@ -1528,6 +1535,8 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   p4est_locidx_t      il, num_indep_nodes, local_num;
   p4est_locidx_t      num_owned_indeps, offset_owned_indeps, end_owned_indeps;
   p4est_indep_t      *in;
+  p4est_quadrant_t   *hq;
+  sc_array_t         *hang;
   sc_recycle_array_t *rarr;
 
   failed = false;
@@ -1568,6 +1577,11 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   otree = 0;
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (&nodes->indep_nodes, (size_t) il);
+    if (!p4est_quadrant_is_node ((p4est_quadrant_t *) in, false)) {
+      P4EST_NOTICE ("p4est nodes independent clamped\n");
+      failed = true;
+      goto failtest;
+    }
     ntree = in->p.piggy3.which_tree;
     local_num = in->p.piggy3.local_num;
     if (ntree < otree || ntree >= p4est->connectivity->num_trees) {
@@ -1651,6 +1665,28 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
     failed = true;
     goto failtest;
   }
+
+  /* Test clamp status for hanging nodes */
+  hang = &nodes->face_hangings;
+  for (zz = 0; zz < hang->elem_count; ++zz) {
+    hq = sc_array_index (hang, zz);
+    if (!p4est_quadrant_is_node (hq, false)) {
+      P4EST_NOTICE ("p4est nodes face hanging clamped\n");
+      failed = true;
+      goto failtest;
+    }
+  }
+#ifdef P4_TO_P8
+  hang = &nodes->edge_hangings;
+  for (zz = 0; zz < hang->elem_count; ++zz) {
+    hq = sc_array_index (hang, zz);
+    if (!p4est_quadrant_is_node (hq, false)) {
+      P4EST_NOTICE ("p4est nodes edge hanging clamped\n");
+      failed = true;
+      goto failtest;
+    }
+  }
+#endif
 
   /* TODO: Test hanging nodes and local corners. */
 
