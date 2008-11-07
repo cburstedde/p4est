@@ -2187,6 +2187,7 @@ void
 p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 {
   const int           headc = 5;
+  const int           align = 16;
 #ifdef P4EST_MPI
   int                 mpiret;
 #ifndef P4EST_MPIIO_WRITE
@@ -2228,6 +2229,15 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
     file = fopen (filename, "ab");
     SC_CHECK_ABORT (file != NULL, "file open");
 
+    /* align the start of the forest */
+    fpos = ftell (file);
+    SC_CHECK_ABORT (fpos > 0, "file tell");
+    while (fpos % align != 0) {
+      retval = fputc ('\0', file);
+      SC_CHECK_ABORT (retval == 0, "file align");
+      ++fpos;
+    }
+
     /* write format and partition information */
     u64a = P4EST_ALLOC (uint64_t, num_procs + headc);
     u64a[0] = P4EST_ONDISK_FORMAT;
@@ -2241,12 +2251,10 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
     sc_fwrite (u64a, sizeof (uint64_t), (size_t) (num_procs + headc),
                file, "write quadrant partition");
     P4EST_FREE (u64a);
+    fpos += (headc + num_procs) * sizeof (uint64_t);
     sc_fwrite (gfpos, sizeof (p4est_quadrant_t),
                (size_t) (num_procs + 1), file, "write tree partition");
-
-    /* determine file position */
-    fpos = ftell (file);
-    SC_CHECK_ABORT (fpos > 0, "file tell");
+    fpos += (num_procs + 1) * sizeof (p4est_quadrant_t);
 
 #ifdef P4EST_MPIIO_WRITE
     /* We will close the sequential access to the file */
@@ -2415,6 +2423,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
             p4est_connectivity_t ** connectivity)
 {
   const int           headc = 5;
+  const int           align = 16;
   int                 retval;
 #ifdef P4EST_MPI
   int                 mpiret;
@@ -2435,6 +2444,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 
   conn = *connectivity = p4est_connectivity_load (filename, &fpos);
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  fpos = ((fpos + align - 1) / align) * align;
 
   /* assign some data members */
   p4est->data_size = data_size;
