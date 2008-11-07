@@ -2187,11 +2187,13 @@ void
 p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 {
   const int           headc = 5;
-  int                 retval;
 #ifdef P4EST_MPI
   int                 mpiret;
+#ifndef P4EST_MPIIO_WRITE
   MPI_Status          mpistatus;
 #endif
+#endif
+  int                 retval;
   int                 num_procs, rank;
   int                 i;
   long                fpos = -1, foffset;
@@ -2308,8 +2310,6 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 #endif
   }
 
-  /* Set view to the starting point */
-
   /*
    * Write local last tree and quadrant information.
    * Each processor writes so many quadrants:
@@ -2327,17 +2327,8 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 #ifndef P4EST_MPIIO_WRITE
   sc_fwrite (&lq, sizeof (p4est_quadrant_t), 1, file, "write last tree");
 #else
-  mpiret = MPI_File_write (mpifile, &lq, (int) sizeof (p4est_quadrant_t),
-                           MPI_BYTE, &mpistatus);
-  SC_CHECK_MPI (mpiret);
-#ifdef P4EST_DEBUG
-  {
-    int                 count = 0;
-    MPI_Get_count (&mpistatus, MPI_BYTE, &count);
-    SC_CHECK_ABORT (count == (int) sizeof (p4est_quadrant_t),
-                    "bytes not written");
-  }
-#endif
+  sc_mpi_write (mpifile, &lq, sizeof (p4est_quadrant_t), MPI_BYTE,
+                "write last tree");
 #endif
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
     tree = p4est_array_index_topidx (p4est->trees, jt);
@@ -2351,36 +2342,17 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 #ifndef P4EST_MPIIO_WRITE
     sc_fwrite (&lq, sizeof (p4est_quadrant_t), 1, file, "write tree count");
 #else
-    mpiret = MPI_File_write (mpifile, &lq, (int) sizeof (p4est_quadrant_t),
-                             MPI_BYTE, &mpistatus);
-    SC_CHECK_MPI (mpiret);
-#ifdef P4EST_DEBUG
-    {
-      int                 count = 0;
-      MPI_Get_count (&mpistatus, MPI_BYTE, &count);
-      SC_CHECK_ABORT (count == (int) sizeof (p4est_quadrant_t),
-                      "bytes not written");
-    }
-#endif
+    sc_mpi_write (mpifile, &lq, sizeof (p4est_quadrant_t), MPI_BYTE,
+                  "write tree count");
 #endif
     if (!save_data) {
 #ifndef P4EST_MPIIO_WRITE
-      sc_fwrite (tquadrants->array, sizeof (p4est_quadrant_t), zcount,
-                 file, "write quadrants");
+      sc_fwrite (tquadrants->array, sizeof (p4est_quadrant_t), zcount, file,
+                 "write quadrants");
 #else
-      mpiret = MPI_File_write (mpifile, tquadrants->array,
-                               (int) (zcount * sizeof (p4est_quadrant_t)),
-                               MPI_BYTE, &mpistatus);
-      SC_CHECK_MPI (mpiret);
-#ifdef P4EST_DEBUG
-      {
-        int                 count = 0;
-        MPI_Get_count (&mpistatus, MPI_BYTE, &count);
-        SC_CHECK_ABORT (count == (int) (zcount * sizeof (p4est_quadrant_t)),
-                        "bytes not written");
-      }
-#endif
-
+      sc_mpi_write (mpifile, tquadrants->array,
+                    zcount * sizeof (p4est_quadrant_t),
+                    MPI_BYTE, "write quadrants");
 #endif
     }
     else {
@@ -2390,27 +2362,10 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
         sc_fwrite (q, sizeof (p4est_quadrant_t), 1, file, "write quadrant");
         sc_fwrite (q->p.user_data, data_size, 1, file, "write quadrant data");
 #else
-        mpiret = MPI_File_write (mpifile, q, (int) sizeof (p4est_quadrant_t),
-                                 MPI_BYTE, &mpistatus);
-        SC_CHECK_MPI (mpiret);
-#ifdef P4EST_DEBUG
-        {
-          int                 count = 0;
-          MPI_Get_count (&mpistatus, MPI_BYTE, &count);
-          SC_CHECK_ABORT (count == (int) sizeof (p4est_quadrant_t),
-                          "bytes not written");
-        }
-#endif
-        mpiret = MPI_File_write (mpifile, q->p.user_data, (int) data_size,
-                                 MPI_BYTE, &mpistatus);
-        SC_CHECK_MPI (mpiret);
-#ifdef P4EST_DEBUG
-        {
-          int                 count = 0;
-          MPI_Get_count (&mpistatus, MPI_BYTE, &count);
-          SC_CHECK_ABORT (count == (int) data_size, "bytes not written");
-        }
-#endif
+        sc_mpi_write (mpifile, q, sizeof (p4est_quadrant_t), MPI_BYTE,
+                      "write quadrant");
+        sc_mpi_write (mpifile, q->p.user_data, data_size, MPI_BYTE,
+                      "write quadrant data");
 #endif
       }
     }
@@ -2423,17 +2378,8 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 #ifndef P4EST_MPIIO_WRITE
     sc_fwrite (&lq, sizeof (p4est_quadrant_t), 1, file, "write extra tree");
 #else
-    mpiret = MPI_File_write (mpifile, &lq, (int) sizeof (p4est_quadrant_t),
-                             MPI_BYTE, &mpistatus);
-    SC_CHECK_MPI (mpiret);
-#ifdef P4EST_DEBUG
-    {
-      int                 count = 0;
-      MPI_Get_count (&mpistatus, MPI_BYTE, &count);
-      SC_CHECK_ABORT (count == (int) sizeof (p4est_quadrant_t),
-                      "bytes not written");
-    }
-#endif
+    sc_mpi_write (mpifile, &lq, sizeof (p4est_quadrant_t), MPI_BYTE,
+                  "write extra tree");
 #endif
   }
 
@@ -2608,8 +2554,8 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
     zcount = (size_t) lq.p.piggy3.local_num;
     sc_array_resize (tquadrants, zcount);
     if (!save_data) {
-      sc_fread (tquadrants->array, sizeof (p4est_quadrant_t), zcount,
-                file, "read quadrants");
+      sc_fread (tquadrants->array, sizeof (p4est_quadrant_t), zcount, file,
+                "read quadrants");
     }
     for (zz = 0; zz < zcount; ++zz) {
       /* initialize quadrants */
