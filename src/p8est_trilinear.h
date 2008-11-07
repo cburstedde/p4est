@@ -85,6 +85,7 @@ typedef uint16_t    trilinear_boundary_flag_t;
 typedef struct trilinear_elem
 {
   int32_t             local_node_id[8]; /* indices into local node table */
+  tick_t              lx, ly, lz;       /* lower-left element coordinates */
   tick_t              size;     /* size of the element in ticks */
   void               *data;     /* pointer to its data record */
 }

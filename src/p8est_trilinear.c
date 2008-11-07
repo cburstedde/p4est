@@ -132,6 +132,9 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
       for (k = 0; k < P4EST_CHILDREN; ++k) {
         elem->local_node_id[k] = *local_node++;
       }
+      elem->lx = (tick_t) q->x;
+      elem->ly = (tick_t) q->y;
+      elem->lz = (tick_t) q->z;
       elem->size = P4EST_QUADRANT_LEN (q->level);
       elem->data = q->p.user_data;
       ++current;
