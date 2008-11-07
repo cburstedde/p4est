@@ -38,6 +38,10 @@
 #define MPI_Allgather sc_allgather
 #endif
 
+#ifdef P4EST_MPIIO
+#define P4EST_MPIIO_WRITE
+#endif
+
 #ifdef P4EST_HAVE_UNISTD_H
 #include <unistd.h>
 #endif
