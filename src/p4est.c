@@ -2186,7 +2186,7 @@ p4est_checksum (p4est_t * p4est)
 void
 p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 {
-  const int           headc = 5;
+  const int           headc = 6;
   const int           align = 16;
 #ifdef P4EST_MPI
   int                 mpiret;
@@ -2198,7 +2198,7 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
   int                 num_procs, rank;
   int                 i;
   long                fpos = -1, foffset;
-  size_t              data_size;
+  size_t              data_size, qbuf_size;
   size_t              zz, zcount;
   uint64_t           *u64a;
   FILE               *file;
@@ -2212,6 +2212,8 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
   p4est_quadrant_t    lq, *gfpos, *q;
+  p4est_qcoord_t      qbuffer[P4EST_DIM + 1];
+  p4est_qcoord_t     *qall, *qpos;
   sc_array_t         *tquadrants;
 
   P4EST_ASSERT (p4est_connectivity_is_valid (p4est->connectivity));
@@ -2221,6 +2223,7 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
   num_procs = p4est->mpisize;
   rank = p4est->mpirank;
   gfpos = p4est->global_first_position;
+  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
 
   if (rank == 0) {
     p4est_connectivity_save (filename, p4est->connectivity);
@@ -2241,10 +2244,11 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
     /* write format and partition information */
     u64a = P4EST_ALLOC (uint64_t, num_procs + headc);
     u64a[0] = P4EST_ONDISK_FORMAT;
-    u64a[1] = (uint64_t) sizeof (p4est_quadrant_t);
-    u64a[2] = (uint64_t) data_size;
-    u64a[3] = (uint64_t) save_data;
-    u64a[4] = (uint64_t) num_procs;
+    u64a[1] = (uint64_t) sizeof (p4est_qcoord_t);
+    u64a[2] = (uint64_t) sizeof (p4est_quadrant_t);
+    u64a[3] = (uint64_t) data_size;
+    u64a[4] = (uint64_t) save_data;
+    u64a[5] = (uint64_t) num_procs;
     for (i = 0; i < num_procs; ++i) {
       u64a[i + headc] = (uint64_t) (p4est->global_last_quad_index[i] + 1);
     }
@@ -2300,9 +2304,9 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 
   if (rank > 0) {
     /* seek to the beginning of this processor's storage */
-    foffset = ((long) p4est->global_last_quad_index[rank - 1] + 1 +
-               2 * rank +
-               gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t);
+    foffset = (long)
+      ((p4est->global_last_quad_index[rank - 1] + 1) * qbuf_size +
+       (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
     if (save_data) {
       foffset += (p4est->global_last_quad_index[rank - 1] + 1) * data_size;
     }
@@ -2354,23 +2358,38 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
                   "write tree count");
 #endif
     if (!save_data) {
-#ifndef P4EST_MPIIO_WRITE
-      sc_fwrite (tquadrants->array, sizeof (p4est_quadrant_t), zcount, file,
-                 "write quadrants");
-#else
-      sc_mpi_write (mpifile, tquadrants->array,
-                    zcount * sizeof (p4est_quadrant_t),
-                    MPI_BYTE, "write quadrants");
+      qpos = qall = P4EST_ALLOC (p4est_qcoord_t, (P4EST_DIM + 1) * zcount);
+      for (zz = 0; zz < zcount; ++zz) {
+        q = sc_array_index (tquadrants, zz);
+        *qpos++ = q->x;
+        *qpos++ = q->y;
+#ifdef P4_TO_P8
+        *qpos++ = q->z;
 #endif
+        *qpos++ = (p4est_qcoord_t) q->level;
+      }
+#ifndef P4EST_MPIIO_WRITE
+      sc_fwrite (qall, qbuf_size, zcount, file, "write quadrants");
+#else
+      sc_mpi_write (mpifile, qall, qbuf_size * zcount, MPI_BYTE,
+                    "write quadrants");
+#endif
+      P4EST_FREE (qall);
     }
     else {
       for (zz = 0; zz < zcount; ++zz) {
         q = sc_array_index (tquadrants, zz);
+        qbuffer[0] = q->x;
+        qbuffer[1] = q->y;
+#ifdef P4_TO_P8
+        qbuffer[2] = q->z;
+#endif
+        qbuffer[P4EST_DIM] = (p4est_qcoord_t) q->level;
 #ifndef P4EST_MPIIO_WRITE
-        sc_fwrite (q, sizeof (p4est_quadrant_t), 1, file, "write quadrant");
+        sc_fwrite (qbuffer, qbuf_size, 1, file, "write quadrant");
         sc_fwrite (q->p.user_data, data_size, 1, file, "write quadrant data");
 #else
-        sc_mpi_write (mpifile, q, sizeof (p4est_quadrant_t), MPI_BYTE,
+        sc_mpi_write (mpifile, qbuffer, qbuf_size, MPI_BYTE,
                       "write quadrant");
         sc_mpi_write (mpifile, q->p.user_data, data_size, MPI_BYTE,
                       "write quadrant data");
@@ -2422,7 +2441,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
             bool load_data, void *user_pointer,
             p4est_connectivity_t ** connectivity)
 {
-  const int           headc = 5;
+  const int           headc = 6;
   const int           align = 16;
   int                 retval;
 #ifdef P4EST_MPI
@@ -2433,6 +2452,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   long                fpos;
   bool                save_data;
   uint64_t           *u64a;
+  size_t              qbuf_size;
   size_t              zz, zcount;
   FILE               *file;
   p4est_topidx_t      jt;
@@ -2440,6 +2460,8 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t    lq, *gfpos, *q;
+  p4est_qcoord_t      qbuffer[P4EST_DIM + 1];
+  p4est_qcoord_t     *qall, *qpos;
   sc_array_t         *tquadrants;
 
   conn = *connectivity = p4est_connectivity_load (filename, &fpos);
@@ -2450,6 +2472,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   p4est->data_size = data_size;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = conn;
+  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
 
   /* sane MPI state */
   p4est->mpicomm = mpicomm;
@@ -2509,15 +2532,17 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   u64a = P4EST_ALLOC (uint64_t, SC_MAX (headc, num_procs));
   sc_fread (u64a, sizeof (uint64_t), (size_t) headc, file, "read format");
   SC_CHECK_ABORT (u64a[0] == P4EST_ONDISK_FORMAT, "invalid format");
-  SC_CHECK_ABORT (u64a[1] == (uint64_t) sizeof (p4est_quadrant_t),
+  SC_CHECK_ABORT (u64a[1] == (uint64_t) sizeof (p4est_qcoord_t),
+                  "invalid coordinate size");
+  SC_CHECK_ABORT (u64a[2] == (uint64_t) sizeof (p4est_quadrant_t),
                   "invalid quadrant size");
-  SC_CHECK_ABORT (u64a[2] == (uint64_t) data_size, "invalid data size");
-  save_data = (bool) u64a[3];
+  SC_CHECK_ABORT (u64a[3] == (uint64_t) data_size, "invalid data size");
+  save_data = (bool) u64a[4];
   SC_CHECK_ABORT (!load_data || save_data, "quadrant data not saved");
   if (data_size == 0) {
     save_data = false;
   }
-  SC_CHECK_ABORT (u64a[4] == (uint64_t) num_procs, "invalid MPI size");
+  SC_CHECK_ABORT (u64a[5] == (uint64_t) num_procs, "invalid MPI size");
   sc_fread (u64a, sizeof (uint64_t), (size_t) num_procs, file,
             "read quadrant partition");
   for (i = 0; i < num_procs; ++i) {
@@ -2533,8 +2558,8 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   /* seek to the beginning of this processor's storage */
   if (rank > 0) {
     fpos = (long)
-      ((p4est->global_last_quad_index[rank - 1] + 1 +
-        2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
+      ((p4est->global_last_quad_index[rank - 1] + 1) * qbuf_size +
+       (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
     if (save_data) {
       fpos += (p4est->global_last_quad_index[rank - 1] + 1) * data_size;
     }
@@ -2563,20 +2588,40 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
     SC_CHECK_ABORT (lq.p.piggy3.local_num > 0, "invalid tree count");
     zcount = (size_t) lq.p.piggy3.local_num;
     sc_array_resize (tquadrants, zcount);
+    memset (tquadrants->array, 0, zcount * sizeof (p4est_quadrant_t));
     if (!save_data) {
-      sc_fread (tquadrants->array, sizeof (p4est_quadrant_t), zcount, file,
-                "read quadrants");
+      qpos = qall = P4EST_ALLOC (p4est_qcoord_t, (P4EST_DIM + 1) * zcount);
+      sc_fread (qall, qbuf_size, zcount, file, "read quadrants");
+    }
+    else {
+      qpos = qall = NULL;
     }
     for (zz = 0; zz < zcount; ++zz) {
-      /* initialize quadrants */
       q = sc_array_index (tquadrants, zz);
       if (save_data) {
-        sc_fread (q, sizeof (p4est_quadrant_t), 1, file, "read quadrant");
+        sc_fread (qbuffer, qbuf_size, 1, file, "read quadrant");
+        q->x = qbuffer[0];
+        q->y = qbuffer[1];
+#ifdef P4_TO_P8
+        q->z = qbuffer[2];
+#endif
+        q->level = (int8_t) qbuffer[P4EST_DIM];
+      }
+      else {
+        q->x = *qpos++;
+        q->y = *qpos++;
+#ifdef P4_TO_P8
+        q->z = *qpos++;
+#endif
+        /* *INDENT-OFF* HORRIBLE indent bug */
+        q->level = (int8_t) *qpos++;
+        /* *INDENT-ON* */
       }
       SC_CHECK_ABORT (p4est_quadrant_is_valid (q), "invalid quadrant");
-      if (data_size > 0) {
+      if (data_size > 0)
         q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
-      }
+      else
+        q->p.user_data = NULL;
       if (load_data) {
         sc_fread (q->p.user_data, data_size, 1, file, "read quadrant data");
       }
@@ -2586,6 +2631,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
       }
       ++tree->quadrants_per_level[q->level];
     }
+    P4EST_FREE (qall);
 
     /* compute tree properties */
     q = sc_array_index (tquadrants, 0);

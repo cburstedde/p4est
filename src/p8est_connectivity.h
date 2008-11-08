@@ -33,7 +33,7 @@ SC_EXTERN_C_BEGIN;
  * p8est_connectivity, p8est, or any other 3D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P8EST_ONDISK_FORMAT 0x3000004
+#define P8EST_ONDISK_FORMAT 0x3000005
 
 /** This structure holds the 3D inter-tree connectivity information.
  * Identification of separate faces and corners is possible.
