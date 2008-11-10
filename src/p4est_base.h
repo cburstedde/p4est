@@ -37,6 +37,11 @@
   (!defined (P4EST_MPI) && defined (SC_MPI))
 #error "MPI configured differently in p4est and libsc"
 #endif
+#if \
+  (defined (P4EST_MPIIO) && !defined (SC_MPIIO)) || \
+  (!defined (P4EST_MPIIO) && defined (SC_MPIIO))
+#error "MPI I/O configured differently in p4est and libsc"
+#endif
 
 SC_EXTERN_C_BEGIN;
 
