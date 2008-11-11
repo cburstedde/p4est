@@ -766,11 +766,13 @@ p8est_connectivity_save (const char *filename, p8est_connectivity_t * conn)
              "write vertices");
 
   tcount = (size_t) (12 * num_trees);
-  sc_fwrite (conn->tree_to_edge, topsize, tcount, file, "write tte");
+  if (num_edges > 0)
+    sc_fwrite (conn->tree_to_edge, topsize, tcount, file, "write tte");
 
   tcount = (size_t) (8 * num_trees);
   sc_fwrite (conn->tree_to_vertex, topsize, tcount, file, "write ttv");
-  sc_fwrite (conn->tree_to_corner, topsize, tcount, file, "write ttc");
+  if (num_corners > 0)
+    sc_fwrite (conn->tree_to_corner, topsize, tcount, file, "write ttc");
 
   tcount = (size_t) (6 * num_trees);
   sc_fwrite (conn->tree_to_tree, topsize, tcount, file, "write ttt");
@@ -778,13 +780,17 @@ p8est_connectivity_save (const char *filename, p8est_connectivity_t * conn)
 
   sc_fwrite (conn->ett_offset, topsize, num_edges + 1, file,
              "write ett_offset");
-  sc_fwrite (conn->edge_to_tree, topsize, num_ett, file, "write ett");
-  sc_fwrite (conn->edge_to_edge, int8size, num_ett, file, "write ete");
+  if (num_edges > 0) {
+    sc_fwrite (conn->edge_to_tree, topsize, num_ett, file, "write ett");
+    sc_fwrite (conn->edge_to_edge, int8size, num_ett, file, "write ete");
+  }
 
   sc_fwrite (conn->ctt_offset, topsize, num_corners + 1, file,
              "write ctt_offset");
-  sc_fwrite (conn->corner_to_tree, topsize, num_ctt, file, "write ctt");
-  sc_fwrite (conn->corner_to_corner, int8size, num_ctt, file, "write ctc");
+  if (num_corners > 0) {
+    sc_fwrite (conn->corner_to_tree, topsize, num_ctt, file, "write ctt");
+    sc_fwrite (conn->corner_to_corner, int8size, num_ctt, file, "write ctc");
+  }
 
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");
@@ -839,11 +845,13 @@ p8est_connectivity_load (const char *filename, long *length)
             "read vertices");
 
   tcount = (size_t) (12 * num_trees);
-  sc_fread (conn->tree_to_edge, topsize, tcount, file, "read tte");
+  if (num_edges > 0)
+    sc_fread (conn->tree_to_edge, topsize, tcount, file, "read tte");
 
   tcount = (size_t) (8 * num_trees);
   sc_fread (conn->tree_to_vertex, topsize, tcount, file, "read ttv");
-  sc_fread (conn->tree_to_corner, topsize, tcount, file, "read ttc");
+  if (num_corners > 0)
+    sc_fread (conn->tree_to_corner, topsize, tcount, file, "read ttc");
 
   tcount = (size_t) (6 * num_trees);
   sc_fread (conn->tree_to_tree, topsize, tcount, file, "read ttt");
@@ -852,15 +860,19 @@ p8est_connectivity_load (const char *filename, long *length)
   sc_fread (conn->ett_offset, topsize, num_edges + 1, file,
             "read ett_offset");
   SC_CHECK_ABORT (num_ett == conn->ett_offset[num_edges], "num_ett mismatch");
-  sc_fread (conn->edge_to_tree, topsize, num_ett, file, "read ett");
-  sc_fread (conn->edge_to_edge, int8size, num_ett, file, "read ete");
+  if (num_edges > 0) {
+    sc_fread (conn->edge_to_tree, topsize, num_ett, file, "read ett");
+    sc_fread (conn->edge_to_edge, int8size, num_ett, file, "read ete");
+  }
 
   sc_fread (conn->ctt_offset, topsize, num_corners + 1, file,
             "read ctt_offset");
   SC_CHECK_ABORT (num_ctt == conn->ctt_offset[num_corners],
                   "num_ctt mismatch");
-  sc_fread (conn->corner_to_tree, topsize, num_ctt, file, "read ctt");
-  sc_fread (conn->corner_to_corner, int8size, num_ctt, file, "read ctc");
+  if (num_corners > 0) {
+    sc_fread (conn->corner_to_tree, topsize, num_ctt, file, "read ctt");
+    sc_fread (conn->corner_to_corner, int8size, num_ctt, file, "read ctc");
+  }
 
   if (length != NULL) {
     *length = ftell (file);
