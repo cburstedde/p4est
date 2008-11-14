@@ -22,6 +22,10 @@
 #ifndef P4EST_H
 #define P4EST_H
 
+#ifdef P4EST_TO_P8EST_H
+#error "The include files p4est.h and p4est_to_p8est.h cannot be combined"
+#endif
+
 /* p4est_connectivity.h includes p4est_base.h sc_containers.h */
 #include <p4est_connectivity.h>
 

@@ -22,6 +22,9 @@
 #ifndef P4EST_TO_P8EST_H
 #define P4EST_TO_P8EST_H
 
+#ifdef P4EST_H
+#error "The include files p4est.h and p4est_to_p8est.h cannot be combined"
+#endif
 #define P4_TO_P8
 
 /* redefine macros */
