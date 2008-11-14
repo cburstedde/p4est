@@ -106,16 +106,15 @@ echo "o---------------------------------------"
 
 AC_CHECK_FUNCS([fsync])
 
-# Checks for typedefs, structures, and compiler characteristics.
-dnl echo "o---------------------------------------"
-dnl echo "| Checking keywords and types"
-dnl echo "o---------------------------------------"
-dnl
-dnl These are done from SC already.
-dnl AC_C_CONST
-dnl AC_C_INLINE
-dnl AC_TYPE_SIZE_T
-dnl AC_TYPE_SSIZE_T
+
+AC_DEFINE_UNQUOTED(CC,          ["${CC}"],          [C compiler])
+AC_DEFINE_UNQUOTED(C_VERSION,   ["${C_VERSION}"],   [C compiler version])
+AC_DEFINE_UNQUOTED(CFLAGS,      ["${CFLAGS}"],      [C compiler flags])
+AC_DEFINE_UNQUOTED(CPP,         ["${CPP}"],         [C preprocessor])
+AC_DEFINE_UNQUOTED(CPPFLAGS,    ["${CPPFLAGS}"],    [C preprocessor flags])
+AC_DEFINE_UNQUOTED(LINK,        ["${LINK}"],        [Linker])
+AC_DEFINE_UNQUOTED(LDFLAGS,     ["${LDFLAGS}"],     [Linker flags])
+AC_DEFINE_UNQUOTED(LIBS,        ["${LIBS}"],        [Libraries])
 
 echo "o----------------------------------"
 echo "| Results are"
@@ -125,6 +124,7 @@ echo "| C_VERSION:   $C_VERSION"
 echo "| CFLAGS:      $CFLAGS"
 echo "| CPP:         $CPP"
 echo "| CPPFLAGS:    $CPPFLAGS"
+echo "| LINK:        $LINK"
 echo "| LDFLAGS:     $LDFLAGS"
 echo "| LIBS:        $LIBS"
 echo "o----------------------------------"
