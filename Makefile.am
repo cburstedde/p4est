@@ -34,7 +34,8 @@ DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
 EXTRA_DIST += bootstrap p4estindent config/git-version-gen bugs doc
-DISTCLEANFILES += _configs.sed src/p4est_config.h
+DISTCLEANFILES += \
+        _configs.sed src/p4est_config.h P4EST.override.pre P4EST.override
 MAINTAINERCLEANFILES += ChangeLog
 .PHONY: lint ChangeLog
 

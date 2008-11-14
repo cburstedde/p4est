@@ -16,6 +16,10 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AX_PREFIX_CONFIG_H([src/p4est_config.h])
 
 # Configure switches
+SC_ARG_OVERRIDE_LOAD([P4EST])
+SC_ARG_OVERRIDE_VAR([P4EST], [WITH_PROVIDE_SC_CPPFLAGS])
+SC_ARG_OVERRIDE_VAR([P4EST], [WITH_PROVIDE_SC_LDADD])
+
 P4EST_ARG_ENABLE([debug], [enable debug mode], [DEBUG])
 P4EST_ARG_ENABLE([stats], [enable statistics], [STATS])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
@@ -126,5 +130,7 @@ echo "| LIBS:        $LIBS"
 echo "o----------------------------------"
 
 # Create output files.
+SC_ARG_OVERRIDE_SAVE([P4EST])
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
