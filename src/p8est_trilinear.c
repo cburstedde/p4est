@@ -236,7 +236,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   memset (mesh->bounds, 0, 6 * sizeof (int));
   memset (mesh->sizes, 0, 3 * sizeof (int));
   mesh->minsize = mesh->maxsize = 0;
-  mesh->ticksize = mesh->volume = 0.;
+  mesh->ticksize = 0.;
   mesh->extra_info = NULL;
   mesh->elem_pids = NULL;
   mesh->node_pids = NULL;
