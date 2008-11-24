@@ -38,6 +38,39 @@
 #define MPI_Allgather sc_allgather
 #endif
 
+typedef struct
+{
+  p4est_quadrant_t   *points;
+  p4est_locidx_t      num_points, current;
+  int                 maxlevel;
+}
+p4est_points_state_t;
+
+static void
+p4est_points_init (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * quadrant)
+{
+  p4est_points_state_t *s = p4est->user_pointer;
+  p4est_locidx_t     *qdata = quadrant->p.user_data;
+  p4est_quadrant_t   *p;
+
+  qdata[0] = s->current;
+  while (s->current < s->num_points) {
+    p = s->points + s->current;
+    P4EST_ASSERT (p->p.which_tree >= which_tree);
+    if (p->p.which_tree > which_tree) {
+      break;
+    }
+    P4EST_ASSERT (p4est_quadrant_is_node (p, true));
+    P4EST_ASSERT (p4est_quadrant_compare (quadrant, p) < 0);
+    if (!p4est_quadrant_contains_node (quadrant, p)) {
+      break;
+    }
+    ++s->current;
+  }
+  qdata[1] = s->current;
+}
+
 p4est_t            *
 p4est_new_points (MPI_Comm mpicomm,
                   p4est_connectivity_t * connectivity, int maxlevel,
@@ -55,6 +88,7 @@ p4est_new_points (MPI_Comm mpicomm,
   p4est_quadrant_t    a, b, c, f, l, n;
   p4est_tree_t       *tree;
   p4est_t            *p4est;
+  p4est_points_state_t ppstate;
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new_points\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
@@ -72,10 +106,14 @@ p4est_new_points (MPI_Comm mpicomm,
 
   /* create the p4est */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  ppstate.points = points;
+  ppstate.num_points = num_points;
+  ppstate.current = 0;
+  ppstate.maxlevel = maxlevel;
 
   /* assign some data members */
   p4est->data_size = 2 * sizeof (p4est_locidx_t);       /* temporary */
-  p4est->user_pointer = user_pointer;
+  p4est->user_pointer = &ppstate;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
@@ -233,13 +271,13 @@ p4est_new_points (MPI_Comm mpicomm,
     if (onlyone) {
       quad = sc_array_push (&tree->quadrants);
       *quad = a;
-      p4est_quadrant_init_data (p4est, jt, quad, init_fn);
+      p4est_quadrant_init_data (p4est, jt, quad, p4est_points_init);
       tree->maxlevel = a.level;
       ++tree->quadrants_per_level[a.level];
     }
     else {
       p4est_complete_region (p4est, &a, true, &b, includeb,
-                             tree, jt, init_fn);
+                             tree, jt, p4est_points_init);
       quad = sc_array_index (&tree->quadrants,
                              tree->quadrants.elem_count - 1);
     }
@@ -266,6 +304,9 @@ p4est_new_points (MPI_Comm mpicomm,
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_new_points with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+
+  /* establish final data size and user pointer */
+  p4est->user_pointer = user_pointer;
 
   return p4est;
 }
