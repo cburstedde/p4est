@@ -187,7 +187,7 @@ extern const int    p8est_num_ranges;
  * \param [in] user_pointer  Assign to the user_pointer member of the p8est
  *                           before init_fn is called the first time.
  *
- * \return This returns a vaild forest.
+ * \return This returns a valid forest.
  *
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this p8est.

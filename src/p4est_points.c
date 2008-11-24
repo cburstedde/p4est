@@ -19,10 +19,17 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_algorithms.h>
+#include <p8est_bits.h>
+#include <p8est_communication.h>
+#include <p8est_points.h>
+#else
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
 #include <p4est_points.h>
+#endif /* !P4_TO_P8 */
 #include <sc_allgather.h>
 #include <sc_sort.h>
 

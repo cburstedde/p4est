@@ -19,16 +19,16 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P4EST_POINTS_H
-#define P4EST_POINTS_H
+#ifndef P8EST_POINTS_H
+#define P8EST_POINTS_H
 
-#include <p4est.h>
+#include <p8est.h>
 
 /** Create a new forest based on a distributed set of points.
  *
  * \param [in] mpicomm       A valid MPI_Comm or MPI_COMM_NULL.
  * \param [in] connectivity  This is the connectivity information that
- *                           the forest is built with.  Note the p4est
+ *                           the forest is built with.  Note the p8est
  *                           does not take ownership of the memory.
  * \param [in] maxlevel      Level of the smallest possible quadrants.
  * \param [in] points        Unsorted collection of clamped quadrant nodes.
@@ -38,7 +38,7 @@
  *                           can be zero.  Then user_data_pool is set to NULL.
  * \param [in] init_fn       Callback function to initialize the user_data
  *                           which is already allocated automatically.
- * \param [in] user_pointer  Assign to the user_pointer member of the p4est
+ * \param [in] user_pointer  Assign to the user_pointer member of the p8est
  *                           before init_fn is called the first time.
  *
  * \return This returns a valid forest.
@@ -46,11 +46,11 @@
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
  */
-p4est_t            *p4est_new_points (MPI_Comm mpicomm,
-                                      p4est_connectivity_t * connectivity,
-                                      int maxlevel, p4est_quadrant_t * points,
+p8est_t            *p8est_new_points (MPI_Comm mpicomm,
+                                      p8est_connectivity_t * connectivity,
+                                      int maxlevel, p8est_quadrant_t * points,
                                       p4est_locidx_t num_points,
-                                      size_t data_size, p4est_init_t init_fn,
+                                      size_t data_size, p8est_init_t init_fn,
                                       void *user_pointer);
 
-#endif /* !P4EST_POINTS_H */
+#endif /* !P8EST_POINTS_H */

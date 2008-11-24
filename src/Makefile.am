@@ -27,12 +27,14 @@ libp4est_installed_headers += \
         src/p8est_connectivity.h src/p8est.h src/p8est_bits.h \
         src/p8est_algorithms.h src/p8est_communication.h \
         src/p8est_ghost.h src/p8est_mesh.h \
-        src/p8est_vtk.h src/p8est_trilinear.h
+        src/p8est_vtk.h src/p8est_trilinear.h \
+        src/p8est_points.h
 libp4est_compiled_sources += \
         src/p8est_connectivity.c src/p8est.c src/p8est_bits.c \
         src/p8est_algorithms.c src/p8est_communication.c \
         src/p8est_ghost.c src/p8est_mesh.c \
-        src/p8est_vtk.c src/p8est_trilinear.c
+        src/p8est_vtk.c src/p8est_trilinear.c \
+        src/p8est_points.c
 endif
 
 lib_LIBRARIES += src/libp4est.a

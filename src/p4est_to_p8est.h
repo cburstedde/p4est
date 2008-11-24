@@ -99,6 +99,9 @@
 #define p4est_balance_type_int          p8est_balance_type_int
 #define p4est_balance_type_string       p8est_balance_type_string
 
+/* functions in p4est_points */
+#define p4est_new_points                p8est_new_points
+
 /* functions in p4est_bits */
 #define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
