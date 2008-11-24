@@ -244,6 +244,23 @@ p4est_node_unclamp (p4est_quadrant_t * n)
   P4EST_ASSERT (p4est_quadrant_is_node (n, false));
 }
 
+void
+p4est_node_to_quadrant (const p4est_quadrant_t * n, int level,
+                        p4est_quadrant_t * q)
+{
+  P4EST_ASSERT (p4est_quadrant_is_node (n, true));
+  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
+
+  q->x = n->x & ~((1 << (P4EST_MAXLEVEL - level)) - 1);
+  q->y = n->y & ~((1 << (P4EST_MAXLEVEL - level)) - 1);
+#ifdef P4_TO_P8
+  q->z = n->z & ~((1 << (P4EST_MAXLEVEL - level)) - 1);
+#endif
+  q->level = (int8_t) level;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+}
+
 int
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {

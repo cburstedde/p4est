@@ -90,6 +90,14 @@ void                p8est_node_clamp_inside (const p8est_quadrant_t * n,
  */
 void                p8est_node_unclamp (p8est_quadrant_t * n);
 
+/** Find the enclosing quadrant of a given node at a given level.
+ * \param [in] n        Clamped node.
+ * \param [in] level    Level of the quadrant to be created.
+ * \param [out] q       Output quadrant, n == q is permitted.
+ */
+void                p8est_node_to_quadrant (const p8est_quadrant_t * n,
+                                            int level, p8est_quadrant_t * q);
+
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */
