@@ -70,8 +70,8 @@ read_points (const char *filename, p4est_topidx_t num_trees,
   qshift = P4EST_MAXLEVEL - P4EST_QMAXLEVEL;
   for (ignored = u = 0; u < ucount; ++u) {
     x = point_buffer[3 * u + 0];
-    y = point_buffer[3 * u + 1];
-    z = point_buffer[3 * u + 2];
+    y = point_buffer[3 * u + 2];
+    z = point_buffer[3 * u + 1];
     if (x < 0. || x > 1. || y < 0. || y > 1. || z < 0. || z > 1.) {
       ++ignored;
       continue;
@@ -200,13 +200,13 @@ main (int argc, char **argv)
   p4est = p4est_new_points (mpicomm, conn, maxlevel,
                             points, num_points, 5, NULL, NULL);
   P4EST_FREE (points);
-  p4est_vtk_write_file (p4est, "points_created");
+  p4est_vtk_write_file (p4est, P4EST_STRING "_points_created");
 
   p4est_partition (p4est, NULL);
-  p4est_vtk_write_file (p4est, "points_partition");
+  p4est_vtk_write_file (p4est, P4EST_STRING "_points_partition");
 
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
-  p4est_vtk_write_file (p4est, "points_balance");
+  p4est_vtk_write_file (p4est, P4EST_STRING "_points_balance");
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
