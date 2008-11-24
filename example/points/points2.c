@@ -19,9 +19,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef P4_TO_P8
+#include <p8est_bits.h>
+#include <p8est_points.h>
+#include <p8est_vtk.h>
+#else
 #include <p4est_bits.h>
 #include <p4est_points.h>
 #include <p4est_vtk.h>
+#endif /* !P4_TO_P8 */
 #include <sc_io.h>
 
 /*
@@ -119,21 +125,26 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
+  sc_init (rank, sc_generic_abort, &mpicomm, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
   usage =
     "Arguments: <configuration> <level> <prefix>\n"
     "   Configuration can be any of\n"
+#ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic\n"
+#else
+    "      unit|periodic|rotwrap|twocubes|rotcubes\n"
+#endif
     "   Level controls the maximum depth of refinement\n"
-    "   Prefix is for loading a point data file\n";
+    "   Prefix is for loading a point data file";
   wrongusage = false;
   if (!wrongusage && argc != 4) {
     wrongusage = true;
   }
   if (!wrongusage) {
+#ifndef P4_TO_P8
     if (!strcmp (argv[1], "unit")) {
       conn = p4est_connectivity_new_unitsquare ();
     }
@@ -149,6 +160,23 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "periodic")) {
       conn = p4est_connectivity_new_periodic ();
     }
+#else
+    if (!strcmp (argv[1], "unit")) {
+      conn = p8est_connectivity_new_unitcube ();
+    }
+    else if (!strcmp (argv[1], "periodic")) {
+      conn = p8est_connectivity_new_periodic ();
+    }
+    else if (!strcmp (argv[1], "rotwrap")) {
+      conn = p8est_connectivity_new_rotwrap ();
+    }
+    else if (!strcmp (argv[1], "twocubes")) {
+      conn = p8est_connectivity_new_twocubes ();
+    }
+    else if (!strcmp (argv[1], "rotcubes")) {
+      conn = p8est_connectivity_new_rotcubes ();
+    }
+#endif
     else {
       wrongusage = true;
     }
