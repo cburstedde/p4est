@@ -204,7 +204,6 @@ p4est_new_points (MPI_Comm mpicomm,
       P4EST_ASSERT ((p4est_quadrant_last_descendent (&a, &l, maxlevel),
                      p4est_quadrant_compare (&l, &n) < 0));
     }
-    p4est_quadrant_init_data (p4est, jt, &a, init_fn);
     p4est_quadrant_first_descendent (&a, &tree->first_desc, P4EST_QMAXLEVEL);
 
     /* determine largest possible last quadrant of this tree */
@@ -232,16 +231,13 @@ p4est_new_points (MPI_Comm mpicomm,
 
     /* create a complete tree */
     if (onlyone) {
-      sc_array_resize (&tree->quadrants, 1);
-      quad = sc_array_index (&tree->quadrants, 0);
+      quad = sc_array_push (&tree->quadrants);
       *quad = a;
+      p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       tree->maxlevel = a.level;
       ++tree->quadrants_per_level[a.level];
     }
     else {
-      if (includeb) {
-        p4est_quadrant_init_data (p4est, jt, &b, init_fn);
-      }
       p4est_complete_region (p4est, &a, true, &b, includeb,
                              tree, jt, init_fn);
       quad = sc_array_index (&tree->quadrants,

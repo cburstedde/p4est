@@ -1270,9 +1270,8 @@ p4est_complete_region (p4est_t * p4est,
   int                 comp;
   size_t              quadrant_pool_size;
   size_t              data_pool_size;
-  int                 level, maxlevel = 0;
+  int                 maxlevel = 0;
   p4est_locidx_t     *quadrants_per_level;
-  p4est_locidx_t      num_quadrants = 0;
 
   P4EST_QUADRANT_INIT (&Afinest);
 
@@ -1298,12 +1297,11 @@ p4est_complete_region (p4est_t * p4est,
 
   /* R <- R + a */
   if (include_q1) {
-    sc_array_resize (quadrants, 1);
-    r = sc_array_index (quadrants, 0);
+    r = sc_array_push (quadrants);
     *r = a;
-    maxlevel = SC_MAX ((int) a.level, maxlevel);
-    ++quadrants_per_level[a.level];
-    ++num_quadrants;
+    p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
+    maxlevel = SC_MAX ((int) r->level, maxlevel);
+    ++quadrants_per_level[r->level];
   }
 
   if (comp < 0) {
@@ -1339,7 +1337,6 @@ p4est_complete_region (p4est_t * p4est,
     /* for each w in W */
     while (W->elem_count > 0) {
       w = sc_list_pop (W);
-      level = (int) w->level;
 
       /* if (a < w < b) and (w not in {A(b)}) */
       if (((p4est_quadrant_compare (&a, w) < 0) &&
@@ -1347,13 +1344,11 @@ p4est_complete_region (p4est_t * p4est,
           ) && !p4est_quadrant_is_ancestor (w, &b)
         ) {
         /* R <- R + w */
-        sc_array_resize (quadrants, num_quadrants + 1);
-        r = sc_array_index (quadrants, num_quadrants);
+        r = sc_array_push (quadrants);
         *r = *w;
         p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
-        maxlevel = SC_MAX (level, maxlevel);
-        ++quadrants_per_level[level];
-        ++num_quadrants;
+        maxlevel = SC_MAX ((int) r->level, maxlevel);
+        ++quadrants_per_level[r->level];
       }
       /* else if (w in {{A(a)}, {A(b)}}) */
       else if (p4est_quadrant_is_ancestor (w, &a)
@@ -1392,12 +1387,11 @@ p4est_complete_region (p4est_t * p4est,
 
     /* R <- R + b */
     if (include_q2) {
-      sc_array_resize (quadrants, num_quadrants + 1);
-      r = sc_array_index (quadrants, num_quadrants);
+      r = sc_array_push (quadrants);
       *r = b;
-      maxlevel = SC_MAX ((int) b.level, maxlevel);
-      ++quadrants_per_level[b.level];
-      ++num_quadrants;
+      p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
+      maxlevel = SC_MAX ((int) r->level, maxlevel);
+      ++quadrants_per_level[r->level];
     }
   }
 
@@ -1408,11 +1402,9 @@ p4est_complete_region (p4est_t * p4est,
 
   P4EST_ASSERT (p4est_tree_is_complete (R));
   P4EST_ASSERT (quadrant_pool_size == p4est->quadrant_pool->elem_count);
-  P4EST_ASSERT (num_quadrants == (p4est_locidx_t) quadrants->elem_count);
   if (p4est->user_data_pool != NULL) {
     P4EST_ASSERT (data_pool_size + quadrants->elem_count ==
-                  p4est->user_data_pool->elem_count + (include_q1 ? 1 : 0)
-                  + (include_q2 ? 1 : 0));
+                  p4est->user_data_pool->elem_count);
   }
 }
 
