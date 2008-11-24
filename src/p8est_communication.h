@@ -51,9 +51,16 @@ p8est_comm_tag_t;
 void                p8est_comm_count_quadrants (p8est_t * p8est);
 
 /** Distribute the global partition boundaries.
- * \param [in,out] p8est  Fills \c p8est->global_first_position.
+ * \param [in,out] p8est        Fills \c p8est->global_first_position.
+ *                              p8est->first_local_tree must be set correctly.
+ *                              If this processor is not empty and
+ *                              first_quad is NULL, the first quadrant
+ *                              of the first local tree must be set correctly.
+ * \param [in] first_quad       If not NULL will be used as first quadrant.
  */
-void                p8est_comm_global_partition (p8est_t * p8est);
+void                p8est_comm_global_partition (p8est_t * p8est,
+                                                 p8est_quadrant_t *
+                                                 first_quad);
 
 /** Searches the owner of a quadrant via p8est->global_first_position.
  * Assumes a tree with no overlaps.

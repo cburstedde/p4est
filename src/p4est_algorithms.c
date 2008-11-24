@@ -2643,7 +2643,7 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_FREE (num_send_to);
   P4EST_FREE (begin_send_to);
 
-  p4est_comm_global_partition (p4est);
+  p4est_comm_global_partition (p4est, NULL);
 
   /* Assert that we have a valid partition */
   P4EST_ASSERT (crc == p4est_checksum (p4est));

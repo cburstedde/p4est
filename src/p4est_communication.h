@@ -51,9 +51,16 @@ p4est_comm_tag_t;
 void                p4est_comm_count_quadrants (p4est_t * p4est);
 
 /** Distribute the global partition boundaries.
- * \param [in,out] p4est  Fills \c p4est->global_first_position.
+ * \param [in,out] p4est        Fills \c p4est->global_first_position.
+ *                              p4est->first_local_tree must be set correctly.
+ *                              If this processor is not empty and
+ *                              first_quad is NULL, the first quadrant
+ *                              of the first local tree must be set correctly.
+ * \param [in] first_quad       If not NULL will be used as first quadrant.
  */
-void                p4est_comm_global_partition (p4est_t * p4est);
+void                p4est_comm_global_partition (p4est_t * p4est,
+                                                 p4est_quadrant_t *
+                                                 first_quad);
 
 /** Searches the owner of a quadrant via p4est->global_first_position.
  * Assumes a tree with no overlaps.

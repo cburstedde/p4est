@@ -61,7 +61,7 @@ p4est_comm_count_quadrants (p4est_t * p4est)
 }
 
 void
-p4est_comm_global_partition (p4est_t * p4est)
+p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
 {
   const int           num_procs = p4est->mpisize;
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
@@ -97,8 +97,14 @@ p4est_comm_global_partition (p4est_t * p4est)
     }
     else {
       /* send values corresponding to my first quadrant */
-      tree = sc_array_index (p4est->trees, first_tree);
-      quadrant = sc_array_index (&tree->quadrants, 0);
+      if (first_quad != NULL) {
+        tree = NULL;
+        quadrant = first_quad;
+      }
+      else {
+        tree = sc_array_index (p4est->trees, first_tree);
+        quadrant = sc_array_index (&tree->quadrants, 0);
+      }
       input.x = quadrant->x;
       input.y = quadrant->y;
 #ifdef P4_TO_P8
