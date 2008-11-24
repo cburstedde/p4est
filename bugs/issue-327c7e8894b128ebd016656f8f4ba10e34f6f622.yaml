@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Remove MPI_COMM_NULL checks
+desc: |-
+  It is currently allowed to pass MPI_COMM_NULL to the p4est.
+  This is no longer necessary since libsc defines MPI_COMM_WORLD if missing.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-11-24 00:02:57.414561 Z
+references: []
+
+id: 327c7e8894b128ebd016656f8f4ba10e34f6f622
+log_events: 
+- - 2008-11-24 00:02:58.038546 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
