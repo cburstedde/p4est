@@ -261,6 +261,24 @@ p4est_node_to_quadrant (const p4est_quadrant_t * n, int level,
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 }
 
+bool
+p4est_quadrant_contains_node (const p4est_quadrant_t * q,
+                              const p4est_quadrant_t * n)
+{
+  const p4est_qcoord_t qlen = P4EST_QUADRANT_LEN (q->level);
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, true));
+
+  return
+    (q->x <= n->x && n->x < q->x + qlen) &&
+    (q->y <= n->y && n->y < q->y + qlen)
+#ifdef P4_TO_P8
+    && (q->z <= n->z && n->z < q->z + qlen)
+#endif
+    ;
+}
+
 int
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {

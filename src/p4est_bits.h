@@ -98,6 +98,13 @@ void                p4est_node_unclamp (p4est_quadrant_t * n);
 void                p4est_node_to_quadrant (const p4est_quadrant_t * n,
                                             int level, p4est_quadrant_t * q);
 
+/** Decide if a node is completely contained within a quadrant.
+ * \param [in] q        Valid quadrant.
+ * \param [in] n        Clamped node.
+ */
+bool                p4est_quadrant_contains_node (const p4est_quadrant_t * q,
+                                                  const p4est_quadrant_t * n);
+
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */
