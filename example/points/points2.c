@@ -24,8 +24,19 @@
 #include <p4est_vtk.h>
 #include <sc_io.h>
 
+/*
+ * Usage: p4est_points <configuration> <level> <prefix>
+ *        possible configurations:
+ *        o unit      Refinement on the unit square.
+ *        o three     Refinement on a forest with three trees.
+ *        o moebius   Refinement on a 5-tree Moebius band.
+ *        o star      Refinement on a 6-tree star shaped domain.
+ *        o periodic  Refinement on the unit square with periodic b.c.
+ */
+
 static p4est_quadrant_t *
-read_points (const char *filename, p4est_locidx_t * num_points)
+read_points (const char *filename, p4est_topidx_t num_trees,
+             p4est_locidx_t * num_points)
 {
   int                 retval;
   int                 qshift;
@@ -69,7 +80,8 @@ read_points (const char *filename, p4est_locidx_t * num_points)
     q->z = SC_MIN (q->z, P4EST_ROOT_LEN - 1);
 #endif
     q->level = P4EST_MAXLEVEL;
-    q->p.which_tree = 0;        /* TODO: extend this to arbitrary trees */
+    q->p.which_tree =
+      (p4est_topidx_t) ((double) num_trees * rand () / (RAND_MAX + 1.0));
     P4EST_ASSERT (p4est_quadrant_is_node (q, true));
 
     ++q;
@@ -89,12 +101,14 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 num_procs, rank;
   int                 maxlevel;
+  bool                wrongusage;
   char                buffer[BUFSIZ];
   p4est_locidx_t      num_points;
   p4est_connectivity_t *conn;
   p4est_quadrant_t   *points;
   p4est_t            *p4est;
   MPI_Comm            mpicomm;
+  const char         *usage;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -108,18 +122,63 @@ main (int argc, char **argv)
   sc_init (rank, NULL, NULL, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  SC_CHECK_ABORT (argc == 2, "Please provide point file prefix");
-  snprintf (buffer, BUFSIZ, "%s%d_%d.pts", argv[1], rank, num_procs);
-  points = read_points (buffer, &num_points);
+  /* process command line arguments */
+  usage =
+    "Arguments: <configuration> <level> <prefix>\n"
+    "   Configuration can be any of\n"
+    "      unit|three|moebius|star|periodic\n"
+    "   Level controls the maximum depth of refinement\n"
+    "   Prefix is for loading a point data file\n";
+  wrongusage = false;
+  if (!wrongusage && argc != 4) {
+    wrongusage = true;
+  }
+  if (!wrongusage) {
+    if (!strcmp (argv[1], "unit")) {
+      conn = p4est_connectivity_new_unitsquare ();
+    }
+    else if (!strcmp (argv[1], "three")) {
+      conn = p4est_connectivity_new_corner ();
+    }
+    else if (!strcmp (argv[1], "moebius")) {
+      conn = p4est_connectivity_new_moebius ();
+    }
+    else if (!strcmp (argv[1], "star")) {
+      conn = p4est_connectivity_new_star ();
+    }
+    else if (!strcmp (argv[1], "periodic")) {
+      conn = p4est_connectivity_new_periodic ();
+    }
+    else {
+      wrongusage = true;
+    }
+  }
+  if (!wrongusage) {
+    maxlevel = atoi (argv[2]);
+    if (maxlevel < 0 || maxlevel > P4EST_QMAXLEVEL) {
+      wrongusage = true;
+    }
+  }
+  if (wrongusage) {
+    SC_CHECK_ABORT (rank != 0, usage);
+    mpiret = MPI_Barrier (mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  snprintf (buffer, BUFSIZ, "%s%d_%d.pts", argv[3], rank, num_procs);
+  points = read_points (buffer, conn->num_trees, &num_points);
   SC_LDEBUGF ("Read %lld points\n", (long long) num_points);
 
-  maxlevel = 5;
-  conn = p4est_connectivity_new_unitsquare ();
   p4est = p4est_new_points (mpicomm, conn, maxlevel,
                             points, num_points, 5, NULL, NULL);
   P4EST_FREE (points);
+  p4est_vtk_write_file (p4est, "points_created");
 
-  p4est_vtk_write_file (p4est, "points");
+  p4est_partition (p4est, NULL);
+  p4est_vtk_write_file (p4est, "points_partition");
+
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_vtk_write_file (p4est, "points_balance");
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
