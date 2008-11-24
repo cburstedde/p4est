@@ -1,0 +1,270 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a parallel collection of quadtrees and/or
+  octrees.
+
+  Copyright (C) 2008 Carsten Burstedde, Lucas Wilcox.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include <p4est_algorithms.h>
+#include <p4est_bits.h>
+#include <p4est_communication.h>
+#include <p4est_points.h>
+#include <sc_allgather.h>
+#include <sc_sort.h>
+
+#ifdef SC_ALLGATHER
+#include <sc_allgather.h>
+#define MPI_Allgather sc_allgather
+#endif
+
+p4est_t            *
+p4est_new_points (MPI_Comm mpicomm,
+                  p4est_connectivity_t * connectivity, int maxlevel,
+                  p4est_quadrant_t * points, p4est_locidx_t num_points,
+                  size_t data_size, p4est_init_t init_fn, void *user_pointer)
+{
+  int                 mpiret;
+  int                 num_procs, rank;
+  int                 i, isizet;
+  size_t              lcount;
+  size_t             *nmemb;
+  p4est_topidx_t      jt, num_trees;
+  p4est_topidx_t      first_tree, last_tree, next_tree;
+  p4est_quadrant_t   *first_quad, *next_quad, *quad;
+  p4est_quadrant_t    a, b, c, f, l, n;
+  p4est_tree_t       *tree;
+  p4est_t            *p4est;
+
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new_points\n");
+  P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
+
+  /* parallel sort the incoming points */
+  lcount = (size_t) num_points;
+  nmemb = SC_ALLOC (size_t, num_procs);
+  isizet = (int) sizeof (size_t);
+  mpiret = MPI_Allgather (&lcount, isizet, MPI_BYTE,
+                          nmemb, isizet, MPI_BYTE, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  sc_psort (mpicomm, points, nmemb, sizeof (p4est_quadrant_t),
+            p4est_quadrant_compare_piggy);
+  SC_FREE (nmemb);
+
+  /* create the p4est */
+  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+
+  /* assign some data members */
+  p4est->data_size = 2 * sizeof (p4est_locidx_t);       /* temporary */
+  p4est->user_pointer = user_pointer;
+  p4est->connectivity = connectivity;
+  num_trees = connectivity->num_trees;
+
+  p4est->mpicomm = mpicomm;
+  mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
+  SC_CHECK_MPI (mpiret);
+  num_procs = p4est->mpisize;
+  rank = p4est->mpirank;
+
+  p4est->user_data_pool = sc_mempool_new (p4est->data_size);
+  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+
+  P4EST_GLOBAL_PRODUCTIONF ("New " P4EST_STRING
+                            " with %lld trees on %d processors\n",
+                            (long long) num_trees, num_procs);
+
+  /* allocate trees */
+  p4est->trees = sc_array_new (sizeof (p4est_tree_t));
+  sc_array_resize (p4est->trees, num_trees);
+  for (jt = 0; jt < num_trees; ++jt) {
+    tree = p4est_array_index_topidx (p4est->trees, jt);
+    sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
+    P4EST_QUADRANT_INIT (&tree->first_desc);
+    P4EST_QUADRANT_INIT (&tree->last_desc);
+    tree->quadrants_offset = 0;
+    for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
+      tree->quadrants_per_level[i] = 0;
+    }
+    for (; i <= P4EST_MAXLEVEL; ++i) {
+      tree->quadrants_per_level[i] = -1;
+    }
+    tree->maxlevel = 0;
+  }
+  p4est->local_num_quadrants = 0;
+  p4est->global_num_quadrants = 0;
+
+  /* create point based partition */
+  P4EST_QUADRANT_INIT (&f);
+  p4est->global_first_position =
+    P4EST_ALLOC_ZERO (p4est_quadrant_t, (size_t) num_procs + 1);
+  if (num_points == 0) {
+    P4EST_VERBOSE ("Empty processor");
+    first_tree = p4est->first_local_tree = -1;
+    first_quad = NULL;
+  }
+  else {
+    /* we are probably not empty */
+    if (rank == 0) {
+      first_tree = p4est->first_local_tree = 0;
+      p4est_quadrant_set_morton (&f, maxlevel, 0);
+    }
+    else {
+      first_tree = p4est->first_local_tree = points->p.which_tree;
+      p4est_node_to_quadrant (points, maxlevel, &f);
+    }
+    first_quad = &f;
+  }
+  last_tree = p4est->last_local_tree = -2;
+  p4est_comm_global_partition (p4est, first_quad);
+  first_quad = p4est->global_first_position + rank;
+  next_quad = p4est->global_first_position + (rank + 1);
+  next_tree = next_quad->p.which_tree;
+  if (first_tree >= 0 &&
+      p4est_quadrant_is_equal (first_quad, next_quad) &&
+      first_quad->p.which_tree == next_quad->p.which_tree) {
+    /* if all our points are consumed by the next processor we are empty */
+    first_tree = p4est->first_local_tree = -1;
+  }
+  if (first_tree >= 0) {
+    /* we are definitely not empty */
+    if (next_quad->x == 0 && next_quad->y == 0
+#ifdef P4_TO_P8
+        && next_quad->z == 0
+#endif
+      ) {
+      last_tree = p4est->last_local_tree = next_tree - 1;
+    }
+    else {
+      last_tree = p4est->last_local_tree = next_tree;
+    }
+    P4EST_ASSERT (first_tree <= last_tree);
+  }
+
+  /* fill the local trees */
+  P4EST_QUADRANT_INIT (&a);
+  P4EST_QUADRANT_INIT (&b);
+  P4EST_QUADRANT_INIT (&c);
+  P4EST_QUADRANT_INIT (&l);
+  n = *next_quad;
+  n.level = (int8_t) maxlevel;
+  for (jt = first_tree; jt <= last_tree; ++jt) {
+    bool                onlyone = false;
+    bool                includeb = false;
+
+    tree = p4est_array_index_topidx (p4est->trees, jt);
+
+    /* determine first local quadrant of this tree */
+    if (jt == first_tree) {
+      a = *first_quad;
+      a.level = (int8_t) maxlevel;
+      P4EST_ASSERT (p4est_quadrant_is_valid (&a));
+    }
+    else {
+      p4est_quadrant_set_morton (&a, maxlevel, 0);
+      P4EST_ASSERT (jt < next_tree || p4est_quadrant_compare (&a, &n) < 0);
+    }
+
+    /* enlarge first local quadrant if possible */
+    if (jt < next_tree) {
+      while (p4est_quadrant_child_id (&a) == 0 && a.level > 0) {
+        p4est_quadrant_parent (&a, &a);
+      }
+      P4EST_ASSERT (jt == first_tree || a.level == 0);
+    }
+    else {
+      for (c = a; p4est_quadrant_child_id (&c) == 0; a = c) {
+        p4est_quadrant_parent (&c, &c);
+        p4est_quadrant_last_descendent (&c, &l, maxlevel);
+        if (p4est_quadrant_compare (&l, &n) >= 0) {
+          break;
+        }
+      }
+      P4EST_ASSERT (a.level > 0);
+      P4EST_ASSERT ((p4est_quadrant_last_descendent (&a, &l, maxlevel),
+                     p4est_quadrant_compare (&l, &n) < 0));
+    }
+    p4est_quadrant_init_data (p4est, jt, &a, init_fn);
+    p4est_quadrant_first_descendent (&a, &tree->first_desc, P4EST_QMAXLEVEL);
+
+    /* determine largest possible last quadrant of this tree */
+    if (jt < next_tree) {
+      p4est_quadrant_last_descendent (&a, &l, maxlevel);
+      p4est_quadrant_set_morton (&b, 0, 0);
+      p4est_quadrant_last_descendent (&b, &b, maxlevel);
+      if (p4est_quadrant_is_equal (&l, &b)) {
+        onlyone = true;
+      }
+      else {
+        includeb = true;
+        for (c = b; p4est_quadrant_child_id (&c) == P4EST_CHILDREN - 1; b = c) {
+          p4est_quadrant_parent (&c, &c);
+          p4est_quadrant_first_descendent (&c, &f, maxlevel);
+          if (p4est_quadrant_compare (&l, &f) >= 0) {
+            break;
+          }
+        }
+      }
+    }
+    else {
+      b = n;
+    }
+
+    /* create a complete tree */
+    if (onlyone) {
+      sc_array_resize (&tree->quadrants, 1);
+      quad = sc_array_index (&tree->quadrants, 0);
+      *quad = a;
+      tree->maxlevel = a.level;
+      ++tree->quadrants_per_level[a.level];
+    }
+    else {
+      if (includeb) {
+        p4est_quadrant_init_data (p4est, jt, &b, init_fn);
+      }
+      p4est_complete_region (p4est, &a, true, &b, includeb,
+                             tree, jt, init_fn);
+      quad = sc_array_index (&tree->quadrants,
+                             tree->quadrants.elem_count - 1);
+    }
+    tree->quadrants_offset = p4est->local_num_quadrants;
+    p4est->local_num_quadrants += tree->quadrants.elem_count;
+    p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
+  }
+  if (last_tree >= 0) {
+    for (; jt < num_trees; ++jt) {
+      tree = p4est_array_index_topidx (p4est->trees, jt);
+      tree->quadrants_offset = p4est->local_num_quadrants;
+    }
+  }
+
+  /* compute some member variables */
+  p4est->global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
+  p4est_comm_count_quadrants (p4est);
+
+  /* print more statistics */
+  P4EST_VERBOSEF ("total local quadrants %lld\n",
+                  (long long) p4est->local_num_quadrants);
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
+                            "_new_points with %lld total quadrants\n",
+                            (long long) p4est->global_num_quadrants);
+
+  return p4est;
+}
+
+/* EOF p4est_points.c */
