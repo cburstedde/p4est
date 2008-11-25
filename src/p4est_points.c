@@ -41,7 +41,7 @@
 typedef struct
 {
   p4est_quadrant_t   *points;
-  p4est_locidx_t      num_points, current;
+  p4est_locidx_t      num_points, max_points, current;
   int                 maxlevel;
 }
 p4est_points_state_t;
@@ -78,7 +78,8 @@ p4est_points_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   p4est_points_state_t *s = p4est->user_pointer;
   p4est_locidx_t     *qdata = quadrant->p.user_data;
 
-  if (qdata[1] > qdata[0] + 1) {
+  P4EST_ASSERT (s->max_points >= 0);
+  if (qdata[1] > qdata[0] + s->max_points) {
     s->current = qdata[0];
     return 1;
   }
@@ -88,9 +89,9 @@ p4est_points_refine (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 p4est_t            *
-p4est_new_points (MPI_Comm mpicomm,
-                  p4est_connectivity_t * connectivity, int maxlevel,
-                  p4est_quadrant_t * points, p4est_locidx_t num_points,
+p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+                  int maxlevel, p4est_quadrant_t * points,
+                  p4est_locidx_t num_points, p4est_locidx_t max_points,
                   size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
   int                 mpiret;
@@ -111,6 +112,7 @@ p4est_new_points (MPI_Comm mpicomm,
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new_points\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
+  P4EST_ASSERT (max_points >= -1);
 
   /* This implementation runs in O(P/p * maxlevel)
    * with P the total number of points, p the number of processors.
@@ -136,6 +138,7 @@ p4est_new_points (MPI_Comm mpicomm,
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   ppstate.points = points;
   ppstate.num_points = num_points;
+  ppstate.max_points = max_points;
   ppstate.current = 0;
   ppstate.maxlevel = maxlevel;
 
@@ -346,17 +349,19 @@ p4est_new_points (MPI_Comm mpicomm,
                             (long long) p4est->global_num_quadrants);
 
   /* refine to have one point per quadrant */
-  p4est_refine_level (p4est, true, p4est_points_refine,
-                      p4est_points_init, maxlevel);
+  if (max_points >= 0) {
+    p4est_refine_level (p4est, true, p4est_points_refine,
+                        p4est_points_init, maxlevel);
 #ifdef P4EST_DEBUG
-  for (jt = first_tree; jt <= last_tree; ++jt) {
-    tree = p4est_array_index_topidx (p4est->trees, jt);
-    first_quad = sc_array_index (&tree->quadrants, 0);
-    for (zz = 1; zz < tree->quadrants.elem_count; ++zz) {
-      next_quad = sc_array_index (&tree->quadrants, zz);
-      P4EST_ASSERT (((p4est_locidx_t *) first_quad->p.user_data)[1] ==
-                    ((p4est_locidx_t *) next_quad->p.user_data)[0]);
-      first_quad = next_quad;
+    for (jt = first_tree; jt <= last_tree; ++jt) {
+      tree = p4est_array_index_topidx (p4est->trees, jt);
+      first_quad = sc_array_index (&tree->quadrants, 0);
+      for (zz = 1; zz < tree->quadrants.elem_count; ++zz) {
+        next_quad = sc_array_index (&tree->quadrants, zz);
+        P4EST_ASSERT (((p4est_locidx_t *) first_quad->p.user_data)[1] ==
+                      ((p4est_locidx_t *) next_quad->p.user_data)[0]);
+        first_quad = next_quad;
+      }
     }
   }
 #endif

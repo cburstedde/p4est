@@ -109,7 +109,7 @@ main (int argc, char **argv)
   int                 maxlevel;
   bool                wrongusage;
   char                buffer[BUFSIZ];
-  p4est_locidx_t      num_points;
+  p4est_locidx_t      num_points, max_points;
   p4est_connectivity_t *conn;
   p4est_quadrant_t   *points;
   p4est_t            *p4est;
@@ -130,7 +130,7 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <configuration> <level> <prefix>\n"
+    "Arguments: <configuration> <level> <maxpoints> <prefix>\n"
     "   Configuration can be any of\n"
 #ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic\n"
@@ -138,9 +138,13 @@ main (int argc, char **argv)
     "      unit|periodic|rotwrap|twocubes|rotcubes\n"
 #endif
     "   Level controls the maximum depth of refinement\n"
+    "   Maxpoints is the maximum number of points per quadrant\n"
+    "      which applies to all quadrants above maxlevel\n"
+    "      A value of 0 refines recursively to maxlevel\n"
+    "      A value of -1 does no refinement at all\n"
     "   Prefix is for loading a point data file";
   wrongusage = false;
-  if (!wrongusage && argc != 4) {
+  if (!wrongusage && argc != 5) {
     wrongusage = true;
   }
   if (!wrongusage) {
@@ -187,18 +191,24 @@ main (int argc, char **argv)
       wrongusage = true;
     }
   }
+  if (!wrongusage) {
+    max_points = (p4est_locidx_t) atoi (argv[3]);
+    if (max_points < -1) {
+      wrongusage = true;
+    }
+  }
   if (wrongusage) {
     SC_CHECK_ABORT (rank != 0, usage);
     mpiret = MPI_Barrier (mpicomm);
     SC_CHECK_MPI (mpiret);
   }
 
-  snprintf (buffer, BUFSIZ, "%s%d_%d.pts", argv[3], rank, num_procs);
+  snprintf (buffer, BUFSIZ, "%s%d_%d.pts", argv[4], rank, num_procs);
   points = read_points (buffer, conn->num_trees, &num_points);
   SC_LDEBUGF ("Read %lld points\n", (long long) num_points);
 
-  p4est = p4est_new_points (mpicomm, conn, maxlevel,
-                            points, num_points, 5, NULL, NULL);
+  p4est = p4est_new_points (mpicomm, conn, maxlevel, points,
+                            num_points, max_points, 5, NULL, NULL);
   P4EST_FREE (points);
   p4est_vtk_write_file (p4est, P4EST_STRING "_points_created");
 
