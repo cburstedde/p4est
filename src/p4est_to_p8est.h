@@ -88,6 +88,7 @@
 #define p4est_new                       p8est_new
 #define p4est_destroy                   p8est_destroy
 #define p4est_copy                      p8est_copy
+#define p4est_reset_data                p8est_reset_data
 #define p4est_refine                    p8est_refine
 #define p4est_refine_level              p8est_refine_level
 #define p4est_coarsen                   p8est_coarsen

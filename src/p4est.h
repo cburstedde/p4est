@@ -201,16 +201,33 @@ p4est_t            *p4est_new (MPI_Comm mpicomm,
                                p4est_init_t init_fn, void *user_pointer);
 
 /** Destroy a p4est.
+ *
  * \note The connectivity structure is not destroyed with the p4est.
  */
 void                p4est_destroy (p4est_t * p4est);
 
 /** Make a deep copy of a p4est.  Copying of quadrant user data is optional.
+ *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p4est that does not depend on the input.
  */
 p4est_t            *p4est_copy (p4est_t * input, bool copy_data);
+
+/** Reset user pointer and element data.
+ * When the data size is changed the quadrant data is freed and allocated.
+ * The initialization callback is invoked on each quadrant.
+ *
+ * \param [in] data_size     This is the size of data for each quadrant which
+ *                           can be zero.  Then user_data_pool is set to NULL.
+ * \param [in] init_fn       Callback function to initialize the user_data
+ *                           which is already allocated automatically.
+ * \param [in] user_pointer  Assign to the user_pointer member of the p4est
+ *                           before init_fn is called the first time.
+ */
+void                p4est_reset_data (p4est_t * p4est, size_t data_size,
+                                      p4est_init_t init_fn,
+                                      void *user_pointer);
 
 /** Refine a forest.
  * \param [in] refine_fn Callback function that returns true

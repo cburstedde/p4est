@@ -37,6 +37,12 @@ static const int    refine_level = 5;
 static const int    refine_level = 3;
 #endif
 
+static void
+init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t * quadrant)
+{
+}
+
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
@@ -148,6 +154,10 @@ main (int argc, char **argv)
   sc_array_reset (&tree->quadrants);
 #endif /* !P4_TO_P8 */
 
+  /* check reset data function */
+  p4est_reset_data (p4est, 0, init_fn, NULL);
+  p4est_reset_data (p4est, 0, NULL, NULL);
+
   /* refine and balance the forest */
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 1");
   p4est_refine (p4est, true, refine_fn, NULL);
@@ -156,11 +166,19 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 3");
 
+  /* check reset data function */
+  p4est_reset_data (p4est, 17, NULL, NULL);
+  p4est_reset_data (p4est, 8, init_fn, NULL);
+
   /* checksum and partition */
   crc = p4est_checksum (p4est);
   p4est_partition (p4est, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Partition");
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 4");
+
+  /* check reset data function */
+  p4est_reset_data (p4est, 3, NULL, NULL);
+  p4est_reset_data (p4est, 3, NULL, NULL);
 
   /* checksum and rebalance */
   crc = p4est_checksum (p4est);

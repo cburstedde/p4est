@@ -436,6 +436,54 @@ p4est_copy (p4est_t * input, bool copy_data)
 }
 
 void
+p4est_reset_data (p4est_t * p4est, size_t data_size,
+                  p4est_init_t init_fn, void *user_pointer)
+{
+  bool                doresize;
+  size_t              zz;
+  p4est_topidx_t      jt;
+  p4est_quadrant_t   *q;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+
+  doresize = (p4est->data_size != data_size);
+
+  p4est->data_size = data_size;
+  p4est->user_pointer = user_pointer;
+
+  if (doresize) {
+    if (p4est->user_data_pool != NULL) {
+      sc_mempool_destroy (p4est->user_data_pool);
+    }
+    if (p4est->data_size > 0) {
+      p4est->user_data_pool = sc_mempool_new (p4est->data_size);
+    }
+    else {
+      p4est->user_data_pool = NULL;
+    }
+  }
+
+  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+    tree = p4est_array_index_topidx (p4est->trees, jt);
+    tquadrants = &tree->quadrants;
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      q = sc_array_index (tquadrants, zz);
+      if (doresize) {
+        if (p4est->data_size > 0) {
+          q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
+        }
+        else {
+          q->p.user_data = NULL;
+        }
+      }
+      if (init_fn != NULL) {
+        init_fn (p4est, jt, q);
+      }
+    }
+  }
+}
+
+void
 p4est_refine (p4est_t * p4est, bool refine_recursive,
               p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
