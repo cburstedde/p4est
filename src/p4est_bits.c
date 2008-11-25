@@ -42,8 +42,10 @@ bool
 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                          const p4est_quadrant_t * q2)
 {
-  P4EST_ASSERT (p4est_quadrant_is_extended (q1));
-  P4EST_ASSERT (p4est_quadrant_is_extended (q2));
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, true) ||
+                p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, true) ||
+                p4est_quadrant_is_extended (q2));
 
   return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y)
 #ifdef P4_TO_P8
