@@ -112,6 +112,15 @@ p4est_new_points (MPI_Comm mpicomm,
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new_points\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
+  /* This implementation runs in O(P/p * maxlevel)
+   * with P the total number of points, p the number of processors.
+   * Two optimizations are possible:
+   * 1. At startup remove points that lead to duplicate quadrants.
+   * 2. Use complete_region between successive points instead of
+   *    the call to refine. This should give O(N/p) * maxlevel
+   *    with N the total number of quadrants.
+   */
+
   /* parallel sort the incoming points */
   lcount = (size_t) num_points;
   nmemb = SC_ALLOC (size_t, num_procs);
@@ -352,8 +361,8 @@ p4est_new_points (MPI_Comm mpicomm,
   }
 #endif
 
-  /* establish final data size and user pointer */
-  p4est->user_pointer = user_pointer;
+  /* initialize user pointer and data size */
+  p4est_reset_data (p4est, data_size, init_fn, user_pointer);
 
   return p4est;
 }
