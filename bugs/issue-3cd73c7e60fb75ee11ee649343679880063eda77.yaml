@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Remove unnecessary global communication
+desc: |-
+  Most of the p4est_comm_count_quadrants calls are not needed.
+  Remove them and introduce a count_dirty flag or similar.
+  The counts are communicated only when needed.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-11-25 01:31:59.556735 Z
+references: []
+
+id: 3cd73c7e60fb75ee11ee649343679880063eda77
+log_events: 
+- - 2008-11-25 01:32:00.068653 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
