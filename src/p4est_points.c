@@ -110,7 +110,9 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_t            *p4est;
   p4est_points_state_t ppstate;
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new_points\n");
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
+                            "_new_points with max level %d max points %lld\n",
+                            maxlevel, (long long) max_points);
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (max_points >= -1);
 
@@ -133,6 +135,14 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   sc_psort (mpicomm, points, nmemb, sizeof (p4est_quadrant_t),
             p4est_quadrant_compare_piggy);
   SC_FREE (nmemb);
+#ifdef P4EST_DEBUG
+  first_quad = points;
+  for (zz = 1; zz < lcount; ++zz) {
+    next_quad = points + zz;
+    P4EST_ASSERT (p4est_quadrant_compare_piggy (first_quad, next_quad) <= 0);
+    first_quad = next_quad;
+  }
+#endif
 
   /* create the p4est */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
