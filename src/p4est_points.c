@@ -116,6 +116,12 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (max_points >= -1);
 
+  /* retrieve MPI information */
+  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
   /* This implementation runs in O(P/p * maxlevel)
    * with P the total number of points, p the number of processors.
    * Two optimizations are possible:
@@ -127,7 +133,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* parallel sort the incoming points */
   lcount = (size_t) num_points;
-  nmemb = SC_ALLOC (size_t, num_procs);
+  nmemb = SC_ALLOC_ZERO (size_t, num_procs);
   isizet = (int) sizeof (size_t);
   mpiret = MPI_Allgather (&lcount, isizet, MPI_BYTE,
                           nmemb, isizet, MPI_BYTE, mpicomm);
@@ -153,18 +159,13 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   ppstate.maxlevel = maxlevel;
 
   /* assign some data members */
+  p4est->mpicomm = mpicomm;
+  p4est->mpisize = num_procs;
+  p4est->mpirank = rank;
   p4est->data_size = 2 * sizeof (p4est_locidx_t);       /* temporary */
   p4est->user_pointer = &ppstate;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
-
-  p4est->mpicomm = mpicomm;
-  mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
-  SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
-  SC_CHECK_MPI (mpiret);
-  num_procs = p4est->mpisize;
-  rank = p4est->mpirank;
 
   p4est->user_data_pool = sc_mempool_new (p4est->data_size);
   p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
