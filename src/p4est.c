@@ -2014,8 +2014,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
           P4EST_ASSERT (lowers > 0
                         && (p4est_locidx_t) lowers <= local_num_quadrants);
           send_index = send_array[base_index + 1] =
-            (p4est_gloidx_t) lowers +
-            ((rank > 0) ? (p4est->global_last_quad_index[rank - 1] + 1) : 0);
+            (p4est_gloidx_t) lowers + p4est->global_first_quadrant[rank];
 
           /* send low bound */
           mpiret =
@@ -2300,7 +2299,7 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
     u64a[4] = (uint64_t) save_data;
     u64a[5] = (uint64_t) num_procs;
     for (i = 0; i < num_procs; ++i) {
-      u64a[i + headc] = (uint64_t) (p4est->global_last_quad_index[i] + 1);
+      u64a[i + headc] = (uint64_t) p4est->global_first_quadrant[i + 1];
     }
     sc_fwrite (u64a, sizeof (uint64_t), (size_t) (num_procs + headc),
                file, "write quadrant partition");
@@ -2355,10 +2354,10 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
   if (rank > 0) {
     /* seek to the beginning of this processor's storage */
     foffset = (long)
-      ((p4est->global_last_quad_index[rank - 1] + 1) * qbuf_size +
+      (p4est->global_first_quadrant[rank] * qbuf_size +
        (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
     if (save_data) {
-      foffset += (p4est->global_last_quad_index[rank - 1] + 1) * data_size;
+      foffset += p4est->global_first_quadrant[rank] * data_size;
     }
 
 #ifndef P4EST_MPIIO_WRITE
@@ -2604,17 +2603,16 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   P4EST_FREE (u64a);
   sc_fread (gfpos, sizeof (p4est_quadrant_t),
             (size_t) (num_procs + 1), file, "read tree partition");
-  p4est->global_num_quadrants =
-    p4est->global_last_quad_index[num_procs - 1] + 1;
+  p4est->global_num_quadrants = p4est->global_first_quadrant[num_procs];
   p4est->local_num_quadrants = 0;
 
   /* seek to the beginning of this processor's storage */
   if (rank > 0) {
     fpos = (long)
-      ((p4est->global_last_quad_index[rank - 1] + 1) * qbuf_size +
+      (p4est->global_first_quadrant[rank] * qbuf_size +
        (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
     if (save_data) {
-      fpos += (p4est->global_last_quad_index[rank - 1] + 1) * data_size;
+      fpos += p4est->global_first_quadrant[rank] * data_size;
     }
     retval = fseek (file, fpos, SEEK_CUR);
     SC_CHECK_ABORT (retval == 0, "seek data");

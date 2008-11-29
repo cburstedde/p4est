@@ -38,29 +38,24 @@ p4est_comm_count_quadrants (p4est_t * p4est)
   int                 mpiret;
   p4est_gloidx_t      qlocal = p4est->local_num_quadrants;
   p4est_gloidx_t     *global_last_quad_index = p4est->global_last_quad_index;
+  p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
   int                 i;
-  const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
 
-  global_last_quad_index[rank] = qlocal;
-
+  global_first_quadrant[0] = 0;
+  global_first_quadrant[num_procs] = qlocal;
   if (p4est->mpicomm != MPI_COMM_NULL) {
     mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
-                            global_last_quad_index, 1, P4EST_MPI_GLOIDX,
+                            global_first_quadrant + 1, 1, P4EST_MPI_GLOIDX,
                             p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
   }
 
-  /* Subtract 1 from the first index since we are zero based */
-  --global_last_quad_index[0];
-  p4est->global_first_quadrant[0] = 0;
-  p4est->global_first_quadrant[1] = global_last_quad_index[0] + 1;
-  for (i = 1; i < num_procs; ++i) {
-    global_last_quad_index[i] += global_last_quad_index[i - 1];
-    p4est->global_first_quadrant[i + 1] = global_last_quad_index[i] + 1;
+  for (i = 0; i < num_procs; ++i) {
+    global_first_quadrant[i + 1] += global_first_quadrant[i];
+    global_last_quad_index[i] = global_first_quadrant[i + 1] - 1;
   }
-  /* Add 1 to the last index since we are zero based */
-  p4est->global_num_quadrants = global_last_quad_index[num_procs - 1] + 1;
+  p4est->global_num_quadrants = global_first_quadrant[num_procs];
 }
 
 void

@@ -45,7 +45,7 @@ p8est_comm_tag_t;
 
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p8est  Adds all \c p8est->local_num_quadrant counters.
- *                        This also fills in \c p8est->global_last_quad_index
+ *                        This also fills in \c p8est->global_first_quadrant
  *                        with the correct values.
  */
 void                p8est_comm_count_quadrants (p8est_t * p8est);
