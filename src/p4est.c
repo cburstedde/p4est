@@ -285,7 +285,6 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* compute some member variables */
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
-  p4est->global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
   p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
   p4est_comm_count_quadrants (p4est);
 
@@ -346,10 +345,8 @@ p4est_destroy (p4est_t * p4est)
   }
   sc_mempool_destroy (p4est->quadrant_pool);
 
-  P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est->global_first_quadrant);
-  P4EST_FREE (p4est->global_last_quad_index);
-
+  P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est);
 }
 
@@ -370,7 +367,6 @@ p4est_copy (p4est_t * input, bool copy_data)
   /* create a shallow copy and zero out dependent fields */
   p4est = P4EST_ALLOC (p4est_t, 1);
   memcpy (p4est, input, sizeof (p4est_t));
-  p4est->global_last_quad_index = NULL;
   p4est->global_first_quadrant = NULL;
   p4est->global_first_position = NULL;
   p4est->trees = NULL;
@@ -421,10 +417,6 @@ p4est_copy (p4est_t * input, bool copy_data)
   }
 
   /* allocate and copy global quadrant count */
-  p4est->global_last_quad_index =
-    P4EST_ALLOC (p4est_gloidx_t, p4est->mpisize);
-  memcpy (p4est->global_last_quad_index, input->global_last_quad_index,
-          p4est->mpisize * sizeof (p4est_gloidx_t));
   p4est->global_first_quadrant =
     P4EST_ALLOC (p4est_gloidx_t, p4est->mpisize + 1);
   memcpy (p4est->global_first_quadrant, input->global_first_quadrant,
@@ -2567,7 +2559,6 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   }
 
   /* allocate partition data */
-  p4est->global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
   p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
   gfpos = p4est->global_first_position =
     P4EST_ALLOC (p4est_quadrant_t, num_procs + 1);
@@ -2597,7 +2588,6 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
             "read quadrant partition");
   p4est->global_first_quadrant[0] = 0;
   for (i = 0; i < num_procs; ++i) {
-    p4est->global_last_quad_index[i] = (p4est_gloidx_t) u64a[i] - 1;
     p4est->global_first_quadrant[i + 1] = (p4est_gloidx_t) u64a[i];
   }
   P4EST_FREE (u64a);

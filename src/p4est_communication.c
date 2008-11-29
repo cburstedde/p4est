@@ -37,7 +37,6 @@ p4est_comm_count_quadrants (p4est_t * p4est)
 {
   int                 mpiret;
   p4est_gloidx_t      qlocal = p4est->local_num_quadrants;
-  p4est_gloidx_t     *global_last_quad_index = p4est->global_last_quad_index;
   p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
   int                 i;
   const int           num_procs = p4est->mpisize;
@@ -53,7 +52,6 @@ p4est_comm_count_quadrants (p4est_t * p4est)
 
   for (i = 0; i < num_procs; ++i) {
     global_first_quadrant[i + 1] += global_first_quadrant[i];
-    global_last_quad_index[i] = global_first_quadrant[i + 1] - 1;
   }
   p4est->global_num_quadrants = global_first_quadrant[num_procs];
 }

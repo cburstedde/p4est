@@ -120,10 +120,6 @@ typedef struct p4est
                                                    trees on this processor */
   p4est_gloidx_t      global_num_quadrants;     /* number of quadrants on all
                                                    trees on all processors */
-  p4est_gloidx_t     *global_last_quad_index;   /* Index in the total ordering
-                                                   of all quadrants of the
-                                                   last quadrant on each proc
-                                                 */
   p4est_gloidx_t     *global_first_quadrant;    /* first global quadrant index
                                                    for each proc and 1 beyond
                                                  */

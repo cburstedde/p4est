@@ -108,10 +108,10 @@ main (int argc, char **argv)
     SC_CHECK_MPI (mpiret);
 
     qsum += qglobal;
-    qbegin = (i == 0) ? 0 : (p4est->global_last_quad_index[i - 1] + 1);
-    qend = p4est->global_last_quad_index[i];
-    SC_CHECK_ABORT (qglobal == qend - qbegin + 1,
-                    "wrong number in p4est->global_last_quad_index");
+    qbegin = p4est->global_first_quadrant[i];
+    qend = p4est->global_first_quadrant[i + 1];
+    SC_CHECK_ABORT (qglobal == qend - qbegin,
+                    "wrong number in p4est->global_first_quadrant");
   }
   SC_CHECK_ABORT (qsum == p4est->global_num_quadrants,
                   "Wrong number after quadrant counting");

@@ -393,9 +393,6 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2, bool compare_data)
   if (p4est1->global_num_quadrants != p4est2->global_num_quadrants)
     return false;
 
-  if (memcmp (p4est1->global_last_quad_index, p4est2->global_last_quad_index,
-              p4est1->mpisize * sizeof (p4est_gloidx_t)))
-    return false;
   if (memcmp (p4est1->global_first_quadrant, p4est2->global_first_quadrant,
               (p4est1->mpisize + 1) * sizeof (p4est_gloidx_t)))
     return false;
@@ -655,14 +652,6 @@ p4est_is_valid (p4est_t * p4est)
     P4EST_NOTICE ("p4est invalid global quadrant index\n");
     failed = true;
     goto failtest;
-  }
-  for (i = 0; i < num_procs; ++i) {
-    if (p4est->global_last_quad_index[i] + 1 !=
-        p4est->global_first_quadrant[i + 1]) {
-      P4EST_NOTICE ("p4est mismatched global quadrant count\n");
-      failed = true;
-      goto failtest;
-    }
   }
 
 failtest:
@@ -1923,9 +1912,6 @@ p4est_partition_given (p4est_t * p4est,
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-  const p4est_gloidx_t *global_last_quad_index =
-    p4est->global_last_quad_index;
-  const p4est_gloidx_t *global_first_quadrant = p4est->global_first_quadrant;
   const p4est_topidx_t first_local_tree = p4est->first_local_tree;
   const p4est_topidx_t last_local_tree = p4est->last_local_tree;
   const size_t        data_size = p4est->data_size;
@@ -1960,6 +1946,7 @@ p4est_partition_given (p4est_t * p4est,
   p4est_gloidx_t      from_begin, from_end;
   p4est_gloidx_t      to_begin, to_end;
   p4est_gloidx_t      my_base, my_begin, my_end;
+  p4est_gloidx_t     *global_last_quad_index;
   p4est_gloidx_t     *new_global_last_quad_index;
   p4est_gloidx_t     *local_tree_last_quad_index;
   p4est_gloidx_t      diff64, total_quadrants_shipped;
@@ -1993,20 +1980,24 @@ p4est_partition_given (p4est_t * p4est,
 #ifdef P4EST_DEBUG
   /* Save a checksum of the original forest */
   crc = p4est_checksum (p4est);
+#endif
 
-  /* Check for a valid requested partition */
+  /* Check for a valid requested partition and create last_quad_index */
+  global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
   for (i = 0; i < num_procs; ++i) {
+    global_last_quad_index[i] = p4est->global_first_quadrant[i + 1] - 1;
+#ifdef P4EST_DEBUG
     total_requested_quadrants += new_num_quadrants_in_proc[i];
     P4EST_ASSERT (new_num_quadrants_in_proc[i] >= 0);
+#endif
   }
   P4EST_ASSERT (total_requested_quadrants == p4est->global_num_quadrants);
-#endif
 
   /* Print some diagnostics */
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
-      P4EST_GLOBAL_VERBOSEF ("partition global_last_quad_index[%d] = %lld\n",
-                             i, (long long) global_last_quad_index[i]);
+      P4EST_GLOBAL_LDEBUGF ("partition global_last_quad_index[%d] = %lld\n",
+                            i, (long long) global_last_quad_index[i]);
     }
   }
 
@@ -2040,7 +2031,7 @@ p4est_partition_given (p4est_t * p4est,
   /* Print some diagnostics */
   if (rank == 0) {
     for (i = 0; i < num_procs; ++i) {
-      P4EST_GLOBAL_VERBOSEF
+      P4EST_GLOBAL_LDEBUGF
         ("partition new_global_last_quad_index[%d] = %lld\n",
          i, (long long) new_global_last_quad_index[i]);
     }
@@ -2568,17 +2559,16 @@ p4est_partition_given (p4est_t * p4est,
   /* Set the global index and count of quadrants instead
    * of calling p4est_comm_count_quadrants
    */
-  P4EST_FREE (p4est->global_first_quadrant);
-  P4EST_FREE (p4est->global_last_quad_index);
-  p4est->global_last_quad_index = new_global_last_quad_index;
+  P4EST_FREE (global_last_quad_index);
+  global_last_quad_index = new_global_last_quad_index;
   P4EST_ASSERT (p4est->global_num_quadrants ==
                 new_global_last_quad_index[num_procs - 1] + 1);
-  p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
-  p4est->global_first_quadrant[0] = 0;
+  P4EST_ASSERT (p4est->global_first_quadrant[0] == 0);
   for (i = 0; i < num_procs; ++i) {
-    p4est->global_first_quadrant[i + 1] =
-      p4est->global_last_quad_index[i] + 1;
+    p4est->global_first_quadrant[i + 1] = global_last_quad_index[i] + 1;
   }
+  P4EST_FREE (new_global_last_quad_index);
+  global_last_quad_index = new_global_last_quad_index = NULL;
 
   p4est->first_local_tree = new_first_local_tree;
   p4est->last_local_tree = new_last_local_tree;

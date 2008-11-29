@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Replace global_last_quad_index in p4est_partition_given
+desc: |-
+  This variable has been replaced by global_first_quadrant
+  everywhere else in the code.  That's easier to use since it has
+  mpisize + 1 elements.  It would be most consistent to also
+  make the end_* variables in partition_given exclusive.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2008-11-29 21:27:18.305382 Z
+references: []
+
+id: 3c9b2ae49358d99afd662085c2bd2d5772309e56
+log_events: 
+- - 2008-11-29 21:27:19.457242 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
