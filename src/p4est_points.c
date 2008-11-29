@@ -197,7 +197,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* create point based partition */
   P4EST_QUADRANT_INIT (&f);
   p4est->global_first_position =
-    P4EST_ALLOC_ZERO (p4est_quadrant_t, (size_t) num_procs + 1);
+    P4EST_ALLOC_ZERO (p4est_quadrant_t, num_procs + 1);
   if (num_points == 0) {
     P4EST_VERBOSE ("Empty processor");
     first_tree = p4est->first_local_tree = -1;

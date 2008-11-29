@@ -289,8 +289,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_comm_count_quadrants (p4est);
 
   /* fill in global partition information */
-  global_first_position =
-    P4EST_ALLOC_ZERO (p4est_quadrant_t, (size_t) num_procs + 1);
+  global_first_position = P4EST_ALLOC_ZERO (p4est_quadrant_t, num_procs + 1);
   for (i = 0; i <= num_procs; ++i) {
     first_quadrant = (global_num_quadrants * i) / num_procs;
     first_tree = first_quadrant / tree_num_quadrants;

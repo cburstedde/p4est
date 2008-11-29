@@ -82,7 +82,7 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_ALLOC(t,n)          (t *) sc_malloc (p4est_package_id,    \
                                                    (n) * sizeof(t))
 #define P4EST_ALLOC_ZERO(t,n)     (t *) sc_calloc (p4est_package_id,    \
-                                                   (n), sizeof(t))
+                                                   (size_t) (n), sizeof(t))
 #define P4EST_REALLOC(p,t,n)      (t *) sc_realloc (p4est_package_id,   \
                                                     (p), (n) * sizeof(t))
 #define P4EST_STRDUP(s)                 sc_strdup (p4est_package_id, (s))

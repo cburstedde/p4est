@@ -956,7 +956,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   /* Fill send buffers and number owned nodes. */
   first_size = P4EST_DIM * sizeof (p4est_qcoord_t) + sizeof (p4est_topidx_t);
   first_size = SC_MAX (first_size, sizeof (p4est_locidx_t));
-  procs = P4EST_ALLOC_ZERO (int, (size_t) num_procs);
+  procs = P4EST_ALLOC_ZERO (int, num_procs);
   peers = P4EST_ALLOC (p4est_node_peer_t, num_procs);
   sc_array_init (&send_requests, sizeof (MPI_Request));
   for (k = 0; k < num_procs; ++k) {
