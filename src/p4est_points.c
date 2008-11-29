@@ -133,14 +133,14 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* parallel sort the incoming points */
   lcount = (size_t) num_points;
-  nmemb = SC_ALLOC_ZERO (size_t, num_procs);
+  nmemb = P4EST_ALLOC_ZERO (size_t, num_procs);
   isizet = (int) sizeof (size_t);
   mpiret = MPI_Allgather (&lcount, isizet, MPI_BYTE,
                           nmemb, isizet, MPI_BYTE, mpicomm);
   SC_CHECK_MPI (mpiret);
   sc_psort (mpicomm, points, nmemb, sizeof (p4est_quadrant_t),
             p4est_quadrant_compare_piggy);
-  SC_FREE (nmemb);
+  P4EST_FREE (nmemb);
 #ifdef P4EST_DEBUG
   first_quad = points;
   for (zz = 1; zz < lcount; ++zz) {
@@ -347,6 +347,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   }
 
   /* compute some member variables */
+  p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
   p4est->global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
   p4est_comm_count_quadrants (p4est);
 

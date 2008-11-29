@@ -124,6 +124,9 @@ typedef struct p4est
                                                    of all quadrants of the
                                                    last quadrant on each proc
                                                  */
+  p4est_gloidx_t     *global_first_quadrant;    /* first global quadrant index
+                                                   for each proc and 1 beyond
+                                                 */
   p4est_quadrant_t   *global_first_position;    /* first smallest possible quad
                                                    for each proc and 1 beyond
                                                  */

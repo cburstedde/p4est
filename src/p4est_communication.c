@@ -53,8 +53,11 @@ p4est_comm_count_quadrants (p4est_t * p4est)
 
   /* Subtract 1 from the first index since we are zero based */
   --global_last_quad_index[0];
+  p4est->global_first_quadrant[0] = 0;
+  p4est->global_first_quadrant[1] = global_last_quad_index[0] + 1;
   for (i = 1; i < num_procs; ++i) {
     global_last_quad_index[i] += global_last_quad_index[i - 1];
+    p4est->global_first_quadrant[i + 1] = global_last_quad_index[i] + 1;
   }
   /* Add 1 to the last index since we are zero based */
   p4est->global_num_quadrants = global_last_quad_index[num_procs - 1] + 1;

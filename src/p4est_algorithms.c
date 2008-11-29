@@ -396,6 +396,9 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2, bool compare_data)
   if (memcmp (p4est1->global_last_quad_index, p4est2->global_last_quad_index,
               p4est1->mpisize * sizeof (p4est_gloidx_t)))
     return false;
+  if (memcmp (p4est1->global_first_quadrant, p4est2->global_first_quadrant,
+              (p4est1->mpisize + 1) * sizeof (p4est_gloidx_t)))
+    return false;
   if (memcmp (p4est1->global_first_position, p4est2->global_first_position,
               (p4est1->mpisize + 1) * sizeof (p4est_quadrant_t)))
     return false;
@@ -439,9 +442,7 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2, bool compare_data)
 bool
 p4est_is_valid (p4est_t * p4est)
 {
-#ifdef P4EST_DEBUG
   const int           num_procs = p4est->mpisize;
-#endif
   const int           rank = p4est->mpirank;
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;
@@ -646,6 +647,22 @@ p4est_is_valid (p4est_t * p4est)
     P4EST_NOTICE ("p4est invalid local quadrant count\n");
     failed = true;
     goto failtest;
+  }
+
+  if (p4est->global_first_quadrant[0] != 0 ||
+      p4est->global_first_quadrant[num_procs] !=
+      p4est->global_num_quadrants) {
+    P4EST_NOTICE ("p4est invalid global quadrant index\n");
+    failed = true;
+    goto failtest;
+  }
+  for (i = 0; i < num_procs; ++i) {
+    if (p4est->global_last_quad_index[i] + 1 !=
+        p4est->global_first_quadrant[i + 1]) {
+      P4EST_NOTICE ("p4est mismatched global quadrant count\n");
+      failed = true;
+      goto failtest;
+    }
   }
 
 failtest:
@@ -1908,6 +1925,7 @@ p4est_partition_given (p4est_t * p4est,
   const int           rank = p4est->mpirank;
   const p4est_gloidx_t *global_last_quad_index =
     p4est->global_last_quad_index;
+  const p4est_gloidx_t *global_first_quadrant = p4est->global_first_quadrant;
   const p4est_topidx_t first_local_tree = p4est->first_local_tree;
   const p4est_topidx_t last_local_tree = p4est->last_local_tree;
   const size_t        data_size = p4est->data_size;
@@ -2550,10 +2568,17 @@ p4est_partition_given (p4est_t * p4est,
   /* Set the global index and count of quadrants instead
    * of calling p4est_comm_count_quadrants
    */
+  P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_last_quad_index);
   p4est->global_last_quad_index = new_global_last_quad_index;
   P4EST_ASSERT (p4est->global_num_quadrants ==
                 new_global_last_quad_index[num_procs - 1] + 1);
+  p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
+  p4est->global_first_quadrant[0] = 0;
+  for (i = 0; i < num_procs; ++i) {
+    p4est->global_first_quadrant[i + 1] =
+      p4est->global_last_quad_index[i] + 1;
+  }
 
   p4est->first_local_tree = new_first_local_tree;
   p4est->last_local_tree = new_last_local_tree;
