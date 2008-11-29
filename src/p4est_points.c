@@ -374,8 +374,8 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
         first_quad = next_quad;
       }
     }
-  }
 #endif
+  }
 
   /* initialize user pointer and data size */
   p4est_reset_data (p4est, data_size, init_fn, user_pointer);
