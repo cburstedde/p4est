@@ -51,9 +51,6 @@ SC_EXTERN_C_BEGIN;
 /* the offset of the highest quadrant at level l */
 #define P4EST_LAST_OFFSET(l) (P4EST_ROOT_LEN - P4EST_QUADRANT_LEN (l))
 
-/* a negative magic number for consistency checks */
-#define P4EST_NEG_MAGIC = -439623172;
-
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
@@ -119,24 +116,26 @@ typedef struct p4est
                                            must be -1 for an empty processor */
   p4est_topidx_t      last_local_tree;  /* 0-based index of last local tree,
                                            must be -2 for an empty processor */
-  p4est_locidx_t      local_num_quadrants;      /* number of quadrants
-                                                   on all trees on this processor */
-  p4est_gloidx_t      global_num_quadrants;     /* number of quadrants
-                                                   on all trees on all processors */
+  p4est_locidx_t      local_num_quadrants;      /* number of quadrants on all
+                                                   trees on this processor */
+  p4est_gloidx_t      global_num_quadrants;     /* number of quadrants on all
+                                                   trees on all processors */
   p4est_gloidx_t     *global_last_quad_index;   /* Index in the total ordering
                                                    of all quadrants of the
-                                                   last quadrant on each proc.
+                                                   last quadrant on each proc
                                                  */
-  p4est_quadrant_t   *global_first_position;    /* first smallest possible quadrant
-                                                   for each processor and 1 beyond */
-  p4est_connectivity_t *connectivity;   /* connectivity structure */
+  p4est_quadrant_t   *global_first_position;    /* first smallest possible quad
+                                                   for each proc and 1 beyond
+                                                 */
+  p4est_connectivity_t *connectivity;   /* connectivity structure, not owned */
   sc_array_t         *trees;    /* list of all trees */
 
   sc_mempool_t       *user_data_pool;   /* memory allocator for user data
                                          * WARNING: This is NULL if data size
                                          *          equals zero.
                                          */
-  sc_mempool_t       *quadrant_pool;    /* memory allocator for temporary quadrants */
+  sc_mempool_t       *quadrant_pool;    /* memory allocator
+                                           for temporary quadrants */
 }
 p4est_t;
 
