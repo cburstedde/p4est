@@ -31,6 +31,21 @@ SC_EXTERN_C_BEGIN;
 void                p4est_quadrant_print (int log_priority,
                                           const p4est_quadrant_t * q);
 
+/** Test if two quadrants have equal Morton indices.
+ * \return true if \a q1 describes the same quadrant as \a q2.
+ */
+bool                p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
+                                             const p4est_quadrant_t * q2);
+
+/** Test if two quadrants have equal Morton indices and the same tree id.
+ * \return          true if \a q1 describes the same quadrant as \a q2
+ *                  and the p.which_tree fields are equal.
+ */
+bool                p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
+                                                   q1,
+                                                   const p4est_quadrant_t *
+                                                   q2);
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,
@@ -47,12 +62,6 @@ int                 p4est_quadrant_compare (const void *v1, const void *v2);
  */
 int                 p4est_quadrant_compare_piggy (const void *v1,
                                                   const void *v2);
-
-/** Test if two quadrants have equal Morton indices.
- * \return true if \a q1 describes the same quadrant as \a q2.
- */
-bool                p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
-                                             const p4est_quadrant_t * q2);
 
 /** Test if two quadrants have equal Morton indices, callback version.
  * \return true if \a v1 describes the same quadrant as \a v2.

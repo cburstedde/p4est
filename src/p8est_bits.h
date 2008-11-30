@@ -37,6 +37,15 @@ void                p8est_quadrant_print (int log_priority,
 bool                p8est_quadrant_is_equal (const p8est_quadrant_t * q1,
                                              const p8est_quadrant_t * q2);
 
+/** Test if two quadrants have equal Morton indices and the same tree id.
+ * \return          true if \a q1 describes the same quadrant as \a q2
+ *                  and the p.which_tree fields are equal.
+ */
+bool                p8est_quadrant_is_equal_piggy (const p8est_quadrant_t *
+                                                   q1,
+                                                   const p8est_quadrant_t *
+                                                   q2);
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,

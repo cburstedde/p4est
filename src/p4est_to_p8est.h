@@ -106,6 +106,7 @@
 /* functions in p4est_bits */
 #define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
+#define p4est_quadrant_is_equal_piggy   p8est_quadrant_is_equal_piggy
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_equal_fn         p8est_quadrant_equal_fn

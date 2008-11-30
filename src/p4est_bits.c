@@ -54,6 +54,14 @@ p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
     ;
 }
 
+bool
+p4est_quadrant_is_equal_piggy (const p4est_quadrant_t * q1,
+                               const p4est_quadrant_t * q2)
+{
+  return
+    q1->p.which_tree == q2->p.which_tree && p4est_quadrant_is_equal (q1, q2);
+}
+
 int
 p4est_quadrant_compare (const void *v1, const void *v2)
 {
