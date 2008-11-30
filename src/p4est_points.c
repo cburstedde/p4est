@@ -167,6 +167,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
+  /* allocate memory pools */
   p4est->user_data_pool = sc_mempool_new (p4est->data_size);
   p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
 

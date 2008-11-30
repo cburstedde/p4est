@@ -173,7 +173,7 @@ extern const int    p8est_num_ranges;
 
 /** Create a new p8est.
  *
- * \param [in] mpicomm       A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
  *                           the forest is built with.  Note the p8est
  *                           does not take ownership of the memory.
@@ -298,7 +298,7 @@ void                p8est_save (const char *filename, p8est_t * p8est,
 
 /** Load the complete connectivity/p4est structure from disk.
  * \param [in] filename         Name of the file to read.
- * \param [in] mpicomm          A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] data_size        Size of data for each quadrant which can be
  *                              zero.  Then user_data_pool is set to NULL.
  * \param [in] load_data        If true, the element data is loaded.  If also

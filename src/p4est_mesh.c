@@ -1463,12 +1463,10 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   P4EST_FREE (peers);
   P4EST_FREE (procs);
 
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allgather (&num_owned_indeps, 1, P4EST_MPI_LOCIDX,
-                            nodes->global_owned_indeps, 1, P4EST_MPI_LOCIDX,
-                            p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-  }
+  mpiret = MPI_Allgather (&num_owned_indeps, 1, P4EST_MPI_LOCIDX,
+                          nodes->global_owned_indeps, 1, P4EST_MPI_LOCIDX,
+                          p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 #endif /* P4EST_MPI */
 
   /* Print some statistics and clean up. */

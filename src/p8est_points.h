@@ -26,7 +26,7 @@
 
 /** Create a new forest based on a distributed set of points.
  *
- * \param [in] mpicomm       A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
  *                           the forest is built with.  Note the p8est
  *                           does not take ownership of the memory.

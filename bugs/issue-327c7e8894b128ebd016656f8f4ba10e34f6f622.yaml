@@ -7,8 +7,8 @@ type: :bugfix
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-11-24 00:02:57.414561 Z
 references: []
 
@@ -18,3 +18,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2008-11-30 01:27:09.143109 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - This is done in current libsc and p4est.

@@ -176,7 +176,7 @@ extern const int    p4est_num_ranges;
 
 /** Create a new p4est.
  *
- * \param [in] mpicomm       A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
  *                           the forest is built with.  Note the p4est
  *                           does not take ownership of the memory.
@@ -301,7 +301,7 @@ void                p4est_save (const char *filename, p4est_t * p4est,
 
 /** Load the complete connectivity/p4est structure from disk.
  * \param [in] filename         Name of the file to read.
- * \param [in] mpicomm          A valid MPI_Comm or MPI_COMM_NULL.
+ * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] data_size        Size of data for each quadrant which can be
  *                              zero.  Then user_data_pool is set to NULL.
  * \param [in] load_data        If true, the element data is loaded.  If also

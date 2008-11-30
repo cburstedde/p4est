@@ -42,13 +42,10 @@ p4est_comm_count_quadrants (p4est_t * p4est)
   const int           num_procs = p4est->mpisize;
 
   global_first_quadrant[0] = 0;
-  global_first_quadrant[num_procs] = qlocal;
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
-                            global_first_quadrant + 1, 1, P4EST_MPI_GLOIDX,
-                            p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-  }
+  mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
+                          global_first_quadrant + 1, 1, P4EST_MPI_GLOIDX,
+                          p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   for (i = 0; i < num_procs; ++i) {
     global_first_quadrant[i + 1] += global_first_quadrant[i];
@@ -68,69 +65,59 @@ p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
   p4est_quadrant_t   *quadrant;
   p4est_quadrant_t   *pi, input;
 
-  SC_BZERO (&p4est->global_first_position[0], 1);
   SC_BZERO (&p4est->global_first_position[num_procs], 1);
-
-  p4est->global_first_position[num_procs].x = 0;
-  p4est->global_first_position[num_procs].y = 0;
-#ifdef P4_TO_P8
-  p4est->global_first_position[num_procs].z = 0;
-#endif
   p4est->global_first_position[num_procs].level = P4EST_QMAXLEVEL;
   p4est->global_first_position[num_procs].p.which_tree = num_trees;
 
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    SC_BZERO (&input, 1);
-    if (first_tree < 0) {
-      /* i don't have any quadrants, send negative values */
-      P4EST_ASSERT (first_tree == -1 && p4est->last_local_tree == -2);
-      input.x = input.y = -1;
+  SC_BZERO (&input, 1);
+  if (first_tree < 0) {
+    /* i don't have any quadrants, send negative values */
+    P4EST_ASSERT (first_tree == -1 && p4est->last_local_tree == -2);
+    input.x = -1;
+    input.y = -1;
 #ifdef P4_TO_P8
-      input.z = -1;
+    input.z = -1;
 #endif
-      input.level = P4EST_QMAXLEVEL;
-      input.p.which_tree = -1;
+  }
+  else {
+    /* send values corresponding to my first quadrant */
+    if (first_quad != NULL) {
+      tree = NULL;
+      quadrant = first_quad;
     }
     else {
-      /* send values corresponding to my first quadrant */
-      if (first_quad != NULL) {
-        tree = NULL;
-        quadrant = first_quad;
-      }
-      else {
-        tree = sc_array_index (p4est->trees, first_tree);
-        quadrant = sc_array_index (&tree->quadrants, 0);
-      }
-      input.x = quadrant->x;
-      input.y = quadrant->y;
-#ifdef P4_TO_P8
-      input.z = quadrant->z;
-#endif
-      input.level = P4EST_QMAXLEVEL;
-      input.p.which_tree = first_tree;
+      tree = sc_array_index (p4est->trees, first_tree);
+      quadrant = sc_array_index (&tree->quadrants, 0);
     }
-    mpiret = MPI_Allgather (&input, (int) sizeof (p4est_quadrant_t), MPI_BYTE,
-                            p4est->global_first_position,
-                            (int) sizeof (p4est_quadrant_t), MPI_BYTE,
-                            p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
+    input.x = quadrant->x;
+    input.y = quadrant->y;
+#ifdef P4_TO_P8
+    input.z = quadrant->z;
+#endif
+  }
+  input.level = P4EST_QMAXLEVEL;
+  input.p.which_tree = first_tree;
+  mpiret = MPI_Allgather (&input, (int) sizeof (p4est_quadrant_t), MPI_BYTE,
+                          p4est->global_first_position,
+                          (int) sizeof (p4est_quadrant_t), MPI_BYTE,
+                          p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
-    /* correct for processors that don't have any quadrants */
-    for (i = num_procs - 1; i >= 0; --i) {
-      pi = &p4est->global_first_position[i];
-      if (pi->p.which_tree < 0) {
-        P4EST_ASSERT (pi->x == -1 && pi->y == -1);
+  /* correct for processors that don't have any quadrants */
+  for (i = num_procs - 1; i >= 0; --i) {
+    pi = &p4est->global_first_position[i];
+    if (pi->p.which_tree < 0) {
+      P4EST_ASSERT (pi->x == -1 && pi->y == -1);
 #ifdef P4_TO_P8
-        P4EST_ASSERT (pi->z == -1);
+      P4EST_ASSERT (pi->z == -1);
 #endif
-        memcpy (pi, pi + 1, sizeof (p4est_quadrant_t));
-      }
-      P4EST_ASSERT (pi->x >= 0 && pi->y >= 0);
-#ifdef P4_TO_P8
-      P4EST_ASSERT (pi->z >= 0);
-#endif
-      P4EST_ASSERT (pi->p.which_tree >= 0 && pi->level == P4EST_QMAXLEVEL);
+      memcpy (pi, pi + 1, sizeof (p4est_quadrant_t));
     }
+    P4EST_ASSERT (pi->x >= 0 && pi->y >= 0);
+#ifdef P4_TO_P8
+    P4EST_ASSERT (pi->z >= 0);
+#endif
+    P4EST_ASSERT (pi->p.which_tree >= 0 && pi->level == P4EST_QMAXLEVEL);
   }
 }
 
@@ -337,10 +324,6 @@ p4est_comm_sync_flag (p4est_t * p4est, bool flag, MPI_Op operation)
   int                 mpiret;
 
   P4EST_ASSERT (operation == MPI_BAND || operation == MPI_BOR);
-
-  if (p4est->mpicomm == MPI_COMM_NULL) {
-    return flag;
-  }
 
   lbyte = (int8_t) (flag ? 1 : 0);
   mpiret = MPI_Allreduce (&lbyte, &gbyte, 1, MPI_BYTE, operation,

@@ -98,14 +98,15 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
 }
 
 int
-main (void)
+main (int argc, char **argv)
 {
   const p4est_qcoord_t qone = 1;
+  int                 mpiret;
   int                 k;
-  size_t              iz, jz, incount;
   int                 level, mid, cid;
   int                 id0, id1, id2, id3;
   int64_t             index1, index2;
+  size_t              iz, jz, incount;
   p4est_qcoord_t      mh = P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est1;
@@ -119,10 +120,14 @@ main (void)
   p4est_quadrant_t    a, f, g, h;
   uint64_t            Aid, Fid;
 
+  /* initialize MPI */
+  mpiret = MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est1 = p4est_new (MPI_COMM_NULL, connectivity, 15, 0, NULL, NULL);
-  p4est2 = p4est_new (MPI_COMM_NULL, connectivity, 15, 8, NULL, NULL);
+  p4est1 = p4est_new (MPI_COMM_SELF, connectivity, 15, 0, NULL, NULL);
+  p4est2 = p4est_new (MPI_COMM_SELF, connectivity, 15, 8, NULL, NULL);
 
   /* refine the second tree to a uniform level */
   p4est_refine (p4est1, true, refine_none, NULL);
@@ -608,6 +613,9 @@ main (void)
   SC_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 
   sc_finalize ();
+
+  mpiret = MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }

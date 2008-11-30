@@ -27,9 +27,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-#ifdef P4EST_MPI
   int                 mpiret;
-#endif
   int                 k, prev_owner, owner;
   int                *sharers;
   size_t              current, zz, num_sharers;
@@ -79,14 +77,9 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   local_counts[2] = mesh->local_onode_num;
   local_counts[3] = mesh->local_dnode_num;
   local_counts[4] = nodes->num_owned_shared;
-  memcpy (global_counts, local_counts, 5 * sizeof (int64_t));
-#ifdef P4EST_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Allreduce (local_counts, global_counts, 5, MPI_LONG_LONG_INT,
-                            MPI_SUM, p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-  }
-#endif
+  mpiret = MPI_Allreduce (local_counts, global_counts, 5, MPI_LONG_LONG_INT,
+                          MPI_SUM, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (global_counts[0] == p4est->global_num_quadrants);
   mesh->total_elem_num = global_counts[0];
   global_borrowed = global_counts[1] - global_counts[2];

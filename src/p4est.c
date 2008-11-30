@@ -73,9 +73,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            p4est_locidx_t min_quadrants, size_t data_size,
            p4est_init_t init_fn, void *user_pointer)
 {
-#ifdef P4EST_MPI
   int                 mpiret;
-#endif
   int                 num_procs, rank;
   int                 i, must_remove_last_quadrant;
   int                 level;
@@ -93,31 +91,21 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new\n");
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
-  P4EST_QUADRANT_INIT (&a);
-  P4EST_QUADRANT_INIT (&b);
-  P4EST_QUADRANT_INIT (&c);
-
-  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  /* retrieve MPI information */
+  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
 
   /* assign some data members */
+  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  p4est->mpicomm = mpicomm;
+  p4est->mpisize = num_procs;
+  p4est->mpirank = rank;
   p4est->data_size = data_size;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
-
-  p4est->mpicomm = mpicomm;
-  p4est->mpisize = 1;
-  p4est->mpirank = 0;
-#ifdef P4EST_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
-    SC_CHECK_MPI (mpiret);
-    mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
-    SC_CHECK_MPI (mpiret);
-  }
-#endif
-  num_procs = p4est->mpisize;
-  rank = p4est->mpirank;
 
   /* allocate memory pools */
   if (p4est->data_size > 0) {
@@ -209,6 +197,9 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->global_num_quadrants = 0;
 
   /* for every locally non-empty tree fill first and last quadrant */
+  P4EST_QUADRANT_INIT (&a);
+  P4EST_QUADRANT_INIT (&b);
+  P4EST_QUADRANT_INIT (&c);
   for (jt = first_tree; jt <= last_tree; ++jt) {
     tree = p4est_array_index_topidx (p4est->trees, jt);
     must_remove_last_quadrant = 0;
@@ -1772,20 +1763,14 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 
   /* compute global sum of send and receive counts */
 #ifdef P4EST_STATS
-  gtotal[0] = gtotal[1] = 0;
   ltotal[0] = (p4est_gloidx_t) total_send_count;
   ltotal[1] = (p4est_gloidx_t) total_recv_count;
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Reduce (ltotal, gtotal, 2, P4EST_MPI_GLOIDX,
-                         MPI_SUM, 0, p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-    P4EST_GLOBAL_STATISTICSF ("Global number of shipped quadrants %lld\n",
-                              (long long) gtotal[0]);
-    P4EST_ASSERT (gtotal[0] == gtotal[1]);
-  }
-  else {
-    P4EST_ASSERT (ltotal[0] == 0 && ltotal[1] == 0);
-  }
+  mpiret = MPI_Reduce (ltotal, gtotal, 2, P4EST_MPI_GLOIDX,
+                       MPI_SUM, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_STATISTICSF ("Global number of shipped quadrants %lld\n",
+                            (long long) gtotal[0]);
+  P4EST_ASSERT (gtotal[0] == gtotal[1]);
 #endif /* P4EST_STATS */
 #endif /* P4EST_MPI */
 
@@ -1884,13 +1869,13 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
      "_partition with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);
 
-#ifdef P4EST_MPI
   /* this function does nothing in a serial setup */
-  if (p4est->mpicomm == MPI_COMM_NULL || p4est->mpisize == 1) {
+  if (p4est->mpisize == 1) {
     P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
     return;
   }
 
+#ifdef P4EST_MPI
   /* allocate new quadrant distribution counts */
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
@@ -2200,14 +2185,10 @@ p4est_checksum (p4est_t * p4est)
   gather = NULL;
   if (p4est->mpirank == 0) {
     gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-    if (p4est->mpicomm == MPI_COMM_NULL)
-      memcpy (gather, send, 2 * sizeof (uint64_t));
   }
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Gather (send, 2, MPI_LONG_LONG_INT,
-                         gather, 2, MPI_LONG_LONG_INT, 0, p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-  }
+  mpiret = MPI_Gather (send, 2, MPI_LONG_LONG_INT,
+                       gather, 2, MPI_LONG_LONG_INT, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   crc = 0;
   if (p4est->mpirank == 0) {
@@ -2484,9 +2465,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   const int           headc = 6;
   const int           align = 16;
   int                 retval;
-#ifdef P4EST_MPI
   int                 mpiret;
-#endif
   int                 num_procs, rank;
   int                 i;
   long                fpos;
@@ -2508,26 +2487,20 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   fpos = ((fpos + align - 1) / align) * align;
 
+  /* retrieve MPI information */
+  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
   /* assign some data members */
+  p4est->mpicomm = mpicomm;
+  p4est->mpisize = num_procs;
+  p4est->mpirank = rank;
   p4est->data_size = data_size;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = conn;
   qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
-
-  /* sane MPI state */
-  p4est->mpicomm = mpicomm;
-  p4est->mpisize = 1;
-  p4est->mpirank = 0;
-#ifdef P4EST_MPI
-  if (p4est->mpicomm != MPI_COMM_NULL) {
-    mpiret = MPI_Comm_size (p4est->mpicomm, &p4est->mpisize);
-    SC_CHECK_MPI (mpiret);
-    mpiret = MPI_Comm_rank (p4est->mpicomm, &p4est->mpirank);
-    SC_CHECK_MPI (mpiret);
-  }
-#endif
-  num_procs = p4est->mpisize;
-  rank = p4est->mpirank;
 
   /* allocate memory pools */
   if (data_size > 0) {
