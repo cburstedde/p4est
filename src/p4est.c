@@ -52,7 +52,7 @@ typedef struct
   int8_t              have_second_count, have_second_load;
   int                 recv_first_count, recv_second_count;
   int                 send_first_count, send_second_count;
-  sc_array_t          send_first, send_second, recv_both;
+  sc_array_t          send_first, send_second, recv_first, recv_second;
 }
 p4est_balance_peer_t;
 
@@ -924,7 +924,7 @@ static void
 p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer)
 {
   /* compute and uniqify overlap quadrants */
-  p4est_tree_compute_overlap (p4est, &peer->recv_both, &peer->send_second);
+  p4est_tree_compute_overlap (p4est, &peer->recv_first, &peer->send_second);
   p4est_tree_uniqify_overlap (&peer->send_first, &peer->send_second);
 }
 
@@ -942,7 +942,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   bool                tree_fully_owned, full_tree[2];
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
-  size_t              qcount, qbytes, offset, obytes;
+  size_t              qcount, qbytes;
   size_t              data_pool_size;
   size_t              all_incount, all_outcount;
   p4est_qcoord_t      qh;
@@ -1054,7 +1054,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
     peer = peers + j;
     sc_array_init (&peer->send_first, sizeof (p4est_quadrant_t));
     sc_array_init (&peer->send_second, sizeof (p4est_quadrant_t));
-    sc_array_init (&peer->recv_both, sizeof (p4est_quadrant_t));
+    sc_array_init (&peer->recv_first, sizeof (p4est_quadrant_t));
+    sc_array_init (&peer->recv_second, sizeof (p4est_quadrant_t));
     peer->send_first_count = peer->send_second_count = 0;
     peer->recv_first_count = peer->recv_second_count = 0;
     peer->have_first_count = peer->have_first_load = 0;
@@ -1472,12 +1473,12 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
           /* received nonzero count, post receive for load */
           P4EST_LDEBUGF ("Balance A recv %llu quadrants from %d\n",
                          (unsigned long long) qcount, j);
-          P4EST_ASSERT (peer->recv_both.elem_count == 0);
-          sc_array_resize (&peer->recv_both, qcount);
+          P4EST_ASSERT (peer->recv_first.elem_count == 0);
+          sc_array_resize (&peer->recv_first, qcount);
           total_recv_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
           P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
-          mpiret = MPI_Irecv (peer->recv_both.array, (int) qbytes, MPI_BYTE,
+          mpiret = MPI_Irecv (peer->recv_first.array, (int) qbytes, MPI_BYTE,
                               j, P4EST_COMM_BALANCE_FIRST_LOAD,
                               p4est->mpicomm, &requests_first[j]);
           SC_CHECK_MPI (mpiret);
@@ -1510,7 +1511,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
         --request_first_count;
 
 #ifdef P4EST_DEBUG
-        checksum = p4est_quadrant_checksum (&peer->recv_both, &checkarray, 0);
+        checksum =
+          p4est_quadrant_checksum (&peer->recv_first, &checkarray, 0);
         P4EST_LDEBUGF ("Balance A recv checksum %x from %d\n", checksum, j);
 #endif /* P4EST_DEBUG */
 
@@ -1558,18 +1560,19 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   /* simulate send and receive with myself across tree boundaries */
   peer = peers + rank;
   sc_array_sort (&peer->send_first, p4est_quadrant_compare_piggy);
-  offset = peer->send_first.elem_count;
-  peer->recv_first_count = peer->send_first_count = (int) offset;
-  obytes = offset * sizeof (p4est_quadrant_t);
-  qarray = &peer->recv_both;
-  sc_array_resize (qarray, offset);
-  memcpy (qarray->array, peer->send_first.array, obytes);
+  qcount = peer->send_first.elem_count;
+  peer->recv_first_count = peer->send_first_count = (int) qcount;
+  qbytes = qcount * sizeof (p4est_quadrant_t);
+  qarray = &peer->recv_first;
+  sc_array_resize (qarray, qcount);
+  memcpy (qarray->array, peer->send_first.array, qbytes);
   p4est_balance_response (p4est, peer);
   qcount = peer->send_second.elem_count;
   peer->recv_second_count = peer->send_second_count = (int) qcount;
   qbytes = qcount * sizeof (p4est_quadrant_t);
-  sc_array_resize (qarray, offset + qcount);
-  memcpy (qarray->array + obytes, peer->send_second.array, qbytes);
+  qarray = &peer->recv_second;
+  sc_array_resize (qarray, qcount);
+  memcpy (qarray->array, peer->send_second.array, qbytes);
 
 #ifdef P4EST_MPI
   /* receive second round appending to the same receive buffer */
@@ -1605,14 +1608,12 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
           /* received nonzero count, post receive for load */
           P4EST_LDEBUGF ("Balance B recv %llu quadrants from %d\n",
                          (unsigned long long) qcount, j);
-          offset = peer->recv_both.elem_count;
-          P4EST_ASSERT (offset == (size_t) peer->recv_first_count);
-          obytes = offset * sizeof (p4est_quadrant_t);
-          sc_array_resize (&peer->recv_both, offset + qcount);
+          P4EST_ASSERT (peer->recv_second.elem_count == 0);
+          sc_array_resize (&peer->recv_second, qcount);
           total_recv_count += qcount;
           qbytes = qcount * sizeof (p4est_quadrant_t);
           P4EST_ASSERT (requests_second[j] == MPI_REQUEST_NULL);
-          mpiret = MPI_Irecv (peer->recv_both.array + obytes, (int) qbytes,
+          mpiret = MPI_Irecv (peer->recv_second.array, (int) qbytes,
                               MPI_BYTE, j, P4EST_COMM_BALANCE_SECOND_LOAD,
                               p4est->mpicomm, &requests_second[j]);
           SC_CHECK_MPI (mpiret);
@@ -1645,8 +1646,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
         --request_second_count;
 
 #ifdef P4EST_DEBUG
-        checksum = p4est_quadrant_checksum (&peer->recv_both, &checkarray,
-                                            (size_t) peer->recv_first_count);
+        checksum =
+          p4est_quadrant_checksum (&peer->recv_second, &checkarray, 0);
         P4EST_LDEBUGF ("Balance B recv checksum %x from %d\n", checksum, j);
 #endif /* P4EST_DEBUG */
       }
@@ -1678,24 +1679,28 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 
   /* merge received quadrants */
   for (j = 0; j < num_procs; ++j) {
+    size_t              fcount;
+
     /* access peer information */
     peer = peers + j;
-    qarray = &peer->recv_both;
-    qcount = qarray->elem_count;
-    P4EST_ASSERT (qcount ==
-                  (size_t) (peer->recv_first_count +
-                            peer->recv_second_count));
+    fcount = peer->recv_first.elem_count;
+    qcount = fcount + peer->recv_second.elem_count;
     P4EST_ASSERT (peer->send_first_count ==
                   (int) peer->send_first.elem_count);
     P4EST_ASSERT (peer->send_second_count ==
                   (int) peer->send_second.elem_count);
+    P4EST_ASSERT (peer->recv_first_count ==
+                  (int) peer->recv_first.elem_count);
+    P4EST_ASSERT (peer->recv_second_count ==
+                  (int) peer->recv_second.elem_count);
     if (qcount == 0) {
       continue;
     }
 
     /* merge received quadrants into correct tree */
     for (zz = 0; zz < qcount; ++zz) {
-      s = sc_array_index (qarray, zz);
+      s = zz < fcount ? sc_array_index (&peer->recv_first, zz) :
+        sc_array_index (&peer->recv_second, zz - fcount);
       P4EST_ASSERT (p4est_quadrant_is_extended (s));
       qtree = s->p.piggy2.which_tree;
       if (qtree < first_tree || qtree > last_tree) {
@@ -1791,7 +1796,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
     peer = peers + j;
     sc_array_reset (&peer->send_first);
     sc_array_reset (&peer->send_second);
-    sc_array_reset (&peer->recv_both);
+    sc_array_reset (&peer->recv_first);
+    sc_array_reset (&peer->recv_second);
   }
   P4EST_FREE (peers);
 
