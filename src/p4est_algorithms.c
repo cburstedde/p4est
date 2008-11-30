@@ -1117,14 +1117,14 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
   }
 
   /* sort array and remove duplicates */
-  sc_array_sort (out, p4est_quadrant_compare);
+  sc_array_sort (out, p4est_quadrant_compare_piggy);
   dupcount = skipcount = 0;
   i = 0;                        /* read counter */
   j = 0;                        /* write counter */
   inq = sc_array_index (out, i);
   while (i < outcount) {
     tq = ((i < outcount - 1) ? sc_array_index (out, i + 1) : NULL);
-    if (i < outcount - 1 && p4est_quadrant_is_equal (inq, tq)) {
+    if (i < outcount - 1 && p4est_quadrant_is_equal_piggy (inq, tq)) {
       ++dupcount;
       ++i;
     }
