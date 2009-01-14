@@ -164,7 +164,7 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
 #endif
     check[P4EST_DIM] = htonl ((uint32_t) q->level);
   }
-  crc = sc_array_checksum (checkarray, 0);
+  crc = sc_array_checksum (checkarray);
 
   if (own_check) {
     sc_array_destroy (checkarray);
