@@ -21,7 +21,6 @@ SC_ARG_OVERRIDE_VAR([P4EST], [WITH_PROVIDE_SC_CPPFLAGS])
 SC_ARG_OVERRIDE_VAR([P4EST], [WITH_PROVIDE_SC_LDADD])
 
 P4EST_ARG_ENABLE([debug], [enable debug mode], [DEBUG])
-P4EST_ARG_ENABLE([stats], [enable statistics], [STATS])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],

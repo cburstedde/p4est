@@ -975,10 +975,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_DEBUG
   unsigned            checksum;
   sc_array_t          checkarray;
-#endif /* P4EST_DEBUG */
-#ifdef P4EST_STATS
   p4est_gloidx_t      ltotal[2], gtotal[2];
-#endif /* P4EST_STATS */
+#endif /* P4EST_DEBUG */
   int                 i;
   int                 mpiret, rcount;
   int                 first_bound;
@@ -1341,7 +1339,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
                              p4est->mpicomm, procs, &maxpeers, &maxwin,
                              p4est_num_ranges, my_ranges, &all_ranges);
   twomaxwin = 2 * maxwin;
-#ifdef P4EST_STATS
+#ifdef P4EST_DEBUG
   P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                             maxpeers, maxwin, p4est_num_ranges);
   sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
@@ -1767,7 +1765,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   }
 
   /* compute global sum of send and receive counts */
-#ifdef P4EST_STATS
+#ifdef P4EST_DEBUG
+  gtotal[0] = gtotal[1] = 0;
   ltotal[0] = (p4est_gloidx_t) total_send_count;
   ltotal[1] = (p4est_gloidx_t) total_recv_count;
   mpiret = MPI_Reduce (ltotal, gtotal, 2, P4EST_MPI_GLOIDX,
@@ -1775,8 +1774,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_STATISTICSF ("Global number of shipped quadrants %lld\n",
                             (long long) gtotal[0]);
-  P4EST_ASSERT (gtotal[0] == gtotal[1]);
-#endif /* P4EST_STATS */
+  P4EST_ASSERT (rank != 0 || gtotal[0] == gtotal[1]);
+#endif /* P4EST_DEBUG */
 #endif /* P4EST_MPI */
 
   /* loop over all local trees to finalize balance */

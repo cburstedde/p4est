@@ -1014,7 +1014,7 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
                              p4est->mpicomm, procs, &maxpeers, &maxwin,
                              p4est_num_ranges, my_ranges, &all_ranges);
   twomaxwin = 2 * maxwin;
-#ifdef P4EST_STATS
+#ifdef P4EST_DEBUG
   P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                             maxpeers, maxwin, p4est_num_ranges);
   sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
