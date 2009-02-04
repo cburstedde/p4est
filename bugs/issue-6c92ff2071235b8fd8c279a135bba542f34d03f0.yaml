@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Make binary load functions accept files written with any mpisize.
+desc: |-
+  Right now the binary connectivity and p4est file formats
+  rely on the mpisize. This should be converted on the fly when reading.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2009-02-04 17:48:23.153149 Z
+references: []
+
+id: 6c92ff2071235b8fd8c279a135bba542f34d03f0
+log_events: 
+- - 2009-02-04 17:48:24.736963 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

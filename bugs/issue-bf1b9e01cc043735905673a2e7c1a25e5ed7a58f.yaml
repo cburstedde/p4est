@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Convert 2D connectivity from right hand rule to z-order
+desc: ""
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2009-02-04 17:24:25.203066 Z
+references: []
+
+id: bf1b9e01cc043735905673a2e7c1a25e5ed7a58f
+log_events: 
+- - 2009-02-04 17:24:26.890839 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

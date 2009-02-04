@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Implement EtoV-based connectivity lua file format
+desc: |-
+  This file format should provide EtoV information,
+  vertex coordinates, piecewise analytical geometry transformations,
+  tags for elements, element faces, element edges and element corners.
+type: :feature
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2009-02-04 17:37:14.952291 Z
+references: []
+
+id: d0e99b9f6d2204e88c8e00a2c0812ae65c2910d5
+log_events: 
+- - 2009-02-04 17:37:27.671899 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
