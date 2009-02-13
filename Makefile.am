@@ -42,7 +42,8 @@ SUBDIRS = @P4EST_SC_SUBDIR@
 DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
-EXTRA_DIST += bootstrap p4estindent config/git-version-gen bugs doc
+EXTRA_DIST += \
+        bootstrap p4estindent config/git-version-gen config/git2cl bugs doc
 DISTCLEANFILES += \
         _configs.sed src/p4est_config.h P4EST.override.pre P4EST.override
 .PHONY: lint ChangeLog
