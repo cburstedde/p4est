@@ -42,6 +42,7 @@ src_libp4est_a_SOURCES = \
         $(libp4est_internal_headers) \
         $(libp4est_installed_headers) \
         $(libp4est_compiled_sources)
+src_libp4est_a_DEPENDENCIES = @P4EST_DEPENDENCIES@
 
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)

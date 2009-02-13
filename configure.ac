@@ -21,6 +21,7 @@ echo "| Checking options"
 echo "o---------------------------------------"
 
 # These variables are only relevant for libsc integration case 2 (see below).
+# The *_LDADD variable must also be suitable for use in DEPENDENCIES.
 SC_ARG_OVERRIDE_LOAD([P4EST])
 SC_ARG_OVERRIDE_VAR([P4EST], [SC_PACKAGE_CPPFLAGS])
 SC_ARG_OVERRIDE_VAR([P4EST], [SC_PACKAGE_LDADD])
@@ -100,8 +101,9 @@ echo "o---------------------------------------"
 echo "| Checking third-party software"
 echo "o---------------------------------------"
 
-# Prepare make dist behavior.
+# Prepare make dist behavior and dependencies.
 P4EST_DIST_ALLOW="yes"
+P4EST_DEPENDENCIES=
 
 # Configure the SC library recursively.
 P4EST_SC_SUBDIR=
@@ -118,6 +120,7 @@ if test "$P4EST_WITH_PROVIDE_SC" = yes ; then
   P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.a"
   P4EST_SC_MK_INCLUDE="include \${sysconfdir}/Makefile.sc.mk"
   P4EST_SC_ENABLE_CHECKS="yes"
+  P4EST_DEPENDENCIES="$P4EST_DEPENDENCIES $P4EST_SC_LDADD"
 else
   if test "$P4EST_WITH_PROVIDE_SC" != no ; then
     # case 2 and 3
@@ -129,6 +132,7 @@ else
       P4EST_SC_CPPFLAGS="$P4EST_SC_PACKAGE_CPPFLAGS -I$P4EST_SC_INC"
       P4EST_SC_LDADD="$P4EST_SC_PACKAGE_LDADD"
       P4EST_SC_ENABLE_CHECKS="yes"
+      P4EST_DEPENDENCIES="$P4EST_DEPENDENCIES $P4EST_SC_LDADD"
     else
       # case 3
       P4EST_SC_CPPFLAGS="\$(SC_CPPFLAGS)"
@@ -150,10 +154,11 @@ AC_SUBST([P4EST_SC_MK_INCLUDE])
 AM_CONDITIONAL([P4EST_SC_USE_MK], [test "$P4EST_SC_USE_MK" = "yes"])
 SC_BUILTIN_ALL_PREFIX([P4EST], [test "$P4EST_SC_ENABLE_CHECKS" = "yes"])
 
-# Implement make dist behavior
+# Implement make dist behavior and dependencies.
 AM_CONDITIONAL([P4EST_DIST_ALLOW], [test "$P4EST_DIST_ALLOW" = "yes"])
+AC_SUBST([P4EST_DEPENDENCIES])
 
-# Set variables and print summary
+# Set variables and print summary.
 AC_DEFINE_UNQUOTED(CC,          ["${CC}"],          [C compiler])
 AC_DEFINE_UNQUOTED(C_VERSION,   ["${C_VERSION}"],   [C compiler version])
 AC_DEFINE_UNQUOTED(CFLAGS,      ["${CFLAGS}"],      [C compiler flags])
