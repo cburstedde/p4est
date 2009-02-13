@@ -15,12 +15,16 @@ AC_PREFIX_DEFAULT([$PWD/local])
 AM_INIT_AUTOMAKE([subdir-objects])
 SC_PREFIX_CONFIG_H([src/p4est_config.h])
 
+# Configure switches
+echo "o---------------------------------------"
+echo "| Checking options"
+echo "o---------------------------------------"
+
 # These variables are only relevant for libsc integration case 2 (see below).
 SC_ARG_OVERRIDE_LOAD([P4EST])
 SC_ARG_OVERRIDE_VAR([P4EST], [SC_PACKAGE_CPPFLAGS])
 SC_ARG_OVERRIDE_VAR([P4EST], [SC_PACKAGE_LDADD])
 
-# Configure switches
 P4EST_ARG_ENABLE([debug], [enable debug mode], [DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
@@ -31,8 +35,8 @@ P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
 
-SC_ARG_WITH_BUILTIN_ALL_PREFIX([P4EST])
-
+# Configure builtin and external packages.
+#
 # There are 4 options for integrating libsc.
 # 1. No option or --with-sc=yes to use the source in subdirectory sc.
 # 2. Specify --with-sc=<dir> to point at a libsc source directory.
@@ -51,7 +55,8 @@ SC_ARG_WITH_BUILTIN_ALL_PREFIX([P4EST])
 # In case 4 the checks are omitted.
 # In all cases Makefile.p4est.mk is installed to allow easy use of p4est.
 #
-dnl Above logic is implemented further down, this is just the option check.
+# Above logic is implemented further down, these are just the option checks.
+SC_ARG_WITH_BUILTIN_ALL_PREFIX([P4EST])
 dnl Does not AC_DEFINE and AC_CONDITIONAL if --with-sc=<dir> is given.
 P4EST_ARG_WITHOUT_YES([sc],
 [disable builtin libsc, provide your own. Can use\
@@ -137,7 +142,6 @@ else
     P4EST_DIST_ALLOW="no"
   fi
 fi
-
 AC_SUBST([P4EST_SC_SUBDIR])
 AC_SUBST([P4EST_SC_AMFLAGS])
 AC_SUBST([P4EST_SC_CPPFLAGS])
