@@ -46,6 +46,10 @@ src_libp4est_a_SOURCES = \
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
 
+if P4EST_SC_USE_MK
+@P4EST_SC_MK_INCLUDE@
+endif
+
 AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
 LDADD += @top_builddir@/src/libp4est.a @P4EST_SC_LDADD@
 

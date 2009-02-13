@@ -26,12 +26,10 @@
 
 #include <p4est_config.h>
 
-/* sc.h includes several headers with proper checks */
-/* see sc.h for the headers included by default */
-/* also includes getopt, obstack, zlib and MPI */
+/* indirectly also include sc.h */
 
-#include <sc.h>
 #include <sc_containers.h>
+
 #if \
   (defined (P4EST_MPI) && !defined (SC_MPI)) || \
   (!defined (P4EST_MPI) && defined (SC_MPI))

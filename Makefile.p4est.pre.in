@@ -1,0 +1,19 @@
+
+# This file is part of p4est
+# Use `include /path/to/Makefile.p4est.mk' in your Makefile
+# to use p4est in your project without autotools
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+sysconfdir = @sysconfdir@
+
+@P4EST_SC_MK_INCLUDE@
+
+# P4EST_CC and P4EST_CFLAGS may not be necessary for your project
+P4EST_CC = @CC@
+P4EST_CFLAGS = @CFLAGS@
+
+# These pull in everything needed by p4est
+P4EST_CPPFLAGS = @CPPFLAGS@ -I@includedir@
+P4EST_LDFLAGS = @LDFLAGS@ -L@libdir@
+P4EST_LIBS = -lp4est $(SC_LIBS)

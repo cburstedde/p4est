@@ -142,18 +142,6 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
     );
 }
 
-static void
-abort_fn (void *data)
-{
-  mpi_context_t      *mpi = data;
-
-  fprintf (stderr, "[%d] " P4EST_STRING "_timings abort handler\n",
-           mpi->mpirank);
-
-  /* Don't check the return value */
-  MPI_Abort (mpi->mpicomm, 1);
-}
-
 int
 main (int argc, char **argv)
 {
@@ -192,7 +180,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpi->mpirank, abort_fn, mpi, NULL, SC_LP_DEFAULT);
+  sc_init (mpi->mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */

@@ -98,7 +98,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (rank, sc_generic_abort, &mpicomm, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* create forest and refine */

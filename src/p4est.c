@@ -32,6 +32,7 @@
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
 #include <sc_ranges.h>
+#include <sc_zlib.h>
 
 #ifdef SC_ALLGATHER
 #include <sc_allgather.h>
