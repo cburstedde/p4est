@@ -228,7 +228,6 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPP", P4EST_CPP);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPPFLAGS", P4EST_CPPFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LINK", P4EST_LINK);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LDFLAGS", P4EST_LDFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
 

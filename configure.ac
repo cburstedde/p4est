@@ -111,7 +111,6 @@ AC_DEFINE_UNQUOTED(C_VERSION,   ["${C_VERSION}"],   [C compiler version])
 AC_DEFINE_UNQUOTED(CFLAGS,      ["${CFLAGS}"],      [C compiler flags])
 AC_DEFINE_UNQUOTED(CPP,         ["${CPP}"],         [C preprocessor])
 AC_DEFINE_UNQUOTED(CPPFLAGS,    ["${CPPFLAGS}"],    [C preprocessor flags])
-AC_DEFINE_UNQUOTED(LINK,        ["${LINK}"],        [Linker])
 AC_DEFINE_UNQUOTED(LDFLAGS,     ["${LDFLAGS}"],     [Linker flags])
 AC_DEFINE_UNQUOTED(LIBS,        ["${LIBS}"],        [Libraries])
 
@@ -123,7 +122,6 @@ echo "| C_VERSION:   $C_VERSION"
 echo "| CFLAGS:      $CFLAGS"
 echo "| CPP:         $CPP"
 echo "| CPPFLAGS:    $CPPFLAGS"
-echo "| LINK:        $LINK"
 echo "| LDFLAGS:     $LDFLAGS"
 echo "| LIBS:        $LIBS"
 echo "o----------------------------------"
