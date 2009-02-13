@@ -149,18 +149,7 @@ SC_BUILTIN_ALL_PREFIX([P4EST], [test "$P4EST_SC_ENABLE_CHECKS" = "yes"])
 # Implement make dist behavior
 AM_CONDITIONAL([P4EST_DIST_ALLOW], [test "$P4EST_DIST_ALLOW" = "yes"])
 
-# Checks for typedefs, structures, and compiler characteristics.
-echo "o---------------------------------------"
-echo "| Checking keywords and types"
-echo "o---------------------------------------"
-
-AC_C_BIGENDIAN
-AC_C_CONST
-AC_C_INLINE
-AC_C_RESTRICT
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
-
+# Set variables and print summary
 AC_DEFINE_UNQUOTED(CC,          ["${CC}"],          [C compiler])
 AC_DEFINE_UNQUOTED(C_VERSION,   ["${C_VERSION}"],   [C compiler version])
 AC_DEFINE_UNQUOTED(CFLAGS,      ["${CFLAGS}"],      [C compiler flags])
