@@ -205,9 +205,10 @@ typedef struct trilinear_mesh
   int32_t             mpisize, mpirank;
   int32_t             recsize;
 
+  /* geometry type and element and node patch ids */
+  int8_t              gid;
   int8_t             *elem_pids;
   int8_t             *node_pids;
-  int                 isshell;  /* boolean set if geo is the shell */
 
   void                (*destructor) (struct trilinear_mesh *);
   trilinear_mesh_extra_t *extra_info;

@@ -57,9 +57,6 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   memset (mesh, -1, sizeof (*mesh));
   shared_offsets = nodes->shared_offsets;
 
-  /* default to not a shell */
-  mesh->isshell = 0;
-
   /* Assign local counts. */
   P4EST_ASSERT (nodes->num_local_quadrants == p4est->local_num_quadrants);
   mesh->local_elem_num = p4est->local_num_quadrants;
@@ -233,6 +230,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->extra_info = NULL;
   mesh->elem_pids = NULL;
   mesh->node_pids = NULL;
+  mesh->gid = -1;
 
   /* We are done */
   P4EST_GLOBAL_PRODUCTIONF ("Done trilinear_mesh_extract"
