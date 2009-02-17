@@ -228,9 +228,9 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->minsize = mesh->maxsize = 0;
   mesh->ticksize = 0.;
   mesh->extra_info = NULL;
-  mesh->elem_pids = NULL;
-  mesh->node_pids = NULL;
   mesh->gid = -1;
+  mesh->elem_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_elem_num);
+  mesh->node_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_node_num);
 
   /* We are done */
   P4EST_GLOBAL_PRODUCTIONF ("Done trilinear_mesh_extract"
