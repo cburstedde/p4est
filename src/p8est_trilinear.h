@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007-2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -29,42 +29,108 @@
 
 #include <p8est_mesh.h>
 
-SC_EXTERN_C_BEGIN;
+/*
+ * BEGIN verbatim copy of trilinear_mesh_types.h from the Rhea code
+ */
 
-#ifndef TRILINEAR_MESH_H
+#ifndef TRILINEAR_MESH_TYPES_H
+#define TRILINEAR_MESH_TYPES_H
 
-/** tick_t: The unit of the embeded integer domain. */
+#include <sc_containers.h>
+
+/*
+ * This file contains typedefs and macros related to the trilinear mesh.
+ * It should not contain specific dependencies to either octor of p4est.
+ */
+
+#ifndef OCTOR_TICKT_TYPES
+#define OCTOR_TICKT_TYPES
+
 typedef int32_t     tick_t;
 
-/** point_t: 3D coordinates in tick units. */
-typedef struct point
+typedef struct point_t
 {
   tick_t              x, y, z;
 }
 point_t;
 
-/** int32link_t: Link list for int32_t's. */
-typedef struct int32link
+#endif /* !OCTOR_TICKT_TYPES */
+
+typedef enum
+{
+  ANCHORED = 0,
+  DANGLING_ON_XEDGE = -1,
+  DANGLING_ON_YEDGE = -2,
+  DANGLING_ON_ZEDGE = -3,
+  DANGLING_ON_XFACE = -4,
+  DANGLING_ON_YFACE = -5,
+  DANGLING_ON_ZFACE = -6
+}
+trilinear_node_type_t;
+
+typedef struct trilinear_elem_t
+{
+  int32_t             local_node_id[8]; /* indices into local node table */
+  tick_t              lx, ly, lz;       /* lower-left element coordinates */
+  tick_t              size;     /* size of the element in ticks */
+  void               *data;     /* pointer to its record, managed by octor */
+}
+trilinear_elem_t;
+
+/**
+ * int32link_t: linked list entry recording processor ids
+ */
+typedef struct int32link_t
 {
   int32_t             id;
-  struct int32link   *next;
+  struct int32link_t *next;
 }
 int32link_t;
 
+/**
+ * trilinear_anode_t: anchored node (associated with free variables)
+ */
+typedef struct trilinear_anode_t
+{
+  point_t             point;
+  int64_t             fvnid;
+  int32link_t        *share;    /* processors that share this anchored node */
+}
+trilinear_anode_t;
+
+typedef struct trilinear_dnode_t
+{
+  point_t             point;
+  int32_t             type;
+  int32_t             local_anode_id[4];        /* _id[2] is -1 for an edge node */
+}
+trilinear_dnode_t;
+
+typedef union trilinear_node_t
+{
+  point_t             point;
+  trilinear_anode_t   anchored;
+  trilinear_dnode_t   dangling;
+}
+trilinear_node_t;
+
 /* *INDENT-OFF* */
-/** Encode the boundary status of a node. */
+/* define below the smallest integer type that holds these flags */
 typedef enum trilinear_boundary_enum
 {
-  TRILINEAR_BOUNDARY_NONE      =      0,
-  TRILINEAR_BOUNDARY_IS_LEFT   = 0x0001,
-  TRILINEAR_BOUNDARY_IS_RIGHT  = 0x0002,
-  TRILINEAR_BOUNDARY_IS_FRONT  = 0x0004,
-  TRILINEAR_BOUNDARY_IS_BACK   = 0x0008,
-  TRILINEAR_BOUNDARY_IS_BOTTOM = 0x0010,
-  TRILINEAR_BOUNDARY_IS_TOP    = 0x0020,
-  TRILINEAR_BOUNDARY_IS_EDGE   = 0x0040,
-  TRILINEAR_BOUNDARY_IS_CORNER = 0x0080,
-  TRILINEAR_BOUNDARY_IS_ORIGIN = 0x0100,
+  TRILINEAR_BOUNDARY_NONE       =      0,
+  TRILINEAR_BOUNDARY_IS_LEFT    = 0x0001,
+  TRILINEAR_BOUNDARY_IS_RIGHT   = 0x0002,
+  TRILINEAR_BOUNDARY_IS_FRONT   = 0x0004,
+  TRILINEAR_BOUNDARY_IS_BACK    = 0x0008,
+  TRILINEAR_BOUNDARY_IS_BOTTOM  = 0x0010,
+  TRILINEAR_BOUNDARY_IS_TOP     = 0x0020,
+  TRILINEAR_BOUNDARY_IS_EDGE    = 0x0040,
+  TRILINEAR_BOUNDARY_IS_CORNER  = 0x0080,
+  TRILINEAR_BOUNDARY_IS_ORIGIN  = 0x0100,
+  TRILINEAR_BOUNDARY_IS_3EDGE   = 0x0200,
+  TRILINEAR_BOUNDARY_IS_3CORNER = 0x0400,
+
   TRILINEAR_BOUNDARY_IS_XBC    = (TRILINEAR_BOUNDARY_IS_LEFT |
                                   TRILINEAR_BOUNDARY_IS_RIGHT),
   TRILINEAR_BOUNDARY_IS_YBC    = (TRILINEAR_BOUNDARY_IS_FRONT |
@@ -78,55 +144,17 @@ typedef enum trilinear_boundary_enum
 trilinear_boundary_enum_t;
 /* *INDENT-ON* */
 
-/* This integer is big enough to hold above flags. */
+/* this integer is big enough to hold a trilinear_boundary_enum_t */
 typedef uint16_t    trilinear_boundary_flag_t;
 
-/** */
-typedef struct trilinear_elem
-{
-  int32_t             local_node_id[8]; /* indices into local node table */
-  tick_t              lx, ly, lz;       /* lower-left element coordinates */
-  tick_t              size;     /* size of the element in ticks */
-  void               *data;     /* pointer to its data record */
-}
-trilinear_elem_t;
-
-/** trilinear_anode_t: anchored node (associated with free variables). */
-typedef struct trilinear_anode
-{
-  point_t             point;
-  int64_t             fvnid;
-  int32link_t        *share;    /* processors that share this anchored node */
-}
-trilinear_anode_t;
-
-/** trilinear_dnode_t: dangling node (associcated with dependent variables). */
-typedef struct trilinear_dnode
-{
-  point_t             point;
-  int32_t             type;     /* not used in Rhea */
-  int32_t             local_anode_id[4];        /* [2] is -1 for edge nodes */
-}
-trilinear_dnode_t;
-
-/** trilinear_node_t: union of both node types. */
-typedef union trilinear_node
-{
-  point_t             point;
-  trilinear_anode_t   anchored;
-  trilinear_dnode_t   dangling;
-}
-trilinear_node_t;
-
-/*
- * This is the structure precomputed after mesh extraction.
- * It is ordered differently than trilinear_element_into_t.
+/**
+ * trilinear_element_info2: a structure precomputed after mesh extraction.
  * First come the anchored nodes, then the dangling nodes.
  * Variables beginning with Q are over direct and indirect anchored nodes (iqc).
  * Variable dQcolumn is indexed by dangling nodes only as
- *   dQcolumn[nd][l] = iqc of depended anchored node l.
+ * dQcolumn[nd][l] = iqc of depended anchored node l.
  * If interior_anchors_only is nonzero, then the element has only
- *   anchored nodes as corners that are not on the domain boundary.
+ * anchored nodes as corners that are not on the domain boundary.
  */
 typedef struct trilinear_element_info2
 {
@@ -149,7 +177,10 @@ typedef struct trilinear_mesh_extra
 }
 trilinear_mesh_extra_t;
 
-typedef struct trilinear_mesh
+/**
+ * trilinear_mesh_t: main mesh structure used in Rhea
+ */
+typedef struct trilinear_mesh_t
 {
   /* Global mesh statistics */
   int64_t             total_elem_num;
@@ -174,24 +205,24 @@ typedef struct trilinear_mesh
   int32_t             local_owned_offset;       /* offset to the first
                                                    owned anchored node */
 
-  /* Memory allocated to hold the trilinear elements and nodes */
+  /* Memory allocated by Octor to hold the trilinear elements and nodes */
   trilinear_elem_t   *elem_table;
   trilinear_node_t   *node_table;
 
-  /* Memory allocated for free variable interval table.
-   * The first two are allocated with (num_procs + 1) entries each.
-   * The third (all_fvnid_start) is a convenience pointer.
-   */
+  /* Memory allocated for free variable interval table. Has
+     (groupsize + 1) entries. The last entry records the total
+     number of free variables plus 1 */
   int64_t            *fvnid_count_table;
   int64_t            *fvnid_interval_table;
   int64_t            *all_fvnid_start;
 
-  /* Convenience pointers into the node table. */
+  /* convenience variables pointing to the node table.
+     Don't try to free the memory pointed to */
   trilinear_node_t   *anode_table;
   trilinear_node_t   *onode_table;
   trilinear_node_t   *dnode_table;
 
-  /* Convenience variables recording the total number of free variables,
+  /* convenience variables recording the total number of free variables,
      the starting id and the ending id. identical on all processors */
   int64_t             global_fvnid_num; /* total number of fvnids */
   int64_t             global_fvnid_start;       /* first global fvnid */
@@ -210,13 +241,48 @@ typedef struct trilinear_mesh
   int8_t             *elem_pids;
   int8_t             *node_pids;
 
-  void                (*destructor) (struct trilinear_mesh *);
+  /* placeholder pointers */
+  void                (*destructor) (struct trilinear_mesh_t *);
   trilinear_mesh_extra_t *extra_info;
 
-  /* Everything below here is not present in Rhea. */
+  /* this is used in p4est only and must not be touched */
   sc_mempool_t       *sharer_pool;      /* allocator for node sharers */
 }
 trilinear_mesh_t;
+
+/**
+ * octor_neighbor_t:
+ *
+ * The face neighbors are ordered in -x, +x, -y, +y, -z, and +z directions.
+ *
+ * For each direction, the neighbor(s) may be:
+ *
+ * 1. Out of the domain.
+ *
+ *      face_neighbor_eid[direction][0] = -1.
+ *      face_neighbor_eid[direction][1--3] = -1.
+ *
+ * 2. As large or twice as large as the current element:
+ *
+ *      face_neighbor_eid[direction][0] = index
+ *
+ *    where ((index >= 0) && (index < local_elem_num)) if the neighbor is
+ *    LOCAL, or
+ *    ((index >= local_elem_num) &&
+ *    (index < (local_elem_num + phantom_elem_num))) if the neighor is
+ *    REMOTE.
+ *
+ *
+ *      face_neighbor_eid[direction][1--3] = -1.
+ *
+ * 3. Half as large as the current element:
+ *
+ *      face_neighbor_eid[direction][i] = index
+ *
+ *    where index is defined as above. Note that in this case all four
+ *    neighbors (half as large) must exist.
+ *
+ */
 
 typedef struct octor_neighor_t
 {
@@ -242,7 +308,13 @@ typedef struct octor_neighborhood_t
 }
 octor_neighborhood_t;
 
-#endif /* !TRILINEAR_MESH_H */
+#endif /* !TRILINEAR_MESH_TYPES_H */
+
+/*
+ * END verbatim copy of trilinear_mesh_types.h from the Rhea code
+ */
+
+SC_EXTERN_C_BEGIN;
 
 /** Creates a trilinear mesh structure from a p8est and its node data.
  */
