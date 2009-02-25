@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Fix documentation of ghost layer
+desc: |-
+  The documentation of p4est_build_ghost_layer states that piggy1 is used.
+  In the code it looks more like piggy3.  Make this consistent.
+type: :bugfix
+component: p4est
+release: "0.3"
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2009-02-25 20:11:23.975917 Z
+references: []
+
+id: ee31c9c10ebd498fb6756ec3d2f0781602c86191
+log_events: 
+- - 2009-02-25 20:11:24.815744 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
