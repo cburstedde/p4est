@@ -444,10 +444,22 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
   P4EST_GLOBAL_STATISTICSF ("Time for ghosts %.3gs nodes %.3gs\n",
                             elapsed_ghosts, elapsed_nodes);
+  P4EST_GLOBAL_STATISTICSF ("Summary %d %d %lld %lld %g %g %g %g %g %g %g\n",
+                            mpi->mpisize, refine_level,
+                            (long long) count_refined,
+                            (long long) count_balanced, elapsed_refine,
+                            elapsed_balance, elapsed_rebalance,
+                            elapsed_partition, elapsed_repartition,
+                            elapsed_ghosts, elapsed_nodes);
 #else
   P4EST_GLOBAL_STATISTICSF
-    ("Time for ghosts %.3gs nodes %.3gs trilinear %.3g\n",
+    ("Time for ghosts %.3gs nodes %.3gs trilinear %.3gs\n",
      elapsed_ghosts, elapsed_nodes, elapsed_trilinear);
+  P4EST_GLOBAL_STATISTICSF
+    ("Summary %d %d %lld %lld %g %g %g %g %g %g %g %g\n", mpi->mpisize,
+     refine_level, (long long) count_refined, (long long) count_balanced,
+     elapsed_refine, elapsed_balance, elapsed_rebalance, elapsed_partition,
+     elapsed_repartition, elapsed_ghosts, elapsed_nodes, elapsed_trilinear);
 #endif
 
   /* destroy the p4est and its connectivity structure */
