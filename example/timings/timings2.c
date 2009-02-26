@@ -35,6 +35,7 @@
  *        o rotwrap   Refinement on the unit cube with weird periodic b.c.
  *        o twocubes  Refinement on a forest with two trees.
  *        o rotcubes  Refinement on a forest with six rotated trees.
+ *        o shell     Refinement on a 24-tree spherical shell.
  */
 
 #ifndef P4_TO_P8
@@ -67,6 +68,7 @@ typedef enum
   P4EST_CONFIG_ROTWRAP,
   P4EST_CONFIG_TWOCUBES,
   P4EST_CONFIG_ROTCUBES,
+  P4EST_CONFIG_SHELL,
 #endif
 }
 timings_config_t;
@@ -116,6 +118,9 @@ static const timings_regression_t regression[] =
   { P4EST_CONFIG_TWOCUBES, 8, 5, 0x98d3579dU },
   { P4EST_CONFIG_ROTCUBES, 1, 5, 0x404e4aa8U },
   { P4EST_CONFIG_ROTCUBES, 7, 6, 0x4c381706U },
+  { P4EST_CONFIG_SHELL, 1, 4, 0x8c56f159U },
+  { P4EST_CONFIG_SHELL, 3, 5, 0xafbc4f8cU },
+  { P4EST_CONFIG_SHELL, 5, 6, 0xf6d9efb8U },
 #endif
   { P4EST_CONFIG_NULL, 0, 0, 0 }
 };
@@ -189,17 +194,18 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
     "      unit|periodic|three|moebius|star\n"
 #else
-    "      unit|periodic|rotwrap|twocubes|rotcubes\n"
+    "      unit|periodic|rotwrap|twocubes|rotcubes|shell\n"
 #endif
     "   Level controls the maximum depth of refinement\n";
   errmsg = NULL;
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
-  config_name = argv[1];
+  config_name = NULL;
   if (!wrongusage && argc != 3) {
     wrongusage = 1;
   }
   if (!wrongusage) {
+    config_name = argv[1];
     if (!strcmp (config_name, "unit")) {
       config = P4EST_CONFIG_UNIT;
     }
@@ -225,6 +231,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (config_name, "rotcubes")) {
       config = P4EST_CONFIG_ROTCUBES;
+    }
+    else if (!strcmp (config_name, "shell")) {
+      config = P4EST_CONFIG_SHELL;
     }
 #endif
     else {
@@ -286,6 +295,9 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();
+  }
+  else if (config == P4EST_CONFIG_SHELL) {
+    connectivity = p8est_connectivity_new_shell ();
   }
   else {
     connectivity = p8est_connectivity_new_unitcube ();
