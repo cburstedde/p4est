@@ -20,8 +20,8 @@
 */
 
 /*
- * Purpose of this program is to precompute the face transformation codes
- * that are currently computed on demand in p8est_find_face_transform.
+ * Purpose of this program is to verify the face transformation codes
+ * that are computed in a fast but cryptic way in p8est_find_face_transform.
  */
 
 #include <p8est.h>

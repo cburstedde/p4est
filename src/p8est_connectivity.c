@@ -1373,13 +1373,12 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
                            p4est_topidx_t my_tree, int my_face,
                            int ftransform[])
 {
+  int                 target_code, target_face, orientation, reverse;
+#ifdef P4EST_DEBUG
   int                 i;
-  int                 target_code, target_face, orientation;
-  int                 face_ref, face_perm;
-  int                 low[2], high[2], swap;
   int                *my_axis = &ftransform[0];
   int                *target_axis = &ftransform[3];
-  int                *edge_reverse = &ftransform[6];
+#endif
   p4est_topidx_t      target_tree;
 
   target_tree = connectivity->tree_to_tree[6 * my_tree + my_face];
@@ -1396,60 +1395,21 @@ p8est_find_face_transform (p8est_connectivity_t * connectivity,
     return -1;
   }
 
-  /* find if my edges 0 and 2 are parallel to the x, y, or z-axis */
-  my_axis[0] = p8est_face_edges[my_face][0] / 4;
-  my_axis[1] = p8est_face_edges[my_face][2] / 4;
-  target_axis[0] = target_axis[1] = -1;
-  edge_reverse[0] = edge_reverse[1] = 0;
-
-  /* find matching target vertices. TODO: precompute this */
-  face_ref = p8est_face_permutation_refs[my_face][target_face];
-  face_perm = p8est_face_permutation_sets[face_ref][orientation];
-  low[0] = low[1] =
-    p8est_face_corners[target_face][p8est_face_permutations[face_perm][0]];
-  high[0] =
-    p8est_face_corners[target_face][p8est_face_permutations[face_perm][1]];
-  high[1] =
-    p8est_face_corners[target_face][p8est_face_permutations[face_perm][2]];
-  if (low[0] > high[0]) {
-    swap = low[0];
-    low[0] = high[0];
-    high[0] = swap;
-    edge_reverse[0] = 1;
-  }
-  if (low[1] > high[1]) {
-    swap = low[1];
-    low[1] = high[1];
-    high[1] = swap;
-    edge_reverse[1] = 1;
-  }
-
-  /* find matching target edges */
-  for (i = 0; i < 12; ++i) {
-    if (low[0] == p8est_edge_corners[i][0] &&
-        high[0] == p8est_edge_corners[i][1]) {
-      P4EST_ASSERT (target_axis[0] == -1);
-      target_axis[0] = i / 4;
-#ifndef P4EST_DEBUG
-      if (target_axis[1] >= 0)
-        break;
-#endif
-    }
-    else if (low[1] == p8est_edge_corners[i][0] &&
-             high[1] == p8est_edge_corners[i][1]) {
-      P4EST_ASSERT (target_axis[1] == -1);
-      target_axis[1] = i / 4;
-#ifndef P4EST_DEBUG
-      if (target_axis[0] >= 0)
-        break;
-#endif
-    }
-  }
-
-  /* find what axis is normal to the faces */
-  my_axis[2] = my_face / 2;
-  target_axis[2] = target_face / 2;
-  edge_reverse[2] = 2 * (my_face % 2) + target_face % 2;
+  /* the code that was here before is now in test/test_face_transform3.c */
+  ftransform[0] = my_face < 2 ? 1 : 0;
+  ftransform[1] = my_face < 4 ? 2 : 1;
+  ftransform[2] = my_face / 2;
+  reverse =
+    p8est_face_permutation_refs[0][my_face] ^
+    p8est_face_permutation_refs[0][target_face] ^
+    (orientation == 0 || orientation == 3);
+  ftransform[3 + reverse] = target_face < 2 ? 1 : 0;
+  ftransform[3 + !reverse] = target_face < 4 ? 2 : 1;
+  ftransform[5] = target_face / 2;
+  reverse = p8est_face_permutation_refs[my_face][target_face] == 1;
+  ftransform[6 + reverse] = orientation % 2;
+  ftransform[6 + !reverse] = orientation / 2;
+  ftransform[8] = 2 * (my_face % 2) + target_face % 2;
 
 #ifdef P4EST_DEBUG
   for (i = 0; i < 3; ++i) {
