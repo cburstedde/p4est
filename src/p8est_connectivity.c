@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2008,2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -92,6 +92,19 @@ const int           p8est_edge_corners[12][2] =
  { 1, 5 },
  { 2, 6 },
  { 3, 7 }};
+const int           p8est_edge_face_corners[12][6][2] =
+{{{ -1, -1 }, { -1, -1 }, {  0,  1 }, { -1, -1 }, {  0,  1 }, { -1, -1 }},
+ {{ -1, -1 }, { -1, -1 }, { -1, -1 }, {  0,  1 }, {  2,  3 }, { -1, -1 }},
+ {{ -1, -1 }, { -1, -1 }, {  2,  3 }, { -1, -1 }, { -1, -1 }, {  0,  1 }},
+ {{ -1, -1 }, { -1, -1 }, { -1, -1 }, {  2,  3 }, { -1, -1 }, {  2,  3 }},
+ {{  0,  1 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, {  0,  2 }, { -1, -1 }},
+ {{ -1, -1 }, {  0,  1 }, { -1, -1 }, { -1, -1 }, {  1,  3 }, { -1, -1 }},
+ {{  2,  3 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, {  0,  2 }},
+ {{ -1, -1 }, {  2,  3 }, { -1, -1 }, { -1, -1 }, { -1, -1 }, {  1,  3 }},
+ {{  0,  2 }, { -1, -1 }, {  0,  2 }, { -1, -1 }, { -1, -1 }, { -1, -1 }},
+ {{ -1, -1 }, {  0,  2 }, {  1,  3 }, { -1, -1 }, { -1, -1 }, { -1, -1 }},
+ {{  1,  3 }, { -1, -1 }, { -1, -1 }, {  0,  2 }, { -1, -1 }, { -1, -1 }},
+ {{ -1, -1 }, {  1,  3 }, { -1, -1 }, {  1,  3 }, { -1, -1 }, { -1, -1 }}};
 
 const int           p8est_corner_faces[8][3] =
 {{ 0, 2, 4 },
@@ -140,36 +153,6 @@ const int           p8est_child_corner_edges[8][8] =
  { -1, -1, 10, -1,  6, -1, -1,  3 },
  { -1, -1, -1, 11, -1,  7,  3, -1 }};
 /* *INDENT-ON* */
-
-static inline       bool
-p8est_compute_edge_face_corners (int edge, int face, int corners[])
-{
-  int                 nfound = 0;
-  int                 fc, c0, c1, cx;
-
-  P4EST_ASSERT (0 <= edge && edge < 12);
-  P4EST_ASSERT (0 <= face && face < 6);
-
-  c0 = p8est_edge_corners[edge][0];
-  c1 = p8est_edge_corners[edge][1];
-
-  for (fc = 0; fc < 4; ++fc) {
-    cx = p8est_face_corners[face][fc];
-    if (c0 == cx) {
-      corners[0] = fc;
-      ++nfound;
-      continue;
-    }
-    if (c1 == cx) {
-      corners[1] = fc;
-      ++nfound;
-      continue;
-    }
-  }
-  P4EST_ASSERT (nfound <= 2);
-
-  return nfound == 2;
-}
 
 /*
  * If num_vertices == 0 or ttv == NULL or vertices == NULL,
@@ -1434,19 +1417,21 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
   int                 redge, nedge, nflip, flipA, flipB;
   int                 pref, pset, fc[2];
   int                 faceA, faceB, nfaceA, nfaceB, orientA, orientB;
-  int                 fcornersA[2], fcornersB[2], nfcorners[2];
-  bool                found, foundA, foundB;
+  bool                same, foundA, foundB;
   bool                nowA, nowB;
   p4est_topidx_t      edge_trees, etree;
   p4est_topidx_t      aedge, ntree, ntreeA, ntreeB;
   p8est_edge_transform_t *et;
   sc_array_t         *ta = &ei->edge_transforms;
+  const int           noncorners[2] = { -1, -1 };
+  const int          *fcornersA = noncorners;
+  const int          *fcornersB = noncorners;
+  const int          *nfcorners;
 
   P4EST_ASSERT (0 <= itree && itree < conn->num_trees);
   P4EST_ASSERT (0 <= iedge && iedge < 12);
   P4EST_ASSERT (ta->elem_size == sizeof (p8est_edge_transform_t));
 
-  nfcorners[0] = nfcorners[1] = -1;
   ei->iedge = (int8_t) iedge;
   ei->iflip = -1;
   sc_array_resize (ta, 0);
@@ -1459,7 +1444,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
   }
 
   /* identify first touching face */
-  fcornersA[0] = fcornersA[1] = flipA = -1;
+  flipA = -1;
   faceA = p8est_edge_faces[iedge][0];
   ntreeA = conn->tree_to_tree[6 * itree + faceA];
   nfaceA = (int) conn->tree_to_face[6 * itree + faceA];
@@ -1470,34 +1455,36 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
   else {
     orientA = nfaceA / 6;
     nfaceA %= 6;
-    found = p8est_compute_edge_face_corners (iedge, faceA, fcornersA);
-    P4EST_ASSERT (found);
+    fcornersA = p8est_edge_face_corners[iedge][faceA];
+    P4EST_ASSERT (fcornersA[0] >= 0 && fcornersA[1] >= 0);
   }
   foundA = false;
 
   /* identify second touching face */
-  fcornersB[0] = fcornersB[1] = flipB = -1;
+  flipB = -1;
   faceB = p8est_edge_faces[iedge][1];
   ntreeB = conn->tree_to_tree[6 * itree + faceB];
   nfaceB = (int) conn->tree_to_face[6 * itree + faceB];
-  if (ntreeB == itree && nfaceB == faceB) {
+  if (ntreeB == itree && nfaceB == faceB) {     /* domain boundary */
     ntreeB = -1;
     nfaceB = orientB = -1;
   }
   else {
     orientB = nfaceB / 6;
     nfaceB %= 6;
-    found = p8est_compute_edge_face_corners (iedge, faceB, fcornersB);
-    P4EST_ASSERT (found);
+    fcornersB = p8est_edge_face_corners[iedge][faceB];
+    P4EST_ASSERT (fcornersB[0] >= 0 && fcornersB[1] >= 0);
   }
   foundB = false;
 
   edge_trees =                  /* same type */
     conn->ett_offset[aedge + 1] - conn->ett_offset[aedge];
 
+  /* loop through all trees connected through this edge */
   for (etree = 0; etree < edge_trees; ++etree) {
     ntree = conn->edge_to_tree[conn->ett_offset[aedge] + etree];
     redge = (int) conn->edge_to_edge[conn->ett_offset[aedge] + etree];
+    P4EST_ASSERT (redge >= 0 && redge < 24);
     nedge = redge % 12;
     nflip = redge / 12;
     if (nedge == iedge && ntree == itree) {
@@ -1509,32 +1496,36 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
     nowA = nowB = false;
     if (ntree == ntreeA) {
       /* Check if the edge touches my first neighbor contact face */
-      if (p8est_compute_edge_face_corners (nedge, nfaceA, nfcorners)) {
+      nfcorners = p8est_edge_face_corners[nedge][nfaceA];
+      if (nfcorners[0] >= 0) {
+        P4EST_ASSERT (fcornersA[0] >= 0);
         pref = p8est_face_permutation_refs[faceA][nfaceA];
         pset = p8est_face_permutation_sets[pref][orientA];
         fc[0] = p8est_face_permutations[pset][fcornersA[0]];
         fc[1] = p8est_face_permutations[pset][fcornersA[1]];
 
-        if (((found = (fc[0] == nfcorners[0])) && fc[1] == nfcorners[1]) ||
+        if (((same = (fc[0] == nfcorners[0])) && fc[1] == nfcorners[1]) ||
             (fc[0] == nfcorners[1] && fc[1] == nfcorners[0])) {
           P4EST_ASSERT (!foundA && flipA == -1);
-          flipA = found ? nflip : 1 - nflip;
+          flipA = !same ^ nflip;
           foundA = nowA = true;
         }
       }
     }
     if (ntree == ntreeB) {
       /* Check if the edge touches my second neighbor contact face */
-      if (p8est_compute_edge_face_corners (nedge, nfaceB, nfcorners)) {
+      nfcorners = p8est_edge_face_corners[nedge][nfaceB];
+      if (nfcorners[0] >= 0) {
+        P4EST_ASSERT (fcornersB[0] >= 0);
         pref = p8est_face_permutation_refs[faceB][nfaceB];
         pset = p8est_face_permutation_sets[pref][orientB];
         fc[0] = p8est_face_permutations[pset][fcornersB[0]];
         fc[1] = p8est_face_permutations[pset][fcornersB[1]];
 
-        if (((found = (fc[0] == nfcorners[0])) && fc[1] == nfcorners[1]) ||
+        if (((same = (fc[0] == nfcorners[0])) && fc[1] == nfcorners[1]) ||
             (fc[0] == nfcorners[1] && fc[1] == nfcorners[0])) {
           P4EST_ASSERT (!foundB && flipB == -1);
-          flipB = found ? nflip : 1 - nflip;
+          flipB = !same ^ nflip;
           foundB = nowB = true;
         }
       }
@@ -1552,7 +1543,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
     et->naxis[1] = (int8_t) (nedge < 4 ? 1 : 0);
     et->naxis[2] = (int8_t) (nedge < 8 ? 2 : 1);
     et->nflip = (int8_t) nflip;
-    et->corners = (int8_t) (2 * ((nedge / 2) % 2) + nedge % 2);
+    et->corners = (int8_t) (nedge % 4);
   }
   P4EST_ASSERT (edge_trees == (p4est_topidx_t) ta->elem_count
                 + 1 + (ntreeA != -1) + (ntreeB != -1));

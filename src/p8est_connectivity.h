@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2008,2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -152,6 +152,9 @@ extern const int    p8est_edge_faces[12][2];
 
 /** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
+
+/** Store the face corner numbers for the faces on a tree edge. */
+extern const int    p8est_edge_face_corners[12][6][2];
 
 /** Store the face numbers 0..5 for each tree corner. */
 extern const int    p8est_corner_faces[8][3];
