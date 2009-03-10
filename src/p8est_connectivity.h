@@ -33,13 +33,13 @@ SC_EXTERN_C_BEGIN;
  * p8est_connectivity, p8est, or any other 3D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P8EST_ONDISK_FORMAT 0x3000006
+#define P8EST_ONDISK_FORMAT 0x3000007
 
 /** This structure holds the 3D inter-tree connectivity information.
- * Identification of separate faces and corners is possible.
+ * Identification of arbitrary faces, edges and corners is possible.
  *
  * The arrays tree_to_* are stored in z ordering.
- * For corners the order is 000 001 010 011 100 101 110 111.
+ * For corners the order wrt. zyx is 000 001 010 011 100 101 110 111.
  * For faces the order is -x +x -y +y -z +z.
  * They are allocated [0][0]..[0][N-1]..[num_trees-1][0]..[num_trees-1][N-1].
  * where N is 6 for tree and face, 8 for corner, 12 for edge.
@@ -48,16 +48,19 @@ SC_EXTERN_C_BEGIN;
  * where ttf % 6 gives the face number and ttf / 6 the face orientation code.
  * The orientation is determined as follows.  Let my_face and other_face
  * be the two face numbers of the connecting trees in 0..5.  Then the first
- * face vertex of the lower of my_face and other_face connects to a face
- * vertex numbered 0..3 in the higher of my_face and other_face.  The face
+ * face corner of the lower of my_face and other_face connects to a face
+ * corner numbered 0..3 in the higher of my_face and other_face.  The face
  * orientation is defined as this number.  If my_face == other_face, treating
  * either of both faces as the lower one leads to the same result.
  *
- * The vertex coordinates are stored in the array vertices, allocated
+ * It is valid to specify num_vertices as 0.
+ * In this case vertices and tree_to_vertex are set to NULL.
+ * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
- * The edges are only stored and counted when they are relevant for balance.
- * Otherwise the tree_to_edge entry must be -1 and this edge will be ignored.
+ * The edges are only stored when they connect trees.
+ * Otherwise the tree_to_edge entry must be -1 and this edge is ignored.
+ * If num_edges == 0, tree_to_edge and edge_to_* arrays are set to NULL.
  *
  * The arrays edge_to_* store a variable number of entries per edge.
  * For edge e these are at position [ett_offset[e]]..[ett_offset[e+1]-1].
@@ -65,6 +68,10 @@ SC_EXTERN_C_BEGIN;
  * The size of the edge_to_* arrays is num_ett = ett_offset[num_edges].
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
  * one edge orientation and the higher 12 the opposite edge orientation.
+ *
+ * The corners are only stored when they connect trees.
+ * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
+ * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
@@ -180,19 +187,17 @@ extern const int    p8est_child_corner_edges[8][8];
 /** Allocate a connectivity structure
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.
- * \param [in] num_edges      Number of balance-relevant identified edges.
+ * \param [in] num_edges      Number of tree-connecting edges.
  * \param [in] num_ett        Number of total trees in edge_to_tree array.
- * \param [in] num_corners    Number of balance-relevant identified corners.
+ * \param [in] num_corners    Number of tree-connecting corners.
  * \param [in] num_ctt        Number of total trees in corner_to_tree array.
- * \param [in] alloc_vertices   Specify if coordinate array should be alloced.
  */
 p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
                                               p4est_topidx_t num_trees,
                                               p4est_topidx_t num_edges,
                                               p4est_topidx_t num_ett,
                                               p4est_topidx_t num_corners,
-                                              p4est_topidx_t num_ctt,
-                                              bool alloc_vertices);
+                                              p4est_topidx_t num_ctt);
 
 /** Destroy a connectivity structure.
  */

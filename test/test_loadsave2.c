@@ -88,33 +88,14 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-int
-main (int argc, char **argv)
+void
+test_loadsave (p4est_connectivity_t * connectivity,
+               MPI_Comm mpicomm, int mpirank)
 {
-  MPI_Comm            mpicomm;
   int                 mpiret;
-  int                 mpisize, mpirank;
-  p4est_connectivity_t *connectivity, *conn2;
+  p4est_connectivity_t *conn2;
   p4est_t            *p4est, *p4est2;
 
-  /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
-  SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpicomm, &mpisize);
-  SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
-  SC_CHECK_MPI (mpiret);
-
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
-  p4est_init (NULL, SC_LP_DEFAULT);
-
-  /* create connectivity and p4est (not balanced) */
-#ifndef P4_TO_P8
-  connectivity = p4est_connectivity_new_star ();
-#else
-  connectivity = p8est_connectivity_new_rotcubes ();
-#endif
   p4est = p4est_new (mpicomm, connectivity, 0, sizeof (int), init_fn, NULL);
   p4est_refine (p4est, true, refine_fn, init_fn);
 
@@ -168,6 +149,46 @@ main (int argc, char **argv)
 
   /* destroy data structures */
   p4est_destroy (p4est);
+}
+
+int
+main (int argc, char **argv)
+{
+  MPI_Comm            mpicomm;
+  int                 mpiret;
+  int                 mpirank;
+  p4est_connectivity_t *connectivity;
+
+  /* initialize MPI */
+  mpiret = MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+  mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+
+  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* create connectivity and p4est (not balanced) */
+#ifndef P4_TO_P8
+  connectivity = p4est_connectivity_new_star ();
+#else
+  connectivity = p8est_connectivity_new_rotcubes ();
+#endif
+
+  /* test with vertex information */
+  test_loadsave (connectivity, mpicomm, mpirank);
+
+#ifdef P4_TO_P8
+  /* test without vertex information */
+  connectivity->num_vertices = 0;
+  P4EST_FREE (connectivity->vertices);
+  connectivity->vertices = NULL;
+  P4EST_FREE (connectivity->tree_to_vertex);
+  connectivity->tree_to_vertex = NULL;
+  test_loadsave (connectivity, mpicomm, mpirank);
+#endif
+
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */

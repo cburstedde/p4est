@@ -31,7 +31,7 @@ p8est_vtk_write_file (p4est_t * p4est, const char *baseName)
 {
   int                 retval;
 
-  SC_CHECK_ABORT (p4est->connectivity->vertices != NULL,
+  SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
                   "Must provide connectivity with vertex information");
 
   retval = p8est_vtk_write_header (p4est, p8est_vtk_default_scale,
@@ -78,8 +78,11 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
   char                vtufilename[BUFSIZ];
   FILE               *vtufile;
 
+  SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
+                  "Must provide connectivity with vertex information");
+  P4EST_ASSERT (p4est->connectivity->vertices != NULL);
+  P4EST_ASSERT (p4est->connectivity->tree_to_vertex != NULL);
   P4EST_ASSERT (scale >= 0.0);
-  P4EST_ASSERT (connectivity->vertices != NULL);
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", baseName, mpirank);
