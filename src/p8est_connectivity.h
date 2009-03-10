@@ -133,7 +133,10 @@ extern const int    p8est_face_edges[6][4];
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
 
-/** Store the hanging face number in the big neighbor of a small quadrant. */
+/** Store the hanging face number in the big neighbor of a small quadrant.
+ * TODO: This is the transpose of p8est_corner_face_corners.
+ *       Remove when the 2D code is converted to z-order.
+ */
 extern const int    p8est_face_child_hang[6][8];
 
 /** Store only the 8 out of 24 possible permutations that occur. */
@@ -153,7 +156,7 @@ extern const int    p8est_edge_faces[12][2];
 /** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
 
-/** Store the face corner numbers for the faces on a tree edge. */
+/** Store the face corner numbers for the faces touching a tree edge. */
 extern const int    p8est_edge_face_corners[12][6][2];
 
 /** Store the face numbers 0..5 for each tree corner. */
@@ -161,6 +164,9 @@ extern const int    p8est_corner_faces[8][3];
 
 /** Store the edge numbers 0..11 for each tree corner. */
 extern const int    p8est_corner_edges[8][3];
+
+/** Store the face corner numbers for the faces touching a tree corner. */
+extern const int    p8est_corner_face_corners[8][6];
 
 /** Store the faces for each child and edge, can be -1. */
 extern const int    p8est_child_edge_faces[8][12];
@@ -285,7 +291,7 @@ void                p8est_find_edge_transform (p8est_connectivity_t *
 void                p8est_find_corner_transform (p8est_connectivity_t *
                                                  connectivity,
                                                  p4est_topidx_t itree,
-                                                 int iedge,
+                                                 int icorner,
                                                  p8est_corner_info_t * ci);
 
 SC_EXTERN_C_END;
