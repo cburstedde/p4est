@@ -21,6 +21,7 @@ p4est_test_programs += \
         test/p8est_test_partition test/p8est_test_coarsen \
         test/p8est_test_valid test/p8est_test_balance_type \
         test/p8est_test_face_transform test/p8est_test_edge_face_corners \
+        test/p8est_test_periodic \
         test/p8est_test_loadsave
 endif
 
@@ -48,6 +49,7 @@ test_p8est_test_valid_SOURCES = test/test_valid3.c
 test_p8est_test_balance_type_SOURCES = test/test_balance_type3.c
 test_p8est_test_face_transform_SOURCES = test/test_face_transform3.c
 test_p8est_test_edge_face_corners_SOURCES = test/test_edge_face_corners3.c
+test_p8est_test_periodic_SOURCES = test/test_periodic3.c
 test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 
 TESTS += $(p4est_test_programs)
@@ -73,4 +75,5 @@ LINT_CSOURCES += \
         $(test_p8est_test_balance_type_SOURCES) \
         $(test_p8est_test_face_transform_SOURCES) \
         $(test_p8est_test_edge_face_corners_SOURCES) \
+        $(test_p8est_test_periodic_SOURCES) \
         $(test_p8est_test_loadsave_SOURCES)
