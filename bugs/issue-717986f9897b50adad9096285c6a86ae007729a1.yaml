@@ -1,4 +1,4 @@
---- !ditz.rubyforge.org,2008-03-06/issue
+--- !ditz.rubyforge.org,2008-03-06/issue 
 title: Vertex-free corner connectivity
 desc: |-
   Currently the corner neighbors are identified using vertices.
@@ -8,13 +8,13 @@ type: :bugfix
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition:
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-16 17:31:22.710949 Z
 references: []
 
 id: 717986f9897b50adad9096285c6a86ae007729a1
-log_events:
+log_events: 
 - - 2008-10-16 17:31:25.974658 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
@@ -23,3 +23,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - assigned to release 0.3 from unassigned
   - ""
+- - 2009-03-11 18:47:55.350166 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - This is done. The vertices are only used in VTK now.
