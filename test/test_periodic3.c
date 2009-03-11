@@ -53,15 +53,16 @@ test_periodic (p4est_connectivity_t * conn)
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
   for (iedge = 0; iedge < 12; ++iedge) {
     p8est_find_edge_transform (conn, itree, iedge, &ei);
-    SC_CHECK_ABORT (ei.iedge == iedge, "PE ei");
+    SC_CHECK_ABORT ((int) ei.iedge == iedge, "PE ei");
     SC_CHECK_ABORT (eta->elem_count == 1, "PE count");
     for (zz = 0; zz < eta->elem_count; ++zz) {
       et = sc_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == itree, "PE tree");
-      SC_CHECK_ABORT (et->nedge + iedge == 8 * (iedge / 4) + 3, "PE edge");
+      SC_CHECK_ABORT ((int) et->nedge + iedge == 8 * (iedge / 4) + 3,
+                      "PE edge");
       SC_CHECK_ABORT (et->nflip == 0, "PE flip");
       SC_CHECK_ABORT (et->corners == et->nedge % 4, "PE corners");
-      SC_CHECK_ABORT (et->naxis[0] == iedge / 4 &&
+      SC_CHECK_ABORT ((int) et->naxis[0] == iedge / 4 &&
                       et->naxis[1] < et->naxis[2] &&
                       et->naxis[0] + et->naxis[1] + et->naxis[2] == 3,
                       "PE axis");
@@ -73,7 +74,7 @@ test_periodic (p4est_connectivity_t * conn)
   sc_array_init (cta, sizeof (p8est_corner_transform_t));
   for (icorner = 0; icorner < 8; ++icorner) {
     p8est_find_corner_transform (conn, itree, icorner, &ci);
-    SC_CHECK_ABORT (ci.icorner == icorner, "PC ci");
+    SC_CHECK_ABORT ((int) ci.icorner == icorner, "PC ci");
     SC_CHECK_ABORT (cta->elem_count == 1, "PC count");
     for (zz = 0; zz < cta->elem_count; ++zz) {
       ct = sc_array_index (cta, zz);
@@ -154,15 +155,15 @@ test_rotwrap (p4est_connectivity_t * conn)
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
   for (iedge = 0; iedge < 12; ++iedge) {
     p8est_find_edge_transform (conn, itree, iedge, &ei);
-    SC_CHECK_ABORT (ei.iedge == iedge, "RE ei");
-    SC_CHECK_ABORT (eta->elem_count == 2 - (iedge / 4), "RE count AB");
+    SC_CHECK_ABORT ((int) ei.iedge == iedge, "RE ei");
+    SC_CHECK_ABORT ((int) eta->elem_count == 2 - (iedge / 4), "RE count AB");
     for (zz = 0; zz < eta->elem_count; ++zz) {
       et = sc_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == itree, "RE tree");
-      SC_CHECK_ABORT (et->nedge == rotwrap_edges[iedge][zz], "RE edge");
-      SC_CHECK_ABORT (et->nflip == rotwrap_flip[iedge][zz], "RE flip");
+      SC_CHECK_ABORT ((int) et->nedge == rotwrap_edges[iedge][zz], "RE edge");
+      SC_CHECK_ABORT ((int) et->nflip == rotwrap_flip[iedge][zz], "RE flip");
       SC_CHECK_ABORT (et->corners == et->nedge % 4, "RE corners");
-      SC_CHECK_ABORT (et->naxis[0] == rotwrap_axes[iedge][zz] &&
+      SC_CHECK_ABORT ((int) et->naxis[0] == rotwrap_axes[iedge][zz] &&
                       et->naxis[1] < et->naxis[2] &&
                       et->naxis[0] + et->naxis[1] + et->naxis[2] == 3,
                       "RE axis");
@@ -174,12 +175,12 @@ test_rotwrap (p4est_connectivity_t * conn)
   sc_array_init (cta, sizeof (p8est_corner_transform_t));
   for (icorner = 0; icorner < 8; ++icorner) {
     p8est_find_corner_transform (conn, itree, icorner, &ci);
-    SC_CHECK_ABORT (ci.icorner == icorner, "RC ci");
+    SC_CHECK_ABORT ((int) ci.icorner == icorner, "RC ci");
     SC_CHECK_ABORT (cta->elem_count == 2, "RC count");
     for (zz = 0; zz < cta->elem_count; ++zz) {
       ct = sc_array_index (cta, zz);
       SC_CHECK_ABORT (ct->ntree == itree, "RC tree");
-      SC_CHECK_ABORT (ct->ncorner == rotwrap_corners[icorner][zz],
+      SC_CHECK_ABORT ((int) ct->ncorner == rotwrap_corners[icorner][zz],
                       "RC corner");
     }
   }
@@ -209,7 +210,7 @@ test_weird (void)
                                  num_edges, num_ett, num_corners, num_ctt);
   for (i = 0; i < 6; ++i) {
     conn->tree_to_tree[i] = 0;
-    conn->tree_to_face[i] = i;
+    conn->tree_to_face[i] = (int8_t) i;
   }
   conn->tree_to_face[4] = 5;
   conn->tree_to_face[5] = 4;
@@ -248,12 +249,12 @@ test_weird (void)
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
   for (i = 0; i < 2; ++i) {
     p8est_find_edge_transform (conn, 0, weird_edges[i][0], &ei);
-    SC_CHECK_ABORT (ei.iedge == weird_edges[i][0], "WE ei");
+    SC_CHECK_ABORT ((int) ei.iedge == weird_edges[i][0], "WE ei");
     SC_CHECK_ABORT (eta->elem_count == 1, "WE count A");
     for (zz = 0; zz < eta->elem_count; ++zz) {
       et = sc_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == 0, "WE tree");
-      SC_CHECK_ABORT (et->nedge == weird_edges[i][1], "WE edge");
+      SC_CHECK_ABORT ((int) et->nedge == weird_edges[i][1], "WE edge");
       SC_CHECK_ABORT (et->nflip == 1, "WE flip");
       SC_CHECK_ABORT (et->corners == et->nedge % 4, "WE corners");
       SC_CHECK_ABORT (et->naxis[0] == 1 && et->naxis[1] == 0 &&
@@ -266,8 +267,8 @@ test_weird (void)
   sc_array_init (cta, sizeof (p8est_corner_transform_t));
   for (i = 0; i < 8; ++i) {
     p8est_find_corner_transform (conn, 0, i, &ci);
-    SC_CHECK_ABORT (ci.icorner == i, "WC ci");
-    SC_CHECK_ABORT (cta->elem_count == 2 - (i & 0x02), "WC count");
+    SC_CHECK_ABORT ((int) ci.icorner == i, "WC ci");
+    SC_CHECK_ABORT ((int) cta->elem_count == 2 - (i & 0x02), "WC count");
     for (zz = 0; zz < cta->elem_count; ++zz) {
       ct = sc_array_index (cta, zz);
       SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
