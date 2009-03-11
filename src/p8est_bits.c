@@ -576,7 +576,6 @@ p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
   p4est_qcoord_t      my_xyz, *target_xyz[3];
 
   iaxis = (int) ei->iedge / 4;
-  P4EST_ASSERT (0 <= ei->iflip && ei->iflip < 2);
   P4EST_ASSERT (0 <= et->naxis[0] && et->naxis[0] < 3);
   P4EST_ASSERT (0 <= et->naxis[1] && et->naxis[1] < 3);
   P4EST_ASSERT (0 <= et->naxis[2] && et->naxis[2] < 3);
@@ -616,7 +615,7 @@ p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
   default:
     SC_CHECK_NOT_REACHED ();
   }
-  if (et->nflip == ei->iflip) {
+  if (!et->nflip) {
     *target_xyz[et->naxis[0]] = my_xyz;
   }
   else {

@@ -112,7 +112,7 @@ p8est_edge_transform_t;
 
 typedef struct
 {
-  int8_t              iedge, iflip;
+  int8_t              iedge;
   sc_array_t          edge_transforms;
 }
 p8est_edge_info_t;
