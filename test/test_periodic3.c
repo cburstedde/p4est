@@ -186,6 +186,99 @@ test_rotwrap (p4est_connectivity_t * conn)
   sc_array_reset (cta);
 }
 
+/* *INDENT-OFF* */
+static const int
+weird_edges[2][2] = {{ 5, 7 }, { 7, 5 }};
+/* *INDENT-ON* */
+
+static void
+test_weird (void)
+{
+  const p4est_topidx_t num_edges = 1, num_ett = 2;
+  const p4est_topidx_t num_corners = 1, num_ctt = 4;
+  int                 i;
+  size_t              zz;
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  p8est_corner_info_t ci;
+  p8est_corner_transform_t *ct;
+  sc_array_t         *eta, *cta;
+  p4est_connectivity_t *conn;
+
+  conn = p8est_connectivity_new (0, 1,
+                                 num_edges, num_ett, num_corners, num_ctt);
+  for (i = 0; i < 6; ++i) {
+    conn->tree_to_tree[i] = 0;
+    conn->tree_to_face[i] = i;
+  }
+  conn->tree_to_face[4] = 5;
+  conn->tree_to_face[5] = 4;
+
+  for (i = 0; i < 12; ++i) {
+    conn->tree_to_edge[i] = -1;
+  }
+  conn->tree_to_edge[5] = 0;
+  conn->tree_to_edge[7] = 0;
+  conn->edge_to_tree[0] = 0;
+  conn->edge_to_tree[1] = 0;
+  conn->edge_to_edge[0] = 5;
+  conn->edge_to_edge[1] = 19;
+  conn->ett_offset[0] = 0;
+
+  for (i = 0; i < 8; ++i) {
+    conn->tree_to_corner[i] = -1;
+  }
+  conn->tree_to_corner[0] = 0;
+  conn->tree_to_corner[1] = 0;
+  conn->tree_to_corner[4] = 0;
+  conn->tree_to_corner[5] = 0;
+  conn->corner_to_tree[0] = 0;
+  conn->corner_to_tree[1] = 0;
+  conn->corner_to_tree[2] = 0;
+  conn->corner_to_tree[3] = 0;
+  conn->corner_to_corner[0] = 0;
+  conn->corner_to_corner[1] = 1;
+  conn->corner_to_corner[2] = 4;
+  conn->corner_to_corner[3] = 5;
+  conn->ctt_offset[0] = 0;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  eta = &ei.edge_transforms;
+  sc_array_init (eta, sizeof (p8est_edge_transform_t));
+  for (i = 0; i < 2; ++i) {
+    p8est_find_edge_transform (conn, 0, weird_edges[i][0], &ei);
+    SC_CHECK_ABORT (ei.iedge == weird_edges[i][0], "WE ei");
+    SC_CHECK_ABORT (eta->elem_count == 1, "WE count A");
+    for (zz = 0; zz < eta->elem_count; ++zz) {
+      et = sc_array_index (eta, zz);
+      SC_CHECK_ABORT (et->ntree == 0, "WE tree");
+      SC_CHECK_ABORT (et->nedge == weird_edges[i][1], "WE edge");
+      SC_CHECK_ABORT (et->nflip == 1, "WE flip");
+      SC_CHECK_ABORT (et->corners == et->nedge % 4, "WE corners");
+      SC_CHECK_ABORT (et->naxis[0] == 1 && et->naxis[1] == 0 &&
+                      et->naxis[2] == 2, "WE axis");
+    }
+  }
+  sc_array_reset (eta);
+
+  cta = &ci.corner_transforms;
+  sc_array_init (cta, sizeof (p8est_corner_transform_t));
+  for (i = 0; i < 8; ++i) {
+    p8est_find_corner_transform (conn, 0, i, &ci);
+    SC_CHECK_ABORT (ci.icorner == i, "WC ci");
+    SC_CHECK_ABORT (cta->elem_count == 2 - (i & 0x02), "WC count");
+    for (zz = 0; zz < cta->elem_count; ++zz) {
+      ct = sc_array_index (cta, zz);
+      SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
+      SC_CHECK_ABORT (ct->ncorner == 4 * zz + !(i % 2), "WC corner");
+    }
+  }
+  sc_array_reset (cta);
+
+  p4est_connectivity_destroy (conn);
+}
+
 /*
  * Purpose of this program is to verify that
  * p8est_find_edge_transform and p8est_find_corner_transform
@@ -206,6 +299,8 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_rotwrap ();
   test_rotwrap (conn);
   p4est_connectivity_destroy (conn);
+
+  test_weird ();
 
   sc_finalize ();
 
