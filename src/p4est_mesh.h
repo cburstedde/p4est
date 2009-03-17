@@ -104,10 +104,12 @@ p4est_hang2_t;
 
 /** This structure holds complete parallel node information.
  *
- * All nodes store their owner's tree id in piggy3.which_tree.
- * The index in their owner's ordering is stored in piggy3.local_num.
- *
  * Nodes are unique and either independent or face hanging.
+ * Independent nodes store their owner's tree id in piggy3.which_tree.
+ * The index in their owner's ordering is stored in piggy3.local_num.
+ * Hanging nodes store their owner's tree id in piggy.which_tree.
+ * The numbers of their associated independent nodes are in piggy.depends[].
+ *
  * The local_nodes table is of dimension 4 * num_local_quadrants
  * and encodes the node indexes for all corners of all quadrants.  Let
  * ni := indep_nodes.elem_count,
