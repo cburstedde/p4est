@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Make octant creation callback know where it's coming from
+desc: |-
+  On refinement, the creation callback should know the parent to be replaced.
+  On coarsening, it should know the children to be replaced.
+type: :feature
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2009-03-17 18:58:29.056069 Z
+references: []
+
+id: ea05cc814c6b8c0c5ffb97c518cedc9bf7d55d10
+log_events: 
+- - 2009-03-17 18:58:30.463924 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
