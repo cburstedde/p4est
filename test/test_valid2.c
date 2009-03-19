@@ -98,7 +98,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_coarsen (p4est, true, coarsen_fn, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   p4est_partition (p4est, NULL);
-  p4est_vtk_write_file (p4est, vtkname);
+  p4est_vtk_write_file (p4est, NULL, vtkname);
   crc_computed = p4est_checksum (p4est);
 
   if (p4est->mpisize == 2 && p4est->mpirank == 0) {

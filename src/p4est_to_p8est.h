@@ -58,6 +58,7 @@
 
 /* redefine types */
 #define p4est_connectivity_t            p8est_connectivity_t
+#define p4est_geometry_t                p8est_geometry_t
 #define p4est_balance_type_t            p8est_balance_type_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t

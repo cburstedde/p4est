@@ -210,13 +210,13 @@ main (int argc, char **argv)
   p4est = p4est_new_points (mpicomm, conn, maxlevel, points,
                             num_points, max_points, 5, NULL, NULL);
   P4EST_FREE (points);
-  p4est_vtk_write_file (p4est, P4EST_STRING "_points_created");
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_created");
 
   p4est_partition (p4est, NULL);
-  p4est_vtk_write_file (p4est, P4EST_STRING "_points_partition");
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_partition");
 
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
-  p4est_vtk_write_file (p4est, P4EST_STRING "_points_balance");
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_balance");
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);

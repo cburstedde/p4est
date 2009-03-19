@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007-2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,14 +27,15 @@ bool                p8est_vtk_default_write_rank = true;
 bool                p8est_vtk_default_write_tree = true;
 
 void
-p8est_vtk_write_file (p4est_t * p4est, const char *baseName)
+p8est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
+                      const char *baseName)
 {
   int                 retval;
 
   SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
                   "Must provide connectivity with vertex information");
 
-  retval = p8est_vtk_write_header (p4est, p8est_vtk_default_scale,
+  retval = p8est_vtk_write_header (p4est, geom, p8est_vtk_default_scale,
                                    p8est_vtk_default_write_rank,
                                    p8est_vtk_default_write_tree, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write header");
@@ -43,7 +44,8 @@ p8est_vtk_write_file (p4est_t * p4est, const char *baseName)
 }
 
 int
-p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
+p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
+                        double scale, bool write_rank,
                         bool write_tree, const char *baseName)
 {
   p4est_connectivity_t *connectivity = p4est->connectivity;
@@ -426,5 +428,3 @@ p8est_vtk_write_header (p4est_t * p4est, double scale, bool write_rank,
 
   return 0;
 }
-
-/* EOF p8est_vtk.c */

@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007-2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #ifndef P8EST_VTK_H
 #define P8EST_VTK_H
 
-#include <p8est.h>
+#include <p8est_geometry.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -36,12 +36,14 @@ extern bool         p8est_vtk_default_write_tree;
  * case of writing out the MPI rank only.  Note this
  * function will abort if there is a file error.
  *
- *  \param p8est     The p8est to be output.
- *  \param baseName  The first part of the name which will have
- *                   the proc number appended to it (i.e., the
- *                   output file will be baseName_procNum.vtu).
+ * \param p8est     The p8est to be written.
+ * \param geom      A p8est_geometry_t structure or NULL for identity.
+ * \param baseName  The first part of the name which will have
+ *                  the proc number appended to it (i.e., the
+ *                  output file will be baseName_procNum.vtu).
  */
 void                p8est_vtk_write_file (p8est_t * p8est,
+                                          p8est_geometry_t * geom,
                                           const char *baseName);
 
 /** This will write the header of the vtu file.
@@ -56,18 +58,21 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  * p8est_vtk_write_footer(p8est, "output");
  * \endcode
  *
- *  \param p8est    The p8est to be outputted.
- *  \param scale     The relative length factor of the quadrants.
- *                   Use 1.0 to fit quadrants exactly, less for gaps.
- *  \param write_rank   Boolean to determine if the MPI rank should be output.
- *  \param write_tree   Boolean to determine if the tree id should be output.
- *  \param baseName The first part of the name which will have
+ * \param p8est     The p8est to be written.
+ * \param geom      A p8est_geometry_t structure or NULL for identity.
+ * \param scale     The relative length factor of the quadrants.
+ *                  Use 1.0 to fit quadrants exactly, less for gaps.
+ * \param write_rank    Boolean to determine if the MPI rank should be output.
+ * \param write_tree    Boolean to determine if the tree id should be output.
+ * \param baseName  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be baseName_procNum.vtu).
  *
- *  \return         This returns 0 if no error and -1 if there is an error.
+ * \return          This returns 0 if no error and -1 if there is an error.
  */
-int                 p8est_vtk_write_header (p8est_t * p8est, double scale,
+int                 p8est_vtk_write_header (p8est_t * p8est,
+                                            p8est_geometry_t * geom,
+                                            double scale,
                                             bool write_rank, bool write_tree,
                                             const char *baseName);
 
@@ -83,12 +88,12 @@ int                 p8est_vtk_write_header (p8est_t * p8est, double scale,
  * p8est_vtk_write_footer(p8est, "output");
  * \endcode
  *
- *  \param p8est    The p8est to be outputted.
- *  \param baseName The first part of the name which will have
+ * \param p8est     The p8est to be written.
+ * \param baseName  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be baseName_procNum.vtu).
  *
- *  \return         This returns 0 if no error and -1 if there is an error.
+ * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p8est_vtk_write_footer (p8est_t * p8est,
                                             const char *baseName);

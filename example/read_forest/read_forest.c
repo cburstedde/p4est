@@ -143,7 +143,7 @@ main (int argc, char **argv)
   p4est = p4est_new (mpicomm, connectivity, 15,
                      sizeof (user_data_t), init_fn, NULL);
   p4est_tree_print (SC_LP_INFO, sc_array_index (p4est->trees, 0));
-  p4est_vtk_write_file (p4est, "mesh");
+  p4est_vtk_write_file (p4est, NULL, "mesh");
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);

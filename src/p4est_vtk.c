@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007-2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -60,7 +60,8 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
 #ifndef P4_TO_P8
 
 void
-p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
+p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
+                      const char *baseName)
 {
   int                 retval;
 
@@ -68,15 +69,16 @@ p4est_vtk_write_file (p4est_t * p4est, const char *baseName)
                   "Must provide connectivity with vertex information");
 
   retval =
-    p4est_vtk_write_header (p4est, p4est_vtk_default_write_rank, baseName);
+    p4est_vtk_write_header (p4est, geom, p4est_vtk_default_write_rank,
+                            baseName);
   SC_CHECK_ABORT (!retval, "VTK: write header");
   retval = p4est_vtk_write_footer (p4est, baseName);
   SC_CHECK_ABORT (!retval, "VTK: write footer");
 }
 
 int
-p4est_vtk_write_header (p4est_t * p4est, bool write_rank,
-                        const char *baseName)
+p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
+                        bool write_rank, const char *baseName)
 {
   p4est_locidx_t      il, jl;
 #ifdef P4EST_VTK_ASCII
@@ -558,5 +560,3 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *baseName)
 
   return 0;
 }
-
-/* EOF p4est_vtk.c */
