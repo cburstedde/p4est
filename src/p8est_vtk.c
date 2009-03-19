@@ -46,6 +46,78 @@ p8est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
   SC_CHECK_ABORT (!retval, "p8est_vtk: Error writing footer");
 }
 
+void
+p8est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
+                     int num_scalars, int num_vectors,
+                     const char *baseName, ...)
+{
+  int                 retval;
+  int                 i, all;
+  int                 scalar_strlen, vector_strlen;
+  char                point_scalars[BUFSIZ], point_vectors[BUFSIZ];
+  const char         *name, **names;
+  double            **values;
+  va_list             ap;
+
+  SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
+                  "Must provide connectivity with vertex information");
+  P4EST_ASSERT (num_scalars >= 0 && num_vectors >= 0);
+
+  values = P4EST_ALLOC (double *, num_scalars + num_vectors);
+  names = P4EST_ALLOC (const char *, num_scalars + num_vectors);
+
+  va_start (ap, baseName);
+  all = 0;
+  scalar_strlen = 0;
+  point_scalars[0] = '\0';
+  for (i = 0; i < num_scalars; ++all, ++i) {
+    name = names[all] = va_arg (ap, const char *);
+    retval = snprintf (point_scalars + scalar_strlen, BUFSIZ - scalar_strlen,
+                       "%s%s", i == 0 ? "" : ",", name);
+    SC_CHECK_ABORT (retval > 0, "p8est_vtk: Error collecting point scalars");
+    scalar_strlen += retval;
+    values[all] = va_arg (ap, double *);
+  }
+  vector_strlen = 0;
+  point_vectors[0] = '\0';
+  for (i = 0; i < num_vectors; ++all, ++i) {
+    name = names[all] = va_arg (ap, const char *);
+    retval = snprintf (point_vectors + vector_strlen, BUFSIZ - vector_strlen,
+                       "%s%s", i == 0 ? "" : ",", name);
+    SC_CHECK_ABORT (retval > 0, "p8est_vtk: Error collecting point vectors");
+    vector_strlen += retval;
+    values[all] = va_arg (ap, double *);
+  }
+  va_end (ap);
+
+  retval = p8est_vtk_write_header (p4est, geom, p8est_vtk_default_scale,
+                                   p8est_vtk_default_write_tree,
+                                   p8est_vtk_default_write_rank,
+                                   p8est_vtk_default_wrap_rank,
+                                   num_scalars > 0 ? point_scalars : NULL,
+                                   num_vectors > 0 ? point_vectors : NULL,
+                                   baseName);
+  SC_CHECK_ABORT (!retval, "p8est_vtk: Error writing header");
+
+  all = 0;
+  for (i = 0; i < num_scalars; ++all, ++i) {
+    retval = p8est_vtk_write_point_scalar (p4est, geom, baseName,
+                                           names[all], values[all]);
+    SC_CHECK_ABORT (!retval, "p8est_vtk: Error writing point scalars");
+  }
+  for (i = 0; i < num_vectors; ++all, ++i) {
+    retval = p8est_vtk_write_point_vector (p4est, geom, baseName,
+                                           names[all], values[all]);
+    SC_CHECK_ABORT (!retval, "p8est_vtk: Error writing point vectors");
+  }
+
+  retval = p4est_vtk_write_footer (p4est, baseName);
+  SC_CHECK_ABORT (!retval, "p8est_vtk: Error writing footer");
+
+  P4EST_FREE (values);
+  P4EST_FREE (names);
+}
+
 int
 p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
                         double scale, bool write_tree, bool write_rank,
@@ -466,8 +538,8 @@ p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 
 int
 p8est_vtk_write_point_scalar (p4est_t * p4est, p4est_geometry_t * geom,
-                              const double *values, const char *scalarName,
-                              const char *baseName)
+                              const char *baseName,
+                              const char *scalarName, const double *values)
 {
   const int           mpirank = p4est->mpirank;
   const p4est_locidx_t Ncells = p4est->local_num_quadrants;
@@ -572,4 +644,12 @@ p8est_vtk_write_point_scalar (p4est_t * p4est, p4est_geometry_t * geom,
   }
 
   return 0;
+}
+
+int
+p8est_vtk_write_point_vector (p4est_t * p4est, p4est_geometry_t * geom,
+                              const char *baseName,
+                              const char *vectorName, const double *values)
+{
+  SC_CHECK_ABORT (false, "p8est_vtk_write_point_vector not implemented");
 }

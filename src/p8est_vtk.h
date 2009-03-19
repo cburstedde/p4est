@@ -31,7 +31,8 @@ extern bool         p8est_vtk_default_write_tree;
 extern bool         p8est_vtk_default_write_rank;
 extern int          p8est_vtk_default_wrap_rank;
 
-/** This will write out the MPI rank in VTK format.
+/** This will write out the p8est in VTK format.
+ * The p8est_vtk_default_* variables will be honored.
  *
  * This is a convenience function for the special
  * case of writing out the MPI rank only.  Note this
@@ -46,6 +47,27 @@ extern int          p8est_vtk_default_wrap_rank;
 void                p8est_vtk_write_file (p8est_t * p8est,
                                           p8est_geometry_t * geom,
                                           const char *baseName);
+
+/** This will write out the p8est and any numner of point fields.
+ * The p8est_vtk_default_* variables will be honored.
+ *
+ * This is a convenience function that will abort if there is a file error.
+ *
+ * \param p8est     The p8est to be written.
+ * \param geom      A p8est_geometry_t structure or NULL for identity.
+ * \param baseName  The first part of the name which will have
+ *                  the proc number appended to it (i.e., the
+ *                  output file will be baseName_procNum.vtu).
+ * \param num_scalars   Number of scalar fields to write.
+ * \param num_vectors   Number of vector fields to write.
+ *
+ * The variable arguments need to be pairs of (fieldname, fieldvalues)
+ * where the scalars come first, then the vectors.
+ */
+void                p8est_vtk_write_all (p8est_t * p8est,
+                                         p8est_geometry_t * geom,
+                                         int num_scalars, int num_vectors,
+                                         const char *baseName, ...);
 
 /** This will write the header of the vtu file.
  *
@@ -95,19 +117,44 @@ int                 p8est_vtk_write_header (p8est_t * p8est,
  *
  * \param p8est     The p8est to be written.
  * \param geom      A p8est_geometry_t structure or NULL for identity.
- * \param values    The point values that will be written.
- * \param scalarName The name of the scalar field.
  * \param baseName  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be baseName_procNum.vtu).
+ * \param scalarName The name of the scalar field.
+ * \param values    The point values that will be written.
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p8est_vtk_write_point_scalar (p8est_t * p8est,
                                                   p8est_geometry_t * geom,
-                                                  const double *values,
+                                                  const char *baseName,
                                                   const char *scalarName,
-                                                  const char *baseName);
+                                                  const double *values);
+
+/** This will write a 3-vector field to the vtu file.
+ *
+ * It is good practice to make sure that the vector field also
+ * exists in the comma separated string \a pointvectors passed
+ * to \c p8est_vtk_write_header.
+ *
+ * Writing a VTK file is split into a couple of routines.
+ * The allows there to be an arbitrary number of fields.
+ *
+ * \param p8est     The p8est to be written.
+ * \param geom      A p8est_geometry_t structure or NULL for identity.
+ * \param baseName  The first part of the name which will have
+ *                  the proc number appended to it (i.e., the
+ *                  output file will be baseName_procNum.vtu).
+ * \param vectorName The name of the vector field.
+ * \param values    The point values that will be written.
+ *
+ * \return          This returns 0 if no error and -1 if there is an error.
+ */
+int                 p8est_vtk_write_point_vector (p8est_t * p8est,
+                                                  p8est_geometry_t * geom,
+                                                  const char *baseName,
+                                                  const char *vectorName,
+                                                  const double *values);
 
 /** This will write the footer of the vtu file.
  *
