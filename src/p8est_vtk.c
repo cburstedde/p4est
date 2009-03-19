@@ -68,6 +68,7 @@ p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #endif
   int                 xi, yi, zi, j, k;
   double              h2, eta_x, eta_y, eta_z;
+  double              xyz[3], XYZ[3];
   size_t              num_quads, zz;
   p4est_topidx_t      jt;
   p4est_topidx_t      vt[P4EST_CHILDREN];
@@ -110,7 +111,7 @@ p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
            (long long) Ntotal, (long long) Ncells);
   fprintf (vtufile, "      <Points>\n");
 
-  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, P4EST_DIM * Ntotal);
+  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Ntotal);
 
   /* write point position data */
   fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"Position\""
@@ -132,30 +133,44 @@ p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       quad = sc_array_index (quadrants, zz);
       h2 = .5 * intsize * P8EST_QUADRANT_LEN (quad->level);
       k = 0;
-      for (zi = 0; zi < 2; ++zi)
-        for (yi = 0; yi < 2; ++yi)
+      for (zi = 0; zi < 2; ++zi) {
+        for (yi = 0; yi < 2; ++yi) {
           for (xi = 0; xi < 2; ++xi) {
             P4EST_ASSERT (0 <= k && k < P4EST_CHILDREN);
             eta_x = intsize * quad->x + h2 * (1. + (xi * 2 - 1) * scale);
             eta_y = intsize * quad->y + h2 * (1. + (yi * 2 - 1) * scale);
             eta_z = intsize * quad->z + h2 * (1. + (zi * 2 - 1) * scale);
 
-            for (j = 0; j < P4EST_DIM; ++j) {
+            for (j = 0; j < 3; ++j) {
               /* *INDENT-OFF* */
-              float_data[P4EST_DIM * (P4EST_CHILDREN * quad_count + k) + j] =
-                (P4EST_VTK_FLOAT_TYPE)
-                ((1. - eta_x) * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[0] + j] +
-                                                 eta_z * v[3 * vt[4] + j]) +
-                                 eta_y * ((1. - eta_z) * v[3 * vt[2] + j] +
-                                          eta_z * v[3 * vt[6] + j])) +
-                 eta_x * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[1] + j] +
-                                          eta_z * v[3 * vt[5] + j]) +
-                          eta_y * ((1. - eta_z) * v[3 * vt[3] + j] +
-                                   eta_z * v[3 * vt[7] + j])));
+              xyz[j] =
+          ((1. - eta_x) * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[0] + j] +
+                                                 eta_z  * v[3 * vt[4] + j]) +
+                                 eta_y  * ((1. - eta_z) * v[3 * vt[2] + j] +
+                                                 eta_z  * v[3 * vt[6] + j])) +
+                 eta_x  * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[1] + j] +
+                                                 eta_z  * v[3 * vt[5] + j]) +
+                                 eta_y  * ((1. - eta_z) * v[3 * vt[3] + j] +
+                                                 eta_z  * v[3 * vt[7] + j])));
               /* *INDENT-ON* */
+            }
+            if (geom != NULL) {
+              geom->X (geom, jt, xyz, XYZ);
+              for (j = 0; j < 3; ++j) {
+                float_data[3 * (P4EST_CHILDREN * quad_count + k) +
+                           j] = (P4EST_VTK_FLOAT_TYPE) XYZ[j];
+              }
+            }
+            else {
+              for (j = 0; j < 3; ++j) {
+                float_data[3 * (P4EST_CHILDREN * quad_count + k) +
+                           j] = (P4EST_VTK_FLOAT_TYPE) xyz[j];
+              }
             }
             ++k;
           }
+        }
+      }
       P4EST_ASSERT (k == P4EST_CHILDREN);
     }
   }
@@ -176,7 +191,7 @@ p8est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #else
   fprintf (vtufile, "          ");
   retval = p4est_vtk_write_binary (vtufile, (char *) float_data,
-                                   sizeof (*float_data) * P4EST_DIM * Ntotal);
+                                   sizeof (*float_data) * 3 * Ntotal);
   fprintf (vtufile, "\n");
   if (retval) {
     P4EST_LERROR ("p8est_vtk: Error encoding points\n");
