@@ -24,7 +24,55 @@
 static void
 write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
 {
-  p8est_vtk_write_file (p8est, geom, name);
+  const p4est_topidx_t *ttv = p8est->connectivity->tree_to_vertex;
+  const p4est_locidx_t Ncells = p8est->local_num_quadrants;
+  const p4est_locidx_t Ntotal = P8EST_CHILDREN * Ncells;        /* type ok */
+  const double       *vertices = p8est->connectivity->vertices;
+  int                 i, k;
+  double             *xyz, center[3], transformed[3];
+  size_t              zz;
+  p4est_topidx_t      jt, vt;
+  p4est_locidx_t      ql, tree_quads;
+  p8est_tree_t       *tree;
+  sc_array_t         *quadrants;
+
+  P4EST_ASSERT (vertices != NULL);
+
+  xyz = P4EST_ALLOC (double, 3 * Ntotal);
+
+  ql = 0;
+  for (jt = p8est->first_local_tree; jt <= p8est->last_local_tree; ++jt) {
+    tree = p4est_array_index_topidx (p8est->trees, jt);
+    for (i = 0; i < 3; ++i) {
+      center[i] = 0.;
+      for (k = 0; k < P8EST_CHILDREN; ++k) {
+        vt = ttv[jt * P8EST_CHILDREN + k];
+        center[i] += vertices[3 * vt + i] / P8EST_CHILDREN;
+      }
+    }
+    if (geom != NULL) {
+      geom->X (geom, jt, center, transformed);
+    }
+    else {
+      memcpy (transformed, center, 3 * sizeof (double));
+    }
+
+    quadrants = &tree->quadrants;
+    tree_quads = quadrants->elem_count;
+    for (zz = 0; zz < tree_quads; ++ql, ++zz) {
+      for (k = 0; k < 8; ++k) {
+        xyz[8 * ql + k] = transformed[0];
+        xyz[Ntotal + 8 * ql + k] = transformed[1];
+        xyz[2 * Ntotal + 8 * ql + k] = transformed[2];
+      }
+    }
+  }
+  P4EST_ASSERT (ql == Ncells);
+
+  p8est_vtk_write_all (p8est, geom, 3, 0, name,
+                       "X", xyz, "Y", xyz + Ntotal, "Z", xyz + 2 * Ntotal);
+
+  P4EST_FREE (xyz);
 }
 
 int
@@ -43,6 +91,8 @@ main (int argc, char **argv)
   mpicomm = MPI_COMM_WORLD;
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  p8est_vtk_default_wrap_rank = 16;
 
   geye = p8est_geometry_new_identity ();
   gshell = p8est_geometry_new_shell (1., 0.55);
