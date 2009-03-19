@@ -263,6 +263,11 @@ p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_shell (void);
 
+/** Create a connectivity structure that builds a solid sphere.
+ * It is made up of two layers and a cube in the center.
+ */
+p8est_connectivity_t *p8est_connectivity_new_sphere (void);
+
 /** Fills arrays encoding the axis combinations for a face transform.
  * \param [in]  itree        The number of the originating tree.
  * \param [in]  iface        The number of the originating face.

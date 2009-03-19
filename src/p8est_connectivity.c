@@ -791,7 +791,7 @@ p8est_connectivity_new_unitcube (void)
   const p4est_topidx_t num_trees = 1;
   const p4est_topidx_t num_ett = 0;
   const p4est_topidx_t num_ctt = 0;
-  const double        vertices[3 * 8] = {
+  const double        vertices[8 * 3] = {
     0, 0, 0,
     1, 0, 0,
     0, 1, 0,
@@ -825,7 +825,7 @@ p8est_connectivity_new_periodic (void)
   const p4est_topidx_t num_trees = 1;
   const p4est_topidx_t num_edges = 3;
   const p4est_topidx_t num_corners = 1;
-  const double        vertices[3 * 8] = {
+  const double        vertices[8 * 3] = {
     0, 0, 0,
     1, 0, 0,
     0, 1, 0,
@@ -886,7 +886,7 @@ p8est_connectivity_new_rotwrap (void)
   const p4est_topidx_t num_trees = 1;
   const p4est_topidx_t num_edges = 4;
   const p4est_topidx_t num_corners = 1;
-  const double        vertices[3 * 8] = {
+  const double        vertices[8 * 3] = {
     0, 0, 0,
     1, 0, 0,
     0, 1, 0,
@@ -947,7 +947,7 @@ p8est_connectivity_new_twocubes (void)
   const p4est_topidx_t num_trees = 2;
   const p4est_topidx_t num_ett = 0;
   const p4est_topidx_t num_ctt = 0;
-  const double        vertices[3 * 12] = {
+  const double        vertices[12 * 3] = {
     0, 0, 0,
     1, 0, 0,
     2, 0, 0,
@@ -988,7 +988,7 @@ p8est_connectivity_new_rotcubes (void)
   const p4est_topidx_t num_trees = 6;
   const p4est_topidx_t num_edges = 3;
   const p4est_topidx_t num_corners = 1;
-  const double        vertices[3 * 26] = {
+  const double        vertices[26 * 3] = {
     0, 0, 0,
     1, 0, 2,
     2, 0, 0,
@@ -1086,7 +1086,7 @@ p8est_connectivity_new_shell (void)
   const p4est_topidx_t num_edges =    18;
   const p4est_topidx_t num_corners =   0;
   const p4est_topidx_t ctt_offset =    0;
-  const double        vertices[3 * 18] = {
+  const double        vertices[18 * 3] = {
     -1, -1,  1,
      0, -1,  1,
      1, -1,  1,
@@ -1263,6 +1263,105 @@ p8est_connectivity_new_shell (void)
                                       tree_to_edge, ett_offset,
                                       edge_to_tree, edge_to_edge,
                                       NULL, &ctt_offset, NULL, NULL);
+}
+
+p8est_connectivity_t *
+p8est_connectivity_new_sphere (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 16;
+  const p4est_topidx_t num_trees =    13;
+  const p4est_topidx_t num_edges =     0;
+  const p4est_topidx_t num_corners =   0;
+  const double        vertices[16 * 3] = {
+    -1, -1,  1,
+     1, -1,  1,
+    -1,  1,  1,
+     1,  1,  1,
+    -1, -1,  2,
+     1, -1,  2,
+    -1,  1,  2,
+     1,  1,  2,
+    -1, -1, -1,
+     1, -1, -1,
+    -1,  1, -1,
+     1,  1, -1,
+    -1, -1,  1,
+     1, -1,  1,
+    -1,  1,  1,
+     1,  1,  1,
+  };
+  const p4est_topidx_t tree_to_vertex[13 * 8] = {
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    8,  9, 10, 11, 12, 13, 14, 15,
+  };
+  const p4est_topidx_t tree_to_tree[13 * 6] = {
+     5,  3,  4,  1,  6,  0,
+     5,  3,  0,  2,  7,  1,
+     5,  3,  1,  4,  8,  2,
+     2,  0,  1,  4,  9,  3,
+     2,  0,  3,  5, 10,  4,
+     2,  0,  4,  1, 11,  5,
+    11,  9, 10,  7, 12,  0,
+    11,  9,  6,  8, 12,  1,
+    11,  9,  7, 10, 12,  2,
+     8,  6,  7, 10, 12,  3,
+     8,  6,  9, 11, 12,  4,
+     8,  6, 10,  7, 12,  5,
+    11,  9,  6,  8, 10,  7,
+  };
+  const int8_t        tree_to_face[13 * 6] = {
+     1,  7,  7,  2,  5,  5,
+     9,  8,  3,  2,  5,  5,
+     6,  0,  3,  6,  5,  5,
+     1,  7,  7,  2,  5,  5,
+     9,  8,  3,  2,  5,  5,
+     6,  0,  3,  6,  5,  5,
+     1,  7,  7,  2,  2,  4,
+     9,  8,  3,  2,  5,  4,
+     6,  0,  3,  6, 15,  4,
+     1,  7,  7,  2, 19,  4,
+     9,  8,  3,  2, 22,  4,
+     6,  0,  3,  6,  6,  4,
+    10, 22,  4, 16, 22,  4,
+  };
+  const p4est_topidx_t tree_to_edge[13 * 12] = {
+  };
+  const p4est_topidx_t ett_offset[0 + 1] = {
+  };
+  const p4est_topidx_t edge_to_tree[0] = {
+  };
+  const int8_t        edge_to_edge[0] = {
+  };
+  const p4est_topidx_t tree_to_corner[13 * 8] = {
+  };
+  const p4est_topidx_t ctt_offset[0 + 1] = {
+  };
+  const p4est_topidx_t corner_to_tree[0] = {
+  };
+  const int8_t        corner_to_corner[0] = {
+  };
+/* *INDENT-ON* */
+
+  return p8est_connectivity_new_copy (num_vertices, num_trees,
+                                      num_edges, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_edge, ett_offset,
+                                      edge_to_tree, edge_to_edge,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
 }
 
 p4est_topidx_t
