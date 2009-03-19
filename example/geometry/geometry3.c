@@ -21,6 +21,30 @@
 
 #include <p8est_vtk.h>
 
+static int
+refine_fn (p8est_t * p8est, p4est_topidx_t which_tree,
+           p8est_quadrant_t * quadrant)
+{
+  const p4est_qcoord_t qh = P8EST_QUADRANT_LEN (quadrant->level);
+  const p4est_qcoord_t rx = quadrant->x + qh;
+  const p4est_qcoord_t ry = quadrant->y + qh;
+  const p4est_qcoord_t rz = quadrant->z + qh;
+
+  if (rx == P8EST_ROOT_LEN && quadrant->y == 0 && quadrant->z == 0
+      && quadrant->level < 2)
+    return 1;
+
+  if (quadrant->x == 0 && ry == P8EST_ROOT_LEN && quadrant->z == 0
+      && quadrant->level < 3)
+    return 1;
+
+  if (quadrant->x == 0 && quadrant->y == 0 && rz == P8EST_ROOT_LEN
+      && quadrant->level < 4)
+    return 1;
+
+  return 0;
+}
+
 static void
 write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
 {
@@ -99,6 +123,7 @@ main (int argc, char **argv)
 
   conn = p8est_connectivity_new_unitcube ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p8est_refine (p8est, true, refine_fn, NULL);
   write_vtk (p8est, NULL, "unitcube_none");
   write_vtk (p8est, geye, "unitcube_identity");
   p8est_destroy (p8est);
@@ -106,6 +131,7 @@ main (int argc, char **argv)
 
   conn = p8est_connectivity_new_shell ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p8est_refine (p8est, true, refine_fn, NULL);
   write_vtk (p8est, NULL, "shell_none");
   write_vtk (p8est, geye, "shell_identity");
   write_vtk (p8est, gshell, "shell_shell");
