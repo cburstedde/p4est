@@ -81,4 +81,12 @@ double              p8est_geometry_identity_J (p8est_geometry_t * geom,
  */
 p8est_geometry_t   *p8est_geometry_new_identity (void);
 
+/** Create a geometry structure for the spherical shell of 24 trees.
+ * This is suitable for forests obtained with p8est_connectivity_new_shell.
+ * \param [in] R2   The outer radius of the shell.
+ * \param [in] R1   The inner radius of the shell.
+ * \return          Geometry structure which must be freed with P4EST_FREE.
+ */
+p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
+
 #endif /* !P8EST_GEOMETRY_H */
