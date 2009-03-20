@@ -23,7 +23,9 @@
 
 typedef enum
 {
-  P8EST_GEOMETRY_BUILTIN_SHELL = 1
+  P8EST_GEOMETRY_BUILTIN_NONE,
+  P8EST_GEOMETRY_BUILTIN_SHELL,
+  P8EST_GEOMETRY_BUILTIN_SPHERE,
 }
 p8est_geometry_builtin_type_t;
 
@@ -33,12 +35,18 @@ typedef struct p8est_geometry_builtin
   union
   {
     p8est_geometry_builtin_type_t type;
-    struct
+    struct p8est_geometry_builtin_shell
     {
       p8est_geometry_builtin_type_t type;
       double              R2, R1;
     }
     shell;
+    struct p8est_geometry_builtin_sphere
+    {
+      p8est_geometry_builtin_type_t type;
+      double              R2, R1, R0;
+    }
+    sphere;
   }
   p;
 }
@@ -115,13 +123,14 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree,
                         const double xyz[3], double XYZ[3])
 {
-  const p8est_geometry_builtin_t *b = (p8est_geometry_builtin_t *) geom;
-  const double        R2byR1 = b->p.shell.R2 / b->p.shell.R1;
-  const double        R1sqrbyR2 = b->p.shell.R1 / R2byR1;
+  const struct p8est_geometry_builtin_shell *shell
+    = &((p8est_geometry_builtin_t *) geom)->p.shell;
+  const double        R2byR1 = shell->R2 / shell->R1;
+  const double        R1sqrbyR2 = shell->R1 / R2byR1;
   double              x, y, R, q;
 
   /* assert that input points are in the expected range */
-  P4EST_ASSERT (b->p.type == P8EST_GEOMETRY_BUILTIN_SHELL);
+  P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
   P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
   P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
@@ -176,17 +185,18 @@ static double
 p8est_geometry_shell_D (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree, const double xyz[3])
 {
-  const p8est_geometry_builtin_t *b = (p8est_geometry_builtin_t *) geom;
-  const double        R2byR1 = b->p.shell.R2 / b->p.shell.R1;
+  const struct p8est_geometry_builtin_shell *shell
+    = &((p8est_geometry_builtin_t *) geom)->p.shell;
+  const double        R2byR1 = shell->R2 / shell->R1;
+  const double        R1sqrbyR2 = shell->R1 / R2byR1;
   const double        Rlog = log (R2byR1);
-  const double        R1sqrbyR2 = b->p.shell.R1 / R2byR1;
   double              cx, cy, x, y, R, t, q;
   double              derx, dery;
   double              detJ;
   double              J[3][3];
 
   /* assert that input points are in the expected range */
-  P4EST_ASSERT (b->p.type == P8EST_GEOMETRY_BUILTIN_SHELL);
+  P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
   P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
   P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
@@ -231,16 +241,17 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree,
                         const double xyz[3], double J[3][3])
 {
-  const p8est_geometry_builtin_t *b = (p8est_geometry_builtin_t *) geom;
-  const double        R2byR1 = b->p.shell.R2 / b->p.shell.R1;
+  const struct p8est_geometry_builtin_shell *shell
+    = &((p8est_geometry_builtin_t *) geom)->p.shell;
+  const double        R2byR1 = shell->R2 / shell->R1;
+  const double        R1sqrbyR2 = shell->R1 / R2byR1;
   const double        Rlog = log (R2byR1);
-  const double        R1sqrbyR2 = b->p.shell.R1 / R2byR1;
   double              cx, cy, x, y, R, t, q;
   double              derx, dery;
   double              detJ;
 
   /* assert that input points are in the expected range */
-  P4EST_ASSERT (b->p.type == P8EST_GEOMETRY_BUILTIN_SHELL);
+  P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
   P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
   P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
@@ -354,6 +365,25 @@ p8est_geometry_new_shell (double R2, double R1)
   builtin->geom.X = p8est_geometry_shell_X;
   builtin->geom.D = p8est_geometry_shell_D;
   builtin->geom.J = p8est_geometry_shell_J;
+  builtin->geom.Jit = p8est_geometry_Jit;
+
+  return (p8est_geometry_t *) builtin;
+}
+
+p8est_geometry_t   *
+p8est_geometry_new_sphere (double R2, double R1, double R0)
+{
+  p8est_geometry_builtin_t *builtin;
+
+  builtin = P4EST_ALLOC (p8est_geometry_builtin_t, 1);
+
+  builtin->p.type = P8EST_GEOMETRY_BUILTIN_SPHERE;
+  builtin->p.sphere.R2 = R2;
+  builtin->p.sphere.R1 = R1;
+  builtin->p.sphere.R0 = R0;
+  builtin->geom.X = p8est_geometry_identity_X;
+  builtin->geom.D = p8est_geometry_identity_D;
+  builtin->geom.J = p8est_geometry_identity_J;
   builtin->geom.Jit = p8est_geometry_Jit;
 
   return (p8est_geometry_t *) builtin;

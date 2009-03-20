@@ -89,4 +89,14 @@ p8est_geometry_t   *p8est_geometry_new_identity (void);
  */
 p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
 
+/** Create a geometry structure for the solid sphere of 13 trees.
+ * This is suitable for forests obtained with p8est_connectivity_new_sphere.
+ * \param [in] R2   The outer radius of the sphere.
+ * \param [in] R1   The outer radius of the inner shell.
+ * \param [in] R0   The inner radius of the inner shell.
+ * \return          Geometry structure which must be freed with P4EST_FREE.
+ */
+p8est_geometry_t   *p8est_geometry_new_sphere (double R2, double R1,
+                                               double R0);
+
 #endif /* !P8EST_GEOMETRY_H */
