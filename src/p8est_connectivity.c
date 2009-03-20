@@ -1271,7 +1271,7 @@ p8est_connectivity_new_sphere (void)
 /* *INDENT-OFF* */
   const p4est_topidx_t num_vertices = 16;
   const p4est_topidx_t num_trees =    13;
-  const p4est_topidx_t num_edges =     0;
+  const p4est_topidx_t num_edges =    12;
   const p4est_topidx_t num_corners =   0;
   const double        vertices[16 * 3] = {
     -1, -1,  1,
@@ -1337,20 +1337,62 @@ p8est_connectivity_new_sphere (void)
     10, 22,  4, 16, 22,  4,
   };
   const p4est_topidx_t tree_to_edge[13 * 12] = {
+     0,  2, -1, -1,  8,  9, -1, -1, -1, -1, -1, -1,
+     2,  3, -1, -1,  6,  7, -1, -1, -1, -1, -1, -1,
+     3,  1, -1, -1, 10, 11, -1, -1, -1, -1, -1, -1,
+     7,  5, -1, -1, 11,  9, -1, -1, -1, -1, -1, -1,
+     5,  4, -1, -1,  1,  0, -1, -1, -1, -1, -1, -1,
+     4,  6, -1, -1, 10,  8, -1, -1, -1, -1, -1, -1,
+    -1, -1,  0,  2, -1, -1,  8,  9, -1, -1, -1, -1,
+    -1, -1,  2,  3, -1, -1,  6,  7, -1, -1, -1, -1,
+    -1, -1,  3,  1, -1, -1, 10, 11, -1, -1, -1, -1,
+    -1, -1,  7,  5, -1, -1, 11,  9, -1, -1, -1, -1,
+    -1, -1,  5,  4, -1, -1,  1,  0, -1, -1, -1, -1,
+    -1, -1,  4,  6, -1, -1, 10,  8, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   };
-  const p4est_topidx_t ett_offset[0 + 1] = {
+  const p4est_topidx_t ett_offset[12 + 1] = {
+    0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
   };
-  const p4est_topidx_t edge_to_tree[0] = {
+  const p4est_topidx_t edge_to_tree[48] = {
+    0,  4,  6, 10,
+    2,  4,  8, 10,
+    0,  1,  6,  7,
+    1,  2,  7,  8,
+    4,  5, 10, 11,
+    3,  4,  9, 10,
+    1,  5,  7, 11,
+    1,  3,  7,  9,
+    0,  5,  6, 11,
+    0,  3,  6,  9,
+    2,  5,  8, 11,
+    2,  3,  8,  9,
   };
-  const int8_t        edge_to_edge[0] = {
+  const int8_t        edge_to_edge[48] = {
+    0, 5, 2, 7,
+    1, 4, 3, 6,
+    1, 0, 3, 2,
+    1, 0, 3, 2,
+    1, 0, 3, 2,
+    1, 0, 3, 2,
+    4, 1, 6, 3,
+    5, 0, 7, 2,
+    4, 5, 6, 7,
+    5, 5, 7, 7,
+    4, 4, 6, 6,
+    5, 4, 7, 6,
   };
   const p4est_topidx_t tree_to_corner[13 * 8] = {
+    0
   };
   const p4est_topidx_t ctt_offset[0 + 1] = {
+    0
   };
-  const p4est_topidx_t corner_to_tree[0] = {
+  const p4est_topidx_t corner_to_tree[1] = {
+    0
   };
-  const int8_t        corner_to_corner[0] = {
+  const int8_t        corner_to_corner[1] = {
+    0
   };
 /* *INDENT-ON* */
 
