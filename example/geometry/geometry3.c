@@ -51,52 +51,101 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
   const p4est_topidx_t *ttv = p8est->connectivity->tree_to_vertex;
   const p4est_locidx_t Ncells = p8est->local_num_quadrants;
   const p4est_locidx_t Ntotal = P8EST_CHILDREN * Ncells;        /* type ok */
-  const double       *vertices = p8est->connectivity->vertices;
+  const double       *v = p8est->connectivity->vertices;
+  const double        intsize = 1.0 / P8EST_ROOT_LEN;
   int                 i, k;
-  double             *xyz, center[3], transformed[3];
+  int                 zi, yi, xi;
+  double              eta_x, eta_y, eta_z;
+  double              xyz[3], XYZ[3];
+  double              det1, det2, J[3][3];
+  double             *double_data, *dptr[4];
   size_t              zz;
-  p4est_topidx_t      jt, vt;
-  p4est_locidx_t      ql, tree_quads;
+  p4est_topidx_t      jt, vt[P8EST_CHILDREN];
+  p4est_locidx_t      ql, num_quads;
+  p4est_qcoord_t      h;
   p8est_tree_t       *tree;
+  p8est_quadrant_t   *quad;
   sc_array_t         *quadrants;
 
-  P4EST_ASSERT (vertices != NULL);
+  P4EST_ASSERT (v != NULL);
 
-  xyz = P4EST_ALLOC (double, 3 * Ntotal);
+  double_data = P4EST_ALLOC (double, 4 * Ntotal);
+  dptr[0] = double_data;
+  dptr[1] = double_data + Ntotal;
+  dptr[2] = double_data + 2 * Ntotal;
+  dptr[3] = double_data + 3 * Ntotal;
 
   ql = 0;
   for (jt = p8est->first_local_tree; jt <= p8est->last_local_tree; ++jt) {
     tree = p4est_array_index_topidx (p8est->trees, jt);
-    for (i = 0; i < 3; ++i) {
-      center[i] = 0.;
-      for (k = 0; k < P8EST_CHILDREN; ++k) {
-        vt = ttv[jt * P8EST_CHILDREN + k];
-        center[i] += vertices[3 * vt + i] / P8EST_CHILDREN;
-      }
-    }
-    if (geom != NULL) {
-      geom->X (geom, jt, center, transformed);
-    }
-    else {
-      memcpy (transformed, center, 3 * sizeof (double));
-    }
-
     quadrants = &tree->quadrants;
-    tree_quads = quadrants->elem_count;
-    for (zz = 0; zz < tree_quads; ++ql, ++zz) {
-      for (k = 0; k < 8; ++k) {
-        xyz[8 * ql + k] = transformed[0];
-        xyz[Ntotal + 8 * ql + k] = transformed[1];
-        xyz[2 * Ntotal + 8 * ql + k] = transformed[2];
+    num_quads = quadrants->elem_count;
+
+    /* retrieve corners of the tree */
+    for (k = 0; k < P8EST_CHILDREN; ++k)
+      vt[k] = ttv[jt * P8EST_CHILDREN + k];
+
+    /* loop over the elements in the tree and calculated vertex coordinates */
+    for (zz = 0; zz < num_quads; ++ql, ++zz) {
+      quad = sc_array_index (quadrants, zz);
+      h = P8EST_QUADRANT_LEN (quad->level);
+      k = 0;
+      for (zi = 0; zi < 2; ++zi) {
+        for (yi = 0; yi < 2; ++yi) {
+          for (xi = 0; xi < 2; ++xi) {
+            P4EST_ASSERT (0 <= k && k < P8EST_CHILDREN);
+            eta_x = intsize * (quad->x + xi * h);
+            eta_y = intsize * (quad->y + yi * h);
+            eta_z = intsize * (quad->z + zi * h);
+
+            for (i = 0; i < 3; ++i) {
+              /* *INDENT-OFF* */
+              xyz[i] =
+          ((1. - eta_x) * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[0] + i] +
+                                                 eta_z  * v[3 * vt[4] + i]) +
+                                 eta_y  * ((1. - eta_z) * v[3 * vt[2] + i] +
+                                                 eta_z  * v[3 * vt[6] + i])) +
+                 eta_x  * ((1. - eta_y) * ((1. - eta_z) * v[3 * vt[1] + i] +
+                                                 eta_z  * v[3 * vt[5] + i]) +
+                                 eta_y  * ((1. - eta_z) * v[3 * vt[3] + i] +
+                                                 eta_z  * v[3 * vt[7] + i])));
+              /* *INDENT-ON* */
+            }
+            if (geom != NULL) {
+              geom->X (geom, jt, xyz, XYZ);
+              for (i = 0; i < 3; ++i) {
+                *dptr[i]++ = XYZ[i];
+              }
+              det1 = geom->D (geom, jt, xyz);
+              det2 = geom->J (geom, jt, xyz, J);
+              SC_CHECK_ABORT (fabs ((det1 - det2) / SC_MAX (det1, det2)) <
+                              1.e-8, "Determinant inconsistent");
+              *dptr[3]++ = det1;
+            }
+            else {
+              for (i = 0; i < 3; ++i) {
+                *dptr[i]++ = xyz[i];
+              }
+              *dptr[3]++ = 1.;
+            }
+            ++k;
+          }
+        }
       }
     }
   }
   P4EST_ASSERT (ql == Ncells);
+  P4EST_ASSERT (dptr[0] == double_data + Ntotal);
+  P4EST_ASSERT (dptr[1] == double_data + 2 * Ntotal);
+  P4EST_ASSERT (dptr[2] == double_data + 3 * Ntotal);
+  P4EST_ASSERT (dptr[3] == double_data + 4 * Ntotal);
 
-  p8est_vtk_write_all (p8est, geom, 3, 0, name,
-                       "X", xyz, "Y", xyz + Ntotal, "Z", xyz + 2 * Ntotal);
+  p8est_vtk_write_all (p8est, geom, 4, 0, name,
+                       "X", double_data, "Y", double_data + Ntotal,
+                       "Z", double_data + 2 * Ntotal,
+                       "D", double_data + 3 * Ntotal);
 
-  P4EST_FREE (xyz);
+  P4EST_FREE (double_data);
 }
 
 int
@@ -105,8 +154,7 @@ main (int argc, char **argv)
   int                 mpiret;
   MPI_Comm            mpicomm;
   p8est_connectivity_t *conn;
-  p8est_geometry_t   *geye;
-  p8est_geometry_t   *gshell;
+  p8est_geometry_t   *geye, *gshell, *gsphere;
   p8est_t            *p8est;
 
   mpiret = MPI_Init (&argc, &argv);
@@ -116,11 +164,14 @@ main (int argc, char **argv)
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  p8est_vtk_default_scale = 1.;
   p8est_vtk_default_wrap_rank = 16;
 
   geye = p8est_geometry_new_identity ();
   gshell = p8est_geometry_new_shell (1., 0.55);
+  gsphere = p8est_geometry_new_sphere (1., 0.191728, 0.039856);
 
+  P4EST_STATISTICS ("Unitcube\n");
   conn = p8est_connectivity_new_unitcube ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
   p8est_refine (p8est, true, refine_fn, NULL);
@@ -129,6 +180,7 @@ main (int argc, char **argv)
   p8est_destroy (p8est);
   p8est_connectivity_destroy (conn);
 
+  P4EST_STATISTICS ("Shell\n");
   conn = p8est_connectivity_new_shell ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
   p8est_refine (p8est, true, refine_fn, NULL);
@@ -138,8 +190,19 @@ main (int argc, char **argv)
   p8est_destroy (p8est);
   p8est_connectivity_destroy (conn);
 
+  P4EST_STATISTICS ("Sphere\n");
+  conn = p8est_connectivity_new_sphere ();
+  p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p8est_refine (p8est, true, refine_fn, NULL);
+  write_vtk (p8est, NULL, "sphere_none");
+  write_vtk (p8est, geye, "sphere_identity");
+  write_vtk (p8est, gsphere, "sphere_sphere");
+  p8est_destroy (p8est);
+  p8est_connectivity_destroy (conn);
+
   P4EST_FREE (geye);
   P4EST_FREE (gshell);
+  P4EST_FREE (gsphere);
 
   sc_finalize ();
 
