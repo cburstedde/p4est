@@ -23,7 +23,7 @@
 
 typedef enum
 {
-  P8EST_GEOMETRY_BUILTIN_NONE,
+  P8EST_GEOMETRY_BUILTIN_MAGIC = 0x65F2F8DF,
   P8EST_GEOMETRY_BUILTIN_SHELL,
   P8EST_GEOMETRY_BUILTIN_SPHERE,
 }
@@ -39,12 +39,16 @@ typedef struct p8est_geometry_builtin
     {
       p8est_geometry_builtin_type_t type;
       double              R2, R1;
+      double              R2byR1, R1sqrbyR2, Rlog;
     }
     shell;
     struct p8est_geometry_builtin_sphere
     {
       p8est_geometry_builtin_type_t type;
       double              R2, R1, R0;
+      double              R2byR1, R1sqrbyR2, R1log;
+      double              R1byR0, R0sqrbyR1, R0log;
+      double              Clength;
     }
     sphere;
   }
@@ -125,8 +129,6 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
-  const double        R2byR1 = shell->R2 / shell->R1;
-  const double        R1sqrbyR2 = shell->R1 / R2byR1;
   double              x, y, R, q;
 
   /* assert that input points are in the expected range */
@@ -141,7 +143,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
   y = tan (xyz[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = R1sqrbyR2 * pow (R2byR1, xyz[2]);
+  R = shell->R1sqrbyR2 * pow (shell->R2byR1, xyz[2]);
   q = R / sqrt (x * x + y * y + 1.);
 
   /* assign correct coordinates based on patch id */
@@ -187,9 +189,6 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
-  const double        R2byR1 = shell->R2 / shell->R1;
-  const double        R1sqrbyR2 = shell->R1 / R2byR1;
-  const double        Rlog = log (R2byR1);
   double              cx, cy, x, y, R, t, q;
   double              derx, dery;
   double              detJ;
@@ -211,7 +210,7 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
   y = tan (xyz[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = R1sqrbyR2 * pow (R2byR1, xyz[2]);
+  R = shell->R1sqrbyR2 * pow (shell->R2byR1, xyz[2]);
   t = 1. / (x * x + y * y + 1.);
   q = R * sqrt (t);
 
@@ -243,9 +242,7 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
-  const double        R2byR1 = shell->R2 / shell->R1;
-  const double        R1sqrbyR2 = shell->R1 / R2byR1;
-  const double        Rlog = log (R2byR1);
+  const double        Rlog = shell->Rlog;
   double              cx, cy, x, y, R, t, q;
   double              derx, dery;
   double              detJ;
@@ -266,7 +263,7 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
   y = tan (xyz[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = R1sqrbyR2 * pow (R2byR1, xyz[2]);
+  R = shell->R1sqrbyR2 * pow (shell->R2byR1, xyz[2]);
   t = 1. / (x * x + y * y + 1.);
   q = R * sqrt (t);
 
@@ -356,12 +353,18 @@ p8est_geometry_t   *
 p8est_geometry_new_shell (double R2, double R1)
 {
   p8est_geometry_builtin_t *builtin;
+  struct p8est_geometry_builtin_shell *shell;
 
   builtin = P4EST_ALLOC (p8est_geometry_builtin_t, 1);
 
-  builtin->p.type = P8EST_GEOMETRY_BUILTIN_SHELL;
-  builtin->p.shell.R2 = R2;
-  builtin->p.shell.R1 = R1;
+  shell = &builtin->p.shell;
+  shell->type = P8EST_GEOMETRY_BUILTIN_SHELL;
+  shell->R2 = R2;
+  shell->R1 = R1;
+  shell->R2byR1 = R2 / R1;
+  shell->R1sqrbyR2 = R1 * R1 / R2;
+  shell->Rlog = log (R2 / R1);
+
   builtin->geom.X = p8est_geometry_shell_X;
   builtin->geom.D = p8est_geometry_shell_D;
   builtin->geom.J = p8est_geometry_shell_J;
@@ -370,18 +373,115 @@ p8est_geometry_new_shell (double R2, double R1)
   return (p8est_geometry_t *) builtin;
 }
 
+static void
+p8est_geometry_sphere_X (p8est_geometry_t * geom,
+                         p4est_topidx_t which_tree,
+                         const double xyz[3], double XYZ[3])
+{
+  const struct p8est_geometry_builtin_sphere *sphere
+    = &((p8est_geometry_builtin_t *) geom)->p.sphere;
+  double              x, y, R, q;
+  double              p, tpx, tpy;
+
+  /* assert that input points are in the expected range */
+  P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
+  P4EST_ASSERT (0 <= which_tree && which_tree < 13);
+  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
+#ifdef P4EST_DEBUG
+  if (which_tree < 12) {
+    P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+  }
+  else {
+    P4EST_ASSERT (xyz[2] < 1.0 + 1e-12 && xyz[2] > -1.0 - 1e-12);
+  }
+#endif /* P4EST_DEBUG */
+
+  if (which_tree < 6) {         /* outer shell */
+    x = tan (xyz[0] * M_PI_4);
+    y = tan (xyz[1] * M_PI_4);
+    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    q = R / sqrt (x * x + y * y + 1.);
+  }
+  else if (which_tree < 12) {   /* inner shell */
+    p = 2. - xyz[2];
+    x = p * xyz[0] + (tpx = (1. - p) * tan (xyz[0] * M_PI_4));
+    y = p * xyz[1] + (tpy = (1. - p) * tan (xyz[1] * M_PI_4));
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    q = R / sqrt ((p + tpx) * (p + tpx) + (p + tpy) * (p + tpy) + 1.);
+  }
+  else {                        /* center cube */
+    XYZ[0] = xyz[0] * sphere->Clength;
+    XYZ[1] = xyz[1] * sphere->Clength;
+    XYZ[2] = xyz[2] * sphere->Clength;
+    return;
+  }
+
+  /* assign correct coordinates based on direction */
+  switch (which_tree % 6) {
+  case 0:                      /* front */
+    XYZ[0] = +q * x;
+    XYZ[1] = -q;
+    XYZ[2] = +q * y;
+    break;
+  case 1:                      /* top */
+    XYZ[0] = +q * x;
+    XYZ[1] = +q * y;
+    XYZ[2] = +q;
+    break;
+  case 2:                      /* back */
+    XYZ[0] = +q * x;
+    XYZ[1] = +q;
+    XYZ[2] = -q * y;
+    break;
+  case 3:                      /* right */
+    XYZ[0] = +q;
+    XYZ[1] = -q * x;
+    XYZ[2] = -q * y;
+    break;
+  case 4:                      /* bottom */
+    XYZ[0] = -q * y;
+    XYZ[1] = -q * x;
+    XYZ[2] = -q;
+    break;
+  case 5:                      /* left */
+    XYZ[0] = -q;
+    XYZ[1] = -q * x;
+    XYZ[2] = +q * y;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+}
+
 p8est_geometry_t   *
 p8est_geometry_new_sphere (double R2, double R1, double R0)
 {
   p8est_geometry_builtin_t *builtin;
+  struct p8est_geometry_builtin_sphere *sphere;
 
   builtin = P4EST_ALLOC (p8est_geometry_builtin_t, 1);
 
-  builtin->p.type = P8EST_GEOMETRY_BUILTIN_SPHERE;
-  builtin->p.sphere.R2 = R2;
-  builtin->p.sphere.R1 = R1;
-  builtin->p.sphere.R0 = R0;
-  builtin->geom.X = p8est_geometry_identity_X;
+  sphere = &builtin->p.sphere;
+  sphere->type = P8EST_GEOMETRY_BUILTIN_SPHERE;
+  sphere->R2 = R2;
+  sphere->R1 = R1;
+  sphere->R0 = R0;
+
+  /* variables useful for the outer shell */
+  sphere->R2byR1 = R2 / R1;
+  sphere->R1sqrbyR2 = R1 * R1 / R2;
+  sphere->R1log = log (R2 / R1);
+
+  /* variables useful for the inner shell */
+  sphere->R1byR0 = R1 / R0;
+  sphere->R0sqrbyR1 = R0 * R0 / R1;
+  sphere->R0log = log (R1 / R0);
+
+  /* variables useful for the center cube */
+  sphere->Clength = R0 / sqrt (3.);
+
+  builtin->geom.X = p8est_geometry_sphere_X;
   builtin->geom.D = p8est_geometry_identity_D;
   builtin->geom.J = p8est_geometry_identity_J;
   builtin->geom.Jit = p8est_geometry_Jit;
