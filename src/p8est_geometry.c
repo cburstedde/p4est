@@ -48,7 +48,7 @@ typedef struct p8est_geometry_builtin
       double              R2, R1, R0;
       double              R2byR1, R1sqrbyR2, R1log;
       double              R1byR0, R0sqrbyR1, R0log;
-      double              Clength;
+      double              Clength, CdetJ;
     }
     sphere;
   }
@@ -214,7 +214,7 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
   t = 1. / (x * x + y * y + 1.);
   q = R * sqrt (t);
 
-  /* compute Jacobian in xyz space aligned to the octree modulo scaling */
+  /* compute Jacobian in XYZ space aligned to the octree modulo scaling */
   J[0][0] = (1. - x * x * t);
   J[0][1] = -x * y * t;
   J[0][2] = x;
@@ -229,7 +229,7 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
   detJ = (J[0][0] * (J[1][1] * J[2][2] - J[1][2] * J[2][1])
           + J[0][1] * (J[1][2] * J[2][0] - J[1][0] * J[2][2])
           + J[0][2] * (J[1][0] * J[2][1] - J[1][1] * J[2][0]))
-    * q * q * q * derx * dery * Rlog;
+    * q * q * q * derx * dery * shell->Rlog;
   P4EST_ASSERT (detJ > 0.);
 
   return detJ;
@@ -267,7 +267,7 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
   t = 1. / (x * x + y * y + 1.);
   q = R * sqrt (t);
 
-  /* compute Jacobian in xyz space aligned to the octree */
+  /* compute Jacobian in XYZ space aligned to the octree */
   /* assign correct coordinates based on patch id */
   switch (which_tree / 4) {
   case 3:                      /* top */
@@ -381,7 +381,6 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   const struct p8est_geometry_builtin_sphere *sphere
     = &((p8est_geometry_builtin_t *) geom)->p.sphere;
   double              x, y, R, q;
-  double              p, tpx, tpy;
 
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
@@ -404,16 +403,23 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
     q = R / sqrt (x * x + y * y + 1.);
   }
   else if (which_tree < 12) {   /* inner shell */
+    double              p, tpx, tpy;
+
     p = 2. - xyz[2];
-    x = p * xyz[0] + (tpx = (1. - p) * tan (xyz[0] * M_PI_4));
-    y = p * xyz[1] + (tpy = (1. - p) * tan (xyz[1] * M_PI_4));
+    tpx = (1. - p) * tan (xyz[0] * M_PI_4);
+    x = p * xyz[0] + tpx;
+    tpx += p;
+    tpy = (1. - p) * tan (xyz[1] * M_PI_4);
+    y = p * xyz[1] + tpy;
+    tpy += p;
     R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
-    q = R / sqrt ((p + tpx) * (p + tpx) + (p + tpy) * (p + tpy) + 1.);
+    q = R / sqrt (tpx * tpx + tpy * tpy + 1.);
   }
   else {                        /* center cube */
     XYZ[0] = xyz[0] * sphere->Clength;
     XYZ[1] = xyz[1] * sphere->Clength;
     XYZ[2] = xyz[2] * sphere->Clength;
+
     return;
   }
 
@@ -454,6 +460,243 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   }
 }
 
+static double
+p8est_geometry_sphere_D (p8est_geometry_t * geom,
+                         p4est_topidx_t which_tree, const double xyz[3])
+{
+  const struct p8est_geometry_builtin_sphere *sphere
+    = &((p8est_geometry_builtin_t *) geom)->p.sphere;
+  double              Rlog;
+  double              cx, cy, x, y, R, t, q;
+  double              derx, dery;
+  double              factor, detJ;
+  double              J[3][3];
+
+  /* assert that input points are in the expected range */
+  P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
+  P4EST_ASSERT (0 <= which_tree && which_tree < 13);
+  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
+#ifdef P4EST_DEBUG
+  if (which_tree < 12) {
+    P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+  }
+  else {
+    P4EST_ASSERT (xyz[2] < 1.0 + 1e-12 && xyz[2] > -1.0 - 1e-12);
+  }
+#endif /* P4EST_DEBUG */
+
+  if (which_tree < 6) {         /* outer shell */
+    cx = cos (xyz[0] * M_PI_4);
+    derx = M_PI_4 / (cx * cx);
+    x = tan (xyz[0] * M_PI_4);
+    cy = cos (xyz[1] * M_PI_4);
+    dery = M_PI_4 / (cy * cy);
+    y = tan (xyz[1] * M_PI_4);
+    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    Rlog = sphere->R1log;
+    t = 1. / (x * x + y * y + 1.);
+    q = R * sqrt (t);
+
+    J[0][0] = (1. - x * x * t);
+    J[0][1] = -x * y * t;
+    J[0][2] = x;
+    J[1][0] = -x * y * t;
+    J[1][1] = (1. - y * y * t);
+    J[1][2] = y;
+    J[2][0] = -x * t;
+    J[2][1] = -y * t;
+    J[2][2] = 1.;
+    factor = q * q * q * derx * dery * Rlog;
+  }
+  else if (which_tree < 12) {   /* inner shell */
+    const double        p = 2. - xyz[2];
+    double              tpx, tpy;
+
+    cx = cos (xyz[0] * M_PI_4);
+    derx = (1. - p) * M_PI_4 / (cx * cx);
+    tpx = (1. - p) * tan (xyz[0] * M_PI_4);
+    x = p * xyz[0] + tpx;
+    tpx += p;
+    cy = cos (xyz[1] * M_PI_4);
+    dery = (1. - p) * M_PI_4 / (cy * cy);
+    tpy = (1. - p) * tan (xyz[1] * M_PI_4);
+    y = p * xyz[1] + tpy;
+    tpy += p;
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    Rlog = sphere->R0log;
+    t = 1. / (tpx * tpx + tpy * tpy + 1.);
+    q = R * sqrt (t);
+
+    J[0][0] = p + (1. - x * tpx * t) * derx;
+    J[0][1] = -x * tpy * t * dery;
+    J[0][2] = x;
+    J[1][0] = -y * tpx * t * derx;
+    J[1][1] = p + (1. - y * tpy * t) * dery;
+    J[1][2] = y;
+    J[2][0] = -tpx * t * derx;
+    J[2][1] = -tpy * t * dery;
+    J[2][2] = 1.;
+    factor = q * q * q * Rlog;
+  }
+  else {                        /* center cube */
+    return sphere->CdetJ;
+  }
+
+  /* compute the determinant */
+  detJ = (J[0][0] * (J[1][1] * J[2][2] - J[1][2] * J[2][1])
+          + J[0][1] * (J[1][2] * J[2][0] - J[1][0] * J[2][2])
+          + J[0][2] * (J[1][0] * J[2][1] - J[1][1] * J[2][0]))
+    * factor;
+  P4EST_ASSERT (detJ > 0.);
+
+  return detJ;
+}
+
+static double
+p8est_geometry_sphere_J (p8est_geometry_t * geom,
+                         p4est_topidx_t which_tree,
+                         const double xyz[3], double J[3][3])
+{
+  const struct p8est_geometry_builtin_sphere *sphere
+    = &((p8est_geometry_builtin_t *) geom)->p.sphere;
+  double              Rlog;
+  double              cx, cy, x, y, R, t, q;
+  double              p, tpx, tpy;
+  double              derx, dery;
+  double              detJ;
+
+  /* assert that input points are in the expected range */
+  P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
+  P4EST_ASSERT (0 <= which_tree && which_tree < 13);
+  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
+#ifdef P4EST_DEBUG
+  if (which_tree < 12) {
+    P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+  }
+  else {
+    P4EST_ASSERT (xyz[2] < 1.0 + 1e-12 && xyz[2] > -1.0 - 1e-12);
+  }
+#endif /* P4EST_DEBUG */
+
+  if (which_tree < 6) {         /* outer shell */
+    p = 0.;
+    cx = cos (xyz[0] * M_PI_4);
+    derx = M_PI_4 / (cx * cx);
+    x = tpx = tan (xyz[0] * M_PI_4);
+    cy = cos (xyz[1] * M_PI_4);
+    dery = M_PI_4 / (cy * cy);
+    y = tpy = tan (xyz[1] * M_PI_4);
+    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    Rlog = sphere->R1log;
+  }
+  else if (which_tree < 12) {   /* inner shell */
+    p = 2. - xyz[2];
+    cx = cos (xyz[0] * M_PI_4);
+    derx = (1. - p) * M_PI_4 / (cx * cx);
+    tpx = (1. - p) * tan (xyz[0] * M_PI_4);
+    x = p * xyz[0] + tpx;
+    tpx += p;
+    cy = cos (xyz[1] * M_PI_4);
+    dery = (1. - p) * M_PI_4 / (cy * cy);
+    tpy = (1. - p) * tan (xyz[1] * M_PI_4);
+    y = p * xyz[1] + tpy;
+    tpy += p;
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    Rlog = sphere->R0log;
+  }
+  else {                        /* center cube */
+    J[0][0] = J[1][1] = J[2][2] = sphere->Clength;
+    J[0][1] = J[1][2] = J[2][0] = 0.;
+    J[1][0] = J[2][1] = J[0][2] = 0.;
+
+    return sphere->CdetJ;
+  }
+
+  t = 1. / (tpx * tpx + tpy * tpy + 1.);
+  q = R * sqrt (t);
+
+  switch (which_tree % 6) {
+  case 0:                      /* front */
+    J[0][0] = q * (p + (1. - x * tpx * t) * derx);
+    J[0][1] = -q * x * tpy * t * dery;
+    J[0][2] = q * x * Rlog;
+    J[1][0] = q * tpx * t * derx;
+    J[1][1] = q * tpy * t * dery;
+    J[1][2] = -q * Rlog;
+    J[2][0] = -q * y * tpx * t * derx;
+    J[2][1] = q * (p + (1. - y * tpy * t) * dery);
+    J[2][2] = q * y * Rlog;
+    break;
+  case 1:                      /* top */
+    J[0][0] = q * (p + (1. - x * tpx * t) * derx);
+    J[0][1] = -q * x * tpy * t * dery;
+    J[0][2] = q * x * Rlog;
+    J[1][0] = -q * y * tpx * t * derx;
+    J[1][1] = q * (p + (1. - y * tpy * t) * dery);
+    J[1][2] = q * y * Rlog;
+    J[2][0] = -q * tpx * t * derx;
+    J[2][1] = -q * tpy * t * dery;
+    J[2][2] = q * Rlog;
+    break;
+  case 2:                      /* back */
+    J[0][0] = q * (p + (1. - x * tpx * t) * derx);
+    J[0][1] = -q * x * tpy * t * dery;
+    J[0][2] = q * x * Rlog;
+    J[1][0] = -q * tpx * t * derx;
+    J[1][1] = -q * tpy * t * dery;
+    J[1][2] = q * Rlog;
+    J[2][0] = q * y * tpx * t * derx;
+    J[2][1] = -q * (p + (1. - y * tpy * t) * dery);
+    J[2][2] = -q * y * Rlog;
+    break;
+  case 3:                      /* right */
+    J[0][0] = -q * tpx * t * derx;
+    J[0][1] = -q * tpy * t * dery;
+    J[0][2] = q * Rlog;
+    J[1][0] = -q * (p + (1. - x * tpx * t) * derx);
+    J[1][1] = q * x * tpy * t * dery;
+    J[1][2] = -q * x * Rlog;
+    J[2][0] = q * y * tpx * t * derx;
+    J[2][1] = -q * (p + (1. - y * tpy * t) * dery);
+    J[2][2] = -q * y * Rlog;
+    break;
+  case 4:                      /* bottom */
+    J[0][0] = q * y * tpx * t * derx;
+    J[0][1] = -q * (p + (1. - y * tpy * t) * dery);
+    J[0][2] = -q * y * Rlog;
+    J[1][0] = -q * (p + (1. - x * tpx * t) * derx);
+    J[1][1] = q * x * tpy * t * dery;
+    J[1][2] = -q * x * Rlog;
+    J[2][0] = q * tpx * t * derx;
+    J[2][1] = q * tpy * t * dery;
+    J[2][2] = -q * Rlog;
+    break;
+  case 5:                      /* left */
+    J[0][0] = q * tpx * t * derx;
+    J[0][1] = q * tpy * t * dery;
+    J[0][2] = -q * Rlog;
+    J[1][0] = -q * (p + (1. - x * tpx * t) * derx);
+    J[1][1] = q * x * tpy * t * dery;
+    J[1][2] = -q * x * Rlog;
+    J[2][0] = -q * y * tpx * t * derx;
+    J[2][1] = q * (p + (1. - y * tpy * t) * dery);
+    J[2][2] = q * y * Rlog;
+    break;
+  default:
+    SC_CHECK_NOT_REACHED ();
+  }
+
+  /* compute the determinant */
+  detJ = J[0][0] * (J[1][1] * J[2][2] - J[1][2] * J[2][1])
+    + J[0][1] * (J[1][2] * J[2][0] - J[1][0] * J[2][2])
+    + J[0][2] * (J[1][0] * J[2][1] - J[1][1] * J[2][0]);
+  P4EST_ASSERT (detJ > 0.);
+
+  return detJ;
+}
+
 p8est_geometry_t   *
 p8est_geometry_new_sphere (double R2, double R1, double R0)
 {
@@ -480,10 +723,11 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
 
   /* variables useful for the center cube */
   sphere->Clength = R0 / sqrt (3.);
+  sphere->CdetJ = pow (R0 / sqrt (3.), 3.);
 
   builtin->geom.X = p8est_geometry_sphere_X;
-  builtin->geom.D = p8est_geometry_identity_D;
-  builtin->geom.J = p8est_geometry_identity_J;
+  builtin->geom.D = p8est_geometry_sphere_D;
+  builtin->geom.J = p8est_geometry_sphere_J;
   builtin->geom.Jit = p8est_geometry_Jit;
 
   return (p8est_geometry_t *) builtin;
