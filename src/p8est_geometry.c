@@ -403,17 +403,15 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
     q = R / sqrt (x * x + y * y + 1.);
   }
   else if (which_tree < 12) {   /* inner shell */
-    double              p, tpx, tpy;
+    double              p, tanx, tany;
 
     p = 2. - xyz[2];
-    tpx = (1. - p) * tan (xyz[0] * M_PI_4);
-    x = p * xyz[0] + tpx;
-    tpx += p;
-    tpy = (1. - p) * tan (xyz[1] * M_PI_4);
-    y = p * xyz[1] + tpy;
-    tpy += p;
+    tanx = tan (xyz[0] * M_PI_4);
+    tany = tan (xyz[1] * M_PI_4);
+    x = p * xyz[0] + (1. - p) * tanx;
+    y = p * xyz[1] + (1. - p) * tany;
     R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
-    q = R / sqrt (tpx * tpx + tpy * tpy + 1.);
+    q = R / sqrt (1. + (1. - p) * (tanx * tanx + tany * tany) + 2. * p);
   }
   else {                        /* center cube */
     XYZ[0] = xyz[0] * sphere->Clength;
@@ -490,13 +488,15 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
     cx = cos (xyz[0] * M_PI_4);
     derx = M_PI_4 / (cx * cx);
     x = tan (xyz[0] * M_PI_4);
+
     cy = cos (xyz[1] * M_PI_4);
     dery = M_PI_4 / (cy * cy);
     y = tan (xyz[1] * M_PI_4);
+
     R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
-    Rlog = sphere->R1log;
     t = 1. / (x * x + y * y + 1.);
     q = R * sqrt (t);
+    Rlog = sphere->R1log;
 
     J[0][0] = (1. - x * x * t);
     J[0][1] = -x * y * t;
@@ -510,34 +510,36 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
     factor = q * q * q * derx * dery * Rlog;
   }
   else if (which_tree < 12) {   /* inner shell */
-    const double        p = 2. - xyz[2];
-    double              tpx, tpy;
+    double              p, tanx, tany, tsqr;
+
+    p = 2. - xyz[2];
 
     cx = cos (xyz[0] * M_PI_4);
     derx = (1. - p) * M_PI_4 / (cx * cx);
-    tpx = (1. - p) * tan (xyz[0] * M_PI_4);
-    x = p * xyz[0] + tpx;
-    tpx += p;
+    tanx = tan (xyz[0] * M_PI_4);
+    x = p * xyz[0] + (1. - p) * tanx;
+
     cy = cos (xyz[1] * M_PI_4);
     dery = (1. - p) * M_PI_4 / (cy * cy);
-    tpy = (1. - p) * tan (xyz[1] * M_PI_4);
-    y = p * xyz[1] + tpy;
-    tpy += p;
-    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
-    Rlog = sphere->R0log;
-    t = 1. / (tpx * tpx + tpy * tpy + 1.);
-    q = R * sqrt (t);
+    tany = tan (xyz[1] * M_PI_4);
+    y = p * xyz[1] + (1. - p) * tany;
 
-    J[0][0] = p + (1. - x * tpx * t) * derx;
-    J[0][1] = -x * tpy * t * dery;
-    J[0][2] = x;
-    J[1][0] = -y * tpx * t * derx;
-    J[1][1] = p + (1. - y * tpy * t) * dery;
-    J[1][2] = y;
-    J[2][0] = -tpx * t * derx;
-    J[2][1] = -tpy * t * dery;
-    J[2][2] = 1.;
-    factor = q * q * q * Rlog;
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    tsqr = tanx * tanx + tany * tany;
+    t = 1. / (1. + (1. - p) * tsqr + 2. * p);
+    q = R * sqrt (t);
+    Rlog = sphere->R0log + t * (1. - .5 * tsqr);
+
+    J[0][0] = p + (1. - x * tanx * t) * derx;
+    J[0][1] = -x * tany * t * dery;
+    J[0][2] = x * Rlog - xyz[0] + tanx;
+    J[1][0] = -y * tanx * t * derx;
+    J[1][1] = p + (1. - y * tany * t) * dery;
+    J[1][2] = y * Rlog - xyz[1] + tany;
+    J[2][0] = -tanx * t * derx;
+    J[2][1] = -tany * t * dery;
+    J[2][2] = Rlog;
+    factor = q * q * q;
   }
   else {                        /* center cube */
     return sphere->CdetJ;
@@ -558,11 +560,28 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
                          p4est_topidx_t which_tree,
                          const double xyz[3], double J[3][3])
 {
+  /* *INDENT-OFF* HORRIBLE indent bug */
   const struct p8est_geometry_builtin_sphere *sphere
     = &((p8est_geometry_builtin_t *) geom)->p.sphere;
+  const int           mapJ[6][3] =
+    {{  0,  2,  1, },
+     {  0,  1,  2, },
+     {  0,  2,  1, },
+     {  1,  2,  0, },
+     {  1,  0,  2, },
+     {  1,  2,  0, }};
+  const double        mapM[6][3] =
+    {{  1,  1, -1, },
+     {  1,  1,  1, },
+     {  1, -1,  1, },
+     { -1, -1,  1, },
+     { -1, -1, -1, },
+     { -1,  1, -1, }};
+  /* *INDENT-ON* */
+  int                 pid, j0, j1, j2;
   double              Rlog;
   double              cx, cy, x, y, R, t, q;
-  double              p, tpx, tpy;
+  double              q0, q1, q2;
   double              derx, dery;
   double              detJ;
 
@@ -581,30 +600,73 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
-    p = 0.;
     cx = cos (xyz[0] * M_PI_4);
     derx = M_PI_4 / (cx * cx);
-    x = tpx = tan (xyz[0] * M_PI_4);
+    x = tan (xyz[0] * M_PI_4);
+
     cy = cos (xyz[1] * M_PI_4);
     dery = M_PI_4 / (cy * cy);
-    y = tpy = tan (xyz[1] * M_PI_4);
+    y = tan (xyz[1] * M_PI_4);
+
     R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    t = 1. / (x * x + y * y + 1.);
+    q = R * sqrt (t);
     Rlog = sphere->R1log;
+
+    pid = (int) which_tree;
+    j0 = mapJ[pid][0];
+    j1 = mapJ[pid][1];
+    j2 = mapJ[pid][2];
+    q0 = mapM[pid][0] * q;
+    q1 = mapM[pid][1] * q;
+    q2 = mapM[pid][2] * q;
+    J[j0][0] = q0 * (1. - x * x * t) * derx;
+    J[j0][1] = -q0 * x * y * t * dery;
+    J[j0][2] = q0 * x * Rlog;
+    J[j1][0] = -q1 * x * y * t * derx;
+    J[j1][1] = q1 * (1. - y * y * t) * dery;
+    J[j1][2] = q1 * y * Rlog;
+    J[j2][0] = -q2 * x * t * derx;
+    J[j2][1] = -q2 * y * t * dery;
+    J[j2][2] = q2 * Rlog;
   }
   else if (which_tree < 12) {   /* inner shell */
+    double              p, tanx, tany, tsqr;
+
     p = 2. - xyz[2];
+
     cx = cos (xyz[0] * M_PI_4);
     derx = (1. - p) * M_PI_4 / (cx * cx);
-    tpx = (1. - p) * tan (xyz[0] * M_PI_4);
-    x = p * xyz[0] + tpx;
-    tpx += p;
+    tanx = tan (xyz[0] * M_PI_4);
+    x = p * xyz[0] + (1. - p) * tanx;
+
     cy = cos (xyz[1] * M_PI_4);
     dery = (1. - p) * M_PI_4 / (cy * cy);
-    tpy = (1. - p) * tan (xyz[1] * M_PI_4);
-    y = p * xyz[1] + tpy;
-    tpy += p;
+    tany = tan (xyz[1] * M_PI_4);
+    y = p * xyz[1] + (1. - p) * tany;
+
     R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
-    Rlog = sphere->R0log;
+    tsqr = tanx * tanx + tany * tany;
+    t = 1. / (1. + (1. - p) * tsqr + 2. * p);
+    q = R * sqrt (t);
+    Rlog = sphere->R0log + t * (1. - .5 * tsqr);
+
+    pid = (int) which_tree - 6;
+    j0 = mapJ[pid][0];
+    j1 = mapJ[pid][1];
+    j2 = mapJ[pid][2];
+    q0 = mapM[pid][0] * q;
+    q1 = mapM[pid][1] * q;
+    q2 = mapM[pid][2] * q;
+    J[j0][0] = q0 * (p + (1. - x * tanx * t) * derx);
+    J[j0][1] = -q0 * x * tany * t * dery;
+    J[j0][2] = q0 * (x * Rlog - xyz[0] + tanx);
+    J[j1][0] = -q1 * y * tanx * t * derx;
+    J[j1][1] = q1 * (p + (1. - y * tany * t) * dery);
+    J[j1][2] = q1 * (y * Rlog - xyz[1] + tany);
+    J[j2][0] = -q2 * tanx * t * derx;
+    J[j2][1] = -q2 * tany * t * dery;
+    J[j2][2] = q2 * Rlog;
   }
   else {                        /* center cube */
     J[0][0] = J[1][1] = J[2][2] = sphere->Clength;
@@ -612,80 +674,6 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
     J[1][0] = J[2][1] = J[0][2] = 0.;
 
     return sphere->CdetJ;
-  }
-
-  t = 1. / (tpx * tpx + tpy * tpy + 1.);
-  q = R * sqrt (t);
-
-  switch (which_tree % 6) {
-  case 0:                      /* front */
-    J[0][0] = q * (p + (1. - x * tpx * t) * derx);
-    J[0][1] = -q * x * tpy * t * dery;
-    J[0][2] = q * x * Rlog;
-    J[1][0] = q * tpx * t * derx;
-    J[1][1] = q * tpy * t * dery;
-    J[1][2] = -q * Rlog;
-    J[2][0] = -q * y * tpx * t * derx;
-    J[2][1] = q * (p + (1. - y * tpy * t) * dery);
-    J[2][2] = q * y * Rlog;
-    break;
-  case 1:                      /* top */
-    J[0][0] = q * (p + (1. - x * tpx * t) * derx);
-    J[0][1] = -q * x * tpy * t * dery;
-    J[0][2] = q * x * Rlog;
-    J[1][0] = -q * y * tpx * t * derx;
-    J[1][1] = q * (p + (1. - y * tpy * t) * dery);
-    J[1][2] = q * y * Rlog;
-    J[2][0] = -q * tpx * t * derx;
-    J[2][1] = -q * tpy * t * dery;
-    J[2][2] = q * Rlog;
-    break;
-  case 2:                      /* back */
-    J[0][0] = q * (p + (1. - x * tpx * t) * derx);
-    J[0][1] = -q * x * tpy * t * dery;
-    J[0][2] = q * x * Rlog;
-    J[1][0] = -q * tpx * t * derx;
-    J[1][1] = -q * tpy * t * dery;
-    J[1][2] = q * Rlog;
-    J[2][0] = q * y * tpx * t * derx;
-    J[2][1] = -q * (p + (1. - y * tpy * t) * dery);
-    J[2][2] = -q * y * Rlog;
-    break;
-  case 3:                      /* right */
-    J[0][0] = -q * tpx * t * derx;
-    J[0][1] = -q * tpy * t * dery;
-    J[0][2] = q * Rlog;
-    J[1][0] = -q * (p + (1. - x * tpx * t) * derx);
-    J[1][1] = q * x * tpy * t * dery;
-    J[1][2] = -q * x * Rlog;
-    J[2][0] = q * y * tpx * t * derx;
-    J[2][1] = -q * (p + (1. - y * tpy * t) * dery);
-    J[2][2] = -q * y * Rlog;
-    break;
-  case 4:                      /* bottom */
-    J[0][0] = q * y * tpx * t * derx;
-    J[0][1] = -q * (p + (1. - y * tpy * t) * dery);
-    J[0][2] = -q * y * Rlog;
-    J[1][0] = -q * (p + (1. - x * tpx * t) * derx);
-    J[1][1] = q * x * tpy * t * dery;
-    J[1][2] = -q * x * Rlog;
-    J[2][0] = q * tpx * t * derx;
-    J[2][1] = q * tpy * t * dery;
-    J[2][2] = -q * Rlog;
-    break;
-  case 5:                      /* left */
-    J[0][0] = q * tpx * t * derx;
-    J[0][1] = q * tpy * t * dery;
-    J[0][2] = -q * Rlog;
-    J[1][0] = -q * (p + (1. - x * tpx * t) * derx);
-    J[1][1] = q * x * tpy * t * dery;
-    J[1][2] = -q * x * Rlog;
-    J[2][0] = -q * y * tpx * t * derx;
-    J[2][1] = q * (p + (1. - y * tpy * t) * dery);
-    J[2][2] = q * y * Rlog;
-    break;
-  default:
-    SC_CHECK_NOT_REACHED ();
   }
 
   /* compute the determinant */
