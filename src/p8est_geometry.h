@@ -24,18 +24,24 @@
 
 #include <p8est.h>
 
+/* Naming convention for different coordinate systems:
+ * xyz              physical domain
+ * abc              p4est vertex domain
+ * rst              reference domain [-1,1]^3
+ */
+
 typedef struct p8est_geometry p8est_geometry_t;
 
 typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
-                                           const double xyz[3],
-                                           double XYZ[3]);
+                                           const double abc[3],
+                                           double xyz[3]);
 typedef double      (*p8est_geometry_D_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
-                                           const double xyz[3]);
+                                           const double abc[3]);
 typedef double      (*p8est_geometry_J_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
-                                           const double xyz[3],
+                                           const double abc[3],
                                            double J[3][3]);
 
 struct p8est_geometry
@@ -51,29 +57,29 @@ struct p8est_geometry
  */
 double              p8est_geometry_Jit (p8est_geometry_t * geom,
                                         p4est_topidx_t which_tree,
-                                        const double xyz[3],
+                                        const double abc[3],
                                         double Jit[3][3]);
 
 /** The identity transformation.
  */
 void                p8est_geometry_identity_X (p8est_geometry_t * geom,
                                                p4est_topidx_t which_tree,
-                                               const double xyz[3],
-                                               double XYZ[3]);
+                                               const double abc[3],
+                                               double xyz[3]);
 
 /** The Jacobi determinant of the identity transformation.
  * \return          The determinant of the Jacobian.
  */
 double              p8est_geometry_identity_D (p8est_geometry_t * geom,
                                                p4est_topidx_t which_tree,
-                                               const double xyz[3]);
+                                               const double abc[3]);
 
 /** The Jacobian matrix of the identity transformation.
  * \return          The determinant of the Jacobian J.
  */
 double              p8est_geometry_identity_J (p8est_geometry_t * geom,
                                                p4est_topidx_t which_tree,
-                                               const double xyz[3],
+                                               const double abc[3],
                                                double J[3][3]);
 
 /** Create a geometry structure for the identity transformation.

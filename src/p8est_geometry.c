@@ -59,12 +59,12 @@ p8est_geometry_builtin_t;
 double
 p8est_geometry_Jit (p8est_geometry_t * geom,
                     p4est_topidx_t which_tree,
-                    const double xyz[3], double Jit[3][3])
+                    const double abc[3], double Jit[3][3])
 {
   double              J[3][3];
   double              detJ, idetJ;
 
-  idetJ = 1. / (detJ = geom->J (geom, which_tree, xyz, J));
+  idetJ = 1. / (detJ = geom->J (geom, which_tree, abc, J));
 
   Jit[0][0] = (J[1][1] * J[2][2] - J[1][2] * J[2][1]) * idetJ;
   Jit[0][1] = (J[1][2] * J[2][0] - J[1][0] * J[2][2]) * idetJ;
@@ -84,14 +84,14 @@ p8est_geometry_Jit (p8est_geometry_t * geom,
 void
 p8est_geometry_identity_X (p8est_geometry_t * geom,
                            p4est_topidx_t which_tree,
-                           const double xyz[3], double XYZ[3])
+                           const double abc[3], double xyz[3])
 {
-  memcpy (XYZ, xyz, 3 * sizeof (double));
+  memcpy (xyz, abc, 3 * sizeof (double));
 }
 
 double
 p8est_geometry_identity_D (p8est_geometry_t * geom,
-                           p4est_topidx_t which_tree, const double xyz[3])
+                           p4est_topidx_t which_tree, const double abc[3])
 {
   return 1.;
 }
@@ -99,7 +99,7 @@ p8est_geometry_identity_D (p8est_geometry_t * geom,
 double
 p8est_geometry_identity_J (p8est_geometry_t * geom,
                            p4est_topidx_t which_tree,
-                           const double xyz[3], double J[3][3])
+                           const double abc[3], double J[3][3])
 {
   J[0][0] = J[1][1] = J[2][2] = 1.;
   J[0][1] = J[1][2] = J[2][0] = 0.;
@@ -125,7 +125,7 @@ p8est_geometry_new_identity (void)
 static void
 p8est_geometry_shell_X (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree,
-                        const double xyz[3], double XYZ[3])
+                        const double abc[3], double xyz[3])
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
@@ -134,49 +134,49 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
-  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
 
-  /* transform xyz[0] and y in-place for nicer grading */
-  x = tan (xyz[0] * M_PI_4);
-  y = tan (xyz[1] * M_PI_4);
+  /* transform abc[0] and y in-place for nicer grading */
+  x = tan (abc[0] * M_PI_4);
+  y = tan (abc[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = shell->R1sqrbyR2 * pow (shell->R2byR1, xyz[2]);
+  R = shell->R1sqrbyR2 * pow (shell->R2byR1, abc[2]);
   q = R / sqrt (x * x + y * y + 1.);
 
   /* assign correct coordinates based on patch id */
   switch (which_tree / 4) {
   case 3:                      /* top */
-    XYZ[0] = +q * y;
-    XYZ[1] = -q * x;
-    XYZ[2] = +q;
+    xyz[0] = +q * y;
+    xyz[1] = -q * x;
+    xyz[2] = +q;
     break;
   case 2:                      /* left */
-    XYZ[0] = -q;
-    XYZ[1] = -q * x;
-    XYZ[2] = +q * y;
+    xyz[0] = -q;
+    xyz[1] = -q * x;
+    xyz[2] = +q * y;
     break;
   case 1:                      /* bottom */
-    XYZ[0] = -q * y;
-    XYZ[1] = -q * x;
-    XYZ[2] = -q;
+    xyz[0] = -q * y;
+    xyz[1] = -q * x;
+    xyz[2] = -q;
     break;
   case 0:                      /* right */
-    XYZ[0] = +q;
-    XYZ[1] = -q * x;
-    XYZ[2] = -q * y;
+    xyz[0] = +q;
+    xyz[1] = -q * x;
+    xyz[2] = -q * y;
     break;
   case 4:                      /* back */
-    XYZ[0] = -q * x;
-    XYZ[1] = +q;
-    XYZ[2] = +q * y;
+    xyz[0] = -q * x;
+    xyz[1] = +q;
+    xyz[2] = +q * y;
     break;
   case 5:                      /* front */
-    XYZ[0] = +q * x;
-    XYZ[1] = -q;
-    XYZ[2] = +q * y;
+    xyz[0] = +q * x;
+    xyz[1] = -q;
+    xyz[2] = +q * y;
     break;
   default:
     SC_CHECK_NOT_REACHED ();
@@ -185,7 +185,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
 
 static double
 p8est_geometry_shell_D (p8est_geometry_t * geom,
-                        p4est_topidx_t which_tree, const double xyz[3])
+                        p4est_topidx_t which_tree, const double abc[3])
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
@@ -197,24 +197,24 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
-  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
 
   /* transform x and y in-place for nicer grading */
-  cx = cos (xyz[0] * M_PI_4);
+  cx = cos (abc[0] * M_PI_4);
   derx = M_PI_4 / (cx * cx);
-  x = tan (xyz[0] * M_PI_4);
-  cy = cos (xyz[1] * M_PI_4);
+  x = tan (abc[0] * M_PI_4);
+  cy = cos (abc[1] * M_PI_4);
   dery = M_PI_4 / (cy * cy);
-  y = tan (xyz[1] * M_PI_4);
+  y = tan (abc[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = shell->R1sqrbyR2 * pow (shell->R2byR1, xyz[2]);
+  R = shell->R1sqrbyR2 * pow (shell->R2byR1, abc[2]);
   t = 1. / (x * x + y * y + 1.);
   q = R * sqrt (t);
 
-  /* compute Jacobian in XYZ space aligned to the octree modulo scaling */
+  /* compute Jacobian in xyz space aligned to the octree modulo scaling */
   J[0][0] = (1. - x * x * t);
   J[0][1] = -x * y * t;
   J[0][2] = x;
@@ -238,7 +238,7 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
 static double
 p8est_geometry_shell_J (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree,
-                        const double xyz[3], double J[3][3])
+                        const double abc[3], double J[3][3])
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
@@ -250,24 +250,24 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
-  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
 
   /* transform x and y in-place for nicer grading */
-  cx = cos (xyz[0] * M_PI_4);
+  cx = cos (abc[0] * M_PI_4);
   derx = M_PI_4 / (cx * cx);
-  x = tan (xyz[0] * M_PI_4);
-  cy = cos (xyz[1] * M_PI_4);
+  x = tan (abc[0] * M_PI_4);
+  cy = cos (abc[1] * M_PI_4);
   dery = M_PI_4 / (cy * cy);
-  y = tan (xyz[1] * M_PI_4);
+  y = tan (abc[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = shell->R1sqrbyR2 * pow (shell->R2byR1, xyz[2]);
+  R = shell->R1sqrbyR2 * pow (shell->R2byR1, abc[2]);
   t = 1. / (x * x + y * y + 1.);
   q = R * sqrt (t);
 
-  /* compute Jacobian in XYZ space aligned to the octree */
+  /* compute Jacobian in xyz space aligned to the octree */
   /* assign correct coordinates based on patch id */
   switch (which_tree / 4) {
   case 3:                      /* top */
@@ -376,7 +376,7 @@ p8est_geometry_new_shell (double R2, double R1)
 static void
 p8est_geometry_sphere_X (p8est_geometry_t * geom,
                          p4est_topidx_t which_tree,
-                         const double xyz[3], double XYZ[3])
+                         const double abc[3], double xyz[3])
 {
   const struct p8est_geometry_builtin_sphere *sphere
     = &((p8est_geometry_builtin_t *) geom)->p.sphere;
@@ -385,38 +385,38 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
-  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
 #ifdef P4EST_DEBUG
   if (which_tree < 12) {
-    P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
   }
   else {
-    P4EST_ASSERT (xyz[2] < 1.0 + 1e-12 && xyz[2] > -1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 1.0 + 1e-12 && abc[2] > -1.0 - 1e-12);
   }
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
-    x = tan (xyz[0] * M_PI_4);
-    y = tan (xyz[1] * M_PI_4);
-    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    x = tan (abc[0] * M_PI_4);
+    y = tan (abc[1] * M_PI_4);
+    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
     q = R / sqrt (x * x + y * y + 1.);
   }
   else if (which_tree < 12) {   /* inner shell */
     double              p, tanx, tany;
 
-    p = 2. - xyz[2];
-    tanx = tan (xyz[0] * M_PI_4);
-    tany = tan (xyz[1] * M_PI_4);
-    x = p * xyz[0] + (1. - p) * tanx;
-    y = p * xyz[1] + (1. - p) * tany;
-    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    p = 2. - abc[2];
+    tanx = tan (abc[0] * M_PI_4);
+    tany = tan (abc[1] * M_PI_4);
+    x = p * abc[0] + (1. - p) * tanx;
+    y = p * abc[1] + (1. - p) * tany;
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, abc[2]);
     q = R / sqrt (1. + (1. - p) * (tanx * tanx + tany * tany) + 2. * p);
   }
   else {                        /* center cube */
-    XYZ[0] = xyz[0] * sphere->Clength;
-    XYZ[1] = xyz[1] * sphere->Clength;
-    XYZ[2] = xyz[2] * sphere->Clength;
+    xyz[0] = abc[0] * sphere->Clength;
+    xyz[1] = abc[1] * sphere->Clength;
+    xyz[2] = abc[2] * sphere->Clength;
 
     return;
   }
@@ -424,34 +424,34 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   /* assign correct coordinates based on direction */
   switch (which_tree % 6) {
   case 0:                      /* front */
-    XYZ[0] = +q * x;
-    XYZ[1] = -q;
-    XYZ[2] = +q * y;
+    xyz[0] = +q * x;
+    xyz[1] = -q;
+    xyz[2] = +q * y;
     break;
   case 1:                      /* top */
-    XYZ[0] = +q * x;
-    XYZ[1] = +q * y;
-    XYZ[2] = +q;
+    xyz[0] = +q * x;
+    xyz[1] = +q * y;
+    xyz[2] = +q;
     break;
   case 2:                      /* back */
-    XYZ[0] = +q * x;
-    XYZ[1] = +q;
-    XYZ[2] = -q * y;
+    xyz[0] = +q * x;
+    xyz[1] = +q;
+    xyz[2] = -q * y;
     break;
   case 3:                      /* right */
-    XYZ[0] = +q;
-    XYZ[1] = -q * x;
-    XYZ[2] = -q * y;
+    xyz[0] = +q;
+    xyz[1] = -q * x;
+    xyz[2] = -q * y;
     break;
   case 4:                      /* bottom */
-    XYZ[0] = -q * y;
-    XYZ[1] = -q * x;
-    XYZ[2] = -q;
+    xyz[0] = -q * y;
+    xyz[1] = -q * x;
+    xyz[2] = -q;
     break;
   case 5:                      /* left */
-    XYZ[0] = -q;
-    XYZ[1] = -q * x;
-    XYZ[2] = +q * y;
+    xyz[0] = -q;
+    xyz[1] = -q * x;
+    xyz[2] = +q * y;
     break;
   default:
     SC_CHECK_NOT_REACHED ();
@@ -460,7 +460,7 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
 
 static double
 p8est_geometry_sphere_D (p8est_geometry_t * geom,
-                         p4est_topidx_t which_tree, const double xyz[3])
+                         p4est_topidx_t which_tree, const double abc[3])
 {
   const struct p8est_geometry_builtin_sphere *sphere
     = &((p8est_geometry_builtin_t *) geom)->p.sphere;
@@ -473,27 +473,27 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
-  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
 #ifdef P4EST_DEBUG
   if (which_tree < 12) {
-    P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
   }
   else {
-    P4EST_ASSERT (xyz[2] < 1.0 + 1e-12 && xyz[2] > -1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 1.0 + 1e-12 && abc[2] > -1.0 - 1e-12);
   }
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
-    cx = cos (xyz[0] * M_PI_4);
+    cx = cos (abc[0] * M_PI_4);
     derx = M_PI_4 / (cx * cx);
-    x = tan (xyz[0] * M_PI_4);
+    x = tan (abc[0] * M_PI_4);
 
-    cy = cos (xyz[1] * M_PI_4);
+    cy = cos (abc[1] * M_PI_4);
     dery = M_PI_4 / (cy * cy);
-    y = tan (xyz[1] * M_PI_4);
+    y = tan (abc[1] * M_PI_4);
 
-    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
     t = 1. / (x * x + y * y + 1.);
     q = R * sqrt (t);
     Rlog = sphere->R1log;
@@ -512,19 +512,19 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
   else if (which_tree < 12) {   /* inner shell */
     double              p, tanx, tany, tsqr;
 
-    p = 2. - xyz[2];
+    p = 2. - abc[2];
 
-    cx = cos (xyz[0] * M_PI_4);
+    cx = cos (abc[0] * M_PI_4);
     derx = (1. - p) * M_PI_4 / (cx * cx);
-    tanx = tan (xyz[0] * M_PI_4);
-    x = p * xyz[0] + (1. - p) * tanx;
+    tanx = tan (abc[0] * M_PI_4);
+    x = p * abc[0] + (1. - p) * tanx;
 
-    cy = cos (xyz[1] * M_PI_4);
+    cy = cos (abc[1] * M_PI_4);
     dery = (1. - p) * M_PI_4 / (cy * cy);
-    tany = tan (xyz[1] * M_PI_4);
-    y = p * xyz[1] + (1. - p) * tany;
+    tany = tan (abc[1] * M_PI_4);
+    y = p * abc[1] + (1. - p) * tany;
 
-    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, abc[2]);
     tsqr = tanx * tanx + tany * tany;
     t = 1. / (1. + (1. - p) * tsqr + 2. * p);
     q = R * sqrt (t);
@@ -532,10 +532,10 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
 
     J[0][0] = p + (1. - x * tanx * t) * derx;
     J[0][1] = -x * tany * t * dery;
-    J[0][2] = x * Rlog - xyz[0] + tanx;
+    J[0][2] = x * Rlog - abc[0] + tanx;
     J[1][0] = -y * tanx * t * derx;
     J[1][1] = p + (1. - y * tany * t) * dery;
-    J[1][2] = y * Rlog - xyz[1] + tany;
+    J[1][2] = y * Rlog - abc[1] + tany;
     J[2][0] = -tanx * t * derx;
     J[2][1] = -tany * t * dery;
     J[2][2] = Rlog;
@@ -558,7 +558,7 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
 static double
 p8est_geometry_sphere_J (p8est_geometry_t * geom,
                          p4est_topidx_t which_tree,
-                         const double xyz[3], double J[3][3])
+                         const double abc[3], double J[3][3])
 {
   /* *INDENT-OFF* HORRIBLE indent bug */
   const struct p8est_geometry_builtin_sphere *sphere
@@ -588,27 +588,27 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
-  P4EST_ASSERT (xyz[0] < 1.0 + 1e-12 && xyz[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (xyz[1] < 1.0 + 1e-12 && xyz[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
 #ifdef P4EST_DEBUG
   if (which_tree < 12) {
-    P4EST_ASSERT (xyz[2] < 2.0 + 1e-12 && xyz[2] > 1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
   }
   else {
-    P4EST_ASSERT (xyz[2] < 1.0 + 1e-12 && xyz[2] > -1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 1.0 + 1e-12 && abc[2] > -1.0 - 1e-12);
   }
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
-    cx = cos (xyz[0] * M_PI_4);
+    cx = cos (abc[0] * M_PI_4);
     derx = M_PI_4 / (cx * cx);
-    x = tan (xyz[0] * M_PI_4);
+    x = tan (abc[0] * M_PI_4);
 
-    cy = cos (xyz[1] * M_PI_4);
+    cy = cos (abc[1] * M_PI_4);
     dery = M_PI_4 / (cy * cy);
-    y = tan (xyz[1] * M_PI_4);
+    y = tan (abc[1] * M_PI_4);
 
-    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, xyz[2]);
+    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
     t = 1. / (x * x + y * y + 1.);
     q = R * sqrt (t);
     Rlog = sphere->R1log;
@@ -633,19 +633,19 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
   else if (which_tree < 12) {   /* inner shell */
     double              p, tanx, tany, tsqr;
 
-    p = 2. - xyz[2];
+    p = 2. - abc[2];
 
-    cx = cos (xyz[0] * M_PI_4);
+    cx = cos (abc[0] * M_PI_4);
     derx = (1. - p) * M_PI_4 / (cx * cx);
-    tanx = tan (xyz[0] * M_PI_4);
-    x = p * xyz[0] + (1. - p) * tanx;
+    tanx = tan (abc[0] * M_PI_4);
+    x = p * abc[0] + (1. - p) * tanx;
 
-    cy = cos (xyz[1] * M_PI_4);
+    cy = cos (abc[1] * M_PI_4);
     dery = (1. - p) * M_PI_4 / (cy * cy);
-    tany = tan (xyz[1] * M_PI_4);
-    y = p * xyz[1] + (1. - p) * tany;
+    tany = tan (abc[1] * M_PI_4);
+    y = p * abc[1] + (1. - p) * tany;
 
-    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, xyz[2]);
+    R = sphere->R0sqrbyR1 * pow (sphere->R1byR0, abc[2]);
     tsqr = tanx * tanx + tany * tany;
     t = 1. / (1. + (1. - p) * tsqr + 2. * p);
     q = R * sqrt (t);
@@ -660,10 +660,10 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
     q2 = mapM[pid][2] * q;
     J[j0][0] = q0 * (p + (1. - x * tanx * t) * derx);
     J[j0][1] = -q0 * x * tany * t * dery;
-    J[j0][2] = q0 * (x * Rlog - xyz[0] + tanx);
+    J[j0][2] = q0 * (x * Rlog - abc[0] + tanx);
     J[j1][0] = -q1 * y * tanx * t * derx;
     J[j1][1] = q1 * (p + (1. - y * tany * t) * dery);
-    J[j1][2] = q1 * (y * Rlog - xyz[1] + tany);
+    J[j1][2] = q1 * (y * Rlog - abc[1] + tany);
     J[j2][0] = -q2 * tanx * t * derx;
     J[j2][1] = -q2 * tany * t * dery;
     J[j2][2] = q2 * Rlog;
