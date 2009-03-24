@@ -134,9 +134,9 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
-  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
 
   /* transform abc[0] and y in-place for nicer grading */
   x = tan (abc[0] * M_PI_4);
@@ -197,9 +197,9 @@ p8est_geometry_shell_D (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
-  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
 
   /* transform x and y in-place for nicer grading */
   cx = cos (abc[0] * M_PI_4);
@@ -250,9 +250,9 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
-  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
 
   /* transform x and y in-place for nicer grading */
   cx = cos (abc[0] * M_PI_4);
@@ -385,14 +385,14 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
-  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
 #ifdef P4EST_DEBUG
   if (which_tree < 12) {
-    P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
   }
   else {
-    P4EST_ASSERT (abc[2] < 1.0 + 1e-12 && abc[2] > -1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 1.0 + SC_1000_EPS && abc[2] > -1.0 - SC_1000_EPS);
   }
 #endif /* P4EST_DEBUG */
 
@@ -473,14 +473,14 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
-  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
 #ifdef P4EST_DEBUG
   if (which_tree < 12) {
-    P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
   }
   else {
-    P4EST_ASSERT (abc[2] < 1.0 + 1e-12 && abc[2] > -1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 1.0 + SC_1000_EPS && abc[2] > -1.0 - SC_1000_EPS);
   }
 #endif /* P4EST_DEBUG */
 
@@ -588,14 +588,14 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
-  P4EST_ASSERT (abc[0] < 1.0 + 1e-12 && abc[0] > -1.0 - 1e-12);
-  P4EST_ASSERT (abc[1] < 1.0 + 1e-12 && abc[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
 #ifdef P4EST_DEBUG
   if (which_tree < 12) {
-    P4EST_ASSERT (abc[2] < 2.0 + 1e-12 && abc[2] > 1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
   }
   else {
-    P4EST_ASSERT (abc[2] < 1.0 + 1e-12 && abc[2] > -1.0 - 1e-12);
+    P4EST_ASSERT (abc[2] < 1.0 + SC_1000_EPS && abc[2] > -1.0 - SC_1000_EPS);
   }
 #endif /* P4EST_DEBUG */
 
