@@ -32,6 +32,7 @@
 
 typedef struct p8est_geometry p8est_geometry_t;
 
+/* Forward transformations return Jacobi determinant */
 typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
                                            const double abc[3],
@@ -44,12 +45,23 @@ typedef double      (*p8est_geometry_J_t) (p8est_geometry_t * geom,
                                            const double abc[3],
                                            double J[3][3]);
 
+/* Inverse transformation returns -1 on error */
+typedef int         (*p8est_geometry_I_t) (p8est_geometry_t * geom,
+                                           p4est_topidx_t which_tree,
+                                           const double txyz[3],
+                                           double cabc[8][3],
+                                           double abc[3], double rst[3]);
+
 struct p8est_geometry
 {
   p8est_geometry_X_t  X;
   p8est_geometry_D_t  D;
   p8est_geometry_J_t  J, Jit;   /* both return the determinant of J */
+  p8est_geometry_I_t  I;        /* returns -1 on error */
 };
+
+/** Number of allowed Newton steps in p8est_geometry_I */
+extern int          p8est_geometry_max_newton;
 
 /** Compute the inverse transpose Jacobian by calling
  * the geom->J function and transpose inverting the result.
@@ -59,6 +71,20 @@ double              p8est_geometry_Jit (p8est_geometry_t * geom,
                                         p4est_topidx_t which_tree,
                                         const double abc[3],
                                         double Jit[3][3]);
+
+/** Approximate the inverse transformation by Newton iterations.
+ * The number of allowed Newton steps is p8est_geometry_max_newton.
+ * \param [in] txyz Physical target coordinates.
+ * \param [in] cabc Corners of a warped hexahedron not larger than the octree.
+ * \param [out] abc Solution such that X(which_tree, abc) \approx txyz.
+ * \param [out] rst Solution in reference coordinates wrt. the hexahedron cabc.
+ * \return          The number of Newton iterations or -1 on failure.
+ */
+int                 p8est_geometry_I (p8est_geometry_t * geom,
+                                      p4est_topidx_t which_tree,
+                                      const double txyz[3],
+                                      double cabc[8][3],
+                                      double abc[3], double rst[3]);
 
 /** The identity transformation.
  */

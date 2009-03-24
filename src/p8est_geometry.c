@@ -56,6 +56,8 @@ typedef struct p8est_geometry_builtin
 }
 p8est_geometry_builtin_t;
 
+int                 p8est_geometry_max_newton = 20;
+
 double
 p8est_geometry_Jit (p8est_geometry_t * geom,
                     p4est_topidx_t which_tree,
@@ -79,6 +81,138 @@ p8est_geometry_Jit (p8est_geometry_t * geom,
   Jit[2][2] = (J[0][0] * J[1][1] - J[1][0] * J[0][1]) * idetJ;
 
   return detJ;
+}
+
+int
+p8est_geometry_I (p8est_geometry_t * geom, p4est_topidx_t which_tree,
+                  const double txyz[3], double cabc[8][3],
+                  double abc[3], double rst[3])
+{
+  int                 i, j, k;
+  int                 ri, si, ti;
+  double              w[3], factor, xyz[3], rhs[3], residual;
+  double              Jit[3][3], habc[3], d[3], dfactor[3], AR[3][3];
+  double              idetAR, ARit[3][3], step[3], steplength;
+  const double       *vkd;
+
+  P4EST_VERBOSEF ("Target location XYZ %g %g %g tree %lld\n",
+                  txyz[0], txyz[1], txyz[2], (long long) which_tree);
+
+  /* use the center of this octree as initial guess */
+  rst[0] = rst[1] = rst[2] = 0.;
+
+  /* run Newton's method on the geometry transformation */
+  residual = 1.;
+  steplength = 1.;
+  for (k = 0;; ++k) {
+    P4EST_LDEBUGF ("Guess %d is RST %g %g %g\n", k, rst[0], rst[1], rst[2]);
+
+    /* transform reference coordinate into physical space */
+    abc[0] = abc[1] = abc[2] = 0.;
+    for (ti = 0; ti < 2; ++ti) {
+      w[2] = 1. + (2 * ti - 1.) * rst[2];
+      for (si = 0; si < 2; ++si) {
+        w[1] = 1. + (2 * si - 1.) * rst[1];
+        for (ri = 0; ri < 2; ++ri) {
+          w[0] = 1. + (2 * ri - 1.) * rst[0];
+          vkd = cabc[4 * ti + 2 * si + ri];
+          factor = .125 * w[0] * w[1] * w[2];
+          abc[0] += factor * vkd[0];
+          abc[1] += factor * vkd[1];
+          abc[2] += factor * vkd[2];
+        }
+      }
+    }
+    geom->X (geom, which_tree, abc, xyz);
+
+    /* compute residual in physical space */
+    rhs[0] = xyz[0] - txyz[0];
+    rhs[1] = xyz[1] - txyz[1];
+    rhs[2] = xyz[2] - txyz[2];
+    residual = sqrt (rhs[0] * rhs[0] + rhs[1] * rhs[1] + rhs[2] * rhs[2]);
+    P4EST_LDEBUGF ("Guess %d is XYZ %g %g %g residual %g\n",
+                   k, xyz[0], xyz[1], xyz[2], residual);
+
+    /* delayed examination of stopping criterion */
+    if (steplength < 1. / P8EST_ROOT_LEN) {
+      break;
+    }
+    if (k > p8est_geometry_max_newton) {
+      P4EST_NOTICE ("Geometry inverse transformation failed\n");
+      return -1;
+    }
+
+    /* apply inverse Jacobian to residual */
+    (void) geom->Jit (geom, which_tree, abc, Jit);      /* physical to tree */
+    habc[0] = Jit[0][0] * rhs[0] + Jit[1][0] * rhs[1] + Jit[2][0] * rhs[2];
+    habc[1] = Jit[0][1] * rhs[0] + Jit[1][1] * rhs[1] + Jit[2][1] * rhs[2];
+    habc[2] = Jit[0][2] * rhs[0] + Jit[1][2] * rhs[1] + Jit[2][2] * rhs[2];
+
+    memset (AR, 0, 3 * 3 * sizeof (double));    /* tree to reference */
+    for (ti = 0; ti < 2; ++ti) {
+      d[2] = 2 * ti - 1.;
+      w[2] = 1. + d[2] * rst[2];
+      for (si = 0; si < 2; ++si) {
+        d[1] = 2 * si - 1.;
+        w[1] = 1. + d[1] * rst[1];
+        for (ri = 0; ri < 2; ++ri) {
+          d[0] = 2 * ri - 1.;
+          w[0] = 1. + d[0] * rst[0];
+          vkd = cabc[4 * ti + 2 * si + ri];
+          dfactor[0] = .125 * d[0] * w[1] * w[2];
+          dfactor[1] = .125 * w[0] * d[1] * w[2];
+          dfactor[2] = .125 * w[0] * w[1] * d[2];
+          for (i = 0; i < 3; ++i) {
+            for (j = 0; j < 3; ++j) {
+              AR[i][j] += dfactor[j] * vkd[i];
+            }
+          }
+        }
+      }
+    }
+    idetAR = 1. / (AR[0][0] * (AR[1][1] * AR[2][2] - AR[1][2] * AR[2][1]) +
+                   AR[0][1] * (AR[1][2] * AR[2][0] - AR[1][0] * AR[2][2]) +
+                   AR[0][2] * (AR[1][0] * AR[2][1] - AR[1][1] * AR[2][0]));
+
+    ARit[0][0] = (AR[1][1] * AR[2][2] - AR[1][2] * AR[2][1]) * idetAR;
+    ARit[0][1] = (AR[1][2] * AR[2][0] - AR[1][0] * AR[2][2]) * idetAR;
+    ARit[0][2] = (AR[1][0] * AR[2][1] - AR[1][1] * AR[2][0]) * idetAR;
+
+    ARit[1][0] = (AR[0][2] * AR[2][1] - AR[0][1] * AR[2][2]) * idetAR;
+    ARit[1][1] = (AR[0][0] * AR[2][2] - AR[0][2] * AR[2][0]) * idetAR;
+    ARit[1][2] = (AR[0][1] * AR[2][0] - AR[0][0] * AR[2][1]) * idetAR;
+
+    ARit[2][0] = (AR[0][1] * AR[1][2] - AR[1][1] * AR[0][2]) * idetAR;
+    ARit[2][1] = (AR[0][2] * AR[1][0] - AR[1][2] * AR[0][0]) * idetAR;
+    ARit[2][2] = (AR[0][0] * AR[1][1] - AR[1][0] * AR[0][1]) * idetAR;
+
+    /* compute step in reference tree */
+    step[0] =
+      ARit[0][0] * habc[0] + ARit[1][0] * habc[1] + ARit[2][0] * habc[2];
+    step[1] =
+      ARit[0][1] * habc[0] + ARit[1][1] * habc[1] + ARit[2][1] * habc[2];
+    step[2] =
+      ARit[0][2] * habc[0] + ARit[1][2] * habc[1] + ARit[2][2] * habc[2];
+    steplength =
+      sqrt (step[0] * step[0] + step[1] * step[1] + step[2] * step[2]);
+    P4EST_LDEBUGF ("Step %d is RST %g %g %g length %g\n", k,
+                   -step[0], -step[1], -step[2], steplength);
+
+    rst[0] -= step[0];
+    rst[1] -= step[1];
+    rst[2] -= step[2];
+    P4EST_LDEBUGF ("Attempt %d is RST %g %g %g\n", k, rst[0], rst[1], rst[2]);
+
+    /* make sure we don't leave the reference tree */
+    rst[0] = SC_MIN (rst[0], +1.);
+    rst[0] = SC_MAX (rst[0], -1.);
+    rst[1] = SC_MIN (rst[1], +1.);
+    rst[1] = SC_MAX (rst[1], -1.);
+    rst[2] = SC_MIN (rst[2], +1.);
+    rst[2] = SC_MAX (rst[2], -1.);
+  }
+
+  return k;
 }
 
 void
@@ -118,6 +252,7 @@ p8est_geometry_new_identity (void)
   geom->X = p8est_geometry_identity_X;
   geom->D = p8est_geometry_identity_D;
   geom->J = geom->Jit = p8est_geometry_identity_J;      /* identical here */
+  geom->I = p8est_geometry_I;
 
   return geom;
 }
@@ -369,6 +504,7 @@ p8est_geometry_new_shell (double R2, double R1)
   builtin->geom.D = p8est_geometry_shell_D;
   builtin->geom.J = p8est_geometry_shell_J;
   builtin->geom.Jit = p8est_geometry_Jit;
+  builtin->geom.I = p8est_geometry_I;
 
   return (p8est_geometry_t *) builtin;
 }
@@ -717,6 +853,7 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
   builtin->geom.D = p8est_geometry_sphere_D;
   builtin->geom.J = p8est_geometry_sphere_J;
   builtin->geom.Jit = p8est_geometry_Jit;
+  builtin->geom.I = p8est_geometry_I;
 
   return (p8est_geometry_t *) builtin;
 }
