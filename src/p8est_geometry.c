@@ -535,9 +535,24 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
+    const double        z_cmb = abc[2] - (1. + 5. / 8.);
+    const double        dist = 1. / 8.; /* keep it inside the tree */
+
     x = tan (abc[0] * M_PI_4);
     y = tan (abc[1] * M_PI_4);
-    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
+    if (fabs (z_cmb) < dist) {
+      /* correct z grading for the PREM model */
+      const double        correction = 0.008873;
+
+      R = sphere->R1sqrbyR2 * pow (sphere->R2byR1,
+                                   abc[2] + correction *
+                                   exp (1. / (dist * dist) -
+                                        1. / ((z_cmb + dist) *
+                                              (dist - z_cmb))));
+    }
+    else {
+      R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
+    }
     q = R / sqrt (x * x + y * y + 1.);
   }
   else if (which_tree < 12) {   /* inner shell */
@@ -623,6 +638,10 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
+    const double        z_cmb = abc[2] - (1. + 5. / 8.);
+    const double        dist = 1. / 8.; /* keep it inside the tree */
+    double              derz;
+
     cx = cos (abc[0] * M_PI_4);
     derx = M_PI_4 / (cx * cx);
     x = tan (abc[0] * M_PI_4);
@@ -631,7 +650,23 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
     dery = M_PI_4 / (cy * cy);
     y = tan (abc[1] * M_PI_4);
 
-    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
+    if (fabs (z_cmb) < dist) {
+      /* correct z grading for the PREM model */
+      const double        correction = 0.008873;
+      const double        z_cmb_plus = z_cmb + dist;
+      const double        z_cmb_minus = dist - z_cmb;
+      const double        z_cmb_both = z_cmb_plus * z_cmb_minus;
+      const double        func = correction * exp (1. / (dist * dist) -
+                                                   1. / z_cmb_both);
+
+      R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2] + func);
+      derz =
+        1. + func * 1. / z_cmb_both * (1. / z_cmb_plus - 1. / z_cmb_minus);
+    }
+    else {
+      R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
+      derz = 1.;
+    }
     t = 1. / (x * x + y * y + 1.);
     q = R * sqrt (t);
     Rlog = sphere->R1log;
@@ -645,7 +680,7 @@ p8est_geometry_sphere_D (p8est_geometry_t * geom,
     J[2][0] = -x * t;
     J[2][1] = -y * t;
     J[2][2] = 1.;
-    factor = q * q * q * derx * dery * Rlog;
+    factor = q * q * q * derx * dery * derz * Rlog;
   }
   else if (which_tree < 12) {   /* inner shell */
     double              p, tanx, tany, tsqr;
@@ -738,6 +773,10 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
 #endif /* P4EST_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
+    const double        z_cmb = abc[2] - (1. + 5. / 8.);
+    const double        dist = 1. / 8.; /* keep it inside the tree */
+    double              derz;
+
     cx = cos (abc[0] * M_PI_4);
     derx = M_PI_4 / (cx * cx);
     x = tan (abc[0] * M_PI_4);
@@ -746,10 +785,26 @@ p8est_geometry_sphere_J (p8est_geometry_t * geom,
     dery = M_PI_4 / (cy * cy);
     y = tan (abc[1] * M_PI_4);
 
-    R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
+    if (fabs (z_cmb) < dist) {
+      /* correct z grading for the PREM model */
+      const double        correction = 0.008873;
+      const double        z_cmb_plus = z_cmb + dist;
+      const double        z_cmb_minus = dist - z_cmb;
+      const double        z_cmb_both = z_cmb_plus * z_cmb_minus;
+      const double        func = correction * exp (1. / (dist * dist) -
+                                                   1. / z_cmb_both);
+
+      R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2] + func);
+      derz =
+        1. + func * 1. / z_cmb_both * (1. / z_cmb_plus - 1. / z_cmb_minus);
+    }
+    else {
+      R = sphere->R1sqrbyR2 * pow (sphere->R2byR1, abc[2]);
+      derz = 1.;
+    }
     t = 1. / (x * x + y * y + 1.);
     q = R * sqrt (t);
-    Rlog = sphere->R1log;
+    Rlog = sphere->R1log * derz;
 
     pid = (int) which_tree;
     j0 = mapJ[pid][0];
