@@ -54,6 +54,7 @@ typedef int         (*p8est_geometry_I_t) (p8est_geometry_t * geom,
 
 struct p8est_geometry
 {
+  const char         *name;     /* use prefixes to be namespace clean */
   p8est_geometry_X_t  X;
   p8est_geometry_D_t  D;
   p8est_geometry_J_t  J, Jit;   /* both return the determinant of J */

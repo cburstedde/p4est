@@ -249,6 +249,7 @@ p8est_geometry_new_identity (void)
 
   geom = P4EST_ALLOC (p8est_geometry_t, 1);
 
+  geom->name = "p8est:identity";
   geom->X = p8est_geometry_identity_X;
   geom->D = p8est_geometry_identity_D;
   geom->J = geom->Jit = p8est_geometry_identity_J;      /* identical here */
@@ -500,6 +501,7 @@ p8est_geometry_new_shell (double R2, double R1)
   shell->R1sqrbyR2 = R1 * R1 / R2;
   shell->Rlog = log (R2 / R1);
 
+  builtin->geom.name = "p8est:shell";
   builtin->geom.X = p8est_geometry_shell_X;
   builtin->geom.D = p8est_geometry_shell_D;
   builtin->geom.J = p8est_geometry_shell_J;
@@ -849,6 +851,7 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
   sphere->Clength = R0 / sqrt (3.);
   sphere->CdetJ = pow (R0 / sqrt (3.), 3.);
 
+  builtin->geom.name = "p8est:sphere";
   builtin->geom.X = p8est_geometry_sphere_X;
   builtin->geom.D = p8est_geometry_sphere_D;
   builtin->geom.J = p8est_geometry_sphere_J;
