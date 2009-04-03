@@ -25,7 +25,7 @@
 #include <p8est.h>
 
 /* Naming convention for different coordinate systems:
- * xyz              physical domain
+ * xyz              computational domain
  * abc              p4est vertex domain
  * rst              reference domain [-1,1]^3
  */
@@ -75,7 +75,7 @@ double              p8est_geometry_Jit (p8est_geometry_t * geom,
 
 /** Approximate the inverse transformation by Newton iterations.
  * The number of allowed Newton steps is p8est_geometry_max_newton.
- * \param [in] txyz Physical target coordinates.
+ * \param [in] txyz Computational domain target coordinates.
  * \param [in] cabc Corners of a warped hexahedron not larger than the octree.
  * \param [out] abc Solution such that X(which_tree, abc) \approx txyz.
  * \param [out] rst Solution in reference coordinates wrt. the hexahedron cabc.

@@ -107,7 +107,7 @@ p8est_geometry_I (p8est_geometry_t * geom, p4est_topidx_t which_tree,
   for (k = 0;; ++k) {
     P4EST_LDEBUGF ("Guess %d is RST %g %g %g\n", k, rst[0], rst[1], rst[2]);
 
-    /* transform reference coordinate into physical space */
+    /* transform reference coordinate into computational domain */
     abc[0] = abc[1] = abc[2] = 0.;
     for (ti = 0; ti < 2; ++ti) {
       w[2] = 1. + (2 * ti - 1.) * rst[2];
@@ -125,7 +125,7 @@ p8est_geometry_I (p8est_geometry_t * geom, p4est_topidx_t which_tree,
     }
     geom->X (geom, which_tree, abc, xyz);
 
-    /* compute residual in physical space */
+    /* compute residual in computational domain */
     rhs[0] = xyz[0] - txyz[0];
     rhs[1] = xyz[1] - txyz[1];
     rhs[2] = xyz[2] - txyz[2];
@@ -143,7 +143,7 @@ p8est_geometry_I (p8est_geometry_t * geom, p4est_topidx_t which_tree,
     }
 
     /* apply inverse Jacobian to residual */
-    (void) geom->Jit (geom, which_tree, abc, Jit);      /* physical to tree */
+    (void) geom->Jit (geom, which_tree, abc, Jit);      /* domain to tree */
     habc[0] = Jit[0][0] * rhs[0] + Jit[1][0] * rhs[1] + Jit[2][0] * rhs[2];
     habc[1] = Jit[0][1] * rhs[0] + Jit[1][1] * rhs[1] + Jit[2][1] * rhs[2];
     habc[2] = Jit[0][2] * rhs[0] + Jit[1][2] * rhs[1] + Jit[2][2] * rhs[2];
