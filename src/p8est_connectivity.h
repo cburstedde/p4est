@@ -258,6 +258,13 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
+/** An m by n by p array with periodicity in x, y, and z if
+ * periodic_a, periodic_b, and periodic_c are true, respectively.
+ */
+p8est_connectivity_t *p8est_connectivity_new_brick
+  (p4est_topidx_t m, p4est_topidx_t n, p4est_topidx_t p,
+   bool periodic_a, bool periodic_b, bool periodic_c);
+
 /** Create a connectivity structure that builds a spherical shell.
  * It is made up of six connected parts [-1,1]x[-1,1]x[1,2].
  */

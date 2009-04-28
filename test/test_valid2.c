@@ -163,6 +163,9 @@ main (int argc, char **argv)
              "test_rotcubes", 0xc0e1b235U);
   check_all (mpicomm, p8est_connectivity_new_shell (),
              "test_shell", 0x558723a2U);
+  check_all (mpicomm,
+             p8est_connectivity_new_brick (2, 3, 4, false, false, true),
+             "test_brick", 0x82174e14U);
 #endif
 
   /* clean up and exit */
