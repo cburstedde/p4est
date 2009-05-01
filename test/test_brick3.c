@@ -45,9 +45,9 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
   p4est_topidx_t      num_edges = conn->num_edges;
   double             *vertices = conn->vertices;
   double             *vertex[8];
-  int                *vert_counter, *corn_counter, *edge_counter;
+  int8_t             *vert_counter, *corn_counter, *edge_counter;
   p4est_topidx_t   ***quad_counter;
-  int                 total, face1, face2, face3, edge1, edge2, corn1;
+  int8_t              total, face1, face2, face3, edge1, edge2, corn1;
   p4est_topidx_t      tx, ty, tz, ttree1, ttree2, ttree3, tedge1, tedge2,
     tcorn1;
   p4est_topidx_t      diffx, diffy, diffz;
@@ -57,12 +57,12 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
   SC_CHECK_ABORT (num_vertices == (m + 1) * (n + 1) * (p + 1),
                   "wrong number of vertices");
   quad_counter = P4EST_ALLOC (p4est_topidx_t **, m);
-  vert_counter = P4EST_ALLOC_ZERO (int, num_vertices);
+  vert_counter = P4EST_ALLOC_ZERO (int8_t, num_vertices);
   if (num_corners > 0) {
-    corn_counter = P4EST_ALLOC_ZERO (int, num_corners);
+    corn_counter = P4EST_ALLOC_ZERO (int8_t, num_corners);
   }
   if (num_edges > 0) {
-    edge_counter = P4EST_ALLOC_ZERO (int, num_edges);
+    edge_counter = P4EST_ALLOC_ZERO (int8_t, num_edges);
   }
 
   for (ti = 0; ti < m; ti++) {
@@ -351,16 +351,17 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
   }
   P4EST_FREE (quad_counter);
 
-  p8est_connectivity_destroy (conn);
-
 }
 
 int
 main (int argc, char **argv)
 {
+  p4est_topidx_t      i, j, k;
+  int                 l, m, n;
   MPI_Comm            mpicomm;
   int                 mpiret;
   int                 size, rank;
+  p8est_connectivity_t *conn;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -373,8 +374,21 @@ main (int argc, char **argv)
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  check_brick (p8est_connectivity_new_brick (8, 8, 1, true, true, false),
-               8, 8, 1, true, true, false);
+  for (i = 1; i <= 5; i++) {
+    for (j = 1; j <= 5; j++) {
+      for (k = 1; k <= 5; k++) {
+        for (l = 0; l < 2; l++) {
+          for (m = 0; m < 2; m++) {
+            for (n = 0; n < 2; n++) {
+              conn = p8est_connectivity_new_brick (i, j, k, l, m, n);
+              check_brick (conn, i, j, k, l, m, n);
+              p8est_connectivity_destroy (conn);
+            }
+          }
+        }
+      }
+    }
+  }
 
   /* clean up and exit */
   sc_finalize ();
