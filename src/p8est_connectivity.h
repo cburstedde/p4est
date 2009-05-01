@@ -3,7 +3,8 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2008,2009 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2008,2009 Carsten Burstedde, Lucas Wilcox,
+                          Toby Isaac.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -260,7 +261,8 @@ p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
 /** An m by n by p array with periodicity in x, y, and z if
  * periodic_a, periodic_b, and periodic_c are true, respectively.
- * (This function contributed by Toby Isaac.)
+ *
+ * This function is contributed by Toby Isaac.
  */
 p8est_connectivity_t *p8est_connectivity_new_brick
   (p4est_topidx_t m, p4est_topidx_t n, p4est_topidx_t p,

@@ -3,9 +3,8 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2009 Carsten Burstedde, Lucas Wilcox.
-
-  (This file contributed by Toby Isaac.)
+  Copyright (C) 2009 Carsten Burstedde, Lucas Wilcox,
+                     Toby Isaac.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,6 +19,8 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+/* This file is contributed by Toby Isaac. */
 
 #include <p8est.h>
 
