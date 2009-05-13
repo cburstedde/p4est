@@ -84,7 +84,7 @@ p8est_geometry_Jit (p8est_geometry_t * geom,
 }
 
 int
-p8est_geometry_I (p8est_geometry_t * geom, p4est_topidx_t which_tree,
+p8est_geometry_R (p8est_geometry_t * geom, p4est_topidx_t which_tree,
                   const double txyz[3], double cabc[8][3],
                   double abc[3], double rst[3])
 {
@@ -253,7 +253,7 @@ p8est_geometry_new_identity (void)
   geom->X = p8est_geometry_identity_X;
   geom->D = p8est_geometry_identity_D;
   geom->J = geom->Jit = p8est_geometry_identity_J;      /* identical here */
-  geom->I = p8est_geometry_I;
+  geom->R = p8est_geometry_R;
 
   return geom;
 }
@@ -506,7 +506,7 @@ p8est_geometry_new_shell (double R2, double R1)
   builtin->geom.D = p8est_geometry_shell_D;
   builtin->geom.J = p8est_geometry_shell_J;
   builtin->geom.Jit = p8est_geometry_Jit;
-  builtin->geom.I = p8est_geometry_I;
+  builtin->geom.R = p8est_geometry_R;
 
   return (p8est_geometry_t *) builtin;
 }
@@ -911,7 +911,7 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
   builtin->geom.D = p8est_geometry_sphere_D;
   builtin->geom.J = p8est_geometry_sphere_J;
   builtin->geom.Jit = p8est_geometry_Jit;
-  builtin->geom.I = p8est_geometry_I;
+  builtin->geom.R = p8est_geometry_R;
 
   return (p8est_geometry_t *) builtin;
 }

@@ -45,8 +45,8 @@ typedef double      (*p8est_geometry_J_t) (p8est_geometry_t * geom,
                                            const double abc[3],
                                            double J[3][3]);
 
-/* Inverse transformation returns -1 on error */
-typedef int         (*p8est_geometry_I_t) (p8est_geometry_t * geom,
+/* Inverse transformation to the reference element; returns -1 on error */
+typedef int         (*p8est_geometry_R_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
                                            const double txyz[3],
                                            double cabc[8][3],
@@ -58,10 +58,10 @@ struct p8est_geometry
   p8est_geometry_X_t  X;
   p8est_geometry_D_t  D;
   p8est_geometry_J_t  J, Jit;   /* both return the determinant of J */
-  p8est_geometry_I_t  I;        /* returns -1 on error */
+  p8est_geometry_R_t  R;        /* returns -1 on error */
 };
 
-/** Number of allowed Newton steps in p8est_geometry_I */
+/** Number of allowed Newton steps in p8est_geometry_R */
 extern int          p8est_geometry_max_newton;
 
 /** Compute the inverse transpose Jacobian by calling
@@ -81,7 +81,7 @@ double              p8est_geometry_Jit (p8est_geometry_t * geom,
  * \param [out] rst Solution in reference coordinates wrt. the hexahedron cabc.
  * \return          The number of Newton iterations or -1 on failure.
  */
-int                 p8est_geometry_I (p8est_geometry_t * geom,
+int                 p8est_geometry_R (p8est_geometry_t * geom,
                                       p4est_topidx_t which_tree,
                                       const double txyz[3],
                                       double cabc[8][3],
