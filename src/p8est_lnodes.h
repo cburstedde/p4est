@@ -33,14 +33,14 @@ SC_EXTERN_C_BEGIN;
  * num_local_elements is the number of local quadrants in the p8est.
  * local_nodes is of dimension vnodes * num_local_elements
  * and indexes into the array global_nodes layed out as follows:
- * global_nodes = [           indep_nodes         ][  hanging_nodes    ]
- *                 <------->|<------------>|        <----------------->
- *                  \ owned_offset \ num_owned_nodes \ num_hanging_nodes
- *                 <----------------------------->
+ * global_nodes = [<--------------->|<-------------------->|          ]
+ *                  \ owned_offset    \ num_owned_nodes
+ *                 <------------------------------------------------->
  *                  \ num_indep_nodes
- * The indep_nodes part contains the global node numbers.
- * Hanging nodes don't have a global number.  They contain
- * the geometrically corresponding global indep_node of a neighbor.
+ * global_nodes contains the globally unique numbers for independent nodes.
+ * Hanging nodes are always local and don't have a global number.
+ * They index the geometrically corresponding global indep_node of a neighbor.
+ * Whether nodes are hanging or not will be encoded separately.
  *
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
@@ -56,7 +56,6 @@ typedef struct p8est_lnodes
   p4est_locidx_t      num_local_elements;
   p4est_locidx_t      num_indep_nodes;
   p4est_locidx_t      owned_offset, num_owned_nodes;
-  p4est_locidx_t      num_hanging_nodes;
   p4est_locidx_t     *local_nodes;
   p4est_gloidx_t     *global_nodes;
   int                *sharers_offset;
