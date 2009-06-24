@@ -151,7 +151,7 @@ main (int argc, char **argv)
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  N = 14;
+  N = 43;
   test_identity (N);
   test_shell (N);
   test_sphere (N);
