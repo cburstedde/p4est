@@ -63,7 +63,8 @@ typedef struct p8est_lnodes
 }
 p8est_lnodes_t;
 
-p8est_lnodes_t     *p8est_lnodes_new (p8est, ghost_layer, degree);
+p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
+                                      sc_array_t * ghost_layer, int degree);
 void                p8est_lnodes_destroy (p8est_lnodes_t *);
 
 SC_EXTERN_C_END;
