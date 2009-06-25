@@ -272,7 +272,7 @@ test_weird (void)
     for (zz = 0; zz < cta->elem_count; ++zz) {
       ct = sc_array_index (cta, zz);
       SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
-      SC_CHECK_ABORT (ct->ncorner == 4 * zz + !(i % 2), "WC corner");
+      SC_CHECK_ABORT ((size_t) ct->ncorner == 4 * zz + !(i % 2), "WC corner");
     }
   }
   sc_array_reset (cta);

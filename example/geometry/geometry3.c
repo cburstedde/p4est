@@ -59,9 +59,9 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
   double              xyz[3], XYZ[3];
   double              det1, det2, J[3][3];
   double             *double_data, *dptr[4];
-  size_t              zz;
+  size_t              zz, znum_quads;
   p4est_topidx_t      jt, vt[P8EST_CHILDREN];
-  p4est_locidx_t      ql, num_quads;
+  p4est_locidx_t      ql;
   p4est_qcoord_t      h;
   p8est_tree_t       *tree;
   p8est_quadrant_t   *quad;
@@ -79,14 +79,14 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
   for (jt = p8est->first_local_tree; jt <= p8est->last_local_tree; ++jt) {
     tree = p4est_array_index_topidx (p8est->trees, jt);
     quadrants = &tree->quadrants;
-    num_quads = quadrants->elem_count;
+    znum_quads = quadrants->elem_count;
 
     /* retrieve corners of the tree */
     for (k = 0; k < P8EST_CHILDREN; ++k)
       vt[k] = ttv[jt * P8EST_CHILDREN + k];
 
     /* loop over the elements in the tree and calculated vertex coordinates */
-    for (zz = 0; zz < num_quads; ++ql, ++zz) {
+    for (zz = 0; zz < znum_quads; ++ql, ++zz) {
       quad = sc_array_index (quadrants, zz);
       h = P8EST_QUADRANT_LEN (quad->level);
       k = 0;
