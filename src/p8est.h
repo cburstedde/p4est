@@ -169,7 +169,7 @@ extern const int    p8est_num_ranges;
 
 /** set statically allocated quadrant to defined values */
 #define P8EST_QUADRANT_INIT(q) \
-  do { memset ((q), -1, sizeof (p8est_quadrant_t)); } while (0)
+  ((void) memset ((q), -1, sizeof (p8est_quadrant_t)))
 
 /** Create a new p8est.
  *
