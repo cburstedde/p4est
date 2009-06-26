@@ -34,7 +34,7 @@ SC_EXTERN_C_BEGIN;
  * local_nodes is of dimension vnodes * num_local_elements
  * and indexes into the array global_nodes layed out as follows:
  * global_nodes = [<--------------->|<-------------------->|          ]
- *                  \ owned_offset    \ num_owned_nodes
+ *                  \ owned_offset    \ owned_count
  *                 <------------------------------------------------->
  *                  \ num_indep_nodes
  * global_nodes contains the globally unique numbers for independent nodes.
@@ -52,24 +52,42 @@ SC_EXTERN_C_BEGIN;
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
  * on the lowest numbered octree sharing the node.
- * sharers_offset is of dimension num_indep_nodes+1 and contains the offset
- * into sharers, which is of dimension sharers_offset[num_indep_nodes].
- * The sharers array is sorted by independent node.  The owner rank is first,
- * since by construction the owner rank is the minimum of the sharer ranks.
+ * The sharers array contains items of type p8est_lnodes_rank_t
+ * that hold the ranks that own or share independent local nodes.
+ * It is sorted by rank.  The rank of the current process is included.
  */
 typedef struct p8est_lnodes
 {
   int                 degree, vnodes;
   p4est_locidx_t      num_local_elements;
   p4est_locidx_t      num_indep_nodes;
-  p4est_locidx_t      owned_offset, num_owned_nodes;
+  p4est_locidx_t      owned_offset, owned_count;
   int16_t            *face_code;
   p4est_locidx_t     *local_nodes;
   p4est_gloidx_t     *global_nodes;
-  int                *sharers_offset;
-  int                *sharers;
+  sc_array_t         *sharers;
 }
 p8est_lnodes_t;
+
+/** The structure stored in the sharers array.
+ *
+ * shared_nodes is a sorted array of p4est_locidx_t
+ * that indexes into global_nodes.  The shared_nodes array has a
+ * contiguous (or empty) section of nodes owned by the current rank.
+ * shared_mine_offset and shared_mine_count identify this section
+ * by indexing the shared_nodes array, not the global_nodes array.
+ * owned_offset and owned_count define the section of local nodes
+ * that is owned by this processor (the section may be empty).
+ * For the current process these coincide with those in p8est_lnodes_t.
+ */
+typedef struct p8est_lnodes_rank
+{
+  int                 rank;
+  sc_array_t          shared_nodes;
+  p4est_locidx_t      shared_mine_offset, shared_mine_count;
+  p4est_locidx_t      owned_offset, owned_count;
+}
+p8est_lnodes_rank_t;
 
 /** Decode the face_code into hanging face information.
  *
