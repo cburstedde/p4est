@@ -136,7 +136,7 @@ ssize_t             p4est_find_lower_bound (sc_array_t * array,
  *                             child i.
  */
 void                p4est_split_array (sc_array_t * array, int level,
-                                       p4est_locidx_t indices[]);
+                                       size_t indices[]);
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant

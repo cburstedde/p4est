@@ -661,7 +661,7 @@ failtest:
 /* here come the heavyweight algorithms */
 
 void
-p4est_split_array (sc_array_t * array, int level, p4est_locidx_t indices[])
+p4est_split_array (sc_array_t * array, int level, size_t indices[])
 {
   size_t              count = array->elem_count;
   size_t              guess, guess_low;
@@ -669,7 +669,7 @@ p4est_split_array (sc_array_t * array, int level, p4est_locidx_t indices[])
 #ifdef P4EST_DEBUG
   p4est_quadrant_t   *test1, test2;
 #endif
-  int8_t              i, j, child;
+  int                 i, j, child;
 
   P4EST_ASSERT (0 <= level && level < P4EST_QMAXLEVEL);
   /** If empty, return all zeroes */
@@ -685,11 +685,11 @@ p4est_split_array (sc_array_t * array, int level, p4est_locidx_t indices[])
   P4EST_ASSERT (sc_array_is_sorted (array, p4est_quadrant_compare));
 #ifdef P4EST_DEBUG
   cur = sc_array_index (array, 0);
-  P4EST_ASSERT (cur->level > level);
+  P4EST_ASSERT ((int) cur->level > level);
   test1 = sc_array_index (array, count - 1);
-  P4EST_ASSERT (test1->level > level);
+  P4EST_ASSERT ((int) test1->level > level);
   p4est_nearest_common_ancestor (cur, test1, &test2);
-  P4EST_ASSERT (test2.level >= level);
+  P4EST_ASSERT ((int) test2.level >= level);
 #endif
 
   /** The invariants of the loop are:
@@ -707,7 +707,7 @@ p4est_split_array (sc_array_t * array, int level, p4est_locidx_t indices[])
 #ifdef P4_TO_P8
     indices[5] = indices[6] = indices[7] = indices[8] =
 #endif
-    (p4est_locidx_t) count;
+    count;
 
   /** higher_child_id gives a child id on at the level that is given as its
    * input, which is one greater than the level that contains all the children,
@@ -735,7 +735,7 @@ p4est_split_array (sc_array_t * array, int level, p4est_locidx_t indices[])
      */
     else {
       for (i = j; i <= child; i++) {
-        indices[i] = (p4est_locidx_t) guess;
+        indices[i] = guess;
         /** if indices[j] = guess_low, then invariants (1) and (2) imply that we
          * have found the correct location for indices[j], and we can start
          * placing indices[j+1], i.e., we increment j.

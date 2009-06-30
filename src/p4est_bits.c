@@ -294,8 +294,8 @@ p4est_quadrant_higher_child_id (const p4est_quadrant_t * q, const int level)
 {
   int                 id = 0;
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT (q->level >= level);
   P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT ((int) q->level >= level);
 
   if (level == 0) {
     return 0;
