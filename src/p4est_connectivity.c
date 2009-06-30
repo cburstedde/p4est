@@ -23,8 +23,12 @@
 #include <sc_io.h>
 
 /* *INDENT-OFF* */
+const int           p4est_face_corners[4][2] =
+{{0, 1}, {1, 3}, {2, 3}, {0, 2}};
+
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 const int           p4est_zface_to_rface[4] = { 3, 1, 0, 2 };
+const int           p4est_rface_to_zface[4] = { 2, 1, 3, 0 };
 
 const int           p4est_face_dual[4] = { 2, 3, 0, 1 };
 const int           p4est_face_child_hang[4][4] =
