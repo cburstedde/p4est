@@ -21,6 +21,6 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "p4est_iterator.c"
+#include "p4est_iterate.c"
 
-/* EOF p8est_iterator.c */
+/* EOF p8est_iterate.c */

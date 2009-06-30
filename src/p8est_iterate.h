@@ -20,14 +20,14 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P8EST_ITERATOR_H
-#define P8EST_ITERATOR_H
+#ifndef P8EST_ITERATE_H
+#define P8EST_ITERATE_H
 
 #include <p8est.h>
 
 SC_EXTERN_C_BEGIN;
 
-typedef struct p8est_qcb_info
+typedef struct p8est_iter_volume_info
 {
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -35,12 +35,12 @@ typedef struct p8est_qcb_info
   size_t              tree_local_num;
   p4est_topidx_t      tree;
 }
-p8est_qcb_info_t;
+p8est_iter_volume_info_t;
 
-typedef void        (*p8est_qcb_func_t) (p8est_qcb_info_t * info,
-                                         void *user_data);
+typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
+                                            void *user_data);
 
-typedef struct p8est_fcb_info
+typedef struct p8est_iter_face_info
 {
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -57,12 +57,12 @@ typedef struct p8est_fcb_info
   int                 orientation;
   bool                hanging_flag;
 }
-p8est_fcb_info_t;
+p8est_iter_face_info_t;
 
-typedef void        (*p8est_fcb_func_t) (p8est_fcb_info_t * info,
-                                         void *user_data);
+typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
+                                          void *user_data);
 
-typedef struct p8est_ecb_info
+typedef struct p8est_iter_edge_info
 {
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -73,12 +73,12 @@ typedef struct p8est_ecb_info
   sc_array_t         *common_corner;
   bool                hanging_flag;
 }
-p8est_ecb_info_t;
+p8est_iter_edge_info_t;
 
-typedef void        (*p8est_ecb_func_t) (p8est_ecb_info_t * info,
-                                         void *user_data);
+typedef void        (*p8est_iter_edge_t) (p8est_iter_edge_info_t * info,
+                                          void *user_data);
 
-typedef struct p8est_vcb_info
+typedef struct p8est_iter_corner_info
 {
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -87,18 +87,18 @@ typedef struct p8est_vcb_info
   sc_array_t         *tree;
   sc_array_t         *corner_in_zorder;
 }
-p8est_vcb_info_t;
+p8est_iter_corner_info_t;
 
-typedef void        (*p8est_vcb_func_t) (p8est_vcb_info_t * info,
-                                         void *user_data);
+typedef void        (*p8est_iter_corner_t) (p8est_iter_corner_info_t * info,
+                                            void *user_data);
 
-void                p8est_iterator (p8est_t * p4est, sc_array_t * ghost_layer,
-                                    void *user_data,
-                                    p8est_qcb_func_t qcb_func,
-                                    p8est_fcb_func_t fcb_func,
-                                    p8est_ecb_func_t ecb_func,
-                                    p8est_vcb_func_t vcb_func);
+void                p8est_iterate (p8est_t * p4est, sc_array_t * ghost_layer,
+                                   void *user_data,
+                                   p8est_iter_volume_t iter_volume,
+                                   p8est_iter_face_t iter_face,
+                                   p8est_iter_edge_t iter_edge,
+                                   p8est_iter_corner_t iter_corner);
 
 SC_EXTERN_C_END;
 
-#endif /* !P8EST_ITERATOR_H */
+#endif /* !P8EST_ITERATE_H */

@@ -20,14 +20,14 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P4EST_ITERATOR_H
-#define P4EST_ITERATOR_H
+#ifndef P4EST_ITERATE_H
+#define P4EST_ITERATE_H
 
 #include <p4est.h>
 
 SC_EXTERN_C_BEGIN;
 
-typedef struct p4est_qcb_info
+typedef struct p4est_iter_volume_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -35,12 +35,12 @@ typedef struct p4est_qcb_info
   size_t              tree_local_num;
   p4est_topidx_t      tree;
 }
-p4est_qcb_info_t;
+p4est_iter_volume_info_t;
 
-typedef void        (*p4est_qcb_func_t) (p4est_qcb_info_t * info,
-                                         void *user_data);
+typedef void        (*p4est_iter_volume_t) (p4est_iter_volume_info_t * info,
+                                            void *user_data);
 
-typedef struct p4est_fcb_info
+typedef struct p4est_iter_face_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -57,12 +57,12 @@ typedef struct p4est_fcb_info
   int                 orientation;
   bool                hanging_flag;
 }
-p4est_fcb_info_t;
+p4est_iter_face_info_t;
 
-typedef void        (*p4est_fcb_func_t) (p4est_fcb_info_t * info,
-                                         void *user_data);
+typedef void        (*p4est_iter_face_t) (p4est_iter_face_info_t * info,
+                                          void *user_data);
 
-typedef struct p4est_vcb_info
+typedef struct p4est_iter_corner_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
@@ -71,17 +71,17 @@ typedef struct p4est_vcb_info
   sc_array_t         *tree;
   sc_array_t         *corner_in_zorder;
 }
-p4est_vcb_info_t;
+p4est_iter_corner_info_t;
 
-typedef void        (*p4est_vcb_func_t) (p4est_vcb_info_t * info,
-                                         void *user_data);
+typedef void        (*p4est_iter_corner_t) (p4est_iter_corner_info_t * info,
+                                            void *user_data);
 
-void                p4est_iterator (p4est_t * p4est, sc_array_t * ghost_layer,
-                                    void *user_data,
-                                    p4est_qcb_func_t qcb_func,
-                                    p4est_fcb_func_t fcb_func,
-                                    p4est_vcb_func_t vcb_func);
+void                p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer,
+                                   void *user_data,
+                                   p4est_iter_volume_t iter_volume,
+                                   p4est_iter_face_t iter_face,
+                                   p4est_iter_corner_t iter_corner);
 
 SC_EXTERN_C_END;
 
-#endif /* !P4EST_ITERATOR_H */
+#endif /* !P4EST_ITERATE_H */

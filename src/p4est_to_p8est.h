@@ -72,14 +72,14 @@
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_fadj_func_t               p8est_fadj_func_t
 #define p4est_fadj_info_t               p8est_fadj_info_t
-#define p4est_fcb_func_t                p8est_fcb_func_t
-#define p4est_fcb_info_t                p8est_fcb_info_t
-#define p4est_qcb_func_t                p8est_qcb_func_t
-#define p4est_qcb_info_t                p8est_qcb_info_t
-#define p4est_ecb_func_t                p8est_ecb_func_t
-#define p4est_ecb_info_t                p8est_ecb_info_t
-#define p4est_vcb_func_t                p8est_vcb_func_t
-#define p4est_vcb_info_t                p8est_vcb_info_t
+#define p4est_iter_face_t               p8est_iter_face_t
+#define p4est_iter_face_info_t          p8est_iter_face_info_t
+#define p4est_iter_volume_t             p8est_iter_volume_t
+#define p4est_iter_volume_info_t        p8est_iter_volume_info_t
+#define p4est_iter_edge_t               p8est_iter_edge_t
+#define p4est_iter_edge_info_t          p8est_iter_edge_info_t
+#define p4est_iter_corner_t             p8est_iter_corner_t
+#define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners

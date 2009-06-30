@@ -24,12 +24,12 @@
 #include <p4est_bits.h>
 #include <p4est_algorithms.h>
 #include <p4est_ghost.h>
-#include <p4est_iterator.h>
+#include <p4est_iterate.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_algorithms.h>
 #include <p8est_ghost.h>
-#include <p8est_iterator.h>
+#include <p8est_iterate.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -77,12 +77,12 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-face_do_nothing (p4est_fcb_info_t * info, void *data)
+face_do_nothing (p4est_iter_face_info_t * info, void *data)
 {
 };
 
 static void
-vert_do_nothing (p4est_vcb_info_t * info, void *data)
+corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 {
 };
 
@@ -184,8 +184,8 @@ quad_edge_neighbor (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
 #endif
 
 static              p4est_topidx_t
-quad_vert_neighbor (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
-                    int c, p4est_quadrant_t * p)
+quad_corner_neighbor (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
+                      int c, p4est_quadrant_t * p)
 {
   int                 f;
   p4est_quadrant_t    temp;
@@ -225,7 +225,7 @@ quad_vert_neighbor (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
 }
 
 static void
-vert_test_adjacency (p4est_vcb_info_t * info, void *data)
+corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
 {
   p4est_t            *p4est = info->p4est;
   int                 i, j, k;
@@ -324,7 +324,7 @@ vert_test_adjacency (p4est_vcb_info_t * info, void *data)
 
     if (!p4est_quadrant_touches_corner (q, c, true)) {
 #ifndef P4_TO_P8
-      nt = quad_vert_neighbor (p4est, q, t, c, &temp);
+      nt = quad_corner_neighbor (p4est, q, t, c, &temp);
       k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 11");
@@ -341,7 +341,7 @@ vert_test_adjacency (p4est_vcb_info_t * info, void *data)
         }
       }
       if (j == P4EST_DIM) {
-        nt = quad_vert_neighbor (p4est, q, t, c, &temp);
+        nt = quad_corner_neighbor (p4est, q, t, c, &temp);
         k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
                               &level_diff, &child_id);
         SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 13");
@@ -401,12 +401,12 @@ vert_test_adjacency (p4est_vcb_info_t * info, void *data)
 
 #ifdef P4_TO_P8
 static void
-edge_do_nothing (p4est_ecb_info_t * info, void *data)
+edge_do_nothing (p4est_iter_edge_info_t * info, void *data)
 {
 };
 
 static void
-edge_test_adjacency (p4est_ecb_info_t * info, void *data)
+edge_test_adjacency (p4est_iter_edge_info_t * info, void *data)
 {
   p4est_t            *p4est = info->p4est;
   p8est_quadrant_t    temp, temp2;
@@ -487,7 +487,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
 #endif
 
 static void
-face_test_adjacency (p4est_fcb_info_t * info, void *data)
+face_test_adjacency (p4est_iter_face_info_t * info, void *data)
 {
   p4est_t            *p4est = info->p4est;
   p4est_quadrant_t    temp;
@@ -636,7 +636,7 @@ main (int argc, char **argv)
     /* do a uniform partition */
     p4est_partition (p4est, NULL);
 
-    /* create ghost layer: n.b. BALANCE_FULL required if vcb_func != NULL */
+    /* create ghost layer: n.b. BALANCE_FULL required if iter_corner != NULL */
     sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
     success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
                                        &ghost_layer, &ghost_owner);
@@ -662,12 +662,12 @@ main (int argc, char **argv)
 
     P4EST_GLOBAL_PRODUCTIONF ("Begin adjacency test %d\n", i);
 #ifndef P4_TO_P8
-    p4est_iterator (p4est, &ghost_layer, NULL, NULL, face_test_adjacency,
-                    vert_test_adjacency);
+    p4est_iterate (p4est, &ghost_layer, NULL, NULL, face_test_adjacency,
+                   corner_test_adjacency);
 #else
-    p8est_iterator (p4est, &ghost_layer, NULL,
-                    NULL, face_test_adjacency, edge_test_adjacency,
-                    vert_test_adjacency);
+    p8est_iterate (p4est, &ghost_layer, NULL,
+                   NULL, face_test_adjacency, edge_test_adjacency,
+                   corner_test_adjacency);
 #endif
 
     /* clean up */
@@ -694,4 +694,4 @@ main (int argc, char **argv)
   return 0;
 }
 
-/* EOF test_iterator2.c */
+/* EOF test_iterate2.c */
