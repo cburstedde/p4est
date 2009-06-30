@@ -117,6 +117,7 @@
 #define p4est_node_unclamp              p8est_node_unclamp
 #define p4est_node_to_quadrant          p8est_node_to_quadrant
 #define p4est_quadrant_contains_node    p8est_quadrant_contains_node
+#define p4est_quadrant_higher_child_id  p8est_quadrant_higher_child_id
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
@@ -166,6 +167,7 @@
 #define p4est_tree_print                p8est_tree_print
 #define p4est_is_equal                  p8est_is_equal
 #define p4est_is_valid                  p8est_is_valid
+#define p4est_split_array               p8est_split_array
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap

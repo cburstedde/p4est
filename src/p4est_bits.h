@@ -114,6 +114,13 @@ void                p4est_node_to_quadrant (const p4est_quadrant_t * n,
 bool                p4est_quadrant_contains_node (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * n);
 
+/** Compute the position of the ancestor of this child at level \a level within
+ * its siblings.
+ * \return Returns its child id in 0..3
+ */
+int                 p4est_quadrant_higher_child_id (const p4est_quadrant_t *q,
+                                                    const int level);
+ 
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..3
  */

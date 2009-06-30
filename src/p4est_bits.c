@@ -290,6 +290,27 @@ p4est_quadrant_contains_node (const p4est_quadrant_t * q,
 }
 
 int
+p4est_quadrant_higher_child_id (const p4est_quadrant_t * q, const int level)
+{
+  int                 id = 0;
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (q->level >= level);
+  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
+
+  if (level == 0) {
+    return 0;
+  }
+
+  id |= ((q->x & P4EST_QUADRANT_LEN (level)) ? 0x01 : 0);
+  id |= ((q->y & P4EST_QUADRANT_LEN (level)) ? 0x02 : 0);
+#ifdef P4_TO_P8
+  id |= ((q->z & P4EST_QUADRANT_LEN (level)) ? 0x04 : 0);
+#endif
+
+  return id;
+}
+
+int
 p4est_quadrant_child_id (const p4est_quadrant_t * q)
 {
   int                 id = 0;

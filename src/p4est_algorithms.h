@@ -121,6 +121,23 @@ ssize_t             p4est_find_lower_bound (sc_array_t * array,
                                             const p4est_quadrant_t * q,
                                             size_t guess);
 
+/** Given a sorted \a array of quadrants that have a common ancestor at level
+ * \a level, compute the \a indices of the first quadrant in each of the common
+ * ancestor's children at level \a level + 1;
+ * \param [in] array     The sorted array of quadrants of level > \a level.
+ * \param [in] level     The level at which there is a common ancestor.
+ * \param [in,out] indices     The indices of the first quadrant in each of
+ *                             the ancestors's children, plus an additional
+ *                             index on the end.  The quadrants of \a array
+ *                             that are descendents of child i have indices
+ *                             between indices[i] and indices[i + 1] - 1.  If
+ *                             indices[i] = indices[i+1], this indicates that
+ *                             no quadrant in the array is contained in
+ *                             child i.
+ */
+void                p4est_split_array (sc_array_t * array, int level,
+                                       p4est_locidx_t indices[]);
+
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant
  *                  or -1 if not found or the array is empty.
