@@ -88,6 +88,7 @@ typedef struct p8est_vcb_info
   sc_array_t         *tree_local_num;
   sc_array_t         *tree;
   sc_array_t         *corner_in_zorder;
+  bool                intra_tree;
 }
 p8est_vcb_info_t;
 

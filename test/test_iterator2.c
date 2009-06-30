@@ -105,6 +105,303 @@ face_do_nothing (p4est_fcb_info_t * info, void *data)
 {
 };
 
+static void
+vert_do_nothing (p4est_vcb_info_t * info, void *data)
+{
+};
+
+static void
+vert_test_adjacency (p4est_vcb_info_t * info, void *data)
+{
+  int                 i, j, k;
+  int                 n = info->quads->elem_count;
+  int                *c, *c2, f;
+  int                 level;
+  int                 id;
+  int8_t              min_level = P4EST_MAXLEVEL;
+  int8_t              max_level = 0;
+  p4est_quadrant_t   *q, *p, temp, temp2;
+  p4est_topidx_t     *t, *t2, nt, nc;
+  bool                failure;
+  size_t              ctree;
+#ifndef P4_TO_P8
+  p4est_connectivity_t *conn = info->p4est->connectivity;
+  int                 ftransform;
+  p4est_corner_transform_t *ct;
+  sc_array_t          ctransforms, *cta;
+  cta = &ctransforms;
+#else
+  p8est_connectivity_t *conn = info->p8est->connectivity;
+  int                 ftransform[9];
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  sc_array_t         *eta;
+  size_t              etree;
+  p4est_topidx_t      ne;
+  int                 e;
+  p8est_corner_info_t ci;
+  p8est_corner_transform_t *ct;
+  sc_array_t         *cta;
+  eta = &ei.edge_transforms;
+  cta = &ci.corner_transforms;
+#endif
+
+  if (n == 1) {
+    P4EST_ASSERT (info->intra_tree == false);
+    c = sc_array_index (info->corner_in_zorder, 0);
+    q = *((p4est_quadrant_t **) sc_array_index (info->quads, 0));
+    P4EST_ASSERT (p4est_quadrant_touches_corner (q, *c, true));
+    return;
+  }
+  if (info->intra_tree) {
+    P4EST_ASSERT (n == P4EST_CHILDREN);
+    for (i = 0; i < n; i++) {
+      t = sc_array_index (info->tree, (size_t) i);
+      q = *((p4est_quadrant_t **) sc_array_index (info->quads, (size_t) i));
+      c = sc_array_index (info->corner_in_zorder, (size_t) i);
+      level = q->level;
+      min_level = (level < min_level) ? level : min_level;
+      max_level = (level > max_level) ? level : max_level;
+      for (j = 0; j < P4EST_DIM; j++) {
+        f = p4est_corner_faces[*c][j];
+        p4est_quadrant_face_neighbor (q, f, &temp);
+        P4EST_ASSERT (p4est_quadrant_is_inside_root (&temp));
+        failure = true;
+        for (k = 0; k < n; k++) {
+          t2 = sc_array_index (info->tree, (size_t) k);
+          P4EST_ASSERT (*t2 == *t);
+          c2 = sc_array_index (info->corner_in_zorder, (size_t) k);
+          p = *((p4est_quadrant_t **)
+                sc_array_index (info->quads, (size_t) k));
+          if (p4est_quadrant_is_equal (&temp, p)) {
+            failure = false;
+          }
+          else if (p4est_quadrant_is_parent (p, &temp)) {
+            id = p4est_quadrant_child_id (&temp);
+            if (id == *c2) {
+              failure = false;
+            }
+          }
+          else if (p4est_quadrant_is_parent (&temp, p)) {
+            id = p4est_quadrant_child_id (p);
+            if (id == *c2) {
+              failure = false;
+            }
+          }
+        }
+        P4EST_ASSERT (failure == false);
+#ifdef P4_TO_P8
+        e = p8est_corner_edges[*c][j];
+        p8est_quadrant_edge_neighbor (q, e, &temp);
+        P4EST_ASSERT (p8est_quadrant_is_inside_root (&temp));
+        failure = true;
+        for (k = 0; k < n; k++) {
+          t2 = sc_array_index (info->tree, (size_t) k);
+          P4EST_ASSERT (*t2 == *t);
+          c2 = sc_array_index (info->corner_in_zorder, (size_t) k);
+          p = *((p8est_quadrant_t **)
+                sc_array_index (info->quads, (size_t) k));
+          if (p8est_quadrant_is_equal (&temp, p)) {
+            failure = false;
+          }
+          else if (p8est_quadrant_is_parent (p, &temp)) {
+            id = p8est_quadrant_child_id (&temp);
+            if (id == *c2) {
+              failure = false;
+            }
+          }
+          else if (p8est_quadrant_is_parent (&temp, p)) {
+            id = p8est_quadrant_child_id (p);
+            if (id == *c2) {
+              failure = false;
+            }
+          }
+        }
+        P4EST_ASSERT (failure == false);
+#endif
+      }
+      p4est_quadrant_corner_neighbor (q, *c, &temp);
+      P4EST_ASSERT (p4est_quadrant_is_inside_root (&temp));
+      failure = true;
+      for (k = 0; k < n; k++) {
+        t2 = sc_array_index (info->tree, (size_t) k);
+        P4EST_ASSERT (*t2 == *t);
+        c2 = sc_array_index (info->corner_in_zorder, (size_t) k);
+        p = *((p4est_quadrant_t **)
+              sc_array_index (info->quads, (size_t) k));
+        if (p4est_quadrant_is_equal (&temp, p)) {
+          failure = false;
+        }
+        else if (p4est_quadrant_is_parent (p, &temp)) {
+          id = p4est_quadrant_child_id (&temp);
+          if (id == *c2) {
+            failure = false;
+          }
+        }
+        else if (p4est_quadrant_is_parent (&temp, p)) {
+          id = p4est_quadrant_child_id (p);
+          if (id == *c2) {
+            failure = false;
+          }
+        }
+      }
+      P4EST_ASSERT (failure == false);
+    }
+  }
+  else {
+#ifndef P4_TO_P8
+    sc_array_init (cta, sizeof (p4est_corner_transform_t));
+#else
+    sc_array_init (eta, sizeof (p8est_edge_transform_t));
+    sc_array_init (cta, sizeof (p8est_corner_transform_t));
+#endif /* !P4_TO_P8 */
+    for (i = 0; i < n; i++) {
+      t = sc_array_index (info->tree, (size_t) i);
+      q = *((p4est_quadrant_t **) sc_array_index (info->quads, (size_t) i));
+      c = sc_array_index (info->corner_in_zorder, (size_t) i);
+      level = q->level;
+      min_level = (level < min_level) ? level : min_level;
+      max_level = (level > max_level) ? level : max_level;
+      for (j = 0; j < P4EST_DIM; j++) {
+        f = p4est_corner_faces[*c][j];
+        p4est_quadrant_face_neighbor (q, f, &temp);
+        if (p4est_quadrant_is_outside_face (&temp)) {
+#ifndef P4_TO_P8
+          ftransform = p4est_find_face_transform (conn, *t, f);
+          if (ftransform == -1) {
+            continue;
+          }
+          p4est_quadrant_translate_face (&temp, f);
+          p4est_quadrant_transform_face (&temp, &temp2, ftransform);
+#else
+          k = p8est_find_face_transform (conn, *t, f, ftransform);
+          if (k == -1) {
+            continue;
+          }
+          p8est_quadrant_transform_face (&temp, &temp2, ftransform);
+#endif
+          temp = temp2;
+          P4EST_ASSERT (p4est_quadrant_is_inside_root (&temp));
+          nt = conn->tree_to_tree[(*t) * 2 * P4EST_DIM + f];
+        }
+        else {
+          nt = *t;
+        }
+        failure = true;
+        for (k = 0; k < n; k++) {
+          t2 = sc_array_index (info->tree, (size_t) k);
+          if (*t2 == nt) {
+            c2 = sc_array_index (info->corner_in_zorder, (size_t) k);
+            p = *((p4est_quadrant_t **)
+                  sc_array_index (info->quads, (size_t) k));
+            if (p4est_quadrant_is_equal (&temp, p)) {
+              failure = false;
+            }
+            else if (p4est_quadrant_is_parent (p, &temp)) {
+              id = p4est_quadrant_child_id (&temp);
+              if (id == *c2) {
+                failure = false;
+              }
+            }
+            else if (p4est_quadrant_is_parent (&temp, p)) {
+              id = p4est_quadrant_child_id (p);
+              if (id == *c2) {
+                failure = false;
+              }
+            }
+          }
+        }
+        P4EST_ASSERT (failure == false);
+#ifdef P4_TP_P8
+        e = p8est_corner_edges[*c][j];
+        if (p8est_quadrant_touches_edge (q, e, true)) {
+          p8est_quadrant_edge_neighbor (q, e, &temp2);
+          p8est_find_edge_transform (conn, *t, e, &ei);
+          for (etree = 0; etree < eta->elem_count; etree++) {
+            et = sc_array_index (eta, etree);
+            p8est_quadrant_transform_edge (&temp2, &temp, &ei, et, true);
+            nt = et->ntree;
+            ne = et->nedge;
+            P4EST_ASSERT (p8est_quadrant_touches_edge (&temp, ne, true));
+            failure = true;
+            for (k = 0; k < n; k++) {
+              t2 = sc_array_index (info->tree, (size_t) k);
+              if (*t2 == nt) {
+                c2 = sc_array_index (info->corner_in_zorder, (size_t) k);
+                p = *((p8est_quadrant_t **)
+                      sc_array_index (info->quads, (size_t) k));
+                if (p8est_quadrant_is_equal (&temp, p)) {
+                  failure = false;
+                }
+                else if (p8est_quadrant_is_parent (p, &temp)) {
+                  id = p8est_quadrant_child_id (&temp);
+                  if (id == *c2) {
+                    failure = false;
+                  }
+                }
+                else if (p8est_quadrant_is_parent (&temp, p)) {
+                  id = p8est_quadrant_child_id (p);
+                  if (id == *c2) {
+                    failure = false;
+                  }
+                }
+              }
+            }
+            P4EST_ASSERT (failure == false);
+          }
+        }
+#endif
+      }
+      if (p4est_quadrant_touches_corner (q, *c, true)) {
+        p4est_quadrant_corner_neighbor (q, *c, &temp);
+#ifndef P4_TO_P8
+        p4est_find_corner_transform (conn, *t, p4est_corner_to_zorder[*c],
+                                     cta);
+#else
+        p8est_find_corner_transform (conn, *t, *c, &ci);
+#endif
+        for (ctree = 0; ctree < cta->elem_count; ++ctree) {
+          ct = sc_array_index (cta, ctree);
+          p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, true);
+          nt = ct->ntree;
+          nc = ct->ncorner;
+          P4EST_ASSERT (p4est_quadrant_touches_corner (&temp, nc, true));
+          failure = true;
+          for (k = 0; k < n; k++) {
+            t2 = sc_array_index (info->tree, (size_t) k);
+            c2 = sc_array_index (info->corner_in_zorder, (size_t) k);
+            if (*t2 == nt && *c2 == nc) {
+              p = *((p4est_quadrant_t **)
+                    sc_array_index (info->quads, (size_t) k));
+              if (p4est_quadrant_is_equal (&temp, p)) {
+                failure = false;
+              }
+              else if (p4est_quadrant_is_parent (p, &temp)) {
+                id = p4est_quadrant_child_id (&temp);
+                if (id == *c2) {
+                  failure = false;
+                }
+              }
+              else if (p4est_quadrant_is_parent (&temp, p)) {
+                id = p4est_quadrant_child_id (p);
+                if (id == *c2) {
+                  failure = false;
+                }
+              }
+            }
+          }
+          P4EST_ASSERT (failure == false);
+        }
+      }
+    }
+    sc_array_reset (cta);
+#ifdef P4_T0_P8
+    sc_array_reset (eta);
+#endif
+  }
+  P4EST_ASSERT (max_level - min_level <= 1);
+}
+
 #ifdef P4_TO_P8
 static void
 edge_do_nothing (p4est_ecb_info_t * info, void *data)
@@ -120,7 +417,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
   int                 i, j, k, *e, *e2, *c, f, ne;
   bool                failure;
   int8_t              level;
-  int8_t              min_level = P4EST_MAXLEVEL;
+  int8_t              min_level = P8EST_MAXLEVEL;
   int8_t              max_level = 0;
   int                 id;
   p4est_topidx_t     *t, *t2, nt;
@@ -134,7 +431,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
   if (n == 1) {
     P4EST_ASSERT (info->intra_tree == false);
     e = sc_array_index (info->edge_in_zorder, 0);
-    q = sc_array_index (info->quads, 0);
+    q = *((p8est_quadrant_t **) sc_array_index (info->quads, 0));
     P4EST_ASSERT (p8est_quadrant_touches_edge (q, *e, true));
     return;
   }
@@ -142,7 +439,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
     P4EST_ASSERT (n == 4);
     for (i = 0; i < n; i++) {
       t = sc_array_index (info->tree, (size_t) i);
-      q = sc_array_index (info->quads, (size_t) i);
+      q = *((p8est_quadrant_t **) sc_array_index (info->quads, (size_t) i));
       e = sc_array_index (info->edge_in_zorder, (size_t) i);
       level = q->level;
       min_level = (level < min_level) ? level : min_level;
@@ -151,13 +448,13 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
         f = p8est_edge_faces[*e][j];
         p8est_quadrant_face_neighbor (q, f, &temp);
         P4EST_ASSERT (p8est_quadrant_is_inside_root (&temp));
-        nt = *t;
         failure = true;
         for (k = 0; k < n; k++) {
           t2 = sc_array_index (info->tree, (size_t) k);
           P4EST_ASSERT (*t2 == *t);
           c = sc_array_index (info->common_corner, (size_t) k);
-          p = sc_array_index (info->quads, k);
+          p = *((p8est_quadrant_t **)
+                sc_array_index (info->quads, (size_t) k));
           if (p8est_quadrant_is_equal (&temp, p)) {
             failure = false;
           }
@@ -176,13 +473,38 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
         }
         P4EST_ASSERT (failure == false);
       }
+      p8est_quadrant_edge_neighbor (q, *e, &temp);
+      P4EST_ASSERT (p8est_quadrant_is_inside_root (&temp));
+      for (k = 0; k < n; k++) {
+        t2 = sc_array_index (info->tree, (size_t) k);
+        P4EST_ASSERT (*t2 == *t);
+        c = sc_array_index (info->common_corner, (size_t) k);
+        p = *((p8est_quadrant_t **)
+              sc_array_index (info->quads, (size_t) k));
+        if (p8est_quadrant_is_equal (&temp, p)) {
+          failure = false;
+        }
+        else if (p8est_quadrant_is_parent (p, &temp)) {
+          id = p8est_quadrant_child_id (&temp);
+          if (id == *c) {
+            failure = false;
+          }
+        }
+        else if (p8est_quadrant_is_parent (&temp, p)) {
+          id = p8est_quadrant_child_id (p);
+          if (id == *c) {
+            failure = false;
+          }
+        }
+      }
+      P4EST_ASSERT (failure == false);
     }
   }
   else {
     sc_array_init (eta, sizeof (p8est_edge_transform_t));
     for (i = 0; i < n; i++) {
       t = sc_array_index (info->tree, (size_t) i);
-      q = sc_array_index (info->quads, (size_t) i);
+      q = *((p8est_quadrant_t **) sc_array_index (info->quads, (size_t) i));
       e = sc_array_index (info->edge_in_zorder, (size_t) i);
       level = q->level;
       min_level = (level < min_level) ? level : min_level;
@@ -190,7 +512,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
       for (j = 0; j < 2; j++) {
         f = p8est_edge_faces[*e][j];
         p8est_quadrant_face_neighbor (q, f, &temp);
-        if (p4est_quadrant_is_outside_face (&temp)) {
+        if (p8est_quadrant_is_outside_face (&temp)) {
           k = p8est_find_face_transform (conn, *t, f, transform);
           if (k == -1) {
             continue;
@@ -208,7 +530,8 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
           t2 = sc_array_index (info->tree, (size_t) k);
           if (*t2 == nt) {
             c = sc_array_index (info->common_corner, (size_t) k);
-            p = sc_array_index (info->quads, k);
+            p = *((p8est_quadrant_t **)
+                  sc_array_index (info->quads, (size_t) k));
             if (p8est_quadrant_is_equal (&temp, p)) {
               failure = false;
             }
@@ -243,7 +566,8 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
             e2 = sc_array_index (info->edge_in_zorder, (size_t) j);
             if (*t2 == nt && *e2 == ne) {
               c = sc_array_index (info->common_corner, (size_t) j);
-              p = sc_array_index (info->quads, j);
+              p = *((p8est_quadrant_t **)
+                    sc_array_index (info->quads, (size_t) j));
               if (p8est_quadrant_is_equal (&temp, p)) {
                 failure = false;
               }
@@ -326,12 +650,6 @@ face_test_adjacency (p4est_fcb_info_t * info, void *data)
 #ifndef P4_TO_P8
       P4EST_ASSERT (conn->tree_to_tree[left_tree * 4 + left_outgoing_face] ==
                     right_tree);
-      if (!
-          (conn->tree_to_tree[right_tree * 4 + right_outgoing_face] ==
-           left_tree)) {
-        printf ("%d %d %d %d\n", left_tree, right_tree, left_outgoing_face,
-                right_outgoing_face);
-      }
       P4EST_ASSERT (conn->
                     tree_to_tree[right_tree * 4 + right_outgoing_face] ==
                     left_tree);
@@ -467,14 +785,14 @@ main (int argc, char **argv)
     p4est_refine (p4est, true, refine_fn, init_fn);
 
     /* balance the forest */
-    p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);
+    p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
 
     /* do a uniform partition, include the weight function for testing */
     p4est_partition (p4est, weight_one);
 
     /* create ghost layer */
     sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-    success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_DEFAULT,
+    success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
                                        &ghost_layer, &ghost_owner);
     P4EST_ASSERT (success);
 
@@ -499,13 +817,11 @@ main (int argc, char **argv)
     P4EST_GLOBAL_PRODUCTIONF ("Begin adjacency test %d\n", i);
 #ifndef P4_TO_P8
     p4est_iterator (p4est, &ghost_layer, NULL, NULL, face_test_adjacency,
-                    NULL);
+                    vert_test_adjacency);
 #else
     p8est_iterator (p4est, &ghost_layer, NULL,
-                    NULL, face_test_adjacency, edge_test_adjacency, NULL);
-    /**
-    p8est_iterator (p4est, &ghost_layer, NULL,
-                    NULL, face_test_adjacency, edge_do_nothing, NULL); */
+                    NULL, face_test_adjacency, edge_test_adjacency,
+                    vert_test_adjacency);
 #endif
 
     /* clean up */
