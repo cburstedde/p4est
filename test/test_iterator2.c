@@ -117,40 +117,45 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
   p8est_quadrant_t    temp, temp2;
   p8est_quadrant_t   *q, *p;
   int                 n = info->quads->elem_count;
-  int                 i, j, k, *e, *c, f;
+  int                 i, j, k, *e, *e2, *c, f, ne;
   bool                failure;
   int8_t              level;
   int8_t              min_level = P4EST_MAXLEVEL;
   int8_t              max_level = 0;
   int                 id;
   p4est_topidx_t     *t, *t2, nt;
-  p8est_edge_info_t   ei;
   p8est_connectivity_t *conn = info->p8est->connectivity;
   int                 transform[9];
-  for (i = 0; i < n; i++) {
-    t = sc_array_index (info->tree, (size_t) i);
-    q = sc_array_index (info->quads, (size_t) i);
-    e = sc_array_index (info->edge_in_zorder, (size_t) i);
-    level = q->level;
-    min_level = (level < min_level) ? level : min_level;
-    max_level = (level > max_level) ? level : max_level;
-    for (j = 0; j < 2; j++) {
-      f = p8est_edge_faces[*e][j];
-      p8est_quadrant_face_neighbor (q, f, &temp);
-      if (p8est_quadrant_is_outside_face (&temp)) {
-        P4EST_ASSERT (info->intra_tree == false);
-        p8est_find_face_transform (conn, *t, f, transform);
-        p8est_quadrant_transform_face (&temp, &temp2, transform);
-        temp = temp2;
-        nt = conn->tree_to_tree[(*t) * 6 + f];
-      }
-      else {
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  sc_array_t         *eta;
+  size_t              etree;
+  eta = &ei.edge_transforms;
+  if (n == 1) {
+    P4EST_ASSERT (info->intra_tree == false);
+    e = sc_array_index (info->edge_in_zorder, 0);
+    q = sc_array_index (info->quads, 0);
+    P4EST_ASSERT (p8est_quadrant_touches_edge (q, *e, true));
+    return;
+  }
+  if (info->intra_tree == true) {
+    P4EST_ASSERT (n == 4);
+    for (i = 0; i < n; i++) {
+      t = sc_array_index (info->tree, (size_t) i);
+      q = sc_array_index (info->quads, (size_t) i);
+      e = sc_array_index (info->edge_in_zorder, (size_t) i);
+      level = q->level;
+      min_level = (level < min_level) ? level : min_level;
+      max_level = (level > max_level) ? level : max_level;
+      for (j = 0; j < 2; j++) {
+        f = p8est_edge_faces[*e][j];
+        p8est_quadrant_face_neighbor (q, f, &temp);
+        P4EST_ASSERT (p8est_quadrant_is_inside_root (&temp));
         nt = *t;
-      }
-      failure = true;
-      for (k = 0; k < n; k++) {
-        t2 = sc_array_index (info->tree, (size_t) k);
-        if (*t2 == nt) {
+        failure = true;
+        for (k = 0; k < n; k++) {
+          t2 = sc_array_index (info->tree, (size_t) k);
+          P4EST_ASSERT (*t2 == *t);
           c = sc_array_index (info->common_corner, (size_t) k);
           p = sc_array_index (info->quads, k);
           if (p8est_quadrant_is_equal (&temp, p)) {
@@ -169,26 +174,104 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
             }
           }
         }
+        P4EST_ASSERT (failure == false);
       }
-      if (failure == true) {
-        printf ("\ni %d j %d f %d *t %d nt %d\n", i, j, f, *t, nt);
-        printf ("temp x %x y %x z %x level %d\n", temp.x, temp.y, temp.z,
-                temp.level);
-        for (k = 0; k < n; k++) {
-          p = sc_array_index (info->quads, k);
-          P4EST_ASSERT (p4est_quadrant_is_inside_root (p));
-          printf ("x %x y %x z %x level %d\n", p->x, p->y, p->z, p->level);
-          e = sc_array_index (info->edge_in_zorder, k);
-          printf ("edge %d\n", *e);
-          c = sc_array_index (info->common_corner, k);
-          printf ("corner %d\n", *c);
-        }
-      }
-      P4EST_ASSERT (failure == false);
     }
   }
+  else {
+    sc_array_init (eta, sizeof (p8est_edge_transform_t));
+    for (i = 0; i < n; i++) {
+      t = sc_array_index (info->tree, (size_t) i);
+      q = sc_array_index (info->quads, (size_t) i);
+      e = sc_array_index (info->edge_in_zorder, (size_t) i);
+      level = q->level;
+      min_level = (level < min_level) ? level : min_level;
+      max_level = (level > max_level) ? level : max_level;
+      for (j = 0; j < 2; j++) {
+        f = p8est_edge_faces[*e][j];
+        p8est_quadrant_face_neighbor (q, f, &temp);
+        if (p4est_quadrant_is_outside_face (&temp)) {
+          k = p8est_find_face_transform (conn, *t, f, transform);
+          if (k == -1) {
+            continue;
+          }
+          p8est_quadrant_transform_face (&temp, &temp2, transform);
+          temp = temp2;
+          P4EST_ASSERT (p8est_quadrant_is_inside_root (&temp));
+          nt = conn->tree_to_tree[(*t) * 6 + f];
+        }
+        else {
+          nt = *t;
+        }
+        failure = true;
+        for (k = 0; k < n; k++) {
+          t2 = sc_array_index (info->tree, (size_t) k);
+          if (*t2 == nt) {
+            c = sc_array_index (info->common_corner, (size_t) k);
+            p = sc_array_index (info->quads, k);
+            if (p8est_quadrant_is_equal (&temp, p)) {
+              failure = false;
+            }
+            else if (p8est_quadrant_is_parent (p, &temp)) {
+              id = p8est_quadrant_child_id (&temp);
+              if (id == *c) {
+                failure = false;
+              }
+            }
+            else if (p8est_quadrant_is_parent (&temp, p)) {
+              id = p8est_quadrant_child_id (p);
+              if (id == *c) {
+                failure = false;
+              }
+            }
+          }
+        }
+        P4EST_ASSERT (failure == false);
+      }
+      if (p8est_quadrant_touches_edge (q, *e, true)) {
+        p8est_quadrant_edge_neighbor (q, *e, &temp2);
+        p8est_find_edge_transform (conn, *t, *e, &ei);
+        for (etree = 0; etree < eta->elem_count; etree++) {
+          et = sc_array_index (eta, etree);
+          p8est_quadrant_transform_edge (&temp2, &temp, &ei, et, true);
+          nt = et->ntree;
+          ne = et->nedge;
+          P4EST_ASSERT (p8est_quadrant_touches_edge (&temp, ne, true));
+          failure = true;
+          for (j = 0; j < n; j++) {
+            t2 = sc_array_index (info->tree, (size_t) j);
+            e2 = sc_array_index (info->edge_in_zorder, (size_t) j);
+            if (*t2 == nt && *e2 == ne) {
+              c = sc_array_index (info->common_corner, (size_t) j);
+              p = sc_array_index (info->quads, j);
+              if (p8est_quadrant_is_equal (&temp, p)) {
+                failure = false;
+              }
+              else if (p8est_quadrant_is_parent (p, &temp)) {
+                id = p8est_quadrant_child_id (&temp);
+                if (id == *c) {
+                  failure = false;
+                }
+              }
+              else if (p8est_quadrant_is_parent (&temp, p)) {
+                id = p8est_quadrant_child_id (p);
+                if (id == *c) {
+                  failure = false;
+                }
+              }
+            }
+          }
+          P4EST_ASSERT (failure == false);
+        }
+      }
+      else {
+        P4EST_ASSERT (n == 4);
+      }
+    }
+    sc_array_reset (eta);
+  }
   P4EST_ASSERT (max_level - min_level <= 1);
-};
+}
 #endif
 
 static void
@@ -323,13 +406,10 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
-  return 0;
-
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (i = 0; i < ntests; i++) {
-    P4EST_GLOBAL_PRODUCTIONF ("Begin adjacency test %d\n", i);
     /* create connectivity and forest structures */
     switch (i) {
 #ifndef P4_TO_P8
@@ -405,13 +485,16 @@ main (int argc, char **argv)
     gQtoH = sc_array_new (sizeof (int8_t));
     sc_array_resize (gQtoH, (size_t) ghost_size);
 
+    P4EST_GLOBAL_PRODUCTIONF ("Begin adjacency test %d\n", i);
 #ifndef P4_TO_P8
     p4est_iterator (p4est, &ghost_layer, NULL, NULL, face_test_adjacency,
                     NULL);
 #else
-    printf ("test %d\n", i);
     p8est_iterator (p4est, &ghost_layer, NULL,
                     NULL, face_test_adjacency, edge_test_adjacency, NULL);
+    /**
+		p8est_iterator (p4est, &ghost_layer, NULL,
+										NULL, face_test_adjacency, edge_do_nothing, NULL); */
 #endif
 
     /* clean up */
