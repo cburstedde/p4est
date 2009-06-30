@@ -118,9 +118,9 @@ bool                p8est_quadrant_contains_node (const p8est_quadrant_t * q,
  * its siblings.
  * \return Returns its child id in 0..7
  */
-int                 p8est_quadrant_higher_child_id (const p8est_quadrant_t *q,
-                                                    const int level);
- 
+int                 p8est_quadrant_ancestor_id (const p8est_quadrant_t * q,
+                                                const int level);
+
 /** Compute the position of this child within its siblings.
  * \return Returns its child id in 0..7
  */

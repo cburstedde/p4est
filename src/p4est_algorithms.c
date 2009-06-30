@@ -709,7 +709,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
 #endif
     count;
 
-  /** higher_child_id gives a child id on at the level that is given as its
+  /** ancestor_id gives a child id on at the level that is given as its
    * input, which is one greater than the level that contains all the children,
    * which is the input of this function.
    */
@@ -723,7 +723,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
   for (;;) {
     P4EST_ASSERT (guess < array->elem_count);
     cur = sc_array_index (array, guess);
-    child = p4est_quadrant_higher_child_id (cur, level);
+    child = p4est_quadrant_ancestor_id (cur, level);
     /** if the guess quad's child id is lower, than j, then by invariant (1) we
      * can set the lower limit of our next search, guess_low, to guess + 1.
      */

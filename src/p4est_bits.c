@@ -290,7 +290,7 @@ p4est_quadrant_contains_node (const p4est_quadrant_t * q,
 }
 
 int
-p4est_quadrant_higher_child_id (const p4est_quadrant_t * q, const int level)
+p4est_quadrant_ancestor_id (const p4est_quadrant_t * q, const int level)
 {
   int                 id = 0;
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
