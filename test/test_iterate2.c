@@ -88,15 +88,15 @@ corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 
 static int
 quad_is_in_array (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
-                  sc_array_t * quads, sc_array_t * tree_array,
+                  sc_array_t * quads, sc_array_t * treeids,
                   int *level_diff, int *child_id)
 {
   int                 i, n = (int) quads->elem_count;
   p4est_topidx_t      nt;
   p4est_quadrant_t   *p;
-  P4EST_ASSERT (tree_array->elem_count == (size_t) n);
+  P4EST_ASSERT (treeids->elem_count == (size_t) n);
   for (i = 0; i < n; i++) {
-    nt = *((p4est_topidx_t *) sc_array_index_int (tree_array, i));
+    nt = *((p4est_topidx_t *) sc_array_index_int (treeids, i));
     if (nt != t) {
       continue;
     }
@@ -234,7 +234,7 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
   int                 child_id, level_diff;
   p4est_quadrant_t   *q, temp;
   p4est_topidx_t      t, nt;
-  sc_array_t         *common_corner = info->corner_in_zorder;
+  sc_array_t         *corners = info->corners;
   p4est_connectivity_t *conn = p4est->connectivity;
 
   size_t              ctree;
@@ -256,7 +256,7 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
 #endif
 
   if (n == 1) {
-    c = *((int *) sc_array_index (info->corner_in_zorder, 0));
+    c = *((int *) sc_array_index (info->corners, 0));
     q = *((p4est_quadrant_t **) sc_array_index (info->quads, 0));
     SC_CHECK_ABORT (p4est_quadrant_touches_corner (q, c, true),
                     "Iterate: mismatched corner 1");
@@ -269,19 +269,19 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
   sc_array_init (cta, sizeof (p8est_corner_transform_t));
 #endif /* !P4_TO_P8 */
   for (i = 0; i < n; i++) {
-    t = *((p4est_topidx_t *) sc_array_index_int (info->tree, i));
+    t = *((p4est_topidx_t *) sc_array_index_int (info->treeids, i));
     q = *((p4est_quadrant_t **) sc_array_index_int (info->quads, i));
-    c = *((int *) sc_array_index_int (info->corner_in_zorder, i));
+    c = *((int *) sc_array_index_int (corners, i));
     for (j = 0; j < P4EST_DIM; j++) {
       nt = quad_face_neighbor (p4est, q, t, p4est_corner_faces[c][j], &temp);
-      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 2");
       SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                       "Iterate: mismatched corner 3");
       if (level_diff != 0) {
         SC_CHECK_ABORT
-          (child_id == *((int *) sc_array_index_int (common_corner, k)),
+          (child_id == *((int *) sc_array_index_int (corners, k)),
            "Iterate: mismatched corner 4");
       }
 
@@ -289,14 +289,14 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
       e = p8est_corner_edges[c][j];
       if (!p8est_quadrant_touches_edge (q, e, true)) {
         nt = quad_edge_neighbor (p4est, q, t, e, &temp);
-        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                               &level_diff, &child_id);
         SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 5");
         SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                         "Iterate: mismatched corner 6");
         if (level_diff != 0) {
           SC_CHECK_ABORT
-            (child_id == *((int *) sc_array_index_int (common_corner, k)),
+            (child_id == *((int *) sc_array_index_int (corners, k)),
              "Iterate: mismatched corner 7");
         }
       }
@@ -307,14 +307,14 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
           et = sc_array_index (eta, etree);
           p8est_quadrant_transform_edge (&temp2, &temp, &ei, et, true);
           nt = et->ntree;
-          k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+          k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                                 &level_diff, &child_id);
           SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 8");
           SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                           "Iterate: mismatched corner 9");
           if (level_diff != 0) {
             SC_CHECK_ABORT
-              (child_id == *((int *) sc_array_index_int (common_corner, k)),
+              (child_id == *((int *) sc_array_index_int (corners, k)),
                "Iterate: mismatched corner 10");
           }
         }
@@ -325,12 +325,12 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
     if (!p4est_quadrant_touches_corner (q, c, true)) {
 #ifndef P4_TO_P8
       nt = quad_corner_neighbor (p4est, q, t, c, &temp);
-      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 11");
       if (level_diff != 0) {
         SC_CHECK_ABORT
-          (child_id == *((int *) sc_array_index_int (common_corner, k)),
+          (child_id == *((int *) sc_array_index_int (corners, k)),
            "Iterate: mismatched corner 12");
       }
 #else
@@ -342,12 +342,12 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
       }
       if (j == P4EST_DIM) {
         nt = quad_corner_neighbor (p4est, q, t, c, &temp);
-        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                               &level_diff, &child_id);
         SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 13");
         if (level_diff != 0) {
           SC_CHECK_ABORT
-            (child_id == *((int *) sc_array_index_int (common_corner, k)),
+            (child_id == *((int *) sc_array_index_int (corners, k)),
              "Iterate: mismatched corner 14");
         }
       }
@@ -359,12 +359,12 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
           et = sc_array_index (eta, etree);
           p8est_quadrant_transform_edge (&temp2, &temp, &ei, et, true);
           nt = et->ntree;
-          k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+          k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                                 &level_diff, &child_id);
           SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 15");
           if (level_diff != 0) {
             SC_CHECK_ABORT
-              (child_id == *((int *) sc_array_index_int (common_corner, k)),
+              (child_id == *((int *) sc_array_index_int (corners, k)),
                "Iterate: mismatched edge 16");
           }
         }
@@ -382,12 +382,12 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
         ct = sc_array_index (cta, ctree);
         p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, true);
         nt = ct->ntree;
-        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                               &level_diff, &child_id);
         SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 16");
         if (level_diff != 0) {
           SC_CHECK_ABORT
-            (child_id == *((int *) sc_array_index_int (common_corner, k)),
+            (child_id == *((int *) sc_array_index_int (corners, k)),
              "Iterate: mismatched edge 17");
         }
       }
@@ -415,7 +415,7 @@ edge_test_adjacency (p4est_iter_edge_info_t * info, void *data)
   int                 i, j, k, e;
   int                 child_id, level_diff;
   p4est_topidx_t      t, nt;
-  sc_array_t         *common_corner = info->common_corner;
+  sc_array_t         *common_corners = info->common_corners;
   p8est_connectivity_t *conn = p4est->connectivity;
 
   p8est_edge_info_t   ei;
@@ -425,7 +425,7 @@ edge_test_adjacency (p4est_iter_edge_info_t * info, void *data)
   eta = &ei.edge_transforms;
 
   if (n == 1) {
-    e = *((int *) sc_array_index (info->edge_in_zorder, 0));
+    e = *((int *) sc_array_index (info->edges, 0));
     q = *((p8est_quadrant_t **) sc_array_index (info->quads, 0));
     SC_CHECK_ABORT (p8est_quadrant_touches_edge (q, e, true),
                     "Iterate: mismatched edge 1");
@@ -434,31 +434,31 @@ edge_test_adjacency (p4est_iter_edge_info_t * info, void *data)
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
   for (i = 0; i < n; i++) {
     q = *((p8est_quadrant_t **) sc_array_index_int (info->quads, i));
-    t = *((p4est_topidx_t *) sc_array_index_int (info->tree, i));
-    e = *((int *) sc_array_index_int (info->edge_in_zorder, i));
+    t = *((p4est_topidx_t *) sc_array_index_int (info->treeids, i));
+    e = *((int *) sc_array_index_int (info->edges, i));
     for (j = 0; j < 2; j++) {
       nt = quad_face_neighbor (p4est, q, t, p8est_edge_faces[e][j], &temp);
-      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched edge 2");
       SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                       "Iterate: mismatched edge 3");
       if (level_diff != 0) {
         SC_CHECK_ABORT
-          (child_id == *((int *) sc_array_index_int (common_corner, k)),
+          (child_id == *((int *) sc_array_index_int (common_corners, k)),
            "Iterate: mismatched edge 4");
       }
     }
     if (!p8est_quadrant_touches_edge (q, e, true)) {
       nt = quad_edge_neighbor (p4est, q, t, e, &temp);
-      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched edge 5");
       SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                       "Iterate: mismatched edge 6");
       if (level_diff != 0) {
         SC_CHECK_ABORT
-          (child_id == *((int *) sc_array_index_int (common_corner, k)),
+          (child_id == *((int *) sc_array_index_int (common_corners, k)),
            "Iterate: mismatched edge 7");
       }
     }
@@ -469,14 +469,14 @@ edge_test_adjacency (p4est_iter_edge_info_t * info, void *data)
         et = sc_array_index (eta, etree);
         p8est_quadrant_transform_edge (&temp2, &temp, &ei, et, true);
         nt = et->ntree;
-        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->tree,
+        k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                               &level_diff, &child_id);
         SC_CHECK_ABORT (k >= 0, "Iterate: mismatched edge 8");
         SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                         "Iterate: mismatched edge 9");
         if (level_diff != 0) {
           SC_CHECK_ABORT
-            (child_id == *((int *) sc_array_index_int (common_corner, k)),
+            (child_id == *((int *) sc_array_index_int (common_corners, k)),
              "Iterate: mismatched edge 10");
         }
       }
@@ -496,8 +496,8 @@ face_test_adjacency (p4est_iter_face_info_t * info, void *data)
   int                 left_outgoing_face = info->left_outgoing_face;
   int                 right_outgoing_face = info->right_outgoing_face;
   int                 level_diff, child_id, j;
-  p4est_topidx_t      left_tree = info->left_tree;
-  p4est_topidx_t      right_tree = info->right_tree;
+  p4est_topidx_t      left_treeid = info->left_treeid;
+  p4est_topidx_t      right_treeid = info->right_treeid;
   p4est_topidx_t      nt;
   sc_array_t          view;
   sc_array_t          view_tree;
@@ -506,7 +506,8 @@ face_test_adjacency (p4est_iter_face_info_t * info, void *data)
   right_outgoing_face = p4est_zface_to_rface[right_outgoing_face];
 #endif
 
-  nt = quad_face_neighbor (p4est, left, left_tree, left_outgoing_face, &temp);
+  nt =
+    quad_face_neighbor (p4est, left, left_treeid, left_outgoing_face, &temp);
   view.elem_count = 1;
   view.byte_alloc = -1;
   view.elem_size = sizeof (p4est_quadrant_t *);
@@ -514,11 +515,11 @@ face_test_adjacency (p4est_iter_face_info_t * info, void *data)
   view_tree.elem_count = 1;
   view_tree.byte_alloc = -1;
   view_tree.elem_size = sizeof (p4est_topidx_t);
-  view_tree.array = (void *) (&right_tree);
+  view_tree.array = (void *) (&right_treeid);
   j = quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
                         &child_id);
   SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 1");
-  if (!info->hanging_flag) {
+  if (!info->is_hanging) {
     SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 2");
   }
   else {
@@ -527,7 +528,7 @@ face_test_adjacency (p4est_iter_face_info_t * info, void *data)
                     "Iterate: mismatched face 4");
   }
 
-  nt = quad_face_neighbor (p4est, right, right_tree,
+  nt = quad_face_neighbor (p4est, right, right_treeid,
                            right_outgoing_face, &temp);
   view.elem_count = 1;
   view.byte_alloc = -1;
@@ -536,11 +537,11 @@ face_test_adjacency (p4est_iter_face_info_t * info, void *data)
   view_tree.elem_count = 1;
   view_tree.byte_alloc = -1;
   view_tree.elem_size = sizeof (p4est_topidx_t);
-  view_tree.array = (void *) (&left_tree);
+  view_tree.array = (void *) (&left_treeid);
   j = quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
                         &child_id);
   SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 1");
-  if (!info->hanging_flag) {
+  if (!info->is_hanging) {
     SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 2");
   }
   else {

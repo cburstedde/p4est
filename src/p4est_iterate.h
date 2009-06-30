@@ -32,8 +32,8 @@ typedef struct p4est_iter_volume_info
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
   p4est_quadrant_t   *quad;
-  size_t              tree_local_num;
-  p4est_topidx_t      tree;
+  size_t              quadid;
+  p4est_topidx_t      treeid;
 }
 p4est_iter_volume_info_t;
 
@@ -45,17 +45,17 @@ typedef struct p4est_iter_face_info
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
   p4est_quadrant_t   *left_quad;
-  ssize_t             left_tree_local_num;
-  p4est_topidx_t      left_tree;
+  ssize_t             left_quadid;
+  p4est_topidx_t      left_treeid;
   int                 left_outgoing_face;
   int                 left_corner;
   p4est_quadrant_t   *right_quad;
-  ssize_t             right_tree_local_num;
-  p4est_topidx_t      right_tree;
+  ssize_t             right_quadid;
+  p4est_topidx_t      right_treeid;
   int                 right_outgoing_face;
   int                 right_corner;
   int                 orientation;
-  bool                hanging_flag;
+  bool                is_hanging;
 }
 p4est_iter_face_info_t;
 
@@ -67,9 +67,9 @@ typedef struct p4est_iter_corner_info
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
   sc_array_t         *quads;
-  sc_array_t         *tree_local_num;
-  sc_array_t         *tree;
-  sc_array_t         *corner_in_zorder;
+  sc_array_t         *quadids;
+  sc_array_t         *treeids;
+  sc_array_t         *corners;
 }
 p4est_iter_corner_info_t;
 
