@@ -32,7 +32,7 @@ typedef struct p8est_qcb_info
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   p8est_quadrant_t   *quad;
-  p4est_locidx_t      tree_local_num;
+  size_t              tree_local_num;
   p4est_topidx_t      tree;
 }
 p8est_qcb_info_t;
@@ -45,12 +45,12 @@ typedef struct p8est_fcb_info
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   p8est_quadrant_t   *left_quad;
-  p4est_locidx_t      left_tree_local_num;
+  ssize_t             left_tree_local_num;
   p4est_topidx_t      left_tree;
   int                 left_outgoing_face;
   int                 left_corner;
   p8est_quadrant_t   *right_quad;
-  p4est_locidx_t      right_tree_local_num;
+  ssize_t             right_tree_local_num;
   p4est_topidx_t      right_tree;
   int                 right_outgoing_face;
   int                 right_corner;
