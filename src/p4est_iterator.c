@@ -132,59 +132,66 @@ p4est_vert_iterator (p4est_viter_args_t * args, void *user_data,
     for (type = local; type <= ghost; type++) {
       sidetype = side * 2 + type;
       if (count[sidetype]) {
-        switch (this_corner) {
-        case (0):
-          P4EST_ASSERT (first_index[sidetype] <
-                        quadrants[sidetype]->elem_count);
+        if (count[sidetype] == 1) {
           test[sidetype] = sc_array_index (quadrants[sidetype], (size_t)
                                            first_index[sidetype]);
           temp_idx = 0;
-          break;
-        case (P4EST_CHILDREN - 1):
-          P4EST_ASSERT (first_index[sidetype] + count[sidetype] - 1 <
-                        quadrants[sidetype]->elem_count);
-          test[sidetype] = sc_array_index (quadrants[sidetype], (size_t)
-                                           first_index[sidetype] +
-                                           count[sidetype] - 1);
-          temp_idx = count[sidetype] - 1;
-          break;
-        default:
-          P4EST_ASSERT (first_index[sidetype] <
-                        quadrants[sidetype]->elem_count);
-          test[sidetype] = sc_array_index (quadrants[sidetype], (size_t)
-                                           first_index[sidetype]);
-          temp = *(test[sidetype]);
-          temp.x &= mask;
-          temp.y &= mask;
+        }
+        else {
+          switch (this_corner) {
+          case (0):
+            P4EST_ASSERT (first_index[sidetype] <
+                          quadrants[sidetype]->elem_count);
+            test[sidetype] = sc_array_index (quadrants[sidetype], (size_t)
+                                             first_index[sidetype]);
+            temp_idx = 0;
+            break;
+          case (P4EST_CHILDREN - 1):
+            P4EST_ASSERT (first_index[sidetype] + count[sidetype] - 1 <
+                          quadrants[sidetype]->elem_count);
+            test[sidetype] = sc_array_index (quadrants[sidetype], (size_t)
+                                             first_index[sidetype] +
+                                             count[sidetype] - 1);
+            temp_idx = count[sidetype] - 1;
+            break;
+          default:
+            P4EST_ASSERT (first_index[sidetype] <
+                          quadrants[sidetype]->elem_count);
+            test[sidetype] = sc_array_index (quadrants[sidetype], (size_t)
+                                             first_index[sidetype]);
+            temp = *(test[sidetype]);
+            temp.x &= mask;
+            temp.y &= mask;
 #ifdef P4_TO_P8
-          temp.z &= mask;
+            temp.z &= mask;
 #endif
-          temp.level = P4EST_QMAXLEVEL;
-          P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
-          temp.x += (this_corner % 2) ?
-            P4EST_QUADRANT_LEN (level) -
-            P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
-          temp.y += ((this_corner % 4) / 2) ?
-            P4EST_QUADRANT_LEN (level) -
-            P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
+            temp.level = P4EST_QMAXLEVEL;
+            P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
+            temp.x += (this_corner % 2) ?
+              P4EST_QUADRANT_LEN (level) -
+              P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
+            temp.y += ((this_corner % 4) / 2) ?
+              P4EST_QUADRANT_LEN (level) -
+              P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
 #ifdef P4_TO_P8
-          temp.z += (this_corner / 4) ?
-            P4EST_QUADRANT_LEN (level) -
-            P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
+            temp.z += (this_corner / 4) ?
+              P4EST_QUADRANT_LEN (level) -
+              P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
 #endif
-          P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
-          test_view.elem_count = count[sidetype];
-          test_view.array = quadrants[sidetype]->array +
-            sizeof (p4est_quadrant_t) * (size_t) first_index[sidetype];
-          temp_idx = p4est_find_higher_bound (&test_view, &temp, 0);
-          if (temp_idx == -1) {
-            test[sidetype] = NULL;
+            P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
+            test_view.elem_count = count[sidetype];
+            test_view.array = quadrants[sidetype]->array +
+              sizeof (p4est_quadrant_t) * (size_t) first_index[sidetype];
+            temp_idx = p4est_find_higher_bound (&test_view, &temp, 0);
+            if (temp_idx == -1) {
+              test[sidetype] = NULL;
+            }
+            else {
+              P4EST_ASSERT (temp_idx < test_view.elem_count);
+              test[sidetype] = sc_array_index (&test_view, (size_t) temp_idx);
+            }
+            break;
           }
-          else {
-            P4EST_ASSERT (temp_idx < test_view.elem_count);
-            test[sidetype] = sc_array_index (&test_view, (size_t) temp_idx);
-          }
-          break;
         }
         if (test[sidetype] != NULL) {
           temp_idx += first_index[sidetype];
