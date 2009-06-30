@@ -82,6 +82,8 @@ p4est_corner_transform_t;
 
 extern const int    p4est_face_corners[4][2];
 
+extern const int    p4est_corner_faces[4][2];
+
 /** Mappings between right-hand rule and z-ordering. */
 extern const int    p4est_corner_to_zorder[5];
 extern const int    p4est_zface_to_rface[4];

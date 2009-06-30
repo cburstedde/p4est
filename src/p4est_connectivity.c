@@ -23,8 +23,14 @@
 #include <sc_io.h>
 
 /* *INDENT-OFF* */
+
+/** right hand rule face to z order corner */
 const int           p4est_face_corners[4][2] =
 {{0, 1}, {1, 3}, {2, 3}, {0, 2}};
+
+/** z order corner to right hand rule face */
+const int           p4est_corner_faces[4][2] =
+{{0, 3}, {0, 1}, {2, 3}, {1, 2}};
 
 const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
 const int           p4est_zface_to_rface[4] = { 3, 1, 0, 2 };

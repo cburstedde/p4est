@@ -83,6 +83,7 @@
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
+#define p4est_corner_faces              p8est_corner_faces
 #define p4est_face_dual                 p8est_face_dual
 #define p4est_face_child_hang           p8est_face_child_hang
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
