@@ -227,11 +227,7 @@ quad_vert_neighbor (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
 static void
 vert_test_adjacency (p4est_vcb_info_t * info, void *data)
 {
-#ifndef P4_TO_P8
   p4est_t            *p4est = info->p4est;
-#else
-  p4est_t            *p4est = info->p8est;
-#endif
   int                 i, j, k;
   int                 n = info->quads->elem_count;
   int                 c;
@@ -317,9 +313,9 @@ vert_test_adjacency (p4est_vcb_info_t * info, void *data)
           SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
                           "Iterate: mismatched corner 9");
           if (level_diff != 0) {
-            SC_CHECK_ABORT (child_id ==
-                            *((int *)
-                              sc_array_index (common_corner, (size_t) k)),
+            SC_CHECK_ABORT (child_id == *((int *)
+                                          sc_array_index (common_corner,
+                                                          (size_t) k)),
                             "Iterate: mismatched corner 10");
           }
         }
@@ -368,9 +364,9 @@ vert_test_adjacency (p4est_vcb_info_t * info, void *data)
                                 &level_diff, &child_id);
           SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 15");
           if (level_diff != 0) {
-            SC_CHECK_ABORT (child_id ==
-                            *((int *)
-                              sc_array_index (common_corner, (size_t) k)),
+            SC_CHECK_ABORT (child_id == *((int *)
+                                          sc_array_index (common_corner,
+                                                          (size_t) k)),
                             "Iterate: mismatched edge 16");
           }
         }
@@ -392,9 +388,9 @@ vert_test_adjacency (p4est_vcb_info_t * info, void *data)
                               &level_diff, &child_id);
         SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 16");
         if (level_diff != 0) {
-          SC_CHECK_ABORT (child_id ==
-                          *((int *)
-                            sc_array_index (common_corner, (size_t) k)),
+          SC_CHECK_ABORT (child_id == *((int *)
+                                        sc_array_index (common_corner,
+                                                        (size_t) k)),
                           "Iterate: mismatched edge 17");
         }
       }
@@ -415,7 +411,7 @@ edge_do_nothing (p4est_ecb_info_t * info, void *data)
 static void
 edge_test_adjacency (p4est_ecb_info_t * info, void *data)
 {
-  p4est_t            *p4est = info->p8est;
+  p4est_t            *p4est = info->p4est;
   p8est_quadrant_t    temp, temp2;
   p8est_quadrant_t   *q;
   int                 n = info->quads->elem_count;
@@ -462,7 +458,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
                             &level_diff, &child_id);
       if (k == -1) {
         p4est_quadrant_print (SC_LP_DEBUG, q);
-        printf ("e %d\n", e, p8est_edge_faces[e][j], j);
+        printf ("e %d %d %d\n", e, p8est_edge_faces[e][j], j);
         p4est_quadrant_print (SC_LP_DEBUG, &temp);
         printf ("t %d nt %d\n\n", t, nt);
         for (k = 0; k < n; k++) {
@@ -511,11 +507,7 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
 static void
 face_test_adjacency (p4est_fcb_info_t * info, void *data)
 {
-#ifndef P4_TO_P8
   p4est_t            *p4est = info->p4est;
-#else
-  p4est_t            *p4est = info->p8est;
-#endif
   p4est_quadrant_t    temp;
   p4est_quadrant_t   *left = info->left_quad;
   p4est_quadrant_t   *right = info->right_quad;
@@ -657,12 +649,12 @@ main (int argc, char **argv)
     p4est_refine (p4est, true, refine_fn, NULL);
 
     /* balance the forest */
-    p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+    p4est_balance (p4est, P4EST_BALANCE_DEFAULT, NULL);
 
     /* do a uniform partition */
     p4est_partition (p4est, NULL);
 
-    /* create ghost layer */
+    /* create ghost layer: n.b. BALANCE_FULL required if vcb_func != NULL */
     sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
     success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
                                        &ghost_layer, &ghost_owner);

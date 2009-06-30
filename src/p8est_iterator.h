@@ -29,7 +29,7 @@ SC_EXTERN_C_BEGIN;
 
 typedef struct p8est_qcb_info
 {
-  p8est_t            *p8est;
+  p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   p8est_quadrant_t   *quad;
   p4est_locidx_t      tree_local_num;
@@ -42,7 +42,7 @@ typedef void        (*p8est_qcb_func_t) (p8est_qcb_info_t * info,
 
 typedef struct p8est_fcb_info
 {
-  p8est_t            *p8est;
+  p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   p8est_quadrant_t   *left_quad;
   p4est_locidx_t      left_tree_local_num;
@@ -64,7 +64,7 @@ typedef void        (*p8est_fcb_func_t) (p8est_fcb_info_t * info,
 
 typedef struct p8est_ecb_info
 {
-  p8est_t            *p8est;
+  p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   sc_array_t         *quads;
   sc_array_t         *tree_local_num;
@@ -80,7 +80,7 @@ typedef void        (*p8est_ecb_func_t) (p8est_ecb_info_t * info,
 
 typedef struct p8est_vcb_info
 {
-  p8est_t            *p8est;
+  p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   sc_array_t         *quads;
   sc_array_t         *tree_local_num;
