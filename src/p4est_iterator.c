@@ -303,6 +303,7 @@ typedef struct p4est_fiter_args
   int8_t             *test_level;
   int                *quad_idx2;
   bool               *refine;
+  bool                outside_face;
 #ifdef P4_TO_P8
   p8est_eiter_args_t *edge_args;
 #endif
@@ -341,12 +342,9 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
   int8_t             *test_level = args->test_level;
   int                *quad_idx2 = args->quad_idx2;
   bool               *refine = args->refine;
+  int8_t              limit;
 
   p4est_quadrant_t   *test2;
-#ifdef P4EST_DEBUG
-  p4est_quadrant_t    tmpv[2];
-  p4est_quadrant_t    tmpq;
-#endif
   int8_t              i, j, k, dir;
   int8_t              true_dir, v;
   int8_t              level;
@@ -372,9 +370,10 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
   int                 temp_idx2;
 #endif
 
+  limit = args->outside_face ? left : right;
   level = start_level;
   level_idx2 = level * idx2_stride;
-  for (side = left; side <= right; side++) {
+  for (side = left; side <= limit; side++) {
     quad_idx2[side] = level_idx2 + start_idx2[side];
     for (type = local; type <= ghost; type++) {
       sidetype = side * 2 + type;
@@ -384,39 +383,16 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
                   first_index[sidetype]);
     }
   }
-  if (!count[left * 2 + local] && !count[right * 2 + local]) {
-    return;
-  }
-
-#ifdef P4EST_DEBUG
-  for (side = left; side <= right; side++) {
-    n_side = side ^ 1;
-    for (type = local; type <= ghost; type++) {
-      sidetype = side * 2 + type;
-      if (count[sidetype]) {
-        P4EST_ASSERT (first_index[sidetype] <
-                      quadrants[sidetype]->elem_count);
-        test[sidetype] =
-          sc_array_index (quadrants[sidetype],
-                          (size_t) first_index[sidetype]);
-        P4EST_ASSERT (first_index[sidetype] + count[sidetype] - 1 <
-                      quadrants[sidetype]->elem_count);
-        test[(side ^ 1) * 2 + type] =
-          sc_array_index (quadrants[sidetype],
-                          ((size_t) first_index[sidetype]) + count[sidetype] -
-                          1);
-        p4est_nearest_common_ancestor (test[sidetype],
-                                       test[(side ^ 1) * 2 + type],
-                                       &(tmpv[type]));
-        P4EST_ASSERT (tmpv[type].level >= start_level);
-      }
-    }
-    if (count[side * 2 + local] && count[side * 2 + ghost]) {
-      p4est_nearest_common_ancestor (&(tmpv[0]), &(tmpv[1]), &(tmpv[2]));
-      P4EST_ASSERT (tmpv[2].level >= start_level);
+  if (!args->outside_face) {
+    if (!count[left * 2 + local] && !count[right * 2 + local]) {
+      return;
     }
   }
-#endif /** P4EST_DEBUG */
+  else {
+    if (!count[left * 2 + local]) {
+      return;
+    }
+  }
 
 #ifndef P4_TO_P8
   info.p4est = args->p4est;
@@ -432,7 +408,7 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
 
   level_num[start_level] = 0;
   for (;;) {
-    for (side = left; side <= right; side++) {
+    for (side = left; side <= limit; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
         if (count[sidetype]) {
@@ -449,7 +425,7 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
       }
     }
     refine[left] = refine[right] = true;
-    for (side = left; side <= right; side++) {
+    for (side = left; side <= limit; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
         if (test_level[sidetype] == level) {
@@ -463,38 +439,55 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
             info.left_outgoing_face = face[side];
             info.left_tree = args->tree[side];
             refine[side] = false;
-            n_side = side ^ 1;
-            info.right_outgoing_face = face[n_side];
-            info.right_tree = args->tree[n_side];
-            for (n_type = type; n_type <= ghost; n_type++) {
-              nsidentype = n_side * 2 + n_type;
-              if ((n_type > type || n_side > side) &&
-                  test_level[nsidentype] == level) {
-                P4EST_ASSERT (count[nsidentype] == 1);
-                P4EST_ASSERT (count[n_side * 2 + (n_type ^ 1)] == 0);
-                info.right_quad = test[nsidentype];
-                info.right_tree_local_num = (n_type == local) ?
-                  first_index[nsidentype] :
-                  (p4est_locidx_t) (first_index[nsidentype] - num_ghosts);
-                info.left_corner = num_to_child[side * ntc_str];
-                info.right_corner = num_to_child[n_side * ntc_str];
-                info.hanging_flag = false;
-                P4EST_ASSERT (!(type == ghost && n_type == ghost));
-                fcb_func (&info, user_data);
-                level_num[level]++;
-                goto change_search_area;
+            if (!args->outside_face) {
+              n_side = side ^ 1;
+              info.right_outgoing_face = face[n_side];
+              info.right_tree = args->tree[n_side];
+              for (n_type = type; n_type <= ghost; n_type++) {
+                nsidentype = n_side * 2 + n_type;
+                if ((n_type > type || n_side > side) &&
+                    test_level[nsidentype] == level) {
+                  P4EST_ASSERT (count[nsidentype] == 1);
+                  P4EST_ASSERT (count[n_side * 2 + (n_type ^ 1)] == 0);
+                  info.right_quad = test[nsidentype];
+                  info.right_tree_local_num = (n_type == local) ?
+                    first_index[nsidentype] :
+                    (p4est_locidx_t) (first_index[nsidentype] - num_ghosts);
+                  info.left_corner = num_to_child[side * ntc_str];
+                  info.right_corner = num_to_child[n_side * ntc_str];
+                  info.hanging_flag = false;
+                  P4EST_ASSERT (!(type == ghost && n_type == ghost));
+                  fcb_func (&info, user_data);
+                  level_num[level]++;
+                  goto change_search_area;
+                }
               }
-            }
 #ifdef P4EST_DEBUG
-            if (type == local) {
-              if (count[n_side * 2 + type] == 0 &&
-                  count[n_side * 2 + (type ^ 1)] == 0) {
-                printf ("unmatched side.\n");
+              if (type == local) {
+                if (count[n_side * 2 + type] == 0 &&
+                    count[n_side * 2 + (type ^ 1)] == 0) {
+                  printf ("unmatched side.\n");
+                }
+                P4EST_ASSERT (count[n_side * 2 + type] > 0 ||
+                              count[n_side * 2 + (type ^ 1)] > 0);
               }
-              P4EST_ASSERT (count[n_side * 2 + type] > 0 ||
-                            count[n_side * 2 + (type ^ 1)] > 0);
-            }
 #endif
+            }
+            else {
+              info.right_outgoing_face = info.left_outgoing_face;
+              info.right_tree = info.left_tree;
+              /**
+							info.right_quad = NULL;
+							*/
+              info.right_quad = info.left_quad;
+              info.right_tree_local_num = info.left_tree_local_num;
+              info.left_corner = num_to_child[side * ntc_str];
+              info.right_corner = info.left_corner;
+              info.hanging_flag = false;
+              fcb_func (&info, user_data);
+              level_num[level]++;
+              goto change_search_area;
+            }
           }
           else {
             level_num[level]++;
@@ -503,7 +496,7 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
         }
       }
     }
-    for (side = left; side <= right; side++) {
+    for (side = left; side <= limit; side++) {
       if (refine[side]) {
         quad_idx2[side] = level_idx2 + idx2_stride;
         for (type = local; type <= ghost; type++) {
@@ -519,7 +512,7 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
         }
       }
     }
-    for (side = left; side <= right; side++) {
+    for (side = left; side <= limit; side++) {
       if (!refine[side]) {
         n_side = side ^ 1;
         info.hanging_flag = true;
@@ -577,48 +570,92 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
       // edge iterator goes here
       if (ecb_func != NULL || vcb_func != NULL) {
         edge_args->level = level;
-        for (dir = 0; dir < 2; dir++) {
-          for (side = 0; side < 2; side++) {
-            for (j = 0; j < 4; j++) {
-              k = j >> 1;
-              if (dir == 0) {
-                e_common_corner[side][j] =
-                  num_to_child[(j % 2) * ntc_str + (2 * (1 - k) + side)];
-              }
-              else {
-                e_common_corner[side][j] =
-                  num_to_child[(j % 2) * ntc_str + ((1 - k) + 2 * side)];
+        if (!args->outside_face) {
+          for (dir = 0; dir < 2; dir++) {
+            for (side = 0; side < 2; side++) {
+              for (j = 0; j < 4; j++) {
+                k = j >> 1;
+                if (dir == 0) {
+                  e_common_corner[side][j] =
+                    num_to_child[(j % 2) * ntc_str + (2 * (1 - k) + side)];
+                }
+                else {
+                  e_common_corner[side][j] =
+                    num_to_child[(j % 2) * ntc_str + ((1 - k) + 2 * side)];
+                }
               }
             }
-          }
-          for (j = 0; j < 4; j++) {
-            v = e_common_corner[0][j];
-            true_dir = e_common_corner[1][j] - v;
-            true_dir = (true_dir > 0) ? true_dir : -true_dir;
-            e_edge_in_zorder[j] = p8est_corner_edges[v][true_dir >> 1];
-          }
-          for (side = 0; side < 2; side++) {
             for (j = 0; j < 4; j++) {
-              k = j >> 1;
-              if (dir == 0) {
-                start_idx2[j] =
-                  num_to_child[(j % 2) * ntc_str + side + 2 * k];
-              }
-              else {
-                start_idx2[j] =
-                  num_to_child[(j % 2) * ntc_str + 2 * side + k];
-              }
-              temp_idx2 = level_idx2 + start_idx2[j];
-              index[j * 2 + local][temp_idx2] = index[(j % 2) * 2 + local]
-                [temp_idx2];
-              index[j * 2 + local][temp_idx2 + 1] = index[(j % 2) * 2 + local]
-                [temp_idx2 + 1];
-              index[j * 2 + ghost][temp_idx2] = index[(j % 2) * 2 + ghost]
-                [temp_idx2];
-              index[j * 2 + ghost][temp_idx2 + 1] = index[(j % 2) * 2 + ghost]
-                [temp_idx2 + 1];
+              v = e_common_corner[0][j];
+              true_dir = e_common_corner[1][j] - v;
+              true_dir = (true_dir > 0) ? true_dir : -true_dir;
+              e_edge_in_zorder[j] = p8est_corner_edges[v][true_dir >> 1];
             }
-            p8est_edge_iterator (edge_args, user_data, ecb_func, vcb_func);
+            for (side = 0; side < 2; side++) {
+              for (j = 0; j < 4; j++) {
+                k = j >> 1;
+                if (dir == 0) {
+                  start_idx2[j] =
+                    num_to_child[(j % 2) * ntc_str + side + 2 * k];
+                }
+                else {
+                  start_idx2[j] =
+                    num_to_child[(j % 2) * ntc_str + 2 * side + k];
+                }
+                temp_idx2 = level_idx2 + start_idx2[j];
+                index[j * 2 + local][temp_idx2] = index[(j % 2) * 2 + local]
+                  [temp_idx2];
+                index[j * 2 + local][temp_idx2 + 1] =
+                  index[(j % 2) * 2 + local]
+                  [temp_idx2 + 1];
+                index[j * 2 + ghost][temp_idx2] = index[(j % 2) * 2 + ghost]
+                  [temp_idx2];
+                index[j * 2 + ghost][temp_idx2 + 1] =
+                  index[(j % 2) * 2 + ghost]
+                  [temp_idx2 + 1];
+              }
+              p8est_edge_iterator (edge_args, user_data, ecb_func, vcb_func);
+            }
+          }
+        }
+        else {
+          for (dir = 0; dir < 2; dir++) {
+            for (side = 0; side < 2; side++) {
+              for (j = 0; j < 2; j++) {
+                if (dir == 0) {
+                  e_common_corner[side][j] =
+                    num_to_child[(2 * (1 - j) + side)];
+                }
+                else {
+                  e_common_corner[side][j] =
+                    num_to_child[((1 - j) + 2 * side)];
+                }
+              }
+            }
+            for (j = 0; j < 2; j++) {
+              v = e_common_corner[0][j];
+              true_dir = e_common_corner[1][j] - v;
+              true_dir = (true_dir > 0) ? true_dir : -true_dir;
+              e_edge_in_zorder[j] = p8est_corner_edges[v][true_dir >> 1];
+            }
+            for (side = 0; side < 2; side++) {
+              for (j = 0; j < 2; j++) {
+                if (dir == 0) {
+                  start_idx2[j] = num_to_child[side + 2 * j];
+                }
+                else {
+                  start_idx2[j] = num_to_child[2 * side + j];
+                }
+                temp_idx2 = level_idx2 + start_idx2[j];
+                index[j * 2 + local][temp_idx2] = index[local][temp_idx2];
+                index[j * 2 + local][temp_idx2 + 1] = index[local]
+                  [temp_idx2 + 1];
+                index[j * 2 + ghost][temp_idx2] = index[ghost][temp_idx2];
+                index[j * 2 + ghost][temp_idx2 + 1] = index[ghost]
+                  [temp_idx2 + 1];
+              }
+              p8est_edge_iterator (edge_args, user_data, ecb_func, vcb_func);
+            }
           }
         }
       }
@@ -628,11 +665,11 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
       level_idx2 -= idx2_stride;
       goto change_search_area;
     }
-    quad_idx2[left] =
-      level_idx2 + num_to_child[left * ntc_str + level_num[level]];
-    quad_idx2[right] =
-      level_idx2 + num_to_child[right * ntc_str + level_num[level]];
-    for (side = left; side <= right; side++) {
+    for (side = left; side <= limit; side++) {
+      quad_idx2[side] =
+        level_idx2 + num_to_child[side * ntc_str + level_num[level]];
+    }
+    for (side = left; side <= limit; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
         first_index[sidetype] = index[sidetype][quad_idx2[side]];
@@ -640,9 +677,17 @@ p8est_face_iterator (p4est_fiter_args_t * args, void *user_data,
           (index[sidetype][quad_idx2[side] + 1] - first_index[sidetype]);
       }
     }
-    if (!count[left * 2 + local] && !count[right * 2 + local]) {
-      level_num[level]++;
-      goto change_search_area;
+    if (!args->outside_face) {
+      if (!count[left * 2 + local] && !count[right * 2 + local]) {
+        level_num[level]++;
+        goto change_search_area;
+      }
+    }
+    else {
+      if (!count[left * 2 + local]) {
+        level_num[level]++;
+        goto change_search_area;
+      }
     }
   }
 }
@@ -922,6 +967,7 @@ p8est_iterator (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     face_args.tree[left] = t;
     face_args.tree[right] = t;
     face_args.intra_tree = true;
+    face_args.outside_face = false;
     face_args.quadrants[left * 2 + local] = quadrants[local];
     face_args.quadrants[right * 2 + local] = quadrants[local];
     face_args.orientation = 0;
@@ -1119,6 +1165,7 @@ p8est_iterator (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
       face[right] %= 6;
 #endif
       if ((t > nt) || (t == nt && face[left] > face[right])) {
+        face_args.outside_face = false;
 #ifndef P4_TO_P8
         modulus = face[left] ^ face[right];
         modulus = ((modulus & 2) >> 1) ^ (modulus & 1) ^ 1;
@@ -1167,6 +1214,31 @@ p8est_iterator (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
           quadrants[2] = &(tree->quadrants);
           quadrants[4] = quadrants[local];
           quadrants[6] = &(tree->quadrants);
+        }
+#endif
+
+#ifndef P4_TO_P8
+        p4est_face_iterator (&face_args, user_data, fcb_func, vcb_func);
+#else
+        p8est_face_iterator (&face_args, user_data, fcb_func, ecb_func,
+                             vcb_func);
+#endif
+      }
+      else if (t == nt && face[left] == face[right]) {
+        face_args.outside_face = true;
+        level_num[0] = 0;
+#ifdef P4_TO_P8
+        if (ecb_func != NULL || vcb_func != NULL) {
+          edge_args.intra_tree = false;
+          edge_args.num_sides = 2;
+          common_corner[0].elem_count = 2;
+          common_corner[1].elem_count = 2;
+          edge_in_zorder.elem_count = 2;
+          tree_array.elem_count = 2;
+          e_tree[0] = e_tree[1] = t;
+          tree_local_num.elem_count = 2;
+          quads.elem_count = 2;
+          quadrants[2] = quadrants[local];
         }
 #endif
 

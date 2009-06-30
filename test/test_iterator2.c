@@ -264,9 +264,6 @@ edge_test_adjacency (p4est_ecb_info_t * info, void *data)
           P4EST_ASSERT (failure == false);
         }
       }
-      else {
-        P4EST_ASSERT (n == 4);
-      }
     }
     sc_array_reset (eta);
   }
@@ -298,10 +295,24 @@ face_test_adjacency (p4est_fcb_info_t * info, void *data)
   p4est_connectivity_t *conn = info->p8est->connectivity;
   int                 transform_left[9];
   int                 transform_right[9];
-  p8est_find_face_transform (conn, left_tree, left_outgoing_face,
-                             transform_left);
-  p8est_find_face_transform (conn, right_tree, right_outgoing_face,
-                             transform_right);
+  p4est_topidx_t      lflag, rflag;
+  lflag = p8est_find_face_transform (conn, left_tree, left_outgoing_face,
+                                     transform_left);
+  rflag = p8est_find_face_transform (conn, right_tree, right_outgoing_face,
+                                     transform_right);
+#endif
+#ifndef P4_TO_P8
+  if (!info->intra_tree && transform_left == -1) {
+    P4EST_ASSERT (transform_right == -1);
+    P4EST_ASSERT (left == right);
+    return;
+  }
+#else
+  if (!info->intra_tree && lflag == -1) {
+    P4EST_ASSERT (rflag == -1);
+    P4EST_ASSERT (left == right);
+    return;
+  }
 #endif
   if (!info->hanging_flag) {
     if (info->intra_tree) {
@@ -493,8 +504,8 @@ main (int argc, char **argv)
     p8est_iterator (p4est, &ghost_layer, NULL,
                     NULL, face_test_adjacency, edge_test_adjacency, NULL);
     /**
-		p8est_iterator (p4est, &ghost_layer, NULL,
-										NULL, face_test_adjacency, edge_do_nothing, NULL); */
+    p8est_iterator (p4est, &ghost_layer, NULL,
+                    NULL, face_test_adjacency, edge_do_nothing, NULL); */
 #endif
 
     /* clean up */
