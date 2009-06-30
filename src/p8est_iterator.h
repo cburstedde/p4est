@@ -56,7 +56,6 @@ typedef struct p8est_fcb_info
   int                 right_corner;
   int                 orientation;
   bool                hanging_flag;
-  bool                intra_tree;
 }
 p8est_fcb_info_t;
 
@@ -73,7 +72,6 @@ typedef struct p8est_ecb_info
   sc_array_t         *edge_in_zorder;
   sc_array_t         *common_corner;
   bool                hanging_flag;
-  bool                intra_tree;
 }
 p8est_ecb_info_t;
 
@@ -88,7 +86,6 @@ typedef struct p8est_vcb_info
   sc_array_t         *tree_local_num;
   sc_array_t         *tree;
   sc_array_t         *corner_in_zorder;
-  bool                intra_tree;
 }
 p8est_vcb_info_t;
 
