@@ -7,8 +7,8 @@ type: :feature
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-22 02:11:49.256229 Z
 references: []
 
@@ -18,3 +18,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2009-07-07 03:14:29.641232 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - Implemented by Toby Isaac.

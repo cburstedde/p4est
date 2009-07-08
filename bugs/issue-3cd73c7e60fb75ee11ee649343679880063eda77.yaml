@@ -19,3 +19,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2009-07-07 02:18:50.085842 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - commented
+  - |-
+    The allgather in comm_count_quadrants uses gloidx instead of locidx.
+    Fix and possibly aggregate it with comm_global_partition.
