@@ -27,10 +27,10 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** The information that is available to the user defined p4est_iter_volume_t
+/** The information that is available to the user-defined p4est_iter_volume_t
  * callback function.
  *
- * \a treeid gives the index in \a p4est->trees of the the tree to which
+ * \a treeid gives the index in \a p4est->trees of the tree to which
  *    \a quad belongs.
  * \a quadid gives the index of \a quad within \a tree's quadrants array.
  */
@@ -51,7 +51,7 @@ typedef void        (*p4est_iter_volume_t) (p4est_iter_volume_info_t * info,
                                             void *user_data);
 
 /** The information that is available to the user defined p4est_iter_face_t
- * callback function about the quadrants on either side of a face. 
+ * callback function about the quadrants on either side of a face.
  * \a left_treeid and \a right_treeid are as above for the volume case.
  * \a left_quadid and/or \a right_quadid may be negative, which indicates that
  *    the quadrant is not local, and resides in the \a ghost_layer at the index
@@ -128,14 +128,14 @@ p4est_iter_corner_info_t;
 typedef void        (*p4est_iter_corner_t) (p4est_iter_corner_info_t * info,
                                             void *user_data);
 
-/** p4est_iterate executes the user-supplied call back functions at every
+/** p4est_iterate executes the user-supplied callback functions at every
  * volume, face, and corner in the local forest. The \a user_data pointer is
  * not touched by p4est_iterate, but is passed to each of the callbakcs.  The
  * callback functions are interspersed with each other, i.e. some face
- * callbacks will occur between volume call backs, and some corner callbacks
+ * callbacks will occur between volume callbacks, and some corner callbacks
  * will occur between face callbacks:
  *
- * 1) volume callbacks occur in the sorted morton-index order.
+ * 1) volume callbacks occur in the sorted Morton-index order.
  * 2) a face callback is not executed until after the volume callbacks have
  *    been executed for the quadrants that share it.
  * 3) a corner callback is not executed until the face callbacks have been
@@ -143,7 +143,7 @@ typedef void        (*p4est_iter_corner_t) (p4est_iter_corner_info_t * info,
  * 4) it is not always the case that every face callback for a given quadrant
  *    is executed before any of the corner callbacks.
  * 5) callbacks are not executed at faces or corners that only involve ghost
- *    quadrants, i.e. that are not adjacency the the local section of the
+ *    quadrants, i.e. that are not adjacent in the local section of the
  *    forest.
  */
 void                p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer,

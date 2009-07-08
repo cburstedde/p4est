@@ -693,7 +693,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
 #endif
 
   /** The invariants of the loop are:
-   *  1) if we are at step j, then 
+   *  1) if we are at step j, then
    *     for every quadrant q in the array with index < guess_low,
    *     child(q) < j,
    *  2) for 0 < i < P4EST_CHILDREN,
@@ -745,7 +745,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
       }
     }
     /** indices[P4EST_CHILDREN] will always be count, and if guess_low == count,
-     * then we have searched through every element of the array 
+     * then we have searched through every element of the array
      */
     if (j == P4EST_CHILDREN || guess_low == count)
       return;
