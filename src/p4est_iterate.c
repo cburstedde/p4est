@@ -290,7 +290,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
   int                 type;
   int                 sidetype;
   int                 level_idx2;
-  p4est_iter_edge_info_t info;
+  p8est_iter_edge_info_t info;
   sc_array_t          test_view;
   bool                all_empty, stop_refine;
   int                 temp_idx2;
@@ -530,17 +530,13 @@ typedef struct p4est_iter_face_args
 }
 p4est_iter_face_args_t;
 
-#ifndef P4_TO_P8
 static void
 p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                     p4est_iter_face_t iter_face,
-                    p4est_iter_corner_t iter_corner)
-#else
-static void
-p8est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
-                    p8est_iter_face_t iter_face, p8est_iter_edge_t iter_edge,
-                    p8est_iter_corner_t iter_corner)
+#ifdef P4_TO_P8
+                    p8est_iter_edge_t iter_edge,
 #endif
+                    p4est_iter_corner_t iter_corner)
 {
 
   const int           left = 0;
@@ -944,19 +940,15 @@ p4est_volume_iterate ()
 {
 };
 
-#ifndef P4_TO_P8
 void
 p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
                p4est_iter_volume_t iter_volume, p4est_iter_face_t iter_face,
-               p4est_iter_corner_t iter_corner)
-#else
-void
-p8est_iterate (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
-               p8est_iter_volume_t iter_volume,
-               p8est_iter_face_t iter_face,
-               p8est_iter_edge_t iter_edge, p8est_iter_corner_t iter_corner)
+#ifdef P4_TO_P8
+               p8est_iter_edge_t iter_edge,
 #endif
+               p4est_iter_corner_t iter_corner)
 {
+  /* constants */
   const int           left = 0;
   const int           right = 1;
   const int           local = 0;
@@ -1368,13 +1360,11 @@ p8est_iterate (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
               index[right * 2 + ghost][quad_idx2[0] + 1] =
                 index[left * 2 + ghost][quad_idx2[0] + 1];
 
-#ifndef P4_TO_P8
               p4est_face_iterate (&face_args, user_data, iter_face,
-                                  iter_corner);
-#else
-              p8est_face_iterate (&face_args, user_data, iter_face, iter_edge,
-                                  iter_corner);
+#ifdef P4_TO_P8
+                                  iter_edge,
 #endif
+                                  iter_corner);
             }
           }
 #ifdef P4_TO_P8
@@ -1578,12 +1568,11 @@ p8est_iterate (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
           corner_quads.elem_count = P4EST_CHILDREN;
         }
 
-#ifndef P4_TO_P8
-        p4est_face_iterate (&face_args, user_data, iter_face, iter_corner);
-#else
-        p8est_face_iterate (&face_args, user_data, iter_face, iter_edge,
-                            iter_corner);
+        p4est_face_iterate (&face_args, user_data, iter_face,
+#ifdef P4_TO_P8
+                            iter_edge,
 #endif
+                            iter_corner);
       }
       else if (t == nt && face[left] == face[right]) {
         face_args.outside_face = true;
@@ -1614,12 +1603,11 @@ p8est_iterate (p8est_t * p4est, sc_array_t * ghost_layer, void *user_data,
           corner_quads.elem_count = P4EST_CHILDREN / 2;
         }
 
-#ifndef P4_TO_P8
-        p4est_face_iterate (&face_args, user_data, iter_face, iter_corner);
-#else
-        p8est_face_iterate (&face_args, user_data, iter_face, iter_edge,
-                            iter_corner);
+        p4est_face_iterate (&face_args, user_data, iter_face,
+#ifdef P4_TO_P8
+                            iter_edge,
 #endif
+                            iter_corner);
       }
     }
 

@@ -70,14 +70,10 @@
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
-#define p4est_fadj_func_t               p8est_fadj_func_t
-#define p4est_fadj_info_t               p8est_fadj_info_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
-#define p4est_iter_edge_t               p8est_iter_edge_t
-#define p4est_iter_edge_info_t          p8est_iter_edge_info_t
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 
@@ -111,6 +107,7 @@
 #define p4est_load                      p8est_load
 #define p4est_balance_type_int          p8est_balance_type_int
 #define p4est_balance_type_string       p8est_balance_type_string
+#define p4est_iterate                   p8est_iterate
 
 /* functions in p4est_points */
 #define p4est_new_points                p8est_new_points
@@ -129,7 +126,7 @@
 #define p4est_node_unclamp              p8est_node_unclamp
 #define p4est_node_to_quadrant          p8est_node_to_quadrant
 #define p4est_quadrant_contains_node    p8est_quadrant_contains_node
-#define p4est_quadrant_higher_child_id  p8est_quadrant_higher_child_id
+#define p4est_quadrant_ancestor_id      p8est_quadrant_ancestor_id
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3

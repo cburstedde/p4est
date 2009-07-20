@@ -401,12 +401,12 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
 
 #ifdef P4_TO_P8
 static void
-edge_do_nothing (p4est_iter_edge_info_t * info, void *data)
+edge_do_nothing (p8est_iter_edge_info_t * info, void *data)
 {
 };
 
 static void
-edge_test_adjacency (p4est_iter_edge_info_t * info, void *data)
+edge_test_adjacency (p8est_iter_edge_info_t * info, void *data)
 {
   p4est_t            *p4est = info->p4est;
   p8est_quadrant_t    temp, temp2;
