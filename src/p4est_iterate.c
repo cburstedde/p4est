@@ -293,22 +293,48 @@ typedef struct p8est_iter_edge_args
   int                 num_sides;
   p8est_t            *p8est;
   sc_array_t         *ghost_layer;
-  int                 level;
-  int                *start_idx2;
-  int                *level_num;
-  sc_array_t         *common_corners[2];
-  sc_array_t        **quadrants;
-  sc_array_t         *edges;
-  sc_array_t         *treeids;
-  sc_array_t         *quadids;
-  sc_array_t         *quads;
-  size_t            **index;
-  size_t             *first_index;
-  p8est_quadrant_t  **test;
-  size_t             *count;
-  int                *test_level;
-  int                *quad_idx2;
-  bool               *refine;
+  int                 level;    /* the level of the initial search areas */
+  int                *start_idx2;       /* for each side, the ancestor_id at
+                                           level of the initial search area */
+  int                *level_num;        /* an array that keeps track of which
+                                           branch we take at each step in the
+                                           heirarchical search areas */
+  sc_array_t         *common_corners[2];        /* for each side of the edge,
+                                                   there are two corners that
+                                                   touch the edge */
+  sc_array_t        **quadrants;        /* the arrays, two for each side (one
+                                           local, one ghost), that contain the
+                                           quadrants in each search area */
+  sc_array_t         *edges;    /* for each search area that touches the edge,
+                                   the edge id that is shared */
+  sc_array_t         *treeids;  /* these three arrays are passed to         */
+  sc_array_t         *quadids;  /* edge_info_t to be used in iter_edge:     */
+  sc_array_t         *quads;    /* in args to avoid alloc/free              */
+
+  size_t            **index;    /* for each sidetype, the indices in quadrants
+                                   that form the bounds of the heirarchical
+                                   search areas */
+  size_t             *first_index;      /* an indexing variable used in
+                                           edge_iterate: passed as an
+                                           argument to avoid using alloc/free
+                                           on each call */
+  p8est_quadrant_t  **test;     /* a testing variable used in
+                                   edge_iterate: passed as an argument to
+                                   avoid using alloc/free on each call */
+  size_t             *count;    /* a counting variable used in
+                                   edge_iterate: passed as an argument to
+                                   avoid using alloc/free on each call */
+  int                *test_level;       /* a testing variable used in
+                                           edge_iterate: passed as an argument
+                                           to avoid using alloc/free on each 
+                                           call */
+  int                *quad_idx2;        /* an indexing variable used in
+                                           edge_iterate: passed as an
+                                           argument to avoid using alloc/free
+                                           on each call */
+  bool               *refine;   /* a testing variable used in edge_iterate:
+                                   passed as an argument to avoid using
+                                   alloc/free on each call */
   p4est_iter_corner_args_t *corner_args;
 }
 p8est_iter_edge_args_t;
@@ -354,10 +380,20 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
   sc_array_t         *corners = corner_args->corners;
   int                *c;
 
+  /* level_idx2 moves us to the correct set of bounds within the index arrays
+   * for the level: it is a set of bounds because it includes all children at
+   * this level */
   level = start_level;
   level_idx2 = level * idx2_stride;
   for (side = 0; side < num_sides; side++) {
+
+    /* start_idx2 gives the ancestor id at level for the search area on this
+     * side, so quad_idx2[side] now gives the correct location in
+     * index[sidetype] of the bounds of the search area */
     quad_idx2[side] = level_idx2 + start_idx2[side];
+
+    /* get the location in quadrants[sidetype] of the first quadrant in the
+     * search area, and the count of quadrants in the search area */
     for (type = local; type <= ghost; type++) {
       sidetype = side * 2 + type;
       first_index[sidetype] = index[sidetype][quad_idx2[side]];
@@ -365,17 +401,19 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
                          first_index[sidetype]);
     }
   }
-  all_empty = true;
+
+  /* edge_iterate only runs if there is a chance of a local quadrant touching
+   * the desired edge */
   for (side = 0; side < num_sides; side++) {
     if (count[side * 2 + local]) {
-      all_empty = false;
       break;
     }
   }
-  if (all_empty) {
+  if (side == num_sides) {
     return;
   }
 
+  /* pass arguments to info that are already known */
   info.p4est = args->p8est;
   info.ghost_layer = args->ghost_layer;
   info.quads = args->quads;
@@ -383,8 +421,13 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
   info.treeids = args->treeids;
   info.edges = args->edges;
 
+  /* we think of the search tree as being rooted at start_level, so we can
+   * think the branch number at start_level as 0, even if it actually is not */
   level_num[start_level] = 0;
+
   for (;;) {
+    /* for each sidetype, get the first quadrant in that sidetype search area
+     */
     for (side = 0; side < num_sides; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
@@ -399,12 +442,16 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           test_level[sidetype] = -1;
         }
       }
+      /* initially assume that every side needs to be refined */
       refine[side] = true;
     }
+    /* initially assume that we are going to have to refine our search areas */
     stop_refine = false;
     for (side = 0; side < num_sides; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
+        /* if the candidate from sidetype is the same size as the search area,
+         * then we do not refine this side */
         if (test_level[sidetype] == level) {
           P4EST_ASSERT ((size_t) side < info.quads->elem_count);
           temp = sc_array_index_int (info.quads, side);
@@ -414,24 +461,31 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           *temp_loc = (ssize_t) first_index[sidetype] -
             (ssize_t) ((type == local) ? 0 : num_ghosts);
           refine[side] = false;
+          /* by the two to one condition, we do not need to continue the search
+           * beyond the possibility of neighbors to this quad being one size
+           * smaller */
           stop_refine = true;
         }
       }
     }
-    all_empty = true;
+    /* if no side needs to be refined, then we run the iter_edge and proceed to
+     * the next search area on this level */
     for (side = 0; side < num_sides; side++) {
       if (refine[side]) {
-        all_empty = false;
         break;
       }
     }
-    if (all_empty) {
+    if (side == num_sides) {
       info.is_hanging = false;
       info.common_corners = common_corners[0];
       iter_edge (&info, user_data);
       level_num[level]++;
       goto change_search_area;
     }
+
+    /* at this point, some sides need to be refined, so we take the search area
+     * and split it up, putting the indices for the refined search areas and
+     * placing them on the next tier in index[sidetype] */
     for (side = 0; side < num_sides; side++) {
       if (refine[side]) {
         quad_idx2[side] = level_idx2 + idx2_stride;
@@ -447,8 +501,12 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
         }
       }
     }
+
+    /* if one of sides was not refined, then it is time to run iter_edge */
     if (stop_refine) {
       info.is_hanging = true;
+      /* for each corner of the common edge, college all of the quadrants that
+       * touch that corner and run iter_edge with that collection */
       for (i = 0; i < 2; i++) {
         all_empty = true;
         info.common_corners = common_corners[i];
@@ -456,6 +514,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           if (refine[side]) {
             P4EST_ASSERT ((size_t) side < common_corners[i]->elem_count);
             temp_int = sc_array_index_int (common_corners[i], side);
+            /* quad_idx2[side] now gives the location in index[sidetype] of the
+             * bounds for the search area that touches the common corner */
             quad_idx2[side] = level_idx2 + idx2_stride + *temp_int;
             for (type = local; type <= ghost; type++) {
               sidetype = side * 2 + type;
@@ -463,6 +523,9 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
               count[sidetype] =
                 (size_t) index[sidetype][quad_idx2[side] + 1] -
                 first_index[sidetype];
+              /* if the search area is non-empty, by the two to one condition
+               * it must contain exactly one quadrant, which we add to the
+               * collection */
               if (count[sidetype]) {
                 P4EST_ASSERT (count[sidetype] == 1);
                 P4EST_ASSERT (first_index[sidetype] <
@@ -483,6 +546,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
               }
             }
           }
+          /* if we did not refine this side above, then this side of the edge
+           * must have a full-sized neighbor that was found above */
           else {
             temp_loc = sc_array_index_int (info.quadids, side);
             if (*temp_loc >= 0) {
@@ -490,23 +555,36 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
             }
           }
         }
+        /* if there is at least one local quadrant in the collection, we run 
+         * iter_edge */
         if (!all_empty) {
           iter_edge (&info, user_data);
         }
       }
+      /* we proceed to the next search area (i.e., branch) on this level */
       level_num[level]++;
       goto change_search_area;
     }
+    /* if every side needed to be refined, then we descend along this branch to
+     * this next level and search there */
     level_num[++level] = 0;
     level_idx2 += idx2_stride;
   change_search_area:
+    /* if we tried to advance the search area on start_level, we've completed
+     * the search */
     if (level_num[start_level] > 0) {
       break;
     }
+    /* if we have tried to advance the search area past two branches, that means
+     * that we have completed all of the branches on this level */
     if (level_num[level] == 2) {
-      // corner iterate goes here
+      /* if we have a corner callback, we need to run it on the corner between
+       * the edge branches on this level */
       if (iter_corner != NULL) {
         corner_args->level = level;
+        /* find the correct corner ids for the corner search areas, and copy
+         * the index information necessary to run corner_iterate over to the
+         * additional index arrays */
         for (i = 0; i < 2 * num_sides; i++) {
           c = sc_array_index_int (corners, i);
           temp_int = sc_array_index_int (common_corners[1 - i / num_sides],
@@ -527,10 +605,14 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
         }
         p4est_corner_iterate (corner_args, user_data, iter_corner);
       }
+      /* now that we're done on this level, go up a level and over a branch */
       level_num[--level]++;
       level_idx2 -= idx2_stride;
       goto change_search_area;
     }
+
+    /* at this point, we need to initialize the bounds of the search areas
+     * for this branch */
     all_empty = true;
     for (side = 0; side < num_sides; side++) {
       P4EST_ASSERT ((size_t) side <
@@ -547,6 +629,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
         }
       }
     }
+    /* if there are no local quadrants in any of the search areas, we're done
+     * this this search area and proceed to the next branch on this level */
     if (all_empty) {
       level_num[level]++;
       goto change_search_area;
