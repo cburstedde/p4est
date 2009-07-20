@@ -484,7 +484,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
     }
 
     /* at this point, some sides need to be refined, so we take the search area
-     * and split it up, putting the indices for the refined search areas and
+     * and split it up, taking the indices for the refined search areas and
      * placing them on the next tier in index[sidetype] */
     for (side = 0; side < num_sides; side++) {
       if (refine[side]) {
@@ -569,14 +569,15 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
      * this next level and search there */
     level_num[++level] = 0;
     level_idx2 += idx2_stride;
+
   change_search_area:
     /* if we tried to advance the search area on start_level, we've completed
      * the search */
     if (level_num[start_level] > 0) {
       break;
     }
-    /* if we have tried to advance the search area past two branches, that means
-     * that we have completed all of the branches on this level */
+    /* if we have tried to advance the search area past two branches, that
+     * means that we have completed all of the branches on this level */
     if (level_num[level] == 2) {
       /* if we have a corner callback, we need to run it on the corner between
        * the edge branches on this level */
@@ -612,7 +613,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
     }
 
     /* at this point, we need to initialize the bounds of the search areas
-     * for this branch */
+     * for this new branch */
     all_empty = true;
     for (side = 0; side < num_sides; side++) {
       P4EST_ASSERT ((size_t) side <
@@ -630,7 +631,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
       }
     }
     /* if there are no local quadrants in any of the search areas, we're done
-     * this this search area and proceed to the next branch on this level */
+     * with this search area and proceed to the next branch on this level */
     if (all_empty) {
       level_num[level]++;
       goto change_search_area;
@@ -643,22 +644,63 @@ typedef struct p4est_iter_face_args
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
-  int                 level;
-  int                *start_idx2;
-  int                 face[2];                /** z-order */
-  int                *level_num;
-  int                 orientation;
-  int                *num_to_child;
-  sc_array_t        **quadrants;
-  size_t            **index;
-  size_t             *first_index;
-  p4est_topidx_t      treeids[2];
-  p4est_quadrant_t  **test;
-  size_t             *count;
-  int                *test_level;
-  int                *quad_idx2;
-  bool               *refine;
-  bool                outside_face;
+  int                 level;    /* the level of the initial search areas */
+  int                *start_idx2;       /* for each side, the ancestor_id at
+                                           level of the initial search area */
+  int                 face[2];  /* the *z-order* of the two face ids on either
+                                   side of this face */
+  int                *level_num;        /* an array that keeps track of which
+                                           branch we take at each step in the
+                                           heirarchical search areas */
+  int                 orientation;      /* the orientation between the two
+                                           sides of the face */
+
+  int                *num_to_child;     /* when a search branch is refined,
+                                           num_to_child says which child id
+                                           corresponds to the branch number for
+                                           each side of the face. e.g. Suppose
+                                           face[left] = 1, face[right] = 0, and
+                                           orientation = 0 in 3D. The child ids
+                                           of the descendants of the current
+                                           search area that touch face[left]
+                                           are 1, 3, 5, 7, and given
+                                           face[right] and the orientation, the
+                                           descendants that are opposite them
+                                           are 0, 2, 4, 6, respectively:
+                                           therefore num_to_child =
+                                           { 1, 3, 5, 7, 0, 2, 4, 6} */
+
+  sc_array_t        **quadrants;        /* the arrays, two for each side (one
+                                           local, one ghost), that contain the
+                                           quadrants in each search area */
+  size_t            **index;    /* for each sidetype, the indices in quadrants
+                                   that form the bounds of the heirarchical
+                                   search areas */
+  size_t             *first_index;      /* an indexing variable used in
+                                           face_iterate: passed as an
+                                           argument to avoid using alloc/free
+                                           on each call */
+  p4est_topidx_t      treeids[2];       /* passed to the callback */
+  p4est_quadrant_t  **test;     /* a testing variable used in
+                                   face_iterate: passed as an argument to
+                                   avoid using alloc/free on each call */
+  size_t             *count;    /* a counting variable used in
+                                   face_iterate: passed as an argument to
+                                   avoid using alloc/free on each call */
+  int                *test_level;       /* a testing variable used in
+                                           edge_iterate: passed as an argument
+                                           to avoid using alloc/free on each 
+                                           call */
+  int                *quad_idx2;        /* an indexing variable used in
+                                           edge_iterate: passed as an
+                                           argument to avoid using alloc/free
+                                           on each call */
+  bool               *refine;   /* a testing variable used in edge_iterate:
+                                   passed as an argument to avoid using
+                                   alloc/free on each call */
+  bool                outside_face;     /* indicates if we are at a tree
+                                           boundary without a neighbor across
+                                           the face */
 #ifdef P4_TO_P8
   p8est_iter_edge_args_t *edge_args;
 #endif
@@ -723,11 +765,25 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
   common_corners[1] = edge_args->common_corners[1];
 #endif
 
+  /* if we are at an outside face, then there is no right half to our search
+   * that needs to be coordinated with the left half */
   limit = args->outside_face ? left : right;
+
+  /* level_idx2 moves us to the correct set of bounds within the index arrays
+   * for the level: it is a set of bounds because it includes all children at
+   * this level */
   level = start_level;
   level_idx2 = level * idx2_stride;
+
   for (side = left; side <= limit; side++) {
+
+    /* start_idx2 gives the ancestor id at level for the search area on this
+     * side, so quad_idx2[side] now gives the correct location in
+     * index[sidetype] of the bounds of the search area */
     quad_idx2[side] = level_idx2 + start_idx2[side];
+
+    /* get the location in quadrants[sidetype] of the first quadrant in the
+     * search area, and the count of quadrants in the search area */
     for (type = local; type <= ghost; type++) {
       sidetype = side * 2 + type;
       first_index[sidetype] = index[sidetype][quad_idx2[side]];
@@ -735,6 +791,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                          first_index[sidetype]);
     }
   }
+
+  /* face_iterate only runs if there is a chance of a local quadrant touching
+   * the desired face */
   if (!args->outside_face) {
     if (!count[left * 2 + local] && !count[right * 2 + local]) {
       return;
@@ -746,12 +805,17 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
     }
   }
 
+  /* pass arguments to info that are already known */
   info.p4est = args->p4est;
   info.ghost_layer = args->ghost_layer;
   info.orientation = args->orientation;
 
+  /* we think of the search tree as being rooted at start_level, so we can
+   * think the branch number at start_level as 0, even if it actually is not */
   level_num[start_level] = 0;
   for (;;) {
+    /* for each sidetype, get the first quadrant in that sidetype search area
+     */
     for (side = left; side <= limit; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
@@ -767,10 +831,15 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
         }
       }
     }
+    /* initially assume that each side needs to be refined */
     refine[left] = refine[right] = true;
+
+    /* get a candidate from each sidetype */
     for (side = left; side <= limit; side++) {
       for (type = local; type <= ghost; type++) {
         sidetype = side * 2 + type;
+        /* if the candidate from sidetype is the same size as the search area,
+         * then we do not refine this side */
         if (test_level[sidetype] == level) {
           if (iter_face != NULL) {
             P4EST_ASSERT (count[sidetype] == 1);
@@ -787,6 +856,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               info.right_treeid = args->treeids[n_side];
               for (n_type = type; n_type <= ghost; n_type++) {
                 nsidentype = n_side * 2 + n_type;
+                /* if the quadrant opposite our candidate is the same size,
+                 * then we run iter_face and proceed to the next branch on this
+                 * level */
                 if ((n_type > type || n_side > side) &&
                     test_level[nsidentype] == level) {
                   P4EST_ASSERT (count[nsidentype] == 1);
@@ -811,6 +883,8 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               }
 #endif
             }
+            /* if we are an outside face, the convention is that the candidate
+             * is set as its own neighbor and iter_face is run */
             else {
               info.right_outgoing_face = info.left_outgoing_face;
               info.right_treeid = info.left_treeid;
@@ -824,6 +898,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               goto change_search_area;
             }
           }
+          /* if there is no face callback, i.e. we are running face_iterate only
+           * to find the edges/corners that live on faces, then we are done once
+           * we find a side that does not need to be refined */
           else {
             level_num[level]++;
             goto change_search_area;
@@ -831,6 +908,10 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
         }
       }
     }
+
+    /* if a side needs to be refined, we take the search area and split it up,
+     * taking the indices for the refined search areas and placing them on the
+     * next tier in index[sidetype] */
     for (side = left; side <= limit; side++) {
       if (refine[side]) {
         quad_idx2[side] = level_idx2 + idx2_stride;
@@ -846,7 +927,10 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
         }
       }
     }
+
     for (side = left; side <= limit; side++) {
+      /* if this side was not refined, then we need to run iter_face with the
+       * candidate from this side and each of its hanging neighbors */
       if (!refine[side]) {
         n_side = side ^ 1;
         info.is_hanging = true;
@@ -857,6 +941,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               info.right_corner = num_to_child[n_side * ntc_str + i];
               quad_idx2[n_side] = level_idx2 + idx2_stride +
                 num_to_child[n_side * ntc_str + i];
+              /* quad_idx2[side] now gives the location in index[nsidentype]
+               * of the bounds for the search area that corresponds to one of
+               * the hanging neighbors */
               for (n_type = local; n_type <= ghost; n_type++) {
                 nsidentype = n_side * 2 + n_type;
                 first_index[nsidentype] =
@@ -864,6 +951,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                 count[nsidentype] =
                   (index[nsidentype][quad_idx2[n_side] + 1] -
                    first_index[nsidentype]);
+                /* if the search area is non-empty, by the two to one condition
+                 * it must contain exactly one quadrant: if one of the two types
+                 * is local, we run iter_face */
                 if (count[nsidentype] && (type + n_type < 2)) {
                   P4EST_ASSERT (count[nsidentype] == 1);
                   P4EST_ASSERT (index[n_side * 2 + (n_type ^ 1)]
@@ -887,25 +977,40 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               }
 #endif
             }
+            /* once we've run iter_face for each of the hanging faces, we
+             * proceed to the next branch on this level */
             level_num[level]++;
             goto change_search_area;
           }
         }
       }
     }
+    /* if we refined both sides, we descend to the next level from this branch
+     * and continue searching there */
     level_num[++level] = 0;
     level_idx2 += idx2_stride;
+
   change_search_area:
+    /* if we tried to advance the search area on start_level, we've completed
+     * the search */
     if (level_num[start_level] > 0) {
       break;
     }
+
+    /* if we have tried to advance the search area past the number of
+     * descendants, that means that we have completed all of the branches on
+     * this level */
     if (level_num[level] == P4EST_CHILDREN / 2) {
 #ifdef P4_TO_P8
-      // edge iterator goes here
+      /* if we have an edge callbach, we need to run it on all of the edges
+       * between the face branches on this level */
       if (iter_edge != NULL || iter_corner != NULL) {
         edge_args->level = level;
         if (!args->outside_face) {
           for (dir = 0; dir < 2; dir++) {
+
+            /* we have to set up the common corners on either side of the
+             * desired edge */
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 4; j++) {
                 k = j >> 1;
@@ -918,6 +1023,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                 }
               }
             }
+
+            /* we have to set up the edge id for all four search areas that
+             * touch the desired edge */
             for (j = 0; j < 4; j++) {
               c = sc_array_index_int (common_corners[0], j);
               v1 = *c;
@@ -928,6 +1036,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               e = sc_array_index_int (edges, j);
               *e = p8est_corner_edges[v1][true_dir >> 1];
             }
+
+            /* copy the index information necessary to run edge_iterate over to
+             * the additional index arrays */
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 4; j++) {
                 k = j >> 1;
@@ -956,8 +1067,14 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
             }
           }
         }
+        /* if we are on on outside face, there are only two quadrants to an
+         * edge instead of four, and we have to set up the arrays
+         * differently */
         else {
           for (dir = 0; dir < 2; dir++) {
+
+            /* we have to set up the common corners on either side of the
+             * desired edge */
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 2; j++) {
                 c = sc_array_index_int (common_corners[side], j);
@@ -969,6 +1086,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                 }
               }
             }
+
+            /* we have to set up the edge id for both search areas that
+             * touch the desired edge */
             for (j = 0; j < 2; j++) {
               c = sc_array_index_int (common_corners[0], j);
               v1 = *c;
@@ -979,6 +1099,9 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
               e = sc_array_index_int (edges, j);
               *e = p8est_corner_edges[v1][true_dir >> 1];
             }
+
+            /* copy the index information necessary to run edge_iterate over to
+             * the additional index arrays */
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 2; j++) {
                 if (dir == 0) {
@@ -1002,9 +1125,13 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
         }
       }
 #endif
-      // corner iterate goes here
+      /* if we have a corner callback, we need to run it on the corner between
+       * the face branches on this level */
       if (iter_corner != NULL) {
         corner_args->level = level;
+        /* find the correct corner ids for the corner search areas, and copy
+         * the index information necessary to run corner_iterate over to the
+         * additional index arrays */
         if (!args->outside_face) {
           for (j = 0; j < P4EST_CHILDREN; j++) {
             c = sc_array_index_int (corners, j);
@@ -1038,10 +1165,15 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
         }
         p4est_corner_iterate (corner_args, user_data, iter_corner);
       }
+
+      /* now that we're done on this level, go up a level and over a branch */
       level_num[--level]++;
       level_idx2 -= idx2_stride;
       goto change_search_area;
     }
+
+    /* at this point, we need to initialize the bounds of the search areas
+     * for this new branch */
     for (side = left; side <= limit; side++) {
       quad_idx2[side] =
         level_idx2 + num_to_child[side * ntc_str + level_num[level]];
@@ -1054,6 +1186,10 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                            first_index[sidetype]);
       }
     }
+
+    /* if there are no local quadrants in either of the search areas, we're
+     * done with this search area and proceed to the next branch on this
+     * level */
     if (!args->outside_face) {
       if (!count[left * 2 + local] && !count[right * 2 + local]) {
         level_num[level]++;
