@@ -90,9 +90,6 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   info.treeids = args->treeids;
   info.corners = args->corners;
 
-  test_view.elem_size = sizeof (p4est_quadrant_t);
-  test_view.byte_alloc = -1;
-
   level_idx2 = level * idx2_stride;
 
   for (side = 0; side < num_sides; side++) {
@@ -171,9 +168,8 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
               P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
 #endif
             P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
-            test_view.elem_count = count[sidetype];
-            test_view.array = quadrants[sidetype]->array +
-              sizeof (p4est_quadrant_t) * first_index[sidetype];
+            sc_array_init_view (&test_view, quadrants[sidetype],
+                                first_index[sidetype], count[sidetype]);
             temp_idx = p4est_find_higher_bound (&test_view, &temp, 0);
             if (temp_idx == -1) {
               test[sidetype] = NULL;
@@ -327,9 +323,6 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
   info.treeids = args->treeids;
   info.edges = args->edges;
 
-  test_view.elem_size = sizeof (p4est_quadrant_t);
-  test_view.byte_alloc = -1;
-
   level_num[start_level] = 0;
   for (;;) {
     for (side = 0; side < num_sides; side++) {
@@ -384,9 +377,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
         quad_idx2[side] = level_idx2 + idx2_stride;
         for (type = local; type <= ghost; type++) {
           sidetype = side * 2 + type;
-          test_view.elem_count = count[sidetype];
-          test_view.array = quadrants[sidetype]->array +
-            sizeof (p4est_quadrant_t) * first_index[sidetype];
+          sc_array_init_view (&test_view, quadrants[sidetype],
+                              first_index[sidetype], count[sidetype]);
           p4est_split_array (&test_view, level,
                              index[sidetype] + quad_idx2[side]);
           for (i = 0; i < idx2_stride; i++) {
@@ -576,19 +568,15 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
   sc_array_t         *corners = corner_args->corners;
   int                *c;
 #ifdef P4_TO_P8
-  int                 v, true_dir, dir, k;
+  int                 v1, v2, true_dir, dir, k;
+  int                *e;
   p8est_iter_edge_args_t *edge_args = args->edge_args;
   sc_array_t         *common_corners[2];
 
   sc_array_t         *edges = edge_args->edges;
-  int                *e_common_corners[2];
-  int                *e_edges;
 
   common_corners[0] = edge_args->common_corners[0];
   common_corners[1] = edge_args->common_corners[1];
-  e_common_corners[0] = (int *) common_corners[0]->array;
-  e_common_corners[1] = (int *) common_corners[1]->array;
-  e_edges = (int *) edges->array;
 #endif
 
   limit = args->outside_face ? left : right;
@@ -617,9 +605,6 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
   info.p4est = args->p4est;
   info.ghost_layer = args->ghost_layer;
   info.orientation = args->orientation;
-
-  test_view.elem_size = sizeof (p4est_quadrant_t);
-  test_view.byte_alloc = -1;
 
   level_num[start_level] = 0;
   for (;;) {
@@ -707,9 +692,8 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
         quad_idx2[side] = level_idx2 + idx2_stride;
         for (type = local; type <= ghost; type++) {
           sidetype = side * 2 + type;
-          test_view.elem_count = count[sidetype];
-          test_view.array = quadrants[sidetype]->array +
-            sizeof (p4est_quadrant_t) * first_index[sidetype];
+          sc_array_init_view (&test_view, quadrants[sidetype],
+                              first_index[sidetype], count[sidetype]);
           p4est_split_array (&test_view, level,
                              index[sidetype] + quad_idx2[side]);
           for (i = 0; i < idx2_stride; i++) {
@@ -781,21 +765,24 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 4; j++) {
                 k = j >> 1;
+                c = sc_array_index_int (common_corners[side], j);
                 if (dir == 0) {
-                  e_common_corners[side][j] =
-                    num_to_child[(j % 2) * ntc_str + (2 * (1 - k) + side)];
+                  *c = num_to_child[(j % 2) * ntc_str + (2 * (1 - k) + side)];
                 }
                 else {
-                  e_common_corners[side][j] =
-                    num_to_child[(j % 2) * ntc_str + ((1 - k) + 2 * side)];
+                  *c = num_to_child[(j % 2) * ntc_str + ((1 - k) + 2 * side)];
                 }
               }
             }
             for (j = 0; j < 4; j++) {
-              v = e_common_corners[0][j];
-              true_dir = e_common_corners[1][j] - v;
-              true_dir = (true_dir > 0) ? true_dir : -true_dir;
-              e_edges[j] = p8est_corner_edges[v][true_dir >> 1];
+              c = sc_array_index_int (common_corners[0], j);
+              v1 = *c;
+              c = sc_array_index_int (common_corners[1], j);
+              v2 = *c;
+              true_dir = v2 - v1;
+              true_dir = (true_dir >= 0) ? true_dir : -true_dir;
+              e = sc_array_index_int (edges, j);
+              *e = p8est_corner_edges[v1][true_dir >> 1];
             }
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 4; j++) {
@@ -829,21 +816,24 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
           for (dir = 0; dir < 2; dir++) {
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 2; j++) {
+                c = sc_array_index_int (common_corners[side], j);
                 if (dir == 0) {
-                  e_common_corners[side][j] =
-                    num_to_child[(2 * (1 - j) + side)];
+                  *c = num_to_child[(2 * (1 - j) + side)];
                 }
                 else {
-                  e_common_corners[side][j] =
-                    num_to_child[((1 - j) + 2 * side)];
+                  *c = num_to_child[((1 - j) + 2 * side)];
                 }
               }
             }
             for (j = 0; j < 2; j++) {
-              v = e_common_corners[0][j];
-              true_dir = e_common_corners[1][j] - v;
-              true_dir = (true_dir > 0) ? true_dir : -true_dir;
-              e_edges[j] = p8est_corner_edges[v][true_dir >> 1];
+              c = sc_array_index_int (common_corners[0], j);
+              v1 = *c;
+              c = sc_array_index_int (common_corners[1], j);
+              v2 = *c;
+              true_dir = v2 - v1;
+              true_dir = (true_dir >= 0) ? true_dir : -true_dir;
+              e = sc_array_index_int (edges, j);
+              *e = p8est_corner_edges[v1][true_dir >> 1];
             }
             for (side = 0; side < 2; side++) {
               for (j = 0; j < 2; j++) {
@@ -1097,9 +1087,6 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   }
   level_num = P4EST_ALLOC (int, P4EST_MAXLEVEL);
 
-  test_view.elem_size = sizeof (p4est_quadrant_t);
-  test_view.byte_alloc = -1;
-
   /** Divide the ghost_layer by p.which_tree */
   global_num_trees = trees->elem_count;
   tree_first_ghost = P4EST_ALLOC (size_t, global_num_trees + 1);
@@ -1155,6 +1142,18 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 
   /** set up the arguments passed to corner_iterate that are invariant */
   if (iter_corner != NULL) {
+    c_corners = P4EST_ALLOC (int, max_corner_size);
+    c_treeids = P4EST_ALLOC (p4est_topidx_t, max_corner_size);
+    c_quadids = P4EST_ALLOC (ssize_t, max_corner_size);
+    c_quads = P4EST_ALLOC (p4est_quadrant_t *, max_corner_size);
+    sc_array_init_data (&corners, c_corners, sizeof (*c_corners),
+                        (size_t) max_corner_size);
+    sc_array_init_data (&corner_treeids, c_treeids, sizeof (*c_treeids),
+                        (size_t) max_corner_size);
+    sc_array_init_data (&corner_quadids, c_quadids, sizeof (*c_quadids),
+                        (size_t) max_corner_size);
+    sc_array_init_data (&corner_quads, c_quads, sizeof (*c_quads),
+                        (size_t) max_corner_size);
     corner_args.p4est = p4est;
     corner_args.ghost_layer = ghost_layer;
     corner_args.quadrants = quadrants;
@@ -1164,23 +1163,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     corner_args.test = test;
     corner_args.count = count;
     corner_args.quad_idx2 = quad_idx2;
-    c_corners = P4EST_ALLOC (int, max_corner_size);
-    corners.elem_size = sizeof (int);
-    corners.byte_alloc = -1;
-    corners.array = (char *) (c_corners);
     corner_args.corners = &corners;
-    c_treeids = P4EST_ALLOC (p4est_topidx_t, max_corner_size);
-    c_quadids = P4EST_ALLOC (ssize_t, max_corner_size);
-    c_quads = P4EST_ALLOC (p4est_quadrant_t *, max_corner_size);
-    corner_treeids.elem_size = sizeof (p4est_topidx_t);
-    corner_treeids.byte_alloc = -1;
-    corner_treeids.array = (char *) c_treeids;
-    corner_quadids.elem_size = sizeof (ssize_t);
-    corner_quadids.byte_alloc = -1;
-    corner_quadids.array = (char *) c_quadids;
-    corner_quads.elem_size = sizeof (p4est_quadrant_t *);
-    corner_quads.byte_alloc = -1;
-    corner_quads.array = (char *) c_quads;
     corner_args.treeids = &corner_treeids;
     corner_args.quadids = &corner_quadids;
     corner_args.quads = &corner_quads;
@@ -1195,6 +1178,26 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 #ifdef P4_TO_P8
   /** set up the arguments passed to edge_iterate that are invariant */
   if (iter_edge != NULL || iter_corner != NULL) {
+    e_common_corners[0] = P4EST_ALLOC (int, max_edge_size);
+    e_common_corners[1] = P4EST_ALLOC (int, max_edge_size);
+    e_edges = P4EST_ALLOC (int, max_edge_size);
+    e_treeids = P4EST_ALLOC (p4est_topidx_t, max_edge_size);
+    e_quadids = P4EST_ALLOC (ssize_t, max_edge_size);
+    e_quads = P4EST_ALLOC (p4est_quadrant_t *, max_edge_size);
+    sc_array_init_data (&(common_corners[0]), e_common_corners[0],
+                        sizeof (*(e_common_corners[0])),
+                        (size_t) max_edge_size);
+    sc_array_init_data (&(common_corners[1]), e_common_corners[1],
+                        sizeof (*(e_common_corners[1])),
+                        (size_t) max_edge_size);
+    sc_array_init_data (&edges, e_edges, sizeof (*e_edges),
+                        (size_t) max_edge_size);
+    sc_array_init_data (&edge_treeids, e_treeids, sizeof (*e_treeids),
+                        (size_t) max_edge_size);
+    sc_array_init_data (&edge_quadids, e_quadids, sizeof (*e_quadids),
+                        (size_t) max_edge_size);
+    sc_array_init_data (&edge_quads, e_quads, sizeof (*e_quads),
+                        (size_t) max_edge_size);
     edge_args.p8est = p4est;
     edge_args.ghost_layer = ghost_layer;
     edge_args.level_num = level_num;
@@ -1207,34 +1210,10 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     edge_args.test_level = test_level;
     edge_args.quad_idx2 = quad_idx2;
     edge_args.refine = refine;
-    e_common_corners[0] = P4EST_ALLOC (int, max_edge_size);
-    e_common_corners[1] = P4EST_ALLOC (int, max_edge_size);
-    e_edges = P4EST_ALLOC (int, max_edge_size);
-    common_corners[0].elem_size = sizeof (int);
-    common_corners[0].byte_alloc = -1;
-    common_corners[0].array = (char *) (e_common_corners[0]);
-    common_corners[1].elem_size = sizeof (int);
-    common_corners[1].byte_alloc = -1;
-    common_corners[1].array = (char *) (e_common_corners[1]);
-    edges.elem_size = sizeof (int);
-    edges.byte_alloc = -1;
-    edges.array = (char *) e_edges;
     edge_args.common_corners[0] = &(common_corners[0]);
     edge_args.common_corners[1] = &(common_corners[1]);
     edge_args.edges = &edges;
     edge_args.corner_args = &corner_args;
-    e_treeids = P4EST_ALLOC (p4est_topidx_t, max_edge_size);
-    e_quadids = P4EST_ALLOC (ssize_t, max_edge_size);
-    e_quads = P4EST_ALLOC (p4est_quadrant_t *, max_edge_size);
-    edge_treeids.elem_size = sizeof (p4est_topidx_t);
-    edge_treeids.byte_alloc = -1;
-    edge_treeids.array = (char *) e_treeids;
-    edge_quadids.elem_size = sizeof (ssize_t);
-    edge_quadids.byte_alloc = -1;
-    edge_quadids.array = (char *) e_quadids;
-    edge_quads.elem_size = sizeof (p4est_quadrant_t *);
-    edge_quads.byte_alloc = -1;
-    edge_quads.array = (char *) e_quads;
     edge_args.treeids = &edge_treeids;
     edge_args.quadids = &edge_quadids;
     edge_args.quads = &edge_quads;
@@ -1253,7 +1232,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 
   for (t = 0; t < global_num_trees; t++) {
 
-    tree = sc_array_index (trees, t);
+    tree = p4est_array_index_topidx (trees, t);
     quadrants[local] = &(tree->quadrants);
 
     P4EST_ASSERT (p4est_tree_is_sorted (tree));
@@ -1300,13 +1279,13 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 #ifdef P4_TO_P8
     if (iter_edge != NULL || iter_corner != NULL) {
       edge_args.num_sides = 4;
-      common_corners[0].elem_count = 4;
-      common_corners[1].elem_count = 4;
-      edges.elem_count = 4;
-      edge_treeids.elem_count = 4;
+      sc_array_resize (&(common_corners[0]), 4);
+      sc_array_resize (&(common_corners[1]), 4);
+      sc_array_resize (&edges, 4);
+      sc_array_resize (&edge_treeids, 4);
+      sc_array_resize (&edge_quadids, 4);
+      sc_array_resize (&edge_quads, 4);
       e_treeids[0] = e_treeids[1] = e_treeids[2] = e_treeids[3] = t;
-      edge_quadids.elem_count = 4;
-      edge_quads.elem_count = 4;
       quadrants[2] = quadrants[local];
       quadrants[4] = quadrants[local];
       quadrants[6] = quadrants[local];
@@ -1315,14 +1294,14 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 
     if (iter_corner != NULL) {
       corner_args.num_sides = P4EST_CHILDREN;
-      corners.elem_count = P4EST_CHILDREN;
+      sc_array_resize (&corners, P4EST_CHILDREN);
       for (i = 0; i < P4EST_CHILDREN; i++) {
         c_treeids[i] = t;
         quadrants[2 * i] = quadrants[local];
       }
-      corner_treeids.elem_count = P4EST_CHILDREN;
-      corner_quadids.elem_count = P4EST_CHILDREN;
-      corner_quads.elem_count = P4EST_CHILDREN;
+      sc_array_resize (&corner_treeids, P4EST_CHILDREN);
+      sc_array_resize (&corner_quadids, P4EST_CHILDREN);
+      sc_array_resize (&corner_quads, P4EST_CHILDREN);
     }
 
     info.treeid = t;
@@ -1435,7 +1414,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
         }
         quad_idx2[0] = level_idx2 + level_num[level];
         for (type = local; type <= ghost; type++) {
-          this_index = index[left * 2 + type];
+          this_index = index[type];
           first_index[type] = this_index[quad_idx2[0]];
           count[type] = (this_index[quad_idx2[0] + 1] - first_index[type]);
         }
@@ -1468,12 +1447,9 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
         }
         quad_idx2[0] = level_idx2 + idx2_stride;
         for (type = local; type <= ghost; type++) {
-          test_view.elem_count = count[type];
-          P4EST_ASSERT (first_index[type] + count[type]
-                        <= quadrants[type]->elem_count);
-          test_view.array = quadrants[type]->array +
-            sizeof (p4est_quadrant_t) * first_index[type];
-          this_index = index[left * 2 + type];
+          sc_array_init_view (&test_view, quadrants[type],
+                              first_index[type], count[type]);
+          this_index = index[type];
           p4est_split_array (&test_view, level, this_index + quad_idx2[0]);
 
           for (i = 0; i < idx2_stride; i++) {
@@ -1538,7 +1514,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 #endif
         level_num[0] = 0;
         P4EST_ASSERT (nt < trees->elem_count);
-        tree = sc_array_index (trees, nt);
+        tree = p4est_array_index_topidx (trees, nt);
         face_args.quadrants[right * 2 + local] = &(tree->quadrants);
         face_args.treeids[right] = nt;
         index[right * 2 + local][0] = 0;
@@ -1549,14 +1525,14 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 #ifdef P4_TO_P8
         if (iter_edge != NULL || iter_corner != NULL) {
           edge_args.num_sides = 4;
-          common_corners[0].elem_count = 4;
-          common_corners[1].elem_count = 4;
-          edges.elem_count = 4;
-          edge_treeids.elem_count = 4;
+          sc_array_resize (&(common_corners[0]), 4);
+          sc_array_resize (&(common_corners[1]), 4);
+          sc_array_resize (&edges, 4);
+          sc_array_resize (&edge_treeids, 4);
+          sc_array_resize (&edge_quadids, 4);
+          sc_array_resize (&edge_quads, 4);
           e_treeids[0] = e_treeids[2] = t;
           e_treeids[1] = e_treeids[3] = nt;
-          edge_quadids.elem_count = 4;
-          edge_quads.elem_count = 4;
           quadrants[2] = &(tree->quadrants);
           quadrants[4] = quadrants[local];
           quadrants[6] = &(tree->quadrants);
@@ -1565,7 +1541,10 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 
         if (iter_corner != NULL) {
           corner_args.num_sides = P4EST_CHILDREN;
-          corners.elem_count = P4EST_CHILDREN;
+          sc_array_resize (&corners, P4EST_CHILDREN);
+          sc_array_resize (&corner_treeids, P4EST_CHILDREN);
+          sc_array_resize (&corner_quadids, P4EST_CHILDREN);
+          sc_array_resize (&corner_quads, P4EST_CHILDREN);
           for (j = 0; j < P4EST_CHILDREN; j++) {
             if (j % 2) {
               c_treeids[j] = nt;
@@ -1576,9 +1555,6 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
               quadrants[2 * j] = quadrants[local];
             }
           }
-          corner_treeids.elem_count = P4EST_CHILDREN;
-          corner_quadids.elem_count = P4EST_CHILDREN;
-          corner_quads.elem_count = P4EST_CHILDREN;
         }
 
         p4est_face_iterate (&face_args, user_data, iter_face,
@@ -1593,27 +1569,27 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 #ifdef P4_TO_P8
         if (iter_edge != NULL || iter_corner != NULL) {
           edge_args.num_sides = 2;
-          common_corners[0].elem_count = 2;
-          common_corners[1].elem_count = 2;
-          edges.elem_count = 2;
-          edge_treeids.elem_count = 2;
+          sc_array_resize (&(common_corners[0]), 2);
+          sc_array_resize (&(common_corners[1]), 2);
+          sc_array_resize (&edges, 2);
+          sc_array_resize (&edge_treeids, 2);
+          sc_array_resize (&edge_quadids, 2);
+          sc_array_resize (&edge_quads, 2);
           e_treeids[0] = e_treeids[1] = t;
-          edge_quadids.elem_count = 2;
-          edge_quads.elem_count = 2;
           quadrants[2] = quadrants[local];
         }
 #endif
 
         if (iter_corner != NULL) {
           corner_args.num_sides = P4EST_CHILDREN / 2;
-          corners.elem_count = P4EST_CHILDREN / 2;
+          sc_array_resize (&corners, P4EST_CHILDREN / 2);
+          sc_array_resize (&corner_treeids, P4EST_CHILDREN / 2);
+          sc_array_resize (&corner_quadids, P4EST_CHILDREN / 2);
+          sc_array_resize (&corner_quads, P4EST_CHILDREN / 2);
           for (j = 0; j < P4EST_CHILDREN / 2; j++) {
             c_treeids[j] = t;
             quadrants[2 * j] = quadrants[local];
           }
-          corner_treeids.elem_count = P4EST_CHILDREN / 2;
-          corner_quadids.elem_count = P4EST_CHILDREN / 2;
-          corner_quads.elem_count = P4EST_CHILDREN / 2;
         }
 
         p4est_face_iterate (&face_args, user_data, iter_face,
@@ -1738,23 +1714,25 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
             index[j * 2 + ghost][0] = tree_first_ghost[e_treeids[j]];
             index[j * 2 + ghost][1] = tree_first_ghost[e_treeids[j] + 1];
           }
-          common_corners[0].elem_count = (size_t) edge_args.num_sides;
-          common_corners[1].elem_count = (size_t) edge_args.num_sides;
-          edges.elem_count = (size_t) edge_args.num_sides;
-          edge_treeids.elem_count = (size_t) edge_args.num_sides;
-          edge_quadids.elem_count = (size_t) edge_args.num_sides;
-          edge_quads.elem_count = (size_t) edge_args.num_sides;
+          sc_array_resize (&(common_corners[0]),
+                           (size_t) edge_args.num_sides);
+          sc_array_resize (&(common_corners[1]),
+                           (size_t) edge_args.num_sides);
+          sc_array_resize (&edges, (size_t) edge_args.num_sides);
+          sc_array_resize (&edge_treeids, (size_t) edge_args.num_sides);
+          sc_array_resize (&edge_quadids, (size_t) edge_args.num_sides);
+          sc_array_resize (&edge_quads, (size_t) edge_args.num_sides);
 
           if (iter_corner != NULL) {
             corner_args.num_sides = edge_args.num_sides * 2;
-            corners.elem_count = (size_t) corner_args.num_sides;
+            sc_array_resize (&corners, (size_t) corner_args.num_sides);
+            sc_array_resize (&corner_treeids, (size_t) corner_args.num_sides);
+            sc_array_resize (&corner_quadids, (size_t) corner_args.num_sides);
+            sc_array_resize (&corner_quads, (size_t) corner_args.num_sides);
             for (j = 0; j < corner_args.num_sides; j++) {
               c_treeids[j] = e_treeids[j % edge_args.num_sides];
               quadrants[2 * j] = quadrants[2 * (j % edge_args.num_sides)];
             }
-            corner_treeids.elem_count = (size_t) corner_args.num_sides;
-            corner_quadids.elem_count = (size_t) corner_args.num_sides;
-            corner_quads.elem_count = (size_t) corner_args.num_sides;
           }
 
           p8est_edge_iterate (&edge_args, user_data, iter_edge, iter_corner);
@@ -1921,10 +1899,10 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
             index[j * 2 + ghost][0] = tree_first_ghost[c_treeids[j]];
             index[j * 2 + ghost][1] = tree_first_ghost[c_treeids[j] + 1];
           }
-          corners.elem_count = (size_t) corner_args.num_sides;
-          corner_treeids.elem_count = (size_t) corner_args.num_sides;
-          corner_quadids.elem_count = (size_t) corner_args.num_sides;
-          corner_quads.elem_count = (size_t) corner_args.num_sides;
+          sc_array_resize (&corners, (size_t) corner_args.num_sides);
+          sc_array_resize (&corner_treeids, (size_t) corner_args.num_sides);
+          sc_array_resize (&corner_quadids, (size_t) corner_args.num_sides);
+          sc_array_resize (&corner_quads, (size_t) corner_args.num_sides);
 
           p4est_corner_iterate (&corner_args, user_data, iter_corner);
         }
