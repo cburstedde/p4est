@@ -100,7 +100,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   ssize_t            *ploc;
   int                 level_idx2;
   int                 type;
-  bool                all_empty, has_local;
+  bool                has_local;
 
   /* pass arguments to info that are already known */
   info.p4est = args->p4est;
@@ -1206,8 +1206,32 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
 }
 
 void static
-p4est_volume_iterate ()
+p4est_volume_iterate (p4est_t * p4est, sc_array_t * ghost_layer,
+                      void *user_data, p4est_iter_volume_t iter_volume)
 {
+  p4est_topidx_t      t;
+  p4est_topidx_t      first_local_tree = p4est->first_local_tree;
+  p4est_topidx_t      last_local_tree = p4est->last_local_tree;
+  sc_array_t         *trees = p4est->trees;
+  p4est_tree_t       *tree;
+  size_t              si, n_quads;
+  sc_array_t         *quadrants;
+  p4est_iter_volume_info_t info;
+
+  info.p4est = p4est;
+  info.ghost_layer = ghost_layer;
+
+  for (t = first_local_tree; t <= last_local_tree; t++) {
+    info.treeid = t;
+    tree = p4est_array_index_topidx (trees, t);
+    quadrants = &(tree->quadrants);
+    n_quads = quadrants->elem_count;
+    for (si = 0; si < n_quads; si++) {
+      info.quad = sc_array_index (quadrants, si);
+      info.quadid = si;
+      iter_volume (&info, user_data);
+    }
+  }
 };
 
 void
@@ -1323,7 +1347,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
       && iter_edge == NULL
 #endif
     ) {
-    p4est_volume_iterate ();
+    p4est_volume_iterate (p4est, ghost_layer, user_data, iter_volume);
     return;
   }
 
