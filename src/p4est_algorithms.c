@@ -695,10 +695,10 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
   /** The invariants of the loop are:
    *  1) if we are at step j, then
    *     for every quadrant q in the array with index < guess_low,
-   *     child(q) < j,
+   *     ancestor_id(q) < j,
    *  2) for 0 < i < P4EST_CHILDREN,
    *     for every quadrant q in the array with index >= indices[i],
-   *     child(q) >= i.
+   *     ancestor_id(q) >= i.
    * Therefore we initialize indices[0] = 0, and all other indices to count.
    */
   guess_low = 0;
@@ -709,7 +709,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
 #endif
     count;
 
-  /** ancestor_id gives a child id on at the level that is given as its
+  /** ancestor_id gives a child id at the level that is given as its
    * input, which is one greater than the level that contains all the children,
    * which is the input of this function.
    */
@@ -724,26 +724,26 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
     P4EST_ASSERT (guess < array->elem_count);
     cur = sc_array_index (array, guess);
     child = p4est_quadrant_ancestor_id (cur, level);
-    /** if the guess quad's child id is lower, than j, then by invariant (1) we
-     * can set the lower limit of our next search, guess_low, to guess + 1.
+    /** if the guess quad's ancestor id is lower than j, then by invariant (1)
+     * we can set the lower limit of our next search, guess_low, to guess + 1.
      */
     if (child < j) {
       guess_low = guess + 1;
     }
-    /** otherwise, then guess is an upper limit for indices[i] for
-     * i = j, ..., child by invariant(2).
+    /** otherwise guess is an upper limit for indices[i] for i = j, ..., child
+     * by invariant (2).
      */
     else {
       for (i = j; i <= child; i++) {
         indices[i] = guess;
-        /** if indices[j] = guess_low, then invariants (1) and (2) imply that we
-         * have found the correct location for indices[j], and we can start
-         * placing indices[j+1], i.e., we increment j.
-         */
-        if ((size_t) indices[j] == guess_low)
-          j++;
       }
     }
+    /** if indices[j] == guess_low, then invariants (1) and (2) imply that
+     * we have found the correct location for indices[j], and we can start
+     * placing indices[j+1], i.e., we increment j.
+     */
+    while (indices[j] == guess_low)
+      j++;
     /** indices[P4EST_CHILDREN] will always be count, and if guess_low == count,
      * then we have searched through every element of the array
      */
