@@ -33,20 +33,39 @@
 typedef struct p4est_iter_corner_args
 {
   p4est_t            *p4est;
-  int                 level;
-  sc_array_t         *corners;
+  int                 level;    /* the level of the initial search areas */
+  sc_array_t         *corners;  /* for each search area that touches the corner,
+                                   the corner id (or child_id) that touches the
+                                   corner */
   int                 num_sides;
-  int                *start_idx2;
-  int                *quad_idx2;
+  int                *start_idx2;       /* for each side, the ancestor_id at
+                                           level of the initial search area */
+  int                *quad_idx2;        /* an indexing variable used in
+                                           corner_iterate: passed as an
+                                           argument to avoid using alloc/free
+                                           on each call */
   sc_array_t         *ghost_layer;
-  sc_array_t        **quadrants;
-  sc_array_t         *quads;
-  sc_array_t         *quadids;
-  sc_array_t         *treeids;
-  size_t            **index;
-  size_t             *first_index;
-  size_t             *count;
-  p4est_quadrant_t  **test;
+  sc_array_t        **quadrants;        /* the arrays, two for each side (one
+                                           local, one ghost), that contain the
+                                           quadrants in each search area */
+
+  sc_array_t         *quads;    /* these three arrays are passed to         */
+  sc_array_t         *quadids;  /* corner_info_t to be used in iter_corner: */
+  sc_array_t         *treeids;  /* in args to avoid alloc/free              */
+
+  size_t            **index;    /* for each sidetype, the indices in quadrants
+                                   that form the bounds of the heirarchical
+                                   search areas */
+  size_t             *first_index;      /* an indexing variable used in
+                                           corner_iterate: passed as an
+                                           argument to avoid using alloc/free
+                                           on each call */
+  size_t             *count;    /* a counting variable used in
+                                   corner_iterate: passed as an argument to
+                                   avoid using alloc/free on each call */
+  p4est_quadrant_t  **test;     /* a testing variable used in
+                                   corner_iterate: passed as an argument to
+                                   avoid using alloc/free on each call */
 }
 p4est_iter_corner_args_t;
 
@@ -83,6 +102,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   int                 type;
   bool                all_empty, has_local;
 
+  /* pass arguments to info that are already known */
   info.p4est = args->p4est;
   info.ghost_layer = args->ghost_layer;
   info.quads = args->quads;
@@ -90,12 +110,23 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   info.treeids = args->treeids;
   info.corners = args->corners;
 
+  /* level_idx2 moves us to the correct set of bounds within the index arrays
+   * for the level: it is a set of bounds because it includes all children at
+   * this level */
   level_idx2 = level * idx2_stride;
 
   for (side = 0; side < num_sides; side++) {
+
+    /* start_idx2 gives the ancestor id at level for the search area on this
+     * side, so quad_idx2[side] now gives the correct location in
+     * index[sidetype] of the bounds of the search area */
     quad_idx2[side] = level_idx2 + start_idx2[side];
+
     ptemp = sc_array_index_int (info.quads, side);
     *ptemp = NULL;
+
+    /* get the location in quadrants[sidetype] of the first quadrant in the
+     * search area, and the count of quadrants in the search area */
     for (type = local; type <= ghost; type++) {
       sidetype = side * 2 + type;
       first_index[sidetype] = index[sidetype][quad_idx2[side]];
@@ -104,13 +135,14 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
     }
   }
 
-  all_empty = true;
+  /* corner_iterate only runs if there is a chance of a local quadrant touching
+   * the desired corner */
   for (side = 0; side < num_sides; side++) {
     if (count[side * 2 + local]) {
-      all_empty = false;
+      break;
     }
   }
-  if (all_empty) {
+  if (side == num_sides) {
     return;
   }
 
@@ -120,7 +152,11 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
     this_corner = *((int *) sc_array_index_int (corners, side));
     for (type = local; type <= ghost; type++) {
       sidetype = side * 2 + type;
+
+      /* for this sidetype, we must find the most likely candidate in the
+       * search area for touching the desired corner */
       if (count[sidetype]) {
+        /* if there is only on quad in the searc area, it is the candidate */
         if (count[sidetype] == 1) {
           test[sidetype] = sc_array_index (quadrants[sidetype],
                                            first_index[sidetype]);
@@ -128,6 +164,8 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
         }
         else {
           switch (this_corner) {
+            /* if it is the first/last corner, then the first/last quadrant is
+             * the candidate */
           case (0):
             P4EST_ASSERT (first_index[sidetype] <
                           quadrants[sidetype]->elem_count);
@@ -143,9 +181,15 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
                                              count[sidetype] - 1);
             temp_idx = ((ssize_t) count[sidetype]) - 1;
             break;
+
+            /* otherwise, we find the last quadrant before the smallest possible
+             * quadrant touching the corner: if it contains the smallest
+             * quadrant, then it touches the corner */
           default:
             P4EST_ASSERT (first_index[sidetype] <
                           quadrants[sidetype]->elem_count);
+            /* we chose an arbitrary quadrant in the search area and transform
+             * it into the smallest possible quadrant touching the corner */
             test[sidetype] = sc_array_index (quadrants[sidetype],
                                              first_index[sidetype]);
             temp = *(test[sidetype]);
@@ -168,9 +212,13 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
               P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
 #endif
             P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
+
+            /* we search for the last quadrant before the temp */
             sc_array_init_view (&test_view, quadrants[sidetype],
                                 first_index[sidetype], count[sidetype]);
             temp_idx = p4est_find_higher_bound (&test_view, &temp, 0);
+            /* if there is no quadrant before temp, then no quad in the search
+             * area can touch the corner */
             if (temp_idx == -1) {
               test[sidetype] = NULL;
             }
@@ -181,9 +229,14 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
             break;
           }
         }
+
+        /* if we have a candidate */
         if (test[sidetype] != NULL) {
           temp_idx += first_index[sidetype];
+          /* we copy the candidate to temp */
           temp = *(test[sidetype]);
+          /* we shift temp canonically across the corner we think the candidate
+           * touches */
           temp.x += (this_corner % 2) ? P4EST_QUADRANT_LEN (temp.level) : 0;
           temp.y += ((this_corner % 4) / 2) ?
             P4EST_QUADRANT_LEN (temp.level) : 0;
@@ -191,6 +244,9 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
           temp.z += (this_corner / 4) ? P4EST_QUADRANT_LEN (temp.level) : 0;
 #endif
           P4EST_ASSERT (p4est_quadrant_is_extended (&temp));
+          /* if temp is the first descendant of a quadrant of size level, this
+           * means that the candidate really does touch the corner, otherwise,
+           * no quad in the search area touches the corner */
           if (temp.x & ~mask || temp.y & ~mask
 #ifdef P4_TO_P8
               || temp.z & ~mask
@@ -213,9 +269,11 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
       }
     }
   }
+  /* if none of the quads touching the corner is local, nothing is done */
   if (!has_local) {
     return;
   }
+
 #ifdef P4EST_DEBUG
   for (side = 0; side < num_sides; side++) {
     ptemp = sc_array_index_int (info.quads, side);
@@ -224,6 +282,8 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
     }
   }
 #endif
+
+  /* run the callback */
   iter_corner (&info, user_data);
 }
 
