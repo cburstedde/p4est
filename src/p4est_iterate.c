@@ -1047,17 +1047,32 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     return;
   }
 
+  /** alloc_size is the number of index arrays that are needed in the program.
+   * at minimum we need two for each side of the face iterator: one for local,
+   * one for ghost */
+  alloc_size = 4;
+  /** in the absence of strange corners (or strange edges), P4EST_CHILDREN is
+   * the most quadrants that can meet at a corner */
+  max_corner_size = P4EST_CHILDREN;
 #ifdef P4_TO_P8
+  /** if there are no strange edges between trees, then at most 4 quadrants meet
+   * at an edge */
+  max_edge_size = 4;
   if (iter_edge != NULL || iter_corner != NULL) {
     for (e = 0; e < num_edges; e++) {
       edge_size = (int) (ett_offset[e + 1] - ett_offset[e]);
       max_edge_size = (edge_size > max_edge_size) ? edge_size : max_edge_size;
     }
+    /** we need to have two index arrays for every side of the edge iterator:
+     * one for local, one for ghost */
+    alloc_size = (2 * max_edge_size > alloc_size) ?
+      2 * max_edge_size : alloc_size;
+    /** even if there are no strange corners, for a corner that is in the middle
+     * of a strange edge, there will be two quadrants that meet at the corner
+     * for every quadrant that meets at the edge */
+    max_corner_size = (max_edge_size * 2 > max_corner_size) ?
+      max_edge_size * 2 : max_corner_size;
   }
-  alloc_size = (2 * max_edge_size > alloc_size) ?
-    2 * max_edge_size : alloc_size;
-  max_corner_size = (max_edge_size * 2 > max_corner_size) ?
-    max_edge_size * 2 : max_corner_size;
 #endif
 
   if (iter_corner != NULL) {
@@ -1066,9 +1081,11 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
       max_corner_size = (corner_size > max_corner_size) ? corner_size :
         max_corner_size;
     }
+    /** Similar to edges, we need to arrays for every quadrant that meets at a
+     * corner */
+    alloc_size = (2 * max_corner_size > alloc_size) ?
+      2 * max_corner_size : alloc_size;
   }
-  alloc_size = (2 * max_corner_size > alloc_size) ?
-    2 * max_corner_size : alloc_size;
 
   /** initialize arrays that keep track of where we are in the search */
   index = P4EST_ALLOC (size_t *, alloc_size);
