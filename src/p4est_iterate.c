@@ -956,31 +956,43 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   const int           idx2_stride = P4EST_CHILDREN + 1;
   const int           ntc_str = P4EST_CHILDREN / 2;
 
-  sc_array_t         *trees = p4est->trees, **quadrants, test_view;
+  /* iterators */
+  int                 i, j, k, type;
+  int                 left_side, right_side;
+
+  /* tree topology */
+  sc_array_t         *trees = p4est->trees;
   p4est_tree_t       *tree;
+  sc_array_t        **quadrants;
+  sc_array_t          test_view;
   p4est_connectivity_t *conn = p4est->connectivity;
   size_t              num_ghosts, num_local;
   p4est_quadrant_t  **test;
+  int                *face;
 #ifndef P4_TO_P8
   int                 rface[2];
 #endif
-  int                 level, type, left_side, right_side,
-    *test_level, *level_num, modulus, i, j, k, *face,
-    num_to_child[P4EST_CHILDREN], *start_idx2;
-  int8_t             *ttf = conn->tree_to_face;
-  p4est_topidx_t     *ttt = conn->tree_to_tree, nt, t, c;
+  int                 level, *test_level;
+  int                *level_num;
+  int                 modulus;
+  int                 num_to_child[P4EST_CHILDREN];
+  int                *start_idx2;
+  const int8_t       *ttf = conn->tree_to_face;
+  const p4est_topidx_t *ttt = conn->tree_to_tree;
+  p4est_topidx_t      nt, t, c;
   size_t              global_num_trees, guess_tree;
-  int                 alloc_size = 4;
-  size_t            **index, *this_index, *tree_first_ghost, *first_index;
+  int                 alloc_size;
+  size_t            **index, *this_index;
+  size_t             *tree_first_ghost, *first_index;
   size_t              guess, guess_low, *count;
 #ifdef P4_TO_P8
-  p4est_topidx_t     *tte = conn->tree_to_edge;
+  const p4est_topidx_t *tte = conn->tree_to_edge;
   p4est_topidx_t      num_edges = conn->num_edges;
-  p4est_topidx_t     *ett_offset = conn->ett_offset;
-  p4est_topidx_t     *edge_to_tree = conn->edge_to_tree;
+  const p4est_topidx_t *ett_offset = conn->ett_offset;
+  const p4est_topidx_t *edge_to_tree = conn->edge_to_tree;
   p4est_topidx_t      this_edge, e;
-  int8_t             *edge_to_edge = conn->edge_to_edge;
-  int                 max_edge_size = 4;
+  const int8_t       *edge_to_edge = conn->edge_to_edge;
+  int                 max_edge_size;
   p8est_iter_edge_args_t edge_args;
   int                 edge_size;
   sc_array_t          common_corners[2];
@@ -997,20 +1009,20 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   int                 orientation, nc;
   p4est_topidx_t      this_corner;
 #ifndef P4_TO_P8
-  p4est_topidx_t     *ttc = conn->tree_to_vertex;
+  const p4est_topidx_t *ttc = conn->tree_to_vertex;
   p4est_topidx_t      num_corners = conn->num_vertices;
-  p4est_topidx_t     *ctt_offset = conn->vtt_offset;
+  const p4est_topidx_t *ctt_offset = conn->vtt_offset;
   p4est_corner_transform_t *ct;
   sc_array_t          ctransforms, *cta = &ctransforms;
 #else
-  p4est_topidx_t     *ttc = conn->tree_to_corner;
+  const p4est_topidx_t *ttc = conn->tree_to_corner;
   p4est_topidx_t      num_corners = conn->num_corners;
-  p4est_topidx_t     *ctt_offset = conn->ctt_offset;
-  p4est_topidx_t     *corner_to_tree = conn->corner_to_tree;
-  int8_t             *corner_to_corner = conn->corner_to_corner;
+  const p4est_topidx_t *ctt_offset = conn->ctt_offset;
+  const p4est_topidx_t *corner_to_tree = conn->corner_to_tree;
+  const int8_t       *corner_to_corner = conn->corner_to_corner;
   p4est_topidx_t      jt, kt;
 #endif
-  int                 max_corner_size = P4EST_CHILDREN;
+  int                 max_corner_size;
   int                 corner_size;
   sc_array_t          corners;
   sc_array_t          corner_treeids;
