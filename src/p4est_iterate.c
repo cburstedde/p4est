@@ -1571,6 +1571,10 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     this_index[1] = tree_first_ghost[t + 1];
     num_ghosts = (this_index[1] - this_index[0]);
 
+    if (!num_local && !num_ghosts) {
+      continue;
+    }
+
 #ifdef P4EST_DEBUG
     if (num_local) {
       this_index = index[left * 2 + local];
