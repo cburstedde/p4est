@@ -28,17 +28,18 @@
 #include <p8est_bits.h>
 #include <p8est_algorithms.h>
 #endif
+#include <sc_options.h>
 
 #ifndef P4_TO_P8
 #define P4EST_CONN_SUFFIX "p4c"
 #define P4EST_FOREST_SUFFIX "p4p"
-static const int    refine_level = 8;
+static const int    default_refine_level = 8;
 #else
 #define P4EST_CONN_SUFFIX "p8c"
 #define P4EST_FOREST_SUFFIX "p8p"
-static const int    refine_level = 5;
+static const int    default_refine_level = 5;
 #endif
-
+static int          refine_level = 0;
 static int          counter = 0;
 
 static void
@@ -157,7 +158,9 @@ main (int argc, char **argv)
   MPI_Comm            mpicomm;
   int                 mpiret;
   int                 mpirank;
+  int                 first_arg;
   p4est_connectivity_t *connectivity;
+  sc_options_t       *opt;
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
@@ -166,8 +169,18 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
+  /* initialize libsc and p4est */
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* handle command line options */
+  opt = sc_options_new (argv[0]);
+  sc_options_add_int (opt, 'l', "level", &refine_level,
+                      default_refine_level, "Refinement level");
+  first_arg = sc_options_parse (p4est_package_id, SC_LP_INFO,
+                                opt, argc, argv);
+  SC_CHECK_ABORT (first_arg >= 0, "Option error");
+  sc_options_destroy (opt);
 
   /* create connectivity and p4est (not balanced) */
 #ifndef P4_TO_P8
