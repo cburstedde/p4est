@@ -29,6 +29,7 @@
 #include <p8est_algorithms.h>
 #endif
 #include <sc_options.h>
+#include <sc_statistics.h>
 
 #ifndef P4_TO_P8
 #define P4EST_CONN_SUFFIX "p4c"
@@ -89,13 +90,28 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+enum
+{
+  STATS_CONN_LOAD,
+  STATS_P4EST_SAVE1,
+  STATS_P4EST_LOAD1,
+  STATS_P4EST_ELEMS,
+  STATS_P4EST_SAVE2,
+  STATS_P4EST_LOAD2,
+  STATS_P4EST_SAVE3,
+  STATS_P4EST_LOAD3,
+  STATS_COUNT,
+};
+
 void
 test_loadsave (p4est_connectivity_t * connectivity,
                MPI_Comm mpicomm, int mpirank)
 {
   int                 mpiret;
+  double              elapsed, wtime;
   p4est_connectivity_t *conn2;
   p4est_t            *p4est, *p4est2;
+  sc_statinfo_t       stats[STATS_COUNT];
 
   p4est = p4est_new (mpicomm, connectivity, 0, sizeof (int), init_fn, NULL);
   p4est_refine (p4est, true, refine_fn, init_fn);
@@ -107,15 +123,28 @@ test_loadsave (p4est_connectivity_t * connectivity,
   }
   mpiret = MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
+
+  wtime = MPI_Wtime ();
   conn2 = p4est_connectivity_load (P4EST_STRING "." P4EST_CONN_SUFFIX, NULL);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_CONN_LOAD, elapsed, "conn load");
+
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch A");
   p4est_connectivity_destroy (conn2);
 
   /* save, synchronize, load p4est and compare */
+  wtime = MPI_Wtime ();
   p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, true);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_P4EST_SAVE1, elapsed, "p4est save 1");
+
+  wtime = MPI_Wtime ();
   p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
                        mpicomm, sizeof (int), true, NULL, &conn2);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_P4EST_LOAD1, elapsed, "p4est load 1");
+
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch B");
   SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, true),
@@ -125,11 +154,21 @@ test_loadsave (p4est_connectivity_t * connectivity,
 
   /* partition (still not balanced) */
   p4est_partition (p4est, NULL);
+  sc_statinfo_set1 (stats + STATS_P4EST_ELEMS,
+                    (double) p4est->local_num_quadrants, "p4est elements");
 
   /* save, synchronize, load p4est and compare */
+  wtime = MPI_Wtime ();
   p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, false);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_P4EST_SAVE2, elapsed, "p4est save 2");
+
+  wtime = MPI_Wtime ();
   p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
                        mpicomm, sizeof (int), false, NULL, &conn2);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_P4EST_LOAD2, elapsed, "p4est load 2");
+
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch C");
   SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, false),
@@ -138,9 +177,17 @@ test_loadsave (p4est_connectivity_t * connectivity,
   p4est_connectivity_destroy (conn2);
 
   /* save, synchronize, load p4est and compare */
+  wtime = MPI_Wtime ();
   p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, true);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_P4EST_SAVE3, elapsed, "p4est save 3");
+
+  wtime = MPI_Wtime ();
   p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
                        mpicomm, sizeof (int), false, NULL, &conn2);
+  elapsed = MPI_Wtime () - wtime;
+  sc_statinfo_set1 (stats + STATS_P4EST_LOAD3, elapsed, "p4est load 3");
+
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch D");
   SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, false),
@@ -150,6 +197,11 @@ test_loadsave (p4est_connectivity_t * connectivity,
 
   /* destroy data structures */
   p4est_destroy (p4est);
+
+  /* compute and print timings */
+  sc_statinfo_compute (mpicomm, STATS_COUNT, stats);
+  sc_statinfo_print (p4est_package_id, SC_LP_STATISTICS,
+                     STATS_COUNT, stats, false, true);
 }
 
 int
