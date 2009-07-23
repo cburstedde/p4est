@@ -103,8 +103,8 @@ enum
   STATS_COUNT,
 };
 
-void
-test_loadsave (p4est_connectivity_t * connectivity,
+static void
+test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                MPI_Comm mpicomm, int mpirank)
 {
   int                 mpiret;
@@ -112,20 +112,25 @@ test_loadsave (p4est_connectivity_t * connectivity,
   p4est_connectivity_t *conn2;
   p4est_t            *p4est, *p4est2;
   sc_statinfo_t       stats[STATS_COUNT];
+  char                conn_name[BUFSIZ];
+  char                p4est_name[BUFSIZ];
+
+  snprintf (conn_name, BUFSIZ, "%s.%s", prefix, P4EST_CONN_SUFFIX);
+  snprintf (p4est_name, BUFSIZ, "%s.%s", prefix, P4EST_FOREST_SUFFIX);
+  P4EST_GLOBAL_INFOF ("Using file names %s and %s\n", conn_name, p4est_name);
 
   p4est = p4est_new (mpicomm, connectivity, 0, sizeof (int), init_fn, NULL);
   p4est_refine (p4est, true, refine_fn, init_fn);
 
   /* save, synchronize, load connectivity and compare */
   if (mpirank == 0) {
-    p4est_connectivity_save (P4EST_STRING "." P4EST_CONN_SUFFIX,
-                             connectivity);
+    p4est_connectivity_save (conn_name, connectivity);
   }
   mpiret = MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
 
   wtime = MPI_Wtime ();
-  conn2 = p4est_connectivity_load (P4EST_STRING "." P4EST_CONN_SUFFIX, NULL);
+  conn2 = p4est_connectivity_load (conn_name, NULL);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_CONN_LOAD, elapsed, "conn load");
 
@@ -135,13 +140,12 @@ test_loadsave (p4est_connectivity_t * connectivity,
 
   /* save, synchronize, load p4est and compare */
   wtime = MPI_Wtime ();
-  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, true);
+  p4est_save (p4est_name, p4est, true);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_P4EST_SAVE1, elapsed, "p4est save 1");
 
   wtime = MPI_Wtime ();
-  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
-                       mpicomm, sizeof (int), true, NULL, &conn2);
+  p4est2 = p4est_load (p4est_name, mpicomm, sizeof (int), true, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_P4EST_LOAD1, elapsed, "p4est load 1");
 
@@ -159,13 +163,13 @@ test_loadsave (p4est_connectivity_t * connectivity,
 
   /* save, synchronize, load p4est and compare */
   wtime = MPI_Wtime ();
-  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, false);
+  p4est_save (p4est_name, p4est, false);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_P4EST_SAVE2, elapsed, "p4est save 2");
 
   wtime = MPI_Wtime ();
-  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
-                       mpicomm, sizeof (int), false, NULL, &conn2);
+  p4est2 =
+    p4est_load (p4est_name, mpicomm, sizeof (int), false, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_P4EST_LOAD2, elapsed, "p4est load 2");
 
@@ -178,13 +182,13 @@ test_loadsave (p4est_connectivity_t * connectivity,
 
   /* save, synchronize, load p4est and compare */
   wtime = MPI_Wtime ();
-  p4est_save (P4EST_STRING "." P4EST_FOREST_SUFFIX, p4est, true);
+  p4est_save (p4est_name, p4est, true);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_P4EST_SAVE3, elapsed, "p4est save 3");
 
   wtime = MPI_Wtime ();
-  p4est2 = p4est_load (P4EST_STRING "." P4EST_FOREST_SUFFIX,
-                       mpicomm, sizeof (int), false, NULL, &conn2);
+  p4est2 =
+    p4est_load (p4est_name, mpicomm, sizeof (int), false, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
   sc_statinfo_set1 (stats + STATS_P4EST_LOAD3, elapsed, "p4est load 3");
 
@@ -211,6 +215,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 mpirank;
   int                 first_arg;
+  const char         *prefix;
   p4est_connectivity_t *connectivity;
   sc_options_t       *opt;
 
@@ -229,10 +234,11 @@ main (int argc, char **argv)
   opt = sc_options_new (argv[0]);
   sc_options_add_int (opt, 'l', "level", &refine_level,
                       default_refine_level, "Refinement level");
+  sc_options_add_string (opt, 'o', "oprefix", &prefix,
+                         P4EST_STRING, "Output prefix");
   first_arg = sc_options_parse (p4est_package_id, SC_LP_INFO,
                                 opt, argc, argv);
   SC_CHECK_ABORT (first_arg >= 0, "Option error");
-  sc_options_destroy (opt);
 
   /* create connectivity and p4est (not balanced) */
 #ifndef P4_TO_P8
@@ -242,7 +248,7 @@ main (int argc, char **argv)
 #endif
 
   /* test with vertex information */
-  test_loadsave (connectivity, mpicomm, mpirank);
+  test_loadsave (connectivity, prefix, mpicomm, mpirank);
 
 #ifdef P4_TO_P8
   /* test without vertex information */
@@ -251,12 +257,13 @@ main (int argc, char **argv)
   connectivity->vertices = NULL;
   P4EST_FREE (connectivity->tree_to_vertex);
   connectivity->tree_to_vertex = NULL;
-  test_loadsave (connectivity, mpicomm, mpirank);
+  test_loadsave (connectivity, prefix, mpicomm, mpirank);
 #endif
 
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
+  sc_options_destroy (opt);
   sc_finalize ();
 
   mpiret = MPI_Finalize ();
