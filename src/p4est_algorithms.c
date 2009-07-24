@@ -2361,9 +2361,9 @@ p4est_partition_given (p4est_t * p4est,
     new_first_local_tree = -1;
     new_last_local_tree = -2;
   }
-  P4EST_INFOF ("partition new forest [%lld,%lld]\n",
-               (long long) new_first_local_tree,
-               (long long) new_last_local_tree);
+  P4EST_VERBOSEF ("partition new forest [%lld,%lld]\n",
+                  (long long) new_first_local_tree,
+                  (long long) new_last_local_tree);
 
   /* Copy the local quadrants */
   if (first_local_tree >= 0 && new_first_local_tree >= 0) {

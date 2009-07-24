@@ -2243,6 +2243,8 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
   p4est_qcoord_t     *qall, *qpos;
   sc_array_t         *tquadrants;
 
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_save %s\n", filename);
+
   P4EST_ASSERT (p4est_connectivity_is_valid (p4est->connectivity));
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -2461,6 +2463,8 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
   mpiret = MPI_File_close (&mpifile);
   SC_CHECK_MPI (mpiret);
 #endif
+
+  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_save\n");
 }
 
 p4est_t            *
@@ -2488,6 +2492,8 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   p4est_qcoord_t      qbuffer[P4EST_DIM + 1];
   p4est_qcoord_t     *qall, *qpos;
   sc_array_t         *tquadrants;
+
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
 
   conn = *connectivity = p4est_connectivity_load (filename, &fpos);
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
@@ -2684,7 +2690,11 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");
 
+  /* assert that we loaded a valid forest */
   SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_load with %lld total quadrants\n",
+     (long long) p4est->global_num_quadrants);
 
   return p4est;
 }
