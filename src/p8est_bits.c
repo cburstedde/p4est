@@ -308,6 +308,69 @@ p8est_quadrant_edge_neighbor (const p4est_quadrant_t * q,
 }
 
 void
+p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t * q, p4est_topidx_t
+                                    t, int edge, sc_array_t * quads,
+                                    sc_array_t * treeids,
+                                    p8est_connectivity_t * conn)
+{
+  p4est_quadrant_t    temp;
+  p4est_quadrant_t   *qp;
+  p4est_topidx_t     *tp;
+  int                 face;
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  sc_array_t         *eta;
+  size_t              etree;
+
+  eta = &ei.edge_transforms;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (quads));
+  P4EST_ASSERT (quads->elem_count == 0);
+  P4EST_ASSERT (quads->elem_size == sizeof (p4est_quadrant_t));
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (treeids));
+  P4EST_ASSERT (treeids->elem_count == 0);
+  P4EST_ASSERT (treeids->elem_size == sizeof (p4est_topidx_t));
+
+  p8est_quadrant_edge_neighbor (q, edge, &temp);
+  if (p4est_quadrant_is_inside_root (&temp)) {
+    qp = sc_array_push (quads);
+    *qp = temp;
+    tp = sc_array_push (treeids);
+    *tp = t;
+    return;
+  }
+
+  if (!p8est_quadrant_is_outside_edge (&temp)) {
+    qp = sc_array_push (quads);
+    tp = sc_array_push (treeids);
+
+    face = p8est_edge_faces[edge][0];
+    p4est_quadrant_face_neighbor (q, face, &temp);
+    if (p4est_quadrant_is_inside_root (&temp)) {
+      face = p8est_edge_faces[edge][1];
+      *tp = p8est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
+      return;
+    }
+    face = p8est_edge_faces[edge][1];
+    p4est_quadrant_face_neighbor (q, face, &temp);
+    P4EST_ASSERT (p4est_quadrant_is_inside_root (&temp));
+    face = p8est_edge_faces[edge][0];
+    *tp = p8est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
+    return;
+  }
+  sc_array_init (eta, sizeof (p8est_edge_transform_t));
+  p8est_find_edge_transform (conn, t, edge, &ei);
+  for (etree = 0; etree < eta->elem_count; etree++) {
+    qp = sc_array_push (quads);
+    tp = sc_array_push (treeids);
+    et = sc_array_index (eta, etree);
+    p8est_quadrant_transform_edge (&temp, qp, &ei, et, true);
+    *tp = et->ntree;
+  }
+  sc_array_reset (eta);
+}
+
+void
 p8est_quadrant_children (const p4est_quadrant_t * q,
                          p4est_quadrant_t * c0, p4est_quadrant_t * c1,
                          p4est_quadrant_t * c2, p4est_quadrant_t * c3,

@@ -828,6 +828,49 @@ p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
+p4est_locidx_t
+p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q, p4est_locidx_t
+                                    t, int face, p4est_quadrant_t * r,
+                                    p4est_connectivity_t * conn)
+{
+  p4est_quadrant_t    temp;
+#ifndef P4_TO_P8
+  int                 transform;
+#else
+  int                 transform[9];
+  p4est_topidx_t      flag;
+#endif
+
+  p4est_quadrant_face_neighbor (q, face, r);
+  if (p4est_quadrant_is_inside_root (r)) {
+    return t;
+  }
+
+  temp = *r;
+#ifndef P4_TO_P8
+  transform = p4est_find_face_transform (conn, t, face);
+  if (transform == -1) {
+    if (r != q) {
+      *r = *q;
+    }
+    return t;
+  }
+  p4est_quadrant_translate_face (&temp, face);
+  p4est_quadrant_transform_face (&temp, r, transform);
+#else
+  flag = p8est_find_face_transform (conn, t, face, transform);
+  if (flag == -1) {
+    if (r != q) {
+      *r = *q;
+    }
+    return t;
+  }
+  p8est_quadrant_transform_face (&temp, r, transform);
+#endif
+
+  return conn->tree_to_tree[t * 2 * P4EST_DIM + face];
+}
+
 #ifndef P4_TO_P8
 
 void
@@ -934,6 +977,97 @@ p4est_quadrant_corner_neighbor (const p4est_quadrant_t * q,
 #endif
   r->level = q->level;
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
+void
+p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
+                                      p4est_locidx_t t, int corner,
+                                      sc_array_t * quads,
+                                      sc_array_t * treeids,
+                                      p4est_connectivity_t * conn)
+{
+  p4est_quadrant_t    temp;
+  p4est_quadrant_t   *qp;
+  p4est_topidx_t     *tp;
+  int                 face;
+#ifndef P4_TO_P8
+  p4est_corner_transform_t *ct;
+  sc_array_t          ctransforms, *cta;
+  cta = &ctransforms;
+#else
+  int                 edge;
+  p8est_corner_info_t ci;
+  p8est_corner_transform_t *ct;
+  sc_array_t         *cta = &ci.corner_transforms;
+  int                 i;
+#endif
+  size_t              ctree;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (quads));
+  P4EST_ASSERT (quads->elem_count == 0);
+  P4EST_ASSERT (quads->elem_size == sizeof (p4est_quadrant_t));
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (treeids));
+  P4EST_ASSERT (treeids->elem_count == 0);
+  P4EST_ASSERT (treeids->elem_size == sizeof (p4est_topidx_t));
+
+  p4est_quadrant_corner_neighbor (q, corner, &temp);
+  if (p4est_quadrant_is_inside_root (&temp)) {
+    qp = sc_array_push (quads);
+    *qp = temp;
+    tp = sc_array_push (treeids);
+    *tp = t;
+    return;
+  }
+
+  if (!p4est_quadrant_is_outside_corner (&temp)) {
+#ifndef P4_TO_P8
+    qp = sc_array_push (quads);
+    tp = sc_array_push (treeids);
+
+    face = p4est_corner_faces[corner][0];
+    p4est_quadrant_face_neighbor (q, face, &temp);
+    if (p4est_quadrant_is_inside_root (&temp)) {
+      face = p4est_corner_faces[corner][1];
+      *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
+      return;
+    }
+    face = p4est_corner_faces[corner][1];
+    p4est_quadrant_face_neighbor (q, face, &temp);
+    P4EST_ASSERT (p4est_quadrant_is_inside_root (&temp));
+
+    face = p4est_corner_faces[corner][0];
+    *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
+    return;
+#else
+    for (i = 0; i < 3; i++) {
+      face = p8est_corner_faces[corner][i];
+      edge = p8est_corner_edges[corner][i];
+      p4est_quadrant_face_neighbor (q, face, &temp);
+      if (p4est_quadrant_is_inside_root (&temp)) {
+        p8est_quadrant_edge_neighbor_extra (&temp, t, edge, quads, treeids,
+                                            conn);
+        return;
+      }
+    }
+    SC_ABORT_NOT_REACHED ();
+#endif
+  }
+#ifndef P4_TO_P8
+  sc_array_init (cta, sizeof (p4est_corner_transform_t));
+  p4est_find_corner_transform (conn, t, p4est_corner_to_zorder[corner], cta);
+#else
+  sc_array_init (cta, sizeof (p8est_corner_transform_t));
+  p8est_find_corner_transform (conn, t, corner, &ci);
+#endif
+  for (ctree = 0; ctree < cta->elem_count; ++ctree) {
+    qp = sc_array_push (quads);
+    tp = sc_array_push (treeids);
+    ct = sc_array_index (cta, ctree);
+    p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, true);
+    *qp = temp;
+    *tp = ct->ntree;
+  }
+  sc_array_reset (cta);
 }
 
 void

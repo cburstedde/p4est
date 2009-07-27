@@ -295,6 +295,25 @@ void                p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
                                                   int face,
                                                   p4est_quadrant_t * r);
 
+/** Compute the face neighbor of a quadrant, transforming across tree
+ * boundaries if necessary.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     t      Tree that contains \q. 
+ * \param [in]     face   The face across which to generate the neighbor.
+ * \param [in,out] r      Existing quadrant whose Morton index will be filled.
+ *                        By convention, if there is no tree across \face,
+ *                        \r has the same Morton index as \q.
+ * \param [in]     conn   The connectivity structure for the forest.
+ * \return Returns the tree that contains \r.  By convention, if there is no
+ * tree across \face, then \t is returned.
+ */
+p4est_locidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
+                                                        * q, p4est_locidx_t t,
+                                                        int face,
+                                                        p4est_quadrant_t * r,
+                                                        p4est_connectivity_t *
+                                                        conn);
+
 /** Get the smaller face neighbors of \a q.
  *
  * Gets the smaller face neighbors, which are half of the size assuming the
@@ -368,6 +387,28 @@ void                p4est_quadrant_all_face_neighbors (const p4est_quadrant_t
 void                p4est_quadrant_corner_neighbor (const p4est_quadrant_t *
                                                     q, int corner,
                                                     p4est_quadrant_t * r);
+
+/** Compute the corner neighbors of a quadrant, transforming across tree
+ * boundaries if necessary.  Only computes neighbors that are not face or edge
+ * neighbors.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     t      Tree that contains \q.
+ * \param [in]     corner The corner across which to generate the neighbor.
+ * \param [in,out] quads  An initialized but empty array where the corner
+ *                        neighbors will be placed.
+ * \param [in,out] treeids An initialized but empty array where the ids of the
+ *                        trees containing the corner neighbors will be placed.
+ * \param [in]     conn   The connectivity structure for the forest.
+ */
+void                p4est_quadrant_corner_neighbor_extra (const
+                                                          p4est_quadrant_t *
+                                                          q, p4est_locidx_t t,
+                                                          int corner,
+                                                          sc_array_t * quads,
+                                                          sc_array_t *
+                                                          treeids,
+                                                          p4est_connectivity_t
+                                                          * conn);
 
 /** Compute the corner node of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
