@@ -89,7 +89,9 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_quadrant_t    a, b, c;
   p4est_quadrant_t   *global_first_position;
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_new\n");
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
+                            "_new with min_quadrants %lld\n",
+                            (long long) min_quadrants);
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
 
   /* retrieve MPI information */
