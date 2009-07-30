@@ -254,7 +254,7 @@ main (int argc, char **argv)
   }
 
 #ifndef P4EST_DEBUG
-  sc_set_log_defaults (NULL, SC_LP_STATISTICS, SC_FP_KEEP);
+  sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
 #endif
 
   /* get command line argument: maximum refinement level */
