@@ -30,6 +30,87 @@
 #include <p4est_iterate.h>
 #endif
 
+#define P4EST_ITER_STRIDE (P4EST_CHILDREN + 1)
+typedef struct p4est_iter_tier
+{
+  p4est_quadrant_t   *key;
+  size_t              array[P4EST_ITER_STRIDE];
+}
+p4est_iter_tier_t;
+
+typedef struct p4est_iter_tier_ring
+{
+  int                 next;
+  sc_array_t          tiers;
+}
+p4est_iter_tier_ring_t;
+
+static void
+p4est_iter_tier_update (sc_array_t * view, int level, size_t * next_tier,
+                        size_t shift)
+{
+  int                 i;
+  p4est_split_array (view, level, next_tier);
+  for (i = 0; i < P4EST_ITER_STRIDE; i++) {
+    next_tier[i] += shift;
+  }
+}
+
+static void
+p4est_iter_tier_insert (sc_array_t * view, int level, size_t * next_tier,
+                        size_t shift, sc_array_t * tier_rings,
+                        p4est_quadrant_t * q)
+{
+  int                 i, limit;
+  p4est_iter_tier_ring_t *ring;
+  p4est_iter_tier_t  *tier;
+  p4est_quadrant_t   *key;
+
+  if (q == NULL) {
+    for (i = 0; i < P4EST_ITER_STRIDE; i++) {
+      next_tier[i] = shift;
+    }
+    return;
+  }
+
+  if (level >= (int) tier_rings->elem_count) {
+    p4est_iter_tier_update (view, level, next_tier, shift);
+    return;
+  }
+  ring = sc_array_index_int (tier_rings, level);
+
+  limit = (int) ring->tiers.elem_count;
+  for (i = 0; i < limit; i++) {
+    tier = sc_array_index_int (&(ring->tiers), i);
+    key = tier->key;
+    if (key == NULL) {
+      if (ring->next != i) {
+        P4EST_VERBOSEF ("level %d i %d next %d limit %d\n",
+                        level, i, ring->next, limit);
+      }
+      P4EST_ASSERT (ring->next == i);
+      p4est_iter_tier_update (view, level, next_tier, shift);
+      memcpy (tier->array, next_tier, P4EST_ITER_STRIDE * sizeof (size_t));
+      tier->key = q;
+      ring->next++;
+      ring->next %= limit;
+      return;
+    }
+    if (q == key) {
+      memcpy (next_tier, tier->array, P4EST_ITER_STRIDE * sizeof (size_t));
+      return;
+    }
+  }
+
+  /* if the tier wasn't already computed, compute it */
+  p4est_iter_tier_update (view, level, next_tier, shift);
+  /* we always rewrite over the oldest created tier */
+  tier = sc_array_index_int (&(ring->tiers), ring->next++);
+  memcpy (tier->array, next_tier, P4EST_ITER_STRIDE * sizeof (size_t));
+  tier->key = q;
+  ring->next %= limit;
+}
+
 typedef struct p4est_iter_corner_args
 {
   p4est_t            *p4est;
@@ -95,7 +176,6 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
 {
   const int           local = 0;
   const int           ghost = 1;
-  const int           idx2_stride = P4EST_CHILDREN + 1;
 
   int                 side, sidetype;
   int                 level = args->level;
@@ -133,7 +213,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   /* level_idx2 moves us to the correct set of bounds within the index arrays
    * for the level: it is a set of bounds because it includes all children at
    * this level */
-  level_idx2 = level * idx2_stride;
+  level_idx2 = level * P4EST_ITER_STRIDE;
 
   for (side = 0; side < num_sides; side++) {
 
@@ -341,6 +421,7 @@ typedef struct p8est_iter_edge_args
                                    passed as an argument to avoid using
                                    alloc/free on each call */
   p4est_iter_corner_args_t *corner_args;
+  sc_array_t         *tier_rings;
 }
 p8est_iter_edge_args_t;
 
@@ -351,7 +432,6 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
 {
   const int           local = 0;
   const int           ghost = 1;
-  const int           idx2_stride = P4EST_CHILDREN + 1;
 
   int                 num_sides = args->num_sides;
   int                 start_level = args->level;
@@ -384,12 +464,13 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
   p4est_iter_corner_args_t *corner_args = args->corner_args;
   sc_array_t         *corners = corner_args->corners;
   int                *c;
+  sc_array_t         *tier_rings = args->tier_rings;
 
   /* level_idx2 moves us to the correct set of bounds within the index arrays
    * for the level: it is a set of bounds because it includes all children at
    * this level */
   level = start_level;
-  level_idx2 = level * idx2_stride;
+  level_idx2 = level * P4EST_ITER_STRIDE;
   for (side = 0; side < num_sides; side++) {
 
     /* start_idx2 gives the ancestor id at level for the search area on this
@@ -444,6 +525,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           test_level[sidetype] = (int) test[sidetype]->level;
         }
         else {
+          test[sidetype] = NULL;
           test_level[sidetype] = -1;
         }
       }
@@ -493,16 +575,14 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
      * placing them on the next tier in index[sidetype] */
     for (side = 0; side < num_sides; side++) {
       if (refine[side]) {
-        quad_idx2[side] = level_idx2 + idx2_stride;
+        quad_idx2[side] = level_idx2 + P4EST_ITER_STRIDE;
         for (type = local; type <= ghost; type++) {
           sidetype = side * 2 + type;
           sc_array_init_view (&test_view, quadrants[sidetype],
                               first_index[sidetype], count[sidetype]);
-          p4est_split_array (&test_view, level,
-                             index[sidetype] + quad_idx2[side]);
-          for (i = 0; i < idx2_stride; i++) {
-            index[sidetype][quad_idx2[side] + i] += first_index[sidetype];
-          }
+          p4est_iter_tier_insert (&test_view, level, index[sidetype] +
+                                  quad_idx2[side], first_index[sidetype],
+                                  tier_rings, test[sidetype]);
         }
       }
     }
@@ -521,7 +601,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
             temp_int = sc_array_index_int (common_corners[i], side);
             /* quad_idx2[side] now gives the location in index[sidetype] of the
              * bounds for the search area that touches the common corner */
-            quad_idx2[side] = level_idx2 + idx2_stride + *temp_int;
+            quad_idx2[side] = level_idx2 + P4EST_ITER_STRIDE + *temp_int;
             for (type = local; type <= ghost; type++) {
               sidetype = side * 2 + type;
               first_index[sidetype] = index[sidetype][quad_idx2[side]];
@@ -573,7 +653,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
     /* if every side needed to be refined, then we descend along this branch to
      * this next level and search there */
     level_num[++level] = 0;
-    level_idx2 += idx2_stride;
+    level_idx2 += P4EST_ITER_STRIDE;
 
   change_search_area:
     /* if we tried to advance the search area on start_level, we've completed
@@ -613,7 +693,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
       }
       /* now that we're done on this level, go up a level and over a branch */
       level_num[--level]++;
-      level_idx2 -= idx2_stride;
+      level_idx2 -= P4EST_ITER_STRIDE;
       goto change_search_area;
     }
 
@@ -710,6 +790,7 @@ typedef struct p4est_iter_face_args
   p8est_iter_edge_args_t *edge_args;
 #endif
   p4est_iter_corner_args_t *corner_args;
+  sc_array_t         *tier_rings;
 }
 p4est_iter_face_args_t;
 
@@ -726,7 +807,6 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
   const int           right = 1;
   const int           local = 0;
   const int           ghost = 1;
-  const int           idx2_stride = P4EST_CHILDREN + 1;
   const int           ntc_str = P4EST_CHILDREN / 2;
 
   int                 start_level = args->level;
@@ -757,6 +837,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
   int                 temp_idx2;
   p4est_iter_corner_args_t *corner_args = args->corner_args;
   sc_array_t         *corners = corner_args->corners;
+  sc_array_t         *tier_rings = args->tier_rings;
   int                *c;
 #ifdef P4_TO_P8
   int                 v1, v2, true_dir, dir, k;
@@ -778,7 +859,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
    * for the level: it is a set of bounds because it includes all children at
    * this level */
   level = start_level;
-  level_idx2 = level * idx2_stride;
+  level_idx2 = level * P4EST_ITER_STRIDE;
 
   for (side = left; side <= limit; side++) {
 
@@ -832,6 +913,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
           test_level[sidetype] = (int) test[sidetype]->level;
         }
         else {
+          test[sidetype] = NULL;
           test_level[sidetype] = -1;
         }
       }
@@ -919,16 +1001,14 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
      * next tier in index[sidetype] */
     for (side = left; side <= limit; side++) {
       if (refine[side]) {
-        quad_idx2[side] = level_idx2 + idx2_stride;
+        quad_idx2[side] = level_idx2 + P4EST_ITER_STRIDE;
         for (type = local; type <= ghost; type++) {
           sidetype = side * 2 + type;
           sc_array_init_view (&test_view, quadrants[sidetype],
                               first_index[sidetype], count[sidetype]);
-          p4est_split_array (&test_view, level,
-                             index[sidetype] + quad_idx2[side]);
-          for (i = 0; i < idx2_stride; i++) {
-            index[sidetype][quad_idx2[side] + i] += first_index[sidetype];
-          }
+          p4est_iter_tier_insert (&test_view, level, index[sidetype] +
+                                  quad_idx2[side], first_index[sidetype],
+                                  tier_rings, test[sidetype]);
         }
       }
     }
@@ -944,7 +1024,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
             for (i = 0; i < P4EST_CHILDREN / 2; i++) {
               info.left_corner = num_to_child[side * ntc_str + i];
               info.right_corner = num_to_child[n_side * ntc_str + i];
-              quad_idx2[n_side] = level_idx2 + idx2_stride +
+              quad_idx2[n_side] = level_idx2 + P4EST_ITER_STRIDE +
                 num_to_child[n_side * ntc_str + i];
               /* quad_idx2[side] now gives the location in index[nsidentype]
                * of the bounds for the search area that corresponds to one of
@@ -993,7 +1073,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
     /* if we refined both sides, we descend to the next level from this branch
      * and continue searching there */
     level_num[++level] = 0;
-    level_idx2 += idx2_stride;
+    level_idx2 += P4EST_ITER_STRIDE;
 
   change_search_area:
     /* if we tried to advance the search area on start_level, we've completed
@@ -1173,7 +1253,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
 
       /* now that we're done on this level, go up a level and over a branch */
       level_num[--level]++;
-      level_idx2 -= idx2_stride;
+      level_idx2 -= P4EST_ITER_STRIDE;
       goto change_search_area;
     }
 
@@ -1252,7 +1332,6 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   const int           right = 1;
   const int           local = 0;
   const int           ghost = 1;
-  const int           idx2_stride = P4EST_CHILDREN + 1;
   const int           ntc_str = P4EST_CHILDREN / 2;
 
   /* iterators */
@@ -1338,6 +1417,13 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   int                 level_idx2;
   p4est_iter_volume_info_t info;
 
+  /* tier_ring vars */
+  int                 tier_ring_max;
+  int                 tier_level_max;
+  sc_array_t          tier_rings;
+  p4est_iter_tier_ring_t *ring;
+  p4est_iter_tier_t  *tier;
+
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (ghost_layer != NULL);
   P4EST_ASSERT (sc_array_is_sorted
@@ -1407,11 +1493,27 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   quad_idx2 = P4EST_ALLOC (int, alloc_size / 2);
   refine = P4EST_ALLOC (bool, alloc_size / 2);
   for (i = 0; i < alloc_size; i++) {
-    index[i] = P4EST_ALLOC (size_t, P4EST_MAXLEVEL * idx2_stride);
+    index[i] = P4EST_ALLOC (size_t, P4EST_MAXLEVEL * P4EST_ITER_STRIDE);
     if (i % 2)
       quadrants[i] = ghost_layer;
   }
   level_num = P4EST_ALLOC (int, P4EST_MAXLEVEL);
+
+  /* initialize the tier rings */
+  tier_ring_max = (p4est->mpisize == 1 ? P4EST_CHILDREN : 2 * P4EST_CHILDREN);
+  tier_level_max = P4EST_QMAXLEVEL - 1;
+  sc_array_init (&tier_rings, sizeof (p4est_iter_tier_ring_t));
+  sc_array_resize (&tier_rings, tier_level_max);
+  for (i = 0; i < tier_level_max; i++) {
+    ring = sc_array_index_int (&tier_rings, i);
+    ring->next = 0;
+    sc_array_init (&(ring->tiers), sizeof (p4est_iter_tier_t));
+    sc_array_resize (&(ring->tiers), tier_ring_max);
+    for (j = 0; j < tier_ring_max; j++) {
+      tier = sc_array_index_int (&(ring->tiers), j);
+      tier->key = NULL;
+    }
+  }
 
   /** Divide the ghost_layer by p.which_tree */
   global_num_trees = trees->elem_count;
@@ -1464,6 +1566,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   face_args.edge_args = &edge_args;
 #endif
   face_args.corner_args = &corner_args;
+  face_args.tier_rings = &tier_rings;
   face = face_args.face;
 
   /** set up the arguments passed to corner_iterate that are invariant */
@@ -1543,6 +1646,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     edge_args.treeids = &edge_treeids;
     edge_args.quadids = &edge_quadids;
     edge_args.quads = &edge_quads;
+    edge_args.tier_rings = &tier_rings;
   }
   else {
     e_treeids = NULL;
@@ -1765,7 +1869,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
           }
           /* we are done at the level, so we go up a level and over a branch */
           level_num[--level]++;
-          level_idx2 -= idx2_stride;
+          level_idx2 -= P4EST_ITER_STRIDE;
           continue;
         }
 
@@ -1803,6 +1907,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
             }
           }
           else {
+            test[type] = NULL;
             test_level[type] = -1;
           }
         }
@@ -1815,21 +1920,19 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
 
         /* otherwise, we need to refine the search areas, and place the
          * bounds of the refined search areas on the next tier in index[type]*/
-        quad_idx2[0] = level_idx2 + idx2_stride;
+        quad_idx2[0] = level_idx2 + P4EST_ITER_STRIDE;
         for (type = local; type <= ghost; type++) {
           sc_array_init_view (&test_view, quadrants[type],
                               first_index[type], count[type]);
           this_index = index[type];
-          p4est_split_array (&test_view, level, this_index + quad_idx2[0]);
-
-          for (i = 0; i < idx2_stride; i++) {
-            this_index[quad_idx2[0] + i] += first_index[type];
-          }
+          p4est_iter_tier_insert (&test_view, level,
+                                  this_index + quad_idx2[0],
+                                  first_index[type], &tier_rings, test[type]);
         }
 
         /* We descend to the next level and continue the search there */
         level_num[++level] = 0;
-        level_idx2 += idx2_stride;
+        level_idx2 += P4EST_ITER_STRIDE;
       }
     }
 
@@ -2389,4 +2492,10 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   P4EST_FREE (first_index);
   P4EST_FREE (start_idx2);
   P4EST_FREE (quadrants);
+
+  for (i = 0; i < tier_level_max; i++) {
+    ring = sc_array_index_int (&tier_rings, i);
+    sc_array_reset (&(ring->tiers));
+  }
+  sc_array_reset (&tier_rings);
 }
