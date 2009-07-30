@@ -1437,7 +1437,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
           tree_first_ghost[nt] = guess;
         }
       }
-      while (tree_first_ghost[t] == guess_low) {
+      while (t < global_num_trees && tree_first_ghost[t] == guess_low) {
         t++;
       }
       if (t == global_num_trees || guess_low == num_ghosts)

@@ -742,7 +742,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
      * we have found the correct location for indices[j], and we can start
      * placing indices[j+1], i.e., we increment j.
      */
-    while (indices[j] == guess_low)
+    while (j < P4EST_CHILDREN && indices[j] == guess_low)
       j++;
     /** indices[P4EST_CHILDREN] will always be count, and if guess_low == count,
      * then we have searched through every element of the array
