@@ -311,7 +311,6 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
   int                 flip, nflip, nflip1, nflip2;
   int                 ecode, ecount;
   bool                good, cfound[4];
-  p4est_topidx_t      ntree1, ntree2, ntree3;
   p4est_topidx_t      vertex, tree, ntree;
   p4est_topidx_t      aedge, edge_begin, edge_end;
   p4est_topidx_t      acorner, corner_begin, corner_end;
@@ -439,8 +438,6 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         }
         ecode = ecount = 0;
         flip = nflip1 = nflip2 = -1;
-        ntree1 = ttt[6 * tree + p8est_edge_faces[edge][0]];
-        ntree2 = ttt[6 * tree + p8est_edge_faces[edge][1]];
         edge_begin = eoff[aedge];
         edge_end = eoff[aedge + 1];
         if (edge_begin < 0 || edge_begin >= num_ett ||
@@ -497,9 +494,6 @@ p8est_connectivity_is_valid (p8est_connectivity_t * conn)
         }
         ecode = ecount = 0;
         cfound[0] = cfound[1] = cfound[2] = cfound[3] = false;
-        ntree1 = ttt[6 * tree + p8est_corner_faces[corner][0]];
-        ntree2 = ttt[6 * tree + p8est_corner_faces[corner][1]];
-        ntree3 = ttt[6 * tree + p8est_corner_faces[corner][2]];
         corner_begin = coff[acorner];
         corner_end = coff[acorner + 1];
         if (corner_begin < 0 || corner_begin >= num_ctt ||

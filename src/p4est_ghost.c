@@ -455,7 +455,6 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   p4est_topidx_t      tqtreeid;
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_quadrant_t    tq, non_existent;
-  sc_array_t         *ta;
 #ifndef P4_TO_P8
   int                 transform;
   p4est_quadrant_t    tempq;
@@ -471,7 +470,6 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
   if (non_existent.level == q->level) {
     return -1;
   }
-  ta = NULL;
 
   /* determine the hanging face number */
   if (phang != NULL) {
