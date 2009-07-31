@@ -90,11 +90,11 @@ typedef int64_t     p4est_gloidx_t;
    does not allow variadic macros. */
 #ifndef __cplusplus
 
-#define P4EST_LOGF(category,priority,fmt,...)                           \
-  ((void) (((priority) >= SC_LP_THRESHOLD) ?                            \
-           (sc_logf (__FILE__, __LINE__,                                \
-                     p4est_package_id, (category), (priority),          \
-                     (fmt), __VA_ARGS__), 0) : 0))
+#define P4EST_LOGF(category,priority,fmt,...)           \
+  ((priority) < SC_LP_THRESHOLD ? (void) 0 :            \
+   sc_logf (__FILE__, __LINE__,                         \
+            p4est_package_id, (category), (priority),   \
+            (fmt), __VA_ARGS__))
 #define P4EST_LOG(c,p,s) P4EST_LOGF((c), (p), "%s", (s))
 #define P4EST_GLOBAL_LOG(p,s) P4EST_LOG (SC_LC_GLOBAL, (p), (s))
 #define P4EST_GLOBAL_LOGF(p,f,...) \
