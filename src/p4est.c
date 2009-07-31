@@ -2712,7 +2712,7 @@ p4est_balance_type_int (p4est_balance_type_t btype)
   case P4EST_BALANCE_CORNER:
     return 2;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 
@@ -2725,7 +2725,7 @@ p4est_balance_type_string (p4est_balance_type_t btype)
   case P4EST_BALANCE_CORNER:
     return "CORNER";
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 

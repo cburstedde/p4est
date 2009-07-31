@@ -808,7 +808,7 @@ p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
     r->y = q->y;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
 #else
@@ -858,7 +858,7 @@ p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
     n[1].y = n[0].y + qh_2;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   P4EST_ASSERT (p4est_quadrant_is_extended (&n[0]));
@@ -1136,7 +1136,7 @@ p4est_quadrant_translate_face (p4est_quadrant_t * q, int face)
     q->x += P4EST_ROOT_LEN;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
 
@@ -1195,7 +1195,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
     r->y = th - q->x;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   r->level = q->level;
@@ -1402,7 +1402,7 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 1;
       break;
     default:
-      SC_CHECK_NOT_REACHED ();
+      SC_ABORT_NOT_REACHED ();
       break;
     }
     break;
@@ -1421,7 +1421,7 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 3;
       break;
     default:
-      SC_CHECK_NOT_REACHED ();
+      SC_ABORT_NOT_REACHED ();
       break;
     }
     break;
@@ -1440,7 +1440,7 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 2;
       break;
     default:
-      SC_CHECK_NOT_REACHED ();
+      SC_ABORT_NOT_REACHED ();
       break;
     }
     break;
@@ -1459,12 +1459,12 @@ p4est_node_transform (int node, int transform_type)
       trans_node = 0;
       break;
     default:
-      SC_CHECK_NOT_REACHED ();
+      SC_ABORT_NOT_REACHED ();
       break;
     }
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   return trans_node;

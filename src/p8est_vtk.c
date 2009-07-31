@@ -651,5 +651,5 @@ p8est_vtk_write_point_vector (p4est_t * p4est, p4est_geometry_t * geom,
                               const char *baseName,
                               const char *vectorName, const double *values)
 {
-  SC_CHECK_ABORT (false, "p8est_vtk_write_point_vector not implemented");
+  SC_ABORT ("p8est_vtk_write_point_vector not implemented");
 }

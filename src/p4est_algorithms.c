@@ -1007,7 +1007,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
           /* do a binary search for the highest tree quadrant <= ld */
           last_index = p4est_find_higher_bound (tquadrants, &ld, guess);
           if (last_index < 0) {
-            SC_CHECK_NOT_REACHED ();
+            SC_ABORT_NOT_REACHED ();
           }
         }
 

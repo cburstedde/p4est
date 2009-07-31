@@ -159,7 +159,7 @@ main (int argc, char **argv)
   double              elapsed_balance, elapsed_rebalance;
   double              elapsed_partition, elapsed_repartition;
   double              elapsed_ghosts, elapsed_nodes;
-  const char         *config_name, *usage, *errmsg;
+  const char         *config_name, *usage;
   p4est_locidx_t     *quadrant_counts;
   p4est_gloidx_t      count_refined, count_balanced;
   p4est_gloidx_t      prev_quadrant, next_quadrant;
@@ -197,7 +197,6 @@ main (int argc, char **argv)
     "      unit|periodic|rotwrap|twocubes|rotcubes|shell\n"
 #endif
     "   Level controls the maximum depth of refinement\n";
-  errmsg = NULL;
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
   config_name = NULL;
@@ -242,12 +241,8 @@ main (int argc, char **argv)
   }
   if (wrongusage) {
     if (mpi->mpirank == 0) {
-      fputs ("Usage error\n", stderr);
       fputs (usage, stderr);
-      if (errmsg != NULL) {
-        fputs (errmsg, stderr);
-      }
-      sc_abort ();
+      SC_ABORT ("Usage error");
     }
     mpiret = MPI_Barrier (mpi->mpicomm);
     SC_CHECK_MPI (mpiret);

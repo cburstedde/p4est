@@ -37,7 +37,7 @@ p8est_balance_type_int (p8est_balance_type_t btype)
   case P8EST_BALANCE_CORNER:
     return 3;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 
@@ -52,7 +52,7 @@ p8est_balance_type_string (p8est_balance_type_t btype)
   case P8EST_BALANCE_CORNER:
     return "CORNER";
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 

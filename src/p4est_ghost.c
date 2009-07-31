@@ -518,7 +518,7 @@ p4est_face_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
 
   /* transform the hanging face number */
 #ifndef P4_TO_P8
-  SC_CHECK_ABORT (false, "Not implemented in 2D\n");
+  SC_ABORT ("Not implemented in 2D\n");
 #else
   *pface = nface;
   if (phang != NULL) {
@@ -599,7 +599,7 @@ p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   case 3:
     return q->x == 0;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
 #else
@@ -614,7 +614,7 @@ p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
     xyz = q->z;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   return xyz == ((face & 0x01) ? dh : 0);

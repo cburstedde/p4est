@@ -140,7 +140,7 @@ p8est_quadrant_get_half_edge_neighbors (const p4est_quadrant_t * q,
     n[1].z += qh_2;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   n[0].level = n[1].level = (int8_t) (q->level + 1);

@@ -315,7 +315,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
     xyz[2] = +q * y;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 
@@ -473,7 +473,7 @@ p8est_geometry_shell_J (p8est_geometry_t * geom,
     J[2][2] = q * y * Rlog;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 
   /* compute the determinant */
@@ -607,7 +607,7 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
     xyz[2] = +q * y;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 

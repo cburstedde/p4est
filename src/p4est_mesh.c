@@ -149,7 +149,7 @@ p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
     cornery = qy + qh;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
 
@@ -179,7 +179,7 @@ p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
     n.y = cornery;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
 

@@ -183,7 +183,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 wrongusage;
   unsigned            crc;
-  const char         *usage, *errmsg;
+  const char         *usage;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
@@ -210,7 +210,6 @@ main (int argc, char **argv)
     "   Configuration can be any of\n"
     "      unit|three|evil|evil3|moebius|star|periodic\n"
     "   Level controls the maximum depth of refinement\n";
-  errmsg = NULL;
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
   if (!wrongusage && argc != 3) {
@@ -244,12 +243,8 @@ main (int argc, char **argv)
   }
   if (wrongusage) {
     if (mpi->mpirank == 0) {
-      fputs ("Usage error\n", stderr);
       fputs (usage, stderr);
-      if (errmsg != NULL) {
-        fputs (errmsg, stderr);
-      }
-      sc_abort ();
+      SC_ABORT ("Usage error");
     }
     mpiret = MPI_Barrier (mpi->mpicomm);
     SC_CHECK_MPI (mpiret);

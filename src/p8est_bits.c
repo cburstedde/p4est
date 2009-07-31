@@ -67,7 +67,7 @@ p8est_quadrant_is_outside_edge_extra (const p4est_quadrant_t * q, int *edge)
       *edge = 8 + 2 * quad_contact[3] + quad_contact[1];
     }
     else {
-      SC_CHECK_NOT_REACHED ();
+      SC_ABORT_NOT_REACHED ();
     }
     P4EST_ASSERT (p8est_quadrant_touches_edge (q, *edge, false));
   }
@@ -222,7 +222,7 @@ p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
     }
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   for (i = 0; i < 4; ++i) {
@@ -300,7 +300,7 @@ p8est_quadrant_edge_neighbor (const p4est_quadrant_t * q,
     r->z = q->z;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
     break;
   }
   r->level = q->level;
@@ -487,7 +487,7 @@ p8est_quadrant_transform_face (const p4est_quadrant_t * q,
     *target_xyz[target_axis[2]] = tRmh - *my_xyz[my_axis[2]];
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 
   r->level = q->level;
@@ -613,7 +613,7 @@ p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
     my_xyz = q->z;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
   if (!et->nflip) {
     *target_xyz[et->naxis[0]] = my_xyz;
@@ -641,7 +641,7 @@ p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
     *target_xyz[et->naxis[2]] = rshift;
     break;
   default:
-    SC_CHECK_NOT_REACHED ();
+    SC_ABORT_NOT_REACHED ();
   }
 
   r->level = q->level;
@@ -694,7 +694,7 @@ p8est_quadrant_shift_edge (const p4est_quadrant_t * q,
       step[2] = 0;
       break;
     default:
-      SC_CHECK_NOT_REACHED ();
+      SC_ABORT_NOT_REACHED ();
     }
     p4est_quadrant_sibling (&quad, r, sid);
     P4EST_ASSERT (-1 <= step[0] && step[0] <= 1);

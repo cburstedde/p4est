@@ -153,7 +153,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 wrongusage;
   unsigned            crc;
-  const char         *usage, *errmsg;
+  const char         *usage;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p8est_t            *p8est;
   p8est_connectivity_t *connectivity;
@@ -180,7 +180,6 @@ main (int argc, char **argv)
     "   Configuration can be any of\n"
     "      unit|periodic|rotwrap|twocubes|rotcubes\n"
     "   Level controls the maximum depth of refinement\n";
-  errmsg = NULL;
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
   if (!wrongusage && argc != 3) {
@@ -208,12 +207,8 @@ main (int argc, char **argv)
   }
   if (wrongusage) {
     if (mpi->mpirank == 0) {
-      fputs ("Usage error\n", stderr);
       fputs (usage, stderr);
-      if (errmsg != NULL) {
-        fputs (errmsg, stderr);
-      }
-      sc_abort ();
+      SC_ABORT ("Usage error");
     }
     mpiret = MPI_Barrier (mpi->mpicomm);
     SC_CHECK_MPI (mpiret);
