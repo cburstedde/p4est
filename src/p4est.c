@@ -488,7 +488,9 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
                     p4est_refine_t refine_fn, p4est_init_t init_fn,
                     int allowed_level)
 {
+#ifdef P4EST_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
+#endif
   bool                dorefine;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
@@ -525,11 +527,13 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
     tree = p4est_array_index_topidx (p4est->trees, nt);
     tree->quadrants_offset = p4est->local_num_quadrants;
     tquadrants = &tree->quadrants;
+#ifdef P4EST_DEBUG
     quadrant_pool_size = p4est->quadrant_pool->elem_count;
     data_pool_size = 0;
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
     }
+#endif
 
     /* initial log message for this tree */
     P4EST_VERBOSEF ("Into refine tree %lld with %llu\n", (long long) nt,
@@ -687,10 +691,12 @@ void
 p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
                p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
+#ifdef P4EST_DEBUG
+  size_t              data_pool_size;
+#endif
   int                 i, maxlevel;
   bool                couldbegood;
   size_t              zz;
-  size_t              data_pool_size;
   size_t              incount, removed;
   size_t              cidz, first, last, rest, before;
   p4est_locidx_t      num_quadrants, prev_offset;
@@ -710,10 +716,12 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
     tree = p4est_array_index_topidx (p4est->trees, jt);
     tquadrants = &tree->quadrants;
+#ifdef P4EST_DEBUG
     data_pool_size = 0;
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
     }
+#endif
     removed = 0;
 
     /* initial log message for this tree */
@@ -946,7 +954,6 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
   size_t              qcount, qbytes;
-  size_t              data_pool_size;
   size_t              all_incount, all_outcount;
   p4est_qcoord_t      qh;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
@@ -960,6 +967,9 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   p4est_quadrant_t   *q, *s;
   p4est_connectivity_t *conn = p4est->connectivity;
   sc_array_t         *qarray, *tquadrants;
+#ifdef P4EST_DEBUG
+  size_t              data_pool_size;
+#endif
 #ifndef P4_TO_P8
   int                 transform, corner;
   p4est_corner_transform_t *ct;
@@ -1009,11 +1019,12 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
                 btype == P8EST_BALANCE_CORNER);
 #endif
 
-  /* prepare sanity checks */
+#ifdef P4EST_DEBUG
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
   }
+#endif
 
   P4EST_QUADRANT_INIT (&mylow);
   P4EST_QUADRANT_INIT (&nextlow);

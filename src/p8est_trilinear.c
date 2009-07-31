@@ -28,11 +28,15 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
   int                 mpiret;
-  int                 k, prev_owner, owner;
+  int                 k, owner;
+#ifdef P4EST_DEBUG
+  int                 prev_owner = 0;
+  int64_t             prev_fvnid = -1;
+#endif
   int                *sharers;
   size_t              current, zz, num_sharers;
   int32_t             e, n, local_owned_end;
-  int64_t             global_borrowed, global_shared, prev_fvnid;
+  int64_t             global_borrowed, global_shared;
   int64_t             local_counts[5], global_counts[5];
   int32link_t        *lynk, **tail;
   p4est_topidx_t      which_tree;
@@ -134,8 +138,6 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   }
 
   /* Assign anchored node information. */
-  prev_owner = 0;
-  prev_fvnid = -1;
   mesh->anode_table = mesh->node_table;
   mesh->onode_table = mesh->node_table + mesh->local_owned_offset;
   mesh->dnode_table = mesh->node_table + mesh->local_anode_num;
@@ -184,8 +186,10 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
       }
       *tail = NULL;
     }
+#ifdef P4EST_DEBUG
     prev_owner = owner;
     prev_fvnid = anode->fvnid;
+#endif
   }
 
   /* Assign face hanging node information. */

@@ -887,8 +887,10 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
   int                 edge;
   int                *pe3;
   bool                bigger_edge[12];
-  size_t              big_count[12];
   sc_array_t          e3_a;
+#ifdef P4EST_DEBUG
+  size_t              big_count[12];
+#endif
 #endif
 
   sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
@@ -966,7 +968,9 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
       /* Find edge neighbors */
       for (edge = 0; edge < 12; ++edge) {
         bigger_edge[edge] = false;
+#ifdef P4EST_DEBUG
         big_count[edge] = 0;
+#endif
 
         /* If q is at a boundary then it is automatically balanced */
         if (p8est_quadrant_on_edge_boundary (p4est, nt, edge, q)) {
@@ -1022,7 +1026,9 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
           }
         }
         bigger_edge[edge] = e3;
+#ifdef P4EST_DEBUG
         big_count[edge] = e3_a.elem_count;
+#endif
       }
 
       if (btype == P8EST_BALANCE_EDGE)

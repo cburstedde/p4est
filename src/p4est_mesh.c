@@ -749,7 +749,10 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   p4est_hang2_t      *fh;
 #else
   int                 edge, corner;
-  p4est_locidx_t      num_face_hangings_end, num_edge_hangings_begin;
+#ifdef P4EST_DEBUG
+  p4est_locidx_t      num_face_hangings_end;
+#endif
+  p4est_locidx_t      num_edge_hangings_begin;
   p4est_locidx_t      num_edge_hangings, dup_edge_hangings;
   p8est_hang4_t      *fh;
   p8est_hang2_t      *eh;
@@ -1321,7 +1324,9 @@ p4est_nodes_new (p4est_t * p4est, sc_array_t * ghost_layer)
   P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) edha->elem_count);
 
   /* Correct the offsets of edge hanging nodes */
+#ifdef P4EST_DEBUG
   num_face_hangings_end = num_indep_nodes + num_face_hangings;
+#endif
   for (il = 0; il < num_local_nodes; ++il) {
     if (local_nodes[il] >= num_edge_hangings_begin) {
       local_nodes[il] -= dup_face_hangings;

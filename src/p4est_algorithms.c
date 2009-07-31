@@ -1255,6 +1255,10 @@ p4est_complete_region (p4est_t * p4est,
                        p4est_tree_t * tree,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
+#ifdef P4EST_DEBUG
+  size_t              quadrant_pool_size, data_pool_size;
+#endif
+
   p4est_tree_t       *R;
   sc_list_t          *W;
 
@@ -1274,8 +1278,6 @@ p4est_complete_region (p4est_t * p4est,
   p4est_quadrant_t   *r;
 
   int                 comp;
-  size_t              quadrant_pool_size;
-  size_t              data_pool_size;
   int                 maxlevel = 0;
   p4est_locidx_t     *quadrants_per_level;
 
@@ -1285,11 +1287,13 @@ p4est_complete_region (p4est_t * p4est,
   R = tree;
 
   /* needed for sanity check */
+#ifdef P4EST_DEBUG
   quadrant_pool_size = p4est->quadrant_pool->elem_count;
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
   }
+#endif
 
   quadrants = &R->quadrants;
   quadrants_per_level = R->quadrants_per_level;
@@ -1435,8 +1439,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
   size_t              iz, jz;
   size_t              incount, ocount;
-  size_t              quadrant_pool_size;
-  size_t              data_pool_size;
+#ifdef P4EST_DEBUG
+  size_t              quadrant_pool_size, data_pool_size;
+#endif
   size_t              count_outside_root, count_outside_tree;
   size_t              count_already_inlist, count_already_outlist;
   size_t              count_moved1_outside, count_moved2_outside;
@@ -1500,11 +1505,13 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   qpool = p4est->quadrant_pool;
 
   /* needed for sanity check */
+#ifdef P4EST_DEBUG
   quadrant_pool_size = qpool->elem_count;
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
   }
+#endif
 
   /* if tree is empty, there is nothing to do */
   if (incount == 0) {
@@ -1831,7 +1838,9 @@ p4est_balance_subtree (p4est_t * p4est, p4est_balance_type_t btype,
 size_t
 p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 {
+#ifdef P4EST_DEBUG
   size_t              data_pool_size;
+#endif
   size_t              incount, removed;
   size_t              current, rest;
   p4est_locidx_t      num_quadrants;
@@ -1845,10 +1854,12 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
   if (incount <= 1) {
     return 0;
   }
+#ifdef P4EST_DEBUG
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
   }
+#endif
   removed = 0;
 
   /* run through the array and remove ancestors */

@@ -97,6 +97,7 @@ p8est_lnodes_rank_t;
  * \param[in] face_code as in the p8est_lnodes_t structure.
  * \return              true if any face is hanging, false otherwise.
  */
+/*@unused@*/
 static inline       bool
 p8est_lnodes_face_decode (int16_t face_code,
                           bool is_hanging[6], int hanging_face[6])
@@ -105,7 +106,7 @@ p8est_lnodes_face_decode (int16_t face_code,
 
   if (face_code) {
     int                 i;
-    int                 work = face_code & ~0x4000;
+    int                 work = (int) face_code & ~0x4000;
     div_t               wdiv;
 
     for (i = 0; i < 6; ++i) {
