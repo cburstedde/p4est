@@ -132,7 +132,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   wtime = MPI_Wtime ();
   conn2 = p4est_connectivity_load (conn_name, NULL);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_CONN_LOAD, elapsed, "conn load");
+  sc_stats_set1 (stats + STATS_CONN_LOAD, elapsed, "conn load");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch A");
@@ -142,12 +142,12 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   wtime = MPI_Wtime ();
   p4est_save (p4est_name, p4est, true);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_P4EST_SAVE1, elapsed, "p4est save 1");
+  sc_stats_set1 (stats + STATS_P4EST_SAVE1, elapsed, "p4est save 1");
 
   wtime = MPI_Wtime ();
   p4est2 = p4est_load (p4est_name, mpicomm, sizeof (int), true, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_P4EST_LOAD1, elapsed, "p4est load 1");
+  sc_stats_set1 (stats + STATS_P4EST_LOAD1, elapsed, "p4est load 1");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch B");
@@ -158,20 +158,20 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
 
   /* partition (still not balanced) */
   p4est_partition (p4est, NULL);
-  sc_statinfo_set1 (stats + STATS_P4EST_ELEMS,
-                    (double) p4est->local_num_quadrants, "p4est elements");
+  sc_stats_set1 (stats + STATS_P4EST_ELEMS,
+                 (double) p4est->local_num_quadrants, "p4est elements");
 
   /* save, synchronize, load p4est and compare */
   wtime = MPI_Wtime ();
   p4est_save (p4est_name, p4est, false);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_P4EST_SAVE2, elapsed, "p4est save 2");
+  sc_stats_set1 (stats + STATS_P4EST_SAVE2, elapsed, "p4est save 2");
 
   wtime = MPI_Wtime ();
   p4est2 =
     p4est_load (p4est_name, mpicomm, sizeof (int), false, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_P4EST_LOAD2, elapsed, "p4est load 2");
+  sc_stats_set1 (stats + STATS_P4EST_LOAD2, elapsed, "p4est load 2");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch C");
@@ -184,13 +184,13 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   wtime = MPI_Wtime ();
   p4est_save (p4est_name, p4est, true);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_P4EST_SAVE3, elapsed, "p4est save 3");
+  sc_stats_set1 (stats + STATS_P4EST_SAVE3, elapsed, "p4est save 3");
 
   wtime = MPI_Wtime ();
   p4est2 =
     p4est_load (p4est_name, mpicomm, sizeof (int), false, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
-  sc_statinfo_set1 (stats + STATS_P4EST_LOAD3, elapsed, "p4est load 3");
+  sc_stats_set1 (stats + STATS_P4EST_LOAD3, elapsed, "p4est load 3");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
                   "load/save connectivity mismatch D");
@@ -203,9 +203,9 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_destroy (p4est);
 
   /* compute and print timings */
-  sc_statinfo_compute (mpicomm, STATS_COUNT, stats);
-  sc_statinfo_print (p4est_package_id, SC_LP_STATISTICS,
-                     STATS_COUNT, stats, false, true);
+  sc_stats_compute (mpicomm, STATS_COUNT, stats);
+  sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
+                  STATS_COUNT, stats, false, true);
 }
 
 int
