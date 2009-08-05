@@ -55,5 +55,3 @@ p8est_balance_type_string (p8est_balance_type_t btype)
     SC_ABORT_NOT_REACHED ();
   }
 }
-
-/* EOF p8est.c */

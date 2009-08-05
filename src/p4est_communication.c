@@ -332,5 +332,3 @@ p4est_comm_sync_flag (p4est_t * p4est, bool flag, MPI_Op operation)
 
   return (bool) gbyte;
 }
-
-/* EOF p4est_communication.c */

@@ -2741,5 +2741,3 @@ p4est_balance_type_string (p4est_balance_type_t btype)
 }
 
 #endif /* !P4_TO_P8 */
-
-/* EOF p4est.c */

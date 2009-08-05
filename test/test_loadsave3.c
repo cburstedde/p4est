@@ -21,5 +21,3 @@
 
 #include <p4est_to_p8est.h>
 #include "test_loadsave2.c"
-
-/* EOF test_loadsave3.c */

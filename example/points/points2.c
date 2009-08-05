@@ -229,5 +229,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-/* EOF points2.c */

@@ -21,5 +21,3 @@
 
 #include <p4est_to_p8est.h>
 #include "test_balance_type2.c"
-
-/* EOF test_balance_type3.c */

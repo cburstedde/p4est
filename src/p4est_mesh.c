@@ -1765,5 +1765,3 @@ p4est_neighborhood_destroy (p4est_neighborhood_t * nhood)
 
   P4EST_FREE (nhood);
 }
-
-/* EOF p4est_mesh.c */

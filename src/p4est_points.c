@@ -383,5 +383,3 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   return p4est;
 }
-
-/* EOF p4est_points.c */

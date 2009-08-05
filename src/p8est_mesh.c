@@ -27,5 +27,3 @@
 
 #include <p4est_to_p8est.h>
 #include "p4est_mesh.c"
-
-/* EOF p8est_mesh.c */

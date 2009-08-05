@@ -238,5 +238,3 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
     P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, *on, *ov);
   }
 }
-
-/* EOF p4est_base.c */

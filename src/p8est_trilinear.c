@@ -262,5 +262,3 @@ p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh)
 
   P4EST_FREE (mesh);
 }
-
-/* EOF p8est_trilinear.c */

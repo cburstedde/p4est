@@ -1662,5 +1662,3 @@ failtest:
 
   return true;
 }
-
-/* EOF p4est_ghost.c */

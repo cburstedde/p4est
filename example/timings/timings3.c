@@ -21,5 +21,3 @@
 
 #include <p4est_to_p8est.h>
 #include "timings2.c"
-
-/* EOF timings3.c */

@@ -619,5 +619,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-/* EOF test_quadrants2.c */

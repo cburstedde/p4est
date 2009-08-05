@@ -2673,5 +2673,3 @@ p4est_partition_given (p4est_t * p4est,
 
   return total_quadrants_shipped;
 }
-
-/* EOF p4est_algorithms.c */

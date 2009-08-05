@@ -66,5 +66,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-/* EOF bug_weighted_partition.c */

@@ -1550,5 +1550,3 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
 }
-
-/* EOF p4est_bits.c */

@@ -176,5 +176,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-/* EOF test_valid2.c */

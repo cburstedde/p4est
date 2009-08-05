@@ -126,5 +126,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-/* EOF test_comm.c */

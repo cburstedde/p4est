@@ -202,5 +202,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-/* EOF test_balance2.c */

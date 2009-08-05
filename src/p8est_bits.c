@@ -744,5 +744,3 @@ p8est_quadrant_shift_edge (const p4est_quadrant_t * q,
   }
   P4EST_ASSERT (p8est_quadrant_touches_edge (r, edge, true));
 }
-
-/* EOF p8est_bits.c */

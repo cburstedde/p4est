@@ -279,5 +279,3 @@ p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
 }
 
 #include "p4est_ghost.c"
-
-/* EOF p8est_ghost.c */

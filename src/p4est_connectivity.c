@@ -812,5 +812,3 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
   P4EST_ASSERT (corner_trees == (p4est_topidx_t) ctransforms->elem_count
                 + 1 + (ntree1 != itree) + (ntree2 != itree));
 }
-
-/* EOF p4est_connectivity.c */

@@ -475,5 +475,3 @@ p4est_connectivity_print (p4est_connectivity_t * connectivity, FILE * nout)
   fprintf (nout, "[Curved Faces]\n");
   fprintf (nout, "[Curved Types]\n");
 }
-
-/* EOF p4est_file.c */

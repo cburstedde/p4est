@@ -31,5 +31,3 @@
 
 #include <p4est_to_p8est.h>
 #include "points2.c"
-
-/* EOF points3.c */

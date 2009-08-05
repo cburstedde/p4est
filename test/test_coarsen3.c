@@ -21,5 +21,3 @@
 
 #include <p4est_to_p8est.h>
 #include "test_coarsen2.c"
-
-/* EOF test_coarsen3.c */
