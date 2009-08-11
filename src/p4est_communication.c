@@ -305,7 +305,8 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
         ) {
         n0_proc = p4est_comm_find_owner (p4est, which_tree, &n0, rank);
         if (n0_proc == rank) {
-          n1_proc = p4est_comm_find_owner (p4est, which_tree, &n1, rank);
+          p4est_quadrant_last_descendent (&n1, &n0, P4EST_QMAXLEVEL);
+          n1_proc = p4est_comm_find_owner (p4est, which_tree, &n0, rank);
           if (n1_proc == rank) {
             return true;
           }
