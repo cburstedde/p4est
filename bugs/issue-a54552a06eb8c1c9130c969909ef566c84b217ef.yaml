@@ -1,0 +1,23 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Optimize ghost layer
+desc: |-
+  A few things can be changed in the ghost layer.
+  1. API: return a structure that contains offsets for trees and procs.
+  2. Test if changing two-round comm to one-round mpi_probe makes it faster.
+  3. Test if waitsome or waitany instead of waitall makes it faster.
+  4. Limit binary searches to an array view that only contains one tree.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2009-08-12 17:05:21.842088 Z
+references: []
+
+id: a54552a06eb8c1c9130c969909ef566c84b217ef
+log_events: 
+- - 2009-08-12 17:05:24.865879 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""

@@ -53,9 +53,9 @@ int                 p8est_quadrant_find_owner (p8est_t * p8est,
  *                              generated.
  * \param [in] btype            Balance type (face, edge, corner or default, full).
  * \param [in,out] ghost_layer  An array of quadrants which make up the
- *                              ghost layer around \a p4est.  Their piggy1
+ *                              ghost layer around \a p4est.  Their piggy3
  *                              data member is filled with their owner's
- *                              tree and processor ids.  Quadrants will be
+ *                              tree and local number.  Quadrants will be
  *                              ordered in \c p8est_quadrant_compare_piggy
  *                              order.  These will be quadrants inside the
  *                              neighboring tree i.e., \c
