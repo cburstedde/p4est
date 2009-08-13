@@ -305,7 +305,7 @@ void                p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
  *                        \r has the same Morton index as \q.
  * \param [in]     conn   The connectivity structure for the forest.
  * \return Returns the tree that contains \r.  By convention, if there is no
- * tree across \face, then \t is returned.
+ * tree across \face, then -1 is returned.
  */
 p4est_locidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
                                                         * q, p4est_locidx_t t,

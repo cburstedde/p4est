@@ -185,6 +185,9 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
     for (j = 0; j < P4EST_DIM; j++) {
       f = p4est_corner_faces[c][j];
       nt = p4est_quadrant_face_neighbor_extra (q, t, f, &temp, conn);
+      if (nt == -1) {
+        continue;
+      }
       k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched corner 2");
@@ -297,6 +300,9 @@ edge_test_adjacency (p8est_iter_edge_info_t * info, void *data)
     for (j = 0; j < 2; j++) {
       f = p8est_edge_faces[e][j];
       nt = p8est_quadrant_face_neighbor_extra (q, t, f, &temp, conn);
+      if (nt == -1) {
+        continue;
+      }
       k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
                             &level_diff, &child_id);
       SC_CHECK_ABORT (k >= 0, "Iterate: mismatched edge 2");
@@ -389,40 +395,44 @@ face_test_adjacency (p4est_iter_face_info_t * info, void *data)
     p4est_quadrant_face_neighbor_extra (left, left_treeid, left_face, &temp,
                                         conn);
 #endif
-  sc_array_init_data (&view, &right, sizeof (p4est_quadrant_t *), 1);
-  sc_array_init_data (&view_tree, &right_treeid, sizeof (p4est_topidx_t), 1);
-  j = quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
+  if (nt != -1) {
+    sc_array_init_data (&view, &right, sizeof (p4est_quadrant_t *), 1);
+    sc_array_init_data (&view_tree, &right_treeid, sizeof (p4est_topidx_t),
+                        1);
+    j =
+      quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
                         &child_id);
-  SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 1");
-  if (!info->is_hanging) {
-    SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 2");
-  }
-  else {
-    SC_CHECK_ABORT (level_diff == -1, "Iterate: mismatched face 3");
-    SC_CHECK_ABORT (child_id == info->right_corner,
-                    "Iterate: mismatched face 4");
-  }
+    SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 1");
+    if (!info->is_hanging) {
+      SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 2");
+    }
+    else {
+      SC_CHECK_ABORT (level_diff == -1, "Iterate: mismatched face 3");
+      SC_CHECK_ABORT (child_id == info->right_corner,
+                      "Iterate: mismatched face 4");
+    }
 
 #ifndef P4_TO_P8
-  nt = p4est_quadrant_face_neighbor_extra (right, right_treeid,
-                                           p4est_zface_to_rface[right_face],
-                                           &temp, conn);
+    nt = p4est_quadrant_face_neighbor_extra (right, right_treeid,
+                                             p4est_zface_to_rface[right_face],
+                                             &temp, conn);
 #else
-  nt = p4est_quadrant_face_neighbor_extra (right, right_treeid, right_face,
-                                           &temp, conn);
+    nt = p4est_quadrant_face_neighbor_extra (right, right_treeid, right_face,
+                                             &temp, conn);
 #endif
-  sc_array_init_data (&view, &left, sizeof (p4est_quadrant_t *), 1);
-  sc_array_init_data (&view_tree, &left_treeid, sizeof (p4est_topidx_t), 1);
-  j = quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
-                        &child_id);
-  SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 5");
-  if (!info->is_hanging) {
-    SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 6");
-  }
-  else {
-    SC_CHECK_ABORT (level_diff == 1, "Iterate: mismatched face 7");
-    SC_CHECK_ABORT (child_id == info->left_corner,
-                    "Iterate: mismatched face 8");
+    sc_array_init_data (&view, &left, sizeof (p4est_quadrant_t *), 1);
+    sc_array_init_data (&view_tree, &left_treeid, sizeof (p4est_topidx_t), 1);
+    j = quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
+                          &child_id);
+    SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 5");
+    if (!info->is_hanging) {
+      SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 6");
+    }
+    else {
+      SC_CHECK_ABORT (level_diff == 1, "Iterate: mismatched face 7");
+      SC_CHECK_ABORT (child_id == info->left_corner,
+                      "Iterate: mismatched face 8");
+    }
   }
 
   qid = info->left_quadid;
