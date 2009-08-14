@@ -361,121 +361,125 @@ edge_test_adjacency (p8est_iter_edge_info_t * info, void *data)
 }
 #endif
 
-static void
-face_test_adjacency (p4est_iter_face_info_t * info, void *data)
+static              bool
+test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
 {
-  p4est_t            *p4est = info->p4est;
-  p4est_quadrant_t    temp;
-  p4est_quadrant_t   *left = info->left_quad;
-  p4est_quadrant_t   *right = info->right_quad;
-  int                 left_face = info->left_outgoing_face;
-  int                 right_face = info->right_outgoing_face;
-  int                 level_diff, child_id, j;
-  p4est_topidx_t      left_treeid = info->left_treeid;
-  p4est_topidx_t      right_treeid = info->right_treeid;
-  p4est_topidx_t      nt;
-  sc_array_t          view;
-  sc_array_t          view_tree;
+  int                 i;
+  int                 face = side->face;
+  int                 child_id, opp_id;
+  bool                has_local = false;
+  p4est_quadrant_t   *q;
+  p4est_quadrant_t    tempq;
   int                *checks = (int *) data;
-  sc_array_t         *trees = p4est->trees;
-  p4est_tree_t       *tree;
-  ssize_t             qid;
-  int                 c;
+  p4est_locidx_t      qid;
 #ifdef P4_TO_P8
-  int                 e, dir;
+  int                 edge;
+  int                 dir = face / 2;
+  int                 j;
 #endif
-  p4est_connectivity_t *conn = p4est->connectivity;
+  p4est_topidx_t      t = side->treeid;
+  p4est_tree_t       *tree;
+  p4est_locidx_t      offset;
+
+  tree = p4est_array_index_topidx (p4est->trees, t);
+  offset = tree->quadrants_offset;
 
 #ifndef P4_TO_P8
-  nt = p4est_quadrant_face_neighbor_extra (left, left_treeid,
-                                           p4est_zface_to_rface[left_face],
-                                           &temp, conn);
-#else
-  nt =
-    p4est_quadrant_face_neighbor_extra (left, left_treeid, left_face, &temp,
-                                        conn);
+  face = p4est_zface_to_rface[face];
 #endif
-  if (nt != -1) {
-    sc_array_init_data (&view, &right, sizeof (p4est_quadrant_t *), 1);
-    sc_array_init_data (&view_tree, &right_treeid, sizeof (p4est_topidx_t),
-                        1);
-    j =
-      quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
-                        &child_id);
-    SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 1");
-    if (!info->is_hanging) {
-      SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 2");
-    }
-    else {
-      SC_CHECK_ABORT (level_diff == -1, "Iterate: mismatched face 3");
-      SC_CHECK_ABORT (child_id == info->right_corner,
-                      "Iterate: mismatched face 4");
-    }
 
-#ifndef P4_TO_P8
-    nt = p4est_quadrant_face_neighbor_extra (right, right_treeid,
-                                             p4est_zface_to_rface[right_face],
-                                             &temp, conn);
-#else
-    nt = p4est_quadrant_face_neighbor_extra (right, right_treeid, right_face,
-                                             &temp, conn);
-#endif
-    sc_array_init_data (&view, &left, sizeof (p4est_quadrant_t *), 1);
-    sc_array_init_data (&view_tree, &left_treeid, sizeof (p4est_topidx_t), 1);
-    j = quad_is_in_array (p4est, &temp, nt, &view, &view_tree, &level_diff,
-                          &child_id);
-    SC_CHECK_ABORT (j == 0, "Iterate: mismatched face 5");
-    if (!info->is_hanging) {
-      SC_CHECK_ABORT (level_diff == 0, "Iterate: mismatched face 6");
+  if (!side->is_hanging) {
+    q = side->is.full.quad;
+    SC_CHECK_ABORT (q != NULL, "Iterate: face side missing quadrant");
+    if (side->is.full.is_local) {
+      qid = side->is.full.quadid + offset;
+      checks[qid * checks_per_quad + face + face_offset]++;
     }
-    else {
-      SC_CHECK_ABORT (level_diff == 1, "Iterate: mismatched face 7");
-      SC_CHECK_ABORT (child_id == info->left_corner,
-                      "Iterate: mismatched face 8");
-    }
+    return side->is.full.is_local;
   }
+  else {
+    for (i = 0; i < P4EST_CHILDREN / 2; i++) {
+      q = side->is.hanging.quad[i];
+      SC_CHECK_ABORT (q != NULL, "Iterate: face side missing quadrant");
+      child_id = p4est_quadrant_child_id (q);
+      SC_CHECK_ABORT (p4est_face_corners[face][i] == child_id,
+                      "Iterate: face side ordering");
+      opp_id = p4est_face_corners[face][P4EST_CHILDREN / 2 - 1 - i];
+      if (side->is.hanging.is_local[i]) {
+        has_local = true;
+        qid = side->is.hanging.quadid[i] + offset;
+        checks[qid * checks_per_quad + face + face_offset]++;
+        checks[qid * checks_per_quad + opp_id + corner_offset]++;
+#ifdef P4_TO_P8
+        for (j = 1; j <= 2; j++) {
+          edge = p8est_corner_edges[opp_id][(dir + j) % 3];
+          checks[qid * checks_per_quad + edge + edge_offset]++;
+        }
+#endif
+      }
+    }
+    q = side->is.hanging.quad[0];
+    p4est_quadrant_parent (q, &tempq);
+    for (i = 1; i < P4EST_CHILDREN / 2; i++) {
+      q = side->is.hanging.quad[i];
+      SC_CHECK_ABORT (p4est_quadrant_is_parent (&tempq, q),
+                      "Iterate: non siblings share face");
+    }
+    return has_local;
+  }
+}
 
-  qid = info->left_quadid;
-  if (qid >= 0) {
-    tree = p4est_array_index_topidx (trees, left_treeid);
-    qid += tree->quadrants_offset;
-    checks[qid * checks_per_quad + face_offset + left_face]++;
-    if (checks[qid * checks_per_quad + face_offset + left_face] ==
-        P4EST_CHILDREN / 2) {
-      checks[qid * checks_per_quad + face_offset + left_face] = 1;
-    }
+static void
+test_face_adjacency (p4est_iter_face_info_t * info, void *data)
+{
+  int                 i;
+  bool                is_local[2];
+  int                 limit = info->sides.elem_count;
+  p4est_iter_face_side_t *fside;
+  p4est_quadrant_t    tempq[2], tempr[2];
+  int                 face[2];
+  p4est_topidx_t      treeid[2], nt[2];
+
+  for (i = 0; i < 2; i++) {
+    is_local[i] = false;
   }
-  if (left_face == right_face && left_treeid == right_treeid) {
-    return;
+  for (i = 0; i < limit; i++) {
+    fside = sc_array_index_int (&(info->sides), i);
+    is_local[i] = test_face_side (info->p4est, fside, data);
   }
-  qid = info->right_quadid;
-  if (qid >= 0) {
-    tree = p4est_array_index_topidx (trees, right_treeid);
-    qid += tree->quadrants_offset;
-    checks[qid * checks_per_quad + face_offset + right_face]++;
-    if (!info->is_hanging) {
-      return;
-    }
+  SC_CHECK_ABORT (is_local[0] || is_local[1], "Iterate: non local face");
+
+  for (i = 0; i < limit; i++) {
+    fside = sc_array_index_int (&(info->sides), i);
+    face[i] = fside->face;
 #ifndef P4_TO_P8
-    if (p4est_face_corners[p4est_zface_to_rface[right_face]][0]
-        == info->right_corner) {
-      c = p4est_face_corners[p4est_zface_to_rface[right_face]][1];
+    face[i] = p4est_zface_to_rface[face[i]];
+#endif
+    treeid[i] = fside->treeid;
+    if (!fside->is_hanging) {
+      tempq[i] = *(fside->is.full.quad);
     }
     else {
-      c = p4est_face_corners[p4est_zface_to_rface[right_face]][0];
+      p4est_quadrant_parent (fside->is.hanging.quad[0], &(tempq[i]));
     }
-    checks[qid * checks_per_quad + corner_offset + c]++;
-#else
-    c = p8est_corner_face_corners[info->right_corner][right_face];
-    P4EST_ASSERT (c >= 0);
-    c = p8est_face_corners[right_face][3 - c];
-    checks[qid * checks_per_quad + corner_offset + c]++;
-    dir = right_face / 2;
-    e = p8est_corner_edges[c][(dir + 1) % 3];
-    checks[qid * checks_per_quad + edge_offset + e]++;
-    e = p8est_corner_edges[c][(dir + 2) % 3];
-    checks[qid * checks_per_quad + edge_offset + e]++;
-#endif
+    nt[1 - i] = p4est_quadrant_face_neighbor_extra (&(tempq[i]), treeid[i],
+                                                    face[i], &(tempr[1 - i]),
+                                                    info->p4est->
+                                                    connectivity);
+  }
+  if (limit == 2) {
+    for (i = 0; i < 2; i++) {
+      SC_CHECK_ABORT (nt[i] == treeid[i], "Iterate: face tree mismatch");
+      SC_CHECK_ABORT (p4est_quadrant_is_equal (&(tempq[i]), &(tempr[i])),
+                      "Iterate: face neighbor mismatch");
+    }
+  }
+  else {
+    SC_CHECK_ABORT (nt[1] == -1,
+                    "Iterate: non boundary face without neighbor");
+    fside = sc_array_index_int (&(info->sides), 0);
+    SC_CHECK_ABORT (!fside->is_hanging,
+                    "Iterate: hanging face without neighbor");
   }
 }
 
@@ -589,7 +593,7 @@ main (int argc, char **argv)
 
     P4EST_GLOBAL_PRODUCTIONF ("Begin adjacency test %d\n", i);
     p4est_iterate (p4est, &ghost_layer, checks, volume_test_adjacency,
-                   face_test_adjacency,
+                   test_face_adjacency,
 #ifdef P4_TO_P8
                    edge_test_adjacency,
 #endif

@@ -50,42 +50,47 @@ p8est_iter_volume_info_t;
 typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
                                             void *user_data);
 
-/** The information that is available to the user defined p8est_iter_face_t
- * callback function about the quadrants on either side of a face.
- * \a left_treeid and \a right_treeid are as above for the volume case.
- * \a left_quadid and/or \a right_quadid may be negative, which indicates that
- *    the quadrant is not local, and resides in the \a ghost_layer at the index
- *    quadid + ghost_layer->elem_count;
- * \a left_outgoing_face is the **z-order** face of \a left_quad that touches
- *    \a right_quad, and vice versa.
- * if \a is_hanging is true, then that indicates that \a left_quad is larger
- *    than right quad.
- * if \a is_hanging is true, then \a left_corner is the **z-order** corner that
- *    touches \a right_corner.  Said another way, of \a left_quad's children,
- *    \a left_corner is adjacent to right_quad, and \a right_corner is
- *    \a right_quad's child_id. When \a is_hanging is false, \a left_corner and
- *    \a right_corner are just one of the two sets of matching corners on the
- *    face.
- *
- * Note: at the outside boundary of the p4est, if it is not-periodic, a
- * quadrants face neighbor is considered to be itself.
+/* Information about one side of a face in the forest.  If a \a quad is local,
+ * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
+ * the ghosts array. If the face is hanging, then the quadrants are listed in
+ * z-order. */
+typedef struct p8est_iter_face_side
+{
+  p4est_topidx_t      treeid;
+  int                 face;
+  bool                is_hanging;
+  union p8est_iter_face_side_data
+  {
+    struct
+    {
+      p8est_quadrant_t   *quad;
+      bool                is_local;
+      p4est_locidx_t      quadid;
+    }
+    full;
+    struct
+    {
+      p8est_quadrant_t   *quad[4];
+      bool                is_local[4];
+      p4est_locidx_t      quadid[4];
+    }
+    hanging;
+  }
+  is;
+}
+p8est_iter_face_side_t;
+
+/** The information about both sides of a face in the forest.  The orientation
+ * is 0 if the face is within one tree; otherwise, it is the same as the
+ * orientation value between the two trees given in the connectivity.  If the
+ * face is on the outside of the forest, then sides will have only one element.
  */
 typedef struct p8est_iter_face_info
 {
-  p8est_t            *p4est;
+  p4est_t            *p4est;
   sc_array_t         *ghost_layer;
-  p8est_quadrant_t   *left_quad;
-  ssize_t             left_quadid;
-  p4est_topidx_t      left_treeid;
-  int                 left_outgoing_face;
-  int                 left_corner;
-  p8est_quadrant_t   *right_quad;
-  ssize_t             right_quadid;
-  p4est_topidx_t      right_treeid;
-  int                 right_outgoing_face;
-  int                 right_corner;
   int                 orientation;
-  bool                is_hanging;
+  sc_array_t          sides;    /* p8est_iter_face_side_t */
 }
 p8est_iter_face_info_t;
 
@@ -98,6 +103,41 @@ p8est_iter_face_info_t;
  */
 typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
                                           void *user_data);
+
+typedef struct p8est_iter_edge_side
+{
+  p4est_topidx_t      treeid;
+  int                 edge;
+  bool                is_hanging;
+  int                 orientation;
+  union p8est_iter_edge_side_data
+  {
+    struct
+    {
+      p8est_quadrant_t   *quad;
+      bool                is_local;
+      p4est_locidx_t      quadid;
+    }
+    full;
+    struct
+    {
+      p8est_quadrant_t   *quad[2];
+      bool                is_local[2];
+      p4est_locidx_t      quadid[2];
+    }
+    hanging;
+  }
+  is;
+}
+p8est_iter_edge_side_t;
+
+typedef struct p8est_iter_edge_info2
+{
+  p4est_t            *p4est;
+  sc_array_t         *ghost_layer;
+  sc_array_t          sides;    /* p8est_iter_edge_side_t */
+}
+p8est_iter_edge_info2_t;
 
 /** The information that is available to the user defined p8est_iter_edge_t
  * callback function about the quadrants surrounding an edge.
@@ -129,6 +169,24 @@ p8est_iter_edge_info_t;
  */
 typedef void        (*p8est_iter_edge_t) (p8est_iter_edge_info_t * info,
                                           void *user_data);
+
+typedef struct p8est_iter_corner_side
+{
+  p4est_topidx_t      treeid;
+  int                 corner;
+  p8est_quadrant_t   *quad;
+  bool                is_local;
+  p4est_locidx_t      quadid;
+}
+p8est_iter_corner_side_t;
+
+typedef struct p8est_iter_corner_info2
+{
+  p4est_t            *p4est;
+  sc_array_t         *ghost_layer;
+  sc_array_t          sides;    /* p8est_iter_corner_side_t */
+}
+p8est_iter_corner_info2_t;
 
 /** The information that is available to the user defined p8est_iter_corner_t
  * callback function about the quadrants surrounding a corner.

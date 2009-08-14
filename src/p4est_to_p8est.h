@@ -72,9 +72,12 @@
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
+#define p4est_iter_face_side_t          p8est_iter_face_side_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
 #define p4est_iter_corner_t             p8est_iter_corner_t
+#define p4est_iter_corner_side_t        p8est_iter_corner_side_t
+#define p4est_iter_corner_info2_t       p8est_iter_corner_info2_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 
 /* redefine external variables */
