@@ -660,16 +660,23 @@ failtest:
 
 /* here come the heavyweight algorithms */
 
+static              size_t
+p4est_array_split_ancestor_id (sc_array_t * array, size_t index, void *data)
+{
+  int                *levelp = data;
+  p4est_quadrant_t   *q = sc_array_index (array, index);
+  return ((size_t) p4est_quadrant_ancestor_id (q, *levelp));
+}
+
 void
 p4est_split_array (sc_array_t * array, int level, size_t indices[])
 {
   size_t              count = array->elem_count;
-  size_t              guess, guess_low;
-  p4est_quadrant_t   *cur;
+  sc_array_t          view;
 #ifdef P4EST_DEBUG
   p4est_quadrant_t   *test1, test2;
+  p4est_quadrant_t   *cur;
 #endif
-  int                 i, j, child;
 
   P4EST_ASSERT (0 <= level && level < P4EST_QMAXLEVEL);
   /** If empty, return all zeroes */
@@ -692,65 +699,10 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
   P4EST_ASSERT ((int) test2.level >= level);
 #endif
 
-  /** The invariants of the loop are:
-   *  1) if we are at step j, then
-   *     for every quadrant q in the array with index < guess_low,
-   *     ancestor_id(q) < j,
-   *  2) for 0 < i < P4EST_CHILDREN,
-   *     for every quadrant q in the array with index >= indices[i],
-   *     ancestor_id(q) >= i.
-   * Therefore we initialize indices[0] = 0, and all other indices to count.
-   */
-  guess_low = 0;
-  indices[0] = 0;
-  indices[1] = indices[2] = indices[3] = indices[4] =
-#ifdef P4_TO_P8
-    indices[5] = indices[6] = indices[7] = indices[8] =
-#endif
-    count;
-
-  /** ancestor_id gives a child id at the level that is given as its
-   * input, which is one greater than the level that contains all the children,
-   * which is the input of this function.
-   */
+  sc_array_init_data (&view, indices, sizeof (size_t), P4EST_CHILDREN + 1);
   level++;
-
-  guess = count / 2;
-  /** indices[0] will not change: if there are no quads in child(0), then
-   * indices[1] will be zero as well.
-   */
-  j = 1;
-  for (;;) {
-    P4EST_ASSERT (guess < array->elem_count);
-    cur = sc_array_index (array, guess);
-    child = p4est_quadrant_ancestor_id (cur, level);
-    /** if the guess quad's ancestor id is lower than j, then by invariant (1)
-     * we can set the lower limit of our next search, guess_low, to guess + 1.
-     */
-    if (child < j) {
-      guess_low = guess + 1;
-    }
-    /** otherwise guess is an upper limit for indices[i] for i = j, ..., child
-     * by invariant (2).
-     */
-    else {
-      for (i = j; i <= child; i++) {
-        indices[i] = guess;
-      }
-    }
-    /** if indices[j] == guess_low, then invariants (1) and (2) imply that
-     * we have found the correct location for indices[j], and we can start
-     * placing indices[j+1], i.e., we increment j.
-     */
-    while (j < P4EST_CHILDREN && indices[j] == guess_low)
-      j++;
-    /** indices[P4EST_CHILDREN] will always be count, and if guess_low == count,
-     * then we have searched through every element of the array
-     */
-    if (j == P4EST_CHILDREN || guess_low == count)
-      return;
-    guess = guess_low + ((size_t) indices[j] - guess_low) / 2;
-  }
+  sc_array_split (array, &view, P4EST_CHILDREN, p4est_array_split_ancestor_id,
+                  &level);
 }
 
 ssize_t
