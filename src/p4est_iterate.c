@@ -1317,7 +1317,24 @@ p4est_volume_iterate (p4est_t * p4est, sc_array_t * ghost_layer,
       iter_volume (&info, user_data);
     }
   }
-};
+}
+
+static              size_t
+p4est_split_array_which_tree (sc_array_t * array, size_t index, void *data)
+{
+  p4est_quadrant_t   *q = sc_array_index (array, index);
+  return ((size_t) q->p.which_tree);
+}
+
+static void
+p4est_split_ghost_layer_by_tree (sc_array_t * ghosts, size_t * tree_offsets,
+                                 p4est_topidx_t num_trees)
+{
+  sc_array_t          view;
+  sc_array_init_data (&view, tree_offsets, sizeof (size_t), num_trees + 1);
+  sc_array_split (ghosts, &view, (size_t) num_trees,
+                  p4est_split_array_which_tree, NULL);
+}
 
 void
 p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
@@ -1358,11 +1375,11 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   const int8_t       *ttf = conn->tree_to_face;
   const p4est_topidx_t *ttt = conn->tree_to_tree;
   p4est_topidx_t      nt, t, c;
-  size_t              global_num_trees, guess_tree;
+  size_t              global_num_trees;
   int                 alloc_size;
   size_t            **index, *this_index;
   size_t             *tree_first_ghost, *first_index;
-  size_t              guess, guess_low, *count;
+  size_t             *count;
 #ifdef P4_TO_P8
   const p4est_topidx_t *tte = conn->tree_to_edge;
   p4est_topidx_t      num_edges = conn->num_edges;
@@ -1518,35 +1535,8 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   /** Divide the ghost_layer by p.which_tree */
   global_num_trees = trees->elem_count;
   tree_first_ghost = P4EST_ALLOC (size_t, global_num_trees + 1);
-  guess_low = 0;
-  tree_first_ghost[0] = 0;
-  num_ghosts = ghost_layer->elem_count;
-  for (t = 1; t <= global_num_trees; t++) {
-    tree_first_ghost[t] = num_ghosts;
-  }
-  if (num_ghosts) {
-    guess = num_ghosts / 2;
-    t = 1;
-    for (;;) {
-      P4EST_ASSERT (guess < ghost_layer->elem_count);
-      test[0] = sc_array_index (ghost_layer, guess);
-      guess_tree = test[0]->p.which_tree;
-      if (guess_tree < t) {
-        guess_low = guess + 1;
-      }
-      else {
-        for (nt = t; nt <= guess_tree; nt++) {
-          tree_first_ghost[nt] = guess;
-        }
-      }
-      while (t < global_num_trees && tree_first_ghost[t] == guess_low) {
-        t++;
-      }
-      if (t == global_num_trees || guess_low == num_ghosts)
-        break;
-      guess = guess_low + (tree_first_ghost[t] - guess_low) / 2;
-    }
-  }
+  p4est_split_ghost_layer_by_tree (ghost_layer, tree_first_ghost,
+                                   global_num_trees);
 
   /** set up the arguments passed to face_iterate that are invariant */
   face_args.p4est = p4est;
