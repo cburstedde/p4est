@@ -174,8 +174,7 @@ void                p4est_order_local_vertices (p4est_t * p4est,
                                                 quadrant_to_local_vertex);
 
 /** Create node information. */
-p4est_nodes_t      *p4est_nodes_new (p4est_t * p4est,
-                                     sc_array_t * ghost_layer);
+p4est_nodes_t      *p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost);
 
 /** Destroy node information. */
 void                p4est_nodes_destroy (p4est_nodes_t * nodes);

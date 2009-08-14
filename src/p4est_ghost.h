@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2007,2008 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2007-2009 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,6 +25,21 @@
 #include <p4est.h>
 
 SC_EXTERN_C_BEGIN;
+
+typedef struct
+{
+  /** An array of quadrants which make up the ghost layer around \a
+   * p4est.  Their piggy3 data member is filled with their owner's tree
+   * and local number.  Quadrants will be ordered in \c
+   * p4est_quadrant_compare_piggy order.  These will be quadrants
+   * inside the neighboring tree i.e., \c p4est_quadrant_is_inside is
+   * true for the quadrant and the neighboring tree.
+   */
+  sc_array_t          ghosts;
+  p4est_locidx_t     *tree_offsets;     /* num_trees + 1 ghost indices */
+  p4est_locidx_t     *proc_offsets;     /* num_procs + 1 ghost indices */
+}
+p4est_ghost_t;
 
 /** Gets the processor id of a quadrant's owner.
  * The quadrant can lie outside of a tree across faces (and only faces).
@@ -51,25 +66,15 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
  *
  * \param [in] p4est            The forest for which the ghost layer will be
  *                              generated.
- * \param [in] btype            Balance type (face, corner or default, full).
- * \param [in,out] ghost_layer  An array of quadrants which make up the
- *                              ghost layer around \a p4est.  Their piggy3
- *                              data member is filled with their owner's
- *                              tree and local number.  Quadrants will be
- *                              ordered in \c p4est_quadrant_compare_piggy
- *                              order.  These will be quadrants inside the
- *                              neighboring tree i.e., \c
- *                              p4est_quadrant_is_inside is true for the
- *                              quadrant and the neighboring tree.
- * \param [out] ghost_owner     If not NULL, this array is allocated and
- *                              filled with one rank per ghost.
- * \return                      Returns false if it fails due to violated
- *                              2:1 constraints, true otherwise.
+ * \param [in] btype            Which ghosts to include (across face, corner
+ *                              or default, full).
+ * \return                      A fully initialized ghost layer.
  */
-bool                p4est_build_ghost_layer (p4est_t * p4est,
-                                             p4est_balance_type_t btype,
-                                             sc_array_t * ghost_layer,
-                                             int **ghost_owner);
+p4est_ghost_t      *p4est_ghost_new (p4est_t * p4est,
+                                     p4est_balance_type_t btype);
+
+/** Frees all memory used for the ghost layer. */
+void                p4est_ghost_destroy (p4est_ghost_t * ghost);
 
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *

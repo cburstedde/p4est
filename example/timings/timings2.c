@@ -170,7 +170,6 @@ main (int argc, char **argv)
   int                 i;
   int                 mpiret;
   int                 wrongusage;
-  int                *ghost_owner;
   unsigned            crc;
   const char         *config_name, *usage;
   p4est_locidx_t     *quadrant_counts;
@@ -180,7 +179,7 @@ main (int argc, char **argv)
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
-  sc_array_t          ghost_layer;
+  p4est_ghost_t      *ghost;
 #ifdef P4_TO_P8
   trilinear_mesh_t   *mesh;
 #endif
@@ -358,17 +357,14 @@ main (int argc, char **argv)
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
   /* time building the ghost layer */
-  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
   sc_flops_snap (&fi, &snapshot);
-  p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
-                           &ghost_layer, &ghost_owner);
+  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_GHOSTS], snapshot.iwtime, "Ghost layer");
-  P4EST_FREE (ghost_owner);
 
   /* time the node numbering */
   sc_flops_snap (&fi, &snapshot);
-  nodes = p4est_nodes_new (p4est, &ghost_layer);
+  nodes = p4est_nodes_new (p4est, ghost);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_NODES], snapshot.iwtime, "Nodes");
 
@@ -383,7 +379,7 @@ main (int argc, char **argv)
   p8est_trilinear_mesh_destroy (mesh);
 #endif
   p4est_nodes_destroy (nodes);
-  sc_array_reset (&ghost_layer);
+  p4est_ghost_destroy (ghost);
 
   /* time a partition with a shift of all elements by one processor */
   for (i = 0, next_quadrant = 0; i < p4est->mpisize; ++i) {

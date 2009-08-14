@@ -70,6 +70,7 @@
 #define p4est_refine_t                  p8est_refine_t
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
+#define p4est_ghost_t                   p8est_ghost_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_lnodes_t                  p8est_lnodes_t
@@ -212,7 +213,8 @@
 
 /* functions in p4est_ghost */
 #define p4est_quadrant_find_owner       p8est_quadrant_find_owner
-#define p4est_build_ghost_layer         p8est_build_ghost_layer
+#define p4est_ghost_new                 p8est_ghost_new
+#define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_face_quadrant_exists      p8est_face_quadrant_exists
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced

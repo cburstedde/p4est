@@ -195,8 +195,7 @@ typedef struct p8est_nodes
 p8est_nodes_t;
 
 /** Create node information. */
-p8est_nodes_t      *p8est_nodes_new (p8est_t * p8est,
-                                     sc_array_t * ghost_layer);
+p8est_nodes_t      *p8est_nodes_new (p8est_t * p8est, p8est_ghost_t * ghost);
 
 /** Destroy node information. */
 void                p8est_nodes_destroy (p8est_nodes_t * nodes);

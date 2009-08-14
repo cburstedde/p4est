@@ -82,14 +82,13 @@ static void
 check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected)
 {
-  int                *ghost_owner;
   unsigned            crc_computed;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
+  p4est_ghost_t      *ghost;
 #ifdef P4_TO_P8
   trilinear_mesh_t   *mesh;
 #endif
-  sc_array_t          ghost_layer;
 
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
@@ -105,17 +104,14 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
     SC_CHECK_ABORT (crc_computed == crc_expected, "Checksum mismatch");
   }
 
-  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
-                           &ghost_layer, &ghost_owner);
-  nodes = p4est_nodes_new (p4est, &ghost_layer);
+  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+  nodes = p4est_nodes_new (p4est, ghost);
 #ifdef P4_TO_P8
   mesh = p8est_trilinear_mesh_new (p4est, nodes);
   p8est_trilinear_mesh_destroy (mesh);
 #endif
   p4est_nodes_destroy (nodes);
-  sc_array_reset (&ghost_layer);
-  P4EST_FREE (ghost_owner);
+  p4est_ghost_destroy (ghost);
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
