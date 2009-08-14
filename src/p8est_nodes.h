@@ -19,10 +19,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P8EST_MESH_H
-#define P8EST_MESH_H
+#ifndef P8EST_NODES_H
+#define P8EST_NODES_H
 
 #include <p8est.h>
+#include <p8est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -193,21 +194,6 @@ typedef struct p8est_nodes
 }
 p8est_nodes_t;
 
-/** This mesh structure holds complete neighborhood information.
- * cumulative_count[i]   is the sum of local quadrants in the
- *                       local trees 0..i-1. i == local_num_trees is allowed.
- * element_offsets[i]    is the offset into local_neighbors for local
- *                       element i. i == local_num_quadrants is allowed
- *                       and contains the number of stored local neighbors.
- */
-typedef struct
-{
-  p4est_locidx_t     *cumulative_count;
-  p4est_locidx_t     *element_offsets;
-  sc_array_t         *local_neighbors;
-}
-p8est_neighborhood_t;
-
 /** Create node information. */
 p8est_nodes_t      *p8est_nodes_new (p8est_t * p8est,
                                      sc_array_t * ghost_layer);
@@ -219,14 +205,6 @@ void                p8est_nodes_destroy (p8est_nodes_t * nodes);
 bool                p8est_nodes_is_valid (p8est_t * p8est,
                                           p8est_nodes_t * nodes);
 
-/** Create neighborhood information.
- */
-p8est_neighborhood_t *p8est_neighborhood_new (p8est_t * p8est);
-
-/** Destroy neighborhood information.
- */
-void                p8est_neighborhood_destroy (p8est_neighborhood_t * nhood);
-
 SC_EXTERN_C_END;
 
-#endif /* P8EST_MESH_H */
+#endif /* P8EST_NODES_H */

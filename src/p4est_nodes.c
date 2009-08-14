@@ -23,8 +23,12 @@
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
-#include <p4est_ghost.h>
-#include <p4est_mesh.h>
+#include <p4est_nodes.h>
+#else
+#include <p8est_algorithms.h>
+#include <p8est_bits.h>
+#include <p8est_communication.h>
+#include <p8est_nodes.h>
 #endif
 #include <sc_ranges.h>
 
@@ -1697,71 +1701,4 @@ failtest:
   P4EST_FREE (sorted);
 
   return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
-}
-
-p4est_neighborhood_t *
-p4est_neighborhood_new (p4est_t * p4est)
-{
-  bool                success;
-  int                *ghost_owner;
-  p4est_topidx_t      local_num_trees, flt, nt;
-  p4est_locidx_t      local_num_quadrants, lsum;
-  p4est_tree_t       *tree;
-  p4est_nodes_t      *nodes;
-  p4est_neighborhood_t *nhood;
-  sc_array_t          ghost_layer;
-
-  P4EST_ASSERT (p4est_is_valid (p4est));
-
-  sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-  success = p4est_build_ghost_layer (p4est,
-#ifndef P4_TO_P8
-                                     P4EST_BALANCE_FACE,
-#else
-                                     P8EST_BALANCE_FACE,
-#endif
-                                     &ghost_layer, &ghost_owner);
-  P4EST_ASSERT (success);
-
-  nodes = p4est_nodes_new (p4est, &ghost_layer);
-  p4est_nodes_destroy (nodes);
-  sc_array_reset (&ghost_layer);
-  P4EST_FREE (ghost_owner);
-
-  if (p4est->first_local_tree < 0) {
-    flt = 0;
-    local_num_trees = 0;
-  }
-  else {
-    flt = p4est->first_local_tree;
-    local_num_trees = p4est->last_local_tree - flt + 1; /* type ok */
-  }
-  local_num_quadrants = p4est->local_num_quadrants;
-
-  nhood = P4EST_ALLOC (p4est_neighborhood_t, 1);
-  nhood->cumulative_count = P4EST_ALLOC (p4est_locidx_t, local_num_trees + 1);
-  nhood->element_offsets =
-    P4EST_ALLOC (p4est_locidx_t, local_num_quadrants + 1);
-  nhood->local_neighbors = sc_array_new (sizeof (p4est_locidx_t));
-
-  lsum = 0;
-  for (nt = 0; nt < local_num_trees; ++nt) {
-    nhood->cumulative_count[nt] = lsum;
-    tree = p4est_array_index_topidx (p4est->trees, flt + nt);   /* type ok */
-    lsum += (p4est_locidx_t) tree->quadrants.elem_count;        /* type ok */
-  }
-  P4EST_ASSERT (lsum == local_num_quadrants);
-  nhood->cumulative_count[nt] = lsum;
-
-  return nhood;
-}
-
-void
-p4est_neighborhood_destroy (p4est_neighborhood_t * nhood)
-{
-  P4EST_FREE (nhood->cumulative_count);
-  P4EST_FREE (nhood->element_offsets);
-  sc_array_destroy (nhood->local_neighbors);
-
-  P4EST_FREE (nhood);
 }

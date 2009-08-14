@@ -23,7 +23,7 @@
 #include <p8est_vtk.h>
 #else
 #include <p4est_vtk.h>
-#include <p4est_mesh.h>
+#include <p4est_nodes.h>
 
 bool                p4est_vtk_default_write_rank = true;
 #endif /* !P4_TO_P8 */

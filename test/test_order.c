@@ -20,7 +20,7 @@
 */
 
 #include <p4est_bits.h>
-#include <p4est_mesh.h>
+#include <p4est_nodes.h>
 
 typedef struct
 {

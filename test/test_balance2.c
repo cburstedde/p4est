@@ -23,12 +23,12 @@
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_ghost.h>
-#include <p4est_mesh.h>
+#include <p4est_nodes.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_ghost.h>
-#include <p8est_mesh.h>
+#include <p8est_nodes.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -96,7 +96,6 @@ main (int argc, char **argv)
 #endif
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  p4est_neighborhood_t *nhood;
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
@@ -184,10 +183,6 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Rebalance");
-
-  /* create neighborhood */
-  nhood = p4est_neighborhood_new (p4est);
-  p4est_neighborhood_destroy (nhood);
 
   /* clean up and exit */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==

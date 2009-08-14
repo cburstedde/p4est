@@ -70,7 +70,6 @@
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
-#define p4est_neighborhood_t            p8est_neighborhood_t
 
 /* redefine external variables */
 #define p4est_face_dual                 p8est_face_dual
@@ -197,11 +196,9 @@
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced
 
-/* functions in p4est_mesh */
+/* functions in p4est_nodes */
 #define p4est_nodes_new                 p8est_nodes_new
 #define p4est_nodes_destroy             p8est_nodes_destroy
 #define p4est_nodes_is_valid            p8est_nodes_is_valid
-#define p4est_neighborhood_new          p8est_neighborhood_new
-#define p4est_neighborhood_destroy      p8est_neighborhood_destroy
 
 #endif /* !P4EST_TO_P8EST_H */

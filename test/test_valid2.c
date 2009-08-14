@@ -22,12 +22,12 @@
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_ghost.h>
-#include <p4est_mesh.h>
+#include <p4est_nodes.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_ghost.h>
-#include <p8est_mesh.h>
+#include <p8est_nodes.h>
 #include <p8est_trilinear.h>
 #include <p8est_vtk.h>
 #endif

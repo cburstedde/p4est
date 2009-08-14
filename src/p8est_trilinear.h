@@ -27,7 +27,7 @@
 #ifndef P8EST_TRILINEAR_H
 #define P8EST_TRILINEAR_H
 
-#include <p8est_mesh.h>
+#include <p8est_nodes.h>
 
 /*
  * BEGIN verbatim copy of trilinear_mesh_types.h from the Rhea code

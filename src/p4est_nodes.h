@@ -19,10 +19,11 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P4EST_MESH_H
-#define P4EST_MESH_H
+#ifndef P4EST_NODES_H
+#define P4EST_NODES_H
 
 #include <p4est.h>
+#include <p4est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -149,21 +150,6 @@ typedef struct p4est_nodes
 }
 p4est_nodes_t;
 
-/** This structure holds complete neighborhood information.
- * cumulative_count[i]   is the sum of local quadrants in the
- *                       local trees 0..i-1. i == local_num_trees is allowed.
- * element_offsets[i]    is the offset into local_neighbors for local
- *                       element i. i == local_num_quadrants is allowed
- *                       and contains the number of stored local neighbors.
- */
-typedef struct
-{
-  p4est_locidx_t     *cumulative_count;
-  p4est_locidx_t     *element_offsets;
-  sc_array_t         *local_neighbors;
-}
-p4est_neighborhood_t;
-
 /** Determine unique ordering of vertices for each quadrant.
  *
  * \param [in]  p4est              The forest whose vertices will be ordered.
@@ -198,14 +184,6 @@ void                p4est_nodes_destroy (p4est_nodes_t * nodes);
 bool                p4est_nodes_is_valid (p4est_t * p4est,
                                           p4est_nodes_t * nodes);
 
-/** Create neighborhood information.
- */
-p4est_neighborhood_t *p4est_neighborhood_new (p4est_t * p4est);
-
-/** Destroy neighborhood information.
- */
-void                p4est_neighborhood_destroy (p4est_neighborhood_t * nhood);
-
 SC_EXTERN_C_END;
 
-#endif /* !P4EST_MESH_H */
+#endif /* !P4EST_NODES_H */

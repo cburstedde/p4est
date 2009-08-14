@@ -19,11 +19,5 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <p8est_algorithms.h>
-#include <p8est_bits.h>
-#include <p8est_communication.h>
-#include <p8est_ghost.h>
-#include <p8est_mesh.h>
-
 #include <p4est_to_p8est.h>
-#include "p4est_mesh.c"
+#include "p4est_nodes.c"
