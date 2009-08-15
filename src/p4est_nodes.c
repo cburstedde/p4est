@@ -744,7 +744,6 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   p4est_quadrant_t    c, n, p;
   p4est_quadrant_t   *q, *qpp[3], *r;
   p4est_indep_t      *in;
-  sc_array_t         *ghost_layer;
   sc_array_t         *quadrants;
   sc_array_t         *inda, *faha;
   sc_array_t         *shared_indeps;
@@ -774,7 +773,6 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   P4EST_QUADRANT_INIT (&p);
   qpp[0] = NULL;
   qpp[1] = qpp[2] = &p;
-  ghost_layer = &ghost->ghosts;
 
   /* allocate and initialize the node structure to return */
   nodes = P4EST_ALLOC (p4est_nodes_t, 1);
@@ -867,7 +865,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
         }
 #endif
         p4est_quadrant_face_neighbor (&p, face, &n);
-        if (p4est_quadrant_exists (p4est, ghost_layer, jt, &n, NULL)) {
+        if (p4est_quadrant_exists (p4est, ghost, jt, &n, NULL)) {
           quad_status[k] = 1;
 #ifdef P4_TO_P8
           for (l = 0; l < 4; ++l) {
@@ -892,7 +890,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
           P4EST_ASSERT (edge >= 0 && edge < 12);
           p8est_quadrant_edge_neighbor (&p, edge, &n);
           quad_status[k] = (int8_t)
-            (p4est_quadrant_exists (p4est, ghost_layer, jt, &n,
+            (p4est_quadrant_exists (p4est, ghost, jt, &n,
                                     &exist_array) ? 2 : 0);
         }
       }

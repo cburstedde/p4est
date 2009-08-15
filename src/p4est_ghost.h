@@ -87,7 +87,7 @@ ssize_t             p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
  * across any face, but not across corners.
  *
  * \param [in]  p4est        The forest in which to search for \a q.
- * \param [in]  ghost_layer  The ghost layer in which to search for \a q.
+ * \param [in]  ghost        The ghost layer in which to search for \a q.
  * \param [in]  treeid       The tree id for which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
  * \param [in,out] face      On input, face id across which \a q was created.
@@ -105,7 +105,7 @@ ssize_t             p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
  *              returns -2 for a domain boundary and -1 if not found.
  */
 p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
-                                                sc_array_t * ghost_layer,
+                                                p4est_ghost_t * ghost,
                                                 p4est_topidx_t treeid,
                                                 const p4est_quadrant_t * q,
                                                 int *face, int *hang,
@@ -117,7 +117,7 @@ p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
  * in any of the corner neighbors.
  *
  * \param [in]  p4est        The forest in which to search for \a q
- * \param [in]  ghost_layer  The ghost layer in which to search for \a q
+ * \param [in]  ghost        The ghost layer in which to search for \a q
  * \param [in]  treeid       The tree id for which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
  * \param [out] exists_arr   Filled for tree corner cases.  An entry
@@ -128,7 +128,7 @@ p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
  *              ghost_layer, and false if doesn't exist in either.
  */
 bool                p4est_quadrant_exists (p4est_t * p4est,
-                                           sc_array_t * ghost_layer,
+                                           p4est_ghost_t * ghost,
                                            p4est_topidx_t treeid,
                                            const p4est_quadrant_t * q,
                                            sc_array_t * exists_arr);
