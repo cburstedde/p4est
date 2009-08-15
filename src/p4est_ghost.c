@@ -206,6 +206,25 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
 
 #endif /* P4EST_MPI */
 
+ssize_t
+p4est_ghost_tree_bsearch (p4est_ghost_t * ghost, p4est_topidx_t which_tree,
+                          const p4est_quadrant_t * q)
+{
+  size_t              start, ended;
+  ssize_t             result;
+  sc_array_t          ghost_view;
+
+  start = (size_t) ghost->tree_offsets[which_tree];
+  ended = (size_t) ghost->tree_offsets[which_tree + 1];
+
+  /* create a per-tree window on the ghost layer */
+  sc_array_init_view (&ghost_view, &ghost->ghosts, start, ended - start);
+  result = sc_array_bsearch (&ghost_view, q, p4est_quadrant_compare);
+
+  /* and don't forget to add the window offset */
+  return (result < 0) ? -1 : result + (ssize_t) start;
+}
+
 bool
 p4est_quadrant_exists (p4est_t * p4est, sc_array_t * ghost_layer,
                        p4est_topidx_t treeid, const p4est_quadrant_t * q,

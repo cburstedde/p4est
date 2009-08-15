@@ -76,6 +76,11 @@ p8est_ghost_t      *p8est_ghost_new (p8est_t * p8est,
 /** Frees all memory used for the ghost layer. */
 void                p8est_ghost_destroy (p8est_ghost_t * ghost);
 
+/** Conduct binary search on range of the ghost layer for specific tree. */
+ssize_t             p8est_ghost_tree_bsearch (p8est_ghost_t * ghost,
+                                              p4est_topidx_t which_tree,
+                                              const p4est_quadrant_t * q);
+
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *
  * For quadrants across tree boundaries it checks if the quadrant exists
