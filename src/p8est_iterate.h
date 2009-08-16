@@ -53,7 +53,9 @@ typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
 /* Information about one side of a face in the forest.  If a \a quad is local,
  * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
  * the ghosts array. If the face is hanging, then the quadrants are listed in
- * z-order. */
+ * z-order. If the ghost_layer only includes face ghosts, a hanging
+ * ghost may be missing from the ghost layer, in which case that quad will be a
+ * null pointer and the quadid will be -1. */
 typedef struct p8est_iter_face_side
 {
   p4est_topidx_t      treeid;
@@ -104,12 +106,20 @@ p8est_iter_face_info_t;
 typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
                                           void *user_data);
 
+/* Information about one side of an edge in the forest.  If a \a quad is local,
+ * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
+ * the ghosts array. If the edge is hanging, then the quadrants are listed in
+ * z-order. If an edge is in the interior of a tree, orientation is 0; if an
+ * edge is between trees, orientation is the same as edge orientation in the
+ * connectivity. If the ghost_layer does not includes corner ghosts, a hanging
+ * ghost may be missing from the ghost layer, in which case that quad will be a
+ * null pointer and the quadid will be -1. */
 typedef struct p8est_iter_edge_side
 {
   p4est_topidx_t      treeid;
   int                 edge;
-  bool                is_hanging;
   int                 orientation;
+  bool                is_hanging;
   union p8est_iter_edge_side_data
   {
     struct
@@ -131,32 +141,12 @@ typedef struct p8est_iter_edge_side
 }
 p8est_iter_edge_side_t;
 
-typedef struct p8est_iter_edge_info2
+/** The information about all sides of an edge in the forest. */
+typedef struct p8est_iter_edge_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
   sc_array_t          sides;    /* p8est_iter_edge_side_t */
-}
-p8est_iter_edge_info2_t;
-
-/** The information that is available to the user defined p8est_iter_edge_t
- * callback function about the quadrants surrounding an edge.
- * There may be a variable number of quadrants.  If \a is_hanging is true, then
- * some of the quadrants around the edge are half the size of the the others.
- * However, if this is the case, then they all meet at a corner, and
- * \a common_corners gives the corner id for the shared corner from each
- * quadrant.  As above, a\ quadids may be positive or negative.
- */
-typedef struct p8est_iter_edge_info
-{
-  p8est_t            *p4est;
-  sc_array_t         *ghost_layer;
-  sc_array_t         *quads;          /** elements are (p8est_quadrant_t *) */
-  sc_array_t         *quadids;        /** elements are (ssize_t)            */
-  sc_array_t         *treeids;        /** elements are (p4est_locidx_t)     */
-  sc_array_t         *edges;          /** elements are (int)                */
-  sc_array_t         *common_corners; /** elements are (int)                */
-  bool                is_hanging;
 }
 p8est_iter_edge_info_t;
 

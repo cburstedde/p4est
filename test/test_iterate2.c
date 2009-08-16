@@ -97,6 +97,13 @@ face_do_nothing (p4est_iter_face_info_t * info, void *data)
 {
 };
 
+#ifdef P4_TO_P8
+static void
+edge_do_nothing (p8est_iter_edge_info_t * info, void *data)
+{
+};
+#endif
+
 static void
 corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 {
@@ -247,116 +254,156 @@ corner_test_adjacency (p4est_iter_corner_info_t * info, void *data)
 }
 
 #ifdef P4_TO_P8
-static void
-edge_do_nothing (p8est_iter_edge_info_t * info, void *data)
+static              bool
+test_edge_side (p4est_t * p4est, p8est_iter_edge_side_t * side, void *data)
 {
-};
-
-static void
-edge_test_adjacency (p8est_iter_edge_info_t * info, void *data)
-{
-  p4est_t            *p4est = info->p4est;
-  p8est_quadrant_t    temp, *ptemp;
-  p8est_quadrant_t   *q;
-  int                 n = (int) info->quads->elem_count;
-  int                 i, j, k, e, c, c2, f;
-  int                 child_id, level_diff;
-  p4est_topidx_t      t, nt;
-  sc_array_t         *common_corners = info->common_corners;
-  p8est_connectivity_t *conn = p4est->connectivity;
-
+  int                 i;
+  int                 edge = side->edge;
+  int                 child_id, opp_id;
+  bool                has_local = false;
+  p4est_quadrant_t   *q;
+  p4est_quadrant_t    tempq;
   int                *checks = (int *) data;
-  ssize_t             qid;
-  bool                hanging;
+  p4est_locidx_t      qid;
+  p4est_topidx_t      t = side->treeid;
   p4est_tree_t       *tree;
-  sc_array_t         *trees = p4est->trees;
-  sc_array_t          qs, ts;
-  sc_array_t         *quads = &qs;
-  sc_array_t         *treeids = &ts;
+  p4est_locidx_t      offset;
+  int                 quad_count = 0;
 
-  sc_array_init (quads, sizeof (p4est_quadrant_t));
-  sc_array_init (treeids, sizeof (p4est_topidx_t));
+  tree = p4est_array_index_topidx (p4est->trees, t);
+  offset = tree->quadrants_offset;
 
-  if (n == 1) {
-    e = *((int *) sc_array_index (info->edges, 0));
-    q = *((p8est_quadrant_t **) sc_array_index (info->quads, 0));
-    SC_CHECK_ABORT (p8est_quadrant_touches_edge (q, e, true),
-                    "Iterate: mismatched edge 1");
-
-    qid = *((ssize_t *) sc_array_index (info->quadids, 0));
-    t = *((p4est_topidx_t *) sc_array_index_int (info->treeids, 0));
-    if (qid >= 0) {
-      tree = p4est_array_index_topidx (trees, t);
-      qid += tree->quadrants_offset;
-      checks[qid * checks_per_quad + edge_offset + e]++;
+  if (!side->is_hanging) {
+    q = side->is.full.quad;
+    SC_CHECK_ABORT (q != NULL, "Iterate: full edge side missing quadrant");
+    if (side->is.full.is_local) {
+      qid = side->is.full.quadid + offset;
+      checks[qid * checks_per_quad + edge + edge_offset]++;
     }
-    return;
+    return side->is.full.is_local;
   }
-  for (i = 0; i < n; i++) {
-    hanging = false;
-    q = *((p8est_quadrant_t **) sc_array_index_int (info->quads, i));
-    t = *((p4est_topidx_t *) sc_array_index_int (info->treeids, i));
-    e = *((int *) sc_array_index_int (info->edges, i));
+  else {
+    for (i = 0; i < 2; i++) {
+      q = side->is.hanging.quad[i];
+      if (q == NULL) {
+        continue;
+      }
+      quad_count++;
+      child_id = p4est_quadrant_child_id (q);
+      SC_CHECK_ABORT (p8est_edge_corners[edge][i] == child_id,
+                      "Iterate: edge side ordering");
+      opp_id = p8est_edge_corners[edge][1 - i];
+      if (side->is.hanging.is_local[i]) {
+        has_local = true;
+        qid = side->is.hanging.quadid[i] + offset;
+        checks[qid * checks_per_quad + edge + edge_offset]++;
+        checks[qid * checks_per_quad + opp_id + corner_offset]++;
+      }
+    }
+    SC_CHECK_ABORT (quad_count > 0,
+                    "Iterate: hanging edge side missing both quadrants");
+    SC_CHECK_ABORT (quad_count == 2 || !has_local,
+                    "Iterate: local hanging quad missing partner on edge");
+    q = side->is.hanging.quad[0];
+    p4est_quadrant_parent (q, &tempq);
+    q = side->is.hanging.quad[1];
+    SC_CHECK_ABORT (p4est_quadrant_is_parent (&tempq, q),
+                    "Iterate: non siblings share edge");
+    return has_local;
+  }
+}
+
+static              bool
+quad_is_in_edge_sides (p8est_quadrant_t * q, p4est_topidx_t t,
+                       sc_array_t * sides)
+{
+  size_t              zz;
+  size_t              zcount = sides->elem_count;
+  p8est_iter_edge_side_t *eside;
+
+  for (zz = 0; zz < zcount; zz++) {
+    eside = sc_array_index (sides, zz);
+    if (eside->treeid == t) {
+      if (!eside->is_hanging) {
+        if (p4est_quadrant_is_equal (q, eside->is.full.quad)) {
+          return true;
+        }
+      }
+      else {
+        if (eside->is.hanging.quad[0] != NULL) {
+          if (p4est_quadrant_is_parent (q, eside->is.hanging.quad[0])) {
+            return true;
+          }
+        }
+        else {
+          if (p4est_quadrant_is_parent (q, eside->is.hanging.quad[1])) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+static void
+test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
+{
+  int                 i, j;
+  bool                has_local = false;
+  int                 limit = info->sides.elem_count;
+  p8est_iter_edge_side_t *eside;
+  p8est_quadrant_t    tempq, tempr;
+  int                 e, f;
+  p4est_topidx_t      t, nt;
+  sc_array_t          quads, treeids;
+  p8est_connectivity_t *conn = info->p4est->connectivity;
+  size_t              zz;
+  p8est_quadrant_t   *ptemp;
+
+  sc_array_init (&quads, sizeof (p8est_quadrant_t));
+  sc_array_init (&treeids, sizeof (p4est_topidx_t));
+  for (i = 0; i < limit; i++) {
+    eside = sc_array_index_int (&(info->sides), i);
+    has_local = (test_edge_side (info->p4est, eside, data) || has_local);
+  }
+  SC_CHECK_ABORT (has_local, "Iterate: non local edge");
+
+  for (i = 0; i < limit; i++) {
+    eside = sc_array_index_int (&(info->sides), i);
+    if (!eside->is_hanging) {
+      tempq = *(eside->is.full.quad);
+    }
+    else {
+      if (eside->is.hanging.quad[0] != NULL) {
+        p4est_quadrant_parent (eside->is.hanging.quad[0], &tempq);
+      }
+      else {
+        p4est_quadrant_parent (eside->is.hanging.quad[1], &tempq);
+      }
+    }
+    e = eside->edge;
+    t = eside->treeid;
     for (j = 0; j < 2; j++) {
       f = p8est_edge_faces[e][j];
-      nt = p8est_quadrant_face_neighbor_extra (q, t, f, &temp, conn);
+      nt = p8est_quadrant_face_neighbor_extra (&tempq, t, f, &tempr, conn);
       if (nt == -1) {
         continue;
       }
-      k = quad_is_in_array (p4est, &temp, nt, info->quads, info->treeids,
-                            &level_diff, &child_id);
-      SC_CHECK_ABORT (k >= 0, "Iterate: mismatched edge 2");
-      SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
-                      "Iterate: mismatched edge 3");
-      if (level_diff == 1) {
-        hanging = true;
-      }
-      if (level_diff != 0) {
-        SC_CHECK_ABORT
-          (child_id == *((int *) sc_array_index_int (common_corners, k)),
-           "Iterate: mismatched edge 4");
-      }
+      SC_CHECK_ABORT (quad_is_in_edge_sides (&tempr, nt, &(info->sides)),
+                      "Iterate: quad missing edge neighbor");
     }
-    p8est_quadrant_edge_neighbor_extra (q, t, e, quads, treeids, conn);
-    for (j = 0; (size_t) j < quads->elem_count; j++) {
-      ptemp = sc_array_index_int (quads, j);
-      nt = *((p4est_topidx_t *) sc_array_index_int (treeids, j));
-      k = quad_is_in_array (p4est, ptemp, nt, info->quads, info->treeids,
-                            &level_diff, &child_id);
-      SC_CHECK_ABORT (k >= 0, "Iterate: mismatched edge 5");
-      SC_CHECK_ABORT (-1 <= level_diff && level_diff <= 1,
-                      "Iterate: mismatched edge 6");
-      if (level_diff == 1) {
-        hanging = true;
-      }
-      if (level_diff != 0) {
-        SC_CHECK_ABORT
-          (child_id == *((int *) sc_array_index_int (common_corners, k)),
-           "Iterate: mismatched edge 7");
-      }
+    sc_array_resize (&quads, 0);
+    sc_array_resize (&treeids, 0);
+    p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids, conn);
+    for (zz = 0; zz < quads.elem_count; zz++) {
+      ptemp = sc_array_index (&quads, zz);
+      nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
+      SC_CHECK_ABORT (quad_is_in_edge_sides (ptemp, nt, &(info->sides)),
+                      "Iterate: quad missing edge neighbor");
     }
-    sc_array_reset (quads);
-    sc_array_reset (treeids);
-
-    qid = *((ssize_t *) sc_array_index_int (info->quadids, i));
-    if (qid >= 0) {
-      tree = p4est_array_index_topidx (trees, t);
-      qid += tree->quadrants_offset;
-      checks[qid * checks_per_quad + edge_offset + e]++;
-      if (hanging) {
-        c = *((int *) sc_array_index_int (common_corners, i));
-        if (p8est_edge_corners[e][0] == c) {
-          c2 = p8est_edge_corners[e][1];
-        }
-        else {
-          c2 = p8est_edge_corners[e][0];
-        }
-        checks[qid * checks_per_quad + corner_offset + c2]++;
-      }
-      else if (checks[qid * checks_per_quad + edge_offset + e] == 2) {
-        checks[qid * checks_per_quad + edge_offset + e] = 1;
-      }
-    }
+    sc_array_reset (&quads);
+    sc_array_reset (&treeids);
   }
 }
 #endif
@@ -380,6 +427,7 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
   p4est_topidx_t      t = side->treeid;
   p4est_tree_t       *tree;
   p4est_locidx_t      offset;
+  int                 quad_count = 0;
 
   tree = p4est_array_index_topidx (p4est->trees, t);
   offset = tree->quadrants_offset;
@@ -390,7 +438,7 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
 
   if (!side->is_hanging) {
     q = side->is.full.quad;
-    SC_CHECK_ABORT (q != NULL, "Iterate: face side missing quadrant");
+    SC_CHECK_ABORT (q != NULL, "Iterate: full face side missing quadrant");
     if (side->is.full.is_local) {
       qid = side->is.full.quadid + offset;
       checks[qid * checks_per_quad + face + face_offset]++;
@@ -400,7 +448,10 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
   else {
     for (i = 0; i < P4EST_CHILDREN / 2; i++) {
       q = side->is.hanging.quad[i];
-      SC_CHECK_ABORT (q != NULL, "Iterate: face side missing quadrant");
+      if (q == NULL) {
+        continue;
+      }
+      quad_count++;
       child_id = p4est_quadrant_child_id (q);
       SC_CHECK_ABORT (p4est_face_corners[face][i] == child_id,
                       "Iterate: face side ordering");
@@ -418,6 +469,15 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
 #endif
       }
     }
+#ifndef P4_TO_P8
+    SC_CHECK_ABORT (quad_count == 2,
+                    "Iterate: hanging face side missing quadrant");
+#else
+    SC_CHECK_ABORT (quad_count >= 3,
+                    "Iterate: hanging face side missing quadrants");
+    SC_CHECK_ABORT (quad_count == 4 || !has_local,
+                    "Iterate: local quad missing face sibling");
+#endif
     q = side->is.hanging.quad[0];
     p4est_quadrant_parent (q, &tempq);
     for (i = 1; i < P4EST_CHILDREN / 2; i++) {
@@ -595,7 +655,7 @@ main (int argc, char **argv)
     p4est_iterate (p4est, &ghost_layer, checks, volume_test_adjacency,
                    test_face_adjacency,
 #ifdef P4_TO_P8
-                   edge_test_adjacency,
+                   test_edge_adjacency,
 #endif
                    corner_test_adjacency);
 
