@@ -319,11 +319,11 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
         if (test[sidetype] != NULL) {
           P4EST_ASSERT (p4est_quadrant_compare_contains
                         (test[sidetype], &temp) == 0);
-          P4EST_ASSERT (temp_idx >= 0 && temp_idx < count[sidetype]);
+          P4EST_ASSERT (temp_idx >= 0 && (size_t) temp_idx < count[sidetype]);
           temp_idx += first_index[sidetype];
           cside->quad = test[sidetype];
           cside->is_local = (type == local);
-          cside->quadid = temp_idx;
+          cside->quadid = (p4est_locidx_t) temp_idx;
           if (type == local) {
             has_local = true;
           }
@@ -1490,12 +1490,12 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
   tier_ring_max = (p4est->mpisize == 1 ? P4EST_CHILDREN : 2 * P4EST_CHILDREN);
   tier_level_max = P4EST_QMAXLEVEL - 1;
   sc_array_init (&tier_rings, sizeof (p4est_iter_tier_ring_t));
-  sc_array_resize (&tier_rings, tier_level_max);
+  sc_array_resize (&tier_rings, (size_t) tier_level_max);
   for (i = 0; i < tier_level_max; i++) {
     ring = sc_array_index_int (&tier_rings, i);
     ring->next = 0;
     sc_array_init (&(ring->tiers), sizeof (p4est_iter_tier_t));
-    sc_array_resize (&(ring->tiers), tier_ring_max);
+    sc_array_resize (&(ring->tiers), (size_t) tier_ring_max);
     for (j = 0; j < tier_ring_max; j++) {
       tier = sc_array_index_int (&(ring->tiers), j);
       tier->key = NULL;
@@ -1543,7 +1543,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     corner_args.count = count;
     corner_args.quad_idx2 = quad_idx2;
     sc_array_init_data (&corner_info.sides, corner_sides,
-                        sizeof (*corner_sides), max_corner_size);
+                        sizeof (*corner_sides), (size_t) max_corner_size);
     corner_info.p4est = p4est;
     corner_info.ghost_layer = ghost_layer;
     corner_args.info = &corner_info;
@@ -1578,7 +1578,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
     edge_args.corner_args = &corner_args;
     edge_args.tier_rings = &tier_rings;
     sc_array_init_data (&edge_info.sides, edge_sides, sizeof (*edge_sides),
-                        max_edge_size);
+                        (size_t) max_edge_size);
     edge_info.p4est = p4est;
     edge_info.ghost_layer = ghost_layer;
     edge_args.info = &edge_info;

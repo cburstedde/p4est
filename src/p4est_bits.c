@@ -990,6 +990,7 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
   p4est_quadrant_t   *qp;
   p4est_topidx_t     *tp;
   int                 face;
+  size_t              ctree;
 #ifndef P4_TO_P8
   p4est_corner_transform_t *ct;
   sc_array_t          ctransforms, *cta;
@@ -1001,7 +1002,6 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
   sc_array_t         *cta = &ci.corner_transforms;
   int                 i;
 #endif
-  size_t              ctree;
 
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (quads));
   P4EST_ASSERT (quads->elem_count == 0);

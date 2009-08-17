@@ -180,7 +180,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
 {
   int                 i, j;
   bool                has_local = false;
-  int                 limit = info->sides.elem_count;
+  int                 limit = (int) info->sides.elem_count;
   p4est_iter_corner_side_t *cside;
   p4est_quadrant_t    tempq, tempr;
   int                 c, f;
@@ -192,7 +192,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
 #ifdef P4_TO_P8
   int                 e;
 #endif
-  int                 min_level = P4EST_QMAXLEVEL;
+  int8_t              min_level = P4EST_QMAXLEVEL;
 
   for (i = 0; i < limit; i++) {
     cside = sc_array_index_int (&(info->sides), i);
@@ -355,7 +355,7 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
 {
   int                 i, j;
   bool                has_local = false;
-  int                 limit = info->sides.elem_count;
+  int                 limit = (int) info->sides.elem_count;
   p8est_iter_edge_side_t *eside;
   p8est_quadrant_t    tempq, tempr;
   int                 e, f;
@@ -498,7 +498,7 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
 {
   int                 i;
   bool                is_local[2];
-  int                 limit = info->sides.elem_count;
+  int                 limit = (int) info->sides.elem_count;
   p4est_iter_face_side_t *fside;
   p4est_quadrant_t    tempq[2], tempr[2];
   int                 face[2];
