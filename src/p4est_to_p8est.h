@@ -77,7 +77,6 @@
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
-#define p4est_iter_corner_info2_t       p8est_iter_corner_info2_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 
 /* redefine external variables */

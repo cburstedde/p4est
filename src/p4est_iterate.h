@@ -104,6 +104,10 @@ p4est_iter_face_info_t;
 typedef void        (*p4est_iter_face_t) (p4est_iter_face_info_t * info,
                                           void *user_data);
 
+/* Information about one side of a corner in the forest.  If a \a quad is local,
+ * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
+ * the ghosts array.
+ */
 typedef struct p4est_iter_corner_side
 {
   p4est_topidx_t      treeid;
@@ -114,28 +118,13 @@ typedef struct p4est_iter_corner_side
 }
 p4est_iter_corner_side_t;
 
-typedef struct p4est_iter_corner_info2
-{
-  p4est_t            *p4est;
-  sc_array_t         *ghost_layer;
-  sc_array_t          sides;    /* p4est_iter_corner_side_t */
-}
-p4est_iter_corner_info2_t;
-
-/** The information that is available to the user defined p4est_iter_corner_t
- * callback function about the quadrants surrounding a corner.
- * There may be a variable number of quadrants. \a corners gives the **z-order**
- * corner that touches the other shared corners, all other information is as
- * above.
+/** The information about all sides of a face in the forest.
  */
 typedef struct p4est_iter_corner_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
-  sc_array_t         *quads;      /** elements are (p4est_quadrant_t *) */
-  sc_array_t         *quadids;    /** elements are (ssize_t)            */
-  sc_array_t         *treeids;    /** elements are (p4est_locidx_t)     */
-  sc_array_t         *corners;    /** elements are (int)                */
+  sc_array_t          sides;    /* p4est_iter_corner_side_t */
 }
 p4est_iter_corner_info_t;
 
