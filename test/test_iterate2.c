@@ -551,7 +551,7 @@ static void
 volume_test_adjacency (p4est_iter_volume_info_t * info, void *data)
 {
   int                *checks = (int *) data;
-  size_t              qid = info->quadid;
+  p4est_locidx_t      qid = info->quadid;
   p4est_topidx_t      t = info->treeid;
   p4est_tree_t       *tree = p4est_array_index_topidx (info->p4est->trees, t);
 

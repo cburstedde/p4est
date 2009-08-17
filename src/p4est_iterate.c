@@ -1811,7 +1811,7 @@ p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer, void *user_data,
             if (test_level[type] == level) {
               if (type == local) {
                 info.quad = test[type];
-                info.quadid = first_index[type];
+                info.quadid = (p4est_locidx_t) first_index[type];
                 if (iter_volume != NULL)
                   iter_volume (&info, user_data);
               }

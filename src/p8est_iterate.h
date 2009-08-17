@@ -39,7 +39,7 @@ typedef struct p8est_iter_volume_info
   p8est_t            *p4est;
   sc_array_t         *ghost_layer;
   p8est_quadrant_t   *quad;
-  size_t              quadid;
+  p4est_locidx_t      quadid;
   p4est_topidx_t      treeid;
 }
 p8est_iter_volume_info_t;
