@@ -53,9 +53,9 @@ typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
 /* Information about one side of a face in the forest.  If a \a quad is local,
  * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
  * the ghosts array. If the face is hanging, then the quadrants are listed in
- * z-order. If the ghost_layer only includes face ghosts, a hanging
- * ghost may be missing from the ghost layer, in which case that quad will be a
- * null pointer and the quadid will be -1. */
+ * z-order. If a quadrant should be present, but it is not included in the
+ * ghost layer, then quad = NULL, is_local = false, and quadid = -1.
+ */
 typedef struct p8est_iter_face_side
 {
   p4est_topidx_t      treeid;
@@ -85,7 +85,7 @@ p8est_iter_face_side_t;
 /** The information about both sides of a face in the forest.  The orientation
  * is 0 if the face is within one tree; otherwise, it is the same as the
  * orientation value between the two trees given in the connectivity.  If the
- * face is on the outside of the forest, then sides will have only one element.
+ * face is on the outside of the forest, then there is only one side.
  */
 typedef struct p8est_iter_face_info
 {
@@ -111,9 +111,9 @@ typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
  * the ghosts array. If the edge is hanging, then the quadrants are listed in
  * z-order. If an edge is in the interior of a tree, orientation is 0; if an
  * edge is between trees, orientation is the same as edge orientation in the
- * connectivity. If the ghost_layer does not includes corner ghosts, a hanging
- * ghost may be missing from the ghost layer, in which case that quad will be a
- * null pointer and the quadid will be -1. */
+ * connectivity. If a quadrant should be present, but it is not included in the
+ * ghost layer, then quad = NULL, is_local = false, and quadid = -1.
+ */
 typedef struct p8est_iter_edge_side
 {
   p4est_topidx_t      treeid;
@@ -151,8 +151,8 @@ typedef struct p8est_iter_edge_info
 p8est_iter_edge_info_t;
 
 /** The prototype for a function that p8est_iterate will execute wherever
- * quadrants meet at a conformal edge i.e. the callback will not execute on
- * an edge the sits on a hanging face.
+ * the edge is an edge of all quadrants that touch it i.e. the callback will
+ * not execute on an edge the sits on a hanging face.
  *
  * Note: the forest must be edge balanced for p8est_iterate to execute a
  * callback function on edges.
@@ -185,22 +185,22 @@ typedef struct p8est_iter_corner_info
 p8est_iter_corner_info_t;
 
 /** The prototype for a function that p8est_iterate will execute wherever
- * quadrants meet at a conformal corner i.e. the callback will not execute on
- * a corner that sits on a hanging face or edge.
+ * the corner is a corner for all quadrants that touch it i.e. the callback
+ * will not execute on a corner that sits on a hanging face or edge.
  *
  * Note: the forest does not need to be corner balanced for p8est_iterate to
- * execute a callback function at corners, only face and edge balance.
- * However, the ghost_layer must be created with the P4EST_BALANCE_FULL option.
+ * execute a callback function at corners, only face and edge balanced.
  */
 typedef void        (*p8est_iter_corner_t) (p8est_iter_corner_info_t * info,
                                             void *user_data);
 
 /** p8est_iterate executes the user-supplied callback functions at every
- * volume, face, edge and corner in the local forest. The \a user_data pointer
- * is not touched by p4est_iterate, but is passed to each of the callbacks.
+ * volume, face, edge and corner in the local forest. The ghost_layer may be
+ * NULL. The \a user_data pointer is not touched by p4est_iterate, but is
+ * passed to each of the callbacks. Any of the callback functions may be NULL.
  * The callback functions are interspersed with each other, i.e. some face
- * callbacks will occur between volume callbacks, and some edge callbacks
- * will occur between face callbacks, etc.:
+ * callbacks will occur between volume callbacks, and some edge callbacks will
+ * occur between face callbacks, etc.:
  *
  * 1) volume callbacks occur in the sorted Morton-index order.
  * 2) a face callback is not executed until after the volume callbacks have

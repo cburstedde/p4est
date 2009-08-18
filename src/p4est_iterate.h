@@ -53,7 +53,9 @@ typedef void        (*p4est_iter_volume_t) (p4est_iter_volume_info_t * info,
 /* Information about one side of a face in the forest.  If a \a quad is local,
  * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
  * the ghosts array. If the face is hanging, then the quadrants are listed in
- * z-order. */
+ * z-order.  If a quadrant should be present, but it is not included in the
+ * ghost layer, then quad = NULL, is_local = false, and quadid = -1.
+ */
 typedef struct p4est_iter_face_side
 {
   p4est_topidx_t      treeid;
@@ -83,7 +85,7 @@ p4est_iter_face_side_t;
 /** The information about both sides of a face in the forest.  The orientation
  * is 0 if the face is within one tree; otherwise, it is the same as the
  * orientation value between the two trees given in the connectivity.  If the
- * face is on the outside of the forest, then sides will have only one element.
+ * face is on the outside boundary of the forest, then there is only one side.
  */
 typedef struct p4est_iter_face_info
 {
@@ -94,19 +96,20 @@ typedef struct p4est_iter_face_info
 }
 p4est_iter_face_info_t;
 
-/** The prototype for a function that p4est_iterate will execute wherever two
- * quadrants share a face: the face can be a 2:1 hanging face, it does not have
- * to be conformal.
+/** The prototype for a function that p4est_iterate will execute wherever
+ * the corner is a corner for all quadrants that touch it i.e. the callback
+ * will not execute on a corner that sits on a hanging face.
  *
- * Note: the forest must be face balanced for p4est_iterate to execute a
- * callback function on faces.
+ * Note: the forest must be face balanced for p4est_iterate to correctly 
+ * execute a callback function on faces.
  */
 typedef void        (*p4est_iter_face_t) (p4est_iter_face_info_t * info,
                                           void *user_data);
 
 /* Information about one side of a corner in the forest.  If a \a quad is local,
  * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
- * the ghosts array.
+ * the ghosts array. If a quadrant should be present, but it is not included in
+ * the ghost layer, then quad = NULL, is_local = false, and quadid = -1.
  */
 typedef struct p4est_iter_corner_side
 {
@@ -118,7 +121,7 @@ typedef struct p4est_iter_corner_side
 }
 p4est_iter_corner_side_t;
 
-/** The information about all sides of a face in the forest.
+/** The information about all sides of a corner in the forest.
  */
 typedef struct p4est_iter_corner_info
 {
@@ -133,17 +136,16 @@ p4est_iter_corner_info_t;
  * a hanging corner.
  *
  * Note: the forest does not need to be corner balanced for p4est_iterate to
- * execute a callback function at corners, only face balanced. However, the
- * ghost_layer must be created with the P4EST_BALANCE_FULL option if there is a
- * corner callback function.
+ * correctly execute a callback function at corners, only face balanced.
  */
 typedef void        (*p4est_iter_corner_t) (p4est_iter_corner_info_t * info,
                                             void *user_data);
 
 /** p4est_iterate executes the user-supplied callback functions at every
- * volume, face, and corner in the local forest. The \a user_data pointer is
- * not touched by p4est_iterate, but is passed to each of the callbakcs.  The
- * callback functions are interspersed with each other, i.e. some face
+ * volume, face, and corner in the local forest. The ghost_layer may be NULL.
+ * The \a user_data pointer is not touched by p4est_iterate, but is passed to
+ * each of the callbacks.  Any of the callbacks may be NULL. 
+ * The callback functions are interspersed with each other, i.e. some face
  * callbacks will occur between volume callbacks, and some corner callbacks
  * will occur between face callbacks:
  *
