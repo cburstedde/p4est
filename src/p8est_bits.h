@@ -319,7 +319,7 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
 /** Compute the face neighbor of a quadrant, transforming across tree
  * boundaries if necessary.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q. 
+ * \param [in]     t      Tree that contains \q.
  * \param [in]     face   The face across which to generate the neighbor.
  * \param [in,out] r      Existing quadrant whose Morton index will be filled.
  *                        By convention, if there is no tree across \face,
@@ -514,12 +514,12 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
                                                      p8est_quadrant_t * r);
 
 /** Transforms a quadrant/node across a face between trees.
- * \param [in]     q          Input quadrant/non-clamped node.
- * \param [in,out] r          Quadrant/node whose Morton index will be filled.
- * \param [in] ftransform     This array holds 9 integers.
- *             [0]..[2]       The coordinate axis sequence of the origin face.
- *             [3]..[5]       The coordinate axis sequence of the target face.
- *             [6]..[8]       Edge reverse flag for axes 0, 1; face code for 2.
+ * \param [in]     q        Input quadrant/non-clamped node.
+ * \param [in,out] r        Quadrant/node whose Morton index will be filled.
+ * \param [in] ftransform   This array holds 9 integers.
+ *             [0]..[2]     The coordinate axis sequence of the origin face.
+ *             [3]..[5]     The coordinate axis sequence of the target face.
+ *             [6]..[8]     Edge reverse flag for axes 0, 1; face code for 2.
  * \note \a q and \q r may NOT point to the same quadrant structure.
  */
 void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,

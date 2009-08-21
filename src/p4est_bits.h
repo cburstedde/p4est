@@ -298,7 +298,7 @@ void                p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
 /** Compute the face neighbor of a quadrant, transforming across tree
  * boundaries if necessary.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q. 
+ * \param [in]     t      Tree that contains \q.
  * \param [in]     face   The face across which to generate the neighbor.
  * \param [in,out] r      Existing quadrant whose Morton index will be filled.
  *                        By convention, if there is no tree across \face,
@@ -319,24 +319,13 @@ p4est_locidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
  * Gets the smaller face neighbors, which are half of the size assuming the
  * 2-1 constant.
  *
- * The order of \a n0 and \a n1 are given in the morton ordering.
+ * The order of the \a n[i] is given in the Morton ordering.
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
- * \param [in]  face   The face across which to generate the neighbors.  The
- *                     face is given in right hand order. So
- *                                2
- *                           +----------+
- *                           |          |
- *                           |          |
- *                          3|          |1
- *                           |          |
- *                           |          |
- *                           +----------+
- *                                0
- * \param [out] n[2]   Filled with the two possible face neighbors, which are
- *                     half of the size assuming the 2-1 constaint.
- * \param [out] nur[2] If not NULL, filled with smallest quadrants that fit
- *                     in the upper right corners of \a n.
+ * \param [in]  face   The face across which to generate the neighbors.
+ * \param [out] n[0]..n[1] Filled with the four smaller face neighbors.
+ * \param [out] nur[0]..nur[1] If not NULL, filled with smallest quadrants
+ *                     that fit in the upper right corners of \a n.
  */
 void                p4est_quadrant_half_face_neighbors (const p4est_quadrant_t
                                                         * q, int face,
@@ -346,30 +335,17 @@ void                p4est_quadrant_half_face_neighbors (const p4est_quadrant_t
 
 /** Create all possible face neighbors of \a q.
  *
- * Gets the all face neighbors, possible assuming the 2-1 constraint.
+ * Gets the face neighbors, possible assuming the 2-1 constraint.
  * If the larger or smaller quadrants do not exist than they are returned
  * as initialized by P4EST_QUADRANT_INIT.
  *
- * The order of \a n0 and \a n1 is given in the morton ordering.
+ * The order of \a n[0] through \a n[3] are given in Morton ordering.
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
- * \param [in]  face   The face across which to generate the neighbors.  The
- *                     face is given in right hand order. So
- *                                2
- *                           +----------+
- *                           |          |
- *                           |          |
- *                          3|          |1
- *                           |          |
- *                           |          |
- *                           +----------+
- *                                0
- * \param [out] n[0]   Filled with the first possible face neighbor, which is
- *                     half of the size if it exists or initialized to
- *                     P4EST_QUADRANT_INIT.
- * \param [out] n[1]   Filled with the second possible face neighbor, which is
- *                     half of the size if it exists or initialized to
- *                     P4EST_QUADRANT_INIT.
+ * \param [in]  face   The face across which to generate the neighbors.
+ * \param [out] n[0]..n[1] Filled with the smaller possible face neighbors,
+ *                     which are half of the size if they exist
+ *                     or initialized to P4EST_QUADRANT_INIT.
  * \param [out] n[2]   Filled with the face neighbor, which is the same size.
  * \param [out] n[3]   Filled with the face neighbor, which is twice the size
  *                     if it exists or initialized to P4EST_QUADRANT_INIT.
@@ -482,32 +458,28 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
                                                      q2,
                                                      p4est_quadrant_t * r);
 
-/** Shift a quadrant/node by the size of a tree depending on the face.
- * \param [in,out] q     The quadrant/non-clamped node to be modified.
- * \param [in]     face  Number of the face to move across, in 0..3.
- */
-void                p4est_quadrant_translate_face (p4est_quadrant_t * q,
-                                                   int face);
-
-/** Transforms a quadrant/node between trees.
- * \param [in]     q  Input quadrant/non-clamped node.
- * \param [in,out] r  Existing quadrant/node whose Morton index will be filled.
- * \param [in] transform_type   Transformation as in p4est_connectivity.h.
+/** Transforms a quadrant/node across a face between trees.
+ * \param [in]     q        Input quadrant/non-clamped node.
+ * \param [in,out] r        Quadrant/node whose Morton index will be filled.
+ * \param [in] ftransform   This array holds 9 integers.
+ *             [0,2]        The coordinate axis sequence of the origin face.
+ *             [3,5]        The coordinate axis sequence of the target face.
+ *             [6,8]        Edge reverse flag for axis 0; face code for 1.
+ *             [1,4,7]      0 (unused for compatibility with 3D).
  * \note \a q and \q r may NOT point to the same quadrant structure.
  */
 void                p4est_quadrant_transform_face (const p4est_quadrant_t * q,
                                                    p4est_quadrant_t * r,
-                                                   int transform_type);
+                                                   const int ftransform[]);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
- * \param [in]     corner     Corner index in z-order.
  */
 bool                p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
                                                    int corner, bool inside);
 
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
- * \param [in]     icorner  Number of the corner in z-order, in 0..3.
+ * \param [in]     icorner  Number of the corner in 0..3.
  * \param [int]    inside   Boolean flag for inside or diagonally outside.
  */
 void                p4est_quadrant_transform_corner (p4est_quadrant_t * q,
@@ -517,22 +489,11 @@ void                p4est_quadrant_transform_corner (p4est_quadrant_t * q,
 /** Shifts a quadrant until it touches the specified corner from the inside.
  * \param [in]     q          Valid input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
- * \param [in]     corner     Corner index in z-order.
+ * \param [in]     corner     Corner index.
  */
 void                p4est_quadrant_shift_corner (const p4est_quadrant_t * q,
                                                  p4est_quadrant_t * r,
                                                  int corner);
-
-/** Transforms the node of quadrant between trees.
- *
- * This gives the node of the transformed quadrant cooresponding to
- * the node passed in.
- *
- * \param [in]     node The node in z-order of the quadrant that is transformed.
- * \param [in] transform_type Transformation as in p4est_connectivity.h.
- * \return The transformed node number coresponding to \a node.
- */
-int                 p4est_node_transform (int node, int transform_type);
 
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.
