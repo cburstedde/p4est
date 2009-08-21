@@ -28,7 +28,8 @@
  *        o evil3     Check second round of refinement on three trees
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
- *        o periodic  Refinement on the unit square with periodic b.c.
+ *        o periodic  Refinement on the unit square with all-periodic b.c.
+ *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  */
 
 #include <p4est_bits.h>
@@ -44,6 +45,7 @@ typedef enum
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_PERIODIC,
+  P4EST_CONFIG_ROTWRAP,
 }
 simple_config_t;
 
@@ -84,8 +86,8 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_MOEBIUS, 6, 6, 0x6d2d6d6cU },
  { P4EST_CONFIG_STAR, 5, 6, 0x38d3736fU },
  { P4EST_CONFIG_STAR, 5, 7, 0xfb97aadfU },
- { P4EST_CONFIG_PERIODIC, 1, 6, 0x9dd600c5U },
- { P4EST_CONFIG_PERIODIC, 3, 6, 0x9dd600c5U },
+ { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
+ { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
 /* *INDENT-ON* */
 
@@ -208,7 +210,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|three|evil|evil3|moebius|star|periodic\n"
+    "      unit|three|evil|evil3|moebius|star|periodic|rotwrap\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -236,6 +238,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P4EST_CONFIG_PERIODIC;
+    }
+    else if (!strcmp (argv[1], "rotwrap")) {
+      config = P4EST_CONFIG_ROTWRAP;
     }
     else {
       wrongusage = 1;
@@ -277,6 +282,9 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_PERIODIC) {
     connectivity = p4est_connectivity_new_periodic ();
+  }
+  else if (config == P4EST_CONFIG_ROTWRAP) {
+    connectivity = p4est_connectivity_new_rotwrap ();
   }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();

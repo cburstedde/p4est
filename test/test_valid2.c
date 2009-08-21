@@ -138,8 +138,8 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),
              "test_unitsquare", 0xef45243bU);
-  check_all (mpicomm, p4est_connectivity_new_periodic (),
-             "test_periodic2", 0x266d2739U);
+  check_all (mpicomm, p4est_connectivity_new_rotwrap (),
+             "test_rotwrap2", 0x266d2739U);
   check_all (mpicomm, p4est_connectivity_new_corner (),
              "test_corner", 0x9dad92ccU);
   check_all (mpicomm, p4est_connectivity_new_moebius (),
