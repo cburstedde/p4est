@@ -1097,63 +1097,142 @@ p4est_quadrant_corner_node (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_node (r, false));
 }
 
-#ifndef P4_TO_P8
-
 void
 p4est_quadrant_children (const p4est_quadrant_t * q,
                          p4est_quadrant_t * c0, p4est_quadrant_t * c1,
-                         p4est_quadrant_t * c2, p4est_quadrant_t * c3)
+                         p4est_quadrant_t * c2, p4est_quadrant_t * c3
+#ifdef P4_TO_P8
+                         , p4est_quadrant_t * c4, p4est_quadrant_t * c5,
+                         p4est_quadrant_t * c6, p4est_quadrant_t * c7
+#endif
+  )
 {
+  const int8_t        level = (int8_t) (q->level + 1);
+  const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
+
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
 
   c0->x = q->x;
   c0->y = q->y;
-  c0->level = (int8_t) (q->level + 1);
+#ifdef P4_TO_P8
+  c0->z = q->z;
+#endif
+  c0->level = level;
 
-  c1->x = c0->x | P4EST_QUADRANT_LEN (c0->level);
+  c1->x = c0->x | inc;
   c1->y = c0->y;
-  c1->level = c0->level;
+#ifdef P4_TO_P8
+  c1->z = c0->z;
+#endif
+  c1->level = level;
 
   c2->x = c0->x;
-  c2->y = c0->y | P4EST_QUADRANT_LEN (c0->level);
-  c2->level = c0->level;
+  c2->y = c0->y | inc;
+#ifdef P4_TO_P8
+  c2->z = c0->z;
+#endif
+  c2->level = level;
 
   c3->x = c1->x;
   c3->y = c2->y;
-  c3->level = c0->level;
+#ifdef P4_TO_P8
+  c3->z = c0->z;
+#endif
+  c3->level = level;
 
-  /* this also verifies p4est_quadrant_is_extended */
-  P4EST_ASSERT (p4est_quadrant_is_family (c0, c1, c2, c3));
+#ifdef P4_TO_P8
+  c4->x = c0->x;
+  c4->y = c0->y;
+  c4->z = c0->z | inc;
+  c4->level = level;
+
+  c5->x = c1->x;
+  c5->y = c1->y;
+  c5->z = c4->z;
+  c5->level = level;
+
+  c6->x = c2->x;
+  c6->y = c2->y;
+  c6->z = c4->z;
+  c6->level = level;
+
+  c7->x = c3->x;
+  c7->y = c3->y;
+  c7->z = c4->z;
+  c7->level = level;
+#endif
+
+  /* this also verifies p4est_quadrant_is_extended (c[i]) */
+  P4EST_ASSERT (p4est_quadrant_is_family (c0, c1, c2, c3
+#ifdef P4_TO_P8
+                                          , c4, c5, c6, c7
+#endif
+                ));
 }
 
 void
 p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 {
+  const int8_t        level = (int8_t) (q->level + 1);
+  const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
+
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
 
   c[0].x = q->x;
   c[0].y = q->y;
-  c[0].level = (int8_t) (q->level + 1);
+#ifdef P4_TO_P8
+  c[0].z = q->z;
+#endif
+  c[0].level = level;
 
-  c[1].x = c[0].x | P4EST_QUADRANT_LEN (c[0].level);
+  c[1].x = c[0].x | inc;
   c[1].y = c[0].y;
-  c[1].level = c[0].level;
+#ifdef P4_TO_P8
+  c[1].z = c[0].z;
+#endif
+  c[1].level = level;
 
   c[2].x = c[0].x;
-  c[2].y = c[0].y | P4EST_QUADRANT_LEN (c[0].level);
-  c[2].level = c[0].level;
+  c[2].y = c[0].y | inc;
+#ifdef P4_TO_P8
+  c[2].z = c[0].z;
+#endif
+  c[2].level = level;
 
   c[3].x = c[1].x;
   c[3].y = c[2].y;
-  c[3].level = c[0].level;
+#ifdef P4_TO_P8
+  c[3].z = c[0].z;
+#endif
+  c[3].level = level;
+
+#ifdef P4_TO_P8
+  c[4].x = c[0].x;
+  c[4].y = c[0].y;
+  c[4].z = c[0].z | inc;
+  c[4].level = level;
+
+  c[5].x = c[1].x;
+  c[5].y = c[1].y;
+  c[5].z = c[4].z;
+  c[5].level = level;
+
+  c[6].x = c[2].x;
+  c[6].y = c[2].y;
+  c[6].z = c[4].z;
+  c[6].level = level;
+
+  c[7].x = c[3].x;
+  c[7].y = c[3].y;
+  c[7].z = c[4].z;
+  c[7].level = level;
+#endif
 
   /* this also verifies p4est_quadrant_is_extended (c[i]) */
   P4EST_ASSERT (p4est_quadrant_is_familyv (c));
 }
-
-#endif /* !P4_TO_P8 */
 
 void
 p4est_quadrant_first_descendent (const p4est_quadrant_t * q,

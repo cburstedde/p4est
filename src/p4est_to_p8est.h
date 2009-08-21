@@ -155,6 +155,7 @@
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling
 #define p4est_quadrant_is_sibling_D     p8est_quadrant_is_sibling_D
+#define p4est_quadrant_is_family        p8est_quadrant_is_family
 #define p4est_quadrant_is_familyv       p8est_quadrant_is_familyv
 #define p4est_quadrant_is_familypv      p8est_quadrant_is_familypv
 #define p4est_quadrant_is_parent        p8est_quadrant_is_parent
@@ -174,6 +175,7 @@
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
 #define p4est_quadrant_corner_neighbor_extra p8est_quadrant_corner_neighbor_extra
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
+#define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
 #define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
 #define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent
