@@ -231,10 +231,10 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
                   ));
 
   if (tree_contact != NULL) {
-    for (face = 0; face < 2 * P4EST_DIM; ++face) {
+    for (face = 0; face < P4EST_FACES; ++face) {
       tree_contact[face] =
-        (conn->tree_to_tree[2 * P4EST_DIM * which_tree + face] != which_tree
-         || (int) conn->tree_to_face[2 * P4EST_DIM * which_tree + face] !=
+        (conn->tree_to_tree[P4EST_FACES * which_tree + face] != which_tree
+         || (int) conn->tree_to_face[P4EST_FACES * which_tree + face] !=
          face);
     }
   }
@@ -255,27 +255,19 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
   const int           rank = p4est->mpirank;
   int                 n0_proc, n1_proc;
-  bool                any_quad;
   p4est_quadrant_t    n0, n1;
 
   if (full_tree[0] && full_tree[1]) {
     /* need only to consider boundary quadrants */
-#ifndef P4_TO_P8
-    any_quad =
-      (tree_contact[0] && q->y == 0) ||
-      (tree_contact[1] && q->x == P4EST_ROOT_LEN - qh) ||
-      (tree_contact[2] && q->y == P4EST_ROOT_LEN - qh) ||
-      (tree_contact[3] && q->x == 0);
-#else
-    any_quad =
-      (tree_contact[0] && q->x == 0) ||
-      (tree_contact[1] && q->x == P4EST_ROOT_LEN - qh) ||
-      (tree_contact[2] && q->y == 0) ||
-      (tree_contact[3] && q->y == P4EST_ROOT_LEN - qh) ||
-      (tree_contact[4] && q->z == 0) ||
-      (tree_contact[5] && q->z == P4EST_ROOT_LEN - qh);
+    if (!((tree_contact[0] && q->x == 0) ||
+          (tree_contact[1] && q->x == P4EST_ROOT_LEN - qh) ||
+          (tree_contact[2] && q->y == 0) ||
+          (tree_contact[3] && q->y == P4EST_ROOT_LEN - qh) ||
+#ifdef P4_TO_P8
+          (tree_contact[4] && q->z == 0) ||
+          (tree_contact[5] && q->z == P4EST_ROOT_LEN - qh) ||
 #endif
-    if (!any_quad) {
+          false)) {
       return true;
     }
   }
