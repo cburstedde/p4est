@@ -31,15 +31,13 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* the spatial dimension */
-#define P4EST_DIM 2
-#define P4EST_CHILDREN 4
+/* size of insulation layer */
 #define P4EST_INSUL 9
 
-/** Finest level of the quadtree for representing nodes */
+/* finest level of the quadtree for representing nodes */
 #define P4EST_MAXLEVEL 30
 
-/** Finest level of the quadtree for representing quadrants */
+/* finest level of the quadtree for representing quadrants */
 #define P4EST_QMAXLEVEL 29
 
 /* the length of a root quadrant */

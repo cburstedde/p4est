@@ -27,6 +27,16 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* the spatial dimension */
+#define P8EST_DIM 3
+#define P8EST_FACES (2 * P8EST_DIM)
+#define P8EST_CHILDREN 8
+#define P8EST_HALF (P8EST_CHILDREN / 2)
+#define P8EST_EDGES 12
+
+/* size of face transformation encoding */
+#define P8EST_FTRANSFORM 9
+
 /* p8est identification string */
 #define P8EST_STRING "p8est"
 
@@ -185,7 +195,7 @@ extern const int    p8est_child_corner_faces[8][8];
 /** Store the edges for each child and corner, can be -1. */
 extern const int    p8est_child_corner_edges[8][8];
 
-/** Allocate a connectivity structure
+/** Allocate a connectivity structure.
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.
  * \param [in] num_edges      Number of tree-connecting edges.
@@ -279,13 +289,13 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
 /** Fills arrays encoding the axis combinations for a face transform.
- * \param [in]  itree        The number of the originating tree.
- * \param [in]  iface        The number of the originating face.
- * \param [out] ftransform   This array holds 9 integers.
- *              [0]..[2]     The coordinate axis sequence of the origin face.
- *              [3]..[5]     The coordinate axis sequence of the target face.
- *              [6]..[8]     Edge reverse flag for axes 0, 1; face code for 2.
- * \return   Returns the face neighbor tree if it exists, -1 otherwise.
+ * \param [in]  itree       The number of the originating tree.
+ * \param [in]  iface       The number of the originating face.
+ * \param [out] ftransform  This array holds 9 integers.
+ *              [0]..[2]    The coordinate axis sequence of the origin face.
+ *              [3]..[5]    The coordinate axis sequence of the target face.
+ *              [6]..[8]    Edge reverse flag for axes 0, 1; face code for 2.
+ * \return                  The face neighbor tree if it exists, -1 otherwise.
  */
 p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
                                                connectivity,

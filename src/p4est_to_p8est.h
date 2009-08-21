@@ -30,7 +30,10 @@
 /* redefine macros */
 #define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
+#define P4EST_FACES                     P8EST_FACES
 #define P4EST_CHILDREN                  P8EST_CHILDREN
+#define P4EST_HALF                      P8EST_HALF
+#define P4EST_FTRANSFORM                P8EST_FTRANSFORM
 #define P4EST_INSUL                     P8EST_INSUL
 #define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
@@ -60,6 +63,8 @@
 
 /* redefine types */
 #define p4est_connectivity_t            p8est_connectivity_t
+#define p4est_corner_transform_t        p8est_corner_transform_t
+#define p4est_corner_info_t             p8est_corner_info_t
 #define p4est_geometry_t                p8est_geometry_t
 #define p4est_balance_type_t            p8est_balance_type_t
 #define p4est_t                         p8est_t
@@ -86,18 +91,22 @@
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
-#define p4est_corner_faces              p8est_corner_faces
 #define p4est_face_dual                 p8est_face_dual
 #define p4est_face_child_hang           p8est_face_child_hang
+#define p4est_corner_faces              p8est_corner_faces
+#define p4est_corner_face_corners       p8est_corner_face_corners
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 #define p4est_num_ranges                p8est_num_ranges
 
 /* functions in p4est_connectivity */
+#define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
 #define p4est_connectivity_is_equal     p8est_connectivity_is_equal
 #define p4est_connectivity_save         p8est_connectivity_save
 #define p4est_connectivity_load         p8est_connectivity_load
+#define p4est_find_face_transform       p8est_find_face_transform
+#define p4est_find_corner_transform     p8est_find_corner_transform
 
 /* functions in p4est */
 #define p4est_new                       p8est_new

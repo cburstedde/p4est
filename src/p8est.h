@@ -27,15 +27,13 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* the spatial dimension */
-#define P8EST_DIM 3
-#define P8EST_CHILDREN 8
+/* size of insulation layer */
 #define P8EST_INSUL 27
 
-/** Finest level of the octree for representing nodes */
+/* finest level of the octree for representing nodes */
 #define P8EST_MAXLEVEL 19
 
-/** Finest level of the octree for representing octants */
+/* finest level of the octree for representing octants */
 #define P8EST_QMAXLEVEL 18
 
 /* the length of a root quadrant */
