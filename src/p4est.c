@@ -948,8 +948,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   int                 j, k, l, m, which;
   int                 face;
   int                 first_peer, last_peer;
-  bool                quad_contact[2 * P4EST_DIM];
-  bool                any_face, tree_contact[2 * P4EST_DIM];
+  bool                quad_contact[P4EST_FACES];
+  bool                any_face, tree_contact[P4EST_FACES];
   bool                tree_fully_owned, full_tree[2];
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
@@ -970,20 +970,20 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_DEBUG
   size_t              data_pool_size;
 #endif
-#ifndef P4_TO_P8
-  int                 transform, corner;
-  p4est_corner_transform_t *ct;
-  sc_array_t          ctransforms, *cta;
-#else
-  int                 ftransform[9], edge, corner;
-  bool                face_axis[3], contact_face_only, contact_edge_only;
+  int                 ftransform[P4EST_FTRANSFORM];
+  bool                face_axis[3];     /* 3 not P4EST_DIM */
+  bool                contact_face_only, contact_edge_only;
+#ifdef P4_TO_P8
+  int                 edge;
   size_t              etree;
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
-  p8est_corner_info_t ci;
-  p8est_corner_transform_t *ct;
-  sc_array_t         *eta, *cta;
+  sc_array_t         *eta;
 #endif
+  int                 corner;
+  p4est_corner_info_t ci;
+  p4est_corner_transform_t *ct;
+  sc_array_t         *cta;
 #ifdef P4EST_MPI
 #ifdef P4EST_DEBUG
   unsigned            checksum;
@@ -1073,15 +1073,12 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
     peer->have_first_count = peer->have_first_load = 0;
     peer->have_second_count = peer->have_second_load = 0;
   }
-#ifndef P4_TO_P8
-  cta = &ctransforms;
-  sc_array_init (cta, sizeof (p4est_corner_transform_t));
-#else
+#ifdef P4_TO_P8
   eta = &ei.edge_transforms;
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
+#endif
   cta = &ci.corner_transforms;
-  sc_array_init (cta, sizeof (p8est_corner_transform_t));
-#endif /* !P4_TO_P8 */
+  sc_array_init (cta, sizeof (p4est_corner_transform_t));
 
   /* compute first quadrant on finest level */
   mylow.x = p4est->global_first_position[rank].x;
@@ -1110,7 +1107,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
     p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
     tree_fully_owned = full_tree[0] && full_tree[1];
     any_face = false;
-    for (face = 0; face < 2 * P4EST_DIM; ++face) {
+    for (face = 0; face < P4EST_FACES; ++face) {
       any_face = any_face || tree_contact[face];
     }
     if (any_face) {
@@ -1174,75 +1171,23 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4_TO_P8
           insulq.z += (m - 1) * qh;
 #endif
-
           /* check boundary status of insulation quadrant */
-#ifndef P4_TO_P8
-          quad_contact[0] = (insulq.y < 0);
-          quad_contact[1] = (insulq.x >= rh);
-          quad_contact[2] = (insulq.y >= rh);
-          quad_contact[3] = (insulq.x < 0);
-          if (quad_contact[0] || quad_contact[1] ||
-              quad_contact[2] || quad_contact[3]) {
-            /* this quadrant is relevant for inter-tree balancing */
-            if ((quad_contact[0] || quad_contact[2]) &&
-                (quad_contact[1] || quad_contact[3])) {
-              /* this quadrant goes across a corner */
-              for (corner = 0; corner < 4; ++corner) {
-                if (quad_contact[(corner + 3) % 4] && quad_contact[corner]) {
-                  break;
-                }
-              }
-              p4est_find_corner_transform (conn, nt, corner, cta);
-              for (ctree = 0; ctree < cta->elem_count; ++ctree) {
-                ct = sc_array_index (cta, ctree);
-                tosend = *q;
-                p4est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
-                                                 false);
-                p4est_quadrant_transform_corner (&insulq, (int) ct->ncorner,
-                                                 true);
-                p4est_balance_schedule (p4est, peers, ct->ntree, true,
-                                        &tosend, &insulq, &first_peer,
-                                        &last_peer);
-                /* insulq is now invalid don't use it below */
-              }
-            }
-            else {
-              /* this quadrant goes across a face */
-              qtree = -1;
-              for (face = 0; face < 4; ++face) {
-                if (quad_contact[face] && tree_contact[face]) {
-                  qtree = conn->tree_to_tree[4 * nt + face];
-                  break;
-                }
-              }
-              if (face == 4) {
-                /* this quadrant ran across a face with no neighbor */
-                continue;
-              }
-              /* transform both q and insulq into the neighbor's coordinates */
-              transform = p4est_find_face_transform (conn, nt, face);
-              tempq = *q;
-              p4est_quadrant_translate_face (&tempq, face);
-              p4est_quadrant_transform_face (&tempq, &tosend, transform);
-              p4est_quadrant_translate_face (&insulq, face);
-              p4est_quadrant_transform_face (&insulq, &tempq, transform);
-              p4est_balance_schedule (p4est, peers, qtree, true,
-                                      &tosend, &tempq,
-                                      &first_peer, &last_peer);
-            }
-          }
-#else /* P4_TO_P8 */
           quad_contact[0] = (insulq.x < 0);
           quad_contact[1] = (insulq.x >= rh);
+          face_axis[0] = quad_contact[0] || quad_contact[1];
           quad_contact[2] = (insulq.y < 0);
           quad_contact[3] = (insulq.y >= rh);
+          face_axis[1] = quad_contact[2] || quad_contact[3];
+#ifndef P4_TO_P8
+          face_axis[2] = false;
+#else
           quad_contact[4] = (insulq.z < 0);
           quad_contact[5] = (insulq.z >= rh);
-          face_axis[0] = quad_contact[0] || quad_contact[1];
-          face_axis[1] = quad_contact[2] || quad_contact[3];
           face_axis[2] = quad_contact[4] || quad_contact[5];
-          contact_face_only = contact_edge_only = false;
-          face = edge = -1;
+          edge = -1;
+#endif
+          contact_edge_only = contact_face_only = false;
+          face = -1;
           if (face_axis[0] || face_axis[1] || face_axis[2]) {
             /* this quadrant is relevant for inter-tree balancing */
             if (!face_axis[1] && !face_axis[2]) {
@@ -1253,6 +1198,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
               contact_face_only = true;
               face = 2 + quad_contact[3];
             }
+#ifdef P4_TO_P8
             else if (!face_axis[0] && !face_axis[1]) {
               contact_face_only = true;
               face = 4 + quad_contact[5];
@@ -1269,15 +1215,17 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
               contact_edge_only = true;
               edge = 8 + 2 * quad_contact[3] + quad_contact[1];
             }
+#endif
             if (contact_face_only) {
               /* square contact across a face */
-              P4EST_ASSERT (!contact_edge_only && face >= 0 && face < 6);
+              P4EST_ASSERT (!contact_edge_only);
+              P4EST_ASSERT (face >= 0 && face < P4EST_FACES);
               P4EST_ASSERT (quad_contact[face]);
-              qtree = p8est_find_face_transform (conn, nt, face, ftransform);
+              qtree = p4est_find_face_transform (conn, nt, face, ftransform);
               if (qtree >= 0) {
                 P4EST_ASSERT (tree_contact[face]);
-                p8est_quadrant_transform_face (q, &tosend, ftransform);
-                p8est_quadrant_transform_face (&insulq, &tempq, ftransform);
+                p4est_quadrant_transform_face (q, &tosend, ftransform);
+                p4est_quadrant_transform_face (&insulq, &tempq, ftransform);
                 p4est_balance_schedule (p4est, peers, qtree, true,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);
@@ -1287,9 +1235,11 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
                 P4EST_ASSERT (!tree_contact[face]);
               }
             }
+#ifdef P4_TO_P8
             else if (contact_edge_only) {
               /* this quadrant crosses an edge */
-              P4EST_ASSERT (!contact_face_only && edge >= 0 && edge < 12);
+              P4EST_ASSERT (!contact_face_only);
+              P4EST_ASSERT (edge >= 0 && edge < P8EST_EDGES);
               p8est_find_edge_transform (conn, nt, edge, &ei);
               for (etree = 0; etree < eta->elem_count; ++etree) {
                 et = sc_array_index (eta, etree);
@@ -1301,22 +1251,26 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
                                         &first_peer, &last_peer);
               }
             }
+#endif
             else {
               /* this quadrant crosses a corner */
-              P4EST_ASSERT (face_axis[0] && face_axis[1] && face_axis[2]);
-              corner =
-                4 * quad_contact[5] + 2 * quad_contact[3] + quad_contact[1];
-              P4EST_ASSERT (p8est_quadrant_touches_corner (q, corner, true));
-              P4EST_ASSERT (p8est_quadrant_touches_corner
+              P4EST_ASSERT (face_axis[0] && face_axis[1]);
+              corner = quad_contact[1] + 2 * quad_contact[3];
+#ifdef P4_TO_P8
+              P4EST_ASSERT (face_axis[2]);
+              corner += 4 * quad_contact[5];
+#endif
+              P4EST_ASSERT (p4est_quadrant_touches_corner (q, corner, true));
+              P4EST_ASSERT (p4est_quadrant_touches_corner
                             (&insulq, corner, false));
-              p8est_find_corner_transform (conn, nt, corner, &ci);
+              p4est_find_corner_transform (conn, nt, corner, &ci);
               for (ctree = 0; ctree < cta->elem_count; ++ctree) {
                 ct = sc_array_index (cta, ctree);
                 tosend = *q;
-                p8est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
+                p4est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
                                                  false);
                 tempq = insulq;
-                p8est_quadrant_transform_corner (&tempq, (int) ct->ncorner,
+                p4est_quadrant_transform_corner (&tempq, (int) ct->ncorner,
                                                  true);
                 p4est_balance_schedule (p4est, peers, ct->ntree, true,
                                         &tosend, &tempq, &first_peer,
@@ -1324,7 +1278,6 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
               }
             }
           }
-#endif /* !P4_TO_P8 */
           else {
             /* no inter-tree contact */
             p4est_balance_schedule (p4est, peers, nt, false,
@@ -1719,17 +1672,16 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
         /* this is a corner/edge quadrant from the second pass of balance */
         P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);
         P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
-#ifndef P4_TO_P8
-        P4EST_ASSERT ((s->x < 0 && s->y < 0) || (s->x < 0 && s->y >= rh) ||
-                      (s->x >= rh && s->y < 0) || (s->x >= rh && s->y >= rh));
-#else
         face_axis[0] = (s->x < 0 || s->x >= rh);
         face_axis[1] = (s->y < 0 || s->y >= rh);
+#ifndef P4_TO_P8
+        face_axis[2] = false;
+#else
         face_axis[2] = (s->z < 0 || s->z >= rh);
+#endif
         P4EST_ASSERT ((face_axis[0] && face_axis[1]) ||
                       (face_axis[0] && face_axis[2]) ||
                       (face_axis[1] && face_axis[2]));
-#endif
         continue;
       }
       tree = sc_array_index (p4est->trees, qtree);
