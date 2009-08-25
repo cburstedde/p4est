@@ -45,7 +45,7 @@ p4est_ghost_t;
  * The quadrant can lie outside of a tree across faces (and only faces).
  *
  * \param [in] p4est  The forest in which to search for a quadrant.
- * \param [in] treeid The tree id for which the quadrant belongs.
+ * \param [in] treeid The tree to which the quadrant belongs.
  * \param [in] face   Supply a face direction if known, or -1 otherwise.
  * \param [in] q      The quadrant that is being searched for.
  *
@@ -88,17 +88,18 @@ ssize_t             p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
  *
  * \param [in]  p4est        The forest in which to search for \a q.
  * \param [in]  ghost        The ghost layer in which to search for \a q.
- * \param [in]  treeid       The tree id for which \a q belongs.
+ * \param [in]  treeid       The tree to which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
  * \param [in,out] face      On input, face id across which \a q was created.
- *                           On output, the neighbor's face number.
- * \param [out] hang         If not NULL, signals that q is bigger than
+ *                           On output, the neighbor's face number augmented
+ *                           by orientation, so face is in 0..7.
+ * \param [in,out] hang      If not NULL, signals that q is bigger than
  *                           the quadrant it came from.  The child id
- *                           of that originating quadrant is passed in hang.
+ *                           of that originating quadrant is passed into hang.
  *                           On output, hang holds the hanging face number
  *                           of \a q that is in contact with its originator.
- * \param [out] owner_rank   Filled with the rank of the owner
- *                           if it is found and undefined otherwise.
+ * \param [out] owner_rank   Filled with the rank of the owner if it is found
+ *                           and undefined otherwise.
  *
  * \return      Returns the local number of \a q if the quadrant exists
  *              in the local forest or in the ghost_layer.  Otherwise,
@@ -118,7 +119,7 @@ p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
  *
  * \param [in]  p4est        The forest in which to search for \a q
  * \param [in]  ghost        The ghost layer in which to search for \a q
- * \param [in]  treeid       The tree id for which \a q belongs.
+ * \param [in]  treeid       The tree to which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
  * \param [out] exists_arr   Filled for tree corner cases.  An entry
  *                           for each corner neighbor is set to 1 if

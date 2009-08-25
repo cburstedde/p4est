@@ -271,8 +271,8 @@ p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   }
 
   return
-    (conn->tree_to_tree[2 * P4EST_DIM * treeid + face] == treeid &&
-     (int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] == face);
+    (conn->tree_to_tree[P4EST_FACES * treeid + face] == treeid &&
+     (int) conn->tree_to_face[P4EST_FACES * treeid + face] == face);
 }
 
 #include "p4est_ghost.c"
