@@ -20,4 +20,52 @@
 */
 
 #include <p4est_to_p8est.h>
+#include <p8est_connectivity.h>
+
+/* *INDENT-OFF* */
+
+/** Store the number of quadrants to add for complete and balance stages. */
+static const int    p4est_balance_count[P4EST_DIM + 1] =
+{ 9, 12, 15, 16 };
+
+/** Store coordinates of quadrants to add for balancing. */
+static const p4est_qcoord_t p4est_balance_coord[26][P4EST_DIM] =
+{ /* faces */
+  { -1,  1,  1 },
+  {  2,  0,  0 },
+  {  1, -1,  1 },
+  {  0,  2,  0 },
+  {  1,  1, -1 },
+  {  0,  0,  2 },
+  /* edges */
+  {  1, -1, -1 },
+  {  1,  2, -1 },
+  {  0, -1,  2 },
+  {  0,  2,  2 },
+  { -1,  1, -1 },
+  {  2,  1, -1 },
+  { -1,  0,  2 },
+  {  2,  0,  2 },
+  { -1, -1,  1 },
+  {  2, -1,  1 },
+  { -1,  2,  0 },
+  {  2,  2,  0 },
+  /* corners */
+  { -1, -1, -1 },
+  {  2, -1, -1 },
+  { -1,  2, -1 },
+  {  2,  2, -1 },
+  { -1, -1,  2 },
+  {  2, -1,  2 },
+  { -1,  2,  2 },
+  {  2,  2,  2 }};
+
+/** Offset for edges into p4est_balance_coord */
+static const int    pbeo = P4EST_FACES;
+
+/** Offset for corners into p4est_balance_coord */
+static const int    pbco = P4EST_FACES + P8EST_EDGES;
+
+/* *INDENT-ON* */
+
 #include "p4est_algorithms.c"
