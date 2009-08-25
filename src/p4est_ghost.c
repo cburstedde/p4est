@@ -489,7 +489,7 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   /* determine the hanging face number */
   if (phang != NULL) {
     P4EST_ASSERT (*phang >= 0 && *phang < P4EST_CHILDREN);
-    *phang = p4est_face_child_hang[face][*phang];
+    *phang = p4est_corner_face_corners[*phang][face];
     P4EST_ASSERT (*phang >= 0 && *phang < P4EST_CHILDREN / 2);
   }
 

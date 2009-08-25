@@ -108,29 +108,20 @@ typedef struct
 }
 p4est_corner_info_t;
 
-/** Mappings between right-hand rule and z-ordering. */
-extern const int    p4est_corner_to_zorder[5];
-extern const int    p4est_zface_to_rface[4];
-extern const int    p4est_rface_to_zface[4];
-
 /** Store the corner numbers 0..4 for each tree face. */
 extern const int    p4est_face_corners[4][2];
 
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p4est_face_dual[4];
 
-/** Store the hanging face number in the big neighbor of a small quadrant. */
-extern const int    p4est_face_child_hang[4][4];
-
-/** Hanging corners and faces indexed by child id, two each. */
-extern const int    p4est_hanging_corner[4][2];
-extern const int    p4est_hanging_face[4][2];
-
 /** Store the face numbers 0..3 for each tree corner. */
 extern const int    p4est_corner_faces[4][2];
 
 /** Store the face corner numbers for the faces touching a tree corner. */
 extern const int    p4est_corner_face_corners[4][4];
+
+/** Store the faces for each child and corner, can be -1. */
+extern const int    p4est_child_corner_faces[4][4];
 
 /** Allocate a connectivity structure.
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).

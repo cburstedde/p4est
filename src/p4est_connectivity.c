@@ -29,41 +29,12 @@
 #ifndef P4_TO_P8
 
 /* *INDENT-OFF* */
-
-/** right hand rule face to z order corner */
-const int           p4est_face_corners[4][2] =
-{{0, 1}, {1, 3}, {2, 3}, {0, 2}};
-
-/** z order corner to right hand rule face */
-const int           p4est_corner_faces[4][2] =
-{{0, 3}, {0, 1}, {2, 3}, {1, 2}};
-
-const int           p4est_corner_to_zorder[5] = { 0, 1, 3, 2, 4 };
-const int           p4est_zface_to_rface[4] = { 3, 1, 0, 2 };
-const int           p4est_rface_to_zface[4] = { 2, 1, 3, 0 };
-
 const int           p4est_face_corners[4][2] =
 {{ 0, 2 },
  { 1, 3 },
  { 0, 1 },
  { 2, 3 }};
-const int           p4est_face_dual[4] = { 2, 3, 0, 1 };
-const int           p4est_face_child_hang[4][4] =
-{{  0,  1, -1, -1 },
- { -1,  0, -1,  1 },
- { -1, -1,  0,  1 },
- {  0, -1,  1, -1 }};
-
-const int           p4est_hanging_corner[4][2] =
-{{ 1, 2 },
- { 0, 3 },
- { 0, 3 },
- { 1, 2 }};
-const int           p4est_hanging_face[4][2] =
-{{ 0, 3 },
- { 0, 1 },
- { 3, 2 },
- { 1, 2 }};
+const int           p4est_face_dual[4] = { 1, 0, 3, 2 };
 
 const int           p4est_corner_faces[4][2] =
 {{ 0, 2 },
@@ -75,6 +46,12 @@ const int           p4est_corner_face_corners[4][4] =
  { -1,  0,  1, -1 },
  {  1, -1, -1,  0 },
  { -1,  1, -1,  1 }};
+
+const int           p4est_child_corner_faces[4][4] =
+{{ -1,  2,  0, -1 },
+ {  2, -1, -1,  1 },
+ {  0, -1, -1,  3 },
+ { -1,  1,  3, -1 }};
 /* *INDENT-ON* */
 
 #endif /* !P4_TO_P8 */
@@ -1073,7 +1050,7 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   ftransform[3 + reverse] = target_face < 2 ? 1 : 0;
   ftransform[3 + !reverse] = target_face < 4 ? 2 : 1;
   ftransform[5] = target_face / 2;
-  reverse = p8est_face_permutation_refs[iface][target_face] == 1;
+  reverse = (p8est_face_permutation_refs[iface][target_face] == 1);
   ftransform[6 + reverse] = orientation % 2;
   ftransform[6 + !reverse] = orientation / 2;
   ftransform[8] = 2 * (iface % 2) + target_face % 2;

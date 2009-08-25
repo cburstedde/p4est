@@ -144,14 +144,6 @@ main (int argc, char **argv)
     }
   }
 
-  for (i = 0; i < 8; ++i) {
-    for (my_face = 0; my_face < 6; ++my_face) {
-      SC_CHECK_ABORT (p8est_corner_face_corners[i][my_face] ==
-                      p8est_face_child_hang[my_face][i],
-                      "Inconsistent face_child_hang table");
-    }
-  }
-
   sc_finalize ();
 
   return 0;
