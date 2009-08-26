@@ -108,8 +108,9 @@ typedef struct p4est_lnodes_buf_info
 {
   p4est_quadrant_t    q;        /* p.which_tree filled */
   int8_t              type;     /* which nodes it shares */
-  bool                send_sharers;     /* whether the sharers are included in the message */
-  p4est_locidx_t      first_index;      /* in inodes array, first node to/from */
+  bool                send_sharers;     /* whether the sharers are included in
+                                           the message */
+  p4est_locidx_t      first_index;      /* inodes array, first node to/from */
 }
 p4est_lnodes_buf_info_t;
 
@@ -272,7 +273,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *data)
             c2 = p8est_edge_corners[he[1 - j]][1];
           }
           k = p8est_corner_face_corners[c2][f];
-          if (p8est_edge_faces[he[1]][0] == f) {
+          if (p8est_edge_faces[he[j]][0] == f) {
             eside = 0;
           }
           else {
@@ -778,6 +779,23 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
   int                *corner_nodes = iter_data->corner_nodes;
   int                 nodes_per_elem = iter_data->nodes_per_elem;
   p4est_locidx_t      quadrants_offset;
+  bool                intra_tree = info->intra_tree;
+
+  if (intra_tree) {
+    cside = sc_array_index (sides, 0);
+    owner_corner = cside->corner;
+    owner_tid = cside->treeid;
+    owner_quad = cside->quad;
+    is_local = cside->is_local;
+    if (is_local) {
+      owner_proc = rank;
+    }
+    else {
+      /* TODO: replace when the new ghost_layer API is implemented */
+      owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
+                                          rank);
+    }
+  }
 
   sc_array_init (&touching_procs, sizeof (int));
   sc_array_init (&all_procs, sizeof (int));
@@ -804,28 +822,22 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
       *ip = proc;
     }
 
-    if (proc < owner_proc) {
-      owner_proc = proc;
-      owner_tid = tid;
-      owner_quad = q;
-      owner_corner = c;
-    }
-    else if (proc == owner_proc) {
-      if (tid < owner_tid) {
+    if (!intra_tree) {
+      if (tid < owner_tid ||
+          (tid == owner_tid && p4est_quadrant_compare (q, owner_quad) < 0)) {
         owner_proc = proc;
         owner_tid = tid;
         owner_quad = q;
         owner_corner = c;
       }
-      else if (tid == owner_tid) {
-        if (p4est_quadrant_compare (q, owner_quad) < 0) {
-          owner_proc = proc;
-          owner_tid = tid;
-          owner_quad = q;
-          owner_corner = c;
-        }
-      }
     }
+#ifdef P4EST_DEBUG
+    else {
+      P4EST_ASSERT (zz == 0 || owner_tid < tid ||
+                    (owner_tid == tid &&
+                     p4est_quadrant_compare (owner_quad, q) < 0));
+    }
+#endif
 
     cdpid = qid * P4EST_CHILDREN + c;
     cdp = is_local ? &(local_cdp[cdpid]) : &(ghost_cdp[cdpid]);
@@ -985,8 +997,32 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
   int8_t              min_level = P4EST_QMAXLEVEL;
   int8_t              max_level = 0;
   p4est_locidx_t      start_node;
+  bool                intra_tree = info->intra_tree;
 
   p8est_lnodes_edge_simple_callback (info, data);
+
+  if (intra_tree) {
+    eside = sc_array_index (sides, 0);
+    owner_edge = eside->edge;
+    owner_tid = eside->treeid;
+    owner_orientation = eside->orientation;
+    if (eside->is_hanging) {
+      owner_quad = eside->is.hanging.quad[0];
+      is_local = eside->is.hanging.is_local;
+    }
+    else {
+      owner_quad = eside->is.full.quad;
+      is_local = &(eside->is.full.is_local);
+    }
+    if (*is_local) {
+      owner_proc = rank;
+    }
+    else {
+      /* TODO: replace when the new ghost_layer API is implemented */
+      owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
+                                          rank);
+    }
+  }
 
   sc_array_init (&touching_procs, sizeof (int));
   sc_array_init (&all_procs, sizeof (int));
@@ -1028,31 +1064,24 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
         *ip = proc;
       }
 
-      if (proc < owner_proc) {
-        owner_proc = proc;
-        owner_tid = tid;
-        owner_quad = q[i];
-        owner_edge = e;
-        owner_orientation = orientation;
-      }
-      else if (proc == owner_proc) {
-        if (tid < owner_tid) {
+      if (!intra_tree) {
+        if (tid < owner_tid ||
+            (tid == owner_tid &&
+             p4est_quadrant_compare (q[i], owner_quad) < 0)) {
           owner_proc = proc;
           owner_tid = tid;
           owner_quad = q[i];
           owner_edge = e;
           owner_orientation = orientation;
         }
-        else if (tid == owner_tid) {
-          if (p4est_quadrant_compare (q[i], owner_quad) < 0) {
-            owner_proc = proc;
-            owner_tid = tid;
-            owner_quad = q[i];
-            owner_edge = e;
-            owner_orientation = orientation;
-          }
-        }
       }
+#ifdef P4EST_DEBUG
+      else {
+        P4EST_ASSERT ((zz == 0 && i == 0) || owner_tid < tid ||
+                      (owner_tid == tid &&
+                       p4est_quadrant_compare (owner_quad, q[i]) < 0));
+      }
+#endif
 
       if (is_hanging) {
         edpid = qid * 12 + e;
@@ -1265,8 +1294,32 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *data)
   int                 jind, kind, lind;
 #endif
   p4est_locidx_t      start_node;
+  bool                intra_tree = info->intra_tree;
 
   p4est_lnodes_face_simple_callback (info, data);
+
+  if (intra_tree) {
+    fside = sc_array_index (sides, 0);
+    owner_face = fside->face;
+    owner_tid = fside->treeid;
+    owner_side = 0;
+    if (fside->is_hanging) {
+      owner_quad = fside->is.hanging.quad[0];
+      is_local = fside->is.hanging.is_local;
+    }
+    else {
+      owner_quad = fside->is.full.quad;
+      is_local = &(fside->is.full.is_local);
+    }
+    if (*is_local) {
+      owner_proc = rank;
+    }
+    else {
+      /* TODO: replace when the new ghost_layer API is implemented */
+      owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
+                                          rank);
+    }
+  }
 
   sc_array_init (&touching_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
@@ -1302,31 +1355,24 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *data)
         *ip = proc;
       }
 
-      if (proc < owner_proc) {
-        owner_proc = proc;
-        owner_tid = tid;
-        owner_quad = q[i];
-        owner_face = f;
-        owner_side = zz;
-      }
-      else if (proc == owner_proc) {
-        if (tid < owner_tid) {
+      if (!intra_tree) {
+        if (tid < owner_tid ||
+            (tid == owner_tid &&
+             p4est_quadrant_compare (q[i], owner_quad) < 0)) {
           owner_proc = proc;
           owner_tid = tid;
           owner_quad = q[i];
           owner_face = f;
           owner_side = zz;
         }
-        else if (tid == owner_tid) {
-          if (p4est_quadrant_compare (q[i], owner_quad) < 0) {
-            owner_proc = proc;
-            owner_tid = tid;
-            owner_quad = q[i];
-            owner_face = f;
-            owner_side = zz;
-          }
-        }
       }
+#ifdef P4EST_DEBUG
+      else {
+        P4EST_ASSERT ((zz == 0 && i == 0) || owner_tid < tid ||
+                      (owner_tid == tid &&
+                       p4est_quadrant_compare (owner_quad, q[i]) < 0));
+      }
+#endif
     }
   }
 
@@ -1792,9 +1838,10 @@ p4est_lnodes_hface_fix (p4est_t * p4est, p4est_iter_face_side_t * hface,
   int                 f = hface->face;
   p4est_locidx_t     *local_elem_nodes = iter_data->local_elem_nodes;
   p4est_locidx_t     *ghost_elem_nodes = iter_data->ghost_elem_nodes;
-  int                 c, c2;
+  int                 c;
   int                 i2;
 #ifdef P4_TO_P8
+  int                 c2;
   int                 nodes_per_edge = iter_data->nodes_per_edge;
   int               **edge_nodes = iter_data->edge_nodes;
   int                 j, k;
