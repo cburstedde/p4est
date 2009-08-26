@@ -150,30 +150,13 @@ typedef struct p4est_nodes
 }
 p4est_nodes_t;
 
-/** Determine unique ordering of vertices for each quadrant.
- *
- * \param [in]  p4est              The forest whose vertices will be ordered.
- * \param [in]  identify_periodic  Boolean flag to switch on periodic b.c.
- * \param [out] num_uniq_local_vertices will be filled with the total number
- *                                      of unique vertices.
- * \param [out] quadrant_to_local_vertex an array that for each vertex of each
- *                                       quadrant holds the value of the
- *                                       corresponding unique local vertex.
- *                                       The array needs to be size (total
- *                                       number of local quadrants x 4).  It
- *                                       will be filled
- *                                       [0][0]..[0][3]..
- *                                       [num_local_quads-1][0]..
- *                                       [num_local_quads-1][3]
+/** Create node information.
+ * \param [in] ghost    Ghost layer.  If this is NULL, then only
+ *                      tree- and processor-local nodes will be matched
+ *                      and all others duplicated, all nodes will be
+ *                      counted as independent with no sharers, and
+ *                      nodes->global_owned_indeps will be NULL.
  */
-void                p4est_order_local_vertices (p4est_t * p4est,
-                                                bool identify_periodic,
-                                                p4est_locidx_t *
-                                                num_uniq_local_vertices,
-                                                p4est_locidx_t *
-                                                quadrant_to_local_vertex);
-
-/** Create node information. */
 p4est_nodes_t      *p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost);
 
 /** Destroy node information. */

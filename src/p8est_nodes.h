@@ -194,7 +194,13 @@ typedef struct p8est_nodes
 }
 p8est_nodes_t;
 
-/** Create node information. */
+/** Create node information.
+ * \param [in] ghost    Ghost layer.  If this is NULL, then only
+ *                      tree- and processor-local nodes will be matched
+ *                      and all others duplicated, all nodes will be
+ *                      counted as independent with no sharers, and
+ *                      nodes->global_owned_indeps will be NULL.
+ */
 p8est_nodes_t      *p8est_nodes_new (p8est_t * p8est, p8est_ghost_t * ghost);
 
 /** Destroy node information. */
@@ -206,4 +212,4 @@ bool                p8est_nodes_is_valid (p8est_t * p8est,
 
 SC_EXTERN_C_END;
 
-#endif /* P8EST_NODES_H */
+#endif /* !P8EST_NODES_H */

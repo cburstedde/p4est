@@ -50,80 +50,26 @@ p4est_node_peer_t;
 
 #endif
 
-#ifndef P4_TO_P8
-
-/** Generate a neighbor of a quadrant for a given node.
- *
- * The neighbor numbering is given below.
- *
- * Neighbor numbering for q, node=0:
- *
- *      ------+------+
- *            |  q   |
- *      nnum=2|nnum=3|
- *            |      |
- *      ------+------+
- *            |      |
- *      nnum=0|nnum=1|
- *
- * Neighbor numbering for q, node=1:
- *
- *            +------+------
- *            |  q   |
- *            |nnum=2|num=3
- *            |      |
- *            +------+------
- *            |      |
- *            |nnum=0|nnum=1
- *
- * Neighbor numbering for q, node=2:
- *
- *            |      |
- *      nnum=2|nnum=3|
- *            |      |
- *      ------+------+
- *            |  q   |
- *      nnum=0|nnum=1|
- *            |      |
- *      ------+------+
- *
- * Neighbor numbering for q, node=3:
- *
- *            |      |
- *            |nnum=2|nnum=3
- *            |      |
- *            +------+------
- *            |  q   |
- *            |nnum=0|nnum=1
- *            |      |
- *            +------+------
- *
- * \param [in]  q             the quadrant whose possible node \a node neighbor
- *                            will be built.
- * \param [in]  node          the node of the quadrant \a q whose possible node
- *                            neighbor list will be built.  This is given in
- *                            pixel (Morton-) ordering.
- * \param [in]  nnum          neighbor number in the ordering described above,
- *                            if nnum==node then it is the corner neighbor.
+/** Generate a neighbor of a quadrant for a given quadrant corner.
+ * \param [in]  q             quadrant whose possible corner neighbor is built.
+ * \param [in]  corner        the corner of the quadrant \a q whose possible
+ *                            corner neighbor list will be indexed.
+ * \param [in]  nnum          neighbor number around the specified corner.
+ *                            This is also the number of the neighbor's corner
+ *                            that is shared with \a q.
+ *                            The case nnum==corner is forbidden.
  * \param [in]  neighor_rlev  the relative level of the neighbor compared to
- *                            the level of \a q.
+ *                            the level of \a q, in -1..1.
  * \param [out] neighbor      the neighbor that will be filled.
- * \param [out] neighbor_node the neighbor's node which shares with \a q
- *                            the node \a node.
  */
 static void
-p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
-                              int nnum, int neighbor_rlev,
-                              p4est_quadrant_t * neighbor, int *neighbor_node)
+p4est_possible_corner_neighbor (const p4est_quadrant_t * q, int corner,
+                                int nnum, int neighbor_rlev,
+                                p4est_quadrant_t * n)
 {
-  int                 nnode;
   const int           nlevel = (int) q->level + neighbor_rlev;
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
   const p4est_qcoord_t nh = P4EST_QUADRANT_LEN (nlevel);
-  const p4est_qcoord_t qx = q->x;
-  const p4est_qcoord_t qy = q->y;
-  p4est_qcoord_t      cornerx, cornery;
-  p4est_quadrant_t    n;
 #ifdef P4EST_DEBUG
   int                 qcid;
 #endif
@@ -131,158 +77,107 @@ p4est_possible_node_neighbor (const p4est_quadrant_t * q, int node,
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (-1 <= neighbor_rlev && neighbor_rlev <= 1);
   P4EST_ASSERT (0 <= nlevel && nlevel <= P4EST_QMAXLEVEL);
-  P4EST_ASSERT (node + nnum != 3);
-
-  P4EST_QUADRANT_INIT (&n);
-
-  switch (node) {
-  case 0:
-    cornerx = qx;
-    cornery = qy;
-    break;
-  case 1:
-    cornerx = qx + qh;
-    cornery = qy;
-    break;
-  case 2:
-    cornerx = qx;
-    cornery = qy + qh;
-    break;
-  case 3:
-    cornerx = qx + qh;
-    cornery = qy + qh;
-    break;
-  default:
-    SC_ABORT_NOT_REACHED ();
-    break;
-  }
+  P4EST_ASSERT (corner != nnum);
 
 #ifdef P4EST_DEBUG
   /* Check to see if it is possible to construct the neighbor */
   qcid = p4est_quadrant_child_id (q);
-  P4EST_ASSERT (neighbor_rlev >= 0 || qcid == node);
+  P4EST_ASSERT (neighbor_rlev >= 0 || qcid == corner);
 #endif
 
-  nnode = 3 - nnum;
-  n.level = (int8_t) nlevel;
-  switch (nnum) {
-  case 0:
-    n.x = cornerx - nh;
-    n.y = cornery - nh;
-    break;
-  case 1:
-    n.x = cornerx;
-    n.y = cornery - nh;
-    break;
-  case 2:
-    n.x = cornerx - nh;
-    n.y = cornery;
-    break;
-  case 3:
-    n.x = cornerx;
-    n.y = cornery;
-    break;
-  default:
-    SC_ABORT_NOT_REACHED ();
-    break;
-  }
+  P4EST_QUADRANT_INIT (n);
+  n->x = q->x + (corner & 0x01) * qh - (nnum & 0x01) * nh;
+  n->y = q->y + ((corner & 0x02) >> 1) * qh - ((nnum & 0x02) >> 1) * nh;
+#ifdef P4_TO_P8
+  n->z = q->z + ((corner & 0x04) >> 2) * qh - ((nnum & 0x04) >> 2) * nh;
+#endif
+  n->level = (int8_t) nlevel;
 
-  *neighbor = n;
-  *neighbor_node = nnode;
-
-  P4EST_ASSERT (p4est_quadrant_is_extended (neighbor));
+  P4EST_ASSERT (p4est_quadrant_is_extended (n));
 }
 
-void
-p4est_order_local_vertices (p4est_t * p4est,
-                            bool identify_periodic,
-                            p4est_locidx_t * num_uniq_local_vertices,
-                            p4est_locidx_t * quadrant_to_local_vertex)
+p4est_nodes_t      *
+p4est_nodes_new_local (p4est_t * p4est)
 {
   const int           rank = p4est->mpirank;
-  p4est_connectivity_t *conn = p4est->connectivity;
-  int                 qcid, transform;
-  int                 neighbor_node;
-  int                 face, corner, nnum, rlev, tree_corner;
+  int                 qcid;
+  int                 corner, nnum, rlev;
   int                 neighbor_proc;
-  bool                face_contact[4];
-  bool                quad_contact[4];
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
-  p4est_topidx_t      jt, num_trees = conn->num_trees;
-  p4est_locidx_t      Ntotal = 0;
+  p4est_topidx_t      jt;
   p4est_locidx_t      il, Ncells = p4est->local_num_quadrants;
   p4est_locidx_t      vertex_num;
   p4est_locidx_t      lqid;
-  p4est_locidx_t      neighbor_tree;
-  size_t              ctree;
+  p4est_locidx_t      tree_offset;
+  p4est_locidx_t     *ln;
   size_t              zz, numz_quadrants;
   ssize_t             lnid;
-  const p4est_qcoord_t rh = P4EST_ROOT_LEN;
-  p4est_locidx_t     *tree_offset;
-  p4est_tree_t       *tree, *ntree;
-  sc_array_t         *trees = p4est->trees;
-  sc_array_t         *quadrants, ctransforms;
-  p4est_quadrant_t    neighbor, cneighbor;
+  p4est_tree_t       *tree;
+  sc_array_t         *quadrants;
+  p4est_quadrant_t    neighbor;
   p4est_quadrant_t   *q;
-  p4est_corner_transform_t *ct;
+  p4est_indep_t      *in;
+  p4est_nodes_t      *nodes;
 
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new_local\n");
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   P4EST_QUADRANT_INIT (&neighbor);
-  P4EST_QUADRANT_INIT (&cneighbor);
 
-  sc_array_init (&ctransforms, sizeof (p4est_corner_transform_t));
+  nodes = P4EST_ALLOC (p4est_nodes_t, 1);
+  nodes->num_local_quadrants = Ncells;
+  nodes->num_owned_indeps = -1;
+  nodes->num_owned_shared = 0;
+  nodes->offset_owned_indeps = 0;
+  sc_array_init (&nodes->indep_nodes, sizeof (p4est_indep_t));
+#ifndef P4_TO_P8
+  sc_array_init (&nodes->face_hangings, sizeof (p4est_hang2_t));
+#else
+  sc_array_init (&nodes->face_hangings, sizeof (p8est_hang4_t));
+  sc_array_init (&nodes->edge_hangings, sizeof (p8est_hang2_t));
+#endif
+  nodes->local_nodes = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * Ncells);
+  sc_array_init (&nodes->shared_indeps, sizeof (sc_recycle_array_t));
+  nodes->shared_offsets = NULL;
+  nodes->nonlocal_ranks = NULL;
+  nodes->global_owned_indeps = NULL;
 
-  /* figure out the offset of each tree into the local element id */
-  tree_offset = P4EST_ALLOC_ZERO (p4est_locidx_t, num_trees);
-  if (first_local_tree >= 0) {
-    tree_offset[first_local_tree] = 0;
-    for (jt = first_local_tree; jt < last_local_tree; ++jt) {
-      tree = sc_array_index (trees, jt);
-      tree_offset[jt + 1] = tree_offset[jt] + tree->quadrants.elem_count;
-    }
+  /* Initialize vertex list to all -1.  Legitimate values are >= 0.  */
+  ln = nodes->local_nodes;
+  for (il = 0; il < P4EST_CHILDREN * Ncells; ++il) {
+    ln[il] = -1;
   }
-  else {
-    P4EST_ASSERT (first_local_tree == -1 && last_local_tree == -2);
-  }
 
-  /* Initialize vertex list to all -1.  This way we know which values
-   * get set because legitimate values are >= 0.
-   */
-  for (il = 0; il < 4 * Ncells; ++il) {
-    quadrant_to_local_vertex[il] = -1;
-  }
-
-  /* loop over all local trees to generate the connetivity list */
-  for (jt = first_local_tree, vertex_num = 0, lqid = 0;
+  /* Loop over all local trees to generate the connectivity list */
+  ln = nodes->local_nodes;
+  for (jt = first_local_tree, vertex_num = 0, lqid = 0, tree_offset = 0;
        jt <= last_local_tree; ++jt) {
-    for (face = 0; face < 4; ++face) {
-      face_contact[face] = (conn->tree_to_tree[4 * jt + face] != jt ||
-                            (identify_periodic &&
-                             (int) conn->tree_to_face[4 * jt + face] !=
-                             face));
-    }
-    tree = sc_array_index (p4est->trees, jt);
+    tree = p4est_array_index_topidx (p4est->trees, jt);
     quadrants = &tree->quadrants;
     numz_quadrants = quadrants->elem_count;
 
     /* Find the neighbors of each quadrant */
     for (zz = 0; zz < numz_quadrants; ++zz, ++lqid) {
-      /* this quadrant may be on the boundary with a range of processors */
       q = sc_array_index (quadrants, zz);
 
       /* loop over the corners of the quadrant */
-      for (corner = 0; corner < 4; ++corner) {
+      for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
 
         /* Check to see if we have a new vertex */
-        if (quadrant_to_local_vertex[lqid * 4 + corner] == -1) {
-          quadrant_to_local_vertex[lqid * 4 + corner] = vertex_num;
+        if (ln[lqid * P4EST_CHILDREN + corner] == -1) {
+          ln[lqid * P4EST_CHILDREN + corner] = vertex_num;
+          in = sc_array_push (&nodes->indep_nodes);
+          p4est_quadrant_corner_node (q, corner, (p4est_quadrant_t *) in);
+          in->pad8 = 0;
+          in->pad16 = 0;
+          in->p.piggy3.which_tree = jt;
+          in->p.piggy3.local_num = vertex_num;
 
-          /* loop over the possible neighbors and set the new vertex */
-          for (nnum = 0; nnum < 4; ++nnum) {
-            /* Don't search for the quadrant q */
-            if (3 - nnum == corner)
+          /* loop over the possible corner neighbors to match new vertex */
+          for (nnum = 0; nnum < P4EST_CHILDREN; ++nnum) {
+            /* Don't search for the quadrant q itself */
+            if (nnum == corner)
               continue;
 
             qcid = p4est_quadrant_child_id (q);
@@ -299,8 +194,8 @@ p4est_order_local_vertices (p4est_t * p4est,
                 continue;
 
               /* get possible neighbor */
-              p4est_possible_node_neighbor (q, corner, nnum, rlev,
-                                            &neighbor, &neighbor_node);
+              p4est_possible_corner_neighbor (q, corner, nnum, rlev,
+                                              &neighbor);
 
               if (p4est_quadrant_is_inside_root (&neighbor)) {
                 /* neighbor is in the same tree */
@@ -315,110 +210,13 @@ p4est_order_local_vertices (p4est_t * p4est,
                 lnid = sc_array_bsearch (quadrants, &neighbor,
                                          p4est_quadrant_compare);
                 if (lnid != -1) {
-                  lnid += tree_offset[jt];
+                  lnid += tree_offset;
                   /* We have found a neighbor in the same tree */
-                  quadrant_to_local_vertex[lnid * 4 + neighbor_node]
-                    = vertex_num;
+                  P4EST_ASSERT (ln[lnid * P4EST_CHILDREN + nnum] == -1);
+                  ln[lnid * P4EST_CHILDREN + nnum] = vertex_num;
 
                   /* No need to check for more quadrants for this neighbor */
-                  continue;
-                }
-              }
-              else {
-                /* the neighbor is in a neighboring tree or multiple
-                 * if it is a neighbor across the corner of the tree
-                 */
-
-                quad_contact[0] = (neighbor.y < 0);
-                quad_contact[1] = (neighbor.x >= rh);
-                quad_contact[2] = (neighbor.y >= rh);
-                quad_contact[3] = (neighbor.x < 0);
-
-                if ((quad_contact[0] || quad_contact[2]) &&
-                    (quad_contact[1] || quad_contact[3])) {
-                  /* Neighbor is across a corner */
-                  for (tree_corner = 0; tree_corner < 4; ++tree_corner) {
-                    if (quad_contact[(tree_corner + 3) % 4]
-                        && quad_contact[tree_corner]) {
-                      break;
-                    }
-                  }
-                  p4est_find_corner_transform (conn, jt, tree_corner,
-                                               &ctransforms);
-                  for (ctree = 0; ctree < ctransforms.elem_count; ++ctree) {
-                    ct = sc_array_index (&ctransforms, ctree);
-                    neighbor_tree = ct->ntree;
-
-                    /* Don't use corner identification in the same tree */
-                    if (!identify_periodic && neighbor_tree == jt)
-                      continue;
-
-                    cneighbor = neighbor;
-                    p4est_quadrant_transform_corner (&cneighbor,
-                                                     (int) ct->ncorner, true);
-
-                    neighbor_proc = p4est_comm_find_owner (p4est,
-                                                           neighbor_tree,
-                                                           &cneighbor, rank);
-
-                    /* Neighbor is remote so we don't number its node */
-                    if (neighbor_proc != rank)
-                      continue;
-
-                    ntree = sc_array_index (trees, neighbor_tree);
-
-                    lnid = sc_array_bsearch (&ntree->quadrants, &cneighbor,
-                                             p4est_quadrant_compare);
-                    if (lnid != -1) {
-                      lnid += tree_offset[neighbor_tree];
-                      neighbor_node = (int) ct->ncorner;
-                      /* We have found a corner neighbor */
-                      quadrant_to_local_vertex[lnid * 4 + neighbor_node]
-                        = vertex_num;
-                    }
-                  }
-                }
-                else {
-                  /* Neighbor is across a face */
-                  neighbor_tree = -1;
-                  for (face = 0; face < 4; ++face) {
-                    if (quad_contact[face] && face_contact[face]) {
-                      neighbor_tree = conn->tree_to_tree[4 * jt + face];
-                      break;
-                    }
-                  }
-                  if (face == 4) {
-                    /* this quadrant ran across a face with no neighbor */
-                    continue;
-                  }
-                  /* transform the neighbor into the other tree's
-                   * coordinates
-                   */
-                  transform = p4est_find_face_transform (conn, jt, face);
-                  p4est_quadrant_translate_face (&neighbor, face);
-                  p4est_quadrant_transform_face (&neighbor, &cneighbor,
-                                                 transform);
-
-                  neighbor_proc = p4est_comm_find_owner (p4est,
-                                                         neighbor_tree,
-                                                         &cneighbor, rank);
-                  /* Neighbor is remote so we don't number its node */
-                  if (neighbor_proc != rank)
-                    continue;
-
-                  ntree = sc_array_index (trees, neighbor_tree);
-
-                  lnid = sc_array_bsearch (&ntree->quadrants, &cneighbor,
-                                           p4est_quadrant_compare);
-                  if (lnid != -1) {
-                    lnid += tree_offset[neighbor_tree];
-                    neighbor_node = p4est_node_transform (neighbor_node,
-                                                          transform);
-
-                    /* We have found a face neighbor */
-                    quadrant_to_local_vertex[lnid * 4 + neighbor_node]
-                      = vertex_num;
-                  }
+                  break;
                 }
               }
             }
@@ -427,16 +225,20 @@ p4est_order_local_vertices (p4est_t * p4est,
         }
       }
     }
+    tree_offset += (p4est_locidx_t) numz_quadrants;
   }
 
-  Ntotal = vertex_num;
-  P4EST_FREE (tree_offset);
-  sc_array_reset (&ctransforms);
+  nodes->num_owned_indeps = vertex_num;
 
-  *num_uniq_local_vertices = Ntotal;
+  P4EST_ASSERT (tree_offset == Ncells);
+  P4EST_ASSERT (lqid == Ncells);
+  P4EST_ASSERT ((size_t) vertex_num == nodes->indep_nodes.elem_count);
+  P4EST_ASSERT (p4est_nodes_is_valid (p4est, nodes));
+
+  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_nodes_new_local\n");
+
+  return nodes;
 }
-
-#endif /* !P4_TO_P8 */
 
 /** Determine the owning tree for a node and clamp it inside the domain.
  *
@@ -453,28 +255,24 @@ static void
 p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
                          const p4est_quadrant_t * n, p4est_quadrant_t * c)
 {
-  int                 face_axis[P4EST_DIM];
-  int                 quad_contact[2 * P4EST_DIM];
-  int                 contacts, face, corner;
-  size_t              ctreez;
-  p4est_topidx_t      ntreeid, lowest;
   p4est_connectivity_t *conn = p4est->connectivity;
+  int                 face_axis[3];     /* 3 not P4EST_DIM */
+  int                 quad_contact[P4EST_FACES];
+  int                 contacts, face, corner;
+  int                 ftransform[P4EST_FTRANSFORM];
+  size_t              ctreez;
+  p4est_topidx_t      ntreeid, ntreeid2, lowest;
   p4est_quadrant_t    tmpq, o;
-#ifndef P4_TO_P8
-  int                 transform;
-  p4est_corner_transform_t *ct;
-  sc_array_t          ctransforms, *cta;
-#else
+#ifdef P4_TO_P8
   int                 edge;
-  int                 ftransform[9];
   size_t              etreez;
-  p4est_topidx_t      ntreeid2;
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
-  p8est_corner_info_t ci;
-  p8est_corner_transform_t *ct;
-  sc_array_t         *eta, *cta;
+  sc_array_t         *eta;
 #endif
+  p4est_corner_info_t ci;
+  p4est_corner_transform_t *ct;
+  sc_array_t         *cta;
 
   P4EST_ASSERT (treeid >= 0 && treeid < conn->num_trees);
   P4EST_ASSERT (p4est_quadrant_is_node (n, false));
@@ -487,26 +285,20 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   c->p.which_tree = -1;
 
   /* Check if the quadrant is inside the tree */
-#ifndef P4_TO_P8
-  quad_contact[0] = (n->y == 0);
-  quad_contact[1] = (n->x == P4EST_ROOT_LEN);
-  quad_contact[2] = (n->y == P4EST_ROOT_LEN);
-  quad_contact[3] = (n->x == 0);
-  face_axis[0] = quad_contact[1] || quad_contact[3];
-  face_axis[1] = quad_contact[0] || quad_contact[2];
-  contacts = face_axis[0] + face_axis[1];
-#else
   quad_contact[0] = (n->x == 0);
   quad_contact[1] = (n->x == P4EST_ROOT_LEN);
+  face_axis[0] = quad_contact[0] || quad_contact[1];
   quad_contact[2] = (n->y == 0);
   quad_contact[3] = (n->y == P4EST_ROOT_LEN);
+  face_axis[1] = quad_contact[2] || quad_contact[3];
+#ifndef P4_TO_P8
+  face_axis[2] = 0;
+#else
   quad_contact[4] = (n->z == 0);
   quad_contact[5] = (n->z == P4EST_ROOT_LEN);
-  face_axis[0] = quad_contact[0] || quad_contact[1];
-  face_axis[1] = quad_contact[2] || quad_contact[3];
   face_axis[2] = quad_contact[4] || quad_contact[5];
-  contacts = face_axis[0] + face_axis[1] + face_axis[2];
 #endif
+  contacts = face_axis[0] + face_axis[1] + face_axis[2];
   if (contacts == 0) {
     goto endfunction;
   }
@@ -515,15 +307,14 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
 #ifdef P4EST_DEBUG
   ntreeid = -1;
 #endif
-  for (face = 0; face < 2 * P4EST_DIM; ++face) {
+  for (face = 0; face < P4EST_FACES; ++face) {
     if (!quad_contact[face]) {
       /* The node is not touching this face */
       continue;
     }
-    ntreeid = conn->tree_to_tree[2 * P4EST_DIM * treeid + face];
+    ntreeid = conn->tree_to_tree[P4EST_FACES * treeid + face];
     if (ntreeid == treeid
-        && ((int) conn->tree_to_face[2 * P4EST_DIM * treeid + face] ==
-            face)) {
+        && ((int) conn->tree_to_face[P4EST_FACES * treeid + face] == face)) {
       /* The node touches a face with no neighbor */
       continue;
     }
@@ -531,17 +322,10 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
       /* This neighbor tree is higher, so we keep the ownership */
       continue;
     }
-#ifndef P4_TO_P8
     /* Transform the node into the other tree's coordinates */
-    transform = p4est_find_face_transform (conn, treeid, face);
-    tmpq = *n;
-    p4est_quadrant_translate_face (&tmpq, face);
-    p4est_quadrant_transform_face (&tmpq, &o, transform);
-#else
-    ntreeid2 = p8est_find_face_transform (conn, treeid, face, ftransform);
+    ntreeid2 = p4est_find_face_transform (conn, treeid, face, ftransform);
     P4EST_ASSERT (ntreeid2 == ntreeid);
-    p8est_quadrant_transform_face (n, &o, ftransform);
-#endif
+    p4est_quadrant_transform_face (n, &o, ftransform);
     if (ntreeid < lowest) {
       /* we have found a new owning tree */
       p4est_node_clamp_inside (&o, c);
@@ -565,7 +349,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   P4EST_ASSERT (contacts >= 2);
   eta = &ei.edge_transforms;
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
-  for (edge = 0; edge < 12; ++edge) {
+  for (edge = 0; edge < P8EST_EDGES; ++edge) {
     if (!(quad_contact[p8est_edge_faces[edge][0]] &&
           quad_contact[p8est_edge_faces[edge][1]])) {
       continue;
@@ -602,27 +386,18 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
 #endif
 
   P4EST_ASSERT (contacts == P4EST_DIM);
-#ifndef P4_TO_P8
-  cta = &ctransforms;
-  sc_array_init (cta, sizeof (p4est_corner_transform_t));
-#else
   cta = &ci.corner_transforms;
-  sc_array_init (cta, sizeof (p8est_corner_transform_t));
-#endif
+  sc_array_init (cta, sizeof (p4est_corner_transform_t));
   for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
-#ifndef P4_TO_P8
-    if (!(quad_contact[(corner + 3) % 4] && quad_contact[corner])) {
-      continue;
-    }
-    p4est_find_corner_transform (conn, treeid, corner, cta);
-#else
-    if (!(quad_contact[p8est_corner_faces[corner][0]] &&
-          quad_contact[p8est_corner_faces[corner][1]] &&
-          quad_contact[p8est_corner_faces[corner][2]])) {
-      continue;
-    }
-    p8est_find_corner_transform (conn, treeid, corner, &ci);
+    if (!(quad_contact[p4est_corner_faces[corner][0]] &&
+          quad_contact[p4est_corner_faces[corner][1]] &&
+#ifdef P4_TO_P8
+          quad_contact[p4est_corner_faces[corner][2]] &&
 #endif
+          true)) {
+      continue;
+    }
+    p4est_find_corner_transform (conn, treeid, corner, &ci);
     for (ctreez = 0; ctreez < cta->elem_count; ++ctreez) {
       ct = sc_array_index (cta, ctreez);
       ntreeid = ct->ntree;
@@ -765,6 +540,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   sc_hash_array_t    *edge_hangings;
 #endif
 
+  if (ghost == NULL)
+    return p4est_nodes_new_local (p4est);
+
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new\n");
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -846,39 +624,33 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       /* assign independent node and face hanging node status */
       for (k = 0; k < P4EST_CHILDREN; ++k) {
         if (k == qcid || k == P4EST_CHILDREN - 1 - qcid || q->level == 0) {
-          quad_status[k] = 0;
+          quad_status[k] = 0;   /* independent node */
           continue;
         }
-#ifndef P4_TO_P8
-        if (k == p4est_hanging_corner[qcid][0]) {
-          face = p4est_hanging_face[qcid][0];
-        }
-        else {
-          P4EST_ASSERT (k == p4est_hanging_corner[qcid][1]);
-          face = p4est_hanging_face[qcid][1];
-        }
-#else
-        face = p8est_child_corner_faces[qcid][k];
+        face = p4est_child_corner_faces[qcid][k];
         if (face == -1) {
+#ifndef P4_TO_P8
+          SC_ABORT_NOT_REACHED ();
+#else
           P4EST_ASSERT (p8est_child_corner_edges[qcid][k] >= 0);
           continue;
-        }
 #endif
+        }
         p4est_quadrant_face_neighbor (&p, face, &n);
         if (p4est_quadrant_exists (p4est, ghost, jt, &n, NULL)) {
-          quad_status[k] = 1;
+          quad_status[k] = 1;   /* face hanging node */
 #ifdef P4_TO_P8
-          for (l = 0; l < 4; ++l) {
-            corner = p8est_face_corners[face][l];
+          for (l = 0; l < P4EST_HALF; ++l) {
+            corner = p4est_face_corners[face][l];
             if (corner != qcid && corner != k) {
-              quad_status[corner] = 2;
+              quad_status[corner] = 2;  /* identify edge hanging nodes */
             }
           }
 #endif
           ++all_face_hangings;
         }
         else {
-          quad_status[k] = 0;
+          quad_status[k] = 0;   /* independent node */
         }
       }
 
@@ -887,7 +659,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       for (k = 0; k < P4EST_CHILDREN; ++k) {
         if (quad_status[k] == -1) {
           edge = p8est_child_corner_edges[qcid][k];
-          P4EST_ASSERT (edge >= 0 && edge < 12);
+          P4EST_ASSERT (edge >= 0 && edge < P8EST_EDGES);
           p8est_quadrant_edge_neighbor (&p, edge, &n);
           quad_status[k] = (int8_t)
             (p4est_quadrant_exists (p4est, ghost, jt, &n,
@@ -1231,12 +1003,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       for (k = 0; k < P4EST_CHILDREN; ++k) {
         if (quad_status[k] == 1) {
           P4EST_ASSERT (qcid != k && quad_indeps[qcid] != quad_indeps[k]);
-#ifndef P4_TO_P8
-          P4EST_ASSERT (k == p4est_hanging_corner[qcid][0] ||
-                        k == p4est_hanging_corner[qcid][1]);
-#else
-          P4EST_ASSERT (p8est_child_corner_faces[qcid][k] >= 0);
-#endif
+          P4EST_ASSERT (p4est_child_corner_faces[qcid][k] >= 0);
           p4est_quadrant_corner_node (q, k, &n);
           p4est_node_canonicalize (p4est, jt, &n, &c);
           r = sc_hash_array_insert_unique (face_hangings, &c, &position);
@@ -1348,8 +1115,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   nodes->offset_owned_indeps = offset_owned_indeps;
   sc_hash_array_rip (indep_nodes, inda = &nodes->indep_nodes);
   nonlocal_ranks = nodes->nonlocal_ranks =
-    P4EST_ALLOC (int, num_indep_nodes - num_owned_indeps + 1);
-  nonlocal_ranks[num_indep_nodes - num_owned_indeps] = -1;
+    P4EST_ALLOC (int, num_indep_nodes - num_owned_indeps);
   nodes->global_owned_indeps = P4EST_ALLOC (p4est_locidx_t, num_procs);
   nodes->global_owned_indeps[rank] = num_owned_indeps;
   indep_nodes = NULL;
@@ -1496,7 +1262,6 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                   (unsigned long long) shared_indeps->elem_count);
 #endif
 
-  P4EST_ASSERT (*nonlocal_ranks == -1);
   P4EST_ASSERT (p4est_nodes_is_valid (p4est, nodes));
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_nodes_new\n");
 
@@ -1547,6 +1312,19 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 
   failed = false;
   sorted = P4EST_ALLOC (int, INT8_MAX);
+
+  if (nodes->indep_nodes.elem_size != sizeof (p4est_indep_t) ||
+#ifndef P4_TO_P8
+      nodes->face_hangings.elem_size != sizeof (p4est_hang2_t) ||
+#else
+      nodes->face_hangings.elem_size != sizeof (p8est_hang4_t) ||
+      nodes->edge_hangings.elem_size != sizeof (p8est_hang2_t) ||
+#endif
+      nodes->shared_indeps.elem_size != sizeof (sc_recycle_array_t)) {
+    P4EST_NOTICE ("p4est nodes invalid array size\n");
+    failed = true;
+    goto failtest;
+  }
 
   if (nodes->num_local_quadrants != p4est->local_num_quadrants) {
     P4EST_NOTICE ("p4est nodes invalid quadrant count\n");
@@ -1665,11 +1443,6 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
       failed = true;
       goto failtest;
     }
-  }
-  if (nodes->nonlocal_ranks[k] != -1) {
-    P4EST_NOTICE ("p4est nodes invalid safeguard\n");
-    failed = true;
-    goto failtest;
   }
 
   /* Test clamp status for hanging nodes */

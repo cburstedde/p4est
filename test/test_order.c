@@ -29,6 +29,13 @@ typedef struct
 }
 user_data_t;
 
+typedef struct p4est_vert
+{
+  double              x, y, z;
+  p4est_topidx_t      treeid;
+}
+p4est_vert_t;
+
 static int          refine_level = 6;
 
 static void
@@ -69,12 +76,6 @@ weight_one (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-typedef struct p4est_vert
-{
-  double              x, y, z;
-}
-p4est_vert_t;
-
 static int
 p4est_vert_compare (const void *a, const void *b)
 {
@@ -83,6 +84,10 @@ p4est_vert_compare (const void *a, const void *b)
   const double        eps = 1e-15;
   double              xdiff, ydiff, zdiff;
   int                 retval = 0;
+
+  if (v1->treeid != v2->treeid) {
+    return (int) v1->treeid - (int) v2->treeid;
+  }
 
   xdiff = fabs (v1->x - v2->x);
   if (xdiff < eps) {
@@ -110,44 +115,46 @@ p4est_vert_compare (const void *a, const void *b)
 static void
 p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 {
-  size_t              iz;
-  p4est_topidx_t      jt;
-  p4est_locidx_t      kl;
-  p4est_locidx_t      num_uniq_local_vertices;
-  p4est_locidx_t     *quadrant_to_local_vertex;
-  p4est_topidx_t     *tree_to_vertex;
+  const double        intsize = 1.0 / P4EST_ROOT_LEN;
   double             *vertices;
-  p4est_tree_t       *tree;
-  p4est_quadrant_t   *quad;
-  p4est_topidx_t      first_local_tree;
-  p4est_topidx_t      last_local_tree;
-  p4est_qcoord_t      inth;
   double              h, eta1, eta2;
-  double              v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y,
-    v3z;
-  double              w0x, w0y, w0z, w1x, w1y, w1z, w2x, w2y, w2z, w3x, w3y,
-    w3z;
-  p4est_topidx_t      v0, v1, v2, v3;
-  p4est_locidx_t      lv0, lv1, lv2, lv3;
-  double              intsize = 1.0 / P4EST_ROOT_LEN;
-  sc_array_t         *trees;
-  sc_array_t         *quadrants;
+  double              v0x, v0y, v0z, v1x, v1y, v1z;
+  double              v2x, v2y, v2z, v3x, v3y, v3z;
+  double              w0x, w0y, w0z, w1x, w1y, w1z;
+  double              w2x, w2y, w2z, w3x, w3y, w3z;
+  size_t              iz;
   size_t              num_quads;
   size_t              quad_count;
-  bool                identify_periodic;
+  p4est_topidx_t      jt;
+  p4est_topidx_t     *tree_to_vertex;
+  p4est_topidx_t      first_local_tree;
+  p4est_topidx_t      last_local_tree;
+  p4est_topidx_t      v0, v1, v2, v3;
+  p4est_locidx_t      kl;
+  p4est_locidx_t      lv0, lv1, lv2, lv3;
+  p4est_locidx_t      num_uniq_local_vertices;
+  p4est_locidx_t     *quadrant_to_local_vertex;
+  p4est_qcoord_t      inth;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
   p4est_vert_t       *vert_locations;
+  p4est_nodes_t      *nodes;
+  sc_array_t         *trees;
+  sc_array_t         *quadrants;
 
-  quadrant_to_local_vertex = P4EST_ALLOC (p4est_locidx_t,
-                                          4 * p4est->local_num_quadrants);
+  nodes = p4est_nodes_new (p4est, NULL);
+  quadrant_to_local_vertex = nodes->local_nodes;
+  num_uniq_local_vertices = nodes->num_owned_indeps;
+  SC_CHECK_ABORT ((size_t) num_uniq_local_vertices ==
+                  nodes->indep_nodes.elem_count, "Node count mismatch");
 
-  identify_periodic = true;
-  p4est_order_local_vertices (p4est, identify_periodic,
-                              &num_uniq_local_vertices,
-                              quadrant_to_local_vertex);
   P4EST_INFOF ("Unique local vertices %lld\n",
                (long long) num_uniq_local_vertices);
 
   vert_locations = P4EST_ALLOC (p4est_vert_t, num_uniq_local_vertices);
+  for (kl = 0; kl < num_uniq_local_vertices; ++kl) {
+    vert_locations[kl].treeid = -1;
+  }
 
   tree_to_vertex = connectivity->tree_to_vertex;
   vertices = connectivity->vertices;
@@ -157,17 +164,13 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 
   for (jt = first_local_tree, quad_count = 0; jt <= last_local_tree; ++jt) {
     tree = p4est_array_index_topidx (trees, jt);
-    /*
-     * Note that we switch from right-hand-rule order for tree_to_vertex
-     * to pixel order for v
-     */
 
     P4EST_ASSERT (0 <= jt && jt < connectivity->num_trees);
 
     v0 = tree_to_vertex[jt * 4 + 0];
     v1 = tree_to_vertex[jt * 4 + 1];
-    v2 = tree_to_vertex[jt * 4 + 3];
-    v3 = tree_to_vertex[jt * 4 + 2];
+    v2 = tree_to_vertex[jt * 4 + 2];
+    v3 = tree_to_vertex[jt * 4 + 3];
 
     P4EST_ASSERT (0 <= v0 && v0 < connectivity->num_vertices);
     P4EST_ASSERT (0 <= v1 && v1 < connectivity->num_vertices);
@@ -273,18 +276,30 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
       vert_locations[lv0].x = w0x;
       vert_locations[lv0].y = w0y;
       vert_locations[lv0].z = w0z;
+      P4EST_ASSERT (vert_locations[lv0].treeid == -1 ||
+                    vert_locations[lv0].treeid == jt);
+      vert_locations[lv0].treeid = jt;
 
       vert_locations[lv1].x = w1x;
       vert_locations[lv1].y = w1y;
       vert_locations[lv1].z = w1z;
+      P4EST_ASSERT (vert_locations[lv1].treeid == -1 ||
+                    vert_locations[lv1].treeid == jt);
+      vert_locations[lv1].treeid = jt;
 
       vert_locations[lv2].x = w2x;
       vert_locations[lv2].y = w2y;
       vert_locations[lv2].z = w2z;
+      P4EST_ASSERT (vert_locations[lv2].treeid == -1 ||
+                    vert_locations[lv2].treeid == jt);
+      vert_locations[lv2].treeid = jt;
 
       vert_locations[lv3].x = w3x;
       vert_locations[lv3].y = w3y;
       vert_locations[lv3].z = w3z;
+      P4EST_ASSERT (vert_locations[lv3].treeid == -1 ||
+                    vert_locations[lv3].treeid == jt);
+      vert_locations[lv3].treeid = jt;
     }
   }
 
@@ -298,8 +313,8 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
                     "local ordering not unique");
   }
 
-  P4EST_FREE (quadrant_to_local_vertex);
   P4EST_FREE (vert_locations);
+  p4est_nodes_destroy (nodes);
 }
 
 static int          weight_counter;
