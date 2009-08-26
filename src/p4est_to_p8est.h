@@ -70,6 +70,8 @@
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
+#define p4est_lnodes_t                  p8est_lnodes_t
+#define p4est_lnodes_rank_t             p8est_lnodes_rank_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
 #define p4est_iter_face_side_t          p8est_iter_face_side_t
@@ -109,6 +111,8 @@
 #define p4est_load                      p8est_load
 #define p4est_balance_type_int          p8est_balance_type_int
 #define p4est_balance_type_string       p8est_balance_type_string
+
+/* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
 
 /* functions in p4est_points */
@@ -215,5 +219,10 @@
 #define p4est_nodes_new                 p8est_nodes_new
 #define p4est_nodes_destroy             p8est_nodes_destroy
 #define p4est_nodes_is_valid            p8est_nodes_is_valid
+
+/* functions in p4est_lnodes */
+#define p4est_lnodes_new                p8est_lnodes_new
+#define p4est_lnodes_destroy            p8est_lnodes_destroy
+#define p4est_lnodes_decode             p8est_lnodes_decode
 
 #endif /* !P4EST_TO_P8EST_H */

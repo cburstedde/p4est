@@ -19,18 +19,18 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef P8EST_LNODES_H
-#define P8EST_LNODES_H
+#ifndef P4EST_LNODES_H
+#define P4EST_LNODES_H
 
-#include <p8est.h>
+#include <p4est.h>
 
 SC_EXTERN_C_BEGIN;
 
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
  *
  * Each element has degree+1 nodes per edge
- * and vnodes = (degree+1)^3 nodes per volume.
- * num_local_elements is the number of local quadrants in the p8est.
+ * and vnodes = (degree+1)^2 nodes per volume.
+ * num_local_elements is the number of local quadrants in the p4est.
  * local_nodes is of dimension vnodes * num_local_elements
  * and indexes into the array global_nodes layed out as follows:
  * global_nodes = [<--------------->|<-------------------->|          ]
@@ -41,30 +41,30 @@ SC_EXTERN_C_BEGIN;
  * Hanging nodes are always local and don't have a global number.
  * They index the geometrically corresponding global indep_node of a neighbor.
  *
- * Whether nodes are hanging or not is decided based on the element faces and
- * edges. This information is encoded in face_code with one int16_t per
- * element. If no faces are hanging, the value is zero, otherwise the face_code
- * is interpreted by p8est_lnodes_decode.
+ * Whether nodes are hanging or not is decided based on the element faces.
+ * This information is encoded in face_code with one int8_t per element.
+ * If no faces are hanging, the value is zero, otherwise the face_code is
+ * interpreted by p4est_lnodes_decode.
  *
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
  * on the lowest numbered octree sharing the node.
- * The sharers array contains items of type p8est_lnodes_rank_t
+ * The sharers array contains items of type p4est_lnodes_rank_t
  * that hold the ranks that own or share independent local nodes.
  * It is sorted by rank.  The rank of the current process is included.
  */
-typedef struct p8est_lnodes
+typedef struct p4est_lnodes
 {
   int                 degree, vnodes;
   p4est_locidx_t      num_local_elements;
   p4est_locidx_t      num_indep_nodes;
   p4est_locidx_t      owned_offset, owned_count;
-  int16_t            *face_code;
+  int8_t             *face_code;
   p4est_locidx_t     *local_nodes;
   p4est_gloidx_t     *global_nodes;
   sc_array_t         *sharers;
 }
-p8est_lnodes_t;
+p4est_lnodes_t;
 
 /** The structure stored in the sharers array.
  *
@@ -75,67 +75,52 @@ p8est_lnodes_t;
  * by indexing the shared_nodes array, not the global_nodes array.
  * owned_offset and owned_count define the section of local nodes
  * that is owned by this processor (the section may be empty).
- * For the current process these coincide with those in p8est_lnodes_t.
+ * For the current process these coincide with those in p4est_lnodes_t.
  */
-typedef struct p8est_lnodes_rank
+typedef struct p4est_lnodes_rank
 {
   int                 rank;
   sc_array_t          shared_nodes;
   p4est_locidx_t      shared_mine_offset, shared_mine_count;
   p4est_locidx_t      owned_offset, owned_count;
 }
-p8est_lnodes_rank_t;
+p4est_lnodes_rank_t;
 
 /** Decode the face_code into hanging face information.
  *
  * This is mostly for demonstration purposes.  Applications probably will
  * integrate it into their own loop over the face for performance reasons.
  *
- * \param[in] face_code as in the p8est_lnodes_t structure.
- * \param[out] hanging_face: if there are hanging faces or edges,
+ * \param[in] face_code as in the p4est_lnodes_t structure.
+ * \param[out] hanging face: if there are hanging faces,
  *             hanging_face = -1 if the face is not hanging,
- *                          = the corner of the full face that it touches:
- *                            e.g. if face = i and hanging_face[i] = 
- *                            j, then the interpolation operator corresponding
- *                            to corner j should be used for that face.
- *             note: not touched if there are no hanging faces or edges.
- * \param[out] hanging_edge: if there are hanging faces or edges,
- *             hanging_edge = -1 if the edge is not hanging or touches a
- *                               hanging face,
- *                          = 0 if the edge is the first half of the full edge,
- *                          = 1 if the edge is the second half.
- *             not: not touched if there are no hanging faces or edges;
- * \return              true if any face or edge is hanging, false otherwise.
+ *                          = 0 if the face is the first half,
+ *                          = 1 if the face is the second half.
+ *             note: not touched if there are no hanging faces.
+ *           
+ * \return              true if any face is hanging, false otherwise.
  */
 /*@unused@*/
 static inline       bool
-p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
-                     int hanging_edge[12])
+p4est_lnodes_decode (int8_t face_code, int hanging_face[6])
 {
   SC_ASSERT (face_code >= 0);
 
   if (face_code) {
     int                 i;
-    int16_t             c = face_code & 0x0007;
-    int16_t             cwork;
+    int8_t              c = face_code & 0x03;
+    int8_t              cwork;
     int                 f;
-    int                 e;
-    int16_t             work = face_code >> 3;
+    int8_t              work = face_code >> 2;
 
-    memset (hanging_face, -1, 6 * sizeof (int));
-    memset (hanging_edge, -1, 12 * sizeof (int));
+    memset (hanging_face, -1, 4 * sizeof (int));
 
     cwork = c;
-    for (i = 0; i < 3; ++i) {
-      e = p8est_corner_edges[c][i];
-      hanging_edge[e] = (work & 0x0001) ? (int) (cwork & 0x0001) : -1;
+    for (i = 0; i < 2; ++i) {
+      /* TODO: change after z-order switch over */
+      f = p4est_rface_to_zface[p4est_corner_faces[c][i]];
+      hanging_face[f] = (work & 0x01) ? (int) (cwork & 0x01) : -1;
       cwork >>= 1;
-      work >>= 1;
-    }
-    for (i = 0; i < 3; ++i) {
-      f = p8est_corner_faces[c][i];
-      hanging_face[f] =
-        (work & 0x0001) ? p8est_corner_face_corners[c][f] : -1;
       work >>= 1;
     }
 
@@ -146,10 +131,10 @@ p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
   }
 }
 
-p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
+p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
                                       sc_array_t * ghost_layer, int degree);
-void                p8est_lnodes_destroy (p8est_lnodes_t *);
+void                p4est_lnodes_destroy (p4est_lnodes_t *);
 
 SC_EXTERN_C_END;
 
-#endif /* !P8EST_LNODES */
+#endif /* !P4EST_LNODES */
