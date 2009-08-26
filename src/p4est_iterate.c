@@ -614,6 +614,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
 
   info->p4est = p4est;
   info->ghost_layer = ghost_layer;
+  info->intra_tree = false;
   sc_array_init (&(info->sides), sizeof (p4est_iter_corner_side_t));
   start_idx2 = args->start_idx2 =
     P4EST_ALLOC (int, loop_args->alloc_size / 2);
@@ -938,6 +939,7 @@ p8est_iter_init_corner_from_edge (p4est_iter_corner_args_t * args,
 
   info->p4est = edge_args->info.p4est;
   info->ghost_layer = edge_args->info.ghost_layer;
+  info->intra_tree = edge_args->info.intra_tree;
   sc_array_init (&(info->sides), sizeof (p4est_iter_corner_side_t));
   args->loop_args = edge_args->loop_args;
   args->num_sides = edge_args->num_sides * 2;
@@ -992,6 +994,7 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
 
   info->p4est = p8est;
   info->ghost_layer = ghost_layer;
+  info->intra_tree = false;
   start_idx2 = args->start_idx2 =
     P4EST_ALLOC (int, loop_args->alloc_size / 2);
   sc_array_init (&(info->sides), sizeof (p8est_iter_edge_side_t));
@@ -1460,6 +1463,7 @@ p4est_iter_init_corner_from_face (p4est_iter_corner_args_t * args,
 
   info->p4est = face_args->info.p4est;
   info->ghost_layer = face_args->info.ghost_layer;
+  info->intra_tree = face_args->info.intra_tree;
   sc_array_init (&(info->sides), sizeof (p4est_iter_corner_side_t));
   args->num_sides = limit * ntc_str;
   sc_array_resize (&(info->sides), (size_t) args->num_sides);
@@ -1508,6 +1512,7 @@ p8est_iter_init_edge_from_face (p8est_iter_edge_args_t * args,
 
   info->p4est = face_args->info.p4est;
   info->ghost_layer = face_args->info.ghost_layer;
+  info->intra_tree = face_args->info.intra_tree;
   sc_array_init (&(info->sides), sizeof (p8est_iter_edge_side_t));
   args->num_sides = limit * ntc_str / 2;
   sc_array_resize (&(info->sides), (size_t) args->num_sides);
@@ -1569,6 +1574,7 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
   args->loop_args = loop_args;
   info->p4est = p4est;
   info->ghost_layer = ghost_layer;
+  info->intra_tree = false;
   sc_array_init (&(info->sides), sizeof (p4est_iter_face_side_t));
 
   tempq.x = 0;
@@ -2049,6 +2055,7 @@ p4est_iter_init_face_from_volume (p4est_iter_face_args_t * args,
   info->p4est = volume_args->info.p4est;
   info->ghost_layer = volume_args->info.ghost_layer;
   info->orientation = 0;
+  info->intra_tree = true;
   sc_array_init (&(info->sides), sizeof (p4est_iter_face_side_t));
   sc_array_resize (&(info->sides), 2);
   args->loop_args = volume_args->loop_args;
@@ -2118,6 +2125,7 @@ p8est_iter_init_edge_from_volume (p8est_iter_edge_args_t * args,
 
   info->p4est = volume_args->info.p4est;
   info->ghost_layer = volume_args->info.ghost_layer;
+  info->intra_tree = true;
   sc_array_init (&(info->sides), sizeof (p8est_iter_edge_side_t));
   sc_array_resize (&(info->sides), 4);
   sc_array_init (&(common_corners[0]), sizeof (int));
@@ -2159,6 +2167,7 @@ p4est_iter_init_corner_from_volume (p4est_iter_corner_args_t * args,
 
   info->p4est = volume_args->info.p4est;
   info->ghost_layer = volume_args->info.ghost_layer;
+  info->intra_tree = true;
   sc_array_init (&(info->sides), sizeof (p4est_iter_corner_side_t));
   sc_array_resize (&(info->sides), P4EST_CHILDREN);
   args->start_idx2 = P4EST_ALLOC (int, P4EST_CHILDREN);

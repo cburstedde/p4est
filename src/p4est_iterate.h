@@ -86,12 +86,16 @@ p4est_iter_face_side_t;
  * is 0 if the face is within one tree; otherwise, it is the same as the
  * orientation value between the two trees given in the connectivity.  If the
  * face is on the outside boundary of the forest, then there is only one side.
+ * If intra_tree is true, the face is on the interior of a tree.
+ * When intra_tree is true, sides[0] contains the lowest z-order quadrant that
+ * touches the face.
  */
 typedef struct p4est_iter_face_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
   int                 orientation;
+  bool                intra_tree;
   sc_array_t          sides;    /* p4est_iter_face_side_t */
 }
 p4est_iter_face_info_t;
@@ -122,11 +126,15 @@ typedef struct p4est_iter_corner_side
 p4est_iter_corner_side_t;
 
 /** The information about all sides of a corner in the forest.
+ * If intra_tree is true, the corner is on the interior of a tree.
+ * When intra_tree is true, sides[0] contains the lowest z-order quadrant that
+ * touches the corner.
  */
 typedef struct p4est_iter_corner_info
 {
   p4est_t            *p4est;
   sc_array_t         *ghost_layer;
+  bool                intra_tree;
   sc_array_t          sides;    /* p4est_iter_corner_side_t */
 }
 p4est_iter_corner_info_t;
