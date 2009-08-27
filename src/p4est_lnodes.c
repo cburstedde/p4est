@@ -90,20 +90,18 @@ typedef struct p8est_lnodes_edp
 p8est_lnodes_edp_t;
 #endif
 
-/** inode: independent node.
- * If the node is only needed by the local process, then share_offset = -1 and
- * share_count = 0.  Otherwise these values index into the inode_sharers array
- * for a list of all processes that share it (local process included).
- */
+/** inode: independent node. */
 typedef struct p4est_lnodes_inode
 {
   int                 owner;
-  p4est_locidx_t      share_offset;
-  int8_t              share_count;
+  p4est_locidx_t      local_index;
 }
 p4est_lnodes_inode_t;
 
-/** buf_info: encodes/decodes the transmission of node information. */
+/** buf_info: encodes/decodes the transmission of node information.
+ * share_offset and share_count index into the inode_sharers array
+ * for a list of all processes that share the nodes (local process included).
+ */
 typedef struct p4est_lnodes_buf_info
 {
   p4est_quadrant_t    q;        /* p.which_tree filled */
@@ -111,6 +109,8 @@ typedef struct p4est_lnodes_buf_info
   bool                send_sharers;     /* whether the sharers are included in
                                            the message */
   p4est_locidx_t      first_index;      /* inodes array, first node to/from */
+  p4est_locidx_t      share_offset;
+  int8_t              share_count;
 }
 p4est_lnodes_buf_info_t;
 
@@ -886,48 +886,43 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
 
   inode = sc_array_push (inodes);
   inode->owner = owner_proc;
+  inode->local_index = -1;
+
   count = all_procs.elem_count;
   if (count) {
     P4EST_QUADRANT_INIT (&tempq);
     p4est_quadrant_smallest_corner_descendent (owner_quad, &tempq,
                                                owner_corner);
-    inode->share_offset = sharers_offset;
     ip = sc_array_push (inode_sharers);
     *ip = rank;
-    new_count++;
-    for (zz = 0; zz < count; zz++, new_count++) {
+    new_count = (int8_t) (count + 1);
+    for (zz = 0; zz < count; zz++) {
       ip = sc_array_push (inode_sharers);
       proc = *((int *) sc_array_index (&all_procs, zz));
       *ip = proc;
       if (owner_proc == rank) {
         binfo = sc_array_push (&(send_buf_info[proc]));
-        binfo->q = tempq;
-        binfo->q.p.which_tree = owner_tid;
-        binfo->type = (int8_t) (P4EST_LN_C_OFFSET + owner_corner);
         if (sc_array_bsearch (&touching_procs, &proc, sc_int_compare) >= 0) {
           binfo->send_sharers = false;
         }
         else {
           binfo->send_sharers = true;
         }
-        binfo->first_index = num_inodes;
       }
       else if (proc == owner_proc) {
-        P4EST_ASSERT (proc != rank);
         binfo = sc_array_push (&(recv_buf_info[proc]));
-        binfo->q = tempq;
-        binfo->q.p.which_tree = owner_tid;
-        binfo->type = (int8_t) (P4EST_LN_C_OFFSET + owner_corner);
         binfo->send_sharers = false;
-        binfo->first_index = num_inodes;
       }
+      else {
+        continue;
+      }
+      binfo->q = tempq;
+      binfo->q.p.which_tree = owner_tid;
+      binfo->type = (int8_t) (P4EST_LN_C_OFFSET + owner_corner);
+      binfo->first_index = num_inodes;
+      binfo->share_offset = sharers_offset;
+      binfo->share_count = new_count;
     }
-    inode->share_count = new_count;
-  }
-  else {
-    P4EST_ASSERT (owner_proc == rank);
-    inode->share_offset = -1;
-    inode->share_count = 0;
   }
 
   sc_array_reset (&touching_procs);
@@ -1169,49 +1164,39 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
     }
     ip = sc_array_push (inode_sharers);
     *ip = rank;
-    new_count++;
-    for (zz = 0; zz < count; zz++, new_count++) {
+    new_count = (int8_t) (count + 1);
+    for (zz = 0; zz < count; zz++) {
       ip = sc_array_push (inode_sharers);
       proc = *((int *) sc_array_index (&all_procs, zz));
       *ip = proc;
       if (owner_proc == rank) {
         binfo = sc_array_push (&(send_buf_info[proc]));
-        binfo->q = tempq;
-        binfo->q.p.which_tree = owner_tid;
-        binfo->type = (int8_t) (P8EST_LN_E_OFFSET + owner_edge);
         if (sc_array_bsearch (&touching_procs, &proc, sc_int_compare) >= 0) {
           binfo->send_sharers = false;
         }
         else {
           binfo->send_sharers = true;
         }
-        binfo->first_index = num_inodes;
       }
       else if (proc == owner_proc) {
-        P4EST_ASSERT (proc != rank);
         binfo = sc_array_push (&(recv_buf_info[proc]));
-        binfo->q = tempq;
-        binfo->q.p.which_tree = owner_tid;
-        binfo->type = (int8_t) (P8EST_LN_E_OFFSET + owner_edge);
         binfo->send_sharers = false;
-        binfo->first_index = num_inodes;
       }
-    }
-    for (i = 0; i < nodes_per_edge; i++) {
-      inode = sc_array_push (inodes);
-      inode->owner = owner_proc;
-      inode->share_offset = sharers_offset;
-      inode->share_count = new_count;
+      else {
+        continue;
+      }
+      binfo->q = tempq;
+      binfo->q.p.which_tree = owner_tid;
+      binfo->type = (int8_t) (P8EST_LN_E_OFFSET + owner_edge);
+      binfo->first_index = num_inodes;
+      binfo->share_offset = sharers_offset;
+      binfo->share_count = new_count;
     }
   }
-  else {
-    P4EST_ASSERT (owner_proc == rank);
-    for (i = 0; i < nodes_per_edge; i++) {
-      inode = sc_array_push (inodes);
-      inode->owner = rank;
-      inode->share_offset = -1;
-      inode->share_count = 0;
-    }
+  for (i = 0; i < nodes_per_edge; i++) {
+    inode = sc_array_push (inodes);
+    inode->owner = owner_proc;
+    inode->local_index = -1;
   }
 
   sc_array_reset (&touching_procs);
@@ -1456,44 +1441,33 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *data)
     tempq = *owner_quad;
     ip = sc_array_push (inode_sharers);
     *ip = rank;
-    new_count++;
-    for (zz = 0; zz < count; zz++, new_count++) {
+    new_count = (int8_t) count + 1;
+    for (zz = 0; zz < count; zz++) {
       ip = sc_array_push (inode_sharers);
       proc = *((int *) sc_array_index (&touching_procs, zz));
       *ip = proc;
       if (owner_proc == rank) {
         binfo = sc_array_push (&(send_buf_info[proc]));
-        binfo->q = tempq;
-        binfo->q.p.which_tree = owner_tid;
-        binfo->type = (int8_t) owner_face;
-        binfo->send_sharers = false;
-        binfo->first_index = num_inodes;
       }
       else if (proc == owner_proc) {
-        P4EST_ASSERT (proc != rank);
         binfo = sc_array_push (&(recv_buf_info[proc]));
-        binfo->q = tempq;
-        binfo->q.p.which_tree = owner_tid;
-        binfo->type = (int8_t) owner_face;
-        binfo->send_sharers = false;
-        binfo->first_index = num_inodes;
       }
-    }
-    for (i = 0; i < nodes_per_face; i++) {
-      inode = sc_array_push (inodes);
-      inode->owner = owner_proc;
-      inode->share_offset = sharers_offset;
-      inode->share_count = new_count;
+      else {
+        continue;
+      }
+      binfo->q = tempq;
+      binfo->q.p.which_tree = owner_tid;
+      binfo->type = (int8_t) owner_face;
+      binfo->send_sharers = false;
+      binfo->first_index = num_inodes;
+      binfo->share_offset = sharers_offset;
+      binfo->share_count = new_count;
     }
   }
-  else {
-    P4EST_ASSERT (owner_proc == rank);
-    for (i = 0; i < nodes_per_face; i++) {
-      inode = sc_array_push (inodes);
-      inode->owner = rank;
-      inode->share_offset = -1;
-      inode->share_count = 0;
-    }
+  for (i = 0; i < nodes_per_face; i++) {
+    inode = sc_array_push (inodes);
+    inode->owner = owner_proc;
+    inode->local_index = -1;
   }
 
   sc_array_reset (&touching_procs);
@@ -1525,8 +1499,7 @@ p4est_lnodes_volume_callback (p4est_iter_volume_info_t * info, void *data)
     elem_nodes[nid] = num_inodes + (p4est_locidx_t) i;
     inode = sc_array_push (inodes);
     inode->owner = info->p4est->mpirank;
-    inode->share_offset = -1;
-    inode->share_count = 0;
+    inode->local_index = -1;
   }
 }
 
@@ -1659,10 +1632,11 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
   binfo->type = P4EST_LN_C_OFFSET + ownerc;
   binfo->first_index = num_inodes;
   binfo->send_sharers = true;
+  binfo->share_offset = -1;
+  binfo->share_count = -1;
   inode = sc_array_push (inodes);
   inode->owner = owner_proc;
-  inode->share_offset = -1;
-  inode->share_count = -1;
+  inode->local_index = -1;
 
   return num_inodes;
 }
@@ -1793,12 +1767,13 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
   binfo->type = P8EST_LN_E_OFFSET + ownere;
   binfo->first_index = num_inodes;
   binfo->send_sharers = true;
+  binfo->share_offset = -1;
+  binfo->share_count = -1;
 
   for (i = 0; i < nodes_per_edge; i++) {
     inode = sc_array_push (inodes);
     inode->owner = owner_proc;
-    inode->share_offset = -1;
-    inode->share_count = -1;
+    inode->local_index = -1;
   }
 
   f = hface->face;
@@ -2011,6 +1986,15 @@ p4est_lnodes_binfo_compare (const void *a, const void *b)
     return piggy_compar;
   }
   return (bufa->type - bufb->type);
+}
+
+static              bool
+p4est_lnodes_binfo_is_equal (const void *a, const void *b)
+{
+  const p4est_lnodes_buf_info_t *bufa = a;
+  const p4est_lnodes_buf_info_t *bufb = b;
+  return (p4est_quadrant_is_equal_piggy (&(bufa->q), &(bufb->q)) &&
+          bufa->type == bufb->type);
 }
 
 #ifdef P4_TO_P8
@@ -2273,12 +2257,11 @@ p4est_lnodes_reset_iter_data (p4est_lnodes_iter_data_t * data,
   /* do not free face_codes: control given to lnodes_t */
 }
 
-static p4est_locidx_t *
+static void
 p4est_lnodes_order_nodes (p4est_lnodes_iter_data_t * data, p4est_t * p4est,
                           sc_array_t * ghost_layer)
 {
   p4est_locidx_t      num_inodes;
-  p4est_locidx_t     *inode_order;
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
   p4est_locidx_t      npel;
   p4est_locidx_t      nlen;
@@ -2293,19 +2276,16 @@ p4est_lnodes_order_nodes (p4est_lnodes_iter_data_t * data, p4est_t * p4est,
   npel = data->nodes_per_elem;
   nlen = npel * nlq;
   num_inodes = (p4est_locidx_t) inodes->elem_count;
-  inode_order = P4EST_ALLOC (p4est_locidx_t, num_inodes);
-  memset (inode_order, -1, num_inodes * sizeof (p4est_locidx_t));
   for (li = 0; li < nlen; li++) {
     inidx = local_en[li];
     if (inidx >= 0) {
       inode = sc_array_index (inodes, (size_t) inidx);
-      if (inode->owner == rank) {
-        inode_order[inidx] = count++;
+      if (inode->owner == rank && inode->local_index == -1) {
+        inode->local_index = count++;
       }
     }
   }
 
-  return inode_order;
 }
 
 static              bool
@@ -2379,7 +2359,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_iter_data_t * data)
     prev = NULL;
     for (zz = 0; zz < count2; zz++) {
       binfo2 = sc_array_index (recv2, zz);
-      if (zz > 0 && p4est_lnodes_binfo_compare (prev, binfo2) == 0) {
+      if (zz > 0 && p4est_lnodes_binfo_is_equal (prev, binfo2)) {
         continue;
       }
       binfo = sc_array_index (recv, count++);
@@ -2387,6 +2367,9 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_iter_data_t * data)
                     (&(binfo->q), &(binfo2->q)));
       P4EST_ASSERT (binfo->type == binfo2->type);
       P4EST_ASSERT (binfo->send_sharers == binfo2->send_sharers);
+      if (!binfo->send_sharers) {
+        P4EST_ASSERT (binfo->share_count == binfo2->share_count);
+      }
       prev = binfo2;
     }
     P4EST_ASSERT (count == elem_count);
@@ -2408,6 +2391,226 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_iter_data_t * data)
   return true;
 }
 
+static void
+p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_iter_data_t * data)
+{
+  int                 mpisize = p4est->mpisize;
+  int                 i, j, k;
+  sc_array_t         *send, *send_info;
+  sc_array_t         *send_buf_info = data->send_buf_info;
+  sc_array_t         *send_buf;
+  sc_array_t         *recv, *recv_info;
+  sc_array_t         *recv_buf;
+  sc_array_t         *recv_buf_info = data->recv_buf_info;
+  size_t              count, info_count, zz;
+  int                 mpiret;
+  sc_array_t          send_requests;
+  MPI_Request        *send_request;
+  MPI_Status          probe_status, recv_status;
+  int                 num_recv_queries = 0;
+  int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
+  int                 byte_count;
+  size_t              elem_count;
+  p4est_lnodes_buf_info_t *binfo, *prev;
+  size_t              index, prev_index;
+  int                 nodes_per_face = data->nodes_per_face;
+#ifdef P4_TO_P8
+  int                 nodes_per_edge = data->nodes_per_edge;
+#endif
+  int8_t              type;
+  p4est_locidx_t     *lp;
+  int                *ip;
+  p4est_lnodes_inode_t *inode, *inode_prev;
+  sc_array_t         *inode_sharers = data->inode_sharers;
+  sc_array_t         *inodes = data->inodes;
+  int                 share_proc;
+  int                 share_count;
+  size_t              send_count;
+
+  sc_array_init (&send_requests, sizeof (MPI_Request));
+  send_buf = P4EST_ALLOC (sc_array_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    sc_array_init (&(send_buf[i]), sizeof (p4est_locidx_t));
+  }
+  for (i = 0; i < mpisize; i++) {
+    send_info = &(send_buf_info[i]);
+    count = send_info->elem_count;
+    if (count > 0) {
+      P4EST_ASSERT (i != p4est->mpirank);
+      send = &(send_buf[i]);
+      for (zz = 0; zz < count; zz++) {
+        binfo = sc_array_index (send_info, zz);
+        index = (size_t) binfo->first_index;
+        type = binfo->type;
+        if (type >= P4EST_LN_C_OFFSET) {
+          lp = sc_array_push (send);
+          inode = sc_array_index (inodes, index);
+          P4EST_ASSERT (inode->local_index >= 0);
+          *lp = inode->local_index;
+        }
+#ifdef P4_TO_P8
+        else if (type >= P8EST_LN_E_OFFSET) {
+          for (j = 0; j < nodes_per_edge; j++) {
+            lp = sc_array_push (send);
+            inode = sc_array_index (inodes, index++);
+            P4EST_ASSERT (inode->local_index >= 0);
+            *lp = inode->local_index;
+          }
+        }
+#endif
+        else {
+          P4EST_ASSERT (0 <= type && type < P4EST_DIM * 2);
+          for (j = 0; j < nodes_per_face; j++) {
+            lp = sc_array_push (send);
+            inode = sc_array_index (inodes, index++);
+            P4EST_ASSERT (inode->local_index >= 0);
+            *lp = inode->local_index;
+          }
+        }
+        if (binfo->send_sharers) {
+          lp = sc_array_push (send);
+          *lp = (p4est_locidx_t) binfo->share_count;
+          P4EST_ASSERT (binfo->share_count > 0);
+          index = (size_t) binfo->share_offset;
+          share_count = (int) binfo->share_count;
+          for (j = 0; j < share_count; j++) {
+            lp = sc_array_push (send);
+            share_proc = *((int *) sc_array_index (inode_sharers, index++));
+            *lp = (p4est_locidx_t) share_proc;
+            P4EST_ASSERT (0 <= share_proc && share_proc < mpisize);
+          }
+        }
+      }
+      send_count = send->elem_count;
+      send_request = sc_array_push (&send_requests);
+      mpiret = MPI_Isend (send->array,
+                          (int) (send_count * sizeof (p4est_locidx_t)),
+                          MPI_BYTE, i, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
+                          send_request);
+      SC_CHECK_MPI (mpiret);
+    }
+    recv_info = &(recv_buf_info[i]);
+    count = recv_info->elem_count;
+    if (count) {
+      P4EST_ASSERT (i != p4est->mpirank);
+      num_recv_queries++;
+      num_recv_expect[i]++;
+    }
+  }
+
+  recv_buf = P4EST_ALLOC (sc_array_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    sc_array_init (&(recv_buf[i]), sizeof (p4est_locidx_t));
+  }
+  for (i = 0; i < num_recv_queries; i++) {
+    mpiret =
+      MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
+                 &probe_status);
+    SC_CHECK_MPI (mpiret);
+    j = probe_status.MPI_SOURCE;
+    P4EST_ASSERT (j != p4est->mpirank && num_recv_expect[j] == 1);
+    recv = &(recv_buf[j]);
+    recv_info = &(recv_buf_info[j]);
+    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (byte_count % ((int) sizeof (p4est_locidx_t)) == 0);
+    elem_count = ((size_t) byte_count) / sizeof (p4est_locidx_t);
+    sc_array_resize (recv, elem_count);
+    mpiret = MPI_Recv (recv->array, byte_count, MPI_BYTE, j,
+                       P4EST_COMM_LNODES_PASS, p4est->mpicomm, &recv_status);
+    SC_CHECK_MPI (mpiret);
+    num_recv_expect[j]--;
+
+    info_count = recv_info->elem_count;
+    count = 0;
+    prev = NULL;
+    for (zz = 0; zz < info_count; zz++) {
+      binfo = sc_array_index (recv_info, zz);
+      if (zz > 0 && p4est_lnodes_binfo_is_equal (prev, binfo)) {
+        binfo->share_offset = prev->share_offset;
+        binfo->share_count = prev->share_count;
+        prev_index = (size_t) prev->first_index;
+        index = (size_t) binfo->first_index;
+        if (binfo->type >= P4EST_LN_C_OFFSET) {
+          inode = sc_array_index (inodes, index);
+          inode_prev = sc_array_index (inodes, prev_index);
+          inode->local_index = inode_prev->local_index;
+        }
+#ifdef P4_TO_P8
+        else if (binfo->type >= P8EST_LN_E_OFFSET) {
+          for (k = 0; k < nodes_per_edge; k++) {
+            inode = sc_array_index (inodes, index++);
+            inode_prev = sc_array_index (inodes, prev_index++);
+            inode->local_index = inode_prev->local_index;
+          }
+        }
+#endif
+        else {
+          for (k = 0; k < nodes_per_face; k++) {
+            inode = sc_array_index (inodes, index++);
+            inode_prev = sc_array_index (inodes, prev_index++);
+            inode->local_index = inode_prev->local_index;
+          }
+        }
+      }
+      else {
+        index = binfo->first_index;
+        if (binfo->type >= P4EST_LN_C_OFFSET) {
+          inode = sc_array_index (inodes, index);
+          lp = sc_array_index (recv, count++);
+          inode->local_index = *lp;
+        }
+#ifdef P4_TO_P8
+        else if (binfo->type >= P8EST_LN_E_OFFSET) {
+          for (k = 0; k < nodes_per_edge; k++) {
+            inode = sc_array_index (inodes, index++);
+            lp = sc_array_index (recv, count++);
+            inode->local_index = *lp;
+          }
+        }
+#endif
+        else {
+          for (k = 0; k < nodes_per_face; k++) {
+            inode = sc_array_index (inodes, index++);
+            lp = sc_array_index (recv, count++);
+            inode->local_index = *lp;
+          }
+        }
+        if (binfo->send_sharers) {
+          lp = sc_array_index (recv, count++);
+          share_count = (int) (*lp);
+          P4EST_ASSERT (share_count > 0);
+          binfo->share_count = (int8_t) share_count;
+          binfo->share_offset = (p4est_locidx_t) inode_sharers->elem_count;
+          for (k = 0; k < share_count; k++) {
+            ip = sc_array_push (inode_sharers);
+            lp = sc_array_index (recv, count++);
+            *ip = (int) (*lp);
+            P4EST_ASSERT (0 <= *ip && *ip < mpisize);
+          }
+        }
+        prev = binfo;
+      }
+    }
+    P4EST_ASSERT (count == elem_count);
+  }
+
+  if (send_requests.elem_count > 0) {
+    mpiret = MPI_Waitall ((int) send_requests.elem_count,
+                          (MPI_Request *) send_requests.array,
+                          MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
+  sc_array_reset (&send_requests);
+  for (i = 0; i < mpisize; i++) {
+    sc_array_reset (&(send_buf[i]));
+    sc_array_reset (&(recv_buf[i]));
+  }
+  P4EST_FREE (send_buf);
+  P4EST_FREE (recv_buf);
+  P4EST_FREE (num_recv_expect);
+}
+
 p4est_lnodes_t     *
 p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 {
@@ -2418,7 +2621,6 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
   p8est_iter_edge_t   eiter;
 #endif
   p4est_lnodes_iter_data_t iter_data;
-  p4est_locidx_t     *inode_owner;
   p4est_iter_face_side_t *hface;
 #ifdef P4_TO_P8
   p8est_iter_edge_side_t *hedge;
@@ -2457,7 +2659,7 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #endif
                  citer);
 
-  inode_owner = p4est_lnodes_order_nodes (&iter_data, p4est, ghost_layer);
+  p4est_lnodes_order_nodes (&iter_data, p4est, ghost_layer);
 
   while (iter_data.hfaces->elem_count) {
     hface = sc_array_pop (iter_data.hfaces);
@@ -2493,9 +2695,8 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
     for (zz = 0; zz < iter_data.recv_buf_info[i].elem_count; zz++) {
       new = sc_array_index (&(iter_data.recv_buf_info[i]), zz);
       if (zz > 0) {
-        if (p4est_lnodes_binfo_compare (last, new) == 0) {
+        if (p4est_lnodes_binfo_is_equal (last, new)) {
           P4EST_VERBOSE ("Doubled receive buffer entry.\n");
-          SC_ABORT ("Doubled receive buffer entry.");
         }
       }
       last = new;
@@ -2505,7 +2706,7 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 
   P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &iter_data));
 
-  P4EST_FREE (inode_owner);
+  p4est_lnodes_pass (p4est, &iter_data);
 
   P4EST_FREE (iter_data.local_elem_nodes);
   P4EST_FREE (iter_data.ghost_elem_nodes);
