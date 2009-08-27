@@ -26,50 +26,133 @@
 
 SC_EXTERN_C_BEGIN;
 
-extern bool         p4est_vtk_default_write_rank;
-
-/** This will write out the MPI rank in VTK format.
+/** This writes out the p4est in VTK format.
  *
  * This is a convenience function for the special
- * case of writing out the MPI rank only.  Note this
- * function will abort if there is a file error.
+ * case of writing out the tree id and MPI rank only.
+ * One file is written per MPI rank, and one meta file on rank 0.
+ * This function will abort if there is a file error.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for identity.
- * \param baseName  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ * \param [in] p4est    The p4est to be written.
+ * \param [in] geom     A p4est_geometry_t structure or NULL for identity.
+ * \param [in] filename The first part of the file name which will have the
+ *                      MPI rank appended to it: The output file will be
+ *                      filename_rank.vtu, and the meta file filename.pvtu).
  */
 void                p4est_vtk_write_file (p4est_t * p4est,
                                           p4est_geometry_t * geom,
-                                          const char *baseName);
+                                          const char *filename);
+
+/** This writes out the p4est and any number of point fields in VTK format.
+ *
+ * This is a convenience function that will abort if there is a file error.
+ *
+ * \param [in] p4est    The p4est to be written.
+ * \param [in] geom     A p4est_geometry_t structure or NULL for identity.
+ * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
+ * \param [in] write_tree   Include the tree id as output field.
+ * \param [in] write_rank   Include the MPI rank as output field.
+ * \param [in] wrap_tree    The MPI rank is written module wrap_tree, or 0.
+ * \param filename      First part of the name, see p4est_vtk_write_file.
+ * \param num_scalars   Number of scalar fields to write.
+ * \param num_vectors   Number of vector fields to write.
+ *
+ * The variable arguments need to be pairs of (fieldname, fieldvalues)
+ * where the scalars come first, then the vectors.
+ */
+void                p4est_vtk_write_all (p4est_t * p4est,
+                                         p4est_geometry_t * geom,
+                                         double scale, bool write_tree,
+                                         bool write_rank, int wrap_rank,
+                                         int num_scalars, int num_vectors,
+                                         const char *filename, ...);
 
 /** This will write the header of the vtu file.
  *
  * Writing a VTK file is split into a couple of routines.
  * The allows there to be an arbitrary number of
- * fields.  To write out two fields the
- * calling sequence would be something like
+ * fields.  The calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header(p4est, true, "output");
- * write_data_fields ();
+ * p4est_vtk_write_header(p4est, geom, 1., true, true, 0, "output");
+ * p4est_vtk_write_point_scalar (...);
+ * ...
  * p4est_vtk_write_footer(p4est, "output");
  * \endcode
  *
  * \param p4est     The p4est to be written.
  * \param geom      A p4est_geometry_t structure or NULL for identity.
+ * \param scale     The relative length factor of the quadrants.
+ *                  Use 1.0 to fit quadrants exactly, less to create gaps.
+ * \param write_tree    Boolean to determine if the tree id should be output.
  * \param write_rank    Boolean to determine if the MPI rank should be output.
- * \param baseName  The first part of the name which will have
+ * \param wrap_rank Number to wrap around the rank with a modulo operation.
+ *                  Can be 0 for no wrapping.
+ * \param point_scalars  Comma-separated list of point scalar fields, or NULL.
+ * \param point_vectors  Comma-separated list of point vector fields, or NULL.
+ * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ *                  output file will be filename_procNum.vtu).
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p4est_vtk_write_header (p4est_t * p4est,
                                             p4est_geometry_t * geom,
-                                            bool write_rank,
-                                            const char *baseName);
+                                            double scale, bool write_tree,
+                                            bool write_rank, int wrap_rank,
+                                            const char *point_scalars,
+                                            const char *point_vectors,
+                                            const char *filename);
+
+/** This will write a scalar field to the vtu file.
+ *
+ * It is good practice to make sure that the scalar field also
+ * exists in the comma separated string \a point_scalars passed
+ * to \c p4est_vtk_write_header.
+ *
+ * Writing a VTK file is split into a couple of routines.
+ * The allows there to be an arbitrary number of fields.
+ *
+ * \param p4est     The p4est to be written.
+ * \param geom      A p4est_geometry_t structure or NULL for identity.
+ * \param filename  The first part of the name which will have
+ *                  the proc number appended to it (i.e., the
+ *                  output file will be filename_procNum.vtu).
+ * \param scalar_name The name of the scalar field.
+ * \param values    The point values that will be written.
+ *
+ * \return          This returns 0 if no error and -1 if there is an error.
+ */
+int                 p4est_vtk_write_point_scalar (p4est_t * p4est,
+                                                  p4est_geometry_t * geom,
+                                                  const char *filename,
+                                                  const char *scalar_name,
+                                                  const double *values);
+
+/** This will write a 3-vector field to the vtu file.
+ *
+ * It is good practice to make sure that the vector field also
+ * exists in the comma separated string \a point_vectors passed
+ * to \c p4est_vtk_write_header.
+ *
+ * Writing a VTK file is split into a couple of routines.
+ * The allows there to be an arbitrary number of fields.
+ *
+ * \param p4est     The p4est to be written.
+ * \param geom      A p4est_geometry_t structure or NULL for identity.
+ * \param filename  The first part of the name which will have
+ *                  the proc number appended to it (i.e., the
+ *                  output file will be filename_procNum.vtu).
+ * \param vector_name The name of the vector field.
+ * \param values    The point values that will be written.
+ *
+ * \return          This returns 0 if no error and -1 if there is an error.
+ */
+int                 p4est_vtk_write_point_vector (p4est_t * p4est,
+                                                  p4est_geometry_t * geom,
+                                                  const char *filename,
+                                                  const char *vector_name,
+                                                  const double *values);
 
 /** This will write the footer of the vtu file.
  *
@@ -79,19 +162,19 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  * calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header(p4est, "output");
+ * p4est_vtk_write_header(p4est, ..., "output");
  * p4est_vtk_write_footer(p4est, "output");
  * \endcode
  *
  * \param p4est     The p4est to be written.
- * \param baseName  The first part of the name which will have
+ * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ *                  output file will be filename_procNum.vtu).
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p4est_vtk_write_footer (p4est_t * p4est,
-                                            const char *baseName);
+                                            const char *filename);
 
 SC_EXTERN_C_END;
 

@@ -26,38 +26,34 @@
 
 SC_EXTERN_C_BEGIN;
 
-extern double       p8est_vtk_default_scale;
-extern bool         p8est_vtk_default_write_tree;
-extern bool         p8est_vtk_default_write_rank;
-extern int          p8est_vtk_default_wrap_rank;
-
-/** This will write out the p8est in VTK format.
- * The p8est_vtk_default_* variables will be honored.
+/** This writes out the p8est in VTK format.
  *
  * This is a convenience function for the special
- * case of writing out the MPI rank only.  Note this
- * function will abort if there is a file error.
+ * case of writing out the tree id and MPI rank only.
+ * One file is written per MPI rank, and one meta file on rank 0.
+ * This function will abort if there is a file error.
  *
- * \param p8est     The p8est to be written.
- * \param geom      A p8est_geometry_t structure or NULL for identity.
- * \param baseName  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ * \param [in] p8est    The p8est to be written.
+ * \param [in] geom     A p8est_geometry_t structure or NULL for identity.
+ * \param [in] filename The first part of the file name which will have the
+ *                      MPI rank appended to it: The output file will be
+ *                      filename_procNum.vtu, and the meta file filename.pvtu.
  */
 void                p8est_vtk_write_file (p8est_t * p8est,
                                           p8est_geometry_t * geom,
-                                          const char *baseName);
+                                          const char *filename);
 
-/** This will write out the p8est and any numner of point fields.
- * The p8est_vtk_default_* variables will be honored.
+/** This writes out the p8est and any number of point fields in VTK format.
  *
  * This is a convenience function that will abort if there is a file error.
  *
- * \param p8est     The p8est to be written.
- * \param geom      A p8est_geometry_t structure or NULL for identity.
- * \param baseName  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ * \param [in] p8est    The p8est to be written.
+ * \param [in] geom     A p8est_geometry_t structure or NULL for identity.
+ * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
+ * \param [in] write_tree   Include the tree id as output field.
+ * \param [in] write_rank   Include the MPI rank as output field.
+ * \param [in] wrap_tree    The MPI rank is written module wrap_tree, or 0.
+ * \param filename      First part of the name, see p8est_vtk_write_file.
  * \param num_scalars   Number of scalar fields to write.
  * \param num_vectors   Number of vector fields to write.
  *
@@ -66,8 +62,10 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  */
 void                p8est_vtk_write_all (p8est_t * p8est,
                                          p8est_geometry_t * geom,
+                                         double scale, bool write_tree,
+                                         bool write_rank, int wrap_rank,
                                          int num_scalars, int num_vectors,
-                                         const char *baseName, ...);
+                                         const char *filename, ...);
 
 /** This will write the header of the vtu file.
  *
@@ -76,7 +74,7 @@ void                p8est_vtk_write_all (p8est_t * p8est,
  * fields.  The calling sequence would be something like
  *
  * \begincode
- * p8est_vtk_write_header(p8est, 1., true, "output");
+ * p8est_vtk_write_header(p8est, geom, 1., true, true, 0, "output");
  * p8est_vtk_write_point_scalar (...);
  * ...
  * p8est_vtk_write_footer(p8est, "output");
@@ -90,11 +88,11 @@ void                p8est_vtk_write_all (p8est_t * p8est,
  * \param write_rank    Boolean to determine if the MPI rank should be output.
  * \param wrap_rank Number to wrap around the rank with a modulo operation.
  *                  Can be 0 for no wrapping.
- * \param pointScalars  Comma-separated list of point scalar fields, or NULL.
- * \param pointVectors  Comma-separated list of point vector fields, or NULL.
- * \param baseName  The first part of the name which will have
+ * \param point_scalars  Comma-separated list of point scalar fields, or NULL.
+ * \param point_vectors  Comma-separated list of point vector fields, or NULL.
+ * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ *                  output file will be filename_procNum.vtu).
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
@@ -102,14 +100,14 @@ int                 p8est_vtk_write_header (p8est_t * p8est,
                                             p8est_geometry_t * geom,
                                             double scale, bool write_tree,
                                             bool write_rank, int wrap_rank,
-                                            const char *pointScalars,
-                                            const char *pointVectors,
-                                            const char *baseName);
+                                            const char *point_scalars,
+                                            const char *point_vectors,
+                                            const char *filename);
 
 /** This will write a scalar field to the vtu file.
  *
  * It is good practice to make sure that the scalar field also
- * exists in the comma separated string \a pointscalars passed
+ * exists in the comma separated string \a point_scalars passed
  * to \c p8est_vtk_write_header.
  *
  * Writing a VTK file is split into a couple of routines.
@@ -117,24 +115,24 @@ int                 p8est_vtk_write_header (p8est_t * p8est,
  *
  * \param p8est     The p8est to be written.
  * \param geom      A p8est_geometry_t structure or NULL for identity.
- * \param baseName  The first part of the name which will have
+ * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
- * \param scalarName The name of the scalar field.
+ *                  output file will be filename_procNum.vtu).
+ * \param scalar_name The name of the scalar field.
  * \param values    The point values that will be written.
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p8est_vtk_write_point_scalar (p8est_t * p8est,
                                                   p8est_geometry_t * geom,
-                                                  const char *baseName,
-                                                  const char *scalarName,
+                                                  const char *filename,
+                                                  const char *scalar_name,
                                                   const double *values);
 
 /** This will write a 3-vector field to the vtu file.
  *
  * It is good practice to make sure that the vector field also
- * exists in the comma separated string \a pointvectors passed
+ * exists in the comma separated string \a point_vectors passed
  * to \c p8est_vtk_write_header.
  *
  * Writing a VTK file is split into a couple of routines.
@@ -142,18 +140,18 @@ int                 p8est_vtk_write_point_scalar (p8est_t * p8est,
  *
  * \param p8est     The p8est to be written.
  * \param geom      A p8est_geometry_t structure or NULL for identity.
- * \param baseName  The first part of the name which will have
+ * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
- * \param vectorName The name of the vector field.
+ *                  output file will be filename_procNum.vtu).
+ * \param vector_name The name of the vector field.
  * \param values    The point values that will be written.
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p8est_vtk_write_point_vector (p8est_t * p8est,
                                                   p8est_geometry_t * geom,
-                                                  const char *baseName,
-                                                  const char *vectorName,
+                                                  const char *filename,
+                                                  const char *vector_name,
                                                   const double *values);
 
 /** This will write the footer of the vtu file.
@@ -164,19 +162,19 @@ int                 p8est_vtk_write_point_vector (p8est_t * p8est,
  * calling sequence would be something like
  *
  * \begincode
- * p8est_vtk_write_header(p8est, "output");
+ * p8est_vtk_write_header(p8est, ..., "output");
  * p8est_vtk_write_footer(p8est, "output");
  * \endcode
  *
  * \param p8est     The p8est to be written.
- * \param baseName  The first part of the name which will have
+ * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
- *                  output file will be baseName_procNum.vtu).
+ *                  output file will be filename_procNum.vtu).
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p8est_vtk_write_footer (p8est_t * p8est,
-                                            const char *baseName);
+                                            const char *filename);
 
 SC_EXTERN_C_END;
 

@@ -221,6 +221,10 @@
 
 /* functions in p4est_vtk */
 #define p4est_vtk_write_file            p8est_vtk_write_file
+#define p4est_vtk_write_all             p8est_vtk_write_all
+#define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
+#define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */

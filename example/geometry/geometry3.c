@@ -140,7 +140,7 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
   P4EST_ASSERT (dptr[2] == double_data + 3 * Ntotal);
   P4EST_ASSERT (dptr[3] == double_data + 4 * Ntotal);
 
-  p8est_vtk_write_all (p8est, geom, 4, 0, name,
+  p8est_vtk_write_all (p8est, geom, 1., true, true, 16, 4, 0, name,
                        "X", double_data, "Y", double_data + Ntotal,
                        "Z", double_data + 2 * Ntotal,
                        "D", double_data + 3 * Ntotal);
@@ -163,9 +163,6 @@ main (int argc, char **argv)
   mpicomm = MPI_COMM_WORLD;
   sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
-
-  p8est_vtk_default_scale = 1.;
-  p8est_vtk_default_wrap_rank = 16;
 
   geye = p8est_geometry_new_identity ();
   gshell = p8est_geometry_new_shell (1., 0.55);
