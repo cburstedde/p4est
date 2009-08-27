@@ -53,7 +53,7 @@ include src/Makefile.am
 include test/Makefile.am
 include example/geometry/Makefile.am
 include example/points/Makefile.am
-include example/read_forest/Makefile.am
+## include example/read_forest/Makefile.am
 include example/second/Makefile.am
 include example/simple/Makefile.am
 include example/timings/Makefile.am

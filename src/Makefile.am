@@ -12,13 +12,13 @@ libp4est_installed_headers += \
         src/p4est_connectivity.h src/p4est.h src/p4est_bits.h \
         src/p4est_algorithms.h src/p4est_communication.h \
         src/p4est_ghost.h src/p4est_nodes.h \
-        src/p4est_file.h src/p4est_vtk.h \
+        src/p4est_vtk.h \
         src/p4est_points.h src/p4est_geometry.h
 libp4est_compiled_sources += \
         src/p4est_connectivity.c src/p4est.c src/p4est_bits.c \
         src/p4est_algorithms.c src/p4est_communication.c \
         src/p4est_ghost.c src/p4est_nodes.c \
-        src/p4est_file.c src/p4est_vtk.c \
+        src/p4est_vtk.c \
         src/p4est_points.c
 endif
 if P4EST_BUILD_3D

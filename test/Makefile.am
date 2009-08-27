@@ -7,11 +7,10 @@ p4est_test_programs =
 if P4EST_BUILD_2D
 p4est_test_programs += \
         test/p4est_test_comm test/p4est_test_hash \
-        test/p4est_test_file test/p4est_test_quadrants \
-        test/p4est_test_balance test/p4est_test_partition \
-        test/p4est_test_order test/p4est_test_coarsen \
+        test/p4est_test_quadrants test/p4est_test_balance \
+        test/p4est_test_partition test/p4est_test_coarsen \
         test/p4est_test_valid test/p4est_test_balance_type \
-        test/p4est_test_loadsave
+        test/p4est_test_loadsave test/p4est_test_order
 noinst_PROGRAMS += \
         test/p4est_bug_wp
 endif
@@ -29,7 +28,6 @@ check_PROGRAMS += $(p4est_test_programs)
 
 test_p4est_test_comm_SOURCES = test/test_comm.c
 test_p4est_test_hash_SOURCES = test/test_hash.c
-test_p4est_test_file_SOURCES = test/test_file.c
 test_p4est_test_quadrants_SOURCES = test/test_quadrants2.c
 test_p4est_test_balance_SOURCES = test/test_balance2.c
 test_p4est_test_partition_SOURCES = test/test_partition2.c
@@ -59,7 +57,6 @@ TESTS += $(p4est_test_programs)
 LINT_CSOURCES += \
         $(test_p4est_test_comm_SOURCES) \
         $(test_p4est_test_hash_SOURCES) \
-        $(test_p4est_test_file_SOURCES) \
         $(test_p4est_test_quadrants_SOURCES) \
         $(test_p4est_test_balance_SOURCES) \
         $(test_p4est_test_partition_SOURCES) \
