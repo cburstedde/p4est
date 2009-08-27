@@ -456,10 +456,13 @@ p4est_lnodes_missing_proc_cdp_face (p4est_quadrant_t * q, p4est_topidx_t tid,
 {
   int                 rank = info->p4est->mpirank;
   p4est_quadrant_t    tempq, tempr;
-  int                 f = p4est_corner_faces[c][dir];
 #ifndef P4_TO_P8
+  int                 f =
+    (p4est_rface_to_zface[p4est_corner_faces[c][dir]] / 2 == dir) ?
+    p4est_corner_faces[c][dir] : p4est_corner_faces[c][1 - dir];
   int                 j = p4est_face_corners[f][0] == c ? 0 : 1;
 #else
+  int                 f = p8est_corner_faces[c][dir];
   int                 j = p8est_corner_face_corners[c][f];
 #endif
   int                 c2 = p4est_face_corners[f][P4EST_CHILDREN / 2 - 1 - j];
@@ -794,6 +797,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
       /* TODO: replace when the new ghost_layer API is implemented */
       owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
                                           rank);
+      P4EST_ASSERT (owner_proc != rank);
     }
   }
 
@@ -816,6 +820,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
     else {
       /* TODO: replace when the new ghost_layer API is implemented */
       proc = p4est_comm_find_owner (info->p4est, tid, q, rank);
+      P4EST_ASSERT (proc != rank);
       ip = sc_array_push (&touching_procs);
       *ip = proc;
       ip = sc_array_push (&all_procs);
@@ -883,6 +888,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
   inode->owner = owner_proc;
   count = all_procs.elem_count;
   if (count) {
+    P4EST_QUADRANT_INIT (&tempq);
     p4est_quadrant_smallest_corner_descendent (owner_quad, &tempq,
                                                owner_corner);
     inode->share_offset = sharers_offset;
@@ -907,6 +913,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *data)
         binfo->first_index = num_inodes;
       }
       else if (proc == owner_proc) {
+        P4EST_ASSERT (proc != rank);
         binfo = sc_array_push (&(recv_buf_info[proc]));
         binfo->q = tempq;
         binfo->q.p.which_tree = owner_tid;
@@ -1021,6 +1028,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
       /* TODO: replace when the new ghost_layer API is implemented */
       owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
                                           rank);
+      P4EST_ASSERT (owner_proc != rank);
     }
   }
 
@@ -1058,6 +1066,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
       else {
         /* TODO: replace when the new ghost_layer API is implemented */
         proc = p4est_comm_find_owner (info->p4est, tid, q[i], rank);
+        P4EST_ASSERT (proc != rank);
         ip = sc_array_push (&touching_procs);
         *ip = proc;
         ip = sc_array_push (&all_procs);
@@ -1147,6 +1156,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
 
   count = all_procs.elem_count;
   if (count) {
+    P4EST_QUADRANT_INIT (&tempq);
     if (owner_quad->level == max_level || min_level == P4EST_QMAXLEVEL) {
       tempq = *owner_quad;
     }
@@ -1178,6 +1188,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *data)
         binfo->first_index = num_inodes;
       }
       else if (proc == owner_proc) {
+        P4EST_ASSERT (proc != rank);
         binfo = sc_array_push (&(recv_buf_info[proc]));
         binfo->q = tempq;
         binfo->q.p.which_tree = owner_tid;
@@ -1318,6 +1329,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *data)
       /* TODO: replace when the new ghost_layer API is implemented */
       owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
                                           rank);
+      P4EST_ASSERT (owner_proc != rank);
     }
   }
 
@@ -1351,6 +1363,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *data)
       else {
         /* TODO: replace when the new ghost_layer API is implemented */
         proc = p4est_comm_find_owner (info->p4est, tid, q[i], rank);
+        P4EST_ASSERT (proc != rank);
         ip = sc_array_push (&touching_procs);
         *ip = proc;
       }
@@ -1457,6 +1470,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *data)
         binfo->first_index = num_inodes;
       }
       else if (proc == owner_proc) {
+        P4EST_ASSERT (proc != rank);
         binfo = sc_array_push (&(recv_buf_info[proc]));
         binfo->q = tempq;
         binfo->q.p.which_tree = owner_tid;
@@ -1588,7 +1602,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
           ownerq = *ptemp;
         }
         else if (ownertid == ntid) {
-          if (p4est_quadrant_compare (&tempr, &ownerq) < 0) {
+          if (p4est_quadrant_compare (ptemp, &ownerq) < 0) {
             ownerq = *ptemp;
           }
         }
@@ -1596,7 +1610,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
       sc_array_reset (&quads);
       sc_array_reset (&treeids);
     }
-    else {
+    else if (tid == ownertid) {
       if (p4est_quadrant_compare (&tempr, &ownerq) < 0) {
         ownerq = tempr;
       }
@@ -1627,7 +1641,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
     sc_array_reset (&quads);
     sc_array_reset (&treeids);
   }
-  else {
+  else if (tid == ownertid) {
     if (p4est_quadrant_compare (&tempr, &ownerq) < 0) {
       ownerq = tempr;
     }
@@ -1754,7 +1768,7 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
       sc_array_reset (&quads);
       sc_array_reset (&treeids);
     }
-    else {
+    else if (tid == ownertid[j]) {
       if (p4est_quadrant_compare (&tempr[j], &ownerq[j]) < 0) {
         ownerq[j] = tempr[j];
       }
@@ -1987,7 +2001,7 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
  * describe is not considered.
  */
 static int
-p4est_lnodes_buf_info_compar (const void *a, const void *b)
+p4est_lnodes_binfo_compare (const void *a, const void *b)
 {
   const p4est_lnodes_buf_info_t *bufa = a;
   const p4est_lnodes_buf_info_t *bufb = b;
@@ -2294,6 +2308,106 @@ p4est_lnodes_order_nodes (p4est_lnodes_iter_data_t * data, p4est_t * p4est,
   return inode_order;
 }
 
+static              bool
+p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_iter_data_t * data)
+{
+  int                 mpisize = p4est->mpisize;
+  int                 i, j;
+  sc_array_t         *send;
+  sc_array_t         *send_buf_info = data->send_buf_info;
+  sc_array_t         *recv, *recv2;
+  sc_array_t         *recv_buf;
+  sc_array_t         *recv_buf_info = data->recv_buf_info;
+  size_t              count, count2, zz;
+  int                 mpiret;
+  sc_array_t          send_requests;
+  MPI_Request        *send_request;
+  MPI_Status          probe_status, recv_status;
+  int                 num_recv_queries = 0;
+  int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
+  int                 byte_count;
+  size_t              elem_count;
+  p4est_lnodes_buf_info_t *binfo, *binfo2, *prev;
+
+  sc_array_init (&send_requests, sizeof (MPI_Request));
+  for (i = 0; i < mpisize; i++) {
+    send = &(send_buf_info[i]);
+    count = send->elem_count;
+    if (count > 0) {
+      P4EST_ASSERT (i != p4est->mpirank);
+      send_request = sc_array_push (&send_requests);
+      mpiret = MPI_Isend (send->array,
+                          (int) (count * sizeof (p4est_lnodes_buf_info_t)),
+                          MPI_BYTE, i, P4EST_COMM_LNODES_TEST, p4est->mpicomm,
+                          send_request);
+      SC_CHECK_MPI (mpiret);
+    }
+    recv = &(recv_buf_info[i]);
+    count = recv->elem_count;
+    if (count) {
+      P4EST_ASSERT (i != p4est->mpirank);
+      num_recv_queries++;
+      num_recv_expect[i]++;
+    }
+  }
+
+  recv_buf = P4EST_ALLOC (sc_array_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    sc_array_init (&(recv_buf[i]), sizeof (p4est_lnodes_buf_info_t));
+  }
+  for (i = 0; i < num_recv_queries; i++) {
+    mpiret =
+      MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_LNODES_TEST, p4est->mpicomm,
+                 &probe_status);
+    SC_CHECK_MPI (mpiret);
+    j = probe_status.MPI_SOURCE;
+    P4EST_ASSERT (j != p4est->mpirank && num_recv_expect[j] == 1);
+    recv = &(recv_buf[j]);
+    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (byte_count % ((int) sizeof (p4est_lnodes_buf_info_t)) == 0);
+    elem_count = ((size_t) byte_count) / sizeof (p4est_lnodes_buf_info_t);
+    sc_array_resize (recv, elem_count);
+    mpiret = MPI_Recv (recv->array, byte_count, MPI_BYTE, j,
+                       P4EST_COMM_LNODES_TEST, p4est->mpicomm, &recv_status);
+    SC_CHECK_MPI (mpiret);
+    num_recv_expect[j]--;
+
+    recv2 = &(recv_buf_info[j]);
+    count2 = recv2->elem_count;
+    count = 0;
+    prev = NULL;
+    for (zz = 0; zz < count2; zz++) {
+      binfo2 = sc_array_index (recv2, zz);
+      if (zz > 0 && p4est_lnodes_binfo_compare (prev, binfo2) == 0) {
+        continue;
+      }
+      binfo = sc_array_index (recv, count++);
+      P4EST_ASSERT (p4est_quadrant_is_equal_piggy
+                    (&(binfo->q), &(binfo2->q)));
+      P4EST_ASSERT (binfo->type == binfo2->type);
+      P4EST_ASSERT (binfo->send_sharers == binfo2->send_sharers);
+      prev = binfo2;
+    }
+    P4EST_ASSERT (count == elem_count);
+  }
+
+  if (send_requests.elem_count > 0) {
+    mpiret = MPI_Waitall ((int) send_requests.elem_count,
+                          (MPI_Request *) send_requests.array,
+                          MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
+  sc_array_reset (&send_requests);
+  for (i = 0; i < mpisize; i++) {
+    sc_array_reset (&(recv_buf[i]));
+  }
+
+  P4EST_FREE (recv_buf);
+  P4EST_FREE (num_recv_expect);
+  return true;
+}
+
 p4est_lnodes_t     *
 p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 {
@@ -2312,7 +2426,11 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #ifdef P4EST_DEBUG
   p4est_locidx_t      li;
   p4est_locidx_t      nlen;
+  size_t              zz;
+  p4est_lnodes_buf_info_t *last, *new;
 #endif
+  int                 i;
+  int                 mpisize = p4est->mpisize;
 
   P4EST_ASSERT (degree >= 1);
 
@@ -2358,6 +2476,34 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
     P4EST_ASSERT (iter_data.local_elem_nodes[li] >= 0);
   }
 #endif
+
+  for (i = 0; i < mpisize; i++) {
+    sc_array_sort (&(iter_data.send_buf_info[i]), p4est_lnodes_binfo_compare);
+    sc_array_sort (&(iter_data.recv_buf_info[i]), p4est_lnodes_binfo_compare);
+#ifdef P4EST_DEBUG
+    last = NULL;
+    for (zz = 0; zz < iter_data.send_buf_info[i].elem_count; zz++) {
+      new = sc_array_index (&(iter_data.send_buf_info[i]), zz);
+      if (zz > 0) {
+        P4EST_ASSERT (p4est_lnodes_binfo_compare (last, new) < 0);
+      }
+      last = new;
+    }
+    last = NULL;
+    for (zz = 0; zz < iter_data.recv_buf_info[i].elem_count; zz++) {
+      new = sc_array_index (&(iter_data.recv_buf_info[i]), zz);
+      if (zz > 0) {
+        if (p4est_lnodes_binfo_compare (last, new) == 0) {
+          P4EST_VERBOSE ("Doubled receive buffer entry.\n");
+          SC_ABORT ("Doubled receive buffer entry.");
+        }
+      }
+      last = new;
+    }
+#endif
+  }
+
+  P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &iter_data));
 
   P4EST_FREE (inode_owner);
 
