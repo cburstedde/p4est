@@ -89,6 +89,7 @@ main (int argc, char **argv)
   bool                success;
   int                 ntests;
   int                 i, j;
+  p4est_lnodes_t     *lnodes;
 
 #ifndef P4_TO_P8
   ntests = 3;
@@ -158,7 +159,8 @@ main (int argc, char **argv)
 
     for (j = 1; j <= 4; j++) {
       P4EST_GLOBAL_PRODUCTIONF ("Begin lnodes test %d:%d\n", i, j);
-      p4est_lnodes_new (p4est, &ghost_layer, j);
+      lnodes = p4est_lnodes_new (p4est, &ghost_layer, j);
+      p4est_lnodes_destroy (lnodes);
       P4EST_GLOBAL_PRODUCTIONF ("End lnodes test %d:%d\n", i, j);
     }
 

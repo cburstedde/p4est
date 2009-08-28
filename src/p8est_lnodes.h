@@ -48,7 +48,7 @@ SC_EXTERN_C_BEGIN;
  *
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
- * on the lowest numbered octree sharing the node.
+ * on the lowest numbered octree touching the node.
  * The sharers array contains items of type p8est_lnodes_rank_t
  * that hold the ranks that own or share independent local nodes.
  * It is sorted by rank.  The rank of the current process is included.

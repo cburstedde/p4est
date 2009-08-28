@@ -28,7 +28,7 @@ SC_EXTERN_C_BEGIN;
 
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
  *
- * Each element has degree+1 nodes per edge
+ * Each element has degree+1 nodes per face
  * and vnodes = (degree+1)^2 nodes per volume.
  * num_local_elements is the number of local quadrants in the p4est.
  * local_nodes is of dimension vnodes * num_local_elements
@@ -48,7 +48,7 @@ SC_EXTERN_C_BEGIN;
  *
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
- * on the lowest numbered octree sharing the node.
+ * on the lowest numbered octree touching the node.
  * The sharers array contains items of type p4est_lnodes_rank_t
  * that hold the ranks that own or share independent local nodes.
  * It is sorted by rank.  The rank of the current process is included.
