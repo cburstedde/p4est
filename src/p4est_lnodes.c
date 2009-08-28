@@ -2255,14 +2255,6 @@ p4est_lnodes_reset_data (p4est_lnodes_data_t * data, p4est_t * p4est)
   }
 #endif
 
-  P4EST_FREE (data->local_cdp);
-  P4EST_FREE (data->ghost_cdp);
-#ifdef P4_TO_P8
-  P4EST_FREE (data->local_edp);
-  P4EST_FREE (data->ghost_edp);
-#endif
-  /* do not free local_elem_nodes: controlled by lnodes_t */
-  P4EST_FREE (data->ghost_elem_nodes);
   sc_array_destroy (data->hfaces);
 #ifdef P4_TO_P8
   sc_array_destroy (data->hedges);
@@ -2849,8 +2841,8 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #endif
   p4est_locidx_t      nel;
   p4est_locidx_t      nlen;
-#ifdef P4EST_DEBUG
   p4est_locidx_t      li;
+#ifdef P4EST_DEBUG
   size_t              zz;
   p4est_lnodes_buf_info_t *last, *new;
 #endif
@@ -2898,6 +2890,13 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 
   p4est_lnodes_count_nodes (&data, p4est, ghost_layer, lnodes);
 
+  P4EST_FREE (data.local_cdp);
+  P4EST_FREE (data.ghost_cdp);
+#ifdef P4_TO_P8
+  P4EST_FREE (data.local_edp);
+  P4EST_FREE (data.ghost_edp);
+#endif
+
   while (data.hfaces->elem_count) {
     hface = sc_array_pop (data.hfaces);
     p4est_lnodes_hface_fix (p4est, hface, &data);
@@ -2909,10 +2908,11 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
   }
 #endif
 
+  P4EST_FREE (data.ghost_elem_nodes);
+
 #ifdef P4EST_DEBUG
-  nlen = data.nodes_per_elem * p4est->local_num_quadrants;
   for (li = 0; li < nlen; li++) {
-    P4EST_ASSERT (data.local_elem_nodes[li] >= 0);
+    P4EST_ASSERT (lnodes->local_nodes[li] >= 0);
   }
 #endif
 
@@ -2941,13 +2941,22 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #endif
   }
 
+#ifdef P4EST_MPI
   P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &data));
 
   p4est_lnodes_pass (p4est, &data);
+#endif
 
   p4est_lnodes_global_and_sharers (&data, lnodes, p4est);
 
   p4est_lnodes_reset_data (&data, p4est);
+
+#ifdef P4_TO_P8
+  for (li = 0; li < nel; li++) {
+    lnodes->face_code[li] = p8est_lnodes_code_fix (lnodes->face_code[li]);
+  }
+#endif
+
   return lnodes;
 }
 
