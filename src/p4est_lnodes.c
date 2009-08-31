@@ -2229,7 +2229,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
   sc_array_t          send_requests;
   MPI_Request        *send_request;
   MPI_Status          probe_status, recv_status;
-  int                 num_recv_queries = 0;
+  int                 num_recv_procs = 0;
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
   size_t              elem_count;
@@ -2252,7 +2252,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
     count = recv->elem_count;
     if (count) {
       P4EST_ASSERT (i != p4est->mpirank);
-      num_recv_queries++;
+      num_recv_procs++;
       num_recv_expect[i]++;
     }
   }
@@ -2261,7 +2261,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
   for (i = 0; i < mpisize; i++) {
     sc_array_init (&(recv_buf[i]), sizeof (p4est_lnodes_buf_info_t));
   }
-  for (i = 0; i < num_recv_queries; i++) {
+  for (i = 0; i < num_recv_procs; i++) {
     mpiret =
       MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_LNODES_TEST, p4est->mpicomm,
                  &probe_status);
@@ -2334,7 +2334,10 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
   sc_array_t          send_requests;
   MPI_Request        *send_request;
   MPI_Status          probe_status, recv_status;
-  int                 num_recv_queries = 0;
+  int                 num_recv_procs = 0;
+  int                 num_send_procs = 0;
+  size_t              total_send = 0;
+  size_t              total_recv = 0;
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
   size_t              elem_count;
@@ -2410,12 +2413,14 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
                           MPI_BYTE, i, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
                           send_request);
       SC_CHECK_MPI (mpiret);
+      num_send_procs++;
+      total_send += (send_count * sizeof (p4est_locidx_t));
     }
     recv_info = &(recv_buf_info[i]);
     count = recv_info->elem_count;
     if (count) {
       P4EST_ASSERT (i != p4est->mpirank);
-      num_recv_queries++;
+      num_recv_procs++;
       num_recv_expect[i]++;
     }
   }
@@ -2424,7 +2429,7 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
   for (i = 0; i < mpisize; i++) {
     sc_array_init (&(recv_buf[i]), sizeof (p4est_locidx_t));
   }
-  for (i = 0; i < num_recv_queries; i++) {
+  for (i = 0; i < num_recv_procs; i++) {
     mpiret =
       MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
                  &probe_status);
@@ -2504,6 +2509,7 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
       }
     }
     P4EST_ASSERT (count == elem_count);
+    total_recv += byte_count;
     sc_array_sort (sorter_array, p4est_lnodes_sorter_compare);
   }
 
@@ -2518,6 +2524,11 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
     sc_array_reset (&(send_buf[i]));
     sc_array_reset (&(recv_buf[i]));
   }
+
+  P4EST_VERBOSEF ("Total of %lld bytes sent to %d processes\n",
+                  (unsigned long long) total_send, num_send_procs);
+  P4EST_VERBOSEF ("Total 0f %lld buyts received from %d processes\n",
+                  (unsigned long long) total_recv, num_recv_procs);
   P4EST_FREE (send_buf);
   P4EST_FREE (recv_buf);
   P4EST_FREE (num_recv_expect);
@@ -2744,6 +2755,7 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
   int                 mpisize = p4est->mpisize;
   p4est_lnodes_t     *lnodes = P4EST_ALLOC (p4est_lnodes_t, 1);
 
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_lnodes_new\n");
   P4EST_ASSERT (degree >= 1);
 
   lnodes->degree = degree;
@@ -2851,6 +2863,7 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
   }
 #endif
 
+  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_lnodes_new\n");
   return lnodes;
 }
 
