@@ -795,7 +795,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   p4est_locidx_t      nid;
   int                 proc;
   int                 rank = info->p4est->mpirank;
-  p4est_topidx_t      owner_tid = P4EST_TOPIDX_MAX;
+  p4est_topidx_t      owner_tid = (p4est_topidx_t) P4EST_TOPIDX_MAX;
   int                 owner_corner = -1;
   p4est_quadrant_t   *owner_quad = NULL;
   p4est_quadrant_t   *q;
@@ -965,7 +965,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      nid;
   int                 proc;
   int                 rank = info->p4est->mpirank;
-  p4est_topidx_t      owner_tid = P4EST_TOPIDX_MAX;
+  p4est_topidx_t      owner_tid = (p4est_topidx_t) P4EST_TOPIDX_MAX;
   int                 owner_orientation = -1;
   int                 owner_edge = -1;
   p4est_quadrant_t   *owner_quad = NULL;
@@ -1215,7 +1215,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   p4est_locidx_t      nid;
   int                 proc;
   int                 rank = info->p4est->mpirank;
-  p4est_topidx_t      owner_tid = P4EST_TOPIDX_MAX;
+  p4est_topidx_t      owner_tid = (p4est_topidx_t) P4EST_TOPIDX_MAX;
   int                 owner_face = -1;
   p4est_quadrant_t   *owner_quad = NULL;
   size_t              owner_side = 2;
@@ -1547,7 +1547,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
   binfo = sc_array_push (&(recv_buf_info[owner_proc]));
   binfo->q = ownerq;
   binfo->q.p.which_tree = ownertid;
-  binfo->type = P4EST_LN_C_OFFSET + ownerc;
+  binfo->type = (int8_t) (P4EST_LN_C_OFFSET + ownerc);
   binfo->first_index = num_inodes;
   binfo->send_sharers = true;
   binfo->share_offset = -1;
@@ -1678,7 +1678,7 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
   binfo = sc_array_push (&(recv_buf_info[owner_proc]));
   binfo->q = final_ownerq;
   binfo->q.p.which_tree = ownertid[0];
-  binfo->type = P8EST_LN_E_OFFSET + ownere;
+  binfo->type = (int8_t) (P8EST_LN_E_OFFSET + ownere);
   binfo->first_index = num_inodes;
   binfo->send_sharers = true;
   binfo->share_offset = -1;
@@ -1898,7 +1898,7 @@ p4est_lnodes_binfo_compare (const void *a, const void *b)
   if (piggy_compar) {
     return piggy_compar;
   }
-  return (bufa->type - bufb->type);
+  return (int) (bufa->type - bufb->type);
 }
 
 static              bool
@@ -2170,7 +2170,6 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
 {
   p4est_locidx_t      num_inodes;
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
-  p4est_locidx_t      npel;
   p4est_locidx_t      nlen;
   p4est_locidx_t      li;
   p4est_locidx_t      inidx;
@@ -2187,8 +2186,7 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
   p4est_lnodes_sorter_t *sorter;
   p4est_locidx_t      rankval = -((p4est_locidx_t) rank + 1);
 
-  npel = data->nodes_per_elem;
-  nlen = npel * nlq;
+  nlen = ((p4est_locidx_t) data->nodes_per_elem) * nlq;
   num_inodes = (p4est_locidx_t) inodes->elem_count;
   for (li = 0; li < nlen; li++) {
     inidx = local_en[li];
