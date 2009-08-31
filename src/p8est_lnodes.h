@@ -48,7 +48,34 @@ SC_EXTERN_C_BEGIN;
  *
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
- * on the lowest numbered octree touching the node.
+ * on the lowest numbered octree *touching* the node.
+ *
+ * What is meant by *touching*?
+ * A quadrant is said to touch all faces/edges/corners that are incident on it,
+ * and by extension all nodes that are contained in those faces/edges/corners.
+ *
+ *            X      +-----------+
+ *             x     |\           \
+ *            x      | \           \
+ *             . x   |  \           \
+ *            x   X  |   +-----------+
+ * +-----+     . .   |   |           |
+ * |\     \   X   o  +   |           |
+ * | +-----+   o .    \  |     p     |
+ * + |  q  |      o    \ |           |
+ *  \|     |     o      \|           |
+ *   +-----+      O      +-----------+
+ * 
+ * In this example degree = 3.  There are 4 nodes that live on the face
+ * between q and p, two on each edge and one at each corner of that face.
+ * The face is incident on q, so q owns the nodes marked '.' on the face
+ * (provided q is from a lower tree or has a lower index than p).
+ * The bottom and frone edges are incident on q, so q owns its nodes marked
+ * 'o' as well.
+ * The front lower corner is incident on q, so q owns its node 'O' as
+ * well.  The other edges and Corner are not incident on q, so q cannot own
+ * their nodes, marked 'x' and 'X'.
+ * 
  * The sharers array contains items of type p8est_lnodes_rank_t
  * that hold the ranks that own or share independent local nodes.
  * It is sorted by rank.  The rank of the current process is included.

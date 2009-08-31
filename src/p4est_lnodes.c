@@ -111,6 +111,36 @@ typedef struct p4est_lnodes_buf_info
 }
 p4est_lnodes_buf_info_t;
 
+/* buf_info_t objects equivalence is based on the quadrants that describe them
+ * and the face/edge/corner of that quadrant.  The first index of the nodes they
+ * describe is not considered.
+ */
+static int
+p4est_lnodes_binfo_compare (const void *a, const void *b)
+{
+  const p4est_lnodes_buf_info_t *bufa = a;
+  const p4est_lnodes_buf_info_t *bufb = b;
+  int                 piggy_compar =
+    p4est_quadrant_compare_piggy (&(bufa->q), &(bufb->q));
+  if (piggy_compar) {
+    return piggy_compar;
+  }
+  return (int) (bufa->type - bufb->type);
+}
+
+static              bool
+p4est_lnodes_binfo_is_equal (const void *a, const void *b)
+{
+  const p4est_lnodes_buf_info_t *bufa = a;
+  const p4est_lnodes_buf_info_t *bufb = b;
+  return (p4est_quadrant_is_equal_piggy (&(bufa->q), &(bufb->q)) &&
+          bufa->type == bufb->type);
+}
+
+/** sorter: the order the independent nodes are created does not match their
+ * final indices: the sorter allows us to order them while maintaining
+ * references to their original indices.
+ */
 typedef struct p4est_lnodes_sorter
 {
   p4est_locidx_t      local_index;
@@ -245,6 +275,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
           has_local = true;
           procs[i] = rank;
           hqid[i] += quadrants_offset;
+          /* update face code */
 #ifndef P4_TO_P8
           face_codes[hqid[i]] |=
             ((int8_t) p4est_face_corners[p4est_zface_to_rface[f]][i]);
@@ -386,6 +417,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
           has_local = true;
           procs[i] = rank;
           hqid[i] += quadrants_offset;
+          /* update face code */
           face_codes[hqid[i]] |= ((int16_t) p8est_edge_corners[e][i]);
           face_codes[hqid[i]] |= (0x0001 << (3 + e / 4));
         }
@@ -707,6 +739,10 @@ p8est_lnodes_missing_proc_edp (p4est_quadrant_t * q, p4est_topidx_t tid,
 }
 #endif
 
+/** That we have found the quadrant (\q, \tid, \type) that owns a set of nodes,
+ * push the info describing the owner quadrant on the appropriate send/recv
+ * lists.
+ */
 static inline void
 p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
                          sc_array_t * send, sc_array_t * recv,
@@ -807,6 +843,9 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   bool                intra_tree = info->intra_tree;
   int8_t              type;
 
+  /* In p4est_iterate, the first quadrant in the first side is the lowest
+   * Morton that touches the corner if the corner is inside a tree.
+   */
   if (intra_tree) {
     cside = sc_array_index (sides, 0);
     owner_corner = cside->corner;
@@ -904,6 +943,11 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   count = all_procs.elem_count;
   if (count) {
     P4EST_QUADRANT_INIT (&tempq);
+    /* Regardless of the size of the quadrant that owns the corner, the
+     * quadrants that's added to the send/recv lists is the smallest descendent
+     * of the owner that touches the corner.  This convention allows all
+     * processes that share the quad to have the same quadrant in their
+     * send/recv lists. */
     p4est_quadrant_smallest_corner_descendent (owner_quad, &tempq,
                                                owner_corner);
     type = (int8_t) (P4EST_LN_C_OFFSET + owner_corner);
@@ -987,6 +1031,9 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
 
   p8est_lnodes_edge_simple_callback (info, data);
 
+  /* In p4est_iterate, the first quadrant in the first side is the lowest
+   * Morton that touches the edge if the edge is inside a tree.
+   */
   if (intra_tree) {
     eside = sc_array_index (sides, 0);
     owner_edge = eside->edge;
@@ -1086,6 +1133,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     }
   }
 
+  /* once we know the owner's orientation, we can number the local nodes based
+   * on whether this quadrant as the same or opposite orientation */
   for (zz = 0; zz < count; zz++) {
     eside = sc_array_index (sides, zz);
     e = eside->edge;
@@ -1130,6 +1179,10 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   count = all_procs.elem_count;
   if (count) {
     P4EST_QUADRANT_INIT (&tempq);
+    /* Even if the quadrant that owns the edge is fullsized, the quadrant that
+     * is added to the send/recv lists is a half-sized quadrant. This
+     * convention allows all processes that shares the edge to have the same
+     * quadrant in their send/recv lists. */
     if (owner_quad->level == max_level || min_level == P4EST_QMAXLEVEL) {
       tempq = *owner_quad;
     }
@@ -1242,6 +1295,9 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 
   p4est_lnodes_face_simple_callback (info, data);
 
+  /* In p4est_iterate, the first quadrant in the first side is the lowest
+   * Morton that touches the face if the face is inside a tree.
+   */
   if (intra_tree) {
     fside = sc_array_index (sides, 0);
     owner_face = fside->face;
@@ -1320,6 +1376,8 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
     }
   }
 
+  /* Once we know which side owns the face, we can number the local nodes based
+   * on the orientation between the faces */
   for (zz = 0; zz < count; zz++) {
     fside = sc_array_index (sides, zz);
     f = fside->face;
@@ -1884,32 +1942,6 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
 }
 #endif
 
-/* buf_info_t objects equivalence is based on the quadrants that describe them
- * and the face/edge/corner of that quadrant.  The first index of the nodes they
- * describe is not considered.
- */
-static int
-p4est_lnodes_binfo_compare (const void *a, const void *b)
-{
-  const p4est_lnodes_buf_info_t *bufa = a;
-  const p4est_lnodes_buf_info_t *bufb = b;
-  int                 piggy_compar =
-    p4est_quadrant_compare_piggy (&(bufa->q), &(bufb->q));
-  if (piggy_compar) {
-    return piggy_compar;
-  }
-  return (int) (bufa->type - bufb->type);
-}
-
-static              bool
-p4est_lnodes_binfo_is_equal (const void *a, const void *b)
-{
-  const p4est_lnodes_buf_info_t *bufa = a;
-  const p4est_lnodes_buf_info_t *bufb = b;
-  return (p4est_quadrant_is_equal_piggy (&(bufa->q), &(bufb->q)) &&
-          bufa->type == bufb->type);
-}
-
 #ifdef P4_TO_P8
 /* p8est_lnodes_code_fix:
  *
@@ -1998,6 +2030,7 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   }
 #endif
 
+  /* figure out which nodes live on which parts of the quadrants */
   n = 0;
 #ifdef P4_TO_P8
   for (k = 0; k < p + 1; k++) {
@@ -2164,6 +2197,17 @@ p4est_lnodes_reset_data (p4est_lnodes_data_t * data, p4est_t * p4est)
   P4EST_FREE (data->global_offsets);
 }
 
+/* p4est_lnodes_count_nodes:
+ *
+ * Coming out of the main iteration that finds the independent nodes, but before
+ * hanging faces and hanging edges have been fixed, we assign numbers to
+ * independent nodes based on greedy numbering: looping through the quadrants,
+ * a quadrant numbers of node if it touches it (touches the
+ * volume/face/edge/corner containing it) and if it hasn't received a number
+ * yet.  This is consistent with the node ownership scheme.
+ * We gather the number of owned nodes from all processes to create an offset
+ * array.
+ */
 static void
 p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
                           sc_array_t * ghost_layer, p4est_lnodes_t * lnodes)
@@ -2212,6 +2256,15 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
   P4EST_FREE (global_num_indep);
 }
 
+/* p4est_lnodes_test_comm:
+ *
+ * If the buf_info_t array is the same on both ends of a communication, then the
+ * information sent will be properly decoded.
+ *
+ * One caveat: in extremely rare circumstances, a recv_buf_info array may have a
+ * duplicated entry: two different inodes request the same node.  In this case,
+ * the recv_buf_info array won't be exactly the same as the send_buf_info array.
+ */
 static              bool
 p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
 {
@@ -2283,6 +2336,8 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
     prev = NULL;
     for (zz = 0; zz < count2; zz++) {
       binfo2 = sc_array_index (recv2, zz);
+      /* if there is a duplicate entry in the receive list, it has already been
+       * checked */
       if (zz > 0 && p4est_lnodes_binfo_is_equal (prev, binfo2)) {
         continue;
       }
@@ -2315,6 +2370,15 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
   return true;
 }
 
+/* p4est_lnodes_pass:
+ *
+ * Each process has its sorted send and receive list.
+ * Each process goes through each send list, encoding based on send_buf_info.
+ * Each process knows who to expect nodes from.
+ * When the nodes are received, they are put into a sorter list dedicated just
+ * to the process that the nodes come from, this is then sorted in ascending
+ * node order.
+ */
 static void
 p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
 {
@@ -2532,6 +2596,14 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
   P4EST_FREE (num_recv_expect);
 }
 
+/* p4est_lnodes_global_and_sharers:
+ *
+ * Each process that owns a node shared by the local process has a list of nodes
+ * that is sorted in increasing local_index, while the local element nodes refer
+ * to indices in the inodes array.  A map between the two is created, which
+ * allows local element nodes to point to global nodes.  After this is done, the
+ * sharers can be created.
+ */
 static void
 p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
                                  p4est_lnodes_t * lnodes, p4est_t * p4est)
@@ -2628,12 +2700,15 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     elnodes[li] = *lp;
   }
 
+  /* figure out all nodes that also share nodes shared by the local process */
   comm_proc = P4EST_ALLOC_ZERO (int, mpisize);
   count = inode_sharers->elem_count;
   for (zz = 0; zz < count; zz++) {
     i = *((int *) sc_array_index (inode_sharers, zz));
     comm_proc[i]++;
   }
+  /* create an entry in sharers for each such process, providing a map from
+   * process id to sharer index */
   comm_proc_count = 0;
   lnodes->sharers = sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   for (i = 0; i < mpisize; i++) {
@@ -2648,6 +2723,10 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     }
   }
 
+  /* for every node in a send or receive list, figure out which global node it
+   * is, and which processes share it, and add the index in global nodes to that
+   * sharer's local_nodes array.
+   */
   for (i = 0; i < mpisize; i++) {
     for (j = 0; j < 2; j++) {
       if (j == 0) {
@@ -2692,6 +2771,8 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     }
   }
 
+  /* for each sharer, figure out which entries in local_nodes are owned by the
+   * current process, and which are owned by the sharer's rank */
   for (i = 0; i < comm_proc_count; i++) {
     lrank = sc_array_index_int (sharers, i);
     sc_array_sort (&(lrank->shared_nodes), p4est_locidx_compare);
