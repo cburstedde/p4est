@@ -158,11 +158,13 @@ p4est_lnodes_sorter_compare (const void *a, const void *b)
 
 typedef struct p4est_lnodes_data
 {
-  p4est_lnodes_cdp_t *local_cdp;        /* num local quads * corners per quad */
-  p4est_lnodes_cdp_t *ghost_cdp;        /* num ghost quads * corners per quad */
+  sc_recycle_array_t *cdp_array;
+  p4est_locidx_t     *local_cdp;        /* num local quads * corners per quad */
+  p4est_locidx_t     *ghost_cdp;        /* num ghost quads * corners per quad */
 #ifdef P4_TO_P8
-  p8est_lnodes_edp_t *local_edp;        /* num local quads * edges per quad */
-  p8est_lnodes_edp_t *ghost_edp;        /* num ghost quads * edges per quad */
+  sc_recycle_array_t *edp_array;
+  p4est_locidx_t     *local_edp;        /* num local quads * edges per quad */
+  p4est_locidx_t     *ghost_edp;        /* num ghost quads * edges per quad */
 #endif
   p4est_locidx_t     *local_elem_nodes; /* number of local q's * nodes per q */
   p4est_locidx_t     *ghost_elem_nodes; /* number of ghost q's * nodes per q */
@@ -220,6 +222,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
 {
   int                 i;
   int                 c;
+  int                 c2;
   int                 f;
   size_t              zz;
   p4est_lnodes_data_t *data = Data;
@@ -230,17 +233,25 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
   p4est_tree_t       *tree;
   p4est_topidx_t      tid;
   p4est_locidx_t      qid;
-  p4est_lnodes_cdp_t *local_cdp = data->local_cdp;
-  p4est_lnodes_cdp_t *ghost_cdp = data->ghost_cdp;
+  sc_recycle_array_t *cdp_array = data->cdp_array;
+  p4est_locidx_t     *local_cdp = data->local_cdp;
+  p4est_locidx_t     *ghost_cdp = data->ghost_cdp;
   p4est_locidx_t      cdpid;
+  p4est_locidx_t      cdpidx;
+  size_t              cdpidxz;
+  p4est_lnodes_cdp_t *cdp;
 #ifdef P4_TO_P8
-  p8est_lnodes_edp_t *local_edp = data->local_edp;
-  p8est_lnodes_edp_t *ghost_edp = data->ghost_edp;
+  sc_recycle_array_t *edp_array = data->edp_array;
+  p4est_locidx_t     *local_edp = data->local_edp;
+  p4est_locidx_t     *ghost_edp = data->ghost_edp;
   p4est_locidx_t      edpid;
-  int                 j;
+  p4est_locidx_t      edpidx;
+  size_t              edpidxz;
+  p8est_lnodes_edp_t *edp;
+  int                 nodes_per_edge = data->nodes_per_edge;
   int                 e;
+  int                 j;
   int                 he[2];
-  int                 c2;
   int                 k;
   int                 eside;
 #endif
@@ -302,28 +313,72 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
         c = p4est_face_corners[f][i];
 #endif
         cdpid = hqid[i] * P4EST_CHILDREN + c;
-        if (h_is_local[i]) {
-          local_cdp[cdpid].face[fdir] = procs[P4EST_CHILDREN / 2 - 1 - i];
+        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        if (cdpidx >= 0) {
+          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
         }
         else {
-          ghost_cdp[cdpid].face[fdir] = procs[P4EST_CHILDREN / 2 - 1 - i];
-        }
-#ifdef P4_TO_P8
-        he[0] = p8est_corner_edges[c][(fdir + 1) % 3];
-        he[1] = p8est_corner_edges[c][(fdir + 2) % 3];
-        for (j = 0; j < 2; j++) {
-          edpid = hqid[i] * 12 + he[j];
-          c2 = p8est_edge_corners[he[1 - j]][0];
-          if (c2 == c) {
-            c2 = p8est_edge_corners[he[1 - j]][1];
-          }
-          k = p8est_corner_face_corners[c2][f];
-          eside = (p8est_edge_faces[he[j]][0] == f) ? 0 : 1;
+          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
+          cdpidx = (p4est_locidx_t) cdpidxz;
           if (h_is_local[i]) {
-            local_edp[edpid].face[eside] = procs[k];
+            local_cdp[cdpid] = cdpidx;
           }
           else {
-            ghost_edp[edpid].face[eside] = procs[k];
+            ghost_cdp[cdpid] = cdpidx;
+          }
+        }
+        cdp->face[fdir] = procs[P4EST_CHILDREN / 2 - 1 - i];
+
+#ifndef P4_TO_P8
+        c2 = p4est_face_corners[p4est_zface_to_rface[f]][1 - i];
+#else
+        c2 = p4est_face_corners[f][P4EST_CHILDREN / 2 - 1 - i];
+#endif
+        cdpid = hqid[i] * P4EST_CHILDREN + c2;
+        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        if (cdpidx >= 0) {
+          (void) sc_recycle_array_remove (cdp_array, (size_t) cdpidx);
+        }
+#ifdef P4_TO_P8
+        if (nodes_per_edge) {
+          he[0] = p8est_corner_edges[c][(fdir + 1) % 3];
+          he[1] = p8est_corner_edges[c][(fdir + 2) % 3];
+          for (j = 0; j < 2; j++) {
+            c2 = p8est_edge_corners[he[1 - j]][0];
+            if (c2 == c) {
+              c2 = p8est_edge_corners[he[1 - j]][1];
+            }
+            k = p8est_corner_face_corners[c2][f];
+            eside = (p8est_edge_faces[he[j]][0] == f) ? 0 : 1;
+            edpid = hqid[i] * 12 + he[j];
+            edpidx = h_is_local[i] ? local_edp[edpid] : ghost_edp[edpid];
+            if (edpidx >= 0) {
+              edp = sc_array_index (&edp_array->a, (size_t) edpidx);
+            }
+            else {
+              edp = sc_recycle_array_insert (edp_array, &edpidxz);
+              memset (edp, -1, sizeof (p8est_lnodes_edp_t));
+              edpidx = (p4est_locidx_t) edpidxz;
+              if (h_is_local[i]) {
+                local_edp[edpid] = edpidx;
+              }
+              else {
+                ghost_edp[edpid] = edpidx;
+              }
+            }
+            edp->face[eside] = procs[k];
+          }
+
+          c2 = p8est_face_corners[f][P4EST_CHILDREN / 2 - 1 - i];
+          he[0] = p8est_corner_edges[c2][(fdir + 1) % 3];
+          he[1] = p8est_corner_edges[c2][(fdir + 2) % 3];
+          for (j = 0; j < 2; j++) {
+            edpid = hqid[i] * 12 + he[j];
+            edpidx = h_is_local[i] ? local_edp[edpid] : ghost_edp[edpid];
+            if (edpidx >= 0) {
+              (void) sc_recycle_array_remove (edp_array, (size_t) edpidx);
+            }
           }
         }
 #endif
@@ -342,23 +397,45 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
         c = p4est_face_corners[f][i];
 #endif
         cdpid = qid * P4EST_CHILDREN + c;
-#ifdef P4_TO_P8
-        e = p8est_face_edges[f][i];
-        edpid = qid * 12 + e;
-        eside = (p8est_edge_faces[e][0] == f) ? 0 : 1;
-#endif
-        if (is_local) {
-          local_cdp[cdpid].face[fdir] = -2;
-#ifdef P4_TO_P8
-          local_edp[edpid].face[eside] = -2;
-#endif
+        cdpidx = is_local ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        if (cdpidx >= 0) {
+          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
         }
         else {
-          ghost_cdp[cdpid].face[fdir] = -2;
-#ifdef P4_TO_P8
-          ghost_edp[edpid].face[eside] = -2;
-#endif
+          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
+          cdpidx = (p4est_locidx_t) cdpidxz;
+          if (is_local) {
+            local_cdp[cdpid] = cdpidx;
+          }
+          else {
+            ghost_cdp[cdpid] = cdpidx;
+          }
         }
+        cdp->face[fdir] = -2;
+#ifdef P4_TO_P8
+        if (nodes_per_edge) {
+          e = p8est_face_edges[f][i];
+          eside = (p8est_edge_faces[e][0] == f) ? 0 : 1;
+          edpid = qid * 12 + e;
+          edpidx = is_local ? local_edp[edpid] : ghost_edp[edpid];
+          if (edpidx >= 0) {
+            edp = sc_array_index (&edp_array->a, (size_t) edpidx);
+          }
+          else {
+            edp = sc_recycle_array_insert (edp_array, &edpidxz);
+            memset (edp, -1, sizeof (p8est_lnodes_edp_t));
+            edpidx = (p4est_locidx_t) edpidxz;
+            if (is_local) {
+              local_edp[edpid] = edpidx;
+            }
+            else {
+              ghost_edp[edpid] = edpidx;
+            }
+          }
+          edp->face[eside] = -2;
+        }
+#endif
       }
     }
   }
@@ -386,9 +463,13 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_tree_t       *tree;
   p4est_topidx_t      tid;
   p4est_locidx_t      qid;
-  p4est_lnodes_cdp_t *local_cdp = data->local_cdp;
-  p4est_lnodes_cdp_t *ghost_cdp = data->ghost_cdp;
+  sc_recycle_array_t *cdp_array = data->cdp_array;
+  p4est_locidx_t     *local_cdp = data->local_cdp;
+  p4est_locidx_t     *ghost_cdp = data->ghost_cdp;
   p4est_locidx_t      cdpid;
+  p4est_locidx_t      cdpidx;
+  size_t              cdpidxz;
+  p4est_lnodes_cdp_t *cdp;
   int                 e;
   bool                is_local, *h_is_local;
   int                 procs[2];
@@ -434,11 +515,28 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
       for (i = 0; i < 2; i++) {
         c = p8est_edge_corners[e][i];
         cdpid = hqid[i] * P4EST_CHILDREN + c;
-        if (h_is_local[i]) {
-          local_cdp[cdpid].edge[edir] = procs[1 - i];
+        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        if (cdpidx >= 0) {
+          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
         }
         else {
-          ghost_cdp[cdpid].edge[edir] = procs[1 - i];
+          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
+          cdpidx = (p4est_locidx_t) cdpidxz;
+          if (h_is_local[i]) {
+            local_cdp[cdpid] = cdpidx;
+          }
+          else {
+            ghost_cdp[cdpid] = cdpidx;
+          }
+        }
+        cdp->edge[edir] = procs[1 - i];
+
+        c = p8est_edge_corners[e][1 - i];
+        cdpid = hqid[i] * P4EST_CHILDREN + c;
+        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        if (cdpidx >= 0) {
+          (void) sc_recycle_array_remove (cdp_array, (size_t) cdpidx);
         }
       }
     }
@@ -451,12 +549,22 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
       for (i = 0; i < 2; i++) {
         c = p8est_edge_corners[e][i];
         cdpid = qid * P4EST_CHILDREN + c;
-        if (is_local) {
-          local_cdp[cdpid].edge[edir] = -2;
+        cdpidx = is_local ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        if (cdpidx >= 0) {
+          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
         }
         else {
-          ghost_cdp[cdpid].edge[edir] = -2;
+          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
+          cdpidx = (p4est_locidx_t) cdpidxz;
+          if (is_local) {
+            local_cdp[cdpid] = cdpidx;
+          }
+          else {
+            ghost_cdp[cdpid] = cdpidx;
+          }
         }
+        cdp->edge[edir] = -2;
       }
     }
   }
@@ -809,8 +917,12 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   sc_array_t         *inodes = data->inodes;
   p4est_locidx_t     *inode;
   sc_array_t         *inode_sharers = data->inode_sharers;
-  p4est_lnodes_cdp_t *local_cdp = data->local_cdp;
-  p4est_lnodes_cdp_t *ghost_cdp = data->ghost_cdp;
+  sc_recycle_array_t *cdp_array = data->cdp_array;
+  p4est_locidx_t     *local_cdp = data->local_cdp;
+  p4est_locidx_t     *ghost_cdp = data->ghost_cdp;
+  p4est_locidx_t      cdpid;
+  p4est_locidx_t      cdpidx;
+  size_t              cdpidxz;
   p4est_lnodes_cdp_t *cdp;
   p4est_locidx_t     *local_elem_nodes = data->local_elem_nodes;
   p4est_locidx_t     *ghost_elem_nodes = data->ghost_elem_nodes;
@@ -827,7 +939,6 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
   bool                is_local;
   int                 c;
-  p4est_locidx_t      cdpid;
   p4est_locidx_t      nid;
   int                 proc;
   int                 rank = info->p4est->mpirank;
@@ -906,7 +1017,15 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
 #endif
 
     cdpid = qid * P4EST_CHILDREN + c;
-    cdp = is_local ? &(local_cdp[cdpid]) : &(ghost_cdp[cdpid]);
+    cdpidx = is_local ? local_cdp[cdpid] : ghost_cdp[cdpid];
+    if (cdpidx >= 0) {
+      cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
+    }
+    else {
+      cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+      memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
+      cdpidx = (p4est_locidx_t) cdpidxz;
+    }
     for (i = 0; i < P4EST_DIM; i++) {
       proc = cdp->face[i];
       if (proc == -1) {
@@ -927,6 +1046,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       }
 #endif
     }
+    (void) sc_recycle_array_remove (cdp_array, (size_t) cdpidx);
 
     nid = qid * nodes_per_elem + corner_nodes[c];
     elnode = is_local ? &(local_elem_nodes[nid]) : &(ghost_elem_nodes[nid]);
@@ -985,8 +1105,12 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   sc_array_t         *inodes = data->inodes;
   p4est_locidx_t     *inode;
   sc_array_t         *inode_sharers = data->inode_sharers;
-  p8est_lnodes_edp_t *local_edp = data->local_edp;
-  p8est_lnodes_edp_t *ghost_edp = data->ghost_edp;
+  sc_recycle_array_t *edp_array = data->edp_array;
+  p4est_locidx_t     *local_edp = data->local_edp;
+  p4est_locidx_t     *ghost_edp = data->ghost_edp;
+  p4est_locidx_t      edpid;
+  p4est_locidx_t      edpidx;
+  size_t              edpidxz;
   p8est_lnodes_edp_t *edp;
   p4est_locidx_t     *local_elem_nodes = data->local_elem_nodes;
   p4est_locidx_t     *ghost_elem_nodes = data->ghost_elem_nodes;
@@ -1005,7 +1129,6 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
   bool               *is_local;
   int                 e;
-  p4est_locidx_t      edpid;
   p4est_locidx_t      nid;
   int                 proc;
   int                 rank = info->p4est->mpirank;
@@ -1116,9 +1239,17 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       }
 #endif
 
+      edpid = qid * 12 + e;
+      edpidx = is_local[i] ? local_edp[edpid] : ghost_edp[edpid];
       if (is_hanging) {
-        edpid = qid * 12 + e;
-        edp = is_local[i] ? &(local_edp[edpid]) : &(ghost_edp[edpid]);
+        if (edpidx >= 0) {
+          edp = sc_array_index (&edp_array->a, edpidx);
+        }
+        else {
+          edp = sc_recycle_array_insert (edp_array, &edpidxz);
+          memset (edp, -1, sizeof (p8est_lnodes_edp_t));
+          edpidx = (p4est_locidx_t) edpidxz;
+        }
         for (j = 0; j < 2; j++) {
           proc = edp->face[j];
           if (proc == -1) {
@@ -1128,6 +1259,12 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
             ip = sc_array_push (&all_procs);
             *ip = proc;
           }
+        }
+        (void) sc_recycle_array_remove (edp_array, (size_t) edpidx);
+      }
+      else {
+        if (edpidx >= 0) {
+          (void) sc_recycle_array_remove (edp_array, (size_t) edpidx);
         }
       }
     }
@@ -2126,15 +2263,26 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   }
 #endif
 
-  data->local_cdp = P4EST_ALLOC (p4est_lnodes_cdp_t, nlcdp);
-  memset (data->local_cdp, -1, nlcdp * sizeof (p4est_lnodes_cdp_t));
-  data->ghost_cdp = P4EST_ALLOC (p4est_lnodes_cdp_t, ngcdp);
-  memset (data->ghost_cdp, -1, ngcdp * sizeof (p4est_lnodes_cdp_t));
+  data->cdp_array = P4EST_ALLOC (sc_recycle_array_t, 1);
+  sc_recycle_array_init (data->cdp_array, sizeof (p4est_lnodes_cdp_t));
+  data->local_cdp = P4EST_ALLOC (p4est_locidx_t, nlcdp);
+  memset (data->local_cdp, -1, nlcdp * sizeof (p4est_locidx_t));
+  data->ghost_cdp = P4EST_ALLOC (p4est_locidx_t, ngcdp);
+  memset (data->ghost_cdp, -1, ngcdp * sizeof (p4est_locidx_t));
 #ifdef P4_TO_P8
-  data->local_edp = P4EST_ALLOC (p8est_lnodes_edp_t, nledp);
-  memset (data->local_edp, -1, nledp * sizeof (p8est_lnodes_edp_t));
-  data->ghost_edp = P4EST_ALLOC (p8est_lnodes_edp_t, ngedp);
-  memset (data->ghost_edp, -1, ngedp * sizeof (p8est_lnodes_edp_t));
+  if (npe) {
+    data->edp_array = P4EST_ALLOC (sc_recycle_array_t, 1);
+    sc_recycle_array_init (data->edp_array, sizeof (p8est_lnodes_edp_t));
+    data->local_edp = P4EST_ALLOC (p4est_locidx_t, nledp);
+    memset (data->local_edp, -1, nledp * sizeof (p4est_locidx_t));
+    data->ghost_edp = P4EST_ALLOC (p4est_locidx_t, ngedp);
+    memset (data->ghost_edp, -1, ngedp * sizeof (p4est_locidx_t));
+  }
+  else {
+    data->edp_array = NULL;
+    data->local_edp = NULL;
+    data->ghost_edp = NULL;
+  }
 #endif
 
   data->local_elem_nodes = lnodes->local_nodes;
@@ -2256,6 +2404,7 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
   P4EST_FREE (global_num_indep);
 }
 
+#ifdef P4EST_DEBUG
 /* p4est_lnodes_test_comm:
  *
  * If the buf_info_t array is the same on both ends of a communication, then the
@@ -2369,6 +2518,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
   P4EST_FREE (num_recv_expect);
   return true;
 }
+#endif
 
 /* p4est_lnodes_pass:
  *
@@ -2589,7 +2739,7 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
 
   P4EST_VERBOSEF ("Total of %lld bytes sent to %d processes\n",
                   (unsigned long long) total_send, num_send_procs);
-  P4EST_VERBOSEF ("Total 0f %lld buyts received from %d processes\n",
+  P4EST_VERBOSEF ("Total 0f %lld bytes received from %d processes\n",
                   (unsigned long long) total_recv, num_recv_procs);
   P4EST_FREE (send_buf);
   P4EST_FREE (recv_buf);
@@ -2821,12 +2971,13 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
   p4est_lnodes_data_t data;
   p4est_iter_face_side_t *hface;
 #ifdef P4_TO_P8
+  p4est_locidx_t      li;
   p8est_iter_edge_side_t *hedge;
 #endif
   p4est_locidx_t      nel;
   p4est_locidx_t      nlen;
-  p4est_locidx_t      li;
 #ifdef P4EST_DEBUG
+  p4est_locidx_t      lj;
   size_t              zz;
   p4est_lnodes_buf_info_t *last, *new;
 #endif
@@ -2875,11 +3026,17 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 
   p4est_lnodes_count_nodes (&data, p4est, ghost_layer, lnodes);
 
+  sc_recycle_array_reset (data.cdp_array);
+  P4EST_FREE (data.cdp_array);
   P4EST_FREE (data.local_cdp);
   P4EST_FREE (data.ghost_cdp);
 #ifdef P4_TO_P8
-  P4EST_FREE (data.local_edp);
-  P4EST_FREE (data.ghost_edp);
+  if (data.nodes_per_edge) {
+    sc_recycle_array_reset (data.edp_array);
+    P4EST_FREE (data.edp_array);
+    P4EST_FREE (data.local_edp);
+    P4EST_FREE (data.ghost_edp);
+  }
 #endif
 
   while (data.hfaces->elem_count) {
@@ -2896,8 +3053,8 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
   P4EST_FREE (data.ghost_elem_nodes);
 
 #ifdef P4EST_DEBUG
-  for (li = 0; li < nlen; li++) {
-    P4EST_ASSERT (lnodes->local_nodes[li] >= 0);
+  for (lj = 0; lj < nlen; lj++) {
+    P4EST_ASSERT (lnodes->local_nodes[lj] >= 0);
   }
 #endif
 
