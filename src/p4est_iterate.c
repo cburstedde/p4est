@@ -2482,7 +2482,8 @@ p4est_iterate (p4est_t * p4est, sc_array_t * Ghost_layer, void *user_data,
 #endif
   p4est_iter_corner_args_t corner_args;
   p4est_iter_volume_args_t args;
-
+  p4est_topidx_t      first_local_tree = p4est->first_local_tree;
+  p4est_topidx_t      last_local_tree = p4est->last_local_tree;
   bool                run_iter;
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -2530,16 +2531,18 @@ p4est_iterate (p4est_t * p4est, sc_array_t * Ghost_layer, void *user_data,
   /** we have to loop over all trees and not just local trees because of the
    * ghost layer */
   for (t = 0; t < global_num_trees; t++) {
-    p4est_iter_init_volume (&args, p4est, ghost_layer, tree_first_ghost,
-                            loop_args, t);
+    if (t >= first_local_tree && t <= last_local_tree) {
+      p4est_iter_init_volume (&args, p4est, ghost_layer, tree_first_ghost,
+                              loop_args, t);
 
-    p4est_volume_iterate (&args, user_data, iter_volume, iter_face,
+      p4est_volume_iterate (&args, user_data, iter_volume, iter_face,
 #ifdef P4_TO_P8
-                          iter_edge,
+                            iter_edge,
 #endif
-                          iter_corner);
+                            iter_corner);
 
-    p4est_iter_reset_volume (&args);
+      p4est_iter_reset_volume (&args);
+    }
 
     /* Now we need to run face_iterate on the faces between trees */
     for (i = 0; i < 2 * P4EST_DIM; i++) {
