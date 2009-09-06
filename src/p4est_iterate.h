@@ -24,6 +24,7 @@
 #define P4EST_ITERATE_H
 
 #include <p4est.h>
+#include <p4est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -37,7 +38,7 @@ SC_EXTERN_C_BEGIN;
 typedef struct p4est_iter_volume_info
 {
   p4est_t            *p4est;
-  sc_array_t         *ghost_layer;
+  p4est_ghost_t      *ghost_layer;
   p4est_quadrant_t   *quad;
   p4est_locidx_t      quadid;
   p4est_topidx_t      treeid;
@@ -50,30 +51,32 @@ p4est_iter_volume_info_t;
 typedef void        (*p4est_iter_volume_t) (p4est_iter_volume_info_t * info,
                                             void *user_data);
 
-/* Information about one side of a face in the forest.  If a \a quad is local,
- * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
- * the ghosts array. If the face is hanging, then the quadrants are listed in
- * z-order.  If a quadrant should be present, but it is not included in the
- * ghost layer, then quad = NULL, is_local = false, and quadid = -1.
+/* Information about one side of a face in the forest.  If a \a quad is local
+ * (\a is_ghost = 0), then its \a quadid indexes the tree's quadrant array;
+ * otherwise, it indexes the ghosts array. If the face is hanging, then the
+ * quadrants are listed in z-order.  If a quadrant should be present, but it is
+ * not included in the ghost layer, then quad = NULL, is_ghost = 1, and
+ * quadid = -1.
+ *
  */
 typedef struct p4est_iter_face_side
 {
   p4est_topidx_t      treeid;
-  int                 face;
-  bool                is_hanging;
+  int8_t              face;
+  int8_t              is_hanging;
   union p4est_iter_face_side_data
   {
     struct
     {
       p4est_quadrant_t   *quad;
-      bool                is_local;
+      int8_t              is_ghost;
       p4est_locidx_t      quadid;
     }
     full;
     struct
     {
       p4est_quadrant_t   *quad[2];
-      bool                is_local[2];
+      int8_t              is_ghost[2];
       p4est_locidx_t      quadid[2];
     }
     hanging;
@@ -86,16 +89,16 @@ p4est_iter_face_side_t;
  * is 0 if the face is within one tree; otherwise, it is the same as the
  * orientation value between the two trees given in the connectivity.  If the
  * face is on the outside boundary of the forest, then there is only one side.
- * If intra_tree is true, the face is on the interior of a tree.
- * When intra_tree is true, sides[0] contains the lowest z-order quadrant that
+ * If tree_boundary = 0, the face is on the interior of a tree.
+ * When tree_boundary = 0, sides[0] contains the lowest z-order quadrant that
  * touches the face.
  */
 typedef struct p4est_iter_face_info
 {
   p4est_t            *p4est;
-  sc_array_t         *ghost_layer;
-  int                 orientation;
-  bool                intra_tree;
+  p4est_ghost_t      *ghost_layer;
+  int8_t              orientation;
+  int8_t              tree_boundary;
   sc_array_t          sides;    /* p4est_iter_face_side_t */
 }
 p4est_iter_face_info_t;
@@ -110,31 +113,32 @@ p4est_iter_face_info_t;
 typedef void        (*p4est_iter_face_t) (p4est_iter_face_info_t * info,
                                           void *user_data);
 
-/* Information about one side of a corner in the forest.  If a \a quad is local,
- * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
- * the ghosts array. If a quadrant should be present, but it is not included in
- * the ghost layer, then quad = NULL, is_local = false, and quadid = -1.
+/* Information about one side of a corner in the forest.  If a \a quad is local
+ * (\a is_ghost = 0), then its \a quadid indexes the tree's quadrant array;
+ * otherwise, it indexes the ghosts array. If a quadrant should be present, but
+ * it is not included in the ghost layer, then quad = NULL, is_ghost = 1,
+ * and quadid = -1.
  */
 typedef struct p4est_iter_corner_side
 {
   p4est_topidx_t      treeid;
-  int                 corner;
+  int8_t              corner;
   p4est_quadrant_t   *quad;
-  bool                is_local;
+  int8_t              is_ghost;
   p4est_locidx_t      quadid;
 }
 p4est_iter_corner_side_t;
 
 /** The information about all sides of a corner in the forest.
- * If intra_tree is true, the corner is on the interior of a tree.
- * When intra_tree is true, sides[0] contains the lowest z-order quadrant that
+ * If tree_boundary = 0, the corner is on the interior of a tree.
+ * When tree_boundary = 0, sides[0] contains the lowest z-order quadrant that
  * touches the corner.
  */
 typedef struct p4est_iter_corner_info
 {
   p4est_t            *p4est;
-  sc_array_t         *ghost_layer;
-  bool                intra_tree;
+  p4est_ghost_t      *ghost_layer;
+  int8_t              tree_boundary;
   sc_array_t          sides;    /* p4est_iter_corner_side_t */
 }
 p4est_iter_corner_info_t;
@@ -168,7 +172,8 @@ typedef void        (*p4est_iter_corner_t) (p4est_iter_corner_info_t * info,
  *    quadrants, i.e. that are not adjacent in the local section of the
  *    forest.
  */
-void                p4est_iterate (p4est_t * p4est, sc_array_t * ghost_layer,
+void                p4est_iterate (p4est_t * p4est,
+                                   p4est_ghost_t * ghost_layer,
                                    void *user_data,
                                    p4est_iter_volume_t iter_volume,
                                    p4est_iter_face_t iter_face,

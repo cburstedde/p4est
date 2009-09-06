@@ -95,15 +95,15 @@ static int          check_to_type[27] = { 3,
 
 typedef struct iter_data
 {
-  bool                count_volume;
-  bool                count_face;
-  bool                ghost_face;
+  int8_t              count_volume;
+  int8_t              count_face;
+  int8_t              ghost_face;
 #ifdef P4_TO_P8
-  bool                count_edge;
-  bool                ghost_edge;
+  int8_t              count_edge;
+  int8_t              ghost_edge;
 #endif
-  bool                count_corner;
-  bool                ghost_corner;
+  int8_t              count_corner;
+  int8_t              ghost_corner;
   int                *checks;
 }
 iter_data_t;
@@ -134,11 +134,11 @@ corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 {
 };
 
-static              bool
+static              int8_t
 test_corner_side (p4est_t * p4est, p4est_iter_corner_side_t * side,
                   void *data)
 {
-  int                 corner = side->corner;
+  int                 corner = (int) side->corner;
   p4est_quadrant_t   *q = side->quad;
   iter_data_t        *iter_data = (iter_data_t *) data;
   int                *checks = iter_data->checks;
@@ -147,25 +147,25 @@ test_corner_side (p4est_t * p4est, p4est_iter_corner_side_t * side,
   p4est_tree_t       *tree;
   p4est_locidx_t      offset;
 
-  tree = p4est_array_index_topidx (p4est->trees, t);
+  tree = p4est_tree_array_index (p4est->trees, t);
   offset = tree->quadrants_offset;
 
   q = side->quad;
   if (q == NULL) {
     SC_CHECK_ABORT (!(iter_data->ghost_corner), "Iterate: empty corner side");
-    return false;
+    return 1;
   }
   else {
-    if (side->is_local && iter_data->count_corner) {
+    if (!side->is_ghost && iter_data->count_corner) {
       qid += offset;
       checks[qid * checks_per_quad + corner + corner_offset]++;
     }
   }
 
-  return side->is_local;
+  return side->is_ghost;
 }
 
-static              bool
+static              int8_t
 quad_is_in_corner_sides (p4est_quadrant_t * q, p4est_topidx_t t,
                          sc_array_t * sides)
 {
@@ -175,29 +175,29 @@ quad_is_in_corner_sides (p4est_quadrant_t * q, p4est_topidx_t t,
   p4est_quadrant_t   *r;
 
   for (zz = 0; zz < zcount; zz++) {
-    cside = sc_array_index (sides, zz);
+    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
     if (cside->treeid == t) {
       r = cside->quad;
       if (r == NULL) {
         continue;
       }
       if (p4est_quadrant_is_equal (q, r)) {
-        return true;
+        return 1;
       }
       if (p4est_quadrant_is_ancestor (q, r)) {
-        return true;
+        return 1;
       }
     }
   }
 
-  return false;
+  return 0;
 }
 
 static void
 test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
 {
   int                 i, j;
-  bool                has_local = false;
+  int8_t              has_local = 0;
   int                 limit = (int) info->sides.elem_count;
   p4est_iter_corner_side_t *cside;
   p4est_quadrant_t    tempq, tempr;
@@ -214,8 +214,9 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
   iter_data_t        *iter_data = (iter_data_t *) data;
 
   for (i = 0; i < limit; i++) {
-    cside = sc_array_index_int (&(info->sides), i);
-    has_local = (test_corner_side (info->p4est, cside, data) || has_local);
+    cside = (p4est_iter_corner_side_t *) sc_array_index_int (&(info->sides),
+                                                             i);
+    has_local = (!test_corner_side (info->p4est, cside, data) || has_local);
     if (cside->quad != NULL) {
       min_level = (cside->quad->level < min_level) ? cside->quad->level :
         min_level;
@@ -226,11 +227,12 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
   sc_array_init (&quads, sizeof (p4est_quadrant_t));
   sc_array_init (&treeids, sizeof (p4est_topidx_t));
   for (i = 0; i < limit; i++) {
-    cside = sc_array_index_int (&(info->sides), i);
+    cside = (p4est_iter_corner_side_t *) sc_array_index_int (&(info->sides),
+                                                             i);
     if (cside->quad == NULL) {
       continue;
     }
-    c = cside->corner;
+    c = (int) cside->corner;
     t = cside->treeid;
     tempq = *(cside->quad);
     tempq.x &= ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - min_level);
@@ -247,7 +249,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
         continue;
       }
       if (!quad_is_in_corner_sides (&tempr, nt, &(info->sides))) {
-        SC_CHECK_ABORT (!(cside->is_local && iter_data->ghost_face),
+        SC_CHECK_ABORT (!(!cside->is_ghost && iter_data->ghost_face),
                         "Iterate: quad missing corner neighbor");
       }
     }
@@ -259,10 +261,10 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
       p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids,
                                           conn);
       for (zz = 0; zz < quads.elem_count; zz++) {
-        ptemp = sc_array_index (&quads, zz);
+        ptemp = p4est_quadrant_array_index (&quads, zz);
         nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
         if (!quad_is_in_corner_sides (ptemp, nt, &(info->sides))) {
-          SC_CHECK_ABORT (!(cside->is_local && iter_data->ghost_edge),
+          SC_CHECK_ABORT (!(!cside->is_ghost && iter_data->ghost_edge),
                           "Iterate: quad missing corner neighbor");
         }
       }
@@ -273,7 +275,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
     p4est_quadrant_corner_neighbor_extra (&tempq, t, c, &quads, &treeids,
                                           conn);
     for (zz = 0; zz < quads.elem_count; zz++) {
-      ptemp = sc_array_index (&quads, zz);
+      ptemp = p4est_quadrant_array_index (&quads, zz);
       nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
       if (!quad_is_in_corner_sides (ptemp, nt, &(info->sides))) {
         SC_CHECK_ABORT (!(iter_data->ghost_corner),
@@ -288,13 +290,13 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
 }
 
 #ifdef P4_TO_P8
-static              bool
+static              int8_t
 test_edge_side (p4est_t * p4est, p8est_iter_edge_side_t * side, void *data)
 {
   int                 i;
-  int                 edge = side->edge;
+  int                 edge = (int) side->edge;
   int                 child_id, opp_id;
-  bool                has_local = false;
+  int8_t              has_local = 0;
   p4est_quadrant_t   *q;
   p4est_quadrant_t    tempq;
   iter_data_t        *iter_data = (iter_data_t *) data;
@@ -305,7 +307,7 @@ test_edge_side (p4est_t * p4est, p8est_iter_edge_side_t * side, void *data)
   p4est_locidx_t      offset;
   int                 quad_count = 0;
 
-  tree = p4est_array_index_topidx (p4est->trees, t);
+  tree = p4est_tree_array_index (p4est->trees, t);
   offset = tree->quadrants_offset;
 
   if (!side->is_hanging) {
@@ -313,13 +315,13 @@ test_edge_side (p4est_t * p4est, p8est_iter_edge_side_t * side, void *data)
     if (q == NULL) {
       SC_CHECK_ABORT (!(iter_data->ghost_edge),
                       "Iterate: full edge side missing quadrant");
-      return false;
+      return 1;
     }
-    if (side->is.full.is_local && iter_data->count_edge) {
+    if (!side->is.full.is_ghost && iter_data->count_edge) {
       qid = side->is.full.quadid + offset;
       checks[qid * checks_per_quad + edge + edge_offset]++;
     }
-    return side->is.full.is_local;
+    return side->is.full.is_ghost;
   }
   else {
     for (i = 0; i < 2; i++) {
@@ -334,8 +336,8 @@ test_edge_side (p4est_t * p4est, p8est_iter_edge_side_t * side, void *data)
       SC_CHECK_ABORT (p8est_edge_corners[edge][i] == child_id,
                       "Iterate: edge side ordering");
       opp_id = p8est_edge_corners[edge][1 - i];
-      if (side->is.hanging.is_local[i]) {
-        has_local = true;
+      if (!side->is.hanging.is_ghost[i]) {
+        has_local = 1;
         qid = side->is.hanging.quadid[i] + offset;
         if (iter_data->count_edge) {
           checks[qid * checks_per_quad + edge + edge_offset]++;
@@ -362,11 +364,11 @@ test_edge_side (p4est_t * p4est, p8est_iter_edge_side_t * side, void *data)
                       "Iterate: non siblings share edge");
       break;
     }
-    return has_local;
+    return !has_local;
   }
 }
 
-static              bool
+static              int8_t
 quad_is_in_edge_sides (p8est_quadrant_t * q, p4est_topidx_t t,
                        sc_array_t * sides)
 {
@@ -375,35 +377,35 @@ quad_is_in_edge_sides (p8est_quadrant_t * q, p4est_topidx_t t,
   p8est_iter_edge_side_t *eside;
 
   for (zz = 0; zz < zcount; zz++) {
-    eside = sc_array_index (sides, zz);
+    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
     if (eside->treeid == t) {
       if (!eside->is_hanging) {
         if (eside->is.full.quad != NULL) {
           if (p4est_quadrant_is_equal (q, eside->is.full.quad)) {
-            return true;
+            return 1;
           }
         }
       }
       else if (eside->is.hanging.quad[0] != NULL) {
         if (p4est_quadrant_is_parent (q, eside->is.hanging.quad[0])) {
-          return true;
+          return 1;
         }
       }
       else if (eside->is.hanging.quad[1] != NULL) {
         if (p4est_quadrant_is_parent (q, eside->is.hanging.quad[1])) {
-          return true;
+          return 1;
         }
       }
     }
   }
-  return false;
+  return 0;
 }
 
 static void
 test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
 {
   int                 i, j;
-  bool                has_local = false;
+  int8_t              has_local = 0;
   int                 limit = (int) info->sides.elem_count;
   p8est_iter_edge_side_t *eside;
   p8est_quadrant_t    tempq, tempr;
@@ -418,34 +420,34 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
   sc_array_init (&quads, sizeof (p8est_quadrant_t));
   sc_array_init (&treeids, sizeof (p4est_topidx_t));
   for (i = 0; i < limit; i++) {
-    eside = sc_array_index_int (&(info->sides), i);
-    has_local = (test_edge_side (info->p4est, eside, data) || has_local);
+    eside = (p8est_iter_edge_side_t *) sc_array_index_int (&(info->sides), i);
+    has_local = (!test_edge_side (info->p4est, eside, data) || has_local);
   }
   SC_CHECK_ABORT (has_local, "Iterate: non local edge");
 
   for (i = 0; i < limit; i++) {
-    eside = sc_array_index_int (&(info->sides), i);
+    eside = (p8est_iter_edge_side_t *) sc_array_index_int (&(info->sides), i);
     if (!eside->is_hanging) {
       if (eside->is.full.quad == NULL) {
         continue;
       }
       tempq = *(eside->is.full.quad);
-      has_local = eside->is.full.is_local;
+      has_local = !eside->is.full.is_ghost;
     }
     else {
       if (eside->is.hanging.quad[0] != NULL) {
         p4est_quadrant_parent (eside->is.hanging.quad[0], &tempq);
-        has_local = eside->is.hanging.is_local[0];
+        has_local = !eside->is.hanging.is_ghost[0];
       }
       else {
         if (eside->is.hanging.quad[1] == NULL) {
           continue;
         }
         p4est_quadrant_parent (eside->is.hanging.quad[1], &tempq);
-        has_local = eside->is.hanging.is_local[1];
+        has_local = !eside->is.hanging.is_ghost[1];
       }
     }
-    e = eside->edge;
+    e = (int) eside->edge;
     t = eside->treeid;
     for (j = 0; j < 2; j++) {
       f = p8est_edge_faces[e][j];
@@ -462,7 +464,7 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
     sc_array_resize (&treeids, 0);
     p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids, conn);
     for (zz = 0; zz < quads.elem_count; zz++) {
-      ptemp = sc_array_index (&quads, zz);
+      ptemp = p4est_quadrant_array_index (&quads, zz);
       nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
       if (!quad_is_in_edge_sides (ptemp, nt, &(info->sides))) {
         SC_CHECK_ABORT (!(iter_data->ghost_edge),
@@ -475,13 +477,13 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
 }
 #endif
 
-static              bool
+static              int8_t
 test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
 {
   int                 i;
-  int                 face = side->face;
+  int                 face = (int) side->face;
   int                 child_id, opp_id;
-  bool                has_local = false;
+  int8_t              has_local = 0;
   p4est_quadrant_t   *q;
   p4est_quadrant_t    tempq;
   iter_data_t        *iter_data = (iter_data_t *) data;
@@ -497,25 +499,21 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
   p4est_locidx_t      offset;
   int                 quad_count = 0;
 
-  tree = p4est_array_index_topidx (p4est->trees, t);
+  tree = p4est_tree_array_index (p4est->trees, t);
   offset = tree->quadrants_offset;
-
-#ifndef P4_TO_P8
-  face = p4est_zface_to_rface[face];
-#endif
 
   if (!side->is_hanging) {
     q = side->is.full.quad;
     if (q == NULL) {
       SC_CHECK_ABORT (!(iter_data->ghost_face),
                       "Iterate: full face side missing quadrant");
-      return false;
+      return 1;
     }
-    if (side->is.full.is_local && iter_data->count_face) {
+    if (!side->is.full.is_ghost && iter_data->count_face) {
       qid = side->is.full.quadid + offset;
       checks[qid * checks_per_quad + face + face_offset]++;
     }
-    return side->is.full.is_local;
+    return side->is.full.is_ghost;
   }
   else {
     for (i = 0; i < P4EST_CHILDREN / 2; i++) {
@@ -535,8 +533,8 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
       SC_CHECK_ABORT (p4est_face_corners[face][i] == child_id,
                       "Iterate: face side ordering");
       opp_id = p4est_face_corners[face][P4EST_CHILDREN / 2 - 1 - i];
-      if (side->is.hanging.is_local[i]) {
-        has_local = true;
+      if (!side->is.hanging.is_ghost[i]) {
+        has_local = 1;
         qid = side->is.hanging.quadid[i] + offset;
         if (iter_data->count_face) {
           checks[qid * checks_per_quad + face + face_offset]++;
@@ -587,7 +585,7 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
       }
       break;
     }
-    return has_local;
+    return !has_local;
   }
 }
 
@@ -595,7 +593,7 @@ static void
 test_face_adjacency (p4est_iter_face_info_t * info, void *data)
 {
   int                 i, j;
-  bool                is_local[2];
+  int8_t              is_ghost[2];
   int                 limit = (int) info->sides.elem_count;
   p4est_iter_face_side_t *fside;
   p4est_quadrant_t    tempq[2], tempr[2];
@@ -603,20 +601,17 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
   p4est_topidx_t      treeid[2], nt[2];
 
   for (i = 0; i < 2; i++) {
-    is_local[i] = false;
+    is_ghost[i] = 1;
   }
   for (i = 0; i < limit; i++) {
-    fside = sc_array_index_int (&(info->sides), i);
-    is_local[i] = test_face_side (info->p4est, fside, data);
+    fside = (p4est_iter_face_side_t *) sc_array_index_int (&(info->sides), i);
+    is_ghost[i] = test_face_side (info->p4est, fside, data);
   }
-  SC_CHECK_ABORT (is_local[0] || is_local[1], "Iterate: non local face");
+  SC_CHECK_ABORT (!(is_ghost[0] && is_ghost[1]), "Iterate: non local face");
 
   for (i = 0; i < limit; i++) {
-    fside = sc_array_index_int (&(info->sides), i);
-    face[i] = fside->face;
-#ifndef P4_TO_P8
-    face[i] = p4est_zface_to_rface[face[i]];
-#endif
+    fside = (p4est_iter_face_side_t *) sc_array_index_int (&(info->sides), i);
+    face[i] = (int) fside->face;
     treeid[i] = fside->treeid;
     if (!fside->is_hanging) {
       if (fside->is.full.quad == NULL) {
@@ -650,7 +645,7 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
   else {
     SC_CHECK_ABORT (nt[1] == -1,
                     "Iterate: non boundary face without neighbor");
-    fside = sc_array_index_int (&(info->sides), 0);
+    fside = (p4est_iter_face_side_t *) sc_array_index_int (&(info->sides), 0);
     SC_CHECK_ABORT (!fside->is_hanging,
                     "Iterate: hanging face without neighbor");
   }
@@ -663,7 +658,7 @@ test_volume_adjacency (p4est_iter_volume_info_t * info, void *data)
   int                *checks = iter_data->checks;
   p4est_locidx_t      qid = info->quadid;
   p4est_topidx_t      t = info->treeid;
-  p4est_tree_t       *tree = p4est_array_index_topidx (info->p4est->trees, t);
+  p4est_tree_t       *tree = p4est_tree_array_index (info->p4est->trees, t);
 
   SC_CHECK_ABORT (info->quad != NULL, "Iterate: missing volume quad");
   if (iter_data->count_volume) {
@@ -683,10 +678,7 @@ main (int argc, char **argv)
   p4est_locidx_t      num_quads, li;
   p4est_locidx_t      num_checks;
   int                *checks;
-  sc_array_t          Ghost_layer;
-  sc_array_t         *ghost_layer;
-  int                *ghost_owner;
-  bool                success;
+  p4est_ghost_t      *ghost_layer;
   int                 ntests;
   int                 i, j, k;
   iter_data_t         iter_data;
@@ -718,7 +710,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (i = 0; i < ntests; i++) {
@@ -752,7 +744,7 @@ main (int argc, char **argv)
     p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
 
     /* refine to make the number of elements interesting */
-    p4est_refine (p4est, true, refine_fn, NULL);
+    p4est_refine (p4est, 1, refine_fn, NULL);
 
     /* balance the forest */
     p4est_balance (p4est, P4EST_BALANCE_DEFAULT, NULL);
@@ -775,7 +767,7 @@ main (int argc, char **argv)
 
     for (j = 0; j <= P4EST_DIM; j++) {
 
-      iter_data.count_volume = true;
+      iter_data.count_volume = 1;
       iter_data.count_face = (j > 0);
 #ifdef P4_TO_P8
       iter_data.count_edge = (j > 1);
@@ -783,60 +775,44 @@ main (int argc, char **argv)
       iter_data.count_corner = (j == P4EST_DIM);
 
       for (k = 0; k <= P4EST_DIM; k++) {
-        sc_array_init (&Ghost_layer, sizeof (p4est_quadrant_t));
         switch (k) {
         case 0:
           ghost_layer = NULL;
-          iter_data.ghost_face = false;
+          iter_data.ghost_face = 0;
 #ifdef P4_TO_P8
-          iter_data.ghost_edge = false;
+          iter_data.ghost_edge = 0;
 #endif
-          iter_data.ghost_corner = false;
+          iter_data.ghost_corner = 0;
           break;
 #ifndef P4_TO_P8
         case 1:
-          ghost_layer = &Ghost_layer;
-          success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_FACE,
-                                             ghost_layer, &ghost_owner);
-          P4EST_ASSERT (success);
-          iter_data.ghost_face = true;
-          iter_data.ghost_corner = false;
+          ghost_layer = p4est_ghost_new (p4est, P4EST_BALANCE_FACE);
+          iter_data.ghost_face = 1;
+          iter_data.ghost_corner = 0;
           break;
         default:
-          ghost_layer = &Ghost_layer;
-          success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_CORNER,
-                                             ghost_layer, &ghost_owner);
-          P4EST_ASSERT (success);
-          iter_data.ghost_face = true;
-          iter_data.ghost_corner = true;
+          ghost_layer = p4est_ghost_new (p4est, P4EST_BALANCE_CORNER);
+          iter_data.ghost_face = 1;
+          iter_data.ghost_corner = 1;
           break;
 #else
         case 1:
-          ghost_layer = &Ghost_layer;
-          success = p4est_build_ghost_layer (p4est, P8EST_BALANCE_FACE,
-                                             ghost_layer, &ghost_owner);
-          P4EST_ASSERT (success);
-          iter_data.ghost_face = true;
-          iter_data.ghost_edge = false;
-          iter_data.ghost_corner = false;
+          ghost_layer = p4est_ghost_new (p4est, P8EST_BALANCE_FACE);
+          iter_data.ghost_face = 1;
+          iter_data.ghost_edge = 0;
+          iter_data.ghost_corner = 0;
           break;
         case 2:
-          ghost_layer = &Ghost_layer;
-          success = p4est_build_ghost_layer (p4est, P8EST_BALANCE_EDGE,
-                                             ghost_layer, &ghost_owner);
-          P4EST_ASSERT (success);
-          iter_data.ghost_face = true;
-          iter_data.ghost_edge = true;
-          iter_data.ghost_corner = false;
+          ghost_layer = p4est_ghost_new (p4est, P8EST_BALANCE_EDGE);
+          iter_data.ghost_face = 1;
+          iter_data.ghost_edge = 1;
+          iter_data.ghost_corner = 0;
           break;
         default:
-          ghost_layer = &Ghost_layer;
-          success = p4est_build_ghost_layer (p4est, P8EST_BALANCE_CORNER,
-                                             ghost_layer, &ghost_owner);
-          P4EST_ASSERT (success);
-          iter_data.ghost_face = true;
-          iter_data.ghost_edge = true;
-          iter_data.ghost_corner = true;
+          ghost_layer = p4est_ghost_new (p4est, P8EST_BALANCE_CORNER);
+          iter_data.ghost_face = 1;
+          iter_data.ghost_edge = 1;
+          iter_data.ghost_corner = 1;
           break;
 #endif
         }
@@ -902,9 +878,8 @@ main (int argc, char **argv)
           }
         }
         /* clean up */
-        sc_array_reset (&Ghost_layer);
         if (k > 0) {
-          P4EST_FREE (ghost_owner);
+          p4est_ghost_destroy (ghost_layer);
         }
       }
     }

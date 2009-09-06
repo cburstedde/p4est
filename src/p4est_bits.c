@@ -806,21 +806,14 @@ p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
-#ifdef P4_TO_P8
-/* the following function is not yet converted to z-order */
-
 p4est_locidx_t
 p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q, p4est_locidx_t
                                     t, int face, p4est_quadrant_t * r,
                                     p4est_connectivity_t * conn)
 {
   p4est_quadrant_t    temp;
-#ifndef P4_TO_P8
-  int                 transform;
-#else
   int                 transform[9];
   p4est_topidx_t      flag;
-#endif
 
   p4est_quadrant_face_neighbor (q, face, r);
   if (p4est_quadrant_is_inside_root (r)) {
@@ -828,31 +821,17 @@ p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q, p4est_locidx_t
   }
 
   temp = *r;
-#ifndef P4_TO_P8
-  transform = p4est_find_face_transform (conn, t, face);
-  if (transform == -1) {
-    if (r != q) {
-      *r = *q;
-    }
-    return -1;
-  }
-  p4est_quadrant_translate_face (&temp, face);
-  p4est_quadrant_transform_face (&temp, r, transform);
-#else
-  flag = p8est_find_face_transform (conn, t, face, transform);
+  flag = p4est_find_face_transform (conn, t, face, transform);
   if (flag == -1) {
     if (r != q) {
       *r = *q;
     }
     return -1;
   }
-  p8est_quadrant_transform_face (&temp, r, transform);
-#endif
+  p4est_quadrant_transform_face (&temp, r, transform);
 
-  return conn->tree_to_tree[t * 2 * P4EST_DIM + face];
+  return flag;
 }
-
-#endif
 
 void
 p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
@@ -975,9 +954,6 @@ p4est_quadrant_corner_neighbor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
-#ifdef P4_TO_P8
-/* the following function is not yet converted to z-order */
-
 void
 p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
                                       p4est_locidx_t t, int corner,
@@ -990,15 +966,11 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
   p4est_topidx_t     *tp;
   int                 face;
   size_t              ctree;
-#ifndef P4_TO_P8
+  p4est_corner_info_t ci;
   p4est_corner_transform_t *ct;
-  sc_array_t          ctransforms, *cta;
-  cta = &ctransforms;
-#else
-  int                 edge;
-  p8est_corner_info_t ci;
-  p8est_corner_transform_t *ct;
   sc_array_t         *cta = &ci.corner_transforms;
+#ifdef P4_TO_P8
+  int                 edge;
   int                 i;
 #endif
 
@@ -1020,8 +992,8 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
 
   if (!p4est_quadrant_is_outside_corner (&temp)) {
 #ifndef P4_TO_P8
-    qp = sc_array_push (quads);
-    tp = sc_array_push (treeids);
+    qp = (p4est_quadrant_t *) sc_array_push (quads);
+    tp = (p4est_topidx_t *) sc_array_push (treeids);
 
     face = p4est_corner_faces[corner][0];
     p4est_quadrant_face_neighbor (q, face, &temp);
@@ -1029,8 +1001,8 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
       face = p4est_corner_faces[corner][1];
       *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
       if (*tp == -1) {
-        qp = sc_array_pop (quads);
-        tp = sc_array_pop (treeids);
+        qp = (p4est_quadrant_t *) sc_array_pop (quads);
+        tp = (p4est_topidx_t *) sc_array_pop (treeids);
       }
       return;
     }
@@ -1041,8 +1013,8 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
     face = p4est_corner_faces[corner][0];
     *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
     if (*tp == -1) {
-      qp = sc_array_pop (quads);
-      tp = sc_array_pop (treeids);
+      qp = (p4est_quadrant_t *) sc_array_pop (quads);
+      tp = (p4est_topidx_t *) sc_array_pop (treeids);
     }
     return;
 #else
@@ -1059,13 +1031,8 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
     SC_ABORT_NOT_REACHED ();
 #endif
   }
-#ifndef P4_TO_P8
   sc_array_init (cta, sizeof (p4est_corner_transform_t));
-  p4est_find_corner_transform (conn, t, p4est_corner_to_zorder[corner], cta);
-#else
-  sc_array_init (cta, sizeof (p8est_corner_transform_t));
-  p8est_find_corner_transform (conn, t, corner, &ci);
-#endif
+  p4est_find_corner_transform (conn, t, corner, &ci);
   for (ctree = 0; ctree < cta->elem_count; ++ctree) {
     qp = p4est_quadrant_array_push (quads);
     tp = (p4est_topidx_t *) sc_array_push (treeids);
@@ -1076,8 +1043,6 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
   }
   sc_array_reset (cta);
 }
-
-#endif
 
 void
 p4est_quadrant_corner_node (const p4est_quadrant_t * q,
