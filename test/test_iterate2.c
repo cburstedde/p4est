@@ -747,7 +747,7 @@ main (int argc, char **argv)
     p4est_refine (p4est, 1, refine_fn, NULL);
 
     /* balance the forest */
-    p4est_balance (p4est, P4EST_BALANCE_DEFAULT, NULL);
+    p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
 
     /* do a uniform partition */
     p4est_partition (p4est, NULL);

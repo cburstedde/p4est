@@ -826,11 +826,11 @@ p4est_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
 
 int32_t
 p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
-                             int level, bool faces[],
+                             int level, int8_t faces[],
 #ifdef P4_TO_P8
-                             bool edges[],
+                             int8_t edges[],
 #endif
-                             bool corners[])
+                             int8_t corners[])
 {
   int                 i;
   p4est_quadrant_t    a;

@@ -151,9 +151,9 @@ void                p4est_split_array (sc_array_t * array, int level,
  *                       are tested: 0 if we want to test the boundaries of the
  *                       whole tree.
  * \param [in/out] faces       An array of size 4 that is filled: faces[i] is
- *                             true if the range touches that face.
+ *                             1 if the range touches that face, 0 otherwise.
  * \param [in/out] corners     An array of size 4 that is filled: corners[i] is
- *                             true if the range touches that corner.
+ *                             1 if the range touches that corner, 0 otherwise.
  *                             \faces or \corners may be NULL.
  * \return  Returns an int32_t encoded with the same information in \faces and
  *          \corners: the first (least) four bits represent the four faces,
@@ -161,8 +161,8 @@ void                p4est_split_array (sc_array_t * array, int level,
  */
 int32_t             p4est_find_range_boundaries (p4est_quadrant_t * lq,
                                                  p4est_quadrant_t * uq,
-                                                 int level, bool faces[],
-                                                 bool corners[]);
+                                                 int level, int8_t faces[],
+                                                 int8_t corners[]);
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant
