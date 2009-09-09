@@ -138,6 +138,35 @@ ssize_t             p8est_find_lower_bound (sc_array_t * array,
 void                p8est_split_array (sc_array_t * array, int level,
                                        size_t indices[]);
 
+/** Given two smallest quadrants, \a lq and \a uq, that mark the first and the
+ * last quadrant in a range of quadrants, determine which portions of the tree
+ * boundary the range touches.
+ * \param [in] lq        The smallest quadrant at the start of the range: if
+ *                       NULL, the tree's first quadrant is taken to be the
+ *                       start of the range.
+ * \param [in] uq        The smallest quadrant at the end of the range: if
+ *                       NULL, the tree's last quadrant is taken to be the
+ *                       end of the range.
+ * \param [in] level     The level of the containing quadrant whose boundaries
+ *                       are tested: 0 if we want to test the boundaries of the
+ *                       whole tree.
+ * \param [in/out] faces       An array of size 6 that is filled: faces[i] is
+ *                             true if the range touches that face.
+ * \param [in/out] edges       An array of size 12 that is filled: edges[i] is
+ *                             true if the range touches that face.
+ * \param [in/out] corners     An array of size 8 that is filled: corners[i] is
+ *                             true if the range touches that corner.
+ *                             \faces, \edges or \corners may be NULL.
+ * \return  Returns an int32_t encoded with the same information in \faces,
+ *          \edges and \corners: the first (least) six bits represent the six
+ *          faces, the next twelve bits represent the twelve edges, the next
+ *          eight bits represent the eight corners.
+ */
+int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
+                                                 p8est_quadrant_t * uq,
+                                                 int level, bool faces[],
+                                                 bool edges[],
+                                                 bool corners[]);
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant
  *                  or -1 if not found or the array is empty.

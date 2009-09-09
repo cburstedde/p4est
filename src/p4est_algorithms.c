@@ -675,6 +675,278 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
                   &level);
 }
 
+/** If we suppose a range of quadrants touches a corner of a tree, then it must
+ * also touch the faces (and edges) that touch that corner.
+ */
+#ifndef P4_TO_P8
+/* *INDENT-OFF* */
+static int32_t p4est_corner_boundaries[4] =
+{             /*                           |corners | faces */
+  0x00000015, /* 0000 0000 0000 0000 0000 0000| 0001| 0101  */
+  0x00000026, /* 0000 0000 0000 0000 0000 0000| 0010| 0110  */
+  0x00000049, /* 0000 0000 0000 0000 0000 0000| 0100| 1001  */
+  0x0000008a  /* 0000 0000 0000 0000 0000 0000| 1000| 1010  */
+};
+/* *INDENT-ON* */
+static int32_t      p4est_all_boundaries = 0x000000ff;
+#else
+/* *INDENT-OFF* */
+static int32_t p4est_corner_boundaries[8] =
+{             /*        |corners   |edges          |faces   */
+  0x00044455, /* 0000 00|00 0000 01|00 0100 0100 01|01 0101 */
+  0x00088856, /* 0000 00|00 0000 10|00 1000 1000 01|01 0110 */
+  0x00110499, /* 0000 00|00 0001 00|01 0000 0100 10|01 1001 */
+  0x0022089a, /* 0000 00|00 0010 00|10 0000 1000 10|01 1010 */
+  0x00405125, /* 0000 00|00 0100 00|00 0101 0001 00|10 0101 */
+  0x0080a126, /* 0000 00|00 1000 00|00 1010 0001 00|10 0110 */
+  0x01011229, /* 0000 00|01 0000 00|01 0001 0010 00|10 1001 */
+  0x0202222a  /* 0000 00|10 0000 00|10 0010 0010 00|10 1010 */
+};
+/* *INDENT-ON* */
+static int32_t      p4est_all_boundaries = 0x03ffffff;
+#endif
+
+static              int32_t
+p4est_limit_boundaries (p4est_quadrant_t * q, int dir, int limit,
+                        int last_level, int level, int32_t touch,
+                        int32_t mask)
+{
+  int                 cid;
+  int32_t             next;
+
+  P4EST_ASSERT (q->level == P4EST_QMAXLEVEL);
+  P4EST_ASSERT (level <= P4EST_QMAXLEVEL);
+  P4EST_ASSERT (level <= last_level);
+  if ((mask & ~touch) == 0) {
+    return touch;
+  }
+  cid = p4est_quadrant_ancestor_id (q, level);
+  next = p4est_corner_boundaries[cid] & mask;
+  cid += dir;
+  while (cid != limit) {
+    touch |= (p4est_corner_boundaries[cid] & mask);
+    cid += dir;
+  }
+  if (level == last_level) {
+    return (touch | next);
+  }
+  return p4est_limit_boundaries (q, dir, limit, last_level, level + 1, touch,
+                                 next);
+}
+
+static              int32_t
+p4est_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
+                        int alevel, int level, int32_t mask)
+{
+  int                 i, lcid, ucid, cid;
+  int32_t             lnext, unext, touch;
+  p4est_qcoord_t      x, y, a;
+#ifdef P4_TO_P8
+  p4est_qcoord_t      z;
+#endif
+  const p4est_qcoord_t shift = P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
+  int                 count;
+  int                 last_level;
+
+  P4EST_ASSERT (level <= alevel + 1);
+
+  if (mask == 0) {
+    return 0;
+  }
+  if (level == alevel + 1) {
+    lcid = p4est_quadrant_ancestor_id (lq, level);
+    ucid = p4est_quadrant_ancestor_id (uq, level);
+    P4EST_ASSERT (lcid < ucid);
+    lnext = (p4est_corner_boundaries[lcid] & mask);
+    unext = (p4est_corner_boundaries[ucid] & mask);
+    touch = 0;
+    for (i = lcid + 1; i < ucid; i++) {
+      touch |= (p4est_corner_boundaries[i] & mask);
+    }
+
+    cid = p4est_quadrant_child_id (lq);
+    x = lq->x + ((cid % 2) ? shift : 0);
+    y = lq->y + (((cid / 2) % 2) ? shift : 0);
+#ifdef P4_TO_P8
+    z = lq->z + ((cid / 4) ? shift : 0);
+#endif
+    a = ~(x | y
+#ifdef P4_TO_P8
+          | z
+#endif
+      );
+    count = 0;
+    while ((a & ((p4est_qcoord_t) 1)) && count <= P4EST_MAXLEVEL) {
+      a >>= 1;
+      count++;
+    }
+    last_level = (P4EST_MAXLEVEL - count) + 1;
+    if (last_level <= level) {
+      touch |= lnext;
+    }
+    else {
+      P4EST_ASSERT (last_level <= P4EST_QMAXLEVEL);
+      touch |= p4est_limit_boundaries (lq, 1, P4EST_CHILDREN, last_level,
+                                       level + 1, touch, lnext);
+    }
+
+    cid = p4est_quadrant_child_id (uq);
+    x = uq->x + ((cid % 2) ? shift : 0);
+    y = uq->y + (((cid / 2) % 2) ? shift : 0);
+#ifdef P4_TO_P8
+    z = uq->z + ((cid / 4) ? shift : 0);
+#endif
+    a = ~(x | y
+#ifdef P4_TO_P8
+          | z
+#endif
+      );
+    count = 0;
+    while ((a & ((p4est_qcoord_t) 1)) && count <= P4EST_MAXLEVEL) {
+      a >>= 1;
+      count++;
+    }
+    last_level = (P4EST_MAXLEVEL - count) + 1;
+    if (last_level <= level) {
+      touch |= unext;
+    }
+    else {
+      P4EST_ASSERT (last_level <= P4EST_QMAXLEVEL);
+      touch |= p4est_limit_boundaries (uq, -1, -1, last_level, level + 1,
+                                       touch, unext);
+    }
+
+    return touch;
+  }
+  lcid = p4est_quadrant_ancestor_id (lq, level);
+  P4EST_ASSERT (p4est_quadrant_ancestor_id (uq, level) == lcid);
+  return p4est_range_boundaries (lq, uq, alevel, level + 1,
+                                 (p4est_corner_boundaries[lcid] & mask));
+}
+
+int32_t
+p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
+                             int level, bool faces[],
+#ifdef P4_TO_P8
+                             bool edges[],
+#endif
+                             bool corners[])
+{
+  int                 i;
+  p4est_quadrant_t    a;
+  int                 alevel;
+  int32_t             touch;
+  int32_t             mask = 0x00000001;
+  p4est_qcoord_t      x, y, all;
+#ifdef P4_TO_P8
+  p4est_qcoord_t      z;
+#endif
+  const p4est_qcoord_t shift = P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
+  int                 count;
+  int                 last_level;
+  int                 cid;
+
+  P4EST_ASSERT (level >= 0 && level < P4EST_QMAXLEVEL);
+  if (lq == NULL && uq == NULL) {
+    touch = p4est_all_boundaries;
+    goto find_range_boundaries_exit;
+  }
+
+  if (lq == NULL) {
+    P4EST_ASSERT (uq->level == P4EST_QMAXLEVEL);
+
+    cid = p4est_quadrant_child_id (uq);
+    x = uq->x + ((cid % 2) ? shift : 0);
+    y = uq->y + (((cid / 2) % 2) ? shift : 0);
+#ifdef P4_TO_P8
+    z = uq->z + ((cid / 4) ? shift : 0);
+#endif
+    all = ~(x | y
+#ifdef P4_TO_P8
+            | z
+#endif
+      );
+    count = 0;
+    while ((all & ((p4est_qcoord_t) 1)) && count <= P4EST_MAXLEVEL) {
+      all >>= 1;
+      count++;
+    }
+    last_level = (P4EST_MAXLEVEL - count) + 1;
+    last_level = (last_level <= level) ? level + 1 : last_level;
+
+    P4EST_ASSERT (last_level <= P4EST_QMAXLEVEL);
+
+    touch = p4est_limit_boundaries (uq, -1, -1, last_level, level + 1, 0,
+                                    p4est_all_boundaries);
+  }
+  else if (uq == NULL) {
+    P4EST_ASSERT (lq->level == P4EST_QMAXLEVEL);
+
+    cid = p4est_quadrant_child_id (lq);
+    x = lq->x + ((cid % 2) ? shift : 0);
+    y = lq->y + (((cid / 2) % 2) ? shift : 0);
+#ifdef P4_TO_P8
+    z = lq->z + ((cid / 4) ? shift : 0);
+#endif
+    all = ~(x | y
+#ifdef P4_TO_P8
+            | z
+#endif
+      );
+    count = 0;
+    while ((all & ((p4est_qcoord_t) 1)) && count <= P4EST_MAXLEVEL) {
+      all >>= 1;
+      count++;
+    }
+    last_level = (P4EST_MAXLEVEL - count) + 1;
+    last_level = (last_level <= level) ? level + 1 : last_level;
+
+    P4EST_ASSERT (last_level <= P4EST_QMAXLEVEL);
+
+    touch = p4est_limit_boundaries (lq, 1, P4EST_CHILDREN, last_level,
+                                    level + 1, 0, p4est_all_boundaries);
+  }
+  else {
+    P4EST_ASSERT (uq->level == P4EST_QMAXLEVEL);
+    P4EST_ASSERT (lq->level == P4EST_QMAXLEVEL);
+    p4est_nearest_common_ancestor (lq, uq, &a);
+    alevel = (int) a.level;
+    P4EST_ASSERT (alevel >= level);
+    touch = p4est_range_boundaries (lq, uq, alevel, level + 1,
+                                    p4est_all_boundaries);
+  }
+
+find_range_boundaries_exit:
+  if (faces != NULL) {
+    for (i = 0; i < 2 * P4EST_DIM; i++) {
+      faces[i] = (touch & mask);
+      mask <<= 1;
+    }
+  }
+  else {
+    mask <<= (2 * P4EST_DIM);
+  }
+#ifdef P4_TO_P8
+  if (edges != NULL) {
+    for (i = 0; i < 12; i++) {
+      edges[i] = (touch & mask);
+      mask <<= 1;
+    }
+  }
+  else {
+    mask <<= 12;
+  }
+#endif
+  if (corners != NULL) {
+    for (i = 0; i < P4EST_CHILDREN; i++) {
+      corners[i] = (touch & mask);
+      mask <<= 1;
+    }
+  }
+
+  return touch;
+}
+
 ssize_t
 p4est_find_lower_bound (sc_array_t * array,
                         const p4est_quadrant_t * q, size_t guess)
