@@ -84,9 +84,7 @@ main (int argc, char **argv)
   int                 mpisize, mpirank;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  sc_array_t          ghost_layer;
-  int                *ghost_owner;
-  bool                success;
+  p4est_ghost_t      *ghost_layer;
   int                 ntests;
   int                 i, j;
   p4est_lnodes_t     *lnodes;
@@ -106,7 +104,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (i = 0; i < ntests; i++) {
@@ -140,7 +138,7 @@ main (int argc, char **argv)
     p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
 
     /* refine to make the number of elements interesting */
-    p4est_refine (p4est, true, refine_fn, NULL);
+    p4est_refine (p4est, 1, refine_fn, NULL);
 
     /* balance the forest */
 #ifndef P4_TO_P8
@@ -152,21 +150,17 @@ main (int argc, char **argv)
     /* do a uniform partition */
     p4est_partition (p4est, NULL);
 
-    sc_array_init (&ghost_layer, sizeof (p4est_quadrant_t));
-    success = p4est_build_ghost_layer (p4est, P4EST_BALANCE_FULL,
-                                       &ghost_layer, &ghost_owner);
-    P4EST_ASSERT (success);
+    ghost_layer = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
 
     for (j = 1; j <= 4; j++) {
       P4EST_GLOBAL_PRODUCTIONF ("Begin lnodes test %d:%d\n", i, j);
-      lnodes = p4est_lnodes_new (p4est, &ghost_layer, j);
+      lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
       p4est_lnodes_destroy (lnodes);
       P4EST_GLOBAL_PRODUCTIONF ("End lnodes test %d:%d\n", i, j);
     }
 
     /* clean up */
-    sc_array_reset (&ghost_layer);
-    P4EST_FREE (ghost_owner);
+    p4est_ghost_destroy (ghost_layer);
 
     p4est_destroy (p4est);
     p4est_connectivity_destroy (connectivity);

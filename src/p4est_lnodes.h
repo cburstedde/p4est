@@ -23,6 +23,7 @@
 #define P4EST_LNODES_H
 
 #include <p4est.h>
+#include <p4est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -117,10 +118,10 @@ p4est_lnodes_rank_t;
  *                          = 1 if the face is the second half.
  *             note: not touched if there are no hanging faces.
  *           
- * \return              true if any face is hanging, false otherwise.
+ * \return              1 if any face is hanging, 0 otherwise.
  */
 /*@unused@*/
-static inline       bool
+static inline int
 p4est_lnodes_decode (int8_t face_code, int hanging_face[6])
 {
   SC_ASSERT (face_code >= 0);
@@ -136,23 +137,23 @@ p4est_lnodes_decode (int8_t face_code, int hanging_face[6])
 
     cwork = c;
     for (i = 0; i < 2; ++i) {
-      /* TODO: change after z-order switch over */
-      f = p4est_rface_to_zface[p4est_corner_faces[c][i]];
+      f = p4est_corner_faces[c][i];
       hanging_face[f] = (work & 0x01) ? (int) (cwork & 0x01) : -1;
       cwork >>= 1;
       work >>= 1;
     }
 
-    return true;
+    return 1;
   }
   else {
-    return false;
+    return 0;
   }
 }
 
 p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
-                                      sc_array_t * ghost_layer, int degree);
-void                p4est_lnodes_destroy (p4est_lnodes_t *);
+                                      p4est_ghost_t * ghost_layer,
+                                      int degree);
+void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
 
 SC_EXTERN_C_END;
 

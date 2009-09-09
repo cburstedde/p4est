@@ -11,7 +11,7 @@ p4est_test_programs += \
         test/p4est_test_partition test/p4est_test_coarsen \
         test/p4est_test_valid test/p4est_test_balance_type \
         test/p4est_test_loadsave test/p4est_test_order \
-        test/p4est_test_iterate
+        test/p4est_test_iterate test/p4est_test_lnodes
 noinst_PROGRAMS += \
         test/p4est_bug_wp
 endif
@@ -23,7 +23,7 @@ p4est_test_programs += \
         test/p8est_test_face_transform test/p8est_test_edge_face_corners \
         test/p8est_test_periodic test/p8est_test_geometry \
         test/p8est_test_loadsave test/p8est_test_brick \
-        test/p8est_test_iterate
+        test/p8est_test_iterate test/p8est_test_lnodes
 endif
 
 check_PROGRAMS += $(p4est_test_programs)
@@ -39,6 +39,7 @@ test_p4est_test_valid_SOURCES = test/test_valid2.c
 test_p4est_test_balance_type_SOURCES = test/test_balance_type2.c
 test_p4est_test_loadsave_SOURCES = test/test_loadsave2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
+test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
 
 test_p4est_bug_wp_SOURCES = test/bug_weighted_partition.c
 
@@ -55,6 +56,7 @@ test_p8est_test_geometry_SOURCES = test/test_geometry3.c
 test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
+test_p8est_test_lnodes_SOURCES = test/test_lnodes3.c
 
 TESTS += $(p4est_test_programs)
 
@@ -70,6 +72,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_balance_type_SOURCES) \
         $(test_p4est_test_loadsave_SOURCES) \
         $(test_p4est_test_iterate_SOURCES) \
+        $(test_p4est_test_lnodes_SOURCES) \
         $(test_p4est_bug_wp_SOURCES) \
         $(test_p8est_test_quadrants_SOURCES) \
         $(test_p8est_test_balance_SOURCES) \
@@ -83,4 +86,5 @@ LINT_CSOURCES += \
         $(test_p8est_test_geometry_SOURCES) \
         $(test_p8est_test_loadsave_SOURCES) \
         $(test_p8est_test_brick_SOURCES) \
-        $(test_p8est_test_iterate_SOURCES)
+        $(test_p8est_test_iterate_SOURCES) \
+        $(test_p8est_test_lnodes_SOURCES)

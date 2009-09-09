@@ -23,11 +23,13 @@
 #include <p4est_lnodes.h>
 #include <p4est_iterate.h>
 #include <p4est_communication.h>
+#include <p4est_ghost.h>
 #include <p4est_bits.h>
 #else
 #include <p8est_lnodes.h>
 #include <p8est_iterate.h>
 #include <p8est_communication.h>
+#include <p8est_ghost.h>
 #include <p8est_bits.h>
 #endif
 
@@ -42,6 +44,22 @@
 #define P8EST_LN_E_OFFSET 6
 #define P4EST_LN_C_OFFSET 18
 #endif
+
+static int
+p4est_locidx_offset_compare (const void *key, const void *elem)
+{
+  const p4est_locidx_t *start = elem;
+  const p4est_locidx_t *stop = start + 1;
+  int                 comp = p4est_locidx_compare (key, start);
+  if (comp < 0) {
+    return -1;
+  }
+  comp = p4est_locidx_compare (key, stop);
+  if (comp >= 0) {
+    return 1;
+  }
+  return 0;
+}
 
 /** cdp: corner dependent processes.
  * Suppose quadrants q0, q1, q2, and q3 share the same face neighbor p.
@@ -103,7 +121,7 @@ typedef struct p4est_lnodes_buf_info
 {
   p4est_quadrant_t    q;        /* p.which_tree filled */
   int8_t              type;     /* which nodes it shares */
-  bool                send_sharers;     /* whether the sharers are included in
+  int8_t              send_sharers;     /* whether the sharers are included in
                                            the message */
   p4est_locidx_t      first_index;      /* inodes array, first node to/from */
   p4est_locidx_t      share_offset;
@@ -128,7 +146,7 @@ p4est_lnodes_binfo_compare (const void *a, const void *b)
   return (int) (bufa->type - bufb->type);
 }
 
-static              bool
+static              int8_t
 p4est_lnodes_binfo_is_equal (const void *a, const void *b)
 {
   const p4est_lnodes_buf_info_t *bufa = a;
@@ -233,6 +251,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
   p4est_tree_t       *tree;
   p4est_topidx_t      tid;
   p4est_locidx_t      qid;
+  p4est_ghost_t      *ghost_layer = info->ghost_layer;
+  sc_array_t          proc_offsets;
   sc_recycle_array_t *cdp_array = data->cdp_array;
   p4est_locidx_t     *local_cdp = data->local_cdp;
   p4est_locidx_t     *ghost_cdp = data->ghost_cdp;
@@ -255,7 +275,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
   int                 k;
   int                 eside;
 #endif
-  bool                is_local, *h_is_local;
+  int8_t              is_ghost, *h_is_ghost;
   int                 procs[P4EST_CHILDREN / 2];
   p4est_iter_face_side_t *hface;
   sc_array_t         *hfaces = data->hfaces;
@@ -268,60 +288,63 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
 #else
   int16_t            *face_codes = data->face_codes;
 #endif
-  bool                has_local;
+  int8_t              has_local;
+
+  /* even though the original is size mpisize+1, proc_offsets uses
+   * p4est_locidx_offset_compare, and we don't want to read past the end of the
+   * array */
+  sc_array_init_data (&proc_offsets, ghost_layer->proc_offsets,
+                      sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
 
   for (zz = 0; zz < count; zz++) {
-    fside = sc_array_index (sides, zz);
+    fside = (p4est_iter_face_side_t *) sc_array_index (sides, zz);
     tid = fside->treeid;
-    f = fside->face;
+    f = (int) fside->face;
     fdir = f / 2;
-    tree = p4est_array_index_topidx (trees, tid);
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
     if (fside->is_hanging) {
-      has_local = false;
-      h_is_local = fside->is.hanging.is_local;
+      has_local = 0;
+      h_is_ghost = fside->is.hanging.is_ghost;
       for (i = 0; i < P4EST_CHILDREN / 2; i++) {
         hqid[i] = fside->is.hanging.quadid[i];
-        if (h_is_local[i]) {
-          has_local = true;
+        if (!h_is_ghost[i]) {
+          has_local = 1;
           procs[i] = rank;
           hqid[i] += quadrants_offset;
           /* update face code */
 #ifndef P4_TO_P8
-          face_codes[hqid[i]] |=
-            ((int8_t) p4est_face_corners[p4est_zface_to_rface[f]][i]);
+          face_codes[hqid[i]] |= ((int8_t) p4est_face_corners[f][i]);
           face_codes[hqid[i]] |= (0x01 << (2 + f / 2));
 #else
           face_codes[hqid[i]] |= ((int16_t) p8est_face_corners[f][i]);
           face_codes[hqid[i]] |= (0x0001 << (6 + f / 2));
 #endif
         }
-        /* TODO: replace when the new ghost_layer API is implemented */
         else {
-          procs[i] = p4est_comm_find_owner (info->p4est, tid,
-                                            fside->is.hanging.quad[i], rank);
+          procs[i] = (int) sc_array_bsearch (&proc_offsets, &(hqid[i]),
+                                             p4est_locidx_offset_compare);
+          P4EST_ASSERT (procs[i] >= 0 && procs[i] != rank);
         }
       }
       if (has_local) {
-        hface = sc_array_push (hfaces);
+        hface = (p4est_iter_face_side_t *) sc_array_push (hfaces);
         *hface = *fside;
       }
       for (i = 0; i < P4EST_CHILDREN / 2; i++) {
-#ifndef P4_TO_P8
-        c = p4est_face_corners[p4est_zface_to_rface[f]][i];
-#else
         c = p4est_face_corners[f][i];
-#endif
         cdpid = hqid[i] * P4EST_CHILDREN + c;
-        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        cdpidx = !h_is_ghost[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
         if (cdpidx >= 0) {
-          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
+          cdp = (p4est_lnodes_cdp_t *) sc_array_index (&cdp_array->a,
+                                                       (size_t) cdpidx);
         }
         else {
-          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          cdp = (p4est_lnodes_cdp_t *) sc_recycle_array_insert (cdp_array,
+                                                                &cdpidxz);
           memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
           cdpidx = (p4est_locidx_t) cdpidxz;
-          if (h_is_local[i]) {
+          if (!h_is_ghost[i]) {
             local_cdp[cdpid] = cdpidx;
           }
           else {
@@ -330,13 +353,9 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
         }
         cdp->face[fdir] = procs[P4EST_CHILDREN / 2 - 1 - i];
 
-#ifndef P4_TO_P8
-        c2 = p4est_face_corners[p4est_zface_to_rface[f]][1 - i];
-#else
         c2 = p4est_face_corners[f][P4EST_CHILDREN / 2 - 1 - i];
-#endif
         cdpid = hqid[i] * P4EST_CHILDREN + c2;
-        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        cdpidx = !h_is_ghost[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
         if (cdpidx >= 0) {
           (void) sc_recycle_array_remove (cdp_array, (size_t) cdpidx);
         }
@@ -352,15 +371,17 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
             k = p8est_corner_face_corners[c2][f];
             eside = (p8est_edge_faces[he[j]][0] == f) ? 0 : 1;
             edpid = hqid[i] * 12 + he[j];
-            edpidx = h_is_local[i] ? local_edp[edpid] : ghost_edp[edpid];
+            edpidx = !h_is_ghost[i] ? local_edp[edpid] : ghost_edp[edpid];
             if (edpidx >= 0) {
-              edp = sc_array_index (&edp_array->a, (size_t) edpidx);
+              edp = (p8est_lnodes_edp_t *) sc_array_index (&edp_array->a,
+                                                           (size_t) edpidx);
             }
             else {
-              edp = sc_recycle_array_insert (edp_array, &edpidxz);
+              edp = (p8est_lnodes_edp_t *) sc_recycle_array_insert (edp_array,
+                                                                    &edpidxz);
               memset (edp, -1, sizeof (p8est_lnodes_edp_t));
               edpidx = (p4est_locidx_t) edpidxz;
-              if (h_is_local[i]) {
+              if (!h_is_ghost[i]) {
                 local_edp[edpid] = edpidx;
               }
               else {
@@ -375,7 +396,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
           he[1] = p8est_corner_edges[c2][(fdir + 2) % 3];
           for (j = 0; j < 2; j++) {
             edpid = hqid[i] * 12 + he[j];
-            edpidx = h_is_local[i] ? local_edp[edpid] : ghost_edp[edpid];
+            edpidx = !h_is_ghost[i] ? local_edp[edpid] : ghost_edp[edpid];
             if (edpidx >= 0) {
               (void) sc_recycle_array_remove (edp_array, (size_t) edpidx);
             }
@@ -385,27 +406,25 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
       }
     }
     else {
-      is_local = fside->is.full.is_local;
+      is_ghost = fside->is.full.is_ghost;
       qid = fside->is.full.quadid;
-      if (is_local) {
+      if (!is_ghost) {
         qid += quadrants_offset;
       }
       for (i = 0; i < P4EST_CHILDREN / 2; i++) {
-#ifndef P4_TO_P8
-        c = p4est_face_corners[p4est_zface_to_rface[f]][i];
-#else
         c = p4est_face_corners[f][i];
-#endif
         cdpid = qid * P4EST_CHILDREN + c;
-        cdpidx = is_local ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        cdpidx = !is_ghost ? local_cdp[cdpid] : ghost_cdp[cdpid];
         if (cdpidx >= 0) {
-          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
+          cdp = (p4est_lnodes_cdp_t *) sc_array_index (&cdp_array->a,
+                                                       (size_t) cdpidx);
         }
         else {
-          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          cdp = (p4est_lnodes_cdp_t *) sc_recycle_array_insert (cdp_array,
+                                                                &cdpidxz);
           memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
           cdpidx = (p4est_locidx_t) cdpidxz;
-          if (is_local) {
+          if (!is_ghost) {
             local_cdp[cdpid] = cdpidx;
           }
           else {
@@ -418,15 +437,16 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
           e = p8est_face_edges[f][i];
           eside = (p8est_edge_faces[e][0] == f) ? 0 : 1;
           edpid = qid * 12 + e;
-          edpidx = is_local ? local_edp[edpid] : ghost_edp[edpid];
+          edpidx = !is_ghost ? local_edp[edpid] : ghost_edp[edpid];
           if (edpidx >= 0) {
-            edp = sc_array_index (&edp_array->a, (size_t) edpidx);
+            edp = (p8est_lnodes_edp_t *) sc_array_index (&edp_array->a,
+                                                         (size_t) edpidx);
           }
           else {
             edp = sc_recycle_array_insert (edp_array, &edpidxz);
             memset (edp, -1, sizeof (p8est_lnodes_edp_t));
             edpidx = (p4est_locidx_t) edpidxz;
-            if (is_local) {
+            if (!is_ghost) {
               local_edp[edpid] = edpidx;
             }
             else {
@@ -463,6 +483,8 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_tree_t       *tree;
   p4est_topidx_t      tid;
   p4est_locidx_t      qid;
+  p4est_ghost_t      *ghost_layer = info->ghost_layer;
+  sc_array_t          proc_offsets;
   sc_recycle_array_t *cdp_array = data->cdp_array;
   p4est_locidx_t     *local_cdp = data->local_cdp;
   p4est_locidx_t     *ghost_cdp = data->ghost_cdp;
@@ -471,7 +493,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   size_t              cdpidxz;
   p4est_lnodes_cdp_t *cdp;
   int                 e;
-  bool                is_local, *h_is_local;
+  int8_t              is_ghost, *h_is_ghost;
   int                 procs[2];
   p8est_iter_edge_side_t *hedge;
   sc_array_t         *hedges = data->hedges;
@@ -480,50 +502,58 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      hqid[2];
   p4est_locidx_t      quadrants_offset;
   int16_t            *face_codes = data->face_codes;
-  bool                has_local;
+  int8_t              has_local;
+
+  /* even though the original is size mpisize+1, proc_offsets uses
+   * p4est_locidx_offset_compare, and we don't want to read past the end of the
+   * array */
+  sc_array_init_data (&proc_offsets, ghost_layer->proc_offsets,
+                      sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
 
   for (zz = 0; zz < count; zz++) {
-    eside = sc_array_index (sides, zz);
+    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
     tid = eside->treeid;
-    e = eside->edge;
+    e = (int) eside->edge;
     edir = e / 4;
-    tree = p4est_array_index_topidx (trees, tid);
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
     if (eside->is_hanging) {
-      has_local = false;
-      h_is_local = eside->is.hanging.is_local;
+      has_local = 0;
+      h_is_ghost = eside->is.hanging.is_ghost;
       for (i = 0; i < 2; i++) {
         hqid[i] = eside->is.hanging.quadid[i];
-        if (h_is_local[i]) {
-          has_local = true;
+        if (!h_is_ghost[i]) {
+          has_local = 1;
           procs[i] = rank;
           hqid[i] += quadrants_offset;
           /* update face code */
           face_codes[hqid[i]] |= ((int16_t) p8est_edge_corners[e][i]);
           face_codes[hqid[i]] |= (0x0001 << (3 + e / 4));
         }
-        /* TODO: replace when the new ghost_layer API is implemented */
         else {
-          procs[i] = p4est_comm_find_owner (info->p4est, tid,
-                                            eside->is.hanging.quad[i], rank);
+          procs[i] = (int) sc_array_bsearch (&proc_offsets, &(hqid[i]),
+                                             p4est_locidx_offset_compare);
+          P4EST_ASSERT (procs[i] >= 0 && procs[i] != rank);
         }
       }
       if (has_local) {
-        hedge = sc_array_push (hedges);
+        hedge = (p8est_iter_edge_side_t *) sc_array_push (hedges);
         *hedge = *eside;
       }
       for (i = 0; i < 2; i++) {
         c = p8est_edge_corners[e][i];
         cdpid = hqid[i] * P4EST_CHILDREN + c;
-        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        cdpidx = !h_is_ghost[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
         if (cdpidx >= 0) {
-          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
+          cdp = (p4est_lnodes_cdp_t *) sc_array_index (&cdp_array->a,
+                                                       (size_t) cdpidx);
         }
         else {
-          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          cdp = (p4est_lnodes_cdp_t *) sc_recycle_array_insert (cdp_array,
+                                                                &cdpidxz);
           memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
           cdpidx = (p4est_locidx_t) cdpidxz;
-          if (h_is_local[i]) {
+          if (!h_is_ghost[i]) {
             local_cdp[cdpid] = cdpidx;
           }
           else {
@@ -534,30 +564,31 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
 
         c = p8est_edge_corners[e][1 - i];
         cdpid = hqid[i] * P4EST_CHILDREN + c;
-        cdpidx = h_is_local[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        cdpidx = !h_is_ghost[i] ? local_cdp[cdpid] : ghost_cdp[cdpid];
         if (cdpidx >= 0) {
           (void) sc_recycle_array_remove (cdp_array, (size_t) cdpidx);
         }
       }
     }
     else {
-      is_local = eside->is.full.is_local;
+      is_ghost = eside->is.full.is_ghost;
       qid = eside->is.full.quadid;
-      if (is_local) {
+      if (!is_ghost) {
         qid += quadrants_offset;
       }
       for (i = 0; i < 2; i++) {
         c = p8est_edge_corners[e][i];
         cdpid = qid * P4EST_CHILDREN + c;
-        cdpidx = is_local ? local_cdp[cdpid] : ghost_cdp[cdpid];
+        cdpidx = !is_ghost ? local_cdp[cdpid] : ghost_cdp[cdpid];
         if (cdpidx >= 0) {
-          cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
+          cdp = (p4est_lnodes_cdp_t *) sc_array_index (&cdp_array->a,
+                                                       (size_t) cdpidx);
         }
         else {
           cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
           memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
           cdpidx = (p4est_locidx_t) cdpidxz;
-          if (is_local) {
+          if (!is_ghost) {
             local_cdp[cdpid] = cdpidx;
           }
           else {
@@ -600,15 +631,8 @@ p4est_lnodes_missing_proc_cdp_face (p4est_quadrant_t * q, p4est_topidx_t tid,
 {
   int                 rank = info->p4est->mpirank;
   p4est_quadrant_t    tempq, tempr;
-#ifndef P4_TO_P8
-  int                 f =
-    (p4est_rface_to_zface[p4est_corner_faces[c][dir]] / 2 == dir) ?
-    p4est_corner_faces[c][dir] : p4est_corner_faces[c][1 - dir];
-  int                 j = p4est_face_corners[f][0] == c ? 0 : 1;
-#else
-  int                 f = p8est_corner_faces[c][dir];
-  int                 j = p8est_corner_face_corners[c][f];
-#endif
+  int                 f = p4est_corner_faces[c][dir];
+  int                 j = p4est_corner_face_corners[c][f];
   int                 c2 = p4est_face_corners[f][P4EST_CHILDREN / 2 - 1 - j];
   int                 nproc;
   int                 nc;
@@ -638,8 +662,8 @@ p4est_lnodes_missing_proc_cdp_face (p4est_quadrant_t * q, p4est_topidx_t tid,
   nlevel = tempq.level;
 
   for (zz = 0; zz < count; zz++) {
-    cside = sc_array_index (sides, zz);
-    if (cside->treeid != ntid || cside->corner != nc) {
+    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+    if (cside->treeid != ntid || (int) cside->corner != nc) {
       continue;
     }
     level = cside->quad->level;
@@ -722,8 +746,8 @@ p8est_lnodes_missing_proc_cdp_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
     nlevel = tempq.level;
 
     for (zz = 0; zz < count; zz++) {
-      cside = sc_array_index (sides, zz);
-      if (cside->treeid != ntid || cside->corner != nc) {
+      cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+      if (cside->treeid != ntid || (int) cside->corner != nc) {
         continue;
       }
       level = cside->quad->level;
@@ -740,14 +764,14 @@ p8est_lnodes_missing_proc_cdp_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
                                       p4est->connectivity);
   count2 = quads.elem_count;
   for (zy = 0; zy < count2; zy++) {
-    ptemp = sc_array_index (&quads, zy);
+    ptemp = p4est_quadrant_array_index (&quads, zy);
     ntid = *((p4est_topidx_t *) sc_array_index (&treeids, zy));
     nc = p4est_quadrant_child_id (ptemp);
     p4est_quadrant_parent (ptemp, &tempq);
     nlevel = tempq.level;
     for (zz = 0; zz < count; zz++) {
-      cside = sc_array_index (sides, zz);
-      if (cside->treeid != ntid || cside->corner != nc) {
+      cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+      if (cside->treeid != ntid || (int) cside->corner != nc) {
         continue;
       }
       level = cside->quad->level;
@@ -832,8 +856,8 @@ p8est_lnodes_missing_proc_edp (p4est_quadrant_t * q, p4est_topidx_t tid,
   nc2 = p4est_quadrant_child_id (&temps);
   ne = p8est_child_corner_edges[nc][nc2];
   for (zz = 0; zz < count; zz++) {
-    eside = sc_array_index (sides, zz);
-    if (eside->treeid != ntid || eside->edge != ne) {
+    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    if (eside->treeid != ntid || (int) eside->edge != ne) {
       continue;
     }
     return (!eside->is_hanging) ? nproc : -2;
@@ -864,24 +888,24 @@ p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
   int8_t              scount;
   p4est_locidx_t      offset = (p4est_locidx_t) share->elem_count;
 
-  ip = sc_array_push (share);
+  ip = (int *) sc_array_push (share);
   *ip = rank;
   scount = (int8_t) (count + 1);
   for (zz = 0; zz < count; zz++) {
-    ip = sc_array_push (share);
+    ip = (int *) sc_array_push (share);
     proc = *((int *) sc_array_index (all, zz));
     *ip = proc;
     if (owner == rank) {
-      binfo = sc_array_push (&(send[proc]));
-      binfo->send_sharers = true;
+      binfo = (p4est_lnodes_buf_info_t *) sc_array_push (&(send[proc]));
+      binfo->send_sharers = 1;
       if (touch == NULL ||
           sc_array_bsearch (touch, &proc, sc_int_compare) >= 0) {
-        binfo->send_sharers = false;
+        binfo->send_sharers = 0;
       }
     }
     else if (proc == owner) {
-      binfo = sc_array_push (&(recv[proc]));
-      binfo->send_sharers = false;
+      binfo = (p4est_lnodes_buf_info_t *) sc_array_push (&(recv[proc]));
+      binfo->send_sharers = 0;
     }
     else {
       continue;
@@ -935,9 +959,11 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   p4est_topidx_t      tid;
   sc_array_t         *trees = info->p4est->trees;
   p4est_tree_t       *tree;
+  p4est_ghost_t      *ghost_layer = info->ghost_layer;
+  sc_array_t          proc_offsets;
   p4est_locidx_t      qid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
-  bool                is_local;
+  int8_t              is_ghost;
   int                 c;
   p4est_locidx_t      nid;
   int                 proc;
@@ -951,56 +977,61 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   int                *corner_nodes = data->corner_nodes;
   int                 nodes_per_elem = data->nodes_per_elem;
   p4est_locidx_t      quadrants_offset;
-  bool                intra_tree = info->intra_tree;
+  int8_t              tree_boundary = info->tree_boundary;
   int8_t              type;
+
+  /* even though the original is size mpisize+1, proc_offsets uses
+   * p4est_locidx_offset_compare, and we don't want to read past the end of the
+   * array */
+  sc_array_init_data (&proc_offsets, ghost_layer->proc_offsets,
+                      sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
 
   /* In p4est_iterate, the first quadrant in the first side is the lowest
    * Morton that touches the corner if the corner is inside a tree.
    */
-  if (intra_tree) {
-    cside = sc_array_index (sides, 0);
-    owner_corner = cside->corner;
+  if (!tree_boundary) {
+    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, 0);
+    owner_corner = (int) cside->corner;
     owner_tid = cside->treeid;
     owner_quad = cside->quad;
-    is_local = cside->is_local;
-    if (is_local) {
+    is_ghost = cside->is_ghost;
+    if (!is_ghost) {
       owner_proc = rank;
     }
     else {
-      /* TODO: replace when the new ghost_layer API is implemented */
-      owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
-                                          rank);
-      P4EST_ASSERT (owner_proc != rank);
+      owner_proc = (int) sc_array_bsearch (&proc_offsets, &(cside->quadid),
+                                           p4est_locidx_offset_compare);
+      P4EST_ASSERT (owner_proc >= 0 && owner_proc != rank);
     }
   }
 
   sc_array_init (&touching_procs, sizeof (int));
   sc_array_init (&all_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
-    cside = sc_array_index (sides, zz);
-    c = cside->corner;
+    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+    c = (int) cside->corner;
     tid = cside->treeid;
     qid = cside->quadid;
     q = cside->quad;
-    is_local = cside->is_local;
-    tree = p4est_array_index_topidx (trees, tid);
+    is_ghost = cside->is_ghost;
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
 
-    if (is_local) {
+    if (!is_ghost) {
       proc = rank;
       qid += quadrants_offset;
     }
     else {
-      /* TODO: replace when the new ghost_layer API is implemented */
-      proc = p4est_comm_find_owner (info->p4est, tid, q, rank);
-      P4EST_ASSERT (proc != rank);
-      ip = sc_array_push (&touching_procs);
+      proc = (int) sc_array_bsearch (&proc_offsets, &qid,
+                                     p4est_locidx_offset_compare);
+      P4EST_ASSERT (proc >= 0 && proc != rank);
+      ip = (int *) sc_array_push (&touching_procs);
       *ip = proc;
-      ip = sc_array_push (&all_procs);
+      ip = (int *) sc_array_push (&all_procs);
       *ip = proc;
     }
 
-    if (!intra_tree && tid <= owner_tid) {
+    if (tree_boundary && tid <= owner_tid) {
       if (tid < owner_tid || p4est_quadrant_compare (q, owner_quad) < 0) {
         owner_proc = proc;
         owner_tid = tid;
@@ -1017,9 +1048,10 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
 #endif
 
     cdpid = qid * P4EST_CHILDREN + c;
-    cdpidx = is_local ? local_cdp[cdpid] : ghost_cdp[cdpid];
+    cdpidx = !is_ghost ? local_cdp[cdpid] : ghost_cdp[cdpid];
     if (cdpidx >= 0) {
-      cdp = sc_array_index (&cdp_array->a, (size_t) cdpidx);
+      cdp = (p4est_lnodes_cdp_t *) sc_array_index (&cdp_array->a,
+                                                   (size_t) cdpidx);
     }
     else {
       cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
@@ -1032,7 +1064,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
         proc = p4est_lnodes_missing_proc_cdp_face (q, tid, c, i, info);
       }
       if (proc >= 0 && proc != rank) {
-        ip = sc_array_push (&all_procs);
+        ip = (int *) sc_array_push (&all_procs);
         *ip = proc;
       }
 #ifdef P4_TO_P8
@@ -1041,7 +1073,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
         proc = p8est_lnodes_missing_proc_cdp_edge (q, tid, c, i, info);
       }
       if (proc >= 0 && proc != rank) {
-        ip = sc_array_push (&all_procs);
+        ip = (int *) sc_array_push (&all_procs);
         *ip = proc;
       }
 #endif
@@ -1049,7 +1081,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     (void) sc_recycle_array_remove (cdp_array, (size_t) cdpidx);
 
     nid = qid * nodes_per_elem + corner_nodes[c];
-    elnode = is_local ? &(local_elem_nodes[nid]) : &(ghost_elem_nodes[nid]);
+    elnode = !is_ghost ? &(local_elem_nodes[nid]) : &(ghost_elem_nodes[nid]);
     *elnode = num_inodes;
   }
   sc_array_sort (&touching_procs, sc_int_compare);
@@ -1057,7 +1089,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   sc_array_sort (&all_procs, sc_int_compare);
   sc_array_uniq (&all_procs, sc_int_compare);
 
-  inode = sc_array_push (inodes);
+  inode = (p4est_locidx_t *) sc_array_push (inodes);
   *inode = -((p4est_locidx_t) owner_proc + 1);
 
   count = all_procs.elem_count;
@@ -1123,11 +1155,13 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_topidx_t      tid;
   sc_array_t         *trees = info->p4est->trees;
   p4est_tree_t       *tree;
+  p4est_ghost_t      *ghost_layer = info->ghost_layer;
+  sc_array_t          proc_offsets;
   p4est_locidx_t      quadrants_offset;
   p4est_locidx_t     *qids;
   p4est_locidx_t      qid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
-  bool               *is_local;
+  int8_t             *is_ghost;
   int                 e;
   p4est_locidx_t      nid;
   int                 proc;
@@ -1142,58 +1176,71 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   int                 nodes_per_edge = data->nodes_per_edge;
   int                 nodes_per_elem = data->nodes_per_elem;
   int               **edge_nodes = data->edge_nodes;
-  bool                is_hanging;
+  int8_t              is_hanging;
   int                 limit;
   int                 stride;
   int                 orientation;
   int8_t              min_level = P4EST_QMAXLEVEL;
   int8_t              max_level = 0;
   p4est_locidx_t      start_node;
-  bool                intra_tree = info->intra_tree;
+  int8_t              tree_boundary = info->tree_boundary;
   int8_t              type;
 
   p8est_lnodes_edge_simple_callback (info, data);
 
+  /* even though the original is size mpisize+1, proc_offsets uses
+   * p4est_locidx_offset_compare, and we don't want to read past the end of the
+   * array */
+  sc_array_init_data (&proc_offsets, ghost_layer->proc_offsets,
+                      sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
+
   /* In p4est_iterate, the first quadrant in the first side is the lowest
    * Morton that touches the edge if the edge is inside a tree.
    */
-  if (intra_tree) {
-    eside = sc_array_index (sides, 0);
-    owner_edge = eside->edge;
+  if (!tree_boundary) {
+    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, 0);
+    owner_edge = (int) eside->edge;
     owner_tid = eside->treeid;
-    owner_orientation = eside->orientation;
+    owner_orientation = (int) eside->orientation;
     if (eside->is_hanging) {
       owner_quad = eside->is.hanging.quad[0];
-      is_local = eside->is.hanging.is_local;
+      is_ghost = eside->is.hanging.is_ghost;
     }
     else {
       owner_quad = eside->is.full.quad;
-      is_local = &(eside->is.full.is_local);
+      is_ghost = &(eside->is.full.is_ghost);
     }
-    if (*is_local) {
+    if (!(*is_ghost)) {
       owner_proc = rank;
     }
     else {
-      /* TODO: replace when the new ghost_layer API is implemented */
-      owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
-                                          rank);
-      P4EST_ASSERT (owner_proc != rank);
+      if (eside->is_hanging) {
+        owner_proc = (int) sc_array_bsearch (&proc_offsets,
+                                             &(eside->is.hanging.quadid[0]),
+                                             p4est_locidx_offset_compare);
+      }
+      else {
+        owner_proc =
+          (int) sc_array_bsearch (&proc_offsets, &(eside->is.full.quadid),
+                                  p4est_locidx_offset_compare);
+      }
+      P4EST_ASSERT (owner_proc >= 0 && owner_proc != rank);
     }
   }
 
   sc_array_init (&touching_procs, sizeof (int));
   sc_array_init (&all_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
-    eside = sc_array_index (sides, zz);
-    e = eside->edge;
+    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    e = (int) eside->edge;
     tid = eside->treeid;
-    tree = p4est_array_index_topidx (trees, tid);
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
     is_hanging = eside->is_hanging;
-    orientation = eside->orientation;
+    orientation = (int) eside->orientation;
     if (!is_hanging) {
       limit = 1;
-      is_local = &(eside->is.full.is_local);
+      is_ghost = &(eside->is.full.is_ghost);
       qids = &(eside->is.full.quadid);
       q = &(eside->is.full.quad);
       min_level = eside->is.full.quad->level;
@@ -1201,28 +1248,28 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     }
     else {
       limit = 2;
-      is_local = eside->is.hanging.is_local;
+      is_ghost = eside->is.hanging.is_ghost;
       qids = eside->is.hanging.quadid;
       q = eside->is.hanging.quad;
     }
 
     for (i = 0; i < limit; i++) {
       qid = qids[i];
-      if (is_local[i]) {
+      if (!is_ghost[i]) {
         proc = rank;
         qid += quadrants_offset;
       }
       else {
-        /* TODO: replace when the new ghost_layer API is implemented */
-        proc = p4est_comm_find_owner (info->p4est, tid, q[i], rank);
-        P4EST_ASSERT (proc != rank);
-        ip = sc_array_push (&touching_procs);
+        proc = (int) sc_array_bsearch (&proc_offsets, &qid,
+                                       p4est_locidx_offset_compare);
+        P4EST_ASSERT (proc >= 0 && proc != rank);
+        ip = (int *) sc_array_push (&touching_procs);
         *ip = proc;
-        ip = sc_array_push (&all_procs);
+        ip = (int *) sc_array_push (&all_procs);
         *ip = proc;
       }
 
-      if (!intra_tree && i == 0 && tid <= owner_tid) {
+      if (tree_boundary && i == 0 && tid <= owner_tid) {
         if (tid < owner_tid || p4est_quadrant_compare (q[i], owner_quad) < 0) {
           owner_proc = proc;
           owner_tid = tid;
@@ -1240,10 +1287,10 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
 #endif
 
       edpid = qid * 12 + e;
-      edpidx = is_local[i] ? local_edp[edpid] : ghost_edp[edpid];
+      edpidx = !is_ghost[i] ? local_edp[edpid] : ghost_edp[edpid];
       if (is_hanging) {
         if (edpidx >= 0) {
-          edp = sc_array_index (&edp_array->a, edpidx);
+          edp = (p8est_lnodes_edp_t *) sc_array_index (&edp_array->a, edpidx);
         }
         else {
           edp = sc_recycle_array_insert (edp_array, &edpidxz);
@@ -1256,7 +1303,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
             proc = p8est_lnodes_missing_proc_edp (q[i], tid, e, j, i, info);
           }
           if (proc >= 0 && proc != rank) {
-            ip = sc_array_push (&all_procs);
+            ip = (int *) sc_array_push (&all_procs);
             *ip = proc;
           }
         }
@@ -1271,29 +1318,29 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   }
 
   /* once we know the owner's orientation, we can number the local nodes based
-   * on whether this quadrant as the same or opposite orientation */
+   * on whether this quadrant has the same or opposite orientation */
   for (zz = 0; zz < count; zz++) {
-    eside = sc_array_index (sides, zz);
-    e = eside->edge;
+    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    e = (int) eside->edge;
     tid = eside->treeid;
-    tree = p4est_array_index_topidx (trees, tid);
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
     is_hanging = eside->is_hanging;
-    orientation = eside->orientation;
+    orientation = (int) eside->orientation;
     if (!is_hanging) {
       limit = 1;
-      is_local = &(eside->is.full.is_local);
+      is_ghost = &(eside->is.full.is_ghost);
       qids = &(eside->is.full.quadid);
     }
     else {
       limit = 2;
-      is_local = eside->is.hanging.is_local;
+      is_ghost = eside->is.hanging.is_ghost;
       qids = eside->is.hanging.quadid;
     }
 
     for (i = 0; i < limit; i++) {
       qid = qids[i];
-      if (is_local[i]) {
+      if (!is_ghost[i]) {
         qid += quadrants_offset;
       }
       start_node = num_inodes + (orientation == owner_orientation ?
@@ -1301,7 +1348,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       stride = (orientation == owner_orientation ? 1 : -1);
       for (j = 0; j < nodes_per_edge; j++, start_node += stride) {
         nid = qid * nodes_per_elem + edge_nodes[e][j];
-        elnode = is_local[i] ? &(local_elem_nodes[nid]) :
+        elnode = !is_ghost[i] ? &(local_elem_nodes[nid]) :
           &(ghost_elem_nodes[nid]);
         *elnode = start_node;
       }
@@ -1336,7 +1383,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
                              &tempq, owner_tid, type, num_inodes);
   }
   for (i = 0; i < nodes_per_edge; i++) {
-    inode = sc_array_push (inodes);
+    inode = (p4est_locidx_t *) sc_array_push (inodes);
     *inode = -((p4est_locidx_t) owner_proc + 1);
   }
 
@@ -1350,8 +1397,9 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
  * to the position on the face of the touching element.
  */
 static inline void
-p8est_lnodes_face_node_transform (int orig_f, int f, int orientation,
-                                  bool * flipj, bool * flipk, bool * swapjk)
+p8est_lnodes_face_node_transform (int orig_f, int f, int8_t orientation,
+                                  int8_t * flipj, int8_t * flipk,
+                                  int8_t * swapjk)
 {
   int                 ref = p8est_face_permutation_refs[f][orig_f];
   int                 set = p8est_face_permutation_sets[ref][orientation];
@@ -1396,11 +1444,13 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   p4est_topidx_t      tid;
   sc_array_t         *trees = info->p4est->trees;
   p4est_tree_t       *tree;
+  p4est_ghost_t      *ghost_layer = info->ghost_layer;
+  sc_array_t          proc_offsets;
   p4est_locidx_t      quadrants_offset;
   p4est_locidx_t     *qids;
   p4est_locidx_t      qid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
-  bool               *is_local;
+  int8_t             *is_ghost;
   int                 f;
   p4est_locidx_t      nid;
   int                 proc;
@@ -1415,7 +1465,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   int                 nodes_per_face = data->nodes_per_face;
   int                 nodes_per_elem = data->nodes_per_elem;
   int               **face_nodes = data->face_nodes;
-  bool                is_hanging;
+  int8_t              is_hanging;
   int                 limit;
   int                 i, j;
 #ifndef P4_TO_P8
@@ -1423,78 +1473,91 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 #else
   int                 k, l;
   int                 nodes_per_edge = data->nodes_per_edge;
-  bool                flipj, flipk, swapjk;
+  int8_t              flipj, flipk, swapjk;
   int                 jind, kind, lind;
 #endif
   p4est_locidx_t      start_node;
-  bool                intra_tree = info->intra_tree;
+  int8_t              tree_boundary = info->tree_boundary;
   int8_t              type;
 
   p4est_lnodes_face_simple_callback (info, data);
 
+  /* even though the original is size mpisize+1, proc_offsets uses
+   * p4est_locidx_offset_compare, and we don't want to read past the end of the
+   * array */
+  sc_array_init_data (&proc_offsets, ghost_layer->proc_offsets,
+                      sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
+
   /* In p4est_iterate, the first quadrant in the first side is the lowest
    * Morton that touches the face if the face is inside a tree.
    */
-  if (intra_tree) {
-    fside = sc_array_index (sides, 0);
-    owner_face = fside->face;
+  if (!tree_boundary) {
+    fside = (p4est_iter_face_side_t *) sc_array_index (sides, 0);
+    owner_face = (int) fside->face;
     owner_tid = fside->treeid;
     owner_side = 0;
     if (fside->is_hanging) {
       owner_quad = fside->is.hanging.quad[0];
-      is_local = fside->is.hanging.is_local;
+      is_ghost = fside->is.hanging.is_ghost;
     }
     else {
       owner_quad = fside->is.full.quad;
-      is_local = &(fside->is.full.is_local);
+      is_ghost = &(fside->is.full.is_ghost);
     }
-    if (*is_local) {
+    if (!(*is_ghost)) {
       owner_proc = rank;
     }
     else {
-      /* TODO: replace when the new ghost_layer API is implemented */
-      owner_proc = p4est_comm_find_owner (info->p4est, owner_tid, owner_quad,
-                                          rank);
-      P4EST_ASSERT (owner_proc != rank);
+      if (fside->is_hanging) {
+        owner_proc = (int) sc_array_bsearch (&proc_offsets,
+                                             &(fside->is.hanging.quadid[0]),
+                                             p4est_locidx_offset_compare);
+      }
+      else {
+        owner_proc =
+          (int) sc_array_bsearch (&proc_offsets, &(fside->is.full.quadid),
+                                  p4est_locidx_offset_compare);
+      }
+      P4EST_ASSERT (owner_proc >= 0 && owner_proc != rank);
     }
   }
 
   sc_array_init (&touching_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
-    fside = sc_array_index (sides, zz);
-    f = fside->face;
+    fside = (p4est_iter_face_side_t *) sc_array_index (sides, zz);
+    f = (int) fside->face;
     tid = fside->treeid;
-    tree = p4est_array_index_topidx (trees, tid);
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
     is_hanging = fside->is_hanging;
     if (!is_hanging) {
       limit = 1;
-      is_local = &(fside->is.full.is_local);
+      is_ghost = &(fside->is.full.is_ghost);
       qids = &(fside->is.full.quadid);
       q = &(fside->is.full.quad);
     }
     else {
       limit = P4EST_CHILDREN / 2;
-      is_local = fside->is.hanging.is_local;
+      is_ghost = fside->is.hanging.is_ghost;
       qids = fside->is.hanging.quadid;
       q = fside->is.hanging.quad;
     }
 
     for (i = 0; i < limit; i++) {
       qid = qids[i];
-      if (is_local[i]) {
+      if (!is_ghost[i]) {
         proc = rank;
         qid += quadrants_offset;
       }
       else {
-        /* TODO: replace when the new ghost_layer API is implemented */
-        proc = p4est_comm_find_owner (info->p4est, tid, q[i], rank);
-        P4EST_ASSERT (proc != rank);
-        ip = sc_array_push (&touching_procs);
+        proc = (int) sc_array_bsearch (&proc_offsets, &qid,
+                                       p4est_locidx_offset_compare);
+        P4EST_ASSERT (proc >= 0 && proc != rank);
+        ip = (int *) sc_array_push (&touching_procs);
         *ip = proc;
       }
 
-      if (!intra_tree && i == 0 && tid <= owner_tid) {
+      if (tree_boundary && i == 0 && tid <= owner_tid) {
         if (tid < owner_tid || p4est_quadrant_compare (q[i], owner_quad) < 0) {
           owner_proc = proc;
           owner_tid = tid;
@@ -1516,26 +1579,26 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   /* Once we know which side owns the face, we can number the local nodes based
    * on the orientation between the faces */
   for (zz = 0; zz < count; zz++) {
-    fside = sc_array_index (sides, zz);
-    f = fside->face;
+    fside = (p4est_iter_face_side_t *) sc_array_index (sides, zz);
+    f = (int) fside->face;
     tid = fside->treeid;
-    tree = p4est_array_index_topidx (trees, tid);
+    tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
     is_hanging = fside->is_hanging;
     if (!is_hanging) {
       limit = 1;
-      is_local = &(fside->is.full.is_local);
+      is_ghost = &(fside->is.full.is_ghost);
       qids = &(fside->is.full.quadid);
     }
     else {
       limit = P4EST_CHILDREN / 2;
-      is_local = fside->is.hanging.is_local;
+      is_ghost = fside->is.hanging.is_ghost;
       qids = fside->is.hanging.quadid;
     }
 
     for (i = 0; i < limit; i++) {
       qid = qids[i];
-      if (is_local[i]) {
+      if (!is_ghost[i]) {
         qid += quadrants_offset;
 #ifndef P4_TO_P8
         start_node = num_inodes + ((zz == owner_side) ? 0 :
@@ -1544,15 +1607,15 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
         stride = (zz == owner_side) ? 1 : info->orientation ? 1 : -1;
         for (j = 0; j < nodes_per_face; j++, start_node += stride) {
           nid = qid * nodes_per_elem + face_nodes[f][j];
-          elnode = is_local[i] ? &(local_elem_nodes[nid]) :
+          elnode = !is_ghost[i] ? &(local_elem_nodes[nid]) :
             &(ghost_elem_nodes[nid]);
           *elnode = start_node;
         }
 #else
         if (zz == owner_side) {
-          flipj = false;
-          flipk = false;
-          swapjk = false;
+          flipj = 0;
+          flipk = 0;
+          swapjk = 0;
         }
         else {
           p8est_lnodes_face_node_transform (owner_face, f, info->orientation,
@@ -1562,7 +1625,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
         for (l = 0, k = 0; k < nodes_per_edge; k++) {
           for (j = 0; j < nodes_per_edge; j++, l++) {
             nid = qid * nodes_per_elem + face_nodes[f][l];
-            elnode = is_local[i] ? &(local_elem_nodes[nid]) :
+            elnode = !is_ghost[i] ? &(local_elem_nodes[nid]) :
               &(ghost_elem_nodes[nid]);
             jind = flipj ? (nodes_per_edge - 1 - j) : j;
             kind = flipk ? (nodes_per_edge - 1 - k) : k;
@@ -1587,7 +1650,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
                              &tempq, owner_tid, type, num_inodes);
   }
   for (i = 0; i < nodes_per_face; i++) {
-    inode = sc_array_push (inodes);
+    inode = (p4est_locidx_t *) sc_array_push (inodes);
     *inode = -((p4est_locidx_t) owner_proc + 1);
   }
 
@@ -1602,8 +1665,8 @@ static void
 p4est_lnodes_volume_callback (p4est_iter_volume_info_t * info, void *Data)
 {
   p4est_lnodes_data_t *data = Data;
-  p4est_tree_t       *tree = p4est_array_index_topidx (info->p4est->trees,
-                                                       info->treeid);
+  p4est_tree_t       *tree = p4est_tree_array_index (info->p4est->trees,
+                                                     info->treeid);
   p4est_locidx_t      qid = info->quadid + tree->quadrants_offset;
   p4est_locidx_t     *elem_nodes = data->local_elem_nodes;
   sc_array_t         *inodes = data->inodes;
@@ -1619,7 +1682,7 @@ p4est_lnodes_volume_callback (p4est_iter_volume_info_t * info, void *Data)
   for (i = 0; i < nodes_per_volume; i++) {
     nid = qid * nodes_per_elem + volume_nodes[i];
     elem_nodes[nid] = num_inodes + (p4est_locidx_t) i;
-    inode = sc_array_push (inodes);
+    inode = (p4est_locidx_t *) sc_array_push (inodes);
     *inode = -((p4est_locidx_t) rank + 1);
   }
 }
@@ -1687,7 +1750,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
                                           p4est->connectivity);
       count = quads.elem_count;
       for (zz = 0; zz < count; zz++) {
-        ptemp = sc_array_index (&quads, zz);
+        ptemp = p4est_quadrant_array_index (&quads, zz);
         ntid = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
         if (ntid < ownertid) {
           ownertid = ntid;
@@ -1715,7 +1778,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
                                           p4est->connectivity);
     count = quads.elem_count;
     for (zz = 0; zz < count; zz++) {
-      ptemp = sc_array_index (&quads, zz);
+      ptemp = p4est_quadrant_array_index (&quads, zz);
       ntid = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
       if (ntid < ownertid) {
         ownertid = ntid;
@@ -1739,15 +1802,16 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
 
   P4EST_ASSERT (owner_proc != p4est->mpirank);
 
-  binfo = sc_array_push (&(recv_buf_info[owner_proc]));
+  binfo = (p4est_lnodes_buf_info_t *)
+    sc_array_push (&(recv_buf_info[owner_proc]));
   binfo->q = ownerq;
   binfo->q.p.which_tree = ownertid;
   binfo->type = (int8_t) (P4EST_LN_C_OFFSET + ownerc);
   binfo->first_index = num_inodes;
-  binfo->send_sharers = true;
+  binfo->send_sharers = 1;
   binfo->share_offset = -1;
   binfo->share_count = -1;
-  inode = sc_array_push (inodes);
+  inode = (p4est_locidx_t *) sc_array_push (inodes);
   *inode = -((p4est_locidx_t) owner_proc + 1);
 
   return num_inodes;
@@ -1791,7 +1855,7 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
   int                 nodes_per_elem = data->nodes_per_elem;
   int                 c;
   p4est_locidx_t      qid;
-  bool                is_local;
+  int8_t              is_ghost;
   sc_array_t         *trees = p4est->trees;
   p4est_tree_t       *tree;
   p4est_locidx_t      quadrants_offset;
@@ -1838,7 +1902,7 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
                                           p4est->connectivity);
       count = quads.elem_count;
       for (zz = 0; zz < count; zz++) {
-        ptemp = sc_array_index (&quads, zz);
+        ptemp = p4est_quadrant_array_index (&quads, zz);
         ntid = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
         if (ntid < ownertid[j]) {
           ownertid[j] = ntid;
@@ -1870,37 +1934,38 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
 
   P4EST_ASSERT (owner_proc != p4est->mpirank);
 
-  binfo = sc_array_push (&(recv_buf_info[owner_proc]));
+  binfo = (p4est_lnodes_buf_info_t *)
+    sc_array_push (&(recv_buf_info[owner_proc]));
   binfo->q = final_ownerq;
   binfo->q.p.which_tree = ownertid[0];
   binfo->type = (int8_t) (P8EST_LN_E_OFFSET + ownere);
   binfo->first_index = num_inodes;
-  binfo->send_sharers = true;
+  binfo->send_sharers = 1;
   binfo->share_offset = -1;
   binfo->share_count = -1;
 
   for (i = 0; i < nodes_per_edge; i++) {
-    inode = sc_array_push (inodes);
+    inode = (p4est_locidx_t *) sc_array_push (inodes);
     *inode = -((p4est_locidx_t) owner_proc + 1);
   }
 
-  f = hface->face;
-  tree = p4est_array_index_topidx (trees, tid);
+  f = (int) hface->face;
+  tree = p4est_tree_array_index (trees, tid);
   quadrants_offset = tree->quadrants_offset;
   for (i = 0; i < 2; i++) {
     c = p4est_quadrant_child_id (&tempq[i]);
     j = p8est_corner_face_corners[c][f];
     P4EST_ASSERT (j >= 0);
     qid = hface->is.hanging.quadid[j];
-    is_local = hface->is.hanging.is_local[j];
-    if (is_local) {
+    is_ghost = hface->is.hanging.is_ghost[j];
+    if (!is_ghost) {
       qid += quadrants_offset;
     }
     start_node = num_inodes + (orientation ? nodes_per_edge - 1 : 0);
     stride = orientation ? -1 : 1;
     for (j = 0; j < nodes_per_edge; j++, start_node += stride) {
       nid = qid * nodes_per_elem + edge_nodes[e][j];
-      if (is_local) {
+      if (!is_ghost) {
         local_elem_nodes[nid] = start_node;
       }
       else {
@@ -1926,13 +1991,13 @@ p4est_lnodes_hface_fix (p4est_t * p4est, p4est_iter_face_side_t * hface,
   p4est_topidx_t      tid = hface->treeid;
   p4est_locidx_t      qid[P4EST_CHILDREN / 2];
   sc_array_t         *trees = p4est->trees;
-  p4est_tree_t       *tree = p4est_array_index_topidx (trees, tid);
+  p4est_tree_t       *tree = p4est_tree_array_index (trees, tid);
   p4est_locidx_t      quadrants_offset = tree->quadrants_offset;
-  bool               *is_local = hface->is.hanging.is_local;
+  int8_t             *is_ghost = hface->is.hanging.is_ghost;
   int                *corner_nodes = data->corner_nodes;
   int                 nodes_per_elem = data->nodes_per_elem;
   p4est_locidx_t      nid, nidval, nid2;
-  int                 f = hface->face;
+  int                 f = (int) hface->face;
   p4est_locidx_t     *local_elem_nodes = data->local_elem_nodes;
   p4est_locidx_t     *ghost_elem_nodes = data->ghost_elem_nodes;
   int                 c;
@@ -1949,24 +2014,20 @@ p4est_lnodes_hface_fix (p4est_t * p4est, p4est_iter_face_side_t * hface,
   P4EST_ASSERT (hface->is_hanging);
   for (i = 0; i < P4EST_CHILDREN / 2; i++) {
     qid[i] = hface->is.hanging.quadid[i];
-    if (is_local[i]) {
+    if (!is_ghost[i]) {
       qid[i] += quadrants_offset;
     }
   }
 
   for (i = 0; i < P4EST_CHILDREN / 2; i++) {
     i2 = P4EST_CHILDREN / 2 - 1 - i;
-    if (!is_local[i2]) {
+    if (is_ghost[i2]) {
       continue;
     }
-#ifndef P4_TO_P8
-    c = p4est_face_corners[p4est_zface_to_rface[f]][i];
-#else
     c = p4est_face_corners[f][i];
-#endif
     nid = qid[i] * nodes_per_elem + corner_nodes[c];
     nid2 = qid[i2] * nodes_per_elem + corner_nodes[c];
-    if (is_local[i]) {
+    if (!is_ghost[i]) {
       nidval = local_elem_nodes[nid];
       P4EST_ASSERT (nidval >= 0);
     }
@@ -1991,13 +2052,13 @@ p4est_lnodes_hface_fix (p4est_t * p4est, p4est_iter_face_side_t * hface,
       c2 = p8est_edge_corners[e2][j];
       i1 = p8est_corner_face_corners[c][f];
       i2 = p8est_corner_face_corners[c2][f];
-      if (!is_local[i2]) {
+      if (is_ghost[i2]) {
         continue;
       }
       for (k = 0; k < nodes_per_edge; k++) {
         nid = qid[i1] * nodes_per_elem + edge_nodes[e][k];
         nid2 = qid[i2] * nodes_per_elem + edge_nodes[e][k];
-        if (is_local[i1]) {
+        if (!is_ghost[i1]) {
           nidval = local_elem_nodes[nid];
           P4EST_ASSERT (nidval >= 0);
         }
@@ -2034,13 +2095,13 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
   p4est_topidx_t      tid = hedge->treeid;
   p4est_locidx_t      qid[2];
   sc_array_t         *trees = p4est->trees;
-  p4est_tree_t       *tree = p4est_array_index_topidx (trees, tid);
+  p4est_tree_t       *tree = p4est_tree_array_index (trees, tid);
   p4est_locidx_t      quadrants_offset = tree->quadrants_offset;
-  bool               *is_local = hedge->is.hanging.is_local;
+  int8_t             *is_ghost = hedge->is.hanging.is_ghost;
   int                *corner_nodes = data->corner_nodes;
   int                 nodes_per_elem = data->nodes_per_elem;
   p4est_locidx_t      nid, nidval, nid2;
-  int                 e = hedge->edge;
+  int                 e = (int) hedge->edge;
   p4est_locidx_t     *local_elem_nodes = data->local_elem_nodes;
   p4est_locidx_t     *ghost_elem_nodes = data->ghost_elem_nodes;
   int                 c, c2;
@@ -2048,7 +2109,7 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
   P4EST_ASSERT (hedge->is_hanging);
   for (i = 0; i < 2; i++) {
     qid[i] = hedge->is.hanging.quadid[i];
-    if (is_local[i]) {
+    if (!is_ghost[i]) {
       qid[i] += quadrants_offset;
     }
   }
@@ -2056,12 +2117,12 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
   for (i = 0; i < 2; i++) {
     c = p8est_edge_corners[e][i];
     c2 = p4est_face_corners[e][1 - i];
-    if (!is_local[1 - i]) {
+    if (is_ghost[1 - i]) {
       continue;
     }
     nid = qid[i] * nodes_per_elem + corner_nodes[c];
     nid2 = qid[1 - i] * nodes_per_elem + corner_nodes[c];
-    if (is_local[i]) {
+    if (!is_ghost[i]) {
       nidval = local_elem_nodes[nid];
       P4EST_ASSERT (nidval >= 0);
     }
@@ -2109,7 +2170,7 @@ p8est_lnodes_code_fix (int16_t face_code)
 
 static void
 p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
-                        sc_array_t * ghost_layer, p4est_lnodes_t * lnodes)
+                        p4est_ghost_t * ghost_layer, p4est_lnodes_t * lnodes)
 {
   int                 i, j, n;
   int                 npel;
@@ -2128,7 +2189,7 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   int                 ecount[12];
 #endif
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
-  p4est_locidx_t      ngq = (p4est_locidx_t) ghost_layer->elem_count;
+  p4est_locidx_t      ngq = (p4est_locidx_t) ghost_layer->ghosts.elem_count;
   p4est_locidx_t      nlcdp = nlq * P4EST_CHILDREN;
   p4est_locidx_t      ngcdp = ngq * P4EST_CHILDREN;
 #ifdef P4_TO_P8
@@ -2358,7 +2419,7 @@ p4est_lnodes_reset_data (p4est_lnodes_data_t * data, p4est_t * p4est)
  */
 static void
 p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
-                          sc_array_t * ghost_layer, p4est_lnodes_t * lnodes)
+                          p4est_lnodes_t * lnodes)
 {
   p4est_locidx_t      num_inodes;
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
@@ -2383,10 +2444,10 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
   for (li = 0; li < nlen; li++) {
     inidx = local_en[li];
     if (inidx >= 0) {
-      inode = sc_array_index (inodes, (size_t) inidx);
+      inode = (p4est_locidx_t *) sc_array_index (inodes, (size_t) inidx);
       if (*inode == rankval) {
         *inode = count;
-        sorter = sc_array_push (sorter_array);
+        sorter = (p4est_lnodes_sorter_t *) sc_array_push (sorter_array);
         sorter->local_index = count++;
         sorter->inode_index = inidx;
       }
@@ -2414,7 +2475,7 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
  * duplicated entry: two different inodes request the same node.  In this case,
  * the recv_buf_info array won't be exactly the same as the send_buf_info array.
  */
-static              bool
+static              int8_t
 p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
 {
   int                 mpisize = p4est->mpisize;
@@ -2441,7 +2502,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
     count = send->elem_count;
     if (count > 0) {
       P4EST_ASSERT (i != p4est->mpirank);
-      send_request = sc_array_push (&send_requests);
+      send_request = (MPI_Request *) sc_array_push (&send_requests);
       mpiret = MPI_Isend (send->array,
                           (int) (count * sizeof (p4est_lnodes_buf_info_t)),
                           MPI_BYTE, i, P4EST_COMM_LNODES_TEST, p4est->mpicomm,
@@ -2484,13 +2545,13 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
     count = 0;
     prev = NULL;
     for (zz = 0; zz < count2; zz++) {
-      binfo2 = sc_array_index (recv2, zz);
+      binfo2 = (p4est_lnodes_buf_info_t *) sc_array_index (recv2, zz);
       /* if there is a duplicate entry in the receive list, it has already been
        * checked */
       if (zz > 0 && p4est_lnodes_binfo_is_equal (prev, binfo2)) {
         continue;
       }
-      binfo = sc_array_index (recv, count++);
+      binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv, count++);
       P4EST_ASSERT (p4est_quadrant_is_equal_piggy
                     (&(binfo->q), &(binfo2->q)));
       P4EST_ASSERT (binfo->type == binfo2->type);
@@ -2516,7 +2577,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
 
   P4EST_FREE (recv_buf);
   P4EST_FREE (num_recv_expect);
-  return true;
+  return 1;
 }
 #endif
 
@@ -2583,7 +2644,7 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
       P4EST_ASSERT (i != p4est->mpirank);
       send = &(send_buf[i]);
       for (zz = 0; zz < count; zz++) {
-        binfo = sc_array_index (send_info, zz);
+        binfo = (p4est_lnodes_buf_info_t *) sc_array_index (send_info, zz);
         index = (size_t) binfo->first_index;
         type = binfo->type;
         if (type >= P4EST_LN_C_OFFSET) {
@@ -2599,19 +2660,19 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
           limit = nodes_per_face;
         }
         for (j = 0; j < limit; j++) {
-          lp = sc_array_push (send);
-          inode = sc_array_index (inodes, index++);
+          lp = (p4est_locidx_t *) sc_array_push (send);
+          inode = (p4est_locidx_t *) sc_array_index (inodes, index++);
           P4EST_ASSERT (*inode >= 0);
           *lp = *inode;
         }
         if (binfo->send_sharers) {
-          lp = sc_array_push (send);
+          lp = (p4est_locidx_t *) sc_array_push (send);
           *lp = (p4est_locidx_t) binfo->share_count;
           P4EST_ASSERT (binfo->share_count > 0);
           index = (size_t) binfo->share_offset;
           share_count = (int) binfo->share_count;
           for (j = 0; j < share_count; j++) {
-            lp = sc_array_push (send);
+            lp = (p4est_locidx_t *) sc_array_push (send);
             share_proc = *((int *) sc_array_index (inode_sharers, index++));
             *lp = (p4est_locidx_t) share_proc;
             P4EST_ASSERT (0 <= share_proc && share_proc < mpisize);
@@ -2619,7 +2680,7 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
         }
       }
       send_count = send->elem_count;
-      send_request = sc_array_push (&send_requests);
+      send_request = (MPI_Request *) sc_array_push (&send_requests);
       mpiret = MPI_Isend (send->array,
                           (int) (send_count * sizeof (p4est_locidx_t)),
                           MPI_BYTE, i, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
@@ -2665,7 +2726,7 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
     count = 0;
     prev = NULL;
     for (zz = 0; zz < info_count; zz++) {
-      binfo = sc_array_index (recv_info, zz);
+      binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv_info, zz);
       if (binfo->type >= P4EST_LN_C_OFFSET) {
         limit = 1;
       }
@@ -2683,36 +2744,37 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
         binfo->share_count = prev->share_count;
         prev_index = (size_t) prev->first_index;
         for (k = 0; k < limit; k++) {
-          inode = sc_array_index (inodes, index);
-          inode_prev = sc_array_index (inodes, prev_index++);
+          inode = (p4est_locidx_t *) sc_array_index (inodes, index);
+          inode_prev = (p4est_locidx_t *) sc_array_index (inodes,
+                                                          prev_index++);
           P4EST_ASSERT (*inode == -((p4est_locidx_t) j + 1));
           P4EST_ASSERT (*inode_prev >= 0);
           *inode = *inode_prev;
-          sorter = sc_array_push (sorter_array);
+          sorter = (p4est_lnodes_sorter_t *) sc_array_push (sorter_array);
           sorter->local_index = *inode_prev;
           sorter->inode_index = index++;
         }
       }
       else {
         for (k = 0; k < limit; k++) {
-          inode = sc_array_index (inodes, index);
-          lp = sc_array_index (recv, count++);
+          inode = (p4est_locidx_t *) sc_array_index (inodes, index);
+          lp = (p4est_locidx_t *) sc_array_index (recv, count++);
           P4EST_ASSERT (*inode == -((p4est_locidx_t) j + 1));
           P4EST_ASSERT (*lp >= 0);
           *inode = *lp;
-          sorter = sc_array_push (sorter_array);
+          sorter = (p4est_lnodes_sorter_t *) sc_array_push (sorter_array);
           sorter->local_index = *lp;
           sorter->inode_index = index++;
         }
         if (binfo->send_sharers) {
-          lp = sc_array_index (recv, count++);
+          lp = (p4est_locidx_t *) sc_array_index (recv, count++);
           share_count = (int) (*lp);
           P4EST_ASSERT (share_count > 0);
           binfo->share_count = (int8_t) share_count;
           binfo->share_offset = (p4est_locidx_t) inode_sharers->elem_count;
           for (k = 0; k < share_count; k++) {
-            ip = sc_array_push (inode_sharers);
-            lp = sc_array_index (recv, count++);
+            ip = (int *) sc_array_push (inode_sharers);
+            lp = (p4est_locidx_t *) sc_array_index (recv, count++);
             *ip = (int) (*lp);
             P4EST_ASSERT (0 <= *ip && *ip < mpisize);
           }
@@ -2809,8 +2871,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       P4EST_ASSERT (count == (size_t) lnodes->owned_count);
     }
     for (zz = 0; zz < count; zz++) {
-      sorter = sc_array_index (s_array, zz);
-      lp = sc_array_index (&inode_to_global, sorter->inode_index);
+      sorter = (p4est_lnodes_sorter_t *) sc_array_index (s_array, zz);
+      lp = (p4est_locidx_t *) sc_array_index (&inode_to_global,
+                                              sorter->inode_index);
       *lp = gcount;
       if (zz == 0 || sorter->local_index > prev->local_index) {
         gcount++;
@@ -2833,7 +2896,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     }
     offset = global_offsets[i];
     for (zz = 0; zz < count; zz++) {
-      sorter = sc_array_index (s_array, zz);
+      sorter = (p4est_lnodes_sorter_t *) sc_array_index (s_array, zz);
       if (zz == 0 || sorter->local_index > prev->local_index) {
         gnodes[gcount2++] = offset + (p4est_gloidx_t) sorter->local_index;
         P4EST_ASSERT (gnodes[gcount2 - 1] < global_offsets[i + 1]);
@@ -2846,7 +2909,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   for (li = 0; li < nlen; li++) {
     inidx = elnodes[li];
     P4EST_ASSERT (0 <= inidx && inidx < num_inodes);
-    lp = sc_array_index (&inode_to_global, (size_t) inidx);
+    lp = (p4est_locidx_t *) sc_array_index (&inode_to_global, (size_t) inidx);
     elnodes[li] = *lp;
   }
 
@@ -2863,7 +2926,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   lnodes->sharers = sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   for (i = 0; i < mpisize; i++) {
     if (comm_proc[i]) {
-      lrank = sc_array_push (sharers);
+      lrank = (p4est_lnodes_rank_t *) sc_array_push (sharers);
       lrank->rank = i;
       sc_array_init (&(lrank->shared_nodes), sizeof (p4est_locidx_t));
       comm_proc[i] = comm_proc_count++;
@@ -2887,7 +2950,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       }
       count = binfo_array->elem_count;
       for (zz = 0; zz < count; zz++) {
-        binfo = sc_array_index (binfo_array, zz);
+        binfo = (p4est_lnodes_buf_info_t *) sc_array_index (binfo_array, zz);
         if (binfo->type >= P4EST_LN_C_OFFSET) {
           limit = 1;
         }
@@ -2911,9 +2974,10 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
                                              (size_t) l));
             shareidx = comm_proc[proc];
             P4EST_ASSERT (shareidx >= 0);
-            lrank = sc_array_index_int (sharers, shareidx);
+            lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
+                                                                shareidx);
             P4EST_ASSERT (lrank->rank == proc);
-            lp = sc_array_push (&(lrank->shared_nodes));
+            lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
             *lp = gidx;
           }
         }
@@ -2924,7 +2988,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   /* for each sharer, figure out which entries in local_nodes are owned by the
    * current process, and which are owned by the sharer's rank */
   for (i = 0; i < comm_proc_count; i++) {
-    lrank = sc_array_index_int (sharers, i);
+    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, i);
     sc_array_sort (&(lrank->shared_nodes), p4est_locidx_compare);
     proc = lrank->rank;
     lrank->shared_mine_offset = -1;
@@ -2960,7 +3024,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
 }
 
 p4est_lnodes_t     *
-p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
+p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 {
   p4est_iter_face_t   fiter;
   p4est_iter_volume_t viter;
@@ -3024,7 +3088,7 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #endif
                  citer);
 
-  p4est_lnodes_count_nodes (&data, p4est, ghost_layer, lnodes);
+  p4est_lnodes_count_nodes (&data, p4est, lnodes);
 
   sc_recycle_array_reset (data.cdp_array);
   P4EST_FREE (data.cdp_array);
@@ -3040,12 +3104,12 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #endif
 
   while (data.hfaces->elem_count) {
-    hface = sc_array_pop (data.hfaces);
+    hface = (p4est_iter_face_side_t *) sc_array_pop (data.hfaces);
     p4est_lnodes_hface_fix (p4est, hface, &data);
   }
 #ifdef P4_TO_P8
   while (data.hedges->elem_count) {
-    hedge = sc_array_pop (data.hedges);
+    hedge = (p8est_iter_edge_side_t *) sc_array_pop (data.hedges);
     p8est_lnodes_hedge_fix (p4est, hedge, &data);
   }
 #endif
@@ -3064,7 +3128,8 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
 #ifdef P4EST_DEBUG
     last = NULL;
     for (zz = 0; zz < data.send_buf_info[i].elem_count; zz++) {
-      new = sc_array_index (&(data.send_buf_info[i]), zz);
+      new = (p4est_lnodes_buf_info_t *)
+        sc_array_index (&(data.send_buf_info[i]), zz);
       if (zz > 0) {
         P4EST_ASSERT (p4est_lnodes_binfo_compare (last, new) < 0);
       }
@@ -3072,7 +3137,8 @@ p4est_lnodes_new (p4est_t * p4est, sc_array_t * ghost_layer, int degree)
     }
     last = NULL;
     for (zz = 0; zz < data.recv_buf_info[i].elem_count; zz++) {
-      new = sc_array_index (&(data.recv_buf_info[i]), zz);
+      new = (p4est_lnodes_buf_info_t *)
+        sc_array_index (&(data.recv_buf_info[i]), zz);
       if (zz > 0) {
         if (p4est_lnodes_binfo_is_equal (last, new)) {
           P4EST_VERBOSE ("Doubled receive buffer entry.\n");
@@ -3113,7 +3179,7 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   P4EST_FREE (lnodes->face_code);
   count = lnodes->sharers->elem_count;
   for (zz = 0; zz < count; zz++) {
-    lrank = sc_array_index (lnodes->sharers, zz);
+    lrank = (p4est_lnodes_rank_t *) sc_array_index (lnodes->sharers, zz);
     sc_array_reset (&(lrank->shared_nodes));
   }
   sc_array_destroy (lnodes->sharers);

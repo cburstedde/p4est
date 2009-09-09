@@ -23,6 +23,7 @@
 #define P8EST_LNODES_H
 
 #include <p8est.h>
+#include <p8est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -132,7 +133,7 @@ p8est_lnodes_rank_t;
  *                          = 0 if the edge is the first half of the full edge,
  *                          = 1 if the edge is the second half.
  *             not: not touched if there are no hanging faces or edges;
- * \return              true if any face or edge is hanging, false otherwise.
+ * \return             1 if any face or edge is hanging, 0 otherwise.
  */
 /*@unused@*/
 static inline int
@@ -174,7 +175,8 @@ p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
 }
 
 p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
-                                      sc_array_t * ghost_layer, int degree);
+                                      p8est_ghost_t * ghost_layer,
+                                      int degree);
 void                p8est_lnodes_destroy (p8est_lnodes_t *);
 
 SC_EXTERN_C_END;
