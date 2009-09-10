@@ -210,7 +210,8 @@ typedef struct p4est_lnodes_data
   int                *edge_nodes[12];
 #endif
   int                 corner_nodes[P4EST_CHILDREN];
-  p4est_gloidx_t     *global_offsets;
+  sc_array_t          send_requests;
+  sc_array_t         *send_buf;
 }
 p4est_lnodes_data_t;
 
@@ -443,7 +444,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                                                          (size_t) edpidx);
           }
           else {
-            edp = sc_recycle_array_insert (edp_array, &edpidxz);
+            edp = (p8est_lnodes_edp_t *) sc_recycle_array_insert (edp_array,
+                                                                  &edpidxz);
             memset (edp, -1, sizeof (p8est_lnodes_edp_t));
             edpidx = (p4est_locidx_t) edpidxz;
             if (!is_ghost) {
@@ -585,7 +587,8 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
                                                        (size_t) cdpidx);
         }
         else {
-          cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+          cdp = (p4est_lnodes_cdp_t *) sc_recycle_array_insert (cdp_array,
+                                                                &cdpidxz);
           memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
           cdpidx = (p4est_locidx_t) cdpidxz;
           if (!is_ghost) {
@@ -1054,7 +1057,8 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
                                                    (size_t) cdpidx);
     }
     else {
-      cdp = sc_recycle_array_insert (cdp_array, &cdpidxz);
+      cdp = (p4est_lnodes_cdp_t *) sc_recycle_array_insert (cdp_array,
+                                                            &cdpidxz);
       memset (cdp, -1, sizeof (p4est_lnodes_cdp_t));
       cdpidx = (p4est_locidx_t) cdpidxz;
     }
@@ -1293,7 +1297,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
           edp = (p8est_lnodes_edp_t *) sc_array_index (&edp_array->a, edpidx);
         }
         else {
-          edp = sc_recycle_array_insert (edp_array, &edpidxz);
+          edp = (p8est_lnodes_edp_t *) sc_recycle_array_insert (edp_array,
+                                                                &edpidxz);
           memset (edp, -1, sizeof (p8est_lnodes_edp_t));
           edpidx = (p4est_locidx_t) edpidxz;
         }
@@ -2368,8 +2373,6 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   }
 
   data->face_codes = lnodes->face_code;
-  data->global_offsets =
-    P4EST_ALLOC_ZERO (p4est_gloidx_t, p4est->mpisize + 1);
 }
 
 static void
@@ -2403,10 +2406,9 @@ p4est_lnodes_reset_data (p4est_lnodes_data_t * data, p4est_t * p4est)
   P4EST_FREE (data->recv_buf_info);
   P4EST_FREE (data->sorters);
   /* do not free face_codes: controlled by lnodes_t */
-  P4EST_FREE (data->global_offsets);
 }
 
-/* p4est_lnodes_count_nodes:
+/* p4est_lnodes_count_send:
  *
  * Coming out of the main iteration that finds the independent nodes, but before
  * hanging faces and hanging edges have been fixed, we assign numbers to
@@ -2414,30 +2416,50 @@ p4est_lnodes_reset_data (p4est_lnodes_data_t * data, p4est_t * p4est)
  * a quadrant numbers of node if it touches it (touches the
  * volume/face/edge/corner containing it) and if it hasn't received a number
  * yet.  This is consistent with the node ownership scheme.
- * We gather the number of owned nodes from all processes to create an offset
- * array.
+ *
+ * At this point each process knows where and what it needs to send, so the
+ * sends are initiated.
  */
 static void
-p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
-                          p4est_lnodes_t * lnodes)
+p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
+                         p4est_lnodes_t * lnodes)
 {
   p4est_locidx_t      num_inodes;
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
   p4est_locidx_t      nlen;
-  p4est_locidx_t      li;
+  p4est_locidx_t      li, *lp;
   p4est_locidx_t      inidx;
   sc_array_t         *inodes = data->inodes;
   p4est_locidx_t     *inode;
   p4est_topidx_t     *local_en = data->local_elem_nodes;
-  int                 i;
+  int                 i, j;
   int                 rank = p4est->mpirank;
   int                 mpisize = p4est->mpisize;
   p4est_locidx_t      count = 0;
-  p4est_locidx_t     *global_num_indep =
-    P4EST_ALLOC (p4est_locidx_t, mpisize);
   sc_array_t         *sorter_array = &(data->sorters[rank]);
   p4est_lnodes_sorter_t *sorter;
   p4est_locidx_t      rankval = -((p4est_locidx_t) rank + 1);
+  sc_array_t         *send_buf_info = data->send_buf_info;
+  sc_array_t         *send_info;
+  sc_array_t         *send;
+  size_t              zz;
+  p4est_lnodes_buf_info_t *binfo;
+  p4est_locidx_t      index;
+  int8_t              type;
+  int                 limit;
+  int                 nodes_per_face = data->nodes_per_face;
+#ifdef P4_TO_P8
+  int                 nodes_per_edge = data->nodes_per_edge;
+#endif
+  int                 share_count;
+  int                 share_proc;
+  sc_array_t         *inode_sharers = data->inode_sharers;
+  size_t              send_count;
+  MPI_Request        *send_request;
+  int                 num_send_procs;
+  size_t              total_sent;
+  int                 mpiret;
+  size_t              countz;
 
   nlen = ((p4est_locidx_t) data->nodes_per_elem) * nlq;
   num_inodes = (p4est_locidx_t) inodes->elem_count;
@@ -2455,14 +2477,70 @@ p4est_lnodes_count_nodes (p4est_lnodes_data_t * data, p4est_t * p4est,
   }
 
   lnodes->owned_count = count;
-  MPI_Allgather (&count, 1, P4EST_MPI_LOCIDX, global_num_indep, 1,
-                 P4EST_MPI_LOCIDX, p4est->mpicomm);
-  for (i = 0; i < mpisize; i++) {
-    data->global_offsets[i + 1] = data->global_offsets[i] +
-      (p4est_gloidx_t) global_num_indep[i];
-  }
 
-  P4EST_FREE (global_num_indep);
+  num_send_procs = 0;
+  total_sent = 0;
+  sc_array_init (&(data->send_requests), sizeof (MPI_Request));
+  data->send_buf = P4EST_ALLOC (sc_array_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    sc_array_init (&(data->send_buf[i]), sizeof (p4est_locidx_t));
+  }
+  for (i = 0; i < mpisize; i++) {
+    send_info = &(send_buf_info[i]);
+    countz = send_info->elem_count;
+    if (countz > 0) {
+      P4EST_ASSERT (i != p4est->mpirank);
+      sc_array_sort (send_info, p4est_lnodes_binfo_compare);
+      send = &(data->send_buf[i]);
+      for (zz = 0; zz < countz; zz++) {
+        binfo = (p4est_lnodes_buf_info_t *) sc_array_index (send_info, zz);
+        index = (size_t) binfo->first_index;
+        type = binfo->type;
+        if (type >= P4EST_LN_C_OFFSET) {
+          limit = 1;
+        }
+#ifdef P4_TO_P8
+        else if (type >= P8EST_LN_E_OFFSET) {
+          limit = nodes_per_edge;
+        }
+#endif
+        else {
+          P4EST_ASSERT (0 <= type && type < P4EST_DIM * 2);
+          limit = nodes_per_face;
+        }
+        for (j = 0; j < limit; j++) {
+          lp = (p4est_locidx_t *) sc_array_push (send);
+          inode = (p4est_locidx_t *) sc_array_index (inodes, index++);
+          P4EST_ASSERT (*inode >= 0);
+          *lp = *inode;
+        }
+        if (binfo->send_sharers) {
+          lp = (p4est_locidx_t *) sc_array_push (send);
+          *lp = (p4est_locidx_t) binfo->share_count;
+          P4EST_ASSERT (binfo->share_count > 0);
+          index = (size_t) binfo->share_offset;
+          share_count = (int) binfo->share_count;
+          for (j = 0; j < share_count; j++) {
+            lp = (p4est_locidx_t *) sc_array_push (send);
+            share_proc = *((int *) sc_array_index (inode_sharers, index++));
+            *lp = (p4est_locidx_t) share_proc;
+            P4EST_ASSERT (0 <= share_proc && share_proc < mpisize);
+          }
+        }
+      }
+      send_count = send->elem_count;
+      send_request = (MPI_Request *) sc_array_push (&data->send_requests);
+      mpiret = MPI_Isend (send->array,
+                          (int) (send_count * sizeof (p4est_locidx_t)),
+                          MPI_BYTE, i, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
+                          send_request);
+      SC_CHECK_MPI (mpiret);
+      num_send_procs++;
+      total_sent += (send_count * sizeof (p4est_locidx_t));
+    }
+  }
+  P4EST_VERBOSEF ("Total of %lld bytes sent to %d processes\n",
+                  (unsigned long long) total_sent, num_send_procs);
 }
 
 #ifdef P4EST_DEBUG
@@ -2581,35 +2659,27 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
 }
 #endif
 
-/* p4est_lnodes_pass:
+/* p4est_lnodes_recv:
  *
- * Each process has its sorted send and receive list.
- * Each process goes through each send list, encoding based on send_buf_info.
+ * Each process has its sorted receive lists.
  * Each process knows who to expect nodes from.
  * When the nodes are received, they are put into a sorter list dedicated just
  * to the process that the nodes come from, this is then sorted in ascending
  * node order.
  */
 static void
-p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
+p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data)
 {
   int                 mpisize = p4est->mpisize;
   int                 i, j, k;
   int                 limit;
-  sc_array_t         *send, *send_info;
-  sc_array_t         *send_buf_info = data->send_buf_info;
-  sc_array_t         *send_buf;
   sc_array_t         *recv, *recv_info;
   sc_array_t         *recv_buf;
   sc_array_t         *recv_buf_info = data->recv_buf_info;
   size_t              count, info_count, zz;
   int                 mpiret;
-  sc_array_t          send_requests;
-  MPI_Request        *send_request;
   MPI_Status          probe_status, recv_status;
   int                 num_recv_procs = 0;
-  int                 num_send_procs = 0;
-  size_t              total_send = 0;
   size_t              total_recv = 0;
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
@@ -2620,78 +2690,20 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
 #ifdef P4_TO_P8
   int                 nodes_per_edge = data->nodes_per_edge;
 #endif
-  int8_t              type;
   p4est_locidx_t     *lp;
   int                *ip;
   p4est_locidx_t     *inode, *inode_prev;
   sc_array_t         *inode_sharers = data->inode_sharers;
   sc_array_t         *inodes = data->inodes;
-  int                 share_proc;
   int                 share_count;
-  size_t              send_count;
   sc_array_t         *sorter_array;
   p4est_lnodes_sorter_t *sorter;
 
-  sc_array_init (&send_requests, sizeof (MPI_Request));
-  send_buf = P4EST_ALLOC (sc_array_t, mpisize);
   for (i = 0; i < mpisize; i++) {
-    sc_array_init (&(send_buf[i]), sizeof (p4est_locidx_t));
-  }
-  for (i = 0; i < mpisize; i++) {
-    send_info = &(send_buf_info[i]);
-    count = send_info->elem_count;
-    if (count > 0) {
-      P4EST_ASSERT (i != p4est->mpirank);
-      send = &(send_buf[i]);
-      for (zz = 0; zz < count; zz++) {
-        binfo = (p4est_lnodes_buf_info_t *) sc_array_index (send_info, zz);
-        index = (size_t) binfo->first_index;
-        type = binfo->type;
-        if (type >= P4EST_LN_C_OFFSET) {
-          limit = 1;
-        }
-#ifdef P4_TO_P8
-        else if (type >= P8EST_LN_E_OFFSET) {
-          limit = nodes_per_edge;
-        }
-#endif
-        else {
-          P4EST_ASSERT (0 <= type && type < P4EST_DIM * 2);
-          limit = nodes_per_face;
-        }
-        for (j = 0; j < limit; j++) {
-          lp = (p4est_locidx_t *) sc_array_push (send);
-          inode = (p4est_locidx_t *) sc_array_index (inodes, index++);
-          P4EST_ASSERT (*inode >= 0);
-          *lp = *inode;
-        }
-        if (binfo->send_sharers) {
-          lp = (p4est_locidx_t *) sc_array_push (send);
-          *lp = (p4est_locidx_t) binfo->share_count;
-          P4EST_ASSERT (binfo->share_count > 0);
-          index = (size_t) binfo->share_offset;
-          share_count = (int) binfo->share_count;
-          for (j = 0; j < share_count; j++) {
-            lp = (p4est_locidx_t *) sc_array_push (send);
-            share_proc = *((int *) sc_array_index (inode_sharers, index++));
-            *lp = (p4est_locidx_t) share_proc;
-            P4EST_ASSERT (0 <= share_proc && share_proc < mpisize);
-          }
-        }
-      }
-      send_count = send->elem_count;
-      send_request = (MPI_Request *) sc_array_push (&send_requests);
-      mpiret = MPI_Isend (send->array,
-                          (int) (send_count * sizeof (p4est_locidx_t)),
-                          MPI_BYTE, i, P4EST_COMM_LNODES_PASS, p4est->mpicomm,
-                          send_request);
-      SC_CHECK_MPI (mpiret);
-      num_send_procs++;
-      total_send += (send_count * sizeof (p4est_locidx_t));
-    }
     recv_info = &(recv_buf_info[i]);
     count = recv_info->elem_count;
     if (count) {
+      sc_array_sort (recv_info, p4est_lnodes_binfo_compare);
       P4EST_ASSERT (i != p4est->mpirank);
       num_recv_procs++;
       num_recv_expect[i]++;
@@ -2787,23 +2799,21 @@ p4est_lnodes_pass (p4est_t * p4est, p4est_lnodes_data_t * data)
     sc_array_sort (sorter_array, p4est_lnodes_sorter_compare);
   }
 
-  if (send_requests.elem_count > 0) {
-    mpiret = MPI_Waitall ((int) send_requests.elem_count,
-                          (MPI_Request *) send_requests.array,
+  if (data->send_requests.elem_count > 0) {
+    mpiret = MPI_Waitall ((int) data->send_requests.elem_count,
+                          (MPI_Request *) data->send_requests.array,
                           MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
-  sc_array_reset (&send_requests);
+  sc_array_reset (&data->send_requests);
   for (i = 0; i < mpisize; i++) {
-    sc_array_reset (&(send_buf[i]));
+    sc_array_reset (&(data->send_buf[i]));
     sc_array_reset (&(recv_buf[i]));
   }
 
-  P4EST_VERBOSEF ("Total of %lld bytes sent to %d processes\n",
-                  (unsigned long long) total_send, num_send_procs);
   P4EST_VERBOSEF ("Total 0f %lld bytes received from %d processes\n",
                   (unsigned long long) total_recv, num_recv_procs);
-  P4EST_FREE (send_buf);
+  P4EST_FREE (data->send_buf);
   P4EST_FREE (recv_buf);
   P4EST_FREE (num_recv_expect);
 }
@@ -2826,7 +2836,6 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   sc_array_t         *s_array;
   p4est_lnodes_sorter_t *sorter;
   p4est_lnodes_sorter_t *prev = NULL;
-  p4est_gloidx_t     *global_offsets = data->global_offsets;
   p4est_gloidx_t     *gnodes;
   p4est_gloidx_t      offset;
   size_t              count, zz;
@@ -2855,6 +2864,23 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   int                 shareidx;
   p4est_locidx_t      gidx;
   sc_array_t         *shared_nodes;
+  p4est_locidx_t     *global_num_indep =
+    P4EST_ALLOC (p4est_locidx_t, mpisize);
+  p4est_gloidx_t     *global_offsets = P4EST_ALLOC (p4est_gloidx_t,
+                                                    mpisize + 1);
+
+#ifdef P4EST_MPI
+  MPI_Allgather (&(lnodes->owned_count), 1, P4EST_MPI_LOCIDX,
+                 global_num_indep, 1, P4EST_MPI_LOCIDX, p4est->mpicomm);
+#else
+  global_num_indep[0] = lnodes->owned_count;
+#endif
+  global_offsets[0] = 0;
+  for (i = 0; i < mpisize; i++) {
+    global_offsets[i + 1] = global_offsets[i] +
+      (p4est_gloidx_t) global_num_indep[i];
+  }
+  P4EST_FREE (global_num_indep);
 
   sc_array_init (&inode_to_global, sizeof (p4est_locidx_t));
   sc_array_resize (&inode_to_global, (size_t) num_inodes);
@@ -3021,6 +3047,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   }
   sc_array_reset (&inode_to_global);
   P4EST_FREE (comm_proc);
+  P4EST_FREE (global_offsets);
 }
 
 p4est_lnodes_t     *
@@ -3042,11 +3069,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   p4est_locidx_t      nlen;
 #ifdef P4EST_DEBUG
   p4est_locidx_t      lj;
-  size_t              zz;
-  p4est_lnodes_buf_info_t *last, *new;
 #endif
-  int                 i;
-  int                 mpisize = p4est->mpisize;
   p4est_lnodes_t     *lnodes = P4EST_ALLOC (p4est_lnodes_t, 1);
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_lnodes_new\n");
@@ -3088,12 +3111,11 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 #endif
                  citer);
 
-  p4est_lnodes_count_nodes (&data, p4est, lnodes);
-
   sc_recycle_array_reset (data.cdp_array);
   P4EST_FREE (data.cdp_array);
   P4EST_FREE (data.local_cdp);
   P4EST_FREE (data.ghost_cdp);
+
 #ifdef P4_TO_P8
   if (data.nodes_per_edge) {
     sc_recycle_array_reset (data.edp_array);
@@ -3102,6 +3124,8 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
     P4EST_FREE (data.ghost_edp);
   }
 #endif
+
+  p4est_lnodes_count_send (&data, p4est, lnodes);
 
   while (data.hfaces->elem_count) {
     hface = (p4est_iter_face_side_t *) sc_array_pop (data.hfaces);
@@ -3122,37 +3146,10 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   }
 #endif
 
-  for (i = 0; i < mpisize; i++) {
-    sc_array_sort (&(data.send_buf_info[i]), p4est_lnodes_binfo_compare);
-    sc_array_sort (&(data.recv_buf_info[i]), p4est_lnodes_binfo_compare);
-#ifdef P4EST_DEBUG
-    last = NULL;
-    for (zz = 0; zz < data.send_buf_info[i].elem_count; zz++) {
-      new = (p4est_lnodes_buf_info_t *)
-        sc_array_index (&(data.send_buf_info[i]), zz);
-      if (zz > 0) {
-        P4EST_ASSERT (p4est_lnodes_binfo_compare (last, new) < 0);
-      }
-      last = new;
-    }
-    last = NULL;
-    for (zz = 0; zz < data.recv_buf_info[i].elem_count; zz++) {
-      new = (p4est_lnodes_buf_info_t *)
-        sc_array_index (&(data.recv_buf_info[i]), zz);
-      if (zz > 0) {
-        if (p4est_lnodes_binfo_is_equal (last, new)) {
-          P4EST_VERBOSE ("Doubled receive buffer entry.\n");
-        }
-      }
-      last = new;
-    }
-#endif
-  }
-
 #ifdef P4EST_MPI
-  P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &data));
+  p4est_lnodes_recv (p4est, &data);
 
-  p4est_lnodes_pass (p4est, &data);
+  P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &data));
 #endif
 
   p4est_lnodes_global_and_sharers (&data, lnodes, p4est);
