@@ -435,6 +435,16 @@ void                p4est_quadrant_last_descendent (const p4est_quadrant_t *
                                                     q, p4est_quadrant_t * ld,
                                                     int level);
 
+/** Compute the smallest descendent of a quadrant touching a given corner.
+ * \param [in]     q   Input quadrant.
+ * \param [in,out] r   Existing quadrant whose Morton index will be filled.
+ *                     Its user_data will be untouched.
+ * \param [in]         The corner of \a q that \r touches.
+ */
+void                p4est_smallest_corner_descendent (const p4est_quadrant_t *
+                                                      q, p4est_quadrant_t * r,
+                                                      int c);
+
 /** Computes the nearest common ancestor of two quadrants in the same tree.
  * \param [in]     q1 First input quadrant.
  * \param [in]     q2 Second input quadrant.

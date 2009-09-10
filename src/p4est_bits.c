@@ -1234,6 +1234,20 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
 }
 
 void
+p4est_smallest_corner_descendent (const p4est_quadrant_t * q,
+                                  p4est_quadrant_t * r, int c)
+{
+  p4est_qcoord_t      shift = P4EST_QUADRANT_LEN (q->level) -
+    P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
+  r->x = q->x + (c % 2 ? shift : 0);
+  r->y = q->y + ((c % 4) / 2 ? shift : 0);
+#ifdef P4_TO_P8
+  r->z = q->z + (c / 4 ? shift : 0);
+#endif
+  r->level = P4EST_QMAXLEVEL;
+}
+
+void
 p4est_nearest_common_ancestor (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2,
                                p4est_quadrant_t * r)

@@ -186,6 +186,7 @@
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
 #define p4est_quadrant_first_descendent p8est_quadrant_first_descendent
 #define p4est_quadrant_last_descendent  p8est_quadrant_last_descendent
+#define p4est_smallest_corner_descendent p8est_smallest_corner_descendent
 #define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
 #define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
 #define p4est_quadrant_transform_face   p8est_quadrant_transform_face

@@ -877,24 +877,13 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
         }
         /* create the smallest quadrant in the appropriate corner */
         temp = *(test[st]);
+        temp.level = (int8_t) level;
         temp.x &= mask;
         temp.y &= mask;
 #ifdef P4_TO_P8
         temp.z &= mask;
 #endif
-        temp.level = P4EST_QMAXLEVEL;
-        P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
-        temp.x += (this_corner % 2) ?
-          P4EST_QUADRANT_LEN (level) -
-          P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
-        temp.y += ((this_corner % 4) / 2) ?
-          P4EST_QUADRANT_LEN (level) -
-          P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
-#ifdef P4_TO_P8
-        temp.z += (this_corner / 4) ?
-          P4EST_QUADRANT_LEN (level) -
-          P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL) : 0;
-#endif
+        p4est_smallest_corner_descendent (&temp, &temp, this_corner);
         P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
         /* we do not have to search if there is one quadrant, or if we are in
          * the first or last corner */

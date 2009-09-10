@@ -215,20 +215,6 @@ typedef struct p4est_lnodes_data
 }
 p4est_lnodes_data_t;
 
-static void
-p4est_quadrant_smallest_corner_descendent (p4est_quadrant_t * q,
-                                           p4est_quadrant_t * r, int c)
-{
-  p4est_qcoord_t      shift = P4EST_QUADRANT_LEN (q->level) -
-    P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
-  r->x = q->x + (c % 2 ? shift : 0);
-  r->y = q->y + ((c % 4) / 2 ? shift : 0);
-#ifdef P4_TO_P8
-  r->z = q->z + (c / 4 ? shift : 0);
-#endif
-  r->level = P4EST_QMAXLEVEL;
-}
-
 /** lnodes_face_simple_callback: runs even if there are no face nodes.
  * If a side of the face is not hanging, then there are no other quadrants that
  * are facewise dependent on its corner or edge nodes, so we set those cdp/edp
@@ -1104,8 +1090,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
      * of the owner that touches the corner.  This convention allows all
      * processes that share the quad to have the same quadrant in their
      * send/recv lists. */
-    p4est_quadrant_smallest_corner_descendent (owner_quad, &tempq,
-                                               owner_corner);
+    p4est_smallest_corner_descendent (owner_quad, &tempq, owner_corner);
     type = (int8_t) (P4EST_LN_C_OFFSET + owner_corner);
     p4est_lnodes_push_binfo (&touching_procs, &all_procs, send_buf_info,
                              recv_buf_info, inode_sharers, owner_proc, rank,
@@ -1725,7 +1710,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
   p4est_lnodes_buf_info_t *binfo;
   int                 owner_proc;
 
-  p4est_quadrant_smallest_corner_descendent (q, &tempq, c);
+  p4est_smallest_corner_descendent (q, &tempq, c);
   ownerq = tempq;
 
   for (i = 0; i < P4EST_DIM; i++) {
