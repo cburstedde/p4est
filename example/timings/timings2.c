@@ -44,6 +44,7 @@
 #include <p4est_ghost.h>
 #include <p4est_nodes.h>
 #include <p4est_vtk.h>
+#include <p4est_lnodes.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
@@ -51,6 +52,7 @@
 #include <p8est_nodes.h>
 #include <p8est_trilinear.h>
 #include <p8est_vtk.h>
+#include <p8est_lnodes.h>
 #endif
 #include <sc_flops.h>
 #include <sc_statistics.h>
@@ -87,7 +89,8 @@ enum
   TIMINGS_TRILINEAR,
 #endif
   TIMINGS_REPARTITION,
-  TIMINGS_NUM_STATS,
+  TIMINGS_LNODES,
+  TIMINGS_NUM_STATS
 };
 
 typedef struct
@@ -183,6 +186,7 @@ main (int argc, char **argv)
 #ifdef P4_TO_P8
   trilinear_mesh_t   *mesh;
 #endif
+  p4est_lnodes_t     *lnodes;
   const timings_regression_t *r;
   timings_config_t    config;
   sc_statinfo_t       stats[TIMINGS_NUM_STATS];
@@ -379,6 +383,14 @@ main (int argc, char **argv)
   p8est_trilinear_mesh_destroy (mesh);
 #endif
   p4est_nodes_destroy (nodes);
+
+  /* time the lnode numbering */
+  sc_flops_snap (&fi, &snapshot);
+  lnodes = p4est_lnodes_new (p4est, ghost, 1);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_LNODES], snapshot.iwtime, "L-Nodes");
+  p4est_lnodes_destroy (lnodes);
+
   p4est_ghost_destroy (ghost);
 
   /* time a partition with a shift of all elements by one processor */
