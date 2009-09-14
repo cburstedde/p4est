@@ -58,6 +58,8 @@
 #define P4EST_COMM_SAVE                 P8EST_COMM_SAVE
 #define P4EST_COMM_LNODES_TEST          P8EST_COMM_LNODES_TEST
 #define P4EST_COMM_LNODES_PASS          P8EST_COMM_LNODES_PASS
+#define P4EST_COMM_LNODES_OWNED         P8EST_COMM_LNODES_OWNED
+#define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
 #define P4EST_BALANCE_DEFAULT           P8EST_BALANCE_DEFAULT
 #define P4EST_BALANCE_FULL              P8EST_BALANCE_FULL
 
@@ -254,5 +256,9 @@
 #define p4est_lnodes_new                p8est_lnodes_new
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
 #define p4est_lnodes_decode             p8est_lnodes_decode
+#define p4est_lnodes_share_owned        p8est_lnodes_share_owned
+#define p4est_lnodes_share_all_begin    p8est_lnodes_share_all_begin
+#define p4est_lnodes_share_all_end      p8est_lnodes_share_all_end
+#define p4est_lnodes_share_all          p8est_lnodes_share_all
 
 #endif /* !P4EST_TO_P8EST_H */

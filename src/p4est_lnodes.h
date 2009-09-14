@@ -153,7 +153,23 @@ p4est_lnodes_decode (int8_t face_code, int hanging_face[6])
 p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
                                       p4est_ghost_t * ghost_layer,
                                       int degree);
+
 void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
+
+void                p4est_lnodes_share_owned (sc_array_t * array,
+                                              p4est_lnodes_t * lnodes,
+                                              p4est_t * p4est);
+
+sc_array_t         *p4est_lnodes_share_all_begin (sc_array_t * array,
+                                                  sc_array_t ** comm_array,
+                                                  p4est_lnodes_t * lnodes,
+                                                  p4est_t * p4est);
+
+void                p4est_lnodes_share_all_end (sc_array_t * comm_array);
+
+sc_array_t         *p4est_lnodes_share_all (sc_array_t * array,
+                                            p4est_lnodes_t * lnodes,
+                                            p4est_t * p4est);
 
 SC_EXTERN_C_END;
 
