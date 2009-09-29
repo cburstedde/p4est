@@ -177,17 +177,17 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
         for (face1 = 0; face1 < 6; face1++) {
           ttree2 = tree_to_tree[ttree1 * 6 + face1];
           face2 = tree_to_face[ttree1 * 6 + face1];
-          if (periodic_a == false &&
+          if (!periodic_a &&
               ((face1 == 0 && ti == 0) || (face1 == 1 && ti == m - 1))) {
             SC_CHECK_ABORT (ttree2 == ttree1 && face2 == face1,
                             "boundary tree without boundary face");
           }
-          else if (periodic_b == false &&
+          else if (!periodic_b &&
                    ((face1 == 2 && tj == 0) || (face1 == 3 && tj == n - 1))) {
             SC_CHECK_ABORT (ttree2 == ttree1 && face2 == face1,
                             "boundary tree without boundary face");
           }
-          else if (periodic_c == false &&
+          else if (!periodic_c &&
                    ((face1 == 4 && tk == 0) || (face1 == 5 && tk == p - 1))) {
             SC_CHECK_ABORT (ttree2 == ttree1 && face2 == face1,
                             "boundary tree without boundary face");
@@ -224,28 +224,28 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
         }
         if (num_edges > 0) {
           for (edge1 = 0; edge1 < 12; edge1++) {
-            if ((periodic_b == false &&
+            if ((!periodic_b &&
                  (((edge1 == 0 || edge1 == 2) && (tj == 0)) ||
                   ((edge1 == 1 || edge1 == 3) && (tj == n - 1)))) ||
-                (periodic_c == false &&
+                (!periodic_c &&
                  (((edge1 == 0 || edge1 == 1) && (tk == 0)) ||
                   ((edge1 == 2 || edge1 == 3) && (tk == p - 1))))) {
               SC_CHECK_ABORT (tree_to_edge[ttree1 * 12 + edge1] == -1,
                               "boundary tree without boundary edge");
             }
-            else if ((periodic_a == false &&
+            else if ((!periodic_a &&
                       (((edge1 == 4 || edge1 == 6) && (ti == 0)) ||
                        ((edge1 == 5 || edge1 == 7) && (ti == m - 1)))) ||
-                     (periodic_c == false &&
+                     (!periodic_c &&
                       (((edge1 == 4 || edge1 == 5) && (tk == 0)) ||
                        ((edge1 == 6 || edge1 == 7) && (tk == p - 1))))) {
               SC_CHECK_ABORT (tree_to_edge[ttree1 * 12 + edge1] == -1,
                               "boundary tree without boundary edge");
             }
-            else if ((periodic_a == false &&
+            else if ((!periodic_a &&
                       (((edge1 == 8 || edge1 == 10) && (ti == 0)) ||
                        ((edge1 == 9 || edge1 == 11) && (ti == m - 1)))) ||
-                     (periodic_b == false &&
+                     (!periodic_b &&
                       (((edge1 == 8 || edge1 == 9) && (tj == 0)) ||
                        ((edge1 == 10 || edge1 == 11) && (tj == n - 1))))) {
               SC_CHECK_ABORT (tree_to_edge[ttree1 * 12 + edge1] == -1,
@@ -296,13 +296,13 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
         }
         if (num_corners > 0) {
           for (corn1 = 0; corn1 < 8; corn1++) {
-            if ((periodic_a == false &&
+            if ((!periodic_a &&
                  ((corn1 % 2 == 0 && ti == 0) ||
                   (corn1 % 2 == 1 && ti == m - 1))) ||
-                (periodic_b == false &&
+                (!periodic_b &&
                  (((corn1 / 2) % 2 == 0 && tj == 0) ||
                   ((corn1 / 2) % 2 == 1 && tj == n - 1))) ||
-                (periodic_c == false &&
+                (!periodic_c &&
                  ((corn1 / 4 == 0 && tk == 0) ||
                   (corn1 / 4 == 1 && tk == p - 1)))) {
               SC_CHECK_ABORT (tree_to_corner[ttree1 * 8 + corn1] == -1,
