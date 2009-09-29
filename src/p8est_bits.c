@@ -40,7 +40,7 @@ p8est_quadrant_is_outside_edge_extra (const p4est_quadrant_t * q, int *edge)
   int                 quad_contact[P4EST_FACES];
   int                 face_axis[P4EST_DIM];
 
-  P4EST_ASSERT (q->level < P4EST_MAXLEVEL);
+  P4EST_ASSERT (q->level <= P4EST_QMAXLEVEL);
 
   quad_contact[0] = (int) (q->x < 0);
   quad_contact[1] = (int) (q->x >= P4EST_ROOT_LEN);
