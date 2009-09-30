@@ -96,7 +96,7 @@ p4est_possible_corner_neighbor (const p4est_quadrant_t * q, int corner,
   P4EST_ASSERT (p4est_quadrant_is_extended (n));
 }
 
-p4est_nodes_t      *
+static p4est_nodes_t *
 p4est_nodes_new_local (p4est_t * p4est)
 {
   const int           rank = p4est->mpirank;
