@@ -45,7 +45,7 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
                                       p4est_topidx_t treeid,
                                       int edge,
                                       const p4est_quadrant_t * q,
-                                      sc_array_t * q_procs, bool * nurgood)
+                                      sc_array_t * q_procs, int *nurgood)
 {
   const int           rank = p4est->mpirank;
   int                *proc, nurproc;
@@ -67,7 +67,7 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
 
   sc_array_resize (q_procs, 0);
   if (nurgood != NULL) {
-    *nurgood = true;
+    *nurgood = 1;
     if (q->level == P4EST_QMAXLEVEL)
       nurgood = NULL;
   }
@@ -75,7 +75,7 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
   for (etree = 0; etree < eta->elem_count; ++etree) {
     et = sc_array_index (eta, etree);
 
-    p8est_quadrant_transform_edge (q, &eq, &ei, et, true);
+    p8est_quadrant_transform_edge (q, &eq, &ei, et, 1);
 
     proc = sc_array_push (q_procs);
     *proc = p4est_comm_find_owner (p4est, et->ntree, &eq, rank);
@@ -219,12 +219,12 @@ p8est_quadrant_get_possible_edge_neighbors (const p4est_quadrant_t * q,
  * \return true if the quadrant's edge is on the boundary of the forest and
  *         false otherwise.
  */
-static              bool
+static int
 p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
                                  int edge, const p4est_quadrant_t * q)
 {
   int                 face;
-  bool                on_boundary;
+  int                 on_boundary;
   p4est_quadrant_t    q2;
   p4est_connectivity_t *conn = p4est->connectivity;
   p8est_edge_info_t   ei;
@@ -233,7 +233,7 @@ p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   P4EST_ASSERT (0 <= edge && edge < 12);
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
-  if (p8est_quadrant_touches_edge (q, edge, true)) {
+  if (p8est_quadrant_touches_edge (q, edge, 1)) {
     eta = &ei.edge_transforms;
     sc_array_init (eta, sizeof (p8est_edge_transform_t));
     p8est_find_edge_transform (conn, treeid, edge, &ei);
@@ -267,7 +267,7 @@ p8est_quadrant_on_edge_boundary (p4est_t * p4est, p4est_topidx_t treeid,
     face = 5;
   }
   else {
-    return false;
+    return 0;
   }
 
   return

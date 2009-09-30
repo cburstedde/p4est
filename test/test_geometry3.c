@@ -148,7 +148,7 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   N = 43;

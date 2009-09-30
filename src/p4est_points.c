@@ -61,7 +61,7 @@ p4est_points_init (p4est_t * p4est, p4est_topidx_t which_tree,
     if (p->p.which_tree > which_tree) {
       break;
     }
-    P4EST_ASSERT (p4est_quadrant_is_node (p, true));
+    P4EST_ASSERT (p4est_quadrant_is_node (p, 1));
     P4EST_ASSERT (p4est_quadrant_compare (quadrant, p) < 0);
     if (!p4est_quadrant_contains_node (quadrant, p)) {
       break;
@@ -250,8 +250,8 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   n = *next_quad;
   n.level = (int8_t) maxlevel;
   for (jt = first_tree; jt <= last_tree; ++jt) {
-    bool                onlyone = false;
-    bool                includeb = false;
+    int                 onlyone = 0;
+    int                 includeb = 0;
 
     tree = p4est_array_index_topidx (p4est->trees, jt);
 
@@ -294,10 +294,10 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       p4est_quadrant_set_morton (&b, 0, 0);
       p4est_quadrant_last_descendent (&b, &b, maxlevel);
       if (p4est_quadrant_is_equal (&l, &b)) {
-        onlyone = true;
+        onlyone = 1;
       }
       else {
-        includeb = true;
+        includeb = 1;
         for (c = b; p4est_quadrant_child_id (&c) == P4EST_CHILDREN - 1; b = c) {
           p4est_quadrant_parent (&c, &c);
           p4est_quadrant_first_descendent (&c, &f, maxlevel);
@@ -320,7 +320,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       ++tree->quadrants_per_level[a.level];
     }
     else {
-      p4est_complete_region (p4est, &a, true, &b, includeb,
+      p4est_complete_region (p4est, &a, 1, &b, includeb,
                              tree, jt, p4est_points_init);
       quad = sc_array_index (&tree->quadrants,
                              tree->quadrants.elem_count - 1);
@@ -362,7 +362,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* refine to have one point per quadrant */
   if (max_points >= 0) {
-    p4est_refine_level (p4est, true, p4est_points_refine,
+    p4est_refine_level (p4est, 1, p4est_points_refine,
                         p4est_points_init, maxlevel);
 #ifdef P4EST_DEBUG
     for (jt = first_tree; jt <= last_tree; ++jt) {

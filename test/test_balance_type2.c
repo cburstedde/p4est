@@ -98,7 +98,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* create forest and refine */
@@ -108,10 +108,10 @@ main (int argc, char **argv)
   connectivity = p8est_connectivity_new_rotcubes ();
 #endif
   p4est = p4est_new (mpicomm, connectivity, 0, 0, NULL, NULL);
-  p4est_refine (p4est, true, refine_fn, NULL);
+  p4est_refine (p4est, 1, refine_fn, NULL);
 
   /* test face balance */
-  p4estF = p4est_copy (p4est, false);
+  p4estF = p4est_copy (p4est, 0);
 #ifndef P4_TO_P8
   p4est_balance (p4estF, P4EST_BALANCE_FACE, NULL);
 #else
@@ -123,7 +123,7 @@ main (int argc, char **argv)
 
 #ifdef P4_TO_P8
   /* test edge balance */
-  p4estE = p4est_copy (p4est, true);
+  p4estE = p4est_copy (p4est, 1);
   p4est_balance (p4estF, P8EST_BALANCE_EDGE, NULL);
   p4est_balance (p4estE, P8EST_BALANCE_EDGE, NULL);
   crcE = p4est_checksum (p4estE);
@@ -133,7 +133,7 @@ main (int argc, char **argv)
 #endif
 
   /* test corner balance */
-  p4estC = p4est_copy (p4est, true);
+  p4estC = p4est_copy (p4est, 1);
 #ifndef P4_TO_P8
   p4est_balance (p4estF, P4EST_BALANCE_CORNER, NULL);
   p4est_balance (p4estC, P4EST_BALANCE_CORNER, NULL);

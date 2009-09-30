@@ -26,8 +26,7 @@
 
 static void
 check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
-             p4est_topidx_t p, bool periodic_a, bool periodic_b,
-             bool periodic_c)
+             p4est_topidx_t p, int periodic_a, int periodic_b, int periodic_c)
 {
   int                 i;
   p4est_topidx_t      ti, tj, tk;
@@ -374,7 +373,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (i = 1; i <= 5; i++) {

@@ -198,7 +198,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpi->mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
@@ -319,7 +319,7 @@ main (int argc, char **argv)
 
   /* time refine */
   sc_flops_snap (&fi, &snapshot);
-  p4est_refine (p4est, true, refine_fractal, NULL);
+  p4est_refine (p4est, 1, refine_fractal, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_REFINE], snapshot.iwtime, "Refine");
 #ifdef P4EST_TIMINGS_VTK
@@ -426,7 +426,7 @@ main (int argc, char **argv)
   /* calculate and print timings */
   sc_stats_compute (mpi->mpicomm, TIMINGS_NUM_STATS, stats);
   sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
-                  TIMINGS_NUM_STATS, stats, true, true);
+                  TIMINGS_NUM_STATS, stats, 1, 1);
 
   /* destroy the p4est and its connectivity structure */
   P4EST_FREE (quadrant_counts);

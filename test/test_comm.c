@@ -72,7 +72,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_corner ();
@@ -82,7 +82,7 @@ main (int argc, char **argv)
   num_procs = p4est->mpisize;
 
   /* refine and balance to make the number of elements interesting */
-  p4est_refine (p4est, true, refine_fn, init_fn);
+  p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* Check the global number of elements */
   qlocal = p4est->local_num_quadrants;

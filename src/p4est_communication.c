@@ -134,8 +134,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
   P4EST_ASSERT (0 <= which_tree &&
                 which_tree < p4est->connectivity->num_trees);
-  P4EST_ASSERT (p4est_quadrant_is_node (q, true) ||
-                p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_node (q, 1) || p4est_quadrant_is_valid (q));
 
   proc_low = 0;
   proc_high = num_procs - 1;
@@ -201,7 +200,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
 void
 p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
-                      bool full_tree[], bool tree_contact[],
+                      int full_tree[], int tree_contact[],
                       const p4est_quadrant_t ** pfirst_pos,
                       const p4est_quadrant_t ** pnext_pos)
 {
@@ -247,9 +246,9 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
   }
 }
 
-bool
+int
 p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
-                               bool full_tree[], bool tree_contact[],
+                               int full_tree[], int tree_contact[],
                                p4est_quadrant_t * q)
 {
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
@@ -267,8 +266,8 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
           (tree_contact[4] && q->z == 0) ||
           (tree_contact[5] && q->z == P4EST_ROOT_LEN - qh) ||
 #endif
-          false)) {
-      return true;
+          0)) {
+      return 1;
     }
   }
   else {
@@ -300,18 +299,18 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
           p4est_quadrant_last_descendent (&n1, &n0, P4EST_QMAXLEVEL);
           n1_proc = p4est_comm_find_owner (p4est, which_tree, &n0, rank);
           if (n1_proc == rank) {
-            return true;
+            return 1;
           }
         }
       }
     }
   }
 
-  return false;
+  return 0;
 }
 
-bool
-p4est_comm_sync_flag (p4est_t * p4est, bool flag, MPI_Op operation)
+int
+p4est_comm_sync_flag (p4est_t * p4est, int flag, MPI_Op operation)
 {
   int8_t              lbyte, gbyte;
   int                 mpiret;
@@ -323,5 +322,5 @@ p4est_comm_sync_flag (p4est_t * p4est, bool flag, MPI_Op operation)
                           p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  return (bool) gbyte;
+  return (int) gbyte;
 }

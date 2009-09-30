@@ -360,8 +360,8 @@ p8est_connectivity_new_twocubes (void)
 /* This function is contributed by Toby Isaac. */
 p8est_connectivity_t *
 p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
-                              p4est_topidx_t p, bool periodic_a,
-                              bool periodic_b, bool periodic_c)
+                              p4est_topidx_t p, int periodic_a,
+                              int periodic_b, int periodic_c)
 {
   const p4est_topidx_t num_trees = m * n * p;
   const p4est_topidx_t num_vertices = (m + 1) * (n + 1) * (p + 1);
@@ -372,7 +372,7 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
   const p4est_topidx_t num_ctt = 8 * num_corners;
   const p4est_topidx_t num_edges = m * nc * pc + mc * n * pc + mc * nc * p;
   const p4est_topidx_t num_ett = 4 * num_edges;
-  const bool          periodic[3] = { periodic_a, periodic_b, periodic_c };
+  const int           periodic[3] = { periodic_a, periodic_b, periodic_c };
   const p4est_topidx_t max[3] = { m - 1, n - 1, p - 1 };
   double             *vertices;
   p4est_topidx_t     *tree_to_vertex;
@@ -1145,7 +1145,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
   int                 redge, nedge, iflip, nflip;
   int                 pref, pset, fc[2];
   int                 faces[2], nfaces[2], orients[2];
-  bool                founds[2], nows[2];
+  int                 founds[2], nows[2];
   p4est_topidx_t      edge_trees, etree, ietree;
   p4est_topidx_t      aedge, ntree, ntrees[2];
   p8est_edge_transform_t *et;
@@ -1186,7 +1186,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
       fcorners[i] = p8est_edge_face_corners[iedge][faces[i]];
       P4EST_ASSERT (fcorners[i][0] >= 0 && fcorners[i][1] >= 0);
     }
-    founds[i] = false;
+    founds[i] = 0;
   }
 
   edge_trees =                  /* same type */
@@ -1219,7 +1219,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
     nedge = redge % 12;
     nflip = (redge / 12) ^ iflip;
 
-    nows[0] = nows[1] = false;
+    nows[0] = nows[1] = 0;
     for (i = 0; i < 2; ++i) {
       if (ntree == ntrees[i]) {
         /* check if the edge touches this neighbor contact face */
@@ -1233,7 +1233,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
 
           if (fc[0] == nfcorners[nflip] && fc[1] == nfcorners[!nflip]) {
             P4EST_ASSERT (!founds[i] && !nows[!i]);
-            founds[i] = nows[i] = true;
+            founds[i] = nows[i] = 1;
           }
 #ifdef P4EST_DEBUG
           else if (fc[0] == nfcorners[!nflip] && fc[1] == nfcorners[nflip]) {
@@ -1247,7 +1247,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
       continue;
     }
 
-    /* else we have a true diagonal edge with ntree */
+    /* else we have a 1 diagonal edge with ntree */
     et = sc_array_push (ta);
     et->ntree = ntree;
     et->nedge = (int8_t) nedge;

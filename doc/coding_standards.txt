@@ -7,12 +7,16 @@ tries to adhere to.
    the main directory.  It calls GNU indent with some extra options.
    This does not apply for included third party code.
 
+ * All boolean parameters will not be checked with (a==true) or (a==false).
+   We follow the standard C convention where (a) is used to test true
+   and (!a) is used to test false.  The bool type is not used.
+   An exception is to test for pointers like (p == NULL) or (p != NULL).
+
  * Comments
    Use doxygen style for comments whenever possible. Comments should
    not exceed the 79th column.
 
  * Integer types
-   For booleans use the bool type with true and false.
    For the indexing of trees use the p4est_treeid_t type.
    For processor-local indexing use the p4est_locidx_t data type.
    For globally unique indexing of potentially large numbers use the

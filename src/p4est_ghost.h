@@ -122,13 +122,13 @@ p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
  * \param [in]  treeid       The tree to which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
  * \param [out] exists_arr   Filled for tree corner cases.  An entry
- *                           for each corner neighbor is set to 1 if
+ *                           for each corner neighbor is set to true if
  *                           it exists in the local forest or ghost_layer.
  *
  * \return true if the quadrant exists in the local forest or in the
- *              ghost_layer, and false if doesn't exist in either.
+ *                  ghost_layer, and false if doesn't exist in either.
  */
-bool                p4est_quadrant_exists (p4est_t * p4est,
+int                 p4est_quadrant_exists (p4est_t * p4est,
                                            p4est_ghost_t * ghost,
                                            p4est_topidx_t treeid,
                                            const p4est_quadrant_t * q,
@@ -142,7 +142,7 @@ bool                p4est_quadrant_exists (p4est_t * p4est,
  * \param [in] btype    Balance type (face, corner or default, full).
  * \return Returns true if balanced, false otherwise.
  */
-bool                p4est_is_balanced (p4est_t * p4est,
+int                 p4est_is_balanced (p4est_t * p4est,
                                        p4est_balance_type_t btype);
 
 SC_EXTERN_C_END;

@@ -207,7 +207,7 @@ p8est_nodes_t      *p8est_nodes_new (p8est_t * p8est, p8est_ghost_t * ghost);
 void                p8est_nodes_destroy (p8est_nodes_t * nodes);
 
 /** Check node information for internal consistency. */
-bool                p8est_nodes_is_valid (p8est_t * p8est,
+int                 p8est_nodes_is_valid (p8est_t * p8est,
                                           p8est_nodes_t * nodes);
 
 SC_EXTERN_C_END;

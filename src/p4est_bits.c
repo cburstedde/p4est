@@ -38,13 +38,13 @@ p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 #endif
 }
 
-bool
+int
 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                          const p4est_quadrant_t * q2)
 {
-  P4EST_ASSERT (p4est_quadrant_is_node (q1, true) ||
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, 1) ||
                 p4est_quadrant_is_extended (q1));
-  P4EST_ASSERT (p4est_quadrant_is_node (q2, true) ||
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, 1) ||
                 p4est_quadrant_is_extended (q2));
 
   return (q1->level == q2->level && q1->x == q2->x && q1->y == q2->y)
@@ -54,7 +54,7 @@ p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
     ;
 }
 
-bool
+int
 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2)
 {
@@ -76,9 +76,9 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 #endif
   int64_t             p1, p2, diff;
 
-  P4EST_ASSERT (p4est_quadrant_is_node (q1, true) ||
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, 1) ||
                 p4est_quadrant_is_extended (q1));
-  P4EST_ASSERT (p4est_quadrant_is_node (q2, true) ||
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, 1) ||
                 p4est_quadrant_is_extended (q2));
 
   /* these are unsigned variables that inherit the sign bits */
@@ -92,7 +92,7 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 #ifdef P4_TO_P8
       exclorz == 0 &&
 #endif
-      true) {
+      1) {
     return (int) q1->level - (int) q2->level;
   }
   else {
@@ -141,7 +141,7 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
     p4est_quadrant_compare (v1, v2) : ((diff < 0) ? -1 : 1);
 }
 
-bool
+int
 p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_quadrant_t *q1 = v1;
@@ -179,13 +179,13 @@ p4est_quadrant_hash_fn (const void *v, const void *u)
   return (unsigned) c;
 }
 
-bool
+int
 p4est_node_equal_piggy_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_quadrant_t *q1 = v1;
   const p4est_quadrant_t *q2 = v2;
 #ifdef P4EST_DEBUG
-  const bool          clamped = *(bool *) u;
+  const int           clamped = *(int *) u;
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_node (q1, clamped));
@@ -204,7 +204,7 @@ p4est_node_hash_piggy_fn (const void *v, const void *u)
 {
   const p4est_quadrant_t *q = v;
 #ifdef P4EST_DEBUG
-  const bool          clamped = *(bool *) u;
+  const int           clamped = *(int *) u;
 #endif
   uint32_t            a, b, c;
 
@@ -227,7 +227,7 @@ p4est_node_hash_piggy_fn (const void *v, const void *u)
 void
 p4est_node_clamp_inside (const p4est_quadrant_t * n, p4est_quadrant_t * r)
 {
-  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, 0));
 
   r->x = (n->x == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->x;
   r->y = (n->y == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->y;
@@ -235,13 +235,13 @@ p4est_node_clamp_inside (const p4est_quadrant_t * n, p4est_quadrant_t * r)
   r->z = (n->z == P4EST_ROOT_LEN) ? (P4EST_ROOT_LEN - 1) : n->z;
 #endif
   r->level = P4EST_MAXLEVEL;
-  P4EST_ASSERT (p4est_quadrant_is_node (r, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (r, 1));
 }
 
 void
 p4est_node_unclamp (p4est_quadrant_t * n)
 {
-  P4EST_ASSERT (p4est_quadrant_is_node (n, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, 1));
 
   if (n->x == P4EST_ROOT_LEN - 1)
     n->x = P4EST_ROOT_LEN;
@@ -251,14 +251,14 @@ p4est_node_unclamp (p4est_quadrant_t * n)
   if (n->z == P4EST_ROOT_LEN - 1)
     n->z = P4EST_ROOT_LEN;
 #endif
-  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, 0));
 }
 
 void
 p4est_node_to_quadrant (const p4est_quadrant_t * n, int level,
                         p4est_quadrant_t * q)
 {
-  P4EST_ASSERT (p4est_quadrant_is_node (n, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, 1));
   P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
 
   q->x = n->x & ~((1 << (P4EST_MAXLEVEL - level)) - 1);
@@ -271,14 +271,14 @@ p4est_node_to_quadrant (const p4est_quadrant_t * n, int level,
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 }
 
-bool
+int
 p4est_quadrant_contains_node (const p4est_quadrant_t * q,
                               const p4est_quadrant_t * n)
 {
   const p4est_qcoord_t qlen = P4EST_QUADRANT_LEN (q->level);
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (p4est_quadrant_is_node (n, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, 1));
 
   return
     (q->x <= n->x && n->x < q->x + qlen) &&
@@ -317,7 +317,7 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
   return p4est_quadrant_ancestor_id (q, (int) q->level);
 }
 
-bool
+int
 p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 {
   return
@@ -326,10 +326,10 @@ p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 #ifdef P4_TO_P8
     (q->z >= 0 && q->z < P4EST_ROOT_LEN) &&
 #endif
-    true;
+    1;
 }
 
-bool
+int
 p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q)
 {
   return
@@ -341,10 +341,10 @@ p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q)
     (q->z >= -P4EST_ROOT_LEN &&
      q->z <= P4EST_ROOT_LEN + (P4EST_ROOT_LEN - 1)) &&
 #endif
-    true;
+    1;
 }
 
-bool
+int
 p4est_quadrant_is_outside_face (const p4est_quadrant_t * q)
 {
   int                 outface[P4EST_DIM];
@@ -362,7 +362,7 @@ p4est_quadrant_is_outside_face (const p4est_quadrant_t * q)
     == 1;
 }
 
-bool
+int
 p4est_quadrant_is_outside_corner (const p4est_quadrant_t * q)
 {
   return
@@ -371,11 +371,11 @@ p4est_quadrant_is_outside_corner (const p4est_quadrant_t * q)
 #ifdef P4_TO_P8
     (q->z < 0 || q->z >= P4EST_ROOT_LEN) &&
 #endif
-    true;
+    1;
 }
 
-bool
-p4est_quadrant_is_node (const p4est_quadrant_t * q, bool inside)
+int
+p4est_quadrant_is_node (const p4est_quadrant_t * q, int inside)
 {
   return
     q->level == P4EST_MAXLEVEL &&
@@ -392,10 +392,10 @@ p4est_quadrant_is_node (const p4est_quadrant_t * q, bool inside)
     (!(q->z & ((1 << (P4EST_MAXLEVEL - P4EST_QMAXLEVEL)) - 1))
      || (inside && q->z == P4EST_ROOT_LEN - 1)) &&
 #endif
-    true;
+    1;
 }
 
-bool
+int
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
   return
@@ -408,7 +408,7 @@ p4est_quadrant_is_valid (const p4est_quadrant_t * q)
     p4est_quadrant_is_inside_root (q);
 }
 
-bool
+int
 p4est_quadrant_is_extended (const p4est_quadrant_t * q)
 {
   return
@@ -421,7 +421,7 @@ p4est_quadrant_is_extended (const p4est_quadrant_t * q)
     p4est_quadrant_is_inside_3x3 (q);
 }
 
-bool
+int
 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
                            const p4est_quadrant_t * q2)
 {
@@ -434,7 +434,7 @@ p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
   if (q1->level == 0) {
-    return false;
+    return 0;
   }
 
   exclorx = q1->x ^ q2->x;
@@ -443,11 +443,11 @@ p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
   exclorz = q1->z ^ q2->z;
 
   if (exclorx == 0 && exclory == 0 && exclorz == 0) {
-    return false;
+    return 0;
   }
 #else
   if (exclorx == 0 && exclory == 0) {
-    return false;
+    return 0;
   }
 #endif
 
@@ -458,10 +458,10 @@ p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
 #ifdef P4_TO_P8
     ((exclorz & ~P4EST_QUADRANT_LEN (q1->level)) == 0) &&
 #endif
-    true;
+    1;
 }
 
-bool
+int
 p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
                              const p4est_quadrant_t * q2)
 {
@@ -469,12 +469,12 @@ p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
 
   /* make sure the quadrant_parent functions below don't abort */
   if (q1->level == 0) {
-    return false;
+    return 0;
   }
 
   /* validity of q1 and q2 is asserted in p4est_quadrant_is_equal */
   if (p4est_quadrant_is_equal (q1, q2)) {
-    return false;
+    return 0;
   }
 
   p4est_quadrant_parent (q1, &p1);
@@ -485,7 +485,7 @@ p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
 
 #ifndef P4_TO_P8
 
-bool
+int
 p4est_quadrant_is_family (const p4est_quadrant_t * q0,
                           const p4est_quadrant_t * q1,
                           const p4est_quadrant_t * q2,
@@ -501,7 +501,7 @@ p4est_quadrant_is_family (const p4est_quadrant_t * q0,
 
   if (level == 0 || level != q1->level ||
       level != q2->level || level != q3->level) {
-    return false;
+    return 0;
   }
 
   inc = P4EST_QUADRANT_LEN (level);
@@ -510,7 +510,7 @@ p4est_quadrant_is_family (const p4est_quadrant_t * q0,
           (q1->x == q3->x && q2->y == q3->y));
 }
 
-bool
+int
 p4est_quadrant_is_familyv (const p4est_quadrant_t q[])
 {
   const int8_t        level = q[0].level;
@@ -523,7 +523,7 @@ p4est_quadrant_is_familyv (const p4est_quadrant_t q[])
 
   if (level == 0 || level != q[1].level ||
       level != q[2].level || level != q[3].level) {
-    return false;
+    return 0;
   }
 
   inc = P4EST_QUADRANT_LEN (level);
@@ -532,7 +532,7 @@ p4est_quadrant_is_familyv (const p4est_quadrant_t q[])
           (q[1].x == q[3].x && q[2].y == q[3].y));
 }
 
-bool
+int
 p4est_quadrant_is_familypv (p4est_quadrant_t * q[])
 {
   const int8_t        level = q[0]->level;
@@ -545,7 +545,7 @@ p4est_quadrant_is_familypv (p4est_quadrant_t * q[])
 
   if (level == 0 || level != q[1]->level ||
       level != q[2]->level || level != q[3]->level) {
-    return false;
+    return 0;
   }
 
   inc = P4EST_QUADRANT_LEN (level);
@@ -556,7 +556,7 @@ p4est_quadrant_is_familypv (p4est_quadrant_t * q[])
 
 #endif /* !P4_TO_P8 */
 
-bool
+int
 p4est_quadrant_is_parent (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
@@ -570,10 +570,10 @@ p4est_quadrant_is_parent (const p4est_quadrant_t * q,
 #ifdef P4_TO_P8
     (q->z == (r->z & ~P4EST_QUADRANT_LEN (r->level))) &&
 #endif
-    true;
+    1;
 }
 
-bool
+int
 p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
                             const p4est_quadrant_t * r)
 {
@@ -583,7 +583,7 @@ p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
 
   /* make sure the quadrant_parent function below doesn't abort */
   if (r->level == 0) {
-    return false;
+    return 0;
   }
 
   /* validity of r is asserted in p4est_quadrant_parent */
@@ -592,7 +592,7 @@ p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
   return p4est_quadrant_is_equal (q, &p);
 }
 
-bool
+int
 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                             const p4est_quadrant_t * r)
 {
@@ -606,7 +606,7 @@ p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 
   if (q->level >= r->level) {
-    return false;
+    return 0;
   }
 
   exclorx = (q->x ^ r->x) >> (P4EST_MAXLEVEL - q->level);
@@ -620,7 +620,7 @@ p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
 #endif
 }
 
-bool
+int
 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                               const p4est_quadrant_t * r)
 {
@@ -628,7 +628,7 @@ p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
 
   /* validity of q and r is asserted in p4est_quadrant_is_equal */
   if (p4est_quadrant_is_equal (q, r)) {
-    return false;
+    return 0;
   }
 
   /* this will abort if q and r are in different trees */
@@ -637,7 +637,7 @@ p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
   return p4est_quadrant_is_equal (q, &s);
 }
 
-bool
+int
 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
@@ -657,8 +657,8 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
 #ifdef P4_TO_P8
         (q->z & mask) != mask ||
 #endif
-        false) {
-      return false;
+        0) {
+      return 0;
     }
     minlevel = (int) r->level;
   }
@@ -671,7 +671,7 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
   return (i1 + 1 == i2);
 }
 
-bool
+int
 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
@@ -680,14 +680,14 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 
   /* validity of q and r is asserted in p4est_quadrant_compare */
   if (p4est_quadrant_compare (q, r) >= 0) {
-    return false;
+    return 0;
   }
 
   a = *q;
   b = *r;
   while (a.level > b.level) {
     if (p4est_quadrant_child_id (&a) != P4EST_CHILDREN - 1) {
-      return false;
+      return 0;
     }
     p4est_quadrant_parent (&a, &a);
   }
@@ -697,7 +697,7 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
   return (i1 + 1 == i2);
 }
 
-bool
+int
 p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
 {
   p4est_quadrant_t    desc;
@@ -705,7 +705,7 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
   if (tree->quadrants.elem_count == 0)
-    return false;
+    return 0;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree->first_desc));
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree->last_desc));
@@ -713,16 +713,16 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
   /* check if the end of q is before the first tree quadrant */
   p4est_quadrant_last_descendent (q, &desc, P4EST_QMAXLEVEL);
   if (p4est_quadrant_compare (&desc, &tree->first_desc) < 0)
-    return false;
+    return 0;
 
   /* check if q is after the last tree quadrant */
   if (p4est_quadrant_compare (&tree->last_desc, q) < 0)
-    return false;
+    return 0;
 
-  return true;
+  return 1;
 }
 
-bool
+int
 p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
                                const p4est_quadrant_t * q)
 {
@@ -731,7 +731,7 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
 
   if (tree->quadrants.elem_count == 0)
-    return false;
+    return 0;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree->first_desc));
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree->last_desc));
@@ -739,14 +739,14 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
   /* check if q is not before the first tree quadrant */
   p4est_quadrant_first_descendent (q, &desc, P4EST_QMAXLEVEL);
   if (p4est_quadrant_compare (&desc, &tree->first_desc) < 0)
-    return false;
+    return 0;
 
   /* check if the end of q is not after the last tree quadrant */
   p4est_quadrant_last_descendent (q, &desc, P4EST_QMAXLEVEL);
   if (p4est_quadrant_compare (&tree->last_desc, q) < 0)
-    return false;
+    return 0;
 
-  return true;
+  return 1;
 }
 
 void
@@ -1070,7 +1070,7 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
     qp = sc_array_push (quads);
     tp = sc_array_push (treeids);
     ct = sc_array_index (cta, ctree);
-    p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, true);
+    p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, 1);
     *qp = temp;
     *tp = ct->ntree;
   }
@@ -1094,7 +1094,7 @@ p4est_quadrant_corner_node (const p4est_quadrant_t * q,
   r->z = q->z + ((corner & 0x04) >> 2) * qh;
 #endif
   r->level = P4EST_MAXLEVEL;
-  P4EST_ASSERT (p4est_quadrant_is_node (r, false));
+  P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
 }
 
 void
@@ -1380,7 +1380,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
   P4EST_ASSERT (q != r);
 
   if (q->level == P4EST_MAXLEVEL) {
-    P4EST_ASSERT (p4est_quadrant_is_node (q, false));
+    P4EST_ASSERT (p4est_quadrant_is_node (q, 0));
     mh = 0;
     /* if (P4EST_MAXLEVEL == 30) tRmh will overflow to INT32_MIN < 0 */
   }
@@ -1436,7 +1436,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
   r->level = q->level;
 #ifdef P4EST_DEBUG
   if (r->level == P4EST_MAXLEVEL) {
-    P4EST_ASSERT (p4est_quadrant_is_node (r, false));
+    P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
   }
   else {
     P4EST_ASSERT (p4est_quadrant_is_extended (r));
@@ -1448,9 +1448,9 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
 #endif
 }
 
-bool
+int
 p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
-                               int corner, bool inside)
+                               int corner, int inside)
 {
   int                 quad_contact[P4EST_FACES];
   int                 side, incount;
@@ -1499,8 +1499,7 @@ p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_transform_corner (p4est_quadrant_t * q,
-                                 int corner, bool inside)
+p4est_quadrant_transform_corner (p4est_quadrant_t * q, int corner, int inside)
 {
   p4est_qcoord_t      shift[2];
 
@@ -1602,7 +1601,7 @@ p4est_quadrant_shift_corner (const p4est_quadrant_t * q,
     r->z = th;
 #endif
 
-  P4EST_ASSERT (p4est_quadrant_touches_corner (r, corner, true));
+  P4EST_ASSERT (p4est_quadrant_touches_corner (r, corner, 1));
 }
 
 uint64_t

@@ -32,8 +32,8 @@
 #include <sc_io.h>
 
 static const double p4est_vtk_scale = 0.95;
-static const bool   p4est_vtk_write_tree = true;
-static const bool   p4est_vtk_write_rank = true;
+static const int    p4est_vtk_write_tree = 1;
+static const int    p4est_vtk_write_rank = 1;
 static const int    p4est_vtk_wrap_rank = 0;
 
 #ifndef P4EST_VTK_DOUBLES
@@ -75,8 +75,8 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
 
 void
 p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
-                     double scale, bool write_tree,
-                     bool write_rank, int wrap_rank,
+                     double scale, int write_tree,
+                     int write_rank, int wrap_rank,
                      int num_scalars, int num_vectors,
                      const char *filename, ...)
 {
@@ -149,7 +149,7 @@ p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
 
 int
 p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
-                        double scale, bool write_tree, bool write_rank,
+                        double scale, int write_tree, int write_rank,
                         int wrap_rank, const char *point_scalars,
                         const char *point_vectors, const char *filename)
 {

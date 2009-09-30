@@ -135,7 +135,7 @@ p8est_lnodes_rank_t;
  * \return              true if any face or edge is hanging, false otherwise.
  */
 /*@unused@*/
-static inline       bool
+static inline int
 p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
                      int hanging_edge[12])
 {
@@ -166,10 +166,10 @@ p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
       work >>= 1;
     }
 
-    return true;
+    return 1;
   }
   else {
-    return false;
+    return 0;
   }
 }
 

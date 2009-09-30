@@ -27,7 +27,7 @@
 #include <p8est.h>
 #include <p4est_to_p8est.h>
 
-static              bool
+static int
 p8est_compute_edge_face_corners (int edge, int face, int corners[])
 {
   int                 nfound = 0;
@@ -61,9 +61,9 @@ int
 main (int argc, char **argv)
 {
   int                 edge, face, cs[2];
-  bool                success;
+  int                 success;
 
-  sc_init (MPI_COMM_NULL, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (edge = 0; edge < 12; ++edge) {

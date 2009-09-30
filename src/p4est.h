@@ -208,7 +208,7 @@ void                p4est_destroy (p4est_t * p4est);
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p4est that does not depend on the input.
  */
-p4est_t            *p4est_copy (p4est_t * input, bool copy_data);
+p4est_t            *p4est_copy (p4est_t * input, int copy_data);
 
 /** Reset user pointer and element data.
  * When the data size is changed the quadrant data is freed and allocated.
@@ -232,7 +232,7 @@ void                p4est_reset_data (p4est_t * p4est, size_t data_size,
  *                       which is already allocated automatically.
  */
 void                p4est_refine (p4est_t * p4est,
-                                  bool refine_recursive,
+                                  int refine_recursive,
                                   p4est_refine_t refine_fn,
                                   p4est_init_t init_fn);
 
@@ -244,7 +244,7 @@ void                p4est_refine (p4est_t * p4est,
  * \param [in] maxlevel  Maximum allowed level (inclusive) of quadrants.
  */
 void                p4est_refine_level (p4est_t * p4est,
-                                        bool refine_recursive,
+                                        int refine_recursive,
                                         p4est_refine_t refine_fn,
                                         p4est_init_t init_fn,
                                         int allowed_level);
@@ -256,7 +256,7 @@ void                p4est_refine_level (p4est_t * p4est,
  *                        which is already allocated automatically.
  */
 void                p4est_coarsen (p4est_t * p4est,
-                                   bool coarsen_recursive,
+                                   int coarsen_recursive,
                                    p4est_coarsen_t coarsen_fn,
                                    p4est_init_t init_fn);
 
@@ -295,7 +295,7 @@ unsigned            p4est_checksum (p4est_t * p4est);
  * \note            Aborts on file errors.
  */
 void                p4est_save (const char *filename, p4est_t * p4est,
-                                bool save_data);
+                                int save_data);
 
 /** Load the complete connectivity/p4est structure from disk.
  * \param [in] filename         Name of the file to read.
@@ -312,7 +312,7 @@ void                p4est_save (const char *filename, p4est_t * p4est,
  * \note            Aborts on file errors or invalid file contents.
  */
 p4est_t            *p4est_load (const char *filename, MPI_Comm mpicomm,
-                                size_t data_size, bool load_data,
+                                size_t data_size, int load_data,
                                 void *user_pointer,
                                 p4est_connectivity_t ** connectivity);
 

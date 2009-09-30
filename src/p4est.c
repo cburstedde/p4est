@@ -257,7 +257,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                      (long long) jt, (long long) b.x, (long long) b.y);
 #endif
       /* now run algorithm CompleteRegion (&tree->quadrants) here */
-      p4est_complete_region (p4est, &a, true, &b, !must_remove_last_quadrant,
+      p4est_complete_region (p4est, &a, 1, &b, !must_remove_last_quadrant,
                              tree, jt, init_fn);
       quad = sc_array_index (&tree->quadrants,
                              tree->quadrants.elem_count - 1);
@@ -344,7 +344,7 @@ p4est_destroy (p4est_t * p4est)
 }
 
 p4est_t            *
-p4est_copy (p4est_t * input, bool copy_data)
+p4est_copy (p4est_t * input, int copy_data)
 {
   const p4est_topidx_t num_trees = input->connectivity->num_trees;
   const p4est_topidx_t first_tree = input->first_local_tree;
@@ -431,7 +431,7 @@ void
 p4est_reset_data (p4est_t * p4est, size_t data_size,
                   p4est_init_t init_fn, void *user_pointer)
 {
-  bool                doresize;
+  int                 doresize;
   size_t              zz;
   p4est_topidx_t      jt;
   p4est_quadrant_t   *q;
@@ -476,7 +476,7 @@ p4est_reset_data (p4est_t * p4est, size_t data_size,
 }
 
 void
-p4est_refine (p4est_t * p4est, bool refine_recursive,
+p4est_refine (p4est_t * p4est, int refine_recursive,
               p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
   p4est_refine_level (p4est, refine_recursive, refine_fn, init_fn,
@@ -484,14 +484,14 @@ p4est_refine (p4est_t * p4est, bool refine_recursive,
 }
 
 void
-p4est_refine_level (p4est_t * p4est, bool refine_recursive,
+p4est_refine_level (p4est_t * p4est, int refine_recursive,
                     p4est_refine_t refine_fn, p4est_init_t init_fn,
                     int allowed_level)
 {
 #ifdef P4EST_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
 #endif
-  bool                dorefine;
+  int                 dorefine;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
   size_t              incount, current, restpos, movecount;
@@ -547,7 +547,7 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
 
     /* run through the array to find first quadrant to be refined */
     q = NULL;
-    dorefine = false;
+    dorefine = 0;
     incount = tquadrants->elem_count;
     for (current = 0; current < incount; ++current) {
       q = sc_array_index (tquadrants, current);
@@ -567,7 +567,7 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
     /* now we have a quadrant to refine, prepend it to the list */
     qalloc = sc_mempool_alloc (p4est->quadrant_pool);
     *qalloc = *q;               /* never prepend array members directly */
-    qalloc->pad8 = false;       /* this quadrant has not been refined yet */
+    qalloc->pad8 = 0;           /* this quadrant has not been refined yet */
     sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
 
     /*
@@ -583,7 +583,7 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
           ((refine_recursive || !qpop->pad8) &&
            (int) qpop->level < allowed_level &&
            refine_fn (p4est, nt, qpop))) {
-        dorefine = false;
+        dorefine = 0;
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
 
@@ -608,14 +608,14 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
         p4est_quadrant_init_data (p4est, nt, c1, init_fn);
         p4est_quadrant_init_data (p4est, nt, c2, init_fn);
         p4est_quadrant_init_data (p4est, nt, c3, init_fn);
-        c0->pad8 = c1->pad8 = c2->pad8 = c3->pad8 = true;
+        c0->pad8 = c1->pad8 = c2->pad8 = c3->pad8 = 1;
 
 #ifdef P4_TO_P8
         p4est_quadrant_init_data (p4est, nt, c4, init_fn);
         p4est_quadrant_init_data (p4est, nt, c5, init_fn);
         p4est_quadrant_init_data (p4est, nt, c6, init_fn);
         p4est_quadrant_init_data (p4est, nt, c7, init_fn);
-        c4->pad8 = c5->pad8 = c6->pad8 = c7->pad8 = true;
+        c4->pad8 = c5->pad8 = c6->pad8 = c7->pad8 = 1;
 
         sc_list_prepend (list, c7);
         sc_list_prepend (list, c6);
@@ -635,7 +635,7 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
             q = sc_array_index (tquadrants, restpos);
             qalloc = sc_mempool_alloc (p4est->quadrant_pool);
             *qalloc = *q;       /* never append array members directly */
-            qalloc->pad8 = false;       /* has not been refined yet */
+            qalloc->pad8 = 0;   /* has not been refined yet */
             sc_list_append (list, qalloc);      /* only newly allocated quadrants */
             --movecount;
             ++restpos;
@@ -688,14 +688,14 @@ p4est_refine_level (p4est_t * p4est, bool refine_recursive,
 }
 
 void
-p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
+p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
                p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
 #ifdef P4EST_DEBUG
   size_t              data_pool_size;
 #endif
   int                 i, maxlevel;
-  bool                couldbegood;
+  int                 couldbegood;
   size_t              zz;
   size_t              incount, removed;
   size_t              cidz, first, last, rest, before;
@@ -741,12 +741,12 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
     /* run through the array and coarsen recursively */
     incount = tquadrants->elem_count;
     while (rest + P4EST_CHILDREN - 1 - before < incount) {
-      couldbegood = true;
+      couldbegood = 1;
       for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
         if (zz < before) {
           c[zz] = sc_array_index (tquadrants, first + zz);
           if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
-            couldbegood = false;
+            couldbegood = 0;
             break;
           }
         }
@@ -875,13 +875,13 @@ p4est_coarsen (p4est_t * p4est, bool coarsen_recursive,
  */
 static void
 p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
-                        p4est_topidx_t qtree, bool inter_tree,
+                        p4est_topidx_t qtree, int inter_tree,
                         const p4est_quadrant_t * q,
                         const p4est_quadrant_t * insul,
                         int *first_peer, int *last_peer)
 {
   const int           rank = p4est->mpirank;
-  bool                found;
+  int                 found;
   int                 back, pos;
   int                 owner, first_owner, last_owner;
   p4est_quadrant_t    ld, *s;
@@ -902,7 +902,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
     }
     peer = peers + owner;
     /* avoid duplicates in the send array */
-    found = false;
+    found = 0;
     for (back = 0; back < P4EST_INSUL - 1; ++back) {
       pos = (int) peer->send_first.elem_count - back - 1;
       if (pos < 0) {
@@ -910,7 +910,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
       }
       s = sc_array_index_int (&peer->send_first, pos);
       if (p4est_quadrant_is_equal (s, q) && s->p.piggy2.which_tree == qtree) {
-        found = true;
+        found = 1;
         break;
       }
     }
@@ -948,9 +948,9 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   int                 j, k, l, m, which;
   int                 face;
   int                 first_peer, last_peer;
-  bool                quad_contact[P4EST_FACES];
-  bool                any_face, tree_contact[P4EST_FACES];
-  bool                tree_fully_owned, full_tree[2];
+  int                 quad_contact[P4EST_FACES];
+  int                 any_face, tree_contact[P4EST_FACES];
+  int                 tree_fully_owned, full_tree[2];
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
   size_t              qcount, qbytes;
@@ -971,8 +971,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   size_t              data_pool_size;
 #endif
   int                 ftransform[P4EST_FTRANSFORM];
-  bool                face_axis[3];     /* 3 not P4EST_DIM */
-  bool                contact_face_only, contact_edge_only;
+  int                 face_axis[3];     /* 3 not P4EST_DIM */
+  int                 contact_face_only, contact_edge_only;
 #ifdef P4_TO_P8
   int                 edge;
   size_t              etree;
@@ -1106,7 +1106,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
   for (nt = first_tree; nt <= last_tree; ++nt) {
     p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
     tree_fully_owned = full_tree[0] && full_tree[1];
-    any_face = false;
+    any_face = 0;
     for (face = 0; face < P4EST_FACES; ++face) {
       any_face = any_face || tree_contact[face];
     }
@@ -1179,40 +1179,40 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
           quad_contact[3] = (insulq.y >= rh);
           face_axis[1] = quad_contact[2] || quad_contact[3];
 #ifndef P4_TO_P8
-          face_axis[2] = false;
+          face_axis[2] = 0;
 #else
           quad_contact[4] = (insulq.z < 0);
           quad_contact[5] = (insulq.z >= rh);
           face_axis[2] = quad_contact[4] || quad_contact[5];
           edge = -1;
 #endif
-          contact_edge_only = contact_face_only = false;
+          contact_edge_only = contact_face_only = 0;
           face = -1;
           if (face_axis[0] || face_axis[1] || face_axis[2]) {
             /* this quadrant is relevant for inter-tree balancing */
             if (!face_axis[1] && !face_axis[2]) {
-              contact_face_only = true;
+              contact_face_only = 1;
               face = 0 + quad_contact[1];
             }
             else if (!face_axis[0] && !face_axis[2]) {
-              contact_face_only = true;
+              contact_face_only = 1;
               face = 2 + quad_contact[3];
             }
 #ifdef P4_TO_P8
             else if (!face_axis[0] && !face_axis[1]) {
-              contact_face_only = true;
+              contact_face_only = 1;
               face = 4 + quad_contact[5];
             }
             else if (!face_axis[0]) {
-              contact_edge_only = true;
+              contact_edge_only = 1;
               edge = 0 + 2 * quad_contact[5] + quad_contact[3];
             }
             else if (!face_axis[1]) {
-              contact_edge_only = true;
+              contact_edge_only = 1;
               edge = 4 + 2 * quad_contact[5] + quad_contact[1];
             }
             else if (!face_axis[2]) {
-              contact_edge_only = true;
+              contact_edge_only = 1;
               edge = 8 + 2 * quad_contact[3] + quad_contact[1];
             }
 #endif
@@ -1226,7 +1226,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
                 P4EST_ASSERT (tree_contact[face]);
                 p4est_quadrant_transform_face (q, &tosend, ftransform);
                 p4est_quadrant_transform_face (&insulq, &tempq, ftransform);
-                p4est_balance_schedule (p4est, peers, qtree, true,
+                p4est_balance_schedule (p4est, peers, qtree, 1,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);
               }
@@ -1243,10 +1243,9 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
               p8est_find_edge_transform (conn, nt, edge, &ei);
               for (etree = 0; etree < eta->elem_count; ++etree) {
                 et = sc_array_index (eta, etree);
-                p8est_quadrant_transform_edge (q, &tosend, &ei, et, false);
-                p8est_quadrant_transform_edge (&insulq, &tempq, &ei, et,
-                                               true);
-                p4est_balance_schedule (p4est, peers, et->ntree, true,
+                p8est_quadrant_transform_edge (q, &tosend, &ei, et, 0);
+                p8est_quadrant_transform_edge (&insulq, &tempq, &ei, et, 1);
+                p4est_balance_schedule (p4est, peers, et->ntree, 1,
                                         &tosend, &tempq,
                                         &first_peer, &last_peer);
               }
@@ -1260,19 +1259,19 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
               P4EST_ASSERT (face_axis[2]);
               corner += 4 * quad_contact[5];
 #endif
-              P4EST_ASSERT (p4est_quadrant_touches_corner (q, corner, true));
+              P4EST_ASSERT (p4est_quadrant_touches_corner (q, corner, 1));
               P4EST_ASSERT (p4est_quadrant_touches_corner
-                            (&insulq, corner, false));
+                            (&insulq, corner, 0));
               p4est_find_corner_transform (conn, nt, corner, &ci);
               for (ctree = 0; ctree < cta->elem_count; ++ctree) {
                 ct = sc_array_index (cta, ctree);
                 tosend = *q;
                 p4est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
-                                                 false);
+                                                 0);
                 tempq = insulq;
                 p4est_quadrant_transform_corner (&tempq, (int) ct->ncorner,
-                                                 true);
-                p4est_balance_schedule (p4est, peers, ct->ntree, true,
+                                                 1);
+                p4est_balance_schedule (p4est, peers, ct->ntree, 1,
                                         &tosend, &tempq, &first_peer,
                                         &last_peer);
               }
@@ -1280,7 +1279,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
           }
           else {
             /* no inter-tree contact */
-            p4est_balance_schedule (p4est, peers, nt, false,
+            p4est_balance_schedule (p4est, peers, nt, 0,
                                     q, &insulq, &first_peer, &last_peer);
           }
         }
@@ -1675,7 +1674,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
         face_axis[0] = (s->x < 0 || s->x >= rh);
         face_axis[1] = (s->y < 0 || s->y >= rh);
 #ifndef P4_TO_P8
-        face_axis[2] = false;
+        face_axis[2] = 0;
 #else
         face_axis[2] = (s->z < 0 || s->z >= rh);
 #endif
@@ -2176,7 +2175,7 @@ p4est_checksum (p4est_t * p4est)
 }
 
 void
-p4est_save (const char *filename, p4est_t * p4est, bool save_data)
+p4est_save (const char *filename, p4est_t * p4est, int save_data)
 {
   const int           headc = 6;
   const int           align = 16;
@@ -2270,7 +2269,7 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 
   /* zero data size is effectively not saved */
   if (data_size == 0) {
-    save_data = false;
+    save_data = 0;
   }
 
 #ifndef P4EST_MPIIO_WRITE
@@ -2434,7 +2433,7 @@ p4est_save (const char *filename, p4est_t * p4est, bool save_data)
 
 p4est_t            *
 p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
-            bool load_data, void *user_pointer,
+            int load_data, void *user_pointer,
             p4est_connectivity_t ** connectivity)
 {
   const int           headc = 6;
@@ -2444,7 +2443,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   int                 num_procs, rank;
   int                 i;
   long                fpos;
-  bool                save_data;
+  int                 save_data;
   uint64_t           *u64a;
   size_t              qbuf_size;
   size_t              zz, zcount;
@@ -2485,7 +2484,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   }
   else {
     p4est->user_data_pool = NULL;
-    load_data = false;
+    load_data = 0;
   }
   p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
 
@@ -2527,10 +2526,10 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   SC_CHECK_ABORT (u64a[2] == (uint64_t) sizeof (p4est_quadrant_t),
                   "invalid quadrant size");
   SC_CHECK_ABORT (u64a[3] == (uint64_t) data_size, "invalid data size");
-  save_data = (bool) u64a[4];
+  save_data = (int) u64a[4];
   SC_CHECK_ABORT (!load_data || save_data, "quadrant data not saved");
   if (data_size == 0) {
-    save_data = false;
+    save_data = 0;
   }
   SC_CHECK_ABORT (u64a[5] == (uint64_t) num_procs, "invalid MPI size");
   sc_fread (u64a, sizeof (uint64_t), (size_t) num_procs, file,

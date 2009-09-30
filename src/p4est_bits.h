@@ -34,14 +34,14 @@ void                p4est_quadrant_print (int log_priority,
 /** Test if two quadrants have equal Morton indices.
  * \return true if \a q1 describes the same quadrant as \a q2.
  */
-bool                p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
+int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                                              const p4est_quadrant_t * q2);
 
 /** Test if two quadrants have equal Morton indices and the same tree id.
  * \return          true if \a q1 describes the same quadrant as \a q2
  *                  and the p.which_tree fields are equal.
  */
-bool                p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
+int                 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
                                                    q1,
                                                    const p4est_quadrant_t *
                                                    q2);
@@ -66,7 +66,7 @@ int                 p4est_quadrant_compare_piggy (const void *v1,
 /** Test if two quadrants have equal Morton indices, callback version.
  * \return true if \a v1 describes the same quadrant as \a v2.
  */
-bool                p4est_quadrant_equal_fn (const void *v1, const void *v2,
+int                 p4est_quadrant_equal_fn (const void *v1, const void *v2,
                                              const void *u);
 
 /** Computes a hash value for a quadrant by the lookup3 method.
@@ -76,14 +76,14 @@ unsigned            p4est_quadrant_hash_fn (const void *v, const void *u);
 /** Test if two nodes are in the same tree and have equal Morton indices.
  * \param [in] v1   Pointer to a clamped or unclamped node, depending on u.
  * \param [in] v2   Pointer to a clamped or unclamped node, depending on u.
- * \param [in] u    User data, points to a bool holding the clamped flag.
+ * \param [in] u    User data, points to an int holding the clamped-flag.
  */
-bool                p4est_node_equal_piggy_fn (const void *v1,
+int                 p4est_node_equal_piggy_fn (const void *v1,
                                                const void *v2, const void *u);
 
 /** Compute hash value of a node based on its tree and Morton index.
  * \param [in] v    Pointer to a clamped or unclamped node, depending on u.
- * \param [in] u    User data, points to a bool holding the clamped flag.
+ * \param [in] u    User data, points to an int holding the clamped-flag.
  */
 unsigned            p4est_node_hash_piggy_fn (const void *v, const void *u);
 
@@ -111,7 +111,7 @@ void                p4est_node_to_quadrant (const p4est_quadrant_t * n,
  * \param [in] q        Valid quadrant.
  * \param [in] n        Clamped node.
  */
-bool                p4est_quadrant_contains_node (const p4est_quadrant_t * q,
+int                 p4est_quadrant_contains_node (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * n);
 
 /** Compute the position of the ancestor of this child at level \a level within
@@ -130,27 +130,27 @@ int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
  */
-bool                p4est_quadrant_is_inside_root (const p4est_quadrant_t *
+int                 p4est_quadrant_is_inside_root (const p4est_quadrant_t *
                                                    q);
 
 /** Test if a quadrant is inside the 3x3 box around the root tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
  */
-bool                p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q);
+int                 p4est_quadrant_is_inside_3x3 (const p4est_quadrant_t * q);
 
 /** Test if a quadrant is outside a tree face boundary (no corner).
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is outside across a unit tree face.
  */
-bool                p4est_quadrant_is_outside_face (const p4est_quadrant_t *
+int                 p4est_quadrant_is_outside_face (const p4est_quadrant_t *
                                                     q);
 
 /** Test if a quadrant is outside a tree corner boundary.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is outside across a unit tree corner.
  */
-bool                p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
+int                 p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
                                                       q);
 
 /** Test if a quadrant is used to represent a mesh node.
@@ -159,39 +159,39 @@ bool                p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
  *                      If false, nodes must align with the quadrant grid.
  * \return Returns true if \a q is a node.
  */
-bool                p4est_quadrant_is_node (const p4est_quadrant_t * q,
-                                            bool inside);
+int                 p4est_quadrant_is_node (const p4est_quadrant_t * q,
+                                            int inside);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is valid.
  */
-bool                p4est_quadrant_is_valid (const p4est_quadrant_t * q);
+int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
 /** Test if a quadrant has valid Morton indices in the 3x3 box around root.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is extended.
  */
-bool                p4est_quadrant_is_extended (const p4est_quadrant_t * q);
+int                 p4est_quadrant_is_extended (const p4est_quadrant_t * q);
 
 /** Test if two quadrants are siblings.
  * \param [in] q1 First quadrant to be tested.
  * \param [in] q2 Second quadrant to be tested.
  * \return true if \a q1 is unequal to and a sibling of \a q2.
  */
-bool                p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
+int                 p4est_quadrant_is_sibling (const p4est_quadrant_t * q1,
                                                const p4est_quadrant_t * q2);
 
 /** Test if two quadrants are siblings.
  * Descriptive, slower version of \a p4est_quadrant_is_sibling.
  * For debugging and educational purposes only.
  */
-bool                p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
+int                 p4est_quadrant_is_sibling_D (const p4est_quadrant_t * q1,
                                                  const p4est_quadrant_t * q2);
 
 /** Test if 4 quadrants are siblings in Morton ordering.
  */
-bool                p4est_quadrant_is_family (const p4est_quadrant_t * q0,
+int                 p4est_quadrant_is_family (const p4est_quadrant_t * q0,
                                               const p4est_quadrant_t * q1,
                                               const p4est_quadrant_t * q2,
                                               const p4est_quadrant_t * q3);
@@ -199,26 +199,26 @@ bool                p4est_quadrant_is_family (const p4est_quadrant_t * q0,
 /** Test if 4 quadrants are siblings in Morton ordering, array version.
  * \param [in] q   Array of 4 quadrants.
  */
-bool                p4est_quadrant_is_familyv (const p4est_quadrant_t q[]);
+int                 p4est_quadrant_is_familyv (const p4est_quadrant_t q[]);
 
 /** Test if 4 quadrants are siblings in Morton ordering, array version.
  * \param [in] q   Array of 4 pointers to quadrants.
  */
-bool                p4est_quadrant_is_familypv (p4est_quadrant_t * q[]);
+int                 p4est_quadrant_is_familypv (p4est_quadrant_t * q[]);
 
 /** Test if a quadrant it the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Possible child quadrant.
  * \return true if \a q is the parent of \a r.
  */
-bool                p4est_quadrant_is_parent (const p4est_quadrant_t * q,
+int                 p4est_quadrant_is_parent (const p4est_quadrant_t * q,
                                               const p4est_quadrant_t * r);
 
 /** Test if a quadrant it the parent of another quadrant.
  * Descriptive, slower version of \a p4est_quadrant_is_parent.
  * For debugging and educational purposes only.
  */
-bool                p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
+int                 p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
                                                 const p4est_quadrant_t * r);
 
 /** Test if a quadrant is an ancestor of another quadrant.
@@ -226,7 +226,7 @@ bool                p4est_quadrant_is_parent_D (const p4est_quadrant_t * q,
  * \param [in] r Descendent quadrant.
  * \return true if \a q is unequal to and an ancestor of \a r.
  */
-bool                p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
+int                 p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
                                                 const p4est_quadrant_t * r);
 
 /** Test if a quadrant is an ancestor of another quadrant.
@@ -234,7 +234,7 @@ bool                p4est_quadrant_is_ancestor (const p4est_quadrant_t * q,
  * Contrary to \a p4est_quadrant_is_ancestor, it aborts for inter-tree q, r.
  * For debugging and educational purposes only.
  */
-bool                p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
+int                 p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
                                                   const p4est_quadrant_t * r);
 
 /** Test if two quadrants follow each other in the tree with no holes.
@@ -243,24 +243,24 @@ bool                p4est_quadrant_is_ancestor_D (const p4est_quadrant_t * q,
  * \return true if \a q is immediately before \a r in the tree.
  * \note for every \a q there are between 0 and P4EST_MAXLEVEL+1 possible nexts.
  */
-bool                p4est_quadrant_is_next (const p4est_quadrant_t * q,
+int                 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                                             const p4est_quadrant_t * r);
 
 /** Test if two quadrants follow each other in the tree with no holes.
  * Descriptive, slower version of \a p4est_quadrant_is_next.
  * For debugging and educational purposes only.
  */
-bool                p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
+int                 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                                               const p4est_quadrant_t * r);
 
 /** Test if a quadrant has at least partial overlap with a tree.
  */
-bool                p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
+int                 p4est_quadrant_overlaps_tree (p4est_tree_t * tree,
                                                   const p4est_quadrant_t * q);
 
 /** Test if a quadrant is completely contained within a tree.
  */
-bool                p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
+int                 p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
                                                    const p4est_quadrant_t *
                                                    q);
 
@@ -474,8 +474,8 @@ void                p4est_quadrant_transform_face (const p4est_quadrant_t * q,
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
  */
-bool                p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
-                                                   int corner, bool inside);
+int                 p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
+                                                   int corner, int inside);
 
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
@@ -483,8 +483,7 @@ bool                p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
  * \param [int]    inside   Boolean flag for inside or diagonally outside.
  */
 void                p4est_quadrant_transform_corner (p4est_quadrant_t * q,
-                                                     int icorner,
-                                                     bool inside);
+                                                     int icorner, int inside);
 
 /** Shifts a quadrant until it touches the specified corner from the inside.
  * \param [in]     q          Valid input quadrant.

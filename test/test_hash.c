@@ -27,7 +27,7 @@ int_hash_fn (const void *v, const void *u)
   return (unsigned) (unsigned long) v;
 }
 
-static              bool
+static int
 int_equal_fn (const void *v1, const void *v2, const void *u)
 {
   return (long) v1 == (long) v2;

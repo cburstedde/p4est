@@ -171,7 +171,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpi->mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
@@ -244,9 +244,9 @@ main (int argc, char **argv)
 #endif
 
   /* refinement and coarsening */
-  p8est_refine (p8est, true, refine_fn, init_fn);
+  p8est_refine (p8est, 1, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
-    p8est_coarsen (p8est, true, coarsen_fn, init_fn);
+    p8est_coarsen (p8est, 1, coarsen_fn, init_fn);
   }
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, NULL, "mesh_simple3_refined");

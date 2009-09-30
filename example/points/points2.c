@@ -88,7 +88,7 @@ read_points (const char *filename, p4est_topidx_t num_trees,
     q->level = P4EST_MAXLEVEL;
     q->p.which_tree =
       (p4est_topidx_t) ((double) num_trees * rand () / (RAND_MAX + 1.0));
-    P4EST_ASSERT (p4est_quadrant_is_node (q, true));
+    P4EST_ASSERT (p4est_quadrant_is_node (q, 1));
 
     ++q;
   }
@@ -107,7 +107,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 num_procs, rank;
   int                 maxlevel;
-  bool                wrongusage;
+  int                 wrongusage;
   char                buffer[BUFSIZ];
   p4est_locidx_t      num_points, max_points;
   p4est_connectivity_t *conn;
@@ -125,7 +125,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
@@ -143,9 +143,9 @@ main (int argc, char **argv)
     "      A value of 0 refines recursively to maxlevel\n"
     "      A value of -1 does no refinement at all\n"
     "   Prefix is for loading a point data file";
-  wrongusage = false;
+  wrongusage = 0;
   if (!wrongusage && argc != 5) {
-    wrongusage = true;
+    wrongusage = 1;
   }
   if (!wrongusage) {
 #ifndef P4_TO_P8
@@ -182,19 +182,19 @@ main (int argc, char **argv)
     }
 #endif
     else {
-      wrongusage = true;
+      wrongusage = 1;
     }
   }
   if (!wrongusage) {
     maxlevel = atoi (argv[2]);
     if (maxlevel < 0 || maxlevel > P4EST_QMAXLEVEL) {
-      wrongusage = true;
+      wrongusage = 1;
     }
   }
   if (!wrongusage) {
     max_points = (p4est_locidx_t) atoi (argv[3]);
     if (max_points < -1) {
-      wrongusage = true;
+      wrongusage = 1;
     }
   }
   if (wrongusage) {

@@ -140,7 +140,7 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
   P4EST_ASSERT (dptr[2] == double_data + 3 * Ntotal);
   P4EST_ASSERT (dptr[3] == double_data + 4 * Ntotal);
 
-  p8est_vtk_write_all (p8est, geom, 1., true, true, 16, 4, 0, name,
+  p8est_vtk_write_all (p8est, geom, 1., 1, 1, 16, 4, 0, name,
                        "X", double_data, "Y", double_data + Ntotal,
                        "Z", double_data + 2 * Ntotal,
                        "D", double_data + 3 * Ntotal);
@@ -161,7 +161,7 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
 
   mpicomm = MPI_COMM_WORLD;
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   geye = p8est_geometry_new_identity ();
@@ -171,7 +171,7 @@ main (int argc, char **argv)
   P4EST_STATISTICS ("Unitcube\n");
   conn = p8est_connectivity_new_unitcube ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
-  p8est_refine (p8est, true, refine_fn, NULL);
+  p8est_refine (p8est, 1, refine_fn, NULL);
   write_vtk (p8est, NULL, "unitcube_none");
   write_vtk (p8est, geye, "unitcube_identity");
   p8est_destroy (p8est);
@@ -180,7 +180,7 @@ main (int argc, char **argv)
   P4EST_STATISTICS ("Shell\n");
   conn = p8est_connectivity_new_shell ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
-  p8est_refine (p8est, true, refine_fn, NULL);
+  p8est_refine (p8est, 1, refine_fn, NULL);
   write_vtk (p8est, NULL, "shell_none");
   write_vtk (p8est, geye, "shell_identity");
   write_vtk (p8est, gshell, "shell_shell");
@@ -190,7 +190,7 @@ main (int argc, char **argv)
   P4EST_STATISTICS ("Sphere\n");
   conn = p8est_connectivity_new_sphere ();
   p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
-  p8est_refine (p8est, true, refine_fn, NULL);
+  p8est_refine (p8est, 1, refine_fn, NULL);
   write_vtk (p8est, NULL, "sphere_none");
   write_vtk (p8est, geye, "sphere_identity");
   write_vtk (p8est, gsphere, "sphere_sphere");

@@ -41,7 +41,7 @@
 
 typedef struct
 {
-  bool                expect_query, expect_reply;
+  int                 expect_query, expect_reply;
   size_t              recv_offset;
   sc_array_t          send_first, send_second;
   sc_array_t          recv_first, recv_second;
@@ -275,7 +275,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   sc_array_t         *cta;
 
   P4EST_ASSERT (treeid >= 0 && treeid < conn->num_trees);
-  P4EST_ASSERT (p4est_quadrant_is_node (n, false));
+  P4EST_ASSERT (p4est_quadrant_is_node (n, 0));
 
   P4EST_QUADRANT_INIT (&tmpq);
   P4EST_QUADRANT_INIT (&o);
@@ -362,7 +362,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
         /* This neighbor tree is higher, so we keep the ownership */
         continue;
       }
-      p8est_quadrant_transform_edge (n, &o, &ei, et, false);
+      p8est_quadrant_transform_edge (n, &o, &ei, et, 0);
       if (ntreeid < lowest) {
         p4est_node_clamp_inside (&o, c);
         lowest = ntreeid;
@@ -394,7 +394,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
 #ifdef P4_TO_P8
           quad_contact[p4est_corner_faces[corner][2]] &&
 #endif
-          true)) {
+          1)) {
       continue;
     }
     p4est_find_corner_transform (conn, treeid, corner, &ci);
@@ -406,7 +406,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
         continue;
       }
       o.level = P4EST_MAXLEVEL;
-      p4est_quadrant_transform_corner (&o, (int) ct->ncorner, false);
+      p4est_quadrant_transform_corner (&o, (int) ct->ncorner, 0);
       if (ntreeid < lowest) {
         p4est_node_clamp_inside (&o, c);
         lowest = ntreeid;
@@ -426,11 +426,11 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
 endfunction:
   c->p.which_tree = lowest;
 
-  P4EST_ASSERT (p4est_quadrant_is_node (c, true));
+  P4EST_ASSERT (p4est_quadrant_is_node (c, 1));
   P4EST_ASSERT (c->p.which_tree >= 0 && c->p.which_tree < conn->num_trees);
 }
 
-static              bool
+static int
 p4est_nodes_foreach (void **item, const void *u)
 {
   const sc_hash_array_data_t *internal_data = u;
@@ -438,7 +438,7 @@ p4est_nodes_foreach (void **item, const void *u)
 
   *item = (void *) (long) new_node_number[(long) *item];
 
-  return true;
+  return 1;
 }
 
 #ifdef P4EST_MPI
@@ -481,7 +481,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   int                *procs, *all_ranges;
   int                *old_sharers, *new_sharers;
   char               *this_base;
-  bool                found;
+  int                 found;
   size_t              first_size, second_size, this_size;
   size_t              num_sharers, old_position, new_position;
   p4est_qcoord_t     *xyz;
@@ -501,7 +501,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   int                 k;
   int                 qcid, face;
   int                *nonlocal_ranks;
-  bool                clamped = true;
+  int                 clamped = 1;
   void               *save_user_data;
   size_t              zz, position;
   int8_t             *local_status, *quad_status;
@@ -739,7 +739,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   sc_array_init (&send_requests, sizeof (MPI_Request));
   for (k = 0; k < num_procs; ++k) {
     peer = peers + k;
-    peer->expect_query = peer->expect_reply = false;
+    peer->expect_query = peer->expect_reply = 0;
     peer->recv_offset = 0;
     sc_array_init (&peer->send_first, first_size);
     sc_array_init (&peer->recv_first, first_size);
@@ -822,7 +822,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       ++num_send_queries;
       if (this_size > 0) {
         ++num_send_nonzero;
-        peer->expect_reply = true;
+        peer->expect_reply = 1;
       }
     }
   }
@@ -839,7 +839,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
         break;
       }
       if (rank <= all_ranges[k * twomaxwin + 2 * l + 1]) {
-        peers[k].expect_query = true;
+        peers[k].expect_query = 1;
         ++num_recv_queries;
         break;
       }
@@ -868,7 +868,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                        k, P4EST_COMM_NODES_QUERY,
                        p4est->mpicomm, &recv_status);
     SC_CHECK_MPI (mpiret);
-    peer->expect_query = false;
+    peer->expect_query = 0;
     for (zz = 0; zz < peer->recv_first.elem_count; ++zz) {
       xyz = sc_array_index (&peer->recv_first, zz);
       inkey.x = xyz[0];
@@ -947,7 +947,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       node_number = sc_array_index (&peer->recv_first, zz);
       position = (size_t) (*node_number + offset_owned_indeps);
       in = sc_array_index (inda, position);
-      P4EST_ASSERT (p4est_quadrant_is_node ((p4est_quadrant_t *) in, true));
+      P4EST_ASSERT (p4est_quadrant_is_node ((p4est_quadrant_t *) in, 1));
       P4EST_ASSERT (in->pad8 >= 0);
       num_sharers = (size_t) in->pad8;
       P4EST_ASSERT (num_sharers <= shared_indeps->elem_count);
@@ -1136,7 +1136,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                        k, P4EST_COMM_NODES_REPLY,
                        p4est->mpicomm, &recv_status);
     SC_CHECK_MPI (mpiret);
-    peer->expect_reply = false;
+    peer->expect_reply = 0;
   }
 #endif /* P4EST_MPI */
 
@@ -1293,14 +1293,14 @@ p4est_nodes_destroy (p4est_nodes_t * nodes)
   P4EST_FREE (nodes);
 }
 
-bool
+int
 p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
   int                 k, prev, owner, pshare, ocount;
   int                *sharers, *sorted;
-  bool                failed, bad;
+  int                 failed, bad;
   size_t              zz, position, sharez, num_sharers, max_sharers;
   p4est_topidx_t      otree, ntree;
   p4est_locidx_t      il, num_indep_nodes, local_num;
@@ -1310,7 +1310,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   sc_array_t         *hang;
   sc_recycle_array_t *rarr;
 
-  failed = false;
+  failed = 0;
   sorted = P4EST_ALLOC (int, INT8_MAX);
 
   if (nodes->indep_nodes.elem_size != sizeof (p4est_indep_t) ||
@@ -1322,13 +1322,13 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 #endif
       nodes->shared_indeps.elem_size != sizeof (sc_recycle_array_t)) {
     P4EST_NOTICE ("p4est nodes invalid array size\n");
-    failed = true;
+    failed = 1;
     goto failtest;
   }
 
   if (nodes->num_local_quadrants != p4est->local_num_quadrants) {
     P4EST_NOTICE ("p4est nodes invalid quadrant count\n");
-    failed = true;
+    failed = 1;
     goto failtest;
   }
 
@@ -1345,7 +1345,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
         k = sorted[sharez];
         if (prev >= k || k == rank || k >= num_procs) {
           P4EST_NOTICE ("p4est nodes invalid sharers 1\n");
-          failed = true;
+          failed = 1;
           goto failtest;
         }
         prev = k;
@@ -1361,47 +1361,47 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   otree = 0;
   for (il = 0; il < num_indep_nodes; ++il) {
     in = sc_array_index (&nodes->indep_nodes, (size_t) il);
-    if (!p4est_quadrant_is_node ((p4est_quadrant_t *) in, false)) {
+    if (!p4est_quadrant_is_node ((p4est_quadrant_t *) in, 0)) {
       P4EST_NOTICE ("p4est nodes independent clamped\n");
-      failed = true;
+      failed = 1;
       goto failtest;
     }
     ntree = in->p.piggy3.which_tree;
     local_num = in->p.piggy3.local_num;
     if (ntree < otree || ntree >= p4est->connectivity->num_trees) {
       P4EST_NOTICE ("p4est nodes invalid tree\n");
-      failed = true;
+      failed = 1;
       goto failtest;
     }
     otree = ntree;
     if (in->pad8 < 0 || (num_sharers = (size_t) in->pad8) > max_sharers) {
       P4EST_NOTICE ("p4est nodes invalid sharer count\n");
-      failed = true;
+      failed = 1;
       goto failtest;
     }
     if (il < offset_owned_indeps || il >= end_owned_indeps) {
       owner = nodes->nonlocal_ranks[k++];
       if (owner < prev || owner == rank || owner >= num_procs) {
         P4EST_NOTICE ("p4est nodes invalid owner\n");
-        failed = true;
+        failed = 1;
         goto failtest;
       }
       if (local_num < 0 || local_num >= nodes->global_owned_indeps[owner]) {
         P4EST_NOTICE ("p4est nodes invalid non-owned index\n");
-        failed = true;
+        failed = 1;
         goto failtest;
       }
       prev = owner;
       if (num_sharers < 1) {
         P4EST_NOTICE ("p4est nodes invalid non-owned sharing 1\n");
-        failed = true;
+        failed = 1;
         goto failtest;
       }
     }
     else {
       if (local_num != il - offset_owned_indeps) {
         P4EST_NOTICE ("p4est nodes invalid owned index\n");
-        failed = true;
+        failed = 1;
         goto failtest;
       }
       owner = prev = rank;
@@ -1419,7 +1419,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
       }
       if (bad || position >= rarr->a.elem_count) {
         P4EST_NOTICE ("p4est nodes invalid sharer position\n");
-        failed = true;
+        failed = 1;
         goto failtest;
       }
       sharers = sc_array_index (&rarr->a, position);
@@ -1429,7 +1429,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
       for (zz = 0; zz < num_sharers; ++zz) {
         if (sorted[zz] <= pshare || sorted[zz] == rank) {
           P4EST_NOTICE ("p4est nodes invalid sharers 2\n");
-          failed = true;
+          failed = 1;
           goto failtest;
         }
         if (sorted[zz] == owner) {
@@ -1440,7 +1440,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
     }
     if (owner != rank && ocount != 1) {
       P4EST_NOTICE ("p4est nodes invalid non-owned sharing 2\n");
-      failed = true;
+      failed = 1;
       goto failtest;
     }
   }
@@ -1449,9 +1449,9 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   hang = &nodes->face_hangings;
   for (zz = 0; zz < hang->elem_count; ++zz) {
     hq = sc_array_index (hang, zz);
-    if (!p4est_quadrant_is_node (hq, false)) {
+    if (!p4est_quadrant_is_node (hq, 0)) {
       P4EST_NOTICE ("p4est nodes face hanging clamped\n");
-      failed = true;
+      failed = 1;
       goto failtest;
     }
   }
@@ -1459,9 +1459,9 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   hang = &nodes->edge_hangings;
   for (zz = 0; zz < hang->elem_count; ++zz) {
     hq = sc_array_index (hang, zz);
-    if (!p4est_quadrant_is_node (hq, false)) {
+    if (!p4est_quadrant_is_node (hq, 0)) {
       P4EST_NOTICE ("p4est nodes edge hanging clamped\n");
-      failed = true;
+      failed = 1;
       goto failtest;
     }
   }

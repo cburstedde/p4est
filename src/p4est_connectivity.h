@@ -142,13 +142,13 @@ void                p4est_connectivity_destroy (p4est_connectivity_t *
 /** Examine a connectivity structure.
  * \return          Returns true if structure is valid, false otherwise.
  */
-bool                p4est_connectivity_is_valid (p4est_connectivity_t *
+int                 p4est_connectivity_is_valid (p4est_connectivity_t *
                                                  connectivity);
 
 /** Check two connectivity structures for equality.
  * \return          Returns true if structures are equal, false otherwise.
  */
-bool                p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
+int                 p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
                                                  p4est_connectivity_t *
                                                  conn2);
 

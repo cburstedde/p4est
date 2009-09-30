@@ -163,7 +163,7 @@ p4est_nodes_t      *p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost);
 void                p4est_nodes_destroy (p4est_nodes_t * nodes);
 
 /** Check node information for internal consistency. */
-bool                p4est_nodes_is_valid (p4est_t * p4est,
+int                 p4est_nodes_is_valid (p4est_t * p4est,
                                           p4est_nodes_t * nodes);
 
 SC_EXTERN_C_END;

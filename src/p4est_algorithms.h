@@ -58,26 +58,26 @@ unsigned            p4est_quadrant_checksum (sc_array_t * quadrants,
  * \return Returns true if sorted, false otherwise.
  * \note Duplicate quadrants are not allowed.
  */
-bool                p4est_tree_is_sorted (p4est_tree_t * tree);
+int                 p4est_tree_is_sorted (p4est_tree_t * tree);
 
 /** Test if a tree is sorted in Morton ordering and linear.
  * \return Returns true if linear, false otherwise.
  * \note Linear means that the tree has no overlaps.
  */
-bool                p4est_tree_is_linear (p4est_tree_t * tree);
+int                 p4est_tree_is_linear (p4est_tree_t * tree);
 
 /** Test if a tree is sorted in Morton ordering and complete.
  * \return Returns true if complete, false otherwise.
  * \note Complete means that the tree has no holes and no overlaps.
  */
-bool                p4est_tree_is_complete (p4est_tree_t * tree);
+int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
 /** Check if a tree is sorted/linear except for diagonally outside corners.
  * \param [in]  check_linearity  Boolean for additional check for linearity.
  * \return Returns true if almost sorted/linear, false otherwise.
  */
-bool                p4est_tree_is_almost_sorted (p4est_tree_t * tree,
-                                                 bool check_linearity);
+int                 p4est_tree_is_almost_sorted (p4est_tree_t * tree,
+                                                 int check_linearity);
 
 /** Print the quadrants in a tree.
  * Prints one line per quadrant with x, y, level and a string.
@@ -100,8 +100,8 @@ void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
  * \param [in] compare_data     Also check if quadrant data are identical.
  * \return          Returns true if forests and their connectivities are equal.
  */
-bool                p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2,
-                                    bool compare_data);
+int                 p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2,
+                                    int compare_data);
 
 /** Check a forest for validity and allreduce the result.
  * Some properties of a valid forest are:
@@ -111,7 +111,7 @@ bool                p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2,
  * \param [in] p4est    The forest to be tested.
  * \return              Returns true if valid, false otherwise.
  */
-bool                p4est_is_valid (p4est_t * p4est);
+int                 p4est_is_valid (p4est_t * p4est);
 
 /** Find the lowest position tq in a quadrant array such that tq >= q.
  * \return  Returns the id of the matching quadrant
@@ -184,9 +184,9 @@ size_t              p4est_tree_remove_nonowned (p4est_t * p4est,
  *
  * \param [in]  p4est      Used for the memory pools and quadrant init.
  * \param [in]  q1         First input quadrant.  User data will not change.
- * \param [in]  include_q1 Flag is set to true if q1 is included.
+ * \param [in]  include_q1 Flag to specify whether q1 is included.
  * \param [in]  q2         Second input quadrant.  User data will not change.
- * \param [in]  include_q2 Flag is set to true if q2 is included.
+ * \param [in]  include_q2 Flag to specify whether q2 is included.
  * \param [out] tree       Initialized tree with zero elements.
  * \param [in]  which_tree The 0-based index of \a tree which is needed for
  *                         the \c p4est_quadrant_init_data routine.
@@ -195,9 +195,9 @@ size_t              p4est_tree_remove_nonowned (p4est_t * p4est,
  */
 void                p4est_complete_region (p4est_t * p4est,
                                            const p4est_quadrant_t * q1,
-                                           bool include_q1,
+                                           int include_q1,
                                            const p4est_quadrant_t * q2,
-                                           bool include_q2,
+                                           int include_q2,
                                            p4est_tree_t * tree,
                                            p4est_topidx_t which_tree,
                                            p4est_init_t init_fn);

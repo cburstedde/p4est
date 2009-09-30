@@ -290,7 +290,7 @@ main (int argc, char **argv)
 {
   p4est_connectivity_t *conn;
 
-  sc_init (MPI_COMM_NULL, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   conn = p8est_connectivity_new_periodic ();

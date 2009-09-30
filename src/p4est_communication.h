@@ -86,33 +86,33 @@ int                 p4est_comm_find_owner (p4est_t * p4est,
  */
 void                p4est_comm_tree_info (p4est_t * p4est,
                                           p4est_locidx_t which_tree,
-                                          bool full_tree[],
-                                          bool tree_contact[],
+                                          int full_tree[],
+                                          int tree_contact[],
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 
 /** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
- * \param [in] p4est             The p4est to work on.
- * \param [in] which_tree        The tree index to work on.
- * \param [in] full_tree[2]      Flags as computed by p4est_comm_tree_info.
- * \param [in] tree_contact[4]   Flags as computed by p4est_comm_tree_info.
- * \param [in] q                 The quadrant to be checked.
- * \return   Returns true iff this quadrant's 3x3 neighborhood is owned.
+ * \param [in] p4est            The p4est to work on.
+ * \param [in] which_tree       The tree index to work on.
+ * \param [in] full_tree[2]     Flags as computed by p4est_comm_tree_info.
+ * \param [in] tree_contact[4]  Flags as computed by p4est_comm_tree_info.
+ * \param [in] q                The quadrant to be checked.
+ * \return          Returns true iff this quadrant's 3x3 neighborhood is owned.
  */
-bool                p4est_comm_neighborhood_owned (p4est_t * p4est,
+int                 p4est_comm_neighborhood_owned (p4est_t * p4est,
                                                    p4est_locidx_t which_tree,
-                                                   bool full_tree[],
-                                                   bool tree_contact[],
+                                                   int full_tree[],
+                                                   int tree_contact[],
                                                    p4est_quadrant_t * q);
 
-/** Evaluates a boolean flag among processors.
- * \param [in] p4est       The MPI communicator of this p4est will be used.
- * \param [in] flag        The boolean flag to communicate.
- * \param [in] operation   Either MPI_BAND or MPI_BOR.
- * \return     Returns the AND resp. OR of all processors' boolean flags.
+/** Evaluates true/false of a flag among processors.
+ * \param [in] p4est        The MPI communicator of this p4est will be used.
+ * \param [in] flag         The variable to communicate.
+ * \param [in] operation    Either MPI_BAND or MPI_BOR (not used bitwise).
+ * \return          Returns the logical AND resp. OR of all processors' flags.
  */
-bool                p4est_comm_sync_flag (p4est_t * p4est,
-                                          bool flag, MPI_Op operation);
+int                 p4est_comm_sync_flag (p4est_t * p4est,
+                                          int flag, MPI_Op operation);
 
 SC_EXTERN_C_END;
 

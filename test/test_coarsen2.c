@@ -30,7 +30,7 @@ static const int    refine_level = 6;
 #else
 static const int    refine_level = 4;
 #endif
-static bool         coarsen_all = true;
+static int          coarsen_all = 1;
 
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -69,7 +69,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
@@ -79,15 +79,15 @@ main (int argc, char **argv)
   connectivity = p4est_connectivity_new_corner ();
 #endif
   p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
-  p4est_refine (p4est, true, refine_fn, NULL);
+  p4est_refine (p4est, 1, refine_fn, NULL);
 
-  coarsen_all = true;
-  p4est_coarsen (p4est, false, coarsen_fn, NULL);
-  coarsen_all = false;
-  p4est_coarsen (p4est, true, coarsen_fn, NULL);
+  coarsen_all = 1;
+  p4est_coarsen (p4est, 0, coarsen_fn, NULL);
+  coarsen_all = 0;
+  p4est_coarsen (p4est, 1, coarsen_fn, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
-  coarsen_all = true;
-  p4est_coarsen (p4est, true, coarsen_fn, NULL);
+  coarsen_all = 1;
+  p4est_coarsen (p4est, 1, coarsen_fn, NULL);
 
   if (mpisize == 1) {
     SC_CHECK_ABORT (p4est->global_num_quadrants ==

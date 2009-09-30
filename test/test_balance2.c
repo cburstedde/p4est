@@ -106,7 +106,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
 #ifndef P4_TO_P8
@@ -159,7 +159,7 @@ main (int argc, char **argv)
 
   /* refine and balance the forest */
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 1");
-  p4est_refine (p4est, true, refine_fn, NULL);
+  p4est_refine (p4est, 1, refine_fn, NULL);
   SC_CHECK_ABORT (!p4est_is_balanced (p4est, P4EST_BALANCE_FULL),
                   "Balance 2");
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);

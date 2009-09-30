@@ -113,7 +113,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
@@ -128,7 +128,7 @@ main (int argc, char **argv)
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   /* refine and balance to make the number of elements interesting */
-  p4est_refine (p4est, true, refine_fn, init_fn);
+  p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* Set an arbitrary partition.
    *

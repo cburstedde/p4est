@@ -62,8 +62,8 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  */
 void                p8est_vtk_write_all (p8est_t * p8est,
                                          p8est_geometry_t * geom,
-                                         double scale, bool write_tree,
-                                         bool write_rank, int wrap_rank,
+                                         double scale, int write_tree,
+                                         int write_rank, int wrap_rank,
                                          int num_scalars, int num_vectors,
                                          const char *filename, ...);
 
@@ -74,7 +74,7 @@ void                p8est_vtk_write_all (p8est_t * p8est,
  * fields.  The calling sequence would be something like
  *
  * \begincode
- * p8est_vtk_write_header(p8est, geom, 1., true, true, 0, "output");
+ * p8est_vtk_write_header(p8est, geom, 1., 1, 1, 0, "output");
  * p8est_vtk_write_point_scalar (...);
  * ...
  * p8est_vtk_write_footer(p8est, "output");
@@ -98,8 +98,8 @@ void                p8est_vtk_write_all (p8est_t * p8est,
  */
 int                 p8est_vtk_write_header (p8est_t * p8est,
                                             p8est_geometry_t * geom,
-                                            double scale, bool write_tree,
-                                            bool write_rank, int wrap_rank,
+                                            double scale, int write_tree,
+                                            int write_rank, int wrap_rank,
                                             const char *point_scalars,
                                             const char *point_vectors,
                                             const char *filename);

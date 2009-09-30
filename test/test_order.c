@@ -346,7 +346,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
@@ -355,7 +355,7 @@ main (int argc, char **argv)
                      sizeof (user_data_t), init_fn, NULL);
 
   /* refine to make the number of elements interesting */
-  p4est_refine (p4est, true, refine_fn, init_fn);
+  p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* balance the forest */
   p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);
@@ -382,7 +382,7 @@ main (int argc, char **argv)
                      sizeof (user_data_t), init_fn, NULL);
 
   /* refine to make the number of elements interesting */
-  p4est_refine (p4est, true, refine_fn, init_fn);
+  p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* balance the forest */
   p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);

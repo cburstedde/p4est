@@ -212,13 +212,13 @@ void                p8est_connectivity_destroy (p8est_connectivity_t *
 /** Examine a connectivity structure.
  * \return  Returns true if structure is valid, false otherwise.
  */
-bool                p8est_connectivity_is_valid (p8est_connectivity_t *
+int                 p8est_connectivity_is_valid (p8est_connectivity_t *
                                                  connectivity);
 
 /** Check two connectivity structures for equality.
  * \return          Returns true if structures are equal, false otherwise.
  */
-bool                p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
+int                 p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
                                                  p8est_connectivity_t *
                                                  conn2);
 
@@ -270,7 +270,7 @@ p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_brick
   (p4est_topidx_t m, p4est_topidx_t n, p4est_topidx_t p,
-   bool periodic_a, bool periodic_b, bool periodic_c);
+   int periodic_a, int periodic_b, int periodic_c);
 
 /** Create a connectivity structure that builds a spherical shell.
  * It is made up of six connected parts [-1,1]x[-1,1]x[1,2].

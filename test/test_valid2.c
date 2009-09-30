@@ -93,8 +93,8 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
   p4est = p4est_new (mpicomm, conn, 0, 0, NULL, NULL);
-  p4est_refine (p4est, true, refine_fn, NULL);
-  p4est_coarsen (p4est, true, coarsen_fn, NULL);
+  p4est_refine (p4est, 1, refine_fn, NULL);
+  p4est_coarsen (p4est, 1, coarsen_fn, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, NULL, vtkname);
@@ -132,7 +132,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
 #ifndef P4_TO_P8
@@ -160,7 +160,7 @@ main (int argc, char **argv)
   check_all (mpicomm, p8est_connectivity_new_shell (),
              "test_shell", 0x558723a2U);
   check_all (mpicomm,
-             p8est_connectivity_new_brick (2, 3, 4, false, false, true),
+             p8est_connectivity_new_brick (2, 3, 4, 0, 0, 1),
              "test_brick", 0x82174e14U);
 #endif
 

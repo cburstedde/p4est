@@ -66,7 +66,7 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpi->mpicomm, true, true, NULL, SC_LP_DEFAULT);
+  sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   SC_CHECK_ABORT (mpi->mpisize == 5, "This example requires MPI with np=5.");
@@ -77,7 +77,7 @@ main (int argc, char **argv)
 
   /* partition and refine the mesh */
   (void) p4est_partition_given (p4est, given);
-  p4est_refine (p4est, true, refine_fn, NULL);
+  p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_vtk_write_file (p4est, NULL, "mesh_second_refined");
 
   /* balance the mesh */

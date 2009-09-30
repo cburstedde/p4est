@@ -205,7 +205,7 @@ void                p8est_destroy (p8est_t * p8est);
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p8est that does not depend on the input.
  */
-p8est_t            *p8est_copy (p8est_t * input, bool copy_data);
+p8est_t            *p8est_copy (p8est_t * input, int copy_data);
 
 /** Reset user pointer and element data.
  * When the data size is changed the quadrant data is freed and allocated.
@@ -229,7 +229,7 @@ void                p8est_reset_data (p8est_t * p8est, size_t data_size,
  *                       which is already allocated automatically.
  */
 void                p8est_refine (p8est_t * p8est,
-                                  bool refine_recursive,
+                                  int refine_recursive,
                                   p8est_refine_t refine_fn,
                                   p8est_init_t init_fn);
 
@@ -241,7 +241,7 @@ void                p8est_refine (p8est_t * p8est,
  * \param [in] maxlevel  Maximum allowed level (inclusive) of quadrants.
  */
 void                p8est_refine_level (p8est_t * p8est,
-                                        bool refine_recursive,
+                                        int refine_recursive,
                                         p8est_refine_t refine_fn,
                                         p8est_init_t init_fn,
                                         int allowed_level);
@@ -253,7 +253,7 @@ void                p8est_refine_level (p8est_t * p8est,
  *                        which is already allocated automatically.
  */
 void                p8est_coarsen (p8est_t * p8est,
-                                   bool coarsen_recursive,
+                                   int coarsen_recursive,
                                    p8est_coarsen_t coarsen_fn,
                                    p8est_init_t init_fn);
 
@@ -292,7 +292,7 @@ unsigned            p8est_checksum (p8est_t * p8est);
  * \note            Aborts on file errors.
  */
 void                p8est_save (const char *filename, p8est_t * p8est,
-                                bool save_data);
+                                int save_data);
 
 /** Load the complete connectivity/p4est structure from disk.
  * \param [in] filename         Name of the file to read.
@@ -309,7 +309,7 @@ void                p8est_save (const char *filename, p8est_t * p8est,
  * \note            Aborts on file errors or invalid file contents.
  */
 p8est_t            *p8est_load (const char *filename, MPI_Comm mpicomm,
-                                size_t data_size, bool load_data,
+                                size_t data_size, int load_data,
                                 void *user_pointer,
                                 p8est_connectivity_t ** connectivity);
 
