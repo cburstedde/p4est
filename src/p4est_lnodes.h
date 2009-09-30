@@ -122,7 +122,7 @@ p4est_lnodes_rank_t;
  */
 /*@unused@*/
 static inline int
-p4est_lnodes_decode (int8_t face_code, int hanging_face[6])
+p4est_lnodes_decode (int8_t face_code, int hanging_face[4])
 {
   SC_ASSERT (face_code >= 0);
 
