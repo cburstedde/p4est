@@ -80,11 +80,11 @@
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_lnodes_t                  p8est_lnodes_t
 #define p4est_lnodes_rank_t             p8est_lnodes_rank_t
+#define p4est_iter_volume_t             p8est_iter_volume_t
+#define p4est_iter_volume_info_t        p8est_iter_volume_info_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
 #define p4est_iter_face_side_t          p8est_iter_face_side_t
-#define p4est_iter_volume_t             p8est_iter_volume_t
-#define p4est_iter_volume_info_t        p8est_iter_volume_info_t
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
@@ -173,7 +173,8 @@
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors
 #define p4est_quadrant_all_face_neighbors p8est_quadrant_all_face_neighbors
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
-#define p4est_quadrant_corner_neighbor_extra p8est_quadrant_corner_neighbor_extra
+#define p4est_quadrant_corner_neighbor_extra \
+                                        p8est_quadrant_corner_neighbor_extra
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
 #define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
