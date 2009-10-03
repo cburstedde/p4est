@@ -1090,7 +1090,8 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
      * of the owner that touches the corner.  This convention allows all
      * processes that share the quad to have the same quadrant in their
      * send/recv lists. */
-    p4est_smallest_corner_descendent (owner_quad, &tempq, owner_corner);
+    p4est_quadrant_corner_descendent (owner_quad, &tempq, owner_corner,
+                                      P4EST_QMAXLEVEL);
     type = (int8_t) (P4EST_LN_C_OFFSET + owner_corner);
     p4est_lnodes_push_binfo (&touching_procs, &all_procs, send_buf_info,
                              recv_buf_info, inode_sharers, owner_proc, rank,
@@ -1710,7 +1711,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
   p4est_lnodes_buf_info_t *binfo;
   int                 owner_proc;
 
-  p4est_smallest_corner_descendent (q, &tempq, c);
+  p4est_quadrant_corner_descendent (q, &tempq, c, P4EST_QMAXLEVEL);
   ownerq = tempq;
 
   for (i = 0; i < P4EST_DIM; i++) {

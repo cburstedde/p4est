@@ -1234,17 +1234,18 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
 }
 
 void
-p4est_smallest_corner_descendent (const p4est_quadrant_t * q,
-                                  p4est_quadrant_t * r, int c)
+p4est_quadrant_corner_descendent (const p4est_quadrant_t * q,
+                                  p4est_quadrant_t * r, int c, int level)
 {
   p4est_qcoord_t      shift = P4EST_QUADRANT_LEN (q->level) -
-    P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
+    P4EST_QUADRANT_LEN (level);
+  P4EST_ASSERT (level >= (int) q->level && level <= P4EST_QMAXLEVEL);
   r->x = q->x + (c % 2 ? shift : 0);
   r->y = q->y + ((c % 4) / 2 ? shift : 0);
 #ifdef P4_TO_P8
   r->z = q->z + (c / 4 ? shift : 0);
 #endif
-  r->level = P4EST_QMAXLEVEL;
+  r->level = (int8_t) level;
 }
 
 void
