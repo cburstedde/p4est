@@ -2147,10 +2147,10 @@ p8est_lnodes_code_fix (int16_t face_code)
   }
   else {
     for (i = 0; i < 3; i++) {
-      if (face_code & (0x0001 << (i + 6))) {
+      if (face_code & (1 << (i + 6))) {
         /* zero out touching edges */
-        face_code &= ~(0x0001 << (((i + 1) % 2) + 3));
-        face_code &= ~(0x0001 << (((i + 2) % 2) + 3));
+        face_code &= ~(1 << (((i + 1) % 3) + 3));
+        face_code &= ~(1 << (((i + 2) % 3) + 3));
       }
     }
   }
