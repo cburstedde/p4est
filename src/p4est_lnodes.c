@@ -3269,7 +3269,7 @@ p4est_lnodes_share_all_begin (sc_array_t * array, sc_array_t ** Comm_array,
   send_bufs = (sc_array_t *) sc_array_index (comm_array, 1);
   sc_array_init (send_bufs, sizeof (sc_array_t));
   recv_bufs = sc_array_new (sizeof (sc_array_t));
-  sc_array_resize (recv_bufs, npeers);
+  sc_array_resize (recv_bufs, (size_t) npeers);
 
   for (p = 0; p < npeers; p++) {
     lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, p);
@@ -3314,7 +3314,7 @@ void
 p4est_lnodes_share_all_end (sc_array_t * comm_array)
 {
   int                 mpiret;
-  int                 zz;
+  size_t              zz;
   sc_array_t         *requests;
   sc_array_t         *send_bufs;
   sc_array_t         *send_buf;
