@@ -278,7 +278,7 @@ p4est_iter_loop_args_new (p4est_connectivity_t * conn,
   for (i = 0; i < alloc_size; i++) {
     loop_args->index[i] =
       P4EST_ALLOC (size_t, (P4EST_QMAXLEVEL + 1) * P4EST_ITER_STRIDE);
-    if (i % 2) {
+    if (i & 1) {
       loop_args->quadrants[i] = &(ghost_layer->ghosts);
     }
   }
@@ -352,20 +352,20 @@ p4est_iter_init_loop_volume (p4est_iter_loop_args_t * loop_args,
     loop_args->index[i * 2 + ghost][1] = stop_ghost_quad;
   }
   for (i = 0; i < 4; i++) {
-    loop_args->quadrants[i] = (i % 2) ? &(ghost_layer->ghosts) : local_quads;
+    loop_args->quadrants[i] = (i & 1) ? &(ghost_layer->ghosts) : local_quads;
   }
 #ifdef P4_TO_P8
   if (loop_args->loop_edge) {
     for (; i < 8; i++) {
       loop_args->quadrants[i] =
-        (i % 2) ? &(ghost_layer->ghosts) : local_quads;
+        (i & 1) ? &(ghost_layer->ghosts) : local_quads;
     }
   }
 #endif
   if (loop_args->loop_corner) {
     for (; i < 2 * P4EST_CHILDREN; i++) {
       loop_args->quadrants[i] =
-        (i % 2) ? &(ghost_layer->ghosts) : local_quads;
+        (i & 1) ? &(ghost_layer->ghosts) : local_quads;
     }
   }
 }
@@ -420,15 +420,15 @@ p4est_iter_init_loop_face (p4est_iter_loop_args_t * loop_args,
 #ifdef P4_TO_P8
   if (loop_args->loop_edge) {
     for (; i < 8; i++) {
-      loop_args->quadrants[i] = (i % 2) ? &(ghost_layer->ghosts) :
-        ((i / 2) % 2) ? right_local_quads : left_local_quads;
+      loop_args->quadrants[i] = (i & 1) ? &(ghost_layer->ghosts) :
+        ((i >> 1) & 1) ? right_local_quads : left_local_quads;
     }
   }
 #endif
   if (loop_args->loop_corner) {
     for (; i < 2 * P4EST_CHILDREN; i++) {
-      loop_args->quadrants[i] = (i % 2) ? &(ghost_layer->ghosts) :
-        ((i / 2) % 2) ? right_local_quads : left_local_quads;
+      loop_args->quadrants[i] = (i & 1) ? &(ghost_layer->ghosts) :
+        ((i >> 1) & 1) ? right_local_quads : left_local_quads;
     }
   }
 }
@@ -468,14 +468,14 @@ p4est_iter_init_loop_outside_face (p4est_iter_loop_args_t * loop_args,
   if (loop_args->loop_edge) {
     for (; i < 4; i++) {
       loop_args->quadrants[i] =
-        (i % 2) ? &(ghost_layer->ghosts) : local_quads;
+        (i & 1) ? &(ghost_layer->ghosts) : local_quads;
     }
   }
 #endif
   if (loop_args->loop_corner) {
     for (; i < P4EST_CHILDREN; i++) {
       loop_args->quadrants[i] =
-        (i % 2) ? &(ghost_layer->ghosts) : local_quads;
+        (i & 1) ? &(ghost_layer->ghosts) : local_quads;
     }
   }
 }

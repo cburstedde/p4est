@@ -566,9 +566,9 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
         }
         for (j = 0; j < 4; j++) {
           l = 4 * i + j;
-          tex[l] = ((tx + ((i == 0) ? 0 : (2 * (j % 2) - 1))) + m) % m;
+          tex[l] = ((tx + ((i == 0) ? 0 : (2 * (j & 1) - 1))) + m) % m;
           tey[l] = ((ty + ((i == 1) ? 0 :
-                           (2 * ((i == 0) ? (j % 2) : (j / 2)) - 1))) +
+                           (2 * ((i == 0) ? (j & 1) : (j / 2)) - 1))) +
                     n) % n;
           tez[l] = ((tz + ((i == 2) ? 0 : (2 * (j / 2) - 1))) + p) % p;
           te[l] = 0;
@@ -582,9 +582,9 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
         }
       }
       for (i = 0; i < 8; i++) {
-        tcx[i] = ((tx + (((i % 2) == 0) ? -1 : 1)) + m) % m;
-        tcy[i] = ((ty + ((((i / 2) % 2) == 0) ? -1 : 1)) + n) % n;
-        tcz[i] = ((tz + (((i / 4) == 0) ? -1 : 1)) + p) % p;
+        tcx[i] = ((tx + (((i & 1) == 0) ? -1 : 1)) + m) % m;
+        tcy[i] = ((ty + ((((i >> 1) & 1) == 0) ? -1 : 1)) + n) % n;
+        tcz[i] = ((tz + (((i >> 2) == 0) ? -1 : 1)) + p) % p;
         tc[i] = 0;
         for (j = 0; j < log_cl; j++) {
           tc[i] |= (tcx[i] & (1 << j)) << (2 * j);
@@ -614,8 +614,8 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
           for (j = 0; j < 4; j++) {
             l = i * 4 + j;
             if ((!periodic[dir1] &&
-                 ((coord[dir1] == 0 && (j % 2) == 0) ||
-                  (coord[dir1] == max[dir1] && (j % 2) == 1))) ||
+                 ((coord[dir1] == 0 && (j & 1) == 0) ||
+                  (coord[dir1] == max[dir1] && (j & 1) == 1))) ||
                 (!periodic[dir2] &&
                  ((coord[dir2] == 0 && (j / 2) == 0) ||
                   (coord[dir2] == max[dir2] && (j / 2) == 1)))) {
@@ -645,9 +645,9 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
       }
       for (i = 0; i < 8; i++) {
         if (tree_to_corner != NULL) {
-          c[0] = i % 2;
-          c[1] = (i / 2) % 2;
-          c[2] = i / 4;
+          c[0] = i & 1;
+          c[1] = (i >> 1) & 1;
+          c[2] = i >> 2;
           if ((!periodic[0] &&
                ((coord[0] == 0 && c[0] == 0) ||
                 (coord[0] == max[0] && c[0] == 1))) ||
@@ -693,20 +693,20 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
             corner_to_corner[ttemp * 8 + (7 - i)] = (int8_t) i;
           }
         }
-        if (tz > 0 && i / 4 == 0) {
+        if (tz > 0 && (i >> 2) == 0) {
           tree_to_vertex[tj * 8 + i] = tree_to_vertex[tf[4] * 8 + i + 4];
         }
-        else if (ty > 0 && (i / 2) % 2 == 0) {
+        else if (ty > 0 && ((i >> 1) & 1) == 0) {
           tree_to_vertex[tj * 8 + i] = tree_to_vertex[tf[2] * 8 + i + 2];
         }
-        else if (tx > 0 && i % 2 == 0) {
+        else if (tx > 0 && (i & 1) == 0) {
           tree_to_vertex[tj * 8 + i] = tree_to_vertex[tf[0] * 8 + i + 1];
         }
         else {
           tree_to_vertex[tj * 8 + i] = vcount++;
-          vertices[vicount++] = (double) (tx + (i % 2));
-          vertices[vicount++] = (double) (ty + ((i / 2) % 2));
-          vertices[vicount++] = (double) (tz + (i / 4));
+          vertices[vicount++] = (double) (tx + (i & 1));
+          vertices[vicount++] = (double) (ty + ((i >> 1) & 1));
+          vertices[vicount++] = (double) (tz + (i >> 2));
         }
       }
     }

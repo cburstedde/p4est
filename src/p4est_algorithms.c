@@ -765,10 +765,10 @@ p4est_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
     }
 
     cid = p4est_quadrant_child_id (lq);
-    x = lq->x + ((cid % 2) ? shift : 0);
-    y = lq->y + (((cid / 2) % 2) ? shift : 0);
+    x = lq->x + ((cid & 1) ? shift : 0);
+    y = lq->y + (((cid >> 1) & 1) ? shift : 0);
 #ifdef P4_TO_P8
-    z = lq->z + ((cid / 4) ? shift : 0);
+    z = lq->z + ((cid >> 2) ? shift : 0);
 #endif
     a = ~(x | y
 #ifdef P4_TO_P8
@@ -791,10 +791,10 @@ p4est_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
     }
 
     cid = p4est_quadrant_child_id (uq);
-    x = uq->x + ((cid % 2) ? shift : 0);
-    y = uq->y + (((cid / 2) % 2) ? shift : 0);
+    x = uq->x + ((cid & 1) ? shift : 0);
+    y = uq->y + (((cid >> 1) & 1) ? shift : 0);
 #ifdef P4_TO_P8
-    z = uq->z + ((cid / 4) ? shift : 0);
+    z = uq->z + ((cid >> 2) ? shift : 0);
 #endif
     a = ~(x | y
 #ifdef P4_TO_P8
@@ -856,10 +856,10 @@ p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
     P4EST_ASSERT (uq->level == P4EST_QMAXLEVEL);
 
     cid = p4est_quadrant_child_id (uq);
-    x = uq->x + ((cid % 2) ? shift : 0);
-    y = uq->y + (((cid / 2) % 2) ? shift : 0);
+    x = uq->x + ((cid & 1) ? shift : 0);
+    y = uq->y + (((cid >> 1) & 1) ? shift : 0);
 #ifdef P4_TO_P8
-    z = uq->z + ((cid / 4) ? shift : 0);
+    z = uq->z + ((cid >> 2) ? shift : 0);
 #endif
     all = ~(x | y
 #ifdef P4_TO_P8
@@ -883,10 +883,10 @@ p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
     P4EST_ASSERT (lq->level == P4EST_QMAXLEVEL);
 
     cid = p4est_quadrant_child_id (lq);
-    x = lq->x + ((cid % 2) ? shift : 0);
-    y = lq->y + (((cid / 2) % 2) ? shift : 0);
+    x = lq->x + ((cid & 1) ? shift : 0);
+    y = lq->y + (((cid >> 1) & 1) ? shift : 0);
 #ifdef P4_TO_P8
-    z = lq->z + ((cid / 4) ? shift : 0);
+    z = lq->z + ((cid >> 2) ? shift : 0);
 #endif
     all = ~(x | y
 #ifdef P4_TO_P8

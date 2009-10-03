@@ -98,19 +98,19 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
       tx = (p4est_locidx_t) (vertex[i][0] - vertex[0][0]);
       ty = (p4est_locidx_t) (vertex[i][1] - vertex[0][1]);
       tz = (p4est_locidx_t) (vertex[i][2] - vertex[0][2]);
-      if ((i % 2) == 1) {
+      if ((i & 1) == 1) {
         SC_CHECK_ABORT (tx == 1, "non-unit vertex difference");
       }
       else {
         SC_CHECK_ABORT (tx == 0, "non-unit vertex difference");
       }
-      if ((i / 2) % 2 == 1) {
+      if (((i >> 1) & 1) == 1) {
         SC_CHECK_ABORT (ty == 1, "non-unit vertex difference");
       }
       else {
         SC_CHECK_ABORT (ty == 0, "non-unit vertex difference");
       }
-      if (i / 4 == 1) {
+      if ((i >> 2) == 1) {
         SC_CHECK_ABORT (tz == 1, "non-unit vertex difference");
       }
       else {
@@ -298,14 +298,14 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
         if (num_corners > 0) {
           for (corn1 = 0; corn1 < 8; corn1++) {
             if ((!periodic_a &&
-                 ((corn1 % 2 == 0 && ti == 0) ||
-                  (corn1 % 2 == 1 && ti == m - 1))) ||
+                 (((corn1 & 1) == 0 && ti == 0) ||
+                  ((corn1 & 1) == 1 && ti == m - 1))) ||
                 (!periodic_b &&
-                 (((corn1 / 2) % 2 == 0 && tj == 0) ||
-                  ((corn1 / 2) % 2 == 1 && tj == n - 1))) ||
+                 ((((corn1 >> 1) & 1) == 0 && tj == 0) ||
+                  (((corn1 >> 1) & 1) == 1 && tj == n - 1))) ||
                 (!periodic_c &&
-                 ((corn1 / 4 == 0 && tk == 0) ||
-                  (corn1 / 4 == 1 && tk == p - 1)))) {
+                 (((corn1 >> 2) == 0 && tk == 0) ||
+                  ((corn1 >> 2) == 1 && tk == p - 1)))) {
               SC_CHECK_ABORT (tree_to_corner[ttree1 * 8 + corn1] == -1,
                               "boundary tree without boundary corner");
             }
@@ -323,9 +323,9 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
                   vertices[3 * tree_to_vertex[ttree2 * 8] + 1];
                 tz = (p4est_topidx_t)
                   vertices[3 * tree_to_vertex[ttree2 * 8] + 2];
-                diffx = (i % 2) - ((7 - corn1) % 2);
-                diffy = ((i / 2) % 2) - (((7 - corn1) / 2) % 2);
-                diffz = (i / 4) - ((7 - corn1) / 4);
+                diffx = (i & 1) - ((7 - corn1) & 1);
+                diffy = ((i >> 1) & 1) - (((7 - corn1) >> 1) & 1);
+                diffz = (i >> 2) - ((7 - corn1) >> 2);
                 SC_CHECK_ABORT ((ti + diffx + m) % m == tx,
                                 "unexpected trees around corner");
                 SC_CHECK_ABORT ((tj + diffy + n) % n == ty,

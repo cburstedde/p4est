@@ -323,15 +323,15 @@ p8est_quadrant_touches_edge (const p4est_quadrant_t * q, int edge, int inside)
 
   incount = 0;
   if (axis != 0) {
-    side = edge % 2;
+    side = edge & 1;
     incount += quad_contact[side];
   }
   if (axis != 1) {
-    side = (axis == 0) ? (edge % 2) : ((edge / 2) % 2);
+    side = (axis == 0) ? (edge & 1) : ((edge >> 1) & 1);
     incount += quad_contact[2 + side];
   }
   if (axis != 2) {
-    side = (edge / 2) % 2;
+    side = (edge >> 1) & 1;
     incount += quad_contact[4 + side];
   }
 #ifdef P4EST_DEBUG

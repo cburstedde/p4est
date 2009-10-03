@@ -1051,9 +1051,9 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   ftransform[3 + !reverse] = target_face < 4 ? 2 : 1;
   ftransform[5] = target_face / 2;
   reverse = (p8est_face_permutation_refs[iface][target_face] == 1);
-  ftransform[6 + reverse] = orientation % 2;
-  ftransform[6 + !reverse] = orientation / 2;
-  ftransform[8] = 2 * (iface % 2) + target_face % 2;
+  ftransform[6 + reverse] = (orientation & 1);
+  ftransform[6 + !reverse] = (orientation >> 1);
+  ftransform[8] = 2 * (iface & 1) + (target_face & 1);
 
 #ifdef P4EST_DEBUG
   for (i = 0; i < 3; ++i) {
@@ -1075,7 +1075,7 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   ftransform[3] = 1 - ftransform[5];
   ftransform[6] = orientation;
   ftransform[7] = 0;
-  ftransform[8] = 2 * (iface % 2) + target_face % 2;
+  ftransform[8] = 2 * (iface & 1) + (target_face & 1);
 #endif
 
   return target_tree;

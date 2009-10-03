@@ -1240,10 +1240,10 @@ p4est_quadrant_corner_descendent (const p4est_quadrant_t * q,
   p4est_qcoord_t      shift = P4EST_QUADRANT_LEN (q->level) -
     P4EST_QUADRANT_LEN (level);
   P4EST_ASSERT (level >= (int) q->level && level <= P4EST_QMAXLEVEL);
-  r->x = q->x + (c % 2 ? shift : 0);
-  r->y = q->y + ((c % 4) / 2 ? shift : 0);
+  r->x = q->x + ((c & 1) ? shift : 0);
+  r->y = q->y + (((c >> 1) & 1) ? shift : 0);
 #ifdef P4_TO_P8
-  r->z = q->z + (c / 4 ? shift : 0);
+  r->z = q->z + ((c >> 2) ? shift : 0);
 #endif
   r->level = (int8_t) level;
 }
@@ -1466,12 +1466,12 @@ p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
 #endif
 
   incount = 0;
-  side = corner % 2;
+  side = (corner & 1);
   incount += quad_contact[side];
-  side = (corner / 2) % 2;
+  side = (corner >> 1) & 1;
   incount += quad_contact[2 + side];
 #ifdef P4_TO_P8
-  side = corner / 4;
+  side = (corner >> 2);
   incount += quad_contact[4 + side];
 #endif
 
@@ -1495,10 +1495,10 @@ p4est_quadrant_transform_corner (p4est_quadrant_t * q, int corner, int inside)
     shift[1] = (inside ? P4EST_LAST_OFFSET (q->level) : P4EST_ROOT_LEN);
   }
 
-  q->x = shift[corner % 2];
-  q->y = shift[(corner / 2) % 2];
+  q->x = shift[corner & 1];
+  q->y = shift[(corner >> 1) & 1];
 #ifdef P4_TO_P8
-  q->z = shift[corner / 4];
+  q->z = shift[corner >> 2];
 #endif
 
   P4EST_ASSERT (p4est_quadrant_touches_corner (q, corner, inside));
