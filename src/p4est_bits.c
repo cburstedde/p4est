@@ -65,8 +65,8 @@ p4est_quadrant_is_equal_piggy (const p4est_quadrant_t * q1,
 int
 p4est_quadrant_compare (const void *v1, const void *v2)
 {
-  const p4est_quadrant_t *q1 = v1;
-  const p4est_quadrant_t *q2 = v2;
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
 
   uint32_t            exclorx, exclory;
   int                 log2x, log2y;
@@ -126,8 +126,8 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 int
 p4est_quadrant_compare_piggy (const void *v1, const void *v2)
 {
-  const p4est_quadrant_t *q1 = v1;
-  const p4est_quadrant_t *q2 = v2;
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
 
   /* expect non-negative tree information */
   /* *INDENT-OFF* horrible indent bug */
@@ -144,8 +144,8 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
 int
 p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
 {
-  const p4est_quadrant_t *q1 = v1;
-  const p4est_quadrant_t *q2 = v2;
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
@@ -160,7 +160,7 @@ p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
 unsigned
 p4est_quadrant_hash_fn (const void *v, const void *u)
 {
-  const p4est_quadrant_t *q = v;
+  const p4est_quadrant_t *q = (const p4est_quadrant_t *) v;
   uint32_t            a, b, c;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
@@ -182,8 +182,8 @@ p4est_quadrant_hash_fn (const void *v, const void *u)
 int
 p4est_node_equal_piggy_fn (const void *v1, const void *v2, const void *u)
 {
-  const p4est_quadrant_t *q1 = v1;
-  const p4est_quadrant_t *q2 = v2;
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
 #ifdef P4EST_DEBUG
   const int           clamped = *(int *) u;
 #endif
@@ -202,7 +202,7 @@ p4est_node_equal_piggy_fn (const void *v1, const void *v2, const void *u)
 unsigned
 p4est_node_hash_piggy_fn (const void *v, const void *u)
 {
-  const p4est_quadrant_t *q = v;
+  const p4est_quadrant_t *q = (const p4est_quadrant_t *) v;
 #ifdef P4EST_DEBUG
   const int           clamped = *(int *) u;
 #endif
@@ -1011,9 +1011,9 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
 
   p4est_quadrant_corner_neighbor (q, corner, &temp);
   if (p4est_quadrant_is_inside_root (&temp)) {
-    qp = sc_array_push (quads);
+    qp = p4est_quadrant_array_push (quads);
     *qp = temp;
-    tp = sc_array_push (treeids);
+    tp = (p4est_topidx_t *) sc_array_push (treeids);
     *tp = t;
     return;
   }
@@ -1067,9 +1067,9 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
   p8est_find_corner_transform (conn, t, corner, &ci);
 #endif
   for (ctree = 0; ctree < cta->elem_count; ++ctree) {
-    qp = sc_array_push (quads);
-    tp = sc_array_push (treeids);
-    ct = sc_array_index (cta, ctree);
+    qp = p4est_quadrant_array_push (quads);
+    tp = (p4est_topidx_t *) sc_array_push (treeids);
+    ct = p4est_corner_array_index (cta, ctree);
     p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, 1);
     *qp = temp;
     *tp = ct->ntree;

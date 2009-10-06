@@ -29,28 +29,32 @@ typedef enum
 }
 p8est_geometry_builtin_type_t;
 
+typedef struct p8est_geometry_builtin_shell
+{
+  p8est_geometry_builtin_type_t type;
+  double              R2, R1;
+  double              R2byR1, R1sqrbyR2, Rlog;
+}
+p8est_geometry_builtin_shell_t;
+
+typedef struct p8est_geometry_builtin_sphere
+{
+  p8est_geometry_builtin_type_t type;
+  double              R2, R1, R0;
+  double              R2byR1, R1sqrbyR2, R1log;
+  double              R1byR0, R0sqrbyR1, R0log;
+  double              Clength, CdetJ;
+}
+p8est_geometry_builtin_sphere_t;
+
 typedef struct p8est_geometry_builtin
 {
   p8est_geometry_t    geom;
   union
   {
     p8est_geometry_builtin_type_t type;
-    struct p8est_geometry_builtin_shell
-    {
-      p8est_geometry_builtin_type_t type;
-      double              R2, R1;
-      double              R2byR1, R1sqrbyR2, Rlog;
-    }
-    shell;
-    struct p8est_geometry_builtin_sphere
-    {
-      p8est_geometry_builtin_type_t type;
-      double              R2, R1, R0;
-      double              R2byR1, R1sqrbyR2, R1log;
-      double              R1byR0, R0sqrbyR1, R0log;
-      double              Clength, CdetJ;
-    }
-    sphere;
+    p8est_geometry_builtin_shell_t shell;
+    p8est_geometry_builtin_sphere_t sphere;
   }
   p;
 }

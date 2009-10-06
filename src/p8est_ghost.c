@@ -73,11 +73,11 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
   }
 
   for (etree = 0; etree < eta->elem_count; ++etree) {
-    et = sc_array_index (eta, etree);
+    et = p8est_edge_array_index (eta, etree);
 
     p8est_quadrant_transform_edge (q, &eq, &ei, et, 1);
 
-    proc = sc_array_push (q_procs);
+    proc = (int *) sc_array_push (q_procs);
     *proc = p4est_comm_find_owner (p4est, et->ntree, &eq, rank);
 
     if (nurgood != NULL) {

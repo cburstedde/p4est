@@ -113,15 +113,15 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   local_node = nodes->local_nodes;
   which_tree = p4est->first_local_tree;
   if (which_tree >= 0) {
-    tree = p4est_array_index_topidx (p4est->trees, which_tree);
+    tree = p4est_tree_array_index (p4est->trees, which_tree);
     current = 0;
     for (e = 0; e < mesh->local_elem_num; ++e) {
       if (current == tree->quadrants.elem_count) {
         ++which_tree;
-        tree = p4est_array_index_topidx (p4est->trees, which_tree);
+        tree = p4est_tree_array_index (p4est->trees, which_tree);
         current = 0;
       }
-      q = sc_array_index (&tree->quadrants, current);
+      q = p4est_quadrant_array_index (&tree->quadrants, current);
       elem = mesh->elem_table + e;
       for (k = 0; k < P4EST_CHILDREN; ++k) {
         elem->local_node_id[k] = *local_node++;
@@ -143,7 +143,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->dnode_table = mesh->node_table + mesh->local_anode_num;
   for (n = 0; n < mesh->local_anode_num; ++n) {
     anode = &mesh->node_table[n].anchored;
-    in = sc_array_index (&nodes->indep_nodes, n);
+    in = (p4est_indep_t *) sc_array_index (&nodes->indep_nodes, (size_t) n);
     anode->point.x = in->x;
     anode->point.y = in->y;
     anode->point.z = in->z;
@@ -168,7 +168,9 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
     else {
       P4EST_ASSERT (in->pad8 > 0);
       num_sharers = (size_t) in->pad8;
-      rarr = sc_array_index (&nodes->shared_indeps, num_sharers - 1);
+      rarr =
+        (sc_recycle_array_t *) sc_array_index (&nodes->shared_indeps,
+                                               num_sharers - 1);
       if (nodes->shared_offsets == NULL) {
         P4EST_ASSERT (in->pad16 >= 0);
         zz = (size_t) in->pad16;
@@ -177,10 +179,10 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
         P4EST_ASSERT (in->pad16 == -1);
         zz = (size_t) shared_offsets[n];
       }
-      sharers = sc_array_index (&rarr->a, zz);
+      sharers = (int *) sc_array_index (&rarr->a, zz);
       tail = &anode->share;
       for (zz = 0; zz < num_sharers; ++zz) {
-        *tail = lynk = sc_mempool_alloc (mesh->sharer_pool);
+        *tail = lynk = (int32link_t *) sc_mempool_alloc (mesh->sharer_pool);
         lynk->id = (int32_t) sharers[zz];
         tail = &lynk->next;
       }
@@ -195,7 +197,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   /* Assign face hanging node information. */
   for (zz = 0; zz < nodes->face_hangings.elem_count; ++n, ++zz) {
     dnode = &mesh->node_table[n].dangling;
-    fh = sc_array_index (&nodes->face_hangings, zz);
+    fh = (p8est_hang4_t *) sc_array_index (&nodes->face_hangings, zz);
     dnode->point.x = fh->x;
     dnode->point.y = fh->y;
     dnode->point.z = fh->z;
@@ -209,7 +211,7 @@ p8est_trilinear_mesh_new (p4est_t * p4est, p4est_nodes_t * nodes)
   /* Assign edge hanging node information. */
   for (zz = 0; zz < nodes->edge_hangings.elem_count; ++n, ++zz) {
     dnode = &mesh->node_table[n].dangling;
-    eh = sc_array_index (&nodes->edge_hangings, zz);
+    eh = (p8est_hang2_t *) sc_array_index (&nodes->edge_hangings, zz);
     dnode->point.x = eh->x;
     dnode->point.y = eh->y;
     dnode->point.z = eh->z;

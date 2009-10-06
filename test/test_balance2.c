@@ -89,7 +89,7 @@ main (int argc, char **argv)
   int                 mpisize, mpirank;
   unsigned            crc;
 #ifndef P4_TO_P8
-  size_t              k;
+  size_t              kz;
   int8_t              l;
   p4est_quadrant_t   *q;
   p4est_tree_t        stree, *tree = &stree;
@@ -126,16 +126,16 @@ main (int argc, char **argv)
 
   /* insert two quadrants */
   sc_array_resize (&tree->quadrants, 4);
-  q = sc_array_index (&tree->quadrants, 0);
+  q = p4est_quadrant_array_index (&tree->quadrants, 0);
   p4est_quadrant_set_morton (q, 3, 13);
-  q = sc_array_index (&tree->quadrants, 1);
+  q = p4est_quadrant_array_index (&tree->quadrants, 1);
   p4est_quadrant_set_morton (q, 1, 1);
-  q = sc_array_index (&tree->quadrants, 2);
+  q = p4est_quadrant_array_index (&tree->quadrants, 2);
   p4est_quadrant_set_morton (q, 1, 2);
-  q = sc_array_index (&tree->quadrants, 3);
+  q = p4est_quadrant_array_index (&tree->quadrants, 3);
   p4est_quadrant_set_morton (q, 1, 3);
-  for (k = 0; k < tree->quadrants.elem_count; ++k) {
-    q = sc_array_index (&tree->quadrants, k);
+  for (kz = 0; kz < tree->quadrants.elem_count; ++kz) {
+    q = p4est_quadrant_array_index (&tree->quadrants, kz);
     q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
     ++tree->quadrants_per_level[q->level];
     tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
@@ -146,8 +146,8 @@ main (int argc, char **argv)
   p4est_balance_subtree (p4est, P4EST_BALANCE_FULL, 0, NULL);
   p4est_tree_print (SC_LP_INFO, tree);
 #endif
-  for (k = 0; k < tree->quadrants.elem_count; ++k) {
-    q = sc_array_index (&tree->quadrants, k);
+  for (kz = 0; kz < tree->quadrants.elem_count; ++kz) {
+    q = p4est_quadrant_array_index (&tree->quadrants, kz);
     sc_mempool_free (p4est->user_data_pool, q->p.user_data);
   }
   sc_array_reset (&tree->quadrants);

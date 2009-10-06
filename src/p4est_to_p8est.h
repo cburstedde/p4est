@@ -107,6 +107,7 @@
 #define p4est_connectivity_load         p8est_connectivity_load
 #define p4est_find_face_transform       p8est_find_face_transform
 #define p4est_find_corner_transform     p8est_find_corner_transform
+#define p4est_corner_array_index        p8est_corner_array_index
 
 /* functions in p4est */
 #define p4est_new                       p8est_new
@@ -123,6 +124,11 @@
 #define p4est_load                      p8est_load
 #define p4est_balance_type_int          p8est_balance_type_int
 #define p4est_balance_type_string       p8est_balance_type_string
+#define p4est_tree_array_index          p8est_tree_array_index
+#define p4est_quadrant_array_index      p8est_quadrant_array_index
+#define p4est_quadrant_array_push       p8est_quadrant_array_push
+#define p4est_quadrant_mempool_alloc    p8est_quadrant_mempool_alloc
+#define p4est_quadrant_list_pop         p8est_quadrant_list_pop
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate

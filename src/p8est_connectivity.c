@@ -1248,7 +1248,7 @@ p8est_find_edge_transform (p8est_connectivity_t * conn,
     }
 
     /* else we have a 1 diagonal edge with ntree */
-    et = sc_array_push (ta);
+    et = (p8est_edge_transform_t *) sc_array_push (ta);
     et->ntree = ntree;
     et->nedge = (int8_t) nedge;
     et->naxis[0] = (int8_t) (nedge / 4);

@@ -221,6 +221,19 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  int icorner,
                                                  p4est_corner_info_t * ci);
 
+/** Return a pointer to a p4est_corner_transform_t array element. */
+/*@unused@*/
+static inline p4est_corner_transform_t *
+p4est_corner_array_index (sc_array_t * array, size_t it)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_corner_transform_t));
+  P4EST_ASSERT (it < array->elem_count);
+
+  return
+    (p4est_corner_transform_t *) (array->array +
+                                  sizeof (p4est_corner_transform_t) * it);
+}
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_CONNECTIVITY_H */

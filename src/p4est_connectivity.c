@@ -1205,7 +1205,7 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
         continue;
       }
       for (jz = 0; jz < eta[i]->elem_count; ++jz) {
-        et = sc_array_index (eta[i], jz);
+        et = p8est_edge_array_index (eta[i], jz);
         if (nctree == et->ntree) {
           nc = p8est_edge_corners[et->nedge][et->nflip ^ iwhich[i]];
 
@@ -1225,7 +1225,7 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
 #endif
 
     /* else we have a true all-diagonal corner with ntree */
-    ct = sc_array_push (cta);
+    ct = (p4est_corner_transform_t *) sc_array_push (cta);
     ct->ntree = nctree;
     ct->ncorner = (int8_t) ncorner;
   }

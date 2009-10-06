@@ -77,7 +77,7 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
 
   ql = 0;
   for (jt = p8est->first_local_tree; jt <= p8est->last_local_tree; ++jt) {
-    tree = p4est_array_index_topidx (p8est->trees, jt);
+    tree = p8est_tree_array_index (p8est->trees, jt);
     quadrants = &tree->quadrants;
     znum_quads = quadrants->elem_count;
 
@@ -87,7 +87,7 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
 
     /* loop over the elements in the tree and calculated vertex coordinates */
     for (zz = 0; zz < znum_quads; ++ql, ++zz) {
-      quad = sc_array_index (quadrants, zz);
+      quad = p8est_quadrant_array_index (quadrants, zz);
       h = P8EST_QUADRANT_LEN (quad->level);
       k = 0;
       for (zi = 0; zi < 2; ++zi) {

@@ -325,6 +325,59 @@ int                 p8est_balance_type_int (p8est_balance_type_t btype);
  */
 const char         *p8est_balance_type_string (p8est_balance_type_t btype);
 
+/** Return a pointer to an array element indexed by a p4est_topidx_t.
+ * \param [in] index needs to be in [0]..[elem_count-1].
+ */
+/*@unused@*/
+static inline p8est_tree_t *
+p8est_tree_array_index (sc_array_t * array, p4est_topidx_t it)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p8est_tree_t));
+  P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
+
+  return (p8est_tree_t *) (array->array +
+                           sizeof (p8est_tree_t) * (size_t) it);
+}
+
+/** Return a pointer to a quadrant array element indexed by a size_t. */
+/*@unused@*/
+static inline p8est_quadrant_t *
+p8est_quadrant_array_index (sc_array_t * array, size_t it)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p8est_quadrant_t));
+  P4EST_ASSERT (it < array->elem_count);
+
+  return (p8est_quadrant_t *) (array->array + sizeof (p8est_quadrant_t) * it);
+}
+
+/** Call sc_array_push for a quadrant array. */
+/*@unused@*/
+static inline p8est_quadrant_t *
+p8est_quadrant_array_push (sc_array_t * array)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p8est_quadrant_t));
+
+  return (p8est_quadrant_t *) sc_array_push (array);
+}
+
+/** Call sc_mempool_alloc for a mempool creating quadrants. */
+/*@unused@*/
+static inline p8est_quadrant_t *
+p8est_quadrant_mempool_alloc (sc_mempool_t * mempool)
+{
+  P4EST_ASSERT (mempool->elem_size == sizeof (p8est_quadrant_t));
+
+  return (p8est_quadrant_t *) sc_mempool_alloc (mempool);
+}
+
+/** Call sc_list pop for a quadrant array. */
+/*@unused@*/
+static inline p8est_quadrant_t *
+p8est_quadrant_list_pop (sc_list_t * list)
+{
+  return (p8est_quadrant_t *) sc_list_pop (list);
+}
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_H */

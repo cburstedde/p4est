@@ -137,15 +137,15 @@ main (int argc, char **argv)
   /* refine the second tree to a uniform level */
   p4est_refine (p4est1, 1, refine_none, NULL);
   p4est_refine (p4est2, 1, refine_some, NULL);
-  t1 = sc_array_index (p4est1->trees, 0);
-  t2 = sc_array_index (p4est2->trees, 0);
+  t1 = p4est_tree_array_index (p4est1->trees, 0);
+  t2 = p4est_tree_array_index (p4est2->trees, 0);
   SC_CHECK_ABORT (p4est_tree_is_sorted (t1), "is_sorted");
   SC_CHECK_ABORT (p4est_tree_is_sorted (t2), "is_sorted");
 
   /* run a bunch of cross-tests */
   p = NULL;
   for (iz = 0; iz < t1->quadrants.elem_count; ++iz) {
-    q1 = sc_array_index (&t1->quadrants, iz);
+    q1 = p4est_quadrant_array_index (&t1->quadrants, iz);
 
     /* test the index conversion */
     index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
@@ -216,7 +216,7 @@ main (int argc, char **argv)
 
     /* test t1 against itself */
     for (jz = 0; jz < t1->quadrants.elem_count; ++jz) {
-      q2 = sc_array_index (&t1->quadrants, jz);
+      q2 = p4est_quadrant_array_index (&t1->quadrants, jz);
 
       /* test the comparison function */
       SC_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
@@ -249,7 +249,7 @@ main (int argc, char **argv)
 
     /* test t1 against t2 */
     for (jz = 0; jz < t2->quadrants.elem_count; ++jz) {
-      q2 = sc_array_index (&t2->quadrants, jz);
+      q2 = p4est_quadrant_array_index (&t2->quadrants, jz);
 
       /* test the comparison function */
       SC_CHECK_ABORT (p4est_quadrant_compare (q1, q2) ==
@@ -283,7 +283,7 @@ main (int argc, char **argv)
 
   p = NULL;
   for (iz = 0; iz < t2->quadrants.elem_count; ++iz) {
-    q1 = sc_array_index (&t2->quadrants, iz);
+    q1 = p4est_quadrant_array_index (&t2->quadrants, iz);
 
     /* test the is_next function */
     if (p != NULL) {
@@ -305,24 +305,24 @@ main (int argc, char **argv)
   /* this is user_data neutral only when p4est1->data_size == 0 */
   sc_array_init (&tree.quadrants, sizeof (p4est_quadrant_t));
   sc_array_resize (&tree.quadrants, 18);
-  q1 = sc_array_index (&tree.quadrants, 0);
-  q2 = sc_array_index (&t2->quadrants, 0);
+  q1 = p4est_quadrant_array_index (&tree.quadrants, 0);
+  q2 = p4est_quadrant_array_index (&t2->quadrants, 0);
   *q1 = *q2;
-  q2 = sc_array_index (&t2->quadrants, 1);
+  q2 = p4est_quadrant_array_index (&t2->quadrants, 1);
   for (k = 0; k < 3; ++k) {
-    q1 = sc_array_index_int (&tree.quadrants, k + 1);
+    q1 = p4est_quadrant_array_index (&tree.quadrants, (size_t) (k + 1));
     *q1 = *q2;
     q1->level = (int8_t) (q1->level + k);
   }
   for (k = 0; k < 10; ++k) {
-    q1 = sc_array_index_int (&tree.quadrants, k + 4);
-    q2 = sc_array_index_int (&t2->quadrants, k + 3);
+    q1 = p4est_quadrant_array_index (&tree.quadrants, (size_t) (k + 4));
+    q2 = p4est_quadrant_array_index (&t2->quadrants, (size_t) (k + 3));
     *q1 = *q2;
     q1->level = (int8_t) (q1->level + k);
   }
   for (k = 0; k < 4; ++k) {
-    q1 = sc_array_index_int (&tree.quadrants, k + 14);
-    q2 = sc_array_index_int (&t2->quadrants, k + 12);
+    q1 = p4est_quadrant_array_index (&tree.quadrants, (size_t) (k + 14));
+    q2 = p4est_quadrant_array_index (&t2->quadrants, (size_t) (k + 12));
     *q1 = *q2;
     q1->level = (int8_t) (q1->level + 10 + k);
   }
@@ -335,7 +335,7 @@ main (int argc, char **argv)
   }
   incount = tree.quadrants.elem_count;
   for (iz = 0; iz < incount; ++iz) {
-    q1 = sc_array_index (&tree.quadrants, iz);
+    q1 = p4est_quadrant_array_index (&tree.quadrants, iz);
     ++tree.quadrants_per_level[q1->level];
     tree.maxlevel = (int8_t) SC_MAX (tree.maxlevel, q1->level);
   }
@@ -346,13 +346,13 @@ main (int argc, char **argv)
 
   /* create a partial tree and check overlap */
   sc_array_resize (&tree.quadrants, 4);
-  q1 = sc_array_index (&tree.quadrants, 0);
+  q1 = p4est_quadrant_array_index (&tree.quadrants, 0);
   p4est_quadrant_set_morton (q1, 3, 191);
-  q1 = sc_array_index (&tree.quadrants, 1);
+  q1 = p4est_quadrant_array_index (&tree.quadrants, 1);
   p4est_quadrant_set_morton (q1, 1, 3);
-  q1 = sc_array_index (&tree.quadrants, 2);
+  q1 = p4est_quadrant_array_index (&tree.quadrants, 2);
   p4est_quadrant_set_morton (q1, 2, 32);
-  q1 = sc_array_index (&tree.quadrants, 3);
+  q1 = p4est_quadrant_array_index (&tree.quadrants, 3);
   p4est_quadrant_set_morton (q1, 2, 33);
   for (k = 0; k <= P4EST_QMAXLEVEL; ++k) {
     tree.quadrants_per_level[k] = 0;
@@ -364,12 +364,13 @@ main (int argc, char **argv)
   tree.quadrants_per_level[2] = 2;
   tree.quadrants_per_level[3] = 1;
   tree.maxlevel = 3;
-  p4est_quadrant_first_descendent (sc_array_index (&tree.quadrants, 0),
-                                   &tree.first_desc, P4EST_QMAXLEVEL);
-  p4est_quadrant_last_descendent (sc_array_index (&tree.quadrants,
-                                                  tree.quadrants.elem_count -
-                                                  1), &tree.last_desc,
-                                  P4EST_QMAXLEVEL);
+  p4est_quadrant_first_descendent (p4est_quadrant_array_index
+                                   (&tree.quadrants, 0), &tree.first_desc,
+                                   P4EST_QMAXLEVEL);
+  p4est_quadrant_last_descendent (p4est_quadrant_array_index
+                                  (&tree.quadrants,
+                                   tree.quadrants.elem_count - 1),
+                                  &tree.last_desc, P4EST_QMAXLEVEL);
   SC_CHECK_ABORT (p4est_tree_is_complete (&tree), "is_complete");
 
   p4est_quadrant_set_morton (&D, 0, 0);

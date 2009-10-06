@@ -42,7 +42,7 @@ static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
 {
-  user_data_t        *data = quadrant->p.user_data;
+  user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;
@@ -79,8 +79,8 @@ weight_one (p4est_t * p4est, p4est_topidx_t which_tree,
 static int
 p4est_vert_compare (const void *a, const void *b)
 {
-  const p4est_vert_t *v1 = a;
-  const p4est_vert_t *v2 = b;
+  const p4est_vert_t *v1 = (const p4est_vert_t *) a;
+  const p4est_vert_t *v2 = (const p4est_vert_t *) b;
   const double        eps = 1e-15;
   double              xdiff, ydiff, zdiff;
   int                 retval = 0;
@@ -163,7 +163,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
   trees = p4est->trees;
 
   for (jt = first_local_tree, quad_count = 0; jt <= last_local_tree; ++jt) {
-    tree = p4est_array_index_topidx (trees, jt);
+    tree = p4est_tree_array_index (trees, jt);
 
     P4EST_ASSERT (0 <= jt && jt < connectivity->num_trees);
 
@@ -195,7 +195,7 @@ p4est_check_local_order (p4est_t * p4est, p4est_connectivity_t * connectivity)
 
     /* loop over the elements in the tree */
     for (iz = 0; iz < num_quads; ++iz, ++quad_count) {
-      quad = sc_array_index (quadrants, iz);
+      quad = p4est_quadrant_array_index (quadrants, iz);
       inth = P4EST_QUADRANT_LEN (quad->level);
       h = intsize * inth;
       eta1 = intsize * quad->x;

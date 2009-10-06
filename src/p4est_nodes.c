@@ -153,13 +153,13 @@ p4est_nodes_new_local (p4est_t * p4est)
   ln = nodes->local_nodes;
   for (jt = first_local_tree, vertex_num = 0, lqid = 0, tree_offset = 0;
        jt <= last_local_tree; ++jt) {
-    tree = p4est_array_index_topidx (p4est->trees, jt);
+    tree = p4est_tree_array_index (p4est->trees, jt);
     quadrants = &tree->quadrants;
     numz_quadrants = quadrants->elem_count;
 
     /* Find the neighbors of each quadrant */
     for (zz = 0; zz < numz_quadrants; ++zz, ++lqid) {
-      q = sc_array_index (quadrants, zz);
+      q = p4est_quadrant_array_index (quadrants, zz);
 
       /* loop over the corners of the quadrant */
       for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
@@ -167,7 +167,7 @@ p4est_nodes_new_local (p4est_t * p4est)
         /* Check to see if we have a new vertex */
         if (ln[lqid * P4EST_CHILDREN + corner] == -1) {
           ln[lqid * P4EST_CHILDREN + corner] = vertex_num;
-          in = sc_array_push (&nodes->indep_nodes);
+          in = (p4est_indep_t *) sc_array_push (&nodes->indep_nodes);
           p4est_quadrant_corner_node (q, corner, (p4est_quadrant_t *) in);
           in->pad8 = 0;
           in->pad16 = 0;
@@ -356,7 +356,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
     }
     p8est_find_edge_transform (conn, treeid, edge, &ei);
     for (etreez = 0; etreez < eta->elem_count; ++etreez) {
-      et = sc_array_index (eta, etreez);
+      et = p8est_edge_array_index (eta, etreez);
       ntreeid = et->ntree;
       if (ntreeid > lowest) {
         /* This neighbor tree is higher, so we keep the ownership */
@@ -399,7 +399,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
     }
     p4est_find_corner_transform (conn, treeid, corner, &ci);
     for (ctreez = 0; ctreez < cta->elem_count; ++ctreez) {
-      ct = sc_array_index (cta, ctreez);
+      ct = p4est_corner_array_index (cta, ctreez);
       ntreeid = ct->ntree;
       if (ntreeid > lowest) {
         /* This neighbor tree is higher, so we keep the ownership */
@@ -433,8 +433,10 @@ endfunction:
 static int
 p4est_nodes_foreach (void **item, const void *u)
 {
-  const sc_hash_array_data_t *internal_data = u;
-  const p4est_locidx_t *new_node_number = internal_data->user_data;
+  const sc_hash_array_data_t *internal_data =
+    (const sc_hash_array_data_t *) u;
+  const p4est_locidx_t *new_node_number =
+    (const p4est_locidx_t *) internal_data->user_data;
 
   *item = (void *) (long) new_node_number[(long) *item];
 
@@ -454,7 +456,7 @@ p4est_shared_offsets (sc_array_t * inda)
   shared_offsets = P4EST_ALLOC (p4est_locidx_t, num_indep_nodes);
 
   for (il = 0; il < num_indep_nodes; ++il) {
-    in = sc_array_index (inda, il);
+    in = (p4est_indep_t *) sc_array_index (inda, il);
     shared_offsets[il] = (p4est_locidx_t) in->pad16;
     in->pad16 = -1;
   }
@@ -604,13 +606,13 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   quad_nodes = local_nodes;
   quad_status = local_status;
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
-    tree = p4est_array_index_topidx (p4est->trees, jt);
+    tree = p4est_tree_array_index (p4est->trees, jt);
     quadrants = &tree->quadrants;
 
     /* determine hanging node status and collect all anchored nodes */
     for (zz = 0; zz < quadrants->elem_count;
          quad_nodes += P4EST_CHILDREN, quad_status += P4EST_CHILDREN, ++zz) {
-      qpp[0] = q = sc_array_index (quadrants, zz);
+      qpp[0] = q = p4est_quadrant_array_index (quadrants, zz);
       qcid = p4est_quadrant_child_id (q);
       if (q->level > 0) {
         p4est_quadrant_parent (q, &p);
@@ -673,7 +675,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
         P4EST_ASSERT (quad_status[k] >= 0 || quad_status[k] <= 2);
         p4est_quadrant_corner_node (qpp[quad_status[k]], k, &n);
         p4est_node_canonicalize (p4est, jt, &n, &c);
-        r = sc_hash_array_insert_unique (indep_nodes, &c, &position);
+        r =
+          (p4est_quadrant_t *) sc_hash_array_insert_unique (indep_nodes, &c,
+                                                            &position);
         if (r != NULL) {
           *r = c;
           P4EST_ASSERT (num_indep_nodes == (p4est_locidx_t) position);
@@ -697,14 +701,14 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   /* Reorder independent nodes by their global treeid and z-order index. */
   new_node_number = P4EST_ALLOC (p4est_locidx_t, num_indep_nodes);
   for (il = 0; il < num_indep_nodes; ++il) {
-    in = sc_array_index (inda, (size_t) il);
+    in = (p4est_indep_t *) sc_array_index (inda, (size_t) il);
     in->pad8 = 0;               /* shared by 0 other processors so far */
     in->pad16 = (int16_t) (-1);
     in->p.piggy3.local_num = il;
   }
   sc_array_sort (inda, p4est_quadrant_compare_piggy);
   for (il = 0; il < num_indep_nodes; ++il) {
-    in = sc_array_index (inda, (size_t) il);
+    in = (p4est_indep_t *) sc_array_index (inda, (size_t) il);
     new_node_number[in->p.piggy3.local_num] = il;
 #ifndef P4EST_MPI
     in->p.piggy3.local_num = il;
@@ -750,12 +754,12 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   last_peer = -1;
   prev = 0;
   for (il = 0; il < num_indep_nodes; ++il) {
-    in = sc_array_index (inda, (size_t) il);
+    in = (p4est_indep_t *) sc_array_index (inda, (size_t) il);
     owner = p4est_comm_find_owner (p4est, in->p.which_tree,
                                    (p4est_quadrant_t *) in, prev);
     if (owner != rank) {
       peer = peers + owner;
-      xyz = sc_array_push (&peer->send_first);
+      xyz = (p4est_qcoord_t *) sc_array_push (&peer->send_first);
       xyz[0] = in->x;
       xyz[1] = in->y;
 #ifdef P4_TO_P8
@@ -812,7 +816,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
         P4EST_ASSERT (peer->send_first.elem_count == 0);
         continue;
       }
-      send_request = sc_array_push (&send_requests);
+      send_request = (MPI_Request *) sc_array_push (&send_requests);
       this_size = peer->send_first.elem_count * first_size;
       mpiret = MPI_Isend (peer->send_first.array, (int) this_size,
                           MPI_BYTE, k, P4EST_COMM_NODES_QUERY,
@@ -870,7 +874,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     SC_CHECK_MPI (mpiret);
     peer->expect_query = 0;
     for (zz = 0; zz < peer->recv_first.elem_count; ++zz) {
-      xyz = sc_array_index (&peer->recv_first, zz);
+      xyz = (p4est_qcoord_t *) sc_array_index (&peer->recv_first, zz);
       inkey.x = xyz[0];
       inkey.y = xyz[1];
 #ifdef P4_TO_P8
@@ -884,7 +888,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                     (p4est_locidx_t) position < end_owned_indeps);
       node_number = (p4est_locidx_t *) xyz;
       *node_number = (p4est_locidx_t) position - offset_owned_indeps;
-      in = sc_array_index (inda, position);
+      in = (p4est_indep_t *) sc_array_index (inda, position);
       P4EST_ASSERT (p4est_node_equal_piggy_fn (&inkey, in, &clamped));
       P4EST_ASSERT (in->pad8 >= 0);
       num_sharers = (size_t) in->pad8;
@@ -892,13 +896,14 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       SC_CHECK_ABORT (num_sharers < (size_t) INT8_MAX,
                       "Max independent node sharer limit exceeded");
       if (num_sharers == shared_indeps->elem_count) {
-        nrarr = sc_array_push (shared_indeps);
+        nrarr = (sc_recycle_array_t *) sc_array_push (shared_indeps);
         sc_recycle_array_init (nrarr, (num_sharers + 1) * sizeof (int));
       }
       else {
-        nrarr = sc_array_index (shared_indeps, num_sharers);
+        nrarr =
+          (sc_recycle_array_t *) sc_array_index (shared_indeps, num_sharers);
       }
-      new_sharers = sc_recycle_array_insert (nrarr, &new_position);
+      new_sharers = (int *) sc_recycle_array_insert (nrarr, &new_position);
       if (num_sharers > 0) {
         if (shared_offsets == NULL) {
           P4EST_ASSERT (in->pad16 >= 0);
@@ -908,8 +913,10 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
           P4EST_ASSERT (in->pad16 == -1);
           old_position = (size_t) shared_offsets[position];
         }
-        orarr = sc_array_index (shared_indeps, num_sharers - 1);
-        old_sharers = sc_recycle_array_remove (orarr, old_position);
+        orarr =
+          (sc_recycle_array_t *) sc_array_index (shared_indeps,
+                                                 num_sharers - 1);
+        old_sharers = (int *) sc_recycle_array_remove (orarr, old_position);
         memcpy (new_sharers, old_sharers, num_sharers * sizeof (int));
       }
       else {
@@ -944,9 +951,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       continue;
     }
     for (zz = 0; zz < peer->recv_first.elem_count; ++zz) {
-      node_number = sc_array_index (&peer->recv_first, zz);
+      node_number = (p4est_locidx_t *) sc_array_index (&peer->recv_first, zz);
       position = (size_t) (*node_number + offset_owned_indeps);
-      in = sc_array_index (inda, position);
+      in = (p4est_indep_t *) sc_array_index (inda, position);
       P4EST_ASSERT (p4est_quadrant_is_node ((p4est_quadrant_t *) in, 1));
       P4EST_ASSERT (in->pad8 >= 0);
       num_sharers = (size_t) in->pad8;
@@ -964,13 +971,15 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
           P4EST_ASSERT (in->pad16 == -1);
           new_position = (size_t) shared_offsets[position];
         }
-        nrarr = sc_array_index (shared_indeps, num_sharers - 1);
-        new_sharers = sc_array_index (&nrarr->a, new_position);
+        nrarr =
+          (sc_recycle_array_t *) sc_array_index (shared_indeps,
+                                                 num_sharers - 1);
+        new_sharers = (int *) sc_array_index (&nrarr->a, new_position);
         memcpy (this_base + second_size, new_sharers,
                 num_sharers * sizeof (int));
       }
     }
-    send_request = sc_array_push (&send_requests);
+    send_request = (MPI_Request *) sc_array_push (&send_requests);
     mpiret = MPI_Isend (peer->send_second.array,
                         (int) peer->send_second.elem_count,
                         MPI_BYTE, k, P4EST_COMM_NODES_REPLY,
@@ -989,13 +998,13 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   quad_nodes = local_nodes;
   quad_status = local_status;
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
-    tree = p4est_array_index_topidx (p4est->trees, jt);
+    tree = p4est_tree_array_index (p4est->trees, jt);
     quadrants = &tree->quadrants;
 
     /* collect all face and edge hanging nodes */
     for (zz = 0; zz < quadrants->elem_count;
          quad_nodes += P4EST_CHILDREN, quad_status += P4EST_CHILDREN, ++zz) {
-      q = sc_array_index (quadrants, zz);
+      q = p4est_quadrant_array_index (quadrants, zz);
       qcid = p4est_quadrant_child_id (q);
 
       /* create hanging nodes and assign related independent nodes */
@@ -1006,7 +1015,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
           P4EST_ASSERT (p4est_child_corner_faces[qcid][k] >= 0);
           p4est_quadrant_corner_node (q, k, &n);
           p4est_node_canonicalize (p4est, jt, &n, &c);
-          r = sc_hash_array_insert_unique (face_hangings, &c, &position);
+          r =
+            (p4est_quadrant_t *) sc_hash_array_insert_unique (face_hangings,
+                                                              &c, &position);
           if (r != NULL) {
             *r = c;
             P4EST_ASSERT (num_face_hangings == (p4est_locidx_t) position);
@@ -1058,7 +1069,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
           P4EST_ASSERT (p8est_child_corner_edges[qcid][k] >= 0);
           p4est_quadrant_corner_node (q, k, &n);
           p4est_node_canonicalize (p4est, jt, &n, &c);
-          r = sc_hash_array_insert_unique (edge_hangings, &c, &position);
+          r =
+            (p4est_quadrant_t *) sc_hash_array_insert_unique (edge_hangings,
+                                                              &c, &position);
           if (r != NULL) {
             *r = c;
             P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) position);
@@ -1142,7 +1155,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 
   /* Convert receive buffers into the output data structures and unclamp. */
   for (il = 0; il < num_indep_nodes; ++il) {
-    in = sc_array_index (inda, (size_t) il);
+    in = (p4est_indep_t *) sc_array_index (inda, (size_t) il);
     p4est_node_unclamp ((p4est_quadrant_t *) in);
 #ifdef P4EST_MPI
     if (il >= offset_owned_indeps && il < end_owned_indeps) {
@@ -1155,7 +1168,8 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     peer = peers + k;
     P4EST_ASSERT (peer->recv_offset + second_size <=
                   peer->recv_second.elem_count);
-    this_base = sc_array_index (&peer->recv_second, peer->recv_offset);
+    this_base =
+      (char *) sc_array_index (&peer->recv_second, peer->recv_offset);
     in->p.piggy3.local_num = *(p4est_locidx_t *) this_base;
     num_sharers =
       (size_t) (*(int8_t *) (this_base + sizeof (p4est_locidx_t)));
@@ -1168,14 +1182,16 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       old_position = shared_indeps->elem_count;
       sc_array_resize (shared_indeps, num_sharers);
       for (zz = old_position; zz < num_sharers; ++zz) {
-        nrarr = sc_array_index (shared_indeps, zz);
+        nrarr = (sc_recycle_array_t *) sc_array_index (shared_indeps, zz);
         sc_recycle_array_init (nrarr, (zz + 1) * sizeof (int));
       }
     }
     else {
-      nrarr = sc_array_index (shared_indeps, num_sharers - 1);
+      nrarr =
+        (sc_recycle_array_t *) sc_array_index (shared_indeps,
+                                               num_sharers - 1);
     }
-    new_sharers = sc_recycle_array_insert (nrarr, &new_position);
+    new_sharers = (int *) sc_recycle_array_insert (nrarr, &new_position);
     memcpy (new_sharers, this_base + second_size, num_sharers * sizeof (int));
     for (zz = 0; zz < num_sharers; ++zz) {
       if (new_sharers[zz] == rank) {
@@ -1203,12 +1219,16 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 
   /* Unclamp the hanging nodes as well. */
   for (zz = 0; zz < faha->elem_count; ++zz) {
-    fh = sc_array_index (faha, zz);
+#ifdef P4_TO_P8
+    fh = (p8est_hang4_t *) sc_array_index (faha, zz);
+#else
+    fh = (p4est_hang2_t *) sc_array_index (faha, zz);
+#endif
     p4est_node_unclamp ((p4est_quadrant_t *) fh);
   }
 #ifdef P4_TO_P8
   for (zz = 0; zz < edha->elem_count; ++zz) {
-    eh = sc_array_index (edha, zz);
+    eh = (p8est_hang2_t *) sc_array_index (edha, zz);
     p4est_node_unclamp ((p4est_quadrant_t *) eh);
   }
 #endif
@@ -1282,7 +1302,7 @@ p4est_nodes_destroy (p4est_nodes_t * nodes)
   P4EST_FREE (nodes->local_nodes);
 
   for (zz = 0; zz < nodes->shared_indeps.elem_count; ++zz) {
-    rarr = sc_array_index (&nodes->shared_indeps, zz);
+    rarr = (sc_recycle_array_t *) sc_array_index (&nodes->shared_indeps, zz);
     sc_recycle_array_reset (rarr);
   }
   sc_array_reset (&nodes->shared_indeps);
@@ -1334,10 +1354,10 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 
   max_sharers = nodes->shared_indeps.elem_count;
   for (zz = 0; zz < max_sharers; ++zz) {
-    rarr = sc_array_index (&nodes->shared_indeps, zz);
+    rarr = (sc_recycle_array_t *) sc_array_index (&nodes->shared_indeps, zz);
     num_sharers = zz + 1;
     for (position = 0; position < rarr->a.elem_count; ++position) {
-      sharers = sc_array_index (&rarr->a, position);
+      sharers = (int *) sc_array_index (&rarr->a, position);
       memcpy (sorted, sharers, num_sharers * sizeof (int));
       qsort (sorted, num_sharers, sizeof (int), sc_int_compare);
       prev = -1;
@@ -1360,7 +1380,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   k = prev = 0;
   otree = 0;
   for (il = 0; il < num_indep_nodes; ++il) {
-    in = sc_array_index (&nodes->indep_nodes, (size_t) il);
+    in = (p4est_indep_t *) sc_array_index (&nodes->indep_nodes, (size_t) il);
     if (!p4est_quadrant_is_node ((p4est_quadrant_t *) in, 0)) {
       P4EST_NOTICE ("p4est nodes independent clamped\n");
       failed = 1;
@@ -1408,7 +1428,9 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
     }
     ocount = 0;
     if (num_sharers > 0) {
-      rarr = sc_array_index (&nodes->shared_indeps, num_sharers - 1);
+      rarr =
+        (sc_recycle_array_t *) sc_array_index (&nodes->shared_indeps,
+                                               num_sharers - 1);
       if (nodes->shared_offsets == NULL) {
         bad = (in->pad16 < 0);
         position = (size_t) in->pad16;
@@ -1422,7 +1444,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
         failed = 1;
         goto failtest;
       }
-      sharers = sc_array_index (&rarr->a, position);
+      sharers = (int *) sc_array_index (&rarr->a, position);
       memcpy (sorted, sharers, num_sharers * sizeof (int));
       qsort (sorted, num_sharers, sizeof (int), sc_int_compare);
       pshare = -1;
@@ -1448,7 +1470,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
   /* Test clamp status for hanging nodes */
   hang = &nodes->face_hangings;
   for (zz = 0; zz < hang->elem_count; ++zz) {
-    hq = sc_array_index (hang, zz);
+    hq = (p4est_quadrant_t *) sc_array_index (hang, zz);
     if (!p4est_quadrant_is_node (hq, 0)) {
       P4EST_NOTICE ("p4est nodes face hanging clamped\n");
       failed = 1;
@@ -1458,7 +1480,7 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 #ifdef P4_TO_P8
   hang = &nodes->edge_hangings;
   for (zz = 0; zz < hang->elem_count; ++zz) {
-    hq = sc_array_index (hang, zz);
+    hq = (p8est_quadrant_t *) sc_array_index (hang, zz);
     if (!p4est_quadrant_is_node (hq, 0)) {
       P4EST_NOTICE ("p4est nodes edge hanging clamped\n");
       failed = 1;

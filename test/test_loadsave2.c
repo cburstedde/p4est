@@ -47,7 +47,7 @@ static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
 {
-  int                *data = quadrant->p.user_data;
+  int                *data = (int *) quadrant->p.user_data;
 
   *data = (counter = counter * 1664525 + 1013904223) + (int) which_tree;
 }

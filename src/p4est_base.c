@@ -238,3 +238,54 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
     P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, *on, *ov);
   }
 }
+
+#ifdef __cplusplus
+
+void
+P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
+{
+  va_list             ap;
+
+  va_start (ap, fmt);
+  sc_logv ("<unknown>", 0, p4est_package_id, SC_LC_GLOBAL, priority, fmt, ap);
+  va_end (ap);
+}
+
+void
+P4EST_NORMAL_LOGF (int priority, const char *fmt, ...)
+{
+  va_list             ap;
+
+  va_start (ap, fmt);
+  sc_logv ("<unknown>", 0, p4est_package_id, SC_LC_NORMAL, priority, fmt, ap);
+  va_end (ap);
+}
+
+#define P4EST_LOG_IMP(n,p)                              \
+  void                                                  \
+  P4EST_GLOBAL_ ## n ## F (const char *fmt, ...)        \
+  {                                                     \
+    va_list             ap;                             \
+    va_start (ap, fmt);                                 \
+    sc_logv ("<unknown>", 0, p4est_package_id,          \
+             SC_LC_GLOBAL, SC_LP_ ## p, fmt, ap);       \
+    va_end (ap);                                        \
+  }                                                     \
+  void                                                  \
+  P4EST_ ## n ## F (const char *fmt, ...)               \
+  {                                                     \
+    va_list             ap;                             \
+    va_start (ap, fmt);                                 \
+    sc_logv ("<unknown>", 0, p4est_package_id,          \
+             SC_LC_NORMAL, SC_LP_ ## p, fmt, ap);       \
+    va_end (ap);                                        \
+  }
+
+P4EST_LOG_IMP (TRACE, TRACE);
+P4EST_LOG_IMP (LDEBUG, DEBUG);
+P4EST_LOG_IMP (VERBOSE, VERBOSE);
+P4EST_LOG_IMP (INFO, INFO);
+P4EST_LOG_IMP (STATISTICS, STATISTICS);
+P4EST_LOG_IMP (PRODUCTION, PRODUCTION);
+
+#endif /* __cplusplus */

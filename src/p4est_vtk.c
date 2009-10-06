@@ -249,7 +249,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   if (nodes == NULL) {
     /* loop over the trees */
     for (jt = first_local_tree, quad_count = 0; jt <= last_local_tree; ++jt) {
-      tree = p4est_array_index_topidx (trees, jt);
+      tree = p4est_tree_array_index (trees, jt);
       quadrants = &tree->quadrants;
       num_quads = quadrants->elem_count;
 
@@ -259,7 +259,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 
       /* loop over the elements in the tree and calculated vertex coordinates */
       for (zz = 0; zz < num_quads; ++zz, ++quad_count) {
-        quad = sc_array_index (quadrants, zz);
+        quad = p4est_quadrant_array_index (quadrants, zz);
         h2 = .5 * intsize * P4EST_QUADRANT_LEN (quad->level);
         k = 0;
 #ifdef P4_TO_P8
@@ -319,7 +319,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   }
   else {
     for (zz = 0; zz < indeps->elem_count; ++zz) {
-      in = sc_array_index (indeps, zz);
+      in = (p4est_indep_t *) sc_array_index (indeps, zz);
 
       /* retrieve corners of the tree */
       jt = in->p.which_tree;
@@ -544,7 +544,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     fprintf (vtufile, "\n");
 #else
     for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_array_index_topidx (trees, jt);
+      tree = p4est_tree_array_index (trees, jt);
       num_quads = tree->quadrants.elem_count;
       for (zz = 0; zz < num_quads; ++zz, ++il) {
         locidx_data[il] = (p4est_locidx_t) jt;

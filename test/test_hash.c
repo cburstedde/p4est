@@ -81,12 +81,14 @@ main (int argc, char **argv)
   q3.p.piggy1.owner_rank = 0;
 
   f1 = f2 = f3 = NULL;
+  /* *INDENT-OFF* HORRIBLE indent bug */
   i1 = sc_hash_insert_unique (qhash, &q1, &vv1);
-  f1 = *vv1;
+  f1 = (p4est_quadrant_t *) *vv1;
   i2 = sc_hash_insert_unique (qhash, &q2, &vv2);
-  f2 = *vv2;
+  f2 = (p4est_quadrant_t *) *vv2;
   i3 = sc_hash_insert_unique (qhash, &q3, &vv3);
-  f3 = *vv3;
+  f3 = (p4est_quadrant_t *) *vv3;
+  /* *INDENT-ON* */
   printf ("Quadrants inserted %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
 
@@ -98,7 +100,9 @@ main (int argc, char **argv)
   i1 = sc_hash_lookup (qhash, &q1, NULL);
   i2 = sc_hash_lookup (qhash, &q2, NULL);
   i3 = sc_hash_lookup (qhash, &q3, &vv3);
-  f3 = *vv3;
+  /* *INDENT-OFF* HORRIBLE indent bug */
+  f3 = (p4est_quadrant_t *) *vv3;
+  /* *INDENT-ON* */
   printf ("Quadrants lookup %d %d %d total %lu\n",
           i1, i2, i3, (unsigned long) qhash->elem_count);
   SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
@@ -106,9 +110,9 @@ main (int argc, char **argv)
 
   f1 = f2 = f3 = NULL;
   i1 = sc_hash_remove (qhash, &q1, &v1);
-  f1 = v1;
+  f1 = (p4est_quadrant_t *) v1;
   i2 = sc_hash_remove (qhash, &q2, &v2);
-  f2 = v2;
+  f2 = (p4est_quadrant_t *) v2;
   i3 = sc_hash_remove (qhash, &q3, NULL);
   SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 0, "Quadrant remove");
   SC_CHECK_ABORT (f2 == &q2 && f2->p.piggy1.owner_rank == 5, "Remove return");

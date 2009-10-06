@@ -26,7 +26,7 @@
 
 #include <p4est_config.h>
 
-/* indirectly also include sc.h */
+/* indirectly also include sc.h and sc_config.h */
 
 #include <sc_containers.h>
 
@@ -86,87 +86,102 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_STRDUP(s)                 sc_strdup (p4est_package_id, (s))
 #define P4EST_FREE(p)                   sc_free (p4est_package_id, (p))
 
-/* Only include the p4est log macros in C, not C++, since C++98
-   does not allow variadic macros. */
+/* log helper macros */
+#define P4EST_GLOBAL_LOG(p,s) SC_LOG (p4est_package_id, SC_LC_GLOBAL, (p), (s))
+#define P4EST_NORMAL_LOG(p,s) SC_LOG (p4est_package_id, SC_LC_NORMAL, (p), (s))
+/* C++98 does not allow variadic macros */
 #ifndef __cplusplus
-
-#define P4EST_LOGF(category,priority,fmt,...)           \
-  ((priority) < SC_LP_THRESHOLD ? (void) 0 :            \
-   sc_logf (__FILE__, __LINE__,                         \
-            p4est_package_id, (category), (priority),   \
-            (fmt), __VA_ARGS__))
-#define P4EST_LOG(c,p,s) P4EST_LOGF((c), (p), "%s", (s))
-#define P4EST_GLOBAL_LOG(p,s) P4EST_LOG (SC_LC_GLOBAL, (p), (s))
-#define P4EST_GLOBAL_LOGF(p,f,...) \
-  P4EST_LOGF (SC_LC_GLOBAL, (p), (f), __VA_ARGS__)
-#define P4EST_NORMAL_LOG(p,s) P4EST_LOG (SC_LC_NORMAL, (p), (s))
-#define P4EST_NORMAL_LOGF(p,f,...) \
-  P4EST_LOGF (SC_LC_NORMAL, (p), (f), __VA_ARGS__)
+#define P4EST_GLOBAL_LOGF(p,f,...)                                      \
+  SC_LOGF (p4est_package_id, SC_LC_GLOBAL, (p), (f), __VA_ARGS__)
+#define P4EST_NORMAL_LOGF(p,f,...)                                      \
+  SC_LOGF (p4est_package_id, SC_LC_NORMAL, (p), (f), __VA_ARGS__)
+#else
+void                P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
+  __attribute__ ((format (printf, 2, 3)));
+void                P4EST_NORMAL_LOGF (int priority, const char *fmt, ...)
+  __attribute__ ((format (printf, 2, 3)));
+#endif
 
 /* convenience global log macros will only print if identifier <= 0 */
 #define P4EST_GLOBAL_TRACE(s) P4EST_GLOBAL_LOG (SC_LP_TRACE, (s))
-#define P4EST_GLOBAL_TRACEF(f,...) \
-  P4EST_GLOBAL_LOGF (SC_LP_TRACE, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_LDEBUG(s) P4EST_GLOBAL_LOG (SC_LP_DEBUG, (s))
-#define P4EST_GLOBAL_LDEBUGF(f,...) \
-  P4EST_GLOBAL_LOGF (SC_LP_DEBUG, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_VERBOSE(s) P4EST_GLOBAL_LOG (SC_LP_VERBOSE, (s))
-#define P4EST_GLOBAL_VERBOSEF(f,...) \
-  P4EST_GLOBAL_LOGF (SC_LP_VERBOSE, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (SC_LP_INFO, (s))
-#define P4EST_GLOBAL_INFOF(f,...) \
-  P4EST_GLOBAL_LOGF (SC_LP_INFO, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_STATISTICS(s) P4EST_GLOBAL_LOG (SC_LP_STATISTICS, (s))
-#define P4EST_GLOBAL_STATISTICSF(f,...) \
-  P4EST_GLOBAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (SC_LP_PRODUCTION, (s))
-#define P4EST_GLOBAL_PRODUCTIONF(f,...) \
+#ifndef __cplusplus
+#define P4EST_GLOBAL_TRACEF(f,...)                      \
+  P4EST_GLOBAL_LOGF (SC_LP_TRACE, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_LDEBUGF(f,...)                     \
+  P4EST_GLOBAL_LOGF (SC_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_VERBOSEF(f,...)                    \
+  P4EST_GLOBAL_LOGF (SC_LP_VERBOSE, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_INFOF(f,...)                       \
+  P4EST_GLOBAL_LOGF (SC_LP_INFO, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_STATISTICSF(f,...)                         \
+  P4EST_GLOBAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_PRODUCTIONF(f,...)                         \
   P4EST_GLOBAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
-#define P4EST_GLOBAL_NOTICE(s)      P4EST_GLOBAL_STATISTICS (s)
-#define P4EST_GLOBAL_NOTICEF(f,...) P4EST_GLOBAL_STATISTICSF (f, __VA_ARGS__)
-#define P4EST_GLOBAL_LERROR(s)      P4EST_GLOBAL_PRODUCTION (s)
-#define P4EST_GLOBAL_LERRORF(f,...) P4EST_GLOBAL_PRODUCTIONF (f, __VA_ARGS__)
+#else
+void                P4EST_GLOBAL_TRACEF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_LDEBUGF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_VERBOSEF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_INFOF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_STATISTICSF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_PRODUCTIONF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+#endif
+#define P4EST_GLOBAL_NOTICE     P4EST_GLOBAL_STATISTICS
+#define P4EST_GLOBAL_NOTICEF    P4EST_GLOBAL_STATISTICSF
+#define P4EST_GLOBAL_LERROR     P4EST_GLOBAL_PRODUCTION
+#define P4EST_GLOBAL_LERRORF    P4EST_GLOBAL_PRODUCTIONF
 
 /* convenience log macros that are active on every processor */
 #define P4EST_TRACE(s) P4EST_NORMAL_LOG (SC_LP_TRACE, (s))
-#define P4EST_TRACEF(f,...) \
-  P4EST_NORMAL_LOGF (SC_LP_TRACE, (f), __VA_ARGS__)
 #define P4EST_LDEBUG(s) P4EST_NORMAL_LOG (SC_LP_DEBUG, (s))
-#define P4EST_LDEBUGF(f,...) \
-  P4EST_NORMAL_LOGF (SC_LP_DEBUG, (f), __VA_ARGS__)
 #define P4EST_VERBOSE(s) P4EST_NORMAL_LOG (SC_LP_VERBOSE, (s))
-#define P4EST_VERBOSEF(f,...) \
-  P4EST_NORMAL_LOGF (SC_LP_VERBOSE, (f), __VA_ARGS__)
 #define P4EST_INFO(s) P4EST_NORMAL_LOG (SC_LP_INFO, (s))
-#define P4EST_INFOF(f,...) \
-  P4EST_NORMAL_LOGF (SC_LP_INFO, (f), __VA_ARGS__)
 #define P4EST_STATISTICS(s) P4EST_NORMAL_LOG (SC_LP_STATISTICS, (s))
-#define P4EST_STATISTICSF(f,...) \
-  P4EST_NORMAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
 #define P4EST_PRODUCTION(s) P4EST_NORMAL_LOG (SC_LP_PRODUCTION, (s))
-#define P4EST_PRODUCTIONF(f,...) \
+#ifndef __cplusplus
+#define P4EST_TRACEF(f,...)                             \
+  P4EST_NORMAL_LOGF (SC_LP_TRACE, (f), __VA_ARGS__)
+#define P4EST_LDEBUGF(f,...)                            \
+  P4EST_NORMAL_LOGF (SC_LP_DEBUG, (f), __VA_ARGS__)
+#define P4EST_VERBOSEF(f,...)                           \
+  P4EST_NORMAL_LOGF (SC_LP_VERBOSE, (f), __VA_ARGS__)
+#define P4EST_INFOF(f,...)                              \
+  P4EST_NORMAL_LOGF (SC_LP_INFO, (f), __VA_ARGS__)
+#define P4EST_STATISTICSF(f,...)                                \
+  P4EST_NORMAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
+#define P4EST_PRODUCTIONF(f,...)                                \
   P4EST_NORMAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
-#define P4EST_NOTICE(s)      P4EST_STATISTICS (s)
-#define P4EST_NOTICEF(f,...) P4EST_STATISTICSF (f, __VA_ARGS__)
-#define P4EST_LERROR(s)      P4EST_PRODUCTION (s)
-#define P4EST_LERRORF(f,...) P4EST_PRODUCTIONF (f, __VA_ARGS__)
-
-#endif /* !__cplusplus */
+#else
+void                P4EST_TRACEF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_LDEBUGF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_VERBOSEF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_INFOF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_STATISTICSF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_PRODUCTIONF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+#endif
+#define P4EST_NOTICE            P4EST_STATISTICS
+#define P4EST_NOTICEF           P4EST_STATISTICSF
+#define P4EST_LERROR            P4EST_PRODUCTION
+#define P4EST_LERRORF           P4EST_PRODUCTIONF
 
 /* extern declarations */
 extern int          p4est_package_id;
-
-/** Returns a pointer to an array element indexed by a p4est_topidx_t.
- * \param [in] index needs to be in [0]..[elem_count-1].
- */
-/*@unused@*/
-static inline void *
-p4est_array_index_topidx (sc_array_t * array, p4est_topidx_t it)
-{
-  P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
-
-  return (void *) (array->array + (array->elem_size * (size_t) it));
-}
 
 /** Find the lowest position k in a sorted array such that array[k] >= target.
  * \param [in]  target  The target lower bound to binary search for.

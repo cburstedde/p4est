@@ -86,8 +86,8 @@ p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
       quadrant = first_quad;
     }
     else {
-      tree = sc_array_index (p4est->trees, first_tree);
-      quadrant = sc_array_index (&tree->quadrants, 0);
+      tree = p4est_tree_array_index (p4est->trees, first_tree);
+      quadrant = p4est_quadrant_array_index (&tree->quadrants, 0);
     }
     input.x = quadrant->x;
     input.y = quadrant->y;

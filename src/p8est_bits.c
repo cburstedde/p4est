@@ -242,16 +242,16 @@ p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t * q, p4est_topidx_t
 
   p8est_quadrant_edge_neighbor (q, edge, &temp);
   if (p4est_quadrant_is_inside_root (&temp)) {
-    qp = sc_array_push (quads);
+    qp = p4est_quadrant_array_push (quads);
     *qp = temp;
-    tp = sc_array_push (treeids);
+    tp = (p4est_topidx_t *) sc_array_push (treeids);
     *tp = t;
     return;
   }
 
   if (!p8est_quadrant_is_outside_edge (&temp)) {
-    qp = sc_array_push (quads);
-    tp = sc_array_push (treeids);
+    qp = p4est_quadrant_array_push (quads);
+    tp = (p4est_topidx_t *) sc_array_push (treeids);
 
     face = p8est_edge_faces[edge][0];
     p4est_quadrant_face_neighbor (q, face, &temp);
@@ -259,8 +259,8 @@ p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t * q, p4est_topidx_t
       face = p8est_edge_faces[edge][1];
       *tp = p8est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
       if (*tp == -1) {
-        qp = sc_array_pop (quads);
-        tp = sc_array_pop (treeids);
+        qp = (p4est_quadrant_t *) sc_array_pop (quads);
+        tp = (p4est_topidx_t *) sc_array_pop (treeids);
       }
       return;
     }
@@ -270,17 +270,17 @@ p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t * q, p4est_topidx_t
     face = p8est_edge_faces[edge][0];
     *tp = p8est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
     if (*tp == -1) {
-      qp = sc_array_pop (quads);
-      tp = sc_array_pop (treeids);
+      qp = (p4est_quadrant_t *) sc_array_pop (quads);
+      tp = (p4est_topidx_t *) sc_array_pop (treeids);
     }
     return;
   }
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
   p8est_find_edge_transform (conn, t, edge, &ei);
   for (etree = 0; etree < eta->elem_count; etree++) {
-    qp = sc_array_push (quads);
-    tp = sc_array_push (treeids);
-    et = sc_array_index (eta, etree);
+    qp = p4est_quadrant_array_push (quads);
+    tp = (p4est_topidx_t *) sc_array_push (treeids);
+    et = p8est_edge_array_index (eta, etree);
     p8est_quadrant_transform_edge (&temp, qp, &ei, et, 1);
     *tp = et->ntree;
   }

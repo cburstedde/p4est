@@ -39,7 +39,7 @@ static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
 {
-  user_data_t        *data = quadrant->p.user_data;
+  user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;
@@ -161,9 +161,9 @@ main (int argc, char **argv)
 
   /* check user data content */
   for (t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
-    tree = p4est_array_index_topidx (p4est->trees, t);
+    tree = p4est_tree_array_index (p4est->trees, t);
     for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
-      quad = sc_array_index (&tree->quadrants, qz);
+      quad = p4est_quadrant_array_index (&tree->quadrants, qz);
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 
@@ -209,9 +209,9 @@ main (int argc, char **argv)
 
   /* check user data content */
   for (t = copy->first_local_tree; t <= copy->last_local_tree; ++t) {
-    tree = p4est_array_index_topidx (copy->trees, t);
+    tree = p4est_tree_array_index (copy->trees, t);
     for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
-      quad = sc_array_index (&tree->quadrants, qz);
+      quad = p4est_quadrant_array_index (&tree->quadrants, qz);
       user_data = (user_data_t *) quad->p.user_data;
       sum = quad->x + quad->y + quad->level;
 

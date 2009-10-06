@@ -20,10 +20,9 @@
 */
 
 #include <p8est.h>
-#include <p4est_to_p8est.h>
 
 static void
-test_periodic (p4est_connectivity_t * conn)
+test_periodic (p8est_connectivity_t * conn)
 {
   int                 i;
   int                 iface, nface;
@@ -56,7 +55,7 @@ test_periodic (p4est_connectivity_t * conn)
     SC_CHECK_ABORT ((int) ei.iedge == iedge, "PE ei");
     SC_CHECK_ABORT (eta->elem_count == 1, "PE count");
     for (zz = 0; zz < eta->elem_count; ++zz) {
-      et = sc_array_index (eta, zz);
+      et = p8est_edge_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == itree, "PE tree");
       SC_CHECK_ABORT ((int) et->nedge + iedge == 8 * (iedge / 4) + 3,
                       "PE edge");
@@ -77,7 +76,7 @@ test_periodic (p4est_connectivity_t * conn)
     SC_CHECK_ABORT ((int) ci.icorner == icorner, "PC ci");
     SC_CHECK_ABORT (cta->elem_count == 1, "PC count");
     for (zz = 0; zz < cta->elem_count; ++zz) {
-      ct = sc_array_index (cta, zz);
+      ct = p8est_corner_array_index (cta, zz);
       SC_CHECK_ABORT (ct->ntree == itree, "PC tree");
       SC_CHECK_ABORT (ct->ncorner + icorner == 7, "PC corner");
     }
@@ -108,7 +107,7 @@ rotwrap_corners[8][2] =
 /* *INDENT-ON* */
 
 static void
-test_rotwrap (p4est_connectivity_t * conn)
+test_rotwrap (p8est_connectivity_t * conn)
 {
   int                 i;
   int                 iface, nface;
@@ -158,7 +157,7 @@ test_rotwrap (p4est_connectivity_t * conn)
     SC_CHECK_ABORT ((int) ei.iedge == iedge, "RE ei");
     SC_CHECK_ABORT ((int) eta->elem_count == 2 - (iedge / 4), "RE count AB");
     for (zz = 0; zz < eta->elem_count; ++zz) {
-      et = sc_array_index (eta, zz);
+      et = p8est_edge_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == itree, "RE tree");
       SC_CHECK_ABORT ((int) et->nedge == rotwrap_edges[iedge][zz], "RE edge");
       SC_CHECK_ABORT ((int) et->nflip == rotwrap_flip[iedge][zz], "RE flip");
@@ -178,7 +177,7 @@ test_rotwrap (p4est_connectivity_t * conn)
     SC_CHECK_ABORT ((int) ci.icorner == icorner, "RC ci");
     SC_CHECK_ABORT (cta->elem_count == 2, "RC count");
     for (zz = 0; zz < cta->elem_count; ++zz) {
-      ct = sc_array_index (cta, zz);
+      ct = p8est_corner_array_index (cta, zz);
       SC_CHECK_ABORT (ct->ntree == itree, "RC tree");
       SC_CHECK_ABORT ((int) ct->ncorner == rotwrap_corners[icorner][zz],
                       "RC corner");
@@ -204,7 +203,7 @@ test_weird (void)
   p8est_corner_info_t ci;
   p8est_corner_transform_t *ct;
   sc_array_t         *eta, *cta;
-  p4est_connectivity_t *conn;
+  p8est_connectivity_t *conn;
 
   conn = p8est_connectivity_new (0, 1,
                                  num_edges, num_ett, num_corners, num_ctt);
@@ -243,7 +242,7 @@ test_weird (void)
   conn->corner_to_corner[3] = 5;
   conn->ctt_offset[0] = 0;
 
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (p8est_connectivity_is_valid (conn));
 
   eta = &ei.edge_transforms;
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
@@ -252,7 +251,7 @@ test_weird (void)
     SC_CHECK_ABORT ((int) ei.iedge == weird_edges[i][0], "WE ei");
     SC_CHECK_ABORT (eta->elem_count == 1, "WE count A");
     for (zz = 0; zz < eta->elem_count; ++zz) {
-      et = sc_array_index (eta, zz);
+      et = p8est_edge_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == 0, "WE tree");
       SC_CHECK_ABORT ((int) et->nedge == weird_edges[i][1], "WE edge");
       SC_CHECK_ABORT (et->nflip == 1, "WE flip");
@@ -270,14 +269,14 @@ test_weird (void)
     SC_CHECK_ABORT ((int) ci.icorner == i, "WC ci");
     SC_CHECK_ABORT ((int) cta->elem_count == 2 - (i & 0x02), "WC count");
     for (zz = 0; zz < cta->elem_count; ++zz) {
-      ct = sc_array_index (cta, zz);
+      ct = p8est_corner_array_index (cta, zz);
       SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
       SC_CHECK_ABORT ((size_t) ct->ncorner == 4 * zz + !(i % 2), "WC corner");
     }
   }
   sc_array_reset (cta);
 
-  p4est_connectivity_destroy (conn);
+  p8est_connectivity_destroy (conn);
 }
 
 /*
@@ -288,18 +287,18 @@ test_weird (void)
 int
 main (int argc, char **argv)
 {
-  p4est_connectivity_t *conn;
+  p8est_connectivity_t *conn;
 
   sc_init (MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   conn = p8est_connectivity_new_periodic ();
   test_periodic (conn);
-  p4est_connectivity_destroy (conn);
+  p8est_connectivity_destroy (conn);
 
   conn = p8est_connectivity_new_rotwrap ();
   test_rotwrap (conn);
-  p4est_connectivity_destroy (conn);
+  p8est_connectivity_destroy (conn);
 
   test_weird ();
 
