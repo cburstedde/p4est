@@ -32,7 +32,7 @@ typedef struct
    * p4est.  Their piggy3 data member is filled with their owner's tree
    * and local number.  Quadrants will be ordered in \c
    * p8est_quadrant_compare_piggy order.  These will be quadrants
-   * inside the neighboring tree i.e., \c p4est_quadrant_is_inside is
+   * inside the neighboring tree i.e., \c p8est_quadrant_is_inside is
    * true for the quadrant and the neighboring tree.
    */
   sc_array_t          ghosts;
@@ -79,7 +79,7 @@ void                p8est_ghost_destroy (p8est_ghost_t * ghost);
 /** Conduct binary search on range of the ghost layer for specific tree. */
 ssize_t             p8est_ghost_tree_bsearch (p8est_ghost_t * ghost,
                                               p4est_topidx_t which_tree,
-                                              const p4est_quadrant_t * q);
+                                              const p8est_quadrant_t * q);
 
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *
