@@ -76,7 +76,7 @@ p8est_quadrant_is_outside_edge_extra (const p4est_quadrant_t * q, int *edge)
 }
 
 int
-p8est_quadrant_is_family (const p4est_quadrant_t * q0,
+p4est_quadrant_is_family (const p4est_quadrant_t * q0,
                           const p4est_quadrant_t * q1,
                           const p4est_quadrant_t * q2,
                           const p4est_quadrant_t * q3,
@@ -217,10 +217,10 @@ p8est_quadrant_edge_neighbor (const p4est_quadrant_t * q,
 }
 
 void
-p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t * q, p4est_topidx_t
+p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
                                     t, int edge, sc_array_t * quads,
                                     sc_array_t * treeids,
-                                    p8est_connectivity_t * conn)
+                                    p4est_connectivity_t * conn)
 {
   p4est_quadrant_t    temp;
   p4est_quadrant_t   *qp;

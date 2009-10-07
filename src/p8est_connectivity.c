@@ -160,7 +160,7 @@ const int           p8est_child_corner_edges[8][8] =
 
 #include "p4est_connectivity.c"
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_unitcube (void)
 {
   const p4est_topidx_t num_vertices = 8;
@@ -194,7 +194,7 @@ p8est_connectivity_new_unitcube (void)
                                       NULL, &num_ctt, NULL, NULL);
 }
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_periodic (void)
 {
   const p4est_topidx_t num_vertices = 8;
@@ -255,7 +255,7 @@ p8est_connectivity_new_periodic (void)
                                       corner_to_tree, corner_to_corner);
 }
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_rotwrap (void)
 {
   const p4est_topidx_t num_vertices = 8;
@@ -316,7 +316,7 @@ p8est_connectivity_new_rotwrap (void)
                                       corner_to_tree, corner_to_corner);
 }
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_twocubes (void)
 {
   const p4est_topidx_t num_vertices = 12;
@@ -358,7 +358,7 @@ p8est_connectivity_new_twocubes (void)
 }
 
 /* This function is contributed by Toby Isaac. */
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
                               p4est_topidx_t p, int periodic_a,
                               int periodic_b, int periodic_c)
@@ -402,10 +402,10 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
   p4est_topidx_t      vcount = 0, vicount = 0;
   int                 dir1, dir2;
   int                 c[3];
-  p8est_connectivity_t *conn;
+  p4est_connectivity_t *conn;
 
   P4EST_ASSERT (m > 0 && n > 0 && p > 0);
-  conn = p8est_connectivity_new (num_vertices, num_trees, num_edges, num_ett,
+  conn = p4est_connectivity_new (num_vertices, num_trees, num_edges, num_ett,
                                  num_corners, num_ctt);
 
   vertices = conn->vertices;
@@ -677,13 +677,12 @@ p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
   P4EST_FREE (tree_to_corner2);
   P4EST_FREE (tree_to_edge2);
 
-  P4EST_ASSERT (p8est_connectivity_is_valid (conn));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   return conn;
-
 }
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_rotcubes (void)
 {
   const p4est_topidx_t num_vertices = 26;
@@ -779,7 +778,7 @@ p8est_connectivity_new_rotcubes (void)
                                       corner_to_tree, corner_to_corner);
 }
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_shell (void)
 {
 /* *INDENT-OFF* */
@@ -967,7 +966,7 @@ p8est_connectivity_new_shell (void)
                                       NULL, &ctt_offset, NULL, NULL);
 }
 
-p8est_connectivity_t *
+p4est_connectivity_t *
 p8est_connectivity_new_sphere (void)
 {
 /* *INDENT-OFF* */
@@ -1137,7 +1136,7 @@ p8est_connectivity_new_sphere (void)
 }
 
 void
-p8est_find_edge_transform (p8est_connectivity_t * conn,
+p8est_find_edge_transform (p4est_connectivity_t * conn,
                            p4est_topidx_t itree, int iedge,
                            p8est_edge_info_t * ei)
 {
