@@ -3169,29 +3169,36 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   P4EST_FREE (lnodes);
 }
 
-void
-p4est_lnodes_share_owned (sc_array_t * array, p4est_lnodes_t * lnodes,
-                          p4est_t * p4est)
+p4est_lnodes_comm_t *
+p4est_lnodes_share_owned_begin (sc_array_t * node_data,
+                                p4est_lnodes_t * lnodes, p4est_t * p4est)
 {
   int                 mpiret;
   int                 p, proc;
   sc_array_t         *sharers = lnodes->sharers;
   int                 npeers = (int) sharers->elem_count;
   p4est_lnodes_rank_t *lrank;
-  sc_array_t          requests;
+  sc_array_t         *requests;
   MPI_Request        *request;
   p4est_locidx_t      li, lz;
   void               *dest;
   size_t              ind;
-  sc_array_t          send_bufs;
+  sc_array_t         *send_bufs;
   sc_array_t         *send_buf;
   p4est_locidx_t      mine_offset, mine_count;
-  size_t              elem_size = array->elem_size;
+  size_t              elem_size = node_data->elem_size;
+  p4est_lnodes_comm_t *comm_array;
 
-  P4EST_ASSERT (array->elem_count == (size_t) lnodes->num_indep_nodes);
+  P4EST_ASSERT (node_data->elem_count == (size_t) lnodes->num_indep_nodes);
 
-  sc_array_init (&requests, sizeof (MPI_Request));
-  sc_array_init (&send_bufs, sizeof (sc_array_t));
+  comm_array = P4EST_ALLOC (p4est_lnodes_comm_t, 1);
+
+  comm_array->requests = requests = sc_array_new (sizeof (MPI_Request));
+  comm_array->send_bufs = send_bufs = sc_array_new (sizeof (sc_array_t));
+  /* in this routine, the values from other processes are writtten directly
+   * into node_data */
+  comm_array->recv_bufs = NULL;
+
   for (p = 0; p < npeers; p++) {
     lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, p);
     proc = lrank->rank;
@@ -3199,8 +3206,8 @@ p4est_lnodes_share_owned (sc_array_t * array, p4est_lnodes_t * lnodes,
       continue;
     }
     if (lrank->owned_count) {
-      request = (MPI_Request *) sc_array_push (&requests);
-      mpiret = MPI_Irecv (array->array + elem_size * lrank->owned_offset,
+      request = (MPI_Request *) sc_array_push (requests);
+      mpiret = MPI_Irecv (node_data->array + elem_size * lrank->owned_offset,
                           (int) (lrank->owned_count * elem_size),
                           MPI_BYTE, proc, P4EST_COMM_LNODES_OWNED,
                           p4est->mpicomm, request);
@@ -3209,45 +3216,72 @@ p4est_lnodes_share_owned (sc_array_t * array, p4est_lnodes_t * lnodes,
     mine_count = lrank->shared_mine_count;
     if (mine_count) {
       mine_offset = lrank->shared_mine_offset;
-      send_buf = (sc_array_t *) sc_array_push (&send_bufs);
+      send_buf = (sc_array_t *) sc_array_push (send_bufs);
       sc_array_init (send_buf, elem_size);
       sc_array_resize (send_buf, mine_count);
       for (ind = (size_t) mine_offset, li = 0; li < mine_count; li++, ind++) {
         lz = *((p4est_locidx_t *) sc_array_index (&lrank->shared_nodes, ind));
         dest = sc_array_index (send_buf, (size_t) li);
-        memcpy (dest, array->array + elem_size * lz, elem_size);
+        memcpy (dest, node_data->array + elem_size * lz, elem_size);
       }
-      request = (MPI_Request *) sc_array_push (&requests);
+      request = (MPI_Request *) sc_array_push (requests);
       mpiret = MPI_Isend (send_buf->array, (int) (mine_count * elem_size),
                           MPI_BYTE, proc, P4EST_COMM_LNODES_OWNED,
                           p4est->mpicomm, request);
       SC_CHECK_MPI (mpiret);
     }
   }
-  if (requests.elem_count) {
-    mpiret = MPI_Waitall ((int) requests.elem_count,
-                          (MPI_Request *) requests.array,
+
+  return comm_array;
+}
+
+void
+p4est_lnodes_share_owned_end (p4est_lnodes_comm_t * comm_array)
+{
+  int                 mpiret;
+  size_t              zz;
+  sc_array_t         *requests = comm_array->requests;
+  sc_array_t         *send_bufs = comm_array->send_bufs;
+  sc_array_t         *send_buf;
+
+  P4EST_ASSERT (comm_array->recv_bufs == NULL);
+
+  if (requests->elem_count) {
+    mpiret = MPI_Waitall ((int) requests->elem_count,
+                          (MPI_Request *) requests->array,
                           MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
-  for (ind = 0; ind < send_bufs.elem_count; ind++) {
-    send_buf = (sc_array_t *) sc_array_index (&send_bufs, ind);
+  sc_array_destroy (requests);
+  for (zz = 0; zz < send_bufs->elem_count; zz++) {
+    send_buf = (sc_array_t *) sc_array_index (send_bufs, zz);
     sc_array_reset (send_buf);
   }
-  sc_array_reset (&send_bufs);
-  sc_array_reset (&requests);
+  sc_array_destroy (send_bufs);
+
+  P4EST_FREE (comm_array);
 }
 
-sc_array_t         *
-p4est_lnodes_share_all_begin (sc_array_t * array, sc_array_t ** Comm_array,
-                              p4est_lnodes_t * lnodes, p4est_t * p4est)
+void
+p4est_lnodes_share_owned (sc_array_t * array, p4est_lnodes_t * lnodes,
+                          p4est_t * p4est)
+{
+  p4est_lnodes_comm_t *comm_array;
+
+  comm_array = p4est_lnodes_share_owned_begin (array, lnodes, p4est);
+  p4est_lnodes_share_owned_end (comm_array);
+}
+
+p4est_lnodes_comm_t *
+p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes,
+                              p4est_t * p4est)
 {
   int                 mpiret;
   int                 p, proc;
   sc_array_t         *sharers = lnodes->sharers;
   int                 npeers = (int) sharers->elem_count;
   p4est_lnodes_rank_t *lrank;
-  sc_array_t         *comm_array;
+  p4est_lnodes_comm_t *comm_array;
   sc_array_t         *requests;
   MPI_Request        *request;
   sc_array_t         *send_bufs;
@@ -3258,30 +3292,28 @@ p4est_lnodes_share_all_begin (sc_array_t * array, sc_array_t ** Comm_array,
   void               *dest;
   size_t              zz;
   size_t              count;
-  size_t              elem_size = array->elem_size;
+  size_t              elem_size = node_data->elem_size;
 
-  P4EST_ASSERT (array->elem_count == (size_t) lnodes->num_indep_nodes);
+  P4EST_ASSERT (node_data->elem_count == (size_t) lnodes->num_indep_nodes);
 
-  *Comm_array = comm_array = sc_array_new (sizeof (sc_array_t));
-  sc_array_resize (comm_array, 2);
-  requests = (sc_array_t *) sc_array_index (comm_array, 0);
-  sc_array_init (requests, sizeof (MPI_Request));
-  send_bufs = (sc_array_t *) sc_array_index (comm_array, 1);
-  sc_array_init (send_bufs, sizeof (sc_array_t));
-  recv_bufs = sc_array_new (sizeof (sc_array_t));
+  comm_array = P4EST_ALLOC (p4est_lnodes_comm_t, 1);
+  comm_array->requests = requests = sc_array_new (sizeof (MPI_Request));
+  comm_array->send_bufs = send_bufs = sc_array_new (sizeof (sc_array_t));
+  comm_array->recv_bufs = recv_bufs = sc_array_new (sizeof (sc_array_t));
   sc_array_resize (recv_bufs, (size_t) npeers);
 
   for (p = 0; p < npeers; p++) {
     lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, p);
     proc = lrank->rank;
     if (proc == p4est->mpirank) {
+      /* there is no buffer for the current process: look in node_data
+       * for values */
       recv_buf = (sc_array_t *) sc_array_index_int (recv_bufs, p);
       sc_array_init (recv_buf, elem_size);
       continue;
     }
     count = lrank->shared_nodes.elem_count;
     if (lrank->shared_nodes.elem_count) {
-
       recv_buf = (sc_array_t *) sc_array_index_int (recv_bufs, p);
       sc_array_init (recv_buf, elem_size);
       sc_array_resize (recv_buf, count);
@@ -3297,7 +3329,7 @@ p4est_lnodes_share_all_begin (sc_array_t * array, sc_array_t ** Comm_array,
       for (zz = 0; zz < count; zz++) {
         lz = *((p4est_locidx_t *) sc_array_index (&lrank->shared_nodes, zz));
         dest = sc_array_index (send_buf, zz);
-        memcpy (dest, array->array + elem_size * lz, elem_size);
+        memcpy (dest, node_data->array + elem_size * lz, elem_size);
       }
       request = (MPI_Request *) sc_array_push (requests);
       mpiret = MPI_Isend (send_buf->array, (int) (count * elem_size),
@@ -3307,45 +3339,61 @@ p4est_lnodes_share_all_begin (sc_array_t * array, sc_array_t ** Comm_array,
     }
   }
 
-  return recv_bufs;
+  return comm_array;
 }
 
-void
-p4est_lnodes_share_all_end (sc_array_t * comm_array)
+sc_array_t         *
+p4est_lnodes_share_all_end (p4est_lnodes_comm_t * comm_array)
 {
   int                 mpiret;
   size_t              zz;
-  sc_array_t         *requests;
-  sc_array_t         *send_bufs;
+  sc_array_t         *requests = comm_array->requests;
+  sc_array_t         *send_bufs = comm_array->send_bufs;
+  sc_array_t         *recv_bufs = comm_array->recv_bufs;
   sc_array_t         *send_buf;
 
-  requests = (sc_array_t *) sc_array_index (comm_array, 0);
-  send_bufs = (sc_array_t *) sc_array_index (comm_array, 1);
+  P4EST_ASSERT (recv_bufs->elem_count == send_bufs->elem_count);
+
   if (requests->elem_count) {
     mpiret = MPI_Waitall ((int) requests->elem_count,
                           (MPI_Request *) requests->array,
                           MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
-  sc_array_reset (requests);
+  sc_array_destroy (requests);
   for (zz = 0; zz < send_bufs->elem_count; zz++) {
     send_buf = (sc_array_t *) sc_array_index (send_bufs, zz);
     sc_array_reset (send_buf);
   }
-  sc_array_reset (send_bufs);
-  sc_array_destroy (comm_array);
+  sc_array_destroy (send_bufs);
+  P4EST_FREE (comm_array);
+
+  return recv_bufs;
 }
 
 sc_array_t         *
-p4est_lnodes_share_all (sc_array_t * array, p4est_lnodes_t * lnodes,
+p4est_lnodes_share_all (sc_array_t * node_data, p4est_lnodes_t * lnodes,
                         p4est_t * p4est)
 {
+  p4est_lnodes_comm_t *comm_array;
   sc_array_t         *recv_bufs;
-  sc_array_t         *comm_array;
 
-  recv_bufs =
-    p4est_lnodes_share_all_begin (array, &comm_array, lnodes, p4est);
-  p4est_lnodes_share_all_end (comm_array);
+  comm_array = p4est_lnodes_share_all_begin (node_data, lnodes, p4est);
+  recv_bufs = p4est_lnodes_share_all_end (comm_array);
 
   return recv_bufs;
+}
+
+void
+p4est_lnodes_buffers_destroy (sc_array_t * recv_bufs)
+{
+  size_t              zz;
+  sc_array_t         *recv_buf;
+
+  P4EST_ASSERT (recv_bufs->elem_size == sizeof (sc_array_t));
+  for (zz = 0; zz < recv_bufs->elem_count; zz++) {
+    recv_buf = (sc_array_t *) sc_array_index (recv_bufs, zz);
+    sc_array_reset (recv_buf);
+  }
+  sc_array_destroy (recv_bufs);
 }

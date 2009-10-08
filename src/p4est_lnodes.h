@@ -156,20 +156,36 @@ p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
 
 void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
 
-void                p4est_lnodes_share_owned (sc_array_t * array,
+typedef struct p4est_lnodes_comm
+{
+  sc_array_t         *requests;
+  sc_array_t         *send_bufs;
+  sc_array_t         *recv_bufs;
+}
+p4est_lnodes_comm_t;
+
+p4est_lnodes_comm_t *p4est_lnodes_share_owned_begin (sc_array_t * node_data,
+                                                     p4est_lnodes_t * lnodes,
+                                                     p4est_t * p4est);
+
+void                p4est_lnodes_share_owned_end (p4est_lnodes_comm_t * comm);
+
+void                p4est_lnodes_share_owned (sc_array_t * node_data,
                                               p4est_lnodes_t * lnodes,
                                               p4est_t * p4est);
 
-sc_array_t         *p4est_lnodes_share_all_begin (sc_array_t * array,
-                                                  sc_array_t ** comm_array,
-                                                  p4est_lnodes_t * lnodes,
-                                                  p4est_t * p4est);
+p4est_lnodes_comm_t *p4est_lnodes_share_all_begin (sc_array_t * node_data,
+                                                   p4est_lnodes_t * lnodes,
+                                                   p4est_t * p4est);
 
-void                p4est_lnodes_share_all_end (sc_array_t * comm_array);
+sc_array_t         *p4est_lnodes_share_all_end (p4est_lnodes_comm_t *
+                                                comm_array);
 
-sc_array_t         *p4est_lnodes_share_all (sc_array_t * array,
+sc_array_t         *p4est_lnodes_share_all (sc_array_t * node_data,
                                             p4est_lnodes_t * lnodes,
                                             p4est_t * p4est);
+
+void                p4est_lnodes_buffers_destroy (sc_array_t * recv_bufs);
 
 SC_EXTERN_C_END;
 
