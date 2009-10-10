@@ -2191,7 +2191,7 @@ p4est_partition_given (p4est_t * p4est,
       tree_from_end = SC_MIN (my_end, from_end) - from_begin;
       num_copy_global = tree_from_end - tree_from_begin + 1;
       P4EST_ASSERT (num_copy_global >= 0);
-      P4EST_ASSERT (num_copy_global <= P4EST_LOCIDX_MAX);
+      P4EST_ASSERT (num_copy_global <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
       num_copy = (p4est_locidx_t) num_copy_global;
       num_per_tree_local[which_tree - first_local_tree] = num_copy;
     }

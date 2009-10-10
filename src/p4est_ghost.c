@@ -29,11 +29,13 @@
 #include <p8est_ghost.h>
 #endif
 
+#ifdef P4EST_MPI
 static inline sc_array_t *
 p4est_ghost_array_index (sc_array_t * array, int i)
 {
   return (sc_array_t *) sc_array_index_int (array, i);
 }
+#endif
 
 static p4est_ghost_t *p4est_ghost_new_check (p4est_t * p4est,
                                              p4est_balance_type_t btype,
@@ -197,7 +199,7 @@ p4est_ghost_tree_bsearch (p4est_ghost_t * ghost, p4est_topidx_t which_tree,
   result = sc_array_bsearch (&ghost_view, q, p4est_quadrant_compare);
 
   /* and don't forget to add the window offset */
-  return (result < 0) ? -1 : result + (ssize_t) start;
+  return (result < 0) ? (ssize_t) (-1) : result + (ssize_t) start;
 }
 
 int
