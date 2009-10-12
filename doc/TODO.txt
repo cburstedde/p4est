@@ -3,7 +3,6 @@ Note: The real bug tracking happenes in the bugs/ directory.
 
  * Connectivity
    Implement periodic connections between different trees
-   Use vertex-free computation of corner connectivity
  * Interface
    Change global_last_quad_index to global_quadrant_offset
    Remove the p4est quadrant_pool member

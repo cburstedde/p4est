@@ -34,11 +34,11 @@
 #ifndef P4_TO_P8
 #define P4EST_CONN_SUFFIX "p4c"
 #define P4EST_FOREST_SUFFIX "p4p"
-static const int    default_refine_level = 8;
+static const int    default_refine_level = 7;
 #else
 #define P4EST_CONN_SUFFIX "p8c"
 #define P4EST_FOREST_SUFFIX "p8p"
-static const int    default_refine_level = 5;
+static const int    default_refine_level = 4;
 #endif
 static int          refine_level = 0;
 static int          counter = 0;
@@ -156,8 +156,9 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 
-  /* partition (still not balanced) */
+  /* partition and balance */
   p4est_partition (p4est, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
   sc_stats_set1 (stats + STATS_P4EST_ELEMS,
                  (double) p4est->local_num_quadrants, "p4est elements");
 
@@ -238,7 +239,7 @@ main (int argc, char **argv)
                                 opt, argc, argv);
   SC_CHECK_ABORT (first_arg >= 0, "Option error");
 
-  /* create connectivity and p4est (not balanced) */
+  /* create connectivity */
 #ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_star ();
 #else
@@ -248,7 +249,6 @@ main (int argc, char **argv)
   /* test with vertex information */
   test_loadsave (connectivity, prefix, mpicomm, mpirank);
 
-#ifdef P4_TO_P8
   /* test without vertex information */
   connectivity->num_vertices = 0;
   P4EST_FREE (connectivity->vertices);
@@ -256,11 +256,9 @@ main (int argc, char **argv)
   P4EST_FREE (connectivity->tree_to_vertex);
   connectivity->tree_to_vertex = NULL;
   test_loadsave (connectivity, prefix, mpicomm, mpirank);
-#endif
-
-  p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
+  p4est_connectivity_destroy (connectivity);
   sc_options_destroy (opt);
   sc_finalize ();
 

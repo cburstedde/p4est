@@ -8,8 +8,8 @@ type: :bugfix
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-11-11 23:29:56.418996 Z
 references: []
 
@@ -23,3 +23,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - commented
   - This is good in 3D. Need to do it all over for 2D.
+- - 2009-10-12 23:42:32.660868 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - |-
+    This was done in the 2D z-order conversion.
+    The loadsave test was updated to test both 2D and 3D without vertices.
