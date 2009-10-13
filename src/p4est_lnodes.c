@@ -2930,7 +2930,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   count = inode_sharers->elem_count;
   for (zz = 0; zz < count; zz++) {
     i = *((int *) sc_array_index (inode_sharers, zz));
-    comm_proc[i]++;
+    comm_proc[i] = 1;
   }
   /* create an entry in sharers for each such process, providing a map from
    * process id to sharer index */
@@ -2980,17 +2980,42 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
         for (k = 0; k < limit; k++) {
           gidx = *((p4est_locidx_t *) sc_array_index (&inode_to_global,
                                                       (size_t) index++));
-          for (l = 0; l < share_count; l++) {
-            proc = *((int *) sc_array_index (inode_sharers,
-                                             (size_t) share_offset +
-                                             (size_t) l));
-            shareidx = comm_proc[proc];
+          if (j == 0) {
+            shareidx = comm_proc[i];
             P4EST_ASSERT (shareidx >= 0);
             lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
                                                                 shareidx);
-            P4EST_ASSERT (lrank->rank == proc);
+            P4EST_ASSERT (lrank->rank == i);
             lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
             *lp = gidx;
+
+            P4EST_ASSERT (share_count >= 2);
+            proc = *((int *) sc_array_index (inode_sharers,
+                                             (size_t) share_offset + 1));
+            P4EST_ASSERT (proc != p4est->mpirank);
+            if (proc == i) {
+              shareidx = comm_proc[p4est->mpirank];
+              P4EST_ASSERT (shareidx >= 0);
+              lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
+                                                                  shareidx);
+              P4EST_ASSERT (lrank->rank == p4est->mpirank);
+              lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
+              *lp = gidx;
+            }
+          }
+          else {
+            for (l = 0; l < share_count; l++) {
+              proc = *((int *) sc_array_index (inode_sharers,
+                                               (size_t) share_offset +
+                                               (size_t) l));
+              shareidx = comm_proc[proc];
+              P4EST_ASSERT (shareidx >= 0);
+              lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
+                                                                  shareidx);
+              P4EST_ASSERT (lrank->rank == proc);
+              lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
+              *lp = gidx;
+            }
           }
         }
       }
@@ -3029,6 +3054,14 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     if (proc == p4est->mpirank) {
       lrank->owned_count = lnodes->owned_count;
       lrank->owned_offset = lnodes->owned_offset;
+    }
+    else {
+      P4EST_VERBOSEF ("Processor %d shares %d nodes with processor %d\n",
+                      p4est->mpirank, count, lrank->rank);
+      P4EST_VERBOSEF ("Processor %d owns %d nodes used by processor %d\n",
+                      p4est->mpirank, lrank->shared_mine_count, lrank->rank);
+      P4EST_VERBOSEF ("Processor %d borrows %d nodes from processor %d\n",
+                      p4est->mpirank, lrank->owned_count, lrank->rank);
     }
   }
   sc_array_reset (&inode_to_global);
