@@ -6,11 +6,8 @@ Note: The real bug tracking happenes in the bugs/ directory.
    Remove the p4est quadrant_pool member
    Let the refine and coarsen callbacks see the originating quadrant(s)
  * Mesh generation
-   2D bilinear elements
    2D interface to pfudg
    Verify trilinear mesh extraction
- * Integer sizes
-   Ensure that balance (and possibly others) use p4est_*idx_t
  * Helper functions / algorithms
    Verify p4est_quadrant_is_inside_tree function
    Isolate a p4est_tree_is_valid function
@@ -19,11 +16,10 @@ Note: The real bug tracking happenes in the bugs/ directory.
    Deal with p4est counters modified by balance_subtree
    Check the inter-tree face-only/edge-only local balance
  * vtk output
-   geometry
+   geometry in 2D
  * Optimization
    Speed up p4est_quadrant_compare
    Speed up p4est_intxx_t_compare
  * Include a test case for every major functionality
  * Documentation using doxygen
- * Enforce const correctness
  * Make the roots of the forest distributed in parallel
