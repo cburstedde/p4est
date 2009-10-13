@@ -2265,8 +2265,11 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
 #endif
     retval = fclose (file);
     SC_CHECK_ABORT (retval == 0, "file close");
+    file = NULL;
 #endif
   }
+  else
+    file = NULL;
 
   /* zero data size is effectively not saved */
   if (data_size == 0) {
@@ -2414,6 +2417,7 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
 #endif
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");
+  file = NULL;
 
   /* initiate sequential synchronization */
 #ifdef P4EST_MPI
@@ -2654,6 +2658,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   /* close file and return */
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");
+  file = NULL;
 
   /* assert that we loaded a valid forest */
   SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");

@@ -60,9 +60,11 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
                   "wrong number of vertices");
   quad_counter = P4EST_ALLOC (p4est_topidx_t **, m);
   vert_counter = P4EST_ALLOC_ZERO (int8_t, num_vertices);
+  corn_counter = NULL;
   if (num_corners > 0) {
     corn_counter = P4EST_ALLOC_ZERO (int8_t, num_corners);
   }
+  edge_counter = NULL;
   if (num_edges > 0) {
     edge_counter = P4EST_ALLOC_ZERO (int8_t, num_edges);
   }

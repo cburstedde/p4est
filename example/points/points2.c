@@ -147,6 +147,7 @@ main (int argc, char **argv)
   if (!wrongusage && argc != 5) {
     wrongusage = 1;
   }
+  conn = NULL;
   if (!wrongusage) {
 #ifndef P4_TO_P8
     if (!strcmp (argv[1], "unit")) {

@@ -1066,7 +1066,10 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
   size_t              pz, zz;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
-  p4est_locidx_t      li, local_num;
+#ifdef P4EST_DEBUG
+  p4est_locidx_t      li;
+#endif
+  p4est_locidx_t      local_num;
   p4est_locidx_t      num_ghosts, ghost_offset, skipped;
   p4est_locidx_t     *send_counts, *recv_counts;
   p4est_tree_t       *tree;

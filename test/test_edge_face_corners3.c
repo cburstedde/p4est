@@ -68,6 +68,7 @@ main (int argc, char **argv)
 
   for (edge = 0; edge < 12; ++edge) {
     for (face = 0; face < 6; ++face) {
+      cs[0] = cs[1] = 0;        /* to avoid compiler warning */
       success = p8est_compute_edge_face_corners (edge, face, cs);
 
       if (!success) {
