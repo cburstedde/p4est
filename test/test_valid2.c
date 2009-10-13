@@ -99,6 +99,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, NULL, vtkname);
   crc_computed = p4est_checksum (p4est);
+  P4EST_GLOBAL_STATISTICSF ("Forest checksum 0x%08x\n", crc_computed);
 
   if (p4est->mpisize == 2 && p4est->mpirank == 0) {
     SC_CHECK_ABORT (crc_computed == crc_expected, "Checksum mismatch");

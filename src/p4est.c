@@ -1364,7 +1364,7 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 
 #ifdef P4EST_DEBUG
       checksum = p4est_quadrant_checksum (&peer->send_first, &checkarray, 0);
-      P4EST_LDEBUGF ("Balance A send checksum %x to %d\n", checksum, j);
+      P4EST_LDEBUGF ("Balance A send checksum 0x%08x to %d\n", checksum, j);
 #endif /* P4EST_DEBUG */
 
       total_send_count += qcount;
@@ -1478,7 +1478,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_DEBUG
         checksum =
           p4est_quadrant_checksum (&peer->recv_first, &checkarray, 0);
-        P4EST_LDEBUGF ("Balance A recv checksum %x from %d\n", checksum, j);
+        P4EST_LDEBUGF ("Balance A recv checksum 0x%08x from %d\n", checksum,
+                       j);
 #endif /* P4EST_DEBUG */
 
         /* process incoming quadrants to interleave with communication */
@@ -1503,7 +1504,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_DEBUG
           checksum =
             p4est_quadrant_checksum (&peer->send_second, &checkarray, 0);
-          P4EST_LDEBUGF ("Balance B send checksum %x to %d\n", checksum, j);
+          P4EST_LDEBUGF ("Balance B send checksum 0x%08x to %d\n", checksum,
+                         j);
 #endif /* P4EST_DEBUG */
 
           total_send_count += qcount;
@@ -1613,7 +1615,8 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_DEBUG
         checksum =
           p4est_quadrant_checksum (&peer->recv_second, &checkarray, 0);
-        P4EST_LDEBUGF ("Balance B recv checksum %x from %d\n", checksum, j);
+        P4EST_LDEBUGF ("Balance B recv checksum 0x%08x from %d\n", checksum,
+                       j);
 #endif /* P4EST_DEBUG */
       }
     }

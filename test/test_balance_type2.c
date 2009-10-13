@@ -118,7 +118,7 @@ main (int argc, char **argv)
   p4est_balance (p4estF, P8EST_BALANCE_FACE, NULL);
 #endif
   crcF = p4est_checksum (p4estF);
-  P4EST_GLOBAL_INFOF ("Face balance with %lld quadrants and crc 0x%x\n",
+  P4EST_GLOBAL_INFOF ("Face balance with %lld quadrants and crc 0x%08x\n",
                       (long long) p4estF->global_num_quadrants, crcF);
 
 #ifdef P4_TO_P8
@@ -128,7 +128,7 @@ main (int argc, char **argv)
   p4est_balance (p4estE, P8EST_BALANCE_EDGE, NULL);
   crcE = p4est_checksum (p4estE);
   SC_CHECK_ABORT (crcE == p4est_checksum (p4estF), "mismatch A");
-  P4EST_GLOBAL_INFOF ("Edge balance with %lld quadrants and crc 0x%x\n",
+  P4EST_GLOBAL_INFOF ("Edge balance with %lld quadrants and crc 0x%08x\n",
                       (long long) p4estE->global_num_quadrants, crcE);
 #endif
 
@@ -143,7 +143,7 @@ main (int argc, char **argv)
 #endif
   crcC = p4est_checksum (p4estC);
   SC_CHECK_ABORT (crcC == p4est_checksum (p4estF), "mismatch B");
-  P4EST_GLOBAL_INFOF ("Corner balance with %lld quadrants and crc 0x%x\n",
+  P4EST_GLOBAL_INFOF ("Corner balance with %lld quadrants and crc 0x%08x\n",
                       (long long) p4estC->global_num_quadrants, crcC);
 
   /* destroy forests and connectivity */

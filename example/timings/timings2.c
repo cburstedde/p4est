@@ -417,7 +417,7 @@ main (int argc, char **argv)
 
   /* print status and checksum */
   P4EST_GLOBAL_STATISTICSF ("Processors %d level %d shift %d"
-                            " tree checksum 0x%x\n",
+                            " tree checksum 0x%08x\n",
                             mpi->mpisize, refine_level, level_shift, crc);
   P4EST_GLOBAL_STATISTICSF ("Level %d refined to %lld balanced to %lld\n",
                             refine_level, (long long) count_refined,

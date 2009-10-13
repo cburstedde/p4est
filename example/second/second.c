@@ -86,7 +86,7 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
 
   /* print and verify forest checksum */
-  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
+  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%08x\n", crc);
   if (mpi->mpirank == 0)
     SC_CHECK_ABORT (crc == 0x324eb631U, "Checksum mismatch");
 

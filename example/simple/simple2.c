@@ -316,7 +316,7 @@ main (int argc, char **argv)
 #endif
 
   /* print and verify forest checksum */
-  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%x\n", crc);
+  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%08x\n", crc);
   if (mpi->mpirank == 0) {
     for (r = regression; r->config != P4EST_CONFIG_NULL; ++r) {
       if (r->config != config || r->mpisize != mpi->mpisize

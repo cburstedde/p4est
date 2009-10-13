@@ -26,6 +26,7 @@ tries to adhere to.
    For printf and friends use the following conversions.
    %lld (long long) int64_t qcoord_t locidx_t gloidx_t ssize_t
    %llu (unsigned long long) uint64_t size_t
+   0x%08x checksums (unsigned)
 
  * Variable names that are not self-descriptive
    Loop variables of type int can be named as usual: i, j, etc.
