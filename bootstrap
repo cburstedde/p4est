@@ -1,8 +1,5 @@
 #! /bin/sh
 
-echo "This is the bootstrap script for p4est"
-echo "Current directory is $PWD"
-
 # override by option argument
 SC_CONFIG="sc/config"
 if test -n "$1" ; then
@@ -15,12 +12,16 @@ fi
 # convert into an absolute path
 SC_CONFIG=`cd "$SC_CONFIG" && pwd`
 
-aclocal -Wall -I config -I "$SC_CONFIG"
-autoheader -Wall
-automake -Wall --add-missing --copy
-autoconf -Wall -f
-
 if test -x "sc/bootstrap" ; then
   echo "Running bootstrap in directory sc"
   (cd sc && ./bootstrap)
 fi
+
+echo "--- This is the bootstrap script for p4est ---"
+echo "Current directory is $PWD"
+
+aclocal -Wall -I config -I "$SC_CONFIG"
+autoconf -Wall --force
+autoheader -Wall --force
+libtoolize --automake --force --copy
+automake -Wall --add-missing --copy

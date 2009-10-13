@@ -3,9 +3,9 @@
 # Makefile.am in src
 # included non-recursively from toplevel directory
 
-libp4est_internal_headers =
 libp4est_generated_headers = src/p4est_config.h
 libp4est_installed_headers = src/p4est_base.h
+libp4est_internal_headers =
 libp4est_compiled_sources = src/p4est_base.c
 if P4EST_BUILD_2D
 libp4est_installed_headers += \
@@ -36,13 +36,26 @@ libp4est_compiled_sources += \
         src/p8est_vtk.c src/p8est_trilinear.c \
         src/p8est_points.c src/p8est_geometry.c
 endif
+P4EST_CPPFLAGS =
 
+# build static library
 lib_LIBRARIES += src/libp4est.a
 src_libp4est_a_SOURCES = \
-        $(libp4est_internal_headers) \
         $(libp4est_installed_headers) \
+        $(libp4est_internal_headers) \
         $(libp4est_compiled_sources)
+src_libp4est_a_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 src_libp4est_a_DEPENDENCIES = @P4EST_DEPENDENCIES@
+
+# build dynamic library
+if P4EST_SHARED
+lib_LTLIBRARIES += src/libp4est.la
+src_libp4est_la_SOURCES = \
+        $(libp4est_internal_headers) \
+        $(libp4est_compiled_sources)
+src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
+src_libp4est_la_DEPENDENCIES = @P4EST_DEPENDENCIES@
+endif
 
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
@@ -52,6 +65,6 @@ if P4EST_SC_USE_MK
 endif
 
 AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
-LDADD += @top_builddir@/src/libp4est.a @P4EST_SC_LDADD@
+LDADD += @top_builddir@/src/libp4est.@P4EST_LIB_SUFFIX@ @P4EST_SC_LDADD@
 
 LINT_CSOURCES += $(libp4est_compiled_sources)

@@ -9,11 +9,10 @@ AC_PREREQ(2.61)
 AC_CONFIG_HEADERS([src/pre_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR([config])
-AC_CONFIG_MACRO_DIR([config])
-AC_CONFIG_MACRO_DIR([sc/config])
 AC_PREFIX_DEFAULT([$PWD/local])
 AM_INIT_AUTOMAKE([subdir-objects])
 SC_PREFIX_CONFIG_H([src/p4est_config.h])
+SC_LIBTOOL([P4EST])
 
 # Configure switches
 echo "o---------------------------------------"
@@ -117,7 +116,7 @@ if test "$P4EST_WITH_PROVIDE_SC" = yes ; then
   P4EST_SC_DIR="\$(top_srcdir)/sc"
   P4EST_SC_AMFLAGS="-I $P4EST_SC_DIR/config"
   P4EST_SC_CPPFLAGS="-I\$(top_builddir)/sc/src -I\$(top_srcdir)/sc/src"
-  P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.a"
+  P4EST_SC_LDADD="\$(top_builddir)/sc/src/libsc.$P4EST_LIB_SUFFIX"
   P4EST_SC_MK_INCLUDE="include \${sysconfdir}/Makefile.sc.mk"
   P4EST_SC_ENABLE_CHECKS="yes"
   P4EST_DEPENDENCIES="$P4EST_DEPENDENCIES $P4EST_SC_LDADD"
