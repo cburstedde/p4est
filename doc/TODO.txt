@@ -1,8 +1,6 @@
 Note: The real bug tracking happenes in the bugs/ directory.
       We use the ditz program for this purpose.
 
- * Connectivity
-   Implement periodic connections between different trees
  * Interface
    Change global_last_quad_index to global_quadrant_offset
    Remove the p4est quadrant_pool member

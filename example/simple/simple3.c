@@ -26,7 +26,8 @@
  *        o periodic  The unit cube with all-periodic boundary conditions.
  *        o rotwrap   The unit cube with various self-periodic b.c.
  *        o twocubes  Two connected cubes.
- *        o rotcubes  A collection of four connected rotated cubes.
+ *        o twowrap   Two cubes with periodically identified far ends.
+ *        o rotcubes  A collection of six connected rotated cubes.
  */
 
 #define VTK_OUTPUT 1
@@ -44,6 +45,7 @@ typedef enum
   P8EST_CONFIG_PERIODIC,
   P8EST_CONFIG_ROTWRAP,
   P8EST_CONFIG_TWOCUBES,
+  P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
 }
 simple_config_t;
@@ -79,6 +81,8 @@ static const simple_regression_t regression[] =
  { P8EST_CONFIG_UNIT, 3, 6, 0xce19fee3U },
  { P8EST_CONFIG_TWOCUBES, 1, 4, 0xd9e96b31U },
  { P8EST_CONFIG_TWOCUBES, 3, 5, 0xe8b16b4aU },
+ { P8EST_CONFIG_TWOWRAP, 1, 4, 0xd3e06e2fU },
+ { P8EST_CONFIG_TWOWRAP, 5, 5, 0x920ecd43U },
  { P8EST_CONFIG_PERIODIC, 1, 4, 0x28304c83U },
  { P8EST_CONFIG_PERIODIC, 7, 4, 0x28304c83U },
  { P8EST_CONFIG_PERIODIC, 3, 5, 0xe4d123b2U },
@@ -178,7 +182,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|rotwrap|twocubes|rotcubes\n"
+    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -197,6 +201,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "twocubes")) {
       config = P8EST_CONFIG_TWOCUBES;
+    }
+    else if (!strcmp (argv[1], "twowrap")) {
+      config = P8EST_CONFIG_TWOWRAP;
     }
     else if (!strcmp (argv[1], "rotcubes")) {
       config = P8EST_CONFIG_ROTCUBES;
@@ -228,6 +235,10 @@ main (int argc, char **argv)
   }
   else if (config == P8EST_CONFIG_TWOCUBES) {
     connectivity = p8est_connectivity_new_twocubes ();
+    refine_fn = refine_sparse_fn;
+  }
+  else if (config == P8EST_CONFIG_TWOWRAP) {
+    connectivity = p8est_connectivity_new_twowrap ();
     refine_fn = refine_sparse_fn;
   }
   else if (config == P8EST_CONFIG_ROTCUBES) {

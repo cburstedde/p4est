@@ -1,4 +1,4 @@
---- !ditz.rubyforge.org,2008-03-06/issue
+--- !ditz.rubyforge.org,2008-03-06/issue 
 title: Make the twocubes example periodic
 desc: |-
   The twocubes example can make periodic when the corner connectivity
@@ -7,13 +7,13 @@ type: :task
 component: p4est
 release: "0.3"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition:
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-16 17:34:41.359987 Z
 references: []
 
 id: 8bb5112f86923515c14a987340d571ade618963a
-log_events:
+log_events: 
 - - 2008-10-16 17:34:46.895639 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
@@ -22,3 +22,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - assigned to release 0.3 from unassigned
   - ""
+- - 2009-10-13 17:55:14.421307 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - Resolved by adding a twowrap connectivity in 3D which is periodic.

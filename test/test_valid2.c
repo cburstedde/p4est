@@ -156,6 +156,8 @@ main (int argc, char **argv)
              "test_rotwrap", 0xa675888dU);
   check_all (mpicomm, p8est_connectivity_new_twocubes (),
              "test_twocubes", 0x7188978aU);
+  check_all (mpicomm, p8est_connectivity_new_twowrap (),
+             "test_twowrap", 0x8e3f994cU);
   check_all (mpicomm, p8est_connectivity_new_rotcubes (),
              "test_rotcubes", 0xc0e1b235U);
   check_all (mpicomm, p8est_connectivity_new_shell (),
