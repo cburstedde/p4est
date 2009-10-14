@@ -3,32 +3,39 @@ This file describes a list of coding standards that the p4est library
 tries to adhere to.
 
  * Indentation
+
    All .c and .h files must be indented with the p4estindent script in
    the main directory.  It calls GNU indent with some extra options.
    This does not apply for included third party code.
 
- * All boolean parameters will not be checked with (a==true) or (a==false).
+ * Boolean variables
+
+   All boolean parameters will not be checked with (a==true) or (a==false).
    We follow the standard C convention where (a) is used to test true
    and (!a) is used to test false.  The bool type is not used.
    An exception is to test for pointers like (p == NULL) or (p != NULL).
 
  * Comments
-   Use doxygen style for comments whenever possible. Comments should
+
+   Use doxygen style for comments whenever possible.  Comments should
    not exceed the 79th column.
 
  * Integer types
-   For the indexing of trees use the p4est_treeid_t type.
+
+   For the indexing of trees use the p4est_topidx_t type.
    For processor-local indexing use the p4est_locidx_t data type.
    For globally unique indexing of potentially large numbers use the
-   p4est_gloidx_t data type.  The int_8 data type may be used only to
+   p4est_gloidx_t data type.  Quadrant and node coordinates are of type
+   p4est_qcoord_t.  The int_8 data type may be used only to
    save storage space.  Generic integers and flags should be
    of int type whenever possible.  Storage sizes should be size_t.
    For printf and friends use the following conversions.
-   %lld (long long) int64_t qcoord_t locidx_t gloidx_t ssize_t
+   %lld (long long) int64_t qcoord_t topidx_t locidx_t gloidx_t ssize_t
    %llu (unsigned long long) uint64_t size_t
    0x%08x checksums (unsigned)
 
  * Variable names that are not self-descriptive
+
    Loop variables of type int can be named as usual: i, j, etc.
    Loop variables of type size_t should be named iz, jz, etc.
    Loop variables of type ssize_t should be named is, js, etc.
