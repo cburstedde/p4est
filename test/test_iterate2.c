@@ -175,7 +175,7 @@ quad_is_in_corner_sides (p4est_quadrant_t * q, p4est_topidx_t t,
   p4est_quadrant_t   *r;
 
   for (zz = 0; zz < zcount; zz++) {
-    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+    cside = p4est_iter_cside_array_index (sides, zz);
     if (cside->treeid == t) {
       r = cside->quad;
       if (r == NULL) {
@@ -214,8 +214,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
   iter_data_t        *iter_data = (iter_data_t *) data;
 
   for (i = 0; i < limit; i++) {
-    cside = (p4est_iter_corner_side_t *) sc_array_index_int (&(info->sides),
-                                                             i);
+    cside = p4est_iter_cside_array_index_int (&info->sides, i);
     has_local = (!test_corner_side (info->p4est, cside, data) || has_local);
     if (cside->quad != NULL) {
       min_level = (cside->quad->level < min_level) ? cside->quad->level :
@@ -227,8 +226,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
   sc_array_init (&quads, sizeof (p4est_quadrant_t));
   sc_array_init (&treeids, sizeof (p4est_topidx_t));
   for (i = 0; i < limit; i++) {
-    cside = (p4est_iter_corner_side_t *) sc_array_index_int (&(info->sides),
-                                                             i);
+    cside = p4est_iter_cside_array_index_int (&info->sides, i);
     if (cside->quad == NULL) {
       continue;
     }
@@ -377,7 +375,7 @@ quad_is_in_edge_sides (p8est_quadrant_t * q, p4est_topidx_t t,
   p8est_iter_edge_side_t *eside;
 
   for (zz = 0; zz < zcount; zz++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    eside = p8est_iter_eside_array_index (sides, zz);
     if (eside->treeid == t) {
       if (!eside->is_hanging) {
         if (eside->is.full.quad != NULL) {
@@ -420,13 +418,13 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
   sc_array_init (&quads, sizeof (p8est_quadrant_t));
   sc_array_init (&treeids, sizeof (p4est_topidx_t));
   for (i = 0; i < limit; i++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index_int (&(info->sides), i);
+    eside = p8est_iter_eside_array_index_int (&info->sides, i);
     has_local = (!test_edge_side (info->p4est, eside, data) || has_local);
   }
   SC_CHECK_ABORT (has_local, "Iterate: non local edge");
 
   for (i = 0; i < limit; i++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index_int (&(info->sides), i);
+    eside = p8est_iter_eside_array_index_int (&(info->sides), i);
     if (!eside->is_hanging) {
       if (eside->is.full.quad == NULL) {
         continue;
@@ -604,13 +602,13 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
     is_ghost[i] = 1;
   }
   for (i = 0; i < limit; i++) {
-    fside = (p4est_iter_face_side_t *) sc_array_index_int (&(info->sides), i);
+    fside = p4est_iter_fside_array_index_int (&info->sides, i);
     is_ghost[i] = test_face_side (info->p4est, fside, data);
   }
   SC_CHECK_ABORT (!(is_ghost[0] && is_ghost[1]), "Iterate: non local face");
 
   for (i = 0; i < limit; i++) {
-    fside = (p4est_iter_face_side_t *) sc_array_index_int (&(info->sides), i);
+    fside = p4est_iter_fside_array_index_int (&info->sides, i);
     face[i] = (int) fside->face;
     treeid[i] = fside->treeid;
     if (!fside->is_hanging) {
@@ -645,7 +643,7 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
   else {
     SC_CHECK_ABORT (nt[1] == -1,
                     "Iterate: non boundary face without neighbor");
-    fside = (p4est_iter_face_side_t *) sc_array_index_int (&(info->sides), 0);
+    fside = p4est_iter_fside_array_index_int (&info->sides, 0);
     SC_CHECK_ABORT (!fside->is_hanging,
                     "Iterate: hanging face without neighbor");
   }

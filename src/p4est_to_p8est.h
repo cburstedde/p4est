@@ -135,6 +135,10 @@
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
+#define p4est_iter_fside_array_index    p8est_iter_fside_array_index
+#define p4est_iter_fside_array_index_int p8est_iter_fside_array_index_int
+#define p4est_iter_cside_array_index    p8est_iter_cside_array_index
+#define p4est_iter_cside_array_index_int p8est_iter_cside_array_index_int
 
 /* functions in p4est_points */
 #define p4est_new_points                p8est_new_points

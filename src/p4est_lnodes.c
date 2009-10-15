@@ -284,7 +284,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                       sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
 
   for (zz = 0; zz < count; zz++) {
-    fside = (p4est_iter_face_side_t *) sc_array_index (sides, zz);
+    fside = p4est_iter_fside_array_index (sides, zz);
     tid = fside->treeid;
     f = (int) fside->face;
     fdir = f / 2;
@@ -499,7 +499,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
                       sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
 
   for (zz = 0; zz < count; zz++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    eside = p8est_iter_eside_array_index (sides, zz);
     tid = eside->treeid;
     e = (int) eside->edge;
     edir = e / 4;
@@ -651,7 +651,7 @@ p4est_lnodes_missing_proc_cdp_face (p4est_quadrant_t * q, p4est_topidx_t tid,
   nlevel = tempq.level;
 
   for (zz = 0; zz < count; zz++) {
-    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+    cside = p4est_iter_cside_array_index (sides, zz);
     if (cside->treeid != ntid || (int) cside->corner != nc) {
       continue;
     }
@@ -735,7 +735,7 @@ p8est_lnodes_missing_proc_cdp_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
     nlevel = tempq.level;
 
     for (zz = 0; zz < count; zz++) {
-      cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+      cside = p4est_iter_cside_array_index (sides, zz);
       if (cside->treeid != ntid || (int) cside->corner != nc) {
         continue;
       }
@@ -759,7 +759,7 @@ p8est_lnodes_missing_proc_cdp_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
     p4est_quadrant_parent (ptemp, &tempq);
     nlevel = tempq.level;
     for (zz = 0; zz < count; zz++) {
-      cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+      cside = p4est_iter_cside_array_index (sides, zz);
       if (cside->treeid != ntid || (int) cside->corner != nc) {
         continue;
       }
@@ -845,7 +845,7 @@ p8est_lnodes_missing_proc_edp (p4est_quadrant_t * q, p4est_topidx_t tid,
   nc2 = p4est_quadrant_child_id (&temps);
   ne = p8est_child_corner_edges[nc][nc2];
   for (zz = 0; zz < count; zz++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    eside = p8est_iter_eside_array_index (sides, zz);
     if (eside->treeid != ntid || (int) eside->edge != ne) {
       continue;
     }
@@ -979,7 +979,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
    * Morton that touches the corner if the corner is inside a tree.
    */
   if (!tree_boundary) {
-    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, 0);
+    cside = p4est_iter_cside_array_index (sides, 0);
     owner_corner = (int) cside->corner;
     owner_tid = cside->treeid;
     owner_quad = cside->quad;
@@ -997,7 +997,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   sc_array_init (&touching_procs, sizeof (int));
   sc_array_init (&all_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
-    cside = (p4est_iter_corner_side_t *) sc_array_index (sides, zz);
+    cside = p4est_iter_cside_array_index (sides, zz);
     c = (int) cside->corner;
     tid = cside->treeid;
     qid = cside->quadid;
@@ -1188,7 +1188,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
    * Morton that touches the edge if the edge is inside a tree.
    */
   if (!tree_boundary) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, 0);
+    eside = p8est_iter_eside_array_index (sides, 0);
     owner_edge = (int) eside->edge;
     owner_tid = eside->treeid;
     owner_orientation = (int) eside->orientation;
@@ -1221,7 +1221,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   sc_array_init (&touching_procs, sizeof (int));
   sc_array_init (&all_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    eside = p8est_iter_eside_array_index (sides, zz);
     e = (int) eside->edge;
     tid = eside->treeid;
     tree = p4est_tree_array_index (trees, tid);
@@ -1311,7 +1311,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   /* once we know the owner's orientation, we can number the local nodes based
    * on whether this quadrant has the same or opposite orientation */
   for (zz = 0; zz < count; zz++) {
-    eside = (p8est_iter_edge_side_t *) sc_array_index (sides, zz);
+    eside = p8est_iter_eside_array_index (sides, zz);
     e = (int) eside->edge;
     tid = eside->treeid;
     tree = p4est_tree_array_index (trees, tid);
@@ -1483,7 +1483,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
    * Morton that touches the face if the face is inside a tree.
    */
   if (!tree_boundary) {
-    fside = (p4est_iter_face_side_t *) sc_array_index (sides, 0);
+    fside = p4est_iter_fside_array_index (sides, 0);
     owner_face = (int) fside->face;
     owner_tid = fside->treeid;
     owner_side = 0;
@@ -1515,7 +1515,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 
   sc_array_init (&touching_procs, sizeof (int));
   for (zz = 0; zz < count; zz++) {
-    fside = (p4est_iter_face_side_t *) sc_array_index (sides, zz);
+    fside = p4est_iter_fside_array_index (sides, zz);
     f = (int) fside->face;
     tid = fside->treeid;
     tree = p4est_tree_array_index (trees, tid);
@@ -1570,7 +1570,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   /* Once we know which side owns the face, we can number the local nodes based
    * on the orientation between the faces */
   for (zz = 0; zz < count; zz++) {
-    fside = (p4est_iter_face_side_t *) sc_array_index (sides, zz);
+    fside = p4est_iter_fside_array_index (sides, zz);
     f = (int) fside->face;
     tid = fside->treeid;
     tree = p4est_tree_array_index (trees, tid);
