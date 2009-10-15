@@ -695,11 +695,7 @@ main (int argc, char **argv)
 #endif
   int                 corner_count;
 
-#ifndef P4_TO_P8
   ntests = 3;
-#else
-  ntests = 4;
-#endif
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
@@ -733,11 +729,8 @@ main (int argc, char **argv)
     case 1:
       connectivity = p8est_connectivity_new_rotwrap ();
       break;
-    case 2:
-      connectivity = p8est_connectivity_new_rotcubes ();
-      break;
     default:
-      connectivity = p8est_connectivity_new_shell ();
+      connectivity = p8est_connectivity_new_rotcubes ();
       break;
 #endif
     }
