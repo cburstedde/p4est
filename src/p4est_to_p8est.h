@@ -268,5 +268,7 @@
 #define p4est_lnodes_share_all_end      p8est_lnodes_share_all_end
 #define p4est_lnodes_share_all          p8est_lnodes_share_all
 #define p4est_lnodes_buffer_destroy     p8est_lnodes_buffer_destroy
+#define p4est_lnodes_rank_array_index   p8est_lnodes_rank_array_index
+#define p4est_lnodes_rank_array_index_int p8est_lnodes_rank_array_index_int
 
 #endif /* !P4EST_TO_P8EST_H */

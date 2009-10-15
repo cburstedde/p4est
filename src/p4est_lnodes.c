@@ -2984,8 +2984,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
           if (j == 0) {
             shareidx = comm_proc[i];
             P4EST_ASSERT (shareidx >= 0);
-            lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
-                                                                shareidx);
+            lrank = p4est_lnodes_rank_array_index_int (sharers, shareidx);
             P4EST_ASSERT (lrank->rank == i);
             lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
             *lp = gidx;
@@ -2997,8 +2996,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
             if (proc == i) {
               shareidx = comm_proc[p4est->mpirank];
               P4EST_ASSERT (shareidx >= 0);
-              lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
-                                                                  shareidx);
+              lrank = p4est_lnodes_rank_array_index_int (sharers, shareidx);
               P4EST_ASSERT (lrank->rank == p4est->mpirank);
               lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
               *lp = gidx;
@@ -3011,8 +3009,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
                                                (size_t) l));
               shareidx = comm_proc[proc];
               P4EST_ASSERT (shareidx >= 0);
-              lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers,
-                                                                  shareidx);
+              lrank = p4est_lnodes_rank_array_index_int (sharers, shareidx);
               P4EST_ASSERT (lrank->rank == proc);
               lp = (p4est_locidx_t *) sc_array_push (&(lrank->shared_nodes));
               *lp = gidx;
@@ -3026,7 +3023,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   /* for each sharer, figure out which entries in local_nodes are owned by the
    * current process, and which are owned by the sharer's rank */
   for (i = 0; i < comm_proc_count; i++) {
-    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, i);
+    lrank = p4est_lnodes_rank_array_index_int (sharers, i);
     sc_array_sort (&(lrank->shared_nodes), p4est_locidx_compare);
     proc = lrank->rank;
     lrank->shared_mine_offset = -1;
@@ -3197,7 +3194,7 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   P4EST_FREE (lnodes->face_code);
   count = lnodes->sharers->elem_count;
   for (zz = 0; zz < count; zz++) {
-    lrank = (p4est_lnodes_rank_t *) sc_array_index (lnodes->sharers, zz);
+    lrank = p4est_lnodes_rank_array_index (lnodes->sharers, zz);
     sc_array_reset (&(lrank->shared_nodes));
   }
   sc_array_destroy (lnodes->sharers);
@@ -3235,7 +3232,7 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
   buffer->recv_buffers = NULL;
 
   for (p = 0; p < npeers; p++) {
-    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, p);
+    lrank = p4est_lnodes_rank_array_index_int (sharers, p);
     proc = lrank->rank;
     if (proc == p4est->mpirank) {
       continue;
@@ -3339,7 +3336,7 @@ p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes,
   sc_array_resize (recv_bufs, (size_t) npeers);
 
   for (p = 0; p < npeers; p++) {
-    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (sharers, p);
+    lrank = p4est_lnodes_rank_array_index_int (sharers, p);
     proc = lrank->rank;
     if (proc == p4est->mpirank) {
       /* there is no buffer for the current process: look in node_data

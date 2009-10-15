@@ -248,6 +248,32 @@ p4est_lnodes_buffer_t *p4est_lnodes_share_all (sc_array_t * node_data,
 void                p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t *
                                                  buffer);
 
+/** Return a pointer to a lnodes_rank array element indexed by a int.
+ */
+/*@unused@*/
+static inline p4est_lnodes_rank_t *
+p4est_lnodes_rank_array_index_int (sc_array_t * array, int it)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_lnodes_rank_t));
+  P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
+
+  return (p4est_lnodes_rank_t *)
+    (array->array + sizeof (p4est_lnodes_rank_t) * it);
+}
+
+/** Return a pointer to a lnodes_rank array element indexed by a size_t.
+ */
+/*@unused@*/
+static inline p4est_lnodes_rank_t *
+p4est_lnodes_rank_array_index (sc_array_t * array, size_t it)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_lnodes_rank_t));
+  P4EST_ASSERT (it < array->elem_count);
+
+  return (p4est_lnodes_rank_t *)
+    (array->array + sizeof (p4est_lnodes_rank_t) * it);
+}
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_LNODES */
