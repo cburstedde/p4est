@@ -118,7 +118,7 @@ p4est_lnodes_rank_t;
  *                          = 1 if the face is the second half.
  *             note: not touched if there are no hanging faces.
  *           
- * \return              1 if any face is hanging, 0 otherwise.
+ * \return              true if any face is hanging, false otherwise.
  */
 /*@unused@*/
 static inline int

@@ -133,7 +133,7 @@ p8est_lnodes_rank_t;
  *                          = 0 if the edge is the first half of the full edge,
  *                          = 1 if the edge is the second half.
  *             not: not touched if there are no hanging faces or edges;
- * \return             1 if any face or edge is hanging, 0 otherwise.
+ * \return             true if any face or edge is hanging, false otherwise.
  */
 /*@unused@*/
 static inline int
