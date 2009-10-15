@@ -39,7 +39,7 @@ libp4est_compiled_sources += \
         src/p8est_vtk.c src/p8est_trilinear.c \
         src/p8est_points.c src/p8est_geometry.c \
         src/p8est_iterate.c src/p8est_lnodes.c \
-        src/p8est_lmesh_trilinear.c
+        src/p8est_trilinear_lnodes.c
 endif
 P4EST_CPPFLAGS =
 

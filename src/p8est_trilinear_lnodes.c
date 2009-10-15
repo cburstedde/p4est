@@ -26,8 +26,8 @@
 
 static int8_t       face_node_type[4] = { 0, 2, 2, 1 };
 
-void
-p8est_lmesh_fcode_to_ntype (int16_t face_code, int8_t node_type[])
+static void
+p8est_mesh_fcode_to_ntype (int16_t face_code, int8_t node_type[])
 {
   int                 i, j, c;
   int                 edge[12];
@@ -53,11 +53,11 @@ p8est_lmesh_fcode_to_ntype (int16_t face_code, int8_t node_type[])
   }
 }
 
-void
-p8est_lmesh_points (point_t * points, int8_t * pids,
-                    p4est_locidx_t * local_nodes,
-                    p4est_locidx_t num_local_nodes, p4est_lnodes_t * nodes,
-                    p4est_t * p4est)
+static void
+p8est_mesh_points (point_t * points, int8_t * pids,
+                   p4est_locidx_t * local_nodes,
+                   p4est_locidx_t num_local_nodes, p4est_lnodes_t * nodes,
+                   p4est_t * p4est)
 {
   p4est_locidx_t      nin = nodes->num_indep_nodes;
   p4est_locidx_t      owned_offset = nodes->owned_offset;
@@ -100,7 +100,7 @@ p8est_lmesh_points (point_t * points, int8_t * pids,
     count = tree->quadrants.elem_count;
     q = p4est_quadrant_array_index (&tree->quadrants, 0);
     for (zz = 0; zz < count; zz++, q++, elid++) {
-      p8est_lmesh_fcode_to_ntype (face_code[elid], node_type);
+      p8est_mesh_fcode_to_ntype (face_code[elid], node_type);
       /* for every corner of every quadrant */
       for (i = 0; i < 8; i++, nid++) {
         for (k = 0; k < 2; k++) {
@@ -274,8 +274,8 @@ p8est_lmesh_points (point_t * points, int8_t * pids,
   }
 }
 
-unsigned
-p8est_lmesh_indep_hash_fn (const void *v, const void *u)
+static unsigned
+p8est_mesh_indep_hash_fn (const void *v, const void *u)
 {
   const p4est_locidx_t *indep = v;
   uint32_t            a, b, c;
@@ -290,17 +290,17 @@ p8est_lmesh_indep_hash_fn (const void *v, const void *u)
   return (unsigned) c;
 }
 
-int
-p8est_lmesh_indep_equal_fn (const void *v1, const void *v2, const void *u)
+static int
+p8est_mesh_indep_equal_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_locidx_t *a = v1;
   const p4est_locidx_t *b = v2;
   return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
 }
 
-p4est_locidx_t
-p8est_lmesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
-                    sc_hash_array_t ** Hash)
+static p4est_locidx_t
+p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
+                   sc_hash_array_t ** Hash)
 {
   p4est_locidx_t      nel = nodes->num_local_elements;
   p4est_locidx_t      nin = nodes->num_indep_nodes;
@@ -323,12 +323,12 @@ p8est_lmesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
           nln * sizeof (p4est_locidx_t));
 
   *Hash = hanging = sc_hash_array_new (4 * sizeof (p4est_locidx_t),
-                                       p8est_lmesh_indep_hash_fn,
-                                       p8est_lmesh_indep_equal_fn, NULL);
+                                       p8est_mesh_indep_hash_fn,
+                                       p8est_mesh_indep_equal_fn, NULL);
 
   for (nid = 0, elid = 0; elid < nel; elid++) {
     if (p8est_lnodes_decode (face_code[elid], faces, edges)) {
-      p8est_lmesh_fcode_to_ntype (face_code[elid], ntype);
+      p8est_mesh_fcode_to_ntype (face_code[elid], ntype);
       for (i = 0; i < 8; i++, nid++) {
         if (ntype[i] == 1) {
           for (j = 0; j < 3; j++) {
@@ -440,7 +440,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   p4est_locidx_t     *indep, indep_count;
 
   P4EST_GLOBAL_PRODUCTIONF
-    ("Into trilinear_lmesh_extract with %lld total elements\n",
+    ("Into trilinear_mesh_extract with %lld total elements\n",
      (long long) p4est->global_num_quadrants);
 
   /* Allocate output data structure. */
@@ -448,11 +448,11 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   memset (mesh, -1, sizeof (*mesh));
 
   /* Count dnodes */
-  num_local_nodes = p8est_lmesh_dcount (nodes, &local_nodes, &hanging);
+  num_local_nodes = p8est_mesh_dcount (nodes, &local_nodes, &hanging);
   indep = (p4est_locidx_t *) hanging->a.array;
   points = P4EST_ALLOC (point_t, num_local_nodes);
   pids = P4EST_ALLOC (int8_t, num_local_nodes);
-  p8est_lmesh_points (points, pids, local_nodes, num_local_nodes, nodes,
+  p8est_mesh_points (points, pids, local_nodes, num_local_nodes, nodes,
                       p4est);
 
   /* Get number of owned shared. */
