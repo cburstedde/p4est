@@ -22,7 +22,7 @@
 
 #include <p4est_to_p8est.h>
 #include <p8est_bits.h>
-#include <p8est_lmesh_trilinear.h>
+#include <p8est_trilinear.h>
 
 static int8_t       face_node_type[4] = { 0, 2, 2, 1 };
 
@@ -409,7 +409,7 @@ p8est_lmesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
 }
 
 trilinear_mesh_t   *
-p8est_trilinear_lmesh_new (p4est_t * p4est, p4est_lnodes_t * nodes)
+p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
@@ -614,7 +614,7 @@ p8est_trilinear_lmesh_new (p4est_t * p4est, p4est_lnodes_t * nodes)
   mesh->mpisize = (int32_t) num_procs;
   mesh->mpirank = (int32_t) rank;
   mesh->recsize = (int32_t) p4est->data_size;
-  mesh->destructor = p8est_trilinear_lmesh_destroy;
+  mesh->destructor = p8est_trilinear_mesh_destroy;
 
   /* These members are incomplete and need to be filled later. */
   memset (mesh->bounds, 0, 6 * sizeof (int));
@@ -636,21 +636,4 @@ p8est_trilinear_lmesh_new (p4est_t * p4est, p4est_lnodes_t * nodes)
   SC_FREE (local_nodes);
   sc_hash_array_destroy (hanging);
   return mesh;
-}
-
-void
-p8est_trilinear_lmesh_destroy (trilinear_mesh_t * mesh)
-{
-  P4EST_ASSERT (mesh->destructor == p8est_trilinear_lmesh_destroy);
-
-  P4EST_FREE (mesh->elem_table);
-  P4EST_FREE (mesh->node_table);
-  P4EST_FREE (mesh->fvnid_count_table);
-  P4EST_FREE (mesh->fvnid_interval_table);
-  sc_mempool_destroy (mesh->sharer_pool);
-
-  P4EST_FREE (mesh->elem_pids);
-  P4EST_FREE (mesh->node_pids);
-
-  P4EST_FREE (mesh);
 }

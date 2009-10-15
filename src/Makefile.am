@@ -31,8 +31,7 @@ libp4est_installed_headers += \
         src/p8est_ghost.h src/p8est_nodes.h \
         src/p8est_vtk.h src/p8est_trilinear.h \
         src/p8est_points.h src/p8est_geometry.h \
-        src/p8est_iterate.h src/p8est_lnodes.h \
-        src/p8est_lmesh_trilinear.h
+        src/p8est_iterate.h src/p8est_lnodes.h
 libp4est_compiled_sources += \
         src/p8est_connectivity.c src/p8est.c src/p8est_bits.c \
         src/p8est_algorithms.c src/p8est_communication.c \

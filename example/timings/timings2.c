@@ -375,7 +375,7 @@ main (int argc, char **argv)
 #ifdef P4_TO_P8
   /* time trilinear mesh extraction */
   sc_flops_snap (&fi, &snapshot);
-  mesh = p8est_trilinear_mesh_new (p4est, nodes);
+  mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_TRILINEAR], snapshot.iwtime, "Trilinear");
 

@@ -108,7 +108,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
   nodes = p4est_nodes_new (p4est, ghost);
 #ifdef P4_TO_P8
-  mesh = p8est_trilinear_mesh_new (p4est, nodes);
+  mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
   p8est_trilinear_mesh_destroy (mesh);
 #endif
   p4est_nodes_destroy (nodes);

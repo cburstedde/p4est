@@ -28,6 +28,7 @@
 #define P8EST_TRILINEAR_H
 
 #include <p8est_nodes.h>
+#include <p8est_lnodes.h>
 
 /*
  * BEGIN verbatim copy of trilinear_mesh_types.h from the Rhea code
@@ -318,9 +319,13 @@ SC_EXTERN_C_BEGIN;
 
 /** Creates a trilinear mesh structure from a p8est and its node data.
  */
-trilinear_mesh_t   *p8est_trilinear_mesh_new (p8est_t * p8est,
-                                              p8est_nodes_t * nodes);
+trilinear_mesh_t   *p8est_trilinear_mesh_new_from_nodes (p8est_t * p8est,
+                                                         p8est_nodes_t *
+                                                         nodes);
 
+trilinear_mesh_t   *p8est_trilinear_mesh_new_from_lnodes (p8est_t * p8est,
+                                                          p8est_lnodes_t *
+                                                          lnodes);
 /** Frees a trilinear mesh structure.
  */
 void                p8est_trilinear_mesh_destroy (trilinear_mesh_t * mesh);
