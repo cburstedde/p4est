@@ -156,36 +156,93 @@ p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
 
 void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
 
-typedef struct p4est_lnodes_comm
+/** p4est_lnodes_buffer_t handles the communication of data associated with
+ * nodes.
+ *
+ * \a send_buffers is an array of arrays: one buffer for each process to which
+ * the current process sends node-data.  It should not be altered between
+ * a shared_*_begin and a shared_*_end call.
+ *
+ * \a recv_buffers is an array of arrays that is used in lnodes_share_all_*.
+ * \a recv_buffers[j] corresponds with lnodes->sharers[j]: it is the same
+ * length as \a lnodes->sharers[j]->shared_nodes.  At the completion of
+ * lnodes_share_all or lnodes_share_all_end, recv_buffers[j] contains the
+ * node-data from the process lnodes->sharers[j]->rank
+ * (unless j is the current rank, in which case recv_buffers[j] is empty).
+ */
+typedef struct p4est_lnodes_buffer
 {
-  sc_array_t         *requests;
-  sc_array_t         *send_bufs;
-  sc_array_t         *recv_bufs;
+  sc_array_t         *requests; /* MPI_Request */
+  sc_array_t         *send_buffers;
+  sc_array_t         *recv_buffers;
 }
-p4est_lnodes_comm_t;
+p4est_lnodes_buffer_t;
 
-p4est_lnodes_comm_t *p4est_lnodes_share_owned_begin (sc_array_t * node_data,
-                                                     p4est_lnodes_t * lnodes,
-                                                     p4est_t * p4est);
+/** p4est_lnodes_share_owned_begin
+ *
+ * \a node_data is a user-defined array of arbitrary type, where each entry
+ * is associated with the \a lnodes->global_nodes entry of matching index.
+ * For every \a lnodes->global_nodes entry that is owned by a process
+ * other than the current one, the value in the \a node_data array of the
+ * owning process is written directly into the \a node_data array of the current
+ * process.  Values of \a node_data are not guaranteed to be sent or received
+ * until the \a buffer created by p4est_lnodes_share_owned_begin is passed to
+ * p4est_lnodes_share_owned_end.
+ *
+ * To be memory neutral, the \a buffer created by
+ * p4est_lnodes_share_owned_begin must be destroying with
+ * p4est_lnodes_buffer_destroy (it is not destroyed by
+ * p4est_lnodes_share_owned_end).
+ */
+p4est_lnodes_buffer_t *p4est_lnodes_share_owned_begin (sc_array_t * node_data,
+                                                       p4est_lnodes_t *
+                                                       lnodes,
+                                                       p4est_t * p4est);
 
-void                p4est_lnodes_share_owned_end (p4est_lnodes_comm_t * comm);
+void                p4est_lnodes_share_owned_end (p4est_lnodes_buffer_t *
+                                                  buffer);
 
+/** Equivalent to calling p4est_lnodes_share_owned_end directly after
+ * p4est_lnodes_share_owned_begin.  Use if there is no local work that can be
+ * done to mask the communication cost.
+ */
 void                p4est_lnodes_share_owned (sc_array_t * node_data,
                                               p4est_lnodes_t * lnodes,
                                               p4est_t * p4est);
 
-p4est_lnodes_comm_t *p4est_lnodes_share_all_begin (sc_array_t * node_data,
-                                                   p4est_lnodes_t * lnodes,
-                                                   p4est_t * p4est);
+/** p4est_lnodes_share_all_begin
+ *
+ * \a node_data is a user_defined array of arbitrary type, where each entry
+ * is associated with the \a lnodes->global_nodes entry of matching index.
+ * For every process that shares an entry with the current one, the value in
+ * the \a node_data array of that process is written into a
+ * \a buffer->recv_buffers entry as described above.  The user can then perform
+ * some arbitrary work that requires the data from all processes that share a
+ * node (such as reduce, max, min, etc.).  When the work concludes, the
+ * \a buffer should be destroyed with p4est_lnodes_buffer_destroy.
+ *
+ * Values of \a node_data are not guaranteed to be send, and
+ * \a buffer->recv_buffer entries are not guaranteed to be received until
+ * the \a buffer created by p4est_lnodes_share_all_begin is passed to
+ * p4est_lnodes_share_all_end.
+ */
+p4est_lnodes_buffer_t *p4est_lnodes_share_all_begin (sc_array_t * node_data,
+                                                     p4est_lnodes_t * lnodes,
+                                                     p4est_t * p4est);
 
-sc_array_t         *p4est_lnodes_share_all_end (p4est_lnodes_comm_t *
-                                                comm_array);
+void                p4est_lnodes_share_all_end (p4est_lnodes_buffer_t *
+                                                buffer);
 
-sc_array_t         *p4est_lnodes_share_all (sc_array_t * node_data,
-                                            p4est_lnodes_t * lnodes,
-                                            p4est_t * p4est);
+/** Equivalend to calling p4est_lnodes_share_all_end directly after
+ * p4est_lnodes_share_all_begin.  Use if there is no local work that can be
+ * done to maks the communication cost.
+ */
+p4est_lnodes_buffer_t *p4est_lnodes_share_all (sc_array_t * node_data,
+                                               p4est_lnodes_t * lnodes,
+                                               p4est_t * p4est);
 
-void                p4est_lnodes_buffers_destroy (sc_array_t * recv_bufs);
+void                p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t *
+                                                 buffer);
 
 SC_EXTERN_C_END;
 

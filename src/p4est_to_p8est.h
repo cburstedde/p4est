@@ -82,7 +82,7 @@
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_lnodes_t                  p8est_lnodes_t
 #define p4est_lnodes_rank_t             p8est_lnodes_rank_t
-#define p4est_lnodes_comm_t             p8est_lnodes_comm_t
+#define p4est_lnodes_buffer_t           p8est_lnodes_buffer_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
 #define p4est_iter_face_t               p8est_iter_face_t
@@ -263,6 +263,6 @@
 #define p4est_lnodes_share_all_begin    p8est_lnodes_share_all_begin
 #define p4est_lnodes_share_all_end      p8est_lnodes_share_all_end
 #define p4est_lnodes_share_all          p8est_lnodes_share_all
-#define p4est_lnodes_buffers_destroy    p8est_lnodes_buffers_destroy
+#define p4est_lnodes_buffer_destroy     p8est_lnodes_buffer_destroy
 
 #endif /* !P4EST_TO_P8EST_H */
