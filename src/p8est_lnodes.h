@@ -77,6 +77,9 @@ SC_EXTERN_C_BEGIN;
  * well.  The other edges and Corner are not incident on q, so q cannot own
  * their nodes, marked 'x' and 'X'.
  * 
+ * global_owned_count contains the number of independent nodes owned by each
+ * process.
+ *
  * The sharers array contains items of type p8est_lnodes_rank_t
  * that hold the ranks that own or share independent local nodes.
  * It is sorted by rank.  The rank of the current process is included.
@@ -90,6 +93,7 @@ typedef struct p8est_lnodes
   int16_t            *face_code;
   p4est_locidx_t     *local_nodes;
   p4est_gloidx_t     *global_nodes;
+  p4est_locidx_t     *global_owned_count;
   sc_array_t         *sharers;
 }
 p8est_lnodes_t;

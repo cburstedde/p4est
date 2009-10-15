@@ -433,7 +433,6 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   size_t              scount = sharers->elem_count, count;
   p4est_locidx_t      num_owned_shared = 0;
   p8est_lnodes_rank_t *lrank;
-  int64_t             long_local_indep;
   point_t            *points;
   int8_t             *pids;
   p4est_locidx_t      nid;
@@ -502,14 +501,10 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   mesh->elem_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_elem_num);
   mesh->node_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_node_num);
 
-  long_local_indep = mesh->local_onode_num;
-  MPI_Allgather (&long_local_indep, 1, MPI_LONG_LONG_INT,
-                 mesh->fvnid_count_table, 1, MPI_LONG_LONG_INT,
-                 p4est->mpicomm);
-
   /* Assign global free variable information. */
   mesh->fvnid_interval_table[0] = 0;
   for (k = 0; k < num_procs; ++k) {
+    mesh->fvnid_count_table[k] = nodes->global_owned_count[k];
     mesh->fvnid_interval_table[k + 1] = mesh->fvnid_interval_table[k] +
       mesh->fvnid_count_table[k];
   }

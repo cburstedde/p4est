@@ -2850,10 +2850,12 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   int                 shareidx;
   p4est_locidx_t      gidx;
   sc_array_t         *shared_nodes;
-  p4est_locidx_t     *global_num_indep =
-    P4EST_ALLOC (p4est_locidx_t, mpisize);
+  p4est_locidx_t     *global_num_indep;
   p4est_gloidx_t     *global_offsets = P4EST_ALLOC (p4est_gloidx_t,
                                                     mpisize + 1);
+
+  global_num_indep = lnodes->global_owned_count = P4EST_ALLOC (p4est_locidx_t,
+                                                               mpisize);
 
 #ifdef P4EST_MPI
   MPI_Allgather (&(lnodes->owned_count), 1, P4EST_MPI_LOCIDX,
@@ -2866,7 +2868,6 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     global_offsets[i + 1] = global_offsets[i] +
       (p4est_gloidx_t) global_num_indep[i];
   }
-  P4EST_FREE (global_num_indep);
 
   sc_array_init (&inode_to_global, sizeof (p4est_locidx_t));
   sc_array_resize (&inode_to_global, (size_t) num_inodes);
@@ -3192,6 +3193,7 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   p4est_lnodes_rank_t *lrank;
   P4EST_FREE (lnodes->local_nodes);
   P4EST_FREE (lnodes->global_nodes);
+  P4EST_FREE (lnodes->global_owned_count);
   P4EST_FREE (lnodes->face_code);
   count = lnodes->sharers->elem_count;
   for (zz = 0; zz < count; zz++) {
