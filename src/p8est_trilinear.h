@@ -323,6 +323,8 @@ trilinear_mesh_t   *p8est_trilinear_mesh_new_from_nodes (p8est_t * p8est,
                                                          p8est_nodes_t *
                                                          nodes);
 
+/** Creates a trilinear mesh structure from a p8est and its lnode data.
+ */
 trilinear_mesh_t   *p8est_trilinear_mesh_new_from_lnodes (p8est_t * p8est,
                                                           p8est_lnodes_t *
                                                           lnodes);
