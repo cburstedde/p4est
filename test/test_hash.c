@@ -89,8 +89,8 @@ main (int argc, char **argv)
   i3 = sc_hash_insert_unique (qhash, &q3, &vv3);
   f3 = (p4est_quadrant_t *) *vv3;
   /* *INDENT-ON* */
-  printf ("Quadrants inserted %d %d %d total %lu\n",
-          i1, i2, i3, (unsigned long) qhash->elem_count);
+  printf ("Quadrants inserted %d %d %d total %llu\n",
+          i1, i2, i3, (unsigned long long) qhash->elem_count);
 
   SC_CHECK_ABORT (i1 + i2 + i3 == (int) qhash->elem_count, "Quadrant hash");
   SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy1.owner_rank == 5, "Insert return");
@@ -103,8 +103,8 @@ main (int argc, char **argv)
   /* *INDENT-OFF* HORRIBLE indent bug */
   f3 = (p4est_quadrant_t *) *vv3;
   /* *INDENT-ON* */
-  printf ("Quadrants lookup %d %d %d total %lu\n",
-          i1, i2, i3, (unsigned long) qhash->elem_count);
+  printf ("Quadrants lookup %d %d %d total %llu\n",
+          i1, i2, i3, (unsigned long long) qhash->elem_count);
   SC_CHECK_ABORT (i1 == 0 && i2 == 1 && i3 == 1, "Quadrant lookup");
   SC_CHECK_ABORT (f3 == &q2 && f3->p.piggy1.owner_rank == 5, "Lookup return");
 

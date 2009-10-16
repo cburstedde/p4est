@@ -3054,8 +3054,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       lrank->owned_offset = lnodes->owned_offset;
     }
     else {
-      P4EST_VERBOSEF ("Processor %d shares %d nodes with processor %d\n",
-                      p4est->mpirank, count, lrank->rank);
+      P4EST_VERBOSEF ("Processor %d shares %llu nodes with processor %d\n",
+                      p4est->mpirank, (unsigned long long) count,
+                      lrank->rank);
       P4EST_VERBOSEF ("Processor %d owns %d nodes used by processor %d\n",
                       p4est->mpirank, lrank->shared_mine_count, lrank->rank);
       P4EST_VERBOSEF ("Processor %d borrows %d nodes from processor %d\n",

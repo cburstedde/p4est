@@ -262,8 +262,8 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       quad = p4est_quadrant_array_index (&tree->quadrants,
                                          tree->quadrants.elem_count - 1);
     }
-    P4EST_VERBOSEF ("tree %lld quadrants %lu\n", (long long) jt,
-                    (unsigned long) tree->quadrants.elem_count);
+    P4EST_VERBOSEF ("tree %lld quadrants %llu\n", (long long) jt,
+                    (unsigned long long) tree->quadrants.elem_count);
 
     tree->quadrants_offset = p4est->local_num_quadrants;
     p4est->local_num_quadrants += tree->quadrants.elem_count;
@@ -1636,10 +1636,10 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
     peer = peers + j;
     if (peer->send_first.elem_count > 0 || peer->recv_first_count > 0 ||
         peer->send_second.elem_count > 0 || peer->recv_second_count > 0) {
-      P4EST_VERBOSEF ("peer %d first S %lu R %d second S %lu R %d\n",
-                      j, (unsigned long) peer->send_first.elem_count,
+      P4EST_VERBOSEF ("peer %d first S %llu R %d second S %llu R %d\n",
+                      j, (unsigned long long) peer->send_first.elem_count,
                       peer->recv_first_count,
-                      (unsigned long) peer->send_second.elem_count,
+                      (unsigned long long) peer->send_second.elem_count,
                       peer->recv_second_count);
     }
   }
