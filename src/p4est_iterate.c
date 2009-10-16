@@ -683,6 +683,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
       c2 = (p8est_edge_corners[e][0] == c) ? 0 : 1;
       edge = (tte != NULL) ? tte[t * 12 + e] : -1;
       if (edge >= 0) {
+        orig_o = -1;
         for (ti = ett_offset[edge]; ti < ett_offset[edge + 1]; ti++) {
           nt = ett[ti];
           ne = (int) ete[ti];
@@ -693,6 +694,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
             break;
           }
         }
+        P4EST_ASSERT (orig_o >= 0);
         P4EST_ASSERT (ti < ett_offset[edge + 1]);
         for (ti = ett_offset[edge]; ti < ett_offset[edge + 1]; ti++) {
           nt = ett[ti];
@@ -747,7 +749,7 @@ p4est_iter_reset_corner (p4est_iter_corner_args_t * args)
  * a list of non overlapping quadrants, because the quadrant can only be
  * contained by one quadrant in the list.
  */
-int
+static int
 p4est_quadrant_compare_contains (const void *a, const void *b)
 {
   const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
@@ -2185,7 +2187,7 @@ p4est_iter_reset_volume (p4est_iter_volume_args_t * args)
 
 /* when there is only a volume callback, there is no coordination necessary, so
  * a simple loop is performed */
-void static
+static void
 p4est_volume_iterate_simple (p4est_t * p4est, p4est_ghost_t * ghost_layer,
                              void *user_data, p4est_iter_volume_t iter_volume)
 {
@@ -2385,7 +2387,7 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
   P4EST_ASSERT (*Level == start_level);
 }
 
-int32_t            *
+static int32_t     *
 p4est_iter_get_boundaries (p4est_t * p4est, p4est_topidx_t * last_run_tree)
 {
   p4est_topidx_t      ti;

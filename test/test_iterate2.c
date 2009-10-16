@@ -108,6 +108,7 @@ typedef struct iter_data
 }
 iter_data_t;
 
+#if 0
 /*@unused@*/
 static void
 volume_do_nothing (p4est_iter_volume_info_t * info, void *data)
@@ -133,6 +134,7 @@ static void
 corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 {
 };
+#endif /* 0 */
 
 static              int8_t
 test_corner_side (p4est_t * p4est, p4est_iter_corner_side_t * side,

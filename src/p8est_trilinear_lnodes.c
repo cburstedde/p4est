@@ -186,7 +186,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
                   set = p8est_face_permutation_sets[ref][o];
                   cid = p8est_face_permutations[set][cid];
                   nc = p8est_face_corners[nf][cid];
-                  nf2 = p8est_find_face_transform (conn, t, f, ftr);
+                  nf2 = (int) p8est_find_face_transform (conn, t, f, ftr);
                   P4EST_ASSERT (nf == nf2);
                   p8est_quadrant_transform_face (&r, &s, ftr);
                   if (nt < ownert || ((nt == ownert) &&
@@ -298,7 +298,7 @@ p8est_mesh_indep_equal_fn (const void *v1, const void *v2, const void *u)
   return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
 }
 
-static p4est_locidx_t
+static              p4est_locidx_t
 p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
                    sc_hash_array_t ** Hash)
 {
@@ -453,7 +453,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   points = P4EST_ALLOC (point_t, num_local_nodes);
   pids = P4EST_ALLOC (int8_t, num_local_nodes);
   p8est_mesh_points (points, pids, local_nodes, num_local_nodes, nodes,
-                      p4est);
+                     p4est);
 
   /* Get number of owned shared. */
   for (zz = 0; zz < scount; zz++) {

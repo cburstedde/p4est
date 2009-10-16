@@ -3383,7 +3383,9 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
   size_t              zz;
   sc_array_t         *requests = buffer->requests;
   sc_array_t         *send_bufs = buffer->send_buffers;
+#ifdef P4EST_DEBUG
   sc_array_t         *recv_bufs = buffer->recv_buffers;
+#endif
   sc_array_t         *send_buf;
 
   P4EST_ASSERT (recv_bufs->elem_count == send_bufs->elem_count);
