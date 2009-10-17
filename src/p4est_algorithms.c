@@ -826,11 +826,11 @@ p4est_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
 
 int32_t
 p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
-                             int level, int8_t faces[],
+                             int level, int faces[],
 #ifdef P4_TO_P8
-                             int8_t edges[],
+                             int edges[],
 #endif
-                             int8_t corners[])
+                             int corners[])
 {
   int                 i;
   p4est_quadrant_t    a;
@@ -918,28 +918,28 @@ p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
 
 find_range_boundaries_exit:
   if (faces != NULL) {
-    for (i = 0; i < 2 * P4EST_DIM; i++) {
-      faces[i] = (touch & mask);
+    for (i = 0; i < P4EST_FACES; i++) {
+      faces[i] = (touch & mask) != 0;
       mask <<= 1;
     }
   }
   else {
-    mask <<= (2 * P4EST_DIM);
+    mask <<= P4EST_FACES;
   }
 #ifdef P4_TO_P8
   if (edges != NULL) {
-    for (i = 0; i < 12; i++) {
-      edges[i] = (touch & mask);
+    for (i = 0; i < P8EST_EDGES; i++) {
+      edges[i] = (touch & mask) != 0;
       mask <<= 1;
     }
   }
   else {
-    mask <<= 12;
+    mask <<= P8EST_EDGES;
   }
 #endif
   if (corners != NULL) {
     for (i = 0; i < P4EST_CHILDREN; i++) {
-      corners[i] = (touch & mask);
+      corners[i] = (touch & mask) != 0;
       mask <<= 1;
     }
   }

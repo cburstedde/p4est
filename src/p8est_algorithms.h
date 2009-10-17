@@ -151,11 +151,11 @@ void                p8est_split_array (sc_array_t * array, int level,
  *                       are tested: 0 if we want to test the boundaries of the
  *                       whole tree.
  * \param [in/out] faces       An array of size 6 that is filled: faces[i] is
- *                             1 if the range touches that face, 0 otherwise.
+ *                             true if the range touches that face.
  * \param [in/out] edges       An array of size 12 that is filled: edges[i] is
- *                             1 if the range touches that edge, 0 otherwise.
+ *                             true if the range touches that edge.
  * \param [in/out] corners     An array of size 8 that is filled: corners[i] is
- *                             1 if the range touches that corner, 0 otherwise.
+ *                             true if the range touches that corner.
  *                             \faces, \edges or \corners may be NULL.
  * \return  Returns an int32_t encoded with the same information in \faces,
  *          \edges and \corners: the first (least) six bits represent the six
@@ -164,9 +164,8 @@ void                p8est_split_array (sc_array_t * array, int level,
  */
 int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
                                                  p8est_quadrant_t * uq,
-                                                 int level, int8_t faces[],
-                                                 int8_t edges[],
-                                                 int8_t corners[]);
+                                                 int level, int faces[],
+                                                 int edges[], int corners[]);
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant
  *                  or -1 if not found or the array is empty.
