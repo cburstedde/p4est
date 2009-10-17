@@ -117,7 +117,7 @@ main (int argc, char **argv)
     case 1:
       connectivity = p4est_connectivity_new_star ();
       break;
-    default:
+    case 2:
       connectivity = p4est_connectivity_new_periodic ();
       break;
 #else
@@ -130,10 +130,13 @@ main (int argc, char **argv)
     case 2:
       connectivity = p8est_connectivity_new_rotcubes ();
       break;
-    default:
+    case 3:
       connectivity = p8est_connectivity_new_shell ();
       break;
 #endif
+    default:
+      SC_ABORT_NOT_REACHED ();
+      break;
     }
     p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
 

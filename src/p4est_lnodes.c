@@ -2856,13 +2856,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
 
   global_num_indep = lnodes->global_owned_count = P4EST_ALLOC (p4est_locidx_t,
                                                                mpisize);
-
-#ifdef P4EST_MPI
   MPI_Allgather (&(lnodes->owned_count), 1, P4EST_MPI_LOCIDX,
                  global_num_indep, 1, P4EST_MPI_LOCIDX, p4est->mpicomm);
-#else
-  global_num_indep[0] = lnodes->owned_count;
-#endif
+
   global_offsets[0] = 0;
   for (i = 0; i < mpisize; i++) {
     global_offsets[i + 1] = global_offsets[i] +
@@ -3164,11 +3160,9 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   }
 #endif
 
-#ifdef P4EST_MPI
   p4est_lnodes_recv (p4est, &data);
 
   P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &data));
-#endif
 
   p4est_lnodes_global_and_sharers (&data, lnodes, p4est);
 
