@@ -49,7 +49,7 @@ src_libp4est_a_SOURCES = \
 src_libp4est_a_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 src_libp4est_a_DEPENDENCIES = @P4EST_DEPENDENCIES@
 
-# build dynamic library
+# build shared library
 if P4EST_SHARED
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
@@ -57,6 +57,9 @@ src_libp4est_la_SOURCES = \
         $(libp4est_compiled_sources)
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 src_libp4est_la_DEPENDENCIES = @P4EST_DEPENDENCIES@
+LDADD += @top_builddir@/src/libp4est.la @P4EST_SC_LDADD@
+else
+LDADD += @top_builddir@/src/libp4est.a @P4EST_SC_LDADD@
 endif
 
 nodist_include_HEADERS += $(libp4est_generated_headers)
@@ -67,6 +70,5 @@ if P4EST_SC_USE_MK
 endif
 
 AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
-LDADD += @top_builddir@/src/libp4est.@P4EST_LIB_SUFFIX@ @P4EST_SC_LDADD@
 
 LINT_CSOURCES += $(libp4est_compiled_sources)
