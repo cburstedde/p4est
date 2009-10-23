@@ -59,6 +59,13 @@ include example/second/Makefile.am
 include example/simple/Makefile.am
 include example/timings/Makefile.am
 
+if P4EST_BLAS
+if P4EST_LAPACK
+LDADD += @LAPACK_LIBS@
+endif
+LDADD += @BLAS_LIBS@ @FLIBS@
+endif
+
 ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
                  $(src_libp4est_a_CPPFLAGS)
