@@ -68,7 +68,7 @@ echo "See output in files .../config.output and .../make.output"
 echo "Build FAST version in $BUILD_FAST"
 mkdir -p "$BUILD_FAST"
 cd "$BUILD_FAST"
-"$UNPACK/$DIR/configure" --enable-mpi \
+"$UNPACK/$DIR/configure" --enable-mpi --without-blas \
 	--prefix="$INSTALL_FAST" CFLAGS="$CFLAGS_FAST" \
 	"$@" > config.output || bdie "Error in configure"
 make -C sc -j 8 > make.output || bdie "Error in make sc"
@@ -83,7 +83,7 @@ cd "$BUILD_DEBUG"
 if test -z "$CFLAGS" ; then
 	export CFLAGS="-g -O0"
 fi
-"$UNPACK/$DIR/configure" --enable-mpi --enable-debug \
+"$UNPACK/$DIR/configure" --enable-mpi --enable-debug --without-blas \
 	--prefix="$INSTALL_DEBUG" CFLAGS="$CFLAGS_DEBUG" \
 	"$@" > config.output || bdie "Error in configure"
 make -C sc -j 8 > make.output || bdie "Error in make sc"
