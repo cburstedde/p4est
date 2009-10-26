@@ -379,10 +379,10 @@ p4est_quadrant_is_node (const p4est_quadrant_t * q, int inside)
 {
   return
     q->level == P4EST_MAXLEVEL &&
-    q->x >= 0 && q->x <= P4EST_ROOT_LEN - (int) inside &&
-    q->y >= 0 && q->y <= P4EST_ROOT_LEN - (int) inside &&
+    q->x >= 0 && q->x <= P4EST_ROOT_LEN - (inside ? 1 : 0) &&
+    q->y >= 0 && q->y <= P4EST_ROOT_LEN - (inside ? 1 : 0) &&
 #ifdef P4_TO_P8
-    q->z >= 0 && q->z <= P4EST_ROOT_LEN - (int) inside &&
+    q->z >= 0 && q->z <= P4EST_ROOT_LEN - (inside ? 1 : 0) &&
 #endif
     (!(q->x & ((1 << (P4EST_MAXLEVEL - P4EST_QMAXLEVEL)) - 1))
      || (inside && q->x == P4EST_ROOT_LEN - 1)) &&
@@ -1441,7 +1441,7 @@ p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
   if (q->level == P4EST_MAXLEVEL) {
     P4EST_ASSERT (p4est_quadrant_is_node (q, inside));
     lower = 0;
-    upper = P4EST_ROOT_LEN - (int) inside;
+    upper = P4EST_ROOT_LEN - (inside ? 1 : 0);
   }
   else {
     if (!inside) {
