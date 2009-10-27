@@ -195,11 +195,7 @@ typedef struct p4est_lnodes_data
   sc_array_t         *send_buf_info;    /* one for each proc: type buf_info_t */
   sc_array_t         *recv_buf_info;    /* one for each proc: type buf_info_t */
   sc_array_t         *sorters;  /* one for each proc: type sorter_t */
-#ifndef P4_TO_P8
-  int8_t             *face_codes;
-#else
-  int16_t            *face_codes;
-#endif
+  p4est_lnodes_code_t *face_codes;
   int                 nodes_per_elem;
   int                 nodes_per_volume;
   int                *volume_nodes;
@@ -270,11 +266,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
   int                 rank = info->p4est->mpirank;
   p4est_locidx_t      hqid[P4EST_CHILDREN / 2];
   p4est_locidx_t      quadrants_offset;
-#ifndef P4_TO_P8
-  int8_t             *face_codes = data->face_codes;
-#else
-  int16_t            *face_codes = data->face_codes;
-#endif
+  p4est_lnodes_code_t *face_codes = data->face_codes;
   int8_t              has_local;
 
   /* even though the original is size mpisize+1, proc_offsets uses
@@ -300,13 +292,10 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
           procs[i] = rank;
           hqid[i] += quadrants_offset;
           /* update face code */
-#ifndef P4_TO_P8
-          face_codes[hqid[i]] |= ((int8_t) p4est_face_corners[f][i]);
-          face_codes[hqid[i]] |= (0x01 << (2 + f / 2));
-#else
-          face_codes[hqid[i]] |= ((int16_t) p8est_face_corners[f][i]);
-          face_codes[hqid[i]] |= (0x0001 << (6 + f / 2));
-#endif
+          face_codes[hqid[i]] |=
+            ((p4est_lnodes_code_t) p4est_face_corners[f][i]);
+          face_codes[hqid[i]] |=
+            ((p4est_lnodes_code_t) 1 << (P4EST_DIM + f / 2));
         }
         else {
           procs[i] = (int) sc_array_bsearch (&proc_offsets, &(hqid[i]),
@@ -489,7 +478,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   int                 rank = info->p4est->mpirank;
   p4est_locidx_t      hqid[2];
   p4est_locidx_t      quadrants_offset;
-  int16_t            *face_codes = data->face_codes;
+  p4est_lnodes_code_t *face_codes = data->face_codes;
   int8_t              has_local;
 
   /* even though the original is size mpisize+1, proc_offsets uses
@@ -515,8 +504,10 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
           procs[i] = rank;
           hqid[i] += quadrants_offset;
           /* update face code */
-          face_codes[hqid[i]] |= ((int16_t) p8est_edge_corners[e][i]);
-          face_codes[hqid[i]] |= (0x0001 << (3 + e / 4));
+          face_codes[hqid[i]] |=
+            ((p4est_lnodes_code_t) p8est_edge_corners[e][i]);
+          face_codes[hqid[i]] |=
+            ((p4est_lnodes_code_t) 1 << (6 + e / 4));
         }
         else {
           procs[i] = (int) sc_array_bsearch (&proc_offsets, &(hqid[i]),
@@ -2137,8 +2128,8 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
  * Coming out of the iterate loop, a hanging edge that touches a hanging face
  * has its bit in the face code set to 1, whereas _decode expects it to be 0.
  */
-static              int16_t
-p8est_lnodes_code_fix (int16_t face_code)
+static              p8est_lnodes_code_t
+p8est_lnodes_code_fix (p8est_lnodes_code_t face_code)
 {
   int                 i;
 
@@ -2147,10 +2138,10 @@ p8est_lnodes_code_fix (int16_t face_code)
   }
   else {
     for (i = 0; i < 3; i++) {
-      if (face_code & (1 << (i + 6))) {
+      if (face_code & (1 << (i + 3))) {
         /* zero out touching edges */
-        face_code &= ~(1 << (((i + 1) % 3) + 3));
-        face_code &= ~(1 << (((i + 2) % 3) + 3));
+        face_code &= ~(1 << (((i + 1) % 3) + 6));
+        face_code &= ~(1 << (((i + 2) % 3) + 6));
       }
     }
   }
@@ -3093,11 +3084,10 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   lnodes->num_local_elements = nel = p4est->local_num_quadrants;
 #ifndef P4_TO_P8
   lnodes->vnodes = (degree + 1) * (degree + 1);
-  lnodes->face_code = P4EST_ALLOC_ZERO (int8_t, nel);
 #else
   lnodes->vnodes = (degree + 1) * (degree + 1) * (degree + 1);
-  lnodes->face_code = P4EST_ALLOC_ZERO (int16_t, nel);
 #endif
+  lnodes->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, nel);
   nlen = nel * lnodes->vnodes;
   lnodes->local_nodes = P4EST_ALLOC (p4est_locidx_t, nlen);
   memset (lnodes->local_nodes, -1, nlen * sizeof (p4est_locidx_t));

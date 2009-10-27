@@ -27,6 +27,8 @@
 
 SC_EXTERN_C_BEGIN;
 
+typedef int8_t p4est_lnodes_code_t;
+
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
  *
  * Each element has degree+1 nodes per face
@@ -82,7 +84,7 @@ typedef struct p4est_lnodes
   p4est_locidx_t      num_local_elements;
   p4est_locidx_t      num_indep_nodes;
   p4est_locidx_t      owned_offset, owned_count;
-  int8_t             *face_code;
+  p4est_lnodes_code_t *face_code;
   p4est_locidx_t     *local_nodes;
   p4est_gloidx_t     *global_nodes;
   p4est_locidx_t     *global_owned_count;
@@ -125,7 +127,7 @@ p4est_lnodes_rank_t;
  */
 /*@unused@*/
 static inline int
-p4est_lnodes_decode (int8_t face_code, int hanging_face[4])
+p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
 {
   SC_ASSERT (face_code >= 0);
 

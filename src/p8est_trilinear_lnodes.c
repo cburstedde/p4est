@@ -27,7 +27,7 @@
 static int8_t       face_node_type[4] = { 0, 2, 2, 1 };
 
 static void
-p8est_mesh_fcode_to_ntype (int16_t face_code, int8_t node_type[])
+p8est_mesh_fcode_to_ntype (p8est_lnodes_code_t face_code, int8_t node_type[])
 {
   int                 i, j, c;
   int                 edge[12];
@@ -69,7 +69,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
   int                 nf, nf2, ne, nc, cid;
   int                 o, ref, set;
   int8_t              node_type[8];
-  int16_t            *face_code = nodes->face_code;
+  p8est_lnodes_code_t *face_code = nodes->face_code;
   int                 ownerc;
   p4est_topidx_t      t, nt, ownert;
   p4est_topidx_t      ft = p4est->first_local_tree;
@@ -308,7 +308,7 @@ p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
   sc_array_t          local_nodes;
   p4est_locidx_t      elid, nid;
   int                 i, j, f, e;
-  int16_t            *face_code = nodes->face_code;
+  p8est_lnodes_code_t *face_code = nodes->face_code;
   int8_t              ntype[8];
   int                 faces[6], edges[12];
   p4est_locidx_t      indep[4], *r;

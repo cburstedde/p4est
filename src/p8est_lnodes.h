@@ -27,6 +27,8 @@
 
 SC_EXTERN_C_BEGIN;
 
+typedef int16_t p8est_lnodes_code_t;
+
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
  *
  * Each element has degree+1 nodes per edge
@@ -90,7 +92,7 @@ typedef struct p8est_lnodes
   p4est_locidx_t      num_local_elements;
   p4est_locidx_t      num_indep_nodes;
   p4est_locidx_t      owned_offset, owned_count;
-  int16_t            *face_code;
+  p8est_lnodes_code_t *face_code;
   p4est_locidx_t     *local_nodes;
   p4est_gloidx_t     *global_nodes;
   p4est_locidx_t     *global_owned_count;
@@ -141,7 +143,7 @@ p8est_lnodes_rank_t;
  */
 /*@unused@*/
 static inline int
-p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
+p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
                      int hanging_edge[12])
 {
   SC_ASSERT (face_code >= 0);
@@ -159,15 +161,15 @@ p8est_lnodes_decode (int16_t face_code, int hanging_face[6],
 
     cwork = c;
     for (i = 0; i < 3; ++i) {
-      e = p8est_corner_edges[c][i];
-      hanging_edge[e] = (work & 0x0001) ? (int) (cwork & 0x0001) : -1;
-      cwork >>= 1;
-      work >>= 1;
-    }
-    for (i = 0; i < 3; ++i) {
       f = p8est_corner_faces[c][i];
       hanging_face[f] =
         (work & 0x0001) ? p8est_corner_face_corners[c][f] : -1;
+      work >>= 1;
+    }
+    for (i = 0; i < 3; ++i) {
+      e = p8est_corner_edges[c][i];
+      hanging_edge[e] = (work & 0x0001) ? (int) (cwork & 0x0001) : -1;
+      cwork >>= 1;
       work >>= 1;
     }
 

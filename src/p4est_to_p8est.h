@@ -81,6 +81,7 @@
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_lnodes_t                  p8est_lnodes_t
+#define p4est_lnodes_code_t             p8est_lnodes_code_t
 #define p4est_lnodes_rank_t             p8est_lnodes_rank_t
 #define p4est_lnodes_buffer_t           p8est_lnodes_buffer_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
