@@ -133,7 +133,7 @@ p4est_hang2_t;
  * Each processor owns num_owned_indeps of the stored independent nodes.
  * The first independent owned node is at index offset_owned_indeps.
  * The table nonlocal_ranks contains the ranks of all stored non-owned nodes.
- * The table global_owned_nodes holds the number of owned nodes for each rank.
+ * The table global_owned_indeps holds the number of owned nodes for each rank.
  */
 typedef struct p4est_nodes
 {

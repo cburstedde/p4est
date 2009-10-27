@@ -44,8 +44,8 @@ SC_EXTERN_C_BEGIN;
  *
  * Whether nodes are hanging or not is decided based on the element faces and
  * edges. This information is encoded in face_code with one int16_t per
- * element. If no faces are hanging, the value is zero, otherwise the face_code
- * is interpreted by p8est_lnodes_decode.
+ * element. If no faces or edges are hanging, the value is zero, otherwise the
+ * face_code is interpreted by p8est_lnodes_decode.
  *
  * Independent nodes can be shared by multiple MPI ranks.
  * The owner rank of a node is the one from the lowest numbered element
@@ -66,17 +66,17 @@ SC_EXTERN_C_BEGIN;
  * + |  q  |      o    \ |           |
  *  \|     |     o      \|           |
  *   +-----+      O      +-----------+
- * 
+ *
  * In this example degree = 3.  There are 4 nodes that live on the face
  * between q and p, two on each edge and one at each corner of that face.
  * The face is incident on q, so q owns the nodes marked '.' on the face
  * (provided q is from a lower tree or has a lower index than p).
- * The bottom and frone edges are incident on q, so q owns its nodes marked
+ * The bottom and front edges are incident on q, so q owns its nodes marked
  * 'o' as well.
  * The front lower corner is incident on q, so q owns its node 'O' as
- * well.  The other edges and Corner are not incident on q, so q cannot own
+ * well.  The other edges and corners are not incident on q, so q cannot own
  * their nodes, marked 'x' and 'X'.
- * 
+ *
  * global_owned_count contains the number of independent nodes owned by each
  * process.
  *
@@ -127,7 +127,7 @@ p8est_lnodes_rank_t;
  * \param[out] hanging_face: if there are hanging faces or edges,
  *             hanging_face = -1 if the face is not hanging,
  *                          = the corner of the full face that it touches:
- *                            e.g. if face = i and hanging_face[i] = 
+ *                            e.g. if face = i and hanging_face[i] =
  *                            j, then the interpolation operator corresponding
  *                            to corner j should be used for that face.
  *             note: not touched if there are no hanging faces or edges.
@@ -136,7 +136,7 @@ p8est_lnodes_rank_t;
  *                               hanging face,
  *                          = 0 if the edge is the first half of the full edge,
  *                          = 1 if the edge is the second half.
- *             not: not touched if there are no hanging faces or edges;
+ *             note: not touched if there are no hanging faces or edges.
  * \return             true if any face or edge is hanging, false otherwise.
  */
 /*@unused@*/
@@ -263,7 +263,7 @@ void                p8est_lnodes_share_all_end (p8est_lnodes_buffer_t *
 
 /** Equivalend to calling p8est_lnodes_share_all_end directly after
  * p8est_lnodes_share_all_begin.  Use if there is no local work that can be
- * done to maks the communication cost.
+ * done to mask the communication cost.
  */
 p8est_lnodes_buffer_t *p8est_lnodes_share_all (sc_array_t * node_data,
                                                p8est_lnodes_t * lnodes,

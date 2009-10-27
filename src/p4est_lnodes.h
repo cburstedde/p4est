@@ -54,7 +54,7 @@ SC_EXTERN_C_BEGIN;
  * What is meant by *touching*?
  * A quadrant is said to touch all faces/corners that are incident on it,
  * and by extension all nodes that are contained in those faces/corners.
- * 
+ *
  *         X +-----------+
  *         o |           |
  *         o |           |
@@ -62,12 +62,12 @@ SC_EXTERN_C_BEGIN;
  * |  q  | o |           |
  * |     | o |           |
  * +-----+ O +-----------+
- * 
+ *
  * In this example degree = 6.  There are 5 nodes that live on the face
  * between q and p, and one at each corner of that face.  The face is incident
- * on q, so q owns the nodes on the face (provided q is from a lower tree or has
- * a lower index than p).  The lower corner is incident on q, so q owns it as
- * well.  The upper corner is not incident on q, so q cannot own it.
+ * on q, so q owns the nodes on the face (provided q is from a lower tree or
+ * has a lower index than p).  The lower corner is incident on q, so q owns it
+ * as well.  The upper corner is not incident on q, so q cannot own it.
  *
  * global_owned_count contains the number of independent nodes owned by each
  * process.
@@ -121,7 +121,6 @@ p4est_lnodes_rank_t;
  *                          = 0 if the face is the first half,
  *                          = 1 if the face is the second half.
  *             note: not touched if there are no hanging faces.
- *           
  * \return              true if any face is hanging, false otherwise.
  */
 /*@unused@*/
@@ -239,7 +238,7 @@ void                p4est_lnodes_share_all_end (p4est_lnodes_buffer_t *
 
 /** Equivalend to calling p4est_lnodes_share_all_end directly after
  * p4est_lnodes_share_all_begin.  Use if there is no local work that can be
- * done to maks the communication cost.
+ * done to mask the communication cost.
  */
 p4est_lnodes_buffer_t *p4est_lnodes_share_all (sc_array_t * node_data,
                                                p4est_lnodes_t * lnodes,
