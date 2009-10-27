@@ -67,15 +67,15 @@ typedef struct p8est_iter_face_side
   {
     struct
     {
-      p8est_quadrant_t   *quad;
       int8_t              is_ghost;
+      p8est_quadrant_t   *quad;
       p4est_locidx_t      quadid;
     }
     full;
     struct
     {
-      p8est_quadrant_t   *quad[4];
       int8_t              is_ghost[4];
+      p8est_quadrant_t   *quad[4];
       p4est_locidx_t      quadid[4];
     }
     hanging;
@@ -131,15 +131,15 @@ typedef struct p8est_iter_edge_side
   {
     struct
     {
-      p8est_quadrant_t   *quad;
       int8_t              is_ghost;
+      p8est_quadrant_t   *quad;
       p4est_locidx_t      quadid;
     }
     full;
     struct
     {
-      p8est_quadrant_t   *quad[2];
       int8_t              is_ghost[2];
+      p8est_quadrant_t   *quad[2];
       p4est_locidx_t      quadid[2];
     }
     hanging;
@@ -180,8 +180,8 @@ typedef struct p8est_iter_corner_side
 {
   p4est_topidx_t      treeid;
   int8_t              corner;
-  p8est_quadrant_t   *quad;
   int8_t              is_ghost;
+  p8est_quadrant_t   *quad;
   p4est_locidx_t      quadid;
 }
 p8est_iter_corner_side_t;
