@@ -69,6 +69,77 @@ static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
 
+void
+p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
+                        p4est_topidx_t treeid,
+                        p4est_qcoord_t x, p4est_qcoord_t y,
+#ifdef P4_TO_P8
+                        p4est_qcoord_t z,
+#endif
+                        double vxy[P4EST_DIM])
+{
+  const double       *vertices = connectivity->vertices;
+  const p4est_topidx_t num_vertices = connectivity->num_vertices;
+  const p4est_topidx_t *vindices;
+  int                 xi, yi;
+  double              wx[2], wy[2];
+#ifndef P4_TO_P8
+  double              xfactor, yfactor;
+  const double        zfactor = 1. / P4EST_CHILDREN;
+#else
+  int                 zi;
+  double              wz[2];
+  double              xfactor, yfactor, zfactor;
+  const double        wfactor = 1. / P4EST_CHILDREN;
+#endif
+  p4est_topidx_t      vindex;
+
+  P4EST_ASSERT (num_vertices > 0);
+  P4EST_ASSERT (vertices != NULL);
+  P4EST_ASSERT (treeid >= 0 && treeid < connectivity->num_trees);
+
+  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
+  vindices = connectivity->tree_to_vertex + P4EST_CHILDREN * treeid;
+
+  P4EST_ASSERT (x >= 0 && x <= P4EST_ROOT_LEN);
+  vxy[0] = 0.;
+  wx[1] = (double) x / (double) P4EST_ROOT_LEN;
+  wx[0] = 1. - wx[1];
+
+  P4EST_ASSERT (y >= 0 && y <= P4EST_ROOT_LEN);
+  vxy[1] = 0.;
+  wy[1] = (double) y / (double) P4EST_ROOT_LEN;
+  wy[0] = 1. - wy[1];
+
+#ifdef P4_TO_P8
+  P4EST_ASSERT (z >= 0 && z <= P4EST_ROOT_LEN);
+  vxy[2] = 0.;
+  wz[1] = (double) z / (double) P4EST_ROOT_LEN;
+  wz[0] = 1. - wz[1];
+
+  for (zi = 0; zi < 2; ++zi) {
+    zfactor = wfactor * wz[zi];
+#endif
+    for (yi = 0; yi < 2; ++yi) {
+      yfactor = zfactor * wy[yi];
+      for (xi = 0; xi < 2; ++xi) {
+        xfactor = yfactor * wx[xi];
+
+        vindex = *vindices++;
+        P4EST_ASSERT (vindex >= 0 && vindex < num_vertices);
+
+        vxy[0] += xfactor * vertices[P4EST_DIM * vindex + 0];
+        vxy[1] += xfactor * vertices[P4EST_DIM * vindex + 1];
+#ifdef P4_TO_P8
+        vxy[2] += xfactor * vertices[P4EST_DIM * vindex + 2];
+#endif
+      }
+    }
+#ifdef P4_TO_P8
+  }
+#endif
+}
+
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            p4est_locidx_t min_quadrants, size_t data_size,

@@ -114,6 +114,7 @@
 #define p4est_corner_array_index        p8est_corner_array_index
 
 /* functions in p4est */
+#define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex
 #define p4est_new                       p8est_new
 #define p4est_destroy                   p8est_destroy
 #define p4est_copy                      p8est_copy

@@ -169,6 +169,19 @@ extern const int    p8est_num_ranges;
 #define P8EST_QUADRANT_INIT(q) \
   ((void) memset ((q), -1, sizeof (p8est_quadrant_t)))
 
+/** Transform a quadrant coordinate into the space spanned by tree vertices.
+ * \param [in] connectivity     Connectivity must provide the vertices.
+ * \param [in] treeid           Identify the tree that contains x, y, z.
+ * \param [in] x, y, z          Quadrant coordinates relative to treeid.
+ * \param [out] vxyz            Transformed coordinates in vertex space.
+ */
+void                p8est_qcoord_to_vertex (p8est_connectivity_t *
+                                            connectivity,
+                                            p4est_topidx_t treeid,
+                                            p4est_qcoord_t x,
+                                            p4est_qcoord_t y,
+                                            p4est_qcoord_t z, double vxyz[3]);
+
 /** Create a new p8est.
  *
  * \param [in] mpicomm       A valid MPI communicator.
