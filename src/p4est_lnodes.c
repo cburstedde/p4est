@@ -48,8 +48,8 @@
 static int
 p4est_locidx_offset_compare (const void *key, const void *elem)
 {
-  const p4est_locidx_t *start = elem;
-  const p4est_locidx_t *stop = start + 1;
+  const p4est_locidx_t *start = (p4est_locidx_t *) elem;
+  const p4est_locidx_t *stop = (p4est_locidx_t *) start + 1;
   int                 comp = p4est_locidx_compare (key, start);
   if (comp < 0) {
     return -1;
@@ -136,8 +136,8 @@ p4est_lnodes_buf_info_t;
 static int
 p4est_lnodes_binfo_compare (const void *a, const void *b)
 {
-  const p4est_lnodes_buf_info_t *bufa = a;
-  const p4est_lnodes_buf_info_t *bufb = b;
+  const p4est_lnodes_buf_info_t *bufa = (p4est_lnodes_buf_info_t *) a;
+  const p4est_lnodes_buf_info_t *bufb = (p4est_lnodes_buf_info_t *) b;
   int                 piggy_compar =
     p4est_quadrant_compare_piggy (&(bufa->q), &(bufb->q));
   if (piggy_compar) {
@@ -149,8 +149,8 @@ p4est_lnodes_binfo_compare (const void *a, const void *b)
 static              int8_t
 p4est_lnodes_binfo_is_equal (const void *a, const void *b)
 {
-  const p4est_lnodes_buf_info_t *bufa = a;
-  const p4est_lnodes_buf_info_t *bufb = b;
+  const p4est_lnodes_buf_info_t *bufa = (p4est_lnodes_buf_info_t *) a;
+  const p4est_lnodes_buf_info_t *bufb = (p4est_lnodes_buf_info_t *) b;
   return (p4est_quadrant_is_equal_piggy (&(bufa->q), &(bufb->q)) &&
           bufa->type == bufb->type);
 }
@@ -169,8 +169,8 @@ p4est_lnodes_sorter_t;
 static int
 p4est_lnodes_sorter_compare (const void *a, const void *b)
 {
-  const p4est_lnodes_sorter_t *A = a;
-  const p4est_lnodes_sorter_t *B = b;
+  const p4est_lnodes_sorter_t *A = (p4est_lnodes_sorter_t *) a;
+  const p4est_lnodes_sorter_t *B = (p4est_lnodes_sorter_t *) b;
   return (p4est_locidx_compare (&(A->local_index), &(B->local_index)));
 }
 
@@ -230,7 +230,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
   int                 c2;
   int                 f;
   size_t              zz;
-  p4est_lnodes_data_t *data = Data;
+  p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
   sc_array_t         *sides = &(info->sides);
   size_t              count = sides->elem_count;
   p4est_iter_face_side_t *fside;
@@ -463,7 +463,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   int                 i;
   int                 c;
   size_t              zz;
-  p4est_lnodes_data_t *data = Data;
+  p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
   sc_array_t         *sides = &(info->sides);
   size_t              count = sides->elem_count;
   p8est_iter_edge_side_t *eside;
@@ -923,7 +923,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
 {
   int                 i;
   size_t              zz;
-  p4est_lnodes_data_t *data = Data;
+  p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
   sc_array_t         *sides = &(info->sides);
   size_t              count = sides->elem_count;
   p4est_iter_corner_side_t *cside;
@@ -1120,7 +1120,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   int                 i;
   int                 j;
   size_t              zz;
-  p4est_lnodes_data_t *data = Data;
+  p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
   sc_array_t         *sides = &(info->sides);
   size_t              count = sides->elem_count;
   p8est_iter_edge_side_t *eside;
@@ -1418,7 +1418,7 @@ static void
 p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 {
   size_t              zz;
-  p4est_lnodes_data_t *data = Data;
+  p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
   sc_array_t         *sides = &(info->sides);
   size_t              count = sides->elem_count;
   p4est_iter_face_side_t *fside;
@@ -1655,7 +1655,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 static void
 p4est_lnodes_volume_callback (p4est_iter_volume_info_t * info, void *Data)
 {
-  p4est_lnodes_data_t *data = Data;
+  p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
   p4est_tree_t       *tree = p4est_tree_array_index (info->p4est->trees,
                                                      info->treeid);
   p4est_locidx_t      qid = info->quadid + tree->quadrants_offset;

@@ -277,7 +277,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
 static unsigned
 p8est_mesh_indep_hash_fn (const void *v, const void *u)
 {
-  const p4est_locidx_t *indep = v;
+  const p4est_locidx_t *indep = (p4est_locidx_t *) v;
   uint32_t            a, b, c;
 
   a = (uint32_t) indep[0];
@@ -293,8 +293,8 @@ p8est_mesh_indep_hash_fn (const void *v, const void *u)
 static int
 p8est_mesh_indep_equal_fn (const void *v1, const void *v2, const void *u)
 {
-  const p4est_locidx_t *a = v1;
-  const p4est_locidx_t *b = v2;
+  const p4est_locidx_t *a = (p4est_locidx_t *) v1;
+  const p4est_locidx_t *b = (p4est_locidx_t *) v2;
   return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
 }
 
@@ -572,7 +572,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
       while (*tail != NULL) {
         tail = &((*tail)->next);
       }
-      *tail = lynk = sc_mempool_alloc (mesh->sharer_pool);
+      *tail = lynk = (int32link_t *) sc_mempool_alloc (mesh->sharer_pool);
       lynk->id = (int32_t) lrank->rank;
       lynk->next = NULL;
     }
