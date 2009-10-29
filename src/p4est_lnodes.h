@@ -134,17 +134,14 @@ p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
   if (face_code) {
     int                 i;
     int8_t              c = face_code & 0x03;
-    int8_t              cwork;
     int                 f;
     int8_t              work = face_code >> 2;
 
     memset (hanging_face, -1, 4 * sizeof (int));
 
-    cwork = c;
     for (i = 0; i < 2; ++i) {
       f = p4est_corner_faces[c][i];
-      hanging_face[f] = (work & 0x01) ? (int) (cwork & 0x01) : -1;
-      cwork >>= 1;
+      hanging_face[f] = (work & 0x01) ? p4est_corner_face_corners[c][f] : -1;
       work >>= 1;
     }
 
