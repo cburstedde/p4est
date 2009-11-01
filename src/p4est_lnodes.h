@@ -27,7 +27,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef int8_t p4est_lnodes_code_t;
+typedef int8_t      p4est_lnodes_code_t;
 
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
  *
@@ -223,7 +223,7 @@ void                p4est_lnodes_share_owned (sc_array_t * node_data,
  * node (such as reduce, max, min, etc.).  When the work concludes, the
  * \a buffer should be destroyed with p4est_lnodes_buffer_destroy.
  *
- * Values of \a node_data are not guaranteed to be send, and
+ * Values of \a node_data are not guaranteed to be sent, and
  * \a buffer->recv_buffer entries are not guaranteed to be received until
  * the \a buffer created by p4est_lnodes_share_all_begin is passed to
  * p4est_lnodes_share_all_end.
@@ -235,7 +235,7 @@ p4est_lnodes_buffer_t *p4est_lnodes_share_all_begin (sc_array_t * node_data,
 void                p4est_lnodes_share_all_end (p4est_lnodes_buffer_t *
                                                 buffer);
 
-/** Equivalend to calling p4est_lnodes_share_all_end directly after
+/** Equivalent to calling p4est_lnodes_share_all_end directly after
  * p4est_lnodes_share_all_begin.  Use if there is no local work that can be
  * done to mask the communication cost.
  */

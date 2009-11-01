@@ -506,8 +506,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
           /* update face code */
           face_codes[hqid[i]] |=
             ((p4est_lnodes_code_t) p8est_edge_corners[e][i]);
-          face_codes[hqid[i]] |=
-            ((p4est_lnodes_code_t) 1 << (6 + e / 4));
+          face_codes[hqid[i]] |= ((p4est_lnodes_code_t) 1 << (6 + e / 4));
         }
         else {
           procs[i] = (int) sc_array_bsearch (&proc_offsets, &(hqid[i]),
