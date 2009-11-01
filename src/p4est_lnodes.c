@@ -1390,7 +1390,7 @@ p8est_lnodes_face_node_transform (int orig_f, int f, int8_t orientation,
   int                 c2 = p8est_face_permutations[set][2];
   *flipj = (c1 < c0);
   *flipk = (c2 < c0);
-  *swapjk = ((c0 ^ c1) == 1);
+  *swapjk = ((c0 ^ c2) == 1);
 }
 #endif
 
@@ -1584,9 +1584,9 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
         qid += quadrants_offset;
 #ifndef P4_TO_P8
         start_node = num_inodes + ((zz == owner_side) ? 0 :
-                                   info->orientation ? 0 : nodes_per_face -
+                                   !info->orientation ? 0 : nodes_per_face -
                                    1);
-        stride = (zz == owner_side) ? 1 : info->orientation ? 1 : -1;
+        stride = (zz == owner_side) ? 1 : !info->orientation ? 1 : -1;
         for (j = 0; j < nodes_per_face; j++, start_node += stride) {
           nid = qid * nodes_per_elem + face_nodes[f][j];
           elnode = !is_ghost[i] ? &(local_elem_nodes[nid]) :
@@ -3372,8 +3372,6 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
 #endif
   sc_array_t         *send_buf;
 
-  P4EST_ASSERT (recv_bufs->elem_count == send_bufs->elem_count);
-
   if (requests->elem_count) {
     mpiret = MPI_Waitall ((int) requests->elem_count,
                           (MPI_Request *) requests->array,
@@ -3418,6 +3416,9 @@ p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t * buffer)
   }
   for (i = 0; i < 2; i++) {
     bufs = (i == 0) ? send_bufs : recv_bufs;
+    if (bufs == NULL) {
+      continue;
+    }
     P4EST_ASSERT (bufs->elem_size == sizeof (sc_array_t));
     for (zz = 0; zz < bufs->elem_count; zz++) {
       buf = (sc_array_t *) sc_array_index (bufs, zz);
