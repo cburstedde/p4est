@@ -64,7 +64,7 @@ p4est_locidx_offset_compare (const void *key, const void *elem)
 /** cdp: corner dependent processes.
  * Suppose quadrants q0, q1, q2, and q3 share the same face neighbor p.
  *
- *       _______ o       +____________ 
+ *       _______ o       +____________
  *      /       /        /            /
  *     /______ /| q3    /            /|
  *    /       / |      /            / |
@@ -75,7 +75,7 @@ p4est_locidx_offset_compare (const void *key, const void *elem)
  *   |      | |/      |           |  /
  *   |  q0  | /       |           | /
  *   |______|/        |___________|/
- * 
+ *
  * Suppose process q0, q1, and q2 are owned by process 0, 1, and 2 respectively,
  * while q3 and p are owned by process 3. Even though processes 0, 1, and 2 do
  * not touch the corner marked by "+", they share the node that is created
@@ -905,7 +905,7 @@ p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
  * Compute all processes that share the node.
  * If the node is locally owned, add info describing the node to the send
  * buffer of all processes that need the node.
- * If the node is not locally owned, add info describing the node to the 
+ * If the node is not locally owned, add info describing the node to the
  * receive buffer of the owner.
  */
 static void
@@ -1101,7 +1101,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
  * Compute all processes that share the nodes.
  * If the nodes are locally owned, add info describing the nodes to the send
  * buffer of all processes that share the nodes.
- * If the nodes are not locally owned, add info describing the nodes to the 
+ * If the nodes are not locally owned, add info describing the nodes to the
  * receive buffer of the owner.
  */
 static void
@@ -1401,7 +1401,7 @@ p8est_lnodes_face_node_transform (int orig_f, int f, int8_t orientation,
  * Compute all processes that share the nodes.
  * If the nodes are locally owned, add info describing the nodes to the send
  * buffer of all processes that share the nodes.
- * If the nodes are not locally owned, add info describing the nodes to the 
+ * If the nodes are not locally owned, add info describing the nodes to the
  * receive buffer of the owner.
  */
 static void
@@ -3366,9 +3366,6 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
   size_t              zz;
   sc_array_t         *requests = buffer->requests;
   sc_array_t         *send_bufs = buffer->send_buffers;
-#ifdef P4EST_DEBUG
-  sc_array_t         *recv_bufs = buffer->recv_buffers;
-#endif
   sc_array_t         *send_buf;
 
   if (requests->elem_count) {

@@ -79,7 +79,9 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
                         double vxy[P4EST_DIM])
 {
   const double       *vertices = connectivity->vertices;
+#ifdef P4EST_DEBUG
   const p4est_topidx_t num_vertices = connectivity->num_vertices;
+#endif
   const p4est_topidx_t *vindices;
   int                 xi, yi;
   double              wx[2], wy[2];
