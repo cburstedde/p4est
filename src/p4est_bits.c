@@ -1129,11 +1129,11 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
 #endif
 
   /* this also verifies p4est_quadrant_is_extended (c[i]) */
-  P4EST_ASSERT (p4est_quadrant_is_family (c0, c1, c2, c3
-#ifdef P4_TO_P8
-                                          , c4, c5, c6, c7
+#ifndef P4_TO_P8
+  P4EST_ASSERT (p4est_quadrant_is_family (c0, c1, c2, c3));
+#else
+  P4EST_ASSERT (p4est_quadrant_is_family (c0, c1, c2, c3, c4, c5, c6, c7));
 #endif
-                ));
 }
 
 void

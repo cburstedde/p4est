@@ -47,6 +47,9 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
 {
   const int           rank = p4est->mpirank;
   p4est_connectivity_t *conn = p4est->connectivity;
+#ifdef P4EST_DEBUG
+  int                 dims;
+#endif
   int                 ftransform[P4EST_FTRANSFORM];
   p4est_topidx_t      ntreeid, ntreeid2;
   p4est_quadrant_t    nq;
@@ -83,12 +86,14 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
 #endif
 
     /* Make sure we are neither tree edge nor tree corner */
-    P4EST_ASSERT (((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
-                  ((quad_contact[2] || quad_contact[3]) ? 1 : 0)
+#ifdef P4EST_DEBUG
+    dims = (((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
+            ((quad_contact[2] || quad_contact[3]) ? 1 : 0));
 #ifdef P4_TO_P8
-                  + ((quad_contact[4] || quad_contact[5]) ? 1 : 0)
+    dims += ((quad_contact[4] || quad_contact[5]) ? 1 : 0);
 #endif
-                  == 1);
+    P4EST_ASSERT (dims == 1);
+#endif
 
     ntreeid = -1;
     for (face = 0; face < P4EST_FACES; ++face) {
