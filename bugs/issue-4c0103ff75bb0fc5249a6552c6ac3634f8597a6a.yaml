@@ -8,8 +8,8 @@ type: :feature
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2009-02-11 22:31:56.780589 Z
 references: []
 
@@ -19,3 +19,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2009-11-02 21:28:59.996252 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - We have the iterator now which should provide sufficient functionality.
