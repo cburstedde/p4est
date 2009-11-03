@@ -564,6 +564,8 @@ main (int argc, char **argv)
   int                 kb;
   int                 e;
 #endif
+  sc_array_t         *global_nodes;
+  p4est_gloidx_t      gn;
 
 #ifndef P4_TO_P8
   ntests = 3;
@@ -646,6 +648,8 @@ main (int argc, char **argv)
         tree = p4est_tree_array_index (p4est->trees, t);
         count = tree->quadrants.elem_count;
         tpoint.tree = t;
+        /* for every node of every element,
+         * determine what kind of node it is */
         for (zz = 0; zz < count; zz++, elid++) {
           fcode = lnodes->face_code[elid];
           p4est_lnodes_decode (fcode, hface
@@ -697,6 +701,9 @@ main (int argc, char **argv)
                 }
 #endif
                 is_hanging = 0;
+                /* if it touches a hanging part of the boundary, then the
+                 * location of the element node is really the location of a
+                 * node with the same index in the element's parent */
                 if (fcode) {
                   switch (bcount) {
                   case 0:
@@ -823,6 +830,21 @@ main (int argc, char **argv)
       }
 
       p4est_lnodes_buffer_destroy (buffer);
+
+      global_nodes = sc_array_new (sizeof (p4est_gloidx_t));
+      sc_array_resize (global_nodes, lnodes->num_indep_nodes);
+      memcpy (global_nodes->array, lnodes->global_nodes,
+              lnodes->num_indep_nodes * sizeof (p4est_gloidx_t));
+
+      p4est_lnodes_share_owned (global_nodes, lnodes, p4est);
+
+      for (zz = 0; zz < global_nodes->elem_count; zz++) {
+        gn = *((p4est_gloidx_t *) sc_array_index (global_nodes, zz));
+        SC_CHECK_ABORT (gn == lnodes->global_nodes[zz],
+                        "Lnodes: bad global index across procesors");
+      }
+
+      sc_array_destroy (global_nodes);
 
       p4est_lnodes_destroy (lnodes);
       P4EST_FREE (tpoints);
