@@ -3023,7 +3023,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       if (lnodes->owned_offset <= gidx &&
           gidx < (lnodes->owned_offset + lnodes->owned_count)) {
         if (lrank->shared_mine_count == 0) {
-          lrank->shared_mine_offset = (p4est_locidx_t) count;
+          lrank->shared_mine_offset = (p4est_locidx_t) zz;
         }
         lrank->shared_mine_count++;
       }
