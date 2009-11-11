@@ -27,7 +27,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef int16_t p8est_lnodes_code_t;
+typedef int16_t     p8est_lnodes_code_t;
 
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
  *
@@ -134,12 +134,44 @@ p8est_lnodes_rank_t;
  *                            to corner j should be used for that face.
  *             note: not touched if there are no hanging faces or edges.
  * \param[out] hanging_edge: if there are hanging faces or edges,
- *             hanging_edge = -1 if the edge is not hanging or touches a
- *                               hanging face,
- *                          = 0 if the edge is the first half of the full edge,
- *                          = 1 if the edge is the second half.
+ *             hanging_edge = -1 if the edge is not hanging,
+ *                          =  0 if the edge is the first half of a full edge,
+ *                               but neither of the two faces touching the
+ *                               edge is hanging,
+ *                          =  1 if the edge is the second half of a full edge,
+ *                               but neither of the two faces touching the
+ *                               edge is hanging,
+ *                          =  2 if the edge is the first half of a full edge
+ *                               and is on the boundary of a full face,
+ *                          =  3 if the edge is the second half of a full edge
+ *                               and is on the boundary of a full face,
+ *                          =  4 if the edge is in the middle of a full face.
+ *                               See the diagram below for clarification.
  *             note: not touched if there are no hanging faces or edges.
  * \return             true if any face or edge is hanging, false otherwise.
+ *
+ * o...............o  o...............o  +---2---+.......o  o.......+---3---+
+ * :               :  :               :  |       |       :  :       |       |
+ * :               :  :               :  3   2   4       :  :       4   3   3
+ * :               :  :               :  |       |       :  :       |       |
+ * +---4---+       :  :       +---4---+  +---4---+       :  :       +---4---+
+ * |       |       :  :       |       |  :               :  :               :
+ * 2   0   4       :  :       4   1   2  :               :  :               :
+ * |       |       :  :       |       |  :               :  :               :
+ * +---2---+.......o  o.......+---3---+  o...............o  o...............o
+ *
+ *                    o                  +-------+
+ *                    :                  |\       \
+ *                    :                  1 \       \
+ *                    :                  |  +-------+
+ *                    +-------+          +  |       |
+ *                    |\       \         :\ |       |
+ *                    0 \       \        : \|       |
+ *                    |  +-------+       :  +-------+
+ *                    +  |       |       o
+ *                     \ |       |
+ *                      \|       |
+ *                       +-------+
  */
 /*@unused@*/
 static inline int
@@ -149,7 +181,7 @@ p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
   SC_ASSERT (face_code >= 0);
 
   if (face_code) {
-    int                 i;
+    int                 i, j;
     int16_t             c = face_code & 0x0007;
     int16_t             cwork;
     int                 f;
@@ -161,18 +193,25 @@ p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
 
     cwork = c;
     for (i = 0; i < 3; ++i) {
-      f = p8est_corner_faces[c][i];
-      hanging_face[f] =
-        (work & 0x0001) ? p8est_corner_face_corners[c][f] : -1;
+      if (work & 0x0001) {
+        f = p8est_corner_faces[c][i];
+        hanging_face[f] = p8est_corner_face_corners[c][f];
+        for (j = 0; j < 4; j++) {
+          e = p8est_face_edges[f][j];
+          hanging_edge[e] = 4;
+        }
+      }
       work >>= 1;
     }
     for (i = 0; i < 3; ++i) {
-      e = p8est_corner_edges[c][i];
-      hanging_edge[e] = (work & 0x0001) ? (int) (cwork & 0x0001) : -1;
+      if (work & 0x0001) {
+        e = p8est_corner_edges[c][i];
+        hanging_edge[e] = (hanging_edge[e] == -1) ? 0 : 2;
+        hanging_edge[e] += (int) (cwork & 0x0001);
+      }
       cwork >>= 1;
       work >>= 1;
     }
-
     return 1;
   }
   else {

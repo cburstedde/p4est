@@ -769,12 +769,6 @@ main (int argc, char **argv)
                     if (fcode && hedge[e] >= 0) {
                       is_hanging = 1;
                     }
-                    for (k = 0; k < 2; k++) {
-                      f = p8est_edge_faces[e][k];
-                      if (fcode && hface[f] >= 0) {
-                        is_hanging = 1;
-                      }
-                    }
                     break;
 #endif
                   default:

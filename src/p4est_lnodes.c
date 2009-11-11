@@ -2121,34 +2121,6 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
 }
 #endif
 
-#ifdef P4_TO_P8
-/* p8est_lnodes_code_fix:
- *
- * Coming out of the iterate loop, a hanging edge that touches a hanging face
- * has its bit in the face code set to 1, whereas _decode expects it to be 0.
- */
-static              p8est_lnodes_code_t
-p8est_lnodes_code_fix (p8est_lnodes_code_t face_code)
-{
-  int                 i;
-
-  if (!face_code) {
-    return face_code;
-  }
-  else {
-    for (i = 0; i < 3; i++) {
-      if (face_code & (1 << (i + 3))) {
-        /* zero out touching edges */
-        face_code &= ~(1 << (((i + 1) % 3) + 6));
-        face_code &= ~(1 << (((i + 2) % 3) + 6));
-      }
-    }
-  }
-
-  return face_code;
-}
-#endif
-
 static void
 p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
                         p4est_ghost_t * ghost_layer, p4est_lnodes_t * lnodes)
@@ -3066,7 +3038,6 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   p4est_lnodes_data_t data;
   p4est_iter_face_side_t *hface;
 #ifdef P4_TO_P8
-  p4est_locidx_t      li;
   p8est_iter_edge_side_t *hedge;
 #endif
   p4est_locidx_t      nel;
@@ -3156,12 +3127,6 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   p4est_lnodes_global_and_sharers (&data, lnodes, p4est);
 
   p4est_lnodes_reset_data (&data, p4est);
-
-#ifdef P4_TO_P8
-  for (li = 0; li < nel; li++) {
-    lnodes->face_code[li] = p8est_lnodes_code_fix (lnodes->face_code[li]);
-  }
-#endif
 
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_lnodes_new\n");
   return lnodes;

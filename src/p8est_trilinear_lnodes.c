@@ -24,12 +24,10 @@
 #include <p8est_bits.h>
 #include <p8est_trilinear.h>
 
-static int8_t       face_node_type[4] = { 0, 2, 2, 1 };
-
 static void
 p8est_mesh_fcode_to_ntype (p8est_lnodes_code_t face_code, int8_t node_type[])
 {
-  int                 i, j, c;
+  int                 i, c;
   int                 edge[12];
   int                 face[6];
 
@@ -38,15 +36,13 @@ p8est_mesh_fcode_to_ntype (p8est_lnodes_code_t face_code, int8_t node_type[])
   if (p8est_lnodes_decode (face_code, face, edge)) {
     for (i = 0; i < 6; i++) {
       if (face[i] >= 0) {
-        for (j = 0; j < 4; j++) {
-          c = p8est_face_corners[i][j];
-          node_type[c] = face_node_type[face[i] ^ j];
-        }
+        c = p8est_face_corners[i][3 - face[i]];
+        node_type[c] = 1;
       }
     }
     for (i = 0; i < 12; i++) {
-      if (edge[i] >= 0) {
-        c = p8est_edge_corners[i][1 - edge[i]];
+      if (edge[i] >= 0 && edge[i] < 4) {
+        c = p8est_edge_corners[i][1 - (edge[i] % 2)];
         node_type[c] = 2;
       }
     }
@@ -359,25 +355,13 @@ p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
         }
         else if (ntype[i] == 2) {
           for (j = 0; j < 3; j++) {
-            f = p8est_corner_faces[i][j];
-            if (faces[f] >= 0) {
+            e = p8est_corner_edges[i][j];
+            if (edges[e] >= 0 && edges[e] < 4) {
               indep[0] =
                 nodes->local_nodes[elid * 8 +
-                                   p8est_face_corners[f][faces[f]]];
+                                   p8est_edge_corners[e][(edges[e] % 2)]];
               indep[1] = nodes->local_nodes[elid * 8 + i];
               break;
-            }
-          }
-          if (j == 3) {
-            for (j = 0; j < 3; j++) {
-              e = p8est_corner_edges[i][j];
-              if (edges[e] >= 0) {
-                indep[0] =
-                  nodes->local_nodes[elid * 8 +
-                                     p8est_edge_corners[e][edges[e]]];
-                indep[1] = nodes->local_nodes[elid * 8 + i];
-                break;
-              }
             }
           }
           P4EST_ASSERT (j < 3);
