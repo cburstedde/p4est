@@ -298,6 +298,7 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     tree = p4est_tree_array_index (p4est->trees, jt);
     tquadrants = &tree->quadrants;
 
+    quad = NULL;
     if (!fill_uniform) {        /* fill with coarsest possible quadrants */
       must_remove_last_quadrant = 0;
 
@@ -382,7 +383,7 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                                        P4EST_QMAXLEVEL);
 
       /* set tree counters */
-      tree->maxlevel = level;
+      tree->maxlevel = (int8_t) level;
       tree->quadrants_per_level[level] = (p4est_locidx_t) count;
     }
 
