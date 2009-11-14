@@ -404,7 +404,18 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->first_local_tree = first_tree;
   p4est->last_local_tree = last_tree;
   p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
-  p4est_comm_count_quadrants (p4est);
+  if (!fill_uniform) {
+    /* this performs an allgather to count all quadrants */
+    p4est_comm_count_quadrants (p4est);
+  }
+  else {
+    /* for a uniform forest we know all global information a priori */
+    for (i = 0; i <= num_procs; ++i) {
+      p4est->global_first_quadrant[i] =
+        (global_num_quadrants * i) / num_procs;
+    }
+    p4est->global_num_quadrants = global_num_quadrants;
+  }
 
   /* fill in global partition information */
   global_first_position = P4EST_ALLOC_ZERO (p4est_quadrant_t, num_procs + 1);
