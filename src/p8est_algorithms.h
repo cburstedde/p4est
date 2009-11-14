@@ -211,9 +211,9 @@ size_t              p8est_tree_remove_nonowned (p8est_t * p8est,
  * \pre \a q1 < \a q2 in the Morton ordering.
  *
  * \param [in]  p8est      Used for the memory pools and quadrant init.
- * \param [in]  q1         First input quadrant.  User data will not change.
+ * \param [in]  q1         First input quadrant.  Data init'ed if included.
  * \param [in]  include_q1 Flag to specify whether q1 is included.
- * \param [in]  q2         Second input quadrant.  User data will not change.
+ * \param [in]  q2         Second input quadrant.  Data init'ed if included.
  * \param [in]  include_q2 Flag to specify whether q2 is included.
  * \param [out] tree       Initialized tree with zero elements.
  * \param [in]  which_tree The 0-based index of \a tree which is needed for
