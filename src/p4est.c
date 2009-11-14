@@ -171,10 +171,13 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_quadrant_t    a, b, c;
   p4est_quadrant_t   *global_first_position;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
-                            "_new with min_quadrants %lld\n",
-                            (long long) min_quadrants);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Into " P4EST_STRING
+     "_new with min quadrants %lld level %d\n",
+     (long long) min_quadrants, SC_MAX (min_level, 0));
+
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
+  P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
 
   /* retrieve MPI information */
   mpiret = MPI_Comm_size (mpicomm, &num_procs);
@@ -212,7 +215,11 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     tree_num_quadrants *= P4EST_CHILDREN;
     P4EST_ASSERT (tree_num_quadrants > 0);
   }
-  P4EST_ASSERT (level < P4EST_QMAXLEVEL
+  for (; level < min_level; ++level) {
+    tree_num_quadrants *= P4EST_CHILDREN;
+    P4EST_ASSERT (tree_num_quadrants > 0);
+  }
+  P4EST_ASSERT (level <= P4EST_QMAXLEVEL
                 && tree_num_quadrants <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
 
   /* compute global number of quadrants */

@@ -214,6 +214,7 @@ p4est_t            *p4est_new (MPI_Comm mpicomm,
  * This is a more general form of p4est_new.
  *
  * \param [in] min_level        The forest is refined at least to this level.
+ *                              May be negative or 0, then it has no effect.
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
  *                              instead of coarsest possible as in p4est_new.
  */
