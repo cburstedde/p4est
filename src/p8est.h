@@ -182,7 +182,9 @@ void                p8est_qcoord_to_vertex (p8est_connectivity_t *
                                             p4est_qcoord_t y,
                                             p4est_qcoord_t z, double vxyz[3]);
 
-/** Create a new p8est.
+/** Create a new forest.
+ * Each processor is assigned a domain partition of equal size.
+ * Each processor's domain is then filled with the coarsest possible quadrants.
  *
  * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
@@ -205,6 +207,20 @@ p8est_t            *p8est_new (MPI_Comm mpicomm,
                                p8est_connectivity_t * connectivity,
                                p4est_locidx_t min_quadrants, size_t data_size,
                                p8est_init_t init_fn, void *user_pointer);
+
+/** Create a new forest.
+ * This is a more general form of p8est_new.
+ *
+ * \param [in] min_level        The forest is refined at least to this level.
+ * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
+ *                              instead of coarsest possible as in p4est_new.
+ */
+p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
+                                   p8est_connectivity_t * connectivity,
+                                   p4est_locidx_t min_quadrants,
+                                   int min_level, int fill_uniform,
+                                   size_t data_size, p8est_init_t init_fn,
+                                   void *user_pointer);
 
 /** Destroy a p8est.
  *
