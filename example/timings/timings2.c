@@ -318,7 +318,8 @@ main (int argc, char **argv)
     connectivity = p8est_connectivity_new_unitcube ();
   }
 #endif
-  p4est = p4est_new (mpi->mpicomm, connectivity, 15, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpi->mpicomm, connectivity,
+                         1, refine_level - level_shift, 1, 0, NULL, NULL);
   quadrant_counts = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
 
   /* time refine */
