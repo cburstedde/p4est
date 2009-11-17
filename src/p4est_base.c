@@ -95,7 +95,22 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
   }
 }
 
-#ifdef __cplusplus
+#ifndef __cplusplus
+#undef P4EST_GLOBAL_LOGF
+#undef P4EST_LOGF
+#undef P4EST_GLOBAL_TRACEF
+#undef P4EST_GLOBAL_LDEBUGF
+#undef P4EST_GLOBAL_VERBOSEF
+#undef P4EST_GLOBAL_INFOF
+#undef P4EST_GLOBAL_STATISTICSF
+#undef P4EST_GLOBAL_PRODUCTIONF
+#undef P4EST_TRACEF
+#undef P4EST_LDEBUGF
+#undef P4EST_VERBOSEF
+#undef P4EST_INFOF
+#undef P4EST_STATISTICSF
+#undef P4EST_PRODUCTIONF
+#endif
 
 void
 P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
@@ -108,7 +123,7 @@ P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
 }
 
 void
-P4EST_NORMAL_LOGF (int priority, const char *fmt, ...)
+P4EST_LOGF (int priority, const char *fmt, ...)
 {
   va_list             ap;
 
@@ -143,5 +158,3 @@ P4EST_LOG_IMP (VERBOSE, VERBOSE);
 P4EST_LOG_IMP (INFO, INFO);
 P4EST_LOG_IMP (STATISTICS, STATISTICS);
 P4EST_LOG_IMP (PRODUCTION, PRODUCTION);
-
-#endif /* __cplusplus */

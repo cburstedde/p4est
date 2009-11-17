@@ -327,7 +327,7 @@ p4est_tree_print (int log_priority, p4est_tree_t * tree)
       l += snprintf (buffer + l, BUFSIZ - l, " F%d", childid);
     }
     l += snprintf (buffer + l, BUFSIZ - l, "\n");
-    P4EST_NORMAL_LOG (log_priority, buffer);
+    P4EST_LOG (log_priority, buffer);
     q1 = q2;
   }
 }

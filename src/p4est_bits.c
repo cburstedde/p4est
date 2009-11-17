@@ -29,12 +29,10 @@ void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 {
 #ifdef P4_TO_P8
-  P4EST_NORMAL_LOGF (log_priority,
-                     "x 0x%x y 0x%x z 0x%x level %d\n",
-                     q->x, q->y, q->z, q->level);
+  P4EST_LOGF (log_priority, "x 0x%x y 0x%x z 0x%x level %d\n",
+              q->x, q->y, q->z, q->level);
 #else
-  P4EST_NORMAL_LOGF (log_priority,
-                     "x 0x%x y 0x%x level %d\n", q->x, q->y, q->level);
+  P4EST_LOGF (log_priority, "x 0x%x y 0x%x level %d\n", q->x, q->y, q->level);
 #endif
 }
 
