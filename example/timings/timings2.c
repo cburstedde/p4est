@@ -203,6 +203,9 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+#ifndef P4EST_DEBUG
+  sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
+#endif
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
@@ -257,17 +260,9 @@ main (int argc, char **argv)
     }
   }
   if (wrongusage) {
-    if (mpi->mpirank == 0) {
-      fputs (usage, stderr);
-      SC_ABORT ("Usage error");
-    }
-    mpiret = MPI_Barrier (mpi->mpicomm);
-    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERROR (usage);
+    sc_abort_collective ("Usage error");
   }
-
-#ifndef P4EST_DEBUG
-  sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
-#endif
 
   /* get command line argument: maximum refinement level */
   refine_level = atoi (argv[2]);

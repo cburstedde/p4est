@@ -247,12 +247,8 @@ main (int argc, char **argv)
     }
   }
   if (wrongusage) {
-    if (mpi->mpirank == 0) {
-      fputs (usage, stderr);
-      SC_ABORT ("Usage error");
-    }
-    mpiret = MPI_Barrier (mpi->mpicomm);
-    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERROR (usage);
+    sc_abort_collective ("Usage error");
   }
 
   /* assign variables based on configuration */

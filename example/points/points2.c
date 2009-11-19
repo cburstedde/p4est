@@ -142,7 +142,7 @@ main (int argc, char **argv)
     "      which applies to all quadrants above maxlevel\n"
     "      A value of 0 refines recursively to maxlevel\n"
     "      A value of -1 does no refinement at all\n"
-    "   Prefix is for loading a point data file";
+    "   Prefix is for loading a point data file\n";
   wrongusage = 0;
   if (!wrongusage && argc != 5) {
     wrongusage = 1;
@@ -199,9 +199,8 @@ main (int argc, char **argv)
     }
   }
   if (wrongusage) {
-    SC_CHECK_ABORT (rank != 0, usage);
-    mpiret = MPI_Barrier (mpicomm);
-    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERROR (usage);
+    sc_abort_collective ("Usage error");
   }
 
   snprintf (buffer, BUFSIZ, "%s%d_%d.pts", argv[4], rank, num_procs);

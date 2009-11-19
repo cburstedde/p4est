@@ -69,7 +69,8 @@ main (int argc, char **argv)
   sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  SC_CHECK_ABORT (mpi->mpisize == 5, "This example requires MPI with np=5.");
+  if (mpi->mpisize != 5)
+    sc_abort_collective ("This example requires MPI with np=5.");
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
