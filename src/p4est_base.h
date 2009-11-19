@@ -109,6 +109,7 @@ void                P4EST_LOGF (int priority, const char *fmt, ...)
 #define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (SC_LP_INFO, (s))
 #define P4EST_GLOBAL_STATISTICS(s) P4EST_GLOBAL_LOG (SC_LP_STATISTICS, (s))
 #define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (SC_LP_PRODUCTION, (s))
+#define P4EST_GLOBAL_LERROR(s) P4EST_GLOBAL_LOG (SC_LP_ERROR, (s))
 void                P4EST_GLOBAL_TRACEF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_GLOBAL_LDEBUGF (const char *fmt, ...)
@@ -120,6 +121,8 @@ void                P4EST_GLOBAL_INFOF (const char *fmt, ...)
 void                P4EST_GLOBAL_STATISTICSF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_GLOBAL_PRODUCTIONF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_LERRORF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 #ifndef __cplusplus
 #define P4EST_GLOBAL_TRACEF(f,...)                      \
@@ -134,11 +137,11 @@ void                P4EST_GLOBAL_PRODUCTIONF (const char *fmt, ...)
   P4EST_GLOBAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_PRODUCTIONF(f,...)                         \
   P4EST_GLOBAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_LERRORF(f,...)                     \
+  P4EST_GLOBAL_LOGF (SC_LP_ERROR, (f), __VA_ARGS__)
 #endif
 #define P4EST_GLOBAL_NOTICE     P4EST_GLOBAL_STATISTICS
 #define P4EST_GLOBAL_NOTICEF    P4EST_GLOBAL_STATISTICSF
-#define P4EST_GLOBAL_LERROR     P4EST_GLOBAL_PRODUCTION
-#define P4EST_GLOBAL_LERRORF    P4EST_GLOBAL_PRODUCTIONF
 
 /* convenience log macros that are active on every processor */
 #define P4EST_TRACE(s) P4EST_LOG (SC_LP_TRACE, (s))
@@ -147,6 +150,7 @@ void                P4EST_GLOBAL_PRODUCTIONF (const char *fmt, ...)
 #define P4EST_INFO(s) P4EST_LOG (SC_LP_INFO, (s))
 #define P4EST_STATISTICS(s) P4EST_LOG (SC_LP_STATISTICS, (s))
 #define P4EST_PRODUCTION(s) P4EST_LOG (SC_LP_PRODUCTION, (s))
+#define P4EST_LERROR(s) P4EST_LOG (SC_LP_ERROR, (s))
 void                P4EST_TRACEF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_LDEBUGF (const char *fmt, ...)
@@ -158,6 +162,8 @@ void                P4EST_INFOF (const char *fmt, ...)
 void                P4EST_STATISTICSF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_PRODUCTIONF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_LERRORF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 #ifndef __cplusplus
 #define P4EST_TRACEF(f,...)                     \
@@ -172,11 +178,11 @@ void                P4EST_PRODUCTIONF (const char *fmt, ...)
   P4EST_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
 #define P4EST_PRODUCTIONF(f,...)                        \
   P4EST_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+#define P4EST_LERRORF(f,...)                    \
+  P4EST_LOGF (SC_LP_ERROR, (f), __VA_ARGS__)
 #endif
 #define P4EST_NOTICE            P4EST_STATISTICS
 #define P4EST_NOTICEF           P4EST_STATISTICSF
-#define P4EST_LERROR            P4EST_PRODUCTION
-#define P4EST_LERRORF           P4EST_PRODUCTIONF
 
 /* extern declarations */
 extern int          p4est_package_id;
