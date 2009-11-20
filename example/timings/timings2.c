@@ -274,6 +274,8 @@ main (int argc, char **argv)
      config_name, refine_level, level_shift);
 
   /* start overall timing */
+  mpiret = MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
   sc_flops_start (&fi);
 
   /* create connectivity and forest structures */
