@@ -533,7 +533,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #ifdef P4EST_VTK_ASCII
     fprintf (vtufile, "         ");
     for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_array_index_topidx (trees, jt);
+      tree = p4est_tree_array_index (trees, jt);
       num_quads = tree->quadrants.elem_count;
       for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
         fprintf (vtufile, " %lld", (long long) jt);
