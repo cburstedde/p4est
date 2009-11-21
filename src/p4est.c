@@ -1021,6 +1021,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
   int                 found;
   int                 back, pos;
   int                 owner, first_owner, last_owner;
+  p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
   p4est_quadrant_t    ld, *s;
   p4est_balance_peer_t *peer;
 
@@ -1035,6 +1036,11 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
   /* send to all processors possibly intersecting insulation */
   for (owner = first_owner; owner <= last_owner; ++owner) {
     if (owner == rank && !inter_tree) {
+      /* do not send to self for the same tree */
+      continue;
+    }
+    if (global_first_quadrant[owner] == global_first_quadrant[owner + 1]) {
+      /* do not send to empty processors */
       continue;
     }
     peer = peers + owner;
