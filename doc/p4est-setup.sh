@@ -80,9 +80,6 @@ echo
 echo "Build DEBUG in $BUILD_DEBUG"
 mkdir -p "$BUILD_DEBUG"
 cd "$BUILD_DEBUG"
-if test -z "$CFLAGS" ; then
-        export CFLAGS="-g -O0"
-fi
 "$UNPACK/$DIR/configure" --enable-mpi --without-blas \
         --enable-debug --disable-vtk-binary \
         --prefix="$INSTALL_DEBUG" CFLAGS="$CFLAGS_DEBUG" \
