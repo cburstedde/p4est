@@ -28,6 +28,8 @@
  *        o twocubes  Two connected cubes.
  *        o twowrap   Two cubes with periodically identified far ends.
  *        o rotcubes  A collection of six connected rotated cubes.
+ *        o shell     A 24-tree discretization of a hollow sphere.
+ *        o sphere    A 13-tree discretization of a solid sphere.
  */
 
 #define VTK_OUTPUT 1
@@ -47,6 +49,8 @@ typedef enum
   P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
+  P8EST_CONFIG_SHELL,
+  P8EST_CONFIG_SPHERE,
 }
 simple_config_t;
 
@@ -161,6 +165,7 @@ main (int argc, char **argv)
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p8est_t            *p8est;
   p8est_connectivity_t *connectivity;
+  p8est_geometry_t   *geom;
   p8est_refine_t      refine_fn;
   p8est_coarsen_t     coarsen_fn;
   simple_config_t     config;
@@ -182,7 +187,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes\n"
+    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -208,6 +213,12 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "rotcubes")) {
       config = P8EST_CONFIG_ROTCUBES;
     }
+    else if (!strcmp (argv[1], "shell")) {
+      config = P8EST_CONFIG_SHELL;
+    }
+    else if (!strcmp (argv[1], "sphere")) {
+      config = P8EST_CONFIG_SPHERE;
+    }
     else {
       wrongusage = 1;
     }
@@ -223,6 +234,7 @@ main (int argc, char **argv)
   coarsen_fn = NULL;
 
   /* create connectivity and forest structures */
+  geom = NULL;
   if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
   }
@@ -240,6 +252,14 @@ main (int argc, char **argv)
   else if (config == P8EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();
   }
+  else if (config == P8EST_CONFIG_SHELL) {
+    connectivity = p8est_connectivity_new_shell ();
+    geom = p8est_geometry_new_shell (1., .55);
+  }
+  else if (config == P8EST_CONFIG_SPHERE) {
+    connectivity = p8est_connectivity_new_sphere ();
+    geom = p8est_geometry_new_sphere (1., 0.191728, 0.039856);
+  }
   else {
     connectivity = p8est_connectivity_new_unitcube ();
   }
@@ -247,7 +267,7 @@ main (int argc, char **argv)
                      sizeof (user_data_t), init_fn, NULL);
 
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, NULL, "mesh_simple3_new");
+  p8est_vtk_write_file (p8est, geom, "mesh_simple3_new");
 #endif
 
   /* refinement and coarsening */
@@ -256,13 +276,13 @@ main (int argc, char **argv)
     p8est_coarsen (p8est, 1, coarsen_fn, init_fn);
   }
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, NULL, "mesh_simple3_refined");
+  p8est_vtk_write_file (p8est, geom, "mesh_simple3_refined");
 #endif
 
   /* balance */
   p8est_balance (p8est, P8EST_BALANCE_FULL, init_fn);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, NULL, "mesh_simple3_balanced");
+  p8est_vtk_write_file (p8est, geom, "mesh_simple3_balanced");
 #endif
 
   crc = p8est_checksum (p8est);
@@ -270,7 +290,7 @@ main (int argc, char **argv)
   /* partition */
   p8est_partition (p8est, NULL);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, NULL, "mesh_simple3_partition");
+  p8est_vtk_write_file (p8est, geom, "mesh_simple3_partition");
 #endif
 
 #ifdef P4EST_DEBUG
@@ -294,6 +314,7 @@ main (int argc, char **argv)
 
   /* destroy the p8est and its connectivity structure */
   p8est_destroy (p8est);
+  P4EST_FREE (geom);
   p8est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
