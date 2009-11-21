@@ -83,7 +83,8 @@ cd "$BUILD_DEBUG"
 if test -z "$CFLAGS" ; then
 	export CFLAGS="-g -O0"
 fi
-"$UNPACK/$DIR/configure" --enable-mpi --enable-debug --without-blas \
+"$UNPACK/$DIR/configure" --enable-mpi --without-blas \
+        --enable-debug --disable-vtk-binary \
 	--prefix="$INSTALL_DEBUG" CFLAGS="$CFLAGS_DEBUG" \
 	"$@" > config.output || bdie "Error in configure"
 make -C sc -j 8 > make.output || bdie "Error in make sc"
