@@ -88,6 +88,43 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
                                                  int level, int faces[],
                                                  int edges[], int corners[]);
 
+/** Callback function to query the match of a "point" with a quadrant.
+ *
+ * \param [in] p8est        The forest to be queried.
+ * \param [in] which_tree   The tree id under consideration.
+ * \param [in] quadrant     The quadrant under consideration.
+ *                          This quadrant may be coarser than the quadrants
+ *                          that are contained in the forest (an ancestor).
+ * \param [in] point        Representation of a "point"; user-defined.
+ * \param [in] is_leaf      Specify if the quadrant is an ancestor or a leaf.
+ * \return                  True if point may be contained in the quadrant,
+ *                          false otherwise.  By returning true for a leaf,
+ *                          a successful match is indicated.
+ */
+typedef int         (*p8est_search_query_t) (p8est_t * p8est,
+                                             p4est_topidx_t which_tree,
+                                             p8est_quadrant_t * quadrant,
+                                             int is_leaf, void *point);
+
+/** Search "points" from a given set in the forest.
+ *
+ * The search goes over all trees and proceeds recursively top-down.
+ * A callback is queried to match each point with a quadrant.
+ * The callback is allowed to return true for the same point and more than one
+ * quadrant; in this case more than one matching quadrant may be identified.
+ * The callback is also allowed to return false for all children
+ * of a quadrant that it returned true for earlier.
+ * The points can really be anything, p8est does not perform any
+ * interpretation, just passes the pointer along to the callback function.
+ *
+ * \param [in] p8est        The forest to be searched.
+ * \param [in] search_fn    Function to return true for a possible match.
+ * \param [in] points       User-defined array of "points".
+ */
+void                p8est_search (p8est_t * p8est,
+                                  p8est_search_query_t search_fn,
+                                  sc_array_t * points);
+
 SC_EXTERN_C_END;
 
 #endif

@@ -92,6 +92,7 @@
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
+#define p4est_search_query_t            p8est_search_query_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -211,6 +212,7 @@
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
+#define p4est_search                    p8est_search
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
