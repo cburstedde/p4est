@@ -113,65 +113,6 @@ int                 p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2,
  */
 int                 p4est_is_valid (p4est_t * p4est);
 
-/** Find the lowest position tq in a quadrant array such that tq >= q.
- * \return  Returns the id of the matching quadrant
- *                  or -1 if not found or the array is empty.
- */
-ssize_t             p4est_find_lower_bound (sc_array_t * array,
-                                            const p4est_quadrant_t * q,
-                                            size_t guess);
-
-/** Given a sorted \a array of quadrants that have a common ancestor at level
- * \a level, compute the \a indices of the first quadrant in each of the common
- * ancestor's children at level \a level + 1;
- * \param [in] array     The sorted array of quadrants of level > \a level.
- * \param [in] level     The level at which there is a common ancestor.
- * \param [in,out] indices     The indices of the first quadrant in each of
- *                             the ancestors's children, plus an additional
- *                             index on the end.  The quadrants of \a array
- *                             that are descendents of child i have indices
- *                             between indices[i] and indices[i + 1] - 1.  If
- *                             indices[i] = indices[i+1], this indicates that
- *                             no quadrant in the array is contained in
- *                             child i.
- */
-void                p4est_split_array (sc_array_t * array, int level,
-                                       size_t indices[]);
-
-/** Given two smallest quadrants, \a lq and \a uq, that mark the first and the
- * last quadrant in a range of quadrants, determine which portions of the tree
- * boundary the range touches.
- * \param [in] lq        The smallest quadrant at the start of the range: if
- *                       NULL, the tree's first quadrant is taken to be the
- *                       start of the range.
- * \param [in] uq        The smallest quadrant at the end of the range: if
- *                       NULL, the tree's last quadrant is taken to be the
- *                       end of the range.
- * \param [in] level     The level of the containing quadrant whose boundaries
- *                       are tested: 0 if we want to test the boundaries of the
- *                       whole tree.
- * \param [in/out] faces       An array of size 4 that is filled: faces[i] is
- *                             true if the range touches that face.
- * \param [in/out] corners     An array of size 4 that is filled: corners[i] is
- *                             true if the range touches that corner.
- *                             \faces or \corners may be NULL.
- * \return  Returns an int32_t encoded with the same information in \faces and
- *          \corners: the first (least) four bits represent the four faces,
- *          the next four bits represent the four corners.
- */
-int32_t             p4est_find_range_boundaries (p4est_quadrant_t * lq,
-                                                 p4est_quadrant_t * uq,
-                                                 int level, int faces[],
-                                                 int corners[]);
-
-/** Find the highest position tq in a quadrant array such that tq <= q.
- * \return  Returns the id of the matching quadrant
- *                  or -1 if not found or the array is empty.
- */
-ssize_t             p4est_find_higher_bound (sc_array_t * array,
-                                             const p4est_quadrant_t * q,
-                                             size_t guess);
-
 /** Compute the overlap of a number of insulation layers with a tree.
  * Every quadrant out of the insulation layer of the quadrants in \a in
  * except the quadrant itself is checked for overlap of quadrants

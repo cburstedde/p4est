@@ -206,6 +206,12 @@
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
 
+/* functions in p4est_search */
+#define p4est_find_lower_bound          p8est_find_lower_bound
+#define p4est_find_higher_bound         p8est_find_higher_bound
+#define p4est_split_array               p8est_split_array
+#define p4est_find_range_boundaries     p8est_find_range_boundaries
+
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
@@ -217,10 +223,6 @@
 #define p4est_tree_print                p8est_tree_print
 #define p4est_is_equal                  p8est_is_equal
 #define p4est_is_valid                  p8est_is_valid
-#define p4est_split_array               p8est_split_array
-#define p4est_find_range_boundaries     p8est_find_range_boundaries
-#define p4est_find_lower_bound          p8est_find_lower_bound
-#define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_tree_remove_nonowned      p8est_tree_remove_nonowned
