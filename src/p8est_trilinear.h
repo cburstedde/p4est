@@ -57,6 +57,8 @@ point_t;
 
 #endif /* !OCTOR_TICKT_TYPES */
 
+typedef int16_t     trilinear_mesh_pid_t;
+
 typedef enum
 {
   ANCHORED = 0,
@@ -131,6 +133,9 @@ typedef enum trilinear_boundary_enum
   TRILINEAR_BOUNDARY_IS_ORIGIN  = 0x0100,
   TRILINEAR_BOUNDARY_IS_3EDGE   = 0x0200,
   TRILINEAR_BOUNDARY_IS_3CORNER = 0x0400,
+  TRILINEAR_BOUNDARY_IS_PRDCX   = 0x0800,
+  TRILINEAR_BOUNDARY_IS_PRDCY   = 0x1000,
+  TRILINEAR_BOUNDARY_IS_PRDCZ   = 0x2000,
 
   TRILINEAR_BOUNDARY_IS_XBC    = (TRILINEAR_BOUNDARY_IS_LEFT |
                                   TRILINEAR_BOUNDARY_IS_RIGHT),
@@ -239,8 +244,8 @@ typedef struct trilinear_mesh_t
 
   /* geometry type and element and node patch ids */
   int8_t              gid;
-  int8_t             *elem_pids;
-  int8_t             *node_pids;
+  trilinear_mesh_pid_t *elem_pids;
+  trilinear_mesh_pid_t *node_pids;
 
   /* placeholder pointers */
   void                (*destructor) (struct trilinear_mesh_t *);

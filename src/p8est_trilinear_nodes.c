@@ -50,6 +50,8 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   trilinear_anode_t  *anode;
   trilinear_dnode_t  *dnode;
   trilinear_mesh_t   *mesh;
+  trilinear_mesh_pid_t *elem_pids;
+  trilinear_mesh_pid_t *node_pids;
   sc_recycle_array_t *rarr;
 
   P4EST_GLOBAL_PRODUCTIONF
@@ -96,6 +98,8 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->fvnid_interval_table = P4EST_ALLOC (int64_t, num_procs + 1);
   mesh->all_fvnid_start = mesh->fvnid_interval_table;
   mesh->sharer_pool = sc_mempool_new (sizeof (int32link_t));
+  mesh->elem_pids = P4EST_ALLOC (trilinear_mesh_pid_t, mesh->local_node_num);
+  mesh->node_pids = P4EST_ALLOC (trilinear_mesh_pid_t, mesh->local_node_num);
 
   /* Assign global free variable information. */
   mesh->fvnid_interval_table[0] = 0;
@@ -112,6 +116,7 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   /* Assign element information. */
   local_node = nodes->local_nodes;
   which_tree = p4est->first_local_tree;
+  elem_pids = mesh->elem_pids;
   if (which_tree >= 0) {
     tree = p4est_tree_array_index (p4est->trees, which_tree);
     current = 0;
@@ -131,6 +136,7 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
       elem->lz = (tick_t) q->z;
       elem->size = P4EST_QUADRANT_LEN (q->level);
       elem->data = q->p.user_data;
+      elem_pids[e] = (trilinear_mesh_pid_t) which_tree;
       ++current;
     }
     P4EST_ASSERT (which_tree == p4est->last_local_tree);
@@ -141,12 +147,14 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->anode_table = mesh->node_table;
   mesh->onode_table = mesh->node_table + mesh->local_owned_offset;
   mesh->dnode_table = mesh->node_table + mesh->local_anode_num;
+  node_pids = mesh->node_pids;
   for (n = 0; n < mesh->local_anode_num; ++n) {
     anode = &mesh->node_table[n].anchored;
     in = (p4est_indep_t *) sc_array_index (&nodes->indep_nodes, (size_t) n);
     anode->point.x = in->x;
     anode->point.y = in->y;
     anode->point.z = in->z;
+    node_pids[n] = (trilinear_mesh_pid_t) in->p.piggy3.which_tree;
     if (n < mesh->local_owned_offset) {
       owner = nodes->nonlocal_ranks[n];
       P4EST_ASSERT (owner < rank && owner >= prev_owner);
@@ -206,6 +214,7 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
     dnode->local_anode_id[1] = fh->p.piggy.depends[1];
     dnode->local_anode_id[2] = fh->p.piggy.depends[2];
     dnode->local_anode_id[3] = fh->p.piggy.depends[3];
+    node_pids[n] = (trilinear_mesh_pid_t) fh->p.piggy.which_tree;
   }
 
   /* Assign edge hanging node information. */
@@ -219,7 +228,9 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
     dnode->local_anode_id[0] = eh->p.piggy.depends[0];
     dnode->local_anode_id[1] = eh->p.piggy.depends[1];
     dnode->local_anode_id[2] = dnode->local_anode_id[3] = -1;
+    node_pids[n] = (trilinear_mesh_pid_t) eh->p.piggy.which_tree;
   }
+  P4EST_ASSERT (n == mesh->local_node_num);
 
   /* Assign the remaining variables. */
   mesh->mpicomm = p4est->mpicomm;
@@ -235,8 +246,6 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->ticksize = 0.;
   mesh->extra_info = NULL;
   mesh->gid = -1;
-  mesh->elem_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_elem_num);
-  mesh->node_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_node_num);
 
   /* We are done */
   P4EST_GLOBAL_PRODUCTIONF ("Done trilinear_mesh_extract"

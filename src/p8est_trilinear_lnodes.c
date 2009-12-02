@@ -54,7 +54,7 @@ p8est_mesh_fcode_to_ntype (p8est_lnodes_code_t face_code, int8_t node_type[])
 }
 
 static void
-p8est_mesh_points (point_t * points, int8_t * pids,
+p8est_mesh_points (point_t * points, trilinear_mesh_pid_t * pids,
                    p4est_locidx_t * local_nodes,
                    p4est_locidx_t num_local_nodes, p4est_lnodes_t * nodes,
                    p4est_t * p4est)
@@ -94,7 +94,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
 
   P4EST_ASSERT (nodes->degree == 1 && nodes->vnodes == 8);
 
-  memset (pids, -1, num_local_nodes);
+  memset (pids, -1, sizeof (trilinear_mesh_pid_t) * num_local_nodes);
   for (nid = 0, elid = 0, t = ft; t <= lt; t++) {
     tree = p4est_tree_array_index (trees, t);
     count = tree->quadrants.elem_count;
@@ -137,7 +137,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
             points[lz].x = (tick_t) (q->x + ((i & 1) ? shift : 0));
             points[lz].y = (tick_t) (q->y + (((i >> 1) & 1) ? shift : 0));
             points[lz].z = (tick_t) (q->z + ((i >> 2) ? shift : 0));
-            pids[lz] = (int8_t) t;
+            pids[lz] = (trilinear_mesh_pid_t) t;
           }
           else {
             if (k == 0) {
@@ -158,7 +158,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
               points[lz].x = (tick_t) (p.x + ((i & 1) ? shift : 0));
               points[lz].y = (tick_t) (p.y + (((i >> 1) & 1) ? shift : 0));
               points[lz].z = (tick_t) (p.z + ((i >> 2) ? shift : 0));
-              pids[lz] = (int8_t) t;
+              pids[lz] = (trilinear_mesh_pid_t) t;
             }
             else {
               ownert = t;
@@ -265,7 +265,7 @@ p8est_mesh_points (point_t * points, int8_t * pids,
                                        (((ownerc >> 1) & 1) ? shift : 0));
               points[lz].z =
                 (tick_t) (ownerq.z + ((ownerc >> 2) ? shift : 0));
-              pids[lz] = (int8_t) ownert;
+              pids[lz] = (trilinear_mesh_pid_t) ownert;
             }
           }
         }
@@ -434,7 +434,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   p4est_locidx_t      num_owned_shared = 0;
   p8est_lnodes_rank_t *lrank;
   point_t            *points;
-  int8_t             *pids;
+  trilinear_mesh_pid_t *pids;
   p4est_locidx_t      nid;
   sc_hash_array_t    *hanging;
   p4est_locidx_t     *indep, indep_count;
@@ -451,7 +451,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   num_local_nodes = p8est_mesh_dcount (nodes, &local_nodes, &hanging);
   indep = (p4est_locidx_t *) hanging->a.array;
   points = P4EST_ALLOC (point_t, num_local_nodes);
-  pids = P4EST_ALLOC (int8_t, num_local_nodes);
+  pids = P4EST_ALLOC (trilinear_mesh_pid_t, num_local_nodes);
   p8est_mesh_points (points, pids, local_nodes, num_local_nodes, nodes,
                      p4est);
 
@@ -498,8 +498,8 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   mesh->fvnid_interval_table = P4EST_ALLOC (int64_t, num_procs + 1);
   mesh->all_fvnid_start = mesh->fvnid_interval_table;
   mesh->sharer_pool = sc_mempool_new (sizeof (int32link_t));
-  mesh->elem_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_elem_num);
-  mesh->node_pids = P4EST_ALLOC_ZERO (int8_t, mesh->local_node_num);
+  mesh->elem_pids = P4EST_ALLOC (trilinear_mesh_pid_t, mesh->local_elem_num);
+  mesh->node_pids = P4EST_ALLOC (trilinear_mesh_pid_t, mesh->local_node_num);
 
   /* Assign global free variable information. */
   mesh->fvnid_interval_table[0] = 0;
@@ -536,7 +536,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
       elem->lz = (tick_t) q->z;
       elem->size = P4EST_QUADRANT_LEN (q->level);
       elem->data = q->p.user_data;
-      mesh->elem_pids[e] = (int8_t) which_tree;
+      mesh->elem_pids[e] = (trilinear_mesh_pid_t) which_tree;
       ++current;
     }
     P4EST_ASSERT (which_tree == p4est->last_local_tree);
