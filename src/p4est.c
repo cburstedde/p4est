@@ -85,15 +85,11 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
   const p4est_topidx_t *vindices;
   int                 xi, yi;
   double              wx[2], wy[2];
-#ifndef P4_TO_P8
-  double              xfactor, yfactor;
-  const double        zfactor = 1. / P4EST_CHILDREN;
-#else
+#ifdef P4_TO_P8
   int                 zi;
   double              wz[2];
-  double              xfactor, yfactor, zfactor;
-  const double        wfactor = 1. / P4EST_CHILDREN;
 #endif
+  double              xfactor, yfactor;
   p4est_topidx_t      vindex;
 
   P4EST_ASSERT (num_vertices > 0);
@@ -120,10 +116,13 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
   wz[0] = 1. - wz[1];
 
   for (zi = 0; zi < 2; ++zi) {
-    zfactor = wfactor * wz[zi];
 #endif
     for (yi = 0; yi < 2; ++yi) {
-      yfactor = zfactor * wy[yi];
+#ifdef P4_TO_P8
+      yfactor = wz[zi] * wy[yi];
+#else
+      yfactor = wy[yi];
+#endif
       for (xi = 0; xi < 2; ++xi) {
         xfactor = yfactor * wx[xi];
 
