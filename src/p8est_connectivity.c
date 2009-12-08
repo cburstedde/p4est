@@ -400,10 +400,12 @@ p8est_connectivity_new_twowrap (void)
 
 /* This function is contributed by Toby Isaac. */
 p4est_connectivity_t *
-p8est_connectivity_new_brick (p4est_topidx_t m, p4est_topidx_t n,
-                              p4est_topidx_t p, int periodic_a,
+p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
                               int periodic_b, int periodic_c)
 {
+  const p4est_topidx_t m = (p4est_topidx_t) mi;
+  const p4est_topidx_t n = (p4est_topidx_t) ni;
+  const p4est_topidx_t p = (p4est_topidx_t) pi;
   const p4est_topidx_t num_trees = m * n * p;
   const p4est_topidx_t num_vertices = (m + 1) * (n + 1) * (p + 1);
   const p4est_topidx_t mc = periodic_a ? m : (m - 1);

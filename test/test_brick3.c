@@ -25,9 +25,12 @@
 #include <p8est.h>
 
 static void
-check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
-             p4est_topidx_t p, int periodic_a, int periodic_b, int periodic_c)
+check_brick (p8est_connectivity_t * conn, int mi, int ni, int pi,
+             int periodic_a, int periodic_b, int periodic_c)
 {
+  p4est_topidx_t      m = (p4est_topidx_t) mi;
+  p4est_topidx_t      n = (p4est_topidx_t) ni;
+  p4est_topidx_t      p = (p4est_topidx_t) pi;
   int                 i;
   p4est_topidx_t      ti, tj, tk;
   p4est_topidx_t     *tree_to_vertex = conn->tree_to_vertex;
@@ -360,7 +363,7 @@ check_brick (p8est_connectivity_t * conn, p4est_topidx_t m, p4est_topidx_t n,
 int
 main (int argc, char **argv)
 {
-  p4est_topidx_t      i, j, k;
+  int                 i, j, k;
   int                 l, m, n;
   MPI_Comm            mpicomm;
   int                 mpiret;

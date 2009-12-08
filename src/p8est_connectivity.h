@@ -273,9 +273,10 @@ p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
  *
  * This function is contributed by Toby Isaac.
  */
-p8est_connectivity_t *p8est_connectivity_new_brick
-  (p4est_topidx_t m, p4est_topidx_t n, p4est_topidx_t p,
-   int periodic_a, int periodic_b, int periodic_c);
+p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p,
+                                                    int periodic_a,
+                                                    int periodic_b,
+                                                    int periodic_c);
 
 /** Create a connectivity structure that builds a spherical shell.
  * It is made up of six connected parts [-1,1]x[-1,1]x[1,2].
