@@ -114,6 +114,8 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
 #undef P4EST_LERRORF
 #endif
 
+#ifndef SC_SPLINT
+
 void
 P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
 {
@@ -161,3 +163,5 @@ P4EST_LOG_IMP (INFO, INFO);
 P4EST_LOG_IMP (STATISTICS, STATISTICS);
 P4EST_LOG_IMP (PRODUCTION, PRODUCTION);
 P4EST_LOG_IMP (LERROR, ERROR);
+
+#endif
