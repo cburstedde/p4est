@@ -80,9 +80,7 @@ search_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                  (int) p->quad.level, (int) quadrant->level,
                  p4est_quadrant_child_id (quadrant), is_leaf);
 
-  if (which_tree != p->quad.p.which_tree) {
-    P4EST_LDEBUGF ("Rejecting quadrant %s for tree %lld\n",
-                   p->name, (long long) which_tree);
+  if (which_tree != p->quad.p.piggy3.which_tree) {
     return 0;
   }
 
@@ -97,7 +95,15 @@ search_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   if (is_match && is_leaf) {
-    P4EST_INFOF ("Matched quadrant %s\n", p->name);
+    p4est_locidx_t      num = -1;
+
+    if (quadrant->level < p->quad.level) {
+      num = p->quad.p.piggy3.local_num = -1;
+    }
+    else {
+      num = p->quad.p.piggy3.local_num = quadrant->p.piggy3.local_num;
+    }
+    P4EST_INFOF ("Matched quadrant %s at %lld\n", p->name, (long long) num);
     p4est_quadrant_print (SC_LP_INFO, quadrant);
     p4est_quadrant_print (SC_LP_INFO, &p->quad);
     ++found_count;
@@ -112,7 +118,9 @@ main (int argc, char **argv)
   MPI_Comm            mpicomm;
   int                 mpiret;
   int                 found_total;
+  p4est_locidx_t      jt, Al, Bl;
   p4est_connectivity_t *conn;
+  p4est_quadrant_t   *A, *B;
   p4est_geometry_t   *geom;
   p4est_t            *p4est;
   sc_array_t         *points;
@@ -143,22 +151,48 @@ main (int argc, char **argv)
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);
 
-  /* Prepare a point search */
-  points = sc_array_new (sizeof (test_point_t));
+  /* Prepare a point search -- fixe size so the memory is not relocated */
+  points = sc_array_new_size (sizeof (test_point_t), 2);
 
   /* A */
-  p = (test_point_t *) sc_array_push (points);
+  p = (test_point_t *) sc_array_index (points, 0);
   p->name = "A";
-  P4EST_QUADRANT_INIT (&p->quad);
-  p4est_quadrant_set_morton (&p->quad, 3, 23);
-  p->quad.p.which_tree = 0;
+  A = &p->quad;
+  P4EST_QUADRANT_INIT (A);
+  p4est_quadrant_set_morton (A, 3, 23);
+  A->p.piggy3.which_tree = 0;
+  A->p.piggy3.local_num = -1;
+  Al = -1;
 
   /* B */
-  p = (test_point_t *) sc_array_push (points);
+  p = (test_point_t *) sc_array_index (points, 1);
   p->name = "B";
-  P4EST_QUADRANT_INIT (&p->quad);
-  p4est_quadrant_set_morton (&p->quad, 2, 13);
-  p->quad.p.which_tree = conn->num_trees / 2;
+  B = &p->quad;
+  P4EST_QUADRANT_INIT (B);
+  p4est_quadrant_set_morton (B, 2, 13);
+  B->p.piggy3.which_tree = conn->num_trees / 2;
+  B->p.piggy3.local_num = -1;
+  Bl = -1;
+
+  /* Find quadrant numbers if existing */
+  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+    size_t              zz;
+    p4est_tree_t       *tree = p4est_tree_array_index (p4est->trees, jt);
+    p4est_quadrant_t   *quad;
+    sc_array_t         *tquadrants = &tree->quadrants;
+
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      quad = p4est_quadrant_array_index (tquadrants, zz);
+      if (A->p.piggy3.which_tree == jt && !p4est_quadrant_compare (quad, A)) {
+        Al = tree->quadrants_offset + (p4est_locidx_t) zz;
+        P4EST_VERBOSEF ("Searching for A at %lld\n", (long long) Al);
+      }
+      if (B->p.piggy3.which_tree == jt && !p4est_quadrant_compare (quad, B)) {
+        Bl = tree->quadrants_offset + (p4est_locidx_t) zz;
+        P4EST_VERBOSEF ("Searching for B at %lld\n", (long long) Bl);
+      }
+    }
+  }
 
   /* Go */
   found_count = 0;
@@ -167,6 +201,8 @@ main (int argc, char **argv)
                           1, MPI_INT, MPI_SUM, mpicomm);
   SC_CHECK_MPI (mpiret);
   SC_CHECK_ABORT (found_total == (int) points->elem_count, "Point search");
+  SC_CHECK_ABORT (A->p.piggy3.local_num == Al, "Search A");
+  SC_CHECK_ABORT (B->p.piggy3.local_num == Bl, "Search B");
 
   /* Clear memory */
   sc_array_destroy (points);

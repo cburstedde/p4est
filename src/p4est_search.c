@@ -478,10 +478,22 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
   if (quadrant->level != q->level) {
     P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, q));
     is_leaf = 0;
+    quadrant->p.piggy3.local_num = -1;
   }
   else {
+    p4est_locidx_t      offset;
+    p4est_tree_t       *tree;
+
     P4EST_ASSERT (quadrants->elem_count == 1);
     is_leaf = 1;
+
+    /* determine offset of quadrant in local forest */
+    tree = p4est_tree_array_index (p4est->trees, which_tree);
+    offset = (p4est_locidx_t) ((quadrants->array - tree->quadrants.array)
+                               / sizeof (p4est_quadrant_t));
+    P4EST_ASSERT (offset >= 0 &&
+                  (size_t) offset < tree->quadrants.elem_count);
+    quadrant->p.piggy3.local_num = tree->quadrants_offset + offset;
   }
 
   /* query callback for all points and return if none remain */

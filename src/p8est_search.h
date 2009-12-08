@@ -99,7 +99,9 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
  * \param [in] is_leaf      Specify if the quadrant is an ancestor or a leaf.
  * \return                  True if point may be contained in the quadrant,
  *                          false otherwise.  By returning true for a leaf,
- *                          a successful match is indicated.
+ *                          a successful match is indicated.  When is_leaf is
+ *                          true, quadrant->p.piggy3.local_num contains the
+ *                          local index of the matched quadrant in the forest.
  */
 typedef int         (*p8est_search_query_t) (p8est_t * p8est,
                                              p4est_topidx_t which_tree,
