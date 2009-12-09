@@ -2097,7 +2097,7 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
 
   for (i = 0; i < 2; i++) {
     c = p8est_edge_corners[e][i];
-    c2 = p4est_face_corners[e][1 - i];
+    c2 = p8est_edge_corners[e][1 - i];
     if (is_ghost[1 - i]) {
       continue;
     }
@@ -2800,6 +2800,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   p4est_lnodes_rank_t *lrank;
   sc_array_t         *binfo_array;
   p4est_lnodes_buf_info_t *binfo;
+  p4est_lnodes_buf_info_t *binfoprev = NULL;
   p4est_locidx_t      share_offset;
   int                 share_count;
   p4est_locidx_t      index;
@@ -2815,6 +2816,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   p4est_locidx_t     *global_num_indep;
   p4est_gloidx_t     *global_offsets = P4EST_ALLOC (p4est_gloidx_t,
                                                     mpisize + 1);
+#ifdef P4EST_DEBUG
+  p4est_locidx_t      last_gidx = 0;
+#endif
 
   global_num_indep = lnodes->global_owned_count = P4EST_ALLOC (p4est_locidx_t,
                                                                mpisize);
@@ -2845,11 +2849,13 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       sorter = (p4est_lnodes_sorter_t *) sc_array_index (s_array, zz);
       lp = (p4est_locidx_t *) sc_array_index (&inode_to_global,
                                               sorter->inode_index);
-      *lp = gcount;
       if (zz == 0 || sorter->local_index > prev->local_index) {
-        gcount++;
+        *lp = gcount++;
+        prev = sorter;
       }
-      prev = sorter;
+      else {
+        *lp = gcount - 1;
+      }
     }
     icount += count;
   }
@@ -2922,6 +2928,10 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       count = binfo_array->elem_count;
       for (zz = 0; zz < count; zz++) {
         binfo = (p4est_lnodes_buf_info_t *) sc_array_index (binfo_array, zz);
+        if (j == 1 && zz > 0 &&
+            p4est_lnodes_binfo_is_equal (binfoprev, binfo)) {
+          continue;
+        }
         if (binfo->type >= P4EST_LN_C_OFFSET) {
           limit = 1;
         }
@@ -2974,6 +2984,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
             }
           }
         }
+        if (j == 1) {
+          binfoprev = binfo;
+        }
       }
     }
   }
@@ -2992,6 +3005,11 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     count = shared_nodes->elem_count;
     for (zz = 0; zz < count; zz++) {
       gidx = *((p4est_locidx_t *) sc_array_index (shared_nodes, zz));
+#ifdef P4EST_DEBUG
+      if (zz > 0) {
+        P4EST_ASSERT (gidx > last_gidx);
+      }
+#endif
       if (lnodes->owned_offset <= gidx &&
           gidx < (lnodes->owned_offset + lnodes->owned_count)) {
         if (lrank->shared_mine_count == 0) {
@@ -3006,6 +3024,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
         }
         lrank->owned_count++;
       }
+#ifdef P4EST_DEBUG
+      last_gidx = gidx;
+#endif
     }
     if (proc == p4est->mpirank) {
       lrank->owned_count = lnodes->owned_count;
@@ -3332,11 +3353,13 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
   sc_array_t         *requests = buffer->requests;
   sc_array_t         *send_bufs = buffer->send_buffers;
   sc_array_t         *send_buf;
+  MPI_Status         *status;
+
+  status = P4EST_ALLOC (MPI_Status, requests->elem_count);
 
   if (requests->elem_count) {
     mpiret = MPI_Waitall ((int) requests->elem_count,
-                          (MPI_Request *) requests->array,
-                          MPI_STATUSES_IGNORE);
+                          (MPI_Request *) requests->array, status);
     SC_CHECK_MPI (mpiret);
   }
   sc_array_destroy (requests);
@@ -3347,6 +3370,7 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
   sc_array_destroy (send_bufs);
   buffer->requests = NULL;
   buffer->send_buffers = NULL;
+  P4EST_FREE (status);
 }
 
 p4est_lnodes_buffer_t *
