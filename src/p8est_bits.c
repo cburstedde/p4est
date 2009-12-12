@@ -277,9 +277,11 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
   }
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
   p8est_find_edge_transform (conn, t, edge, &ei);
+  sc_array_resize (quads, eta->elem_count);
+  sc_array_resize (treeids, eta->elem_count);
   for (etree = 0; etree < eta->elem_count; etree++) {
-    qp = p4est_quadrant_array_push (quads);
-    tp = (p4est_topidx_t *) sc_array_push (treeids);
+    qp = p4est_quadrant_array_index (quads, etree);
+    tp = (p4est_topidx_t *) sc_array_index (treeids, etree);
     et = p8est_edge_array_index (eta, etree);
     p8est_quadrant_transform_edge (&temp, qp, &ei, et, 1);
     *tp = et->ntree;

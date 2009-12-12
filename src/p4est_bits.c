@@ -1031,9 +1031,11 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
   }
   sc_array_init (cta, sizeof (p4est_corner_transform_t));
   p4est_find_corner_transform (conn, t, corner, &ci);
+  sc_array_resize (quads, cta->elem_count);
+  sc_array_resize (treeids, cta->elem_count);
   for (ctree = 0; ctree < cta->elem_count; ++ctree) {
-    qp = p4est_quadrant_array_push (quads);
-    tp = (p4est_topidx_t *) sc_array_push (treeids);
+    qp = p4est_quadrant_array_index (quads, ctree);
+    tp = (p4est_topidx_t *) sc_array_index (treeids, ctree);
     ct = p4est_corner_array_index (cta, ctree);
     p4est_quadrant_transform_corner (&temp, (int) ct->ncorner, 1);
     *qp = temp;
