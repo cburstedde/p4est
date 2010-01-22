@@ -78,7 +78,7 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
                                           "p4est", "A forest of octrees");
 
   w = 24;
-  P4EST_GLOBAL_PRODUCTIONF ("%s\n", P4EST_PACKAGE_STRING);
+  P4EST_GLOBAL_ESSENTIALF ("This is %s.\n", P4EST_PACKAGE_STRING);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CC", P4EST_CC);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "C_VERSION", P4EST_C_VERSION);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
@@ -104,6 +104,7 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
 #undef P4EST_GLOBAL_INFOF
 #undef P4EST_GLOBAL_STATISTICSF
 #undef P4EST_GLOBAL_PRODUCTIONF
+#undef P4EST_GLOBAL_ESSENTIALF
 #undef P4EST_GLOBAL_LERRORF
 #undef P4EST_TRACEF
 #undef P4EST_LDEBUGF
@@ -111,6 +112,7 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
 #undef P4EST_INFOF
 #undef P4EST_STATISTICSF
 #undef P4EST_PRODUCTIONF
+#undef P4EST_ESSENTIALF
 #undef P4EST_LERRORF
 #endif
 
@@ -162,6 +164,7 @@ P4EST_LOG_IMP (VERBOSE, VERBOSE);
 P4EST_LOG_IMP (INFO, INFO);
 P4EST_LOG_IMP (STATISTICS, STATISTICS);
 P4EST_LOG_IMP (PRODUCTION, PRODUCTION);
+P4EST_LOG_IMP (ESSENTIAL, ESSENTIAL);
 P4EST_LOG_IMP (LERROR, ERROR);
 
 #endif

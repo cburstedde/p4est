@@ -109,6 +109,7 @@ void                P4EST_LOGF (int priority, const char *fmt, ...)
 #define P4EST_GLOBAL_INFO(s) P4EST_GLOBAL_LOG (SC_LP_INFO, (s))
 #define P4EST_GLOBAL_STATISTICS(s) P4EST_GLOBAL_LOG (SC_LP_STATISTICS, (s))
 #define P4EST_GLOBAL_PRODUCTION(s) P4EST_GLOBAL_LOG (SC_LP_PRODUCTION, (s))
+#define P4EST_GLOBAL_ESSENTIAL(s) P4EST_GLOBAL_LOG (SC_LP_ESSENTIAL, (s))
 #define P4EST_GLOBAL_LERROR(s) P4EST_GLOBAL_LOG (SC_LP_ERROR, (s))
 void                P4EST_GLOBAL_TRACEF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
@@ -121,6 +122,8 @@ void                P4EST_GLOBAL_INFOF (const char *fmt, ...)
 void                P4EST_GLOBAL_STATISTICSF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_GLOBAL_PRODUCTIONF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_GLOBAL_ESSENTIALF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_GLOBAL_LERRORF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
@@ -137,6 +140,8 @@ void                P4EST_GLOBAL_LERRORF (const char *fmt, ...)
   P4EST_GLOBAL_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_PRODUCTIONF(f,...)                         \
   P4EST_GLOBAL_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+#define P4EST_GLOBAL_ESSENTIALF(f,...)                          \
+  P4EST_GLOBAL_LOGF (SC_LP_ESSENTIAL, (f), __VA_ARGS__)
 #define P4EST_GLOBAL_LERRORF(f,...)                     \
   P4EST_GLOBAL_LOGF (SC_LP_ERROR, (f), __VA_ARGS__)
 #endif
@@ -150,6 +155,7 @@ void                P4EST_GLOBAL_LERRORF (const char *fmt, ...)
 #define P4EST_INFO(s) P4EST_LOG (SC_LP_INFO, (s))
 #define P4EST_STATISTICS(s) P4EST_LOG (SC_LP_STATISTICS, (s))
 #define P4EST_PRODUCTION(s) P4EST_LOG (SC_LP_PRODUCTION, (s))
+#define P4EST_ESSENTIAL(s) P4EST_LOG (SC_LP_ESSENTIAL, (s))
 #define P4EST_LERROR(s) P4EST_LOG (SC_LP_ERROR, (s))
 void                P4EST_TRACEF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
@@ -162,6 +168,8 @@ void                P4EST_INFOF (const char *fmt, ...)
 void                P4EST_STATISTICSF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_PRODUCTIONF (const char *fmt, ...)
+  __attribute__ ((format (printf, 1, 2)));
+void                P4EST_ESSENTIALF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
 void                P4EST_LERRORF (const char *fmt, ...)
   __attribute__ ((format (printf, 1, 2)));
@@ -178,6 +186,8 @@ void                P4EST_LERRORF (const char *fmt, ...)
   P4EST_LOGF (SC_LP_STATISTICS, (f), __VA_ARGS__)
 #define P4EST_PRODUCTIONF(f,...)                        \
   P4EST_LOGF (SC_LP_PRODUCTION, (f), __VA_ARGS__)
+#define P4EST_ESSENTIALF(f,...)                         \
+  P4EST_LOGF (SC_LP_ESSENTIAL, (f), __VA_ARGS__)
 #define P4EST_LERRORF(f,...)                    \
   P4EST_LOGF (SC_LP_ERROR, (f), __VA_ARGS__)
 #endif
