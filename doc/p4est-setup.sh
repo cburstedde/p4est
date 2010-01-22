@@ -70,6 +70,7 @@ mkdir -p "$BUILD_FAST"
 cd "$BUILD_FAST"
 "$UNPACK/$DIR/configure" --enable-mpi --without-blas \
         --prefix="$INSTALL_FAST" CFLAGS="$CFLAGS_FAST" \
+        CPPFLAGS="-DSC_LOG_PRIORITY=SC_LP_ESSENTIAL" \
         "$@" > config.output || bdie "Error in configure"
 make -C sc -j 8 > make.output || bdie "Error in make sc"
 make -j 8 >> make.output || bdie "Error in make p4est"
