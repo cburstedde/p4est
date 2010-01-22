@@ -6,7 +6,7 @@ desc: |-
   The counts are communicated only when needed.
 type: :bugfix
 component: p4est
-release: "0.3"
+release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
 disposition: 
@@ -25,3 +25,7 @@ log_events:
   - |-
     The allgather in comm_count_quadrants uses gloidx instead of locidx.
     Fix and possibly aggregate it with comm_global_partition.
+- - 2010-01-22 17:46:17.813592 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - unassigned from release 0.3
+  - ""

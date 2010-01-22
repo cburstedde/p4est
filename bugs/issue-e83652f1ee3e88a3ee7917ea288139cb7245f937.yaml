@@ -7,7 +7,7 @@ desc: |-
   This in turn must not happen for e.g. rhea and mangll which expect 2:1.
 type: :bugfix
 component: p4est
-release: "0.3"
+release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
 disposition: 
@@ -26,3 +26,7 @@ log_events:
   - |-
     The inter-tree balance can be relaxed to face or edge only
     once the edge and corner minimum connectivity is ensured.
+- - 2010-01-22 17:46:01.206176 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - unassigned from release 0.3
+  - ""

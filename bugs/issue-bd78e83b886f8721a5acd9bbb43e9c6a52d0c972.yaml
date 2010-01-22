@@ -1,20 +1,24 @@
---- !ditz.rubyforge.org,2008-03-06/issue
+--- !ditz.rubyforge.org,2008-03-06/issue 
 title: Deal with p4est counters modified by balance_subtree
 desc: |-
   Make sure that the p4est counters are correct throughout the helper
   functions in p4est_algorithms.
 type: :bugfix
 component: p4est
-release: "0.3"
+release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
-disposition:
+disposition: 
 creation_time: 2008-10-16 17:41:05.586582 Z
 references: []
 
 id: bd78e83b886f8721a5acd9bbb43e9c6a52d0c972
-log_events:
+log_events: 
 - - 2008-10-16 17:41:06.578555 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
+  - ""
+- - 2010-01-22 17:45:41.550867 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - unassigned from release 0.3
   - ""

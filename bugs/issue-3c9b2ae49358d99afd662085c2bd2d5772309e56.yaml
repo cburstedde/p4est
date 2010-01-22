@@ -7,7 +7,7 @@ desc: |-
   make the end_* variables in partition_given exclusive.
 type: :bugfix
 component: p4est
-release: "0.3"
+release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
 disposition: 
@@ -19,4 +19,8 @@ log_events:
 - - 2008-11-29 21:27:19.457242 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
+  - ""
+- - 2010-01-22 17:46:15.589709 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - unassigned from release 0.3
   - ""

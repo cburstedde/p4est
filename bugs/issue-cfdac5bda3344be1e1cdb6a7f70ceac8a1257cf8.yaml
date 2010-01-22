@@ -6,7 +6,7 @@ desc: |-
   Configurable means to make edge and/or corner balance optional.
 type: :feature
 component: p4est
-release: "0.3"
+release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :paused
 disposition: 
@@ -33,3 +33,7 @@ log_events:
   - |-
     Balance, ghost layer and balance check are now configurable.
     Inter-tree balance always does edges and corners, may not be necessary.
+- - 2010-01-22 17:46:10.261844 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - unassigned from release 0.3
+  - ""
