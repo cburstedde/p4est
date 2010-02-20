@@ -2157,6 +2157,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     my_highcut = (weight_sum * (rank + 1)) / num_procs;
     if (my_highcut == 0) {
+      /* TODO bug: receive highcut always! construct counter example! */
       recv_high = 0;
       recv_requests[1] = MPI_REQUEST_NULL;
       high_source = -1;

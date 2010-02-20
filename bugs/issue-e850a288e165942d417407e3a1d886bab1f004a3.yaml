@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Fix weighted partition corner case
+desc: Added a TODO comment.  The low end must always receive the cut.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2010-02-20 17:35:10.931398 Z
+references: []
+
+id: e850a288e165942d417407e3a1d886bab1f004a3
+log_events: 
+- - 2010-02-20 17:35:11.963285 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
