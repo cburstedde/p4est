@@ -21,8 +21,10 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_vtk.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -74,12 +76,13 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
-  connectivity = p8est_connectivity_new_twocubes ();
+  connectivity = p8est_connectivity_new_rotcubes ();
 #else
-  connectivity = p4est_connectivity_new_corner ();
+  connectivity = p4est_connectivity_new_star ();
 #endif
   p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
+  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
 
   coarsen_all = 1;
   p4est_coarsen (p4est, 0, coarsen_fn, NULL);
@@ -88,6 +91,7 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   coarsen_all = 1;
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_endcoarsen");
 
   if (mpisize == 1) {
     SC_CHECK_ABORT (p4est->global_num_quadrants ==
