@@ -835,7 +835,7 @@ p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
   int                 couldbegood;
   size_t              zz;
   size_t              incount, removed;
-  size_t              cidz, first, last, rest, before;
+  size_t              window, start, length, cidz;
   p4est_locidx_t      num_quadrants, prev_offset;
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
@@ -865,35 +865,31 @@ p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
     P4EST_VERBOSEF ("Into coarsen tree %lld with %llu\n", (long long) jt,
                     (unsigned long long) tquadrants->elem_count);
 
-    /* Initialize array indices.
-       If children are coarsened, the array will have an empty window.
-       first   index of the first child to be considered
-       last    index of the last child before the hole in the array
-       before  number of children before the hole in the array
-       rest    index of the first child after the hole in the array
-     */
-    first = last = 0;
-    before = rest = 1;
+    /* state information */
+    window = 0;                 /* start position of sliding window in array */
+    start = 1;                  /* start position of hole in window/array */
+    length = 0;                 /* length of hole in window/array */
 
     /* run through the array and coarsen recursively */
     incount = tquadrants->elem_count;
-    while (rest + P4EST_CHILDREN - 1 - before < incount) {
+    while (window + P4EST_CHILDREN + length <= incount) {
+      P4EST_ASSERT (window < start);
+
+      cidz = incount;
       couldbegood = 1;
       for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
-        if (zz < before) {
-          c[zz] = p4est_quadrant_array_index (tquadrants, first + zz);
-          if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
-            couldbegood = 0;
-            break;
-          }
-        }
-        else {
-          c[zz] = p4est_quadrant_array_index (tquadrants, rest + zz - before);
+        c[zz] = (window + zz < start) ?
+          p4est_quadrant_array_index (tquadrants, window + zz) :
+          p4est_quadrant_array_index (tquadrants, window + length + zz);
+
+        if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
+          couldbegood = 0;
+          break;
         }
       }
       if (couldbegood && p4est_quadrant_is_familypv (c) &&
           coarsen_fn (p4est, jt, c)) {
-        /* coarsen now */
+        /* coarsen this family of quadrants */
         for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
           p4est_quadrant_free_data (p4est, c[zz]);
         }
@@ -905,55 +901,35 @@ p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
         p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
         removed += P4EST_CHILDREN - 1;
 
-        rest += P4EST_CHILDREN - before;
-        if (coarsen_recursive) {
-          last = first;
-          cidz = (size_t) p4est_quadrant_child_id (cfirst);
-          if (cidz > first)
-            first = 0;
-          else
-            first -= cidz;
-        }
-        else {
-          /* don't coarsen again, move the counters and the hole */
-          P4EST_ASSERT (first == last && before == 1);
-          if (rest < incount) {
-            ++first;
-            cfirst = p4est_quadrant_array_index (tquadrants, first);
-            clast = p4est_quadrant_array_index (tquadrants, rest);
-            *cfirst = *clast;
-            last = first;
-            ++rest;
-          }
-        }
+        cidz = (size_t) p4est_quadrant_child_id (cfirst);
+        start = window + 1;
+        length += P4EST_CHILDREN - 1;
+      }
+
+      if (cidz <= window && coarsen_recursive) {
+        window -= cidz;
       }
       else {
-        /* do nothing, just move the counters and the hole */
-        ++first;
-        if (first > last) {
-          if (first != rest) {
-            cfirst = p4est_quadrant_array_index (tquadrants, first);
-            clast = p4est_quadrant_array_index (tquadrants, rest);
+        ++window;
+        if (window == start && start + length < incount) {
+          if (length > 0) {
+            cfirst = p4est_quadrant_array_index (tquadrants, start);
+            clast = p4est_quadrant_array_index (tquadrants, start + length);
             *cfirst = *clast;
           }
-          last = first;
-          ++rest;
+          start = window + 1;
         }
       }
-      before = last - first + 1;
     }
 
     /* adjust final array size */
-    first = last;
-    if (first + 1 < rest) {
-      while (rest < incount) {
-        ++first;
-        cfirst = p4est_quadrant_array_index (tquadrants, first);
-        clast = p4est_quadrant_array_index (tquadrants, rest);
+    if (length > 0) {
+      for (zz = start + length; zz < incount; ++zz) {
+        cfirst = p4est_quadrant_array_index (tquadrants, zz - length);
+        clast = p4est_quadrant_array_index (tquadrants, zz);
         *cfirst = *clast;
-        ++rest;
       }
-      sc_array_resize (tquadrants, first + 1);
+      sc_array_resize (tquadrants, incount - length);
     }
 
     /* compute maximum level */
