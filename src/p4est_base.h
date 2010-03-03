@@ -197,18 +197,6 @@ void                P4EST_LERRORF (const char *fmt, ...)
 /* extern declarations */
 extern int          p4est_package_id;
 
-/** Find the lowest position k in a sorted array such that array[k] >= target.
- * \param [in]  target  The target lower bound to binary search for.
- * \param [in]  array   The 64bit integer array to binary search in.
- * \param [in]  size    The number of int64_t's in the array.
- * \param [in]  guess   Initial array position to look at.
- * \return  Returns the matching position
- *          or -1 if array[size-1] < target or if size == 0.
- */
-ssize_t             p4est_int64_lower_bound (int64_t target,
-                                             const int64_t * array,
-                                             size_t size, size_t guess);
-
 /** Registers the p4est library with SC and sets the logging behavior.
  * This function is optional.
  * If this function is not called or called with log_handler == NULL,

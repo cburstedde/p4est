@@ -23,50 +23,6 @@
 
 int                 p4est_package_id = -1;
 
-ssize_t
-p4est_int64_lower_bound (int64_t target, const int64_t * array,
-                         size_t size, size_t guess)
-{
-  size_t              k_low, k_high;
-  int64_t             cur;
-
-  if (size == 0)
-    return -1;
-
-  k_low = 0;
-  k_high = size - 1;
-  for (;;) {
-    P4EST_ASSERT (k_low <= k_high);
-    P4EST_ASSERT (k_low < size && k_high < size);
-    P4EST_ASSERT (k_low <= guess && guess <= k_high);
-
-    /* compare two quadrants */
-    cur = array[guess];
-
-    /* check if guess is higher or equal target and there's room below it */
-    if (target <= cur && (guess > 0 && target <= array[guess - 1])) {
-      k_high = guess - 1;
-      guess = (k_low + k_high + 1) / 2;
-      continue;
-    }
-
-    /* check if guess is lower than target */
-    if (target > cur) {
-      k_low = guess + 1;
-      if (k_low > k_high)
-        return -1;
-
-      guess = (k_low + k_high) / 2;
-      continue;
-    }
-
-    /* otherwise guess is the correct position */
-    break;
-  }
-
-  return (ssize_t) guess;
-}
-
 void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
 {

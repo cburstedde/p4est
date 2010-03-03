@@ -32,6 +32,7 @@
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
 #include <sc_ranges.h>
+#include <sc_search.h>
 #include <sc_zlib.h>
 
 #ifdef SC_ALLGATHER
@@ -2098,7 +2099,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
         base_index = 2 * (i - send_lowest);
         if (i < num_procs) {
           /* do binary search in the weight array */
-          lowers = p4est_int64_lower_bound ((weight_sum * i) / num_procs,
+          lowers = sc_search_lower_bound64 ((weight_sum * i) / num_procs,
                                             local_weights,
                                             (size_t) local_num_quadrants + 1,
                                             (size_t) lowers);
