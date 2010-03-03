@@ -349,9 +349,14 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2, int compare_data)
     return 0;
   if (p4est1->mpirank != p4est2->mpirank)
     return 0;
-  if (p4est1->data_size != p4est2->data_size)
-    return 0;
-  data_size = p4est1->data_size;
+  if (compare_data) {
+    if (p4est1->data_size != p4est2->data_size)
+      return 0;
+    data_size = p4est1->data_size;
+  }
+  else {
+    data_size = 0;
+  }
 
   if (p4est1->first_local_tree != p4est2->first_local_tree)
     return 0;
