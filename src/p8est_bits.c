@@ -427,6 +427,22 @@ p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
     SC_ABORT_NOT_REACHED ();
   }
 
+#ifdef P4EST_DEBUG
+  {
+    /* This is the code from the paper. */
+
+    p4est_qcoord_t      qparallel, qt1, qt2;
+
+    qparallel = et->nflip * Rmh + (1 - 2 * et->nflip) * my_xyz;
+    P4EST_ASSERT (qparallel == *target_xyz[et->naxis[0]]);
+
+    qt1 = (!(et->nedge & 1)) ? lshift : rshift;
+    qt2 = (!(et->nedge & 2)) ? lshift : rshift;
+    P4EST_ASSERT (qt1 == *target_xyz[et->naxis[1]]);
+    P4EST_ASSERT (qt2 == *target_xyz[et->naxis[2]]);
+  }
+#endif
+
   r->level = q->level;
   P4EST_ASSERT (p8est_quadrant_touches_edge (r, (int) et->nedge, inside));
 }
