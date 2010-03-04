@@ -1413,6 +1413,25 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
     SC_ABORT_NOT_REACHED ();
   }
 
+#ifdef P4EST_DEBUG
+  {
+    /* This is the code from the paper -- not sure which is preferable. */
+
+    int                 d_iface_and1, d_tface_and1;
+    int                 sprime;
+    p4est_qcoord_t      qcoord;
+
+    d_iface_and1 = ftransform[8] >> 1;
+    d_tface_and1 = ftransform[8] & 1;
+    sprime = 1 - (d_iface_and1 ^ d_tface_and1);
+
+    qcoord = P4EST_ROOT_LEN * (2 * d_tface_and1 - 1)
+      + sprime * Rmh + (1 - 2 * sprime) * *my_xyz[my_axis[2]];
+
+    P4EST_ASSERT (qcoord == *target_xyz[target_axis[2]]);
+  }
+#endif
+
   r->level = q->level;
 #ifdef P4EST_DEBUG
   if (r->level == P4EST_MAXLEVEL) {
