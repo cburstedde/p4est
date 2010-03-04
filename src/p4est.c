@@ -2059,7 +2059,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
      * send low cut to send_lowest..send_highest
      * and high cut to send_lowest-1..send_highest-1
      */
-    P4EST_LDEBUGF ("send bounds low %d high %d\n", send_lowest, send_highest);
+    P4EST_LDEBUGF ("my send peers %d %d\n", send_lowest, send_highest);
 
     num_sends = 2 * (send_highest - send_lowest + 1);
     if (num_sends <= 0) {
@@ -2081,10 +2081,13 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
                                             (size_t) lowers);
           P4EST_ASSERT (lowers > 0
                         && (p4est_locidx_t) lowers <= local_num_quadrants);
-          send_index = send_array[base_index + 1] =
-            (p4est_gloidx_t) lowers + p4est->global_first_quadrant[rank];
 
           /* send low bound */
+          send_index = send_array[base_index + 1] =
+            (p4est_gloidx_t) lowers + p4est->global_first_quadrant[rank];
+          P4EST_LDEBUGF ("send A %d %d %d index %lld base %d to %d\n",
+                         send_lowest, i, send_highest,
+                         (long long) send_index, base_index + 1, i);
           mpiret =
             MPI_Isend (&send_array[base_index + 1], 1, P4EST_MPI_GLOIDX, i,
                        P4EST_COMM_PARTITION_WEIGHTED_LOW, p4est->mpicomm,
@@ -2097,11 +2100,12 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
           send_requests[base_index + 1] = MPI_REQUEST_NULL;
           send_array[base_index + 1] = -1;
         }
-        P4EST_LDEBUGF ("send pos %lld index %lld high %d low %d\n",
-                       (long long) lowers, (long long) send_index, i - 1, i);
 
         /* send high bound */
         send_array[base_index] = send_index;
+        P4EST_LDEBUGF ("send B %d %d %d index %lld base %d to %d\n",
+                       send_lowest, i, send_highest,
+                       (long long) send_index, base_index, i - 1);
         mpiret = MPI_Isend (&send_array[base_index], 1, P4EST_MPI_GLOIDX,
                             i - 1, P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                             p4est->mpicomm, &send_requests[base_index]);
@@ -2121,7 +2125,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (; i < num_procs; ++i) {
         if (global_weight_sums[i] < my_lowcut &&
             my_lowcut <= global_weight_sums[i + 1]) {
-          P4EST_LDEBUGF ("receive low cut from %d\n", i);
+          P4EST_LDEBUGF ("recv A from %d\n", i);
           mpiret = MPI_Irecv (&recv_low, 1, P4EST_MPI_GLOIDX, i,
                               P4EST_COMM_PARTITION_WEIGHTED_LOW,
                               p4est->mpicomm, &recv_requests[0]);
@@ -2134,7 +2138,6 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
     my_highcut = (weight_sum * (rank + 1)) / num_procs;
     if (my_highcut == 0) {
-      /* TODO bug: receive highcut always! construct counter example! */
       recv_high = 0;
       recv_requests[1] = MPI_REQUEST_NULL;
       high_source = -1;
@@ -2143,7 +2146,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       for (; i < num_procs; ++i) {
         if (global_weight_sums[i] < my_highcut &&
             my_highcut <= global_weight_sums[i + 1]) {
-          P4EST_LDEBUGF ("receive high cut from %d\n", i);
+          P4EST_LDEBUGF ("recv B from %d\n", i);
           mpiret = MPI_Irecv (&recv_high, 1, P4EST_MPI_GLOIDX, i,
                               P4EST_COMM_PARTITION_WEIGHTED_HIGH,
                               p4est->mpicomm, &recv_requests[1]);
@@ -2154,7 +2157,8 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
       P4EST_ASSERT (i < num_procs);
       high_source = i;
     }
-    P4EST_LDEBUGF ("my cut low %lld high %lld\n",
+    P4EST_LDEBUGF ("my recv peers %d %d cuts %lld %lld\n",
+                   low_source, high_source,
                    (long long) my_lowcut, (long long) my_highcut);
 
     /* free temporary memory */
