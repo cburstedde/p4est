@@ -24,7 +24,6 @@
 #include <p8est_communication.h>
 
 #ifdef P4EST_MPI
-#if 0
 
 /** Gets the procids of the owners of \a q.
  *
@@ -91,7 +90,6 @@ p8est_quadrant_find_tree_edge_owners (p4est_t * p4est,
   sc_array_reset (eta);
 }
 
-#endif /* 0 */
 #endif /* P4EST_MPI */
 
 /** Get the small edge neighbors of \a q.

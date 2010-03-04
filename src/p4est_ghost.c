@@ -30,6 +30,14 @@
 #include <p8est_search.h>
 #endif
 
+typedef enum
+{
+  P4EST_GHOST_UNBALANCED_ABORT = 0,
+  P4EST_GHOST_UNBALANCED_FAIL,
+  P4EST_GHOST_UNBALANCED_ALLOW
+}
+p4est_ghost_tolerance_t;
+
 #ifdef P4EST_MPI
 static inline sc_array_t *
 p4est_ghost_array_index (sc_array_t * array, int i)
@@ -37,6 +45,10 @@ p4est_ghost_array_index (sc_array_t * array, int i)
   return (sc_array_t *) sc_array_index_int (array, i);
 }
 #endif
+
+static p4est_ghost_t *p4est_ghost_new_check (p4est_t * p4est,
+                                             p4est_balance_type_t btype,
+                                             p4est_ghost_tolerance_t tol);
 
 int
 p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
@@ -116,7 +128,6 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
 }
 
 #ifdef P4EST_MPI
-#if 0
 
 /** Gets the procids of the owners of \a q.
  *
@@ -184,7 +195,6 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
   sc_array_reset (cta);
 }
 
-#endif /* 0 */
 #endif /* P4EST_MPI */
 
 ssize_t
@@ -786,8 +796,10 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
 #endif
   p4est_ghost_t      *gl;
 
-  gl = p4est_ghost_new (p4est, btype);
-  P4EST_ASSERT (gl != NULL);
+  gl = p4est_ghost_new_check (p4est, btype, P4EST_GHOST_UNBALANCED_FAIL);
+  if (gl == NULL) {
+    return 0;
+  }
 
   for (ii = 0; ii < P4EST_HALF + 2; ++ii) {
     P4EST_QUADRANT_INIT (&n[ii]);
@@ -1114,8 +1126,9 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
   }
 }
 
-p4est_ghost_t      *
-p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
+static p4est_ghost_t *
+p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
+                       p4est_ghost_tolerance_t tol)
 {
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
   const int           num_procs = p4est->mpisize;
@@ -1123,13 +1136,15 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
   const int           rank = p4est->mpirank;
   MPI_Comm            comm = p4est->mpicomm;
   int                 face, corner;
-  int                 nface;
+  int                 nface, ncheck, ncount;
   int                 i;
-  int                 n0_proc;
+  int                 n0_proc, n0ur_proc, n1_proc;
   int                 num_peers, peer, peer_proc;
   int                 mpiret;
+  int                 maxed, failed;
   int                 full_tree[2], tree_contact[2 * P4EST_DIM];
-  size_t              zz;
+  int                 urg[P4EST_DIM - 1];
+  size_t              pz, zz;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
 #ifdef P4EST_DEBUG
@@ -1158,6 +1173,7 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
   int                 c0, c1;
   int                 nc0, nc1;
   int                 oppedge;
+  int                 n1ur_proc;
 #endif
 #ifdef P4EST_DEBUG
   p4est_quadrant_t   *q2;
@@ -1199,6 +1215,7 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
     P4EST_QUADRANT_INIT (&nur[i]);
   }
 
+  failed = 0;
   for (i = 0; i < P4EST_DIM - 1; ++i) {
     sc_array_init (&procs[i], sizeof (int));
   }
@@ -1232,24 +1249,60 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
 
       /* Find smaller face neighbors */
       for (face = 0; face < 2 * P4EST_DIM; ++face) {
-        p4est_quadrant_face_neighbor (q, face, &n[0]);
-        if (p4est_quadrant_is_inside_root (&n[0])) {
-          nface = face ^ 1;
-          touch = ((int32_t) 1 << nface);
-          p4est_ghost_test_add (p4est, q, nt, &n[0], nt, touch, rank,
-                                &send_bufs, local_num);
+        if (tol < P4EST_GHOST_UNBALANCED_ALLOW) {
+          if (q->level == P4EST_QMAXLEVEL) {
+            p4est_quadrant_face_neighbor (q, face, &n[0]);
+            ncheck = 0;
+            ncount = 1;
+          }
+          else {
+            p4est_quadrant_half_face_neighbors (q, face, n, nur);
+            ncheck = ncount = P4EST_HALF;
+          }
+
+          n1_proc = -1;
+          for (i = 0; i < ncount; ++i) {
+            n0_proc = p4est_quadrant_find_owner (p4est, nt, face, &n[i]);
+            if (i < ncheck) {
+              /* Note that we will always check this
+               * because it prevents deadlocks
+               */
+              n0ur_proc = p4est_quadrant_find_owner (p4est, nt, face,
+                                                     &nur[i]);
+              if (n0_proc != n0ur_proc) {
+                P4EST_NOTICE ("Small face owner inconsistency\n");
+                failed = 1;
+                goto failtest;
+              }
+            }
+
+            if (n0_proc != rank && n0_proc >= 0 && n0_proc != n1_proc) {
+              buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              n1_proc = n0_proc;
+            }
+          }
         }
         else {
-          nnt = p4est_find_face_transform (conn, nt, face, ftransform);
-          if (nnt < 0) {
-            continue;
+          p4est_quadrant_face_neighbor (q, face, &n[0]);
+          if (p4est_quadrant_is_inside_root (&n[0])) {
+            nface = face ^ 1;
+            touch = ((int32_t) 1 << nface);
+            p4est_ghost_test_add (p4est, q, nt, &n[0], nt, touch, rank,
+                                  &send_bufs, local_num);
           }
-          nface = (int) conn->tree_to_face[nt * P4EST_FACES + face];
-          nface %= P4EST_FACES;
-          touch = ((int32_t) 1 << nface);
-          p4est_quadrant_transform_face (&n[0], &n[1], ftransform);
-          p4est_ghost_test_add (p4est, q, nt, &n[1], nnt, touch, rank,
-                                &send_bufs, local_num);
+          else {
+            nnt = p4est_find_face_transform (conn, nt, face, ftransform);
+            if (nnt < 0) {
+              continue;
+            }
+            nface = (int) conn->tree_to_face[nt * P4EST_FACES + face];
+            nface %= P4EST_FACES;
+            touch = ((int32_t) 1 << nface);
+            p4est_quadrant_transform_face (&n[0], &n[1], ftransform);
+            p4est_ghost_test_add (p4est, q, nt, &n[1], nnt, touch, rank,
+                                  &send_bufs, local_num);
+          }
         }
       }
 
@@ -1262,73 +1315,154 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
 
       /* Find smaller edge neighbors */
       for (edge = 0; edge < 12; ++edge) {
-        p8est_quadrant_edge_neighbor (q, edge, &n[0]);
-        if (p4est_quadrant_is_inside_root (&n[0])) {
-          nedge = edge ^ 3;
-          touch = ((int32_t) 1 << (6 + nedge));
-          p4est_ghost_test_add (p4est, q, nt, &n[0], nt, touch, rank,
-                                &send_bufs, local_num);
-        }
-        else if (p4est_quadrant_is_outside_face (&n[0])) {
-          P4EST_ASSERT (p4est_quadrant_is_extended (&n[0]));
-          face = -1;
-          if (n[0].x < 0 || n[0].x >= P4EST_ROOT_LEN) {
-            face = p8est_edge_faces[edge][0];
-          }
-          else if (n[0].z < 0 || n[0].z >= P4EST_ROOT_LEN) {
-            face = p8est_edge_faces[edge][1];
-          }
-          else if (n[0].y < 0) {
-            face = 2;
+        if (tol < P4EST_GHOST_UNBALANCED_ALLOW) {
+          if (q->level == P4EST_QMAXLEVEL) {
+            p8est_quadrant_edge_neighbor (q, edge, &n[0]);
+            maxed = 1;
           }
           else {
-            face = 3;
+            p8est_quadrant_get_half_edge_neighbors (q, edge, n, nur);
+            maxed = 0;
           }
-          nnt = p4est_find_face_transform (conn, nt, face, ftransform);
-          if (nnt < 0) {
-            continue;
-          }
-          P4EST_ASSERT (face >= 0);
-          P4EST_ASSERT (p8est_edge_face_corners[edge][face][0] != -1);
-          if (p8est_edge_faces[edge][0] == face) {
-            oppedge = edge ^ 2;
-            P4EST_ASSERT (p8est_edge_faces[oppedge][0] == face);
+
+          /* Check to see if we are a tree edge neighbor */
+          P4EST_ASSERT (!p4est_quadrant_is_outside_corner (&n[0]));
+          if (p8est_quadrant_is_outside_edge (&n[0])) {
+            p8est_quadrant_find_tree_edge_owners (p4est, nt, edge,
+                                                  &n[0], &procs[0], &urg[0]);
+            if (!maxed) {
+              p8est_quadrant_find_tree_edge_owners (p4est, nt, edge,
+                                                    &n[1], &procs[1],
+                                                    &urg[1]);
+              P4EST_ASSERT (procs[0].elem_count == procs[1].elem_count);
+
+              if (!urg[0] || !urg[1]) {
+                P4EST_NOTICE ("Tree edge owner inconsistency\n");
+                failed = 1;
+                goto failtest;
+              }
+            }
+
+            /* Then we have to loop over multiple neighbors */
+            for (pz = 0; pz < procs[0].elem_count; ++pz) {
+              n0_proc = *((int *) sc_array_index (&procs[0], pz));
+
+              if (n0_proc != rank) {
+                buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              }
+
+              if (!maxed) {
+                n1_proc = *((int *) sc_array_index (&procs[1], pz));
+
+                if (n1_proc != n0_proc && n1_proc != rank) {
+                  buf = p4est_ghost_array_index (&send_bufs, n1_proc);
+                  p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                }
+              }
+            }
           }
           else {
-            oppedge = edge ^ 1;
-            P4EST_ASSERT (p8est_edge_faces[oppedge][1] == face);
+            /* We are not at a tree edge so we only have two neighbors
+             * either inside the tree or across a face
+             */
+            n0_proc = n1_proc =
+              p4est_quadrant_find_owner (p4est, nt, -1, &n[0]);
+            if (!maxed) {
+              n1_proc = p4est_quadrant_find_owner (p4est, nt, -1, &n[1]);
+              n0ur_proc = p4est_quadrant_find_owner (p4est, nt, -1, &nur[0]);
+              n1ur_proc = p4est_quadrant_find_owner (p4est, nt, -1, &nur[1]);
+
+              /* Note that we will always check this
+               * because it prevents deadlocks
+               */
+              if (n0_proc != n0ur_proc || n1_proc != n1ur_proc) {
+                P4EST_NOTICE ("Small edge owner inconsistency\n");
+                failed = 1;
+                goto failtest;
+              }
+            }
+
+            if (n0_proc != rank && n0_proc >= 0) {
+              buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+            }
+
+            if (n1_proc != n0_proc && n1_proc != rank && n1_proc >= 0) {
+              buf = p4est_ghost_array_index (&send_bufs, n1_proc);
+              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+            }
           }
-          nface = (int) conn->tree_to_face[nt * P4EST_FACES + face];
-          o = nface / P4EST_FACES;
-          nface %= P4EST_FACES;
-          ref = p8est_face_permutation_refs[face][nface];
-          set = p8est_face_permutation_sets[ref][o];
-          c0 = p8est_edge_face_corners[oppedge][face][0];
-          c1 = p8est_edge_face_corners[oppedge][face][1];
-          nc0 = p8est_face_permutations[set][c0];
-          nc1 = p8est_face_permutations[set][c1];
-          nc0 = p8est_face_corners[nface][nc0];
-          nc1 = p8est_face_corners[nface][nc1];
-          nedge = p8est_child_corner_edges[nc0][nc1];
-          touch = ((int32_t) 1 << (6 + nedge));
-          p4est_quadrant_transform_face (&n[0], &n[1], ftransform);
-          p4est_ghost_test_add (p4est, q, nt, &n[1], nnt, touch, rank,
-                                &send_bufs, local_num);
         }
         else {
-          P4EST_ASSERT (p8est_quadrant_is_outside_edge (&n[0]));
-          sc_array_init (eta, sizeof (p8est_edge_transform_t));
-          p8est_find_edge_transform (conn, nt, edge, &ei);
-          for (etree = 0; etree < eta->elem_count; etree++) {
-            et = p8est_edge_array_index (eta, etree);
-            p8est_quadrant_transform_edge (&n[0], &n[1], &ei, et, 1);
-            nnt = et->ntree;
-            nedge = (int) et->nedge;
+          p8est_quadrant_edge_neighbor (q, edge, &n[0]);
+          if (p4est_quadrant_is_inside_root (&n[0])) {
+            nedge = edge ^ 3;
             touch = ((int32_t) 1 << (6 + nedge));
+            p4est_ghost_test_add (p4est, q, nt, &n[0], nt, touch, rank,
+                                  &send_bufs, local_num);
+          }
+          else if (p4est_quadrant_is_outside_face (&n[0])) {
+            P4EST_ASSERT (p4est_quadrant_is_extended (&n[0]));
+            face = -1;
+            if (n[0].x < 0 || n[0].x >= P4EST_ROOT_LEN) {
+              face = p8est_edge_faces[edge][0];
+            }
+            else if (n[0].z < 0 || n[0].z >= P4EST_ROOT_LEN) {
+              face = p8est_edge_faces[edge][1];
+            }
+            else if (n[0].y < 0) {
+              face = 2;
+            }
+            else {
+              face = 3;
+            }
+            nnt = p4est_find_face_transform (conn, nt, face, ftransform);
+            if (nnt < 0) {
+              continue;
+            }
+            P4EST_ASSERT (face >= 0);
+            P4EST_ASSERT (p8est_edge_face_corners[edge][face][0] != -1);
+            if (p8est_edge_faces[edge][0] == face) {
+              oppedge = edge ^ 2;
+              P4EST_ASSERT (p8est_edge_faces[oppedge][0] == face);
+            }
+            else {
+              oppedge = edge ^ 1;
+              P4EST_ASSERT (p8est_edge_faces[oppedge][1] == face);
+            }
+            nface = (int) conn->tree_to_face[nt * P4EST_FACES + face];
+            o = nface / P4EST_FACES;
+            nface %= P4EST_FACES;
+            ref = p8est_face_permutation_refs[face][nface];
+            set = p8est_face_permutation_sets[ref][o];
+            c0 = p8est_edge_face_corners[oppedge][face][0];
+            c1 = p8est_edge_face_corners[oppedge][face][1];
+            nc0 = p8est_face_permutations[set][c0];
+            nc1 = p8est_face_permutations[set][c1];
+            nc0 = p8est_face_corners[nface][nc0];
+            nc1 = p8est_face_corners[nface][nc1];
+            nedge = p8est_child_corner_edges[nc0][nc1];
+            touch = ((int32_t) 1 << (6 + nedge));
+            p4est_quadrant_transform_face (&n[0], &n[1], ftransform);
             p4est_ghost_test_add (p4est, q, nt, &n[1], nnt, touch, rank,
                                   &send_bufs, local_num);
           }
-          sc_array_reset (eta);
+          else {
+            P4EST_ASSERT (p8est_quadrant_is_outside_edge (&n[0]));
+            sc_array_init (eta, sizeof (p8est_edge_transform_t));
+            p8est_find_edge_transform (conn, nt, edge, &ei);
+            for (etree = 0; etree < eta->elem_count; etree++) {
+              et = p8est_edge_array_index (eta, etree);
+              p8est_quadrant_transform_edge (&n[0], &n[1], &ei, et, 1);
+              nnt = et->ntree;
+              nedge = (int) et->nedge;
+              touch = ((int32_t) 1 << (6 + nedge));
+              p4est_ghost_test_add (p4est, q, nt, &n[1], nnt, touch, rank,
+                                    &send_bufs, local_num);
+            }
+            sc_array_reset (eta);
+          }
         }
       }
 
@@ -1338,68 +1472,148 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
 
       /* Find smaller corner neighbors */
       for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
-        p4est_quadrant_corner_descendant (q, &n[1], corner, P4EST_QMAXLEVEL);
-        p4est_quadrant_corner_neighbor (&n[1], corner, &n[0]);
-        if (p4est_quadrant_is_inside_root (&n[0])) {
-          n0_proc = p4est_comm_find_owner (p4est, nt, &n[0], rank);
-          P4EST_ASSERT (n0_proc >= 0);
-          if (n0_proc != rank) {
-            buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-            p4est_add_ghost_to_buf (buf, nt, local_num, q);
-          }
-        }
-        else if (p4est_quadrant_is_outside_face (&n[0])) {
-          if (n[0].x < 0 || n[0].x >= P4EST_ROOT_LEN) {
-            face = p4est_corner_faces[corner][0];
-          }
-          else if (n[0].y < 0 || n[0].y >= P4EST_ROOT_LEN) {
-            face = p4est_corner_faces[corner][1];
+        if (tol < P4EST_GHOST_UNBALANCED_ALLOW) {
+          if (q->level == P4EST_QMAXLEVEL) {
+            p4est_quadrant_corner_neighbor (q, corner, &n[0]);
+            maxed = 1;
           }
           else {
-            face = p4est_corner_faces[corner][2];
+            p4est_quadrant_get_half_corner_neighbor (q, corner, &n[0],
+                                                     &nur[0]);
+            maxed = 0;
           }
-          nnt = p4est_find_face_transform (conn, nt, face, ftransform);
-          if (nnt < 0) {
-            continue;
+
+          /* Check to see if we are a tree corner neighbor */
+          if (p4est_quadrant_is_outside_corner (&n[0])) {
+            /* Then we have to loop over multiple corner neighbors */
+            p4est_quadrant_find_tree_corner_owners (p4est, nt, corner, &n[0],
+                                                    &procs[0], &urg[0]);
+            if (!urg[0]) {
+              P4EST_NOTICE ("Tree corner owner inconsistency\n");
+              failed = 1;
+              goto failtest;
+            }
+
+            for (pz = 0; pz < procs[0].elem_count; ++pz) {
+              n0_proc = *((int *) sc_array_index (&procs[0], pz));
+
+              if (n0_proc != rank) {
+                buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              }
+            }
           }
-          p4est_quadrant_transform_face (&n[0], &n[1], ftransform);
-          n0_proc = p4est_comm_find_owner (p4est, nnt, &n[1], rank);
-          if (n0_proc != rank) {
-            buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-            p4est_add_ghost_to_buf (buf, nt, local_num, q);
+#ifdef P4_TO_P8
+          /* Check to see if we are a tree edge neighbor */
+          else if (p8est_quadrant_is_outside_edge_extra (&n[0], &edge)) {
+            p8est_quadrant_find_tree_edge_owners (p4est, nt, edge,
+                                                  &n[0], &procs[0], &urg[0]);
+            if (!urg[0]) {
+              P4EST_NOTICE ("Tree corner/edge owner inconsistency\n");
+              failed = 1;
+              goto failtest;
+            }
+
+            /* Then we have to loop over multiple edge neighbors */
+            for (pz = 0; pz < procs[0].elem_count; ++pz) {
+              n0_proc = *((int *) sc_array_index (&procs[0], pz));
+
+              if (n0_proc != rank) {
+                buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              }
+            }
+          }
+#endif
+          else {
+            /* We are not at a tree edge or corner so
+             * we only have one corner neighbor
+             */
+            n0_proc = p4est_quadrant_find_owner (p4est, nt, -1, &n[0]);
+            if (!maxed) {
+              n0ur_proc = p4est_quadrant_find_owner (p4est, nt, -1, &nur[0]);
+
+              /* Note that we will always check this
+               * because it prevents deadlocks
+               */
+              if (n0_proc != n0ur_proc) {
+                P4EST_NOTICE ("Small corner owner inconsistency\n");
+                failed = 1;
+                goto failtest;
+              }
+            }
+
+            if (n0_proc != rank && n0_proc >= 0) {
+              buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+            }
           }
         }
-#ifdef P4_TO_P8
-        else if (p8est_quadrant_is_outside_edge_extra (&n[0], &edge)) {
-          sc_array_init (eta, sizeof (p8est_edge_transform_t));
-          p8est_find_edge_transform (conn, nt, edge, &ei);
-          for (etree = 0; etree < eta->elem_count; etree++) {
-            et = p8est_edge_array_index (eta, etree);
-            p8est_quadrant_transform_edge (&n[0], &n[1], &ei, et, 1);
-            nnt = et->ntree;
+        else {
+          p4est_quadrant_corner_descendant (q, &n[1], corner,
+                                            P4EST_QMAXLEVEL);
+          p4est_quadrant_corner_neighbor (&n[1], corner, &n[0]);
+          if (p4est_quadrant_is_inside_root (&n[0])) {
+            n0_proc = p4est_comm_find_owner (p4est, nt, &n[0], rank);
+            P4EST_ASSERT (n0_proc >= 0);
+            if (n0_proc != rank) {
+              buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+            }
+          }
+          else if (p4est_quadrant_is_outside_face (&n[0])) {
+            if (n[0].x < 0 || n[0].x >= P4EST_ROOT_LEN) {
+              face = p4est_corner_faces[corner][0];
+            }
+            else if (n[0].y < 0 || n[0].y >= P4EST_ROOT_LEN) {
+              face = p4est_corner_faces[corner][1];
+            }
+            else {
+              face = p4est_corner_faces[corner][2];
+            }
+            nnt = p4est_find_face_transform (conn, nt, face, ftransform);
+            if (nnt < 0) {
+              continue;
+            }
+            p4est_quadrant_transform_face (&n[0], &n[1], ftransform);
             n0_proc = p4est_comm_find_owner (p4est, nnt, &n[1], rank);
             if (n0_proc != rank) {
               buf = p4est_ghost_array_index (&send_bufs, n0_proc);
               p4est_add_ghost_to_buf (buf, nt, local_num, q);
             }
           }
-          sc_array_reset (eta);
-        }
-#endif
-        else {
-          sc_array_init (cta, sizeof (p4est_corner_transform_t));
-          p4est_find_corner_transform (conn, nt, corner, &ci);
-          for (ctree = 0; ctree < cta->elem_count; ++ctree) {
-            ct = p4est_corner_array_index (cta, ctree);
-            p4est_quadrant_transform_corner (&n[0], (int) ct->ncorner, 1);
-            nnt = ct->ntree;
-            n0_proc = p4est_comm_find_owner (p4est, nnt, &n[0], rank);
-            if (n0_proc != rank) {
-              buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+#ifdef P4_TO_P8
+          else if (p8est_quadrant_is_outside_edge_extra (&n[0], &edge)) {
+            sc_array_init (eta, sizeof (p8est_edge_transform_t));
+            p8est_find_edge_transform (conn, nt, edge, &ei);
+            for (etree = 0; etree < eta->elem_count; etree++) {
+              et = p8est_edge_array_index (eta, etree);
+              p8est_quadrant_transform_edge (&n[0], &n[1], &ei, et, 1);
+              nnt = et->ntree;
+              n0_proc = p4est_comm_find_owner (p4est, nnt, &n[1], rank);
+              if (n0_proc != rank) {
+                buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              }
             }
+            sc_array_reset (eta);
           }
-          sc_array_reset (cta);
+#endif
+          else {
+            sc_array_init (cta, sizeof (p4est_corner_transform_t));
+            p4est_find_corner_transform (conn, nt, corner, &ci);
+            for (ctree = 0; ctree < cta->elem_count; ++ctree) {
+              ct = p4est_corner_array_index (cta, ctree);
+              p4est_quadrant_transform_corner (&n[0], (int) ct->ncorner, 1);
+              nnt = ct->ntree;
+              n0_proc = p4est_comm_find_owner (p4est, nnt, &n[0], rank);
+              if (n0_proc != rank) {
+                buf = p4est_ghost_array_index (&send_bufs, n0_proc);
+                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              }
+            }
+            sc_array_reset (cta);
+          }
         }
       }
 
@@ -1407,6 +1621,26 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
     }
   }
   P4EST_ASSERT (local_num == p4est->local_num_quadrants);
+
+failtest:
+  if (tol == P4EST_GHOST_UNBALANCED_FAIL) {
+    if (p4est_comm_sync_flag (p4est, failed, MPI_BOR)) {
+      for (i = 0; i < num_procs; ++i) {
+        buf = p4est_ghost_array_index (&send_bufs, i);
+        sc_array_reset (buf);
+      }
+      sc_array_reset (&send_bufs);
+      for (i = 0; i < P4EST_DIM - 1; ++i) {
+        sc_array_reset (&procs[i]);
+      }
+      p4est_ghost_destroy (gl);
+
+      return NULL;
+    }
+  }
+  else if (tol == P4EST_GHOST_UNBALANCED_ABORT) {
+    SC_CHECK_ABORT (!failed, "Ghost layer");
+  }
 
   /* Count the number of peers that I send to and receive from */
   for (i = 0, num_peers = 0; i < num_procs; ++i) {
@@ -1606,6 +1840,12 @@ p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
 
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
   return gl;
+}
+
+p4est_ghost_t      *
+p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
+{
+  return p4est_ghost_new_check (p4est, btype, P4EST_GHOST_UNBALANCED_ALLOW);
 }
 
 void
