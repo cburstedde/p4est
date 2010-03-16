@@ -7,7 +7,7 @@ libp4est_generated_headers = src/p4est_config.h
 libp4est_installed_headers = src/p4est_base.h
 libp4est_internal_headers =
 libp4est_compiled_sources = src/p4est_base.c
-if P4EST_BUILD_2D
+if P4EST_ENABLE_BUILD_2D
 libp4est_installed_headers += \
         src/p4est_connectivity.h src/p4est.h \
         src/p4est_bits.h src/p4est_search.h \
@@ -23,7 +23,7 @@ libp4est_compiled_sources += \
         src/p4est_points.c \
         src/p4est_iterate.c src/p4est_lnodes.c
 endif
-if P4EST_BUILD_3D
+if P4EST_ENABLE_BUILD_3D
 libp4est_installed_headers += \
         src/p4est_to_p8est.h \
         src/p8est_connectivity.h src/p8est.h \
@@ -54,7 +54,7 @@ src_libp4est_a_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 src_libp4est_a_DEPENDENCIES = @P4EST_DEPENDENCIES@
 
 # build shared library
-if P4EST_SHARED
+if P4EST_ENABLE_SHARED
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
         $(libp4est_internal_headers) \

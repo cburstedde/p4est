@@ -4,7 +4,7 @@
 # included non-recursively from toplevel directory
 
 p4est_test_programs =
-if P4EST_BUILD_2D
+if P4EST_ENABLE_BUILD_2D
 p4est_test_programs += \
         test/p4est_test_comm test/p4est_test_hash \
         test/p4est_test_quadrants test/p4est_test_balance \
@@ -14,7 +14,7 @@ p4est_test_programs += \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search
 endif
-if P4EST_BUILD_3D
+if P4EST_ENABLE_BUILD_3D
 p4est_test_programs += \
         test/p8est_test_quadrants test/p8est_test_balance \
         test/p8est_test_partition test/p8est_test_coarsen \
