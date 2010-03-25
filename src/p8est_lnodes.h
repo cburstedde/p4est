@@ -178,7 +178,7 @@ static inline int
 p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
                      int hanging_edge[12])
 {
-  SC_ASSERT (face_code >= 0);
+  P4EST_ASSERT (face_code >= 0);
 
   if (face_code) {
     int                 i, j;

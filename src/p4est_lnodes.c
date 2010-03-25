@@ -3158,16 +3158,19 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
 {
   size_t              zz, count;
   p4est_lnodes_rank_t *lrank;
+
   P4EST_FREE (lnodes->local_nodes);
   P4EST_FREE (lnodes->global_nodes);
   P4EST_FREE (lnodes->global_owned_count);
   P4EST_FREE (lnodes->face_code);
+
   count = lnodes->sharers->elem_count;
   for (zz = 0; zz < count; zz++) {
     lrank = p4est_lnodes_rank_array_index (lnodes->sharers, zz);
     sc_array_reset (&(lrank->shared_nodes));
   }
   sc_array_destroy (lnodes->sharers);
+
   P4EST_FREE (lnodes);
 }
 

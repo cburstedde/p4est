@@ -129,7 +129,7 @@ p4est_lnodes_rank_t;
 static inline int
 p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
 {
-  SC_ASSERT (face_code >= 0);
+  P4EST_ASSERT (face_code >= 0);
 
   if (face_code) {
     int                 i;

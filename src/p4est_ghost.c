@@ -1045,7 +1045,7 @@ ghost_tree_type (sc_array_t * array, size_t index, void *data)
 {
   p4est_quadrant_t   *q;
 
-  SC_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
 
   q = (p4est_quadrant_t *) sc_array_index (array, index);
   return (size_t) q->p.which_tree;
@@ -1573,8 +1573,8 @@ failtest:
 #endif
   }
   sc_array_reset (&split);
-  SC_ASSERT (gl->tree_offsets[0] == 0);
-  SC_ASSERT (gl->proc_offsets[0] == 0);
+  P4EST_ASSERT (gl->tree_offsets[0] == 0);
+  P4EST_ASSERT (gl->proc_offsets[0] == 0);
 
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
   return gl;

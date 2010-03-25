@@ -467,7 +467,7 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
    * 2. quadrant is identical to or an ancestor of those in the array.
    */
 
-  SC_ASSERT (actives->elem_count <= points->elem_count);
+  P4EST_ASSERT (actives->elem_count <= points->elem_count);
 
   /* return if there are no quadrants or active points */
   if (quadrants->elem_count == 0 || actives->elem_count == 0)
