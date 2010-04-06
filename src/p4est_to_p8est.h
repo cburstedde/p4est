@@ -75,6 +75,7 @@
 #define p4est_position_t                p8est_position_t
 #define p4est_init_t                    p8est_init_t
 #define p4est_refine_t                  p8est_refine_t
+#define p4est_refine_ext_t              p8est_refine_ext_t
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_ghost_t                   p8est_ghost_t
@@ -122,7 +123,7 @@
 #define p4est_copy                      p8est_copy
 #define p4est_reset_data                p8est_reset_data
 #define p4est_refine                    p8est_refine
-#define p4est_refine_level              p8est_refine_level
+#define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen                   p8est_coarsen
 #define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition

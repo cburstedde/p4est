@@ -146,6 +146,16 @@ typedef int         (*p8est_refine_t) (p8est_t * p8est,
                                        p4est_topidx_t which_tree,
                                        p8est_quadrant_t * quadrant);
 
+/** Extended callback function prototype to decide for refinement.
+ * \param [in] quadrant     Quadrant under consideration for refinement.
+ * \param [in] children     If true is returned these will be the children.
+ * \return                  Nonzero if the quadrant shall be refined.
+ */
+typedef int         (*p8est_refine_ext_t) (p8est_t * p4est,
+                                           p4est_topidx_t which_tree,
+                                           p8est_quadrant_t * quadrant,
+                                           p8est_quadrant_t * children[]);
+
 /** Callback function prototype to decide for coarsening.
  * \param [in] quadrants   Pointers to 8 siblings in Morton ordering.
  * \return nonzero if the quadrants shall be replaced with their parent.
@@ -264,17 +274,21 @@ void                p8est_refine (p8est_t * p8est,
                                   p8est_init_t init_fn);
 
 /** Refine a forest with a bounded maximum refinement level.
+ * A quadrant is refined if either callback returns true.
  * \param [in] refine_fn Callback function that returns true
- *                       if a quadrant shall be refined
+ *                       if a quadrant shall be refined, may be NULL.
+ * \param [in] refine_fn Extended callback function that returns true
+ *                       if a quadrant shall be refined, may be NULL.
  * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is already allocated automatically.
- * \param [in] maxlevel  Maximum allowed level (inclusive) of quadrants.
+ *                       which is guaranteed to be allocated, may be NULL.
+ * \param [in] maxlevel  Maximum allowed refinement level (inclusive).
+ *                       If this is negative the level is unrestricted.
  */
-void                p8est_refine_level (p8est_t * p8est,
-                                        int refine_recursive,
-                                        p8est_refine_t refine_fn,
-                                        p8est_init_t init_fn,
-                                        int allowed_level);
+void                p8est_refine_ext (p8est_t * p8est,
+                                      int refine_recursive, int maxlevel,
+                                      p8est_refine_t refine_fn,
+                                      p8est_refine_ext_t refine_ext_fn,
+                                      p8est_init_t init_fn);
 
 /** Coarsen a forest.
  * \param [in] coarsen_fn Callback function that returns true if a

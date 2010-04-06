@@ -616,14 +616,13 @@ void
 p4est_refine (p4est_t * p4est, int refine_recursive,
               p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  p4est_refine_level (p4est, refine_recursive, refine_fn, init_fn,
-                      P4EST_QMAXLEVEL);
+  p4est_refine_ext (p4est, refine_recursive, -1, refine_fn, NULL, init_fn);
 }
 
 void
-p4est_refine_level (p4est_t * p4est, int refine_recursive,
-                    p4est_refine_t refine_fn, p4est_init_t init_fn,
-                    int allowed_level)
+p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
+                  p4est_refine_t refine_fn, p4est_refine_ext_t refine_ext_fn,
+                  p4est_init_t init_fn)
 {
 #ifdef P4EST_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
@@ -641,11 +640,26 @@ p4est_refine_level (p4est_t * p4est, int refine_recursive,
 #endif
   sc_array_t         *tquadrants;
 
+  if (allowed_level == 0 || (refine_fn == NULL && refine_ext_fn == NULL)) {
+    P4EST_GLOBAL_PRODUCTIONF ("Noop " P4EST_STRING
+                              "_refine with %lld total quadrants\n",
+                              (long long) p4est->global_num_quadrants);
+    return;
+  }
+
+  if (allowed_level < 0) {
+    allowed_level = P4EST_QMAXLEVEL;
+  }
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
-                            "_refine with %lld total quadrants\n",
-                            (long long) p4est->global_num_quadrants);
+                            "_refine with %lld total quadrants maxlevel %d\n",
+                            (long long) p4est->global_num_quadrants,
+                            allowed_level);
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (0 <= allowed_level && allowed_level <= P4EST_QMAXLEVEL);
+
+  if (refine_ext_fn != NULL) {
+    sc_abort_collective ("Extended refinement callback not implemented");
+  }
 
   /*
      q points to a quadrant that is an array member
