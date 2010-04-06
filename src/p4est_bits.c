@@ -709,7 +709,7 @@ p4est_quadrant_overlaps_tree (p4est_tree_t * tree, const p4est_quadrant_t * q)
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree->last_desc));
 
   /* check if the end of q is before the first tree quadrant */
-  p4est_quadrant_last_descendent (q, &desc, P4EST_QMAXLEVEL);
+  p4est_quadrant_last_descendant (q, &desc, P4EST_QMAXLEVEL);
   if (p4est_quadrant_compare (&desc, &tree->first_desc) < 0)
     return 0;
 
@@ -735,12 +735,12 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
   P4EST_ASSERT (p4est_quadrant_is_valid (&tree->last_desc));
 
   /* check if q is not before the first tree quadrant */
-  p4est_quadrant_first_descendent (q, &desc, P4EST_QMAXLEVEL);
+  p4est_quadrant_first_descendant (q, &desc, P4EST_QMAXLEVEL);
   if (p4est_quadrant_compare (&desc, &tree->first_desc) < 0)
     return 0;
 
   /* check if the end of q is not after the last tree quadrant */
-  p4est_quadrant_last_descendent (q, &desc, P4EST_QMAXLEVEL);
+  p4est_quadrant_last_descendant (q, &desc, P4EST_QMAXLEVEL);
   if (p4est_quadrant_compare (&tree->last_desc, q) < 0)
     return 0;
 
@@ -1200,7 +1200,7 @@ p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 }
 
 void
-p4est_quadrant_first_descendent (const p4est_quadrant_t * q,
+p4est_quadrant_first_descendant (const p4est_quadrant_t * q,
                                  p4est_quadrant_t * fd, int level)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
@@ -1215,7 +1215,7 @@ p4est_quadrant_first_descendent (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
+p4est_quadrant_last_descendant (const p4est_quadrant_t * q,
                                 p4est_quadrant_t * ld, int level)
 {
   p4est_qcoord_t      shift;
@@ -1234,7 +1234,7 @@ p4est_quadrant_last_descendent (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_corner_descendent (const p4est_quadrant_t * q,
+p4est_quadrant_corner_descendant (const p4est_quadrant_t * q,
                                   p4est_quadrant_t * r, int c, int level)
 {
   p4est_qcoord_t      shift = P4EST_QUADRANT_LEN (q->level) -

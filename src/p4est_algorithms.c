@@ -527,7 +527,7 @@ p4est_is_valid (p4est_t * p4est)
         }
       }
       else {
-        p4est_quadrant_last_descendent (q, &s, P4EST_QMAXLEVEL);
+        p4est_quadrant_last_descendant (q, &s, P4EST_QMAXLEVEL);
         if (s.x + mh != P4EST_ROOT_LEN || s.y + mh != P4EST_ROOT_LEN ||
 #ifdef P4_TO_P8
             s.z + mh != P4EST_ROOT_LEN ||
@@ -562,18 +562,18 @@ p4est_is_valid (p4est_t * p4est)
         goto failtest;
       }
       q = p4est_quadrant_array_index (&tree->quadrants, 0);
-      p4est_quadrant_first_descendent (q, &s, P4EST_QMAXLEVEL);
+      p4est_quadrant_first_descendant (q, &s, P4EST_QMAXLEVEL);
       if (!p4est_quadrant_is_equal (&s, &tree->first_desc)) {
-        P4EST_NOTICE ("p4est invalid first tree descendent\n");
+        P4EST_NOTICE ("p4est invalid first tree descendant\n");
         failed = 1;
         goto failtest;
       }
       q =
         p4est_quadrant_array_index (&tree->quadrants,
                                     tree->quadrants.elem_count - 1);
-      p4est_quadrant_last_descendent (q, &s, P4EST_QMAXLEVEL);
+      p4est_quadrant_last_descendant (q, &s, P4EST_QMAXLEVEL);
       if (!p4est_quadrant_is_equal (&s, &tree->last_desc)) {
-        P4EST_NOTICE ("p4est invalid last tree descendent\n");
+        P4EST_NOTICE ("p4est invalid last tree descendant\n");
         failed = 1;
         goto failtest;
       }
@@ -582,7 +582,7 @@ p4est_is_valid (p4est_t * p4est)
       P4EST_QUADRANT_INIT (&s);
       if (s.level != tree->first_desc.level ||
           s.level != tree->last_desc.level) {
-        P4EST_NOTICE ("p4est invalid empty descendent\n");
+        P4EST_NOTICE ("p4est invalid empty descendant\n");
         failed = 1;
         goto failtest;
       }
@@ -824,8 +824,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
           /* this quadrant is outside this tree, no overlap */
           continue;
         }
-        p4est_quadrant_first_descendent (s, &fd, P4EST_QMAXLEVEL);
-        p4est_quadrant_last_descendent (s, &ld, P4EST_QMAXLEVEL);
+        p4est_quadrant_first_descendant (s, &fd, P4EST_QMAXLEVEL);
+        p4est_quadrant_last_descendant (s, &ld, P4EST_QMAXLEVEL);
 
         /* skip this insulation quadrant if there is no overlap */
         if (p4est_quadrant_compare (&ld, treefd) < 0 ||
@@ -1036,7 +1036,7 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 #endif
           ))) ||
         (!full_tree[1] &&
-         (p4est_quadrant_last_descendent (q2, &ld, P4EST_QMAXLEVEL),
+         (p4est_quadrant_last_descendant (q2, &ld, P4EST_QMAXLEVEL),
           p4est_quadrant_compare (next_pos, &ld) <= 0))) {
       /* quadrant is outside of the unit square
          or at least partially outside of the tree bounds */
@@ -2444,10 +2444,10 @@ p4est_partition_given (p4est_t * p4est,
     }
 
     quad = p4est_quadrant_array_index (quadrants, 0);
-    p4est_quadrant_first_descendent (quad, &tree->first_desc,
+    p4est_quadrant_first_descendant (quad, &tree->first_desc,
                                      P4EST_QMAXLEVEL);
     quad = p4est_quadrant_array_index (quadrants, quadrants->elem_count - 1);
-    p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
+    p4est_quadrant_last_descendant (quad, &tree->last_desc, P4EST_QMAXLEVEL);
   }
   for (; which_tree < p4est->connectivity->num_trees; ++which_tree) {
     tree = p4est_tree_array_index (p4est->trees, which_tree);

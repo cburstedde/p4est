@@ -347,10 +347,10 @@ main (int argc, char **argv)
   tree.quadrants_per_level[1] = 1;
   tree.quadrants_per_level[2] = 2;
   tree.maxlevel = 2;
-  p4est_quadrant_first_descendent (p4est_quadrant_array_index
+  p4est_quadrant_first_descendant (p4est_quadrant_array_index
                                    (&tree.quadrants, 0), &tree.first_desc,
                                    P4EST_QMAXLEVEL);
-  p4est_quadrant_last_descendent (p4est_quadrant_array_index
+  p4est_quadrant_last_descendant (p4est_quadrant_array_index
                                   (&tree.quadrants,
                                    tree.quadrants.elem_count - 1),
                                   &tree.last_desc, P4EST_QMAXLEVEL);
@@ -579,12 +579,12 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (id0 == 0 && id1 == 1 && id2 == 2 && id3 == 3, "child_id");
   SC_CHECK_ABORT (p4est_quadrant_child_id (&G) == 3, "child_id");
 
-  p4est_quadrant_first_descendent (&A, &c1, 1);
+  p4est_quadrant_first_descendant (&A, &c1, 1);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&c0, &c1) == 1,
-                  "first_descendent");
+                  "first_descendant");
 
-  p4est_quadrant_last_descendent (&A, &g, P4EST_QMAXLEVEL);
-  SC_CHECK_ABORT (p4est_quadrant_is_equal (&G, &g) == 1, "last_descendent");
+  p4est_quadrant_last_descendant (&A, &g, P4EST_QMAXLEVEL);
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&G, &g) == 1, "last_descendant");
 
   Fid = p4est_quadrant_linear_id (&F, P4EST_QMAXLEVEL);
   p4est_quadrant_set_morton (&f, P4EST_QMAXLEVEL, Fid);

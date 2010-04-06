@@ -87,7 +87,7 @@ int                 p4est_tree_is_almost_sorted (p4est_tree_t * tree,
  *   R   for a quadrant that with smaller Morton index
  *   Cn  for child id n
  *   Sn  for sibling with child id n
- *   D   for a descendent
+ *   D   for a descendant
  *   Nn   for a next quadrant in the tree with no holes in between and child id n
  *   qn  for a general quadrant whose child id is n
  * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.

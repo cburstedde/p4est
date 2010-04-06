@@ -884,7 +884,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
 #ifdef P4_TO_P8
         temp.z &= mask;
 #endif
-        p4est_quadrant_corner_descendent (&temp, &temp, this_corner,
+        p4est_quadrant_corner_descendant (&temp, &temp, this_corner,
                                           P4EST_QMAXLEVEL);
         P4EST_ASSERT (p4est_quadrant_is_valid (&temp));
         /* we do not have to search if there is one quadrant, or if we are in

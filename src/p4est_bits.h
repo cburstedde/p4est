@@ -417,32 +417,32 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
 void                p4est_quadrant_childrenv (const p4est_quadrant_t * q,
                                               p4est_quadrant_t c[]);
 
-/** Compute the first descendent of a quadrant on a given level.
+/** Compute the first descendant of a quadrant on a given level.
  * \param [in]  q      Input quadrant.
- * \param [out] fd     First descendent of \a q on level \a level.
+ * \param [out] fd     First descendant of \a q on level \a level.
  * \param [in]  level  Level must be greater equal than q's level.
  */
-void                p4est_quadrant_first_descendent (const p4est_quadrant_t *
+void                p4est_quadrant_first_descendant (const p4est_quadrant_t *
                                                      q, p4est_quadrant_t * fd,
                                                      int level);
 
-/** Compute the last descendent of a quadrant on a given level.
+/** Compute the last descendant of a quadrant on a given level.
  * \param [in]  q      Input quadrant.
- * \param [out] ld     Last descendent of \a q on level \a level.
+ * \param [out] ld     Last descendant of \a q on level \a level.
  * \param [in]  level  Level must be greater equal than q's level.
  */
-void                p4est_quadrant_last_descendent (const p4est_quadrant_t *
+void                p4est_quadrant_last_descendant (const p4est_quadrant_t *
                                                     q, p4est_quadrant_t * ld,
                                                     int level);
 
-/** Compute the descendent of a quadrant touching a given corner.
+/** Compute the descendant of a quadrant touching a given corner.
  * \param [in]     q   Input quadrant.
  * \param [in,out] r   Existing quadrant whose Morton index will be filled.
  *                     Its user_data will be untouched.
  * \param [in]     c   The corner of \a q that \a r touches.
  * \param [in] level   The size of \a r.
  */
-void                p4est_quadrant_corner_descendent (const p4est_quadrant_t *
+void                p4est_quadrant_corner_descendant (const p4est_quadrant_t *
                                                       q, p4est_quadrant_t * r,
                                                       int c, int level);
 

@@ -177,7 +177,7 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
     *proc = p4est_comm_find_owner (p4est, ct->ntree, &cq, rank);
 
     if (nurgood != NULL) {
-      p4est_quadrant_last_descendent (&cq, &cq, P4EST_QMAXLEVEL);
+      p4est_quadrant_last_descendant (&cq, &cq, P4EST_QMAXLEVEL);
       nurproc = p4est_comm_find_owner (p4est, ct->ntree, &cq, *proc);
       *nurgood = *nurgood && (nurproc == *proc);
     }

@@ -277,22 +277,22 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     else {
       for (c = a; p4est_quadrant_child_id (&c) == 0; a = c) {
         p4est_quadrant_parent (&c, &c);
-        p4est_quadrant_last_descendent (&c, &l, maxlevel);
+        p4est_quadrant_last_descendant (&c, &l, maxlevel);
         if (p4est_quadrant_compare (&l, &n) >= 0) {
           break;
         }
       }
       P4EST_ASSERT (a.level > 0);
-      P4EST_ASSERT ((p4est_quadrant_last_descendent (&a, &l, maxlevel),
+      P4EST_ASSERT ((p4est_quadrant_last_descendant (&a, &l, maxlevel),
                      p4est_quadrant_compare (&l, &n) < 0));
     }
-    p4est_quadrant_first_descendent (&a, &tree->first_desc, P4EST_QMAXLEVEL);
+    p4est_quadrant_first_descendant (&a, &tree->first_desc, P4EST_QMAXLEVEL);
 
     /* determine largest possible last quadrant of this tree */
     if (jt < next_tree) {
-      p4est_quadrant_last_descendent (&a, &l, maxlevel);
+      p4est_quadrant_last_descendant (&a, &l, maxlevel);
       p4est_quadrant_set_morton (&b, 0, 0);
-      p4est_quadrant_last_descendent (&b, &b, maxlevel);
+      p4est_quadrant_last_descendant (&b, &b, maxlevel);
       if (p4est_quadrant_is_equal (&l, &b)) {
         onlyone = 1;
       }
@@ -300,7 +300,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
         includeb = 1;
         for (c = b; p4est_quadrant_child_id (&c) == P4EST_CHILDREN - 1; b = c) {
           p4est_quadrant_parent (&c, &c);
-          p4est_quadrant_first_descendent (&c, &f, maxlevel);
+          p4est_quadrant_first_descendant (&c, &f, maxlevel);
           if (p4est_quadrant_compare (&l, &f) >= 0) {
             break;
           }
@@ -327,7 +327,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     }
     tree->quadrants_offset = p4est->local_num_quadrants;
     p4est->local_num_quadrants += tree->quadrants.elem_count;
-    p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
+    p4est_quadrant_last_descendant (quad, &tree->last_desc, P4EST_QMAXLEVEL);
 
     /* verification */
 #ifdef P4EST_DEBUG

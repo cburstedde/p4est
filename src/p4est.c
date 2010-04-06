@@ -317,7 +317,7 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       P4EST_LDEBUGF ("tree %lld first morton 0x%llx 0x%llx\n",
                      (long long) jt, (long long) a.x, (long long) a.y);
 #endif
-      p4est_quadrant_first_descendent (&a, &tree->first_desc,
+      p4est_quadrant_first_descendant (&a, &tree->first_desc,
                                        P4EST_QMAXLEVEL);
 
       /* set morton id of last quadrant */
@@ -378,7 +378,7 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       }
 
       /* remember first tree position */
-      p4est_quadrant_first_descendent (p4est_quadrant_array_index
+      p4est_quadrant_first_descendant (p4est_quadrant_array_index
                                        (tquadrants, 0), &tree->first_desc,
                                        P4EST_QMAXLEVEL);
 
@@ -392,7 +392,7 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
     tree->quadrants_offset = p4est->local_num_quadrants;
     p4est->local_num_quadrants += tquadrants->elem_count;
-    p4est_quadrant_last_descendent (quad, &tree->last_desc, P4EST_QMAXLEVEL);
+    p4est_quadrant_last_descendant (quad, &tree->last_desc, P4EST_QMAXLEVEL);
   }
   if (last_tree >= 0) {
     for (; jt < num_trees; ++jt) {
@@ -1017,10 +1017,10 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
 
   P4EST_QUADRANT_INIT (&ld);
 
-  /* querying insul is equivalent to querying first descendent */
+  /* querying insul is equivalent to querying first descendant */
   first_owner = p4est_comm_find_owner (p4est, qtree, insul, rank);
-  /* querying last descendent */
-  p4est_quadrant_last_descendent (insul, &ld, P4EST_QMAXLEVEL);
+  /* querying last descendant */
+  p4est_quadrant_last_descendant (insul, &ld, P4EST_QMAXLEVEL);
   last_owner = p4est_comm_find_owner (p4est, qtree, &ld, rank);
 
   /* send to all processors possibly intersecting insulation */
@@ -2769,9 +2769,9 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 
     /* compute tree properties */
     q = p4est_quadrant_array_index (tquadrants, 0);
-    p4est_quadrant_first_descendent (q, &tree->first_desc, P4EST_QMAXLEVEL);
+    p4est_quadrant_first_descendant (q, &tree->first_desc, P4EST_QMAXLEVEL);
     q = p4est_quadrant_array_index (tquadrants, tquadrants->elem_count - 1);
-    p4est_quadrant_last_descendent (q, &tree->last_desc, P4EST_QMAXLEVEL);
+    p4est_quadrant_last_descendant (q, &tree->last_desc, P4EST_QMAXLEVEL);
     for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       if (tree->quadrants_per_level[i] > 0) {
         tree->maxlevel = (int8_t) i;

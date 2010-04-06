@@ -50,7 +50,7 @@ ssize_t             p8est_find_higher_bound (sc_array_t * array,
  * \param [in,out] indices     The indices of the first quadrant in each of
  *                             the ancestors's children, plus an additional
  *                             index on the end.  The quadrants of \a array
- *                             that are descendents of child i have indices
+ *                             that are descendants of child i have indices
  *                             between indices[i] and indices[i + 1] - 1.  If
  *                             indices[i] = indices[i+1], this indicates that
  *                             no quadrant in the array is contained in

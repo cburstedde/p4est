@@ -137,14 +137,14 @@ p8est_mesh_points (point_t * points, trilinear_mesh_pid_t * pids,
           }
           else {
             if (k == 0) {
-              p8est_quadrant_corner_descendent (q, &p, i, P8EST_QMAXLEVEL);
+              p8est_quadrant_corner_descendant (q, &p, i, P8EST_QMAXLEVEL);
             }
             /* if k == 1, then that means that the current node is indpendent,
              * but is not touched by the current quadrant: rather, it is
              * touched by the parent of the current quadrant */
             else {
               p8est_quadrant_parent (q, &r);
-              p8est_quadrant_corner_descendent (&r, &p, i, P8EST_QMAXLEVEL);
+              p8est_quadrant_corner_descendant (&r, &p, i, P8EST_QMAXLEVEL);
             }
             p4est_quadrant_corner_neighbor (&p, i, &r);
             /* if the corner in question is in the interior of the tree, its
