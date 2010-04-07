@@ -24,6 +24,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /* Naming convention for different coordinate systems:
  * xyz              computational domain
  * abc              p4est vertex domain
@@ -131,5 +133,7 @@ p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
  */
 p8est_geometry_t   *p8est_geometry_new_sphere (double R2, double R1,
                                                double R0);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_GEOMETRY_H */

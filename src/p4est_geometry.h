@@ -24,6 +24,10 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 typedef struct p4est_geometry p4est_geometry_t;
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_GEOMETRY_H */

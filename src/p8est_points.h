@@ -24,6 +24,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Create a new forest based on a distributed set of points.
  *
  * \param [in] mpicomm       A valid MPI communicator.
@@ -56,5 +58,7 @@ p8est_t            *p8est_new_points (MPI_Comm mpicomm,
                                       p4est_locidx_t max_points,
                                       size_t data_size, p8est_init_t init_fn,
                                       void *user_pointer);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_POINTS_H */
