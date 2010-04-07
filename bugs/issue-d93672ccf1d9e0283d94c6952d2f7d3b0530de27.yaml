@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Write vector versions of qcoord_to_vertex and children.
+desc: |-
+  Provide a function p4est_qcoord_to_vertexv that processes any number
+  of quadrant coordinate triples.
+  Provide p4est_quadrant_childrenpv analogously to p4est_is_family_pv.
+type: :feature
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2010-04-06 18:47:57.384030 Z
+references: []
+
+id: d93672ccf1d9e0283d94c6952d2f7d3b0530de27
+log_events: 
+- - 2010-04-06 18:47:58.375779 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
