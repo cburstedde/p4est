@@ -3,7 +3,7 @@
   p4est is a C library to manage a parallel collection of quadtrees and/or
   octrees.
 
-  Copyright (C) 2008,2009 Carsten Burstedde, Lucas Wilcox.
+  Copyright (C) 2008-2010 Carsten Burstedde, Lucas Wilcox.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -329,10 +329,13 @@ void                p8est_partition (p8est_t * p8est,
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
-/** Save the complete connectivity/p4est data to disk.
- * \param [in] filename Name of the file to write.
- * \param [in] p8est    Valid forest structure.
- * \param [in] save_data        If true, the element data is saved.
+/** Save the complete connectivity/p4est data to disk. This is a collective
+ * operation that all MPI processes need to call. All processes write
+ * into the same file, so the filename given needs to be identical over
+ * all parallel invocations.
+ * \param [in] filename    Name of the file to write.
+ * \param [in] p8est       Valid forest structure.
+ * \param [in] save_data   If true, the element data is saved.
  * \note            Aborts on file errors.
  */
 void                p8est_save (const char *filename, p8est_t * p8est,
@@ -348,8 +351,10 @@ void                p8est_save (const char *filename, p8est_t * p8est,
  *                              this is an error and the function aborts.
  * \param [in] user_pointer     Assign to the user_pointer member of the p4est
  *                              before init_fn is called the first time.
- * \param [out] connectivity    Connectivity must be destroyd separately.
- * \return          Returns a valid forest structure.
+ * \param [out] connectivity    Connectivity must be destroyed separately.
+ * \return          Returns a valid forest structure. A pointer to a valid
+ *                  connectivity structure is returned through the last
+ *                  argument.
  * \note            Aborts on file errors or invalid file contents.
  */
 p8est_t            *p8est_load (const char *filename, MPI_Comm mpicomm,
