@@ -30,6 +30,14 @@
 #include <p8est_search.h>
 #endif
 
+/* htonl is in either of these two */
+#ifdef P4EST_HAVE_ARPA_NET_H
+#include <arpa/inet.h>
+#endif
+#ifdef P4EST_HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
 typedef enum
 {
   P4EST_GHOST_UNBALANCED_ABORT = 0,
@@ -1859,4 +1867,64 @@ p4est_ghost_destroy (p4est_ghost_t * ghost)
   P4EST_FREE (ghost->proc_offsets);
 
   P4EST_FREE (ghost);
+}
+
+unsigned
+p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
+{
+  unsigned            crc;
+  uint32_t           *check;
+  size_t              zz, csize, qcount, offset;
+  size_t              nt1, np1, local_count;
+  sc_array_t         *quadrants, *checkarray;
+  p4est_quadrant_t   *q;
+
+  quadrants = &ghost->ghosts;
+  qcount = quadrants->elem_count;
+  nt1 = (size_t) p4est->connectivity->num_trees + 1;
+  np1 = (size_t) p4est->mpisize + 1;
+
+  P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
+
+  csize = sizeof (uint32_t);
+  checkarray = sc_array_new (csize);
+
+  local_count = qcount * (P4EST_DIM + 3) + nt1 + np1;
+  sc_array_resize (checkarray, local_count);
+
+  /* checksum ghost quadrants */
+  for (zz = 0; zz < qcount; ++zz) {
+    q = p4est_quadrant_array_index (quadrants, zz);
+    P4EST_ASSERT (p4est_quadrant_is_valid (q));
+    check = (uint32_t *) sc_array_index (checkarray, zz * (P4EST_DIM + 3));
+    check[0] = htonl ((uint32_t) q->x);
+    check[1] = htonl ((uint32_t) q->y);
+#ifdef P4_TO_P8
+    check[2] = htonl ((uint32_t) q->z);
+#endif
+    check[P4EST_DIM] = htonl ((uint32_t) q->level);
+    check[P4EST_DIM + 1] = htonl ((uint32_t) q->p.piggy3.which_tree);
+    check[P4EST_DIM + 2] = htonl ((uint32_t) q->p.piggy3.local_num);
+  }
+
+  /* checksum tree_offsets */
+  offset = qcount * (P4EST_DIM + 3);
+  for (zz = 0; zz < nt1; ++zz) {
+    check = (uint32_t *) sc_array_index (checkarray, offset + zz);
+    *check = htonl ((uint32_t) ghost->tree_offsets[zz]);
+  }
+
+  /* checksum proc_offsets */
+  offset += nt1;
+  for (zz = 0; zz < np1; ++zz) {
+    check = (uint32_t *) sc_array_index (checkarray, offset + zz);
+    *check = htonl ((uint32_t) ghost->proc_offsets[zz]);
+  }
+  P4EST_ASSERT (offset + zz == local_count);
+
+  /* compute parallel checksum */
+  crc = sc_array_checksum (checkarray);
+  sc_array_destroy (checkarray);
+
+  return p4est_comm_checksum (p4est, crc, csize * local_count);
 }

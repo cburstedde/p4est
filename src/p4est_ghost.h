@@ -145,6 +145,14 @@ int                 p4est_quadrant_exists (p4est_t * p4est,
 int                 p4est_is_balanced (p4est_t * p4est,
                                        p4est_balance_type_t btype);
 
+/** Compute the parallel checksum of a ghost layer.
+ * \param [in] p4est   The MPI information of this p4est will be used.
+ * \param [in] ghost   A ghost layer obtained from the p4est.
+ * \return             Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p4est_ghost_checksum (p4est_t * p4est,
+                                          p4est_ghost_t * ghost);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_GHOST_H */

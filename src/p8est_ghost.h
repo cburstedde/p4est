@@ -145,6 +145,14 @@ int                 p8est_quadrant_exists (p8est_t * p8est,
 int                 p8est_is_balanced (p8est_t * p8est,
                                        p8est_balance_type_t btype);
 
+/** Compute the parallel checksum of a ghost layer.
+ * \param [in] p8est   The MPI information of this p8est will be used.
+ * \param [in] ghost   A ghost layer obtained from the p8est.
+ * \return             Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p8est_ghost_checksum (p8est_t * p8est,
+                                          p8est_ghost_t * ghost);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_GHOST_H */
