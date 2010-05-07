@@ -2353,7 +2353,13 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
   P4EST_ASSERT (p4est_connectivity_is_valid (p4est->connectivity));
   P4EST_ASSERT (p4est_is_valid (p4est));
 
-  data_size = p4est->data_size;
+  /* when data is not saved the size is set to zero */
+  data_size = save_data ? p4est->data_size : 0;
+
+  /* zero data size is effectively not saved */
+  if (data_size == 0)
+    save_data = 0;
+
   num_procs = p4est->mpisize;
   rank = p4est->mpirank;
   gfpos = p4est->global_first_position;
@@ -2410,11 +2416,6 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
   }
   else
     file = NULL;
-
-  /* zero data size is effectively not saved */
-  if (data_size == 0) {
-    save_data = 0;
-  }
 
 #ifndef P4EST_MPIIO_WRITE
   if (rank > 0) {
@@ -2590,6 +2591,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   long                fpos;
   int                 save_data;
   uint64_t           *u64a;
+  size_t              save_data_size;
   size_t              qbuf_size;
   size_t              zz, zcount;
   FILE               *file;
@@ -2670,11 +2672,11 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
                   "invalid coordinate size");
   SC_CHECK_ABORT (u64a[2] == (uint64_t) sizeof (p4est_quadrant_t),
                   "invalid quadrant size");
-  SC_CHECK_ABORT (u64a[3] == (uint64_t) data_size, "invalid data size");
+  save_data_size = (size_t) u64a[3];
   save_data = (int) u64a[4];
-  SC_CHECK_ABORT (!load_data || save_data, "quadrant data not saved");
-  if (data_size == 0) {
-    save_data = 0;
+  if (load_data) {
+    SC_CHECK_ABORT (save_data_size == data_size, "invalid data size");
+    SC_CHECK_ABORT (save_data, "quadrant data not saved");
   }
   SC_CHECK_ABORT (u64a[5] == (uint64_t) num_procs, "invalid MPI size");
   sc_fread (u64a, sizeof (uint64_t), (size_t) num_procs, file,
@@ -2695,7 +2697,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
       (p4est->global_first_quadrant[rank] * qbuf_size +
        (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
     if (save_data) {
-      fpos += p4est->global_first_quadrant[rank] * data_size;
+      fpos += p4est->global_first_quadrant[rank] * save_data_size;
     }
     retval = fseek (file, fpos, SEEK_CUR);
     SC_CHECK_ABORT (retval == 0, "seek data");
@@ -2760,7 +2762,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
         sc_fread (q->p.user_data, data_size, 1, file, "read quadrant data");
       }
       else if (save_data) {
-        retval = fseek (file, (long) data_size, SEEK_CUR);
+        retval = fseek (file, (long) save_data_size, SEEK_CUR);
         SC_CHECK_ABORT (retval == 0, "seek quadrant data");
       }
       ++tree->quadrants_per_level[q->level];

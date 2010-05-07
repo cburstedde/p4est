@@ -329,13 +329,14 @@ void                p8est_partition (p8est_t * p8est,
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
-/** Save the complete connectivity/p4est data to disk. This is a collective
- * operation that all MPI processes need to call. All processes write
+/** Save the complete connectivity/p4est data to disk.  This is a collective
+ * operation that all MPI processes need to call.  All processes write
  * into the same file, so the filename given needs to be identical over
  * all parallel invocations.
  * \param [in] filename    Name of the file to write.
  * \param [in] p8est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
+ *                         Otherwise, a data size of 0 is saved.
  * \note            Aborts on file errors.
  */
 void                p8est_save (const char *filename, p8est_t * p8est,
@@ -346,9 +347,10 @@ void                p8est_save (const char *filename, p8est_t * p8est,
  * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] data_size        Size of data for each quadrant which can be
  *                              zero.  Then user_data_pool is set to NULL.
- * \param [in] load_data        If true, the element data is loaded.  If also
- *                              no element data was saved and data_size > 0,
- *                              this is an error and the function aborts.
+ *                              If data_size is zero, load_data is ignored.
+ * \param [in] load_data        If true, the element data is loaded.  This is
+ *                              only permitted if the saved data size matches.
+ *                              If false, the stored data size is ignored.
  * \param [in] user_pointer     Assign to the user_pointer member of the p4est
  *                              before init_fn is called the first time.
  * \param [out] connectivity    Connectivity must be destroyed separately.
