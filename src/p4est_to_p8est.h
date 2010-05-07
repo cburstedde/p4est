@@ -243,6 +243,7 @@
 #define p4est_comm_tree_info            p8est_comm_tree_info
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
+#define p4est_comm_checksum             p8est_comm_checksum
 
 /* functions in p4est_vtk */
 #define p4est_vtk_write_file            p8est_vtk_write_file

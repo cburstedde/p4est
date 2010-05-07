@@ -116,6 +116,16 @@ int                 p8est_comm_neighborhood_owned (p8est_t * p8est,
 int                 p8est_comm_sync_flag (p8est_t * p8est,
                                           int flag, MPI_Op operation);
 
+/** Compute a parallel checksum out of local checksums.
+ * \param [in] p8est       The MPI information of this p8est will be used.
+ * \param [in] local_crc   Locally computed adler32 checksum.
+ * \param [in] local_bytes Number of bytes used for local checksum.
+ * \return                 Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p8est_comm_checksum (p8est_t * p8est,
+                                         unsigned local_crc,
+                                         size_t local_bytes);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_COMMUNICATION_H */

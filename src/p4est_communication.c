@@ -26,6 +26,7 @@
 #include <p4est_communication.h>
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
+#include <sc_zlib.h>
 
 #ifdef SC_ALLGATHER
 #include <sc_allgather.h>
@@ -323,4 +324,40 @@ p4est_comm_sync_flag (p4est_t * p4est, int flag, MPI_Op operation)
   SC_CHECK_MPI (mpiret);
 
   return (int) gbyte;
+}
+
+unsigned
+p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
+{
+  uLong               crc = (uLong) local_crc;
+
+#ifdef P4EST_MPI
+  int                 mpiret;
+  int                 p;
+  uint64_t            send[2];
+  uint64_t           *gather;
+
+  send[0] = (uint64_t) local_crc;
+  send[1] = (uint64_t) local_bytes;
+  gather = NULL;
+  if (p4est->mpirank == 0) {
+    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
+  }
+  mpiret = MPI_Gather (send, 2, MPI_LONG_LONG_INT,
+                       gather, 2, MPI_LONG_LONG_INT, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  if (p4est->mpirank == 0) {
+    for (p = 1; p < p4est->mpisize; ++p) {
+      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
+                             (z_off_t) gather[2 * p + 1]);
+    }
+    P4EST_FREE (gather);
+  }
+  else {
+    crc = 0;
+  }
+#endif
+
+  return (unsigned) crc;
 }

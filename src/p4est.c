@@ -2267,12 +2267,6 @@ p4est_checksum (p4est_t * p4est)
   p4est_topidx_t      nt;
   p4est_tree_t       *tree;
   sc_array_t          checkarray;
-#ifdef P4EST_MPI
-  int                 mpiret;
-  int                 p;
-  uint64_t            send[2];
-  uint64_t           *gather;
-#endif
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
@@ -2281,7 +2275,8 @@ p4est_checksum (p4est_t * p4est)
   ssum = 0;
   for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
     tree = p4est_tree_array_index (p4est->trees, nt);
-    treecrc = p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
+    treecrc =
+      (uLong) p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
     scount = 4 * checkarray.elem_count;
     ssum += scount;
     crc = adler32_combine (crc, treecrc, (z_off_t) scount);
@@ -2290,29 +2285,7 @@ p4est_checksum (p4est_t * p4est)
   P4EST_ASSERT ((p4est_locidx_t) ssum ==
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
 
-#ifdef P4EST_MPI
-  send[0] = (uint64_t) crc;
-  send[1] = (uint64_t) ssum;
-  gather = NULL;
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  mpiret = MPI_Gather (send, 2, MPI_LONG_LONG_INT,
-                       gather, 2, MPI_LONG_LONG_INT, 0, p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-
-  crc = 0;
-  if (p4est->mpirank == 0) {
-    crc = gather[0];
-    for (p = 1; p < p4est->mpisize; ++p) {
-      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
-                             (z_off_t) gather[2 * p + 1]);
-    }
-    P4EST_FREE (gather);
-  }
-#endif
-
-  return (unsigned) crc;
+  return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
 }
 
 void

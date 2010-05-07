@@ -116,6 +116,16 @@ int                 p4est_comm_neighborhood_owned (p4est_t * p4est,
 int                 p4est_comm_sync_flag (p4est_t * p4est,
                                           int flag, MPI_Op operation);
 
+/** Compute a parallel checksum out of local checksums.
+ * \param [in] p4est       The MPI information of this p4est will be used.
+ * \param [in] local_crc   Locally computed adler32 checksum.
+ * \param [in] local_bytes Number of bytes used for local checksum.
+ * \return                 Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p4est_comm_checksum (p4est_t * p4est,
+                                         unsigned local_crc,
+                                         size_t local_bytes);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_COMMUNICATION_H */
