@@ -39,11 +39,13 @@ typedef enum
 p4est_ghost_tolerance_t;
 
 #ifdef P4EST_MPI
+
 static inline sc_array_t *
 p4est_ghost_array_index (sc_array_t * array, int i)
 {
   return (sc_array_t *) sc_array_index_int (array, i);
 }
+
 #endif
 
 static p4est_ghost_t *p4est_ghost_new_check (p4est_t * p4est,

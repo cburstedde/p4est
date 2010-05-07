@@ -630,10 +630,10 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
         return;
       }
     }
-    nt[1 - i] = p4est_quadrant_face_neighbor_extra (&(tempq[i]), treeid[i],
-                                                    face[i], &(tempr[1 - i]),
-                                                    info->p4est->
-                                                    connectivity);
+    nt[1 - i] =
+      p4est_quadrant_face_neighbor_extra (&(tempq[i]), treeid[i],
+                                          face[i], &(tempr[1 - i]),
+                                          info->p4est->connectivity);
   }
   if (limit == 2) {
     for (i = 0; i < 2; i++) {
@@ -740,6 +740,7 @@ main (int argc, char **argv)
     p4est_refine (p4est, 1, refine_fn, NULL);
 
     /* balance the forest */
+    /* TODO: use BALANCE_FACE/EDGE when that is known to work */
     p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
 
     /* do a uniform partition */
