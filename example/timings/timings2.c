@@ -173,7 +173,7 @@ main (int argc, char **argv)
   int                 i;
   int                 mpiret;
   int                 wrongusage;
-  unsigned            crc;
+  unsigned            crc, gcrc;
   const char         *config_name, *usage;
   p4est_locidx_t     *quadrant_counts;
   p4est_gloidx_t      count_refined, count_balanced;
@@ -363,6 +363,7 @@ main (int argc, char **argv)
   ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_GHOSTS], snapshot.iwtime, "Ghost layer");
+  gcrc = p4est_ghost_checksum (p4est, ghost);
 
   /* time the node numbering */
   sc_flops_snap (&fi, &snapshot);
@@ -427,8 +428,9 @@ main (int argc, char **argv)
 
   /* print status and checksum */
   P4EST_GLOBAL_STATISTICSF ("Processors %d level %d shift %d"
-                            " tree checksum 0x%08x\n",
-                            mpi->mpisize, refine_level, level_shift, crc);
+                            " checksums 0x%08x 0x%08x\n",
+                            mpi->mpisize, refine_level, level_shift,
+                            crc, gcrc);
   P4EST_GLOBAL_STATISTICSF ("Level %d refined to %lld balanced to %lld\n",
                             refine_level, (long long) count_refined,
                             (long long) count_balanced);
