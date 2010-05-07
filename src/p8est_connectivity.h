@@ -196,6 +196,7 @@ extern const int    p8est_child_corner_edges[8][8];
  * \param [in] num_ett        Number of total trees in edge_to_tree array.
  * \param [in] num_corners    Number of tree-connecting corners.
  * \param [in] num_ctt        Number of total trees in corner_to_tree array.
+ * \return                    A connectivity structure with allocated arrays.
  */
 p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
                                               p4est_topidx_t num_trees,
@@ -203,6 +204,35 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
                                               p4est_topidx_t num_ett,
                                               p4est_topidx_t num_corners,
                                               p4est_topidx_t num_ctt);
+
+/** Allocate a connectivity structure and populate from constants.
+ * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
+ * \param [in] num_trees      Number of trees in the forest.
+ * \param [in] num_edges      Number of tree-connecting edges.
+ * \param [in] num_corners    Number of tree-connecting corners.
+ * \param [in] eoff           Edge-to-tree offsets (num_edges + 1 values).
+ * \param [in] coff           Corner-to-tree offsets (num_corners + 1 values).
+ * \return                    The connectivity is checked for validity.
+ */
+p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
+                                                   num_vertices,
+                                                   p4est_topidx_t num_trees,
+                                                   p4est_topidx_t num_edges,
+                                                   p4est_topidx_t num_corners,
+                                                   const double *vertices,
+                                                   const p4est_topidx_t * ttv,
+                                                   const p4est_topidx_t * ttt,
+                                                   const int8_t * ttf,
+                                                   const p4est_topidx_t * tte,
+                                                   const p4est_topidx_t *
+                                                   eoff,
+                                                   const p4est_topidx_t * ett,
+                                                   const int8_t * ete,
+                                                   const p4est_topidx_t * ttc,
+                                                   const p4est_topidx_t *
+                                                   coff,
+                                                   const p4est_topidx_t * ctt,
+                                                   const int8_t * ctc);
 
 /** Destroy a connectivity structure.
  */

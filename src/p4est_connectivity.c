@@ -56,7 +56,7 @@ const int           p4est_child_corner_faces[4][4] =
 
 #endif /* !P4_TO_P8 */
 
-static p4est_connectivity_t *
+p4est_connectivity_t *
 p4est_connectivity_new_copy (p4est_topidx_t num_vertices,
                              p4est_topidx_t num_trees,
 #ifdef P4_TO_P8
