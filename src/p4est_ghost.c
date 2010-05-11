@@ -1070,6 +1070,8 @@ ghost_tree_type (sc_array_t * array, size_t index, void *data)
   return (size_t) q->p.which_tree;
 }
 
+#ifdef P4EST_MPI
+
 static void
 p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
                       p4est_quadrant_t * nq, p4est_topidx_t nt, int32_t touch,
@@ -1136,6 +1138,8 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
   }
 }
 
+#endif /* P4EST_MPI */
+
 static p4est_ghost_t *
 p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
                        p4est_ghost_tolerance_t tol)
@@ -1145,6 +1149,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_MPI
   const int           rank = p4est->mpirank;
   MPI_Comm            comm = p4est->mpicomm;
+  p4est_connectivity_t *conn = p4est->connectivity;
   int                 face, corner;
   int                 nface, ncheck, ncount;
   int                 i;
@@ -1188,24 +1193,19 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
 #ifdef P4EST_DEBUG
   p4est_quadrant_t   *q2;
 #endif
+  int32_t             touch;
+  p4est_topidx_t      nnt;
+  int                 ftransform[P4EST_FTRANSFORM];
+  p4est_corner_info_t ci;
+  p4est_corner_transform_t *ct;
+  sc_array_t         *cta;
+  size_t              ctree;
 #endif
   size_t             *ppz;
   sc_array_t          split;
   sc_array_t         *ghost_layer;
   p4est_topidx_t      nt;
   p4est_ghost_t      *gl;
-  int32_t             touch;
-  p4est_topidx_t      nnt;
-  p4est_connectivity_t *conn = p4est->connectivity;
-  int                 ftransform[P4EST_FTRANSFORM];
-  size_t              ctree;
-  p4est_corner_info_t ci;
-  p4est_corner_transform_t *ct;
-  sc_array_t         *cta = &ci.corner_transforms;
-
-#ifdef P4_TO_P8
-  eta = &ei.edge_transforms;
-#endif
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_new %s\n",
                             p4est_balance_type_string (btype));
@@ -1219,6 +1219,10 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
 #ifndef P4EST_MPI
   gl->proc_offsets[1] = 0;
 #else
+#ifdef P4_TO_P8
+  eta = &ei.edge_transforms;
+#endif
+  cta = &ci.corner_transforms;
 
   for (i = 0; i < P4EST_HALF; ++i) {
     P4EST_QUADRANT_INIT (&n[i]);
