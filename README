@@ -1,7 +1,9 @@
 
-This is the README file for p4est-0.3.0.
-p4est is a C library to manage a parallel collection of quadtrees and/or
-octrees.
+This is the README file for p4est.
+p4est is free software licensed under GPL version 2 (or later).
+
+p4est is a C library to manage a collection (a forest) of multiple
+connected adaptive quadtrees or octrees in parallel.
 
 See more documentation in the doc subdirectory.
 
@@ -13,18 +15,18 @@ Version 0.2.0 includes libsc 0.5.0.  It handles the 2D forest.
 
 Example configure lines:
 
-# GNU compilers, debug, default BLAS, splint syntax checking.
+# GNU compilers, debug, default BLAS from libsc (not used by p4est).
 # Using an external libsc installed under SC_PATH.
 #
 configure \
         CFLAGS="-Wall -Wextra -Wshadow -Wno-unused-parameter \
                 -O0 -g -rdynamic" \
-        --enable-debug --enable-mpi --with-lint --with-sc=<SC_PATH>
+        --enable-debug --enable-mpi --with-sc=<SC_PATH>
 
 # Intel compilers, debug, mpi, no builtin zlib.
-# Default BLAS, VTK ASCII double output, splint syntax checking.
+# Default BLAS, VTK ASCII double output.
 #
 configure \
         CFLAGS="-Wall -w2 -Wcheck -O0 -g -rdynamic -wd869,981" \
-        --enable-debug --enable-mpi --without-zlib --with-lint \
+        --enable-debug --enable-mpi --without-zlib \
         --disable-vtk-binary --enable-vtk-doubles
