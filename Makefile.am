@@ -1,5 +1,5 @@
 
-# This file is part of the p4est library
+# This file is part of p4est.
 # Makefile.am in toplevel directory
 
 ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@

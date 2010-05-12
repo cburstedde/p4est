@@ -1,5 +1,5 @@
 dnl
-dnl This file is part of the p4est library.
+dnl This file is part of p4est.
 dnl
 
 AC_INIT([p4est],

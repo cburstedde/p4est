@@ -20,7 +20,7 @@ function bdie () {
 }
 
 echo
-echo "This script tries to unpack, configure and build the p4est library."
+echo "This script tries to unpack, configure and build p4est."
 echo "Build FAST: $BUILD_FAST"
 echo "Build DEBUG: $BUILD_DEBUG"
 echo "Install FAST: $INSTALL_FAST"

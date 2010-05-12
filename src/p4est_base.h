@@ -199,7 +199,7 @@ void                P4EST_LERRORF (const char *fmt, ...)
 /* extern declarations */
 extern int          p4est_package_id;
 
-/** Registers the p4est library with SC and sets the logging behavior.
+/** Registers p4est with the SC Library and sets the logging behavior.
  * This function is optional.
  * If this function is not called or called with log_handler == NULL,
  * the default SC log handler will be used.

@@ -1,6 +1,5 @@
 
-This file describes a list of coding standards that the p4est library
-tries to adhere to.
+This file describes coding standards that p4est tries to adhere to.
 
  * Indentation
 
