@@ -31,6 +31,10 @@
 /*
   The subdirectory sc contains the SC Library licensed under GNU LGPL.
   See the files sc/AUTHORS and sc/COPYING for copyright information.
+
+  Several scripts under config are released under GNU GPL versions.
+  These are not compiled or linked with p4est, so we consider them
+  independent programs that are not part of p4est.
 */
 
 Contact:
