@@ -56,6 +56,7 @@ include example/geometry/Makefile.am
 include example/points/Makefile.am
 include example/second/Makefile.am
 include example/simple/Makefile.am
+include example/sieve/Makefile.am
 include example/timings/Makefile.am
 
 if P4EST_BLAS
