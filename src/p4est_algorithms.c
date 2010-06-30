@@ -1853,7 +1853,7 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_ASSERT (global_last_quad_index[num_procs - 1] ==
                 new_global_last_quad_index[num_procs - 1]);
 
-  /* Calculate the global number of shipped quadrants */
+  /* Calculate the global number of shipped (= received) quadrants */
   total_quadrants_shipped = 0;
   for (i = 1; i < num_procs; ++i) {
     diff64 =
@@ -1888,6 +1888,7 @@ p4est_partition_given (p4est_t * p4est,
       = tree->quadrants.elem_count - 1;
   }
   else {
+    /* empty processor */
     P4EST_ASSERT (first_local_tree == -1 && last_local_tree == -2);
   }
   for (which_tree = first_local_tree + 1;       /* same type */
@@ -1908,7 +1909,7 @@ p4est_partition_given (p4est_t * p4est,
   }
 #endif
 
-  /* Calculate where the quadrants are coming from */
+  /* Calculate where the new quadrants are coming from */
   num_recv_from = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   my_begin = (rank == 0) ? 0 : (new_global_last_quad_index[rank - 1] + 1);
@@ -1921,7 +1922,7 @@ p4est_partition_given (p4est_t * p4est,
     from_end = global_last_quad_index[from_proc];
 
     if (from_begin <= my_end && from_end >= my_begin) {
-      /* from_proc sends to me */
+      /* from_proc sends to me but may be empty */
       num_recv_from[from_proc] = SC_MIN (my_end, from_end)
         - SC_MAX (my_begin, from_begin) + 1;
       if (from_proc != rank)
@@ -1977,6 +1978,7 @@ p4est_partition_given (p4est_t * p4est,
   }
 #ifdef P4EST_MPI
   for (; sk < num_proc_recv_from; ++sk) {
+    /* for empty processors in receiving range */
     recv_request[sk] = MPI_REQUEST_NULL;
   }
 #endif
@@ -1995,7 +1997,7 @@ p4est_partition_given (p4est_t * p4est,
     to_end = new_global_last_quad_index[to_proc];
 
     if (to_begin <= my_end && to_end >= my_begin) {
-      /* I send to to_proc */
+      /* I send to to_proc which may be empty */
       num_send_to[to_proc] = SC_MIN (my_end, to_end)
         - SC_MAX (my_begin, to_begin) + 1;
       begin_send_to[to_proc] = SC_MAX (my_begin, to_begin);
@@ -2115,14 +2117,14 @@ p4est_partition_given (p4est_t * p4est,
             quad_send_buf[il].p.user_data = NULL;
           }
 
-          /* move the pointer to the begining of the quads that need copied */
+          /* move pointer to beginning of quads that need to be copied */
           my_begin += num_copy;
           quad_send_buf += num_copy;
           user_data_send_buf += num_copy * data_size;
         }
       }
 
-      /* Post receives for the quadrants and their data */
+      /* Post send operation for the quadrants and their data */
 #ifdef P4EST_MPI
       P4EST_LDEBUGF ("partition send %lld quadrants to %d\n",
                      (long long) num_send_to[to_proc], to_proc);
@@ -2147,7 +2149,7 @@ p4est_partition_given (p4est_t * p4est,
   SC_CHECK_MPI (mpiret);
 #endif
 
-  /* Loop Through and fill in */
+  /* Loop through and fill in */
 
   /* Calculate the local index of the end of each tree in the repartition */
   new_local_tree_elem_count =
@@ -2169,9 +2171,8 @@ p4est_partition_given (p4est_t * p4est,
         ("partition from %d with trees [%lld,%lld] get %lld trees\n",
          from_proc, (long long) first_from_tree, (long long) last_from_tree,
          (long long) num_recv_trees);
-      num_per_tree_recv_buf =
-        (from_proc ==
-         rank) ? num_per_tree_local : (p4est_locidx_t *) recv_buf[from_proc];
+      num_per_tree_recv_buf = (from_proc == rank) ?
+        num_per_tree_local : (p4est_locidx_t *) recv_buf[from_proc];
 
       for (it = 0; it < num_recv_trees; ++it) {
 
