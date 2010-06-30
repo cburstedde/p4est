@@ -89,6 +89,97 @@ weight_once (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int          circle_count;
+
+static void
+circle_init (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrant)
+{
+  int                *idata = (int *) quadrant->p.user_data;
+
+  *idata = ++circle_count;
+}
+
+static void
+test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
+{
+  int                 i, j;
+  int                 num_procs;
+  int                 empty_proc1, empty_proc2;
+  unsigned            crc1, crc2;
+  p4est_gloidx_t      global_num;
+  p4est_locidx_t     *new_counts;
+  p4est_t            *p4est, *copy;
+
+  /* Create a forest and make a copy */
+
+  circle_count = 0;
+  p4est = p4est_new_ext (mpicomm, connectivity, 0, 3, 1,
+                         sizeof (int), circle_init, NULL);
+  num_procs = p4est->mpisize;
+
+  global_num = p4est->global_num_quadrants;
+  crc1 = p4est_checksum (p4est);
+  copy = p4est_copy (p4est, 1);
+  P4EST_ASSERT (p4est_checksum (copy) == crc1);
+
+  new_counts = P4EST_ALLOC (p4est_locidx_t, num_procs);
+
+  /* Partition with one empty processor */
+
+  if (num_procs > 1) {
+    P4EST_GLOBAL_INFO ("First circle partition\n");
+    empty_proc1 = num_procs / 3;
+    j = 0;
+    for (i = 0; i < num_procs; ++i) {
+      if (i == empty_proc1) {
+        new_counts[i] = 0;
+      }
+      else {
+        new_counts[i] = ((j + 1) * global_num) / (num_procs - 1)
+          - (j * global_num) / (num_procs - 1);
+        ++j;
+      }
+    }
+    p4est_partition_given (p4est, new_counts);
+    crc2 = p4est_checksum (p4est);
+    SC_CHECK_ABORT (crc1 == crc2, "First checksum mismatch");
+  }
+
+  /* Partition with two empty processors */
+  if (num_procs > 2) {
+    P4EST_GLOBAL_INFO ("Second circle partition\n");
+    empty_proc1 = (2 * num_procs) / 3 - 2;
+    empty_proc2 = (2 * num_procs) / 3;
+    j = 0;
+    for (i = 0; i < num_procs; ++i) {
+      if (i == empty_proc1 || i == empty_proc2) {
+        new_counts[i] = 0;
+      }
+      else {
+        new_counts[i] = ((j + 1) * global_num) / (num_procs - 2)
+          - (j * global_num) / (num_procs - 2);
+        ++j;
+      }
+    }
+    p4est_partition_given (p4est, new_counts);
+    crc2 = p4est_checksum (p4est);
+    SC_CHECK_ABORT (crc1 == crc2, "Second checksum mismatch");
+  }
+
+  /* Uniform partition */
+  P4EST_GLOBAL_INFO ("Third circle partition\n");
+  p4est_partition (p4est, NULL);
+  crc2 = p4est_checksum (p4est);
+  SC_CHECK_ABORT (crc1 == crc2, "Third checksum mismatch");
+  SC_CHECK_ABORT (p4est_is_equal (p4est, copy, 1), "Forest mismatch");
+
+  P4EST_FREE (new_counts);
+
+  p4est_destroy (copy);
+  p4est_destroy (p4est);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -221,6 +312,9 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (user_data->sum == sum, "bad user_data, sum");
     }
   }
+
+  /* add another test */
+  test_partition_circle (mpicomm, connectivity);
 
   /* clean up and exit */
   P4EST_FREE (num_quadrants_in_proc);
