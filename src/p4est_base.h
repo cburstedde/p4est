@@ -51,12 +51,14 @@ typedef int32_t     p4est_qcoord_t;
 #define P4EST_VTK_QCOORD "Int32"
 #define P4EST_QCOORD_MIN INT32_MIN
 #define P4EST_QCOORD_MAX INT32_MAX
+#define P4EST_QCOORD_1   ((p4est_qcoord_t) 1)
 
 /** Typedef for counting topological entities (trees, vertices). */
 typedef int32_t     p4est_topidx_t;
 #define P4EST_MPI_TOPIDX MPI_INT
 #define P4EST_VTK_TOPIDX "Int32"
 #define P4EST_TOPIDX_MAX INT32_MAX
+#define P4EST_TOPIDX_1   ((p4est_topidx_t) 1)
 
 /** Typedef for processor-local indexing of quadrants and nodes. */
 typedef int32_t     p4est_locidx_t;
@@ -64,12 +66,14 @@ typedef int32_t     p4est_locidx_t;
 #define P4EST_MPI_LOCIDX MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
 #define P4EST_LOCIDX_MAX INT32_MAX
+#define P4EST_LOCIDX_1   ((p4est_locidx_t) 1)
 
 /** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
 #define P4EST_MPI_GLOIDX MPI_LONG_LONG_INT
 #define P4EST_VTK_GLOIDX "Int64"
 #define P4EST_GLOIDX_MAX INT64_MAX
+#define P4EST_GLOIDX_1   ((p4est_gloidx_t) 1)
 
 /* some error checking possibly specific to p4est */
 #ifdef P4EST_DEBUG
