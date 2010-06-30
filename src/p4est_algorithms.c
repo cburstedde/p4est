@@ -1910,7 +1910,7 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   /* Calculate where the new quadrants are coming from */
-  num_recv_from = P4EST_ALLOC (p4est_locidx_t, num_procs);
+  num_recv_from = P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
 
   my_begin = (rank == 0) ? 0 : (new_global_last_quad_index[rank - 1] + 1);
   my_end = new_global_last_quad_index[rank];
@@ -1925,12 +1925,9 @@ p4est_partition_given (p4est_t * p4est,
       /* from_proc sends to me but may be empty */
       num_recv_from[from_proc] = SC_MIN (my_end, from_end)
         - SC_MAX (my_begin, from_begin) + 1;
+      P4EST_ASSERT (num_recv_from[from_proc] >= 0);
       if (from_proc != rank)
         ++num_proc_recv_from;
-    }
-    else {
-      /* from_proc does not send to me */
-      num_recv_from[from_proc] = 0;
     }
   }
 
@@ -1944,7 +1941,7 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   /* Post receives for the quadrants and their data */
-  recv_buf = P4EST_ALLOC (char *, num_procs);
+  recv_buf = P4EST_ALLOC_ZERO (char *, num_procs);
 #ifdef P4EST_MPI
   recv_request = P4EST_ALLOC (MPI_Request, num_proc_recv_from);
   recv_status = P4EST_ALLOC (MPI_Status, num_proc_recv_from);
@@ -1952,7 +1949,7 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Allocate space for receiving quadrants and user data */
   for (from_proc = 0, sk = 0; from_proc < num_procs; ++from_proc) {
-    if (from_proc != rank && num_recv_from[from_proc]) {
+    if (from_proc != rank && num_recv_from[from_proc] > 0) {
       num_recv_trees =          /* same type */
         p4est->global_first_position[from_proc + 1].p.which_tree
         - p4est->global_first_position[from_proc].p.which_tree + 1;
@@ -1971,9 +1968,6 @@ p4est_partition_given (p4est_t * p4est,
       SC_CHECK_MPI (mpiret);
 #endif
       ++sk;
-    }
-    else {
-      recv_buf[from_proc] = NULL;
     }
   }
 #ifdef P4EST_MPI
@@ -2001,6 +1995,7 @@ p4est_partition_given (p4est_t * p4est,
       num_send_to[to_proc] = SC_MIN (my_end, to_end)
         - SC_MAX (my_begin, to_begin) + 1;
       begin_send_to[to_proc] = SC_MAX (my_begin, to_begin);
+      P4EST_ASSERT (num_send_to[to_proc] >= 0);
       if (to_proc != rank)
         ++num_proc_send_to;
     }
@@ -2019,7 +2014,7 @@ p4est_partition_given (p4est_t * p4est,
     }
   }
   for (i = 0; i < num_procs; ++i) {
-    if (begin_send_to[i] >= 0) {
+    if (begin_send_to[i] != -1) {
       P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                      i, (long long) begin_send_to[i]);
     }
