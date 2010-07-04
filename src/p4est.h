@@ -138,6 +138,14 @@ typedef struct p4est
 }
 p4est_t;
 
+/** Calculate memory usage of a forest structure.
+ * The connectivity structure is not counted since it is not owned;
+ * use p4est_connectivity_memory_usage (p4est->connectivity).
+ * \param [in] p4est    Forest structure.
+ * \return              Memory used in bytes.
+ */
+size_t              p4est_memory_used (p4est_t * p4est);
+
 /** Callback function prototype to initialize the quadrant's user data.
  */
 typedef void        (*p4est_init_t) (p4est_t * p4est,

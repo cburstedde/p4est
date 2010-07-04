@@ -144,6 +144,31 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
 #endif
 }
 
+size_t
+p4est_memory_used (p4est_t * p4est)
+{
+  const int           mpisize = p4est->mpisize;
+  size_t              size;
+  p4est_topidx_t      nt;
+  p4est_tree_t       *tree;
+
+  size = sizeof (p4est_t) +
+    (mpisize + 1) * (sizeof (p4est_gloidx_t) + sizeof (p4est_quadrant_t));
+
+  size += sc_array_memory_used (p4est->trees, 1);
+  for (nt = 0; nt < p4est->connectivity->num_trees; ++nt) {
+    tree = p4est_tree_array_index (p4est->trees, nt);
+    size += sc_array_memory_used (&tree->quadrants, 0);
+  }
+
+  if (p4est->data_size > 0) {
+    size += sc_mempool_memory_used (p4est->user_data_pool);
+  }
+  size += sc_mempool_memory_used (p4est->quadrant_pool);
+
+  return size;
+}
+
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            p4est_locidx_t min_quadrants, size_t data_size,

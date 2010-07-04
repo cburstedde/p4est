@@ -135,6 +135,14 @@ typedef struct p8est
 }
 p8est_t;
 
+/** Calculate memory usage of a forest structure.
+ * The connectivity structure is not counted since it is not owned;
+ * use p8est_connectivity_memory_usage (p8est->connectivity).
+ * \param [in] p8est    Forest structure.
+ * \return              Memory used in bytes.
+ */
+size_t              p8est_memory_used (p8est_t * p8est);
+
 /** Callback function prototype to initialize the quadrant's user data.
  */
 typedef void        (*p8est_init_t) (p8est_t * p8est,

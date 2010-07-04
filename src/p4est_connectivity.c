@@ -58,6 +58,27 @@ const int           p4est_child_corner_faces[4][4] =
 
 #endif /* !P4_TO_P8 */
 
+size_t
+p4est_connectivity_memory_used (p4est_connectivity_t * conn)
+{
+  return sizeof (p4est_connectivity_t) +
+    (conn->num_vertices > 0 ?
+     (conn->num_vertices * 3 * sizeof (double) +
+      conn->num_trees * P4EST_CHILDREN * sizeof (p4est_topidx_t)) : 0) +
+    conn->num_trees * P4EST_FACES * (sizeof (p4est_topidx_t) +
+                                     sizeof (int8_t)) +
+#ifdef P4_TO_P8
+    conn->num_trees * P8EST_EDGES * sizeof (p4est_topidx_t) +
+    (conn->num_edges + 1) * sizeof (p4est_topidx_t) +
+    conn->ett_offset[conn->num_edges] * (sizeof (p4est_topidx_t) +
+                                         sizeof (int8_t)) +
+#endif
+    conn->num_trees * P4EST_CHILDREN * sizeof (p4est_topidx_t) +
+    (conn->num_corners + 1) * sizeof (p4est_topidx_t) +
+    conn->ctt_offset[conn->num_corners] * (sizeof (p4est_topidx_t) +
+                                           sizeof (int8_t));
+}
+
 p4est_connectivity_t *
 p4est_connectivity_new_copy (p4est_topidx_t num_vertices,
                              p4est_topidx_t num_trees,

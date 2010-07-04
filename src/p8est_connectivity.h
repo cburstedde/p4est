@@ -115,6 +115,13 @@ typedef struct p8est_connectivity
 }
 p8est_connectivity_t;
 
+/** Calculate memory usage of a connectivity structure.
+ * \param [in] conn   Connectivity structure.
+ * \return            Memory used in bytes.
+ */
+size_t            p8est_connectivity_memory_used (p8est_connectivity_t *
+                                                  conn);
+
 typedef struct
 {
   p4est_topidx_t      ntree;

@@ -107,6 +107,7 @@
 #define p4est_num_ranges                p8est_num_ranges
 
 /* functions in p4est_connectivity */
+#define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
@@ -120,6 +121,7 @@
 
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex
+#define p4est_memory_used               p8est_memory_used
 #define p4est_new                       p8est_new
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_destroy                   p8est_destroy
