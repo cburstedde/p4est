@@ -44,6 +44,8 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 refine_level;
+  size_t              size2, size3;
+  long long           lsize[2], gsize[2];
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity2;
@@ -68,13 +70,26 @@ main (int argc, char **argv)
 
   /* create 2D connectivity and forest structures */
   connectivity2 = p4est_connectivity_new_corner ();
+  size2 = p4est_connectivity_memory_used (connectivity2);
   p4est = p4est_new_ext (mpi->mpicomm, connectivity2,
                          0, refine_level, 1, 0, NULL, NULL);
+  size2 += p4est_memory_used (p4est);
 
   /* create 3D connectivity and forest structures */
   connectivity3 = p8est_connectivity_new_rotcubes ();
+  size3 = p8est_connectivity_memory_used (connectivity3);
   p8est = p8est_new_ext (mpi->mpicomm, connectivity3,
                          0, refine_level, 1, 0, NULL, NULL);
+  size3 += p8est_memory_used (p8est);
+
+  /* compute total size of forest storage */
+  lsize[0] = (long long) size2;
+  lsize[1] = (long long) size3;
+  mpiret =
+    MPI_Reduce (lsize, gsize, 2, MPI_LONG_LONG_INT, MPI_SUM, 0, mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_INFOF ("Total forest byte sizes: %lld (2D), %lld (3D)\n",
+                      gsize[0], gsize[1]);
 
   /* write vtk output files */
   p4est_vtk_write_file (p4est, NULL, "p4est_sieve");
