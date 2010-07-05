@@ -1,4 +1,4 @@
---- !ditz.rubyforge.org,2008-03-06/issue
+--- !ditz.rubyforge.org,2008-03-06/issue 
 title: "Replace p4est_to_p8est.h with P48EST ## construction"
 desc: |-
   Currently p4est_to_p8est.h redefines every p4est function, data type, etc.
@@ -8,14 +8,18 @@ type: :task
 component: p4est
 release: "0.4"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition:
+status: :closed
+disposition: :wontfix
 creation_time: 2008-10-16 19:08:09.693280 Z
 references: []
 
 id: 927e4b037e69d0b970faa9e882fde8519f9b21b7
-log_events:
+log_events: 
 - - 2008-10-16 19:08:10.957076 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2010-07-05 20:13:38.686646 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition wontfix
+  - It works for us.  People can write wrappers if they want.

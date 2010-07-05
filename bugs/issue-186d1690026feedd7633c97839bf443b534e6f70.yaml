@@ -8,8 +8,8 @@ type: :feature
 component: p4est
 release: "0.4"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :reorg
 creation_time: 2008-10-31 02:42:27.098035 Z
 references: []
 
@@ -19,3 +19,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2010-07-05 20:15:47.119808 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition reorg
+  - This will be addressed in {issue d0e99b9f6d2204e88c8e00a2c0812ae65c2910d5} with lua code.
