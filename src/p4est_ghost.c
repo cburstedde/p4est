@@ -1213,6 +1213,8 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
                             p4est_balance_type_string (btype));
 
   gl = P4EST_ALLOC (p4est_ghost_t, 1);
+  gl->mpisize = num_procs;
+  gl->num_trees = num_trees;
   ghost_layer = &gl->ghosts;
   sc_array_init (ghost_layer, sizeof (p4est_quadrant_t));
   gl->tree_offsets = P4EST_ALLOC (p4est_locidx_t, num_trees + 1);

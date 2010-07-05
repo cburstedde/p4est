@@ -30,6 +30,9 @@ SC_EXTERN_C_BEGIN;
 
 typedef struct
 {
+  int                 mpisize;
+  p4est_topidx_t      num_trees;
+
   /** An array of quadrants which make up the ghost layer around \a
    * p4est.  Their piggy3 data member is filled with their owner's tree
    * and local number.  Quadrants will be ordered in \c
@@ -38,8 +41,9 @@ typedef struct
    * true for the quadrant and the neighboring tree.
    */
   sc_array_t          ghosts;
+
   p4est_locidx_t     *tree_offsets;     /* num_trees + 1 ghost indices */
-  p4est_locidx_t     *proc_offsets;     /* num_procs + 1 ghost indices */
+  p4est_locidx_t     *proc_offsets;     /* mpisize + 1 ghost indices */
 }
 p8est_ghost_t;
 
