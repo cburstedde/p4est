@@ -47,6 +47,12 @@ typedef struct
 }
 p4est_ghost_t;
 
+/** Calculate the memory usage of the ghost layer.
+ * \param [in] ghost    Ghost layer structure.
+ * \return              Memory used in bytes.
+ */
+size_t              p4est_ghost_memory_used (p4est_ghost_t * ghost);
+
 /** Gets the processor id of a quadrant's owner.
  * The quadrant can lie outside of a tree across faces (and only faces).
  *

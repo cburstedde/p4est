@@ -259,6 +259,7 @@
 
 /* functions in p4est_ghost */
 #define p4est_quadrant_find_owner       p8est_quadrant_find_owner
+#define p4est_ghost_memory_used         p8est_ghost_memory_used
 #define p4est_ghost_new                 p8est_ghost_new
 #define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_ghost_tree_bsearch        p8est_ghost_tree_bsearch

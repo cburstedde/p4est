@@ -48,6 +48,15 @@ typedef enum
 }
 p4est_ghost_tolerance_t;
 
+size_t
+p4est_ghost_memory_used (p4est_ghost_t * ghost)
+{
+  return sizeof (p4est_ghost_t) +
+    sc_array_memory_used (&ghost->ghosts, 0) +
+    (ghost->mpisize + 1) * sizeof (p4est_locidx_t) +
+    (ghost->num_trees + 1) * sizeof (p4est_locidx_t);
+}
+
 #ifdef P4EST_MPI
 
 static inline sc_array_t *
