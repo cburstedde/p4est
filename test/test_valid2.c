@@ -84,7 +84,10 @@ static void
 check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected, unsigned gcrc_expected)
 {
+  int                 mpiret;
   unsigned            crc_computed, gcrc_computed;
+  long long           lsize[3], gsize[3];
+  size_t              size_conn, size_p4est, size_ghost;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
@@ -108,6 +111,19 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   }
 
   ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+
+  /* compute total size of forest storage */
+  size_conn = p4est_connectivity_memory_used (conn);
+  size_p4est = p4est_memory_used (p4est);
+  size_ghost = p4est_ghost_memory_used (ghost);
+  lsize[0] = (long long) size_conn;
+  lsize[1] = (long long) size_p4est;
+  lsize[2] = (long long) size_ghost;
+  mpiret =
+    MPI_Reduce (lsize, gsize, 3, MPI_LONG_LONG_INT, MPI_SUM, 0, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_INFOF ("Global byte sizes: %lld %lld %lld\n",
+                      gsize[0], gsize[1], gsize[2]);
 
   gcrc_computed = p4est_ghost_checksum (p4est, ghost);
   P4EST_GLOBAL_STATISTICSF ("Ghost checksum 0x%08x\n", gcrc_computed);
