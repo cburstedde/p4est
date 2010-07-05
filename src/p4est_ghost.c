@@ -1097,6 +1097,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
   sc_array_t         *buf;
   int32_t             rb;
 
+  P4EST_ASSERT (q->level == nq->level);
   n0_proc = p4est_comm_find_owner (p4est, nt, nq, rank);
   P4EST_ASSERT (n0_proc >= 0);
   if (q->level == P4EST_QMAXLEVEL) {
@@ -1133,6 +1134,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
     else {
       uq = &temp;
       next_lid = p4est_quadrant_linear_id (&(gfp[proc + 1]), P4EST_QMAXLEVEL);
+      P4EST_ASSERT (next_lid > 0);
       uid = next_lid - 1;
       p4est_quadrant_set_morton (uq, P4EST_QMAXLEVEL, uid);
       P4EST_ASSERT (p4est_quadrant_is_valid (uq));
@@ -1592,11 +1594,13 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
             if (n[0].x < 0 || n[0].x >= P4EST_ROOT_LEN) {
               face = p4est_corner_faces[corner][0];
             }
+#ifdef P4_TO_P8
             else if (n[0].y < 0 || n[0].y >= P4EST_ROOT_LEN) {
               face = p4est_corner_faces[corner][1];
             }
+#endif
             else {
-              face = p4est_corner_faces[corner][2];
+              face = p4est_corner_faces[corner][P4EST_DIM - 1];
             }
             nnt = p4est_find_face_transform (conn, nt, face, ftransform);
             if (nnt < 0) {
