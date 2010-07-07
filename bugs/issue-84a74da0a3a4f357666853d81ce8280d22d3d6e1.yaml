@@ -8,8 +8,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :reorg
 creation_time: 2008-10-20 19:23:12.081863 Z
 references: []
 
@@ -23,3 +23,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - unassigned from release 0.3
   - ""
+- - 2010-07-07 15:34:06.051955 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition reorg
+  - |-
+    This is superseded by the new ghost layer implementation
+    that does not require any balance condition anymore.
