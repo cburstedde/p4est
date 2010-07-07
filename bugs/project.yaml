@@ -7,13 +7,17 @@ components:
 releases: 
 - !ditz.rubyforge.org,2008-03-06/release 
   name: "0.3"
-  status: :unreleased
-  release_time: 
+  status: :released
+  release_time: 2010-07-07 16:06:55.540168 Z
   log_events: 
   - - 2008-10-16 17:36:04.252955 Z
     - Carsten Burstedde <carsten@ices.utexas.edu>
     - created
     - Release 0.3 should have full 2D and 3D functionality.
+  - - 2010-07-07 16:06:55.540184 Z
+    - Carsten Burstedde <carsten@ices.utexas.edu>
+    - released
+    - This has been done on 2010-01-22.
 - !ditz.rubyforge.org,2008-03-06/release 
   name: "0.4"
   status: :unreleased
