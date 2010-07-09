@@ -12,7 +12,7 @@ p4est_test_programs += \
         test/p4est_test_valid test/p4est_test_balance_type \
         test/p4est_test_loadsave test/p4est_test_order \
         test/p4est_test_iterate test/p4est_test_lnodes \
-        test/p4est_test_search
+        test/p4est_test_search test/p4est_test_partition_corr
 endif
 if P4EST_ENABLE_BUILD_3D
 p4est_test_programs += \
@@ -23,7 +23,7 @@ p4est_test_programs += \
         test/p8est_test_periodic test/p8est_test_geometry \
         test/p8est_test_loadsave test/p8est_test_brick \
         test/p8est_test_iterate test/p8est_test_lnodes \
-        test/p8est_test_search
+        test/p8est_test_search test/p8est_test_partition_corr
 endif
 
 check_PROGRAMS += $(p4est_test_programs)
@@ -41,6 +41,7 @@ test_p4est_test_loadsave_SOURCES = test/test_loadsave2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
 test_p4est_test_search_SOURCES = test/test_search2.c
+test_p4est_test_partition_corr_SOURCES = test/test_partition_corr2.c
 
 test_p8est_test_quadrants_SOURCES = test/test_quadrants3.c
 test_p8est_test_balance_SOURCES = test/test_balance3.c
@@ -57,6 +58,7 @@ test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
 test_p8est_test_lnodes_SOURCES = test/test_lnodes3.c
 test_p8est_test_search_SOURCES = test/test_search3.c
+test_p8est_test_partition_corr_SOURCES = test/test_partition_corr3.c
 
 TESTS += $(p4est_test_programs)
 
@@ -74,6 +76,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
         $(test_p4est_test_search_SOURCES) \
+				$(test_p4est_test_partition_corr_SOURCES) \
         $(test_p8est_test_quadrants_SOURCES) \
         $(test_p8est_test_balance_SOURCES) \
         $(test_p8est_test_partition_SOURCES) \
@@ -88,4 +91,5 @@ LINT_CSOURCES += \
         $(test_p8est_test_brick_SOURCES) \
         $(test_p8est_test_iterate_SOURCES) \
         $(test_p8est_test_lnodes_SOURCES) \
-        $(test_p8est_test_search_SOURCES)
+        $(test_p8est_test_search_SOURCES) \
+				$(test_p8est_test_partition_corr_SOURCES)
