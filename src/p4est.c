@@ -1969,24 +1969,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
-  
-  /* variables for partition correction */
-  int                 parent_index;
-  p4est_locidx_t      num_quadrants_in_tree;
-  p4est_topidx_t      it, tree_index;
-  p4est_gloidx_t      iq, quad_id_near_cut;
-  p4est_gloidx_t      min_quad_id, max_quad_id;
-  int8_t              quad_near_cut_level;
-  p4est_gloidx_t     *partition_now = p4est->global_first_quadrant;
-  p4est_gloidx_t     *partition_new;
-  p4est_quadrant_t   *parent_send;
-  MPI_Request        *receive_requests;
-  int                 receive_lowest, receive_highest, num_receives;
-  int                 process_with_cut, process_with_cut_recv_id;
-  p4est_quadrant_t   *parent_receive;
-  int                *receive_process;
-  int                *correction, correction_local;
-  int                 current_proc, next_proc;
+  int                 num_corrected, run_correction = 1; 
 #endif /* P4EST_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -2264,10 +2247,59 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
     }
 #endif
   }
-  
-  
-  /* BEGIN: partition correction where quadrant families are split over
-   *        multiple processes */
+ 
+  /* correct partition */
+  if (run_correction) {
+    num_corrected = p4est_correct_partition (p4est, num_quadrants_in_proc);
+    P4EST_GLOBAL_PRODUCTIONF (
+      "Designated new partition corrected, %d quadrants moved\n",
+      num_corrected
+    );
+  }
+
+  /* run the partition algorithm with proper quadrant counts */
+  global_shipped = p4est_partition_given (p4est, num_quadrants_in_proc);
+  P4EST_FREE (num_quadrants_in_proc);
+
+  /* check validity of the p4est */
+  P4EST_ASSERT (p4est_is_valid (p4est));
+#endif /* P4EST_MPI */
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_partition shipped %lld quadrants %.3g%%\n",
+     (long long) global_shipped,
+     global_shipped * 100. / global_num_quadrants);
+}
+
+int
+p4est_correct_partition (p4est_t *p4est, p4est_locidx_t *num_quadrants_in_proc)
+{
+  int                 num_procs = p4est->mpisize;
+  int                 rank = p4est->mpirank;
+  int                 mpiret;
+  p4est_gloidx_t      global_num_quadrants = p4est->global_num_quadrants;
+  int                 i, send_lowest, send_highest, num_sends;
+  int                 parent_index;
+  p4est_quadrant_t   *q;
+  p4est_tree_t       *tree;
+  p4est_locidx_t      num_quadrants_in_tree;
+  p4est_topidx_t      it, tree_index;
+  p4est_gloidx_t      iq, quad_id_near_cut;
+  p4est_gloidx_t      min_quad_id, max_quad_id;
+  int8_t              quad_near_cut_level;
+  p4est_gloidx_t     *partition_now = p4est->global_first_quadrant;
+  p4est_gloidx_t     *partition_new;
+  p4est_quadrant_t   *parent_send;
+  MPI_Request        *send_requests;
+  MPI_Request        *receive_requests;
+  int                 receive_lowest, receive_highest, num_receives;
+  int                 process_with_cut, process_with_cut_recv_id;
+  p4est_quadrant_t   *parent_receive;
+  int                *receive_process;
+  int                *correction, correction_local;
+  int                 current_proc, next_proc;
+  int                 num_moved_quadrants; 
+
 
   /* create array with first quadrants of new partition */
   partition_new = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
@@ -2653,11 +2685,13 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   next_proc = p4est_find_next_nonempty_process (
                 current_proc + 1, num_procs, num_quadrants_in_proc
   );
+  num_moved_quadrants = 0;
   while (current_proc < num_procs) { /* loop over all non empty processes */
     /* compute correct partition for process `current_proc` */
     if (0 < current_proc && current_proc < num_procs) { /* if any process
                                                          * but first */
       num_quadrants_in_proc[current_proc] += correction[current_proc];
+      num_moved_quadrants += abs (correction[current_proc]);
     }
     if (current_proc == 0 || next_proc < num_procs) { /* if first process
                                                        * or next process is 
@@ -2671,28 +2705,15 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
                   next_proc + 1, num_procs, num_quadrants_in_proc
     );
   }
-  //if (rank == 0) { printf ("\n"); for (i=0; i<num_procs; i++) { printf("### DEV ### result %d ; num quads %d ; corr %d ; num quads corrected %d\n", i, num_quadrants_in_proc_copy[i], correction[i], num_quadrants_in_proc[i]); } }
+  //if (rank == 0) { printf ("\n"); for (i=0; i<num_procs; i++) { printf("### DEV ### result %d ; corr %d ; num quads corrected %d\n", i, correction[i], num_quadrants_in_proc[i]); } }
 
 
   /* free memory */
   P4EST_FREE (correction);
-  
-  /* END: partition correction where quadrant families are split over
-   *      multiple processes */
 
 
-  /* run the partition algorithm with proper quadrant counts */
-  global_shipped = p4est_partition_given (p4est, num_quadrants_in_proc);
-  P4EST_FREE (num_quadrants_in_proc);
-
-  /* check validity of the p4est */
-  P4EST_ASSERT (p4est_is_valid (p4est));
-#endif /* P4EST_MPI */
-
-  P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_partition shipped %lld quadrants %.3g%%\n",
-     (long long) global_shipped,
-     global_shipped * 100. / global_num_quadrants);
+  /* return absolute number of moved quadrants */
+  return num_moved_quadrants;
 }
 
 unsigned
