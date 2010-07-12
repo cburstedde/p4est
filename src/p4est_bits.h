@@ -39,6 +39,13 @@ void                p4est_quadrant_print (int log_priority,
 int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                                              const p4est_quadrant_t * q2);
 
+/** Test if two quadrants overlap.
+ * \return true if \a q1 and \a q2 are equal or one is the ancestor of the
+ * other.
+ */
+int                 p4est_quadrant_overlaps (const p4est_quadrant_t * q1,
+                                             const p4est_quadrant_t * q2);
+
 /** Test if two quadrants have equal Morton indices and the same tree id.
  * \return          true if \a q1 describes the same quadrant as \a q2
  *                  and the p.which_tree fields are equal.
@@ -55,6 +62,14 @@ int                 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
  *                 > 0 if \a v1 > \a v2
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
+
+/** Compare two quadrants in their Morton ordering, with equivalence if the
+ * two quadrants overlap.
+ * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \v2 do not overlap,
+ *                   0 if \a v1 and \a v2 overlap,
+ *                 > 0 if \a v1 > \a v2 and \a v1 and \v2 do not overlap.
+ */
+int                 p4est_quadrant_disjoint (const void *v1, const void *v2);
 
 /** Compare two quadrants in their Morton ordering and the which_tree member.
  * Both quadrants must be extended (superset of valid, see below).

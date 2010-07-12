@@ -747,32 +747,6 @@ p4est_iter_reset_corner (p4est_iter_corner_args_t * args)
   P4EST_FREE (args->start_idx2);
 }
 
-/* this isn't strictly a correct comparison operator: A may contain B and C,
- * so A = C and A = B, but if B and C do not overlap, B != C.  It works,
- * however, when we are testing a quadrant of the smallest size against a
- * a list of non overlapping quadrants, because the quadrant can only be
- * contained by one quadrant in the list.
- */
-static int
-p4est_quadrant_compare_contains (const void *a, const void *b)
-{
-  const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
-  const p4est_quadrant_t *r = (p4est_quadrant_t *) b;
-  int8_t              level = (q->level < r->level) ? q->level : r->level;
-  p4est_qcoord_t      mask =
-    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
-
-  if (((q->x ^ r->x) & mask) || ((q->y ^ r->y) & mask)
-#ifdef P4_TO_P8
-      || ((q->z ^ r->z) & mask)
-#endif
-    ) {
-    return p4est_quadrant_compare (a, b);
-  }
-
-  return 0;
-}
-
 static void
 p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
                       p4est_iter_corner_t iter_corner)
@@ -904,7 +878,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
           sc_array_init_view (&test_view, quadrants[st],
                               first_index[st], count[st]);
           temp_idx = sc_array_bsearch (&test_view, &temp,
-                                       p4est_quadrant_compare_contains);
+                                       p4est_quadrant_disjoint);
           /* if there is no quadrant containing temp, then no quad in the
            * search area can touch the corner */
           if (temp_idx == -1) {
@@ -918,8 +892,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
         }
         /* if we have found the right quadrant for this side of the corner */
         if (test[st] != NULL) {
-          P4EST_ASSERT (p4est_quadrant_compare_contains
-                        (test[st], &temp) == 0);
+          P4EST_ASSERT (p4est_quadrant_overlaps (test[st], &temp));
           P4EST_ASSERT (temp_idx >= 0 && (size_t) temp_idx < count[st]);
           temp_idx += first_index[st];
           cside->quad = test[st];
