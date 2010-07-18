@@ -202,7 +202,7 @@ void                p4est_qcoord_to_vertex (p4est_connectivity_t *
                                             connectivity,
                                             p4est_topidx_t treeid,
                                             p4est_qcoord_t x,
-                                            p4est_qcoord_t y, double vxy[2]);
+                                            p4est_qcoord_t y, double vxyz[3]);
 
 /** Create a new forest.
  * Each processor is assigned a domain partition of equal size.

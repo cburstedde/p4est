@@ -79,7 +79,7 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
 #ifdef P4_TO_P8
                         p4est_qcoord_t z,
 #endif
-                        double vxy[P4EST_DIM])
+                        double vxyz[3])
 {
   const double       *vertices = connectivity->vertices;
 #ifdef P4EST_DEBUG
@@ -101,20 +101,19 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
 
   P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
   vindices = connectivity->tree_to_vertex + P4EST_CHILDREN * treeid;
+  
+  vxyz[0] = vxyz[1] = vxyz[2] = 0.;
 
   P4EST_ASSERT (x >= 0 && x <= P4EST_ROOT_LEN);
-  vxy[0] = 0.;
   wx[1] = (double) x / (double) P4EST_ROOT_LEN;
   wx[0] = 1. - wx[1];
 
   P4EST_ASSERT (y >= 0 && y <= P4EST_ROOT_LEN);
-  vxy[1] = 0.;
   wy[1] = (double) y / (double) P4EST_ROOT_LEN;
   wy[0] = 1. - wy[1];
 
 #ifdef P4_TO_P8
   P4EST_ASSERT (z >= 0 && z <= P4EST_ROOT_LEN);
-  vxy[2] = 0.;
   wz[1] = (double) z / (double) P4EST_ROOT_LEN;
   wz[0] = 1. - wz[1];
 
@@ -132,11 +131,9 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
         vindex = *vindices++;
         P4EST_ASSERT (vindex >= 0 && vindex < num_vertices);
 
-        vxy[0] += xfactor * vertices[P4EST_DIM * vindex + 0];
-        vxy[1] += xfactor * vertices[P4EST_DIM * vindex + 1];
-#ifdef P4_TO_P8
-        vxy[2] += xfactor * vertices[P4EST_DIM * vindex + 2];
-#endif
+        vxyz[0] += xfactor * vertices[3 * vindex + 0];
+        vxyz[1] += xfactor * vertices[3 * vindex + 1];
+        vxyz[2] += xfactor * vertices[3 * vindex + 2];
       }
     }
 #ifdef P4_TO_P8
