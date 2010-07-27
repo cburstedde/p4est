@@ -69,7 +69,7 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 int
 main (int argc, char **argv)
 {
-  int                 rank, num_procs, mpiret;
+  int                 rank, num_procs, mpiret, i=0;
   MPI_Comm            mpicomm = MPI_COMM_WORLD;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
@@ -103,9 +103,11 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_refined");
 
   /* run partition and coarsen till one quadrant per tree remains */
-  while (p4est->global_num_quadrants > connectivity->num_trees) {
+  while (p4est->global_num_quadrants > connectivity->num_trees &&
+         i <= P4EST_MAXLEVEL) {
     p4est_partition (p4est, NULL);
     p4est_coarsen (p4est, 0, coarsen_fn, init_fn);
+    i++;
   }
   SC_CHECK_ABORT (p4est->global_num_quadrants == connectivity->num_trees,
                   "coarsest forest was not achieved");
