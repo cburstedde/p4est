@@ -36,7 +36,7 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
                                           "p4est", "A forest of octrees");
 
   w = 24;
-  P4EST_GLOBAL_ESSENTIALF ("This is %s.\n", P4EST_PACKAGE_STRING);
+  P4EST_GLOBAL_ESSENTIALF ("This is %s\n", P4EST_PACKAGE_STRING);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CC", P4EST_CC);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "C_VERSION", P4EST_C_VERSION);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
