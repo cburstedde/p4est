@@ -12,7 +12,6 @@ AC_CONFIG_AUX_DIR([config])
 AC_PREFIX_DEFAULT([$PWD/local])
 AM_INIT_AUTOMAKE([subdir-objects])
 SC_PREFIX_CONFIG_H([src/p4est_config.h])
-SC_LIBTOOL([P4EST])
 
 # Configure switches
 echo "o---------------------------------------"
@@ -68,7 +67,9 @@ echo "o----------------------------------"
 echo "| Checking for compilers"
 echo "o----------------------------------"
 
-SC_MPI([P4EST], [icc gcc cc])
+SC_MPI_CONFIG([P4EST])
+SC_MPI_ENGAGE([P4EST])
+SC_LIBTOOL([P4EST])
 AM_PROG_CC_C_O
 AC_PROG_RANLIB
 SC_PROG_LINT
