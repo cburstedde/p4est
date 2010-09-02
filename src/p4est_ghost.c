@@ -1121,24 +1121,41 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
     if (proc == rank) {
       continue;
     }
+    lq = &(gfp[proc]);
+    uq = &(gfp[proc + 1]);
+    /* check for empty processor */
+    if (p4est_quadrant_is_equal (lq, uq)) {
+      continue;
+    }
     if (proc == n0_proc) {
       lq = NULL;
     }
     else {
-      lq = &(gfp[proc]);
       P4EST_ASSERT (p4est_quadrant_is_valid (lq));
+      P4EST_ASSERT (lq->p.which_tree == nt);
+      P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, lq) ||
+                    p4est_quadrant_is_equal (nq, lq));
     }
     if (proc == n1_proc) {
       uq = NULL;
     }
     else {
-      uq = &temp;
-      next_lid = p4est_quadrant_linear_id (&(gfp[proc + 1]), P4EST_QMAXLEVEL);
+      P4EST_ASSERT (p4est_quadrant_is_valid (uq));
+      P4EST_ASSERT (uq->p.which_tree == nt);
+      P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, uq) ||
+                    p4est_quadrant_is_equal (nq, uq));
+      next_lid = p4est_quadrant_linear_id (uq, P4EST_QMAXLEVEL);
       P4EST_ASSERT (next_lid > 0);
       uid = next_lid - 1;
+      uq = &temp;
       p4est_quadrant_set_morton (uq, P4EST_QMAXLEVEL, uid);
       P4EST_ASSERT (p4est_quadrant_is_valid (uq));
     }
+#ifdef P4EST_DEBUG
+    if (lq != NULL && uq != NULL) {
+      P4EST_ASSERT (p4est_quadrant_compare (lq, uq) <= 0);
+    }
+#endif
     rb = p4est_find_range_boundaries (lq, uq, (int) q->level,
 #ifdef P4_TO_P8
                                       NULL,
