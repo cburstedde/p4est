@@ -21,6 +21,14 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/********************************************************************
+ *                          IMPORTANT NOTE                          *
+ *                                                                  *
+ * The p4est_geometry interface will be removed shortly.            *
+ * Please do NOT use this interface for newly written code.         *
+ * It will be replaced with a generic transfinite blending scheme.  *
+ ********************************************************************/
+
 #ifdef P4_TO_P8
 #include <p8est_vtk.h>
 #include <p8est_nodes.h>
