@@ -65,7 +65,7 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
 
 static void
-run_bricks (MPI_Comm mpicomm, int l, int rlevel)
+run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
 {
 #ifndef P4_TO_P8
   sc_abort_collective ("The brick is not yet implemented in 2D");
@@ -89,7 +89,7 @@ run_bricks (MPI_Comm mpicomm, int l, int rlevel)
   elapsed_create = -MPI_Wtime ();
 
   tcount = 1 << l;
-  conn = p8est_connectivity_new_brick (tcount, tcount, tcount, 0, 0, 0);
+  conn = p8est_connectivity_new_brick (tcount, tcount, tcount, per, per, per);
   p4est = p4est_new_ext (mpicomm, conn, 0, rlevel - l, 1, 0, NULL, NULL);
 
   level_shift = 4;
@@ -139,6 +139,7 @@ main (int argc, char **argv)
   MPI_Comm            mpicomm;
   int                 mpiret, retval;
   int                 rlevel, l;
+  int                 periodic;
   sc_options_t       *opt;
 
   mpiret = MPI_Init (&argc, &argv);
@@ -151,6 +152,8 @@ main (int argc, char **argv)
   opt = sc_options_new (argv[0]);
   sc_options_add_int (opt, 'l', "level", &rlevel, 0,
                       "Upfront refinement level");
+  sc_options_add_switch (opt, 'p', "periodic", &periodic,
+                         "Periodic connectivity");
   retval = sc_options_parse (p4est_package_id, SC_LP_ERROR, opt, argc, argv);
   if (retval == -1 || retval < argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_PRODUCTION, opt, NULL);
@@ -158,7 +161,7 @@ main (int argc, char **argv)
   }
 
   for (l = 0; l <= rlevel; ++l) {
-    run_bricks (mpicomm, l, rlevel);
+    run_bricks (mpicomm, periodic, l, rlevel);
   }
 
   sc_options_destroy (opt);
