@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Extend brick connectivity to 2D
+desc: The brick is written for 3D only.  Would be nice to have a 2D version.
+type: :feature
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2010-09-29 16:12:44.591400 Z
+references: []
+
+id: 6c6239e053919531627e706685ed4c811e474eda
+log_events: 
+- - 2010-09-29 16:12:46.423280 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
