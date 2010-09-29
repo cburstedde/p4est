@@ -6,7 +6,7 @@ desc: |-
   This makes the p4est and connectivity files machine independent.
 type: :feature
 component: p4est
-release: "0.5"
+release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
 disposition: 
@@ -18,4 +18,8 @@ log_events:
 - - 2008-10-30 17:04:57.634788 Z
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
+  - ""
+- - 2010-09-29 15:33:52.812363 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - unassigned from release 0.5
   - ""

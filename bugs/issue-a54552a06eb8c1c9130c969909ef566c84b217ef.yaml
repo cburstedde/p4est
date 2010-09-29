@@ -10,8 +10,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :in_progress
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2009-08-12 17:05:21.842088 Z
 references: []
 
@@ -25,3 +25,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - changed status from unstarted to in_progress
   - Taks 1. and 4. have been implemented.
+- - 2010-09-29 15:30:29.570672 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - While 2 and 3 are still open, other optimizations have been used.

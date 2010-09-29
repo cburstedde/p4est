@@ -7,8 +7,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :wontfix
 creation_time: 2009-03-19 19:51:52.151946 Z
 references: []
 
@@ -18,3 +18,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2010-09-29 15:32:52.459831 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition wontfix
+  - |-
+    The p4est_geometry interface will be removed.
+    It will be replaced by a generic transfinite blending scheme.
