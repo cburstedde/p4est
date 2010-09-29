@@ -119,8 +119,8 @@ p8est_connectivity_t;
  * \param [in] conn   Connectivity structure.
  * \return            Memory used in bytes.
  */
-size_t            p8est_connectivity_memory_used (p8est_connectivity_t *
-                                                  conn);
+size_t              p8est_connectivity_memory_used (p8est_connectivity_t *
+                                                    conn);
 
 typedef struct
 {
@@ -308,8 +308,6 @@ p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
 /** An m by n by p array with periodicity in x, y, and z if
  * periodic_a, periodic_b, and periodic_c are true, respectively.
- *
- * This function is contributed by Toby Isaac.
  */
 p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p,
                                                     int periodic_a,

@@ -399,7 +399,6 @@ p8est_connectivity_new_twowrap (void)
                                       NULL, &num_ctt, NULL, NULL);
 }
 
-/* This function is contributed by Toby Isaac. */
 p4est_connectivity_t *
 p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
                               int periodic_b, int periodic_c)
