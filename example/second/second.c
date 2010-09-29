@@ -76,7 +76,7 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
-  p4est = p4est_new (mpi->mpicomm, connectivity, 15, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
 
   /* partition and refine the mesh */
   (void) p4est_partition_given (p4est, given);

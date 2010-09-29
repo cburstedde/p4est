@@ -101,7 +101,7 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
 
   P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
   vindices = connectivity->tree_to_vertex + P4EST_CHILDREN * treeid;
-  
+
   vxyz[0] = vxyz[1] = vxyz[2] = 0.;
 
   P4EST_ASSERT (x >= 0 && x <= P4EST_ROOT_LEN);
@@ -168,10 +168,9 @@ p4est_memory_used (p4est_t * p4est)
 
 p4est_t            *
 p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
-           p4est_locidx_t min_quadrants, size_t data_size,
-           p4est_init_t init_fn, void *user_pointer)
+           size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
-  return p4est_new_ext (mpicomm, connectivity, min_quadrants, 0, 0,
+  return p4est_new_ext (mpicomm, connectivity, 0, 0, 1,
                         data_size, init_fn, user_pointer);
 }
 

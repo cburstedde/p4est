@@ -148,7 +148,7 @@ main (int argc, char **argv)
   geom = p8est_geometry_new_sphere (1., 0.191728, 0.039856);
   vtkname = "test_search3";
 #endif
-  p4est = p4est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);

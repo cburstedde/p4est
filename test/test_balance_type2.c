@@ -109,7 +109,7 @@ main (int argc, char **argv)
 #else
   connectivity = p8est_connectivity_new_rotcubes ();
 #endif
-  p4est = p4est_new (mpicomm, connectivity, 0, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpicomm, connectivity, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
 
   /* test face balance */

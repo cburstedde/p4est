@@ -265,8 +265,8 @@ main (int argc, char **argv)
   else {
     connectivity = p8est_connectivity_new_unitcube ();
   }
-  p8est = p8est_new (mpi->mpicomm, connectivity, 1,
-                     sizeof (user_data_t), init_fn, NULL);
+  p8est = p8est_new_ext (mpi->mpicomm, connectivity, 1, 0, 0,
+                         sizeof (user_data_t), init_fn, NULL);
 
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, geom, "mesh_simple3_new");

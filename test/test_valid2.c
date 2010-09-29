@@ -97,7 +97,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
 
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
-  p4est = p4est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);

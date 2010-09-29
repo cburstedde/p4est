@@ -287,8 +287,8 @@ main (int argc, char **argv)
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
-  p4est = p4est_new (mpi->mpicomm, connectivity, 15,
-                     sizeof (user_data_t), init_fn, NULL);
+  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
+                         sizeof (user_data_t), init_fn, NULL);
   p4est_vtk_write_file (p4est, NULL, "mesh_simple2_new");
 
   /* refinement and coarsening */

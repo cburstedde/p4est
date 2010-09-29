@@ -353,8 +353,8 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_star ();
-  p4est = p4est_new (mpicomm, connectivity, 15,
-                     sizeof (user_data_t), init_fn, NULL);
+  p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
+                         sizeof (user_data_t), init_fn, NULL);
 
   /* refine to make the number of elements interesting */
   p4est_refine (p4est, 1, refine_fn, init_fn);
@@ -380,8 +380,8 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_periodic ();
-  p4est = p4est_new (mpicomm, connectivity, 15,
-                     sizeof (user_data_t), init_fn, NULL);
+  p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
+                         sizeof (user_data_t), init_fn, NULL);
 
   /* refine to make the number of elements interesting */
   p4est_refine (p4est, 1, refine_fn, init_fn);

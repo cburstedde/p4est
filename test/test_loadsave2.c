@@ -122,7 +122,8 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   snprintf (p4est_name, BUFSIZ, "%s.%s", prefix, P4EST_FOREST_SUFFIX);
   P4EST_GLOBAL_INFOF ("Using file names %s and %s\n", conn_name, p4est_name);
 
-  p4est = p4est_new (mpicomm, connectivity, 0, sizeof (int), init_fn, NULL);
+  p4est = p4est_new_ext (mpicomm, connectivity, 0, 0, 0,
+                         sizeof (int), init_fn, NULL);
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* save, synchronize, load connectivity and compare */

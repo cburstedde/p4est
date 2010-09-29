@@ -128,8 +128,10 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   connectivity = p4est_connectivity_new_unitsquare ();
-  p4est1 = p4est_new (MPI_COMM_SELF, connectivity, 15, 0, NULL, NULL);
-  p4est2 = p4est_new (MPI_COMM_SELF, connectivity, 15, 8, NULL, NULL);
+  p4est1 = p4est_new_ext (MPI_COMM_SELF, connectivity, 15, 0, 0,
+                          0, NULL, NULL);
+  p4est2 = p4est_new_ext (MPI_COMM_SELF, connectivity, 15, 0, 0,
+                          8, NULL, NULL);
 
   /* refine the second tree to a uniform level */
   p4est_refine (p4est1, 1, refine_none, NULL);

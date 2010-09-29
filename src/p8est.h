@@ -210,7 +210,6 @@ void                p8est_qcoord_to_vertex (p8est_connectivity_t *
  * \param [in] connectivity  This is the connectivity information that
  *                           the forest is built with.  Note the p8est
  *                           does not take ownership of the memory.
- * \param [in] min_quadrants Minimum initial number of quadrants per processor.
  * \param [in] data_size     This is the size of data for each quadrant which
  *                           can be zero.  Then user_data_pool is set to NULL.
  * \param [in] init_fn       Callback function to initialize the user_data
@@ -221,20 +220,23 @@ void                p8est_qcoord_to_vertex (p8est_connectivity_t *
  * \return This returns a valid forest.
  *
  * \note The connectivity structure must not be destroyed
- *       during the lifetime of this p8est.
+ *       during the lifetime of this forest.
  */
 p8est_t            *p8est_new (MPI_Comm mpicomm,
                                p8est_connectivity_t * connectivity,
-                               p4est_locidx_t min_quadrants, size_t data_size,
+                               size_t data_size,
                                p8est_init_t init_fn, void *user_pointer);
 
 /** Create a new forest.
  * This is a more general form of p8est_new.
  *
+ * \param [in] min_quadrants    Minimum initial quadrants per processor.
  * \param [in] min_level        The forest is refined at least to this level.
  *                              May be negative or 0, then it has no effect.
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
- *                              instead of coarsest possible as in p4est_new.
+ *                              instead of the coarsest possible one.
+ *                              The latter is partition-specific so that
+ *                              is usually not a good idea.
  */
 p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
                                    p8est_connectivity_t * connectivity,

@@ -172,7 +172,7 @@ main (int argc, char **argv)
 
   P4EST_STATISTICS ("Unitcube\n");
   conn = p8est_connectivity_new_unitcube ();
-  p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p8est = p8est_new (mpicomm, conn, 0, NULL, NULL);
   p8est_refine (p8est, 1, refine_fn, NULL);
   write_vtk (p8est, NULL, "unitcube_none");
   write_vtk (p8est, geye, "unitcube_identity");
@@ -181,7 +181,7 @@ main (int argc, char **argv)
 
   P4EST_STATISTICS ("Shell\n");
   conn = p8est_connectivity_new_shell ();
-  p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p8est = p8est_new (mpicomm, conn, 0, NULL, NULL);
   p8est_refine (p8est, 1, refine_fn, NULL);
   write_vtk (p8est, NULL, "shell_none");
   write_vtk (p8est, geye, "shell_identity");
@@ -191,7 +191,7 @@ main (int argc, char **argv)
 
   P4EST_STATISTICS ("Sphere\n");
   conn = p8est_connectivity_new_sphere ();
-  p8est = p8est_new (mpicomm, conn, 0, 0, NULL, NULL);
+  p8est = p8est_new (mpicomm, conn, 0, NULL, NULL);
   p8est_refine (p8est, 1, refine_fn, NULL);
   write_vtk (p8est, NULL, "sphere_none");
   write_vtk (p8est, geye, "sphere_identity");

@@ -617,7 +617,7 @@ main (int argc, char **argv)
       SC_ABORT_NOT_REACHED ();
       break;
     }
-    p4est = p4est_new (mpicomm, conn, 15, 0, NULL, NULL);
+    p4est = p4est_new_ext (mpicomm, conn, 15, 0, 0, 0, NULL, NULL);
 
     /* refine to make the number of elements interesting */
     p4est_refine (p4est, 1, refine_fn, NULL);

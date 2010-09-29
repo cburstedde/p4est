@@ -279,7 +279,7 @@ main (int argc, char **argv)
 #else
   connectivity = p4est_connectivity_new_star ();
 #endif
-  p4est = p4est_new (mpicomm, connectivity, 15, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
 
