@@ -1027,20 +1027,45 @@ p4est_connectivity_new_star (void)
                                       tree_to_corner, ctt_offset,
                                       corner_to_tree, corner_to_corner);
 }
+#endif /* !P4_TO_P8 */
 
 p4est_connectivity_t *
+#ifndef P4_TO_P8
 p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
+#else
+p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
+                              int periodic_b, int periodic_c)
+#endif
 {
+#ifndef P4_TO_P8
   const p4est_topidx_t m = (p4est_topidx_t) mi;
   const p4est_topidx_t n = (p4est_topidx_t) ni;
-  const p4est_topidx_t num_trees = m * n;
-  const p4est_topidx_t num_vertices = (m + 1) * (n + 1);
   const p4est_topidx_t mc = periodic_a ? m : (m - 1);
   const p4est_topidx_t nc = periodic_b ? n : (n - 1);
+  const p4est_topidx_t num_trees = m * n;
   const p4est_topidx_t num_corners = mc * nc;
-  const p4est_topidx_t num_ctt = 4 * num_corners;
-  const int           periodic[2] = { periodic_a, periodic_b };
-  const p4est_topidx_t max[2] = { m - 1, n - 1 };
+  const p4est_topidx_t num_ctt = P4EST_CHILDREN * num_corners;
+  const p4est_topidx_t num_vertices = (m + 1) * (n + 1);
+  const int           periodic[P4EST_DIM] = { periodic_a, periodic_b };
+  const p4est_topidx_t max[P4EST_DIM] = { m - 1, n - 1 };
+#else
+  const p4est_topidx_t m = (p4est_topidx_t) mi;
+  const p4est_topidx_t n = (p4est_topidx_t) ni;
+  const p4est_topidx_t p = (p4est_topidx_t) pi;
+  const p4est_topidx_t mc = periodic_a ? m : (m - 1);
+  const p4est_topidx_t nc = periodic_b ? n : (n - 1);
+  const p4est_topidx_t pc = periodic_c ? p : (p - 1);
+  const p4est_topidx_t num_trees = m * n * p;
+  const p4est_topidx_t num_corners = mc * nc * pc;
+  const p4est_topidx_t num_ctt = P4EST_CHILDREN * num_corners;
+  const p4est_topidx_t num_edges = m * nc * pc + mc * n * pc + mc * nc * p;
+  const p4est_topidx_t num_ett = 4 * num_edges;
+  const p4est_topidx_t num_vertices = (m + 1) * (n + 1) * (p + 1);
+  const int           periodic[P4EST_DIM] = { periodic_a, periodic_b,
+    periodic_c
+  };
+  const p4est_topidx_t max[P4EST_DIM] = { m - 1, n - 1, p - 1 };
+#endif
   double             *vertices;
   p4est_topidx_t     *tree_to_vertex;
   p4est_topidx_t     *tree_to_tree;
@@ -1049,66 +1074,151 @@ p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
   p4est_topidx_t     *ctt_offset;
   p4est_topidx_t     *corner_to_tree;
   int8_t             *corner_to_corner;
-  p4est_topidx_t      square_length, n_iter;
-  int                 log_sl;
+  p4est_topidx_t      cube_length, n_iter;
+  int                 log_cl;
   int                 i, j, k, l;
   p4est_topidx_t      ti, tj, tk;
   p4est_topidx_t      tx, ty;
-  p4est_topidx_t      tfx[6], tfy[6];
-  p4est_topidx_t      tcx[8], tcy[8];
-  p4est_topidx_t      tf[6], tc[8];
-  p4est_topidx_t      coord[2], ttemp;
+  p4est_topidx_t      tfx[P4EST_FACES], tfy[P4EST_FACES];
+  p4est_topidx_t      tcx[P4EST_CHILDREN], tcy[P4EST_CHILDREN];
+  p4est_topidx_t      tf[P4EST_FACES], tc[P4EST_CHILDREN];
+  p4est_topidx_t      coord[P4EST_DIM], ttemp;
   p4est_topidx_t     *linear_to_tree;
   p4est_topidx_t     *tree_to_corner2;
   p4est_topidx_t      vcount = 0, vicount = 0;
-  int                 c[2];
+  int                 c[P4EST_DIM];
   p4est_connectivity_t *conn;
+#ifdef P4_TO_P8
+  p4est_topidx_t      tl;
+  p4est_topidx_t      tz;
+  p4est_topidx_t      tfz[P4EST_FACES];
+  p4est_topidx_t      tex[P8EST_EDGES], tey[P8EST_EDGES], tez[P8EST_EDGES];
+  p4est_topidx_t      tcz[P4EST_CHILDREN];
+  p4est_topidx_t      te[P8EST_EDGES];
+  p4est_topidx_t     *tree_to_edge;
+  p4est_topidx_t     *ett_offset;
+  p4est_topidx_t     *edge_to_tree;
+  int8_t             *edge_to_edge;
+  p4est_topidx_t     *tree_to_edge2;
+  int                 dir1, dir2;
+#endif
 
+#ifndef P4_TO_P8
   P4EST_ASSERT (m > 0 && n > 0);
-  conn = p4est_connectivity_new (num_vertices, num_trees, num_corners,
-                                 num_ctt);
+#else
+  P4EST_ASSERT (m > 0 && n > 0 && p > 0);
+#endif
+
+  conn = p4est_connectivity_new (num_vertices, num_trees,
+#ifdef P4_TO_P8
+                                 num_edges, num_ett,
+#endif
+                                 num_corners, num_ctt);
 
   vertices = conn->vertices;
   tree_to_vertex = conn->tree_to_vertex;
   tree_to_tree = conn->tree_to_tree;
   tree_to_face = conn->tree_to_face;
+#ifdef P4_TO_P8
+  tree_to_edge = conn->tree_to_edge;
+  ett_offset = conn->ett_offset;
+  edge_to_tree = conn->edge_to_tree;
+  edge_to_edge = conn->edge_to_edge;
+#endif
   tree_to_corner = conn->tree_to_corner;
   ctt_offset = conn->ctt_offset;
   corner_to_tree = conn->corner_to_tree;
   corner_to_corner = conn->corner_to_corner;
 
+#ifdef P4_TO_P8
+  for (ti = 0; ti < num_edges + 1; ti++) {
+    ett_offset[ti] = 4 * ti;
+  }
+#endif
+
   for (ti = 0; ti < num_corners + 1; ti++) {
-    ctt_offset[ti] = 4 * ti;
+    ctt_offset[ti] = P4EST_CHILDREN * ti;
   }
 
-  for (ti = 0; ti < 4 * num_trees; ti++) {
+  for (ti = 0; ti < P4EST_CHILDREN * num_trees; ti++) {
     tree_to_vertex[ti] = -1;
   }
 
-  square_length = (m > n) ? m : n;
-  log_sl = SC_LOG2_32 (square_length - 1) + 1;
-  square_length = ((p4est_locidx_t) 1) << log_sl;
-  n_iter = square_length * square_length;
+  cube_length = (m > n) ? m : n;
+#ifdef P4_TO_P8
+  cube_length = (cube_length > p) ? cube_length : p;
+#endif
+  log_cl = SC_LOG2_32 (cube_length - 1) + 1;
+  cube_length = ((p4est_locidx_t) 1) << log_cl;
+  n_iter = cube_length * cube_length;
+#ifdef P4_TO_P8
+  n_iter *= cube_length;
+#endif
 
   linear_to_tree = P4EST_ALLOC (p4est_topidx_t, n_iter);
   tree_to_corner2 = P4EST_ALLOC (p4est_topidx_t, num_trees);
+#ifdef P4_TO_P8
+  tree_to_edge2 = P4EST_ALLOC (p4est_topidx_t, 3 * num_trees);
+#endif
 
   tj = 0;
   tk = 0;
+#ifdef P4_TO_P8
+  tl = 0;
+#endif
   for (ti = 0; ti < n_iter; ti++) {
     tx = 0;
     ty = 0;
-    for (i = 0; i < log_sl; i++) {
-      tx |= (ti & (1 << (2 * i))) >> i;
-      ty |= (ti & (1 << (2 * i + 1))) >> (i + 1);
+#ifdef P4_TO_P8
+    tz = 0;
+#endif
+    for (i = 0; i < log_cl; i++) {
+      tx |= (ti & (1 << (P4EST_DIM * i))) >> ((P4EST_DIM - 1) * i);
+      ty |= (ti & (1 << (P4EST_DIM * i + 1))) >> ((P4EST_DIM - 1) * i + 1);
+#ifdef P4_TO_P8
+      tz |= (ti & (1 << (P4EST_DIM * i + 2))) >> ((P4EST_DIM - 1) * i + 2);
+#endif
     }
-    if (tx < m && ty < n) {
+    if (tx < m && ty < n &&
+#ifdef P4_TO_P8
+        tz < p &&
+#endif
+        1) {
       linear_to_tree[ti] = tj;
-      if ((tx < m - 1 || periodic_a) && (ty < n - 1 || periodic_b)) {
+      if ((tx < m - 1 || periodic_a) && (ty < n - 1 || periodic_b) &&
+#ifdef P4_TO_P8
+          (tz < p - 1 || periodic_c) &&
+#endif
+          1) {
         tree_to_corner2[tj] = tk++;
+#ifdef P4_TO_P8
+        tree_to_edge2[3 * tj] = tl++;
+        tree_to_edge2[3 * tj + 1] = tl++;
+        tree_to_edge2[3 * tj + 2] = tl++;
+#endif
       }
       else {
         tree_to_corner2[tj] = -1;
+#ifdef P4_TO_P8
+        if ((ty < n - 1 || periodic_b) && (tz < p - 1 || periodic_c)) {
+          tree_to_edge2[3 * tj] = tl++;
+        }
+        else {
+          tree_to_edge2[3 * tj] = -1;
+        }
+        if ((tx < m - 1 || periodic_a) && (tz < p - 1 || periodic_c)) {
+          tree_to_edge2[3 * tj + 1] = tl++;
+        }
+        else {
+          tree_to_edge2[3 * tj + 1] = -1;
+        }
+        if ((tx < m - 1 || periodic_a) && (ty < n - 1 || periodic_b)) {
+          tree_to_edge2[3 * tj + 2] = tl++;
+        }
+        else {
+          tree_to_edge2[3 * tj + 2] = -1;
+        }
+#endif
       }
       tj++;
     }
@@ -1118,71 +1228,168 @@ p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
   }
   P4EST_ASSERT (tj == num_trees);
   P4EST_ASSERT (tk == num_corners);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (tl == num_edges);
+#endif
 
   for (ti = 0; ti < n_iter; ti++) {
-    tx = ty = 0;
-    for (i = 0; i < log_sl; i++) {
-      tx |= (ti & (1 << (2 * i))) >> i;
-      ty |= (ti & (1 << (2 * i + 1))) >> (i + 1);
+    tx = 0;
+    ty = 0;
+#ifdef P4_TO_P8
+    tz = 0;
+#endif
+    for (i = 0; i < log_cl; i++) {
+      tx |= (ti & (1 << (P4EST_DIM * i))) >> ((P4EST_DIM - 1) * i);
+      ty |= (ti & (1 << (P4EST_DIM * i + 1))) >> ((P4EST_DIM - 1) * i + 1);
+#ifdef P4_TO_P8
+      tz |= (ti & (1 << (P4EST_DIM * i + 2))) >> ((P4EST_DIM - 1) * i + 2);
+#endif
     }
     coord[0] = tx;
     coord[1] = ty;
-    if (tx < m && ty < n) {
+#ifdef P4_TO_P8
+    coord[2] = tz;
+#endif
+    if (tx < m && ty < n &&
+#ifdef P4_TO_P8
+        tz < p &&
+#endif
+        1) {
       tj = linear_to_tree[ti];
       P4EST_ASSERT (tj >= 0);
-      for (i = 0; i < 2; i++) {
+      for (i = 0; i < P4EST_DIM; i++) {
         for (j = 0; j < 2; j++) {
           l = i * 2 + j;
           tfx[l] = ((tx + ((i == 0) ? (2 * j - 1) : 0)) + m) % m;
           tfy[l] = ((ty + ((i == 1) ? (2 * j - 1) : 0)) + n) % n;
+#ifdef P4_TO_P8
+          tfz[l] = ((tz + ((i == 2) ? (2 * j - 1) : 0)) + p) % p;
+#endif
           tf[l] = 0;
-          for (k = 0; k < log_sl; k++) {
-            tf[l] |= (tfx[l] & (1 << k)) << k;
-            tf[l] |= (tfy[l] & (1 << k)) << (k + 1);
+          for (k = 0; k < log_cl; k++) {
+            tf[l] |= (tfx[l] & (1 << k)) << ((P4EST_DIM - 1) * k);
+            tf[l] |= (tfy[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 1);
+#ifdef P4_TO_P8
+            tf[l] |= (tfz[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 2);
+#endif
           }
           tf[l] = linear_to_tree[tf[l]];
           P4EST_ASSERT (tf[l] >= 0);
         }
+#ifdef P4_TO_P8
+        for (j = 0; j < 4; j++) {
+          l = 4 * i + j;
+          tex[l] = ((tx + ((i == 0) ? 0 : (2 * (j & 1) - 1))) + m) % m;
+          tey[l] = ((ty + ((i == 1) ? 0 :
+                           (2 * ((i == 0) ? (j & 1) : (j / 2)) - 1))) +
+                    n) % n;
+          tez[l] = ((tz + ((i == 2) ? 0 : (2 * (j / 2) - 1))) + p) % p;
+          te[l] = 0;
+          for (k = 0; k < log_cl; k++) {
+            te[l] |= (tex[l] & (1 << k)) << ((P4EST_DIM - 1) * k);
+            te[l] |= (tey[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 1);
+            te[l] |= (tez[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 2);
+          }
+          te[l] = linear_to_tree[te[l]];
+          P4EST_ASSERT (te[l] >= 0);
+        }
+#endif
       }
-      for (i = 0; i < 4; i++) {
+      for (i = 0; i < P4EST_CHILDREN; i++) {
         tcx[i] = ((tx + (((i & 1) == 0) ? -1 : 1)) + m) % m;
         tcy[i] = ((ty + ((((i >> 1) & 1) == 0) ? -1 : 1)) + n) % n;
+#ifdef P4_TO_P8
+        tcz[i] = ((tz + (((i >> 2) == 0) ? -1 : 1)) + p) % p;
+#endif
         tc[i] = 0;
-        for (j = 0; j < log_sl; j++) {
-          tc[i] |= (tcx[i] & (1 << j)) << j;
-          tc[i] |= (tcy[i] & (1 << j)) << (j + 1);
+        for (j = 0; j < log_cl; j++) {
+          tc[i] |= (tcx[i] & (1 << j)) << ((P4EST_DIM - 1) * j);
+          tc[i] |= (tcy[i] & (1 << j)) << ((P4EST_DIM - 1) * j + 1);
+#ifdef P4_TO_P8
+          tc[i] |= (tcz[i] & (1 << j)) << ((P4EST_DIM - 1) * j + 2);
+#endif
         }
         tc[i] = linear_to_tree[tc[i]];
         P4EST_ASSERT (tc[i] >= 0);
       }
-      for (i = 0; i < 2; i++) {
+      for (i = 0; i < P4EST_DIM; i++) {
         for (j = 0; j < 2; j++) {
           l = i * 2 + j;
           if (!periodic[i] &&
               ((coord[i] == 0 && j == 0) || (coord[i] == max[i] && j == 1))) {
-            tree_to_tree[tj * 4 + l] = tj;
-            tree_to_face[tj * 4 + l] = (int8_t) l;
+            tree_to_tree[tj * P4EST_FACES + l] = tj;
+            tree_to_face[tj * P4EST_FACES + l] = (int8_t) l;
           }
           else {
-            tree_to_tree[tj * 4 + l] = tf[l];
-            tree_to_face[tj * 4 + l] = (int8_t) (i * 2 + (j ^ 1));
+            tree_to_tree[tj * P4EST_FACES + l] = tf[l];
+            tree_to_face[tj * P4EST_FACES + l] = (int8_t) (i * 2 + (j ^ 1));
           }
         }
+#ifdef P4_TO_P8
+        if (tree_to_edge != NULL) {
+          /** dir1, dir2 should be in correct z order */
+          dir1 = (i == 0) ? 1 : 0;
+          dir2 = (i == 2) ? 1 : 2;
+          for (j = 0; j < 4; j++) {
+            l = i * 4 + j;
+            if ((!periodic[dir1] &&
+                 ((coord[dir1] == 0 && (j & 1) == 0) ||
+                  (coord[dir1] == max[dir1] && (j & 1) == 1))) ||
+                (!periodic[dir2] &&
+                 ((coord[dir2] == 0 && (j / 2) == 0) ||
+                  (coord[dir2] == max[dir2] && (j / 2) == 1)))) {
+              tree_to_edge[tj * P8EST_EDGES + l] = -1;
+            }
+            else {
+              switch (j) {
+              case 0:
+                ttemp = tree_to_edge2[te[l] * 3 + i];
+                break;
+              case 1:
+                ttemp = tree_to_edge2[tf[dir2 * 2] * 3 + i];
+                break;
+              case 2:
+                ttemp = tree_to_edge2[tf[dir1 * 2] * 3 + i];
+                break;
+              case 3:
+                ttemp = tree_to_edge2[tj * 3 + i];
+                break;
+              default:
+                SC_ABORT_NOT_REACHED ();
+              }
+              P4EST_ASSERT (ttemp >= 0);
+              tree_to_edge[tj * P8EST_EDGES + l] = ttemp;
+              edge_to_tree[4 * ttemp + (3 - j)] = tj;
+              edge_to_edge[4 * ttemp + (3 - j)] = (int8_t) l;
+            }
+          }
+        }
+#endif
       }
-      for (i = 0; i < 4; i++) {
+      for (i = 0; i < P4EST_CHILDREN; i++) {
         if (tree_to_corner != NULL) {
           c[0] = i & 1;
           c[1] = (i >> 1) & 1;
+#ifdef P4_TO_P8
+          c[2] = i >> 2;
+#endif
           if ((!periodic[0] &&
                ((coord[0] == 0 && c[0] == 0) ||
                 (coord[0] == max[0] && c[0] == 1))) ||
               (!periodic[1] &&
                ((coord[1] == 0 && c[1] == 0) ||
-                (coord[1] == max[1] && c[1] == 1)))) {
-            tree_to_corner[tj * 4 + i] = -1;
+                (coord[1] == max[1] && c[1] == 1))) ||
+#ifdef P4_TO_P8
+              (!periodic[2] &&
+               ((coord[2] == 0 && c[2] == 0) ||
+                (coord[2] == max[2] && c[2] == 1))) ||
+#endif
+              0) {
+            tree_to_corner[tj * P4EST_CHILDREN + i] = -1;
           }
           else {
             switch (i) {
+#ifndef P4_TO_P8
             case 0:
               ttemp = tc[0];
               break;
@@ -1195,27 +1402,68 @@ p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
             case 3:
               ttemp = tj;
               break;
+#else
+            case 0:
+              ttemp = tc[0];
+              break;
+            case 1:
+              ttemp = te[0];
+              break;
+            case 2:
+              ttemp = te[4];
+              break;
+            case 3:
+              ttemp = tf[4];
+              break;
+            case 4:
+              ttemp = te[8];
+              break;
+            case 5:
+              ttemp = tf[2];
+              break;
+            case 6:
+              ttemp = tf[0];
+              break;
+            case 7:
+              ttemp = tj;
+              break;
+#endif
             default:
               SC_ABORT_NOT_REACHED ();
             }
             ttemp = tree_to_corner2[ttemp];
             P4EST_ASSERT (ttemp >= 0);
-            tree_to_corner[tj * 4 + i] = ttemp;
-            corner_to_tree[ttemp * 4 + (3 - i)] = tj;
-            corner_to_corner[ttemp * 4 + (3 - i)] = (int8_t) i;
+            tree_to_corner[tj * P4EST_CHILDREN + i] = ttemp;
+            corner_to_tree[ttemp * P4EST_CHILDREN +
+                           (P4EST_CHILDREN - 1 - i)] = tj;
+            corner_to_corner[ttemp * P4EST_CHILDREN +
+                             (P4EST_CHILDREN - 1 - i)] = (int8_t) i;
           }
         }
+#ifdef P4_TO_P8
+        if (tz > 0 && (i >> 2) == 0) {
+          tree_to_vertex[tj * P4EST_CHILDREN + i] =
+            tree_to_vertex[tf[4] * P4EST_CHILDREN + i + 4];
+        }
+        else
+#endif
         if (ty > 0 && ((i >> 1) & 1) == 0) {
-          tree_to_vertex[tj * 4 + i] = tree_to_vertex[tf[2] * 4 + i + 2];
+          tree_to_vertex[tj * P4EST_CHILDREN + i] =
+            tree_to_vertex[tf[2] * P4EST_CHILDREN + i + 2];
         }
         else if (tx > 0 && (i & 1) == 0) {
-          tree_to_vertex[tj * 4 + i] = tree_to_vertex[tf[0] * 4 + i + 1];
+          tree_to_vertex[tj * P4EST_CHILDREN + i] =
+            tree_to_vertex[tf[0] * P4EST_CHILDREN + i + 1];
         }
         else {
-          tree_to_vertex[tj * 4 + i] = vcount++;
+          tree_to_vertex[tj * P4EST_CHILDREN + i] = vcount++;
           vertices[vicount++] = (double) (tx + (i & 1));
           vertices[vicount++] = (double) (ty + ((i >> 1) & 1));
+#ifndef P4_TO_P8
           vertices[vicount++] = 0.;
+#else
+          vertices[vicount++] = (double) (tz + (i >> 2));
+#endif
         }
       }
     }
@@ -1225,12 +1473,14 @@ p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
 
   P4EST_FREE (linear_to_tree);
   P4EST_FREE (tree_to_corner2);
+#ifdef P4_TO_P8
+  P4EST_FREE (tree_to_edge2);
+#endif
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   return conn;
 }
-#endif /* !P4_TO_P8 */
 
 p4est_topidx_t
 p4est_find_face_transform (p4est_connectivity_t * connectivity,
