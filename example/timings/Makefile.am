@@ -6,25 +6,31 @@
 if P4EST_ENABLE_BUILD_2D
 bin_PROGRAMS += \
         example/timings/p4est_timings \
-        example/timings/p4est_bricks
+        example/timings/p4est_bricks \
+        example/timings/p4est_loadconn
 
 example_timings_p4est_timings_SOURCES = example/timings/timings2.c
 example_timings_p4est_bricks_SOURCES = example/timings/bricks2.c
+example_timings_p4est_loadconn_SOURCES = example/timings/loadconn2.c
 
 LINT_CSOURCES += \
         $(example_timings_p4est_timings_SOURCES) \
-        $(example_timings_p4est_bricks_SOURCES)
+        $(example_timings_p4est_bricks_SOURCES) \
+        $(example_timings_p4est_loadconn_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
 bin_PROGRAMS += \
         example/timings/p8est_timings \
-        example/timings/p8est_bricks
+        example/timings/p8est_bricks \
+        example/timings/p8est_loadconn
 
 example_timings_p8est_timings_SOURCES = example/timings/timings3.c
 example_timings_p8est_bricks_SOURCES = example/timings/bricks3.c
+example_timings_p8est_loadconn_SOURCES = example/timings/loadconn3.c
 
 LINT_CSOURCES += \
         $(example_timings_p8est_timings_SOURCES) \
-        $(example_timings_p8est_bricks_SOURCES)
+        $(example_timings_p8est_bricks_SOURCES) \
+        $(example_timings_p8est_loadconn_SOURCES)
 endif
