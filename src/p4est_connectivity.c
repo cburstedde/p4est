@@ -1028,6 +1028,208 @@ p4est_connectivity_new_star (void)
                                       corner_to_tree, corner_to_corner);
 }
 
+p4est_connectivity_t *
+p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
+{
+  const p4est_topidx_t m = (p4est_topidx_t) mi;
+  const p4est_topidx_t n = (p4est_topidx_t) ni;
+  const p4est_topidx_t num_trees = m * n;
+  const p4est_topidx_t num_vertices = (m + 1) * (n + 1);
+  const p4est_topidx_t mc = periodic_a ? m : (m - 1);
+  const p4est_topidx_t nc = periodic_b ? n : (n - 1);
+  const p4est_topidx_t num_corners = mc * nc;
+  const p4est_topidx_t num_ctt = 4 * num_corners;
+  const int           periodic[2] = { periodic_a, periodic_b };
+  const p4est_topidx_t max[2] = { m - 1, n - 1 };
+  double             *vertices;
+  p4est_topidx_t     *tree_to_vertex;
+  p4est_topidx_t     *tree_to_tree;
+  int8_t             *tree_to_face;
+  p4est_topidx_t     *tree_to_corner;
+  p4est_topidx_t     *ctt_offset;
+  p4est_topidx_t     *corner_to_tree;
+  int8_t             *corner_to_corner;
+  p4est_topidx_t      square_length, n_iter;
+  int                 log_sl;
+  int                 i, j, k, l;
+  p4est_topidx_t      ti, tj, tk;
+  p4est_topidx_t      tx, ty;
+  p4est_topidx_t      tfx[6], tfy[6];
+  p4est_topidx_t      tcx[8], tcy[8];
+  p4est_topidx_t      tf[6], tc[8];
+  p4est_topidx_t      coord[2], ttemp;
+  p4est_topidx_t     *linear_to_tree;
+  p4est_topidx_t     *tree_to_corner2;
+  p4est_topidx_t      vcount = 0, vicount = 0;
+  int                 c[2];
+  p4est_connectivity_t *conn;
+
+  P4EST_ASSERT (m > 0 && n > 0);
+  conn = p4est_connectivity_new (num_vertices, num_trees, num_corners,
+                                 num_ctt);
+
+  vertices = conn->vertices;
+  tree_to_vertex = conn->tree_to_vertex;
+  tree_to_tree = conn->tree_to_tree;
+  tree_to_face = conn->tree_to_face;
+  tree_to_corner = conn->tree_to_corner;
+  ctt_offset = conn->ctt_offset;
+  corner_to_tree = conn->corner_to_tree;
+  corner_to_corner = conn->corner_to_corner;
+
+  for (ti = 0; ti < num_corners + 1; ti++) {
+    ctt_offset[ti] = 4 * ti;
+  }
+
+  for (ti = 0; ti < 4 * num_trees; ti++) {
+    tree_to_vertex[ti] = -1;
+  }
+
+  square_length = (m > n) ? m : n;
+  log_sl = SC_LOG2_32 (square_length - 1) + 1;
+  square_length = ((p4est_locidx_t) 1) << log_sl;
+  n_iter = square_length * square_length;
+
+  linear_to_tree = P4EST_ALLOC (p4est_topidx_t, n_iter);
+  tree_to_corner2 = P4EST_ALLOC (p4est_topidx_t, num_trees);
+
+  tj = 0;
+  tk = 0;
+  for (ti = 0; ti < n_iter; ti++) {
+    tx = 0;
+    ty = 0;
+    for (i = 0; i < log_sl; i++) {
+      tx |= (ti & (1 << (2 * i))) >> i;
+      ty |= (ti & (1 << (2 * i + 1))) >> (i + 1);
+    }
+    if (tx < m && ty < n) {
+      linear_to_tree[ti] = tj;
+      if ((tx < m - 1 || periodic_a) && (ty < n - 1 || periodic_b)) {
+        tree_to_corner2[tj] = tk++;
+      }
+      else {
+        tree_to_corner2[tj] = -1;
+      }
+      tj++;
+    }
+    else {
+      linear_to_tree[ti] = -1;
+    }
+  }
+  P4EST_ASSERT (tj == num_trees);
+  P4EST_ASSERT (tk == num_corners);
+
+  for (ti = 0; ti < n_iter; ti++) {
+    tx = ty = 0;
+    for (i = 0; i < log_sl; i++) {
+      tx |= (ti & (1 << (2 * i))) >> i;
+      ty |= (ti & (1 << (2 * i + 1))) >> (i + 1);
+    }
+    coord[0] = tx;
+    coord[1] = ty;
+    if (tx < m && ty < n) {
+      tj = linear_to_tree[ti];
+      P4EST_ASSERT (tj >= 0);
+      for (i = 0; i < 2; i++) {
+        for (j = 0; j < 2; j++) {
+          l = i * 2 + j;
+          tfx[l] = ((tx + ((i == 0) ? (2 * j - 1) : 0)) + m) % m;
+          tfy[l] = ((ty + ((i == 1) ? (2 * j - 1) : 0)) + n) % n;
+          tf[l] = 0;
+          for (k = 0; k < log_sl; k++) {
+            tf[l] |= (tfx[l] & (1 << k)) << k;
+            tf[l] |= (tfy[l] & (1 << k)) << (k + 1);
+          }
+          tf[l] = linear_to_tree[tf[l]];
+          P4EST_ASSERT (tf[l] >= 0);
+        }
+      }
+      for (i = 0; i < 4; i++) {
+        tcx[i] = ((tx + (((i & 1) == 0) ? -1 : 1)) + m) % m;
+        tcy[i] = ((ty + ((((i >> 1) & 1) == 0) ? -1 : 1)) + n) % n;
+        tc[i] = 0;
+        for (j = 0; j < log_sl; j++) {
+          tc[i] |= (tcx[i] & (1 << j)) << j;
+          tc[i] |= (tcy[i] & (1 << j)) << (j + 1);
+        }
+        tc[i] = linear_to_tree[tc[i]];
+        P4EST_ASSERT (tc[i] >= 0);
+      }
+      for (i = 0; i < 2; i++) {
+        for (j = 0; j < 2; j++) {
+          l = i * 2 + j;
+          if (!periodic[i] &&
+              ((coord[i] == 0 && j == 0) || (coord[i] == max[i] && j == 1))) {
+            tree_to_tree[tj * 4 + l] = tj;
+            tree_to_face[tj * 4 + l] = (int8_t) l;
+          }
+          else {
+            tree_to_tree[tj * 4 + l] = tf[l];
+            tree_to_face[tj * 4 + l] = (int8_t) (i * 2 + (j ^ 1));
+          }
+        }
+      }
+      for (i = 0; i < 4; i++) {
+        if (tree_to_corner != NULL) {
+          c[0] = i & 1;
+          c[1] = (i >> 1) & 1;
+          if ((!periodic[0] &&
+               ((coord[0] == 0 && c[0] == 0) ||
+                (coord[0] == max[0] && c[0] == 1))) ||
+              (!periodic[1] &&
+               ((coord[1] == 0 && c[1] == 0) ||
+                (coord[1] == max[1] && c[1] == 1)))) {
+            tree_to_corner[tj * 4 + i] = -1;
+          }
+          else {
+            switch (i) {
+            case 0:
+              ttemp = tc[0];
+              break;
+            case 1:
+              ttemp = tf[2];
+              break;
+            case 2:
+              ttemp = tf[0];
+              break;
+            case 3:
+              ttemp = tj;
+              break;
+            default:
+              SC_ABORT_NOT_REACHED ();
+            }
+            ttemp = tree_to_corner2[ttemp];
+            P4EST_ASSERT (ttemp >= 0);
+            tree_to_corner[tj * 4 + i] = ttemp;
+            corner_to_tree[ttemp * 4 + (3 - i)] = tj;
+            corner_to_corner[ttemp * 4 + (3 - i)] = (int8_t) i;
+          }
+        }
+        if (ty > 0 && ((i >> 1) & 1) == 0) {
+          tree_to_vertex[tj * 4 + i] = tree_to_vertex[tf[2] * 4 + i + 2];
+        }
+        else if (tx > 0 && (i & 1) == 0) {
+          tree_to_vertex[tj * 4 + i] = tree_to_vertex[tf[0] * 4 + i + 1];
+        }
+        else {
+          tree_to_vertex[tj * 4 + i] = vcount++;
+          vertices[vicount++] = (double) (tx + (i & 1));
+          vertices[vicount++] = (double) (ty + ((i >> 1) & 1));
+          vertices[vicount++] = 0.;
+        }
+      }
+    }
+  }
+
+  P4EST_ASSERT (vcount == num_vertices);
+
+  P4EST_FREE (linear_to_tree);
+  P4EST_FREE (tree_to_corner2);
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  return conn;
+}
 #endif /* !P4_TO_P8 */
 
 p4est_topidx_t

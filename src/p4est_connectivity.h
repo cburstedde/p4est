@@ -100,8 +100,8 @@ p4est_connectivity_t;
  * \param [in] conn   Connectivity structure.
  * \return            Memory used in bytes.
  */
-size_t            p4est_connectivity_memory_used (p4est_connectivity_t *
-                                                  conn);
+size_t              p4est_connectivity_memory_used (p4est_connectivity_t *
+                                                    conn);
 
 typedef struct
 {
@@ -225,6 +225,13 @@ p4est_connectivity_t *p4est_connectivity_new_moebius (void);
 /** Create a connectivity structure for a six-tree star.
  */
 p4est_connectivity_t *p4est_connectivity_new_star (void);
+
+/** An m by n array with periodicity in x and y if periodic_a and periodic_b
+ * are true, respectively.
+ */
+p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni,
+                                                    int periodic_a,
+                                                    int periodic_b);
 
 /** Fills arrays encoding the axis combinations for a face transform.
  * \param [in]  itree       The number of the originating tree.
