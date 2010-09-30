@@ -34,8 +34,6 @@
 
 /* #define BRICKS_VTK */
 
-#ifdef P4_TO_P8
-
 static int          refine_level;
 static int          level_shift;
 
@@ -62,14 +60,9 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
     );
 }
 
-#endif
-
 static void
 run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
 {
-#ifndef P4_TO_P8
-  sc_abort_collective ("The brick is not yet implemented in 2D");
-#else
   int                 mpiret;
   int                 tcount;
   double              elapsed_create, elapsed_partition, elapsed_balance;
@@ -89,7 +82,11 @@ run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
   elapsed_create = -MPI_Wtime ();
 
   tcount = 1 << l;
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_brick (tcount, tcount, per, per);
+#else
   conn = p8est_connectivity_new_brick (tcount, tcount, tcount, per, per, per);
+#endif
   p4est = p4est_new_ext (mpicomm, conn, 0, rlevel - l, 1, 0, NULL, NULL);
 
   level_shift = 4;
@@ -130,7 +127,6 @@ run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
-#endif
 }
 
 int
