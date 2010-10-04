@@ -34,6 +34,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Extended callback function prototype to decide for refinement.
  * \param [in] quadrant     Quadrant under consideration for refinement.
  * \param [in] children     If true is returned these will be the children.
@@ -94,5 +96,7 @@ void                p4est_refine_ext (p4est_t * p4est,
 void                p4est_partition_ext (p4est_t * p4est,
                                          int partition_for_coarsening,
                                          p4est_weight_t weight_fn);
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_EXTENDED_H */
