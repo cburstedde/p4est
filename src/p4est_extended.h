@@ -80,4 +80,19 @@ void                p4est_refine_ext (p4est_t * p4est,
                                       p4est_refine_ext_t refine_ext_fn,
                                       p4est_init_t init_fn);
 
+/** Repartition the forest.
+ *
+ * The forest is partitioned between processors such that each processor
+ * has an approximately equal number of quadrants (or weight).
+ *
+ * \param [in,out] p4est      The forest that will be partitioned.
+ * \param [in]     partition_for_coarsening     If true, the partition
+ *                            is modified to allow one level of coarsening.
+ * \param [in]     weight_fn  A weighting function or NULL
+ *                            for uniform partitioning.
+ */
+void                p4est_partition_ext (p4est_t * p4est,
+                                         int partition_for_coarsening,
+                                         p4est_weight_t weight_fn);
+
 #endif /* !P4EST_EXTENDED_H */

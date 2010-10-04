@@ -106,7 +106,6 @@
 #define p4est_child_corner_faces        p8est_child_corner_faces
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 #define p4est_num_ranges                p8est_num_ranges
-#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 
 /* functions in p4est_connectivity */
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
@@ -148,6 +147,7 @@
 
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_refine_ext                p8est_refine_ext
+#define p4est_partition_ext             p8est_partition_ext
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate

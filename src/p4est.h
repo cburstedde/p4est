@@ -178,18 +178,6 @@ typedef int         (*p4est_weight_t) (p4est_t * p4est,
 extern void        *P4EST_DATA_UNINITIALIZED;
 extern const int    p4est_num_ranges;
 
-/** Boolean variable that activaties partition modification.
- *
- * If true, a call to p4est_partition tweaks the computed partition
- * by placing a family of quadrants on the same processor.
- * This guarantees that non-recursive coarsening effects all quadrants.
- * The equi-partition quality, on the other hand, is slightly reduced.
- *
- * This variable exists separately for 2D and 3D.
- * The default is 0.
- */
-extern int          p4est_partition_for_coarsening;
-
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \
   ((void) memset ((q), -1, sizeof (p4est_quadrant_t)))
@@ -296,9 +284,6 @@ void                p4est_balance (p4est_t * p4est,
  *
  * The forest will be partitioned between processors where they each
  * have an approximately equal number of quadrants.
- *
- * If p4est_partition_for_coarsening is true, the partition will be
- * modified to place a family of quadrants on the same processor.
  *
  * \param [in,out] p4est      The forest that will be partitioned.
  * \param [in]     weight_fn  A weighting function or NULL

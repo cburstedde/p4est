@@ -27,7 +27,6 @@
 static int          p8est_uninitialized_key;
 void               *P8EST_DATA_UNINITIALIZED = &p8est_uninitialized_key;
 const int           p8est_num_ranges = 25;
-int                 p8est_partition_for_coarsening = 0;
 
 int
 p8est_balance_type_int (p8est_balance_type_t btype)

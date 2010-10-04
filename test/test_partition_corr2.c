@@ -24,10 +24,12 @@
 #ifdef P4_TO_P8
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 #include <p8est_vtk.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_vtk.h>
 #endif
 
@@ -104,9 +106,6 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  /* activate correction for partitioning */
-  p4est_partition_for_coarsening = 1;
-
   /* create connectivity */
 #ifdef P4_TO_P8
   connectivity = p8est_connectivity_new_twocubes ();
@@ -115,8 +114,8 @@ main (int argc, char **argv)
 #endif
 
   /* create forest structure */
-  p4est = p4est_new (mpicomm, connectivity, 15,
-                     sizeof (user_data_t), init_fn, NULL);
+  p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
+                         sizeof (user_data_t), init_fn, NULL);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_new");
 
   /* refine */
@@ -126,7 +125,7 @@ main (int argc, char **argv)
   /* run partition and coarsen till one quadrant per tree remains */
   while (p4est->global_num_quadrants > connectivity->num_trees &&
          i <= P4EST_MAXLEVEL) {
-    p4est_partition (p4est, NULL);
+    p4est_partition_ext (p4est, 1, NULL);
     p4est_coarsen (p4est, 0, coarsen_fn, init_fn);
     i++;
   }
