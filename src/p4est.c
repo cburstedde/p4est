@@ -74,15 +74,15 @@ static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
 
-/** Correct partition where quadrant families are split over multiple processes.
+/** Correct partition to allow one level of coarsening.
  *
  * \param [in] p4est                     forest whose partition is corrected
  * \param [in,out] num_quadrants_in_proc partition that will be corrected
  * \return                               absolute number of moved quadrants
  */
-static int          p4est_correct_partition (p4est_t * p4est,
-                                             p4est_locidx_t *
-                                             num_quadrants_in_proc);
+static p4est_locidx_t p4est_partition_for_coarsening (p4est_t * p4est,
+                                                      p4est_locidx_t *
+                                                      num_quadrants_in_proc);
 
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
@@ -2009,7 +2009,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
-  int                 num_corrected;
+  p4est_locidx_t      num_corrected;
 #endif /* P4EST_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -2290,10 +2290,11 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
   /* correct partition */
   if (partition_for_coarsening) {
-    num_corrected = p4est_correct_partition (p4est, num_quadrants_in_proc);
-    P4EST_GLOBAL_PRODUCTIONF
-      ("Designated new partition corrected, %d quadrants moved\n",
-       num_corrected);
+    num_corrected =
+      p4est_partition_for_coarsening (p4est, num_quadrants_in_proc);
+    P4EST_GLOBAL_INFOF
+      ("Designated partition for coarsening %lld quadrants moved\n",
+       (long long) num_corrected);
   }
 
   /* run the partition algorithm with proper quadrant counts */
@@ -2310,9 +2311,9 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
      global_shipped * 100. / global_num_quadrants);
 }
 
-static int
-p4est_correct_partition (p4est_t * p4est,
-                         p4est_locidx_t * num_quadrants_in_proc)
+static              p4est_locidx_t
+p4est_partition_for_coarsening (p4est_t * p4est,
+                                p4est_locidx_t * num_quadrants_in_proc)
 {
   int                 num_procs = p4est->mpisize;
   int                 rank = p4est->mpirank;
@@ -2338,7 +2339,7 @@ p4est_correct_partition (p4est_t * p4est,
   int                *receive_process;
   int                *correction, correction_local;
   int                 current_proc, next_proc;
-  int                 num_moved_quadrants;
+  p4est_locidx_t      num_moved_quadrants;
 
   /* create array with first quadrants of new partition */
   partition_new = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
@@ -2492,8 +2493,8 @@ p4est_correct_partition (p4est_t * p4est,
         /* if able to compute correction */
         /* compute correction */
         parent_send[parent_index].p.piggy3.local_num =
-          p4est_compute_partition_correction (partition_new, num_procs, i,
-                                              min_quad_id, max_quad_id);
+          p4est_partition_correction (partition_new, num_procs, i,
+                                      min_quad_id, max_quad_id);
 
         /* send correction */
         mpiret =
@@ -2684,10 +2685,9 @@ p4est_correct_partition (p4est_t * p4est,
     }
 
     /* compute correction */
-    correction_local = p4est_compute_partition_correction (partition_new,
-                                                           num_procs, rank,
-                                                           min_quad_id,
-                                                           max_quad_id);
+    correction_local = p4est_partition_correction (partition_new,
+                                                   num_procs, rank,
+                                                   min_quad_id, max_quad_id);
 
     /* free receive memory */
     P4EST_FREE (parent_receive);
@@ -2706,10 +2706,10 @@ p4est_correct_partition (p4est_t * p4est,
 
   /* correct partition */
   current_proc =
-    p4est_find_next_nonempty_process (0, num_procs, num_quadrants_in_proc);
+    p4est_next_nonempty_process (0, num_procs, num_quadrants_in_proc);
   next_proc =
-    p4est_find_next_nonempty_process (current_proc + 1, num_procs,
-                                      num_quadrants_in_proc);
+    p4est_next_nonempty_process (current_proc + 1, num_procs,
+                                 num_quadrants_in_proc);
   num_moved_quadrants = 0;
   while (current_proc < num_procs) {
     /* loop over all non empty processes */
@@ -2717,7 +2717,7 @@ p4est_correct_partition (p4est_t * p4est,
     if (0 < current_proc && current_proc < num_procs) {
       /* if any process but first */
       num_quadrants_in_proc[current_proc] += correction[current_proc];
-      num_moved_quadrants += abs (correction[current_proc]);
+      num_moved_quadrants += (p4est_locidx_t) abs (correction[current_proc]);
     }
     if (current_proc == 0 || next_proc < num_procs) {
       /* if first process or next process is feasible */
@@ -2727,8 +2727,8 @@ p4est_correct_partition (p4est_t * p4est,
     /* increase process ids */
     current_proc = next_proc;
     next_proc =
-      p4est_find_next_nonempty_process (next_proc + 1, num_procs,
-                                        num_quadrants_in_proc);
+      p4est_next_nonempty_process (next_proc + 1, num_procs,
+                                   num_quadrants_in_proc);
   }
 
   /* free memory */

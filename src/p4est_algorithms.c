@@ -1749,11 +1749,10 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 }
 
 int
-p4est_compute_partition_correction (p4est_gloidx_t * partition,
-                                    int num_procs,
-                                    int rank,
-                                    p4est_gloidx_t min_quadrant_id,
-                                    p4est_gloidx_t max_quadrant_id)
+p4est_partition_correction (p4est_gloidx_t * partition,
+                            int num_procs, int rank,
+                            p4est_gloidx_t min_quadrant_id,
+                            p4est_gloidx_t max_quadrant_id)
 {
   int                 i, h;
   int                 rank_with_max_quads = rank;
@@ -1797,9 +1796,8 @@ p4est_compute_partition_correction (p4est_gloidx_t * partition,
 }
 
 int
-p4est_find_next_nonempty_process (int rank,
-                                  int num_procs,
-                                  p4est_locidx_t * num_quadrants_in_proc)
+p4est_next_nonempty_process (int rank, int num_procs,
+                             p4est_locidx_t * num_quadrants_in_proc)
 {
   if (rank >= num_procs) {      /* if `rank` is too high */
     /* return process id beyond scope */

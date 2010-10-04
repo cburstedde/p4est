@@ -144,7 +144,6 @@
 #define p4est_quadrant_list_pop         p8est_quadrant_list_pop
 
 /* functions in p4est_extended */
-
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_partition_ext             p8est_partition_ext
@@ -244,8 +243,8 @@
 #define p4est_complete_subtree          p8est_complete_subtree
 #define p4est_balance_subtree           p8est_balance_subtree
 #define p4est_linearize_tree            p8est_linearize_tree
-#define p4est_find_next_nonempty_process p8est_find_next_nonempty_process
-#define p4est_compute_partition_correction p8est_compute_partition_correction
+#define p4est_next_nonempty_process     p8est_next_nonempty_process
+#define p4est_partition_correction      p8est_partition_correction
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
