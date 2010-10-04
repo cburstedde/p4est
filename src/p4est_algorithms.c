@@ -1748,15 +1748,16 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
   return removed;
 }
 
-int
+p4est_locidx_t
 p4est_partition_correction (p4est_gloidx_t * partition,
                             int num_procs, int rank,
                             p4est_gloidx_t min_quadrant_id,
                             p4est_gloidx_t max_quadrant_id)
 {
-  int                 i, h;
+  int                 i;
   int                 rank_with_max_quads = rank;
-  int                 max_num_quadrants =
+  p4est_gloidx_t      h;
+  p4est_gloidx_t      max_num_quadrants =
     SC_MIN (max_quadrant_id, partition[rank + 1] - 1) - partition[rank] + 1;
 
   /* no correction if num quadrants not sufficient for family */
@@ -1788,10 +1789,10 @@ p4est_partition_correction (p4est_gloidx_t * partition,
 
   /* compute correction */
   if (rank_with_max_quads < rank) {
-    return (int) -(max_quadrant_id - partition[rank] + 1);
+    return (p4est_locidx_t) (partition[rank] - max_quadrant_id - 1);
   }
   else {
-    return (int) partition[rank] - min_quadrant_id;
+    return (p4est_locidx_t) (partition[rank] - min_quadrant_id);
   }
 }
 

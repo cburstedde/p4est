@@ -226,7 +226,7 @@ size_t              p4est_linearize_tree (p4est_t * p4est,
  * \param [in] max_quadrant_id maximal global quadrant index of family
  * \return                     correction for process \a rank
  */
-int                 p4est_partition_correction (p4est_gloidx_t *
+p4est_locidx_t      p4est_partition_correction (p4est_gloidx_t *
                                                 partition,
                                                 int num_procs,
                                                 int rank,

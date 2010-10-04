@@ -2685,9 +2685,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     }
 
     /* compute correction */
-    correction_local = p4est_partition_correction (partition_new,
-                                                   num_procs, rank,
-                                                   min_quad_id, max_quad_id);
+    correction_local =
+      (int) p4est_partition_correction (partition_new, num_procs, rank,
+                                        min_quad_id, max_quad_id);
 
     /* free receive memory */
     P4EST_FREE (parent_receive);
