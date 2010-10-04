@@ -65,6 +65,7 @@ p4est_balance_peer_t;
 static int          p4est_uninitialized_key;
 void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
 const int           p4est_num_ranges = 25;
+int                 p4est_partition_for_coarsening = 0;
 
 #endif /* P4_TO_P8 */
 
@@ -1979,7 +1980,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
-  int                 num_corrected, run_correction = 1;
+  int                 num_corrected;
 #endif /* P4EST_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -2259,7 +2260,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
   }
 
   /* correct partition */
-  if (run_correction) {
+  if (p4est_partition_for_coarsening) {
     num_corrected = p4est_correct_partition (p4est, num_quadrants_in_proc);
     P4EST_GLOBAL_PRODUCTIONF
       ("Designated new partition corrected, %d quadrants moved\n",

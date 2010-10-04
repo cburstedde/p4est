@@ -38,7 +38,7 @@ typedef struct
 }
 user_data_t;
 
-/* global variables*/
+/* global variables */
 static int          coarsen_all = 1;
 
 /* functions */
@@ -103,6 +103,9 @@ main (int argc, char **argv)
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* activate correction for partitioning */
+  p4est_partition_for_coarsening = 1;
 
   /* create connectivity */
 #ifdef P4_TO_P8
