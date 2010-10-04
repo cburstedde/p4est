@@ -72,6 +72,16 @@ static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
 
+/** Correct partition where quadrant families are split over multiple processes.
+ *
+ * \param [in] p4est                     forest whose partition is corrected
+ * \param [in,out] num_quadrants_in_proc partition that will be corrected
+ * \return                               absolute number of moved quadrants
+ */
+static int          p4est_correct_partition (p4est_t * p4est,
+                                             p4est_locidx_t *
+                                             num_quadrants_in_proc);
+
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
                         p4est_topidx_t treeid,
@@ -2270,7 +2280,7 @@ p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
      global_shipped * 100. / global_num_quadrants);
 }
 
-int
+static int
 p4est_correct_partition (p4est_t * p4est,
                          p4est_locidx_t * num_quadrants_in_proc)
 {

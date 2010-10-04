@@ -130,7 +130,6 @@
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen                   p8est_coarsen
 #define p4est_balance                   p8est_balance
-#define p4est_correct_partition         p8est_correct_partition
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save

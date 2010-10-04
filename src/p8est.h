@@ -325,16 +325,6 @@ void                p8est_balance (p8est_t * p8est,
 void                p8est_partition (p8est_t * p8est,
                                      p8est_weight_t weight_fn);
 
-/** Correct partition where quadrant families are split over multiple processes.
- *
- * \param [in] p8est                     forest whose partition is corrected
- * \param [in,out] num_quadrants_in_proc partition that will be corrected
- * \return                               absolute number of moved quadrants
- */
-int                 p8est_correct_partition (p8est_t * p8est,
-                                             p4est_locidx_t *
-                                             num_quadrants_in_proc);
-
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
