@@ -193,8 +193,8 @@ void                p8est_qcoord_to_vertex (p8est_connectivity_t *
                                             p4est_qcoord_t z, double vxyz[3]);
 
 /** Create a new forest.
- * Each processor is assigned a domain partition of equal size.
- * Each processor's domain is then filled with the coarsest possible quadrants.
+ * The new forest consists of equi-partitioned root quadrants.
+ * When there are more processors than trees, some processors are empty.
  *
  * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
