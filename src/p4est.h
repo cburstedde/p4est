@@ -335,8 +335,8 @@ void                p4est_partition (p4est_t * p4est,
  * \return                               absolute number of moved quadrants
  */
 int                 p4est_correct_partition (p4est_t * p4est,
-                                             p4est_locidx_t * 
-					     num_quadrants_in_proc);
+                                             p4est_locidx_t *
+                                             num_quadrants_in_proc);
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
