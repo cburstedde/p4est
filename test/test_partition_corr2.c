@@ -1,3 +1,26 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
 #ifdef P4_TO_P8
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
@@ -8,18 +31,15 @@
 #include <p4est_vtk.h>
 #endif
 
-
 /* typedefs */
 typedef struct
 {
-  p4est_topidx_t a;
+  p4est_topidx_t      a;
 }
 user_data_t;
 
-
 /* global variables*/
-static int            coarsen_all = 1;
-
+static int          coarsen_all = 1;
 
 /* functions */
 static void
@@ -64,16 +84,14 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return coarsen_all || q[0]->y >= P4EST_ROOT_LEN / 2;
 }
 
-
 /* main */
 int
 main (int argc, char **argv)
 {
-  int                 rank, num_procs, mpiret, i=0;
+  int                 rank, num_procs, mpiret, i = 0;
   MPI_Comm            mpicomm = MPI_COMM_WORLD;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -111,7 +129,8 @@ main (int argc, char **argv)
   }
   SC_CHECK_ABORT (p4est->global_num_quadrants == connectivity->num_trees,
                   "coarsest forest was not achieved");
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_coarsened");
+  p4est_vtk_write_file (p4est, NULL,
+                        P4EST_STRING "_partition_corr_coarsened");
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
@@ -122,6 +141,6 @@ main (int argc, char **argv)
 
   mpiret = MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
-  
+
   return 0;
 }

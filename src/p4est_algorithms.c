@@ -1749,16 +1749,16 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 }
 
 int
-p4est_compute_partition_correction (p4est_gloidx_t *partition,
+p4est_compute_partition_correction (p4est_gloidx_t * partition,
                                     int num_procs,
                                     int rank,
                                     p4est_gloidx_t min_quadrant_id,
                                     p4est_gloidx_t max_quadrant_id)
 {
-  int i, h;
-  int rank_with_max_quads = rank;
-  int max_num_quadrants =
-        SC_MIN (max_quadrant_id, partition[rank+1] - 1) - partition[rank] + 1;
+  int                 i, h;
+  int                 rank_with_max_quads = rank;
+  int                 max_num_quadrants =
+    SC_MIN (max_quadrant_id, partition[rank + 1] - 1) - partition[rank] + 1;
 
   /* no correction if num quadrants not sufficient for family */
   if (max_quadrant_id - min_quadrant_id + 1 != P4EST_CHILDREN) {
@@ -1767,8 +1767,8 @@ p4est_compute_partition_correction (p4est_gloidx_t *partition,
 
   /* decreasing search for process with highest amount of quadrants */
   i = rank_with_max_quads - 1;
-  while (min_quadrant_id < partition[i+1]) {
-    h = partition[i+1] - SC_MAX (min_quadrant_id, partition[i]);
+  while (min_quadrant_id < partition[i + 1]) {
+    h = partition[i + 1] - SC_MAX (min_quadrant_id, partition[i]);
     if (max_num_quadrants <= h) {
       max_num_quadrants = h;
       rank_with_max_quads = i;
@@ -1779,7 +1779,7 @@ p4est_compute_partition_correction (p4est_gloidx_t *partition,
   /* increasing search for process with highest amount of quadrants */
   i = rank_with_max_quads + 1;
   while (partition[i] <= max_quadrant_id) {
-    h = SC_MIN (max_quadrant_id, partition[i+1] - 1) - partition[i] + 1;
+    h = SC_MIN (max_quadrant_id, partition[i + 1] - 1) - partition[i] + 1;
     if (max_num_quadrants < h) {
       max_num_quadrants = h;
       rank_with_max_quads = i;
@@ -1799,9 +1799,9 @@ p4est_compute_partition_correction (p4est_gloidx_t *partition,
 int
 p4est_find_next_nonempty_process (int rank,
                                   int num_procs,
-                                  p4est_locidx_t *num_quadrants_in_proc)
+                                  p4est_locidx_t * num_quadrants_in_proc)
 {
-  if (rank >= num_procs) { /* if `rank` is too high */
+  if (rank >= num_procs) {      /* if `rank` is too high */
     /* return process id beyond scope */
     return num_procs;
   }

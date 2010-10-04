@@ -76,7 +76,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
         $(test_p4est_test_search_SOURCES) \
-				$(test_p4est_test_partition_corr_SOURCES) \
+        $(test_p4est_test_partition_corr_SOURCES) \
         $(test_p8est_test_quadrants_SOURCES) \
         $(test_p8est_test_balance_SOURCES) \
         $(test_p8est_test_partition_SOURCES) \
@@ -92,4 +92,4 @@ LINT_CSOURCES += \
         $(test_p8est_test_iterate_SOURCES) \
         $(test_p8est_test_lnodes_SOURCES) \
         $(test_p8est_test_search_SOURCES) \
-				$(test_p8est_test_partition_corr_SOURCES)
+        $(test_p8est_test_partition_corr_SOURCES)
