@@ -9,7 +9,7 @@ libp4est_internal_headers =
 libp4est_compiled_sources = src/p4est_base.c
 if P4EST_ENABLE_BUILD_2D
 libp4est_installed_headers += \
-        src/p4est_connectivity.h src/p4est.h \
+        src/p4est_connectivity.h src/p4est.h src/p4est_extended.h \
         src/p4est_bits.h src/p4est_search.h \
         src/p4est_algorithms.h src/p4est_communication.h \
         src/p4est_ghost.h src/p4est_nodes.h src/p4est_vtk.h \
@@ -26,7 +26,7 @@ endif
 if P4EST_ENABLE_BUILD_3D
 libp4est_installed_headers += \
         src/p4est_to_p8est.h \
-        src/p8est_connectivity.h src/p8est.h \
+        src/p8est_connectivity.h src/p8est.h src/p8est_extended.h \
         src/p8est_bits.h src/p8est_search.h \
         src/p8est_algorithms.h src/p8est_communication.h \
         src/p8est_ghost.h src/p8est_nodes.h src/p8est_vtk.h \

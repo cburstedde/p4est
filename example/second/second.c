@@ -27,6 +27,7 @@
  */
 
 #include <p4est_algorithms.h>
+#include <p4est_extended.h>
 #include <p4est_vtk.h>
 
 typedef struct

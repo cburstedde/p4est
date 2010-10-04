@@ -24,11 +24,13 @@
 #ifndef P4_TO_P8
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_ghost.h>
 #include <p4est_nodes.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_nodes.h>
 #endif

@@ -37,6 +37,7 @@
 #define VTK_OUTPUT 1
 
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 
 #ifdef VTK_OUTPUT
 #include <p8est_vtk.h>

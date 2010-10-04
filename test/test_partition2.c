@@ -23,8 +23,10 @@
 
 #ifdef P4_TO_P8
 #include <p8est_algorithms.h>
+#include <p8est_extended.h>
 #else
 #include <p4est_algorithms.h>
+#include <p4est_extended.h>
 #endif
 
 typedef struct

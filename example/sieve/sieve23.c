@@ -26,9 +26,9 @@
  * We'll figure out elsewhere how to interface this to PETSc/Sieve.
  */
 
-#include <p4est.h>
+#include <p4est_extended.h>
 #include <p4est_vtk.h>
-#include <p8est.h>
+#include <p8est_extended.h>
 #include <p8est_vtk.h>
 
 typedef struct

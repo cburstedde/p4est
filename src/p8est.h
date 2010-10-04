@@ -156,16 +156,6 @@ typedef int         (*p8est_refine_t) (p8est_t * p8est,
                                        p4est_topidx_t which_tree,
                                        p8est_quadrant_t * quadrant);
 
-/** Extended callback function prototype to decide for refinement.
- * \param [in] quadrant     Quadrant under consideration for refinement.
- * \param [in] children     If true is returned these will be the children.
- * \return                  Nonzero if the quadrant shall be refined.
- */
-typedef int         (*p8est_refine_ext_t) (p8est_t * p4est,
-                                           p4est_topidx_t which_tree,
-                                           p8est_quadrant_t * quadrant,
-                                           p8est_quadrant_t * children[]);
-
 /** Callback function prototype to decide for coarsening.
  * \param [in] quadrants   Pointers to 8 siblings in Morton ordering.
  * \return nonzero if the quadrants shall be replaced with their parent.
@@ -227,24 +217,6 @@ p8est_t            *p8est_new (MPI_Comm mpicomm,
                                size_t data_size,
                                p8est_init_t init_fn, void *user_pointer);
 
-/** Create a new forest.
- * This is a more general form of p8est_new.
- *
- * \param [in] min_quadrants    Minimum initial quadrants per processor.
- * \param [in] min_level        The forest is refined at least to this level.
- *                              May be negative or 0, then it has no effect.
- * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
- *                              instead of the coarsest possible one.
- *                              The latter is partition-specific so that
- *                              is usually not a good idea.
- */
-p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
-                                   p8est_connectivity_t * connectivity,
-                                   p4est_locidx_t min_quadrants,
-                                   int min_level, int fill_uniform,
-                                   size_t data_size, p8est_init_t init_fn,
-                                   void *user_pointer);
-
 /** Destroy a p8est.
  *
  * \note The connectivity structure is not destroyed with the p8est.
@@ -284,23 +256,6 @@ void                p8est_refine (p8est_t * p8est,
                                   int refine_recursive,
                                   p8est_refine_t refine_fn,
                                   p8est_init_t init_fn);
-
-/** Refine a forest with a bounded maximum refinement level.
- * A quadrant is refined if either callback returns true.
- * \param [in] refine_fn Callback function that returns true
- *                       if a quadrant shall be refined, may be NULL.
- * \param [in] refine_fn Extended callback function that returns true
- *                       if a quadrant shall be refined, may be NULL.
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is guaranteed to be allocated, may be NULL.
- * \param [in] maxlevel  Maximum allowed refinement level (inclusive).
- *                       If this is negative the level is unrestricted.
- */
-void                p8est_refine_ext (p8est_t * p8est,
-                                      int refine_recursive, int maxlevel,
-                                      p8est_refine_t refine_fn,
-                                      p8est_refine_ext_t refine_ext_fn,
-                                      p8est_init_t init_fn);
 
 /** Coarsen a forest.
  * \param [in] coarsen_fn Callback function that returns true if a

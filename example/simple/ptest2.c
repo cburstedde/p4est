@@ -26,8 +26,8 @@
  * We'll figure out elsewhere how to interface this to PETSc/Sieve.
  */
 
-#include <p4est.h>
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_ghost.h>
 #include <p4est_vtk.h>
 
