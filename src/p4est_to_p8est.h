@@ -53,6 +53,7 @@
 #define P4EST_COMM_PARTITION_GIVEN      P8EST_COMM_PARTITION_GIVEN
 #define P4EST_COMM_PARTITION_WEIGHTED_LOW P8EST_COMM_PARTITION_WEIGHTED_LOW
 #define P4EST_COMM_PARTITION_WEIGHTED_HIGH P8EST_COMM_PARTITION_WEIGHTED_HIGH
+#define P4EST_COMM_PARTITION_CORRECTION P8EST_COMM_PARTITION_CORRECTION
 #define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
 #define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
@@ -105,6 +106,7 @@
 #define p4est_child_corner_faces        p8est_child_corner_faces
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 #define p4est_num_ranges                p8est_num_ranges
+#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 
 /* functions in p4est_connectivity */
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
@@ -242,6 +244,8 @@
 #define p4est_complete_subtree          p8est_complete_subtree
 #define p4est_balance_subtree           p8est_balance_subtree
 #define p4est_linearize_tree            p8est_linearize_tree
+#define p4est_find_next_nonempty_process p8est_find_next_nonempty_process
+#define p4est_compute_partition_correction p8est_compute_partition_correction
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */

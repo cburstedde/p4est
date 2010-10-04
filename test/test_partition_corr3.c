@@ -21,29 +21,5 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/*
-  Authors:
-  Carsten Burstedde <carsten@ices.utexas.edu>
-  Lucas C. Wilcox <lucasw@ices.utexas.edu>
-  Tobin Isaac <tisaac@ices.utexas.edu>
-  Johann Rudi <johann@ices.utexas.edu>
-*/
-
-/*
-  The subdirectory sc contains the SC Library licensed under GNU LGPL.
-  See the files sc/AUTHORS and sc/COPYING for copyright information.
-
-  Several scripts under config are released under GNU GPL versions.
-  These are not compiled or linked with p4est, so we consider them
-  independent programs that are not part of p4est.
-*/
-
-Contact:
-
-Carsten Burstedde <carsten@ices.utexas.edu>
-Lucas Wilcox <lucasw@ices.utexas.edu>
-
-ICES, The University of Texas at Austin
-1 University Station C0200
-Austin, TX 78712
-USA
+#include <p4est_to_p8est.h>
+#include "test_partition_corr2.c"

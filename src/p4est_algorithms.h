@@ -207,6 +207,49 @@ void                p4est_balance_subtree (p4est_t * p4est,
 size_t              p4est_linearize_tree (p4est_t * p4est,
                                           p4est_tree_t * tree);
 
+/** Compute correction of partition for a process.
+ *
+ * The correction denotes how many quadrants the process with id \a rank takes
+ * from (if correction positive) or gives to (if correction negative) the
+ * previous process with id \a rank-1 in order to assign a family of quadrants
+ * to one process.
+ * The process with the highest number of quadrants of a family gets all
+ * quadrants belonging to this family from other processes. If this applies to
+ * several processes, then the process with the lowest id gets the quadrants.
+ * A process can give more quadrants than it owns, if it passes quadrants from
+ * other processes.
+ *
+ * \param [in] partition       first global quadrant index for each process (+1)
+ * \param [in] num_procs       number of processes
+ * \param [in] rank            process id for which correction is computed
+ * \param [in] min_quadrant_id minimal global quadrant index of family
+ * \param [in] max_quadrant_id maximal global quadrant index of family
+ * \return                     correction for process \a rank
+ */
+int                 p4est_compute_partition_correction (p4est_gloidx_t *
+                                                        partition,
+                                                        int num_procs,
+                                                        int rank,
+                                                        p4est_gloidx_t
+                                                        min_quadrant_id,
+                                                        p4est_gloidx_t
+                                                        max_quadrant_id);
+
+/** Find next non-empty process.
+ *
+ * Finds the next process id >= \a rank which is not empty according to
+ * \a num_quadrants_in_proc.
+ *
+ * \param [in] rank                  process id where search starts
+ * \param [in] num_proc              number of processes
+ * \param [in] num_quadrants_in_proc number of quadrants for each process
+ * \return                           process id of a non empty process
+ */
+int                 p4est_find_next_nonempty_process (int rank,
+                                                      int num_procs,
+                                                      p4est_locidx_t *
+                                                      num_quadrants_in_proc);
+
 /** Partition \a p4est given the number of quadrants per proc.
  *
  * Given the desired number of quadrants per proc \a num_quadrants_in_proc
