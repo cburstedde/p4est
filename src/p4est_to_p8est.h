@@ -130,6 +130,7 @@
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen                   p8est_coarsen
 #define p4est_balance                   p8est_balance
+#define p4est_correct_partition         p8est_correct_partition
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
@@ -237,6 +238,8 @@
 #define p4est_complete_subtree          p8est_complete_subtree
 #define p4est_balance_subtree           p8est_balance_subtree
 #define p4est_linearize_tree            p8est_linearize_tree
+#define p4est_find_next_nonempty_process p8est_find_next_nonempty_process
+#define p4est_compute_partition_correction p8est_compute_partition_correction
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */

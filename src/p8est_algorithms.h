@@ -226,7 +226,7 @@ size_t              p8est_linearize_tree (p8est_t * p8est,
  * \param [in] max_quadrant_id maximal global quadrant index of family
  * \return                     correction for process \a rank
  */
-int                 p4est_compute_partition_correction (p4est_gloidx_t *
+int                 p8est_compute_partition_correction (p4est_gloidx_t *
                                                         partition,
                                                         int num_procs,
                                                         int rank,
@@ -245,7 +245,7 @@ int                 p4est_compute_partition_correction (p4est_gloidx_t *
  * \param [in] num_quadrants_in_proc number of quadrants for each process
  * \return                           process id of a non empty process
  */
-int                 p4est_find_next_nonempty_process (int rank,
+int                 p8est_find_next_nonempty_process (int rank,
                                                       int num_procs,
                                                       p4est_locidx_t *
                                                       num_quadrants_in_proc);
