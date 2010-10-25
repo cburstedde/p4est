@@ -1,0 +1,90 @@
+<html>
+<head>
+<title>p4est: Parallel Adaptive Mesh Refinement
+on Forests of Octrees</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+</head>
+<body>
+
+<h2><tt>p4est</tt>: Parallel AMR on Forests of Octrees</h2>
+
+<p>
+The <tt>p4est</tt> software library enables the dynamic management of
+a collection of adaptive octrees, conveniently called a forest of
+octrees.  <tt>p4est</tt> is designed to work in parallel and scale to
+hundreds of thousands of processor cores.
+We explain the concepts and algorithms behind <tt>p4est</tt> in this <a
+href="http://users.ices.utexas.edu/~carsten/papers/BursteddeWilcoxGhattas10.pdf"
+>preprint</a>.  If you use <tt>p4est</tt> for your publications, please cite
+this as:
+</p>
+
+<p class="cite">
+[1]
+Carsten Burstedde, Lucas C. Wilcox, and Omar Ghattas,<br>
+<em>p4est: Scalable Algorithms for Parallel Adaptive Mesh Refinement on
+Forests of Octrees.</em><br>
+Submitted to SIAM Journal on Scientific Computing.
+</p>
+
+<p>
+<tt>p4est</tt> is under active development and
+released under the GNU GPL License version 2 (or
+later). The current version of the software is
+<a href="http://users.ices.utexas.edu/~carsten/p4est/p4est-0.3.1.55-67fe1.tar.gz"
+>0.3.1.55</a>.
+</p>
+
+<p>
+<tt>p4est</tt> uses <tt>libsc</tt> written by the
+same authors and others for basic helper functionality such as logging, array and
+hash data structures, parallel statistics, and more.  <tt>libsc</tt>
+also integrates the third-party libraries <tt>zlib</tt> and
+<tt>lua</tt>.  <tt>libsc</tt> is included in <tt>p4est</tt> and
+free software under LGPL v2.1 (or later).
+</p>
+
+<p>
+The generic adaptive finite element software <a
+href="http://www.dealii.org/">deal.II</a> now interfaces to
+<tt>p4est</tt> to obtain distributed mesh information.  The corresponding
+algorithms are described in this <a
+href="http://users.ices.utexas.edu/~carsten/papers/BangerthBursteddeHeisterEtAl10.pdf"
+>preprint</a>.  If you use <tt>deal.II</tt> with <tt>p4est</tt> for your
+publications, please cite this as:
+</p>
+
+<p class="cite">
+[2]
+Wolfgang Bangerth, Carsten Burstedde, Timo Heister, and Martin
+Kronbichler,<br>
+<em>Algorithms and Data Structures for Massively Parallel Generic
+Adaptive Finite Element Codes.</em><br>
+Submitted to ACM Transactions on Mathematical Software.
+</p>
+
+<hr>
+
+<p>
+<tt>p4est</tt> Authors:<br>
+<a href="http://users.ices.utexas.edu/~carsten/">Carsten Burstedde</a><br>
+<a href="http://lucaswilcox.com/">Lucas C. Wilcox</a><br>
+Tobin Isaac
+</p>
+
+<p>
+Address:<br>
+<a href="http://www.ices.utexas.edu">ICES</a>,
+<a href="http://www.utexas.edu">The University of Texas at Austin</a><br>
+1 University Station C0200<br>
+Austin, Texas 78712, USA
+</p>
+
+<p>
+Contact:<br>
+info-at-p4est.org
+</p>
+
+</body>
+</html>
