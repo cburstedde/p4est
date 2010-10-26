@@ -213,6 +213,9 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
+  P4EST_GLOBAL_PRODUCTIONF ("Size of %dtant: %lld bytes\n", P4EST_DIM,
+                            (long long) sizeof (p4est_quadrant_t));
+
   usage =
     "Arguments: <configuration> <level>\n   Configuration can be any of\n"
 #ifndef P4_TO_P8
