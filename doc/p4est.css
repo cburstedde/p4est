@@ -2,12 +2,12 @@ body {
 	color: #000000;
 	background: #FFFFFF;
 	font-family: sans-serif;
-	margin: 2em 10% 2em 10%;
+	margin: 1em 10% 1em 10%;
 }
 
 tt {
         color: #006633;
-        font-weight: bold
+        font-weight: bold;
 }
 
 hr {
@@ -18,4 +18,16 @@ hr {
 p.cite {
         text-indent: -1em;
         margin-left: 1em;
+        margin-top: 0;
+}
+
+pre.bibtex {
+        margin-bottom: 0;
+}
+
+div.citation {
+        background-color: #E0F0E8;
+        border-style: dashed;
+        border-width: thin;
+        padding: 1ex;
 }
