@@ -219,8 +219,8 @@ static const int    refine_level = 4;
 static int          coarsen_all = 1;
 
 static int
-refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant)
+test_refine (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -230,8 +230,8 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-            p4est_quadrant_t * q[])
+test_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
+              p4est_quadrant_t * q[])
 {
   SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
 
@@ -282,16 +282,16 @@ main (int argc, char **argv)
   connectivity = p4est_connectivity_new_star ();
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
-  p4est_refine (p4est, 1, refine_fn, NULL);
+  p4est_refine (p4est, 1, test_refine, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
 
   coarsen_all = 1;
-  p4est_coarsen_both (p4est, 0, coarsen_fn, NULL);
+  p4est_coarsen_both (p4est, 0, test_coarsen, NULL);
   coarsen_all = 0;
-  p4est_coarsen_both (p4est, 1, coarsen_fn, NULL);
+  p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
   p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
   coarsen_all = 1;
-  p4est_coarsen_both (p4est, 1, coarsen_fn, NULL);
+  p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_endcoarsen");
 
   if (mpisize == 1) {
