@@ -1071,13 +1071,13 @@ failtest:
 }
 
 static              size_t
-ghost_tree_type (sc_array_t * array, size_t index, void *data)
+ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
 {
   p4est_quadrant_t   *q;
 
   P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
 
-  q = (p4est_quadrant_t *) sc_array_index (array, index);
+  q = (p4est_quadrant_t *) sc_array_index (array, zindex);
   return (size_t) q->p.which_tree;
 }
 

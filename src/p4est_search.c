@@ -132,10 +132,10 @@ p4est_find_higher_bound (sc_array_t * array,
 }
 
 static              size_t
-p4est_array_split_ancestor_id (sc_array_t * array, size_t index, void *data)
+p4est_array_split_ancestor_id (sc_array_t * array, size_t zindex, void *data)
 {
   int                *levelp = (int *) data;
-  p4est_quadrant_t   *q = p4est_quadrant_array_index (array, index);
+  p4est_quadrant_t   *q = p4est_quadrant_array_index (array, zindex);
 
   return ((size_t) p4est_quadrant_ancestor_id (q, *levelp));
 }

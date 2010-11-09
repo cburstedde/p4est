@@ -574,7 +574,7 @@ p4est_iter_copy_indices (p4est_iter_loop_args_t * loop_args, int *start_idx2,
   const int           ghost = 1;
   int                 type;
   int                 side;
-  size_t            **index = loop_args->index;
+  size_t            **zindex = loop_args->index;
   int                 idx2;
 
   P4EST_ASSERT (new_num % old_num == 0);
@@ -582,9 +582,10 @@ p4est_iter_copy_indices (p4est_iter_loop_args_t * loop_args, int *start_idx2,
   for (side = 0; side < new_num; side++) {
     idx2 = loop_args->level * P4EST_ITER_STRIDE + start_idx2[side];
     for (type = local; type <= ghost; type++) {
-      index[side * 2 + type][idx2] = index[(side % old_num) * 2 + type][idx2];
-      index[side * 2 + type][idx2 + 1] =
-        index[(side % old_num) * 2 + type][idx2 + 1];
+      zindex[side * 2 + type][idx2] =
+        zindex[(side % old_num) * 2 + type][idx2];
+      zindex[side * 2 + type][idx2 + 1] =
+        zindex[(side % old_num) * 2 + type][idx2 + 1];
     }
   }
 }
@@ -788,7 +789,7 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   int                *quad_idx2 = loop_args->quad_idx2;
   int                 this_corner;
   sc_array_t        **quadrants = loop_args->quadrants;
-  size_t            **index = loop_args->index;
+  size_t            **zindex = loop_args->index;
   size_t             *first_index = loop_args->first_index;
   size_t             *count = loop_args->count;
   p4est_quadrant_t  **test = loop_args->test;
@@ -819,8 +820,8 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
      * initialize tests to NULL */
     for (type = local; type <= ghost; type++) {
       st = side * 2 + type;
-      first_index[st] = index[st][quad_idx2[side]];
-      count[st] = (index[st][quad_idx2[side] + 1] - first_index[st]);
+      first_index[st] = zindex[st][quad_idx2[side]];
+      count[st] = (zindex[st][quad_idx2[side] + 1] - first_index[st]);
       test[st] = NULL;
     }
   }
@@ -1136,7 +1137,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
   int                *start_idx2 = args->start_idx2;
   int                *level_num = loop_args->level_num;
   sc_array_t        **quadrants = loop_args->quadrants;
-  size_t            **index = loop_args->index;
+  size_t            **zindex = loop_args->index;
   size_t             *first_index = loop_args->first_index;
   sc_array_t         *common_corners = args->common_corners;
   p8est_quadrant_t  **test = loop_args->test;
@@ -1178,8 +1179,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
      * search area, and the count of quadrants in the search area */
     for (type = local; type <= ghost; type++) {
       st = side * 2 + type;
-      first_index[st] = index[st][quad_idx2[side]];
-      count[st] = (index[st][quad_idx2[side] + 1] - first_index[st]);
+      first_index[st] = zindex[st][quad_idx2[side]];
+      count[st] = (zindex[st][quad_idx2[side] + 1] - first_index[st]);
     }
   }
 
@@ -1285,7 +1286,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           st = side * 2 + type;
           sc_array_init_view (&test_view, quadrants[st],
                               first_index[st], count[st]);
-          p4est_iter_tier_insert (&test_view, *Level, index[st] +
+          p4est_iter_tier_insert (&test_view, *Level, zindex[st] +
                                   quad_idx2[side], first_index[st],
                                   tier_rings, test[st]);
         }
@@ -1326,9 +1327,9 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
             quad_idx2[side] = level_idx2 + P4EST_ITER_STRIDE + *temp_int;
             for (type = local; type <= ghost; type++) {
               st = side * 2 + type;
-              first_index[st] = index[st][quad_idx2[side]];
+              first_index[st] = zindex[st][quad_idx2[side]];
               count[st] =
-                (size_t) index[st][quad_idx2[side] + 1] - first_index[st];
+                (size_t) zindex[st][quad_idx2[side] + 1] - first_index[st];
               /* if the search area is non-empty, by the two to one condition
                * it must contain exactly quadrant half as large as the search
                * level, which we add to the collection */
@@ -1389,8 +1390,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
       quad_idx2[side] = level_idx2 + *temp_int;
       for (type = local; type <= ghost; type++) {
         st = side * 2 + type;
-        first_index[st] = index[st][quad_idx2[side]];
-        count[st] = (index[st][quad_idx2[side] + 1] - first_index[st]);
+        first_index[st] = zindex[st][quad_idx2[side]];
+        count[st] = (zindex[st][quad_idx2[side] + 1] - first_index[st]);
         if (type == local && count[st]) {
           all_empty = 0;
         }
@@ -1669,7 +1670,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
   int                *start_idx2 = args->start_idx2;
   int                *level_num = loop_args->level_num;
   sc_array_t        **quadrants = loop_args->quadrants;
-  size_t            **index = loop_args->index;
+  size_t            **zindex = loop_args->index;
   size_t             *first_index = loop_args->first_index;
   int                *num_to_child = args->num_to_child;
   p4est_quadrant_t  **test = loop_args->test;
@@ -1712,15 +1713,15 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
 
     /* start_idx2 gives the ancestor id at level for the search area on this
      * side, so quad_idx2[side] now gives the correct location in
-     * index[sidetype] of the bounds of the search area */
+     * zindex[sidetype] of the bounds of the search area */
     quad_idx2[side] = level_idx2 + start_idx2[side];
 
     /* get the location in quadrants[sidetype] of the first quadrant in the
      * search area, and the count of quadrants in the search area */
     for (type = local; type <= ghost; type++) {
       st = side * 2 + type;
-      first_index[st] = index[st][quad_idx2[side]];
-      count[st] = (index[st][quad_idx2[side] + 1] - first_index[st]);
+      first_index[st] = zindex[st][quad_idx2[side]];
+      count[st] = (zindex[st][quad_idx2[side] + 1] - first_index[st]);
     }
   }
 
@@ -1844,7 +1845,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
           st = side * 2 + type;
           sc_array_init_view (&test_view, quadrants[st],
                               first_index[st], count[st]);
-          p4est_iter_tier_insert (&test_view, *Level, index[st] +
+          p4est_iter_tier_insert (&test_view, *Level, zindex[st] +
                                   quad_idx2[side], first_index[st],
                                   tier_rings, test[st]);
         }
@@ -1873,8 +1874,8 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
             num_to_child[n_side * ntc_str + i];
           for (n_type = local; n_type <= ghost; n_type++) {
             nsidentype = n_side * 2 + n_type;
-            first_index[nsidentype] = index[nsidentype][quad_idx2[n_side]];
-            count[nsidentype] = index[nsidentype][quad_idx2[n_side] + 1] -
+            first_index[nsidentype] = zindex[nsidentype][quad_idx2[n_side]];
+            count[nsidentype] = zindex[nsidentype][quad_idx2[n_side] + 1] -
               first_index[nsidentype];
             /* if the search area is non-empty, by the two to one condition
              * it must contain exactly one quadrant: if one of the two types
@@ -1960,8 +1961,8 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
     for (side = left; side <= limit; side++) {
       for (type = local; type <= ghost; type++) {
         st = side * 2 + type;
-        first_index[st] = index[st][quad_idx2[side]];
-        count[st] = (index[st][quad_idx2[side] + 1] - first_index[st]);
+        first_index[st] = zindex[st][quad_idx2[side]];
+        count[st] = (zindex[st][quad_idx2[side] + 1] - first_index[st]);
       }
     }
 
@@ -2239,7 +2240,7 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
   int                 start_idx2 = args->start_idx2;
   int                *level_num = loop_args->level_num;
   sc_array_t        **quadrants = loop_args->quadrants;
-  size_t            **index = loop_args->index;
+  size_t            **zindex = loop_args->index;
   size_t             *first_index = loop_args->first_index;
   p4est_quadrant_t  **test = loop_args->test;
   size_t             *count = loop_args->count;
@@ -2260,8 +2261,8 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
    * index[type] of the bounds of the search area */
   quad_idx2 = level_idx2 + start_idx2;
   for (type = local; type <= ghost; type++) {
-    first_index[type] = index[type][quad_idx2];
-    count[type] = index[type][quad_idx2 + 1] - first_index[type];
+    first_index[type] = zindex[type][quad_idx2];
+    count[type] = zindex[type][quad_idx2 + 1] - first_index[type];
   }
 
   /* if ther are no local quadrants, nothing to be done */
@@ -2309,7 +2310,7 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
     for (type = local; type <= ghost; type++) {
       sc_array_init_view (&test_view, quadrants[type],
                           first_index[type], count[type]);
-      p4est_iter_tier_insert (&test_view, *Level, index[type] + quad_idx2,
+      p4est_iter_tier_insert (&test_view, *Level, zindex[type] + quad_idx2,
                               first_index[type], tier_rings, test[type]);
     }
 
@@ -2377,8 +2378,8 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
      * and the count */
     quad_idx2 = level_idx2 + level_num[*Level];
     for (type = local; type <= ghost; type++) {
-      first_index[type] = index[type][quad_idx2];
-      count[type] = index[type][quad_idx2 + 1] - first_index[type];
+      first_index[type] = zindex[type][quad_idx2];
+      count[type] = zindex[type][quad_idx2 + 1] - first_index[type];
     }
     /* if there are no local quadrants, we are done with this search area,
      * and we advance to the next branch at this level */
