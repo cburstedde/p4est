@@ -225,7 +225,9 @@ p4est_t            *p4est_new (MPI_Comm mpicomm,
  */
 void                p4est_destroy (p4est_t * p4est);
 
-/** Make a deep copy of a p4est.  Copying of quadrant user data is optional.
+/** Make a deep copy of a p4est.
+ * The connectivity is not duplicated.
+ * Copying of quadrant user data is optional.
  *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
