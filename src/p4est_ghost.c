@@ -1893,7 +1893,7 @@ failtest:
 p4est_ghost_t      *
 p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
 {
-  return p4est_ghost_new_check (p4est, btype, P4EST_GHOST_UNBALANCED_ALLOW);
+  return p4est_ghost_new_check (p4est, btype, P4EST_GHOST_UNBALANCED_ABORT);
 }
 
 void
