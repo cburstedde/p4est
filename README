@@ -1,32 +1,100 @@
 
 This is the README file for p4est.
-p4est is free software licensed under GPL version 2 (or later).
 
 p4est is a C library to manage a collection (a forest) of multiple
 connected adaptive quadtrees or octrees in parallel.
 
-See more documentation in the doc subdirectory.
+p4est is written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+and released under the GNU General Public Licence version 2 (or later),
+Copyright (C) 2010 The University of Texas System.
 
-Version 0.3.0 handles both 2D and 3D forests.
+The official web page for source code and documentation is www.p4est.org.
+Please send bug reports and ideas for contribution to info@p4est.org.
 
-Version 0.2.0 includes libsc 0.5.0.  It handles the 2D forest.
 
-------------------------------------------------------------------------
+ 1. Purpose
 
-Example configure lines:
+Many applications in applied mathematics and numerical simulation use a mesh of
+computation cells that covers the domain of interest.  The numerical solution
+is then approximated by functions, each of which is associated with a small set
+of cells (or even one).  Dynamic ``adaptive'' methods change the mesh during
+the simulation by local refinement or coarsening, and ``parallel'' methods
+distribute (``partition'') the mesh between multiple processors, where each
+processor ideally receives an equal share of the computational load.  p4est
+isolates the task of parallel dynamic adaptive mesh refinement (AMR),
+coarsening, and load balancing, and encapsulates algorithms that scale well to
+large numbers (10^5) of processors.
 
-# GNU compilers, debug, default BLAS from libsc (not used by p4est).
-# Using an external libsc installed under SC_PATH.
-#
-configure \
-        CFLAGS="-Wall -Wextra -Wshadow -Wno-unused-parameter \
-                -O0 -g -rdynamic" \
-        --enable-debug --enable-mpi --with-sc=<SC_PATH>
 
-# Intel compilers, debug, mpi, no builtin zlib.
-# Default BLAS, VTK ASCII double output.
-#
-configure \
-        CFLAGS="-Wall -w2 -Wcheck -O0 -g -rdynamic -wd869,981" \
-        --enable-debug --enable-mpi --without-zlib \
-        --disable-vtk-binary --enable-vtk-doubles
+ 2. Geometric structure
+
+The basic structure used in p4est is a ``connectivity'' of quadtrees (2D) or
+octrees (3D) which covers the domain of interest in a conforming macro-mesh.
+These trees can then be arbitrarily refined and coarsened, where the storage of
+quadrants/octants is distributed in parallel.  Thus, the mesh primitives used
+in p4est are quadrilaterals in 2D and hexahedra in 3D.  The adaptive structure
+allows for quadrants/octants of different sizes to neighbor each other, which
+is commonly called ``non-conforming''.  This concept leads to ``hanging'' faces
+and edges.
+
+
+ 3. Core p4est (2D) and p8est (3D) routines
+
+p?est_new: Create an equi-partitioned, uniformly refined forest.
+
+p?est_refine: Adaptively subdivide octants based on a callback function, once
+for each octant or recursively.
+
+p?est_coarsen: Replace families of eight child octants by their common parent
+octant, once or recursively.
+
+p?est_partition: Redistribute the octants in parallel, according to a given
+target number of octants for each process, or weights prescribed for all
+octants.
+
+p?est_balance: Ensure at most 2:1 size relations between neighboring octants by
+local refinement where necessary.
+
+p?est_checksum: Compute a partition-independent integer ``fingerprint'' of a
+forest.  This is useful for debugging and regression testing.
+
+
+ 4. Interfacing to p4est from applications
+
+p?est_ghost: Collect one layer of off-process octants touching the process
+boundaries from the outside.  This function requires a previous call to
+p?est_balance.  This is the most generally useful function for external
+applications.  By querying the ghost layer, the application can associate
+degrees of freedom with the mesh which are the basis for all numerical
+computation.
+
+p?est_nodes: Create a globally unique numbering of the mesh nodes (i.e., the
+vertices at the corners of octants, not to be confused with octree nodes),
+taking into account the classification into ``independent'' and ``hanging''
+nodes.  This function requires previous calls to p?est_balance and p?est_ghost.
+It provides a global numbering for degrees of freedom that can be associated
+with piecewise linear finite elements.
+
+
+ 5. Installation
+
+p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
+file for details.  The following configure options are important.
+
+--enable-mpi: Necessary for parallel functionality.  Without this option, p4est
+does not require MPI, which is replaced by a dummy implementation that always
+assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
+
+--enable-debug: Enable assertions and additional code for verification.  This
+is generally helpful for development, even if it is somewhat slower and
+produces a lot of diagnostic log messages.
+
+
+ 6. Using p4est through the deal.II interface
+
+The recent development version of the generic adaptive finite element software
+library deal.II interfaces to p4est to parallelize its mesh handling.  The most
+convenient way to compile and install p4est to be accessible for deal.II is to
+use the doc/p4est-setup.sh script.  This creates both a debug and production
+version compiled with minimal logging output.  To know what is going on within
+p4est, the log level needs to be relaxed in the script.
