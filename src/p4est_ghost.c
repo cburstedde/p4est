@@ -1124,7 +1124,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
     lq = &(gfp[proc]);
     uq = &(gfp[proc + 1]);
     /* check for empty processor */
-    if (p4est_quadrant_is_equal (lq, uq)) {
+    if (p4est_quadrant_is_equal_piggy (lq, uq)) {
       continue;
     }
     if (proc == n0_proc) {
