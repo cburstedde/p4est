@@ -791,6 +791,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
       }
 #endif
       else {
+        /* outside across a corner */
         P4EST_ASSERT (face_axis[0] && face_axis[1]);
         corner = outface[1] + 2 * outface[3];
 #ifdef P4_TO_P8
@@ -846,14 +847,17 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
           continue;
         }
 
-        /* find first quadrant in tree that fits between fd and ld */
+        /* Find first quadrant in tree that fits between fd and ld.
+           We are only interested in tree quadrants that are NOT
+           larger than s, since this function is used for balance. */
         guess = treecount / 2;
         if (p4est_quadrant_compare (&fd, treefd) <= 0) {
           /* the first tree quadrant overlaps an insulation quadrant */
           first_index = 0;
         }
         else {
-          /* do a binary search for the lowest tree quadrant >= s */
+          /* Do a binary search for the lowest tree quadrant >= s.
+             Does not accept an ancestor of s, which is on purpose. */
           first_index = p4est_find_lower_bound (tquadrants, s, guess);
           if (first_index < 0) {
             continue;

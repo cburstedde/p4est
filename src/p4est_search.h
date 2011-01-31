@@ -30,7 +30,7 @@ SC_EXTERN_C_BEGIN;
 
 /** Find the lowest position tq in a quadrant array such that tq >= q.
  * \return  Returns the id of the matching quadrant
- *                  or -1 if not found or the array is empty.
+ *                  or -1 if array < q or the array is empty.
  */
 ssize_t             p4est_find_lower_bound (sc_array_t * array,
                                             const p4est_quadrant_t * q,
@@ -38,7 +38,7 @@ ssize_t             p4est_find_lower_bound (sc_array_t * array,
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant
- *                  or -1 if not found or the array is empty.
+ *                  or -1 if array > q or the array is empty.
  */
 ssize_t             p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
