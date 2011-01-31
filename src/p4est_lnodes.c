@@ -311,8 +311,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
       }
       if (has_local) {
         hface = (p4est_iter_face_side_t *) sc_array_push (hfaces);
-        P4EST_ASSERT (hfaces->elem_count <=
-                      P4EST_FACES * info->p4est->local_num_quadrants);
+        P4EST_ASSERT (hfaces->elem_count <= P4EST_FACES *
+                      (size_t) info->p4est->local_num_quadrants);
         *hface = *fside;
       }
       for (i = 0; i < P4EST_CHILDREN / 2; i++) {
@@ -332,8 +332,9 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                                                                 &cdpidxz);
 #ifdef P4EST_DEBUG
           P4EST_ASSERT (cdp_array->a.elem_count <= prepushcount + 1);
-          P4EST_ASSERT (prepushalloc == 0
-                        || cdp_array->a.byte_alloc <= 2 * prepushalloc);
+          P4EST_ASSERT (prepushalloc == 0 ||
+                        cdp_array->a.byte_alloc <=
+                        2 * (ssize_t) prepushalloc);
           P4EST_ASSERT (cdp == (p4est_lnodes_cdp_t *)
                         sc_array_index (&cdp_array->a, cdpidxz));
           P4EST_ASSERT (cdp_array->a.elem_count <= P4EST_CHILDREN *
@@ -383,8 +384,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                                                                     &edpidxz);
 #ifdef P4EST_DEBUG
               P4EST_ASSERT (edp_array->a.elem_count <= prepushcount + 1);
-              P4EST_ASSERT (prepushalloc == 0
-                            || edp_array->a.byte_alloc <= 2 * prepushalloc);
+              P4EST_ASSERT (prepushalloc == 0 || edp_array->a.byte_alloc
+                            <= 2 * (ssize_t) prepushalloc);
               P4EST_ASSERT (edp == (p8est_lnodes_edp_t *)
                             sc_array_index (&edp_array->a, edpidxz));
               P4EST_ASSERT (edp_array->a.elem_count <= P8EST_EDGES *
@@ -440,8 +441,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                                                                 &cdpidxz);
 #ifdef P4EST_DEBUG
           P4EST_ASSERT (cdp_array->a.elem_count <= prepushcount + 1);
-          P4EST_ASSERT (prepushalloc == 0
-                        || cdp_array->a.byte_alloc <= 2 * prepushalloc);
+          P4EST_ASSERT (prepushalloc == 0 || cdp_array->a.byte_alloc
+                        <= 2 * (ssize_t) prepushalloc);
           P4EST_ASSERT (cdp == (p4est_lnodes_cdp_t *)
                         sc_array_index (&cdp_array->a, cdpidxz));
           P4EST_ASSERT (cdp_array->a.elem_count <= P4EST_CHILDREN *
@@ -477,8 +478,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                                                                   &edpidxz);
 #ifdef P4EST_DEBUG
             P4EST_ASSERT (edp_array->a.elem_count <= prepushcount + 1);
-            P4EST_ASSERT (prepushalloc == 0
-                          || edp_array->a.byte_alloc <= 2 * prepushalloc);
+            P4EST_ASSERT (prepushalloc == 0 || edp_array->a.byte_alloc
+                          <= 2 * (ssize_t) prepushalloc);
             P4EST_ASSERT (edp == (p8est_lnodes_edp_t *)
                           sc_array_index (&edp_array->a, edpidxz));
             P4EST_ASSERT (edp_array->a.elem_count <= P8EST_EDGES *
@@ -584,8 +585,8 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
       }
       if (has_local) {
         hedge = (p8est_iter_edge_side_t *) sc_array_push (hedges);
-        P4EST_ASSERT (hedges->elem_count <=
-                      3 * P8EST_EDGES * info->p4est->local_num_quadrants);
+        P4EST_ASSERT (hedges->elem_count <= (size_t)
+                      (3 * P8EST_EDGES * info->p4est->local_num_quadrants));
         *hedge = *eside;
       }
       for (i = 0; i < 2; i++) {
@@ -605,8 +606,8 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
                                                                 &cdpidxz);
 #ifdef P4EST_DEBUG
           P4EST_ASSERT (cdp_array->a.elem_count <= prepushcount + 1);
-          P4EST_ASSERT (prepushalloc == 0
-                        || cdp_array->a.byte_alloc <= 2 * prepushalloc);
+          P4EST_ASSERT (prepushalloc == 0 || cdp_array->a.byte_alloc <=
+                        2 * (ssize_t) prepushalloc);
           P4EST_ASSERT (cdp == (p4est_lnodes_cdp_t *)
                         sc_array_index (&cdp_array->a, cdpidxz));
           P4EST_ASSERT (cdp_array->a.elem_count <= P4EST_CHILDREN *
@@ -655,8 +656,8 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
                                                                 &cdpidxz);
 #ifdef P4EST_DEBUG
           P4EST_ASSERT (cdp_array->a.elem_count <= prepushcount + 1);
-          P4EST_ASSERT (prepushalloc == 0
-                        || cdp_array->a.byte_alloc <= 2 * prepushalloc);
+          P4EST_ASSERT (prepushalloc == 0 || cdp_array->a.byte_alloc <=
+                        2 * (ssize_t) prepushalloc);
           P4EST_ASSERT (cdp == (p4est_lnodes_cdp_t *)
                         sc_array_index (&cdp_array->a, cdpidxz));
           P4EST_ASSERT (cdp_array->a.elem_count <= P4EST_CHILDREN *
@@ -987,8 +988,8 @@ p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
       binfo = (p4est_lnodes_buf_info_t *) sc_array_push (&(send[proc]));
 #ifdef P4EST_DEBUG
       P4EST_ASSERT (send[proc].elem_count == prepushcount + 1);
-      P4EST_ASSERT (prepushalloc == 0
-                    || send[proc].byte_alloc <= prepushalloc * 2);
+      P4EST_ASSERT (prepushalloc == 0 || send[proc].byte_alloc
+                    <= (ssize_t) prepushalloc * 2);
       P4EST_ASSERT (binfo == (p4est_lnodes_buf_info_t *)
                     sc_array_index (&(send[proc]), prepushcount));
 #endif
@@ -1007,8 +1008,8 @@ p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
       binfo = (p4est_lnodes_buf_info_t *) sc_array_push (&(recv[proc]));
 #ifdef P4EST_DEBUG
       P4EST_ASSERT (recv[proc].elem_count == prepushcount + 1);
-      P4EST_ASSERT (prepushalloc == 0
-                    || recv[proc].byte_alloc <= prepushalloc * 2);
+      P4EST_ASSERT (prepushalloc == 0 || recv[proc].byte_alloc
+                    <= (ssize_t) prepushalloc * 2);
       P4EST_ASSERT (binfo == (p4est_lnodes_buf_info_t *)
                     sc_array_index (&(recv[proc]), prepushcount));
 #endif
@@ -1501,8 +1502,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   }
   for (i = 0; i < nodes_per_edge; i++) {
     inode = (p4est_locidx_t *) sc_array_push (inodes);
-    P4EST_ASSERT (inodes->elem_count <=
-                  nodes_per_elem * info->p4est->local_num_quadrants);
+    P4EST_ASSERT (inodes->elem_count <= (size_t)
+                  (nodes_per_elem * info->p4est->local_num_quadrants));
     *inode = -((p4est_locidx_t) owner_proc + 1);
   }
 
@@ -1771,8 +1772,8 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   }
   for (i = 0; i < nodes_per_face; i++) {
     inode = (p4est_locidx_t *) sc_array_push (inodes);
-    P4EST_ASSERT (inodes->elem_count <=
-                  nodes_per_elem * info->p4est->local_num_quadrants);
+    P4EST_ASSERT (inodes->elem_count <= (size_t)
+                  (nodes_per_elem * info->p4est->local_num_quadrants));
     *inode = -((p4est_locidx_t) owner_proc + 1);
   }
 
@@ -1805,8 +1806,8 @@ p4est_lnodes_volume_callback (p4est_iter_volume_info_t * info, void *Data)
     nid = qid * nodes_per_elem + volume_nodes[i];
     elem_nodes[nid] = num_inodes + (p4est_locidx_t) i;
     inode = (p4est_locidx_t *) sc_array_push (inodes);
-    P4EST_ASSERT (inodes->elem_count <=
-                  nodes_per_elem * info->p4est->local_num_quadrants);
+    P4EST_ASSERT (inodes->elem_count <= (size_t)
+                  (nodes_per_elem * info->p4est->local_num_quadrants));
     *inode = -((p4est_locidx_t) rank + 1);
   }
 }
@@ -1937,8 +1938,8 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
   binfo->share_offset = -1;
   binfo->share_count = -1;
   inode = (p4est_locidx_t *) sc_array_push (inodes);
-  P4EST_ASSERT (inodes->elem_count <=
-                data->nodes_per_elem * p4est->local_num_quadrants);
+  P4EST_ASSERT (inodes->elem_count <= (size_t)
+                (data->nodes_per_elem * p4est->local_num_quadrants));
   *inode = -((p4est_locidx_t) owner_proc + 1);
 
   return num_inodes;
@@ -2073,8 +2074,8 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
 
   for (i = 0; i < nodes_per_edge; i++) {
     inode = (p4est_locidx_t *) sc_array_push (inodes);
-    P4EST_ASSERT (inodes->elem_count <=
-                  nodes_per_elem * p4est->local_num_quadrants);
+    P4EST_ASSERT (inodes->elem_count <= (size_t)
+                  (nodes_per_elem * p4est->local_num_quadrants));
     *inode = -((p4est_locidx_t) owner_proc + 1);
   }
 
