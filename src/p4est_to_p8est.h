@@ -310,4 +310,8 @@
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
 
+/* functions in p4est_balance */
+#define p4est_balance_face_test         p8est_balance_face_test
+#define p4est_balance_corner_test       p8est_balance_corner_test
+
 #endif /* !P4EST_TO_P8EST_H */
