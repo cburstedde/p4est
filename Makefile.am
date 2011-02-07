@@ -64,6 +64,7 @@ include example/simple/Makefile.am
 include example/sieve/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
+include example/balance_test/Makefile.am
 
 if P4EST_BLAS
 if P4EST_LAPACK
