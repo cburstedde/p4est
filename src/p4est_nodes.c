@@ -105,6 +105,9 @@ p4est_nodes_new_local (p4est_t * p4est)
   int                 qcid;
   int                 corner, nnum, rlev;
   int                 neighbor_proc;
+#ifdef P4EST_DEBUG
+  int                 is_balanced;
+#endif
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
   p4est_topidx_t      jt;
@@ -124,6 +127,9 @@ p4est_nodes_new_local (p4est_t * p4est)
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new_local\n");
   P4EST_ASSERT (p4est_is_valid (p4est));
+#ifdef P4EST_DEBUG
+  is_balanced = p4est_is_balanced (p4est, P4EST_BALANCE_FULL);
+#endif
 
   P4EST_QUADRANT_INIT (&neighbor);
 
@@ -214,9 +220,14 @@ p4est_nodes_new_local (p4est_t * p4est)
                 if (lnid != -1) {
                   lnid += tree_offset;
                   /* We have found a neighbor in the same tree */
-                  P4EST_ASSERT (ln[lnid * P4EST_CHILDREN + nnum] == -1);
-                  ln[lnid * P4EST_CHILDREN + nnum] = vertex_num;
-
+                  if (ln[lnid * P4EST_CHILDREN + nnum] == -1) {
+                    /* This branch an invariant for corner-balanced forest */
+                    ln[lnid * P4EST_CHILDREN + nnum] = vertex_num;
+                  }
+                  else {
+                    /* This can only happen if not corner-balanced */
+                    P4EST_ASSERT (!is_balanced);
+                  }
                   /* No need to check for more quadrants for this neighbor */
                   break;
                 }

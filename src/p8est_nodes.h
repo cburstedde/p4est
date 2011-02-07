@@ -201,7 +201,9 @@ p8est_nodes_t;
  *                      tree- and processor-local nodes will be matched
  *                      and all others duplicated, all nodes will be
  *                      counted as independent with no sharers, and
- *                      nodes->global_owned_indeps will be NULL.
+ *                      nodes->global_owned_indeps will be NULL;
+ *                      this also works for a corner-unbalanced forest,
+ *                      but nodes may not be numbered uniquely in this case.
  */
 p8est_nodes_t      *p8est_nodes_new (p8est_t * p8est, p8est_ghost_t * ghost);
 
