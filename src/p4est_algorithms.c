@@ -638,6 +638,12 @@ failtest:
 
 /* here come the heavyweight algorithms */
 
+/* warning: p4est_tree_compute_overlap may not work properly for less than
+ * full balancing (i.e. face only, face/edge only balancing)
+ *
+ * TODO: make p4et_tree_compute_overlap take p4est_balance_type_t to guarantee
+ * correct behavior for all balance types
+ */
 void
 p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                             sc_array_t * out)
