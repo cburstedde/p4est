@@ -36,4 +36,9 @@ int                 p4est_balance_corner_test (p4est_quadrant_t * restrict q,
                                                int face, p4est_balance_type_t
                                                balance, sc_array_t * seeds);
 
+int                 p4est_balance_test (p4est_quadrant_t * restrict q,
+                                        p4est_quadrant_t * restrict p,
+                                        p4est_balance_type_t balance,
+                                        sc_array_t * seeds);
+
 #endif

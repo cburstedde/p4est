@@ -313,5 +313,6 @@
 /* functions in p4est_balance */
 #define p4est_balance_face_test         p8est_balance_face_test
 #define p4est_balance_corner_test       p8est_balance_corner_test
+#define p4est_balance_test              p8est_balance_test
 
 #endif /* !P4EST_TO_P8EST_H */

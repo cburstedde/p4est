@@ -1164,3 +1164,112 @@ p8est_balance_edge_test (p4est_quadrant_t * restrict q,
   }
 }
 #endif
+
+int
+p4est_balance_test (p4est_quadrant_t * restrict q,
+                    p4est_quadrant_t * restrict p,
+                    p4est_balance_type_t balance, sc_array_t * seeds)
+{
+  int                 outside[P4EST_DIM];
+  int                 i;
+  int                 type = 0;
+  p4est_qcoord_t      diff;
+  p4est_qcoord_t      qc, pc;
+  p4est_qcoord_t      pdist = P4EST_QUADRANT_LEN (p->level);
+  p4est_qcoord_t      qdist = P4EST_QUADRANT_LEN (q->level);
+  p4est_quadrant_t   *s;
+  int                 f, c;
+#ifdef P4_TO_P8
+  int                 e;
+#endif
+
+  if (seeds != NULL) {
+    sc_array_resize (seeds, 0);
+  }
+
+  if (q->level <= p->level + 1) {
+    return 1;
+  }
+
+  for (i = 0; i < P4EST_DIM; i++) {
+    switch (i) {
+    case 0:
+      qc = q->x;
+      pc = p->x;
+      break;
+    case 1:
+      qc = q->y;
+      pc = p->y;
+      break;
+#ifdef P4_TO_P8
+    case 2:
+      qc = q->z;
+      pc = p->z;
+      break;
+#endif
+    default:
+      SC_ABORT_NOT_REACHED ();
+      break;
+    }
+    outside[i] = 0;
+    if (qc < pc) {
+      diff = pc - qc;
+      if (diff > pdist) {
+        return 1;
+      }
+      outside[i] = -1;
+    }
+    else {
+      diff = (qc + qdist) - (pc + pdist);
+      if (diff > pdist) {
+        return 1;
+      }
+      if (diff > 0) {
+        outside[i] = 1;
+      }
+    }
+    type += (outside[i] ? 1 : 0);
+  }
+
+  switch (type) {
+  case 0:
+    sc_array_resize (seeds, seeds->elem_count + 1);
+    s = p4est_quadrant_array_index (seeds, seeds->elem_count - 1);
+    *s = *q;
+    return 0;
+  case 1:
+    for (i = 0; i < P4EST_DIM; i++) {
+      if (outside[i]) {
+        f = 2 * i + (outside[i] > 0 ? 1 : 0);
+        return p4est_balance_face_test (q, p, f, balance, seeds);
+      }
+    }
+    SC_ABORT_NOT_REACHED ();
+    return -1;
+  case P4EST_DIM:
+    c = 0;
+    for (i = 0; i < P4EST_DIM; i++) {
+      c += (outside[i] > 0 ? (1 << i) : 0);
+    }
+    return p4est_balance_corner_test (q, p, c, balance, seeds);
+#ifdef P4_TO_P8
+  case 2:
+    e = 0;
+    c = 0;
+    for (i = 2; i >= 0; i--) {
+      if (outside[i]) {
+        c <<= 1;
+        c |= (outside[i] > 0 ? 1 : 0);
+      }
+      else {
+        e |= (i << 2);
+      }
+    }
+    e |= c;
+    return p8est_balance_edge_test (q, p, e, balance, seeds);
+#endif
+  default:
+    SC_ABORT_NOT_REACHED ();
+    return -1;
+  }
+}

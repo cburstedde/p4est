@@ -41,4 +41,9 @@ int                 p8est_balance_edge_test (p8est_quadrant_t * restrict q,
                                              int face, p8est_balance_type_t
                                              balance, sc_array_t * seeds);
 
+int                 p8est_balance_test (p8est_quadrant_t * restrict q,
+                                        p8est_quadrant_t * restrict p,
+                                        p8est_balance_type_t balance,
+                                        sc_array_t * seeds);
+
 #endif
