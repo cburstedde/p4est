@@ -666,6 +666,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
   sc_array_t         *eta;
+  p4est_quadrant_t    tempq1, tempq2;
 #endif
   p4est_corner_info_t ci;
   p4est_corner_transform_t *ct;
@@ -675,6 +676,10 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
   P4EST_QUADRANT_INIT (&tempq);
+#ifdef P4_TO_P8
+  P4EST_QUADRANT_INIT (&tempq1);
+  P4EST_QUADRANT_INIT (&tempq2);
+#endif
   for (which = 0; which < P4EST_INSUL; ++which) {
     P4EST_QUADRANT_INIT (&ins[which]);
   }
@@ -910,7 +915,8 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
 #ifdef P4_TO_P8
                 else {
                   P4EST_ASSERT (contact_edge_only);
-                  p8est_quadrant_shift_edge (tq, &tempq, edge);
+                  p8est_quadrant_shift_edge (tq, &tempq, &tempq1, &tempq2,
+                                             edge);
                   if (tempq.level > inq->level + 1) {
                     P4EST_ASSERT (p4est_quadrant_is_ancestor (s, &tempq));
                     for (etree = 0; etree < eta->elem_count; ++etree) {
@@ -919,6 +925,24 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                       p8est_quadrant_transform_edge (&tempq, outq, &ei, et,
                                                      0);
                       outq->p.piggy2.which_tree = et->ntree;
+                    }
+                    if (p4est_quadrant_is_ancestor (s, &tempq1)) {
+                      for (etree = 0; etree < eta->elem_count; ++etree) {
+                        outq = p4est_quadrant_array_push (out);
+                        et = p8est_edge_array_index (eta, etree);
+                        p8est_quadrant_transform_edge (&tempq1, outq, &ei, et,
+                                                       0);
+                        outq->p.piggy2.which_tree = et->ntree;
+                      }
+                    }
+                    if (p4est_quadrant_is_ancestor (s, &tempq2)) {
+                      for (etree = 0; etree < eta->elem_count; ++etree) {
+                        outq = p4est_quadrant_array_push (out);
+                        et = p8est_edge_array_index (eta, etree);
+                        p8est_quadrant_transform_edge (&tempq2, outq, &ei, et,
+                                                       0);
+                        outq->p.piggy2.which_tree = et->ntree;
+                      }
                     }
                   }
                   et = NULL;

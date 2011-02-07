@@ -562,10 +562,16 @@ void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
 /** Shifts a quadrant until it touches the specified edge from the inside.
  * \param [in]     q          Valid input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
+ * \param [in,out] rup        Quadrant whose Morton index will be filled (may
+ *                            be NULL).
+ * \param [in,out] t          Quadrant whose Morton index will be filled (may
+ *                            be NULL).
  * \param [in]     edge       Edge index.
  */
 void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
                                                p8est_quadrant_t * r,
+                                               p8est_quadrant_t * rup,
+                                               p8est_quadrant_t * rdown,
                                                int edge);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
