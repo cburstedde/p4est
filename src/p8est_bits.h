@@ -560,12 +560,20 @@ void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
                                                    et, int inside);
 
 /** Shifts a quadrant until it touches the specified edge from the inside.
+ * If this shift is meant to recreate the effects of \a q on balancing across
+ * the edge, then \a r, \a rup, and \a rdown may all be necessary for that
+ * recreation.
  * \param [in]     q          Valid input quadrant.
- * \param [in,out] r          Quadrant whose Morton index will be filled.
- * \param [in,out] rup        Quadrant whose Morton index will be filled (may
- *                            be NULL).
- * \param [in,out] t          Quadrant whose Morton index will be filled (may
- *                            be NULL).
+ * \param [out]    r          Quadrant whose Morton index will be filled.
+ *                            This quadrant results from shifting \a q
+ *                            laterally towards the edge.
+ * \param [out]    rup        Quadrant whose Morton index will be filled (may
+ *                            be NULL).  This quadrant results from shifting
+ *                            \a q diagonally towards \a edge's higher
+ *                            corner.
+ * \param [out]    rdown      Quadrant whose Morton index will be filled (may
+ *                            be NULL).  This quadrant results from shifting
+ *                            \a q diagonally towards \a edge's lower corner.
  * \param [in]     edge       Edge index.
  */
 void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
