@@ -8,8 +8,8 @@ type: :feature
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2010-04-06 18:47:57.384030 Z
 references: []
 
@@ -19,3 +19,12 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2011-02-11 02:34:00.953462 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - closed with disposition fixed
+  - |-
+    A vector version of qcoord_to_vertex is not necessary.
+    It can be written when needed by wrapping the one-at-a-time function.
+    Not clear how much optimization can possibly be done more intrusively.
+    
+    p4est_childrenpv has been added.
