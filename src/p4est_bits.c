@@ -1117,64 +1117,21 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
 void
 p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 {
-  const int8_t        level = (int8_t) (q->level + 1);
-  const p4est_qcoord_t inc = P4EST_QUADRANT_LEN (level);
-
-  P4EST_ASSERT (p4est_quadrant_is_extended (q));
-  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
-
-  c[0].x = q->x;
-  c[0].y = q->y;
+  return p4est_quadrant_children (q, &c[0], &c[1], &c[2], &c[3]
 #ifdef P4_TO_P8
-  c[0].z = q->z;
+                                  , &c[4], &c[5], &c[6], &c[7]
 #endif
-  c[0].level = level;
+    );
+}
 
-  c[1].x = c[0].x | inc;
-  c[1].y = c[0].y;
+void
+p4est_quadrant_childrenpv (const p4est_quadrant_t * q, p4est_quadrant_t * c[])
+{
+  return p4est_quadrant_children (q, c[0], c[1], c[2], c[3]
 #ifdef P4_TO_P8
-  c[1].z = c[0].z;
+                                  , c[4], c[5], c[6], c[7]
 #endif
-  c[1].level = level;
-
-  c[2].x = c[0].x;
-  c[2].y = c[0].y | inc;
-#ifdef P4_TO_P8
-  c[2].z = c[0].z;
-#endif
-  c[2].level = level;
-
-  c[3].x = c[1].x;
-  c[3].y = c[2].y;
-#ifdef P4_TO_P8
-  c[3].z = c[0].z;
-#endif
-  c[3].level = level;
-
-#ifdef P4_TO_P8
-  c[4].x = c[0].x;
-  c[4].y = c[0].y;
-  c[4].z = c[0].z | inc;
-  c[4].level = level;
-
-  c[5].x = c[1].x;
-  c[5].y = c[1].y;
-  c[5].z = c[4].z;
-  c[5].level = level;
-
-  c[6].x = c[2].x;
-  c[6].y = c[2].y;
-  c[6].z = c[4].z;
-  c[6].level = level;
-
-  c[7].x = c[3].x;
-  c[7].y = c[3].y;
-  c[7].z = c[4].z;
-  c[7].level = level;
-#endif
-
-  /* this also verifies p4est_quadrant_is_extended (c[i]) */
-  P4EST_ASSERT (p4est_quadrant_is_familyv (c));
+    );
 }
 
 void

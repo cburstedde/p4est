@@ -206,6 +206,7 @@
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
 #define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
+#define p4est_quadrant_childrenpv       p8est_quadrant_childrenpv
 #define p4est_quadrant_first_descendant p8est_quadrant_first_descendant
 #define p4est_quadrant_last_descendant  p8est_quadrant_last_descendant
 #define p4est_quadrant_corner_descendant p8est_quadrant_corner_descendant

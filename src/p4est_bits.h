@@ -419,6 +419,15 @@ void                p4est_quadrant_children (const p4est_quadrant_t * q,
 void                p4est_quadrant_childrenv (const p4est_quadrant_t * q,
                                               p4est_quadrant_t c[]);
 
+/** Compute the 4 children of a quadrant, array version.
+ * \param [in]     q  Input quadrant.
+ * \param [in,out] c  Pointers to the 4 computed children in z-order.
+ *                    q may point to the same quadrant as c[0].
+ * \note The user_data of c[i] is never modified.
+ */
+void                p4est_quadrant_childrenpv (const p4est_quadrant_t * q,
+                                               p4est_quadrant_t * c[]);
+
 /** Compute the first descendant of a quadrant on a given level.
  * \param [in]  q      Input quadrant.
  * \param [out] fd     First descendant of \a q on level \a level.
