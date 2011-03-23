@@ -267,7 +267,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       for (k = 0; k < P4EST_CHILDREN; ++k)
         vt[k] = tree_to_vertex[jt * P4EST_CHILDREN + k];
 
-      /* loop over the elements in the tree and calculated vertex coordinates */
+      /* loop over the elements in tree and calculated vertex coordinates */
       for (zz = 0; zz < num_quads; ++zz, ++quad_count) {
         quad = p4est_quadrant_array_index (quadrants, zz);
         h2 = .5 * intsize * P4EST_QUADRANT_LEN (quad->level);
@@ -605,6 +605,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   if (mpirank == 0) {
     char                pvtufilename[BUFSIZ];
     FILE               *pvtufile;
+
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
     pvtufile = fopen (pvtufilename, "w");
@@ -636,13 +637,13 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
                "mpirank,treeid");
     }
     if (write_rank) {
-      fprintf (pvtufile,
-               "      <PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
+      fprintf (pvtufile, "      "
+               "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
     if (write_tree) {
-      fprintf (pvtufile,
-               "      <PDataArray type=\"%s\" Name=\"treeid\" format=\"%s\"/>\n",
+      fprintf (pvtufile, "      "
+               "<PDataArray type=\"%s\" Name=\"treeid\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
     if (write_rank || write_tree) {
