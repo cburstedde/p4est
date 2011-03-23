@@ -820,30 +820,58 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *filename)
 
   /* Only have the root write to the parallel vtk file */
   if (procRank == 0) {
+    char                visitfilename[BUFSIZ];
     char                pvtufilename[BUFSIZ];
-    FILE               *pvtufile;
-    snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
+    FILE               *pvtufile, *visitfile;
 
+    /* Reopen paraview master file for writing bottom half */
+    snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
     pvtufile = fopen (pvtufilename, "ab");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
     }
 
+    /* Create a master file for visualization in Visit */
+    snprintf (visitfilename, BUFSIZ, "%s.visit", filename);
+    visitfile = fopen (visitfilename, "w");
+    if (!visitfile) {
+      P4EST_LERRORF ("Could not open %s for output\n", visitfilename);
+      fclose (pvtufile);
+      return -1;
+    }
+    fprintf (visitfile, "!NBLOCKS %d\n", numProcs);
+
+    /* Write data about the parallel pieces into both files */
     fprintf (pvtufile, "    </PPointData>\n");
     for (p = 0; p < numProcs; ++p) {
-      fprintf (pvtufile, "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename,
-               p);
+      fprintf (pvtufile,
+               "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename, p);
+      fprintf (visitfile, "%s_%04d.vtu\n", filename, p);
     }
     fprintf (pvtufile, "  </PUnstructuredGrid>\n");
     fprintf (pvtufile, "</VTKFile>\n");
 
+    /* Close paraview master file */
     if (ferror (pvtufile)) {
       P4EST_LERROR ("p4est_vtk: Error writing parallel footer\n");
+      fclose (visitfile);
       fclose (pvtufile);
       return -1;
     }
     if (fclose (pvtufile)) {
+      fclose (visitfile);
+      P4EST_LERROR ("p4est_vtk: Error closing parallel footer\n");
+      return -1;
+    }
+
+    /* Close visit master file */
+    if (ferror (visitfile)) {
+      P4EST_LERROR ("p4est_vtk: Error writing parallel footer\n");
+      fclose (visitfile);
+      return -1;
+    }
+    if (fclose (visitfile)) {
       P4EST_LERROR ("p4est_vtk: Error closing parallel footer\n");
       return -1;
     }
