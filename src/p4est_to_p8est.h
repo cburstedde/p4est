@@ -97,6 +97,7 @@
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
+#define p4est_mesh_t                    p8est_mesh_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
