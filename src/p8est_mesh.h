@@ -24,7 +24,7 @@
 #ifndef P4EST_MESH_H
 #define P4EST_MESH_H
 
-#include <p8est.h>
+#include <p8est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -34,7 +34,8 @@ SC_EXTERN_C_BEGIN;
  *
  * All vertices of the locally owned quadrants are stored in xyz triples.
  * For each local quadrant, its eight corners point into the vertices array.
- * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
+ * For each ghost quadrant, its owner rank is stored in ghost_to_proc,
+ * and its number in it's owners range of local quadrants in ghost_to_index.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * The quad_to_face list has equally many entries which are either:
@@ -59,12 +60,17 @@ typedef struct
   double             *vertices;
   p4est_locidx_t     *quad_to_vertex;   /* 8 indices for each local quad */
   int                *ghost_to_proc;    /* 1 integer for each ghost quad */
+  p4est_locidx_t     *ghost_to_index;   /* 1 remote index for each ghost */
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 6 faces */
   int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
   p4est_locidx_t     *quad_to_half;     /* stores half-size neigbors */
 }
 p8est_mesh_t;
+
+p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
+                                    p8est_balance_type_t btype);
+void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 
 SC_EXTERN_C_END;
 
