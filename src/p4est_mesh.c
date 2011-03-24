@@ -29,6 +29,42 @@
 #include <p8est_mesh.h>
 #endif
 
+static void
+mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
+{
+  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_locidx_t      jl;
+  p4est_locidx_t      in_qtoq;
+  p4est_iter_face_side_t *side;
+  p4est_tree_t       *tree;
+
+  if (info->sides.elem_count == 1) {
+    /* this face is on an outside boundary of the forest */
+    P4EST_ASSERT (info->orientation == 0);
+    P4EST_ASSERT (info->tree_boundary);
+    side = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 0);
+    P4EST_ASSERT (0 <= side->treeid &&
+                  side->treeid < info->p4est->connectivity->num_trees);
+    P4EST_ASSERT (0 <= side->face && side->face < P4EST_FACES);
+    P4EST_ASSERT (!side->is_hanging && !side->is.full.is_ghost);
+    tree = p4est_tree_array_index (info->p4est->trees, side->treeid);
+    jl = side->is.full.quadid + tree->quadrants_offset;
+    P4EST_ASSERT (0 <= jl && jl < info->p4est->local_num_quadrants);
+    in_qtoq = P4EST_FACES * jl + side->face;
+    mesh->quad_to_quad[in_qtoq] = jl;   /* put in myself and my own face */
+    mesh->quad_to_face[in_qtoq] = side->face;
+  }
+  else {
+    /* this face is between two quadrants */
+    P4EST_ASSERT (info->sides.elem_count == 2);
+  }
+}
+
+static void
+mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
+{
+}
+
 p4est_mesh_t       *
 p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                 p4est_balance_type_t btype)
@@ -38,6 +74,8 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      jl;
   p4est_mesh_t       *mesh;
   p4est_quadrant_t   *quad;
+
+  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL));
 
   mesh = P4EST_ALLOC (p4est_mesh_t, 1);
 
@@ -64,6 +102,19 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
     mesh->ghost_to_proc[jl] = rank;
     mesh->ghost_to_index[jl] = quad->p.piggy3.local_num;
   }
+
+  /* Fill arrays with default values */
+#ifdef P4EST_DEBUG
+  memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
+  memset (mesh->quad_to_face, -1, P4EST_FACES * lq * sizeof (int8_t));
+#endif
+
+  /* Call the forest iterator */
+  p4est_iterate (p4est, ghost, mesh, NULL, mesh_iter_face,
+#ifdef P4_TO_P8
+                 NULL,
+#endif
+                 mesh_iter_corner);
 
   return mesh;
 }
