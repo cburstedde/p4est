@@ -24,9 +24,11 @@
 #ifndef P4_TO_P8
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
+#include <p4est_nodes.h>
 #else
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
+#include <p8est_nodes.h>
 #endif
 
 static void
@@ -166,11 +168,6 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
   }
 }
 
-static void
-mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
-{
-}
-
 size_t
 p4est_mesh_memory_used (p4est_mesh_t * mesh)
 {
@@ -182,6 +179,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   return sizeof (p4est_mesh_t) +
     ((P4EST_CHILDREN + P4EST_FACES) * lqz + ngz) * sizeof (p4est_locidx_t) +
     ngz * sizeof (int) + (P4EST_FACES * lqz) * sizeof (int8_t) +
+    3 * (size_t) mesh->local_num_vertices * sizeof (double) +
     sc_array_memory_used (mesh->quad_to_half, 1);
 }
 
@@ -190,9 +188,11 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                 p4est_balance_type_t btype)
 {
   int                 rank;
+  size_t              ncz, zz;
   p4est_locidx_t      lq, ng;
   p4est_locidx_t      jl;
   p4est_mesh_t       *mesh;
+  p4est_nodes_t      *nodes;
   p4est_quadrant_t   *quad;
 
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL));
@@ -227,12 +227,44 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
   memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
 
-  /* Call the forest iterator */
+  /* Call the forest iterator to collect face connectivity */
   p4est_iterate (p4est, ghost, mesh, NULL, mesh_iter_face,
 #ifdef P4_TO_P8
                  NULL,
 #endif
-                 mesh_iter_corner);
+                 NULL);
+
+  /* Construct non-unique vertex information if vertices are present */
+  if (p4est->connectivity->num_vertices > 0) {
+    P4EST_ASSERT (p4est->connectivity->vertices != NULL);
+    nodes = p4est_nodes_new (p4est, NULL);      /* fast local version */
+    P4EST_ASSERT (nodes->num_local_quadrants == mesh->local_num_quadrants);
+    P4EST_ASSERT (nodes->num_owned_shared == 0);
+    P4EST_ASSERT (nodes->face_hangings.elem_count == 0);
+#ifdef P4_TO_P8
+    P4EST_ASSERT (nodes->edge_hangings.elem_count == 0);
+#endif
+    P4EST_ASSERT (nodes->shared_indeps.elem_count == 0);
+    memcpy (mesh->quad_to_vertex, nodes->local_nodes,
+            P4EST_CHILDREN * lq * sizeof (p4est_locidx_t));
+    ncz = (p4est_locidx_t) nodes->indep_nodes.elem_count;
+    mesh->vertices = P4EST_ALLOC (double, 3 * ncz);
+    mesh->local_num_vertices = (p4est_locidx_t) ncz;
+    for (zz = 0; zz < ncz; ++zz) {
+      quad = p4est_quadrant_array_index (&nodes->indep_nodes, zz);
+      p4est_qcoord_to_vertex (p4est->connectivity,
+                              quad->p.which_tree, quad->x, quad->y,
+#ifdef P4_TO_P8
+                              quad->z,
+#endif
+                              mesh->vertices + 3 * zz);
+    }
+    p4est_nodes_destroy (nodes);
+  }
+  else {
+    memset (mesh->quad_to_vertex, -1,
+            P4EST_CHILDREN * lq * sizeof (p4est_locidx_t));
+  }
 
   return mesh;
 }

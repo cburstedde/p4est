@@ -34,6 +34,7 @@ SC_EXTERN_C_BEGIN;
  *
  * All vertices of the locally owned quadrants are stored in xyz triples.
  * For each local quadrant, its eight corners point into the vertices array.
+ * Some vertices are duplicated and no effort is made to uniquify them.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc,
  * and its number in it's owners range of local quadrants in ghost_to_index.
  *
