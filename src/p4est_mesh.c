@@ -88,7 +88,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       if (!side->is.full.is_ghost) {
         in_qtoq = P4EST_FACES * jl + side->face;
         P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
-        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -1);
+        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -25);
         mesh->quad_to_quad[in_qtoq] = jl2;
         mesh->quad_to_face[in_qtoq] =
           P4EST_FACES * info->orientation + side2->face;
@@ -96,7 +96,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       if (!side2->is.full.is_ghost) {
         in_qtoq = P4EST_FACES * jl2 + side2->face;
         P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
-        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -1);
+        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -25);
         mesh->quad_to_quad[in_qtoq] = jl;
         mesh->quad_to_face[in_qtoq] =
           P4EST_FACES * info->orientation + side->face;
@@ -149,10 +149,8 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 
   /* Fill arrays with default values */
-#ifdef P4EST_DEBUG
   memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
-  memset (mesh->quad_to_face, -1, P4EST_FACES * lq * sizeof (int8_t));
-#endif
+  memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
 
   /* Call the forest iterator */
   p4est_iterate (p4est, ghost, mesh, NULL, mesh_iter_face,
