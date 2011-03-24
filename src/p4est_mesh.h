@@ -41,7 +41,7 @@ typedef struct
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 4 faces */
   int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
-  p4est_locidx_t     *quad_to_half;     /* stores half-size neigbors */
+  sc_array_t         *quad_to_half;     /* stores half-size neigbors */
 }
 p4est_mesh_t;
 

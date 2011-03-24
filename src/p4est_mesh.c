@@ -134,7 +134,7 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->ghost_to_index = P4EST_ALLOC (p4est_locidx_t, ng);
   mesh->quad_to_quad = P4EST_ALLOC (p4est_locidx_t, P4EST_FACES * lq);
   mesh->quad_to_face = P4EST_ALLOC (int8_t, P4EST_FACES * lq);
-  mesh->quad_to_half = NULL;
+  mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
 
   /* Populate ghost information */
   rank = 0;
@@ -171,6 +171,6 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   P4EST_FREE (mesh->ghost_to_index);
   P4EST_FREE (mesh->quad_to_quad);
   P4EST_FREE (mesh->quad_to_face);
-  P4EST_FREE (mesh->quad_to_half);
+  sc_array_destroy (mesh->quad_to_half);
   P4EST_FREE (mesh);
 }

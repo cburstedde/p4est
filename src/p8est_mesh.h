@@ -50,7 +50,7 @@ SC_EXTERN_C_BEGIN;
  *    r and nf are as above and h = 0..3 is the number of the subface.
  * 3. A value of v = -24..1 indicates four half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
- *    quad_to_half table which stores four quadrant numbers per index,
+ *    quad_to_half array which stores four quadrant numbers per index,
  *    and the orientation of the smaller faces follows from 24 + v.
  *    The entries of quad_to_half encode between local and ghost quadrant
  *    in the same way as the quad_to_quad values described above.
@@ -69,7 +69,7 @@ typedef struct
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 6 faces */
   int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
-  p4est_locidx_t     *quad_to_half;     /* stores half-size neigbors */
+  sc_array_t         *quad_to_half;     /* stores half-size neigbors */
 }
 p8est_mesh_t;
 
