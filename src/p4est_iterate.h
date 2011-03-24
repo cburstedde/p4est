@@ -104,12 +104,12 @@ typedef struct p4est_iter_face_info
 }
 p4est_iter_face_info_t;
 
-/** The prototype for a function that p4est_iterate will execute wherever
- * the corner is a corner for all quadrants that touch it i.e. the callback
- * will not execute on a corner that sits on a hanging face.
+/** The prototype for a function that p4est_iterate will execute wherever two
+ * quadrants share a face: the face can be a 2:1 hanging face, it does not have
+ * to be conformal.
  *
- * Note: the forest must be face balanced for p4est_iterate to correctly 
- * execute a callback function on faces.
+ * Note: the forest must be face balanced for p4est_iterate to execute a
+ * callback function on faces.
  */
 typedef void        (*p4est_iter_face_t) (p4est_iter_face_info_t * info,
                                           void *user_data);
