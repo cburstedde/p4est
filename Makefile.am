@@ -104,4 +104,4 @@ if !P4EST_DIST_ALLOW
 endif
 
 clean-local:
-	rm -f *vtu *.p4c *.p4p *.p8c *.p8p
+	rm -f *vtu *.visit *.p4c *.p4p *.p8c *.p8p
