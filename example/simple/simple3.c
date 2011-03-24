@@ -270,7 +270,7 @@ main (int argc, char **argv)
                          sizeof (user_data_t), init_fn, NULL);
 
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, geom, "mesh_simple3_new");
+  p8est_vtk_write_file (p8est, geom, "simple3_new");
 #endif
 
   /* refinement and coarsening */
@@ -279,13 +279,13 @@ main (int argc, char **argv)
     p8est_coarsen (p8est, 1, coarsen_fn, init_fn);
   }
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, geom, "mesh_simple3_refined");
+  p8est_vtk_write_file (p8est, geom, "simple3_refined");
 #endif
 
   /* balance */
   p8est_balance (p8est, P8EST_BALANCE_FULL, init_fn);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, geom, "mesh_simple3_balanced");
+  p8est_vtk_write_file (p8est, geom, "simple3_balanced");
 #endif
 
   crc = p8est_checksum (p8est);
@@ -293,7 +293,7 @@ main (int argc, char **argv)
   /* partition */
   p8est_partition (p8est, NULL);
 #ifdef VTK_OUTPUT
-  p8est_vtk_write_file (p8est, geom, "mesh_simple3_partition");
+  p8est_vtk_write_file (p8est, geom, "simple3_partition");
 #endif
 
 #ifdef P4EST_DEBUG
