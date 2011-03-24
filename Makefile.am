@@ -53,6 +53,7 @@ DISTCLEANFILES += \
 include src/Makefile.am
 include test/Makefile.am
 include example/geometry/Makefile.am
+include example/mesh/Makefile.am
 include example/points/Makefile.am
 include example/second/Makefile.am
 include example/simple/Makefile.am
