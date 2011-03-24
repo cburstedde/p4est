@@ -32,11 +32,14 @@
 static void
 mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 {
+  int                 h;
+  int                 swapsides;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
-  p4est_locidx_t      jl, jl2;
-  p4est_locidx_t      in_qtoq;
+  p4est_locidx_t      jl, jl2, jls[P4EST_HALF];
+  p4est_locidx_t      in_qtoq, halfindex;
+  p4est_locidx_t     *halfentries;
   p4est_tree_t       *tree;
-  p4est_iter_face_side_t *side, *side2;
+  p4est_iter_face_side_t *side, *side2, *tempside;
 
   if (info->sides.elem_count == 1) {
     /* this face is on an outside boundary of the forest */
@@ -100,6 +103,64 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
         mesh->quad_to_quad[in_qtoq] = jl;
         mesh->quad_to_face[in_qtoq] =
           P4EST_FACES * info->orientation + side->face;
+      }
+    }
+    else {
+      /* one of the faces is hanging, rename so it's always side2 */
+      swapsides = side->is_hanging;
+      if (swapsides) {
+        tempside = side;
+        side = side2;
+        side2 = tempside;
+      }
+      P4EST_ASSERT (!side->is_hanging && side2->is_hanging);
+
+      /* determine quadrant number for non-hanging large face */
+      if (!side->is.full.is_ghost) {
+        tree = p4est_tree_array_index (info->p4est->trees, side->treeid);
+        jl = side->is.full.quadid + tree->quadrants_offset;
+        P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
+      }
+      else {
+        jl = mesh->local_num_quadrants + side->is.full.quadid;
+      }
+
+      /* determine quadrant numbers for all hanging faces */
+      for (h = 0; h < P4EST_HALF; ++h) {
+        if (!side2->is.hanging.is_ghost[h]) {
+          tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
+          jls[h] = side2->is.hanging.quadid[h] + tree->quadrants_offset;
+          P4EST_ASSERT (0 <= jls[h] && jls[h] < mesh->local_num_quadrants);
+        }
+        else {
+          jls[h] = mesh->local_num_quadrants + side2->is.hanging.quadid[h];
+        }
+      }
+
+      /* encode quadrant neighborhood */
+      if (!side->is.full.is_ghost) {
+        in_qtoq = P4EST_FACES * jl + side->face;
+        P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
+        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -25);
+        halfindex = (p4est_locidx_t) mesh->quad_to_half->elem_count;
+        mesh->quad_to_quad[in_qtoq] = halfindex;
+        mesh->quad_to_face[in_qtoq] =
+          P4EST_FACES * (info->orientation - P4EST_HALF) + side2->face;
+        halfentries = (p4est_locidx_t *) sc_array_push (mesh->quad_to_half);
+        for (h = 0; h < P4EST_HALF; ++h) {
+          halfentries[h] = jls[h];
+        }
+      }
+      for (h = 0; h < P4EST_HALF; ++h) {
+        if (!side2->is.hanging.is_ghost[h]) {
+          in_qtoq = P4EST_FACES * jls[h] + side2->face;
+          P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
+          P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -25);
+          mesh->quad_to_quad[in_qtoq] = jl;
+          mesh->quad_to_face[in_qtoq] =
+            P4EST_FACES * (info->orientation + (h + 1) * P4EST_HALF) +
+            side->face;
+        }
       }
     }
   }
