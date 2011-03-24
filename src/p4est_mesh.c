@@ -171,6 +171,20 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
 }
 
+size_t
+p4est_mesh_memory_used (p4est_mesh_t * mesh)
+{
+  size_t              lqz, ngz;
+
+  lqz = (size_t) mesh->local_num_quadrants;
+  ngz = (size_t) mesh->ghost_num_quadrants;
+
+  return sizeof (p4est_mesh_t) +
+    ((P4EST_CHILDREN + P4EST_FACES) * lqz + ngz) * sizeof (p4est_locidx_t) +
+    ngz * sizeof (int) + (P4EST_FACES * lqz) * sizeof (int8_t) +
+    sc_array_memory_used (mesh->quad_to_half, 1);
+}
+
 p4est_mesh_t       *
 p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                 p4est_balance_type_t btype)

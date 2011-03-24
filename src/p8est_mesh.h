@@ -73,6 +73,12 @@ typedef struct
 }
 p8est_mesh_t;
 
+/** Calculate the memory usage of the mesh structure.
+ * \param [in] mesh     Mesh structure.
+ * \return              Memory used in bytes.
+ */
+size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
+
 p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
                                     p8est_balance_type_t btype);
 void                p8est_mesh_destroy (p8est_mesh_t * mesh);

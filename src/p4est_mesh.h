@@ -45,6 +45,12 @@ typedef struct
 }
 p4est_mesh_t;
 
+/** Calculate the memory usage of the mesh structure.
+ * \param [in] mesh     Mesh structure.
+ * \return              Memory used in bytes.
+ */
+size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
+
 p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                                     p4est_balance_type_t btype);
 void                p4est_mesh_destroy (p4est_mesh_t * mesh);

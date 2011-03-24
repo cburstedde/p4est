@@ -297,6 +297,7 @@
 #define p4est_lnodes_rank_array_index_int p8est_lnodes_rank_array_index_int
 
 /* functions in p4est_mesh */
+#define p4est_mesh_memory_used          p8est_mesh_memory_used
 #define p4est_mesh_new                  p8est_mesh_new
 #define p4est_mesh_destroy              p8est_mesh_destroy
 
