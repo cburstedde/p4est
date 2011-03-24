@@ -33,10 +33,10 @@ static void
 mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 {
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
-  p4est_locidx_t      jl;
+  p4est_locidx_t      jl, jl2;
   p4est_locidx_t      in_qtoq;
-  p4est_iter_face_side_t *side;
   p4est_tree_t       *tree;
+  p4est_iter_face_side_t *side, *side2;
 
   if (info->sides.elem_count == 1) {
     /* this face is on an outside boundary of the forest */
@@ -49,14 +49,59 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
     P4EST_ASSERT (!side->is_hanging && !side->is.full.is_ghost);
     tree = p4est_tree_array_index (info->p4est->trees, side->treeid);
     jl = side->is.full.quadid + tree->quadrants_offset;
-    P4EST_ASSERT (0 <= jl && jl < info->p4est->local_num_quadrants);
+    P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
     in_qtoq = P4EST_FACES * jl + side->face;
     mesh->quad_to_quad[in_qtoq] = jl;   /* put in myself and my own face */
     mesh->quad_to_face[in_qtoq] = side->face;
   }
   else {
     /* this face is between two quadrants */
+    P4EST_ASSERT (info->orientation == 0 || info->tree_boundary);
     P4EST_ASSERT (info->sides.elem_count == 2);
+    side = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 0);
+    side2 = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 1);
+    P4EST_ASSERT (info->tree_boundary || side->treeid == side2->treeid);
+    P4EST_ASSERT (!side->is_hanging || !side2->is_hanging);
+    if (!side->is_hanging && !side2->is_hanging) {
+      /* same-size face neighbors */
+      P4EST_ASSERT (!side->is.full.is_ghost || !side2->is.full.is_ghost);
+
+      /* determine both quadrant numbers */
+      if (!side->is.full.is_ghost) {
+        tree = p4est_tree_array_index (info->p4est->trees, side->treeid);
+        jl = side->is.full.quadid + tree->quadrants_offset;
+        P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
+      }
+      else {
+        jl = mesh->local_num_quadrants + side->is.full.quadid;
+      }
+      if (!side2->is.full.is_ghost) {
+        tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
+        jl2 = side2->is.full.quadid + tree->quadrants_offset;
+        P4EST_ASSERT (0 <= jl2 && jl2 < mesh->local_num_quadrants);
+      }
+      else {
+        jl2 = mesh->local_num_quadrants + side2->is.full.quadid;
+      }
+
+      /* encode quadrant neighborhood */
+      if (!side->is.full.is_ghost) {
+        in_qtoq = P4EST_FACES * jl + side->face;
+        P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
+        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -1);
+        mesh->quad_to_quad[in_qtoq] = jl2;
+        mesh->quad_to_face[in_qtoq] =
+          P4EST_FACES * info->orientation + side2->face;
+      }
+      if (!side2->is.full.is_ghost) {
+        in_qtoq = P4EST_FACES * jl2 + side2->face;
+        P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
+        P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -1);
+        mesh->quad_to_quad[in_qtoq] = jl;
+        mesh->quad_to_face[in_qtoq] =
+          P4EST_FACES * info->orientation + side->face;
+      }
+    }
   }
 }
 
