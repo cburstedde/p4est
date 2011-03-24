@@ -80,8 +80,17 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                  p4est_quadrant_t * quadrant)
+refine_uniform (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * quadrant)
+{
+  return (int) quadrant->level < refine_level;
+}
+
+#if 0
+
+static int
+refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
+               p4est_quadrant_t * quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -100,19 +109,86 @@ refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+#endif
+
+static void
+test_mesh_uniform (p4est_t * p4est, p4est_mesh_t * mesh)
+{
+  int                 f, nf;
+  p4est_locidx_t      K, kl;
+  p4est_locidx_t      ql, QpG;
+
+  K = mesh->local_num_quadrants;
+  P4EST_ASSERT (K == p4est->local_num_quadrants);
+  QpG = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
+
+  for (kl = 0; kl < K; ++kl) {
+    for (f = 0; f < P4EST_FACES; ++f) {
+      ql = mesh->quad_to_quad[P4EST_FACES * kl + f];
+      SC_CHECK_ABORTF (0 <= ql && ql < QpG,
+                       "quad %d face %d neighbor %d mismatch", kl, f, ql);
+      nf = mesh->quad_to_face[P4EST_FACES * kl + f];
+      SC_CHECK_ABORTF (0 <= nf && nf < P4EST_HALF * P4EST_FACES,
+                       "quad %d face %d code %d mismatch", kl, f, nf);
+    }
+  }
+}
+
+static void
+mesh_uniform (mpi_context_t * mpi, p4est_connectivity_t * connectivity)
+{
+  unsigned            crc;
+  p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
+  p4est = p4est_new (mpi->mpicomm, connectivity,
+                     sizeof (user_data_t), init_fn, NULL);
+  p4est_vtk_write_file (p4est, NULL, "mesh2_uniform_new");
+
+  /* refinement */
+  p4est_refine (p4est, 1, refine_uniform, init_fn);
+  p4est_vtk_write_file (p4est, NULL, "mesh2_uniform_refined");
+
+  /* balance */
+  p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
+  p4est_vtk_write_file (p4est, NULL, "mesh2_uniform_balanced");
+
+  /* partition */
+  p4est_partition (p4est, NULL);
+  p4est_vtk_write_file (p4est, NULL, "mesh2_uniform_partition");
+  crc = p4est_checksum (p4est);
+
+  /* print and verify forest checksum */
+  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%08x\n", crc);
+
+  /* create ghost layer and mesh */
+  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+  mesh = p4est_mesh_new (p4est, ghost, P4EST_BALANCE_FULL);
+  test_mesh_uniform (p4est, mesh);
+
+  /* destroy ghost layer and mesh */
+  p4est_mesh_destroy (mesh);
+  p4est_ghost_destroy (ghost);
+
+  /* destroy the p4est and its connectivity structure */
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (connectivity);
+}
+
+static void
+mesh_adapted (mpi_context_t * mpi, p4est_connectivity_t * connectivity)
+{
+}
+
 int
 main (int argc, char **argv)
 {
   int                 mpiret;
   int                 wrongusage;
-  unsigned            crc;
   const char         *usage;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
-  p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  p4est_ghost_t      *ghost;
-  p4est_mesh_t       *mesh;
-  p4est_refine_t      refine_fn;
   simple_config_t     config;
 
   /* initialize MPI and p4est internals */
@@ -168,7 +244,6 @@ main (int argc, char **argv)
 
   /* assign variables based on configuration */
   refine_level = atoi (argv[2]);
-  refine_fn = refine_normal_fn;
 
   /* create connectivity and forest structures */
   if (config == P4EST_CONFIG_THREE) {
@@ -189,37 +264,10 @@ main (int argc, char **argv)
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
-  p4est = p4est_new (mpi->mpicomm, connectivity,
-                     sizeof (user_data_t), init_fn, NULL);
-  p4est_vtk_write_file (p4est, NULL, "mesh2_new");
 
-  /* refinement */
-  p4est_refine (p4est, 1, refine_fn, init_fn);
-  p4est_vtk_write_file (p4est, NULL, "mesh2_refined");
-
-  /* balance */
-  p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
-  p4est_vtk_write_file (p4est, NULL, "mesh2_balanced");
-
-  /* partition */
-  p4est_partition (p4est, NULL);
-  p4est_vtk_write_file (p4est, NULL, "mesh2_partition");
-  crc = p4est_checksum (p4est);
-
-  /* print and verify forest checksum */
-  P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%08x\n", crc);
-
-  /* create ghost layer and mesh */
-  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, P4EST_BALANCE_FULL);
-
-  /* destroy ghost layer and mesh */
-  p4est_mesh_destroy (mesh);
-  p4est_ghost_destroy (ghost);
-
-  /* destroy the p4est and its connectivity structure */
-  p4est_destroy (p4est);
-  p4est_connectivity_destroy (connectivity);
+  /* run mesh tests */
+  mesh_uniform (mpi, connectivity);
+  mesh_adapted (mpi, connectivity);
 
   /* clean up and exit */
   sc_finalize ();
