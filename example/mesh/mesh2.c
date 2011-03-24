@@ -45,12 +45,23 @@
 typedef enum
 {
   P4EST_CONFIG_NULL,
+#ifndef P4_TO_P8
   P4EST_CONFIG_UNIT,
   P4EST_CONFIG_THREE,
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP,
+#else
+  P8EST_CONFIG_UNIT,
+  P8EST_CONFIG_PERIODIC,
+  P8EST_CONFIG_ROTWRAP,
+  P8EST_CONFIG_TWOCUBES,
+  P8EST_CONFIG_TWOWRAP,
+  P8EST_CONFIG_ROTCUBES,
+  P8EST_CONFIG_SHELL,
+  P8EST_CONFIG_SPHERE,
+#endif
 }
 simple_config_t;
 
@@ -100,9 +111,15 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
       quadrant->y == P4EST_LAST_OFFSET (2)) {
     return 1;
   }
+#ifndef P4_TO_P8
   if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
     return 0;
   }
+#else
+  if (quadrant->z >= P8EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+#endif
 
   return 1;
 }
@@ -151,7 +168,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   p4est = p4est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn, NULL);
   if (!uniform)
-    p4est_vtk_write_file (p4est, NULL, "mesh2_adapted_new");
+    p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_new");
 
   /* refinement */
   if (uniform) {
@@ -159,18 +176,18 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   }
   else {
     p4est_refine (p4est, 1, refine_normal, init_fn);
-    p4est_vtk_write_file (p4est, NULL, "mesh2_adapted_refined");
+    p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_refined");
   }
 
   /* balance */
   p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
   if (!uniform)
-    p4est_vtk_write_file (p4est, NULL, "mesh2_adapted_balanced");
+    p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_balanced");
 
   /* partition */
   p4est_partition (p4est, NULL);
   if (!uniform) {
-    p4est_vtk_write_file (p4est, NULL, "mesh2_adapted_partition");
+    p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_partition");
   }
   crc = p4est_checksum (p4est);
 
@@ -228,9 +245,12 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <configuration> <level>\n"
-    "   Configuration can be any of\n"
+    "Arguments: <configuration> <level>\n   Configuration can be any of\n"
+#ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic|rotwrap\n"
+#else
+    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
+#endif
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -239,8 +259,13 @@ main (int argc, char **argv)
   }
   if (!wrongusage) {
     if (!strcmp (argv[1], "unit")) {
+#ifndef P4_TO_P8
       config = P4EST_CONFIG_UNIT;
+#else
+      config = P8EST_CONFIG_UNIT;
+#endif
     }
+#ifndef P4_TO_P8
     else if (!strcmp (argv[1], "three")) {
       config = P4EST_CONFIG_THREE;
     }
@@ -256,6 +281,29 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "rotwrap")) {
       config = P4EST_CONFIG_ROTWRAP;
     }
+#else
+    else if (!strcmp (argv[1], "periodic")) {
+      config = P8EST_CONFIG_PERIODIC;
+    }
+    else if (!strcmp (argv[1], "rotwrap")) {
+      config = P8EST_CONFIG_ROTWRAP;
+    }
+    else if (!strcmp (argv[1], "twocubes")) {
+      config = P8EST_CONFIG_TWOCUBES;
+    }
+    else if (!strcmp (argv[1], "twowrap")) {
+      config = P8EST_CONFIG_TWOWRAP;
+    }
+    else if (!strcmp (argv[1], "rotcubes")) {
+      config = P8EST_CONFIG_ROTCUBES;
+    }
+    else if (!strcmp (argv[1], "shell")) {
+      config = P8EST_CONFIG_SHELL;
+    }
+    else if (!strcmp (argv[1], "sphere")) {
+      config = P8EST_CONFIG_SPHERE;
+    }
+#endif
     else {
       wrongusage = 1;
     }
@@ -269,7 +317,10 @@ main (int argc, char **argv)
   refine_level = atoi (argv[2]);
 
   /* create connectivity and forest structures */
-  if (config == P4EST_CONFIG_THREE) {
+  if (0) {
+  }
+#ifndef P4_TO_P8
+  else if (config == P4EST_CONFIG_THREE) {
     connectivity = p4est_connectivity_new_corner ();
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
@@ -284,8 +335,35 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_ROTWRAP) {
     connectivity = p4est_connectivity_new_rotwrap ();
   }
+#else
+  else if (config == P8EST_CONFIG_PERIODIC) {
+    connectivity = p8est_connectivity_new_periodic ();
+  }
+  else if (config == P8EST_CONFIG_ROTWRAP) {
+    connectivity = p8est_connectivity_new_rotwrap ();
+  }
+  else if (config == P8EST_CONFIG_TWOCUBES) {
+    connectivity = p8est_connectivity_new_twocubes ();
+  }
+  else if (config == P8EST_CONFIG_TWOWRAP) {
+    connectivity = p8est_connectivity_new_twowrap ();
+  }
+  else if (config == P8EST_CONFIG_ROTCUBES) {
+    connectivity = p8est_connectivity_new_rotcubes ();
+  }
+  else if (config == P8EST_CONFIG_SHELL) {
+    connectivity = p8est_connectivity_new_shell ();
+  }
+  else if (config == P8EST_CONFIG_SPHERE) {
+    connectivity = p8est_connectivity_new_sphere ();
+  }
+#endif
   else {
+#ifndef P4_TO_P8
     connectivity = p4est_connectivity_new_unitsquare ();
+#else
+    connectivity = p8est_connectivity_new_unitcube ();
+#endif
   }
 
   /* run mesh tests */

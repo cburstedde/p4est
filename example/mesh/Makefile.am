@@ -10,9 +10,9 @@ example_mesh_p4est_mesh_SOURCES = example/mesh/mesh2.c
 LINT_CSOURCES += $(example_mesh_p4est_mesh_SOURCES)
 endif
 
-## if P4EST_ENABLE_BUILD_3D
-## bin_PROGRAMS += example/mesh/p8est_mesh
-## example_mesh_p8est_mesh_SOURCES = example/mesh/mesh3.c
-##
-## LINT_CSOURCES += $(example_mesh_p8est_mesh_SOURCES)
-## endif
+if P4EST_ENABLE_BUILD_3D
+bin_PROGRAMS += example/mesh/p8est_mesh
+example_mesh_p8est_mesh_SOURCES = example/mesh/mesh3.c
+
+LINT_CSOURCES += $(example_mesh_p8est_mesh_SOURCES)
+endif
