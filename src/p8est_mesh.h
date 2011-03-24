@@ -38,6 +38,8 @@ SC_EXTERN_C_BEGIN;
  * and its number in it's owners range of local quadrants in ghost_to_index.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
+ * This value is in 0..local_num_quadrants-1 for local quadrants, or in
+ * local_num_quadrants + (0..ghost_num_quadrants-1) for ghost quadrants.
  * The quad_to_face list has equally many entries which are either:
  * 1. A value of v = 0..23 which indicates one same-size neighbor.
  *    This value is decoded as v = r * 6 + nf, where nf = 0..5 is the
@@ -49,7 +51,10 @@ SC_EXTERN_C_BEGIN;
  * 3. A value of v = -24..1 indicates four half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
  *    quad_to_half table which stores four quadrant numbers per index,
- *    and the orientation of the smaller faces follow from 24 + v.
+ *    and the orientation of the smaller faces follows from 24 + v.
+ *    The entries of quad_to_half encode between local and ghost quadrant
+ *    in the same way as the quad_to_quad values described above.
+ * A quadrant on the boundary of the forest sees itself and its face number.
  */
 typedef struct
 {
