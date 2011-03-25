@@ -46,7 +46,7 @@ SC_EXTERN_C_BEGIN;
  *    This value is decoded as v = r * 4 + nf, where nf = 0..3 is the
  *    neigbbor's connecting face number and r = 0..1 is the relative
  *    orientation of the neighbor's face, see p4est_connectivity.h.
- * 2. A value of v = 8..39 indicates a double-size neighbor.
+ * 2. A value of v = 8..23 indicates a double-size neighbor.
  *    This value is decoded as v = 8 + h * 8 + r * 4 + nf, where
  *    r and nf are as above and h = 0..1 is the number of the subface.
  * 3. A value of v = -8..-1 indicates two half-size neighbors.
