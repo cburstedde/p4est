@@ -227,7 +227,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   /* Use "w" for writing the initial part of the file.
    * For further parts, use "r+" and fseek so write_compressed succeeds.
    */
-  vtufile = fopen (vtufilename, "w");
+  vtufile = fopen (vtufilename, "wb");
   if (vtufile == NULL) {
     P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
     return -1;
@@ -608,7 +608,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
-    pvtufile = fopen (pvtufilename, "w");
+    pvtufile = fopen (pvtufilename, "wb");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
       return -1;
@@ -686,7 +686,7 @@ p4est_vtk_write_point_scalar (p4est_t * p4est, p4est_geometry_t * geom,
   /* To be able to fseek in a file you cannot open in append mode.
    * so you need to open with "r+" and fseek to SEEK_END.
    */
-  vtufile = fopen (vtufilename, "r+");
+  vtufile = fopen (vtufilename, "rb+");
   if (vtufile == NULL) {
     P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
     return -1;
@@ -751,7 +751,7 @@ p4est_vtk_write_point_scalar (p4est_t * p4est, p4est_geometry_t * geom,
     FILE               *pvtufile;
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
-    pvtufile = fopen (pvtufilename, "a");
+    pvtufile = fopen (pvtufilename, "ab");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
       return -1;
@@ -834,7 +834,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *filename)
 
     /* Create a master file for visualization in Visit */
     snprintf (visitfilename, BUFSIZ, "%s.visit", filename);
-    visitfile = fopen (visitfilename, "w");
+    visitfile = fopen (visitfilename, "wb");
     if (!visitfile) {
       P4EST_LERRORF ("Could not open %s for output\n", visitfilename);
       fclose (pvtufile);
