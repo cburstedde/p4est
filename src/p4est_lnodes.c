@@ -2986,9 +2986,6 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   for (i = 0; i < mpisize; i++) {
     s_array = &(data->sorters[i]);
     count = s_array->elem_count;
-    if (s_array->elem_count == 0) {
-      continue;
-    }
     P4EST_ASSERT (sc_array_is_sorted (s_array, p4est_lnodes_sorter_compare));
     if (i == p4est->mpirank) {
       lnodes->owned_offset = gcount;
