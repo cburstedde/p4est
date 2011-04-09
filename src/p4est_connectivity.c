@@ -1029,6 +1029,102 @@ p4est_connectivity_new_star (void)
 }
 #endif /* !P4_TO_P8 */
 
+static inline void
+brick_linear_to_xyz (p4est_topidx_t ti, const int logx[P4EST_DIM],
+                     const int rankx[P4EST_DIM], p4est_topidx_t tx[P4EST_DIM])
+{
+  int                 i, j, k;
+  int                 lastlog = 0;
+
+  for (i = 0; i < P4EST_DIM; i++) {
+    tx[i] = 0;
+  }
+
+  for (i = 0; i < P4EST_DIM - 1; i++) {
+    p4est_topidx_t      tempx[3] = { 0, 0, 0 };
+    int                 logi = logx[rankx[i]] - lastlog;
+    int                 idx[3] = { -1, -1, -1 };
+    int                 c = 0;
+
+    for (k = 0; k < P4EST_DIM - i; k++) {
+      int                 d = rankx[i + k];
+
+      idx[d] = 0;
+    }
+    for (k = 0; k < P4EST_DIM; k++) {
+      if (idx[k] == 0) {
+        idx[k] = c++;
+      }
+    }
+
+    for (j = 0; j < logi; j++) {
+      int                 base = (P4EST_DIM - i) * j;
+      int                 shift = (P4EST_DIM - i - 1) * j;
+
+      for (k = 0; k < P4EST_DIM; k++) {
+        int                 id = idx[k];
+
+        if (id >= 0) {
+          tempx[k] |= (ti & (1 << (base + id))) >> (shift + id);
+        }
+      }
+    }
+    for (k = 0; k < P4EST_DIM; k++) {
+      tx[k] += (tempx[k] << lastlog);
+    }
+    lastlog += logi;
+    ti >>= (P4EST_DIM - i) * logi;
+  }
+  tx[rankx[P4EST_DIM - 1]] += (ti << lastlog);
+}
+
+static inline       p4est_topidx_t
+brick_xyz_to_linear (const p4est_topidx_t tx[P4EST_DIM],
+                     const int logx[P4EST_DIM], const int rankx[P4EST_DIM])
+{
+  int                 i, j, k;
+  int                 lastlog = logx[rankx[P4EST_DIM - 2]];
+  p4est_topidx_t      ti = tx[rankx[P4EST_DIM - 1]] >> lastlog;
+
+  for (i = P4EST_DIM - 2; i >= 0; i--) {
+    p4est_topidx_t      tempx[3] = { 0, 0, 0 };
+    int                 logi =
+      (i == 0) ? lastlog : lastlog - logx[rankx[i - 1]];
+    int                 idx[3] = { -1, -1, -1 };
+    int                 c = 0;
+
+    for (k = 0; k < P4EST_DIM - i; k++) {
+      int                 d = rankx[i + k];
+
+      idx[d] = 0;
+    }
+    for (k = 0; k < P4EST_DIM; k++) {
+      if (idx[k] == 0) {
+        idx[k] = c++;
+      }
+    }
+
+    ti <<= (P4EST_DIM - i) * logi;
+    lastlog -= logi;
+    for (k = 0; k < P4EST_DIM; k++) {
+      tempx[k] = tx[k] >> lastlog;
+    }
+    for (j = 0; j < logi; j++) {
+      int                 shift = (P4EST_DIM - i - 1) * j;
+
+      for (k = 0; k < P4EST_DIM; k++) {
+        int                 id = idx[k];
+
+        if (id >= 0) {
+          ti |= (tempx[k] & (1 << j)) << (shift + id);
+        }
+      }
+    }
+  }
+
+  return ti;
+}
+
 p4est_connectivity_t *
 #ifndef P4_TO_P8
 p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b)
@@ -1074,15 +1170,14 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
   p4est_topidx_t     *ctt_offset;
   p4est_topidx_t     *corner_to_tree;
   int8_t             *corner_to_corner;
-  p4est_topidx_t      cube_length, n_iter;
-  int                 log_cl;
-  int                 i, j, k, l;
+  p4est_topidx_t      n_iter;
+  int                 logx[P4EST_DIM];
+  int                 rankx[P4EST_DIM];
+  int                 i, j, l;
   p4est_topidx_t      ti, tj, tk;
   p4est_topidx_t      tx, ty;
-  p4est_topidx_t      tfx[P4EST_FACES], tfy[P4EST_FACES];
-  p4est_topidx_t      tcx[P4EST_CHILDREN], tcy[P4EST_CHILDREN];
   p4est_topidx_t      tf[P4EST_FACES], tc[P4EST_CHILDREN];
-  p4est_topidx_t      coord[P4EST_DIM], ttemp;
+  p4est_topidx_t      coord[P4EST_DIM], coord2[P4EST_DIM], ttemp;
   p4est_topidx_t     *linear_to_tree;
   p4est_topidx_t     *tree_to_corner2;
   p4est_topidx_t      vcount = 0, vicount = 0;
@@ -1091,9 +1186,6 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
 #ifdef P4_TO_P8
   p4est_topidx_t      tl;
   p4est_topidx_t      tz;
-  p4est_topidx_t      tfz[P4EST_FACES];
-  p4est_topidx_t      tex[P8EST_EDGES], tey[P8EST_EDGES], tez[P8EST_EDGES];
-  p4est_topidx_t      tcz[P4EST_CHILDREN];
   p4est_topidx_t      te[P8EST_EDGES];
   p4est_topidx_t     *tree_to_edge;
   p4est_topidx_t     *ett_offset;
@@ -1144,15 +1236,32 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
     tree_to_vertex[ti] = -1;
   }
 
-  cube_length = (m > n) ? m : n;
+  logx[0] = SC_LOG2_32 (m - 1) + 1;
+  logx[1] = SC_LOG2_32 (n - 1) + 1;
+  n_iter = (1 << logx[0]) * (1 << logx[1]);
+  if (logx[0] <= logx[1]) {
+    rankx[0] = 0;
+    rankx[1] = 1;
+  }
+  else {
+    rankx[0] = 1;
+    rankx[1] = 0;
+  }
 #ifdef P4_TO_P8
-  cube_length = (cube_length > p) ? cube_length : p;
-#endif
-  log_cl = SC_LOG2_32 (cube_length - 1) + 1;
-  cube_length = ((p4est_locidx_t) 1) << log_cl;
-  n_iter = cube_length * cube_length;
-#ifdef P4_TO_P8
-  n_iter *= cube_length;
+  logx[2] = SC_LOG2_32 (p - 1) + 1;
+  n_iter *= (1 << logx[2]);
+  if (logx[2] < logx[rankx[0]]) {
+    rankx[2] = rankx[1];
+    rankx[1] = rankx[0];
+    rankx[0] = 2;
+  }
+  else if (logx[rankx[1]] <= logx[2]) {
+    rankx[2] = 2;
+  }
+  else {
+    rankx[2] = rankx[1];
+    rankx[1] = 2;
+  }
 #endif
 
   linear_to_tree = P4EST_ALLOC (p4est_topidx_t, n_iter);
@@ -1167,18 +1276,12 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
   tl = 0;
 #endif
   for (ti = 0; ti < n_iter; ti++) {
-    tx = 0;
-    ty = 0;
+    brick_linear_to_xyz (ti, logx, rankx, coord);
+    tx = coord[0];
+    ty = coord[1];
 #ifdef P4_TO_P8
-    tz = 0;
+    tz = coord[2];
 #endif
-    for (i = 0; i < log_cl; i++) {
-      tx |= (ti & (1 << (P4EST_DIM * i))) >> ((P4EST_DIM - 1) * i);
-      ty |= (ti & (1 << (P4EST_DIM * i + 1))) >> ((P4EST_DIM - 1) * i + 1);
-#ifdef P4_TO_P8
-      tz |= (ti & (1 << (P4EST_DIM * i + 2))) >> ((P4EST_DIM - 1) * i + 2);
-#endif
-    }
     if (tx < m && ty < n &&
 #ifdef P4_TO_P8
         tz < p &&
@@ -1233,22 +1336,11 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
 #endif
 
   for (ti = 0; ti < n_iter; ti++) {
-    tx = 0;
-    ty = 0;
+    brick_linear_to_xyz (ti, logx, rankx, coord);
+    tx = coord[0];
+    ty = coord[1];
 #ifdef P4_TO_P8
-    tz = 0;
-#endif
-    for (i = 0; i < log_cl; i++) {
-      tx |= (ti & (1 << (P4EST_DIM * i))) >> ((P4EST_DIM - 1) * i);
-      ty |= (ti & (1 << (P4EST_DIM * i + 1))) >> ((P4EST_DIM - 1) * i + 1);
-#ifdef P4_TO_P8
-      tz |= (ti & (1 << (P4EST_DIM * i + 2))) >> ((P4EST_DIM - 1) * i + 2);
-#endif
-    }
-    coord[0] = tx;
-    coord[1] = ty;
-#ifdef P4_TO_P8
-    coord[2] = tz;
+    tz = coord[2];
 #endif
     if (tx < m && ty < n &&
 #ifdef P4_TO_P8
@@ -1259,56 +1351,40 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
       P4EST_ASSERT (tj >= 0);
       for (i = 0; i < P4EST_DIM; i++) {
         for (j = 0; j < 2; j++) {
-          l = i * 2 + j;
-          tfx[l] = ((tx + ((i == 0) ? (2 * j - 1) : 0)) + m) % m;
-          tfy[l] = ((ty + ((i == 1) ? (2 * j - 1) : 0)) + n) % n;
+          l = 2 * i + j;
+          coord2[0] = ((tx + ((i == 0) ? (2 * j - 1) : 0)) + m) % m;
+          coord2[1] = ((ty + ((i == 1) ? (2 * j - 1) : 0)) + n) % n;
 #ifdef P4_TO_P8
-          tfz[l] = ((tz + ((i == 2) ? (2 * j - 1) : 0)) + p) % p;
+          coord2[2] = ((tz + ((i == 2) ? (2 * j - 1) : 0)) + p) % p;
 #endif
-          tf[l] = 0;
-          for (k = 0; k < log_cl; k++) {
-            tf[l] |= (tfx[l] & (1 << k)) << ((P4EST_DIM - 1) * k);
-            tf[l] |= (tfy[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 1);
-#ifdef P4_TO_P8
-            tf[l] |= (tfz[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 2);
-#endif
-          }
+          tf[l] = brick_xyz_to_linear (coord2, logx, rankx);
+          P4EST_ASSERT (tf[l] < n_iter);
           tf[l] = linear_to_tree[tf[l]];
           P4EST_ASSERT (tf[l] >= 0);
         }
 #ifdef P4_TO_P8
         for (j = 0; j < 4; j++) {
           l = 4 * i + j;
-          tex[l] = ((tx + ((i == 0) ? 0 : (2 * (j & 1) - 1))) + m) % m;
-          tey[l] = ((ty + ((i == 1) ? 0 :
-                           (2 * ((i == 0) ? (j & 1) : (j / 2)) - 1))) +
-                    n) % n;
-          tez[l] = ((tz + ((i == 2) ? 0 : (2 * (j / 2) - 1))) + p) % p;
-          te[l] = 0;
-          for (k = 0; k < log_cl; k++) {
-            te[l] |= (tex[l] & (1 << k)) << ((P4EST_DIM - 1) * k);
-            te[l] |= (tey[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 1);
-            te[l] |= (tez[l] & (1 << k)) << ((P4EST_DIM - 1) * k + 2);
-          }
+          coord2[0] = ((tx + ((i == 0) ? 0 : (2 * (j & 1) - 1))) + m) % m;
+          coord2[1] = ((ty + ((i == 1) ? 0 :
+                              (2 * ((i == 0) ? (j & 1) : (j / 2)) - 1))) +
+                       n) % n;
+          coord2[2] = ((tz + ((i == 2) ? 0 : (2 * (j / 2) - 1))) + p) % p;
+          te[l] = brick_xyz_to_linear (coord2, logx, rankx);
+          P4EST_ASSERT (te[l] < n_iter);
           te[l] = linear_to_tree[te[l]];
           P4EST_ASSERT (te[l] >= 0);
         }
 #endif
       }
       for (i = 0; i < P4EST_CHILDREN; i++) {
-        tcx[i] = ((tx + (((i & 1) == 0) ? -1 : 1)) + m) % m;
-        tcy[i] = ((ty + ((((i >> 1) & 1) == 0) ? -1 : 1)) + n) % n;
+        coord2[0] = ((tx + (((i & 1) == 0) ? -1 : 1)) + m) % m;
+        coord2[1] = ((ty + ((((i >> 1) & 1) == 0) ? -1 : 1)) + n) % n;
 #ifdef P4_TO_P8
-        tcz[i] = ((tz + (((i >> 2) == 0) ? -1 : 1)) + p) % p;
+        coord2[2] = ((tz + (((i >> 2) == 0) ? -1 : 1)) + p) % p;
 #endif
-        tc[i] = 0;
-        for (j = 0; j < log_cl; j++) {
-          tc[i] |= (tcx[i] & (1 << j)) << ((P4EST_DIM - 1) * j);
-          tc[i] |= (tcy[i] & (1 << j)) << ((P4EST_DIM - 1) * j + 1);
-#ifdef P4_TO_P8
-          tc[i] |= (tcz[i] & (1 << j)) << ((P4EST_DIM - 1) * j + 2);
-#endif
-        }
+        tc[i] = brick_xyz_to_linear (coord2, logx, rankx);
+        P4EST_ASSERT (tc[i] < n_iter);
         tc[i] = linear_to_tree[tc[i]];
         P4EST_ASSERT (tc[i] >= 0);
       }
