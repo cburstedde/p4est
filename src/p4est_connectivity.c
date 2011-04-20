@@ -27,6 +27,9 @@
 #include <p4est_connectivity.h>
 #endif
 #include <sc_io.h>
+#ifdef P4EST_METIS
+#include <metis.h>
+#endif
 
 #ifndef P4_TO_P8
 
@@ -1799,3 +1802,279 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
   }
 #endif
 }
+
+#ifdef P4EST_METIS
+
+static int
+reorder_comp (const void *a, const void *b)
+{
+  const int          *A = (const int *) a;
+  const int          *B = (const int *) b;
+
+  if (A[0] < B[0]) {
+    return -1;
+  }
+  else if (B[0] < A[0]) {
+    return 1;
+  }
+  else {
+    return (a - b);
+  }
+}
+
+void
+p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
+                            int conntype)
+{
+  int                 n = (int) conn->num_trees;
+  int                *xadj;
+  int                *adjncy;
+  int                *part;
+  int                 totaldeg;
+  int                 degree;
+  int                 i, j, l;
+  int                 rank = -1;
+  p4est_corner_info_t ci;
+  sc_array_t         *cta = &ci.corner_transforms;
+  p4est_corner_transform_t *ct;
+#ifdef P4_TO_P8
+  p8est_edge_info_t   ei;
+  sc_array_t         *eta = &ei.edge_transforms;
+  p8est_edge_transform_t *et;
+#endif
+  int                 wgtflag = 0;      /* do not use weights */
+  int                 numflag = 0;      /* C-style numbering */
+  int                 options[5] = { 0, 1, 1, 1, 1 };   /* default options */
+  int                 volume = -1;
+  size_t              zz;
+  int                 mpiret = MPI_Comm_rank (comm, &rank);
+  sc_array_t         *newid;
+  size_t             *zp;
+  sc_array_t          array_view;
+  sc_array_t         *sorter;
+  int                *ip;
+  int                 count;
+
+  SC_CHECK_MPI (mpiret);
+
+  /* part will hold the partition number of each tree */
+  part = P4EST_ALLOC (int, n);
+
+  if (!rank) {
+
+    xadj = P4EST_ALLOC (int, n + 1);
+
+    switch (conntype) {
+    case 0:
+      degree = P4EST_FACES;
+      break;
+    case (P4EST_DIM - 1):
+      sc_array_init (cta, sizeof (p4est_corner_transform_t));
+#ifndef P4_TO_P8
+      degree = 8;
+#else
+      degree = 26;
+      sc_array_init (eta, sizeof (p8est_edge_transform_t));
+#endif
+      break;
+#ifdef P4_TO_P8
+    case 1:
+      sc_array_init (eta, sizeof (p8est_edge_transform_t));
+      degree = 18;
+      break;
+#endif
+    default:
+      SC_ABORT_NOT_REACHED ();
+    }
+
+    if (degree == P4EST_FACES) {
+      /* each tree has the same: metis shouldn't have any trouble with a
+       * loop on a face/edge corner that has no neighbor */
+      for (i = 0; i < n + 1; i++) {
+        xadj[i] = P4EST_FACES * i;
+      }
+      adjncy = P4EST_ALLOC (int, P4EST_FACES * n);
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < P4EST_FACES; j++) {
+          adjncy[P4EST_FACES * i + j] =
+            conn->tree_to_tree[P4EST_FACES * i + j];
+        }
+      }
+    }
+    else {
+      totaldeg = 0;
+      xadj[0] = 0;
+      for (i = 0; i < n; i++) {
+        totaldeg += P4EST_FACES;
+        if (conntype == (P4EST_DIM - 1)) {
+          for (j = 0; j < P4EST_CHILDREN; j++) {
+            /* add the number of strict corner neighbors */
+            p4est_find_corner_transform (conn, (p4est_topidx_t) i, j, &ci);
+            totaldeg += (int) cta->elem_count;
+          }
+        }
+#ifdef P4_TO_P8
+        if (conntype >= 1) {
+          /* add the number of strict edge neighbors */
+          for (j = 0; j < P8EST_EDGES; j++) {
+            p8est_find_edge_transform (conn, (p4est_topidx_t) i, j, &ei);
+            totaldeg += (int) eta->elem_count;
+          }
+        }
+#endif
+        xadj[i + 1] = totaldeg;
+      }
+
+      adjncy = P4EST_ALLOC (int, totaldeg);
+
+      l = 0;
+      for (i = 0; i < n; i++) {
+        for (j = 0; j < P4EST_FACES; j++) {
+          adjncy[l++] = (int) conn->tree_to_tree[P4EST_FACES * i + j];
+        }
+        if (conntype == (P4EST_DIM - 1)) {
+          for (j = 0; j < P4EST_CHILDREN; j++) {
+            /* add the number of strict corner neighbors */
+            p4est_find_corner_transform (conn, (p4est_topidx_t) i, j, &ci);
+            for (zz = 0; zz < cta->elem_count; zz++) {
+              ct = p4est_corner_array_index (cta, zz);
+              adjncy[l++] = (int) ct->ntree;
+            }
+          }
+        }
+#ifdef P4_TO_P8
+        if (conntype >= 1) {
+          /* add the number of strict edge neighbors */
+          for (j = 0; j < P8EST_EDGES; j++) {
+            p8est_find_edge_transform (conn, (p4est_topidx_t) i, j, &ei);
+            for (zz = 0; zz < eta->elem_count; zz++) {
+              et = p8est_edge_array_index (eta, zz);
+              adjncy[l++] = (int) et->ntree;
+            }
+          }
+        }
+#endif
+        P4EST_ASSERT (l == xadj[i + 1]);
+      }
+
+      P4EST_ASSERT (l == totaldeg);
+
+      if (conntype == (P4EST_DIM - 1)) {
+        sc_array_reset (cta);
+      }
+#ifdef P4_TO_P8
+      if (conntype >= 1) {
+        sc_array_reset (eta);
+      }
+#endif
+    }
+
+    P4EST_GLOBAL_INFO ("Entering metis\n");
+    /* now call metis */
+    METIS_PartGraphVKway (&n, xadj, adjncy, NULL, NULL, &wgtflag, &numflag,
+                          &k, options, &volume, part);
+    P4EST_GLOBAL_INFO ("Done metis\n");
+
+    P4EST_GLOBAL_STATISTICSF ("metis volume %d\n", volume);
+
+    P4EST_FREE (xadj);
+    P4EST_FREE (adjncy);
+  }
+
+  /* broadcast part to every process: this is expensive, should probably think
+   * of a better way to do this */
+  MPI_Bcast (part, n, MPI_INT, 0, comm);
+
+  /* now that everyone has part, each process computes the renumbering
+   * for itself*/
+  newid = sc_array_new_size (sizeof (size_t), (size_t) n);
+  sorter = sc_array_new_size (2 * sizeof (int), (size_t) n);
+  for (i = 0; i < n; i++) {
+    ip = (int *) sc_array_index (sorter, i);
+    ip[0] = part[i];
+    ip[1] = i;
+  }
+  P4EST_FREE (part);
+
+  /* sort current index by partition given */
+  /* this will be the same on every process because the comparison operation
+   * does not allow equality between different trees */
+  sc_array_sort (sorter, reorder_comp);
+  for (i = 0; i < n; i++) {
+    ip = (int *) sc_array_index (sorter, i);
+    zp = (size_t *) sc_array_index (newid, ip[1]);
+    *zp = i;
+  }
+  sc_array_destroy (sorter);
+
+  /* first we change the entries in the various tables */
+
+  /* tree_to_tree */
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < P4EST_FACES; j++) {
+      l = (int) conn->tree_to_tree[P4EST_FACES * i + j];
+      zp = (size_t *) sc_array_index (newid, l);
+      conn->tree_to_tree[P4EST_FACES * i + j] = (p4est_topidx_t) (*zp);
+    }
+  }
+
+#ifdef P4_TO_P8
+  /* edge_to_tree */
+  if (conn->edge_to_tree != NULL) {
+    count = (int) conn->ett_offset[conn->num_edges];
+    for (i = 0; i < count; i++) {
+      l = (int) conn->edge_to_tree[i];
+      zp = (size_t *) sc_array_index (newid, l);
+      conn->edge_to_tree[i] = (p4est_topidx_t) (*zp);
+    }
+  }
+#endif
+
+  /* corner_to_tree */
+  if (conn->corner_to_tree != NULL) {
+    count = (int) conn->ctt_offset[conn->num_corners];
+    for (i = 0; i < count; i++) {
+      l = (int) conn->corner_to_tree[i];
+      zp = (size_t *) sc_array_index (newid, l);
+      conn->corner_to_tree[i] = (p4est_topidx_t) (*zp);
+    }
+  }
+
+  /* now we reorder the various tables via in-place permutation */
+
+  /* tree_to_vertex */
+  sc_array_init_data (&array_view, conn->tree_to_vertex,
+                      P4EST_CHILDREN * sizeof (p4est_topidx_t), n);
+  sc_array_permute (&array_view, newid, 1);
+
+  /* tree_to_tree */
+  sc_array_init_data (&array_view, conn->tree_to_tree,
+                      P4EST_FACES * sizeof (p4est_topidx_t), n);
+  sc_array_permute (&array_view, newid, 1);
+
+  /* tree_to_face */
+  sc_array_init_data (&array_view, conn->tree_to_face,
+                      P4EST_FACES * sizeof (int8_t), n);
+  sc_array_permute (&array_view, newid, 1);
+
+#ifdef P4_TO_P8
+  /* tree_to_edge */
+  if (conn->tree_to_edge != NULL) {
+    sc_array_init_data (&array_view, conn->tree_to_edge,
+                        P8EST_EDGES * sizeof (p4est_topidx_t), n);
+    sc_array_permute (&array_view, newid, 1);
+  }
+#endif
+
+  /* tree_to_corner */
+  if (conn->tree_to_corner != NULL) {
+    sc_array_init_data (&array_view, conn->tree_to_corner,
+                        P4EST_CHILDREN * sizeof (p4est_topidx_t), n);
+    sc_array_permute (&array_view, newid, 1);
+  }
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  sc_array_destroy (newid);
+}
+#endif

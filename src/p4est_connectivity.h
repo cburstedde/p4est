@@ -259,6 +259,35 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  int icorner,
                                                  p4est_corner_info_t * ci);
 
+#ifdef P4EST_METIS
+/** p4est_connectivity_reorder
+ * This function takes a connectivity \a conn and a parameter \a k,
+ * which will typically be the number of processes, and reorders the trees
+ * such that if every processes is assigned (num_trees / k) trees, the
+ * communication volume will be minimized.  This is intended for use with
+ * connectivities that contain a large number of trees.  This should be done
+ * BEFORE a p4est is created using the connectivity.  This is done in place:
+ * any data structures that use indices to refer to trees before this
+ * procedure will be invalid.  Note that this routine calls metis and not
+ * parmetis because the connectivity is copied on every process.
+ * A communicator is required because I'm not positive that metis is
+ * deterministic. \a conntype determines when an edge
+ * exist between two trees in the dual graph used by metis in the reordering:
+ * if conntype = 0, then only face adjacency matters; if conntype = 1,
+ * then face and corner adjacency matter.
+ * \param [in,out] conn       connectivity that will be reordered.
+ * \param [in]     k          the number of pieces metis will use to guide the
+ *                            reordering.
+ * \param [in]     comm       MPI communicator.
+ * \param [in]     conntype   0: dual graph edges only for face adjacency;
+ *                            1: dual graph edges for face and corner
+ *                               adjacency.
+ */
+void                p4est_connectivity_reorder (p4est_connectivity_t * conn,
+                                                int k, MPI_Comm comm,
+                                                int conntype);
+#endif
+
 /** Return a pointer to a p4est_corner_transform_t array element. */
 /*@unused@*/
 static inline p4est_corner_transform_t *

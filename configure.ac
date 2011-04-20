@@ -82,6 +82,39 @@ echo "o----------------------------------"
 
 SC_REQUIRE_LIB([m], [fabs])
 
+#P4EST_CHECK_METIS
+P4EST_ARG_WITH([metis], [enable metis-dependent code], [METIS])
+if test "$P4EST_WITH_METIS" != "no" ; then
+  P4EST_METIS_INC=""
+  P4EST_METIS_LD=""
+  P4EST_METIS_LIB="-lmetis"
+  if test "$P4EST_WITH_METIS" != "yes" ; then
+    P4EST_METIS_INC="-I$P4EST_WITH_METIS/include"
+    P4EST_METIS_LD="-L$P4EST_WITH_METIS/lib"
+  fi
+  PRE_METIS_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $P4EST_METIS_INC"
+  PRE_METIS_LIBS="$LIBS"
+  LIBS="$LIBS $P4EST_METIS_LIB"
+  PRE_METIS_LDFLAGS="$LDFLAGS"
+  LDFLAGS="$LDFLAGS $P4EST_METIS_LD"
+  
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <metis.h>]],
+[int n = 0, xadj, adjncy, wgtflag = 0, numflag = 0;
+ int nparts = 0, options = 0, volume, part;
+
+ METIS_PartGraphVKway (&n, &xadj, &adjncy, NULL, NULL,
+                       &wgtflag, &numflag, &nparts, &options,
+                       &volume, &part);])],
+                    [AC_SUBST(P4EST_METIS_INC)
+                     AC_SUBST(P4EST_METIS_LD)
+                     AC_SUBST(P4EST_METIS_LIB)],[AC_MSG_ERROR([Unable to link metis])])
+  CFLAGS="$PRE_METIS_CFLAGS"
+  LIBS="$PRE_METIS_LIBS"
+  LDFLAGS="$PRE_METIS_LDFLAGS"
+fi
+
+
 # Checks for header files.
 echo "o---------------------------------------"
 echo "| Checking headers"
