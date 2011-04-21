@@ -116,10 +116,14 @@ main (int argc, char **argv)
   /* create forest structure */
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, NULL);
+
+  /* write output: new forest */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_new");
 
   /* refine */
   p4est_refine (p4est, 1, refine_fn, init_fn);
+
+  /* write output: refined forest */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_refined");
 
   /* run partition and coarsen till one quadrant per tree remains */
@@ -131,6 +135,11 @@ main (int argc, char **argv)
   }
   SC_CHECK_ABORT (p4est->global_num_quadrants == connectivity->num_trees,
                   "coarsest forest was not achieved");
+
+  /* run partition on coarse forest (one quadrant per tree) once again */
+  p4est_partition_ext (p4est, 1, NULL);
+
+  /* write output: coarsened forest */
   p4est_vtk_write_file (p4est, NULL,
                         P4EST_STRING "_partition_corr_coarsened");
 
