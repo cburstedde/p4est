@@ -2433,7 +2433,6 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
       if (quad_near_cut_level > 0) {
         /* if quadrant near cut is not root of tree, i.e. level is not zero */
-
         /* get parent of quadrant near cut */
         p4est_quadrant_parent (q, &parent_send[parent_index]);
 
@@ -2491,27 +2490,25 @@ p4est_partition_for_coarsening (p4est_t * p4est,
             break;
           }
         }
-      }
-      else {
-        /* set parent as tree root `q` */
-        parent_send[parent_index].x = q->x;
-        parent_send[parent_index].y = q->y;
-#ifdef P4_TO_P8
-        parent_send[parent_index].z = q->z;
-#endif
-        parent_send[parent_index].level = q->level;
-      }
 
-      /* MPI send */
-      if (quad_near_cut_level <= 0) {
-        /* if quadrant near cut is root of tree, i.e. level is zero */
         /* write tree */
         parent_send[parent_index].p.piggy3.which_tree = tree_index;
 
-        /* write num quadrants with same parent */
-        parent_send[parent_index].p.piggy3.local_num = 1;
+        if (quad_id_near_cut == partition_new[i]) {
+          /* if this process has cut */
+          /* encode number of quadrants with same parent before and after
+           * `partition_new[i]` into one integer */
+          parent_send[parent_index].p.piggy3.local_num =
+            (partition_new[i] - min_quad_id) * P4EST_CHILDREN +
+            (max_quad_id - partition_new[i]);
+        }
+        else {
+          /* write number of quadrants with same parent */
+          parent_send[parent_index].p.piggy3.local_num =
+            max_quad_id - min_quad_id + 1;
+        }
 
-        /* send root of tree */
+        /* MPI send: parent */
         mpiret = MPI_Isend (&parent_send[parent_index],
                             sizeof (p4est_quadrant_t), MPI_BYTE,
                             i,
@@ -2519,43 +2516,22 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
       }
-      else if (partition_now[rank] <=
-               SC_MAX (partition_new[i] - P4EST_CHILDREN + 1, 0)
-               &&
-               SC_MIN (partition_new[i] + P4EST_CHILDREN - 2,
-                       global_num_quadrants - 1) < partition_now[rank + 1]) {
-        /* if able to compute correction */
-        /* compute correction */
-        parent_send[parent_index].p.piggy3.local_num =
-          p4est_partition_correction (partition_new, num_procs, i,
-                                      min_quad_id, max_quad_id);
+      else { /* if quadrant near cut is root of tree, i.e. level is zero */
+        /* set parent as tree root `q` */
+        parent_send[parent_index].level = q->level;
+        parent_send[parent_index].x = q->x;
+        parent_send[parent_index].y = q->y;
+#ifdef P4_TO_P8
+        parent_send[parent_index].z = q->z;
+#endif
 
-        /* send correction */
-        mpiret =
-          MPI_Isend (&parent_send[parent_index].p.piggy3.local_num, 1,
-                     MPI_INT, i, P4EST_COMM_PARTITION_CORRECTION,
-                     p4est->mpicomm, &send_requests[parent_index]);
-        SC_CHECK_MPI (mpiret);
-      }
-      else {
         /* write tree */
         parent_send[parent_index].p.piggy3.which_tree = tree_index;
 
-        if (quad_id_near_cut == partition_new[i]) {
-          /* if this process has cut */
-          /* write num quadrants with same parent before and after
-           * `partition_new[i]` into one integer */
-          parent_send[parent_index].p.piggy3.local_num =
-            (partition_new[i] - min_quad_id) * P4EST_CHILDREN +
-            (max_quad_id - partition_new[i]);
-        }
-        else {
-          /* write num quadrants with same parent */
-          parent_send[parent_index].p.piggy3.local_num =
-            max_quad_id - min_quad_id + 1;
-        }
+        /* write number of quadrants with same "parent" */
+        parent_send[parent_index].p.piggy3.local_num = 1;
 
-        /* send parent */
+        /* MPI send: root of tree */
         mpiret = MPI_Isend (&parent_send[parent_index],
                             sizeof (p4est_quadrant_t), MPI_BYTE,
                             i,
@@ -2607,49 +2583,36 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   }
 
   if (num_receives > 0) {       /* if this process receives messages */
-    /* allocate MPI requests */
+    /* allocate receive messages */
     receive_requests = P4EST_ALLOC (MPI_Request, num_receives);
+    parent_receive = P4EST_ALLOC (p4est_quadrant_t, num_receives);
+    receive_process = P4EST_ALLOC (int, num_receives);
 
-    if (num_receives > 1) {     /* if this process receives parent quadrants */
-      /* allocate receive messages */
-      parent_receive = P4EST_ALLOC (p4est_quadrant_t, num_receives);
-      receive_process = P4EST_ALLOC (int, num_receives);
+    /* array index of receive messages */
+    parent_index = 0;
 
-      /* array index of send messages */
-      parent_index = 0;
-
-      for (i = receive_lowest; i <= receive_highest; i++) {
-        /* loop over all process candidates to receive from */
-        if (!(partition_now[i] < partition_now[i + 1] &&
-              partition_now[i] <= partition_new[rank] + P4EST_CHILDREN - 2 &&
-              partition_new[rank] - P4EST_CHILDREN + 1 <
-              partition_now[i + 1])) {
-          /* if process `i` has no relevant quadrants for this process */
-          continue;
-        }
-        else {
-          receive_process[parent_index] = i;
-        }
-
-        /* MPI receive */
-        mpiret = MPI_Irecv (&parent_receive[parent_index],
-                            sizeof (p4est_quadrant_t), MPI_BYTE,
-                            i,
-                            P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
-                            &receive_requests[parent_index]);
-        SC_CHECK_MPI (mpiret);
-
-        /* increment parent index */
-        parent_index++;
+    for (i = receive_lowest; i <= receive_highest; i++) {
+      /* loop over all process candidates to receive from */
+      if (!(partition_now[i] < partition_now[i + 1] &&
+            partition_now[i] <= partition_new[rank] + P4EST_CHILDREN - 2 &&
+            partition_new[rank] - P4EST_CHILDREN + 1 <
+            partition_now[i + 1])) {
+        /* if process `i` has no relevant quadrants for this process */
+        continue;
       }
-    }
-    else {            /* if this process receives correction */
+      /* store process index */
+      receive_process[parent_index] = i;
+
       /* MPI receive */
-      mpiret = MPI_Irecv (&correction_local, 1, MPI_INT,
-                          process_with_cut,
+      mpiret = MPI_Irecv (&parent_receive[parent_index],
+                          sizeof (p4est_quadrant_t), MPI_BYTE,
+                          i,
                           P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
-                          receive_requests);
+                          &receive_requests[parent_index]);
       SC_CHECK_MPI (mpiret);
+
+      /* increment parent index */
+      parent_index++;
     }
   }
   /* END: receive */
@@ -2676,14 +2639,14 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   }
   /* END: wait for MPI communication to complete */
 
-  /* BEGIN: compute correction with received parent quadrants */
-  if (num_receives > 1) {
-    /* if this process received parent quadrants */
+  /* BEGIN: compute correction with received quadrants */
+  if (num_receives > 0) {
+    /* if this process received quadrants */
     min_quad_id = partition_new[rank];  /* min quadrant id with same parent */
     max_quad_id = partition_new[rank];  /* max quadrant id with same parent */
 
     for (i = 0; i < num_receives; i++) {
-      /* loop over all received parents */
+      /* loop over all received (parent or tree root) quadrants */
       if (parent_receive[i].p.piggy3.which_tree ==
           parent_receive[process_with_cut_recv_id].p.piggy3.which_tree
           &&
