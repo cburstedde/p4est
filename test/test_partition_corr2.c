@@ -90,10 +90,10 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 int
 main (int argc, char **argv)
 {
-  int                 rank, num_procs, mpiret, i = 0;
+  int                 rank, num_procs, mpiret, i;
   MPI_Comm            mpicomm = MPI_COMM_WORLD;
-  p4est_t            *p4est;
-  p4est_connectivity_t *connectivity;
+  p4est_t            *p4est_1tree, *p4est_ntrees;
+  p4est_connectivity_t *connectivity_1tree, *connectivity_ntrees;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -108,44 +108,73 @@ main (int argc, char **argv)
 
   /* create connectivity */
 #ifdef P4_TO_P8
-  connectivity = p8est_connectivity_new_twocubes ();
+  connectivity_1tree= p8est_connectivity_new_unitcube ();
+  connectivity_ntrees = p8est_connectivity_new_twocubes ();
 #else
-  connectivity = p4est_connectivity_new_corner ();
+  connectivity_1tree= p4est_connectivity_new_unitsquare ();
+  connectivity_ntrees = p4est_connectivity_new_corner ();
 #endif
 
-  /* create forest structure */
-  p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
-                         sizeof (user_data_t), init_fn, NULL);
+  /* create p4est structure */
+  p4est_1tree= p4est_new_ext (mpicomm, connectivity_1tree, 15, 0, 0,
+                              sizeof (user_data_t), init_fn, NULL);
 
-  /* write output: new forest */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_new");
+  p4est_ntrees = p4est_new_ext (mpicomm, connectivity_ntrees, 15, 0, 0,
+                                sizeof (user_data_t), init_fn, NULL);
+
+  /* write output: new */
+  p4est_vtk_write_file (p4est_1tree, NULL,
+                        P4EST_STRING "_partition_corr_1tree_new");
+  p4est_vtk_write_file (p4est_ntrees, NULL,
+                        P4EST_STRING "_partition_corr_ntrees_new");
 
   /* refine */
-  p4est_refine (p4est, 1, refine_fn, init_fn);
+  p4est_refine (p4est_1tree, 1, refine_fn, init_fn);
+  p4est_refine (p4est_ntrees, 1, refine_fn, init_fn);
 
-  /* write output: refined forest */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_partition_corr_refined");
+  /* write output: refined */
+  p4est_vtk_write_file (p4est_1tree, NULL,
+                        P4EST_STRING "_partition_corr_1tree_refined");
+  p4est_vtk_write_file (p4est_ntrees, NULL,
+                        P4EST_STRING "_partition_corr_ntrees_refined");
 
   /* run partition and coarsen till one quadrant per tree remains */
-  while (p4est->global_num_quadrants > connectivity->num_trees &&
-         i <= P4EST_MAXLEVEL) {
-    p4est_partition_ext (p4est, 1, NULL);
-    p4est_coarsen (p4est, 0, coarsen_fn, init_fn);
+  i = 0;
+  while (p4est_1tree->global_num_quadrants > 1 && i <= P4EST_MAXLEVEL) {
+    p4est_partition_ext (p4est_1tree, 1, NULL);
+    p4est_coarsen (p4est_1tree, 0, coarsen_fn, init_fn);
     i++;
   }
-  SC_CHECK_ABORT (p4est->global_num_quadrants == connectivity->num_trees,
-                  "coarsest forest was not achieved");
+  SC_CHECK_ABORT (p4est_1tree->global_num_quadrants == 1,
+                  "coarsest forest with one tree was not achieved");
+
+  i = 0;
+  while (p4est_ntrees->global_num_quadrants > connectivity_ntrees->num_trees
+         &&
+         i <= P4EST_MAXLEVEL) {
+    p4est_partition_ext (p4est_ntrees, 1, NULL);
+    p4est_coarsen (p4est_ntrees, 0, coarsen_fn, init_fn);
+    i++;
+  }
+  SC_CHECK_ABORT (p4est_ntrees->global_num_quadrants
+                  == connectivity_ntrees->num_trees,
+                  "coarsest forest with multiple trees was not achieved");
 
   /* run partition on coarse forest (one quadrant per tree) once again */
-  p4est_partition_ext (p4est, 1, NULL);
+  p4est_partition_ext (p4est_1tree, 1, NULL);
+  p4est_partition_ext (p4est_ntrees, 1, NULL);
 
-  /* write output: coarsened forest */
-  p4est_vtk_write_file (p4est, NULL,
-                        P4EST_STRING "_partition_corr_coarsened");
+  /* write output: coarsened */
+  p4est_vtk_write_file (p4est_1tree, NULL,
+                        P4EST_STRING "_partition_corr_1tree_coarsened");
+  p4est_vtk_write_file (p4est_ntrees, NULL,
+                        P4EST_STRING "_partition_corr_ntrees_coarsened");
 
   /* destroy the p4est and its connectivity structure */
-  p4est_destroy (p4est);
-  p4est_connectivity_destroy (connectivity);
+  p4est_destroy (p4est_1tree);
+  p4est_destroy (p4est_ntrees);
+  p4est_connectivity_destroy (connectivity_1tree);
+  p4est_connectivity_destroy (connectivity_ntrees);
 
   /* clean up and exit */
   sc_finalize ();
