@@ -74,6 +74,8 @@ static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
 
+#ifdef P4EST_MPI
+
 /** Correct partition to allow one level of coarsening.
  *
  * \param [in] p4est                     forest whose partition is corrected
@@ -83,6 +85,8 @@ static const int8_t any_face_flag = 0x02;
 static p4est_locidx_t p4est_partition_for_coarsening (p4est_t * p4est,
                                                       p4est_locidx_t *
                                                       num_quadrants_in_proc);
+
+#endif
 
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
@@ -2311,6 +2315,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
      global_shipped * 100. / global_num_quadrants);
 }
 
+#ifdef P4EST_MPI
+
 static              p4est_locidx_t
 p4est_partition_for_coarsening (p4est_t * p4est,
                                 p4est_locidx_t * num_quadrants_in_proc)
@@ -2448,7 +2454,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                                           tree->quadrants_offset);
 
           /* check quadrant `iq` */
-          if (q->level == quad_near_cut_level) {  /* if same level */
+          if (q->level == quad_near_cut_level) {        /* if same level */
             if (p4est_quadrant_is_parent (&parent_send[parent_index], q)) {
               /* if same parent */
               min_quad_id = iq;
@@ -2477,7 +2483,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                                           tree->quadrants_offset);
 
           /* check quadrant `iq` */
-          if (q->level == quad_near_cut_level) {  /* if same level */
+          if (q->level == quad_near_cut_level) {        /* if same level */
             if (p4est_quadrant_is_parent (&parent_send[parent_index], q)) {
               /* if same parent */
               max_quad_id = iq;
@@ -2516,7 +2522,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
       }
-      else { /* if quadrant near cut is root of tree, i.e. level is zero */
+      else {                    /* if quadrant near cut is root of tree, i.e. level is zero */
         /* set parent as tree root `q` */
         parent_send[parent_index].level = q->level;
         parent_send[parent_index].x = q->x;
@@ -2730,6 +2736,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   /* return absolute number of moved quadrants */
   return num_moved_quadrants;
 }
+
+#endif
 
 unsigned
 p4est_checksum (p4est_t * p4est)
