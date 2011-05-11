@@ -128,7 +128,7 @@ p4est_nodes_new_local (p4est_t * p4est)
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new_local\n");
   P4EST_ASSERT (p4est_is_valid (p4est));
 #ifdef P4EST_DEBUG
-  is_balanced = p4est_is_balanced (p4est, P4EST_BALANCE_FULL);
+  is_balanced = p4est_is_balanced (p4est, P4EST_CONNECT_FULL);
 #endif
 
   P4EST_QUADRANT_INIT (&neighbor);

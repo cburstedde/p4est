@@ -47,6 +47,36 @@ SC_EXTERN_C_BEGIN;
  */
 #define P8EST_ONDISK_FORMAT 0x3000007
 
+/* Several functions involve relationships between neighboring trees and/or
+ * quadrants, and their behavior depends on how one defines adjacency:
+ * 1) entities are adjacent if they share a face, or
+ * 2) entities are adjacent if they share a face or corner, or
+ * 3) entities are adjacent if they share a face, corner or edge.
+ * p8est_connect_type_t is used to choose the desired behavior.
+ */
+typedef enum
+{
+  /* make sure to have different values 2D and 3D */
+  P8EST_CONNECT_FACE = 31,
+  P8EST_CONNECT_EDGE = 32,
+  P8EST_CONNECT_CORNER = 33,
+  P8EST_CONNECT_DEFAULT = P8EST_CONNECT_EDGE,
+  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
+}
+p8est_connect_type_t;
+
+/** Convert the p8est_connect_type_t into a number.
+ * \param [in] btype    The balance type to convert.
+ * \return              Returns 1, 2 or 3.
+ */
+int                 p8est_connect_type_int (p8est_connect_type_t btype);
+
+/** Convert the p8est_connect_type_t into a const string.
+ * \param [in] btype    The balance type to convert.
+ * \return              Returns a pointer to a constant string.
+ */
+const char         *p8est_connect_type_string (p8est_connect_type_t btype);
+
 /** This structure holds the 3D inter-tree connectivity information.
  * Identification of arbitrary faces, edges and corners is possible.
  *

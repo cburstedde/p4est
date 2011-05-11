@@ -361,7 +361,7 @@ main (int argc, char **argv)
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* balance the forest */
-  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);
+  p4est_balance (p4est, P4EST_CONNECT_DEFAULT, init_fn);
 
   /* do a uniform partition, include the weight function for testing */
   p4est_partition (p4est, weight_one);
@@ -388,7 +388,7 @@ main (int argc, char **argv)
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
   /* balance the forest */
-  p4est_balance (p4est, P4EST_BALANCE_DEFAULT, init_fn);
+  p4est_balance (p4est, P4EST_CONNECT_DEFAULT, init_fn);
 
   /* do a uniform partition, include the weight function for testing */
   p4est_partition (p4est, weight_one);

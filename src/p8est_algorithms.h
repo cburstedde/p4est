@@ -191,7 +191,7 @@ void                p8est_complete_subtree (p8est_t * p8est,
  *                            which is already allocated automatically.
  */
 void                p8est_balance_subtree (p8est_t * p8est,
-                                           p8est_balance_type_t btype,
+                                           p8est_connect_type_t btype,
                                            p4est_topidx_t which_tree,
                                            p8est_init_t init_fn);
 

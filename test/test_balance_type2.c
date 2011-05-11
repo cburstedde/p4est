@@ -115,9 +115,9 @@ main (int argc, char **argv)
   /* test face balance */
   p4estF = p4est_copy (p4est, 0);
 #ifndef P4_TO_P8
-  p4est_balance (p4estF, P4EST_BALANCE_FACE, NULL);
+  p4est_balance (p4estF, P4EST_CONNECT_FACE, NULL);
 #else
-  p4est_balance (p4estF, P8EST_BALANCE_FACE, NULL);
+  p4est_balance (p4estF, P8EST_CONNECT_FACE, NULL);
 #endif
   crcF = p4est_checksum (p4estF);
   P4EST_GLOBAL_INFOF ("Face balance with %lld quadrants and crc 0x%08x\n",
@@ -126,8 +126,8 @@ main (int argc, char **argv)
 #ifdef P4_TO_P8
   /* test edge balance */
   p4estE = p4est_copy (p4est, 1);
-  p4est_balance (p4estF, P8EST_BALANCE_EDGE, NULL);
-  p4est_balance (p4estE, P8EST_BALANCE_EDGE, NULL);
+  p4est_balance (p4estF, P8EST_CONNECT_EDGE, NULL);
+  p4est_balance (p4estE, P8EST_CONNECT_EDGE, NULL);
   crcE = p4est_checksum (p4estE);
   SC_CHECK_ABORT (crcE == p4est_checksum (p4estF), "mismatch A");
   P4EST_GLOBAL_INFOF ("Edge balance with %lld quadrants and crc 0x%08x\n",
@@ -137,11 +137,11 @@ main (int argc, char **argv)
   /* test corner balance */
   p4estC = p4est_copy (p4est, 1);
 #ifndef P4_TO_P8
-  p4est_balance (p4estF, P4EST_BALANCE_CORNER, NULL);
-  p4est_balance (p4estC, P4EST_BALANCE_CORNER, NULL);
+  p4est_balance (p4estF, P4EST_CONNECT_CORNER, NULL);
+  p4est_balance (p4estC, P4EST_CONNECT_CORNER, NULL);
 #else
-  p4est_balance (p4estF, P8EST_BALANCE_CORNER, NULL);
-  p4est_balance (p4estC, P8EST_BALANCE_CORNER, NULL);
+  p4est_balance (p4estF, P8EST_CONNECT_CORNER, NULL);
+  p4est_balance (p4estC, P8EST_CONNECT_CORNER, NULL);
 #endif
   crcC = p4est_checksum (p4estC);
   SC_CHECK_ABORT (crcC == p4est_checksum (p4estF), "mismatch B");

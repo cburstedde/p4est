@@ -185,7 +185,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
 
 p4est_mesh_t       *
 p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
-                p4est_balance_type_t btype)
+                p4est_connect_type_t btype)
 {
   int                 rank;
   size_t              ncz, zz;
@@ -195,7 +195,7 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_nodes_t      *nodes;
   p4est_quadrant_t   *quad;
 
-  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL));
+  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
 
   mesh = P4EST_ALLOC (p4est_mesh_t, 1);
 

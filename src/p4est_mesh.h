@@ -89,7 +89,7 @@ size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
  * \return              A fully allocated mesh structure.
  */
 p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
-                                    p4est_balance_type_t btype);
+                                    p4est_connect_type_t btype);
 
 /** Destroy a p4est_mesh structure.
  * \param [in] mesh     Mesh structure previously created by p4est_mesh_new.

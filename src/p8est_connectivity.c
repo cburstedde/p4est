@@ -976,3 +976,33 @@ p8est_find_edge_transform (p4est_connectivity_t * conn,
   P4EST_ASSERT (edge_trees == (p4est_topidx_t) ta->elem_count
                 + 1 + (ntrees[0] != -1) + (ntrees[1] != -1) - flipped);
 }
+
+int
+p8est_connect_type_int (p8est_connect_type_t btype)
+{
+  switch (btype) {
+  case P8EST_CONNECT_FACE:
+    return 1;
+  case P8EST_CONNECT_EDGE:
+    return 2;
+  case P8EST_CONNECT_CORNER:
+    return 3;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
+const char         *
+p8est_connect_type_string (p8est_connect_type_t btype)
+{
+  switch (btype) {
+  case P8EST_CONNECT_FACE:
+    return "FACE";
+  case P8EST_CONNECT_EDGE:
+    return "EDGE";
+  case P8EST_CONNECT_CORNER:
+    return "CORNER";
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+}

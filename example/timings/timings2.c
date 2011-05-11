@@ -338,7 +338,7 @@ main (int argc, char **argv)
 
   /* time balance */
   sc_flops_snap (&fi, &snapshot);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_BALANCE], snapshot.iwtime, "Balance");
 #ifdef P4EST_TIMINGS_VTK
@@ -349,7 +349,7 @@ main (int argc, char **argv)
 
   /* time rebalance - is a noop on the tree */
   sc_flops_snap (&fi, &snapshot);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_REBALANCE], snapshot.iwtime, "Rebalance");
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
@@ -367,7 +367,7 @@ main (int argc, char **argv)
 
   /* time building the ghost layer */
   sc_flops_snap (&fi, &snapshot);
-  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_GHOSTS], snapshot.iwtime, "Ghost layer");
   gcrc = p4est_ghost_checksum (p4est, ghost);

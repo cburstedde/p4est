@@ -641,7 +641,7 @@ failtest:
 /* warning: p4est_tree_compute_overlap may not work properly for less than
  * full balancing (i.e. face only, face/edge only balancing)
  *
- * TODO: make p4et_tree_compute_overlap take p4est_balance_type_t to guarantee
+ * TODO: make p4et_tree_compute_overlap take p4est_connect_type_t to guarantee
  * correct behavior for all balance types
  */
 void
@@ -1693,11 +1693,11 @@ p4est_complete_subtree (p4est_t * p4est,
 }
 
 void
-p4est_balance_subtree (p4est_t * p4est, p4est_balance_type_t btype,
+p4est_balance_subtree (p4est_t * p4est, p4est_connect_type_t btype,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
   p4est_complete_or_balance (p4est, which_tree, init_fn,
-                             p4est_balance_type_int (btype));
+                             p4est_connect_type_int (btype));
 }
 
 size_t

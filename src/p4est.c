@@ -1112,7 +1112,7 @@ p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer)
 }
 
 void
-p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
+p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                p4est_init_t init_fn)
 {
   const int           rank = p4est->mpirank;
@@ -1181,14 +1181,14 @@ p4est_balance (p4est_t * p4est, p4est_balance_type_t btype,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_balance %s with %lld total quadrants\n",
-                            p4est_balance_type_string (btype),
+                            p4est_connect_type_string (btype),
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
 #ifndef P4_TO_P8
-  P4EST_ASSERT (btype == P4EST_BALANCE_FACE || btype == P4EST_BALANCE_CORNER);
+  P4EST_ASSERT (btype == P4EST_CONNECT_FACE || btype == P4EST_CONNECT_CORNER);
 #else
-  P4EST_ASSERT (btype == P8EST_BALANCE_FACE || btype == P8EST_BALANCE_EDGE ||
-                btype == P8EST_BALANCE_CORNER);
+  P4EST_ASSERT (btype == P8EST_CONNECT_FACE || btype == P8EST_CONNECT_EDGE ||
+                btype == P8EST_CONNECT_CORNER);
 #endif
 
 #ifdef P4EST_DEBUG
@@ -3263,33 +3263,3 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 
   return p4est;
 }
-
-#ifndef P4_TO_P8
-
-int
-p4est_balance_type_int (p4est_balance_type_t btype)
-{
-  switch (btype) {
-  case P4EST_BALANCE_FACE:
-    return 1;
-  case P4EST_BALANCE_CORNER:
-    return 2;
-  default:
-    SC_ABORT_NOT_REACHED ();
-  }
-}
-
-const char         *
-p4est_balance_type_string (p4est_balance_type_t btype)
-{
-  switch (btype) {
-  case P4EST_BALANCE_FACE:
-    return "FACE";
-  case P4EST_BALANCE_CORNER:
-    return "CORNER";
-  default:
-    SC_ABORT_NOT_REACHED ();
-  }
-}
-
-#endif /* !P4_TO_P8 */

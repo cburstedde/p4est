@@ -283,13 +283,13 @@ main (int argc, char **argv)
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, test_refine, NULL);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
   coarsen_all = 1;
   p4est_coarsen_both (p4est, 0, test_coarsen, NULL);
   coarsen_all = 0;
   p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   coarsen_all = 1;
   p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_endcoarsen");

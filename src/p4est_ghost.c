@@ -68,7 +68,7 @@ p4est_ghost_array_index (sc_array_t * array, int i)
 #endif
 
 static p4est_ghost_t *p4est_ghost_new_check (p4est_t * p4est,
-                                             p4est_balance_type_t btype,
+                                             p4est_connect_type_t btype,
                                              p4est_ghost_tolerance_t tol);
 
 int
@@ -788,7 +788,7 @@ p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
 #endif /* P4EST_MPI */
 
 int
-p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
+p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
 {
   int                 zero = 0;
   int                 face, corner;
@@ -879,10 +879,10 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
       }
 
 #ifndef P4_TO_P8
-      if (btype == P4EST_BALANCE_FACE)
+      if (btype == P4EST_CONNECT_FACE)
         continue;
 #else
-      if (btype == P8EST_BALANCE_FACE)
+      if (btype == P8EST_CONNECT_FACE)
         continue;
 
       /* Find edge neighbors */
@@ -954,7 +954,7 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
 #endif
       }
 
-      if (btype == P8EST_BALANCE_EDGE)
+      if (btype == P8EST_CONNECT_EDGE)
         continue;
 #endif
 
@@ -1054,7 +1054,7 @@ p4est_is_balanced (p4est_t * p4est, p4est_balance_type_t btype)
         }
       }
 
-      P4EST_ASSERT (btype == P4EST_BALANCE_FULL);
+      P4EST_ASSERT (btype == P4EST_CONNECT_FULL);
     }
   }
 
@@ -1171,7 +1171,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
 #endif /* P4EST_MPI */
 
 static p4est_ghost_t *
-p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
+p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
                        p4est_ghost_tolerance_t tol)
 {
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
@@ -1238,7 +1238,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
   p4est_ghost_t      *gl;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_new %s\n",
-                            p4est_balance_type_string (btype));
+                            p4est_connect_type_string (btype));
 
   gl = P4EST_ALLOC (p4est_ghost_t, 1);
   gl->mpisize = num_procs;
@@ -1353,10 +1353,10 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
       }
 
 #ifndef P4_TO_P8
-      if (btype == P4EST_BALANCE_FACE)
+      if (btype == P4EST_CONNECT_FACE)
         continue;
 #else
-      if (btype == P8EST_BALANCE_FACE)
+      if (btype == P8EST_CONNECT_FACE)
         continue;
 
       /* Find smaller edge neighbors */
@@ -1512,7 +1512,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
         }
       }
 
-      if (btype == P8EST_BALANCE_EDGE)
+      if (btype == P8EST_CONNECT_EDGE)
         continue;
 #endif
 
@@ -1665,7 +1665,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_balance_type_t btype,
         }
       }
 
-      P4EST_ASSERT (btype == P4EST_BALANCE_FULL);
+      P4EST_ASSERT (btype == P4EST_CONNECT_FULL);
     }
   }
   P4EST_ASSERT (local_num == p4est->local_num_quadrants);
@@ -1891,7 +1891,7 @@ failtest:
 }
 
 p4est_ghost_t      *
-p4est_ghost_new (p4est_t * p4est, p4est_balance_type_t btype)
+p4est_ghost_new (p4est_t * p4est, p4est_connect_type_t btype)
 {
   return p4est_ghost_new_check (p4est, btype, P4EST_GHOST_UNBALANCED_ALLOW);
 }

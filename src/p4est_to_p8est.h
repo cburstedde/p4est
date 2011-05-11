@@ -63,15 +63,15 @@
 #define P4EST_COMM_LNODES_PASS          P8EST_COMM_LNODES_PASS
 #define P4EST_COMM_LNODES_OWNED         P8EST_COMM_LNODES_OWNED
 #define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
-#define P4EST_BALANCE_DEFAULT           P8EST_BALANCE_DEFAULT
-#define P4EST_BALANCE_FULL              P8EST_BALANCE_FULL
+#define P4EST_CONNECT_DEFAULT           P8EST_CONNECT_DEFAULT
+#define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 
 /* redefine types */
 #define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_corner_transform_t        p8est_corner_transform_t
 #define p4est_corner_info_t             p8est_corner_info_t
 #define p4est_geometry_t                p8est_geometry_t
-#define p4est_balance_type_t            p8est_balance_type_t
+#define p4est_connect_type_t            p8est_connect_type_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
@@ -137,8 +137,8 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
-#define p4est_balance_type_int          p8est_balance_type_int
-#define p4est_balance_type_string       p8est_balance_type_string
+#define p4est_connect_type_int          p8est_connect_type_int
+#define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
 #define p4est_quadrant_array_index      p8est_quadrant_array_index
 #define p4est_quadrant_array_push       p8est_quadrant_array_push

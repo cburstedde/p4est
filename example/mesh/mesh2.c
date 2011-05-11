@@ -180,7 +180,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   }
 
   /* balance */
-  p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
   if (!uniform)
     p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_balanced");
 
@@ -196,8 +196,8 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
                             uniform ? "uniform" : "adapted", crc);
 
   /* create ghost layer and mesh */
-  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, P4EST_BALANCE_FULL);
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new (p4est, ghost, P4EST_CONNECT_FULL);
   test_mesh (p4est, mesh, uniform);
 
   /* compute memory used */

@@ -102,7 +102,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   p4est_partition (p4est, NULL);
   p4est_vtk_write_file (p4est, NULL, vtkname);
 
@@ -112,7 +112,7 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
     SC_CHECK_ABORT (crc_computed == crc_expected, "Forest checksum mismatch");
   }
 
-  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
 
   /* compute total size of forest storage */
   size_conn = p4est_connectivity_memory_used (conn);

@@ -147,7 +147,7 @@ main (int argc, char **argv)
 
   /* balance the tree, print and destroy */
 #if 0
-  p4est_balance_subtree (p4est, P4EST_BALANCE_FULL, 0, NULL);
+  p4est_balance_subtree (p4est, P4EST_CONNECT_FULL, 0, NULL);
   p4est_tree_print (SC_LP_INFO, tree);
 #endif
   for (kz = 0; kz < tree->quadrants.elem_count; ++kz) {
@@ -162,12 +162,12 @@ main (int argc, char **argv)
   p4est_reset_data (p4est, 0, NULL, NULL);
 
   /* refine and balance the forest */
-  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 1");
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL), "Balance 1");
   p4est_refine (p4est, 1, refine_fn, NULL);
-  SC_CHECK_ABORT (!p4est_is_balanced (p4est, P4EST_BALANCE_FULL),
+  SC_CHECK_ABORT (!p4est_is_balanced (p4est, P4EST_CONNECT_FULL),
                   "Balance 2");
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
-  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 3");
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL), "Balance 3");
 
   /* check reset data function */
   p4est_reset_data (p4est, 17, NULL, NULL);
@@ -177,7 +177,7 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
   p4est_partition (p4est, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Partition");
-  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_BALANCE_FULL), "Balance 4");
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL), "Balance 4");
 
   /* check reset data function */
   p4est_reset_data (p4est, 3, NULL, NULL);
@@ -185,7 +185,7 @@ main (int argc, char **argv)
 
   /* checksum and rebalance */
   crc = p4est_checksum (p4est);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Rebalance");
 
   /* clean up and exit */

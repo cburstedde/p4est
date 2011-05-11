@@ -51,16 +51,6 @@ SC_EXTERN_C_BEGIN;
 /* the offset of the highest quadrant at level l */
 #define P4EST_LAST_OFFSET(l) (P4EST_ROOT_LEN - P4EST_QUADRANT_LEN (l))
 
-typedef enum
-{
-  /* make sure to have different values 2D and 3D */
-  P4EST_BALANCE_FACE = 21,
-  P4EST_BALANCE_CORNER = 22,
-  P4EST_BALANCE_DEFAULT = P4EST_BALANCE_CORNER,
-  P4EST_BALANCE_FULL = P4EST_BALANCE_CORNER
-}
-p4est_balance_type_t;
-
 typedef struct p4est_quadrant
 {
   p4est_qcoord_t      x, y;
@@ -279,7 +269,7 @@ void                p4est_coarsen (p4est_t * p4est,
  *                       which is already allocated automatically.
  */
 void                p4est_balance (p4est_t * p4est,
-                                   p4est_balance_type_t btype,
+                                   p4est_connect_type_t btype,
                                    p4est_init_t init_fn);
 
 /** Equally partition the forest.
@@ -334,18 +324,6 @@ p4est_t            *p4est_load (const char *filename, MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
                                 p4est_connectivity_t ** connectivity);
-
-/** Convert the p4est_balance_type_t into a number.
- * \param [in] btype    The balance type to convert.
- * \return              Returns 1 or 2.
- */
-int                 p4est_balance_type_int (p4est_balance_type_t btype);
-
-/** Convert the p4est_balance_type_t into a const string.
- * \param [in] btype    The balance type to convert.
- * \return              Returns a pointer to a constant string.
- */
-const char         *p4est_balance_type_string (p4est_balance_type_t btype);
 
 /** Return a pointer to an array element indexed by a p4est_topidx_t.
  * \param [in] index needs to be in [0]..[elem_count-1].

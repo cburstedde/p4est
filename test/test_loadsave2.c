@@ -174,7 +174,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
 
   /* partition and balance */
   p4est_partition (p4est, NULL);
-  p4est_balance (p4est, P4EST_BALANCE_FULL, init_fn);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
   sc_stats_set1 (stats + STATS_P4EST_ELEMS,
                  (double) p4est->local_num_quadrants, "p4est elements");
 

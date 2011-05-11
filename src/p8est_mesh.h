@@ -89,7 +89,7 @@ size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
  * \return              A fully allocated mesh structure.
  */
 p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
-                                    p8est_balance_type_t btype);
+                                    p8est_connect_type_t btype);
 
 /** Destroy a p8est_mesh structure.
  * \param [in] mesh     Mesh structure previously created by p8est_mesh_new.

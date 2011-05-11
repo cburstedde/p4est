@@ -111,7 +111,7 @@ run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
   SC_CHECK_MPI (mpiret);
   elapsed_balance = -MPI_Wtime ();
 
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
   elapsed_balance += MPI_Wtime ();
 

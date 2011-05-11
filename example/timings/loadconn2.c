@@ -107,7 +107,7 @@ run_load (MPI_Comm mpicomm, p4est_connectivity_t * conn, int level)
   SC_CHECK_MPI (mpiret);
   elapsed_balance = -MPI_Wtime ();
 
-  p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
   elapsed_balance += MPI_Wtime ();
 

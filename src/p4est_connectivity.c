@@ -2078,3 +2078,31 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
   sc_array_destroy (newid);
 }
 #endif
+
+#ifndef P4_TO_P8
+int
+p4est_connect_type_int (p4est_connect_type_t btype)
+{
+  switch (btype) {
+  case P4EST_CONNECT_FACE:
+    return 1;
+  case P4EST_CONNECT_CORNER:
+    return 2;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
+const char         *
+p4est_connect_type_string (p4est_connect_type_t btype)
+{
+  switch (btype) {
+  case P4EST_CONNECT_FACE:
+    return "FACE";
+  case P4EST_CONNECT_CORNER:
+    return "CORNER";
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+#endif /* !P4_TO_P8 */

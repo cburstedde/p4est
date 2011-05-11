@@ -626,15 +626,15 @@ main (int argc, char **argv)
 
     /* balance the forest */
 #ifndef P4_TO_P8
-    p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 #else
-    p4est_balance (p4est, P8EST_BALANCE_FULL, NULL);
+    p4est_balance (p4est, P8EST_CONNECT_FULL, NULL);
 #endif
 
     /* do a uniform partition */
     p4est_partition (p4est, NULL);
 
-    ghost_layer = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+    ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
 
     flt = p4est->first_local_tree;
     llt = p4est->last_local_tree;

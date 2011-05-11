@@ -83,7 +83,7 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
  * \return                      A fully initialized ghost layer.
  */
 p4est_ghost_t      *p4est_ghost_new (p4est_t * p4est,
-                                     p4est_balance_type_t btype);
+                                     p4est_connect_type_t btype);
 
 /** Frees all memory used for the ghost layer. */
 void                p4est_ghost_destroy (p4est_ghost_t * ghost);
@@ -155,7 +155,7 @@ int                 p4est_quadrant_exists (p4est_t * p4est,
  * \return Returns true if balanced, false otherwise.
  */
 int                 p4est_is_balanced (p4est_t * p4est,
-                                       p4est_balance_type_t btype);
+                                       p4est_connect_type_t btype);
 
 /** Compute the parallel checksum of a ghost layer.
  * \param [in] p4est   The MPI information of this p4est will be used.

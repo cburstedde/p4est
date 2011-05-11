@@ -744,7 +744,7 @@ main (int argc, char **argv)
 
     /* balance the forest */
     /* TODO: use BALANCE_FACE/EDGE when that is known to work */
-    p4est_balance (p4est, P4EST_BALANCE_FULL, NULL);
+    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
     /* do a uniform partition */
     p4est_partition (p4est, NULL);
@@ -783,30 +783,30 @@ main (int argc, char **argv)
           break;
 #ifndef P4_TO_P8
         case 1:
-          ghost_layer = p4est_ghost_new (p4est, P4EST_BALANCE_FACE);
+          ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
           iter_data.ghost_face = 1;
           iter_data.ghost_corner = 0;
           break;
         default:
-          ghost_layer = p4est_ghost_new (p4est, P4EST_BALANCE_CORNER);
+          ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_CORNER);
           iter_data.ghost_face = 1;
           iter_data.ghost_corner = 1;
           break;
 #else
         case 1:
-          ghost_layer = p4est_ghost_new (p4est, P8EST_BALANCE_FACE);
+          ghost_layer = p4est_ghost_new (p4est, P8EST_CONNECT_FACE);
           iter_data.ghost_face = 1;
           iter_data.ghost_edge = 0;
           iter_data.ghost_corner = 0;
           break;
         case 2:
-          ghost_layer = p4est_ghost_new (p4est, P8EST_BALANCE_EDGE);
+          ghost_layer = p4est_ghost_new (p4est, P8EST_CONNECT_EDGE);
           iter_data.ghost_face = 1;
           iter_data.ghost_edge = 1;
           iter_data.ghost_corner = 0;
           break;
         default:
-          ghost_layer = p4est_ghost_new (p4est, P8EST_BALANCE_CORNER);
+          ghost_layer = p4est_ghost_new (p4est, P8EST_CONNECT_CORNER);
           iter_data.ghost_face = 1;
           iter_data.ghost_edge = 1;
           iter_data.ghost_corner = 1;

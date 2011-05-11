@@ -84,7 +84,7 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, NULL, "p4est_ptest2");
 
   /* create and destroy ghost layer */
-  ghost = p4est_ghost_new (p4est, P4EST_BALANCE_FULL);
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   p4est_ghost_destroy (ghost);
 
   /* destroy the p4est and its connectivity structure */
