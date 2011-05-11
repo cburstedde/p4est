@@ -34,6 +34,8 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_CHILDREN 8
 #define P8EST_HALF (P8EST_CHILDREN / 2)
 #define P8EST_EDGES 12
+/* size of insulation layer */
+#define P8EST_INSUL 27
 
 /* size of face transformation encoding */
 #define P8EST_FTRANSFORM 9
@@ -402,24 +404,20 @@ void                p8est_find_corner_transform (p8est_connectivity_t *
  * procedure will be invalid.  Note that this routine calls metis and not
  * parmetis because the connectivity is copied on every process.
  * A communicator is required because I'm not positive that metis is
- * deterministic. \a conntype determines when an edge
- * exist between two trees in the dual graph used by metis in the reordering:
- * if conntype = 0, then only face adjacency matters; if conntype = 1,
- * then face and edge adjacency matter; if conntype = 3, face, edge, and
- * corner adjacency matter.
- * \param [in,out] conn       connectivity that will be reordered.
- * \param [in]     k          the number of pieces metis will use to guide the
- *                            reordering.
+ * deterministic. \a ctype determines when an edge exist between two trees in
+ * the dual graph used by metis in the reordering.
  * \param [in]     comm       MPI communicator.
- * \param [in]     conntype   0: dual graph edges only for face adjacency;
- *                            1: dual graph edges for face and edge
- *                               adjacency;
- *                            2: dual graph edges for face, edge, and corner
- *                               adjacency.
+ * \param [in]     k          if k > 0, the number of pieces metis will use to
+ *                            guide the reordering; if k = 0, the number of
+ *                            pieces will be determined from the MPI
+ *                            communicator.
+ * \param [in,out] conn       connectivity that will be reordered.
+ * \param [in]     ctype      determines when an edge exists in the dual graph
+ *                            of the connectivity structure.
  */
-void                p8est_connectivity_reorder (p8est_connectivity_t * conn,
-                                                int k, MPI_Comm comm,
-                                                int conntype);
+void                p8est_connectivity_reorder (MPI_Comm comm, int k,
+                                                p8est_connectivity_t * conn,
+                                                p8est_connect_type_t ctype);
 #endif
 
 /** Return a pointer to a p8est_edge_transform_t array element. */

@@ -53,7 +53,7 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_brick (7, 8, 9, 0, 1, 1);
 #endif
 
-  p4est_connectivity_reorder (conn, k, mpicomm, P4EST_DIM - 1);
+  p4est_connectivity_reorder (mpicomm, k, conn, P4EST_CONNECT_FULL);
 
   SC_CHECK_ABORT (p4est_connectivity_is_valid (conn), "Bad reordering");
 

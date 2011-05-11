@@ -33,9 +33,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* size of insulation layer */
-#define P4EST_INSUL 9
-
 /* finest level of the quadtree for representing nodes */
 #define P4EST_MAXLEVEL 30
 

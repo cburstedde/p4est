@@ -1823,8 +1823,8 @@ reorder_comp (const void *a, const void *b)
 }
 
 void
-p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
-                            int conntype)
+p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
+                            p4est_connect_type_t ctype)
 {
   int                 n = (int) conn->num_trees;
   int                *xadj;
@@ -1854,8 +1854,16 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
   sc_array_t         *sorter;
   int                *ip;
   int                 count;
+  int                 conntype = p4est_connect_type_int (ctype);
 
   SC_CHECK_MPI (mpiret);
+
+  if (k == 0) {
+    mpiret = MPI_Comm_size (comm, &k);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  P4EST_ASSERT (k > 0);
 
   /* part will hold the partition number of each tree */
   part = P4EST_ALLOC (int, n);
@@ -1865,22 +1873,20 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
     xadj = P4EST_ALLOC (int, n + 1);
 
     switch (conntype) {
-    case 0:
+    case 1:
       degree = P4EST_FACES;
       break;
-    case (P4EST_DIM - 1):
+    case P4EST_DIM:
+      degree = P4EST_INSUL - 1;
       sc_array_init (cta, sizeof (p4est_corner_transform_t));
-#ifndef P4_TO_P8
-      degree = 8;
-#else
-      degree = 26;
+#ifdef P4_TO_P8
       sc_array_init (eta, sizeof (p8est_edge_transform_t));
 #endif
       break;
 #ifdef P4_TO_P8
-    case 1:
+    case 2:
+      degree = P8EST_FACES + P8EST_EDGES;
       sc_array_init (eta, sizeof (p8est_edge_transform_t));
-      degree = 18;
       break;
 #endif
     default:
@@ -1906,7 +1912,7 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
       xadj[0] = 0;
       for (i = 0; i < n; i++) {
         totaldeg += P4EST_FACES;
-        if (conntype == (P4EST_DIM - 1)) {
+        if (conntype == P4EST_DIM) {
           for (j = 0; j < P4EST_CHILDREN; j++) {
             /* add the number of strict corner neighbors */
             p4est_find_corner_transform (conn, (p4est_topidx_t) i, j, &ci);
@@ -1914,7 +1920,7 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
           }
         }
 #ifdef P4_TO_P8
-        if (conntype >= 1) {
+        if (conntype >= 2) {
           /* add the number of strict edge neighbors */
           for (j = 0; j < P8EST_EDGES; j++) {
             p8est_find_edge_transform (conn, (p4est_topidx_t) i, j, &ei);
@@ -1932,7 +1938,7 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
         for (j = 0; j < P4EST_FACES; j++) {
           adjncy[l++] = (int) conn->tree_to_tree[P4EST_FACES * i + j];
         }
-        if (conntype == (P4EST_DIM - 1)) {
+        if (conntype == P4EST_DIM) {
           for (j = 0; j < P4EST_CHILDREN; j++) {
             /* add the number of strict corner neighbors */
             p4est_find_corner_transform (conn, (p4est_topidx_t) i, j, &ci);
@@ -1943,7 +1949,7 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
           }
         }
 #ifdef P4_TO_P8
-        if (conntype >= 1) {
+        if (conntype >= 2) {
           /* add the number of strict edge neighbors */
           for (j = 0; j < P8EST_EDGES; j++) {
             p8est_find_edge_transform (conn, (p4est_topidx_t) i, j, &ei);
@@ -1959,11 +1965,11 @@ p4est_connectivity_reorder (p4est_connectivity_t * conn, int k, MPI_Comm comm,
 
       P4EST_ASSERT (l == totaldeg);
 
-      if (conntype == (P4EST_DIM - 1)) {
+      if (conntype == P4EST_DIM) {
         sc_array_reset (cta);
       }
 #ifdef P4_TO_P8
-      if (conntype >= 1) {
+      if (conntype >= 2) {
         sc_array_reset (eta);
       }
 #endif

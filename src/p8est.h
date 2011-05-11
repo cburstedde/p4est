@@ -29,9 +29,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* size of insulation layer */
-#define P8EST_INSUL 27
-
 /* finest level of the octree for representing nodes */
 #define P8EST_MAXLEVEL 19
 

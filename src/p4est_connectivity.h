@@ -37,6 +37,8 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_FACES (2 * P4EST_DIM)
 #define P4EST_CHILDREN 4
 #define P4EST_HALF (P4EST_CHILDREN / 2)
+/* size of insulation layer */
+#define P4EST_INSUL 9
 
 /* size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
@@ -299,21 +301,20 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
  * procedure will be invalid.  Note that this routine calls metis and not
  * parmetis because the connectivity is copied on every process.
  * A communicator is required because I'm not positive that metis is
- * deterministic. \a conntype determines when an edge
- * exist between two trees in the dual graph used by metis in the reordering:
- * if conntype = 0, then only face adjacency matters; if conntype = 1,
- * then face and corner adjacency matter.
- * \param [in,out] conn       connectivity that will be reordered.
- * \param [in]     k          the number of pieces metis will use to guide the
- *                            reordering.
+ * deterministic. \a ctype determines when an edge exist between two trees in
+ * the dual graph used by metis in the reordering.
  * \param [in]     comm       MPI communicator.
- * \param [in]     conntype   0: dual graph edges only for face adjacency;
- *                            1: dual graph edges for face and corner
- *                               adjacency.
+ * \param [in]     k          if k > 0, the number of pieces metis will use to
+ *                            guide the reordering; if k = 0, the number of
+ *                            pieces will be determined from the MPI
+ *                            communicator.
+ * \param [in,out] conn       connectivity that will be reordered.
+ * \param [in]     ctype      determines when an edge exists in the dual graph
+ *                            of the connectivity structure.
  */
-void                p4est_connectivity_reorder (p4est_connectivity_t * conn,
-                                                int k, MPI_Comm comm,
-                                                int conntype);
+void                p4est_connectivity_reorder (MPI_Comm comm, int k,
+                                                p4est_connectivity_t * conn,
+                                                p4est_connect_type_t ctype);
 #endif
 
 /** Return a pointer to a p4est_corner_transform_t array element. */
