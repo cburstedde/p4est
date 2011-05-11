@@ -13,8 +13,11 @@ p4est_test_programs += \
         test/p4est_test_loadsave test/p4est_test_order \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search test/p4est_test_brick \
-        test/p4est_test_reorder \
         test/p4est_test_partition_corr
+if P4EST_WITH_METIS
+p4est_test_programs += \
+        test/p4est_test_reorder
+endif
 endif
 if P4EST_ENABLE_BUILD_3D
 p4est_test_programs += \
@@ -25,8 +28,11 @@ p4est_test_programs += \
         test/p8est_test_periodic test/p8est_test_geometry \
         test/p8est_test_loadsave test/p8est_test_brick \
         test/p8est_test_iterate test/p8est_test_lnodes \
-        test/p8est_test_reorder \
         test/p8est_test_search test/p8est_test_partition_corr
+if P4EST_WITH_METIS
+p4est_test_programs += \
+        test/p8est_test_reorder
+endif
 endif
 
 check_PROGRAMS += $(p4est_test_programs)

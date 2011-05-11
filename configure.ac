@@ -83,6 +83,8 @@ echo "o----------------------------------"
 SC_REQUIRE_LIB([m], [fabs])
 
 #P4EST_CHECK_METIS
+METIS_LIBS=""
+METIS_INCLUDES=""
 P4EST_ARG_WITH([metis], [enable metis-dependent code], [METIS])
 if test "$P4EST_WITH_METIS" != "no" ; then
   P4EST_METIS_INC=""
@@ -92,6 +94,8 @@ if test "$P4EST_WITH_METIS" != "no" ; then
     P4EST_METIS_INC="-I$P4EST_WITH_METIS/include"
     P4EST_METIS_LD="-L$P4EST_WITH_METIS/lib"
   fi
+  METIS_LIBS="$P4EST_METIS_LD $P4EST_METIS_LIB"
+  METIS_INCLUDES="$P4EST_METIS_INC"
   PRE_METIS_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $P4EST_METIS_INC"
   PRE_METIS_LIBS="$LIBS"
@@ -105,14 +109,14 @@ if test "$P4EST_WITH_METIS" != "no" ; then
 
  METIS_PartGraphVKway (&n, &xadj, &adjncy, NULL, NULL,
                        &wgtflag, &numflag, &nparts, &options,
-                       &volume, &part);])],
-                    [AC_SUBST(P4EST_METIS_INC)
-                     AC_SUBST(P4EST_METIS_LD)
-                     AC_SUBST(P4EST_METIS_LIB)],[AC_MSG_ERROR([Unable to link metis])])
+                       &volume, &part);])],,
+                       [AC_MSG_ERROR([Unable to link metis])])
   CFLAGS="$PRE_METIS_CFLAGS"
   LIBS="$PRE_METIS_LIBS"
   LDFLAGS="$PRE_METIS_LDFLAGS"
 fi
+AC_SUBST([METIS_LIBS])
+AC_SUBST([METIS_INCLUDES])
 
 
 # Checks for header files.

@@ -14,6 +14,6 @@ P4EST_CC = @CC@
 P4EST_CFLAGS = @CFLAGS@
 
 # These pull in everything needed by p4est
-P4EST_CPPFLAGS = @CPPFLAGS@ -I@includedir@
+P4EST_CPPFLAGS = @CPPFLAGS@ @METIS_INCLUDES@ -I@includedir@
 P4EST_LDFLAGS = @LDFLAGS@ -L@libdir@
-P4EST_LIBS = -lp4est $(SC_LIBS)
+P4EST_LIBS = -lp4est $(SC_LIBS) @METIS_LIBS@
