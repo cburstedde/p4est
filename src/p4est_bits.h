@@ -266,6 +266,17 @@ int                 p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
                                                    const p4est_quadrant_t *
                                                    q);
 
+/** Compute the ancestor of a quadrant at a given level.
+ * \param [in]  q       Input quadrant.
+ * \param [in]  level   A smaller level than q.
+ * \param [in,out]  r   Existing quadrent whose Morton index will be filled
+ *                      with the ancestor of q at the given level.
+ * \note The quadrant q may point to the same quadrant as r.
+ *       The user_data of r are never modified.
+ */
+void                p4est_quadrant_ancestor (const p4est_quadrant_t * q,
+                                             int level, p4est_quadrant_t * r);
+
 /** Compute the parent of a quadrant.
  * \param [in]  q Input quadrant.
  * \param [in,out] r Existing quadrant whose Morton index will be filled

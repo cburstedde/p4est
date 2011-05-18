@@ -196,6 +196,7 @@
 #define p4est_quadrant_is_next_D        p8est_quadrant_is_next_D
 #define p4est_quadrant_overlaps_tree    p8est_quadrant_overlaps_tree
 #define p4est_quadrant_is_inside_tree   p8est_quadrant_is_inside_tree
+#define p4est_quadrant_ancestor         p8est_quadrant_ancestor
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor

@@ -726,6 +726,22 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
 }
 
 void
+p4est_quadrant_ancestor (const p4est_quadrant_t * q,
+                         int level, p4est_quadrant_t * r)
+{
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (q->level > level && level >= 0);
+
+  r->x = q->x & ~(P4EST_QUADRANT_LEN (level) - 1);
+  r->y = q->y & ~(P4EST_QUADRANT_LEN (level) - 1);
+#ifdef P4_TO_P8
+  r->z = q->z & ~(P4EST_QUADRANT_LEN (level) - 1);
+#endif
+  r->level = (int8_t) level;
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
+void
 p4est_quadrant_parent (const p4est_quadrant_t * q, p4est_quadrant_t * r)
 {
   P4EST_ASSERT (p4est_quadrant_is_extended (q));

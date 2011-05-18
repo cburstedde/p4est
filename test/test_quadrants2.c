@@ -83,11 +83,14 @@ coarsen_all (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
 {
+  int                 l;
   int                 comp = p4est_quadrant_compare (q1, q2);
   int                 level = (int) SC_MIN (q1->level, q2->level);
   uint64_t            id1 = p4est_quadrant_linear_id (q1, level);
   uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
+  p4est_quadrant_t    quad, par, anc;
 
+  /* test linear id */
   if (p4est_quadrant_is_ancestor (q1, q2)) {
     SC_CHECK_ABORT (id1 == id2 && comp < 0, "Ancestor 1");
   }
@@ -97,6 +100,20 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   else {
     SC_CHECK_ABORT ((comp == 0 && id1 == id2) || (comp < 0 && id1 < id2)
                     || (comp > 0 && id1 > id2), "compare");
+  }
+
+  /* test ancestor and parent functions */
+  par = quad = *q1;
+  for (l = quad.level - 1; l >= 0; --l) {
+    p4est_quadrant_parent (&par, &par);
+    p4est_quadrant_ancestor (&quad, l, &anc);
+    SC_CHECK_ABORT (p4est_quadrant_is_equal (&par, &anc), "Ancestor test A");
+  }
+  par = quad = *q2;
+  for (l = quad.level - 1; l >= 0; --l) {
+    p4est_quadrant_parent (&par, &par);
+    p4est_quadrant_ancestor (&quad, l, &anc);
+    SC_CHECK_ABORT (p4est_quadrant_is_equal (&par, &anc), "Ancestor test B");
   }
 }
 
