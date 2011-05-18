@@ -74,6 +74,27 @@ typedef struct
 }
 p4est_mesh_t;
 
+/** This structure can be used as the status of a face neighbor iterator.
+  * It always contains the face and subface of the neighbor to be processed.
+  */
+typedef struct
+{
+  /* forest information */
+  p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
+  /* quadrant information */
+  p4est_topidx_t      which_tree;
+  p4est_locidx_t      quadrant_id;      /* tree-local quadrant index */
+  p4est_locidx_t      quadrant_code;    /* 4 * (quadrant_id + tree_offset) */
+
+  /* neighbor information */
+  int                 face;     /* Face number in 0..3. */
+  int                 subface;  /* Hanging neighbor number in 0..1. */
+}
+p4est_mesh_face_neighbor_t;
+
 /** Calculate the memory usage of the mesh structure.
  * \param [in] mesh     Mesh structure.
  * \return              Memory used in bytes.
@@ -95,6 +116,43 @@ p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
  * \param [in] mesh     Mesh structure previously created by p4est_mesh_new.
  */
 void                p4est_mesh_destroy (p4est_mesh_t * mesh);
+
+/** Find a quadrant based on its cumulative number in the local forest.
+ * \param [in]  p4est           Forest to be worked with.
+ * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
+ * \param [out] which_tree      If not NULL, the tree of returned quadrant.
+ * \return                      The identified quadrant.
+ */
+p4est_quadrant_t   *p4est_mesh_quadrant_cumulative (p4est_t * p4est,
+                                                    p4est_locidx_t
+                                                    cumulative_id,
+                                                    p4est_topidx_t
+                                                    * which_tree);
+
+/** Initialize a mesh neighbor iterator.
+ * \param [out] mfn         A p4est_mesh_face_neighbor_t to be initialized.
+ * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
+ * \param [in]  quadrant_id Index relative to which_tree of quadrant.
+ */
+void                p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t
+                                                   * mfn, p4est_t * p4est,
+                                                   p4est_ghost_t * ghost,
+                                                   p4est_mesh_t * mesh,
+                                                   p4est_topidx_t which_tree,
+                                                   p4est_locidx_t
+                                                   quadrant_id);
+
+/** Move the iterator forward to loop around neighbors of the quadrant.
+ * \param [in,out] mfn      Internal status of the iterator.
+ * \param [out]    ntree    If not NULL, the tree number of the neighbor.
+ * \param [out]    nface    If not NULL, the face in the neighbor's numbering.
+ * \param [out]    is_ghost If not NULL, the ghost status of the neighbor.
+ * \return                  Either a real quadrant or one from the ghost layer.
+ *                          Returns NULL when the iterator is done.
+ */
+p4est_quadrant_t   *p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t
+                                                   * mfn, int *ntree,
+                                                   int *nface, int *is_ghost);
 
 SC_EXTERN_C_END;
 

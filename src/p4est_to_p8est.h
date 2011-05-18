@@ -98,6 +98,7 @@
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_mesh_t                    p8est_mesh_t
+#define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -302,5 +303,8 @@
 #define p4est_mesh_memory_used          p8est_mesh_memory_used
 #define p4est_mesh_new                  p8est_mesh_new
 #define p4est_mesh_destroy              p8est_mesh_destroy
+#define p4est_mesh_quadrant_cumulative  p8est_mesh_quadrant_cumulative
+#define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
+#define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
 
 #endif /* !P4EST_TO_P8EST_H */

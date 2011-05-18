@@ -125,17 +125,24 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-test_mesh (p4est_t * p4est, p4est_mesh_t * mesh, int uniform)
+test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
+           int uniform)
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
   int                 f, nf;
+  int                 nface, is_ghost;
+  p4est_topidx_t      which_tree;
   p4est_locidx_t      K, kl;
   p4est_locidx_t      ql, QpG;
+  p4est_locidx_t      qumid, quadrant_id;
+  p4est_mesh_face_neighbor_t mfn;
+  p4est_quadrant_t   *q;
 
   K = mesh->local_num_quadrants;
   P4EST_ASSERT (K == p4est->local_num_quadrants);
   QpG = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
+  /* TODO: test the mesh relations in more depth */
   for (kl = 0; kl < K; ++kl) {
     for (f = 0; f < P4EST_FACES; ++f) {
       ql = mesh->quad_to_quad[P4EST_FACES * kl + f];
@@ -150,6 +157,17 @@ test_mesh (p4est_t * p4est, p4est_mesh_t * mesh, int uniform)
         SC_CHECK_ABORTF (-HF <= nf && nf < (P4EST_HALF + 1) * HF,
                          "quad %d face %d code %d mismatch", kl, f, nf);
       }
+    }
+  }
+
+  /* Test face neighbor iterator */
+  for (qumid = 0; qumid < mesh->local_num_quadrants; ++qumid) {
+    q = p4est_mesh_quadrant_cumulative (p4est, qumid,
+                                        &which_tree, &quadrant_id);
+    p4est_mesh_face_neighbor_init (&mfn, p4est, ghost, mesh,
+                                   which_tree, quadrant_id);
+    while ((q = p4est_mesh_face_neighbor_next (&mfn, &which_tree,
+                                               &nface, &is_ghost)) != NULL) {
     }
   }
 }
@@ -198,7 +216,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   mesh = p4est_mesh_new (p4est, ghost, P4EST_CONNECT_FULL);
-  test_mesh (p4est, mesh, uniform);
+  test_mesh (p4est, ghost, mesh, uniform);
 
   /* compute memory used */
   local_used[0] = (long) p4est_connectivity_memory_used (p4est->connectivity);

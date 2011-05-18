@@ -281,3 +281,145 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   sc_array_destroy (mesh->quad_to_half);
   P4EST_FREE (mesh);
 }
+
+p4est_quadrant_t   *
+p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
+                                p4est_topidx_t * which_tree)
+{
+  int                 quadrant_id;
+  p4est_topidx_t      low_tree, high_tree, guess_tree;
+  p4est_tree_t       *tree;
+
+  P4EST_ASSERT (0 <= cumulative_id &&
+                cumulative_id < p4est->local_num_quadrants);
+
+  low_tree = p4est->first_local_tree;
+  high_tree = p4est->last_local_tree;
+  for (;;) {
+    P4EST_ASSERT (p4est->first_local_tree <= low_tree);
+    P4EST_ASSERT (high_tree <= p4est->last_local_tree);
+    P4EST_ASSERT (low_tree <= high_tree);
+
+    guess_tree = (low_tree + high_tree) / 2;
+    tree = p4est_tree_array_index (p4est->trees, guess_tree);
+    if (cumulative_id < tree->quadrants_offset) {
+      high_tree = guess_tree - 1;
+    }
+    else if (cumulative_id >= tree->quadrants_offset +
+             (p4est_locidx_t) tree->quadrants.elem_count) {
+      low_tree = guess_tree + 1;
+    }
+    else {
+      quadrant_id = cumulative_id - tree->quadrants_offset;
+      P4EST_ASSERT (0 <= quadrant_id);
+
+      if (which_tree != NULL) {
+        *which_tree = guess_tree;
+      }
+      return p4est_quadrant_array_index (&tree->quadrants,
+                                         (size_t) quadrant_id);
+    }
+  }
+}
+
+void
+p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t * mfn,
+                               p4est_t * p4est, p4est_ghost_t * ghost,
+                               p4est_mesh_t * mesh, p4est_topidx_t which_tree,
+                               p4est_locidx_t quadrant_id)
+{
+  p4est_tree_t       *tree;
+
+  mfn->p4est = p4est;
+  mfn->ghost = ghost;
+  mfn->mesh = mesh;
+
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+  mfn->which_tree = which_tree;
+  tree = p4est_tree_array_index (p4est->trees, which_tree);
+
+  P4EST_ASSERT (0 <= quadrant_id &&
+                (size_t) quadrant_id < tree->quadrants.elem_count);
+  mfn->quadrant_id = quadrant_id;
+  mfn->quadrant_code = P4EST_FACES * (tree->quadrants_offset + quadrant_id);
+
+  mfn->face = 0;
+  mfn->subface = 0;
+}
+
+p4est_quadrant_t   *
+p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
+                               int *ntree, int *nface, int *is_ghost)
+{
+  int                 qtf;
+  p4est_locidx_t      qtq, quadfacecode;
+  p4est_locidx_t      lnq, ngh, *halfs;
+  p4est_quadrant_t   *q;
+
+  /* We have already processed the last quadrant */
+  if (mfn->face == P4EST_FACES) {
+    P4EST_ASSERT (mfn->subface == 0);
+    return NULL;
+  }
+
+  /* Make sure we have a valid quadrant face and iterator */
+  lnq = mfn->mesh->local_num_quadrants;
+  ngh = mfn->mesh->ghost_num_quadrants;
+  P4EST_ASSERT (mfn->face >= 0 && mfn->face < P4EST_FACES);
+  P4EST_ASSERT (mfn->subface >= 0 && mfn->subface < P4EST_HALF);
+  P4EST_ASSERT (mfn->p4est->local_num_quadrants == lnq);
+  P4EST_ASSERT (mfn->ghost->ghosts.elem_count == ngh);
+
+  /* Retrieve face and quadrant codes */
+  quadfacecode = mfn->quadrant_code + (p4est_locidx_t) mfn->face;
+  qtq = mfn->mesh->quad_to_quad[quadfacecode];
+  qtf = (int) mfn->mesh->quad_to_face[quadfacecode];
+  if (qtf >= 0) {
+    /* Neighbor is same or double size */
+    ;
+
+    /* Advance to next quadrant */
+    ++mfn->face;
+  }
+  else {
+    /* Neighbors across this face are half size */
+    P4EST_ASSERT (qtq >= 0);
+    halfs = (p4est_locidx_t *) sc_array_index (mfn->mesh->quad_to_half,
+                                               (size_t) qtq);
+    qtq = halfs[mfn->subface];
+
+    /* Advance to next quadrant */
+    if (++mfn->subface == P4EST_HALF) {
+      mfn->subface = 0;
+      ++mfn->face;
+    }
+  }
+
+  /* From here on face and subface have advanced and can no longer be used */
+  P4EST_ASSERT (qtq >= 0);
+  if (qtq < lnq) {
+    /* Local quadrant */
+    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, ntree);
+    if (is_ghost != NULL) {
+      *is_ghost = 0;
+    }
+  }
+  else {
+    /* Ghost quadrant */
+    qtq -= lnq;
+    P4EST_ASSERT (qtq < ngh);
+    q = p4est_quadrant_array_index (&mfn->ghost->ghosts, (size_t) qtq);
+    if (ntree != NULL) {
+      *ntree = q->p.piggy3.which_tree;
+    }
+    if (is_ghost != NULL) {
+      *is_ghost = 1;
+    }
+  }
+  if (nface != NULL) {
+    *nface = qtf % P4EST_FACES;
+  }
+
+  return q;
+}
