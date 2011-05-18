@@ -284,9 +284,10 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
 
 p4est_quadrant_t   *
 p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
-                                p4est_topidx_t * which_tree)
+                                p4est_topidx_t * which_tree,
+                                p4est_locidx_t * quadrant_id)
 {
-  int                 quadrant_id;
+  int                 the_quadrant_id;
   p4est_topidx_t      low_tree, high_tree, guess_tree;
   p4est_tree_t       *tree;
 
@@ -310,14 +311,17 @@ p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
       low_tree = guess_tree + 1;
     }
     else {
-      quadrant_id = cumulative_id - tree->quadrants_offset;
-      P4EST_ASSERT (0 <= quadrant_id);
+      the_quadrant_id = cumulative_id - tree->quadrants_offset;
+      P4EST_ASSERT (0 <= the_quadrant_id);
 
       if (which_tree != NULL) {
         *which_tree = guess_tree;
       }
+      if (quadrant_id != NULL) {
+        *quadrant_id = the_quadrant_id;
+      }
       return p4est_quadrant_array_index (&tree->quadrants,
-                                         (size_t) quadrant_id);
+                                         (size_t) the_quadrant_id);
     }
   }
 }
@@ -400,7 +404,7 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   P4EST_ASSERT (qtq >= 0);
   if (qtq < lnq) {
     /* Local quadrant */
-    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, ntree);
+    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, ntree, NULL);
     if (is_ghost != NULL) {
       *is_ghost = 0;
     }

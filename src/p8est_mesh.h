@@ -121,13 +121,16 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
  * \param [in]  p8est           Forest to be worked with.
  * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
  * \param [out] which_tree      If not NULL, the tree of returned quadrant.
+ * \param [out] quadrant_id     If not NULL, the number of quadrant in tree.
  * \return                      The identified quadrant.
  */
 p8est_quadrant_t   *p8est_mesh_quadrant_cumulative (p8est_t * p8est,
                                                     p4est_locidx_t
                                                     cumulative_id,
                                                     p4est_topidx_t
-                                                    * which_tree);
+                                                    * which_tree,
+                                                    p4est_locidx_t
+                                                    * quadrant_id);
 
 /** Initialize a mesh neighbor iterator.
  * \param [out] mfn         A p8est_mesh_face_neighbor_t to be initialized.
