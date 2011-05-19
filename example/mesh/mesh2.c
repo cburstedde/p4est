@@ -136,7 +136,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   p4est_locidx_t      K, kl;
   p4est_locidx_t      ql, QpG;
   p4est_locidx_t      qumid, quadrant_id, which_quad;
-  p4est_mesh_face_neighbor_t mfn;
+  p4est_mesh_face_neighbor_t mfn, mfn2;
   p4est_quadrant_t   *q;
 
   K = mesh->local_num_quadrants;
@@ -165,8 +165,11 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   for (qumid = 0; qumid < mesh->local_num_quadrants; ++qumid) {
     q = p4est_mesh_quadrant_cumulative (p4est, qumid,
                                         &which_tree, &quadrant_id);
-    p4est_mesh_face_neighbor_init (&mfn, p4est, ghost, mesh,
+    p4est_mesh_face_neighbor_init2 (&mfn, p4est, ghost, mesh,
                                    which_tree, quadrant_id);
+    p4est_mesh_face_neighbor_init (&mfn2, p4est, ghost, mesh,
+                                   which_tree, q);
+    P4EST_ASSERT (mfn2.quadrant_id == quadrant_id);
     while ((q = p4est_mesh_face_neighbor_next (&mfn, &which_tree, &which_quad,
                                                &nface, &nrank)) != NULL) {
     }

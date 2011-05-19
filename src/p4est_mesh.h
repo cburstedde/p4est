@@ -132,18 +132,31 @@ p4est_quadrant_t   *p4est_mesh_quadrant_cumulative (p4est_t * p4est,
                                                     p4est_locidx_t
                                                     * quadrant_id);
 
-/** Initialize a mesh neighbor iterator.
+/** Initialize a mesh neighbor iterator by quadrant index.
  * \param [out] mfn         A p4est_mesh_face_neighbor_t to be initialized.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant_id Index relative to which_tree of quadrant.
+ */
+void                p4est_mesh_face_neighbor_init2 (p4est_mesh_face_neighbor_t
+                                                    * mfn, p4est_t * p4est,
+                                                    p4est_ghost_t * ghost,
+                                                    p4est_mesh_t * mesh,
+                                                    p4est_topidx_t which_tree,
+                                                    p4est_locidx_t
+                                                    quadrant_id);
+
+/** Initialize a mesh neighbor iterator by quadrant pointer.
+ * \param [out] mfn         A p4est_mesh_face_neighbor_t to be initialized.
+ * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
+ * \param [in]  quadrant    Pointer to quadrant contained in which_tree.
  */
 void                p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t
                                                    * mfn, p4est_t * p4est,
                                                    p4est_ghost_t * ghost,
                                                    p4est_mesh_t * mesh,
                                                    p4est_topidx_t which_tree,
-                                                   p4est_locidx_t
-                                                   quadrant_id);
+                                                   p4est_quadrant_t
+                                                   * quadrant);
 
 /** Move the iterator forward to loop around neighbors of the quadrant.
  * \param [in,out] mfn      Internal status of the iterator.

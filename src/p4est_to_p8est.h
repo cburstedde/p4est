@@ -305,6 +305,7 @@
 #define p4est_mesh_destroy              p8est_mesh_destroy
 #define p4est_mesh_quadrant_cumulative  p8est_mesh_quadrant_cumulative
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
+#define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
 
 #endif /* !P4EST_TO_P8EST_H */
