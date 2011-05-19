@@ -130,11 +130,12 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
   int                 f, nf;
-  int                 nface, is_ghost;
+  int                 nface;
+  int                 nrank;
   p4est_topidx_t      which_tree;
   p4est_locidx_t      K, kl;
   p4est_locidx_t      ql, QpG;
-  p4est_locidx_t      qumid, quadrant_id;
+  p4est_locidx_t      qumid, quadrant_id, which_quad;
   p4est_mesh_face_neighbor_t mfn;
   p4est_quadrant_t   *q;
 
@@ -166,8 +167,8 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                         &which_tree, &quadrant_id);
     p4est_mesh_face_neighbor_init (&mfn, p4est, ghost, mesh,
                                    which_tree, quadrant_id);
-    while ((q = p4est_mesh_face_neighbor_next (&mfn, &which_tree,
-                                               &nface, &is_ghost)) != NULL) {
+    while ((q = p4est_mesh_face_neighbor_next (&mfn, &which_tree, &which_quad,
+                                               &nface, &nrank)) != NULL) {
     }
   }
 }

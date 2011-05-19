@@ -148,14 +148,18 @@ void                p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t
 /** Move the iterator forward to loop around neighbors of the quadrant.
  * \param [in,out] mfn      Internal status of the iterator.
  * \param [out]    ntree    If not NULL, the tree number of the neighbor.
+ * \param [out]    nquad    If not NULL, the quadrant number within tree.
+ *                          For ghosts instead the number in ghost layer.
  * \param [out]    nface    If not NULL, the face in the neighbor's numbering.
- * \param [out]    is_ghost If not NULL, the ghost status of the neighbor.
+ * \param [out]    nrank    If not NULL, the owner process of the neighbor.
  * \return                  Either a real quadrant or one from the ghost layer.
  *                          Returns NULL when the iterator is done.
  */
 p8est_quadrant_t   *p8est_mesh_face_neighbor_next (p8est_mesh_face_neighbor_t
-                                                   * mfn, int *ntree,
-                                                   int *nface, int *is_ghost);
+                                                   * mfn,
+                                                   p4est_topidx_t *ntree,
+                                                   p4est_locidx_t *nquad,
+                                                   int *nface, int *nrank);
 
 SC_EXTERN_C_END;
 

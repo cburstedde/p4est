@@ -354,7 +354,8 @@ p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t * mfn,
 
 p4est_quadrant_t   *
 p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
-                               int *ntree, int *nface, int *is_ghost)
+                               p4est_topidx_t *ntree, p4est_locidx_t *nquad,
+                               int *nface, int *nrank)
 {
   int                 qtf;
   p4est_locidx_t      qtq, quadfacecode;
@@ -404,9 +405,9 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   P4EST_ASSERT (qtq >= 0);
   if (qtq < lnq) {
     /* Local quadrant */
-    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, ntree, NULL);
-    if (is_ghost != NULL) {
-      *is_ghost = 0;
+    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, ntree, nquad);
+    if (nrank != NULL) {
+      *nrank = mfn->p4est->mpirank;
     }
   }
   else {
@@ -414,11 +415,15 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
     qtq -= lnq;
     P4EST_ASSERT (qtq < ngh);
     q = p4est_quadrant_array_index (&mfn->ghost->ghosts, (size_t) qtq);
+    P4EST_ASSERT (q->p.piggy3.local_num == mfn->mesh->ghost_to_index[qtq]);
     if (ntree != NULL) {
       *ntree = q->p.piggy3.which_tree;
     }
-    if (is_ghost != NULL) {
-      *is_ghost = 1;
+    if (nquad != NULL) {
+      *nquad = qtq;             /* number of ghost in the ghost layer */
+    }
+    if (nrank != NULL) {
+      *nrank = mfn->mesh->ghost_to_proc[qtq];
     }
   }
   if (nface != NULL) {
