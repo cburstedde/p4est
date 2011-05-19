@@ -458,7 +458,7 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
     }
   }
   if (nface != NULL) {
-    *nface = qtf % P4EST_FACES;
+    *nface = qtf;
   }
 
   return q;

@@ -163,7 +163,7 @@ void                p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t
  * \param [out]    ntree    If not NULL, the tree number of the neighbor.
  * \param [out]    nquad    If not NULL, the quadrant number within tree.
  *                          For ghosts instead the number in ghost layer.
- * \param [out]    nface    If not NULL, the face in the neighbor's numbering.
+ * \param [out]    nface    If not NULL, neighbor's face as in p4est_mesh_t.
  * \param [out]    nrank    If not NULL, the owner process of the neighbor.
  * \return                  Either a real quadrant or one from the ghost layer.
  *                          Returns NULL when the iterator is done.
