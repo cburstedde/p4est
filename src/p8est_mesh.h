@@ -120,7 +120,9 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 /** Find a quadrant based on its cumulative number in the local forest.
  * \param [in]  p8est           Forest to be worked with.
  * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
- * \param [out] which_tree      If not NULL, the tree of returned quadrant.
+ * \param [in,out] which_tree   If not NULL, the input value can be -1
+ *                              or an initial guess for the quadrant's tree
+ *                              and output is the tree of returned quadrant.
  * \param [out] quadrant_id     If not NULL, the number of quadrant in tree.
  * \return                      The identified quadrant.
  */
