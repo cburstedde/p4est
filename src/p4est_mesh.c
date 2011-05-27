@@ -329,7 +329,8 @@ p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
 void
 p4est_mesh_face_neighbor_init2 (p4est_mesh_face_neighbor_t * mfn,
                                 p4est_t * p4est, p4est_ghost_t * ghost,
-                                p4est_mesh_t * mesh, p4est_topidx_t which_tree,
+                                p4est_mesh_t * mesh,
+                                p4est_topidx_t which_tree,
                                 p4est_locidx_t quadrant_id)
 {
   p4est_tree_t       *tree;
@@ -370,10 +371,10 @@ p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t * mfn,
                 which_tree < p4est->connectivity->num_trees);
   mfn->which_tree = which_tree;
   tree = p4est_tree_array_index (p4est->trees, which_tree);
-  
+
   q0 = p4est_quadrant_array_index (&tree->quadrants, 0);
   quadrant_id = (p4est_locidx_t) (quadrant - q0);
-  
+
   P4EST_ASSERT (0 <= quadrant_id &&
                 (size_t) quadrant_id < tree->quadrants.elem_count);
   mfn->quadrant_id = quadrant_id;
@@ -385,7 +386,7 @@ p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t * mfn,
 
 p4est_quadrant_t   *
 p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
-                               p4est_topidx_t *ntree, p4est_locidx_t *nquad,
+                               p4est_topidx_t * ntree, p4est_locidx_t * nquad,
                                int *nface, int *nrank)
 {
   int                 qtf;

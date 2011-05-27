@@ -170,8 +170,8 @@ void                p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t
  */
 p4est_quadrant_t   *p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t
                                                    * mfn,
-                                                   p4est_topidx_t *ntree,
-                                                   p4est_locidx_t *nquad,
+                                                   p4est_topidx_t * ntree,
+                                                   p4est_locidx_t * nquad,
                                                    int *nface, int *nrank);
 
 SC_EXTERN_C_END;
