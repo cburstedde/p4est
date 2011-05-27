@@ -29,8 +29,6 @@ void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
 {
   int                 w;
-  const char        **on, **ov;
-  const char         *overrides[] = { P4EST_OVERRIDES NULL, NULL };
 
   p4est_package_id = sc_package_register (log_handler, log_threshold,
                                           "p4est", "A forest of octrees");
@@ -44,13 +42,6 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPPFLAGS", P4EST_CPPFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LDFLAGS", P4EST_LDFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
-
-  w = 32;
-  for (on = overrides; *on != NULL; on = ov + 1) {
-    ov = on + 1;
-    SC_CHECK_ABORT (*ov != NULL, "P4EST_OVERRIDES should contain pairs");
-    P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, *on, *ov);
-  }
 }
 
 #ifndef __cplusplus

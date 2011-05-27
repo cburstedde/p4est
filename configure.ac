@@ -18,12 +18,6 @@ echo "o---------------------------------------"
 echo "| Checking options"
 echo "o---------------------------------------"
 
-# These variables are only relevant for libsc integration case 2 (see below).
-# The *_LDADD variable must also be suitable for use in DEPENDENCIES.
-SC_ARG_OVERRIDE_LOAD([P4EST])
-SC_ARG_OVERRIDE_VAR([P4EST], [SC_PACKAGE_CPPFLAGS])
-SC_ARG_OVERRIDE_VAR([P4EST], [SC_PACKAGE_LDADD])
-
 P4EST_ARG_ENABLE([debug], [enable debug mode], [DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
@@ -301,7 +295,5 @@ echo "| LIBS:        $LIBS"
 echo "o----------------------------------"
 
 # Create output files.
-SC_ARG_OVERRIDE_SAVE([P4EST])
-
 AC_CONFIG_FILES([Makefile Makefile.p4est.pre])
 AC_OUTPUT
