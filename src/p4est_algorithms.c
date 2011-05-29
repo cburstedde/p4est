@@ -355,6 +355,9 @@ p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2, int compare_data)
     if (p4est1->data_size != p4est2->data_size)
       return 0;
     data_size = p4est1->data_size;
+    if (data_size == 0) {
+      compare_data = 0;
+    }
   }
   else {
     data_size = 0;

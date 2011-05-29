@@ -213,6 +213,7 @@ void                p8est_destroy (p8est_t * p8est);
 /** Make a deep copy of a p8est.
  * The connectivity is not duplicated.
  * Copying of quadrant user data is optional.
+ * If old and new data sizes are 0, the user_data field is copied regardless.
  *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
@@ -223,6 +224,7 @@ p8est_t            *p8est_copy (p8est_t * input, int copy_data);
 /** Reset user pointer and element data.
  * When the data size is changed the quadrant data is freed and allocated.
  * The initialization callback is invoked on each quadrant.
+ * Old user_data content is disregarded.
  *
  * \param [in] data_size     This is the size of data for each quadrant which
  *                           can be zero.  Then user_data_pool is set to NULL.

@@ -570,17 +570,12 @@ p4est_copy (p4est_t * input, int copy_data)
     memcpy (pquadrants->array, iquadrants->array,
             icount * sizeof (p4est_quadrant_t));
     if (p4est->data_size > 0) {
+      P4EST_ASSERT (copy_data);
       for (zz = 0; zz < icount; ++zz) {
         iq = p4est_quadrant_array_index (iquadrants, zz);
         pq = p4est_quadrant_array_index (pquadrants, zz);
         pq->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
         memcpy (pq->p.user_data, iq->p.user_data, p4est->data_size);
-      }
-    }
-    else {
-      for (zz = 0; zz < icount; ++zz) {
-        pq = p4est_quadrant_array_index (pquadrants, zz);
-        pq->p.user_data = NULL;
       }
     }
   }
@@ -3212,6 +3207,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
       else
         q->p.user_data = NULL;
       if (load_data) {
+        P4EST_ASSERT (data_size > 0);
         sc_fread (q->p.user_data, data_size, 1, file, "read quadrant data");
       }
       else if (save_data) {
