@@ -108,16 +108,16 @@ main (int argc, char **argv)
 
   /* create connectivity */
 #ifdef P4_TO_P8
-  connectivity_1tree= p8est_connectivity_new_unitcube ();
+  connectivity_1tree = p8est_connectivity_new_unitcube ();
   connectivity_ntrees = p8est_connectivity_new_twocubes ();
 #else
-  connectivity_1tree= p4est_connectivity_new_unitsquare ();
+  connectivity_1tree = p4est_connectivity_new_unitsquare ();
   connectivity_ntrees = p4est_connectivity_new_corner ();
 #endif
 
   /* create p4est structure */
-  p4est_1tree= p4est_new_ext (mpicomm, connectivity_1tree, 15, 0, 0,
-                              sizeof (user_data_t), init_fn, NULL);
+  p4est_1tree = p4est_new_ext (mpicomm, connectivity_1tree, 15, 0, 0,
+                               sizeof (user_data_t), init_fn, NULL);
 
   p4est_ntrees = p4est_new_ext (mpicomm, connectivity_ntrees, 15, 0, 0,
                                 sizeof (user_data_t), init_fn, NULL);
@@ -150,8 +150,7 @@ main (int argc, char **argv)
 
   i = 0;
   while (p4est_ntrees->global_num_quadrants > connectivity_ntrees->num_trees
-         &&
-         i <= P4EST_MAXLEVEL) {
+         && i <= P4EST_MAXLEVEL) {
     p4est_partition_ext (p4est_ntrees, 1, NULL);
     p4est_coarsen (p4est_ntrees, 0, coarsen_fn, init_fn);
     i++;
