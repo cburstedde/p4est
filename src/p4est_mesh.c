@@ -409,7 +409,7 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   P4EST_ASSERT (mfn->face >= 0 && mfn->face < P4EST_FACES);
   P4EST_ASSERT (mfn->subface >= 0 && mfn->subface < P4EST_HALF);
   P4EST_ASSERT (mfn->p4est->local_num_quadrants == lnq);
-  P4EST_ASSERT (mfn->ghost->ghosts.elem_count == ngh);
+  P4EST_ASSERT (mfn->ghost->ghosts.elem_count == (size_t) ngh);
 
   /* Retrieve face and quadrant codes */
   quadfacecode = mfn->quadrant_code + (p4est_locidx_t) mfn->face;
