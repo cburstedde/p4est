@@ -972,7 +972,8 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       num_sharers = (size_t) in->pad8;
       P4EST_ASSERT (num_sharers <= shared_indeps->elem_count);
       this_size = second_size + num_sharers * sizeof (int);
-      this_base = sc_array_push_bytes (&peer->send_second, this_size);
+      this_base =
+        (char *) sc_array_push_count (&peer->send_second, this_size);
       *(p4est_locidx_t *) this_base = *node_number;
       *(int8_t *) (this_base + sizeof (p4est_locidx_t)) = in->pad8;
       if (num_sharers > 0) {

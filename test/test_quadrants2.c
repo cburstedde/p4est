@@ -463,7 +463,7 @@ main (int argc, char **argv)
   check_linear_id (&A, &B);
   check_linear_id (&A, &C);
   check_linear_id (&A, &D);
-  // check_linear_id (&A, &E);
+  /* check_linear_id (&A, &E); */
   check_linear_id (&A, &F);
   check_linear_id (&A, &G);
   check_linear_id (&A, &H);
@@ -473,7 +473,7 @@ main (int argc, char **argv)
   check_linear_id (&B, &B);
   check_linear_id (&B, &C);
   check_linear_id (&B, &D);
-  // check_linear_id (&B, &E);
+  /* check_linear_id (&B, &E); */
   check_linear_id (&B, &F);
   check_linear_id (&B, &G);
   check_linear_id (&B, &H);
@@ -483,7 +483,7 @@ main (int argc, char **argv)
   check_linear_id (&D, &B);
   check_linear_id (&D, &C);
   check_linear_id (&D, &D);
-  // check_linear_id (&D, &E);
+  /* check_linear_id (&D, &E); */
   check_linear_id (&D, &F);
   check_linear_id (&D, &G);
   check_linear_id (&D, &H);
@@ -493,7 +493,7 @@ main (int argc, char **argv)
   check_linear_id (&G, &B);
   check_linear_id (&G, &C);
   check_linear_id (&G, &D);
-  // check_linear_id (&G, &E);
+  /* check_linear_id (&G, &E); */
   check_linear_id (&G, &F);
   check_linear_id (&G, &G);
   check_linear_id (&G, &H);
@@ -503,7 +503,7 @@ main (int argc, char **argv)
   check_linear_id (&I, &B);
   check_linear_id (&I, &C);
   check_linear_id (&I, &D);
-  // check_linear_id (&I, &E);
+  /* check_linear_id (&I, &E); */
   check_linear_id (&I, &F);
   check_linear_id (&I, &G);
   check_linear_id (&I, &H);
@@ -576,9 +576,9 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (p4est_quadrant_is_ancestor_D (&G, &A) == 0,
                   "is_ancestor_D");
 
-  // SC_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next");
+  /* SC_CHECK_ABORT (p4est_quadrant_is_next (&F, &E) == 1, "is_next"); */
   SC_CHECK_ABORT (p4est_quadrant_is_next (&A, &H) == 0, "is_next");
-  // SC_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D");
+  /* SC_CHECK_ABORT (p4est_quadrant_is_next_D (&F, &E) == 1, "is_next_D"); */
   SC_CHECK_ABORT (p4est_quadrant_is_next_D (&A, &H) == 0, "is_next_D");
 
   p4est_quadrant_parent (&H, &a);
