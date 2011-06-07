@@ -15,7 +15,7 @@ a collection of adaptive octrees, conveniently called a forest of
 octrees.  <tt>p4est</tt> is designed to work in parallel and scale to
 hundreds of thousands of processor cores.
 We explain the concepts and algorithms behind <tt>p4est</tt> in this <a
-href="http://users.ices.utexas.edu/~carsten/papers/BursteddeWilcoxGhattas10.pdf"
+href="http://users.ices.utexas.edu/~carsten/papers/BursteddeWilcoxGhattas11.pdf"
 >preprint</a>.  If you use <tt>p4est</tt> for your publications, please cite
 this as:
 </p>
@@ -26,16 +26,21 @@ this as:
 Carsten Burstedde, Lucas C. Wilcox, and Omar Ghattas,<br>
 <em>p4est: Scalable Algorithms for Parallel Adaptive Mesh Refinement on
 Forests of Octrees.</em><br>
-Accepted for publication in SIAM Journal on Scientific Computing.
+Published in SIAM Journal on Scientific Computing 33 no. 3 (2011),
+pages 1103-1133.
 </p>
 
 <pre class="bibtex">
-@UNPUBLISHED{p4est,
+@ARTICLE{p4est,
   author = {Carsten Burstedde and Lucas C. Wilcox and Omar Ghattas},
   title = {{\texttt{p4est}}: Scalable Algorithms for Parallel Adaptive Mesh
 	Refinement on Forests of Octrees},
-  note = {Accepted for publication in
-          {\em SIAM Journal on Scientific Computing}}
+  journal = {SIAM Journal on Scientific Computing},
+  volume = {33},
+  number = {3},
+  pages = {1103-1133},
+  year = {2011},
+  doi = {10.1137/100791634}
 }
 </pre>
 </div>
@@ -44,13 +49,13 @@ Accepted for publication in SIAM Journal on Scientific Computing.
 <tt>p4est</tt> is under active development and
 released under the GNU GPL License version 2 (or
 later). The current version of the software is
-<a href="http://users.ices.utexas.edu/~carsten/release/p4est-0.3.2.tar.gz"
->0.3.2</a>.
+<a href="http://users.ices.utexas.edu/~carsten/release/p4est-0.3.3.8-3d81.tar.gz"
+>0.3.3.8-3d81</a>.
 </p>
 
 <p>
-<tt>p4est</tt> uses <tt>libsc</tt> written by the
-same authors and others for basic helper functionality such as logging, array and
+<tt>p4est</tt> uses <tt>libsc</tt> written by the same authors and others
+for basic helper functionality such as logging, array and
 hash data structures, parallel statistics, and more.  <tt>libsc</tt>
 also integrates the third-party libraries <tt>zlib</tt> and
 <tt>lua</tt>.  <tt>libsc</tt> is included in <tt>p4est</tt> and
@@ -74,7 +79,7 @@ Wolfgang Bangerth, Carsten Burstedde, Timo Heister, and Martin
 Kronbichler,<br>
 <em>Algorithms and Data Structures for Massively Parallel Generic
 Adaptive Finite Element Codes.</em><br>
-Submitted to ACM Transactions on Mathematical Software.
+Accepted for publication in ACM Transactions on Mathematical Software.
 </p>
 
 <pre class="bibtex">
@@ -83,7 +88,8 @@ Submitted to ACM Transactions on Mathematical Software.
 	Kronbichler},
   title = {Algorithms and Data Structures for Massively Parallel Generic Adaptive
 	Finite Element Codes},
-  note = {Submitted to {\em ACM Transactions on Mathematical Software}}
+  note = {Accepted for publication in
+        {\em ACM Transactions on Mathematical Software}}
 }
 </pre>
 </div>
