@@ -21,6 +21,7 @@ nodist_include_HEADERS =
 noinst_HEADERS =
 noinst_PROGRAMS =
 sysconf_DATA =
+dist_p4estdata_DATA =
 
 # use this if you want to link in p4est without autotools
 sysconf_DATA += Makefile.p4est.mk
@@ -34,6 +35,9 @@ Makefile.p4est.mk : Makefile.p4est.pre
 p4estaclocaldir = $(datadir)/aclocal
 dist_p4estaclocal_DATA = \
         config/p4est_include.m4
+
+# install p4est data files in the correct directory
+p4estdatadir = $(datadir)/data
 
 # set test environment
 TESTS_ENVIRONMENT = @P4EST_MPI_TESTS_ENVIRONMENT@
@@ -58,6 +62,7 @@ include example/points/Makefile.am
 include example/second/Makefile.am
 include example/simple/Makefile.am
 include example/sieve/Makefile.am
+include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 
 if P4EST_BLAS
