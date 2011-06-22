@@ -48,12 +48,14 @@ sc_array_t         *p8est_tetgen_read_node (const char *nodefile);
 
 /** Read tetrahedra from a tetgen .ele file.
  * \param [in] elefile          Name of file in tetgen .ele format.
+ * \param [in] num_nodes        If nonnegative, (exclusive) upper node number.
  * \param [in,out] attributes   If not NULL, an array will be created
  *                              if the .ele file contains attributes.
  * \return                      An array with four node numbers per tet,
  *                              or NULL on file error.
  */
 sc_array_t         *p8est_tetgen_read_ele (const char *elefile,
+                                           int num_nodes,
                                            sc_array_t ** attributes);
 
 /** Read element and node information from a tetgen base name.

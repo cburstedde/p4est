@@ -42,9 +42,15 @@ main (int argc, char **argv)
   }
   argbasename = argv[1];
 
+  /* read tetgen nodes and tetrahedra from files */
   ptg = p8est_tetgen_read (argbasename);
   SC_CHECK_ABORTF (ptg != NULL, "Failed to read tetgen %s", argbasename);
+  SC_GLOBAL_STATISTICSF ("Read %d nodes and %d tets %s attributes\n",
+                         (int) ptg->nodes->elem_count / 3,
+                         (int) ptg->tets->elem_count / 4,
+                         ptg->tet_attributes != NULL ? "with" : "without");
 
+  /* clean up */
   p8est_tetgen_destroy (ptg);
 
   sc_finalize ();
