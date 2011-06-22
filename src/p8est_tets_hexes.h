@@ -71,4 +71,10 @@ p8est_tetgen_t     *p8est_tetgen_read (const char *tetgenbasename);
  */
 void                p8est_tetgen_destroy (p8est_tetgen_t * ptg);
 
+/** Change all left-handed tetrahedra to right-handed ones.
+ * \param [in,out] ptg      Structure with node and tet information.
+ * \return                  The number of tets that were flipped.
+ */
+int                 p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg);
+
 #endif /* !P8EST_TETS_HEXES */

@@ -249,3 +249,63 @@ p8est_tetgen_destroy (p8est_tetgen_t * ptg)
 
   P4EST_FREE (ptg);
 }
+
+static int
+p8est_tet_is_righthanded (sc_array_t * nodes, int *tet)
+{
+  int                 i, j;
+  double             *nc[4];
+  double              v0[3], v1[3], v2[3], cross01[3];
+  double              vol;
+
+  /* compute tet volume */
+  for (i = 0; i < 4; ++i) {
+    nc[i] = (double *) sc_array_index_int (nodes, 3 * tet[i]);
+  }
+  for (j = 0; j < 3; ++j) {
+    v0[j] = nc[1][j] - nc[0][j];
+    v1[j] = nc[2][j] - nc[0][j];
+    v2[j] = nc[3][j] - nc[0][j];
+  }
+  cross01[0] = v0[1] * v1[2] - v0[2] * v1[1];
+  cross01[1] = v0[2] * v1[0] - v0[0] * v1[2];
+  cross01[2] = v0[0] * v1[1] - v0[1] * v1[0];
+  vol = 0.;
+  for (j = 0; j < 3; ++j) {
+    vol += cross01[j] * v2[j];
+  }
+  vol *= 1. / 3.;
+
+  return vol >= 0.;
+}
+
+static void
+p8est_tet_make_righthanded (int *tet)
+{
+  int                 tempn;
+
+  tempn = tet[3];
+  tet[3] = tet[2];
+  tet[2] = tempn;
+}
+
+int
+p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg)
+{
+  int                 i, num_tets;
+  int                 num_flips;
+  int                *tet;
+
+  num_flips = 0;
+  num_tets = (int) ptg->tets->elem_count / 4;
+  for (i = 0; i < num_tets; ++i) {
+    tet = (int *) sc_array_index_int (ptg->tets, 4 * i);
+    if (!p8est_tet_is_righthanded (ptg->nodes, tet)) {
+      p8est_tet_make_righthanded (tet);
+      P4EST_ASSERT (p8est_tet_is_righthanded (ptg->nodes, tet));
+      ++num_flips;
+    }
+  }
+
+  return num_flips;
+}

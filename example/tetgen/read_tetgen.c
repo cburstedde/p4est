@@ -27,6 +27,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
+  int                 num_flips;
   const char         *argbasename;
   p8est_tetgen_t     *ptg;
 
@@ -45,10 +46,14 @@ main (int argc, char **argv)
   /* read tetgen nodes and tetrahedra from files */
   ptg = p8est_tetgen_read (argbasename);
   SC_CHECK_ABORTF (ptg != NULL, "Failed to read tetgen %s", argbasename);
-  SC_GLOBAL_STATISTICSF ("Read %d nodes and %d tets %s attributes\n",
-                         (int) ptg->nodes->elem_count / 3,
-                         (int) ptg->tets->elem_count / 4,
-                         ptg->tet_attributes != NULL ? "with" : "without");
+  P4EST_GLOBAL_STATISTICSF ("Read %d nodes and %d tets %s attributes\n",
+                            (int) ptg->nodes->elem_count / 3,
+                            (int) ptg->tets->elem_count / 4,
+                            ptg->tet_attributes != NULL ? "with" : "without");
+
+  /* flip orientation to right-handed */
+  num_flips = p8est_tetgen_make_righthanded (ptg);
+  P4EST_GLOBAL_STATISTICSF ("Performed %d orientation flip(s)\n", num_flips);
 
   /* clean up */
   p8est_tetgen_destroy (ptg);
