@@ -52,7 +52,7 @@ main (int argc, char **argv)
                             ptg->tet_attributes != NULL ? "with" : "without");
 
   /* flip orientation to right-handed */
-  num_flips = p8est_tetgen_make_righthanded (ptg);
+  num_flips = (int) p8est_tetgen_make_righthanded (ptg);
   P4EST_GLOBAL_STATISTICSF ("Performed %d orientation flip(s)\n", num_flips);
 
   /* clean up */

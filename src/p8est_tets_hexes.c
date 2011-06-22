@@ -27,11 +27,13 @@ sc_array_t         *
 p8est_tetgen_read_node (const char *nodefilename)
 {
   int                 retval;
-  int                 i, j;
-  int                 num_nodes, dims, num_attributes, boundary_marker;
+  int                 k;
+  int                 dims, num_attributes, boundary_marker;
+  long                jl, lnum_nodes;
   double             *pc;
-  sc_array_t         *nodes;
+  size_t              iz, znum_nodes;
   FILE               *nodefile;
+  sc_array_t         *nodes;
 
   /* prepare cleanup on error */
   nodefile = NULL;
@@ -45,33 +47,38 @@ p8est_tetgen_read_node (const char *nodefilename)
   }
 
   /* read header information */
-  retval = fscanf (nodefile, "%d %d %d %d",
-                   &num_nodes, &dims, &num_attributes, &boundary_marker);
-  if (retval != 4 || num_nodes < 0 || dims != 3 || num_attributes < 0) {
+  retval = fscanf (nodefile, "%ld %d %d %d",
+                   &lnum_nodes, &dims, &num_attributes, &boundary_marker) - 4;
+  if (retval || lnum_nodes < 0 || lnum_nodes > P4EST_TOPIDX_MAX
+      || dims != 3 || num_attributes < 0) {
     P4EST_LERROR ("Failed to read node header\n");
     goto dead;
   }
+  znum_nodes = (size_t) lnum_nodes;
 
   /* read node coordinates */
-  nodes = sc_array_new_size (sizeof (double), 3 * num_nodes);
-  for (i = 0; i < num_nodes; ++i) {
-    pc = (double *) sc_array_index_int (nodes, 3 * i);
-    retval = fscanf (nodefile, "%d %lf %lf %lf", &j, pc, pc + 1, pc + 2);
-    if (retval != 4 || i != j) {
-      P4EST_LERRORF ("Failed to read node %d coordinates\n", i);
+  nodes = sc_array_new_size (sizeof (double), 3 * znum_nodes);
+  for (iz = 0; iz < znum_nodes; ++iz) {
+    pc = (double *) sc_array_index (nodes, 3 * iz);
+    retval = fscanf (nodefile, "%ld %lf %lf %lf",
+                     &jl, pc, pc + 1, pc + 2) - 4;
+    if (retval || (long) iz != jl) {
+      P4EST_LERRORF ("Failed to read node %ld coordinates\n", (long) iz);
       goto dead;
     }
-    for (j = 0; j < num_attributes; ++j) {
+    for (k = 0; k < num_attributes; ++k) {
       retval = fscanf (nodefile, "%*f");
       if (retval != 0) {
-        P4EST_LERRORF ("Failed to read node %d attribute %d\n", i, j);
+        P4EST_LERRORF ("Failed to read node %ld attribute %d\n", (long) iz,
+                       k);
         goto dead;
       }
     }
     if (boundary_marker) {
       retval = fscanf (nodefile, "%*d");
       if (retval != 0) {
-        P4EST_LERRORF ("Failed to read node %d boundary marker\n", i);
+        P4EST_LERRORF ("Failed to read node %ld boundary marker\n",
+                       (long) iz);
         goto dead;
       }
     }
@@ -98,15 +105,19 @@ dead:
 }
 
 sc_array_t         *
-p8est_tetgen_read_ele (const char *elefilename, int num_nodes,
+p8est_tetgen_read_ele (const char *elefilename, p4est_topidx_t num_nodes,
                        sc_array_t ** attributes)
 {
   int                 retval;
-  int                 i, j;
-  int                 num_tets, nodespertet, region;
+  int                 k;
+  int                 nodespertet, region;
+  long                jl, lnum_tets, lmax_nodes;
+  long                nl[4];
+  size_t              iz, znum_tets;
   int                *pi;
-  sc_array_t         *tets, *attr;
+  p4est_topidx_t     *pt;
   FILE               *elefile;
+  sc_array_t         *tets, *attr;
 
   /* prepare cleanup on error */
   elefile = NULL;
@@ -115,6 +126,7 @@ p8est_tetgen_read_ele (const char *elefilename, int num_nodes,
   if (attributes != NULL) {
     *attributes = NULL;
   }
+  lmax_nodes = (num_nodes >= 0 ? (long) num_nodes : P4EST_TOPIDX_MAX);
 
   /* open ele file */
   elefile = fopen (elefilename, "rb");
@@ -124,41 +136,46 @@ p8est_tetgen_read_ele (const char *elefilename, int num_nodes,
   }
 
   /* read header information */
-  retval = fscanf (elefile, "%d %d %d", &num_tets, &nodespertet, &region);
-  if (retval != 3 || num_tets < 0 || nodespertet != 4) {
+  retval = fscanf (elefile, "%ld %d %d",
+                   &lnum_tets, &nodespertet, &region) - 3;
+  if (retval || lnum_tets < 0 || lnum_tets > P4EST_TOPIDX_MAX
+      || nodespertet != 4) {
     P4EST_LERROR ("Failed to read tet header\n");
     goto dead;
   }
+  znum_tets = (size_t) lnum_tets;
 
   /* read tet coordinates */
-  tets = sc_array_new_size (sizeof (int), 4 * num_tets);
+  tets = sc_array_new_size (sizeof (p4est_topidx_t), 4 * znum_tets);
   if (region && attributes != NULL) {
-    attr = *attributes = sc_array_new_size (sizeof (int), num_tets);
+    attr = *attributes = sc_array_new_size (sizeof (int), znum_tets);
   }
-  for (i = 0; i < num_tets; ++i) {
-    pi = (int *) sc_array_index_int (tets, 4 * i);
-    retval = fscanf (elefile, "%d %d %d %d %d",
-                     &j, pi, pi + 1, pi + 2, pi + 3);
-    if (retval != 5 || i != j) {
-      P4EST_LERRORF ("Failed to read tet %d node numbers\n", i);
+  for (iz = 0; iz < znum_tets; ++iz) {
+    pt = (p4est_topidx_t *) sc_array_index (tets, 4 * iz);
+    retval = fscanf (elefile, "%ld %ld %ld %ld %ld",
+                     &jl, nl, nl + 1, nl + 2, nl + 3) - 5;
+    if (retval || (long) iz != jl) {
+      P4EST_LERRORF ("Failed to read tet %ld node numbers\n", (long) iz);
       goto dead;
     }
-    for (j = 0; j < 4; ++j) {
-      if (pi[j] < 0 || (num_nodes >= 0 && pi[j] >= num_nodes)) {
-        P4EST_LERRORF ("Tet %d has invalid node number %d\n", i, j);
+    for (k = 0; k < 4; ++k) {
+      if (nl[k] < 0 || nl[k] > lmax_nodes) {
+        P4EST_LERRORF ("Tet %ld has invalid node number %d\n", (long) iz, k);
         goto dead;
       }
+      pt[k] = (p4est_topidx_t) nl[k];
     }
     if (region) {
       if (attr != NULL) {
-        pi = (int *) sc_array_index_int (attr, i);
+        pi = (int *) sc_array_index (attr, iz);
         retval = fscanf (elefile, "%d", pi) - 1;
       }
       else {
         retval = fscanf (elefile, "%*d");
       }
       if (retval != 0) {
-        P4EST_LERRORF ("Failed to read tet %d region attribute\n", i);
+        P4EST_LERRORF ("Failed to read tet %ld region attribute\n",
+                       (long) iz);
         goto dead;
       }
     }
@@ -191,7 +208,7 @@ dead:
 p8est_tetgen_t     *
 p8est_tetgen_read (const char *tetgenbasename)
 {
-  int                 num_nodes;
+  p4est_topidx_t      num_nodes;
   char                nodefilename[BUFSIZ];
   char                elefilename[BUFSIZ];
   sc_array_t         *nodes, *tets, *attr;
@@ -208,7 +225,7 @@ p8est_tetgen_read (const char *tetgenbasename)
     P4EST_LERRORF ("Failed to read nodes for %s\n", tetgenbasename);
     goto dead;
   }
-  num_nodes = (int) nodes->elem_count;
+  num_nodes = (p4est_topidx_t) (nodes->elem_count / 3);
 
   /* read tetrahedra */
   snprintf (elefilename, BUFSIZ, "%s.ele", tetgenbasename);
@@ -251,7 +268,7 @@ p8est_tetgen_destroy (p8est_tetgen_t * ptg)
 }
 
 static int
-p8est_tet_is_righthanded (sc_array_t * nodes, int *tet)
+p8est_tet_is_righthanded (sc_array_t * nodes, p4est_topidx_t * tet)
 {
   int                 i, j;
   double             *nc[4];
@@ -260,7 +277,7 @@ p8est_tet_is_righthanded (sc_array_t * nodes, int *tet)
 
   /* compute tet volume */
   for (i = 0; i < 4; ++i) {
-    nc[i] = (double *) sc_array_index_int (nodes, 3 * tet[i]);
+    nc[i] = (double *) sc_array_index (nodes, (size_t) (3 * tet[i]));
   }
   for (j = 0; j < 3; ++j) {
     v0[j] = nc[1][j] - nc[0][j];
@@ -280,32 +297,32 @@ p8est_tet_is_righthanded (sc_array_t * nodes, int *tet)
 }
 
 static void
-p8est_tet_make_righthanded (int *tet)
+p8est_tet_make_righthanded (p4est_topidx_t * tet)
 {
-  int                 tempn;
+  p4est_topidx_t      temp;
 
-  tempn = tet[3];
+  temp = tet[3];
   tet[3] = tet[2];
-  tet[2] = tempn;
+  tet[2] = temp;
 }
 
-int
+p4est_topidx_t
 p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg)
 {
-  int                 i, num_tets;
-  int                 num_flips;
-  int                *tet;
+  size_t              iz, znum_tets;
+  p4est_topidx_t      tnum_flips;
+  p4est_topidx_t     *tet;
 
-  num_flips = 0;
-  num_tets = (int) ptg->tets->elem_count / 4;
-  for (i = 0; i < num_tets; ++i) {
-    tet = (int *) sc_array_index_int (ptg->tets, 4 * i);
+  tnum_flips = 0;
+  znum_tets = ptg->tets->elem_count / 4;
+  for (iz = 0; iz < znum_tets; ++iz) {
+    tet = (p4est_topidx_t *) sc_array_index (ptg->tets, 4 * iz);
     if (!p8est_tet_is_righthanded (ptg->nodes, tet)) {
       p8est_tet_make_righthanded (tet);
       P4EST_ASSERT (p8est_tet_is_righthanded (ptg->nodes, tet));
-      ++num_flips;
+      ++tnum_flips;
     }
   }
 
-  return num_flips;
+  return tnum_flips;
 }

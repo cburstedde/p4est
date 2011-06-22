@@ -31,7 +31,7 @@ typedef struct p8est_tetgen
   /** The node array contains a triplet of double coordinates per node. */
   sc_array_t         *nodes;
 
-  /** The element array contains a quartet of node numbers per tet. */
+  /** The tet array contains a quartet of p4est_topidx_t nodes per tet. */
   sc_array_t         *tets;
 
   /** The element_attributes array can contain one int attribute per tet. */
@@ -51,11 +51,11 @@ sc_array_t         *p8est_tetgen_read_node (const char *nodefile);
  * \param [in] num_nodes        If nonnegative, (exclusive) upper node number.
  * \param [in,out] attributes   If not NULL, an array will be created
  *                              if the .ele file contains attributes.
- * \return                      An array with four node numbers per tet,
- *                              or NULL on file error.
+ * \return                      An array with four p4est_topidx_t nodes
+ *                              per tet, or NULL on file error.
  */
 sc_array_t         *p8est_tetgen_read_ele (const char *elefile,
-                                           int num_nodes,
+                                           p4est_topidx_t num_nodes,
                                            sc_array_t ** attributes);
 
 /** Read element and node information from a tetgen base name.
@@ -75,6 +75,6 @@ void                p8est_tetgen_destroy (p8est_tetgen_t * ptg);
  * \param [in,out] ptg      Structure with node and tet information.
  * \return                  The number of tets that were flipped.
  */
-int                 p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg);
+p4est_topidx_t      p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg);
 
 #endif /* !P8EST_TETS_HEXES */
