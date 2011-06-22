@@ -297,7 +297,7 @@ p8est_tet_is_righthanded (sc_array_t * nodes, p4est_topidx_t * tet)
 }
 
 static void
-p8est_tet_make_righthanded (p4est_topidx_t * tet)
+p8est_tet_flip (p4est_topidx_t * tet)
 {
   p4est_topidx_t      temp;
 
@@ -318,7 +318,7 @@ p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg)
   for (iz = 0; iz < znum_tets; ++iz) {
     tet = (p4est_topidx_t *) sc_array_index (ptg->tets, 4 * iz);
     if (!p8est_tet_is_righthanded (ptg->nodes, tet)) {
-      p8est_tet_make_righthanded (tet);
+      p8est_tet_flip (tet);
       P4EST_ASSERT (p8est_tet_is_righthanded (ptg->nodes, tet));
       ++tnum_flips;
     }
