@@ -29,7 +29,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 num_flips;
   const char         *argbasename;
-  p8est_tetgen_t     *ptg;
+  p8est_tets_t       *ptg;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -44,7 +44,7 @@ main (int argc, char **argv)
   argbasename = argv[1];
 
   /* read tetgen nodes and tetrahedra from files */
-  ptg = p8est_tetgen_read (argbasename);
+  ptg = p8est_tets_read (argbasename);
   SC_CHECK_ABORTF (ptg != NULL, "Failed to read tetgen %s", argbasename);
   P4EST_GLOBAL_STATISTICSF ("Read %d nodes and %d tets %s attributes\n",
                             (int) ptg->nodes->elem_count / 3,
@@ -52,11 +52,11 @@ main (int argc, char **argv)
                             ptg->tet_attributes != NULL ? "with" : "without");
 
   /* flip orientation to right-handed */
-  num_flips = (int) p8est_tetgen_make_righthanded (ptg);
+  num_flips = (int) p8est_tets_make_righthanded (ptg);
   P4EST_GLOBAL_STATISTICSF ("Performed %d orientation flip(s)\n", num_flips);
 
   /* clean up */
-  p8est_tetgen_destroy (ptg);
+  p8est_tets_destroy (ptg);
 
   sc_finalize ();
   mpiret = MPI_Finalize ();

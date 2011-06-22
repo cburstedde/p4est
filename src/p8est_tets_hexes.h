@@ -26,7 +26,7 @@
 
 #include <p4est_base.h>
 
-typedef struct p8est_tetgen
+typedef struct p8est_tets
 {
   /** The node array contains a triplet of double coordinates per node. */
   sc_array_t         *nodes;
@@ -37,14 +37,14 @@ typedef struct p8est_tetgen
   /** The element_attributes array can contain one int attribute per tet. */
   sc_array_t         *tet_attributes;
 }
-p8est_tetgen_t;
+p8est_tets_t;
 
 /** Read nodes from a tetgen .node file.
  * \param [in] nodefile     Name of file in tetgen .node format.
  * \return                  An array with three double coordinates per node,
  *                          or NULL on file error.
  */
-sc_array_t         *p8est_tetgen_read_node (const char *nodefile);
+sc_array_t         *p8est_tets_read_node (const char *nodefile);
 
 /** Read tetrahedra from a tetgen .ele file.
  * \param [in] elefile          Name of file in tetgen .ele format.
@@ -54,27 +54,27 @@ sc_array_t         *p8est_tetgen_read_node (const char *nodefile);
  * \return                      An array with four p4est_topidx_t nodes
  *                              per tet, or NULL on file error.
  */
-sc_array_t         *p8est_tetgen_read_ele (const char *elefile,
-                                           p4est_topidx_t num_nodes,
-                                           sc_array_t ** attributes);
+sc_array_t         *p8est_tets_read_ele (const char *elefile,
+                                         p4est_topidx_t num_nodes,
+                                         sc_array_t ** attributes);
 
 /** Read element and node information from a tetgen base name.
  * The names for element and node files are derived from base name by suffix.
  * \param [in] tetgenbasename   Base name for tetgen files (without suffix).
- * \return                      A populated p8est_tetgen_t structure
+ * \return                      A populated p8est_tets_t structure
  *                              or NULL on file error.
  */
-p8est_tetgen_t     *p8est_tetgen_read (const char *tetgenbasename);
+p8est_tets_t       *p8est_tets_read (const char *tetgenbasename);
 
-/** Destroy all memory associated with a p8est_tetgen_t structure.
- * \param [in] ptg          Allocated p8est_tetgen_t structure.
+/** Destroy all memory associated with a p8est_tets_t structure.
+ * \param [in] ptg          Allocated p8est_tets_t structure.
  */
-void                p8est_tetgen_destroy (p8est_tetgen_t * ptg);
+void                p8est_tets_destroy (p8est_tets_t * ptg);
 
 /** Change all left-handed tetrahedra to right-handed ones.
  * \param [in,out] ptg      Structure with node and tet information.
  * \return                  The number of tets that were flipped.
  */
-p4est_topidx_t      p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg);
+p4est_topidx_t      p8est_tets_make_righthanded (p8est_tets_t * ptg);
 
 #endif /* !P8EST_TETS_HEXES */

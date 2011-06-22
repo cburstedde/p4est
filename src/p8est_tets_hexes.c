@@ -24,7 +24,7 @@
 #include <p8est_tets_hexes.h>
 
 sc_array_t         *
-p8est_tetgen_read_node (const char *nodefilename)
+p8est_tets_read_node (const char *nodefilename)
 {
   int                 retval;
   int                 k;
@@ -105,8 +105,8 @@ dead:
 }
 
 sc_array_t         *
-p8est_tetgen_read_ele (const char *elefilename, p4est_topidx_t num_nodes,
-                       sc_array_t ** attributes)
+p8est_tets_read_ele (const char *elefilename, p4est_topidx_t num_nodes,
+                     sc_array_t ** attributes)
 {
   int                 retval;
   int                 k;
@@ -205,22 +205,22 @@ dead:
   return NULL;
 }
 
-p8est_tetgen_t     *
-p8est_tetgen_read (const char *tetgenbasename)
+p8est_tets_t       *
+p8est_tets_read (const char *tetgenbasename)
 {
   p4est_topidx_t      num_nodes;
   char                nodefilename[BUFSIZ];
   char                elefilename[BUFSIZ];
   sc_array_t         *nodes, *tets, *attr;
-  p8est_tetgen_t     *ptg;
+  p8est_tets_t       *ptg;
 
   /* prepare cleanup */
   nodes = tets = attr = NULL;
-  ptg = P4EST_ALLOC (p8est_tetgen_t, 1);
+  ptg = P4EST_ALLOC (p8est_tets_t, 1);
 
   /* read nodes */
   snprintf (nodefilename, BUFSIZ, "%s.node", tetgenbasename);
-  nodes = ptg->nodes = p8est_tetgen_read_node (nodefilename);
+  nodes = ptg->nodes = p8est_tets_read_node (nodefilename);
   if (nodes == NULL) {
     P4EST_LERRORF ("Failed to read nodes for %s\n", tetgenbasename);
     goto dead;
@@ -229,7 +229,7 @@ p8est_tetgen_read (const char *tetgenbasename)
 
   /* read tetrahedra */
   snprintf (elefilename, BUFSIZ, "%s.ele", tetgenbasename);
-  tets = ptg->tets = p8est_tetgen_read_ele (elefilename, num_nodes, &attr);
+  tets = ptg->tets = p8est_tets_read_ele (elefilename, num_nodes, &attr);
   if (tets == NULL) {
     P4EST_ASSERT (attr == NULL);
     P4EST_LERRORF ("Failed to read tetrahedra for %s\n", tetgenbasename);
@@ -256,7 +256,7 @@ dead:
 }
 
 void
-p8est_tetgen_destroy (p8est_tetgen_t * ptg)
+p8est_tets_destroy (p8est_tets_t * ptg)
 {
   sc_array_destroy (ptg->nodes);
   sc_array_destroy (ptg->tets);
@@ -307,7 +307,7 @@ p8est_tet_flip (p4est_topidx_t * tet)
 }
 
 p4est_topidx_t
-p8est_tetgen_make_righthanded (p8est_tetgen_t * ptg)
+p8est_tets_make_righthanded (p8est_tets_t * ptg)
 {
   size_t              iz, znum_tets;
   p4est_topidx_t      tnum_flips;
