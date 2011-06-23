@@ -22,18 +22,25 @@
 */
 
 #include <p8est_tets_hexes.h>
+#include <p8est_vtk.h>
 
 int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 num_flips;
+  int                 mpirank;
   const char         *argbasename;
+  char                afilename[BUFSIZ];
+  p4est_topidx_t      tnum_flips;
   p8est_tets_t       *ptg;
   p8est_connectivity_t *connectivity;
+  p8est_t            *p8est;
+  MPI_Comm            mpicomm;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
+  mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
 
   sc_init (MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
@@ -53,13 +60,24 @@ main (int argc, char **argv)
                             ptg->tet_attributes != NULL ? "with" : "without");
 
   /* flip orientation to right-handed */
-  num_flips = (int) p8est_tets_make_righthanded (ptg);
-  P4EST_GLOBAL_STATISTICSF ("Performed %d orientation flip(s)\n", num_flips);
+  tnum_flips = p8est_tets_make_righthanded (ptg);
+  P4EST_GLOBAL_STATISTICSF ("Performed %ld orientation flip(s)\n",
+                            (long) tnum_flips);
 
-  /* create a connectivity from the tet mesh */
+  /* create a connectivity from the tet mesh and save it */
   connectivity = p8est_connectivity_new_tets (ptg);
+  if (mpirank == 0) {
+    snprintf (afilename, BUFSIZ, "%s", "read_tetgen.p8c");
+    p8est_connectivity_save (afilename, connectivity);
+  }
+
+  /* create a forest and visualize */
+  p8est = p8est_new (mpicomm, connectivity, 0, NULL, NULL);
+  snprintf (afilename, BUFSIZ, "%s", "read_tetgen");
+  p8est_vtk_write_file (p8est, NULL, afilename);
 
   /* clean up */
+  p8est_destroy (p8est);
   p8est_connectivity_destroy (connectivity);
   p8est_tets_destroy (ptg);
 
