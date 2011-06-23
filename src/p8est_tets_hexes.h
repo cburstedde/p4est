@@ -77,6 +77,16 @@ void                p8est_tets_destroy (p8est_tets_t * ptg);
  */
 p4est_topidx_t      p8est_tets_make_righthanded (p8est_tets_t * ptg);
 
+/** Internally connect a connectivity based on tree_to_vertex information.
+ * \param [in,out] conn     The connectivity needs to have proper vertices
+ *                          and tree_to_vertex fields.  The tree_to_tree
+ *                          and tree_to_face fields must be allocated
+ *                          and satisfy p8est_connectivity_is_valid (conn)
+ *                          but will be overwritten.  The edge and corner
+ *                          fields must be empty and will be filled.
+ */
+void                p8est_connectivity_complete (p8est_connectivity_t * conn);
+
 /** Create a fully populated connectivity structure from tetgen information.
  * \param [in] ptg  A p8est_tets_t structure with node and tet information.
  * \return          Connectivity (free with p8est_connectivity_destroy).

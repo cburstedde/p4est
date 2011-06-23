@@ -39,6 +39,13 @@ p8est_tet_face_corners[4][3] =
  {0, 1, 3},
  {0, 2, 3},
  {1, 2, 3}};
+
+static const int
+p8est_tet_tree_nodes[4][8] =
+{{ 0, 4, 5, 10, 6, 11, 12, 14 },
+ { 4, 1, 10, 7, 11, 8, 14, 13 },
+ { 5, 10, 2, 7, 12, 14, 9, 13 },
+ { 6, 11, 12, 14, 3, 8, 9, 13 }};
 /* *INDENT-ON* */
 
 static inline int
@@ -601,21 +608,31 @@ p8est_tets_identify_faces (p8est_tets_t * ptg)
   return face_ha;
 }
 
-static p8est_connectivity_t *
-p8est_tets_connectivity_new_vertices (p8est_tets_t * ptg,
-                                      sc_hash_array_t * edge_ha,
-                                      sc_hash_array_t * face_ha)
+void
+p8est_connectivity_complete (p8est_connectivity_t * conn)
 {
-  int                 j, edge, face;
-  size_t              nvz, evzoffset, fvzoffset, vvzoffset;
-  size_t              iz;
-  double             *vp, *n[4];
-  p4est_topidx_t      tt, *tet, node;
-  p8est_connectivity_t *conn;
-  p8est_tet_edge_info_t *ei;
-  p8est_tet_face_info_t *fi;
+  P4EST_ASSERT (p8est_connectivity_is_valid (conn));
+  P4EST_ASSERT (conn->num_edges == 0 && conn->ett_offset != NULL);
+  P4EST_ASSERT (conn->num_corners == 0 && conn->ctt_offset != NULL);
+}
 
-  conn = P4EST_ALLOC_ZERO (p8est_connectivity_t, 1);
+static p8est_connectivity_t *
+p8est_tets_connectivity_new (p8est_tets_t * ptg,
+                             sc_hash_array_t * edge_ha,
+                             sc_hash_array_t * face_ha)
+{
+  int                 j, k;
+  int                 edge, face, found;
+  size_t              nvz, evzoffset, fvzoffset, vvzoffset;
+  size_t              iz, pz;
+  double             *vp, *n[4];
+  int8_t             *ttf;
+  p4est_topidx_t      tt, *tet, node;
+  p4est_topidx_t     *ttv, *ttt;
+  p4est_topidx_t      nid[15];
+  p8est_connectivity_t *conn;
+  p8est_tet_edge_info_t *ei, eikey;
+  p8est_tet_face_info_t *fi, fikey;
 
   /* arrange vertices by tet corners, edges, faces, and volumes */
   evzoffset = ptg->nodes->elem_count / 3;
@@ -623,8 +640,10 @@ p8est_tets_connectivity_new_vertices (p8est_tets_t * ptg,
   vvzoffset = fvzoffset + face_ha->a.elem_count;
   nvz = vvzoffset + ptg->tets->elem_count / 4;
 
-  conn->num_vertices = (p4est_topidx_t) nvz;
-  conn->vertices = P4EST_ALLOC (double, 3 * nvz);
+  /* allocate connectivity */
+  conn = p8est_connectivity_new (nvz, ptg->tets->elem_count, 0, 0, 0, 0);
+
+  /* populate vertices */
   memcpy (conn->vertices, ptg->nodes->array, 3 * evzoffset * sizeof (double));
   vp = conn->vertices + 3 * evzoffset;
   for (iz = 0; iz < edge_ha->a.elem_count; ++iz) {
@@ -666,6 +685,52 @@ p8est_tets_connectivity_new_vertices (p8est_tets_t * ptg,
     vp += 3;
   }
 
+  /* associate forest trees with vertices */
+  ttv = conn->tree_to_vertex;
+  for (iz = 0; iz < ptg->tets->elem_count / 4; ++iz) {
+    tet = p8est_tets_tet_index (ptg, iz);
+
+    /* look up node numbers for all vertices in this tetrahedron */
+    for (j = 0; j < 4; ++j) {
+      nid[j] = tet[j];
+    }
+    for (edge = 0; edge < 6; ++edge) {
+      p8est_tet_edge_key (eikey.ek, tet, edge);
+      found = sc_hash_array_lookup (edge_ha, &eikey, &pz);
+      P4EST_ASSERT (found);
+      nid[4 + edge] = (p4est_topidx_t) (evzoffset + pz);
+    }
+    for (face = 0; face < 4; ++face) {
+      p8est_tet_face_key (fikey.fk, tet, face);
+      found = sc_hash_array_lookup (face_ha, &fikey, &pz);
+      P4EST_ASSERT (found);
+      nid[10 + face] = (p4est_topidx_t) (fvzoffset + pz);
+    }
+    nid[14] = (p4est_topidx_t) (vvzoffset + iz);
+
+    /* create four trees from this tetrahedron */
+    for (j = 0; j < 4; ++j) {
+      for (k = 0; k < P8EST_CHILDREN; ++k) {
+        *ttv++ = nid[p8est_tet_tree_nodes[j][k]];
+      }
+    }
+  }
+
+  /* create neighborhood information for isolated trees */
+  ttt = conn->tree_to_tree;
+  ttf = conn->tree_to_face;
+  for (tt = 0; tt < conn->num_trees; ++tt) {
+    for (face = 0; face < P8EST_FACES; ++face) {
+      ttt[face] = tt;
+      ttf[face] = (int8_t) face;
+    }
+    ttt += P8EST_FACES;
+    ttf += P8EST_FACES;
+  }
+
+  /* connect p4est tree through faces, edges, and corners */
+  p8est_connectivity_complete (conn);
+
   return conn;
 }
 
@@ -688,9 +753,9 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
                         (long) face_ha->a.elem_count);
 
   /* add vertex information to connectivity */
-  conn = p8est_tets_connectivity_new_vertices (ptg, edge_ha, face_ha);
-  P4EST_GLOBAL_LDEBUGF ("Connectivity has %ld vertices\n",
-                        (long) conn->num_vertices);
+  conn = p8est_tets_connectivity_new (ptg, edge_ha, face_ha);
+  P4EST_GLOBAL_LDEBUGF ("Connectivity has %ld vertices and %ld trees\n",
+                        (long) conn->num_vertices, (long) conn->num_trees);
 
   /* clean unique edges and faces */
   sc_hash_array_rip (edge_ha, &edge_array);
