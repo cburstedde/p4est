@@ -23,6 +23,57 @@
 
 #include <p8est_tets_hexes.h>
 
+/* *INDENT-OFF* */
+static const int
+p8est_tet_edge_to_corner[6][2] =
+{{0, 1},
+ {0, 2},
+ {0, 3},
+ {1, 2},
+ {1, 3},
+ {2, 3}};
+
+static const int
+p8est_tet_face_to_corner[4][3] =
+{{0, 1, 2},
+ {0, 1, 3},
+ {0, 2, 3},
+ {1, 2, 3}};
+/* *INDENT-ON* */
+
+static int
+p8est_topidx_is_sorted (p4est_topidx_t * t, int length)
+{
+  int                 i;
+
+  for (i = 1; i < length; ++i) {
+    if (t[i - 1] > t[i]) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+static void
+p8est_topidx_bsort (p4est_topidx_t * t, int length)
+{
+  int                 i, j;
+  p4est_topidx_t      tswap;
+
+  /* go through all elements except the last */
+  for (i = length - 1; i > 0; --i) {
+    /* bubble up the first element until before position i */
+    for (j = 0; j < i; ++j) {
+      if (t[j] > t[j + 1]) {
+        tswap = t[j + 1];
+        t[j + 1] = t[j];
+        t[j] = tswap;
+      }
+    }
+  }
+  P4EST_ASSERT (p8est_topidx_is_sorted (t, length));
+}
+
 sc_array_t         *
 p8est_tets_read_node (const char *nodefilename)
 {
@@ -304,6 +355,41 @@ p8est_tet_flip (p4est_topidx_t * tet)
   temp = tet[3];
   tet[3] = tet[2];
   tet[2] = temp;
+}
+
+/** Create unique edge key for a given edge of a tetrahedron.
+ * \param [out] ek      The edge key consists of two node numbers.
+ * \param [in] tet      A tetrahedron referring to node indices.
+ * \param [in] edge     Tetrahedron edge number in [ 0 .. 5 ].
+ */
+static void
+p8est_tet_edge_key (p4est_topidx_t * ek, p4est_topidx_t * tet, int edge)
+{
+  P4EST_ASSERT (0 <= edge && edge < 6);
+
+  ek[0] = tet[p8est_tet_edge_to_corner[edge][0]];
+  ek[1] = tet[p8est_tet_edge_to_corner[edge][1]];
+
+  P4EST_ASSERT (ek[0] != ek[1]);
+  p8est_topidx_bsort (ek, 2);
+}
+
+/** Create unique face key for a given face of a tetrahedron.
+ * \param [out] fk      The edge key consists of three node numbers.
+ * \param [in] tet      A tetrahedron referring to node indices.
+ * \param [in] face     Tetrahedron face number in [ 0 .. 3 ].
+ */
+static void
+p8est_tet_face_key (p4est_topidx_t * fk, p4est_topidx_t * tet, int face)
+{
+  P4EST_ASSERT (0 <= face && face < 4);
+
+  fk[0] = tet[p8est_tet_face_to_corner[face][0]];
+  fk[1] = tet[p8est_tet_face_to_corner[face][1]];
+  fk[2] = tet[p8est_tet_face_to_corner[face][2]];
+
+  P4EST_ASSERT (fk[0] != fk[1] && fk[0] != fk[2] && fk[1] != fk[2]);
+  p8est_topidx_bsort (fk, 3);
 }
 
 p4est_topidx_t
