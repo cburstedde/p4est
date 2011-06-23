@@ -24,7 +24,7 @@
 #ifndef P8EST_TETS_HEXES_H
 #define P8EST_TETS_HEXES_H
 
-#include <p4est_base.h>
+#include <p8est_connectivity.h>
 
 typedef struct p8est_tets
 {
@@ -76,5 +76,11 @@ void                p8est_tets_destroy (p8est_tets_t * ptg);
  * \return                  The number of tets that were flipped.
  */
 p4est_topidx_t      p8est_tets_make_righthanded (p8est_tets_t * ptg);
+
+/** Create a fully populated connectivity structure from tetgen information.
+ * \param [in] ptg  A p8est_tets_t structure with node and tet information.
+ * \return          Connectivity (free with p8est_connectivity_destroy).
+ */
+p8est_connectivity_t *p8est_connectivity_new_tets (p8est_tets_t * ptg);
 
 #endif /* !P8EST_TETS_HEXES */

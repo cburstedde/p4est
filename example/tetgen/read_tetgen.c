@@ -30,6 +30,7 @@ main (int argc, char **argv)
   int                 num_flips;
   const char         *argbasename;
   p8est_tets_t       *ptg;
+  p8est_connectivity_t *connectivity;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -54,6 +55,10 @@ main (int argc, char **argv)
   /* flip orientation to right-handed */
   num_flips = (int) p8est_tets_make_righthanded (ptg);
   P4EST_GLOBAL_STATISTICSF ("Performed %d orientation flip(s)\n", num_flips);
+
+  /* create a connectivity from the tet mesh */
+  connectivity = p8est_connectivity_new_tets (ptg);
+  P4EST_ASSERT (connectivity == NULL);
 
   /* clean up */
   p8est_tets_destroy (ptg);

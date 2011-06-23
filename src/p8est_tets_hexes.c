@@ -326,3 +326,9 @@ p8est_tets_make_righthanded (p8est_tets_t * ptg)
 
   return tnum_flips;
 }
+
+p8est_connectivity_t *
+p8est_connectivity_new_tets (p8est_tets_t * ptg)
+{
+  return NULL;
+}
