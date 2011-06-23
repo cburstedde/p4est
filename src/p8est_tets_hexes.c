@@ -589,6 +589,74 @@ p8est_tets_identify_faces (p8est_tets_t * ptg)
   return face_ha;
 }
 
+static p8est_connectivity_t *
+p8est_tets_connectivity_new_vertices (p8est_tets_t * ptg,
+                                      sc_hash_array_t * edge_ha,
+                                      sc_hash_array_t * face_ha)
+{
+  int                 j, edge, face;
+  size_t              nvz, evzoffset, fvzoffset, vvzoffset;
+  size_t              iz;
+  double             *vp, *n[4];
+  p4est_topidx_t      tt, *tet, node;
+  p8est_connectivity_t *conn;
+  p8est_tet_edge_info_t *ei;
+  p8est_tet_face_info_t *fi;
+
+  conn = P4EST_ALLOC_ZERO (p8est_connectivity_t, 1);
+
+  /* arrange vertices by tet corners, edges, faces, and volumes */
+  evzoffset = ptg->nodes->elem_count / 3;
+  fvzoffset = evzoffset + edge_ha->a.elem_count;
+  vvzoffset = fvzoffset + face_ha->a.elem_count;
+  nvz = vvzoffset + ptg->tets->elem_count / 4;
+
+  conn->num_vertices = (p4est_topidx_t) nvz;
+  conn->vertices = P4EST_ALLOC (double, 3 * nvz);
+  memcpy (conn->vertices, ptg->nodes->array, 3 * evzoffset * sizeof (double));
+  vp = conn->vertices + 3 * evzoffset;
+  for (iz = 0; iz < edge_ha->a.elem_count; ++iz) {
+    ei = (p8est_tet_edge_info_t *) sc_array_index (&edge_ha->a, iz);
+    tt = *((p4est_topidx_t *) sc_array_index (&ei->tets, 0));
+    edge = *((int *) sc_array_index (&ei->tet_edges, 0));
+    tet = (p4est_topidx_t *) sc_array_index (ptg->tets, (size_t) (4 * tt));
+    for (j = 0; j < 2; ++j) {
+      node = tet[p8est_tet_edge_corners[edge][j]];
+      n[j] = (double *) sc_array_index (ptg->nodes, (size_t) (3 * node));
+    }
+    vp[0] = .5 * (n[0][0] + n[1][0]);
+    vp[1] = .5 * (n[0][1] + n[1][1]);
+    vp[2] = .5 * (n[0][2] + n[1][2]);
+    vp += 3;
+  }
+  for (iz = 0; iz < face_ha->a.elem_count; ++iz) {
+    fi = (p8est_tet_face_info_t *) sc_array_index (&face_ha->a, iz);
+    tt = fi->tets[0];
+    face = fi->tet_faces[0];
+    tet = (p4est_topidx_t *) sc_array_index (ptg->tets, (size_t) (4 * tt));
+    for (j = 0; j < 3; ++j) {
+      node = tet[p8est_tet_face_corners[face][j]];
+      n[j] = (double *) sc_array_index (ptg->nodes, (size_t) (3 * node));
+    }
+    vp[0] = (1. / 3.) * (n[0][0] + n[1][0] + n[2][0]);
+    vp[1] = (1. / 3.) * (n[0][1] + n[1][1] + n[2][1]);
+    vp[2] = (1. / 3.) * (n[0][2] + n[1][2] + n[2][2]);
+    vp += 3;
+  }
+  for (iz = 0; iz < ptg->tets->elem_count / 4; ++iz) {
+    tet = (p4est_topidx_t *) sc_array_index (ptg->tets, 4 * iz);
+    for (j = 0; j < 4; ++j) {
+      n[j] = (double *) sc_array_index (ptg->nodes, (size_t) (3 * tet[j]));
+    }
+    vp[0] = .25 * (n[0][0] + n[1][0] + n[2][0] + n[3][0]);
+    vp[1] = .25 * (n[0][1] + n[1][1] + n[2][1] + n[3][1]);
+    vp[2] = .25 * (n[0][2] + n[1][2] + n[2][2] + n[3][2]);
+    vp += 3;
+  }
+
+  return conn;
+}
+
 p8est_connectivity_t *
 p8est_connectivity_new_tets (p8est_tets_t * ptg)
 {
@@ -596,6 +664,7 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
   sc_hash_array_t    *edge_ha, *face_ha;
   sc_array_t          edge_array;
   p8est_tet_edge_info_t *ei;
+  p8est_connectivity_t *conn;
 
   /* identify unique edges and faces */
   edge_ha = p8est_tets_identify_edges (ptg);
@@ -605,6 +674,9 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
   face_ha = p8est_tets_identify_faces (ptg);
   P4EST_GLOBAL_LDEBUGF ("Added %ld unique tetrahedron faces\n",
                         (long) face_ha->a.elem_count);
+
+  /* add vertex information to connectivity */
+  conn = p8est_tets_connectivity_new_vertices (ptg, edge_ha, face_ha);
 
   /* clean unique edges and faces */
   sc_hash_array_rip (edge_ha, &edge_array);
@@ -617,5 +689,5 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
   sc_array_reset (&edge_array);
   sc_hash_array_destroy (face_ha);
 
-  return NULL;
+  return conn;
 }

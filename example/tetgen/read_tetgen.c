@@ -58,9 +58,9 @@ main (int argc, char **argv)
 
   /* create a connectivity from the tet mesh */
   connectivity = p8est_connectivity_new_tets (ptg);
-  P4EST_ASSERT (connectivity == NULL);
 
   /* clean up */
+  p8est_connectivity_destroy (connectivity);
   p8est_tets_destroy (ptg);
 
   sc_finalize ();
