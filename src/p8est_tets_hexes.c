@@ -25,7 +25,7 @@
 
 /* *INDENT-OFF* */
 static const int
-p8est_tet_edge_to_corner[6][2] =
+p8est_tet_edge_corners[6][2] =
 {{0, 1},
  {0, 2},
  {0, 3},
@@ -34,7 +34,7 @@ p8est_tet_edge_to_corner[6][2] =
  {2, 3}};
 
 static const int
-p8est_tet_face_to_corner[4][3] =
+p8est_tet_face_corners[4][3] =
 {{0, 1, 2},
  {0, 1, 3},
  {0, 2, 3},
@@ -357,41 +357,6 @@ p8est_tet_flip (p4est_topidx_t * tet)
   tet[2] = temp;
 }
 
-/** Create unique edge key for a given edge of a tetrahedron.
- * \param [out] ek      The edge key consists of two node numbers.
- * \param [in] tet      A tetrahedron referring to node indices.
- * \param [in] edge     Tetrahedron edge number in [ 0 .. 5 ].
- */
-static void
-p8est_tet_edge_key (p4est_topidx_t * ek, p4est_topidx_t * tet, int edge)
-{
-  P4EST_ASSERT (0 <= edge && edge < 6);
-
-  ek[0] = tet[p8est_tet_edge_to_corner[edge][0]];
-  ek[1] = tet[p8est_tet_edge_to_corner[edge][1]];
-
-  P4EST_ASSERT (ek[0] != ek[1]);
-  p8est_topidx_bsort (ek, 2);
-}
-
-/** Create unique face key for a given face of a tetrahedron.
- * \param [out] fk      The edge key consists of three node numbers.
- * \param [in] tet      A tetrahedron referring to node indices.
- * \param [in] face     Tetrahedron face number in [ 0 .. 3 ].
- */
-static void
-p8est_tet_face_key (p4est_topidx_t * fk, p4est_topidx_t * tet, int face)
-{
-  P4EST_ASSERT (0 <= face && face < 4);
-
-  fk[0] = tet[p8est_tet_face_to_corner[face][0]];
-  fk[1] = tet[p8est_tet_face_to_corner[face][1]];
-  fk[2] = tet[p8est_tet_face_to_corner[face][2]];
-
-  P4EST_ASSERT (fk[0] != fk[1] && fk[0] != fk[2] && fk[1] != fk[2]);
-  p8est_topidx_bsort (fk, 3);
-}
-
 p4est_topidx_t
 p8est_tets_make_righthanded (p8est_tets_t * ptg)
 {
@@ -420,6 +385,23 @@ typedef struct p8est_tet_edge_info
   sc_array_t          tet_edges;
 }
 p8est_tet_edge_info_t;
+
+/** Create unique edge key for a given edge of a tetrahedron.
+ * \param [out] ek      The edge key consists of two node numbers.
+ * \param [in] tet      A tetrahedron referring to node indices.
+ * \param [in] edge     Tetrahedron edge number in [ 0 .. 5 ].
+ */
+static void
+p8est_tet_edge_key (p4est_topidx_t * ek, p4est_topidx_t * tet, int edge)
+{
+  P4EST_ASSERT (0 <= edge && edge < 6);
+
+  ek[0] = tet[p8est_tet_edge_corners[edge][0]];
+  ek[1] = tet[p8est_tet_edge_corners[edge][1]];
+
+  P4EST_ASSERT (ek[0] != ek[1]);
+  p8est_topidx_bsort (ek, 2);
+}
 
 static unsigned
 p8est_tet_edge_hash (const void *v, const void *u)
@@ -509,6 +491,24 @@ typedef struct p8est_tet_face_info
   int                 tet_faces[2];
 }
 p8est_tet_face_info_t;
+
+/** Create unique face key for a given face of a tetrahedron.
+ * \param [out] fk      The face key consists of three node numbers.
+ * \param [in] tet      A tetrahedron referring to node indices.
+ * \param [in] face     Tetrahedron face number in [ 0 .. 3 ].
+ */
+static void
+p8est_tet_face_key (p4est_topidx_t * fk, p4est_topidx_t * tet, int face)
+{
+  P4EST_ASSERT (0 <= face && face < 4);
+
+  fk[0] = tet[p8est_tet_face_corners[face][0]];
+  fk[1] = tet[p8est_tet_face_corners[face][1]];
+  fk[2] = tet[p8est_tet_face_corners[face][2]];
+
+  P4EST_ASSERT (fk[0] != fk[1] && fk[0] != fk[2] && fk[1] != fk[2]);
+  p8est_topidx_bsort (fk, 3);
+}
 
 static unsigned
 p8est_tet_face_hash (const void *v, const void *u)
