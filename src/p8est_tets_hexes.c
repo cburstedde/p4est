@@ -413,8 +413,114 @@ p8est_tets_make_righthanded (p8est_tets_t * ptg)
   return tnum_flips;
 }
 
+typedef struct p8est_tet_face_info
+{
+  p4est_topidx_t      fk[3];
+  p4est_topidx_t      tets[2];
+  int                 tet_faces[2];
+}
+p8est_tet_face_info_t;
+
+static unsigned
+p8est_tet_face_hash (const void *v, const void *u)
+{
+  const p8est_tet_face_info_t *fi = (p8est_tet_face_info_t *) v;
+  uint32_t            a, b, c;
+
+#if (P4EST_TOPIDX_FITS_32)
+  a = (uint32_t) fi->fk[0];
+  b = (uint32_t) fi->fk[1];
+  c = (uint32_t) fi->fk[2];
+#else
+  a = (uint32_t) (fi->fk[0] && 0xFFFFFFFF);
+  b = (uint32_t) (fi->fk[0] >> 32);
+  c = (uint32_t) (fi->fk[1] && 0xFFFFFFFF);
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) (fi->fk[1] >> 32);
+  b += (uint32_t) (fi->fk[2] && 0xFFFFFFFF);
+  c += (uint32_t) (fi->fk[2] >> 32);
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
+static int
+p8est_tet_face_equal (const void *v1, const void *v2, const void *u)
+{
+  const p8est_tet_face_info_t *fi1 = (p8est_tet_face_info_t *) v1;
+  const p8est_tet_face_info_t *fi2 = (p8est_tet_face_info_t *) v2;
+
+  return !memcmp (fi1->fk, fi2->fk, 3 * sizeof (p4est_topidx_t));
+}
+
+static sc_hash_t   *
+p8est_tets_identify_faces (p8est_tets_t * ptg, sc_mempool_t * face_info_pool)
+{
+  int                 face;
+  int                 added;
+  size_t              iz, znum_tets;
+  sc_hash_t          *face_hash;
+  p4est_topidx_t     *tet;
+  p8est_tet_face_info_t *fi, *fifound;
+  void              **found;
+
+  /* create hash map for shared faces */
+  P4EST_ASSERT (face_info_pool != NULL);
+  face_hash = sc_hash_new (p8est_tet_face_hash, p8est_tet_face_equal,
+                           NULL, NULL);
+
+  /* loop through all faces and identify face-neighbor tet pairs */
+  fi = (p8est_tet_face_info_t *) sc_mempool_alloc (face_info_pool);
+  znum_tets = ptg->tets->elem_count / 4;
+  for (iz = 0; iz < znum_tets; ++iz) {
+    tet = (p4est_topidx_t *) sc_array_index (ptg->tets, 4 * iz);
+    for (face = 0; face < 4; ++face) {
+      p8est_tet_face_key (fi->fk, tet, face);
+      added = sc_hash_insert_unique (face_hash, fi, &found);
+      if (added) {
+        /* added fi to hash as the first of two tets */
+        /* *INDENT-OFF* HORRIBLE indent bug */
+        P4EST_ASSERT ((p8est_tet_face_info_t *) *found == fi);
+        /* *INDENT-ON* */
+        fi->tets[0] = (p4est_topidx_t) iz;
+        fi->tets[1] = -1;
+        fi->tet_faces[0] = face;
+        fi->tet_faces[1] = -1;
+        fi = (p8est_tet_face_info_t *) sc_mempool_alloc (face_info_pool);
+      }
+      else {
+        /* found existing entry from the first face */
+        /* *INDENT-OFF* HORRIBLE indent bug */
+        fifound = (p8est_tet_face_info_t *) *found;
+        /* *INDENT-ON* */
+        P4EST_ASSERT (p8est_tet_face_equal (fi->fk, fifound->fk, NULL));
+        P4EST_ASSERT (fifound->tets[0] >= 0 && fifound->tet_faces[0] >= 0);
+        P4EST_ASSERT (fifound->tets[1] == -1 && fifound->tet_faces[1] == -1);
+        fifound->tets[1] = (p4est_topidx_t) iz;
+        fifound->tet_faces[1] = face;
+      }
+    }
+  }
+  sc_mempool_free (face_info_pool, fi);
+
+  return face_hash;
+}
+
 p8est_connectivity_t *
 p8est_connectivity_new_tets (p8est_tets_t * ptg)
 {
+  sc_mempool_t       *face_info_pool;
+  sc_hash_t          *face_hash;
+
+  face_info_pool = sc_mempool_new (sizeof (p8est_tet_face_info_t));
+  face_hash = p8est_tets_identify_faces (ptg, face_info_pool);
+
+  P4EST_GLOBAL_LDEBUGF ("Added %ld unique tetrahedron faces\n",
+                        (long) face_hash->elem_count);
+
+  sc_hash_destroy (face_hash);
+  sc_mempool_destroy (face_info_pool);
+
   return NULL;
 }
