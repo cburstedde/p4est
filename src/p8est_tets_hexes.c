@@ -413,6 +413,95 @@ p8est_tets_make_righthanded (p8est_tets_t * ptg)
   return tnum_flips;
 }
 
+typedef struct p8est_tet_edge_info
+{
+  p4est_topidx_t      ek[2];
+  sc_array_t          tets;
+  sc_array_t          tet_edges;
+}
+p8est_tet_edge_info_t;
+
+static unsigned
+p8est_tet_edge_hash (const void *v, const void *u)
+{
+  const p8est_tet_edge_info_t *ei = (p8est_tet_edge_info_t *) v;
+  uint32_t            a, b, c;
+
+#if (P4EST_TOPIDX_FITS_32)
+  a = (uint32_t) ei->ek[0];
+  b = (uint32_t) ei->ek[1];
+  c = 0;
+#else
+  a = (uint32_t) (ei->ek[0] && 0xFFFFFFFF);
+  b = (uint32_t) (ei->ek[0] >> 32);
+  c = (uint32_t) (ei->ek[1] && 0xFFFFFFFF);
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) (ei->ek[1] >> 32);
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
+static int
+p8est_tet_edge_equal (const void *v1, const void *v2, const void *u)
+{
+  const p8est_tet_edge_info_t *ei1 = (p8est_tet_edge_info_t *) v1;
+  const p8est_tet_edge_info_t *ei2 = (p8est_tet_edge_info_t *) v2;
+
+  return !memcmp (ei1->ek, ei2->ek, 2 * sizeof (p4est_topidx_t));
+}
+
+static sc_hash_array_t *
+p8est_tets_identify_edges (p8est_tets_t * ptg)
+{
+  int                 edge, *pi;
+  size_t              iz, znum_tets, pz;
+  sc_hash_array_t    *edge_ha;
+  p4est_topidx_t     *tet, *pt;
+  p8est_tet_edge_info_t eikey, *ei;
+
+  /* create hash array for shared edges */
+  edge_ha = sc_hash_array_new (sizeof (p8est_tet_edge_info_t),
+                               p8est_tet_edge_hash, p8est_tet_edge_equal,
+                               NULL);
+
+  /* loop through all edges and identify edge-neighbor tet groups */
+  znum_tets = ptg->tets->elem_count / 4;
+  for (iz = 0; iz < znum_tets; ++iz) {
+    tet = (p4est_topidx_t *) sc_array_index (ptg->tets, 4 * iz);
+    for (edge = 0; edge < 6; ++edge) {
+      p8est_tet_edge_key (eikey.ek, tet, edge);
+      ei = (p8est_tet_edge_info_t *)
+        sc_hash_array_insert_unique (edge_ha, &eikey, &pz);
+      if (ei != NULL) {
+        /* added new edge group ei to hash array */
+        P4EST_ASSERT (sc_array_position (&edge_ha->a, ei) == pz);
+        memcpy (ei->ek, eikey.ek, 2 * sizeof (p4est_topidx_t));
+        sc_array_init (&ei->tets, sizeof (p4est_topidx_t));
+        pt = (p4est_topidx_t *) sc_array_push (&ei->tets);
+        *pt = (p4est_topidx_t) iz;
+        sc_array_init (&ei->tet_edges, sizeof (int));
+        pi = (int *) sc_array_push (&ei->tet_edges);
+        *pi = edge;
+      }
+      else {
+        /* found existing entry from earlier edge */
+        ei = (p8est_tet_edge_info_t *) sc_array_index (&edge_ha->a, pz);
+        P4EST_ASSERT (p8est_tet_edge_equal (ei->ek, eikey.ek, NULL));
+        P4EST_ASSERT (ei->tets.elem_count > 0);
+        pt = (p4est_topidx_t *) sc_array_push (&ei->tets);
+        *pt = (p4est_topidx_t) iz;
+        P4EST_ASSERT (ei->tet_edges.elem_count > 0);
+        pi = (int *) sc_array_push (&ei->tet_edges);
+        *pi = edge;
+      }
+    }
+  }
+
+  return edge_ha;
+}
+
 typedef struct p8est_tet_face_info
 {
   p4est_topidx_t      fk[3];
@@ -510,14 +599,32 @@ p8est_tets_identify_faces (p8est_tets_t * ptg, sc_mempool_t * face_info_pool)
 p8est_connectivity_t *
 p8est_connectivity_new_tets (p8est_tets_t * ptg)
 {
+  size_t              ez, znum_edges;
+  sc_hash_array_t    *edge_ha;
+  sc_array_t          edge_array;
   sc_mempool_t       *face_info_pool;
   sc_hash_t          *face_hash;
+  p8est_tet_edge_info_t *ei;
+
+  /* identify unique edges and faces */
+  edge_ha = p8est_tets_identify_edges (ptg);
+  P4EST_GLOBAL_LDEBUGF ("Added %ld unique tetrahedron edges\n",
+                        (long) edge_ha->a.elem_count);
 
   face_info_pool = sc_mempool_new (sizeof (p8est_tet_face_info_t));
   face_hash = p8est_tets_identify_faces (ptg, face_info_pool);
-
   P4EST_GLOBAL_LDEBUGF ("Added %ld unique tetrahedron faces\n",
                         (long) face_hash->elem_count);
+
+  /* clean unique edges and faces */
+  sc_hash_array_rip (edge_ha, &edge_array);
+  znum_edges = edge_array.elem_count;
+  for (ez = 0; ez < znum_edges; ++ez) {
+    ei = (p8est_tet_edge_info_t *) sc_array_index (&edge_array, ez);
+    sc_array_reset (&ei->tets);
+    sc_array_reset (&ei->tet_edges);
+  }
+  sc_array_reset (&edge_array);
 
   sc_hash_destroy (face_hash);
   sc_mempool_destroy (face_info_pool);
