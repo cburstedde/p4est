@@ -426,8 +426,10 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       tree->quadrants_per_level[level] = (p4est_locidx_t) count;
     }
 
+#if 0
     P4EST_VERBOSEF ("tree %lld quadrants %llu\n", (long long) jt,
                     (unsigned long long) tquadrants->elem_count);
+#endif
 
     tree->quadrants_offset = p4est->local_num_quadrants;
     p4est->local_num_quadrants += tquadrants->elem_count;
