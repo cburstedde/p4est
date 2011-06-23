@@ -543,67 +543,58 @@ p8est_tet_face_equal (const void *v1, const void *v2, const void *u)
   return !memcmp (fi1->fk, fi2->fk, 3 * sizeof (p4est_topidx_t));
 }
 
-static sc_hash_t   *
-p8est_tets_identify_faces (p8est_tets_t * ptg, sc_mempool_t * face_info_pool)
+static sc_hash_array_t *
+p8est_tets_identify_faces (p8est_tets_t * ptg)
 {
   int                 face;
-  int                 added;
-  size_t              iz, znum_tets;
-  sc_hash_t          *face_hash;
+  size_t              iz, znum_tets, pz;
+  sc_hash_array_t    *face_ha;
   p4est_topidx_t     *tet;
-  p8est_tet_face_info_t *fi, *fifound;
-  void              **found;
+  p8est_tet_face_info_t fikey, *fi;
 
-  /* create hash map for shared faces */
-  P4EST_ASSERT (face_info_pool != NULL);
-  face_hash = sc_hash_new (p8est_tet_face_hash, p8est_tet_face_equal,
-                           NULL, NULL);
+  /* create hash array for shared faces */
+  face_ha = sc_hash_array_new (sizeof (p8est_tet_face_info_t),
+                               p8est_tet_face_hash, p8est_tet_face_equal,
+                               NULL);
 
   /* loop through all faces and identify face-neighbor tet pairs */
-  fi = (p8est_tet_face_info_t *) sc_mempool_alloc (face_info_pool);
   znum_tets = ptg->tets->elem_count / 4;
   for (iz = 0; iz < znum_tets; ++iz) {
     tet = (p4est_topidx_t *) sc_array_index (ptg->tets, 4 * iz);
     for (face = 0; face < 4; ++face) {
-      p8est_tet_face_key (fi->fk, tet, face);
-      added = sc_hash_insert_unique (face_hash, fi, &found);
-      if (added) {
-        /* added fi to hash as the first of two tets */
-        /* *INDENT-OFF* HORRIBLE indent bug */
-        P4EST_ASSERT ((p8est_tet_face_info_t *) *found == fi);
-        /* *INDENT-ON* */
+      p8est_tet_face_key (fikey.fk, tet, face);
+      fi = (p8est_tet_face_info_t *)
+        sc_hash_array_insert_unique (face_ha, &fikey, &pz);
+      if (fi != NULL) {
+        /* added fi to hash array as the first of two tets */
+        P4EST_ASSERT (sc_array_position (&face_ha->a, fi) == pz);
+        memcpy (fi->fk, fikey.fk, 3 * sizeof (p4est_topidx_t));
         fi->tets[0] = (p4est_topidx_t) iz;
         fi->tets[1] = -1;
         fi->tet_faces[0] = face;
         fi->tet_faces[1] = -1;
-        fi = (p8est_tet_face_info_t *) sc_mempool_alloc (face_info_pool);
       }
       else {
         /* found existing entry from the first face */
-        /* *INDENT-OFF* HORRIBLE indent bug */
-        fifound = (p8est_tet_face_info_t *) *found;
-        /* *INDENT-ON* */
-        P4EST_ASSERT (p8est_tet_face_equal (fi->fk, fifound->fk, NULL));
-        P4EST_ASSERT (fifound->tets[0] >= 0 && fifound->tet_faces[0] >= 0);
-        P4EST_ASSERT (fifound->tets[1] == -1 && fifound->tet_faces[1] == -1);
-        fifound->tets[1] = (p4est_topidx_t) iz;
-        fifound->tet_faces[1] = face;
+        fi = (p8est_tet_face_info_t *) sc_array_index (&face_ha->a, pz);
+        P4EST_ASSERT (p8est_tet_face_equal (fi->fk, fikey.fk, NULL));
+        P4EST_ASSERT (fi->tets[0] >= 0 && fi->tet_faces[0] >= 0);
+        P4EST_ASSERT (fi->tets[1] == -1 && fi->tet_faces[1] == -1);
+        fi->tets[1] = (p4est_topidx_t) iz;
+        fi->tet_faces[1] = face;
       }
     }
   }
-  sc_mempool_free (face_info_pool, fi);
 
-  return face_hash;
+  return face_ha;
 }
 
 p8est_connectivity_t *
 p8est_connectivity_new_tets (p8est_tets_t * ptg)
 {
   size_t              ez, znum_edges;
-  sc_hash_array_t    *edge_ha;
+  sc_hash_array_t    *edge_ha, *face_ha;
   sc_array_t          edge_array;
-  sc_mempool_t       *face_info_pool;
-  sc_hash_t          *face_hash;
   p8est_tet_edge_info_t *ei;
 
   /* identify unique edges and faces */
@@ -611,10 +602,9 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
   P4EST_GLOBAL_LDEBUGF ("Added %ld unique tetrahedron edges\n",
                         (long) edge_ha->a.elem_count);
 
-  face_info_pool = sc_mempool_new (sizeof (p8est_tet_face_info_t));
-  face_hash = p8est_tets_identify_faces (ptg, face_info_pool);
+  face_ha = p8est_tets_identify_faces (ptg);
   P4EST_GLOBAL_LDEBUGF ("Added %ld unique tetrahedron faces\n",
-                        (long) face_hash->elem_count);
+                        (long) face_ha->a.elem_count);
 
   /* clean unique edges and faces */
   sc_hash_array_rip (edge_ha, &edge_array);
@@ -625,9 +615,7 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
     sc_array_reset (&ei->tet_edges);
   }
   sc_array_reset (&edge_array);
-
-  sc_hash_destroy (face_hash);
-  sc_mempool_destroy (face_info_pool);
+  sc_hash_array_destroy (face_ha);
 
   return NULL;
 }
