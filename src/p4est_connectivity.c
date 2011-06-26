@@ -1561,6 +1561,16 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
   return conn;
 }
 
+void
+p4est_connectivity_complete (p4est_connectivity_t * conn)
+{
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+#ifdef P4_TO_P8
+  P4EST_ASSERT (conn->num_edges == 0 && conn->ett_offset != NULL);
+#endif
+  P4EST_ASSERT (conn->num_corners == 0 && conn->ctt_offset != NULL);
+}
+
 p4est_topidx_t
 p4est_find_face_transform (p4est_connectivity_t * connectivity,
                            p4est_topidx_t itree, int iface, int ftransform[])

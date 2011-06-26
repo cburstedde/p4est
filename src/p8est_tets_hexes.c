@@ -578,14 +578,6 @@ p8est_tets_identify_faces (p8est_tets_t * ptg)
   return face_ha;
 }
 
-void
-p8est_connectivity_complete (p8est_connectivity_t * conn)
-{
-  P4EST_ASSERT (p8est_connectivity_is_valid (conn));
-  P4EST_ASSERT (conn->num_edges == 0 && conn->ett_offset != NULL);
-  P4EST_ASSERT (conn->num_corners == 0 && conn->ctt_offset != NULL);
-}
-
 /** Create a connectivity where the trees are not connected to each other. */
 static p8est_connectivity_t *
 p8est_tets_connectivity_new (p8est_tets_t * ptg,
