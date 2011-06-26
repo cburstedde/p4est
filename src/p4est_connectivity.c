@@ -1561,14 +1561,120 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
   return conn;
 }
 
+typedef struct
+{
+  p4est_topidx_t      key[P4EST_HALF];
+  p4est_topidx_t      trees[2];
+  int8_t              faces[2];
+}
+p4est_conn_face_info_t;
+
+static unsigned
+p4est_conn_face_hash (const void *v, const void *u)
+{
+  const p4est_conn_face_info_t *fi = (p4est_conn_face_info_t *) v;
+
+#ifdef P4_TO_P8
+  return p4est_topidx_hash4 (fi->key);
+#else
+  return p4est_topidx_hash2 (fi->key);
+#endif
+}
+
+static int
+p4est_conn_face_equal (const void *v1, const void *v2, const void *u)
+{
+  const p4est_conn_face_info_t *fi1 = (p4est_conn_face_info_t *) v1;
+  const p4est_conn_face_info_t *fi2 = (p4est_conn_face_info_t *) v2;
+
+  return !memcmp (fi1->key, fi2->key, P4EST_HALF * sizeof (p4est_topidx_t));
+}
+
+static void
+p4est_conn_face_key (p4est_topidx_t * key, p4est_topidx_t * ttv, int face)
+{
+  int                 fc;
+
+  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
+
+  for (fc = 0; fc < P4EST_HALF; ++fc) {
+    key[fc] = ttv[p4est_face_corners[face][fc]];
+  }
+  p4est_topidx_bsort (key, P4EST_HALF);
+}
+
 void
 p4est_connectivity_complete (p4est_connectivity_t * conn)
 {
+  int                 face, corner, r;
+  int                 primary, secondary, j;
+  size_t              pz;
+  p4est_topidx_t      treeid, nodeid, tt;
+  p4est_topidx_t     *ttv, *whichttv[2];
+  p4est_conn_face_info_t fikey, *fi;
+  sc_hash_array_t    *face_ha;
+
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 #ifdef P4_TO_P8
   P4EST_ASSERT (conn->num_edges == 0 && conn->ett_offset != NULL);
 #endif
   P4EST_ASSERT (conn->num_corners == 0 && conn->ctt_offset != NULL);
+
+  /* hash all faces to identify connections */
+  face_ha = sc_hash_array_new (sizeof (p4est_conn_face_info_t),
+                               p4est_conn_face_hash, p4est_conn_face_equal,
+                               NULL);
+  ttv = conn->tree_to_vertex;
+  for (treeid = 0; treeid < conn->num_trees; ++treeid) {
+    for (face = 0; face < P4EST_FACES; ++face) {
+      p4est_conn_face_key (fikey.key, ttv, face);
+      fi = (p4est_conn_face_info_t *)
+        sc_hash_array_insert_unique (face_ha, &fikey, &pz);
+      if (fi != NULL) {
+        /* added fi to hash array as the first of two faces */
+        P4EST_ASSERT (sc_array_position (&face_ha->a, fi) == pz);
+        memcpy (fi->key, fikey.key, P4EST_HALF * sizeof (p4est_topidx_t));
+        fi->trees[0] = treeid;
+        fi->faces[0] = (int8_t) face;
+        fi->trees[1] = -1;
+        fi->faces[1] = -1;
+      }
+      else {
+        /* found existing entry from the first face */
+        fi = (p4est_conn_face_info_t *) sc_array_index (&face_ha->a, pz);
+        P4EST_ASSERT (p4est_conn_face_equal (fi->key, fikey.key, NULL));
+        P4EST_ASSERT (fi->trees[0] >= 0 && fi->faces[0] >= 0);
+        P4EST_ASSERT (fi->trees[1] == -1 && fi->faces[1] == -1);
+        fi->trees[1] = treeid;
+        fi->faces[1] = (int8_t) face;
+
+        /* find primary face and orientation to store it */
+        primary = (fi->faces[0] <= fi->faces[1] ? 0 : 1);
+        secondary = 1 - primary;
+        whichttv[0] = conn->tree_to_vertex + P4EST_CHILDREN * fi->trees[0];
+        whichttv[1] = ttv;
+        nodeid = whichttv[primary][p4est_face_corners[fi->faces[primary]][0]];
+        for (r = 0; r < P4EST_HALF; ++r) {
+          corner = p4est_face_corners[fi->faces[secondary]][r];
+          if (nodeid == whichttv[secondary][corner]) {
+            break;
+          }
+        }
+        P4EST_ASSERT (r < P4EST_HALF);
+        for (j = 0; j < 2; ++j) {
+          tt = P4EST_FACES * fi->trees[j] + fi->faces[j];
+          conn->tree_to_tree[tt] = fi->trees[1 - j];
+          conn->tree_to_face[tt] =
+            (int8_t) (P4EST_FACES * r + fi->faces[1 - j]);
+        }
+      }
+    }
+    ttv += P4EST_CHILDREN;
+  }
+
+  /* single faces are on the boundary and need not be changed */
+  sc_hash_array_destroy (face_ha);
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 }
 
 p4est_topidx_t
