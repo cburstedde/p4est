@@ -2083,9 +2083,11 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
 
   sc_array_destroy (newid);
 }
-#endif
+
+#endif /* P4EST_METIS */
 
 #ifndef P4_TO_P8
+
 int
 p4est_connect_type_int (p4est_connect_type_t btype)
 {
@@ -2111,4 +2113,5 @@ p4est_connect_type_string (p4est_connect_type_t btype)
     SC_ABORT_NOT_REACHED ();
   }
 }
+
 #endif /* !P4_TO_P8 */

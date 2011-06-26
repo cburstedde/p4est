@@ -290,6 +290,7 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  p4est_corner_info_t * ci);
 
 #ifdef P4EST_METIS
+
 /** p4est_connectivity_reorder
  * This function takes a connectivity \a conn and a parameter \a k,
  * which will typically be the number of processes, and reorders the trees
@@ -315,7 +316,8 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
 void                p4est_connectivity_reorder (MPI_Comm comm, int k,
                                                 p4est_connectivity_t * conn,
                                                 p4est_connect_type_t ctype);
-#endif
+
+#endif /* P4EST_METIS */
 
 /** Return a pointer to a p4est_corner_transform_t array element. */
 /*@unused@*/
