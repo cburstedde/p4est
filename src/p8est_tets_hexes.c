@@ -586,6 +586,7 @@ p8est_connectivity_complete (p8est_connectivity_t * conn)
   P4EST_ASSERT (conn->num_corners == 0 && conn->ctt_offset != NULL);
 }
 
+/** Create a connectivity where the trees are not connected to each other. */
 static p8est_connectivity_t *
 p8est_tets_connectivity_new (p8est_tets_t * ptg,
                              sc_hash_array_t * edge_ha,
@@ -698,9 +699,6 @@ p8est_tets_connectivity_new (p8est_tets_t * ptg,
     ttf += P8EST_FACES;
   }
 
-  /* connect p4est tree through faces, edges, and corners */
-  p8est_connectivity_complete (conn);
-
   return conn;
 }
 
@@ -737,6 +735,9 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
   }
   sc_array_reset (&edge_array);
   sc_hash_array_destroy (face_ha);
+
+  /* connect p4est tree through faces, edges, and corners */
+  p8est_connectivity_complete (conn);
 
   return conn;
 }
