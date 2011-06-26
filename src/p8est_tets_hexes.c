@@ -426,22 +426,8 @@ static unsigned
 p8est_tet_edge_hash (const void *v, const void *u)
 {
   const p8est_tet_edge_info_t *ei = (p8est_tet_edge_info_t *) v;
-  uint32_t            a, b, c;
 
-#if (P4EST_TOPIDX_FITS_32)
-  a = (uint32_t) ei->ek[0];
-  b = (uint32_t) ei->ek[1];
-  c = 0;
-#else
-  a = (uint32_t) (ei->ek[0] && 0xFFFFFFFF);
-  b = (uint32_t) (ei->ek[0] >> 32);
-  c = (uint32_t) (ei->ek[1] && 0xFFFFFFFF);
-  sc_hash_mix (a, b, c);
-  a += (uint32_t) (ei->ek[1] >> 32);
-#endif
-  sc_hash_final (a, b, c);
-
-  return (unsigned) c;
+  return p4est_topidx_hash2 (ei->ek);
 }
 
 static int
@@ -533,24 +519,8 @@ static unsigned
 p8est_tet_face_hash (const void *v, const void *u)
 {
   const p8est_tet_face_info_t *fi = (p8est_tet_face_info_t *) v;
-  uint32_t            a, b, c;
 
-#if (P4EST_TOPIDX_FITS_32)
-  a = (uint32_t) fi->fk[0];
-  b = (uint32_t) fi->fk[1];
-  c = (uint32_t) fi->fk[2];
-#else
-  a = (uint32_t) (fi->fk[0] && 0xFFFFFFFF);
-  b = (uint32_t) (fi->fk[0] >> 32);
-  c = (uint32_t) (fi->fk[1] && 0xFFFFFFFF);
-  sc_hash_mix (a, b, c);
-  a += (uint32_t) (fi->fk[1] >> 32);
-  b += (uint32_t) (fi->fk[2] && 0xFFFFFFFF);
-  c += (uint32_t) (fi->fk[2] >> 32);
-#endif
-  sc_hash_final (a, b, c);
-
-  return (unsigned) c;
+  return p4est_topidx_hash3 (fi->fk);
 }
 
 static int

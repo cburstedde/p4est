@@ -215,6 +215,90 @@ extern int          p4est_package_id;
 void                p4est_init (sc_log_handler_t log_handler,
                                 int log_threshold);
 
+/** Compute hash value for two p4est_topidx_t integers.
+ * \param [in] tt     Array of (at least) two values.
+ * \return            An unsigned hash value.
+ */
+static inline unsigned
+p4est_topidx_hash2 (const p4est_topidx_t * tt)
+{
+  uint32_t            a, b, c;
+
+#if (P4EST_TOPIDX_FITS_32)
+  a = (uint32_t) tt[0];
+  b = (uint32_t) tt[1];
+  c = 0;
+#else
+  a = (uint32_t) (tt[0] && 0xFFFFFFFF);
+  b = (uint32_t) (tt[0] >> 32);
+  c = (uint32_t) (tt[1] && 0xFFFFFFFF);
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) (tt[1] >> 32);
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
+/** Compute hash value for three p4est_topidx_t integers.
+ * \param [in] tt     Array of (at least) three values.
+ * \return            An unsigned hash value.
+ */
+static inline unsigned
+p4est_topidx_hash3 (const p4est_topidx_t * tt)
+{
+  uint32_t            a, b, c;
+
+#if (P4EST_TOPIDX_FITS_32)
+  a = (uint32_t) tt[0];
+  b = (uint32_t) tt[1];
+  c = (uint32_t) tt[2];
+#else
+  a = (uint32_t) (tt[0] && 0xFFFFFFFF);
+  b = (uint32_t) (tt[0] >> 32);
+  c = (uint32_t) (tt[1] && 0xFFFFFFFF);
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) (tt[1] >> 32);
+  b += (uint32_t) (tt[2] && 0xFFFFFFFF);
+  c += (uint32_t) (tt[2] >> 32);
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
+/** Compute hash value for four p4est_topidx_t integers.
+ * \param [in] tt     Array of (at least) four values.
+ * \return            An unsigned hash value.
+ */
+static inline unsigned
+p4est_topidx_hash4 (const p4est_topidx_t * tt)
+{
+  uint32_t            a, b, c;
+
+#if (P4EST_TOPIDX_FITS_32)
+  a = (uint32_t) tt[0];
+  b = (uint32_t) tt[1];
+  c = (uint32_t) tt[2];
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) tt[3];
+#else
+  a = (uint32_t) (tt[0] && 0xFFFFFFFF);
+  b = (uint32_t) (tt[0] >> 32);
+  c = (uint32_t) (tt[1] && 0xFFFFFFFF);
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) (tt[1] >> 32);
+  b += (uint32_t) (tt[2] && 0xFFFFFFFF);
+  c += (uint32_t) (tt[2] >> 32);
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) (tt[3] && 0xFFFFFFFF);
+  b += (uint32_t) (tt[3] >> 32);
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BASE_H */
