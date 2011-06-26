@@ -299,6 +299,39 @@ p4est_topidx_hash4 (const p4est_topidx_t * tt)
   return (unsigned) c;
 }
 
+static inline int
+p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
+{
+  int                 i;
+
+  for (i = 1; i < length; ++i) {
+    if (t[i - 1] > t[i]) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+static inline void
+p4est_topidx_bsort (p4est_topidx_t * t, int length)
+{
+  int                 i, j;
+  p4est_topidx_t      tswap;
+
+  /* go through all elements except the last */
+  for (i = length - 1; i > 0; --i) {
+    /* bubble up the first element until before position i */
+    for (j = 0; j < i; ++j) {
+      if (t[j] > t[j + 1]) {
+        tswap = t[j + 1];
+        t[j + 1] = t[j];
+        t[j] = tswap;
+      }
+    }
+  }
+  P4EST_ASSERT (p4est_topidx_is_sorted (t, length));
+}
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BASE_H */

@@ -48,39 +48,6 @@ p8est_tet_tree_nodes[4][8] =
  { 6, 11, 12, 14, 3, 8, 9, 13 }};
 /* *INDENT-ON* */
 
-static inline int
-p8est_topidx_is_sorted (p4est_topidx_t * t, int length)
-{
-  int                 i;
-
-  for (i = 1; i < length; ++i) {
-    if (t[i - 1] > t[i]) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-static inline void
-p8est_topidx_bsort (p4est_topidx_t * t, int length)
-{
-  int                 i, j;
-  p4est_topidx_t      tswap;
-
-  /* go through all elements except the last */
-  for (i = length - 1; i > 0; --i) {
-    /* bubble up the first element until before position i */
-    for (j = 0; j < i; ++j) {
-      if (t[j] > t[j + 1]) {
-        tswap = t[j + 1];
-        t[j + 1] = t[j];
-        t[j] = tswap;
-      }
-    }
-  }
-  P4EST_ASSERT (p8est_topidx_is_sorted (t, length));
-}
-
 static inline double *
 p8est_tets_node_index (p8est_tets_t * ptg, size_t nodeno)
 {
@@ -419,7 +386,7 @@ p8est_tet_edge_key (p4est_topidx_t * ek, p4est_topidx_t * tet, int edge)
   ek[1] = tet[p8est_tet_edge_corners[edge][1]];
 
   P4EST_ASSERT (ek[0] != ek[1]);
-  p8est_topidx_bsort (ek, 2);
+  p4est_topidx_bsort (ek, 2);
 }
 
 static unsigned
@@ -512,7 +479,7 @@ p8est_tet_face_key (p4est_topidx_t * fk, p4est_topidx_t * tet, int face)
   fk[2] = tet[p8est_tet_face_corners[face][2]];
 
   P4EST_ASSERT (fk[0] != fk[1] && fk[0] != fk[2] && fk[1] != fk[2]);
-  p8est_topidx_bsort (fk, 3);
+  p4est_topidx_bsort (fk, 3);
 }
 
 static unsigned
