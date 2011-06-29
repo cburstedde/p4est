@@ -1668,12 +1668,8 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
 #endif
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
-#ifdef P4_TO_P8
-  P4EST_ASSERT (conn->num_edges == 0 && conn->ett_offset != NULL);
-#endif
-  P4EST_ASSERT (conn->num_corners == 0 && conn->ctt_offset != NULL);
 
-  /* hash all faces to identify connections */
+  /* prepare data structures and remove previous connectivity information */
   face_ha = sc_hash_array_new (sizeof (p4est_conn_face_info_t),
                                p4est_conn_face_hash, p4est_conn_face_equal,
                                NULL);
@@ -1691,6 +1687,18 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   real_edges = 0;
   ett_count = 0;
 #endif
+  P4EST_FREE (conn->tree_to_corner);
+  P4EST_FREE (conn->ctt_offset);
+  P4EST_FREE (conn->corner_to_tree);
+  P4EST_FREE (conn->corner_to_corner);
+  conn->tree_to_corner = NULL;
+  conn->ctt_offset = P4EST_ALLOC (p4est_topidx_t, 1);
+  conn->corner_to_tree = NULL;
+  conn->corner_to_corner = NULL;
+  conn->num_corners = 0;
+  conn->ctt_offset[0] = 0;
+
+  /* hash all faces and edges to identify connections */
   ttv = conn->tree_to_vertex;
   for (treeid = 0; treeid < conn->num_trees; ++treeid) {
     for (face = 0; face < P4EST_FACES; ++face) {
