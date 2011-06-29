@@ -348,21 +348,26 @@ p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p,
 
 /** Create a connectivity structure that builds a spherical shell.
  * It is made up of six connected parts [-1,1]x[-1,1]x[1,2].
+ * This connectivity reuses vertices and relies on a geometry transformation.
+ * It is thus not suitable for p8est_connectivity_complete.
  */
 p8est_connectivity_t *p8est_connectivity_new_shell (void);
 
 /** Create a connectivity structure that builds a solid sphere.
  * It is made up of two layers and a cube in the center.
+ * This connectivity reuses vertices and relies on a geometry transformation.
+ * It is thus not suitable for p8est_connectivity_complete.
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
 /** Internally connect a connectivity based on tree_to_vertex information.
+ * Periodicity that is not inherent in the list of vertices will be lost.
  * \param [in,out] conn     The connectivity needs to have proper vertices
  *                          and tree_to_vertex fields.  The tree_to_tree
  *                          and tree_to_face fields must be allocated
  *                          and satisfy p8est_connectivity_is_valid (conn)
  *                          but will be overwritten.  The edge and corner
- *                          fields must be empty and will be filled.
+ *                          fields will be freed and allocated anew.
  */
 void                p8est_connectivity_complete (p8est_connectivity_t * conn);
 
