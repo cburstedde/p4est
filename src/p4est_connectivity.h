@@ -263,17 +263,6 @@ p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni,
                                                     int periodic_a,
                                                     int periodic_b);
 
-/** Internally connect a connectivity based on tree_to_vertex information.
- * Periodicity that is not inherent in the list of vertices will be lost.
- * \param [in,out] conn     The connectivity needs to have proper vertices
- *                          and tree_to_vertex fields.  The tree_to_tree
- *                          and tree_to_face fields must be allocated
- *                          and satisfy p4est_connectivity_is_valid (conn)
- *                          but will be overwritten.  The corner
- *                          fields will be freed and allocated anew.
- */
-void                p4est_connectivity_complete (p4est_connectivity_t * conn);
-
 /** Fills arrays encoding the axis combinations for a face transform.
  * \param [in]  itree       The number of the originating tree.
  * \param [in]  iface       The number of the originating face.
@@ -299,6 +288,17 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  p4est_topidx_t itree,
                                                  int icorner,
                                                  p4est_corner_info_t * ci);
+
+/** Internally connect a connectivity based on tree_to_vertex information.
+ * Periodicity that is not inherent in the list of vertices will be lost.
+ * \param [in,out] conn     The connectivity needs to have proper vertices
+ *                          and tree_to_vertex fields.  The tree_to_tree
+ *                          and tree_to_face fields must be allocated
+ *                          and satisfy p4est_connectivity_is_valid (conn)
+ *                          but will be overwritten.  The corner
+ *                          fields will be freed and allocated anew.
+ */
+void                p4est_connectivity_complete (p4est_connectivity_t * conn);
 
 #ifdef P4EST_METIS
 
