@@ -1646,13 +1646,23 @@ p8est_conn_edge_key (p4est_topidx_t * key, p4est_topidx_t * ttv, int edge)
 
 #endif /* P4_TO_P8 */
 
+/* *INDENT-OFF* HORRIBLE indent bug */
+static int
+p4est_find_corner_transform_internal (p4est_connectivity_t * conn,
+                                      p4est_topidx_t itree, int icorner,
+                                      p4est_corner_info_t * ci,
+                                      p4est_topidx_t * ctt, int8_t * ctc,
+                                      p4est_topidx_t corner_trees,
+                                      p4est_topidx_t ntree[P4EST_DIM]);
+/* *INDENT-ON* */
+
 void
 p4est_connectivity_complete (p4est_connectivity_t * conn)
 {
   int                 face, corner, r;
   int                 primary, secondary, j;
   size_t              pz;
-  p4est_topidx_t      treeid, nodeid, tt;
+  p4est_topidx_t     *pt, treeid, nodeid, tt;
   p4est_topidx_t     *ttv, *whichttv[2];
   p4est_conn_face_info_t fikey, *fi;
   sc_hash_array_t    *face_ha;
@@ -1661,14 +1671,26 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   int                 flipped;
   int8_t             *et;
   size_t              ez, egz;
-  p4est_topidx_t     *pt, *ept, real_edges, enode[2];
-  p4est_topidx_t      ett_count, ett_offset, ett_edge, ntrees[2];
+  p4est_topidx_t     *ept, real_edges, enode[2];
+  p4est_topidx_t      ett_count, ett_offset, ett_edge;
   p8est_conn_edge_info_t eikey, *ei;
   p8est_edge_info_t   einfo;
   sc_hash_array_t    *edge_ha;
   sc_array_t          edge_array, edge_to_pz;
-  sc_array_t         *ta = &einfo.edge_transforms;
+  sc_array_t         *eta = &einfo.edge_transforms;
 #endif
+  int                 ignored;
+  int8_t             *ct;
+  size_t              zcount;
+#ifdef P4EST_DEBUG
+  size_t              expected_count;
+#endif
+  p4est_topidx_t      real_corners, ntree[P4EST_DIM];
+  p4est_topidx_t      ctt_count, ctt_offset, ctt_corner;
+  p4est_corner_info_t cinfo;
+  sc_array_t         *node_trees, *nt;
+  sc_array_t         *node_corners, *nc;
+  sc_array_t         *cta = &cinfo.corner_transforms;
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
@@ -1690,20 +1712,26 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   real_edges = 0;
   ett_count = 0;
   sc_array_init (&edge_to_pz, sizeof (p4est_topidx_t));
-  sc_array_init (ta, sizeof (p8est_edge_transform_t));
+  sc_array_init (eta, sizeof (p8est_edge_transform_t));
 #endif
   P4EST_FREE (conn->tree_to_corner);
   P4EST_FREE (conn->ctt_offset);
   P4EST_FREE (conn->corner_to_tree);
   P4EST_FREE (conn->corner_to_corner);
-  conn->tree_to_corner = NULL;
-  conn->ctt_offset = P4EST_ALLOC (p4est_topidx_t, 1);
-  conn->corner_to_tree = NULL;
-  conn->corner_to_corner = NULL;
-  conn->num_corners = 0;
-  conn->ctt_offset[0] = 0;
+  real_corners = P4EST_CHILDREN * conn->num_trees;
+  conn->tree_to_corner = P4EST_ALLOC (p4est_topidx_t, real_corners);
+  memset (conn->tree_to_corner, -1, real_corners * sizeof (p4est_topidx_t));
+  real_corners = 0;
+  ctt_count = 0;
+  node_trees = P4EST_ALLOC (sc_array_t, conn->num_vertices);
+  node_corners = P4EST_ALLOC (sc_array_t, conn->num_vertices);
+  for (nodeid = 0; nodeid < conn->num_vertices; ++nodeid) {
+    sc_array_init (node_trees + nodeid, sizeof (p4est_topidx_t));
+    sc_array_init (node_corners + nodeid, sizeof (int8_t));
+  }
+  sc_array_init (cta, sizeof (p4est_corner_transform_t));
 
-  /* hash all faces and edges to identify connections */
+  /* hash all faces and edges to identify connections, map corners */
   ttv = conn->tree_to_vertex;
   for (treeid = 0; treeid < conn->num_trees; ++treeid) {
     for (face = 0; face < P4EST_FACES; ++face) {
@@ -1798,11 +1826,33 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
       *et = (int8_t) edge;
     }
 #endif
+    for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
+      nodeid = ttv[corner];
+      nt = node_trees + nodeid;
+      nc = node_corners + nodeid;
+      zcount = nt->elem_count;
+      P4EST_ASSERT (zcount == nc->elem_count);
+      if (zcount == 1) {
+        ctt_count += 2;
+      }
+      else if (zcount > 1) {
+        ++ctt_count;
+      }
+      P4EST_ASSERT (conn->tree_to_corner[P4EST_CHILDREN * treeid + corner] ==
+                    -1);
+      conn->tree_to_corner[P4EST_CHILDREN * treeid + corner] = nodeid;
+      pt = (p4est_topidx_t *) sc_array_push (nt);
+      *pt = treeid;
+      ct = (int8_t *) sc_array_push (nc);
+      *ct = (int8_t) corner;
+    }
     ttv += P4EST_CHILDREN;
   }
 
   /* single faces are on the boundary and need not be changed */
   sc_hash_array_destroy (face_ha);
+
+  /* complete edge identification */
 #ifdef P4_TO_P8
   P4EST_ASSERT (edge_to_pz.elem_count == (size_t) real_edges);
   conn->num_edges = real_edges;
@@ -1851,11 +1901,11 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
                                                   conn->edge_to_edge +
                                                   ett_offset,
                                                   ei->trees.elem_count,
-                                                  ntrees);
+                                                  ntree);
     P4EST_ASSERT (flipped == 0);
-    if (ta->elem_count == 0) {
+    if (eta->elem_count == 0) {
       /* erase all references to this redundant edge */
-      P4EST_ASSERT (ntrees[0] != -1 || ntrees[1] != -1);
+      P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1);
       for (egz = 0; egz < ei->trees.elem_count; ++egz) {
         pt = (p4est_topidx_t *) sc_array_index (&ei->trees, egz);
         et = (int8_t *) sc_array_index (&ei->edges, egz);
@@ -1868,9 +1918,9 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
     }
     else {
       /* accept edge as non-redundant */
-      P4EST_ASSERT (ei->trees.elem_count == ta->elem_count
-                    + 1 + (ntrees[0] != -1) + (ntrees[1] != -1));
-      sc_array_reset (ta);
+      P4EST_ASSERT (ei->trees.elem_count == eta->elem_count
+                    + 1 + (ntree[0] != -1) + (ntree[1] != -1));
+      sc_array_reset (eta);
       if (real_edges > 0) {
         for (egz = 0; egz < ei->trees.elem_count; ++egz) {
           pt = (p4est_topidx_t *) sc_array_index (&ei->trees, egz);
@@ -1920,6 +1970,112 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   }
   sc_array_reset (&edge_array);
 #endif /* P4_TO_P8 */
+
+  /* complete corner identification */
+  P4EST_ASSERT (real_corners == 0);
+  conn->num_corners = conn->num_vertices;
+  conn->ctt_offset = P4EST_ALLOC (p4est_topidx_t, conn->num_corners + 1);
+  conn->corner_to_tree = P4EST_ALLOC (p4est_topidx_t, ctt_count);
+  conn->corner_to_corner = P4EST_ALLOC (int8_t, ctt_count);
+  ctt_corner = 0;
+  ctt_offset = 0;
+  for (nodeid = 0; nodeid < conn->num_vertices; ++nodeid) {
+    nt = node_trees + nodeid;
+    nc = node_corners + nodeid;
+    zcount = nt->elem_count;
+    P4EST_ASSERT (zcount == nc->elem_count);
+    if (zcount <= 1) {
+      /* isolated corner does not count */
+      if (zcount > 0) {
+        pt = (p4est_topidx_t *) sc_array_index (nt, 0);
+        ct = (int8_t *) sc_array_index (nc, 0);
+        P4EST_ASSERT (0 <= *pt && *pt < conn->num_trees);
+        P4EST_ASSERT (0 <= *ct && *ct < P4EST_CHILDREN);
+        P4EST_ASSERT (conn->tree_to_corner[P4EST_CHILDREN * *pt + *ct] ==
+                      nodeid);
+        conn->tree_to_corner[P4EST_CHILDREN * *pt + *ct] = -1;
+      }
+      ++real_corners;
+    }
+    else {
+      /* set up corner connection information */
+      for (pz = 0; pz < zcount; ++pz) {
+        pt = (p4est_topidx_t *) sc_array_index (nt, pz);
+        ct = (int8_t *) sc_array_index (nc, pz);
+        P4EST_ASSERT (0 <= *pt && *pt < conn->num_trees);
+        P4EST_ASSERT (0 <= *ct && *ct < P4EST_CHILDREN);
+        P4EST_ASSERT (conn->tree_to_corner[P4EST_CHILDREN * *pt + *ct]
+                      == nodeid);
+        if (real_corners > 0) {
+          conn->tree_to_corner[P4EST_CHILDREN * *pt + *ct] -= real_corners;
+        }
+        conn->corner_to_tree[ctt_offset + pz] = *pt;
+        conn->corner_to_corner[ctt_offset + pz] = *ct;
+      }
+
+      /* remove this corner again if it is redundant */
+      pt = (p4est_topidx_t *) sc_array_index (nt, 0);
+      ct = (int8_t *) sc_array_index (nc, 0);
+      cinfo.icorner = -1;       /* unused */
+      ignored = p4est_find_corner_transform_internal (conn, *pt, *ct, &cinfo,
+                                                      conn->corner_to_tree +
+                                                      ctt_offset,
+                                                      conn->corner_to_corner +
+                                                      ctt_offset,
+                                                      zcount, ntree);
+      if (cta->elem_count == 0) {
+        /* erase all references to this redundant corner */
+        P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1
+#ifdef P4_TO_P8
+                      || ntree[2] != -1
+#endif
+          );
+        for (pz = 0; pz < zcount; ++pz) {
+          pt = (p4est_topidx_t *) sc_array_index (nt, pz);
+          ct = (int8_t *) sc_array_index (nc, pz);
+          P4EST_ASSERT (conn->tree_to_corner[P4EST_CHILDREN * *pt + *ct]
+                        == nodeid - real_corners);
+          conn->tree_to_corner[P4EST_CHILDREN * *pt + *ct] = -1;
+        }
+        ++real_corners;
+      }
+      else {
+        /* accept corner as non-redundant */
+#ifdef P4EST_DEBUG
+        expected_count =
+          cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
+#ifdef P4_TO_P8
+        expected_count += (ntree[2] != -1);
+#endif
+        P4EST_ASSERT (zcount == expected_count + ignored);
+#endif
+        sc_array_reset (cta);
+        conn->ctt_offset[ctt_corner++] = ctt_offset;
+        ctt_offset += (p4est_topidx_t) zcount;
+      }
+    }
+  }
+  P4EST_ASSERT (ctt_corner == conn->num_corners - real_corners);
+  P4EST_ASSERT (ctt_offset <= ctt_count);
+  conn->ctt_offset[ctt_corner] = ctt_offset;
+  if (real_corners > 0) {
+    conn->num_corners -= real_corners;
+    conn->ctt_offset = P4EST_REALLOC (conn->ctt_offset, p4est_topidx_t,
+                                      conn->num_corners + 1);
+    conn->corner_to_tree =
+      P4EST_REALLOC (conn->corner_to_tree, p4est_topidx_t, ctt_offset);
+    conn->corner_to_corner =
+      P4EST_REALLOC (conn->corner_to_corner, int8_t, ctt_offset);
+  }
+  /* clean up storage for all corners */
+  for (nodeid = 0; nodeid < conn->num_vertices; ++nodeid) {
+    sc_array_reset (node_trees + nodeid);
+    sc_array_reset (node_corners + nodeid);
+  }
+  P4EST_FREE (node_trees);
+  P4EST_FREE (node_corners);
+
+  /* and be done */
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 }
 
