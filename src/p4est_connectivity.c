@@ -608,10 +608,12 @@ void
 p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {
   int                 retval;
-  char                magic6[6];
+  int                 has_tree_attr;
+  char                magic8[8];
+  char                pkgversion24[24];
   size_t              u64z, topsize, int8size;
   size_t              tcount;
-  uint64_t            array8[8];
+  uint64_t            array10[10];
   p4est_topidx_t      num_vertices, num_trees;
   p4est_topidx_t      num_edges, num_ett, num_corners, num_ctt;
   FILE               *file;
@@ -631,31 +633,39 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 #endif
   num_corners = conn->num_corners;
   num_ctt = conn->ctt_offset[num_corners];
+  has_tree_attr = (conn->tree_to_attr != NULL);
 
-  strncpy (magic6, P4EST_STRING, 6);
-  sc_fwrite (magic6, 6, 1, file, "write magic");
+  strncpy (magic8, P4EST_STRING, 8);
+  sc_fwrite (magic8, 8, 1, file, "write magic");
+  strncpy (pkgversion24, P4EST_PACKAGE_VERSION, 24);
+  sc_fwrite (pkgversion24, 8, 3, file, "write package version");
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);
   int8size = sizeof (int8_t);
-  array8[0] = P4EST_ONDISK_FORMAT;
-  array8[1] = (uint64_t) topsize;
-  array8[2] = (uint64_t) num_vertices;
-  array8[3] = (uint64_t) num_trees;
-  array8[4] = (uint64_t) num_edges;
-  array8[5] = (uint64_t) num_ett;
-  array8[6] = (uint64_t) num_corners;
-  array8[7] = (uint64_t) num_ctt;
-  sc_fwrite (array8, u64z, 8, file, "write header");
+  array10[0] = P4EST_ONDISK_FORMAT;
+  array10[1] = (uint64_t) topsize;
+  array10[2] = (uint64_t) num_vertices;
+  array10[3] = (uint64_t) num_trees;
+  array10[4] = (uint64_t) num_edges;
+  array10[5] = (uint64_t) num_ett;
+  array10[6] = (uint64_t) num_corners;
+  array10[7] = (uint64_t) num_ctt;
+  array10[8] = (uint64_t) has_tree_attr;
+  array10[9] = (uint64_t) 0;
+  sc_fwrite (array10, u64z, 10, file, "write header");
 
-  if (num_vertices > 0)
-    sc_fwrite (conn->vertices, sizeof (double), 3 * num_vertices, file,
+  if (num_vertices > 0) {
+    tcount = (size_t) (3 * num_vertices);
+    sc_fwrite (conn->vertices, sizeof (double), tcount, file,
                "write vertices");
+  }
 
 #ifdef P4_TO_P8
-  tcount = (size_t) (P8EST_EDGES * num_trees);
-  if (num_edges > 0)
+  if (num_edges > 0) {
+    tcount = (size_t) (P8EST_EDGES * num_trees);
     sc_fwrite (conn->tree_to_edge, topsize, tcount, file, "write tte");
+  }
 #endif
 
   tcount = (size_t) (P4EST_CHILDREN * num_trees);
@@ -667,6 +677,12 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
   tcount = (size_t) (P4EST_FACES * num_trees);
   sc_fwrite (conn->tree_to_tree, topsize, tcount, file, "write ttt");
   sc_fwrite (conn->tree_to_face, int8size, tcount, file, "write ttf");
+
+  if (has_tree_attr) {
+    tcount = (size_t) num_trees;
+    sc_fwrite (conn->tree_to_attr, int8size, tcount, file,
+               "write tree_to_attr");
+  }
 
 #ifdef P4_TO_P8
   sc_fwrite (conn->ett_offset, topsize, num_edges + 1, file,
@@ -692,10 +708,12 @@ p4est_connectivity_t *
 p4est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
-  char                magic6[6];
+  int                 has_tree_attr;
+  char                magic8[8];
+  char                pkgversion24[24];
   size_t              u64z, topsize, int8size;
   size_t              tcount;
-  uint64_t            array8[8];
+  uint64_t            array10[10];
   p4est_topidx_t      num_vertices, num_trees;
   p4est_topidx_t      num_edges, num_ett, num_corners, num_ctt;
   FILE               *file;
@@ -704,25 +722,27 @@ p4est_connectivity_load (const char *filename, long *length)
   file = fopen (filename, "rb");
   SC_CHECK_ABORT (file != NULL, "file open");
 
-  sc_fread (magic6, 6, 1, file, "read magic");
-  SC_CHECK_ABORT (strncmp (magic6, P4EST_STRING, 6) == 0, "invalid magic");
+  sc_fread (magic8, 8, 1, file, "read magic");
+  SC_CHECK_ABORT (strncmp (magic8, P4EST_STRING, 8) == 0, "invalid magic");
+  sc_fread (pkgversion24, 8, 3, file, "read package version");
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);
   int8size = sizeof (int8_t);
-  sc_fread (array8, u64z, 8, file, "read header");
+  sc_fread (array10, u64z, 10, file, "read header");
 
-  SC_CHECK_ABORT (array8[0] == P4EST_ONDISK_FORMAT,
+  SC_CHECK_ABORT (array10[0] == P4EST_ONDISK_FORMAT,
                   "on-disk format mismatch");
-  SC_CHECK_ABORT (array8[1] == (uint64_t) topsize,
+  SC_CHECK_ABORT (array10[1] == (uint64_t) topsize,
                   "p4est_topidx_t size mismatch");
 
-  num_vertices = (p4est_topidx_t) array8[2];
-  num_trees = (p4est_topidx_t) array8[3];
-  num_edges = (p4est_topidx_t) array8[4];
-  num_ett = (p4est_topidx_t) array8[5];
-  num_corners = (p4est_topidx_t) array8[6];
-  num_ctt = (p4est_topidx_t) array8[7];
+  num_vertices = (p4est_topidx_t) array10[2];
+  num_trees = (p4est_topidx_t) array10[3];
+  num_edges = (p4est_topidx_t) array10[4];
+  num_ett = (p4est_topidx_t) array10[5];
+  num_corners = (p4est_topidx_t) array10[6];
+  num_ctt = (p4est_topidx_t) array10[7];
+  has_tree_attr = (array10[8] & 1);
   SC_CHECK_ABORT (num_vertices >= 0, "negative num_vertices");
   SC_CHECK_ABORT (num_trees >= 0, "negative num_trees");
 #ifdef P4_TO_P8
@@ -740,15 +760,18 @@ p4est_connectivity_load (const char *filename, long *length)
                                  num_edges, num_ett,
 #endif
                                  num_corners, num_ctt);
+  p4est_connectivity_set_attr (conn, has_tree_attr);
 
-  if (num_vertices > 0)
-    sc_fread (conn->vertices, sizeof (double), 3 * num_vertices, file,
-              "read vertices");
+  if (num_vertices > 0) {
+    tcount = (size_t) (3 * num_vertices);
+    sc_fread (conn->vertices, sizeof (double), tcount, file, "read vertices");
+  }
 
 #ifdef P4_TO_P8
-  tcount = (size_t) (P8EST_EDGES * num_trees);
-  if (num_edges > 0)
+  if (num_edges > 0) {
+    tcount = (size_t) (P8EST_EDGES * num_trees);
     sc_fread (conn->tree_to_edge, topsize, tcount, file, "read tte");
+  }
 #endif
 
   tcount = (size_t) (P4EST_CHILDREN * num_trees);
@@ -760,6 +783,12 @@ p4est_connectivity_load (const char *filename, long *length)
   tcount = (size_t) (P4EST_FACES * num_trees);
   sc_fread (conn->tree_to_tree, topsize, tcount, file, "read ttt");
   sc_fread (conn->tree_to_face, int8size, tcount, file, "read ttf");
+
+  if (has_tree_attr) {
+    tcount = (size_t) num_trees;
+    sc_fread (conn->tree_to_attr, int8size, tcount, file,
+              "write tree_to_attr");
+  }
 
 #ifdef P4_TO_P8
   sc_fread (conn->ett_offset, topsize, num_edges + 1, file,

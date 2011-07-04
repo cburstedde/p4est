@@ -271,6 +271,9 @@ main (int argc, char **argv)
   connectivity->vertices = NULL;
   P4EST_FREE (connectivity->tree_to_vertex);
   connectivity->tree_to_vertex = NULL;
+  p4est_connectivity_set_attr (connectivity, 1);
+  memset (connectivity->tree_to_attr, 0,
+          connectivity->num_trees * sizeof (int8_t));
   test_loadsave (connectivity, prefix, mpicomm, mpirank);
 
   /* clean up and exit */

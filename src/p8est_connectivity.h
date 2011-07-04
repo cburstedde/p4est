@@ -47,7 +47,7 @@ SC_EXTERN_C_BEGIN;
  * p8est_connectivity, p8est, or any other 3D data structure changes.
  * The format for reading and writing must be the same.
  */
-#define P8EST_ONDISK_FORMAT 0x3000007
+#define P8EST_ONDISK_FORMAT 0x3000008
 
 /* Several functions involve relationships between neighboring trees and/or
  * quadrants, and their behavior depends on how one defines adjacency:
