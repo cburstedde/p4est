@@ -236,7 +236,23 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
   P4EST_FREE (conn->corner_to_tree);
   P4EST_FREE (conn->corner_to_corner);
 
+  p4est_connectivity_set_attr (conn, 0);
+
   P4EST_FREE (conn);
+}
+
+void
+p4est_connectivity_set_attr (p4est_connectivity_t * conn,
+                             int enable_tree_attr)
+{
+  if (enable_tree_attr) {
+    P4EST_ASSERT (conn->tree_to_attr == NULL);
+    conn->tree_to_attr = P4EST_ALLOC (int8_t, conn->num_trees);
+  }
+  else {
+    P4EST_FREE (conn->tree_to_attr);
+    conn->tree_to_attr = NULL;
+  }
 }
 
 int

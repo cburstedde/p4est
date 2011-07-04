@@ -121,6 +121,8 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
+ *
+ * The *_to_attr arrays may have arbitrary contents defined by the user.
  */
 typedef struct p8est_connectivity
 {
@@ -131,6 +133,7 @@ typedef struct p8est_connectivity
 
   double             *vertices;
   p4est_topidx_t     *tree_to_vertex;
+  int8_t             *tree_to_attr;
 
   p4est_topidx_t     *tree_to_tree;
   int8_t             *tree_to_face;
@@ -230,6 +233,7 @@ extern const int    p8est_child_corner_faces[8][8];
 extern const int    p8est_child_corner_edges[8][8];
 
 /** Allocate a connectivity structure.
+ * The attribute fields are initialized to NULL.
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.
  * \param [in] num_edges      Number of tree-connecting edges.
@@ -246,6 +250,7 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
                                               p4est_topidx_t num_ctt);
 
 /** Allocate a connectivity structure and populate from constants.
+ * The attribute fields are initialized to NULL.
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.
  * \param [in] num_edges      Number of tree-connecting edges.
@@ -274,10 +279,19 @@ p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
-/** Destroy a connectivity structure.
+/** Destroy a connectivity structure.  Also destroy all attributes.
  */
 void                p8est_connectivity_destroy (p8est_connectivity_t *
                                                 connectivity);
+
+/** Allocate or free the attribute fields in a connectivity.
+ * \param [in,out] conn         The conn->*_to_attr fields must either be NULL
+ *                              or previously be allocated by this function.
+ * \param [in] enable_tree_attr If false, tree_to_attr is freed (NULL is ok).
+ *                              If true, it must be NULL and is allocated.
+ */
+void                p8est_connectivity_set_attr (p8est_connectivity_t * conn,
+                                                 int enable_tree_attr);
 
 /** Examine a connectivity structure.
  * \return  Returns true if structure is valid, false otherwise.

@@ -115,6 +115,7 @@
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
+#define p4est_connectivity_set_attr     p8est_connectivity_set_attr
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
 #define p4est_connectivity_is_equal     p8est_connectivity_is_equal
 #define p4est_connectivity_save         p8est_connectivity_save
