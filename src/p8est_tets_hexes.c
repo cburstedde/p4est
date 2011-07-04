@@ -664,7 +664,10 @@ p8est_tets_connectivity_new (p8est_tets_t * ptg,
 p8est_connectivity_t *
 p8est_connectivity_new_tets (p8est_tets_t * ptg)
 {
+  int                *pint, i;
+  int8_t              attr;
   size_t              ez, znum_edges;
+  size_t              tz, znum_tets;
   sc_hash_array_t    *edge_ha, *face_ha;
   sc_array_t          edge_array;
   p8est_tet_edge_info_t *ei;
@@ -694,6 +697,20 @@ p8est_connectivity_new_tets (p8est_tets_t * ptg)
   }
   sc_array_reset (&edge_array);
   sc_hash_array_destroy (face_ha);
+
+  /* transfer tree tags */
+  if (ptg->tet_attributes != NULL) {
+    znum_tets = ptg->tet_attributes->elem_count;
+    P4EST_ASSERT (4 * znum_tets == (size_t) conn->num_trees);
+    p8est_connectivity_set_attr (conn, 1);
+    for (tz = 0; tz < znum_tets; ++tz) {
+      pint = (int *) sc_array_index (ptg->tet_attributes, tz);
+      attr = (int8_t) pint[0];
+      for (i = 0; i < 4; ++i) {
+        conn->tree_to_attr[4 * tz + i] = attr;
+      }
+    }
+  }
 
   /* connect p4est tree through faces, edges, and corners */
   p8est_connectivity_complete (conn);

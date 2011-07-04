@@ -79,6 +79,7 @@ p4est_topidx_t      p8est_tets_make_righthanded (p8est_tets_t * ptg);
 
 /** Create a fully populated connectivity structure from tetgen information.
  * \param [in] ptg  A p8est_tets_t structure with node and tet information.
+ *                  If it contains attributes they will be cast with (int8_t).
  * \return          Connectivity (free with p8est_connectivity_destroy).
  */
 p8est_connectivity_t *p8est_connectivity_new_tets (p8est_tets_t * ptg);
