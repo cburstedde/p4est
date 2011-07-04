@@ -609,8 +609,8 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {
   int                 retval;
   int                 has_tree_attr;
-  char                magic8[8];
-  char                pkgversion24[24];
+  char                magic8[9];
+  char                pkgversion24[25];
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array10[10];
@@ -636,8 +636,10 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
   has_tree_attr = (conn->tree_to_attr != NULL);
 
   strncpy (magic8, P4EST_STRING, 8);
+  magic8[8] = '\0';
   sc_fwrite (magic8, 8, 1, file, "write magic");
   strncpy (pkgversion24, P4EST_PACKAGE_VERSION, 24);
+  pkgversion24[24] = '\0';
   sc_fwrite (pkgversion24, 8, 3, file, "write package version");
 
   u64z = sizeof (uint64_t);
@@ -709,8 +711,8 @@ p4est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
   int                 has_tree_attr;
-  char                magic8[8];
-  char                pkgversion24[24];
+  char                magic8[9];
+  char                pkgversion24[25];
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array10[10];
@@ -723,8 +725,10 @@ p4est_connectivity_load (const char *filename, long *length)
   SC_CHECK_ABORT (file != NULL, "file open");
 
   sc_fread (magic8, 8, 1, file, "read magic");
+  magic8[8] = '\0';
   SC_CHECK_ABORT (strncmp (magic8, P4EST_STRING, 8) == 0, "invalid magic");
   sc_fread (pkgversion24, 8, 3, file, "read package version");
+  pkgversion24[24] = '\0';
 
   u64z = sizeof (uint64_t);
   topsize = sizeof (p4est_topidx_t);
