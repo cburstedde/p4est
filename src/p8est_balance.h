@@ -28,22 +28,22 @@
 
 int                 p8est_balance_face_test (p8est_quadrant_t * restrict q,
                                              p8est_quadrant_t * restrict p,
-                                             int face, p8est_balance_type_t
+                                             int face, p8est_connect_type_t
                                              balance, sc_array_t * seeds);
 
 int                 p8est_balance_corner_test (p8est_quadrant_t * restrict q,
                                                p8est_quadrant_t * restrict p,
-                                               int face, p8est_balance_type_t
+                                               int face, p8est_connect_type_t
                                                balance, sc_array_t * seeds);
 
 int                 p8est_balance_edge_test (p8est_quadrant_t * restrict q,
                                              p8est_quadrant_t * restrict p,
-                                             int face, p8est_balance_type_t
+                                             int face, p8est_connect_type_t
                                              balance, sc_array_t * seeds);
 
 int                 p8est_balance_test (p8est_quadrant_t * restrict q,
                                         p8est_quadrant_t * restrict p,
-                                        p8est_balance_type_t balance,
+                                        p8est_connect_type_t balance,
                                         sc_array_t * seeds);
 
 #endif

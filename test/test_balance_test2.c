@@ -31,7 +31,7 @@
 
 int
 check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
-                    p4est_balance_type_t b, sc_array_t * seeds)
+                    p4est_connect_type_t b, sc_array_t * seeds)
 {
   int                 ib;
   int                 level = q->level;
@@ -52,17 +52,17 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
   p4est_quadrant_sibling (q, s, 0);
 
 #ifndef P4_TO_P8
-  if (b == P4EST_BALANCE_FACE) {
+  if (b == P4EST_CONNECT_FACE) {
     ib = 0;
   }
   else {
     ib = 1;
   }
 #else
-  if (b == P8EST_BALANCE_FACE) {
+  if (b == P8EST_CONNECT_FACE) {
     ib = 0;
   }
-  else if (b == P8EST_BALANCE_EDGE) {
+  else if (b == P8EST_CONNECT_EDGE) {
     ib = 1;
   }
   else {
@@ -255,33 +255,33 @@ main (int argc, char **argv)
       for (i = ifirst; i <= ilast; i++) {
         p4est_quadrant_set_morton (&q, level, i);
 #ifndef P4_TO_P8
-        testval = p4est_balance_face_test (&q, &p, face, P4EST_BALANCE_FACE,
+        testval = p4est_balance_face_test (&q, &p, face, P4EST_CONNECT_FACE,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P4EST_BALANCE_FACE,
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FACE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p4est_balance_face_test error");
         compare_seeds (seeds, seeds_check);
 #else
-        testval = p4est_balance_face_test (&q, &p, face, P8EST_BALANCE_FACE,
+        testval = p4est_balance_face_test (&q, &p, face, P8EST_CONNECT_FACE,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_FACE,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p8est_balance_face_test error");
         compare_seeds (seeds, seeds_check);
-        testval = p4est_balance_face_test (&q, &p, face, P8EST_BALANCE_EDGE,
+        testval = p4est_balance_face_test (&q, &p, face, P8EST_CONNECT_EDGE,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_EDGE,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_EDGE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p8est_balance_face_test error");
         compare_seeds (seeds, seeds_check);
 #endif
-        testval = p4est_balance_face_test (&q, &p, face, P4EST_BALANCE_FULL,
+        testval = p4est_balance_face_test (&q, &p, face, P4EST_CONNECT_FULL,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P4EST_BALANCE_FULL,
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FULL,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p4est_balance_face_test error");
         compare_seeds (seeds, seeds_check);
@@ -300,24 +300,24 @@ main (int argc, char **argv)
       ilast = p4est_quadrant_linear_id (&desc, level);
       for (i = ifirst; i <= ilast; i++) {
         p4est_quadrant_set_morton (&q, level, i);
-        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_BALANCE_FACE,
+        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_FACE,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_FACE,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p8est_balance_edge_test error");
         compare_seeds (seeds, seeds_check);
-        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_BALANCE_EDGE,
+        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_EDGE,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_EDGE,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_EDGE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p8est_balance_edge_test error");
         compare_seeds (seeds, seeds_check);
-        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_BALANCE_FULL,
+        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_FULL,
                                            seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_FULL,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FULL,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval, "p8est_balance_edge_test error");
         compare_seeds (seeds, seeds_check);
@@ -338,39 +338,39 @@ main (int argc, char **argv)
         p4est_quadrant_set_morton (&q, level, i);
 #ifndef P4_TO_P8
         testval =
-          p4est_balance_corner_test (&q, &p, corner, P4EST_BALANCE_FACE,
+          p4est_balance_corner_test (&q, &p, corner, P4EST_CONNECT_FACE,
                                      seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P4EST_BALANCE_FACE,
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FACE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval,
                         "p4est_balance_corner_test error");
         compare_seeds (seeds, seeds_check);
 #else
         testval =
-          p4est_balance_corner_test (&q, &p, corner, P8EST_BALANCE_FACE,
+          p4est_balance_corner_test (&q, &p, corner, P8EST_CONNECT_FACE,
                                      seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_FACE,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval,
                         "p8est_balance_corner_test error");
         compare_seeds (seeds, seeds_check);
         testval =
-          p4est_balance_corner_test (&q, &p, corner, P8EST_BALANCE_EDGE,
+          p4est_balance_corner_test (&q, &p, corner, P8EST_CONNECT_EDGE,
                                      seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P8EST_BALANCE_EDGE,
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_EDGE,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval,
                         "p8est_balance_corner_test error");
         compare_seeds (seeds, seeds_check);
 #endif
         testval =
-          p4est_balance_corner_test (&q, &p, corner, P4EST_BALANCE_FULL,
+          p4est_balance_corner_test (&q, &p, corner, P4EST_CONNECT_FULL,
                                      seeds);
         standard_seeds (seeds);
-        checkval = check_balance_test (&q, &p, P4EST_BALANCE_FULL,
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FULL,
                                        seeds_check);
         SC_CHECK_ABORT (testval == checkval,
                         "p4est_balance_corner_test error");

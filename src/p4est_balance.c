@@ -892,7 +892,7 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
 int
 p4est_balance_face_test (p4est_quadrant_t * restrict q,
                          p4est_quadrant_t * restrict p,
-                         int face, p4est_balance_type_t balance,
+                         int face, p4est_connect_type_t balance,
                          sc_array_t * seeds)
 {
   p4est_quadrant_t    temp = *p;
@@ -911,11 +911,11 @@ p4est_balance_face_test (p4est_quadrant_t * restrict q,
   P4EST_ASSERT (seeds == NULL ||
                 seeds->elem_size == sizeof (p4est_quadrant_t));
 
-  if (balance == P4EST_BALANCE_FULL) {
+  if (balance == P4EST_CONNECT_FULL) {
     ibalance = P4EST_DIM - 1;
   }
 #ifdef P4_TO_P8
-  else if (balance == P8EST_BALANCE_EDGE) {
+  else if (balance == P8EST_CONNECT_EDGE) {
     ibalance = 1;
   }
 #endif
@@ -1026,7 +1026,7 @@ p4est_balance_face_test (p4est_quadrant_t * restrict q,
 int
 p4est_balance_corner_test (p4est_quadrant_t * restrict q,
                            p4est_quadrant_t * restrict p,
-                           int corner, p4est_balance_type_t balance,
+                           int corner, p4est_connect_type_t balance,
                            sc_array_t * seeds)
 {
   p4est_quadrant_t    temp = *p;
@@ -1037,11 +1037,11 @@ p4est_balance_corner_test (p4est_quadrant_t * restrict q,
   P4EST_ASSERT (seeds == NULL ||
                 seeds->elem_size == sizeof (p4est_quadrant_t));
 
-  if (balance == P4EST_BALANCE_FULL) {
+  if (balance == P4EST_CONNECT_FULL) {
     ibalance = P4EST_DIM - 1;
   }
 #ifdef P4_TO_P8
-  else if (balance == P8EST_BALANCE_EDGE) {
+  else if (balance == P8EST_CONNECT_EDGE) {
     ibalance = 1;
   }
 #endif
@@ -1073,7 +1073,7 @@ p4est_balance_corner_test (p4est_quadrant_t * restrict q,
 int
 p8est_balance_edge_test (p4est_quadrant_t * restrict q,
                          p4est_quadrant_t * restrict p,
-                         int edge, p4est_balance_type_t balance,
+                         int edge, p4est_connect_type_t balance,
                          sc_array_t * seeds)
 {
   p4est_quadrant_t    temp = *p;
@@ -1087,11 +1087,11 @@ p8est_balance_edge_test (p4est_quadrant_t * restrict q,
   P4EST_ASSERT (seeds == NULL ||
                 seeds->elem_size == sizeof (p4est_quadrant_t));
 
-  if (balance == P4EST_BALANCE_FULL) {
+  if (balance == P4EST_CONNECT_FULL) {
     ibalance = P4EST_DIM - 1;
   }
 #ifdef P4_TO_P8
-  else if (balance == P8EST_BALANCE_EDGE) {
+  else if (balance == P8EST_CONNECT_EDGE) {
     ibalance = 1;
   }
 #endif
@@ -1168,7 +1168,7 @@ p8est_balance_edge_test (p4est_quadrant_t * restrict q,
 int
 p4est_balance_test (p4est_quadrant_t * restrict q,
                     p4est_quadrant_t * restrict p,
-                    p4est_balance_type_t balance, sc_array_t * seeds)
+                    p4est_connect_type_t balance, sc_array_t * seeds)
 {
   int                 outside[P4EST_DIM];
   int                 i;

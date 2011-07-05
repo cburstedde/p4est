@@ -61,9 +61,9 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
 {
 #ifndef P4_TO_P8
-  p4est_balance_type_t balance = P4EST_BALANCE_FACE;
+  p4est_connect_type_t balance = P4EST_CONNECT_FACE;
 #else
-  p4est_balance_type_t balance = P8EST_BALANCE_FACE;
+  p4est_connect_type_t balance = P8EST_CONNECT_FACE;
 #endif
   p4est_quadrant_t    desc;
   int                 i;
