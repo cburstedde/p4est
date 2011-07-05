@@ -31,6 +31,342 @@
 #include <p4est_search.h>
 #endif /* !P4_TO_P8 */
 
+/* We have a location, and a \a level quadrant that must be shifted by
+ * \a distance (>= 0) to be at the location.  This returns the largest quadrant
+ * that can exist at \a location and be in balance with the \a level quadrant.
+ */
+static inline       int8_t
+p4est_balance_kernel_1d (p4est_qcoord_t distance, int8_t level)
+{
+  int                 shift = P4EST_MAXLEVEL - (int) level;
+  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
+  /* the distance only makes sense if it is an integer number of \a level
+   * distances */
+  P4EST_ASSERT (distance >= 0);
+  P4EST_ASSERT (!(distance & (~(((p4est_qcoord_t) - 1) << shift))));
+  distance >>= shift;
+  /* The theory says we should use ((distance + 1)&(~1) + 1), but
+   * using distance + 1 is equivalent for all distance >= 0 */
+  distance++;
+
+  return SC_MAX (0, level - (int8_t) SC_LOG2_32 (distance));
+}
+
+/* This is the kernel for 2D balance with face-only balancing */
+static inline       int8_t
+p4est_balance_kernel_2d (p4est_qcoord_t dx, p4est_qcoord_t dy, int8_t level)
+{
+  int                 shift = P4EST_MAXLEVEL - (int) level;
+  p4est_qcoord_t      distance;
+
+  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
+  /* the distance only makes sense if it is an integer number of \a level
+   * distances */
+  P4EST_ASSERT (dx >= 0);
+  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (dy >= 0);
+  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
+
+  dx >>= shift;
+  /* get the smallest even number greater than or equal to dx */
+  dx = (dx + 1) & (~((p4est_qcoord_t) 0x1));
+
+  dy >>= shift;
+  /* get the smallest even number greater than or equal to dy */
+  dy = (dy + 1) & (~((p4est_qcoord_t) 0x1));
+
+  /* the + 1 guarantees the correct answer even for (0, 0) */
+  distance = dx + dy + 1;
+
+  return SC_MAX (0, level - (int8_t) SC_LOG2_32 (distance));
+}
+
+#ifdef P4_TO_P8
+/* This is the kernel for 3d balance with face and edge balancing */
+static inline       int8_t
+p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
+                              p4est_qcoord_t dz, int8_t level)
+{
+  int                 shift = P4EST_MAXLEVEL - (int) level;
+  int                 xbit, ybit, zbit;
+  int                 maxbit, thisbit;
+  int                 count;
+
+  P4EST_ASSERT (dx >= 0);
+  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (dy >= 0);
+  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (dz >= 0);
+  P4EST_ASSERT (!(dz & (~(((p4est_qcoord_t) - 1) << shift))));
+
+  if (!dx && !dy && !dz) {
+    return level;
+  }
+
+  dx >>= shift;
+  /* get the smallest even number greater than or equal to dx */
+  dx = (dx + 1) & (~((p4est_qcoord_t) 0x1));
+
+  dy >>= shift;
+  /* get the smallest even number greater than or equal to dy */
+  dy = (dy + 1) & (~((p4est_qcoord_t) 0x1));
+
+  dz >>= shift;
+  /* get the smallest even number greater than or equal to dz */
+  dz = (dz + 1) & (~((p4est_qcoord_t) 0x1));
+
+  xbit = SC_LOG2_32 (dx);
+  maxbit = xbit;
+  ybit = SC_LOG2_32 (dy);
+  maxbit = SC_MAX (maxbit, ybit);
+  zbit = SC_LOG2_32 (dz);
+  maxbit = SC_MAX (maxbit, zbit);
+
+  P4EST_ASSERT (maxbit >= 1);
+
+  count = (xbit == maxbit);
+  count += (ybit == maxbit);
+  count += (zbit == maxbit);
+
+  switch (count) {
+  case 1:
+    /* There is always a path where at most one of the other two dimensions
+     * adds a bit in this position, so there is always a path where we don't
+     * create a more significant bit */
+    return SC_MAX (0, level - (int8_t) maxbit);
+  case 2:
+    /* This is the start of a chain of 2s.  If this chain ends in 0 or 1,
+     * there is always a path where we don't add a more significant bit; if
+     * this chain ends in a 3, there is always a path where only one dimension
+     * adds a more significant bit */
+    thisbit = maxbit - 1;
+    do {
+      P4EST_ASSERT (thisbit >= 0);
+      count = ((dx & (1 << thisbit)) != 0);
+      count += ((dy & (1 << thisbit)) != 0);
+      count += ((dz & (1 << thisbit)) != 0);
+      switch (count) {
+      case 0:
+      case 1:
+        return SC_MAX (0, level - (int8_t) maxbit);
+      case 2:
+        break;
+      case 3:
+        return SC_MAX (0, level - (int8_t) (maxbit + 1));
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+      P4EST_ASSERT (count == 2);
+      thisbit--;
+    } while (count == 2);
+    SC_ABORT_NOT_REACHED ();
+    return -1;
+  case 3:
+    /* There is always a path where only one dimension adds a more signifcant
+     * bit */
+    return SC_MAX (0, level - (int8_t) (maxbit + 1));
+  default:
+    SC_ABORT_NOT_REACHED ();
+    return -1;
+  }
+}
+
+static inline int   p8est_balance_2chain (p4est_qcoord_t dx,
+                                          p4est_qcoord_t dy,
+                                          p4est_qcoord_t dz, int thisbit,
+                                          int xbit, int ybit, int zbit);
+
+/* This is the kernel for 3d balance with face balancing only */
+static inline       int8_t
+p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
+                              p4est_qcoord_t dz, int8_t level)
+{
+  int                 shift = P4EST_MAXLEVEL - (int) level;
+  int                 xbit, ybit, zbit;
+  int                 maxbit, thisbit;
+  int                 count;
+
+  P4EST_ASSERT (dx >= 0);
+  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (dy >= 0);
+  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (dz >= 0);
+  P4EST_ASSERT (!(dz & (~(((p4est_qcoord_t) - 1) << shift))));
+
+  if (!dx && !dy && !dz) {
+    return level;
+  }
+
+  dx >>= shift;
+  /* get the smallest even number greater than or equal to dx */
+  dx = (dx + 1) & (~((p4est_qcoord_t) 0x1));
+
+  dy >>= shift;
+  /* get the smallest even number greater than or equal to dy */
+  dy = (dy + 1) & (~((p4est_qcoord_t) 0x1));
+
+  dz >>= shift;
+  /* get the smallest even number greater than or equal to dz */
+  dz = (dz + 1) & (~((p4est_qcoord_t) 0x1));
+
+  xbit = SC_LOG2_32 (dx);
+  maxbit = xbit;
+  ybit = SC_LOG2_32 (dy);
+  maxbit = SC_MAX (maxbit, ybit);
+  zbit = SC_LOG2_32 (dz);
+  maxbit = SC_MAX (maxbit, zbit);
+
+  P4EST_ASSERT (maxbit >= 1);
+
+  count = (xbit == maxbit);
+  count += (ybit == maxbit);
+  count += (zbit == maxbit);
+
+  switch (count) {
+  case 1:
+    /* This is the start of a chain of 1s.  If this chain ends in a 2, 3, or
+     * 03, * then every path results in adding one more significant bit.  If
+     * this chain ends in 00 or 01, then there is a path that results in no
+     * more significant bit.  If this chain ends in 02, we need more
+     * information */
+    thisbit = maxbit - 1;
+    do {
+      P4EST_ASSERT (thisbit >= 0);
+      count = ((dx & (1 << thisbit)) != 0);
+      count += ((dy & (1 << thisbit)) != 0);
+      count += ((dz & (1 << thisbit)) != 0);
+      switch (count) {
+      case 0:
+        if (thisbit-- == 0) {
+          return SC_MAX (0, level - (int8_t) (maxbit + 1));
+        }
+        xbit = (dx & (1 << thisbit));
+        ybit = (dy & (1 << thisbit));
+        zbit = (dz & (1 << thisbit));
+        count = (xbit != 0);
+        count += (ybit != 0);
+        count += (zbit != 0);
+        switch (count) {
+        case 0:
+        case 1:
+          return SC_MAX (0, level - (int8_t) maxbit);
+        case 2:
+          /* If there is a path where this 2 advances only 1 bit, then the
+           * initial one does not advance a bit; otherwise this 2 advances 2
+           * bits, and the initial 1 advances a bit */
+          if (p8est_balance_2chain (dx, dy, dz, thisbit, xbit, ybit, zbit)) {
+            return SC_MAX (0, level - (int8_t) (maxbit + 1));
+          }
+          else {
+            return SC_MAX (0, level - (int8_t) maxbit);
+          }
+        case 3:
+          return SC_MAX (0, level - (int8_t) (maxbit + 1));
+        default:
+          SC_ABORT_NOT_REACHED ();
+          return -1;
+        }
+      case 1:
+        break;
+      case 2:
+      case 3:
+        return SC_MAX (0, level - (int8_t) (maxbit + 1));
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+      P4EST_ASSERT (count == 1);
+      thisbit--;
+    } while (count == 1);
+    SC_ABORT_NOT_REACHED ();
+    return -1;
+  case 2:
+    /* Check to see if there is a path where this 2 advances only 1 bit:
+     * otherwise it advances 2 bits */
+    if (p8est_balance_2chain (dx, dy, dz, maxbit, xbit, ybit, zbit)) {
+      return SC_MAX (0, level - (int8_t) (maxbit + 2));
+    }
+    else {
+      return SC_MAX (0, level - (int8_t) (maxbit + 1));
+    }
+  case 3:
+    /* Every path results in a bit twice more significant */
+    return SC_MAX (0, level - (int8_t) (maxbit + 2));
+  default:
+    SC_ABORT_NOT_REACHED ();
+    return -1;
+  }
+}
+
+static inline int
+p8est_balance_2chain (p4est_qcoord_t dx, p4est_qcoord_t dy, p4est_qcoord_t dz,
+                      int thisbit, int xbit, int ybit, int zbit)
+{
+  int                 zfx = xbit;
+  int                 zfy = ybit;
+  int                 zfz = zbit;
+  int                 count;
+
+  thisbit--;
+
+  P4EST_ASSERT ((zfx != 0) + (zfy != 0) + (zfz != 0) == 2);
+
+  do {
+    P4EST_ASSERT (thisbit >= 0);
+
+    xbit = (dx & (1 << thisbit));
+    ybit = (dy & (1 << thisbit));
+    zbit = (dz & (1 << thisbit));
+    count = (xbit != 0);
+    count += (ybit != 0);
+    count += (zbit != 0);
+
+    switch (count) {
+    case 0:
+      /* if the chain of 2's with at least one zero-free dimension ends in a
+       * 0, then there is always a path where the most significant 2 advances
+       * only one bit */
+      return 0;
+    case 1:
+      /* if the chain of 2's with at least one zero-free dimension ends in a
+       * 1, and that one is in a zero-free dimension, then there is always a
+       * path where the most significant 2 advances only one bit; if the one
+       * is not in a zero-free dimension, we can treat it as though it is a
+       * two that maintains the zero-free dimensions and continue */
+      if ((xbit != 0) && zfx) {
+        return 0;
+      }
+      if ((ybit != 0) && zfy) {
+        return 0;
+      }
+      if ((zbit != 0) && zfy) {
+        return 0;
+      }
+      break;
+    case 2:
+      /* if we no longer have a zero free dimension, then the most significant
+       * 2 advances 2 bits; otherwise we continue */
+      zfx = (zfx && xbit);
+      zfy = (zfy && ybit);
+      zfz = (zfz && zbit);
+      if (!(zfx || zfy || zfz)) {
+        return 1;
+      }
+      break;
+    case 3:
+      /* the most significant 2 advances 2 bits */
+      return 1;
+    default:
+      SC_ABORT_NOT_REACHED ();
+    }
+
+    thisbit--;
+  } while (thisbit >= 0);
+
+  SC_ABORT_NOT_REACHED ();
+  return -1;
+}
+#endif
+
 /* a quadrant q is outside of quadrant p, as a descendent of p's neighbor n
  * outside of \a corner.  We know the \a child of n that contains q.
  * Depending on the \a balance type, q is either relevant (return true) or
@@ -51,7 +387,8 @@ p4est_balance_corner_relevant (int balance, int corner, int child)
 #else
 
 #define p4est_balance_corner_relevant p8est_balance_corner_relevant
-/* assuming face only balance \a corner == 0, only the closest child of n (child 7) and its face neighbors (3, 5, 6) are relevant to p's balance */
+/* assuming face only balance \a corner == 0, only the closest child of n
+ * (child 7) and its face neighbors (3, 5, 6) are relevant to p's balance */
 static const int    p8est_balance_corner_face_relevant[8] =
   { 0, 0, 0, 1, 0, 1, 1, 1 };
 
@@ -509,18 +846,201 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
   p4est_quadrant_t    a;
   int                 cfc;
   int                 cfcextra;
+  int                 i;
 #ifndef P4_TO_P8
   int                 nconextra = 3;
 #else
   int                 nconextra = 9;
   int                 reconextra[3];
-  int                 i;
+  int                 j;
 #endif
   int                 extraid;
+  double              distance;
+  int                 blevel;
 
-#ifdef P4EST_DEBUG
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
+
+  if (q->level <= p->level) {
+    if (consistent != NULL) {
+      *consistent = 1;
+    }
+    if (conextra != NULL) {
+      conextra[nconextra / 2] = p->level;
+    }
+    return;
+  }
+
+  switch (face) {
+  case 0:
+    distance = p->x - q->x;
+    break;
+  case 1:
+    distance = (q->x + P4EST_QUADRANT_LEN (q->level)) -
+      (p->x + P4EST_QUADRANT_LEN (p->level));
+    break;
+  case 2:
+    distance = p->y - q->y;
+    break;
+  case 3:
+    distance = (q->y + P4EST_QUADRANT_LEN (q->level)) -
+      (p->y + P4EST_QUADRANT_LEN (p->level));
+    break;
+#ifdef P4_TO_P8
+  case 4:
+    distance = p->z - q->z;
+    break;
+  case 5:
+    distance = (q->z + P4EST_QUADRANT_LEN (q->level)) -
+      (p->z + P4EST_QUADRANT_LEN (p->level));
+    break;
+#endif
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  blevel = p4est_balance_kernel_1d (distance, q->level);
+
+  if (blevel <= p->level) {
+    if (consistent != NULL) {
+      *consistent = 1;
+    }
+    if (conextra != NULL) {
+      conextra[nconextra / 2] = p->level;
+    }
+    return;
+  }
+
+  if (consistent != NULL) {
+    *consistent = 0;
+  }
+  if (conextra != NULL) {
+    conextra[nconextra / 2] = blevel;
+
+    if (blevel <= p->level + 1) {
+      return;
+    }
+
+    a = *q;
+
+    /* shift a until it is inside p */
+    switch (face) {
+    case 0:
+      a.x = q->x + distance;
+      break;
+    case 1:
+      a.x = q->x - distance;
+      break;
+    case 2:
+      a.y = q->y + distance;
+      break;
+    case 3:
+      a.y = q->y - distance;
+      break;
+#ifdef P4_TO_P8
+    case 4:
+      a.z = q->z + distance;
+      break;
+    case 5:
+      a.z = q->z - distance;
+      break;
+#endif
+    default:
+      SC_ABORT_NOT_REACHED ();
+    }
+
+    /* get a's ancestor on blevel - 1 */
+    a.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
+    a.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
+#ifdef P4_TO_P8
+    a.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
+#endif
+    a.level = blevel - 1;
+
+#ifndef P4_TO_P8
+    for (i = -1; i <= 1; i += 2) {
+      temp = a;
+      /* a is in a neighboring family groupone family group over from temp */
+      if (face / 2 == 0) {
+        temp.y += i * P4EST_QUADRANT_LEN (blevel - 1);
+      }
+      else {
+        temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
+      }
+
+      if ((temp.x & (-1 << (P4EST_MAXLEVEL - (p->level)))) != p->x ||
+          (temp.y & (-1 << (P4EST_MAXLEVEL - (p->level)))) != p->y) {
+        /* only test other descendents of p */
+        continue;
+      }
+
+      child = p4est_face_corners[face][(1 - i) / 2];
+
+      p4est_bal_corner_con_internal (q, &temp, child, balance, &recon,
+                                     recurse);
+
+      conextra[1 + i] = recon ? blevel - 1 : blevel;
+    }
+#else
+    for (j = -1; j <= 1; j++) {
+      for (i = -1; i <= 1; i++) {
+        if (!i & !j) {
+          continue;
+        }
+        temp = a;
+        switch (face / 2) {
+        case 0:
+          temp.y += i * P4EST_QUADRANT_LEN (blevel - 1);
+          temp.z += j * P4EST_QUADRANT_LEN (blevel - 1);
+          break;
+        case 1:
+          temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
+          temp.z += j * P4EST_QUADRANT_LEN (blevel - 1);
+          break;
+        case 2:
+          temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
+          temp.y += j * P4EST_QUADRANT_LEN (blevel - 1);
+          break;
+        default:
+          SC_ABORT_NOT_REACHED ();
+        }
+
+        if ((temp.x & (-1 << (P4EST_MAXLEVEL - (p->level)))) != p->x ||
+            (temp.y & (-1 << (P4EST_MAXLEVEL - (p->level)))) != p->y ||
+            (temp.z & (-1 << (P4EST_MAXLEVEL - (p->level)))) != p->z) {
+          /* only test other descendents of p */
+          continue;
+        }
+
+        if (i & j) {
+          child = p4est_face_corners[face][(1 - j) + (1 - i) / 2];
+
+          p4est_bal_corner_con_internal (q, &temp, child, balance, &recon,
+                                         recurse);
+
+          conextra[4 + 3 * j + i] = recon ? blevel - 1 : blevel;
+        }
+        else {
+          if (!i) {
+            edge = p8est_face_edges[face][(1 - j) / 2];
+          }
+          else {
+            edge = p8est_face_edges[face][2 + (1 - i) / 2];
+          }
+
+          p8est_bal_edge_con_internal (q, &temp, edge, balance, &recon,
+                                       reconextra, recurse);
+
+          conextra[4 + 3 * j + i] = recon ? blevel - 1 : blevel;
+        }
+
+      }
+    }
+#endif
+  }
+  return;
+
+#ifdef P4EST_DEBUG
   P4EST_ASSERT (q->level >= p->level);
   /* get the ancestor of q at the same level as p */
   a = *q;
