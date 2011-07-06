@@ -236,7 +236,9 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
       switch (count) {
       case 0:
         if (thisbit-- == 0) {
-          return SC_MAX (0, level - (int8_t) (maxbit + 1));
+          /* if we've gone through all of the bits, then the leading 1 doesn't
+           * advance a bit */
+          return SC_MAX (0, level - (int8_t) maxbit);
         }
         xbit = ((dx & (1 << thisbit)) != 0);
         ybit = ((dy & (1 << thisbit)) != 0);
@@ -333,7 +335,7 @@ p8est_balance_2chain (p4est_qcoord_t dx, p4est_qcoord_t dy, p4est_qcoord_t dz,
       if (ybit && zfy) {
         return 0;
       }
-      if (zbit && zfy) {
+      if (zbit && zfz) {
         return 0;
       }
       break;
@@ -486,6 +488,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
   int                 child;
 #ifdef P4_TO_P8
   int                 edge;
+  int                 dual;
 #endif
   int                 recon;
   p4est_quadrant_t    porig;
@@ -661,49 +664,21 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 
         if (i && j) {
 
+          child = p8est_face_corners[face][(1 - j) + (1 - i) / 2];
+
           /* for face only balance, we need to check a larger neighbor in one
            * instance */
           if (!balance) {
-            switch (face / 2) {
-            case 0:
-              if ((temp.y & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) !=
-                  (a.y & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) &&
-                  (temp.z & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) !=
-                  (a.z & (-1 << (P4EST_MAXLEVEL - (blevel - 2))))) {
-                temp.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.level = blevel - 2;
-              }
-              break;
-            case 1:
-              if ((temp.x & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) !=
-                  (a.x & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) &&
-                  (temp.z & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) !=
-                  (a.z & (-1 << (P4EST_MAXLEVEL - (blevel - 2))))) {
-                temp.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.level = blevel - 2;
-              }
-              break;
-            case 2:
-              if ((temp.x & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) !=
-                  (a.x & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) &&
-                  (temp.y & (-1 << (P4EST_MAXLEVEL - (blevel - 2)))) !=
-                  (a.y & (-1 << (P4EST_MAXLEVEL - (blevel - 2))))) {
-                temp.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-                temp.level = blevel - 2;
-              }
-              break;
-            default:
-              SC_ABORT_NOT_REACHED ();
+            dual = p8est_face_corners[face][(1 + j) + (1 + i) / 2];
+
+            if (p8est_quadrant_child_id (p) == dual &&
+                p8est_quadrant_child_id (&a) == dual) {
+              temp.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
+              temp.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
+              temp.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
+              temp.level = blevel - 2;
             }
           }
-
-          child = p4est_face_corners[face][(1 - j) + (1 - i) / 2];
 
           p4est_bal_corner_con_internal (q, &temp, child, balance, &recon);
 
@@ -726,6 +701,19 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
           }
         }
 
+      }
+    }
+
+    if (!balance) {
+      for (j = -1; j <= 1; j += 2) {
+        for (i = -1; i <= 1; i += 2) {
+          if (add[4 + 3 * j + i].level != -1 &&
+              add[4 + 3 * j + i].level < blevel) {
+            if (add[4 + 3 * j].level != -1 || add[4 + i].level != -1) {
+              memset (&(add[4 + 3 * j + i]), -1, sizeof (p4est_quadrant_t));
+            }
+          }
+        }
       }
     }
 #endif

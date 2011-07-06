@@ -134,8 +134,57 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
     }
 
     if (stop) {
+#ifdef P4_TO_P8
+      if (!ib && seeds->elem_count == 1) {
+        sc_array_sort (nextlevel, p4est_quadrant_compare);
+        sc_array_uniq (nextlevel, p4est_quadrant_compare);
+        temparray = thislevel;
+        thislevel = nextlevel;
+        nextlevel = temparray;
+        sc_array_reset (nextlevel);
+        level--;
+
+        nlast = thislevel->elem_count;
+        for (zz = 0; zz < nlast; zz++) {
+          s = p4est_quadrant_array_index (thislevel, zz);
+          P4EST_ASSERT (p4est_quadrant_child_id (s) == 0);
+          p4est_quadrant_parent (s, &temp1);
+          for (f = 0; f < P4EST_FACES; f++) {
+            p4est_quadrant_face_neighbor (&temp1, f, &temp2);
+            if (p4est_quadrant_is_ancestor (p, &temp2)) {
+              int                 f2;
+              p4est_quadrant_t    a;
+              p4est_quadrant_t    u;
+
+              t = p4est_quadrant_array_index (seeds, 0);
+
+              p8est_quadrant_parent (t, &a);
+
+              for (f2 = 0; f2 < P8EST_FACES; f2++) {
+                if (f2 / 2 == f / 2) {
+                  continue;
+                }
+                p8est_quadrant_face_neighbor (&a, f2, &u);
+
+                if (p8est_quadrant_is_equal (&temp2, &u) ||
+                    p8est_quadrant_is_sibling (&temp2, &u)) {
+                  break;
+                }
+              }
+
+              if (f2 == P8EST_FACES) {
+                sc_array_resize (seeds, seeds->elem_count + 1);
+                t = sc_array_index (seeds, seeds->elem_count - 1);
+                p4est_quadrant_sibling (&temp2, t, 0);
+              }
+            }
+          }
+        }
+      }
+#endif
       sc_array_sort (seeds, p4est_quadrant_compare);
       sc_array_uniq (seeds, p4est_quadrant_compare);
+
       break;
     }
     sc_array_sort (nextlevel, p4est_quadrant_compare);
@@ -244,6 +293,7 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&p);
   P4EST_QUADRANT_INIT (&q);
 
+#if 1
   for (face = 0; face < P4EST_FACES; face++) {
     p4est_quadrant_face_neighbor (&root, face ^ 1, &p);
     for (level = 4; level <= maxlevel; level++) {
@@ -325,6 +375,7 @@ main (int argc, char **argv)
     }
   }
 #endif
+#endif
 
   for (corner = 0; corner < P4EST_FACES; corner++) {
     p4est_quadrant_corner_neighbor (&root, corner ^ (P4EST_CHILDREN - 1), &p);
@@ -347,9 +398,8 @@ main (int argc, char **argv)
                         "p4est_balance_corner_test error");
         compare_seeds (seeds, seeds_check);
 #else
-        testval =
-          p4est_balance_corner_test (&q, &p, corner, P8EST_CONNECT_FACE,
-                                     seeds);
+        testval = p4est_balance_corner_test (&q, &p, corner,
+                                             P8EST_CONNECT_FACE, seeds);
         standard_seeds (seeds);
         checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
                                        seeds_check);
