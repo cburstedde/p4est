@@ -26,11 +26,13 @@
 #include <p8est_bits.h>
 #include <p8est_communication.h>
 #include <p8est_search.h>
+#include <p8est_balance.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
 #include <p4est_search.h>
+#include <p4est_balance.h>
 #endif /* !P4_TO_P8 */
 
 /* htonl is in either of these two */
@@ -640,37 +642,59 @@ failtest:
 }
 
 /* here come the heavyweight algorithms */
+#ifndef P4_TO_P8
+/* which face of the center quad touches this insul */
+const static int    insul_to_f[9] = { -1, 2, -1, 0, -1, 1, -1, 3, -1 };
 
-/* warning: p4est_tree_compute_overlap may not work properly for less than
- * full balancing (i.e. face only, face/edge only balancing)
- *
- * TODO: make p4et_tree_compute_overlap take p4est_connect_type_t to guarantee
- * correct behavior for all balance types
- */
-void
-p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
-                            sc_array_t * out)
+/* which corner of the center quad touches this insul */
+const static int    insul_to_c[9] = { 0, -1, 1, -1, -1, -1, 2, -1, 3 };
+#else
+/* which face of the center quad touches this insul */
+/* *INDENT-OFF* */
+const static int insul_to_f[27] =
+{-1, -1, -1, -1, 4, -1, -1, -1, -1,
+ -1, 2, -1, 0, -1, 1, -1, 3, -1,
+ -1, -1, -1, -1, 5, -1, -1, -1, -1};
+/* which corner of the center quad touches this insul */
+const static int insul_to_c[27] =
+{0, -1, 1, -1, -1, -1, 2, -1, 3,
+ -1, -1, -1, -1, -1, -1, -1, -1, -1,
+ 4, -1, 5, -1, -1, -1, 6, -1, 7};
+/* which edge of the center quad touches this insul */
+const static int insul_to_e[27] =
+{-1, 0, -1, 4, -1, 5, -1, 1, -1,
+  8, -1, 9, -1, -1, -1, 10, -1, 11,
+  -1, 2, -1, 6, -1, 7, -1, 3, -1};
+/* *INDENT-ON* */
+#endif
+
+static void
+p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
+                                     sc_array_t * out, int new,
+                                     p4est_connect_type_t balance)
 {
   int                 k, l, m, which;
   int                 face, corner, level;
+  int                 f = -1, c = -1;
   int                 ftransform[P4EST_FTRANSFORM];
   int                 face_axis[3];     /* 3 not P4EST_DIM */
   int                 contact_face_only, contact_edge_only;
   int                 inter_tree, outface[P4EST_FACES];
-  size_t              iz, ctree;
-  size_t              treecount, incount;
-  size_t              guess;
+  size_t              iz, jz, ctree;
+  size_t              treecount, incount, seedcount;
+  size_t              guess, split;
   ssize_t             first_index, last_index, js;
   p4est_topidx_t      qtree, ntree;
   p4est_qcoord_t      qh;
   p4est_quadrant_t    fd, ld, tempq, ins[P4EST_INSUL];
   p4est_quadrant_t   *treefd, *treeld;
-  p4est_quadrant_t   *tq, *s;
+  p4est_quadrant_t   *tq, *s, *u;
   p4est_quadrant_t   *inq, *outq;
   p4est_tree_t       *tree;
   p4est_connectivity_t *conn = p4est->connectivity;
 #ifdef P4_TO_P8
   int                 edge;
+  int                 e = -1;
   size_t              etree;
   p8est_edge_info_t   ei;
   p8est_edge_transform_t *et;
@@ -681,6 +705,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   p4est_corner_transform_t *ct;
   sc_array_t         *cta;
   sc_array_t         *tquadrants;
+  sc_array_t         *seeds;
 
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
@@ -708,6 +733,10 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   treefd = treeld = NULL;
   tquadrants = NULL;
   treecount = -1;
+
+  if (new) {
+    seeds = sc_array_new (sizeof (p4est_quadrant_t));
+  }
 
   /* loop over input list of quadrants */
   for (iz = 0; iz < incount; ++iz) {
@@ -886,86 +915,167 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
           continue;
         }
 
-        /* copy relevant quadrants into out */
-        if (inter_tree && corner >= 0) {
-          /* across a corner, find smallest quadrant to be sent */
-          level = 0;
+        if (new) {
+          /* figure out the relationship of s to inq */
+          f = insul_to_f[which];
+#ifdef P4_TO_P8
+          e = insul_to_e[which];
+#endif
+          c = insul_to_c[which];
+
+          level = inq->level + 1;
+
+          /* copy relevant quadrants into out */
           for (js = first_index; js <= last_index; ++js) {
             tq = p4est_quadrant_array_index (tquadrants, (size_t) js);
-            if ((int) tq->level <= SC_MAX (level, (int) inq->level + 1)) {
+            if (tq->level <= level) {
               continue;
             }
-            p4est_quadrant_shift_corner (tq, &tempq, corner);
-            P4EST_ASSERT (p4est_quadrant_is_ancestor (s, &tempq));
-            level = SC_MAX (level, (int) tempq.level);
-          }
-          if (level > 0) {
-            /* send this small corner to all neighbor corner trees */
-            for (ctree = 0; ctree < cta->elem_count; ++ctree) {
-              outq = p4est_quadrant_array_push (out);
-              outq->level = (int8_t) level;
-              ct = p4est_corner_array_index (cta, ctree);
-              p4est_quadrant_transform_corner (outq, (int) ct->ncorner, 0);
-              outq->p.piggy2.which_tree = ct->ntree;
+            if (f >= 0) {
+              split = !p4est_balance_face_test (tq, inq, f, balance, seeds);
             }
-            ct = NULL;
+#ifdef P4_TO_P8
+            else if (e >= 0) {
+              split = !p8est_balance_edge_test (tq, inq, e, balance, seeds);
+            }
+#endif
+            else {
+              P4EST_ASSERT (c >= 0);
+              split = !p4est_balance_corner_test (tq, inq, c, balance, seeds);
+            }
+            if (split) {
+              seedcount = seeds->elem_count;
+              for (jz = 0; jz < seedcount; jz++) {
+                u = p4est_quadrant_array_index (seeds, jz);
+                P4EST_ASSERT (p4est_quadrant_is_ancestor (inq, u));
+                if (inter_tree) {
+                  if (contact_face_only) {
+                    P4EST_ASSERT (!contact_edge_only);
+                    p4est_quadrant_transform_face (u, &tempq, ftransform);
+                    outq = p4est_quadrant_array_push (out);
+                    p4est_quadrant_sibling (&tempq, outq, 0);
+                    outq->p.piggy2.which_tree = ntree;
+                  }
+#ifdef P4_TO_P8
+                  else if (contact_edge_only) {
+                    for (etree = 0; etree < eta->elem_count; ++etree) {
+                      et = p8est_edge_array_index (eta, etree);
+                      p8est_quadrant_transform_edge (u, &tempq, &ei, et, 1);
+                      outq = p4est_quadrant_array_push (out);
+                      p4est_quadrant_sibling (&tempq, outq, 0);
+                      outq->p.piggy2.which_tree = et->ntree;
+                    }
+                    et = NULL;
+                  }
+#endif
+                  else {
+                    P4EST_ASSERT (corner >= 0);
+                    for (ctree = 0; ctree < cta->elem_count; ++ctree) {
+                      ct = p4est_corner_array_index (cta, ctree);
+                      p4est_quadrant_transform_corner (u, (int) ct->ncorner,
+                                                       1);
+                      outq = p4est_quadrant_array_push (out);
+                      p4est_quadrant_sibling (u, outq, 0);
+                      outq->p.piggy2.which_tree = ct->ntree;
+                    }
+                    ct = NULL;
+                  }
+                }
+                else {
+                  outq = p4est_quadrant_array_push (out);
+                  p4est_quadrant_sibling (u, outq, 0);
+                  outq->p.piggy2.which_tree = qtree;
+                }
+
+                if (c >= 0) {
+                  level = SC_MAX (level, u->level);
+                }
+              }
+            }
           }
         }
         else {
-          /* across face/edge or intra-tree, find small enough quadrants */
-          P4EST_ASSERT (corner == -1);
-          for (js = first_index; js <= last_index; ++js) {
-            tq = p4est_quadrant_array_index (tquadrants, (size_t) js);
-            if (tq->level > inq->level + 1) {
-              P4EST_ASSERT (p4est_quadrant_is_ancestor (s, tq));
-              if (inter_tree) {
-                if (contact_face_only) {
-                  P4EST_ASSERT (!contact_edge_only);
-                  outq = p4est_quadrant_array_push (out);
-                  p4est_quadrant_transform_face (tq, outq, ftransform);
-                  outq->p.piggy2.which_tree = ntree;
-                }
-#ifdef P4_TO_P8
-                else {
-                  P4EST_ASSERT (contact_edge_only);
-                  p8est_quadrant_shift_edge (tq, &tempq, &tempq1, &tempq2,
-                                             edge);
-                  if (tempq.level > inq->level + 1) {
-                    P4EST_ASSERT (p4est_quadrant_is_ancestor (s, &tempq));
-                    for (etree = 0; etree < eta->elem_count; ++etree) {
-                      outq = p4est_quadrant_array_push (out);
-                      et = p8est_edge_array_index (eta, etree);
-                      p8est_quadrant_transform_edge (&tempq, outq, &ei, et,
-                                                     0);
-                      outq->p.piggy2.which_tree = et->ntree;
-                    }
-                    if (p4est_quadrant_is_ancestor (s, &tempq1)) {
-                      for (etree = 0; etree < eta->elem_count; ++etree) {
-                        outq = p4est_quadrant_array_push (out);
-                        et = p8est_edge_array_index (eta, etree);
-                        p8est_quadrant_transform_edge (&tempq1, outq, &ei, et,
-                                                       0);
-                        outq->p.piggy2.which_tree = et->ntree;
-                      }
-                    }
-                    if (p4est_quadrant_is_ancestor (s, &tempq2)) {
-                      for (etree = 0; etree < eta->elem_count; ++etree) {
-                        outq = p4est_quadrant_array_push (out);
-                        et = p8est_edge_array_index (eta, etree);
-                        p8est_quadrant_transform_edge (&tempq2, outq, &ei, et,
-                                                       0);
-                        outq->p.piggy2.which_tree = et->ntree;
-                      }
-                    }
-                  }
-                  et = NULL;
-                }
-#endif
+          /* copy relevant quadrants into out */
+          if (inter_tree && corner >= 0) {
+            /* across a corner, find smallest quadrant to be sent */
+            level = 0;
+            for (js = first_index; js <= last_index; ++js) {
+              tq = p4est_quadrant_array_index (tquadrants, (size_t) js);
+              if ((int) tq->level <= SC_MAX (level, (int) inq->level + 1)) {
+                continue;
               }
-              else {
+              p4est_quadrant_shift_corner (tq, &tempq, corner);
+              P4EST_ASSERT (p4est_quadrant_is_ancestor (s, &tempq));
+              level = SC_MAX (level, (int) tempq.level);
+            }
+            if (level > 0) {
+              /* send this small corner to all neighbor corner trees */
+              for (ctree = 0; ctree < cta->elem_count; ++ctree) {
                 outq = p4est_quadrant_array_push (out);
-                *outq = *tq;
-                outq->p.piggy2.which_tree = qtree;
+                outq->level = (int8_t) level;
+                ct = p4est_corner_array_index (cta, ctree);
+                p4est_quadrant_transform_corner (outq, (int) ct->ncorner, 0);
+                outq->p.piggy2.which_tree = ct->ntree;
+              }
+              ct = NULL;
+            }
+          }
+          else {
+            /* across face/edge or intra-tree, find small enough quadrants */
+            P4EST_ASSERT (corner == -1);
+            for (js = first_index; js <= last_index; ++js) {
+              tq = p4est_quadrant_array_index (tquadrants, (size_t) js);
+              if (tq->level > inq->level + 1) {
+                P4EST_ASSERT (p4est_quadrant_is_ancestor (s, tq));
+                if (inter_tree) {
+                  if (contact_face_only) {
+                    P4EST_ASSERT (!contact_edge_only);
+                    outq = p4est_quadrant_array_push (out);
+                    p4est_quadrant_transform_face (tq, outq, ftransform);
+                    outq->p.piggy2.which_tree = ntree;
+                  }
+#ifdef P4_TO_P8
+                  else {
+                    P4EST_ASSERT (contact_edge_only);
+                    p8est_quadrant_shift_edge (tq, &tempq, &tempq1, &tempq2,
+                                               edge);
+                    if (tempq.level > inq->level + 1) {
+                      P4EST_ASSERT (p4est_quadrant_is_ancestor (s, &tempq));
+                      for (etree = 0; etree < eta->elem_count; ++etree) {
+                        outq = p4est_quadrant_array_push (out);
+                        et = p8est_edge_array_index (eta, etree);
+                        p8est_quadrant_transform_edge (&tempq, outq, &ei, et,
+                                                       0);
+                        outq->p.piggy2.which_tree = et->ntree;
+                      }
+                      if (p4est_quadrant_is_ancestor (s, &tempq1)) {
+                        for (etree = 0; etree < eta->elem_count; ++etree) {
+                          outq = p4est_quadrant_array_push (out);
+                          et = p8est_edge_array_index (eta, etree);
+                          p8est_quadrant_transform_edge (&tempq1, outq, &ei,
+                                                         et, 0);
+                          outq->p.piggy2.which_tree = et->ntree;
+                        }
+                      }
+                      if (p4est_quadrant_is_ancestor (s, &tempq2)) {
+                        for (etree = 0; etree < eta->elem_count; ++etree) {
+                          outq = p4est_quadrant_array_push (out);
+                          et = p8est_edge_array_index (eta, etree);
+                          p8est_quadrant_transform_edge (&tempq2, outq, &ei,
+                                                         et, 0);
+                          outq->p.piggy2.which_tree = et->ntree;
+                        }
+                      }
+                    }
+                    et = NULL;
+                  }
+#endif
+                }
+                else {
+                  outq = p4est_quadrant_array_push (out);
+                  *outq = *tq;
+                  outq->p.piggy2.which_tree = qtree;
+                }
               }
             }
           }
@@ -984,6 +1094,31 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   sc_array_reset (eta);
 #endif
   sc_array_reset (cta);
+
+  if (new) {
+    sc_array_destroy (seeds);
+  }
+}
+
+void
+p4est_tree_compute_overlap_new (p4est_t * p4est, sc_array_t * in,
+                                sc_array_t * out,
+                                p4est_connect_type_t balance)
+{
+  p4est_tree_compute_overlap_internal (p4est, in, out, 1, balance);
+}
+
+/* warning: p4est_tree_compute_overlap may not work properly for less than
+ * full balancing (i.e. face only, face/edge only balancing)
+ *
+ * TODO: make p4et_tree_compute_overlap take p4est_connect_type_t to guarantee
+ * correct behavior for all balance types
+ */
+void
+p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
+                            sc_array_t * out)
+{
+  p4est_tree_compute_overlap_internal (p4est, in, out, 0, -1);
 }
 
 void
@@ -991,6 +1126,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 {
   size_t              iz, jz;
   size_t              outcount, dupcount, skipcount;
+  size_t              olcount;
   p4est_quadrant_t   *inq, *outq, *tq;
 
   outcount = out->elem_count;
@@ -1000,7 +1136,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 
   /* sort array and remove duplicates */
   sc_array_sort (out, p4est_quadrant_compare_piggy);
-  dupcount = skipcount = 0;
+  dupcount = skipcount = olcount = 0;
   iz = 0;                       /* read counter */
   jz = 0;                       /* write counter */
   inq = p4est_quadrant_array_index (out, iz);
@@ -1011,6 +1147,13 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
       ++dupcount;
       ++iz;
     }
+#if 0
+    else if (iz < outcount - 1 && inq.p.which_tree == tq.p.which_tree &&
+             p4est_quadrant_is_ancestor (inq, tq)) {
+      ++olcount;
+      ++iz;
+    }
+#endif
     else if (sc_array_bsearch (skip, inq, p4est_quadrant_compare_piggy) != -1) {
       ++skipcount;
       ++iz;
@@ -1026,7 +1169,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
     inq = tq;
   }
   P4EST_ASSERT (iz == outcount);
-  P4EST_ASSERT (jz + dupcount + skipcount == outcount);
+  P4EST_ASSERT (jz + dupcount + olcount + skipcount == outcount);
   sc_array_resize (out, jz);
 }
 

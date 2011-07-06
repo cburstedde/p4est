@@ -244,6 +244,7 @@
 #define p4est_is_equal                  p8est_is_equal
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap
+#define p4est_tree_compute_overlap_new  p8est_tree_compute_overlap_new
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
 #define p4est_tree_remove_nonowned      p8est_tree_remove_nonowned
 #define p4est_complete_region           p8est_complete_region
