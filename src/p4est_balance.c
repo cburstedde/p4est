@@ -35,10 +35,10 @@
  * \a distance (>= 0) to be at the location.  This returns the largest quadrant
  * that can exist at \a location and be in balance with the \a level quadrant.
  */
-static inline       int8_t
-p4est_balance_kernel_1d (p4est_qcoord_t distance, int8_t level)
+static inline int
+p4est_balance_kernel_1d (p4est_qcoord_t distance, int level)
 {
-  int                 shift = P4EST_MAXLEVEL - (int) level;
+  int                 shift = P4EST_MAXLEVEL - level;
   P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
   /* the distance only makes sense if it is an integer number of \a level
    * distances */
@@ -49,14 +49,14 @@ p4est_balance_kernel_1d (p4est_qcoord_t distance, int8_t level)
    * using distance + 1 is equivalent for all distance >= 0 */
   distance++;
 
-  return SC_MAX (0, level - (int8_t) SC_LOG2_32 (distance));
+  return SC_MAX (0, level - SC_LOG2_32 (distance));
 }
 
 /* This is the kernel for 2D balance with face-only balancing */
-static inline       int8_t
-p4est_balance_kernel_2d (p4est_qcoord_t dx, p4est_qcoord_t dy, int8_t level)
+static inline int
+p4est_balance_kernel_2d (p4est_qcoord_t dx, p4est_qcoord_t dy, int level)
 {
-  int                 shift = P4EST_MAXLEVEL - (int) level;
+  int                 shift = P4EST_MAXLEVEL - level;
   p4est_qcoord_t      distance;
 
   P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
@@ -78,16 +78,16 @@ p4est_balance_kernel_2d (p4est_qcoord_t dx, p4est_qcoord_t dy, int8_t level)
   /* the + 1 guarantees the correct answer even for (0, 0) */
   distance = dx + dy + 1;
 
-  return SC_MAX (0, level - (int8_t) SC_LOG2_32 (distance));
+  return SC_MAX (0, level - SC_LOG2_32 (distance));
 }
 
 #ifdef P4_TO_P8
 /* This is the kernel for 3d balance with face and edge balancing */
-static inline       int8_t
+static inline int
 p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
-                              p4est_qcoord_t dz, int8_t level)
+                              p4est_qcoord_t dz, int level)
 {
-  int                 shift = P4EST_MAXLEVEL - (int) level;
+  int                 shift = P4EST_MAXLEVEL - level;
   int                 xbit, ybit, zbit;
   int                 maxbit, thisbit;
   int                 count;
@@ -133,7 +133,7 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
     /* There is always a path where at most one of the other two dimensions
      * adds a bit in this position, so there is always a path where we don't
      * create a more significant bit */
-    return SC_MAX (0, level - (int8_t) maxbit);
+    return SC_MAX (0, level - maxbit);
   case 2:
     /* This is the start of a chain of 2s.  If this chain ends in 0 or 1,
      * there is always a path where we don't add a more significant bit; if
@@ -148,11 +148,11 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
       switch (count) {
       case 0:
       case 1:
-        return SC_MAX (0, level - (int8_t) maxbit);
+        return SC_MAX (0, level - maxbit);
       case 2:
         break;
       case 3:
-        return SC_MAX (0, level - (int8_t) (maxbit + 1));
+        return SC_MAX (0, level - (maxbit + 1));
       default:
         SC_ABORT_NOT_REACHED ();
       }
@@ -164,7 +164,7 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   case 3:
     /* There is always a path where only one dimension adds a more signifcant
      * bit */
-    return SC_MAX (0, level - (int8_t) (maxbit + 1));
+    return SC_MAX (0, level - (maxbit + 1));
   default:
     SC_ABORT_NOT_REACHED ();
     return -1;
@@ -177,11 +177,11 @@ static inline int   p8est_balance_2chain (p4est_qcoord_t dx,
                                           int xbit, int ybit, int zbit);
 
 /* This is the kernel for 3d balance with face balancing only */
-static inline       int8_t
+static inline int
 p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
-                              p4est_qcoord_t dz, int8_t level)
+                              p4est_qcoord_t dz, int level)
 {
-  int                 shift = P4EST_MAXLEVEL - (int) level;
+  int                 shift = P4EST_MAXLEVEL - level;
   int                 xbit, ybit, zbit;
   int                 maxbit, thisbit;
   int                 count;
@@ -238,7 +238,7 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
         if (thisbit-- == 0) {
           /* if we've gone through all of the bits, then the leading 1 doesn't
            * advance a bit */
-          return SC_MAX (0, level - (int8_t) maxbit);
+          return SC_MAX (0, level - maxbit);
         }
         xbit = ((dx & (1 << thisbit)) != 0);
         ybit = ((dy & (1 << thisbit)) != 0);
@@ -247,19 +247,19 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
         switch (count) {
         case 0:
         case 1:
-          return SC_MAX (0, level - (int8_t) maxbit);
+          return SC_MAX (0, level - maxbit);
         case 2:
           /* If there is a path where this 2 advances only 1 bit, then the
            * initial one does not advance a bit; otherwise this 2 advances 2
            * bits, and the initial 1 advances a bit */
           if (p8est_balance_2chain (dx, dy, dz, thisbit, xbit, ybit, zbit)) {
-            return SC_MAX (0, level - (int8_t) (maxbit + 1));
+            return SC_MAX (0, level - (maxbit + 1));
           }
           else {
-            return SC_MAX (0, level - (int8_t) maxbit);
+            return SC_MAX (0, level - maxbit);
           }
         case 3:
-          return SC_MAX (0, level - (int8_t) (maxbit + 1));
+          return SC_MAX (0, level - (maxbit + 1));
         default:
           SC_ABORT_NOT_REACHED ();
           return -1;
@@ -268,7 +268,7 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
         break;
       case 2:
       case 3:
-        return SC_MAX (0, level - (int8_t) (maxbit + 1));
+        return SC_MAX (0, level - (maxbit + 1));
       default:
         SC_ABORT_NOT_REACHED ();
       }
@@ -282,14 +282,14 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
      * otherwise it advances 2 bits */
     if (p8est_balance_2chain (dx, dy, dz, maxbit, (xbit == maxbit),
                               (ybit == maxbit), (zbit == maxbit))) {
-      return SC_MAX (0, level - (int8_t) (maxbit + 2));
+      return SC_MAX (0, level - (maxbit + 2));
     }
     else {
-      return SC_MAX (0, level - (int8_t) (maxbit + 1));
+      return SC_MAX (0, level - (maxbit + 1));
     }
   case 3:
     /* Every path results in a bit twice more significant */
-    return SC_MAX (0, level - (int8_t) (maxbit + 2));
+    return SC_MAX (0, level - (maxbit + 2));
   default:
     SC_ABORT_NOT_REACHED ();
     return -1;
