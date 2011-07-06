@@ -139,12 +139,12 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
      * there is always a path where we don't add a more significant bit; if
      * this chain ends in a 3, there is always a path where only one dimension
      * adds a more significant bit */
-    thisbit = maxbit - 1;
+    thisbit = 1 << (maxbit - 1);
     do {
-      P4EST_ASSERT (thisbit >= 0);
-      count = ((dx & (1 << thisbit)) != 0);
-      count += ((dy & (1 << thisbit)) != 0);
-      count += ((dz & (1 << thisbit)) != 0);
+      P4EST_ASSERT (thisbit > 0);
+      count = ((dx & thisbit) != 0);
+      count += ((dy & thisbit) != 0);
+      count += ((dz & thisbit) != 0);
       switch (count) {
       case 0:
       case 1:
@@ -157,7 +157,7 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
         SC_ABORT_NOT_REACHED ();
       }
       P4EST_ASSERT (count == 2);
-      thisbit--;
+      thisbit >>= 1;
     } while (count == 2);
     SC_ABORT_NOT_REACHED ();
     return -1;
@@ -227,22 +227,23 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
      * this chain ends in 00 or 01, then there is a path that results in no
      * more significant bit.  If this chain ends in 02, we need more
      * information */
-    thisbit = maxbit - 1;
+    thisbit = 1 << (maxbit - 1);
     do {
-      P4EST_ASSERT (thisbit >= 0);
-      count = ((dx & (1 << thisbit)) != 0);
-      count += ((dy & (1 << thisbit)) != 0);
-      count += ((dz & (1 << thisbit)) != 0);
+      P4EST_ASSERT (thisbit > 0);
+      count = ((dx & thisbit) != 0);
+      count += ((dy & thisbit) != 0);
+      count += ((dz & thisbit) != 0);
       switch (count) {
       case 0:
-        if (thisbit-- == 0) {
+        thisbit >>= 1;
+        if (thisbit == 0) {
           /* if we've gone through all of the bits, then the leading 1 doesn't
            * advance a bit */
           return SC_MAX (0, level - maxbit);
         }
-        xbit = ((dx & (1 << thisbit)) != 0);
-        ybit = ((dy & (1 << thisbit)) != 0);
-        zbit = ((dz & (1 << thisbit)) != 0);
+        xbit = ((dx & thisbit) != 0);
+        ybit = ((dy & thisbit) != 0);
+        zbit = ((dz & thisbit) != 0);
         count = xbit + ybit + zbit;
         switch (count) {
         case 0:
@@ -273,14 +274,14 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
         SC_ABORT_NOT_REACHED ();
       }
       P4EST_ASSERT (count == 1);
-      thisbit--;
+      thisbit >>= 1;
     } while (count == 1);
     SC_ABORT_NOT_REACHED ();
     return -1;
   case 2:
     /* Check to see if there is a path where this 2 advances only 1 bit:
      * otherwise it advances 2 bits */
-    if (p8est_balance_2chain (dx, dy, dz, maxbit, (xbit == maxbit),
+    if (p8est_balance_2chain (dx, dy, dz, (1 << maxbit), (xbit == maxbit),
                               (ybit == maxbit), (zbit == maxbit))) {
       return SC_MAX (0, level - (maxbit + 2));
     }
@@ -305,16 +306,16 @@ p8est_balance_2chain (p4est_qcoord_t dx, p4est_qcoord_t dy, p4est_qcoord_t dz,
   int                 zfz = zbit;
   int                 count;
 
-  thisbit--;
+  thisbit >>= 1;
 
   P4EST_ASSERT (zfx + zfy + zfz == 2);
 
-  do {
-    P4EST_ASSERT (thisbit >= 0);
+  for (;;) {
+    P4EST_ASSERT (thisbit > 0);
 
-    xbit = ((dx & (1 << thisbit)) != 0);
-    ybit = ((dy & (1 << thisbit)) != 0);
-    zbit = ((dz & (1 << thisbit)) != 0);
+    xbit = ((dx & thisbit) != 0);
+    ybit = ((dy & thisbit) != 0);
+    zbit = ((dz & thisbit) != 0);
     count = xbit + ybit + zbit;
 
     switch (count) {
@@ -356,8 +357,8 @@ p8est_balance_2chain (p4est_qcoord_t dx, p4est_qcoord_t dy, p4est_qcoord_t dz,
       SC_ABORT_NOT_REACHED ();
     }
 
-    thisbit--;
-  } while (thisbit >= 0);
+    thisbit >>= 1;
+  }
 
   SC_ABORT_NOT_REACHED ();
   return -1;
@@ -399,6 +400,7 @@ p4est_bal_corner_con_internal (p4est_quadrant_t const *restrict q,
   int                 qlevel = q->level;
   int                 plevel = p->level;
   int                 blevel;
+  p4est_qcoord_t      qlen, plen, mask;
   p4est_qcoord_t      dx, dy, dist;
 #ifdef P4_TO_P8
   p4est_qcoord_t      dz;
@@ -414,15 +416,15 @@ p4est_bal_corner_con_internal (p4est_quadrant_t const *restrict q,
     return;
   }
 
-  dx = (corner & 1) ? ((q->x + P4EST_QUADRANT_LEN (qlevel)) -
-                       (p->x + P4EST_QUADRANT_LEN (plevel))) : p->x - q->x;
+  qlen = P4EST_QUADRANT_LEN (qlevel);
+  plen = P4EST_QUADRANT_LEN (plevel);
+
+  dx = (corner & 1) ? ((q->x + qlen) - (p->x + plen)) : p->x - q->x;
   P4EST_ASSERT (dx >= 0);
-  dy = (corner & 2) ? ((q->y + P4EST_QUADRANT_LEN (qlevel)) -
-                       (p->y + P4EST_QUADRANT_LEN (plevel))) : p->y - q->y;
+  dy = (corner & 2) ? ((q->y + qlen) - (p->y + plen)) : p->y - q->y;
   P4EST_ASSERT (dy >= 0);
 #ifdef P4_TO_P8
-  dz = (corner & 4) ? ((q->z + P4EST_QUADRANT_LEN (qlevel)) -
-                       (p->z + P4EST_QUADRANT_LEN (plevel))) : p->z - q->z;
+  dz = (corner & 4) ? ((q->z + qlen) - (p->z + plen)) : p->z - q->z;
   P4EST_ASSERT (dz >= 0);
 #endif
 
@@ -463,13 +465,14 @@ p4est_bal_corner_con_internal (p4est_quadrant_t const *restrict q,
     *consistent = 0;
   }
 
+  mask = -1 << (P4EST_MAXLEVEL - blevel);
   p->x = q->x + ((corner & 1) ? -dx : dx);
-  p->x &= (-1 << (P4EST_MAXLEVEL - blevel));
+  p->x &= mask;
   p->y = q->y + ((corner & 2) ? -dy : dy);
-  p->y &= (-1 << (P4EST_MAXLEVEL - blevel));
+  p->y &= mask;
 #ifdef P4_TO_P8
   p->z = q->z + ((corner & 4) ? -dz : dz);
-  p->z &= (-1 << (P4EST_MAXLEVEL - blevel));
+  p->z &= mask;
 #endif
   p->level = blevel;
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
@@ -500,8 +503,11 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 #else
   int                 nconextra = 9;
   int                 j;
+  p4est_qcoord_t      b2mask;
 #endif
-  double              distance;
+  p4est_qcoord_t      distance;
+  p4est_qcoord_t      qlen, plen, mask, pmask;
+  p4est_qcoord_t      b1len;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
@@ -513,28 +519,28 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
     return;
   }
 
+  qlen = P4EST_QUADRANT_LEN (qlevel);
+  plen = P4EST_QUADRANT_LEN (plevel);
+
   switch (face) {
   case 0:
     distance = p->x - q->x;
     break;
   case 1:
-    distance = (q->x + P4EST_QUADRANT_LEN (q->level)) -
-      (p->x + P4EST_QUADRANT_LEN (p->level));
+    distance = (q->x + qlen) - (p->x + plen);
     break;
   case 2:
     distance = p->y - q->y;
     break;
   case 3:
-    distance = (q->y + P4EST_QUADRANT_LEN (q->level)) -
-      (p->y + P4EST_QUADRANT_LEN (p->level));
+    distance = (q->y + qlen) - (p->y + plen);
     break;
 #ifdef P4_TO_P8
   case 4:
     distance = p->z - q->z;
     break;
   case 5:
-    distance = (q->z + P4EST_QUADRANT_LEN (q->level)) -
-      (p->z + P4EST_QUADRANT_LEN (p->level));
+    distance = (q->z + qlen) - (p->z + plen);
     break;
 #endif
   default:
@@ -586,10 +592,11 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
     SC_ABORT_NOT_REACHED ();
   }
 
-  p->x &= (-1 << (P4EST_MAXLEVEL - blevel));
-  p->y &= (-1 << (P4EST_MAXLEVEL - blevel));
+  mask = -1 << (P4EST_MAXLEVEL - blevel);
+  p->x &= mask;
+  p->y &= mask;
 #ifdef P4_TO_P8
-  p->z &= (-1 << (P4EST_MAXLEVEL - blevel));
+  p->z &= mask;
 #endif
   p->level = blevel;
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
@@ -598,27 +605,29 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 
     add[nconextra / 2] = *p;
 
+    mask = -1 << (P4EST_MAXLEVEL - (blevel - 1));
+    pmask = -1 << (P4EST_MAXLEVEL - (plevel));
     a = *p;
-    a.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
-    a.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
+    a.x &= mask;
+    a.y &= mask;
 #ifdef P4_TO_P8
-    a.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
+    a.z &= mask;
 #endif
     a.level = blevel - 1;
 
+    b1len = P4EST_QUADRANT_LEN (blevel - 1);
 #ifndef P4_TO_P8
     for (i = -1; i <= 1; i += 2) {
       temp = a;
       /* temp is in a family group one family group over from temp */
       if (face / 2 == 0) {
-        temp.y += i * P4EST_QUADRANT_LEN (blevel - 1);
+        temp.y += i * b1len;
       }
       else {
-        temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
+        temp.x += i * b1len;
       }
 
-      if ((temp.x & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.x ||
-          (temp.y & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.y) {
+      if ((temp.x & pmask) != porig.x || (temp.y & pmask) != porig.y) {
         /* only test other descendents of p */
         continue;
       }
@@ -632,6 +641,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
       }
     }
 #else
+    b2mask = -1 << (P4EST_MAXLEVEL - (blevel - 2));
     for (j = -1; j <= 1; j++) {
       for (i = -1; i <= 1; i++) {
         if (!i & !j) {
@@ -640,24 +650,23 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
         temp = a;
         switch (face / 2) {
         case 0:
-          temp.y += i * P4EST_QUADRANT_LEN (blevel - 1);
-          temp.z += j * P4EST_QUADRANT_LEN (blevel - 1);
+          temp.y += i * b1len;
+          temp.z += j * b1len;
           break;
         case 1:
-          temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
-          temp.z += j * P4EST_QUADRANT_LEN (blevel - 1);
+          temp.x += i * b1len;
+          temp.z += j * b1len;
           break;
         case 2:
-          temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
-          temp.y += j * P4EST_QUADRANT_LEN (blevel - 1);
+          temp.x += i * b1len;
+          temp.y += j * b1len;
           break;
         default:
           SC_ABORT_NOT_REACHED ();
         }
 
-        if ((temp.x & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.x ||
-            (temp.y & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.y ||
-            (temp.z & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.z) {
+        if ((temp.x & pmask) != porig.x || (temp.y & pmask) != porig.y ||
+            (temp.z & pmask) != porig.z) {
           /* only test other descendents of p */
           continue;
         }
@@ -673,9 +682,9 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 
             if (p8est_quadrant_child_id (p) == dual &&
                 p8est_quadrant_child_id (&a) == dual) {
-              temp.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-              temp.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
-              temp.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 2)));
+              temp.x &= b2mask;
+              temp.y &= b2mask;
+              temp.z &= b2mask;
               temp.level = blevel - 2;
             }
           }
@@ -737,6 +746,8 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
   p4est_quadrant_t    a;
   p4est_qcoord_t      dx, dy;
   p4est_qcoord_t      dist;
+  p4est_qcoord_t      qlen, plen, mask;
+  p4est_qcoord_t      b1len, pmask;
   int                 i;
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
@@ -749,24 +760,21 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
     return;
   }
 
+  qlen = P4EST_QUADRANT_LEN (qlevel);
+  plen = P4EST_QUADRANT_LEN (plevel);
+
   switch (edge / 4) {
   case 0:
-    dx = (edge & 1) ? (q->y + P4EST_QUADRANT_LEN (qlevel)) -
-      (p->y + P4EST_QUADRANT_LEN (plevel)) : p->y - q->y;
-    dy = (edge & 2) ? (q->z + P4EST_QUADRANT_LEN (qlevel)) -
-      (p->z + P4EST_QUADRANT_LEN (plevel)) : p->z - q->z;
+    dx = (edge & 1) ? (q->y + qlen) - (p->y + plen) : p->y - q->y;
+    dy = (edge & 2) ? (q->z + qlen) - (p->z + plen) : p->z - q->z;
     break;
   case 1:
-    dx = (edge & 1) ? (q->x + P4EST_QUADRANT_LEN (qlevel)) -
-      (p->x + P4EST_QUADRANT_LEN (plevel)) : p->x - q->x;
-    dy = (edge & 2) ? (q->z + P4EST_QUADRANT_LEN (qlevel)) -
-      (p->z + P4EST_QUADRANT_LEN (plevel)) : p->z - q->z;
+    dx = (edge & 1) ? (q->x + qlen) - (p->x + plen) : p->x - q->x;
+    dy = (edge & 2) ? (q->z + qlen) - (p->z + plen) : p->z - q->z;
     break;
   case 2:
-    dx = (edge & 1) ? (q->x + P4EST_QUADRANT_LEN (qlevel)) -
-      (p->x + P4EST_QUADRANT_LEN (plevel)) : p->x - q->x;
-    dy = (edge & 2) ? (q->y + P4EST_QUADRANT_LEN (qlevel)) -
-      (p->y + P4EST_QUADRANT_LEN (plevel)) : p->y - q->y;
+    dx = (edge & 1) ? (q->x + qlen) - (p->x + plen) : p->x - q->x;
+    dy = (edge & 2) ? (q->y + qlen) - (p->y + plen) : p->y - q->y;
     break;
   default:
     SC_ABORT_NOT_REACHED ();
@@ -812,41 +820,44 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
   default:
     SC_ABORT_NOT_REACHED ();
   }
-  p->x &= (-1 << (P4EST_MAXLEVEL - blevel));
-  p->y &= (-1 << (P4EST_MAXLEVEL - blevel));
-  p->z &= (-1 << (P4EST_MAXLEVEL - blevel));
+  mask = -1 << (P4EST_MAXLEVEL - blevel);
+  p->x &= mask;
+  p->y &= mask;
+  p->z &= mask;
   p->level = blevel;
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
 
   if (add != NULL) {
     add[1] = *p;
 
+    mask = -1 << (P4EST_MAXLEVEL - (blevel - 1));
+    pmask = -1 << (P4EST_MAXLEVEL - (plevel));
     a = *p;
-    a.x &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
-    a.y &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
-    a.z &= (-1 << (P4EST_MAXLEVEL - (blevel - 1)));
+    a.x &= mask;
+    a.y &= mask;
+    a.z &= mask;
     a.level = blevel - 1;
 
+    b1len = P4EST_QUADRANT_LEN (blevel - 1);
     for (i = -1; i <= 1; i += 2) {
       temp = a;
       /* temp is in a family group one family group over from temp */
       switch (edge / 4) {
       case 0:
-        temp.x += i * P4EST_QUADRANT_LEN (blevel - 1);
+        temp.x += i * b1len;
         break;
       case 1:
-        temp.y += i * P4EST_QUADRANT_LEN (blevel - 1);
+        temp.y += i * b1len;
         break;
       case 2:
-        temp.z += i * P4EST_QUADRANT_LEN (blevel - 1);
+        temp.z += i * b1len;
         break;
       default:
         SC_ABORT_NOT_REACHED ();
       }
 
-      if ((temp.x & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.x ||
-          (temp.y & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.y ||
-          (temp.z & (-1 << (P4EST_MAXLEVEL - (plevel)))) != porig.z) {
+      if ((temp.x & pmask) != porig.x || (temp.y & pmask) != porig.y ||
+          (temp.z & pmask) != porig.z) {
         /* only test other descendents of p */
         continue;
       }
