@@ -29,6 +29,59 @@
 #include <p8est_bits.h>
 #endif
 
+static int
+is_farther (p4est_quadrant_t * orig, p4est_quadrant_t * targ,
+            p4est_quadrant_t * new)
+{
+  p4est_qcoord_t      ox1, ox2, nx1, nx2;
+  p4est_qcoord_t      oy1, oy2, ny1, ny2;
+#ifdef P4_TO_P8
+  p4est_qcoord_t      oz1, oz2, nz1, nz2;
+#endif
+  p4est_qcoord_t      nl = P4EST_QUADRANT_LEN (new->level);
+  p4est_qcoord_t      tl = P4EST_QUADRANT_LEN (targ->level);
+
+  P4EST_ASSERT (new->level == orig->level);
+
+  ox1 = targ->x - orig->x;
+  ox2 = (orig->x + nl) - (targ->x + tl);
+  nx1 = targ->x - new->x;
+  nx2 = (new->x + nl) - (targ->x + tl);
+  if (ox1 > 0 && nx1 > ox1) {
+    return 1;
+  }
+  if (ox2 > 0 && nx2 > ox2) {
+    return 1;
+  }
+
+  oy1 = targ->y - orig->y;
+  oy2 = (orig->y + nl) - (targ->y + tl);
+  ny1 = targ->y - new->y;
+  ny2 = (new->y + nl) - (targ->y + tl);
+  if (oy1 > 0 && ny1 > oy1) {
+    return 1;
+  }
+  if (oy2 > 0 && ny2 > oy2) {
+    return 1;
+  }
+
+#ifdef P4_TO_P8
+  oz1 = targ->z - orig->z;
+  oz2 = (orig->z + nl) - (targ->z + tl);
+  nz1 = targ->z - new->z;
+  nz2 = (new->z + nl) - (targ->z + tl);
+  if (oz1 > 0 && nz1 > oz1) {
+    return 1;
+  }
+  if (oz2 > 0 && nz2 > oz2) {
+    return 1;
+  }
+#endif
+
+  return 0;
+
+}
+
 int
 check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
                     p4est_connect_type_t b, sc_array_t * seeds)
@@ -82,6 +135,9 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
       p4est_quadrant_parent (s, &temp1);
       for (f = 0; f < P4EST_FACES; f++) {
         p4est_quadrant_face_neighbor (&temp1, f, &temp2);
+        if (is_farther (&temp1, p, &temp2)) {
+          continue;
+        }
         if (p4est_quadrant_is_ancestor (p, &temp2)) {
           stop = 1;
           sc_array_resize (seeds, seeds->elem_count + 1);
@@ -101,6 +157,9 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
 #ifdef P4_TO_P8
       for (e = 0; e < P8EST_EDGES; e++) {
         p8est_quadrant_edge_neighbor (&temp1, e, &temp2);
+        if (is_farther (&temp1, p, &temp2)) {
+          continue;
+        }
         if (p4est_quadrant_is_ancestor (p, &temp2)) {
           stop = 1;
           sc_array_resize (seeds, seeds->elem_count + 1);
@@ -120,6 +179,9 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
 
       for (c = 0; c < P4EST_CHILDREN; c++) {
         p4est_quadrant_corner_neighbor (&temp1, c, &temp2);
+        if (is_farther (&temp1, p, &temp2)) {
+          continue;
+        }
         if (p4est_quadrant_is_ancestor (p, &temp2)) {
           stop = 1;
           sc_array_resize (seeds, seeds->elem_count + 1);
@@ -134,6 +196,9 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
     }
 
     if (stop) {
+      sc_array_sort (seeds, p4est_quadrant_compare);
+      sc_array_uniq (seeds, p4est_quadrant_compare);
+
 #ifdef P4_TO_P8
       if (!ib && seeds->elem_count == 1) {
         sc_array_sort (nextlevel, p4est_quadrant_compare);
@@ -243,24 +308,19 @@ main (int argc, char **argv)
   p4est_quadrant_t    desc;
   int                 face, corner;
 #ifndef P4_TO_P8
-  int                 maxlevel = 10;
-  int                 nseeds = 3;
-  p4est_quadrant_t    seed_quads[3];
-  p4est_quadrant_t    seed_quads_check[3];
+  int                 maxlevel = 9;
 #else
   int                 edge;
-  int                 nseeds = 9;
-  int                 maxlevel = 7;
-  p4est_quadrant_t    seed_quads[9];
-  p4est_quadrant_t    seed_quads_check[9];
+  int                 maxlevel = 6;
 #endif
   int                 mpiret, mpisize, mpirank;
   MPI_Comm            mpicomm;
-  uint64_t            i, ifirst, ilast;
+  uint64_t            i, ifirst, ilast, j;
   int                 level;
   sc_array_t         *seeds, *seeds_check;
   int                 testval;
   int                 checkval;
+  int                 nrand = 1000;
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
@@ -271,17 +331,12 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
+  srandom (9212007);
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-#if 1
   seeds = sc_array_new (sizeof (p4est_quadrant_t));
   seeds_check = sc_array_new (sizeof (p4est_quadrant_t));
-#else
-  seeds = sc_array_new_data (seed_quads, sizeof (p4est_quadrant_t), nseeds);
-  seeds_check = sc_array_new_data (seed_quads_check,
-                                   sizeof (p4est_quadrant_t), nseeds);
-#endif
 
   memset (&root, 0, sizeof (p4est_quadrant_t));
   root.level = 2;
@@ -296,13 +351,57 @@ main (int argc, char **argv)
 #if 1
   for (face = 0; face < P4EST_FACES; face++) {
     p4est_quadrant_face_neighbor (&root, face ^ 1, &p);
+    P4EST_GLOBAL_VERBOSEF ("Testing face %d\n", face);
     for (level = 4; level <= maxlevel; level++) {
-      P4EST_GLOBAL_VERBOSEF ("level %d\n", level);
+      P4EST_GLOBAL_VERBOSEF (" level %d\n", level);
       p4est_quadrant_first_descendant (&root, &desc, level);
       ifirst = p4est_quadrant_linear_id (&desc, level);
       p4est_quadrant_last_descendant (&root, &desc, level);
       ilast = p4est_quadrant_linear_id (&desc, level);
-      for (i = ifirst; i <= ilast; i++) {
+      for (i = ifirst; i <= ilast; i += P4EST_CHILDREN) {
+        p4est_quadrant_set_morton (&q, level, i);
+#ifndef P4_TO_P8
+        testval = p4est_balance_face_test (&q, &p, face, P4EST_CONNECT_FACE,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FACE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p4est_balance_face_test error");
+        compare_seeds (seeds, seeds_check);
+#else
+        testval = p4est_balance_face_test (&q, &p, face, P8EST_CONNECT_FACE,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p8est_balance_face_test error");
+        compare_seeds (seeds, seeds_check);
+        testval = p4est_balance_face_test (&q, &p, face, P8EST_CONNECT_EDGE,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_EDGE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p8est_balance_face_test error");
+        compare_seeds (seeds, seeds_check);
+#endif
+        testval = p4est_balance_face_test (&q, &p, face, P4EST_CONNECT_FULL,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FULL,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p4est_balance_face_test error");
+        compare_seeds (seeds, seeds_check);
+      }
+    }
+    if (!face) {
+      P4EST_GLOBAL_VERBOSE (" random levels\n");
+      for (j = 0; j < nrand; j++) {
+        level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        p4est_quadrant_first_descendant (&root, &desc, level);
+        ifirst = p4est_quadrant_linear_id (&desc, level);
+        p4est_quadrant_last_descendant (&root, &desc, level);
+        ilast = p4est_quadrant_linear_id (&desc, level);
+        i = ((random ()) % (ilast + 1 - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
 #ifndef P4_TO_P8
         testval = p4est_balance_face_test (&q, &p, face, P4EST_CONNECT_FACE,
@@ -342,13 +441,47 @@ main (int argc, char **argv)
 #ifdef P4_TO_P8
   for (edge = 0; edge < P8EST_EDGES; edge++) {
     p8est_quadrant_edge_neighbor (&root, edge ^ 3, &p);
+    P4EST_GLOBAL_VERBOSEF ("Testing edge %d\n", edge);
     for (level = 4; level <= maxlevel; level++) {
-      P4EST_GLOBAL_VERBOSEF ("level %d\n", level);
+      P4EST_GLOBAL_VERBOSEF (" level %d\n", level);
       p4est_quadrant_first_descendant (&root, &desc, level);
       ifirst = p4est_quadrant_linear_id (&desc, level);
       p4est_quadrant_last_descendant (&root, &desc, level);
       ilast = p4est_quadrant_linear_id (&desc, level);
-      for (i = ifirst; i <= ilast; i++) {
+      for (i = ifirst; i <= ilast; i += P4EST_CHILDREN) {
+        p4est_quadrant_set_morton (&q, level, i);
+        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_FACE,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p8est_balance_edge_test error");
+        compare_seeds (seeds, seeds_check);
+        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_EDGE,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_EDGE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p8est_balance_edge_test error");
+        compare_seeds (seeds, seeds_check);
+        testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_FULL,
+                                           seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FULL,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval, "p8est_balance_edge_test error");
+        compare_seeds (seeds, seeds_check);
+      }
+    }
+    if (!edge) {
+      P4EST_GLOBAL_VERBOSE (" random levels\n");
+      for (j = 0; j < nrand; j++) {
+        level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        p4est_quadrant_first_descendant (&root, &desc, level);
+        ifirst = p4est_quadrant_linear_id (&desc, level);
+        p4est_quadrant_last_descendant (&root, &desc, level);
+        ilast = p4est_quadrant_linear_id (&desc, level);
+        i = ((random ()) % (ilast + 1 - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
         testval = p8est_balance_edge_test (&q, &p, edge, P8EST_CONNECT_FACE,
                                            seeds);
@@ -379,13 +512,64 @@ main (int argc, char **argv)
 
   for (corner = 0; corner < P4EST_FACES; corner++) {
     p4est_quadrant_corner_neighbor (&root, corner ^ (P4EST_CHILDREN - 1), &p);
+    P4EST_GLOBAL_VERBOSEF ("Testing corner %d\n", corner);
     for (level = 4; level <= maxlevel; level++) {
-      P4EST_GLOBAL_VERBOSEF ("level %d\n", level);
+      P4EST_GLOBAL_VERBOSEF (" level %d\n", level);
       p4est_quadrant_first_descendant (&root, &desc, level);
       ifirst = p4est_quadrant_linear_id (&desc, level);
       p4est_quadrant_last_descendant (&root, &desc, level);
       ilast = p4est_quadrant_linear_id (&desc, level);
-      for (i = ifirst; i <= ilast; i++) {
+      for (i = ifirst; i <= ilast; i += P4EST_CHILDREN) {
+        p4est_quadrant_set_morton (&q, level, i);
+#ifndef P4_TO_P8
+        testval =
+          p4est_balance_corner_test (&q, &p, corner, P4EST_CONNECT_FACE,
+                                     seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FACE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval,
+                        "p4est_balance_corner_test error");
+        compare_seeds (seeds, seeds_check);
+#else
+        testval = p4est_balance_corner_test (&q, &p, corner,
+                                             P8EST_CONNECT_FACE, seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_FACE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval,
+                        "p8est_balance_corner_test error");
+        compare_seeds (seeds, seeds_check);
+        testval =
+          p4est_balance_corner_test (&q, &p, corner, P8EST_CONNECT_EDGE,
+                                     seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P8EST_CONNECT_EDGE,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval,
+                        "p8est_balance_corner_test error");
+        compare_seeds (seeds, seeds_check);
+#endif
+        testval =
+          p4est_balance_corner_test (&q, &p, corner, P4EST_CONNECT_FULL,
+                                     seeds);
+        standard_seeds (seeds);
+        checkval = check_balance_test (&q, &p, P4EST_CONNECT_FULL,
+                                       seeds_check);
+        SC_CHECK_ABORT (testval == checkval,
+                        "p4est_balance_corner_test error");
+        compare_seeds (seeds, seeds_check);
+      }
+    }
+    if (!corner) {
+      P4EST_GLOBAL_VERBOSE (" random levels\n");
+      for (j = 0; j < nrand; j++) {
+        level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        p4est_quadrant_first_descendant (&root, &desc, level);
+        ifirst = p4est_quadrant_linear_id (&desc, level);
+        p4est_quadrant_last_descendant (&root, &desc, level);
+        ilast = p4est_quadrant_linear_id (&desc, level);
+        i = ((random ()) % (ilast + 1 - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
 #ifndef P4_TO_P8
         testval =
