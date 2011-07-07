@@ -128,6 +128,26 @@ void                p4est_tree_compute_overlap (p4est_t * p4est,
                                                 sc_array_t * in,
                                                 sc_array_t * out);
 
+/** Compute the overlap of a number of insulation layers with a tree.
+ * Every quadrant out of the insulation layer of the quadrants in \a in
+ * except the quadrant itself is checked for overlap of quadrants
+ * from all trees that are smaller by at least two levels and thus
+ * can cause a split. Those elements that cause a split (as determined by the
+ * p4est_balance_*_test routines) create quadrants in \a out that will
+ * reproduce those splits when \a in is balanced. Note: use this verion if you
+ * are using less than full balance.
+ *
+ * \param [in] p4est    The p4est to work on.
+ * \param [in] in       A piggy-sorted linear list of quadrants.
+ * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
+ * \param [in] balance  The type of balance condition that should be enforced.
+ */
+void                p4est_tree_compute_overlap_new (p4est_t * p4est,
+                                                    sc_array_t * in,
+                                                    sc_array_t * out,
+                                                    p4est_connect_type_t
+                                                    balance);
+
 /** Removes duplicate quadrant from the output array of compute_overlap.
  * \param [in] skip     A piggy-sorted list of quadrants to be skipped.
  * \param [in,out] out  A piggy-sorted subset of tree->quadrants.

@@ -1859,7 +1859,7 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
   p4est_quadrant_t   *q1, *q2;
   sc_array_t         *tquadrants = &tree->quadrants;
 
-  P4EST_ASSERT (p4est_tree_is_sorted (tree));
+  P4EST_ASSERT (sc_array_is_sorted (tquadrants, p4est_quadrant_compare));
 
   incount = tquadrants->elem_count;
   if (incount <= 1) {

@@ -87,6 +87,16 @@ typedef struct p8est_tree
 }
 p8est_tree_t;
 
+/* data pertaining to selecting, inspecting, and profiling algorithms that
+ * are used */
+typedef struct p8est_inspect
+{
+  int                 use_comp_overlap_new;
+  int                 use_uniq_overlap_new;
+  int                 use_borders;
+}
+p8est_inspect_t;
+
 typedef struct p8est
 {
   MPI_Comm            mpicomm;
@@ -119,6 +129,7 @@ typedef struct p8est
                                          */
   sc_mempool_t       *quadrant_pool;    /* memory allocator
                                            for temporary quadrants */
+  p8est_inspect_t    *inspect;  /* algorithmic switches */
 }
 p8est_t;
 

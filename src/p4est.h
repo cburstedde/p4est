@@ -91,6 +91,18 @@ typedef struct p4est_tree
 }
 p4est_tree_t;
 
+/* data pertaining to selecting, inspecting, and profiling algorithms that
+ * are used */
+typedef struct p4est_inspect
+{
+  int                 use_comp_overlap_new;
+  int                 use_uniq_overlap_new;
+  int                 use_borders;
+}
+p4est_inspect_t;
+
+SC_EXTERN_C_END;
+
 typedef struct p4est
 {
   MPI_Comm            mpicomm;
@@ -123,6 +135,7 @@ typedef struct p4est
                                          */
   sc_mempool_t       *quadrant_pool;    /* memory allocator
                                            for temporary quadrants */
+  p4est_inspect_t    *inspect;  /* algorithmic switches */
 }
 p4est_t;
 

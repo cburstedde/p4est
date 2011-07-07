@@ -75,6 +75,7 @@
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
+#define p4est_inspect_t                 p8est_inspect_t
 #define p4est_position_t                p8est_position_t
 #define p4est_init_t                    p8est_init_t
 #define p4est_refine_t                  p8est_refine_t
