@@ -141,12 +141,15 @@ void                p8est_tree_compute_overlap (p8est_t * p8est,
  * \param [in] in       A piggy-sorted linear list of quadrants.
  * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
  * \param [in] balance  The type of balance condition that should be enforced.
+ * \param [in] borders  Array of arrays of tree border elements: if not NULL,
+ *                      this will be used to fill \a out.
  */
 void                p8est_tree_compute_overlap_new (p8est_t * p8est,
                                                     sc_array_t * in,
                                                     sc_array_t * out,
                                                     p8est_connect_type_t
-                                                    balance);
+                                                    balance,
+                                                    sc_array_t * borders);
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
  * \param [in] skip     A piggy-sorted list of quadrants to be skipped.
@@ -214,6 +217,12 @@ void                p8est_balance_subtree (p8est_t * p8est,
                                            p8est_connect_type_t btype,
                                            p4est_topidx_t which_tree,
                                            p8est_init_t init_fn);
+
+void                p8est_balance_border (p8est_t * p8est,
+                                          p8est_connect_type_t btype,
+                                          p4est_topidx_t which_tree,
+                                          p8est_init_t init_fn,
+                                          sc_array_t * borders);
 
 /** Remove overlaps from a sorted list of quadrants.
  *

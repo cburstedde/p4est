@@ -605,6 +605,12 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 
     add[nconextra / 2] = *p;
 
+    /* this is the only quad needed if it is only one level smaller than the
+     * original quadrant */
+    if (blevel == plevel - 1) {
+      return;
+    }
+
     mask = -1 << (P4EST_MAXLEVEL - (blevel - 1));
     pmask = -1 << (P4EST_MAXLEVEL - (plevel));
     a = *p;
@@ -829,6 +835,12 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
 
   if (add != NULL) {
     add[1] = *p;
+
+    /* this is the only quad needed if it is only one level smaller than the
+     * original quadrant */
+    if (blevel == plevel - 1) {
+      return;
+    }
 
     mask = -1 << (P4EST_MAXLEVEL - (blevel - 1));
     pmask = -1 << (P4EST_MAXLEVEL - (plevel));

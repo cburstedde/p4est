@@ -253,6 +253,7 @@
 #define p4est_complete_region           p8est_complete_region
 #define p4est_complete_subtree          p8est_complete_subtree
 #define p4est_balance_subtree           p8est_balance_subtree
+#define p4est_balance_border            p8est_balance_border
 #define p4est_linearize_tree            p8est_linearize_tree
 #define p4est_next_nonempty_process     p8est_next_nonempty_process
 #define p4est_partition_correction      p8est_partition_correction

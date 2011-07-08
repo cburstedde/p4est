@@ -1082,7 +1082,8 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
         break;
       }
       s = (p4est_quadrant_t *) sc_array_index_int (&peer->send_first, pos);
-      if (p4est_quadrant_is_equal (s, q) && s->p.piggy2.which_tree == qtree) {
+      if (p4est_quadrant_is_equal (s, q) && s->p.piggy2.which_tree == qtree
+          && s->p.piggy2.from_tree == q->p.piggy2.from_tree) {
         found = 1;
         break;
       }
@@ -1106,13 +1107,12 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
 
 static void
 p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer,
-                        p4est_connect_type_t balance)
+                        p4est_connect_type_t balance, sc_array_t * borders)
 {
   /* compute and uniqify overlap quadrants */
-  if (p4est->inspect != NULL &&
-      p4est->inspect->use_comp_overlap_new) {
+  if (p4est->inspect != NULL && p4est->inspect->use_comp_overlap_new) {
     p4est_tree_compute_overlap_new (p4est, &peer->recv_first,
-                                    &peer->send_second, balance);
+                                    &peer->send_second, balance, borders);
   }
   else {
     p4est_tree_compute_overlap (p4est, &peer->recv_first, &peer->send_second);
@@ -1134,6 +1134,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   int                 tree_fully_owned, full_tree[2];
   int8_t             *tree_flags;
   size_t              zz, treecount, ctree;
+  size_t              localcount;
   size_t              qcount, qbytes;
   size_t              all_incount, all_outcount;
   p4est_qcoord_t      qh;
@@ -1148,6 +1149,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   p4est_quadrant_t   *q, *s;
   p4est_connectivity_t *conn = p4est->connectivity;
   sc_array_t         *qarray, *tquadrants;
+  sc_array_t         *borders;
 #ifdef P4EST_DEBUG
   size_t              data_pool_size;
 #endif
@@ -1217,6 +1219,19 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   tree_flags = P4EST_ALLOC (int8_t, conn->num_trees);
   for (nt = 0; nt < conn->num_trees; ++nt) {
     tree_flags[nt] = 0x00;
+  }
+
+  localcount = (size_t) (p4est->last_local_tree + 1 -
+                         p4est->first_local_tree);
+  if (p4est->inspect != NULL && p4est->inspect->use_borders) {
+    borders = sc_array_new_size (sizeof (sc_array_t), localcount);
+    for (zz = 0; zz < localcount; zz++) {
+      qarray = (sc_array_t *) sc_array_index (borders, zz);
+      sc_array_init (qarray, sizeof (p4est_quadrant_t));
+    }
+  }
+  else {
+    borders = NULL;
   }
 
 #ifdef P4EST_MPI
@@ -1318,6 +1333,14 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       }
     }
 
+    if (borders != NULL) {
+      qarray = (sc_array_t *) sc_array_index (borders,
+                                              (size_t) (nt - first_tree));
+    }
+    else {
+      qarray = NULL;
+    }
+
     /* identify boundary quadrants and prepare them to be sent */
     for (zz = 0; zz < treecount; ++zz) {
       /* this quadrant may be on the boundary with a range of processors */
@@ -1328,6 +1351,11 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
         /* this quadrant's 3x3 neighborhood is onwed by this processor */
         ++skipped;
         continue;
+      }
+
+      if (qarray != NULL) {
+        s = (p4est_quadrant_t *) sc_array_push (qarray);
+        *s = *q;
       }
 
 #ifdef P4_TO_P8
@@ -1406,6 +1434,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
               if (qtree >= 0) {
                 P4EST_ASSERT (tree_contact[face]);
                 p4est_quadrant_transform_face (q, &tosend, ftransform);
+                tosend.p.piggy2.from_tree = nt;
                 p4est_quadrant_transform_face (&insulq, &tempq, ftransform);
                 p4est_balance_schedule (p4est, peers, qtree, 1,
                                         &tosend, &tempq,
@@ -1425,6 +1454,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
               for (etree = 0; etree < eta->elem_count; ++etree) {
                 et = p8est_edge_array_index (eta, etree);
                 p8est_quadrant_transform_edge (q, &tosend, &ei, et, 0);
+                tosend.p.piggy2.from_tree = nt;
                 p8est_quadrant_transform_edge (&insulq, &tempq, &ei, et, 1);
                 p4est_balance_schedule (p4est, peers, et->ntree, 1,
                                         &tosend, &tempq,
@@ -1449,6 +1479,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                 tosend = *q;
                 p4est_quadrant_transform_corner (&tosend, (int) ct->ncorner,
                                                  0);
+                tosend.p.piggy2.from_tree = nt;
                 tempq = insulq;
                 p4est_quadrant_transform_corner (&tempq, (int) ct->ncorner,
                                                  1);
@@ -1460,8 +1491,11 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
           }
           else {
             /* no inter-tree contact */
+            tosend = *q;
+            tosend.p.piggy2.from_tree = nt;
             p4est_balance_schedule (p4est, peers, nt, 0,
-                                    q, &insulq, &first_peer, &last_peer);
+                                    &tosend, &insulq, &first_peer,
+                                    &last_peer);
           }
         }
       }
@@ -1663,7 +1697,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 #endif /* P4EST_DEBUG */
 
         /* process incoming quadrants to interleave with communication */
-        p4est_balance_response (p4est, peer, btype);
+        p4est_balance_response (p4est, peer, btype, borders);
         qcount = peer->send_second.elem_count;
         if (qcount > 0) {
           P4EST_LDEBUGF ("Balance B send %llu quadrants to %d\n",
@@ -1713,7 +1747,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   qarray = &peer->recv_first;
   sc_array_resize (qarray, qcount);
   memcpy (qarray->array, peer->send_first.array, qbytes);
-  p4est_balance_response (p4est, peer, btype);
+  p4est_balance_response (p4est, peer, btype, borders);
   qcount = peer->send_second.elem_count;
   peer->recv_second_count = peer->send_second_count = (int) qcount;
   qbytes = qcount * sizeof (p4est_quadrant_t);
@@ -1856,8 +1890,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
         P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);
         P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
 #ifdef P4EST_DEBUG
-        if (p4est->inspect == NULL ||
-            !p4est->inspect->use_comp_overlap_new) {
+        if (p4est->inspect == NULL || !p4est->inspect->use_comp_overlap_new) {
           face_axis[0] = (s->x < 0 || s->x >= rh);
           face_axis[1] = (s->y < 0 || s->y >= rh);
 #ifndef P4_TO_P8
@@ -1872,13 +1905,21 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
         continue;
       }
-      tree = p4est_tree_array_index (p4est->trees, qtree);
-      q = p4est_quadrant_array_push (&tree->quadrants);
-      *q = *s;
-      ++tree->quadrants_per_level[q->level];
-      tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
-      ++p4est->local_num_quadrants;
-      p4est_quadrant_init_data (p4est, qtree, q, init_fn);
+      if (borders == NULL) {
+        tree = p4est_tree_array_index (p4est->trees, qtree);
+        q = p4est_quadrant_array_push (&tree->quadrants);
+        *q = *s;
+        ++tree->quadrants_per_level[q->level];
+        tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
+        ++p4est->local_num_quadrants;
+        p4est_quadrant_init_data (p4est, qtree, q, init_fn);
+      }
+      else {
+        qarray = (sc_array_t *) sc_array_index (borders,
+                                                (int) (qtree - first_tree));
+        q = p4est_quadrant_array_push (qarray);
+        *q = *s;
+      }
     }
   }
 
@@ -1893,8 +1934,17 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     if (!(tree_flags[nt] & fully_owned_flag) ||
         (tree_flags[nt] & any_face_flag)) {
       /* we have most probably received quadrants, run sort and balance */
-      sc_array_sort (tquadrants, p4est_quadrant_compare);
-      p4est_balance_subtree (p4est, btype, nt, init_fn);
+      if (borders == NULL) {
+        sc_array_sort (tquadrants, p4est_quadrant_compare);
+        if (p4est->inspect != NULL && p4est->inspect->use_comp_overlap_new) {
+          p4est_linearize_tree (p4est, tree);
+        }
+        p4est_balance_subtree (p4est, btype, nt, init_fn);
+      }
+      else {
+        /* balance the border, add it back into the tree, and linearize */
+        p4est_balance_border (p4est, btype, nt, init_fn, borders);
+      }
       P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
                       (long long) nt,
                       (unsigned long long) treecount,
@@ -1953,6 +2003,14 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     sc_array_reset (&peer->recv_second);
   }
   P4EST_FREE (peers);
+
+  if (borders != NULL) {
+    for (zz = 0; zz < localcount; zz++) {
+      qarray = (sc_array_t *) sc_array_index (borders, zz);
+      sc_array_reset (qarray);
+    }
+    sc_array_destroy (borders);
+  }
 
 #ifdef P4_TO_P8
   sc_array_reset (eta);
