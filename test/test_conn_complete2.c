@@ -23,19 +23,47 @@
 
 #ifndef P4_TO_P8
 #include <p4est_connectivity.h>
+#include <p4est_ghost.h>
+#include <p4est_lnodes.h>
 #else
 #include <p8est_connectivity.h>
+#include <p8est_ghost.h>
+#include <p8est_lnodes.h>
 #endif
 
 static void
-test_complete (p4est_connectivity_t * conn, const char *which)
+test_the_p4est (p4est_connectivity_t * conn, int N)
 {
-  SC_GLOBAL_INFOF ("Testing completion for connectivity %s\n", which);
+  p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
+  p4est_lnodes_t     *lnodes;
+
+  p4est = p4est_new (MPI_COMM_WORLD, conn, 0, NULL, NULL);
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  lnodes = p4est_lnodes_new (p4est, ghost, N);
+  p4est_lnodes_destroy (lnodes);
+  p4est_ghost_destroy (ghost);
+  p4est_destroy (p4est);
+}
+
+static void
+test_complete (p4est_connectivity_t * conn, const char *which, int test_p4est)
+{
+  SC_GLOBAL_INFOF ("Testing standard connectivity %s\n", which);
   SC_CHECK_ABORTF (p4est_connectivity_is_valid (conn),
-                   "Invalid connectivity %s before completion", which);
+                   "Invalid connectivity %s before compqletion", which);
+  if (0 && test_p4est) {
+    test_the_p4est (conn, 3);
+  }
+
+  SC_GLOBAL_INFOF ("Testing completion for connectivity %s\n", which);
   p4est_connectivity_complete (conn);
   SC_CHECK_ABORTF (p4est_connectivity_is_valid (conn),
                    "Invalid connectivity %s after completion", which);
+  if (test_p4est) {
+    test_the_p4est (conn, 3);
+  }
+
   p4est_connectivity_destroy (conn);
 }
 
@@ -51,21 +79,26 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
 #ifndef P4_TO_P8
-  test_complete (p4est_connectivity_new_unitsquare (), "unitsquare");
-  test_complete (p4est_connectivity_new_periodic (), "2D periodic");
-  test_complete (p4est_connectivity_new_rotwrap (), "rotwrap");
-  test_complete (p4est_connectivity_new_corner (), "corner");
-  test_complete (p4est_connectivity_new_moebius (), "moebius");
-  test_complete (p4est_connectivity_new_star (), "star");
-  test_complete (p4est_connectivity_new_brick (3, 18, 0, 1), "2D brick");
+  test_complete (p4est_connectivity_new_unitsquare (), "unitsquare", 1);
+  test_complete (p4est_connectivity_new_periodic (), "2D periodic", 0);
+  test_complete (p4est_connectivity_new_rotwrap (), "rotwrap", 0);
+  test_complete (p4est_connectivity_new_corner (), "corner", 1);
+  test_complete (p4est_connectivity_new_moebius (), "moebius", 1);
+  test_complete (p4est_connectivity_new_star (), "star", 1);
+  test_complete (p4est_connectivity_new_brick (3, 18, 0, 1),
+                 "2D periodic brick", 0);
+  test_complete (p4est_connectivity_new_brick (3, 18, 0, 0), "2D brick", 1);
 #else
-  test_complete (p8est_connectivity_new_unitcube (), "unitcube");
-  test_complete (p8est_connectivity_new_periodic (), "3D periodic");
-  test_complete (p8est_connectivity_new_rotwrap (), "rotwrap");
-  test_complete (p8est_connectivity_new_twowrap (), "twowrap");
-  test_complete (p8est_connectivity_new_twocubes (), "twocubes");
-  test_complete (p8est_connectivity_new_rotcubes (), "rotcubes");
-  test_complete (p8est_connectivity_new_brick (3, 2, 8, 1, 0, 1), "3D brick");
+  test_complete (p8est_connectivity_new_unitcube (), "unitcube", 1);
+  test_complete (p8est_connectivity_new_periodic (), "3D periodic", 0);
+  test_complete (p8est_connectivity_new_rotwrap (), "rotwrap", 0);
+  test_complete (p8est_connectivity_new_twowrap (), "twowrap", 1);
+  test_complete (p8est_connectivity_new_twocubes (), "twocubes", 1);
+  test_complete (p8est_connectivity_new_rotcubes (), "rotcubes", 1);
+  test_complete (p8est_connectivity_new_brick (3, 2, 8, 1, 0, 1),
+                 "3D periodic brick", 0);
+  test_complete (p8est_connectivity_new_brick (3, 2, 8, 0, 0, 0),
+                 "3D brick", 1);
 #endif
 
   sc_finalize ();
