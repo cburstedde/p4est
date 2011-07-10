@@ -95,6 +95,7 @@ p4est_tree_t;
  * are used */
 typedef struct p4est_inspect
 {
+  int                 use_balance_subtree_new;
   int                 use_comp_overlap_new;
   int                 use_uniq_overlap_new;
   int                 use_borders;

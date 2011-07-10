@@ -91,6 +91,7 @@ p8est_tree_t;
  * are used */
 typedef struct p8est_inspect
 {
+  int                 use_balance_subtree_new;
   int                 use_comp_overlap_new;
   int                 use_uniq_overlap_new;
   int                 use_borders;
