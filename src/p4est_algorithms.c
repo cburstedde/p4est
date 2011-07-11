@@ -923,7 +923,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
             /* Do a binary search for the lowest tree quadrant >= s.
                Does not accept an ancestor of s, which is on purpose. */
             first_index = p4est_find_lower_bound (tquadrants, s, guess);
-            if (first_index < 0) {
+            if (first_index < 0 || first_index > last_index) {
               /* The only possibility is that a quadrant larger than s
                * contains s */
               tq = p4est_quadrant_array_index (tquadrants, last_index);
@@ -940,6 +940,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
                   split = !p4est_balance_test (inq, tq, balance, seeds);
 
                   if (split) {
+                    seedcount = seeds->elem_count;
                     for (jz = 0; jz < seedcount; jz++) {
                       u = p4est_quadrant_array_index (seeds, jz);
                       P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, u));
@@ -1980,6 +1981,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
  * out: output complete balance array
  * first_desc: optional first descendant
  * last_desct: optional last_descendant
+ * count_in: count_already_inlist accumulator
+ * count_out: count_already_outlist accumulator
+ * count_an: count_ancestor_inlist_accumulator
  */
 static void
 p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
@@ -1989,7 +1993,9 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
                                       sc_mempool_t * restrict list_alloc,
                                       sc_array_t * restrict out,
                                       p4est_quadrant_t * restrict first_desc,
-                                      p4est_quadrant_t * restrict last_desc)
+                                      p4est_quadrant_t * restrict last_desc,
+                                      size_t * count_in, size_t * count_out,
+                                      size_t * count_an)
 {
   int                 lookup, inserted;
   size_t              jz;
@@ -2413,6 +2419,16 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
   }
 #endif
 
+  if (count_in != NULL) {
+    *count_in += count_already_inlist;
+  }
+  if (count_out != NULL) {
+    *count_out += count_already_outlist;
+  }
+  if (count_an != NULL) {
+    *count_an += count_ancestor_inlist;
+  }
+
 }
 
 static void
@@ -2427,8 +2443,8 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
   size_t              data_pool_size;
 #endif
   size_t              tcount;
-  int                 count_already_inlist, count_already_outlist;
-  int                 count_ancestor_inlist, count_ancestor_outlist;
+  size_t              count_already_inlist, count_already_outlist;
+  size_t              count_ancestor_inlist;
   p4est_quadrant_t   *q, *p;
   sc_mempool_t       *list_alloc;
   sc_array_t         *inlist, *outlist;
@@ -2523,7 +2539,10 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
   p4est_complete_or_balance_new_kernel (inlist, &root, bound, qpool,
                                         list_alloc, outlist,
                                         &(tree->first_desc),
-                                        &(tree->last_desc));
+                                        &(tree->last_desc),
+                                        &count_already_inlist,
+                                        &count_already_outlist,
+                                        &count_ancestor_inlist);
 
   ocount = outlist->elem_count;
 
@@ -2560,6 +2579,19 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
   /* resize tquadrants and copy */
   sc_array_resize (tquadrants, ocount);
   memcpy (tquadrants->array, outlist->array, outlist->elem_size * ocount);
+
+  /* sanity check */
+  if (p4est->user_data_pool != NULL) {
+    P4EST_ASSERT (data_pool_size + (ocount - tcount) ==
+                  p4est->user_data_pool->elem_count);
+  }
+
+  P4EST_VERBOSEF
+    ("Tree %lld inlist %llu outlist %llu ancestor %llu insert %llu\n",
+     (long long) which_tree, (unsigned long long) count_already_inlist,
+     (unsigned long long) count_already_outlist,
+     (unsigned long long) count_ancestor_inlist,
+     (unsigned long long) (ocount - tcount));
 
   sc_array_destroy (inlist);
   sc_array_destroy (outlist);
@@ -2723,7 +2755,10 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
 
     /* balance them within the containing quad */
     p4est_complete_or_balance_new_kernel (inlist, p, bound, qpool, list_alloc,
-                                          flist, NULL, NULL);
+                                          flist, NULL, NULL,
+                                          &count_already_inlist,
+                                          &count_already_outlist,
+                                          &count_ancestor_inlist);
 
     /* we are going to put flist in tquadrants and remove p */
     num_this_added = flist->elem_count - 1;
