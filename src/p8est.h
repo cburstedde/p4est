@@ -92,9 +92,18 @@ p8est_tree_t;
 typedef struct p8est_inspect
 {
   int                 use_balance_subtree_new;
-  int                 use_comp_overlap_new;
-  int                 use_uniq_overlap_new;
+  int                 use_overlap_new;
   int                 use_borders;
+  size_t              balance_A_count_in;
+  size_t              balance_A_count_out;
+  size_t              balance_comm_sent;
+  size_t              balance_comm_nzpeers;
+  size_t              balance_B_count_in;
+  size_t              balance_B_count_out;
+  double              balance_A;
+  double              balance_comm;
+  double              balance_B;
+  int                 use_B;
 }
 p8est_inspect_t;
 

@@ -1110,7 +1110,7 @@ p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer,
                         p4est_connect_type_t balance, sc_array_t * borders)
 {
   /* compute and uniqify overlap quadrants */
-  if (p4est->inspect != NULL && p4est->inspect->use_comp_overlap_new) {
+  if (p4est->inspect != NULL && p4est->inspect->use_overlap_new) {
     sc_array_t         *first_seeds =
       sc_array_new (sizeof (p4est_quadrant_t));
     p4est_tree_compute_overlap_new (p4est, &peer->recv_first,
@@ -1128,6 +1128,13 @@ p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer,
   else {
     p4est_tree_compute_overlap (p4est, &peer->recv_first, &peer->send_second);
     p4est_tree_uniqify_overlap (&peer->send_first, &peer->send_second);
+  }
+
+  if (p4est->inspect) {
+    p4est->inspect->balance_comm_sent += peer->send_second.elem_count;
+    if (peer->send_second.elem_count) {
+      p4est->inspect->balance_comm_nzpeers++;
+    }
   }
 }
 
@@ -1302,6 +1309,14 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   nextlow.z = p4est->global_first_position[rank + 1].z;
 #endif
   nextlow.level = P4EST_QMAXLEVEL;
+
+  /* start balance_A timing */
+  if (p4est->inspect != NULL) {
+    p4est->inspect->balance_A = -MPI_Wtime ();
+    p4est->inspect->balance_A_count_in = 0;
+    p4est->inspect->balance_A_count_out = 0;
+    p4est->inspect->use_B = 0;
+  }
 
   /* loop over all local trees to assemble first send list */
   first_tree = p4est->first_local_tree;
@@ -1518,6 +1533,15 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
     }
     tquadrants = NULL;          /* safeguard */
+  }
+
+  /* end balance_A, start balance_comm */
+  if (p4est->inspect) {
+    p4est->inspect->balance_comm = MPI_Wtime ();
+    p4est->inspect->balance_A += p4est->inspect->balance_comm;
+    p4est->inspect->balance_comm *= -1.;
+    p4est->inspect->balance_comm_sent = 0;
+    p4est->inspect->balance_comm_nzpeers = 0;
   }
 
 #ifdef P4EST_MPI
@@ -1870,6 +1894,16 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   }
 #endif /* P4EST_MPI */
 
+  /* end balance_comm, start balance_B */
+  if (p4est->inspect) {
+    p4est->inspect->balance_B = MPI_Wtime ();
+    p4est->inspect->balance_comm += p4est->inspect->balance_B;
+    p4est->inspect->balance_B *= -1.;
+    p4est->inspect->balance_B_count_in = 0;
+    p4est->inspect->balance_B_count_out = 0;
+    p4est->inspect->use_B = 1;
+  }
+
   /* merge received quadrants */
   for (j = 0; j < num_procs; ++j) {
     size_t              fcount;
@@ -1882,7 +1916,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                   (int) peer->send_first.elem_count);
     P4EST_ASSERT (peer->send_second_count ==
                   (int) peer->send_second.elem_count);
-    if (p4est->inspect == NULL || !p4est->inspect->use_comp_overlap_new) {
+    if (p4est->inspect == NULL || !p4est->inspect->use_overlap_new) {
       P4EST_ASSERT (peer->recv_first_count ==
                     (int) peer->recv_first.elem_count);
     }
@@ -1901,7 +1935,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner/edge quadrant from the second pass of balance */
 #ifdef P4EST_DEBUG
-        if (p4est->inspect == NULL || !p4est->inspect->use_comp_overlap_new) {
+        if (p4est->inspect == NULL || !p4est->inspect->use_overlap_new) {
           P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);
           P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
           face_axis[0] = (s->x < 0 || s->x >= rh);
@@ -1949,7 +1983,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       /* we have most probably received quadrants, run sort and balance */
       if (borders == NULL) {
         sc_array_sort (tquadrants, p4est_quadrant_compare);
-        if (p4est->inspect != NULL && p4est->inspect->use_comp_overlap_new) {
+        if (p4est->inspect != NULL && p4est->inspect->use_overlap_new) {
           p4est_linearize_tree (p4est, tree);
         }
         p4est_balance_subtree (p4est, btype, nt, init_fn);
@@ -1979,6 +2013,11 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     mpiret = MPI_Waitall (4 * num_procs,
                           send_requests_first_count, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
+  }
+
+  /* end balance_B */
+  if (p4est->inspect != NULL) {
+    p4est->inspect->balance_B += MPI_Wtime ();
   }
 
   /* compute global sum of send and receive counts */

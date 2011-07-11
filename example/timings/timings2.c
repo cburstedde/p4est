@@ -60,6 +60,7 @@
 #endif
 #include <sc_flops.h>
 #include <sc_statistics.h>
+#include <sc_options.h>
 
 /* #define P4EST_TIMINGS_VTK */
 
@@ -85,7 +86,25 @@ enum
 {
   TIMINGS_REFINE,
   TIMINGS_BALANCE,
+  TIMINGS_BALANCE_A,
+  TIMINGS_BALANCE_COMM,
+  TIMINGS_BALANCE_B,
+  TIMINGS_BALANCE_A_COUNT_IN,
+  TIMINGS_BALANCE_A_COUNT_OUT,
+  TIMINGS_BALANCE_COMM_SENT,
+  TIMINGS_BALANCE_COMM_NZPEERS,
+  TIMINGS_BALANCE_B_COUNT_IN,
+  TIMINGS_BALANCE_B_COUNT_OUT,
   TIMINGS_REBALANCE,
+  TIMINGS_REBALANCE_A,
+  TIMINGS_REBALANCE_COMM,
+  TIMINGS_REBALANCE_B,
+  TIMINGS_REBALANCE_A_COUNT_IN,
+  TIMINGS_REBALANCE_A_COUNT_OUT,
+  TIMINGS_REBALANCE_COMM_SENT,
+  TIMINGS_REBALANCE_COMM_NZPEERS,
+  TIMINGS_REBALANCE_B_COUNT_IN,
+  TIMINGS_REBALANCE_B_COUNT_OUT,
   TIMINGS_PARTITION,
   TIMINGS_GHOSTS,
   TIMINGS_NODES,
@@ -178,7 +197,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 wrongusage;
   unsigned            crc, gcrc;
-  const char         *config_name, *usage;
+  const char         *config_name;
   p4est_locidx_t     *quadrant_counts;
   p4est_gloidx_t      count_refined, count_balanced;
   p4est_gloidx_t      prev_quadrant, next_quadrant;
@@ -196,6 +215,11 @@ main (int argc, char **argv)
   sc_statinfo_t       stats[TIMINGS_NUM_STATS];
   sc_flopinfo_t       fi, snapshot;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
+  sc_options_t       *opt;
+  int                 overlap;
+  int                 subtree;
+  int                 borders;
+  int                 success;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -216,63 +240,72 @@ main (int argc, char **argv)
   P4EST_GLOBAL_PRODUCTIONF ("Size of %dtant: %lld bytes\n", P4EST_DIM,
                             (long long) sizeof (p4est_quadrant_t));
 
-  usage =
-    "Arguments: <configuration> <level>\n   Configuration can be any of\n"
+  opt = sc_options_new (argv[0]);
+
+  sc_options_add_switch (opt, 'o', "new-balance-overlap", &overlap,
+                         "use the new balance overlap algorithm");
+  sc_options_add_switch (opt, 's', "new-balance-subtree", &subtree,
+                         "use the new balance subtree algorithm");
+  sc_options_add_switch (opt, 'b', "new_balance-borders", &borders,
+                         "use borders in balance");
+  sc_options_add_int (opt, 'l', "level", &refine_level, 0,
+                      "initial refine level");
 #ifndef P4_TO_P8
-    "      unit|periodic|three|moebius|star\n"
+  sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
+                         "configuration: unit|periodic|three|moebius|star");
 #else
-    "      unit|periodic|rotwrap|twocubes|rotcubes|shell\n"
+  sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
+                         "configuration: unit|periodic|rotwrap|twocubes|rotcubes|shell");
 #endif
-    "   Level controls the maximum depth of refinement\n";
-  wrongusage = 0;
+
+  success = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                              opt, argc, argv);
+
+  if (success < 0) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+    return -1;
+  }
   config = P4EST_CONFIG_NULL;
-  config_name = NULL;
-  if (!wrongusage && argc != 3) {
+  if (!strcmp (config_name, "unit")) {
+    config = P4EST_CONFIG_UNIT;
+  }
+  else if (!strcmp (config_name, "periodic")) {
+    config = P4EST_CONFIG_PERIODIC;
+  }
+#ifndef P4_TO_P8
+  else if (!strcmp (config_name, "three")) {
+    config = P4EST_CONFIG_THREE;
+  }
+  else if (!strcmp (config_name, "moebius")) {
+    config = P4EST_CONFIG_MOEBIUS;
+  }
+  else if (!strcmp (config_name, "star")) {
+    config = P4EST_CONFIG_STAR;
+  }
+#else
+  else if (!strcmp (config_name, "rotwrap")) {
+    config = P4EST_CONFIG_ROTWRAP;
+  }
+  else if (!strcmp (config_name, "twocubes")) {
+    config = P4EST_CONFIG_TWOCUBES;
+  }
+  else if (!strcmp (config_name, "rotcubes")) {
+    config = P4EST_CONFIG_ROTCUBES;
+  }
+  else if (!strcmp (config_name, "shell")) {
+    config = P4EST_CONFIG_SHELL;
+  }
+#endif
+  else {
     wrongusage = 1;
   }
-  if (!wrongusage) {
-    config_name = argv[1];
-    if (!strcmp (config_name, "unit")) {
-      config = P4EST_CONFIG_UNIT;
-    }
-    else if (!strcmp (config_name, "periodic")) {
-      config = P4EST_CONFIG_PERIODIC;
-    }
-#ifndef P4_TO_P8
-    else if (!strcmp (config_name, "three")) {
-      config = P4EST_CONFIG_THREE;
-    }
-    else if (!strcmp (config_name, "moebius")) {
-      config = P4EST_CONFIG_MOEBIUS;
-    }
-    else if (!strcmp (config_name, "star")) {
-      config = P4EST_CONFIG_STAR;
-    }
-#else
-    else if (!strcmp (config_name, "rotwrap")) {
-      config = P4EST_CONFIG_ROTWRAP;
-    }
-    else if (!strcmp (config_name, "twocubes")) {
-      config = P4EST_CONFIG_TWOCUBES;
-    }
-    else if (!strcmp (config_name, "rotcubes")) {
-      config = P4EST_CONFIG_ROTCUBES;
-    }
-    else if (!strcmp (config_name, "shell")) {
-      config = P4EST_CONFIG_SHELL;
-    }
-#endif
-    else {
-      wrongusage = 1;
-    }
-  }
   if (wrongusage) {
-    P4EST_GLOBAL_LERROR (usage);
+    P4EST_GLOBAL_LERROR ("Wrong configuration name given");
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     sc_abort_collective ("Usage error");
   }
 
   /* get command line argument: maximum refinement level */
-  refine_level = atoi (argv[2]);
   level_shift = 4;
 
   /* print general setup information */
@@ -324,6 +357,13 @@ main (int argc, char **argv)
 #endif
   p4est = p4est_new_ext (mpi->mpicomm, connectivity,
                          1, refine_level - level_shift, 1, 0, NULL, NULL);
+  p4est->inspect = P4EST_ALLOC_ZERO (p4est_inspect_t, 1);
+  p4est->inspect->use_overlap_new = overlap;
+  p4est->inspect->use_balance_subtree_new = (overlap && subtree);
+  p4est->inspect->use_borders = (overlap && borders);
+  P4EST_GLOBAL_STATISTICSF
+    ("Balance: new overlap %d new subtree %d borders %d\n", overlap,
+     (overlap && subtree), (overlap && borders));
   quadrant_counts = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
 
   /* time refine */
@@ -341,6 +381,30 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_BALANCE], snapshot.iwtime, "Balance");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_A],
+                 p4est->inspect->balance_A, "Balance A time");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_COMM],
+                 p4est->inspect->balance_comm, "Balance comm time");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_B],
+                 p4est->inspect->balance_B, "Balance B time");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_A_COUNT_IN],
+                 (double) p4est->inspect->balance_A_count_in,
+                 "Balance A count inlist");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_A_COUNT_OUT],
+                 (double) p4est->inspect->balance_A_count_out,
+                 "Balance A count outlist");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_COMM_SENT],
+                 (double) p4est->inspect->balance_comm_sent,
+                 "Balance sent second round");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_COMM_NZPEERS],
+                 (double) p4est->inspect->balance_comm_nzpeers,
+                 "Balance nonzero peers second round");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_B_COUNT_IN],
+                 (double) p4est->inspect->balance_B_count_in,
+                 "Balance B count inlist");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_B_COUNT_OUT],
+                 (double) p4est->inspect->balance_B_count_out,
+                 "Balance B count outlist");
 #ifdef P4EST_TIMINGS_VTK
   p4est_vtk_write_file (p4est, "timings_balanced");
 #endif
@@ -352,6 +416,30 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_REBALANCE], snapshot.iwtime, "Rebalance");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_A],
+                 p4est->inspect->balance_A, "Rebalance A time");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_COMM],
+                 p4est->inspect->balance_comm, "Rebalance comm time");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_B],
+                 p4est->inspect->balance_B, "Rebalance B time");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_A_COUNT_IN],
+                 (double) p4est->inspect->balance_A_count_in,
+                 "Rebalance A count inlist");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_A_COUNT_OUT],
+                 (double) p4est->inspect->balance_A_count_out,
+                 "Rebalance A count outlist");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_COMM_SENT],
+                 (double) p4est->inspect->balance_comm_sent,
+                 "Rebalance sent second round");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_COMM_NZPEERS],
+                 (double) p4est->inspect->balance_comm_nzpeers,
+                 "Rebalance nonzero peers second round");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_B_COUNT_IN],
+                 (double) p4est->inspect->balance_B_count_in,
+                 "Rebalance B count inlist");
+  sc_stats_set1 (&stats[TIMINGS_REBALANCE_B_COUNT_OUT],
+                 (double) p4est->inspect->balance_B_count_out,
+                 "Rebalance B count outlist");
   P4EST_ASSERT (count_balanced == p4est->global_num_quadrants);
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
@@ -451,6 +539,8 @@ main (int argc, char **argv)
   P4EST_FREE (quadrant_counts);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
+
+  sc_options_destroy (opt);
 
   /* clean up and exit */
   sc_finalize ();

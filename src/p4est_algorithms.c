@@ -1970,6 +1970,17 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                 tree->quadrants.elem_count);
 
   P4EST_ASSERT (p4est_tree_is_complete (tree));
+
+  if (p4est->inspect) {
+    if (!p4est->inspect->use_B) {
+      p4est->inspect->balance_A_count_in += count_already_inlist;
+      p4est->inspect->balance_A_count_out += count_already_outlist;
+    }
+    else {
+      p4est->inspect->balance_B_count_in += count_already_inlist;
+      p4est->inspect->balance_B_count_out += count_already_outlist;
+    }
+  }
 }
 
 /* kernel for balancing quadrants.
@@ -2554,6 +2565,17 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
     q = p4est_quadrant_array_index (tquadrants, iz);
     p = p4est_quadrant_array_index (outlist, jz);
 
+    /* watch out for gaps in tquadrants */
+    while (p4est_quadrant_compare (p, q) < 0) {
+      P4EST_ASSERT (!p4est_quadrant_is_ancestor (p, q));
+      ++tree->quadrants_per_level[p->level];
+      p4est_quadrant_init_data (p4est, which_tree, p, init_fn);
+      jz++;
+      P4EST_ASSERT (jz < ocount);
+      p = p4est_quadrant_array_index (outlist, jz);
+    }
+
+    /* watchout out for tquadrants that have been split */
     if (q->level < p->level) {
       P4EST_ASSERT (p4est_quadrant_is_ancestor (q, p));
       /* reset q */
@@ -2576,6 +2598,15 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
     }
   }
 
+  P4EST_ASSERT (iz == tcount);
+
+  /* initialize new quadrants after last tquadrant */
+  for (; jz < ocount; jz++) {
+    p = p4est_quadrant_array_index (outlist, jz);
+    ++tree->quadrants_per_level[p->level];
+    p4est_quadrant_init_data (p4est, which_tree, p, init_fn);
+  }
+
   /* resize tquadrants and copy */
   sc_array_resize (tquadrants, ocount);
   memcpy (tquadrants->array, outlist->array, outlist->elem_size * ocount);
@@ -2596,6 +2627,19 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
   sc_array_destroy (inlist);
   sc_array_destroy (outlist);
   sc_mempool_destroy (list_alloc);
+
+  if (p4est->inspect) {
+    if (!p4est->inspect->use_B) {
+      p4est->inspect->balance_A_count_in += count_already_inlist;
+      p4est->inspect->balance_A_count_in += count_ancestor_inlist;
+      p4est->inspect->balance_A_count_out += count_already_outlist;
+    }
+    else {
+      p4est->inspect->balance_B_count_in += count_already_inlist;
+      p4est->inspect->balance_B_count_in += count_ancestor_inlist;
+      p4est->inspect->balance_B_count_out += count_already_outlist;
+    }
+  }
 }
 
 void
@@ -2819,6 +2863,12 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
   sc_array_destroy (flist);
 
   P4EST_ASSERT (p4est_tree_is_complete (tree));
+
+  if (p4est->inspect) {
+    p4est->inspect->balance_B_count_in += count_already_inlist;
+    p4est->inspect->balance_B_count_in += count_ancestor_inlist;
+    p4est->inspect->balance_B_count_out += count_already_outlist;
+  }
 }
 
 void
