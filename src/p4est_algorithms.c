@@ -686,7 +686,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
   size_t              treecount, incount, seedcount;
   size_t              guess, split;
   ssize_t             first_index, last_index, js;
-  p4est_topidx_t      qtree, ntree, first_tree, ftree;
+  p4est_topidx_t      qtree, ntree, first_tree, ftree = -1;
   p4est_qcoord_t      qh;
   p4est_quadrant_t    fd, ld, tempq, ins[P4EST_INSUL];
   p4est_quadrant_t   *treefd, *treeld;
@@ -707,9 +707,9 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
   p4est_corner_transform_t *ct;
   sc_array_t         *cta;
   sc_array_t         *tquadrants;
-  sc_array_t         *seeds;
+  sc_array_t         *seeds = NULL;
   p4est_quadrant_t   *neigharray[P4EST_CHILDREN];
-  size_t              nneigh;
+  size_t              nneigh = -1;
 
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
@@ -2732,7 +2732,7 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
     if (!p4est_quadrant_is_equal (q, p)) {
       p++;
       jz++;
-      if (!kz) {
+      if (kz) {
         *p = *q;
       }
     }
