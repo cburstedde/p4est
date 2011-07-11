@@ -265,6 +265,8 @@ main (int argc, char **argv)
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     return -1;
   }
+
+  wrongusage = 0;
   config = P4EST_CONFIG_NULL;
   if (!strcmp (config_name, "unit")) {
     config = P4EST_CONFIG_UNIT;
@@ -300,7 +302,8 @@ main (int argc, char **argv)
     wrongusage = 1;
   }
   if (wrongusage) {
-    P4EST_GLOBAL_LERROR ("Wrong configuration name given");
+    P4EST_GLOBAL_LERRORF ("Wrong configuration name given: %s\n",
+                          config_name);
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     sc_abort_collective ("Usage error");
   }

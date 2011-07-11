@@ -2007,17 +2007,17 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     }
   }
 
+  /* end balance_B */
+  if (p4est->inspect != NULL) {
+    p4est->inspect->balance_B += MPI_Wtime ();
+  }
+
 #ifdef P4EST_MPI
   /* wait for all send operations */
   if (request_send_count > 0) {
     mpiret = MPI_Waitall (4 * num_procs,
                           send_requests_first_count, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
-  }
-
-  /* end balance_B */
-  if (p4est->inspect != NULL) {
-    p4est->inspect->balance_B += MPI_Wtime ();
   }
 
   /* compute global sum of send and receive counts */
