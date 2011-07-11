@@ -143,13 +143,15 @@ void                p4est_tree_compute_overlap (p4est_t * p4est,
  * \param [in] balance  The type of balance condition that should be enforced.
  * \param [in] borders  Array of arrays of tree border elements: if not NULL,
  *                      this will be used to fill \a out.
+ * \param [in] inseeds  The seeds that \a in generates locally.
  */
 void                p4est_tree_compute_overlap_new (p4est_t * p4est,
                                                     sc_array_t * in,
                                                     sc_array_t * out,
                                                     p4est_connect_type_t
                                                     balance,
-                                                    sc_array_t * borders);
+                                                    sc_array_t * borders,
+                                                    sc_array_t * inseeds);
 
 /** Removes duplicate quadrant from the output array of compute_overlap.
  * \param [in] skip     A piggy-sorted list of quadrants to be skipped.
@@ -157,6 +159,12 @@ void                p4est_tree_compute_overlap_new (p4est_t * p4est,
   */
 void                p4est_tree_uniqify_overlap (sc_array_t * skip,
                                                 sc_array_t * out);
+
+/** Gets the reduced representation of the overlap that results from using
+ * p4est_tree_compute_overlap_new
+ * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
+  */
+void                p4est_tree_uniqify_overlap_new (sc_array_t * out);
 
 /** Removes quadrants that are outside the owned tree boundaries from a tree.
  * \param [in,out] p4est    The p4est to work on.

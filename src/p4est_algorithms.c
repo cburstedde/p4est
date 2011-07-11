@@ -672,7 +672,8 @@ static void
 p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
                                      sc_array_t * out, int new,
                                      p4est_connect_type_t balance,
-                                     sc_array_t * borders)
+                                     sc_array_t * borders,
+                                     sc_array_t * inseeds)
 {
   int                 k, l, m, which;
   int                 face, corner, level;
@@ -681,7 +682,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
   int                 face_axis[3];     /* 3 not P4EST_DIM */
   int                 contact_face_only, contact_edge_only;
   int                 inter_tree, outface[P4EST_FACES];
-  size_t              iz, jz, ctree;
+  size_t              iz, jz, kz, ctree;
   size_t              treecount, incount, seedcount;
   size_t              guess, split;
   ssize_t             first_index, last_index, js;
@@ -707,6 +708,8 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
   sc_array_t         *cta;
   sc_array_t         *tquadrants;
   sc_array_t         *seeds;
+  p4est_quadrant_t   *neigharray[P4EST_CHILDREN];
+  size_t              nneigh;
 
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
@@ -748,6 +751,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
       P4EST_ASSERT (inq->p.piggy2.from_tree >= 0 &&
                     inq->p.piggy2.from_tree < p4est->connectivity->num_trees);
       ftree = inq->p.piggy2.from_tree;
+      nneigh = 0;
     }
 
     /* potentially grab new tree */
@@ -895,40 +899,100 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
           continue;
         }
 
-        /* Find first quadrant in tree that fits between fd and ld.
-           We are only interested in tree quadrants that are NOT
-           larger than s, since this function is used for balance. */
-        guess = treecount / 2;
-        if (p4est_quadrant_compare (&fd, treefd) <= 0) {
-          /* the first tree quadrant overlaps an insulation quadrant */
-          first_index = 0;
+        if (new) {
+          /* Find last quadrant in tree <= ld */
+          guess = treecount / 2;
+          if (p4est_quadrant_compare (treeld, &ld) <= 0) {
+            /* the last tree quadrant overlaps an insulation quadrant */
+            last_index = (ssize_t) treecount - 1;
+          }
+          else {
+            /* do a binary search for the highest tree quadrant <= ld */
+            last_index = p4est_find_higher_bound (tquadrants, &ld, guess);
+            if (last_index < 0) {
+              SC_ABORT_NOT_REACHED ();
+            }
+            guess = (size_t) last_index;
+          }
+
+          if (p4est_quadrant_compare (&fd, treefd) <= 0) {
+            /* the first tree quadrant overlaps an insulation quadrant */
+            first_index = 0;
+          }
+          else {
+            /* Do a binary search for the lowest tree quadrant >= s.
+               Does not accept an ancestor of s, which is on purpose. */
+            first_index = p4est_find_lower_bound (tquadrants, s, guess);
+            if (first_index < 0) {
+              /* The only possibility is that a quadrant larger than s
+               * contains s */
+              tq = p4est_quadrant_array_index (tquadrants, last_index);
+              P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, s));
+              if (tq->level < s->level - 1) {
+                for (kz = 0; kz < nneigh; kz++) {
+                  if (neigharray[kz] == tq) {
+                    break;
+                  }
+                }
+                /* if this neighbor hasn't been calculated */
+                if (kz == nneigh) {
+                  /* we should check to see if inq causes a split to tq */
+                  split = !p4est_balance_test (inq, tq, balance, seeds);
+
+                  if (split) {
+                    for (jz = 0; jz < seedcount; jz++) {
+                      u = p4est_quadrant_array_index (seeds, jz);
+                      P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, u));
+
+                      outq = sc_array_push (inseeds);
+                      p4est_quadrant_sibling (u, outq, 0);
+                      outq->p.piggy2.which_tree = qtree;
+                    }
+                  }
+                  P4EST_ASSERT (nneigh < P4EST_CHILDREN - 1);
+                  neigharray[nneigh++] = tq;
+                }
+              }
+              continue;
+            }
+          }
         }
         else {
-          /* Do a binary search for the lowest tree quadrant >= s.
-             Does not accept an ancestor of s, which is on purpose. */
-          first_index = p4est_find_lower_bound (tquadrants, s, guess);
-          if (first_index < 0) {
+          /* Find first quadrant in tree that fits between fd and ld.
+             We are only interested in tree quadrants that are NOT
+             larger than s, since this function is used for balance. */
+          guess = treecount / 2;
+          if (p4est_quadrant_compare (&fd, treefd) <= 0) {
+            /* the first tree quadrant overlaps an insulation quadrant */
+            first_index = 0;
+          }
+          else {
+            /* Do a binary search for the lowest tree quadrant >= s.
+               Does not accept an ancestor of s, which is on purpose. */
+            first_index = p4est_find_lower_bound (tquadrants, s, guess);
+            if (first_index < 0) {
+              continue;
+            }
+            guess = (size_t) first_index;
+          }
+
+          /* find last quadrant in tree that fits between fd and ld */
+          if (p4est_quadrant_compare (treeld, &ld) <= 0) {
+            /* the last tree quadrant overlaps an insulation quadrant */
+            last_index = (ssize_t) treecount - 1;
+          }
+          else {
+            /* do a binary search for the highest tree quadrant <= ld */
+            last_index = p4est_find_higher_bound (tquadrants, &ld, guess);
+            if (last_index < 0) {
+              SC_ABORT_NOT_REACHED ();
+            }
+          }
+
+          /* skip if no overlap of sufficient level difference is found */
+          if (first_index > last_index) {
             continue;
           }
-          guess = (size_t) first_index;
-        }
-
-        /* find last quadrant in tree that fits between fd and ld */
-        if (p4est_quadrant_compare (treeld, &ld) <= 0) {
-          /* the last tree quadrant overlaps an insulation quadrant */
-          last_index = (ssize_t) treecount - 1;
-        }
-        else {
-          /* do a binary search for the highest tree quadrant <= ld */
-          last_index = p4est_find_higher_bound (tquadrants, &ld, guess);
-          if (last_index < 0) {
-            SC_ABORT_NOT_REACHED ();
-          }
-        }
-
-        /* skip if no overlap of sufficient level difference is found */
-        if (first_index > last_index) {
-          continue;
         }
 
         if (new) {
@@ -948,15 +1012,28 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
               continue;
             }
             if (f >= 0) {
+              p4est_quadrant_face_neighbor (tq, f ^ 1, &tempq);
+              if (p4est_quadrant_is_ancestor (inq, &tempq)) {
+                continue;
+              }
               split = !p4est_balance_face_test (tq, inq, f, balance, seeds);
             }
 #ifdef P4_TO_P8
             else if (e >= 0) {
+              p8est_quadrant_edge_neighbor (tq, e ^ 3, &tempq);
+              if (p4est_quadrant_is_ancestor (inq, &tempq)) {
+                continue;
+              }
               split = !p8est_balance_edge_test (tq, inq, e, balance, seeds);
             }
 #endif
             else {
               P4EST_ASSERT (c >= 0);
+              p4est_quadrant_corner_neighbor (tq, (P4EST_CHILDREN - 1) ^ c,
+                                              &tempq);
+              if (p4est_quadrant_is_ancestor (inq, &tempq)) {
+                continue;
+              }
               split = !p4est_balance_corner_test (tq, inq, c, balance, seeds);
             }
             if (split) {
@@ -1125,9 +1202,10 @@ void
 p4est_tree_compute_overlap_new (p4est_t * p4est, sc_array_t * in,
                                 sc_array_t * out,
                                 p4est_connect_type_t balance,
-                                sc_array_t * borders)
+                                sc_array_t * borders, sc_array_t * inseeds)
 {
-  p4est_tree_compute_overlap_internal (p4est, in, out, 1, balance, borders);
+  p4est_tree_compute_overlap_internal (p4est, in, out, 1, balance, borders,
+                                       inseeds);
 }
 
 /* warning: p4est_tree_compute_overlap may not work properly for less than
@@ -1140,7 +1218,55 @@ void
 p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                             sc_array_t * out)
 {
-  p4est_tree_compute_overlap_internal (p4est, in, out, 0, -1, NULL);
+  p4est_tree_compute_overlap_internal (p4est, in, out, 0, -1, NULL, NULL);
+}
+
+void
+p4est_tree_uniqify_overlap_new (sc_array_t * out)
+{
+  size_t              iz, jz;
+  size_t              outcount, dupcount, olcount;
+  p4est_quadrant_t   *q, *p, tempq;
+
+  outcount = out->elem_count;
+  if (outcount == 0) {
+    return;
+  }
+
+  /* sort array and remove duplicates */
+  sc_array_sort (out, p4est_quadrant_compare_piggy);
+  dupcount = olcount = 0;
+  iz = 0;                       /* read counter */
+  jz = 0;                       /* write counter */
+  q = NULL;
+  for (iz = 0; iz < outcount; iz++) {
+    p = p4est_quadrant_array_index (out, iz);
+    P4EST_ASSERT (p4est_quadrant_child_id (p) == 0);
+    if (q != NULL && q->p.piggy2.which_tree == p->p.piggy2.which_tree) {
+      p4est_nearest_common_ancestor (p, q, &tempq);
+      if (tempq.level >= q->level - 1) {
+        if (p->level > q->level) {
+          olcount++;
+          *q = *p;
+        }
+        else {
+          P4EST_ASSERT (p->level == q->level);
+          dupcount++;
+        }
+        continue;
+      }
+    }
+    if (iz == jz) {
+      q = p;
+    }
+    else {
+      q = p4est_quadrant_array_index (out, jz);
+      *q = *p;
+    }
+    jz++;
+  }
+  P4EST_ASSERT (jz + olcount + dupcount == outcount);
+  sc_array_resize (out, jz);
 }
 
 void
@@ -1148,7 +1274,6 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 {
   size_t              iz, jz;
   size_t              outcount, dupcount, skipcount;
-  size_t              olcount;
   p4est_quadrant_t   *inq, *outq, *tq;
 
   outcount = out->elem_count;
@@ -1158,7 +1283,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
 
   /* sort array and remove duplicates */
   sc_array_sort (out, p4est_quadrant_compare_piggy);
-  dupcount = skipcount = olcount = 0;
+  dupcount = skipcount = 0;
   iz = 0;                       /* read counter */
   jz = 0;                       /* write counter */
   inq = p4est_quadrant_array_index (out, iz);
@@ -1169,13 +1294,6 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
       ++dupcount;
       ++iz;
     }
-#if 0
-    else if (iz < outcount - 1 && inq.p.which_tree == tq.p.which_tree &&
-             p4est_quadrant_is_ancestor (inq, tq)) {
-      ++olcount;
-      ++iz;
-    }
-#endif
     else if (sc_array_bsearch (skip, inq, p4est_quadrant_compare_piggy) != -1) {
       ++skipcount;
       ++iz;
@@ -1191,7 +1309,7 @@ p4est_tree_uniqify_overlap (sc_array_t * skip, sc_array_t * out)
     inq = tq;
   }
   P4EST_ASSERT (iz == outcount);
-  P4EST_ASSERT (jz + dupcount + olcount + skipcount == outcount);
+  P4EST_ASSERT (jz + dupcount + skipcount == outcount);
   sc_array_resize (out, jz);
 }
 

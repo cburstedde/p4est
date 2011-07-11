@@ -406,7 +406,7 @@ p4est_bal_corner_con_internal (p4est_quadrant_t const *restrict q,
   p4est_qcoord_t      dz;
 #endif
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
 
   if (qlevel <= plevel) {
@@ -509,7 +509,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
   p4est_qcoord_t      qlen, plen, mask, pmask;
   p4est_qcoord_t      b1len;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
 
   if (qlevel <= plevel) {
@@ -756,7 +756,7 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
   p4est_qcoord_t      b1len, pmask;
   int                 i;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
   P4EST_ASSERT (p4est_quadrant_is_extended (p));
 
   if (qlevel <= plevel) {
