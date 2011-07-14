@@ -1901,6 +1901,7 @@ p4est_find_corner_transform_internal (p4est_connectivity_t * conn,
       for (jz = 0; jz < eta[i]->elem_count; ++jz) {
         et = p8est_edge_array_index (eta[i], jz);
         if (nctree == et->ntree) {
+          P4EST_ASSERT ((iwhich[i] & ~1) == 0);
           nc = p8est_edge_corners[et->nedge][et->nflip ^ iwhich[i]];
 
           if (nc == ncorner) {
@@ -2153,6 +2154,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
 #endif
     for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
       nodeid = ttv[corner];
+      P4EST_ASSERT (0 <= nodeid && nodeid < conn->num_vertices);
       nt = node_trees + nodeid;
       nc = node_corners + nodeid;
       zcount = nt->elem_count;
@@ -2206,6 +2208,9 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
       P4EST_ASSERT (0 <= *et && *et < P8EST_EDGES);
       P4EST_ASSERT (conn->tree_to_edge[P8EST_EDGES * *pt + *et]
                     == ei->edgeid);
+      if (real_edges > 0) {
+        conn->tree_to_edge[P8EST_EDGES * *pt + *et] -= real_edges;
+      }
       for (j = 0; j < 2; ++j) {
         enode[j] = conn->tree_to_vertex[P4EST_CHILDREN * *pt
                                         + p8est_edge_corners[*et][j]];
@@ -2215,6 +2220,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
       conn->edge_to_edge[ett_offset + egz] =
         *et + (enode[0] < enode[1] ? 0 : P8EST_EDGES);
     }
+    ei->edgeid -= real_edges;
 
     /* remove this edge again if it is redundant */
     pt = (p4est_topidx_t *) sc_array_index (&ei->trees, 0);
@@ -2246,16 +2252,6 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
       P4EST_ASSERT (ei->trees.elem_count == eta->elem_count
                     + 1 + (ntree[0] != -1) + (ntree[1] != -1));
       sc_array_reset (eta);
-      if (real_edges > 0) {
-        for (egz = 0; egz < ei->trees.elem_count; ++egz) {
-          pt = (p4est_topidx_t *) sc_array_index (&ei->trees, egz);
-          et = (int8_t *) sc_array_index (&ei->edges, egz);
-          P4EST_ASSERT (conn->tree_to_edge[P8EST_EDGES * *pt + *et]
-                        == ei->edgeid);
-          conn->tree_to_edge[P8EST_EDGES * *pt + *et] -= real_edges;
-        }
-        ei->edgeid -= real_edges;
-      }
       conn->ett_offset[ett_edge++] = ett_offset;
       ett_offset += (p4est_topidx_t) ei->trees.elem_count;
     }
@@ -2311,7 +2307,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
     P4EST_ASSERT (zcount == nc->elem_count);
     if (zcount <= 1) {
       /* isolated corner does not count */
-      if (zcount > 0) {
+      if (zcount == 1) {
         pt = (p4est_topidx_t *) sc_array_index (nt, 0);
         ct = (int8_t *) sc_array_index (nc, 0);
         P4EST_ASSERT (0 <= *pt && *pt < conn->num_trees);
