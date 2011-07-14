@@ -2222,21 +2222,32 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
     }
     ei->edgeid -= real_edges;
 
-    /* remove this edge again if it is redundant */
-    pt = (p4est_topidx_t *) sc_array_index (&ei->trees, 0);
-    et = (int8_t *) sc_array_index (&ei->edges, 0);
-    einfo.iedge = -1;           /* unused */
-    flipped = p8est_find_edge_transform_internal (conn, *pt, *et, &einfo,
-                                                  conn->edge_to_tree +
-                                                  ett_offset,
-                                                  conn->edge_to_edge +
-                                                  ett_offset,
-                                                  ei->trees.elem_count,
-                                                  ntree);
-    P4EST_ASSERT (flipped == 0);
+    /* determine if this edge is redundant */
+    for (egz = 0; egz < ei->trees.elem_count; ++egz) {
+      pt = (p4est_topidx_t *) sc_array_index (&ei->trees, egz);
+      et = (int8_t *) sc_array_index (&ei->edges, egz);
+      einfo.iedge = -1;         /* unused */
+      flipped = p8est_find_edge_transform_internal (conn, *pt, *et, &einfo,
+                                                    conn->edge_to_tree +
+                                                    ett_offset,
+                                                    conn->edge_to_edge +
+                                                    ett_offset,
+                                                    ei->trees.elem_count,
+                                                    ntree);
+      P4EST_ASSERT (flipped == 0);
+      if (eta->elem_count == 0) {
+        P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1);
+      }
+      else {
+        /* edge is non-redundant */
+        P4EST_ASSERT (ei->trees.elem_count == eta->elem_count
+                      + 1 + (ntree[0] != -1) + (ntree[1] != -1));
+        break;
+      }
+    }
+
     if (eta->elem_count == 0) {
       /* erase all references to this redundant edge */
-      P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1);
       for (egz = 0; egz < ei->trees.elem_count; ++egz) {
         pt = (p4est_topidx_t *) sc_array_index (&ei->trees, egz);
         et = (int8_t *) sc_array_index (&ei->edges, egz);
@@ -2249,8 +2260,6 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
     }
     else {
       /* accept edge as non-redundant */
-      P4EST_ASSERT (ei->trees.elem_count == eta->elem_count
-                    + 1 + (ntree[0] != -1) + (ntree[1] != -1));
       sc_array_reset (eta);
       conn->ett_offset[ett_edge++] = ett_offset;
       ett_offset += (p4est_topidx_t) ei->trees.elem_count;
@@ -2334,23 +2343,40 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
         conn->corner_to_corner[ctt_offset + pz] = *ct;
       }
 
-      /* remove this corner again if it is redundant */
-      pt = (p4est_topidx_t *) sc_array_index (nt, 0);
-      ct = (int8_t *) sc_array_index (nc, 0);
-      cinfo.icorner = -1;       /* unused */
-      ignored = p4est_find_corner_transform_internal (conn, *pt, *ct, &cinfo,
-                                                      conn->corner_to_tree +
-                                                      ctt_offset,
-                                                      conn->corner_to_corner +
-                                                      ctt_offset,
-                                                      zcount, ntree);
+      /* determine if this corner is redundant */
+      for (pz = 0; pz < zcount; ++pz) {
+        pt = (p4est_topidx_t *) sc_array_index (nt, pz);
+        ct = (int8_t *) sc_array_index (nc, pz);
+        cinfo.icorner = -1;     /* unused */
+        ignored =
+          p4est_find_corner_transform_internal (conn, *pt, *ct, &cinfo,
+                                                conn->corner_to_tree +
+                                                ctt_offset,
+                                                conn->corner_to_corner +
+                                                ctt_offset, zcount, ntree);
+        if (cta->elem_count == 0) {
+          P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1
+#ifdef P4_TO_P8
+                        || ntree[2] != -1
+#endif
+            );
+        }
+        else {
+          /* corner is non-redundant */
+#ifdef P4EST_DEBUG
+          expected_count =
+            cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
+#ifdef P4_TO_P8
+          expected_count += (ntree[2] != -1);
+#endif
+          P4EST_ASSERT (zcount == expected_count + ignored);
+#endif
+          break;
+        }
+      }
+
       if (cta->elem_count == 0) {
         /* erase all references to this redundant corner */
-        P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1
-#ifdef P4_TO_P8
-                      || ntree[2] != -1
-#endif
-          );
         for (pz = 0; pz < zcount; ++pz) {
           pt = (p4est_topidx_t *) sc_array_index (nt, pz);
           ct = (int8_t *) sc_array_index (nc, pz);
@@ -2362,14 +2388,6 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
       }
       else {
         /* accept corner as non-redundant */
-#ifdef P4EST_DEBUG
-        expected_count =
-          cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
-#ifdef P4_TO_P8
-        expected_count += (ntree[2] != -1);
-#endif
-        P4EST_ASSERT (zcount == expected_count + ignored);
-#endif
         sc_array_reset (cta);
         conn->ctt_offset[ctt_corner++] = ctt_offset;
         ctt_offset += (p4est_topidx_t) zcount;
