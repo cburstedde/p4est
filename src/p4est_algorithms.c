@@ -670,7 +670,7 @@ const static int insul_to_e[27] =
 
 static void
 p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
-                                     sc_array_t * out, int new,
+                                     sc_array_t * out, int usenew,
                                      p4est_connect_type_t balance,
                                      sc_array_t * borders,
                                      sc_array_t * inseeds)
@@ -738,7 +738,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
   tquadrants = NULL;
   treecount = -1;
 
-  if (new) {
+  if (usenew) {
     seeds = sc_array_new (sizeof (p4est_quadrant_t));
   }
   first_tree = p4est->first_local_tree;
@@ -747,7 +747,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
   for (iz = 0; iz < incount; ++iz) {
     inq = p4est_quadrant_array_index (in, iz);
 
-    if (new) {
+    if (usenew) {
       P4EST_ASSERT (inq->p.piggy2.from_tree >= 0 &&
                     inq->p.piggy2.from_tree < p4est->connectivity->num_trees);
       ftree = inq->p.piggy2.from_tree;
@@ -899,7 +899,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
           continue;
         }
 
-        if (new) {
+        if (usenew) {
           /* Find last quadrant in tree <= ld */
           guess = treecount / 2;
           if (p4est_quadrant_compare (treeld, &ld) <= 0) {
@@ -945,7 +945,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
                       u = p4est_quadrant_array_index (seeds, jz);
                       P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, u));
 
-                      outq = sc_array_push (inseeds);
+                      outq = (p4est_quadrant_t *) sc_array_push (inseeds);
                       p4est_quadrant_sibling (u, outq, 0);
                       outq->p.piggy2.which_tree = qtree;
                     }
@@ -996,7 +996,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
           }
         }
 
-        if (new) {
+        if (usenew) {
           /* figure out the relationship of s to inq */
           f = insul_to_f[which];
 #ifdef P4_TO_P8
@@ -1194,7 +1194,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
 #endif
   sc_array_reset (cta);
 
-  if (new) {
+  if (usenew) {
     sc_array_destroy (seeds);
   }
 }
@@ -1219,7 +1219,8 @@ void
 p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                             sc_array_t * out)
 {
-  p4est_tree_compute_overlap_internal (p4est, in, out, 0, -1, NULL, NULL);
+  p4est_tree_compute_overlap_internal (p4est, in, out, 0,
+                                       P4EST_CONNECT_FULL, NULL, NULL);
 }
 
 void
@@ -1245,7 +1246,7 @@ p4est_tree_uniqify_overlap_new (sc_array_t * out)
     P4EST_ASSERT (p4est_quadrant_child_id (p) == 0);
     if (q != NULL && q->p.piggy2.which_tree == p->p.piggy2.which_tree) {
       p4est_nearest_common_ancestor (p, q, &tempq);
-      if (tempq.level >= q->level - 1) {
+      if (tempq.level >= SC_MIN (q->level, p->level) - 1) {
         if (p->level > q->level) {
           olcount++;
           *q = *p;
@@ -2104,7 +2105,7 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
       if (tempq.level < tempp.level - 1) {
         /* add tempp to inlist */
         sc_array_resize (inlist, inlist->elem_count + 1);
-        if (si < incount - 1) {
+        if ((size_t) si < incount - 1) {
           memmove (sc_array_index (inlist, si + 2),
                    sc_array_index (inlist, si + 1), incount - (si + 1));
         }
@@ -2549,7 +2550,7 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
 
     if (q != NULL) {
       p4est_nearest_common_ancestor (p, q, &tempq);
-      if (tempq.level >= q->level - 1) {
+      if (tempq.level >= SC_MIN (q->level, p->level) - 1) {
         if (p->level > q->level) {
           *q = *p;
         }
@@ -2814,7 +2815,7 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
     sc_array_init_view (&tqview, tquadrants, tqoffset, tqorig - tqoffset);
 
     /* first, remove p */
-    q = sc_array_index (tquadrants, tqindex);
+    q = p4est_quadrant_array_index (tquadrants, tqindex);
     P4EST_ASSERT (p4est_quadrant_is_equal (q, p));
     /* reset the data, decrement level count */
     p4est_quadrant_free_data (p4est, q);
@@ -2840,7 +2841,7 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
 
     /* initialize */
     for (jz = fcount; jz < flist->elem_count; jz++) {
-      q = sc_array_index (flist, jz);
+      q = p4est_quadrant_array_index (flist, jz);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (p, q));
       ++tree->quadrants_per_level[q->level];
       tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);

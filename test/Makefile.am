@@ -55,7 +55,6 @@ test_p4est_test_search_SOURCES = test/test_search2.c
 test_p4est_test_brick_SOURCES = test/test_brick2.c
 test_p4est_test_partition_corr_SOURCES = test/test_partition_corr2.c
 test_p4est_test_conn_complete_SOURCES = test/test_conn_complete2.c
-test_p4est_test_reorder_SOURCES = test/test_reorder2.c
 test_p4est_test_balance_test_SOURCES = test/test_balance_test2.c
 
 test_p8est_test_quadrants_SOURCES = test/test_quadrants3.c

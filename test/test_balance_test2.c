@@ -31,22 +31,22 @@
 
 static int
 is_farther (p4est_quadrant_t * orig, p4est_quadrant_t * targ,
-            p4est_quadrant_t * new)
+            p4est_quadrant_t * newq)
 {
   p4est_qcoord_t      ox1, ox2, nx1, nx2;
   p4est_qcoord_t      oy1, oy2, ny1, ny2;
 #ifdef P4_TO_P8
   p4est_qcoord_t      oz1, oz2, nz1, nz2;
 #endif
-  p4est_qcoord_t      nl = P4EST_QUADRANT_LEN (new->level);
+  p4est_qcoord_t      nl = P4EST_QUADRANT_LEN (newq->level);
   p4est_qcoord_t      tl = P4EST_QUADRANT_LEN (targ->level);
 
-  P4EST_ASSERT (new->level == orig->level);
+  P4EST_ASSERT (newq->level == orig->level);
 
   ox1 = targ->x - orig->x;
   ox2 = (orig->x + nl) - (targ->x + tl);
-  nx1 = targ->x - new->x;
-  nx2 = (new->x + nl) - (targ->x + tl);
+  nx1 = targ->x - newq->x;
+  nx2 = (newq->x + nl) - (targ->x + tl);
   if (ox1 > 0 && nx1 > ox1) {
     return 1;
   }
@@ -56,8 +56,8 @@ is_farther (p4est_quadrant_t * orig, p4est_quadrant_t * targ,
 
   oy1 = targ->y - orig->y;
   oy2 = (orig->y + nl) - (targ->y + tl);
-  ny1 = targ->y - new->y;
-  ny2 = (new->y + nl) - (targ->y + tl);
+  ny1 = targ->y - newq->y;
+  ny2 = (newq->y + nl) - (targ->y + tl);
   if (oy1 > 0 && ny1 > oy1) {
     return 1;
   }
@@ -68,8 +68,8 @@ is_farther (p4est_quadrant_t * orig, p4est_quadrant_t * targ,
 #ifdef P4_TO_P8
   oz1 = targ->z - orig->z;
   oz2 = (orig->z + nl) - (targ->z + tl);
-  nz1 = targ->z - new->z;
-  nz2 = (new->z + nl) - (targ->z + tl);
+  nz1 = targ->z - newq->z;
+  nz2 = (newq->z + nl) - (targ->z + tl);
   if (oz1 > 0 && nz1 > oz1) {
     return 1;
   }
@@ -101,7 +101,7 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
 
   sc_array_resize (seeds, 0);
 
-  s = sc_array_push (thislevel);
+  s = (p4est_quadrant_t *) sc_array_push (thislevel);
   p4est_quadrant_sibling (q, s, 0);
 
 #ifndef P4_TO_P8
@@ -141,11 +141,11 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
         if (p4est_quadrant_is_ancestor (p, &temp2)) {
           stop = 1;
           sc_array_resize (seeds, seeds->elem_count + 1);
-          t = sc_array_index (seeds, seeds->elem_count - 1);
+          t = p4est_quadrant_array_index (seeds, seeds->elem_count - 1);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
         else if (p4est_quadrant_is_inside_root (&temp2)) {
-          t = sc_array_push (nextlevel);
+          t = (p4est_quadrant_t *) sc_array_push (nextlevel);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
       }
@@ -163,11 +163,11 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
         if (p4est_quadrant_is_ancestor (p, &temp2)) {
           stop = 1;
           sc_array_resize (seeds, seeds->elem_count + 1);
-          t = sc_array_index (seeds, seeds->elem_count - 1);
+          t = p4est_quadrant_array_index (seeds, seeds->elem_count - 1);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
         else if (p4est_quadrant_is_inside_root (&temp2)) {
-          t = sc_array_push (nextlevel);
+          t = (p4est_quadrant_t *) sc_array_push (nextlevel);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
       }
@@ -185,11 +185,11 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
         if (p4est_quadrant_is_ancestor (p, &temp2)) {
           stop = 1;
           sc_array_resize (seeds, seeds->elem_count + 1);
-          t = sc_array_index (seeds, seeds->elem_count - 1);
+          t = p4est_quadrant_array_index (seeds, seeds->elem_count - 1);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
         else if (p4est_quadrant_is_inside_root (&temp2)) {
-          t = sc_array_push (nextlevel);
+          t = (p4est_quadrant_t *) sc_array_push (nextlevel);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
       }
@@ -239,7 +239,7 @@ check_balance_test (p4est_quadrant_t * q, p4est_quadrant_t * p,
 
               if (f2 == P8EST_FACES) {
                 sc_array_resize (seeds, seeds->elem_count + 1);
-                t = sc_array_index (seeds, seeds->elem_count - 1);
+                t = p4est_quadrant_array_index (seeds, seeds->elem_count - 1);
                 p4est_quadrant_sibling (&temp2, t, 0);
               }
             }
@@ -315,12 +315,12 @@ main (int argc, char **argv)
 #endif
   int                 mpiret, mpisize, mpirank;
   MPI_Comm            mpicomm;
-  uint64_t            i, ifirst, ilast, j;
+  uint64_t            i, ifirst, ilast;
   int                 level;
   sc_array_t         *seeds, *seeds_check;
   int                 testval;
   int                 checkval;
-  int                 nrand = 1000;
+  int                 j, nrand = 1000;
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
@@ -395,7 +395,7 @@ main (int argc, char **argv)
     }
     if (!face) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
-      for (j = 0; j < nrand; j++) {
+      for (j = 0; j < (int) nrand; j++) {
         level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
@@ -475,7 +475,7 @@ main (int argc, char **argv)
     }
     if (!edge) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
-      for (j = 0; j < nrand; j++) {
+      for (j = 0; j < (int) nrand; j++) {
         level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
@@ -563,7 +563,7 @@ main (int argc, char **argv)
     }
     if (!corner) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
-      for (j = 0; j < nrand; j++) {
+      for (j = 0; j < (int) nrand; j++) {
         level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);

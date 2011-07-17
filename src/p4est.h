@@ -111,8 +111,6 @@ typedef struct p4est_inspect
 }
 p4est_inspect_t;
 
-SC_EXTERN_C_END;
-
 typedef struct p4est
 {
   MPI_Comm            mpicomm;
