@@ -2028,7 +2028,7 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
   void              **vlookup;
   ssize_t             srindex, si;
   p4est_qcoord_t      ph;
-  p4est_quadrant_t   *qalloc, **qpointer;
+  p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
   p4est_quadrant_t    par, tempq, tempp, fd;
   sc_array_t         *olist;
   sc_hash_t          *hash[P4EST_MAXLEVEL + 1];
@@ -2252,6 +2252,11 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
           /* qalloc is already included in output list,
            * this catches most */
           ++count_already_outlist;
+          /* make sure that the parent ancestor is included */
+          if (!sid) {
+            qlookup = (p4est_quadrant_t *) * vlookup;
+            qlookup->p.user_data = key;
+          }
           continue;
         }
         if (sid) {
