@@ -516,10 +516,6 @@ p4est_destroy (p4est_t * p4est)
   }
   sc_mempool_destroy (p4est->quadrant_pool);
 
-  if (p4est->inspect != NULL) {
-    P4EST_FREE (p4est->inspect);
-  }
-
   P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est);

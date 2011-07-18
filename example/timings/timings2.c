@@ -540,6 +540,7 @@ main (int argc, char **argv)
 
   /* destroy the p4est and its connectivity structure */
   P4EST_FREE (quadrant_counts);
+  P4EST_FREE (p4est->inspect);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 
