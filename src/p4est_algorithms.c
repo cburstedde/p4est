@@ -1872,8 +1872,13 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
           /* *INDENT-OFF* HORRIBLE indent bug */
           qlookup = (p4est_quadrant_t *) *vlookup;
           /* *INDENT-ON* */
-          if (sid == P4EST_CHILDREN && qlookup->p.user_data == parent_key) {
-            break;              /* this parent has been triggered before */
+          if (sid == P4EST_CHILDREN) {
+            if (qlookup->p.user_data == parent_key) {
+              break;            /* this parent has been triggered before */
+            }
+            else {
+              qlookup->p.user_data = parent_key;
+            }
           }
           continue;
         }
@@ -1921,14 +1926,16 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       P4EST_ASSERT (qalloc->p.user_data == key ||
                     qalloc->p.user_data == parent_key);
       if (p4est_quadrant_is_inside_root (qalloc)) {
-        /* copy temporary quadrant into final tree */
-        q = p4est_quadrant_array_push (inlist);
-        *q = *qalloc;
-        ++num_added;
-        ++tree->quadrants_per_level[l];
+        if (qalloc->p.user_data != parent_key) {
+          /* copy temporary quadrant into final tree */
+          q = p4est_quadrant_array_push (inlist);
+          *q = *qalloc;
+          ++num_added;
+          ++tree->quadrants_per_level[l];
 
-        /* complete quadrant initialization */
-        p4est_quadrant_init_data (p4est, which_tree, q, init_fn);
+          /* complete quadrant initialization */
+          p4est_quadrant_init_data (p4est, which_tree, q, init_fn);
+        }
       }
       else {
         P4EST_ASSERT (p4est_quadrant_is_extended (qalloc));
