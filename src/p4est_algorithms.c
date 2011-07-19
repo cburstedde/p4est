@@ -2028,10 +2028,11 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
   p4est_quadrant_t   *q, *r;
   int                 minlevel = p->level + 1, maxlevel;
   int                 sid, pid;
-  int                 skey, *key = &skey;
-  int                 bkey, *block_key = &bkey;
+  int                 skey, *key = &skey;       /* octants to add */
+  int                 ikey, *in_key = &ikey;    /* hash duplicates */
+  int                 akey, *an_key = &akey;    /* hash ancestors (no add) */
+  int                 pkey, *parent_key = &pkey;        /* hash parents (add) */
   int                 l;
-  int                 add_block;
   void              **vlookup;
   ssize_t             srindex, si;
   p4est_qcoord_t      ph;
@@ -2167,7 +2168,10 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
     for (jz = 0; jz < incount + ocount; ++jz) {
       if (jz < incount) {
         q = p4est_quadrant_array_index (inlist, jz);
-        if ((int) q->level != l || q->p.user_data == block_key) {
+        if ((int) q->level != l ||
+            q->p.user_data == in_key || q->p.user_data == an_key) {
+          /* if a duplicate, don't run because it's already run in the
+           * original array; if an ancestor, don't run because not needed */
           continue;
         }
       }
@@ -2262,7 +2266,11 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
           /* make sure that the parent ancestor is included */
           if (!sid) {
             qlookup = (p4est_quadrant_t *) * vlookup;
-            qlookup->p.user_data = key;
+            if (qlookup->p.user_data != in_key) {
+              /* if this is not a duplicate, mark it as a parent because it
+               * may be necessary for it to add quadrants */
+              qlookup->p.user_data = parent_key;
+            }
           }
           continue;
         }
@@ -2277,28 +2285,34 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
         }
         srindex = sc_array_bsearch (inlist, r, p4est_quadrant_disjoint);
 
-        add_block = 0;
+        if (!sid) {
+          qalloc->p.user_data = parent_key;
+        }
+        else {
+          qalloc->p.user_data = key;
+        }
         if (srindex != -1) {
           r = p4est_quadrant_array_index (inlist, srindex);
 
           if (r->level == qalloc->level) {
             ++count_already_inlist;
-            add_block = 1;
+            /* duplicate */
+            qalloc->p.user_data = in_key;
           }
           if (r->level < qalloc->level) {
-            r->p.user_data = block_key;
+            /* an octant from the input list is too coarse, it is not needed */
+            r->p.user_data = an_key;
           }
           else if (sid) {
-            /* unless we know that we need this ancestor, do not include it
-             * yet */
+            /* we tried to add a coarse neighbor, but we found an overlap:
+             * unless it is later determined that this may be necessary
+             * (switched to parent_key), do not include it */
+            qalloc->p.user_data = an_key;
             ++count_ancestor_inlist;
-            add_block = 1;
           }
         }
-        if (add_block) {
-          /* add a road block to prevent more searches */
-          qalloc->p.user_data = block_key;
-        }
+        /* if no overlap was found, then this remains a normal quadrant
+         * (user_data == key) */
 
         inserted = sc_hash_insert_unique (hash[qalloc->level], qalloc, NULL);
         P4EST_ASSERT (inserted);
@@ -2331,7 +2345,7 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
       P4EST_ASSERT (p4est_quadrant_is_ancestor (p, qalloc));
       P4EST_ASSERT (p4est_quadrant_child_id (qalloc) == 0);
       /* copy temporary quadrant into inlist */
-      if (qalloc->p.user_data != block_key) {
+      if (qalloc->p.user_data == key) {
         q = p4est_quadrant_array_push (inlist);
         *q = *qalloc;
       }
