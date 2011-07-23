@@ -1928,6 +1928,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       if (p4est_quadrant_is_inside_root (qalloc)) {
         if (qalloc->p.user_data != parent_key) {
           /* copy temporary quadrant into final tree */
+          if (!p4est_quadrant_is_inside_tree (tree, qalloc)) {
+            sc_mempool_free (qpool, qalloc);
+            continue;
+          }
           q = p4est_quadrant_array_push (inlist);
           *q = *qalloc;
           ++num_added;
@@ -1989,6 +1993,26 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       p4est->inspect->balance_B_count_out += count_already_outlist;
     }
   }
+}
+
+static int
+p4est_quadrant_disjoint_parent (const void *a, const void *b)
+{
+  const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
+  const p4est_quadrant_t *r = (p4est_quadrant_t *) b;
+  int8_t              level = SC_MIN (q->level - 1, r->level - 1);
+  p4est_qcoord_t      mask =
+    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+
+  if (((q->x ^ r->x) & mask) || ((q->y ^ r->y) & mask)
+#ifdef P4_TO_P8
+      || ((q->z ^ r->z) & mask)
+#endif
+      || 0) {
+    return p4est_quadrant_compare (a, b);
+  }
+
+  return 0;
 }
 
 /* kernel for balancing quadrants.
@@ -2252,6 +2276,7 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
         P4EST_ASSERT (p4est_quadrant_is_extended (qalloc));
         P4EST_ASSERT (p4est_quadrant_child_id (qalloc) == 0);
 
+        /* do not add quadrants outside of the domain */
         P4EST_ASSERT (sid || p4est_quadrant_is_ancestor (p, qalloc));
         if (sid && !p4est_quadrant_is_ancestor (p, qalloc)) {
           continue;
@@ -2266,50 +2291,61 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
           /* make sure that the parent ancestor is included */
           if (!sid) {
             qlookup = (p4est_quadrant_t *) * vlookup;
-            if (qlookup->p.user_data != in_key) {
-              /* if this is not a duplicate, mark it as a parent because it
-               * may be necessary for it to add quadrants */
-              qlookup->p.user_data = parent_key;
-            }
+            /* this can't be a duplicate, because then reduce didn't work or
+             * we failed to find an octant with overlapping parents */
+            P4EST_ASSERT (qlookup->p.user_data != in_key);
+            /* if this is not a duplicate, mark it as a parent because it
+             * may be necessary for it to add quadrants */
+            qlookup->p.user_data = parent_key;
           }
           continue;
         }
+
         if (sid) {
-          tempq = *qalloc;
-          tempq.level--;
-          P4EST_ASSERT (p4est_quadrant_is_valid (&tempq));
-          r = &tempq;
-        }
-        else {
-          r = qalloc;
-        }
-        srindex = sc_array_bsearch (inlist, r, p4est_quadrant_disjoint);
+          srindex = sc_array_bsearch (inlist, qalloc,
+                                      p4est_quadrant_disjoint_parent);
 
-        if (!sid) {
-          qalloc->p.user_data = parent_key;
-        }
-        else {
           qalloc->p.user_data = key;
-        }
-        if (srindex != -1) {
-          r = p4est_quadrant_array_index (inlist, srindex);
 
-          if (r->level == qalloc->level) {
-            ++count_already_inlist;
-            /* duplicate */
-            qalloc->p.user_data = in_key;
+          if (srindex != -1) {
+            r = p4est_quadrant_array_index (inlist, srindex);
+
+            if (r->level == qalloc->level) {
+              ++count_already_inlist;
+              if (r->p.user_data == an_key) {
+                qalloc->p.user_data = an_key;
+              }
+              else {
+                /* duplicate */
+                qalloc->p.user_data = in_key;
+              }
+            }
+            if (r->level < qalloc->level) {
+              /* an octant from the input list is too coarse,
+               * it is not needed */
+              r->p.user_data = an_key;
+            }
+            else {
+              /* we tried to add a coarse neighbor, but we found an overlap:
+               * unless it is later determined that this may be necessary
+               * (switched to parent_key), do not include it */
+              qalloc->p.user_data = an_key;
+              ++count_ancestor_inlist;
+            }
           }
-          if (r->level < qalloc->level) {
-            /* an octant from the input list is too coarse, it is not needed */
-            r->p.user_data = an_key;
+        }
+        else {
+#ifdef P4EST_DEBUG
+          srindex = sc_array_bsearch (inlist, qalloc,
+                                      p4est_quadrant_disjoint_parent);
+
+          if (srindex != -1) {
+            r = p4est_quadrant_array_index (inlist, srindex);
+            P4EST_ASSERT (r->level > qalloc->level ||
+                          r->p.user_data == an_key);
           }
-          else if (sid) {
-            /* we tried to add a coarse neighbor, but we found an overlap:
-             * unless it is later determined that this may be necessary
-             * (switched to parent_key), do not include it */
-            qalloc->p.user_data = an_key;
-            ++count_ancestor_inlist;
-          }
+#endif
+          qalloc->p.user_data = parent_key;
         }
         /* if no overlap was found, then this remains a normal quadrant
          * (user_data == key) */
@@ -2345,6 +2381,14 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
       P4EST_ASSERT (p4est_quadrant_is_ancestor (p, qalloc));
       P4EST_ASSERT (p4est_quadrant_child_id (qalloc) == 0);
       /* copy temporary quadrant into inlist */
+      if (first_desc != NULL && p4est_quadrant_compare (qalloc, &fd) < 0) {
+        sc_mempool_free (qpool, qalloc);
+        continue;
+      }
+      if (last_desc != NULL && p4est_quadrant_compare (qalloc, last_desc) > 0) {
+        sc_mempool_free (qpool, qalloc);
+        continue;
+      }
       if (qalloc->p.user_data == key) {
         q = p4est_quadrant_array_push (inlist);
         *q = *qalloc;
@@ -2568,20 +2612,18 @@ p4est_complete_or_balance_new (p4est_t * p4est, p4est_topidx_t which_tree,
   outlist = sc_array_new (sizeof (p4est_quadrant_t));
 
   /* get the reduced representation of the tree */
-  q = NULL;
-  for (iz = 0; iz < tcount; iz++) {
+  q = (p4est_quadrant_t *) sc_array_push (inlist);
+  p = p4est_quadrant_array_index (tquadrants, 0);
+  p4est_quadrant_sibling (p, q, 0);
+  for (iz = 1; iz < tcount; iz++) {
     p = p4est_quadrant_array_index (tquadrants, iz);
-
     P4EST_ASSERT (p4est_quadrant_is_ancestor (&root, p));
-
-    if (q != NULL) {
-      p4est_nearest_common_ancestor (p, q, &tempq);
-      if (tempq.level >= SC_MIN (q->level, p->level) - 1) {
-        if (p->level > q->level) {
-          *q = *p;
-        }
-        continue;
+    p4est_nearest_common_ancestor (p, q, &tempq);
+    if (tempq.level >= SC_MIN (q->level, p->level) - 1) {
+      if (p->level > q->level) {
+        *q = *p;
       }
+      continue;
     }
     q = (p4est_quadrant_t *) sc_array_push (inlist);
     p4est_quadrant_sibling (p, q, 0);
@@ -2696,7 +2738,8 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
   size_t              count_already_inlist, count_already_outlist;
   size_t              count_ancestor_inlist;
   p4est_tree_t       *tree;
-  p4est_quadrant_t   *q, *p;
+  p4est_quadrant_t   *q, *p, *r;
+  p4est_quadrant_t    tempq;
   sc_array_t          qview;
   sc_array_t         *inlist, *flist, *tquadrants;
   sc_array_t          tqview;
@@ -2717,6 +2760,8 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
     /* nothing to be done */
     return;
   }
+
+  P4EST_QUADRANT_INIT (&tempq);
 
   /* set up balance machinery */
 
@@ -2849,8 +2894,26 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
 
     /* get all of the quadrants that descend from p into inlist */
     sc_array_init_view (&qview, qarray, jz, incount);
-    sc_array_resize (inlist, incount);
-    memcpy (inlist->array, qview.array, incount * sizeof (p4est_quadrant_t));
+    sc_array_resize (inlist, 1);
+    q = p4est_quadrant_array_index (inlist, 0);
+    r = p4est_quadrant_array_index (&qview, 0);
+    P4EST_ASSERT (p4est_quadrant_child_id (r) == 0);
+    *q = *r;
+    for (jz = 1; jz < incount; jz++) {
+      r = p4est_quadrant_array_index (&qview, jz);
+      P4EST_ASSERT (p4est_quadrant_child_id (r) == 0);
+      p4est_nearest_common_ancestor (r, q, &tempq);
+      if (tempq.level >= SC_MIN (r->level, q->level) - 1) {
+        if (r->level > q->level) {
+          *q = *r;
+        }
+        continue;
+      }
+      q = (p4est_quadrant_t *) sc_array_push (inlist);
+      *q = *p;
+    }
+    memcpy (inlist->array, qview.array,
+            inlist->elem_count * sizeof (p4est_quadrant_t));
 
     fcount = flist->elem_count;
 
