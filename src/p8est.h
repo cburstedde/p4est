@@ -94,6 +94,10 @@ typedef struct p8est_inspect
   int                 use_balance_subtree_new;
   int                 use_overlap_new;
   int                 use_borders;
+  /** compare sc_notify to sc_ranges (check consistency, collect timings) */
+  int                 use_notify_compare;
+  /** verify sc_notify by sc_notify_allgather (only if use_notify_compare) */
+  int                 use_notify_verify;
   size_t              balance_A_count_in;
   size_t              balance_A_count_out;
   size_t              balance_comm_sent;
@@ -103,6 +107,10 @@ typedef struct p8est_inspect
   double              balance_A;
   double              balance_comm;
   double              balance_B;
+  double              balance_ranges;   /**< time spent in sc_ranges */
+  double              balance_notify;   /**< time spent in sc_notify */
+  /** time spent in sc_notify_allgather */
+  double              balance_notify_allgather;
   int                 use_B;
 }
 p8est_inspect_t;

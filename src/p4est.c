@@ -35,6 +35,7 @@
 #include <p4est_ghost.h>
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
+#include <sc_notify.h>
 #include <sc_ranges.h>
 #include <sc_search.h>
 #include <sc_zlib.h>
@@ -1198,6 +1199,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   int                 my_ranges[2 * p4est_num_ranges];
   int                *wait_indices;
   int                *procs, *all_ranges;
+  int                *receiver_ranks, *sender_ranks;
+  int                 num_receivers, num_senders;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
@@ -1249,7 +1252,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   }
 
 #ifdef P4EST_MPI
-  procs = P4EST_ALLOC (int, num_procs);
   requests_first = P4EST_ALLOC (MPI_Request, 6 * num_procs);
   requests_second = requests_first + 1 * num_procs;
   send_requests_first_count = requests_first + 2 * num_procs;
@@ -1532,25 +1534,84 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   }
 
   /* end balance_A, start balance_comm */
-  if (p4est->inspect) {
+  if (p4est->inspect != NULL) {
     p4est->inspect->balance_comm = MPI_Wtime ();
     p4est->inspect->balance_A += p4est->inspect->balance_comm;
     p4est->inspect->balance_comm *= -1.;
     p4est->inspect->balance_comm_sent = 0;
     p4est->inspect->balance_comm_nzpeers = 0;
+    p4est->inspect->balance_ranges = 0.;
+    p4est->inspect->balance_notify = 0.;
+    p4est->inspect->balance_notify_allgather = 0.;
   }
 
 #ifdef P4EST_MPI
+  receiver_ranks = sender_ranks = NULL;
+  num_receivers = num_senders = 0;
+
   /* encode and distribute the asymmetric communication pattern */
+  procs = P4EST_ALLOC (int, num_procs);
   for (j = 0; j < num_procs; ++j) {
     procs[j] = (int) peers[j].send_first.elem_count;
   }
   maxpeers = first_peer;
   maxwin = last_peer;
+  if (p4est->inspect != NULL) {
+    p4est->inspect->balance_ranges = -MPI_Wtime ();
+  }
   nwin = sc_ranges_adaptive (p4est_package_id,
                              p4est->mpicomm, procs, &maxpeers, &maxwin,
                              p4est_num_ranges, my_ranges, &all_ranges);
   twomaxwin = 2 * maxwin;
+  if (p4est->inspect != NULL) {
+    p4est->inspect->balance_ranges += MPI_Wtime ();
+  }
+
+  /* determine communication pattern by sc_notify function */
+  if (p4est->inspect != NULL && p4est->inspect->use_notify_compare) {
+    receiver_ranks = P4EST_ALLOC (int, num_procs);
+    sender_ranks = P4EST_ALLOC (int, num_procs);
+    num_receivers = num_senders = 0;
+    for (j = 0; j < num_procs; ++j) {
+      if (j != rank && peers[j].send_first.elem_count > 0) {
+        receiver_ranks[num_receivers++] = j;
+      }
+    }
+    p4est->inspect->balance_notify = -MPI_Wtime ();
+    mpiret = sc_notify (receiver_ranks, num_receivers,
+                        sender_ranks, &num_senders, p4est->mpicomm);
+    SC_CHECK_MPI (mpiret);
+    p4est->inspect->balance_notify += MPI_Wtime ();
+
+    /* double-check sc_notify results by sc_notify_allgather */
+    if (p4est->inspect->use_notify_verify) {
+      int                *sender_ranks2, num_senders2;
+
+      sender_ranks2 = P4EST_ALLOC (int, num_procs);
+      p4est->inspect->balance_notify_allgather = -MPI_Wtime ();
+      mpiret = sc_notify_allgather (receiver_ranks, num_receivers,
+                                    sender_ranks2, &num_senders2,
+                                    p4est->mpicomm);
+      SC_CHECK_MPI (mpiret);
+      p4est->inspect->balance_notify_allgather += MPI_Wtime ();
+
+      /* run verification against sc_notify_allgather */
+      SC_CHECK_ABORT (num_senders2 == num_senders,
+                      "Failed notify_allgather sender count");
+      for (j = 0; j < num_senders; ++j) {
+        SC_CHECK_ABORT (sender_ranks2[j] == sender_ranks[j],
+                        "Failed notify_allgather sender rank");
+      }
+      P4EST_FREE (sender_ranks2);
+    }
+    P4EST_FREE (receiver_ranks);
+    receiver_ranks = NULL;
+
+    /* run verification against sc_ranges */
+
+    P4EST_FREE (sender_ranks);
+    sender_ranks = NULL;
+  }
 #ifdef P4EST_DEBUG
   P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                             maxpeers, maxwin, p4est_num_ranges);
@@ -1558,6 +1619,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                         p4est->mpicomm, num_procs, procs,
                         rank, p4est_num_ranges, my_ranges);
 #endif
+  P4EST_FREE (procs);
   P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
                   nwin, maxwin, p4est_num_ranges, first_peer, last_peer);
 
@@ -2070,7 +2132,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
   P4EST_FREE (recv_statuses);
   P4EST_FREE (wait_indices);
-  P4EST_FREE (procs);
 #ifdef P4EST_DEBUG
   sc_array_reset (&checkarray);
 #endif /* P4EST_DEBUG */
