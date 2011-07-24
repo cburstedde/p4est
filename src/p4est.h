@@ -91,6 +91,26 @@ typedef struct p4est_tree
 }
 p4est_tree_t;
 
+/* data pertaining to selecting, inspecting, and profiling algorithms that
+ * are used */
+typedef struct p4est_inspect
+{
+  int                 use_balance_subtree_new;
+  int                 use_overlap_new;
+  int                 use_borders;
+  size_t              balance_A_count_in;
+  size_t              balance_A_count_out;
+  size_t              balance_comm_sent;
+  size_t              balance_comm_nzpeers;
+  size_t              balance_B_count_in;
+  size_t              balance_B_count_out;
+  double              balance_A;
+  double              balance_comm;
+  double              balance_B;
+  int                 use_B;
+}
+p4est_inspect_t;
+
 typedef struct p4est
 {
   MPI_Comm            mpicomm;
@@ -123,6 +143,7 @@ typedef struct p4est
                                          */
   sc_mempool_t       *quadrant_pool;    /* memory allocator
                                            for temporary quadrants */
+  p4est_inspect_t    *inspect;  /* algorithmic switches */
 }
 p4est_t;
 

@@ -55,6 +55,25 @@ p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
 }
 
 int
+p4est_quadrant_overlaps (const p4est_quadrant_t * q1,
+                         const p4est_quadrant_t * q2)
+{
+  int8_t              level = SC_MIN (q1->level, q2->level);
+  p4est_qcoord_t      mask =
+    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+
+  if (((q1->x ^ q2->x) & mask) || ((q1->y ^ q2->y) & mask)
+#ifdef P4_TO_P8
+      || ((q1->z ^ q2->z) & mask)
+#endif
+      || 0) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2)
 {
@@ -121,6 +140,26 @@ p4est_quadrant_compare (const void *v1, const void *v2)
     diff = p1 - p2;
     return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
   }
+}
+
+int
+p4est_quadrant_disjoint (const void *a, const void *b)
+{
+  const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
+  const p4est_quadrant_t *r = (p4est_quadrant_t *) b;
+  int8_t              level = SC_MIN (q->level, r->level);
+  p4est_qcoord_t      mask =
+    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+
+  if (((q->x ^ r->x) & mask) || ((q->y ^ r->y) & mask)
+#ifdef P4_TO_P8
+      || ((q->z ^ r->z) & mask)
+#endif
+      || 0) {
+    return p4est_quadrant_compare (a, b);
+  }
+
+  return 0;
 }
 
 int

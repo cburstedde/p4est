@@ -75,6 +75,7 @@
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
+#define p4est_inspect_t                 p8est_inspect_t
 #define p4est_position_t                p8est_position_t
 #define p4est_init_t                    p8est_init_t
 #define p4est_refine_t                  p8est_refine_t
@@ -166,8 +167,10 @@
 /* functions in p4est_bits */
 #define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
+#define p4est_quadrant_overlaps         p8est_quadrant_overlaps
 #define p4est_quadrant_is_equal_piggy   p8est_quadrant_is_equal_piggy
 #define p4est_quadrant_compare          p8est_quadrant_compare
+#define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_equal_fn         p8est_quadrant_equal_fn
 #define p4est_quadrant_hash_fn          p8est_quadrant_hash_fn
@@ -244,11 +247,14 @@
 #define p4est_is_equal                  p8est_is_equal
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap
+#define p4est_tree_compute_overlap_new  p8est_tree_compute_overlap_new
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap
+#define p4est_tree_uniqify_overlap_new  p8est_tree_uniqify_overlap_new
 #define p4est_tree_remove_nonowned      p8est_tree_remove_nonowned
 #define p4est_complete_region           p8est_complete_region
 #define p4est_complete_subtree          p8est_complete_subtree
 #define p4est_balance_subtree           p8est_balance_subtree
+#define p4est_balance_border            p8est_balance_border
 #define p4est_linearize_tree            p8est_linearize_tree
 #define p4est_next_nonempty_process     p8est_next_nonempty_process
 #define p4est_partition_correction      p8est_partition_correction
@@ -309,5 +315,10 @@
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
+
+/* functions in p4est_balance */
+#define p4est_balance_face_test         p8est_balance_face_test
+#define p4est_balance_corner_test       p8est_balance_corner_test
+#define p4est_balance_test              p8est_balance_test
 
 #endif /* !P4EST_TO_P8EST_H */

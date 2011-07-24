@@ -128,12 +128,43 @@ void                p8est_tree_compute_overlap (p8est_t * p8est,
                                                 sc_array_t * in,
                                                 sc_array_t * out);
 
+/** Compute the overlap of a number of insulation layers with a tree.
+ * Every quadrant out of the insulation layer of the quadrants in \a in
+ * except the quadrant itself is checked for overlap of quadrants
+ * from all trees that are smaller by at least two levels and thus
+ * can cause a split. Those elements that cause a split (as determined by the
+ * p8est_balance_*_test routines) create quadrants in \a out that will
+ * reproduce those splits when \a in is balanced. Note: use this verion if you
+ * are using less than full balance.
+ *
+ * \param [in] p4est    The p8est to work on.
+ * \param [in] in       A piggy-sorted linear list of quadrants.
+ * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
+ * \param [in] balance  The type of balance condition that should be enforced.
+ * \param [in] borders  Array of arrays of tree border elements: if not NULL,
+ *                      this will be used to fill \a out.
+ * \param [in] inseeds  The seeds that \a in generates locally.
+ */
+void                p8est_tree_compute_overlap_new (p8est_t * p8est,
+                                                    sc_array_t * in,
+                                                    sc_array_t * out,
+                                                    p8est_connect_type_t
+                                                    balance,
+                                                    sc_array_t * borders,
+                                                    sc_array_t * inseeds);
+
 /** Removes duplicate quadrant from the output array of compute_overlap.
  * \param [in] skip     A piggy-sorted list of quadrants to be skipped.
  * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
   */
 void                p8est_tree_uniqify_overlap (sc_array_t * skip,
                                                 sc_array_t * out);
+
+/** Gets the reduced representation of the overlap that results from using
+ * p8est_tree_compute_overlap_new
+ * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
+  */
+void                p8est_tree_uniqify_overlap_new (sc_array_t * out);
 
 /** Removes quadrants that are outside the owned tree boundaries from a tree.
  * \param [in,out] p8est    The p8est to work on.
@@ -194,6 +225,12 @@ void                p8est_balance_subtree (p8est_t * p8est,
                                            p8est_connect_type_t btype,
                                            p4est_topidx_t which_tree,
                                            p8est_init_t init_fn);
+
+void                p8est_balance_border (p8est_t * p8est,
+                                          p8est_connect_type_t btype,
+                                          p4est_topidx_t which_tree,
+                                          p8est_init_t init_fn,
+                                          sc_array_t * borders);
 
 /** Remove overlaps from a sorted list of quadrants.
  *
