@@ -223,7 +223,7 @@ main (int argc, char **argv)
   int                 subtree;
   int                 borders;
   int                 notify, notify_allgather;
-  int                 success;
+  int                 first_argc;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -266,13 +266,13 @@ main (int argc, char **argv)
                          "configuration: unit|periodic|rotwrap|twocubes|rotcubes|shell");
 #endif
 
-  success = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
-                              opt, argc, argv);
-
-  if (success < 0) {
+  first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                 opt, argc, argv);
+  if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     return -1;
   }
+  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
