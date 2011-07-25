@@ -1591,6 +1591,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       }
     }
   }
+  P4EST_ASSERT (k == num_receivers3);
 #endif
 
   /* determine communication pattern by sc_notify function */
@@ -1646,8 +1647,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                         rank, p4est_num_ranges, my_ranges);
 #endif
   P4EST_FREE (procs);
-  P4EST_FREE (receiver_ranks3);
-  P4EST_FREE (sender_ranks3);
   P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
                   nwin, maxwin, p4est_num_ranges, first_peer, last_peer);
 
@@ -1659,14 +1658,17 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   request_first_count = request_second_count = request_send_count = 0;
   send_zero[0] = send_load[0] = recv_zero[0] = recv_load[0] = 0;
   send_zero[1] = send_load[1] = recv_zero[1] = recv_load[1] = 0;
+
+  /* This loop is now only used for verification */
+  k = 0;
   for (j = first_peer; j <= last_peer; ++j) {
     if (j == rank) {
+      P4EST_ASSERT (k == num_receivers3 || receiver_ranks3[k] != j);
       continue;
     }
     peer = peers + j;
     qcount = peer->send_first.elem_count;
 
-    /* check windows here for now, eventually merge into outer loop */
     for (i = 0; i < nwin - 1; ++i) {
       if (j > my_ranges[2 * i + 1] && j < my_ranges[2 * (i + 1)]) {
         break;
@@ -1674,8 +1676,20 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     }
     if (i < nwin - 1) {
       P4EST_ASSERT (qcount == 0);
+      P4EST_ASSERT (k == num_receivers3 || receiver_ranks3[k] != j);
       continue;
     }
+    P4EST_ASSERT (k < num_receivers3 && receiver_ranks3[k] == j);
+    ++k;
+  }
+  P4EST_ASSERT (k == num_receivers3);
+
+  /* Use receiver_ranks array to send to them */
+  for (k = 0; k < num_receivers3; ++k) {
+    j = receiver_ranks3[k];
+    P4EST_ASSERT (j >= first_peer && j <= last_peer && j != rank);
+    peer = peers + j;
+    qcount = peer->send_first.elem_count;
 
     /* first send number of quadrants to be expected */
     if (qcount > 0) {
@@ -1716,29 +1730,41 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       ++request_second_count;
     }
   }
-
-  /* find out who is sending to me and receive quadrant counts */
   peer = NULL;
+  P4EST_FREE (receiver_ranks3);
+
+  /* now only used for verification of who is sending to me */
+  k = 0;
   for (j = 0; j < num_procs; ++j) {
     if (j == rank) {
+      P4EST_ASSERT (k == num_senders3 || sender_ranks3[k] != j);
       continue;
     }
     for (i = 0; i < maxwin; ++i) {
       first_bound = all_ranges[twomaxwin * j + 2 * i];
       if (first_bound == -1 || first_bound > rank) {
+        P4EST_ASSERT (k == num_senders3 || sender_ranks3[k] != j);
         break;
       }
       if (rank <= all_ranges[twomaxwin * j + 2 * i + 1]) {
         /* processor j is sending to me */
-        ++request_first_count;
-        mpiret = MPI_Irecv (&peers[j].recv_first_count, 1, MPI_INT,
-                            j, P4EST_COMM_BALANCE_FIRST_COUNT,
-                            p4est->mpicomm, &requests_first[j]);
-        SC_CHECK_MPI (mpiret);
+        P4EST_ASSERT (k < num_senders3 && sender_ranks3[k] == j);
+        ++k;
         break;
       }
     }
   }
+
+  /* find out who is sending to me and receive quadrant counts */
+  for (k = 0; k < num_senders3; ++k) {
+    j = sender_ranks3[k];
+    ++request_first_count;
+    mpiret = MPI_Irecv (&peers[j].recv_first_count, 1, MPI_INT,
+                        j, P4EST_COMM_BALANCE_FIRST_COUNT,
+                        p4est->mpicomm, &requests_first[j]);
+    SC_CHECK_MPI (mpiret);
+  }
+  P4EST_FREE (sender_ranks3);
 
   /* wait for quadrant counts and post receive and send for quadrants */
   while (request_first_count > 0) {
