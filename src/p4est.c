@@ -1201,6 +1201,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   int                *procs, *all_ranges;
   int                *receiver_ranks, *sender_ranks;
   int                 num_receivers, num_senders;
+  int                *receiver_ranks3, *sender_ranks3;
+  int                 num_receivers3, num_senders3;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
@@ -1548,6 +1550,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_MPI
   receiver_ranks = sender_ranks = NULL;
   num_receivers = num_senders = 0;
+  receiver_ranks3 = sender_ranks3 = NULL;
+  num_receivers3 = num_senders3 = 0;
 
   /* encode and distribute the asymmetric communication pattern */
   procs = P4EST_ALLOC (int, num_procs);
@@ -1566,6 +1570,28 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   if (p4est->inspect != NULL) {
     p4est->inspect->balance_ranges += MPI_Wtime ();
   }
+  receiver_ranks3 = P4EST_ALLOC (int, num_procs);
+  sender_ranks3 = P4EST_ALLOC (int, num_procs);
+  sc_ranges_decode (num_procs, rank, maxwin, all_ranges,
+                    &num_receivers3, receiver_ranks3,
+                    &num_senders3, sender_ranks3);
+#ifdef P4EST_DEBUG
+  k = 0;
+  for (j = 0; j < num_procs; ++j) {
+    if (j == rank) {
+      continue;
+    }
+    if (procs[j] > 0) {
+      P4EST_ASSERT (k < num_receivers3 && receiver_ranks3[k] == j);
+      ++k;
+    }
+    else {
+      if (k < num_receivers3 && receiver_ranks3[k] == j) {
+        ++k;
+      }
+    }
+  }
+#endif
 
   /* determine communication pattern by sc_notify function */
   if (p4est->inspect != NULL && p4est->inspect->use_notify_compare) {
@@ -1620,6 +1646,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                         rank, p4est_num_ranges, my_ranges);
 #endif
   P4EST_FREE (procs);
+  P4EST_FREE (receiver_ranks3);
+  P4EST_FREE (sender_ranks3);
   P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
                   nwin, maxwin, p4est_num_ranges, first_peer, last_peer);
 
