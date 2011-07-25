@@ -95,6 +95,9 @@ enum
   TIMINGS_BALANCE_COMM_NZPEERS,
   TIMINGS_BALANCE_B_COUNT_IN,
   TIMINGS_BALANCE_B_COUNT_OUT,
+  TIMINGS_BALANCE_RANGES,
+  TIMINGS_BALANCE_NOTIFY,
+  TIMINGS_BALANCE_NOTIFY_ALLGATHER,
   TIMINGS_REBALANCE,
   TIMINGS_REBALANCE_A,
   TIMINGS_REBALANCE_COMM,
@@ -219,6 +222,7 @@ main (int argc, char **argv)
   int                 overlap;
   int                 subtree;
   int                 borders;
+  int                 notify, notify_allgather;
   int                 success;
 
   /* initialize MPI and p4est internals */
@@ -246,8 +250,12 @@ main (int argc, char **argv)
                          "use the new balance overlap algorithm");
   sc_options_add_switch (opt, 's', "new-balance-subtree", &subtree,
                          "use the new balance subtree algorithm");
-  sc_options_add_switch (opt, 'b', "new_balance-borders", &borders,
+  sc_options_add_switch (opt, 'b', "new-balance-borders", &borders,
                          "use borders in balance");
+  sc_options_add_switch (opt, 'n', "notify", &notify,
+                         "use notify in balance");
+  sc_options_add_switch (opt, 'a', "notify-allgather", &notify_allgather,
+                         "use notify_allgather in balance");
   sc_options_add_int (opt, 'l', "level", &refine_level, 0,
                       "initial refine level");
 #ifndef P4_TO_P8
@@ -364,6 +372,8 @@ main (int argc, char **argv)
   p4est->inspect->use_overlap_new = overlap;
   p4est->inspect->use_balance_subtree_new = (overlap && subtree);
   p4est->inspect->use_borders = (overlap && borders);
+  p4est->inspect->use_notify_compare = notify;
+  p4est->inspect->use_notify_verify = notify_allgather;
   P4EST_GLOBAL_STATISTICSF
     ("Balance: new overlap %d new subtree %d borders %d\n", overlap,
      (overlap && subtree), (overlap && borders));
@@ -408,6 +418,13 @@ main (int argc, char **argv)
   sc_stats_set1 (&stats[TIMINGS_BALANCE_B_COUNT_OUT],
                  (double) p4est->inspect->balance_B_count_out,
                  "Balance B count outlist");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_RANGES],
+                 p4est->inspect->balance_ranges, "Balance time for ranges");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_NOTIFY],
+                 p4est->inspect->balance_notify, "Balance time for notify");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_NOTIFY_ALLGATHER],
+                 p4est->inspect->balance_notify_allgather,
+                 "Balance time for notify_allgather");
 #ifdef P4EST_TIMINGS_VTK
   p4est_vtk_write_file (p4est, "timings_balanced");
 #endif
