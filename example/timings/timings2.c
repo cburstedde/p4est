@@ -226,6 +226,7 @@ main (int argc, char **argv)
   int                 overlap;
   int                 subtree;
   int                 borders;
+  int                 max_ranges;
   int                 use_ranges, use_ranges_notify, use_balance_verify;
   int                 first_argc;
 
@@ -256,6 +257,8 @@ main (int argc, char **argv)
                          "use the new balance subtree algorithm");
   sc_options_add_switch (opt, 'b', "new-balance-borders", &borders,
                          "use borders in balance");
+  sc_options_add_int (opt, 'm', "max-ranges", &max_ranges, -1,
+                      "override p4est_num_ranges");
   sc_options_add_switch (opt, 'r', "ranges", &use_ranges,
                          "use ranges in balance");
   sc_options_add_switch (opt, 't', "ranges-notify", &use_ranges_notify,
@@ -276,6 +279,10 @@ main (int argc, char **argv)
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+    return 1;
+  }
+  if (max_ranges < -1 || max_ranges == 0) {
+    P4EST_GLOBAL_LERROR ("The -m / --max-ranges option must be positive\n");
     return 1;
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
@@ -382,6 +389,7 @@ main (int argc, char **argv)
   p4est->inspect->use_balance_ranges = use_ranges;
   p4est->inspect->use_balance_ranges_notify = use_ranges_notify;
   p4est->inspect->use_balance_verify = use_balance_verify;
+  p4est->inspect->balance_max_ranges = max_ranges;
   P4EST_GLOBAL_STATISTICSF
     ("Balance: new overlap %d new subtree %d borders %d\n", overlap,
      (overlap && subtree), (overlap && borders));
