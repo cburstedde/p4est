@@ -112,6 +112,8 @@ typedef struct p4est_inspect
   int                 use_balance_ranges_notify;
   /** Verify sc_ranges and/or sc_notify as applicable. */
   int                 use_balance_verify;
+  /** If positive and smaller than p4est_num ranges, overrides it */
+  int                 balance_max_ranges;
   size_t              balance_A_count_in;
   size_t              balance_A_count_out;
   size_t              balance_comm_sent;

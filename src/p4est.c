@@ -1207,6 +1207,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   int                 num_receivers_notify, num_senders_notify;
   int                 is_ranges_primary, is_balance_verify;
   int                 is_ranges_active, is_notify_active;
+  int                 max_ranges;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
@@ -1591,12 +1592,17 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     }
     maxpeers = first_peer;
     maxwin = last_peer;
+    max_ranges = p4est_num_ranges;
     if (p4est->inspect != NULL) {
+      if (p4est->inspect->balance_max_ranges > 0 &&
+          p4est->inspect->balance_max_ranges < p4est_num_ranges) {
+        max_ranges = p4est->inspect->balance_max_ranges;
+      }
       p4est->inspect->balance_ranges = -MPI_Wtime ();
     }
     nwin = sc_ranges_adaptive (p4est_package_id,
                                p4est->mpicomm, procs, &maxpeers, &maxwin,
-                               p4est_num_ranges, my_ranges, &all_ranges);
+                               max_ranges, my_ranges, &all_ranges);
     twomaxwin = 2 * maxwin;
     if (p4est->inspect != NULL) {
       p4est->inspect->balance_ranges += MPI_Wtime ();
@@ -1680,15 +1686,15 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     }
 #ifdef P4EST_DEBUG
     P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
-                              maxpeers, maxwin, p4est_num_ranges);
+                              maxpeers, maxwin, max_ranges);
     sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
                           p4est->mpicomm, num_procs, procs,
-                          rank, p4est_num_ranges, my_ranges);
+                          rank, max_ranges, my_ranges);
 #endif
     SC_FREE (all_ranges);
     P4EST_FREE (procs);
     P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
-                    nwin, maxwin, p4est_num_ranges, first_peer, last_peer);
+                    nwin, maxwin, max_ranges, first_peer, last_peer);
   }
 
   /* determine asymmetric communication pattern by sc_notify function */
