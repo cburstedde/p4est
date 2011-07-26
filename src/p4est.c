@@ -2122,7 +2122,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 #endif /* P4EST_MPI */
 
   /* end balance_comm, start balance_B */
-  if (p4est->inspect) {
+  if (p4est->inspect != NULL) {
     p4est->inspect->balance_B = MPI_Wtime ();
     p4est->inspect->balance_comm += p4est->inspect->balance_B;
     p4est->inspect->balance_B *= -1.;

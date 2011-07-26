@@ -276,7 +276,7 @@ main (int argc, char **argv)
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-    return -1;
+    return 1;
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
@@ -372,6 +372,7 @@ main (int argc, char **argv)
     connectivity = p8est_connectivity_new_unitcube ();
   }
 #endif
+
   p4est = p4est_new_ext (mpi->mpicomm, connectivity,
                          1, refine_level - level_shift, 1, 0, NULL, NULL);
   p4est->inspect = P4EST_ALLOC_ZERO (p4est_inspect_t, 1);
