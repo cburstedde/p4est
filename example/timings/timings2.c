@@ -98,6 +98,10 @@ enum
   TIMINGS_BALANCE_RANGES,
   TIMINGS_BALANCE_NOTIFY,
   TIMINGS_BALANCE_NOTIFY_ALLGATHER,
+  TIMINGS_BALANCE_A_ZERO_SENDS,
+  TIMINGS_BALANCE_A_ZERO_RECEIVES,
+  TIMINGS_BALANCE_B_ZERO_SENDS,
+  TIMINGS_BALANCE_B_ZERO_RECEIVES,
   TIMINGS_REBALANCE,
   TIMINGS_REBALANCE_A,
   TIMINGS_REBALANCE_COMM,
@@ -428,6 +432,18 @@ main (int argc, char **argv)
   sc_stats_set1 (&stats[TIMINGS_BALANCE_NOTIFY_ALLGATHER],
                  p4est->inspect->balance_notify_allgather,
                  "Balance time for notify_allgather");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_A_ZERO_RECEIVES],
+                 p4est->inspect->balance_zero_receives[0],
+                 "Balance A zero receives");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_A_ZERO_SENDS],
+                 p4est->inspect->balance_zero_sends[0],
+                 "Balance A zero sends");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_B_ZERO_RECEIVES],
+                 p4est->inspect->balance_zero_receives[1],
+                 "Balance B zero receives");
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_B_ZERO_SENDS],
+                 p4est->inspect->balance_zero_sends[1],
+                 "Balance B zero sends");
 #ifdef P4EST_TIMINGS_VTK
   p4est_vtk_write_file (p4est, "timings_balanced");
 #endif
