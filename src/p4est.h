@@ -91,17 +91,27 @@ typedef struct p4est_tree
 }
 p4est_tree_t;
 
-/* data pertaining to selecting, inspecting, and profiling algorithms that
- * are used */
+/* Data pertaining to selecting, inspecting, and profiling algorithms.
+ * A pointer to this structure is hooked into the p4est main structure.
+ *
+ * TODO: Describe the purpose of various switches, counters, and timings.
+ *
+ * The balance_ranges and balance_notify* times are collected
+ * whenever an inspect structure is present in p4est.
+ */
 typedef struct p4est_inspect
 {
   int                 use_balance_subtree_new;
   int                 use_overlap_new;
   int                 use_borders;
-  /** compare sc_notify to sc_ranges (check consistency, collect timings) */
-  int                 use_notify_compare;
-  /** verify sc_notify by sc_notify_allgather (only if use_notify_compare) */
-  int                 use_notify_verify;
+  /** Use sc_ranges to determine the asymmetric communication pattern.
+   * If \a use_balance_ranges is false (the default), sc_notify is used. */
+  int                 use_balance_ranges;
+  /** If true, call both sc_ranges and sc_notify and verify consistency.
+   * Which is actually used is still determined by \a use_balance_ranges. */
+  int                 use_balance_ranges_notify;
+  /** Verify sc_ranges and/or sc_notify as applicable. */
+  int                 use_balance_verify;
   size_t              balance_A_count_in;
   size_t              balance_A_count_out;
   size_t              balance_comm_sent;

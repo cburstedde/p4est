@@ -1201,8 +1201,12 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   int                *procs, *all_ranges;
   int                *receiver_ranks, *sender_ranks;
   int                 num_receivers, num_senders;
-  int                *receiver_ranks3, *sender_ranks3;
-  int                 num_receivers3, num_senders3;
+  int                *receiver_ranks_ranges, *sender_ranks_ranges;
+  int                 num_receivers_ranges, num_senders_ranges;
+  int                *receiver_ranks_notify, *sender_ranks_notify;
+  int                 num_receivers_notify, num_senders_notify;
+  int                 is_ranges_primary, is_balance_verify;
+  int                 is_ranges_active, is_notify_active;
   MPI_Request        *requests_first, *requests_second;
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
@@ -1536,6 +1540,12 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   }
 
   /* end balance_A, start balance_comm */
+#ifdef P4EST_MPI
+  is_ranges_primary = 0;
+  is_ranges_active = 0;
+  is_notify_active = 1;
+  is_balance_verify = 0;
+#endif
   if (p4est->inspect != NULL) {
     p4est->inspect->balance_comm = MPI_Wtime ();
     p4est->inspect->balance_A += p4est->inspect->balance_comm;
@@ -1545,110 +1555,193 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     p4est->inspect->balance_ranges = 0.;
     p4est->inspect->balance_notify = 0.;
     p4est->inspect->balance_notify_allgather = 0.;
+#ifdef P4EST_MPI
+    is_ranges_primary = p4est->inspect->use_balance_ranges;
+    is_ranges_active = is_ranges_primary;
+    is_notify_active = !is_ranges_primary;
+    if (p4est->inspect->use_balance_ranges_notify) {
+      is_ranges_active = is_notify_active = 1;
+    }
+    is_balance_verify = p4est->inspect->use_balance_verify;
+#endif
   }
 
 #ifdef P4EST_MPI
+  /* encode and distribute the asymmetric communication pattern */
+  procs = NULL;
   receiver_ranks = sender_ranks = NULL;
   num_receivers = num_senders = 0;
-  receiver_ranks3 = sender_ranks3 = NULL;
-  num_receivers3 = num_senders3 = 0;
+  receiver_ranks_ranges = sender_ranks_ranges = NULL;
+  num_receivers_ranges = num_senders_ranges = 0;
+  receiver_ranks_notify = sender_ranks_notify = NULL;
+  num_receivers_notify = num_senders_notify = 0;
 
-  /* encode and distribute the asymmetric communication pattern */
-  procs = P4EST_ALLOC (int, num_procs);
-  for (j = 0; j < num_procs; ++j) {
-    procs[j] = (int) peers[j].send_first.elem_count;
-  }
-  maxpeers = first_peer;
-  maxwin = last_peer;
-  if (p4est->inspect != NULL) {
-    p4est->inspect->balance_ranges = -MPI_Wtime ();
-  }
-  nwin = sc_ranges_adaptive (p4est_package_id,
-                             p4est->mpicomm, procs, &maxpeers, &maxwin,
-                             p4est_num_ranges, my_ranges, &all_ranges);
-  twomaxwin = 2 * maxwin;
-  if (p4est->inspect != NULL) {
-    p4est->inspect->balance_ranges += MPI_Wtime ();
-  }
-  receiver_ranks3 = P4EST_ALLOC (int, num_procs);
-  sender_ranks3 = P4EST_ALLOC (int, num_procs);
-  sc_ranges_decode (num_procs, rank, maxwin, all_ranges,
-                    &num_receivers3, receiver_ranks3,
-                    &num_senders3, sender_ranks3);
-#ifdef P4EST_DEBUG
-  k = 0;
-  for (j = 0; j < num_procs; ++j) {
-    if (j == rank) {
-      continue;
+  /* determine asymmetric communication pattern by sc_ranges function */
+  if (is_ranges_active) {
+    procs = P4EST_ALLOC (int, num_procs);
+    receiver_ranks_ranges = P4EST_ALLOC (int, num_procs);
+    sender_ranks_ranges = P4EST_ALLOC (int, num_procs);
+
+    for (j = 0; j < num_procs; ++j) {
+      procs[j] = (int) peers[j].send_first.elem_count;
     }
-    if (procs[j] > 0) {
-      P4EST_ASSERT (k < num_receivers3 && receiver_ranks3[k] == j);
-      ++k;
+    maxpeers = first_peer;
+    maxwin = last_peer;
+    if (p4est->inspect != NULL) {
+      p4est->inspect->balance_ranges = -MPI_Wtime ();
     }
-    else {
-      if (k < num_receivers3 && receiver_ranks3[k] == j) {
+    nwin = sc_ranges_adaptive (p4est_package_id,
+                               p4est->mpicomm, procs, &maxpeers, &maxwin,
+                               p4est_num_ranges, my_ranges, &all_ranges);
+    twomaxwin = 2 * maxwin;
+    if (p4est->inspect != NULL) {
+      p4est->inspect->balance_ranges += MPI_Wtime ();
+    }
+    sc_ranges_decode (num_procs, rank, maxwin, all_ranges,
+                      &num_receivers_ranges, receiver_ranks_ranges,
+                      &num_senders_ranges, sender_ranks_ranges);
+    if (is_balance_verify) {
+      /* verification written after using sc_ranges_decode */
+      k = 0;
+      for (j = 0; j < num_procs; ++j) {
+        if (j == rank) {
+          continue;
+        }
+        if (procs[j] > 0) {
+          P4EST_ASSERT (k < num_receivers_ranges &&
+                        receiver_ranks_ranges[k] == j);
+          ++k;
+        }
+        else {
+          if (k < num_receivers_ranges && receiver_ranks_ranges[k] == j) {
+            ++k;
+          }
+        }
+      }
+      P4EST_ASSERT (k == num_receivers_ranges);
+
+      /* original verification loop modified and partially redundant */
+      k = 0;
+      for (j = first_peer; j <= last_peer; ++j) {
+        if (j == rank) {
+          P4EST_ASSERT (k == num_receivers_ranges ||
+                        receiver_ranks_ranges[k] != j);
+          continue;
+        }
+        peer = peers + j;
+        qcount = peer->send_first.elem_count;
+
+        for (i = 0; i < nwin - 1; ++i) {
+          if (j > my_ranges[2 * i + 1] && j < my_ranges[2 * (i + 1)]) {
+            break;
+          }
+        }
+        if (i < nwin - 1) {
+          P4EST_ASSERT (qcount == 0);
+          P4EST_ASSERT (k == num_receivers_ranges ||
+                        receiver_ranks_ranges[k] != j);
+          continue;
+        }
+        P4EST_ASSERT (k < num_receivers_ranges &&
+                      receiver_ranks_ranges[k] == j);
         ++k;
       }
-    }
-  }
-  P4EST_ASSERT (k == num_receivers3);
-#endif
+      P4EST_ASSERT (k == num_receivers_ranges);
 
-  /* determine communication pattern by sc_notify function */
-  if (p4est->inspect != NULL && p4est->inspect->use_notify_compare) {
-    receiver_ranks = P4EST_ALLOC (int, num_procs);
-    sender_ranks = P4EST_ALLOC (int, num_procs);
-    num_receivers = num_senders = 0;
+      /* original verification loop of who is sending to me */
+      k = 0;
+      for (j = 0; j < num_procs; ++j) {
+        if (j == rank) {
+          P4EST_ASSERT (k == num_senders_ranges ||
+                        sender_ranks_ranges[k] != j);
+          continue;
+        }
+        for (i = 0; i < maxwin; ++i) {
+          first_bound = all_ranges[twomaxwin * j + 2 * i];
+          if (first_bound == -1 || first_bound > rank) {
+            P4EST_ASSERT (k == num_senders_ranges ||
+                          sender_ranks_ranges[k] != j);
+            break;
+          }
+          if (rank <= all_ranges[twomaxwin * j + 2 * i + 1]) {
+            /* processor j is sending to me */
+            P4EST_ASSERT (k < num_senders_ranges &&
+                          sender_ranks_ranges[k] == j);
+            ++k;
+            break;
+          }
+        }
+      }
+      P4EST_ASSERT (k == num_senders_ranges);
+    }
+#ifdef P4EST_DEBUG
+    P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
+                              maxpeers, maxwin, p4est_num_ranges);
+    sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
+                          p4est->mpicomm, num_procs, procs,
+                          rank, p4est_num_ranges, my_ranges);
+#endif
+    SC_FREE (all_ranges);
+    P4EST_FREE (procs);
+    P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
+                    nwin, maxwin, p4est_num_ranges, first_peer, last_peer);
+  }
+
+  /* determine asymmetric communication pattern by sc_notify function */
+  if (is_notify_active) {
+    receiver_ranks_notify = P4EST_ALLOC (int, num_procs);
+    sender_ranks_notify = P4EST_ALLOC (int, num_procs);
+    num_receivers_notify = num_senders_notify = 0;
+
     for (j = 0; j < num_procs; ++j) {
       if (j != rank && peers[j].send_first.elem_count > 0) {
-        receiver_ranks[num_receivers++] = j;
+        receiver_ranks_notify[num_receivers_notify++] = j;
       }
     }
-    p4est->inspect->balance_notify = -MPI_Wtime ();
-    mpiret = sc_notify (receiver_ranks, num_receivers,
-                        sender_ranks, &num_senders, p4est->mpicomm);
+    if (p4est->inspect != NULL) {
+      p4est->inspect->balance_notify = -MPI_Wtime ();
+    }
+    mpiret = sc_notify (receiver_ranks_notify, num_receivers_notify,
+                        sender_ranks_notify, &num_senders_notify,
+                        p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
-    p4est->inspect->balance_notify += MPI_Wtime ();
+    if (p4est->inspect != NULL) {
+      p4est->inspect->balance_notify += MPI_Wtime ();
+    }
 
     /* double-check sc_notify results by sc_notify_allgather */
-    if (p4est->inspect->use_notify_verify) {
+    if (is_balance_verify) {
       int                *sender_ranks2, num_senders2;
 
       sender_ranks2 = P4EST_ALLOC (int, num_procs);
-      p4est->inspect->balance_notify_allgather = -MPI_Wtime ();
-      mpiret = sc_notify_allgather (receiver_ranks, num_receivers,
+      if (p4est->inspect != NULL) {
+        p4est->inspect->balance_notify_allgather = -MPI_Wtime ();
+      }
+      mpiret = sc_notify_allgather (receiver_ranks_notify,
+                                    num_receivers_notify,
                                     sender_ranks2, &num_senders2,
                                     p4est->mpicomm);
       SC_CHECK_MPI (mpiret);
-      p4est->inspect->balance_notify_allgather += MPI_Wtime ();
+      if (p4est->inspect != NULL) {
+        p4est->inspect->balance_notify_allgather += MPI_Wtime ();
+      }
 
       /* run verification against sc_notify_allgather */
-      SC_CHECK_ABORT (num_senders2 == num_senders,
+      SC_CHECK_ABORT (num_senders2 == num_senders_notify,
                       "Failed notify_allgather sender count");
-      for (j = 0; j < num_senders; ++j) {
-        SC_CHECK_ABORT (sender_ranks2[j] == sender_ranks[j],
+      for (j = 0; j < num_senders_notify; ++j) {
+        SC_CHECK_ABORT (sender_ranks2[j] == sender_ranks_notify[j],
                         "Failed notify_allgather sender rank");
       }
       P4EST_FREE (sender_ranks2);
     }
-    P4EST_FREE (receiver_ranks);
-    receiver_ranks = NULL;
-
-    /* run verification against sc_ranges */
-
-    P4EST_FREE (sender_ranks);
-    sender_ranks = NULL;
   }
-#ifdef P4EST_DEBUG
-  P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
-                            maxpeers, maxwin, p4est_num_ranges);
-  sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
-                        p4est->mpicomm, num_procs, procs,
-                        rank, p4est_num_ranges, my_ranges);
-#endif
-  P4EST_FREE (procs);
-  P4EST_VERBOSEF ("Peer ranges %d/%d/%d first %d last %d\n",
-                  nwin, maxwin, p4est_num_ranges, first_peer, last_peer);
+
+  /* verify sc_ranges and sc_notify against each other */
+  if (is_ranges_active && is_notify_active && is_balance_verify) {
+    /* TODO: Complete this block */
+
+  }
 
   /*
    * loop over all peers and send first round of quadrants
@@ -1658,35 +1751,27 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   request_first_count = request_second_count = request_send_count = 0;
   send_zero[0] = send_load[0] = recv_zero[0] = recv_load[0] = 0;
   send_zero[1] = send_load[1] = recv_zero[1] = recv_load[1] = 0;
-
-  /* This loop is now only used for verification */
-  k = 0;
-  for (j = first_peer; j <= last_peer; ++j) {
-    if (j == rank) {
-      P4EST_ASSERT (k == num_receivers3 || receiver_ranks3[k] != j);
-      continue;
-    }
-    peer = peers + j;
-    qcount = peer->send_first.elem_count;
-
-    for (i = 0; i < nwin - 1; ++i) {
-      if (j > my_ranges[2 * i + 1] && j < my_ranges[2 * (i + 1)]) {
-        break;
-      }
-    }
-    if (i < nwin - 1) {
-      P4EST_ASSERT (qcount == 0);
-      P4EST_ASSERT (k == num_receivers3 || receiver_ranks3[k] != j);
-      continue;
-    }
-    P4EST_ASSERT (k < num_receivers3 && receiver_ranks3[k] == j);
-    ++k;
+  if (is_ranges_primary) {
+    P4EST_ASSERT (is_ranges_active);
+    receiver_ranks = receiver_ranks_ranges;
+    sender_ranks = sender_ranks_ranges;
+    num_receivers = num_receivers_ranges;
+    num_senders = num_senders_ranges;
   }
-  P4EST_ASSERT (k == num_receivers3);
+  else {
+    P4EST_ASSERT (is_notify_active);
+    receiver_ranks = receiver_ranks_notify;
+    sender_ranks = sender_ranks_notify;
+    num_receivers = num_receivers_notify;
+    num_senders = num_senders_notify;
+  }
+  P4EST_ASSERT (receiver_ranks != NULL && sender_ranks != NULL);
+  num_receivers_ranges = num_senders_ranges = 0;
+  num_receivers_notify = num_senders_notify = 0;
 
   /* Use receiver_ranks array to send to them */
-  for (k = 0; k < num_receivers3; ++k) {
-    j = receiver_ranks3[k];
+  for (k = 0; k < num_receivers; ++k) {
+    j = receiver_ranks[k];
     P4EST_ASSERT (j >= first_peer && j <= last_peer && j != rank);
     peer = peers + j;
     qcount = peer->send_first.elem_count;
@@ -1698,6 +1783,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       ++send_load[0];
     }
     else {
+      P4EST_ASSERT (is_ranges_primary);
       ++send_zero[0];
     }
     peer->send_first_count = (int) qcount;
@@ -1731,40 +1817,22 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     }
   }
   peer = NULL;
-  P4EST_FREE (receiver_ranks3);
-
-  /* now only used for verification of who is sending to me */
-  k = 0;
-  for (j = 0; j < num_procs; ++j) {
-    if (j == rank) {
-      P4EST_ASSERT (k == num_senders3 || sender_ranks3[k] != j);
-      continue;
-    }
-    for (i = 0; i < maxwin; ++i) {
-      first_bound = all_ranges[twomaxwin * j + 2 * i];
-      if (first_bound == -1 || first_bound > rank) {
-        P4EST_ASSERT (k == num_senders3 || sender_ranks3[k] != j);
-        break;
-      }
-      if (rank <= all_ranges[twomaxwin * j + 2 * i + 1]) {
-        /* processor j is sending to me */
-        P4EST_ASSERT (k < num_senders3 && sender_ranks3[k] == j);
-        ++k;
-        break;
-      }
-    }
-  }
+  P4EST_FREE (receiver_ranks_ranges);
+  P4EST_FREE (receiver_ranks_notify);
+  receiver_ranks = receiver_ranks_ranges = receiver_ranks_notify = NULL;
 
   /* find out who is sending to me and receive quadrant counts */
-  for (k = 0; k < num_senders3; ++k) {
-    j = sender_ranks3[k];
+  for (k = 0; k < num_senders; ++k) {
+    j = sender_ranks[k];
     ++request_first_count;
     mpiret = MPI_Irecv (&peers[j].recv_first_count, 1, MPI_INT,
                         j, P4EST_COMM_BALANCE_FIRST_COUNT,
                         p4est->mpicomm, &requests_first[j]);
     SC_CHECK_MPI (mpiret);
   }
-  P4EST_FREE (sender_ranks3);
+  P4EST_FREE (sender_ranks_ranges);
+  P4EST_FREE (sender_ranks_notify);
+  sender_ranks = sender_ranks_ranges = sender_ranks_notify = NULL;
 
   /* wait for quadrant counts and post receive and send for quadrants */
   while (request_first_count > 0) {
@@ -2182,7 +2250,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   sc_array_reset (cta);
 
 #ifdef P4EST_MPI
-  SC_FREE (all_ranges);
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
   P4EST_FREE (recv_statuses);
   P4EST_FREE (wait_indices);

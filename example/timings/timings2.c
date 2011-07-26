@@ -222,7 +222,7 @@ main (int argc, char **argv)
   int                 overlap;
   int                 subtree;
   int                 borders;
-  int                 notify, notify_allgather;
+  int                 use_ranges, use_ranges_notify, use_balance_verify;
   int                 first_argc;
 
   /* initialize MPI and p4est internals */
@@ -252,10 +252,12 @@ main (int argc, char **argv)
                          "use the new balance subtree algorithm");
   sc_options_add_switch (opt, 'b', "new-balance-borders", &borders,
                          "use borders in balance");
-  sc_options_add_switch (opt, 'n', "notify", &notify,
-                         "use notify in balance");
-  sc_options_add_switch (opt, 'a', "notify-allgather", &notify_allgather,
-                         "use notify_allgather in balance");
+  sc_options_add_switch (opt, 'r', "ranges", &use_ranges,
+                         "use ranges in balance");
+  sc_options_add_switch (opt, 't', "ranges-notify", &use_ranges_notify,
+                         "use both ranges and notify");
+  sc_options_add_switch (opt, 'y', "balance-verify", &use_balance_verify,
+                         "use verifications in balance");
   sc_options_add_int (opt, 'l', "level", &refine_level, 0,
                       "initial refine level");
 #ifndef P4_TO_P8
@@ -372,8 +374,9 @@ main (int argc, char **argv)
   p4est->inspect->use_overlap_new = overlap;
   p4est->inspect->use_balance_subtree_new = (overlap && subtree);
   p4est->inspect->use_borders = (overlap && borders);
-  p4est->inspect->use_notify_compare = notify;
-  p4est->inspect->use_notify_verify = notify_allgather;
+  p4est->inspect->use_balance_ranges = use_ranges;
+  p4est->inspect->use_balance_ranges_notify = use_ranges_notify;
+  p4est->inspect->use_balance_verify = use_balance_verify;
   P4EST_GLOBAL_STATISTICSF
     ("Balance: new overlap %d new subtree %d borders %d\n", overlap,
      (overlap && subtree), (overlap && borders));
