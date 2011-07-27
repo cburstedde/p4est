@@ -2100,10 +2100,9 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
   size_t              count_ancestor_inlist;
   p4est_quadrant_t   *q, *r;
   int                 minlevel = p->level + 1, maxlevel;
-  int                 sid, pid, rbound;
+  int                 sid, pid;
   int                 duplicate = 1;
   int                 precluded = 2;
-  int                 skip = 4;
   int                 l;
   void              **vlookup;
   ssize_t             srindex, si;
@@ -2261,20 +2260,10 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
       pid = p4est_quadrant_child_id (&par);     /* and position */
       p4est_quadrant_sibling (&par, &par, 0);   /* now shift to 0 */
 
-      /* if skip, only add sibling of parent */
-      rbound = (q->p.user_int & skip) ? 1 : bound;
-
-      for (sid = 0; sid < rbound; sid++) {
+      for (sid = 0; sid < bound; sid++) {
         *qalloc = par;
         if (!sid) {
-          if (p4est_quadrant_ancestor_id (qalloc, qalloc->level - 1) == pid) {
-            /* only sibling of parent is necessary */
-            qalloc->p.user_int = (skip & precluded);
-          }
-          else {
-            /* mark as precluded for later removal */
-            qalloc->p.user_int = (precluded);
-          }
+          qalloc->p.user_int = precluded;
           P4EST_ASSERT (p4est_quadrant_is_ancestor (p, qalloc));
         }
         else if (sid <= P4EST_DIM) {
@@ -2341,10 +2330,9 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
           /* qalloc is already included in output list, this catches most */
           ++count_already_outlist;
           if (!sid) {
-            /* we need to relay the fact that this octant is precluded and
-             * possibly skippable */
+            /* we need to relay the fact that this octant is precluded */
             qlookup = (p4est_quadrant_t *) * vlookup;
-            qlookup->p.user_int |= qalloc->p.user_int;
+            qlookup->p.user_int = precluded;
           }
           continue;
         }
@@ -2362,7 +2350,7 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
             if (r->level >= l - 1) {
               /* either qalloc duplicates r or is precluded by r: either way,
                * we do not need to add qalloc to inlist in the final merge */
-              qalloc->p.user_int |= precluded;
+              qalloc->p.user_int = precluded;
               if (r->level > l - 1) {
                 ++count_ancestor_inlist;
               }
@@ -2436,7 +2424,7 @@ p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
         sc_mempool_free (qpool, qalloc);
         continue;
       }
-      if ((qalloc->p.user_int & precluded) == 0) {
+      if (qalloc->p.user_int != precluded) {
         q = p4est_quadrant_array_push (inlist);
         *q = *qalloc;
       }
