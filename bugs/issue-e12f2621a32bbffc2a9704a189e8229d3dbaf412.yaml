@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Only store local trees
+desc: |-
+  Currently p4est->trees stores all trees, even empty ones.
+  This is a waste of memory with many trees.  Only store non-empty ones.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <carsten@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2011-07-31 23:15:57.768188 Z
+references: []
+
+id: e12f2621a32bbffc2a9704a189e8229d3dbaf412
+log_events: 
+- - 2011-07-31 23:15:58.956090 Z
+  - Carsten Burstedde <carsten@ices.utexas.edu>
+  - created
+  - ""
