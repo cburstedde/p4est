@@ -1931,6 +1931,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     q = p4est_quadrant_array_index (inlist, iz);
     if (q->p.user_data == parent_key) {
       --tree->quadrants_per_level[q->level];
+      ++num_linearized;
     }
     else if (!p4est_quadrant_is_inside_root (q) ||
              !p4est_quadrant_is_inside_tree (tree, q)) {
@@ -1939,7 +1940,6 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       --tree->quadrants_per_level[q->level];
     }
     else if (jz != iz) {
-      ++num_linearized;
       p = p4est_quadrant_array_index (inlist, jz++);
       *p = *q;
     }
@@ -1947,12 +1947,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       jz++;
     }
   }
-  while (tree->maxlevel >= 0 && !tree->quadrants_per_level[tree->maxlevel]) {
-    tree->maxlevel--;
-  }
-  P4EST_ASSERT (tree->maxlevel >= 0);
   P4EST_ASSERT (incount - num_nonowned - num_linearized == jz);
-  sc_array_resize (inlist, jz);
 
   /* merge outlist into input list and free temporary storage */
   P4EST_LDEBUGF ("Hash statistics for tree %lld\n", (long long) which_tree);
@@ -1977,7 +1972,13 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       if (qalloc->p.user_data != parent_key) {
         if (p4est_quadrant_is_inside_root (qalloc) &&
             p4est_quadrant_is_inside_tree (tree, qalloc)) {
-          q = p4est_quadrant_array_push (inlist);
+          if (jz < incount) {
+            q = p4est_quadrant_array_index (inlist, jz++);
+          }
+          else {
+            q = p4est_quadrant_array_push (inlist);
+            jz++;
+          }
           *q = *qalloc;
           ++num_added;
           ++tree->quadrants_per_level[l];
@@ -1997,7 +1998,15 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     sc_array_reset (&outlist[l]);
   }
   sc_mempool_destroy (list_alloc);
-  P4EST_ASSERT (jz + num_added == inlist->elem_count);
+  P4EST_ASSERT (jz <= inlist->elem_count);
+  P4EST_ASSERT (incount - num_nonowned - num_linearized + num_added == jz);
+  if (jz < incount) {
+    sc_array_resize (inlist, jz);
+  }
+  while (tree->maxlevel >= 0 && !tree->quadrants_per_level[tree->maxlevel]) {
+    tree->maxlevel--;
+  }
+  P4EST_ASSERT (tree->maxlevel >= 0);
 
   /* print more statistics */
   P4EST_VERBOSEF ("Tree %lld Outside root %llu tree %llu\n",
