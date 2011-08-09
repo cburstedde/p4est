@@ -91,6 +91,7 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   int                 xbit, ybit, zbit;
   int                 maxbit, thisbit;
   int                 count;
+  p4est_qcoord_t      bitor;
 
   P4EST_ASSERT (dx >= 0);
   P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
@@ -128,46 +129,18 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   count += (ybit == maxbit);
   count += (zbit == maxbit);
 
-  switch (count) {
-  case 1:
+  if (count == 1) {
     /* There is always a path where at most one of the other two dimensions
      * adds a bit in this position, so there is always a path where we don't
      * create a more significant bit */
     return SC_MAX (0, level - maxbit);
-  case 2:
-    /* This is the start of a chain of 2s.  If this chain ends in 0 or 1,
-     * there is always a path where we don't add a more significant bit; if
-     * this chain ends in a 3, there is always a path where only one dimension
-     * adds a more significant bit */
-    thisbit = 1 << (maxbit - 1);
-    do {
-      P4EST_ASSERT (thisbit > 0);
-      count = ((dx & thisbit) != 0);
-      count += ((dy & thisbit) != 0);
-      count += ((dz & thisbit) != 0);
-      switch (count) {
-      case 0:
-      case 1:
-        return SC_MAX (0, level - maxbit);
-      case 2:
-        break;
-      case 3:
-        return SC_MAX (0, level - (maxbit + 1));
-      default:
-        SC_ABORT_NOT_REACHED ();
-      }
-      P4EST_ASSERT (count == 2);
-      thisbit >>= 1;
-    } while (count == 2);
-    SC_ABORT_NOT_REACHED ();
-    return -1;
-  case 3:
-    /* There is always a path where only one dimension adds a more signifcant
-     * bit */
-    return SC_MAX (0, level - (maxbit + 1));
-  default:
-    SC_ABORT_NOT_REACHED ();
-    return -1;
+  }
+  else {
+    /* we want to carry a 1 when there are three 1 bits, so we find places
+     * where there is at least one 1 bit and subtract one 1 bit: then if we
+     * sum, the binary carry rule will give the correct result */
+    bitor = (dx | dy | dz);
+    return SC_MAX (0, level - SC_LOG2_32 (dx + dy + dz - bitor));
   }
 }
 
@@ -492,6 +465,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 #ifdef P4_TO_P8
   int                 edge;
   int                 dual;
+  int                 achild = -1;
 #endif
   int                 recon;
   p4est_quadrant_t    porig;
@@ -648,6 +622,9 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
     }
 #else
     b2mask = -1 << (P4EST_MAXLEVEL - (blevel - 2));
+    if (!balance) {
+      achild = p8est_quadrant_child_id (&a);
+    }
     for (j = -1; j <= 1; j++) {
       for (i = -1; i <= 1; i++) {
         if (!i & !j) {
@@ -686,8 +663,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
           if (!balance) {
             dual = p8est_face_corners[face][(1 + j) + (1 + i) / 2];
 
-            if (p8est_quadrant_child_id (p) == dual &&
-                p8est_quadrant_child_id (&a) == dual) {
+            if (achild == dual) {
               temp.x &= b2mask;
               temp.y &= b2mask;
               temp.z &= b2mask;
