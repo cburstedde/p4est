@@ -89,9 +89,9 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
 {
   int                 shift = P4EST_MAXLEVEL - level;
   int                 xbit, ybit, zbit;
-  int                 maxbit, thisbit;
-  int                 count;
+  int                 maxbit;
   p4est_qcoord_t      bitor;
+  int                 ret;
 
   P4EST_ASSERT (dx >= 0);
   P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
@@ -122,32 +122,18 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   maxbit = SC_MAX (maxbit, ybit);
   zbit = SC_LOG2_32 (dz);
   maxbit = SC_MAX (maxbit, zbit);
-
   P4EST_ASSERT (maxbit >= 1);
 
-  count = (xbit == maxbit);
-  count += (ybit == maxbit);
-  count += (zbit == maxbit);
-
-  if (count == 1) {
-    /* There is always a path where at most one of the other two dimensions
-     * adds a bit in this position, so there is always a path where we don't
-     * create a more significant bit */
-    return SC_MAX (0, level - maxbit);
-  }
-  else {
-    /* we want to carry a 1 when there are three 1 bits, so we find places
-     * where there is at least one 1 bit and subtract one 1 bit: then if we
-     * sum, the binary carry rule will give the correct result */
-    bitor = (dx | dy | dz);
-    return SC_MAX (0, level - SC_LOG2_32 (dx + dy + dz - bitor));
-  }
+  /* we want to carry a 1 when there are three 1 bits, so we find places
+   * where there is at least one 1 bit and subtract one 1 bit: then if we
+   * sum, the binary carry rule will give the correct result */
+  bitor = (dx | dy | dz);
+  ret = SC_LOG2_32 (dx + dy + dz - bitor);
+  /* we have to guard against the case when the leading position has one 1
+   * bit. */
+  ret = SC_MAX (maxbit, ret);
+  return SC_MAX (0, level - ret);
 }
-
-static inline int   p8est_balance_2chain (p4est_qcoord_t dx,
-                                          p4est_qcoord_t dy,
-                                          p4est_qcoord_t dz, int thisbit,
-                                          int xbit, int ybit, int zbit);
 
 /* This is the kernel for 3d balance with face balancing only */
 static inline int
@@ -155,9 +141,10 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
                               p4est_qcoord_t dz, int level)
 {
   int                 shift = P4EST_MAXLEVEL - level;
-  int                 xbit, ybit, zbit;
-  int                 maxbit, thisbit;
-  int                 count;
+  int                 maxbit;
+  int                 yzbit, zxbit, xybit;
+  p4est_qcoord_t      dyz, dzx, dxy, bitor;
+  int                 ret;
 
   P4EST_ASSERT (dx >= 0);
   P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
@@ -182,159 +169,28 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
   /* get the smallest even number greater than or equal to dz */
   dz = (dz + 1) & (~((p4est_qcoord_t) 0x1));
 
-  xbit = SC_LOG2_32 (dx);
-  maxbit = xbit;
-  ybit = SC_LOG2_32 (dy);
-  maxbit = SC_MAX (maxbit, ybit);
-  zbit = SC_LOG2_32 (dz);
-  maxbit = SC_MAX (maxbit, zbit);
+  /* this problem is dual to dual to kernel 3d edge */
+  dyz = dy + dz;
+  dzx = dz + dx;
+  dxy = dx + dy;
 
+  yzbit = SC_LOG2_32 (dyz);
+  maxbit = yzbit;
+  zxbit = SC_LOG2_32 (dzx);
+  maxbit = SC_MAX (maxbit, zxbit);
+  xybit = SC_LOG2_32 (dxy);
+  maxbit = SC_MAX (maxbit, xybit);
   P4EST_ASSERT (maxbit >= 1);
 
-  count = (xbit == maxbit) + (ybit == maxbit) + (zbit == maxbit);
-
-  switch (count) {
-  case 1:
-    /* This is the start of a chain of 1s.  If this chain ends in a 2, 3, or
-     * 03, * then every path results in adding one more significant bit.  If
-     * this chain ends in 00 or 01, then there is a path that results in no
-     * more significant bit.  If this chain ends in 02, we need more
-     * information */
-    thisbit = 1 << (maxbit - 1);
-    do {
-      P4EST_ASSERT (thisbit > 0);
-      count = ((dx & thisbit) != 0);
-      count += ((dy & thisbit) != 0);
-      count += ((dz & thisbit) != 0);
-      switch (count) {
-      case 0:
-        thisbit >>= 1;
-        if (thisbit == 0) {
-          /* if we've gone through all of the bits, then the leading 1 doesn't
-           * advance a bit */
-          return SC_MAX (0, level - maxbit);
-        }
-        xbit = ((dx & thisbit) != 0);
-        ybit = ((dy & thisbit) != 0);
-        zbit = ((dz & thisbit) != 0);
-        count = xbit + ybit + zbit;
-        switch (count) {
-        case 0:
-        case 1:
-          return SC_MAX (0, level - maxbit);
-        case 2:
-          /* If there is a path where this 2 advances only 1 bit, then the
-           * initial one does not advance a bit; otherwise this 2 advances 2
-           * bits, and the initial 1 advances a bit */
-          if (p8est_balance_2chain (dx, dy, dz, thisbit, xbit, ybit, zbit)) {
-            return SC_MAX (0, level - (maxbit + 1));
-          }
-          else {
-            return SC_MAX (0, level - maxbit);
-          }
-        case 3:
-          return SC_MAX (0, level - (maxbit + 1));
-        default:
-          SC_ABORT_NOT_REACHED ();
-          return -1;
-        }
-      case 1:
-        break;
-      case 2:
-      case 3:
-        return SC_MAX (0, level - (maxbit + 1));
-      default:
-        SC_ABORT_NOT_REACHED ();
-      }
-      P4EST_ASSERT (count == 1);
-      thisbit >>= 1;
-    } while (count == 1);
-    SC_ABORT_NOT_REACHED ();
-    return -1;
-  case 2:
-    /* Check to see if there is a path where this 2 advances only 1 bit:
-     * otherwise it advances 2 bits */
-    if (p8est_balance_2chain (dx, dy, dz, (1 << maxbit), (xbit == maxbit),
-                              (ybit == maxbit), (zbit == maxbit))) {
-      return SC_MAX (0, level - (maxbit + 2));
-    }
-    else {
-      return SC_MAX (0, level - (maxbit + 1));
-    }
-  case 3:
-    /* Every path results in a bit twice more significant */
-    return SC_MAX (0, level - (maxbit + 2));
-  default:
-    SC_ABORT_NOT_REACHED ();
-    return -1;
-  }
-}
-
-static inline int
-p8est_balance_2chain (p4est_qcoord_t dx, p4est_qcoord_t dy, p4est_qcoord_t dz,
-                      int thisbit, int xbit, int ybit, int zbit)
-{
-  int                 zfx = xbit;
-  int                 zfy = ybit;
-  int                 zfz = zbit;
-  int                 count;
-
-  thisbit >>= 1;
-
-  P4EST_ASSERT (zfx + zfy + zfz == 2);
-
-  for (;;) {
-    P4EST_ASSERT (thisbit > 0);
-
-    xbit = ((dx & thisbit) != 0);
-    ybit = ((dy & thisbit) != 0);
-    zbit = ((dz & thisbit) != 0);
-    count = xbit + ybit + zbit;
-
-    switch (count) {
-    case 0:
-      /* if the chain of 2's with at least one zero-free dimension ends in a
-       * 0, then there is always a path where the most significant 2 advances
-       * only one bit */
-      return 0;
-    case 1:
-      /* if the chain of 2's with at least one zero-free dimension ends in a
-       * 1, and that one is in a zero-free dimension, then there is always a
-       * path where the most significant 2 advances only one bit; if the one
-       * is not in a zero-free dimension, we can treat it as though it is a
-       * two that maintains the zero-free dimensions and continue */
-      if (xbit && zfx) {
-        return 0;
-      }
-      if (ybit && zfy) {
-        return 0;
-      }
-      if (zbit && zfz) {
-        return 0;
-      }
-      break;
-    case 2:
-      /* if we no longer have a zero free dimension, then the most significant
-       * 2 advances 2 bits; otherwise we continue */
-      zfx = (zfx && xbit);
-      zfy = (zfy && ybit);
-      zfz = (zfz && zbit);
-      if (!(zfx || zfy || zfz)) {
-        return 1;
-      }
-      break;
-    case 3:
-      /* the most significant 2 advances 2 bits */
-      return 1;
-    default:
-      SC_ABORT_NOT_REACHED ();
-    }
-
-    thisbit >>= 1;
-  }
-
-  SC_ABORT_NOT_REACHED ();
-  return -1;
+  /* we want to carry a 1 when there are three 1 bits, so we find places
+   * where there is at least one 1 bit and subtract one 1 bit: then if we
+   * sum, the binary carry rule will give the correct result */
+  bitor = (dyz | dzx | dxy);
+  ret = SC_LOG2_32 (dyz + dzx + dxy - bitor);
+  /* we have to guard against the case when the leading position has one 1
+   * bit. */
+  ret = SC_MAX (maxbit, ret);
+  return SC_MAX (0, level - ret);
 }
 #endif
 
