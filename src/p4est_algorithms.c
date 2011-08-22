@@ -937,7 +937,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
                 /* if this neighbor hasn't been calculated */
                 if (kz == nneigh) {
                   /* we should check to see if inq causes a split to tq */
-                  split = !p4est_balance_test (inq, tq, balance, seeds);
+                  split = p4est_balance_seeds (inq, tq, balance, seeds);
 
                   if (split) {
                     seedcount = seeds->elem_count;
@@ -1017,7 +1017,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
               if (p4est_quadrant_is_ancestor (inq, &tempq)) {
                 continue;
               }
-              split = !p4est_balance_face_test (tq, inq, f, balance, seeds);
+              split = p4est_balance_seeds_face (tq, inq, f, balance, seeds);
             }
 #ifdef P4_TO_P8
             else if (e >= 0) {
@@ -1025,7 +1025,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
               if (p4est_quadrant_is_ancestor (inq, &tempq)) {
                 continue;
               }
-              split = !p8est_balance_edge_test (tq, inq, e, balance, seeds);
+              split = p8est_balance_seeds_edge (tq, inq, e, balance, seeds);
             }
 #endif
             else {
@@ -1035,7 +1035,7 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
               if (p4est_quadrant_is_ancestor (inq, &tempq)) {
                 continue;
               }
-              split = !p4est_balance_corner_test (tq, inq, c, balance, seeds);
+              split = p4est_balance_seeds_corner (tq, inq, c, balance, seeds);
             }
             if (split) {
               seedcount = seeds->elem_count;

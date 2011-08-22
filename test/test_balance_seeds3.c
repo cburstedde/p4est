@@ -22,6 +22,6 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "test_balance_test2.c"
+#include "test_balance_seeds2.c"
 
-/* EOF test_balance_test3.c */
+/* EOF test_balance_seeds3.c */

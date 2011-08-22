@@ -317,8 +317,8 @@
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
 
 /* functions in p4est_balance */
-#define p4est_balance_face_test         p8est_balance_face_test
-#define p4est_balance_corner_test       p8est_balance_corner_test
-#define p4est_balance_test              p8est_balance_test
+#define p4est_balance_seeds_face        p8est_balance_seeds_face
+#define p4est_balance_seeds_corner      p8est_balance_seeds_corner
+#define p4est_balance_seeds             p8est_balance_seeds
 
 #endif /* !P4EST_TO_P8EST_H */

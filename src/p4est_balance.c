@@ -719,10 +719,10 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
 #endif
 
 int
-p4est_balance_face_test (p4est_quadrant_t * restrict q,
-                         p4est_quadrant_t * restrict p,
-                         int face, p4est_connect_type_t balance,
-                         sc_array_t * seeds)
+p4est_balance_seeds_face (p4est_quadrant_t * restrict q,
+                          p4est_quadrant_t * restrict p,
+                          int face, p4est_connect_type_t balance,
+                          sc_array_t * seeds)
 {
   p4est_quadrant_t    temp = *p;
   p4est_quadrant_t   *s;
@@ -754,7 +754,7 @@ p4est_balance_face_test (p4est_quadrant_t * restrict q,
 
   if (seeds == NULL) {
     p4est_bal_face_con_internal (q, &temp, face, ibalance, &consistent, NULL);
-    return consistent;
+    return !consistent;
   }
   else {
     memset (add, -1, nextra * sizeof (p4est_quadrant_t));
@@ -772,15 +772,15 @@ p4est_balance_face_test (p4est_quadrant_t * restrict q,
       }
     }
 
-    return consistent;
+    return !consistent;
   }
 }
 
 int
-p4est_balance_corner_test (p4est_quadrant_t * restrict q,
-                           p4est_quadrant_t * restrict p,
-                           int corner, p4est_connect_type_t balance,
-                           sc_array_t * seeds)
+p4est_balance_seeds_corner (p4est_quadrant_t * restrict q,
+                            p4est_quadrant_t * restrict p,
+                            int corner, p4est_connect_type_t balance,
+                            sc_array_t * seeds)
 {
   p4est_quadrant_t    temp = *p;
   p4est_quadrant_t   *s;
@@ -804,7 +804,7 @@ p4est_balance_corner_test (p4est_quadrant_t * restrict q,
 
   p4est_bal_corner_con_internal (q, &temp, corner, ibalance, &consistent);
   if (seeds == NULL) {
-    return consistent;
+    return !consistent;
   }
   else {
     sc_array_resize (seeds, 0);
@@ -815,16 +815,16 @@ p4est_balance_corner_test (p4est_quadrant_t * restrict q,
       *s = temp;
     }
 
-    return consistent;
+    return !consistent;
   }
 }
 
 #ifdef P4_TO_P8
 int
-p8est_balance_edge_test (p4est_quadrant_t * restrict q,
-                         p4est_quadrant_t * restrict p,
-                         int edge, p4est_connect_type_t balance,
-                         sc_array_t * seeds)
+p8est_balance_seeds_edge (p4est_quadrant_t * restrict q,
+                          p4est_quadrant_t * restrict p,
+                          int edge, p4est_connect_type_t balance,
+                          sc_array_t * seeds)
 {
   p4est_quadrant_t    temp = *p;
   p4est_quadrant_t   *s;
@@ -852,7 +852,7 @@ p8est_balance_edge_test (p4est_quadrant_t * restrict q,
   if (seeds == NULL) {
     p8est_bal_edge_con_internal (q, &temp, edge, ibalance, &consistent, NULL);
 
-    return consistent;
+    return !consistent;
   }
   else {
     memset (add, -1, nextra * sizeof (p4est_quadrant_t));
@@ -871,15 +871,15 @@ p8est_balance_edge_test (p4est_quadrant_t * restrict q,
       }
     }
 
-    return consistent;
+    return !consistent;
   }
 }
 #endif
 
 int
-p4est_balance_test (p4est_quadrant_t * restrict q,
-                    p4est_quadrant_t * restrict p,
-                    p4est_connect_type_t balance, sc_array_t * seeds)
+p4est_balance_seeds (p4est_quadrant_t * restrict q,
+                     p4est_quadrant_t * restrict p,
+                     p4est_connect_type_t balance, sc_array_t * seeds)
 {
   int                 outside[P4EST_DIM];
   int                 i;
@@ -898,8 +898,9 @@ p4est_balance_test (p4est_quadrant_t * restrict q,
     sc_array_resize (seeds, 0);
   }
 
+  /* basic level comparison */
   if (q->level <= p->level + 1) {
-    return 1;
+    return 0;
   }
 
   for (i = 0; i < P4EST_DIM; i++) {
@@ -925,15 +926,17 @@ p4est_balance_test (p4est_quadrant_t * restrict q,
     outside[i] = 0;
     if (qc < pc) {
       diff = pc - qc;
+      /* insulation layer comparison */
       if (diff > pdist) {
-        return 1;
+        return 0;
       }
       outside[i] = -1;
     }
     else {
       diff = (qc + qdist) - (pc + pdist);
+      /* insulation layer comparison */
       if (diff > pdist) {
-        return 1;
+        return 0;
       }
       if (diff > 0) {
         outside[i] = 1;
@@ -944,15 +947,16 @@ p4est_balance_test (p4est_quadrant_t * restrict q,
 
   switch (type) {
   case 0:
+    /* q is inside p, so it is its own seed */
     sc_array_resize (seeds, seeds->elem_count + 1);
     s = p4est_quadrant_array_index (seeds, seeds->elem_count - 1);
     *s = *q;
-    return 0;
+    return 1;
   case 1:
     for (i = 0; i < P4EST_DIM; i++) {
       if (outside[i]) {
         f = 2 * i + (outside[i] > 0 ? 1 : 0);
-        return p4est_balance_face_test (q, p, f, balance, seeds);
+        return p4est_balance_seeds_face (q, p, f, balance, seeds);
       }
     }
     SC_ABORT_NOT_REACHED ();
@@ -962,7 +966,7 @@ p4est_balance_test (p4est_quadrant_t * restrict q,
     for (i = 0; i < P4EST_DIM; i++) {
       c += (outside[i] > 0 ? (1 << i) : 0);
     }
-    return p4est_balance_corner_test (q, p, c, balance, seeds);
+    return p4est_balance_seeds_corner (q, p, c, balance, seeds);
 #ifdef P4_TO_P8
   case 2:
     e = 0;
@@ -977,7 +981,7 @@ p4est_balance_test (p4est_quadrant_t * restrict q,
       }
     }
     e |= c;
-    return p8est_balance_edge_test (q, p, e, balance, seeds);
+    return p8est_balance_seeds_edge (q, p, e, balance, seeds);
 #endif
   default:
     SC_ABORT_NOT_REACHED ();

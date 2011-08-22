@@ -22,4 +22,4 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "balance_test2.c"
+#include "balance_seeds2.c"

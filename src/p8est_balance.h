@@ -26,24 +26,47 @@
 
 #include <p8est.h>
 
-int                 p8est_balance_face_test (p8est_quadrant_t * restrict q,
-                                             p8est_quadrant_t * restrict p,
-                                             int face, p8est_connect_type_t
-                                             balance, sc_array_t * seeds);
+/** Determines if quadrant \a q causes quadrant \a p to split under the given
+ * \a balance condition.
+ *
+ * \param [in] q         Test quadrant.
+ * \param [in] p         Trial quadrant.
+ * \param [in] balance   Balance condition.
+ * \param [out] seeds    optional array: if \a seeds is not NULL, then it will
+ *                       be resized and filled with descendants of \a p such
+ *                       that the coarsest balanced subtree rooted at \a p
+ *                       that contains all of \a seeds is also the coarset
+ *                       subtree rooted at \a p that is entirely balanced with
+ *                       \a q.
+ * \return               True if \a q causes \a p to split.
+ */
+int                 p8est_balance_seeds (p8est_quadrant_t * restrict q,
+                                         p8est_quadrant_t * restrict p,
+                                         p8est_connect_type_t balance,
+                                         sc_array_t * seeds);
 
-int                 p8est_balance_corner_test (p8est_quadrant_t * restrict q,
-                                               p8est_quadrant_t * restrict p,
-                                               int face, p8est_connect_type_t
-                                               balance, sc_array_t * seeds);
+/** Same as p8est_balance_seeds, optimized for the case when it is already
+ * known that \a q is outside of a certain \a face of \a p.
+ */
+int                 p8est_balance_seeds_face (p8est_quadrant_t * restrict q,
+                                              p8est_quadrant_t * restrict p,
+                                              int face, p8est_connect_type_t
+                                              balance, sc_array_t * seeds);
 
-int                 p8est_balance_edge_test (p8est_quadrant_t * restrict q,
-                                             p8est_quadrant_t * restrict p,
-                                             int face, p8est_connect_type_t
-                                             balance, sc_array_t * seeds);
+/** Same as p8est_balance_seeds, optimized for the case when it is already
+ * known that \a q is outside of a certain \a edge of \a p.
+ */
+int                 p8est_balance_seeds_edge (p8est_quadrant_t * restrict q,
+                                              p8est_quadrant_t * restrict p,
+                                              int face, p8est_connect_type_t
+                                              balance, sc_array_t * seeds);
 
-int                 p8est_balance_test (p8est_quadrant_t * restrict q,
-                                        p8est_quadrant_t * restrict p,
-                                        p8est_connect_type_t balance,
-                                        sc_array_t * seeds);
+/** Same as p8est_balance_seeds, optimized for the case when it is already
+ * known that \a q is outside of a certain \a corner of \a p.
+ */
+int                 p8est_balance_seeds_corner (p8est_quadrant_t * restrict q,
+                                                p8est_quadrant_t * restrict p,
+                                                int face, p8est_connect_type_t
+                                                balance, sc_array_t * seeds);
 
 #endif

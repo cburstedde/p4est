@@ -38,13 +38,13 @@ typedef struct
 {
   int                 flag;
 }
-balance_test_elem_t;
+balance_seeds_elem_t;
 
 #ifndef P4_TO_P8
-static const int    refine_level = 12;
+static const int    refine_level = 8;
 static p4est_quadrant_t center = { 0x10000000, 0x10000000, 2, 0, 0, {NULL} };
 #else
-static const int    refine_level = 7;
+static const int    refine_level = 8;
 static p4est_quadrant_t center =
   { 0x20000, 0x20000, 0x20000, 2, 0, 0, {NULL} };
 #endif
@@ -53,7 +53,7 @@ static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
 {
-  ((balance_test_elem_t *) (quadrant->p.user_data))->flag = -2;
+  ((balance_seeds_elem_t *) (quadrant->p.user_data))->flag = -2;
 }
 
 static int
@@ -63,12 +63,12 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 #ifndef P4_TO_P8
   p4est_connect_type_t balance = P4EST_CONNECT_FACE;
 #else
-  p4est_connect_type_t balance = P8EST_CONNECT_FACE;
+  p4est_connect_type_t balance = P8EST_CONNECT_EDGE;
 #endif
   p4est_quadrant_t    desc;
   int                 i;
 
-  if (((balance_test_elem_t *) (quadrant->p.user_data))->flag > -2) {
+  if (((balance_seeds_elem_t *) (quadrant->p.user_data))->flag > -2) {
     return 0;
   }
 
@@ -76,40 +76,40 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
     return 1;
   }
   if (p4est_quadrant_is_equal (quadrant, &center)) {
-    ((balance_test_elem_t *) (quadrant->p.user_data))->flag = center.level;
+    ((balance_seeds_elem_t *) (quadrant->p.user_data))->flag = center.level;
     return 0;
   }
 #ifndef P4_TO_P8
   if (quadrant->x >= 0x30000000 || quadrant->y >= 0x30000000) {
-    ((balance_test_elem_t *) (quadrant->p.user_data))->flag = -1;
+    ((balance_seeds_elem_t *) (quadrant->p.user_data))->flag = -1;
     return 0;
   }
 #else
   if (quadrant->x >= 0x60000 || quadrant->y >= 0x60000 ||
       quadrant->z >= 0x60000) {
-    ((balance_test_elem_t *) (quadrant->p.user_data))->flag = -1;
+    ((balance_seeds_elem_t *) (quadrant->p.user_data))->flag = -1;
     return 0;
   }
 #endif
 
   for (i = 0; i < P4EST_CHILDREN; i++) {
     p4est_quadrant_corner_descendant (quadrant, &desc, i, P4EST_QMAXLEVEL);
-    if (!p4est_balance_test (&desc, &center, balance, NULL)) {
+    if (p4est_balance_seeds (&desc, &center, balance, NULL)) {
       break;
     }
   }
   if (i == P4EST_CHILDREN) {
-    P4EST_ASSERT (p4est_balance_test (quadrant, &center, balance, NULL));
-    ((balance_test_elem_t *) (quadrant->p.user_data))->flag = -1;
+    P4EST_ASSERT (!p4est_balance_seeds (quadrant, &center, balance, NULL));
+    ((balance_seeds_elem_t *) (quadrant->p.user_data))->flag = -1;
     return 0;
   }
   p4est_quadrant_corner_descendant (quadrant, &desc, i, quadrant->level + 1);
-  if (p4est_balance_test (&desc, &center, balance, NULL)) {
+  if (!p4est_balance_seeds (&desc, &center, balance, NULL)) {
     if (quadrant->level < refine_level) {
       return 1;
     }
   }
-  ((balance_test_elem_t *) (quadrant->p.user_data))->flag = quadrant->level;
+  ((balance_seeds_elem_t *) (quadrant->p.user_data))->flag = quadrant->level;
   return 0;
 }
 
@@ -128,9 +128,9 @@ main (int argc, char **argv)
   p4est_quadrant_t   *q;
   int                 i;
 #ifndef P4_TO_P8
-  const char          filename[] = "p4est_balance_test";
+  const char          filename[] = "p4est_balance_face";
 #else
-  const char          filename[] = "p8est_balance_test";
+  const char          filename[] = "p8est_balance_edge";
 #endif
 
   /* initialize MPI */
@@ -152,11 +152,12 @@ main (int argc, char **argv)
 #endif
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, 2, 1,
-                         sizeof (balance_test_elem_t), init_fn, NULL);
+                         sizeof (balance_seeds_elem_t), init_fn, NULL);
 
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
-  p4est_vtk_write_header (p4est, NULL, 1., 0, 0, 0, "level", NULL, filename);
+  p4est_vtk_write_header (p4est, NULL, 1. - 2. * SC_EPS,
+                          0, 0, 0, "level", NULL, filename);
   vtkvec = sc_dmatrix_new (p4est->local_num_quadrants, P4EST_CHILDREN);
   tree = p4est_tree_array_index (p4est->trees, 0);
   quadrants = &(tree->quadrants);
@@ -165,7 +166,7 @@ main (int argc, char **argv)
     q = p4est_quadrant_array_index (quadrants, zz);
     for (i = 0; i < P4EST_CHILDREN; i++) {
       vtkvec->e[zz][i] = (double)
-        ((balance_test_elem_t *) (q->p.user_data))->flag;
+        ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
   p4est_vtk_write_point_scalar (p4est, NULL, filename, "level", vtkvec->e[0]);
