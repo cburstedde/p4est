@@ -2355,11 +2355,11 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
                                                 conn->corner_to_corner +
                                                 ctt_offset, zcount, ntree);
         if (cta->elem_count == 0) {
-          P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1
-#ifdef P4_TO_P8
-                        || ntree[2] != -1
+#ifndef P4_TO_P8
+          P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1);
+#else
+          P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1 || ntree[2] != -1);
 #endif
-            );
         }
         else {
           /* corner is non-redundant */
