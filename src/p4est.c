@@ -1548,15 +1548,16 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   is_balance_verify = 0;
 #endif
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_comm = MPI_Wtime ();
-    p4est->inspect->balance_A += p4est->inspect->balance_comm;
-    p4est->inspect->balance_comm *= -1.;
+    p4est->inspect->balance_A += MPI_Wtime ();
+    p4est->inspect->balance_comm = -MPI_Wtime ();
     p4est->inspect->balance_comm_sent = 0;
     p4est->inspect->balance_comm_nzpeers = 0;
+    P4EST_PRODUCTIONF ("balance_A %e\n", p4est->inspect->balance_A);
     for (k = 0; k < 2; ++k) {
       p4est->inspect->balance_zero_sends[k] = 0;
       p4est->inspect->balance_zero_receives[k] = 0;
     }
+    P4EST_PRODUCTIONF ("balance_A %e\n", p4est->inspect->balance_A);
     p4est->inspect->balance_ranges = 0.;
     p4est->inspect->balance_notify = 0.;
     p4est->inspect->balance_notify_allgather = 0.;
@@ -2129,9 +2130,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* end balance_comm, start balance_B */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_B = MPI_Wtime ();
-    p4est->inspect->balance_comm += p4est->inspect->balance_B;
-    p4est->inspect->balance_B *= -1.;
+    p4est->inspect->balance_comm += MPI_Wtime ();
+    p4est->inspect->balance_B = -MPI_Wtime ();
     p4est->inspect->balance_B_count_in = 0;
     p4est->inspect->balance_B_count_out = 0;
     p4est->inspect->use_B = 1;
@@ -2249,6 +2249,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   /* end balance_B */
   if (p4est->inspect != NULL) {
     p4est->inspect->balance_B += MPI_Wtime ();
+    P4EST_PRODUCTIONF ("balance_B %e\n", p4est->inspect->balance_B);
   }
 
 #ifdef P4EST_MPI
@@ -2333,6 +2334,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+  P4EST_PRODUCTIONF ("A %e B %e\n", p4est->inspect->balance_A,
+                     p4est->inspect->balance_B);
 }
 
 void
@@ -3401,6 +3404,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   int                 retval;
   int                 mpiret;
   int                 num_procs, rank;
+  int                 fnum_procs;
   int                 i;
   long                fpos;
   int                 save_data;
@@ -3479,7 +3483,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   SC_CHECK_ABORT (retval == 0, "seek header");
 
   /* read format and partition information */
-  u64a = P4EST_ALLOC (uint64_t, SC_MAX (headc, num_procs));
+  u64a = P4EST_ALLOC (uint64_t, headc);
   sc_fread (u64a, sizeof (uint64_t), (size_t) headc, file, "read format");
   SC_CHECK_ABORT (u64a[0] == P4EST_ONDISK_FORMAT, "invalid format");
   SC_CHECK_ABORT (u64a[1] == (uint64_t) sizeof (p4est_qcoord_t),
@@ -3492,21 +3496,35 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
     SC_CHECK_ABORT (save_data_size == data_size, "invalid data size");
     SC_CHECK_ABORT (save_data, "quadrant data not saved");
   }
-  SC_CHECK_ABORT (u64a[5] == (uint64_t) num_procs, "invalid MPI size");
-  sc_fread (u64a, sizeof (uint64_t), (size_t) num_procs, file,
+  fnum_procs = u64a[5];
+  SC_CHECK_ABORT (fnum_procs <= num_procs, "invalid MPI size");
+  u64a = P4EST_REALLOC (u64a, uint64_t, fnum_procs);
+  //SC_CHECK_ABORT (u64a[5] == (uint64_t) num_procs, "invalid MPI size");
+  sc_fread (u64a, sizeof (uint64_t), (size_t) fnum_procs, file,
             "read quadrant partition");
   p4est->global_first_quadrant[0] = 0;
-  for (i = 0; i < num_procs; ++i) {
+
+  /* the strategy is for the last (num_procs - fnum_procs) to be empty
+   * partitions, then to repartition at the end */
+  for (i = 0; i < fnum_procs; ++i) {
     p4est->global_first_quadrant[i + 1] = (p4est_gloidx_t) u64a[i];
   }
+  for (; i < num_procs; i++) {
+    p4est->global_first_quadrant[i + 1] = (p4est_gloidx_t)
+      u64a[fnum_procs - 1];
+  }
+
   P4EST_FREE (u64a);
   sc_fread (gfpos, sizeof (p4est_quadrant_t),
-            (size_t) (num_procs + 1), file, "read tree partition");
+            (size_t) (fnum_procs + 1), file, "read tree partition");
+  for (i = fnum_procs; i < num_procs; i++) {
+    gfpos[i] = gfpos[fnum_procs - 1];
+  }
   p4est->global_num_quadrants = p4est->global_first_quadrant[num_procs];
   p4est->local_num_quadrants = 0;
 
   /* seek to the beginning of this processor's storage */
-  if (rank > 0) {
+  if (rank > 0 && rank < fnum_procs) {
     fpos = (long)
       (p4est->global_first_quadrant[rank] * qbuf_size +
        (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
@@ -3521,95 +3539,102 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
    * Read local last tree and quadrant information.
    * See comments and code in p4est_save for the data layout.
    */
-  sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read last tree");
-  p4est->last_local_tree = lq.p.which_tree;
-  if (p4est->last_local_tree < 0) {
-    SC_CHECK_ABORT (p4est->last_local_tree == -2, "invalid empty tree");
-    p4est->first_local_tree = -1;
-  }
-  else {
-    p4est->first_local_tree = gfpos[rank].p.which_tree;
-  }
-  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
-    /* read tree quadrants */
-    tree = p4est_tree_array_index (p4est->trees, jt);
-    tquadrants = &tree->quadrants;
-    sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read tree count");
-    SC_CHECK_ABORT (lq.p.piggy3.local_num > 0, "invalid tree count");
-    zcount = (size_t) lq.p.piggy3.local_num;
-    sc_array_resize (tquadrants, zcount);
-    memset (tquadrants->array, 0, zcount * sizeof (p4est_quadrant_t));
-    if (!save_data) {
-      qpos = qall = P4EST_ALLOC (p4est_qcoord_t, (P4EST_DIM + 1) * zcount);
-      sc_fread (qall, qbuf_size, zcount, file, "read quadrants");
+  if (rank < fnum_procs) {
+    sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read last tree");
+    p4est->last_local_tree = lq.p.which_tree;
+    if (p4est->last_local_tree < 0) {
+      SC_CHECK_ABORT (p4est->last_local_tree == -2, "invalid empty tree");
+      p4est->first_local_tree = -1;
     }
     else {
-      qpos = qall = NULL;
+      p4est->first_local_tree = gfpos[rank].p.which_tree;
     }
-    for (zz = 0; zz < zcount; ++zz) {
-      q = p4est_quadrant_array_index (tquadrants, zz);
-      if (save_data) {
-        sc_fread (qbuffer, qbuf_size, 1, file, "read quadrant");
-        q->x = qbuffer[0];
-        q->y = qbuffer[1];
-#ifdef P4_TO_P8
-        q->z = qbuffer[2];
-#endif
-        q->level = (int8_t) qbuffer[P4EST_DIM];
+    for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+      /* read tree quadrants */
+      tree = p4est_tree_array_index (p4est->trees, jt);
+      tquadrants = &tree->quadrants;
+      sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read tree count");
+      SC_CHECK_ABORT (lq.p.piggy3.local_num > 0, "invalid tree count");
+      zcount = (size_t) lq.p.piggy3.local_num;
+      sc_array_resize (tquadrants, zcount);
+      memset (tquadrants->array, 0, zcount * sizeof (p4est_quadrant_t));
+      if (!save_data) {
+        qpos = qall = P4EST_ALLOC (p4est_qcoord_t, (P4EST_DIM + 1) * zcount);
+        sc_fread (qall, qbuf_size, zcount, file, "read quadrants");
       }
       else {
-        q->x = *qpos++;
-        q->y = *qpos++;
+        qpos = qall = NULL;
+      }
+      for (zz = 0; zz < zcount; ++zz) {
+        q = p4est_quadrant_array_index (tquadrants, zz);
+        if (save_data) {
+          sc_fread (qbuffer, qbuf_size, 1, file, "read quadrant");
+          q->x = qbuffer[0];
+          q->y = qbuffer[1];
 #ifdef P4_TO_P8
-        q->z = *qpos++;
+          q->z = qbuffer[2];
 #endif
-        /* *INDENT-OFF* HORRIBLE indent bug */
-        q->level = (int8_t) *qpos++;
-        /* *INDENT-ON* */
+          q->level = (int8_t) qbuffer[P4EST_DIM];
+        }
+        else {
+          q->x = *qpos++;
+          q->y = *qpos++;
+#ifdef P4_TO_P8
+          q->z = *qpos++;
+#endif
+          /* *INDENT-OFF* HORRIBLE indent bug */
+          q->level = (int8_t) *qpos++;
+          /* *INDENT-ON* */
+        }
+        SC_CHECK_ABORT (p4est_quadrant_is_valid (q), "invalid quadrant");
+        if (data_size > 0)
+          q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
+        else
+          q->p.user_data = NULL;
+        if (load_data) {
+          P4EST_ASSERT (data_size > 0);
+          sc_fread (q->p.user_data, data_size, 1, file, "read quadrant data");
+        }
+        else if (save_data) {
+          retval = fseek (file, (long) save_data_size, SEEK_CUR);
+          SC_CHECK_ABORT (retval == 0, "seek quadrant data");
+        }
+        ++tree->quadrants_per_level[q->level];
       }
-      SC_CHECK_ABORT (p4est_quadrant_is_valid (q), "invalid quadrant");
-      if (data_size > 0)
-        q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
-      else
-        q->p.user_data = NULL;
-      if (load_data) {
-        P4EST_ASSERT (data_size > 0);
-        sc_fread (q->p.user_data, data_size, 1, file, "read quadrant data");
-      }
-      else if (save_data) {
-        retval = fseek (file, (long) save_data_size, SEEK_CUR);
-        SC_CHECK_ABORT (retval == 0, "seek quadrant data");
-      }
-      ++tree->quadrants_per_level[q->level];
-    }
-    P4EST_FREE (qall);
+      P4EST_FREE (qall);
 
-    /* compute tree properties */
-    q = p4est_quadrant_array_index (tquadrants, 0);
-    p4est_quadrant_first_descendant (q, &tree->first_desc, P4EST_QMAXLEVEL);
-    q = p4est_quadrant_array_index (tquadrants, tquadrants->elem_count - 1);
-    p4est_quadrant_last_descendant (q, &tree->last_desc, P4EST_QMAXLEVEL);
-    for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
-      if (tree->quadrants_per_level[i] > 0) {
-        tree->maxlevel = (int8_t) i;
+      /* compute tree properties */
+      q = p4est_quadrant_array_index (tquadrants, 0);
+      p4est_quadrant_first_descendant (q, &tree->first_desc, P4EST_QMAXLEVEL);
+      q = p4est_quadrant_array_index (tquadrants, tquadrants->elem_count - 1);
+      p4est_quadrant_last_descendant (q, &tree->last_desc, P4EST_QMAXLEVEL);
+      for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
+        if (tree->quadrants_per_level[i] > 0) {
+          tree->maxlevel = (int8_t) i;
+        }
       }
-    }
-    for (; i <= P4EST_MAXLEVEL; ++i) {
-      P4EST_ASSERT (tree->quadrants_per_level[i] == -1);
-    }
-    tree->quadrants_offset = p4est->local_num_quadrants;
-    p4est->local_num_quadrants += (p4est_locidx_t) tquadrants->elem_count;
-  }
-  if (p4est->last_local_tree < gfpos[rank + 1].p.which_tree) {
-    sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read extra tree");
-  }
-
-  /* fix quadrant offset */
-  if (p4est->last_local_tree >= 0) {
-    for (jt = p4est->last_local_tree + 1; jt < conn->num_trees; ++jt) {
-      tree = p4est_tree_array_index (p4est->trees, jt);
+      for (; i <= P4EST_MAXLEVEL; ++i) {
+        P4EST_ASSERT (tree->quadrants_per_level[i] == -1);
+      }
       tree->quadrants_offset = p4est->local_num_quadrants;
+      p4est->local_num_quadrants += (p4est_locidx_t) tquadrants->elem_count;
     }
+    if (p4est->last_local_tree < gfpos[rank + 1].p.which_tree) {
+      sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read extra tree");
+    }
+
+    /* fix quadrant offset */
+    if (p4est->last_local_tree >= 0) {
+      for (jt = p4est->last_local_tree + 1; jt < conn->num_trees; ++jt) {
+        tree = p4est_tree_array_index (p4est->trees, jt);
+        tree->quadrants_offset = p4est->local_num_quadrants;
+      }
+    }
+  }
+  else {
+    /* create an empty partition */
+    p4est->first_local_tree = -1;
+    p4est->last_local_tree = -2;
   }
 
   /* close file and return */
@@ -3619,6 +3644,10 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 
   /* assert that we loaded a valid forest */
   SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
+
+  if (fnum_procs < num_procs) {
+    p4est_partition (p4est, NULL);
+  }
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_load with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);

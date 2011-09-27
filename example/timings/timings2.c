@@ -205,6 +205,7 @@ main (int argc, char **argv)
   int                 wrongusage;
   unsigned            crc, gcrc;
   const char         *config_name;
+  const char         *load_name;
   p4est_locidx_t     *quadrant_counts;
   p4est_gloidx_t      count_refined, count_balanced;
   p4est_gloidx_t      prev_quadrant, next_quadrant;
@@ -274,6 +275,8 @@ main (int argc, char **argv)
   sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
                          "configuration: unit|periodic|rotwrap|twocubes|rotcubes|shell");
 #endif
+  sc_options_add_string (opt, 'f', "load-forest", &load_name, NULL,
+                         "load saved " P4EST_STRING);
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -319,6 +322,9 @@ main (int argc, char **argv)
     config = P4EST_CONFIG_SHELL;
   }
 #endif
+  else if (load_name != NULL) {
+    config_name = load_name;
+  }
   else {
     wrongusage = 1;
   }
@@ -343,45 +349,51 @@ main (int argc, char **argv)
   sc_flops_start (&fi);
 
   /* create connectivity and forest structures */
+  if (load_name == NULL) {
 #ifndef P4_TO_P8
-  if (config == P4EST_CONFIG_PERIODIC) {
-    connectivity = p4est_connectivity_new_periodic ();
-  }
-  else if (config == P4EST_CONFIG_THREE) {
-    connectivity = p4est_connectivity_new_corner ();
-  }
-  else if (config == P4EST_CONFIG_MOEBIUS) {
-    connectivity = p4est_connectivity_new_moebius ();
-  }
-  else if (config == P4EST_CONFIG_STAR) {
-    connectivity = p4est_connectivity_new_star ();
-  }
-  else {
-    connectivity = p4est_connectivity_new_unitsquare ();
-  }
+    if (config == P4EST_CONFIG_PERIODIC) {
+      connectivity = p4est_connectivity_new_periodic ();
+    }
+    else if (config == P4EST_CONFIG_THREE) {
+      connectivity = p4est_connectivity_new_corner ();
+    }
+    else if (config == P4EST_CONFIG_MOEBIUS) {
+      connectivity = p4est_connectivity_new_moebius ();
+    }
+    else if (config == P4EST_CONFIG_STAR) {
+      connectivity = p4est_connectivity_new_star ();
+    }
+    else {
+      connectivity = p4est_connectivity_new_unitsquare ();
+    }
 #else
-  if (config == P4EST_CONFIG_PERIODIC) {
-    connectivity = p8est_connectivity_new_periodic ();
-  }
-  else if (config == P4EST_CONFIG_ROTWRAP) {
-    connectivity = p8est_connectivity_new_rotwrap ();
-  }
-  else if (config == P4EST_CONFIG_TWOCUBES) {
-    connectivity = p8est_connectivity_new_twocubes ();
-  }
-  else if (config == P4EST_CONFIG_ROTCUBES) {
-    connectivity = p8est_connectivity_new_rotcubes ();
-  }
-  else if (config == P4EST_CONFIG_SHELL) {
-    connectivity = p8est_connectivity_new_shell ();
-  }
-  else {
-    connectivity = p8est_connectivity_new_unitcube ();
-  }
+    if (config == P4EST_CONFIG_PERIODIC) {
+      connectivity = p8est_connectivity_new_periodic ();
+    }
+    else if (config == P4EST_CONFIG_ROTWRAP) {
+      connectivity = p8est_connectivity_new_rotwrap ();
+    }
+    else if (config == P4EST_CONFIG_TWOCUBES) {
+      connectivity = p8est_connectivity_new_twocubes ();
+    }
+    else if (config == P4EST_CONFIG_ROTCUBES) {
+      connectivity = p8est_connectivity_new_rotcubes ();
+    }
+    else if (config == P4EST_CONFIG_SHELL) {
+      connectivity = p8est_connectivity_new_shell ();
+    }
+    else {
+      connectivity = p8est_connectivity_new_unitcube ();
+    }
 #endif
 
-  p4est = p4est_new_ext (mpi->mpicomm, connectivity,
-                         1, refine_level - level_shift, 1, 0, NULL, NULL);
+    p4est = p4est_new_ext (mpi->mpicomm, connectivity,
+                           1, refine_level - level_shift, 1, 0, NULL, NULL);
+  }
+  else {
+    p4est = p4est_load (load_name, mpi->mpicomm, 0, 0, NULL, &connectivity);
+  }
+
   p4est->inspect = P4EST_ALLOC_ZERO (p4est_inspect_t, 1);
   p4est->inspect->use_overlap_new = overlap;
   p4est->inspect->use_balance_subtree_new = (overlap && subtree);
