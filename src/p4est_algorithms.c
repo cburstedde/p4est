@@ -2955,8 +2955,6 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
       q = (p4est_quadrant_t *) sc_array_push (inlist);
       *q = *r;
     }
-    memcpy (inlist->array, qview.array,
-            inlist->elem_count * sizeof (p4est_quadrant_t));
 
     fcount = flist->elem_count;
 

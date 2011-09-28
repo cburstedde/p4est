@@ -1552,12 +1552,10 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     p4est->inspect->balance_comm = -MPI_Wtime ();
     p4est->inspect->balance_comm_sent = 0;
     p4est->inspect->balance_comm_nzpeers = 0;
-    P4EST_PRODUCTIONF ("balance_A %e\n", p4est->inspect->balance_A);
     for (k = 0; k < 2; ++k) {
       p4est->inspect->balance_zero_sends[k] = 0;
       p4est->inspect->balance_zero_receives[k] = 0;
     }
-    P4EST_PRODUCTIONF ("balance_A %e\n", p4est->inspect->balance_A);
     p4est->inspect->balance_ranges = 0.;
     p4est->inspect->balance_notify = 0.;
     p4est->inspect->balance_notify_allgather = 0.;
@@ -2249,7 +2247,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   /* end balance_B */
   if (p4est->inspect != NULL) {
     p4est->inspect->balance_B += MPI_Wtime ();
-    P4EST_PRODUCTIONF ("balance_B %e\n", p4est->inspect->balance_B);
   }
 
 #ifdef P4EST_MPI
@@ -2334,8 +2331,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
-  P4EST_PRODUCTIONF ("A %e B %e\n", p4est->inspect->balance_A,
-                     p4est->inspect->balance_B);
 }
 
 void
@@ -3517,8 +3512,8 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   P4EST_FREE (u64a);
   sc_fread (gfpos, sizeof (p4est_quadrant_t),
             (size_t) (fnum_procs + 1), file, "read tree partition");
-  for (i = fnum_procs; i < num_procs; i++) {
-    gfpos[i] = gfpos[fnum_procs - 1];
+  for (i = fnum_procs + 1; i <= num_procs; i++) {
+    gfpos[i] = gfpos[fnum_procs];
   }
   p4est->global_num_quadrants = p4est->global_first_quadrant[num_procs];
   p4est->local_num_quadrants = 0;
