@@ -321,9 +321,11 @@
 #define p4est_balance_seeds_corner      p8est_balance_seeds_corner
 #define p4est_balance_seeds             p8est_balance_seeds
 
-/* deprecated definitions (align this with p{4,8}est_backward.h) */
+/* deprecated definitions, do NOT use in newly written code */
+#ifndef P4EST_STRICT_API
 #define p4est_balance_type_t            p8est_balance_type_t
 #define P4EST_BALANCE_DEFAULT           P8EST_BALANCE_DEFAULT
 #define P4EST_BALANCE_FULL              P8EST_BALANCE_FULL
+#endif /* !P4EST_STRICT_API */
 
 #endif /* !P4EST_TO_P8EST_H */
