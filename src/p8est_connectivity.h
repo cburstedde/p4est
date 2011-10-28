@@ -69,17 +69,13 @@ p8est_connect_type_t;
 
 #ifndef P4EST_STRICT_API
 
-/** The following definition is deprecated, do NOT use it in new code. */
-typedef enum
-{
-  /* make sure to have different values 2D and 3D */
-  P8EST_BALANCE_FACE = P8EST_CONNECT_FACE,
-  P8EST_BALANCE_EDGE = P8EST_CONNECT_EDGE,
-  P8EST_BALANCE_CORNER = P8EST_CONNECT_CORNER,
-  P8EST_BALANCE_DEFAULT = P8EST_CONNECT_DEFAULT,
-  P8EST_BALANCE_FULL = P8EST_CONNECT_FULL
-}
-p8est_balance_type_t;
+/** The following definitions are deprecated, do NOT use in new code. */
+#define P8EST_BALANCE_FACE    P8EST_CONNECT_FACE
+#define P8EST_BALANCE_EDGE    P8EST_CONNECT_EDGE
+#define P8EST_BALANCE_CORNER  P8EST_CONNECT_CORNER
+#define P8EST_BALANCE_DEFAULT P8EST_CONNECT_DEFAULT
+#define P8EST_BALANCE_FULL    P8EST_CONNECT_FULL
+#define p8est_balance_type_t  p8est_connect_type_t
 
 #endif /* P4EST_STRICT_API */
 
