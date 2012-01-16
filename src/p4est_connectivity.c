@@ -2433,7 +2433,7 @@ reorder_comp (const void *a, const void *b)
     return 1;
   }
   else {
-    return (a - b);
+    return (A[1] - B[1]);
   }
 }
 
@@ -2457,9 +2457,6 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   sc_array_t         *eta = &ei.edge_transforms;
   p8est_edge_transform_t *et;
 #endif
-  int                 wgtflag = 0;      /* do not use weights */
-  int                 numflag = 0;      /* C-style numbering */
-  int                 options[5] = { 0, 1, 1, 1, 1 };   /* default options */
   int                 volume = -1;
   size_t              zz;
   int                 mpiret = MPI_Comm_rank (comm, &rank);
@@ -2470,6 +2467,8 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   int                *ip;
   int                 count;
   int                 conntype = p4est_connect_type_int (ctype);
+  int                 ncon = 1;
+  int                 success;
 
   SC_CHECK_MPI (mpiret);
 
@@ -2592,8 +2591,10 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
 
     P4EST_GLOBAL_INFO ("Entering metis\n");
     /* now call metis */
-    METIS_PartGraphVKway (&n, xadj, adjncy, NULL, NULL, &wgtflag, &numflag,
-                          &k, options, &volume, part);
+    success = METIS_PartGraphRecursive (&n, &ncon, xadj, adjncy, NULL, NULL,
+                                        NULL, &k, NULL, NULL, NULL, &volume,
+                                        part);
+    P4EST_ASSERT (success == METIS_OK);
     P4EST_GLOBAL_INFO ("Done metis\n");
 
     P4EST_GLOBAL_STATISTICSF ("metis volume %d\n", volume);

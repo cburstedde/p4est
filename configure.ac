@@ -98,13 +98,14 @@ if test "$P4EST_WITH_METIS" != "no" ; then
   LDFLAGS="$LDFLAGS $P4EST_METIS_LD"
   
   AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <metis.h>]],
-[int n = 0, xadj, adjncy, wgtflag = 0, numflag = 0;
- int nparts = 0, options = 0, volume, part;
+[int n = 0, xadj, adjncy, adjwgt, vwgt;
+ int nparts = 0, options = 0, volume, part, ncon, vsize;
+ float tpwgts, ubvec;
 
- METIS_PartGraphVKway (&n, &xadj, &adjncy, NULL, NULL,
-                       &wgtflag, &numflag, &nparts, &options,
-                       &volume, &part);])],,
-                       [AC_MSG_ERROR([Unable to link metis])])
+ METIS_PartGraphRecursive (&n, &ncon, &xadj, &adjncy, &vwgt, &vsize,
+                           &adjwgt, &nparts, &tpwgts, &ubvec, &options,
+                           &volume, &part);])],,
+                      [AC_MSG_ERROR([Unable to link metis])])
   CFLAGS="$PRE_METIS_CFLAGS"
   LIBS="$PRE_METIS_LIBS"
   LDFLAGS="$PRE_METIS_LDFLAGS"
