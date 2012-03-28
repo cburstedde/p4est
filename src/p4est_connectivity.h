@@ -325,6 +325,23 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
  */
 void                p4est_connectivity_complete (p4est_connectivity_t * conn);
 
+/** p4est_connectivity_permute
+ * Given a permutation \a perm of the trees in a connectivity \a conn,
+ * permute the trees of \a conn in place and update \a conn to match.
+ * \param [in,out] conn                The connectivity whose trees are
+ *                                     permuted.
+ * \param [in] perm                    A permutation array, whose elements are
+ *                                     size_t's.
+ * \param [in] is_current_to_new       if true, the jth entry of perm is the
+ *                                     new index for the entry whose current
+ *                                     index is j, otherwise the jth entry of
+ *                                     perm is the current index of the tree
+ *                                     whose index will be j after the
+ *                                     permutation.
+ */
+void                p4est_connectivity_permute (p4est_connectivity_t * conn,
+                                                sc_array_t * perm,
+                                                int is_current_to_new);
 #ifdef P4EST_METIS
 
 /** p4est_connectivity_reorder

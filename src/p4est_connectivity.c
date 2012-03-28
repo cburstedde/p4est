@@ -2418,8 +2418,104 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 }
 
-#ifdef P4EST_METIS
+void
+p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
+                            int is_current_to_new)
+{
+  sc_array_t         *permarray;
+  size_t             *perm;
+  p4est_topidx_t      ti, ntrees = conn->num_trees;
+  p4est_topidx_t      tj, count;
+  sc_array_t          array_view;
+  int                 j;
 
+  /* we want the permutation to be the current to new map, not
+   * the new to current map */
+  if (is_current_to_new) {
+    permarray = inperm;
+    perm = (size_t *) permarray->array;
+  }
+  else {
+    permarray = sc_array_new_size (sizeof (size_t), (size_t) ntrees);
+    perm = (size_t *) permarray->array;
+    for (ti = 0; ti < ntrees; ti++) {
+      size_t              mapti = *((size_t *) sc_array_index (inperm, ti));
+      P4EST_ASSERT (mapti < ntrees);
+      perm[mapti] = (size_t) ti;
+    }
+  }
+
+  /* first we change the entries in the various tables */
+
+  /* tree_to_tree */
+  for (ti = 0; ti < ntrees; ti++) {
+    for (j = 0; j < P4EST_FACES; j++) {
+      tj = conn->tree_to_tree[P4EST_FACES * ti + j];
+      conn->tree_to_tree[P4EST_FACES * ti + j] = (p4est_topidx_t) perm[tj];
+    }
+  }
+
+#ifdef P4_TO_P8
+  /* edge_to_tree */
+  if (conn->edge_to_tree != NULL) {
+    count = conn->ett_offset[conn->num_edges];
+    for (ti = 0; ti < count; ti++) {
+      tj = conn->edge_to_tree[ti];
+      conn->edge_to_tree[ti] = (p4est_topidx_t) perm[tj];
+    }
+  }
+#endif
+
+  /* corner_to_tree */
+  if (conn->corner_to_tree != NULL) {
+    count = conn->ctt_offset[conn->num_corners];
+    for (ti = 0; ti < count; ti++) {
+      tj = conn->corner_to_tree[ti];
+      conn->corner_to_tree[ti] = (p4est_topidx_t) perm[tj];
+    }
+  }
+
+  /* now we reorder the various tables via in-place permutation */
+
+  /* tree_to_vertex */
+  sc_array_init_data (&array_view, conn->tree_to_vertex,
+                      P4EST_CHILDREN * sizeof (p4est_topidx_t), ntrees);
+  sc_array_permute (&array_view, permarray, 1);
+
+  /* tree_to_tree */
+  sc_array_init_data (&array_view, conn->tree_to_tree,
+                      P4EST_FACES * sizeof (p4est_topidx_t), ntrees);
+  sc_array_permute (&array_view, permarray, 1);
+
+  /* tree_to_face */
+  sc_array_init_data (&array_view, conn->tree_to_face,
+                      P4EST_FACES * sizeof (int8_t), ntrees);
+  sc_array_permute (&array_view, permarray, 1);
+
+#ifdef P4_TO_P8
+  /* tree_to_edge */
+  if (conn->tree_to_edge != NULL) {
+    sc_array_init_data (&array_view, conn->tree_to_edge,
+                        P8EST_EDGES * sizeof (p4est_topidx_t), ntrees);
+    sc_array_permute (&array_view, permarray, 1);
+  }
+#endif
+
+  /* tree_to_corner */
+  if (conn->tree_to_corner != NULL) {
+    sc_array_init_data (&array_view, conn->tree_to_corner,
+                        P4EST_CHILDREN * sizeof (p4est_topidx_t), ntrees);
+    sc_array_permute (&array_view, permarray, 1);
+  }
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  if (!is_current_to_new) {
+    sc_array_destroy (permarray);
+  }
+}
+
+#ifdef P4EST_METIS
 static int
 reorder_comp (const void *a, const void *b)
 {
@@ -2462,10 +2558,8 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   int                 mpiret = MPI_Comm_rank (comm, &rank);
   sc_array_t         *newid;
   size_t             *zp;
-  sc_array_t          array_view;
   sc_array_t         *sorter;
   int                *ip;
-  int                 count;
   int                 conntype = p4est_connect_type_int (ctype);
   int                 ncon = 1;
   int                 success;
@@ -2629,73 +2723,7 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   }
   sc_array_destroy (sorter);
 
-  /* first we change the entries in the various tables */
-
-  /* tree_to_tree */
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < P4EST_FACES; j++) {
-      l = (int) conn->tree_to_tree[P4EST_FACES * i + j];
-      zp = (size_t *) sc_array_index (newid, l);
-      conn->tree_to_tree[P4EST_FACES * i + j] = (p4est_topidx_t) (*zp);
-    }
-  }
-
-#ifdef P4_TO_P8
-  /* edge_to_tree */
-  if (conn->edge_to_tree != NULL) {
-    count = (int) conn->ett_offset[conn->num_edges];
-    for (i = 0; i < count; i++) {
-      l = (int) conn->edge_to_tree[i];
-      zp = (size_t *) sc_array_index (newid, l);
-      conn->edge_to_tree[i] = (p4est_topidx_t) (*zp);
-    }
-  }
-#endif
-
-  /* corner_to_tree */
-  if (conn->corner_to_tree != NULL) {
-    count = (int) conn->ctt_offset[conn->num_corners];
-    for (i = 0; i < count; i++) {
-      l = (int) conn->corner_to_tree[i];
-      zp = (size_t *) sc_array_index (newid, l);
-      conn->corner_to_tree[i] = (p4est_topidx_t) (*zp);
-    }
-  }
-
-  /* now we reorder the various tables via in-place permutation */
-
-  /* tree_to_vertex */
-  sc_array_init_data (&array_view, conn->tree_to_vertex,
-                      P4EST_CHILDREN * sizeof (p4est_topidx_t), n);
-  sc_array_permute (&array_view, newid, 1);
-
-  /* tree_to_tree */
-  sc_array_init_data (&array_view, conn->tree_to_tree,
-                      P4EST_FACES * sizeof (p4est_topidx_t), n);
-  sc_array_permute (&array_view, newid, 1);
-
-  /* tree_to_face */
-  sc_array_init_data (&array_view, conn->tree_to_face,
-                      P4EST_FACES * sizeof (int8_t), n);
-  sc_array_permute (&array_view, newid, 1);
-
-#ifdef P4_TO_P8
-  /* tree_to_edge */
-  if (conn->tree_to_edge != NULL) {
-    sc_array_init_data (&array_view, conn->tree_to_edge,
-                        P8EST_EDGES * sizeof (p4est_topidx_t), n);
-    sc_array_permute (&array_view, newid, 1);
-  }
-#endif
-
-  /* tree_to_corner */
-  if (conn->tree_to_corner != NULL) {
-    sc_array_init_data (&array_view, conn->tree_to_corner,
-                        P4EST_CHILDREN * sizeof (p4est_topidx_t), n);
-    sc_array_permute (&array_view, newid, 1);
-  }
-
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  p4est_connectivity_permute (conn, newid, 1);
 
   sc_array_destroy (newid);
 }
