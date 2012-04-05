@@ -604,6 +604,137 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
   return 1;
 }
 
+static int
+p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
+{
+  int                 retval;
+  int                 has_tree_attr;
+  char                magic8[8 + 1];
+  char                pkgversion24[24 + 1];
+  size_t              u64z, topsize, int8size;
+  size_t              tcount;
+  uint64_t            array10[10];
+  p4est_topidx_t      num_vertices, num_trees;
+  p4est_topidx_t      num_edges, num_ett, num_corners, num_ctt;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  retval = 0;
+  num_vertices = conn->num_vertices;
+  num_trees = conn->num_trees;
+#ifdef P4_TO_P8
+  num_edges = conn->num_edges;
+  num_ett = conn->ett_offset[num_edges];
+#else
+  num_edges = num_ett = 0;
+#endif
+  num_corners = conn->num_corners;
+  num_ctt = conn->ctt_offset[num_corners];
+  has_tree_attr = (conn->tree_to_attr != NULL);
+
+  strncpy (magic8, P4EST_STRING, 8);
+  magic8[8] = '\0';
+  retval = retval || sc_io_sink_write (sink, magic8, 8);
+
+  strncpy (pkgversion24, P4EST_PACKAGE_VERSION, 24);
+  pkgversion24[24] = '\0';
+  retval = retval || sc_io_sink_write (sink, pkgversion24, 24);
+
+  u64z = sizeof (uint64_t);
+  topsize = sizeof (p4est_topidx_t);
+  int8size = sizeof (int8_t);
+  array10[0] = P4EST_ONDISK_FORMAT;
+  array10[1] = (uint64_t) topsize;
+  array10[2] = (uint64_t) num_vertices;
+  array10[3] = (uint64_t) num_trees;
+  array10[4] = (uint64_t) num_edges;
+  array10[5] = (uint64_t) num_ett;
+  array10[6] = (uint64_t) num_corners;
+  array10[7] = (uint64_t) num_ctt;
+  array10[8] = (uint64_t) has_tree_attr;
+  array10[9] = (uint64_t) 0;
+  retval = retval || sc_io_sink_write (sink, array10, 10 * u64z);
+
+  if (num_vertices > 0) {
+    tcount = (size_t) (3 * num_vertices);
+    retval = retval ||
+      sc_io_sink_write (sink, conn->vertices, tcount * sizeof (double));
+  }
+
+#ifdef P4_TO_P8
+  if (num_edges > 0) {
+    tcount = (size_t) (P8EST_EDGES * num_trees);
+    retval = retval ||
+      sc_io_sink_write (sink, conn->tree_to_edge, tcount * topsize);
+  }
+#endif
+
+  tcount = (size_t) (P4EST_CHILDREN * num_trees);
+  if (num_vertices > 0) {
+    retval = retval ||
+      sc_io_sink_write (sink, conn->tree_to_vertex, tcount * topsize);
+  }
+  if (num_corners > 0) {
+    retval = retval ||
+      sc_io_sink_write (sink, conn->tree_to_corner, tcount * topsize);
+  }
+
+  tcount = (size_t) (P4EST_FACES * num_trees);
+  retval = retval ||
+    sc_io_sink_write (sink, conn->tree_to_tree, tcount * topsize) ||
+    sc_io_sink_write (sink, conn->tree_to_face, tcount * int8size);
+
+  if (has_tree_attr) {
+    tcount = (size_t) num_trees;
+    retval = retval ||
+      sc_io_sink_write (sink, conn->tree_to_attr, tcount * int8size);
+  }
+
+#ifdef P4_TO_P8
+  retval = retval || sc_io_sink_write (sink, conn->ett_offset,
+                                       topsize * (num_edges + 1));
+  if (num_edges > 0) {
+    retval = retval ||
+      sc_io_sink_write (sink, conn->edge_to_tree, topsize * num_ett) ||
+      sc_io_sink_write (sink, conn->edge_to_edge, int8size * num_ett);
+  }
+#endif
+
+  retval = retval || sc_io_sink_write (sink, conn->ctt_offset,
+                                       topsize * (num_corners + 1));
+  if (num_corners > 0) {
+    retval = retval ||
+      sc_io_sink_write (sink, conn->corner_to_tree, topsize * num_ctt) ||
+      sc_io_sink_write (sink, conn->corner_to_corner, int8size * num_ctt);
+  }
+
+  return retval;
+}
+
+sc_array_t         *
+p4est_connectivity_deflate (p4est_connectivity_t * conn,
+                            p4est_connectivity_encode_t code)
+{
+  int                 retval;
+  sc_array_t         *buffer;
+  sc_io_sink_t       *sink;
+
+  buffer = sc_array_new (sizeof (char));
+
+  /* This sink writes to a memory buffer so no file errors are caught. */
+  sink = sc_io_sink_new (SC_IO_SINK_BUFFER, SC_IO_MODE_WRITE,
+                         SC_IO_ENCODE_NONE, buffer);
+  SC_CHECK_ABORT (sink != NULL, "sink open from buffer");
+
+  retval = p4est_connectivity_sink (conn, sink);
+  SC_CHECK_ABORT (retval == 0, "sink connectivity");
+
+  retval = sc_io_sink_destroy (sink);
+  SC_CHECK_ABORT (retval == 0, "destroy sink");
+
+  return buffer;
+}
+
 void
 p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {

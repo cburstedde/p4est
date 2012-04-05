@@ -65,13 +65,15 @@
 #define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
 #define P4EST_CONNECT_DEFAULT           P8EST_CONNECT_DEFAULT
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
+#define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
 
 /* redefine types */
+#define p4est_connect_type_t            p8est_connect_type_t
+#define p4est_connectivity_encode_t     p8est_connectivity_encode_t
 #define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_corner_transform_t        p8est_corner_transform_t
 #define p4est_corner_info_t             p8est_corner_info_t
 #define p4est_geometry_t                p8est_geometry_t
-#define p4est_connect_type_t            p8est_connect_type_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
@@ -119,6 +121,8 @@
 #define p4est_connectivity_set_attr     p8est_connectivity_set_attr
 #define p4est_connectivity_is_valid     p8est_connectivity_is_valid
 #define p4est_connectivity_is_equal     p8est_connectivity_is_equal
+#define p4est_connectivity_sink         p8est_connectivity_sink
+#define p4est_connectivity_deflate      p8est_connectivity_deflate
 #define p4est_connectivity_save         p8est_connectivity_save
 #define p4est_connectivity_load         p8est_connectivity_load
 #define p4est_connectivity_complete     p8est_connectivity_complete

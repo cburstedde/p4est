@@ -24,6 +24,7 @@
 #ifndef P8EST_CONNECTIVITY_H
 #define P8EST_CONNECTIVITY_H
 
+#include <sc_io.h>
 #include <p4est_base.h>
 
 SC_EXTERN_C_BEGIN;
@@ -66,6 +67,14 @@ typedef enum
   P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
 }
 p8est_connect_type_t;
+
+/** Typedef for serialization method. */
+typedef enum
+{
+  P8EST_CONN_ENCODE_NONE = SC_IO_ENCODE_NONE,
+  P8EST_CONN_ENCODE_LAST        /**< Invalid entry to close the list. */
+}
+p8est_connectivity_encode_t;
 
 #ifndef P4EST_STRICT_API
 
@@ -317,6 +326,15 @@ int                 p8est_connectivity_is_valid (p8est_connectivity_t *
 int                 p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
                                                  p8est_connectivity_t *
                                                  conn2);
+
+/** Allocate memory and store the connectivity information there.
+ * \param [in] conn     The connectivity structure to be exported to memory.
+ * \param [in] code     Encoding and compression method for serialization.
+ * \return              Newly created array that contains the information.
+ */
+sc_array_t         *p8est_connectivity_deflate (p8est_connectivity_t * conn,
+                                                p8est_connectivity_encode_t
+                                                code);
 
 /** Save a connectivity structure to disk.
  * \param [in] filename         Name of the file to write.
