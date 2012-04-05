@@ -2440,7 +2440,7 @@ p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
     perm = (size_t *) permarray->array;
     for (ti = 0; ti < ntrees; ti++) {
       size_t              mapti = *((size_t *) sc_array_index (inperm, ti));
-      P4EST_ASSERT (mapti < ntrees);
+      P4EST_ASSERT (mapti < (size_t) ntrees);
       perm[mapti] = (size_t) ti;
     }
   }

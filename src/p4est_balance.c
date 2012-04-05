@@ -90,7 +90,7 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   int                 shift = P4EST_MAXLEVEL - level;
   int                 xbit, ybit, zbit;
   int                 maxbit;
-  p4est_qcoord_t      bitor;
+  p4est_qcoord_t      bitwor;
   int                 ret;
 
   P4EST_ASSERT (dx >= 0);
@@ -127,8 +127,8 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   /* we want to carry a 1 when there are three 1 bits, so we find places
    * where there is at least one 1 bit and subtract one 1 bit: then if we
    * sum, the binary carry rule will give the correct result */
-  bitor = (dx | dy | dz);
-  ret = SC_LOG2_32 (dx + dy + dz - bitor);
+  bitwor = (dx | dy | dz);
+  ret = SC_LOG2_32 (dx + dy + dz - bitwor);
   /* we have to guard against the case when the leading position has one 1
    * bit. */
   ret = SC_MAX (maxbit, ret);
@@ -143,7 +143,7 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
   int                 shift = P4EST_MAXLEVEL - level;
   int                 maxbit;
   int                 yzbit, zxbit, xybit;
-  p4est_qcoord_t      dyz, dzx, dxy, bitor;
+  p4est_qcoord_t      dyz, dzx, dxy, bitwor;
   int                 ret;
 
   P4EST_ASSERT (dx >= 0);
@@ -185,8 +185,8 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
   /* we want to carry a 1 when there are three 1 bits, so we find places
    * where there is at least one 1 bit and subtract one 1 bit: then if we
    * sum, the binary carry rule will give the correct result */
-  bitor = (dyz | dzx | dxy);
-  ret = SC_LOG2_32 (dyz + dzx + dxy - bitor);
+  bitwor = (dyz | dzx | dxy);
+  ret = SC_LOG2_32 (dyz + dzx + dxy - bitwor);
   /* we have to guard against the case when the leading position has one 1
    * bit. */
   ret = SC_MAX (maxbit, ret);
