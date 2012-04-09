@@ -722,7 +722,7 @@ p4est_connectivity_deflate (p4est_connectivity_t * conn,
   buffer = sc_array_new (sizeof (char));
 
   /* This sink writes to a memory buffer so no file errors are caught. */
-  sink = sc_io_sink_new (SC_IO_SINK_BUFFER, SC_IO_MODE_WRITE,
+  sink = sc_io_sink_new (SC_IO_TYPE_BUFFER, SC_IO_MODE_WRITE,
                          SC_IO_ENCODE_NONE, buffer);
   SC_CHECK_ABORT (sink != NULL, "sink open from buffer");
 
@@ -741,7 +741,7 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
   int                 retval;
   sc_io_sink_t       *sink;
 
-  sink = sc_io_sink_new (SC_IO_SINK_FILENAME, SC_IO_MODE_WRITE,
+  sink = sc_io_sink_new (SC_IO_TYPE_FILENAME, SC_IO_MODE_WRITE,
                          SC_IO_ENCODE_NONE, filename);
   if (sink == NULL) {
     return -1;
