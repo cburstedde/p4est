@@ -735,106 +735,23 @@ p4est_connectivity_deflate (p4est_connectivity_t * conn,
   return buffer;
 }
 
-void
+int
 p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {
   int                 retval;
-  int                 has_tree_attr;
-  char                magic8[9];
-  char                pkgversion24[25];
-  size_t              u64z, topsize, int8size;
-  size_t              tcount;
-  uint64_t            array10[10];
-  p4est_topidx_t      num_vertices, num_trees;
-  p4est_topidx_t      num_edges, num_ett, num_corners, num_ctt;
-  FILE               *file;
+  sc_io_sink_t       *sink;
 
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
-
-  file = fopen (filename, "wb");
-  SC_CHECK_ABORT (file != NULL, "file open");
-
-  num_vertices = conn->num_vertices;
-  num_trees = conn->num_trees;
-#ifdef P4_TO_P8
-  num_edges = conn->num_edges;
-  num_ett = conn->ett_offset[num_edges];
-#else
-  num_edges = num_ett = 0;
-#endif
-  num_corners = conn->num_corners;
-  num_ctt = conn->ctt_offset[num_corners];
-  has_tree_attr = (conn->tree_to_attr != NULL);
-
-  strncpy (magic8, P4EST_STRING, 8);
-  magic8[8] = '\0';
-  sc_fwrite (magic8, 8, 1, file, "write magic");
-  strncpy (pkgversion24, P4EST_PACKAGE_VERSION, 24);
-  pkgversion24[24] = '\0';
-  sc_fwrite (pkgversion24, 8, 3, file, "write package version");
-
-  u64z = sizeof (uint64_t);
-  topsize = sizeof (p4est_topidx_t);
-  int8size = sizeof (int8_t);
-  array10[0] = P4EST_ONDISK_FORMAT;
-  array10[1] = (uint64_t) topsize;
-  array10[2] = (uint64_t) num_vertices;
-  array10[3] = (uint64_t) num_trees;
-  array10[4] = (uint64_t) num_edges;
-  array10[5] = (uint64_t) num_ett;
-  array10[6] = (uint64_t) num_corners;
-  array10[7] = (uint64_t) num_ctt;
-  array10[8] = (uint64_t) has_tree_attr;
-  array10[9] = (uint64_t) 0;
-  sc_fwrite (array10, u64z, 10, file, "write header");
-
-  if (num_vertices > 0) {
-    tcount = (size_t) (3 * num_vertices);
-    sc_fwrite (conn->vertices, sizeof (double), tcount, file,
-               "write vertices");
+  sink = sc_io_sink_new (SC_IO_SINK_FILENAME, SC_IO_MODE_WRITE,
+                         SC_IO_ENCODE_NONE, filename);
+  if (sink == NULL) {
+    return -1;
   }
 
-#ifdef P4_TO_P8
-  if (num_edges > 0) {
-    tcount = (size_t) (P8EST_EDGES * num_trees);
-    sc_fwrite (conn->tree_to_edge, topsize, tcount, file, "write tte");
-  }
-#endif
+  /* Close file even on earlier write error */
+  retval = p4est_connectivity_sink (conn, sink);
+  retval = sc_io_sink_destroy (sink) || retval;
 
-  tcount = (size_t) (P4EST_CHILDREN * num_trees);
-  if (num_vertices > 0)
-    sc_fwrite (conn->tree_to_vertex, topsize, tcount, file, "write ttv");
-  if (num_corners > 0)
-    sc_fwrite (conn->tree_to_corner, topsize, tcount, file, "write ttc");
-
-  tcount = (size_t) (P4EST_FACES * num_trees);
-  sc_fwrite (conn->tree_to_tree, topsize, tcount, file, "write ttt");
-  sc_fwrite (conn->tree_to_face, int8size, tcount, file, "write ttf");
-
-  if (has_tree_attr) {
-    tcount = (size_t) num_trees;
-    sc_fwrite (conn->tree_to_attr, int8size, tcount, file,
-               "write tree_to_attr");
-  }
-
-#ifdef P4_TO_P8
-  sc_fwrite (conn->ett_offset, topsize, num_edges + 1, file,
-             "write ett_offset");
-  if (num_edges > 0) {
-    sc_fwrite (conn->edge_to_tree, topsize, num_ett, file, "write ett");
-    sc_fwrite (conn->edge_to_edge, int8size, num_ett, file, "write ete");
-  }
-#endif
-
-  sc_fwrite (conn->ctt_offset, topsize, num_corners + 1, file,
-             "write ctt_offset");
-  if (num_corners > 0) {
-    sc_fwrite (conn->corner_to_tree, topsize, num_ctt, file, "write ctt");
-    sc_fwrite (conn->corner_to_corner, int8size, num_ctt, file, "write ctc");
-  }
-
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
+  return retval;
 }
 
 p4est_connectivity_t *

@@ -259,9 +259,9 @@ sc_array_t         *p4est_connectivity_deflate (p4est_connectivity_t * conn,
 /** Save a connectivity structure to disk.
  * \param [in] filename         Name of the file to write.
  * \param [in] connectivity     Valid connectivity structure.
- * \note            Aborts on file errors.
+ * \return                      Returns 0 on success, nonzero on file error.
  */
-void                p4est_connectivity_save (const char *filename,
+int                 p4est_connectivity_save (const char *filename,
                                              p4est_connectivity_t *
                                              connectivity);
 

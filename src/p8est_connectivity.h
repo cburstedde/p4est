@@ -339,9 +339,9 @@ sc_array_t         *p8est_connectivity_deflate (p8est_connectivity_t * conn,
 /** Save a connectivity structure to disk.
  * \param [in] filename         Name of the file to write.
  * \param [in] connectivity     Valid connectivity structure.
- * \note            Aborts on file errors.
+ * \return                      Returns 0 on success, nonzero on file error.
  */
-void                p8est_connectivity_save (const char *filename,
+int                 p8est_connectivity_save (const char *filename,
                                              p8est_connectivity_t *
                                              connectivity);
 

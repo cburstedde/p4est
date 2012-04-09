@@ -110,7 +110,7 @@ static void
 test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                MPI_Comm mpicomm, int mpirank)
 {
-  int                 mpiret;
+  int                 mpiret, retval;
   double              elapsed, wtime;
   p4est_connectivity_t *conn2;
   p4est_t            *p4est, *p4est2;
@@ -128,7 +128,8 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
 
   /* save, synchronize, load connectivity and compare */
   if (mpirank == 0) {
-    p4est_connectivity_save (conn_name, connectivity);
+    retval = p4est_connectivity_save (conn_name, connectivity);
+    SC_CHECK_ABORT (retval == 0, "connectivity_save failed");
   }
   mpiret = MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);

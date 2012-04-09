@@ -27,7 +27,7 @@
 int
 main (int argc, char **argv)
 {
-  int                 mpiret;
+  int                 mpiret, retval;
   int                 mpirank;
   const char         *argbasename;
   char                afilename[BUFSIZ];
@@ -68,7 +68,8 @@ main (int argc, char **argv)
   connectivity = p8est_connectivity_new_tets (ptg);
   if (mpirank == 0) {
     snprintf (afilename, BUFSIZ, "%s", "read_tetgen.p8c");
-    p8est_connectivity_save (afilename, connectivity);
+    retval = p8est_connectivity_save (afilename, connectivity);
+    SC_CHECK_ABORT (retval == 0, "Failed connectivity_save");
   }
 
   /* create a forest and visualize */
