@@ -1,0 +1,50 @@
+
+The connectivity between neighbor trees and quadrants in p4est
+==============================================================
+
+In p4est, multiple octrees are connected into a forest.  The octrees are
+connected in a conforming mesh, that is, there are no hanging or split
+faces/edges between the octrees.  In 2D, quadtrees can be freely embedded into
+3D space, so it is meaningless to refer to the orientation of a quadtree by
+itself.  In 3D, all octrees have a right-handed coordinate system.  Octree and
+quadrant coordinate systems refers to an integer spacing in [0, 2^maxlevel].
+
+Each octree is connected to neighbor trees across faces, edges, and corners
+that are oriented relative to each other.
+
+2D
+Face neighbors: The neighbor can meet with 1 out of 4 possible faces, which can
+optionally be flipped around, which makes for 8 possibilities.
+Corner neighbors: There is only one way of connecting across a corner.
+
+3D
+Face neighbors: The neighbor can meet with 1 out of 6 possible faces, which can
+be rotated in 4 different ways, which makes for 24 possibilities.
+Edge neighbors: The neighbor can meet with 1 out of 12 possible edges, which
+can optionally be flipped around, which makes for 24 possibilities.
+Corner neighbors: There is only one way of connecting across a corner.
+
+The neighbor connection between octrees is encoded in p{4,8}est_connectivity.h.
+There is a comment block that describes the encoding of the configurations.
+For each configuration, a transformation is provided that maps quadrants between
+the respective coordinate systems of neighbor octrees.  A numerical application
+could use the same encoding, or a user-defined one.
+
+All quadrants (for simplicity this denotes both 2D quadrants and 3D octants)
+inherit the coordinate system of the octree they are associated with.  Thus,
+two neighbor quadrants in the same octree always meet with the identity
+configuration.  Only when quadrants meet across an octree boundary, they need
+to be transformed depending on the configuration of the neighbor octrees.
+
+For a numerical application each octree can have its own geometry/reference
+transformation.  To encode the connectivity however, it is generally not
+necessary to differentiate between intra- and inter-octree quadrant neighbors
+since the former is a special case of the latter.  It would however require
+less memory to do so, since most quadrants are away from an octree boundary and
+meet with the identity transformation that does not require encoding.  A
+non-differentiating neighbor encoding between quadrants is exposed in the
+p{4,8}est_mesh.h file.  Currently it only contains face neighbors but this will
+be extended as necessary.  This mesh information also encodes the size
+differences between neighbor octants.  When two half-size quadrants are on the
+other side, those are within the same octree and thus share the same
+transformation.
