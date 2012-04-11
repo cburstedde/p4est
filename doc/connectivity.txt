@@ -48,3 +48,6 @@ be extended as necessary.  This mesh information also encodes the size
 differences between neighbor octants.  When two half-size quadrants are on the
 other side, those are within the same octree and thus share the same
 transformation.
+
+For parallel computation each quadrant is assigned to one owner processor.  The
+information in p{4,8}est_mesh.h includes the processor rank of each neighbor.
