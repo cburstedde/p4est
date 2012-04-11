@@ -13,7 +13,7 @@
 
 \tikzstyle{coordaxis}=[draw=red!50!black, thick, ->]
 \tikzstyle{mapping}=[draw=blue!50!black, thick, ->]
-\tikzstyle{connect}=[draw=green!50!black, thick]
+\tikzstyle{connect}=[draw=green!50!black, thick, ->]
 
 \author{Carsten Burstedde}
 \title{Documentation on octree and quadrant connectivity}
@@ -38,7 +38,7 @@ See \figref{octreemap} for an illustration.
   \end{scope}
 
   % second tree
-  \begin{scope}[xshift=3.4cm]
+  \begin{scope}[xshift=4.4cm]
   \draw (0,0) rectangle (3,3) node (m2) [midway] {$k_2$};
   \draw [style=coordaxis] (3,3) -- (3,1.5) node [right] {$x_2$};
   \draw [style=coordaxis] (3,3) -- (1.5,3) node [above] {$y_2$};
@@ -46,7 +46,7 @@ See \figref{octreemap} for an illustration.
   \end{scope}
 
   % physical space
-  \begin{scope}[xshift=.5cm, yshift=4cm]
+  \begin{scope}[xshift=1.2cm, yshift=4cm]
   \draw (0,0) to [bend left=20] (5,1) node (pm1) [midway] {}
               to [bend left=10] (6,3)
               to [bend right=20] (-1,2) node (pm2) [midway] {}
@@ -56,7 +56,10 @@ See \figref{octreemap} for an illustration.
   \end{scope}
 
   % connections
-  \draw [connect] (r1.center) -- (r2.center);
+  \draw [connect] (r1) to [bend right=20] (r2)
+        node [midway, below] {$T_{1,2}$};
+  \draw [connect] (r2) to [bend right=20] (r1)
+        node [midway, above] {$T_{2,1}$};
   \draw [mapping] (r1) to [bend left=40] (pmm) node [pos=0.55, left] {$\phi_1$};
   \draw [mapping] (r2) to [bend right=40] (pmm) node [pos=0.6, right] {$\phi_2$};
 
