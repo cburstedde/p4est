@@ -347,12 +347,12 @@ int                 p8est_connectivity_save (const char *filename,
 
 /** Load a connectivity structure from disk.
  * \param [in] filename Name of the file to read.
- * \param [out] length  Size in bytes of connectivity on disk or NULL.
+ * \param [out] bytes   Size in bytes of connectivity on disk or NULL.
  * \return              Returns a valid connectivity structure.
  * \note                Aborts on file errors or invalid data.
  */
 p8est_connectivity_t *p8est_connectivity_load (const char *filename,
-                                               long *length);
+                                               size_t * bytes);
 
 /** Create a connectivity structure for the unit cube.
  */

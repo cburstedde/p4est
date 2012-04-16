@@ -996,122 +996,33 @@ p4est_connectivity_inflate (sc_array_t * buffer)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_load (const char *filename, long *length)
+p4est_connectivity_load (const char *filename, size_t * bytes)
 {
   int                 retval;
-  int                 has_tree_attr;
-  char                magic8[9];
-  char                pkgversion24[25];
-  size_t              u64z, topsize, int8size;
-  size_t              tcount;
-  uint64_t            array10[10];
-  p4est_topidx_t      num_vertices, num_trees;
-  p4est_topidx_t      num_edges, num_ett, num_corners, num_ctt;
-  FILE               *file;
-  p4est_connectivity_t *conn = NULL;
+  size_t              bytes_out;
+  sc_io_source_t     *source;
+  p4est_connectivity_t *conn;
 
-  file = fopen (filename, "rb");
-  SC_CHECK_ABORT (file != NULL, "file open");
-
-  sc_fread (magic8, 8, 1, file, "read magic");
-  magic8[8] = '\0';
-  SC_CHECK_ABORT (strncmp (magic8, P4EST_STRING, 8) == 0, "invalid magic");
-  sc_fread (pkgversion24, 8, 3, file, "read package version");
-  pkgversion24[24] = '\0';
-
-  u64z = sizeof (uint64_t);
-  topsize = sizeof (p4est_topidx_t);
-  int8size = sizeof (int8_t);
-  sc_fread (array10, u64z, 10, file, "read header");
-
-  SC_CHECK_ABORT (array10[0] == P4EST_ONDISK_FORMAT,
-                  "on-disk format mismatch");
-  SC_CHECK_ABORT (array10[1] == (uint64_t) topsize,
-                  "p4est_topidx_t size mismatch");
-
-  num_vertices = (p4est_topidx_t) array10[2];
-  num_trees = (p4est_topidx_t) array10[3];
-  num_edges = (p4est_topidx_t) array10[4];
-  num_ett = (p4est_topidx_t) array10[5];
-  num_corners = (p4est_topidx_t) array10[6];
-  num_ctt = (p4est_topidx_t) array10[7];
-  has_tree_attr = (array10[8] & 1);
-  SC_CHECK_ABORT (num_vertices >= 0, "negative num_vertices");
-  SC_CHECK_ABORT (num_trees >= 0, "negative num_trees");
-#ifdef P4_TO_P8
-  SC_CHECK_ABORT (num_edges >= 0, "negative num_edges");
-  SC_CHECK_ABORT (num_ett >= 0, "negative num_ett");
-#else
-  SC_CHECK_ABORT (num_edges == 0, "num_edges must be zero in 2D");
-  SC_CHECK_ABORT (num_ett == 0, "num_ett must be zero in 2D");
-#endif
-  SC_CHECK_ABORT (num_corners >= 0, "negative num_corners");
-  SC_CHECK_ABORT (num_ctt >= 0, "negative num_ctt");
-
-  conn = p4est_connectivity_new (num_vertices, num_trees,
-#ifdef P4_TO_P8
-                                 num_edges, num_ett,
-#endif
-                                 num_corners, num_ctt);
-  p4est_connectivity_set_attr (conn, has_tree_attr);
-
-  if (num_vertices > 0) {
-    tcount = (size_t) (3 * num_vertices);
-    sc_fread (conn->vertices, sizeof (double), tcount, file, "read vertices");
+  source = sc_io_source_new (SC_IO_TYPE_FILENAME,
+                             SC_IO_ENCODE_NONE, filename);
+  if (source == NULL) {
+    return NULL;
   }
 
-#ifdef P4_TO_P8
-  if (num_edges > 0) {
-    tcount = (size_t) (P8EST_EDGES * num_trees);
-    sc_fread (conn->tree_to_edge, topsize, tcount, file, "read tte");
-  }
-#endif
-
-  tcount = (size_t) (P4EST_CHILDREN * num_trees);
-  if (num_vertices > 0)
-    sc_fread (conn->tree_to_vertex, topsize, tcount, file, "read ttv");
-  if (num_corners > 0)
-    sc_fread (conn->tree_to_corner, topsize, tcount, file, "read ttc");
-
-  tcount = (size_t) (P4EST_FACES * num_trees);
-  sc_fread (conn->tree_to_tree, topsize, tcount, file, "read ttt");
-  sc_fread (conn->tree_to_face, int8size, tcount, file, "read ttf");
-
-  if (has_tree_attr) {
-    tcount = (size_t) num_trees;
-    sc_fread (conn->tree_to_attr, int8size, tcount, file,
-              "write tree_to_attr");
+  /* Get byte length and close file even on earlier read error */
+  conn = p4est_connectivity_source (source);
+  retval = sc_io_source_complete (source, &bytes_out, NULL) || conn == NULL;
+  retval = sc_io_source_destroy (source) || retval;
+  if (retval) {
+    if (conn != NULL) {
+      p4est_connectivity_destroy (conn);
+    }
+    return NULL;
   }
 
-#ifdef P4_TO_P8
-  sc_fread (conn->ett_offset, topsize, num_edges + 1, file,
-            "read ett_offset");
-  SC_CHECK_ABORT (num_ett == conn->ett_offset[num_edges], "num_ett mismatch");
-  if (num_edges > 0) {
-    sc_fread (conn->edge_to_tree, topsize, num_ett, file, "read ett");
-    sc_fread (conn->edge_to_edge, int8size, num_ett, file, "read ete");
+  if (bytes != NULL) {
+    *bytes = bytes_out;
   }
-#endif
-
-  sc_fread (conn->ctt_offset, topsize, num_corners + 1, file,
-            "read ctt_offset");
-  SC_CHECK_ABORT (num_ctt == conn->ctt_offset[num_corners],
-                  "num_ctt mismatch");
-  if (num_corners > 0) {
-    sc_fread (conn->corner_to_tree, topsize, num_ctt, file, "read ctt");
-    sc_fread (conn->corner_to_corner, int8size, num_ctt, file, "read ctc");
-  }
-
-  if (length != NULL) {
-    *length = ftell (file);
-    SC_CHECK_ABORT (*length > 0, "file tell");
-  }
-
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
-
-  SC_CHECK_ABORT (p4est_connectivity_is_valid (conn), "invalid connectivity");
-
   return conn;
 }
 

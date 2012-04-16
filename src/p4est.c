@@ -3419,9 +3419,9 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
 
-  conn = *connectivity = p4est_connectivity_load (filename, &fpos);
+  conn = *connectivity = p4est_connectivity_load (filename, &zcount);
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  fpos = ((fpos + align - 1) / align) * align;
+  fpos = (((long) zcount + align - 1) / align) * align;
 
   /* retrieve MPI information */
   mpiret = MPI_Comm_size (mpicomm, &num_procs);
