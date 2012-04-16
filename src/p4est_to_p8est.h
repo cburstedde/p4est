@@ -124,6 +124,8 @@
 #define p4est_connectivity_sink         p8est_connectivity_sink
 #define p4est_connectivity_deflate      p8est_connectivity_deflate
 #define p4est_connectivity_save         p8est_connectivity_save
+#define p4est_connectivity_source       p8est_connectivity_source
+#define p4est_connectivity_inflate      p8est_connectivity_inflate
 #define p4est_connectivity_load         p8est_connectivity_load
 #define p4est_connectivity_complete     p8est_connectivity_complete
 #define p4est_find_face_transform       p8est_find_face_transform

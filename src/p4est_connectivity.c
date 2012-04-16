@@ -755,6 +755,247 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 }
 
 p4est_connectivity_t *
+p4est_connectivity_source (sc_io_source_t * source)
+{
+  int                 retval;
+  int                 has_tree_attr;
+  char                magic8[9];
+  char                pkgversion24[25];
+  size_t              u64z, topsize, int8size;
+  size_t              tcount;
+  uint64_t            array10[10];
+  p4est_topidx_t      num_vertices, num_trees;
+  p4est_topidx_t      num_edges, num_ett, num_corners, num_ctt;
+  p4est_connectivity_t *conn = NULL;
+
+  retval = sc_io_source_read (source, magic8, 8, NULL);
+  magic8[8] = '\0';
+  if (retval || strncmp (magic8, P4EST_STRING, 8)) {
+    /* "invalid magic" */
+    return NULL;
+  }
+  retval = sc_io_source_read (source, pkgversion24, 24, NULL);
+  pkgversion24[24] = '\0';
+  if (retval) {
+    /* "read package version" */
+    return NULL;
+  }
+
+  u64z = sizeof (uint64_t);
+  topsize = sizeof (p4est_topidx_t);
+  int8size = sizeof (int8_t);
+  retval = sc_io_source_read (source, array10, 10 * u64z, NULL);
+  if (retval) {
+    /*"read header" */
+    return NULL;
+  }
+  if (array10[0] != P4EST_ONDISK_FORMAT) {
+    /* "on-disk format mismatch" */
+    return NULL;
+  }
+  if (array10[1] != (uint64_t) topsize) {
+    /* "p4est_topidx_t size mismatch" */
+    return NULL;
+  }
+  num_vertices = (p4est_topidx_t) array10[2];
+  num_trees = (p4est_topidx_t) array10[3];
+  num_edges = (p4est_topidx_t) array10[4];
+  num_ett = (p4est_topidx_t) array10[5];
+  num_corners = (p4est_topidx_t) array10[6];
+  num_ctt = (p4est_topidx_t) array10[7];
+  has_tree_attr = (array10[8] & 1);
+  if (num_vertices < 0) {
+    /* "negative num_vertices" */
+    return NULL;
+  }
+  if (num_trees < 0) {
+    /* "negative num_trees" */
+    return NULL;
+  }
+#ifdef P4_TO_P8
+  if (num_edges < 0) {
+    /* "negative num_edges" */
+    return NULL;
+  }
+  if (num_ett < 0) {
+    /* "negative num_ett" */
+    return NULL;
+  }
+#else
+  if (num_edges != 0) {
+    /* "num_edges must be zero in 2D" */
+    return NULL;
+  }
+  if (num_ett != 0) {
+    /* "num_ett must be zero in 2D" */
+    return NULL;
+  }
+#endif
+  if (num_corners < 0) {
+    /* "negative num_corners" */
+    return NULL;
+  }
+  if (num_ctt < 0) {
+    /* "negative num_ctt" */
+    return NULL;
+  }
+
+  conn = p4est_connectivity_new (num_vertices, num_trees,
+#ifdef P4_TO_P8
+                                 num_edges, num_ett,
+#endif
+                                 num_corners, num_ctt);
+  p4est_connectivity_set_attr (conn, has_tree_attr);
+
+  if (num_vertices > 0) {
+    tcount = (size_t) (3 * num_vertices);
+    retval = sc_io_source_read (source, conn->vertices,
+                                tcount * sizeof (double), NULL);
+    if (retval) {
+      /* "read vertices" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+
+#ifdef P4_TO_P8
+  if (num_edges > 0) {
+    tcount = (size_t) (P8EST_EDGES * num_trees);
+    retval = sc_io_source_read (source, conn->tree_to_edge, topsize * tcount,
+                                NULL);
+    if (retval) {
+      /* "read tte" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+#endif
+
+  tcount = (size_t) (P4EST_CHILDREN * num_trees);
+  if (num_vertices > 0) {
+    retval = sc_io_source_read (source, conn->tree_to_vertex,
+                                topsize * tcount, NULL);
+    if (retval) {
+      /* "read ttv" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+  if (num_corners > 0) {
+    retval = sc_io_source_read (source, conn->tree_to_corner,
+                                topsize * tcount, NULL);
+    if (retval) {
+      /* "read ttc" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+  tcount = (size_t) (P4EST_FACES * num_trees);
+  retval = sc_io_source_read (source, conn->tree_to_tree, topsize * tcount,
+                              NULL);
+  if (retval) {
+    /* "read ttt" */
+    p4est_connectivity_destroy (conn);
+    return NULL;
+  }
+  retval = sc_io_source_read (source, conn->tree_to_face, int8size * tcount,
+                              NULL);
+  if (retval) {
+    /* "read ttf" */
+    p4est_connectivity_destroy (conn);
+    return NULL;
+  }
+  if (has_tree_attr) {
+    tcount = (size_t) num_trees;
+    retval = sc_io_source_read (source, conn->tree_to_attr, int8size * tcount,
+                                NULL);
+    if (retval) {
+      /* "write tree_to_attr" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+
+#ifdef P4_TO_P8
+  retval = sc_io_source_read (source, conn->ett_offset,
+                              topsize * (num_edges + 1), NULL);
+  if (retval || num_ett != conn->ett_offset[num_edges]) {
+    /* "read ett_offset" */
+    p4est_connectivity_destroy (conn);
+    return NULL;
+  }
+  if (num_edges > 0) {
+    retval = sc_io_source_read (source, conn->edge_to_tree, topsize * num_ett,
+                                NULL);
+    if (retval) {
+      /* "read ett" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+    retval = sc_io_source_read (source, conn->edge_to_edge,
+                                int8size * num_ett, NULL);
+    if (retval) {
+      /* "read ete" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+#endif
+
+  retval = sc_io_source_read (source, conn->ctt_offset,
+                              topsize * (num_corners + 1), NULL);
+  if (retval || num_ctt != conn->ctt_offset[num_corners]) {
+    /* "read ctt_offset" */
+    p4est_connectivity_destroy (conn);
+    return NULL;
+  }
+  if (num_corners > 0) {
+    retval = sc_io_source_read (source, conn->corner_to_tree,
+                                topsize * num_ctt, NULL);
+    if (retval) {
+      /* "read ctt" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+    retval = sc_io_source_read (source, conn->corner_to_corner,
+                                int8size * num_ctt, NULL);
+    if (retval) {
+      /* "read ctc" */
+      p4est_connectivity_destroy (conn);
+      return NULL;
+    }
+  }
+
+  if (!p4est_connectivity_is_valid (conn)) {
+    /* "invalid connectivity" */
+    p4est_connectivity_destroy (conn);
+    return NULL;
+  }
+
+  return conn;
+}
+
+p4est_connectivity_t *
+p4est_connectivity_inflate (sc_array_t * buffer)
+{
+  int                 retval;
+  p4est_connectivity_t *conn;
+  sc_io_source_t     *source;
+
+  /* This source reads from a memory buffer so no file errors are caught. */
+  source = sc_io_source_new (SC_IO_TYPE_BUFFER, SC_IO_ENCODE_NONE, buffer);
+  SC_CHECK_ABORT (source != NULL, "source open from buffer");
+
+  conn = p4est_connectivity_source (source);
+  SC_CHECK_ABORT (conn != NULL, "source connectivity");
+
+  retval = sc_io_source_destroy (source);
+  SC_CHECK_ABORT (retval == 0, "destroy source");
+
+  return conn;
+}
+
+p4est_connectivity_t *
 p4est_connectivity_load (const char *filename, long *length)
 {
   int                 retval;
