@@ -29,7 +29,8 @@
 int
 main (int argc, char **argv)
 {
-  p4est_connectivity_t * conn;
+  p4est_connectivity_t *conn;
+  size_t              bytes;
 
   if (argc != 2) {
     char               *cp, *bn;
@@ -41,8 +42,15 @@ main (int argc, char **argv)
     exit (1);
   }
 
-  conn = p4est_connectivity_load (argv[1], NULL);
-  p4est_connectivity_destroy (conn);
+  conn = p4est_connectivity_load (argv[1], &bytes);
+  if (conn == NULL) {
+    P4EST_PRODUCTIONF ("Failed to load connectivity file \"%s\"\n", argv[1]);
+  }
+  else {
+    P4EST_INFOF ("Load connectivity file \"%s\"\n bytes %lld\n", argv[1],
+                 (long long) bytes);
+    p4est_connectivity_destroy (conn);
+  }
 
   return 0;
 }
