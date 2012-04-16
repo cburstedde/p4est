@@ -604,7 +604,7 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
   return 1;
 }
 
-static int
+int
 p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
 {
   int                 retval;

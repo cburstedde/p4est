@@ -247,6 +247,14 @@ int                 p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
                                                  p4est_connectivity_t *
                                                  conn2);
 
+/** Write connectivity to a sink object.
+ * \param [in] conn     The connectivity to be written.
+ * \param [in,out] sink The connectivity is written into this sink.
+ * \return              0 on success, nonzero on error.
+ */
+int                 p4est_connectivity_sink (p4est_connectivity_t * conn,
+                                             sc_io_sink_t * sink);
+
 /** Allocate memory and store the connectivity information there.
  * \param [in] conn     The connectivity structure to be exported to memory.
  * \param [in] code     Encoding and compression method for serialization.
@@ -265,11 +273,22 @@ int                 p4est_connectivity_save (const char *filename,
                                              p4est_connectivity_t *
                                              connectivity);
 
+/** Read connectivity from a source object.
+ * \param [in,out] source       The connectivity is read from this source.
+ * \return              The newly created connectivity, or NULL on error.
+ */
+p4est_connectivity_t *p4est_connectivity_source (sc_io_source_t * source);
+
+/** Create new connectivity from a memory buffer.
+ * \param [in] buffer   The connectivity is created from this memory buffer.
+ * \return              The newly created connectivity, or NULL on error.
+ */
+p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
+
 /** Load a connectivity structure from disk.
- * \param [in] filename Name of the file to read.
- * \param [out] bytes   Size in bytes of connectivity on disk or NULL.
- * \return              Returns a valid connectivity structure.
- * \note                Aborts on file errors or invalid data.
+ * \param [in] filename         Name of the file to read.
+ * \param [in,out] bytes        Size in bytes of connectivity on disk or NULL.
+ * \return              Returns valid connectivity, or NULL on file error.
  */
 p4est_connectivity_t *p4est_connectivity_load (const char *filename,
                                                size_t * bytes);
