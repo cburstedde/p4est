@@ -51,9 +51,8 @@ typedef enum
 p4est_comm_tag_t;
 
 /** Caculate the number and partition of quadrents.
- * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters.
- *                        This also fills in \c p4est->global_first_quadrant
- *                        with the correct values.
+ * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
+ *                        puts cumulative sums in p4est->global_first_quadrant.
  */
 void                p4est_comm_count_quadrants (p4est_t * p4est);
 
