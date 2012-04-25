@@ -30,7 +30,8 @@ SC_EXTERN_C_BEGIN;
 
 typedef enum
 {
-  P4EST_COMM_BALANCE_FIRST_COUNT = 1,
+  P4EST_COMM_COUNT_PERTREE = 1,
+  P4EST_COMM_BALANCE_FIRST_COUNT,
   P4EST_COMM_BALANCE_FIRST_LOAD,
   P4EST_COMM_BALANCE_SECOND_COUNT,
   P4EST_COMM_BALANCE_SECOND_LOAD,
@@ -67,6 +68,15 @@ void                p4est_comm_count_quadrants (p4est_t * p4est);
 void                p4est_comm_global_partition (p4est_t * p4est,
                                                  p4est_quadrant_t *
                                                  first_quad);
+
+/** Compute and distribute the cumulative number of quadrants per tree.
+ * \param [in] p4est    This p4est needs to have correct values for
+ *                      global_first_quadrant and global_first_position.
+ * \paarm [in,out] pertree      On input, memory for num_trees + 1 numbers.
+ *                              On output, the cumulative quadrant counts.
+ */
+void                p4est_comm_count_pertree (p4est_t * p4est,
+                                              p4est_gloidx_t * pertree);
 
 /** Searches the owner of a quadrant via p4est->global_first_position.
  * Assumes a tree with no overlaps.

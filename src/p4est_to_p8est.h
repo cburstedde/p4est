@@ -46,6 +46,7 @@
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 
 /* redefine enums */
+#define P4EST_COMM_COUNT_PERTREE        P8EST_COMM_COUNT_PERTREE
 #define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
 #define P4EST_COMM_BALANCE_FIRST_LOAD   P8EST_COMM_BALANCE_FIRST_LOAD
 #define P4EST_COMM_BALANCE_SECOND_COUNT P8EST_COMM_BALANCE_SECOND_COUNT
@@ -270,6 +271,7 @@
 /* functions in p4est_communication */
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
+#define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned

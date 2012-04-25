@@ -124,6 +124,174 @@ p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
   }
 }
 
+void
+p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
+{
+  const int           num_procs = p4est->mpisize;
+  const int           rank = p4est->mpirank;
+  const p4est_gloidx_t *gfq = p4est->global_first_quadrant;
+  const p4est_quadrant_t *gfp = p4est->global_first_position;
+  const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
+  int                 mpiret;
+  int                 p;
+  int                 mycount, c, addtomytree;
+  int                *treecount, *treeoffset;
+  p4est_topidx_t      t;
+  p4est_locidx_t      recvbuf, sendbuf;
+  p4est_gloidx_t     *mypertree;
+  MPI_Request         req_recv, req_send;
+  MPI_Status          status;
+  p4est_tree_t       *tree;
+#ifdef P4EST_DEBUG
+  const p4est_quadrant_t *q;
+#endif
+
+  /* Tip off valgrind in case input array is too small */
+  pertree[num_trees] = 0;
+
+  /*
+   * Determine which trees each rank will be counting.
+   * A tree is counted by the processor that starts on its first quadrant,
+   * even if this processor is empty.
+   */
+  treecount = P4EST_ALLOC (int, num_procs + 1);
+  treeoffset = P4EST_ALLOC (int, num_procs + 1);
+  p = 0;
+  t = 0;
+  treecount[0] = 1;
+  treeoffset[0] = 0;
+  for (;;) {
+    /* Invariant: Rank p is the first that mentions tree t in gfp[p]
+                  and the ownership of t has been assigned to p or p - 1 */
+    P4EST_ASSERT (gfp[p].p.which_tree == t);
+    P4EST_ASSERT (p == 0 || gfp[p - 1].p.which_tree < t);
+    do {
+      treecount[++p] = 0;
+    }
+    while (gfp[p].p.which_tree == t);
+    /* Assign the trees before the next first quadrant */
+    P4EST_ASSERT (t < gfp[p].p.which_tree);
+    for (++t; t < gfp[p].p.which_tree; ++t) {
+      ++treecount[p - 1];
+    }
+    if (t < num_trees) {
+      P4EST_ASSERT (p < num_procs);
+      /* Check if the processor has the beginning of the tree */
+      if (gfp[p].x == 0 && gfp[p].y == 0
+#ifdef P4_TO_P8
+          && gfp[p].z == 0
+#endif
+         ) {
+        ++treecount[p];
+      }
+      else {
+        ++treecount[p - 1];
+      }
+    }
+    else {
+      while (p < num_procs) {
+        treecount[++p] = 0;
+      }
+      break;
+    }
+  }
+  P4EST_ASSERT (p == num_procs);
+  P4EST_ASSERT (t == num_trees);
+  P4EST_ASSERT (treecount[num_procs] == 0);
+  for (p = 0; p < num_procs; ++p) {
+    treeoffset[p + 1] = treeoffset[p] + treecount[p];
+  }
+  P4EST_ASSERT ((p4est_topidx_t) treeoffset[num_procs] == num_trees);
+  mycount = treecount[rank];
+#ifdef P4EST_DEBUG
+  P4EST_ASSERT (p4est->first_local_tree <= treeoffset[rank]);
+  P4EST_ASSERT (gfq[rank + 1] - gfq[rank] ==
+                (p4est_gloidx_t) p4est->local_num_quadrants);
+  for (c = 0; c < mycount; ++c) {
+    t = (p4est_topidx_t) (treeoffset[rank] + c);
+    P4EST_ASSERT (rank == 0 || gfp[rank - 1].p.which_tree < t);
+    if (p4est->local_num_quadrants > 0) {
+      tree = p4est_tree_array_index (p4est->trees, t);
+      q = p4est_quadrant_array_index (&tree->quadrants, 0);
+    }
+    else {
+      q = gfp + rank;
+    }
+    P4EST_ASSERT (q->x == 0 && q->y == 0);
+#ifdef P4_TO_P8
+    P4EST_ASSERT (q->z == 0);
+#endif
+  }
+#endif
+
+  /* Go through trees this rank is responsible for and collect information */
+  recvbuf = sendbuf = -1;
+  addtomytree = -1;
+  mypertree = P4EST_ALLOC (p4est_gloidx_t, mycount);
+  for (c = 0; c < mycount; ++c) {
+    /* Rank owns at least the first quadrant on this tree */
+    t = (p4est_topidx_t) (treeoffset[rank] + c);
+    tree = p4est_tree_array_index (p4est->trees, t);
+    mypertree[c] = (p4est_gloidx_t) tree->quadrants.elem_count;
+    if (c == mycount - 1) {
+      /* Only the last tree in the counted list may be partially owned */
+      for (p = rank + 1; p < num_procs && treecount[p] == 0; ++p) {
+        P4EST_ASSERT (p < num_procs);
+      }
+      mypertree[c] += gfq[p] - gfq[rank + 1];
+      if (gfp[p].p.which_tree == t) {
+        P4EST_ASSERT (p < num_procs);
+        /* Processor p has part of this tree too and needs to tell me */
+        mpiret = MPI_Irecv (&recvbuf, 1, P4EST_MPI_LOCIDX, p,
+                            P4EST_COMM_COUNT_PERTREE, p4est->mpicomm,
+                            &req_recv);
+        SC_CHECK_MPI (mpiret);
+        addtomytree = c;
+      }
+      else {
+        P4EST_ASSERT (p <= num_procs);
+        P4EST_ASSERT (gfp[p].p.which_tree == t + 1);
+      }
+    }
+  }
+  if (mycount > 0 && (t = gfp[rank].p.which_tree) < treeoffset[rank]) {
+    /* Send information to processor that counts my first local quadrants */
+    P4EST_ASSERT (rank > 0 && p4est->first_local_tree == t);
+    tree = p4est_tree_array_index (p4est->trees, t);
+    sendbuf = (p4est_gloidx_t) tree->quadrants.elem_count;
+    for (p = rank - 1; treecount[p] == 0; --p) {
+      P4EST_ASSERT (p > 0);
+    }
+    mpiret = MPI_Isend (&sendbuf, 1, P4EST_MPI_LOCIDX, p,
+                        P4EST_COMM_COUNT_PERTREE, p4est->mpicomm, &req_send);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  /* Complete MPI operations and cumulative count */
+  if (addtomytree >= 0) {
+    mpiret = MPI_Wait (&req_recv, &status);
+    SC_CHECK_MPI (mpiret);
+    mypertree[addtomytree] += (p4est_gloidx_t) recvbuf;
+  }
+  pertree[0] = 0;
+  mpiret = MPI_Allgatherv (mypertree, mycount, P4EST_MPI_GLOIDX, pertree + 1,
+                           treecount, treeoffset, P4EST_MPI_GLOIDX,
+                           p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  for (c = 0; c < (int) num_trees; ++c) {
+     pertree[c + 1] += pertree[c];
+  }
+  if (sendbuf >= 0) {
+    mpiret = MPI_Wait (&req_send, &status);
+    SC_CHECK_MPI (mpiret);
+  }
+  
+  /* Clean up */
+  P4EST_FREE (treecount);
+  P4EST_FREE (treeoffset);
+  P4EST_FREE (mypertree);
+}
+
 int
 p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
                        const p4est_quadrant_t * q, int guess)
