@@ -22,6 +22,7 @@
 */
 
 #include <p4est_algorithms.h>
+#include <p4est_communication.h>
 #include <p4est_extended.h>
 
 typedef struct
@@ -57,6 +58,21 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static void
+test_pertree (p4est_t * p4est)
+{
+  p4est_topidx_t      num_trees;
+  p4est_gloidx_t     *pertree;
+
+  num_trees = p4est->connectivity->num_trees;
+  P4EST_ASSERT ((size_t) num_trees == p4est->trees->elem_count);
+  pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
+  p4est_comm_count_pertree (p4est, pertree);
+  SC_CHECK_ABORT (pertree[num_trees] == p4est->global_num_quadrants,
+                  "pertree check failed");
+  P4EST_FREE (pertree);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -83,8 +99,14 @@ main (int argc, char **argv)
 
   num_procs = p4est->mpisize;
 
+  /* test tree counting */
+  test_pertree (p4est);
+
   /* refine and balance to make the number of elements interesting */
   p4est_refine (p4est, 1, refine_fn, init_fn);
+
+  /* test tree counting */
+  test_pertree (p4est);
 
   /* Check the global number of elements */
   qlocal = p4est->local_num_quadrants;
