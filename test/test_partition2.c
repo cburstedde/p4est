@@ -23,9 +23,11 @@
 
 #ifdef P4_TO_P8
 #include <p8est_algorithms.h>
+#include <p8est_communication.h>
 #include <p8est_extended.h>
 #else
 #include <p4est_algorithms.h>
+#include <p4est_communication.h>
 #include <p4est_extended.h>
 #endif
 
@@ -103,7 +105,35 @@ circle_init (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
+test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
+              p4est_gloidx_t * new_pertree)
+{
+  const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
+  p4est_gloidx_t     *pertree;
+
+  P4EST_ASSERT ((size_t) num_trees == p4est->trees->elem_count);
+  if (new_pertree == NULL) {
+    pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
+  }
+  else {
+    pertree = new_pertree;
+  }
+  p4est_comm_count_pertree (p4est, pertree);
+  SC_CHECK_ABORT (pertree[num_trees] == p4est->global_num_quadrants,
+                  "pertree check failed");
+  if (prev_pertree != NULL) {
+    SC_CHECK_ABORT (!memcmp (pertree, prev_pertree,
+                             sizeof (p4est_gloidx_t) * (num_trees + 1)),
+                    "pertree now different");
+  }
+  if (new_pertree == NULL) {
+    P4EST_FREE (pertree);
+  }
+}
+
+static void
+test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+                       p4est_gloidx_t *pertree1, p4est_gloidx_t *pertree2)
 {
   int                 i, j;
   int                 num_procs;
@@ -119,6 +149,7 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
   p4est = p4est_new_ext (mpicomm, connectivity, 0, 3, 1,
                          sizeof (int), circle_init, NULL);
   num_procs = p4est->mpisize;
+  test_pertree (p4est, NULL, pertree1);
 
   global_num = p4est->global_num_quadrants;
   crc1 = p4est_checksum (p4est);
@@ -128,7 +159,6 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
   new_counts = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   /* Partition with one empty processor */
-
   if (num_procs > 1) {
     P4EST_GLOBAL_INFO ("First circle partition\n");
     empty_proc1 = num_procs / 3;
@@ -144,6 +174,7 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
       }
     }
     p4est_partition_given (p4est, new_counts);
+    test_pertree (p4est, pertree1, pertree2);
     crc2 = p4est_checksum (p4est);
     SC_CHECK_ABORT (crc1 == crc2, "First checksum mismatch");
   }
@@ -165,6 +196,7 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
       }
     }
     p4est_partition_given (p4est, new_counts);
+    test_pertree (p4est, pertree1, pertree2);
     crc2 = p4est_checksum (p4est);
     SC_CHECK_ABORT (crc1 == crc2, "Second checksum mismatch");
   }
@@ -172,12 +204,12 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity)
   /* Uniform partition */
   P4EST_GLOBAL_INFO ("Third circle partition\n");
   p4est_partition (p4est, NULL);
+  test_pertree (p4est, pertree1, pertree2);
   crc2 = p4est_checksum (p4est);
   SC_CHECK_ABORT (crc1 == crc2, "Third checksum mismatch");
   SC_CHECK_ABORT (p4est_is_equal (p4est, copy, 1), "Forest mismatch");
 
   P4EST_FREE (new_counts);
-
   p4est_destroy (copy);
   p4est_destroy (p4est);
 }
@@ -196,6 +228,7 @@ main (int argc, char **argv)
   size_t              qz;
   p4est_locidx_t      num_quadrants_on_last;
   p4est_locidx_t     *num_quadrants_in_proc;
+  p4est_gloidx_t     *pertree1, *pertree2;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
   user_data_t        *user_data;
@@ -219,11 +252,17 @@ main (int argc, char **argv)
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, NULL);
 
+  pertree1 = P4EST_ALLOC (p4est_gloidx_t,
+                          p4est->connectivity->num_trees + 1);
+  pertree2 = P4EST_ALLOC (p4est_gloidx_t,
+                          p4est->connectivity->num_trees + 1);
   num_procs = p4est->mpisize;
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   /* refine and balance to make the number of elements interesting */
+  test_pertree (p4est, NULL, pertree1);
   p4est_refine (p4est, 1, refine_fn, init_fn);
+  test_pertree (p4est, NULL, pertree1);
 
   /* Set an arbitrary partition.
    *
@@ -244,6 +283,7 @@ main (int argc, char **argv)
 
   /* partition the forest */
   (void) p4est_partition_given (p4est, num_quadrants_in_proc);
+  test_pertree (p4est, pertree1, pertree2);
 
   /* Double check that we didn't loose any quads */
   SC_CHECK_ABORT (crc == p4est_checksum (p4est),
@@ -269,6 +309,7 @@ main (int argc, char **argv)
 
   /* do a weighted partition with uniform weights */
   p4est_partition (p4est, weight_one);
+  test_pertree (p4est, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (p4est),
                   "bad checksum after uniformly weighted partition");
 
@@ -280,6 +321,7 @@ main (int argc, char **argv)
   weight_counter = 0;
   weight_index = (rank == 1) ? 1342 : 0;
   p4est_partition (copy, weight_once);
+  test_pertree (copy, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 1");
 
@@ -287,6 +329,7 @@ main (int argc, char **argv)
   weight_counter = 0;
   weight_index = 0;
   p4est_partition (copy, weight_once);
+  test_pertree (copy, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 2");
 
@@ -299,6 +342,7 @@ main (int argc, char **argv)
   weight_index =
     (rank == num_procs - 1) ? ((int) copy->local_num_quadrants - 1) : 0;
   p4est_partition (copy, weight_once);
+  test_pertree (copy, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 3");
 
@@ -315,10 +359,12 @@ main (int argc, char **argv)
     }
   }
 
-  /* add another test */
-  test_partition_circle (mpicomm, connectivity);
+  /* Add another test.  Overwrites pertree1, pertree2 */
+  test_partition_circle (mpicomm, connectivity, pertree1, pertree2);
 
   /* clean up and exit */
+  P4EST_FREE (pertree1);
+  P4EST_FREE (pertree2);
   P4EST_FREE (num_quadrants_in_proc);
   p4est_destroy (p4est);
   p4est_destroy (copy);
