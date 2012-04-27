@@ -225,6 +225,7 @@ void                p4est_init (sc_log_handler_t log_handler,
  * \param [in] tt     Array of (at least) two values.
  * \return            An unsigned hash value.
  */
+/*@unused@*/
 static inline unsigned
 p4est_topidx_hash2 (const p4est_topidx_t * tt)
 {
@@ -250,6 +251,7 @@ p4est_topidx_hash2 (const p4est_topidx_t * tt)
  * \param [in] tt     Array of (at least) three values.
  * \return            An unsigned hash value.
  */
+/*@unused@*/
 static inline unsigned
 p4est_topidx_hash3 (const p4est_topidx_t * tt)
 {
@@ -277,6 +279,7 @@ p4est_topidx_hash3 (const p4est_topidx_t * tt)
  * \param [in] tt     Array of (at least) four values.
  * \return            An unsigned hash value.
  */
+/*@unused@*/
 static inline unsigned
 p4est_topidx_hash4 (const p4est_topidx_t * tt)
 {
@@ -305,6 +308,7 @@ p4est_topidx_hash4 (const p4est_topidx_t * tt)
   return (unsigned) c;
 }
 
+/*@unused@*/
 static inline int
 p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
 {
@@ -318,6 +322,7 @@ p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
   return 1;
 }
 
+/*@unused@*/
 static inline void
 p4est_topidx_bsort (p4est_topidx_t * t, int length)
 {
