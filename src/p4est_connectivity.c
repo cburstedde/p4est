@@ -389,6 +389,12 @@ p4est_connectivity_is_valid (p4est_connectivity_t * conn)
     }
 
 #ifdef P4_TO_P8
+    for (aedge = 0; aedge < num_edges; ++aedge) {
+      if (eoff[aedge + 1] <= eoff[aedge]) {
+        P4EST_NOTICEF ("Edge offset backwards %lld\n", (long long) aedge);
+        goto failure;
+      }
+    }
     if (num_edges > 0) {
       for (edge = 0; edge < P8EST_EDGES; ++edge) {
         p8est_find_edge_transform (conn, tree, edge, &ei);
@@ -446,6 +452,12 @@ p4est_connectivity_is_valid (p4est_connectivity_t * conn)
     }
 #endif
 
+    for (acorner = 0; acorner < num_corners; ++acorner) {
+      if (coff[acorner + 1] <= coff[acorner]) {
+        P4EST_NOTICEF ("Corner offset backwards %lld\n", (long long) acorner);
+        goto failure;
+      }
+    }
     if (num_corners > 0) {
       for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
         p4est_find_corner_transform (conn, tree, corner, &ci);
@@ -2063,7 +2075,9 @@ p4est_find_corner_transform_internal (p4est_connectivity_t * conn,
   /* collect all corners that are not from face or edge neighbors */
   for (ctree = 0; ctree < corner_trees; ++ctree) {
     nctree = ctt[ctree];
+    P4EST_ASSERT (0 <= nctree && nctree < conn->num_trees);
     ncorner = (int) ctc[ctree];
+    P4EST_ASSERT (ncorner >= 0 && ncorner < P4EST_CHILDREN);
     if (ncorner == icorner && nctree == itree) {
       continue;
     }
@@ -2162,10 +2176,12 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
   if (acorner == -1) {
     return;
   }
+  P4EST_ASSERT (0 <= acorner && acorner < conn->num_corners);
 
   /* retrieve connectivity information for this corner */
   cttac = conn->ctt_offset[acorner];
   corner_trees = conn->ctt_offset[acorner + 1] - cttac;
+  P4EST_ASSERT (0 <= cttac && 1 <= corner_trees);
 
   /* loop through all corner neighbors and find corner connections */
   ignored = p4est_find_corner_transform_internal (conn, itree, icorner, ci,

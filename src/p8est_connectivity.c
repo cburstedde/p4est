@@ -899,6 +899,7 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
   iflip = -1;
   for (etree = 0; etree < edge_trees; ++etree) {
     ntree = ett[etree];
+    P4EST_ASSERT (0 <= ntree && ntree < conn->num_trees);
     redge = (int) ete[etree];
     P4EST_ASSERT (redge >= 0 && redge < 2 * P8EST_EDGES);
     nedge = redge % P8EST_EDGES;
@@ -916,6 +917,7 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
       continue;
     }
     ntree = ett[etree];
+    P4EST_ASSERT (0 <= ntree && ntree < conn->num_trees);
     redge = (int) ete[etree];
     P4EST_ASSERT (redge >= 0 && redge < 2 * P8EST_EDGES);
     nedge = redge % P8EST_EDGES;
@@ -986,10 +988,12 @@ p8est_find_edge_transform (p4est_connectivity_t * conn,
   if (aedge == -1) {
     return;
   }
+  P4EST_ASSERT (0 <= aedge && aedge < conn->num_edges);
 
   /* retrieve connectivity information for this edge */
   ettae = conn->ett_offset[aedge];
   edge_trees = conn->ett_offset[aedge + 1] - ettae;
+  P4EST_ASSERT (0 <= ettae && 1 <= edge_trees);
 
   /* loop through all edge neighbors and find edge connections */
   flipped = p8est_find_edge_transform_internal (conn, itree, iedge, ei,
