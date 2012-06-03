@@ -22,13 +22,17 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est_bits.h>
-#include <p4est_extended.h>
 #include <p4est_algorithms.h>
+#include <p4est_bits.h>
+#include <p4est_communication.h>
+#include <p4est_extended.h>
+#include <p4est_io.h>
 #else
-#include <p8est_bits.h>
-#include <p8est_extended.h>
 #include <p8est_algorithms.h>
+#include <p8est_bits.h>
+#include <p8est_communication.h>
+#include <p8est_extended.h>
+#include <p8est_io.h>
 #endif
 #include <sc_options.h>
 #include <sc_statistics.h>
@@ -107,6 +111,43 @@ enum
 };
 
 static void
+test_deflate (p4est_t * p4est)
+{
+  p4est_gloidx_t    *pertree;
+  sc_array_t        *carr;
+  sc_array_t        *qarr, *darr;
+
+  /* collect information to deflate (serialize) the forest */
+  carr = p4est_connectivity_deflate (p4est->connectivity, SC_IO_ENCODE_NONE);
+  pertree = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
+  p4est_comm_count_pertree (p4est, pertree);
+  darr = NULL;
+  qarr = p4est_deflate_quadrants (p4est, p4est->data_size > 0 ? &darr : NULL);
+
+  /* Data that describes the forest completely
+   (a) shared data (identical on all processors):
+       carr
+       p4est->global_first_quadrant
+       pertree
+   (b) per-processor data (partition independent after allgatherv):
+       qarr
+       darr (if per-quadrant data size is greater 0 and it should be saved)
+   (c) shared data that describes a certain partition:
+       p4est->global_first_position
+   */
+
+  /* There will be a function p4est_inflate that creates a forest from this */
+
+  /* clean up allocated memory */
+  P4EST_FREE (pertree);
+  sc_array_destroy (carr);
+  sc_array_destroy (qarr);
+  if (darr != NULL) {
+    sc_array_destroy (darr);
+  }
+}
+
+static void
 test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                MPI_Comm mpicomm, int mpirank)
 {
@@ -125,6 +166,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est = p4est_new_ext (mpicomm, connectivity, 0, 0, 0,
                          sizeof (int), init_fn, NULL);
   p4est_refine (p4est, 1, refine_fn, init_fn);
+  test_deflate (p4est);
 
   /* save, synchronize, load connectivity and compare */
   if (mpirank == 0) {
@@ -170,6 +212,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                   "load/save connectivity mismatch Bb");
   SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, 0),
                   "load/save p4est mismatch Bb");
+  test_deflate (p4est2);
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 

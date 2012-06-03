@@ -15,7 +15,7 @@ libp4est_installed_headers += \
         src/p4est_ghost.h src/p4est_nodes.h src/p4est_vtk.h \
         src/p4est_points.h src/p4est_geometry.h \
         src/p4est_iterate.h src/p4est_lnodes.h src/p4est_mesh.h \
-        src/p4est_balance.h
+        src/p4est_balance.h src/p4est_io.h
 libp4est_compiled_sources += \
         src/p4est_connectivity.c src/p4est.c \
         src/p4est_bits.c src/p4est_search.c \
@@ -23,7 +23,7 @@ libp4est_compiled_sources += \
         src/p4est_ghost.c src/p4est_nodes.c src/p4est_vtk.c \
         src/p4est_points.c \
         src/p4est_iterate.c src/p4est_lnodes.c src/p4est_mesh.c \
-        src/p4est_balance.c
+        src/p4est_balance.c src/p4est_io.c
 endif
 if P4EST_ENABLE_BUILD_3D
 libp4est_installed_headers += \
@@ -35,7 +35,7 @@ libp4est_installed_headers += \
         src/p8est_trilinear.h \
         src/p8est_points.h src/p8est_geometry.h \
         src/p8est_iterate.h src/p8est_lnodes.h src/p8est_mesh.h \
-        src/p8est_tets_hexes.h src/p8est_balance.h
+        src/p8est_tets_hexes.h src/p8est_balance.h src/p8est_io.h
 libp4est_compiled_sources += \
         src/p8est_connectivity.c src/p8est.c \
         src/p8est_bits.c src/p8est_search.c \
@@ -45,7 +45,7 @@ libp4est_compiled_sources += \
         src/p8est_trilinear_nodes.c src/p8est_trilinear_lnodes.c \
         src/p8est_points.c src/p8est_geometry.c \
         src/p8est_iterate.c src/p8est_lnodes.c src/p8est_mesh.c \
-        src/p8est_tets_hexes.c src/p8est_balance.c
+        src/p8est_tets_hexes.c src/p8est_balance.c src/p8est_io.c
 endif
 P4EST_CPPFLAGS =
 
