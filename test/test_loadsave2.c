@@ -162,7 +162,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_connectivity_destroy (conn2);
 
   wtime = MPI_Wtime ();
-  p4est2 = p4est_load (p4est_name, mpicomm, sizeof (char), 0, NULL, &conn2);
+  p4est2 = p4est_load (p4est_name, mpicomm, 0, 0, NULL, &conn2);
   elapsed = MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_LOAD1b, elapsed, "p4est load 1b");
 
