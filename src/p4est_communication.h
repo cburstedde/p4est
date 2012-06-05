@@ -72,7 +72,7 @@ void                p4est_comm_global_partition (p4est_t * p4est,
 /** Compute and distribute the cumulative number of quadrants per tree.
  * \param [in] p4est    This p4est needs to have correct values for
  *                      global_first_quadrant and global_first_position.
- * \paarm [in,out] pertree      On input, memory for num_trees + 1 numbers.
+ * \param [in,out] pertree      On input, memory for num_trees + 1 numbers.
  *                              On output, the cumulative quadrant counts.
  */
 void                p4est_comm_count_pertree (p4est_t * p4est,

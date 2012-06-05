@@ -27,7 +27,7 @@
 
 #include <p4est.h>
 
-/** Extract all quadrant x y level data on the local processor.
+/** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
  * \param [in] p4est    The forest is not modified.
  * \param [in,out] data If not NULL, pointer to a pointer that will be set
