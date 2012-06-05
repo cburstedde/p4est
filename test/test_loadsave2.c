@@ -114,6 +114,7 @@ static void
 test_deflate (p4est_t * p4est)
 {
   p4est_gloidx_t    *pertree;
+  p4est_t           *p4est2;
   sc_array_t        *carr;
   sc_array_t        *qarr, *darr;
 
@@ -128,16 +129,19 @@ test_deflate (p4est_t * p4est)
   /* Data that describes the forest completely
    (a) shared data (identical on all processors):
        carr
-       p4est->global_first_quadrant
+       p4est->global_first_quadrant (does not need to be stored away)
        pertree
    (b) per-processor data (partition independent after allgatherv):
        qarr
        darr (if per-quadrant data size is greater 0 and it should be saved)
-   (c) shared data that describes a certain partition:
-       p4est->global_first_position
    */
 
-  /* There will be a function p4est_inflate that creates a forest from this */
+  /* Create a forest from this information and compare */
+  p4est2 = p4est_inflate (p4est->mpicomm, p4est->connectivity,
+                          p4est->global_first_quadrant, pertree,
+                          qarr, darr, p4est->user_pointer);
+  P4EST_ASSERT (p4est_is_equal (p4est, p4est2, 1));
+  p4est_destroy (p4est2);
 
   /* clean up allocated memory */
   P4EST_FREE (pertree);

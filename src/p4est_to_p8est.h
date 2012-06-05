@@ -280,6 +280,7 @@
 
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
+#define p4est_inflate                   p8est_inflate
 
 /* functions in p4est_vtk */
 #define p4est_vtk_write_file            p8est_vtk_write_file
