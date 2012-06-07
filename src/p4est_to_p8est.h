@@ -103,6 +103,8 @@
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
+#define p4est_wrap_t                    p8est_wrap_t
+#define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -332,5 +334,11 @@
 #define p4est_balance_seeds_face        p8est_balance_seeds_face
 #define p4est_balance_seeds_corner      p8est_balance_seeds_corner
 #define p4est_balance_seeds             p8est_balance_seeds
+
+/* functions in p4est_wrap */
+#define p4est_wrap_new                  p8est_wrap_new
+#define p4est_wrap_destroy              p8est_wrap_destroy
+#define p4est_wrap_leaf_next            p8est_wrap_leaf_next
+#define p4est_wrap_leaf_first           p8est_wrap_leaf_first
 
 #endif /* !P4EST_TO_P8EST_H */
