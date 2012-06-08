@@ -83,6 +83,12 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   SC_FREE (pp);
 }
 
+void
+p4est_wrap_partition (p4est_wrap_t * pp)
+{
+  p4est_partition_ext (pp->p4est, 1, NULL);
+}
+
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {

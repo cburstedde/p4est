@@ -54,6 +54,11 @@ void                p4est_wrap_finalize (void);
 p4est_wrap_t       *p4est_wrap_new (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
 
+/** Call p4est_partition for equal leaf distribution.
+ * Note: does not change ghost and mesh accordingly as of yet! Don't use.
+ */
+void                p4est_wrap_partition (p4est_wrap_t * pp);
+
 /*** ITERATOR OVER THE FOREST LEAVES ***/
 
 typedef struct p4est_wrap_leaf
