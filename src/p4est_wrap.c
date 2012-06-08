@@ -30,6 +30,25 @@
 #include <p8est_wrap.h>
 #endif
 
+void
+p4est_wrap_init (void)
+{
+#ifdef P4EST_DEBUG
+  int                 lp = SC_LP_DEFAULT;
+#else
+  int                 lp = SC_LP_PRODUCTION;
+#endif
+
+  sc_init (MPI_COMM_WORLD, 0, 0, NULL, lp);
+  p4est_init (NULL, lp);
+}
+
+void
+p4est_wrap_finalize (void)
+{
+  sc_finalize ();
+}
+
 p4est_wrap_t       *
 p4est_wrap_new (int initial_level)
 {

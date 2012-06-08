@@ -37,8 +37,15 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
 
+  p4est_wrap_init ();
+
   wrap = p4est_wrap_new (0);
+
+  /* Everything else goes here between new and destroy */
+
   p4est_wrap_destroy (wrap);
+
+  p4est_wrap_finalize ();
 
   mpiret = MPI_Finalize ();
   SC_CHECK_MPI (mpiret);

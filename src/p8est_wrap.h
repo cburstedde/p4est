@@ -39,9 +39,17 @@ typedef struct p8est_wrap
 }
 p8est_wrap_t;
 
+/** Call global initialization of p4est and sc.
+ * Not strictly necessary but uses an MPI_Comm to decide on who outputs.
+ * Expects MPI_Init to be called beforehand.
+ * Passes MPI_COMM_WORLD to p4est.  We should wrap the MPI_Comm and pass it.
+ */
+void                p8est_wrap_init (void);
+void                p8est_wrap_finalize (void);
+
 /** Create p4est and auxiliary data structures.
  * Expects MPI_Init to be called beforehand.
- * Passes MPI_COMM_WORLD to p4est.  Better wrap the MPI_Comm and pass it in.
+ * Passes MPI_COMM_WORLD to p4est.  We should wrap the MPI_Comm and pass it.
  */
 p8est_wrap_t       *p8est_wrap_new (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
