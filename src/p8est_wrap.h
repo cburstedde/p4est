@@ -26,6 +26,12 @@ SC_EXTERN_C_BEGIN;
 
 /*** COMPLETE INTERNAL STATE OF P4EST ***/
 
+typedef enum p8est_wrap_flags {
+  P8EST_WRAP_REFINE = 1,
+  P8EST_WRAP_COARSEN = 2
+}
+p8est_wrap_flags_t;
+
 typedef struct p8est_wrap
 {
   int                 p4est_dim;
@@ -56,6 +62,11 @@ void                p8est_wrap_finalize (void);
  */
 p8est_wrap_t       *p8est_wrap_new (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
+
+/** Call p8est_refine, coarsen, balance to update the processor-local mesh.
+ * Checks pp->flags as per-quadrant input agains p8est_wrap_flags_t.
+ */
+void                p8est_wrap_refine (p8est_wrap_t * pp);
 
 /** Call p4est_partition for equal leaf distribution.
  * Note: does not change ghost and mesh accordingly as of yet! Don't use.

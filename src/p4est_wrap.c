@@ -30,6 +30,34 @@
 #include <p8est_wrap.h>
 #endif
 
+static void
+init_callback (p4est_t * p4est, p4est_topidx_t which_tree,
+               p4est_quadrant_t * q)
+{
+  q->p.user_int = 0;
+}
+
+static int
+refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *q)
+{
+  return q->p.user_int == P4EST_WRAP_REFINE;
+}
+
+static int
+coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t *q[])
+{
+  int                 k;
+
+  for (k = 0; k < P4EST_CHILDREN; ++k) {
+    if (q[k]->p.user_int != P4EST_WRAP_COARSEN) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 void
 p4est_wrap_init (void)
 {
@@ -95,6 +123,37 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   p4est_connectivity_destroy (pp->conn);
 
   SC_FREE (pp);
+}
+
+void
+p4est_wrap_refine (p4est_wrap_t * pp)
+{
+  size_t              allz, qz;
+  p4est_locidx_t      tt;
+  p4est_t            *p4est = pp->p4est;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *q;
+
+  allz = 0;
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt)
+  {
+    tree = p4est_tree_array_index (p4est->trees, tt);
+    for (qz = 0; qz < tree->quadrants.elem_count; ++qz)
+    {
+      q = p4est_quadrant_array_index (&tree->quadrants, qz);
+      q->p.user_int = (int) pp->flags[allz++];
+    }
+  }
+  P4EST_ASSERT (allz == (size_t) p4est->local_num_quadrants);
+  P4EST_FREE (pp->flags);
+  
+  p4est_refine (p4est, 0, refine_callback, init_callback);
+  p4est_coarsen (p4est, 0, coarsen_callback, init_callback);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, init_callback);
+  pp->flags = P4EST_ALLOC_ZERO (int8_t, p4est->local_num_quadrants);
+
+  pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  pp->mesh_aux = p4est_mesh_new (p4est, pp->ghost_aux, P4EST_CONNECT_FULL);
 }
 
 void

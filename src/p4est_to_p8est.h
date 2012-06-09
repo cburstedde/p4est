@@ -67,6 +67,8 @@
 #define P4EST_CONNECT_DEFAULT           P8EST_CONNECT_DEFAULT
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
+#define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
+#define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
 
 /* redefine types */
 #define p4est_connect_type_t            p8est_connect_type_t
@@ -105,6 +107,7 @@
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_wrap_t                    p8est_wrap_t
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
+#define p4est_wrap_flags_t              p8est_wrap_flags_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -340,6 +343,7 @@
 #define p4est_wrap_finalize             p8est_wrap_finalize
 #define p4est_wrap_new                  p8est_wrap_new
 #define p4est_wrap_destroy              p8est_wrap_destroy
+#define p4est_wrap_refine               p8est_wrap_refine
 #define p4est_wrap_partition            p8est_wrap_partition
 #define p4est_wrap_leaf_next            p8est_wrap_leaf_next
 #define p4est_wrap_leaf_first           p8est_wrap_leaf_first

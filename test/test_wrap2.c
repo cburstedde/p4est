@@ -40,6 +40,7 @@ main (int argc, char **argv)
   p4est_wrap_init ();
 
   wrap = p4est_wrap_new (0);
+  p4est_wrap_refine (wrap);
   p4est_wrap_partition (wrap);
   p4est_wrap_destroy (wrap);
 
