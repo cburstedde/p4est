@@ -34,8 +34,11 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
+  int8_t             *flags;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  p4est_ghost_t      *ghost_aux;
+  p4est_mesh_t       *mesh_aux;
 }
 p4est_wrap_t;
 

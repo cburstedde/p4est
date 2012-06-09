@@ -65,9 +65,14 @@ p4est_wrap_new (int initial_level)
   pp->conn = p8est_connectivity_new_unitcube ();
 #endif
   pp->p4est = p4est_new_ext (MPI_COMM_WORLD, pp->conn,
-                             0, initial_level, 1, 0, NULL, NULL);
+                             0, initial_level, 1, 0, init_callback, NULL);
+  pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
+
   pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
   pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
+
+  pp->ghost_aux = NULL;
+  pp->mesh_aux = NULL;
 
   return pp;
 }
@@ -75,8 +80,17 @@ p4est_wrap_new (int initial_level)
 void
 p4est_wrap_destroy (p4est_wrap_t * pp)
 {
+  if (pp->mesh_aux != NULL) {
+    p4est_mesh_destroy (pp->mesh_aux);
+  }
+  if (pp->ghost_aux != NULL) {
+    p4est_ghost_destroy (pp->ghost_aux);
+  }
+ 
   p4est_mesh_destroy (pp->mesh);
   p4est_ghost_destroy (pp->ghost);
+  
+  P4EST_FREE (pp->flags);
   p4est_destroy (pp->p4est);
   p4est_connectivity_destroy (pp->conn);
 
