@@ -45,6 +45,7 @@ typedef struct p8est_wrap
   p8est_mesh_t       *mesh;
   p8est_ghost_t      *ghost_aux;
   p8est_mesh_t       *mesh_aux;
+  int                 match_aux;
 }
 p8est_wrap_t;
 

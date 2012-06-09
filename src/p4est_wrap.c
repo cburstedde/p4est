@@ -101,6 +101,7 @@ p4est_wrap_new (int initial_level)
 
   pp->ghost_aux = NULL;
   pp->mesh_aux = NULL;
+  pp->match_aux = 0;
 
   return pp;
 }
@@ -138,6 +139,7 @@ p4est_wrap_refine (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh_aux == NULL);
   P4EST_ASSERT (pp->ghost_aux == NULL);
+  P4EST_ASSERT (pp->match_aux == 0);
 
   allz = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt)
@@ -159,6 +161,7 @@ p4est_wrap_refine (p4est_wrap_t * pp)
 
   pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   pp->mesh_aux = p4est_mesh_new (p4est, pp->ghost_aux, P4EST_CONNECT_FULL);
+  pp->match_aux = 1;
 }
 
 void
@@ -168,6 +171,7 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
+  P4EST_ASSERT (pp->match_aux == 1);
 
   /* In the future the flags could be used to pass partition weights */
   P4EST_FREE (pp->flags);
@@ -178,6 +182,7 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   p4est_ghost_destroy (pp->ghost);
   pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
   pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
+  pp->match_aux = 0;
 }
 
 void
@@ -187,6 +192,7 @@ p4est_wrap_complete (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
+  P4EST_ASSERT (pp->match_aux == 0);
   
   p4est_mesh_destroy (pp->mesh_aux);
   p4est_ghost_destroy (pp->ghost_aux);
@@ -199,7 +205,8 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
 #ifdef P4EST_DEBUG
   int                 nface;
-  p4est_mesh_t       *mesh = leaf->pp->mesh;
+  p4est_mesh_t       *mesh =
+    leaf->pp->match_aux ? leaf->pp->mesh_aux : leaf->pp->mesh;
 #endif
   p4est_quadrant_t    corner;
 
