@@ -226,7 +226,7 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
   printf ("C: Leaf level %d tree %d tree_leaf %d local_leaf %d\n",
           leaf->level, leaf->which_tree, leaf->which_quad, leaf->total_quad);
   for (nface = 0; nface < P4EST_FACES; ++nface) {
-    printf ("C: Leaf face %d leaf %d\n", nface,
+    printf ("C: Leaf face %d neighbor leaf %d\n", nface,
             mesh->quad_to_quad[P4EST_FACES * leaf->total_quad + nface]);
   }
 #endif
