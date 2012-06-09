@@ -180,6 +180,20 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
 }
 
+void
+p4est_wrap_complete (p4est_wrap_t * pp)
+{
+  P4EST_ASSERT (pp->mesh != NULL);
+  P4EST_ASSERT (pp->ghost != NULL);
+  P4EST_ASSERT (pp->mesh_aux != NULL);
+  P4EST_ASSERT (pp->ghost_aux != NULL);
+  
+  p4est_mesh_destroy (pp->mesh_aux);
+  p4est_ghost_destroy (pp->ghost_aux);
+  pp->ghost_aux = NULL;
+  pp->mesh_aux = NULL;
+}
+
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {

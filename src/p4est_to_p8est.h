@@ -345,6 +345,7 @@
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_refine               p8est_wrap_refine
 #define p4est_wrap_partition            p8est_wrap_partition
+#define p4est_wrap_complete             p8est_wrap_complete
 #define p4est_wrap_leaf_next            p8est_wrap_leaf_next
 #define p4est_wrap_leaf_first           p8est_wrap_leaf_first
 

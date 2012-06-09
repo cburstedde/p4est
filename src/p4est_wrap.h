@@ -77,6 +77,11 @@ void                p4est_wrap_refine (p4est_wrap_t * pp);
  */
 void                p4est_wrap_partition (p4est_wrap_t * pp);
 
+/** Free memory for the intermediate mesh.
+ * Sets mesh_aux and ghost_aux to NULL.
+ */
+void                p4est_wrap_complete (p4est_wrap_t * pp);
+
 /*** ITERATOR OVER THE FOREST LEAVES ***/
 
 typedef struct p4est_wrap_leaf

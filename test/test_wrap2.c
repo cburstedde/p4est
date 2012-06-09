@@ -42,6 +42,7 @@ main (int argc, char **argv)
   wrap = p4est_wrap_new (0);
   p4est_wrap_refine (wrap);
   p4est_wrap_partition (wrap);
+  p4est_wrap_complete (wrap);
   p4est_wrap_destroy (wrap);
 
   p4est_wrap_finalize ();
