@@ -133,6 +133,11 @@ p4est_wrap_refine (p4est_wrap_t * pp)
   p4est_t            *p4est = pp->p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
+  
+  P4EST_ASSERT (pp->mesh != NULL);
+  P4EST_ASSERT (pp->ghost != NULL);
+  P4EST_ASSERT (pp->mesh_aux == NULL);
+  P4EST_ASSERT (pp->ghost_aux == NULL);
 
   allz = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt)
@@ -159,7 +164,20 @@ p4est_wrap_refine (p4est_wrap_t * pp)
 void
 p4est_wrap_partition (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (pp->mesh != NULL);
+  P4EST_ASSERT (pp->ghost != NULL);
+  P4EST_ASSERT (pp->mesh_aux != NULL);
+  P4EST_ASSERT (pp->ghost_aux != NULL);
+
+  /* In the future the flags could be used to pass partition weights */
+  P4EST_FREE (pp->flags);
   p4est_partition_ext (pp->p4est, 1, NULL);
+  pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
+
+  p4est_mesh_destroy (pp->mesh);
+  p4est_ghost_destroy (pp->ghost);
+  pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
+  pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
 }
 
 static p4est_wrap_leaf_t *
