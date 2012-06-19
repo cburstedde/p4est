@@ -47,6 +47,7 @@ SC_EXTERN_C_BEGIN;
 
 /** Typedef for quadrant coordinates. */
 typedef int32_t     p4est_qcoord_t;
+#define p4est_qcoord_compare sc_int32_compare
 #define P4EST_MPI_QCOORD MPI_INT
 #define P4EST_VTK_QCOORD "Int32"
 #define P4EST_QCOORD_MIN INT32_MIN
@@ -55,8 +56,10 @@ typedef int32_t     p4est_qcoord_t;
 
 /** Typedef for counting topological entities (trees, tree vertices). */
 typedef int32_t     p4est_topidx_t;     /**< must not be larger than int */
+#define p4est_topidx_compare sc_int32_compare
 #define P4EST_MPI_TOPIDX MPI_INT
 #define P4EST_VTK_TOPIDX "Int32"
+#define P4EST_TOPIDX_MIN INT32_MIN
 #define P4EST_TOPIDX_MAX INT32_MAX
 #define P4EST_TOPIDX_FITS_32 1
 #define P4EST_TOPIDX_1   ((p4est_topidx_t) 1)
@@ -66,13 +69,16 @@ typedef int32_t     p4est_locidx_t;
 #define p4est_locidx_compare sc_int32_compare
 #define P4EST_MPI_LOCIDX MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
+#define P4EST_LOCIDX_MIN INT32_MIN
 #define P4EST_LOCIDX_MAX INT32_MAX
 #define P4EST_LOCIDX_1   ((p4est_locidx_t) 1)
 
 /** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
+#define p4est_gloidx_compare sc_int64_compare
 #define P4EST_MPI_GLOIDX MPI_LONG_LONG_INT
 #define P4EST_VTK_GLOIDX "Int64"
+#define P4EST_GLOIDX_MIN INT64_MIN
 #define P4EST_GLOIDX_MAX INT64_MAX
 #define P4EST_GLOIDX_1   ((p4est_gloidx_t) 1)
 
