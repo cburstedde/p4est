@@ -258,7 +258,8 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
     /* Send information to processor that counts my first local quadrants */
     P4EST_ASSERT (rank > 0 && p4est->first_local_tree == t);
     tree = p4est_tree_array_index (p4est->trees, t);
-    sendbuf = (p4est_gloidx_t) tree->quadrants.elem_count;
+    /* Always below the 32bit limit since this is processor-local data */
+    sendbuf = (p4est_locidx_t) tree->quadrants.elem_count;
     for (p = rank - 1; treecount[p] == 0; --p) {
       P4EST_ASSERT (p > 0);
     }
