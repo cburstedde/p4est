@@ -118,7 +118,8 @@ test_deflate (p4est_t * p4est)
   sc_array_t        *qarr, *darr;
 
   /* collect information to deflate (serialize) the forest */
-  carr = p4est_connectivity_deflate (p4est->connectivity, SC_IO_ENCODE_NONE);
+  carr = p4est_connectivity_deflate (p4est->connectivity,
+                                     P4EST_CONN_ENCODE_NONE);
   pertree = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
   p4est_comm_count_pertree (p4est, pertree);
   darr = NULL;

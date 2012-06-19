@@ -39,7 +39,7 @@ p4est_deflate_quadrants (p4est_t * p4est, sc_array_t **data)
   p4est_tree_t      *tree;
   p4est_quadrant_t  *q;
   p4est_qcoord_t    *qap;
-  void              *dap;
+  char              *dap;
 
   qarr = sc_array_new_size (qsize,
                             (P4EST_DIM + 1) * p4est->local_num_quadrants);
