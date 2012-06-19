@@ -37,7 +37,7 @@
  *                      x y z level for each quadrant on this processor.
  *                      The tree information is not extracted.
  */
-sc_array_t        *p4est_deflate_quadrants (p8est_t * p8est,
-                                              sc_array_t **data);
+sc_array_t        *p8est_deflate_quadrants (p8est_t * p8est,
+                                            sc_array_t **data);
 
 #endif /* !P8EST_IO_H */
