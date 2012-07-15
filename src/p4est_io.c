@@ -35,18 +35,18 @@
 #endif
 #include <sc_search.h>
 
-sc_array_t        *
-p4est_deflate_quadrants (p4est_t * p4est, sc_array_t **data)
+sc_array_t         *
+p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
 {
-  const size_t       qsize = sizeof (p4est_qcoord_t);
-  const size_t       dsize = p4est->data_size;
-  size_t             qtreez, qz;
-  sc_array_t        *qarr, *darr;
-  p4est_topidx_t     tt;
-  p4est_tree_t      *tree;
-  p4est_quadrant_t  *q;
-  p4est_qcoord_t    *qap;
-  char              *dap;
+  const size_t        qsize = sizeof (p4est_qcoord_t);
+  const size_t        dsize = p4est->data_size;
+  size_t              qtreez, qz;
+  sc_array_t         *qarr, *darr;
+  p4est_topidx_t      tt;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *q;
+  p4est_qcoord_t     *qap;
+  char               *dap;
 
   qarr = sc_array_new_size (qsize,
                             (P4EST_DIM + 1) * p4est->local_num_quadrants);
@@ -58,7 +58,7 @@ p4est_deflate_quadrants (p4est_t * p4est, sc_array_t **data)
     darr = sc_array_new_size (dsize, p4est->local_num_quadrants);
     dap = darr->array;
   }
-  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {    
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
     tree = p4est_tree_array_index (p4est->trees, tt);
     qtreez = tree->quadrants.elem_count;
     for (qz = 0; qz < qtreez; ++qz) {
@@ -84,11 +84,11 @@ p4est_deflate_quadrants (p4est_t * p4est, sc_array_t **data)
   return qarr;
 }
 
-p4est_t           *
-p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t *connectivity,
-               const p4est_gloidx_t *global_first_quadrant,
-               const p4est_gloidx_t *pertree,
-               sc_array_t *quadrants, sc_array_t *data, void *user_pointer)
+p4est_t            *
+p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+               const p4est_gloidx_t * global_first_quadrant,
+               const p4est_gloidx_t * pertree,
+               sc_array_t * quadrants, sc_array_t * data, void *user_pointer)
 {
   const p4est_gloidx_t *gfq;
   int                 i;
@@ -108,7 +108,7 @@ p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t *connectivity,
   size_t              qz, zqoffset, zqthistree;
   p4est_qcoord_t     *qap;
   char               *dap;
- 
+
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_inflate\n");
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
@@ -225,7 +225,9 @@ p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t *connectivity,
 #ifdef P4_TO_P8
         q->z = *qap++;
 #endif
+/* *INDENT-OFF* HORRIBLE indent bug */
         q->level = ql = (int8_t) *qap++;
+/* *INDENT-ON* */
         P4EST_ASSERT (ql >= 0 && ql <= P4EST_QMAXLEVEL);
         ++tree->quadrants_per_level[ql];
         tml = SC_MAX (tml, ql);

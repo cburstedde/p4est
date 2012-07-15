@@ -37,8 +37,8 @@
  *                      x y level for each quadrant on this processor.
  *                      The tree information is not extracted.
  */
-sc_array_t        *p4est_deflate_quadrants (p4est_t * p4est,
-                                            sc_array_t **data);
+sc_array_t         *p4est_deflate_quadrants (p4est_t * p4est,
+                                             sc_array_t ** data);
 
 /** Create a new p4est based on serialized data.
  * See p4est.h and p4est_communication.h for more information on parameters.
@@ -57,11 +57,12 @@ sc_array_t        *p4est_deflate_quadrants (p4est_t * p4est,
  * \param [in] user_pointer  Assign to the user_pointer member of the p4est.
  * \return              The newly created p4est.
  */
-p4est_t           *p4est_inflate (MPI_Comm mpicomm,
-                                  p4est_connectivity_t *connectivity,
-                                  const p4est_gloidx_t *global_first_quadrant,
-                                  const p4est_gloidx_t *pertree,
-                                  sc_array_t *quadrants, sc_array_t *data,
-                                  void *user_pointer);
+p4est_t            *p4est_inflate (MPI_Comm mpicomm,
+                                   p4est_connectivity_t * connectivity,
+                                   const p4est_gloidx_t *
+                                   global_first_quadrant,
+                                   const p4est_gloidx_t * pertree,
+                                   sc_array_t * quadrants, sc_array_t * data,
+                                   void *user_pointer);
 
 #endif /* !P4EST_IO_H */
