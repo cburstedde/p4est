@@ -27,12 +27,14 @@
 #include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
+#include <p8est_io.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_ghost.h>
+#include <p4est_io.h>
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
 #include <sc_notify.h>
@@ -3352,34 +3354,41 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
             int load_data, void *user_pointer,
             p4est_connectivity_t ** connectivity)
 {
+  return p4est_load_ext (filename, mpicomm, data_size, load_data,
+                         0, 0, user_pointer, connectivity);
+}
+
+p4est_t            *
+p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
+                int load_data, int autopartition, int broadcasthead,
+                void *user_pointer, p4est_connectivity_t ** connectivity)
+{
   const int           headc = 6;
-  const int           align = 16;
+  const int           align = 32;
   int                 retval;
   int                 mpiret;
   int                 num_procs, rank;
-  int                 fnum_procs;
-  int                 i;
-  long                fpos;
+  int                 save_num_procs;
   int                 save_data;
-  uint64_t           *u64a;
+  int                 i;
+  uint64_t           *u64a, u64int;
   size_t              save_data_size;
-  size_t              qbuf_size;
-  size_t              zz, zcount;
+  size_t              qbuf_size, comb_size, head_count;
+  size_t              zz, zcount, zpadding;
   FILE               *file;
-  p4est_topidx_t      jt;
+  p4est_topidx_t      jt, num_trees;
+  p4est_gloidx_t     *gfq;
+  p4est_gloidx_t     *pertree;
+  p4est_qcoord_t     *qap;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
-  p4est_tree_t       *tree;
-  p4est_quadrant_t    lq, *gfpos, *q;
-  p4est_qcoord_t      qbuffer[P4EST_DIM + 1];
-  p4est_qcoord_t     *qall, *qpos;
-  sc_array_t         *tquadrants;
+  sc_array_t         *qarr, *darr;
+  sc_io_source_t     *src;
+  char               *dap, *lbuf;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
 
-  conn = *connectivity = p4est_connectivity_load (filename, &zcount);
-  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  fpos = (((long) zcount + align - 1) / align) * align;
+  SC_CHECK_ABORT (!broadcasthead, "Header broadcast not implemented");
 
   /* retrieve MPI information */
   mpiret = MPI_Comm_size (mpicomm, &num_procs);
@@ -3387,53 +3396,30 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  /* assign some data members */
-  p4est->mpicomm = mpicomm;
-  p4est->mpisize = num_procs;
-  p4est->mpirank = rank;
-  p4est->data_size = data_size;
-  p4est->user_pointer = user_pointer;
-  p4est->connectivity = conn;
-  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
-
-  /* allocate memory pools */
-  if (data_size > 0) {
-    p4est->user_data_pool = sc_mempool_new (data_size);
-  }
-  else {
-    p4est->user_data_pool = NULL;
-    load_data = 0;
-  }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
-
-  /* create tree array */
-  p4est->trees = sc_array_new (sizeof (p4est_tree_t));
-  sc_array_resize (p4est->trees, conn->num_trees);
-  for (jt = 0; jt < conn->num_trees; ++jt) {
-    tree = p4est_tree_array_index (p4est->trees, jt);
-    sc_array_init (&tree->quadrants, sizeof (p4est_quadrant_t));
-    P4EST_QUADRANT_INIT (&tree->first_desc);
-    P4EST_QUADRANT_INIT (&tree->last_desc);
-    tree->quadrants_offset = 0;
-    for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
-      tree->quadrants_per_level[i] = 0;
-    }
-    for (; i <= P4EST_MAXLEVEL; ++i) {
-      tree->quadrants_per_level[i] = -1;
-    }
-    tree->maxlevel = 0;
-  }
-
-  /* allocate partition data */
-  p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
-  gfpos = p4est->global_first_position =
-    P4EST_ALLOC (p4est_quadrant_t, num_procs + 1);
-
-  /* open file and skip connectivity */
+  /* open file on all processors */
   file = fopen (filename, "rb");
   SC_CHECK_ABORT (file != NULL, "file open");
-  retval = fseek (file, fpos, SEEK_SET);
-  SC_CHECK_ABORT (retval == 0, "seek header");
+
+  /* read connectivity */
+  src = sc_io_source_new (SC_IO_TYPE_FILEFILE, SC_IO_ENCODE_NONE, file);
+  SC_CHECK_ABORT (src != NULL, "file source");
+  conn = *connectivity = p4est_connectivity_source (src);
+  SC_CHECK_ABORT (conn != NULL, "connectivity source");
+  retval = sc_io_source_complete (src, NULL, &zcount);
+  SC_CHECK_ABORT (!retval, "source complete");
+  zpadding = (align - zcount % align) % align;
+  retval = sc_io_source_read (src, NULL, zpadding, NULL);
+  SC_CHECK_ABORT (!retval, "source padding");
+  retval = sc_io_source_destroy (src);
+  SC_CHECK_ABORT (!retval, "source destroy");
+
+  /* set some parameters */
+  if (data_size == 0) {
+    load_data = 0;
+  }
+  num_trees = conn->num_trees;
+  head_count = (size_t) (headc + num_procs) + (size_t) num_trees;
+  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
 
   /* read format and partition information */
   u64a = P4EST_ALLOC (uint64_t, headc);
@@ -3449,158 +3435,101 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
     SC_CHECK_ABORT (save_data_size == data_size, "invalid data size");
     SC_CHECK_ABORT (save_data, "quadrant data not saved");
   }
-  fnum_procs = u64a[5];
-  SC_CHECK_ABORT (fnum_procs <= num_procs, "invalid MPI size");
-  u64a = P4EST_REALLOC (u64a, uint64_t, fnum_procs);
-  //SC_CHECK_ABORT (u64a[5] == (uint64_t) num_procs, "invalid MPI size");
-  sc_fread (u64a, sizeof (uint64_t), (size_t) fnum_procs, file,
-            "read quadrant partition");
-  p4est->global_first_quadrant[0] = 0;
+  save_num_procs = (int) u64a[5];
+  comb_size = qbuf_size + save_data_size;
+  SC_CHECK_ABORT (autopartition || num_procs == save_num_procs,
+                  "num procs mismatch");
 
-  /* the strategy is for the last (num_procs - fnum_procs) to be empty
-   * partitions, then to repartition at the end */
-  for (i = 0; i < fnum_procs; ++i) {
-    p4est->global_first_quadrant[i + 1] = (p4est_gloidx_t) u64a[i];
-  }
-  for (; i < num_procs; i++) {
-    p4est->global_first_quadrant[i + 1] = (p4est_gloidx_t)
-      u64a[fnum_procs - 1];
-  }
-
-  P4EST_FREE (u64a);
-  sc_fread (gfpos, sizeof (p4est_quadrant_t),
-            (size_t) (fnum_procs + 1), file, "read tree partition");
-  for (i = fnum_procs + 1; i <= num_procs; i++) {
-    gfpos[i] = gfpos[fnum_procs];
-  }
-  p4est->global_num_quadrants = p4est->global_first_quadrant[num_procs];
-  p4est->local_num_quadrants = 0;
-
-  /* seek to the beginning of this processor's storage */
-  if (rank > 0 && rank < fnum_procs) {
-    fpos = (long)
-      (p4est->global_first_quadrant[rank] * qbuf_size +
-       (2 * rank + gfpos[rank].p.which_tree) * sizeof (p4est_quadrant_t));
-    if (save_data) {
-      fpos += p4est->global_first_quadrant[rank] * save_data_size;
-    }
-    retval = fseek (file, fpos, SEEK_CUR);
-    SC_CHECK_ABORT (retval == 0, "seek data");
-  }
-
-  /*
-   * Read local last tree and quadrant information.
-   * See comments and code in p4est_save for the data layout.
-   */
-  if (rank < fnum_procs) {
-    sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read last tree");
-    p4est->last_local_tree = lq.p.which_tree;
-    if (p4est->last_local_tree < 0) {
-      SC_CHECK_ABORT (p4est->last_local_tree == -2, "invalid empty tree");
-      p4est->first_local_tree = -1;
-    }
-    else {
-      p4est->first_local_tree = gfpos[rank].p.which_tree;
-    }
-    for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
-      /* read tree quadrants */
-      tree = p4est_tree_array_index (p4est->trees, jt);
-      tquadrants = &tree->quadrants;
-      sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read tree count");
-      SC_CHECK_ABORT (lq.p.piggy3.local_num > 0, "invalid tree count");
-      zcount = (size_t) lq.p.piggy3.local_num;
-      sc_array_resize (tquadrants, zcount);
-      memset (tquadrants->array, 0, zcount * sizeof (p4est_quadrant_t));
-      if (!save_data) {
-        qpos = qall = P4EST_ALLOC (p4est_qcoord_t, (P4EST_DIM + 1) * zcount);
-        sc_fread (qall, qbuf_size, zcount, file, "read quadrants");
-      }
-      else {
-        qpos = qall = NULL;
-      }
-      for (zz = 0; zz < zcount; ++zz) {
-        q = p4est_quadrant_array_index (tquadrants, zz);
-        if (save_data) {
-          sc_fread (qbuffer, qbuf_size, 1, file, "read quadrant");
-          q->x = qbuffer[0];
-          q->y = qbuffer[1];
-#ifdef P4_TO_P8
-          q->z = qbuffer[2];
-#endif
-          q->level = (int8_t) qbuffer[P4EST_DIM];
-        }
-        else {
-          q->x = *qpos++;
-          q->y = *qpos++;
-#ifdef P4_TO_P8
-          q->z = *qpos++;
-#endif
-          /* *INDENT-OFF* HORRIBLE indent bug */
-          q->level = (int8_t) *qpos++;
-          /* *INDENT-ON* */
-        }
-        SC_CHECK_ABORT (p4est_quadrant_is_valid (q), "invalid quadrant");
-        if (data_size > 0)
-          q->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
-        else
-          q->p.user_data = NULL;
-        if (load_data) {
-          P4EST_ASSERT (data_size > 0);
-          sc_fread (q->p.user_data, data_size, 1, file, "read quadrant data");
-        }
-        else if (save_data) {
-          retval = fseek (file, (long) save_data_size, SEEK_CUR);
-          SC_CHECK_ABORT (retval == 0, "seek quadrant data");
-        }
-        ++tree->quadrants_per_level[q->level];
-      }
-      P4EST_FREE (qall);
-
-      /* compute tree properties */
-      q = p4est_quadrant_array_index (tquadrants, 0);
-      p4est_quadrant_first_descendant (q, &tree->first_desc, P4EST_QMAXLEVEL);
-      q = p4est_quadrant_array_index (tquadrants, tquadrants->elem_count - 1);
-      p4est_quadrant_last_descendant (q, &tree->last_desc, P4EST_QMAXLEVEL);
-      for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
-        if (tree->quadrants_per_level[i] > 0) {
-          tree->maxlevel = (int8_t) i;
-        }
-      }
-      for (; i <= P4EST_MAXLEVEL; ++i) {
-        P4EST_ASSERT (tree->quadrants_per_level[i] == -1);
-      }
-      tree->quadrants_offset = p4est->local_num_quadrants;
-      p4est->local_num_quadrants += (p4est_locidx_t) tquadrants->elem_count;
-    }
-    if (p4est->last_local_tree < gfpos[rank + 1].p.which_tree) {
-      sc_fread (&lq, sizeof (p4est_quadrant_t), 1, file, "read extra tree");
-    }
-
-    /* fix quadrant offset */
-    if (p4est->last_local_tree >= 0) {
-      for (jt = p4est->last_local_tree + 1; jt < conn->num_trees; ++jt) {
-        tree = p4est_tree_array_index (p4est->trees, jt);
-        tree->quadrants_offset = p4est->local_num_quadrants;
-      }
+  /* create partition data */
+  gfq = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
+  if (!autopartition) {
+    P4EST_ASSERT (num_procs == save_num_procs);
+    u64a = P4EST_REALLOC (u64a, uint64_t, num_procs);
+    sc_fread (u64a, sizeof (uint64_t), (size_t) num_procs, file,
+              "read quadrant partition");
+    gfq[0] = 0;
+    for (i = 0; i < num_procs; ++i) {
+      gfq[i + 1] = (p4est_gloidx_t) u64a[i];
     }
   }
   else {
-    /* create an empty partition */
-    p4est->first_local_tree = -1;
-    p4est->last_local_tree = -2;
+    /* ignore saved partition and compute a new uniform one */
+    retval = fseek (file, (long) ((save_num_procs - 1) * sizeof (uint64_t)),
+                    SEEK_CUR);
+    SC_CHECK_ABORT (!retval, "seek over ignored partition");
+    sc_fread (&u64int, sizeof (uint64_t), 1, file, "read quadrant count");
+    for (i = 0; i <= num_procs; ++i) {
+      gfq[i] = (p4est_gloidx_t) ((i * u64int) / (uint64_t) num_procs);
+    }
+  }
+  zcount = (size_t) (gfq[rank + 1] - gfq[rank]);
+  
+  /* read pertree data */
+  u64a = P4EST_REALLOC (u64a, uint64_t, num_trees);
+  sc_fread (u64a, sizeof (uint64_t), (size_t) num_trees, file,
+            "read pertree information");
+  pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
+  pertree[0] = 0;
+  for (jt = 0; jt < num_trees; ++jt) {
+    pertree[jt + 1] = (p4est_gloidx_t) u64a[jt];
+  }
+  SC_CHECK_ABORT (gfq[num_procs] == pertree[num_trees], "pertree mismatch");
+  P4EST_FREE (u64a);
+
+  /* seek to the beginning of this processor's storage */
+  zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
+  if (zpadding > 0 || rank > 0) {
+    retval = fseek (file, (long) (zpadding + gfq[rank] * comb_size), SEEK_CUR);
+    SC_CHECK_ABORT (retval == 0, "seek data");
   }
 
-  /* close file and return */
+  /* read quadrant coordinates and data interleaved */
+  qarr = sc_array_new_size (sizeof (p4est_qcoord_t), (P4EST_DIM + 1) * zcount);
+  qap = (p4est_qcoord_t *) qarr->array;
+  darr = NULL;
+  dap = NULL;
+  lbuf = NULL;
+  if (load_data) {
+    P4EST_ASSERT (data_size == save_data_size && data_size > 0);
+    darr = sc_array_new_size (data_size, zcount);
+    dap = darr->array;
+    lbuf = P4EST_ALLOC (char, comb_size);
+  }
+  for (zz = 0; zz < zcount; ++zz) {
+    if (load_data) {
+      sc_fread (lbuf, comb_size, 1, file, "read quadrant with data");
+      memcpy (qap, lbuf, qbuf_size);
+      memcpy (dap, lbuf + qbuf_size, data_size);
+    }
+    else {
+      sc_fread (qap, qbuf_size, 1, file, "read quadrant with data");
+      if (save_data_size > 0) {
+        retval = fseek (file, save_data_size, SEEK_CUR);
+        SC_CHECK_ABORT (retval == 0, "seek over data");
+      }
+    }
+    qap += P4EST_DIM + 1;
+    dap += data_size;
+  }
+  P4EST_FREE (lbuf);
+
+  /* close file */
   retval = fclose (file);
   SC_CHECK_ABORT (retval == 0, "file close");
   file = NULL;
 
-  /* assert that we loaded a valid forest */
-  SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
-
-  if (fnum_procs < num_procs) {
-    p4est_partition (p4est, NULL);
+  /* create p4est from accumulated information */
+  p4est = p4est_inflate (mpicomm, conn, gfq, pertree,
+                         qarr, darr, user_pointer);
+  sc_array_destroy (qarr);
+  if (darr != NULL) {
+    sc_array_destroy (darr);
   }
+  P4EST_FREE (pertree);
+  P4EST_FREE (gfq);
+
+  /* assert that we loaded a valid forest and return */
+  SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_load with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);

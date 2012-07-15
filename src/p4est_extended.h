@@ -97,6 +97,33 @@ void                p4est_partition_ext (p4est_t * p4est,
                                          int partition_for_coarsening,
                                          p4est_weight_t weight_fn);
 
+/** Load the complete connectivity/p4est structure from disk.
+ * It is possible to load the file with a different number of processors
+ * than has been used to write it.  The partition will then be uniform.
+ * \param [in] filename         Name of the file to read.
+ * \param [in] mpicomm          A valid MPI communicator.
+ * \param [in] data_size        Size of data for each quadrant which can be
+ *                              zero.  Then user_data_pool is set to NULL.
+ *                              If data_size is zero, load_data is ignored.
+ * \param [in] load_data        If true, the element data is loaded.  This is
+ *                              only permitted if the saved data size matches.
+ *                              If false, the stored data size is ignored.
+ * \param [in] autopartition    Ignore saved partition and make it uniform.
+ * \param [in] broadcasthead    Have only rank 0 read headers and bcast them.
+ * \param [in] user_pointer     Assign to the user_pointer member of the p4est
+ *                              before init_fn is called the first time.
+ * \param [out] connectivity    Connectivity must be destroyed separately.
+ * \return          Returns a valid forest structure. A pointer to a valid
+ *                  connectivity structure is returned through the last
+ *                  argument.
+ * \note            Aborts on file errors or invalid file contents.
+ */
+p4est_t            *p4est_load_ext (const char *filename, MPI_Comm mpicomm,
+                                    size_t data_size, int load_data,
+                                    int autopartition, int broadcasthead,
+                                    void *user_pointer,
+                                    p4est_connectivity_t ** connectivity);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_EXTENDED_H */

@@ -161,6 +161,7 @@
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_partition_ext             p8est_partition_ext
+#define p4est_load_ext                  p8est_load_ext
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
