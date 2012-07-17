@@ -1011,7 +1011,7 @@ p4est_connectivity_t *
 p4est_connectivity_load (const char *filename, size_t * bytes)
 {
   int                 retval;
-  size_t              bytes_out;
+  size_t              bytes_in;
   sc_io_source_t     *source;
   p4est_connectivity_t *conn;
 
@@ -1023,7 +1023,7 @@ p4est_connectivity_load (const char *filename, size_t * bytes)
 
   /* Get byte length and close file even on earlier read error */
   conn = p4est_connectivity_source (source);
-  retval = sc_io_source_complete (source, &bytes_out, NULL) || conn == NULL;
+  retval = sc_io_source_complete (source, &bytes_in, NULL) || conn == NULL;
   retval = sc_io_source_destroy (source) || retval;
   if (retval) {
     if (conn != NULL) {
@@ -1033,7 +1033,7 @@ p4est_connectivity_load (const char *filename, size_t * bytes)
   }
 
   if (bytes != NULL) {
-    *bytes = bytes_out;
+    *bytes = bytes_in;
   }
   return conn;
 }
