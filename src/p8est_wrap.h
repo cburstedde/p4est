@@ -49,31 +49,25 @@ typedef struct p8est_wrap
 }
 p8est_wrap_t;
 
-/** Call global initialization of p4est and sc.
- * Not strictly necessary but uses an MPI_Comm to decide on who outputs.
+/** Create p8est and auxiliary data structures on the unit cube domain.
  * Expects MPI_Init to be called beforehand.
- * Passes MPI_COMM_WORLD to p4est.  We should wrap the MPI_Comm and pass it.
+ * The pp->flags array is initialized to all zeros.
  */
-void                p8est_wrap_init (void);
-void                p8est_wrap_finalize (void);
+p8est_wrap_t       *p8est_wrap_new (MPI_Comm mpicomm, int initial_level);
 
-/** Create p4est and auxiliary data structures.
- * Expects MPI_Init to be called beforehand.
- * Passes MPI_COMM_WORLD to p4est.  We should wrap the MPI_Comm and pass it.
- * The pp->flags array is initialized to zeros.
- */
-p8est_wrap_t       *p8est_wrap_new (int initial_level);
+/** Passes MPI_COMM_WORLD to p8est_wrap_new. */
+p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
 
-/** Call p8est_refine, coarsen, balance to update pp->p4est.
+/** Call p8est_refine, coarsen, balance to update pp->p8est.
  * Checks pp->flags as per-quadrant input against p8est_wrap_flags_t.
- * The pp->flags array is updated along with p4est and initialized to zeros.
+ * The pp->flags array is updated along with p8est and initialized to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
  */
 void                p8est_wrap_refine (p8est_wrap_t * pp);
 
 /** Call p8est_partition for equal leaf distribution.
- * Frees the old ghost and mesh first and updates pp->flags along with p4est.
+ * Frees the old ghost and mesh first and updates pp->flags along with p8est.
  * Creates ghost and mesh to represent the new mesh.
  */
 void                p8est_wrap_partition (p8est_wrap_t * pp);

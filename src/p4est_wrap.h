@@ -49,20 +49,14 @@ typedef struct p4est_wrap
 }
 p4est_wrap_t;
 
-/** Call global initialization of p4est and sc.
- * Not strictly necessary but uses an MPI_Comm to decide on who outputs.
+/** Create p4est and auxiliary data structures on the unit square domain.
  * Expects MPI_Init to be called beforehand.
- * Passes MPI_COMM_WORLD to p4est.  We should wrap the MPI_Comm and pass it.
+ * The pp->flags array is initialized to all zeros.
  */
-void                p4est_wrap_init (void);
-void                p4est_wrap_finalize (void);
+p4est_wrap_t       *p4est_wrap_new (MPI_Comm mpicomm, int initial_level);
 
-/** Create p4est and auxiliary data structures.
- * Expects MPI_Init to be called beforehand.
- * Passes MPI_COMM_WORLD to p4est.  We should wrap the MPI_Comm and pass it.
- * The pp->flags array is initialized to zeros.
- */
-p4est_wrap_t       *p4est_wrap_new (int initial_level);
+/** Passes MPI_COMM_WORLD to p4est_wrap_new. */
+p4est_wrap_t       *p4est_wrap_new_world (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
 
 /** Call p4est_refine, coarsen, balance to update pp->p4est.

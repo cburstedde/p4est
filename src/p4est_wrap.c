@@ -58,27 +58,8 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-void
-p4est_wrap_init (void)
-{
-#ifdef P4EST_DEBUG
-  int                 lp = SC_LP_DEFAULT;
-#else
-  int                 lp = SC_LP_PRODUCTION;
-#endif
-
-  sc_init (MPI_COMM_WORLD, 0, 0, NULL, lp);
-  p4est_init (NULL, lp);
-}
-
-void
-p4est_wrap_finalize (void)
-{
-  sc_finalize ();
-}
-
 p4est_wrap_t       *
-p4est_wrap_new (int initial_level)
+p4est_wrap_new (MPI_Comm mpicomm, int initial_level)
 {
   p4est_wrap_t       *pp;
 
@@ -92,7 +73,7 @@ p4est_wrap_new (int initial_level)
 #else
   pp->conn = p8est_connectivity_new_unitcube ();
 #endif
-  pp->p4est = p4est_new_ext (MPI_COMM_WORLD, pp->conn,
+  pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, init_callback, NULL);
   pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
 
@@ -104,6 +85,12 @@ p4est_wrap_new (int initial_level)
   pp->match_aux = 0;
 
   return pp;
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_world (int initial_level)
+{
+  return p4est_wrap_new (MPI_COMM_WORLD, initial_level);
 }
 
 void

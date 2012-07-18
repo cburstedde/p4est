@@ -30,6 +30,11 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
+#ifdef P4EST_DEBUG
+  int                 lp = SC_LP_DEFAULT;
+#else
+  int                 lp = SC_LP_PRODUCTION;
+#endif
   MPI_Comm            mpicomm;
   p4est_wrap_t       *wrap;
 
@@ -37,15 +42,16 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
 
-  p4est_wrap_init ();
+  sc_init (mpicomm, 0, 0, NULL, lp);
+  p4est_init (NULL, lp);
 
-  wrap = p4est_wrap_new (0);
+  wrap = p4est_wrap_new (mpicomm, 0);
   p4est_wrap_refine (wrap);
   p4est_wrap_partition (wrap);
   p4est_wrap_complete (wrap);
   p4est_wrap_destroy (wrap);
 
-  p4est_wrap_finalize ();
+  sc_finalize ();
 
   mpiret = MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
