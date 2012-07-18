@@ -58,8 +58,9 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-p4est_wrap_t       *
-p4est_wrap_new (MPI_Comm mpicomm, int initial_level)
+static p4est_wrap_t *
+p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t *conn,
+                     int initial_level)
 {
   p4est_wrap_t       *pp;
 
@@ -68,11 +69,7 @@ p4est_wrap_new (MPI_Comm mpicomm, int initial_level)
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
-#ifndef P4_TO_P8
-  pp->conn = p4est_connectivity_new_unitsquare ();
-#else
-  pp->conn = p8est_connectivity_new_unitcube ();
-#endif
+  pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, init_callback, NULL);
   pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
@@ -87,10 +84,52 @@ p4est_wrap_new (MPI_Comm mpicomm, int initial_level)
   return pp;
 }
 
+#ifndef P4_TO_P8
+
+p4est_wrap_t       *
+p4est_wrap_new_unitsquare (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_unitsquare (),
+                              initial_level);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_periodic (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_periodic (),
+                              initial_level);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_moebius (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_moebius (),
+                              initial_level);
+}
+
+#else
+
+p8est_wrap_t       *
+p8est_wrap_new_unitcube (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p8est_connectivity_new_unitcube (),
+                              initial_level);
+}
+
+#endif
+
 p4est_wrap_t       *
 p4est_wrap_new_world (int initial_level)
 {
-  return p4est_wrap_new (MPI_COMM_WORLD, initial_level);
+#ifndef P4_TO_P8
+  return p4est_wrap_new_unitsquare (MPI_COMM_WORLD, initial_level);
+#else
+  return p8est_wrap_new_unitcube (MPI_COMM_WORLD, initial_level);
+#endif
 }
 
 void

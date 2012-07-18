@@ -45,7 +45,11 @@ main (int argc, char **argv)
   sc_init (mpicomm, 0, 0, NULL, lp);
   p4est_init (NULL, lp);
 
-  wrap = p4est_wrap_new (mpicomm, 0);
+#ifndef P4_TO_P8
+  wrap = p4est_wrap_new_unitsquare (mpicomm, 0);
+#else
+  wrap = p8est_wrap_new_unitcube (mpicomm, 0);
+#endif
   p4est_wrap_refine (wrap);
   p4est_wrap_partition (wrap);
   p4est_wrap_complete (wrap);

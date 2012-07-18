@@ -339,7 +339,7 @@
 #define p4est_balance_seeds             p8est_balance_seeds
 
 /* functions in p4est_wrap */
-#define p4est_wrap_new                  p8est_wrap_new
+#define p4est_wrap_new_conn             p8est_wrap_new_conn
 #define p4est_wrap_new_world            p8est_wrap_new_world
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_refine               p8est_wrap_refine

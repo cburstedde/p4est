@@ -49,13 +49,18 @@ typedef struct p4est_wrap
 }
 p4est_wrap_t;
 
-/** Create p4est and auxiliary data structures on the unit square domain.
+/** Create p4est and auxiliary data structures.
  * Expects MPI_Init to be called beforehand.
  * The pp->flags array is initialized to all zeros.
  */
-p4est_wrap_t       *p4est_wrap_new (MPI_Comm mpicomm, int initial_level);
+p4est_wrap_t       *p4est_wrap_new_unitsquare (MPI_Comm mpicomm,
+                                               int initial_level);
+p4est_wrap_t       *p4est_wrap_new_periodic (MPI_Comm mpicomm,
+                                             int initial_level);
+p4est_wrap_t       *p4est_wrap_new_moebius (MPI_Comm mpicomm,
+                                            int initial_level);
 
-/** Passes MPI_COMM_WORLD to p4est_wrap_new. */
+/** Passes MPI_COMM_WORLD to p4est_wrap_new_unitsquare. */
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
 
