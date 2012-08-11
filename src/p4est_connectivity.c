@@ -565,13 +565,15 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
 
 #ifdef P4_TO_P8
   tcount = (size_t) (P8EST_EDGES * conn1->num_trees);
-  if (memcmp (conn1->tree_to_edge, conn2->tree_to_edge, tcount * topsize)) {
+  if (conn1->num_edges > 0 &&
+      memcmp (conn1->tree_to_edge, conn2->tree_to_edge, tcount * topsize)) {
     return 0;
   }
 #endif
 
   tcount = (size_t) (P4EST_CHILDREN * conn1->num_trees);
-  if (memcmp (conn1->tree_to_corner, conn2->tree_to_corner, tcount * topsize)) {
+  if (conn1->num_corners > 0 &&
+      memcmp (conn1->tree_to_corner, conn2->tree_to_corner, tcount * topsize)) {
     return 0;
   }
 
@@ -593,6 +595,7 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
 #ifdef P4_TO_P8
   num_edges = conn1->num_edges;
   num_ett = conn1->ett_offset[num_edges];
+  /* when there are no edges, the latter two ranges are zero */
   if (memcmp (conn1->ett_offset, conn2->ett_offset,
               topsize * (num_edges + 1)) ||
       memcmp (conn1->edge_to_tree, conn2->edge_to_tree,
@@ -604,6 +607,7 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
 
   num_corners = conn1->num_corners;
   num_ctt = conn1->ctt_offset[num_corners];
+  /* when there are no corners, the latter two ranges are zero */
   if (memcmp (conn1->ctt_offset, conn2->ctt_offset,
               topsize * (num_corners + 1)) ||
       memcmp (conn1->corner_to_tree, conn2->corner_to_tree,
