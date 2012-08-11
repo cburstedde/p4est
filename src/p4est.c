@@ -3221,7 +3221,7 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
                file, "write header information");
     P4EST_FREE (u64a);
     fpos += head_count * sizeof (uint64_t);
-    
+
     /* align the start of the quadrants */
     fpos = ftell (file);
     SC_CHECK_ABORT (fpos > 0, "second file tell");
@@ -3316,7 +3316,7 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
     sc_fwrite (lbuf, comb_size, zcount, file, "write quadrants");
 #else
     sc_mpi_write (mpifile, lbuf, comb_size * zcount, MPI_BYTE,
-                    "write quadrants");
+                  "write quadrants");
 #endif
     P4EST_FREE (lbuf);
   }
@@ -3463,7 +3463,7 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
     }
   }
   zcount = (size_t) (gfq[rank + 1] - gfq[rank]);
-  
+
   /* read pertree data */
   u64a = P4EST_REALLOC (u64a, uint64_t, num_trees);
   sc_fread (u64a, sizeof (uint64_t), (size_t) num_trees, file,
@@ -3479,12 +3479,14 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
   /* seek to the beginning of this processor's storage */
   zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
   if (zpadding > 0 || rank > 0) {
-    retval = fseek (file, (long) (zpadding + gfq[rank] * comb_size), SEEK_CUR);
+    retval =
+      fseek (file, (long) (zpadding + gfq[rank] * comb_size), SEEK_CUR);
     SC_CHECK_ABORT (retval == 0, "seek data");
   }
 
   /* read quadrant coordinates and data interleaved */
-  qarr = sc_array_new_size (sizeof (p4est_qcoord_t), (P4EST_DIM + 1) * zcount);
+  qarr =
+    sc_array_new_size (sizeof (p4est_qcoord_t), (P4EST_DIM + 1) * zcount);
   qap = (p4est_qcoord_t *) qarr->array;
   darr = NULL;
   dap = NULL;

@@ -573,7 +573,8 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
 
   tcount = (size_t) (P4EST_CHILDREN * conn1->num_trees);
   if (conn1->num_corners > 0 &&
-      memcmp (conn1->tree_to_corner, conn2->tree_to_corner, tcount * topsize)) {
+      memcmp (conn1->tree_to_corner, conn2->tree_to_corner,
+              tcount * topsize)) {
     return 0;
   }
 
