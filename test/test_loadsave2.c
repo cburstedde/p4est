@@ -115,12 +115,8 @@ test_deflate (p4est_t * p4est)
 {
   p4est_gloidx_t    *pertree;
   p4est_t           *p4est2;
-  sc_array_t        *carr;
   sc_array_t        *qarr, *darr;
 
-  /* collect information to deflate (serialize) the forest */
-  carr = p4est_connectivity_deflate (p4est->connectivity,
-                                     P4EST_CONN_ENCODE_NONE);
   pertree = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
   p4est_comm_count_pertree (p4est, pertree);
   darr = NULL;
@@ -128,7 +124,7 @@ test_deflate (p4est_t * p4est)
 
   /* Data that describes the forest completely
    (a) shared data (identical on all processors):
-       carr
+       p4est->connectivity
        p4est->global_first_quadrant (does not need to be stored away)
        pertree
    (b) per-processor data (partition independent after allgatherv):
@@ -140,12 +136,11 @@ test_deflate (p4est_t * p4est)
   p4est2 = p4est_inflate (p4est->mpicomm, p4est->connectivity,
                           p4est->global_first_quadrant, pertree,
                           qarr, darr, p4est->user_pointer);
-  P4EST_ASSERT (p4est_is_equal (p4est, p4est2, 1));
+  SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, 1), "de/inflate");
   p4est_destroy (p4est2);
 
   /* clean up allocated memory */
   P4EST_FREE (pertree);
-  sc_array_destroy (carr);
   sc_array_destroy (qarr);
   if (darr != NULL) {
     sc_array_destroy (darr);
