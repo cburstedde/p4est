@@ -18,3 +18,9 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2012-08-13 09:18:57.906932 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - "The p4est_load_ext function now has an autopartition parameter.\n\
+    If set to true, p4est will load files written with any mpisize.\n\
+    In this case the partition is set to uniform."
