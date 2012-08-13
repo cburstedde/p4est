@@ -2087,14 +2087,14 @@ p4est_quadrant_disjoint_parent (const void *a, const void *b)
  * count_an: count_ancestor_inlist_accumulator
  */
 static void
-p4est_complete_or_balance_new_kernel (sc_array_t * restrict inlist,
-                                      p4est_quadrant_t * restrict dom,
+p4est_complete_or_balance_new_kernel (sc_array_t * inlist,
+                                      p4est_quadrant_t * dom,
                                       int bound,
-                                      sc_mempool_t * restrict qpool,
-                                      sc_mempool_t * restrict list_alloc,
-                                      sc_array_t * restrict out,
-                                      p4est_quadrant_t * restrict first_desc,
-                                      p4est_quadrant_t * restrict last_desc,
+                                      sc_mempool_t * qpool,
+                                      sc_mempool_t * list_alloc,
+                                      sc_array_t * out,
+                                      p4est_quadrant_t * first_desc,
+                                      p4est_quadrant_t * last_desc,
                                       size_t * count_in, size_t * count_out,
                                       size_t * count_an)
 {

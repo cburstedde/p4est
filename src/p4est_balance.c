@@ -194,27 +194,22 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
 }
 #endif
 
-static void         p4est_bal_corner_con_internal (p4est_quadrant_t const
-                                                   *restrict q,
-                                                   p4est_quadrant_t *
-                                                   restrict p, int corner,
+static void         p4est_bal_corner_con_internal (p4est_quadrant_t const *q,
+                                                   p4est_quadrant_t * p,
+                                                   int corner,
                                                    int balance,
                                                    int *consisent);
 
-static void         p4est_bal_face_con_internal (p4est_quadrant_t const
-                                                 *restrict q,
-                                                 p4est_quadrant_t *
-                                                 restrict p, int face,
-                                                 int balance,
+static void         p4est_bal_face_con_internal (p4est_quadrant_t const *q,
+                                                 p4est_quadrant_t * p,
+                                                 int face, int balance,
                                                  int *consisent,
                                                  p4est_quadrant_t * add);
 
 #ifdef P4_TO_P8
-static void         p8est_bal_edge_con_internal (p4est_quadrant_t const
-                                                 *restrict q,
-                                                 p4est_quadrant_t *
-                                                 restrict p, int edge,
-                                                 int balance,
+static void         p8est_bal_edge_con_internal (p4est_quadrant_t const *q,
+                                                 p4est_quadrant_t * p,
+                                                 int edge, int balance,
                                                  int *consistent,
                                                  p4est_quadrant_t * add);
 #endif
@@ -222,8 +217,8 @@ static void         p8est_bal_edge_con_internal (p4est_quadrant_t const
 /* \a corner is the corner of \a p closest to \a q: the corner of \a q closest
  * to \a p is the dual of \a corner */
 static void
-p4est_bal_corner_con_internal (p4est_quadrant_t const *restrict q,
-                               p4est_quadrant_t * restrict p,
+p4est_bal_corner_con_internal (p4est_quadrant_t const *q,
+                               p4est_quadrant_t * p,
                                int corner, int balance, int *consistent)
 {
   int                 qlevel = q->level;
@@ -308,8 +303,8 @@ p4est_bal_corner_con_internal (p4est_quadrant_t const *restrict q,
 }
 
 static void
-p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
-                             p4est_quadrant_t * restrict p, int face,
+p4est_bal_face_con_internal (p4est_quadrant_t const *q,
+                             p4est_quadrant_t * p, int face,
                              int balance, int *consistent,
                              p4est_quadrant_t * add)
 {
@@ -569,8 +564,8 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *restrict q,
 
 #ifdef P4_TO_P8
 static void
-p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
-                             p4est_quadrant_t * restrict p, int edge,
+p8est_bal_edge_con_internal (p4est_quadrant_t const *q,
+                             p4est_quadrant_t * p, int edge,
                              int balance, int *consistent,
                              p4est_quadrant_t * add)
 {
@@ -719,8 +714,8 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *restrict q,
 #endif
 
 int
-p4est_balance_seeds_face (p4est_quadrant_t * restrict q,
-                          p4est_quadrant_t * restrict p,
+p4est_balance_seeds_face (p4est_quadrant_t * q,
+                          p4est_quadrant_t * p,
                           int face, p4est_connect_type_t balance,
                           sc_array_t * seeds)
 {
@@ -777,8 +772,8 @@ p4est_balance_seeds_face (p4est_quadrant_t * restrict q,
 }
 
 int
-p4est_balance_seeds_corner (p4est_quadrant_t * restrict q,
-                            p4est_quadrant_t * restrict p,
+p4est_balance_seeds_corner (p4est_quadrant_t * q,
+                            p4est_quadrant_t * p,
                             int corner, p4est_connect_type_t balance,
                             sc_array_t * seeds)
 {
@@ -821,8 +816,8 @@ p4est_balance_seeds_corner (p4est_quadrant_t * restrict q,
 
 #ifdef P4_TO_P8
 int
-p8est_balance_seeds_edge (p4est_quadrant_t * restrict q,
-                          p4est_quadrant_t * restrict p,
+p8est_balance_seeds_edge (p4est_quadrant_t * q,
+                          p4est_quadrant_t * p,
                           int edge, p4est_connect_type_t balance,
                           sc_array_t * seeds)
 {
@@ -877,8 +872,7 @@ p8est_balance_seeds_edge (p4est_quadrant_t * restrict q,
 #endif
 
 int
-p4est_balance_seeds (p4est_quadrant_t * restrict q,
-                     p4est_quadrant_t * restrict p,
+p4est_balance_seeds (p4est_quadrant_t * q, p4est_quadrant_t * p,
                      p4est_connect_type_t balance, sc_array_t * seeds)
 {
   int                 outside[P4EST_DIM];
