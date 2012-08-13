@@ -107,7 +107,8 @@ enum
   STATS_P4EST_LOAD2,
   STATS_P4EST_SAVE3,
   STATS_P4EST_LOAD3,
-  STATS_COUNT,
+  STATS_P4EST_LOAD4,
+  STATS_COUNT
 };
 
 static void
@@ -152,6 +153,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                MPI_Comm mpicomm, int mpirank)
 {
   int                 mpiret, retval;
+  unsigned            csum, csum2;
   double              elapsed, wtime;
   p4est_connectivity_t *conn2;
   p4est_t            *p4est, *p4est2;
@@ -219,6 +221,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   /* partition and balance */
   p4est_partition (p4est, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
+  csum = p4est_checksum (p4est);
   sc_stats_set1 (stats + STATS_P4EST_ELEMS,
                  (double) p4est->local_num_quadrants, "p4est elements");
 
@@ -255,6 +258,21 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                   "load/save connectivity mismatch D");
   SC_CHECK_ABORT (p4est_is_equal (p4est, p4est2, 0),
                   "load/save p4est mismatch D");
+  p4est_destroy (p4est2);
+  p4est_connectivity_destroy (conn2);
+
+  /* Test autopartition load feature */
+  wtime = MPI_Wtime ();
+  p4est2 = p4est_load_ext (p4est_name, mpicomm, sizeof (int), 0,
+                           1, 0, NULL, &conn2);
+  elapsed = MPI_Wtime () - wtime;
+  csum2 = p4est_checksum (p4est2);
+  sc_stats_set1 (stats + STATS_P4EST_LOAD4, elapsed, "p4est load 4");
+
+  SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
+                  "load/save connectivity mismatch E");
+  SC_CHECK_ABORT (mpirank != 0 || csum == csum2,
+                  "load/save p4est mismatch E");
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 
