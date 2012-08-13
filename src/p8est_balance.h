@@ -40,32 +40,32 @@
  *                       \a q.
  * \return               True if \a q causes \a p to split.
  */
-int                 p8est_balance_seeds (p8est_quadrant_t * restrict q,
-                                         p8est_quadrant_t * restrict p,
+int                 p8est_balance_seeds (p8est_quadrant_t * q,
+                                         p8est_quadrant_t * p,
                                          p8est_connect_type_t balance,
                                          sc_array_t * seeds);
 
 /** Same as p8est_balance_seeds, optimized for the case when it is already
  * known that \a q is outside of a certain \a face of \a p.
  */
-int                 p8est_balance_seeds_face (p8est_quadrant_t * restrict q,
-                                              p8est_quadrant_t * restrict p,
+int                 p8est_balance_seeds_face (p8est_quadrant_t * q,
+                                              p8est_quadrant_t * p,
                                               int face, p8est_connect_type_t
                                               balance, sc_array_t * seeds);
 
 /** Same as p8est_balance_seeds, optimized for the case when it is already
  * known that \a q is outside of a certain \a edge of \a p.
  */
-int                 p8est_balance_seeds_edge (p8est_quadrant_t * restrict q,
-                                              p8est_quadrant_t * restrict p,
+int                 p8est_balance_seeds_edge (p8est_quadrant_t * q,
+                                              p8est_quadrant_t * p,
                                               int face, p8est_connect_type_t
                                               balance, sc_array_t * seeds);
 
 /** Same as p8est_balance_seeds, optimized for the case when it is already
  * known that \a q is outside of a certain \a corner of \a p.
  */
-int                 p8est_balance_seeds_corner (p8est_quadrant_t * restrict q,
-                                                p8est_quadrant_t * restrict p,
+int                 p8est_balance_seeds_corner (p8est_quadrant_t * q,
+                                                p8est_quadrant_t * p,
                                                 int face, p8est_connect_type_t
                                                 balance, sc_array_t * seeds);
 

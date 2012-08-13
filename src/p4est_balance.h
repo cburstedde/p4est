@@ -40,24 +40,24 @@
  *                       \a q.
  * \return               True if \a q causes \a p to split.
  */
-int                 p4est_balance_seeds (p4est_quadrant_t * restrict q,
-                                         p4est_quadrant_t * restrict p,
+int                 p4est_balance_seeds (p4est_quadrant_t * q,
+                                         p4est_quadrant_t * p,
                                          p4est_connect_type_t balance,
                                          sc_array_t * seeds);
 
 /** Same as p4est_balance_seeds, optimized for the case when it is already
  * known that \a q is outside of a certain \a face of \a p.
  */
-int                 p4est_balance_seeds_face (p4est_quadrant_t * restrict q,
-                                              p4est_quadrant_t * restrict p,
+int                 p4est_balance_seeds_face (p4est_quadrant_t * q,
+                                              p4est_quadrant_t * p,
                                               int face, p4est_connect_type_t
                                               balance, sc_array_t * seeds);
 
 /** Same as p4est_balance_seeds, optimized for the case when it is already
  * known that \a q is outside of a certain \a corner of \a p.
  */
-int                 p4est_balance_seeds_corner (p4est_quadrant_t * restrict q,
-                                                p4est_quadrant_t * restrict p,
+int                 p4est_balance_seeds_corner (p4est_quadrant_t * q,
+                                                p4est_quadrant_t * p,
                                                 int face, p4est_connect_type_t
                                                 balance, sc_array_t * seeds);
 
