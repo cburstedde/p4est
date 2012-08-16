@@ -3132,6 +3132,13 @@ p4est_checksum (p4est_t * p4est)
 void
 p4est_save (const char *filename, p4est_t * p4est, int save_data)
 {
+  p4est_save_ext (filename, p4est, save_data, 1);
+}
+
+void
+p4est_save_ext (const char *filename, p4est_t * p4est,
+                int save_data, int save_partition)
+{
   const int           headc = 6;
   const int           align = 32;
 #ifdef P4EST_MPI
@@ -3141,7 +3148,7 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
 #endif
 #endif
   int                 retval;
-  int                 num_procs, rank;
+  int                 num_procs, save_num_procs, rank;
   int                 i;
   long                fpos = -1, foffset;
   size_t              data_size, qbuf_size, comb_size, head_count;
@@ -3179,7 +3186,8 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
   /* other parameters */
   num_trees = p4est->connectivity->num_trees;
   num_procs = p4est->mpisize;
-  head_count = (size_t) (headc + num_procs) + (size_t) num_trees;
+  save_num_procs = save_partition ? num_procs : 1;
+  head_count = (size_t) (headc + save_num_procs) + (size_t) num_trees;
   rank = p4est->mpirank;
   gfpos = p4est->global_first_position;
   qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
@@ -3210,12 +3218,19 @@ p4est_save (const char *filename, p4est_t * p4est, int save_data)
     u64a[2] = (uint64_t) sizeof (p4est_quadrant_t);
     u64a[3] = (uint64_t) data_size;
     u64a[4] = (uint64_t) save_data;
-    u64a[5] = (uint64_t) num_procs;
-    for (i = 0; i < num_procs; ++i) {
-      u64a[headc + i] = (uint64_t) p4est->global_first_quadrant[i + 1];
+    u64a[5] = (uint64_t) save_num_procs;
+    if (save_partition) {
+      P4EST_ASSERT (save_num_procs == num_procs);
+      for (i = 0; i < num_procs; ++i) {
+        u64a[headc + i] = (uint64_t) p4est->global_first_quadrant[i + 1];
+      }
+    }
+    else {
+      P4EST_ASSERT (save_num_procs == 1);
+      u64a[headc] = (uint64_t) p4est->global_first_quadrant[num_procs];
     }
     for (jt = 0; jt < num_trees; ++jt) {
-      u64a[headc + num_procs + jt] = (uint64_t) pertree[jt + 1];
+      u64a[headc + save_num_procs + jt] = (uint64_t) pertree[jt + 1];
     }
     sc_fwrite (u64a, sizeof (uint64_t), head_count,
                file, "write header information");

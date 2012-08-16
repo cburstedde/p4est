@@ -97,6 +97,26 @@ void                p8est_partition_ext (p8est_t * p8est,
                                          int partition_for_coarsening,
                                          p8est_weight_t weight_fn);
 
+/** Save the complete connectivity/p8est data to disk.  This is a collective
+ * operation that all MPI processes need to call.  All processes write
+ * into the same file, so the filename given needs to be identical over
+ * all parallel invocations.
+ * See p8est_load_ext for information on the autopartition parameter.
+ * \param [in] filename    Name of the file to write.
+ * \param [in] p8est       Valid forest structure.
+ * \param [in] save_data   If true, the element data is saved.
+ *                         Otherwise, a data size of 0 is saved.
+ * \param [in] save_partition   If false, save file as if 1 core was used.
+ *                              If true, save core count and partition.
+ *                         Advantage: Partition can be recovered on loading
+ *                              with same mpisize and autopartition false.
+ *                         Disadvantage: Makes the file depend on mpisize.
+ *                  Either way the file can be loaded with autopartition true.
+ * \note            Aborts on file errors.
+ */
+void                p8est_save_ext (const char *filename, p8est_t * p8est,
+                                    int save_data, int save_partition);
+
 /** Load the complete connectivity/p4est structure from disk.
  * It is possible to load the file with a different number of processors
  * than has been used to write it.  The partition will then be uniform.
