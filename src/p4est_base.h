@@ -31,6 +31,7 @@
 /* indirectly also include sc.h and sc_config.h */
 
 #include <sc_containers.h>
+#define _p4est_const _sc_const
 
 #if \
   (defined (P4EST_MPI) && !defined (SC_MPI)) || \
