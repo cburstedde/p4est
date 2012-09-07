@@ -92,8 +92,9 @@ void                p8est_refine_ext (p8est_t * p8est,
  *                            is modified to allow one level of coarsening.
  * \param [in]     weight_fn  A weighting function or NULL
  *                            for uniform partitioning.
+ * \return         The global number of shipped quadrants
  */
-void                p8est_partition_ext (p8est_t * p8est,
+p4est_gloidx_t      p8est_partition_ext (p8est_t * p8est,
                                          int partition_for_coarsening,
                                          p8est_weight_t weight_fn);
 

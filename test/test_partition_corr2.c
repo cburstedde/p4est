@@ -141,7 +141,7 @@ main (int argc, char **argv)
   /* run partition and coarsen till one quadrant per tree remains */
   i = 0;
   while (p4est_1tree->global_num_quadrants > 1 && i <= P4EST_MAXLEVEL) {
-    p4est_partition_ext (p4est_1tree, 1, NULL);
+    (void) p4est_partition_ext (p4est_1tree, 1, NULL);
     p4est_coarsen (p4est_1tree, 0, coarsen_fn, init_fn);
     i++;
   }
@@ -151,7 +151,7 @@ main (int argc, char **argv)
   i = 0;
   while (p4est_ntrees->global_num_quadrants > connectivity_ntrees->num_trees
          && i <= P4EST_MAXLEVEL) {
-    p4est_partition_ext (p4est_ntrees, 1, NULL);
+    (void) p4est_partition_ext (p4est_ntrees, 1, NULL);
     p4est_coarsen (p4est_ntrees, 0, coarsen_fn, init_fn);
     i++;
   }
@@ -160,8 +160,8 @@ main (int argc, char **argv)
                   "coarsest forest with multiple trees was not achieved");
 
   /* run partition on coarse forest (one quadrant per tree) once again */
-  p4est_partition_ext (p4est_1tree, 1, NULL);
-  p4est_partition_ext (p4est_ntrees, 1, NULL);
+  (void) p4est_partition_ext (p4est_1tree, 1, NULL);
+  (void) p4est_partition_ext (p4est_ntrees, 1, NULL);
 
   /* write output: coarsened */
   p4est_vtk_write_file (p4est_1tree, NULL,

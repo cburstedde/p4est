@@ -206,6 +206,8 @@ p4est_wrap_refine (p4est_wrap_t * pp)
 void
 p4est_wrap_partition (p4est_wrap_t * pp)
 {
+  p4est_gloidx_t        global_shipped;
+
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
@@ -214,7 +216,7 @@ p4est_wrap_partition (p4est_wrap_t * pp)
 
   /* In the future the flags could be used to pass partition weights */
   P4EST_FREE (pp->flags);
-  p4est_partition_ext (pp->p4est, 1, NULL);
+  global_shipped = p4est_partition_ext (pp->p4est, 1, NULL);
   pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
 
   p4est_mesh_destroy (pp->mesh);

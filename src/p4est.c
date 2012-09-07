@@ -2338,10 +2338,10 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 void
 p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
 {
-  p4est_partition_ext (p4est, 0, weight_fn);
+  (void) p4est_partition_ext (p4est, 0, weight_fn);
 }
 
-void
+p4est_gloidx_t
 p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
                      p4est_weight_t weight_fn)
 {
@@ -2386,7 +2386,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   /* this function does nothing in a serial setup */
   if (p4est->mpisize == 1) {
     P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
-    return;
+    return global_shipped;
   }
 
 #ifdef P4EST_MPI
@@ -2463,7 +2463,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
       P4EST_FREE (num_quadrants_in_proc);
       P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING
                                "_partition no shipping\n");
-      return;
+      return global_shipped;
     }
 
     /* determine processor ids to send to */
@@ -2674,6 +2674,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     ("Done " P4EST_STRING "_partition shipped %lld quadrants %.3g%%\n",
      (long long) global_shipped,
      global_shipped * 100. / global_num_quadrants);
+
+  return global_shipped;
 }
 
 #ifdef P4EST_MPI
