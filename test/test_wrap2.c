@@ -30,6 +30,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
+  int                 changed;
 #ifdef P4EST_DEBUG
   int                 lp = SC_LP_DEFAULT;
 #else
@@ -50,9 +51,11 @@ main (int argc, char **argv)
 #else
   wrap = p8est_wrap_new_unitcube (mpicomm, 0);
 #endif
-  p4est_wrap_refine (wrap);
-  p4est_wrap_partition (wrap);
-  p4est_wrap_complete (wrap);
+  changed = p4est_wrap_refine (wrap);
+  if (changed) {
+    p4est_wrap_partition (wrap);
+    p4est_wrap_complete (wrap);
+  }
   p4est_wrap_destroy (wrap);
 
   sc_finalize ();

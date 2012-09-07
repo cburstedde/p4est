@@ -68,8 +68,11 @@ void                p4est_wrap_destroy (p4est_wrap_t * pp);
  * Checks pp->flags as per-quadrant input against p4est_wrap_flags_t.
  * The pp->flags array is updated along with p4est and initialized to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
+ * \return          boolean whether p4est has changed.
+ *                  If true, partition must be called.
+ *                  If false, partition must not be called.
  */
-void                p4est_wrap_refine (p4est_wrap_t * pp);
+int                 p4est_wrap_refine (p4est_wrap_t * pp);
 
 /** Call p4est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p4est.

@@ -152,11 +152,13 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   SC_FREE (pp);
 }
 
-void
+int
 p4est_wrap_refine (p4est_wrap_t * pp)
 {
+  int                 changed;
   size_t              allz, qz;
   p4est_locidx_t      tt;
+  p4est_gloidx_t      global_num;
   p4est_t            *p4est = pp->p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
@@ -178,16 +180,27 @@ p4est_wrap_refine (p4est_wrap_t * pp)
     }
   }
   P4EST_ASSERT (allz == (size_t) p4est->local_num_quadrants);
-  P4EST_FREE (pp->flags);
-  
-  p4est_refine (p4est, 0, refine_callback, init_callback);
-  p4est_coarsen (p4est, 0, coarsen_callback, init_callback);
-  p4est_balance (p4est, P4EST_CONNECT_FULL, init_callback);
-  pp->flags = P4EST_ALLOC_ZERO (int8_t, p4est->local_num_quadrants);
+  changed = 0;
 
-  pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  pp->mesh_aux = p4est_mesh_new (p4est, pp->ghost_aux, P4EST_CONNECT_FULL);
-  pp->match_aux = 1;
+  global_num = p4est->global_num_quadrants;
+  p4est_refine (p4est, 0, refine_callback, init_callback);
+  changed = global_num != p4est->global_num_quadrants;
+
+  global_num = p4est->global_num_quadrants;
+  p4est_coarsen (p4est, 0, coarsen_callback, init_callback);
+  changed = changed || global_num != p4est->global_num_quadrants;
+
+  if (changed) {
+    P4EST_FREE (pp->flags);
+    p4est_balance (p4est, P4EST_CONNECT_FULL, init_callback);
+    pp->flags = P4EST_ALLOC_ZERO (int8_t, p4est->local_num_quadrants);
+
+    pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+    pp->mesh_aux = p4est_mesh_new (p4est, pp->ghost_aux, P4EST_CONNECT_FULL);
+    pp->match_aux = 1;
+  }
+
+  return changed;
 }
 
 void
