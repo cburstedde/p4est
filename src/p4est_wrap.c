@@ -180,7 +180,6 @@ p4est_wrap_refine (p4est_wrap_t * pp)
     }
   }
   P4EST_ASSERT (allz == (size_t) p4est->local_num_quadrants);
-  changed = 0;
 
   global_num = p4est->global_num_quadrants;
   p4est_refine (p4est, 0, refine_callback, init_callback);
@@ -208,10 +207,10 @@ p4est_wrap_partition (p4est_wrap_t * pp)
 {
   p4est_gloidx_t        global_shipped;
 
-  P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
-  P4EST_ASSERT (pp->mesh_aux != NULL);
+  P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
+  P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 1);
 
   /* In the future the flags could be used to pass partition weights */
@@ -229,10 +228,10 @@ p4est_wrap_partition (p4est_wrap_t * pp)
 void
 p4est_wrap_complete (p4est_wrap_t * pp)
 {
-  P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
-  P4EST_ASSERT (pp->mesh_aux != NULL);
+  P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
+  P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 0);
   
   p4est_mesh_destroy (pp->mesh_aux);
