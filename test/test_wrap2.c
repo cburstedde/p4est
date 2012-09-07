@@ -53,8 +53,10 @@ main (int argc, char **argv)
 #endif
   changed = p4est_wrap_refine (wrap);
   if (changed) {
-    p4est_wrap_partition (wrap);
-    p4est_wrap_complete (wrap);
+    changed = p4est_wrap_partition (wrap);
+    if (changed) {
+      p4est_wrap_complete (wrap);
+    }
   }
   p4est_wrap_destroy (wrap);
 

@@ -77,8 +77,11 @@ int                 p4est_wrap_refine (p4est_wrap_t * pp);
 /** Call p4est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p4est.
  * Creates ghost and mesh to represent the new mesh.
+ * \return          boolean whether p4est has changed.
+ *                  If true, complete must be called.
+ *                  If false, complete must not be called.
  */
-void                p4est_wrap_partition (p4est_wrap_t * pp);
+int                 p4est_wrap_partition (p4est_wrap_t * pp);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.

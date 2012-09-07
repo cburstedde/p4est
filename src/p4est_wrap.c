@@ -202,10 +202,10 @@ p4est_wrap_refine (p4est_wrap_t * pp)
   return changed;
 }
 
-void
+int
 p4est_wrap_partition (p4est_wrap_t * pp)
 {
-  p4est_gloidx_t        global_shipped;
+  int                   changed;
 
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
@@ -213,16 +213,28 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 1);
 
-  /* In the future the flags could be used to pass partition weights */
-  P4EST_FREE (pp->flags);
-  global_shipped = p4est_partition_ext (pp->p4est, 1, NULL);
-  pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
-
   p4est_mesh_destroy (pp->mesh);
   p4est_ghost_destroy (pp->ghost);
-  pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
-  pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
   pp->match_aux = 0;
+  
+  /* In the future the flags could be used to pass partition weights */
+  changed = p4est_partition_ext (pp->p4est, 1, NULL) > 0;
+
+  if (changed) {
+    P4EST_FREE (pp->flags);
+    pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
+
+    pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
+    pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
+  }
+  else {
+    pp->ghost = pp->ghost_aux;
+    pp->mesh = pp->mesh_aux;
+    pp->ghost_aux = NULL;
+    pp->mesh_aux = NULL;
+  }
+
+  return changed;
 }
 
 void
