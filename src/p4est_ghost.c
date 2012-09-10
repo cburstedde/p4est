@@ -219,15 +219,31 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
 #endif /* P4EST_MPI */
 
 ssize_t
-p4est_ghost_tree_bsearch (p4est_ghost_t * ghost, p4est_topidx_t which_tree,
+p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
+                          int which_proc, p4est_topidx_t which_tree,
                           const p4est_quadrant_t * q)
 {
   size_t              start, ended;
   ssize_t             result;
   sc_array_t          ghost_view;
 
-  start = (size_t) ghost->tree_offsets[which_tree];
-  ended = (size_t) ghost->tree_offsets[which_tree + 1];
+  start = 0;
+  ended = ghost->ghosts.elem_count;
+  
+  if (which_proc != -1) {
+    P4EST_ASSERT (0 <= which_proc && which_proc < ghost->mpisize);
+    start = SC_MAX (start, (size_t) ghost->proc_offsets[which_proc]);
+    ended = SC_MIN (ended, (size_t) ghost->proc_offsets[which_proc + 1]);
+  }
+  if (which_tree != -1) {
+    P4EST_ASSERT (0 <= which_tree && which_tree < ghost->num_trees);
+    start = SC_MAX (start, (size_t) ghost->tree_offsets[which_tree]);
+    ended = SC_MIN (ended, (size_t) ghost->tree_offsets[which_tree + 1]);
+  }
+
+  if (start >= ended) {
+    return -1;
+  }
 
   /* create a per-tree window on the ghost layer */
   sc_array_init_view (&ghost_view, &ghost->ghosts, start, ended - start);
@@ -289,7 +305,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
       lnid = sc_array_bsearch (quadrants, q, p4est_quadrant_compare);
     }
     else {
-      lnid = p4est_ghost_tree_bsearch (ghost, treeid, q);
+      lnid = p4est_ghost_tree_bsearch (ghost, qproc, treeid, q);
       P4EST_ASSERT (lnid == -1 ||
                     (ghost->proc_offsets[qproc] <= lnid &&
                      lnid < ghost->proc_offsets[qproc + 1]));
@@ -393,7 +409,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
                                  p4est_quadrant_compare);
       }
       else {
-        lnid = p4est_ghost_tree_bsearch (ghost, tqtreeid, &tq);
+        lnid = p4est_ghost_tree_bsearch (ghost, qproc, tqtreeid, &tq);
         P4EST_ASSERT (lnid == -1 ||
                       (ghost->proc_offsets[qproc] <= lnid &&
                        lnid < ghost->proc_offsets[qproc + 1]));
@@ -431,7 +447,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
                                p4est_quadrant_compare);
     }
     else {
-      lnid = p4est_ghost_tree_bsearch (ghost, tqtreeid, &tq);
+      lnid = p4est_ghost_tree_bsearch (ghost, qproc, tqtreeid, &tq);
       P4EST_ASSERT (lnid == -1 ||
                     (ghost->proc_offsets[qproc] <= lnid &&
                      lnid < ghost->proc_offsets[qproc + 1]));
@@ -488,7 +504,7 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
         (tree->quadrants_offset + (p4est_locidx_t) lnid);
     }
     else {
-      lnid = p4est_ghost_tree_bsearch (ghost, treeid, q);
+      lnid = p4est_ghost_tree_bsearch (ghost, qproc, treeid, q);
       return (lnid == -1) ? (p4est_locidx_t) (-1) :
         (q = p4est_quadrant_array_index (&ghost->ghosts, (size_t) lnid),
          q->p.piggy3.local_num);
@@ -536,7 +552,7 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
       (tqtree->quadrants_offset + (p4est_locidx_t) lnid);
   }
   else {
-    lnid = p4est_ghost_tree_bsearch (ghost, tqtreeid, &tq);
+    lnid = p4est_ghost_tree_bsearch (ghost, qproc, tqtreeid, &tq);
     return (lnid == -1) ? (p4est_locidx_t) (-1) :
       (q =
        p4est_quadrant_array_index (&ghost->ghosts, (size_t) lnid),

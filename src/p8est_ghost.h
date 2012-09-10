@@ -88,8 +88,14 @@ p8est_ghost_t      *p8est_ghost_new (p8est_t * p8est,
 /** Frees all memory used for the ghost layer. */
 void                p8est_ghost_destroy (p8est_ghost_t * ghost);
 
-/** Conduct binary search on range of the ghost layer for specific tree. */
+/** Conduct binary search on range of the ghost layer for specific tree.
+ * \param [in] ghost            The ghost layer.
+ * \param [in] which_proc       The owner of the searched quadrant.  Can be -1.
+ * \param [in] which_tree       The tree of the searched quadrant.  Can be -1.
+ * \param [in] q                Quadrant to be searched in the ghost layer.
+ */
 ssize_t             p8est_ghost_tree_bsearch (p8est_ghost_t * ghost,
+                                              int which_proc,
                                               p4est_topidx_t which_tree,
                                               const p8est_quadrant_t * q);
 
