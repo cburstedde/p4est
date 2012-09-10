@@ -646,22 +646,9 @@ p4est_quadrant_get_half_corner_neighbor (const p4est_quadrant_t * q,
                                          p4est_quadrant_t * n0,
                                          p4est_quadrant_t * n0ur)
 {
-  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
-  const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
-
-  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
-
-  n0->x = q->x + ((corner & 0x01) ? qh : -qh_2);
-  n0->y = q->y + ((corner & 0x02) ? qh : -qh_2);
-#ifdef P4_TO_P8
-  n0->z = q->z + ((corner & 0x04) ? qh : -qh_2);
-#endif
-  n0->level = (int8_t) (q->level + 1);
-  P4EST_ASSERT (p4est_quadrant_is_extended (n0));
-
+  p4est_quadrant_half_corner_neighbor (q, corner, n0);
   if (n0ur != NULL) {
+    const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
     const p4est_qcoord_t dh = qh_2 - P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
 
     n0ur->x = n0->x + dh;
