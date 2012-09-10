@@ -229,7 +229,7 @@ p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
 
   start = 0;
   ended = ghost->ghosts.elem_count;
-  
+
   if (which_proc != -1) {
     P4EST_ASSERT (0 <= which_proc && which_proc < ghost->mpisize);
     start = SC_MAX (start, (size_t) ghost->proc_offsets[which_proc]);
@@ -256,7 +256,8 @@ p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
 int
 p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
                        p4est_topidx_t treeid, const p4est_quadrant_t * q,
-                       sc_array_t * exists_arr, sc_array_t * rproc_arr)
+                       sc_array_t * exists_arr,
+                       sc_array_t * rproc_arr, sc_array_t * rquad_arr)
 {
   const int           rank = p4est->mpirank;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
@@ -273,7 +274,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_tree_t       *tree = p4est_tree_array_index (p4est->trees, treeid);
   p4est_tree_t       *tqtree;
-  p4est_quadrant_t    tq, non_existent;
+  p4est_quadrant_t    tq, non_existent, *rquad;
   sc_array_t         *quadrants = &tree->quadrants;
   sc_array_t         *ta;
 #ifdef P4_TO_P8
@@ -290,6 +291,10 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   if (rproc_arr != NULL) {
     P4EST_ASSERT (rproc_arr->elem_size == sizeof (int));
     sc_array_resize (rproc_arr, 0);
+  }
+  if (rquad_arr != NULL) {
+    P4EST_ASSERT (rquad_arr->elem_size == sizeof (p4est_quadrant_t));
+    sc_array_resize (rquad_arr, 0);
   }
   P4EST_QUADRANT_INIT (&non_existent);
   ta = NULL;
@@ -312,6 +317,12 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
     }
     if (rproc_arr != NULL) {
       *(int *) sc_array_push (rproc_arr) = qproc;
+    }
+    if (rquad_arr != NULL) {
+      rquad = (p4est_quadrant_t *) sc_array_push (rquad_arr);
+      *rquad = *q;
+      rquad->p.piggy3.which_tree = treeid;
+      rquad->p.piggy3.local_num = (p4est_locidx_t) lnid;
     }
     return (lnid != -1);
   }
@@ -417,6 +428,12 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
       if (rproc_arr != NULL) {
         *(int *) sc_array_push (rproc_arr) = qproc;
       }
+      if (rquad_arr != NULL) {
+        rquad = (p4est_quadrant_t *) sc_array_push (rquad_arr);
+        *rquad = tq;
+        rquad->p.piggy3.which_tree = tqtreeid;
+        rquad->p.piggy3.local_num = (p4est_locidx_t) lnid;
+      }
 
       /* add the existence value */
       pexists = (int *) sc_array_index (exists_arr, ctreeidz);
@@ -454,6 +471,12 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
     }
     if (rproc_arr != NULL) {
       *(int *) sc_array_push (rproc_arr) = qproc;
+    }
+    if (rquad_arr != NULL) {
+      rquad = (p4est_quadrant_t *) sc_array_push (rquad_arr);
+      *rquad = tq;
+      rquad->p.piggy3.which_tree = tqtreeid;
+      rquad->p.piggy3.local_num = (p4est_locidx_t) lnid;
     }
     return (lnid != -1);
   }
@@ -892,13 +915,13 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
 
         /* Do more expensive face balance checks */
         p4est_quadrant_all_face_neighbors (q, face, n);
-        e0 = p4est_quadrant_exists (p4est, gl, nt, &n[0], NULL, NULL);
-        e1 = p4est_quadrant_exists (p4est, gl, nt, &n[1], NULL, NULL);
+        e0 = p4est_quadrant_exists (p4est, gl, nt, &n[0], NULL, NULL, NULL);
+        e1 = p4est_quadrant_exists (p4est, gl, nt, &n[1], NULL, NULL, NULL);
 #ifndef P4_TO_P8
         e0b = e1b = e0;
 #else
-        e0b = p4est_quadrant_exists (p4est, gl, nt, &n[2], NULL, NULL);
-        e1b = p4est_quadrant_exists (p4est, gl, nt, &n[3], NULL, NULL);
+        e0b = p4est_quadrant_exists (p4est, gl, nt, &n[2], NULL, NULL, NULL);
+        e1b = p4est_quadrant_exists (p4est, gl, nt, &n[3], NULL, NULL, NULL);
 #endif
         if (e0 != e1 || e0 != e0b || e0 != e1b) {
           P4EST_NOTICE ("Contradicting small face neighbors\n");
@@ -906,9 +929,9 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
           goto failtest;
         }
         e2 = p4est_quadrant_exists (p4est, gl, nt, &n[P4EST_HALF],
-                                    NULL, NULL);
+                                    NULL, NULL, NULL);
         e3 = p4est_quadrant_exists (p4est, gl, nt, &n[P4EST_HALF + 1],
-                                    NULL, NULL);
+                                    NULL, NULL, NULL);
         if ((int) e0 + (int) e2 + (int) e3 != 1) {
           P4EST_NOTICE ("Face balance quadrant mismatch\n");
           failed = 1;
@@ -938,15 +961,15 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
 
         /* Do more expensive edge balance checks */
         p8est_quadrant_get_possible_edge_neighbors (q, edge, n);
-        e0 = p4est_quadrant_exists (p4est, gl, nt, &n[0], &e0_a, NULL);
-        e1 = p4est_quadrant_exists (p4est, gl, nt, &n[1], &e1_a, NULL);
+        e0 = p4est_quadrant_exists (p4est, gl, nt, &n[0], &e0_a, NULL, NULL);
+        e1 = p4est_quadrant_exists (p4est, gl, nt, &n[1], &e1_a, NULL, NULL);
         if (e0 != e1 || e0_a.elem_count != e1_a.elem_count) {
           P4EST_NOTICE ("Contradicting small edge neighbors\n");
           failed = 1;
           goto failtest;
         }
-        e2 = p4est_quadrant_exists (p4est, gl, nt, &n[2], &e2_a, NULL);
-        e3 = p4est_quadrant_exists (p4est, gl, nt, &n[3], &e3_a, NULL);
+        e2 = p4est_quadrant_exists (p4est, gl, nt, &n[2], &e2_a, NULL, NULL);
+        e3 = p4est_quadrant_exists (p4est, gl, nt, &n[3], &e3_a, NULL, NULL);
         P4EST_ASSERT (((e0_a.elem_count == 0 && q->level == P4EST_QMAXLEVEL)
                        || e0_a.elem_count == e2_a.elem_count)
                       && ((e3_a.elem_count == 0 && (!e3 || q->level == 0))
@@ -1007,9 +1030,9 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
 
         /* Do more expensive corner balance checks */
         p4est_quadrant_get_possible_corner_neighbors (q, corner, n);
-        e0 = p4est_quadrant_exists (p4est, gl, nt, &n[0], &e0_a, NULL);
-        e1 = p4est_quadrant_exists (p4est, gl, nt, &n[1], &e1_a, NULL);
-        e2 = p4est_quadrant_exists (p4est, gl, nt, &n[2], &e2_a, NULL);
+        e0 = p4est_quadrant_exists (p4est, gl, nt, &n[0], &e0_a, NULL, NULL);
+        e1 = p4est_quadrant_exists (p4est, gl, nt, &n[1], &e1_a, NULL, NULL);
+        e2 = p4est_quadrant_exists (p4est, gl, nt, &n[2], &e2_a, NULL, NULL);
         P4EST_ASSERT (((e0_a.elem_count == 0 && q->level == P4EST_QMAXLEVEL)
                        || e0_a.elem_count == e1_a.elem_count)
                       && ((e2_a.elem_count == 0 && (!e2 || q->level == 0))
@@ -1061,7 +1084,8 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
             /* recreate the edge neighbor information */
             p4est_quadrant_parent (q, &n[3]);
             p8est_quadrant_edge_neighbor (&n[3], edge, &n[3]);
-            e3 = p4est_quadrant_exists (p4est, gl, nt, &n[3], &e3_a, NULL);
+            e3 =
+              p4est_quadrant_exists (p4est, gl, nt, &n[3], &e3_a, NULL, NULL);
             P4EST_ASSERT (e3 && big_count[edge] == e3_a.elem_count);
           }
 #endif

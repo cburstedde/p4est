@@ -133,16 +133,20 @@ p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *
  * For quadrants across tree corners it checks if the quadrant exists
- * in any of the corner neighbors.
+ * in any of the corner neighbors, thus it can execute multiple queries.
  *
  * \param [in]  p4est        The forest in which to search for \a q
  * \param [in]  ghost        The ghost layer in which to search for \a q
- * \param [in]  treeid       The tree to which \a q belongs.
+ * \param [in]  treeid       The tree to which \a q belongs (can be extended).
  * \param [in]  q            The quadrant that is being searched for.
- * \param [in,out] exists_arr Must exist for tree corner cases.  One int
- *                           entry for each corner neighbor is set to true if
- *                           it exists in the local forest or ghost_layer.
- * \param [in,out] rproc_arr If not NULL is filled with the rank for each match.
+ * \param [in,out] exists_arr Must exist and be of of elem_size = sizeof (int)
+ *                           for inter-tree corner cases.  Is resized by this
+ *                           function to one entry for each corner search
+ *                           and set to true/false depending on its existence
+ *                           in the local forest or ghost_layer.
+ * \param [in,out] rproc_arr If not NULL is filled with one rank per query.
+ * \param [in,out] rquad_arr If not NULL is filled with one quadrant per query.
+ *                           Its piggy3 member is defined as well.
  *
  * \return true if the quadrant exists in the local forest or in the
  *                  ghost_layer, and false if doesn't exist in either.
@@ -152,7 +156,8 @@ int                 p4est_quadrant_exists (p4est_t * p4est,
                                            p4est_topidx_t treeid,
                                            const p4est_quadrant_t * q,
                                            sc_array_t * exists_arr,
-                                           sc_array_t * rproc_arr);
+                                           sc_array_t * rproc_arr,
+                                           sc_array_t * rquad_arr);
 
 /** Check a forest to see if it is balanced.
  *
