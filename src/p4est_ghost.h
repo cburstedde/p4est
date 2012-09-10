@@ -133,9 +133,10 @@ p4est_locidx_t      p4est_face_quadrant_exists (p4est_t * p4est,
  * \param [in]  ghost        The ghost layer in which to search for \a q
  * \param [in]  treeid       The tree to which \a q belongs.
  * \param [in]  q            The quadrant that is being searched for.
- * \param [out] exists_arr   Filled for tree corner cases.  An entry
- *                           for each corner neighbor is set to true if
+ * \param [in,out] exists_arr Must exist for tree corner cases.  One int
+ *                           entry for each corner neighbor is set to true if
  *                           it exists in the local forest or ghost_layer.
+ * \param [in,out] rproc_arr If not NULL is filled with the rank for each match.
  *
  * \return true if the quadrant exists in the local forest or in the
  *                  ghost_layer, and false if doesn't exist in either.
@@ -144,7 +145,8 @@ int                 p4est_quadrant_exists (p4est_t * p4est,
                                            p4est_ghost_t * ghost,
                                            p4est_topidx_t treeid,
                                            const p4est_quadrant_t * q,
-                                           sc_array_t * exists_arr);
+                                           sc_array_t * exists_arr,
+                                           sc_array_t * rproc_arr);
 
 /** Check a forest to see if it is balanced.
  *

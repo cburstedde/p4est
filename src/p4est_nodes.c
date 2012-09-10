@@ -652,7 +652,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
         }
         p4est_quadrant_face_neighbor (&p, face, &n);
-        if (p4est_quadrant_exists (p4est, ghost, jt, &n, NULL)) {
+        if (p4est_quadrant_exists (p4est, ghost, jt, &n, NULL, NULL)) {
           quad_status[k] = 1;   /* face hanging node */
 #ifdef P4_TO_P8
           for (l = 0; l < P4EST_HALF; ++l) {
@@ -678,7 +678,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
           p8est_quadrant_edge_neighbor (&p, edge, &n);
           quad_status[k] = (int8_t)
             (p4est_quadrant_exists (p4est, ghost, jt, &n,
-                                    &exist_array) ? 2 : 0);
+                                    &exist_array, NULL) ? 2 : 0);
         }
       }
 #endif
