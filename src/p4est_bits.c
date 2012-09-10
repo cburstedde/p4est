@@ -1078,6 +1078,26 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
 }
 
 void
+p4est_quadrant_half_corner_neighbor (const p4est_quadrant_t * q, int corner,
+                                     p4est_quadrant_t * r)
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t mqh_2 = -P4EST_QUADRANT_LEN (q->level + 1);
+
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
+
+  r->x = q->x + ((corner & 0x01) ? qh : mqh_2);
+  r->y = q->y + ((corner & 0x02) ? qh : mqh_2);
+#ifdef P4_TO_P8
+  r->z = q->z + ((corner & 0x04) ? qh : mqh_2);
+#endif
+  r->level = (int8_t) (q->level + 1);
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
+void
 p4est_quadrant_corner_node (const p4est_quadrant_t * q,
                             int corner, p4est_quadrant_t * r)
 {

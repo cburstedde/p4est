@@ -414,6 +414,18 @@ void                p4est_quadrant_corner_neighbor_extra (const
                                                           p4est_connectivity_t
                                                           * conn);
 
+/** Compute the half size corner neighbor of a quadrant.
+ *
+ * \param [in]  q       The quadrant whose corner neighbor will be constructed.
+ * \param [in]  corner  The corner across which to generate the neighbor.
+ * \param [out] r       Morton index filled with the half size corner neighbor.
+ */
+void                p4est_quadrant_half_corner_neighbor (const
+                                                         p4est_quadrant_t * q,
+                                                         int corner,
+                                                         p4est_quadrant_t *
+                                                         r);
+
 /** Compute the corner node of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.

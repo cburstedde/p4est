@@ -227,6 +227,8 @@
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
 #define p4est_quadrant_corner_neighbor_extra \
                                         p8est_quadrant_corner_neighbor_extra
+#define p4est_quadrant_half_corner_neighbor \
+                                        p8est_quadrant_half_corner_neighbor
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
 #define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
