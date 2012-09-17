@@ -310,6 +310,10 @@ p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_corner (void);
 
+/** Create a connectivity structure for two trees on top of each other.
+ */
+p4est_connectivity_t *p4est_connectivity_new_pillow (void);
+
 /** Create a connectivity structure for a five-tree moebius band.
  */
 p4est_connectivity_t *p4est_connectivity_new_moebius (void);

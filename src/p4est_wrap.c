@@ -103,6 +103,14 @@ p4est_wrap_new_periodic (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
+p4est_wrap_new_pillow (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_pillow (),
+                              initial_level);
+}
+
+p4est_wrap_t       *
 p4est_wrap_new_moebius (MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,

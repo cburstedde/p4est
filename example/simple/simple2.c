@@ -28,6 +28,7 @@
  *        o three     Refinement on a forest with three trees.
  *        o evil      Check second round of refinement with np=5 level=7
  *        o evil3     Check second round of refinement on three trees
+ *        o pillow    Refinement on a 2-tree pillow-shaped domain.
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
@@ -45,6 +46,7 @@ typedef enum
   P4EST_CONFIG_THREE,
   P4EST_CONFIG_EVIL,
   P4EST_CONFIG_EVIL3,
+  P4EST_CONFIG_PILLOW,
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_PERIODIC,
@@ -213,7 +215,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|three|evil|evil3|moebius|star|periodic|rotwrap\n"
+    "      unit|three|evil|evil3|pillow|moebius|star|periodic|rotwrap\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -232,6 +234,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "evil3")) {
       config = P4EST_CONFIG_EVIL3;
+    }
+    else if (!strcmp (argv[1], "pillow")) {
+      config = P4EST_CONFIG_PILLOW;
     }
     else if (!strcmp (argv[1], "moebius")) {
       config = P4EST_CONFIG_MOEBIUS;
@@ -272,6 +277,9 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   if (config == P4EST_CONFIG_THREE || config == P4EST_CONFIG_EVIL3) {
     connectivity = p4est_connectivity_new_corner ();
+  }
+  else if (config == P4EST_CONFIG_PILLOW) {
+    connectivity = p4est_connectivity_new_pillow ();
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
     connectivity = p4est_connectivity_new_moebius ();

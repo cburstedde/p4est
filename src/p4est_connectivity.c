@@ -1200,6 +1200,47 @@ p4est_connectivity_new_corner (void)
 }
 
 p4est_connectivity_t *
+p4est_connectivity_new_pillow(void)
+{
+  const p4est_topidx_t num_vertices = 4;
+  const p4est_topidx_t num_trees = 2;
+  const p4est_topidx_t num_corners = 4;
+  const double        vertices[4 * 3] = {
+    0, 0, 0,
+    0, 1, 0,
+    1, 0, 0,
+    1, 1, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 4] = {
+    0, 1, 2, 3, 0, 1, 2, 3,
+  };
+  const p4est_topidx_t tree_to_tree[2 * 4] = {
+    1, 1, 1, 1, 0, 0, 0, 0,
+  };
+  const int8_t        tree_to_face[2 * 4] = {
+    0, 1, 2, 3, 0, 1, 2, 3,
+  };
+  const p4est_topidx_t tree_to_corner[2 * 4] = {
+    0, 1, 2, 3, 0, 1, 2, 3,
+  };
+  const p4est_topidx_t ctt_offset[4 + 1] = {
+    0, 2, 4, 6, 8,
+  };
+  const p4est_topidx_t corner_to_tree[8] = {
+    0, 1, 0, 1, 0, 1, 0, 1,
+  };
+  const int8_t        corner_to_corner[8] = {
+    0, 0, 1, 1, 2, 2, 3, 3,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
+}
+
+p4est_connectivity_t *
 p4est_connectivity_new_moebius (void)
 {
   const p4est_topidx_t num_vertices = 10;
@@ -2014,12 +2055,19 @@ p4est_find_corner_transform_internal (p4est_connectivity_t * conn,
   int                 i;
   int                 iface[P4EST_DIM], nface[P4EST_DIM];
   int                 orient[P4EST_DIM], fcorner[P4EST_DIM];
-  int                 ncorner, ncode, fc, nc;
+  int                 ncorner, ncode;
+#ifndef P4EST_PILLOW_HACK
+  int                 fc, nc;
+#endif
   int                 omit;
   p4est_topidx_t      ctree, nctree;
 #ifdef P4_TO_P8
   int                 iedge[3], iwhich[3];
+#ifndef P4EST_PILLOW_HACK
   int                 pref, pset;
+#else
+  int                 nc;
+#endif
   size_t              jz;
   p4est_topidx_t      aedge[3];
   p8est_edge_info_t   ei[3];
@@ -2089,6 +2137,7 @@ p4est_find_corner_transform_internal (p4est_connectivity_t * conn,
 
     /* rule out face neighbors */
     omit = 0;
+#ifndef P4EST_PILLOW_HACK
     for (i = 0; i < P4EST_DIM; ++i) {
       if (nctree == ntree[i]) {
         P4EST_ASSERT (fcorner[i] >= 0);
@@ -2109,6 +2158,7 @@ p4est_find_corner_transform_internal (p4est_connectivity_t * conn,
     }
     if (omit)
       continue;
+#endif /* !P4EST_PILLOW_HACK */
 
 #ifdef P4_TO_P8
     /* rule out edge neighbors */
@@ -2200,7 +2250,13 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
   expected_count += (ntree[2] != -1);
 #else
   P4EST_ASSERT (ignored == 0);
+#ifdef P4EST_PILLOW_HACK
+  if (corner_trees == 2) {
+    expected_count = 2;
+  }
+#endif /* P4EST_PILLOW_HACK */
 #endif
+
   P4EST_ASSERT (corner_trees == (p4est_topidx_t) (expected_count + ignored));
 #endif
 }
