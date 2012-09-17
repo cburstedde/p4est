@@ -2198,6 +2198,8 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
   expected_count = cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
 #ifdef P4_TO_P8
   expected_count += (ntree[2] != -1);
+#else
+  P4EST_ASSERT (ignored == 0);
 #endif
   P4EST_ASSERT (corner_trees == (p4est_topidx_t) (expected_count + ignored));
 #endif
@@ -2575,6 +2577,9 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
                                                 ctt_offset,
                                                 conn->corner_to_corner +
                                                 ctt_offset, zcount, ntree);
+#ifndef P4_TO_P8
+        P4EST_ASSERT (ignored == 0);
+#endif
         if (cta->elem_count == 0) {
 #ifndef P4_TO_P8
           P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1);
