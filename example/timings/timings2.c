@@ -395,9 +395,6 @@ main (int argc, char **argv)
   }
 
   p4est->inspect = P4EST_ALLOC_ZERO (p4est_inspect_t, 1);
-  p4est->inspect->use_overlap_new = overlap;
-  p4est->inspect->use_balance_subtree_new = (overlap && subtree);
-  p4est->inspect->use_borders = (overlap && borders);
   p4est->inspect->use_balance_ranges = use_ranges;
   p4est->inspect->use_balance_ranges_notify = use_ranges_notify;
   p4est->inspect->use_balance_verify = use_balance_verify;

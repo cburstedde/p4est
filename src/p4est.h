@@ -101,9 +101,6 @@ p4est_tree_t;
  */
 typedef struct p4est_inspect
 {
-  int                 use_balance_subtree_new;
-  int                 use_overlap_new;
-  int                 use_borders;
   /** Use sc_ranges to determine the asymmetric communication pattern.
    * If \a use_balance_ranges is false (the default), sc_notify is used. */
   int                 use_balance_ranges;

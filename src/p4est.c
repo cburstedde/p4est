@@ -1109,26 +1109,20 @@ static void
 p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer,
                         p4est_connect_type_t balance, sc_array_t * borders)
 {
-  /* compute and uniqify overlap quadrants */
-  if (p4est->inspect == NULL || p4est->inspect->use_overlap_new) {
-    sc_array_t         *first_seeds =
-      sc_array_new (sizeof (p4est_quadrant_t));
-    p4est_tree_compute_overlap_new (p4est, &peer->recv_first,
-                                    &peer->send_second, balance, borders,
-                                    first_seeds);
-    /* replace peer->recv_first with first_seeds */
-    p4est_tree_uniqify_overlap_new (&peer->send_second);
-    p4est_tree_uniqify_overlap_new (first_seeds);
-    /* replace peer->recv_first with first_seeds */
-    sc_array_resize (&peer->recv_first, first_seeds->elem_count);
-    memcpy (peer->recv_first.array, first_seeds->array,
-            first_seeds->elem_size * first_seeds->elem_count);
-    sc_array_destroy (first_seeds);
-  }
-  else {
-    p4est_tree_compute_overlap (p4est, &peer->recv_first, &peer->send_second);
-    p4est_tree_uniqify_overlap (&peer->send_first, &peer->send_second);
-  }
+  sc_array_t         *first_seeds = sc_array_new (sizeof (p4est_quadrant_t));
+
+/* compute and uniqify overlap quadrants */
+  p4est_tree_compute_overlap (p4est, &peer->recv_first,
+                              &peer->send_second, balance, borders,
+                              first_seeds);
+  /* replace peer->recv_first with first_seeds */
+  p4est_tree_uniqify_overlap (&peer->send_second);
+  p4est_tree_uniqify_overlap (first_seeds);
+  /* replace peer->recv_first with first_seeds */
+  sc_array_resize (&peer->recv_first, first_seeds->elem_count);
+  memcpy (peer->recv_first.array, first_seeds->array,
+          first_seeds->elem_size * first_seeds->elem_count);
+  sc_array_destroy (first_seeds);
 
   if (p4est->inspect) {
     p4est->inspect->balance_comm_sent += peer->send_second.elem_count;
@@ -1250,15 +1244,10 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
 
   localcount = (size_t) (p4est->last_local_tree + 1 -
                          p4est->first_local_tree);
-  if (p4est->inspect == NULL || p4est->inspect->use_borders) {
-    borders = sc_array_new_size (sizeof (sc_array_t), localcount);
-    for (zz = 0; zz < localcount; zz++) {
-      qarray = (sc_array_t *) sc_array_index (borders, zz);
-      sc_array_init (qarray, sizeof (p4est_quadrant_t));
-    }
-  }
-  else {
-    borders = NULL;
+  borders = sc_array_new_size (sizeof (sc_array_t), localcount);
+  for (zz = 0; zz < localcount; zz++) {
+    qarray = (sc_array_t *) sc_array_index (borders, zz);
+    sc_array_init (qarray, sizeof (p4est_quadrant_t));
   }
 
 #ifdef P4EST_MPI
@@ -2160,10 +2149,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                   (int) peer->send_first.elem_count);
     P4EST_ASSERT (peer->send_second_count ==
                   (int) peer->send_second.elem_count);
-    if (p4est->inspect != NULL && !p4est->inspect->use_overlap_new) {
-      P4EST_ASSERT (peer->recv_first_count ==
-                    (int) peer->recv_first.elem_count);
-    }
     P4EST_ASSERT (peer->recv_second_count ==
                   (int) peer->recv_second.elem_count);
     if (qcount == 0) {
@@ -2178,22 +2163,6 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
       qtree = s->p.piggy2.which_tree;
       if (qtree < first_tree || qtree > last_tree) {
         /* this is a corner/edge quadrant from the second pass of balance */
-#ifdef P4EST_DEBUG
-        if (p4est->inspect != NULL && !p4est->inspect->use_overlap_new) {
-          P4EST_ASSERT (zz >= (size_t) peer->recv_first_count);
-          P4EST_ASSERT (0 <= qtree && qtree < conn->num_trees);
-          face_axis[0] = (s->x < 0 || s->x >= rh);
-          face_axis[1] = (s->y < 0 || s->y >= rh);
-#ifndef P4_TO_P8
-          face_axis[2] = 0;
-#else
-          face_axis[2] = (s->z < 0 || s->z >= rh);
-#endif
-          P4EST_ASSERT ((face_axis[0] && face_axis[1]) ||
-                        (face_axis[0] && face_axis[2]) ||
-                        (face_axis[1] && face_axis[2]));
-        }
-#endif
         continue;
       }
       if (borders == NULL) {
@@ -2225,17 +2194,8 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
     if (!(tree_flags[nt] & fully_owned_flag) ||
         (tree_flags[nt] & any_face_flag)) {
       /* we have most probably received quadrants, run sort and balance */
-      if (borders == NULL) {
-        sc_array_sort (tquadrants, p4est_quadrant_compare);
-        if (p4est->inspect == NULL || p4est->inspect->use_overlap_new) {
-          p4est_linearize_tree (p4est, tree);
-        }
-        p4est_balance_subtree (p4est, btype, nt, init_fn);
-      }
-      else {
-        /* balance the border, add it back into the tree, and linearize */
-        p4est_balance_border (p4est, btype, nt, init_fn, borders);
-      }
+      /* balance the border, add it back into the tree, and linearize */
+      p4est_balance_border (p4est, btype, nt, init_fn, borders);
       P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
                       (long long) nt,
                       (unsigned long long) treecount,
