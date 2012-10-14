@@ -923,39 +923,42 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
             /* Do a binary search for the lowest tree quadrant >= s.
                Does not accept an ancestor of s, which is on purpose. */
             first_index = p4est_find_lower_bound (tquadrants, s, guess);
-            if (first_index < 0 || first_index > last_index) {
-              /* The only possibility is that a quadrant larger than s
-               * contains s */
-              tq = p4est_quadrant_array_index (tquadrants, last_index);
-              P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, s));
-              if (tq->level < s->level - 1) {
-                for (kz = 0; kz < nneigh; kz++) {
-                  if (neigharray[kz] == tq) {
-                    break;
-                  }
-                }
-                /* if this neighbor hasn't been calculated */
-                if (kz == nneigh) {
-                  /* we should check to see if inq causes a split to tq */
-                  split = p4est_balance_seeds (inq, tq, balance, seeds);
+          }
 
-                  if (split) {
-                    seedcount = seeds->elem_count;
-                    for (jz = 0; jz < seedcount; jz++) {
-                      u = p4est_quadrant_array_index (seeds, jz);
-                      P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, u));
-
-                      outq = (p4est_quadrant_t *) sc_array_push (inseeds);
-                      p4est_quadrant_sibling (u, outq, 0);
-                      outq->p.piggy2.which_tree = qtree;
-                    }
-                  }
-                  P4EST_ASSERT (nneigh < P4EST_CHILDREN - 1);
-                  neigharray[nneigh++] = tq;
+          if (first_index < 0 || first_index > last_index ||
+              p4est_quadrant_compare (&fd, &ld) == 0) {
+            /* The only possibility is that a quadrant larger than s
+             * contains s */
+            tq = p4est_quadrant_array_index (tquadrants, last_index);
+            P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, s) ||
+                          p4est_quadrant_is_equal (tq, s));
+            if (tq->level < s->level - 1) {
+              for (kz = 0; kz < nneigh; kz++) {
+                if (neigharray[kz] == tq) {
+                  break;
                 }
               }
-              continue;
+              /* if this neighbor hasn't been calculated */
+              if (kz == nneigh) {
+                /* we should check to see if inq causes a split to tq */
+                split = p4est_balance_seeds (inq, tq, balance, seeds);
+
+                if (split) {
+                  seedcount = seeds->elem_count;
+                  for (jz = 0; jz < seedcount; jz++) {
+                    u = p4est_quadrant_array_index (seeds, jz);
+                    P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, u));
+
+                    outq = (p4est_quadrant_t *) sc_array_push (inseeds);
+                    p4est_quadrant_sibling (u, outq, 0);
+                    outq->p.piggy2.which_tree = qtree;
+                  }
+                }
+                P4EST_ASSERT (nneigh < P4EST_CHILDREN - 1);
+                neigharray[nneigh++] = tq;
+              }
             }
+            continue;
           }
         }
         else {
@@ -1053,9 +1056,11 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
                   }
 #ifdef P4_TO_P8
                   else if (contact_edge_only) {
+                    P4EST_ASSERT (inq->pad16 >= 0 &&
+                                  inq->pad16 < P8EST_EDGES);
                     for (etree = 0; etree < eta->elem_count; ++etree) {
                       et = p8est_edge_array_index (eta, etree);
-                      if (et->ntree == ftree) {
+                      if (et->ntree == ftree && et->nedge == inq->pad16) {
                         p8est_quadrant_transform_edge (u, &tempq, &ei, et, 1);
                         outq = p4est_quadrant_array_push (out);
                         p4est_quadrant_sibling (&tempq, outq, 0);
@@ -1067,9 +1072,11 @@ p4est_tree_compute_overlap_internal (p4est_t * p4est, sc_array_t * in,
 #endif
                   else {
                     P4EST_ASSERT (corner >= 0);
+                    P4EST_ASSERT (inq->pad16 >= 0 &&
+                                  inq->pad16 < P4EST_CHILDREN);
                     for (ctree = 0; ctree < cta->elem_count; ++ctree) {
                       ct = p4est_corner_array_index (cta, ctree);
-                      if (ct->ntree == ftree) {
+                      if (ct->ntree == ftree && ct->ncorner == inq->pad16) {
                         p4est_quadrant_transform_corner (u, (int) ct->ncorner,
                                                          1);
                         outq = p4est_quadrant_array_push (out);
@@ -3053,7 +3060,7 @@ void
 p4est_balance_subtree (p4est_t * p4est, p4est_connect_type_t btype,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
-  if (p4est->inspect != NULL && p4est->inspect->use_balance_subtree_new) {
+  if (p4est->inspect == NULL || p4est->inspect->use_balance_subtree_new) {
     p4est_complete_or_balance_new (p4est, which_tree, init_fn,
                                    p4est_connect_type_int (btype));
   }
