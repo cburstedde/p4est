@@ -167,6 +167,12 @@ void                p4est_refine_ext (p4est_t * p4est,
                                       p4est_replace_t replace_fn,
                                       p4est_replace_type_t rtype);
 
+void                p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
+                                       p4est_coarsen_t coarsen_fn,
+                                       p4est_init_t init_fn,
+                                       p4est_replace_t replace_fn,
+                                       p4est_replace_type_t rtype);
+
 /** Repartition the forest.
  *
  * The forest is partitioned between processors such that each processor

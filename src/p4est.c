@@ -967,11 +967,20 @@ void
 p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
                p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
+  p4est_coarsen_ext (p4est, coarsen_recursive, coarsen_fn, init_fn, NULL,
+                     P4EST_REPLACE_FAMILY);
+}
+
+void
+p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
+                   p4est_coarsen_t coarsen_fn, p4est_init_t init_fn,
+                   p4est_replace_t replace_fn, p4est_replace_type_t rtype)
+{
 #ifdef P4EST_DEBUG
   size_t              data_pool_size;
 #endif
   int                 i, maxlevel;
-  int                 couldbegood;
+  int                 isfamily;
   size_t              zz;
   size_t              incount, removed;
   size_t              window, start, length, cidz;
@@ -981,11 +990,24 @@ p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
   p4est_quadrant_t   *c[P4EST_CHILDREN];
   p4est_quadrant_t   *cfirst, *clast;
   sc_array_t         *tquadrants;
+  p4est_quadrant_t    qtemp;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
+
+  if (replace_fn == NULL || !coarsen_recursive) {
+    rtype = P4EST_REPLACE_FAMILY;
+  }
+
+  P4EST_QUADRANT_INIT (&qtemp);
+
+  SC_CHECK_ABORT (rtype != P4EST_REPLACE_BATCH,
+                  "batch replacement in " P4EST_STRING
+                  "_coarsen_ext not implemented.");
+  if (rtype == P4EST_REPLACE_BATCH) {
+  }
 
   /* loop over all local trees */
   prev_offset = 0;
@@ -1015,34 +1037,60 @@ p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
       P4EST_ASSERT (window < start);
 
       cidz = incount;
-      couldbegood = 1;
+      isfamily = 1;
       for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
         c[zz] = (window + zz < start) ?
           p4est_quadrant_array_index (tquadrants, window + zz) :
           p4est_quadrant_array_index (tquadrants, window + length + zz);
 
         if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
-          couldbegood = 0;
+          isfamily = 0;
           break;
         }
       }
-      if (couldbegood && p4est_quadrant_is_familypv (c) &&
-          coarsen_fn (p4est, jt, c)) {
-        /* coarsen this family of quadrants */
-        for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
-          p4est_quadrant_free_data (p4est, c[zz]);
-        }
-        tree->quadrants_per_level[c[0]->level] -= P4EST_CHILDREN;
-        cfirst = c[0];
-        p4est_quadrant_parent (c[0], cfirst);
-        p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
-        tree->quadrants_per_level[cfirst->level] += 1;
-        p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
-        removed += P4EST_CHILDREN - 1;
+#ifdef P4EST_DEBUG
+      /* in a complete tree, the only way P4EST_CHILDREN consecutive quadrants
+       * have the correct consecutive child_id's is if they are, in fact, a
+       * family.
+       */
+      if (isfamily) {
+        P4EST_ASSERT (p4est_quadrant_is_familypv (c));
+      }
+      else {
+        P4EST_ASSERT (!p4est_quadrant_is_familypv (c));
+      }
+#endif
+      if (isfamily) {
+        if (coarsen_fn (p4est, jt, c)) {
+          /* coarsen this family of quadrants */
+          if (replace_fn == NULL) {
+            for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
+              p4est_quadrant_free_data (p4est, c[zz]);
+            }
+          }
+          tree->quadrants_per_level[c[0]->level] -= P4EST_CHILDREN;
+          cfirst = c[0];
+          if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
+            qtemp = *(c[0]);
+            c[0] = &qtemp;
+          }
+          p4est_quadrant_parent (c[0], cfirst);
+          p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
+          tree->quadrants_per_level[cfirst->level] += 1;
+          p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
+          removed += P4EST_CHILDREN - 1;
 
-        cidz = (size_t) p4est_quadrant_child_id (cfirst);
-        start = window + 1;
-        length += P4EST_CHILDREN - 1;
+          cidz = (size_t) p4est_quadrant_child_id (cfirst);
+          start = window + 1;
+          length += P4EST_CHILDREN - 1;
+
+          if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
+            replace_fn (p4est, jt, P4EST_CHILDREN, c, 1, &cfirst);
+            for (zz = 0; zz < P4EST_CHILDREN; zz++) {
+              p4est_quadrant_free_data (p4est, c[zz]);
+            }
+          }
+        }
       }
 
       if (cidz <= window && coarsen_recursive) {

@@ -168,6 +168,7 @@
 #define P4EST_REPLACE_BATCH             P8EST_REPLACE_BATCH
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_refine_ext                p8est_refine_ext
+#define p4est_coarsen_ext               p8est_coarsen_ext
 #define p4est_partition_ext             p8est_partition_ext
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext

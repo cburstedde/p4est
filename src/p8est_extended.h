@@ -167,6 +167,12 @@ void                p8est_refine_ext (p8est_t * p8est,
                                       p8est_replace_t replace_fn,
                                       p8est_replace_type_t rtype);
 
+void                p8est_coarsen_ext (p8est_t * p8est, int coarsen_recursive,
+                                       p8est_coarsen_t coarsen_fn,
+                                       p8est_init_t init_fn,
+                                       p8est_replace_t replace_fn,
+                                       p8est_replace_type_t rtype);
+
 /** Repartition the forest.
  *
  * The forest is partitioned between processors such that each processor
