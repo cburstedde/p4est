@@ -655,13 +655,14 @@ void
 p4est_refine (p4est_t * p4est, int refine_recursive,
               p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  p4est_refine_ext (p4est, refine_recursive, -1, refine_fn, NULL, init_fn);
+  p4est_refine_ext (p4est, refine_recursive, -1, refine_fn, init_fn, NULL,
+                    P4EST_REPLACE_FAMILY);
 }
 
 void
 p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
-                  p4est_refine_t refine_fn, p4est_refine_ext_t refine_ext_fn,
-                  p4est_init_t init_fn)
+                  p4est_refine_t refine_fn, p4est_init_t init_fn,
+                  p4est_replace_t replace_fn, p4est_replace_type_t rtype)
 {
 #ifdef P4EST_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
@@ -669,7 +670,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   int                 dorefine;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
-  size_t              incount, current, restpos, movecount;
+  size_t              incount, current, restpos, movecount, zz;
   sc_list_t          *list;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q, *qalloc, *qpop;
@@ -678,8 +679,14 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   p4est_quadrant_t   *c4, *c5, *c6, *c7;
 #endif
   sc_array_t         *tquadrants;
+  p4est_quadrant_t   *family[8];
+  p4est_quadrant_t    parent, *pp = &parent;
+  p4est_quadrant_t    parentlast;
+  size_t              parentind = 0;
+  sc_array_t         *batchquads = NULL;
+  int                 hasp = 1;
 
-  if (allowed_level == 0 || (refine_fn == NULL && refine_ext_fn == NULL)) {
+  if (allowed_level == 0 || refine_fn == NULL) {
     P4EST_GLOBAL_PRODUCTIONF ("Noop " P4EST_STRING
                               "_refine with %lld total quadrants\n",
                               (long long) p4est->global_num_quadrants);
@@ -696,10 +703,6 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (0 <= allowed_level && allowed_level <= P4EST_QMAXLEVEL);
 
-  if (refine_ext_fn != NULL) {
-    sc_abort_collective ("Extended refinement callback not implemented");
-  }
-
   /*
      q points to a quadrant that is an array member
      qalloc is a quadrant that has been allocated through quadrant_pool
@@ -711,6 +714,13 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
    */
   list = sc_list_new (NULL);
   p4est->local_num_quadrants = 0;
+
+  if (!refine_recursive) {
+    rtype = P4EST_REPLACE_FAMILY;
+  }
+  if (rtype == P4EST_REPLACE_BATCH) {
+    batchquads = sc_array_new (sizeof (p4est_quadrant_t *));
+  }
 
   /* loop over all local trees */
   for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
@@ -760,6 +770,12 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
     qalloc->pad8 = 0;           /* this quadrant has not been refined yet */
     sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
 
+    P4EST_QUADRANT_INIT (&parent);
+    P4EST_QUADRANT_INIT (&parentlast);
+    if (replace_fn != NULL) {
+      hasp = 0;
+    }
+
     /*
        current points to the next array member to write
        restpos points to the next array member to read
@@ -777,9 +793,32 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
 
-        /* compute children and prepend them to the list */
-        p4est_quadrant_free_data (p4est, qpop);
-        c0 = qpop;
+#ifdef P4EST_DEBUG
+        if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
+          P4EST_ASSERT (!hasp);
+        }
+        else if (replace_fn == NULL) {
+          P4EST_ASSERT (hasp);
+        }
+#endif
+        if (!hasp) {
+          P4EST_ASSERT (replace_fn != NULL);
+          /* do not free qpop's data yet: we will do this when the parent
+           * is replaced */
+          parent = *qpop;
+          c0 = qpop;
+          if (rtype == P4EST_REPLACE_BATCH) {
+            P4EST_ASSERT (!parent.pad8);
+            p4est_quadrant_last_descendant (&parent, &parentlast,
+                                            P4EST_QMAXLEVEL);
+            parentind = current;
+            hasp = 1;
+          }
+        }
+        else {
+          p4est_quadrant_free_data (p4est, qpop);
+          c0 = qpop;
+        }
         c1 = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
         c2 = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
         c3 = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
@@ -816,6 +855,23 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         sc_list_prepend (list, c2);
         sc_list_prepend (list, c1);
         sc_list_prepend (list, c0);
+
+        if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
+          /* in family mode we always call the replace callback right
+           * away */
+          family[0] = c0;
+          family[1] = c1;
+          family[2] = c2;
+          family[3] = c3;
+#ifdef P4_TO_P8
+          family[4] = c4;
+          family[5] = c5;
+          family[6] = c6;
+          family[7] = c7;
+#endif
+          replace_fn (p4est, nt, 1, &pp, P4EST_CHILDREN, family);
+          p4est_quadrant_free_data (p4est, &parent);
+        }
       }
       else {
         /* need to make room in the array to store this new quadrant */
@@ -839,6 +895,32 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         ++tree->quadrants_per_level[qpop->level];
         ++current;
         sc_mempool_free (p4est->quadrant_pool, qpop);
+
+        if (replace_fn != NULL && hasp) {
+          P4EST_ASSERT (rtype == P4EST_REPLACE_BATCH);
+          P4EST_ASSERT (p4est_quadrant_is_ancestor (&parent, q));
+          if (p4est_quadrant_overlaps (q, &parentlast)) {
+            /* this is the last descendant of batch parent to be added */
+            P4EST_ASSERT (current > parentind);
+            P4EST_ASSERT (current - parentind >= P4EST_CHILDREN);
+            /* the first descendant of parent that was added assumed its
+             * place in the array */
+            sc_array_resize (batchquads, current - parentind);
+            /* get pointers to all of the new quadrants */
+            for (zz = parentind; zz < current; zz++) {
+              *((p4est_quadrant_t **) sc_array_index (batchquads,
+                                                      zz - parentind)) =
+                p4est_quadrant_array_index (tquadrants, zz);
+            }
+            /* replace */
+            replace_fn (p4est, nt, 1, &pp,
+                        (p4est_topidx_t) (current - parentind),
+                        (p4est_quadrant_t **) sc_array_index (batchquads, 0));
+            /* now we can destroy parent */
+            p4est_quadrant_free_data (p4est, &parent);
+            hasp = 0;
+          }
+        }
       }
     }
     tree->maxlevel = (int8_t) maxlevel;
@@ -867,6 +949,10 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   }
 
   sc_list_destroy (list);
+
+  if (replace_fn != NULL && rtype == P4EST_REPLACE_BATCH) {
+    sc_array_destroy (batchquads);
+  }
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);

@@ -36,15 +36,97 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Extended callback function prototype to decide for refinement.
- * \param [in] quadrant     Quadrant under consideration for refinement.
- * \param [in] children     If true is returned these will be the children.
- * \return                  Nonzero if the quadrant shall be refined.
+/** Callback function prototype used by extended routines when the quadrants
+ * of an existing, valid p8est are changed.  The callback allows the user to
+ * make changes to newly initialized quadrants before the quadrants that they
+ * replace are destroyed.
+ *
+ * \param [in] num_outgoing The number of outgoing quadrants.
+ * \param [in] outgoing     The outgoing quadrants: after the callback, the
+ *                          user_data, if \a p8est->data_size is nonzero,
+ *                          will be destroyed.
+ * \param [in] num_incoming The number of incoming quadrants.
+ * \param [in/out] incoming The incoming quadrants: prior to the callback,
+ *                          the user_data, if \a p8est->data_size is nonzero,
+ *                          is allocated, and the p8est_init_t callback,
+ *                          if it has been provided, will be called.
+ *
+ * Either num_outgoing or num_incoming will be 1, depending on whether the
+ * change in the mesh is refinement or coarsening.  The incoming and outoing
+ * quadrants always occupy the same region of the mesh.  See the description
+ * of p8est_replace_type_t for more information.
  */
-typedef int         (*p8est_refine_ext_t) (p8est_t * p8est,
-                                           p4est_topidx_t which_tree,
-                                           p8est_quadrant_t * quadrant,
-                                           p8est_quadrant_t * children[]);
+typedef void        (*p8est_replace_t) (p8est_t * p8est,
+                                        p4est_topidx_t which_tree,
+                                        p4est_locidx_t num_outgoing,
+                                        p8est_quadrant_t * outgoing[],
+                                        p4est_locidx_t num_incoming,
+                                        p8est_quadrant_t * incoming[]);
+
+/** A flag that is set by the user to define the capabilities of a particular
+ * implementation of the p8est_replace_t prototype.
+ *
+ * Sometimes, the extended routines will change a mesh only by one level,
+ * either replacing a single quadrant with its family of children
+ * (p8est_refine_ext if refine_recursive if false), or replacing a family of
+ * children with their parent (p8est_coarsen_ext if coarsen_recursive is
+ * false).
+ *
+ * In other situations, the incoming or outgoing quadrants may contain
+ * quadrants from multiple levels (when recursive refinement/coarsening
+ * occurs, or when balancing).  Providing a p8est_replace_t callback that
+ * handles multiple levels may be more efficient, but may also be more
+ * difficult to implement.  If the user's callback can only handle one level
+ * at a time, the user should set the flag to P8EST_REPLACE_FAMILY and the
+ * callback will be called multiple times.
+ *
+ * For example, consider the following recursive refinement:
+ *
+ * o...............o     +-------+---+---+
+ * :               :     |       |   |   |
+ * :               :     |       +---+---+
+ * :               :     |       |   |   |
+ * :               : --> +-------+---+---+
+ * :               :     |       |       |
+ * :               :     |       |       |
+ * :               :     |       |       |
+ * o...............o     +-------+-------+
+ *
+ * If the flag is P8EST_REPLACE_BATCH, the p8est_replace_t callback will be
+ * called once, with all of the descendants on the right in the incoming
+ * array.
+ *
+ * If the flag is P8EST_REPLACE_FAMILY, the p8est_replace_t callback will be
+ * called twice, first
+ *
+ * o...............o     +-------+-------+
+ * :               :     |       |       |
+ * :               :     |       |       |
+ * :               :     |       |       |
+ * :               : --> +-------+-------+ ,
+ * :               :     |       |       |
+ * :               :     |       |       |
+ * :               :     |       |       |
+ * o...............o     +-------+-------+
+ *
+ * and then
+ *
+ * o . . . o.......o     o . . . +---+---+
+ * .       :       :     .       |   |   |
+ * .       :       :     .       +---+---+
+ * .       :       :     .       |   |   |
+ * o . . . o.......o --> o . . . +---+---+ .
+ * .       .       .     .       .       .
+ * .       .       .     .       .       .
+ * .       .       .     .       .       .
+ * o . . . o . . . o     o . . . o . . . o
+ */
+typedef enum
+{
+  P8EST_REPLACE_FAMILY,
+  P8EST_REPLACE_BATCH
+}
+p8est_replace_type_t;
 
 /** Create a new forest.
  * This is a more general form of p8est_new.
@@ -67,20 +149,23 @@ p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
 
 /** Refine a forest with a bounded maximum refinement level.
  * A quadrant is refined if either callback returns true.
- * \param [in] refine_fn Callback function that returns true
- *                       if a quadrant shall be refined, may be NULL.
- * \param [in] refine_fn Extended callback function that returns true
- *                       if a quadrant shall be refined, may be NULL.
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is guaranteed to be allocated, may be NULL.
- * \param [in] maxlevel  Maximum allowed refinement level (inclusive).
- *                       If this is negative the level is unrestricted.
+ * \param [in] maxlevel   Maximum allowed refinement level (inclusive).
+ *                        If this is negative the level is unrestricted.
+ * \param [in] refine_fn  Callback function that returns true
+ *                        if a quadrant shall be refined, may be NULL.
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is guaranteed to be allocated, may be NULL.
+ * \param [in] replace_fn Callback function that allows the user to change
+ *                        incoming quadrants based on the quadrants they
+ *                        replace.
+ * \param [in] rtype      See description of p8est_replace_type_t
  */
 void                p8est_refine_ext (p8est_t * p8est,
                                       int refine_recursive, int maxlevel,
                                       p8est_refine_t refine_fn,
-                                      p8est_refine_ext_t refine_ext_fn,
-                                      p8est_init_t init_fn);
+                                      p8est_init_t init_fn,
+                                      p8est_replace_t replace_fn,
+                                      p8est_replace_type_t rtype);
 
 /** Repartition the forest.
  *

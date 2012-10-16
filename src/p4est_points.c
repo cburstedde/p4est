@@ -375,7 +375,7 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* refine to have one point per quadrant */
   if (max_points >= 0) {
     p4est_refine_ext (p4est, 1, maxlevel,
-                      p4est_points_refine, NULL, p4est_points_init);
+                      p4est_points_refine, p4est_points_init, NULL, 0);
 #ifdef P4EST_DEBUG
     for (jt = first_tree; jt <= last_tree; ++jt) {
       tree = p4est_tree_array_index (p4est->trees, jt);
