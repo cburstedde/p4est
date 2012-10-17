@@ -1953,7 +1953,7 @@ p4est_balance_replace_recursive (p4est_t * p4est, p4est_topidx_t nt,
     return;
   }
   sc_array_init_view (&view, array, start, end - start);
-  p4est_split_array (array, parent->level, iz);
+  p4est_split_array (&view, parent->level, iz);
 
   for (jz = 0; jz < P4EST_CHILDREN; jz++) {
     if (iz[jz] + 1 == iz[jz + 1]) {

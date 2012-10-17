@@ -56,9 +56,9 @@ SC_EXTERN_C_BEGIN;
  */
 typedef void        (*p4est_replace_t) (p4est_t * p4est,
                                         p4est_topidx_t which_tree,
-                                        p4est_locidx_t num_outgoing,
+                                        int num_outgoing,
                                         p4est_quadrant_t * outgoing[],
-                                        p4est_locidx_t num_incoming,
+                                        int num_incoming,
                                         p4est_quadrant_t * incoming[]);
 
 /** Create a new forest.

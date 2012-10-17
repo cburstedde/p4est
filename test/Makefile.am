@@ -15,7 +15,7 @@ p4est_test_programs += \
         test/p4est_test_search test/p4est_test_brick \
         test/p4est_test_partition_corr \
         test/p4est_test_conn_complete test/p4est_test_balance_seeds \
-        test/p4est_test_wrap
+        test/p4est_test_wrap test/p4est_test_replace
 if P4EST_WITH_METIS
 p4est_test_programs += \
         test/p4est_test_reorder
@@ -32,7 +32,7 @@ p4est_test_programs += \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_partition_corr \
         test/p8est_test_conn_complete test/p8est_test_balance_seeds \
-        test/p8est_test_wrap
+        test/p8est_test_wrap test/p8est_test_replace
 if P4EST_WITH_METIS
 p4est_test_programs += \
         test/p8est_test_reorder
@@ -59,6 +59,7 @@ test_p4est_test_partition_corr_SOURCES = test/test_partition_corr2.c
 test_p4est_test_conn_complete_SOURCES = test/test_conn_complete2.c
 test_p4est_test_balance_seeds_SOURCES = test/test_balance_seeds2.c
 test_p4est_test_wrap_SOURCES = test/test_wrap2.c
+test_p4est_test_replace_SOURCES = test/test_replace2.c
 
 test_p8est_test_quadrants_SOURCES = test/test_quadrants3.c
 test_p8est_test_balance_SOURCES = test/test_balance3.c
@@ -79,6 +80,7 @@ test_p8est_test_partition_corr_SOURCES = test/test_partition_corr3.c
 test_p8est_test_conn_complete_SOURCES = test/test_conn_complete3.c
 test_p8est_test_balance_seeds_SOURCES = test/test_balance_seeds3.c
 test_p8est_test_wrap_SOURCES = test/test_wrap3.c
+test_p8est_test_replace_SOURCES = test/test_replace3.c
 
 if P4EST_WITH_METIS
 test_p4est_test_reorder_SOURCES = test/test_reorder2.c
@@ -105,6 +107,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_partition_corr_SOURCES) \
         $(test_p4est_test_reorder_SOURCES) \
         $(test_p4est_test_balance_seeds_SOURCES) \
+        $(test_p4est_test_replace_SOURCES) \
         $(test_p8est_test_quadrants_SOURCES) \
         $(test_p8est_test_balance_SOURCES) \
         $(test_p8est_test_partition_SOURCES) \
@@ -122,7 +125,8 @@ LINT_CSOURCES += \
         $(test_p8est_test_search_SOURCES) \
         $(test_p8est_test_reorder_SOURCES) \
         $(test_p8est_test_partition_corr_SOURCES) \
-        $(test_p8est_test_balance_seeds_SOURCES)
+        $(test_p8est_test_balance_seeds_SOURCES) \
+        $(test_p8est_test_replace_SOURCES)
 
 if P4EST_WITH_METIS
 LINT_CSOURCES += \
