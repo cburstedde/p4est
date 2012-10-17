@@ -655,14 +655,13 @@ void
 p4est_refine (p4est_t * p4est, int refine_recursive,
               p4est_refine_t refine_fn, p4est_init_t init_fn)
 {
-  p4est_refine_ext (p4est, refine_recursive, -1, refine_fn, init_fn, NULL,
-                    P4EST_REPLACE_FAMILY);
+  p4est_refine_ext (p4est, refine_recursive, -1, refine_fn, init_fn, NULL);
 }
 
 void
 p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
                   p4est_refine_t refine_fn, p4est_init_t init_fn,
-                  p4est_replace_t replace_fn, p4est_replace_type_t rtype)
+                  p4est_replace_t replace_fn)
 {
 #ifdef P4EST_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
@@ -670,7 +669,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   int                 dorefine;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
-  size_t              incount, current, restpos, movecount, zz;
+  size_t              incount, current, restpos, movecount;
   sc_list_t          *list;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q, *qalloc, *qpop;
@@ -681,10 +680,6 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   sc_array_t         *tquadrants;
   p4est_quadrant_t   *family[8];
   p4est_quadrant_t    parent, *pp = &parent;
-  p4est_quadrant_t    parentlast;
-  size_t              parentind = 0;
-  sc_array_t         *batchquads = NULL;
-  int                 hasp = 1;
 
   if (allowed_level == 0 || refine_fn == NULL) {
     P4EST_GLOBAL_PRODUCTIONF ("Noop " P4EST_STRING
@@ -714,13 +709,6 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
    */
   list = sc_list_new (NULL);
   p4est->local_num_quadrants = 0;
-
-  if (!refine_recursive) {
-    rtype = P4EST_REPLACE_FAMILY;
-  }
-  if (rtype == P4EST_REPLACE_BATCH) {
-    batchquads = sc_array_new (sizeof (p4est_quadrant_t *));
-  }
 
   /* loop over all local trees */
   for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
@@ -771,10 +759,6 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
     sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
 
     P4EST_QUADRANT_INIT (&parent);
-    P4EST_QUADRANT_INIT (&parentlast);
-    if (replace_fn != NULL) {
-      hasp = 0;
-    }
 
     /*
        current points to the next array member to write
@@ -793,27 +777,11 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
 
-#ifdef P4EST_DEBUG
-        if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
-          P4EST_ASSERT (!hasp);
-        }
-        else if (replace_fn == NULL) {
-          P4EST_ASSERT (hasp);
-        }
-#endif
-        if (!hasp) {
-          P4EST_ASSERT (replace_fn != NULL);
+        if (replace_fn != NULL) {
           /* do not free qpop's data yet: we will do this when the parent
            * is replaced */
           parent = *qpop;
           c0 = qpop;
-          if (rtype == P4EST_REPLACE_BATCH) {
-            P4EST_ASSERT (!parent.pad8);
-            p4est_quadrant_last_descendant (&parent, &parentlast,
-                                            P4EST_QMAXLEVEL);
-            parentind = current;
-            hasp = 1;
-          }
         }
         else {
           p4est_quadrant_free_data (p4est, qpop);
@@ -856,7 +824,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         sc_list_prepend (list, c1);
         sc_list_prepend (list, c0);
 
-        if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
+        if (replace_fn != NULL) {
           /* in family mode we always call the replace callback right
            * away */
           family[0] = c0;
@@ -895,32 +863,6 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         ++tree->quadrants_per_level[qpop->level];
         ++current;
         sc_mempool_free (p4est->quadrant_pool, qpop);
-
-        if (replace_fn != NULL && hasp) {
-          P4EST_ASSERT (rtype == P4EST_REPLACE_BATCH);
-          P4EST_ASSERT (p4est_quadrant_is_ancestor (&parent, q));
-          if (p4est_quadrant_overlaps (q, &parentlast)) {
-            /* this is the last descendant of batch parent to be added */
-            P4EST_ASSERT (current > parentind);
-            P4EST_ASSERT (current - parentind >= P4EST_CHILDREN);
-            /* the first descendant of parent that was added assumed its
-             * place in the array */
-            sc_array_resize (batchquads, current - parentind);
-            /* get pointers to all of the new quadrants */
-            for (zz = parentind; zz < current; zz++) {
-              *((p4est_quadrant_t **) sc_array_index (batchquads,
-                                                      zz - parentind)) =
-                p4est_quadrant_array_index (tquadrants, zz);
-            }
-            /* replace */
-            replace_fn (p4est, nt, 1, &pp,
-                        (p4est_topidx_t) (current - parentind),
-                        (p4est_quadrant_t **) sc_array_index (batchquads, 0));
-            /* now we can destroy parent */
-            p4est_quadrant_free_data (p4est, &parent);
-            hasp = 0;
-          }
-        }
       }
     }
     tree->maxlevel = (int8_t) maxlevel;
@@ -950,10 +892,6 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
 
   sc_list_destroy (list);
 
-  if (replace_fn != NULL && rtype == P4EST_REPLACE_BATCH) {
-    sc_array_destroy (batchquads);
-  }
-
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
 
@@ -967,14 +905,13 @@ void
 p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
                p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
-  p4est_coarsen_ext (p4est, coarsen_recursive, coarsen_fn, init_fn, NULL,
-                     P4EST_REPLACE_FAMILY);
+  p4est_coarsen_ext (p4est, coarsen_recursive, coarsen_fn, init_fn, NULL);
 }
 
 void
 p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
                    p4est_coarsen_t coarsen_fn, p4est_init_t init_fn,
-                   p4est_replace_t replace_fn, p4est_replace_type_t rtype)
+                   p4est_replace_t replace_fn)
 {
 #ifdef P4EST_DEBUG
   size_t              data_pool_size;
@@ -997,17 +934,7 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
 
-  if (replace_fn == NULL || !coarsen_recursive) {
-    rtype = P4EST_REPLACE_FAMILY;
-  }
-
   P4EST_QUADRANT_INIT (&qtemp);
-
-  SC_CHECK_ABORT (rtype != P4EST_REPLACE_BATCH,
-                  "batch replacement in " P4EST_STRING
-                  "_coarsen_ext not implemented.");
-  if (rtype == P4EST_REPLACE_BATCH) {
-  }
 
   /* loop over all local trees */
   prev_offset = 0;
@@ -1048,47 +975,38 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
           break;
         }
       }
-#ifdef P4EST_DEBUG
       /* in a complete tree, the only way P4EST_CHILDREN consecutive quadrants
        * have the correct consecutive child_id's is if they are, in fact, a
        * family.
        */
-      if (isfamily) {
-        P4EST_ASSERT (p4est_quadrant_is_familypv (c));
-      }
-      else {
-        P4EST_ASSERT (!p4est_quadrant_is_familypv (c));
-      }
-#endif
-      if (isfamily) {
-        if (coarsen_fn (p4est, jt, c)) {
-          /* coarsen this family of quadrants */
-          if (replace_fn == NULL) {
-            for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
-              p4est_quadrant_free_data (p4est, c[zz]);
-            }
+      P4EST_ASSERT (!isfamily || p4est_quadrant_is_familypv (c));
+      if (isfamily && coarsen_fn (p4est, jt, c)) {
+        /* coarsen this family of quadrants */
+        if (replace_fn == NULL) {
+          for (zz = 0; zz < P4EST_CHILDREN; ++zz) {
+            p4est_quadrant_free_data (p4est, c[zz]);
           }
-          tree->quadrants_per_level[c[0]->level] -= P4EST_CHILDREN;
-          cfirst = c[0];
-          if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
-            qtemp = *(c[0]);
-            c[0] = &qtemp;
-          }
-          p4est_quadrant_parent (c[0], cfirst);
-          p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
-          tree->quadrants_per_level[cfirst->level] += 1;
-          p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
-          removed += P4EST_CHILDREN - 1;
+        }
+        tree->quadrants_per_level[c[0]->level] -= P4EST_CHILDREN;
+        cfirst = c[0];
+        if (replace_fn != NULL) {
+          qtemp = *(c[0]);
+          c[0] = &qtemp;
+        }
+        p4est_quadrant_parent (c[0], cfirst);
+        p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
+        tree->quadrants_per_level[cfirst->level] += 1;
+        p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
+        removed += P4EST_CHILDREN - 1;
 
-          cidz = (size_t) p4est_quadrant_child_id (cfirst);
-          start = window + 1;
-          length += P4EST_CHILDREN - 1;
+        cidz = (size_t) p4est_quadrant_child_id (cfirst);
+        start = window + 1;
+        length += P4EST_CHILDREN - 1;
 
-          if (replace_fn != NULL && rtype == P4EST_REPLACE_FAMILY) {
-            replace_fn (p4est, jt, P4EST_CHILDREN, c, 1, &cfirst);
-            for (zz = 0; zz < P4EST_CHILDREN; zz++) {
-              p4est_quadrant_free_data (p4est, c[zz]);
-            }
+        if (replace_fn != NULL) {
+          replace_fn (p4est, jt, P4EST_CHILDREN, c, 1, &cfirst);
+          for (zz = 0; zz < P4EST_CHILDREN; zz++) {
+            p4est_quadrant_free_data (p4est, c[zz]);
           }
         }
       }
@@ -1269,6 +1187,13 @@ p4est_balance_response (p4est_t * p4est, p4est_balance_peer_t * peer,
 void
 p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                p4est_init_t init_fn)
+{
+  p4est_balance_ext (p4est, btype, init_fn, NULL);
+}
+
+void
+p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
+                   p4est_init_t init_fn, p4est_replace_t replace_fn)
 {
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
@@ -1475,7 +1400,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
                     (unsigned long long) tquadrants->elem_count);
 
     /* local balance first pass */
-    p4est_balance_subtree (p4est, btype, nt, init_fn);
+    p4est_balance_subtree_ext (p4est, btype, nt, init_fn, replace_fn);
     treecount = tquadrants->elem_count;
     P4EST_VERBOSEF ("Balance tree %lld A %llu\n",
                     (long long) nt, (unsigned long long) treecount);
@@ -2329,7 +2254,7 @@ p4est_balance (p4est_t * p4est, p4est_connect_type_t btype,
         (tree_flags[nt] & any_face_flag)) {
       /* we have most probably received quadrants, run sort and balance */
       /* balance the border, add it back into the tree, and linearize */
-      p4est_balance_border (p4est, btype, nt, init_fn, borders);
+      p4est_balance_border (p4est, btype, nt, init_fn, replace_fn, borders);
       P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
                       (long long) nt,
                       (unsigned long long) treecount,

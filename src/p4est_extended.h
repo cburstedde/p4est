@@ -51,10 +51,8 @@ SC_EXTERN_C_BEGIN;
  *                          is allocated, and the p4est_init_t callback,
  *                          if it has been provided, will be called.
  *
- * Either num_outgoing or num_incoming will be 1, depending on whether the
- * change in the mesh is refinement or coarsening.  The incoming and outoing
- * quadrants always occupy the same region of the mesh.  See the description
- * of p4est_replace_type_t for more information.
+ * If the mesh is being refined, num_outgoing will be 1 and num_incoming will
+ * be 4, and vice versa if the mesh is being coarsened.
  */
 typedef void        (*p4est_replace_t) (p4est_t * p4est,
                                         p4est_topidx_t which_tree,
@@ -62,71 +60,6 @@ typedef void        (*p4est_replace_t) (p4est_t * p4est,
                                         p4est_quadrant_t * outgoing[],
                                         p4est_locidx_t num_incoming,
                                         p4est_quadrant_t * incoming[]);
-
-/** A flag that is set by the user to define the capabilities of a particular
- * implementation of the p4est_replace_t prototype.
- *
- * Sometimes, the extended routines will change a mesh only by one level,
- * either replacing a single quadrant with its family of children
- * (p4est_refine_ext if refine_recursive if false), or replacing a family of
- * children with their parent (p4est_coarsen_ext if coarsen_recursive is
- * false).
- *
- * In other situations, the incoming or outgoing quadrants may contain
- * quadrants from multiple levels (when recursive refinement/coarsening
- * occurs, or when balancing).  Providing a p4est_replace_t callback that
- * handles multiple levels may be more efficient, but may also be more
- * difficult to implement.  If the user's callback can only handle one level
- * at a time, the user should set the flag to P4EST_REPLACE_FAMILY and the
- * callback will be called multiple times.
- *
- * For example, consider the following recursive refinement:
- *
- * o...............o     +-------+---+---+
- * :               :     |       |   |   |
- * :               :     |       +---+---+
- * :               :     |       |   |   |
- * :               : --> +-------+---+---+
- * :               :     |       |       |
- * :               :     |       |       |
- * :               :     |       |       |
- * o...............o     +-------+-------+
- *
- * If the flag is P4EST_REPLACE_BATCH, the p4est_replace_t callback will be
- * called once, with all of the descendants on the right in the incoming
- * array.
- *
- * If the flag is P4EST_REPLACE_FAMILY, the p4est_replace_t callback will be
- * called twice, first
- *
- * o...............o     +-------+-------+
- * :               :     |       |       |
- * :               :     |       |       |
- * :               :     |       |       |
- * :               : --> +-------+-------+ ,
- * :               :     |       |       |
- * :               :     |       |       |
- * :               :     |       |       |
- * o...............o     +-------+-------+
- *
- * and then
- *
- * o . . . o.......o     o . . . +---+---+
- * .       :       :     .       |   |   |
- * .       :       :     .       +---+---+
- * .       :       :     .       |   |   |
- * o . . . o.......o --> o . . . +---+---+ .
- * .       .       .     .       .       .
- * .       .       .     .       .       .
- * .       .       .     .       .       .
- * o . . . o . . . o     o . . . o . . . o
- */
-typedef enum
-{
-  P4EST_REPLACE_FAMILY,
-  P4EST_REPLACE_BATCH
-}
-p4est_replace_type_t;
 
 /** Create a new forest.
  * This is a more general form of p4est_new.
@@ -158,20 +91,37 @@ p4est_t            *p4est_new_ext (MPI_Comm mpicomm,
  * \param [in] replace_fn Callback function that allows the user to change
  *                        incoming quadrants based on the quadrants they
  *                        replace.
- * \param [in] rtype      See description of p4est_replace_type_t
  */
 void                p4est_refine_ext (p4est_t * p4est,
                                       int refine_recursive, int maxlevel,
                                       p4est_refine_t refine_fn,
                                       p4est_init_t init_fn,
-                                      p4est_replace_t replace_fn,
-                                      p4est_replace_type_t rtype);
+                                      p4est_replace_t replace_fn);
 
+/** Coarsen a forest.
+ * \param [in] coarsen_fn Callback function that returns true if a
+ *                        family of quadrants shall be coarsened
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
+ * \param [in] replace_fn Callback function that allows the user to change
+ *                        incoming quadrants based on the quadrants they
+ *                        replace.
+ */
 void                p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
                                        p4est_coarsen_t coarsen_fn,
                                        p4est_init_t init_fn,
-                                       p4est_replace_t replace_fn,
-                                       p4est_replace_type_t rtype);
+                                       p4est_replace_t replace_fn);
+
+void                p4est_balance_ext (p4est_t * p4est,
+                                       p4est_connect_type_t btype,
+                                       p4est_init_t init_fn,
+                                       p4est_replace_t replace_fn);
+
+void                p4est_balance_subtree_ext (p4est_t * p4est,
+                                               p4est_connect_type_t btype,
+                                               p4est_topidx_t which_tree,
+                                               p4est_init_t init_fn,
+                                               p4est_replace_t replace_fn);
 
 /** Repartition the forest.
  *
