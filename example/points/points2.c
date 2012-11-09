@@ -80,8 +80,8 @@ read_points (const char *filename, p4est_topidx_t num_trees,
   qshift = P4EST_MAXLEVEL - P4EST_QMAXLEVEL;
   for (ignored = u = 0; u < ucount; ++u) {
     x = point_buffer[3 * u + 0];
-    y = point_buffer[3 * u + 2];
-    z = point_buffer[3 * u + 1];
+    y = point_buffer[3 * u + 1];
+    z = point_buffer[3 * u + 2];
     if (x < 0. || x > 1. || y < 0. || y > 1. || z < 0. || z > 1.) {
       ++ignored;
       continue;
