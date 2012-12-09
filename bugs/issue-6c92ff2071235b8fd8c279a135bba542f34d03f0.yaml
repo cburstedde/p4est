@@ -7,8 +7,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2009-02-04 17:48:23.153149 Z
 references: []
 
@@ -21,6 +21,13 @@ log_events:
 - - 2012-08-13 09:18:57.906932 Z
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - commented
-  - "The p4est_load_ext function now has an autopartition parameter.\n\
-    If set to true, p4est will load files written with any mpisize.\n\
-    In this case the partition is set to uniform."
+  - |-
+    The p4est_load_ext function now has an autopartition parameter.
+    If set to true, p4est will load files written with any mpisize.
+    In this case the partition is set to uniform.
+- - 2012-12-09 19:58:35.496342 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - |-
+    Loading of previous format versions will not be implemented.
+    Features are complete for current binary load/save
