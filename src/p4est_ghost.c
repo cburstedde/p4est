@@ -227,6 +227,7 @@ p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
   ssize_t             result;
   sc_array_t          ghost_view;
 
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
   start = 0;
   ended = ghost->ghosts.elem_count;
 
