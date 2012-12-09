@@ -218,18 +218,19 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
 
 #endif /* P4EST_MPI */
 
-ssize_t
-p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
-                          int which_proc, p4est_topidx_t which_tree,
-                          const p4est_quadrant_t * q)
+/* Returns true for matching proc and tree range, false otherwise. */
+static int
+p4est_ghost_check_range (p4est_ghost_t * ghost,
+                         int which_proc, p4est_topidx_t which_tree,
+                         size_t * pstart, size_t * pended)
 {
-  size_t              start, ended;
-  ssize_t             result;
-  sc_array_t          ghost_view;
+  size_t              start = 0;
+  size_t              ended = ghost->ghosts.elem_count;
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  start = 0;
-  ended = ghost->ghosts.elem_count;
+  if (ghost->ghosts.elem_count == 0) {
+    *pstart = *pended = 0;
+    return 0;
+  }
 
   if (which_proc != -1) {
     P4EST_ASSERT (0 <= which_proc && which_proc < ghost->mpisize);
@@ -242,16 +243,33 @@ p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
     ended = SC_MIN (ended, (size_t) ghost->tree_offsets[which_tree + 1]);
   }
 
-  if (start >= ended) {
+  *pstart = start;
+  *pended = ended;
+  return start < ended;
+}
+
+ssize_t
+p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
+                          int which_proc, p4est_topidx_t which_tree,
+                          const p4est_quadrant_t * q)
+{
+  size_t              start, ended;
+
+  if (p4est_ghost_check_range (ghost, which_proc, which_tree, &start, &ended)) {
+    ssize_t             result;
+    sc_array_t          ghost_view;
+
+    /* create a per-tree window on the ghost layer */
+    sc_array_init_view (&ghost_view, &ghost->ghosts, start, ended - start);
+    result = sc_array_bsearch (&ghost_view, q, p4est_quadrant_compare);
+
+    /* and don't forget to add the window offset */
+    return (result < 0) ? (ssize_t) (-1) : result + (ssize_t) start;
+  }
+  else {
+    P4EST_ASSERT (p4est_quadrant_is_valid (q));
     return -1;
   }
-
-  /* create a per-tree window on the ghost layer */
-  sc_array_init_view (&ghost_view, &ghost->ghosts, start, ended - start);
-  result = sc_array_bsearch (&ghost_view, q, p4est_quadrant_compare);
-
-  /* and don't forget to add the window offset */
-  return (result < 0) ? (ssize_t) (-1) : result + (ssize_t) start;
 }
 
 int
