@@ -95,10 +95,10 @@ void                p4est_ghost_destroy (p4est_ghost_t * ghost);
  * \param [in] q                Valid quadrant is searched in the ghost layer.
  * \return                      Offset in the ghost layer, or -1 if not found.
  */
-ssize_t             p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
-                                              int which_proc,
-                                              p4est_topidx_t which_tree,
-                                              const p4est_quadrant_t * q);
+ssize_t             p4est_ghost_bsearch (p4est_ghost_t * ghost,
+                                         int which_proc,
+                                         p4est_topidx_t which_tree,
+                                         const p4est_quadrant_t * q);
 
 /** Conduct binary search for ancestor on range of the ghost layer.
  * \param [in] ghost            The ghost layer.
@@ -107,10 +107,10 @@ ssize_t             p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
  * \param [in] q                Valid quadrant's ancestor is searched.
  * \return                      Offset in the ghost layer, or -1 if not found.
  */
-ssize_t             p4est_ghost_tree_contains (p4est_ghost_t * ghost,
-                                               int which_proc,
-                                               p4est_topidx_t which_tree,
-                                               const p4est_quadrant_t * q);
+ssize_t             p4est_ghost_contains (p4est_ghost_t * ghost,
+                                          int which_proc,
+                                          p4est_topidx_t which_tree,
+                                          const p4est_quadrant_t * q);
 
 /** Checks if quadrant exists in the local forest or the ghost layer.
  *
