@@ -31,6 +31,7 @@
 #include <p8est_ghost.h>
 #include <p8est_search.h>
 #endif
+#include <sc_search.h>
 
 /* htonl is in either of these two */
 #ifdef P4EST_HAVE_ARPA_NET_H
@@ -265,6 +266,37 @@ p4est_ghost_tree_bsearch (p4est_ghost_t * ghost,
 
     /* and don't forget to add the window offset */
     return (result < 0) ? (ssize_t) (-1) : result + (ssize_t) start;
+  }
+  else {
+    P4EST_ASSERT (p4est_quadrant_is_valid (q));
+    return -1;
+  }
+}
+
+ssize_t
+p4est_ghost_tree_contains (p4est_ghost_t * ghost,
+                           int which_proc, p4est_topidx_t which_tree,
+                           const p4est_quadrant_t * q)
+{
+  size_t              start, ended;
+
+  if (p4est_ghost_check_range (ghost, which_proc, which_tree, &start, &ended)) {
+    size_t              nmemb = ended - start - 1;
+    size_t              result;
+    sc_array_t          ghost_view;
+    p4est_quadrant_t   *qresult;
+
+    /* create a per-tree window on the ghost layer */
+    sc_array_init_view (&ghost_view, &ghost->ghosts, start, ended - start);
+    result = sc_bsearch_range (q, ghost_view.array, 
+                               nmemb, sizeof (p4est_quadrant_t),
+                               p4est_quadrant_compare);
+    qresult = p4est_quadrant_array_index (&ghost_view, result);
+
+    /* and don't forget to add the window offset */
+    return !(p4est_quadrant_is_equal (qresult, q) ||
+             p4est_quadrant_is_ancestor (qresult, q)) ?
+           (ssize_t) (-1) : result + (ssize_t) start;
   }
   else {
     P4EST_ASSERT (p4est_quadrant_is_valid (q));

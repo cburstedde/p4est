@@ -303,6 +303,7 @@
 #define p4est_ghost_new                 p8est_ghost_new
 #define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_ghost_tree_bsearch        p8est_ghost_tree_bsearch
+#define p4est_ghost_tree_contains       p8est_ghost_tree_contains
 #define p4est_face_quadrant_exists      p8est_face_quadrant_exists
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced
