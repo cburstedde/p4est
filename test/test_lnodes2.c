@@ -807,7 +807,7 @@ main (int argc, char **argv)
       }
 
       sc_array_init_data (&tpoint_array, tpoints, sizeof (tpoint_t), nin);
-      buffer = p4est_lnodes_share_all (&tpoint_array, lnodes, p4est);
+      buffer = p4est_lnodes_share_all (&tpoint_array, lnodes);
 
       for (zz = 0; zz < lnodes->sharers->elem_count; zz++) {
         lrank = p4est_lnodes_rank_array_index (lnodes->sharers, zz);
@@ -835,7 +835,7 @@ main (int argc, char **argv)
           p4est_lnodes_global_index (lnodes, zz);
       }
 
-      p4est_lnodes_share_owned (global_nodes, lnodes, p4est);
+      p4est_lnodes_share_owned (global_nodes, lnodes);
 
       for (zz = 0; zz < global_nodes->elem_count; zz++) {
         gn = *((p4est_gloidx_t *) sc_array_index (global_nodes, zz));

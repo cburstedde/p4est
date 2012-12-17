@@ -203,8 +203,7 @@ p4est_lnodes_buffer_t;
  */
 p4est_lnodes_buffer_t *p4est_lnodes_share_owned_begin (sc_array_t * node_data,
                                                        p4est_lnodes_t *
-                                                       lnodes,
-                                                       p4est_t * p4est);
+                                                       lnodes);
 
 void                p4est_lnodes_share_owned_end (p4est_lnodes_buffer_t *
                                                   buffer);
@@ -214,8 +213,7 @@ void                p4est_lnodes_share_owned_end (p4est_lnodes_buffer_t *
  * done to mask the communication cost.
  */
 void                p4est_lnodes_share_owned (sc_array_t * node_data,
-                                              p4est_lnodes_t * lnodes,
-                                              p4est_t * p4est);
+                                              p4est_lnodes_t * lnodes);
 
 /** p4est_lnodes_share_all_begin
  *
@@ -234,8 +232,7 @@ void                p4est_lnodes_share_owned (sc_array_t * node_data,
  * p4est_lnodes_share_all_end.
  */
 p4est_lnodes_buffer_t *p4est_lnodes_share_all_begin (sc_array_t * node_data,
-                                                     p4est_lnodes_t * lnodes,
-                                                     p4est_t * p4est);
+                                                     p4est_lnodes_t * lnodes);
 
 void                p4est_lnodes_share_all_end (p4est_lnodes_buffer_t *
                                                 buffer);
@@ -245,8 +242,7 @@ void                p4est_lnodes_share_all_end (p4est_lnodes_buffer_t *
  * done to mask the communication cost.
  */
 p4est_lnodes_buffer_t *p4est_lnodes_share_all (sc_array_t * node_data,
-                                               p4est_lnodes_t * lnodes,
-                                               p4est_t * p4est);
+                                               p4est_lnodes_t * lnodes);
 
 void                p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t *
                                                  buffer);
