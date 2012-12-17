@@ -326,6 +326,7 @@
 #define p4est_lnodes_buffer_destroy     p8est_lnodes_buffer_destroy
 #define p4est_lnodes_rank_array_index   p8est_lnodes_rank_array_index
 #define p4est_lnodes_rank_array_index_int p8est_lnodes_rank_array_index_int
+#define p4est_lnodes_global_index       p8est_lnodes_global_index
 
 /* functions in p4est_mesh */
 #define p4est_mesh_memory_used          p8est_mesh_memory_used

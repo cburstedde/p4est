@@ -2448,7 +2448,7 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   }
 #endif
 
-  data->local_elem_nodes = lnodes->local_nodes;
+  data->local_elem_nodes = lnodes->element_nodes;
   data->ghost_elem_nodes = P4EST_ALLOC (p4est_locidx_t, ngen);
   memset (data->ghost_elem_nodes, -1, ngen * sizeof (p4est_locidx_t));
 
@@ -2908,7 +2908,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data)
     sc_array_reset (&(recv_buf[i]));
   }
 
-  P4EST_VERBOSEF ("Total 0f %lld bytes received from %d processes\n",
+  P4EST_VERBOSEF ("Total of %lld bytes received from %d processes\n",
                   (unsigned long long) total_recv, num_recv_procs);
   P4EST_FREE (data->send_buf);
   P4EST_FREE (recv_buf);
@@ -2938,7 +2938,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   size_t              count, zz;
   p4est_locidx_t      icount = 0, gcount = 0, gcount2 = 0;
   p4est_locidx_t     *lp, li;
-  p4est_locidx_t     *elnodes = lnodes->local_nodes;
+  p4est_locidx_t     *elnodes = lnodes->element_nodes;
   p4est_locidx_t      nlen = lnodes->num_local_elements * lnodes->vnodes;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) data->inodes->elem_count;
   p4est_locidx_t      inidx;
@@ -2979,18 +2979,38 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     global_offsets[i + 1] = global_offsets[i] +
       (p4est_gloidx_t) global_num_indep[i];
   }
+  lnodes->global_offset = global_offsets[p4est->mpirank];
 
   sc_array_init (&inode_to_global, sizeof (p4est_locidx_t));
   sc_array_resize (&inode_to_global, (size_t) num_inodes);
 
-  for (i = 0; i < mpisize; i++) {
+  i = p4est->mpirank;
+  {
     s_array = &(data->sorters[i]);
     count = s_array->elem_count;
     P4EST_ASSERT (sc_array_is_sorted (s_array, p4est_lnodes_sorter_compare));
-    if (i == p4est->mpirank) {
-      lnodes->owned_offset = gcount;
-      P4EST_ASSERT (count == (size_t) lnodes->owned_count);
+    P4EST_ASSERT (count == (size_t) lnodes->owned_count);
+    for (zz = 0; zz < count; zz++) {
+      sorter = (p4est_lnodes_sorter_t *) sc_array_index (s_array, zz);
+      lp = (p4est_locidx_t *) sc_array_index (&inode_to_global,
+                                              sorter->inode_index);
+      if (zz == 0 || sorter->local_index > prev->local_index) {
+        *lp = gcount++;
+        prev = sorter;
+      }
+      else {
+        *lp = gcount - 1;
+      }
     }
+    icount += count;
+  }
+  for (i = 0; i < mpisize; i++) {
+    if (i == p4est->mpirank) {
+      continue;
+    }
+    s_array = &(data->sorters[i]);
+    count = s_array->elem_count;
+    P4EST_ASSERT (sc_array_is_sorted (s_array, p4est_lnodes_sorter_compare));
     for (zz = 0; zz < count; zz++) {
       sorter = (p4est_lnodes_sorter_t *) sc_array_index (s_array, zz);
       lp = (p4est_locidx_t *) sc_array_index (&inode_to_global,
@@ -3007,11 +3027,15 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   }
   P4EST_ASSERT (icount == num_inodes);
 
-  lnodes->num_indep_nodes = gcount;
+  lnodes->num_local_nodes = gcount;
 
-  lnodes->global_nodes = gnodes = P4EST_ALLOC (p4est_gloidx_t, gcount);
+  lnodes->nonlocal_nodes = gnodes = P4EST_ALLOC (p4est_gloidx_t, gcount -
+                                                 lnodes->owned_count);
 
   for (i = 0; i < mpisize; i++) {
+    if (i == p4est->mpirank) {
+      continue;
+    }
     s_array = &(data->sorters[i]);
     count = s_array->elem_count;
     if (s_array->elem_count == 0) {
@@ -3027,7 +3051,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       prev = sorter;
     }
   }
-  P4EST_ASSERT (gcount2 == gcount);
+  P4EST_ASSERT (gcount2 + lnodes->owned_count == gcount);
 
   for (li = 0; li < nlen; li++) {
     inidx = elnodes[li];
@@ -3061,7 +3085,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
 
   /* for every node in a send or receive list, figure out which global node it
    * is, and which processes share it, and add the index in global nodes to that
-   * sharer's local_nodes array.
+   * sharer's element_nodes array.
    */
   for (i = 0; i < mpisize; i++) {
     for (j = 0; j < 2; j++) {
@@ -3137,46 +3161,58 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
     }
   }
 
-  /* for each sharer, figure out which entries in local_nodes are owned by the
-   * current process, and which are owned by the sharer's rank */
+  /* for each sharer, figure out which entries in element_nodes are owned by
+   * the current process, and which are owned by the sharer's rank */
   for (i = 0; i < comm_proc_count; i++) {
     lrank = p4est_lnodes_rank_array_index_int (sharers, i);
-    sc_array_sort (&(lrank->shared_nodes), p4est_locidx_compare);
+    shared_nodes = &(lrank->shared_nodes);
+    count = shared_nodes->elem_count;
+    if (count) {
+      sc_array_t         *sortshared =
+        sc_array_new_size (2 * sizeof (p4est_gloidx_t),
+                           count);
+      for (zz = 0; zz < count; zz++) {
+        p4est_gloidx_t     *gp;
+
+        gidx = *((p4est_locidx_t *) sc_array_index (shared_nodes, zz));
+        gp = (p4est_gloidx_t *) sc_array_index (sortshared, zz);
+        gp[0] = p4est_lnodes_global_index (lnodes, gidx);
+        gp[1] = gidx;
+      }
+      sc_array_sort (sortshared, p4est_gloidx_compare);
+      for (zz = 0; zz < count; zz++) {
+        p4est_gloidx_t     *gp;
+
+        gp = (p4est_gloidx_t *) sc_array_index (sortshared, zz);
+        *((p4est_locidx_t *) sc_array_index (shared_nodes, zz)) = gp[1];
+      }
+      sc_array_destroy (sortshared);
+    }
     proc = lrank->rank;
     lrank->shared_mine_offset = -1;
     lrank->shared_mine_count = 0;
     lrank->owned_offset = -1;
     lrank->owned_count = 0;
-    shared_nodes = &(lrank->shared_nodes);
-    count = shared_nodes->elem_count;
     for (zz = 0; zz < count; zz++) {
       gidx = *((p4est_locidx_t *) sc_array_index (shared_nodes, zz));
-#ifdef P4EST_DEBUG
-      if (zz > 0) {
-        P4EST_ASSERT (gidx > last_gidx);
-      }
-#endif
-      if (lnodes->owned_offset <= gidx &&
-          gidx < (lnodes->owned_offset + lnodes->owned_count)) {
+      if (gidx < lnodes->owned_count) {
         if (lrank->shared_mine_count == 0) {
           lrank->shared_mine_offset = (p4est_locidx_t) zz;
         }
         lrank->shared_mine_count++;
       }
-      if (global_offsets[proc] <= gnodes[gidx] &&
-          gnodes[gidx] < global_offsets[proc + 1]) {
+      else if (global_offsets[proc] <= gnodes[gidx - lnodes->owned_count] &&
+               gnodes[gidx - lnodes->owned_count] <
+               global_offsets[proc + 1]) {
         if (lrank->owned_count == 0) {
           lrank->owned_offset = gidx;
         }
         lrank->owned_count++;
       }
-#ifdef P4EST_DEBUG
-      last_gidx = gidx;
-#endif
     }
     if (proc == p4est->mpirank) {
       lrank->owned_count = lnodes->owned_count;
-      lrank->owned_offset = lnodes->owned_offset;
+      lrank->owned_offset = 0;
     }
     else {
       P4EST_VERBOSEF ("Processor %d shares %llu nodes with processor %d\n",
@@ -3217,6 +3253,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_lnodes_new\n");
   P4EST_ASSERT (degree >= 1);
 
+  lnodes->mpicomm = p4est->mpicomm;
   lnodes->degree = degree;
   lnodes->num_local_elements = nel = p4est->local_num_quadrants;
 #ifndef P4_TO_P8
@@ -3226,8 +3263,8 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 #endif
   lnodes->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, nel);
   nlen = nel * lnodes->vnodes;
-  lnodes->local_nodes = P4EST_ALLOC (p4est_locidx_t, nlen);
-  memset (lnodes->local_nodes, -1, nlen * sizeof (p4est_locidx_t));
+  lnodes->element_nodes = P4EST_ALLOC (p4est_locidx_t, nlen);
+  memset (lnodes->element_nodes, -1, nlen * sizeof (p4est_locidx_t));
 
   p4est_lnodes_init_data (&data, degree, p4est, ghost_layer, lnodes);
   if (degree == 1) {
@@ -3283,7 +3320,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 
 #ifdef P4EST_DEBUG
   for (lj = 0; lj < nlen; lj++) {
-    P4EST_ASSERT (lnodes->local_nodes[lj] >= 0);
+    P4EST_ASSERT (lnodes->element_nodes[lj] >= 0);
   }
 #endif
 
@@ -3305,8 +3342,8 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   size_t              zz, count;
   p4est_lnodes_rank_t *lrank;
 
-  P4EST_FREE (lnodes->local_nodes);
-  P4EST_FREE (lnodes->global_nodes);
+  P4EST_FREE (lnodes->element_nodes);
+  P4EST_FREE (lnodes->nonlocal_nodes);
   P4EST_FREE (lnodes->global_owned_count);
   P4EST_FREE (lnodes->face_code);
 
@@ -3333,14 +3370,13 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
   MPI_Request        *request;
   p4est_locidx_t      li, lz;
   void               *dest;
-  size_t              ind;
   sc_array_t         *send_bufs;
   sc_array_t         *send_buf;
   p4est_locidx_t      mine_offset, mine_count;
   size_t              elem_size = node_data->elem_size;
   p4est_lnodes_buffer_t *buffer;
 
-  P4EST_ASSERT (node_data->elem_count == (size_t) lnodes->num_indep_nodes);
+  P4EST_ASSERT (node_data->elem_count == (size_t) lnodes->num_local_nodes);
 
   buffer = P4EST_ALLOC (p4est_lnodes_buffer_t, 1);
 
@@ -3370,8 +3406,10 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
       send_buf = (sc_array_t *) sc_array_push (send_bufs);
       sc_array_init (send_buf, elem_size);
       sc_array_resize (send_buf, mine_count);
-      for (ind = (size_t) mine_offset, li = 0; li < mine_count; li++, ind++) {
-        lz = *((p4est_locidx_t *) sc_array_index (&lrank->shared_nodes, ind));
+      for (li = 0; li < mine_count; li++) {
+        lz = *((p4est_locidx_t *) sc_array_index (&lrank->shared_nodes,
+                                                  (size_t) (li +
+                                                            mine_offset)));
         dest = sc_array_index (send_buf, (size_t) li);
         memcpy (dest, node_data->array + elem_size * lz, elem_size);
       }
@@ -3446,7 +3484,7 @@ p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes,
   size_t              count;
   size_t              elem_size = node_data->elem_size;
 
-  P4EST_ASSERT (node_data->elem_count == (size_t) lnodes->num_indep_nodes);
+  P4EST_ASSERT (node_data->elem_count == (size_t) lnodes->num_local_nodes);
 
   buffer = P4EST_ALLOC (p4est_lnodes_buffer_t, 1);
   buffer->requests = requests = sc_array_new (sizeof (MPI_Request));

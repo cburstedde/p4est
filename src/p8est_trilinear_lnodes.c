@@ -56,8 +56,8 @@ p8est_mesh_points (point_t * points, trilinear_mesh_pid_t * pids,
                    p4est_locidx_t num_local_nodes, p4est_lnodes_t * nodes,
                    p4est_t * p4est)
 {
-  p4est_locidx_t      nin = nodes->num_indep_nodes;
-  p4est_locidx_t      owned_offset = nodes->owned_offset;
+  p4est_locidx_t      nin = nodes->num_local_nodes;
+  p4est_locidx_t      owned_offset = 0;
   p4est_locidx_t      owned_count = nodes->owned_count;
   p4est_locidx_t      elid, nid;
   p4est_locidx_t      lz;
@@ -109,7 +109,7 @@ p8est_mesh_points (point_t * points, trilinear_mesh_pid_t * pids,
           /* if a corner is hanging, the point values of both the hanging node
            * and the independent node must be computed */
           else if (local_nodes[nid] >= nin) {
-            lz = nodes->local_nodes[nid];
+            lz = nodes->element_nodes[nid];
             P4EST_ASSERT (lz < nin);
             /* if the independent node is local, it must (by the ownership
              * rules) be touches by a local quadrant, so its point values will
@@ -300,7 +300,7 @@ p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
                    sc_hash_array_t ** Hash)
 {
   p4est_locidx_t      nel = nodes->num_local_elements;
-  p4est_locidx_t      nin = nodes->num_indep_nodes;
+  p4est_locidx_t      nin = nodes->num_local_nodes;
   p4est_locidx_t      nln = nel * 8;
   sc_array_t          local_nodes;
   p4est_locidx_t      elid, nid;
@@ -316,7 +316,7 @@ p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
 
   sc_array_init (&local_nodes, sizeof (p4est_locidx_t));
   sc_array_resize (&local_nodes, nln);
-  memcpy (local_nodes.array, nodes->local_nodes,
+  memcpy (local_nodes.array, nodes->element_nodes,
           nln * sizeof (p4est_locidx_t));
 
   *Hash = hanging = sc_hash_array_new (4 * sizeof (p4est_locidx_t),
@@ -339,7 +339,7 @@ p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
           P4EST_ASSERT (j < 3);
           for (j = 0; j < 4; j++) {
             indep[j] =
-              nodes->local_nodes[elid * 8 + p8est_face_corners[f][j]];
+              nodes->element_nodes[elid * 8 + p8est_face_corners[f][j]];
           }
           qsort (indep, 4, sizeof (p4est_locidx_t), p4est_locidx_compare);
           lp = (p4est_locidx_t *) sc_array_index (&local_nodes, nid);
@@ -359,9 +359,9 @@ p8est_mesh_dcount (p4est_lnodes_t * nodes, p4est_locidx_t ** Local_nodes,
             e = p8est_corner_edges[i][j];
             if (edges[e] >= 0 && edges[e] < 4) {
               indep[0] =
-                nodes->local_nodes[elid * 8 +
-                                   p8est_edge_corners[e][(edges[e] % 2)]];
-              indep[1] = nodes->local_nodes[elid * 8 + i];
+                nodes->element_nodes[elid * 8 +
+                                     p8est_edge_corners[e][(edges[e] % 2)]];
+              indep[1] = nodes->element_nodes[elid * 8 + i];
               break;
             }
           }
@@ -452,10 +452,10 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   /* Assign local counts. */
   P4EST_ASSERT (nodes->num_local_elements == p4est->local_num_quadrants);
   mesh->local_elem_num = p4est->local_num_quadrants;
-  mesh->local_anode_num = nodes->num_indep_nodes;
-  mesh->local_dnode_num = num_local_nodes - nodes->num_indep_nodes;
+  mesh->local_anode_num = nodes->num_local_nodes;
+  mesh->local_dnode_num = num_local_nodes - nodes->num_local_nodes;
   mesh->local_onode_num = nodes->owned_count;
-  mesh->local_owned_offset = nodes->owned_offset;
+  mesh->local_owned_offset = 0;
   mesh->local_node_num = num_local_nodes;
   local_owned_end = mesh->local_owned_offset + mesh->local_onode_num;
 
@@ -540,7 +540,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
     mesh->node_pids[n] = pids[n];
     P4EST_ASSERT (pids[n] >= 0
                   && (size_t) pids[n] < p4est->trees->elem_count);
-    anode->fvnid = nodes->global_nodes[n];
+    anode->fvnid = p4est_lnodes_global_index (nodes, n);
     anode->share = NULL;
   }
 

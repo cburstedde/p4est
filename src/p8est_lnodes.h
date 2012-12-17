@@ -90,15 +90,18 @@ typedef int16_t     p8est_lnodes_code_t;
  */
 typedef struct p8est_lnodes
 {
+  MPI_Comm            mpicomm;
+  p4est_locidx_t      num_local_nodes;
+  p4est_locidx_t      owned_count;
+  p4est_gloidx_t      global_offset;
+  p4est_gloidx_t     *nonlocal_nodes;
+  sc_array_t         *sharers;
+  p4est_locidx_t     *global_owned_count;
+
   int                 degree, vnodes;
   p4est_locidx_t      num_local_elements;
-  p4est_locidx_t      num_indep_nodes;
-  p4est_locidx_t      owned_offset, owned_count;
   p8est_lnodes_code_t *face_code;
-  p4est_locidx_t     *local_nodes;
-  p4est_gloidx_t     *global_nodes;
-  p4est_locidx_t     *global_owned_count;
-  sc_array_t         *sharers;
+  p4est_locidx_t     *element_nodes;
 }
 p8est_lnodes_t;
 
@@ -342,5 +345,17 @@ p8est_lnodes_rank_array_index (sc_array_t * array, size_t it)
 }
 
 SC_EXTERN_C_END;
+
+/** Compute the global number of a local node number */
+/*@unused@*/
+static inline       p4est_gloidx_t
+p8est_lnodes_global_index (p8est_lnodes_t * lnodes, p4est_locidx_t lidx)
+{
+  p4est_locidx_t      owned = lnodes->owned_count;
+  P4EST_ASSERT (lidx >= 0 && lidx < lnodes->num_local_nodes);
+
+  return (lidx < owned) ? lnodes->global_offset + lidx :
+    lnodes->nonlocal_nodes[lidx - owned];
+}
 
 #endif /* !P8EST_LNODES */
