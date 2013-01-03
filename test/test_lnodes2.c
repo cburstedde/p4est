@@ -644,7 +644,7 @@ main (int argc, char **argv)
       lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
 
       nel = lnodes->num_local_elements;
-      nin = lnodes->num_indep_nodes;
+      nin = lnodes->num_local_nodes;
       tpoints = P4EST_ALLOC (tpoint_t, nin);
       memset (tpoints, -1, nin * sizeof (tpoint_t));
       for (elid = 0, elnid = 0, t = flt; t <= llt; t++) {
@@ -784,7 +784,7 @@ main (int argc, char **argv)
                            kind,
 #endif
                            j);
-                nid = lnodes->local_nodes[elnid];
+                nid = lnodes->element_nodes[elnid];
                 if (tpoints[nid].tree == -1) {
                   tpoints[nid].tree = t;
                   tpoints[nid].point[0] = tpoint.point[0];
@@ -807,7 +807,7 @@ main (int argc, char **argv)
       }
 
       sc_array_init_data (&tpoint_array, tpoints, sizeof (tpoint_t), nin);
-      buffer = p4est_lnodes_share_all (&tpoint_array, lnodes, p4est);
+      buffer = p4est_lnodes_share_all (&tpoint_array, lnodes);
 
       for (zz = 0; zz < lnodes->sharers->elem_count; zz++) {
         lrank = p4est_lnodes_rank_array_index (lnodes->sharers, zz);
@@ -829,15 +829,17 @@ main (int argc, char **argv)
       p4est_lnodes_buffer_destroy (buffer);
 
       global_nodes = sc_array_new (sizeof (p4est_gloidx_t));
-      sc_array_resize (global_nodes, lnodes->num_indep_nodes);
-      memcpy (global_nodes->array, lnodes->global_nodes,
-              lnodes->num_indep_nodes * sizeof (p4est_gloidx_t));
+      sc_array_resize (global_nodes, lnodes->num_local_nodes);
+      for (zz = 0; zz < global_nodes->elem_count; zz++) {
+        *((p4est_gloidx_t *) sc_array_index (global_nodes, zz)) =
+          p4est_lnodes_global_index (lnodes, zz);
+      }
 
-      p4est_lnodes_share_owned (global_nodes, lnodes, p4est);
+      p4est_lnodes_share_owned (global_nodes, lnodes);
 
       for (zz = 0; zz < global_nodes->elem_count; zz++) {
         gn = *((p4est_gloidx_t *) sc_array_index (global_nodes, zz));
-        SC_CHECK_ABORT (gn == lnodes->global_nodes[zz],
+        SC_CHECK_ABORT (gn == p4est_lnodes_global_index (lnodes, zz),
                         "Lnodes: bad global index across procesors");
       }
 
