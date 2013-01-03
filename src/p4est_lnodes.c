@@ -2965,9 +2965,6 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   p4est_locidx_t     *global_num_indep;
   p4est_gloidx_t     *global_offsets = P4EST_ALLOC (p4est_gloidx_t,
                                                     mpisize + 1);
-#ifdef P4EST_DEBUG
-  p4est_locidx_t      last_gidx = 0;
-#endif
 
   global_num_indep = lnodes->global_owned_count = P4EST_ALLOC (p4est_locidx_t,
                                                                mpisize);
