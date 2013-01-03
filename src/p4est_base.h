@@ -344,6 +344,44 @@ p4est_topidx_bsort (p4est_topidx_t * t, int length)
   P4EST_ASSERT (p4est_topidx_is_sorted (t, length));
 }
 
+/*@unused@*/
+static inline       int64_t
+p4est_cut_partition_int64 (int64_t global_num, int p, int num_procs)
+{
+  int64_t             result;
+
+  /* In theory, a double * double product should never overflow
+     due to the 15-bit exponent used internally on x87 and above.
+     Also in theory, 80-bit floats should be used internally,
+     and multiply/divide associativity goes left-to-right.
+     Still checking for funny stuff just to be sure. */
+  result = (int64_t)
+    (((long double) global_num * (double) p) / (double) num_procs);
+
+  result = SC_MIN (result, global_num);
+
+  return SC_MAX (result, (int64_t) 0);
+}
+
+/*@unused@*/
+static inline       p4est_gloidx_t
+p4est_cut_partition_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
+{
+  p4est_gloidx_t      result;
+
+  /* In theory, a double * double product should never overflow
+     due to the 15-bit exponent used internally on x87 and above.
+     Also in theory, 80-bit floats should be used internally,
+     and multiply/divide associativity goes left-to-right.
+     Still checking for funny stuff just to be sure. */
+  result = (p4est_gloidx_t)
+    (((long double) global_num * (double) p) / (double) num_procs);
+
+  result = SC_MIN (result, global_num);
+
+  return SC_MAX (result, (p4est_gloidx_t) 0);
+}
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BASE_H */
