@@ -61,6 +61,10 @@ p4est_wrap_t       *p4est_wrap_new_pillow (MPI_Comm mpicomm,
                                            int initial_level);
 p4est_wrap_t       *p4est_wrap_new_moebius (MPI_Comm mpicomm,
                                             int initial_level);
+p4est_wrap_t       *p4est_wrap_new_cubed (MPI_Comm mpicomm,
+                                          int initial_level);
+p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm,
+                                         int initial_level);
 
 /** Passes MPI_COMM_WORLD to p4est_wrap_new_unitsquare. */
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);

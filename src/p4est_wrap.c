@@ -118,6 +118,22 @@ p4est_wrap_new_moebius (MPI_Comm mpicomm, int initial_level)
                               initial_level);
 }
 
+p4est_wrap_t       *
+p4est_wrap_new_cubed (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_cubed (),
+                              initial_level);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_disk (),
+                              initial_level);
+}
+
 #else
 
 p8est_wrap_t       *
