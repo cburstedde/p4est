@@ -466,7 +466,7 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
   /*
    * Invariants of the recursion:
    * 1. quadrant is larger or equal in size than those in the array.
-   * 2. quadrant is identical to or an ancestor of those in the array.
+   * 2. quadrant is equal to or an ancestor of those in the array.
    */
 
   P4EST_ASSERT (actives->elem_count <= points->elem_count);
@@ -487,6 +487,7 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
     p4est_tree_t       *tree;
 
     P4EST_ASSERT (quadrants->elem_count == 1);
+    P4EST_ASSERT (p4est_quadrant_is_equal (quadrant, q));
     is_leaf = 1;
 
     /* determine offset of quadrant in local forest */
