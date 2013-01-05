@@ -31,6 +31,8 @@
  *        o pillow    Refinement on a 2-tree pillow-shaped domain.
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
+ *        o cubed     Refinement on a 6-tree cubed sphere surface.
+ *        o disk      Refinement on a 5-tree spherical disk.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  */
@@ -49,6 +51,8 @@ typedef enum
   P4EST_CONFIG_PILLOW,
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
+  P4EST_CONFIG_CUBED,
+  P4EST_CONFIG_DISK,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP,
 }
@@ -91,6 +95,10 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_MOEBIUS, 6, 6, 0x6d2d6d6cU },
  { P4EST_CONFIG_STAR, 5, 6, 0x38d3736fU },
  { P4EST_CONFIG_STAR, 5, 7, 0xfb97aadfU },
+ { P4EST_CONFIG_CUBED, 4, 3, 0x85581649U },
+ { P4EST_CONFIG_CUBED, 5, 5, 0x64a1d105U },
+ { P4EST_CONFIG_DISK, 5, 4, 0x4995411dU },
+ { P4EST_CONFIG_DISK, 2, 6, 0x3f758706U },
  { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
@@ -215,7 +223,8 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|three|evil|evil3|pillow|moebius|star|periodic|rotwrap\n"
+    "      unit|three|evil|evil3|pillow|moebius|\n"
+    "         star|cubed|disk|periodic|rotwrap\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -243,6 +252,12 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "star")) {
       config = P4EST_CONFIG_STAR;
+    }
+    else if (!strcmp (argv[1], "cubed")) {
+      config = P4EST_CONFIG_CUBED;
+    }
+    else if (!strcmp (argv[1], "disk")) {
+      config = P4EST_CONFIG_DISK;
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P4EST_CONFIG_PERIODIC;
@@ -286,6 +301,12 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_STAR) {
     connectivity = p4est_connectivity_new_star ();
+  }
+  else if (config == P4EST_CONFIG_CUBED) {
+    connectivity = p4est_connectivity_new_cubed ();
+  }
+  else if (config == P4EST_CONFIG_DISK) {
+    connectivity = p4est_connectivity_new_disk ();
   }
   else if (config == P4EST_CONFIG_PERIODIC) {
     connectivity = p4est_connectivity_new_periodic ();

@@ -322,6 +322,21 @@ p4est_connectivity_t *p4est_connectivity_new_moebius (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_star (void);
 
+/** Create a connectivity structure for the six sides of a unit cube.
+ * The ordering of the trees is as follows: 0 1
+ *                                            2 3 <-- 3: axis-aligned top side
+ *                                              4 5.
+ * This choice has been made for maximum symmetry (see tree_to_* in .c file).
+ */
+p4est_connectivity_t *p4est_connectivity_new_cubed (void);
+
+/** Create a connectivity structure for a five-tree flat spherical disk.
+ * The ordering of the trees is as follows:   4
+ *                                          1 2 3
+ *                                            0.
+ */
+p4est_connectivity_t *p4est_connectivity_new_disk (void);
+
 /** An m by n array with periodicity in x and y if periodic_a and periodic_b
  * are true, respectively.
  */

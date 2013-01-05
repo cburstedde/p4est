@@ -1354,6 +1354,97 @@ p4est_connectivity_new_star (void)
                                       tree_to_corner, ctt_offset,
                                       corner_to_tree, corner_to_corner);
 }
+
+p4est_connectivity_t *
+p4est_connectivity_new_cubed (void)
+{
+  const p4est_topidx_t num_vertices = 8;
+  const p4est_topidx_t num_trees = 6;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[8 * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    0, 0, 1,
+    1, 0, 1,
+    0, 1, 1,
+    1, 1, 1,
+  };
+  const p4est_topidx_t tree_to_vertex[6 * 4] = {
+    0, 2, 1, 3,
+    2, 6, 3, 7,
+    0, 4, 2, 6,
+    4, 5, 6, 7,
+    0, 1, 4, 5,
+    1, 3, 5, 7,
+  };
+  const p4est_topidx_t tree_to_tree[6 * 4] = {
+    4, 1, 2, 5,
+    0, 3, 2, 5,
+    0, 3, 4, 1,
+    2, 5, 4, 1,
+    2, 5, 0, 3,
+    4, 1, 0, 3,
+  };
+  const int8_t        tree_to_face[6 * 4] = {
+    2, 0, 0, 2,
+    1, 3, 3, 1,
+    2, 0, 0, 2,
+    1, 3, 3, 1,
+    2, 0, 0, 2,
+    1, 3, 3, 1,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
+
+p4est_connectivity_t *p4est_connectivity_new_disk (void)
+{
+  const p4est_topidx_t num_vertices = 8;
+  const p4est_topidx_t num_trees = 5;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[8 * 3] = {
+    -1, -1, 0,
+    1, -1, 0,
+    -1, 1, 0,
+    1, 1, 0,
+    -3, -3, 0,
+    3, -3, 0,
+    -3, 3, 0,
+    3, 3, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[5 * 4] = {
+    4, 5, 0, 1,
+    4, 0, 6, 2,
+    0, 1, 2, 3,
+    1, 5, 3, 7,
+    2, 3, 6, 7,
+  };
+  const p4est_topidx_t tree_to_tree[5 * 4] = {
+    1, 3, 0, 2,
+    1, 2, 0, 4,
+    1, 3, 0, 4,
+    2, 3, 0, 4,
+    1, 3, 2, 4,
+  };
+  const int8_t        tree_to_face[5 * 4] = {
+    2, 6, 2, 2,
+    0, 0, 0, 4,
+    1, 0, 3, 2,
+    1, 1, 5, 1,
+    7, 3, 3, 3,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
+
 #endif /* !P4_TO_P8 */
 
 static inline void
