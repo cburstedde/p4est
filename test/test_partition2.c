@@ -133,7 +133,7 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
 
 static void
 test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
-                       p4est_gloidx_t *pertree1, p4est_gloidx_t *pertree2)
+                       p4est_gloidx_t * pertree1, p4est_gloidx_t * pertree2)
 {
   int                 i, j;
   int                 num_procs;
@@ -258,10 +258,8 @@ main (int argc, char **argv)
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, NULL);
 
-  pertree1 = P4EST_ALLOC (p4est_gloidx_t,
-                          p4est->connectivity->num_trees + 1);
-  pertree2 = P4EST_ALLOC (p4est_gloidx_t,
-                          p4est->connectivity->num_trees + 1);
+  pertree1 = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
+  pertree2 = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
   num_procs = p4est->mpisize;
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
