@@ -66,6 +66,7 @@ typedef void        (*p4est_replace_t) (p4est_t * p4est,
  * See the documentation of p4est_new for basic usage.
  *
  * \param [in] min_quadrants    Minimum initial quadrants per processor.
+ *                              Makes the refinement pattern mpisize-specific.
  * \param [in] min_level        The forest is refined at least to this level.
  *                              May be negative or 0, then it has no effect.
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
@@ -81,13 +82,13 @@ p4est_t            *p4est_new_ext (MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** Refine a forest with a bounded maximum refinement level.
- * A quadrant is refined if either callback returns true.
+ * A quadrant is refined if the refine_fn callback returns true.
  * \param [in] maxlevel   Maximum allowed refinement level (inclusive).
  *                        If this is negative the level is unrestricted.
  * \param [in] refine_fn  Callback function that returns true
- *                        if a quadrant shall be refined, may be NULL.
+ *                        if a quadrant shall be refined; may be NULL.
  * \param [in] init_fn    Callback function to initialize the user_data
- *                        which is guaranteed to be allocated, may be NULL.
+ *                        which is guaranteed to be allocated; may be NULL.
  * \param [in] replace_fn Callback function that allows the user to change
  *                        incoming quadrants based on the quadrants they
  *                        replace.
