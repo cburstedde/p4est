@@ -345,27 +345,35 @@ p4est_topidx_bsort (p4est_topidx_t * t, int length)
 }
 
 /*@unused@*/
-static inline       int64_t
-p4est_cut_partition_int64 (int64_t global_num, int p, int num_procs)
+static inline       uint64_t
+p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs)
 {
-  int64_t             result;
+  uint64_t            result;
 
   /* In theory, a double * double product should never overflow
      due to the 15-bit exponent used internally on x87 and above.
      Also in theory, 80-bit floats should be used internally,
      and multiply/divide associativity goes left-to-right.
      Still checking for funny stuff just to be sure. */
-  result = (int64_t)
+
+  P4EST_ASSERT (0 <= p && p <= num_procs);
+
+  if (p == num_procs) {
+    /* prevent roundoff error and division by zero */
+    return global_num;
+  }
+
+  result = (uint64_t)
     (((long double) global_num * (double) p) / (double) num_procs);
 
-  result = SC_MIN (result, global_num);
+  P4EST_ASSERT (result <= global_num);
 
-  return SC_MAX (result, (int64_t) 0);
+  return result;
 }
 
 /*@unused@*/
 static inline       p4est_gloidx_t
-p4est_cut_partition_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
+p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
 {
   p4est_gloidx_t      result;
 
@@ -374,12 +382,21 @@ p4est_cut_partition_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
      Also in theory, 80-bit floats should be used internally,
      and multiply/divide associativity goes left-to-right.
      Still checking for funny stuff just to be sure. */
+
+  P4EST_ASSERT (global_num >= 0);
+  P4EST_ASSERT (0 <= p && p <= num_procs);
+
+  if (p == num_procs) {
+    /* prevent roundoff error and division by zero */
+    return global_num;
+  }
+
   result = (p4est_gloidx_t)
     (((long double) global_num * (double) p) / (double) num_procs);
 
-  result = SC_MIN (result, global_num);
+  P4EST_ASSERT (0 <= result && result <= global_num);
 
-  return SC_MAX (result, (p4est_gloidx_t) 0);
+  return result;
 }
 
 SC_EXTERN_C_END;
