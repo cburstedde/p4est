@@ -168,11 +168,14 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
         new_counts[i] = 0;
       }
       else {
-        new_counts[i] = ((j + 1) * global_num) / (num_procs - 1)
-          - (j * global_num) / (num_procs - 1);
+        new_counts[i] =
+          p4est_partition_cut_gloidx (global_num, j + 1, num_procs - 1) -
+          p4est_partition_cut_gloidx (global_num, j, num_procs - 1);
+        P4EST_ASSERT (new_counts[i] >= 0);
         ++j;
       }
     }
+    P4EST_ASSERT (j == num_procs - 1);
     p4est_partition_given (p4est, new_counts);
     test_pertree (p4est, pertree1, pertree2);
     crc2 = p4est_checksum (p4est);
@@ -190,11 +193,14 @@ test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
         new_counts[i] = 0;
       }
       else {
-        new_counts[i] = ((j + 1) * global_num) / (num_procs - 2)
-          - (j * global_num) / (num_procs - 2);
+        new_counts[i] =
+          p4est_partition_cut_gloidx (global_num, j + 1, num_procs - 2) -
+          p4est_partition_cut_gloidx (global_num, j, num_procs - 2);
+        P4EST_ASSERT (new_counts[i] >= 0);
         ++j;
       }
     }
+    P4EST_ASSERT (j == num_procs - 2);
     p4est_partition_given (p4est, new_counts);
     test_pertree (p4est, pertree1, pertree2);
     crc2 = p4est_checksum (p4est);

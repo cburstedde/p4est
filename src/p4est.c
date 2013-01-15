@@ -277,10 +277,12 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                       (long long) tree_num_quadrants);
 
   /* compute index of first tree for this processor */
-  first_quadrant = (global_num_quadrants * rank) / num_procs;
+  first_quadrant =
+    p4est_partition_cut_gloidx (global_num_quadrants, rank, num_procs);
   first_tree = first_quadrant / tree_num_quadrants;
   first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
-  last_quadrant = (global_num_quadrants * (rank + 1)) / num_procs - 1;
+  last_quadrant = p4est_partition_cut_gloidx (global_num_quadrants, rank + 1,
+                                              num_procs) - 1;
   P4EST_VERBOSEF
     ("first tree %lld first quadrant %lld global quadrant %lld\n",
      (long long) first_tree, (long long) first_tree_quadrant,
@@ -457,7 +459,7 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     /* for a uniform forest we know all global information a priori */
     for (i = 0; i <= num_procs; ++i) {
       p4est->global_first_quadrant[i] =
-        (global_num_quadrants * i) / num_procs;
+        p4est_partition_cut_gloidx (global_num_quadrants, i, num_procs);
     }
     p4est->global_num_quadrants = global_num_quadrants;
   }
@@ -465,7 +467,8 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* fill in global partition information */
   global_first_position = P4EST_ALLOC_ZERO (p4est_quadrant_t, num_procs + 1);
   for (i = 0; i <= num_procs; ++i) {
-    first_quadrant = (global_num_quadrants * i) / num_procs;
+    first_quadrant =
+      p4est_partition_cut_gloidx (global_num_quadrants, i, num_procs);
     first_tree = first_quadrant / tree_num_quadrants;
     first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
     p4est_quadrant_set_morton (&c, level, first_tree_quadrant);
@@ -2421,7 +2424,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     /* Divide up the quadants equally */
     for (p = 0, next_quadrant = 0; p < num_procs; ++p) {
       prev_quadrant = next_quadrant;
-      next_quadrant = (global_num_quadrants * (p + 1)) / num_procs;
+      next_quadrant =
+        p4est_partition_cut_gloidx (global_num_quadrants, p + 1, num_procs);
       qcount = next_quadrant - prev_quadrant;
       P4EST_ASSERT (0 <= qcount
                     && qcount <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
@@ -2494,7 +2498,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     send_lowest = num_procs;
     send_highest = 0;
     for (i = 1; i <= num_procs; ++i) {
-      cut = (weight_sum * i) / num_procs;
+      cut = p4est_partition_cut_uint64 (weight_sum, i, num_procs);
       if (global_weight_sums[rank] < cut &&
           cut <= global_weight_sums[rank + 1]) {
         send_lowest = SC_MIN (send_lowest, i);
@@ -2521,7 +2525,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
         base_index = 2 * (i - send_lowest);
         if (i < num_procs) {
           /* do binary search in the weight array */
-          lowers = sc_search_lower_bound64 ((weight_sum * i) / num_procs,
+          lowers = sc_search_lower_bound64 (p4est_partition_cut_uint64
+                                            (weight_sum, i, num_procs),
                                             local_weights,
                                             (size_t) local_num_quadrants + 1,
                                             (size_t) lowers);
@@ -2561,7 +2566,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
     /* determine processor ids to receive from and post irecv */
     i = 0;
-    my_lowcut = (weight_sum * rank) / num_procs;
+    my_lowcut = p4est_partition_cut_uint64 (weight_sum, rank, num_procs);
     if (my_lowcut == 0) {
       recv_low = 0;
       recv_requests[0] = MPI_REQUEST_NULL;
@@ -2582,7 +2587,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
       P4EST_ASSERT (i < num_procs);
       low_source = i;
     }
-    my_highcut = (weight_sum * (rank + 1)) / num_procs;
+    my_highcut = p4est_partition_cut_uint64 (weight_sum, rank + 1, num_procs);
     if (my_highcut == 0) {
       recv_high = 0;
       recv_requests[1] = MPI_REQUEST_NULL;
@@ -3500,7 +3505,7 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
     SC_CHECK_ABORT (!retval, "seek over ignored partition");
     sc_fread (&u64int, sizeof (uint64_t), 1, file, "read quadrant count");
     for (i = 0; i <= num_procs; ++i) {
-      gfq[i] = (p4est_gloidx_t) ((i * u64int) / (uint64_t) num_procs);
+      gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
     }
   }
   zcount = (size_t) (gfq[rank + 1] - gfq[rank]);

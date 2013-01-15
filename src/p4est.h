@@ -196,7 +196,7 @@ typedef int         (*p4est_coarsen_t) (p4est_t * p4est,
 
 /** Callback function prototype to calculate weights for partitioning.
  * \return a 32bit integer >= 0 as the quadrant weight.
- * \note    (global sum of weights * mpisize) must fit into a 64bit integer.
+ * \note    Global sum of weights must fit into a 64bit integer.
  */
 typedef int         (*p4est_weight_t) (p4est_t * p4est,
                                        p4est_topidx_t which_tree,
