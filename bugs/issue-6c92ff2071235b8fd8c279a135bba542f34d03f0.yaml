@@ -31,3 +31,9 @@ log_events:
   - |-
     Loading of previous format versions will not be implemented.
     Features are complete for current binary load/save
+- - 2013-01-15 15:35:33.935213 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - |-
+    The on-the-fly conversion on reading is a wontfix.
+    Other than that, everything works.
