@@ -36,21 +36,37 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Extended callback function prototype to decide for refinement.
- * \param [in] quadrant     Quadrant under consideration for refinement.
- * \param [in] children     If true is returned these will be the children.
- * \return                  Nonzero if the quadrant shall be refined.
+/** Callback function prototype used by extended routines when the quadrants
+ * of an existing, valid p4est are changed.  The callback allows the user to
+ * make changes to newly initialized quadrants before the quadrants that they
+ * replace are destroyed.
+ *
+ * \param [in] num_outgoing The number of outgoing quadrants.
+ * \param [in] outgoing     The outgoing quadrants: after the callback, the
+ *                          user_data, if \a p4est->data_size is nonzero,
+ *                          will be destroyed.
+ * \param [in] num_incoming The number of incoming quadrants.
+ * \param [in/out] incoming The incoming quadrants: prior to the callback,
+ *                          the user_data, if \a p4est->data_size is nonzero,
+ *                          is allocated, and the p4est_init_t callback,
+ *                          if it has been provided, will be called.
+ *
+ * If the mesh is being refined, num_outgoing will be 1 and num_incoming will
+ * be 4, and vice versa if the mesh is being coarsened.
  */
-typedef int         (*p4est_refine_ext_t) (p4est_t * p4est,
-                                           p4est_topidx_t which_tree,
-                                           p4est_quadrant_t * quadrant,
-                                           p4est_quadrant_t * children[]);
+typedef void        (*p4est_replace_t) (p4est_t * p4est,
+                                        p4est_topidx_t which_tree,
+                                        int num_outgoing,
+                                        p4est_quadrant_t * outgoing[],
+                                        int num_incoming,
+                                        p4est_quadrant_t * incoming[]);
 
 /** Create a new forest.
  * This is a more general form of p4est_new.
  * See the documentation of p4est_new for basic usage.
  *
  * \param [in] min_quadrants    Minimum initial quadrants per processor.
+ *                              Makes the refinement pattern mpisize-specific.
  * \param [in] min_level        The forest is refined at least to this level.
  *                              May be negative or 0, then it has no effect.
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
@@ -66,21 +82,47 @@ p4est_t            *p4est_new_ext (MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** Refine a forest with a bounded maximum refinement level.
- * A quadrant is refined if either callback returns true.
- * \param [in] refine_fn Callback function that returns true
- *                       if a quadrant shall be refined, may be NULL.
- * \param [in] refine_fn Extended callback function that returns true
- *                       if a quadrant shall be refined, may be NULL.
- * \param [in] init_fn   Callback function to initialize the user_data
- *                       which is guaranteed to be allocated, may be NULL.
- * \param [in] maxlevel  Maximum allowed refinement level (inclusive).
- *                       If this is negative the level is unrestricted.
+ * A quadrant is refined if the refine_fn callback returns true.
+ * \param [in] maxlevel   Maximum allowed refinement level (inclusive).
+ *                        If this is negative the level is unrestricted.
+ * \param [in] refine_fn  Callback function that returns true
+ *                        if a quadrant shall be refined; may be NULL.
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is guaranteed to be allocated; may be NULL.
+ * \param [in] replace_fn Callback function that allows the user to change
+ *                        incoming quadrants based on the quadrants they
+ *                        replace.
  */
 void                p4est_refine_ext (p4est_t * p4est,
                                       int refine_recursive, int maxlevel,
                                       p4est_refine_t refine_fn,
-                                      p4est_refine_ext_t refine_ext_fn,
-                                      p4est_init_t init_fn);
+                                      p4est_init_t init_fn,
+                                      p4est_replace_t replace_fn);
+
+/** Coarsen a forest.
+ * \param [in] coarsen_fn Callback function that returns true if a
+ *                        family of quadrants shall be coarsened
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
+ * \param [in] replace_fn Callback function that allows the user to change
+ *                        incoming quadrants based on the quadrants they
+ *                        replace.
+ */
+void                p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
+                                       p4est_coarsen_t coarsen_fn,
+                                       p4est_init_t init_fn,
+                                       p4est_replace_t replace_fn);
+
+void                p4est_balance_ext (p4est_t * p4est,
+                                       p4est_connect_type_t btype,
+                                       p4est_init_t init_fn,
+                                       p4est_replace_t replace_fn);
+
+void                p4est_balance_subtree_ext (p4est_t * p4est,
+                                               p4est_connect_type_t btype,
+                                               p4est_topidx_t which_tree,
+                                               p4est_init_t init_fn,
+                                               p4est_replace_t replace_fn);
 
 /** Repartition the forest.
  *

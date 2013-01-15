@@ -84,7 +84,6 @@
 #define p4est_position_t                p8est_position_t
 #define p4est_init_t                    p8est_init_t
 #define p4est_refine_t                  p8est_refine_t
-#define p4est_refine_ext_t              p8est_refine_ext_t
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_ghost_t                   p8est_ghost_t
@@ -163,8 +162,12 @@
 #define p4est_quadrant_list_pop         p8est_quadrant_list_pop
 
 /* functions in p4est_extended */
+#define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_refine_ext                p8est_refine_ext
+#define p4est_coarsen_ext               p8est_coarsen_ext
+#define p4est_balance_ext               p8est_balance_ext
+#define p4est_balance_subtree_ext       p8est_balance_subtree_ext
 #define p4est_partition_ext             p8est_partition_ext
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext

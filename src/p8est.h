@@ -277,6 +277,8 @@ void                p8est_reset_data (p8est_t * p8est, size_t data_size,
                                       void *user_pointer);
 
 /** Refine a forest.
+ * \param [in,out] p8est The forest is changed in place.
+ * \param [in] refine_recursive Boolean to decide on recursive refinement.
  * \param [in] refine_fn Callback function that returns true
  *                       if a quadrant shall be refined
  * \param [in] init_fn   Callback function to initialize the user_data
@@ -288,6 +290,8 @@ void                p8est_refine (p8est_t * p8est,
                                   p8est_init_t init_fn);
 
 /** Coarsen a forest.
+ * \param [in,out] p8est  The forest is changed in place.
+ * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
  * \param [in] coarsen_fn Callback function that returns true if a
  *                        family of quadrants shall be coarsened
  * \param [in] init_fn    Callback function to initialize the user_data

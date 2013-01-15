@@ -25,6 +25,7 @@
 #define P8EST_ALGORITHMS_H
 
 #include <p8est.h>
+#include <p8est_extended.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -210,6 +211,7 @@ void                p8est_balance_border (p8est_t * p8est,
                                           p8est_connect_type_t btype,
                                           p4est_topidx_t which_tree,
                                           p8est_init_t init_fn,
+                                          p8est_replace_t replace_fn,
                                           sc_array_t * borders);
 
 /** Remove overlaps from a sorted list of quadrants.
