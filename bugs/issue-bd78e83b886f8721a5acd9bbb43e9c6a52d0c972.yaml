@@ -22,3 +22,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - unassigned from release 0.3
   - ""
+- - 2013-01-15 15:38:08.365125 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - We probably won't need that.  We could remove the per-level counters entirely.
