@@ -35,16 +35,17 @@ typedef int16_t     p8est_lnodes_code_t;
  *
  * Each element has degree+1 nodes per edge
  * and vnodes = (degree+1)^3 nodes per volume.
- * num_local_elements is the number of local quadrants in the p8est.
- * local_nodes is of dimension vnodes * num_local_elements
- * and indexes into the array global_nodes layed out as follows:
- * global_nodes = [<--------------->|<-------------------->|          ]
- *                  \ owned_offset    \ owned_count
- *                 <------------------------------------------------->
- *                  \ num_indep_nodes
- * global_nodes contains the globally unique numbers for independent nodes.
+ * element_nodes is of dimension vnodes * num_local_elements
+ * and indexes into the set of local nodes layed out as follows:
+ * local nodes = [<-------------------->|<-----non_local_nodes----->]
+ *                 \ owned_count
+ *                <------------------------------------------------>
+ *                 \ num_local_nodes
+ * nonlocal_nodes contains the globally unique numbers for independent nodes
+ * that are owned by other processes; for local nodes, the globally unique
+ * numbers are given by i + global_offset, where is is the local number.
  * Hanging nodes are always local and don't have a global number.
- * They index the geometrically corresponding global indep_node of a neighbor.
+ * They index the geometrically corresponding independent nodes of a neighbor.
  *
  * Whether nodes are hanging or not is decided based on the element faces and
  * edges. This information is encoded in face_code with one int16_t per
