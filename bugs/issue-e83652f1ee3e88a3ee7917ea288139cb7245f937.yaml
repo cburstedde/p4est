@@ -9,8 +9,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-30 23:27:32.641358 Z
 references: []
 
@@ -30,3 +30,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - unassigned from release 0.3
   - ""
+- - 2013-01-15 20:37:53.333187 Z
+  - Tobin Isaac <tisaac@wildspitze.ices.utexas.edu>
+  - closed with disposition fixed
+  - New balance algorithm correctly performed face/edge-only intertree balance

@@ -8,8 +8,8 @@ type: :feature
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :paused
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-16 17:40:03.876875 Z
 references: []
 
@@ -37,3 +37,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - unassigned from release 0.3
   - ""
+- - 2013-01-15 20:35:43.643167 Z
+  - Tobin Isaac <tisaac@wildspitze.ices.utexas.edu>
+  - closed with disposition fixed
+  - New balance algorithm is optimal.
