@@ -423,13 +423,34 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
-/** Fills arrays encoding the axis combinations for a face transform.
- * \param [in]  itree       The number of the originating tree.
+/** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
+ * \param [in]  nface       Encoded as nface = r * 6 + nf, where nf = 0..5 is
+ *                          the neigbbor's connecting face number and r = 0..3
+ *                          is the relative orientation to the neighbor's face.
+ *                          This encoding matches p8est_connectivity_t.
+ * \param [out] ftransform  This array holds 9 integers.
+ *              [0]..[2]    The coordinate axis sequence of the origin face,
+ *                          the first two referring to the tangentials and the
+ *                          third to the normal.  A permutation of (0, 1, 2).
+ *              [3]..[5]    The coordinate axis sequence of the target face.
+ *              [6]..[8]    Edge reversal flags for tangential axes (boolean);
+ *                          face code in [0, 3] for the normal coordinate q:
+ *                          0: q' = -q
+ *                          1: q' = q + 1
+ *                          2: q' = q - 1
+ *                          3: q' = 2 - q
+ */
+void                p8est_expand_face_transform (int iface, int nface,
+                                                 int ftransform[]);
+
+/** Fill an array with the axis combination of a face neighbor transform.
+ * \param [in]  itree       The number of the originating tree.
+ * \param [in]  iface       The number of the originating tree's face.
  * \param [out] ftransform  This array holds 9 integers.
  *              [0]..[2]    The coordinate axis sequence of the origin face.
  *              [3]..[5]    The coordinate axis sequence of the target face.
- *              [6]..[8]    Edge reverse flag for axes 0, 1; face code for 2.
+ *              [6]..[8]    Edge reverse flag for axes t1, t2; face code for n.
  * \return                  The face neighbor tree if it exists, -1 otherwise.
  */
 p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *

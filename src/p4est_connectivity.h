@@ -344,13 +344,35 @@ p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni,
                                                     int periodic_a,
                                                     int periodic_b);
 
-/** Fills arrays encoding the axis combinations for a face transform.
- * \param [in]  itree       The number of the originating tree.
+/** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
+ * \param [in]  nface       Encoded as nface = r * 4 + nf, where nf = 0..3 is
+ *                          the neigbbor's connecting face number and r = 0..1
+ *                          is the relative orientation to the neighbor's face.
+ *                          This encoding matches p4est_connectivity_t.
+ * \param [out] ftransform  This array holds 9 integers.
+ *              [0,2]       The coordinate axis sequence of the origin face,
+ *                          the first referring to the tangential and the second
+ *                          to the normal.  A permutation of (0, 1).
+ *              [3,5]       The coordinate axis sequence of the target face.
+ *              [6,8]       Edge reversal flag for tangential axis (boolean);
+ *                          face code in [0, 3] for the normal coordinate q:
+ *                          0: q' = -q
+ *                          1: q' = q + 1
+ *                          2: q' = q - 1
+ *                          3: q' = 2 - q
+ *              [1,4,7]     0 (unused for compatibility with 3D).
+ */
+void                p4est_expand_face_transform (int iface, int nface,
+                                                 int ftransform[]);
+
+/** Fill an array with the axis combinations of a tree neighbor transform.
+ * \param [in]  itree       The number of the originating tree.
+ * \param [in]  iface       The number of the originating tree's face.
  * \param [out] ftransform  This array holds 9 integers.
  *              [0,2]       The coordinate axis sequence of the origin face.
  *              [3,5]       The coordinate axis sequence of the target face.
- *              [6,8]       Edge reverse flag for axis 0; face code for 1.
+ *              [6,8]       Edge reverse flag for axis t; face code for axis n.
  *              [1,4,7]     0 (unused for compatibility with 3D).
  * \return                  The face neighbor tree if it exists, -1 otherwise.
  */

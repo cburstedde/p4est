@@ -2048,11 +2048,10 @@ p8est_conn_edge_key (p4est_topidx_t * key, p4est_topidx_t * ttv, int edge)
 
 #endif /* P4_TO_P8 */
 
-p4est_topidx_t
-p4est_find_face_transform (p4est_connectivity_t * connectivity,
-                           p4est_topidx_t itree, int iface, int ftransform[])
+static void
+p4est_expand_face_transform_internal (int iface, int target_face,
+                                      int orientation, int ftransform[])
 {
-  int                 target_code, target_face, orientation;
 #ifdef P4_TO_P8
   int                 reverse;
 #ifdef P4EST_DEBUG
@@ -2061,23 +2060,10 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   int                *target_axis = &ftransform[3];
 #endif
 #endif
-  p4est_topidx_t      target_tree;
 
-  P4EST_ASSERT (itree >= 0 && itree < connectivity->num_trees);
-  P4EST_ASSERT (iface >= 0 && iface < P4EST_FACES);
-
-  target_tree = connectivity->tree_to_tree[P4EST_FACES * itree + iface];
-  target_code = (int) connectivity->tree_to_face[P4EST_FACES * itree + iface];
-  target_face = target_code % P4EST_FACES;
-  orientation = target_code / P4EST_FACES;
-
+  P4EST_ASSERT (0 <= iface && iface < P4EST_FACES);
   P4EST_ASSERT (0 <= target_face && target_face < P4EST_FACES);
   P4EST_ASSERT (0 <= orientation && orientation < P4EST_HALF);
-
-  if (target_tree == itree && target_face == iface) {
-    P4EST_ASSERT (orientation == 0);
-    return -1;
-  }
 
 #ifdef P4_TO_P8
   /* the code that was here before is now in test/test_face_transform3.c */
@@ -2118,6 +2104,40 @@ p4est_find_face_transform (p4est_connectivity_t * connectivity,
   ftransform[7] = 0;
   ftransform[8] = 2 * (iface & 1) + (target_face & 1);
 #endif
+}
+
+void
+p4est_expand_face_transform (int iface, int nface, int ftransform[])
+{
+  const int           target_face = nface % P4EST_FACES;
+  const int           orientation = nface / P4EST_FACES;
+
+  p4est_expand_face_transform_internal (iface, target_face, orientation,
+                                        ftransform);
+}
+
+p4est_topidx_t
+p4est_find_face_transform (p4est_connectivity_t * connectivity,
+                           p4est_topidx_t itree, int iface, int ftransform[])
+{
+  int                 target_code, target_face, orientation;
+  p4est_topidx_t      target_tree;
+
+  P4EST_ASSERT (itree >= 0 && itree < connectivity->num_trees);
+  P4EST_ASSERT (iface >= 0 && iface < P4EST_FACES);
+
+  target_tree = connectivity->tree_to_tree[P4EST_FACES * itree + iface];
+  target_code = (int) connectivity->tree_to_face[P4EST_FACES * itree + iface];
+  target_face = target_code % P4EST_FACES;
+  orientation = target_code / P4EST_FACES;
+
+  if (target_tree == itree && target_face == iface) {
+    P4EST_ASSERT (orientation == 0);
+    return -1;
+  }
+
+  p4est_expand_face_transform_internal (iface, target_face, orientation,
+                                        ftransform);
 
   return target_tree;
 }

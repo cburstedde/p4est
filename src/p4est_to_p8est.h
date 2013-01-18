@@ -133,6 +133,7 @@
 #define p4est_connectivity_inflate      p8est_connectivity_inflate
 #define p4est_connectivity_load         p8est_connectivity_load
 #define p4est_connectivity_complete     p8est_connectivity_complete
+#define p4est_expand_face_transform     p8est_expand_face_transform
 #define p4est_find_face_transform       p8est_find_face_transform
 #define p4est_find_corner_transform     p8est_find_corner_transform
 #define p4est_corner_array_index        p8est_corner_array_index
