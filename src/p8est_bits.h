@@ -244,7 +244,7 @@ int                 p8est_quadrant_is_familyv (const p8est_quadrant_t q[]);
  */
 int                 p8est_quadrant_is_familypv (p8est_quadrant_t * q[]);
 
-/** Test if a quadrant it the parent of another quadrant.
+/** Test if a quadrant is the parent of another quadrant.
  * \param [in] q Quadrant to be tested.
  * \param [in] r Possible child quadrant.
  * \return true if \a q is the parent of \a r.
@@ -252,7 +252,7 @@ int                 p8est_quadrant_is_familypv (p8est_quadrant_t * q[]);
 int                 p8est_quadrant_is_parent (const p8est_quadrant_t * q,
                                               const p8est_quadrant_t * r);
 
-/** Test if a quadrant it the parent of another quadrant.
+/** Test if a quadrant is the parent of another quadrant.
  * Descriptive, slower version of \a p8est_quadrant_is_parent.
  * For debugging and educational purposes only.
  */
