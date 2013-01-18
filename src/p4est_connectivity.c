@@ -1200,7 +1200,7 @@ p4est_connectivity_new_corner (void)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_new_pillow(void)
+p4est_connectivity_new_pillow (void)
 {
   const p4est_topidx_t num_vertices = 4;
   const p4est_topidx_t num_trees = 2;
@@ -1389,7 +1389,8 @@ p4est_connectivity_new_cubed (void)
                                       NULL, &num_ctt, NULL, NULL);
 }
 
-p4est_connectivity_t *p4est_connectivity_new_disk (void)
+p4est_connectivity_t *
+p4est_connectivity_new_disk (void)
 {
   const p4est_topidx_t num_vertices = 8;
   const p4est_topidx_t num_trees = 5;
