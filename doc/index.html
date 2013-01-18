@@ -22,7 +22,7 @@ this as:
 
 <div class="citation">
 <p class="cite">
-[1]
+[1a]
 Carsten Burstedde, Lucas C. Wilcox, and Omar Ghattas,<br>
 <em>p4est: Scalable Algorithms for Parallel Adaptive Mesh Refinement on
 Forests of Octrees.</em><br>
@@ -54,15 +54,29 @@ later). The latest version of the software is
 The code is hosted at
 <a href="https://github.com/cburstedde/p4est">github</a> (see the
 cb/pu branch for the latest development code).
+Recently, the 2:1 balance algorithm has been rewritten; see this
+<a href="http://burstedde.ins.uni-bonn.de/research/papers/IsaacBursteddeGhattas12.pdf"
+>article</a> on the new logic:
 </p>
+
+<div class="citation">
+<p class="cite">
+[1b]
+Tobin Isaac, Carsten Burstedde, and Omar Ghattas,<br>
+<em>Low-Cost Parallel Algorithms for 2:1 Octree Balance.</em><br>
+Published in Proceedings of the 26th IEEE International Parallel &amp;
+Distributed Processing Symposium, 2012.
+</p>
+</div>
 
 <p>
 <tt>p4est</tt> uses <tt>libsc</tt> written by the same authors and others
 for basic helper functionality such as logging, array and
 hash data structures, parallel statistics, and more.  <tt>libsc</tt>
 also integrates the third-party libraries <tt>zlib</tt> and
-<tt>lua</tt>.  <tt>libsc</tt> is included in <tt>p4est</tt> and
-free software under LGPL v2.1 (or later).
+<tt>lua</tt>.  <tt>libsc</tt> is
+free software under LGPL v2.1 (or later) and hosted under
+<a href="https://github.com/cburstedde/libsc">github</a> as well.
 </p>
 
 <p>
@@ -78,7 +92,7 @@ href="http://www.dealii.org/">deal.II</a> now interfaces to
 <tt>p4est</tt> to obtain distributed mesh information.  The corresponding
 algorithms are described in this <a
 href="http://burstedde.ins.uni-bonn.de/research/papers/BangerthBursteddeHeisterEtAl11.pdf"
->preprint</a>.  If you use <tt>deal.II</tt> with <tt>p4est</tt> for your
+>article</a>.  If you use <tt>deal.II</tt> with <tt>p4est</tt> for your
 publications, please cite this as:
 </p>
 
@@ -118,7 +132,7 @@ Johann Rudi
 
 <p>
 Contact:<br>
-info-at-p4est.org
+info at p4est org
 </p>
 
 <div class="citation">

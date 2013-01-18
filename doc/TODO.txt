@@ -1,25 +1,19 @@
-Note: The real bug tracking happenes in the bugs/ directory.
+Note: Officially, bug tracking happens in the bugs/ directory.
       We use the ditz program for this purpose.
 
- * Interface
-   Change global_last_quad_index to global_quadrant_offset
-   Remove the p4est quadrant_pool member
-   Let the refine and coarsen callbacks see the originating quadrant(s)
  * Mesh generation
-   2D interface to pfudg
-   Verify trilinear mesh extraction
- * Helper functions / algorithms
+   Create connectivity from gmesh file format
+ * VTK output
+   Define proper geometry mapping in 2D and 3D
+ * Internals
+   Verify nodes against lnodes
    Verify p4est_quadrant_is_inside_tree function
    Isolate a p4est_tree_is_valid function
- * Balance
-   Make edge/face only balance optimal and configurable
-   Deal with p4est counters modified by balance_subtree
-   Check the inter-tree face-only/edge-only local balance
- * vtk output
-   geometry in 2D
  * Optimization
+   Distribute the connectivity in parallel
+   Remove the p4est quadrant_pool member
    Speed up p4est_quadrant_compare
    Speed up p4est_intxx_t_compare
- * Include a test case for every major functionality
- * Documentation using doxygen
- * Make the roots of the forest distributed in parallel
+ * Nice ideas
+   Include a test case for every major functionality
+   Documentation using doxygen
