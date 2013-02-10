@@ -20,6 +20,8 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/* This program is NOT collective (i.e., usually NOT called with mpirun). */
+
 #ifndef P4_TO_P8
 #include <p4est_connectivity.h>
 #else
@@ -30,29 +32,31 @@ int
 main (int argc, char **argv)
 {
   p4est_connectivity_t *conn;
-  size_t              bytes;
+  int                 retval;
+  char                buf[BUFSIZ];
 
   if (argc != 2) {
     char               *cp, *bn;
 
     cp = strdup (argv[0]);
     bn = basename (cp);
-    fprintf (stderr, "Usage: %s <connectivity file>\n", bn);
+    fprintf (stderr, "Usage: %s <connectivity name>\n", bn);
     free (cp);
     exit (1);
   }
 
-  conn = p4est_connectivity_load (argv[1], &bytes);
+  conn = p4est_connectivity_new_byname (argv[1]);
   if (conn == NULL) {
-    P4EST_PRODUCTIONF ("Failed to load connectivity file \"%s\"\n", argv[1]);
+    P4EST_PRODUCTIONF ("Failed to identify connectivity \"%s\"\n", argv[1]);
   }
   else {
-    P4EST_STATISTICSF ("Loaded \"%s\" bytes %lld\n",
-                       argv[1], (long long) bytes);
-    P4EST_STATISTICSF ("Loaded %lld trees, %lld vertices, %lld corners\n",
-                       (long long) conn->num_trees,
-                       (long long) conn->num_vertices,
-                       (long long) conn->num_corners);
+    snprintf (buf, BUFSIZ, "%s_%s.p%dc",
+              P4EST_STRING, argv[1], P4EST_CHILDREN);
+    P4EST_INFOF ("Write connectivity file \"%s\"\n", buf);
+    retval = p4est_connectivity_save (buf, conn);
+    if (retval) {
+      P4EST_PRODUCTION ("Error writing connectivity file\n");
+    }
     p4est_connectivity_destroy (conn);
   }
 
