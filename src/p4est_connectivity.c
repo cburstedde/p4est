@@ -1964,6 +1964,72 @@ p8est_connectivity_new_brick (int mi, int ni, int pi, int periodic_a,
   return conn;
 }
 
+p4est_connectivity_t *
+p4est_connectivity_new_byname (const char *name)
+{
+#ifndef P4_TO_P8
+  if (!strcmp (name, "brick23")) {
+    return p4est_connectivity_new_brick (2, 3, 0, 0);
+  }
+  else if (!strcmp (name, "corner")) {
+    return p4est_connectivity_new_corner ();
+  }
+  else if (!strcmp (name, "cubed")) {
+    return p4est_connectivity_new_cubed ();
+  }
+  else if (!strcmp (name, "disk")) {
+    return p4est_connectivity_new_disk ();
+  }
+  else if (!strcmp (name, "moebius")) {
+    return p4est_connectivity_new_moebius ();
+  }
+  else if (!strcmp (name, "periodic")) {
+    return p4est_connectivity_new_periodic ();
+  }
+  else if (!strcmp (name, "pillow")) {
+    return p4est_connectivity_new_pillow ();
+  }
+  else if (!strcmp (name, "rotwrap")) {
+    return p4est_connectivity_new_rotwrap ();
+  }
+  else if (!strcmp (name, "star")) {
+    return p4est_connectivity_new_star ();
+  }
+  else if (!strcmp (name, "unit")) {
+    return p4est_connectivity_new_unitsquare ();
+  }
+#else
+  if (!strcmp (name, "brick235")) {
+    return p8est_connectivity_new_brick (2, 3, 5, 0, 0, 0);
+  }
+  else if (!strcmp (name, "periodic")) {
+    return p8est_connectivity_new_periodic ();
+  }
+  else if (!strcmp (name, "rotcubes")) {
+    return p8est_connectivity_new_rotcubes ();
+  }
+  else if (!strcmp (name, "rotwrap")) {
+    return p8est_connectivity_new_rotwrap ();
+  }
+  else if (!strcmp (name, "shell")) {
+    return p8est_connectivity_new_shell ();
+  }
+  else if (!strcmp (name, "sphere")) {
+    return p8est_connectivity_new_sphere ();
+  }
+  else if (!strcmp (name, "twocubes")) {
+    return p8est_connectivity_new_twocubes ();
+  }
+  else if (!strcmp (name, "twowrap")) {
+    return p8est_connectivity_new_twowrap ();
+  }
+  else if (!strcmp (name, "unit")) {
+    return p8est_connectivity_new_unitcube ();
+  }
+#endif
+  return NULL;
+}
+
 typedef struct
 {
   p4est_topidx_t      key[P4EST_HALF];

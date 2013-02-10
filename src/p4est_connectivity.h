@@ -344,6 +344,22 @@ p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni,
                                                     int periodic_a,
                                                     int periodic_b);
 
+/** Create connectivity structure from predefined catalogue.
+ * \param [in]  name            Invokes connectivity_new_* function.
+ *              brick23         brick (2, 3, 0, 0)
+ *              corner          corner
+ *              cubed           cubed
+ *              disk            disk
+ *              moebius         moebius
+ *              periodic        periodic
+ *              pillow          pillow
+ *              rotwrap         rotwrap
+ *              star            star
+ *              unit            unitsquare
+ * \return      An initialized connectivity if name is defined, NULL else.
+ */
+p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
+
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
  * \param [in]  nface       Encoded as nface = r * 4 + nf, where nf = 0..3 is

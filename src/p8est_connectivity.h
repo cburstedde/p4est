@@ -423,6 +423,21 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
+/** Create connectivity structure from predefined catalogue.
+ * \param [in]  name            Invokes connectivity_new_* function.
+ *              brick235        brick (2, 3, 5, 0, 0, 0)
+ *              periodic        periodic
+ *              rotcubes        rotcubes
+ *              rotwrap         rotwrap
+ *              shell           shell
+ *              sphere          sphere
+ *              twocubes        twocubes
+ *              twowrap         twowrap
+ *              unit            unitcube
+ * \return      An initialized connectivity if name is defined, NULL else.
+ */
+p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
+
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
  * \param [in]  nface       Encoded as nface = r * 6 + nf, where nf = 0..5 is

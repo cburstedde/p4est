@@ -121,6 +121,7 @@
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick
+#define p4est_connectivity_new_byname   p8est_connectivity_new_byname
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_set_attr     p8est_connectivity_set_attr
