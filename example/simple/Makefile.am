@@ -4,14 +4,10 @@
 # included non-recursively from toplevel directory
 
 if P4EST_ENABLE_BUILD_2D
-bin_PROGRAMS += \
-        example/simple/p4est_simple example/simple/p4est_ptest
+bin_PROGRAMS += example/simple/p4est_simple
 example_simple_p4est_simple_SOURCES = example/simple/simple2.c
-example_simple_p4est_ptest_SOURCES = example/simple/ptest2.c
 
-LINT_CSOURCES += \
-        $(example_simple_p4est_simple_SOURCES) \
-        $(example_simple_p4est_ptest_SOURCES)
+LINT_CSOURCES += $(example_simple_p4est_simple_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
