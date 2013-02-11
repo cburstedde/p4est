@@ -87,11 +87,9 @@ p4est_quadrant_compare (const void *v1, const void *v2)
   const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
   const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
 
-  uint32_t            exclorx, exclory;
-  int                 log2x, log2y;
+  uint32_t            exclorx, exclory, exclorxy, exclor;
 #ifdef P4_TO_P8
   uint32_t            exclorz;
-  int                 log2z;
 #endif
   int64_t             p1, p2, diff;
 
@@ -103,43 +101,38 @@ p4est_quadrant_compare (const void *v1, const void *v2)
   /* these are unsigned variables that inherit the sign bits */
   exclorx = q1->x ^ q2->x;
   exclory = q1->y ^ q2->y;
+  exclor = exclorxy = exclorx | exclory;
 #ifdef P4_TO_P8
   exclorz = q1->z ^ q2->z;
+  exclor = exclorxy | exclorz;
 #endif
 
-  if (exclory == 0 && exclorx == 0 &&
-#ifdef P4_TO_P8
-      exclorz == 0 &&
-#endif
-      1) {
+  if (!exclor) {
     return (int) q1->level - (int) q2->level;
   }
-  else {
-    log2x = SC_LOG2_32 (exclorx);
-    log2y = SC_LOG2_32 (exclory);
-#ifdef P4_TO_P8
-    log2z = SC_LOG2_32 (exclorz);
 
-    if (log2z >= log2x && log2z >= log2y) {
-      p1 = q1->z + ((q1->z >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-      p2 = q2->z + ((q2->z >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-    }
-    else
-#if 0
-      ;                         /* let indent survive */
-#endif
-#endif
-    if (log2y >= log2x) {
-      p1 = q1->y + ((q1->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-      p2 = q2->y + ((q2->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-    }
-    else {
-      p1 = q1->x + ((q1->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-      p2 = q2->x + ((q2->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-    }
-    diff = p1 - p2;
-    return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
+#ifdef P4_TO_P8
+  /* if (exclor ^ exclorz) > exclorz, then exclorxy has a more significant bit
+   * than exclorz; also exclor and (exclor ^ exclorz) cannot be equal */
+  if (exclorz > (exclor ^ exclorz)) {
+    p1 = q1->z + ((q1->z >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = q2->z + ((q2->z >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
   }
+  else
+#if 0
+    ;
+#endif
+#endif
+  if (exclory > (exclorxy ^ exclory)) {
+    p1 = q1->y + ((q1->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = q2->y + ((q2->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+  }
+  else {
+    p1 = q1->x + ((q1->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = q2->x + ((q2->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+  }
+  diff = p1 - p2;
+  return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
 }
 
 int
