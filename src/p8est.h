@@ -52,6 +52,7 @@ typedef struct p8est_quadrant
   union p8est_quadrant_data
   {
     void               *user_data;      /* never changed by p4est */
+    long                user_long;      /* never changed by p4est */
     int                 user_int;       /* never changed by p4est */
     p4est_topidx_t      which_tree;
     struct
