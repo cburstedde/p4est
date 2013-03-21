@@ -95,10 +95,10 @@ void                p8est_ghost_destroy (p8est_ghost_t * ghost);
  * \param [in] q                Valid quadrant is searched in the ghost layer.
  * \return                      Offset in the ghost layer, or -1 if not found.
  */
-ssize_t             p8est_ghost_tree_bsearch (p8est_ghost_t * ghost,
-                                              int which_proc,
-                                              p4est_topidx_t which_tree,
-                                              const p8est_quadrant_t * q);
+ssize_t             p8est_ghost_bsearch (p8est_ghost_t * ghost,
+                                         int which_proc,
+                                         p4est_topidx_t which_tree,
+                                         const p8est_quadrant_t * q);
 
 /** Conduct binary search for ancestor on range of the ghost layer.
  * \param [in] ghost            The ghost layer.
