@@ -401,7 +401,7 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   int                 mpiret;
   int                 k;
   size_t              current, zz, zy;
-  int32_t             e, n, local_owned_end;
+  int32_t             e, n;
   int64_t             global_borrowed, global_shared;
   int64_t             local_counts[5], global_counts[5];
   int32link_t        *lynk, **tail;
@@ -457,7 +457,6 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   mesh->local_onode_num = nodes->owned_count;
   mesh->local_owned_offset = 0;
   mesh->local_node_num = num_local_nodes;
-  local_owned_end = mesh->local_owned_offset + mesh->local_onode_num;
 
   /* Communicate global counts. */
   local_counts[0] = mesh->local_elem_num;

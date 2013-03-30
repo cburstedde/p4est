@@ -2234,7 +2234,7 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
   int                 e = (int) hedge->edge;
   p4est_locidx_t     *local_elem_nodes = data->local_elem_nodes;
   p4est_locidx_t     *ghost_elem_nodes = data->ghost_elem_nodes;
-  int                 c, c2;
+  int                 c;
 
   P4EST_ASSERT (hedge->is_hanging);
   for (i = 0; i < 2; i++) {
@@ -2246,7 +2246,6 @@ p8est_lnodes_hedge_fix (p4est_t * p4est, p8est_iter_edge_side_t * hedge,
 
   for (i = 0; i < 2; i++) {
     c = p8est_edge_corners[e][i];
-    c2 = p8est_edge_corners[e][1 - i];
     if (is_ghost[1 - i]) {
       continue;
     }
@@ -2298,7 +2297,6 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   p4est_locidx_t      nledp = nlq * 12;
   p4est_locidx_t      ngedp = ngq * 12;
 #endif
-  p4est_locidx_t      nlen;
   p4est_locidx_t      ngen;
   int                 mpisize = p4est->mpisize;
 
@@ -2317,7 +2315,6 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   ecount[6] = ecount[7] = ecount[8] = ecount[9] = ecount[10] = ecount[11] = 0;
 #endif
   vcount = 0;
-  nlen = nlq * npel;
   ngen = ngq * npel;
 
   data->volume_nodes = P4EST_ALLOC (int, npv);
@@ -2521,7 +2518,6 @@ static void
 p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
                          p4est_lnodes_t * lnodes)
 {
-  p4est_locidx_t      num_inodes;
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
   p4est_locidx_t      nlen;
   p4est_locidx_t      li, *lp;
@@ -2559,7 +2555,6 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
   size_t              countz;
 
   nlen = ((p4est_locidx_t) data->nodes_per_elem) * nlq;
-  num_inodes = (p4est_locidx_t) inodes->elem_count;
   for (li = 0; li < nlen; li++) {
     inidx = local_en[li];
     if (inidx >= 0) {

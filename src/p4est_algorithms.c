@@ -2199,9 +2199,6 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
 {
   size_t              iz, jz, kz;
   size_t              incount;
-#ifdef P4EST_DEBUG
-  size_t              data_pool_size;
-#endif
   size_t              count_already_inlist, count_already_outlist;
   size_t              count_ancestor_inlist;
   p4est_tree_t       *tree;
@@ -2256,13 +2253,6 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
                       tquadrants->elem_count - tqoffset);
 
   qpool = p4est->quadrant_pool;
-
-#ifdef P4EST_DEBUG
-  data_pool_size = 0;
-  if (p4est->user_data_pool != NULL) {
-    data_pool_size = p4est->user_data_pool->elem_count;
-  }
-#endif
 
   count_already_inlist = count_already_outlist = 0;
   count_ancestor_inlist = 0;

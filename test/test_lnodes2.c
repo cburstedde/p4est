@@ -131,7 +131,7 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
   double              a_trans[P4EST_DIM];
   int                 a_f, b_f;
   int                 a_nf, b_nf;
-  int                 a_o, b_o;
+  int                 a_o;
   int                 a_c, b_c;
   int                 i;
   int                 a_c_pos, b_c_pos;
@@ -144,6 +144,7 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
   p4est_topidx_t      edge;
   int                 a_ne;
   double              a_edge_pos, b_edge_pos;
+  int                 b_o;
   int                 a_e_c0, a_e_c1;
   int                 b_e_c0, b_e_c1;
 #endif
@@ -246,7 +247,6 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
     a_nf %= P4EST_FACES;
 
     b_nf = (int) conn->tree_to_face[b_t * P4EST_FACES + b_f];
-    b_o = b_nf / P4EST_FACES;
     b_nf %= P4EST_FACES;
 
     if (a_nf != b_f || b_nf != a_f) {
@@ -538,7 +538,6 @@ main (int argc, char **argv)
   int                 ntests;
   int                 i, j, k;
   p4est_lnodes_t     *lnodes;
-  p4est_locidx_t      nel;
   p4est_locidx_t      nin;
   tpoint_t           *tpoints, tpoint, *tpoint_p;
   p4est_locidx_t      elid;
@@ -643,7 +642,6 @@ main (int argc, char **argv)
       P4EST_GLOBAL_PRODUCTIONF ("Begin lnodes test %d:%d\n", i, j);
       lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
 
-      nel = lnodes->num_local_elements;
       nin = lnodes->num_local_nodes;
       tpoints = P4EST_ALLOC (tpoint_t, nin);
       memset (tpoints, -1, nin * sizeof (tpoint_t));

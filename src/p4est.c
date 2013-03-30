@@ -2807,6 +2807,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
       /* get tree `tree` of quadrant `quad_id_near_cut` */
       num_quadrants_in_tree = partition_now[rank + 1] - partition_now[rank];
+      tree_index = -1;
       for (it = p4est->first_local_tree; it <= p4est->last_local_tree; it++) {
         /* loop over all local trees */
         tree = p4est_tree_array_index (p4est->trees, it);
@@ -3196,7 +3197,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   p4est_topidx_t      jt, num_trees;
   p4est_gloidx_t     *pertree;
   p4est_tree_t       *tree;
-  p4est_quadrant_t   *gfpos, *q;
+  p4est_quadrant_t   *q;
   char               *lbuf, *bp;
   p4est_qcoord_t     *qpos;
   sc_array_t         *tquadrants;
@@ -3220,7 +3221,6 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   save_num_procs = save_partition ? num_procs : 1;
   head_count = (size_t) (headc + save_num_procs) + (size_t) num_trees;
   rank = p4est->mpirank;
-  gfpos = p4est->global_first_position;
   qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
   comb_size = qbuf_size + data_size;
   pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
