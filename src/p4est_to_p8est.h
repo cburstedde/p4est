@@ -126,6 +126,7 @@
 #define p4est_find_corner_transform     p8est_find_corner_transform
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
+#define p4est_connectivity_join_faces   p8est_connectivity_join_faces
 
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex
