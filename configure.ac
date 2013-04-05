@@ -143,9 +143,9 @@ dnl Try a default name mangling scheme without using F77.
 dgemm=dgemm_;dgecon=dgecon_
 extraf77=no
 
-echo "Checking BLAS without F77 support first"
+AC_MSG_NOTICE([Checking BLAS without F77 support first])
 SC_BLAS([P4EST], [$dgemm],,
-        [echo "Could not find BLAS without F77 support"])
+        [AC_MSG_NOTICE([Could not find BLAS without F77 support])])
 for CVAR in `set | awk -F= "/^ac_cv_.*${dgemm}/ { print \\$1 }"` ; do
   # echo "Unset $CVAR"
   unset $CVAR
@@ -154,7 +154,7 @@ done
 if test "$sc_blas_ok" = no ; then
 
 extraf77=yes
-echo "Calling F77 autoconf macros"
+AC_MSG_NOTICE([Calling F77 autoconf macros])
 dnl For some strange reason these wrappers need to be toplevel.
 dnl Otherwise they are executed even if the test above fails.
 AC_PROG_F77([gfortran g77 fl32 f77 fort77 xlf f90 xlf90])
@@ -165,7 +165,7 @@ if test "$dgemm" = unknown ; then dgemm=dgemm_ ; fi
 dgecon=;AC_F77_FUNC(dgecon)
 if test "$dgecon" = unknown ; then dgecon=dgecon_ ; fi
 
-echo "Checking BLAS with proper F77 support"
+AC_MSG_NOTICE([Checking BLAS with proper F77 support])
 SC_BLAS([P4EST], [$dgemm],,
         [AC_MSG_ERROR([[\
 Cannot find BLAS library, specify a path using LIBS=-L<DIR> (ex.\
@@ -174,14 +174,14 @@ Cannot find BLAS library, specify a path using LIBS=-L<DIR> (ex.\
 fi
 # at this point $sc_blas_ok is either of: yes disable
 if test "$sc_blas_ok" = disable ; then
-        echo "Not using BLAS (p4est does not call BLAS anyway)"
+        AC_MSG_NOTICE([Not using BLAS (p4est does not call BLAS anyway)])
 fi
 AM_CONDITIONAL([P4EST_BLAS], [test "$sc_blas_ok" = yes])
 
 if test "$extraf77" = no ; then
-echo "Checking LAPACK without F77 support first"
+AC_MSG_NOTICE([Checking LAPACK without F77 support first])
 SC_LAPACK([P4EST], [$dgecon],,
-          [echo "Could not find LAPACK without F77 support"])
+          [AC_MSG_NOTICE([Could not find LAPACK without F77 support])])
 for CVAR in `set | awk -F= "/^ac_cv_.*${dgecon}/ { print \\$1 }"` ; do
   # echo "Unset $CVAR"
   unset $CVAR
@@ -190,7 +190,7 @@ done
 if test "$sc_lapack_ok" = no ; then
 
 extraf77=yes
-echo "Calling F77 autoconf macros"
+AC_MSG_NOTICE([Calling F77 autoconf macros])
 dnl For some strange reason these wrappers need to be toplevel.
 dnl Otherwise they are executed even if the test above fails.
 AC_PROG_F77([gfortran g77 fl32 f77 fort77 xlf f90 xlf90])
@@ -203,7 +203,7 @@ else sc_lapack_ok=no
 fi
 if test "$sc_lapack_ok" = no ; then
 
-echo "Checking LAPACK with proper F77 support"
+AC_MSG_NOTICE([Checking LAPACK with proper F77 support])
 SC_LAPACK([P4EST], [$dgecon],,
           [AC_MSG_ERROR([[\
 Cannot find LAPACK library, specify a path using LIBS=-L<DIR> (ex.\
@@ -212,7 +212,7 @@ Cannot find LAPACK library, specify a path using LIBS=-L<DIR> (ex.\
 fi
 # at this point $sc_lapack_ok is either of: yes disable
 if test "$sc_lapack_ok" = disable ; then
-        echo "Not using LAPACK (p4est does not call LAPACK anyway)"
+        AC_MSG_NOTICE([Not using LAPACK (p4est does not call LAPACK anyway)])
 fi
 AM_CONDITIONAL([P4EST_LAPACK], [test "$sc_lapack_ok" = yes])
 
