@@ -54,7 +54,9 @@ endif
 P4EST_CPPFLAGS =
 
 # build static library
+if P4EST_ENABLE_STATIC
 lib_LIBRARIES += src/libp4est.a
+endif
 src_libp4est_a_SOURCES = \
         $(libp4est_installed_headers) \
         $(libp4est_internal_headers) \
