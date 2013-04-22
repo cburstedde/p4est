@@ -2726,15 +2726,13 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
   if (!conn->ctt_offset) {
     /* TODO: Create corner storage if it does not yet exist */
   }
-  P4EST_ASSERT (conn->
-                tree_to_corner[P4EST_CHILDREN * tree_left + corner_left] >=
-                0);
+  P4EST_ASSERT (conn->tree_to_corner[P4EST_CHILDREN * tree_left + corner_left]
+                >= 0);
   if (conn->tree_to_corner[P4EST_CHILDREN * tree_left + corner_left] < 0) {
     /* TODO: Create corner_left if it does not yet exist */
   }
-  P4EST_ASSERT (conn->
-                tree_to_corner[P4EST_CHILDREN * tree_right + corner_right] >=
-                0);
+  P4EST_ASSERT (conn->tree_to_corner
+                [P4EST_CHILDREN * tree_right + corner_right] >= 0);
   if (conn->tree_to_corner[P4EST_CHILDREN * tree_right + corner_right] < 0) {
     /* TODO: Create corner_right if it does not yet exist */
   }
@@ -2755,11 +2753,11 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
     c1 = swap;
   }
 
-  /* remove all reference to e1 */
+  /* remove all reference to c1 */
   startt = conn->ctt_offset[c1];
   endt = conn->ctt_offset[c1 + 1];
 
-  n1 = startt - endt;           /* the number of tree corners that border c1 */
+  n1 = endt - startt;           /* the number of tree corners that border c1 */
   for (it = startt; it < endt; it++) {  /* get all trees that reference c1 */
     p4est_topidx_t      nt = conn->corner_to_tree[it];  /* nt is a tree the borders c1 */
     int                 ntc = (int) conn->corner_to_corner[it]; /* ntc is nt's numering for c1 */
@@ -2869,7 +2867,7 @@ p8est_connectivity_join_edges (p8est_connectivity_t * conn,
   startt = conn->ett_offset[e1];
   endt = conn->ett_offset[e1 + 1];
 
-  n1 = startt - endt;           /* the number of tree edges that border e1 */
+  n1 = endt - startt;           /* the number of tree edges that border e1 */
   for (it = startt; it < endt; it++) {  /* get all trees that reference e1 */
     p4est_topidx_t      nt = conn->edge_to_tree[it];    /* nt is a tree the borders e1 */
     int                 nte = (int) conn->edge_to_edge[it];     /* nte is nt's numering for e1,
