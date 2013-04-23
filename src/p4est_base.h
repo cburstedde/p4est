@@ -55,6 +55,7 @@ typedef int32_t     p4est_qcoord_t;
 
 /** Typedef for counting topological entities (trees, vertices). */
 typedef int32_t     p4est_topidx_t;
+#define p4est_topidx_compare sc_int32_compare
 #define P4EST_MPI_TOPIDX MPI_INT
 #define P4EST_VTK_TOPIDX "Int32"
 #define P4EST_TOPIDX_MAX INT32_MAX
