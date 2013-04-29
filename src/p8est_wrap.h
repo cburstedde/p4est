@@ -26,7 +26,8 @@ SC_EXTERN_C_BEGIN;
 
 /*** COMPLETE INTERNAL STATE OF P4EST ***/
 
-typedef enum p8est_wrap_flags {
+typedef enum p8est_wrap_flags
+{
   P8EST_WRAP_REFINE = 1,
   P8EST_WRAP_COARSEN = 2
 }

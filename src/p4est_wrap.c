@@ -39,14 +39,14 @@ init_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static int
 refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
-                 p4est_quadrant_t *q)
+                 p4est_quadrant_t * q)
 {
   return q->p.user_int == P4EST_WRAP_REFINE;
 }
 
 static int
 coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
-                  p4est_quadrant_t *q[])
+                  p4est_quadrant_t * q[])
 {
   int                 k;
 
@@ -59,7 +59,7 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static p4est_wrap_t *
-p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t *conn,
+p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
   p4est_wrap_t       *pp;
@@ -122,16 +122,14 @@ p4est_wrap_t       *
 p4est_wrap_new_cubed (MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
-                              p4est_connectivity_new_cubed (),
-                              initial_level);
+                              p4est_connectivity_new_cubed (), initial_level);
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
-                              p4est_connectivity_new_disk (),
-                              initial_level);
+                              p4est_connectivity_new_disk (), initial_level);
 }
 
 #else
@@ -165,10 +163,10 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   if (pp->ghost_aux != NULL) {
     p4est_ghost_destroy (pp->ghost_aux);
   }
- 
+
   p4est_mesh_destroy (pp->mesh);
   p4est_ghost_destroy (pp->ghost);
-  
+
   P4EST_FREE (pp->flags);
   p4est_destroy (pp->p4est);
   p4est_connectivity_destroy (pp->conn);
@@ -186,7 +184,7 @@ p4est_wrap_refine (p4est_wrap_t * pp)
   p4est_t            *p4est = pp->p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
-  
+
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh_aux == NULL);
@@ -194,11 +192,9 @@ p4est_wrap_refine (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->match_aux == 0);
 
   allz = 0;
-  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt)
-  {
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
     tree = p4est_tree_array_index (p4est->trees, tt);
-    for (qz = 0; qz < tree->quadrants.elem_count; ++qz)
-    {
+    for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
       q = p4est_quadrant_array_index (&tree->quadrants, qz);
       q->p.user_int = (int) pp->flags[allz++];
     }
@@ -229,7 +225,7 @@ p4est_wrap_refine (p4est_wrap_t * pp)
 int
 p4est_wrap_partition (p4est_wrap_t * pp)
 {
-  int                   changed;
+  int                 changed;
 
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
@@ -240,7 +236,7 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   p4est_mesh_destroy (pp->mesh);
   p4est_ghost_destroy (pp->ghost);
   pp->match_aux = 0;
-  
+
   /* In the future the flags could be used to pass partition weights */
   changed = p4est_partition_ext (pp->p4est, 1, NULL) > 0;
 
@@ -269,7 +265,7 @@ p4est_wrap_complete (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost_aux != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 0);
-  
+
   p4est_mesh_destroy (pp->mesh_aux);
   p4est_ghost_destroy (pp->ghost_aux);
   pp->ghost_aux = NULL;

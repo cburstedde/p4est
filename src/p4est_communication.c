@@ -162,7 +162,7 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
   treeoffset[0] = 0;
   for (;;) {
     /* Invariant: Rank p is the first that mentions tree t in gfp[p]
-                  and the ownership of t has been assigned to p or p - 1 */
+       and the ownership of t has been assigned to p or p - 1 */
     P4EST_ASSERT (gfp[p].p.which_tree == t);
     P4EST_ASSERT (p == 0 || gfp[p - 1].p.which_tree < t);
     do {
@@ -181,7 +181,7 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
 #ifdef P4_TO_P8
           && gfp[p].z == 0
 #endif
-         ) {
+        ) {
         ++treecount[p];
       }
       else {
@@ -280,13 +280,13 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
                            p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   for (c = 0; c < (int) num_trees; ++c) {
-     pertree[c + 1] += pertree[c];
+    pertree[c + 1] += pertree[c];
   }
   if (sendbuf >= 0) {
     mpiret = MPI_Wait (&req_send, &status);
     SC_CHECK_MPI (mpiret);
   }
-  
+
   /* Clean up */
   P4EST_FREE (treecount);
   P4EST_FREE (treeoffset);

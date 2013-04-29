@@ -26,7 +26,8 @@ SC_EXTERN_C_BEGIN;
 
 /*** COMPLETE INTERNAL STATE OF P4EST ***/
 
-typedef enum p4est_wrap_flags {
+typedef enum p4est_wrap_flags
+{
   P4EST_WRAP_REFINE = 1,
   P4EST_WRAP_COARSEN = 2
 }
@@ -63,8 +64,7 @@ p4est_wrap_t       *p4est_wrap_new_moebius (MPI_Comm mpicomm,
                                             int initial_level);
 p4est_wrap_t       *p4est_wrap_new_cubed (MPI_Comm mpicomm,
                                           int initial_level);
-p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm,
-                                         int initial_level);
+p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level);
 
 /** Passes MPI_COMM_WORLD to p4est_wrap_new_unitsquare. */
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);

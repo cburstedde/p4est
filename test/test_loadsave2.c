@@ -114,9 +114,9 @@ enum
 static void
 test_deflate (p4est_t * p4est)
 {
-  p4est_gloidx_t    *pertree;
-  p4est_t           *p4est2;
-  sc_array_t        *qarr, *darr;
+  p4est_gloidx_t     *pertree;
+  p4est_t            *p4est2;
+  sc_array_t         *qarr, *darr;
 
   pertree = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
   p4est_comm_count_pertree (p4est, pertree);
@@ -124,13 +124,13 @@ test_deflate (p4est_t * p4est)
   qarr = p4est_deflate_quadrants (p4est, p4est->data_size > 0 ? &darr : NULL);
 
   /* Data that describes the forest completely
-   (a) shared data (identical on all processors):
-       p4est->connectivity
-       p4est->global_first_quadrant (does not need to be stored away)
-       pertree
-   (b) per-processor data (partition independent after allgatherv):
-       qarr
-       darr (if per-quadrant data size is greater 0 and it should be saved)
+     (a) shared data (identical on all processors):
+     p4est->connectivity
+     p4est->global_first_quadrant (does not need to be stored away)
+     pertree
+     (b) per-processor data (partition independent after allgatherv):
+     qarr
+     darr (if per-quadrant data size is greater 0 and it should be saved)
    */
 
   /* Create a forest from this information and compare */
