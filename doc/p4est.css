@@ -32,3 +32,17 @@ div.citation {
         border-width: thin;
         padding: 1ex;
 }
+
+table.faq {
+        background-color: #E0F0E8;
+	border-style: solid;
+	border-collapse: collapse;
+	border-width: 0px;
+}
+
+div.faq {
+        background-color: #FFFCC9;
+        border-style: dashed;
+        border-width: thin;
+        padding: 1ex;
+}
