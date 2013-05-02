@@ -23,6 +23,15 @@ if test -z "$INDENT" ; then
 	INDENT=`which indent`
 fi
 
-for NAME in "$@" ; do
-	$INDENT $INDENT_OPTIONS "$NAME"
+for arg in "$@" ; do
+  if [ "x$arg" == "x-o" ]; then
+    WANTSOUT=1
+  fi
 done
+if [ -z "$WANTSOUT" ]; then
+  for NAME in "$@" ; do
+    $INDENT $INDENT_OPTIONS "$NAME"
+  done
+else
+  $INDENT $INDENT_OPTIONS $@
+fi
