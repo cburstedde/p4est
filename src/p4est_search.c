@@ -348,8 +348,8 @@ p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq,
   int                 last_level;
   int                 cid;
 
-  P4EST_ASSERT (level >= 0 && level < P4EST_QMAXLEVEL);
-  if (lq == NULL && uq == NULL) {
+  P4EST_ASSERT (level >= 0 && level <= P4EST_QMAXLEVEL);
+  if ((lq == NULL && uq == NULL) || level == P4EST_QMAXLEVEL) {
     touch = p4est_all_boundaries;
     goto find_range_boundaries_exit;
   }
