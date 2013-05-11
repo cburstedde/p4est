@@ -2757,8 +2757,12 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
     o = nf / P4EST_FACES;
     nf %= P4EST_FACES;
 
+    if (nt == t && nf == f) {
+      continue;
+    }
+
 #ifndef P4_TO_P8
-    nc = p4est_face_corners[nt][o ^ p4est_corner_face_corners[c][f]];
+    nc = p4est_face_corners[nf][o ^ p4est_corner_face_corners[c][f]];
 #else
     {
       int                 ref = p8est_face_permutation_refs[f][nf];
@@ -2872,6 +2876,10 @@ p8est_connectivity_store_edge (p4est_connectivity_t * conn, p4est_topidx_t t,
 
     o = nf / P4EST_FACES;
     nf %= P4EST_FACES;
+
+    if (t == nt && f == nf) {
+      continue;
+    }
     ref = p8est_face_permutation_refs[f][nf];
     set = p8est_face_permutation_sets[ref][o];
 
@@ -3004,7 +3012,7 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
           n1 * sizeof (int8_t));
   P4EST_FREE (swapspacei);
 
-  /* finally, we have to correct ett_offset */
+  /* finally, we have to correct ctt_offset */
   for (c = c0 + 1; c <= c1; c++) {
     conn->ctt_offset[c] += n1;
   }
@@ -3172,14 +3180,19 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
       c[j] = p8est_face_corners[face_right][c[j]];
     }
     /* now from the two corners, we can figure out e_right */
-    e_right = p8est_corner_edges[c[0]][c[1]];
+    e_right = -1;
+    for (j = 0; j < 3; j++) {
+      if (p8est_corner_edges[c[0]][j] == p8est_corner_edges[c[1]][j]) {
+        e_right = p8est_corner_edges[c[0]][j];
+      }
+    }
     P4EST_ASSERT (e_right >= 0);
 
     /* how are e_left and e_right oriented? 0 for same orientation, 1 for
      * opposite */
     e_orient = (p8est_edge_corners[e_right][0] == c[1]);
 
-    /* now we have to facing edges and their orientation, so we can join them */
+    /* now we have two facing edges and their orientation, so we can join them */
     /* these routines will also join the corners */
     p8est_connectivity_join_edges (conn, tree_left, tree_right, e_left,
                                    e_right, e_orient);
