@@ -758,15 +758,13 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
       treeld = &tree->last_desc;
       if (borders == NULL) {
         tquadrants = &tree->quadrants;
-        treecount = tquadrants->elem_count;
-        P4EST_ASSERT (treecount > 0);
       }
       else {
         tquadrants = (sc_array_t *) sc_array_index_int (borders, (int)
                                                         (qtree - first_tree));
-        treecount = tquadrants->elem_count;
-        P4EST_ASSERT (treecount > 0);
       }
+      treecount = tquadrants->elem_count;
+      P4EST_ASSERT (treecount > 0);
     }
 
     inter_tree = 0;
@@ -914,17 +912,18 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
         }
         else {
           /* Do a binary search for the lowest tree quadrant >= s.
-             Does not accept an ancestor of s, which is on purpose. */
+             Does not accept a strict ancestor of s, which is on purpose. */
           first_index = p4est_find_lower_bound (tquadrants, s, guess);
         }
 
         if (first_index < 0 || first_index > last_index ||
             p4est_quadrant_compare (&fd, &ld) == 0) {
-          /* The only possibility is that a quadrant larger than s
-           * contains s */
+          /* The only possibility is that a quadrant tq larger than s
+           * contains s, or that tq and s are of smallest possible size */
           tq = p4est_quadrant_array_index (tquadrants, last_index);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, s) ||
-                        p4est_quadrant_is_equal (tq, s));
+                        (p4est_quadrant_is_equal (tq, s) && 
+                         tq->level == P4EST_QMAXLEVEL));
           if (tq->level < s->level - 1) {
             for (kz = 0; kz < nneigh; kz++) {
               if (neigharray[kz] == tq) {

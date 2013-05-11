@@ -122,11 +122,12 @@ int                 p4est_is_valid (p4est_t * p4est);
  * from all trees that are smaller by at least two levels and thus
  * can cause a split. Those elements that cause a split (as determined by the
  * p4est_balance_*_test routines) create quadrants in \a out that will
- * reproduce those splits when \a in is balanced. Note: use this verion if you
- * are using less than full balance.
+ * reproduce those splits when \a in is balanced.
+ * Note: Use this version if you are using less than full balance.
  *
  * \param [in] p4est    The p4est to work on.
  * \param [in] in       A piggy-sorted linear list of quadrants.
+ *                      The piggy2->from_tree member must be set.
  * \param [in,out] out  A piggy-sorted subset of tree->quadrants.
  * \param [in] balance  The type of balance condition that should be enforced.
  * \param [in] borders  Array of arrays of tree border elements: if not NULL,
