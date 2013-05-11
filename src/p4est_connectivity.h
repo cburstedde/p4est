@@ -378,6 +378,21 @@ void                p4est_connectivity_join_faces (p4est_connectivity_t *
                                                    int face_right,
                                                    int orientation);
 
+/** p4est_connectivity_is_equivalent
+ * This function compares two connectivities for equivalence: it returns
+ * \a true if they are the same connectivity, or if they have the same
+ * topology.  The definition of topological sameness is strict: there is no
+ * attempt made to determine whether permutation and/or rotation of the trees
+ * makes the connectivities equivalent.
+ *
+ * \param[in]      conn1    a valid connectivity
+ * \param[out]     conn2    a valid connectivity
+ */
+int                 p4est_connectivity_is_equivalent (p4est_connectivity_t *
+                                                      conn1,
+                                                      p4est_connectivity_t *
+                                                      conn2);
+
 /** Return a pointer to a p4est_corner_transform_t array element. */
 /*@unused@*/
 static inline p4est_corner_transform_t *

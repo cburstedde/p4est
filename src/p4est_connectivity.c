@@ -3212,6 +3212,121 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 }
 
+#ifdef P4_TO_P8
+static int
+p8est_edge_compare (const void *a, const void *b)
+{
+  const p8est_edge_transform_t *A = (const p8est_edge_transform_t *) a;
+  const p8est_edge_transform_t *B = (const p8est_edge_transform_t *) b;
+
+  return (A->ntree != B->ntree) ? A->ntree - B->ntree :
+    (A->nedge != B->nedge) ? A->nedge - B->nedge :
+    (A->naxis[0] != B->naxis[0]) ? A->naxis[0] - B->naxis[0] :
+    (A->naxis[1] != B->naxis[1]) ? A->naxis[1] - B->naxis[1] :
+    (A->naxis[2] != B->naxis[2]) ? A->naxis[2] - B->naxis[2] :
+    (A->nflip != B->nflip) ? A->nflip - B->nflip : A->corners - B->corners;
+}
+#endif
+
+static int
+p4est_corner_compare (const void *a, const void *b)
+{
+  const p4est_corner_transform_t *A = (const p4est_corner_transform_t *) a;
+  const p4est_corner_transform_t *B = (const p4est_corner_transform_t *) b;
+
+  return (A->ntree != B->ntree) ? A->ntree - B->ntree :
+    A->ncorner - B->ncorner;
+}
+
+int
+p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
+                                  p4est_connectivity_t * conn2)
+{
+  size_t              count;
+  p4est_topidx_t      ntrees, t;
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn1));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn2));
+  size_t              topsize = sizeof (p4est_topidx_t);
+  size_t              int8size = sizeof (int8_t);
+
+  /* same pointer or equality are stronger */
+  if (conn1 == conn2 || p4est_connectivity_is_equal (conn1, conn2)) {
+    return 1;
+  }
+
+  ntrees = conn1->num_trees;
+
+  /* clearly must have same number of trees */
+  if (conn2->num_trees != ntrees) {
+    return 0;
+  }
+
+  /* compare tree_to_tree, tree_to_face structure: must be exactly the same */
+  count = (size_t) (P4EST_FACES * conn1->num_trees);
+  if (memcmp (conn1->tree_to_tree, conn2->tree_to_tree, count * topsize) ||
+      memcmp (conn1->tree_to_face, conn2->tree_to_face, count * int8size)) {
+    return 0;
+  }
+
+  /* test equivalence of edges and corners only through the transforms: the
+   * numbering of the edges and corners is not relevant */
+
+#ifdef P4_TO_P8
+  {
+    p8est_edge_info_t   e1, e2;
+
+    sc_array_init (&e1.edge_transforms, sizeof (p8est_edge_transform_t));
+    sc_array_init (&e2.edge_transforms, sizeof (p8est_edge_transform_t));
+    for (t = 0; t < ntrees; t++) {
+      int                 e;
+
+      for (e = 0; e < P8EST_EDGES; e++) {
+        p8est_find_edge_transform (conn1, t, e, &e1);
+        p8est_find_edge_transform (conn2, t, e, &e2);
+        if (e1.edge_transforms.elem_count != e2.edge_transforms.elem_count) {
+          return 0;
+        }
+        /* sort so memory comparison is correct */
+        sc_array_sort (&e1.edge_transforms, p8est_edge_compare);
+        sc_array_sort (&e2.edge_transforms, p8est_edge_compare);
+        if (!sc_array_is_equal (&e1.edge_transforms, &e2.edge_transforms)) {
+          return 0;
+        }
+      }
+    }
+    sc_array_reset (&e1.edge_transforms);
+    sc_array_reset (&e2.edge_transforms);
+  }
+#endif
+  {
+    p4est_corner_info_t c1, c2;
+
+    sc_array_init (&c1.corner_transforms, sizeof (p4est_corner_transform_t));
+    sc_array_init (&c2.corner_transforms, sizeof (p4est_corner_transform_t));
+    for (t = 0; t < ntrees; t++) {
+      int                 c;
+
+      for (c = 0; c < P4EST_CHILDREN; c++) {
+        p4est_find_corner_transform (conn1, t, c, &c1);
+        p4est_find_corner_transform (conn2, t, c, &c2);
+        if (c1.corner_transforms.elem_count !=
+            c2.corner_transforms.elem_count) {
+          return 0;
+        }
+        /* sort so memory comparison is correct */
+        sc_array_sort (&c1.corner_transforms, p4est_corner_compare);
+        sc_array_sort (&c2.corner_transforms, p4est_corner_compare);
+        if (!sc_array_is_equal (&c1.corner_transforms, &c2.corner_transforms)) {
+          return 0;
+        }
+      }
+    }
+    sc_array_reset (&c1.corner_transforms);
+    sc_array_reset (&c2.corner_transforms);
+  }
+  return 1;
+}
+
 #ifndef P4_TO_P8
 
 int
