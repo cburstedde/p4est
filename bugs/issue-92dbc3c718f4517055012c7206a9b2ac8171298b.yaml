@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Distribute connectivity in parallel
+desc: |-
+  Design a connectivity format where tree storage is distributed.
+  Will need to include sharing a layer of ghost octrees.
+  Will need repartitioning of the octrees from p4est_partition.
+  This should remove the current limit of about 10**5--10**6 octrees.
+type: :bugfix
+component: p4est
+release: "0.5"
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2013-05-11 15:43:51.216569 Z
+references: []
+
+id: 92dbc3c718f4517055012c7206a9b2ac8171298b
+log_events: 
+- - 2013-05-11 15:44:06.336136 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - Release 0.5 should be fine for zillions of octrees.
