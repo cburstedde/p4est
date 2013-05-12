@@ -906,7 +906,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
           guess = (size_t) last_index;
         }
 
-        if (p4est_quadrant_compare (&fd, treefd) <= 0) {
+        if (p4est_quadrant_compare (&fd, treefd) < 0) {
           /* the first tree quadrant overlaps an insulation quadrant */
           first_index = 0;
         }
