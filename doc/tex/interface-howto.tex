@@ -1,0 +1,70 @@
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{xspace}
+
+\newcommand{\dealii}{\texttt{deal.II}\xspace}
+\newcommand{\pforest}{\texttt{p4est}\xspace}
+
+\author{Carsten Burstedde}
+\title{Brief \pforest interface schematics}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We describe the general procedure of using \pforest from application codes.
+\pforest is a software library that stores and modifies a forest-of-octrees
+refinement structure using distributed (MPI) parallelism.  It expects the
+description of the domain as a coarse mesh of conforming hexahedra.
+Non-conforming adaptive mesh refinement (AMR), coarsening, and other operations
+that modify the forest are implemented as \pforest API functions.  To inform
+the application about the refinement structure, several methods are provided
+that encode this information.
+\end{abstract}
+
+\section{Starting point}
+
+We generally separate the adaptive mesh refinement (AMR) topology from any
+numerical information.  The former is stored and modified internally by the
+\pforest software library, while an application is free to define the way it
+uses this information and arranges numerical and other data.  This document is
+inteded to describe the interface by which \pforest transfers mesh information
+to the application.
+
+The general, modular AMR pipeline is described in
+\cite{BursteddeGhattasStadlerEtAl08}, which is not specific to \pforest but can
+in principle be applied to any AMR provider.  The \pforest algorithms and main
+interface routines are destribed in \cite{BursteddeWilcoxGhattas11}.
+% \cite{IsaacBursteddeGhattas12}
+An example usage of \pforest as scalable mesh backend for the general-purpose
+finite element software \dealii is described in
+\cite{BangerthBursteddeHeisterEtAl11}.  A reference implementation of \pforest
+in \texttt{C} can be freely downloaded \cite{Burstedde10} and used and extended
+under the GNU General Public License.  This software is best installed
+standalone into a dedicated directory, where an application code can then find
+the header and library files to compile and link against, respectively.
+
+In this document, we document the three distinct tasks to
+\begin{description}
+\item[A] create a coarse mesh,
+\item[B] modify the refinement and partition structure internal to \pforest,
+\item[C] and to transfer the mesh information to an application.
+\end{description}
+Unless indicated otherwise, all operations described below are understood as
+MPI collectives, that is, they are called on all processors simultaneously.
+Currently, part A needs to be performed redundantly on all processors, which is
+acceptable for up to $10^5$--$10^6$ coarse cells (octree roots).  In parts B
+and C, runtime and memory are roughly proportional to the number of elements
+(octree leaves) on a given processor, independent of the number of octrees.
+
+\bibliographystyle{siam}
+\bibliography{ccgo}
+
+\end{document}
