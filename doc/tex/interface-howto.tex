@@ -11,6 +11,8 @@
 
 \usetikzlibrary{fit}
 \usetikzlibrary{positioning}
+\usetikzlibrary{trees}
+\input{tikzstyles}
 
 \newcommand{\dealii}{\texttt{deal.II}\xspace}
 \newcommand{\pforest}{\texttt{p4est}\xspace}
@@ -60,7 +62,8 @@ the header and library files to compile and link against, respectively.
 In this document, we document the three distinct tasks to
 \begin{description}
 \item[A] create a coarse mesh (\figref{partA}),
-\item[B] modify the refinement and partition structure internal to \pforest,
+\item[B] modify the refinement and partition structure internal to \pforest
+  (\figref{partB}),
 \item[C] and to transfer the mesh information to an application.
 \end{description}
 Unless indicated otherwise, all operations described below are understood as
@@ -72,54 +75,113 @@ and C, runtime and memory are roughly proportional to the number of elements
 
 \begin{figure}
 \begin{center}
-\begin{tikzpicture}[node distance=3ex]
+\begin{tikzpicture}[node distance=3ex,
+  grow via three points = {one child at (0.5,-1.5) and
+  two children at (0.5,-1.5) and (0.5,-3.0)},
+  edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}]
 
-\tikzstyle{group}=[rectangle, rounded corners, thick, draw=green,
-  minimum size=5ex, inner sep=1.5ex]
-\tikzstyle{action}=[rectangle, rounded corners, thick, draw=blue,
-  minimum size=5ex, inner sep=1.5ex]
-\tikzstyle{object}=[rectangle, thick, draw=purple,
-  minimum size=5ex, inner sep=1.5ex]
+\tikzstyle{every node}=[action, anchor=west]
+\tikzstyle{every child}=[arrseq]
 
-\tikzstyle{arrseq}=[->, thick, draw=blue]
-\tikzstyle{arrdat}=[->, thick, draw=red]
+\node (createconn) {\texttt{c =} (choose one of the following)}
+child  {
+%\node (CAD) {CAD / mesh generator / \ldots}
+%  child {
+  node (connnew) { \texttt{c = p4est\_connectivity\_new (\ldots)} }
+  child {
+    node (connfill) { \parbox{5.2cm}{\texttt{c.tree\_to\_tree[\ldots]~= \ldots}\\
+                                   %\texttt{c\ldots}\\
+                                   etc. (populate members)}}
+  }
+}
+%\draw [arrseq] (CAD) -- (connnew);
+%\draw [arrseq] (connnew) -- (connfill);
+%\node[group, fit=(CAD) (connnew) (connfill)] (cadpipe) {};
+child [missing] {}
+child {
+  node (newunit) { \texttt{c = p4est\_connectivity\_new\_unitcube ()} }
+}
+child {
+  node (newstar) { \texttt{c = p4est\_connectivity\_new\_\ldots ()} }
+}
+child {
+  node (conndestroy) { \texttt{p4est\_connectivity\_destroy (c)} }
+};
 
-\node [action] (CAD) {CAD / mesh generator / \ldots};
-\node [action, below=of CAD] (connnew) { 
-  \texttt{c = p4est\_connectivity\_new (CAD.num\_cells, \ldots)} };
-\draw [arrseq] (CAD) -- (connnew);
-\node [action, below=of connnew] (connfill) {
-  \texttt{c.tree\_to\_tree[\ldots]$ = \ldots$} };
-\draw [arrseq] (connnew) -- (connfill);
-\node[group, fit=(CAD) (connnew) (connfill)] (cadpipe) {};
+\node[object] at (12.5, 0) (theconn) { \texttt{c} };
+\draw[arrdat] (createconn) -- (theconn);
+%\draw[arrdat] (newunit.east) -- (theconn);
+%\draw[arrdat] (newstar.east) -- (theconn);
 
-\node[action, below=of cadpipe] (newunit) {
-  \texttt{c = p4est\_connectivity\_new\_unitcube ()} };
+\node[object] at (0, -1.5-.75) (cadinput) { CAD };
+\node[object] at (0, -4.5-.75) (predef) { predefined };
 
-\node[action, below=of newunit] (newstar) {
-  \texttt{c = p4est\_connectivity\_new\_* ()} };
+%\node[object, right=of theconn] (topartb) { Part B };
+%\draw[arrdat, dashed] (theconn.east) -- (topartb.west);
 
-\node[object, below right=of cadpipe] (theconn) { \texttt{c} };
-\draw[arrdat] (connfill.east) -- (theconn);
-\draw[arrdat] (newunit.east) -- (theconn);
-\draw[arrdat] (newstar.east) -- (theconn);
-
-\node[object, right=of theconn] (topartb) { Part B };
-\draw[arrdat, dashed] (theconn.east) -- (topartb.west);
-
-\node[action, below=of newstar] (conndestroy) {
-  \texttt{p4est\_connectivity\_destroy (c)} };
-\draw[arrdat] (theconn.south) -- (conndestroy.east);
+%\draw[arrdat] (theconn) -- (conndestroy.east);
+\draw[arrdat] (cadinput) -- (connnew);
+\draw[arrdat] (cadinput) -- (connfill);
+\draw[arrdat] (predef) -- (newunit);
+\draw[arrdat] (predef) -- (newstar);
 
 \end{tikzpicture}
 \end{center}
 \caption{Part A, creating the coarse mesh connectivity.  The connectivity
   \texttt{c} is a \texttt{C struct} that contains numbers and orientations of
   neighboring coarse cells.  It can be created by translating CAD or mesh data
-  file formats or by using one of several \pforest convenience functions.  The
-  data format is documented in the big comment blocks in
+  file formats (green box) or by using one of several \pforest convenience
+  functions.  The data format is documented in the big comment blocks in
   \texttt{p4est\_connectivity.h} (2D) and \texttt{p8est\_connectivity.h} (3D).}
 \label{fig:partA}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\begin{tikzpicture}[%node distance=3ex,
+  grow via three points = {one child at (0.5,-1.5) and
+  two children at (0.5,-1.5) and (0.5,-3.0)},
+  edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}]
+
+\tikzstyle{every node}=[action, anchor=west]
+\tikzstyle{every child}=[arrseq]
+
+\node (p4estnew) { \parbox{6.0cm}{\texttt{p = p4est\_new (c)}\\
+                                (modify \texttt{p} in place in the following)} }
+  child {
+    node (p4estrefine) { \texttt{p4est\_refine (p)} }
+  }
+  child {
+    node (p4estcoarsen) { \texttt{p4est\_coarsen (p)} }
+  }
+  child { 
+    node (p4estbalance) { \texttt{p4est\_balance (p)} }
+  }
+  child {
+    node (p4estpartition) { \texttt{p4est\_partition (p)} }
+  }
+  child {
+    node (ghostnew) { \texttt{g = p4est\_ghost\_new (p)} }
+    child {
+      node (ghostdestroy) { \texttt{p4est\_ghost\_destroy (g)} }
+    }
+  }
+  child [missing] {}
+  child {
+    node (p4estdestroy) { \texttt{p4est\_destroy (p)} }
+  };
+
+\node[object, xshift=-1.5cm] (cinput) {\texttt{c}};
+\draw[arrdat] (cinput) -- (p4estnew);
+
+\node[object, xshift=11cm] (output) {\texttt{p}, \texttt{g}};
+\draw[arrdat] (p4estnew) -- (output);
+\draw[arrdat] (ghostnew.east) -- (output.south);
+
+\end{tikzpicture}
+\end{center}
+\caption{Part B, changing the refinement structure and partition.}
+\label{fig:partB}
 \end{figure}
 
 \bibliographystyle{siam}
