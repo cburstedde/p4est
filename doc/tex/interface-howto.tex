@@ -5,6 +5,7 @@
 \usepackage{cite}
 \usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
+\usepackage{subfigure}
 \usepackage{tikz}
 \usepackage{url}
 \usepackage{xspace}
@@ -196,12 +197,13 @@ child {
 \caption{Part B, changing the refinement structure and partition.  With the
   connectivity \texttt{c} created in part A, we can create the distributed
   \pforest structure.  Several functions for its modification exist.  For a
-  given \pforest snapshot, we can create a ghost layer of off-processor
-  leaves, which will be outdated once \texttt{p} is changed again.  Refinement
-  and coarsening are controlled by callback functions that usually query flags
+  given \pforest snapshot, we can create a ghost layer \texttt{g} of off-processor
+  leaves, which will be outdated and destroyed once \texttt{p} is changed
+  again.  Refinement and coarsening are controlled by callback functions that
+  usually query flags
   determined by the application.  The \texttt{C struct}s \texttt{p} and \texttt{g}
-  can be examined directly by an application, for example to create and loop
-  through its local and ghost leaf storage.
+  can be inspected directly by an application, for example to loop
+  through data associated with local and ghost leaves.
 }%
 \label{fig:partB}%
 \end{figure}%
@@ -246,17 +248,47 @@ child {
 
 \end{tikzpicture}
 \end{center}
-\caption{Part C, create an application-specific numbering of degrees of freedom.
+\caption{Part C, creating an application-specific numbering of degrees of freedom.
   The \texttt{nodes} and \texttt{lnodes} constructors create a processor-local
   view of globally unique node numbers and the dependency lists for hanging
   nodes for continuous tensor-product piecewise linear and piecewise polynomial
-  finite elements, respectively.  Their prototypes and documentation can be found
-  in the respective \pforest \texttt{.h} files.  The iterator provides a generic
-  way to traverse the refinement structure and to have callbacks executed for every
-  face, edge, and corner neighborhood.  Of course, any custom traversal and
-  numbering can work as well.
+  finite elements, respectively.  
+  The iterator provides a generic way to traverse the refinement structure and to
+  have callbacks executed for every face, edge, and corner neighborhood, which can
+  then be used to identify node locations and their hanging status.  The \texttt{C}
+  prototypes and documentation can be found in the respective \pforest
+  \texttt{.h} files.%  Custom traversal and numbering can work as well.
 }%
 \label{fig:partC}%
+\end{figure}%
+
+\begin{figure}
+\begin{center}
+  \subfigure[Generating the initial refinement structure and mesh.]{%
+  \includegraphics[width=.9\columnwidth]{plots/adaptivity/amr_octor1}%
+  }
+  \\
+  \subfigure[A-posteriori change of refinement structure and mesh.]{%
+  \includegraphics[width=.9\columnwidth]{plots/adaptivity/amr_octor2}%
+  }
+\end{center}
+\caption{Separation between \pforest on one hand and application-specific mesh
+  and numerical information on the other.
+  The dark blue nodes in the picture correspond to in-place operations on
+  \pforest that belong to part B (\figref{partB}).  The dark green node labelled
+  ExtractMesh refers to creating a node numbering structure \texttt{n} (part C;
+  see \figref{partC}) and the allocation of numerical space in application
+  memory guided by \texttt{n}.  The bright green fields in the bottom-most row refer
+  to moving the application-specific numerical information from the old mesh to
+  the new one.  We suggest doing this in two steps: Interpolation works
+  processor-local since the partition has not been changed at this point.
+  Transfer moves data to the owner processors of the respective degrees of
+  freedom without changing the refinement pattern any further.  Both operations
+  require the existence of both the old and
+  new \texttt{n} structures for a short time.
+  (Plots originally published in \cite{BursteddeGhattasStadlerEtAl08}.)
+}%
+\label{fig:meshes}%
 \end{figure}%
 
 \bibliographystyle{siam}
