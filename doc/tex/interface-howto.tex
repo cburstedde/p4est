@@ -83,7 +83,7 @@ and C, runtime and memory are roughly proportional to the number of elements
 \tikzstyle{every node}=[action, anchor=west]
 \tikzstyle{every child}=[arrseq]
 
-\node (createconn) {\texttt{c =} (choose one of the following)}
+\node (createconn) {\texttt{c =} (choose one below)}
 child  {
 %\node (CAD) {CAD / mesh generator / \ldots}
 %  child {
@@ -91,7 +91,7 @@ child  {
   child {
     node (connfill) { \parbox{5.2cm}{\texttt{c.tree\_to\_tree[\ldots]~= \ldots}\\
                                    %\texttt{c\ldots}\\
-                                   etc. (populate members)}}
+                                   etc.\ (populate members)}}
   }
 }
 %\draw [arrseq] (CAD) -- (connnew);
@@ -108,13 +108,13 @@ child {
   node (conndestroy) { \texttt{p4est\_connectivity\_destroy (c)} }
 };
 
-\node[object] at (12.5, 0) (theconn) { \texttt{c} };
+\node[robject, xshift=12.5cm] (theconn) { \texttt{c} };
 \draw[arrdat] (createconn) -- (theconn);
 %\draw[arrdat] (newunit.east) -- (theconn);
 %\draw[arrdat] (newstar.east) -- (theconn);
 
-\node[object] at (0, -1.5-.75) (cadinput) { CAD };
-\node[object] at (0, -4.5-.75) (predef) { predefined };
+\node[object] at (0, -1.5-.75) (cadinput) {CAD};
+\node[object] at (0, -4.5-.75) (predef) {predef.};
 
 %\node[object, right=of theconn] (topartb) { Part B };
 %\draw[arrdat, dashed] (theconn.east) -- (topartb.west);
@@ -127,12 +127,15 @@ child {
 
 \end{tikzpicture}
 \end{center}
-\caption{Part A, creating the coarse mesh connectivity.  The connectivity
+\caption{Part A, creating the coarse mesh connectivity.  The \pforest connectivity
   \texttt{c} is a \texttt{C struct} that contains numbers and orientations of
   neighboring coarse cells.  It can be created by translating CAD or mesh data
-  file formats (green box) or by using one of several \pforest convenience
-  functions.  The data format is documented in the big comment blocks in
-  \texttt{p4est\_connectivity.h} (2D) and \texttt{p8est\_connectivity.h} (3D).}
+  file formats or by using one of several predefined \pforest
+  functions.  The data format is documented in the extensive comment blocks in
+  \texttt{p4est\_connectivity.h} (2D) and \texttt{p8est\_connectivity.h} (3D);
+  see also \cite{BursteddeWilcoxGhattas11}.
+  In the following, \texttt{p4est} always refers to both 2D and 3D.
+}
 \label{fig:partA}
 \end{figure}
 
@@ -146,41 +149,55 @@ child {
 \tikzstyle{every node}=[action, anchor=west]
 \tikzstyle{every child}=[arrseq]
 
-\node (p4estnew) { \parbox{6.0cm}{\texttt{p = p4est\_new (c)}\\
-                                (modify \texttt{p} in place in the following)} }
+\node (p4estnew) {\parbox{4.5cm}{\texttt{p = p4est\_new (c)}\\
+                                (modify \texttt{p} in-place below)}}
   child {
-    node (p4estrefine) { \texttt{p4est\_refine (p)} }
+    node (p4estrefine) {\texttt{p4est\_refine (p)}}
   }
   child {
-    node (p4estcoarsen) { \texttt{p4est\_coarsen (p)} }
+    node (p4estcoarsen) {\texttt{p4est\_coarsen (p)}}
   }
   child { 
-    node (p4estbalance) { \texttt{p4est\_balance (p)} }
+    node (p4estbalance) {\texttt{p4est\_balance (p)}}
   }
   child {
-    node (p4estpartition) { \texttt{p4est\_partition (p)} }
+    node (p4estpartition) {\texttt{p4est\_partition (p)}}
   }
   child {
-    node (ghostnew) { \texttt{g = p4est\_ghost\_new (p)} }
+    node (ghostnew) {\texttt{g = p4est\_ghost\_new (p)}}
     child {
-      node (ghostdestroy) { \texttt{p4est\_ghost\_destroy (g)} }
+      node (ghostdestroy) {\texttt{p4est\_ghost\_destroy (g)}}
     }
   }
   child [missing] {}
   child {
-    node (p4estdestroy) { \texttt{p4est\_destroy (p)} }
+    node (p4estdestroy) {\texttt{p4est\_destroy (p)}}
   };
 
 \node[object, xshift=-1.5cm] (cinput) {\texttt{c}};
 \draw[arrdat] (cinput) -- (p4estnew);
 
-\node[object, xshift=11cm] (output) {\texttt{p}, \texttt{g}};
-\draw[arrdat] (p4estnew) -- (output);
-\draw[arrdat] (ghostnew.east) -- (output.south);
+\node[robject, xshift=11.2cm] (poutput) {\texttt{p}};
+\draw[arrdat] (p4estnew) -- (poutput);
+\node[robject, xshift=11.2cm, yshift=-7.5cm] (goutput) {\texttt{g}};
+\draw[arrdat] (ghostnew) -- (goutput);
+
+\node[robject, xshift=11.2cm, yshift=-1.5cm-.75cm] (flags) {flags};
+\draw[arrdat] (flags) -- (p4estrefine);
+\draw[arrdat] (flags) -- (p4estcoarsen);
 
 \end{tikzpicture}
 \end{center}
-\caption{Part B, changing the refinement structure and partition.}
+\caption{Part B, changing the refinement structure and partition.  With the
+  connectivity \texttt{c} created in part A, we can create the distributed
+  \pforest structure.  Several functions for its modification exist.  For a
+  given \pforest snapshot, we can create a ghost layer of off-processor
+  leaves, which will be outdated once \texttt{p} is changed again.  Refinement
+  and coarsening are controlled by callback functions that usually query flags
+  determined by the application.  The \texttt{C struct}s \texttt{p} and \texttt{g}
+  can be examined directly by an application, for example to create and loop
+  through its local and ghost leaf storage.
+}
 \label{fig:partB}
 \end{figure}
 
