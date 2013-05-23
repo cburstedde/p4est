@@ -64,14 +64,15 @@ In this document, we document the three distinct tasks to
 \item[A] create a coarse mesh (\figref{partA}),
 \item[B] modify the refinement and partition structure internal to \pforest
   (\figref{partB}),
-\item[C] and to transfer the mesh information to an application.
+\item[C] and to transfer the mesh information to an application (\figref{partC}).
 \end{description}
 Unless indicated otherwise, all operations described below are understood as
 MPI collectives, that is, they are called on all processors simultaneously.
 Currently, part A needs to be performed redundantly on all processors, which is
 acceptable for up to $10^5$--$10^6$ coarse cells (octree roots).  In parts B
-and C, runtime and memory are roughly proportional to the number of elements
-(octree leaves) on a given processor, independent of the number of octrees.
+and C, runtime and memory are roughly proportional to the number of local
+elements (octree leaves) on a given processor, independent of the number of
+octrees.
 
 \begin{figure}
 \begin{center}
@@ -106,6 +107,7 @@ child {
 }
 child {
   node (conndestroy) { \texttt{p4est\_connectivity\_destroy (c)} }
+  edge from parent[dashed]
 };
 
 \node[robject, xshift=12.5cm] (theconn) { \texttt{c} };
@@ -135,9 +137,9 @@ child {
   \texttt{p4est\_connectivity.h} (2D) and \texttt{p8est\_connectivity.h} (3D);
   see also \cite{BursteddeWilcoxGhattas11}.
   In the following, \texttt{p4est} always refers to both 2D and 3D.
-}
-\label{fig:partA}
-\end{figure}
+}%
+\label{fig:partA}%
+\end{figure}%
 
 \begin{figure}
 \begin{center}
@@ -164,14 +166,17 @@ child {
     node (p4estpartition) {\texttt{p4est\_partition (p)}}
   }
   child {
-    node (ghostnew) {\texttt{g = p4est\_ghost\_new (p)}}
+    node (ghostnew) {\parbox{4.6cm}{\texttt{g = p4est\_ghost\_new (p)}\\
+                                  (does not modify \texttt{p})}}
     child {
       node (ghostdestroy) {\texttt{p4est\_ghost\_destroy (g)}}
+      edge from parent[dashed]
     }
   }
   child [missing] {}
   child {
     node (p4estdestroy) {\texttt{p4est\_destroy (p)}}
+    edge from parent[dashed]
   };
 
 \node[object, xshift=-1.5cm] (cinput) {\texttt{c}};
@@ -197,9 +202,62 @@ child {
   determined by the application.  The \texttt{C struct}s \texttt{p} and \texttt{g}
   can be examined directly by an application, for example to create and loop
   through its local and ghost leaf storage.
-}
-\label{fig:partB}
-\end{figure}
+}%
+\label{fig:partB}%
+\end{figure}%
+
+\begin{figure}
+\begin{center}
+\begin{tikzpicture}[%node distance=3ex,
+  grow via three points = {one child at (0.5,-1.5) and
+  two children at (0.5,-1.5) and (0.5,-3.0)},
+  edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}]
+
+\tikzstyle{every node}=[action, anchor=west]
+\tikzstyle{every child}=[arrseq]
+
+\node (createmesh) {%\parbox{8cm}{
+\texttt{n =} %(numbering of degrees of freedom)\\
+                                 (choose one below)}
+  child {
+    node (nodesnew) {\texttt{n = p4est\_nodes\_new (p, g)}}
+  }
+  child {
+    node (lnodesnew) {\texttt{n = p4est\_lnodes\_new (p, g)}}
+  }
+  child {
+    node (iterate) {\parbox{4cm}{\texttt{n =} (custom allocation)\\
+      \texttt{p4est\_iterate (p, g)}}}
+  }
+  child {
+    node (custom) {\texttt{n =} (custom allocation and code)}
+  }
+  child {
+    node (ndestroy) {(call appropriate destructor on \texttt{n})}
+    edge from parent[dashed]
+  }
+;
+
+\node[object, xshift=-2.0cm] (pginput) {\texttt{p, g}};
+\draw[arrdat] (pginput) -- (createmesh);
+
+\node[robject, xshift=9.0cm] (themesh) {\texttt{n}};
+\draw[arrdat] (createmesh) -- (themesh);
+
+\end{tikzpicture}
+\end{center}
+\caption{Part C, create an application-specific numbering of degrees of freedom.
+  The \texttt{nodes} and \texttt{lnodes} constructors create a processor-local
+  view of globally unique node numbers and the dependency lists for hanging
+  nodes for continuous tensor-product piecewise linear and piecewise polynomial
+  finite elements, respectively.  Their prototypes and documentation can be found
+  in the respective \pforest \texttt{.h} files.  The iterator provides a generic
+  way to traverse the refinement structure and to have callbacks executed for every
+  face, edge, and corner neighborhood.  Of course, any custom traversal and
+  numbering can work as well.
+}%
+\label{fig:partC}%
+\end{figure}%
 
 \bibliographystyle{siam}
 \bibliography{ccgo}
