@@ -44,7 +44,7 @@ We generally separate the adaptive mesh refinement (AMR) topology from any
 numerical information.  The former is stored and modified internally by the
 \pforest software library, while an application is free to define the way it
 uses this information and arranges numerical and other data.  This document is
-inteded to describe the interface by which \pforest transfers mesh information
+inteded to describe the interface by which \pforest relates mesh information
 to the application.
 
 The general, modular AMR pipeline is described in
@@ -65,7 +65,7 @@ In this document, we document the three distinct tasks to
 \item[A] create a coarse mesh (\figref{partA}),
 \item[B] modify the refinement and partition structure internal to \pforest
   (\figref{partB}),
-\item[C] and to transfer the mesh information to an application (\figref{partC}).
+\item[C] and to relate the mesh information to an application (\figref{partC}).
 \end{description}
 Unless indicated otherwise, all operations described below are understood as
 MPI collectives, that is, they are called on all processors simultaneously.
@@ -275,21 +275,34 @@ child {
 \caption{Separation between \pforest on one hand and application-specific mesh
   and numerical information on the other.
   The dark blue nodes in the picture correspond to in-place operations on
-  \pforest that belong to part B (\figref{partB}).  The dark green node labelled
+  \pforest that fall under part B (\figref{partB}).  The dark green node labelled
   ExtractMesh refers to creating a node numbering structure \texttt{n} (part C;
   see \figref{partC}) and the allocation of numerical space in application
   memory guided by \texttt{n}.  The bright green fields in the bottom-most row refer
   to moving the application-specific numerical information from the old mesh to
   the new one.  We suggest doing this in two steps: Interpolation works
   processor-local since the partition has not been changed at this point.
-  Transfer moves data to the owner processors of the respective degrees of
+  Transfer moves data to the new owner processors of the respective degrees of
   freedom without changing the refinement pattern any further.  Both operations
   require the existence of both the old and
-  new \texttt{n} structures for a short time.
+  new \texttt{n} structures, and allow for freeing the older one afterwards.
   (Plots originally published in \cite{BursteddeGhattasStadlerEtAl08}.)
 }%
 \label{fig:meshes}%
 \end{figure}%
+
+The definition and organisation of numerical data is entirely left up to the
+application.  The application calls modification operations for the forest
+(part B), guided by the numerical state related to the local leaves.  A
+numerical application will require its own numbering scheme for degrees of
+freedom, which is most of the time defined via node locations on a reference
+element and dependencies between hanging nodes and the independent nodes they
+are interpolated from.  \pforest provides several paths for aiding the
+application in defining their data layout (henceforth called the mesh, not to
+be confused with the coarse octree mesh; part C).  \figref{meshes} contains
+illustrations on the sequence of operations that are required to create a new
+refinement pattern from scratch or by refining an existing one, and to move
+the application-specific numerical data from an old to a new mesh.
 
 \bibliographystyle{siam}
 \bibliography{ccgo}
