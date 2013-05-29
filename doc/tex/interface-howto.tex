@@ -56,7 +56,8 @@ An example usage of \pforest as scalable mesh backend for the general-purpose
 finite element software \dealii is described in
 \cite{BangerthBursteddeHeisterEtAl11}.  A reference implementation of \pforest
 in \texttt{C} can be freely downloaded \cite{Burstedde10} and used and extended
-under the GNU General Public License.  This software is best installed
+under the GNU General Public License.  This code contains commented header
+files and simple examples and use cases.  This software is best installed
 standalone into a dedicated directory, where an application code can then find
 the header and library files to compile and link against, respectively.
 
@@ -70,10 +71,14 @@ In this document, we document the three distinct tasks to
 Unless indicated otherwise, all operations described below are understood as
 MPI collectives, that is, they are called on all processors simultaneously.
 Currently, part A needs to be performed redundantly on all processors, which is
-acceptable for up to $10^5$--$10^6$ coarse cells (octree roots).  In parts B
-and C, runtime and memory are roughly proportional to the number of local
-elements (octree leaves) on a given processor, independent of the number of
-octrees.
+acceptable for up to $10^5$--$10^6$ coarse cells (octree roots).  Parts B and C
+strictly implement distributed parallelism, where runtime and per-processor
+memory are roughly proportional to the number of local elements (octree leaves)
+on a given processor, independent of the number of octrees, the total number of
+elements, or the refinement depth.  Partitioning the forest into equal numbers
+of elements per processor is a core \pforest operation and essentially free in
+terms of execution time, so we suggest to call it whenever load balance is
+desirable for subsequent operations.
 
 \begin{figure}
 \begin{center}
@@ -198,9 +203,9 @@ child {
   connectivity \texttt{c} created in part A, we can create the distributed
   \pforest structure.  Several functions for its modification exist.  For a
   given \pforest snapshot, we can create a ghost layer \texttt{g} of off-processor
-  leaves, which will be outdated and destroyed once \texttt{p} is changed
-  again.  Refinement and coarsening are controlled by callback functions that
-  usually query flags
+  leaves, which will be outdated and should be destroyed once \texttt{p} is
+  changed again.  Refinement and coarsening are controlled by callback functions
+  that usually query flags
   determined by the application.  The \texttt{C struct}s \texttt{p} and \texttt{g}
   can be inspected directly by an application, for example to loop
   through data associated with local and ghost leaves.
@@ -255,7 +260,8 @@ child {
   finite elements, respectively.  
   The iterator provides a generic way to traverse the refinement structure and to
   have callbacks executed for every face, edge, and corner neighborhood, which can
-  then be used to identify node locations and their hanging status.  The \texttt{C}
+  then be used to identify node locations and their hanging status for any custom
+  element type.  The \texttt{C}
   prototypes and documentation can be found in the respective \pforest
   \texttt{.h} files.%  Custom traversal and numbering can work as well.
 }%
@@ -274,8 +280,9 @@ child {
 \end{center}
 \caption{Separation between \pforest on one hand and application-specific mesh
   and numerical information on the other.
-  The dark blue nodes in the picture correspond to in-place operations on
-  \pforest that fall under part B (\figref{partB}).  The dark green node labelled
+  The dark blue nodes in the picture correspond to in-place operations on the
+  forest \texttt{p} that fall under part B (\figref{partB}).  The dark green node
+  labeled
   ExtractMesh refers to creating a node numbering structure \texttt{n} (part C;
   see \figref{partC}) and the allocation of numerical space in application
   memory guided by \texttt{n}.  The bright green fields in the bottom-most row refer
@@ -298,11 +305,11 @@ numerical application will require its own numbering scheme for degrees of
 freedom, which is most of the time defined via node locations on a reference
 element and dependencies between hanging nodes and the independent nodes they
 are interpolated from.  \pforest provides several paths for aiding the
-application in defining their data layout (henceforth called the mesh, not to
-be confused with the coarse octree mesh; part C).  \figref{meshes} contains
-illustrations on the sequence of operations that are required to create a new
-refinement pattern from scratch or by refining an existing one, and to move
-the application-specific numerical data from an old to a new mesh.
+application in defining their data layout, henceforth called the mesh (part C),
+and not to be confused with the coarse octree mesh (part A).  \figref{meshes}
+contains illustrations on the sequence of operations that are required to
+create a new refinement pattern from scratch or by modifying an existing one,
+and to move the application-specific numerical data from an old to a new mesh.
 
 \bibliographystyle{siam}
 \bibliography{ccgo}
