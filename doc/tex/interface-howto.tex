@@ -288,10 +288,10 @@ child {
   memory guided by \texttt{n}.  The bright green fields in the bottom-most row refer
   to moving the application-specific numerical information from the old mesh to
   the new one.  We suggest doing this in two steps: Interpolation works
-  processor-local since the partition has not been changed at this point.
-  Transfer moves data to the new owner processors of the respective degrees of
-  freedom without changing the refinement pattern any further.  Both operations
-  require the existence of both the old and
+  processor-local since the partition has not been changed at this point.  Then,
+  after partitioning, transfer moves data to the new owner processors of the
+  respective degrees of freedom without changing the refinement pattern any
+  further.  Both operations require the existence of both the old and
   new \texttt{n} structures, and allow for freeing the older one afterwards.
   (Plots originally published in \cite{BursteddeGhattasStadlerEtAl08}.)
 }%
