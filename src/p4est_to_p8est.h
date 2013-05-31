@@ -309,6 +309,8 @@
 #define p4est_ghost_memory_used         p8est_ghost_memory_used
 #define p4est_ghost_new                 p8est_ghost_new
 #define p4est_ghost_destroy             p8est_ghost_destroy
+#define p4est_ghost_exchange_p4est_data p8est_ghost_exchange_p8est_data
+#define p4est_ghost_exchange_custom_data p8est_ghost_exchange_custom_data
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
 #define p4est_face_quadrant_exists      p8est_face_quadrant_exists

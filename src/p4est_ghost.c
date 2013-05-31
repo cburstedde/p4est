@@ -1344,10 +1344,18 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
   gl = P4EST_ALLOC (p4est_ghost_t, 1);
   gl->mpisize = num_procs;
   gl->num_trees = num_trees;
+  gl->btype = btype;
+
   ghost_layer = &gl->ghosts;
   sc_array_init (ghost_layer, sizeof (p4est_quadrant_t));
   gl->tree_offsets = P4EST_ALLOC (p4est_locidx_t, num_trees + 1);
   gl->proc_offsets = P4EST_ALLOC (p4est_locidx_t, num_procs + 1);
+
+  sc_array_init (&gl->mirrors, sizeof (p4est_quadrant_t));
+  gl->mirror_tree_offsets = NULL;
+  gl->mirror_proc_mirrors = NULL;
+  gl->mirror_proc_offsets = NULL;
+
   gl->proc_offsets[0] = 0;
 #ifndef P4EST_MPI
   gl->proc_offsets[1] = 0;
@@ -2001,9 +2009,13 @@ void
 p4est_ghost_destroy (p4est_ghost_t * ghost)
 {
   sc_array_reset (&ghost->ghosts);
-
   P4EST_FREE (ghost->tree_offsets);
   P4EST_FREE (ghost->proc_offsets);
+
+  sc_array_reset (&ghost->mirrors);
+  P4EST_FREE (ghost->mirror_tree_offsets);
+  P4EST_FREE (ghost->mirror_proc_mirrors);
+  P4EST_FREE (ghost->mirror_proc_offsets);
 
   P4EST_FREE (ghost);
 }

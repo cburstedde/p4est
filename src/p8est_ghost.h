@@ -32,18 +32,31 @@ typedef struct
 {
   int                 mpisize;
   p4est_topidx_t      num_trees;
+  p8est_connect_type_t btype;
 
   /** An array of quadrants which make up the ghost layer around \a
    * p4est.  Their piggy3 data member is filled with their owner's tree
-   * and local number.  Quadrants will be ordered in \c
-   * p8est_quadrant_compare_piggy order.  These will be quadrants
-   * inside the neighboring tree i.e., \c p8est_quadrant_is_inside is
-   * true for the quadrant and the neighboring tree.
+   * and local number (cumulative over trees).  Quadrants are ordered in \c
+   * p8est_quadrant_compare_piggy order.  These are quadrants inside the
+   * neighboring tree, i.e., \c p8est_quadrant_is_inside is true for the
+   * quadrant and the neighboring tree.
    */
   sc_array_t          ghosts;
-
   p4est_locidx_t     *tree_offsets;     /* num_trees + 1 ghost indices */
   p4est_locidx_t     *proc_offsets;     /* mpisize + 1 ghost indices */
+
+  /** An array of local quadrants that touch the parallel boundary from the
+   * inside, i.e., that are ghosts in the perspective of at least one other
+   * processor.  The storage convention is the same as for \c ghosts above.
+   * CAUTION: NOT YET IMPLEMENTED!
+   */
+  sc_array_t          mirrors;
+  p4est_locidx_t     *mirror_tree_offsets;      /* num_trees + 1 mirror indices */
+  p4est_locidx_t     *mirror_proc_mirrors;      /* indices into mirrors grouped by
+                                                   outside processor rank and
+                                                   ascending within each rank */
+  p4est_locidx_t     *mirror_proc_offsets;      /* mpisize + 1 indices into 
+                                                   mirror_proc_mirrors */
 }
 p8est_ghost_t;
 
@@ -87,6 +100,36 @@ p8est_ghost_t      *p8est_ghost_new (p8est_t * p8est,
 
 /** Frees all memory used for the ghost layer. */
 void                p8est_ghost_destroy (p8est_ghost_t * ghost);
+
+/** Transfer data for local quadrants that are ghosts to other processors.
+ * Send the data stored in the quadrant's user_data.  This is either the
+ * pointer variable itself if \c p8est->data_size is 0, or the content of
+ * the referenced memory field if p8est->data_size is positive.
+ * \param [in] p8est            The forest used for reference.
+ * \param [in] ghost            The ghost layer used for reference.
+ * \param [in,out] ghost_data   Pre-allocated data pointers, one per ghost
+ *                              quadrant.  If p8est->data_size is 0, must at
+ *                              least hold sizeof (void *) bytes each.
+ */
+void                p8est_ghost_exchange_p8est_data (p8est_t * p4est,
+                                                     p8est_ghost_t * ghost,
+                                                     void **ghost_data);
+
+/** Transfer data for local quadrants that are ghosts to other processors.
+ * The data size is the same for all quadrants and can be chosen arbitrarily.
+ * \param [in] p8est            The forest used for reference.
+ * \param [in] ghost            The ghost layer used for reference.
+ * \param [in] data_size        The data size to transfer per quadrant.
+ * \param [in] mirror_data      One data pointer per mirror quadrant. 
+ * \param [in,out] ghost_data   Pre-allocated data pointers, one per ghost,
+ *                              which must hold at least \c data_size.
+ */
+void                p8est_ghost_exchange_custom_data (p8est_t * p4est,
+                                                      p8est_ghost_t * ghost,
+                                                      size_t data_size,
+                                                      const void
+                                                      **mirror_data,
+                                                      void **ghost_data);
 
 /** Conduct binary search for exact match on a range of the ghost layer.
  * \param [in] ghost            The ghost layer.
