@@ -3180,12 +3180,7 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
       c[j] = p8est_face_corners[face_right][c[j]];
     }
     /* now from the two corners, we can figure out e_right */
-    e_right = -1;
-    for (j = 0; j < 3; j++) {
-      if (p8est_corner_edges[c[0]][j] == p8est_corner_edges[c[1]][j]) {
-        e_right = p8est_corner_edges[c[0]][j];
-      }
-    }
+    e_right = p8est_child_corner_edges[c[0]][c[1]];
     P4EST_ASSERT (e_right >= 0);
 
     /* how are e_left and e_right oriented? 0 for same orientation, 1 for
