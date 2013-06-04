@@ -3164,6 +3164,640 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
 
 #endif /* P4EST_METIS */
 
+static int
+p4est_topidx_compare_2 (const void *A, const void *B)
+{
+  int                 ret = p4est_topidx_compare (A, B);
+
+  if (!ret) {
+    const p4est_topidx_t *a = (const p4est_topidx_t *) A;
+    const p4est_topidx_t *b = (const p4est_topidx_t *) B;
+    p4est_topidx_t      diff = a[1] - b[1];
+
+    ret = diff ? (diff < 0 ? -1 : 1) : 0;
+  }
+  return ret;
+}
+
+static void
+p4est_connectivity_store_corner (p4est_connectivity_t * conn,
+                                 p4est_topidx_t t, int c)
+{
+  p4est_topidx_t      n = ++conn->num_corners;
+  p4est_topidx_t     *tc;
+  size_t              zz;
+  size_t              zk;
+  int                 i;
+  sc_array_t         *corner_to_tc;
+
+  P4EST_ASSERT (conn->tree_to_corner == NULL ||
+                conn->tree_to_corner[P4EST_CHILDREN * t + c] < 0);
+
+  conn->ctt_offset = P4EST_REALLOC (conn->ctt_offset, p4est_topidx_t, n + 1);
+  conn->ctt_offset[n] = conn->ctt_offset[n - 1];
+
+  if (conn->tree_to_corner == NULL) {
+    conn->tree_to_corner =
+      P4EST_ALLOC (p4est_topidx_t, P4EST_CHILDREN * conn->num_trees);
+    memset (conn->tree_to_corner, -1,
+            P4EST_CHILDREN * conn->num_trees * sizeof (p4est_topidx_t));
+  }
+
+  corner_to_tc = sc_array_new (2 * sizeof (p4est_topidx_t));
+
+  conn->tree_to_corner[P4EST_CHILDREN * t + c] = n - 1;
+  tc = (p4est_topidx_t *) sc_array_push (corner_to_tc);
+  tc[0] = t;
+  tc[1] = c;
+
+  for (i = 0; i < P4EST_DIM; i++) {
+    int                 f = p4est_corner_faces[c][i];
+    p4est_topidx_t      nt = conn->tree_to_tree[P4EST_FACES * t + f];
+    int                 nf = conn->tree_to_face[P4EST_FACES * t + f];
+    int                 o;
+    int                 nc;
+
+    o = nf / P4EST_FACES;
+    nf %= P4EST_FACES;
+
+    if (nt == t && nf == f) {
+      continue;
+    }
+
+#ifndef P4_TO_P8
+    nc = p4est_face_corners[nf][o ^ p4est_corner_face_corners[c][f]];
+#else
+    {
+      int                 ref = p8est_face_permutation_refs[f][nf];
+      int                 set = p8est_face_permutation_sets[ref][o];
+
+      nc = p8est_face_permutations[set][c];
+    }
+#endif
+
+    conn->tree_to_corner[P4EST_CHILDREN * nt + nc] = n - 1;
+    tc = (p4est_topidx_t *) sc_array_push (corner_to_tc);
+    tc[0] = nt;
+    tc[1] = nc;
+  }
+#ifdef P4_TO_P8
+  for (i = 0; i < P4EST_DIM; i++) {
+    p8est_edge_info_t   ei;
+    p8est_edge_transform_t *et;
+    int                 e = p8est_corner_edges[c][i];
+
+    sc_array_init (&(ei.edge_transforms), sizeof (p8est_edge_transform_t));
+    p8est_find_edge_transform (conn, t, e, &ei);
+
+    for (zz = 0; zz < ei.edge_transforms.elem_count; zz++) {
+      p4est_topidx_t      nt;
+      int                 ne;
+      int                 nc;
+
+      et = p8est_edge_array_index (&(ei.edge_transforms), zz);
+
+      nt = et->ntree;
+      ne = et->nedge;
+      if (p8est_edge_corners[e][0] == c) {
+        nc = p8est_edge_corners[ne][et->nflip];
+      }
+      else {
+        nc = p8est_edge_corners[ne][1 ^ et->nflip];
+      }
+
+      conn->tree_to_corner[P4EST_CHILDREN * nt + nc] = n - 1;
+      tc = (p4est_topidx_t *) sc_array_push (corner_to_tc);
+      tc[0] = nt;
+      tc[1] = nc;
+    }
+
+    sc_array_reset (&(ei.edge_transforms));
+  }
+#endif
+
+  sc_array_sort (corner_to_tc, p4est_topidx_compare_2);
+  sc_array_uniq (corner_to_tc, p4est_topidx_compare_2);
+
+  zk = corner_to_tc->elem_count;
+  conn->ctt_offset[n] += (p4est_topidx_t) zk;
+  conn->corner_to_tree = P4EST_REALLOC (conn->corner_to_tree,
+                                        p4est_topidx_t, conn->ctt_offset[n]);
+  conn->corner_to_corner = P4EST_REALLOC (conn->corner_to_corner,
+                                          int8_t, conn->ctt_offset[n]);
+
+  for (zz = 0; zz < zk; zz++) {
+    tc = (p4est_topidx_t *) sc_array_index (corner_to_tc, zz);
+    conn->corner_to_tree[conn->ctt_offset[n - 1] + zz] = tc[0];
+    conn->corner_to_corner[conn->ctt_offset[n - 1] + zz] = (int8_t) tc[1];
+  }
+
+  sc_array_destroy (corner_to_tc);
+}
+
+#ifdef P4_TO_P8
+static void
+p8est_connectivity_store_edge (p4est_connectivity_t * conn, p4est_topidx_t t,
+                               int e)
+{
+  p4est_topidx_t      n = ++conn->num_edges;
+  p4est_topidx_t     *te;
+  size_t              zz;
+  size_t              zk;
+  int                 i;
+  sc_array_t         *edge_to_te;
+
+  P4EST_ASSERT (conn->tree_to_edge == NULL ||
+                conn->tree_to_edge[P8EST_EDGES * t + e] < 0);
+
+  conn->ett_offset = P4EST_REALLOC (conn->ett_offset, p4est_topidx_t, n + 1);
+  conn->ett_offset[n] = conn->ett_offset[n - 1];
+
+  if (conn->tree_to_edge == NULL) {
+    conn->tree_to_edge =
+      P4EST_ALLOC (p4est_topidx_t, P8EST_EDGES * conn->num_trees);
+    memset (conn->tree_to_edge, -1,
+            P8EST_EDGES * conn->num_trees * sizeof (p4est_topidx_t));
+  }
+
+  edge_to_te = sc_array_new (2 * sizeof (p4est_topidx_t));
+
+  conn->tree_to_edge[P8EST_EDGES * t + e] = n - 1;
+  te = (p4est_topidx_t *) sc_array_push (edge_to_te);
+  te[0] = t;
+  te[1] = e;
+
+  for (i = 0; i < 2; i++) {
+    int                 f = p8est_edge_faces[e][i];
+    p4est_topidx_t      nt = conn->tree_to_tree[P4EST_FACES * t + f];
+    int                 nf = conn->tree_to_face[P4EST_FACES * t + f];
+    int                 o, c[2], nc[2];
+    int                 ne;
+    int                 ref;
+    int                 set;
+    int                 j;
+    int                 diff;
+
+    o = nf / P4EST_FACES;
+    nf %= P4EST_FACES;
+
+    if (t == nt && f == nf) {
+      continue;
+    }
+    ref = p8est_face_permutation_refs[f][nf];
+    set = p8est_face_permutation_sets[ref][o];
+
+    for (j = 0; j < 2; j++) {
+      c[j] = p8est_edge_corners[e][j];
+      nc[j] = p8est_face_permutations[set][c[j]];
+    }
+    diff = SC_MAX (nc[0], nc[1]) - SC_MIN (nc[0], nc[1]);
+    switch (diff) {
+    case 1:
+      ne = p8est_corner_edges[nc[0]][0];
+      break;
+    case 2:
+      ne = p8est_corner_edges[nc[0]][1];
+      break;
+    case 4:
+      ne = p8est_corner_edges[nc[0]][2];
+      break;
+    default:
+      SC_ABORT_NOT_REACHED ();
+    }
+    conn->tree_to_edge[P8EST_EDGES * nt + ne] = n - 1;
+    if (p8est_edge_corners[ne][0] != nc[0]) {
+      ne += 12;
+    }
+
+    te = (p4est_topidx_t *) sc_array_push (edge_to_te);
+    te[0] = nt;
+    te[1] = ne;
+  }
+
+  sc_array_sort (edge_to_te, p4est_topidx_compare_2);
+  sc_array_uniq (edge_to_te, p4est_topidx_compare_2);
+
+  zk = edge_to_te->elem_count;
+  conn->ett_offset[n] += (p4est_topidx_t) zk;
+  conn->edge_to_tree = P4EST_REALLOC (conn->edge_to_tree,
+                                      p4est_topidx_t, conn->ett_offset[n]);
+  conn->edge_to_edge = P4EST_REALLOC (conn->edge_to_edge,
+                                      int8_t, conn->ett_offset[n]);
+
+  for (zz = 0; zz < zk; zz++) {
+    te = (p4est_topidx_t *) sc_array_index (edge_to_te, zz);
+    conn->edge_to_tree[conn->ett_offset[n - 1] + zz] = te[0];
+    conn->edge_to_edge[conn->ett_offset[n - 1] + zz] = (int8_t) te[1];
+  }
+
+  sc_array_destroy (edge_to_te);
+}
+#endif
+
+static void
+p4est_connectivity_join_corners (p4est_connectivity_t * conn,
+                                 p4est_topidx_t tree_left,
+                                 p4est_topidx_t tree_right,
+                                 int corner_left, int corner_right)
+{
+  p4est_topidx_t      c, c0, c1, swap;
+  p4est_topidx_t      startt, endt, n1, it, end0;
+  p4est_topidx_t     *swapspace;
+  int8_t             *swapspacei;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (tree_left >= 0 && tree_left < conn->num_trees);
+  P4EST_ASSERT (tree_right >= 0 && tree_right < conn->num_trees);
+  P4EST_ASSERT (corner_left >= 0 && corner_left < P4EST_CHILDREN);
+  P4EST_ASSERT (corner_right >= 0 && corner_right < P4EST_CHILDREN);
+
+  /* it could be that the current connectivity did not store corner information,
+   * because all of the corners are simple enough that they can be figured out
+   * from context.  To simplify things, we're going to only deal with
+   * explicitly stored corners. */
+  if (conn->tree_to_corner == NULL ||
+      conn->tree_to_corner[P4EST_CHILDREN * tree_left + corner_left] < 0) {
+    p4est_connectivity_store_corner (conn, tree_left, corner_left);
+  }
+  if (conn->tree_to_corner == NULL ||
+      conn->tree_to_corner[P4EST_CHILDREN * tree_right + corner_right] < 0) {
+    p4est_connectivity_store_corner (conn, tree_right, corner_right);
+  }
+
+  /* now we know that the two corners are explicitly stored, so it's just a
+   * matter of combining their storage and removing references to one of them
+   * */
+  c0 = conn->tree_to_corner[P4EST_CHILDREN * tree_left + corner_left];
+  c1 = conn->tree_to_corner[P4EST_CHILDREN * tree_right + corner_right];
+
+  if (c0 == c1) {
+    /* whoops, these two corners were already the same */
+    return;
+  }
+  if (c1 < c0) {
+    swap = c0;
+    c0 = c1;
+    c1 = swap;
+  }
+
+  /* remove all reference to c1 */
+  startt = conn->ctt_offset[c1];
+  endt = conn->ctt_offset[c1 + 1];
+
+  n1 = endt - startt;           /* the number of tree corners that border c1 */
+  for (it = startt; it < endt; it++) {  /* get all trees that reference c1 */
+    p4est_topidx_t      nt = conn->corner_to_tree[it];  /* nt is a tree the borders c1 */
+    int                 ntc = (int) conn->corner_to_corner[it]; /* ntc is nt's numering for c1 */
+
+    conn->tree_to_corner[P4EST_CHILDREN * nt + ntc] = c0;       /* c1->c0 */
+  }
+
+  /* we now have to move the entries in corner_to_tree and corner_to_corner around */
+  end0 = conn->ctt_offset[c0 + 1];
+
+  swapspace = P4EST_ALLOC (p4est_topidx_t, n1);
+  memcpy (swapspace, conn->corner_to_tree + (size_t) startt,
+          n1 * sizeof (p4est_topidx_t));
+  memmove (conn->corner_to_tree + (size_t) (end0 + n1),
+           conn->corner_to_tree + (size_t) end0,
+           (size_t) (startt - end0) * sizeof (p4est_topidx_t));
+  memcpy (conn->corner_to_tree + (size_t) end0, swapspace,
+          n1 * sizeof (p4est_topidx_t));
+  P4EST_FREE (swapspace);
+
+  swapspacei = P4EST_ALLOC (int8_t, n1);
+  memcpy (swapspacei, conn->corner_to_corner + (size_t) startt,
+          n1 * sizeof (int8_t));
+  memmove (conn->corner_to_corner + (size_t) (end0 + n1),
+           conn->corner_to_corner + (size_t) end0,
+           (size_t) (startt - end0) * sizeof (int8_t));
+  memcpy (conn->corner_to_corner + (size_t) end0, swapspacei,
+          n1 * sizeof (int8_t));
+  P4EST_FREE (swapspacei);
+
+  /* finally, we have to correct ctt_offset */
+  for (c = c0 + 1; c <= c1; c++) {
+    conn->ctt_offset[c] += n1;
+  }
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+}
+
+#ifdef P4_TO_P8
+static void
+p8est_connectivity_join_edges (p8est_connectivity_t * conn,
+                               p4est_topidx_t tree_left,
+                               p4est_topidx_t tree_right,
+                               int edge_left, int edge_right, int orientation)
+{
+  int                 i, c_left, c_right;
+  p4est_topidx_t      e, e0, e1, swap;
+  p4est_topidx_t      startt, endt, n1, it, end0;
+  p4est_topidx_t     *swapspace;
+  int8_t             *swapspacei;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (tree_left >= 0 && tree_left < conn->num_trees);
+  P4EST_ASSERT (tree_right >= 0 && tree_right < conn->num_trees);
+  P4EST_ASSERT (edge_left >= 0 && edge_left < P8EST_EDGES);
+  P4EST_ASSERT (edge_right >= 0 && edge_right < P8EST_EDGES);
+  for (i = 0; i < 2; i++) {
+    /* get matching corners */
+    c_left = p8est_edge_corners[edge_left][i];
+    if (orientation) {
+      c_right = p8est_edge_corners[edge_right][1 ^ i];
+    }
+    else {
+      c_right = p8est_edge_corners[edge_right][i];
+    }
+    /* join the corners */
+    p4est_connectivity_join_corners (conn, tree_left, tree_right,
+                                     c_left, c_right);
+  }
+
+  /* it could be that the current connectivity did not store edge information,
+   * because all of the edges are simple enough that they can be figured out
+   * from context.  To simplify things, we're going to only deal with
+   * explicitly stored edges. */
+  if (conn->tree_to_edge == NULL ||
+      conn->tree_to_edge[P8EST_EDGES * tree_left + edge_left] < 0) {
+    p8est_connectivity_store_edge (conn, tree_left, edge_left);
+  }
+  if (conn->tree_to_edge == NULL ||
+      conn->tree_to_edge[P8EST_EDGES * tree_right + edge_right] < 0) {
+    p8est_connectivity_store_edge (conn, tree_right, edge_right);
+  }
+
+  /* now we know that the two edges are explicitly stored, so it's just a
+   * matter of combining their storage and removing references to one of them
+   * */
+  e0 = conn->tree_to_edge[P8EST_EDGES * tree_left + edge_left];
+  e1 = conn->tree_to_edge[P8EST_EDGES * tree_right + edge_right];
+
+  if (e0 == e1) {
+    /* whoops, these two edges were already the same, looks like we did a bunch
+     * of work for nothing */
+    return;
+  }
+  if (e1 < e0) {
+    swap = e0;
+    e0 = e1;
+    e1 = swap;
+  }
+
+  /* remove all reference to e1 */
+  startt = conn->ett_offset[e1];
+  endt = conn->ett_offset[e1 + 1];
+
+  n1 = endt - startt;           /* the number of tree edges that border e1 */
+  for (it = startt; it < endt; it++) {  /* get all trees that reference e1 */
+    p4est_topidx_t      nt = conn->edge_to_tree[it];    /* nt is a tree the borders e1 */
+    int                 nte = (int) conn->edge_to_edge[it];     /* nte is nt's numering for e1,
+                                                                   modified by orientation */
+    int                 o = nte / P8EST_EDGES;  /* o is that modifying orientation */
+
+    nte %= P8EST_EDGES;         /* okay, now nte is nt's numering for e1 */
+    conn->tree_to_edge[P8EST_EDGES * nt + nte] = e0;    /* e1->e0 */
+    /* if edge_left and edge_right have opposite orientations, then the
+     * orientation information in edge_to_edge has to be toggled */
+    conn->edge_to_edge[it] = P8EST_EDGES * (o ^ orientation) + nte;
+  }
+
+  /* we now have to move the entries in edge_to_tree and edge_to_edge around */
+  end0 = conn->ett_offset[e0 + 1];
+
+  swapspace = P4EST_ALLOC (p4est_topidx_t, n1);
+  memcpy (swapspace, conn->edge_to_tree + (size_t) startt,
+          n1 * sizeof (p4est_topidx_t));
+  memmove (conn->edge_to_tree + (size_t) (end0 + n1),
+           conn->edge_to_tree + (size_t) end0,
+           (size_t) (startt - end0) * sizeof (p4est_topidx_t));
+  memcpy (conn->edge_to_tree + (size_t) end0, swapspace,
+          n1 * sizeof (p4est_topidx_t));
+  P4EST_FREE (swapspace);
+
+  swapspacei = P4EST_ALLOC (int8_t, n1);
+  memcpy (swapspacei, conn->edge_to_edge + (size_t) startt,
+          n1 * sizeof (int8_t));
+  memmove (conn->edge_to_edge + (size_t) (end0 + n1),
+           conn->edge_to_edge + (size_t) end0,
+           (size_t) (startt - end0) * sizeof (int8_t));
+  memcpy (conn->edge_to_edge + (size_t) end0, swapspacei,
+          n1 * sizeof (int8_t));
+  P4EST_FREE (swapspacei);
+
+  /* finally, we have to correct ett_offset */
+  for (e = e0 + 1; e <= e1; e++) {
+    conn->ett_offset[e] += n1;
+  }
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+}
+#endif
+
+void
+p4est_connectivity_join_faces (p4est_connectivity_t * conn,
+                               p4est_topidx_t tree_left,
+                               p4est_topidx_t tree_right,
+                               int face_left, int face_right, int orientation)
+{
+#ifdef P4_TO_P8
+  int                 ref, set, j;
+#endif
+  int                 i;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (tree_left >= 0 && tree_left < conn->num_trees);
+  P4EST_ASSERT (tree_right >= 0 && tree_right < conn->num_trees);
+  P4EST_ASSERT (face_left >= 0 && face_left < P4EST_FACES);
+  P4EST_ASSERT (face_right >= 0 && face_right < P4EST_FACES);
+  P4EST_ASSERT (conn->tree_to_tree[P4EST_FACES * tree_left + face_left] ==
+                tree_left);
+  P4EST_ASSERT (conn->tree_to_tree[P4EST_FACES * tree_right + face_right] ==
+                tree_right);
+  P4EST_ASSERT (conn->tree_to_face[P4EST_FACES * tree_left + face_left] ==
+                (int8_t) face_left);
+  P4EST_ASSERT (conn->tree_to_face[P4EST_FACES * tree_right + face_right] ==
+                (int8_t) face_right);
+
+#ifdef P4_TO_P8
+  /* figure out which edges are next to each other */
+  ref = p8est_face_permutation_refs[face_left][face_right];
+  set = p8est_face_permutation_sets[ref][orientation];
+  for (i = 0; i < 4; i++) {
+    int                 c[2], e_left, e_right, e_orient;
+
+    /* get an edge of face_left */
+    e_left = p8est_face_edges[face_left][i];
+
+    for (j = 0; j < 2; j++) {
+      /* get a corners of that edge */
+      c[j] = p8est_edge_corners[e_left][j];
+      /* get the numbering of that corner in the face numbering */
+      c[j] = p8est_corner_face_corners[c[j]][face_left];
+      P4EST_ASSERT (c[j] >= 0);
+      /* use the permutation to get the equivalent face numbering on
+       * face_right */
+      c[j] = p8est_face_permutations[set][c[j]];
+      /* finally, turn that in the octant numbering for tree_right */
+      c[j] = p8est_face_corners[face_right][c[j]];
+    }
+    /* now from the two corners, we can figure out e_right */
+    e_right = p8est_child_corner_edges[c[0]][c[1]];
+    P4EST_ASSERT (e_right >= 0);
+
+    /* how are e_left and e_right oriented? 0 for same orientation, 1 for
+     * opposite */
+    e_orient = (p8est_edge_corners[e_right][0] == c[1]);
+
+    /* now we have two facing edges and their orientation, so we can join them */
+    /* these routines will also join the corners */
+    p8est_connectivity_join_edges (conn, tree_left, tree_right, e_left,
+                                   e_right, e_orient);
+  }
+#else
+  for (i = 0; i < 2; i++) {
+    int                 c_left, c_right;
+
+    c_left = p4est_face_corners[face_left][i];
+    if (orientation) {          /* if the two faces have opposite orientation */
+      c_right = p4est_face_corners[face_right][1 ^ i];
+    }
+    else {                      /* if the two faces have the same orientation */
+      c_right = p4est_face_corners[face_right][i];
+    }
+
+    /* join the corners */
+    p4est_connectivity_join_corners (conn, tree_left, tree_right, c_left,
+                                     c_right);
+  }
+#endif
+
+  conn->tree_to_tree[P4EST_FACES * tree_left + face_left] = tree_right;
+  conn->tree_to_tree[P4EST_FACES * tree_right + face_right] = tree_left;
+  conn->tree_to_face[P4EST_FACES * tree_left + face_left] =
+    face_right + P4EST_FACES * orientation;
+  conn->tree_to_face[P4EST_FACES * tree_right + face_right] =
+    face_left + P4EST_FACES * orientation;
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+}
+
+#ifdef P4_TO_P8
+static int
+p8est_edge_compare (const void *a, const void *b)
+{
+  const p8est_edge_transform_t *A = (const p8est_edge_transform_t *) a;
+  const p8est_edge_transform_t *B = (const p8est_edge_transform_t *) b;
+
+  return (A->ntree != B->ntree) ? A->ntree - B->ntree :
+    (A->nedge != B->nedge) ? A->nedge - B->nedge :
+    (A->naxis[0] != B->naxis[0]) ? A->naxis[0] - B->naxis[0] :
+    (A->naxis[1] != B->naxis[1]) ? A->naxis[1] - B->naxis[1] :
+    (A->naxis[2] != B->naxis[2]) ? A->naxis[2] - B->naxis[2] :
+    (A->nflip != B->nflip) ? A->nflip - B->nflip : A->corners - B->corners;
+}
+#endif
+
+static int
+p4est_corner_compare (const void *a, const void *b)
+{
+  const p4est_corner_transform_t *A = (const p4est_corner_transform_t *) a;
+  const p4est_corner_transform_t *B = (const p4est_corner_transform_t *) b;
+
+  return (A->ntree != B->ntree) ? A->ntree - B->ntree :
+    A->ncorner - B->ncorner;
+}
+
+int
+p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
+                                  p4est_connectivity_t * conn2)
+{
+  size_t              count;
+  p4est_topidx_t      ntrees, t;
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn1));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn2));
+  size_t              topsize = sizeof (p4est_topidx_t);
+  size_t              int8size = sizeof (int8_t);
+
+  /* same pointer or equality are stronger */
+  if (conn1 == conn2 || p4est_connectivity_is_equal (conn1, conn2)) {
+    return 1;
+  }
+
+  ntrees = conn1->num_trees;
+
+  /* clearly must have same number of trees */
+  if (conn2->num_trees != ntrees) {
+    return 0;
+  }
+
+  /* compare tree_to_tree, tree_to_face structure: must be exactly the same */
+  count = (size_t) (P4EST_FACES * conn1->num_trees);
+  if (memcmp (conn1->tree_to_tree, conn2->tree_to_tree, count * topsize) ||
+      memcmp (conn1->tree_to_face, conn2->tree_to_face, count * int8size)) {
+    return 0;
+  }
+
+  /* test equivalence of edges and corners only through the transforms: the
+   * numbering of the edges and corners is not relevant */
+
+#ifdef P4_TO_P8
+  {
+    p8est_edge_info_t   e1, e2;
+
+    sc_array_init (&e1.edge_transforms, sizeof (p8est_edge_transform_t));
+    sc_array_init (&e2.edge_transforms, sizeof (p8est_edge_transform_t));
+    for (t = 0; t < ntrees; t++) {
+      int                 e;
+
+      for (e = 0; e < P8EST_EDGES; e++) {
+        p8est_find_edge_transform (conn1, t, e, &e1);
+        p8est_find_edge_transform (conn2, t, e, &e2);
+        if (e1.edge_transforms.elem_count != e2.edge_transforms.elem_count) {
+          return 0;
+        }
+        /* sort so memory comparison is correct */
+        sc_array_sort (&e1.edge_transforms, p8est_edge_compare);
+        sc_array_sort (&e2.edge_transforms, p8est_edge_compare);
+        if (!sc_array_is_equal (&e1.edge_transforms, &e2.edge_transforms)) {
+          return 0;
+        }
+      }
+    }
+    sc_array_reset (&e1.edge_transforms);
+    sc_array_reset (&e2.edge_transforms);
+  }
+#endif
+  {
+    p4est_corner_info_t c1, c2;
+
+    sc_array_init (&c1.corner_transforms, sizeof (p4est_corner_transform_t));
+    sc_array_init (&c2.corner_transforms, sizeof (p4est_corner_transform_t));
+    for (t = 0; t < ntrees; t++) {
+      int                 c;
+
+      for (c = 0; c < P4EST_CHILDREN; c++) {
+        p4est_find_corner_transform (conn1, t, c, &c1);
+        p4est_find_corner_transform (conn2, t, c, &c2);
+        if (c1.corner_transforms.elem_count !=
+            c2.corner_transforms.elem_count) {
+          return 0;
+        }
+        /* sort so memory comparison is correct */
+        sc_array_sort (&c1.corner_transforms, p4est_corner_compare);
+        sc_array_sort (&c2.corner_transforms, p4est_corner_compare);
+        if (!sc_array_is_equal (&c1.corner_transforms, &c2.corner_transforms)) {
+          return 0;
+        }
+      }
+    }
+    sc_array_reset (&c1.corner_transforms);
+    sc_array_reset (&c2.corner_transforms);
+  }
+  return 1;
+}
+
 #ifndef P4_TO_P8
 
 int

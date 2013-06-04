@@ -140,6 +140,8 @@
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
 #define p4est_connectivity_permute      p8est_connectivity_permute
+#define p4est_connectivity_join_faces   p8est_connectivity_join_faces
+#define p4est_connectivity_is_equivalent p8est_connectivity_is_equivalent
 
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex

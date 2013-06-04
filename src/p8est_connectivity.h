@@ -554,6 +554,44 @@ void                p8est_connectivity_reorder (MPI_Comm comm, int k,
 
 #endif /* P4EST_METIS */
 
+/** p8est_connectivity_join_faces
+ * This function takes an existing valid connectivity \a conn and modifies it
+ * by joining two tree faces that are currently boundary faces.
+ * \param [in,out] conn        connectivity that will be altered.
+ * \param [in]     tree_left   tree that will be on the left side of the joined
+ *                             faces.
+ * \param [in]     tree_right  tree that will be on the right side of the
+ *                             joined faces.
+ * \param [in]     face_left   face of \a tree_left that will be joined.
+ * \param [in]     face_right  face of \a tree_right that will be joined.
+ * \param [in]     orientation the orientation of \a face_left and
+ *                             \a face_right once joined (see the description
+ *                             of p8est_connectivity_t to understand
+ *                             orientation).
+ */
+void                p8est_connectivity_join_faces (p8est_connectivity_t *
+                                                   conn,
+                                                   p4est_topidx_t tree_left,
+                                                   p4est_topidx_t tree_right,
+                                                   int face_left,
+                                                   int face_right,
+                                                   int orientation);
+
+/** p8est_connectivity_is_equivalent
+ * This function compares two connectivities for equivalence: it returns
+ * \a true if they are the same connectivity, or if they have the same
+ * topology.  The definition of topological sameness is strict: there is no
+ * attempt made to determine whether permutation and/or rotation of the trees
+ * makes the connectivities equivalent.
+ *
+ * \param[in]      conn1    a valid connectivity
+ * \param[out]     conn2    a valid connectivity
+ */
+int                 p8est_connectivity_is_equivalent (p8est_connectivity_t *
+                                                      conn1,
+                                                      p8est_connectivity_t *
+                                                      conn2);
+
 /** Return a pointer to a p8est_edge_transform_t array element. */
 /*@unused@*/
 static inline p8est_edge_transform_t *
