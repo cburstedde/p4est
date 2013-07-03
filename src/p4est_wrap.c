@@ -64,7 +64,7 @@ p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
 {
   p4est_wrap_t       *pp;
 
-  pp = SC_ALLOC (p4est_wrap_t, 1);
+  pp = P4EST_ALLOC (p4est_wrap_t, 1);
   pp->p4est_dim = P4EST_DIM;
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
@@ -171,7 +171,7 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   p4est_destroy (pp->p4est);
   p4est_connectivity_destroy (pp->conn);
 
-  SC_FREE (pp);
+  P4EST_FREE (pp);
 }
 
 int
@@ -323,7 +323,7 @@ p4est_wrap_leaf_first (p4est_wrap_t * pp)
     return NULL;
   }
 
-  leaf = SC_ALLOC (p4est_wrap_leaf_t, 1);
+  leaf = P4EST_ALLOC (p4est_wrap_leaf_t, 1);
   leaf->pp = pp;
   leaf->which_tree = p4est->first_local_tree;
   leaf->tree = p4est_tree_array_index (p4est->trees, leaf->which_tree);
@@ -343,7 +343,7 @@ p4est_wrap_leaf_next (p4est_wrap_leaf_t * leaf)
   if ((size_t) leaf->which_quad + 1 == leaf->tree->quadrants.elem_count) {
     ++leaf->which_tree;
     if (leaf->which_tree > p4est->last_local_tree) {
-      SC_FREE (leaf);
+      P4EST_FREE (leaf);
       return NULL;
     }
     leaf->tree = p4est_tree_array_index (p4est->trees, leaf->which_tree);
