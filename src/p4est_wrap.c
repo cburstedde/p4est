@@ -30,31 +30,69 @@
 #include <p8est_wrap.h>
 #endif
 
-static void
-init_callback (p4est_t * p4est, p4est_topidx_t which_tree,
-               p4est_quadrant_t * q)
-{
-  q->p.user_int = 0;
-}
-
 static int
 refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                  p4est_quadrant_t * q)
 {
-  return q->p.user_int == P4EST_WRAP_REFINE;
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+  const p4est_locidx_t old_counter = pp->inside_counter++;
+  const uint8_t       flag = pp->flags[old_counter];
+
+  P4EST_ASSERT (0 <= old_counter);
+  P4EST_ASSERT (0 <= pp->num_replaced
+                && pp->num_replaced <= pp->num_refine_flags);
+
+  /* copy current flag since we cannot be certain that refinement occurs */
+  pp->flags[old_counter] = 0;
+  pp->temp_flags[old_counter + (P4EST_CHILDREN - 1) * pp->num_replaced] =
+    flag & ~P4EST_WRAP_REFINE;
+
+  return flag & P4EST_WRAP_REFINE;
+}
+
+static void
+replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
+                   int num_outgoing, p4est_quadrant_t * outgoing[],
+                   int num_incoming, p4est_quadrant_t * incoming[])
+{
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+  const p4est_locidx_t new_counter =
+    pp->inside_counter - 1 + (P4EST_CHILDREN - 1) * pp->num_replaced++;
+  const uint8_t       flag = pp->temp_flags[new_counter];
+  int                 k;
+
+  /* this function is only called when refinement actually happens */
+  P4EST_ASSERT (num_outgoing == 1 && num_incoming == P4EST_CHILDREN);
+  P4EST_ASSERT (!(flag & (P4EST_WRAP_REFINE | P4EST_WRAP_COARSEN)));
+
+  for (k = 1; k < P4EST_CHILDREN; ++k) {
+    pp->temp_flags[new_counter + k] = flag;
+  }
 }
 
 static int
 coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                   p4est_quadrant_t * q[])
 {
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+  const p4est_locidx_t old_counter = pp->inside_counter++;
   int                 k;
 
+  /* are we not coarsening at all, just counting? */
+  if (q[1] == NULL) {
+    return 0;
+  }
+
+  /* now we are possibly coarsening */
   for (k = 0; k < P4EST_CHILDREN; ++k) {
-    if (q[k]->p.user_int != P4EST_WRAP_COARSEN) {
+    if (!(pp->temp_flags[old_counter + k] & P4EST_WRAP_COARSEN)) {
       return 0;
     }
   }
+  
+  /* we are definitely coarsening */
+  pp->inside_counter += P4EST_CHILDREN - 1; 
+  ++pp->num_replaced;
   return 1;
 }
 
@@ -71,8 +109,10 @@ p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->p4est_children = P4EST_CHILDREN;
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
-                             0, initial_level, 1, 0, init_callback, NULL);
-  pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
+                             0, initial_level, 1, 0, NULL, NULL);
+  pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
+  pp->temp_flags = NULL;
+  pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
 
   pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
   pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
@@ -80,6 +120,8 @@ p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->ghost_aux = NULL;
   pp->mesh_aux = NULL;
   pp->match_aux = 0;
+
+  pp->p4est->user_pointer = pp;
 
   return pp;
 }
@@ -99,6 +141,14 @@ p4est_wrap_new_periodic (MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_periodic (),
+                              initial_level);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_corner (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p4est_connectivity_new_corner (),
                               initial_level);
 }
 
@@ -142,6 +192,14 @@ p8est_wrap_new_unitcube (MPI_Comm mpicomm, int initial_level)
                               initial_level);
 }
 
+p8est_wrap_t       *
+p8est_wrap_new_rotwrap (MPI_Comm mpicomm, int initial_level)
+{
+  return p4est_wrap_new_conn (mpicomm,
+                              p8est_connectivity_new_rotwrap (),
+                              initial_level);
+}
+
 #endif
 
 p4est_wrap_t       *
@@ -168,22 +226,73 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   p4est_ghost_destroy (pp->ghost);
 
   P4EST_FREE (pp->flags);
+  P4EST_FREE (pp->temp_flags);
+
   p4est_destroy (pp->p4est);
   p4est_connectivity_destroy (pp->conn);
 
   P4EST_FREE (pp);
 }
 
-int
-p4est_wrap_refine (p4est_wrap_t * pp)
+void
+p4est_wrap_mark_refine (p4est_wrap_t * pp,
+                        p4est_topidx_t which_tree, p4est_locidx_t which_quad)
 {
-  int                 changed;
-  size_t              allz, qz;
-  p4est_locidx_t      tt;
-  p4est_gloidx_t      global_num;
   p4est_t            *p4est = pp->p4est;
   p4est_tree_t       *tree;
-  p4est_quadrant_t   *q;
+  p4est_locidx_t      pos;
+  uint8_t             flag;
+
+  P4EST_ASSERT (p4est->first_local_tree <= which_tree);
+  P4EST_ASSERT (which_tree <= p4est->last_local_tree);
+
+  tree = p4est_tree_array_index (p4est->trees, which_tree);
+  P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
+  pos = tree->quadrants_offset + which_quad;
+  P4EST_ASSERT (pos < p4est->local_num_quadrants);
+
+  flag = pp->flags[pos];
+  if (!(flag & P4EST_WRAP_REFINE)) {
+    pp->flags[pos] |= P4EST_WRAP_REFINE;
+    ++pp->num_refine_flags;
+  }
+  pp->flags[pos] &= ~P4EST_WRAP_COARSEN;
+}
+
+void
+p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
+                         p4est_topidx_t which_tree, p4est_locidx_t which_quad)
+{
+  p4est_t            *p4est = pp->p4est;
+  p4est_tree_t       *tree;
+  p4est_locidx_t      pos;
+  uint8_t             flag;
+
+  P4EST_ASSERT (p4est->first_local_tree <= which_tree);
+  P4EST_ASSERT (which_tree <= p4est->last_local_tree);
+
+  tree = p4est_tree_array_index (p4est->trees, which_tree);
+  P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
+  pos = tree->quadrants_offset + which_quad;
+  P4EST_ASSERT (pos < p4est->local_num_quadrants);
+
+  flag = pp->flags[pos];
+  if (flag & P4EST_WRAP_REFINE) {
+    pp->flags[pos] &= ~P4EST_WRAP_REFINE;
+    --pp->num_refine_flags;
+  }
+  pp->flags[pos] |= P4EST_WRAP_COARSEN;
+}
+
+int
+p4est_wrap_adapt (p4est_wrap_t * pp)
+{
+  int                 changed;
+#ifdef P4EST_DEBUG
+  p4est_locidx_t      jl, local_num;
+#endif
+  p4est_gloidx_t      global_num;
+  p4est_t            *p4est = pp->p4est;
 
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
@@ -191,33 +300,61 @@ p4est_wrap_refine (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost_aux == NULL);
   P4EST_ASSERT (pp->match_aux == 0);
 
-  allz = 0;
-  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
-    tree = p4est_tree_array_index (p4est->trees, tt);
-    for (qz = 0; qz < tree->quadrants.elem_count; ++qz) {
-      q = p4est_quadrant_array_index (&tree->quadrants, qz);
-      q->p.user_int = (int) pp->flags[allz++];
-    }
-  }
-  P4EST_ASSERT (allz == (size_t) p4est->local_num_quadrants);
+  P4EST_ASSERT (pp->temp_flags == NULL);
+  P4EST_ASSERT (pp->num_refine_flags >= 0 &&
+                pp->num_refine_flags <= p4est->local_num_quadrants);
 
+  /* This allocation is optimistic when not all refine requests are honored */
+  pp->temp_flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants +
+                                     (P4EST_CHILDREN - 1) *
+                                     pp->num_refine_flags);
+
+  /* Execute refinement */
+  pp->inside_counter = pp->num_replaced = 0;
+#ifdef P4EST_DEBUG
+  local_num = p4est->local_num_quadrants;
+#endif
   global_num = p4est->global_num_quadrants;
-  p4est_refine (p4est, 0, refine_callback, init_callback);
+  p4est_refine_ext (p4est, 0, -1, refine_callback, NULL, replace_on_refine);
+  P4EST_ASSERT (pp->inside_counter == local_num);
+  P4EST_ASSERT (p4est->local_num_quadrants - local_num ==
+    pp->num_replaced * (P4EST_CHILDREN - 1));
   changed = global_num != p4est->global_num_quadrants;
 
+  /* Execute coarsening */
+  pp->inside_counter = pp->num_replaced = 0;
+#ifdef P4EST_DEBUG
+  local_num = p4est->local_num_quadrants;
+#endif
   global_num = p4est->global_num_quadrants;
-  p4est_coarsen (p4est, 0, coarsen_callback, init_callback);
+  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, NULL);
+  P4EST_ASSERT (pp->inside_counter == local_num);
+  P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
+    pp->num_replaced * (P4EST_CHILDREN - 1));
   changed = changed || global_num != p4est->global_num_quadrants;
 
+  /* Free temporary flags */
+  P4EST_FREE (pp->temp_flags);
+  pp->temp_flags = NULL;
+
+  /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
     P4EST_FREE (pp->flags);
-    p4est_balance (p4est, P4EST_CONNECT_FULL, init_callback);
-    pp->flags = P4EST_ALLOC_ZERO (int8_t, p4est->local_num_quadrants);
+    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
     pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
     pp->mesh_aux = p4est_mesh_new (p4est, pp->ghost_aux, P4EST_CONNECT_FULL);
     pp->match_aux = 1;
   }
+#ifdef P4EST_DEBUG
+  else {
+    for (jl = 0; jl < p4est->local_num_quadrants; ++jl) {
+      P4EST_ASSERT (pp->flags[jl] == 0);
+    }
+  }
+#endif
+  pp->num_refine_flags = 0;
 
   return changed;
 }
@@ -242,7 +379,7 @@ p4est_wrap_partition (p4est_wrap_t * pp)
 
   if (changed) {
     P4EST_FREE (pp->flags);
-    pp->flags = P4EST_ALLOC_ZERO (int8_t, pp->p4est->local_num_quadrants);
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
 
     pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
     pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
@@ -275,10 +412,12 @@ p4est_wrap_complete (p4est_wrap_t * pp)
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
+#if 0
 #ifdef P4EST_DEBUG
   int                 nface;
   p4est_mesh_t       *mesh =
     leaf->pp->match_aux ? leaf->pp->mesh_aux : leaf->pp->mesh;
+#endif
 #endif
   p4est_quadrant_t    corner;
 
@@ -301,6 +440,7 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 #endif
                           leaf->upperright);
 
+#if 0
 #ifdef P4EST_DEBUG
   printf ("C: Leaf level %d tree %d tree_leaf %d local_leaf %d\n",
           leaf->level, leaf->which_tree, leaf->which_quad, leaf->total_quad);
@@ -308,6 +448,7 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
     printf ("C: Leaf face %d neighbor leaf %d\n", nface,
             mesh->quad_to_quad[P4EST_FACES * leaf->total_quad + nface]);
   }
+#endif
 #endif
 
   return leaf;
