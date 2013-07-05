@@ -109,8 +109,17 @@ void                p8est_refine_ext (p8est_t * p8est,
                                       p8est_replace_t replace_fn);
 
 /** Coarsen a forest.
+ * \param [in,out] p8est The forest is changed in place.
+ * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
+ * \param [in] callback_orphans Boolean to enable calling coarsen_fn even on
+ *                        non-families.  In this case, the second quadrant
+ *                        pointer in the argument list of the callback is NULL,
+ *                        subsequent pointers are undefined, and the return
+ *                        value is ignored.  If coarsen_recursive is true, it
+ *                        is possible that a quadrant is called once or more as
+ *                        an orphan and eventually becomes part of a family.
  * \param [in] coarsen_fn Callback function that returns true if a
- *                        family of quadrants shall be coarsened
+ *                        family of quadrants shall be coarsened.
  * \param [in] init_fn    Callback function to initialize the user_data
  *                        which is already allocated automatically.
  * \param [in] replace_fn Callback function that allows the user to change
@@ -118,6 +127,7 @@ void                p8est_refine_ext (p8est_t * p8est,
  *                        replace.
  */
 void                p8est_coarsen_ext (p8est_t * p8est, int coarsen_recursive,
+                                       int callback_orphans,
                                        p8est_coarsen_t coarsen_fn,
                                        p8est_init_t init_fn,
                                        p8est_replace_t replace_fn);

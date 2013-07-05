@@ -902,11 +902,12 @@ void
 p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
                p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
-  p4est_coarsen_ext (p4est, coarsen_recursive, coarsen_fn, init_fn, NULL);
+  p4est_coarsen_ext (p4est, coarsen_recursive, 0, coarsen_fn, init_fn, NULL);
 }
 
 void
-p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
+p4est_coarsen_ext (p4est_t * p4est,
+                   int coarsen_recursive, int callback_orphans,
                    p4est_coarsen_t coarsen_fn, p4est_init_t init_fn,
                    p4est_replace_t replace_fn)
 {
@@ -970,6 +971,10 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
 
         if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
           isfamily = 0;
+          if (callback_orphans) {
+            c[1] = NULL;
+            (void) coarsen_fn (p4est, jt, c);
+          }
           break;
         }
       }
@@ -1033,6 +1038,15 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
         *cfirst = *clast;
       }
       sc_array_resize (tquadrants, incount - length);
+    }
+
+    /* call remaining orphans */
+    if (callback_orphans) {
+      c[1] = NULL;
+      for (zz = window; zz < incount - length; ++zz) {
+        c[0] = p4est_quadrant_array_index (tquadrants, zz);
+        (void) coarsen_fn (p4est, jt, c);
+      }
     }
 
     /* compute maximum level */
