@@ -106,6 +106,7 @@ int                 p4est_wrap_adapt (p4est_wrap_t * pp);
 
 /** Call p4est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p4est.
+ * The pp->flags array is reset to zeros.
  * Creates ghost and mesh to represent the new mesh.
  * \return          boolean whether p4est has changed.
  *                  If true, complete must be called.

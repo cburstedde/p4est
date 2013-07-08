@@ -249,7 +249,7 @@ p4est_wrap_mark_refine (p4est_wrap_t * pp,
   tree = p4est_tree_array_index (p4est->trees, which_tree);
   P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
   pos = tree->quadrants_offset + which_quad;
-  P4EST_ASSERT (pos < p4est->local_num_quadrants);
+  P4EST_ASSERT (0 <= pos && pos < p4est->local_num_quadrants);
 
   flag = pp->flags[pos];
   if (!(flag & P4EST_WRAP_REFINE)) {
@@ -274,7 +274,7 @@ p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
   tree = p4est_tree_array_index (p4est->trees, which_tree);
   P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
   pos = tree->quadrants_offset + which_quad;
-  P4EST_ASSERT (pos < p4est->local_num_quadrants);
+  P4EST_ASSERT (0 <= pos && pos < p4est->local_num_quadrants);
 
   flag = pp->flags[pos];
   if (flag & P4EST_WRAP_REFINE) {
@@ -385,6 +385,8 @@ p4est_wrap_partition (p4est_wrap_t * pp)
     pp->mesh = p4est_mesh_new (pp->p4est, pp->ghost, P4EST_CONNECT_FULL);
   }
   else {
+    memset (pp->flags, 0, sizeof (uint8_t) * pp->p4est->local_num_quadrants);
+
     pp->ghost = pp->ghost_aux;
     pp->mesh = pp->mesh_aux;
     pp->ghost_aux = NULL;
