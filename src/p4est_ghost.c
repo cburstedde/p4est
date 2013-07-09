@@ -852,7 +852,7 @@ p4est_quadrant_on_corner_boundary (p4est_t * p4est, p4est_topidx_t treeid,
  * the buffer and only adds the quadrant to the end of the buffer if
  * it is unique.
  *
- * \param [in,out] buf    \a q is added to the end if it is not alread there.
+ * \param [in,out] buf    \a q is added to the end if it is not already there.
  * \param [in,out] q      the quadrant to be added.  The \c user_data field
  *                        is filled with \a treeid.
  * \param [in]     treeid the tree id of \a q.
@@ -869,8 +869,8 @@ p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
   /* Check to see if the quadrant already is last in the array */
   if (buf->elem_count > 0) {
     qold = p4est_quadrant_array_index (buf, buf->elem_count - 1);
-    if (treeid == qold->p.piggy1.which_tree &&
-        p4est_quadrant_compare (q, qold) == 0) {
+    if (treeid == qold->p.piggy3.which_tree &&
+        p4est_quadrant_is_equal (q, qold)) {
       return;
     }
   }
@@ -1306,9 +1306,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
   sc_array_t          procs[P4EST_DIM - 1];
   sc_array_t         *buf, *quadrants;
   MPI_Request        *recv_request, *send_request;
-  MPI_Status         *recv_status, *send_status;
   MPI_Request        *recv_load_request, *send_load_request;
-  MPI_Status         *recv_load_status, *send_load_status;
 #ifdef P4_TO_P8
   int                 edge, nedge;
   p8est_edge_info_t   ei;
@@ -1324,9 +1322,9 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_DEBUG
   p4est_quadrant_t   *q2;
 #endif
+  int                 ftransform[P4EST_FTRANSFORM];
   int32_t             touch;
   p4est_topidx_t      nnt;
-  int                 ftransform[P4EST_FTRANSFORM];
   p4est_corner_info_t ci;
   p4est_corner_transform_t *ct;
   sc_array_t         *cta;
@@ -1583,6 +1581,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
               P4EST_ASSERT (p8est_edge_faces[oppedge][0] == face);
             }
             else {
+              P4EST_ASSERT (p8est_edge_faces[edge][1] == face);
               oppedge = edge ^ 1;
               P4EST_ASSERT (p8est_edge_faces[oppedge][1] == face);
             }
@@ -1807,19 +1806,13 @@ failtest:
   }
 
   recv_request = P4EST_ALLOC (MPI_Request, 2 * num_peers);
-  recv_status = P4EST_ALLOC (MPI_Status, 2 * num_peers);
-
   send_request = P4EST_ALLOC (MPI_Request, 2 * num_peers);
-  send_status = P4EST_ALLOC (MPI_Status, 2 * num_peers);
 
   recv_counts = P4EST_ALLOC (p4est_locidx_t, 2 * num_peers);
   send_counts = recv_counts + num_peers;
 
   recv_load_request = recv_request + num_peers;
-  recv_load_status = recv_status + num_peers;
-
   send_load_request = send_request + num_peers;
-  send_load_status = send_status + num_peers;
 
   /* Post receives for the counts of ghosts to be received */
   for (i = 0, peer = 0; i < num_procs; ++i) {
@@ -1854,10 +1847,10 @@ failtest:
 
   /* Wait for the counts */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_request, recv_status);
+    mpiret = MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_request, send_status);
+    mpiret = MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -1925,10 +1918,10 @@ failtest:
 
   /* Wait for everything */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_load_request, recv_load_status);
+    mpiret = MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_load_request, send_load_status);
+    mpiret = MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -1957,9 +1950,7 @@ failtest:
 #endif
 
   P4EST_FREE (recv_request);
-  P4EST_FREE (recv_status);
   P4EST_FREE (send_request);
-  P4EST_FREE (send_status);
 
   for (i = 0; i < num_procs; ++i) {
     buf = p4est_ghost_array_index (&send_bufs, i);
