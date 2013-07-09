@@ -844,47 +844,6 @@ p4est_quadrant_on_corner_boundary (p4est_t * p4est, p4est_topidx_t treeid,
      (int) conn->tree_to_face[P4EST_FACES * treeid + face] == face);
 }
 
-#ifdef P4EST_MPI
-
-/** This adds a quadrant to the end of a buffer.
- *
- * It crams the tree id into the user_data field of the quadrant in
- * the buffer and only adds the quadrant to the end of the buffer if
- * it is unique.
- *
- * \param [in,out] buf    \a q is added to the end if it is not already there.
- * \param [in,out] q      the quadrant to be added.  The \c user_data field
- *                        is filled with \a treeid.
- * \param [in]     treeid the tree id of \a q.
- *
- */
-static void
-p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
-                        p4est_locidx_t number, const p4est_quadrant_t * q)
-{
-  p4est_quadrant_t   *qold, *qnew;
-
-  P4EST_ASSERT (treeid >= 0 && number >= 0);
-
-  /* Check to see if the quadrant already is last in the array */
-  if (buf->elem_count > 0) {
-    qold = p4est_quadrant_array_index (buf, buf->elem_count - 1);
-    if (treeid == qold->p.piggy3.which_tree &&
-        p4est_quadrant_is_equal (q, qold)) {
-      return;
-    }
-  }
-
-  qnew = p4est_quadrant_array_push (buf);
-  *qnew = *q;
-
-  /* Cram the tree id and the local number into the user_data pointer */
-  qnew->p.piggy3.which_tree = treeid;
-  qnew->p.piggy3.local_num = number;
-}
-
-#endif /* P4EST_MPI */
-
 int
 p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
 {
@@ -1183,6 +1142,43 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
 }
 
 #ifdef P4EST_MPI
+
+/** This adds a quadrant to the end of a buffer.
+ *
+ * It crams the tree id into the user_data field of the quadrant in
+ * the buffer and only adds the quadrant to the end of the buffer if
+ * it is unique.
+ *
+ * \param [in,out] buf    \a q is added to the end if it is not already there.
+ * \param [in,out] q      the quadrant to be added.  The \c user_data field
+ *                        is filled with \a treeid.
+ * \param [in]     treeid the tree id of \a q.
+ *
+ */
+static void
+p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
+                        p4est_locidx_t number, const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t   *qold, *qnew;
+
+  P4EST_ASSERT (treeid >= 0 && number >= 0);
+
+  /* Check to see if the quadrant already is last in the array */
+  if (buf->elem_count > 0) {
+    qold = p4est_quadrant_array_index (buf, buf->elem_count - 1);
+    if (treeid == qold->p.piggy3.which_tree &&
+        p4est_quadrant_is_equal (q, qold)) {
+      return;
+    }
+  }
+
+  qnew = p4est_quadrant_array_push (buf);
+  *qnew = *q;
+
+  /* Cram the tree id and the local number into the user_data pointer */
+  qnew->p.piggy3.which_tree = treeid;
+  qnew->p.piggy3.local_num = number;
+}
 
 static void
 p4est_ghost_test_add (p4est_t * p4est, p4est_quadrant_t * q, p4est_topidx_t t,
