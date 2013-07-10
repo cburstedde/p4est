@@ -2260,3 +2260,55 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
 
   return p4est_comm_checksum (p4est, crc, csize * local_count);
 }
+
+void
+p4est_ghost_exchange_p4est_data (p4est_t * p4est, p4est_ghost_t * ghost,
+                                 void *ghost_data)
+{
+  size_t              zz;
+  size_t              data_size;
+#ifdef P4EST_DEBUG
+  p4est_topidx_t      prev_tree;
+#endif
+  p4est_topidx_t      which_tree;
+  p4est_locidx_t      which_quad;
+  p4est_quadrant_t   *mirror, *q;
+  p4est_tree_t       *tree;
+  void              **mirror_data;
+
+  mirror_data = P4EST_ALLOC (void *, ghost->mirrors.elem_count);
+
+  data_size = p4est->data_size == 0 ? sizeof (void *) : p4est->data_size;
+#ifdef P4EST_DEBUG
+  prev_tree = -1;
+#endif
+  for (zz = 0; zz < ghost->mirrors.elem_count; ++zz) {
+    mirror = p4est_quadrant_array_index (&ghost->mirrors, zz);
+    which_tree = mirror->p.piggy3.which_tree;
+    P4EST_ASSERT (p4est->first_local_tree <= which_tree &&
+                  which_tree <= p4est->last_local_tree);
+    P4EST_ASSERT (prev_tree <= which_tree);
+#ifdef P4EST_DEBUG
+    prev_tree = which_tree;
+#endif
+    tree = p4est_tree_array_index (p4est->trees, which_tree);
+    which_quad = mirror->p.piggy3.local_num - tree->quadrants_offset;
+    P4EST_ASSERT (0 <= which_quad &&
+                  which_quad < (p4est_locidx_t) tree->quadrants.elem_count);
+    q = p4est_quadrant_array_index (&tree->quadrants, which_quad);
+    mirror_data[zz] =
+      p4est->data_size == 0 ? &q->p.user_data : q->p.user_data;
+  }
+
+  p4est_ghost_exchange_custom_data (p4est, ghost, data_size,
+                                    mirror_data, ghost_data);
+  P4EST_FREE (mirror_data);
+}
+
+void
+p4est_ghost_exchange_custom_data (p4est_t * p4est, p4est_ghost_t * ghost,
+                                  size_t data_size,
+                                  void **mirror_data, void *ghost_data)
+{
+
+}
