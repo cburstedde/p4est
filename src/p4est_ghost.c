@@ -2310,5 +2310,70 @@ p4est_ghost_exchange_custom_data (p4est_t * p4est, p4est_ghost_t * ghost,
                                   size_t data_size,
                                   void **mirror_data, void *ghost_data)
 {
+  const int           num_procs = p4est->mpisize;
+  int                 mpiret;
+  int                 q;
+  char               *mem, **sbuf;
+  size_t              zz;
+  sc_array_t          requests, sbuffers;
+  p4est_locidx_t      ng_excl, ng_incl, ng, theg;
+  p4est_locidx_t      mirr;
+  MPI_Request        *r;
 
+  if (data_size == 0) {
+    return;
+  }
+  sc_array_init (&requests, sizeof (MPI_Request));
+  sc_array_init (&sbuffers, sizeof (char *));
+
+  /* receive data from other processors */
+  ng_excl = 0;
+  for (q = 0; q < num_procs; ++q) {
+    ng_incl = ghost->proc_offsets[q + 1];
+    ng = ng_incl - ng_excl;
+    P4EST_ASSERT (ng >= 0);
+    if (ng > 0) {
+      r = (MPI_Request *) sc_array_push (&requests);
+      mpiret = MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
+                          ng * data_size, MPI_BYTE, q,
+                          P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      SC_CHECK_MPI (mpiret);
+      ng_excl = ng_incl;
+    }
+  }
+
+  /* send data to other processors */
+  ng_excl = 0;
+  for (q = 0; q < num_procs; ++q) {
+    ng_incl = ghost->mirror_proc_offsets[q + 1];
+    ng = ng_incl - ng_excl;
+    P4EST_ASSERT (ng >= 0);
+    if (ng > 0) {
+      /* every peer populates its own send buffer */
+      sbuf = (char **) sc_array_push (&sbuffers);
+      mem = *sbuf = P4EST_ALLOC (char, ng * data_size);
+      for (theg = 0; theg < ng; ++theg) {
+        mirr = ghost->mirror_proc_mirrors[ng_excl + theg];
+        P4EST_ASSERT (0 <= mirr && (size_t) mirr < ghost->mirrors.elem_count);
+        memcpy (mem, mirror_data[mirr], data_size);
+        mem += data_size;
+      }
+      r = (MPI_Request *) sc_array_push (&requests);
+      mpiret = MPI_Isend (*sbuf, ng * data_size, MPI_BYTE, q,
+                          P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      SC_CHECK_MPI (mpiret);
+      ng_excl = ng_incl;
+    }
+  }
+
+  /* wait and clean up */
+  mpiret = MPI_Waitall (requests.elem_count, (MPI_Request *) requests.array, 
+                        MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_reset (&requests);
+  for (zz = 0; zz < sbuffers.elem_count; ++zz) {
+    sbuf = sc_array_index (&sbuffers, zz);
+    P4EST_FREE (*sbuf);
+  }
+  sc_array_reset (&sbuffers);
 }
