@@ -3538,13 +3538,10 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
   sc_array_t         *requests = buffer->requests;
   sc_array_t         *send_bufs = buffer->send_buffers;
   sc_array_t         *send_buf;
-  MPI_Status         *status;
-
-  status = P4EST_ALLOC (MPI_Status, requests->elem_count);
 
   if (requests->elem_count) {
     mpiret = MPI_Waitall ((int) requests->elem_count,
-                          (MPI_Request *) requests->array, status);
+                          (MPI_Request *) requests->array, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
   sc_array_destroy (requests);
@@ -3555,7 +3552,6 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
   sc_array_destroy (send_bufs);
   buffer->requests = NULL;
   buffer->send_buffers = NULL;
-  P4EST_FREE (status);
 }
 
 p4est_lnodes_buffer_t *

@@ -2674,7 +2674,6 @@ p4est_partition_given (p4est_t * p4est,
   int                 mpiret;
   MPI_Comm            comm = p4est->mpicomm;
   MPI_Request        *recv_request, *send_request;
-  MPI_Status         *recv_status, *send_status;
 #endif
 #ifdef P4EST_DEBUG
   unsigned            crc;
@@ -2810,7 +2809,6 @@ p4est_partition_given (p4est_t * p4est,
   recv_buf = P4EST_ALLOC_ZERO (char *, num_procs);
 #ifdef P4EST_MPI
   recv_request = P4EST_ALLOC (MPI_Request, num_proc_recv_from);
-  recv_status = P4EST_ALLOC (MPI_Status, num_proc_recv_from);
 #endif
 
   /* Allocate space for receiving quadrants and user data */
@@ -2891,7 +2889,6 @@ p4est_partition_given (p4est_t * p4est,
   send_buf = P4EST_ALLOC (char *, num_procs);
 #ifdef P4EST_MPI
   send_request = P4EST_ALLOC (MPI_Request, num_proc_send_to);
-  send_status = P4EST_ALLOC (MPI_Status, num_proc_send_to);
 #endif
 
   /* Set the num_per_tree_local */
@@ -3006,7 +3003,7 @@ p4est_partition_given (p4est_t * p4est,
   }
 
   /* Fill in forest */
-  mpiret = MPI_Waitall (num_proc_recv_from, recv_request, recv_status);
+  mpiret = MPI_Waitall (num_proc_recv_from, recv_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 #endif
 
@@ -3322,7 +3319,7 @@ p4est_partition_given (p4est_t * p4est,
   /* Clean up */
 
 #ifdef P4EST_MPI
-  mpiret = MPI_Waitall (num_proc_send_to, send_request, send_status);
+  mpiret = MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
 #ifdef P4EST_DEBUG
@@ -3334,9 +3331,7 @@ p4est_partition_given (p4est_t * p4est,
   }
 #endif
   P4EST_FREE (recv_request);
-  P4EST_FREE (recv_status);
   P4EST_FREE (send_request);
-  P4EST_FREE (send_status);
 #endif
 
   for (i = 0; i < num_procs; ++i) {
