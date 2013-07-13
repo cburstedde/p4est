@@ -26,16 +26,32 @@
 #include <p8est_wrap.h>
 #endif
 
+static int
+wrap_adapt_partition (p4est_wrap_t * wrap)
+{
+  if (p4est_wrap_adapt (wrap)) {
+    if (p4est_wrap_partition (wrap)) {
+      p4est_wrap_complete (wrap);
+    }
+    return 1;
+  }
+
+  return 0;
+}
+
 int
 main (int argc, char **argv)
 {
   int                 mpiret;
   int                 changed;
+  int                 loop;
 #ifdef P4EST_DEBUG
   int                 lp = SC_LP_DEFAULT;
 #else
   int                 lp = SC_LP_PRODUCTION;
 #endif
+  p4est_locidx_t      jl;
+  p4est_wrap_leaf_t  *leaf;
   MPI_Comm            mpicomm;
   p4est_wrap_t       *wrap;
 
@@ -47,17 +63,53 @@ main (int argc, char **argv)
   p4est_init (NULL, lp);
 
 #ifndef P4_TO_P8
-  wrap = p4est_wrap_new_unitsquare (mpicomm, 0);
+  wrap = p4est_wrap_new_corner (mpicomm, 0);
 #else
-  wrap = p8est_wrap_new_unitcube (mpicomm, 0);
+  wrap = p8est_wrap_new_rotwrap (mpicomm, 0);
 #endif
-  changed = p4est_wrap_refine (wrap);
-  if (changed) {
-    changed = p4est_wrap_partition (wrap);
-    if (changed) {
-      p4est_wrap_complete (wrap);
+
+  for (loop = 0; loop < 3; ++loop) {
+    /* mark for refinement */
+    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap); leaf != NULL;
+         jl++, leaf = p4est_wrap_leaf_next (leaf)) {
+      if (leaf->which_quad % 3 == 0) {
+        p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
+      }
     }
+    SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
+
+    changed = wrap_adapt_partition (wrap);
+    SC_CHECK_ABORT (changed, "Wrap refine");
   }
+
+  for (loop = 0; loop < 2; ++loop) {
+    /* mark some elements for coarsening that does not effect anything */
+    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap); leaf != NULL;
+         jl++, leaf = p4est_wrap_leaf_next (leaf)) {
+      if (leaf->which_quad % 5 == 0) {
+        p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
+        p4est_wrap_mark_coarsen (wrap, leaf->which_tree, leaf->which_quad);
+      }
+    }
+    SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
+
+    changed = wrap_adapt_partition (wrap);
+    SC_CHECK_ABORT (!changed, "Wrap noop");
+  }
+  
+  for (loop = 0; loop < 2; ++loop) {
+    /* mark for coarsening */
+    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap); leaf != NULL;
+         jl++, leaf = p4est_wrap_leaf_next (leaf)) {
+      if ((leaf->which_quad / 13) % 17 != 3) {
+        p4est_wrap_mark_coarsen (wrap, leaf->which_tree, leaf->which_quad);
+      }
+    }
+    SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
+
+    (void) wrap_adapt_partition (wrap);
+  }
+
   p4est_wrap_destroy (wrap);
 
   sc_finalize ();

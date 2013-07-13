@@ -28,8 +28,9 @@ SC_EXTERN_C_BEGIN;
 
 typedef enum p4est_wrap_flags
 {
-  P4EST_WRAP_REFINE = 1,
-  P4EST_WRAP_COARSEN = 2
+  P4EST_WRAP_NONE = 0,
+  P4EST_WRAP_REFINE = 0x01,
+  P4EST_WRAP_COARSEN = 0x02
 }
 p4est_wrap_flags_t;
 
@@ -41,7 +42,8 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
-  int8_t             *flags;
+  uint8_t            *flags, *temp_flags;
+  p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost_aux;
@@ -52,12 +54,13 @@ p4est_wrap_t;
 
 /** Create p4est and auxiliary data structures.
  * Expects MPI_Init to be called beforehand.
- * The pp->flags array is initialized to all zeros.
  */
 p4est_wrap_t       *p4est_wrap_new_unitsquare (MPI_Comm mpicomm,
                                                int initial_level);
 p4est_wrap_t       *p4est_wrap_new_periodic (MPI_Comm mpicomm,
                                              int initial_level);
+p4est_wrap_t       *p4est_wrap_new_corner (MPI_Comm mpicomm,
+                                          int initial_level);
 p4est_wrap_t       *p4est_wrap_new_pillow (MPI_Comm mpicomm,
                                            int initial_level);
 p4est_wrap_t       *p4est_wrap_new_moebius (MPI_Comm mpicomm,
@@ -70,18 +73,40 @@ p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level);
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
 
-/** Call p4est_refine, coarsen, balance to update pp->p4est.
+/** Mark a local element for refinement.
+ * This will cancel any coarsening mark set previously for this element.
+ * \param [in,out] wrap The p4est wrapper to work with.
+ * \param [in] which_tree The number of the tree this element lives in.
+ * \param [in] which_quad The number of this element relative to its tree.
+ */
+void                p4est_wrap_mark_refine (p4est_wrap_t * pp,
+                                            p4est_topidx_t which_tree,
+                                            p4est_locidx_t which_quad);
+
+/** Mark a local element for coarsening.
+ * This will cancel any refinement mark set previously for this element.
+ * \param [in,out] wrap The p4est wrapper to work with.
+ * \param [in] which_tree The number of the tree this element lives in.
+ * \param [in] which_quad The number of this element relative to its tree.
+ */
+void                p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
+                                             p4est_topidx_t which_tree,
+                                             p4est_locidx_t which_quad);
+
+/** Call p4est_refine, coarsen, and balance to update pp->p4est.
  * Checks pp->flags as per-quadrant input against p4est_wrap_flags_t.
- * The pp->flags array is updated along with p4est and initialized to zeros.
+ * The pp->flags array is updated along with p4est and reset to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
  * \return          boolean whether p4est has changed.
  *                  If true, partition must be called.
- *                  If false, partition must not be called.
+ *                  If false, partition must not be called, and
+ *                  complete must not be called either.
  */
-int                 p4est_wrap_refine (p4est_wrap_t * pp);
+int                 p4est_wrap_adapt (p4est_wrap_t * pp);
 
 /** Call p4est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p4est.
+ * The pp->flags array is reset to zeros.
  * Creates ghost and mesh to represent the new mesh.
  * \return          boolean whether p4est has changed.
  *                  If true, complete must be called.
@@ -91,6 +116,8 @@ int                 p4est_wrap_partition (p4est_wrap_t * pp);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.
+ * This function must be used if both refinement and partition effect changes.
+ * After this call, we are ready for another mark-refine-partition cycle.
  */
 void                p4est_wrap_complete (p4est_wrap_t * pp);
 

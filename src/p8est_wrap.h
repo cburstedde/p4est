@@ -28,8 +28,9 @@ SC_EXTERN_C_BEGIN;
 
 typedef enum p8est_wrap_flags
 {
-  P8EST_WRAP_REFINE = 1,
-  P8EST_WRAP_COARSEN = 2
+  P8EST_WRAP_NONE = 0,
+  P8EST_WRAP_REFINE = 0x01,
+  P8EST_WRAP_COARSEN = 0x02
 }
 p8est_wrap_flags_t;
 
@@ -41,7 +42,8 @@ typedef struct p8est_wrap
   int                 p4est_children;
   p8est_connectivity_t *conn;
   p8est_t            *p4est;
-  int8_t             *flags;
+  uint8_t            *flags, *temp_flags;
+  p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
   p8est_ghost_t      *ghost;
   p8est_mesh_t       *mesh;
   p8est_ghost_t      *ghost_aux;
@@ -52,24 +54,46 @@ p8est_wrap_t;
 
 /** Create p8est and auxiliary data structures.
  * Expects MPI_Init to be called beforehand.
- * The pp->flags array is initialized to all zeros.
  */
 p8est_wrap_t       *p8est_wrap_new_unitcube (MPI_Comm mpicomm,
                                              int initial_level);
+p8est_wrap_t       *p8est_wrap_new_rotwrap (MPI_Comm mpicomm,
+                                            int initial_level);
 
 /** Passes MPI_COMM_WORLD to p8est_wrap_new_unitcube. */
 p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
 
-/** Call p8est_refine, coarsen, balance to update pp->p8est.
+/** Mark a local element for refinement.
+ * This will cancel any coarsening mark set previously for this element.
+ * \param [in,out] wrap The p8est wrapper to work with.
+ * \param [in] which_tree The number of the tree this element lives in.
+ * \param [in] which_quad The number of this element relative to its tree.
+ */
+void                p8est_wrap_mark_refine (p8est_wrap_t * pp,
+                                            p4est_topidx_t which_tree,
+                                            p4est_locidx_t which_quad);
+
+/** Mark a local element for coarsening.
+ * This will cancel any refinement mark set previously for this element.
+ * \param [in,out] wrap The p8est wrapper to work with.
+ * \param [in] which_tree The number of the tree this element lives in.
+ * \param [in] which_quad The number of this element relative to its tree.
+ */
+void                p8est_wrap_mark_coarsen (p8est_wrap_t * pp,
+                                             p4est_topidx_t which_tree,
+                                             p4est_locidx_t which_quad);
+
+/** Call p8est_refine, coarsen, and balance to update pp->p8est.
  * Checks pp->flags as per-quadrant input against p8est_wrap_flags_t.
- * The pp->flags array is updated along with p8est and initialized to zeros.
+ * The pp->flags array is updated along with p8est and reset to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
  * \return          boolean whether p8est has changed.
  *                  If true, partition must be called.
- *                  If false, partition must not be called.
+ *                  If false, partition must not be called,
+ *                  and complete must not be called either.
  */
-int                 p8est_wrap_refine (p8est_wrap_t * pp);
+int                 p8est_wrap_adapt (p8est_wrap_t * pp);
 
 /** Call p8est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p8est.
@@ -82,6 +106,8 @@ int                 p8est_wrap_partition (p8est_wrap_t * pp);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.
+ * This function must be used if both refinement and partition effect changes.
+ * After this call, we are ready for another mark-refine-partition cycle.
  */
 void                p8est_wrap_complete (p8est_wrap_t * pp);
 
