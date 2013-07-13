@@ -48,7 +48,6 @@ typedef struct
   /** An array of local quadrants that touch the parallel boundary from the
    * inside, i.e., that are ghosts in the perspective of at least one other
    * processor.  The storage convention is the same as for \c ghosts above.
-   * CAUTION: NOT YET IMPLEMENTED!
    */
   sc_array_t          mirrors;
   p4est_locidx_t     *mirror_tree_offsets;      /* num_trees + 1 mirror indices */
