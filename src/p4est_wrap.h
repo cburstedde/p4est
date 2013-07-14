@@ -73,6 +73,18 @@ p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level);
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
 
+/** Return the appropriate ghost layer.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p4est_ghost_t      *p4est_wrap_get_ghost (p4est_wrap_t * pp);
+
+/** Return the appropriate mesh structure.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p4est_mesh_t       *p4est_wrap_get_mesh (p4est_wrap_t * pp);
+
 /** Mark a local element for refinement.
  * This will cancel any coarsening mark set previously for this element.
  * \param [in,out] wrap The p4est wrapper to work with.

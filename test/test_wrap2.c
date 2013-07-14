@@ -52,6 +52,8 @@ main (int argc, char **argv)
 #endif
   p4est_locidx_t      jl;
   p4est_wrap_leaf_t  *leaf;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
   MPI_Comm            mpicomm;
   p4est_wrap_t       *wrap;
 
@@ -67,6 +69,12 @@ main (int argc, char **argv)
 #else
   wrap = p8est_wrap_new_rotwrap (mpicomm, 0);
 #endif
+  ghost = p4est_wrap_get_ghost (wrap);
+  SC_CHECK_ABORT (ghost != NULL, "Get ghost");
+  ghost = NULL;
+  mesh = p4est_wrap_get_mesh (wrap);
+  SC_CHECK_ABORT (mesh != NULL, "Get mesh");
+  mesh = NULL;
 
   for (loop = 0; loop < 3; ++loop) {
     /* mark for refinement */

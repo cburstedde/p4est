@@ -234,6 +234,18 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   P4EST_FREE (pp);
 }
 
+p4est_ghost_t      *
+p4est_wrap_get_ghost (p4est_wrap_t * pp)
+{
+  return pp->match_aux ? pp->ghost_aux : pp->ghost;
+}
+
+p4est_mesh_t       *
+p4est_wrap_get_mesh (p4est_wrap_t * pp)
+{
+  return pp->match_aux ? pp->mesh_aux : pp->mesh;
+}
+
 void
 p4est_wrap_mark_refine (p4est_wrap_t * pp,
                         p4est_topidx_t which_tree, p4est_locidx_t which_quad)
@@ -417,8 +429,7 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 #if 0
 #ifdef P4EST_DEBUG
   int                 nface;
-  p4est_mesh_t       *mesh =
-    leaf->pp->match_aux ? leaf->pp->mesh_aux : leaf->pp->mesh;
+  p4est_mesh_t       *mesh = p4est_wrap_get_mesh (leaf->pp);
 #endif
 #endif
   p4est_quadrant_t    corner;

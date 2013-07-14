@@ -64,6 +64,18 @@ p8est_wrap_t       *p8est_wrap_new_rotwrap (MPI_Comm mpicomm,
 p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
 
+/** Return the appropriate ghost layer.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p8est_ghost_t      *p8est_wrap_get_ghost (p8est_wrap_t * pp);
+
+/** Return the appropriate mesh structure.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p8est_mesh_t       *p8est_wrap_get_mesh (p8est_wrap_t * pp);
+
 /** Mark a local element for refinement.
  * This will cancel any coarsening mark set previously for this element.
  * \param [in,out] wrap The p8est wrapper to work with.
