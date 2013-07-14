@@ -372,8 +372,17 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   return changed;
 }
 
+static int
+partition_weight (p4est_t * p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t * quadrant)
+{
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+
+  return 1 << ((int) quadrant->level * pp->weight_exponent);
+}
+
 int
-p4est_wrap_partition (p4est_wrap_t * pp)
+p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 {
   int                 changed;
 
@@ -388,7 +397,12 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   pp->match_aux = 0;
 
   /* In the future the flags could be used to pass partition weights */
-  changed = p4est_partition_ext (pp->p4est, 1, NULL) > 0;
+  /* We need to lift the restriction on 64 bits for the global weight sum */
+  P4EST_ASSERT (weight_exponent == 0 || weight_exponent == 1);
+  pp->weight_exponent = weight_exponent;
+  changed =
+    p4est_partition_ext (pp->p4est, 1,
+                         weight_exponent ? partition_weight : NULL) > 0;
 
   if (changed) {
     P4EST_FREE (pp->flags);

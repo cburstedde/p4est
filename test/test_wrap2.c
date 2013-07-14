@@ -27,10 +27,10 @@
 #endif
 
 static int
-wrap_adapt_partition (p4est_wrap_t * wrap)
+wrap_adapt_partition (p4est_wrap_t * wrap, int weight_exponent)
 {
   if (p4est_wrap_adapt (wrap)) {
-    if (p4est_wrap_partition (wrap)) {
+    if (p4est_wrap_partition (wrap, weight_exponent)) {
       p4est_wrap_complete (wrap);
     }
     return 1;
@@ -86,7 +86,7 @@ main (int argc, char **argv)
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
 
-    changed = wrap_adapt_partition (wrap);
+    changed = wrap_adapt_partition (wrap, 1);
     SC_CHECK_ABORT (changed, "Wrap refine");
   }
 
@@ -101,7 +101,7 @@ main (int argc, char **argv)
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
 
-    changed = wrap_adapt_partition (wrap);
+    changed = wrap_adapt_partition (wrap, 0);
     SC_CHECK_ABORT (!changed, "Wrap noop");
   }
   
@@ -115,7 +115,7 @@ main (int argc, char **argv)
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
 
-    (void) wrap_adapt_partition (wrap);
+    (void) wrap_adapt_partition (wrap, 0);
   }
 
   p4est_wrap_destroy (wrap);

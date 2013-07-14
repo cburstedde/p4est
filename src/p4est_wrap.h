@@ -126,11 +126,17 @@ int                 p4est_wrap_adapt (p4est_wrap_t * pp);
  * Frees the old ghost and mesh first and updates pp->flags along with p4est.
  * The pp->flags array is reset to zeros.
  * Creates ghost and mesh to represent the new mesh.
+ * \param [in] weight_exponent      Integer weight assigned to each leaf
+ *                  according to 2 ** (level * dimension).  Passing 0 assigns
+ *                  equal weight to all leaves.  Passing 1 increases the
+ *                  leaf weight by a factor of two for each level increase.
+ *                  CURRENTLY ONLY 0 AND 1 ARE LEGAL VALUES.
  * \return          boolean whether p4est has changed.
  *                  If true, complete must be called.
  *                  If false, complete must not be called.
  */
-int                 p4est_wrap_partition (p4est_wrap_t * pp);
+int                 p4est_wrap_partition (p4est_wrap_t * pp,
+                                          int weight_exponent);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.
