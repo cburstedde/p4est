@@ -89,9 +89,9 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
       return 0;
     }
   }
-  
+
   /* we are definitely coarsening */
-  pp->inside_counter += P4EST_CHILDREN - 1; 
+  pp->inside_counter += P4EST_CHILDREN - 1;
   ++pp->num_replaced;
   return 1;
 }
@@ -110,6 +110,7 @@ p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
+  pp->weight_exponent = 0;
   pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
   pp->temp_flags = NULL;
   pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
@@ -330,7 +331,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_refine_ext (p4est, 0, -1, refine_callback, NULL, replace_on_refine);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (p4est->local_num_quadrants - local_num ==
-    pp->num_replaced * (P4EST_CHILDREN - 1));
+                pp->num_replaced * (P4EST_CHILDREN - 1));
   changed = global_num != p4est->global_num_quadrants;
 
   /* Execute coarsening */
@@ -342,7 +343,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, NULL);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
-    pp->num_replaced * (P4EST_CHILDREN - 1));
+                pp->num_replaced * (P4EST_CHILDREN - 1));
   changed = changed || global_num != p4est->global_num_quadrants;
 
   /* Free temporary flags */

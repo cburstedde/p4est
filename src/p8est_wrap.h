@@ -36,14 +36,20 @@ p8est_wrap_flags_t;
 
 typedef struct p8est_wrap
 {
+  /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
   p8est_connectivity_t *conn;
   p8est_t            *p4est;
+
+  /* anything below here is considered private und should not be touched */
+  int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+
+  /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;
   p8est_mesh_t       *mesh;
   p8est_ghost_t      *ghost_aux;
