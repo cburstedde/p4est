@@ -20,6 +20,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P8EST_WRAP_H
+#define P8EST_WRAP_H
+
 #include <p8est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
@@ -164,3 +167,5 @@ p8est_wrap_leaf_t  *p8est_wrap_leaf_first (p8est_wrap_t * pp);
 p8est_wrap_leaf_t  *p8est_wrap_leaf_next (p8est_wrap_leaf_t * leaf);
 
 SC_EXTERN_C_END;
+
+#endif /* !P8EST_WRAP_H */
