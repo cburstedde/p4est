@@ -2341,6 +2341,7 @@ p4est_ghost_exchange_custom_data (p4est_t * p4est, p4est_ghost_t * ghost,
       ng_excl = ng_incl;
     }
   }
+  P4EST_ASSERT (ng_excl == (p4est_locidx_t) ghost->ghosts.elem_count);
 
   /* send data to other processors */
   ng_excl = 0;
