@@ -89,9 +89,9 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
       return 0;
     }
   }
-  
+
   /* we are definitely coarsening */
-  pp->inside_counter += P4EST_CHILDREN - 1; 
+  pp->inside_counter += P4EST_CHILDREN - 1;
   ++pp->num_replaced;
   return 1;
 }
@@ -110,6 +110,7 @@ p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
+  pp->weight_exponent = 0;
   pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
   pp->temp_flags = NULL;
   pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
@@ -234,6 +235,18 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   P4EST_FREE (pp);
 }
 
+p4est_ghost_t      *
+p4est_wrap_get_ghost (p4est_wrap_t * pp)
+{
+  return pp->match_aux ? pp->ghost_aux : pp->ghost;
+}
+
+p4est_mesh_t       *
+p4est_wrap_get_mesh (p4est_wrap_t * pp)
+{
+  return pp->match_aux ? pp->mesh_aux : pp->mesh;
+}
+
 void
 p4est_wrap_mark_refine (p4est_wrap_t * pp,
                         p4est_topidx_t which_tree, p4est_locidx_t which_quad)
@@ -318,7 +331,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_refine_ext (p4est, 0, -1, refine_callback, NULL, replace_on_refine);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (p4est->local_num_quadrants - local_num ==
-    pp->num_replaced * (P4EST_CHILDREN - 1));
+                pp->num_replaced * (P4EST_CHILDREN - 1));
   changed = global_num != p4est->global_num_quadrants;
 
   /* Execute coarsening */
@@ -330,7 +343,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, NULL);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
-    pp->num_replaced * (P4EST_CHILDREN - 1));
+                pp->num_replaced * (P4EST_CHILDREN - 1));
   changed = changed || global_num != p4est->global_num_quadrants;
 
   /* Free temporary flags */
@@ -359,8 +372,17 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   return changed;
 }
 
+static int
+partition_weight (p4est_t * p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t * quadrant)
+{
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+
+  return 1 << ((int) quadrant->level * pp->weight_exponent);
+}
+
 int
-p4est_wrap_partition (p4est_wrap_t * pp)
+p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 {
   int                 changed;
 
@@ -375,7 +397,12 @@ p4est_wrap_partition (p4est_wrap_t * pp)
   pp->match_aux = 0;
 
   /* In the future the flags could be used to pass partition weights */
-  changed = p4est_partition_ext (pp->p4est, 1, NULL) > 0;
+  /* We need to lift the restriction on 64 bits for the global weight sum */
+  P4EST_ASSERT (weight_exponent == 0 || weight_exponent == 1);
+  pp->weight_exponent = weight_exponent;
+  changed =
+    p4est_partition_ext (pp->p4est, 1,
+                         weight_exponent ? partition_weight : NULL) > 0;
 
   if (changed) {
     P4EST_FREE (pp->flags);
@@ -417,8 +444,7 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 #if 0
 #ifdef P4EST_DEBUG
   int                 nface;
-  p4est_mesh_t       *mesh =
-    leaf->pp->match_aux ? leaf->pp->mesh_aux : leaf->pp->mesh;
+  p4est_mesh_t       *mesh = p4est_wrap_get_mesh (leaf->pp);
 #endif
 #endif
   p4est_quadrant_t    corner;

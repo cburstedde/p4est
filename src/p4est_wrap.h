@@ -20,6 +20,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4EST_WRAP_H
+#define P4EST_WRAP_H
+
 #include <p4est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
@@ -36,14 +39,20 @@ p4est_wrap_flags_t;
 
 typedef struct p4est_wrap
 {
+  /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
+
+  /* anything below here is considered private und should not be touched */
+  int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+
+  /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
   p4est_ghost_t      *ghost_aux;
@@ -60,7 +69,7 @@ p4est_wrap_t       *p4est_wrap_new_unitsquare (MPI_Comm mpicomm,
 p4est_wrap_t       *p4est_wrap_new_periodic (MPI_Comm mpicomm,
                                              int initial_level);
 p4est_wrap_t       *p4est_wrap_new_corner (MPI_Comm mpicomm,
-                                          int initial_level);
+                                           int initial_level);
 p4est_wrap_t       *p4est_wrap_new_pillow (MPI_Comm mpicomm,
                                            int initial_level);
 p4est_wrap_t       *p4est_wrap_new_moebius (MPI_Comm mpicomm,
@@ -72,6 +81,18 @@ p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level);
 /** Passes MPI_COMM_WORLD to p4est_wrap_new_unitsquare. */
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
+
+/** Return the appropriate ghost layer.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p4est_ghost_t      *p4est_wrap_get_ghost (p4est_wrap_t * pp);
+
+/** Return the appropriate mesh structure.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p4est_mesh_t       *p4est_wrap_get_mesh (p4est_wrap_t * pp);
 
 /** Mark a local element for refinement.
  * This will cancel any coarsening mark set previously for this element.
@@ -108,11 +129,17 @@ int                 p4est_wrap_adapt (p4est_wrap_t * pp);
  * Frees the old ghost and mesh first and updates pp->flags along with p4est.
  * The pp->flags array is reset to zeros.
  * Creates ghost and mesh to represent the new mesh.
+ * \param [in] weight_exponent      Integer weight assigned to each leaf
+ *                  according to 2 ** (level * exponent).  Passing 0 assigns
+ *                  equal weight to all leaves.  Passing 1 increases the
+ *                  leaf weight by a factor of two for each level increase.
+ *                  CURRENTLY ONLY 0 AND 1 ARE LEGAL VALUES.
  * \return          boolean whether p4est has changed.
  *                  If true, complete must be called.
  *                  If false, complete must not be called.
  */
-int                 p4est_wrap_partition (p4est_wrap_t * pp);
+int                 p4est_wrap_partition (p4est_wrap_t * pp,
+                                          int weight_exponent);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.
@@ -150,3 +177,5 @@ p4est_wrap_leaf_t  *p4est_wrap_leaf_first (p4est_wrap_t * pp);
 p4est_wrap_leaf_t  *p4est_wrap_leaf_next (p4est_wrap_leaf_t * leaf);
 
 SC_EXTERN_C_END;
+
+#endif /* !P4EST_WRAP_H */

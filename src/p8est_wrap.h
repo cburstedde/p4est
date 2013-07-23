@@ -20,6 +20,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P8EST_WRAP_H
+#define P8EST_WRAP_H
+
 #include <p8est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
@@ -36,14 +39,20 @@ p8est_wrap_flags_t;
 
 typedef struct p8est_wrap
 {
+  /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
   p8est_connectivity_t *conn;
   p8est_t            *p4est;
+
+  /* anything below here is considered private und should not be touched */
+  int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+
+  /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;
   p8est_mesh_t       *mesh;
   p8est_ghost_t      *ghost_aux;
@@ -63,6 +72,18 @@ p8est_wrap_t       *p8est_wrap_new_rotwrap (MPI_Comm mpicomm,
 /** Passes MPI_COMM_WORLD to p8est_wrap_new_unitcube. */
 p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
+
+/** Return the appropriate ghost layer.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p8est_ghost_t      *p8est_wrap_get_ghost (p8est_wrap_t * pp);
+
+/** Return the appropriate mesh structure.
+ * This function is necessary since two versions may exist simultaneously
+ * after refinement and before partition/complete.
+ * */
+p8est_mesh_t       *p8est_wrap_get_mesh (p8est_wrap_t * pp);
 
 /** Mark a local element for refinement.
  * This will cancel any coarsening mark set previously for this element.
@@ -98,11 +119,17 @@ int                 p8est_wrap_adapt (p8est_wrap_t * pp);
 /** Call p8est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p8est.
  * Creates ghost and mesh to represent the new mesh.
+ * \param [in] weight_exponent      Integer weight assigned to each leaf
+ *                  according to 2 ** (level * exponent).  Passing 0 assigns
+ *                  equal weight to all leaves.  Passing 1 increases the
+ *                  leaf weight by a factor of two for each level increase.
+ *                  CURRENTLY ONLY 0 AND 1 ARE LEGAL VALUES.
  * \return          boolean whether p4est has changed.
  *                  If true, complete must be called.
  *                  If false, complete must not be called.
  */
-int                 p8est_wrap_partition (p8est_wrap_t * pp);
+int                 p8est_wrap_partition (p8est_wrap_t * pp,
+                                          int weight_exponent);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.
@@ -140,3 +167,5 @@ p8est_wrap_leaf_t  *p8est_wrap_leaf_first (p8est_wrap_t * pp);
 p8est_wrap_leaf_t  *p8est_wrap_leaf_next (p8est_wrap_leaf_t * leaf);
 
 SC_EXTERN_C_END;
+
+#endif /* !P8EST_WRAP_H */

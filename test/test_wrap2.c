@@ -27,10 +27,10 @@
 #endif
 
 static int
-wrap_adapt_partition (p4est_wrap_t * wrap)
+wrap_adapt_partition (p4est_wrap_t * wrap, int weight_exponent)
 {
   if (p4est_wrap_adapt (wrap)) {
-    if (p4est_wrap_partition (wrap)) {
+    if (p4est_wrap_partition (wrap, weight_exponent)) {
       p4est_wrap_complete (wrap);
     }
     return 1;
@@ -52,6 +52,8 @@ main (int argc, char **argv)
 #endif
   p4est_locidx_t      jl;
   p4est_wrap_leaf_t  *leaf;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
   MPI_Comm            mpicomm;
   p4est_wrap_t       *wrap;
 
@@ -67,6 +69,12 @@ main (int argc, char **argv)
 #else
   wrap = p8est_wrap_new_rotwrap (mpicomm, 0);
 #endif
+  ghost = p4est_wrap_get_ghost (wrap);
+  SC_CHECK_ABORT (ghost != NULL, "Get ghost");
+  ghost = NULL;
+  mesh = p4est_wrap_get_mesh (wrap);
+  SC_CHECK_ABORT (mesh != NULL, "Get mesh");
+  mesh = NULL;
 
   for (loop = 0; loop < 3; ++loop) {
     /* mark for refinement */
@@ -78,7 +86,7 @@ main (int argc, char **argv)
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
 
-    changed = wrap_adapt_partition (wrap);
+    changed = wrap_adapt_partition (wrap, 1);
     SC_CHECK_ABORT (changed, "Wrap refine");
   }
 
@@ -93,7 +101,7 @@ main (int argc, char **argv)
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
 
-    changed = wrap_adapt_partition (wrap);
+    changed = wrap_adapt_partition (wrap, 0);
     SC_CHECK_ABORT (!changed, "Wrap noop");
   }
   
@@ -107,7 +115,7 @@ main (int argc, char **argv)
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
 
-    (void) wrap_adapt_partition (wrap);
+    (void) wrap_adapt_partition (wrap, 0);
   }
 
   p4est_wrap_destroy (wrap);
