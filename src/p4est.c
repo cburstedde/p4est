@@ -3400,7 +3400,6 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
     load_data = 0;
   }
   num_trees = conn->num_trees;
-  head_count = (size_t) (headc + num_procs) + (size_t) num_trees;
   qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
 
   /* read format and partition information */
@@ -3459,6 +3458,7 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
   P4EST_FREE (u64a);
 
   /* seek to the beginning of this processor's storage */
+  head_count = (size_t) (headc + save_num_procs) + (size_t) num_trees;
   zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
   if (zpadding > 0 || rank > 0) {
     retval =
