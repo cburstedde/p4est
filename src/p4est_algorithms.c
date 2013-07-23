@@ -1814,6 +1814,19 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
     q = p4est_quadrant_array_index (inlist, jz);
     P4EST_ASSERT (p4est_quadrant_child_id (q) == 0);
   }
+  else if (last_desc != NULL) {
+    p4est_quadrant_last_descendant (dom, &ld, P4EST_QMAXLEVEL);
+    if (p4est_quadrant_is_equal (&ld, last_desc)) {
+      q = NULL;
+    }
+    else {
+      lid = p4est_quadrant_linear_id (last_desc, P4EST_QMAXLEVEL);
+      lid++;
+      p4est_quadrant_set_morton (&ld, P4EST_QMAXLEVEL, lid);
+      P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
+      q = &ld;
+    }
+  }
   else {
     q = NULL;
   }
