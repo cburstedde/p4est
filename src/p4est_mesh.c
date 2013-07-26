@@ -32,6 +32,79 @@
 #endif
 
 static void
+mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
+{
+  int                 i, j;
+  int8_t              visited[P4EST_CHILDREN];
+  size_t              cz;
+  p4est_locidx_t      qoffset, qid1, qid2;
+  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_iter_corner_side_t *side1, *side2;
+  p4est_tree_t       *tree;
+
+  /* Check the case when the corner does not involve neighbors */
+  cz = info->sides.elem_count;
+  P4EST_ASSERT (cz > 0);
+  P4EST_ASSERT (info->tree_boundary || cz == P4EST_CHILDREN);
+  if (cz == 1) {
+    return;
+  }
+
+  /* Tree boundary corners are not implemented yet */
+  if (info->tree_boundary) {
+    return;
+  }
+
+  /* Process a corner inside the tree in pairs of diagonal neighbors */
+  side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, 0);
+  tree = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+  qoffset = tree->quadrants_offset;
+  memset (visited, 0, P4EST_CHILDREN * sizeof (int8_t));
+  for (i = 0; i < P4EST_HALF; ++i) {
+    side1 = side2 = NULL;
+    for (j = 0; j < P4EST_CHILDREN; ++j) {
+      if (visited[j]) {
+        continue;
+      }
+      if (side1 == NULL) {
+        side1 =
+          (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, j);
+        qid1 = side1->quadid +
+          (side1->is_ghost ? mesh->local_num_quadrants : qoffset);
+        visited[j] = 1;
+        continue;
+      }
+      P4EST_ASSERT (side2 == NULL);
+      side2 =
+        (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, j);
+      P4EST_ASSERT (side1->treeid == side2->treeid);
+      if (side1->corner + side2->corner == P4EST_CHILDREN - 1) {
+        qid2 = side2->quadid +
+          (side2->is_ghost ? mesh->local_num_quadrants : qoffset);
+        if (!side1->is_ghost) {
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                             side1->corner] == -1);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = qid2;
+        }
+        if (!side2->is_ghost) {
+          P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid2 +
+                                             side2->corner] == -1);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] = qid1;
+        }
+        visited[j] = 1;
+        break;
+      }
+      else {
+        side2 = NULL;
+      }
+    }
+    P4EST_ASSERT (side1 != NULL && side2 != NULL);
+  }
+}
+
+static void
 mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 {
   int                 h;
@@ -198,16 +271,19 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   ngz = (size_t) mesh->ghost_num_quadrants;
 
   return sizeof (p4est_mesh_t) + lqz * sizeof (p4est_topidx_t) +
-    ((P4EST_CHILDREN + P4EST_FACES) * lqz + ngz) * sizeof (p4est_locidx_t) +
+    ((2 * P4EST_CHILDREN + P4EST_FACES) * lqz + ngz) *
+    sizeof (p4est_locidx_t) +
     ngz * sizeof (int) + (P4EST_FACES * lqz) * sizeof (int8_t) +
     3 * (size_t) mesh->local_num_vertices * sizeof (double) +
-    sc_array_memory_used (mesh->quad_to_half, 1);
+    sc_array_memory_used (mesh->quad_to_half, 1) +
+    sc_array_memory_used (mesh->corner_offset, 1);
 }
 
 p4est_mesh_t       *
 p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                 p4est_connect_type_t btype)
 {
+  int                 do_corner = 0;
   int                 rank;
   size_t              ncz, zz;
   p4est_locidx_t      lq, ng;
@@ -220,12 +296,21 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
 
   mesh = P4EST_ALLOC (p4est_mesh_t, 1);
 
-  mesh->local_num_vertices = 0;
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
   ng = mesh->ghost_num_quadrants = (p4est_locidx_t) ghost->ghosts.elem_count;
-  
+
+  mesh->local_num_corners = 0;
+  mesh->quad_to_corner = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
+  mesh->corner_offset = sc_array_new (sizeof (p4est_locidx_t));
+  mesh->corner_quad = NULL;
+  mesh->corner_corner = NULL;
+  if (btype == P4EST_CONNECT_FULL) {
+    do_corner = 1;
+  }
+
   mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
 
+  mesh->local_num_vertices = 0;
   mesh->vertices = NULL;
   mesh->quad_to_vertex = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
   mesh->ghost_to_proc = P4EST_ALLOC (int, ng);
@@ -249,13 +334,16 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   /* Fill arrays with default values */
   memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
   memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
+  memset (mesh->quad_to_corner, -1, P4EST_CHILDREN * lq *
+          sizeof (p4est_locidx_t));
 
   /* Call the forest iterator to collect face connectivity */
   p4est_iterate (p4est, ghost, mesh, mesh_iter_volume, mesh_iter_face,
 #ifdef P4_TO_P8
                  NULL,
 #endif
-                 NULL);
+                 do_corner ? mesh_iter_corner : NULL);
+  *(p4est_locidx_t *) sc_array_push (mesh->corner_offset) = 0;
 
   /* Construct non-unique vertex information if vertices are present */
   if (p4est->connectivity->num_vertices > 0) {
@@ -296,7 +384,7 @@ void
 p4est_mesh_destroy (p4est_mesh_t * mesh)
 {
   P4EST_FREE (mesh->quad_to_tree);
-  
+
   P4EST_FREE (mesh->vertices);
   P4EST_FREE (mesh->quad_to_vertex);
   P4EST_FREE (mesh->ghost_to_proc);
@@ -304,6 +392,10 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   P4EST_FREE (mesh->quad_to_quad);
   P4EST_FREE (mesh->quad_to_face);
   sc_array_destroy (mesh->quad_to_half);
+
+  P4EST_FREE (mesh->quad_to_corner);
+  sc_array_destroy (mesh->corner_offset);
+
   P4EST_FREE (mesh);
 }
 
