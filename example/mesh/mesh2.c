@@ -138,6 +138,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   p4est_locidx_t      qumid, quadrant_id, which_quad;
   p4est_mesh_face_neighbor_t mfn, mfn2;
   p4est_quadrant_t   *q;
+  p4est_tree_t       *tree;
 
   K = mesh->local_num_quadrants;
   P4EST_ASSERT (K == p4est->local_num_quadrants);
@@ -145,6 +146,11 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
   /* TODO: test the mesh relations in more depth */
   for (kl = 0; kl < K; ++kl) {
+    tree = p4est_tree_array_index (p4est->trees, mesh->quad_to_tree[kl]);
+    SC_CHECK_ABORTF (tree->quadrants_offset <= kl && kl < tree->quadrants_offset +
+                     (p4est_locidx_t) tree->quadrants.elem_count,
+                     "Tree index mismatch %lld", (long long) kl);
+
     for (f = 0; f < P4EST_FACES; ++f) {
       ql = mesh->quad_to_quad[P4EST_FACES * kl + f];
       SC_CHECK_ABORTF (0 <= ql && ql < QpG,

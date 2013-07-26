@@ -176,6 +176,19 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
   }
 }
 
+static void
+mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_tree_t       *tree;
+
+  /* We could use a static quadrant counter, but that gets uglier */
+  tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
+  P4EST_ASSERT (0 <= info->quadid &&
+                info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
+  mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
+}
+
 size_t
 p4est_mesh_memory_used (p4est_mesh_t * mesh)
 {
@@ -184,7 +197,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   lqz = (size_t) mesh->local_num_quadrants;
   ngz = (size_t) mesh->ghost_num_quadrants;
 
-  return sizeof (p4est_mesh_t) +
+  return sizeof (p4est_mesh_t) + lqz * sizeof (p4est_topidx_t) +
     ((P4EST_CHILDREN + P4EST_FACES) * lqz + ngz) * sizeof (p4est_locidx_t) +
     ngz * sizeof (int) + (P4EST_FACES * lqz) * sizeof (int8_t) +
     3 * (size_t) mesh->local_num_vertices * sizeof (double) +
@@ -210,6 +223,8 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->local_num_vertices = 0;
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
   ng = mesh->ghost_num_quadrants = (p4est_locidx_t) ghost->ghosts.elem_count;
+  
+  mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
 
   mesh->vertices = NULL;
   mesh->quad_to_vertex = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
@@ -236,7 +251,7 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
 
   /* Call the forest iterator to collect face connectivity */
-  p4est_iterate (p4est, ghost, mesh, NULL, mesh_iter_face,
+  p4est_iterate (p4est, ghost, mesh, mesh_iter_volume, mesh_iter_face,
 #ifdef P4_TO_P8
                  NULL,
 #endif
@@ -280,6 +295,8 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
 void
 p4est_mesh_destroy (p4est_mesh_t * mesh)
 {
+  P4EST_FREE (mesh->quad_to_tree);
+  
   P4EST_FREE (mesh->vertices);
   P4EST_FREE (mesh->quad_to_vertex);
   P4EST_FREE (mesh->ghost_to_proc);
