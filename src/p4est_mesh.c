@@ -78,6 +78,8 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
         P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
       }
       else {
+        P4EST_ASSERT (side->is.full.quad != NULL);
+        P4EST_ASSERT (side->is.full.quadid >= 0);
         jl = mesh->local_num_quadrants + side->is.full.quadid;
       }
       if (!side2->is.full.is_ghost) {
@@ -86,6 +88,8 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
         P4EST_ASSERT (0 <= jl2 && jl2 < mesh->local_num_quadrants);
       }
       else {
+        P4EST_ASSERT (side2->is.full.quad != NULL);
+        P4EST_ASSERT (side2->is.full.quadid >= 0);
         jl2 = mesh->local_num_quadrants + side2->is.full.quadid;
       }
 
@@ -124,6 +128,8 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
         P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
       }
       else {
+        P4EST_ASSERT (side->is.full.quad != NULL);
+        P4EST_ASSERT (side->is.full.quadid >= 0);
         jl = mesh->local_num_quadrants + side->is.full.quadid;
       }
 
@@ -135,6 +141,8 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
           P4EST_ASSERT (0 <= jls[h] && jls[h] < mesh->local_num_quadrants);
         }
         else {
+          P4EST_ASSERT (side2->is.hanging.quad[h] != NULL);
+          P4EST_ASSERT (side2->is.hanging.quadid[h] >= 0);
           jls[h] = mesh->local_num_quadrants + side2->is.hanging.quadid[h];
         }
       }
