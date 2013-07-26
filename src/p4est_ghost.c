@@ -937,12 +937,10 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
         bigger_face[face] = e3;
       }
 
-#ifndef P4_TO_P8
       if (btype == P4EST_CONNECT_FACE)
         continue;
-#else
-      if (btype == P8EST_CONNECT_FACE)
-        continue;
+
+#ifdef P4_TO_P8
 
       /* Find edge neighbors */
       for (edge = 0; edge < P8EST_EDGES; ++edge) {
@@ -1601,12 +1599,10 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
         }
       }
 
-#ifndef P4_TO_P8
       if (btype == P4EST_CONNECT_FACE)
         continue;
-#else
-      if (btype == P8EST_CONNECT_FACE)
-        continue;
+
+#ifdef P4_TO_P8
 
       /* Find smaller edge neighbors */
       for (edge = 0; edge < 12; ++edge) {
