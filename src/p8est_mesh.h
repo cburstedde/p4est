@@ -57,15 +57,19 @@ SC_EXTERN_C_BEGIN;
  *    in the same way as the quad_to_quad values described above.
  * A quadrant on the boundary of the forest sees itself and its face number.
  *
- * The quad_to_corner list stores corner neighbors that are not face neighbors.
- * On the inside of a tree, there is precisely one such neighbor per corner.
- * In this case, its index is encoded as described above for quad_to_quad.
- * On the other hand, if a corner lies on a tree boundary, then the number of
- * corner neighbors may be any non-negative number.  In this case, the value is
+ * The quad_to_corner list stores corner neighbors that are not face or edge
+ * neighbors.  On the inside of a tree or inside an inter-tree face, there is
+ * precisely one such neighbor per corner.  In this case, its index is encoded
+ * as described above for quad_to_quad.
+ * On the other hand, if a corner is an inter-tree corner or inside an inter-tree
+ * edge, then the number of corner neighbors may be any non-negative number.
+ * In this case, the value is
  * in local_num_quadrants + local_num_ghosts + [0 .. num_corners - 1].
  * It indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
+ * Inter-tree/tree-edge corners are NOT YET IMPLEMENTED and set to -2.
+ * Corners with no diagonal neighbor at all are assigned the value -1.
  */
 typedef struct
 {
