@@ -637,7 +637,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
 
   info->p4est = p4est;
   info->ghost_layer = ghost_layer;
-  info->tree_boundary = 1;
+  info->tree_boundary = (int8_t) P4EST_CONNECT_CORNER;
   sc_array_init (&(info->sides), sizeof (p4est_iter_corner_side_t));
   start_idx2 = args->start_idx2 =
     P4EST_ALLOC (int, loop_args->alloc_size / 2);
@@ -1000,7 +1000,7 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
 
   info->p4est = p8est;
   info->ghost_layer = ghost_layer;
-  info->tree_boundary = 1;
+  info->tree_boundary = (int8_t) P8EST_CONNECT_EDGE;
   start_idx2 = args->start_idx2 =
     P4EST_ALLOC (int, loop_args->alloc_size / 2);
   sc_array_init (&(info->sides), sizeof (p8est_iter_edge_side_t));
@@ -1541,7 +1541,7 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
   args->loop_args = loop_args;
   info->p4est = p4est;
   info->ghost_layer = ghost_layer;
-  info->tree_boundary = 1;
+  info->tree_boundary = (int8_t) P4EST_CONNECT_FACE;
   sc_array_init (&(info->sides), sizeof (p4est_iter_face_side_t));
 
 #ifdef P4_TO_P8

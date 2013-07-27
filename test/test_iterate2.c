@@ -199,6 +199,65 @@ quad_is_in_corner_sides (p4est_quadrant_t * q, p4est_topidx_t t,
 }
 
 static void
+test_corner_boundary (p4est_iter_corner_info_t * info)
+{
+  int                 c, f, dir, which;
+  int                 k, count;
+  p4est_qcoord_t      end, xyz[P4EST_DIM];
+  p4est_iter_corner_side_t *cside;
+  p4est_quadrant_t   *q;
+
+  SC_CHECK_ABORT (info->sides.elem_count > 0, "Empty corner iteration");
+  cside = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, 0);
+  c = cside->corner;
+
+  if (!info->tree_boundary) {
+    SC_CHECK_ABORT (c == P4EST_CHILDREN - 1, "Not the lowest corner");
+    return;
+  }
+
+  /* grab information about this quadrant */
+  q = cside->quad;
+  if (q == NULL) {
+    SC_CHECK_ABORT (cside->is_ghost && cside->quadid == -1,
+                    "Not a corner ghost");
+    return;
+  }
+  end = P4EST_LAST_OFFSET (q->level);
+  xyz[0] = q->x;
+  xyz[1] = q->y;
+#ifdef P4_TO_P8
+  xyz[2] = q->z;
+#endif
+
+  /* check how many tree faces it is touching */
+  count = 0;
+  for (k = 0; k < P4EST_DIM; ++k) {
+    f = p4est_corner_faces[c][k];
+    dir = f >> 1;
+    which = f & 1;
+    count += (which == 0 && xyz[dir] == 0) || (which == 1 && xyz[dir] == end);
+  }
+  if (info->tree_boundary == P4EST_CONNECT_CORNER) {
+    /* we are at a true inter-tree corner */
+    SC_CHECK_ABORT (count == P4EST_DIM, "Not a tree boundary corner");
+  }
+#ifdef P4_TO_P8
+  else if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+    /* we are a corner inside an inter-tree edge */
+    SC_CHECK_ABORT (count == 2, "Not a tree edge boundary corner");
+  }
+#endif
+  else if (info->tree_boundary == P4EST_CONNECT_FACE) {
+    /* we are a corner inside an inter-tree face */
+    SC_CHECK_ABORT (count == 1, "Not a tree face boundary corner");
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
+static void
 test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
 {
   int                 i, j;
@@ -217,6 +276,8 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
 #endif
   int8_t              min_level = P4EST_QMAXLEVEL;
   iter_data_t        *iter_data = (iter_data_t *) data;
+
+  test_corner_boundary (info);
 
   for (i = 0; i < limit; i++) {
     cside = p4est_iter_cside_array_index_int (&info->sides, i);
@@ -405,6 +466,55 @@ quad_is_in_edge_sides (p8est_quadrant_t * q, p4est_topidx_t t,
 }
 
 static void
+test_edge_boundary (p8est_iter_edge_info_t * info)
+{
+  int                 e, f, dir, which;
+  int                 k, count;
+  p4est_qcoord_t      end, xyz[P4EST_DIM];
+  p8est_iter_edge_side_t *eside;
+  p4est_quadrant_t   *q;
+
+  SC_CHECK_ABORT (info->sides.elem_count > 0, "Empty edge iteration");
+  eside = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
+  e = eside->edge;
+
+  if (!info->tree_boundary) {
+    SC_CHECK_ABORT (e & 1, "Not the lowest edge");
+    return;
+  }
+
+  /* grab information about this quadrant */
+  q = eside->is_hanging ? eside->is.hanging.quad[0] : eside->is.full.quad;
+  if (q == NULL) {
+    return;
+  }
+  end = P4EST_LAST_OFFSET (q->level);
+  xyz[0] = q->x;
+  xyz[1] = q->y;
+  xyz[2] = q->z;
+
+  /* check how many tree faces it is touching */
+  count = 0;
+  for (k = 0; k < 2; ++k) {
+    f = p8est_edge_faces[e][k];
+    dir = f >> 1;
+    which = f & 1;
+    count += (which == 0 && xyz[dir] == 0) || (which == 1 && xyz[dir] == end);
+  }
+  if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+    /* we are at a true inter-tree edge */
+    SC_CHECK_ABORT (count == 2, "Not a tree boundary edge");
+  }
+  else if (info->tree_boundary == P4EST_CONNECT_FACE) {
+    /* we are an edge inside an inter-tree face */
+    SC_CHECK_ABORT (count == 1, "Not a tree face boundary edge");
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
+static void
 test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
 {
   int                 i, j;
@@ -419,6 +529,8 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
   size_t              zz;
   p8est_quadrant_t   *ptemp;
   iter_data_t        *iter_data = (iter_data_t *) data;
+
+  test_edge_boundary (info);
 
   sc_array_init (&quads, sizeof (p8est_quadrant_t));
   sc_array_init (&treeids, sizeof (p4est_topidx_t));
@@ -593,6 +705,38 @@ test_face_side (p4est_t * p4est, p4est_iter_face_side_t * side, void *data)
 }
 
 static void
+test_face_boundary (p4est_iter_face_info_t * info)
+{
+  int                 f;
+  p4est_qcoord_t      end;
+  p4est_iter_face_side_t *fside;
+  p4est_quadrant_t   *q;
+
+  SC_CHECK_ABORT (info->sides.elem_count > 0, "Empty face iteration");
+  fside = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 0);
+  f = fside->face;
+
+  if (!info->tree_boundary) {
+    SC_CHECK_ABORT (f & 1, "Not the lowest face");
+  }
+  else {
+    SC_CHECK_ABORT (info->tree_boundary == P4EST_CONNECT_FACE, "Not a face");
+    q = fside->is_hanging ? fside->is.hanging.quad[0] : fside->is.full.quad;
+    if (q == NULL) {
+      return;
+    }
+    end = P4EST_LAST_OFFSET (q->level);
+
+    SC_CHECK_ABORT ((f == 0 && q->x == 0) || (f == 1 && q->x == end) ||
+                    (f == 2 && q->y == 0) || (f == 3 && q->y == end) ||
+#ifdef P4_TO_P8
+                    (f == 4 && q->z == 0) || (f == 5 && q->z == end) ||
+#endif
+                    0, "Not a tree boundary face");
+  }
+}
+
+static void
 test_face_adjacency (p4est_iter_face_info_t * info, void *data)
 {
   int                 i, j;
@@ -602,6 +746,8 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
   p4est_quadrant_t    tempq[2], tempr[2];
   int                 face[2];
   p4est_topidx_t      treeid[2], nt[2];
+
+  test_face_boundary (info);
 
   for (i = 0; i < 2; i++) {
     is_ghost[i] = 1;

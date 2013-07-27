@@ -92,6 +92,7 @@ p8est_iter_face_side_t;
  * If tree_boundary is false, the face is on the interior of a tree.
  * When tree_boundary false, sides[0] contains the lowest z-order quadrant that
  * touches the face.
+ * When tree_boundary is true, its value is P8EST_CONNECT_FACE.
  */
 typedef struct p8est_iter_face_info
 {
@@ -153,6 +154,8 @@ p8est_iter_edge_side_t;
  * If tree_boundary is false, the edge is on the interior of a tree.
  * When tree_boundary is false, sides[0] contains the lowest z-order quadrant
  * that touches the edge.
+ * When tree_boundary is true, its value is P8EST_CONNECT_FACE/EDGE
+ * depending on the location of the edge relative to the tree.
  */
 typedef struct p8est_iter_edge_info
 {
@@ -191,6 +194,8 @@ p8est_iter_corner_side_t;
  * If tree_boundary is false, the corner is on the interior of a tree.
  * When tree_boundary is false, sides[0] contains the lowest z-order quadrant
  * that touches the corner.
+ * When tree_boundary is true, its value is P8EST_CONNECT_FACE/EDGE/CORNER
+ * depending on the location of the corner relative to the tree.
  */
 typedef struct p8est_iter_corner_info
 {
