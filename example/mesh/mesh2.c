@@ -184,7 +184,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
 static void
 mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
-          int uniform)
+          int uniform, p4est_connect_type_t mesh_btype)
 {
   int                 mpiret;
   unsigned            crc;
@@ -225,7 +225,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
   test_mesh (p4est, ghost, mesh, uniform);
 
   /* compute memory used */
@@ -395,8 +395,9 @@ main (int argc, char **argv)
   }
 
   /* run mesh tests */
-  mesh_run (mpi, connectivity, 1);
-  mesh_run (mpi, connectivity, 0);
+  mesh_run (mpi, connectivity, 1, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, P4EST_CONNECT_FACE);
 
   /* clean up and exit */
   p4est_connectivity_destroy (connectivity);
