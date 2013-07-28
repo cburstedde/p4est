@@ -25,12 +25,10 @@
 #include <p4est_bits.h>
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
-#include <p4est_nodes.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
-#include <p8est_nodes.h>
 #endif
 
 /** For a quadrant that touches a tree face with a corner inside the face,
