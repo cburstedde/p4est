@@ -121,14 +121,13 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         side2 =
           (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, j);
         P4EST_ASSERT (side2->quad != NULL);
-        if (side1->treeid == side2->treeid) {
-          P4EST_ASSERT (f1 == tree_face_quadrant_corner_face (side2->quad,
-                                                              side2->corner));
+        f2 = tree_face_quadrant_corner_face (side2->quad, side2->corner);
+        if (side1->treeid == side2->treeid && f1 == f2) {
+          /* Periodicity allows for equal trees and unequal faces */
           side2 = NULL;
           continue;
         }
         /* This side as in the opposite tree */
-        f2 = tree_face_quadrant_corner_face (side2->quad, side2->corner);
         fc2 = p4est_corner_face_corners[side2->corner][f2];
         P4EST_ASSERT (0 <= fc2 && fc2 < P4EST_HALF);
         code = info->p4est->connectivity->tree_to_face[P4EST_FACES *
