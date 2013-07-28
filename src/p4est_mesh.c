@@ -183,7 +183,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         qid1 = side1->quadid + tree1->quadrants_offset;
         P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
         P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                           side1->corner] == -1);
+                                           side1->corner] <= -1);
+        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                           side1->corner] >= -2);
         mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -2;
       }
     }
