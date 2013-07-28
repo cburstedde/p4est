@@ -32,9 +32,6 @@ SC_EXTERN_C_BEGIN;
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
  *
- * All vertices of the locally owned quadrants are stored in xyz triples.
- * For each local quadrant, its four corners point into the vertices array.
- * Some vertices are duplicated and no effort is made to uniquify them.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc,
  * and its number in it's owners range of local quadrants in ghost_to_index.
  *
@@ -72,14 +69,11 @@ SC_EXTERN_C_BEGIN;
  */
 typedef struct
 {
-  p4est_locidx_t      local_num_vertices;
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
 
   p4est_topidx_t     *quad_to_tree;     /* Tree index for each quad */
 
-  double             *vertices;
-  p4est_locidx_t     *quad_to_vertex;   /* 4 indices for each local quad */
   int                *ghost_to_proc;    /* 1 integer for each ghost quad */
   p4est_locidx_t     *ghost_to_index;   /* 1 remote index for each ghost */
 
@@ -124,8 +118,6 @@ p4est_mesh_face_neighbor_t;
 size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
 
 /** Create a p4est_mesh structure.
- * The vertex information will be filled if p4est->connectivity contains
- * vertices.  Currently only face neighborhood information is stored.
  * \param [in] p4est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] btype    Currently ignored, only face neighbors are stored.
