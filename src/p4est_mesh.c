@@ -98,6 +98,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     memset (visited, 0, P4EST_CHILDREN * sizeof (int8_t));
     for (i = 0; i < P4EST_HALF; ++i) {
       side1 = side2 = NULL;
+      f1 = -1;
+      fc1 = -1;
+      qid1 = -3;
       for (j = 0; j < P4EST_CHILDREN; ++j) {
         if (visited[j]) {
           continue;
@@ -194,6 +197,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   memset (visited, 0, P4EST_CHILDREN * sizeof (int8_t));
   for (i = 0; i < P4EST_HALF; ++i) {
     side1 = side2 = NULL;
+    qid1 = -3;
     for (j = 0; j < P4EST_CHILDREN; ++j) {
       if (visited[j]) {
         continue;
