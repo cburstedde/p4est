@@ -72,7 +72,7 @@ typedef struct
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
 
-  p4est_topidx_t     *quad_to_tree;     /* Tree index for each quad */
+  p4est_topidx_t     *quad_to_tree;     /* tree index for each local quad */
   int                *ghost_to_proc;    /* 1 integer for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 4 faces */

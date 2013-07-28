@@ -73,14 +73,14 @@ typedef struct
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
 
-  p4est_topidx_t     *quad_to_tree;     /* Tree index for each quad */
+  p4est_topidx_t     *quad_to_tree;     /* tree index for each local quad */
   int                *ghost_to_proc;    /* 1 integer for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 6 faces */
   int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
   sc_array_t         *quad_to_half;     /* stores half-size neigbors */
 
-  /* CAUTION: tree-boundary corners not yet implemented */
+  /* CAUTION: tree-boundary/tree-edge corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 8 indices for each local quad */
   sc_array_t         *corner_offset;    /* has num_corners + 1 entries */
