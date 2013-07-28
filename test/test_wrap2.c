@@ -65,7 +65,7 @@ main (int argc, char **argv)
   p4est_init (NULL, lp);
 
 #ifndef P4_TO_P8
-  wrap = p4est_wrap_new_corner (mpicomm, 0);
+  wrap = p4est_wrap_new_rotwrap (mpicomm, 0);
 #else
   wrap = p8est_wrap_new_rotwrap (mpicomm, 0);
 #endif

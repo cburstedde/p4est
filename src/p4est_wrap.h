@@ -68,6 +68,8 @@ p4est_wrap_t       *p4est_wrap_new_unitsquare (MPI_Comm mpicomm,
                                                int initial_level);
 p4est_wrap_t       *p4est_wrap_new_periodic (MPI_Comm mpicomm,
                                              int initial_level);
+p4est_wrap_t       *p4est_wrap_new_rotwrap (MPI_Comm mpicomm,
+                                            int initial_level);
 p4est_wrap_t       *p4est_wrap_new_corner (MPI_Comm mpicomm,
                                            int initial_level);
 p4est_wrap_t       *p4est_wrap_new_pillow (MPI_Comm mpicomm,
