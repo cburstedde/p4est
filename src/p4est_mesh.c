@@ -407,8 +407,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   ngz = (size_t) mesh->ghost_num_quadrants;
 
   return sizeof (p4est_mesh_t) + lqz * sizeof (p4est_topidx_t) +
-    ((P4EST_CHILDREN + P4EST_FACES) * lqz + ngz) *
-    sizeof (p4est_locidx_t) +
+    (P4EST_CHILDREN + P4EST_FACES) * lqz * sizeof (p4est_locidx_t) +
     ngz * sizeof (int) + (P4EST_FACES * lqz) * sizeof (int8_t) +
     sc_array_memory_used (mesh->quad_to_half, 1) +
     sc_array_memory_used (mesh->corner_offset, 1);
@@ -423,7 +422,6 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      lq, ng;
   p4est_locidx_t      jl;
   p4est_mesh_t       *mesh;
-  p4est_quadrant_t   *quad;
 
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
 
@@ -444,7 +442,6 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
 
   mesh->ghost_to_proc = P4EST_ALLOC (int, ng);
-  mesh->ghost_to_index = P4EST_ALLOC (p4est_locidx_t, ng);
   mesh->quad_to_quad = P4EST_ALLOC (p4est_locidx_t, P4EST_FACES * lq);
   mesh->quad_to_face = P4EST_ALLOC (int8_t, P4EST_FACES * lq);
   mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
@@ -456,9 +453,7 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
       ++rank;
       P4EST_ASSERT (rank < p4est->mpisize);
     }
-    quad = p4est_quadrant_array_index (&ghost->ghosts, (size_t) jl);
     mesh->ghost_to_proc[jl] = rank;
-    mesh->ghost_to_index[jl] = quad->p.piggy3.local_num;
   }
 
   /* Fill arrays with default values */
@@ -482,9 +477,8 @@ void
 p4est_mesh_destroy (p4est_mesh_t * mesh)
 {
   P4EST_FREE (mesh->quad_to_tree);
-
   P4EST_FREE (mesh->ghost_to_proc);
-  P4EST_FREE (mesh->ghost_to_index);
+
   P4EST_FREE (mesh->quad_to_quad);
   P4EST_FREE (mesh->quad_to_face);
   sc_array_destroy (mesh->quad_to_half);
@@ -667,7 +661,6 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
     qtq -= lnq;
     P4EST_ASSERT (qtq < ngh);
     q = p4est_quadrant_array_index (&mfn->ghost->ghosts, (size_t) qtq);
-    P4EST_ASSERT (q->p.piggy3.local_num == mfn->mesh->ghost_to_index[qtq]);
     if (ntree != NULL) {
       *ntree = q->p.piggy3.which_tree;
     }

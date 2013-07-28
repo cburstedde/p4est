@@ -32,8 +32,8 @@ SC_EXTERN_C_BEGIN;
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
  *
- * For each ghost quadrant, its owner rank is stored in ghost_to_proc,
- * and its number in it's owners range of local quadrants in ghost_to_index.
+ * For each local quadrant, its tree number is stored in quad_to_tree.
+ * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * This value is in 0..local_num_quadrants-1 for local quadrants, or in
@@ -73,9 +73,7 @@ typedef struct
   p4est_locidx_t      ghost_num_quadrants;
 
   p4est_topidx_t     *quad_to_tree;     /* Tree index for each quad */
-
   int                *ghost_to_proc;    /* 1 integer for each ghost quad */
-  p4est_locidx_t     *ghost_to_index;   /* 1 remote index for each ghost */
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 4 faces */
   int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
