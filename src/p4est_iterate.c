@@ -608,7 +608,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
                         int c)
 {
   p4est_topidx_t      ti;
-  int                 i;
+  int                 i, j;
   int                 f, nf, o;
   int                 c2, nc;
   int                 count = 0;
@@ -622,7 +622,6 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
   int8_t             *ctc = conn->corner_to_corner;
   p4est_topidx_t      corner = ttc != NULL ? ttc[t * P4EST_CHILDREN + c] : -1;
 #ifdef P4_TO_P8
-  int                 j;
   int                 ref, set, nc2, orig_o;
   int                 e, ne;
   p4est_topidx_t     *tte = conn->tree_to_edge;
@@ -676,6 +675,15 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
       nc2 = p8est_face_permutations[set][c2];
       nc = p8est_face_corners[nf][nc2];
 #endif
+      for (j = 0; j < count; j++) {
+        cside = p4est_iter_cside_array_index_int (&(info->sides), j);
+        if (cside->treeid == nt && (int) cside->corner == nc) {
+          break;
+        }
+      }
+      if (j < count) {
+        continue;
+      }
       cside = (p4est_iter_corner_side_t *) sc_array_push (&(info->sides));
       cside->corner = (int8_t) nc;
       cside->treeid = nt;
@@ -979,7 +987,7 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
                       int e)
 {
   p4est_topidx_t      ti;
-  int                 i;
+  int                 i, j;
   int                 f, nf, o, ref, set;
   int                 ne;
   int                 c0, c1, nc0, nc1, *cc;
@@ -1055,6 +1063,15 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
       nc0 = p8est_face_corners[nf][nc0];
       nc1 = p8est_face_corners[nf][nc1];
       ne = p8est_child_corner_edges[nc0][nc1];
+      for (j = 0; j < count; j++) {
+        eside = p8est_iter_eside_array_index_int (&(info->sides), j);
+        if (eside->treeid == nt && (int) eside->edge == ne) {
+          break;
+        }
+      }
+      if (j < count) {
+        continue;
+      }
       eside = (p8est_iter_edge_side_t *) sc_array_push (&(info->sides));
       eside->orientation = (int8_t) ((nc0 < nc1) ? 0 : 1);
       eside->edge = (int8_t) ne;
