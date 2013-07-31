@@ -214,9 +214,9 @@ unsigned            p8est_ghost_checksum (p8est_t * p8est,
  *                              0, must at least hold sizeof (void *) bytes for
  *                              each, otherwise p8est->data_size each.
  */
-void                p8est_ghost_exchange_p8est_data (p8est_t * p4est,
-                                                     p8est_ghost_t * ghost,
-                                                     void *ghost_data);
+void                p8est_ghost_exchange_data (p8est_t * p4est,
+                                               p8est_ghost_t * ghost,
+                                               void *ghost_data);
 
 /** Transfer data for local quadrants that are ghosts to other processors.
  * The data size is the same for all quadrants and can be chosen arbitrarily.
@@ -228,11 +228,35 @@ void                p8est_ghost_exchange_p8est_data (p8est_t * p4est,
  *                              in sequence, which must hold at least \c
  *                              data_size for each ghost.
  */
-void                p8est_ghost_exchange_custom_data (p8est_t * p4est,
-                                                      p8est_ghost_t * ghost,
-                                                      size_t data_size,
-                                                      void **mirror_data,
-                                                      void *ghost_data);
+void                p8est_ghost_exchange_custom (p8est_t * p4est,
+                                                 p8est_ghost_t * ghost,
+                                                 size_t data_size,
+                                                 void **mirror_data,
+                                                 void *ghost_data);
+
+/** Transfer data for local quadrants that are ghosts to other processors.
+ * The data size is the same for all quadrants and can be chosen arbitrarily.
+ * This function restricts the transfer to a range of refinement levels.
+ * \param [in] p4est            The forest used for reference.
+ * \param [in] ghost            The ghost layer used for reference.
+ * \param [in] minlevel         Level of the largest quads to be exchanged.
+ *                              Use <= 0 for no restriction.
+ * \param [in] maxlevel         Level of the smallest quads to be exchanged.
+ *                              Use >= P4EST_QMAXLEVEL for no restriction.
+ * \param [in] data_size        The data size to transfer per quadrant.
+ * \param [in] mirror_data      One data pointer per mirror quadrant as input. 
+ * \param [in,out] ghost_data   Pre-allocated contiguous data for all ghosts
+ *                              in sequence, which must hold at least \c
+ *                              data_size for each ghost.
+ */
+void                p8est_ghost_exchange_custom_levels (p8est_t * p8est,
+                                                        p8est_ghost_t * ghost,
+                                                        int minlevel,
+                                                        int maxlevel,
+                                                        size_t data_size,
+                                                        void **mirror_data,
+                                                        void *ghost_data);
+
 
 SC_EXTERN_C_END;
 

@@ -2258,8 +2258,8 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
 }
 
 void
-p4est_ghost_exchange_p4est_data (p4est_t * p4est, p4est_ghost_t * ghost,
-                                 void *ghost_data)
+p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
+                           void *ghost_data)
 {
   size_t              zz;
   size_t              data_size;
@@ -2296,15 +2296,15 @@ p4est_ghost_exchange_p4est_data (p4est_t * p4est, p4est_ghost_t * ghost,
       p4est->data_size == 0 ? &q->p.user_data : q->p.user_data;
   }
 
-  p4est_ghost_exchange_custom_data (p4est, ghost, data_size,
-                                    mirror_data, ghost_data);
+  p4est_ghost_exchange_custom (p4est, ghost, data_size,
+                               mirror_data, ghost_data);
   P4EST_FREE (mirror_data);
 }
 
 void
-p4est_ghost_exchange_custom_data (p4est_t * p4est, p4est_ghost_t * ghost,
-                                  size_t data_size,
-                                  void **mirror_data, void *ghost_data)
+p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
+                             size_t data_size,
+                             void **mirror_data, void *ghost_data)
 {
   const int           num_procs = p4est->mpisize;
   int                 mpiret;
@@ -2373,4 +2373,24 @@ p4est_ghost_exchange_custom_data (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_FREE (*sbuf);
   }
   sc_array_reset (&sbuffers);
+}
+
+void
+p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
+                                   int minlevel, int maxlevel,
+                                   size_t data_size,
+                                   void **mirror_data, void *ghost_data)
+{
+  if (minlevel > maxlevel) {
+    return;
+  }
+  if (minlevel <= 0 && maxlevel >= P4EST_QMAXLEVEL) {
+    p4est_ghost_exchange_custom (p4est, ghost,
+                                 data_size, mirror_data, ghost_data);
+    return;
+  }
+
+  /* TODO: implement per-level version instead */
+  p4est_ghost_exchange_custom (p4est, ghost,
+                               data_size, mirror_data, ghost_data);
 }

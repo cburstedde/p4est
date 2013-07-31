@@ -109,7 +109,7 @@ test_exchange_A (p4est_t * p4est, p4est_ghost_t * ghost)
   P4EST_ASSERT (gnum == p4est->global_first_quadrant[p4est->mpirank + 1]);
 
   ghost_void_data = P4EST_ALLOC (void *, ghost->ghosts.elem_count);
-  p4est_ghost_exchange_p4est_data (p4est, ghost, ghost_void_data);
+  p4est_ghost_exchange_data (p4est, ghost, ghost_void_data);
   
   gexcl = 0;
   for (p = 0; p < p4est->mpisize; ++p) {
@@ -157,7 +157,7 @@ test_exchange_B (p4est_t * p4est, p4est_ghost_t * ghost)
   P4EST_ASSERT (gnum == p4est->global_first_quadrant[p4est->mpirank + 1]);
 
   ghost_struct_data = P4EST_ALLOC (test_exchange_t, ghost->ghosts.elem_count);
-  p4est_ghost_exchange_p4est_data (p4est, ghost, ghost_struct_data);
+  p4est_ghost_exchange_data (p4est, ghost, ghost_struct_data);
 
   gexcl = 0;
   for (p = 0; p < p4est->mpisize; ++p) {
@@ -207,8 +207,9 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
   }
 
   ghost_struct_data = P4EST_ALLOC (test_exchange_t, ghost->ghosts.elem_count);
-  p4est_ghost_exchange_custom_data (p4est, ghost,
-     sizeof (test_exchange_t), mirror_data, ghost_struct_data);
+  p4est_ghost_exchange_custom_levels (p4est, ghost, 0, P4EST_QMAXLEVEL,
+                                      sizeof (test_exchange_t),
+                                      mirror_data, ghost_struct_data);
 
   P4EST_FREE (mirror_data);
   P4EST_FREE (mirror_struct_data);
