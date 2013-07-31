@@ -32,7 +32,7 @@
 #ifndef P4_TO_P8
 static int          refine_level = 5;
 #else
-static int          refine_level = 3;
+static int          refine_level = 4;
 #endif
 
 static int
@@ -235,6 +235,67 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
   P4EST_FREE (ghost_struct_data);
 }
 
+static void
+test_exchange_D (p4est_t * p4est, p4est_ghost_t * ghost)
+{
+  const int           exchange_minlevel = 1;
+  const int           exchange_maxlevel = refine_level - 1;
+  int                 p;
+  size_t              zz;
+  p4est_locidx_t      gexcl, gincl, gl;
+  p4est_gloidx_t      gnum;
+  p4est_quadrant_t   *q;
+  void              **mirror_data;
+  test_exchange_t    *mirror_struct_data;
+  test_exchange_t    *ghost_struct_data, *e;
+
+  /* Test C: don't use p4est user_data at all */
+
+  mirror_struct_data = P4EST_ALLOC (test_exchange_t, ghost->mirrors.elem_count);
+  mirror_data = P4EST_ALLOC (void *, ghost->mirrors.elem_count);
+  for (zz = 0; zz < ghost->mirrors.elem_count; ++zz) {
+    q = p4est_quadrant_array_index (&ghost->mirrors, zz);
+    gnum = p4est->global_first_quadrant[p4est->mpirank] +
+      (p4est_gloidx_t) q->p.piggy3.local_num;
+    mirror_data[zz] = e = mirror_struct_data + zz;
+    e->gi = gnum;
+    e->ll = (long) gnum;
+    e->magic = TEST_EXCHANGE_MAGIC;
+  }
+
+  ghost_struct_data = P4EST_ALLOC (test_exchange_t, ghost->ghosts.elem_count);
+  p4est_ghost_exchange_custom_levels (p4est, ghost,
+                                      exchange_minlevel, exchange_maxlevel,
+                                      sizeof (test_exchange_t),
+                                      mirror_data, ghost_struct_data);
+
+  P4EST_FREE (mirror_data);
+  P4EST_FREE (mirror_struct_data);
+
+  gexcl = 0;
+  for (p = 0; p < p4est->mpisize; ++p) {
+    gincl = ghost->proc_offsets[p + 1];
+    gnum = p4est->global_first_quadrant[p];
+    P4EST_LDEBUGF ("In test D for %d with %d %d\n", p, gexcl, gincl);
+    for (gl = gexcl; gl < gincl; ++gl) {
+      q = p4est_quadrant_array_index (&ghost->ghosts, gl);
+      if (exchange_minlevel <= (int) q->level &&
+          (int) q->level <= exchange_maxlevel) {
+        e = ghost_struct_data + gl,
+        SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
+                        e->gi, "Ghost exchange mismatch D1");
+        SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
+                        (p4est_gloidx_t) e->ll, "Ghost exchange mismatch D2");
+        SC_CHECK_ABORT (e->magic == TEST_EXCHANGE_MAGIC,
+                        "Ghost exchange mismatch D3");
+      }
+    }
+    gexcl = gincl;
+  }
+  P4EST_ASSERT (gexcl == (p4est_locidx_t) ghost->ghosts.elem_count);
+  P4EST_FREE (ghost_struct_data);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -276,6 +337,7 @@ main (int argc, char **argv)
   test_exchange_A (p4est, ghost);
   test_exchange_B (p4est, ghost);
   test_exchange_C (p4est, ghost);
+  test_exchange_D (p4est, ghost);
 
   /* clean up */
   p4est_ghost_destroy (ghost);
