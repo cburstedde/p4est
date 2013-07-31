@@ -35,6 +35,8 @@ static int          refine_level = 5;
 static int          refine_level = 4;
 #endif
 
+/* #undef P4EST_TEST_CHATTY */
+
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
@@ -115,7 +117,9 @@ test_exchange_A (p4est_t * p4est, p4est_ghost_t * ghost)
   for (p = 0; p < p4est->mpisize; ++p) {
     gincl = ghost->proc_offsets[p + 1];
     gnum = p4est->global_first_quadrant[p];
+#ifdef P4EST_TEST_CHATTY
     P4EST_LDEBUGF ("In test A for %d with %d %d\n", p, gexcl, gincl);
+#endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
@@ -163,7 +167,9 @@ test_exchange_B (p4est_t * p4est, p4est_ghost_t * ghost)
   for (p = 0; p < p4est->mpisize; ++p) {
     gincl = ghost->proc_offsets[p + 1];
     gnum = p4est->global_first_quadrant[p];
+#ifdef P4EST_TEST_CHATTY
     P4EST_LDEBUGF ("In test B for %d with %d %d\n", p, gexcl, gincl);
+#endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
       e = ghost_struct_data + gl,
@@ -218,7 +224,9 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
   for (p = 0; p < p4est->mpisize; ++p) {
     gincl = ghost->proc_offsets[p + 1];
     gnum = p4est->global_first_quadrant[p];
+#ifdef P4EST_TEST_CHATTY
     P4EST_LDEBUGF ("In test C for %d with %d %d\n", p, gexcl, gincl);
+#endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
       e = ghost_struct_data + gl,
@@ -276,7 +284,9 @@ test_exchange_D (p4est_t * p4est, p4est_ghost_t * ghost)
   for (p = 0; p < p4est->mpisize; ++p) {
     gincl = ghost->proc_offsets[p + 1];
     gnum = p4est->global_first_quadrant[p];
+#ifdef P4EST_TEST_CHATTY
     P4EST_LDEBUGF ("In test D for %d with %d %d\n", p, gexcl, gincl);
+#endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
       if (exchange_minlevel <= (int) q->level &&
