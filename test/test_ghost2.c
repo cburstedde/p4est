@@ -213,9 +213,8 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
   }
 
   ghost_struct_data = P4EST_ALLOC (test_exchange_t, ghost->ghosts.elem_count);
-  p4est_ghost_exchange_custom_levels (p4est, ghost, 0, P4EST_QMAXLEVEL,
-                                      sizeof (test_exchange_t),
-                                      mirror_data, ghost_struct_data);
+  p4est_ghost_exchange_custom (p4est, ghost, sizeof (test_exchange_t),
+                               mirror_data, ghost_struct_data);
 
   P4EST_FREE (mirror_data);
   P4EST_FREE (mirror_struct_data);
