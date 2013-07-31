@@ -237,6 +237,7 @@ void                p8est_ghost_exchange_custom (p8est_t * p4est,
 /** Transfer data for local quadrants that are ghosts to other processors.
  * The data size is the same for all quadrants and can be chosen arbitrarily.
  * This function restricts the transfer to a range of refinement levels.
+ * The memory for quadrants outside the level range is not dereferenced.
  * \param [in] p4est            The forest used for reference.
  * \param [in] ghost            The ghost layer used for reference.
  * \param [in] minlevel         Level of the largest quads to be exchanged.
@@ -256,7 +257,6 @@ void                p8est_ghost_exchange_custom_levels (p8est_t * p8est,
                                                         size_t data_size,
                                                         void **mirror_data,
                                                         void *ghost_data);
-
 
 SC_EXTERN_C_END;
 
