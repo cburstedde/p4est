@@ -2384,11 +2384,15 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   const int           num_procs = p4est->mpisize;
   int                 mpiret;
   int                 q;
-  char               *mem, **sbuf;
+  int                 i, expected, remaining, received, *peers;
+  int                *theq, *qactive, *qbuffer;
+  char               *mem, **rbuf, **sbuf;
   size_t              zz;
-  sc_array_t          requests, sbuffers;
+  sc_array_t          rrequests, srequests, rbuffers, sbuffers;
   p4est_locidx_t      ng_excl, ng_incl, ng, theg;
+  p4est_locidx_t      lmatches;
   p4est_locidx_t      mirr;
+  p4est_quadrant_t    *g, *m;
   MPI_Request        *r;
 
   if (minlevel <= 0 && maxlevel >= P4EST_QMAXLEVEL) {
@@ -2402,22 +2406,51 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
     return;
   }
 
-  /* TODO: implement per-level version instead */
-  sc_array_init (&requests, sizeof (MPI_Request));
+  sc_array_init (&rrequests, sizeof (MPI_Request));
+  sc_array_init (&srequests, sizeof (MPI_Request));
+  sc_array_init (&rbuffers, sizeof (char *));
   sc_array_init (&sbuffers, sizeof (char *));
+  qactive = P4EST_ALLOC (int, num_procs);
+  qbuffer = P4EST_ALLOC (int, num_procs);
 
   /* receive data from other processors */
   ng_excl = 0;
   for (q = 0; q < num_procs; ++q) {
+    qactive[q] = -1;
+    qbuffer[q] = -1;
     ng_incl = ghost->proc_offsets[q + 1];
     ng = ng_incl - ng_excl;
     P4EST_ASSERT (ng >= 0);
     if (ng > 0) {
-      r = (MPI_Request *) sc_array_push (&requests);
-      mpiret = MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
-                          ng * data_size, MPI_BYTE, q,
-                          P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
-      SC_CHECK_MPI (mpiret);
+      P4EST_ASSERT (q != p4est->mpirank);
+      /* run through ghosts to count the matching level quadrants */
+      for (lmatches = 0, theg = 0; theg < ng; ++theg) {
+        g = p4est_quadrant_array_index (&ghost->ghosts, ng_excl + theg);
+        if (minlevel <= (int) g->level && (int) g->level <= maxlevel) {
+          ++lmatches;
+        }
+      }
+      if (lmatches > 0) {
+        theq = qactive + rrequests.elem_count;
+        r = (MPI_Request *) sc_array_push (&rrequests);
+        if (lmatches < ng) {
+          /* every peer populates its own receive buffer */
+          *theq = q;
+          qbuffer[q] = (int) rbuffers.elem_count;
+          rbuf = (char **) sc_array_push (&rbuffers);
+          *rbuf = P4EST_ALLOC (char, lmatches * data_size);
+          mpiret = MPI_Irecv (*rbuf, lmatches * data_size, MPI_BYTE, q,
+                              P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+        }
+        else {
+          /* use the ghost data memory as is */
+          *theq = -1;
+          mpiret = MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
+                              ng * data_size, MPI_BYTE, q,
+                              P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+        }
+        SC_CHECK_MPI (mpiret);
+      }
       ng_excl = ng_incl;
     }
   }
@@ -2430,30 +2463,84 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
     ng = ng_incl - ng_excl;
     P4EST_ASSERT (ng >= 0);
     if (ng > 0) {
-      /* every peer populates its own send buffer */
-      sbuf = (char **) sc_array_push (&sbuffers);
-      mem = *sbuf = P4EST_ALLOC (char, ng * data_size);
-      for (theg = 0; theg < ng; ++theg) {
+      P4EST_ASSERT (q != p4est->mpirank);
+      /* run through mirrors to count the matching level quadrants */
+      for (lmatches = 0, theg = 0; theg < ng; ++theg) {
         mirr = ghost->mirror_proc_mirrors[ng_excl + theg];
-        P4EST_ASSERT (0 <= mirr && (size_t) mirr < ghost->mirrors.elem_count);
-        memcpy (mem, mirror_data[mirr], data_size);
-        mem += data_size;
+        m = p4est_quadrant_array_index (&ghost->mirrors, mirr);
+        if (minlevel <= (int) m->level && (int) m->level <= maxlevel) {
+          ++lmatches;
+        }
       }
-      r = (MPI_Request *) sc_array_push (&requests);
-      mpiret = MPI_Isend (*sbuf, ng * data_size, MPI_BYTE, q,
-                          P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
-      SC_CHECK_MPI (mpiret);
+      if (lmatches > 0) {
+        /* every peer populates its own send buffer */
+        sbuf = (char **) sc_array_push (&sbuffers);
+        mem = *sbuf = P4EST_ALLOC (char, lmatches * data_size);
+        for (theg = 0; theg < ng; ++theg) {
+          mirr = ghost->mirror_proc_mirrors[ng_excl + theg];
+          m = p4est_quadrant_array_index (&ghost->mirrors, mirr);
+          if (minlevel <= (int) m->level && (int) m->level <= maxlevel) {
+            memcpy (mem, mirror_data[mirr], data_size);
+            mem += data_size;
+          }
+        }
+        r = (MPI_Request *) sc_array_push (&srequests);
+        mpiret = MPI_Isend (*sbuf, lmatches * data_size, MPI_BYTE, q,
+                            P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+        SC_CHECK_MPI (mpiret);
+      }
       ng_excl = ng_incl;
     }
   }
 
-  /* wait and clean up */
-  mpiret = MPI_Waitall (requests.elem_count, (MPI_Request *) requests.array,
+  /* wait for receives and copy data into the proper result array */
+  peers = P4EST_ALLOC (int, rrequests.elem_count);
+  expected = remaining = (int) rrequests.elem_count;
+  while (remaining > 0) {
+    mpiret = MPI_Waitsome (expected, (MPI_Request *) rrequests.array,
+                           &received, peers, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (received != MPI_UNDEFINED);
+    P4EST_ASSERT (received > 0);
+    for (i = 0; i < received; ++i) {
+      P4EST_ASSERT (0 <= peers[i] && peers[i] < (int) rrequests.elem_count);
+      q = qactive[peers[i]];
+      if (q >= 0) {
+        P4EST_ASSERT (q != p4est->mpirank && q < num_procs);
+        ng_excl = ghost->proc_offsets[q];
+        ng_incl = ghost->proc_offsets[q + 1];
+        ng = ng_incl - ng_excl;
+        P4EST_ASSERT (ng > 0);
+        /* run through ghosts to copy the matching level quadrants' data */
+        rbuf = (char **) sc_array_index_int (&rbuffers, qbuffer[q]);
+        for (lmatches = 0, theg = 0; theg < ng; ++theg) {
+          g = p4est_quadrant_array_index (&ghost->ghosts, ng_excl + theg);
+          if (minlevel <= (int) g->level && (int) g->level <= maxlevel) {
+            memcpy (ghost_data + (ng_excl + theg) * data_size,
+                    *rbuf + lmatches * data_size, data_size);
+            ++lmatches;
+          }
+        }
+        P4EST_FREE (*rbuf);
+        qactive[peers[i]] = -1;
+        qbuffer[q] = -1;
+      }
+    }
+    remaining -= received;
+  }
+  P4EST_FREE (peers);
+  P4EST_FREE (qactive);
+  P4EST_FREE (qbuffer);
+  sc_array_reset (&rrequests);
+  sc_array_reset (&rbuffers);
+  
+  /* wait for sends and clean up */
+  mpiret = MPI_Waitall (srequests.elem_count, (MPI_Request *) srequests.array,
                         MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
-  sc_array_reset (&requests);
+  sc_array_reset (&srequests);
   for (zz = 0; zz < sbuffers.elem_count; ++zz) {
-    sbuf = sc_array_index (&sbuffers, zz);
+    sbuf = (char **) sc_array_index (&sbuffers, zz);
     P4EST_FREE (*sbuf);
   }
   sc_array_reset (&sbuffers);
