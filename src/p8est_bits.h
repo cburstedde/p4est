@@ -352,6 +352,8 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
  * \param [in,out] r      Existing quadrant whose Morton index will be filled.
  *                        By convention, if there is no tree across \face,
  *                        \r has the same Morton index as \q.
+ * \param [in,out] nface  if not NULL, set to the face of \r that neighbors
+ *                        \q.
  * \param [in]     conn   The connectivity structure for the forest.
  * \return Returns the tree that contains \r.  By convention, if there is no
  * tree across \face, then -1 is returned.
@@ -360,6 +362,7 @@ p4est_locidx_t      p8est_quadrant_face_neighbor_extra (const p8est_quadrant_t
                                                         * q, p4est_locidx_t t,
                                                         int face,
                                                         p8est_quadrant_t * r,
+                                                        int *nface,
                                                         p8est_connectivity_t *
                                                         conn);
 

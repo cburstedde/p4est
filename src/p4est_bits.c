@@ -831,8 +831,9 @@ p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
 }
 
 p4est_locidx_t
-p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q, p4est_locidx_t
-                                    t, int face, p4est_quadrant_t * r,
+p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q,
+                                    p4est_locidx_t t, int face,
+                                    p4est_quadrant_t * r, int *nface,
                                     p4est_connectivity_t * conn)
 {
   p4est_quadrant_t    temp;
@@ -841,6 +842,9 @@ p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q, p4est_locidx_t
 
   p4est_quadrant_face_neighbor (q, face, r);
   if (p4est_quadrant_is_inside_root (r)) {
+    if (nface != NULL) {
+      *nface = (face ^ 1);
+    }
     return t;
   }
 
@@ -850,9 +854,15 @@ p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q, p4est_locidx_t
     if (r != q) {
       *r = *q;
     }
+    if (nface != NULL) {
+      *nface = -1;
+    }
     return -1;
   }
   p4est_quadrant_transform_face (&temp, r, transform);
+  if (nface != NULL) {
+    *nface = (int) conn->tree_to_face[t * P4EST_FACES + face] % P4EST_FACES;
+  }
 
   return flag;
 }
@@ -1023,7 +1033,8 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
     p4est_quadrant_face_neighbor (q, face, &temp);
     if (p4est_quadrant_is_inside_root (&temp)) {
       face = p4est_corner_faces[corner][1];
-      *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
+      *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, NULL,
+                                                conn);
       if (*tp == -1) {
         qp = (p4est_quadrant_t *) sc_array_pop (quads);
         tp = (p4est_topidx_t *) sc_array_pop (treeids);
@@ -1035,7 +1046,7 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
     P4EST_ASSERT (p4est_quadrant_is_inside_root (&temp));
 
     face = p4est_corner_faces[corner][0];
-    *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, conn);
+    *tp = p4est_quadrant_face_neighbor_extra (&temp, t, face, qp, NULL, conn);
     if (*tp == -1) {
       qp = (p4est_quadrant_t *) sc_array_pop (quads);
       tp = (p4est_topidx_t *) sc_array_pop (treeids);

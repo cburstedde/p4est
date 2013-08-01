@@ -730,7 +730,7 @@ p4est_lnodes_missing_proc_cdp_face (p4est_quadrant_t * q, p4est_topidx_t tid,
   p4est_quadrant_sibling (q, &tempq, c2);
   nproc = p4est_comm_find_owner (p4est, tid, &tempq, rank);
 
-  ntid = p4est_quadrant_face_neighbor_extra (q, tid, f, &tempr,
+  ntid = p4est_quadrant_face_neighbor_extra (q, tid, f, &tempr, NULL,
                                              p4est->connectivity);
   if (ntid == -1) {
     return -2;
@@ -814,7 +814,7 @@ p8est_lnodes_missing_proc_cdp_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
 
   for (i = 0; i < 2; i++) {
     f = p8est_edge_faces[e][i];
-    ntid = p4est_quadrant_face_neighbor_extra (q, tid, f, &tempr,
+    ntid = p4est_quadrant_face_neighbor_extra (q, tid, f, &tempr, NULL,
                                                p4est->connectivity);
     if (ntid == -1) {
       continue;
@@ -921,14 +921,14 @@ p8est_lnodes_missing_proc_edp (p4est_quadrant_t * q, p4est_topidx_t tid,
   p4est_quadrant_sibling (q, &tempq, c2);
   nproc = p4est_comm_find_owner (p4est, tid, &tempq, rank);
 
-  ntid = p4est_quadrant_face_neighbor_extra (q, tid, f, &tempr,
+  ntid = p4est_quadrant_face_neighbor_extra (q, tid, f, &tempr, NULL,
                                              p4est->connectivity);
   if (ntid == -1) {
     return -2;
   }
   nc = p4est_quadrant_child_id (&tempr);
   p4est_quadrant_sibling (q, &tempq, p8est_edge_corners[e][1 - pos]);
-  ntid = p4est_quadrant_face_neighbor_extra (&tempq, tid, f, &temps,
+  ntid = p4est_quadrant_face_neighbor_extra (&tempq, tid, f, &temps, NULL,
                                              p4est->connectivity);
   P4EST_ASSERT (ntid != -1);
   nc2 = p4est_quadrant_child_id (&temps);
@@ -1850,7 +1850,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
 
   for (i = 0; i < P4EST_DIM; i++) {
     f = p4est_corner_faces[c][i];
-    ntid = p4est_quadrant_face_neighbor_extra (&tempq, tid, f, &tempr,
+    ntid = p4est_quadrant_face_neighbor_extra (&tempq, tid, f, &tempr, NULL,
                                                p4est->connectivity);
     if (ntid == -1) {
       continue;
@@ -2006,7 +2006,7 @@ p8est_lnodes_missing_proc_edge (p4est_quadrant_t * q, p4est_topidx_t tid,
     f = p8est_edge_faces[e][i];
     for (j = 0; j < 2; j++) {
       ntid = p4est_quadrant_face_neighbor_extra (&tempq[j], tid, f, &tempr[j],
-                                                 p4est->connectivity);
+                                                 NULL, p4est->connectivity);
       if (ntid == -1) {
         continue;
       }
@@ -3541,7 +3541,8 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
 
   if (requests->elem_count) {
     mpiret = MPI_Waitall ((int) requests->elem_count,
-                          (MPI_Request *) requests->array, MPI_STATUSES_IGNORE);
+                          (MPI_Request *) requests->array,
+                          MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
   sc_array_destroy (requests);
