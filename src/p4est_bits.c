@@ -1059,7 +1059,7 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
       p4est_quadrant_face_neighbor (q, face, &temp);
       if (p4est_quadrant_is_inside_root (&temp)) {
         p8est_quadrant_edge_neighbor_extra (&temp, t, edge, quads, treeids,
-                                            conn);
+                                            NULL, conn);
         return;
       }
     }

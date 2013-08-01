@@ -426,6 +426,8 @@ void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
  *                        neighbors will be placed.
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the edge neighbors will be placed.
+ * \param [in,out] nedges if not NULL, filled with the edges of \a quads that
+ *                        neighbor \q.
  * \param [in]     conn   The connectivity structure for the forest.
  */
 void                p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t
@@ -433,6 +435,7 @@ void                p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t
                                                         int edge, sc_array_t *
                                                         quads, sc_array_t *
                                                         treeids,
+                                                        sc_array_t * nedges,
                                                         p8est_connectivity_t *
                                                         conn);
 

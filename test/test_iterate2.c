@@ -324,7 +324,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
       sc_array_resize (&quads, 0);
       sc_array_resize (&treeids, 0);
       p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids,
-                                          conn);
+                                          NULL, conn);
       for (zz = 0; zz < quads.elem_count; zz++) {
         ptemp = p4est_quadrant_array_index (&quads, zz);
         nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
@@ -579,7 +579,8 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
     }
     sc_array_resize (&quads, 0);
     sc_array_resize (&treeids, 0);
-    p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids, conn);
+    p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids, NULL,
+                                        conn);
     for (zz = 0; zz < quads.elem_count; zz++) {
       ptemp = p4est_quadrant_array_index (&quads, zz);
       nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
