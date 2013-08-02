@@ -234,6 +234,9 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
         P4EST_ASSERT (nc1 >= 0);
         ip = (int *) sc_array_push (nedges);
         *ip = p8est_child_corner_edges[nc1][nc2];
+        if (nc2 > nc1) {
+          *ip += P8EST_EDGES;
+        }
         P4EST_ASSERT (*ip >= 0);
       }
       return;
@@ -248,7 +251,7 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
       tp = (p4est_topidx_t *) sc_array_pop (treeids);
     }
     else if (nedges != NULL) {
-      int                 opedge = (edge ^ 1);
+      int                 opedge = (edge ^ 2);
       int                 nface = conn->tree_to_face[P4EST_FACES * t + face];
       int                 o = nface / P4EST_FACES;
       int                 ref, set;
@@ -274,6 +277,9 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
       P4EST_ASSERT (nc1 >= 0);
       ip = (int *) sc_array_push (nedges);
       *ip = p8est_child_corner_edges[nc1][nc2];
+      if (nc2 > nc1) {
+        *ip += P8EST_EDGES;
+      }
       P4EST_ASSERT (*ip >= 0);
     }
     return;
@@ -294,6 +300,9 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
     if (nedges != NULL) {
       ip = (int *) sc_array_index (nedges, etree);
       *ip = et->nedge;
+      if (et->nflip) {
+        *ip += P8EST_EDGES;
+      }
     }
   }
   sc_array_reset (eta);

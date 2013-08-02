@@ -1899,7 +1899,7 @@ p4est_lnodes_missing_proc_corner (p4est_quadrant_t * q, p4est_topidx_t tid,
     sc_array_init (&quads, sizeof (p4est_quadrant_t));
     sc_array_init (&treeids, sizeof (p4est_topidx_t));
     p4est_quadrant_corner_neighbor_extra (&tempq, tid, c, &quads, &treeids,
-                                          p4est->connectivity);
+                                          NULL, p4est->connectivity);
     count = quads.elem_count;
     for (zz = 0; zz < count; zz++) {
       ptemp = p4est_quadrant_array_index (&quads, zz);

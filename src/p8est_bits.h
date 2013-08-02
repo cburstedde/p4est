@@ -353,7 +353,9 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
  *                        By convention, if there is no tree across \face,
  *                        \r has the same Morton index as \q.
  * \param [in,out] nface  if not NULL, set to the face of \r that neighbors
- *                        \q.
+ *                        \q.  nface is encoded with orientation information
+ *                        in the same manner as the tree_to_face array in
+ *                        the p8est_connectivity_t struct.
  * \param [in]     conn   The connectivity structure for the forest.
  * \return Returns the tree that contains \r.  By convention, if there is no
  * tree across \face, then -1 is returned.
@@ -427,7 +429,9 @@ void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the edge neighbors will be placed.
  * \param [in,out] nedges if not NULL, filled with the edges of \a quads that
- *                        neighbor \q.
+ *                        neighbor \q. the ints in \nedges are encoded with
+ *                        orientation informatin like the edge_to_edge array
+ *                        in the p8est_connectivity_t struct
  * \param [in]     conn   The connectivity structure for the forest.
  */
 void                p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t
@@ -459,6 +463,8 @@ void                p8est_quadrant_corner_neighbor (const p8est_quadrant_t *
  *                        neighbors will be placed.
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the corner neighbors will be placed.
+ * \param [in,out] ncorners if not NULL, filled with the corners of \a quads
+ *                          that neighbor \q.
  * \param [in]     conn   The connectivity structure for the forest.
  */
 void                p8est_quadrant_corner_neighbor_extra (const
@@ -468,6 +474,8 @@ void                p8est_quadrant_corner_neighbor_extra (const
                                                           sc_array_t * quads,
                                                           sc_array_t *
                                                           treeids,
+                                                          sc_array_t *
+                                                          ncorners,
                                                           p8est_connectivity_t
                                                           * conn);
 
