@@ -79,6 +79,16 @@ void                p8est_comm_global_partition (p8est_t * p8est,
 void                p8est_comm_count_pertree (p8est_t * p8est,
                                               p4est_gloidx_t * pertree);
 
+/** Tests ownershop of a quadrant via p8est->global_first_position.
+ * Assumes a tree with no overlaps.
+ * \param [in] rank    Rank whose ownership is tested.
+ * \return true if rank is the owner.
+ */
+int                 p8est_comm_is_owner (p8est_t * p8est,
+                                         p4est_locidx_t which_tree,
+                                         const p8est_quadrant_t * q,
+                                         int rank);
+
 /** Searches the owner of a quadrant via p8est->global_first_position.
  * Assumes a tree with no overlaps.
  * \param [in] guess   Initial guess for the search.
