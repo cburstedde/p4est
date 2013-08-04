@@ -58,6 +58,8 @@
 #define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
 #define P4EST_COMM_GHOST_EXCHANGE       P8EST_COMM_GHOST_EXCHANGE
+#define P4EST_COMM_GHOST_EXPAND_COUNT   P8EST_COMM_GHOST_EXPAND_COUNT
+#define P4EST_COMM_GHOST_EXPAND_LOAD    P8EST_COMM_GHOST_EXPAND_LOAD
 #define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
 #define P4EST_COMM_NODES_REPLY          P8EST_COMM_NODES_REPLY
 #define P4EST_COMM_SAVE                 P8EST_COMM_SAVE
@@ -323,6 +325,7 @@
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced
 #define p4est_ghost_checksum            p8est_ghost_checksum
+#define p4est_ghost_expand              p8est_ghost_expand
 
 /* functions in p4est_nodes */
 #define p4est_nodes_new                 p8est_nodes_new
