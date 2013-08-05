@@ -1119,7 +1119,7 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
             nedge = *ip;
             o = nedge / P8EST_EDGES;
             nedge = nedge % P8EST_EDGES;
-            *ip = p8est_edge_corners[edge][o ? ce : (ce ^ 1)];
+            *ip = p8est_edge_corners[nedge][o ? ce : (ce ^ 1)];
           }
         }
         return;

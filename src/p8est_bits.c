@@ -216,17 +216,18 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
 
         nface = nface % P4EST_FACES;
 
+        P4EST_ASSERT (p8est_edge_faces[opedge][1] == face);
         ref = p8est_face_permutation_refs[face][nface];
         set = p8est_face_permutation_sets[ref][o];
 
         c1 = p8est_edge_corners[opedge][0];
-        nc1 = p8est_corner_face_corners[face][c1];
+        nc1 = p8est_corner_face_corners[c1][face];
         P4EST_ASSERT (nc1 >= 0);
         c1 = p8est_face_permutations[set][nc1];
         nc1 = p8est_face_corners[nface][c1];
 
         c2 = p8est_edge_corners[opedge][1];
-        nc2 = p8est_corner_face_corners[face][c2];
+        nc2 = p8est_corner_face_corners[c2][face];
         P4EST_ASSERT (nc2 >= 0);
         c2 = p8est_face_permutations[set][nc2];
         nc2 = p8est_face_corners[nface][c2];
@@ -234,7 +235,7 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
         P4EST_ASSERT (nc1 >= 0);
         ip = (int *) sc_array_push (nedges);
         *ip = p8est_child_corner_edges[nc1][nc2];
-        if (nc2 > nc1) {
+        if (nc1 > nc2) {
           *ip += P8EST_EDGES;
         }
         P4EST_ASSERT (*ip >= 0);
@@ -259,17 +260,18 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
 
       nface = nface % P4EST_FACES;
 
+      P4EST_ASSERT (p8est_edge_faces[opedge][0] == face);
       ref = p8est_face_permutation_refs[face][nface];
       set = p8est_face_permutation_sets[ref][o];
 
       c1 = p8est_edge_corners[opedge][0];
-      nc1 = p8est_corner_face_corners[face][c1];
+      nc1 = p8est_corner_face_corners[c1][face];
       P4EST_ASSERT (nc1 >= 0);
       c1 = p8est_face_permutations[set][nc1];
       nc1 = p8est_face_corners[nface][c1];
 
       c2 = p8est_edge_corners[opedge][1];
-      nc2 = p8est_corner_face_corners[face][c2];
+      nc2 = p8est_corner_face_corners[c2][face];
       P4EST_ASSERT (nc2 >= 0);
       c2 = p8est_face_permutations[set][nc2];
       nc2 = p8est_face_corners[nface][c2];
@@ -277,7 +279,7 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
       P4EST_ASSERT (nc1 >= 0);
       ip = (int *) sc_array_push (nedges);
       *ip = p8est_child_corner_edges[nc1][nc2];
-      if (nc2 > nc1) {
+      if (nc1 > nc2) {
         *ip += P8EST_EDGES;
       }
       P4EST_ASSERT (*ip >= 0);
