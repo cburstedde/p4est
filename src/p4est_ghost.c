@@ -2190,6 +2190,8 @@ failtest:
   P4EST_ASSERT (gl->tree_offsets[0] == 0);
   P4EST_ASSERT (gl->proc_offsets[0] == 0);
 
+  gl->mirror_proc_fronts = gl->mirror_proc_mirrors;
+  gl->mirror_proc_front_offsets = gl->mirror_proc_offsets;
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
   return gl;
 }
@@ -2207,16 +2209,17 @@ p4est_ghost_destroy (p4est_ghost_t * ghost)
   P4EST_FREE (ghost->tree_offsets);
   P4EST_FREE (ghost->proc_offsets);
 
+  if (ghost->mirror_proc_fronts != ghost->mirror_proc_mirrors) {
+    P4EST_ASSERT (ghost->mirror_proc_front_offsets !=
+                  ghost->mirror_proc_offsets);
+    P4EST_FREE (ghost->mirror_proc_fronts);
+    P4EST_FREE (ghost->mirror_proc_front_offsets);
+  }
+
   sc_array_reset (&ghost->mirrors);
   P4EST_FREE (ghost->mirror_tree_offsets);
   P4EST_FREE (ghost->mirror_proc_mirrors);
   P4EST_FREE (ghost->mirror_proc_offsets);
-
-  if (ghost->mirror_proc_fronts != NULL) {
-    P4EST_ASSERT (ghost->mirror_proc_front_offsets != NULL);
-    P4EST_FREE (ghost->mirror_proc_fronts);
-    P4EST_FREE (ghost->mirror_proc_front_offsets);
-  }
 
   P4EST_FREE (ghost);
 }
@@ -2905,9 +2908,10 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
     }
   }
 
-  if (ghost->mirror_proc_fronts == NULL) {
+  if (ghost->mirror_proc_fronts == ghost->mirror_proc_mirrors) {
     /* create the fronts: the last quads added to the mirrors */
-    P4EST_ASSERT (ghost->mirror_proc_front_offsets == NULL);
+    P4EST_ASSERT (ghost->mirror_proc_front_offsets ==
+                  ghost->mirror_proc_offsets);
 
     ghost->mirror_proc_fronts = P4EST_ALLOC (p4est_locidx_t,
                                              mirror_proc_offsets[mpisize]);
