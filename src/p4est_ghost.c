@@ -2874,10 +2874,10 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
   /* post recvs */
   for (p = 0, num_peers = 0; p < mpisize; p++) {
-    if (mirror_proc_offsets[p + 1] - mirror_proc_offsets[p]) {
+    if (mirror_proc_offsets[p + 1] != mirror_proc_offsets[p]) {
       /* this is an important assertion: if any proc is part of my ghost
        * layer, I am part of its ghost layer */
-      P4EST_ASSERT (proc_offsets[p + 1] - proc_offsets[p]);
+      P4EST_ASSERT (proc_offsets[p + 1] != proc_offsets[p]);
       num_peers++;
     }
   }
@@ -2897,7 +2897,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   }
 
   for (p = 0, peer = 0; p < mpisize; p++) {
-    if (mirror_proc_offsets[p + 1] - mirror_proc_offsets[p]) {
+    if (mirror_proc_offsets[p + 1] != mirror_proc_offsets[p]) {
       P4EST_ASSERT (p != mpirank);
       P4EST_LDEBUGF ("ghost layer expand post count receive from %d\n", p);
       mpiret = MPI_Irecv (recv_counts + peer, 1, P4EST_MPI_LOCIDX, p,
@@ -2934,7 +2934,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
     size_t              zm;
     sc_array_t          pview;
 
-    if (!(mirror_proc_offsets[p + 1] - mirror_proc_offsets[p])) {
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
       continue;
     }
 
@@ -3057,7 +3057,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   for (p = 0, peer = 0; p < mpisize; p++) {
     buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
 
-    if (!(mirror_proc_offsets[p + 1] - mirror_proc_offsets[p])) {
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
       continue;
     }
 
@@ -3110,7 +3110,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   /* Post receives for the ghosts */
   for (p = 0, peer = 0, ghost_offset = old_num_ghosts; p < mpisize; p++) {
 
-    if (!(mirror_proc_offsets[p + 1] - mirror_proc_offsets[p])) {
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
       continue;
     }
 
@@ -3134,7 +3134,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
   /* Send the ghosts */
   for (p = 0, peer = 0; p < mpisize; p++) {
-    if (!(mirror_proc_offsets[p + 1] - mirror_proc_offsets[p])) {
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
       continue;
     }
     buf = (sc_array_t *) sc_array_index (send_bufs, p);

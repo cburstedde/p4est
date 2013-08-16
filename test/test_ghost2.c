@@ -172,9 +172,9 @@ test_exchange_B (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
-      e = ghost_struct_data + gl,
-        SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
-                        e->gi, "Ghost exchange mismatch B1");
+      e = ghost_struct_data + gl;
+      SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
+                      e->gi, "Ghost exchange mismatch B1");
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
                       (p4est_gloidx_t) e->ll, "Ghost exchange mismatch B2");
       SC_CHECK_ABORT (e->magic == TEST_EXCHANGE_MAGIC,
@@ -229,9 +229,9 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
-      e = ghost_struct_data + gl,
-        SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
-                        e->gi, "Ghost exchange mismatch C1");
+      e = ghost_struct_data + gl;
+      SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
+                      e->gi, "Ghost exchange mismatch C1");
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
                       (p4est_gloidx_t) e->ll, "Ghost exchange mismatch C2");
       SC_CHECK_ABORT (e->magic == TEST_EXCHANGE_MAGIC,
@@ -292,9 +292,9 @@ test_exchange_D (p4est_t * p4est, p4est_ghost_t * ghost)
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
       if (exchange_minlevel <= (int) q->level &&
           (int) q->level <= exchange_maxlevel) {
-        e = ghost_struct_data + gl,
-          SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
-                          e->gi, "Ghost exchange mismatch D1");
+        e = ghost_struct_data + gl;
+        SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
+                        e->gi, "Ghost exchange mismatch D1");
         SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
                         (p4est_gloidx_t) e->ll, "Ghost exchange mismatch D2");
         SC_CHECK_ABORT (e->magic == TEST_EXCHANGE_MAGIC,
