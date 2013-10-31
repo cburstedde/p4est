@@ -38,13 +38,11 @@ typedef int8_t      p4est_lnodes_code_t;
  * num_local_elements is the number of local quadrants in the p4est.
  * element_nodes is of dimension vnodes * num_local_elements
  * and indexes into the set of local nodes layed out as follows:
- * local nodes = [<-------------------->|<-----non_local_nodes----->]
- *                 \ owned_count
- *                <------------------------------------------------>
- *                 \ num_local_nodes
+ * local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
+ *             = [<----------------num_local_nodes----------------->]
  * nonlocal_nodes contains the globally unique numbers for independent nodes
  * that are owned by other processes; for local nodes, the globally unique
- * numbers are given by i + global_offset, where is is the local number.
+ * numbers are given by i + global_offset, where i is the local number.
  * Hanging nodes are always local and don't have a global number.
  * They index the geometrically corresponding independent nodes of a neighbor.
  *
@@ -102,12 +100,12 @@ p4est_lnodes_t;
 /** The structure stored in the sharers array.
  *
  * shared_nodes is a sorted array of p4est_locidx_t
- * that indexes into global_nodes.  The shared_nodes array has a
+ * that indexes into local nodes.  The shared_nodes array has a
  * contiguous (or empty) section of nodes owned by the current rank.
  * shared_mine_offset and shared_mine_count identify this section
- * by indexing the shared_nodes array, not the global_nodes array.
+ * by indexing the shared_nodes array, not the local nodes array.
  * owned_offset and owned_count define the section of local nodes
- * that is owned by this processor (the section may be empty).
+ * that is owned by the listed rank (the section may be empty).
  * For the current process these coincide with those in p4est_lnodes_t.
  */
 typedef struct p4est_lnodes_rank
@@ -190,8 +188,8 @@ p4est_lnodes_buffer_t;
 /** p4est_lnodes_share_owned_begin
  *
  * \a node_data is a user-defined array of arbitrary type, where each entry
- * is associated with the \a lnodes->global_nodes entry of matching index.
- * For every \a lnodes->global_nodes entry that is owned by a process
+ * is associated with the \a lnodes local nodes entry of matching index.
+ * For every local nodes entry that is owned by a process
  * other than the current one, the value in the \a node_data array of the
  * owning process is written directly into the \a node_data array of the current
  * process.  Values of \a node_data are not guaranteed to be sent or received
@@ -220,7 +218,7 @@ void                p4est_lnodes_share_owned (sc_array_t * node_data,
 /** p4est_lnodes_share_all_begin
  *
  * \a node_data is a user_defined array of arbitrary type, where each entry
- * is associated with the \a lnodes->global_nodes entry of matching index.
+ * is associated with the lnodes local nodes entry of matching index.
  * For every process that shares an entry with the current one, the value in
  * the \a node_data array of that process is written into a
  * \a buffer->recv_buffers entry as described above.  The user can then perform
