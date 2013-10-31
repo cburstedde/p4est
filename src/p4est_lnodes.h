@@ -273,8 +273,6 @@ p4est_lnodes_rank_array_index (sc_array_t * array, size_t it)
     (array->array + sizeof (p4est_lnodes_rank_t) * it);
 }
 
-SC_EXTERN_C_END;
-
 /** Compute the global number of a local node number */
 /*@unused@*/
 static inline       p4est_gloidx_t
@@ -286,5 +284,7 @@ p4est_lnodes_global_index (p4est_lnodes_t * lnodes, p4est_locidx_t lidx)
   return (lidx < owned) ? lnodes->global_offset + lidx :
     lnodes->nonlocal_nodes[lidx - owned];
 }
+
+SC_EXTERN_C_END;
 
 #endif /* !P4EST_LNODES */
