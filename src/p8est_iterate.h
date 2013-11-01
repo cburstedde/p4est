@@ -146,6 +146,7 @@ typedef struct p8est_iter_edge_side
     hanging;
   }
   is;
+  int8_t              faces[2];
 }
 p8est_iter_edge_side_t;
 
@@ -184,6 +185,8 @@ typedef struct p8est_iter_corner_side
   int8_t              is_ghost;
   p8est_quadrant_t   *quad;
   p4est_locidx_t      quadid;
+  int8_t              faces[3];
+  int8_t              edges[3];
 }
 p8est_iter_corner_side_t;
 
