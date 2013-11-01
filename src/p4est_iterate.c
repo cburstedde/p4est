@@ -1821,13 +1821,13 @@ p4est_iter_init_corner_from_face (p4est_iter_corner_args_t * args,
       c_start_idx2[count++] = num_to_child[k * ntc_str + j];
       cside->faces[dir] = j;
 #ifndef P4_TO_P8
-      cside->faces[dir ^ 1] = ntc_str + limit;
+      cside->faces[dir ^ 1] = ntc_str + k;
 #else
-      cside->edges[dir] = ntc_str + limit;
+      cside->edges[dir] = ntc_str + k;
       ndir1 = SC_MIN (((dir + 1) % 3), ((dir + 2) % 3));
       ndir2 = SC_MAX (((dir + 1) % 3), ((dir + 2) % 3));
-      cside->faces[ndir1] = ntc_str + ntc_str * limit + (j >> 1);
-      cside->faces[ndir2] = ntc_str + ntc_str * limit + 2 + (j & 2);
+      cside->faces[ndir1] = ntc_str + ntc_str * k + (j >> 1);
+      cside->faces[ndir2] = ntc_str + ntc_str * k + 2 + (j & 2);
       if (!k) {
         cside->edges[ndir1] = (j & 1);
         cside->edges[ndir2] = 2 + (j >> 1);
