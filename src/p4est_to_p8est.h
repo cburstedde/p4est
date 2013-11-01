@@ -178,6 +178,7 @@
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
+#define p4est_iterate_ext               p8est_iterate_ext
 #define p4est_iter_fside_array_index    p8est_iter_fside_array_index
 #define p4est_iter_fside_array_index_int p8est_iter_fside_array_index_int
 #define p4est_iter_cside_array_index    p8est_iter_cside_array_index
