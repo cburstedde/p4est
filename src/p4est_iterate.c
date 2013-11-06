@@ -601,6 +601,20 @@ typedef struct p4est_iter_corner_args
 }
 p4est_iter_corner_args_t;
 
+static int
+cside_compare (const void *a, const void *b)
+{
+  p4est_locidx_t diff;
+  const p4est_iter_corner_side_t *A = (const p4est_iter_corner_side_t *) a;
+  const p4est_iter_corner_side_t *B = (const p4est_iter_corner_side_t *) b;
+
+  diff = (A->treeid - B->treeid);
+  if (diff) {
+    return (int) diff;
+  }
+  return (A->corner - B->corner);
+}
+
 /* initialize corner args for a corner between trees */
 static void
 p4est_iter_init_corner (p4est_iter_corner_args_t * args,
@@ -746,6 +760,8 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
 #endif
   }
 
+  sc_array_sort (&(info->sides), cside_compare);
+
   {
     int faces_count = 0;
 #ifdef P4_TO_P8
@@ -851,14 +867,6 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
 
   args->num_sides = count;
   p4est_iter_init_loop_corner (loop_args, p4est, ghost_layer, info);
-
-#ifdef P4_TO_P8
-  for (i = 1; i < count; i++) {
-    cside = p4est_iter_cside_array_index_int (&(info->sides), i);
-    P4EST_ASSERT (cside->treeid < t ||
-                  (cside->treeid == t && (int) cside->corner <= c));
-  }
-#endif
 }
 
 static void
@@ -1227,6 +1235,20 @@ p8est_iter_init_corner_from_edge (p4est_iter_corner_args_t * args,
   args->remote = edge_args->remote;
 }
 
+static int
+eside_compare (const void *a, const void *b)
+{
+  p4est_locidx_t diff;
+  const p8est_iter_edge_side_t *A = (const p8est_iter_edge_side_t *) a;
+  const p8est_iter_edge_side_t *B = (const p8est_iter_edge_side_t *) b;
+
+  diff = (A->treeid - B->treeid);
+  if (diff) {
+    return (int) diff;
+  }
+  return (A->edge - B->edge);
+}
+
 /* initialize edge args for an edge between trees */
 static void
 p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
@@ -1275,10 +1297,6 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
       eside->edge = (int8_t) ne;
       eside->treeid = nt;
       start_idx2[count++] = 0;
-      cc = (int *) sc_array_push (&(common_corners[0]));
-      *cc = p8est_edge_corners[ne][o];
-      cc = (int *) sc_array_push (&(common_corners[1]));
-      *cc = p8est_edge_corners[ne][1 - o];
       eside->faces[0] = -1;
       eside->faces[1] = -1;
     }
@@ -1318,13 +1336,25 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
       eside->edge = (int8_t) ne;
       eside->treeid = nt;
       start_idx2[count++] = 0;
-      cc = (int *) sc_array_push (&(common_corners[0]));
-      *cc = nc0;
-      cc = (int *) sc_array_push (&(common_corners[1]));
-      *cc = nc1;
       eside->faces[0] = -1;
       eside->faces[1] = -1;
     }
+  }
+
+  sc_array_sort (&(info->sides), eside_compare);
+  for (i = 0; i < count; i++) {
+    eside = p8est_iter_eside_array_index_int (&(info->sides), i);
+    if (!i) {
+      o = eside->orientation;
+      eside->orientation = 0;
+    }
+    else {
+      eside->orientation ^= o;
+    }
+    cc = (int *) sc_array_push (&(common_corners[0]));
+    *cc = p8est_edge_corners[eside->edge][eside->orientation];
+    cc = (int *) sc_array_push (&(common_corners[1]));
+    *cc = p8est_edge_corners[eside->edge][1 - eside->orientation];
   }
 
   args->num_sides = count;
@@ -1391,15 +1421,6 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
     p8est_iter_init_corner_from_edge (&(args->corner_args), args);
   }
   p8est_iter_init_loop_edge (loop_args, p8est, ghost_layer, info);
-
-#ifdef P4EST_DEBUG
-  for (i = 1; i < count; i++) {
-    eside = p8est_iter_eside_array_index_int (&(info->sides), i);
-    P4EST_ASSERT (eside->treeid < t ||
-                  (eside->treeid == t && (int) eside->edge <= e));
-  }
-#endif
-
 }
 
 static void
@@ -1925,6 +1946,20 @@ p8est_iter_init_edge_from_face (p8est_iter_edge_args_t * args,
 }
 #endif
 
+static int
+fside_compare (const void *a, const void *b)
+{
+  p4est_locidx_t diff;
+  const p4est_iter_face_side_t *A = (const p4est_iter_face_side_t *) a;
+  const p4est_iter_face_side_t *B = (const p4est_iter_face_side_t *) b;
+
+  diff = (A->treeid - B->treeid);
+  if (diff) {
+    return (int) diff;
+  }
+  return (A->face - B->face);
+}
+
 /* initialize face args for a face between trees */
 static void
 p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
@@ -1946,9 +1981,14 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_topidx_t      nt = conn->tree_to_tree[t * P4EST_FACES + f];
   int                 nf = (int) conn->tree_to_face[t * P4EST_FACES + f];
-  int                 o = nf / P4EST_FACES;
+  int                 o = 0;
 
   nf %= P4EST_FACES;
+
+  if (nt < t || (nt == t && nf < f)) {
+    p4est_iter_init_face (args, p4est, ghost_layer, loop_args, nt, nf);
+    return;
+  }
 
   args->loop_args = loop_args;
   info->p4est = p4est;
@@ -1965,6 +2005,22 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
     nt = -1;
   }
 
+  args->outside_face = (nt == -1);
+
+  fside = (p4est_iter_face_side_t *) sc_array_push (&(info->sides));
+  fside->face = (int8_t) f;
+  fside->treeid = t;
+  start_idx2[count++] = 0;
+  o = info->orientation = 0;
+
+  if (nt != -1) {
+    fside = (p4est_iter_face_side_t *) sc_array_push (&(info->sides));
+    fside->treeid = nt;
+    fside->face = (int8_t) nf;
+    start_idx2[count++] = 0;
+    o = info->orientation = conn->tree_to_face[t * P4EST_FACES + f] / P4EST_FACES;
+  }
+
   /* for each corner, find the touching corner on the other tree */
   for (i = 0; i < ntc_str; i++) {
     c = p4est_face_corners[f][i];
@@ -1978,21 +2034,6 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
 #endif
     }
   }
-  args->outside_face = (nt == -1);
-
-  fside = (p4est_iter_face_side_t *) sc_array_push (&(info->sides));
-  fside->face = (int8_t) f;
-  fside->treeid = t;
-  start_idx2[count++] = 0;
-  info->orientation = 0;
-
-  if (nt != -1) {
-    fside = (p4est_iter_face_side_t *) sc_array_push (&(info->sides));
-    fside->treeid = nt;
-    info->orientation = (int8_t) o;
-    fside->face = (int8_t) nf;
-    start_idx2[count++] = 0;
-  }
 
 #ifdef P4_TO_P8
   if (loop_args->loop_edge) {
@@ -2004,10 +2045,6 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
 #endif
   if (loop_args->loop_corner) {
     p4est_iter_init_corner_from_face (&(args->corner_args), args);
-  }
-
-  if (nt != -1) {
-    P4EST_ASSERT ((nt < t) || ((t == nt) && (nf < f)));
   }
 
   if (nt != -1) {
