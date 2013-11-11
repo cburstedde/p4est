@@ -1307,10 +1307,8 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
     eside->treeid = t;
     eside->orientation = 0;
     start_idx2[count++] = 0;
-    cc = (int *) sc_array_push (&(common_corners[0]));
-    *cc = p8est_edge_corners[e][0];
-    cc = (int *) sc_array_push (&(common_corners[1]));
-    *cc = p8est_edge_corners[e][1];
+    eside->faces[0] = -1;
+    eside->faces[1] = -1;
     for (i = 0; i < 2; i++) {
       f = p8est_edge_faces[e][i];
       nt = ttt[t * P4EST_FACES + f];
@@ -1981,7 +1979,7 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_topidx_t      nt = conn->tree_to_tree[t * P4EST_FACES + f];
   int                 nf = (int) conn->tree_to_face[t * P4EST_FACES + f];
-  int                 o = 0;
+  int                 o = nf / P4EST_FACES;
 
   nf %= P4EST_FACES;
 
