@@ -820,7 +820,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
 
           e = p8est_corner_edges[nc][j];
           c2 = (p8est_edge_corners[e][0] == nc) ? 0 : 1;
-          edge = (tte != NULL) ? tte[t * 12 + e] : -1;
+          edge = (tte != NULL) ? tte[nt * 12 + e] : -1;
           if (edge >= 0) {
             orig_o = -1;
             for (ti = ett_offset[edge]; ti < ett_offset[edge + 1]; ti++) {
