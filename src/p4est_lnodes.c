@@ -422,7 +422,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
 static void
 p8est_lnodes_edge_simple_callback_void (p8est_iter_edge_info_t * info, void *Data)
 {
-  int dummy = p8est_lnodes_edge_simple_callback (info, Data);
+  (void) p8est_lnodes_edge_simple_callback (info, Data);
 }
 #endif
 
@@ -452,7 +452,7 @@ p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
   size_t              zz, count = all->elem_count;
   int                *ip, proc;
   p4est_lnodes_buf_info_t *binfo;
-  int8_t              scount;
+  int8_t              scount = -1;
   p4est_locidx_t      offset = (p4est_locidx_t) share->elem_count;
 
   if (!is_remote) {
@@ -654,6 +654,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     /* if this is a remote node, we don't have a quad available for
      * determining ownership, so we have to create it */
     P4EST_ASSERT (count > 1);
+    cside = NULL;
     for (zz = 1; zz < count; zz++) {
       /* find a nonempty side */
       cside = p4est_iter_cside_array_index (sides, zz);
@@ -856,6 +857,8 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       continue;
     }
 
+    tree = p4est_tree_array_index (trees, tid);
+    quadrants_offset = tree->quadrants_offset;
     if (!is_ghost) {
       proc = rank;
       qid += quadrants_offset;
@@ -871,6 +874,9 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       *ip = proc;
       ip = (int *) sc_array_push (all_procs);
       *ip = proc;
+    }
+    else {
+      proc = -1;
     }
     if (p4est_quadrant_child_id (q) != c) {
       /* there can be no remote quads / processes */
@@ -909,7 +915,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
         if (nproc != rank && nproc != proc) {
           P4EST_ASSERT (nproc != rank);
           ip = (int *) sc_array_push (all_procs);
-          *ip = proc;
+          *ip = nproc;
         }
       }
     }
@@ -1071,6 +1077,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     p4est_qcoord_t x, y, z, h, l;
 
     P4EST_ASSERT (count > 1);
+    eside = NULL;
     for (zz = 1; zz < count; zz++) {
       eside = p8est_iter_eside_array_index (sides, zz);
       if (eside->is_hanging || eside->is.full.quad) {
@@ -1221,6 +1228,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     }
     for (i = 0; i < limit; i++) {
       qid = qids[i];
+      stride = (o ? -1 : 1);
       if (!is_ghost[i]) {
         proc = rank;
         qid += quadrants_offset;
@@ -1236,7 +1244,6 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       /* get quads that may be dependent because of hanging faces */
       dep = !is_ghost[i] ? &local_dep[qid] : &ghost_dep[qid];
       edir = e / 4;
-      stride = (o ? -1 : 1);
       for (j = 0; j < 2; j++) {
         xdir[0] = (edir + j + 1) % 3;
         xdir[1] = (edir + 2 - j) % 3;
@@ -1253,7 +1260,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
           nproc = nqid;
           if (nproc == -1) {
             nproc = p8est_lnodes_missing_proc_edge (info, zz, i, xdir[1],
-                                                    proc);
+                                                    rank);
             dep->edge[xdir[0]] = -(nproc + 2);
           }
           else {
@@ -2114,7 +2121,9 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   sc_array_t         *inodes = data->inodes;
   p4est_locidx_t     *elnodes = lnodes->element_nodes;
   p4est_locidx_t      nlen = lnodes->num_local_elements * lnodes->vnodes;
+#ifdef P4EST_DEBUG
   p4est_locidx_t      num_inodes = (p4est_locidx_t) data->inodes->elem_count;
+#endif
   p4est_locidx_t      inidx;
   int                *comm_proc;
   int                 comm_proc_count;
