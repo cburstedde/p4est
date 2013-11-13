@@ -519,6 +519,9 @@ p4est_lnodes_missing_proc_corner (p4est_iter_corner_info_t *info, int side,
   q = thisside->quad;
   P4EST_ASSERT (q != NULL);
   l = q->level;
+  if (l == 0) {
+    return -1;
+  }
 
   if (b < P4EST_DIM) {
     key = thisside->faces[b];
