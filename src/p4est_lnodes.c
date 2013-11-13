@@ -106,7 +106,7 @@ p4est_lnodes_dep_t;
  */
 typedef struct p4est_lnodes_buf_info
 {
-  int8_t              type;             /* which nodes it shares */
+  int8_t              type;     /* which nodes it shares */
   int8_t              send_sharers;     /* whether the sharers are included in
                                            the message */
   p4est_locidx_t      first_index;      /* inodes array, first node to/from */
@@ -120,8 +120,8 @@ typedef struct p4est_lnodes_data
   p4est_lnodes_dep_t *local_dep;        /* num local quads */
   p4est_lnodes_dep_t *ghost_dep;        /* num ghost quads */
   p4est_locidx_t     *local_elem_nodes; /* num local quads * nodes per q */
-  p4est_locidx_t     *poff;             /* mpisize + 1 */
-  sc_array_t         *inodes;           /* 2 * p4est_locidx_t */
+  p4est_locidx_t     *poff;     /* mpisize + 1 */
+  sc_array_t         *inodes;   /* 2 * p4est_locidx_t */
   sc_array_t         *inode_sharers;    /* int */
   sc_array_t         *send_buf_info;    /* one for each proc: type buf_info_t */
   sc_array_t         *recv_buf_info;    /* one for each proc: type buf_info_t */
@@ -144,11 +144,11 @@ typedef struct p4est_lnodes_data
 p4est_lnodes_data_t;
 
 static inline int
-fside_get_fields (p4est_iter_face_side_t *fside, int *is_hanging,
-                  p4est_topidx_t *tid, int *f, int8_t **is_ghost,
-                  p4est_locidx_t **quadid, p4est_quadrant_t ***quad)
+fside_get_fields (p4est_iter_face_side_t * fside, int *is_hanging,
+                  p4est_topidx_t * tid, int *f, int8_t ** is_ghost,
+                  p4est_locidx_t ** quadid, p4est_quadrant_t *** quad)
 {
-  int limit;
+  int                 limit;
 
   *is_hanging = fside->is_hanging;
   *tid = fside->treeid;
@@ -204,7 +204,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
 #endif
 
   P4EST_ASSERT (touching_procs->elem_size == sizeof (int));
-  sc_array_resize (touching_procs, 0);
+  sc_array_truncate (touching_procs);
   /* even though the original is size mpisize+1, proc_offsets uses
    * p4est_locidx_offset_compare, and we don't want to read past the end of the
    * array */
@@ -243,7 +243,7 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
       dep = !is_ghost[i] ? &(local_dep[qid[i]]) : &(ghost_dep[qid[i]]);
       if (is_hanging) {
 #ifdef P4_TO_P8
-        int ndir[2];
+        int                 ndir[2];
 
         ndir[0] = SC_MIN (((fdir + 1) % 3), ((fdir + 2) % 3));
         ndir[1] = SC_MAX (((fdir + 1) % 3), ((fdir + 2) % 3));
@@ -287,11 +287,11 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
 #ifdef P4_TO_P8
 
 static inline int
-eside_get_fields (p8est_iter_edge_side_t *eside, int *is_hanging,
-                  p4est_topidx_t *tid, int *e, int *o, int8_t **is_ghost,
-                  p4est_locidx_t **quadid, p4est_quadrant_t ***quad)
+eside_get_fields (p8est_iter_edge_side_t * eside, int *is_hanging,
+                  p4est_topidx_t * tid, int *e, int *o, int8_t ** is_ghost,
+                  p4est_locidx_t ** quadid, p4est_quadrant_t *** quad)
 {
-  int limit;
+  int                 limit;
 
   *is_hanging = eside->is_hanging;
   *tid = eside->treeid;
@@ -312,6 +312,7 @@ eside_get_fields (p8est_iter_edge_side_t *eside, int *is_hanging,
 
   return limit;
 }
+
 /** lnodes_edge_simple_callback: runs even if there are no edge nodes.  If a
  * side of the face is not hanging, then there are no other quadrants that are
  * facewise dependent on its corner or edge nodes.  If a side of the face is
@@ -346,7 +347,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   int                 is_hanging, o, has_local = 0;
 
   P4EST_ASSERT (touching_procs->elem_size == sizeof (int));
-  sc_array_resize (touching_procs, 0);
+  sc_array_truncate (touching_procs);
   /* even though the original is size mpisize+1, proc_offsets uses
    * p4est_locidx_offset_compare, and we don't want to read past the end of the
    * array */
@@ -414,16 +415,17 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
 }
 
 static void
-p8est_lnodes_edge_simple_callback_void (p8est_iter_edge_info_t * info, void *Data)
+p8est_lnodes_edge_simple_callback_void (p8est_iter_edge_info_t * info,
+                                        void *Data)
 {
   (void) p8est_lnodes_edge_simple_callback (info, Data);
 }
 #endif
 
 static inline void
-cside_get_fields (p4est_iter_corner_side_t *cside,
-                  p4est_topidx_t *tid, int *c, int8_t *is_ghost,
-                  p4est_locidx_t *quadid, p4est_quadrant_t **quad)
+cside_get_fields (p4est_iter_corner_side_t * cside,
+                  p4est_topidx_t * tid, int *c, int8_t * is_ghost,
+                  p4est_locidx_t * quadid, p4est_quadrant_t ** quad)
 {
   *tid = cside->treeid;
   *c = cside->corner;
@@ -501,19 +503,19 @@ p4est_lnodes_push_binfo (sc_array_t * touch, sc_array_t * all,
  * corner node remotely
  */
 static int
-p4est_lnodes_missing_proc_corner (p4est_iter_corner_info_t *info, int side,
+p4est_lnodes_missing_proc_corner (p4est_iter_corner_info_t * info, int side,
                                   int b)
 {
-  sc_array_t *sides = &(info->sides);
-  int i, nsides = (int) sides->elem_count;
+  sc_array_t         *sides = &(info->sides);
+  int                 i, nsides = (int) sides->elem_count;
   p4est_iter_corner_side_t *thisside = p4est_iter_cside_array_index_int
-                                       (sides, side);
+    (sides, side);
   p4est_iter_corner_side_t *cside;
-  p4est_quadrant_t *q, tempq;
-  int l, j, f, fc, c2, nproc, key, test;
-  int c = thisside->corner;
+  p4est_quadrant_t   *q, tempq;
+  int                 l, j, f, fc, c2, nproc, key, test;
+  int                 c = thisside->corner;
 #ifdef P4_TO_P8
-  int e;
+  int                 e;
 #endif
 
   q = thisside->quad;
@@ -565,8 +567,9 @@ p4est_lnodes_missing_proc_corner (p4est_iter_corner_info_t *info, int side,
         P4EST_ASSERT (cside->quad != NULL);
         if (cside->quad->level < l) {
           P4EST_ASSERT (cside->quad->level == l - 1);
-          nproc = p4est_comm_find_owner (info->p4est, thisside->treeid, &tempq,
-                                         info->p4est->mpirank);
+          nproc =
+            p4est_comm_find_owner (info->p4est, thisside->treeid, &tempq,
+                                   info->p4est->mpirank);
           P4EST_ASSERT (nproc >= 0);
           return nproc;
         }
@@ -628,15 +631,14 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   int                 is_remote;
   int                 has_local;
 
-
   /* even though the original is size mpisize+1, proc_offsets uses
    * p4est_locidx_offset_compare, and we don't want to read past the end of the
    * array */
   sc_array_init_data (&proc_offsets, ghost_layer->proc_offsets,
                       sizeof (p4est_locidx_t), (size_t) info->p4est->mpisize);
 
-  sc_array_resize (touching_procs, 0);
-  sc_array_resize (all_procs, 0);
+  sc_array_truncate (touching_procs);
+  sc_array_truncate (all_procs);
 
   /* figure out which proc owns the node */
   owner_cside = p4est_iter_cside_array_index (sides, 0);
@@ -690,7 +692,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     else if (p8est_quadrant_is_outside_edge (&tempq)) {
       /* outside an edge: use some knowledge about how p4est_iterate orders
        * the sides around a corner that is in the middle of an edge */
-      int owner_e, owner_c2, e, c2;
+      int                 owner_e, owner_c2, e, c2;
 
       P4EST_ASSERT (count % 2 == 0);
       /* side[count/2] should be on the same edge as side[0] */
@@ -753,16 +755,17 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     }
 #endif
     else {
-      int owner_c2, owner_f, c2;
-      p4est_topidx_t nt;
-      int nf, o;
+      int                 owner_c2, owner_f, c2;
+      p4est_topidx_t      nt;
+      int                 nf, o;
 
       /* this uses some knowledge about how iterate orders the sides of a
        * corner that is in the middle of a face */
       P4EST_ASSERT (count == P4EST_HALF || count == P4EST_CHILDREN);
       /* side[count - (count / P4EST_HALF)] is the same side of the face,
        * opposite corner */
-      cside = p4est_iter_cside_array_index (sides, count - (count / P4EST_HALF));
+      cside =
+        p4est_iter_cside_array_index (sides, count - (count / P4EST_HALF));
       P4EST_ASSERT (cside->treeid == owner_tid);
 
       owner_c2 = cside->corner;
@@ -789,7 +792,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       }
       else {
         /* transform q across the face */
-        p4est_topidx_t nnt;
+        p4est_topidx_t      nnt;
 
         P4EST_ASSERT (nt == tid);
         nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, conn);
@@ -955,21 +958,21 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
  * edge node remotely
  */
 static void
-p8est_lnodes_missing_proc_edge (p8est_iter_edge_info_t *info, int side,
+p8est_lnodes_missing_proc_edge (p8est_iter_edge_info_t * info, int side,
                                 int b, int *mproc)
 {
-  sc_array_t *sides = &(info->sides);
-  int i, nsides = (int) sides->elem_count;
+  sc_array_t         *sides = &(info->sides);
+  int                 i, nsides = (int) sides->elem_count;
   p8est_iter_edge_side_t *thisside = p8est_iter_eside_array_index_int
-                                     (sides, side);
+    (sides, side);
   p8est_iter_edge_side_t *eside;
-  p4est_quadrant_t *q, tempq, tempr;
-  int key, test;
-  int j;
-  int e = thisside->edge, f;
-  int edir = e / 4;
-  int missdir = 3 - edir - b;
-  int c, c2;
+  p4est_quadrant_t   *q, tempq, tempr;
+  int                 key, test;
+  int                 j;
+  int                 e = thisside->edge, f;
+  int                 edir = e / 4;
+  int                 missdir = 3 - edir - b;
+  int                 c, c2;
 
   P4EST_ASSERT (edir != b);
   P4EST_ASSERT (thisside->is_hanging);
@@ -994,11 +997,13 @@ p8est_lnodes_missing_proc_edge (p8est_iter_edge_info_t *info, int side,
       test = eside->faces[j];
       if (test == key) {
         if (!eside->is_hanging && eside->is.full.quad != NULL) {
-          mproc[0] = p4est_comm_find_owner (info->p4est, thisside->treeid, &tempq,
-                                            info->p4est->mpirank);
+          mproc[0] =
+            p4est_comm_find_owner (info->p4est, thisside->treeid, &tempq,
+                                   info->p4est->mpirank);
           P4EST_ASSERT (mproc[0] >= 0);
-          mproc[1] = p4est_comm_find_owner (info->p4est, thisside->treeid, &tempr,
-                                            mproc[0]);
+          mproc[1] =
+            p4est_comm_find_owner (info->p4est, thisside->treeid, &tempr,
+                                   mproc[0]);
           P4EST_ASSERT (mproc[1] >= 0);
           return;
         }
@@ -1069,10 +1074,10 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   int8_t              type;
   int                 is_remote, has_local;
   p4est_connectivity_t *conn = info->p4est->connectivity;
-  int                 mproc[2][2] = {{-1, -1}, {-1, -1}};
+  int                 mproc[2][2] = { {-1, -1}, {-1, -1} };
 
-  sc_array_resize (touching_procs, 0);
-  sc_array_resize (all_procs, 0);
+  sc_array_truncate (touching_procs);
+  sc_array_truncate (all_procs);
   has_local = p8est_lnodes_edge_simple_callback (info, data);
   sc_array_sort (touching_procs, sc_int_compare);
   sc_array_uniq (touching_procs, sc_int_compare);
@@ -1093,8 +1098,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   P4EST_ASSERT (!owner_eside->orientation);
   owner_c = p8est_edge_corners[owner_e][0];
   if (owner_q == NULL) {
-    int c;
-    p4est_qcoord_t x, y, z, h, l;
+    int                 c;
+    p4est_qcoord_t      x, y, z, h, l;
 
     P4EST_ASSERT (count > 1);
     eside = NULL;
@@ -1160,8 +1165,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     }
     else {
       /* outside face */
-      int owner_f, c1, c2, nf;
-      p4est_topidx_t nt;
+      int                 owner_f, c1, c2, nf;
+      p4est_topidx_t      nt;
       /* this uses some knowledge about how iterate orders the sides of a
        * corner that is in the middle of a face */
       P4EST_ASSERT (count == 2 || count == 4);
@@ -1188,8 +1193,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
         z = q->z + h * ((c & 4) >> 2);
       }
       else {
-        int c2;
-        p4est_topidx_t nnt;
+        int                 c2;
+        p4est_topidx_t      nnt;
 
         P4EST_ASSERT (nt == tid);
         P4EST_ASSERT (count == 4);
@@ -1279,7 +1284,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
         if (dep->face[xdir[1]] == -1) {
           P4EST_ASSERT (is_ghost[i]);
           if (!is_ghost[i ^ 1]) {
-            P4EST_ASSERT (local_dep[qids[i ^ 1] + quadrants_offset].face[xdir[1]] == -2);
+            P4EST_ASSERT (local_dep[qids[i ^ 1] + quadrants_offset].
+                          face[xdir[1]] == -2);
             dep->face[xdir[1]] = -2;
           }
           else if (!i) {
@@ -1415,7 +1421,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   p4est_locidx_t      start_node;
   int8_t              type;
 
-  sc_array_resize (touching_procs, 0);
+  sc_array_truncate (touching_procs);
   p4est_lnodes_face_simple_callback (info, data);
   sc_array_sort (touching_procs, sc_int_compare);
   sc_array_uniq (touching_procs, sc_int_compare);
@@ -1697,11 +1703,9 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
 #endif
 
   data->local_dep = P4EST_ALLOC (p4est_lnodes_dep_t, nldep);
-  memset (data->local_dep, -1,
-          nldep * sizeof (p4est_lnodes_dep_t));
+  memset (data->local_dep, -1, nldep * sizeof (p4est_lnodes_dep_t));
   data->ghost_dep = P4EST_ALLOC (p4est_lnodes_dep_t, ngdep);
-  memset (data->ghost_dep, -1,
-          ngdep * sizeof (p4est_lnodes_dep_t));
+  memset (data->ghost_dep, -1, ngdep * sizeof (p4est_lnodes_dep_t));
 
   data->local_elem_nodes = lnodes->element_nodes;
 
@@ -1826,7 +1830,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
 
   pcount = 0;
   for (i = 0; i < mpisize; i++) {
-    p4est_topidx_t temp = pcount;
+    p4est_topidx_t      temp = pcount;
 
     pcount += poff[i];
     poff[i] = temp;
@@ -2016,7 +2020,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
  */
 static void
 p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
-                   p4est_lnodes_t *lnodes)
+                   p4est_lnodes_t * lnodes)
 {
   int                 mpisize = p4est->mpisize;
   int                 i, j, k;
@@ -2696,7 +2700,8 @@ p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer)
 
   if (requests->elem_count) {
     mpiret = MPI_Waitall ((int) requests->elem_count,
-                          (MPI_Request *) requests->array, MPI_STATUSES_IGNORE);
+                          (MPI_Request *) requests->array,
+                          MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
   sc_array_destroy (requests);
