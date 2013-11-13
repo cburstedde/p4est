@@ -669,7 +669,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
 #ifdef P4EST_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
 #endif
-  int                 dorefine;
+  int                 firsttime;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
   size_t              incount, current, restpos, movecount;
@@ -684,22 +684,17 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   p4est_quadrant_t   *family[8];
   p4est_quadrant_t    parent, *pp = &parent;
 
-  if (allowed_level == 0 || refine_fn == NULL) {
-    P4EST_GLOBAL_PRODUCTIONF ("Noop " P4EST_STRING
-                              "_refine with %lld total quadrants\n",
-                              (long long) p4est->global_num_quadrants);
-    return;
-  }
-
   if (allowed_level < 0) {
     allowed_level = P4EST_QMAXLEVEL;
   }
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
-                            "_refine with %lld total quadrants maxlevel %d\n",
+                            "_refine with %lld total quadrants,"
+                            " allowed level %d\n",
                             (long long) p4est->global_num_quadrants,
                             allowed_level);
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (0 <= allowed_level && allowed_level <= P4EST_QMAXLEVEL);
+  P4EST_ASSERT (refine_fn != NULL);
 
   /*
      q points to a quadrant that is an array member
@@ -738,22 +733,21 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
 
     /* run through the array to find first quadrant to be refined */
     q = NULL;
-    dorefine = 0;
     incount = tquadrants->elem_count;
     for (current = 0; current < incount; ++current) {
       q = p4est_quadrant_array_index (tquadrants, current);
-      dorefine = (((int) q->level < allowed_level) &&
-                  refine_fn (p4est, nt, q));
-      if (dorefine) {
+      if (refine_fn (p4est, nt, q) && (int) q->level < allowed_level) {
         break;
       }
       maxlevel = SC_MAX (maxlevel, (int) q->level);
       ++tree->quadrants_per_level[q->level];
     }
-    if (!dorefine) {
+    if (current == incount) {
+      /* no refinement occurs in this tree */
       p4est->local_num_quadrants += incount;
       continue;
     }
+    P4EST_ASSERT (q != NULL);
 
     /* now we have a quadrant to refine, prepend it to the list */
     qalloc = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
@@ -770,13 +764,14 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
     restpos = current + 1;
 
     /* run through the list and refine recursively */
+    firsttime = 1;
     while (list->elem_count > 0) {
       qpop = p4est_quadrant_list_pop (list);
-      if (dorefine ||
+      if (firsttime ||
           ((refine_recursive || !qpop->pad8) &&
-           (int) qpop->level < allowed_level &&
-           refine_fn (p4est, nt, qpop))) {
-        dorefine = 0;
+           refine_fn (p4est, nt, qpop) &&
+           (int) qpop->level < allowed_level)) {
+        firsttime = 0;
         sc_array_resize (tquadrants,
                          tquadrants->elem_count + P4EST_CHILDREN - 1);
 
@@ -784,12 +779,11 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
           /* do not free qpop's data yet: we will do this when the parent
            * is replaced */
           parent = *qpop;
-          c0 = qpop;
         }
         else {
           p4est_quadrant_free_data (p4est, qpop);
-          c0 = qpop;
         }
+        c0 = qpop;
         c1 = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
         c2 = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
         c3 = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
@@ -908,11 +902,12 @@ void
 p4est_coarsen (p4est_t * p4est, int coarsen_recursive,
                p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
-  p4est_coarsen_ext (p4est, coarsen_recursive, coarsen_fn, init_fn, NULL);
+  p4est_coarsen_ext (p4est, coarsen_recursive, 0, coarsen_fn, init_fn, NULL);
 }
 
 void
-p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
+p4est_coarsen_ext (p4est_t * p4est,
+                   int coarsen_recursive, int callback_orphans,
                    p4est_coarsen_t coarsen_fn, p4est_init_t init_fn,
                    p4est_replace_t replace_fn)
 {
@@ -936,6 +931,7 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
                             "_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
   P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (coarsen_fn != NULL);
 
   P4EST_QUADRANT_INIT (&qtemp);
 
@@ -975,6 +971,10 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
 
         if (zz != (size_t) p4est_quadrant_child_id (c[zz])) {
           isfamily = 0;
+          if (callback_orphans) {
+            c[1] = NULL;
+            (void) coarsen_fn (p4est, jt, c);
+          }
           break;
         }
       }
@@ -1038,6 +1038,15 @@ p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
         *cfirst = *clast;
       }
       sc_array_resize (tquadrants, incount - length);
+    }
+
+    /* call remaining orphans */
+    if (callback_orphans) {
+      c[1] = NULL;
+      for (zz = window; zz < incount - length; ++zz) {
+        c[0] = p4est_quadrant_array_index (tquadrants, zz);
+        (void) coarsen_fn (p4est, jt, c);
+      }
     }
 
     /* compute maximum level */
@@ -3464,7 +3473,6 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
     load_data = 0;
   }
   num_trees = conn->num_trees;
-  head_count = (size_t) (headc + num_procs) + (size_t) num_trees;
   qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
 
   /* read format and partition information */
@@ -3523,6 +3531,7 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
   P4EST_FREE (u64a);
 
   /* seek to the beginning of this processor's storage */
+  head_count = (size_t) (headc + save_num_procs) + (size_t) num_trees;
   zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
   if (zpadding > 0 || rank > 0) {
     retval =

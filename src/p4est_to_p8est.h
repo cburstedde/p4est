@@ -57,6 +57,7 @@
 #define P4EST_COMM_PARTITION_CORRECTION P8EST_COMM_PARTITION_CORRECTION
 #define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
+#define P4EST_COMM_GHOST_EXCHANGE       P8EST_COMM_GHOST_EXCHANGE
 #define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
 #define P4EST_COMM_NODES_REPLY          P8EST_COMM_NODES_REPLY
 #define P4EST_COMM_SAVE                 P8EST_COMM_SAVE
@@ -64,9 +65,12 @@
 #define P4EST_COMM_LNODES_PASS          P8EST_COMM_LNODES_PASS
 #define P4EST_COMM_LNODES_OWNED         P8EST_COMM_LNODES_OWNED
 #define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
+#define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
+#define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_DEFAULT           P8EST_CONNECT_DEFAULT
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
+#define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
 #define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
 
@@ -310,6 +314,9 @@
 #define p4est_ghost_memory_used         p8est_ghost_memory_used
 #define p4est_ghost_new                 p8est_ghost_new
 #define p4est_ghost_destroy             p8est_ghost_destroy
+#define p4est_ghost_exchange_data       p8est_ghost_exchange_data
+#define p4est_ghost_exchange_custom     p8est_ghost_exchange_custom
+#define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
 #define p4est_face_quadrant_exists      p8est_face_quadrant_exists
@@ -355,7 +362,11 @@
 #define p4est_wrap_new_conn             p8est_wrap_new_conn
 #define p4est_wrap_new_world            p8est_wrap_new_world
 #define p4est_wrap_destroy              p8est_wrap_destroy
-#define p4est_wrap_refine               p8est_wrap_refine
+#define p4est_wrap_get_ghost            p8est_wrap_get_ghost
+#define p4est_wrap_get_mesh             p8est_wrap_get_mesh
+#define p4est_wrap_mark_refine          p8est_wrap_mark_refine
+#define p4est_wrap_mark_coarsen         p8est_wrap_mark_coarsen
+#define p4est_wrap_adapt                p8est_wrap_adapt
 #define p4est_wrap_partition            p8est_wrap_partition
 #define p4est_wrap_complete             p8est_wrap_complete
 #define p4est_wrap_leaf_next            p8est_wrap_leaf_next

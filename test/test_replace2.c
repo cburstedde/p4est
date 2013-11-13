@@ -143,7 +143,7 @@ main (int argc, char **argv)
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 1, NULL, NULL);
   p4est_refine_ext (p4est, 1, P4EST_QMAXLEVEL, refine_fn, NULL, replace_fn);
-  p4est_coarsen_ext (p4est, 1, coarsen_fn, NULL, replace_fn);
+  p4est_coarsen_ext (p4est, 1, 0, coarsen_fn, NULL, replace_fn);
   p4est_balance_ext (p4est, P4EST_CONNECT_FULL, NULL, replace_fn);
 
   p4est_destroy (p4est);

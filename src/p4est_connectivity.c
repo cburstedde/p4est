@@ -390,7 +390,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * conn)
 
 #ifdef P4_TO_P8
     for (aedge = 0; aedge < num_edges; ++aedge) {
-      if (eoff[aedge + 1] <= eoff[aedge]) {
+      if (eoff[aedge + 1] < eoff[aedge]) {
         P4EST_NOTICEF ("Edge offset backwards %lld\n", (long long) aedge);
         goto failure;
       }
@@ -453,7 +453,7 @@ p4est_connectivity_is_valid (p4est_connectivity_t * conn)
 #endif
 
     for (acorner = 0; acorner < num_corners; ++acorner) {
-      if (coff[acorner + 1] <= coff[acorner]) {
+      if (coff[acorner + 1] < coff[acorner]) {
         P4EST_NOTICEF ("Corner offset backwards %lld\n", (long long) acorner);
         goto failure;
       }

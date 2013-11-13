@@ -81,17 +81,26 @@ p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
                                    size_t data_size, p8est_init_t init_fn,
                                    void *user_pointer);
 
-/** Refine a forest with a bounded maximum refinement level.
- * A quadrant is refined if the refine_fn callback returns true.
+/** Refine a forest with a bounded refinement level and a replace option.
+ * \param [in,out] p8est The forest is changed in place.
+ * \param [in] refine_recursive Boolean to decide on recursive refinement.
  * \param [in] maxlevel   Maximum allowed refinement level (inclusive).
- *                        If this is negative the level is unrestricted.
- * \param [in] refine_fn  Callback function that returns true
- *                        if a quadrant shall be refined; may be NULL.
- * \param [in] init_fn    Callback function to initialize the user_data
- *                        which is guaranteed to be allocated; may be NULL.
+ *                        If this is negative the level is restricted only
+ *                        by the compile-time constant QMAXLEVEL in p8est.h.
+ * \param [in] refine_fn  Callback function that must return true if a quadrant
+ *                        shall be refined.  If refine_recursive is true,
+ *                        refine_fn is called for every existing and newly
+ *                        created quadrant.  Otherwise, it is called for every
+ *                        existing quadrant.  It is possible that a refinement
+ *                        request made by the callback is ignored.  To catch
+ *                        this case, you can examine whether init_fn or
+ *                        replace_fn gets called.
+ * \param [in] init_fn    Callback function to initialize the user_data for
+ *                        newly created quadrants, which is guaranteed to be
+ *                        allocated.  This function pointer may be NULL.
  * \param [in] replace_fn Callback function that allows the user to change
  *                        incoming quadrants based on the quadrants they
- *                        replace.
+ *                        replace; may be NULL.
  */
 void                p8est_refine_ext (p8est_t * p8est,
                                       int refine_recursive, int maxlevel,
@@ -100,8 +109,17 @@ void                p8est_refine_ext (p8est_t * p8est,
                                       p8est_replace_t replace_fn);
 
 /** Coarsen a forest.
+ * \param [in,out] p8est The forest is changed in place.
+ * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
+ * \param [in] callback_orphans Boolean to enable calling coarsen_fn even on
+ *                        non-families.  In this case, the second quadrant
+ *                        pointer in the argument list of the callback is NULL,
+ *                        subsequent pointers are undefined, and the return
+ *                        value is ignored.  If coarsen_recursive is true, it
+ *                        is possible that a quadrant is called once or more as
+ *                        an orphan and eventually becomes part of a family.
  * \param [in] coarsen_fn Callback function that returns true if a
- *                        family of quadrants shall be coarsened
+ *                        family of quadrants shall be coarsened.
  * \param [in] init_fn    Callback function to initialize the user_data
  *                        which is already allocated automatically.
  * \param [in] replace_fn Callback function that allows the user to change
@@ -109,6 +127,7 @@ void                p8est_refine_ext (p8est_t * p8est,
  *                        replace.
  */
 void                p8est_coarsen_ext (p8est_t * p8est, int coarsen_recursive,
+                                       int callback_orphans,
                                        p8est_coarsen_t coarsen_fn,
                                        p8est_init_t init_fn,
                                        p8est_replace_t replace_fn);

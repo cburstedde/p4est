@@ -130,14 +130,16 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
   int                 f, nf;
+  int                 c;
   int                 nface;
   int                 nrank;
   p4est_topidx_t      which_tree;
   p4est_locidx_t      K, kl;
   p4est_locidx_t      ql, QpG;
-  p4est_locidx_t      qumid, quadrant_id, which_quad;
+  p4est_locidx_t      qlid, qumid, quadrant_id, which_quad;
   p4est_mesh_face_neighbor_t mfn, mfn2;
   p4est_quadrant_t   *q;
+  p4est_tree_t       *tree;
 
   K = mesh->local_num_quadrants;
   P4EST_ASSERT (K == p4est->local_num_quadrants);
@@ -145,6 +147,18 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
   /* TODO: test the mesh relations in more depth */
   for (kl = 0; kl < K; ++kl) {
+    tree = p4est_tree_array_index (p4est->trees, mesh->quad_to_tree[kl]);
+    SC_CHECK_ABORTF (tree->quadrants_offset <= kl && kl <
+                     tree->quadrants_offset +
+                     (p4est_locidx_t) tree->quadrants.elem_count,
+                     "Tree index mismatch %lld", (long long) kl);
+
+    for (c = 0; c < P4EST_CHILDREN; ++c) {
+      qlid = mesh->quad_to_corner[P4EST_CHILDREN * kl + c];
+      SC_CHECK_ABORTF (qlid >= -2
+                       && qlid < QpG, "quad %lld corner %d mismatch",
+                       (long long) kl, c);
+    }
     for (f = 0; f < P4EST_FACES; ++f) {
       ql = mesh->quad_to_quad[P4EST_FACES * kl + f];
       SC_CHECK_ABORTF (0 <= ql && ql < QpG,
@@ -178,7 +192,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
 static void
 mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
-          int uniform)
+          int uniform, p4est_connect_type_t mesh_btype)
 {
   int                 mpiret;
   unsigned            crc;
@@ -219,7 +233,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new (p4est, ghost, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
   test_mesh (p4est, ghost, mesh, uniform);
 
   /* compute memory used */
@@ -389,8 +403,9 @@ main (int argc, char **argv)
   }
 
   /* run mesh tests */
-  mesh_run (mpi, connectivity, 1);
-  mesh_run (mpi, connectivity, 0);
+  mesh_run (mpi, connectivity, 1, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, P4EST_CONNECT_FACE);
 
   /* clean up and exit */
   p4est_connectivity_destroy (connectivity);

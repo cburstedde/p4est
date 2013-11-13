@@ -486,6 +486,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   const int           rank = p4est->mpirank;
 #ifdef P4EST_MPI
   int                 mpiret;
+  int                 found;
   int                 owner, prev, start;
   int                 first_peer, last_peer;
   int                 num_send_queries, num_send_nonzero, num_recv_queries;
@@ -494,14 +495,14 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   int                 nwin, maxpeers, maxwin, twomaxwin;
   int                 my_ranges[2 * p4est_num_ranges];
   int                *procs, *all_ranges;
+  int                *nonlocal_ranks;
   int                *old_sharers, *new_sharers;
   char               *this_base;
-  int                 found;
   size_t              first_size, second_size, this_size;
   size_t              num_sharers, old_position, new_position;
   p4est_qcoord_t     *xyz;
   p4est_topidx_t     *ttt;
-  p4est_locidx_t      end_owned_indeps;
+  p4est_locidx_t      end_owned_indeps, *shared_offsets;
   p4est_locidx_t     *node_number;
   p4est_node_peer_t  *peers, *peer;
   p4est_indep_t       inkey;
@@ -515,7 +516,6 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
   int                 k;
   int                 qcid, face;
-  int                *nonlocal_ranks;
   int                 clamped = 1;
   void               *save_user_data;
   size_t              zz, position;
@@ -527,7 +527,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   p4est_locidx_t      offset_owned_indeps;
   p4est_locidx_t      num_indep_nodes, dup_indep_nodes, all_face_hangings;
   p4est_locidx_t      num_face_hangings, dup_face_hangings;
-  p4est_locidx_t     *local_nodes, *quad_nodes, *shared_offsets;
+  p4est_locidx_t     *local_nodes, *quad_nodes;
   p4est_locidx_t     *new_node_number;
   p4est_tree_t       *tree;
   p4est_nodes_t      *nodes;
@@ -576,7 +576,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
   shared_indeps = &nodes->shared_indeps;
   sc_array_init (shared_indeps, sizeof (sc_recycle_array_t));
-  shared_offsets = nodes->shared_offsets = NULL;
+  nodes->shared_offsets = NULL;
 
   /* compute number of local quadrant corners */
   nodes->num_local_quadrants = p4est->local_num_quadrants;
@@ -868,6 +868,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   /* Receive queries and look up the reply information */
   P4EST_QUADRANT_INIT (&inkey);
   inkey.level = P4EST_MAXLEVEL;
+  shared_offsets = NULL;
   for (l = 0; l < num_recv_queries; ++l) {
     mpiret = MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_NODES_QUERY,
                         p4est->mpicomm, &probe_status);
@@ -1141,13 +1142,15 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   nodes->num_owned_shared = num_owned_shared;
   nodes->offset_owned_indeps = offset_owned_indeps;
   sc_hash_array_rip (indep_nodes, inda = &nodes->indep_nodes);
-  nonlocal_ranks = nodes->nonlocal_ranks =
+  nodes->nonlocal_ranks =
     P4EST_ALLOC (int, num_indep_nodes - num_owned_indeps);
   nodes->global_owned_indeps = P4EST_ALLOC (p4est_locidx_t, num_procs);
   nodes->global_owned_indeps[rank] = num_owned_indeps;
   indep_nodes = NULL;
 
 #ifdef P4EST_MPI
+  nonlocal_ranks = nodes->nonlocal_ranks;
+
   /* Receive the replies. */
   for (l = 0; l < num_send_nonzero; ++l) {
     mpiret = MPI_Probe (MPI_ANY_SOURCE, P4EST_COMM_NODES_REPLY,

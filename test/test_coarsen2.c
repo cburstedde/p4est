@@ -216,12 +216,16 @@ static const int    refine_level = 6;
 #else
 static const int    refine_level = 4;
 #endif
+static int          refine_callback_count;
 static int          coarsen_all = 1;
+static int          coarsen_callback_count;
 
 static int
 test_refine (p4est_t * p4est, p4est_topidx_t which_tree,
              p4est_quadrant_t * quadrant)
 {
+  ++refine_callback_count;
+
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
   }
@@ -233,6 +237,10 @@ static int
 test_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
               p4est_quadrant_t * q[])
 {
+  ++coarsen_callback_count;
+  if (q[1] == NULL) {
+    return 0;
+  }
   SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
 
   return coarsen_all || q[0]->y >= P4EST_ROOT_LEN / 2;
@@ -247,7 +255,12 @@ p4est_coarsen_both (p4est_t * p4est, int coarsen_recursive,
 
   copy = p4est_copy (p4est, 1);
   p4est_coarsen_old (copy, coarsen_recursive, coarsen_fn, init_fn);
-  p4est_coarsen (p4est, coarsen_recursive, coarsen_fn, init_fn);
+
+  coarsen_callback_count = 0;
+  p4est_coarsen_ext (p4est, coarsen_recursive, 1, coarsen_fn, init_fn, NULL);
+  SC_CHECK_ABORT (coarsen_recursive ||
+                  coarsen_callback_count == (int) p4est->local_num_quadrants,
+                  "Coarsen count");
 
   success = p4est_is_equal (p4est, copy, 1);
   SC_CHECK_ABORT (success, "Coarsen mismatch");
@@ -258,19 +271,15 @@ p4est_coarsen_both (p4est_t * p4est, int coarsen_recursive,
 int
 main (int argc, char **argv)
 {
-  int                 mpirank, mpisize;
   int                 mpiret;
   MPI_Comm            mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
+  p4est_locidx_t      save_local_count;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpicomm, &mpisize);
-  SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
-  SC_CHECK_MPI (mpiret);
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
@@ -282,6 +291,13 @@ main (int argc, char **argv)
   connectivity = p4est_connectivity_new_star ();
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
+
+  save_local_count = p4est->local_num_quadrants;
+  refine_callback_count = 0;
+  p4est_refine_ext (p4est, 0, 2, test_refine, NULL, NULL);
+  SC_CHECK_ABORT (refine_callback_count == save_local_count, "Refine count");
+
+  refine_callback_count = 0;
   p4est_refine (p4est, 1, test_refine, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
@@ -291,12 +307,13 @@ main (int argc, char **argv)
   p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   coarsen_all = 1;
+
   p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_endcoarsen");
 
-  if (mpisize == 1) {
+  if (p4est->mpisize == 1) {
     SC_CHECK_ABORT (p4est->global_num_quadrants ==
-                    (p4est_gloidx_t) connectivity->num_trees, "Coarsen");
+                    (p4est_gloidx_t) connectivity->num_trees, "Coarsen all");
   }
 
   p4est_destroy (p4est);

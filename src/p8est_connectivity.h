@@ -56,6 +56,7 @@ SC_EXTERN_C_BEGIN;
  * 2) entities are adjacent if they share a face or corner, or
  * 3) entities are adjacent if they share a face, corner or edge.
  * p8est_connect_type_t is used to choose the desired behavior.
+ * This enum must fit into an int8_t.
  */
 typedef enum
 {
