@@ -561,31 +561,29 @@ p4est_iter_init_loop_corner (p4est_iter_loop_args_t * loop_args,
   }
 }
 
-/* When one iterate loop calls another, i.e. volume_iterate calls face_iterate,
+/* When one iterate loop calls another, e.g. volume_iterate calls face_iterate,
  * the initial bounds for the new sides of the search need to be initialized.
  * The whole heirarchy doesn't need to be copied, just the most recent bounds
  * from the correct starting sections (start_idx2).
  */
 static void
-p4est_iter_copy_indices (p4est_iter_loop_args_t * loop_args, int *start_idx2,
-                         int old_num, int new_num)
+p4est_iter_copy_indices (p4est_iter_loop_args_t * loop_args,
+                         const int *start_idx2,
+                         int old_num, int factor)
 {
   const int           local = 0;
   const int           ghost = 1;
-  int                 type;
-  int                 side;
+  int                 r, s, t;
   size_t            **zindex = loop_args->index;
-  int                 idx2;
+  int                 i, j, idx2 = loop_args->level * P4EST_ITER_STRIDE;
 
-  P4EST_ASSERT (new_num % old_num == 0);
-
-  for (side = 0; side < new_num; side++) {
-    idx2 = loop_args->level * P4EST_ITER_STRIDE + start_idx2[side];
-    for (type = local; type <= ghost; type++) {
-      zindex[side * 2 + type][idx2] =
-        zindex[(side % old_num) * 2 + type][idx2];
-      zindex[side * 2 + type][idx2 + 1] =
-        zindex[(side % old_num) * 2 + type][idx2 + 1];
+  for (r = old_num, j = 1; j < factor; j++) {
+    for (s = 0; s < old_num; s++, r++) {
+      i = idx2 + start_idx2[r];
+      for (t = local; t <= ghost; t++) {
+        zindex[r * 2 + t][i] = zindex[s * 2 + t][i];
+        zindex[r * 2 + t][i + 1] = zindex[s * 2 + t][i + 1];
+      }
     }
   }
 }
@@ -604,7 +602,7 @@ p4est_iter_corner_args_t;
 static int
 cside_compare (const void *a, const void *b)
 {
-  p4est_locidx_t diff;
+  p4est_locidx_t      diff;
   const p4est_iter_corner_side_t *A = (const p4est_iter_corner_side_t *) a;
   const p4est_iter_corner_side_t *B = (const p4est_iter_corner_side_t *) b;
 
@@ -772,9 +770,9 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
   sc_array_sort (&(info->sides), cside_compare);
 
   {
-    int faces_count = 0;
+    int                 faces_count = 0;
 #ifdef P4_TO_P8
-    int edges_count = 0;
+    int                 edges_count = 0;
 #endif
     for (i = 0; i < count; i++) {
       cside = p4est_iter_cside_array_index_int (&(info->sides), i);
@@ -782,8 +780,8 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
       nc = cside->corner;
       for (j = 0; j < P4EST_DIM; j++) {
         if (cside->faces[j] == -1) {
-          int nnc;
-          p4est_topidx_t nnt;
+          int                 nnc;
+          p4est_topidx_t      nnt;
           p4est_iter_corner_side_t *cside2;
 
           cside->faces[j] = faces_count;
@@ -822,7 +820,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
         }
 #ifdef P4_TO_P8
         if (cside->edges[j] == -1) {
-          p4est_topidx_t nnt;
+          p4est_topidx_t      nnt;
 
           cside->edges[j] = edges_count;
           e = p8est_corner_edges[nc][j];
@@ -843,7 +841,7 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
             P4EST_ASSERT (orig_o >= 0);
             P4EST_ASSERT (ti < ett_offset[edge + 1]);
             for (ti = ett_offset[edge]; ti < ett_offset[edge + 1]; ti++) {
-              int nnc;
+              int                 nnc;
 
               nnt = ett[ti];
               ne = (int) ete[ti];
@@ -867,8 +865,8 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
           }
           else {
             for (l = 0; l < 2; l++) {
-              int nnc, e2;
-              p4est_iter_corner_side_t * cside2;
+              int                 nnc, e2;
+              p4est_iter_corner_side_t *cside2;
 
               f = p8est_edge_faces[e][l];
               nnt = ttt[P4EST_FACES * nt + f];
@@ -1089,29 +1087,30 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
     /* otherwise, if are supposed to run the callback if the corner is
      * remotely touched, we have to determine if the corner is remotely
      * touched */
-    p4est_t *p4est = info->p4est;
-    p4est_quadrant_t *fq = &(p4est->global_first_position[p4est->mpirank]);
-    p4est_quadrant_t *lq = &(p4est->global_first_position[p4est->mpirank + 1]);
-    p4est_topidx_t flt = fq->p.which_tree;
-    p4est_topidx_t llt = lq->p.which_tree;
+    p4est_t            *p4est = info->p4est;
+    p4est_quadrant_t   *fq = &(p4est->global_first_position[p4est->mpirank]);
+    p4est_quadrant_t   *lq =
+      &(p4est->global_first_position[p4est->mpirank + 1]);
+    p4est_topidx_t      flt = fq->p.which_tree;
+    p4est_topidx_t      llt = lq->p.which_tree;
 
     for (side = 0; side < num_sides; side++) {
       cside = p4est_iter_cside_array_index_int (&info->sides, side);
-      p4est_quadrant_t *q = cside->quad;
-      int dir;
-      int l = -1;
+      p4est_quadrant_t   *q = cside->quad;
+      int                 dir;
+      int                 l = -1;
 
       if (q == NULL || (l = q->level) == lmax) {
         continue;
       }
       for (dir = 0; dir < P4EST_DIM; dir++) {
-        int f = cside->faces[dir];
-        int side2;
-        int ht;
+        int                 f = cside->faces[dir];
+        int                 side2;
+        int                 ht;
 
         for (side2 = 0; side2 < num_sides; side2++) {
           p4est_iter_corner_side_t *cside2;
-          int dir2;
+          int                 dir2;
 
           if (side2 == side) {
             continue;
@@ -1123,17 +1122,18 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
 
           for (dir2 = 0; dir2 < P4EST_DIM; dir2++) {
             if (cside2->faces[dir2] == f && cside2->quad) {
-              p4est_quadrant_t *q2 = cside2->quad;
-              int i;
-              int nf = p4est_corner_faces[cside2->corner][dir2];
+              p4est_quadrant_t   *q2 = cside2->quad;
+              int                 i;
+              int                 nf =
+                p4est_corner_faces[cside2->corner][dir2];
 
               if (q2->level < l + 1) {
                 continue;
               }
 
               for (i = 0; i < P4EST_HALF; i++) {
-                int nc = p4est_face_corners[nf][i];
-                p4est_quadrant_t h;
+                int                 nc = p4est_face_corners[nf][i];
+                p4est_quadrant_t    h;
                 if (nc == cside2->corner) {
                   continue;
                 }
@@ -1153,13 +1153,13 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
       }
 #ifdef P4_TO_P8
       for (dir = 0; dir < P4EST_DIM; dir++) {
-        int e = cside->edges[dir];
-        int side2;
-        int ht;
+        int                 e = cside->edges[dir];
+        int                 side2;
+        int                 ht;
 
         for (side2 = 0; side2 < num_sides; side2++) {
           p4est_iter_corner_side_t *cside2;
-          int dir2;
+          int                 dir2;
 
           if (side2 == side) {
             continue;
@@ -1168,9 +1168,10 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
           ht = cside2->treeid;
           for (dir2 = 0; dir2 < P4EST_DIM; dir2++) {
             if (cside2->edges[dir2] == e && cside2->quad) {
-              p4est_quadrant_t h;
-              p4est_quadrant_t *q2 = cside2->quad;
-              int ne = p8est_corner_edges[cside2->corner][dir2];
+              p4est_quadrant_t    h;
+              p4est_quadrant_t   *q2 = cside2->quad;
+              int                 ne =
+                p8est_corner_edges[cside2->corner][dir2];
 
               if (q2->level < l + 1) {
                 continue;
@@ -1280,7 +1281,7 @@ p8est_iter_init_corner_from_edge (p4est_iter_corner_args_t * args,
 static int
 eside_compare (const void *a, const void *b)
 {
-  p4est_locidx_t diff;
+  p4est_locidx_t      diff;
   const p8est_iter_edge_side_t *A = (const p8est_iter_edge_side_t *) a;
   const p8est_iter_edge_side_t *B = (const p8est_iter_edge_side_t *) b;
 
@@ -1409,15 +1410,15 @@ p8est_iter_init_edge (p8est_iter_edge_args_t * args, p8est_t * p8est,
   args->num_sides = count;
 
   {
-    int faces_count = 0;
+    int                 faces_count = 0;
     for (i = 0; i < count; i++) {
       eside = p8est_iter_eside_array_index_int (&(info->sides), i);
       nt = eside->treeid;
       ne = eside->edge;
       for (j = 0; j < 2; j++) {
         if (eside->faces[j] == -1) {
-          int nne;
-          p4est_topidx_t nnt;
+          int                 nne;
+          p4est_topidx_t      nnt;
 
           eside->faces[j] = faces_count;
 
@@ -1683,9 +1684,9 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
               }
             }
           }
-        } /* if (stop_refine) */
-      } /* if (refine[side]) */
-    } /* for (side = 0; side < num_sides; side++) */
+        }                       /* if (stop_refine) */
+      }                         /* if (refine[side]) */
+    }                           /* for (side = 0; side < num_sides; side++) */
     if (stop_refine) {
       if (has_local) {
         /* if there is a local quadrant, we run the callback */
@@ -1694,15 +1695,17 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
       else if (args->remote) {
         /* if we are supposed to run on remotely touched edges, determine if
          * the edge is remotely touched first */
-        p4est_t *p4est = info->p4est;
-        p4est_quadrant_t *fq = &(p4est->global_first_position[p4est->mpirank]);
-        p4est_quadrant_t *lq = &(p4est->global_first_position[p4est->mpirank + 1]);
-        p4est_topidx_t flt = fq->p.which_tree;
-        p4est_topidx_t llt = lq->p.which_tree;
+        p4est_t            *p4est = info->p4est;
+        p4est_quadrant_t   *fq =
+          &(p4est->global_first_position[p4est->mpirank]);
+        p4est_quadrant_t   *lq =
+          &(p4est->global_first_position[p4est->mpirank + 1]);
+        p4est_topidx_t      flt = fq->p.which_tree;
+        p4est_topidx_t      llt = lq->p.which_tree;
 
         for (side = 0; side < num_sides; side++) {
-          int dir;
-          p4est_topidx_t ht;
+          int                 dir;
+          p4est_topidx_t      ht;
 
           eside = p8est_iter_eside_array_index_int (&info->sides, side);
           ht = eside->treeid;
@@ -1711,12 +1714,12 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
             continue;
           }
           for (dir = 0; dir < 2; dir++) {
-            int f = eside->faces[dir];
-            int side2;
+            int                 f = eside->faces[dir];
+            int                 side2;
 
             for (side2 = 0; side2 < num_sides; side2++) {
               p8est_iter_edge_side_t *eside2;
-              int dir2;
+              int                 dir2;
 
               if (side2 == side) {
                 continue;
@@ -1727,9 +1730,9 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
               }
               for (dir2 = 0; dir2 < 2; dir2++) {
                 if (eside2->faces[dir2] == f) {
-                  p4est_quadrant_t h;
-                  int c1, c2, fc[2];
-                  int face;
+                  p4est_quadrant_t    h;
+                  int                 c1, c2, fc[2];
+                  int                 face;
 
                   face = p8est_edge_faces[eside->edge][dir];
                   c1 = p8est_edge_corners[eside->edge][0];
@@ -1739,12 +1742,14 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
                   fc[0] = p8est_face_corners[face][fc[0] ^ 3];
                   fc[1] = p8est_face_corners[face][fc[1] ^ 3];
                   for (i = 0; i < 2; i++) {
-                    p4est_quadrant_sibling (eside->is.hanging.quad[0], &h, fc[i]);
-                    if ((ht > flt ||
-                         (ht == flt && p4est_quadrant_disjoint (fq, &h) <= 0))
-                        &&
-                        (ht < llt ||
-                         (ht == llt && p4est_quadrant_disjoint (&h, lq) < 0))) {
+                    p4est_quadrant_sibling (eside->is.hanging.quad[0], &h,
+                                            fc[i]);
+                    if ((ht > flt
+                         || (ht == flt
+                             && p4est_quadrant_disjoint (fq, &h) <= 0))
+                        && (ht < llt
+                            || (ht == llt
+                                && p4est_quadrant_disjoint (&h, lq) < 0))) {
                       iter_edge (info, user_data);
                       /* this goto is to avoid a 5-level break */
                       goto change_search_area;
@@ -1756,7 +1761,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           }
         }
       }
-    } /* if (stop_refine) */
+    }                           /* if (stop_refine) */
     else {
       /* if every side needed to be refined, then we descend along this branch to
        * the next level and search there */
@@ -1781,7 +1786,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
         if (loop_args->loop_corner) {
           P4EST_ASSERT (corner_args->num_sides == 2 * num_sides);
           p4est_iter_copy_indices (loop_args, corner_args->start_idx2,
-                                   num_sides, 2 * num_sides);
+                                   num_sides, 2);
           p4est_corner_iterate (corner_args, user_data, iter_corner);
         }
         /* now that we're done on this level, go up a level and over a branch */
@@ -1815,8 +1820,8 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
           break;
         }
       }
-    } /* change_search_area for (;;) */
-  } /* outer for (;;) */
+    }                           /* change_search_area for (;;) */
+  }                             /* outer for (;;) */
 }
 #endif
 
@@ -1848,7 +1853,7 @@ typedef struct p4est_iter_face_args
 #endif
   p4est_iter_corner_args_t corner_args;
   p4est_iter_face_info_t info;
-  int remote;
+  int                 remote;
 }
 p4est_iter_face_args_t;
 
@@ -1905,8 +1910,10 @@ p4est_iter_init_corner_from_face (p4est_iter_corner_args_t * args,
         cside->edges[ndir2] = 2 + (j >> 1);
       }
       else {
-        int c0 = p8est_corner_face_corners[num_to_child[ntc_str]][fside->face];
-        int c1 = p8est_corner_face_corners[num_to_child[ntc_str + 1]][fside->face];
+        int                 c0 =
+          p8est_corner_face_corners[num_to_child[ntc_str]][fside->face];
+        int                 c1 =
+          p8est_corner_face_corners[num_to_child[ntc_str + 1]][fside->face];
 
         if (c0 == (c1 ^ 1)) {
           cside->edges[ndir1] = (j & 1);
@@ -2000,7 +2007,7 @@ p8est_iter_init_edge_from_face (p8est_iter_edge_args_t * args,
 static int
 fside_compare (const void *a, const void *b)
 {
-  p4est_locidx_t diff;
+  p4est_locidx_t      diff;
   const p4est_iter_face_side_t *A = (const p4est_iter_face_side_t *) a;
   const p4est_iter_face_side_t *B = (const p4est_iter_face_side_t *) b;
 
@@ -2069,7 +2076,8 @@ p4est_iter_init_face (p4est_iter_face_args_t * args, p4est_t * p4est,
     fside->treeid = nt;
     fside->face = (int8_t) nf;
     start_idx2[count++] = 0;
-    o = info->orientation = conn->tree_to_face[t * P4EST_FACES + f] / P4EST_FACES;
+    o = info->orientation =
+      conn->tree_to_face[t * P4EST_FACES + f] / P4EST_FACES;
   }
 
   /* for each corner, find the touching corner on the other tree */
@@ -2273,8 +2281,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
       if (refine[side]) {
         if (stop_refine && count[side * 2 + local] == 0 &&
             count[side * 2 + ghost] == 0) {
-          fside =
-            p4est_iter_fside_array_index_int (&info->sides, side);
+          fside = p4est_iter_fside_array_index_int (&info->sides, side);
           fside->is_hanging = 0;
           fside->is.full.quad = NULL;
           fside->is.full.is_ghost = 1;
@@ -2302,7 +2309,8 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
             /* fside expects the hanging quadrants listed in z order, not search
              * order */
             child_corner = num_to_child[side * ntc_str + i];
-            child_corner = p4est_corner_face_corners[child_corner][fside->face];
+            child_corner =
+              p4est_corner_face_corners[child_corner][fside->face];
             quads[child_corner] = NULL;
             quadids[child_corner] = -1;
             is_ghost[child_corner] = 1;
@@ -2311,8 +2319,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
             for (type = local; type <= ghost; type++) {
               st = side * 2 + type;
               first_index[st] = zindex[st][quad_idx2[side]];
-              count[st] = zindex[st][quad_idx2[side] + 1] -
-                first_index[st];
+              count[st] = zindex[st][quad_idx2[side] + 1] - first_index[st];
               /* if the search area is non-empty, by the two to one condition
                * it must contain exactly one quadrant: if one of the two types
                * is local, we run iter_face */
@@ -2320,8 +2327,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                 quads[child_corner] = p4est_quadrant_array_index
                   (quadrants[st], first_index[st]);
                 P4EST_ASSERT ((int) quads[child_corner]->level == *Level + 1);
-                quadids[child_corner] =
-                  (p4est_locidx_t) first_index[st];
+                quadids[child_corner] = (p4est_locidx_t) first_index[st];
                 is_ghost[child_corner] = (type == ghost);
                 has_local = (has_local || (type == local));
               }
@@ -2366,7 +2372,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
                             2 * (limit + 1));
               p4est_iter_copy_indices (loop_args,
                                        args->edge_args[dir][side].start_idx2,
-                                       limit + 1, 2 * (limit + 1));
+                                       limit + 1, 2);
               p8est_edge_iterate (&(args->edge_args[dir][side]), user_data,
                                   iter_edge, iter_corner);
             }
@@ -2379,8 +2385,7 @@ p4est_face_iterate (p4est_iter_face_args_t * args, void *user_data,
           P4EST_ASSERT (corner_args->num_sides ==
                         (P4EST_CHILDREN / 2) * (limit + 1));
           p4est_iter_copy_indices (loop_args, corner_args->start_idx2,
-                                   limit + 1, (P4EST_CHILDREN / 2) *
-                                   (limit + 1));
+                                   limit + 1, P4EST_HALF);
           p4est_corner_iterate (corner_args, user_data, iter_corner);
         }
 
@@ -2432,7 +2437,7 @@ typedef struct p4est_iter_volume_args
 #endif
   p4est_iter_corner_args_t corner_args;
   p4est_iter_volume_info_t info;
-  int remote;
+  int                 remote;
 }
 p4est_iter_volume_args_t;
 
@@ -2853,7 +2858,8 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
 }
 
 static int32_t     *
-p4est_iter_get_boundaries (p4est_t * p4est, p4est_topidx_t * last_run_tree, int remote)
+p4est_iter_get_boundaries (p4est_t * p4est, p4est_topidx_t * last_run_tree,
+                           int remote)
 {
   p4est_topidx_t      ti;
   int                 i;
@@ -3111,8 +3117,9 @@ p4est_iter_get_boundaries (p4est_t * p4est, p4est_topidx_t * last_run_tree, int 
 }
 
 void
-p4est_iterate_ext (p4est_t * p4est, p4est_ghost_t * Ghost_layer, void *user_data,
-                   p4est_iter_volume_t iter_volume, p4est_iter_face_t iter_face,
+p4est_iterate_ext (p4est_t * p4est, p4est_ghost_t * Ghost_layer,
+                   void *user_data, p4est_iter_volume_t iter_volume,
+                   p4est_iter_face_t iter_face,
 #ifdef P4_TO_P8
                    p8est_iter_edge_t iter_edge,
 #endif
