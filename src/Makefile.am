@@ -51,6 +51,7 @@ libp4est_compiled_sources += \
         src/p8est_tets_hexes.c src/p8est_balance.c src/p8est_io.c \
         src/p8est_wrap.c
 endif
+include example/p6est/Makefile.am
 P4EST_CPPFLAGS =
 
 # build static library
