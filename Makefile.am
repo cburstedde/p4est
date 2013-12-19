@@ -15,7 +15,6 @@ TESTS =
 bin_PROGRAMS =
 check_PROGRAMS =
 include_HEADERS =
-lib_LIBRARIES =
 lib_LTLIBRARIES =
 nodist_include_HEADERS =
 noinst_HEADERS =
