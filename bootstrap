@@ -23,5 +23,5 @@ echo "Current directory is $PWD"
 aclocal -Wall -I config -I "$SC_CONFIG"
 autoconf -Wall --force
 autoheader -Wall --force
-libtoolize --automake --force --copy
+libtoolize --install --copy
 automake -Wall --add-missing --copy
