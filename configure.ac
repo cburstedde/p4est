@@ -51,8 +51,6 @@ P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
 # In case 4 the checks are omitted.
 # In all cases Makefile.p4est.mk is installed to allow easy use of p4est.
 #
-# Above logic is implemented further down, these are just the option checks.
-SC_ARG_WITH_BUILTIN_ALL_PREFIX([P4EST])
 dnl Does not AC_DEFINE and AC_CONDITIONAL if --with-sc=<dir> is given.
 P4EST_ARG_WITHOUT_YES([sc],
 [disable builtin libsc, provide your own. Can use\
@@ -272,7 +270,7 @@ AC_SUBST([P4EST_SC_CPPFLAGS])
 AC_SUBST([P4EST_SC_LDADD])
 AC_SUBST([P4EST_SC_MK_INCLUDE])
 AM_CONDITIONAL([P4EST_SC_USE_MK], [test "$P4EST_SC_USE_MK" = "yes"])
-SC_BUILTIN_ALL_PREFIX([P4EST], [test "$P4EST_SC_ENABLE_CHECKS" = "yes"])
+SC_BUILTIN_ALL
 
 # Implement make dist behavior and dependencies.
 AM_CONDITIONAL([P4EST_DIST_ALLOW], [test "$P4EST_DIST_ALLOW" = "yes"])
