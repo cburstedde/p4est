@@ -259,20 +259,6 @@ void                p8est_iterate (p8est_t * p4est,
                                    p8est_iter_edge_t iter_edge,
                                    p8est_iter_corner_t iter_corner);
 
-/** p8est_iterate_ext adds the option \a remote: if this is false, then it is
- * the same as p8est_iterate; if this is true, then corner/edge callbacks are
- * also called on corners/edges for hanging faces/edges touched by local
- * quadrants.
- */
-void                p4est_iterate_ext (p4est_t * p4est,
-                                       p4est_ghost_t * ghost_layer,
-                                       void *user_data,
-                                       p4est_iter_volume_t iter_volume,
-                                       p4est_iter_face_t iter_face,
-                                       p8est_iter_edge_t iter_edge,
-                                       p4est_iter_corner_t iter_corner,
-                                       int remote);
-
 /** Return a pointer to a iter_corner_side array element indexed by a int.
  */
 /*@unused@*/
