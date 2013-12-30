@@ -2529,7 +2529,7 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
 
   buffer->requests = requests = sc_array_new (sizeof (MPI_Request));
   buffer->send_buffers = send_bufs = sc_array_new (sizeof (sc_array_t));
-  /* in this routine, the values from other processes are writtten directly
+  /* in this routine, the values from other processes are written directly
    * into node_data */
   buffer->recv_buffers = NULL;
 
