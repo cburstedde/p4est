@@ -97,7 +97,6 @@ typedef struct p6est
   size_t              data_size;        /* size of per-quadrant user_data */
   void               *user_pointer;     /* convenience pointer for users,
                                            will never be touched by p4est */
-
   p8est_connectivity_t *connectivity;   /* 3D connectivity, not owned */
   p4est_connectivity_t *conn4;          /* 2D connectivity, owned */
   p4est_t            *p4est;            /* 2D description of mesh */
@@ -109,6 +108,7 @@ typedef struct p6est
                                          */
   sc_mempool_t       *quadrant_pool;    /* memory allocator
                                            for temporary quadrants */
+  p4est_gloidx_t     *global_first_quadrant;
 }
 p6est_t;
 
@@ -236,7 +236,8 @@ void                p6est_reset_data (p6est_t * p6est, size_t data_size,
  */
 void                p6est_refine (p6est_t * p6est,
                                   int refine_recursive,
-                                  p6est_refine_t refine_fn,
+                                  p4est_refine_t refine_fn,
+                                  p6est_refine_t zrefine_fn,
                                   p6est_init_t init_fn);
 
 /** Coarsen a forest.
