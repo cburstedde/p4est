@@ -33,7 +33,7 @@ Makefile.p4est.mk : Makefile.p4est.pre
 # install p4est m4 macros in the correct directory
 p4estaclocaldir = $(datadir)/aclocal
 dist_p4estaclocal_DATA = \
-        config/p4est_include.m4
+        config/p4est_include.m4 config/p4est_metis.m4
 
 # install p4est data files in the correct directory
 p4estdatadir = $(datadir)/data
