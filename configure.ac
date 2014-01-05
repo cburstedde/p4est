@@ -82,7 +82,7 @@ echo "o----------------------------------"
 echo "| Checking subpackages"
 echo "o----------------------------------"
 
-P4EST_DIST_ALLOW=
+P4EST_DIST_DENY=
 P4EST_SC_SUBDIR=
 P4EST_SC_MK_USE=
 
@@ -90,6 +90,7 @@ if test x$P4EST_WITH_SC != xno ; then
   AC_MSG_NOTICE([Using make installed libsc])
 
   # Verify that we are using a libsc installation
+  P4EST_DIST_DENY="yes"
   P4EST_SC_DIR="$P4EST_WITH_SC"
   SC_CHECK_INSTALL([P4EST_SC], [true], [true], [true], [true])
 
@@ -104,7 +105,6 @@ else
   AC_MSG_NOTICE([Building with sc source])
 
   # Prepare for a build using sc sources
-  P4EST_DIST_ALLOW="yes"
   if test -z "$P4EST_SC_SOURCE" ; then
     P4EST_SC_SOURCE="sc"
     P4EST_SC_SUBDIR="sc"
@@ -135,7 +135,7 @@ AC_SUBST([P4EST_SC_CPPFLAGS])
 AC_SUBST([P4EST_SC_LDADD])
 
 # Implement make dist behavior and dependencies.
-AM_CONDITIONAL([P4EST_DIST_ALLOW], [test "$P4EST_DIST_ALLOW" = "yes"])
+AM_CONDITIONAL([P4EST_DIST_DENY], [test -n "$P4EST_DIST_DENY"])
 
 # Print summary.
 
