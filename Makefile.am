@@ -55,7 +55,7 @@ DIST_SUBDIRS = $(SUBDIRS)
 EXTRA_DIST += \
         bootstrap p4estindent config/git-version-gen config/git2cl bugs doc
 DISTCLEANFILES += \
-        _configs.sed src/p4est_config.h
+        _configs.sed src/p4est_config.h @P4EST_DISTCLEAN@
 .PHONY: lint ChangeLog
 
 # non-recursive build

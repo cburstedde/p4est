@@ -66,6 +66,7 @@ AC_DEFUN([P4EST_AS_SUBPACKAGE],
 [
 $1_P4EST_SUBDIR=
 $1_P4EST_MK_USE=
+$1_DISTCLEAN="$$1_DISTCLEAN $1_P4EST_SOURCE.log"
 
 SC_ARG_WITH_PREFIX([p4est], [path to installed p4est (optional)],
                    [P4EST], [$1])
@@ -88,9 +89,16 @@ else
 
   # Prepare for a build using p4est sources
   if test -z "$$1_P4EST_SOURCE" ; then
-    $1_P4EST_SOURCE="p4est"
-    $1_P4EST_SUBDIR="p4est"
-    AC_CONFIG_SUBDIRS([p4est])
+    if test -f "$1_P4EST_SOURCE.log" ; then
+      $1_P4EST_SOURCE=`cat $1_P4EST_SOURCE.log`
+    else
+      $1_P4EST_SOURCE="p4est"
+      $1_P4EST_SUBDIR="p4est"
+      AC_CONFIG_SUBDIRS([p4est])
+    fi
+  else
+    AC_CONFIG_COMMANDS([$1_P4EST_SOURCE.log],
+                       [echo "$$1_P4EST_SOURCE" >$1_P4EST_SOURCE.log])
   fi
   $1_P4EST_AMFLAGS="-I \$(top_srcdir)/$$1_P4EST_SOURCE/config"
   $1_P4EST_MK_INCLUDE="include \${$2_sysconfdir}/Makefile.p4est.mk"

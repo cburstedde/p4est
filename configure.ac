@@ -68,8 +68,10 @@ echo "| Checking subpackages"
 echo "o---------------------------------------"
 
 P4EST_DIST_DENY=
+P4EST_DISTCLEAN=
 SC_AS_SUBPACKAGE([P4EST], [p4est])
 AM_CONDITIONAL([P4EST_DIST_DENY], [test -n "$P4EST_DIST_DENY"])
+AC_SUBST([P4EST_DISTCLEAN])
 
 dnl TODO fix library dependencies
 dnl P4EST_DEPENDENCIES=
