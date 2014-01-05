@@ -64,7 +64,7 @@ echo "| Checking for libraries"
 echo "o----------------------------------"
 
 SC_CHECK_LIBRARIES([P4EST])
-P4EST_CHECK_METIS
+P4EST_CHECK_LIBRARIES([P4EST])
 
 echo "o---------------------------------------"
 echo "| Checking headers"

@@ -1,27 +1,28 @@
 
+dnl P4EST_CHECK_METIS(PREXIX)
 dnl Check for METIS library and link a test program
-
+dnl
 AC_DEFUN([P4EST_CHECK_METIS], [
 
 METIS_LIBS=""
 METIS_INCLUDES=""
 P4EST_ARG_WITH([metis], [enable metis-dependent code], [METIS])
-if test "$P4EST_WITH_METIS" != "no" ; then
-  P4EST_METIS_INC=""
-  P4EST_METIS_LD=""
-  P4EST_METIS_LIB="-lmetis"
-  if test "$P4EST_WITH_METIS" != "yes" ; then
-    P4EST_METIS_INC="-I$P4EST_WITH_METIS/include"
-    P4EST_METIS_LD="-L$P4EST_WITH_METIS/lib"
+if test "$$1_WITH_METIS" != "no" ; then
+  $1_METIS_INC=""
+  $1_METIS_LD=""
+  $1_METIS_LIB="-lmetis"
+  if test "$$1_WITH_METIS" != "yes" ; then
+    $1_METIS_INC="-I$$1_WITH_METIS/include"
+    $1_METIS_LD="-L$$1_WITH_METIS/lib"
   fi
-  METIS_LIBS="$P4EST_METIS_LD $P4EST_METIS_LIB"
-  METIS_INCLUDES="$P4EST_METIS_INC"
+  METIS_LIBS="$$1_METIS_LD $$1_METIS_LIB"
+  METIS_INCLUDES="$$1_METIS_INC"
   PRE_METIS_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS $P4EST_METIS_INC"
+  CFLAGS="$CFLAGS $$1_METIS_INC"
   PRE_METIS_LIBS="$LIBS"
-  LIBS="$LIBS $P4EST_METIS_LIB"
+  LIBS="$LIBS $$1_METIS_LIB"
   PRE_METIS_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS $P4EST_METIS_LD"
+  LDFLAGS="$LDFLAGS $$1_METIS_LD"
 
   AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <metis.h>]],
 [int n = 0, xadj, adjncy, adjwgt, vwgt;
@@ -37,6 +38,6 @@ if test "$P4EST_WITH_METIS" != "no" ; then
   LDFLAGS="$PRE_METIS_LDFLAGS"
 fi
 
-AC_SUBST([METIS_LIBS])
-AC_SUBST([METIS_INCLUDES])
+AC_SUBST([$1_METIS_LIBS])
+AC_SUBST([$1_METIS_INCLUDES])
 ])

@@ -58,4 +58,12 @@ dnl
 AC_DEFUN([P4EST_ARG_WITHOUT_YES],
          [SC_ARG_WITHOUT_YES_PREFIX([$1], [$2], [$3], [P4EST])])
 
-dnl EOF acinclude.m4
+dnl P4EST_CHECK_LIBRARIES(PREFIX)
+dnl This macro bundles the checks for all libraries and link tests
+dnl that are required by p4est.  It can be used by other packages that
+dnl link to p4est to add appropriate options to LIBS.
+dnl
+AC_DEFUN([P4EST_CHECK_LIBRARIES],
+[
+P4EST_CHECK_METIS([$1])
+])

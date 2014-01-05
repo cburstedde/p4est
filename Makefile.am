@@ -72,8 +72,8 @@ include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
 
 if P4EST_WITH_METIS
-LDADD += @METIS_LIBS@
-AM_CPPFLAGS += @METIS_INCLUDES@
+LDADD += @P4EST_METIS_LIBS@
+AM_CPPFLAGS += @P4EST_METIS_INCLUDES@
 endif
 
 # lint static syntax checker
