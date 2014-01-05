@@ -44,9 +44,9 @@ SC_PROG_LINT
 SC_C_VERSION
 LT_INIT
 
-echo "o----------------------------------"
-echo "| Checking for libraries"
-echo "o----------------------------------"
+echo "o---------------------------------------"
+echo "| Checking libraries"
+echo "o---------------------------------------"
 
 SC_CHECK_LIBRARIES([P4EST])
 P4EST_CHECK_LIBRARIES([P4EST])
@@ -63,9 +63,9 @@ echo "o---------------------------------------"
 
 AC_CHECK_FUNCS([fsync])
 
-echo "o----------------------------------"
+echo "o---------------------------------------"
 echo "| Checking subpackages"
-echo "o----------------------------------"
+echo "o---------------------------------------"
 
 P4EST_DIST_DENY=
 SC_AS_SUBPACKAGE([P4EST], [p4est])
