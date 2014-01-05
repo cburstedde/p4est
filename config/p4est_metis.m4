@@ -6,7 +6,7 @@ AC_DEFUN([P4EST_CHECK_METIS], [
 
 METIS_LIBS=""
 METIS_INCLUDES=""
-P4EST_ARG_WITH([metis], [enable metis-dependent code], [METIS])
+SC_ARG_WITH_PREFIX([metis], [enable metis-dependent code], [METIS], [$1])
 if test "$$1_WITH_METIS" != "no" ; then
   $1_METIS_INC=""
   $1_METIS_LD=""

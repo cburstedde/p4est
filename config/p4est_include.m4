@@ -1,5 +1,5 @@
 dnl
-dnl P4EST acinclude.m4 - custom macros
+dnl p4est_include.m4 - custom macros
 dnl
 
 dnl Documentation for macro names: brackets indicate optional arguments
