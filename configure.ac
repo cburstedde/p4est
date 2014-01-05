@@ -20,21 +20,6 @@ echo "o---------------------------------------"
 echo "| Checking options"
 echo "o---------------------------------------"
 
-dnl---------------------- HOW SUBPACKAGES WORK --------------------------
-dnl
-dnl p4est relies on libsc.  In a build from source, libsc usually resides
-dnl in the subdirectory sc.  This location can be overridden by the
-dnl environment variable P4EST_SC_SOURCE; this situation can arise when
-dnl both p4est and libsc are subpackages to yet another software.  The path
-dnl in P4EST_SC_SOURCE must be relative to the p4est toplevel directory. All
-dnl of this works without specifying any configure command line option.
-dnl However, if libsc is already make install'd in the system and should
-dnl be used from there, use --with-sc=<path to libsc install directory>.
-dnl In this case, p4est expects subdirectories etc, include, lib, and
-dnl share/aclocal, which are routinely created by libsc's make install.
-dnl
-P4EST_ARG_WITH([sc], [path to installed libsc (optional)], [SC])
-
 P4EST_ARG_ENABLE([debug], [enable debug mode (assertions and extra checks)],
                  [DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
@@ -83,59 +68,12 @@ echo "| Checking subpackages"
 echo "o----------------------------------"
 
 P4EST_DIST_DENY=
-P4EST_SC_SUBDIR=
-P4EST_SC_MK_USE=
+SC_AS_SUBPACKAGE([P4EST], [p4est])
+AM_CONDITIONAL([P4EST_DIST_DENY], [test -n "$P4EST_DIST_DENY"])
 
-if test x$P4EST_WITH_SC != xno ; then
-  AC_MSG_NOTICE([Using make installed libsc])
-
-  # Verify that we are using a libsc installation
-  P4EST_DIST_DENY="yes"
-  P4EST_SC_DIR="$P4EST_WITH_SC"
-  SC_CHECK_INSTALL([P4EST_SC], [true], [true], [true], [true])
-
-  # Set variables for using the subpackage
-  P4EST_SC_AMFLAGS="-I $P4EST_SC_CFG"
-  P4EST_SC_MK_USE="yes"
-  P4EST_SC_MK_INCLUDE="include $P4EST_SC_ETC/Makefile.sc.mk"
-  P4EST_SC_CPPFLAGS="\$(SC_CPPFLAGS)"
-  # P4EST_SC_LDADD="\$(SC_LDFLAGS) \$(SC_LIBS)"
-  P4EST_SC_LDADD="\$(SC_LDFLAGS) -lsc"
-else
-  AC_MSG_NOTICE([Building with sc source])
-
-  # Prepare for a build using sc sources
-  if test -z "$P4EST_SC_SOURCE" ; then
-    P4EST_SC_SOURCE="sc"
-    P4EST_SC_SUBDIR="sc"
-    AC_CONFIG_SUBDIRS([sc])
-  fi
-  P4EST_SC_AMFLAGS="-I \$(top_srcdir)/$P4EST_SC_SOURCE/config"
-  P4EST_SC_MK_INCLUDE="include \${p4est_sysconfdir}/Makefile.sc.mk"
-  P4EST_SC_CPPFLAGS="-I\$(top_builddir)/$P4EST_SC_SOURCE/src \
--I\$(top_srcdir)/$P4EST_SC_SOURCE/src"
-  P4EST_SC_LDADD="\$(top_builddir)/$P4EST_SC_SOURCE/src/libsc.la"
-fi
-
-# Prepare make dist behavior and dependencies.
 dnl TODO fix library dependencies
 dnl P4EST_DEPENDENCIES=
 dnl AC_SUBST([P4EST_DEPENDENCIES])
-
-dnl Make sure we find the m4 macros provided by libsc
-AC_SUBST([P4EST_SC_AMFLAGS])
-
-dnl We call make in this subdirectory if not empty
-AC_SUBST([P4EST_SC_SUBDIR])
-
-dnl We will need these variables to compile and link with libsc
-AM_CONDITIONAL([P4EST_SC_MK_USE], [test -n "$P4EST_SC_MK_USE"])
-AC_SUBST([P4EST_SC_MK_INCLUDE])
-AC_SUBST([P4EST_SC_CPPFLAGS])
-AC_SUBST([P4EST_SC_LDADD])
-
-# Implement make dist behavior and dependencies.
-AM_CONDITIONAL([P4EST_DIST_DENY], [test -n "$P4EST_DIST_DENY"])
 
 # Print summary.
 
