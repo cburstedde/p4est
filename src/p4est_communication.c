@@ -28,7 +28,9 @@
 #include <p4est_communication.h>
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
-#include <sc_zlib.h>
+#ifdef P4EST_HAVE_ZLIB
+#include <zlib.h>
+#endif
 
 #ifdef SC_ALLGATHER
 #include <sc_allgather.h>
@@ -500,6 +502,7 @@ p4est_comm_sync_flag (p4est_t * p4est, int flag, MPI_Op operation)
 unsigned
 p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 {
+#ifdef P4EST_HAVE_ZLIB
   uLong               crc = (uLong) local_crc;
 
 #ifdef P4EST_MPI
@@ -528,7 +531,13 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
   else {
     crc = 0;
   }
-#endif
+#endif /* P4EST_MPI */
 
   return (unsigned) crc;
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+
+  return 0;
+#endif /* !P4EST_HAVE_ZLIB */
 }

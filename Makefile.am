@@ -3,6 +3,9 @@
 # Makefile.am in toplevel directory
 
 ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
+if P4EST_SC_MK_USE
+@P4EST_SC_MK_INCLUDE@
+endif
 
 # initialize empty variables
 AM_CPPFLAGS =
@@ -38,8 +41,11 @@ dist_p4estaclocal_DATA = \
 # install p4est data files in the correct directory
 p4estdatadir = $(datadir)/data
 
-# set test environment
-TESTS_ENVIRONMENT = @P4EST_MPI_TESTS_ENVIRONMENT@
+# setup test environment
+if P4EST_MPIRUN
+LOG_COMPILER = @P4EST_MPIRUN@
+AM_LOG_FLAGS = @P4EST_MPI_TEST_FLAGS@
+endif
 
 # recurse only into subpackages
 SUBDIRS = @P4EST_SC_SUBDIR@
@@ -65,22 +71,15 @@ include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
 
-if P4EST_BLAS
-if P4EST_LAPACK
-LDADD += @LAPACK_LIBS@
-endif
-LDADD += @BLAS_LIBS@ @FLIBS@
-endif
-
 if P4EST_WITH_METIS
 LDADD += @METIS_LIBS@
 AM_CPPFLAGS += @METIS_INCLUDES@
 endif
 
+# lint static syntax checker
 ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
                  $(src_libp4est_a_CPPFLAGS)
-
 lint:
 if LINT
 	@for subdir in $(SUBDIRS) ; do \
@@ -95,6 +94,7 @@ else
 	@echo "Static source code check disabled by configure"
 endif
 
+# revision control and ChangeLog
 ChangeLog:
 	(GIT_DIR=@top_srcdir@/.git git log > .ChangeLog.tmp && \
          cat .ChangeLog.tmp | @top_srcdir@/config/git2cl > ChangeLog) ; \
@@ -111,6 +111,7 @@ if !P4EST_DIST_ALLOW
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with external libsc"
 	@echo "-----------------------------------------------------"
+	rm -rf $(distdir)
 	@exit 1
 endif
 

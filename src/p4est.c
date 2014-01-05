@@ -40,7 +40,9 @@
 #include <sc_notify.h>
 #include <sc_ranges.h>
 #include <sc_search.h>
-#include <sc_zlib.h>
+#ifdef P4EST_HAVE_ZLIB
+#include <zlib.h>
+#endif
 
 #ifdef SC_ALLGATHER
 #include <sc_allgather.h>
@@ -3144,6 +3146,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 unsigned
 p4est_checksum (p4est_t * p4est)
 {
+#ifdef P4EST_HAVE_ZLIB
   uLong               treecrc, crc;
   size_t              scount, ssum;
   p4est_topidx_t      nt;
@@ -3168,6 +3171,12 @@ p4est_checksum (p4est_t * p4est)
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
 
   return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+
+  return 0;
+#endif /* !P4EST_HAVE_ZLIB */
 }
 
 void
