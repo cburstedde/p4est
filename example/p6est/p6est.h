@@ -44,7 +44,7 @@ typedef int16_t    p6est_zcoord_t;
 #define P6EST_MAXLEVEL 14
 
 /* finest vertical level of quadrants */
-#define P6EST_QMAXLEVEL 29
+#define P6EST_QMAXLEVEL 13
 
 /* the vertical length of a root quadrant */
 #define P6EST_ROOT_LEN ((p6est_zcoord_t) 1 << P6EST_MAXLEVEL)
@@ -326,6 +326,47 @@ p6est_quadrant_array_index (sc_array_t * array, size_t it)
 
   return (p6est_quadrant_t *) (array->array + sizeof (p6est_quadrant_t) * it);
 }
+
+/** Call sc_array_push for a quadrant array. */
+/*@unused@*/
+static inline p6est_quadrant_t *
+p6est_quadrant_array_push (sc_array_t * array)
+{
+  P4EST_ASSERT (array->elem_size == sizeof (p6est_quadrant_t));
+
+  return (p6est_quadrant_t *) sc_array_push (array);
+}
+
+/** Call sc_mempool_alloc for a mempool creating quadrants. */
+/*@unused@*/
+static inline p6est_quadrant_t *
+p6est_quadrant_mempool_alloc (sc_mempool_t * mempool)
+{
+  P4EST_ASSERT (mempool->elem_size == sizeof (p6est_quadrant_t));
+
+  return (p6est_quadrant_t *) sc_mempool_alloc (mempool);
+}
+
+/** Call sc_list pop for a quadrant array. */
+/*@unused@*/
+static inline p6est_quadrant_t *
+p6est_quadrant_list_pop (sc_list_t * list)
+{
+  return (p6est_quadrant_t *) sc_list_pop (list);
+}
+
+#define P6EST_COLUMN_GET_RANGE(q,f,l)                \
+  do {                                               \
+    *(f) = (size_t) (q)->p.piggy3.local_num;         \
+    *(l) = *(f) + (size_t) (q)->p.piggy3.which_tree; \
+  } while (0);
+
+#define P6EST_COLUMN_SET_RANGE(q,f,l)                        \
+  do {                                                       \
+    (q)->p.piggy3.local_num = (p4est_locidx_t) (f);          \
+    (q)->p.piggy3.which_tree = (p4est_topidx_t) ((l) - (f)); \
+  } while (0);
+
 
 SC_EXTERN_C_END;
 

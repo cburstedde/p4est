@@ -491,6 +491,7 @@ p6est_compress_columns (p6est_t *p6est)
   sc_array_resize (p6est->quads, offset);
 }
 
+#if 0
 void
 p6est_refine_ext (p6est_t *p6est, int refine_recursive, int allowed_level,
                   p4est_refine_t refine_fn, int allowed_zlevel,
@@ -506,14 +507,15 @@ p6est_refine_ext (p6est_t *p6est, int refine_recursive, int allowed_level,
   size_t              incount, current, restpos, movecount;
   sc_list_t          *list;
   p4est_tree_t       *tree;
-  p4est_quadrant_t   *q, *qalloc, *qpop;
+  p6est_quadrant_t   *q, *newq, *qalloc, *qpop;
   p4est_quadrant_t   *c0, *c1, *c2, *c3;
 #ifdef P4_TO_P8
   p4est_quadrant_t   *c4, *c5, *c6, *c7;
 #endif
+  sc_array_t         *quads = p6est->quads;
   sc_array_t         *tquadrants;
-  p4est_quadrant_t   *family[8];
-  p4est_quadrant_t    parent, *pp = &parent;
+  p6est_quadrant_t   *family[2];
+  p6est_quadrant_t    parent, *pp = &parent;
   p6est_refine_col_data_t refine_col;
   void               *orig_user_pointer = p6est->user_pointer;
   size_t              zz, first;
@@ -521,6 +523,9 @@ p6est_refine_ext (p6est_t *p6est, int refine_recursive, int allowed_level,
   p4est_quadrant_t   *col;
   size_t              offset = 0;
   int                 count;
+  sc_array_t         *newcol;
+  int                 any_change, this_change;
+
 
   if (refine_fn) {
     refine_col.init_fn = zinit_fn;
@@ -534,16 +539,85 @@ p6est_refine_ext (p6est_t *p6est, int refine_recursive, int allowed_level,
 
     p6est_compress_columns (p6est);
   }
+
   if (zrefine_fn) {
+    newcol = sc_array_new (sizeof (p6est_quadrant_t));
+
     for (jt = p6est->p4est->first_local_tree; jt <= p6est->p4est->last_local_tree; ++jt) {
       tree = p4est_tree_array_index (p6est->p4est->trees, jt);
       tquadrants = &tree->quadrants;
+
       for (zz = 0; zz < tquadrants->elem_count; ++zz) {
         col = p4est_quadrant_array_index (tquadrants, zz);
-        first = col->p.piggy3.local_num;
-        count = col->p.piggy3.which_tree;
+        first = (size_t) col->p.piggy3.local_num;
+        count = (int) col->p.piggy3.which_tree;
+
+        any_change = 0;
+        parent = NULL;
+
+        for (current = first; current < first + count; current++) {
+          q = p6est_quadrant_array_index (quads, current);
+          parent = q;
+          newq = sc_array_push (newcol);
+          *newq = *q;
+          stop_recurse = 0;
+          this_change = 0;
+          for (;;) {
+            if (!stop_recurse && zrefine_fn (p4est, nt, newq) && (int) newq->zlevel < allowed_zlevel) {
+              this_change = 1;
+              any_change = 1;
+              newq->zlevel++;
+              stop_recurse = !refine_recursive;
+            }
+            else {
+              q = newq;
+              newq = sc_array_push (newcol);
+              *newq = *q;
+              newq->z += P6EST_QUADRANT_LEN (newq->zlevel);
+              if (current + 1 >= first + count ||
+                  (p6est_quadrant_array_index (quads, current + 1))->z <= newq->z) {
+                /* pop */
+                P4EST_ASSERT (newcol->elem_count > 1);
+                newcol->elem_count--;
+                break;
+              }
+              while (newq->zlevel > 0 && !(newq->z & P6EST_QUADRANT_LEN (newq->zlevel))) {
+                newq->zlevel--;
+              }
+            }
+          }
+          if (this_change) {
+          }
+        }
+        if (any_change) {
+          old_count = quads->elem_count;
+          sc_array_resize (quads, old_count + newcol->elem_count);
+          memcpy (sc_array_index (quads, old_count),
+                  sc_array_index (newcol, 0), newcol->elem_size * newcol->elem_count);
+          col->p.piggy3.local_num = (p4est_locidx_t) old_count;
+          col->p.piggy3.which_tree = (p4est_topidx_t) newcol->elem_count;
+        }
+        sc_array_truncate (newcol);
       }
+    }
+
+    if (current != quads->elem_count) {
+      P4EST_ASSERT (q != NULL);
+
+      /* now we have a quadrant to refine, prepend it to the list */
+      qalloc = p6est_quadrant_mempool_alloc (p4est->quadrant_pool);
+      *qalloc = *q;               /* never prepend array members directly */
+      sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
+
+      P6EST_QUADRANT_INIT (&parent);
+
+      /*
+         current points to the next array member to write
+         restpos points to the next array member to read
+         */
+      restpos = current + 1;
     }
   }
   /* update counts */
 }
+#endif
