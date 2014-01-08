@@ -164,7 +164,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 #endif
   int                 xi, yi, j, k;
   int                 zi;
-  double              h2, eta_x, eta_y, eta_z = 0.;
+  double              h2, h2z, eta_x, eta_y, eta_z = 0.;
   double              xyz[3];   /* 3 not P4EST_DIM */
   size_t              num_cols, zz, zy, first, last;
   p4est_topidx_t      jt;
@@ -238,7 +238,8 @@ p6est_vtk_write_header (p6est_t * p6est,
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
       for (zy = first; zy < last; zy++, quad_count++) {
         layer = p2est_quadrant_array_index (layers, zy);
-        h2 = .5 * intsize * P4EST_QUADRANT_LEN (layer->level);
+        h2 = .5 * intsize * P4EST_QUADRANT_LEN (col->level);
+        h2z = .5 * intsize * P4EST_QUADRANT_LEN (layer->level);
         k = 0;
         for (zi = 0; zi < 2; ++zi) {
           for (yi = 0; yi < 2; ++yi) {
@@ -246,7 +247,7 @@ p6est_vtk_write_header (p6est_t * p6est,
               P4EST_ASSERT (0 <= k && k < P8EST_CHILDREN);
               eta_x = intsize * col->x + h2 * (1. + (xi * 2 - 1) * scale);
               eta_y = intsize * col->y + h2 * (1. + (yi * 2 - 1) * scale);
-              eta_z = intsize * layer->z + h2 * (1. + (zi * 2 - 1) * scale);
+              eta_z = intsize * layer->z + h2z * (1. + (zi * 2 - 1) * scale);
               for (j = 0; j < 3; ++j) {
                 /* *INDENT-OFF* */
                 xyz[j] =

@@ -27,7 +27,7 @@
 #include <sc_containers.h>
 
 p6est_connectivity_t *
-p6est_connecitivty_new (p4est_connectivity_t * conn4,
+p6est_connectivity_new (p4est_connectivity_t * conn4,
                         double *top_to_vertex, double height[3])
 {
   p6est_connectivity_t *conn = P4EST_ALLOC (p6est_connectivity_t, 1);
@@ -61,7 +61,7 @@ p6est_connecitivty_new (p4est_connectivity_t * conn4,
 }
 
 void
-p6est_connecitivity_destroy (p6est_connectivity_t * conn)
+p6est_connectivity_destroy (p6est_connectivity_t * conn)
 {
   p4est_connectivity_destroy (conn->conn4);
   if (conn->top_to_vertex != NULL) {
@@ -83,18 +83,16 @@ p6est_tree_get_vertices (p6est_connectivity_t * conn,
   P4EST_ASSERT (which_tree >= 0 && which_tree < conn->conn4->num_trees);
   P4EST_ASSERT (vertices != NULL);
 
-  memcpy (vertices, btv, which_tree * 12 * sizeof (double));
+  memcpy (vertices, btv + which_tree * 12, 12 * sizeof (double));
   if (ttv != NULL) {
-    memcpy (vertices + 12, ttv, which_tree * 12 * sizeof (double));
+    memcpy (vertices + 12, ttv + which_tree * 12, 12 * sizeof (double));
   }
   else {
-    memcpy (vertices + 12, btv, which_tree * 12 * sizeof (double));
+    memcpy (vertices + 12, btv + which_tree * 12, 12 * sizeof (double));
 
-    for (i = 0; i < P4EST_HALF; i++) {
+    for (i = 0; i < P4EST_CHILDREN; i++) {
       for (j = 0; j < 3; j++) {
-        vertices[12 + 3 * i + 0] += conn->height[0];
-        vertices[12 + 3 * i + 1] += conn->height[1];
-        vertices[12 + 3 * i + 2] += conn->height[2];
+        vertices[12 + 3 * i + j] += conn->height[j];
       }
     }
   }
@@ -243,10 +241,8 @@ p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
 {
   p6est_t            *p6est = P4EST_ALLOC (p6est_t, 1);
   p4est_t            *p4est;
-  p4est_connectivity_t *conn4;
   sc_array_t         *layers;
   sc_mempool_t       *user_data_pool;
-  sc_mempool_t       *quadrant_pool;
   p6est_init_data_t   init_data;
   int                 mpiret, num_procs, rank;
   int                 quadpercol = (1 << min_zlevel);
@@ -266,7 +262,7 @@ p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
     user_data_pool = NULL;
   }
 
-  quadrant_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
+  p6est->quadrant_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
 
   p6est->mpicomm = mpicomm;
   p6est->mpisize = num_procs;
@@ -285,9 +281,9 @@ p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
   init_data.user_pointer = user_pointer;
   p6est->user_pointer = &init_data;
 
-  p4est = p4est_new_ext (mpicomm, conn4, min_quadrants / quadpercol,
-                         min_level, fill_uniform, 0, p6est_init_fn,
-                         (void *) p6est);
+  p4est =
+    p4est_new_ext (mpicomm, connectivity->conn4, min_quadrants / quadpercol,
+                   min_level, fill_uniform, 0, p6est_init_fn, (void *) p6est);
 
   p6est->user_pointer = user_pointer;
   p6est->columns = p4est;
