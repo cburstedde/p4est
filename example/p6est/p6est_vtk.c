@@ -95,8 +95,7 @@ p6est_vtk_write_all (p6est_t * p6est,
     name = names[all] = va_arg (ap, const char *);
     retval = snprintf (point_scalars + scalar_strlen, BUFSIZ - scalar_strlen,
                        "%s%s", i == 0 ? "" : ",", name);
-    SC_CHECK_ABORT (retval > 0,
-                    "p6est_vtk: Error collecting point scalars");
+    SC_CHECK_ABORT (retval > 0, "p6est_vtk: Error collecting point scalars");
     scalar_strlen += retval;
     values[all] = va_arg (ap, double *);
   }
@@ -106,8 +105,7 @@ p6est_vtk_write_all (p6est_t * p6est,
     name = names[all] = va_arg (ap, const char *);
     retval = snprintf (point_vectors + vector_strlen, BUFSIZ - vector_strlen,
                        "%s%s", i == 0 ? "" : ",", name);
-    SC_CHECK_ABORT (retval > 0,
-                    "p6est_vtk: Error collecting point vectors");
+    SC_CHECK_ABORT (retval > 0, "p6est_vtk: Error collecting point vectors");
     vector_strlen += retval;
     values[all] = va_arg (ap, double *);
   }
@@ -265,7 +263,7 @@ p6est_vtk_write_header (p6est_t * p6est,
               }
               for (j = 0; j < 3; ++j) {
                 float_data[3 * (P8EST_CHILDREN * quad_count + k) +
-                  j] = (P4EST_VTK_FLOAT_TYPE) xyz[j];
+                           j] = (P4EST_VTK_FLOAT_TYPE) xyz[j];
               }
               ++k;
             }

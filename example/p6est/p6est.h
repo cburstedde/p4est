@@ -33,28 +33,28 @@ SC_EXTERN_C_BEGIN;
 
 typedef struct p6est_connectivity_t
 {
-  p4est_connectivity_t *conn4; /* owned: vertices interpreted as the vertices
-                                  of the bottom of the sheet */
-  double               *top_to_vertex; /* if NULL, uniform vertical profile,
-                                          otherwise the vertices of the top of
-                                          the sheet: should be the same size
-                                          as \a conn4->tree_to_vertex; owned. */
-  double                height[3]; /* if top_to_vertex == NULL, this gives the
-                                      offset from the bottom of the sheet to
-                                      the top */
+  p4est_connectivity_t *conn4;  /* owned: vertices interpreted as the vertices
+                                   of the bottom of the sheet */
+  double             *top_to_vertex;    /* if NULL, uniform vertical profile,
+                                           otherwise the vertices of the top of
+                                           the sheet: should be the same size
+                                           as \a conn4->tree_to_vertex; owned. */
+  double              height[3];        /* if top_to_vertex == NULL, this gives the
+                                           offset from the bottom of the sheet to
+                                           the top */
 }
 p6est_connectivity_t;
 
 /** Create a p6est_connectivity_t from a  p4est_connectivity_t.  All fields
  * are copied.
  */
-p6est_connectivity_t *p6est_connectivity_new (p4est_connectivity_t *conn4,
+p6est_connectivity_t *p6est_connectivity_new (p4est_connectivity_t * conn4,
                                               double *top_to_vertex,
                                               double height[3]);
 
-void                p6est_connectivity_destroy (p6est_connectivity_t *conn);
+void                p6est_connectivity_destroy (p6est_connectivity_t * conn);
 
-void                p6est_tree_get_vertices (p6est_connectivity_t *conn,
+void                p6est_tree_get_vertices (p6est_connectivity_t * conn,
                                              p4est_topidx_t which_tree,
                                              double vertices[24]);
 
@@ -116,15 +116,15 @@ typedef struct p6est
   p6est_connectivity_t *connectivity;   /* topology of sheet, not owned. */
   double              height[3];        /* offset from bottom to top,
                                            if uniform height profile */
-  double             *top_to_vertices; /* if this is not NULL, it should be an
-                                          array of the same size as \a
-                                          connectivity->tree_to_vertex: points
-                                          in the interior of the sheet
-                                          trilinearly interpolate between them. */
-  p4est_t            *columns;          /* 2D description of column layout
-                                           built from \a connectivity */
-  sc_array_t         *layers;           /* single array that stores
-                                           p2est_quadrant_t layers within columns */
+  double             *top_to_vertices;  /* if this is not NULL, it should be an
+                                           array of the same size as \a
+                                           connectivity->tree_to_vertex: points
+                                           in the interior of the sheet
+                                           trilinearly interpolate between them. */
+  p4est_t            *columns;  /* 2D description of column layout
+                                   built from \a connectivity */
+  sc_array_t         *layers;   /* single array that stores
+                                   p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /* memory allocator for user data
                                          * WARNING: This is NULL if data size
                                          *          equals zero.  */
@@ -431,7 +431,6 @@ p2est_quadrant_list_pop (sc_list_t * list)
     (q)->p.piggy3.local_num = (p4est_locidx_t) (f);          \
     (q)->p.piggy3.which_tree = (p4est_topidx_t) ((l) - (f)); \
   } while (0);
-
 
 SC_EXTERN_C_END;
 
