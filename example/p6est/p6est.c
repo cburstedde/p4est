@@ -26,16 +26,119 @@
 #include <p4est_extended.h>
 #include <sc_containers.h>
 
+p6est_connectivity_t *
+p6est_connecitivty_new (p4est_connectivity_t *conn4,
+                        double *top_to_vertex,
+                        double height[3])
+{
+  p6est_connectivity_t *conn = P4EST_ALLOC (p6est_connectivity_t, 1);
+
+  conn->conn4 = p4est_connectivity_new_copy (conn4->num_vertices,
+                                             conn4->num_trees,
+                                             conn4->num_corners,
+                                             conn4->vertices,
+                                             conn4->tree_to_vertex,
+                                             conn4->tree_to_tree,
+                                             conn4->tree_to_face,
+                                             conn4->tree_to_corner,
+                                             conn4->ctt_offset,
+                                             conn4->corner_to_tree,
+                                             conn4->corner_to_corner);
+
+  if (top_to_vertex != NULL) {
+    conn->top_to_vertex = P4EST_ALLOC (double, 3 * conn4->num_vertices);
+    memcpy (conn->top_to_vertex, top_to_vertex,
+            3 * conn4->num_vertices * sizeof (double));
+  }
+  else {
+    conn->top_to_vertex = NULL;
+    P4EST_ASSERT (height != NULL);
+    conn->height[0] = height[0];
+    conn->height[1] = height[1];
+    conn->height[2] = height[2];
+  }
+
+  return conn;
+}
+
 void
-p6est_qcoord_to_vertex (p8est_connectivity_t * connectivity,
+p6est_connecitivity_destroy (p6est_connectivity_t *conn)
+{
+  p4est_connectivity_destroy (conn->conn4);
+  if (conn->top_to_vertex != NULL) {
+    P4EST_FREE (conn->top_to_vertex);
+  }
+  P4EST_FREE (conn);
+}
+
+void
+p6est_tree_get_vertices (p6est_connectivity_t * conn,
+                         p4est_topidx_t which_tree,
+                         double vertices[24])
+{
+  const double       *btv = conn->conn4->vertices;
+  const double       *ttv = conn->top_to_vertex;
+  int i, j;
+
+  P4EST_ASSERT (conn->conn4->num_vertices > 0);
+  P4EST_ASSERT (btv != NULL);
+  P4EST_ASSERT (which_tree >= 0 && which_tree < conn->conn4->num_trees);
+  P4EST_ASSERT (vertices != NULL);
+
+  memcpy (vertices, btv,
+          which_tree * 12 * sizeof (double));
+  if (ttv != NULL) {
+    memcpy (vertices + 12, ttv,
+            which_tree * 12 * sizeof (double));
+  }
+  else {
+    memcpy (vertices + 12, btv,
+            which_tree * 12 * sizeof (double));
+
+    for (i = 0; i < P4EST_HALF; i++) {
+      for (j = 0; j < 3; j++) {
+        vertices[12 + 3 * i + 0] += conn->height[0];
+        vertices[12 + 3 * i + 1] += conn->height[1];
+        vertices[12 + 3 * i + 2] += conn->height[2];
+      }
+    }
+  }
+}
+
+void
+p6est_qcoord_to_vertex (p6est_connectivity_t * conn,
                         p4est_topidx_t treeid,
                         p4est_qcoord_t x, p4est_qcoord_t y,
-                        p6est_zcoord_t z,
-                        double vxyz[3])
+                        p4est_qcoord_t z, double vxyz[3])
 {
-  p4est_qcoord_t      qz = (p4est_qcoord_t) z;
+  double              bottom[3], top[3];
+  double              eta = (double) z / (double) P4EST_ROOT_LEN;
 
-  p8est_qcoord_to_vertex (connectivity, treeid, x, y, qz, vxyz);
+  p4est_qcoord_to_vertex (conn->conn4, treeid, x, y, bottom);
+  if (conn->top_to_vertex != NULL) {
+    double *orig = conn->conn4->vertices;
+
+    conn->conn4->vertices = conn->top_to_vertex;
+    p4est_qcoord_to_vertex (conn->conn4, treeid, x, y, top);
+    conn->conn4->vertices = orig;
+  }
+  else {
+    top[0] = bottom[0] + conn->height[0];
+    top[1] = bottom[1] + conn->height[1];
+    top[2] = bottom[2] + conn->height[2];
+  }
+  vxyz[0] = (1. - eta) * bottom[0] + eta * top[0];
+  vxyz[1] = (1. - eta) * bottom[1] + eta * top[1];
+  vxyz[2] = (1. - eta) * bottom[2] + eta * top[2];
+}
+
+size_t
+p6est_connectivity_memory_used (p6est_connectivity_t *conn)
+{
+  return
+    p4est_connectivity_memory_used (conn->conn4) +
+    conn->top_to_vertex == NULL ? 0 :
+    (conn->conn4->num_vertices * 3 * sizeof (double));
 }
 
 size_t
@@ -43,9 +146,8 @@ p6est_memory_used (p6est_t * p6est)
 {
   size_t              size;
 
-  size = p4est_memory_used (p6est->p4est);
-  size += p4est_connectivity_memory_used (p6est->conn4);
-  size += sc_array_memory_used (p6est->quads, 1);
+  size = p4est_memory_used (p6est->columns);
+  size += sc_array_memory_used (p6est->layers, 1);
   if (p6est->data_size > 0) {
     size += sc_mempool_memory_used (p6est->user_data_pool);
   }
@@ -81,104 +183,66 @@ p8est_connectivity_is_flat (p8est_connectivity_t *conn8)
   return 1;
 }
 
-static p4est_connectivity_t *
-p8est_connectivity_flatten (p8est_connectivity_t *conn8)
-{
-  p4est_connectivity_t *conn4;
-  p4est_topidx_t num_trees = conn8->num_trees;
-  p4est_topidx_t num_edges = conn8->num_edges;
-  p4est_topidx_t ti, tj;
-  p4est_topidx_t *ett = conn8->ett_offset;
-  int j;
-
-  P4EST_ASSERT (p8est_connectivity_is_flat (conn8));
-  conn4 = p4est_connectivity_new (0, num_trees, conn8->num_edges,
-                                  conn8->ett_offset[conn8->num_edges]);
-
-  for (ti = 0; ti < num_trees; ti++) {
-    for (j = 0; j < P4EST_FACES; j++) {
-      conn4->tree_to_tree[P4EST_FACES * ti + j] =
-        conn8->tree_to_tree[P8EST_FACES * ti + j];
-      conn4->tree_to_face[P4EST_FACES * ti + j] =
-        (conn8->tree_to_face[P8EST_FACES * ti + j] % P8EST_FACES);
-    }
-    for (j = 0; j < P4EST_CHILDREN; j++) {
-      conn4->tree_to_corner[P4EST_CHILDREN * ti + j] =
-        conn8->tree_to_edge[P8EST_EDGES * ti + 8 + j];
-    }
-  }
-
-  for (ti = 0; ti < num_edges; ti++) {
-    conn4->ctt_offset[ti] = ett[ti];
-    conn4->ctt_offset[ti + 1] = ett[ti + 1];
-    for (tj = ett[ti]; tj < ett[ti + 1]; ti++) {
-      conn4->corner_to_tree[tj] = conn8->edge_to_tree[tj];
-      conn8->corner_to_corner[tj] = (conn8->edge_to_edge[tj] % P8EST_EDGES);
-    }
-  }
-
-  return conn4;
-}
-
 typedef struct p6est_init_data
 {
   int         min_zlevel;
-  sc_array_t *quads;
+  sc_array_t *layers;
   p6est_init_t init_fn;
   void       *user_pointer;
 }
 p6est_init_data_t;
 
 void
-p6est_quadrant_init_data (p6est_t * p6est, p4est_topidx_t which_tree,
-                          p6est_quadrant_t * quad, p6est_init_t init_fn)
+p6est_layer_init_data (p6est_t * p6est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t * column,
+                       p2est_quadrant_t * layer,
+                       p6est_init_t init_fn)
 {
   if (p6est->data_size > 0) {
-    quad->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
+    layer->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
   }
   else {
-    quad->p.user_data = NULL;
+    layer->p.user_data = NULL;
   }
   if (init_fn != NULL) {
-    init_fn (p6est, which_tree, quad);
+    init_fn (p6est, which_tree, column, layer);
   }
 }
 
 static void
 p6est_init_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-               p4est_quadrant_t *quadrant)
+               p4est_quadrant_t *col)
 {
-  p6est_t *p6est = (p6est_t *) p4est->user_pointer;
+  p6est_t *p6est               = (p6est_t *) p4est->user_pointer;
   p6est_init_data_t *init_data = (p6est_init_data_t *) p6est->user_pointer;
-  int nquads = 1 << (init_data->min_zlevel);
-  sc_array_t *quads = init_data->quads;
-  size_t incount = quads->elem_count, zz;
+  int nlayers                   = 1 << (init_data->min_zlevel);
+  sc_array_t *layers           = init_data->layers;
+  size_t incount               = layers->elem_count, zz;
+  size_t last                  = incount + nlayers;
 
+  /* we have to sneak the user_pointer in */
   p6est->user_pointer = init_data->user_pointer;
 
-  quadrant->p.piggy3.local_num = (p4est_locidx_t) quads->elem_count;
-  quadrant->p.piggy3.which_tree = (p4est_topidx_t) nquads;
+  P6EST_COLUMN_SET_RANGE (col, layers->elem_count, last)
 
-  sc_array_resize (quads, quads->elem_count + nquads);
+  sc_array_resize (layers, last);
 
-  for (zz = incount; zz < quads->elem_count; zz++) {
-    p6est_quadrant_t * colquad = p6est_quadrant_array_index (quads, zz);
-    P6EST_QUADRANT_INIT (colquad);
+  for (zz = incount; zz < last; zz++) {
+    p2est_quadrant_t * layer = p2est_quadrant_array_index (layers, zz);
+    P2EST_QUADRANT_INIT (layer);
 
-    colquad->x = quadrant->x;
-    colquad->y = quadrant->y;
-    colquad->level = quadrant->level;
-    colquad->zlevel = init_data->min_zlevel;
-    colquad->z = (zz - incount) * P6EST_QUADRANT_LEN (colquad->zlevel);
+    layer->level = init_data->min_zlevel;
+    layer->z = (zz - incount) * P4EST_QUADRANT_LEN (layer->level);
 
-    p6est_quadrant_init_data (p6est, which_tree, colquad, init_data->init_fn);
+    p6est_layer_init_data (p6est, which_tree, col, layer, init_data->init_fn);
   }
 
+  /* we have to sneak the user_pointer out */
   p6est->user_pointer = (void *) init_data;
 }
 
 p6est_t            *
-p6est_new_ext (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
+p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
                p4est_locidx_t min_quadrants, int min_level, int min_zlevel,
                int fill_uniform, size_t data_size, p6est_init_t init_fn,
                void *user_pointer)
@@ -186,7 +250,7 @@ p6est_new_ext (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
   p6est_t             *p6est = P4EST_ALLOC (p6est_t, 1);
   p4est_t             *p4est;
   p4est_connectivity_t *conn4;
-  sc_array_t          *quads;
+  sc_array_t          *layers;
   sc_mempool_t        *user_data_pool;
   sc_mempool_t        *quadrant_pool;
   p6est_init_data_t    init_data;
@@ -198,10 +262,8 @@ p6est_new_ext (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
   SC_CHECK_MPI (mpiret);
   mpiret = MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
-  /* get the 2D connectivity for the forest */
-  conn4 = p8est_connectivity_flatten (connectivity);
 
-  quads = sc_array_new (sizeof (p6est_quadrant_t));
+  layers = sc_array_new (sizeof (p2est_quadrant_t));
 
   if (data_size > 0) {
     user_data_pool = sc_mempool_new (data_size);
@@ -210,7 +272,7 @@ p6est_new_ext (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
     user_data_pool = NULL;
   }
 
-  quadrant_pool = sc_mempool_new (sizeof (p6est_quadrant_t));
+  quadrant_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
 
   p6est->mpicomm = mpicomm;
   p6est->mpisize = num_procs;
@@ -218,33 +280,33 @@ p6est_new_ext (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
   p6est->data_size = data_size;
   p6est->user_pointer = user_pointer;
   p6est->connectivity = connectivity;
-  p6est->conn4 = conn4;
-  p6est->quads = quads;
+  p6est->layers = layers;
   p6est->user_data_pool = user_data_pool;
 
-  P4EST_ASSERT (min_zlevel <= P6EST_QMAXLEVEL);
-  init_data.min_zlevel = min_zlevel;
-  init_data.quads      = quads;
-  init_data.init_fn    = init_fn;
-  p6est->user_pointer = &init_data;
+  P4EST_ASSERT (min_zlevel <= P4EST_QMAXLEVEL);
+
+  init_data.min_zlevel   = min_zlevel;
+  init_data.layers       = layers;
+  init_data.init_fn      = init_fn;
+  init_data.user_pointer = user_pointer;
+  p6est->user_pointer    = &init_data;
+
   p4est = p4est_new_ext (mpicomm, conn4, min_quadrants / quadpercol,
                          min_level, fill_uniform, 0, p6est_init_fn,
                          (void *) p6est);
 
   p6est->user_pointer = user_pointer;
-  p6est->p4est = p4est;
+  p6est->columns = p4est;
   p6est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
   for (i = 0; i <= num_procs; i++) {
     p6est->global_first_quadrant[i] = quadpercol * p4est->global_first_quadrant[i];
   }
 
-  /* order the columns? */
-
   return p6est;
 }
 
 p6est_t            *
-p6est_new (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
+p6est_new (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
            size_t data_size, p6est_init_t init_fn, void *user_pointer)
 {
   return p6est_new_ext (mpicomm, connectivity, 0, 0, 0, 1,
@@ -252,30 +314,29 @@ p6est_new (MPI_Comm mpicomm, p8est_connectivity_t * connectivity,
 }
 
 void
-p6est_quadrant_free_data (p6est_t * p6est, p6est_quadrant_t * quad)
+p6est_layer_free_data (p6est_t * p6est, p2est_quadrant_t * layer)
 {
   if (p6est->data_size > 0) {
-    sc_mempool_free (p6est->user_data_pool, quad->p.user_data);
+    sc_mempool_free (p6est->user_data_pool, layer->p.user_data);
   }
-  quad->p.user_data = NULL;
+  layer->p.user_data = NULL;
 }
 
 void
 p6est_destroy (p6est_t *p6est)
 {
-  sc_array_t *quads = p6est->quads;
-  size_t quadcount = quads->elem_count;
+  sc_array_t *layers = p6est->layers;
+  size_t layercount = layers->elem_count;
   size_t zz;
 
-  for (zz = 0; zz < quadcount; zz++) {
-    p6est_quadrant_t *colquad = p6est_quadrant_array_index (quads, zz);
+  for (zz = 0; zz < layercount; zz++) {
+    p2est_quadrant_t *layer = p2est_quadrant_array_index (layers, zz);
 
-    p6est_quadrant_free_data (p6est, colquad);
+    p6est_layer_free_data (p6est, layer);
   }
-  sc_array_destroy (p6est->quads);
+  sc_array_destroy (p6est->layers);
 
-  p4est_destroy (p6est->p4est);
-  p4est_connectivity_destroy (p6est->conn4);
+  p4est_destroy (p6est->columns);
   if (p6est->user_data_pool != NULL) {
     sc_mempool_destroy (p6est->user_data_pool);
   }
@@ -288,40 +349,29 @@ p6est_t *
 p6est_copy (p6est_t *input, int copy_data)
 {
   p6est_t *p6est = P4EST_ALLOC (p6est_t, 1);
-  size_t zz, qcount = input->quads->elem_count;
+  size_t zz, qcount = input->layers->elem_count;
 
   memcpy (p6est, input, sizeof (p4est_t));
-  p6est->conn4 = p4est_connectivity_new_copy (input->conn4->num_vertices,
-                                              input->conn4->num_trees,
-                                              input->conn4->num_corners,
-                                              input->conn4->vertices,
-                                              input->conn4->tree_to_vertex,
-                                              input->conn4->tree_to_tree,
-                                              input->conn4->tree_to_face,
-                                              input->conn4->tree_to_corner,
-                                              input->conn4->ctt_offset,
-                                              input->conn4->corner_to_tree,
-                                              input->conn4->corner_to_corner);
-  p6est->quads = sc_array_new_size (input->quads->elem_size, input->quads->elem_count);
-  sc_array_copy (input->quads, p6est->quads);
-  p6est->p4est = p4est_copy (input->p4est, 0);
-  p6est->p4est->user_pointer = p6est;
+  p6est->layers = sc_array_new_size (input->layers->elem_size, input->layers->elem_count);
+  sc_array_copy (input->layers, p6est->layers);
+  p6est->columns = p4est_copy (input->columns, 0);
+  p6est->columns->user_pointer = p6est;
   if (copy_data && p6est->data_size > 0) {
     p6est->user_data_pool = sc_mempool_new (p6est->data_size);
   }
   else {
     p6est->data_size = 0;
   }
-  p6est->quadrant_pool = sc_mempool_new (sizeof (p6est_quadrant_t));
+  p6est->quadrant_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
 
   if (p6est->data_size > 0) {
     P4EST_ASSERT (copy_data);
     for (zz = 0; zz < qcount; zz++) {
-      p6est_quadrant_t *inquad = p6est_quadrant_array_index (input->quads, zz);
-      p6est_quadrant_t *outquad = p6est_quadrant_array_index (p6est->quads, zz);
+      p2est_quadrant_t *inlayer = p2est_quadrant_array_index (input->layers, zz);
+      p2est_quadrant_t *outlayer = p2est_quadrant_array_index (p6est->layers, zz);
 
-      outquad->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
-      memcpy (outquad->p.user_data, inquad->p.user_data, p6est->data_size);
+      outlayer->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
+      memcpy (outlayer->p.user_data, inlayer->p.user_data, p6est->data_size);
     }
   }
   p6est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, p6est->mpisize + 1);
@@ -339,7 +389,7 @@ p6est_reset_data (p6est_t *p6est, size_t data_size, p6est_init_t init_fn,
   size_t              zz, zy, first, last;
   p4est_topidx_t      jt;
   p4est_quadrant_t   *col;
-  p6est_quadrant_t   *q;
+  p2est_quadrant_t   *q;
   p4est_tree_t       *tree;
   sc_array_t         *tquadrants;
 
@@ -360,15 +410,14 @@ p6est_reset_data (p6est_t *p6est, size_t data_size, p6est_init_t init_fn,
     }
   }
 
-  for (jt = p6est->p4est->first_local_tree; jt <= p6est->p4est->last_local_tree; ++jt) {
-    tree = p4est_tree_array_index (p6est->p4est->trees, jt);
+  for (jt = p6est->columns->first_local_tree; jt <= p6est->columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (p6est->columns->trees, jt);
     tquadrants = &tree->quadrants;
     for (zz = 0; zz < tquadrants->elem_count; ++zz) {
       col = p4est_quadrant_array_index (tquadrants, zz);
-      first = col->p.piggy3.local_num;
-      last = first + col->p.piggy3.which_tree;
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
       for (zy = first; zy < last; zy++) {
-        q = p6est_quadrant_array_index (p6est->quads, zy);
+        q = p2est_quadrant_array_index (p6est->layers, zy);
         if (doresize) {
           if (p6est->data_size > 0) {
             q->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
@@ -378,7 +427,7 @@ p6est_reset_data (p6est_t *p6est, size_t data_size, p6est_init_t init_fn,
           }
         }
         if (init_fn != NULL) {
-          init_fn (p6est, jt, q);
+          init_fn (p6est, jt, col, q);
         }
       }
     }
@@ -387,10 +436,14 @@ p6est_reset_data (p6est_t *p6est, size_t data_size, p6est_init_t init_fn,
 
 typedef void (*p6est_replace_t) (p6est_t *p6est,
                                  p4est_topidx_t which_tree,
-                                 int num_outgoing,
-                                 p6est_quadrant_t *outgoing[],
-                                 int num_incoming,
-                                 p6est_quadrant_t *incoming[]);
+                                 int num_outcolumns,
+                                 int num_outlayers,
+                                 p4est_quadrant_t *outcolumns[],
+                                 p2est_quadrant_t *outlayers[],
+                                 int num_incolumns,
+                                 int num_inlayers,
+                                 p4est_quadrant_t *incolumns[],
+                                 p2est_quadrant_t *inlayers[]);
 
 typedef struct p6est_refine_col_data
 {
@@ -400,7 +453,7 @@ typedef struct p6est_refine_col_data
 }
 p6est_refine_col_data_t;
 
-void
+static void
 p6est_refine_column (p4est_t *p4est, p4est_topidx_t which_tree,
                      int num_outgoing,
                      p4est_quadrant_t * outgoing[],
@@ -409,55 +462,57 @@ p6est_refine_column (p4est_t *p4est, p4est_topidx_t which_tree,
 {
   p6est_t *p6est = (p6est_t *) p4est->user_pointer;
   p6est_refine_col_data_t *refine_col = (p6est_refine_col_data_t *) p6est->user_pointer;
-  int nquads;
-  size_t first, ifirst;
+  int nlayers;
+  size_t first, last, ifirst, ilast;
   int i, j;
-  p6est_quadrant_t *oq, *q;
+  p2est_quadrant_t *oq, *q;
 
+  /* sneak the user pointer in */
   p6est->user_pointer = refine_col->user_pointer;
   P4EST_ASSERT (num_outgoing == 1);
   P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
 
-  nquads = (int) outgoing[0]->p.piggy3.which_tree;
-  first = (size_t) outgoing[0]->p.piggy3.local_num;
+  P6EST_COLUMN_GET_RANGE (outgoing[0], &first, &last);
+  nlayers = last - first;
 
   for (i = 0; i < num_incoming; i++) {
-    incoming[i]->p.piggy3.which_tree = (p4est_topidx_t) nquads;
-    ifirst = p6est->quads->elem_count;
-    incoming[i]->p.piggy3.local_num = (p4est_locidx_t) ifirst;
-    sc_array_resize (p6est->quads, ifirst + nquads);
-    for (j = 0; j < nquads; j++) {
-      oq = p6est_quadrant_array_index (p6est->quads, first + j);
-      q = p6est_quadrant_array_index (p6est->quads, ifirst + j);
-      P6EST_QUADRANT_INIT (q);
-      q->x = incoming[i]->x;
-      q->y = incoming[i]->y;
-      q->level = incoming[i]->level;
+    ifirst = p6est->layers->elem_count;
+    ilast = ifirst + nlayers;
+    sc_array_resize (p6est->layers, ilast);
+    P6EST_COLUMN_SET_RANGE (incoming[i], ifirst, ilast);
+    for (j = 0; j < nlayers; j++) {
+      oq = p2est_quadrant_array_index (p6est->layers, first + j);
+      q = p2est_quadrant_array_index (p6est->layers, ifirst + j);
+      P2EST_QUADRANT_INIT (q);
       q->z = oq->z;
-      q->zlevel = oq->zlevel;
-      p6est_quadrant_init_data (p6est, which_tree, q, refine_col->init_fn);
+      q->level = oq->level;
+      p6est_layer_init_data (p6est, which_tree, incoming[i], q, refine_col->init_fn);
     }
   }
 
   if (refine_col->replace_fn != NULL) {
-    for (j = 0; j < nquads; j++) {
-      p6est_quadrant_t *inq[P4EST_CHILDREN];
-      oq = p6est_quadrant_array_index (p6est->quads, first + j);
+    for (j = 0; j < nlayers; j++) {
+      p2est_quadrant_t *inq[P4EST_CHILDREN];
 
+      oq = p2est_quadrant_array_index (p6est->layers, first + j);
       ifirst = incoming[i]->p.piggy3.local_num;
       for (i = 0; i < P4EST_CHILDREN; i++) {
-        inq[i] = p6est_quadrant_array_index (p6est->quads, ifirst + j);
+        inq[i] = p2est_quadrant_array_index (p6est->layers, ifirst + j);
       }
 
-      refine_col->replace_fn (p6est, which_tree, 1, &oq, P4EST_CHILDREN,
-                              inq);
+      refine_col->replace_fn (p6est, which_tree,
+                              1, 1,
+                              outgoing, &oq,
+                              P4EST_CHILDREN, P4EST_CHILDREN,
+                              incoming, inq);
     }
   }
 
-  for (j = 0; j < nquads; j++) {
-    oq = p6est_quadrant_array_index (p6est->quads, first + j);
-    p6est_quadrant_free_data (p6est, oq);
+  for (j = 0; j < nlayers; j++) {
+    oq = p2est_quadrant_array_index (p6est->layers, first + j);
+    p6est_layer_free_data (p6est, oq);
   }
+  /* sneak the user pointer out */
   p6est->user_pointer = (void *) refine_col;
 }
 
@@ -472,8 +527,8 @@ p6est_compress_columns (p6est_t *p6est)
   size_t              offset = 0;
   int                 count;
 
-  for (jt = p6est->p4est->first_local_tree; jt <= p6est->p4est->last_local_tree; ++jt) {
-    tree = p4est_tree_array_index (p6est->p4est->trees, jt);
+  for (jt = p6est->columns->first_local_tree; jt <= p6est->columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (p6est->columns->trees, jt);
     tquadrants = &tree->quadrants;
     for (zz = 0; zz < tquadrants->elem_count; ++zz) {
       col = p4est_quadrant_array_index (tquadrants, zz);
@@ -481,14 +536,14 @@ p6est_compress_columns (p6est_t *p6est)
       count = col->p.piggy3.which_tree;
       P4EST_ASSERT (first >= offset);
       if (first != offset) {
-        memcpy (sc_array_index (p6est->quads, offset),
-                sc_array_index (p6est->quads, first),
-                count * sizeof (p6est_quadrant_t));
+        memcpy (sc_array_index (p6est->layers, offset),
+                sc_array_index (p6est->layers, first),
+                count * sizeof (p2est_quadrant_t));
       }
       offset += count;
     }
   }
-  sc_array_resize (p6est->quads, offset);
+  sc_array_resize (p6est->layers, offset);
 }
 
 #if 0

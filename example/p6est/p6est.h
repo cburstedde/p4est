@@ -31,35 +31,51 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef int16_t    p6est_zcoord_t;
-#define p6est_zcoord_compare sc_int16_compare
-#define P6EST_MPI_ZCOORD MPI_INT
-#define P6EST_VTK_ZCOORD "Int16"
-#define P6EST_ZCOORD_MIN INT16_MIN
-#define P6EST_ZCOORD_MAX INT16_MAX
-#define P6EST_ZCOORD_1   ((p6est_zcoord_t) 1)
-
-
-/* finest vertical level */
-#define P6EST_MAXLEVEL 14
-
-/* finest vertical level of quadrants */
-#define P6EST_QMAXLEVEL 13
-
-/* the vertical length of a root quadrant */
-#define P6EST_ROOT_LEN ((p6est_zcoord_t) 1 << P6EST_MAXLEVEL)
-
-/* the vertical length of a quadrant of level l */
-#define P6EST_QUADRANT_LEN(l) ((p6est_zcoord_t) 1 << (P6EST_MAXLEVEL - (l)))
-
-/* the offset of the highest quadrant at level l */
-#define P6EST_LAST_OFFSET(l) (P6EST_ROOT_LEN - P6EST_QUADRANT_LEN (l))
-
-typedef struct p6est_quadrant
+typedef struct p6est_connectivity_t
 {
-  p4est_qcoord_t      x, y;
-  int8_t              level, zlevel;
-  int16_t             z;
+  p4est_connectivity_t *conn4; /* owned: vertices interpreted as the vertices
+                                  of the bottom of the sheet */
+  double               *top_to_vertex; /* if NULL, uniform vertical profile,
+                                          otherwise the vertices of the top of
+                                          the sheet: should be the same size
+                                          as \a conn4->tree_to_vertex; owned. */
+  double                height[3]; /* if top_to_vertex == NULL, this gives the
+                                      offset from the bottom of the sheet to
+                                      the top */
+}
+p6est_connectivity_t;
+
+/** Create a p6est_connectivity_t from a  p4est_connectivity_t.  All fields
+ * are copied.
+ */
+p6est_connectivity_t *p6est_connectivity_new (p4est_connectivity_t *conn4,
+                                              double *top_to_vertex,
+                                              double height[3]);
+
+void                p6est_connectivity_destroy (p6est_connectivity_t *conn);
+
+void                p6est_tree_get_vertices (p6est_connectivity_t *conn,
+                                             p4est_topidx_t which_tree,
+                                             double vertices[24]);
+
+/** Transform a quadrant coordinate into the space spanned by tree vertices.
+ * \param [in] connectivity     Connectivity must provide the vertices.
+ * \param [in] treeid           Identify the tree that contains x, y.
+ * \param [in] x, y             Quadrant coordinates relative to treeid.
+ * \param [out] vxy             Transformed coordinates in vertex space.
+ */
+void                p6est_qcoord_to_vertex (p6est_connectivity_t *
+                                            connectivity,
+                                            p4est_topidx_t treeid,
+                                            p4est_qcoord_t x,
+                                            p4est_qcoord_t y,
+                                            p4est_qcoord_t z, double vxyz[3]);
+
+typedef struct p2est_quadrant
+{
+  p4est_qcoord_t      z;
+  int8_t              level, pad8;
+  int16_t             pad16;
   union p6est_quadrant_data
   {
     void               *user_data;      /* never changed by p6est */
@@ -87,7 +103,7 @@ typedef struct p6est_quadrant
   }
   p;
 }
-p6est_quadrant_t;
+p2est_quadrant_t;
 
 typedef struct p6est
 {
@@ -97,15 +113,21 @@ typedef struct p6est
   size_t              data_size;        /* size of per-quadrant user_data */
   void               *user_pointer;     /* convenience pointer for users,
                                            will never be touched by p4est */
-  p8est_connectivity_t *connectivity;   /* 3D connectivity, not owned */
-  p4est_connectivity_t *conn4;          /* 2D connectivity, owned */
-  p4est_t            *p4est;            /* 2D description of mesh */
-  sc_array_t         *quads;            /* single array that stores
-                                           p6est_quadrants */
+  p6est_connectivity_t *connectivity;   /* topology of sheet, not owned. */
+  double              height[3];        /* offset from bottom to top,
+                                           if uniform height profile */
+  double             *top_to_vertices; /* if this is not NULL, it should be an
+                                          array of the same size as \a
+                                          connectivity->tree_to_vertex: points
+                                          in the interior of the sheet
+                                          trilinearly interpolate between them. */
+  p4est_t            *columns;          /* 2D description of column layout
+                                           built from \a connectivity */
+  sc_array_t         *layers;           /* single array that stores
+                                           p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /* memory allocator for user data
                                          * WARNING: This is NULL if data size
-                                         *          equals zero.
-                                         */
+                                         *          equals zero.  */
   sc_mempool_t       *quadrant_pool;    /* memory allocator
                                            for temporary quadrants */
   p4est_gloidx_t     *global_first_quadrant;
@@ -116,22 +138,42 @@ p6est_t;
  */
 typedef void        (*p6est_init_t) (p6est_t * p6est,
                                      p4est_topidx_t which_tree,
-                                     p6est_quadrant_t * quadrant);
+                                     p4est_quadrant_t * column,
+                                     p2est_quadrant_t * layer);
 
-/** Callback function prototype to decide for vertical refinement.
- * \return nonzero if the quadrant shall be refined.
+/** Callback function prototype to decide whether to horizontally refine a
+ * layer.
+ * \return nonzero if the layer shall be refined.
  */
-typedef int         (*p6est_refine_t) (p6est_t * p6est,
-                                       p4est_topidx_t which_tree,
-                                       p6est_quadrant_t * quadrant);
+typedef int         (*p6est_refine_column_t) (p6est_t * p6est,
+                                              p4est_topidx_t which_tree,
+                                              p4est_quadrant_t * column);
+
+/** Callback function prototype to decide whether to vertically refine a
+ * layer.
+ * \return nonzero if the layer shall be refined.
+ */
+typedef int         (*p6est_refine_layer_t) (p6est_t * p6est,
+                                             p4est_topidx_t which_tree,
+                                             p4est_quadrant_t * column,
+                                             p2est_quadrant_t * layer);
+
+/** Callback function prototype to decide for horizontal coarsening.
+ * \param [in] columns      Pointers to 4 sibling columns.
+ * \return nonzero if the columns shall be replaced with their parent.
+ */
+typedef int         (*p6est_coarsen_column_t) (p6est_t * p6est,
+                                               p4est_topidx_t which_tree,
+                                               p4est_quadrant_t * columns[]);
 
 /** Callback function prototype to decide for vertical coarsening.
- * \param [in] quadrants   Pointers to 2 vertical siblings.
- * \return nonzero if the quadrants shall be replaced with their parent.
+ * \param [in] layers      Pointers to 2 vertical siblings.
+ * \return nonzero if the layers shall be replaced with their parent.
  */
-typedef int         (*p6est_coarsen_t) (p6est_t * p6est,
-                                        p4est_topidx_t which_tree,
-                                        p6est_quadrant_t * quadrants[]);
+typedef int         (*p6est_coarsen_layer_t) (p6est_t * p6est,
+                                              p4est_topidx_t which_tree,
+                                              p4est_quadrant_t * column,
+                                              p2est_quadrant_t * layers[]);
 
 /** Callback function prototype to calculate weights for partitioning.
  * \return a 32bit integer >= 0 as the quadrant weight.
@@ -139,26 +181,14 @@ typedef int         (*p6est_coarsen_t) (p6est_t * p6est,
  */
 typedef int         (*p6est_weight_t) (p6est_t * p6est,
                                        p4est_topidx_t which_tree,
-                                       p6est_quadrant_t * quadrant);
+                                       p4est_quadrant_t * column,
+                                       p2est_quadrant_t * layer);
 
-extern void        *P6EST_DATA_UNINITIALIZED;
+extern void        *P2EST_DATA_UNINITIALIZED;
 
 /** set statically allocated quadrant to defined values */
-#define P6EST_QUADRANT_INIT(q) \
-  ((void) memset ((q), -1, sizeof (p6est_quadrant_t)))
-
-/** Transform a quadrant coordinate into the space spanned by tree vertices.
- * \param [in] connectivity     Connectivity must provide the vertices.
- * \param [in] treeid           Identify the tree that contains x, y.
- * \param [in] x, y             Quadrant coordinates relative to treeid.
- * \param [out] vxy             Transformed coordinates in vertex space.
- */
-void                p6est_qcoord_to_vertex (p8est_connectivity_t *
-                                            connectivity,
-                                            p4est_topidx_t treeid,
-                                            p4est_qcoord_t x,
-                                            p4est_qcoord_t y,
-                                            p6est_zcoord_t z, double vxyz[3]);
+#define P2EST_QUADRANT_INIT(q) \
+  ((void) memset ((q), -1, sizeof (p2est_quadrant_t)))
 
 /** Create a new forest.
  * The new forest consists of equi-partitioned root quadrants.
@@ -181,7 +211,7 @@ void                p6est_qcoord_to_vertex (p8est_connectivity_t *
  *       during the lifetime of this forest.
  */
 p6est_t            *p6est_new (MPI_Comm mpicomm,
-                               p8est_connectivity_t * connectivity,
+                               p6est_connectivity_t * connectivity,
                                size_t data_size,
                                p6est_init_t init_fn, void *user_pointer);
 
@@ -218,40 +248,75 @@ void                p6est_reset_data (p6est_t * p6est, size_t data_size,
                                       p6est_init_t init_fn,
                                       void *user_pointer);
 
-/** Refine a forest.
+/** Refine the columns of a sheet.
  * \param [in,out] p6est The forest is changed in place.
  * \param [in] refine_recursive Boolean to decide on recursive refinement.
- * \param [in] refine_fn Callback function that must return true if a quadrant
- *                       shall be refined.  If refine_recursive is true,
- *                       refine_fn is called for every existing and newly
- *                       created quadrant.  Otherwise, it is called for every
- *                       existing quadrant.  It is possible that a refinement
- *                       request made by the callback is ignored.  To catch
- *                       this case, you can examine whether init_fn gets
- *                       called, or use p6est_refine_ext in p6est_extended.h
- *                       and examine whether replace_fn gets called.
+ * \param [in] refine_fn Callback function that must return true if a column
+ *                       shall be refined into smaller columns.  If
+ *                       refine_recursive is true, refine_fn is called for
+ *                       every existing and newly created column.
+ *                       Otherwise, it is called for every existing column.
+ *                       It is possible that a refinement request made by the
+ *                       callback is ignored.  To catch this case, you can
+ *                       examine whether init_fn gets called, or use
+ *                       p6est_refine_columns_ext in p6est_extended.h and examine
+ *                       whether replace_fn gets called.
  * \param [in] init_fn   Callback function to initialize the user_data of newly
- *                       created quadrants, which is already allocated.  This
+ *                       created layers within columns, which are already
+ *                       allocated.  This function pointer may be NULL.
+ */
+void                p6est_refine_columns (p6est_t * p6est,
+                                          int refine_recursive,
+                                          p6est_refine_column_t refine_fn,
+                                          p6est_init_t init_fn);
+
+/** Refine the layers within the columns of a sheet.
+ * \param [in,out] p6est The forest is changed in place.
+ * \param [in] refine_recursive Boolean to decide on recursive refinement.
+ * \param [in] refine_fn Callback function that must return true if a layer
+ *                       shall be refined into smaller layers.  If
+ *                       refine_recursive is true, refine_fn is called for
+ *                       every existing and newly created layer.
+ *                       Otherwise, it is called for every existing layer.
+ *                       It is possible that a refinement request made by the
+ *                       callback is ignored.  To catch this case, you can
+ *                       examine whether init_fn gets called, or use
+ *                       p6est_refine_layers_ext in p6est_extended.h and examine
+ *                       whether replace_fn gets called.
+ * \param [in] init_fn   Callback function to initialize the user_data of newly
+ *                       created layers, which are already allocated.  This
  *                       function pointer may be NULL.
  */
-void                p6est_refine (p6est_t * p6est,
-                                  int refine_recursive,
-                                  p4est_refine_t refine_fn,
-                                  p6est_refine_t zrefine_fn,
-                                  p6est_init_t init_fn);
+void                p6est_refine_layers (p6est_t * p6est,
+                                         int refine_recursive,
+                                         p6est_refine_layer_t refine_fn,
+                                         p6est_init_t init_fn);
 
-/** Coarsen a forest.
+/** Coarsen the columns of a sheet.
  * \param [in,out] p6est  The forest is changed in place.
  * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
  * \param [in] coarsen_fn Callback function that returns true if a
- *                        family of quadrants shall be coarsened
+ *                        family of columns shall be coarsened
  * \param [in] init_fn    Callback function to initialize the user_data
  *                        which is already allocated automatically.
  */
-void                p6est_coarsen (p6est_t * p6est,
-                                   int coarsen_recursive,
-                                   p6est_coarsen_t coarsen_fn,
-                                   p6est_init_t init_fn);
+void                p6est_coarsen_columns (p6est_t * p6est,
+                                           int coarsen_recursive,
+                                           p6est_coarsen_column_t coarsen_fn,
+                                           p6est_init_t init_fn);
+
+/** Coarsen the layers of a sheet.
+ * \param [in,out] p6est  The forest is changed in place.
+ * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
+ * \param [in] coarsen_fn Callback function that returns true if a
+ *                        family of layers shall be coarsened
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
+ */
+void                p6est_coarsen_layers (p6est_t * p6est,
+                                          int coarsen_recursive,
+                                          p6est_coarsen_layer_t coarsen_fn,
+                                          p6est_init_t init_fn);
 
 /** Balance a forest.
  * \param [in] p6est     The p6est to be worked on.
@@ -314,45 +379,45 @@ void                p6est_save (const char *filename, p6est_t * p6est,
 p6est_t            *p6est_load (const char *filename, MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
-                                p8est_connectivity_t ** connectivity);
+                                p4est_connectivity_t ** connectivity);
 
 /** Return a pointer to a quadrant array element indexed by a size_t. */
 /*@unused@*/
-static inline p6est_quadrant_t *
-p6est_quadrant_array_index (sc_array_t * array, size_t it)
+static inline p2est_quadrant_t *
+p2est_quadrant_array_index (sc_array_t * array, size_t it)
 {
-  P4EST_ASSERT (array->elem_size == sizeof (p6est_quadrant_t));
+  P4EST_ASSERT (array->elem_size == sizeof (p2est_quadrant_t));
   P4EST_ASSERT (it < array->elem_count);
 
-  return (p6est_quadrant_t *) (array->array + sizeof (p6est_quadrant_t) * it);
+  return (p2est_quadrant_t *) (array->array + sizeof (p2est_quadrant_t) * it);
 }
 
 /** Call sc_array_push for a quadrant array. */
 /*@unused@*/
-static inline p6est_quadrant_t *
-p6est_quadrant_array_push (sc_array_t * array)
+static inline p2est_quadrant_t *
+p2est_quadrant_array_push (sc_array_t * array)
 {
-  P4EST_ASSERT (array->elem_size == sizeof (p6est_quadrant_t));
+  P4EST_ASSERT (array->elem_size == sizeof (p2est_quadrant_t));
 
-  return (p6est_quadrant_t *) sc_array_push (array);
+  return (p2est_quadrant_t *) sc_array_push (array);
 }
 
 /** Call sc_mempool_alloc for a mempool creating quadrants. */
 /*@unused@*/
-static inline p6est_quadrant_t *
-p6est_quadrant_mempool_alloc (sc_mempool_t * mempool)
+static inline p2est_quadrant_t *
+p2est_quadrant_mempool_alloc (sc_mempool_t * mempool)
 {
-  P4EST_ASSERT (mempool->elem_size == sizeof (p6est_quadrant_t));
+  P4EST_ASSERT (mempool->elem_size == sizeof (p2est_quadrant_t));
 
-  return (p6est_quadrant_t *) sc_mempool_alloc (mempool);
+  return (p2est_quadrant_t *) sc_mempool_alloc (mempool);
 }
 
 /** Call sc_list pop for a quadrant array. */
 /*@unused@*/
-static inline p6est_quadrant_t *
-p6est_quadrant_list_pop (sc_list_t * list)
+static inline p2est_quadrant_t *
+p2est_quadrant_list_pop (sc_list_t * list)
 {
-  return (p6est_quadrant_t *) sc_list_pop (list);
+  return (p2est_quadrant_t *) sc_list_pop (list);
 }
 
 #define P6EST_COLUMN_GET_RANGE(q,f,l)                \

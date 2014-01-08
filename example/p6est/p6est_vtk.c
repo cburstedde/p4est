@@ -145,18 +145,16 @@ p6est_vtk_write_header (p6est_t * p6est,
                         int wrap_rank, const char *point_scalars,
                         const char *point_vectors, const char *filename)
 {
-  p8est_connectivity_t *connectivity = p6est->connectivity;
-  p4est_t            *p4est = p6est->p4est;
-  sc_array_t         *quads = p6est->quads;
+  p6est_connectivity_t *connectivity = p6est->connectivity;
+  p4est_t            *p4est = p6est->columns;
+  sc_array_t         *layers = p6est->layers;
   sc_array_t         *trees = p4est->trees;
   const int           mpirank = p4est->mpirank;
   const double        intsize = 1.0 / P4EST_ROOT_LEN;
-  const double        zintsize = 1.0 / P6EST_ROOT_LEN;
-  const double       *v = connectivity->vertices;
+  double              v[24];
   const p4est_topidx_t first_local_tree = p4est->first_local_tree;
   const p4est_topidx_t last_local_tree = p4est->last_local_tree;
-  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
-  const p4est_locidx_t Ncells = (p4est_locidx_t) quads->elem_count;
+  const p4est_locidx_t Ncells = (p4est_locidx_t) layers->elem_count;
   const p4est_locidx_t Ncorners = P8EST_CHILDREN * Ncells;
 #ifdef P4EST_VTK_ASCII
   double              wx, wy, wz;
@@ -168,26 +166,24 @@ p6est_vtk_write_header (p6est_t * p6est,
 #endif
   int                 xi, yi, j, k;
   int                 zi;
-  double              h2, h2z, eta_x, eta_y, eta_z = 0.;
+  double              h2, eta_x, eta_y, eta_z = 0.;
   double              xyz[3];   /* 3 not P4EST_DIM */
   size_t              num_cols, zz, zy, first, last;
   p4est_topidx_t      jt;
-  p4est_topidx_t      vt[P8EST_CHILDREN];
   p4est_locidx_t      quad_count, Ntotal;
   p4est_locidx_t      il;
   P4EST_VTK_FLOAT_TYPE *float_data;
   sc_array_t         *columns;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *col;
-  p6est_quadrant_t   *quad;
+  p2est_quadrant_t   *layer;
   char                vtufilename[BUFSIZ];
   FILE               *vtufile;
 
-  SC_CHECK_ABORT (connectivity->num_vertices > 0,
+  SC_CHECK_ABORT (connectivity->conn4->num_vertices > 0,
                   "Must provide connectivity with vertex information");
 
   P4EST_ASSERT (0. <= scale && scale <= 1. && wrap_rank >= 0);
-  P4EST_ASSERT (v != NULL && tree_to_vertex != NULL);
 
   if (scale < 1.) {
     /* when we scale the quadrants we need each corner separately */
@@ -236,38 +232,34 @@ p6est_vtk_write_header (p6est_t * p6est,
     tree = p4est_tree_array_index (trees, jt);
     columns = &tree->quadrants;
     num_cols = columns->elem_count;
-
-    /* retrieve corners of the tree */
-    for (k = 0; k < P8EST_CHILDREN; ++k)
-      vt[k] = tree_to_vertex[jt * P8EST_CHILDREN + k];
+    p6est_tree_get_vertices (connectivity, jt, v);
 
     /* loop over the elements in tree and calculated vertex coordinates */
     for (zz = 0; zz < num_cols; ++zz) {
       col = p4est_quadrant_array_index (columns, zz);
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
       for (zy = first; zy < last; zy++, quad_count++) {
-        quad = p6est_quadrant_array_index (quads, zy);
-        h2 = .5 * intsize * P4EST_QUADRANT_LEN (quad->level);
-        h2z = .5 * zintsize * P6EST_QUADRANT_LEN (quad->zlevel);
+        layer = p2est_quadrant_array_index (layers, zy);
+        h2 = .5 * intsize * P4EST_QUADRANT_LEN (layer->level);
         k = 0;
         for (zi = 0; zi < 2; ++zi) {
           for (yi = 0; yi < 2; ++yi) {
             for (xi = 0; xi < 2; ++xi) {
               P4EST_ASSERT (0 <= k && k < P8EST_CHILDREN);
-              eta_x = intsize * quad->x + h2 * (1. + (xi * 2 - 1) * scale);
-              eta_y = intsize * quad->y + h2 * (1. + (yi * 2 - 1) * scale);
-              eta_z = zintsize * quad->z + h2z * (1. + (zi * 2 - 1) * scale);
+              eta_x = intsize * col->x + h2 * (1. + (xi * 2 - 1) * scale);
+              eta_y = intsize * col->y + h2 * (1. + (yi * 2 - 1) * scale);
+              eta_z = intsize * layer->z + h2 * (1. + (zi * 2 - 1) * scale);
               for (j = 0; j < 3; ++j) {
                 /* *INDENT-OFF* */
                 xyz[j] =
-                        ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
-                                                         eta_x  * v[3 * vt[1] + j]) +
-                                         eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
-                                                   eta_x  * v[3 * vt[3] + j]))
-                         +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
-                                                         eta_x  * v[3 * vt[5] + j]) +
-                                         eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
-                                                   eta_x  * v[3 * vt[7] + j]))
+                        ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * 0 + j] +
+                                                         eta_x  * v[3 * 1 + j]) +
+                                         eta_y  * ((1. - eta_x) * v[3 * 2 + j] +
+                                                   eta_x  * v[3 * 3 + j]))
+                         +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * 4 + j] +
+                                                         eta_x  * v[3 * 5 + j]) +
+                                         eta_y  * ((1. - eta_x) * v[3 * 6 + j] +
+                                                   eta_x  * v[3 * 7 + j]))
                         );
                 /* *INDENT-ON* */
               }
@@ -578,7 +570,7 @@ p6est_vtk_write_point_scalar (p6est_t * p6est,
                               const char *scalar_name, const double *values)
 {
   const int           mpirank = p6est->mpirank;
-  const p4est_locidx_t Ncells = (p4est_locidx_t) p6est->quads->elem_count;
+  const p4est_locidx_t Ncells = (p4est_locidx_t) p6est->layers->elem_count;
   const p4est_locidx_t Ncorners = P8EST_CHILDREN * Ncells;      /* type ok */
   int                 retval;
   p4est_locidx_t      il;
