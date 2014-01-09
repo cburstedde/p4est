@@ -60,8 +60,8 @@ src_libp4est_la_SOURCES = \
         $(libp4est_internal_headers) \
         $(libp4est_compiled_sources)
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
-## src_libp4est_la_DEPENDENCIES = @P4EST_DEPENDENCIES@
 LDADD += @top_builddir@/src/libp4est.la @P4EST_SC_LDADD@
+EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_LDADD@
 
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)

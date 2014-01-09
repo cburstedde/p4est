@@ -73,10 +73,6 @@ SC_AS_SUBPACKAGE([P4EST], [p4est])
 AM_CONDITIONAL([P4EST_DIST_DENY], [test -n "$P4EST_DIST_DENY"])
 AC_SUBST([P4EST_DISTCLEAN])
 
-dnl TODO fix library dependencies
-dnl P4EST_DEPENDENCIES=
-dnl AC_SUBST([P4EST_DEPENDENCIES])
-
 # Print summary.
 
 AC_DEFINE_UNQUOTED(CPP,         ["${CPP}"],         [C preprocessor])
