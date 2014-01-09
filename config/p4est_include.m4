@@ -40,24 +40,6 @@ dnl
 AC_DEFUN([P4EST_ARG_WITHOUT],
          [SC_ARG_WITHOUT_PREFIX([$1], [$2], [$3], [P4EST])])
 
-dnl P4EST_ARG_WITH_YES(NAME, COMMENT, TOKEN)
-dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
-dnl If shell variable is set beforehand it overrides the option
-dnl If with = yes, define TOKEN to 1 and set conditional P4EST_TOKEN
-dnl Default is no
-dnl
-AC_DEFUN([P4EST_ARG_WITH_YES],
-         [SC_ARG_WITH_YES_PREFIX([$1], [$2], [$3], [P4EST])])
-
-dnl P4EST_ARG_WITHOUT_YES(NAME, COMMENT, TOKEN)
-dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
-dnl If shell variable is set beforehand it overrides the option
-dnl If with = yes, define TOKEN to 1 and set conditional P4EST_TOKEN
-dnl Default is yes
-dnl
-AC_DEFUN([P4EST_ARG_WITHOUT_YES],
-         [SC_ARG_WITHOUT_YES_PREFIX([$1], [$2], [$3], [P4EST])])
-
 dnl P4EST_AS_SUBPACKAGE(PREFIX, prefix)
 dnl Call from a package that is using p4est as a subpackage.
 dnl Sets PREFIX_DIST_DENY="yes" if p4est is make install'd.
