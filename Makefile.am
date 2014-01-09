@@ -71,11 +71,6 @@ include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
 
-if P4EST_WITH_METIS
-LDADD += @P4EST_METIS_LIBS@
-AM_CPPFLAGS += @P4EST_METIS_INCLUDES@
-endif
-
 # lint static syntax checker
 ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \

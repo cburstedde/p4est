@@ -14,9 +14,9 @@ P4EST_CC = @CC@
 P4EST_CFLAGS = @CFLAGS@
 
 # These pull in p4est but none of its dependencies
-P4EST_PKG_CPPFLAGS = @P4EST_METIS_INCLUDES@ -I@includedir@
+P4EST_PKG_CPPFLAGS = -I@includedir@
 P4EST_PKG_LDFLAGS = -L@libdir@
-P4EST_PKG_LIBS = -lp4est @P4EST_METIS_LIBS@
+P4EST_PKG_LIBS = -lp4est
 
 # These pull in everything needed by p4est
 P4EST_CPPFLAGS = @CPPFLAGS@ $(SC_PKG_CPPFLAGS) $(P4EST_PKG_CPPFLAGS)
