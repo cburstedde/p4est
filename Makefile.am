@@ -106,7 +106,7 @@ dist-hook:
               @top_srcdir@/.tarball-version`" || \
         ((echo "Stale version;" ; echo "Please run:" ; \
           echo "     cd @top_srcdir@ && ./bootstrap" ; \
-          echo "before make dist") 1>&2 ; exit 1)
+          echo "before make dist") 1>&2 ; rm -r $(distdir) ; exit 1)
 if P4EST_DIST_DENY
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with external libsc"
@@ -116,4 +116,4 @@ if P4EST_DIST_DENY
 endif
 
 clean-local:
-	rm -f *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p

@@ -129,3 +129,8 @@ AC_DEFUN([P4EST_CHECK_LIBRARIES],
 [
 P4EST_CHECK_METIS([$1])
 ])
+
+dnl P4EST_FINAL_MESSAGES(PREFIX)
+dnl This macro prints messages at the end of the configure run.
+dnl
+AC_DEFUN([P4EST_FINAL_MESSAGES],)
