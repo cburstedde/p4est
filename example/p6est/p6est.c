@@ -442,17 +442,37 @@ typedef void        (*p6est_replace_t) (p6est_t * p6est,
 
 typedef struct p6est_refine_col_data
 {
+  p6est_refine_column_t refine_col_fn;
   p6est_init_t        init_fn;
   p6est_replace_t     replace_fn;
   void               *user_pointer;
 }
 p6est_refine_col_data_t;
 
+static int
+p6est_refine_column_int (p4est_t * p4est, p4est_topidx_t which_tree,
+                         p4est_quadrant_t * quadrant)
+{
+  p6est_t            *p6est = (p6est_t *) p4est->user_pointer;
+  p6est_refine_col_data_t *refine_col =
+    (p6est_refine_col_data_t *) p6est->user_pointer;
+  int                 retval;
+
+  /* sneak the user pointer in */
+  p6est->user_pointer = refine_col->user_pointer;
+  retval = refine_col->refine_col_fn (p6est, which_tree, quadrant);
+
+  /* sneak the user pointer_out */
+  p6est->user_pointer = (void *) refine_col;
+
+  return retval;
+}
+
 static void
-p6est_refine_column (p4est_t * p4est, p4est_topidx_t which_tree,
-                     int num_outgoing,
-                     p4est_quadrant_t * outgoing[],
-                     int num_incoming, p4est_quadrant_t * incoming[])
+p6est_replace_column (p4est_t * p4est, p4est_topidx_t which_tree,
+                      int num_outgoing,
+                      p4est_quadrant_t * outgoing[],
+                      int num_incoming, p4est_quadrant_t * incoming[])
 {
   p6est_t            *p6est = (p6est_t *) p4est->user_pointer;
   p6est_refine_col_data_t *refine_col =
@@ -542,137 +562,136 @@ p6est_compress_columns (p6est_t * p6est)
   sc_array_resize (p6est->layers, offset);
 }
 
-#if 0
 void
-p6est_refine_ext (p6est_t * p6est, int refine_recursive, int allowed_level,
-                  p4est_refine_t refine_fn, int allowed_zlevel,
-                  p6est_refine_t zrefine_fn, p6est_init_t zinit_fn,
-                  p6est_replace_t zreplace_fn)
+p6est_update_offsets (p6est_t * p6est)
 {
-#ifdef P4EST_DEBUG
-  size_t              quadrant_pool_size, data_pool_size;
-#endif
-  int                 firsttime;
-  int                 i, maxlevel;
-  p4est_topidx_t      nt;
-  size_t              incount, current, restpos, movecount;
-  sc_list_t          *list;
-  p4est_tree_t       *tree;
-  p6est_quadrant_t   *q, *newq, *qalloc, *qpop;
-  p4est_quadrant_t   *c0, *c1, *c2, *c3;
-#ifdef P4_TO_P8
-  p4est_quadrant_t   *c4, *c5, *c6, *c7;
-#endif
-  sc_array_t         *quads = p6est->quads;
-  sc_array_t         *tquadrants;
-  p6est_quadrant_t   *family[2];
-  p6est_quadrant_t    parent, *pp = &parent;
+  int                 p, mpiret;
+  p4est_gloidx_t     *gfq = p6est->global_first_quadrant;
+  p4est_gloidx_t      mycount = p6est->layers->elem_count;
+  p4est_gloidx_t      psum = 0, thiscount;
+
+  mpiret = MPI_Allgather (&mycount, 1, P4EST_MPI_GLOIDX, gfq, 1,
+                          P4EST_MPI_GLOIDX, p6est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  for (p = 0; p < p6est->mpisize; p++) {
+    thiscount = gfq[p];
+    gfq[p] += psum;
+    psum += thiscount;
+  }
+  gfq[p6est->mpisize] = psum;
+}
+
+void
+p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
+                          int allowed_level, p6est_refine_column_t refine_fn,
+                          p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
   p6est_refine_col_data_t refine_col;
   void               *orig_user_pointer = p6est->user_pointer;
-  size_t              zz, first;
+
+  refine_col.refine_col_fn = refine_fn;
+  refine_col.init_fn = init_fn;
+  refine_col.replace_fn = replace_fn;
+  refine_col.user_pointer = orig_user_pointer;
+
+  p6est->user_pointer = (void *) &refine_col;
+  p4est_refine_ext (p6est->columns, refine_recursive, allowed_level,
+                    p6est_refine_column_int, NULL, p6est_replace_column);
+  p6est->user_pointer = orig_user_pointer;
+
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
+}
+
+void
+p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
+                         int allowed_level, p6est_refine_layer_t refine_fn,
+                         p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
+  p4est_t            *columns = p6est->columns;
+  sc_array_t         *layers = p6est->layers;
+  sc_array_t         *newcol = sc_array_new (sizeof (p2est_quadrant_t));
   p4est_topidx_t      jt;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
   p4est_quadrant_t   *col;
-  size_t              offset = 0;
-  int                 count;
-  sc_array_t         *newcol;
-  int                 any_change, this_change;
+  p2est_quadrant_t   *q, *newq;
+  p2est_quadrant_t    nextq[P4EST_MAXLEVEL];
+  p2est_quadrant_t    c[2];
+  p2est_quadrant_t    p, *parent = &p;
+  p2est_quadrant_t   *child[2];
+  size_t              first, last, zz, current, old_count;
+  int                 any_change;
+  int                 level;
+  int                 stop_recurse;
 
-  if (refine_fn) {
-    refine_col.init_fn = zinit_fn;
-    refine_col.replace_fn = zreplace_fn;
-    refine_col.user_pointer = orig_user_pointer;
+  for (jt = columns->first_local_tree; jt <= columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (columns->trees, jt);
+    tquadrants = &tree->quadrants;
 
-    p6est->user_pointer = (void *) &refine_col;
-    p4est_refine_ext (p6est->p4est, refine_recursive, allowed_level,
-                      refine_fn, NULL, p6est_refine_column);
-    p6est->user_pointer = orig_user_pointer;
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
 
-    p6est_compress_columns (p6est);
-  }
+      any_change = 0;
 
-  if (zrefine_fn) {
-    newcol = sc_array_new (sizeof (p6est_quadrant_t));
-
-    for (jt = p6est->p4est->first_local_tree;
-         jt <= p6est->p4est->last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (p6est->p4est->trees, jt);
-      tquadrants = &tree->quadrants;
-
-      for (zz = 0; zz < tquadrants->elem_count; ++zz) {
-        col = p4est_quadrant_array_index (tquadrants, zz);
-        first = (size_t) col->p.piggy3.local_num;
-        count = (int) col->p.piggy3.which_tree;
-
-        any_change = 0;
-        parent = NULL;
-
-        for (current = first; current < first + count; current++) {
-          q = p6est_quadrant_array_index (quads, current);
-          parent = q;
-          newq = sc_array_push (newcol);
-          *newq = *q;
-          stop_recurse = 0;
-          this_change = 0;
-          for (;;) {
-            if (!stop_recurse && zrefine_fn (p4est, nt, newq)
-                && (int) newq->zlevel < allowed_zlevel) {
-              this_change = 1;
-              any_change = 1;
-              newq->zlevel++;
-              stop_recurse = !refine_recursive;
+      for (current = first; current < last; current++) {
+        q = p2est_quadrant_array_index (layers, current);
+        stop_recurse = 0;
+        level = q->level;
+        parent = q;
+        for (;;) {
+          if (!stop_recurse && refine_fn (p6est, jt, col, parent) &&
+              (int) parent->level < allowed_level) {
+            level++;
+            any_change = 1;
+            c[0] = *parent;
+            c[0].level = level;
+            c[1] = *parent;
+            c[1].level = level;
+            c[1].z += P4EST_QUADRANT_LEN (level);
+            child[0] = &c[0];
+            child[1] = &c[1];
+            p6est_layer_init_data (p6est, jt, col, child[0], init_fn);
+            p6est_layer_init_data (p6est, jt, col, child[1], init_fn);
+            if (replace_fn != NULL) {
+              replace_fn (p6est, jt, 1, 1, &col, &parent, 1, 2, &col, child);
+            }
+            p6est_layer_free_data (p6est, parent);
+            p = c[0];
+            parent = &p;
+            nextq[level] = c[1];
+            stop_recurse = !refine_recursive;
+          }
+          else {
+            /* parent is accepted */
+            newq = (p2est_quadrant_t *) sc_array_push (newcol);
+            *newq = *parent;
+            if (parent == &p) {
+              parent = &nextq[level];
             }
             else {
-              q = newq;
-              newq = sc_array_push (newcol);
-              *newq = *q;
-              newq->z += P6EST_QUADRANT_LEN (newq->zlevel);
-              if (current + 1 >= first + count ||
-                  (p6est_quadrant_array_index (quads, current + 1))->z <=
-                  newq->z) {
-                /* pop */
-                P4EST_ASSERT (newcol->elem_count > 1);
-                newcol->elem_count--;
+              if (level == q->level) {
                 break;
               }
-              while (newq->zlevel > 0
-                     && !(newq->z & P6EST_QUADRANT_LEN (newq->zlevel))) {
-                newq->zlevel--;
-              }
+              parent = &(nextq[--level]);
             }
           }
-          if (this_change) {
-          }
         }
-        if (any_change) {
-          old_count = quads->elem_count;
-          sc_array_resize (quads, old_count + newcol->elem_count);
-          memcpy (sc_array_index (quads, old_count),
-                  sc_array_index (newcol, 0),
-                  newcol->elem_size * newcol->elem_count);
-          col->p.piggy3.local_num = (p4est_locidx_t) old_count;
-          col->p.piggy3.which_tree = (p4est_topidx_t) newcol->elem_count;
-        }
-        sc_array_truncate (newcol);
       }
-    }
-
-    if (current != quads->elem_count) {
-      P4EST_ASSERT (q != NULL);
-
-      /* now we have a quadrant to refine, prepend it to the list */
-      qalloc = p6est_quadrant_mempool_alloc (p4est->quadrant_pool);
-      *qalloc = *q;             /* never prepend array members directly */
-      sc_list_prepend (list, qalloc);   /* only newly allocated quadrants */
-
-      P6EST_QUADRANT_INIT (&parent);
-
-      /*
-         current points to the next array member to write
-         restpos points to the next array member to read
-       */
-      restpos = current + 1;
+      if (any_change) {
+        old_count = layers->elem_count;
+        sc_array_resize (layers, old_count + newcol->elem_count);
+        memcpy (sc_array_index (layers, old_count),
+                sc_array_index (newcol, 0),
+                newcol->elem_size * newcol->elem_count);
+        P6EST_COLUMN_SET_RANGE (col, old_count,
+                                old_count + newcol->elem_count);
+      }
+      sc_array_truncate (newcol);
     }
   }
-  /* update counts */
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
 }
-#endif
