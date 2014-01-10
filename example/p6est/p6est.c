@@ -511,8 +511,8 @@ p6est_replace_column (p4est_t * p4est, p4est_topidx_t which_tree,
       p2est_quadrant_t   *inq[P4EST_CHILDREN];
 
       oq = p2est_quadrant_array_index (p6est->layers, first + j);
-      ifirst = incoming[i]->p.piggy3.local_num;
       for (i = 0; i < P4EST_CHILDREN; i++) {
+        P6EST_COLUMN_GET_RANGE (incoming[i], &ifirst, &ilast);
         inq[i] = p2est_quadrant_array_index (p6est->layers, ifirst + j);
       }
 
@@ -534,32 +534,54 @@ p6est_replace_column (p4est_t * p4est, p4est_topidx_t which_tree,
 void
 p6est_compress_columns (p6est_t * p6est)
 {
-  size_t              zz, first;
+  size_t              zz, zy, first, last;
   p4est_topidx_t      jt;
   p4est_quadrant_t   *col;
   p4est_tree_t       *tree;
   sc_array_t         *tquadrants;
-  size_t              offset = 0;
+  size_t              offset, nkeep;
   int                 count;
+  size_t              this_col;
+  p4est_t            *columns = p6est->columns;
+  sc_array_t         *layers = p6est->layers;
+  size_t             *newindex;
+  sc_array_t         *na;
+  size_t              nlayers = layers->elem_count;
 
-  for (jt = p6est->columns->first_local_tree;
-       jt <= p6est->columns->last_local_tree; ++jt) {
-    tree = p4est_tree_array_index (p6est->columns->trees, jt);
+  na = sc_array_new_size (sizeof (size_t), nlayers);
+  newindex = (size_t *) na->array;
+  for (zy = 0; zy < nlayers; zy++) {
+    newindex[zy] = nlayers;
+  }
+
+  offset = 0;
+  for (this_col = 0, jt = columns->first_local_tree;
+       jt <= columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (columns->trees, jt);
     tquadrants = &tree->quadrants;
-    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+    for (zz = 0; zz < tquadrants->elem_count; ++zz, this_col++) {
       col = p4est_quadrant_array_index (tquadrants, zz);
-      first = col->p.piggy3.local_num;
-      count = col->p.piggy3.which_tree;
-      P4EST_ASSERT (first >= offset);
-      if (first != offset) {
-        memcpy (sc_array_index (p6est->layers, offset),
-                sc_array_index (p6est->layers, first),
-                count * sizeof (p2est_quadrant_t));
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
+      count = last - first;
+      P6EST_COLUMN_SET_RANGE (col, offset, offset + count);
+      for (zy = first; zy < last; zy++) {
+        newindex[zy] = offset++;
       }
-      offset += count;
     }
   }
-  sc_array_resize (p6est->layers, offset);
+  nkeep = offset;
+  P4EST_ASSERT (nkeep <= nlayers);
+
+  for (zy = 0; zy < nlayers; zy++) {
+    if (newindex[zy] == nlayers) {
+      newindex[zy] = offset++;
+    }
+  }
+  P4EST_ASSERT (offset == nlayers);
+
+  sc_array_permute (layers, na, 0);
+  sc_array_resize (p6est->layers, nkeep);
+  sc_array_destroy (na);
 }
 
 void
@@ -643,7 +665,7 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
         parent = q;
         for (;;) {
           if (!stop_recurse && refine_fn (p6est, jt, col, parent) &&
-              (int) parent->level < allowed_level) {
+              (allowed_level < 0 || (int) parent->level < allowed_level)) {
             level++;
             any_change = 1;
             c[0] = *parent;
@@ -658,6 +680,7 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
             if (replace_fn != NULL) {
               replace_fn (p6est, jt, 1, 1, &col, &parent, 1, 2, &col, child);
             }
+            P4EST_ASSERT (parent->p.user_data != NULL);
             p6est_layer_free_data (p6est, parent);
             p = c[0];
             parent = &p;
@@ -672,10 +695,12 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
               parent = &nextq[level];
             }
             else {
-              if (level == q->level) {
+              while (--level > q->level && parent->z > nextq[level].z) {
+              }
+              if (level <= q->level) {
                 break;
               }
-              parent = &(nextq[--level]);
+              parent = &(nextq[level]);
             }
           }
         }
@@ -692,6 +717,23 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
       sc_array_truncate (newcol);
     }
   }
+  sc_array_destroy (newcol);
   p6est_compress_columns (p6est);
   p6est_update_offsets (p6est);
+}
+
+void
+p6est_refine_columns (p6est_t * p6est, int refine_recursive,
+                      p6est_refine_column_t refine_fn, p6est_init_t init_fn)
+{
+  p6est_refine_columns_ext (p6est, refine_recursive, -1, refine_fn, init_fn,
+                            NULL);
+}
+
+void
+p6est_refine_layers (p6est_t * p6est, int refine_recursive,
+                     p6est_refine_layer_t refine_fn, p6est_init_t init_fn)
+{
+  p6est_refine_layers_ext (p6est, refine_recursive, -1, refine_fn, init_fn,
+                           NULL);
 }

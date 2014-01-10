@@ -21,10 +21,79 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#include <p4est_bits.h>
 #include <p6est.h>
 #include <p6est_vtk.h>
 
 char               *TEST_USER_POINTER;
+
+static int          refine_level = -1;
+
+/* To define a p6est_refine_column_t, all we have to do is take a p4est refine
+ * function ... */
+static int
+p4est_refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t * quadrant)
+{
+  int                 cid;
+
+  if (quadrant->level >= refine_level) {
+    return 0;
+  }
+  if (which_tree == 2 || which_tree == 3) {
+    return 0;
+  }
+
+  cid = p4est_quadrant_child_id (quadrant);
+
+  if (cid == P4EST_CHILDREN - 1 ||
+      (quadrant->x >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2) &&
+       quadrant->y >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2)
+#ifdef P4_TO_P8
+       && quadrant->z >= P4EST_LAST_OFFSET (P4EST_MAXLEVEL - 2)
+#endif
+      )) {
+    return 1;
+  }
+  if (quadrant->level == 1 && cid == 2) {
+    return 1;
+  }
+  if (quadrant->x == P4EST_QUADRANT_LEN (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+  if (quadrant->y >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+/* and wrap it.*/
+static int
+refine_column_fn (p6est_t * p6est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t * column)
+{
+  return p4est_refine_fn (p6est->columns, which_tree, column);
+}
+
+static int
+refine_layer_fn (p6est_t * p6est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t * column, p2est_quadrant_t * layer)
+{
+  p4est_topidx_t      tohash[4];
+  unsigned            hash;
+
+  tohash[0] = (p4est_topidx_t) column->x;
+  tohash[1] = (p4est_topidx_t) column->y;
+  tohash[2] = (p4est_topidx_t) layer->z;
+  tohash[3] = (((p4est_topidx_t) column->level) << 16) |
+    ((p4est_topidx_t) layer->level);
+
+  hash = p4est_topidx_hash4 (tohash);
+
+  return (layer->level < refine_level && !((int) hash % 3));
+}
 
 void
 init_fn (p6est_t * p6est, p4est_topidx_t which_tree,
@@ -41,7 +110,7 @@ main (int argc, char **argv)
   p4est_connectivity_t *conn4;
   p6est_connectivity_t *conn;
   p6est_t            *p6est;
-  double              height[3] = { 0., 0., 1. };
+  double              height[3] = { 0., 0., 0.1 };
   int                 mpiret;
 
   mpiret = MPI_Init (&argc, &argv);
@@ -64,6 +133,13 @@ main (int argc, char **argv)
 
   p6est = p6est_new_ext (mpicomm, conn, 0, 1, 2, 1, 3, init_fn,
                          TEST_USER_POINTER);
+
+  refine_level = 3;
+  p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
+  refine_level = 4;
+  p6est_refine_layers (p6est, 1, refine_layer_fn, init_fn);
+  refine_level = 5;
+  p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
 
   p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
 

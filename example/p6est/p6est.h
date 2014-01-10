@@ -31,7 +31,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef struct p6est_connectivity_t
+typedef struct p6est_connectivity
 {
   p4est_connectivity_t *conn4;  /* owned: vertices interpreted as the vertices
                                    of the bottom of the sheet */
@@ -45,7 +45,7 @@ typedef struct p6est_connectivity_t
 }
 p6est_connectivity_t;
 
-/** Create a p6est_connectivity_t from a  p4est_connectivity_t.  All fields
+/** Create a p6est_connectivity_t from a p4est_connectivity_t.  All fields
  * are copied.
  */
 p6est_connectivity_t *p6est_connectivity_new (p4est_connectivity_t * conn4,
