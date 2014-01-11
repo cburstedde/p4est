@@ -1,17 +1,17 @@
 
 dnl P4EST_CHECK_METIS(PREXIX)
-dnl Check for METIS library and link a test program
+dnl Check for the METIS library and link a test program
 dnl
 AC_DEFUN([P4EST_CHECK_METIS], [
 
-AC_MSG_CHECKING([for the metis library])
+AC_MSG_CHECKING([for metis])
 
 SC_ARG_WITH_PREFIX([metis], [enable metis-dependent code], [METIS], [$1])
-if test "$$1_WITH_METIS" != "no" ; then
+if test "x$$1_WITH_METIS" != xno ; then
   $1_METIS_INC=
   $1_METIS_LD=
   $1_METIS_LIB="-lmetis"
-  if test "$$1_WITH_METIS" != "yes" ; then
+  if test "x$$1_WITH_METIS" != xyes ; then
     $1_METIS_INC="-I$$1_WITH_METIS/include"
     $1_METIS_LD="-L$$1_WITH_METIS/lib"
   fi
