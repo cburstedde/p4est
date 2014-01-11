@@ -52,11 +52,11 @@ libp4est_compiled_sources += \
         src/p8est_wrap.c
 endif
 
+# this variable is used for headers that are not publicly installed
 P4EST_CPPFLAGS =
 
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
-        $(libp4est_installed_headers) \
         $(libp4est_internal_headers) \
         $(libp4est_compiled_sources)
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
