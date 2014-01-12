@@ -70,7 +70,7 @@ echo "o---------------------------------------"
 P4EST_DIST_DENY=
 P4EST_DISTCLEAN=
 SC_AS_SUBPACKAGE([P4EST])
-AM_CONDITIONAL([P4EST_DIST_DENY], [test -n "$P4EST_DIST_DENY"])
+AM_CONDITIONAL([P4EST_DIST_DENY], [test "x$P4EST_DIST_DENY" != x])
 AC_SUBST([P4EST_DISTCLEAN])
 
 # Print summary.
