@@ -103,13 +103,20 @@ init_fn (p6est_t * p6est, p4est_topidx_t which_tree,
                   "user_pointer corruption\n");
 }
 
+static int
+coarsen_column_fn (p6est_t * p6est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * column[])
+{
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
   MPI_Comm            mpicomm = MPI_COMM_WORLD;
   p4est_connectivity_t *conn4;
   p6est_connectivity_t *conn;
-  p6est_t            *p6est;
+  p6est_t            *p6est, *copy_p6est;
   double              height[3] = { 0., 0., 0.1 };
   int                 mpiret;
 
@@ -142,6 +149,11 @@ main (int argc, char **argv)
   p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
 
   p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
+
+  copy_p6est = p6est_copy (p6est, 1);
+  p6est_coarsen_columns (copy_p6est, 1, coarsen_column_fn, init_fn);
+  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen");
+  p6est_destroy (copy_p6est);
 
   p6est_destroy (p6est);
 

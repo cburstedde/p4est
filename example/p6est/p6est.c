@@ -342,10 +342,10 @@ p6est_copy (p6est_t * input, int copy_data)
   p6est_t            *p6est = P4EST_ALLOC (p6est_t, 1);
   size_t              zz, qcount = input->layers->elem_count;
 
-  memcpy (p6est, input, sizeof (p4est_t));
+  memcpy (p6est, input, sizeof (p6est_t));
   p6est->layers =
     sc_array_new_size (input->layers->elem_size, input->layers->elem_count);
-  sc_array_copy (input->layers, p6est->layers);
+  sc_array_copy (p6est->layers, input->layers);
   p6est->columns = p4est_copy (input->columns, 0);
   p6est->columns->user_pointer = p6est;
   if (copy_data && p6est->data_size > 0) {
@@ -794,7 +794,7 @@ p2est_quadrant_is_ancestor (p2est_quadrant_t * a, p2est_quadrant_t * b)
     return 0;
   }
 
-  return (b->z >= a->z && b->z < a->z + P4EST_QUADRANT_LEN (a->z));
+  return (b->z >= a->z && b->z < a->z + P4EST_QUADRANT_LEN (a->level));
 }
 
 static void
@@ -805,8 +805,10 @@ p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
 {
   p2est_quadrant_t    prevq[P4EST_QMAXLEVEL];
   size_t              zz;
+#ifdef P4EST_DEBUG
   size_t              old_count = descendants->elem_count;
-  p2est_quadrant_t   *q, *p, a, *sib[2];
+#endif
+  p2est_quadrant_t   *q, *p, a, s, *sib[2];
 
   P4EST_ASSERT (old_count > 1);
 
@@ -820,7 +822,8 @@ p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
     if (q->z & P4EST_QUADRANT_LEN (q->level)) {
       p = &prevq[q->level];
       sib[0] = p;
-      sib[1] = q;
+      s = *q;
+      sib[1] = &s;
       a = *p;
       q = &a;
       q->level--;
@@ -905,7 +908,7 @@ p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
       if (q[j]->level > p->level) {
         P4EST_ASSERT (p2est_quadrant_is_ancestor (p, q[j]));
         view_count = 1;
-        view_first = zw[j];
+        view_first = first[j] + zw[j];
         P4EST_ASSERT (zw[j] < nlayers[j] - 1);
         while (++zw[j] < nlayers[j] &&
                p2est_quadrant_is_ancestor (p,
@@ -922,6 +925,9 @@ p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
         p6est_coarsen_all_layers (p6est, which_tree, outgoing[j], p->level,
                                   &view, init_fn, replace_fn);
         q[j] = p2est_quadrant_array_index (&view, 0);
+      }
+      else {
+        zw[j]++;
       }
     }
     if (replace_fn != NULL) {
@@ -960,6 +966,7 @@ p6est_coarsen_columns_ext (p6est_t * p6est, int coarsen_recursive,
   coarsen_col.init_fn = init_fn;
   coarsen_col.replace_fn = replace_fn;
   coarsen_col.user_pointer = orig_user_pointer;
+  coarsen_col.work_array = sc_array_new (sizeof (p2est_quadrant_t));
 
   p6est->user_pointer = (void *) &coarsen_col;
   p4est_coarsen_ext (p6est->columns, coarsen_recursive, callback_orphans,
@@ -967,6 +974,16 @@ p6est_coarsen_columns_ext (p6est_t * p6est, int coarsen_recursive,
                      p6est_replace_column_join);
   p6est->user_pointer = orig_user_pointer;
 
+  sc_array_destroy (coarsen_col.work_array);
   p6est_compress_columns (p6est);
   p6est_update_offsets (p6est);
+}
+
+void
+p6est_coarsen_columns (p6est_t * p6est, int coarsen_recursive,
+                       p6est_coarsen_column_t coarsen_fn,
+                       p6est_init_t init_fn)
+{
+  p6est_coarsen_columns_ext (p6est, coarsen_recursive, 0,
+                             coarsen_fn, init_fn, NULL);
 }
