@@ -469,10 +469,9 @@ p6est_refine_column_int (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-p6est_replace_column (p4est_t * p4est, p4est_topidx_t which_tree,
-                      int num_outgoing,
-                      p4est_quadrant_t * outgoing[],
-                      int num_incoming, p4est_quadrant_t * incoming[])
+p6est_replace_column_split (p4est_t * p4est, p4est_topidx_t which_tree,
+                            int num_outgoing, p4est_quadrant_t * outgoing[],
+                            int num_incoming, p4est_quadrant_t * incoming[])
 {
   p6est_t            *p6est = (p6est_t *) p4est->user_pointer;
   p6est_refine_col_data_t *refine_col =
@@ -619,7 +618,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
 
   p6est->user_pointer = (void *) &refine_col;
   p4est_refine_ext (p6est->columns, refine_recursive, allowed_level,
-                    p6est_refine_column_int, NULL, p6est_replace_column);
+                    p6est_refine_column_int, NULL,
+                    p6est_replace_column_split);
   p6est->user_pointer = orig_user_pointer;
 
   p6est_compress_columns (p6est);
@@ -736,4 +736,192 @@ p6est_refine_layers (p6est_t * p6est, int refine_recursive,
 {
   p6est_refine_layers_ext (p6est, refine_recursive, -1, refine_fn, init_fn,
                            NULL);
+}
+
+typedef struct p6est_coarsen_col_data
+{
+  p6est_coarsen_column_t coarsen_col_fn;
+  p6est_init_t        init_fn;
+  p6est_replace_t     replace_fn;
+  void               *user_pointer;
+  sc_array_t         *work_array;       /* for merging columns */
+}
+p6est_coarsen_col_data_t;
+
+static int
+p6est_coarsen_column_int (p4est_t * p4est, p4est_topidx_t which_tree,
+                          p4est_quadrant_t * quadrants[])
+{
+  p6est_t            *p6est = (p6est_t *) p4est->user_pointer;
+  p6est_coarsen_col_data_t *coarsen_col =
+    (p6est_coarsen_col_data_t *) p6est->user_pointer;
+  int                 retval;
+
+  /* sneak the user pointer in */
+  p6est->user_pointer = coarsen_col->user_pointer;
+  retval = coarsen_col->coarsen_col_fn (p6est, which_tree, quadrants);
+
+  /* sneak the user pointer_out */
+  p6est->user_pointer = (void *) coarsen_col;
+
+  return retval;
+}
+
+static int
+p2est_quadrant_compare (const void *A, const void *B)
+{
+  const p2est_quadrant_t *a = (const p2est_quadrant_t *) A;
+  const p2est_quadrant_t *b = (const p2est_quadrant_t *) B;
+  p4est_qcoord_t      diff = a->z - b->z;
+
+  if (!diff) {
+    return (int) a->level - b->level;
+  }
+
+  return (int) diff;
+}
+
+static int
+p2est_quadrant_is_equal (p2est_quadrant_t * a, p2est_quadrant_t * b)
+{
+  return (a->z == b->z && a->level == b->level);
+}
+
+static int
+p2est_quadrant_is_ancestor (p2est_quadrant_t * a, p2est_quadrant_t * b)
+{
+  if (a->level >= b->level) {
+    return 0;
+  }
+
+  return (b->z >= a->z && b->z < a->z + P4EST_QUADRANT_LEN (a->z));
+}
+
+static void
+p6est_coarsen_layer_int (p6est_t * p6est, p4est_topidx_t which_tree,
+                         p4est_quadrant_t * column, sc_array_t * descendants,
+                         p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
+}
+
+static void
+p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
+                           int num_outgoing, p4est_quadrant_t * outgoing[],
+                           int num_incoming, p4est_quadrant_t * incoming[])
+{
+  p6est_t            *p6est = (p6est_t *) p4est->user_pointer;
+  p6est_coarsen_col_data_t *coarsen_col =
+    (p6est_coarsen_col_data_t *) p6est->user_pointer;
+  size_t              nlayers[P4EST_CHILDREN];
+  size_t              first[P4EST_CHILDREN], last[P4EST_CHILDREN];
+  size_t              zw[P4EST_CHILDREN];
+  size_t              view_first, view_count;
+  size_t              new_first, new_count, new_last;
+  int                 j;
+  p2est_quadrant_t   *q[P4EST_CHILDREN], *p;
+  sc_array_t         *layers = p6est->layers;
+  sc_array_t         *work_array = coarsen_col->work_array;
+  sc_array_t          view;
+  p6est_init_t        init_fn = coarsen_col->init_fn;
+  p6est_replace_t     replace_fn = coarsen_col->replace_fn;
+
+  /* sneak the user pointer in */
+  p6est->user_pointer = coarsen_col->user_pointer;
+
+  P4EST_ASSERT (num_outgoing == P4EST_CHILDREN);
+  P4EST_ASSERT (num_incoming == 1);
+  P4EST_ASSERT (!work_array->elem_count);
+
+  new_first = layers->elem_count;
+  new_count = 0;
+
+  /* zero counters for each column */
+  for (j = 0; j < num_outgoing; j++) {
+    zw[j] = 0;
+    P6EST_COLUMN_GET_RANGE (outgoing[j], &first[j], &last[j]);
+    nlayers[j] = last[j] - first[j];
+  }
+
+  while (zw[0] < nlayers[0]) {
+    for (j = 0; j < num_outgoing; j++) {
+      P4EST_ASSERT (zw[j] < nlayers[j]);
+      q[j] = p2est_quadrant_array_index (layers, first[j] + zw[j]);
+    }
+    p = (p2est_quadrant_t *) sc_array_push (work_array);
+    *p = *q[0];
+    p6est_layer_init_data (p6est, which_tree, incoming[0], p, init_fn);
+    for (j = 1; j < num_outgoing; j++) {
+      P4EST_ASSERT (q[j]->z == p->z);
+      if (q[j]->level < p->level) {
+        *p = *q[j];
+      }
+    }
+    for (j = 0; j < num_outgoing; j++) {
+      if (q[j]->level > p->level) {
+        P4EST_ASSERT (p2est_quadrant_is_ancestor (p, q[j]));
+        view_count = 1;
+        view_first = zw[j];
+        P4EST_ASSERT (zw[j] < nlayers[j] - 1);
+        while (++zw[j] < nlayers[j] &&
+               p2est_quadrant_is_ancestor (p,
+                                           p2est_quadrant_array_index (layers,
+                                                                       first
+                                                                       [j] +
+                                                                       zw
+                                                                       [j])))
+        {
+          view_count++;
+        }
+        sc_array_init_view (&view, layers, view_first, view_count);
+        /* coarsen within this column */
+        p6est_coarsen_layer_int (p6est, which_tree, outgoing[j], &view,
+                                 init_fn, replace_fn);
+        q[j] = p2est_quadrant_array_index (&view, 0);
+      }
+    }
+    if (replace_fn != NULL) {
+      replace_fn (p6est, which_tree, P4EST_CHILDREN, 1, outgoing, q, 1, 1,
+                  incoming, &p);
+    }
+    for (j = 0; j < num_outgoing; j++) {
+      p6est_layer_free_data (p6est, q[j]);
+    }
+  }
+
+  new_count = work_array->elem_count;
+  new_last = new_first + new_count;
+  P6EST_COLUMN_SET_RANGE (incoming[0], new_first, new_last);
+
+  /* create the new column */
+  sc_array_resize (layers, new_last);
+  memcpy (sc_array_index (layers, new_first),
+          sc_array_index (work_array, 0), new_count * work_array->elem_size);
+
+  sc_array_truncate (work_array);
+  /* sneak the user pointer out */
+  p6est->user_pointer = (void *) coarsen_col;
+}
+
+void
+p6est_coarsen_columns_ext (p6est_t * p6est, int coarsen_recursive,
+                           int callback_orphans,
+                           p6est_coarsen_column_t coarsen_fn,
+                           p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
+  p6est_coarsen_col_data_t coarsen_col;
+  void               *orig_user_pointer = p6est->user_pointer;
+
+  coarsen_col.coarsen_col_fn = coarsen_fn;
+  coarsen_col.init_fn = init_fn;
+  coarsen_col.replace_fn = replace_fn;
+  coarsen_col.user_pointer = orig_user_pointer;
+
+  p6est->user_pointer = (void *) &coarsen_col;
+  p4est_coarsen_ext (p6est->columns, coarsen_recursive, callback_orphans,
+                     p6est_coarsen_column_int, NULL,
+                     p6est_replace_column_join);
+  p6est->user_pointer = orig_user_pointer;
+
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
 }
