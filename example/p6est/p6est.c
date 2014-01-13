@@ -798,10 +798,55 @@ p2est_quadrant_is_ancestor (p2est_quadrant_t * a, p2est_quadrant_t * b)
 }
 
 static void
-p6est_coarsen_layer_int (p6est_t * p6est, p4est_topidx_t which_tree,
-                         p4est_quadrant_t * column, sc_array_t * descendants,
-                         p6est_init_t init_fn, p6est_replace_t replace_fn)
+p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
+                          p4est_quadrant_t * column, int ancestor_level,
+                          sc_array_t * descendants,
+                          p6est_init_t init_fn, p6est_replace_t replace_fn)
 {
+  p2est_quadrant_t    prevq[P4EST_QMAXLEVEL];
+  size_t              zz;
+  size_t              old_count = descendants->elem_count;
+  p2est_quadrant_t   *q, *p, a, *sib[2];
+
+  P4EST_ASSERT (old_count > 1);
+
+  q = p2est_quadrant_array_index (descendants, 0);
+
+  prevq[q->level] = *q;
+
+  zz = 1;
+  q = p2est_quadrant_array_index (descendants, zz++);
+  for (;;) {
+    if (q->z & P4EST_QUADRANT_LEN (q->level)) {
+      p = &prevq[q->level];
+      sib[0] = p;
+      sib[1] = q;
+      a = *p;
+      q = &a;
+      q->level--;
+      P4EST_ASSERT (p2est_quadrant_is_ancestor (q, sib[0]));
+      P4EST_ASSERT (p2est_quadrant_is_ancestor (q, sib[1]));
+      p6est_layer_init_data (p6est, which_tree, column, q, init_fn);
+      if (replace_fn) {
+        replace_fn (p6est, which_tree, 1, 2, &column, sib, 1, 1, &column, &q);
+      }
+      p6est_layer_free_data (p6est, sib[0]);
+      p6est_layer_free_data (p6est, sib[1]);
+      if (q->level == ancestor_level) {
+        P4EST_ASSERT (zz == old_count);
+        break;
+      }
+    }
+    else {
+      prevq[q->level] = *q;
+      P4EST_ASSERT (zz < old_count);
+      q = p2est_quadrant_array_index (descendants, zz++);
+    }
+  }
+
+  P4EST_ASSERT (q->level == ancestor_level);
+  p = p2est_quadrant_array_index (descendants, 0);
+  *p = *q;
 }
 
 static void
@@ -874,8 +919,8 @@ p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
         }
         sc_array_init_view (&view, layers, view_first, view_count);
         /* coarsen within this column */
-        p6est_coarsen_layer_int (p6est, which_tree, outgoing[j], &view,
-                                 init_fn, replace_fn);
+        p6est_coarsen_all_layers (p6est, which_tree, outgoing[j], p->level,
+                                  &view, init_fn, replace_fn);
         q[j] = p2est_quadrant_array_index (&view, 0);
       }
     }
