@@ -3,7 +3,7 @@ dnl This file is part of p4est.
 dnl
 
 AC_INIT([p4est],
-        [m4_esyscmd([config/git-version-gen .tarball-version])],
+        [m4_esyscmd([build-aux/git-version-gen .tarball-version])],
         [info@p4est.org])
 AC_PREREQ(2.61)
 AC_CONFIG_HEADERS([src/pre_config.h])
