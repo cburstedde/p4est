@@ -24,15 +24,9 @@
 #ifndef P4EST_BASE_H
 #define P4EST_BASE_H
 
-/* include p4est config header */
-
+/* include config headers */
 #include <p4est_config.h>
-
-/* indirectly also include sc.h and sc_config.h */
-
-#include <sc_containers.h>
-#define _p4est_const _sc_const
-
+#include <sc_config.h>
 #if \
   (defined (P4EST_MPI) && !defined (SC_MPI)) || \
   (!defined (P4EST_MPI) && defined (SC_MPI))
@@ -43,6 +37,10 @@
   (!defined (P4EST_MPIIO) && defined (SC_MPIIO))
 #error "MPI I/O configured differently in p4est and libsc"
 #endif
+
+/* indirectly also include sc.h */
+#include <sc_containers.h>
+#define _p4est_const _sc_const
 
 SC_EXTERN_C_BEGIN;
 
