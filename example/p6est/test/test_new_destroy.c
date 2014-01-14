@@ -110,6 +110,13 @@ coarsen_column_fn (p6est_t * p6est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static int
+coarsen_layer_fn (p6est_t * p6est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t * column, p2est_quadrant_t * layers[])
+{
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -152,7 +159,12 @@ main (int argc, char **argv)
 
   copy_p6est = p6est_copy (p6est, 1);
   p6est_coarsen_columns (copy_p6est, 1, coarsen_column_fn, init_fn);
-  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen");
+  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_columns");
+  p6est_destroy (copy_p6est);
+
+  copy_p6est = p6est_copy (p6est, 1);
+  p6est_coarsen_layers (copy_p6est, 0, coarsen_layer_fn, init_fn);
+  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
   p6est_destroy (copy_p6est);
 
   p6est_destroy (p6est);

@@ -801,55 +801,129 @@ static void
 p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
                           p4est_quadrant_t * column, int ancestor_level,
                           sc_array_t * descendants,
+                          int coarsen_recursive,
+                          int callback_orphan,
+                          p6est_coarsen_layer_t coarsen_fn,
                           p6est_init_t init_fn, p6est_replace_t replace_fn)
 {
   p2est_quadrant_t    prevq[P4EST_QMAXLEVEL];
-  size_t              zz;
-#ifdef P4EST_DEBUG
   size_t              old_count = descendants->elem_count;
+  size_t              zz, new_count = 0;
+  p2est_quadrant_t   *q, *r, a, s, *sib[2];
+  int                 i, stackheight;
+#ifdef P4EST_DEBUG
+  size_t              mcount = p6est->user_data_pool->elem_count;
+  p4est_qcoord_t      startpos, endpos;
 #endif
-  p2est_quadrant_t   *q, *p, a, s, *sib[2];
+
+  P4EST_ASSERT (old_count > 0);
+
+  q = p2est_quadrant_array_index (descendants, 0);
+#ifdef P4EST_DEBUG
+  startpos = q->z;
+#endif
+
+  if (q->level == ancestor_level) {
+    P4EST_ASSERT (old_count == 1);
+    if (coarsen_fn != NULL && callback_orphan) {
+      sib[0] = q;
+      sib[1] = NULL;
+      coarsen_fn (p6est, which_tree, column, sib);
+    }
+    return;
+  }
 
   P4EST_ASSERT (old_count > 1);
 
-  q = p2est_quadrant_array_index (descendants, 0);
+  /* the stack contains only first siblings until it is time to move the stack
+   * back to the array */
+  P4EST_ASSERT (!(q->z & P4EST_QUADRANT_LEN (q->level)));
 
-  prevq[q->level] = *q;
-
+  stackheight = 0;
   zz = 1;
-  q = p2est_quadrant_array_index (descendants, zz++);
   for (;;) {
+    /* if this is a second sibling */
     if (q->z & P4EST_QUADRANT_LEN (q->level)) {
-      p = &prevq[q->level];
-      sib[0] = p;
-      s = *q;
-      sib[1] = &s;
-      a = *p;
-      q = &a;
-      q->level--;
-      P4EST_ASSERT (p2est_quadrant_is_ancestor (q, sib[0]));
-      P4EST_ASSERT (p2est_quadrant_is_ancestor (q, sib[1]));
-      p6est_layer_init_data (p6est, which_tree, column, q, init_fn);
-      if (replace_fn) {
-        replace_fn (p6est, which_tree, 1, 2, &column, sib, 1, 1, &column, &q);
+      if (!stackheight) {
+        prevq[stackheight++] = *q;
       }
-      p6est_layer_free_data (p6est, sib[0]);
-      p6est_layer_free_data (p6est, sib[1]);
-      if (q->level == ancestor_level) {
-        P4EST_ASSERT (zz == old_count);
-        break;
+      else {
+        /* pop the first sibling off the stack */
+        sib[0] = &prevq[stackheight - 1];
+        s = *q;
+        sib[1] = &s;
+        P4EST_ASSERT (sib[0]->level == sib[1]->level);
+        P4EST_ASSERT (sib[0]->z + P4EST_QUADRANT_LEN (sib[0]->level) ==
+                      sib[1]->z);
+        /* test if we will coarsen this pair */
+        if (coarsen_fn == NULL || coarsen_fn (p6est, which_tree, column, sib)) {
+          /* coarsen */
+          a = *sib[0];
+          q = &a;
+          q->level--;
+          P4EST_ASSERT (p2est_quadrant_is_ancestor (q, sib[0]));
+          P4EST_ASSERT (p2est_quadrant_is_ancestor (q, sib[1]));
+          p6est_layer_init_data (p6est, which_tree, column, q, init_fn);
+          if (replace_fn) {
+            replace_fn (p6est, which_tree, 1, 2, &column, sib, 1, 1, &column,
+                        &q);
+          }
+          p6est_layer_free_data (p6est, sib[0]);
+          p6est_layer_free_data (p6est, sib[1]);
+          /* if we are doing recursive coarsening, do not advance */
+          if (coarsen_recursive) {
+            stackheight--;
+          }
+          else {
+            /* put the parent on the end of the stack */
+            prevq[stackheight - 1] = *q;
+          }
+        }
+        else {
+          prevq[stackheight++] = *q;
+        }
       }
     }
     else {
-      prevq[q->level] = *q;
-      P4EST_ASSERT (zz < old_count);
-      q = p2est_quadrant_array_index (descendants, zz++);
+      prevq[stackheight++] = *q;
+      if (q->level > ancestor_level) {
+        P4EST_ASSERT (zz < old_count);
+        q = p2est_quadrant_array_index (descendants, zz++);
+      }
+    }
+
+    if (stackheight && p2est_quadrant_is_equal (&prevq[stackheight - 1], q)) {
+      /* clear the stack into the array from the bottom up */
+      for (i = 0; i < stackheight; i++) {
+        r = p2est_quadrant_array_index (descendants, new_count++);
+        *r = prevq[i];
+        if (coarsen_fn != NULL && callback_orphan) {
+          sib[0] = r;
+          sib[1] = NULL;
+          coarsen_fn (p6est, which_tree, column, sib);
+        }
+      }
+      stackheight = 0;
+      if (zz == old_count) {
+        break;
+      }
+      else {
+        q = p2est_quadrant_array_index (descendants, zz++);
+      }
     }
   }
 
-  P4EST_ASSERT (q->level == ancestor_level);
-  p = p2est_quadrant_array_index (descendants, 0);
-  *p = *q;
+  sc_array_resize (descendants, new_count);
+
+#ifdef P4EST_DEBUG
+  P4EST_ASSERT (mcount - p6est->user_data_pool->elem_count ==
+                (old_count - new_count));
+
+  q = p2est_quadrant_array_index (descendants, new_count - 1);
+  endpos = q->z + P4EST_QUADRANT_LEN (q->level);
+  P4EST_ASSERT (endpos - startpos == P4EST_QUADRANT_LEN (ancestor_level));
+
+#endif
 }
 
 static void
@@ -923,7 +997,7 @@ p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
         sc_array_init_view (&view, layers, view_first, view_count);
         /* coarsen within this column */
         p6est_coarsen_all_layers (p6est, which_tree, outgoing[j], p->level,
-                                  &view, init_fn, replace_fn);
+                                  &view, 1, 0, NULL, init_fn, replace_fn);
         q[j] = p2est_quadrant_array_index (&view, 0);
       }
       else {
@@ -986,4 +1060,51 @@ p6est_coarsen_columns (p6est_t * p6est, int coarsen_recursive,
 {
   p6est_coarsen_columns_ext (p6est, coarsen_recursive, 0,
                              coarsen_fn, init_fn, NULL);
+}
+
+void
+p6est_coarsen_layers_ext (p6est_t * p6est, int coarsen_recursive,
+                          int callback_orphans,
+                          p6est_coarsen_layer_t coarsen_fn,
+                          p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
+  p4est_t            *columns = p6est->columns;
+  sc_array_t         *layers = p6est->layers;
+  sc_array_t          view;
+  p4est_topidx_t      jt;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *col;
+  size_t              first, last, zz, count;
+
+  for (jt = columns->first_local_tree; jt <= columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (columns->trees, jt);
+    tquadrants = &tree->quadrants;
+
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
+
+      count = last - first;
+      sc_array_init_view (&view, layers, first, count);
+      p6est_coarsen_all_layers (p6est, jt, col, 0, &view,
+                                coarsen_recursive, callback_orphans,
+                                coarsen_fn, init_fn, replace_fn);
+      P4EST_ASSERT (view.elem_count > 0);
+      P4EST_ASSERT (view.elem_count <= count);
+      last = first + view.elem_count;
+      P6EST_COLUMN_SET_RANGE (col, first, last);
+    }
+  }
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
+  P4EST_ASSERT (p6est->user_data_pool->elem_count == layers->elem_count);
+}
+
+void
+p6est_coarsen_layers (p6est_t * p6est, int coarsen_recursive,
+                      p6est_coarsen_layer_t coarsen_fn, p6est_init_t init_fn)
+{
+  p6est_coarsen_layers_ext (p6est, coarsen_recursive, 0, coarsen_fn, init_fn,
+                            NULL);
 }
