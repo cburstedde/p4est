@@ -68,6 +68,10 @@ scriptversion=2008-04-08.07
 # dist-hook:
 #	echo $(VERSION) > $(distdir)/.tarball-version
 
+# Copyright (C) 2014 Carsten Burstedde
+#
+# With the new style of git submodules, .git may be a file: added test -f .git
+
 case $# in
   1) ;;
   *) echo 1>&2 "Usage: $0 \$srcdir/.tarball-version"; exit 1;;
@@ -100,7 +104,7 @@ fi
 if test -n "$v"
 then
   : # use $v
-elif test -d .git \
+elif { test -d .git || test -f .git ; } \
   && v=`git describe --abbrev=4 --match='v*' HEAD 2>/dev/null \
   || git describe --abbrev=4 HEAD 2>/dev/null` \
   && case $v in
