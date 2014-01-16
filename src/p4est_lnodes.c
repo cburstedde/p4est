@@ -757,7 +757,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     else {
       int                 owner_c2, owner_f, c2;
       p4est_topidx_t      nt;
-      int                 nf, o;
+      int                 nf;
 
       /* this uses some knowledge about how iterate orders the sides of a
        * corner that is in the middle of a face */
@@ -777,7 +777,6 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       nt = conn->tree_to_tree[P4EST_FACES * owner_tid + owner_f];
       nf = conn->tree_to_face[P4EST_FACES * owner_tid + owner_f];
 
-      o = nf / P4EST_FACES;
       nf %= P4EST_FACES;
 
       if ((nt == owner_tid && nf == owner_f) || (zz % 2) == 0) {
