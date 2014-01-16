@@ -1057,7 +1057,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   int8_t             *is_ghost, owner_is_ghost;
   int                 e, edir, owner_e, owner_c, o;
   p4est_locidx_t      nid;
-  int                 proc, owner_proc, nproc;
+  int                 owner_proc, nproc;
   int                 rank = info->p4est->mpirank;
   p4est_quadrant_t   *owner_q = NULL;
   p4est_quadrant_t   *q;
@@ -1258,7 +1258,6 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       qid = qids[i];
       stride = (o ? -1 : 1);
       if (!is_ghost[i]) {
-        proc = rank;
         qid += quadrants_offset;
         P4EST_ASSERT (qid < info->p4est->local_num_quadrants);
         start_node = num_inodes + (o ? nodes_per_edge - 1 : 0);
