@@ -830,7 +830,7 @@ p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
 }
 
-p4est_locidx_t
+p4est_topidx_t
 p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q,
                                     p4est_topidx_t t, int face,
                                     p4est_quadrant_t * r, int *nface,
