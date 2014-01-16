@@ -1555,7 +1555,6 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
                         p4est_ghost_t * ghost_layer, p4est_lnodes_t * lnodes)
 {
   int                 i, j, n;
-  int                 npel;
   int                 npv;
   int                 vcount;
   int                 npf;
@@ -1567,32 +1566,29 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   int                 e;
   int                 eshift;
   int                 k;
-  int                 npe;
   int                 ecount[12];
 #endif
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
   p4est_locidx_t      ngq = (p4est_locidx_t) ghost_layer->ghosts.elem_count;
   p4est_locidx_t      nldep = nlq;
   p4est_locidx_t      ngdep = ngq;
-  p4est_locidx_t      ngen;
   int                 mpisize = p4est->mpisize;
 
 #ifndef P4_TO_P8
-  npel = data->nodes_per_elem = (p + 1) * (p + 1);
+  data->nodes_per_elem = (p + 1) * (p + 1);
   npv = data->nodes_per_volume = (p - 1) * (p - 1);
   npf = data->nodes_per_face = p - 1;
   fcount[0] = fcount[1] = fcount[2] = fcount[3] = 0;
 #else
-  npel = data->nodes_per_elem = (p + 1) * (p + 1) * (p + 1);
+  data->nodes_per_elem = (p + 1) * (p + 1) * (p + 1);
   npv = data->nodes_per_volume = (p - 1) * (p - 1) * (p - 1);
   npf = data->nodes_per_face = (p - 1) * (p - 1);
   fcount[0] = fcount[1] = fcount[2] = fcount[3] = fcount[4] = fcount[5] = 0;
-  npe = data->nodes_per_edge = p - 1;
+  data->nodes_per_edge = p - 1;
   ecount[0] = ecount[1] = ecount[2] = ecount[3] = ecount[4] = ecount[5] = 0;
   ecount[6] = ecount[7] = ecount[8] = ecount[9] = ecount[10] = ecount[11] = 0;
 #endif
   vcount = 0;
-  ngen = ngq * npel;
 
   data->volume_nodes = P4EST_ALLOC (int, npv);
   for (i = 0; i < P4EST_DIM * 2; i++) {
@@ -1931,7 +1927,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
   size_t              count, elem_count;
-  p4est_lnodes_buf_info_t *binfo, *binfo2, *prev;
+  p4est_lnodes_buf_info_t *binfo, *binfo2;
 
   sc_array_init (&send_requests, sizeof (MPI_Request));
   for (i = 0; i < mpisize; i++) {
@@ -1979,7 +1975,6 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
 
     recv2 = &(recv_buf_info[j]);
     P4EST_ASSERT (recv2->elem_count == recv->elem_count);
-    prev = NULL;
     for (zz = 0; zz < elem_count; zz++) {
       binfo2 = (p4est_lnodes_buf_info_t *) sc_array_index (recv2, zz);
       binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv, zz);
@@ -2034,7 +2029,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
   size_t              elem_count;
-  p4est_lnodes_buf_info_t *binfo, *prev;
+  p4est_lnodes_buf_info_t *binfo;
   size_t              zindex;
   int                 nodes_per_face = data->nodes_per_face;
 #ifdef P4_TO_P8
@@ -2088,7 +2083,6 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
 
     info_count = recv_info->elem_count;
     count = 0;
-    prev = NULL;
     for (zz = 0; zz < info_count; zz++) {
       binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv_info, zz);
       if (binfo->type >= P4EST_LN_C_OFFSET) {
