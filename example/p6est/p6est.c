@@ -562,6 +562,7 @@ p6est_compress_columns (p6est_t * p6est)
       col = p4est_quadrant_array_index (tquadrants, zz);
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
       count = last - first;
+      P4EST_ASSERT (count > 0);
       P6EST_COLUMN_SET_RANGE (col, offset, offset + count);
       for (zy = first; zy < last; zy++) {
         newindex[zy] = offset++;
@@ -597,10 +598,12 @@ p6est_update_offsets (p6est_t * p6est)
 
   for (p = 0; p < p6est->mpisize; p++) {
     thiscount = gfl[p];
-    gfl[p] += psum;
+    gfl[p] = psum;
     psum += thiscount;
   }
   gfl[p6est->mpisize] = psum;
+  P4EST_ASSERT (gfl[p6est->mpirank + 1] - gfl[p6est->mpirank] ==
+                p6est->layers->elem_count);
 }
 
 void
@@ -1148,10 +1151,10 @@ p6est_weight_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-int_compare_overlap (const void *key, const void *array)
+gloidx_compare_overlap (const void *key, const void *array)
 {
-  const int           search = *((const int *) key);
-  const int          *range = (const int *) array;
+  const p4est_gloidx_t search = *((const p4est_gloidx_t *) key);
+  const p4est_gloidx_t *range = (const p4est_gloidx_t *) array;
 
   if (search >= range[0]) {
     if (search < range[1]) {
@@ -1198,14 +1201,17 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   int                 outcount, *array_of_indices;
   size_t              self_offset, self_count;
   sc_array_t         *new_layers;
-  int                 local_offset, local_last;
+  p4est_gloidx_t      local_offset, local_last;
   sc_array_t         *old_layers = p6est->layers;
+  sc_array_t         *recv_procs;
   p4est_gloidx_t      shipped;
+  int                *ip;
 
   /* wrap the p6est_weight_t in a p4est_weight_t */
   wc.layer_weight_fn = weight_fn;
   wc.user_pointer = p6est->user_pointer;
   p6est->user_pointer = &wc;
+  p6est_compress_columns (p6est);
   /* repartition the columns */
   p4est_partition_ext (p6est->columns, partition_for_coarsening,
                        p6est_weight_fn);
@@ -1221,6 +1227,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
       col = p4est_quadrant_array_index (tquadrants, zz);
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
       count = last - first;
+      P4EST_ASSERT (count > 0);
       first = offset;
       last = offset + count;
       offset += count;
@@ -1238,7 +1245,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   psum = 0;
   for (p = 0; p < p6est->mpisize; p++) {
     thiscount = new_gfl[p];
-    new_gfl[p] += psum;
+    new_gfl[p] = psum;
     psum += thiscount;
   }
   new_gfl[p6est->mpisize] = psum;
@@ -1267,11 +1274,15 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   new_layers = sc_array_new_size (sizeof (p2est_quadrant_t), my_count);
 
   /* initialize views that we can use to bsearch */
-  sc_array_init_data (&new_gfl_bsearch, new_gfl, 0, (size_t) mpisize);
-  sc_array_init_data (&old_gfl_bsearch, old_gfl, 0, (size_t) mpisize);
+  sc_array_init_data (&new_gfl_bsearch, new_gfl, sizeof (p4est_gloidx_t),
+                      (size_t) mpisize);
+  sc_array_init_data (&old_gfl_bsearch, old_gfl, sizeof (p4est_gloidx_t),
+                      (size_t) mpisize);
 
   /* create the mpi recv requests */
   recv_requests = sc_array_new (sizeof (MPI_Request));
+  /* create the list of procs from which to receive */
+  recv_procs = sc_array_new (sizeof (int));
 
   /* create the receive buffer */
   if (!data_size) {
@@ -1284,7 +1295,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   /* find the first proc that owns layers to send to me */
   search = sc_array_bsearch (&old_gfl_bsearch, new_gfl + rank,
-                             int_compare_overlap);
+                             gloidx_compare_overlap);
   P4EST_ASSERT (search >= 0 && search < mpisize);
   overlap = search;
   P4EST_ASSERT (old_gfl[overlap] <= new_gfl[rank] &&
@@ -1292,6 +1303,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   offset = new_gfl[rank];
   self_offset = my_count;
+  self_count = 0;
   /* for every proc whose old range overlaps with this rank's new range */
   while (overlap < mpisize &&
          old_gfl[overlap] < new_gfl[rank + 1] &&
@@ -1303,6 +1315,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
       if (recv_count) {
         /* post the receive */
         req = (MPI_Request *) sc_array_push (recv_requests);
+        ip = (int *) sc_array_push (recv_procs);
+        *ip = overlap;
         mpiret = MPI_Irecv (sc_array_index (recv, local_offset),
                             (int) (recv_count * recv->elem_size), MPI_BYTE,
                             overlap, P6EST_COMM_PARTITION, p6est->mpicomm,
@@ -1336,7 +1350,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   /* find the first proc that owns layers to send to me */
   search = sc_array_bsearch (&new_gfl_bsearch, old_gfl + rank,
-                             int_compare_overlap);
+                             gloidx_compare_overlap);
   P4EST_ASSERT (search >= 0 && search < mpisize);
   overlap = search;
   P4EST_ASSERT (new_gfl[overlap] <= old_gfl[rank] &&
@@ -1350,21 +1364,24 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
     /* get the count that this proc will send this rank */
     send_count = SC_MIN (old_gfl[rank + 1], new_gfl[overlap + 1]) - offset;
     local_offset = offset - old_gfl[rank];
-    if (overlap != rank) {
-      if (data_size) {
-        /* pack data for shipping */
-        for (zz = 0; zz < send_count; zz++) {
-          layer = p2est_quadrant_array_index (old_layers, zz + local_offset);
-          packedlayer =
-            (p2est_quadrant_t *) sc_array_index (send, zz + local_offset);
-          *packedlayer = *layer;
-          packedlayer->p.user_data = NULL;
-          layer_data = (void *) (packedlayer + 1);
-          memcpy (layer_data, layer->p.user_data, data_size);
-          p6est_layer_free_data (p6est, layer);
+    if (send_count) {
+      if (overlap != rank) {
+        if (data_size) {
+          /* pack data for shipping */
+          for (zz = 0; zz < send_count; zz++) {
+            layer =
+              p2est_quadrant_array_index (old_layers, zz + local_offset);
+            packedlayer =
+              (p2est_quadrant_t *) sc_array_index (send, zz + local_offset);
+            *packedlayer = *layer;
+            packedlayer->p.user_data = NULL;
+            if (data_size) {
+              layer_data = (void *) (packedlayer + 1);
+              memcpy (layer_data, layer->p.user_data, data_size);
+              p6est_layer_free_data (p6est, layer);
+            }
+          }
         }
-      }
-      if (send_count) {
         /* post the send */
         req = (MPI_Request *) sc_array_push (send_requests);
         mpiret = MPI_Isend (sc_array_index (send, local_offset),
@@ -1373,13 +1390,13 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
                             req);
         SC_CHECK_MPI (mpiret);
       }
-    }
-    else {
-      P4EST_ASSERT (send_count == self_count);
-      /* copy locally */
-      memcpy (sc_array_index (new_layers, self_offset),
-              sc_array_index (old_layers, offset - old_gfl[rank]),
-              self_count * new_layers->elem_size);
+      else {
+        P4EST_ASSERT (send_count == self_count);
+        /* copy locally */
+        memcpy (sc_array_index (new_layers, self_offset),
+                sc_array_index (old_layers, offset - old_gfl[rank]),
+                self_count * new_layers->elem_size);
+      }
     }
     offset += send_count;
     overlap++;
@@ -1400,7 +1417,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
       continue;
     }
     for (i = 0; i < outcount; i++) {
-      p = array_of_indices[i];
+      i = array_of_indices[i];
+      p = *((int *) sc_array_index_int (recv_procs, i));
       P4EST_ASSERT (p >= 0 && p < mpisize);
       P4EST_ASSERT (p != rank);
       if (data_size) {
@@ -1408,6 +1426,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
         local_offset = SC_MAX (0, old_gfl[p] - new_gfl[rank]);
         local_last =
           SC_MIN (new_gfl[rank + 1], old_gfl[p + 1]) - new_gfl[rank];
+        P4EST_ASSERT (local_last > local_offset);
         for (zz = local_offset; zz < local_last; zz++) {
           /* unpack */
           layer = p2est_quadrant_array_index (new_layers, zz);
@@ -1427,6 +1446,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   /* clean up recv */
   sc_array_destroy (recv);
   sc_array_destroy (recv_requests);
+  sc_array_destroy (recv_procs);
 
   /* switch to the new layers */
   p6est->layers = new_layers;
@@ -1434,7 +1454,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   P4EST_FREE (old_gfl);
 
   /* wait for sends to complete */
-  mpiret = MPI_Waitall (nsend, (MPI_Request *) send->array,
+  mpiret = MPI_Waitall (nsend, (MPI_Request *) (send_requests->array),
                         MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
@@ -1444,4 +1464,10 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   sc_array_destroy (old_layers);
 
   return shipped;
+}
+
+p4est_gloidx_t
+p6est_partition (p6est_t * p6est, p6est_weight_t weight_fn)
+{
+  return p6est_partition_ext (p6est, 0, weight_fn);
 }

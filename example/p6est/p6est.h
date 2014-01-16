@@ -345,11 +345,15 @@ p6est_comm_tag_t;
  * The forest will be partitioned between processors where they each
  * have an approximately equal number of quadrants.
  *
+ * Note that \a p6est->layers and \a p6est->global_first_layers may change
+ * during this call.  Address pointers referencing these objects from before
+ * \a p6est_partition is called become invalid.
+ *
  * \param [in,out] p6est      The forest that will be partitioned.
  * \param [in]     weight_fn  A weighting function or NULL
  *                            for uniform partitioning.
  */
-void                p6est_partition (p6est_t * p6est,
+p4est_gloidx_t      p6est_partition (p6est_t * p6est,
                                      p6est_weight_t weight_fn);
 
 /** Compute the checksum for a forest.

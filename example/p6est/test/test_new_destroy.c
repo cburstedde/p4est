@@ -111,6 +111,13 @@ coarsen_column_fn (p6est_t * p6est, p4est_topidx_t which_tree,
 }
 
 static int
+weight_fn (p6est_t * p6est, p4est_topidx_t which_tree,
+           p4est_quadrant_t * col, p2est_quadrant_t * layer)
+{
+  return 1;
+}
+
+static int
 coarsen_layer_fn (p6est_t * p6est, p4est_topidx_t which_tree,
                   p4est_quadrant_t * column, p2est_quadrant_t * layers[])
 {
@@ -155,8 +162,6 @@ main (int argc, char **argv)
   refine_level = 5;
   p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
 
-  p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
-
   copy_p6est = p6est_copy (p6est, 1);
   p6est_coarsen_columns (copy_p6est, 1, coarsen_column_fn, init_fn);
   p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_columns");
@@ -166,6 +171,11 @@ main (int argc, char **argv)
   p6est_coarsen_layers (copy_p6est, 0, coarsen_layer_fn, init_fn);
   p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
   p6est_destroy (copy_p6est);
+
+  p6est_partition (p6est, weight_fn);
+  p6est_partition (p6est, NULL);
+
+  p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
 
   p6est_destroy (p6est);
 
