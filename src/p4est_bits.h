@@ -331,14 +331,19 @@ void                p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
  * \param [in,out] r      Existing quadrant whose Morton index will be filled.
  *                        By convention, if there is no tree across \face,
  *                        \r has the same Morton index as \q.
+ * \param [in,out] nface  if not NULL, set to the face of \r that neighbors
+ *                        \q.  nface is encoded with orientation information
+ *                        in the same manner as the tree_to_face array in
+ *                        the p4est_connectivity_t struct.
  * \param [in]     conn   The connectivity structure for the forest.
  * \return Returns the tree that contains \r.  By convention, if there is no
  * tree across \face, then -1 is returned.
  */
-p4est_locidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
-                                                        * q, p4est_locidx_t t,
+p4est_topidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
+                                                        * q, p4est_topidx_t t,
                                                         int face,
                                                         p4est_quadrant_t * r,
+                                                        int *nface,
                                                         p4est_connectivity_t *
                                                         conn);
 
@@ -402,6 +407,8 @@ void                p4est_quadrant_corner_neighbor (const p4est_quadrant_t *
  *                        neighbors will be placed.
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the corner neighbors will be placed.
+ * \param [in,out] ncorners if not NULL, filled with the corners of \a quads
+ *                          that neighbor \q.
  * \param [in]     conn   The connectivity structure for the forest.
  */
 void                p4est_quadrant_corner_neighbor_extra (const
@@ -411,6 +418,8 @@ void                p4est_quadrant_corner_neighbor_extra (const
                                                           sc_array_t * quads,
                                                           sc_array_t *
                                                           treeids,
+                                                          sc_array_t *
+                                                          ncorners,
                                                           p4est_connectivity_t
                                                           * conn);
 

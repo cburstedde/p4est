@@ -794,7 +794,8 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
         p4est_topidx_t      nnt;
 
         P4EST_ASSERT (nt == tid);
-        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, conn);
+        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL,
+                                                  conn);
         P4EST_ASSERT (nnt == owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         h = P4EST_QUADRANT_LEN (tempq.level);
@@ -1197,7 +1198,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
 
         P4EST_ASSERT (nt == tid);
         P4EST_ASSERT (count == 4);
-        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, conn);
+        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL, conn);
         P4EST_ASSERT (nnt == owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         P4EST_ASSERT (p4est_corner_face_corners[c2][owner_f] >= 0);

@@ -922,7 +922,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
            * contains s, or that tq and s are of smallest possible size */
           tq = p4est_quadrant_array_index (tquadrants, last_index);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, s) ||
-                        (p4est_quadrant_is_equal (tq, s) && 
+                        (p4est_quadrant_is_equal (tq, s) &&
                          tq->level == P4EST_QMAXLEVEL));
           if (tq->level < s->level - 1) {
             for (kz = 0; kz < nneigh; kz++) {
@@ -3016,7 +3016,8 @@ p4est_partition_given (p4est_t * p4est,
   }
 
   /* Fill in forest */
-  mpiret = MPI_Waitall (num_proc_recv_from, recv_request, MPI_STATUSES_IGNORE);
+  mpiret =
+    MPI_Waitall (num_proc_recv_from, recv_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 #endif
 

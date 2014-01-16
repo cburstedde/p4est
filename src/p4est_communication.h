@@ -42,6 +42,8 @@ typedef enum
   P4EST_COMM_GHOST_COUNT,
   P4EST_COMM_GHOST_LOAD,
   P4EST_COMM_GHOST_EXCHANGE,
+  P4EST_COMM_GHOST_EXPAND_COUNT,
+  P4EST_COMM_GHOST_EXPAND_LOAD,
   P4EST_COMM_NODES_QUERY,
   P4EST_COMM_NODES_REPLY,
   P4EST_COMM_SAVE,
@@ -78,6 +80,16 @@ void                p4est_comm_global_partition (p4est_t * p4est,
  */
 void                p4est_comm_count_pertree (p4est_t * p4est,
                                               p4est_gloidx_t * pertree);
+
+/** Tests ownershop of a quadrant via p4est->global_first_position.
+ * Assumes a tree with no overlaps.
+ * \param [in] rank    Rank whose ownership is tested.
+ * \return true if rank is the owner.
+ */
+int                 p4est_comm_is_owner (p4est_t * p4est,
+                                         p4est_locidx_t which_tree,
+                                         const p4est_quadrant_t * q,
+                                         int rank);
 
 /** Searches the owner of a quadrant via p4est->global_first_position.
  * Assumes a tree with no overlaps.
