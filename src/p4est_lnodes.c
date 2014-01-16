@@ -1403,7 +1403,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   int                 owner_proc;
   int                 rank = info->p4est->mpirank;
   p4est_quadrant_t  **q;
-  p4est_quadrant_t   *owner_q;
+  /* p4est_quadrant_t   *owner_q; */
   int                 nodes_per_face = data->nodes_per_face;
   int                 nodes_per_elem = data->nodes_per_elem;
   int               **face_nodes = data->face_nodes;
@@ -1427,13 +1427,13 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   /* the first touching quad is the owner */
   fside = p4est_iter_fside_array_index (sides, 0);
   if (fside->is_hanging) {
-    owner_q = fside->is.hanging.quad[0];
+    /* owner_q = fside->is.hanging.quad[0]; */
     owner_is_ghost = fside->is.hanging.is_ghost[0];
     owner_qid = fside->is.hanging.quadid[0];
     owner_f = fside->face;
   }
   else {
-    owner_q = fside->is.full.quad;
+    /* owner_q = fside->is.full.quad; */
     owner_is_ghost = fside->is.full.is_ghost;
     owner_qid = fside->is.full.quadid;
     owner_f = fside->face;
