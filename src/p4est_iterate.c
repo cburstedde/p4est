@@ -2004,6 +2004,8 @@ p8est_iter_init_edge_from_face (p8est_iter_edge_args_t * args,
 }
 #endif
 
+#if 0 /* currently unused */
+
 static int
 fside_compare (const void *a, const void *b)
 {
@@ -2017,6 +2019,8 @@ fside_compare (const void *a, const void *b)
   }
   return (A->face - B->face);
 }
+
+#endif /* 0 */
 
 /* initialize face args for a face between trees */
 static void
