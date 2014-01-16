@@ -128,9 +128,9 @@ typedef struct p6est
   sc_mempool_t       *user_data_pool;   /* memory allocator for user data
                                          * WARNING: This is NULL if data size
                                          *          equals zero.  */
-  sc_mempool_t       *quadrant_pool;    /* memory allocator
+  sc_mempool_t       *layer_pool;       /* memory allocator
                                            for temporary quadrants */
-  p4est_gloidx_t     *global_first_quadrant;
+  p4est_gloidx_t     *global_first_layer;
 }
 p6est_t;
 
@@ -333,6 +333,12 @@ void                p6est_coarsen_layers (p6est_t * p6est,
 void                p6est_balance (p6est_t * p6est,
                                    p8est_connect_type_t btype,
                                    p6est_init_t init_fn);
+
+typedef enum
+{
+  P6EST_COMM_PARTITION = 0
+}
+p6est_comm_tag_t;
 
 /** Equally partition the forest.
  *
