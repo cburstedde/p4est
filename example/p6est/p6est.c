@@ -1200,6 +1200,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   sc_array_t         *new_layers;
   int                 local_offset, local_last;
   sc_array_t         *old_layers = p6est->layers;
+  p4est_gloidx_t      shipped;
 
   /* wrap the p6est_weight_t in a p4est_weight_t */
   wc.layer_weight_fn = weight_fn;
@@ -1249,6 +1250,18 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
     p6est->global_first_layer = new_gfl;
     P4EST_FREE (old_gfl);
     return 0;
+  }
+
+  /* calculate the global number of shipped (received) layers */
+  shipped = 0;
+  for (i = 0; i < mpisize; i++) {
+    p4est_locidx_t      same, diff;
+
+    same =
+      SC_MIN (new_gfl[i + 1], old_gfl[i + 1]) - SC_MAX (new_gfl[i],
+                                                        old_gfl[i]);
+    diff = my_count - same;
+    shipped += diff;
   }
 
   new_layers = sc_array_new_size (sizeof (p2est_quadrant_t), my_count);
@@ -1430,5 +1443,5 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   sc_array_destroy (send_requests);
   sc_array_destroy (old_layers);
 
-  return 0;
+  return shipped;
 }
