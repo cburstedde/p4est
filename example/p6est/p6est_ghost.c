@@ -176,7 +176,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     llast = lmpfo[i + 1];
     lcount = llast - lfirst;
     P4EST_ASSERT (lcount);
-    mpiret = MPI_Isend (sc_array_index (layers, (size_t) lfirst),
+    mpiret = MPI_Isend (sc_array_index (send, (size_t) lfirst),
                         (int) lcount * sizeof (p2est_quadrant_t), MPI_BYTE,
                         i, P6EST_COMM_GHOST, p6est->mpicomm, req);
     P4EST_ASSERT (lmpfo[i + 1] == loffset);
@@ -224,8 +224,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     for (zz = lmpfo[i]; zz < lmpfo[i + 1]; zz++) {
       ssize_t             idx;
       p2est_quadrant_t   *q1 = p2est_quadrant_array_index (send, zz);
-      p4est_locidx_t     *lp =
-        (p4est_locidx_t *) sc_array_index (nmpfa, offset + zz);
+      p4est_locidx_t     *lp = (p4est_locidx_t *) sc_array_index (nmpfa, zz);
 
       idx = sc_array_bsearch (new_mirrors, q1, p2est_quadrant_compare_piggy);
       P4EST_ASSERT (idx >= 0);
