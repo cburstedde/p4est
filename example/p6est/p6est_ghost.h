@@ -24,6 +24,9 @@
 #ifndef P6EST_GHOST_H
 #define P6EST_GHOST_H
 
+#include <p6est.h>
+#include <p4est_ghost.h>
+
 SC_EXTERN_C_BEGIN;
 
 typedef struct p6est_ghost
@@ -55,6 +58,8 @@ typedef struct p6est_ghost
   p4est_locidx_t     *mirror_tree_offsets;
   p4est_locidx_t     *mirror_proc_mirrors;
   p4est_locidx_t     *mirror_proc_offsets;
+  p4est_locidx_t     *mirror_proc_fronts;
+  p4est_locidx_t     *mirror_proc_front_offsets;
 
 }
 p6est_ghost_t;
@@ -76,7 +81,7 @@ size_t              p6est_ghost_memory_used (p6est_ghost_t * ghost);
  *                              or default, full).
  * \return                      A fully initialized ghost layer.
  */
-p6est_ghost_t      *p4est_ghost_new (p6est_t * p4est,
+p6est_ghost_t      *p6est_ghost_new (p6est_t * p4est,
                                      p4est_connect_type_t btype);
 
 /** Frees all memory used for the ghost layer. */
@@ -92,7 +97,7 @@ void                p6est_ghost_destroy (p6est_ghost_t * ghost);
 ssize_t             p6est_ghost_bsearch (p6est_ghost_t * ghost,
                                          int which_proc,
                                          p4est_topidx_t which_tree,
-                                         const p6est_quadrant_t * column,
+                                         const p4est_quadrant_t * column,
                                          const p2est_quadrant_t * layer);
 
 /** Conduct binary search for ancestor on range of the ghost layer.
@@ -102,7 +107,7 @@ ssize_t             p6est_ghost_bsearch (p6est_ghost_t * ghost,
  * \param [in] q                Valid quadrant's ancestor is searched.
  * \return                      Offset in the ghost layer, or -1 if not found.
  */
-ssize_t             p4est_ghost_contains (p4est_ghost_t * ghost,
+ssize_t             p6est_ghost_contains (p6est_ghost_t * ghost,
                                           int which_proc,
                                           p4est_topidx_t which_tree,
                                           const p4est_quadrant_t * column,
@@ -155,7 +160,7 @@ int                 p6est_is_balanced (p6est_t * p6est,
  * \param [in] ghost   A ghost layer obtained from the p4est.
  * \return             Parallel checksum on rank 0, 0 otherwise.
  */
-unsigned            p4est_ghost_checksum (p6est_t * p6est,
+unsigned            p6est_ghost_checksum (p6est_t * p6est,
                                           p6est_ghost_t * ghost);
 
 SC_EXTERN_C_END;

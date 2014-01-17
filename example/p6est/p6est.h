@@ -336,7 +336,8 @@ void                p6est_balance (p6est_t * p6est,
 
 typedef enum
 {
-  P6EST_COMM_PARTITION = 0
+  P6EST_COMM_PARTITION = 1,
+  P6EST_COMM_GHOST,
 }
 p6est_comm_tag_t;
 

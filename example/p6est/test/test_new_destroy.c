@@ -23,6 +23,7 @@
 
 #include <p4est_bits.h>
 #include <p6est.h>
+#include <p6est_ghost.h>
 #include <p6est_vtk.h>
 
 char               *TEST_USER_POINTER;
@@ -131,6 +132,7 @@ main (int argc, char **argv)
   p4est_connectivity_t *conn4;
   p6est_connectivity_t *conn;
   p6est_t            *p6est, *copy_p6est;
+  p6est_ghost_t      *ghost;
   double              height[3] = { 0., 0., 0.1 };
   int                 mpiret;
 
@@ -176,6 +178,11 @@ main (int argc, char **argv)
   p6est_partition (p6est, NULL);
 
   p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
+
+  ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FACE);
+  p6est_ghost_destroy (ghost);
+  ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FULL);
+  p6est_ghost_destroy (ghost);
 
   p6est_destroy (p6est);
 
