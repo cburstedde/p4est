@@ -2985,7 +2985,9 @@ p4est_partition_given (p4est_t * p4est,
           for (il = 0; il < num_copy; ++il) {
             memcpy (user_data_send_buf + il * data_size,
                     quad_send_buf[il].p.user_data, data_size);
-            quad_send_buf[il].p.user_data = NULL;
+            if (data_size) {
+              quad_send_buf[il].p.user_data = NULL;
+            }
           }
 
           /* move pointer to beginning of quads that need to be copied */
@@ -3248,9 +3250,6 @@ p4est_partition_given (p4est_t * p4est,
               quad->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
               memcpy (quad->p.user_data, user_data_recv_buf + zz * data_size,
                       data_size);
-            }
-            else {
-              quad->p.user_data = NULL;
             }
           }
         }
