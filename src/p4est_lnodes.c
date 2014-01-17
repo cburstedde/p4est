@@ -22,17 +22,17 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est_lnodes.h>
-#include <p4est_iterate.h>
-#include <p4est_communication.h>
-#include <p4est_ghost.h>
 #include <p4est_bits.h>
+#include <p4est_communication.h>
+#include <p4est_extended.h>
+#include <p4est_ghost.h>
+#include <p4est_lnodes.h>
 #else
-#include <p8est_lnodes.h>
-#include <p8est_iterate.h>
-#include <p8est_communication.h>
-#include <p8est_ghost.h>
 #include <p8est_bits.h>
+#include <p8est_communication.h>
+#include <p8est_extended.h>
+#include <p8est_ghost.h>
+#include <p8est_lnodes.h>
 #endif
 
 #ifdef SC_ALLGATHER
@@ -757,7 +757,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     else {
       int                 owner_c2, owner_f, c2;
       p4est_topidx_t      nt;
-      int                 nf, o;
+      int                 nf;
 
       /* this uses some knowledge about how iterate orders the sides of a
        * corner that is in the middle of a face */
@@ -777,7 +777,6 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       nt = conn->tree_to_tree[P4EST_FACES * owner_tid + owner_f];
       nf = conn->tree_to_face[P4EST_FACES * owner_tid + owner_f];
 
-      o = nf / P4EST_FACES;
       nf %= P4EST_FACES;
 
       if ((nt == owner_tid && nf == owner_f) || (zz % 2) == 0) {
@@ -795,7 +794,8 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
         p4est_topidx_t      nnt;
 
         P4EST_ASSERT (nt == tid);
-        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, conn);
+        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL,
+                                                  conn);
         P4EST_ASSERT (nnt == owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         h = P4EST_QUADRANT_LEN (tempq.level);
@@ -1058,7 +1058,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   int8_t             *is_ghost, owner_is_ghost;
   int                 e, edir, owner_e, owner_c, o;
   p4est_locidx_t      nid;
-  int                 proc, owner_proc, nproc;
+  int                 owner_proc, nproc;
   int                 rank = info->p4est->mpirank;
   p4est_quadrant_t   *owner_q = NULL;
   p4est_quadrant_t   *q;
@@ -1198,7 +1198,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
 
         P4EST_ASSERT (nt == tid);
         P4EST_ASSERT (count == 4);
-        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, conn);
+        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL, conn);
         P4EST_ASSERT (nnt == owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         P4EST_ASSERT (p4est_corner_face_corners[c2][owner_f] >= 0);
@@ -1259,7 +1259,6 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       qid = qids[i];
       stride = (o ? -1 : 1);
       if (!is_ghost[i]) {
-        proc = rank;
         qid += quadrants_offset;
         P4EST_ASSERT (qid < info->p4est->local_num_quadrants);
         start_node = num_inodes + (o ? nodes_per_edge - 1 : 0);
@@ -1405,7 +1404,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   int                 owner_proc;
   int                 rank = info->p4est->mpirank;
   p4est_quadrant_t  **q;
-  p4est_quadrant_t   *owner_q;
+  /* p4est_quadrant_t   *owner_q; */
   int                 nodes_per_face = data->nodes_per_face;
   int                 nodes_per_elem = data->nodes_per_elem;
   int               **face_nodes = data->face_nodes;
@@ -1429,13 +1428,13 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
   /* the first touching quad is the owner */
   fside = p4est_iter_fside_array_index (sides, 0);
   if (fside->is_hanging) {
-    owner_q = fside->is.hanging.quad[0];
+    /* owner_q = fside->is.hanging.quad[0]; */
     owner_is_ghost = fside->is.hanging.is_ghost[0];
     owner_qid = fside->is.hanging.quadid[0];
     owner_f = fside->face;
   }
   else {
-    owner_q = fside->is.full.quad;
+    /* owner_q = fside->is.full.quad; */
     owner_is_ghost = fside->is.full.is_ghost;
     owner_qid = fside->is.full.quadid;
     owner_f = fside->face;
@@ -1557,7 +1556,6 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
                         p4est_ghost_t * ghost_layer, p4est_lnodes_t * lnodes)
 {
   int                 i, j, n;
-  int                 npel;
   int                 npv;
   int                 vcount;
   int                 npf;
@@ -1569,32 +1567,29 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   int                 e;
   int                 eshift;
   int                 k;
-  int                 npe;
   int                 ecount[12];
 #endif
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
   p4est_locidx_t      ngq = (p4est_locidx_t) ghost_layer->ghosts.elem_count;
   p4est_locidx_t      nldep = nlq;
   p4est_locidx_t      ngdep = ngq;
-  p4est_locidx_t      ngen;
   int                 mpisize = p4est->mpisize;
 
 #ifndef P4_TO_P8
-  npel = data->nodes_per_elem = (p + 1) * (p + 1);
+  data->nodes_per_elem = (p + 1) * (p + 1);
   npv = data->nodes_per_volume = (p - 1) * (p - 1);
   npf = data->nodes_per_face = p - 1;
   fcount[0] = fcount[1] = fcount[2] = fcount[3] = 0;
 #else
-  npel = data->nodes_per_elem = (p + 1) * (p + 1) * (p + 1);
+  data->nodes_per_elem = (p + 1) * (p + 1) * (p + 1);
   npv = data->nodes_per_volume = (p - 1) * (p - 1) * (p - 1);
   npf = data->nodes_per_face = (p - 1) * (p - 1);
   fcount[0] = fcount[1] = fcount[2] = fcount[3] = fcount[4] = fcount[5] = 0;
-  npe = data->nodes_per_edge = p - 1;
+  data->nodes_per_edge = p - 1;
   ecount[0] = ecount[1] = ecount[2] = ecount[3] = ecount[4] = ecount[5] = 0;
   ecount[6] = ecount[7] = ecount[8] = ecount[9] = ecount[10] = ecount[11] = 0;
 #endif
   vcount = 0;
-  ngen = ngq * npel;
 
   data->volume_nodes = P4EST_ALLOC (int, npv);
   for (i = 0; i < P4EST_DIM * 2; i++) {
@@ -1933,7 +1928,7 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
   size_t              count, elem_count;
-  p4est_lnodes_buf_info_t *binfo, *binfo2, *prev;
+  p4est_lnodes_buf_info_t *binfo, *binfo2;
 
   sc_array_init (&send_requests, sizeof (MPI_Request));
   for (i = 0; i < mpisize; i++) {
@@ -1981,7 +1976,6 @@ p4est_lnodes_test_comm (p4est_t * p4est, p4est_lnodes_data_t * data)
 
     recv2 = &(recv_buf_info[j]);
     P4EST_ASSERT (recv2->elem_count == recv->elem_count);
-    prev = NULL;
     for (zz = 0; zz < elem_count; zz++) {
       binfo2 = (p4est_lnodes_buf_info_t *) sc_array_index (recv2, zz);
       binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv, zz);
@@ -2036,7 +2030,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
   int                *num_recv_expect = P4EST_ALLOC_ZERO (int, mpisize);
   int                 byte_count;
   size_t              elem_count;
-  p4est_lnodes_buf_info_t *binfo, *prev;
+  p4est_lnodes_buf_info_t *binfo;
   size_t              zindex;
   int                 nodes_per_face = data->nodes_per_face;
 #ifdef P4_TO_P8
@@ -2090,7 +2084,6 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
 
     info_count = recv_info->elem_count;
     count = 0;
-    prev = NULL;
     for (zz = 0; zz < info_count; zz++) {
       binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv_info, zz);
       if (binfo->type >= P4EST_LN_C_OFFSET) {
@@ -2537,7 +2530,7 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
 
   buffer->requests = requests = sc_array_new (sizeof (MPI_Request));
   buffer->send_buffers = send_bufs = sc_array_new (sizeof (sc_array_t));
-  /* in this routine, the values from other processes are writtten directly
+  /* in this routine, the values from other processes are written directly
    * into node_data */
   buffer->recv_buffers = NULL;
 

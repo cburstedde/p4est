@@ -308,7 +308,8 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
     P4EST_ASSERT (p4est_quadrant_is_valid (&tempq));
     for (j = 0; j < P4EST_DIM; j++) {
       f = p4est_corner_faces[c][j];
-      nt = p4est_quadrant_face_neighbor_extra (&tempq, t, f, &tempr, conn);
+      nt = p4est_quadrant_face_neighbor_extra (&tempq, t, f, &tempr, NULL,
+                                               conn);
       if (nt == -1) {
         continue;
       }
@@ -323,7 +324,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
       sc_array_resize (&quads, 0);
       sc_array_resize (&treeids, 0);
       p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids,
-                                          conn);
+                                          NULL, conn);
       for (zz = 0; zz < quads.elem_count; zz++) {
         ptemp = p4est_quadrant_array_index (&quads, zz);
         nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
@@ -337,7 +338,7 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
     sc_array_resize (&quads, 0);
     sc_array_resize (&treeids, 0);
     p4est_quadrant_corner_neighbor_extra (&tempq, t, c, &quads, &treeids,
-                                          conn);
+                                          NULL, conn);
     for (zz = 0; zz < quads.elem_count; zz++) {
       ptemp = p4est_quadrant_array_index (&quads, zz);
       nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
@@ -566,7 +567,8 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
     t = eside->treeid;
     for (j = 0; j < 2; j++) {
       f = p8est_edge_faces[e][j];
-      nt = p8est_quadrant_face_neighbor_extra (&tempq, t, f, &tempr, conn);
+      nt = p8est_quadrant_face_neighbor_extra (&tempq, t, f, &tempr, NULL,
+                                               conn);
       if (nt == -1) {
         continue;
       }
@@ -577,7 +579,8 @@ test_edge_adjacency (p8est_iter_edge_info_t * info, void *data)
     }
     sc_array_resize (&quads, 0);
     sc_array_resize (&treeids, 0);
-    p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids, conn);
+    p8est_quadrant_edge_neighbor_extra (&tempq, t, e, &quads, &treeids, NULL,
+                                        conn);
     for (zz = 0; zz < quads.elem_count; zz++) {
       ptemp = p4est_quadrant_array_index (&quads, zz);
       nt = *((p4est_topidx_t *) sc_array_index (&treeids, zz));
@@ -780,8 +783,8 @@ test_face_adjacency (p4est_iter_face_info_t * info, void *data)
       }
     }
     nt[1 - i] =
-      p4est_quadrant_face_neighbor_extra (&(tempq[i]), treeid[i],
-                                          face[i], &(tempr[1 - i]),
+      p4est_quadrant_face_neighbor_extra (&(tempq[i]), treeid[i], face[i],
+                                          &(tempr[1 - i]), NULL,
                                           info->p4est->connectivity);
   }
   if (limit == 2) {

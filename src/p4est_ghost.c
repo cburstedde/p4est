@@ -1139,6 +1139,22 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
+static              size_t
+ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
+{
+  p4est_quadrant_t   *q;
+  p4est_t            *p4est = (p4est_t *) data;
+  int                 proc;
+
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
+
+  q = (p4est_quadrant_t *) sc_array_index (array, zindex);
+  proc = p4est_comm_find_owner (p4est, q->p.which_tree, q, 0);
+  P4EST_ASSERT (proc >= 0 && proc < p4est->mpisize);
+  P4EST_ASSERT (p4est_comm_is_owner (p4est, q->p.which_tree, q, proc));
+  return (size_t) proc;
+}
+
 #ifdef P4EST_MPI
 
 /** This adds a quadrant to the end of a buffer.
@@ -1478,6 +1494,8 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
   gl->mirror_tree_offsets = P4EST_ALLOC (p4est_locidx_t, num_trees + 1);
   gl->mirror_proc_mirrors = NULL;
   gl->mirror_proc_offsets = P4EST_ALLOC (p4est_locidx_t, num_procs + 1);
+  gl->mirror_proc_fronts = NULL;
+  gl->mirror_proc_front_offsets = NULL;
 
   gl->proc_offsets[0] = 0;
   gl->mirror_proc_offsets[0] = 0;
@@ -2172,6 +2190,8 @@ failtest:
   P4EST_ASSERT (gl->tree_offsets[0] == 0);
   P4EST_ASSERT (gl->proc_offsets[0] == 0);
 
+  gl->mirror_proc_fronts = gl->mirror_proc_mirrors;
+  gl->mirror_proc_front_offsets = gl->mirror_proc_offsets;
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
   return gl;
 }
@@ -2188,6 +2208,13 @@ p4est_ghost_destroy (p4est_ghost_t * ghost)
   sc_array_reset (&ghost->ghosts);
   P4EST_FREE (ghost->tree_offsets);
   P4EST_FREE (ghost->proc_offsets);
+
+  if (ghost->mirror_proc_fronts != ghost->mirror_proc_mirrors) {
+    P4EST_ASSERT (ghost->mirror_proc_front_offsets !=
+                  ghost->mirror_proc_offsets);
+    P4EST_FREE (ghost->mirror_proc_fronts);
+    P4EST_FREE (ghost->mirror_proc_front_offsets);
+  }
 
   sc_array_reset (&ghost->mirrors);
   P4EST_FREE (ghost->mirror_tree_offsets);
@@ -2392,7 +2419,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      ng_excl, ng_incl, ng, theg;
   p4est_locidx_t      lmatches;
   p4est_locidx_t      mirr;
-  p4est_quadrant_t    *g, *m;
+  p4est_quadrant_t   *g, *m;
   MPI_Request        *r;
 
   if (minlevel <= 0 && maxlevel >= P4EST_QMAXLEVEL) {
@@ -2533,7 +2560,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_FREE (qbuffer);
   sc_array_reset (&rrequests);
   sc_array_reset (&rbuffers);
-  
+
   /* wait for sends and clean up */
   mpiret = MPI_Waitall (srequests.elem_count, (MPI_Request *) srequests.array,
                         MPI_STATUSES_IGNORE);
@@ -2544,4 +2571,896 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_FREE (*sbuf);
   }
   sc_array_reset (&sbuffers);
+}
+
+static void
+p4est_ghost_expand_insert (p4est_quadrant_t * q, p4est_topidx_t t,
+                           p4est_locidx_t idx, sc_array_t * send_bufs,
+                           int target, int owner, int is_ghost)
+{
+  sc_array_t         *send_buf =
+    (sc_array_t *) sc_array_index_int (send_bufs, target);
+  p4est_quadrant_t   *qp;
+  /* add to mirrors */
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  qp = (p4est_quadrant_t *) sc_array_push (send_buf);
+  P4EST_QUADRANT_INIT (qp);
+  qp->x = q->x;
+  qp->y = q->y;
+#ifdef P4_TO_P8
+  qp->z = q->z;
+#endif
+  qp->level = q->level;
+  qp->p.piggy3.which_tree = t;
+  if (is_ghost) {
+    sc_array_t         *from_buf =
+      (sc_array_t *) sc_array_index_int (send_bufs, owner);
+    p4est_quadrant_t   *qp2;
+
+    P4EST_ASSERT (owner != target);
+    P4EST_ASSERT (q->p.piggy3.which_tree == t);
+    qp->p.piggy3.local_num = q->p.piggy3.local_num;
+
+    qp2 = (p4est_quadrant_t *) sc_array_push (from_buf);
+    qp2->x = q->x;
+    qp2->y = q->y;
+#ifdef P4_TO_P8
+    qp2->z = q->z;
+#endif
+    qp2->level = q->level;
+    qp2->p.piggy1.which_tree = t;
+    qp2->p.piggy1.owner_rank = target;  /* yes, we're putting the target in the
+                                           owner field */
+    P4EST_ASSERT (p4est_quadrant_is_valid (qp2));
+  }
+  else {
+    qp->p.piggy3.local_num = idx;
+  }
+  P4EST_ASSERT (p4est_quadrant_is_valid (qp));
+}
+
+static void
+p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
+                           p4est_topidx_t nt, p4est_quadrant_t * nq,
+                           sc_array_t * quads, int quads_is_ghost,
+                           sc_array_t * mview, sc_array_t * pview,
+                           p4est_connect_type_t btype, int point,
+                           sc_array_t * tempquads, sc_array_t * temptrees,
+                           p4est_connectivity_t * conn,
+                           p4est_locidx_t pview_offset,
+                           p4est_locidx_t quads_offset,
+                           p4est_t * p4est, int target,
+                           sc_array_t * send_bufs)
+{
+  ssize_t             fidx, lidx;
+  size_t              zz, zy;
+  int                 owner = -1;
+
+  /* we want a list of all quadrants in quads that overlap nq */
+
+  /* this will return a quad that overlaps nq, but not necessarily the first
+   * */
+  fidx = sc_array_bsearch (quads, nq, p4est_quadrant_disjoint);
+  if (fidx < 0) {
+    /* nothing to be done */
+    return;
+  }
+
+  lidx = fidx;
+
+  /* walk fidx back to find the first quad that overlaps nq */
+  while (fidx > 0) {
+    p4est_quadrant_t   *testq = p4est_quadrant_array_index (quads, (size_t)
+                                                            fidx - 1);
+
+    if (p4est_quadrant_disjoint (testq, nq)) {
+      P4EST_ASSERT (p4est_quadrant_compare (testq, nq) < 0);
+      break;
+    }
+    fidx--;
+  }
+
+  /* walk lidx forward to find the first quad that overlaps nq */
+  while (lidx < quads->elem_count - 1) {
+    p4est_quadrant_t   *testq = p4est_quadrant_array_index (quads, (size_t)
+                                                            lidx + 1);
+
+    if (p4est_quadrant_disjoint (testq, nq)) {
+      P4EST_ASSERT (p4est_quadrant_compare (testq, nq) > 0);
+      break;
+    }
+    lidx++;
+  }
+
+  /* for every overlapping quadrant, test to see if mq overlaps the neighbor
+   * */
+  for (zz = fidx; zz <= lidx; zz++) {
+    ssize_t             midx;
+    p4est_topidx_t      nnt;
+    p4est_quadrant_t   *p = p4est_quadrant_array_index (quads, zz);
+    p4est_quadrant_t    np;
+
+    P4EST_ASSERT (p4est_quadrant_overlaps (p, nq));
+    /* if we are searching local quads, avoid trying to send mirrors back to
+     * the procs for which they are already ghosts */
+    if (!quads_is_ghost) {
+      midx = sc_array_bsearch (mview, p, p4est_quadrant_compare);
+
+      /* p is a mirror, but is it a mirror for this proc?  search in pview */
+      if (midx >= 0) {
+        ssize_t             pidx;
+        p4est_locidx_t      lmidx;
+
+        lmidx = midx + pview_offset;
+        pidx = sc_array_bsearch (pview, &lmidx, p4est_locidx_compare);
+        if (pidx >= 0) {
+          /* this is already a mirror that this proc knows about */
+          continue;
+        }
+      }
+    }
+    else {
+      /* if we are searching for ghost quads, don't send back one owned by the
+       * target proc */
+      owner = p4est_comm_find_owner (p4est, nt, p, target);
+      if (owner == target) {
+        continue;
+      }
+    }
+
+    /* now create the approriate neighbor and test for overlaps */
+    if (btype == P4EST_CONNECT_FACE) {
+      nnt = p4est_quadrant_face_neighbor_extra (p, nt, point, &np, NULL,
+                                                conn);
+      P4EST_ASSERT (nnt == nt || nnt == t);
+      if (nnt == t && p4est_quadrant_overlaps (mq, &np)) {
+        p4est_ghost_expand_insert (p, nt, (p4est_locidx_t) zz +
+                                   quads_offset, send_bufs, target, owner,
+                                   quads_is_ghost);
+      }
+    }
+#ifdef P4_TO_P8
+    else if (btype == P8EST_CONNECT_EDGE) {
+      p8est_quadrant_edge_neighbor_extra (p, nt, point, tempquads, temptrees,
+                                          NULL, conn);
+
+      for (zy = 0; zy < tempquads->elem_count; zy++) {
+        p4est_topidx_t      nnt =
+          *((p4est_topidx_t *) sc_array_index (temptrees, zy));
+
+        if (nnt == t) {
+          p4est_quadrant_t   *tempq =
+            p4est_quadrant_array_index (tempquads, zy);
+
+          if (p4est_quadrant_overlaps (mq, tempq)) {
+            p4est_ghost_expand_insert (p, nt, (p4est_locidx_t) zz +
+                                       quads_offset, send_bufs, target, owner,
+                                       quads_is_ghost);
+            break;
+          }
+        }
+      }
+      sc_array_reset (tempquads);
+      sc_array_reset (temptrees);
+    }
+#endif
+    else {
+      P4EST_ASSERT (btype == P4EST_CONNECT_CORNER);
+
+      p4est_quadrant_corner_neighbor_extra (p, nt, point, tempquads,
+                                            temptrees, NULL, conn);
+
+      for (zy = 0; zy < tempquads->elem_count; zy++) {
+        p4est_topidx_t      nnt =
+          *((p4est_topidx_t *) sc_array_index (temptrees, zy));
+
+        if (nnt == t) {
+          p4est_quadrant_t   *tempq =
+            p4est_quadrant_array_index (tempquads, zy);
+
+          if (p4est_quadrant_overlaps (mq, tempq)) {
+            /* add to mirrors */
+            p4est_ghost_expand_insert (p, nt, (p4est_locidx_t) zz +
+                                       quads_offset, send_bufs, target, owner,
+                                       quads_is_ghost);
+            break;
+          }
+        }
+      }
+      sc_array_reset (tempquads);
+      sc_array_reset (temptrees);
+    }
+  }
+}
+
+static void
+p4est_ghost_expand_int (p4est_topidx_t t, p4est_quadrant_t * mq,
+                        p4est_topidx_t nt, p4est_quadrant_t * nq,
+                        sc_array_t * pview, p4est_connect_type_t btype,
+                        int point, sc_array_t * tempquads,
+                        sc_array_t * temptrees, int target,
+                        p4est_t * p4est, p4est_ghost_t * ghost,
+                        sc_array_t * send_bufs)
+{
+  sc_array_t          mview;
+  sc_array_t          gview;
+
+  sc_array_init_view (&mview, &ghost->mirrors, ghost->mirror_tree_offsets[nt],
+                      ghost->mirror_tree_offsets[nt + 1] -
+                      ghost->mirror_tree_offsets[nt]);
+  sc_array_init_view (&gview, &ghost->ghosts, ghost->tree_offsets[nt],
+                      ghost->tree_offsets[nt + 1] - ghost->tree_offsets[nt]);
+
+  if (nt >= p4est->first_local_tree && nt <= p4est->last_local_tree) {
+    p4est_tree_t       *ntree = p4est_tree_array_index (p4est->trees, nt);
+
+    p4est_ghost_expand_kernel (t, mq, nt, nq, &ntree->quadrants, 0, &mview,
+                               pview, btype, point, tempquads, temptrees,
+                               p4est->connectivity,
+                               ghost->mirror_tree_offsets[nt],
+                               ntree->quadrants_offset,
+                               p4est, target, send_bufs);
+  }
+
+  p4est_ghost_expand_kernel (t, mq, nt, nq, &gview, 1, &mview, pview, btype,
+                             point, tempquads, temptrees, p4est->connectivity,
+                             ghost->mirror_tree_offsets[nt],
+                             ghost->tree_offsets[nt],
+                             p4est, target, send_bufs);
+
+  sc_array_reset (&mview);
+  sc_array_reset (&gview);
+}
+
+static int
+p4est_quadrant_compare_piggy_proc (const void *a, const void *b)
+{
+  const p4est_quadrant_t *A = (const p4est_quadrant_t *) a;
+  const p4est_quadrant_t *B = (const p4est_quadrant_t *) b;
+  int                 ret = p4est_quadrant_compare_piggy (a, b);
+
+  if (ret) {
+    return ret;
+  }
+  return (A->p.piggy1.owner_rank - B->p.piggy1.owner_rank);
+}
+
+void
+p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
+{
+#ifdef P4EST_MPI
+  int                 p;
+  int                 mpisize = p4est->mpisize;
+  int                 mpirank = p4est->mpirank;
+  MPI_Comm            comm = p4est->mpicomm;
+  p4est_connect_type_t btype = ghost->btype;
+  sc_array_t         *mirrors = &ghost->mirrors;
+  sc_array_t         *new_mirrors;
+  p4est_locidx_t     *mirror_tree_offsets = ghost->mirror_tree_offsets;
+  p4est_locidx_t     *mirror_proc_mirrors = ghost->mirror_proc_mirrors;
+  p4est_locidx_t     *mirror_proc_offsets = ghost->mirror_proc_offsets;
+  p4est_locidx_t     *proc_offsets = ghost->proc_offsets;
+  p4est_connectivity_t *conn = p4est->connectivity;
+  p4est_locidx_t     *mpf, *mpfo;
+  p4est_locidx_t     *send_counts, *recv_counts;
+  MPI_Request        *recv_request, *send_request;
+  MPI_Request        *recv_load_request, *send_load_request;
+  int                 num_peers;
+  int                 peer;
+  int                 mpiret;
+  sc_array_t         *send_bufs, *buf;
+  size_t              zz, *ppz;
+  p4est_topidx_t      t;
+  sc_array_t         *nmpma, *nmpfa;
+  p4est_locidx_t      old_num_ghosts, num_new_ghosts, ghost_offset;
+  p4est_locidx_t      old_num_mirrors, new_count, new_num_mirrors;
+  sc_array_t         *ghost_layer = &ghost->ghosts;
+  sc_array_t          split;
+  sc_array_t         *tempquads;
+  sc_array_t         *temptrees;
+  sc_array_t         *tempquads2;
+  sc_array_t         *temptrees2;
+  sc_array_t         *npoints;
+
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_expand %s\n",
+                            p4est_connect_type_string (btype));
+
+  tempquads = sc_array_new (sizeof (p4est_quadrant_t));
+  temptrees = sc_array_new (sizeof (p4est_topidx_t));
+  tempquads2 = sc_array_new (sizeof (p4est_quadrant_t));
+  temptrees2 = sc_array_new (sizeof (p4est_topidx_t));
+  npoints = sc_array_new (sizeof (int));
+
+  /* post recvs */
+  for (p = 0, num_peers = 0; p < mpisize; p++) {
+    if (mirror_proc_offsets[p + 1] != mirror_proc_offsets[p]) {
+      /* this is an important assertion: if any proc is part of my ghost
+       * layer, I am part of its ghost layer */
+      P4EST_ASSERT (proc_offsets[p + 1] != proc_offsets[p]);
+      num_peers++;
+    }
+  }
+  recv_request = P4EST_ALLOC (MPI_Request, 2 * num_peers);
+  send_request = P4EST_ALLOC (MPI_Request, 2 * num_peers);
+
+  recv_counts = P4EST_ALLOC (p4est_locidx_t, 2 * num_peers);
+  send_counts = recv_counts + num_peers;
+
+  recv_load_request = recv_request + num_peers;
+  send_load_request = send_request + num_peers;
+
+  send_bufs = sc_array_new_size (sizeof (sc_array_t), mpisize);
+  for (p = 0; p < mpisize; p++) {
+    buf = (sc_array_t *) sc_array_index (send_bufs, p);
+    sc_array_init (buf, sizeof (p4est_quadrant_t));
+  }
+
+  for (p = 0, peer = 0; p < mpisize; p++) {
+    if (mirror_proc_offsets[p + 1] != mirror_proc_offsets[p]) {
+      P4EST_ASSERT (p != mpirank);
+      P4EST_LDEBUGF ("ghost layer expand post count receive from %d\n", p);
+      mpiret = MPI_Irecv (recv_counts + peer, 1, P4EST_MPI_LOCIDX, p,
+                          P4EST_COMM_GHOST_EXPAND_COUNT, comm, recv_request +
+                          peer);
+      SC_CHECK_MPI (mpiret);
+      peer++;
+    }
+  }
+
+  if (ghost->mirror_proc_fronts == ghost->mirror_proc_mirrors) {
+    /* create the fronts: the last quads added to the mirrors */
+    P4EST_ASSERT (ghost->mirror_proc_front_offsets ==
+                  ghost->mirror_proc_offsets);
+
+    ghost->mirror_proc_fronts = P4EST_ALLOC (p4est_locidx_t,
+                                             mirror_proc_offsets[mpisize]);
+    memcpy (ghost->mirror_proc_fronts, mirror_proc_mirrors,
+            sizeof (p4est_locidx_t) * mirror_proc_offsets[mpisize]);
+
+    ghost->mirror_proc_front_offsets = P4EST_ALLOC (p4est_locidx_t,
+                                                    mpisize + 1);
+    memcpy (ghost->mirror_proc_front_offsets, mirror_proc_offsets,
+            sizeof (p4est_locidx_t) * (mpisize + 1));
+  }
+  mpf = ghost->mirror_proc_fronts;
+  mpfo = ghost->mirror_proc_front_offsets;
+
+  /* for every proc */
+  for (p = 0; p < mpisize; p++) {
+    /* get mirror_proc_offsets */
+    p4est_locidx_t      first_mirror = mpfo[p];
+    p4est_locidx_t      end_mirror = mpfo[p + 1];
+    size_t              zm;
+    sc_array_t          pview;
+
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
+      continue;
+    }
+
+    sc_array_init_data (&pview, mirror_proc_mirrors + mirror_proc_offsets[p],
+                        sizeof (p4est_locidx_t),
+                        mirror_proc_offsets[p + 1] - mirror_proc_offsets[p]);
+
+    /* for every mirror */
+    for (zm = first_mirror; zm < end_mirror; zm++) {
+      int                 f, c;
+#ifdef P4_TO_P8
+      int                 e;
+#endif
+      p4est_quadrant_t   *mq = p4est_quadrant_array_index (mirrors,
+                                                           (size_t) mpf[zm]);
+      p4est_locidx_t      t = mq->p.piggy3.which_tree;
+
+      /* for every face */
+      for (f = 0; f < P4EST_FACES; f++) {
+        p4est_quadrant_t    nq;
+        p4est_topidx_t      nt;
+        int                 nf;
+
+        nf = (f ^ 1);
+        nt = t;
+
+        /* get the neighbor */
+        nt = p4est_quadrant_face_neighbor_extra (mq, t, f, &nq, &nf, conn);
+        if (nt == -1) {
+          continue;
+        }
+
+        nf = nf % P4EST_FACES;
+
+        /* add any quadrant that overlaps this neighbor and touches the mirror
+         * to the buffer */
+        p4est_ghost_expand_int (t, mq, nt, &nq, &pview, P4EST_CONNECT_FACE,
+                                nf, tempquads, temptrees, p, p4est, ghost,
+                                send_bufs);
+      }
+      if (btype == P4EST_CONNECT_FACE) {
+        continue;
+      }
+
+#ifdef P4_TO_P8
+      /* for every edge */
+      for (e = 0; e < P8EST_EDGES; e++) {
+        p4est_quadrant_t   *nq;
+        p4est_topidx_t      nt;
+        int                 ne;
+
+        nt = t;
+
+        /* get the neighbors */
+        p8est_quadrant_edge_neighbor_extra (mq, t, e, tempquads2, temptrees2,
+                                            npoints, conn);
+
+        /* for every neighbor */
+        for (zz = 0; zz < tempquads2->elem_count; zz++) {
+          nq = p4est_quadrant_array_index (tempquads2, zz);
+          nt = *((p4est_locidx_t *) sc_array_index (temptrees2, zz));
+          ne = *((int *) sc_array_index (npoints, zz));
+          ne = ne % P8EST_EDGES;
+
+          /* add any quadrant that overlaps this neighbor and touches the mirror
+           * to the buffer */
+          p4est_ghost_expand_int (t, mq, nt, nq, &pview, P8EST_CONNECT_EDGE,
+                                  ne, tempquads, temptrees, p, p4est, ghost,
+                                  send_bufs);
+
+        }
+        sc_array_reset (tempquads2);
+        sc_array_reset (temptrees2);
+        sc_array_reset (npoints);
+      }
+      if (btype == P8EST_CONNECT_EDGE) {
+        continue;
+      }
+#endif
+      /* for every corner */
+      for (c = 0; c < P4EST_CHILDREN; c++) {
+        p4est_quadrant_t   *nq;
+        p4est_topidx_t      nt;
+        int                 nc;
+
+        nt = t;
+
+        /* get the neighbors */
+        p4est_quadrant_corner_neighbor_extra (mq, t, c, tempquads2,
+                                              temptrees2, npoints, conn);
+
+        /* for every neighbor */
+        for (zz = 0; zz < tempquads2->elem_count; zz++) {
+          nq = p4est_quadrant_array_index (tempquads2, zz);
+          nt = *((p4est_locidx_t *) sc_array_index (temptrees2, zz));
+          nc = *((int *) sc_array_index (npoints, zz));
+
+          /* add any quadrant that overlaps this neighbor and touches the mirror
+           * to the buffer */
+          p4est_ghost_expand_int (t, mq, nt, nq, &pview, P4EST_CONNECT_CORNER,
+                                  nc, tempquads, temptrees, p, p4est, ghost,
+                                  send_bufs);
+        }
+        sc_array_reset (tempquads2);
+        sc_array_reset (temptrees2);
+        sc_array_reset (npoints);
+      }
+    }
+
+    sc_array_reset (&pview);
+  }
+  sc_array_destroy (tempquads);
+  sc_array_destroy (temptrees);
+  sc_array_destroy (tempquads2);
+  sc_array_destroy (temptrees2);
+  sc_array_destroy (npoints);
+
+  /* Send the counts of ghosts that are going to be sent */
+  new_count = 0;
+  for (p = 0, peer = 0; p < mpisize; p++) {
+    buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
+
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
+      continue;
+    }
+
+    if (buf->elem_count) {
+      sc_array_sort (buf, p4est_quadrant_compare_piggy);
+      sc_array_uniq (buf, p4est_quadrant_compare_piggy_proc);
+    }
+    send_counts[peer] = (p4est_locidx_t) buf->elem_count;
+    new_count += send_counts[peer];
+    P4EST_ASSERT (p != mpirank);
+    P4EST_LDEBUGF ("ghost layer expand post count send to %d\n", p);
+    mpiret = MPI_Isend (send_counts + peer, 1, P4EST_MPI_LOCIDX, p,
+                        P4EST_COMM_GHOST_EXPAND_COUNT, comm, send_request +
+                        peer);
+    SC_CHECK_MPI (mpiret);
+    peer++;
+  }
+  P4EST_ASSERT (peer == num_peers);
+  P4EST_VERBOSEF ("Total new ghosts to send %lld\n", (long long) new_count);
+
+  /* Wait for the counts */
+  if (num_peers > 0) {
+    mpiret = MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    mpiret = MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
+
+#ifdef P4EST_DEBUG
+  for (p = 0; p < num_peers; ++p) {
+    P4EST_ASSERT (recv_request[p] == MPI_REQUEST_NULL);
+  }
+  for (p = 0; p < num_peers; ++p) {
+    P4EST_ASSERT (send_request[p] == MPI_REQUEST_NULL);
+  }
+#endif
+
+  /* Count ghosts */
+  for (peer = 0, num_new_ghosts = 0; peer < num_peers; ++peer) {
+    num_new_ghosts += recv_counts[peer];        /* same type */
+  }
+  P4EST_VERBOSEF ("Total new ghosts to receive %lld\n",
+                  (long long) num_new_ghosts);
+
+  /* Allocate space for the ghosts */
+  old_num_ghosts = (p4est_locidx_t) ghost_layer->elem_count;
+  sc_array_resize (ghost_layer, (size_t) (old_num_ghosts + num_new_ghosts));
+
+  /* Post receives for the ghosts */
+  for (p = 0, peer = 0, ghost_offset = old_num_ghosts; p < mpisize; p++) {
+
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
+      continue;
+    }
+
+    if (recv_counts[peer]) {
+      P4EST_LDEBUGF
+        ("ghost layer expand post ghost receive %lld quadrants from %d\n",
+         (long long) recv_counts[peer], p);
+      mpiret =
+        MPI_Irecv (ghost_layer->array +
+                   ghost_offset * sizeof (p4est_quadrant_t),
+                   (int) (recv_counts[peer] * sizeof (p4est_quadrant_t)),
+                   MPI_BYTE, p, P4EST_COMM_GHOST_EXPAND_LOAD, comm,
+                   recv_load_request + peer);
+
+      SC_CHECK_MPI (mpiret);
+      ghost_offset += recv_counts[peer];
+    }
+    peer++;
+  }
+  P4EST_ASSERT (ghost_offset == old_num_ghosts + num_new_ghosts);
+
+  /* Send the ghosts */
+  for (p = 0, peer = 0; p < mpisize; p++) {
+    if (mirror_proc_offsets[p + 1] == mirror_proc_offsets[p]) {
+      continue;
+    }
+    buf = (sc_array_t *) sc_array_index (send_bufs, p);
+    if (buf->elem_count > 0) {
+      P4EST_ASSERT ((p4est_locidx_t) buf->elem_count == send_counts[peer]);
+      P4EST_LDEBUGF
+        ("ghost layer expand post ghost send %lld quadrants to %d\n",
+         (long long) send_counts[peer], p);
+      mpiret =
+        MPI_Isend (buf->array,
+                   (int) (send_counts[peer] * sizeof (p4est_quadrant_t)),
+                   MPI_BYTE, p, P4EST_COMM_GHOST_EXPAND_LOAD, comm,
+                   send_load_request + peer);
+      SC_CHECK_MPI (mpiret);
+    }
+    peer++;
+  }
+
+  /* Wait for everything */
+  if (num_peers > 0) {
+    mpiret = MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    mpiret = MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
+
+#ifdef P4EST_DEBUG
+  for (p = 0; p < num_peers; p++) {
+    P4EST_ASSERT (recv_load_request[p] == MPI_REQUEST_NULL);
+  }
+  for (p = 0; p < num_peers; p++) {
+    P4EST_ASSERT (send_load_request[p] == MPI_REQUEST_NULL);
+  }
+#endif
+
+  /* Clean up */
+  P4EST_FREE (recv_counts);
+  P4EST_FREE (recv_request);
+  P4EST_FREE (send_request);
+
+  /* sift bridges out of send buffers so that we can reuse buffers when
+   * updating mirrors*/
+  for (p = 0; p < mpisize; p++) {
+    size_t              count;
+    p4est_quadrant_t   *q1, *q2;
+
+    buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
+    count = buf->elem_count;
+
+    if (!count) {
+      continue;
+    }
+
+    q1 = p4est_quadrant_array_index (buf, 0);
+    for (zz = 0; zz < buf->elem_count; zz++) {
+      q2 = p4est_quadrant_array_index (buf, zz);
+      P4EST_ASSERT (p4est_quadrant_is_valid (q2));
+      if (p4est_comm_is_owner (p4est, q2->p.which_tree, q2, mpirank)) {
+#ifdef P4EST_DEBUG
+        ssize_t             idx;
+
+        idx = sc_array_bsearch (mirrors, q2, p4est_quadrant_compare_piggy);
+
+        if (idx >= 0) {
+          ssize_t             idx2;
+          sc_array_t          pview;
+          p4est_locidx_t      lidx = (p4est_locidx_t) idx;
+          sc_array_init_data (&pview,
+                              mirror_proc_mirrors + mirror_proc_offsets[p],
+                              sizeof (p4est_locidx_t),
+                              mirror_proc_offsets[p + 1] -
+                              mirror_proc_offsets[p]);
+          idx2 = sc_array_bsearch (&pview, &lidx, p4est_locidx_compare);
+          P4EST_ASSERT (idx2 < 0);
+        }
+#endif
+        if (q1 != q2) {
+          *(q1++) = *q2;
+        }
+        else {
+          q1++;
+        }
+      }
+      else {
+        count--;
+      }
+    }
+    P4EST_LDEBUGF ("ghost layer expand sending %lld new non-bridges to %d\n",
+                   (long long) count, p);
+    sc_array_resize (buf, count);
+  }
+
+  if (num_new_ghosts) {
+    p4est_quadrant_t   *q1, *q2;
+
+    q1 = p4est_quadrant_array_index (ghost_layer, old_num_ghosts);
+
+    /* sift out the bridges */
+    for (zz = old_num_ghosts; zz < ghost_layer->elem_count; zz++) {
+      q2 = p4est_quadrant_array_index (ghost_layer, zz);
+
+      if (p4est_comm_is_owner (p4est, q2->p.which_tree, q2, mpirank)) {
+        /* this is a bridge: it is already a mirror for a proc other
+         * than p */
+        int                 target = q2->p.piggy1.owner_rank;
+        ssize_t             idx, idx2;
+        p4est_locidx_t      lidx;
+        sc_array_t          pview;
+
+        P4EST_ASSERT (0 <= target && target < mpisize);
+        P4EST_ASSERT (target != mpirank);
+
+        num_new_ghosts--;
+        idx = sc_array_bsearch (mirrors, q2, p4est_quadrant_compare_piggy);
+        P4EST_ASSERT (idx >= 0);
+        /* does the target already know about this ? */
+        lidx = (p4est_locidx_t) idx;
+        sc_array_init_data (&pview,
+                            mirror_proc_mirrors + mirror_proc_offsets[target],
+                            sizeof (p4est_locidx_t),
+                            mirror_proc_offsets[target + 1] -
+                            mirror_proc_offsets[target]);
+        idx2 = sc_array_bsearch (&pview, &lidx, p4est_locidx_compare);
+        sc_array_reset (&pview);
+
+        if (idx2 < 0) {
+          /* if the target doesn't already know about it, put it in send_bufs
+           * */
+          p4est_quadrant_t   *q3, *q4;
+
+          q3 = p4est_quadrant_array_index (mirrors, (size_t) idx);
+          P4EST_ASSERT (p4est_quadrant_is_equal_piggy (q2, q3));
+          buf = (sc_array_t *) sc_array_index_int (send_bufs, target);
+          q4 = (p4est_quadrant_t *) sc_array_push (buf);
+          *q4 = *q3;
+        }
+      }
+      else {
+        if (q1 != q2) {
+          *(q1++) = *q2;
+        }
+        else {
+          q1++;
+        }
+      }
+    }
+
+    P4EST_ASSERT (num_new_ghosts >= 0);
+
+    for (p = 0; p < mpisize; p++) {
+      buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
+
+      sc_array_sort (buf, p4est_quadrant_compare_piggy);
+      sc_array_uniq (buf, p4est_quadrant_compare_piggy);
+    }
+
+    if (num_new_ghosts) {
+      /* update the ghost layer */
+      sc_array_resize (ghost_layer,
+                       (size_t) (old_num_ghosts + num_new_ghosts));
+      sc_array_sort (ghost_layer, p4est_quadrant_compare_piggy);
+      sc_array_uniq (ghost_layer, p4est_quadrant_compare_piggy);
+
+      num_new_ghosts = ghost_layer->elem_count - old_num_ghosts;
+
+      if (num_new_ghosts) {
+
+        P4EST_LDEBUGF ("ghost layer expand receiving %lld new non-bridges\n",
+                       (long long) num_new_ghosts);
+        /* calculate tree offsets */
+        sc_array_init (&split, sizeof (size_t));
+        sc_array_split (ghost_layer, &split,
+                        (size_t) conn->num_trees, ghost_tree_type, NULL);
+        P4EST_ASSERT (split.elem_count == (size_t) conn->num_trees + 1);
+        for (t = 0; t <= conn->num_trees; ++t) {
+          ppz = (size_t *) sc_array_index (&split, (size_t) t);
+          ghost->tree_offsets[t] = *ppz;
+        }
+        sc_array_reset (&split);
+
+        /* calculate proc offsets */
+        sc_array_init (&split, sizeof (size_t));
+        sc_array_split (ghost_layer, &split,
+                        (size_t) mpisize, ghost_proc_type, p4est);
+        P4EST_ASSERT (split.elem_count == (size_t) mpisize + 1);
+        for (p = 0; p <= mpisize; p++) {
+          ppz = (size_t *) sc_array_index (&split, (size_t) p);
+          proc_offsets[p] = (p4est_locidx_t) (*ppz);
+        }
+        sc_array_reset (&split);
+      }
+    }
+  }
+
+  /* we're going to build new mirrors structures, then destroy the old
+   * structures later */
+  new_mirrors = sc_array_new_size (mirrors->elem_size, mirrors->elem_count);
+  sc_array_copy (new_mirrors, mirrors);
+  old_num_mirrors = (p4est_locidx_t) mirrors->elem_count;
+  for (p = 0; p < mpisize; p++) {
+    /* add all of the potentially new mirrors */
+    buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
+    size_t              oldsize;
+
+    if (!buf->elem_count) {
+      continue;
+    }
+    oldsize = new_mirrors->elem_count;
+    sc_array_resize (new_mirrors, oldsize + buf->elem_count);
+    memcpy (new_mirrors->array + oldsize * new_mirrors->elem_size,
+            buf->array, buf->elem_count * buf->elem_size);
+  }
+  sc_array_sort (new_mirrors, p4est_quadrant_compare_piggy);
+  sc_array_uniq (new_mirrors, p4est_quadrant_compare_piggy);
+  new_num_mirrors = (p4est_locidx_t) new_mirrors->elem_count;
+  P4EST_ASSERT (new_num_mirrors >= old_num_mirrors);
+
+  if (new_num_mirrors > old_num_mirrors) {
+    /* update mirror_tree_offsets */
+    sc_array_init (&split, sizeof (size_t));
+    sc_array_split (new_mirrors, &split,
+                    (size_t) conn->num_trees, ghost_tree_type, NULL);
+    P4EST_ASSERT (split.elem_count == (size_t) conn->num_trees + 1);
+    for (t = 0; t <= conn->num_trees; ++t) {
+      ppz = (size_t *) sc_array_index (&split, (size_t) t);
+      mirror_tree_offsets[t] = *ppz;
+    }
+    sc_array_reset (&split);
+  }
+
+  /* update mirror_proc_fronts */
+  nmpfa = sc_array_new (sizeof (p4est_locidx_t));
+  for (p = 0; p < mpisize; p++) {
+    size_t              offset = nmpfa->elem_count;
+    buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
+
+    sc_array_resize (nmpfa, offset + buf->elem_count);
+    mpfo[p] = (p4est_locidx_t) offset;
+
+    for (zz = 0; zz < buf->elem_count; zz++) {
+      ssize_t             idx;
+      p4est_quadrant_t   *q1 = p4est_quadrant_array_index (buf, zz);
+      p4est_locidx_t     *lp =
+        (p4est_locidx_t *) sc_array_index (nmpfa, offset + zz);
+
+      idx = sc_array_bsearch (new_mirrors, q1, p4est_quadrant_compare_piggy);
+      P4EST_ASSERT (idx >= 0);
+      *lp = (p4est_locidx_t) idx;
+    }
+
+    sc_array_reset (buf);
+  }
+  mpfo[mpisize] = nmpfa->elem_count;
+  P4EST_FREE (mpf);
+  ghost->mirror_proc_fronts = mpf =
+    P4EST_ALLOC (p4est_locidx_t, nmpfa->elem_count);
+  memcpy (mpf, nmpfa->array, nmpfa->elem_size * nmpfa->elem_count);
+  sc_array_destroy (nmpfa);
+  sc_array_destroy (send_bufs);
+
+  /* update mirror_proc_mirrors */
+  nmpma = sc_array_new (sizeof (p4est_locidx_t));
+  for (p = 0; p < mpisize; p++) {
+    size_t              frontsize = mpfo[p + 1] - mpfo[p];
+    size_t              offset = nmpma->elem_count;
+    p4est_locidx_t      old_offset = mirror_proc_offsets[p];
+    p4est_locidx_t      old_count = mirror_proc_offsets[p + 1] - old_offset;
+
+    mirror_proc_offsets[p] = offset;
+
+    P4EST_LDEBUGF
+      ("ghost layer expanded with proc %d: send %lld receive %lld\n",
+       p, (long long) old_count + frontsize,
+       (long long) proc_offsets[p + 1] - proc_offsets[p]);
+    sc_array_resize (nmpma, offset + old_count + frontsize);
+    memcpy (nmpma->array + nmpma->elem_size * offset,
+            mpf + mpfo[p], sizeof (p4est_locidx_t) * frontsize);
+
+    if (old_count) {
+      sc_array_t          pview;
+      for (zz = 0; zz < old_count; zz++) {
+        ssize_t             idx;
+        p4est_quadrant_t   *q1 = p4est_quadrant_array_index (mirrors,
+                                                             mirror_proc_mirrors
+                                                             [zz +
+                                                              old_offset]);
+        p4est_locidx_t     *lp =
+          (p4est_locidx_t *) sc_array_index (nmpma, offset + frontsize + zz);
+
+        idx =
+          sc_array_bsearch (new_mirrors, q1, p4est_quadrant_compare_piggy);
+        P4EST_ASSERT (idx >= 0);
+        *lp = (p4est_locidx_t) idx;
+      }
+
+      sc_array_init_view (&pview, nmpma, offset, old_count + frontsize);
+      sc_array_sort (&pview, p4est_locidx_compare);
+      sc_array_reset (&pview);
+    }
+  }
+  mirror_proc_offsets[mpisize] = nmpma->elem_count;
+  P4EST_FREE (mirror_proc_mirrors);
+  ghost->mirror_proc_mirrors = mirror_proc_mirrors = P4EST_ALLOC
+    (p4est_locidx_t, nmpma->elem_count);
+  memcpy (mirror_proc_mirrors, nmpma->array,
+          nmpma->elem_size * nmpma->elem_count);
+  sc_array_destroy (nmpma);
+
+  sc_array_resize (mirrors, new_mirrors->elem_count);
+  sc_array_copy (mirrors, new_mirrors);
+  sc_array_destroy (new_mirrors);
+
+#ifdef P4EST_DEBUG
+  for (p = 0; p < mpisize; p++) {
+    int                 ghost_count =
+      ghost->proc_offsets[p + 1] - ghost->proc_offsets[p];
+    int                 mirror_count =
+      ghost->mirror_proc_offsets[p + 1] - ghost->mirror_proc_offsets[p];
+
+    P4EST_ASSERT ((mirror_count && ghost_count)
+                  || (!mirror_count && !ghost_count));
+
+  }
+#endif
+
+  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_expand\n");
+#endif
 }

@@ -124,7 +124,7 @@ typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
  * true, and quadid = -1.
                       *
  * the \a faces field provides some additional information about the local
- * topography: if side[i]->facse[j] == side[k]->faces[l], this indicates that
+ * neighborhood: if side[i]->faces[j] == side[k]->faces[l], this indicates that
  * there is a common face between these two sides of the edge.
  */
 typedef struct p8est_iter_edge_side
@@ -186,7 +186,7 @@ typedef void        (*p8est_iter_edge_t) (p8est_iter_edge_info_t * info,
  * the ghosts array.
  *
  * the \a faces and \a edges field provides some additional information about
- * the local topography: if side[i]->faces[j] == side[k]->faces[l], this
+ * the local neighborhood: if side[i]->faces[j] == side[k]->faces[l], this
  * indicates that there is a common face between these two sides of the
  * corner.
  */
@@ -230,7 +230,7 @@ typedef void        (*p8est_iter_corner_t) (p8est_iter_corner_info_t * info,
 
 /** p8est_iterate executes the user-supplied callback functions at every
  * volume, face, edge and corner in the local forest. The ghost_layer may be
- * NULL. The \a user_data pointer is not touched by p4est_iterate, but is
+ * NULL. The \a user_data pointer is not touched by p8est_iterate, but is
  * passed to each of the callbacks. Any of the callback functions may be NULL.
  * The callback functions are interspersed with each other, i.e. some face
  * callbacks will occur between volume callbacks, and some edge callbacks will
@@ -258,20 +258,6 @@ void                p8est_iterate (p8est_t * p4est,
                                    p8est_iter_face_t iter_face,
                                    p8est_iter_edge_t iter_edge,
                                    p8est_iter_corner_t iter_corner);
-
-/** p8est_iterate_ext adds the option \a remote: if this is false, then it is
- * the same as p8est_iterate; if this is true, then corner/edge callbacks are
- * also called on corners/edges for hanging faces/edges touched by local
- * quadrants.
- */
-void                p4est_iterate_ext (p4est_t * p4est,
-                                       p4est_ghost_t * ghost_layer,
-                                       void *user_data,
-                                       p4est_iter_volume_t iter_volume,
-                                       p4est_iter_face_t iter_face,
-                                       p8est_iter_edge_t iter_edge,
-                                       p4est_iter_corner_t iter_corner,
-                                       int remote);
 
 /** Return a pointer to a iter_corner_side array element indexed by a int.
  */

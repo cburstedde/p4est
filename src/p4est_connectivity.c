@@ -3750,6 +3750,7 @@ p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
     sc_array_init (&e2.edge_transforms, sizeof (p8est_edge_transform_t));
     for (t = 0; t < ntrees; t++) {
       int                 e;
+      size_t              zz;
 
       for (e = 0; e < P8EST_EDGES; e++) {
         p8est_find_edge_transform (conn1, t, e, &e1);
@@ -3760,8 +3761,23 @@ p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
         /* sort so memory comparison is correct */
         sc_array_sort (&e1.edge_transforms, p8est_edge_compare);
         sc_array_sort (&e2.edge_transforms, p8est_edge_compare);
-        if (!sc_array_is_equal (&e1.edge_transforms, &e2.edge_transforms)) {
+        if (e1.edge_transforms.elem_count != e2.edge_transforms.elem_count) {
           return 0;
+        }
+        for (zz = 0; zz < e1.edge_transforms.elem_count; zz++) {
+          p8est_edge_transform_t *t1 = p8est_edge_array_index
+            (&e1.edge_transforms, zz);
+          p8est_edge_transform_t *t2 = p8est_edge_array_index
+            (&e2.edge_transforms, zz);
+
+          if (t1->corners != t2->corners ||
+              t1->naxis[0] != t2->naxis[0] ||
+              t1->naxis[1] != t2->naxis[1] ||
+              t1->naxis[2] != t2->naxis[2] ||
+              t1->nedge != t2->nedge ||
+              t1->nflip != t2->nflip || t1->ntree != t2->ntree) {
+            return 0;
+          }
         }
       }
     }
@@ -3776,6 +3792,7 @@ p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
     sc_array_init (&c2.corner_transforms, sizeof (p4est_corner_transform_t));
     for (t = 0; t < ntrees; t++) {
       int                 c;
+      size_t              zz;
 
       for (c = 0; c < P4EST_CHILDREN; c++) {
         p4est_find_corner_transform (conn1, t, c, &c1);
@@ -3787,8 +3804,20 @@ p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
         /* sort so memory comparison is correct */
         sc_array_sort (&c1.corner_transforms, p4est_corner_compare);
         sc_array_sort (&c2.corner_transforms, p4est_corner_compare);
-        if (!sc_array_is_equal (&c1.corner_transforms, &c2.corner_transforms)) {
+
+        if (c1.corner_transforms.elem_count !=
+            c2.corner_transforms.elem_count) {
           return 0;
+        }
+        for (zz = 0; zz < c1.corner_transforms.elem_count; zz++) {
+          p4est_corner_transform_t *t1 = p4est_corner_array_index
+            (&c1.corner_transforms, zz);
+          p4est_corner_transform_t *t2 = p4est_corner_array_index
+            (&c2.corner_transforms, zz);
+
+          if (t1->ncorner != t2->ncorner || t1->ntree != t2->ntree) {
+            return 0;
+          }
         }
       }
     }
