@@ -3128,6 +3128,9 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
       SC_CHECK_MPI (mpiret);
       ghost_offset += recv_counts[peer];
     }
+    else {
+      recv_load_request[peer] = MPI_REQUEST_NULL;
+    }
     peer++;
   }
   P4EST_ASSERT (ghost_offset == old_num_ghosts + num_new_ghosts);
@@ -3149,6 +3152,9 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
                    MPI_BYTE, p, P4EST_COMM_GHOST_EXPAND_LOAD, comm,
                    send_load_request + peer);
       SC_CHECK_MPI (mpiret);
+    }
+    else {
+      send_load_request[peer] = MPI_REQUEST_NULL;
     }
     peer++;
   }
