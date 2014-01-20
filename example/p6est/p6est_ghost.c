@@ -211,6 +211,14 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
 
   /* update mirror_proc_fronts */
   nmpfa = sc_array_new (sizeof (p4est_locidx_t));
+
+  if (mpo == mpfo) {
+    /* mpo and mpfo will now diverge, need to be separate arrays */
+    ghost->mirror_proc_offsets = mpo =
+      P4EST_ALLOC (p4est_locidx_t, mpisize + 1);
+    memcpy (mpo, mpfo, (mpisize + 1) * sizeof (p4est_locidx_t));
+  }
+
   for (i = 0; i < mpisize; i++) {
     size_t              offset = nmpfa->elem_count;
 
@@ -247,6 +255,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   }
   else {
     /* update mirror_proc_mirrors */
+
     nmpma = sc_array_new (sizeof (p4est_locidx_t));
     for (i = 0; i < mpisize; i++) {
       size_t              frontsize = mpfo[i + 1] - mpfo[i];
@@ -286,7 +295,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     if (ghost->mirror_proc_mirrors != NULL) {
       P4EST_FREE (ghost->mirror_proc_mirrors);
     }
-    ghost->mirror_proc_mirrors =
+    ghost->mirror_proc_mirrors = mpm =
       P4EST_ALLOC (p4est_locidx_t, nmpma->elem_count);
     memcpy (mpm, nmpma->array, nmpma->elem_size * nmpma->elem_count);
     sc_array_destroy (nmpma);
@@ -378,38 +387,25 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     P4EST_FREE (cdata);
   }
 #endif
-
-  return;
 }
 
-p6est_ghost_t      *
-p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
+static void
+p6est_ghost_fill_offsets (p6est_t * p6est, p6est_ghost_t * ghost)
 {
-  p4est_t            *columns = p6est->columns;
-  p4est_ghost_t      *cghost;
-  sc_array_t         *gcols;
-  p6est_ghost_t      *ghost = P4EST_ALLOC (p6est_ghost_t, 1);
-  p4est_topidx_t      num_trees, it, thiscol;
-  p4est_locidx_t      il, ngcol, nglayer, offset;
-  p4est_locidx_t     *clo, *ctree_off, *cproc_off, *tree_off, *proc_off;
-  p4est_locidx_t     *proc_count;
   p4est_quadrant_data_t *cdata;
-  size_t              first, last, count;
-  int                 nneigh;
-  int                 i, mpisize;
+  p4est_locidx_t     *clo, offset, il, count, nglayer, thiscol;
+  p4est_topidx_t      it, num_trees = ghost->num_trees;
+  p4est_locidx_t     *proc_off, *tree_off, *cproc_off, *ctree_off;
+  p4est_t            *columns = p6est->columns;
+  p4est_ghost_t      *cghost = ghost->column_ghost;
+  size_t              first, last;
+  int                 i, mpisize = ghost->mpisize;
+  p4est_locidx_t      ngcol =
+    (p4est_locidx_t) ghost->column_ghost->ghosts.elem_count;
 
-  /* create the column ghost layer */
-  ghost->column_ghost = cghost = p4est_ghost_new (columns, btype);
-  ghost->mpisize = mpisize = cghost->mpisize;
-  ghost->num_trees = num_trees = cghost->num_trees;
-  ghost->btype = btype;
+  sc_array_resize (ghost->column_layer_offsets, (size_t) ngcol + 1);
 
-  /* create the column layer offsets */
-  gcols = &cghost->ghosts;
-  ngcol = gcols->elem_count;
-  ghost->column_layer_offsets =
-    sc_array_new_size (sizeof (p4est_locidx_t), (size_t) ngcol + 1);
-  clo = (p4est_locidx_t *) ghost->column_layer_offsets->array;
+  clo = (p4est_locidx_t *) sc_array_index (ghost->column_layer_offsets, 0);
 
   /* create an array of the data for each ghost column */
   cdata = P4EST_ALLOC (p4est_quadrant_data_t, ngcol);
@@ -433,15 +429,8 @@ p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
   P4EST_FREE (cdata);
 
   /* create the tree and proc offsets */
-  ghost->tree_offsets = tree_off =
-    P4EST_ALLOC (p4est_locidx_t, num_trees + 1);
-  ghost->proc_offsets = proc_off = P4EST_ALLOC (int, mpisize + 1);
-  ghost->mirror_proc_front_offsets = P4EST_ALLOC (int, mpisize + 1);
-  ghost->mirror_tree_offsets = P4EST_ALLOC (p4est_locidx_t, num_trees + 1);
-  ghost->mirror_proc_fronts = NULL;     /* these three are set below */
-  ghost->mirror_proc_offsets = NULL;
-  ghost->mirror_proc_mirrors = NULL;
-  proc_count = P4EST_ALLOC (int, mpisize);
+  tree_off = ghost->tree_offsets;
+  proc_off = ghost->proc_offsets;
   ctree_off = cghost->tree_offsets;
   cproc_off = cghost->proc_offsets;
 
@@ -460,14 +449,11 @@ p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
 
   /* fill proc offsets */
   proc_off[0] = 0;
-  nneigh = 0;
   for (i = 1; i <= mpisize; i++) {
     if (cproc_off[i] == cproc_off[i - 1]) {
       proc_off[i] = proc_off[i - 1];
-      proc_count[i - 1] = 0;
     }
     else {
-      nneigh++;
       if (i < mpisize) {
         thiscol = cproc_off[i];
         proc_off[i] = clo[thiscol];
@@ -476,13 +462,55 @@ p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
         proc_off[i] = nglayer;
       }
       P4EST_ASSERT (proc_off[i] > proc_off[i - 1]);
-      proc_count[i - 1] = (proc_off[i] - proc_off[i - 1]);
     }
   }
 
-  /* create the ghost array */
-  sc_array_init_size (&ghost->ghosts, sizeof (p2est_quadrant_t), nglayer);
+  sc_array_resize (&ghost->ghosts, (size_t) nglayer);
+}
+
+p6est_ghost_t      *
+p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
+{
+  p4est_t            *columns = p6est->columns;
+  p4est_ghost_t      *cghost;
+  p6est_ghost_t      *ghost = P4EST_ALLOC (p6est_ghost_t, 1);
+  p4est_topidx_t      num_trees;
+  p4est_locidx_t     *proc_off, *proc_count;
+  int                 nneigh;
+  int                 i, mpisize;
+
+  /* create the column ghost layer */
+  ghost->column_ghost = cghost = p4est_ghost_new (columns, btype);
+  ghost->mpisize = mpisize = cghost->mpisize;
+  ghost->num_trees = num_trees = cghost->num_trees;
+  ghost->btype = btype;
+
+  /* create the column layer offsets */
+  ghost->column_layer_offsets = sc_array_new (sizeof (p4est_locidx_t));
+  ghost->tree_offsets = P4EST_ALLOC (p4est_locidx_t, num_trees + 1);
+  ghost->proc_offsets = P4EST_ALLOC (int, mpisize + 1);
+  ghost->mirror_proc_front_offsets = P4EST_ALLOC (int, mpisize + 1);
+  ghost->mirror_tree_offsets = P4EST_ALLOC (p4est_locidx_t, num_trees + 1);
+  ghost->mirror_proc_fronts = NULL;     /* these three are set in p6est_ghost_send_front_layers */
+  ghost->mirror_proc_offsets = NULL;
+  ghost->mirror_proc_mirrors = NULL;
+  sc_array_init (&ghost->ghosts, sizeof (p2est_quadrant_t));
   sc_array_init (&ghost->mirrors, sizeof (p2est_quadrant_t));
+
+  p6est_ghost_fill_offsets (p6est, ghost);
+
+  proc_off = ghost->proc_offsets;
+
+  /* create the proc counts */
+  proc_count = P4EST_ALLOC (int, mpisize);
+
+  nneigh = 0;
+  for (i = 0; i < mpisize; i++) {
+    proc_count[i] = proc_off[i + 1] - proc_off[i];
+    if (proc_count[i]) {
+      nneigh++;
+    }
+  }
 
   p6est_ghost_send_front_layers (ghost, nneigh, p6est, proc_off, proc_count);
 
@@ -510,4 +538,65 @@ p6est_ghost_destroy (p6est_ghost_t * ghost)
   P4EST_FREE (ghost->mirror_proc_mirrors);
   P4EST_FREE (ghost->mirror_proc_offsets);
   P4EST_FREE (ghost);
+}
+
+void
+p6est_ghost_expand (p6est_t * p6est, p6est_ghost_t * ghost)
+{
+  int                 i, mpisize = ghost->mpisize;
+  p4est_t            *columns = p6est->columns;
+  p4est_ghost_t      *cghost = ghost->column_ghost;
+  p4est_locidx_t     *old_proc_off, *proc_comm_off;
+  p4est_locidx_t     *proc_off, *proc_count;
+  int                 nneigh = 0;
+
+  /* copy the old proc offsets */
+  old_proc_off = P4EST_ALLOC (p4est_locidx_t, mpisize + 1);
+  proc_comm_off = P4EST_ALLOC (p4est_locidx_t, mpisize + 1);
+  memcpy (old_proc_off, ghost->proc_offsets, (mpisize + 1) * sizeof
+          (p4est_locidx_t));
+
+  /* expand the columns */
+  p4est_ghost_expand (columns, cghost);
+
+  /* update the offsets */
+  p6est_ghost_fill_offsets (p6est, ghost);
+
+  proc_off = ghost->proc_offsets;
+  proc_count = P4EST_ALLOC (p4est_locidx_t, mpisize);
+
+  /* The ghosts array reflects the old processor offsets.  Move every
+   * processor's existing ghosts to the beginning of its new offset */
+  nneigh = 0;
+  for (i = mpisize - 1; i >= 0; i--) {
+    int                 old_proc_count, new_proc_count;
+
+    old_proc_count = old_proc_off[i + 1] - old_proc_off[i];
+    new_proc_count = proc_off[i + 1] - proc_off[i];
+    P4EST_ASSERT (new_proc_count >= old_proc_count);
+
+    if (old_proc_count) {
+      P4EST_ASSERT (proc_off[i] >= old_proc_off[i]);
+      memmove (sc_array_index (&ghost->ghosts, (size_t) proc_off[i]),
+               sc_array_index (&ghost->ghosts, (size_t) old_proc_off[i]),
+               (old_proc_count) * sizeof (p2est_quadrant_t));
+    }
+
+    proc_count[i] = new_proc_count - old_proc_count;
+    /* we are going to send the new layers into the new array, after the old
+     * layers, so the communication offset is the processor's range in the new
+     * array, shifted by the old count */
+    proc_comm_off[i] = proc_off[i] + old_proc_count;
+
+    if (proc_count[i]) {
+      nneigh++;
+    }
+  }
+  P4EST_FREE (old_proc_off);
+
+  p6est_ghost_send_front_layers (ghost, nneigh, p6est, proc_comm_off,
+                                 proc_count);
+
+  P4EST_FREE (proc_comm_off);
+  P4EST_FREE (proc_count);
 }

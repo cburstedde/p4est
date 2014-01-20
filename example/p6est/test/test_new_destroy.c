@@ -182,6 +182,8 @@ main (int argc, char **argv)
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FACE);
   p6est_ghost_destroy (ghost);
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FULL);
+  p6est_ghost_expand (p6est, ghost);
+  p6est_ghost_expand (p6est, ghost);
   p6est_ghost_destroy (ghost);
 
   p6est_destroy (p6est);

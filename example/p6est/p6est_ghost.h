@@ -84,6 +84,15 @@ size_t              p6est_ghost_memory_used (p6est_ghost_t * ghost);
 p6est_ghost_t      *p6est_ghost_new (p6est_t * p4est,
                                      p4est_connect_type_t btype);
 
+/** Expand the size of the ghost layer and mirrors by one additional layer of
+ * adjacency.
+ * \param [in] p6est            The forest from which the ghost layer was
+ *                              generated.
+ * \param [in,out] ghost        The ghost layer to be expanded.
+ */
+void                p6est_ghost_expand (p6est_t * p6est,
+                                        p6est_ghost_t * ghost);
+
 /** Frees all memory used for the ghost layer. */
 void                p6est_ghost_destroy (p6est_ghost_t * ghost);
 
