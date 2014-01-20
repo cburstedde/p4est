@@ -28,20 +28,14 @@ p2est_quadrant_compare_piggy (const void *A, const void *B)
 {
   const p2est_quadrant_t *a = (const p2est_quadrant_t *) A;
   const p2est_quadrant_t *b = (const p2est_quadrant_t *) B;
-  p4est_qcoord_t      qdiff;
   p4est_topidx_t      tdiff;
 
-  tdiff = a->p.which_tree - b->p.which_tree;
+  tdiff = a->p.piggy3.which_tree - b->p.piggy3.which_tree;
   if (tdiff) {
     return tdiff;
   }
 
-  qdiff = a->z - b->z;
-  if (qdiff) {
-    return qdiff;
-  }
-
-  return (int) (a->level - b->level);
+  return a->p.piggy3.local_num - b->p.piggy3.local_num;
 }
 
 static              size_t
@@ -54,6 +48,8 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   q = (p2est_quadrant_t *) sc_array_index (array, zindex);
   return (size_t) q->p.which_tree;
 }
+
+typedef union p4est_quadrant_data p4est_quadrant_data_t;
 
 static void
 p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
@@ -344,10 +340,47 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   sc_array_destroy (send);
   sc_array_destroy (send_requests);
 
+#ifdef P4EST_DEBUG
+  {
+    p4est_quadrant_data_t *cdata;
+    p4est_locidx_t      ngcol = cghost->ghosts.elem_count;
+
+    /* create an array of the data for each ghost column */
+    cdata = P4EST_ALLOC (p4est_quadrant_data_t, ngcol);
+
+    /* get the ghost column data using p4est_ghost_exchange_data */
+    P4EST_ASSERT (sizeof (void *) == sizeof (p4est_quadrant_data_t));
+    p4est_ghost_exchange_data (p6est->columns, cghost, cdata);
+
+    for (zz = 0; zz < ngcol; zz++) {
+      p4est_quadrant_t    dummy;
+      size_t              first, last, zy;
+      p4est_locidx_t      gfirst, glast;
+
+      col = p4est_quadrant_array_index (&cghost->ghosts, zz);
+      dummy.p = cdata[zz];
+      P6EST_COLUMN_GET_RANGE (&dummy, &first, &last);
+
+      gfirst = *((p4est_locidx_t *) sc_array_index
+                 (ghost->column_layer_offsets, zz));
+      glast = *((p4est_locidx_t *) sc_array_index
+                (ghost->column_layer_offsets, zz + 1));
+
+      P4EST_ASSERT ((glast - gfirst) == last - first);
+
+      for (zy = glast; zy < gfirst; zy++) {
+        layer = p2est_quadrant_array_index (&ghost->ghosts, zy);
+        P4EST_ASSERT (col->p.piggy3.which_tree == layer->p.piggy3.which_tree);
+        P4EST_ASSERT (layer->p.piggy3.local_num == zy + first);
+      }
+    }
+
+    P4EST_FREE (cdata);
+  }
+#endif
+
   return;
 }
-
-typedef union p4est_quadrant_data p4est_quadrant_data_t;
 
 p6est_ghost_t      *
 p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
