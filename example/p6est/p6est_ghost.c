@@ -377,10 +377,10 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
 
       P4EST_ASSERT ((glast - gfirst) == last - first);
 
-      for (zy = glast; zy < gfirst; zy++) {
+      for (zy = gfirst; zy < glast; zy++) {
         layer = p2est_quadrant_array_index (&ghost->ghosts, zy);
         P4EST_ASSERT (col->p.piggy3.which_tree == layer->p.piggy3.which_tree);
-        P4EST_ASSERT (layer->p.piggy3.local_num == zy + first);
+        P4EST_ASSERT (layer->p.piggy3.local_num == (zy - gfirst) + first);
       }
     }
 
