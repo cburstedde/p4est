@@ -1198,7 +1198,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
 
         P4EST_ASSERT (nt == tid);
         P4EST_ASSERT (count == 4);
-        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL, conn);
+        nnt =
+          p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL, conn);
         P4EST_ASSERT (nnt == owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         P4EST_ASSERT (p4est_corner_face_corners[c2][owner_f] >= 0);
@@ -1283,8 +1284,8 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
         if (dep->face[xdir[1]] == -1) {
           P4EST_ASSERT (is_ghost[i]);
           if (!is_ghost[i ^ 1]) {
-            P4EST_ASSERT (local_dep[qids[i ^ 1] + quadrants_offset].
-                          face[xdir[1]] == -2);
+            P4EST_ASSERT (local_dep[qids[i ^ 1] + quadrants_offset].face
+                          [xdir[1]] == -2);
             dep->face[xdir[1]] = -2;
           }
           else if (!i) {
@@ -2538,6 +2539,7 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
     lrank = p4est_lnodes_rank_array_index_int (sharers, p);
     proc = lrank->rank;
     if (proc == mpirank) {
+      send_buf = (sc_array_t *) sc_array_push (send_bufs);
       continue;
     }
     if (lrank->owned_count) {
@@ -2641,6 +2643,7 @@ p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes)
   buffer->send_buffers = send_bufs = sc_array_new (sizeof (sc_array_t));
   buffer->recv_buffers = recv_bufs = sc_array_new (sizeof (sc_array_t));
   sc_array_resize (recv_bufs, (size_t) npeers);
+  sc_array_resize (send_bufs, (size_t) npeers);
 
   for (p = 0; p < npeers; p++) {
     lrank = p4est_lnodes_rank_array_index_int (sharers, p);
@@ -2650,6 +2653,8 @@ p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes)
        * for values */
       recv_buf = (sc_array_t *) sc_array_index_int (recv_bufs, p);
       sc_array_init (recv_buf, elem_size);
+      send_buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
+      sc_array_init (send_buf, elem_size);
       continue;
     }
     count = lrank->shared_nodes.elem_count;
@@ -2663,7 +2668,7 @@ p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes)
                           comm, request);
       SC_CHECK_MPI (mpiret);
 
-      send_buf = (sc_array_t *) sc_array_push (send_bufs);
+      send_buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
       sc_array_init (send_buf, elem_size);
       sc_array_resize (send_buf, count);
       for (zz = 0; zz < count; zz++) {
