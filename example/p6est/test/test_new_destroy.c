@@ -175,7 +175,7 @@ main (int argc, char **argv)
   p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
   p6est_destroy (copy_p6est);
 
-  p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
+  p6est_vtk_write_file (p6est, "p6est_test_pre_balance");
 
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FACE);
   p6est_ghost_destroy (ghost);

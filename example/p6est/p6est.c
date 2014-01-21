@@ -1516,94 +1516,7 @@ p6est_layer_refine_thick_layer (p6est_t * p6est,
   return 0;
 }
 
-static void
-p6est_balance_within_columns (p6est_t * p6est, p6est_init_t init_fn,
-                              p6est_replace_t replace_fn)
-{
-  p4est_topidx_t      jt;
-  p4est_t            *columns = p6est->columns;
-  p4est_tree_t       *tree;
-  sc_array_t         *tquadrants;
-  p4est_quadrant_t   *col;
-  size_t              first, last, zz, zy, count;
-  sc_array_t         *work[2];
-  sc_array_t         *layers = p6est->layers;
-  int                 i;
-
-  work[0] = sc_array_new (sizeof (p2est_quadrant_t));
-  work[1] = sc_array_new (sizeof (p2est_quadrant_t));
-
-  for (jt = columns->first_local_tree; jt <= columns->last_local_tree; ++jt) {
-    tree = p4est_tree_array_index (columns->trees, jt);
-    tquadrants = &tree->quadrants;
-
-    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
-      sc_array_t          view;
-      col = p4est_quadrant_array_index (tquadrants, zz);
-      P6EST_COLUMN_GET_RANGE (col, &first, &last);
-      count = last - first;
-
-      sc_array_init_view (&view, layers, first, count);
-      for (i = 0; i < 2; i++) {
-        p2est_quadrant_t    n, p, *parent = &p, *next;
-        p2est_quadrant_t   *writel;
-        p2est_quadrant_t    wstack[P4EST_QMAXLEVEL];
-        p2est_quadrant_t   *child[2];
-        int                 stackcount;
-        sc_array_t         *read, *write;
-
-        if (!i) {
-          read = &view;
-          write = work[0];
-        }
-        else {
-          read = work[0];
-          write = work[1];
-        }
-
-        writel = p2est_quadrant_array_push (write);
-        next = p2est_quadrant_array_index (read, count - 1);
-        *writel = *next;
-        for (zy = 1; zy < count; zy++) {
-          next = p2est_quadrant_array_index (read, count - 1 - zy);
-          stackcount = 0;
-          while (next->level < writel->level - 1) {
-            *parent = *next;
-            wstack[stackcount] = *next;
-            wstack[stackcount].level++;
-            n = *next;
-            n.level++;
-            n.z += P4EST_QUADRANT_LEN (n.level);
-
-            child[0] = &wstack[stackcount];
-            child[1] = &n;
-            p6est_layer_init_data (p6est, jt, col, child[0], init_fn);
-            p6est_layer_init_data (p6est, jt, col, child[1], init_fn);
-            if (replace_fn) {
-              replace_fn (p6est, jt, 1, 1, &col, &parent, 1, 2, &col, child);
-            }
-            p6est_layer_free_data (p6est, parent);
-            next = &n;
-          }
-          writel = p2est_quadrant_array_push (write);
-          *writel = *next;
-          while (stackcount) {
-            writel = p2est_quadrant_array_push (write);
-            *writel = wstack[--stackcount];
-          }
-        }
-      }
-
-      sc_array_truncate (work[0]);
-      sc_array_truncate (work[1]);
-    }
-  }
-
-  p6est_compress_columns (p6est);
-  p6est_update_offsets (p6est);
-}
-
-typedef struct p6est_lnodes_profile
+typedef struct p6est_profile
 {
   p8est_connect_type_t btype;
   p4est_lnodes_t     *lnodes;
@@ -1611,7 +1524,7 @@ typedef struct p6est_lnodes_profile
   p4est_locidx_t     *lnode_ranges;
   sc_array_t         *lnode_columns;
 }
-p6est_lnodes_profile_t;
+p6est_profile_t;
 
 /* given two profiles (layers that have been reduced to just their levels),
  * take the union, i.e. combine them, taking the finer layers */
@@ -1840,7 +1753,7 @@ p6est_profile_balance_full (sc_array_t * a, sc_array_t * b, sc_array_t * work)
 }
 
 static void
-p6est_lnodes_profile_compress (p6est_lnodes_profile_t * profile)
+p6est_profile_compress (p6est_profile_t * profile)
 {
   p4est_locidx_t      nidx, il, old_off, nln =
     profile->lnodes->num_local_nodes;
@@ -1889,10 +1802,10 @@ p6est_lnodes_profile_compress (p6est_lnodes_profile_t * profile)
   sc_array_resize (lc, new_count);
 }
 
-p6est_lnodes_profile_t *
-p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
+p6est_profile_t    *
+p6est_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
 {
-  p6est_lnodes_profile_t *profile = P4EST_ALLOC (p6est_lnodes_profile_t, 1);
+  p6est_profile_t    *profile = P4EST_ALLOC (p6est_profile_t, 1);
   p4est_lnodes_t     *lnodes;
   p4est_locidx_t      nln, nle;
   p4est_topidx_t      jt;
@@ -2012,7 +1925,7 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
       }
     }
   }
-  p6est_lnodes_profile_compress (profile);
+  p6est_profile_compress (profile);
 
   sc_array_destroy (selfprof);
   sc_array_destroy (faceprof);
@@ -2023,8 +1936,8 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
 }
 
 static void
-p6est_lnodes_profile_balance_local (p6est_lnodes_profile_t * profile,
-                                    p8est_connect_type_t btype)
+p6est_profile_balance_local (p6est_profile_t * profile,
+                             p8est_connect_type_t btype)
 {
   p4est_lnodes_t     *lnodes = profile->lnodes;
   p4est_locidx_t      nln, nle;
@@ -2152,7 +2065,7 @@ p6est_lnodes_profile_balance_local (p6est_lnodes_profile_t * profile,
         }
       }
     }
-    p6est_lnodes_profile_compress (profile);
+    p6est_profile_compress (profile);
   } while (any_local_change);
 
   sc_array_destroy (selfprof);
@@ -2162,7 +2075,7 @@ p6est_lnodes_profile_balance_local (p6est_lnodes_profile_t * profile,
 }
 
 static int
-p6est_lnodes_profile_sync (p6est_lnodes_profile_t * profile)
+p6est_profile_sync (p6est_profile_t * profile)
 {
   p4est_lnodes_t     *lnodes = profile->lnodes;
   p4est_locidx_t      nln = lnodes->num_local_nodes;
@@ -2384,7 +2297,7 @@ p6est_lnodes_profile_sync (p6est_lnodes_profile_t * profile)
   P4EST_FREE (array_of_indices);
   sc_array_destroy (work);
 
-  p6est_lnodes_profile_compress (profile);
+  p6est_profile_compress (profile);
   p4est_lnodes_buffer_destroy (countbuf);
 
   P4EST_FREE (recv_request);
@@ -2410,13 +2323,104 @@ p6est_lnodes_profile_sync (p6est_lnodes_profile_t * profile)
 }
 
 void
-p6est_lnodes_profile_destroy (p6est_lnodes_profile_t * profile)
+p6est_profile_destroy (p6est_profile_t * profile)
 {
   p4est_lnodes_destroy (profile->lnodes);
   p4est_ghost_destroy (profile->cghost);
   P4EST_FREE (profile->lnode_ranges);
   sc_array_destroy (profile->lnode_columns);
   P4EST_FREE (profile);
+}
+
+void
+p6est_refine_to_profile (p6est_t * p6est, p6est_profile_t * profile,
+                         p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
+  size_t              zz, zy, first, last;
+  p4est_topidx_t      jt;
+  p4est_quadrant_t   *col;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_locidx_t      eidx;
+  p4est_locidx_t     *en = profile->lnodes->element_nodes;
+  p4est_locidx_t (*lr)[2];
+  p4est_locidx_t      nidx, pidx, pfirst, plast;
+  sc_array_t         *layers = p6est->layers;
+  sc_array_t         *lc = profile->lnode_columns;
+  sc_array_t         *work;
+
+  lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
+  work = sc_array_new (sizeof (p2est_quadrant_t));
+  for (eidx = 0, jt = p6est->columns->first_local_tree;
+       jt <= p6est->columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (p6est->columns->trees, jt);
+    tquadrants = &tree->quadrants;
+    for (zz = 0; zz < tquadrants->elem_count; ++zz, eidx++) {
+
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
+      nidx = en[P4EST_INSUL * eidx + P4EST_INSUL / 2];
+      P4EST_ASSERT (lr[nidx][1] >= last - first);
+      pfirst = lr[nidx][0];
+      plast = pfirst + lr[nidx][1];
+      if (lr[nidx][1] > last - first) {
+        p2est_quadrant_t    stack[P4EST_QMAXLEVEL];
+        p2est_quadrant_t   *q, *r, s, t;
+        int                 stackcount;
+
+        sc_array_truncate (work);
+        stackcount = 0;
+        zy = first;
+        for (pidx = pfirst; pidx < plast; pidx++) {
+          int8_t              p;
+
+          P4EST_ASSERT (stackcount || zy < last);
+
+          p = *((int8_t *) sc_array_index (lc, pidx));
+
+          if (stackcount) {
+            q = &(stack[--stackcount]);
+          }
+          else {
+            q = p2est_quadrant_array_index (layers, zy++);
+          }
+
+          P4EST_ASSERT (q->level <= p);
+          while (q->level < p) {
+            p2est_quadrant_t   *child[2];
+
+            t = *q;
+            s = *q;
+            s.level++;
+            stack[stackcount] = s;
+            stack[stackcount].z += P4EST_QUADRANT_LEN (s.level);
+            child[0] = &s;
+            child[1] = &stack[stackcount++];
+            p6est_layer_init_data (p6est, jt, col, child[0], init_fn);
+            p6est_layer_init_data (p6est, jt, col, child[1], init_fn);
+            q = &t;
+            if (replace_fn) {
+              replace_fn (p6est, jt, 1, 1, &col, &q, 1, 2, &col, child);
+            }
+            p6est_layer_free_data (p6est, &t);
+            q = &s;
+          }
+          r = p2est_quadrant_array_push (work);
+          *r = *q;
+        }
+        P4EST_ASSERT (work->elem_count == lr[nidx][1]);
+        first = layers->elem_count;
+        last = first + work->elem_count;
+        P6EST_COLUMN_SET_RANGE (col, first, last);
+        q = (p2est_quadrant_t *) sc_array_push_count (layers,
+                                                      work->elem_count);
+        memcpy (q, work->array, work->elem_count * work->elem_size);
+      }
+    }
+  }
+  sc_array_destroy (work);
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
 }
 
 void
@@ -2427,7 +2431,7 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   p4est_connect_type_t hbtype;
   p6est_refine_col_data_t refine_col;
   void               *orig_user_pointer = p6est->user_pointer;
-  p6est_lnodes_profile_t *profile;
+  p6est_profile_t    *profile;
   int                 any_change;
 
   /* first refine columns whose layers are too thin */
@@ -2467,16 +2471,18 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   /* finally, the real work: balance neighboring layers */
 
   /* initialize the lnodes profile and balance locally */
-  profile = p6est_lnodes_profile_new_local (p6est, btype);
+  profile = p6est_profile_new_local (p6est, btype);
   do {
     P4EST_GLOBAL_VERBOSE ("p6est_balance iteration begin\n");
     any_change = 0;
-    p6est_lnodes_profile_balance_local (profile, btype);
-    any_change = p6est_lnodes_profile_sync (profile);
+    p6est_profile_balance_local (profile, btype);
+    any_change = p6est_profile_sync (profile);
     P4EST_GLOBAL_VERBOSE ("p6est_balance iteration end\n");
   } while (any_change);
 
-  p6est_lnodes_profile_destroy (profile);
+  p6est_refine_to_profile (p6est, profile, init_fn, replace_fn);
+
+  p6est_profile_destroy (profile);
 }
 
 void
