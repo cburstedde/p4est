@@ -1419,8 +1419,9 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
       continue;
     }
     for (i = 0; i < outcount; i++) {
-      i = array_of_indices[i];
-      p = *((int *) sc_array_index_int (recv_procs, i));
+      int                 j;
+      j = array_of_indices[i];
+      p = *((int *) sc_array_index_int (recv_procs, j));
       P4EST_ASSERT (p >= 0 && p < mpisize);
       P4EST_ASSERT (p != rank);
       if (data_size) {
@@ -1847,9 +1848,15 @@ p6est_lnodes_profile_compress (p6est_lnodes_profile_t * profile)
   sc_array_t         *lc = profile->lnode_columns;
   size_t              old_count = lc->elem_count;
   size_t              new_count;
-  sc_array_t         *perm = sc_array_new_size (sizeof (size_t), old_count);
-  size_t             *newindex = (size_t *) sc_array_index (perm, 0);
+  sc_array_t         *perm;
+  size_t             *newindex;
   size_t              zz, offset;
+
+  if (!old_count) {
+    return;
+  }
+  perm = sc_array_new_size (sizeof (size_t), old_count);
+  newindex = (size_t *) sc_array_index (perm, 0);
 
   for (zz = 0; zz < old_count; zz++) {
     newindex[zz] = old_count;
@@ -1859,7 +1866,12 @@ p6est_lnodes_profile_compress (p6est_lnodes_profile_t * profile)
 
   for (nidx = 0; nidx < nln; nidx++) {
     old_off = lr[nidx][0];
-    lr[nidx][0] = offset;
+    if (lr[nidx][1]) {
+      lr[nidx][0] = offset;
+    }
+    else {
+      P4EST_ASSERT (!lr[nidx][0]);
+    }
     for (il = 0; il < lr[nidx][1]; il++) {
       newindex[il + old_off] = offset++;
     }
@@ -1891,10 +1903,10 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
   size_t              first, last, count, zz, zy;
   p4est_locidx_t     *en, (*lr)[2];
   sc_array_t         *lc;
-  int                 i, j, k;
+  int                 i, j;
   p2est_quadrant_t   *layer;
   sc_array_t         *layers = p6est->layers;
-  p4est_locidx_t      nidx, enidx, eidx;
+  p4est_locidx_t      nidx, enidx;
   p4est_connect_type_t hbtype;
   int8_t             *c;
   sc_array_t         *thisprof;
@@ -1903,9 +1915,6 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
   sc_array_t         *cornerprof;
   sc_array_t         *work;
   sc_array_t          oldprof;
-  sc_array_t          testprof;
-  int                 any_prof_change;
-  int                 any_local_change;
 
   profile->btype = btype;
   if (btype == P8EST_CONNECT_FACE) {
@@ -1965,6 +1974,7 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
           if (i != 1 && j != 1) {
             if (hbtype == P4EST_CONNECT_FACE) {
               /* skip corners if we don't need to balance them */
+              P4EST_ASSERT (!lr[nidx][0]);
               P4EST_ASSERT (!lr[nidx][1]);
               continue;
             }
@@ -2004,6 +2014,54 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
   }
   p6est_lnodes_profile_compress (profile);
 
+  sc_array_destroy (selfprof);
+  sc_array_destroy (faceprof);
+  sc_array_destroy (cornerprof);
+  sc_array_destroy (work);
+
+  return profile;
+}
+
+static void
+p6est_lnodes_profile_balance_local (p6est_lnodes_profile_t * profile,
+                                    p8est_connect_type_t btype)
+{
+  p4est_lnodes_t     *lnodes = profile->lnodes;
+  p4est_locidx_t      nln, nle;
+  size_t              count;
+  p4est_locidx_t     *en, (*lr)[2];
+  sc_array_t         *lc;
+  int                 i, j;
+  p4est_locidx_t      nidx, enidx, eidx;
+  p4est_connect_type_t hbtype;
+  int8_t             *c;
+  sc_array_t         *thisprof;
+  sc_array_t         *selfprof;
+  sc_array_t         *faceprof;
+  sc_array_t         *cornerprof;
+  sc_array_t         *work;
+  sc_array_t          oldprof;
+  sc_array_t          testprof;
+  int                 any_prof_change;
+  int                 any_local_change;
+
+  profile->btype = btype;
+  if (btype == P8EST_CONNECT_FACE) {
+    hbtype = P4EST_CONNECT_FACE;
+  }
+  else {
+    hbtype = P4EST_CONNECT_FULL;
+  }
+  en = lnodes->element_nodes;
+  nln = lnodes->num_local_nodes;
+  nle = lnodes->num_local_elements;
+  lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
+  lc = profile->lnode_columns;
+  selfprof = sc_array_new (sizeof (int8_t));
+  work = sc_array_new (sizeof (int8_t));
+  faceprof = sc_array_new (sizeof (int8_t));
+  cornerprof = sc_array_new (sizeof (int8_t));
+
   do {
     any_local_change = 0;
     for (eidx = 0, enidx = 0; eidx < nle; eidx++) {
@@ -2013,18 +2071,19 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
       sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
       thisprof = &oldprof;
       any_prof_change = 0;
-      for (k = 0, j = 0; j < 3; j++) {
-        for (i = 0; i < 3; i++, k++, enidx++) {
+      for (j = 0; j < 3; j++) {
+        for (i = 0; i < 3; i++, enidx++) {
           nidx = en[enidx];
           if (i != 1 && j != 1) {
             if (hbtype == P4EST_CONNECT_FACE) {
               /* skip corners if we don't need to balance them */
+              P4EST_ASSERT (!lr[nidx][0]);
               P4EST_ASSERT (!lr[nidx][1]);
               continue;
             }
           }
           if (i == 1 && j == 1) {
-            /* need to further balance against oneself */
+            /* no need to further balance against oneself */
             continue;
           }
           P4EST_ASSERT (lr[nidx][1]);
@@ -2056,13 +2115,14 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
           p6est_profile_balance_full (selfprof, cornerprof, work);
         }
         enidx = start_enidx;
-        for (k = 0, j = 0; j < 3; j++) {
-          for (i = 0; i < 3; i++, k++, enidx++) {
+        for (j = 0; j < 3; j++) {
+          for (i = 0; i < 3; i++, enidx++) {
             thisprof = NULL;
             nidx = en[enidx];
             if (i != 1 && j != 1) {
               if (hbtype == P4EST_CONNECT_FACE) {
                 /* skip corners if we don't need to balance them */
+                P4EST_ASSERT (!lr[nidx][0]);
                 P4EST_ASSERT (!lr[nidx][1]);
                 continue;
               }
@@ -2077,7 +2137,6 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
               thisprof = faceprof;
             }
             count = thisprof->elem_count;
-            nidx = en[enidx];
             P4EST_ASSERT (lr[nidx][1]);
             /* if this node has been initialized, combine the two profiles,
              * taking the finer layers from each */
@@ -2100,8 +2159,254 @@ p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
   sc_array_destroy (faceprof);
   sc_array_destroy (cornerprof);
   sc_array_destroy (work);
+}
 
-  return profile;
+static int
+p6est_lnodes_profile_sync (p6est_lnodes_profile_t * profile)
+{
+  p4est_lnodes_t     *lnodes = profile->lnodes;
+  p4est_locidx_t      nln = lnodes->num_local_nodes;
+  sc_array_t          lrview;
+  p4est_lnodes_buffer_t *countbuf;
+  sc_array_t         *sharers;
+  size_t              zz, nsharers;
+  int                 nleft;
+  int8_t             *recv, *send;
+  int                *array_of_indices;
+  p4est_locidx_t      recv_total;
+  p4est_locidx_t     *recv_offsets, recv_offset;
+  p4est_locidx_t      send_total;
+  p4est_locidx_t     *send_offsets, send_offset;
+  p4est_locidx_t (*lr)[2];
+  sc_array_t         *lc = profile->lnode_columns;
+  MPI_Request        *recv_request, *send_request;
+  sc_array_t         *work;
+  int                 any_change = 0;
+  int                 any_global_change;
+  int                 mpiret, mpirank;
+
+  lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
+  sharers = lnodes->sharers;
+  nsharers = sharers->elem_count;
+
+  mpiret = MPI_Comm_rank (lnodes->mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+
+  sc_array_init_data (&lrview, lr, 2 * sizeof (p4est_locidx_t), nln);
+
+  countbuf = p4est_lnodes_share_all_begin (&lrview, lnodes);
+  send_offsets = P4EST_ALLOC (p4est_locidx_t, nsharers + 1);
+  send_offset = 0;
+  for (zz = 0; zz < nsharers; zz++) {
+    p4est_lnodes_rank_t *sharer;
+    sc_array_t         *send_buf;
+    size_t              zy, nnodes;
+
+    send_offsets[zz] = send_offset;
+    sharer = p4est_lnodes_rank_array_index (sharers, zz);
+    if (sharer->rank == mpirank) {
+      continue;
+    }
+    send_buf = (sc_array_t *) sc_array_index (countbuf->send_buffers, zz);
+    nnodes = sharer->shared_nodes.elem_count;
+
+    P4EST_ASSERT (nnodes == send_buf->elem_count);
+
+    P4EST_ASSERT (send_buf->elem_size == 2 * sizeof (p4est_locidx_t));
+    for (zy = 0; zy < nnodes; zy++) {
+      p4est_locidx_t     *lp =
+        (p4est_locidx_t *) sc_array_index (send_buf, zy);
+      P4EST_ASSERT (lp[0] >= 0);
+      P4EST_ASSERT (lp[1] >= 0);
+      send_offset += lp[1];
+    }
+  }
+  send_total = send_offsets[nsharers] = send_offset;
+
+  p4est_lnodes_share_all_end (countbuf);
+  recv_offsets = P4EST_ALLOC (p4est_locidx_t, nsharers + 1);
+  recv_offset = 0;
+  for (zz = 0; zz < nsharers; zz++) {
+    p4est_lnodes_rank_t *sharer;
+    sc_array_t         *recv_buf;
+    size_t              zy, nnodes;
+
+    recv_offsets[zz] = recv_offset;
+    sharer = p4est_lnodes_rank_array_index (sharers, zz);
+    if (sharer->rank == mpirank) {
+      continue;
+    }
+    recv_buf = (sc_array_t *) sc_array_index (countbuf->recv_buffers, zz);
+    nnodes = sharer->shared_nodes.elem_count;
+
+    P4EST_ASSERT (nnodes == recv_buf->elem_count);
+
+    P4EST_ASSERT (recv_buf->elem_size == 2 * sizeof (p4est_locidx_t));
+    for (zy = 0; zy < nnodes; zy++) {
+      p4est_locidx_t     *lp =
+        (p4est_locidx_t *) sc_array_index (recv_buf, zy);
+      P4EST_ASSERT (lp[0] >= 0);
+      P4EST_ASSERT (lp[1] >= 0);
+      recv_offset += lp[1];
+    }
+  }
+  recv_total = recv_offsets[nsharers] = recv_offset;
+
+  recv = P4EST_ALLOC (int8_t, recv_total);
+  recv_request = P4EST_ALLOC (MPI_Request, nsharers);
+  send = P4EST_ALLOC (int8_t, send_total);
+  send_request = P4EST_ALLOC (MPI_Request, nsharers);
+
+  /* post receives */
+  nleft = 0;
+  for (zz = 0; zz < nsharers; zz++) {
+    p4est_lnodes_rank_t *sharer;
+    int                 icount = recv_offsets[zz + 1] - recv_offsets[zz];
+
+    sharer = p4est_lnodes_rank_array_index (sharers, zz);
+    if (sharer->rank == mpirank) {
+      recv_request[zz] = MPI_REQUEST_NULL;
+      continue;
+    }
+    if (icount) {
+      mpiret = MPI_Irecv (recv + recv_offsets[zz], icount * sizeof (int8_t),
+                          MPI_BYTE, sharer->rank, P6EST_COMM_BALANCE,
+                          lnodes->mpicomm, recv_request + zz);
+      SC_CHECK_MPI (mpiret);
+      nleft++;
+    }
+    else {
+      recv_request[zz] = MPI_REQUEST_NULL;
+    }
+  }
+
+  /* post sends */
+  for (zz = 0; zz < nsharers; zz++) {
+    p4est_lnodes_rank_t *sharer;
+    size_t              zy, nnodes;
+    int                 icount;
+    sc_array_t         *shared_nodes;
+
+    sharer = p4est_lnodes_rank_array_index (sharers, zz);
+    if (sharer->rank == mpirank) {
+      send_request[zz] = MPI_REQUEST_NULL;
+      continue;
+    }
+    shared_nodes = &sharer->shared_nodes;
+    nnodes = shared_nodes->elem_count;
+    icount = 0;
+    for (zy = 0; zy < nnodes; zy++) {
+      p4est_locidx_t      nidx;
+      int8_t             *c;
+
+      nidx = *((p4est_locidx_t *) sc_array_index (shared_nodes, zy));
+
+      if (lr[nidx][1]) {
+        c = (int8_t *) sc_array_index (lc, lr[nidx][0]);
+        memcpy (send + send_offsets[zz] + icount, c,
+                lr[nidx][1] * sizeof (int8_t));
+        icount += lr[nidx][1];
+      }
+      else {
+        P4EST_ASSERT (!lr[nidx][0]);
+      }
+    }
+    P4EST_ASSERT (icount == send_offsets[zz + 1] - send_offsets[zz]);
+    if (icount) {
+      mpiret = MPI_Isend (send + send_offsets[zz], icount * sizeof (int8_t),
+                          MPI_BYTE, sharer->rank, P6EST_COMM_BALANCE,
+                          lnodes->mpicomm, send_request + zz);
+      SC_CHECK_MPI (mpiret);
+    }
+    else {
+      send_request[zz] = MPI_REQUEST_NULL;
+    }
+  }
+
+  work = sc_array_new (sizeof (int8_t));
+  array_of_indices = P4EST_ALLOC (int, nsharers);
+  while (nleft) {
+    int                 outcount;
+    int                 i;
+
+    mpiret = MPI_Waitsome (nsharers, recv_request, &outcount,
+                           array_of_indices, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    for (i = 0; i < outcount; i++) {
+      p4est_lnodes_rank_t *sharer;
+      size_t              zy, nnode;
+      sc_array_t         *shared_nodes;
+      sc_array_t         *recv_buf;
+
+      zz = array_of_indices[i];
+      sharer = p4est_lnodes_rank_array_index (sharers, zz);
+      shared_nodes = &sharer->shared_nodes;
+      recv_buf = (sc_array_t *) sc_array_index (countbuf->recv_buffers, zz);
+      nnode = shared_nodes->elem_count;
+      P4EST_ASSERT (nnode == recv_buf->elem_count);
+
+      recv_offset = recv_offsets[zz];
+      for (zy = 0; zy < nnode; zy++) {
+        p4est_locidx_t     *lp;
+        p4est_locidx_t      nidx;
+        p4est_locidx_t      count;
+        sc_array_t          oldview, newview;
+
+        nidx = *((p4est_locidx_t *) sc_array_index (shared_nodes, zy));
+        lp = (p4est_locidx_t *) sc_array_index (recv_buf, zy);
+
+        sc_array_init_view (&oldview, lc, lr[nidx][0], lr[nidx][1]);
+        sc_array_init_data (&newview, recv + recv_offset, sizeof (int8_t),
+                            lp[1]);
+        p6est_profile_union (&oldview, &newview, work);
+
+        count = work->elem_count;
+        if (work->elem_count > oldview.elem_count) {
+          int8_t             *c;
+
+          any_change = 1;
+          lr[nidx][0] = lc->elem_count;
+          lr[nidx][1] = work->elem_count;
+
+          c = (int8_t *) sc_array_push_count (lc, work->elem_count);
+          memcpy (c, work->array, work->elem_count * work->elem_size);
+        }
+
+        recv_offset += lp[1];
+      }
+      P4EST_ASSERT (recv_offset == recv_offsets[zz + 1]);
+    }
+
+    nleft -= outcount;
+    P4EST_ASSERT (nleft >= 0);
+  }
+  P4EST_FREE (array_of_indices);
+  sc_array_destroy (work);
+
+  p6est_lnodes_profile_compress (profile);
+  p4est_lnodes_buffer_destroy (countbuf);
+
+  P4EST_FREE (recv_request);
+  P4EST_FREE (recv_offsets);
+  P4EST_FREE (recv);
+
+  {
+    mpiret = MPI_Waitall (nsharers, send_request, MPI_STATUSES_IGNORE);
+
+    SC_CHECK_MPI (mpiret);
+    P4EST_FREE (send_request);
+    P4EST_FREE (send_offsets);
+    P4EST_FREE (send);
+
+    any_global_change = any_change;
+    mpiret = MPI_Allreduce (&any_change, &any_global_change, 1, MPI_INT,
+                            MPI_LOR, lnodes->mpicomm);
+
+    SC_CHECK_MPI (mpiret);
+  }
+
+  return any_global_change;
 }
 
 void
@@ -2123,6 +2428,7 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   p6est_refine_col_data_t refine_col;
   void               *orig_user_pointer = p6est->user_pointer;
   p6est_lnodes_profile_t *profile;
+  int                 any_change;
 
   /* first refine columns whose layers are too thin */
   if (max_diff >= min_diff) {
@@ -2162,6 +2468,13 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
 
   /* initialize the lnodes profile and balance locally */
   profile = p6est_lnodes_profile_new_local (p6est, btype);
+  do {
+    P4EST_GLOBAL_VERBOSE ("p6est_balance iteration begin\n");
+    any_change = 0;
+    p6est_lnodes_profile_balance_local (profile, btype);
+    any_change = p6est_lnodes_profile_sync (profile);
+    P4EST_GLOBAL_VERBOSE ("p6est_balance iteration end\n");
+  } while (any_change);
 
   p6est_lnodes_profile_destroy (profile);
 }

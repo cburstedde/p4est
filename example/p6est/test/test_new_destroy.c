@@ -175,9 +175,6 @@ main (int argc, char **argv)
   p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
   p6est_destroy (copy_p6est);
 
-  p6est_partition (p6est, weight_fn);
-  p6est_partition (p6est, NULL);
-
   p6est_vtk_write_file (p6est, "p6est_test_new_destroy");
 
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FACE);
@@ -193,6 +190,11 @@ main (int argc, char **argv)
   p6est_vtk_write_file (p6est, "p6est_test_balance_edge");
   p6est_balance (p6est, P8EST_CONNECT_FULL, init_fn);
   p6est_vtk_write_file (p6est, "p6est_test_balance_full");
+
+  p6est_partition (p6est, weight_fn);
+  p6est_partition (p6est, NULL);
+
+  p6est_vtk_write_file (p6est, "p6est_test_partition");
 
   p6est_destroy (p6est);
 

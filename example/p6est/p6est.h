@@ -338,6 +338,7 @@ typedef enum
 {
   P6EST_COMM_PARTITION = 1,
   P6EST_COMM_GHOST,
+  P6EST_COMM_BALANCE,
 }
 p6est_comm_tag_t;
 
