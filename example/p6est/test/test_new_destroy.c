@@ -26,7 +26,8 @@
 #include <p6est_ghost.h>
 #include <p6est_vtk.h>
 
-char               *TEST_USER_POINTER;
+char                test_data = 'x';
+char               *TEST_USER_POINTER = &test_data;
 
 static int          refine_level = -1;
 
@@ -185,6 +186,13 @@ main (int argc, char **argv)
   p6est_ghost_expand (p6est, ghost);
   p6est_ghost_expand (p6est, ghost);
   p6est_ghost_destroy (ghost);
+
+  p6est_balance (p6est, P8EST_CONNECT_FACE, init_fn);
+  p6est_vtk_write_file (p6est, "p6est_test_balance_face");
+  p6est_balance (p6est, P8EST_CONNECT_EDGE, init_fn);
+  p6est_vtk_write_file (p6est, "p6est_test_balance_edge");
+  p6est_balance (p6est, P8EST_CONNECT_FULL, init_fn);
+  p6est_vtk_write_file (p6est, "p6est_test_balance_full");
 
   p6est_destroy (p6est);
 

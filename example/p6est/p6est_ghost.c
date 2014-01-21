@@ -182,10 +182,10 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   new_mirrors = sc_array_new_size (lmirrors->elem_size, lmirrors->elem_count);
   sc_array_copy (new_mirrors, lmirrors);
   old_count = lmirrors->elem_count;
-  sc_array_resize (new_mirrors, old_count + nlmirror);
+  mlayer = sc_array_push_count (new_mirrors, nlmirror);
   if (send->elem_count) {
-    memcpy (sc_array_index (new_mirrors, old_count),
-            sc_array_index (send, 0), send->elem_count * send->elem_size);
+    memcpy (mlayer, sc_array_index (send, 0),
+            send->elem_count * send->elem_size);
   }
   sc_array_sort (new_mirrors, p2est_quadrant_compare_piggy);
   sc_array_uniq (new_mirrors, p2est_quadrant_compare_piggy);
@@ -220,19 +220,19 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   }
 
   for (i = 0; i < mpisize; i++) {
+    p4est_locidx_t     *lp;
     size_t              offset = nmpfa->elem_count;
 
-    sc_array_resize (nmpfa, offset + lmpfo[i + 1] - lmpfo[i]);
+    lp = sc_array_push_count (nmpfa, lmpfo[i + 1] - lmpfo[i]);
     mpfo[i] = (p4est_locidx_t) offset;
 
     for (zz = lmpfo[i]; zz < lmpfo[i + 1]; zz++) {
       ssize_t             idx;
       p2est_quadrant_t   *q1 = p2est_quadrant_array_index (send, zz);
-      p4est_locidx_t     *lp = (p4est_locidx_t *) sc_array_index (nmpfa, zz);
 
       idx = sc_array_bsearch (new_mirrors, q1, p2est_quadrant_compare_piggy);
       P4EST_ASSERT (idx >= 0);
-      *lp = (p4est_locidx_t) idx;
+      *(lp++) = (p4est_locidx_t) idx;
     }
   }
   mpfo[mpisize] = nmpfa->elem_count;
@@ -261,14 +261,15 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
       size_t              frontsize = mpfo[i + 1] - mpfo[i];
       size_t              offset = nmpma->elem_count;
       p4est_locidx_t      old_offset = mpo[i];
+      p4est_locidx_t     *lp;
 
       old_count = mpo[i + 1] - old_offset;
 
       mpo[i] = offset;
 
-      sc_array_resize (nmpma, offset + old_count + frontsize);
-      memcpy (nmpma->array + nmpma->elem_size * offset,
-              mpf + mpfo[i], sizeof (p4est_locidx_t) * frontsize);
+      lp = sc_array_push_count (nmpma, old_count + frontsize);
+      memcpy (lp, mpf + mpfo[i], sizeof (p4est_locidx_t) * frontsize);
+      lp += frontsize;
 
       if (old_count) {
         sc_array_t          pview;
@@ -278,13 +279,10 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
           p2est_quadrant_t   *q1 = p2est_quadrant_array_index (lmirrors,
                                                                mpm[zz +
                                                                    old_offset]);
-          p4est_locidx_t     *lp = (p4est_locidx_t *)
-            sc_array_index (nmpma, offset + frontsize + zz);
-
           idx = sc_array_bsearch (new_mirrors, q1,
                                   p2est_quadrant_compare_piggy);
           P4EST_ASSERT (idx >= 0);
-          *lp = (p4est_locidx_t) idx;
+          *(lp++) = (p4est_locidx_t) idx;
         }
         sc_array_init_view (&pview, nmpma, offset, old_count + frontsize);
         sc_array_sort (&pview, p4est_locidx_compare);

@@ -22,6 +22,8 @@
 */
 
 #include <p6est.h>
+#include <p6est_ghost.h>
+#include <p4est_lnodes.h>
 #include <p8est.h>
 #include <p4est_extended.h>
 #include <sc_containers.h>
@@ -211,16 +213,16 @@ p6est_init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   sc_array_t         *layers = init_data->layers;
   size_t              incount = layers->elem_count, zz;
   size_t              last = incount + nlayers;
+  p2est_quadrant_t   *layer;
 
   /* we have to sneak the user_pointer in */
   p6est->user_pointer = init_data->user_pointer;
 
-  P6EST_COLUMN_SET_RANGE (col, layers->elem_count, last)
+  P6EST_COLUMN_SET_RANGE (col, layers->elem_count, last);
 
-    sc_array_resize (layers, last);
+  layer = sc_array_push_count (layers, nlayers);
 
-  for (zz = incount; zz < last; zz++) {
-    p2est_quadrant_t   *layer = p2est_quadrant_array_index (layers, zz);
+  for (zz = incount; zz < last; zz++, layer++) {
     P2EST_QUADRANT_INIT (layer);
 
     layer->level = init_data->min_zlevel;
@@ -492,11 +494,10 @@ p6est_replace_column_split (p4est_t * p4est, p4est_topidx_t which_tree,
   for (i = 0; i < num_incoming; i++) {
     ifirst = p6est->layers->elem_count;
     ilast = ifirst + nlayers;
-    sc_array_resize (p6est->layers, ilast);
+    q = sc_array_push_count (p6est->layers, nlayers);
+    oq = sc_array_index (p6est->layers, first);
     P6EST_COLUMN_SET_RANGE (incoming[i], ifirst, ilast);
-    for (j = 0; j < nlayers; j++) {
-      oq = p2est_quadrant_array_index (p6est->layers, first + j);
-      q = p2est_quadrant_array_index (p6est->layers, ifirst + j);
+    for (j = 0; j < nlayers; j++, oq++, q++) {
       P2EST_QUADRANT_INIT (q);
       q->z = oq->z;
       q->level = oq->level;
@@ -710,9 +711,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
       }
       if (any_change) {
         old_count = layers->elem_count;
-        sc_array_resize (layers, old_count + newcol->elem_count);
-        memcpy (sc_array_index (layers, old_count),
-                sc_array_index (newcol, 0),
+        newq = sc_array_push_count (layers, newcol->elem_count);
+        memcpy (newq, sc_array_index (newcol, 0),
                 newcol->elem_size * newcol->elem_count);
         P6EST_COLUMN_SET_RANGE (col, old_count,
                                 old_count + newcol->elem_count);
@@ -1021,9 +1021,9 @@ p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
   P6EST_COLUMN_SET_RANGE (incoming[0], new_first, new_last);
 
   /* create the new column */
-  sc_array_resize (layers, new_last);
-  memcpy (sc_array_index (layers, new_first),
-          sc_array_index (work_array, 0), new_count * work_array->elem_size);
+  p = sc_array_push_count (layers, new_count);
+  memcpy (p, sc_array_index (work_array, 0),
+          new_count * work_array->elem_size);
 
   sc_array_truncate (work_array);
   /* sneak the user pointer out */
@@ -1206,15 +1206,17 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   sc_array_t         *recv_procs;
   p4est_gloidx_t      shipped;
   int                *ip;
+  void               *orig_user_pointer = p6est->user_pointer;
 
   /* wrap the p6est_weight_t in a p4est_weight_t */
   wc.layer_weight_fn = weight_fn;
-  wc.user_pointer = p6est->user_pointer;
+  wc.user_pointer = orig_user_pointer;
   p6est->user_pointer = &wc;
   p6est_compress_columns (p6est);
   /* repartition the columns */
   p4est_partition_ext (p6est->columns, partition_for_coarsening,
                        p6est_weight_fn);
+  p6est->user_pointer = orig_user_pointer;
 
   /* the column counts (last - first) are correct, but not the offsets. update
    * the offsets */
@@ -1470,4 +1472,703 @@ p4est_gloidx_t
 p6est_partition (p6est_t * p6est, p6est_weight_t weight_fn)
 {
   return p6est_partition_ext (p6est, 0, weight_fn);
+}
+
+static int
+p6est_column_refine_thin_layer (p6est_t * p6est,
+                                p4est_topidx_t which_tree,
+                                p4est_quadrant_t * column)
+{
+  int                 max_diff = *((int *) p6est->user_pointer);
+  int8_t              horz_level = column->level;
+  size_t              first, last, zz;
+  sc_array_t         *layers = p6est->layers;
+
+  P6EST_COLUMN_GET_RANGE (column, &first, &last);
+
+  for (zz = first; zz < last; zz++) {
+    p2est_quadrant_t   *layer = p2est_quadrant_array_index (layers, zz);
+    int8_t              vert_level = layer->level;
+
+    if (vert_level - horz_level > max_diff) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+static int
+p6est_layer_refine_thick_layer (p6est_t * p6est,
+                                p4est_topidx_t which_tree,
+                                p4est_quadrant_t * column,
+                                p2est_quadrant_t * layer)
+{
+  int                 min_diff = *((int *) p6est->user_pointer);
+  int8_t              horz_level = column->level;
+  int8_t              vert_level = layer->level;
+
+  if (vert_level - horz_level < min_diff) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static void
+p6est_balance_within_columns (p6est_t * p6est, p6est_init_t init_fn,
+                              p6est_replace_t replace_fn)
+{
+  p4est_topidx_t      jt;
+  p4est_t            *columns = p6est->columns;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *col;
+  size_t              first, last, zz, zy, count;
+  sc_array_t         *work[2];
+  sc_array_t         *layers = p6est->layers;
+  int                 i;
+
+  work[0] = sc_array_new (sizeof (p2est_quadrant_t));
+  work[1] = sc_array_new (sizeof (p2est_quadrant_t));
+
+  for (jt = columns->first_local_tree; jt <= columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (columns->trees, jt);
+    tquadrants = &tree->quadrants;
+
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      sc_array_t          view;
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
+      count = last - first;
+
+      sc_array_init_view (&view, layers, first, count);
+      for (i = 0; i < 2; i++) {
+        p2est_quadrant_t    n, p, *parent = &p, *next;
+        p2est_quadrant_t   *writel;
+        p2est_quadrant_t    wstack[P4EST_QMAXLEVEL];
+        p2est_quadrant_t   *child[2];
+        int                 stackcount;
+        sc_array_t         *read, *write;
+
+        if (!i) {
+          read = &view;
+          write = work[0];
+        }
+        else {
+          read = work[0];
+          write = work[1];
+        }
+
+        writel = p2est_quadrant_array_push (write);
+        next = p2est_quadrant_array_index (read, count - 1);
+        *writel = *next;
+        for (zy = 1; zy < count; zy++) {
+          next = p2est_quadrant_array_index (read, count - 1 - zy);
+          stackcount = 0;
+          while (next->level < writel->level - 1) {
+            *parent = *next;
+            wstack[stackcount] = *next;
+            wstack[stackcount].level++;
+            n = *next;
+            n.level++;
+            n.z += P4EST_QUADRANT_LEN (n.level);
+
+            child[0] = &wstack[stackcount];
+            child[1] = &n;
+            p6est_layer_init_data (p6est, jt, col, child[0], init_fn);
+            p6est_layer_init_data (p6est, jt, col, child[1], init_fn);
+            if (replace_fn) {
+              replace_fn (p6est, jt, 1, 1, &col, &parent, 1, 2, &col, child);
+            }
+            p6est_layer_free_data (p6est, parent);
+            next = &n;
+          }
+          writel = p2est_quadrant_array_push (write);
+          *writel = *next;
+          while (stackcount) {
+            writel = p2est_quadrant_array_push (write);
+            *writel = wstack[--stackcount];
+          }
+        }
+      }
+
+      sc_array_truncate (work[0]);
+      sc_array_truncate (work[1]);
+    }
+  }
+
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
+}
+
+typedef struct p6est_lnodes_profile
+{
+  p8est_connect_type_t btype;
+  p4est_lnodes_t     *lnodes;
+  p4est_ghost_t      *cghost;
+  p4est_locidx_t     *lnode_ranges;
+  sc_array_t         *lnode_columns;
+}
+p6est_lnodes_profile_t;
+
+/* given two profiles (layers that have been reduced to just their levels),
+ * take the union, i.e. combine them, taking the finer layers */
+static void
+p6est_profile_union (sc_array_t * a, sc_array_t * b, sc_array_t * c)
+{
+  size_t              az, bz, na;
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (c));
+  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (c->elem_size == sizeof (int8_t));
+  int8_t              al, bl, finel, *cc;
+  p4est_qcoord_t      finesize, coarsesize;
+  sc_array_t         *finer;
+  size_t             *fineincr;
+
+  sc_array_truncate (c);
+  az = 0;
+  bz = 0;
+  na = a->elem_count;
+  while (az < na) {
+    P4EST_ASSERT (bz < b->elem_count);
+
+    cc = (int8_t *) sc_array_push (c);
+
+    al = *((int8_t *) sc_array_index (a, az++));
+    bl = *((int8_t *) sc_array_index (b, bz++));
+    if (al == bl) {
+      *cc = al;
+      continue;
+    }
+    else if (al > bl) {
+      finer = a;
+      finesize = P4EST_QUADRANT_LEN (al);
+      fineincr = &az;
+      finel = al;
+      coarsesize = P4EST_QUADRANT_LEN (bl);
+    }
+    else {
+      finer = b;
+      finesize = P4EST_QUADRANT_LEN (bl);
+      fineincr = &bz;
+      finel = bl;
+      coarsesize = P4EST_QUADRANT_LEN (al);
+    }
+
+    P4EST_ASSERT (finesize < coarsesize);
+
+    do {
+      *cc = finel;
+      cc = (int8_t *) sc_array_push (c);
+      finel = *((int8_t *) sc_array_index (finer, (*fineincr)++));
+      finesize += P4EST_QUADRANT_LEN (finel);
+    } while (finesize < coarsesize);
+    P4EST_ASSERT (finesize == coarsesize);
+    *cc = finel;
+  }
+}
+
+static void
+p6est_profile_balance_self_one_pass (sc_array_t * read, sc_array_t * write)
+{
+  int                 stackcount;
+  int8_t              n, newn, p, l;
+  int8_t             *wc;
+  size_t              count = read->elem_count;
+  size_t              zy;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (write));
+  P4EST_ASSERT (read->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (write->elem_size == sizeof (int8_t));
+
+  sc_array_truncate (write);
+  wc = (int8_t *) sc_array_push (write);
+  n = *((int8_t *) sc_array_index (read, count - 1));
+  *wc = l = n;
+  for (zy = 1; zy < count; zy++) {
+    n = *((int8_t *) sc_array_index (read, count - 1 - zy));
+    p = l - 1;
+    newn = SC_MAX (p, n);
+    stackcount = newn - n;
+    wc = (int8_t *) sc_array_push_count (write, 1 + stackcount);
+    *wc = l = newn;
+    while (stackcount--) {
+      *(++wc) = l = newn--;
+    }
+  }
+}
+
+static void
+p6est_profile_balance_self (sc_array_t * a, sc_array_t * work)
+{
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (a));
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (work));
+  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (work->elem_size == sizeof (int8_t));
+
+  p6est_profile_balance_self_one_pass (a, work);
+  p6est_profile_balance_self_one_pass (work, a);
+}
+
+static void
+p6est_profile_balance_face_one_pass (sc_array_t * read, sc_array_t * write)
+{
+  int8_t             *wc;
+  size_t              count;
+  int                 stackcount;
+  int8_t              n, nn, newn, p, l;
+  p4est_qcoord_t      readh;
+  size_t              zy;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (write));
+  P4EST_ASSERT (read->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (write->elem_size == sizeof (int8_t));
+
+  count = read->elem_count;
+
+  sc_array_truncate (write);
+  l = 0;
+  zy = 0;
+  readh = 0;
+  while (zy < count) {
+    n = *((int8_t *) sc_array_index (read, count - 1 - zy++));
+    if (n && !(readh & P4EST_QUADRANT_LEN (n))) {
+      P4EST_ASSERT (zy < count);
+      nn = *((int8_t *) sc_array_index (read, count - 1 - zy));
+      if (n == nn) {
+        zy++;
+        n--;
+      }
+    }
+    readh += P4EST_QUADRANT_LEN (n);
+    p = l - 1;
+    newn = SC_MAX (p, n);
+    stackcount = newn - n;
+    wc = (int8_t *) sc_array_push_count (write, 1 + stackcount);
+    *wc = l = newn;
+    while (stackcount--) {
+      *(++wc) = l = newn--;
+    }
+  }
+}
+
+/* assumes a is already self balanced */
+static void
+p6est_profile_balance_face (sc_array_t * a, sc_array_t * b, sc_array_t * work)
+{
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (b));
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (work));
+  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (work->elem_size == sizeof (int8_t));
+
+  p6est_profile_balance_face_one_pass (a, work);
+  p6est_profile_balance_self_one_pass (work, b);
+}
+
+static void
+p6est_profile_balance_full_one_pass (sc_array_t * read, sc_array_t * write)
+{
+  int8_t             *wc;
+  size_t              count;
+  int                 stackcount;
+  int8_t              n, nn, newn, p, l, prevl, nextl;
+  p4est_qcoord_t      readh;
+  size_t              zy;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (write));
+  P4EST_ASSERT (read->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (write->elem_size == sizeof (int8_t));
+
+  count = read->elem_count;
+
+  sc_array_truncate (write);
+  l = 0;
+  zy = 0;
+  readh = 0;
+  while (zy < count) {
+    n = *((int8_t *) sc_array_index (read, count - 1 - zy++));
+    if (n && !(readh & P4EST_QUADRANT_LEN (n))) {
+      P4EST_ASSERT (zy < count);
+      nn = *((int8_t *) sc_array_index (read, count - 1 - zy));
+      if (n == nn) {
+        if (zy > 1) {
+          prevl = *((int8_t *) sc_array_index (read, count - 1 - (zy - 2)));
+        }
+        else {
+          prevl = -1;
+        }
+        if (zy < count - 1) {
+          nextl = *((int8_t *) sc_array_index (read, count - 1 - (zy + 1)));
+        }
+        else {
+          nextl = -1;
+        }
+        if (n >= SC_MAX (nextl, prevl) - 1) {
+          zy++;
+          n--;
+        }
+      }
+    }
+    readh += P4EST_QUADRANT_LEN (n);
+    p = l - 1;
+    newn = SC_MAX (p, n);
+    stackcount = newn - n;
+    wc = (int8_t *) sc_array_push_count (write, 1 + stackcount);
+    *wc = l = newn;
+    while (stackcount--) {
+      *(++wc) = l = newn--;
+    }
+  }
+}
+
+/* assumes a is already self balanced */
+static void
+p6est_profile_balance_full (sc_array_t * a, sc_array_t * b, sc_array_t * work)
+{
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (b));
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (work));
+  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (work->elem_size == sizeof (int8_t));
+
+  p6est_profile_balance_full_one_pass (a, work);
+  p6est_profile_balance_self_one_pass (work, b);
+}
+
+static void
+p6est_lnodes_profile_compress (p6est_lnodes_profile_t * profile)
+{
+  p4est_locidx_t      nidx, il, old_off, nln =
+    profile->lnodes->num_local_nodes;
+  p4est_locidx_t (*lr)[2] = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
+  sc_array_t         *lc = profile->lnode_columns;
+  size_t              old_count = lc->elem_count;
+  size_t              new_count;
+  sc_array_t         *perm = sc_array_new_size (sizeof (size_t), old_count);
+  size_t             *newindex = (size_t *) sc_array_index (perm, 0);
+  size_t              zz, offset;
+
+  for (zz = 0; zz < old_count; zz++) {
+    newindex[zz] = old_count;
+  }
+
+  offset = 0;
+
+  for (nidx = 0; nidx < nln; nidx++) {
+    old_off = lr[nidx][0];
+    lr[nidx][0] = offset;
+    for (il = 0; il < lr[nidx][1]; il++) {
+      newindex[il + old_off] = offset++;
+    }
+  }
+  new_count = offset;
+
+  for (zz = 0; zz < old_count; zz++) {
+    if (newindex[zz] == old_count) {
+      newindex[zz] = offset++;
+    }
+  }
+
+  sc_array_permute (lc, perm, 0);
+  sc_array_destroy (perm);
+  sc_array_resize (lc, new_count);
+}
+
+p6est_lnodes_profile_t *
+p6est_lnodes_profile_new_local (p6est_t * p6est, p8est_connect_type_t btype)
+{
+  p6est_lnodes_profile_t *profile = P4EST_ALLOC (p6est_lnodes_profile_t, 1);
+  p4est_lnodes_t     *lnodes;
+  p4est_locidx_t      nln, nle;
+  p4est_topidx_t      jt;
+  p4est_t            *columns = p6est->columns;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *col;
+  size_t              first, last, count, zz, zy;
+  p4est_locidx_t     *en, (*lr)[2];
+  sc_array_t         *lc;
+  int                 i, j, k;
+  p2est_quadrant_t   *layer;
+  sc_array_t         *layers = p6est->layers;
+  p4est_locidx_t      nidx, enidx, eidx;
+  p4est_connect_type_t hbtype;
+  int8_t             *c;
+  sc_array_t         *thisprof;
+  sc_array_t         *selfprof;
+  sc_array_t         *faceprof;
+  sc_array_t         *cornerprof;
+  sc_array_t         *work;
+  sc_array_t          oldprof;
+  sc_array_t          testprof;
+  int                 any_prof_change;
+  int                 any_local_change;
+
+  profile->btype = btype;
+  if (btype == P8EST_CONNECT_FACE) {
+    hbtype = P4EST_CONNECT_FACE;
+  }
+  else {
+    hbtype = P4EST_CONNECT_FULL;
+  }
+  profile->cghost = p4est_ghost_new (p6est->columns, P4EST_CONNECT_FULL);
+  profile->lnodes = lnodes = p4est_lnodes_new (p6est->columns,
+                                               profile->cghost, 2);
+  en = lnodes->element_nodes;
+  nln = lnodes->num_local_nodes;
+  nle = lnodes->num_local_elements;
+  profile->lnode_ranges = P4EST_ALLOC_ZERO (p4est_locidx_t, 2 * nln);
+  lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
+  profile->lnode_columns = lc = sc_array_new (sizeof (int8_t));
+  selfprof = sc_array_new (sizeof (int8_t));
+  work = sc_array_new (sizeof (int8_t));
+  faceprof = sc_array_new (sizeof (int8_t));
+  cornerprof = sc_array_new (sizeof (int8_t));
+
+  /* create the profiles for each node: layers are reduced to just their level
+   * */
+  for (enidx = 0, jt = columns->first_local_tree;
+       jt <= columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (columns->trees, jt);
+    tquadrants = &tree->quadrants;
+
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
+      count = last - first;
+      sc_array_truncate (selfprof);
+      c = (int8_t *) sc_array_push_count (selfprof, count);
+      for (zy = first; zy < last; zy++) {
+        layer = p2est_quadrant_array_index (layers, zy);
+        *(c++) = layer->level;
+      }
+      p6est_profile_balance_self (selfprof, work);
+      if (btype == P8EST_CONNECT_FACE) {
+        p6est_profile_balance_face (selfprof, faceprof, work);
+      }
+      else {
+        p6est_profile_balance_full (selfprof, faceprof, work);
+      }
+      if (btype == P8EST_CONNECT_EDGE) {
+        p6est_profile_balance_face (selfprof, cornerprof, work);
+      }
+      else if (btype == P8EST_CONNECT_FULL) {
+        p6est_profile_balance_full (selfprof, cornerprof, work);
+      }
+      for (j = 0; j < 3; j++) {
+        for (i = 0; i < 3; i++, enidx++) {
+          thisprof = NULL;
+          nidx = en[enidx];
+          if (i != 1 && j != 1) {
+            if (hbtype == P4EST_CONNECT_FACE) {
+              /* skip corners if we don't need to balance them */
+              P4EST_ASSERT (!lr[nidx][1]);
+              continue;
+            }
+            else {
+              thisprof = cornerprof;
+            }
+          }
+          else if (i == 1 && j == 1) {
+            thisprof = selfprof;
+          }
+          else {
+            thisprof = faceprof;
+          }
+          count = thisprof->elem_count;
+          if (!lr[nidx][1]) {
+            /* if this node has not yet been initialized, initialize it */
+            lr[nidx][0] = lc->elem_count;
+            lr[nidx][1] = count;
+            c = (int8_t *) sc_array_push_count (lc, count);
+            memcpy (c, thisprof->array, count * sizeof (int8_t));
+          }
+          else {
+            /* if this node has been initialized, combine the two profiles,
+             * taking the finer layers from each */
+            sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
+            p6est_profile_union (thisprof, &oldprof, work);
+            if (work->elem_count > oldprof.elem_count) {
+              lr[nidx][0] = lc->elem_count;
+              lr[nidx][1] = work->elem_count;
+              c = (int8_t *) sc_array_push_count (lc, work->elem_count);
+              memcpy (c, work->array, work->elem_count * work->elem_size);
+            }
+          }
+        }
+      }
+    }
+  }
+  p6est_lnodes_profile_compress (profile);
+
+  do {
+    any_local_change = 0;
+    for (eidx = 0, enidx = 0; eidx < nle; eidx++) {
+      p4est_locidx_t      start_enidx = enidx;
+      nidx = en[start_enidx + P4EST_INSUL / 2];
+      P4EST_ASSERT (lr[nidx][1]);
+      sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
+      thisprof = &oldprof;
+      any_prof_change = 0;
+      for (k = 0, j = 0; j < 3; j++) {
+        for (i = 0; i < 3; i++, k++, enidx++) {
+          nidx = en[enidx];
+          if (i != 1 && j != 1) {
+            if (hbtype == P4EST_CONNECT_FACE) {
+              /* skip corners if we don't need to balance them */
+              P4EST_ASSERT (!lr[nidx][1]);
+              continue;
+            }
+          }
+          if (i == 1 && j == 1) {
+            /* need to further balance against oneself */
+            continue;
+          }
+          P4EST_ASSERT (lr[nidx][1]);
+          sc_array_init_view (&testprof, lc, lr[nidx][0], lr[nidx][1]);
+          p6est_profile_union (thisprof, &testprof, work);
+          if (work->elem_count > thisprof->elem_count) {
+            any_prof_change = 1;
+            any_local_change = 1;
+            sc_array_copy (selfprof, work);
+            thisprof = selfprof;
+          }
+        }
+      }
+
+      if (any_prof_change) {
+        P4EST_ASSERT (thisprof == selfprof);
+        P4EST_ASSERT (selfprof->elem_count > oldprof.elem_count);
+        /* update */
+        if (btype == P8EST_CONNECT_FACE) {
+          p6est_profile_balance_face (selfprof, faceprof, work);
+        }
+        else {
+          p6est_profile_balance_full (selfprof, faceprof, work);
+        }
+        if (btype == P8EST_CONNECT_EDGE) {
+          p6est_profile_balance_face (selfprof, cornerprof, work);
+        }
+        else if (btype == P8EST_CONNECT_FULL) {
+          p6est_profile_balance_full (selfprof, cornerprof, work);
+        }
+        enidx = start_enidx;
+        for (k = 0, j = 0; j < 3; j++) {
+          for (i = 0; i < 3; i++, k++, enidx++) {
+            thisprof = NULL;
+            nidx = en[enidx];
+            if (i != 1 && j != 1) {
+              if (hbtype == P4EST_CONNECT_FACE) {
+                /* skip corners if we don't need to balance them */
+                P4EST_ASSERT (!lr[nidx][1]);
+                continue;
+              }
+              else {
+                thisprof = cornerprof;
+              }
+            }
+            else if (i == 1 && j == 1) {
+              thisprof = selfprof;
+            }
+            else {
+              thisprof = faceprof;
+            }
+            count = thisprof->elem_count;
+            nidx = en[enidx];
+            P4EST_ASSERT (lr[nidx][1]);
+            /* if this node has been initialized, combine the two profiles,
+             * taking the finer layers from each */
+            sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
+            p6est_profile_union (thisprof, &oldprof, work);
+            if (work->elem_count > oldprof.elem_count) {
+              lr[nidx][0] = lc->elem_count;
+              lr[nidx][1] = work->elem_count;
+              c = (int8_t *) sc_array_push_count (lc, work->elem_count);
+              memcpy (c, work->array, work->elem_count * work->elem_size);
+            }
+          }
+        }
+      }
+    }
+    p6est_lnodes_profile_compress (profile);
+  } while (any_local_change);
+
+  sc_array_destroy (selfprof);
+  sc_array_destroy (faceprof);
+  sc_array_destroy (cornerprof);
+  sc_array_destroy (work);
+
+  return profile;
+}
+
+void
+p6est_lnodes_profile_destroy (p6est_lnodes_profile_t * profile)
+{
+  p4est_lnodes_destroy (profile->lnodes);
+  p4est_ghost_destroy (profile->cghost);
+  P4EST_FREE (profile->lnode_ranges);
+  sc_array_destroy (profile->lnode_columns);
+  P4EST_FREE (profile);
+}
+
+void
+p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
+                   int max_diff, int min_diff,
+                   p6est_init_t init_fn, p6est_replace_t replace_fn)
+{
+  p4est_connect_type_t hbtype;
+  p6est_refine_col_data_t refine_col;
+  void               *orig_user_pointer = p6est->user_pointer;
+  p6est_lnodes_profile_t *profile;
+
+  /* first refine columns whose layers are too thin */
+  if (max_diff >= min_diff) {
+    p6est->user_pointer = (void *) &max_diff;
+    p6est_refine_columns_ext (p6est, 1, -1, p6est_column_refine_thin_layer,
+                              init_fn, replace_fn);
+    p6est->user_pointer = orig_user_pointer;
+  }
+
+  /* next perform the horizontal balancing */
+  if (btype == P8EST_CONNECT_FACE) {
+    hbtype = P4EST_CONNECT_FACE;
+  }
+  else {
+    hbtype = P4EST_CONNECT_FULL;
+  }
+  refine_col.refine_col_fn = NULL;
+  refine_col.init_fn = init_fn;
+  refine_col.replace_fn = replace_fn;
+  refine_col.user_pointer = orig_user_pointer;
+  p6est->user_pointer = (void *) &refine_col;
+  p4est_balance_ext (p6est->columns, hbtype, NULL,
+                     p6est_replace_column_split);
+  p6est->user_pointer = orig_user_pointer;
+  p6est_compress_columns (p6est);
+  p6est_update_offsets (p6est);
+
+  /* next refine layers that are too thick */
+  if (max_diff >= min_diff) {
+    p6est->user_pointer = (void *) &min_diff;
+    p6est_refine_layers_ext (p6est, 1, -1, p6est_layer_refine_thick_layer,
+                             init_fn, replace_fn);
+    p6est->user_pointer = orig_user_pointer;
+  }
+
+  /* finally, the real work: balance neighboring layers */
+
+  /* initialize the lnodes profile and balance locally */
+  profile = p6est_lnodes_profile_new_local (p6est, btype);
+
+  p6est_lnodes_profile_destroy (profile);
+}
+
+void
+p6est_balance (p6est_t * p6est, p8est_connect_type_t btype,
+               p6est_init_t init_fn)
+{
+  p6est_balance_ext (p6est, btype, 0, 1, init_fn, NULL);
 }
