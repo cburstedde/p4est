@@ -53,6 +53,8 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   sc_array_t          lnoview;
   size_t              zz, nsharers;
 
+  P4EST_GLOBAL_PRODUCTION ("Into p6est_lnodes_new\n");
+
   P4EST_ASSERT (degree >= 1);
 
   lnodes = P4EST_ALLOC (p6est_lnodes_t, 1);
@@ -238,6 +240,8 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   P4EST_FREE (owned_offsets);
   P4EST_FREE (layernodecount);
   P4EST_FREE (layernodeoffsets);
+
+  P4EST_GLOBAL_PRODUCTION ("Done p6est_lnodes_new\n");
 
   return lnodes;
 }

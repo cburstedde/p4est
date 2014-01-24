@@ -477,6 +477,8 @@ p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
   int                 nneigh;
   int                 i, mpisize;
 
+  P4EST_GLOBAL_PRODUCTION ("Into p6est_ghost_new\n");
+
   /* create the column ghost layer */
   ghost->column_ghost = cghost = p4est_ghost_new (columns, btype);
   ghost->mpisize = mpisize = cghost->mpisize;
@@ -514,6 +516,8 @@ p6est_ghost_new (p6est_t * p6est, p4est_connect_type_t btype)
 
   P4EST_FREE (proc_count);
 
+  P4EST_GLOBAL_PRODUCTION ("Done p6est_ghost_new\n");
+
   return ghost;
 }
 
@@ -547,6 +551,8 @@ p6est_ghost_expand (p6est_t * p6est, p6est_ghost_t * ghost)
   p4est_locidx_t     *old_proc_off, *proc_comm_off;
   p4est_locidx_t     *proc_off, *proc_count;
   int                 nneigh = 0;
+
+  P4EST_GLOBAL_PRODUCTION ("Into p6est_ghost_expand\n");
 
   /* copy the old proc offsets */
   old_proc_off = P4EST_ALLOC (p4est_locidx_t, mpisize + 1);
@@ -597,4 +603,7 @@ p6est_ghost_expand (p6est_t * p6est, p6est_ghost_t * ghost)
 
   P4EST_FREE (proc_comm_off);
   P4EST_FREE (proc_count);
+
+  P4EST_GLOBAL_PRODUCTION ("Done p6est_ghost_expand\n");
+
 }
