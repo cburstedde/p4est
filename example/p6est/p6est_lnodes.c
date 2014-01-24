@@ -70,15 +70,14 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   nelemcols = clnodes->num_local_elements;
   en = clnodes->element_nodes;
   layernodecount = P4EST_ALLOC_ZERO (p4est_locidx_t, nnodecols);
-  layernodeoffsets = P4EST_ALLOC_ZERO (p4est_locidx_t, nnodecols);
-  num_owned = 0;
-  num_local = 0;
+  layernodeoffsets = P4EST_ALLOC_ZERO (p4est_locidx_t, nnodecols + 1);
   for (cid = 0, enid = 0; cid < nelemcols; cid++) {
     for (j = 0; j < 3; j++) {
       for (i = 0; i < 3; i++, enid++) {
         ncid = en[enid];
         is_owned = (ncid < clnodes->owned_count);
         nlayers = lr[ncid][1];
+        P4EST_ASSERT (nlayers);
         ncolnodes = nlayers * degree + 1;
         if (i != 1 && j != 1) {
           /* this is a corner column */
@@ -92,13 +91,20 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
           /* this is a face column */
           layernodecount[ncid] = ncolnodes * (degree - 1);
         }
-        num_local += layernodecount[ncid];
-        if (is_owned) {
-          num_owned += layernodecount[ncid];
-        }
       }
     }
   }
+
+  num_owned = 0;
+  num_local = 0;
+  for (ncid = 0; ncid < nnodecols; ncid++) {
+    num_local += layernodecount[ncid];
+    if (ncid < clnodes->owned_count) {
+      num_owned += layernodecount[ncid];
+    }
+  }
+
+  P4EST_VERBOSEF ("p6est_lnodes: %d owned %d local\n", num_owned, num_local);
 
   if (nnodecols) {
     layernodeoffsets[0] = 0;
@@ -133,7 +139,8 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   lnodes->num_local_nodes = num_local;
   lnodes->owned_count = num_owned;
   lnodes->global_offset = owned_offsets[p6est->mpirank];
-  lnodes->nonlocal_nodes = P4EST_ALLOC (p4est_gloidx_t, num_local - num_owned); /* TODO */
+  lnodes->nonlocal_nodes =
+    P4EST_ALLOC (p4est_gloidx_t, num_local - num_owned);
   lnodes->sharers =
     sc_array_new_size (sizeof (p6est_lnodes_rank_t), nsharers);
   lnodes->global_owned_count = global_owned_count;
@@ -215,6 +222,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
       p4est_gloidx_t      owners_offset;
       p4est_locidx_t      nid;
 
+      P4EST_ASSERT (ncid >= clnodes->owned_count);
       owners_offset = owned_offsets[crank->rank] + layernodecount[ncid];
       for (nid = layernodeoffsets[ncid]; nid < layernodeoffsets[ncid + 1];
            nid++) {

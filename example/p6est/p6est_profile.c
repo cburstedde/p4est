@@ -329,7 +329,7 @@ p6est_profile_element_to_node_corner (sc_array_t * elem, sc_array_t * node,
     int                 loop = 0;
 
     do {
-      a = *((int8_t *) sc_array_index (elem, az++));
+      a = *((int8_t *) sc_array_index (elem, az));
       P4EST_ASSERT (a == b || a == b + 1);
       loop = !loop && (a == b + 1);
       for (i = 0; i < degree + 1; i++) {
@@ -338,8 +338,10 @@ p6est_profile_element_to_node_corner (sc_array_t * elem, sc_array_t * node,
       if (fc && a == b + 1) {
         fc[az] |= (1 << fcoffset);
       }
+      az++;
     } while (loop);
   }
+  P4EST_ASSERT (az == elem->elem_count);
 }
 
 static void
@@ -404,7 +406,8 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
   nelem = lr[ncid][1];
 
   elem_to_node =
-    P4EST_ALLOC (p4est_locidx_t *, (degree - 1) * (degree - 1) * nelem);
+    P4EST_ALLOC (p4est_locidx_t *,
+                 SC_MAX (1, (degree - 1) * (degree - 1)) * nelem);
   sc_array_init_view (&elem, lc, lr[ncid][0], nelem);
 
   for (ll = 0; ll < nelem; ll++) {
@@ -446,7 +449,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
 
         for (r = 0; r < degree - 1; r++) {
           /* may need to swap order */
-          int                 s = swap[f] ? r : (degree - 1 - r);
+          int                 s = swap[f] ? (degree - 2 - r) : r;
           for (ll = 0; ll < nelem; ll++) {
             elem_to_node[s * nelem + ll] = e_to_n
               + (degree + 1) * (degree + 1) * (degree + 1) * ll

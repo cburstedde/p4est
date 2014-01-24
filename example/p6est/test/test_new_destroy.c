@@ -25,6 +25,7 @@
 #include <p6est.h>
 #include <p6est_ghost.h>
 #include <p6est_vtk.h>
+#include <p6est_lnodes.h>
 
 char                test_data = 'x';
 char               *TEST_USER_POINTER = &test_data;
@@ -136,6 +137,7 @@ main (int argc, char **argv)
   p6est_ghost_t      *ghost;
   double              height[3] = { 0., 0., 0.1 };
   int                 mpiret;
+  int                 i;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -195,6 +197,14 @@ main (int argc, char **argv)
   p6est_partition (p6est, NULL);
 
   p6est_vtk_write_file (p6est, "p6est_test_partition");
+
+  for (i = 1; i <= 3; i++) {
+    p6est_lnodes_t     *lnodes;
+
+    lnodes = p6est_lnodes_new (p6est, NULL, i);
+
+    p6est_lnodes_destroy (lnodes);
+  }
 
   p6est_destroy (p6est);
 
