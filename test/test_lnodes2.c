@@ -723,6 +723,7 @@ main (int argc, char **argv)
 
     for (j = 1; j <= 4; j++) {
       P4EST_GLOBAL_PRODUCTIONF ("Begin lnodes test %d:%d\n", i, j);
+      p4est_log_indent_push ();
       lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
 
       nin = lnodes->num_local_nodes;
@@ -928,6 +929,7 @@ main (int argc, char **argv)
 
       p4est_lnodes_destroy (lnodes);
       P4EST_FREE (tpoints);
+      p4est_log_indent_pop ();
       P4EST_GLOBAL_PRODUCTIONF ("End lnodes test %d:%d\n", i, j);
     }
 

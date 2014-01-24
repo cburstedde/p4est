@@ -2423,6 +2423,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   p4est_lnodes_t     *lnodes = P4EST_ALLOC (p4est_lnodes_t, 1);
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_lnodes_new\n");
+  p4est_log_indent_push ();
   P4EST_ASSERT (degree >= 1);
 
   lnodes->mpicomm = p4est->mpicomm;
@@ -2477,6 +2478,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 
   p4est_lnodes_reset_data (&data, p4est);
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_lnodes_new\n");
   return lnodes;
 }

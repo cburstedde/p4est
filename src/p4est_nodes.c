@@ -126,6 +126,7 @@ p4est_nodes_new_local (p4est_t * p4est)
   p4est_nodes_t      *nodes;
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new_local\n");
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
 #ifdef P4EST_DEBUG
   is_balanced = p4est_is_balanced (p4est, P4EST_CONNECT_FULL);
@@ -248,6 +249,7 @@ p4est_nodes_new_local (p4est_t * p4est)
   P4EST_ASSERT ((size_t) vertex_num == nodes->indep_nodes.elem_count);
   P4EST_ASSERT (p4est_nodes_is_valid (p4est, nodes));
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_nodes_new_local\n");
 
   return nodes;
@@ -559,6 +561,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     return p4est_nodes_new_local (p4est);
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new\n");
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   P4EST_QUADRANT_INIT (&c);
@@ -1300,6 +1303,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
 
   P4EST_ASSERT (p4est_nodes_is_valid (p4est, nodes));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_nodes_new\n");
 
   return nodes;

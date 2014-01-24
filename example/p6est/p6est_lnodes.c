@@ -54,6 +54,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   size_t              zz, nsharers;
 
   P4EST_GLOBAL_PRODUCTION ("Into p6est_lnodes_new\n");
+  p4est_log_indent_push ();
 
   P4EST_ASSERT (degree >= 1);
 
@@ -241,6 +242,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   P4EST_FREE (layernodecount);
   P4EST_FREE (layernodeoffsets);
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done p6est_lnodes_new\n");
 
   return lnodes;

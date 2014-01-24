@@ -59,6 +59,7 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   P4EST_GLOBAL_PRODUCTIONF
     ("Into trilinear_mesh_extract with %lld total elements\n",
      (long long) p4est->global_num_quadrants);
+  p4est_log_indent_push ();
 
   /* Allocate output data structure. */
   mesh = P4EST_ALLOC_ZERO (trilinear_mesh_t, 1);
@@ -250,6 +251,7 @@ p8est_trilinear_mesh_new_from_nodes (p4est_t * p4est, p4est_nodes_t * nodes)
   mesh->gid = -1;
 
   /* We are done */
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done trilinear_mesh_extract"
                             " with %lld anodes %lld %lld\n",
                             (long long) mesh->total_anode_num,
