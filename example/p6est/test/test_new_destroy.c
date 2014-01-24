@@ -211,6 +211,8 @@ main (int argc, char **argv)
 
   P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
 
+  p6est_save ("p6est_test_new_destroy.p6p", p6est, 1);
+
   p6est_destroy (p6est);
 
   p6est_connectivity_destroy (conn);

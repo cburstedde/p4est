@@ -29,6 +29,7 @@
 #include <p4est_extended.h>
 #include <sc_containers.h>
 #include <p4est_communication.h>
+#include <sc_io.h>
 
 /* htonl is in either of these two */
 #ifdef P4EST_HAVE_ARPA_NET_H
@@ -41,7 +42,7 @@
 
 p6est_connectivity_t *
 p6est_connectivity_new (p4est_connectivity_t * conn4,
-                        double *top_to_vertex, double height[3])
+                        double *top_vertices, double height[3])
 {
   p6est_connectivity_t *conn = P4EST_ALLOC (p6est_connectivity_t, 1);
 
@@ -57,13 +58,13 @@ p6est_connectivity_new (p4est_connectivity_t * conn4,
                                              conn4->corner_to_tree,
                                              conn4->corner_to_corner);
 
-  if (top_to_vertex != NULL) {
-    conn->top_to_vertex = P4EST_ALLOC (double, 3 * conn4->num_vertices);
-    memcpy (conn->top_to_vertex, top_to_vertex,
+  if (top_vertices != NULL) {
+    conn->top_vertices = P4EST_ALLOC (double, 3 * conn4->num_vertices);
+    memcpy (conn->top_vertices, top_vertices,
             3 * conn4->num_vertices * sizeof (double));
   }
   else {
-    conn->top_to_vertex = NULL;
+    conn->top_vertices = NULL;
     P4EST_ASSERT (height != NULL);
     conn->height[0] = height[0];
     conn->height[1] = height[1];
@@ -77,8 +78,8 @@ void
 p6est_connectivity_destroy (p6est_connectivity_t * conn)
 {
   p4est_connectivity_destroy (conn->conn4);
-  if (conn->top_to_vertex != NULL) {
-    P4EST_FREE (conn->top_to_vertex);
+  if (conn->top_vertices != NULL) {
+    P4EST_FREE (conn->top_vertices);
   }
   P4EST_FREE (conn);
 }
@@ -87,25 +88,32 @@ void
 p6est_tree_get_vertices (p6est_connectivity_t * conn,
                          p4est_topidx_t which_tree, double vertices[24])
 {
-  const double       *btv = conn->conn4->vertices;
-  const double       *ttv = conn->top_to_vertex;
-  int                 i, j;
+  p4est_connectivity_t *conn4 = conn->conn4;
+  const double       *btv = conn4->vertices;
+  const double       *ttv = conn->top_vertices;
+  int                 i, j, k;
+  double             *height = conn->height;
+  double              zerooff[3] = { 0., 0., 0. };
 
-  P4EST_ASSERT (conn->conn4->num_vertices > 0);
+  P4EST_ASSERT (conn4->num_vertices > 0);
   P4EST_ASSERT (btv != NULL);
-  P4EST_ASSERT (which_tree >= 0 && which_tree < conn->conn4->num_trees);
+  P4EST_ASSERT (which_tree >= 0 && which_tree < conn4->num_trees);
   P4EST_ASSERT (vertices != NULL);
 
-  memcpy (vertices, btv + which_tree * 12, 12 * sizeof (double));
-  if (ttv != NULL) {
-    memcpy (vertices + 12, ttv + which_tree * 12, 12 * sizeof (double));
-  }
-  else {
-    memcpy (vertices + 12, btv + which_tree * 12, 12 * sizeof (double));
+  for (k = 0; k < 2; k++) {
+    const double       *verts = k ? ttv : btv;
+    const double       *off = (verts != NULL) ? zerooff : height;
+
+    if (verts == NULL) {
+      verts = btv;
+    }
 
     for (i = 0; i < P4EST_CHILDREN; i++) {
+      p4est_topidx_t      vert;
+
+      vert = conn4->tree_to_vertex[P4EST_CHILDREN * which_tree + i];
       for (j = 0; j < 3; j++) {
-        vertices[12 + 3 * i + j] += conn->height[j];
+        vertices[3 * i + j] = verts[3 * vert + j] + off[j];
       }
     }
   }
@@ -121,10 +129,10 @@ p6est_qcoord_to_vertex (p6est_connectivity_t * conn,
   double              eta = (double) z / (double) P4EST_ROOT_LEN;
 
   p4est_qcoord_to_vertex (conn->conn4, treeid, x, y, bottom);
-  if (conn->top_to_vertex != NULL) {
+  if (conn->top_vertices != NULL) {
     double             *orig = conn->conn4->vertices;
 
-    conn->conn4->vertices = conn->top_to_vertex;
+    conn->conn4->vertices = conn->top_vertices;
     p4est_qcoord_to_vertex (conn->conn4, treeid, x, y, top);
     conn->conn4->vertices = orig;
   }
@@ -143,8 +151,162 @@ p6est_connectivity_memory_used (p6est_connectivity_t * conn)
 {
   return
     p4est_connectivity_memory_used (conn->conn4) +
-    conn->top_to_vertex == NULL ? 0 :
+    conn->top_vertices == NULL ? 0 :
     (conn->conn4->num_vertices * 3 * sizeof (double));
+}
+
+int
+p6est_connectivity_extra_sink (p6est_connectivity_t * conn,
+                               sc_io_sink_t * sink)
+{
+  int                 retval;
+  size_t              u64z, tcount;
+  double             *v;
+  uint64_t            num_vertices;
+
+  u64z = sizeof (uint64_t);
+  num_vertices = (conn->top_vertices != NULL) ?
+    (uint64_t) conn->conn4->num_vertices : 0;
+
+  retval = sc_io_sink_write (sink, &num_vertices, 1 * u64z);
+
+  if (conn->top_vertices != NULL) {
+    tcount = (size_t) (3 * conn->conn4->num_vertices);
+    v = conn->top_vertices;
+  }
+  else {
+    tcount = 3;
+    v = conn->height;
+  }
+  retval = retval || sc_io_sink_write (sink, v, tcount * sizeof (double));
+
+  return retval;
+}
+
+p6est_connectivity_t *
+p6est_connectivity_extra_source (p4est_connectivity_t * conn4,
+                                 sc_io_source_t * source)
+{
+  p6est_connectivity_t *conn;
+  int                 retval;
+  size_t              u64z;
+  uint64_t            num_vertices;
+  double             *top_vertices;
+  double              height[3];
+
+  u64z = sizeof (uint64_t);
+
+  retval = sc_io_source_read (source, &num_vertices, 1 * u64z, NULL);
+  if (retval) {
+    return NULL;
+  }
+  if (num_vertices > 0) {
+    height[0] = height[1] = height[2] = 0.;
+
+    if (num_vertices != (uint64_t) conn4->num_vertices) {
+      return NULL;
+    }
+    top_vertices = P4EST_ALLOC (double, 3 * num_vertices);
+    retval = sc_io_source_read (source, top_vertices,
+                                3 * num_vertices * sizeof (double), NULL);
+
+    if (retval) {
+      P4EST_FREE (top_vertices);
+      return NULL;
+    }
+  }
+  else {
+    top_vertices = NULL;
+    retval = sc_io_source_read (source, conn->height, 3 * sizeof (double),
+                                NULL);
+    if (retval) {
+      return NULL;
+    }
+  }
+  conn = P4EST_ALLOC (p6est_connectivity_t, 1);
+
+  conn->conn4 = conn4;
+  conn->top_vertices = top_vertices;
+  conn->height[0] = height[0];
+  conn->height[1] = height[1];
+  conn->height[2] = height[2];
+
+  return 0;
+}
+
+int
+p6est_connectivity_sink (p6est_connectivity_t * conn, sc_io_sink_t * sink)
+{
+  int                 retval;
+
+  retval = p4est_connectivity_sink (conn->conn4, sink);
+
+  retval = retval || p6est_connectivity_extra_sink (conn, sink);
+
+  return retval;
+}
+
+p6est_connectivity_t *
+p6est_connectivity_source (sc_io_source_t * source)
+{
+  p4est_connectivity_t *conn4;
+
+  conn4 = p4est_connectivity_source (source);
+  if (conn4 == NULL) {
+    return NULL;
+  }
+
+  return p6est_connectivity_extra_source (conn4, source);
+}
+
+int
+p6est_connectivity_save (const char *filename, p6est_connectivity_t * conn)
+{
+  int                 retval;
+  sc_io_sink_t       *sink;
+
+  sink = sc_io_sink_new (SC_IO_TYPE_FILENAME, SC_IO_MODE_WRITE,
+                         SC_IO_ENCODE_NONE, filename);
+  if (sink == NULL) {
+    return -1;
+  }
+
+  /* Close file even on earlier write error */
+  retval = p6est_connectivity_sink (conn, sink);
+  retval = sc_io_sink_destroy (sink) || retval;
+
+  return retval;
+}
+
+p6est_connectivity_t *
+p6est_connectivity_load (const char *filename, size_t * bytes)
+{
+  int                 retval;
+  size_t              bytes_in;
+  sc_io_source_t     *source;
+  p6est_connectivity_t *conn;
+
+  source = sc_io_source_new (SC_IO_TYPE_FILENAME,
+                             SC_IO_ENCODE_NONE, filename);
+  if (source == NULL) {
+    return NULL;
+  }
+
+  /* Get byte length and close file even on earlier read error */
+  conn = p6est_connectivity_source (source);
+  retval = sc_io_source_complete (source, &bytes_in, NULL) || conn == NULL;
+  retval = sc_io_source_destroy (source) || retval;
+  if (retval) {
+    if (conn != NULL) {
+      p6est_connectivity_destroy (conn);
+    }
+    return NULL;
+  }
+
+  if (bytes != NULL) {
+    *bytes = bytes_in;
+  }
+  return conn;
 }
 
 size_t
@@ -433,6 +595,227 @@ p6est_reset_data (p6est_t * p6est, size_t data_size, p6est_init_t init_fn,
   }
 }
 
+void                p6est_save_ext (const char *filename, p6est_t * p6est,
+                                    int save_data, int save_partition);
+
+void
+p6est_save (const char *filename, p6est_t * p6est, int save_data)
+{
+  p6est_save_ext (filename, p6est, save_data, 1);
+}
+
+void
+p6est_save_ext (const char *filename, p6est_t * p6est,
+                int save_data, int save_partition)
+{
+  FILE               *file;
+  int                 rank = p6est->mpirank;
+  long                fpos = -1, foffset;
+  int                 align = 32;
+  sc_io_sink_t       *sink;
+  int                 retval, mpiret;
+  p4est_t            *savecolumns;
+#ifdef P4EST_MPIIO_WRITE
+  MPI_File            mpifile;
+  MPI_Offset          mpipos;
+  MPI_Offset          mpithis;
+#else
+  long                fthis;
+  MPI_Status          mpistatus;
+#endif
+  int                 num_procs = p6est->mpisize;
+
+  P4EST_GLOBAL_PRODUCTION ("Into p6est_save\n");
+
+  savecolumns = p4est_copy (p6est->columns, 0);
+  p4est_reset_data (savecolumns, 2 * sizeof (p4est_locidx_t), NULL, NULL);
+  size_t              comb_size, data_size = p6est->data_size;
+  size_t              zz, nlayers = p6est->layers->elem_count;
+  char               *lbuf, *bp;
+
+  if (!data_size) {
+    save_data = 0;
+  }
+  if (!save_data) {
+    data_size = 0;
+  }
+
+  comb_size = 2 * sizeof (p4est_qcoord_t) + data_size;
+
+  {
+    p4est_topidx_t      jt;
+    p4est_tree_t       *tree, *savetree;
+    sc_array_t         *tquadrants, *savetquadrants;
+    p4est_quadrant_t   *col, *savecol;
+    size_t              first, last;
+    p4est_locidx_t      lfirst, llast;
+
+    for (jt = p6est->columns->first_local_tree;
+         jt <= p6est->columns->last_local_tree; ++jt) {
+      tree = p4est_tree_array_index (p6est->columns->trees, jt);
+      savetree = p4est_tree_array_index (savecolumns->trees, jt);
+      tquadrants = &tree->quadrants;
+      savetquadrants = &savetree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+        p4est_locidx_t     *savedata;
+        col = p4est_quadrant_array_index (tquadrants, zz);
+        savecol = p4est_quadrant_array_index (savetquadrants, zz);
+        P6EST_COLUMN_GET_RANGE (col, &first, &last);
+        lfirst = (p4est_locidx_t) first;
+        llast = (p4est_locidx_t) last;
+        savedata = (p4est_locidx_t *) savecol->p.user_data;
+        savedata[0] = lfirst;
+        savedata[1] = llast;
+      }
+    }
+  }
+
+  /* save the columns */
+  p4est_save_ext (filename, savecolumns, 1, save_partition);
+
+  p4est_destroy (savecolumns);
+
+  if (rank == 0) {
+    file = fopen (filename, "ab");
+    SC_CHECK_ABORT (file != NULL, "file open");
+
+    /* align */
+    fpos = ftell (file);
+    SC_CHECK_ABORT (fpos > 0, "first file tell");
+    while (fpos % align != 0) {
+      retval = fputc ('\0', file);
+      SC_CHECK_ABORT (retval == 0, "first file align");
+      ++fpos;
+    }
+
+    /* write the p6est_connectivity extra data */
+    sink = sc_io_sink_new (SC_IO_TYPE_FILEFILE, SC_IO_MODE_APPEND,
+                           SC_IO_ENCODE_NONE, file);
+    SC_CHECK_ABORT (sink != NULL, "file sink");
+    retval = p6est_connectivity_extra_sink (p6est->connectivity, sink);
+    SC_CHECK_ABORT (retval == 0, "sink connectivity");
+    retval = sc_io_sink_destroy (sink);
+    SC_CHECK_ABORT (retval == 0, "destroy sink");
+
+    fpos = ftell (file);
+    SC_CHECK_ABORT (fpos > 0, "second file tell");
+    while (fpos % align != 0) {
+      retval = fputc ('\0', file);
+      SC_CHECK_ABORT (retval == 0, "second file align");
+      ++fpos;
+    }
+
+#ifdef P4EST_MPIIO_WRITE
+    /* We will close the sequential access to the file */
+    /* best attempt to flush file to disk */
+    retval = fflush (file);
+    SC_CHECK_ABORT (retval == 0, "file flush");
+#ifdef P4EST_HAVE_FSYNC
+    retval = fsync (fileno (file));
+    SC_CHECK_ABORT (retval == 0, "file fsync");
+#endif
+    retval = fclose (file);
+    SC_CHECK_ABORT (retval == 0, "file close");
+    file = NULL;
+#else
+    /* file is still open for sequential write mode */
+#endif
+  }
+  else {
+    file = NULL;
+  }
+
+#ifndef P4EST_MPIIO_WRITE
+  if (rank > 0) {
+    /* wait for sequential synchronization */
+#ifdef P4EST_MPI
+    mpiret = MPI_Recv (&fpos, 1, MPI_LONG, rank - 1, P4EST_COMM_SAVE,
+                       p6est->mpicomm, &mpistatus);
+    SC_CHECK_MPI (mpiret);
+#endif
+
+    /* open file after all previous processors have written to it */
+    file = fopen (filename, "rb+");
+    SC_CHECK_ABORT (file != NULL, "file open");
+  }
+#else
+  /* Every core opens the file in append mode */
+  mpiret = MPI_File_open (p6est->mpicomm, (char *) filename,
+                          MPI_MODE_WRONLY | MPI_MODE_APPEND |
+                          MPI_MODE_UNIQUE_OPEN, MPI_INFO_NULL, &mpifile);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_File_get_position (mpifile, &mpipos);
+  SC_CHECK_MPI (mpiret);
+#endif
+
+  if (rank > 0) {
+    /* seek to the beginning of this processor's storage */
+    foffset = (long) (p6est->global_first_layer[rank] * comb_size);
+
+#ifndef P4EST_MPIIO_WRITE
+    fthis = fpos + foffset;
+    retval = fseek (file, fthis, SEEK_SET);
+    SC_CHECK_ABORT (retval == 0, "seek data");
+#else
+    mpithis = mpipos + (MPI_Offset) foffset;
+    mpiret = MPI_File_seek (mpifile, mpithis, MPI_SEEK_SET);
+    SC_CHECK_MPI (mpiret);
+#endif
+  }
+
+  /* write layers and data interleaved */
+  bp = lbuf = P4EST_ALLOC (char, comb_size * nlayers);
+  for (zz = 0; zz < nlayers; zz++) {
+    p2est_quadrant_t   *layer;
+    p4est_qcoord_t     *qpos;
+
+    qpos = (p4est_locidx_t *) bp;
+
+    layer = p2est_quadrant_array_index (p6est->layers, zz);
+    *qpos++ = layer->z;
+    *qpos++ = (p4est_qcoord_t) layer->level;
+    if (save_data) {
+      memcpy (qpos, layer->p.user_data, data_size);
+    }
+    bp += comb_size;
+  }
+#ifndef P4EST_MPIIO_WRITE
+  sc_fwrite (lbuf, comb_size, nlayers, file, "write quadrants");
+#else
+  sc_mpi_write (mpifile, lbuf, comb_size * nlayers, MPI_BYTE,
+                "write quadrants");
+#endif
+  P4EST_FREE (lbuf);
+
+#ifndef P4EST_MPIIO_WRITE
+  /* best attempt to flush file to disk */
+  retval = fflush (file);
+  SC_CHECK_ABORT (retval == 0, "file flush");
+#ifdef P4EST_HAVE_FSYNC
+  retval = fsync (fileno (file));
+  SC_CHECK_ABORT (retval == 0, "file fsync");
+#endif
+  retval = fclose (file);
+  SC_CHECK_ABORT (retval == 0, "file close");
+  file = NULL;
+
+  /* initiate sequential synchronization */
+#ifdef P4EST_MPI
+  if (rank < num_procs - 1) {
+    mpiret = MPI_Send (&fpos, 1, MPI_LONG, rank + 1, P4EST_COMM_SAVE,
+                       p6est->mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+#endif
+#else
+  mpiret = MPI_File_close (&mpifile);
+  SC_CHECK_MPI (mpiret);
+#endif
+
+  p4est_log_indent_pop ();
+  P4EST_GLOBAL_PRODUCTION ("Done p6est_save\n");
+}
+
 typedef struct p6est_refine_col_data
 {
   p6est_refine_column_t refine_col_fn;
@@ -608,8 +991,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_columns with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   refine_col.refine_col_fn = refine_fn;
@@ -629,8 +1012,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_columns with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -658,8 +1041,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_layers with %lld total layers"
                             " in %lld total columns, allowed level %d\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants,
                             allowed_level);
   p4est_log_indent_push ();
@@ -737,8 +1120,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_layers with %lld total layers "
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -1112,8 +1495,8 @@ p6est_coarsen_layers_ext (p6est_t * p6est, int coarsen_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_coarsen_layers with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
 
@@ -1254,8 +1637,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_parition with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   /* wrap the p6est_weight_t in a p4est_weight_t */
@@ -1593,8 +1976,8 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_coarsen_layers with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
 
@@ -1668,8 +2051,8 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_balance with %lld total layers "
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 

@@ -35,7 +35,7 @@ typedef struct p6est_connectivity
 {
   p4est_connectivity_t *conn4;  /* owned: vertices interpreted as the vertices
                                    of the bottom of the sheet */
-  double             *top_to_vertex;    /* if NULL, uniform vertical profile,
+  double             *top_vertices;     /* if NULL, uniform vertical profile,
                                            otherwise the vertices of the top of
                                            the sheet: should be the same size
                                            as \a conn4->tree_to_vertex; owned. */
