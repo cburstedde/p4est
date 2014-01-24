@@ -138,6 +138,7 @@ main (int argc, char **argv)
   double              height[3] = { 0., 0., 0.1 };
   int                 mpiret;
   int                 i;
+  unsigned            crc_computed;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -205,6 +206,10 @@ main (int argc, char **argv)
 
     p6est_lnodes_destroy (lnodes);
   }
+
+  crc_computed = p6est_checksum (p6est);
+
+  P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
 
   p6est_destroy (p6est);
 
