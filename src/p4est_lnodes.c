@@ -2538,7 +2538,6 @@ p4est_lnodes_share_owned_begin (sc_array_t * node_data,
     lrank = p4est_lnodes_rank_array_index_int (sharers, p);
     proc = lrank->rank;
     if (proc == mpirank) {
-      send_buf = (sc_array_t *) sc_array_push (send_bufs);
       continue;
     }
     if (lrank->owned_count) {
