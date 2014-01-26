@@ -268,7 +268,8 @@ p4est_wrap_mark_refine (p4est_wrap_t * pp,
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
   tree = p4est_tree_array_index (p4est->trees, which_tree);
-  P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
+  P4EST_ASSERT (0 <= which_quad &&
+                which_quad < (p4est_locidx_t) tree->quadrants.elem_count);
   pos = tree->quadrants_offset + which_quad;
   P4EST_ASSERT (0 <= pos && pos < p4est->local_num_quadrants);
 
@@ -293,7 +294,8 @@ p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
   tree = p4est_tree_array_index (p4est->trees, which_tree);
-  P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
+  P4EST_ASSERT (0 <= which_quad &&
+                which_quad < (p4est_locidx_t) tree->quadrants.elem_count);
   pos = tree->quadrants_offset + which_quad;
   P4EST_ASSERT (0 <= pos && pos < p4est->local_num_quadrants);
 
