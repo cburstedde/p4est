@@ -170,15 +170,15 @@ main (int argc, char **argv)
 
   copy_p6est = p6est_copy (p6est, 1);
   p6est_coarsen_columns (copy_p6est, 1, coarsen_column_fn, init_fn);
-  //p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_columns");
+  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_columns");
   p6est_destroy (copy_p6est);
 
   copy_p6est = p6est_copy (p6est, 1);
   p6est_coarsen_layers (copy_p6est, 0, coarsen_layer_fn, init_fn);
-  //p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
+  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
   p6est_destroy (copy_p6est);
 
-  //p6est_vtk_write_file (p6est, "p6est_test_pre_balance");
+  p6est_vtk_write_file (p6est, "p6est_test_pre_balance");
 
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FACE);
   p6est_ghost_destroy (ghost);
@@ -188,16 +188,16 @@ main (int argc, char **argv)
   p6est_ghost_destroy (ghost);
 
   p6est_balance (p6est, P8EST_CONNECT_FACE, init_fn);
-  //p6est_vtk_write_file (p6est, "p6est_test_balance_face");
+  p6est_vtk_write_file (p6est, "p6est_test_balance_face");
   p6est_balance (p6est, P8EST_CONNECT_EDGE, init_fn);
-  //p6est_vtk_write_file (p6est, "p6est_test_balance_edge");
+  p6est_vtk_write_file (p6est, "p6est_test_balance_edge");
   p6est_balance (p6est, P8EST_CONNECT_FULL, init_fn);
-  //p6est_vtk_write_file (p6est, "p6est_test_balance_full");
+  p6est_vtk_write_file (p6est, "p6est_test_balance_full");
 
   p6est_partition (p6est, weight_fn);
   p6est_partition (p6est, NULL);
 
-  //p6est_vtk_write_file (p6est, "p6est_test_partition");
+  p6est_vtk_write_file (p6est, "p6est_test_partition");
 
   for (i = 1; i <= 3; i++) {
     p6est_lnodes_t     *lnodes;
