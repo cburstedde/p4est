@@ -216,6 +216,7 @@ p4est_log_indent_push ()
 {
   sc_log_indent_push_count (p4est_package_id, 1);
 }
+
 static inline void
 p4est_log_indent_pop ()
 {

@@ -219,6 +219,15 @@ p4est_t            *p4est_load_ext (const char *filename, MPI_Comm mpicomm,
                                     void *user_pointer,
                                     p4est_connectivity_t ** connectivity);
 
+/** The same as p4est_load_ext, but reading the connectivity/p4est from an
+ * open sc_io_source_t stream.
+ */
+p4est_t            *p4est_source_ext (sc_io_source_t * src, MPI_Comm mpicomm,
+                                      size_t data_size, int load_data,
+                                      int autopartition, int broadcasthead,
+                                      void *user_pointer,
+                                      p4est_connectivity_t ** connectivity);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_EXTENDED_H */

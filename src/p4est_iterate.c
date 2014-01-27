@@ -568,8 +568,7 @@ p4est_iter_init_loop_corner (p4est_iter_loop_args_t * loop_args,
  */
 static void
 p4est_iter_copy_indices (p4est_iter_loop_args_t * loop_args,
-                         const int *start_idx2,
-                         int old_num, int factor)
+                         const int *start_idx2, int old_num, int factor)
 {
   const int           local = 0;
   const int           ghost = 1;
@@ -2004,7 +2003,7 @@ p8est_iter_init_edge_from_face (p8est_iter_edge_args_t * args,
 }
 #endif
 
-#if 0 /* currently unused */
+#if 0                           /* currently unused */
 
 static int
 fside_compare (const void *a, const void *b)
