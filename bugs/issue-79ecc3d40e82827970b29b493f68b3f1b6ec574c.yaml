@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: read-safe file write routines
+desc: Should the files created by the _save routines be readable by all processes immediately?  With parallel I/O, we need to be sure that the writing has complete before any reading begins, maybe with an MPI_Barrier at the end of _save routines?
+type: :task
+component: p4est
+release: 
+reporter: Tobin Isaac <tisaac@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2014-01-27 14:44:25.946743 Z
+references: []
+
+id: 79ecc3d40e82827970b29b493f68b3f1b6ec574c
+log_events: 
+- - 2014-01-27 14:44:29.058674 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - created
+  - ""
