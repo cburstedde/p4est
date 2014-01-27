@@ -43,9 +43,9 @@ SC_EXTERN_C_BEGIN;
  * partition-unique numbering.
  *
  * Although we call a p2est_quadrant_t coordinate layer->z, the orientaton of
- * a layer from lnodes perspect is that the vertical axis is the X axis of the
- * 3D element, the x axis of the columns is the Y axis of the 3D element, and
- * the y axis of the columns is the Z axis of the 3D element
+ * a layer from lnodes perspective is that the vertical axis is the X axis of
+ * the 3D element, the x axis of the columns is the Y axis of the 3D element,
+ * and the y axis of the columns is the Z axis of the 3D element
  */
 
 typedef p8est_lnodes_t p6est_lnodes_t;
@@ -136,18 +136,20 @@ p6est_lnodes_decode (p6est_lnodes_code_t face_code, int hanging_face[6],
     memset (hanging_face, -1, 6 * sizeof (int));
     memset (hanging_edge, -1, 12 * sizeof (int));
 
-    p4est_lnodes_decode (fc4, hanging_face);
+    /* the first two faces are the top and bottom face, which we know are not
+     * hanging */
+    p4est_lnodes_decode (fc4, hanging_face + 2);
     for (f = 0; f < 4; f++) {
-      hf = hanging_face[f];
+      hf = hanging_face[f + 2];
       if (hf >= 0) {
-        hanging_edge[p8est_face_edges[f][0]] = 2 + hf;
-        hanging_edge[p8est_face_edges[f][1]] = 2 + hf;
-        hanging_edge[p8est_face_edges[f][3 ^ hf]] = 4;
+        hanging_edge[p8est_face_edges[f + 2][0]] = 2 + hf;
+        hanging_edge[p8est_face_edges[f + 2][1]] = 2 + hf;
+        hanging_edge[p8est_face_edges[f + 2][3 ^ hf]] = 4;
       }
       if (work & 0x0001) {
-        hanging_edge[p8est_face_edges[f][1 ^ h]] = 4;
-        hanging_edge[p8est_face_edges[f][2]] = 2 + h;
-        hanging_edge[p8est_face_edges[f][3]] = 2 + h;
+        hanging_edge[p8est_face_edges[f + 2][1 ^ h]] = 4;
+        hanging_edge[p8est_face_edges[f + 2][2]] = 2 + h;
+        hanging_edge[p8est_face_edges[f + 2][3]] = 2 + h;
         if (hanging_face[f] >= 0) {
           hanging_face[f] += h2;
         }
@@ -156,8 +158,8 @@ p6est_lnodes_decode (p6est_lnodes_code_t face_code, int hanging_face[6],
     }
     for (e = 0; e < 4; e++) {
       if (work & 0x0001) {
-        if (hanging_edge[8 + e] < 0) {
-          hanging_edge[8 + e] = h;
+        if (hanging_edge[e] < 0) {
+          hanging_edge[e] = h;
         }
       }
       work >>= 1;
