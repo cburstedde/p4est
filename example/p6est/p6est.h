@@ -114,13 +114,6 @@ typedef struct p6est
   void               *user_pointer;     /* convenience pointer for users,
                                            will never be touched by p4est */
   p6est_connectivity_t *connectivity;   /* topology of sheet, not owned. */
-  double              height[3];        /* offset from bottom to top,
-                                           if uniform height profile */
-  double             *top_to_vertices;  /* if this is not NULL, it should be an
-                                           array of the same size as \a
-                                           connectivity->tree_to_vertex: points
-                                           in the interior of the sheet
-                                           trilinearly interpolate between them. */
   p4est_t            *columns;  /* 2D description of column layout
                                    built from \a connectivity */
   sc_array_t         *layers;   /* single array that stores
@@ -410,7 +403,7 @@ void                p6est_save (const char *filename, p6est_t * p6est,
 p6est_t            *p6est_load (const char *filename, MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
-                                p4est_connectivity_t ** connectivity);
+                                p6est_connectivity_t ** connectivity);
 
 /** Return a pointer to a quadrant array element indexed by a size_t. */
 /*@unused@*/

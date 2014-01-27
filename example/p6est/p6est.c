@@ -217,8 +217,7 @@ p6est_connectivity_extra_source (p4est_connectivity_t * conn4,
   }
   else {
     top_vertices = NULL;
-    retval = sc_io_source_read (source, conn->height, 3 * sizeof (double),
-                                NULL);
+    retval = sc_io_source_read (source, height, 3 * sizeof (double), NULL);
     if (retval) {
       return NULL;
     }
@@ -231,7 +230,7 @@ p6est_connectivity_extra_source (p4est_connectivity_t * conn4,
   conn->height[1] = height[1];
   conn->height[2] = height[2];
 
-  return 0;
+  return conn;
 }
 
 int
@@ -612,6 +611,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   int                 rank = p6est->mpirank;
   long                fpos = -1, foffset;
   int                 align = 32;
+  uint64_t            u64a;
   sc_io_sink_t       *sink;
   int                 retval, mpiret;
   p4est_t            *savecolumns;
@@ -626,6 +626,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   int                 num_procs = p6est->mpisize;
 
   P4EST_GLOBAL_PRODUCTION ("Into p6est_save\n");
+  p4est_log_indent_push ();
 
   savecolumns = p4est_copy (p6est->columns, 0);
   p4est_reset_data (savecolumns, 2 * sizeof (p4est_locidx_t), NULL, NULL);
@@ -702,6 +703,18 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     while (fpos % align != 0) {
       retval = fputc ('\0', file);
       SC_CHECK_ABORT (retval == 0, "second file align");
+      ++fpos;
+    }
+
+    /* write the data size */
+    u64a = (uint64_t) data_size;
+    sc_fwrite (&u64a, sizeof (uint64_t), 1, file, "write data size");
+
+    fpos = ftell (file);
+    SC_CHECK_ABORT (fpos > 0, "third file tell");
+    while (fpos % align != 0) {
+      retval = fputc ('\0', file);
+      SC_CHECK_ABORT (retval == 0, "third file align");
       ++fpos;
     }
 
@@ -814,6 +827,169 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done p6est_save\n");
+}
+
+p6est_t            *p6est_load_ext (const char *filename, MPI_Comm mpicomm,
+                                    size_t data_size, int load_data,
+                                    int autopartition, int broadcasthead,
+                                    void *user_pointer,
+                                    p6est_connectivity_t ** connectivity);
+
+p6est_t            *
+p6est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
+            int load_data, void *user_pointer,
+            p6est_connectivity_t ** connectivity)
+{
+  return p6est_load_ext (filename, mpicomm, data_size, load_data,
+                         0, 0, user_pointer, connectivity);
+}
+
+p6est_t            *
+p6est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
+                int load_data, int autopartition, int broadcasthead,
+                void *user_pointer, p6est_connectivity_t ** connectivity)
+{
+  int                 align = 32;
+  int                 retval;
+  sc_io_source_t     *src;
+  p4est_t            *loadcolumns, *columns;
+  p4est_connectivity_t *conn4;
+  p6est_connectivity_t *conn;
+  p4est_topidx_t      jt;
+  p4est_tree_t       *tree, *loadtree;
+  p4est_quadrant_t   *col, *loadcol;
+  sc_array_t         *tquadrants, *loadtquadrants;
+  size_t              zz, first, last, zcount, zpadding;
+  p4est_locidx_t     *loaddata, lfirst, llast, nlayers;
+  p6est_t            *p6est;
+  size_t              save_data_size, comb_size;
+  uint64_t            u64a;
+  p4est_gloidx_t     *gfl;
+  int                 rank, mpisize;
+
+  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_load %s\n", filename);
+  p4est_log_indent_push ();
+
+  /* open file on all processors */
+  src = sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
+  SC_CHECK_ABORT (src != NULL, "file source");
+
+  loadcolumns = p4est_source_ext (src, mpicomm, 2 * sizeof (p4est_locidx_t),
+                                  1, autopartition, broadcasthead, NULL,
+                                  &conn4);
+  columns = p4est_copy (loadcolumns, 0);
+
+  nlayers = 0;
+  for (jt = columns->first_local_tree; jt <= columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (columns->trees, jt);
+    loadtree = p4est_tree_array_index (loadcolumns->trees, jt);
+    tquadrants = &tree->quadrants;
+    loadtquadrants = &loadtree->quadrants;
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      loadcol = p4est_quadrant_array_index (loadtquadrants, zz);
+      loaddata = (p4est_locidx_t *) loadcol->p.user_data;
+      lfirst = loaddata[0];
+      llast = loaddata[1];
+      first = (size_t) lfirst;
+      last = (size_t) llast;
+      nlayers += llast - lfirst;
+      P6EST_COLUMN_SET_RANGE (col, first, last);
+    }
+  }
+  columns->connectivity = conn4;
+  p4est_destroy (loadcolumns);
+
+  /* padding */
+  zcount = src->bytes_out;
+  zpadding = (align - zcount % align) % align;
+  retval = sc_io_source_read (src, NULL, zpadding, NULL);
+  SC_CHECK_ABORT (!retval, "source padding");
+
+  conn = p6est_connectivity_extra_source (columns->connectivity, src);
+  if (connectivity != NULL) {
+    *connectivity = conn;
+  }
+
+  /* padding */
+  zcount = src->bytes_out;
+  zpadding = (align - zcount % align) % align;
+  retval = sc_io_source_read (src, NULL, zpadding, NULL);
+  SC_CHECK_ABORT (!retval, "source padding");
+
+  /* read data size */
+  retval = sc_io_source_read (src, &u64a, sizeof (uint64_t), NULL);
+  SC_CHECK_ABORT (!retval, "source data size");
+  save_data_size = (size_t) u64a;
+
+  if (load_data) {
+    SC_CHECK_ABORT (save_data_size == data_size, "data size mismatch");
+  }
+
+  /* padding */
+  zcount = src->bytes_out;
+  zpadding = (align - zcount % align) % align;
+  retval = sc_io_source_read (src, NULL, zpadding, NULL);
+  SC_CHECK_ABORT (!retval, "source padding");
+
+  p6est = P4EST_ALLOC (p6est_t, 1);
+  columns->user_pointer = p6est;
+
+  p6est->columns = columns;
+  p6est->connectivity = conn;
+  p6est->data_size = data_size;
+  p6est->mpicomm = mpicomm;
+  p6est->mpisize = mpisize = columns->mpisize;
+  p6est->mpirank = rank = columns->mpirank;
+  p6est->global_first_layer = gfl = P4EST_ALLOC (p4est_gloidx_t,
+                                                 p6est->mpisize + 1);
+  p6est->layers =
+    sc_array_new_size (sizeof (p2est_quadrant_t), (size_t) nlayers);
+  p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
+  p6est->user_pointer = user_pointer;
+  p6est->user_data_pool = data_size ? sc_mempool_new (data_size) : NULL;
+
+  p6est_update_offsets (p6est);
+
+  comb_size = 2 * sizeof (p4est_qcoord_t) + save_data_size;
+
+  if (gfl[rank]) {
+    /* seek to the start of my layers */
+    retval = sc_io_source_read (src, NULL, (long) (gfl[rank] * comb_size),
+                                NULL);
+    SC_CHECK_ABORT (!retval, "seek to layers");
+  }
+
+  if (nlayers) {
+    sc_array_t         *loaddata;
+
+    loaddata = sc_array_new_size (comb_size, (size_t) nlayers);
+
+    retval =
+      sc_io_source_read (src, loaddata->array, comb_size * nlayers, NULL);
+    SC_CHECK_ABORT (!retval, "read layers");
+
+    for (zz = 0; zz < nlayers; zz++) {
+      p2est_quadrant_t   *layer =
+        p2est_quadrant_array_index (p6est->layers, zz);
+      p4est_qcoord_t     *loadlayer =
+        (p4est_qcoord_t *) sc_array_index (loaddata, zz);
+
+      P2EST_QUADRANT_INIT (layer);
+      layer->z = loadlayer[0];
+      layer->level = (int8_t) loadlayer[1];
+      if (load_data) {
+        layer->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
+        memcpy (layer->p.user_data, &loadlayer[2], save_data_size);
+      }
+    }
+    sc_array_destroy (loaddata);
+  }
+
+  retval = sc_io_source_destroy (src);
+  SC_CHECK_ABORT (!retval, "destroy source");
+
+  return p6est;
 }
 
 typedef struct p6est_refine_col_data
@@ -991,8 +1167,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_columns with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   refine_col.refine_col_fn = refine_fn;
@@ -1012,8 +1188,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_columns with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -1041,8 +1217,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_layers with %lld total layers"
                             " in %lld total columns, allowed level %d\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants,
                             allowed_level);
   p4est_log_indent_push ();
@@ -1120,8 +1296,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_layers with %lld total layers "
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -1495,8 +1671,8 @@ p6est_coarsen_layers_ext (p6est_t * p6est, int coarsen_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_coarsen_layers with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
 
@@ -1637,8 +1813,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_parition with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   /* wrap the p6est_weight_t in a p4est_weight_t */
@@ -1976,8 +2152,8 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_coarsen_layers with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
 
@@ -2051,8 +2227,8 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_balance with %lld total layers "
                             " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long) p6est->global_first_layer[p6est->
+                                                                  mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
