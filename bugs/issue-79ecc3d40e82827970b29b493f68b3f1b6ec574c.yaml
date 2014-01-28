@@ -16,3 +16,11 @@ log_events:
   - Tobin Isaac <tisaac@ices.utexas.edu>
   - created
   - ""
+- - 2014-01-28 17:11:05.821708 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    We could document that MPI_File_Close is called.
+    The user is then referred to the MPI standard and can take their own actions.
+    I think a barrier would not be transparent and rarely needed.
+    Propose to keep as is with added documentation.
