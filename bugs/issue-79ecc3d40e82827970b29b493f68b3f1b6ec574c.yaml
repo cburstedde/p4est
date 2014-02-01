@@ -24,3 +24,10 @@ log_events:
     The user is then referred to the MPI standard and can take their own actions.
     I think a barrier would not be transparent and rarely needed.
     Propose to keep as is with added documentation.
+- - 2014-02-01 16:23:10.905239 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - commented
+  - |-
+    if P4EST_MPIIO_WRITE is not defined, processes write in serial, and each exits
+    as soon as it has written its section.  Comment added to documentation about
+    this issue.

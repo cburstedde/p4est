@@ -348,6 +348,10 @@ unsigned            p8est_checksum (p8est_t * p8est);
  * \param [in] save_data   If true, the element data is saved.
  *                         Otherwise, a data size of 0 is saved.
  * \note            Aborts on file errors.
+ * \note            If p4est is not configured to use MPI-IO, some processes
+ *                  return from this function before the file is complete, in
+ *                  which case immediate read-access to the file may require a
+ *                  call to MPI_Barrier.
  */
 void                p8est_save (const char *filename, p8est_t * p8est,
                                 int save_data);
