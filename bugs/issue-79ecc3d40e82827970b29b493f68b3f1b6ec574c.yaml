@@ -31,3 +31,9 @@ log_events:
     if P4EST_MPIIO_WRITE is not defined, processes write in serial, and each exits
     as soon as it has written its section.  Comment added to documentation about
     this issue.
+- - 2014-02-08 16:44:06.149912 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    For non-MPI I/O configuration, we might indeed add a barrier or broadcast.
+    Also thinking to enable MPI I/O by default and run a configure test for it.
