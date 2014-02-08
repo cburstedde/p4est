@@ -486,7 +486,6 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   const int           rank = p4est->mpirank;
 #ifdef P4EST_MPI
   int                 mpiret;
-  int                 found;
   int                 owner, prev, start;
   int                 first_peer, last_peer;
   int                 num_send_queries, num_send_nonzero, num_recv_queries;
@@ -896,8 +895,8 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
       ttt = (p4est_topidx_t *) (&xyz[P4EST_DIM]);
       inkey.p.which_tree = *ttt;
-      found = sc_hash_array_lookup (indep_nodes, &inkey, &position);
-      P4EST_ASSERT (found);
+      P4EST_EXECUTE_ASSERT_TRUE (sc_hash_array_lookup
+                                 (indep_nodes, &inkey, &position));
       P4EST_ASSERT ((p4est_locidx_t) position >= offset_owned_indeps &&
                     (p4est_locidx_t) position < end_owned_indeps);
       node_number = (p4est_locidx_t *) xyz;
