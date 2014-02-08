@@ -84,8 +84,20 @@ typedef int64_t     p4est_gloidx_t;
 /* some error checking possibly specific to p4est */
 #ifdef P4EST_DEBUG
 #define P4EST_ASSERT(c) SC_CHECK_ABORT ((c), "Assertion '" #c "'")
+#define P4EST_EXECUTE_ASSERT_FALSE(expression)                          \
+  do { int _p4est_i = (int) (expression);                               \
+       SC_CHECK_ABORT (!_p4est_i, "Expected false: '" #expression "'"); \
+  } while (0)
+#define P4EST_EXECUTE_ASSERT_TRUE(expression)                           \
+  do { int _p4est_i = (int) (expression);                               \
+       SC_CHECK_ABORT (_p4est_i, "Expected true: '" #expression "'");   \
+  } while (0)
 #else
 #define P4EST_ASSERT(c) SC_NOOP ()
+#define P4EST_EXECUTE_ASSERT_FALSE(expression) \
+  do { (void) (expression); } while (0)
+#define P4EST_EXECUTE_ASSERT_TRUE(expression) \
+  do { (void) (expression); } while (0)
 #endif
 
 /* macros for memory allocation, will abort if out of memory */

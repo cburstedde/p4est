@@ -1206,7 +1206,7 @@ p4est_ghost_mirror_init (p4est_ghost_t * ghost, int mpirank,
 
   m->send_bufs = send_bufs;
   P4EST_ASSERT (m->send_bufs->elem_size == sizeof (sc_array_t));
-  P4EST_ASSERT (m->send_bufs->elem_count == m->mpisize);
+  P4EST_ASSERT (m->send_bufs->elem_count == (size_t) m->mpisize);
 
   m->mirrors = &ghost->mirrors;
   P4EST_ASSERT (m->mirrors->elem_size == sizeof (p4est_quadrant_t));
@@ -2369,7 +2369,7 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
   SC_CHECK_MPI (mpiret);
   sc_array_reset (&requests);
   for (zz = 0; zz < sbuffers.elem_count; ++zz) {
-    sbuf = sc_array_index (&sbuffers, zz);
+    sbuf = (char **) sc_array_index (&sbuffers, zz);
     P4EST_FREE (*sbuf);
   }
   sc_array_reset (&sbuffers);
@@ -2516,7 +2516,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
         for (lmatches = 0, theg = 0; theg < ng; ++theg) {
           g = p4est_quadrant_array_index (&ghost->ghosts, ng_excl + theg);
           if (minlevel <= (int) g->level && (int) g->level <= maxlevel) {
-            memcpy (ghost_data + (ng_excl + theg) * data_size,
+            memcpy ((char *) ghost_data + (ng_excl + theg) * data_size,
                     *rbuf + lmatches * data_size, data_size);
             ++lmatches;
           }

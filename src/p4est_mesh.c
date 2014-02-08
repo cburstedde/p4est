@@ -604,7 +604,10 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   int                 qtf;
   p4est_topidx_t      which_tree;
   p4est_locidx_t      qtq, quadfacecode;
-  p4est_locidx_t      lnq, ngh, *halfs;
+  p4est_locidx_t      lnq, *halfs;
+#ifdef P4EST_DEBUG
+  p4est_locidx_t      ngh;
+#endif
   p4est_quadrant_t   *q;
 
   /* We have already processed the last quadrant */
@@ -615,7 +618,9 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
 
   /* Make sure we have a valid quadrant face and iterator */
   lnq = mfn->mesh->local_num_quadrants;
+#ifdef P4EST_DEBUG
   ngh = mfn->mesh->ghost_num_quadrants;
+#endif
   P4EST_ASSERT (mfn->face >= 0 && mfn->face < P4EST_FACES);
   P4EST_ASSERT (mfn->subface >= 0 && mfn->subface < P4EST_HALF);
   P4EST_ASSERT (mfn->p4est->local_num_quadrants == lnq);

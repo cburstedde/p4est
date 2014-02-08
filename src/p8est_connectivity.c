@@ -863,7 +863,10 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
   int                 redge, nedge, iflip, nflip;
   int                 pref, pset, fc[2];
   int                 faces[2], nfaces[2], orients[2];
-  int                 founds[2], nows[2];
+#ifdef P4EST_DEBUG
+  int                 founds[2];
+#endif
+  int                 nows[2];
   p4est_topidx_t      etree, ietree, ntree;
   p8est_edge_transform_t *et;
   sc_array_t         *ta = &ei->edge_transforms;
@@ -891,7 +894,9 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
       fcorners[i] = p8est_edge_face_corners[iedge][faces[i]];
       P4EST_ASSERT (fcorners[i][0] >= 0 && fcorners[i][1] >= 0);
     }
+#ifdef P4EST_DEBUG
     founds[i] = 0;
+#endif
   }
 
   /* find orientation of this edge */
@@ -937,7 +942,10 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
 
           if (fc[0] == nfcorners[nflip] && fc[1] == nfcorners[!nflip]) {
             P4EST_ASSERT (!founds[i] && !nows[!i]);
-            founds[i] = nows[i] = 1;
+#ifdef P4EST_DEBUG
+            founds[i] = 1;
+#endif
+            nows[i] = 1;
           }
           else if (fc[0] == nfcorners[!nflip] && fc[1] == nfcorners[nflip]) {
             ++flipped;

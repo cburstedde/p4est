@@ -346,11 +346,17 @@ unsigned            p4est_checksum (p4est_t * p4est);
  * operation that all MPI processes need to call.  All processes write
  * into the same file, so the filename given needs to be identical over
  * all parallel invocations.
+ *
+ *
  * \param [in] filename    Name of the file to write.
  * \param [in] p4est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
  *                         Otherwise, a data size of 0 is saved.
  * \note            Aborts on file errors.
+ * \note            If p4est is not configured to use MPI-IO, some processes
+ *                  return from this function before the file is complete, in
+ *                  which case immediate read-access to the file may require a
+ *                  call to MPI_Barrier.
  */
 void                p4est_save (const char *filename, p4est_t * p4est,
                                 int save_data);
