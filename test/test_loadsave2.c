@@ -150,7 +150,7 @@ test_deflate (p4est_t * p4est)
 
 static void
 test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
-               MPI_Comm mpicomm, int mpirank)
+               sc_MPI_Comm mpicomm, int mpirank)
 {
   int                 mpiret, retval;
   unsigned            csum, csum2;
@@ -175,12 +175,12 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
     retval = p4est_connectivity_save (conn_name, connectivity);
     SC_CHECK_ABORT (retval == 0, "connectivity_save failed");
   }
-  mpiret = MPI_Barrier (mpicomm);
+  mpiret = sc_MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   conn2 = p4est_connectivity_load (conn_name, NULL);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_CONN_LOAD, elapsed, "conn load");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
@@ -188,14 +188,14 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_connectivity_destroy (conn2);
 
   /* save, synchronize, load p4est and compare */
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est_save (p4est_name, p4est, 1);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_SAVE1, elapsed, "p4est save 1");
 
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est2 = p4est_load (p4est_name, mpicomm, sizeof (int), 1, NULL, &conn2);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_LOAD1a, elapsed, "p4est load 1a");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
@@ -205,9 +205,9 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_destroy (p4est2);
   p4est_connectivity_destroy (conn2);
 
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est2 = p4est_load (p4est_name, mpicomm, 0, 0, NULL, &conn2);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_LOAD1b, elapsed, "p4est load 1b");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
@@ -226,14 +226,14 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                  (double) p4est->local_num_quadrants, "p4est elements");
 
   /* save, synchronize, load p4est and compare */
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est_save (p4est_name, p4est, 0);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_SAVE2, elapsed, "p4est save 2");
 
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est2 = p4est_load (p4est_name, mpicomm, sizeof (int), 0, NULL, &conn2);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_LOAD2, elapsed, "p4est load 2");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
@@ -244,14 +244,14 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_connectivity_destroy (conn2);
 
   /* save, synchronize, load p4est and compare */
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est_save (p4est_name, p4est, 1);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_SAVE3, elapsed, "p4est save 3");
 
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est2 = p4est_load (p4est_name, mpicomm, sizeof (int), 0, NULL, &conn2);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   sc_stats_set1 (stats + STATS_P4EST_LOAD3, elapsed, "p4est load 3");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
@@ -262,10 +262,10 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_connectivity_destroy (conn2);
 
   /* Test autopartition load feature */
-  wtime = MPI_Wtime ();
+  wtime = sc_MPI_Wtime ();
   p4est2 = p4est_load_ext (p4est_name, mpicomm, sizeof (int), 0,
                            1, 0, NULL, &conn2);
-  elapsed = MPI_Wtime () - wtime;
+  elapsed = sc_MPI_Wtime () - wtime;
   csum2 = p4est_checksum (p4est2);
   sc_stats_set1 (stats + STATS_P4EST_LOAD4, elapsed, "p4est load 4");
 
@@ -288,7 +288,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
 int
 main (int argc, char **argv)
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 mpirank;
   int                 first_arg;
@@ -297,10 +297,10 @@ main (int argc, char **argv)
   sc_options_t       *opt;
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
   /* initialize libsc and p4est */
@@ -343,7 +343,7 @@ main (int argc, char **argv)
   sc_options_destroy (opt);
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

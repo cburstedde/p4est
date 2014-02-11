@@ -57,7 +57,7 @@ sc_array_t         *p8est_deflate_quadrants (p8est_t * p8est,
  * \param [in] user_pointer  Assign to the user_pointer member of the p4est.
  * \return              The newly created p4est.
  */
-p8est_t            *p8est_inflate (MPI_Comm mpicomm,
+p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
                                    p8est_connectivity_t * connectivity,
                                    const p4est_gloidx_t *
                                    global_first_quadrant,

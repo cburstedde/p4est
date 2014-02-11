@@ -133,11 +133,11 @@ int                 p8est_comm_neighborhood_owned (p8est_t * p8est,
 /** Evaluates true/false of a flag among processors.
  * \param [in] p8est        The MPI communicator of this p8est will be used.
  * \param [in] flag         The variable to communicate.
- * \param [in] operation    Either MPI_BAND or MPI_BOR (not used bitwise).
+ * \param [in] operation    Either sc_MPI_BAND or sc_MPI_BOR (not used bitwise).
  * \return          Returns the logical AND resp. OR of all processors' flags.
  */
 int                 p8est_comm_sync_flag (p8est_t * p8est,
-                                          int flag, MPI_Op operation);
+                                          int flag, sc_MPI_Op operation);
 
 /** Compute a parallel checksum out of local checksums.
  * \param [in] p8est       The MPI information of this p8est will be used.

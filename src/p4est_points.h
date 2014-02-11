@@ -61,7 +61,7 @@ SC_EXTERN_C_BEGIN;
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
  */
-p4est_t            *p4est_new_points (MPI_Comm mpicomm,
+p4est_t            *p4est_new_points (sc_MPI_Comm mpicomm,
                                       p4est_connectivity_t * connectivity,
                                       int maxlevel, p4est_quadrant_t * points,
                                       p4est_locidx_t num_points,

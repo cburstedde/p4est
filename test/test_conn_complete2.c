@@ -38,7 +38,7 @@ test_the_p4est (p4est_connectivity_t * conn, int N)
   p4est_ghost_t      *ghost;
   p4est_lnodes_t     *lnodes;
 
-  p4est = p4est_new (MPI_COMM_WORLD, conn, 0, NULL, NULL);
+  p4est = p4est_new (sc_MPI_COMM_WORLD, conn, 0, NULL, NULL);
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   lnodes = p4est_lnodes_new (p4est, ghost, N);
   p4est_lnodes_destroy (lnodes);
@@ -72,10 +72,10 @@ main (int argc, char **argv)
 {
   int                 mpiret;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
 #ifndef P4_TO_P8
@@ -103,7 +103,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

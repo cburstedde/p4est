@@ -54,12 +54,12 @@ main (int argc, char **argv)
   p4est_wrap_leaf_t  *leaf;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p4est_wrap_t       *wrap;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
+  mpicomm = sc_MPI_COMM_WORLD;
 
   sc_init (mpicomm, 0, 0, NULL, lp);
   p4est_init (NULL, lp);
@@ -122,7 +122,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

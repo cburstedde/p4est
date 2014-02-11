@@ -73,7 +73,7 @@ user_data_t;
 
 typedef struct
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize;
   int                 mpirank;
 }
@@ -241,8 +241,8 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   local_used[1] = (long) p4est_memory_used (p4est);
   local_used[2] = (long) p4est_ghost_memory_used (ghost);
   local_used[3] = (long) p4est_mesh_memory_used (mesh);
-  mpiret = MPI_Allreduce (local_used, global_used, 4, MPI_LONG, MPI_SUM,
-                          mpi->mpicomm);
+  mpiret = sc_MPI_Allreduce (local_used, global_used, 4, sc_MPI_LONG,
+                             sc_MPI_SUM, mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_PRODUCTIONF ("Total %s memory used %ld %ld %ld %ld\n",
                             uniform ? "uniform" : "adapted",
@@ -268,12 +268,12 @@ main (int argc, char **argv)
   simple_config_t     config;
 
   /* initialize MPI and p4est internals */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpi->mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  mpi->mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
+  mpiret = sc_MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -411,7 +411,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

@@ -34,11 +34,6 @@
 #endif
 #include <sc_ranges.h>
 
-#ifdef SC_ALLGATHER
-#include <sc_allgather.h>
-#define MPI_Allgather sc_allgather
-#endif
-
 #ifdef P4EST_MPI
 
 typedef struct
@@ -1510,5 +1505,5 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 failtest:
   P4EST_FREE (sorted);
 
-  return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
+  return !p4est_comm_sync_flag (p4est, failed, sc_MPI_BOR);
 }

@@ -44,11 +44,6 @@
 #include <zlib.h>
 #endif
 
-#ifdef SC_ALLGATHER
-#include <sc_allgather.h>
-#define MPI_Allgather sc_allgather
-#endif
-
 #ifdef P4EST_MPIIO
 #define P4EST_MPIIO_WRITE
 #endif
@@ -188,7 +183,7 @@ p4est_memory_used (p4est_t * p4est)
 }
 
 p4est_t            *
-p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+p4est_new (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
   return p4est_new_ext (mpicomm, connectivity, 0, 0, 1,
@@ -196,7 +191,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 }
 
 p4est_t            *
-p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                p4est_locidx_t min_quadrants, int min_level, int fill_uniform,
                size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
@@ -226,9 +221,9 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   /* assign some data members */
@@ -1382,7 +1377,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* start balance_A timing */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_A = -MPI_Wtime ();
+    p4est->inspect->balance_A = -sc_MPI_Wtime ();
     p4est->inspect->balance_A_count_in = 0;
     p4est->inspect->balance_A_count_out = 0;
     p4est->inspect->use_B = 0;
@@ -1617,8 +1612,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   is_balance_verify = 0;
 #endif
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_A += MPI_Wtime ();
-    p4est->inspect->balance_comm = -MPI_Wtime ();
+    p4est->inspect->balance_A += sc_MPI_Wtime ();
+    p4est->inspect->balance_comm = -sc_MPI_Wtime ();
     p4est->inspect->balance_comm_sent = 0;
     p4est->inspect->balance_comm_nzpeers = 0;
     for (k = 0; k < 2; ++k) {
@@ -2197,8 +2192,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* end balance_comm, start balance_B */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_comm += MPI_Wtime ();
-    p4est->inspect->balance_B = -MPI_Wtime ();
+    p4est->inspect->balance_comm += sc_MPI_Wtime ();
+    p4est->inspect->balance_B = -sc_MPI_Wtime ();
     p4est->inspect->balance_B_count_in = 0;
     p4est->inspect->balance_B_count_out = 0;
     p4est->inspect->use_B = 1;
@@ -2286,7 +2281,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* end balance_B */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_B += MPI_Wtime ();
+    p4est->inspect->balance_B += sc_MPI_Wtime ();
   }
 
 #ifdef P4EST_MPI
@@ -3414,7 +3409,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 }
 
 p4est_t            *
-p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
+p4est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
             int load_data, void *user_pointer,
             p4est_connectivity_t ** connectivity)
 {
@@ -3423,7 +3418,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 }
 
 p4est_t            *
-p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
+p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                 int load_data, int autopartition, int broadcasthead,
                 void *user_pointer, p4est_connectivity_t ** connectivity)
 {
@@ -3455,9 +3450,9 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
   SC_CHECK_ABORT (!broadcasthead, "Header broadcast not implemented");
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   /* open file on all processors */
