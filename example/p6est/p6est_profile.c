@@ -486,6 +486,9 @@ p6est_profile_element_to_node (p6est_t * p6est,
   size_t              zz;
   int                 swap[P4EST_FACES];
   p4est_topidx_t      nt;
+  p6est_lnodes_code_t mask = 0x1fe0;
+  p6est_lnodes_code_t hbit = 0x0010;
+  sc_array_t         *layers = p6est->layers;
 
   for (cid = 0, jt = columns->first_local_tree;
        jt <= columns->last_local_tree; ++jt) {
@@ -496,11 +499,11 @@ p6est_profile_element_to_node (p6est_t * p6est,
       p4est_locidx_t      nlayers;
       p4est_locidx_t      nid =
         profile->lnodes->element_nodes[P4EST_INSUL * cid + P4EST_INSUL / 2];
-
-      col = p4est_quadrant_array_index (tquadrants, zz);
       int                 f, nf;
+      size_t              first, last, zw, zy;
 
       col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
       for (f = 0; f < P4EST_FACES; f++) {
         p4est_quadrant_t    temp;
         swap[f] = 0;
@@ -520,6 +523,21 @@ p6est_profile_element_to_node (p6est_t * p6est,
       p6est_profile_element_to_node_col (profile, cid, degree, offsets,
                                          elem_to_node, swap, fc);
       elem_to_node += nlayers * (degree + 1) * (degree + 1) * (degree + 1);
+
+      for (zy = 0, zw = first; zw < last; zw++, zy++) {
+        if (fc[zy] & mask) {
+          /* this layer has vertical half faces, we need to set the bit that
+           * says whether this is the upper half or the lower half */
+          p2est_quadrant_t   *layer;
+
+          layer = p2est_quadrant_array_index (layers, zw);
+
+          if (layer->z & P4EST_QUADRANT_LEN (layer->level)) {
+            /* upper half of a pair of layers */
+            fc[zy] |= hbit;
+          }
+        }
+      }
       fc += nlayers;
     }
   }

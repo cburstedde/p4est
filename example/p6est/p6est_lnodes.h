@@ -127,32 +127,39 @@ p6est_lnodes_decode (p6est_lnodes_code_t face_code, int hanging_face[6],
      * nonconforming, followed by four bits indicating which of the four side
      * edges are layerwise nonconforming */
     p4est_lnodes_code_t fc4 = face_code & 0x000f;
-    int16_t             h = (face_code & 0x0010) >> 4;;
-    int16_t             h2 = h << 1;
+    int16_t             h = (face_code & 0x0010) >> 4;
     int16_t             work = face_code >> 5;
     int                 hf;
-    int                 f, e;
+    int                 f, e, w;
 
     memset (hanging_face, -1, 6 * sizeof (int));
     memset (hanging_edge, -1, 12 * sizeof (int));
 
-    /* the first two faces are the top and bottom face, which we know are not
+    /* the first two faces are the top and bottom faces, which we know are not
      * hanging */
     p4est_lnodes_decode (fc4, hanging_face + 2);
     for (f = 0; f < 4; f++) {
       hf = hanging_face[f + 2];
+      w = work & 0x0001;
       if (hf >= 0) {
-        hanging_edge[p8est_face_edges[f + 2][0]] = 2 + hf;
-        hanging_edge[p8est_face_edges[f + 2][1]] = 2 + hf;
-        hanging_edge[p8est_face_edges[f + 2][3 ^ hf]] = 4;
-      }
-      if (work & 0x0001) {
-        hanging_edge[p8est_face_edges[f + 2][1 ^ h]] = 4;
-        hanging_edge[p8est_face_edges[f + 2][2]] = 2 + h;
-        hanging_edge[p8est_face_edges[f + 2][3]] = 2 + h;
-        if (hanging_face[f] >= 0) {
-          hanging_face[f] += h2;
+        hanging_edge[p8est_face_edges[f + 2][2]] = 2 + hf;
+        hanging_edge[p8est_face_edges[f + 2][3]] = 2 + hf;
+        hanging_edge[p8est_face_edges[f + 2][1 ^ hf]] = 4;
+        if (w) {
+          hanging_edge[p8est_face_edges[f + 2][3 ^ h]] = 4;
+          hanging_edge[p8est_face_edges[f + 2][1 ^ hf]] = 4;
+          hanging_edge[p8est_face_edges[f + 2][hf]] = 2 + h;
+          hanging_face[f + 2] = (hf << 1) | h;
         }
+        else {
+          hanging_face[f + 2] = 4 + hf;
+        }
+      }
+      else if (w) {
+        hanging_edge[p8est_face_edges[f + 2][3 ^ h]] = 4;
+        hanging_edge[p8est_face_edges[f + 2][0]] = 2 + h;
+        hanging_edge[p8est_face_edges[f + 2][1]] = 2 + h;
+        hanging_face[f + 2] = 6 + h;
       }
       work >>= 1;
     }
@@ -161,6 +168,11 @@ p6est_lnodes_decode (p6est_lnodes_code_t face_code, int hanging_face[6],
         if (hanging_edge[e] < 0) {
           hanging_edge[e] = h;
         }
+#ifdef P4EST_DEBUG
+        else {
+          P4EST_ASSERT (hanging_edge[e] == 2 + h || hanging_edge[e] == 4);
+        }
+#endif
       }
       work >>= 1;
     }
