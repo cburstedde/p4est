@@ -308,7 +308,7 @@ p6est_profile_balance_full (sc_array_t * a, sc_array_t * b, sc_array_t * work)
 }
 
 static void
-p6est_profile_element_to_node_corner (sc_array_t * elem, sc_array_t * node,
+p6est_profile_element_to_node_single (sc_array_t * elem, sc_array_t * node,
                                       int degree, p4est_locidx_t offset,
                                       p4est_locidx_t ** elem_to_node,
                                       p6est_lnodes_code_t * fc, int fcoffset)
@@ -317,9 +317,7 @@ p6est_profile_element_to_node_corner (sc_array_t * elem, sc_array_t * node,
   size_t              az, bz;
   int                 i;
 
-  P4EST_ASSERT (degree >= 1 || degree == -1);
-
-  fcoffset += 5;
+  P4EST_ASSERT (degree > 1);
 
   az = 0;
 
@@ -336,7 +334,7 @@ p6est_profile_element_to_node_corner (sc_array_t * elem, sc_array_t * node,
         elem_to_node[az][i] = offset + bz * degree + i;
       }
       if (fc && a == b + 1) {
-        fc[az] |= (1 << fcoffset);
+        fc[az] |= (1 << (fcoffset + 5));
       }
       az++;
     } while (loop);
@@ -345,124 +343,65 @@ p6est_profile_element_to_node_corner (sc_array_t * elem, sc_array_t * node,
 }
 
 static void
-p6est_profile_element_to_node_face (sc_array_t * elem, sc_array_t * node,
-                                    int degree, p4est_locidx_t offset,
-                                    p4est_locidx_t ** elem_to_node,
-                                    p6est_lnodes_code_t * fc, int fcoffset)
-{
-  size_t              nelem = elem->elem_count;
-  size_t              nnode = node->elem_count * degree + 1;
-  int                 i;
-
-  P4EST_ASSERT (degree >= 1);
-
-  p6est_profile_element_to_node_corner (elem, node, -1, offset,
-                                        NULL, fc, fcoffset);
-  for (i = 0; i < degree - 1; i++) {
-    p6est_profile_element_to_node_corner (elem, node, degree, offset,
-                                          elem_to_node + i * nelem, NULL, -1);
-    offset += nnode;
-  }
-}
-
-static void
-p6est_profile_element_to_node_vol (sc_array_t * elem, sc_array_t * node,
-                                   int degree, p4est_locidx_t offset,
-                                   p4est_locidx_t ** elem_to_node)
-{
-  size_t              nelem = elem->elem_count;
-  size_t              nnode = node->elem_count * degree + 1;
-  int                 i;
-
-  P4EST_ASSERT (degree >= 1);
-
-  for (i = 0; i < (degree - 1) * (degree - 1); i++) {
-    p6est_profile_element_to_node_corner (elem, node, degree, offset,
-                                          elem_to_node + i * nelem, NULL, -1);
-    offset += nnode;
-  }
-}
-
-static void
 p6est_profile_element_to_node_col (p6est_profile_t * profile,
-                                   p4est_locidx_t cid, int degree,
+                                   p4est_locidx_t cid,
                                    p4est_locidx_t * offsets,
-                                   p4est_locidx_t * e_to_n, int *swap,
+                                   p4est_locidx_t * e_to_n,
                                    p6est_lnodes_code_t * fc)
 {
   p4est_locidx_t (*lr)[2] = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
   p4est_locidx_t      nelem;
   p4est_locidx_t    **elem_to_node;
-  int                 i, j, k, m, n, r;
+  int                 i, j, k;
   p4est_locidx_t      ll;
   sc_array_t          elem, node;
   sc_array_t         *lc = profile->lnode_columns;
   p4est_locidx_t      ncid, nid;
   p4est_lnodes_code_t fc4 = profile->lnodes->face_code[cid];
   p4est_locidx_t     *en = profile->lnodes->element_nodes;
+  int                 degree = profile->lnodes->degree;
+  int                 Nrp = degree + 1;
+  int                 Nfp = (degree + 1) * (degree + 1);
 
-  ncid = en[P4EST_INSUL * cid + P4EST_INSUL / 2];
+  P4EST_ASSERT (degree > 1);
 
+  ncid = en[Nfp / 2];
   nelem = lr[ncid][1];
 
-  elem_to_node =
-    P4EST_ALLOC (p4est_locidx_t *,
-                 SC_MAX (1, (degree - 1) * (degree - 1)) * nelem);
   sc_array_init_view (&elem, lc, lr[ncid][0], nelem);
+
+  elem_to_node = P4EST_ALLOC (p4est_locidx_t *, nelem);
 
   for (ll = 0; ll < nelem; ll++) {
     fc[ll] = (p6est_lnodes_code_t) fc4;
   }
-  for (k = 0, j = 0; j < 3; j++) {
-    for (i = 0; i < 3; i++, k++) {
-      nid = en[P4EST_INSUL * cid + k];
+  for (k = 0, j = 0; j < Nrp; j++) {
+    for (i = 0; i < Nrp; i++, k++) {
+      nid = en[Nfp * Nrp * cid + k];
       sc_array_init_view (&node, lc, lr[nid][0], lr[nid][1]);
-      if (i != 1 && j != 1) {
-        int                 c = 2 * (j == 2) + (i == 2);
+      for (ll = 0; ll < nelem; ll++) {
+        elem_to_node[ll] = e_to_n +
+          (degree + 1) * (degree + 1) * (degree + 1) * ll + (degree + 1) * k;
+      }
+      if (!(i % degree) && !(j % degree)) {
+        int                 c = 2 * (!!j) + (!!i);
 
-        for (ll = 0; ll < nelem; ll++) {
-          elem_to_node[ll] =
-            e_to_n + (degree + 1) * (degree + 1) * (degree + 1) * ll +
-            (j ? (degree + 1) * (degree + 1) * degree : 0)
-            + (i ? (degree + 1) * degree : 0);
-        }
-        p6est_profile_element_to_node_corner (&elem, &node, degree,
+        p6est_profile_element_to_node_single (&elem, &node, degree,
                                               offsets[nid], elem_to_node, fc,
                                               4 + c);
       }
-      else if (i == 1 && j == 1) {
-        for (r = 0, n = 0; n < degree - 1; n++) {
-          for (m = 0; m < degree - 1; m++, r++) {
-            for (ll = 0; ll < nelem; ll++) {
-              elem_to_node[r * nelem + ll] = e_to_n
-                + (degree + 1) * (degree + 1) * (degree + 1) * ll
-                + (n + 1) * (degree + 1) * (degree + 1)
-                + (m + 1) * (degree + 1);
-            }
-          }
-        }
-        p6est_profile_element_to_node_vol (&elem, &elem, degree, offsets[nid],
-                                           elem_to_node);
+      else if ((i % degree) && (j % degree)) {
+        p6est_profile_element_to_node_single (&elem, &elem, degree,
+                                              offsets[nid], elem_to_node,
+                                              NULL, -1);
       }
       else {
-        int                 f = 2 * (j != 1) + (i == 2 || j == 2);
+        int                 f = 2 * !(j % degree) + (i == degree
+                                                     || j == degree);
 
-        for (r = 0; r < degree - 1; r++) {
-          /* may need to swap order */
-          int                 s = swap[f] ? (degree - 2 - r) : r;
-          for (ll = 0; ll < nelem; ll++) {
-            elem_to_node[s * nelem + ll] = e_to_n
-              + (degree + 1) * (degree + 1) * (degree + 1) * ll
-              + ((i == 1) ? ((r + 1) * (degree + 1) * (degree + 1)
-                             + (j ? (degree + 1) * degree : 0)) :
-                 ((r + 1) * (degree + 1)
-                  + (i ? (degree + 1) * (degree + 1) * degree : 0)));
-
-          }
-        }
-        p6est_profile_element_to_node_face (&elem, &node, degree,
-                                            offsets[nid], elem_to_node, fc,
-                                            f);
+        p6est_profile_element_to_node_single (&elem, &node, degree,
+                                              offsets[nid], elem_to_node, fc,
+                                              f);
       }
     }
   }
@@ -471,7 +410,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
 
 void
 p6est_profile_element_to_node (p6est_t * p6est,
-                               p6est_profile_t * profile, int degree,
+                               p6est_profile_t * profile,
                                p4est_locidx_t * offsets,
                                p4est_locidx_t * elem_to_node,
                                p6est_lnodes_code_t * fc)
@@ -484,10 +423,10 @@ p6est_profile_element_to_node (p6est_t * p6est,
   p4est_locidx_t (*lr)[2] = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
   p4est_locidx_t      cid;
   size_t              zz;
-  int                 swap[P4EST_FACES];
-  p4est_topidx_t      nt;
   p6est_lnodes_code_t mask = 0x1fe0;
   p6est_lnodes_code_t hbit = 0x0010;
+  int                 degree = profile->lnodes->degree;
+  int                 Nfp = (degree + 1) * (degree + 1);
   sc_array_t         *layers = p6est->layers;
 
   for (cid = 0, jt = columns->first_local_tree;
@@ -498,30 +437,15 @@ p6est_profile_element_to_node (p6est_t * p6est,
     for (zz = 0; zz < tquadrants->elem_count; ++zz, cid++) {
       p4est_locidx_t      nlayers;
       p4est_locidx_t      nid =
-        profile->lnodes->element_nodes[P4EST_INSUL * cid + P4EST_INSUL / 2];
-      int                 f, nf;
+        profile->lnodes->element_nodes[Nfp * cid + Nfp / 2];
       size_t              first, last, zw, zy;
 
       col = p4est_quadrant_array_index (tquadrants, zz);
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
-      for (f = 0; f < P4EST_FACES; f++) {
-        p4est_quadrant_t    temp;
-        swap[f] = 0;
-
-        nt =
-          p4est_quadrant_face_neighbor_extra (col, jt, f, &temp, &nf,
-                                              columns->connectivity);
-        if (nf > P4EST_FACES) {
-          nf = (nf % P4EST_FACES);
-          if (nt < jt || nf < f) {
-            swap[f] = 1;
-          }
-        }
-      }
 
       nlayers = lr[nid][1];
-      p6est_profile_element_to_node_col (profile, cid, degree, offsets,
-                                         elem_to_node, swap, fc);
+      p6est_profile_element_to_node_col (profile, cid, offsets,
+                                         elem_to_node, fc);
       elem_to_node += nlayers * (degree + 1) * (degree + 1) * (degree + 1);
 
       for (zy = 0, zw = first; zw < last; zw++, zy++) {
@@ -541,7 +465,6 @@ p6est_profile_element_to_node (p6est_t * p6est,
       fc += nlayers;
     }
   }
-
 }
 
 static void
@@ -598,7 +521,7 @@ p6est_profile_t    *
 p6est_profile_new_local (p6est_t * p6est,
                          p6est_ghost_t * ghost,
                          p6est_profile_type_t ptype,
-                         p8est_connect_type_t btype)
+                         p8est_connect_type_t btype, int degree)
 {
   p6est_profile_t    *profile = P4EST_ALLOC (p6est_profile_t, 1);
   p4est_lnodes_t     *lnodes;
@@ -623,7 +546,9 @@ p6est_profile_new_local (p6est_t * p6est,
   sc_array_t         *cornerprof;
   sc_array_t         *work;
   sc_array_t          oldprof;
+  const int           Nrp = degree + 1;
 
+  P4EST_ASSERT (degree > 1);
   profile->ptype = ptype;
   profile->btype = btype;
   if (btype == P8EST_CONNECT_FACE) {
@@ -641,8 +566,11 @@ p6est_profile_new_local (p6est_t * p6est,
     profile->cghost = ghost->column_ghost;
     profile->ghost_owned = 0;
   }
+  if (ptype == P6EST_PROFILE_UNION) {
+    P4EST_ASSERT (degree == 2);
+  }
   profile->lnodes = lnodes = p4est_lnodes_new (p6est->columns,
-                                               profile->cghost, 2);
+                                               profile->cghost, degree);
   en = lnodes->element_nodes;
   nln = lnodes->num_local_nodes;
   nle = lnodes->num_local_elements;
@@ -686,12 +614,12 @@ p6est_profile_new_local (p6est_t * p6est,
           p6est_profile_balance_full (selfprof, cornerprof, work);
         }
       }
-      for (j = 0; j < 3; j++) {
-        for (i = 0; i < 3; i++, enidx++) {
+      for (j = 0; j < Nrp; j++) {
+        for (i = 0; i < Nrp; i++, enidx++) {
           nidx = en[enidx];
           if (ptype == P6EST_PROFILE_UNION) {
             thisprof = NULL;
-            if (i != 1 && j != 1) {
+            if (!(i % degree) && !(j % degree)) {
               if (hbtype == P4EST_CONNECT_FACE) {
                 /* skip corners if we don't need to balance them */
                 P4EST_ASSERT (!lr[nidx][0]);
@@ -702,7 +630,7 @@ p6est_profile_new_local (p6est_t * p6est,
                 thisprof = cornerprof;
               }
             }
-            else if (i == 1 && j == 1) {
+            else if ((i % degree) && (j % degree)) {
               thisprof = selfprof;
             }
             else {
@@ -740,7 +668,7 @@ p6est_profile_new_local (p6est_t * p6est,
             }
             else {
               /* if this node has been initialized, combine the two profiles,
-               * taking the finer layers from each */
+               * taking the coarser layers from each */
               sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
               p6est_profile_intersection (selfprof, &oldprof, work);
               P4EST_ASSERT (work->elem_count <= oldprof.elem_count);
@@ -787,6 +715,8 @@ p6est_profile_balance_local (p6est_profile_t * profile)
   sc_array_t          testprof;
   int                 any_prof_change;
   int                 any_local_change;
+
+  P4EST_ASSERT (profile->lnodes->degree == 2);
 
   if (btype == P8EST_CONNECT_FACE) {
     hbtype = P4EST_CONNECT_FACE;
@@ -1190,6 +1120,8 @@ p6est_refine_to_profile (p6est_t * p6est, p6est_profile_t * profile,
   sc_array_t         *layers = p6est->layers;
   sc_array_t         *lc = profile->lnode_columns;
   sc_array_t         *work;
+
+  P4EST_ASSERT (profile->lnodes->degree == 2);
 
   lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
   work = sc_array_new (sizeof (p2est_quadrant_t));

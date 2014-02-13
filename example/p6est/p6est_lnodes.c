@@ -46,12 +46,171 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   p4est_locidx_t      num_owned, num_local;
   p4est_gloidx_t      gnum_owned, offset;
   p4est_gloidx_t     *owned_offsets;
-  int                 i, j;
+  int                 i, j, k;
   int                 is_owned;
   int                 mpisize = p6est->mpisize;
   int                 mpiret;
   sc_array_t          lnoview;
   size_t              zz, nsharers;
+  int                 Nrp = degree + 1;
+
+  if (degree == 2) {
+    p4est_locidx_t      eid, nid, enid2, nid2;
+    p4est_locidx_t     *newnum, newlocal, newowned;
+
+    P4EST_GLOBAL_PRODUCTION ("Into adapt p6est_lnodes_new for degree = 1\n");
+    p4est_log_indent_push ();
+    /* adapt 2 to 1 */
+
+    lnodes = p6est_lnodes_new (p6est, ghost, 2);
+    nll = p6est->layers->elem_count;
+    num_local = lnodes->num_local_nodes;
+    num_owned = lnodes->owned_count;
+
+    en = lnodes->element_nodes;
+
+    newnum = P4EST_ALLOC (p4est_locidx_t, P8EST_INSUL * nll);
+    memset (newnum, -1, P8EST_INSUL * nll * sizeof (p4est_locidx_t));
+
+    for (enid = 0, eid = 0; eid < nll; eid++) {
+      for (k = 0; k < 3; k++) {
+        for (j = 0; j < 3; j++) {
+          for (i = 0; i < 3; i++, enid++) {
+            if (k != 1 && j != 1 && i != 1) {
+              newnum[en[enid]] = 0;
+            }
+          }
+        }
+      }
+    }
+
+    newlocal = 0;
+    newowned = 0;
+    for (nid = 0; nid < num_local; nid++) {
+      if (newnum[nid] >= 0) {
+        newnum[nid] = newlocal++;
+        if (nid < num_owned) {
+          newowned++;
+        }
+      }
+    }
+
+    /* compress en */
+    enid2 = 0;
+    for (enid = 0, eid = 0; eid < nll; eid++) {
+      for (k = 0; k < 3; k++) {
+        for (j = 0; j < 3; j++) {
+          for (i = 0; i < 3; i++, enid++) {
+            if (k != 1 && j != 1 && i != 1) {
+              en[enid2++] = newnum[en[enid]];
+            }
+          }
+        }
+      }
+    }
+    P4EST_ASSERT (enid2 == P8EST_CHILDREN * nll);
+    lnodes->element_nodes =
+      P4EST_REALLOC (en, p4est_locidx_t, P8EST_CHILDREN * nll);
+
+    owned_offsets = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
+
+    mpiret = MPI_Allgather (&newowned, 1, P4EST_MPI_LOCIDX,
+                            lnodes->global_owned_count, 1, P4EST_MPI_GLOIDX,
+                            p6est->mpicomm);
+
+    owned_offsets[0] = 0;
+    for (i = 0; i < mpisize; i++) {
+      owned_offsets[i + 1] = owned_offsets[i] + lnodes->global_owned_count[i];
+    }
+    lnodes->global_offset = owned_offsets[p6est->mpirank];
+    lnodes->num_local_nodes = newlocal;
+    lnodes->owned_count = newowned;
+    lnodes->degree = 1;
+    lnodes->vnodes = P8EST_CHILDREN;
+
+    lnodes->nonlocal_nodes =
+      P4EST_REALLOC (lnodes->nonlocal_nodes, p4est_gloidx_t,
+                     newlocal - newowned);
+
+    nsharers = lnodes->sharers->elem_count;
+    for (zz = 0; zz < nsharers; zz++) {
+      size_t              nshared, zy, zw;
+      p6est_lnodes_rank_t *rank = p6est_lnodes_rank_array_index
+        (lnodes->sharers, zz);
+
+      nsharers = rank->shared_nodes.elem_count;
+      if (rank->owned_count) {
+        if (rank->rank != p6est->mpirank) {
+          p4est_locidx_t      newrankowned = 0;
+          p4est_locidx_t      newrankoffset = -1;
+
+          for (nid = rank->owned_offset; nid < rank->owned_offset +
+               rank->owned_count; nid++) {
+            if (newnum[nid] >= 0) {
+              lnodes->nonlocal_nodes[newnum[nid] - newowned] =
+                owned_offsets[rank->rank];
+              newrankowned++;
+              if (newrankoffset < 0) {
+                newrankoffset = newnum[nid];
+              }
+            }
+          }
+          rank->owned_offset = newrankoffset;
+          rank->owned_count = newrankowned;
+        }
+        else {
+          rank->owned_offset = 0;
+          rank->owned_count = newowned;
+        }
+      }
+      rank->shared_mine_count = 0;
+      rank->shared_mine_offset = -1;
+      zw = 0;
+      nshared = rank->shared_nodes.elem_count;
+      for (zy = 0; zy < nshared; zy++) {
+
+        nid = *((p4est_locidx_t *) sc_array_index (&rank->shared_nodes, zy));
+        if (newnum[nid] >= 0) {
+          p4est_locidx_t     *lp;
+
+          lp = (p4est_locidx_t *) sc_array_index (&rank->shared_nodes, zw++);
+          *lp = newnum[nid];
+          if (newnum[nid] < newowned) {
+            rank->shared_mine_count++;
+            if (rank->shared_mine_offset == -1) {
+              rank->shared_mine_offset = zw - 1;
+            }
+          }
+        }
+      }
+      sc_array_resize (&rank->shared_nodes, zw);
+    }
+
+    /* send local numbers to others */
+    {
+      sc_array_t          view;
+
+      sc_array_init_data (&view, newnum, sizeof (p4est_locidx_t), newlocal);
+
+      p6est_lnodes_share_owned (&view, lnodes);
+    }
+
+    nid2 = 0;
+    for (nid = num_owned; nid < num_local; nid++) {
+      if (newnum[nid] >= 0) {
+        lnodes->nonlocal_nodes[nid2++] += (p4est_gloidx_t) newnum[nid];
+      }
+    }
+    P4EST_ASSERT (nid2 == newlocal - newowned);
+
+    P4EST_FREE (owned_offsets);
+    P4EST_FREE (newnum);
+
+    p4est_log_indent_pop ();
+    P4EST_GLOBAL_PRODUCTION ("Done adapt p6est_lnodes_new for degree = 1\n");
+
+    return lnodes;
+  }
 
   P4EST_GLOBAL_PRODUCTION ("Into p6est_lnodes_new\n");
   p4est_log_indent_push ();
@@ -62,7 +221,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
   /* first get the profile */
   profile = p6est_profile_new_local (p6est, ghost, P6EST_PROFILE_INTERSECTION,
-                                     P8EST_CONNECT_DEFAULT);
+                                     P8EST_CONNECT_DEFAULT, degree);
   p6est_profile_sync (profile);
 
   lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
@@ -75,25 +234,14 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   layernodecount = P4EST_ALLOC_ZERO (p4est_locidx_t, nnodecols);
   layernodeoffsets = P4EST_ALLOC_ZERO (p4est_locidx_t, nnodecols + 1);
   for (cid = 0, enid = 0; cid < nelemcols; cid++) {
-    for (j = 0; j < 3; j++) {
-      for (i = 0; i < 3; i++, enid++) {
+    for (j = 0; j < Nrp; j++) {
+      for (i = 0; i < Nrp; i++, enid++) {
         ncid = en[enid];
         is_owned = (ncid < clnodes->owned_count);
         nlayers = lr[ncid][1];
         P4EST_ASSERT (nlayers);
         ncolnodes = nlayers * degree + 1;
-        if (i != 1 && j != 1) {
-          /* this is a corner column */
-          layernodecount[ncid] = ncolnodes;
-        }
-        else if (i == 1 && j == 1) {
-          /* this is a quad column */
-          layernodecount[ncid] = ncolnodes * (degree - 1) * (degree - 1);
-        }
-        else {
-          /* this is a face column */
-          layernodecount[ncid] = ncolnodes * (degree - 1);
-        }
+        layernodecount[ncid] = ncolnodes;
       }
     }
   }
@@ -154,7 +302,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   lnodes->face_code = P4EST_ALLOC (p6est_lnodes_code_t, nll);
   lnodes->element_nodes = P4EST_ALLOC (p4est_locidx_t, nperelem * nll);
 
-  p6est_profile_element_to_node (p6est, profile, degree, layernodeoffsets,
+  p6est_profile_element_to_node (p6est, profile, layernodeoffsets,
                                  lnodes->element_nodes, lnodes->face_code);
 
   for (zz = 0; zz < nsharers; zz++) {

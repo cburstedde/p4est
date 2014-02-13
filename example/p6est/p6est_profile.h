@@ -62,12 +62,15 @@ p6est_profile_t;
  * \param[in] ptype P6EST_PROFILE_UNION if we are balancing,
  *                  P6EST_PROFILE_INTERSECTION if we are generating lnodes
  * \param[in] btype Type of 3D balance law desired.
+ * \param[in] degree degree of underlying lnodes, should be 2 if used for
+ *                   balancing
  */
 
 p6est_profile_t    *p6est_profile_new_local (p6est_t * p6est,
                                              p6est_ghost_t * ghost,
                                              p6est_profile_type_t ptype,
-                                             p8est_connect_type_t btype);
+                                             p8est_connect_type_t btype,
+                                             int degree);
 
 /** Destroy a profile */
 void                p6est_profile_destroy (p6est_profile_t * profile);
@@ -92,7 +95,6 @@ void                p6est_refine_to_profile (p6est_t * p6est,
 
 void                p6est_profile_element_to_node (p6est_t * p6est,
                                                    p6est_profile_t * profile,
-                                                   int degree,
                                                    p4est_locidx_t * offsets,
                                                    p4est_locidx_t *
                                                    elem_to_node,
