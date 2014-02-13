@@ -365,7 +365,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
 
   P4EST_ASSERT (degree > 1);
 
-  ncid = en[Nfp / 2];
+  ncid = en[Nfp * cid + Nrp * (Nrp / 2) + (Nrp / 2)];
   nelem = lr[ncid][1];
 
   sc_array_init_view (&elem, lc, lr[ncid][0], nelem);
@@ -377,7 +377,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
   }
   for (k = 0, j = 0; j < Nrp; j++) {
     for (i = 0; i < Nrp; i++, k++) {
-      nid = en[Nfp * Nrp * cid + k];
+      nid = en[Nfp * cid + k];
       sc_array_init_view (&node, lc, lr[nid][0], lr[nid][1]);
       for (ll = 0; ll < nelem; ll++) {
         elem_to_node[ll] = e_to_n +
@@ -426,6 +426,7 @@ p6est_profile_element_to_node (p6est_t * p6est,
   p6est_lnodes_code_t mask = 0x1fe0;
   p6est_lnodes_code_t hbit = 0x0010;
   int                 degree = profile->lnodes->degree;
+  int                 Nrp = (degree + 1);
   int                 Nfp = (degree + 1) * (degree + 1);
   sc_array_t         *layers = p6est->layers;
 
@@ -437,7 +438,8 @@ p6est_profile_element_to_node (p6est_t * p6est,
     for (zz = 0; zz < tquadrants->elem_count; ++zz, cid++) {
       p4est_locidx_t      nlayers;
       p4est_locidx_t      nid =
-        profile->lnodes->element_nodes[Nfp * cid + Nfp / 2];
+        profile->lnodes->element_nodes[Nfp * cid + Nrp * (Nrp / 2) +
+                                       (Nrp / 2)];
       size_t              first, last, zw, zy;
 
       col = p4est_quadrant_array_index (tquadrants, zz);

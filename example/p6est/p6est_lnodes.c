@@ -54,7 +54,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   size_t              zz, nsharers;
   int                 Nrp = degree + 1;
 
-  if (degree == 2) {
+  if (degree == 1) {
     p4est_locidx_t      eid, nid, enid2, nid2;
     p4est_locidx_t     *newnum, newlocal, newowned;
 
@@ -350,6 +350,10 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
           }
         }
       }
+    }
+    if (rank->rank == p6est->mpirank) {
+      rank->owned_offset = 0;
+      rank->owned_count = num_owned;
     }
   }
 
