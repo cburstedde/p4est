@@ -115,7 +115,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
     owned_offsets = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
 
     mpiret = MPI_Allgather (&newowned, 1, P4EST_MPI_LOCIDX,
-                            lnodes->global_owned_count, 1, P4EST_MPI_GLOIDX,
+                            lnodes->global_owned_count, 1, P4EST_MPI_LOCIDX,
                             p6est->mpicomm);
 
     owned_offsets[0] = 0;
@@ -138,7 +138,6 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
       p6est_lnodes_rank_t *rank = p6est_lnodes_rank_array_index
         (lnodes->sharers, zz);
 
-      nsharers = rank->shared_nodes.elem_count;
       if (rank->owned_count) {
         if (rank->rank != p6est->mpirank) {
           p4est_locidx_t      newrankowned = 0;

@@ -23,6 +23,7 @@
 
 #include <p4est_bits.h>
 #include <p6est.h>
+#include <p6est_extended.h>
 #include <p6est_ghost.h>
 #include <p6est_vtk.h>
 #include <p6est_lnodes.h>
@@ -145,12 +146,12 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  SC_CHECK_ABORTF (argc == 2,
+  SC_CHECK_ABORTF (argc <= 2,
                    "Usage:\n%s NAME\n"
                    "  NAME=<corner|cubed|disk|periodic|rotwrap|star|unit>\n",
                    argv[0]);
 
-  conn4 = p4est_connectivity_new_byname (argv[1]);
+  conn4 = p4est_connectivity_new_byname (argc == 1 ? "unit" : argv[1]);
   conn = p6est_connectivity_new (conn4, NULL, height);
 
   p4est_connectivity_destroy (conn4);
@@ -211,9 +212,9 @@ main (int argc, char **argv)
 
   P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
 
-  p6est_save ("p6est_test_new_destroy.p6p", p6est, 1);
+  p6est_save ("p6est_test_all.p6p", p6est, 1);
 
-  copy_p6est = p6est_load ("p6est_test_new_destroy.p6p", p6est->mpicomm,
+  copy_p6est = p6est_load ("p6est_test_all.p6p", p6est->mpicomm,
                            p6est->data_size, 1, p6est->user_pointer,
                            &copy_conn);
 
