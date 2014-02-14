@@ -178,7 +178,30 @@ static const timings_regression_t regression_oldschool[] =
 static const timings_regression_t regression_latest[] =
 {
 #ifndef P4_TO_P8
+  { P4EST_CONFIG_UNIT, 1, 10, 0x6e3e83c4U },
+  { P4EST_CONFIG_UNIT, 1, 11, 0x334bc3deU },
+  { P4EST_CONFIG_UNIT, 64, 14, 0xad908ce4U },
+  { P4EST_CONFIG_UNIT, 256, 15, 0x9e7da646U },
+  { P4EST_CONFIG_STAR, 1, 6, 0x14107b57U },
+  { P4EST_CONFIG_STAR, 4, 6, 0x14107b57U },
+  { P4EST_CONFIG_STAR, 52, 13, 0xc86c74d9U },
+  { P4EST_CONFIG_STAR, 64, 13, 0xc86c74d9U },
 #else
+  { P4EST_CONFIG_UNIT, 1, 5, 0xc2012e84U },
+  { P4EST_CONFIG_UNIT, 1, 6, 0x2cad814dU },
+  { P4EST_CONFIG_UNIT, 3, 8, 0xeb252238U },
+  { P4EST_CONFIG_PERIODIC, 1, 5, 0x2776c9b7U },
+  { P4EST_CONFIG_PERIODIC, 2, 5, 0x2776c9b7U },
+  { P4EST_CONFIG_PERIODIC, 7, 6, 0x4f281079U },
+  { P4EST_CONFIG_ROTWRAP, 2, 6, 0x372f7402U },
+  { P4EST_CONFIG_ROTWRAP, 7, 6, 0x372f7402U },
+  { P4EST_CONFIG_TWOCUBES, 5, 6, 0xa8b1f54eU },
+  { P4EST_CONFIG_TWOCUBES, 8, 5, 0x0aad11d0U },
+  { P4EST_CONFIG_ROTCUBES, 1, 5, 0x404e4aa8U },
+  { P4EST_CONFIG_ROTCUBES, 7, 6, 0x4c381706U },
+  { P4EST_CONFIG_SHELL, 1, 4, 0x8c56f159U },
+  { P4EST_CONFIG_SHELL, 3, 5, 0xafbc4f8cU },
+  { P4EST_CONFIG_SHELL, 5, 6, 0xf6d9efb8U },
 #endif
   { P4EST_CONFIG_NULL, 0, 0, 0 }
 };
