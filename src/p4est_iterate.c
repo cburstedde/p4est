@@ -1903,7 +1903,7 @@ p4est_iter_init_corner_from_face (p4est_iter_corner_args_t * args,
       ndir1 = SC_MIN (((dir + 1) % 3), ((dir + 2) % 3));
       ndir2 = SC_MAX (((dir + 1) % 3), ((dir + 2) % 3));
       cside->faces[ndir1] = ntc_str + ntc_str * k + (j >> 1);
-      cside->faces[ndir2] = ntc_str + ntc_str * k + 2 + (j & 2);
+      cside->faces[ndir2] = ntc_str + ntc_str * k + 2 + (j & 1);
       if (!k) {
         cside->edges[ndir1] = (j & 1);
         cside->edges[ndir2] = 2 + (j >> 1);
