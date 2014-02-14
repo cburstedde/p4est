@@ -26,3 +26,7 @@ log_events:
     [p4est] Into p8est_lnodes_new
     [libsc 4] Abort: Assertion 'nproc != rank'
     [libsc 4] Abort: /home/carsten/work/p4est/src/p4est_lnodes.c:921
+- - 2014-02-14 14:19:21.305941 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - commented
+  - I fixed the assertion, but there is still a checksum mismatch.
