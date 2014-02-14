@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Crash in p8est_timings
+desc: |-
+  The following call crashes with double-free/corruption:
+  mpirun -np 8 example/timings/p8est_timings -c twocubes -l 5
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-02-14 10:22:28.844116 Z
+references: []
+
+id: 3209cbc7fe045c201f5f0b4af7951a3b81c164ab
+log_events: 
+- - 2014-02-14 10:22:29.345901 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
