@@ -18,3 +18,11 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - created
   - ""
+- - 2014-02-14 10:27:35.658114 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    We actually hit an assertion:
+    [p4est] Into p8est_lnodes_new
+    [libsc 4] Abort: Assertion 'nproc != rank'
+    [libsc 4] Abort: /home/carsten/work/p4est/src/p4est_lnodes.c:921
