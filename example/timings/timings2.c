@@ -410,7 +410,7 @@ main (int argc, char **argv)
     else {
       regression = regression_latest;
       p4est = p4est_new_ext (mpi->mpicomm, connectivity,
-                             1, refine_level - level_shift, 1, 0, NULL, NULL);
+                             0, refine_level - level_shift, 1, 0, NULL, NULL);
     }
 
     /* print all available regression tests */
