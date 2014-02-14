@@ -7,8 +7,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2014-02-14 10:22:28.844116 Z
 references: []
 
@@ -30,3 +30,7 @@ log_events:
   - Tobin Isaac <tisaac@ices.utexas.edu>
   - commented
   - I fixed the assertion, but there is still a checksum mismatch.
+- - 2014-02-14 15:34:12.672817 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - The checksums are clean up and cherry-picked.
