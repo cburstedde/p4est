@@ -2116,10 +2116,10 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
         P4EST_ASSERT (binfo->share_offset == -1);
         binfo->share_count = (int8_t) share_count;
         binfo->share_offset = (p4est_locidx_t) inode_sharers->elem_count;
+        ip = (int *) sc_array_push_count (inode_sharers, share_count);
         for (k = 0; k < share_count; k++) {
-          ip = (int *) sc_array_push (inode_sharers);
           lp = (p4est_locidx_t *) sc_array_index (recv, count++);
-          *ip = (int) (*lp);
+          ip[k] = (int) (*lp);
           P4EST_ASSERT (0 <= *ip && *ip < mpisize);
         }
       }
