@@ -27,11 +27,15 @@
 #include <p6est_ghost.h>
 #include <p6est_vtk.h>
 #include <p6est_lnodes.h>
+#include <sc_flops.h>
+#include <sc_statistics.h>
+#include <sc_options.h>
 
 char                test_data = 'x';
 char               *TEST_USER_POINTER = &test_data;
 
 static int          refine_level = -1;
+static int          refine_zlevel = -1;
 
 /* To define a p6est_refine_column_t, all we have to do is take a p4est refine
  * function ... */
@@ -96,7 +100,7 @@ refine_layer_fn (p6est_t * p6est, p4est_topidx_t which_tree,
 
   hash = p4est_topidx_hash4 (tohash);
 
-  return (layer->level < refine_level && !((int) hash % 3));
+  return (layer->level < refine_zlevel && !((int) hash % 3));
 }
 
 void
@@ -128,6 +132,33 @@ coarsen_layer_fn (p6est_t * p6est, p4est_topidx_t which_tree,
   return 1;
 }
 
+enum
+{
+  TIMINGS_CONNECTIVITY,
+  TIMINGS_NEW,
+  TIMINGS_NEW_EXT,
+  TIMINGS_REFINE_COLUMNS_A,
+  TIMINGS_REFINE_COLUMNS_B,
+  TIMINGS_REFINE_LAYERS,
+  TIMINGS_COARSEN_COLUMNS,
+  TIMINGS_COARSEN_LAYERS,
+  TIMINGS_GHOST_FACE,
+  TIMINGS_GHOST_FULL,
+  TIMINGS_GHOST_EXPAND_1,
+  TIMINGS_GHOST_EXPAND_2,
+  TIMINGS_BALANCE_FACE,
+  TIMINGS_BALANCE_EDGE,
+  TIMINGS_BALANCE_FULL,
+  TIMINGS_PARTITION,
+  TIMINGS_PARTITION_SAME,
+  TIMINGS_LNODES_1,
+  TIMINGS_LNODES_2,
+  TIMINGS_LNODES_3,
+  TIMINGS_SAVE,
+  TIMINGS_LOAD,
+  TIMINGS_NUM_STATS
+};
+
 int
 main (int argc, char **argv)
 {
@@ -137,73 +168,207 @@ main (int argc, char **argv)
   p6est_t            *p6est, *copy_p6est;
   p6est_ghost_t      *ghost;
   double              height[3] = { 0., 0., 0.1 };
-  int                 mpiret;
   int                 i;
+  int                 vtk;
   unsigned            crc_computed;
+  sc_options_t       *opt;
+  int                 first_argc;
+  const char         *config_name;
+  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
+  sc_flopinfo_t       fi, snapshot;
+  int                 mpiret;
 
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+#ifndef P4EST_DEBUG
+  sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
+#endif
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  SC_CHECK_ABORTF (argc <= 2,
-                   "Usage:\n%s NAME\n"
-                   "  NAME=<corner|cubed|disk|periodic|rotwrap|star|unit>\n",
-                   argv[0]);
+  opt = sc_options_new (argv[0]);
 
-  conn4 = p4est_connectivity_new_byname (argc == 1 ? "unit" : argv[1]);
+  sc_options_add_int (opt, 'l', "level", &refine_level, 1,
+                      "initial refine level");
+  sc_options_add_int (opt, 'z', "z-level", &refine_zlevel, 2,
+                      "initial refine level");
+  sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
+                         "configuration: brick23|corner|cubed|disc|moebius|periodic|pillow|rotwrap|star|unit");
+  sc_options_add_switch (opt, 'w', "write-vtk", &vtk, "write vtk files");
+
+  first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                 opt, argc, argv);
+
+  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
+
+  if (first_argc < 0 || first_argc != argc) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+    return 1;
+  }
+
+  /* start overall timing */
+  mpiret = MPI_Barrier (mpicomm);
+  SC_CHECK_MPI (mpiret);
+  sc_flops_start (&fi);
+
+  conn4 = p4est_connectivity_new_byname (config_name);
+  SC_CHECK_ABORTF (conn4 != NULL, "Invalid connectivity name: %s\n",
+                   config_name);
+
+  sc_flops_snap (&fi, &snapshot);
   conn = p6est_connectivity_new (conn4, NULL, height);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_CONNECTIVITY], snapshot.iwtime,
+                 "Connectivity");
 
   p4est_connectivity_destroy (conn4);
 
+  sc_flops_snap (&fi, &snapshot);
   p6est = p6est_new (mpicomm, conn, 4, init_fn, TEST_USER_POINTER);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_NEW], snapshot.iwtime, "New");
   p6est_destroy (p6est);
 
-  p6est = p6est_new_ext (mpicomm, conn, 0, 1, 2, 1, 3, init_fn,
-                         TEST_USER_POINTER);
+  sc_flops_snap (&fi, &snapshot);
+  p6est = p6est_new_ext (mpicomm, conn, 0, refine_level, refine_zlevel, 1, 3,
+                         init_fn, TEST_USER_POINTER);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_NEW_EXT], snapshot.iwtime, "New extended");
 
-  refine_level = 3;
+  refine_level += 2;
+  sc_flops_snap (&fi, &snapshot);
   p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
-  refine_level = 4;
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_REFINE_COLUMNS_A], snapshot.iwtime,
+                 "Refine columns A");
+
+  refine_zlevel += 2;
+  sc_flops_snap (&fi, &snapshot);
   p6est_refine_layers (p6est, 1, refine_layer_fn, init_fn);
-  refine_level = 5;
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_REFINE_LAYERS], snapshot.iwtime,
+                 "Refine layers");
+
+  refine_level += 2;
+  sc_flops_snap (&fi, &snapshot);
   p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_REFINE_COLUMNS_B], snapshot.iwtime,
+                 "Refine layers B");
 
   copy_p6est = p6est_copy (p6est, 1);
+  sc_flops_snap (&fi, &snapshot);
   p6est_coarsen_columns (copy_p6est, 1, coarsen_column_fn, init_fn);
-  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_columns");
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_COARSEN_COLUMNS], snapshot.iwtime,
+                 "Coarsen columns");
+  if (vtk) {
+    p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_columns");
+  }
   p6est_destroy (copy_p6est);
 
   copy_p6est = p6est_copy (p6est, 1);
+  sc_flops_snap (&fi, &snapshot);
   p6est_coarsen_layers (copy_p6est, 0, coarsen_layer_fn, init_fn);
-  p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_COARSEN_LAYERS], snapshot.iwtime,
+                 "Coarsen layers");
+  if (vtk) {
+    p6est_vtk_write_file (copy_p6est, "p6est_test_coarsen_layers");
+  }
   p6est_destroy (copy_p6est);
 
-  p6est_vtk_write_file (p6est, "p6est_test_pre_balance");
+  if (vtk) {
+    p6est_vtk_write_file (p6est, "p6est_test_pre_balance");
+  }
 
+  sc_flops_snap (&fi, &snapshot);
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FACE);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_GHOST_FACE], snapshot.iwtime, "Ghost face");
   p6est_ghost_destroy (ghost);
+
+  sc_flops_snap (&fi, &snapshot);
   ghost = p6est_ghost_new (p6est, P4EST_CONNECT_FULL);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_GHOST_FULL], snapshot.iwtime, "Ghost full");
+
+  sc_flops_snap (&fi, &snapshot);
   p6est_ghost_expand (p6est, ghost);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_GHOST_EXPAND_1], snapshot.iwtime,
+                 "Ghost expand 1");
+
+  sc_flops_snap (&fi, &snapshot);
   p6est_ghost_expand (p6est, ghost);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_GHOST_EXPAND_2], snapshot.iwtime,
+                 "Ghost expand 2");
+
   p6est_ghost_destroy (ghost);
 
+  sc_flops_snap (&fi, &snapshot);
   p6est_balance (p6est, P8EST_CONNECT_FACE, init_fn);
-  p6est_vtk_write_file (p6est, "p6est_test_balance_face");
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_FACE], snapshot.iwtime,
+                 "Balance face");
+
+  if (vtk) {
+    p6est_vtk_write_file (p6est, "p6est_test_balance_face");
+  }
+
+  sc_flops_snap (&fi, &snapshot);
   p6est_balance (p6est, P8EST_CONNECT_EDGE, init_fn);
-  p6est_vtk_write_file (p6est, "p6est_test_balance_edge");
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_EDGE], snapshot.iwtime,
+                 "Balance edge");
+
+  if (vtk) {
+    p6est_vtk_write_file (p6est, "p6est_test_balance_edge");
+  }
+
+  sc_flops_snap (&fi, &snapshot);
   p6est_balance (p6est, P8EST_CONNECT_FULL, init_fn);
-  p6est_vtk_write_file (p6est, "p6est_test_balance_full");
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_BALANCE_FULL], snapshot.iwtime,
+                 "Balance full");
 
+  if (vtk) {
+    p6est_vtk_write_file (p6est, "p6est_test_balance_full");
+  }
+
+  sc_flops_snap (&fi, &snapshot);
   p6est_partition (p6est, weight_fn);
-  p6est_partition (p6est, NULL);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_PARTITION], snapshot.iwtime, "Partition");
 
-  p6est_vtk_write_file (p6est, "p6est_test_partition");
+  sc_flops_snap (&fi, &snapshot);
+  p6est_partition (p6est, NULL);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_PARTITION_SAME], snapshot.iwtime,
+                 "Partition same");
+
+  if (vtk) {
+    p6est_vtk_write_file (p6est, "p6est_test_partition");
+  }
 
   for (i = 1; i <= 3; i++) {
     p6est_lnodes_t     *lnodes;
 
+    sc_flops_snap (&fi, &snapshot);
     lnodes = p6est_lnodes_new (p6est, NULL, i);
+    sc_flops_shot (&fi, &snapshot);
+    switch (i) {
+    case 1:
+      sc_stats_set1 (&stats[TIMINGS_LNODES_1], snapshot.iwtime, "Lnodes 1");
+      break;
+    case 2:
+      sc_stats_set1 (&stats[TIMINGS_LNODES_2], snapshot.iwtime, "Lnodes 2");
+      break;
+    case 3:
+      sc_stats_set1 (&stats[TIMINGS_LNODES_3], snapshot.iwtime, "Lnodes 3");
+      break;
+    }
 
     p6est_lnodes_destroy (lnodes);
   }
@@ -212,11 +377,17 @@ main (int argc, char **argv)
 
   P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
 
+  sc_flops_snap (&fi, &snapshot);
   p6est_save ("p6est_test_all.p6p", p6est, 1);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_SAVE], snapshot.iwtime, "Save");
 
+  sc_flops_snap (&fi, &snapshot);
   copy_p6est = p6est_load ("p6est_test_all.p6p", p6est->mpicomm,
                            p6est->data_size, 1, p6est->user_pointer,
                            &copy_conn);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_LOAD], snapshot.iwtime, "Load");
 
   p6est_destroy (copy_p6est);
 
@@ -225,6 +396,13 @@ main (int argc, char **argv)
   p6est_destroy (p6est);
 
   p6est_connectivity_destroy (conn);
+
+  /* calculate and print timings */
+  sc_stats_compute (mpicomm, TIMINGS_NUM_STATS, stats);
+  sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
+                  TIMINGS_NUM_STATS, stats, 1, 1);
+
+  sc_options_destroy (opt);
 
   /* exit */
   sc_finalize ();
