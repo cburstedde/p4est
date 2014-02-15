@@ -674,6 +674,12 @@ p4est_iter_init_corner (p4est_iter_corner_args_t * args,
     cside = (p4est_iter_corner_side_t *) sc_array_push (&(info->sides));
     cside->corner = (int8_t) c;
     cside->treeid = t;
+    for (j = 0; j < P4EST_DIM; j++) {
+      cside->faces[j] = -1;
+#ifdef P4_TO_P8
+      cside->edges[j] = -1;
+#endif
+    }
     start_idx2[count++] = 0;
     for (i = 0; i < P4EST_DIM; i++) {
       f = p4est_corner_faces[c][i];
