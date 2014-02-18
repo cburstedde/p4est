@@ -199,12 +199,11 @@ main (int argc, char **argv)
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
 
-  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
-
   if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     return 1;
   }
+  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   /* start overall timing */
   mpiret = MPI_Barrier (mpicomm);
