@@ -14,4 +14,7 @@ p6est_test_programs = example/p6est/test/p6est_test_all
 example_p6est_test_p6est_test_all_SOURCES = example/p6est/test/test_all.c
 TESTS += $(p6est_test_programs)
 check_PROGRAMS += $(p6est_test_programs)
+
+# for now -- make it easier for batch builds
+bin_PROGRAMS += $(p6est_test_programs)
 endif
