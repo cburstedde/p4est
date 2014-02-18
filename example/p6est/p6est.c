@@ -114,7 +114,8 @@ p6est_tree_get_vertices (p6est_connectivity_t * conn,
 
       vert = conn4->tree_to_vertex[P4EST_CHILDREN * which_tree + i];
       for (j = 0; j < 3; j++) {
-        vertices[3 * i + j] = verts[3 * vert + j] + off[j];
+        vertices[3 * (P4EST_CHILDREN * k + i) + j] = verts[3 * vert + j] +
+                                                     off[j];
       }
     }
   }
