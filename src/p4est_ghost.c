@@ -1139,6 +1139,8 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
+#ifdef P4EST_MPI
+
 static              size_t
 ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
 {
@@ -1154,8 +1156,6 @@ ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
   P4EST_ASSERT (p4est_comm_is_owner (p4est, q->p.which_tree, q, proc));
   return (size_t) proc;
 }
-
-#ifdef P4EST_MPI
 
 /** This adds a quadrant to the end of a buffer.
  *
@@ -2575,6 +2575,8 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_reset (&sbuffers);
 }
 
+#ifdef P4EST_MPI
+
 static void
 p4est_ghost_expand_insert (p4est_quadrant_t * q, p4est_topidx_t t,
                            p4est_locidx_t idx, sc_array_t * send_bufs,
@@ -2827,6 +2829,8 @@ p4est_quadrant_compare_piggy_proc (const void *a, const void *b)
   }
   return (A->p.piggy1.owner_rank - B->p.piggy1.owner_rank);
 }
+
+#endif /* P4EST_MPI */
 
 void
 p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
