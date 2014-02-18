@@ -18,3 +18,8 @@ check_PROGRAMS += $(p6est_test_programs)
 # for now -- make it easier for batch builds
 bin_PROGRAMS += $(p6est_test_programs)
 endif
+
+clean-local-p6est:
+	rm -f *.p6p
+
+.PHONY: clean-local-p6est
