@@ -35,4 +35,4 @@ LINT_CSOURCES += \
         $(example_timings_p8est_loadconn_SOURCES)
 endif
 
-EXTRA_DIST += example/timings/timana.awk
+EXTRA_DIST += example/timings/timana.awk example/timings/timana.sh
