@@ -450,7 +450,8 @@ p2est_quadrant_list_pop (sc_list_t * list)
     (q)->p.piggy3.which_tree = (p4est_topidx_t) ((l) - (f)); \
   } while (0);
 
-static void
+/*@unused@*/
+static inline void
 p6est_layer_init_data (p6est_t * p6est, p4est_topidx_t which_tree,
                        p4est_quadrant_t * column,
                        p2est_quadrant_t * layer, p6est_init_t init_fn)
@@ -466,7 +467,8 @@ p6est_layer_init_data (p6est_t * p6est, p4est_topidx_t which_tree,
   }
 }
 
-static void
+/*@unused@*/
+static inline void
 p6est_layer_free_data (p6est_t * p6est, p2est_quadrant_t * layer)
 {
   if (p6est->data_size > 0) {
