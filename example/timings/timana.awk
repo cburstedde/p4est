@@ -8,10 +8,14 @@
 /^\[p4est\] Processors [[:digit:]]+ level/ {
 	procs = $3
 	level = $5
+	elems = 0
 	#printf "Procs %d level %d\n", procs, level
+}
+/^\[p4est\] .* balanced to/ {
+	elems = $9
 }
 /^\[p4est\] Summary =/ {
 	# Output runtimes for: Refine Balance Partition Ghost Nodes Lnodes
-	printf "%d %d %g %g %g %g %g %g\n", procs, level,
+	printf "%d %d %d %g %g %g %g %g %g\n", procs, level, elems,
 		$5, $6, $33, $34, $35, $38
 }
