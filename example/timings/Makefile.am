@@ -34,3 +34,5 @@ LINT_CSOURCES += \
         $(example_timings_p8est_bricks_SOURCES) \
         $(example_timings_p8est_loadconn_SOURCES)
 endif
+
+EXTRA_DIST += example/timings/timana.awk
