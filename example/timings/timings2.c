@@ -115,9 +115,7 @@ enum
   TIMINGS_PARTITION,
   TIMINGS_GHOSTS,
   TIMINGS_NODES,
-#ifdef P4_TO_P8
   TIMINGS_TRILINEAR,
-#endif
   TIMINGS_REPARTITION,
   TIMINGS_LNODES,
   TIMINGS_NUM_STATS
@@ -591,7 +589,10 @@ main (int argc, char **argv)
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_NODES], snapshot.iwtime, "Nodes");
 
-#ifdef P4_TO_P8
+#ifndef P4_TO_P8
+  /* set this anyway so the output format is dimension independent */
+  sc_stats_set1 (&stats[TIMINGS_TRILINEAR], 0., "Trilinear");
+#else
   /* time trilinear mesh extraction */
   sc_flops_snap (&fi, &snapshot);
   mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
