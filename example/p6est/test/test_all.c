@@ -174,6 +174,7 @@ main (int argc, char **argv)
   sc_options_t       *opt;
   int                 first_argc;
   const char         *config_name;
+  const char         *save_filename;
   sc_statinfo_t       stats[TIMINGS_NUM_STATS];
   sc_flopinfo_t       fi, snapshot;
   int                 mpiret;
@@ -194,17 +195,18 @@ main (int argc, char **argv)
                       "initial refine level");
   sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
                          "configuration: brick23|corner|cubed|disc|moebius|periodic|pillow|rotwrap|star|unit");
+  sc_options_add_string (opt, 'P', "save-file", &save_filename,
+                         "p6est_test_all.p6p", "filename for saving");
   sc_options_add_switch (opt, 'w', "write-vtk", &vtk, "write vtk files");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
 
-  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
-
   if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     return 1;
   }
+  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   /* start overall timing */
   mpiret = MPI_Barrier (mpicomm);
@@ -378,12 +380,12 @@ main (int argc, char **argv)
   P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
 
   sc_flops_snap (&fi, &snapshot);
-  p6est_save ("p6est_test_all.p6p", p6est, 1);
+  p6est_save (save_filename, p6est, 1);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_SAVE], snapshot.iwtime, "Save");
 
   sc_flops_snap (&fi, &snapshot);
-  copy_p6est = p6est_load ("p6est_test_all.p6p", p6est->mpicomm,
+  copy_p6est = p6est_load (save_filename, p6est->mpicomm,
                            p6est->data_size, 1, p6est->user_pointer,
                            &copy_conn);
   sc_flops_shot (&fi, &snapshot);

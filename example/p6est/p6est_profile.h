@@ -53,6 +53,8 @@ typedef struct p6est_profile
   int                 ghost_owned;
   p4est_locidx_t     *lnode_ranges;
   sc_array_t         *lnode_columns;
+  int                *lnode_changed[2];
+  int                 evenodd;
 }
 p6est_profile_t;
 

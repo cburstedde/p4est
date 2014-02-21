@@ -384,7 +384,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
           (degree + 1) * (degree + 1) * (degree + 1) * ll + (degree + 1) * k;
       }
       if (!(i % degree) && !(j % degree)) {
-        int                 c = 2 * (!!j) + (!!i);
+        int                 c = 2 * (! !j) + (! !i);
 
         p6est_profile_element_to_node_single (&elem, &node, degree,
                                               offsets[nid], elem_to_node, fc,
@@ -553,6 +553,8 @@ p6est_profile_new_local (p6est_t * p6est,
   P4EST_ASSERT (degree > 1);
   profile->ptype = ptype;
   profile->btype = btype;
+  profile->lnode_changed[0] = NULL;
+  profile->lnode_changed[1] = NULL;
   if (btype == P8EST_CONNECT_FACE) {
     hbtype = P4EST_CONNECT_FACE;
   }
@@ -583,6 +585,12 @@ p6est_profile_new_local (p6est_t * p6est,
   work = sc_array_new (sizeof (int8_t));
   faceprof = sc_array_new (sizeof (int8_t));
   cornerprof = sc_array_new (sizeof (int8_t));
+  if (ptype == P6EST_PROFILE_UNION) {
+    profile->lnode_changed[0] = P4EST_ALLOC (p4est_locidx_t, nln);
+    profile->lnode_changed[1] = P4EST_ALLOC (p4est_locidx_t, nln);
+    profile->evenodd = 0;
+    memset (profile->lnode_changed[0], -1, nln * sizeof (int));
+  }
 
   /* create the profiles for each node: layers are reduced to just their level
    * */
@@ -717,6 +725,7 @@ p6est_profile_balance_local (p6est_profile_t * profile)
   sc_array_t          testprof;
   int                 any_prof_change;
   int                 any_local_change;
+  int                 evenodd = profile->evenodd;
 
   P4EST_ASSERT (profile->lnodes->degree == 2);
 
@@ -737,6 +746,10 @@ p6est_profile_balance_local (p6est_profile_t * profile)
   cornerprof = sc_array_new (sizeof (int8_t));
 
   do {
+    /* We read from evenodd and write to evenodd ^ 1 */
+    memset (&(profile->lnode_changed[evenodd ^ 1][0]), 0, sizeof (int) * nln);
+    P4EST_GLOBAL_VERBOSE ("p6est_balance local loop\n");
+
     any_local_change = 0;
     for (eidx = 0, enidx = 0; eidx < nle; eidx++) {
       p4est_locidx_t      start_enidx = enidx;
@@ -748,6 +761,11 @@ p6est_profile_balance_local (p6est_profile_t * profile)
       for (j = 0; j < 3; j++) {
         for (i = 0; i < 3; i++, enidx++) {
           nidx = en[enidx];
+          if (!profile->lnode_changed[evenodd][nidx]) {
+            /* if the profile hasn't changed since I wrote to it, there's no
+             * need to balance against it */
+            continue;
+          }
           if (i != 1 && j != 1) {
             if (hbtype == P4EST_CONNECT_FACE) {
               /* skip corners if we don't need to balance them */
@@ -764,8 +782,8 @@ p6est_profile_balance_local (p6est_profile_t * profile)
           sc_array_init_view (&testprof, lc, lr[nidx][0], lr[nidx][1]);
           p6est_profile_union (thisprof, &testprof, work);
           if (work->elem_count > thisprof->elem_count) {
+            P4EST_ASSERT (profile->lnode_changed[evenodd][nidx]);
             any_prof_change = 1;
-            any_local_change = 1;
             sc_array_copy (selfprof, work);
             thisprof = selfprof;
           }
@@ -817,6 +835,10 @@ p6est_profile_balance_local (p6est_profile_t * profile)
             sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
             p6est_profile_union (thisprof, &oldprof, work);
             if (work->elem_count > oldprof.elem_count) {
+              if (!(i == 1 && j == 1)) {        /* we don't count changing self */
+                profile->lnode_changed[evenodd ^ 1][nidx] = 1;
+                any_local_change = 1;
+              }
               lr[nidx][0] = lc->elem_count;
               lr[nidx][1] = work->elem_count;
               c = (int8_t *) sc_array_push_count (lc, work->elem_count);
@@ -827,8 +849,10 @@ p6est_profile_balance_local (p6est_profile_t * profile)
       }
     }
     p6est_profile_compress (profile);
+    evenodd ^= 1;
   } while (any_local_change);
 
+  profile->evenodd = evenodd;
   sc_array_destroy (selfprof);
   sc_array_destroy (faceprof);
   sc_array_destroy (cornerprof);
@@ -858,6 +882,7 @@ p6est_profile_sync (p6est_profile_t * profile)
   int                 any_change = 0;
   int                 any_global_change;
   int                 mpiret, mpirank;
+  int                 evenodd = profile->evenodd;
 
   lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;
   sharers = lnodes->sharers;
@@ -1043,6 +1068,7 @@ p6est_profile_sync (p6est_profile_t * profile)
             any_change = 1;
             lr[nidx][0] = lc->elem_count;
             lr[nidx][1] = work->elem_count;
+            profile->lnode_changed[evenodd][nidx] = 1;
 
             c = (int8_t *) sc_array_push_count (lc, work->elem_count);
             memcpy (c, work->array, work->elem_count * work->elem_size);
@@ -1100,6 +1126,11 @@ p6est_profile_destroy (p6est_profile_t * profile)
   p4est_lnodes_destroy (profile->lnodes);
   if (profile->ghost_owned) {
     p4est_ghost_destroy (profile->cghost);
+  }
+  if (profile->lnode_changed[0]) {
+    P4EST_ASSERT (profile->lnode_changed[1]);
+    P4EST_FREE (profile->lnode_changed[0]);
+    P4EST_FREE (profile->lnode_changed[1]);
   }
   P4EST_FREE (profile->lnode_ranges);
   sc_array_destroy (profile->lnode_columns);

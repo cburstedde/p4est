@@ -115,5 +115,5 @@ if !P4EST_DIST_ALLOW
 	@exit 1
 endif
 
-clean-local:
+clean-local: clean-local-p6est
 	rm -f *vtu *.visit *.p4c *.p4p *.p8c *.p8p
