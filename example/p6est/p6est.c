@@ -2147,7 +2147,7 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   int                 any_change;
   int                 niter;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_coarsen_layers with %lld total layers"
+  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_balance with %lld total layers"
                             " in %lld total columns\n",
                             (long long) p6est->
                             global_first_layer[p6est->mpisize],
@@ -2224,7 +2224,7 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_balance with %lld total layers "
-                            " in %lld total columns\n",
+                            "in %lld total columns\n",
                             (long long) p6est->
                             global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
