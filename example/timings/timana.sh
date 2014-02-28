@@ -17,18 +17,24 @@ $TIMANAWK > $TMPF
 gnuplot <<EOF
 
 set logscale xy
-set xlabel "Elements"
-set ylabel "Runtime / \#cores [1s]"
 set key left
 
 set output "timana.eps"
 set term postscript color
 
 # Fields 4..9: Refine Balance Partition Ghost Nodes Lnodes
+
+set xlabel "\#elements / core"
+set ylabel "runtime [1s]"
 plot "$TMPF" using (\$3 / \$1):(\$5) title "Balance", \
-	1e-5 * x title "ideal scaling" with lines
+	5e-6 * x title "ideal scaling" with lines, \
+	1 title "1 second"
 plot "$TMPF" using (\$3 / \$1):(\$9) title "Lnodes", \
-	2e-5 * x title "ideal scaling" with lines
+	2e-5 * x title "ideal scaling" with lines, \
+	1 title "1 second"
+
+# set xlabel "Elements"
+# set ylabel "Runtime / \#cores [1s]"
 # plot "$TMPF" using (\$3):(\$5 / (\$3 * 1e-6 / \$1)) title "Balance"
 # plot "$TMPF" using (\$3):(\$9 / (\$3 * 1e-6 / \$1)) title "Lnodes"
 
