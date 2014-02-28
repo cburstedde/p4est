@@ -842,7 +842,12 @@ p6est_profile_balance_local (p6est_profile_t * profile)
             /* if this node has been initialized, combine the two profiles,
              * taking the finer layers from each */
             sc_array_init_view (&oldprof, lc, lr[nidx][0], lr[nidx][1]);
-            p6est_profile_union (thisprof, &oldprof, work);
+            if (i == 1 && j == 1) {
+              sc_array_copy (work, thisprof);
+            }
+            else {
+              p6est_profile_union (thisprof, &oldprof, work);
+            }
             if (work->elem_count > oldprof.elem_count) {
               if (!(i == 1 && j == 1)) {        /* we don't count changing self */
                 profile->lnode_changed[evenodd ^ 1][nidx] = 1;
