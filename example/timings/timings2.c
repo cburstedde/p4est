@@ -221,6 +221,7 @@ main (int argc, char **argv)
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
 #ifdef P4_TO_P8
+  int                 do_trilinear;
   trilinear_mesh_t   *mesh;
 #endif
   p4est_lnodes_t     *lnodes;
@@ -273,6 +274,10 @@ main (int argc, char **argv)
                          "use both ranges and notify");
   sc_options_add_switch (opt, 'y', "balance-verify", &use_balance_verify,
                          "use verifications in balance");
+#ifdef P4_TO_P8
+  sc_options_add_bool (opt, 0, "trilinear", &do_trilinear, 0,
+                       "Time trilinear_mesh_new");
+#endif
   sc_options_add_int (opt, 'l', "level", &refine_level, 0,
                       "initial refine level");
 #ifndef P4_TO_P8
@@ -589,18 +594,19 @@ main (int argc, char **argv)
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_NODES], snapshot.iwtime, "Nodes");
 
-#ifndef P4_TO_P8
   /* set this anyway so the output format is dimension independent */
   sc_stats_set1 (&stats[TIMINGS_TRILINEAR], 0., "Trilinear");
-#else
-  /* time trilinear mesh extraction */
-  sc_flops_snap (&fi, &snapshot);
-  mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
-  sc_flops_shot (&fi, &snapshot);
-  sc_stats_set1 (&stats[TIMINGS_TRILINEAR], snapshot.iwtime, "Trilinear");
+#ifdef P4_TO_P8
+  if (do_trilinear) {
+    /* time trilinear mesh extraction */
+    sc_flops_snap (&fi, &snapshot);
+    mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_TRILINEAR], snapshot.iwtime, "Trilinear");
 
-  /* destroy mesh related memory */
-  p8est_trilinear_mesh_destroy (mesh);
+    /* destroy mesh related memory */
+    p8est_trilinear_mesh_destroy (mesh);
+  }
 #endif
   p4est_nodes_destroy (nodes);
 
