@@ -1908,9 +1908,9 @@ p4est_iter_init_corner_from_face (p4est_iter_corner_args_t * args,
       cside->edges[dir] = ntc_str + k;
       ndir1 = SC_MIN (((dir + 1) % 3), ((dir + 2) % 3));
       ndir2 = SC_MAX (((dir + 1) % 3), ((dir + 2) % 3));
-      cside->faces[ndir1] = ntc_str + ntc_str * k + (j >> 1);
-      cside->faces[ndir2] = ntc_str + ntc_str * k + 2 + (j & 1);
       if (!k) {
+        cside->faces[ndir1] = ntc_str + ntc_str * k + (j >> 1);
+        cside->faces[ndir2] = ntc_str + ntc_str * k + 2 + (j & 1);
         cside->edges[ndir1] = (j & 1);
         cside->edges[ndir2] = 2 + (j >> 1);
       }
@@ -1921,11 +1921,15 @@ p4est_iter_init_corner_from_face (p4est_iter_corner_args_t * args,
           p8est_corner_face_corners[num_to_child[ntc_str + 1]][fside->face];
 
         if (c0 == (c1 ^ 1)) {
+          cside->faces[ndir1] = ntc_str + ntc_str * k + (j >> 1);
+          cside->faces[ndir2] = ntc_str + ntc_str * k + 2 + (j & 1);
           cside->edges[ndir1] = (j & 1);
           cside->edges[ndir2] = 2 + (j >> 1);
         }
         else {
           P4EST_ASSERT (c0 == (c1 ^ 2));
+          cside->faces[ndir2] = ntc_str + ntc_str * k + (j >> 1);
+          cside->faces[ndir1] = ntc_str + ntc_str * k + 2 + (j & 1);
           cside->edges[ndir2] = (j & 1);
           cside->edges[ndir1] = 2 + (j >> 1);
         }
