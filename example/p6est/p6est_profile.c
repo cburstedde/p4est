@@ -384,7 +384,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
           (degree + 1) * (degree + 1) * (degree + 1) * ll + (degree + 1) * k;
       }
       if (!(i % degree) && !(j % degree)) {
-        int                 c = 2 * (! !j) + (! !i);
+        int                 c = 2 * (!!j) + (!!i);
 
         p6est_profile_element_to_node_single (&elem, &node, degree,
                                               offsets[nid], elem_to_node, fc,
@@ -555,6 +555,7 @@ p6est_profile_new_local (p6est_t * p6est,
   profile->btype = btype;
   profile->lnode_changed[0] = NULL;
   profile->lnode_changed[1] = NULL;
+  profile->enode_counts = NULL;
   if (btype == P8EST_CONNECT_FACE) {
     hbtype = P4EST_CONNECT_FACE;
   }
@@ -588,6 +589,7 @@ p6est_profile_new_local (p6est_t * p6est,
   if (ptype == P6EST_PROFILE_UNION) {
     profile->lnode_changed[0] = P4EST_ALLOC (p4est_locidx_t, nln);
     profile->lnode_changed[1] = P4EST_ALLOC (p4est_locidx_t, nln);
+    profile->enode_counts = P4EST_ALLOC (p4est_locidx_t, P4EST_INSUL * nle);
     profile->evenodd = 0;
     memset (profile->lnode_changed[0], -1, nln * sizeof (int));
   }
@@ -647,6 +649,7 @@ p6est_profile_new_local (p6est_t * p6est,
               thisprof = faceprof;
             }
             count = thisprof->elem_count;
+            profile->enode_counts[enidx] = count;
             if (!lr[nidx][1]) {
               /* if this node has not yet been initialized, initialize it */
               lr[nidx][0] = lc->elem_count;
@@ -779,6 +782,12 @@ p6est_profile_balance_local (p6est_profile_t * profile)
             continue;
           }
           P4EST_ASSERT (lr[nidx][1]);
+          P4EST_ASSERT (profile->enode_counts[enidx] <= lr[nidx][1]);
+          if (profile->enode_counts[enidx] == lr[nidx][1]) {
+            /* if the profile hasn't changed since I wrote to it, there's no
+             * need to balance against it */
+            continue;
+          }
           sc_array_init_view (&testprof, lc, lr[nidx][0], lr[nidx][1]);
           p6est_profile_union (thisprof, &testprof, work);
           if (work->elem_count > thisprof->elem_count) {
@@ -844,6 +853,7 @@ p6est_profile_balance_local (p6est_profile_t * profile)
               c = (int8_t *) sc_array_push_count (lc, work->elem_count);
               memcpy (c, work->array, work->elem_count * work->elem_size);
             }
+            profile->enode_counts[enidx] = lr[nidx][1];
           }
         }
       }
@@ -1131,6 +1141,8 @@ p6est_profile_destroy (p6est_profile_t * profile)
     P4EST_ASSERT (profile->lnode_changed[1]);
     P4EST_FREE (profile->lnode_changed[0]);
     P4EST_FREE (profile->lnode_changed[1]);
+    P4EST_ASSERT (profile->enode_counts);
+    P4EST_FREE (profile->enode_counts);
   }
   P4EST_FREE (profile->lnode_ranges);
   sc_array_destroy (profile->lnode_columns);

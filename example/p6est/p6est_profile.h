@@ -54,6 +54,7 @@ typedef struct p6est_profile
   p4est_locidx_t     *lnode_ranges;
   sc_array_t         *lnode_columns;
   int                *lnode_changed[2];
+  p4est_locidx_t     *enode_counts;
   int                 evenodd;
 }
 p6est_profile_t;
