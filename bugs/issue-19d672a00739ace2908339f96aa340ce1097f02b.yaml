@@ -1,0 +1,24 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Assertion in p8est_nodes_new
+desc: |-
+  reproducible with
+  
+  mpiexec -n 27 p8est_timings -c periodic --level 3
+  
+  [libsc 22] Abort: Assertion '(k < rank && il < offset_owned_indeps) || (k > rank && il >= end_owned_indeps)'
+  [libsc 22] Abort: /h2/tisaac/Projects/p4est/src/p4est_nodes.c:1183
+type: :bugfix
+component: p4est
+release: 
+reporter: Tobin Isaac <tisaac@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2014-03-04 04:17:58.885803 Z
+references: []
+
+id: 19d672a00739ace2908339f96aa340ce1097f02b
+log_events: 
+- - 2014-03-04 04:18:01.408539 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - created
+  - ""
