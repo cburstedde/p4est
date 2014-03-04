@@ -692,7 +692,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     else if (p8est_quadrant_is_outside_edge (&tempq)) {
       /* outside an edge: use some knowledge about how p4est_iterate orders
        * the sides around a corner that is in the middle of an edge */
-      int                 owner_e, owner_c2, e, c2;
+      int                 owner_e, owner_c2, e, c2, this_c, this_c2;
 
       P4EST_ASSERT (count % 2 == 0);
       /* side[count/2] should be on the same edge as side[0] */
@@ -706,9 +706,17 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       /* side[zz] is on the same edge as side[zz +- count / 2] */
       if (zz < count / 2) {
         cside = p4est_iter_cside_array_index (sides, zz + count / 2);
+        /* the order of this_c and this_c2 reflects the orientation of the
+         * edge that the corners touch */
+        this_c = c;
+        this_c2 = cside->corner;
       }
       else {
         cside = p4est_iter_cside_array_index (sides, zz - count / 2);
+        /* the order of this_c and this_c2 reflects the orientation of the
+         * edge that the corners touch */
+        this_c = cside->corner;
+        this_c2 = c;
       }
       /* we now have two corners, which determines the edge from zz's point of
        * view */
@@ -730,7 +738,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       }
       /* if the two edges are oppositely oriented, get the complement
        * coordinate */
-      if ((owner_c > owner_c2) != (c > c2)) {
+      if ((owner_c > owner_c2) != (this_c > this_c2)) {
         l = P4EST_ROOT_LEN - l;
       }
       /* we combine the knowledge about which edge we are looking for with the
