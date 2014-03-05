@@ -7,6 +7,10 @@ desc: |-
   
   [libsc 22] Abort: Assertion '(k < rank && il < offset_owned_indeps) || (k > rank && il >= end_owned_indeps)'
   [libsc 22] Abort: /h2/tisaac/Projects/p4est/src/p4est_nodes.c:1183
+  
+  I found a smaller example
+  
+  mpiexec -n 7 p8est_timings -c periodic --level 2
 type: :bugfix
 component: p4est
 release: 
@@ -21,4 +25,8 @@ log_events:
 - - 2014-03-04 04:18:01.408539 Z
   - Tobin Isaac <tisaac@ices.utexas.edu>
   - created
+  - ""
+- - 2014-03-05 05:20:24.872509 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - edited description
   - ""
