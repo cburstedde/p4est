@@ -784,11 +784,16 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       if (first_peer == num_procs) {
         first_peer = owner;
       }
+      if (owner > rank && offset_owned_indeps == -1) {
+        /* we own no independent nodes and have just found the right offset */
+        offset_owned_indeps = il;
+      }
       last_peer = owner;
       ++procs[owner];
     }
     else {
       if (offset_owned_indeps == -1) {
+        /* we own at least one independent node */
         offset_owned_indeps = il;
       }
       in->p.piggy3.local_num = num_owned_indeps++;
@@ -797,8 +802,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     prev = owner;
   }
   if (offset_owned_indeps == -1) {
+    /* we own no independent nodes and all nodes belong to smaller processors */
     P4EST_ASSERT (num_owned_indeps == 0);
-    offset_owned_indeps = 0;
+    offset_owned_indeps = num_indep_nodes;
   }
   end_owned_indeps = offset_owned_indeps + num_owned_indeps;
 
@@ -964,6 +970,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     if (peer->recv_first.elem_count == 0) {
       continue;
     }
+    P4EST_ASSERT (k != rank);
     for (zz = 0; zz < peer->recv_first.elem_count; ++zz) {
       node_number = (p4est_locidx_t *) sc_array_index (&peer->recv_first, zz);
       position = (size_t) (*node_number + offset_owned_indeps);
@@ -1297,6 +1304,10 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                   (long long) num_owned_indeps,
                   (long long) num_indep_nodes,
                   (unsigned long long) shared_indeps->elem_count);
+
+  P4EST_ASSERT (0 <= offset_owned_indeps &&
+                offset_owned_indeps <= end_owned_indeps && 
+                end_owned_indeps <= num_indep_nodes);
 #endif
 
   P4EST_ASSERT (p4est_nodes_is_valid (p4est, nodes));
