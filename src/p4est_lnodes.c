@@ -1066,7 +1066,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      qid, owner_qid, nqid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
   int8_t             *is_ghost, owner_is_ghost;
-  int                 e, edir, owner_e, owner_c, o, o2;
+  int                 e, edir, owner_e, owner_c, o;
   p4est_locidx_t      nid;
   int                 owner_proc, nproc;
   int                 rank = info->p4est->mpirank;
@@ -1192,7 +1192,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       nt = conn->tree_to_tree[P4EST_FACES * owner_tid + owner_f];
       nf = conn->tree_to_face[P4EST_FACES * owner_tid + owner_f];
 
-      o2 = nf / P4EST_FACES;
+      /* o2 = nf / P4EST_FACES; */
       nf %= P4EST_FACES;
 
       if ((nt == owner_tid && nf == owner_f) || (zz % 2) == 0) {
