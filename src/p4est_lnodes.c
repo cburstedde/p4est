@@ -1023,6 +1023,8 @@ p8est_lnodes_missing_proc_edge (p8est_iter_edge_info_t * info, int side,
       }
     }
   }
+  mproc[0] = -1;
+  mproc[1] = -1;
 }
 
 /* p8est_lnodes_edge_callback:
@@ -1064,7 +1066,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      qid, owner_qid, nqid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
   int8_t             *is_ghost, owner_is_ghost;
-  int                 e, edir, owner_e, owner_c, o;
+  int                 e, edir, owner_e, owner_c, o, o2;
   p4est_locidx_t      nid;
   int                 owner_proc, nproc;
   int                 rank = info->p4est->mpirank;
@@ -1087,8 +1089,6 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   sc_array_truncate (touching_procs);
   sc_array_truncate (all_procs);
   has_local = p8est_lnodes_edge_simple_callback (info, data);
-  sc_array_sort (touching_procs, sc_int_compare);
-  sc_array_uniq (touching_procs, sc_int_compare);
 
   owner_eside = p8est_iter_eside_array_index (sides, 0);
   owner_e = owner_eside->edge;
@@ -1113,7 +1113,9 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     eside = NULL;
     for (zz = 1; zz < count; zz++) {
       eside = p8est_iter_eside_array_index (sides, zz);
-      if (eside->is_hanging || eside->is.full.quad) {
+      if ((eside->is_hanging && eside->is.hanging.quad[0]
+           && eside->is.hanging.quad[1])
+          || eside->is.full.quad) {
         break;
       }
     }
@@ -1180,6 +1182,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       P4EST_ASSERT (count == 2 || count == 4);
       eside = p8est_iter_eside_array_index (sides, count / 2);
       P4EST_ASSERT (eside->treeid == owner_tid);
+      P4EST_ASSERT (eside->edge != owner_e);
 
       c1 = p8est_edge_corners[owner_e][0];
       c2 = p8est_edge_corners[eside->edge][1];
@@ -1189,12 +1192,13 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       nt = conn->tree_to_tree[P4EST_FACES * owner_tid + owner_f];
       nf = conn->tree_to_face[P4EST_FACES * owner_tid + owner_f];
 
-      o = nf / P4EST_FACES;
+      o2 = nf / P4EST_FACES;
       nf %= P4EST_FACES;
 
       if ((nt == owner_tid && nf == owner_f) || (zz % 2) == 0) {
         /* q must be on the same side: the corner is in the same coordinates
          */
+        P4EST_ASSERT (!o);
         h = P4EST_QUADRANT_LEN (q->level);
         x = q->x + h * (c & 1);
         y = q->y + h * ((c & 2) >> 1);
@@ -1232,10 +1236,14 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       P4EST_ASSERT (owner_proc >= 0 && owner_proc != rank);
     }
     else {
+      owner_proc = rank;
       tree = p4est_tree_array_index (trees, owner_tid);
       quadrants_offset = tree->quadrants_offset;
       owner_qid += quadrants_offset;
-      owner_proc = rank;
+    }
+    if (has_local) {
+      sc_array_sort (touching_procs, sc_int_compare);
+      sc_array_uniq (touching_procs, sc_int_compare);
     }
   }
   /* create nodes */
@@ -1264,6 +1272,10 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     if (!is_hanging && quad[0] == NULL) {
       continue;
     }
+    mproc[0][0] = -2;
+    mproc[0][1] = -2;
+    mproc[1][0] = -2;
+    mproc[1][1] = -2;
     for (i = 0; i < limit; i++) {
       qid = qids[i];
       stride = (o ? -1 : 1);
@@ -1296,14 +1308,15 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
                           [xdir[1]] == -2);
             dep->face[xdir[1]] = -2;
           }
-          else if (!i) {
+          else if (mproc[j][i] == -2) {
             p8est_lnodes_missing_proc_edge (info, zz, xdir[1],
                                             &(mproc[j][0]));
+            P4EST_ASSERT (mproc[j][0] != -2 && mproc[j][1] != -2);
             P4EST_ASSERT (mproc[j][0] != rank && mproc[j][1] != rank);
-            dep->face[xdir[1]] = -((p4est_locidx_t) mproc[j][0] + 3);
+            dep->face[xdir[1]] = -((p4est_locidx_t) mproc[j][i] + 3);
           }
           else {
-            dep->face[xdir[1]] = -((p4est_locidx_t) mproc[j][1] + 3);
+            dep->face[xdir[1]] = -((p4est_locidx_t) mproc[j][i] + 3);
           }
         }
         if (dep->face[xdir[1]] == -2) {
@@ -1431,8 +1444,6 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 
   sc_array_truncate (touching_procs);
   p4est_lnodes_face_simple_callback (info, data);
-  sc_array_sort (touching_procs, sc_int_compare);
-  sc_array_uniq (touching_procs, sc_int_compare);
 
   /* the first touching quad is the owner */
   fside = p4est_iter_fside_array_index (sides, 0);
@@ -1459,6 +1470,8 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
     owner_proc = *((int *) sc_array_index (touching_procs, 0));
     P4EST_ASSERT (owner_proc >= 0 && owner_proc != rank);
   }
+  sc_array_sort (touching_procs, sc_int_compare);
+  sc_array_uniq (touching_procs, sc_int_compare);
   /* create the nodes */
   for (i = 0; i < nodes_per_face; i++) {
     inode = (p4est_locidx_t *) sc_array_push (inodes);
