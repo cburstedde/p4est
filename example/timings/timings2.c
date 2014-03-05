@@ -118,6 +118,9 @@ enum
   TIMINGS_TRILINEAR,
   TIMINGS_REPARTITION,
   TIMINGS_LNODES,
+  TIMINGS_LNODES2,
+  TIMINGS_LNODES4,
+  TIMINGS_LNODES8,
   TIMINGS_NUM_STATS
 };
 
@@ -238,6 +241,7 @@ main (int argc, char **argv)
   int                 use_ranges, use_ranges_notify, use_balance_verify;
   int                 oldschool, generate;
   int                 first_argc;
+  int                 test_multiple_orders;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -293,6 +297,9 @@ main (int argc, char **argv)
                          "Generate regression commands");
   sc_options_add_string (opt, 'f', "load-forest", &load_name, NULL,
                          "load saved " P4EST_STRING);
+  sc_options_add_switch (opt, 0, "multiple-lnodes",
+                         &test_multiple_orders,
+                         "Also time lnodes for orders 2, 4, and 8");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -616,6 +623,31 @@ main (int argc, char **argv)
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_LNODES], snapshot.iwtime, "L-Nodes");
   p4est_lnodes_destroy (lnodes);
+
+  if (test_multiple_orders) {
+    sc_flops_snap (&fi, &snapshot);
+    lnodes = p4est_lnodes_new (p4est, ghost, 2);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_LNODES2], snapshot.iwtime, "L-Nodes 2");
+    p4est_lnodes_destroy (lnodes);
+
+    sc_flops_snap (&fi, &snapshot);
+    lnodes = p4est_lnodes_new (p4est, ghost, 4);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_LNODES4], snapshot.iwtime, "L-Nodes 4");
+    p4est_lnodes_destroy (lnodes);
+
+    sc_flops_snap (&fi, &snapshot);
+    lnodes = p4est_lnodes_new (p4est, ghost, 8);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_LNODES8], snapshot.iwtime, "L-Nodes 8");
+    p4est_lnodes_destroy (lnodes);
+  }
+  else {
+    sc_stats_set1 (&stats[TIMINGS_LNODES2], 0., "L-Nodes 2");
+    sc_stats_set1 (&stats[TIMINGS_LNODES4], 0., "L-Nodes 4");
+    sc_stats_set1 (&stats[TIMINGS_LNODES8], 0., "L-Nodes 8");
+  }
 
   p4est_ghost_destroy (ghost);
 
