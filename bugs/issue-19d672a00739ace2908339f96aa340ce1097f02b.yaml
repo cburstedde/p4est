@@ -30,3 +30,7 @@ log_events:
   - Tobin Isaac <tisaac@ices.utexas.edu>
   - edited description
   - ""
+- - 2014-03-05 17:50:05.310170 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - Fixed a bug in p4est_nodes, the examples run cleanly now.
