@@ -144,7 +144,7 @@ static int          refine_level = 0;
 static int          level_shift = 0;
 
 /* *INDENT-OFF* */
-static const timings_regression_t regression[] =
+static const timings_regression_t regression_oldschool[] =
 {
 #ifndef P4_TO_P8
   { P4EST_CONFIG_UNIT, 1, 10, 0x6e3e83c4U },
@@ -166,6 +166,37 @@ static const timings_regression_t regression[] =
   { P4EST_CONFIG_ROTWRAP, 7, 6, 0xa2f1ee48U },
   { P4EST_CONFIG_TWOCUBES, 5, 6, 0xa8b1f54eU },
   { P4EST_CONFIG_TWOCUBES, 8, 5, 0x98d3579dU },
+  { P4EST_CONFIG_ROTCUBES, 1, 5, 0x404e4aa8U },
+  { P4EST_CONFIG_ROTCUBES, 7, 6, 0x4c381706U },
+  { P4EST_CONFIG_SHELL, 1, 4, 0x8c56f159U },
+  { P4EST_CONFIG_SHELL, 3, 5, 0xafbc4f8cU },
+  { P4EST_CONFIG_SHELL, 5, 6, 0xf6d9efb8U },
+#endif
+  { P4EST_CONFIG_NULL, 0, 0, 0 }
+};
+
+static const timings_regression_t regression_latest[] =
+{
+#ifndef P4_TO_P8
+  { P4EST_CONFIG_UNIT, 1, 10, 0x6e3e83c4U },
+  { P4EST_CONFIG_UNIT, 1, 11, 0x334bc3deU },
+  { P4EST_CONFIG_UNIT, 64, 14, 0xad908ce4U },
+  { P4EST_CONFIG_UNIT, 256, 15, 0x9e7da646U },
+  { P4EST_CONFIG_STAR, 1, 6, 0x14107b57U },
+  { P4EST_CONFIG_STAR, 4, 6, 0x14107b57U },
+  { P4EST_CONFIG_STAR, 52, 13, 0xc86c74d9U },
+  { P4EST_CONFIG_STAR, 64, 13, 0xc86c74d9U },
+#else
+  { P4EST_CONFIG_UNIT, 1, 5, 0xc2012e84U },
+  { P4EST_CONFIG_UNIT, 1, 6, 0x2cad814dU },
+  { P4EST_CONFIG_UNIT, 3, 8, 0xeb252238U },
+  { P4EST_CONFIG_PERIODIC, 1, 5, 0x2776c9b7U },
+  { P4EST_CONFIG_PERIODIC, 2, 5, 0x2776c9b7U },
+  { P4EST_CONFIG_PERIODIC, 7, 6, 0x4f281079U },
+  { P4EST_CONFIG_ROTWRAP, 2, 6, 0x372f7402U },
+  { P4EST_CONFIG_ROTWRAP, 7, 6, 0x372f7402U },
+  { P4EST_CONFIG_TWOCUBES, 5, 6, 0xa8b1f54eU },
+  { P4EST_CONFIG_TWOCUBES, 8, 5, 0x0aad11d0U },
   { P4EST_CONFIG_ROTCUBES, 1, 5, 0x404e4aa8U },
   { P4EST_CONFIG_ROTCUBES, 7, 6, 0x4c381706U },
   { P4EST_CONFIG_SHELL, 1, 4, 0x8c56f159U },
@@ -218,7 +249,7 @@ main (int argc, char **argv)
   trilinear_mesh_t   *mesh;
 #endif
   p4est_lnodes_t     *lnodes;
-  const timings_regression_t *r;
+  const timings_regression_t *r, *regression;
   timings_config_t    config;
   sc_statinfo_t       stats[TIMINGS_NUM_STATS];
   sc_flopinfo_t       fi, snapshot;
@@ -229,6 +260,7 @@ main (int argc, char **argv)
   int                 borders;
   int                 max_ranges;
   int                 use_ranges, use_ranges_notify, use_balance_verify;
+  int                 oldschool, generate;
   int                 first_argc;
 
   /* initialize MPI and p4est internals */
@@ -275,6 +307,10 @@ main (int argc, char **argv)
   sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
                          "configuration: unit|periodic|rotwrap|twocubes|rotcubes|shell");
 #endif
+  sc_options_add_bool (opt, 0, "oldschool", &oldschool, 0,
+                       "Use original p4est_new call");
+  sc_options_add_switch (opt, 0, "generate", &generate,
+                         "Generate regression commands");
   sc_options_add_string (opt, 'f', "load-forest", &load_name, NULL,
                          "load saved " P4EST_STRING);
 
@@ -349,6 +385,7 @@ main (int argc, char **argv)
   sc_flops_start (&fi);
 
   /* create connectivity and forest structures */
+  regression = NULL;
   if (load_name == NULL) {
 #ifndef P4_TO_P8
     if (config == P4EST_CONFIG_PERIODIC) {
@@ -387,8 +424,62 @@ main (int argc, char **argv)
     }
 #endif
 
-    p4est = p4est_new_ext (mpi->mpicomm, connectivity,
-                           1, refine_level - level_shift, 1, 0, NULL, NULL);
+    /* create new p4est from scratch */
+    if (oldschool) {
+      regression = regression_oldschool;
+      p4est = p4est_new_ext (mpi->mpicomm, connectivity,
+                             15, 0, 0, 0, NULL, NULL);
+    }
+    else {
+      regression = regression_latest;
+      p4est = p4est_new_ext (mpi->mpicomm, connectivity,
+                             0, refine_level - level_shift, 1, 0, NULL, NULL);
+    }
+
+    /* print all available regression tests */
+    if (generate) {
+      const char         *config_name = NULL;
+
+      P4EST_GLOBAL_PRODUCTION ("Checksum regression tests available:\n");
+      for (r = regression; r->config != P4EST_CONFIG_NULL; ++r) {
+        switch (r->config) {
+        case P4EST_CONFIG_PERIODIC:
+          config_name = "periodic";
+          break;
+#ifndef P4_TO_P8
+        case P4EST_CONFIG_THREE:
+          config_name = "three";
+          break;
+        case P4EST_CONFIG_MOEBIUS:
+          config_name = "moebius";
+          break;
+        case P4EST_CONFIG_STAR:
+          config_name = "star";
+          break;
+#else
+        case P4EST_CONFIG_ROTWRAP:
+          config_name = "rotwrap";
+          break;
+        case P4EST_CONFIG_TWOCUBES:
+          config_name = "twocubes";
+          break;
+        case P4EST_CONFIG_ROTCUBES:
+          config_name = "rotcubes";
+          break;
+        case P4EST_CONFIG_SHELL:
+          config_name = "shell";
+          break;
+#endif
+        default:
+          config_name = "unit";
+          break;
+        }
+        P4EST_GLOBAL_PRODUCTIONF ("mpirun -np %3d %s%s -c %10s -l %2d\n",
+                                  r->mpisize, opt->program_path,
+                                  oldschool ? " --oldschool" : "",
+                                  config_name, r->level);
+      }
+    }
   }
   else {
     p4est = p4est_load (load_name, mpi->mpicomm, 0, 0, NULL, &connectivity);
@@ -567,7 +658,7 @@ main (int argc, char **argv)
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
   /* verify forest checksum */
-  if (mpi->mpirank == 0) {
+  if (regression != NULL && mpi->mpirank == 0) {
     for (r = regression; r->config != P4EST_CONFIG_NULL; ++r) {
       if (r->config != config || r->mpisize != mpi->mpisize
           || r->level != refine_level)
