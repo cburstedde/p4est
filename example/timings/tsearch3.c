@@ -23,7 +23,7 @@
 
 /*
  * Usage:
- * p8est_tsearch [-l <LEVEL>] [-s <LEVEL-SHIFT>] [-N <NUM-POINTS>]
+ * p8est_tsearch [-l <LEVEL>] [-s <LEVEL-SHIFT>] [-N <NUM-POINTS>] [-V]
  *
  * NUM-POINTS determines how many points are positioned randomly and searched
  * in the forest.  The domain is the spherical shell with radii 0.55 and 1 and
@@ -66,10 +66,12 @@ typedef struct
   /* global data for the program */
   double              rout, rin;
   double              rout2, rin2;
-  
+
   /* data for the currently active quadrant */
+  p4est_locidx_t      which_tree;
   p4est_quadrant_t   *sq;
   int                 is_leaf;
+  double              center[P4EST_DIM], radius2;
 }
 tsearch_global_t;
 
@@ -101,18 +103,116 @@ typedef struct tsearch_point
 }
 tsearch_point_t;
 
+static void
+reference_to_physical (tsearch_global_t * tsg, const double *ref,
+                       double *phys)
+{
+  const double        R2byR1 = tsg->rout / tsg->rin;
+  const double        R1sqrbyR2 = tsg->rin / R2byR1;
+  double              x, y;
+  double              R, q;
+
+  /* assert that input points are in the expected range */
+  P4EST_ASSERT (ref[0] < 1.0 + 1e-12 && ref[0] > -1.0 - 1e-12);
+  P4EST_ASSERT (ref[1] < 1.0 + 1e-12 && ref[1] > -1.0 - 1e-12);
+  P4EST_ASSERT (ref[2] < 2.0 + 1e-12 && ref[2] > 1.0 - 1e-12);
+
+  /* transform x and y for nicer grading */
+  x = tan (ref[0] * M_PI_4);
+  y = tan (ref[1] * M_PI_4);
+
+  /* compute transformation ingredients */
+  R = R1sqrbyR2 * pow (R2byR1, ref[2]);
+  q = R / sqrt (x * x + y * y + 1.);
+
+  /* assign coordinates based on tree id */
+  switch (tsg->which_tree / 4) {
+  case 3:                      /* top */
+    phys[0] = +q * y;
+    phys[1] = -q * x;
+    phys[2] = +q;
+    break;
+  case 2:                      /* left */
+    phys[0] = -q;
+    phys[1] = -q * x;
+    phys[2] = +q * y;
+    break;
+  case 1:                      /* bottom */
+    phys[0] = -q * y;
+    phys[1] = -q * x;
+    phys[2] = -q;
+    break;
+  case 0:                      /* right */
+    phys[0] = +q;
+    phys[1] = -q * x;
+    phys[2] = -q * y;
+    break;
+  case 4:                      /* back */
+    phys[0] = -q * x;
+    phys[1] = +q;
+    phys[2] = +q * y;
+    break;
+  case 5:                      /* front */
+    phys[0] = +q * x;
+    phys[1] = -q;
+    phys[2] = +q * y;
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
+static void
+tsearch_setup (tsearch_global_t * tsg)
+{
+  int                 j, k;
+  double              mlen, hwidth, dist2;
+  double              ref[P4EST_DIM], phys[P4EST_DIM];
+  double             *m = tsg->center;
+  p4est_quadrant_t   *q = tsg->sq, c;
+
+  mlen = 1. / P4EST_ROOT_LEN;
+  hwidth = .5 * mlen * P4EST_QUADRANT_LEN (q->level);
+
+  /* transform center of the quadrant to physical space */
+  ref[0] = q->x * mlen + hwidth - 1. + (tsg->which_tree & 1);
+  ref[1] = q->y * mlen + hwidth - 1. + (tsg->which_tree & 2) / 2;
+  ref[2] = q->z * mlen + hwidth + 1.;
+  reference_to_physical (tsg, ref, m);
+
+  /* transform all corners of the quadrant and take max distance to center */
+  tsg->radius2 = 0.;
+  for (k = 0; k < P4EST_CHILDREN; ++k) {
+    p4est_quadrant_corner_node (q, k, &c);
+    ref[0] = c.x * mlen - 1. + (tsg->which_tree & 1);
+    ref[1] = c.y * mlen - 1. + (tsg->which_tree & 2) / 2;
+    ref[2] = c.z * mlen + 1.;
+    reference_to_physical (tsg, ref, phys);
+    dist2 = 0.;
+    for (j = 0; j < P4EST_DIM; ++j) {
+      dist2 += (phys[j] - m[j]) * (phys[j] - m[j]);
+    }
+    if (dist2 > tsg->radius2) {
+      tsg->radius2 = dist2;
+    }
+  }
+}
+
 static int
 time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * q, p4est_locidx_t local_num, void *point)
 {
   tsearch_global_t   *tsg = (tsearch_global_t *) p4est->user_pointer;
+  int                 j;
   double              r2;
   tsearch_point_t    *t = (tsearch_point_t *) point;
 
   if (point == NULL) {
     /* per-quadrant setup function */
+    tsg->which_tree = which_tree;
     tsg->sq = q;
     tsg->is_leaf = local_num >= 0;
+    tsearch_setup (tsg);
     return 1;
   }
   P4EST_ASSERT (tsg->sq == q);
@@ -127,7 +227,12 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   if (!tsg->is_leaf) {
-    /* perform over-optimistic check on bounding box */
+    /* perform over-optimistic check on bounding sphere */
+    r2 = 0.;
+    for (j = 0; j < P4EST_DIM; ++j) {
+      r2 += (t->xy[j] - tsg->center[j]) * (t->xy[j] - tsg->center[j]);
+    }
+    return r2 < (1. + 1e-12) * tsg->radius2;
   }
   else {
     /* perform strict check by inverse coordinate transformation */
