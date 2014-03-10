@@ -303,6 +303,18 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
 
+void                p4est_partition_lnodes (p4est_t *p4est,
+                                            p4est_ghost_t *ghost,
+                                            int degree,
+                                            int partition_for_coarsening);
+
+void                p4est_partition_lnodes_ext (p4est_t *p4est,
+                                                p4est_ghost_t *ghost,
+                                                int nodes_per_volume,
+                                                int nodes_per_face,
+                                                int nodes_per_corner,
+                                                int partition_for_coarsening);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_EXTENDED_H */

@@ -248,7 +248,7 @@ p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
                                       p8est_ghost_t * ghost_layer,
                                       int degree);
 
-void                p8est_lnodes_destroy (p8est_lnodes_t *);
+void                p8est_lnodes_destroy (p8est_lnodes_t * lnodes);
 
 /** Expand the ghost layer to include the support of all nodes supported on
  * the local partition.
