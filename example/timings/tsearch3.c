@@ -96,6 +96,11 @@ static int
 time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * q, p4est_locidx_t local_num, void *point)
 {
+  if (point == NULL) {
+    /* per-quadrant setup function */
+    return 1;
+  }
+
   return 0;
 }
 
@@ -129,7 +134,7 @@ time_search (p4est_t * p4est, size_t znum_points, sc_flopinfo_t * fi,
    * one processor.
    */
   sc_flops_snap (fi, &snapshot);
-  p4est_search (p4est, time_search_fn, points);
+  p4est_search (p4est, time_search_fn, time_search_fn, points);
   sc_flops_shot (fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_SEARCH], snapshot.iwtime, "Search");
 
