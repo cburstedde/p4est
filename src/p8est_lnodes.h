@@ -227,7 +227,10 @@ p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
                                       p8est_ghost_t * ghost_layer,
                                       int degree);
 
-void                p8est_lnodes_destroy (p8est_lnodes_t *);
+void                p8est_lnodes_destroy (p8est_lnodes_t * lnodes);
+
+void                p8est_partition_lnodes (p8est_t *p8est, p8est_ghost_t *ghost,
+                                            int degree, int partition_for_coarsening);
 
 /** p8est_lnodes_buffer_t handles the communication of data associated with
  * nodes.

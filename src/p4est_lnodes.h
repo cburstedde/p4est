@@ -163,6 +163,9 @@ p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
 
 void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
 
+void                p4est_partition_lnodes (p4est_t *p4est, p4est_ghost_t *ghost,
+                                            int degree, int partition_for_coarsening);
+
 /** p4est_lnodes_buffer_t handles the communication of data associated with
  * nodes.
  *

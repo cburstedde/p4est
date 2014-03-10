@@ -2744,7 +2744,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   int                 process_with_cut, process_with_cut_recv_id;
   p4est_quadrant_t   *parent_receive;
   int                *receive_process;
-  int                *correction, correction_local;
+  int                *correction, correction_local = 0;
   int                 current_proc, next_proc;
   p4est_locidx_t      num_moved_quadrants;
 
@@ -3120,7 +3120,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       num_quadrants_in_proc[current_proc] += correction[current_proc];
       num_moved_quadrants += (p4est_locidx_t) abs (correction[current_proc]);
     }
-    if (current_proc == 0 || next_proc < num_procs) {
+    if (next_proc < num_procs) {
       /* if first process or next process is feasible */
       num_quadrants_in_proc[current_proc] -= correction[next_proc];
     }
