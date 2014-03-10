@@ -42,8 +42,6 @@
 #include <sc_options.h>
 #include <sc_statistics.h>
 
-/* #define P4EST_TSEARCH_VTK */
-
 static int          refine_level, level_shift;
 
 typedef enum tsearch_stats
@@ -90,6 +88,7 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 first_argc;
+  int                 write_vtk;
   size_t              znum_points;
   unsigned            crc;
   p4est_gloidx_t      count_refined, count_balanced;
@@ -121,6 +120,8 @@ main (int argc, char **argv)
                       "Refinement level");
   sc_options_add_int (opt, 's', "level-shift", &level_shift, 0,
                       "Refinement shift");
+  sc_options_add_bool (opt, 'V', "write-vtk", &write_vtk, 0,
+                       "Write VTK files");
   sc_options_add_size_t (opt, 'N', "num-points", &znum_points, 0,
                          "Number of points");
   first_argc = sc_options_parse (p4est_package_id, SC_LP_ERROR,
@@ -143,18 +144,18 @@ main (int argc, char **argv)
                          0, refine_level - level_shift, 1, 0, NULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_NEW], snapshot.iwtime, "New");
-#ifdef P4EST_TSEARCH_VTK
-  p4est_vtk_write_file (p4est, "tsearch_new");
-#endif
+  if (write_vtk) {
+    p4est_vtk_write_file (p4est, NULL, "tsearch_new");
+  }
 
   /* time refine */
   sc_flops_snap (&fi, &snapshot);
   p4est_refine (p4est, 1, refine_fractal, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_REFINE], snapshot.iwtime, "Refine");
-#ifdef P4EST_TSEARCH_VTK
-  p4est_vtk_write_file (p4est, "tsearch_refined");
-#endif
+  if (write_vtk) {
+    p4est_vtk_write_file (p4est, NULL, "tsearch_refined");
+  }
   count_refined = p4est->global_num_quadrants;
 
   /* time balance */
@@ -162,9 +163,9 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_BALANCE], snapshot.iwtime, "Balance");
-#ifdef P4EST_TSEARCH_VTK
-  p4est_vtk_write_file (p4est, "tsearch_balanced");
-#endif
+  if (write_vtk) {
+    p4est_vtk_write_file (p4est, NULL, "tsearch_balanced");
+  }
   count_balanced = p4est->global_num_quadrants;
   crc = p4est_checksum (p4est);
 
@@ -173,9 +174,9 @@ main (int argc, char **argv)
   p4est_partition (p4est, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_PARTITION], snapshot.iwtime, "Partition");
-#ifdef P4EST_TSEARCH_VTK
-  p4est_vtk_write_file (p4est, "tsearch_partitioned");
-#endif
+  if (write_vtk) {
+    p4est_vtk_write_file (p4est, NULL, "tsearch_partitioned");
+  }
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
   /* print status and checksum */
