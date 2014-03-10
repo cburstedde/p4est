@@ -58,11 +58,20 @@ tsearch_stats_t;
 
 typedef struct
 {
+  /* MPI related data */
   MPI_Comm            mpicomm;
   int                 mpisize;
   int                 mpirank;
+
+  /* global data for the program */
+  double              rout, rin;
+  double              rout2, rin2;
+  
+  /* data for the currently active quadrant */
+  p4est_quadrant_t   *sq;
+  int                 is_leaf;
 }
-mpi_context_t;
+tsearch_global_t;
 
 static int
 refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -96,11 +105,33 @@ static int
 time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * q, p4est_locidx_t local_num, void *point)
 {
+  tsearch_global_t   *tsg = (tsearch_global_t *) p4est->user_pointer;
+  double              r2;
+  tsearch_point_t    *t = (tsearch_point_t *) point;
+
   if (point == NULL) {
     /* per-quadrant setup function */
+    tsg->sq = q;
+    tsg->is_leaf = local_num >= 0;
     return 1;
   }
+  P4EST_ASSERT (tsg->sq == q);
+  P4EST_ASSERT (tsg->is_leaf == (local_num >= 0));
 
+  /* root level check to see if the point is contained in the shell */
+  if (q->level == 0) {
+    r2 = t->xy[0] * t->xy[0] + t->xy[1] * t->xy[1] + t->xy[2] * t->xy[2];
+    if (r2 >= tsg->rout2 || r2 <= tsg->rin2) {
+      return 0;
+    }
+  }
+
+  if (!tsg->is_leaf) {
+    /* perform over-optimistic check on bounding box */
+  }
+  else {
+    /* perform strict check by inverse coordinate transformation */
+  }
   return 0;
 }
 
@@ -155,26 +186,30 @@ main (int argc, char **argv)
   sc_statinfo_t       stats[TSEARCH_NUM_STATS];
   sc_flopinfo_t       fi, snapshot;
   sc_options_t       *opt;
-  mpi_context_t       mpis, *mpi = &mpis;
+  tsearch_global_t    tsgt, *tsg = &tsgt;
 
   /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpi->mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  tsg->mpicomm = MPI_COMM_WORLD;
+  mpiret = MPI_Comm_size (tsg->mpicomm, &tsg->mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
+  mpiret = MPI_Comm_rank (tsg->mpicomm, &tsg->mpirank);
   SC_CHECK_MPI (mpiret);
 
   /* initialize p4est internals */
-  sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (tsg->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 #ifndef P4EST_DEBUG
   sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
 #endif
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  /* seed random number generator */
-  srand (mpi->mpisize);
+  /* initialize global data */
+  srand (tsg->mpisize);
+  tsg->rout = 1.;
+  tsg->rin = .55;
+  tsg->rout2 = tsg->rout * tsg->rout;
+  tsg->rin2 = tsg->rin * tsg->rin;
 
   /* process command line arguments */
   opt = sc_options_new (argv[0]);
@@ -195,15 +230,15 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   /* start overall timing */
-  mpiret = MPI_Barrier (mpi->mpicomm);
+  mpiret = MPI_Barrier (tsg->mpicomm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&fi);
 
   /* create connectivity and forest */
   sc_flops_snap (&fi, &snapshot);
   connectivity = p8est_connectivity_new_shell ();
-  p4est = p4est_new_ext (mpi->mpicomm, connectivity,
-                         0, refine_level - level_shift, 1, 0, NULL, NULL);
+  p4est = p4est_new_ext (tsg->mpicomm, connectivity,
+                         0, refine_level - level_shift, 1, 0, NULL, tsg);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_NEW], snapshot.iwtime, "New");
   if (write_vtk) {
@@ -247,14 +282,14 @@ main (int argc, char **argv)
   /* print status and checksum */
   P4EST_GLOBAL_STATISTICSF
     ("Processors %d level %d shift %d points %llu checksum 0x%08x\n",
-     mpi->mpisize, refine_level, level_shift,
+     tsg->mpisize, refine_level, level_shift,
      (unsigned long long) znum_points, crc);
   P4EST_GLOBAL_STATISTICSF ("Level %d refined to %lld balanced to %lld\n",
                             refine_level, (long long) count_refined,
                             (long long) count_balanced);
 
   /* calculate and print timings */
-  sc_stats_compute (mpi->mpicomm, TSEARCH_NUM_STATS, stats);
+  sc_stats_compute (tsg->mpicomm, TSEARCH_NUM_STATS, stats);
   sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
                   TSEARCH_NUM_STATS, stats, 1, 1);
 
