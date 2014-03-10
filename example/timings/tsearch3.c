@@ -26,7 +26,8 @@
  * p8est_tsearch [-l <LEVEL>] [-s <LEVEL-SHIFT>] [-N <NUM-POINTS>]
  *
  * NUM-POINTS determines how many points are positioned randomly and searched
- * in the forest.
+ * in the forest.  The domain is the spherical shell with radii 0.55 and 1 and
+ * the points are uniformly distributed in the unit cube.
  */
 
 #include <p4est_to_p8est.h>
@@ -50,6 +51,7 @@ typedef enum tsearch_stats
   TSEARCH_REFINE,
   TSEARCH_BALANCE,
   TSEARCH_PARTITION,
+  TSEARCH_SEARCH,
   TSEARCH_NUM_STATS
 }
 tsearch_stats_t;
@@ -83,6 +85,57 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
     );
 }
 
+typedef struct tsearch_point
+{
+  double              xy[P4EST_DIM];
+  p4est_gloidx_t      gid;
+}
+tsearch_point_t;
+
+static int
+time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * q, int is_leaf, void *point)
+{
+  return 0;
+}
+
+static void
+time_search (p4est_t * p4est, size_t znum_points, sc_flopinfo_t * fi,
+             sc_statinfo_t * stats)
+{
+  int                 i;
+  size_t              zz;
+  sc_array_t         *points;
+  sc_flopinfo_t       snapshot;
+  tsearch_point_t    *point;
+
+  /* prepare search points with real-world coordinates */
+  points = sc_array_new_size (sizeof (tsearch_point_t), znum_points);
+  for (zz = 0; zz < znum_points; ++zz) {
+    point = (tsearch_point_t *) sc_array_index (points, zz);
+    for (i = 0; i < P4EST_DIM; ++i) {
+      point->xy[i] = 2. * (rand () / (RAND_MAX + 1.)) - 1.;
+    }
+    point->gid = -1;
+  }
+
+  /*
+   * For each point, perform a search to compute the global number of the
+   * containing quadrant and the reference coordinates in [0, 1]^d relative to
+   * this quadrant in-place.  This only happens if the quadrant is
+   * processor-local.
+   *
+   * Due to roundoff errors, it is possible that a point matches on more than
+   * one processor.
+   */
+  sc_flops_snap (fi, &snapshot);
+  p4est_search (p4est, time_search_fn, points);
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[TSEARCH_SEARCH], snapshot.iwtime, "Search");
+
+  sc_array_destroy (points);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -99,7 +152,7 @@ main (int argc, char **argv)
   sc_options_t       *opt;
   mpi_context_t       mpis, *mpi = &mpis;
 
-  /* initialize MPI and p4est internals */
+  /* initialize MPI */
   mpiret = MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   mpi->mpicomm = MPI_COMM_WORLD;
@@ -108,11 +161,15 @@ main (int argc, char **argv)
   mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
+  /* initialize p4est internals */
   sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 #ifndef P4EST_DEBUG
   sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
 #endif
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* seed random number generator */
+  srand (mpi->mpisize);
 
   /* process command line arguments */
   opt = sc_options_new (argv[0]);
@@ -178,6 +235,9 @@ main (int argc, char **argv)
     p4est_vtk_write_file (p4est, NULL, "tsearch_partitioned");
   }
   P4EST_ASSERT (crc == p4est_checksum (p4est));
+
+  /* run search timings */
+  time_search (p4est, znum_points, &fi, stats);
 
   /* print status and checksum */
   P4EST_GLOBAL_STATISTICSF
