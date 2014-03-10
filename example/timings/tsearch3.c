@@ -94,7 +94,7 @@ tsearch_point_t;
 
 static int
 time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t * q, int is_leaf, void *point)
+                p4est_quadrant_t * q, p4est_locidx_t local_num, void *point)
 {
   return 0;
 }

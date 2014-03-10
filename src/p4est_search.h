@@ -93,9 +93,14 @@ int32_t             p4est_find_range_boundaries (p4est_quadrant_t * lq,
  * \param [in] which_tree   The tree id under consideration.
  * \param [in] quadrant     The quadrant under consideration.
  *                          This quadrant may be coarser than the quadrants
- *                          that are contained in the forest (an ancestor).
+ *                          that are contained in the forest (an ancestor), in
+ *                          which case it is a temporary variable and not part
+ *                          of the forest storage.  Otherwise, it is a leaf and
+ *                          points directly into the forest storage.
+ * \param [in] local_num    If the quadrant is not a leaf, this is -1.  Otherwise
+ *                          it is the (non-negative) index of the quadrant
+ *                          relative to the processor-local quadrant storage.
  * \param [in] point        Representation of a "point"; user-defined.
- * \param [in] is_leaf      Specify if the quadrant is an ancestor or a leaf.
  * \return                  True if point may be contained in the quadrant,
  *                          false otherwise.  By returning true for a leaf,
  *                          a successful match is indicated.  When is_leaf is
@@ -105,16 +110,24 @@ int32_t             p4est_find_range_boundaries (p4est_quadrant_t * lq,
 typedef int         (*p4est_search_query_t) (p4est_t * p4est,
                                              p4est_topidx_t which_tree,
                                              p4est_quadrant_t * quadrant,
-                                             int is_leaf, void *point);
+                                             p4est_locidx_t local_num,
+                                             void *point);
 
 /** Search "points" from a given set in the forest.
  *
- * The search goes over all trees and proceeds recursively top-down.
- * A callback is queried to match each point with a quadrant.
+ * The search runs over all local quadrants and proceeds recursively top-down.
+ * Its outer loop is thus a depth-first, processor-local forest traversal.
+ * Each quadrant in that loop either is a leaf, or a (direct or indirect)
+ * strict ancestor of a leaf.  The set of points that potentially matches a
+ * given quadrants diminishes from the root down to the leaves:  For each
+ * quadrant, an inner loop over the potentially matching points executes a
+ * callback for each candidate that determines whether the point may be a
+ * match.  If not, it is discarded immediately, otherwise it is passed to the next
+ * finer level.
  * The callback is allowed to return true for the same point and more than one
  * quadrant; in this case more than one matching quadrant may be identified.
- * The callback is also allowed to return false for all children
- * of a quadrant that it returned true for earlier.
+ * The callback is also allowed to return false for all children of a quadrant
+ * that it returned true for earlier.
  * The points can really be anything, p4est does not perform any
  * interpretation, just passes the pointer along to the callback function.
  *
