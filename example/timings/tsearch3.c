@@ -64,6 +64,7 @@ typedef struct
   int                 mpirank;
 
   /* global data for the program */
+  size_t              matches;
   double              rout, rin;
   double              rout2, rin2;
   double              routbyrin, logrbyr;
@@ -72,7 +73,8 @@ typedef struct
   p4est_locidx_t      which_tree;
   p4est_quadrant_t   *sq;
   int                 is_leaf;
-  double              center[P4EST_DIM], radius2;
+  double              width, radius2;
+  double              qref[P4EST_DIM], center[P4EST_DIM];
 }
 tsearch_global_t;
 
@@ -237,6 +239,7 @@ tsearch_setup (tsearch_global_t * tsg)
   int                 j, k;
   double              mlen, hwidth, dist2;
   double              ref[P4EST_DIM], phys[P4EST_DIM];
+  double             *qref = tsg->qref;
   double             *center = tsg->center;
   p4est_quadrant_t   *q = tsg->sq, c;
 #ifdef P4EST_DEBUG
@@ -245,7 +248,7 @@ tsearch_setup (tsearch_global_t * tsg)
 #endif
 
   mlen = 1. / P4EST_ROOT_LEN;
-  hwidth = .5 * mlen * P4EST_QUADRANT_LEN (q->level);
+  hwidth = .5 * (tsg->width = mlen * P4EST_QUADRANT_LEN (q->level));
 
   /* transform center of the quadrant to physical space */
   ref[0] = q->x * mlen + hwidth - 1. + (tsg->which_tree & 1);
@@ -257,7 +260,7 @@ tsearch_setup (tsearch_global_t * tsg)
   retval = physical_to_reference (tsg, center, nref);
   P4EST_ASSERT (retval);
   for (j = 0; j < P4EST_DIM; ++j) {
-    P4EST_ASSERT (fabs(ref[j] - nref[j]) < 1e-10);
+    P4EST_ASSERT (fabs (ref[j] - nref[j]) < 1e-10);
   }
 #endif
 
@@ -276,6 +279,11 @@ tsearch_setup (tsearch_global_t * tsg)
     if (dist2 > tsg->radius2) {
       tsg->radius2 = dist2;
     }
+    if (k == 0) {
+      qref[0] = ref[0];
+      qref[1] = ref[1];
+      qref[2] = ref[2];
+    }
   }
 }
 
@@ -285,8 +293,9 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   tsearch_global_t   *tsg = (tsearch_global_t *) p4est->user_pointer;
   int                 j;
-  double              r2;
+  double              width, r2;
   double              ref[P4EST_DIM];
+  const double       *qref;
   tsearch_point_t    *t = (tsearch_point_t *) point;
 
   if (point == NULL) {
@@ -320,22 +329,39 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
     /* perform strict check by inverse coordinate transformation */
     if (physical_to_reference (tsg, t->xy, ref)) {
       /* the point is contained in the correct tree, now check quadrant */
+      width = tsg->width;
+      qref = tsg->qref;
+      for (j = 0; j < P4EST_DIM; ++j) {
+        if (ref[j] < qref[j] || ref[j] > qref[j] + width) {
+          return 0;
+        }
+      }
+
+      /* we have found a matching quadrant for this point */
+      ++tsg->matches;
+      return 1;
     }
+
+    /* the return value is irrelevant for leaves */
     return 0;
   }
 }
 
 static void
-time_search (p4est_t * p4est, size_t znum_points, sc_flopinfo_t * fi,
-             sc_statinfo_t * stats)
+time_search (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
+             sc_flopinfo_t * fi, sc_statinfo_t * stats)
 {
   int                 i;
+  int                 mpiret;
+  long long           expected, ll, gg;
+  double              ratio;
   size_t              zz;
   sc_array_t         *points;
   sc_flopinfo_t       snapshot;
   tsearch_point_t    *point;
 
   /* prepare search points with real-world coordinates */
+  tsg->matches = 0;
   points = sc_array_new_size (sizeof (tsearch_point_t), znum_points);
   for (zz = 0; zz < znum_points; ++zz) {
     point = (tsearch_point_t *) sc_array_index (points, zz);
@@ -351,14 +377,25 @@ time_search (p4est_t * p4est, size_t znum_points, sc_flopinfo_t * fi,
    * this quadrant in-place.  This only happens if the quadrant is
    * processor-local.
    *
-   * The points are not synchronized between the processors.
+   * The points are identical on all processors.  Due to points on quadrant
+   * boundaries, we will find slightly more points than we expect.
    */
   sc_flops_snap (fi, &snapshot);
   p4est_search (p4est, time_search_fn, time_search_fn, points);
   sc_flops_shot (fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_SEARCH], snapshot.iwtime, "Search");
-
   sc_array_destroy (points);
+
+  ratio = 4. / 3. * M_PI * (pow (tsg->rout, 3.) - pow (tsg->rin, 3.)) / 8.;
+  expected = (long long) round (ratio * znum_points);
+  ll = (long long) tsg->matches;
+  mpiret =
+    MPI_Allreduce (&ll, &gg, 1, MPI_LONG_LONG_INT, MPI_SUM, tsg->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_STATISTICSF
+    ("Search expected %lld found %lld of %lld error %.3g%%\n",
+     expected, gg, (long long) znum_points,
+     100. * fabs ((gg - expected) / (double) expected));
 }
 
 int
@@ -468,7 +505,7 @@ main (int argc, char **argv)
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
   /* run search timings */
-  time_search (p4est, znum_points, &fi, stats);
+  time_search (tsg, p4est, znum_points, &fi, stats);
 
   /* print status and checksum */
   P4EST_GLOBAL_STATISTICSF
