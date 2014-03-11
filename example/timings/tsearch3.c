@@ -352,6 +352,49 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
+time_search_1 (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
+               sc_flopinfo_t * fi, sc_statinfo_t * stats)
+{
+  const double        expected = tsg->expected;
+  int                 mpiret;
+  long long           ll, gg;
+  size_t              zz;
+  sc_array_t          pview;
+  sc_flopinfo_t       snapshot;
+
+  /*
+   * Search all points separately.
+   *
+   * For each point, perform a search to compute the local number of the
+   * containing quadrant and the reference coordinates in [0, 1]^d relative to
+   * this quadrant in-place.  This only happens if the quadrant is
+   * processor-local.
+   *
+   * The points are identical on all processors.  Due to points on quadrant
+   * boundaries, we will find slightly more points than we expect.
+   */
+
+  ll = 0;
+  sc_flops_snap (fi, &snapshot);
+  for (zz = 0; zz < znum_points; ++zz) {
+    tsg->matches = 0;
+    sc_array_init_view (&pview, tsg->points, zz, 1);
+    p4est_search (p4est, time_search_fn, time_search_fn, &pview);
+    ll += (long long) tsg->matches;
+  }
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[TSEARCH_SEARCH_1], snapshot.iwtime, "Search_1");
+
+  mpiret =
+    MPI_Allreduce (&ll, &gg, 1, MPI_LONG_LONG_INT, MPI_SUM, tsg->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_STATISTICSF
+    ("Search_1 expected %lld found %lld of %lld error %.3g%%\n",
+     (long long) round (expected), gg, (long long) znum_points,
+     100. * fabs ((gg - expected) / expected));
+}
+
+static void
 time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
                sc_flopinfo_t * fi, sc_statinfo_t * stats)
 {
@@ -376,8 +419,7 @@ time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
   sc_flops_snap (fi, &snapshot);
   p4est_search (p4est, time_search_fn, time_search_fn, tsg->points);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[TSEARCH_SEARCH_1], snapshot.iwtime, "Search");
-  sc_stats_set1 (&stats[TSEARCH_SEARCH_N], snapshot.iwtime, "Search");
+  sc_stats_set1 (&stats[TSEARCH_SEARCH_N], snapshot.iwtime, "Search_N");
   ll = (long long) tsg->matches;
 
   mpiret =
@@ -410,6 +452,7 @@ time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
   ratio = 4. / 3. * M_PI * (pow (tsg->rout, 3.) - pow (tsg->rin, 3.)) / 8.;
   tsg->expected = ratio * znum_points;
 
+  time_search_1 (tsg, p4est, znum_points, fi, stats);
   time_search_N (tsg, p4est, znum_points, fi, stats);
 
   sc_array_destroy (tsg->points);
