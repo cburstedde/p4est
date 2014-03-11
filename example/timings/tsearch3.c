@@ -69,6 +69,7 @@ typedef struct
   double              rout, rin;
   double              rout2, rin2;
   double              routbyrin, logrbyr;
+  double              expected;
   sc_array_t         *points;
 
   /* data for the currently active quadrant */
@@ -354,9 +355,9 @@ static void
 time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
                sc_flopinfo_t * fi, sc_statinfo_t * stats)
 {
+  const double        expected = tsg->expected;
   int                 mpiret;
-  long long           expected, ll, gg;
-  double              ratio;
+  long long           ll, gg;
   sc_flopinfo_t       snapshot;
 
   /*
@@ -372,23 +373,20 @@ time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
    */
 
   tsg->matches = 0;
-
   sc_flops_snap (fi, &snapshot);
   p4est_search (p4est, time_search_fn, time_search_fn, tsg->points);
   sc_flops_shot (fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_SEARCH_1], snapshot.iwtime, "Search");
   sc_stats_set1 (&stats[TSEARCH_SEARCH_N], snapshot.iwtime, "Search");
-
-  ratio = 4. / 3. * M_PI * (pow (tsg->rout, 3.) - pow (tsg->rin, 3.)) / 8.;
-  expected = (long long) round (ratio * znum_points);
   ll = (long long) tsg->matches;
+
   mpiret =
     MPI_Allreduce (&ll, &gg, 1, MPI_LONG_LONG_INT, MPI_SUM, tsg->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_STATISTICSF
-    ("Search expected %lld found %lld of %lld error %.3g%%\n",
-     expected, gg, (long long) znum_points,
-     100. * fabs ((gg - expected) / (double) expected));
+    ("Search_N expected %lld found %lld of %lld error %.3g%%\n",
+     (long long) round (expected), gg, (long long) znum_points,
+     100. * fabs ((gg - expected) / expected));
 }
 
 static void
@@ -396,6 +394,7 @@ time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
                  sc_flopinfo_t * fi, sc_statinfo_t * stats)
 {
   int i;
+  double ratio;
   size_t zz;
   tsearch_point_t * point;
 
@@ -407,7 +406,12 @@ time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     }
     point->lid = -1;
   }
+
+  ratio = 4. / 3. * M_PI * (pow (tsg->rout, 3.) - pow (tsg->rin, 3.)) / 8.;
+  tsg->expected = ratio * znum_points;
+
   time_search_N (tsg, p4est, znum_points, fi, stats);
+
   sc_array_destroy (tsg->points);
 }
 
