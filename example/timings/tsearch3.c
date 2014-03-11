@@ -104,7 +104,7 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
 typedef struct tsearch_point
 {
   double              xy[P4EST_DIM];
-  p4est_gloidx_t      gid;
+  p4est_locidx_t      lid;
 }
 tsearch_point_t;
 
@@ -341,6 +341,7 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
       /* we have found a matching quadrant for this point */
       ++tsg->matches;
+      t->lid = local_num;
       return 1;
     }
 
@@ -404,7 +405,7 @@ time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     for (i = 0; i < P4EST_DIM; ++i) {
       point->xy[i] = 2. * (rand () / (RAND_MAX + 1.)) - 1.;
     }
-    point->gid = -1;
+    point->lid = -1;
   }
   time_search_N (tsg, p4est, znum_points, fi, stats);
   sc_array_destroy (tsg->points);
