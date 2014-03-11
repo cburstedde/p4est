@@ -51,7 +51,8 @@ typedef enum tsearch_stats
   TSEARCH_REFINE,
   TSEARCH_BALANCE,
   TSEARCH_PARTITION,
-  TSEARCH_SEARCH,
+  TSEARCH_SEARCH_1,
+  TSEARCH_SEARCH_N,
   TSEARCH_NUM_STATS
 }
 tsearch_stats_t;
@@ -68,6 +69,7 @@ typedef struct
   double              rout, rin;
   double              rout2, rin2;
   double              routbyrin, logrbyr;
+  sc_array_t         *points;
 
   /* data for the currently active quadrant */
   p4est_locidx_t      which_tree;
@@ -348,30 +350,17 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-time_search (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
-             sc_flopinfo_t * fi, sc_statinfo_t * stats)
+time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
+               sc_flopinfo_t * fi, sc_statinfo_t * stats)
 {
-  int                 i;
   int                 mpiret;
   long long           expected, ll, gg;
   double              ratio;
-  size_t              zz;
-  sc_array_t         *points;
   sc_flopinfo_t       snapshot;
-  tsearch_point_t    *point;
-
-  /* prepare search points with real-world coordinates */
-  tsg->matches = 0;
-  points = sc_array_new_size (sizeof (tsearch_point_t), znum_points);
-  for (zz = 0; zz < znum_points; ++zz) {
-    point = (tsearch_point_t *) sc_array_index (points, zz);
-    for (i = 0; i < P4EST_DIM; ++i) {
-      point->xy[i] = 2. * (rand () / (RAND_MAX + 1.)) - 1.;
-    }
-    point->gid = -1;
-  }
 
   /*
+   * Search all points in one pass through the forest
+   *
    * For each point, perform a search to compute the local number of the
    * containing quadrant and the reference coordinates in [0, 1]^d relative to
    * this quadrant in-place.  This only happens if the quadrant is
@@ -380,11 +369,14 @@ time_search (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
    * The points are identical on all processors.  Due to points on quadrant
    * boundaries, we will find slightly more points than we expect.
    */
+
+  tsg->matches = 0;
+
   sc_flops_snap (fi, &snapshot);
-  p4est_search (p4est, time_search_fn, time_search_fn, points);
+  p4est_search (p4est, time_search_fn, time_search_fn, tsg->points);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[TSEARCH_SEARCH], snapshot.iwtime, "Search");
-  sc_array_destroy (points);
+  sc_stats_set1 (&stats[TSEARCH_SEARCH_1], snapshot.iwtime, "Search");
+  sc_stats_set1 (&stats[TSEARCH_SEARCH_N], snapshot.iwtime, "Search");
 
   ratio = 4. / 3. * M_PI * (pow (tsg->rout, 3.) - pow (tsg->rin, 3.)) / 8.;
   expected = (long long) round (ratio * znum_points);
@@ -396,6 +388,26 @@ time_search (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     ("Search expected %lld found %lld of %lld error %.3g%%\n",
      expected, gg, (long long) znum_points,
      100. * fabs ((gg - expected) / (double) expected));
+}
+
+static void
+time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
+                 sc_flopinfo_t * fi, sc_statinfo_t * stats)
+{
+  int i;
+  size_t zz;
+  tsearch_point_t * point;
+
+  tsg->points = sc_array_new_size (sizeof (tsearch_point_t), znum_points);
+  for (zz = 0; zz < znum_points; ++zz) {
+    point = (tsearch_point_t *) sc_array_index (tsg->points, zz);
+    for (i = 0; i < P4EST_DIM; ++i) {
+      point->xy[i] = 2. * (rand () / (RAND_MAX + 1.)) - 1.;
+    }
+    point->gid = -1;
+  }
+  time_search_N (tsg, p4est, znum_points, fi, stats);
+  sc_array_destroy (tsg->points);
 }
 
 int
@@ -505,7 +517,7 @@ main (int argc, char **argv)
   P4EST_ASSERT (crc == p4est_checksum (p4est));
 
   /* run search timings */
-  time_search (tsg, p4est, znum_points, &fi, stats);
+  time_search_all (tsg, p4est, znum_points, &fi, stats);
 
   /* print status and checksum */
   P4EST_GLOBAL_STATISTICSF
