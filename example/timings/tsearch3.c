@@ -103,16 +103,36 @@ typedef struct tsearch_point
 }
 tsearch_point_t;
 
+/* *INDENT-OFF* */
+/* lookup table for the permutations of the coordinate axes in the shell */
+static const int    rtop[6][3] = {{ 2, 0, 1 },
+                                  { 1, 0, 2 },
+                                  { 2, 0, 1 },
+                                  { 1, 0, 2 },
+                                  { 0, 2, 1 },
+                                  { 0, 2, 1 }};
+static const double rsign[6][3] = {{  1., -1., -1. },
+                                   { -1., -1., -1. },
+                                   { -1., -1.,  1. },
+                                   {  1., -1.,  1. },
+                                   { -1.,  1.,  1. },
+                                   {  1., -1.,  1. }};
+/* *INDENT-ON* */
+
 static void
 reference_to_physical (tsearch_global_t * tsg, const double *ref,
                        double *phys)
 {
   const double        R2byR1 = tsg->rout / tsg->rin;
   const double        R1sqrbyR2 = tsg->rin / R2byR1;
+  const int          *pi;
+  const double       *si;
+  int                 j;
+  double              qvalues[6];
   double              x, y;
   double              R, q;
 
-  /* assert that input points are in the expected range */
+  /* assert that input coordinates are in the expected range */
   P4EST_ASSERT (ref[0] < 1.0 + 1e-12 && ref[0] > -1.0 - 1e-12);
   P4EST_ASSERT (ref[1] < 1.0 + 1e-12 && ref[1] > -1.0 - 1e-12);
   P4EST_ASSERT (ref[2] < 2.0 + 1e-12 && ref[2] > 1.0 - 1e-12);
@@ -125,7 +145,19 @@ reference_to_physical (tsearch_global_t * tsg, const double *ref,
   R = R1sqrbyR2 * pow (R2byR1, ref[2]);
   q = R / sqrt (x * x + y * y + 1.);
 
+  /* compute physical coordinate values */
+  qvalues[0] = q * x;
+  qvalues[1] = q * y;
+  qvalues[2] = q;
+
   /* assign coordinates based on tree id */
+#if 1
+  pi = rtop[tsg->which_tree / 4];
+  si = rsign[tsg->which_tree / 4];
+  for (j = 0; j < P4EST_DIM; ++j) {
+    phys[j] = si[j] * qvalues[pi[j]];
+  }
+#else
   switch (tsg->which_tree / 4) {
   case 3:                      /* top */
     phys[0] = +q * y;
@@ -160,6 +192,7 @@ reference_to_physical (tsearch_global_t * tsg, const double *ref,
   default:
     SC_ABORT_NOT_REACHED ();
   }
+#endif
 }
 
 static void
