@@ -168,7 +168,7 @@ tsearch_setup (tsearch_global_t * tsg)
   int                 j, k;
   double              mlen, hwidth, dist2;
   double              ref[P4EST_DIM], phys[P4EST_DIM];
-  double             *m = tsg->center;
+  double             *center = tsg->center;
   p4est_quadrant_t   *q = tsg->sq, c;
 
   mlen = 1. / P4EST_ROOT_LEN;
@@ -178,7 +178,7 @@ tsearch_setup (tsearch_global_t * tsg)
   ref[0] = q->x * mlen + hwidth - 1. + (tsg->which_tree & 1);
   ref[1] = q->y * mlen + hwidth - 1. + (tsg->which_tree & 2) / 2;
   ref[2] = q->z * mlen + hwidth + 1.;
-  reference_to_physical (tsg, ref, m);
+  reference_to_physical (tsg, ref, center);
 
   /* transform all corners of the quadrant and take max distance to center */
   tsg->radius2 = 0.;
@@ -190,7 +190,7 @@ tsearch_setup (tsearch_global_t * tsg)
     reference_to_physical (tsg, ref, phys);
     dist2 = 0.;
     for (j = 0; j < P4EST_DIM; ++j) {
-      dist2 += (phys[j] - m[j]) * (phys[j] - m[j]);
+      dist2 += (phys[j] - center[j]) * (phys[j] - center[j]);
     }
     if (dist2 > tsg->radius2) {
       tsg->radius2 = dist2;
@@ -227,7 +227,7 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   if (!tsg->is_leaf) {
-    /* perform over-optimistic check on bounding sphere */
+    /* perform over-optimistic check with the quadrant's bounding sphere */
     r2 = 0.;
     for (j = 0; j < P4EST_DIM; ++j) {
       r2 += (t->xy[j] - tsg->center[j]) * (t->xy[j] - tsg->center[j]);
@@ -261,13 +261,12 @@ time_search (p4est_t * p4est, size_t znum_points, sc_flopinfo_t * fi,
   }
 
   /*
-   * For each point, perform a search to compute the global number of the
+   * For each point, perform a search to compute the local number of the
    * containing quadrant and the reference coordinates in [0, 1]^d relative to
    * this quadrant in-place.  This only happens if the quadrant is
    * processor-local.
    *
-   * Due to roundoff errors, it is possible that a point matches on more than
-   * one processor.
+   * The points are not synchronized between the processors.
    */
   sc_flops_snap (fi, &snapshot);
   p4est_search (p4est, time_search_fn, time_search_fn, points);
