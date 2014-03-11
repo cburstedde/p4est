@@ -194,6 +194,43 @@ reference_to_physical (tsearch_global_t * tsg, const double *ref,
 #endif
 }
 
+/** Return true if and only if the reference coordinates match the tree. */
+static int
+physical_to_reference (tsearch_global_t * tsg, const double *phys,
+                       double *ref)
+{
+  const int          *pi;
+  const double       *si;
+  int                 j;
+  double              q, R2;
+  double              qvalues[3];
+  const p4est_topidx_t tid = tsg->which_tree;
+
+  /* reverse permutation of coordinate axes and compute radius */
+  R2 = 0.;
+  pi = rtop[tid / 4];
+  si = rsign[tid / 4];
+  for (j = 0; j < P4EST_DIM; ++j) {
+    q = qvalues[pi[j]] = si[j] * phys[j];
+    R2 += q * q;
+  }
+
+  /* recover the reference coordinates */
+  for (j = 0; j < 2; ++j) {
+    q = ref[j] = atan2 (qvalues[j], qvalues[2]) / M_PI_4;
+    /* check x and y coordinate range */
+    if (!(tid & (1 << j))) {
+      q += 1.;
+    }
+    if (q < 0. || q > 1.) {
+      return 0;
+    }
+  }
+  q = ref[2] = log (sqrt (R2) / tsg->rin) / tsg->logrbyr;
+
+  return q >= 0. && q <= 1.;
+}
+
 static void
 tsearch_setup (tsearch_global_t * tsg)
 {
@@ -202,6 +239,10 @@ tsearch_setup (tsearch_global_t * tsg)
   double              ref[P4EST_DIM], phys[P4EST_DIM];
   double             *center = tsg->center;
   p4est_quadrant_t   *q = tsg->sq, c;
+#ifdef P4EST_DEBUG
+  int                 retval;
+  double              nref[P4EST_DIM];
+#endif
 
   mlen = 1. / P4EST_ROOT_LEN;
   hwidth = .5 * mlen * P4EST_QUADRANT_LEN (q->level);
@@ -211,6 +252,14 @@ tsearch_setup (tsearch_global_t * tsg)
   ref[1] = q->y * mlen + hwidth - 1. + (tsg->which_tree & 2) / 2;
   ref[2] = q->z * mlen + hwidth;
   reference_to_physical (tsg, ref, center);
+
+#ifdef P4EST_DEBUG
+  retval = physical_to_reference (tsg, center, nref);
+  P4EST_ASSERT (retval);
+  for (j = 0; j < P4EST_DIM; ++j) {
+    P4EST_ASSERT (fabs(ref[j] - nref[j]) < 1e-10);
+  }
+#endif
 
   /* transform all corners of the quadrant and take max distance to center */
   tsg->radius2 = 0.;
@@ -237,6 +286,7 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   tsearch_global_t   *tsg = (tsearch_global_t *) p4est->user_pointer;
   int                 j;
   double              r2;
+  double              ref[P4EST_DIM];
   tsearch_point_t    *t = (tsearch_point_t *) point;
 
   if (point == NULL) {
@@ -268,8 +318,11 @@ time_search_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   }
   else {
     /* perform strict check by inverse coordinate transformation */
+    if (physical_to_reference (tsg, t->xy, ref)) {
+      /* the point is contained in the correct tree, now check quadrant */
+    }
+    return 0;
   }
-  return 0;
 }
 
 static void
