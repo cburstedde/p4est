@@ -66,6 +66,7 @@ typedef struct
   /* global data for the program */
   double              rout, rin;
   double              rout2, rin2;
+  double              routbyrin, logrbyr;
 
   /* data for the currently active quadrant */
   p4est_locidx_t      which_tree;
@@ -123,8 +124,6 @@ static void
 reference_to_physical (tsearch_global_t * tsg, const double *ref,
                        double *phys)
 {
-  const double        R2byR1 = tsg->rout / tsg->rin;
-  const double        R1sqrbyR2 = tsg->rin / R2byR1;
   const int          *pi;
   const double       *si;
   int                 j;
@@ -135,14 +134,14 @@ reference_to_physical (tsearch_global_t * tsg, const double *ref,
   /* assert that input coordinates are in the expected range */
   P4EST_ASSERT (ref[0] < 1.0 + 1e-12 && ref[0] > -1.0 - 1e-12);
   P4EST_ASSERT (ref[1] < 1.0 + 1e-12 && ref[1] > -1.0 - 1e-12);
-  P4EST_ASSERT (ref[2] < 2.0 + 1e-12 && ref[2] > 1.0 - 1e-12);
+  P4EST_ASSERT (ref[2] < 1.0 + 1e-12 && ref[2] > -1e-12);
 
   /* transform x and y for nicer grading */
   x = tan (ref[0] * M_PI_4);
   y = tan (ref[1] * M_PI_4);
 
   /* compute transformation ingredients */
-  R = R1sqrbyR2 * pow (R2byR1, ref[2]);
+  R = tsg->rin * pow (tsg->routbyrin, ref[2]);
   q = R / sqrt (x * x + y * y + 1.);
 
   /* compute physical coordinate values */
@@ -210,7 +209,7 @@ tsearch_setup (tsearch_global_t * tsg)
   /* transform center of the quadrant to physical space */
   ref[0] = q->x * mlen + hwidth - 1. + (tsg->which_tree & 1);
   ref[1] = q->y * mlen + hwidth - 1. + (tsg->which_tree & 2) / 2;
-  ref[2] = q->z * mlen + hwidth + 1.;
+  ref[2] = q->z * mlen + hwidth;
   reference_to_physical (tsg, ref, center);
 
   /* transform all corners of the quadrant and take max distance to center */
@@ -219,7 +218,7 @@ tsearch_setup (tsearch_global_t * tsg)
     p4est_quadrant_corner_node (q, k, &c);
     ref[0] = c.x * mlen - 1. + (tsg->which_tree & 1);
     ref[1] = c.y * mlen - 1. + (tsg->which_tree & 2) / 2;
-    ref[2] = c.z * mlen + 1.;
+    ref[2] = c.z * mlen;
     reference_to_physical (tsg, ref, phys);
     dist2 = 0.;
     for (j = 0; j < P4EST_DIM; ++j) {
@@ -347,6 +346,8 @@ main (int argc, char **argv)
   tsg->rin = .55;
   tsg->rout2 = tsg->rout * tsg->rout;
   tsg->rin2 = tsg->rin * tsg->rin;
+  tsg->routbyrin = tsg->rout / tsg->rin;
+  tsg->logrbyr = log (tsg->routbyrin);
 
   /* process command line arguments */
   opt = sc_options_new (argv[0]);
