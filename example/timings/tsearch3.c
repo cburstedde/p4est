@@ -82,8 +82,22 @@ typedef struct
 tsearch_global_t;
 
 static int
-refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t * q)
+refine_local_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t * q)
+{
+  if ((int) q->level >= refine_level) {
+    return 0;
+  }
+  if ((int) q->level < refine_level - level_shift) {
+    return 1;
+  }
+
+  return which_tree == 0 && p4est_quadrant_child_id (q) == 0;
+}
+
+static int
+refine_fractal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * q)
 {
   int                 qid;
 
@@ -435,10 +449,10 @@ static void
 time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
                  sc_flopinfo_t * fi, sc_statinfo_t * stats)
 {
-  int i;
-  double ratio;
-  size_t zz;
-  tsearch_point_t * point;
+  int                 i;
+  double              ratio;
+  size_t              zz;
+  tsearch_point_t    *point;
 
   tsg->points = sc_array_new_size (sizeof (tsearch_point_t), znum_points);
   for (zz = 0; zz < znum_points; ++zz) {
@@ -463,6 +477,7 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 first_argc;
+  int                 refine_local;
   int                 write_vtk;
   size_t              znum_points;
   unsigned            crc;
@@ -505,6 +520,8 @@ main (int argc, char **argv)
                       "Refinement level");
   sc_options_add_int (opt, 's', "level-shift", &level_shift, 0,
                       "Refinement shift");
+  sc_options_add_bool (opt, 'L', "refine-local", &refine_local, 0,
+                       "Refine around one point");
   sc_options_add_bool (opt, 'V', "write-vtk", &write_vtk, 0,
                        "Write VTK files");
   sc_options_add_size_t (opt, 'N', "num-points", &znum_points, 0,
@@ -535,7 +552,8 @@ main (int argc, char **argv)
 
   /* time refine */
   sc_flops_snap (&fi, &snapshot);
-  p4est_refine (p4est, 1, refine_fractal, NULL);
+  p4est_refine (p4est, 1,
+                refine_local ? refine_local_fn : refine_fractal_fn, NULL);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_REFINE], snapshot.iwtime, "Refine");
   if (write_vtk) {
