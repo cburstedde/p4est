@@ -27,16 +27,17 @@ set term postscript color
 set xlabel "\#elements / core"
 set ylabel "runtime [1s]"
 plot "$TMPF" using (\$3 / \$1):(\$5) title "Balance", \
-	5e-6 * x title "ideal scaling" with lines, \
+	5e-6 * x title "linear scaling" with lines, \
+	8e-4 * x**(2./3.) title "scaling with x**(2/3)" with lines, \
 	1 title "1 second"
 plot "$TMPF" using (\$3 / \$1):(\$7) title "Ghost", \
-  2e-4 * x**(2./3.) title "ideal scaling" with lines, \
+	2e-4 * x**(2./3.) title "scaling with x**(2/3)" with lines, \
 	1 title "1 second"
 plot "$TMPF" using (\$3 / \$1):(\$8) title "Nodes", \
-	2e-5 * x title "ideal scaling" with lines, \
+	2e-5 * x title "linear scaling" with lines, \
 	1 title "1 second"
 plot "$TMPF" using (\$3 / \$1):(\$9) title "Lnodes", \
-	2e-5 * x title "ideal scaling" with lines, \
+	2e-5 * x title "linear scaling" with lines, \
 	1 title "1 second"
 
 # set xlabel "Elements"
