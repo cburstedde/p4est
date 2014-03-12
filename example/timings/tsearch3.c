@@ -518,7 +518,7 @@ main (int argc, char **argv)
   opt = sc_options_new (argv[0]);
   sc_options_add_int (opt, 'l', "level", &refine_level, 0,
                       "Refinement level");
-  sc_options_add_int (opt, 's', "level-shift", &level_shift, 0,
+  sc_options_add_int (opt, 's', "level-shift", &level_shift, 4,
                       "Refinement shift");
   sc_options_add_bool (opt, 'L', "refine-local", &refine_local, 0,
                        "Refine around one point");
