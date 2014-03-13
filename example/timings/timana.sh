@@ -1,12 +1,20 @@
 #! /bin/sh
 
 # Pipe in the contents of one or more log files written by p{4,8}est_timings
+# Optionally let the first and second argument be --title "Title of plot"
 
 # Find path for the content filter script
 TIMANAWK=`echo $0 | sed -e 's/\.sh$/.awk/'`
 if test ! -x "$TIMANAWK" ; then
 	echo "No executable $TIMANAWK"
 	exit 1
+fi
+
+TITLECOMM=
+if test "x$1" = "x--title" ; then
+	TITLECOMM="set title \"$2\""
+	shift
+	shift
 fi
 
 TMPF=`tempfile --prefix=timana`
@@ -21,6 +29,7 @@ set key left
 
 set output "timana.eps"
 set term postscript color
+$TITLECOMM
 
 # Fields 4..9: Refine Balance Partition Ghost Nodes Lnodes
 
