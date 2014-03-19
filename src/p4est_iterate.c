@@ -1730,7 +1730,7 @@ p8est_edge_iterate (p8est_iter_edge_args_t * args, void *user_data,
                 continue;
               }
               eside2 = p8est_iter_eside_array_index_int (&info->sides, side2);
-              if (eside2->is_hanging) {
+              if (eside2->is_hanging || eside2->is.full.quad == NULL) {
                 continue;
               }
               for (dir2 = 0; dir2 < 2; dir2++) {
