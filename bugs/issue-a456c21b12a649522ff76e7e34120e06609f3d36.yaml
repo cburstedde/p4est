@@ -1,0 +1,23 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Make ghost_ext/iterate_ext proper API functions
+desc: |-
+  The ghost and iterate versions in p4est_extended.h should be official
+  p4est API functions and moved/renamed into p4est_{ghost,iterate}.h,
+  respectively.
+  If we have several versions we can easily use postfixes such as
+  p4est_ghost_new_with_feature_something.
+type: :bugfix
+component: p4est
+release: "0.4"
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-03-18 10:10:42.506995 Z
+references: []
+
+id: a456c21b12a649522ff76e7e34120e06609f3d36
+log_events: 
+- - 2014-03-18 10:10:43.334029 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
