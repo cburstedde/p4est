@@ -221,7 +221,7 @@ main (int argc, char **argv)
   p4est_gloidx_t      global_shipped;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
-  p4est_nodes_t      *nodes;
+  p4est_nodes_t      *nodes = NULL;
   p4est_ghost_t      *ghost;
 #ifdef P4_TO_P8
   int                 do_trilinear;
@@ -242,6 +242,7 @@ main (int argc, char **argv)
   int                 oldschool, generate;
   int                 first_argc;
   int                 test_multiple_orders;
+  int                 skip_nodes, skip_lnodes;
 
   /* initialize MPI and p4est internals */
   mpiret = MPI_Init (&argc, &argv);
@@ -300,6 +301,8 @@ main (int argc, char **argv)
   sc_options_add_switch (opt, 0, "multiple-lnodes",
                          &test_multiple_orders,
                          "Also time lnodes for orders 2, 4, and 8");
+  sc_options_add_switch (opt, 0, "skip-nodes", &skip_nodes, "Skip nodes");
+  sc_options_add_switch (opt, 0, "skip-lnodes", &skip_lnodes, "Skip lnodes");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -313,6 +316,22 @@ main (int argc, char **argv)
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
+#ifdef P4_TO_P8
+  if (skip_nodes) {
+    if (do_trilinear) {
+      SC_GLOBAL_PRODUCTION
+        ("Warning: cannot test trilinear if --skip-nodes is given.\n");
+      do_trilinear = 0;
+    }
+  }
+#endif
+  if (skip_lnodes) {
+    if (test_multiple_orders) {
+      SC_GLOBAL_PRODUCTION
+        ("Warning: cannot test multiple lnode orders if --skip-lnodes is given.\n");
+      test_multiple_orders = 0;
+    }
+  }
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
   if (!strcmp (config_name, "unit")) {
@@ -596,10 +615,15 @@ main (int argc, char **argv)
   gcrc = p4est_ghost_checksum (p4est, ghost);
 
   /* time the node numbering */
-  sc_flops_snap (&fi, &snapshot);
-  nodes = p4est_nodes_new (p4est, ghost);
-  sc_flops_shot (&fi, &snapshot);
-  sc_stats_set1 (&stats[TIMINGS_NODES], snapshot.iwtime, "Nodes");
+  if (!skip_nodes) {
+    sc_flops_snap (&fi, &snapshot);
+    nodes = p4est_nodes_new (p4est, ghost);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_NODES], snapshot.iwtime, "Nodes");
+  }
+  else {
+    sc_stats_set1 (&stats[TIMINGS_NODES], 0., "Nodes");
+  }
 
   /* set this anyway so the output format is dimension independent */
   sc_stats_set1 (&stats[TIMINGS_TRILINEAR], 0., "Trilinear");
@@ -615,14 +639,22 @@ main (int argc, char **argv)
     p8est_trilinear_mesh_destroy (mesh);
   }
 #endif
-  p4est_nodes_destroy (nodes);
+
+  if (!skip_nodes) {
+    p4est_nodes_destroy (nodes);
+  }
 
   /* time the lnode numbering */
-  sc_flops_snap (&fi, &snapshot);
-  lnodes = p4est_lnodes_new (p4est, ghost, 1);
-  sc_flops_shot (&fi, &snapshot);
-  sc_stats_set1 (&stats[TIMINGS_LNODES], snapshot.iwtime, "L-Nodes");
-  p4est_lnodes_destroy (lnodes);
+  if (!skip_lnodes) {
+    sc_flops_snap (&fi, &snapshot);
+    lnodes = p4est_lnodes_new (p4est, ghost, 1);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_LNODES], snapshot.iwtime, "L-Nodes");
+    p4est_lnodes_destroy (lnodes);
+  }
+  else {
+    sc_stats_set1 (&stats[TIMINGS_LNODES], 0., "L-Nodes");
+  }
 
   if (test_multiple_orders) {
     sc_flops_snap (&fi, &snapshot);
