@@ -19,12 +19,10 @@ for i in 4 5 6 7 8; do
     fi
     perf stat -o p8.$type.$i -e "$STATS" -r $REPCOUNT ./p8est_timings \
       -c unit --skip-$othertype --level $i > p8.$type.$i.stdout
-    runtime= \
-      `egrep "[0-9.]+ seconds time elapsed" p8.$type.$i | awk '{print $1;}'`
+    runtime=`egrep "[0-9.]+ seconds time elapsed" p8.$type.$i | awk '{print $1;}'`
     accum=$runtime
     for stat in $SPACESTATS; do
-      count= \
-        `egrep "[0-9,]+ $stat" p8.$type.$i | awk '{print $1;}' | sed 's/,//g'`
+      count=`egrep "[0-9,]+ $stat" p8.$type.$i | awk '{print $1;}' | sed 's/,//g'`
       accum="$accum $count"
     done
     if [ $type = "base" ]; then
