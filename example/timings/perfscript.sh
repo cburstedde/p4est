@@ -8,7 +8,7 @@ REPCOUNT=30
 SPACESTATS=`echo $STATS | sed 's/,/ /g'`
 echo "type level time $SPACESTATS" > p8.perf
 
-for i in 4 5 6 7 8; do
+for i in 5 6 7 8; do
   for type in "base" "nodes" "lnodes"; do
     if [ $type = "nodes" ]; then
       othertype="lnodes"
