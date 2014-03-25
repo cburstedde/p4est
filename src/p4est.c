@@ -3025,17 +3025,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   }
   /* END: receive */
 
-  /* BEGIN: wait for MPI communication to complete */
-  if (num_sends > 0) {
-    /* wait for sends to complete */
-    mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
-    SC_CHECK_MPI (mpiret);
-
-    /* free send memory */
-    P4EST_FREE (parent_send);
-    P4EST_FREE (send_requests);
-  }
-
+  /* BEGIN: wait for MPI receive to complete */
   if (num_receives > 0) {
     /* wait for receives to complete */
     mpiret =
@@ -3045,7 +3035,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI communication to complete */
+  /* END: wait for MPI recieve to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {
@@ -3104,6 +3094,18 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   mpiret = MPI_Allgather (&correction_local, 1, MPI_INT,
                           correction, 1, MPI_INT, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
+
+  /* BEGIN: wait for MPI send to complete */
+  if (num_sends > 0) {
+    /* wait for sends to complete */
+    mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    /* free send memory */
+    P4EST_FREE (parent_send);
+    P4EST_FREE (send_requests);
+  }
+  /* END: wait for MPI send to complete */
 
   /* correct partition */
   current_proc =
