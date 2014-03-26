@@ -15,8 +15,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Tobin Isaac <tisaac@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2014-03-04 04:17:58.885803 Z
 references: []
 
@@ -30,3 +30,11 @@ log_events:
   - Tobin Isaac <tisaac@ices.utexas.edu>
   - edited description
   - ""
+- - 2014-03-05 17:50:05.310170 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - Fixed a bug in p4est_nodes, the examples run cleanly now.
+- - 2014-03-18 10:14:10.268451 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - The program does not crash anymore.
