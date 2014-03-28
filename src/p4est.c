@@ -77,20 +77,6 @@ static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
 
-#ifdef P4EST_MPI
-
-/** Correct partition to allow one level of coarsening.
- *
- * \param [in] p4est                     forest whose partition is corrected
- * \param [in,out] num_quadrants_in_proc partition that will be corrected
- * \return                               absolute number of moved quadrants
- */
-static p4est_locidx_t p4est_partition_for_coarsening (p4est_t * p4est,
-                                                      p4est_locidx_t *
-                                                      num_quadrants_in_proc);
-
-#endif
-
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
                         p4est_topidx_t treeid,
@@ -2410,7 +2396,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
-  p4est_locidx_t      num_corrected;
+  p4est_gloidx_t      num_corrected;
 #endif /* P4EST_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -2716,12 +2702,11 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   return global_shipped;
 }
 
-#ifdef P4EST_MPI
-
-static              p4est_locidx_t
+p4est_gloidx_t
 p4est_partition_for_coarsening (p4est_t * p4est,
                                 p4est_locidx_t * num_quadrants_in_proc)
 {
+#ifdef P4EST_MPI
   int                 num_procs = p4est->mpisize;
   int                 rank = p4est->mpirank;
   int                 mpiret;
@@ -2746,7 +2731,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   int                *receive_process;
   int                *correction, correction_local;
   int                 current_proc, next_proc;
-  p4est_locidx_t      num_moved_quadrants;
+  p4est_gloidx_t      num_moved_quadrants;
 
   /* create array with first quadrants of new partition */
   partition_new = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
@@ -2924,8 +2909,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
       }
-      else {                    /* if quadrant near cut is root of tree, i.e. level is zero */
-        /* set parent as tree root `q` */
+      else {
+        /* if quadrant near cut is root of tree, i.e., level is zero,
+           set parent as tree root `q` */
         parent_send[parent_index].level = q->level;
         parent_send[parent_index].x = q->x;
         parent_send[parent_index].y = q->y;
@@ -3120,7 +3106,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     if (0 < current_proc && current_proc < num_procs) {
       /* if any process but first */
       num_quadrants_in_proc[current_proc] += correction[current_proc];
-      num_moved_quadrants += (p4est_locidx_t) abs (correction[current_proc]);
+      num_moved_quadrants += (p4est_gloidx_t) abs (correction[current_proc]);
     }
     if (current_proc == 0 || next_proc < num_procs) {
       /* if first process or next process is feasible */
@@ -3139,9 +3125,12 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
   /* return absolute number of moved quadrants */
   return num_moved_quadrants;
-}
+#else
+  P4EST_ASSERT (num_quadrants_in_proc[0] == p4est->local_num_quadrants);
 
+  return 0;
 #endif
+}
 
 unsigned
 p4est_checksum (p4est_t * p4est)

@@ -254,6 +254,21 @@ p4est_locidx_t      p4est_partition_correction (p4est_gloidx_t *
                                                 p4est_gloidx_t
                                                 max_quadrant_id);
 
+/** Correct partition counters to allow one level of coarsening.
+ * No quadrants are actually shipped, just the desired number is updated.
+ * This function guarantees that empty processors remain empty.
+ * This function is collective and acts as a synchronization point.
+ *
+ * \param [in] p4est                     forest whose partition is corrected
+ * \param [in,out] num_quadrants_in_proc partition that will be corrected
+ * \return                               total absolute number of moved
+ *                                       quadrants.  In practice, at most
+ *                                       a small number per processor.
+ */
+p4est_gloidx_t      p4est_partition_for_coarsening (p4est_t * p4est,
+                                                    p4est_locidx_t *
+                                                    num_quadrants_in_proc);
+
 /** Find next non-empty process.
  *
  * Finds the next process id >= \a rank which is not empty according to
