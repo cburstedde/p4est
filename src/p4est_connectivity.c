@@ -2425,7 +2425,6 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   sc_hash_array_t    *face_ha;
 #ifdef P4_TO_P8
   int                 edge;
-  int                 flipped;
   int8_t             *et;
   size_t              ez, egz;
   p4est_topidx_t     *ept, real_edges, enode[2];
@@ -2658,14 +2657,13 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
       pt = (p4est_topidx_t *) sc_array_index (&ei->trees, egz);
       et = (int8_t *) sc_array_index (&ei->edges, egz);
       einfo.iedge = -1;         /* unused */
-      flipped = p8est_find_edge_transform_internal (conn, *pt, *et, &einfo,
-                                                    conn->edge_to_tree +
-                                                    ett_offset,
-                                                    conn->edge_to_edge +
-                                                    ett_offset,
-                                                    ei->trees.elem_count,
-                                                    ntree);
-      P4EST_ASSERT (flipped == 0);
+      P4EST_EXECUTE_ASSERT_FALSE
+        (p8est_find_edge_transform_internal (conn, *pt, *et, &einfo,
+                                             conn->edge_to_tree +
+                                             ett_offset,
+                                             conn->edge_to_edge +
+                                             ett_offset,
+                                             ei->trees.elem_count, ntree));
       if (eta->elem_count == 0) {
         P4EST_ASSERT (ntree[0] != -1 || ntree[1] != -1);
       }

@@ -552,7 +552,7 @@ p8est_tets_connectivity_new (p8est_tets_t * ptg,
                              sc_hash_array_t * face_ha)
 {
   int                 j, k;
-  int                 edge, face, found;
+  int                 edge, face;
   size_t              nvz, evzoffset, fvzoffset, vvzoffset;
   size_t              iz, pz;
   double             *vp, *n[4];
@@ -626,14 +626,12 @@ p8est_tets_connectivity_new (p8est_tets_t * ptg,
     }
     for (edge = 0; edge < 6; ++edge) {
       p8est_tet_edge_key (eikey.ek, tet, edge);
-      found = sc_hash_array_lookup (edge_ha, &eikey, &pz);
-      P4EST_ASSERT (found);
+      P4EST_EXECUTE_ASSERT_TRUE (sc_hash_array_lookup (edge_ha, &eikey, &pz));
       nid[4 + edge] = (p4est_topidx_t) (evzoffset + pz);
     }
     for (face = 0; face < 4; ++face) {
       p8est_tet_face_key (fikey.fk, tet, face);
-      found = sc_hash_array_lookup (face_ha, &fikey, &pz);
-      P4EST_ASSERT (found);
+      P4EST_EXECUTE_ASSERT_TRUE (sc_hash_array_lookup (face_ha, &fikey, &pz));
       nid[10 + face] = (p4est_topidx_t) (fvzoffset + pz);
     }
     nid[14] = (p4est_topidx_t) (vvzoffset + iz);
