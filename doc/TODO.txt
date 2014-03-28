@@ -1,8 +1,8 @@
 Note: Officially, bug tracking happens in the bugs/ directory.
       We use the ditz program for this purpose.
 
- * Mesh generation
-   Create connectivity from gmesh file format
+TODO: Turn this file into a list of ditz issues.
+
  * VTK output
    Define proper geometry mapping in 2D and 3D
  * Internals
@@ -10,10 +10,7 @@ Note: Officially, bug tracking happens in the bugs/ directory.
    Verify p4est_quadrant_is_inside_tree function
    Isolate a p4est_tree_is_valid function
  * Optimization
-   Distribute the connectivity in parallel
-   Remove the p4est quadrant_pool member
-   Speed up p4est_quadrant_compare
    Speed up p4est_intxx_t_compare
  * Nice ideas
    Include a test case for every major functionality
-   Documentation using doxygen
+   Create complete documentation using doxygen
