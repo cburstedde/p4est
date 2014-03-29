@@ -288,6 +288,7 @@
 #define p4est_linearize_tree            p8est_linearize_tree
 #define p4est_next_nonempty_process     p8est_next_nonempty_process
 #define p4est_partition_correction      p8est_partition_correction
+#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
