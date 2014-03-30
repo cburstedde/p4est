@@ -118,9 +118,8 @@ enum
   TIMINGS_TRILINEAR,
   TIMINGS_REPARTITION,
   TIMINGS_LNODES,
-  TIMINGS_LNODES2,
-  TIMINGS_LNODES4,
-  TIMINGS_LNODES8,
+  TIMINGS_LNODES3,
+  TIMINGS_LNODES7,
   TIMINGS_NUM_STATS
 };
 
@@ -681,27 +680,20 @@ main (int argc, char **argv)
 
   if (test_multiple_orders) {
     sc_flops_snap (&fi, &snapshot);
-    lnodes = p4est_lnodes_new (p4est, ghost, 2);
+    lnodes = p4est_lnodes_new (p4est, ghost, 3);
     sc_flops_shot (&fi, &snapshot);
-    sc_stats_set1 (&stats[TIMINGS_LNODES2], snapshot.iwtime, "L-Nodes 2");
+    sc_stats_set1 (&stats[TIMINGS_LNODES3], snapshot.iwtime, "L-Nodes 3");
     p4est_lnodes_destroy (lnodes);
 
     sc_flops_snap (&fi, &snapshot);
-    lnodes = p4est_lnodes_new (p4est, ghost, 4);
+    lnodes = p4est_lnodes_new (p4est, ghost, 7);
     sc_flops_shot (&fi, &snapshot);
-    sc_stats_set1 (&stats[TIMINGS_LNODES4], snapshot.iwtime, "L-Nodes 4");
-    p4est_lnodes_destroy (lnodes);
-
-    sc_flops_snap (&fi, &snapshot);
-    lnodes = p4est_lnodes_new (p4est, ghost, 8);
-    sc_flops_shot (&fi, &snapshot);
-    sc_stats_set1 (&stats[TIMINGS_LNODES8], snapshot.iwtime, "L-Nodes 8");
+    sc_stats_set1 (&stats[TIMINGS_LNODES7], snapshot.iwtime, "L-Nodes 7");
     p4est_lnodes_destroy (lnodes);
   }
   else {
-    sc_stats_set1 (&stats[TIMINGS_LNODES2], 0., "L-Nodes 2");
-    sc_stats_set1 (&stats[TIMINGS_LNODES4], 0., "L-Nodes 4");
-    sc_stats_set1 (&stats[TIMINGS_LNODES8], 0., "L-Nodes 8");
+    sc_stats_set1 (&stats[TIMINGS_LNODES3], 0., "L-Nodes 3");
+    sc_stats_set1 (&stats[TIMINGS_LNODES7], 0., "L-Nodes 7");
   }
 
   p4est_ghost_destroy (ghost);
