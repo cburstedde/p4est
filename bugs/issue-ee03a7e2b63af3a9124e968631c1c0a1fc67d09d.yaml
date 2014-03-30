@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Remove all dependencies on sc_ranges
+desc: |-
+  The sc/sc_ranges.{c,h} code is no longer necessary.
+  Use sc_notify throughout and remove obsolete code.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-02-08 17:37:13.973371 Z
+references: []
+
+id: ee03a7e2b63af3a9124e968631c1c0a1fc67d09d
+log_events: 
+- - 2014-02-08 17:37:15.681968 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

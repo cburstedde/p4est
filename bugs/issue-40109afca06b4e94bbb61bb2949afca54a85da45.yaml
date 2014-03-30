@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: abstract distributed set communication in libsc
+desc: The communication routines in lnodes should be abstracted into an object in libsc that deals with distributed index sets and communicating data associated with those index sets
+type: :task
+component: p4est
+release: 
+reporter: Tobin Isaac <tisaac@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2014-01-24 04:51:25.965937 Z
+references: []
+
+id: 40109afca06b4e94bbb61bb2949afca54a85da45
+log_events: 
+- - 2014-01-24 04:51:34.546223 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - created
+  - ""
+- - 2014-01-28 17:11:50.638256 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - Feel free to propose some prototypes.  Could be interesting.

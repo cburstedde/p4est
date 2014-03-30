@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Write VTK output into one partition-independent .vtu file
+desc: |-
+  Currently each processor writes one .vtu file.  This is not practicable
+  for large numbers of processors.  We can instead use MPI I/O to create
+  only one (or a smaller number of) .vtu files that appear to have been
+  written by one (or few) processes.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-03-27 09:56:21.110167 Z
+references: []
+
+id: acb1ebc87d79bd1744490f330b0e0abdbe7944aa
+log_events: 
+- - 2014-03-27 09:56:21.702038 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
