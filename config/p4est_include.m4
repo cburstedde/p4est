@@ -60,4 +60,16 @@ AC_DEFUN([P4EST_AS_SUBPACKAGE],
 dnl P4EST_FINAL_MESSAGES(PREFIX)
 dnl This macro prints messages at the end of the configure run.
 dnl
-AC_DEFUN([P4EST_FINAL_MESSAGES],)
+AC_DEFUN([P4EST_FINAL_MESSAGES],
+[
+if test "x$$1_ENABLE_VTK_COMPRESSION" = xyes && \
+   test "x$$1_HAVE_ZLIB" != xyes ; then
+AC_MSG_NOTICE([- $1 -------------------------------------------------
+VTK compression is enabled, but we did not find a recent zlib.
+This is OK if the following does not matter to you:
+Calling p4est_vtk_write_file will abort your program.
+You can fix this by compiling a working zlib and pointing LIBS to it,
+or by using the p4est configure option --disable-vtk-zlib.
+])
+fi
+])

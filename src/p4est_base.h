@@ -223,6 +223,7 @@ extern int          p4est_package_id;
 
 /** Registers p4est with the SC Library and sets the logging behavior.
  * This function is optional.
+ * This function must only be called before additional threads are created.
  * If this function is not called or called with log_handler == NULL,
  * the default SC log handler will be used.
  * If this function is not called or called with log_threshold == SC_LP_DEFAULT,
