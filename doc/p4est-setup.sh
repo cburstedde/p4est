@@ -81,7 +81,7 @@ echo "Build FAST version in $BUILD_FAST"
 mkdir -p "$BUILD_FAST"
 cd "$BUILD_FAST"
 "$UNPACK/$DIR/configure" --enable-mpi --enable-shared \
-        --disable-vtk-binary --without-blas \
+        --disable-vtk-binary --without-blas --disable-mpithread \
         --prefix="$INSTALL_FAST" CFLAGS="$CFLAGS_FAST" \
         CPPFLAGS="-DSC_LOG_PRIORITY=SC_LP_ESSENTIAL" \
         "$@" > config.output || bdie "Error in configure"
@@ -95,7 +95,7 @@ echo "Build DEBUG version in $BUILD_DEBUG"
 mkdir -p "$BUILD_DEBUG"
 cd "$BUILD_DEBUG"
 "$UNPACK/$DIR/configure" --enable-debug --enable-mpi --enable-shared \
-        --disable-vtk-binary --without-blas \
+        --disable-vtk-binary --without-blas --disable-mpithread \
         --prefix="$INSTALL_DEBUG" CFLAGS="$CFLAGS_DEBUG" \
         CPPFLAGS="-DSC_LOG_PRIORITY=SC_LP_ESSENTIAL" \
         "$@" > config.output || bdie "Error in configure"
