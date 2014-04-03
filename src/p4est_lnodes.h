@@ -80,7 +80,8 @@ typedef int8_t      p4est_lnodes_code_t;
  *
  * The sharers array contains items of type p4est_lnodes_rank_t
  * that hold the ranks that own or share independent local nodes.
- * It is sorted by rank.  The rank of the current process is included.
+ * If there are no shared nodes on this processor, it is empty.
+ * Otherwise, it is sorted by rank and the current process is included.
  */
 typedef struct p4est_lnodes
 {
