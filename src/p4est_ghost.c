@@ -2392,7 +2392,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      ng_excl, ng_incl, ng, theg;
   p4est_locidx_t      lmatches;
   p4est_locidx_t      mirr;
-  p4est_quadrant_t    *g, *m;
+  p4est_quadrant_t   *g, *m;
   MPI_Request        *r;
 
   if (minlevel <= 0 && maxlevel >= P4EST_QMAXLEVEL) {
@@ -2533,7 +2533,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_FREE (qbuffer);
   sc_array_reset (&rrequests);
   sc_array_reset (&rbuffers);
-  
+
   /* wait for sends and clean up */
   mpiret = MPI_Waitall (srequests.elem_count, (MPI_Request *) srequests.array,
                         MPI_STATUSES_IGNORE);
