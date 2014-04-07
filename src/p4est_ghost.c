@@ -3470,3 +3470,40 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_expand\n");
 #endif
 }
+
+int
+p4est_ghost_is_valid (p4est_ghost_t *ghost)
+{
+    const p4est_topidx_t    num_trees=ghost->num_trees;
+    const int               mpisize=ghost->mpisize;
+    int                     i,proc_length;
+    p4est_locidx_t          proc_offset;
+    size_t                  zz;
+    void                    *vold,*vnew;
+
+    /* check if quadrants in ghost layer are in z-order and if quadrants in
+     * mirror-layer are in z-order.
+     * also check if tree_offsets, proc_offsets, mirror_tree_offstes
+     * and mirror_proc_offsets are sorted.
+     */
+    if (! (sc_array_is_sorted (&ghost->ghosts,p4est_quadrant_compare_piggy) &&
+        sc_array_is_sorted (&ghost->mirrors,p4est_quadrant_compare) &&
+        p4est_locidx_is_sorted (ghost->tree_offsets,num_trees+1) &&
+        p4est_locidx_is_sorted (ghost->proc_offsets,mpisize+1) &&
+        p4est_locidx_is_sorted (ghost->mirror_tree_offsets,num_trees+1) &&
+        p4est_locidx_is_sorted (ghost->mirror_proc_offsets,mpisize+1))){
+            return 0;
+    }
+
+    /* check if mirror_proc_offsets is ascending within each rank
+     */
+    for(i=0;i<mpisize;i++){
+        proc_offset=ghost->mirror_proc_offsets[i];
+        proc_length=ghost->mirror_proc_offsets[i+1]-proc_offset;
+        if(!p4est_locidx_is_sorted (ghost->mirror_proc_mirrors+proc_offset,
+                                    proc_length)){
+            return 0;
+        }
+    }
+    return 1;
+}

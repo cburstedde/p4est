@@ -44,6 +44,28 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
 }
 
+int
+p4est_locidx_is_sorted (p4est_locidx_t * array, int length)
+{
+  void               *vold, *vnew;
+  int                i;
+
+  if (length <= 1) {
+    return 1;
+  }
+
+  vold = array;
+  for (i = 1; i < length; i++) {
+    vnew = (array+i);
+    if (p4est_locidx_compare (vold, vnew) > 0) {
+      return 0;
+    }
+    vold = vnew;
+  }
+
+  return 1;
+}
+
 #ifndef __cplusplus
 #undef P4EST_GLOBAL_LOGF
 #undef P4EST_LOGF

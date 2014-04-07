@@ -68,6 +68,10 @@ typedef struct
 }
 p8est_ghost_t;
 
+
+int                 p8est_ghost_is_valid (p8est_ghost_t *ghost);
+
+
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.
  * \return              Memory used in bytes.

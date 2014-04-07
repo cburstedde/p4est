@@ -323,6 +323,7 @@
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
+#define p4est_ghost_is_valid            p8est_ghost_is_valid
 #define p4est_face_quadrant_exists      p8est_face_quadrant_exists
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced

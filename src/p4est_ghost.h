@@ -69,6 +69,15 @@ typedef struct
 }
 p4est_ghost_t;
 
+/** Test if within a ghost-structure the array ghosts is in
+ * p4est_quadrant_compare_piggy order and the array mirrors is in z-order.
+ * Test if the p4est_locidx_t arrays are in ascending order
+ * (for mirror_proc_mirrors ascending within each rank)
+ * \param [in] ghost    Ghost layer structure.
+ * \return true if \a ghost is valid
+ */
+int                 p4est_ghost_is_valid (p4est_ghost_t *ghost);
+
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.
  * \return              Memory used in bytes.
