@@ -221,6 +221,13 @@ p6est_t            *p6est_new (MPI_Comm mpicomm,
                                size_t data_size,
                                p6est_init_t init_fn, void *user_pointer);
 
+p6est_t            *p6est_new_from_p4est (p4est_t * p4est,
+                                          double *top_vertices,
+                                          double height[3], int min_zlevel,
+                                          size_t data_size,
+                                          p6est_init_t init_fn,
+                                          void *user_pointer);
+
 /** Destroy a p6est.
  *
  * \note The connectivity structure is not destroyed with the p6est.
