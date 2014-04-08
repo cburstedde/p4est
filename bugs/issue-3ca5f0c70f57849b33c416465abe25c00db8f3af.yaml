@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: The non-MPI compile throws a couple warnings.  Check non-debug too.
+desc: ""
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-04-08 12:28:55.445223 Z
+references: []
+
+id: 3ca5f0c70f57849b33c416465abe25c00db8f3af
+log_events: 
+- - 2014-04-08 12:28:56.069153 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

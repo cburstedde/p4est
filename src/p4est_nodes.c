@@ -1308,7 +1308,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                   (unsigned long long) shared_indeps->elem_count);
 
   P4EST_ASSERT (0 <= offset_owned_indeps &&
-                offset_owned_indeps <= end_owned_indeps && 
+                offset_owned_indeps <= end_owned_indeps &&
                 end_owned_indeps <= num_indep_nodes);
 #endif
 
