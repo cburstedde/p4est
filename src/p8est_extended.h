@@ -258,6 +258,15 @@ p8est_t            *p8est_load_ext (const char *filename, sc_MPI_Comm mpicomm,
                                     void *user_pointer,
                                     p8est_connectivity_t ** connectivity);
 
+/** The same as p8est_load_ext, but reading the connectivity/p8est from an
+ * open sc_io_source_t stream.
+ */
+p8est_t            *p8est_source_ext (sc_io_source_t * src,
+                                      sc_MPI_Comm mpicomm, size_t data_size,
+                                      int load_data, int autopartition,
+                                      int broadcasthead, void *user_pointer,
+                                      p8est_connectivity_t ** connectivity);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_EXTENDED_H */

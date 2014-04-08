@@ -3414,6 +3414,35 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                 int load_data, int autopartition, int broadcasthead,
                 void *user_pointer, p4est_connectivity_t ** connectivity)
 {
+  int                 retval;
+  p4est_t            *p4est;
+  sc_io_source_t     *src;
+
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
+
+  /* open file on all processors */
+
+  src = sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
+  SC_CHECK_ABORT (src != NULL, "file source");
+
+  p4est = p4est_source_ext (src, mpicomm, data_size, load_data, autopartition,
+                            broadcasthead, user_pointer, connectivity);
+
+  retval = sc_io_source_destroy (src);
+  SC_CHECK_ABORT (!retval, "source destroy");
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_load with %lld total quadrants\n",
+     (long long) p4est->global_num_quadrants);
+
+  return p4est;
+}
+
+p4est_t            *
+p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
+                  int load_data, int autopartition, int broadcasthead,
+                  void *user_pointer, p4est_connectivity_t ** connectivity)
+{
   const int           headc = 6;
   const int           align = 32;
   int                 retval;
@@ -3426,7 +3455,6 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   size_t              save_data_size;
   size_t              qbuf_size, comb_size, head_count;
   size_t              zz, zcount, zpadding;
-  FILE               *file;
   p4est_topidx_t      jt, num_trees;
   p4est_gloidx_t     *gfq;
   p4est_gloidx_t     *pertree;
@@ -3434,10 +3462,7 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
   sc_array_t         *qarr, *darr;
-  sc_io_source_t     *src;
   char               *dap, *lbuf;
-
-  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
 
   SC_CHECK_ABORT (!broadcasthead, "Header broadcast not implemented");
 
@@ -3447,22 +3472,13 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  /* open file on all processors */
-  file = fopen (filename, "rb");
-  SC_CHECK_ABORT (file != NULL, "file open");
-
   /* read connectivity */
-  src = sc_io_source_new (SC_IO_TYPE_FILEFILE, SC_IO_ENCODE_NONE, file);
-  SC_CHECK_ABORT (src != NULL, "file source");
   conn = *connectivity = p4est_connectivity_source (src);
   SC_CHECK_ABORT (conn != NULL, "connectivity source");
-  retval = sc_io_source_complete (src, NULL, &zcount);
-  SC_CHECK_ABORT (!retval, "source complete");
+  zcount = src->bytes_out;
   zpadding = (align - zcount % align) % align;
   retval = sc_io_source_read (src, NULL, zpadding, NULL);
   SC_CHECK_ABORT (!retval, "source padding");
-  retval = sc_io_source_destroy (src);
-  SC_CHECK_ABORT (!retval, "source destroy");
 
   /* set some parameters */
   if (data_size == 0) {
@@ -3473,7 +3489,9 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
 
   /* read format and partition information */
   u64a = P4EST_ALLOC (uint64_t, headc);
-  sc_fread (u64a, sizeof (uint64_t), (size_t) headc, file, "read format");
+  retval = sc_io_source_read (src, u64a, sizeof (uint64_t) * (size_t) headc,
+                              NULL);
+  SC_CHECK_ABORT (!retval, "read format");
   SC_CHECK_ABORT (u64a[0] == P4EST_ONDISK_FORMAT, "invalid format");
   SC_CHECK_ABORT (u64a[1] == (uint64_t) sizeof (p4est_qcoord_t),
                   "invalid coordinate size");
@@ -3495,8 +3513,9 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   if (!autopartition) {
     P4EST_ASSERT (num_procs == save_num_procs);
     u64a = P4EST_REALLOC (u64a, uint64_t, num_procs);
-    sc_fread (u64a, sizeof (uint64_t), (size_t) num_procs, file,
-              "read quadrant partition");
+    sc_io_source_read (src, u64a, sizeof (uint64_t) * (size_t) num_procs,
+                       NULL);
+    SC_CHECK_ABORT (!retval, "read quadrant partition");
     gfq[0] = 0;
     for (i = 0; i < num_procs; ++i) {
       gfq[i + 1] = (p4est_gloidx_t) u64a[i];
@@ -3504,10 +3523,11 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   }
   else {
     /* ignore saved partition and compute a new uniform one */
-    retval = fseek (file, (long) ((save_num_procs - 1) * sizeof (uint64_t)),
-                    SEEK_CUR);
+    retval = sc_io_source_read
+      (src, NULL, (long) ((save_num_procs - 1) * sizeof (uint64_t)), NULL);
     SC_CHECK_ABORT (!retval, "seek over ignored partition");
-    sc_fread (&u64int, sizeof (uint64_t), 1, file, "read quadrant count");
+    retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
+    SC_CHECK_ABORT (!retval, "read quadrant count");
     for (i = 0; i <= num_procs; ++i) {
       gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
     }
@@ -3516,8 +3536,9 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
 
   /* read pertree data */
   u64a = P4EST_REALLOC (u64a, uint64_t, num_trees);
-  sc_fread (u64a, sizeof (uint64_t), (size_t) num_trees, file,
-            "read pertree information");
+  retval = sc_io_source_read (src, u64a, sizeof (uint64_t) * (size_t)
+                              num_trees, NULL);
+  SC_CHECK_ABORT (!retval, "read pertree information");
   pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
   pertree[0] = 0;
   for (jt = 0; jt < num_trees; ++jt) {
@@ -3531,8 +3552,9 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
   if (zpadding > 0 || rank > 0) {
     retval =
-      fseek (file, (long) (zpadding + gfq[rank] * comb_size), SEEK_CUR);
-    SC_CHECK_ABORT (retval == 0, "seek data");
+      sc_io_source_read (src, NULL, (long) (zpadding + gfq[rank] * comb_size),
+                         NULL);
+    SC_CHECK_ABORT (!retval, "seek data");
   }
 
   /* read quadrant coordinates and data interleaved */
@@ -3550,15 +3572,17 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   }
   for (zz = 0; zz < zcount; ++zz) {
     if (load_data) {
-      sc_fread (lbuf, comb_size, 1, file, "read quadrant with data");
+      retval = sc_io_source_read (src, lbuf, comb_size, NULL);
+      SC_CHECK_ABORT (!retval, "read quadrant with data");
       memcpy (qap, lbuf, qbuf_size);
       memcpy (dap, lbuf + qbuf_size, data_size);
     }
     else {
-      sc_fread (qap, qbuf_size, 1, file, "read quadrant with data");
+      retval = sc_io_source_read (src, qap, qbuf_size, NULL);
+      SC_CHECK_ABORT (!retval, "read quadrant with data");
       if (save_data_size > 0) {
-        retval = fseek (file, save_data_size, SEEK_CUR);
-        SC_CHECK_ABORT (retval == 0, "seek over data");
+        retval = sc_io_source_read (src, NULL, save_data_size, NULL);
+        SC_CHECK_ABORT (!retval, "seek over data");
       }
     }
     qap += P4EST_DIM + 1;
@@ -3566,10 +3590,13 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   }
   P4EST_FREE (lbuf);
 
-  /* close file */
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
-  file = NULL;
+  /* seek every process to the end of the source (in case there is data
+   * appended to the end of this source) */
+  if (gfq[num_procs] > gfq[rank + 1]) {
+    retval = sc_io_source_read
+      (src, NULL, (long) (gfq[num_procs] - gfq[rank + 1]) * comb_size, NULL);
+    SC_CHECK_ABORT (!retval, "seek to end of data");
+  }
 
   /* create p4est from accumulated information */
   p4est = p4est_inflate (mpicomm, conn, gfq, pertree,
@@ -3583,9 +3610,6 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
 
   /* assert that we loaded a valid forest and return */
   SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
-  P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_load with %lld total quadrants\n",
-     (long long) p4est->global_num_quadrants);
 
   return p4est;
 }
