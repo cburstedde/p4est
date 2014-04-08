@@ -122,6 +122,10 @@ typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
  * as edge orientation in the connectivity. If a quadrant should be present,
  * but it is not included in the ghost layer, then quad = NULL, is_ghost is
  * true, and quadid = -1.
+                      *
+ * the \a faces field provides some additional information about the local
+ * neighborhood: if side[i]->faces[j] == side[k]->faces[l], this indicates that
+ * there is a common face between these two sides of the edge.
  */
 typedef struct p8est_iter_edge_side
 {
@@ -147,6 +151,7 @@ typedef struct p8est_iter_edge_side
     hanging;
   }
   is;
+  int8_t              faces[2];
 }
 p8est_iter_edge_side_t;
 
@@ -179,6 +184,11 @@ typedef void        (*p8est_iter_edge_t) (p8est_iter_edge_info_t * info,
 /* Information about one side of a corner in the forest.  If a \a quad is local,
  * then its \a quadid indexes the tree's quadrant array; otherwise, it indexes
  * the ghosts array.
+ *
+ * the \a faces and \a edges field provides some additional information about
+ * the local neighborhood: if side[i]->faces[j] == side[k]->faces[l], this
+ * indicates that there is a common face between these two sides of the
+ * corner.
  */
 typedef struct p8est_iter_corner_side
 {
@@ -187,6 +197,8 @@ typedef struct p8est_iter_corner_side
   int8_t              is_ghost;
   p8est_quadrant_t   *quad;
   p4est_locidx_t      quadid;
+  int8_t              faces[3];
+  int8_t              edges[3];
 }
 p8est_iter_corner_side_t;
 
@@ -218,7 +230,7 @@ typedef void        (*p8est_iter_corner_t) (p8est_iter_corner_info_t * info,
 
 /** p8est_iterate executes the user-supplied callback functions at every
  * volume, face, edge and corner in the local forest. The ghost_layer may be
- * NULL. The \a user_data pointer is not touched by p4est_iterate, but is
+ * NULL. The \a user_data pointer is not touched by p8est_iterate, but is
  * passed to each of the callbacks. Any of the callback functions may be NULL.
  * The callback functions are interspersed with each other, i.e. some face
  * callbacks will occur between volume callbacks, and some edge callbacks will

@@ -5,7 +5,7 @@ desc: |-
   functions in p4est_algorithms.
 type: :bugfix
 component: p4est
-release: 
+release: "0.4"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
 disposition: 
@@ -26,3 +26,7 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - commented
   - We probably won't need that.  We could remove the per-level counters entirely.
+- - 2014-03-18 10:16:04.711515 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - assigned to release 0.4 from unassigned
+  - We should think about how we want it and resolve the issue.

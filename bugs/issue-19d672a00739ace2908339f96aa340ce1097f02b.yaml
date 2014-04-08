@@ -1,0 +1,40 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Assertion in p8est_nodes_new
+desc: |-
+  reproducible with
+  
+  mpiexec -n 27 p8est_timings -c periodic --level 3
+  
+  [libsc 22] Abort: Assertion '(k < rank && il < offset_owned_indeps) || (k > rank && il >= end_owned_indeps)'
+  [libsc 22] Abort: /h2/tisaac/Projects/p4est/src/p4est_nodes.c:1183
+  
+  I found a smaller example
+  
+  mpiexec -n 7 p8est_timings -c periodic --level 2
+type: :bugfix
+component: p4est
+release: 
+reporter: Tobin Isaac <tisaac@ices.utexas.edu>
+status: :closed
+disposition: :fixed
+creation_time: 2014-03-04 04:17:58.885803 Z
+references: []
+
+id: 19d672a00739ace2908339f96aa340ce1097f02b
+log_events: 
+- - 2014-03-04 04:18:01.408539 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - created
+  - ""
+- - 2014-03-05 05:20:24.872509 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - edited description
+  - ""
+- - 2014-03-05 17:50:05.310170 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - Fixed a bug in p4est_nodes, the examples run cleanly now.
+- - 2014-03-18 10:14:10.268451 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - The program does not crash anymore.

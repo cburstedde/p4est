@@ -56,6 +56,15 @@ typedef struct
                                                    ascending within each rank */
   p4est_locidx_t     *mirror_proc_offsets;      /* mpisize + 1 indices into 
                                                    mirror_proc_mirrors */
+  p4est_locidx_t     *mirror_proc_fronts;       /* like mirror_proc_mirrors,
+                                                   but limited to the
+                                                   outermost octants.  This is
+                                                   NULL until
+                                                   p4est_ghost_expand is
+                                                   called */
+  p4est_locidx_t     *mirror_proc_front_offsets;        /* NULL until
+                                                           p4est_ghost_expand is
+                                                           called */
 }
 p8est_ghost_t;
 
@@ -257,6 +266,15 @@ void                p8est_ghost_exchange_custom_levels (p8est_t * p8est,
                                                         size_t data_size,
                                                         void **mirror_data,
                                                         void *ghost_data);
+
+/** Expand the size of the ghost layer and mirrors by one additional layer of
+ * adjacency.
+ * \param [in] p8est            The forest from which the ghost layer was
+ *                              generated.
+ * \param [in,out] ghost        The ghost layer to be expanded.
+ */
+void                p8est_ghost_expand (p8est_t * p8est,
+                                        p8est_ghost_t * ghost);
 
 SC_EXTERN_C_END;
 

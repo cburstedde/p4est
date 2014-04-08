@@ -120,6 +120,10 @@ typedef void        (*p4est_iter_face_t) (p4est_iter_face_info_t * info,
  * otherwise, it indexes the ghosts array. If a quadrant should be present, but
  * it is not included in the ghost layer, then quad = NULL, is_ghost is true,
  * and quadid = -1.
+ *
+ * the \a faces field provides some additional information about the local
+ * topology: if side[i]->faces[j] == side[k]->faces[l], this indicates that
+ * there is a common face between these two sides of the corner.
  */
 typedef struct p4est_iter_corner_side
 {
@@ -128,6 +132,7 @@ typedef struct p4est_iter_corner_side
   int8_t              is_ghost;
   p4est_quadrant_t   *quad;
   p4est_locidx_t      quadid;
+  int8_t              faces[2];
 }
 p4est_iter_corner_side_t;
 
