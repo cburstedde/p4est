@@ -3471,15 +3471,15 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
 }
 
-/** Examine if a ghost structure is valid as described in the header file.
- * Test if within a ghost-structure the arrays ghosts and mirrors are in
- * p4est_quadrant_compare_piggy order.
- * Test if local_num in piggy3 data member of the quadrants in ghosts and
- * mirrors are in ascending order (ascending within each rank for ghost).
- *
+/** Examine if a ghost structure is valid.
+ * Test if within a ghost-structure the array ghosts is in
+ * p4est_quadrant_compare_piggy order and the array mirrors is in z-order.
  * Test if the p4est_locidx_t arrays are in ascending order
  * (for mirror_proc_mirrors ascending within each rank)
  * \param [in] ghost    Ghost layer structure.
+ * \return true if \a ghost is valid
+ */
+
  * \return true if \a ghost is valid
  */
 
@@ -3490,28 +3490,25 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
   const int           mpisize = ghost->mpisize;
   int                 i, proc_length;
   p4est_locidx_t      proc_offset;
-  size_t              view_length;
+  size_t              zz;
+  void               *vold, *vnew;
   sc_array_t         *array;
 
   /* check if the last entries of the offset arrays are the element count of ghosts/mirrors array. */
-  if (!(ghost->tree_offsets[num_trees] == ghost->ghosts.elem_count
-        && ghost->proc_offsets[mpisize] == ghost->ghosts.elem_count
-        && ghost->mirror_tree_offsets[num_trees] ==
-        ghost->mirrors.elem_count)) {
+  if (!
+      (ghost->tree_offsets[num_trees] == ghost->ghosts.elem_count
+       && ghost->proc_offsets[mpisize] == ghost->ghosts.elem_count
+       && ghost->mirror_tree_offsets[num_trees] ==
+       ghost->mirrors.elem_count)) {
     return 0;
   }
 
   /* check if quadrants in ghost and mirror layer are in p4est_quadrant_compare_piggy order.
-   * check if quadrants in mirror layer are in p4est_quadrant_compare_local_num order.
    * also check if tree_offsets, proc_offsets, mirror_tree_offstes
-   * and mirror_proc_offsets are sorted (ascending).
+   * and mirror_proc_offsets are sorted.
    */
   if (!(sc_array_is_sorted (&ghost->ghosts, p4est_quadrant_compare_piggy) &&
-        sc_array_is_sorted (&ghost->mirrors, p4est_quadrant_compare_piggy))
-      && sc_array_is_sorted (&ghost->mirrors,
-                             p4est_quadrant_compare_local_num)) {
-    return 0;
-  }
+        sc_array_is_sorted (&ghost->mirrors, p4est_quadrant_compare_piggy))) {
   array =
     sc_array_new_data (ghost->tree_offsets, sizeof (p4est_locidx_t),
                        num_trees + 1);
@@ -3537,6 +3534,23 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
     sc_array_destroy (array);
     return 0;
   }
+  array =
+    sc_array_new_data (ghost->tree_offsets, sizeof (p4est_locidx_t),
+                       num_trees + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+  sc_array_init_data (array, ghost->proc_offsets, sizeof (p4est_locidx_t),
+                      mpisize + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+  sc_array_init_data (array, ghost->mirror_tree_offsets,
+                      sizeof (p4est_locidx_t), num_trees + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+  sc_array_init_data (array, ghost->mirror_proc_offsets,
+                      sizeof (p4est_locidx_t), mpisize + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
 
   /* check if local number in piggy3 data member of the quadrants in ghost is
    * ascending within each rank.

@@ -69,8 +69,7 @@ typedef struct
 }
 p4est_ghost_t;
 
-/** Examine if a ghost structure is valid as desribed above.
- * Test if within a ghost-structure the arrays ghosts and mirrors are in
+/** Test if within a ghost-structure the array ghosts is in
  * p4est_quadrant_compare_piggy order.
  * Test if local_num in piggy3 data member of the quadrants in ghosts and
  * mirrors are in ascending order (ascending within each rank for ghost).
