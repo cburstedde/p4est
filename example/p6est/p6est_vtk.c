@@ -26,7 +26,7 @@
 
 #define P4EST_VTK_CELL_TYPE     11      /* VTK_VOXEL */
 
-static const double p6est_vtk_scale = 0.95;
+static const double p6est_vtk_scale = 1.;
 static const int    p6est_vtk_write_tree = 1;
 static const int    p6est_vtk_write_rank = 1;
 static const int    p6est_vtk_wrap_rank = 0;
@@ -183,12 +183,10 @@ p6est_vtk_write_header (p6est_t * p6est,
 
   P4EST_ASSERT (0. <= scale && scale <= 1. && wrap_rank >= 0);
 
-  if (scale < 1.) {
-    /* when we scale the quadrants we need each corner separately */
-    Ntotal = Ncorners;
-  }
-  else {
-    SC_ABORT ("p6est_vtk_write_header with scale == 1. not implemented");
+  Ntotal = Ncorners;
+  if (scale == 1.) {
+    scale = 1. - 2. * SC_EPS;
+    P4EST_ASSERT (scale < 1.);
   }
 
   /* Have each proc write to its own file */
