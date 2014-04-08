@@ -92,41 +92,66 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
 
 /** Callback function to query the match of a "point" with a quadrant.
  *
+ * This function can be called in two roles:  Per-quadrant, in which case the
+ * parameter \a point is NULL, or per-point, possibly many times per quadrant.
+ *
  * \param [in] p8est        The forest to be queried.
  * \param [in] which_tree   The tree id under consideration.
  * \param [in] quadrant     The quadrant under consideration.
  *                          This quadrant may be coarser than the quadrants
- *                          that are contained in the forest (an ancestor).
+ *                          that are contained in the forest (an ancestor), in
+ *                          which case it is a temporary variable and not part
+ *                          of the forest storage.  Otherwise, it is a leaf and
+ *                          points directly into the forest storage.
+ * \param [in] local_num    If the quadrant is not a leaf, this is -1.  Otherwise
+ *                          it is the (non-negative) index of the quadrant
+ *                          relative to the processor-local quadrant storage.
  * \param [in] point        Representation of a "point"; user-defined.
- * \param [in] is_leaf      Specify if the quadrant is an ancestor or a leaf.
- * \return                  True if point may be contained in the quadrant,
- *                          false otherwise.  By returning true for a leaf,
- *                          a successful match is indicated.  When is_leaf is
- *                          true, quadrant->p.piggy3.local_num contains the
- *                          local index of the matched quadrant in the forest.
+ *                          If \a point is NULL, the callback may be used to
+ *                          prepare quadrant-related search meta data.
+ * \return                  If \a point is NULL, true if the search confined to
+ *                          \a quadrant should be executed, false to skip it.
+ *                          Else, true if point may be contained in the
+ *                          quadrant and false otherwise; the return value has
+ *                          no effect on a leaf.
  */
 typedef int         (*p8est_search_query_t) (p8est_t * p8est,
                                              p4est_topidx_t which_tree,
                                              p8est_quadrant_t * quadrant,
-                                             int is_leaf, void *point);
+                                             p4est_locidx_t local_num,
+                                             void *point);
 
 /** Search "points" from a given set in the forest.
  *
- * The search goes over all trees and proceeds recursively top-down.
- * A callback is queried to match each point with a quadrant.
+ * The search runs over all local quadrants and proceeds recursively top-down.
+ * Its outer loop is thus a depth-first, processor-local forest traversal.
+ * Each quadrant in that loop either is a leaf, or a (direct or indirect)
+ * strict ancestor of a leaf.  On entering a new quadrant, a user-provided
+ * quadrant-callback is executed.
+ * The set of points that potentially matches a given quadrants diminishes from
+ * the root down to the leaves:  For each quadrant, an inner loop over the
+ * potentially matching points executes a point-callback for each candidate
+ * that determines whether the point may be a match.  If not, it is discarded
+ * immediately, otherwise it is passed to the next finer level.
  * The callback is allowed to return true for the same point and more than one
  * quadrant; in this case more than one matching quadrant may be identified.
- * The callback is also allowed to return false for all children
- * of a quadrant that it returned true for earlier.
- * The points can really be anything, p8est does not perform any
+ * The callback is also allowed to return false for all children of a quadrant
+ * that it returned true for earlier.
+ * The points can really be anything, p4est does not perform any
  * interpretation, just passes the pointer along to the callback function.
  *
  * \param [in] p8est        The forest to be searched.
- * \param [in] search_fn    Function to return true for a possible match.
+ * \param [in] search_quadrant_fn   Executed once for each quadrant that is
+ *                          entered.  This quadrant is always local.  If the
+ *                          callback returns false, this quadrant and its
+ *                          descendents are excluded from the search.
+ *                          May be NULL in which case it is ignored.
+ * \param [in] search_point_fn      Must return true for a possible match.
  * \param [in] points       User-defined array of "points".
  */
 void                p8est_search (p8est_t * p8est,
-                                  p8est_search_query_t search_fn,
+                                  p8est_search_query_t search_quadrant_fn,
+                                  p8est_search_query_t search_point_fn,
                                   sc_array_t * points);
 
 SC_EXTERN_C_END;
