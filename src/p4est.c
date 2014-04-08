@@ -3441,6 +3441,11 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
   retval = sc_io_source_destroy (src);
   SC_CHECK_ABORT (!retval, "source destroy");
 
+  p4est_log_indent_pop ();
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_load with %lld total quadrants\n",
+     (long long) p4est->global_num_quadrants);
+
   return p4est;
 }
 
@@ -3616,10 +3621,5 @@ p4est_source_ext (sc_io_source_t * src, MPI_Comm mpicomm, size_t data_size,
 
   /* assert that we loaded a valid forest and return */
   SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
-  p4est_log_indent_pop ();
-  P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_load with %lld total quadrants\n",
-     (long long) p4est->global_num_quadrants);
-
   return p4est;
 }
