@@ -174,6 +174,16 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
 }
 
 int
+p4est_quadrant_compare_local_num (const void *v1, const void *v2)
+{
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
+
+  return p4est_locidx_compare (&q1->p.piggy3.local_num,
+                               &q2->p.piggy3.local_num);
+}
+
+int
 p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;

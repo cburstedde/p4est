@@ -201,6 +201,7 @@
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
+#define p4est_quadrant_compare_local_num p8est_quadrant_compare_local_num
 #define p4est_quadrant_equal_fn         p8est_quadrant_equal_fn
 #define p4est_quadrant_hash_fn          p8est_quadrant_hash_fn
 #define p4est_node_equal_piggy_fn       p8est_node_equal_piggy_fn

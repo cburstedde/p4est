@@ -80,6 +80,14 @@ int                 p4est_quadrant_disjoint (const void *v1, const void *v2);
 int                 p4est_quadrant_compare_piggy (const void *v1,
                                                   const void *v2);
 
+/** Compare two quadrants with respect to their local_num in the piggy3 member.
+ * \return Returns < 0 if \a v1 < \a v2,
+ *                   0 if \a v1 == \a v2,
+ *                 > 0 if \a v1 > \a v2
+ */
+int                 p4est_quadrant_compare_local_num (const void *v1,
+                                                      const void *v2);
+
 /** Test if two quadrants have equal Morton indices, callback version.
  * \return true if \a v1 describes the same quadrant as \a v2.
  */
