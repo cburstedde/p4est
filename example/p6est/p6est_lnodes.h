@@ -157,8 +157,10 @@ p6est_lnodes_decode (p6est_lnodes_code_t face_code, int hanging_face[6],
       }
       else if (w) {
         hanging_edge[p8est_face_edges[f + 2][3 ^ h]] = 4;
-        hanging_edge[p8est_face_edges[f + 2][0]] = 2 + h;
-        hanging_edge[p8est_face_edges[f + 2][1]] = 2 + h;
+        hanging_edge[p8est_face_edges[f + 2][0]] =
+          SC_MAX (hanging_edge[p8est_face_edges[f + 2][0]], 2 + h);
+        hanging_edge[p8est_face_edges[f + 2][1]] =
+          SC_MAX (hanging_edge[p8est_face_edges[f + 2][1]], 2 + h);
         hanging_face[f + 2] = 6 + h;
       }
       work >>= 1;
