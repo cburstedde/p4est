@@ -3509,29 +3509,25 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
    */
   if (!(sc_array_is_sorted (&ghost->ghosts, p4est_quadrant_compare_piggy) &&
         sc_array_is_sorted (&ghost->mirrors, p4est_quadrant_compare_piggy))) {
+    sc_array_destroy (array);
+    return 0;
+  }
   array =
     sc_array_new_data (ghost->tree_offsets, sizeof (p4est_locidx_t),
                        num_trees + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare)) {
-    sc_array_destroy (array);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
     return 0;
-  }
   sc_array_init_data (array, ghost->proc_offsets, sizeof (p4est_locidx_t),
                       mpisize + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare)) {
-    sc_array_destroy (array);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
     return 0;
-  }
   sc_array_init_data (array, ghost->mirror_tree_offsets,
                       sizeof (p4est_locidx_t), num_trees + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare)) {
-    sc_array_destroy (array);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
     return 0;
-  }
   sc_array_init_data (array, ghost->mirror_proc_offsets,
                       sizeof (p4est_locidx_t), mpisize + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare)) {
-    sc_array_destroy (array);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
     return 0;
   }
   array =
