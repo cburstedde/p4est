@@ -60,7 +60,7 @@ tsearch_stats_t;
 typedef struct
 {
   /* MPI related data */
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize;
   int                 mpirank;
 
@@ -399,8 +399,8 @@ time_search_1 (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
   sc_flops_shot (fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_SEARCH_1], snapshot.iwtime, "Search_1");
 
-  mpiret =
-    MPI_Allreduce (&ll, &gg, 1, MPI_LONG_LONG_INT, MPI_SUM, tsg->mpicomm);
+  mpiret = sc_MPI_Allreduce (&ll, &gg, 1, sc_MPI_LONG_LONG_INT, sc_MPI_SUM,
+                             tsg->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_STATISTICSF
     ("Search_1 expected %lld found %lld of %lld error %.3g%%\n",
@@ -436,8 +436,8 @@ time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
   sc_stats_set1 (&stats[TSEARCH_SEARCH_N], snapshot.iwtime, "Search_N");
   ll = (long long) tsg->matches;
 
-  mpiret =
-    MPI_Allreduce (&ll, &gg, 1, MPI_LONG_LONG_INT, MPI_SUM, tsg->mpicomm);
+  mpiret = sc_MPI_Allreduce (&ll, &gg, 1, sc_MPI_LONG_LONG_INT, sc_MPI_SUM,
+                             tsg->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_STATISTICSF
     ("Search_N expected %lld found %lld of %lld error %.3g%%\n",
@@ -490,12 +490,12 @@ main (int argc, char **argv)
   tsearch_global_t    tsgt, *tsg = &tsgt;
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  tsg->mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (tsg->mpicomm, &tsg->mpisize);
+  tsg->mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (tsg->mpicomm, &tsg->mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (tsg->mpicomm, &tsg->mpirank);
+  mpiret = sc_MPI_Comm_rank (tsg->mpicomm, &tsg->mpirank);
   SC_CHECK_MPI (mpiret);
 
   /* initialize p4est internals */
@@ -535,7 +535,7 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   /* start overall timing */
-  mpiret = MPI_Barrier (tsg->mpicomm);
+  mpiret = sc_MPI_Barrier (tsg->mpicomm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&fi);
 
@@ -608,7 +608,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;
