@@ -891,7 +891,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     }
     P4EST_ASSERT (qid >= 0);
     if (is_ghost) {
-      P4EST_ASSERT (qid < info->ghost_layer->ghosts.elem_count);
+      P4EST_ASSERT ((size_t) qid < info->ghost_layer->ghosts.elem_count);
     }
     else {
       P4EST_ASSERT (qid < info->p4est->local_num_quadrants);
@@ -2143,7 +2143,8 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
     }
     P4EST_ASSERT (count == elem_count);
     total_recv += byte_count;
-    P4EST_ASSERT (sorter->elem_count == (poff[j + 1] - poff[j]));
+    P4EST_ASSERT ((p4est_locidx_t) sorter->elem_count ==
+                  poff[j + 1] - poff[j]);
     sc_array_sort (sorter, p4est_locidx_compare);
     for (zz = 0; zz < sorter->elem_count; zz++) {
       lp = (p4est_locidx_t *) sc_array_index (sorter, zz);

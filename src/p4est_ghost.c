@@ -1139,6 +1139,8 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
+#ifdef P4EST_MPI
+
 static              size_t
 ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
 {
@@ -1154,8 +1156,6 @@ ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
   P4EST_ASSERT (p4est_comm_is_owner (p4est, q->p.which_tree, q, proc));
   return (size_t) proc;
 }
-
-#ifdef P4EST_MPI
 
 /** This adds a quadrant to the end of a buffer.
  *
@@ -2575,6 +2575,8 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_reset (&sbuffers);
 }
 
+#ifdef P4EST_MPI
+
 static void
 p4est_ghost_expand_insert (p4est_quadrant_t * q, p4est_topidx_t t,
                            p4est_locidx_t idx, sc_array_t * send_bufs,
@@ -2664,7 +2666,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
   }
 
   /* walk lidx forward to find the first quad that overlaps nq */
-  while (lidx < quads->elem_count - 1) {
+  while (lidx < (ssize_t) quads->elem_count - 1) {
     p4est_quadrant_t   *testq = p4est_quadrant_array_index (quads, (size_t)
                                                             lidx + 1);
 
@@ -2677,7 +2679,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
 
   /* for every overlapping quadrant, test to see if mq overlaps the neighbor
    * */
-  for (zz = fidx; zz <= lidx; zz++) {
+  for (zz = (size_t) fidx; zz <= (size_t) lidx; zz++) {
     ssize_t             midx;
     p4est_topidx_t      nnt;
     p4est_quadrant_t   *p = p4est_quadrant_array_index (quads, zz);
@@ -2828,6 +2830,8 @@ p4est_quadrant_compare_piggy_proc (const void *a, const void *b)
   return (A->p.piggy1.owner_rank - B->p.piggy1.owner_rank);
 }
 
+#endif /* P4EST_MPI */
+
 void
 p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 {
@@ -2945,7 +2949,8 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
                         mirror_proc_offsets[p + 1] - mirror_proc_offsets[p]);
 
     /* for every mirror */
-    for (zm = first_mirror; zm < end_mirror; zm++) {
+    P4EST_ASSERT (first_mirror >= 0 && end_mirror >= 0);
+    for (zm = (size_t) first_mirror; zm < (size_t) end_mirror; zm++) {
       int                 f, c;
 #ifdef P4_TO_P8
       int                 e;
@@ -3210,13 +3215,13 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
         if (idx >= 0) {
           ssize_t             idx2;
           sc_array_t          pview;
-          p4est_locidx_t      lidx = (p4est_locidx_t) idx;
+          p4est_locidx_t      locidx = (p4est_locidx_t) idx;
           sc_array_init_data (&pview,
                               mirror_proc_mirrors + mirror_proc_offsets[p],
                               sizeof (p4est_locidx_t),
                               mirror_proc_offsets[p + 1] -
                               mirror_proc_offsets[p]);
-          idx2 = sc_array_bsearch (&pview, &lidx, p4est_locidx_compare);
+          idx2 = sc_array_bsearch (&pview, &locidx, p4est_locidx_compare);
           P4EST_ASSERT (idx2 < 0);
         }
 #endif
@@ -3250,7 +3255,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
          * than p */
         int                 target = q2->p.piggy1.owner_rank;
         ssize_t             idx, idx2;
-        p4est_locidx_t      lidx;
+        p4est_locidx_t      locidx;
         sc_array_t          pview;
 
         P4EST_ASSERT (0 <= target && target < mpisize);
@@ -3260,13 +3265,13 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
         idx = sc_array_bsearch (mirrors, q2, p4est_quadrant_compare_piggy);
         P4EST_ASSERT (idx >= 0);
         /* does the target already know about this ? */
-        lidx = (p4est_locidx_t) idx;
+        locidx = (p4est_locidx_t) idx;
         sc_array_init_data (&pview,
                             mirror_proc_mirrors + mirror_proc_offsets[target],
                             sizeof (p4est_locidx_t),
                             mirror_proc_offsets[target + 1] -
                             mirror_proc_offsets[target]);
-        idx2 = sc_array_bsearch (&pview, &lidx, p4est_locidx_compare);
+        idx2 = sc_array_bsearch (&pview, &locidx, p4est_locidx_compare);
         sc_array_reset (&pview);
 
         if (idx2 < 0) {
@@ -3412,6 +3417,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
     p4est_locidx_t      old_offset = mirror_proc_offsets[p];
     p4est_locidx_t      old_count = mirror_proc_offsets[p + 1] - old_offset;
 
+    P4EST_ASSERT (old_count >= 0);
     mirror_proc_offsets[p] = offset;
 
     P4EST_LDEBUGF
@@ -3424,7 +3430,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
     if (old_count) {
       sc_array_t          pview;
-      for (zz = 0; zz < old_count; zz++) {
+      for (zz = 0; zz < (size_t) old_count; zz++) {
         ssize_t             idx;
         p4est_quadrant_t   *q1 = p4est_quadrant_array_index (mirrors,
                                                              mirror_proc_mirrors
