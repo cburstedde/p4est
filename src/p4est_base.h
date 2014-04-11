@@ -411,9 +411,6 @@ p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
   return result;
 }
 
-int
-p4est_locidx_is_sorted (p4est_locidx_t * array, int length);
-
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BASE_H */

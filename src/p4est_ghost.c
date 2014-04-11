@@ -3471,39 +3471,71 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
 }
 
+/** Examine if a ghost structure is valid.
+ * Test if within a ghost-structure the array ghosts is in
+ * p4est_quadrant_compare_piggy order and the array mirrors is in z-order.
+ * Test if the p4est_locidx_t arrays are in ascending order
+ * (for mirror_proc_mirrors ascending within each rank)
+ * \param [in] ghost    Ghost layer structure.
+ * \return true if \a ghost is valid
+ */
+
 int
-p4est_ghost_is_valid (p4est_ghost_t *ghost)
+p4est_ghost_is_valid (p4est_ghost_t * ghost)
 {
-    const p4est_topidx_t    num_trees=ghost->num_trees;
-    const int               mpisize=ghost->mpisize;
-    int                     i,proc_length;
-    p4est_locidx_t          proc_offset;
-    size_t                  zz;
-    void                    *vold,*vnew;
+  const p4est_topidx_t num_trees = ghost->num_trees;
+  const int           mpisize = ghost->mpisize;
+  int                 i, proc_length;
+  p4est_locidx_t      proc_offset;
+  size_t              zz;
+  void               *vold, *vnew;
+  sc_array_t         *array;
 
-    /* check if quadrants in ghost layer are in z-order and if quadrants in
-     * mirror-layer are in z-order.
-     * also check if tree_offsets, proc_offsets, mirror_tree_offstes
-     * and mirror_proc_offsets are sorted.
-     */
-    if (! (sc_array_is_sorted (&ghost->ghosts,p4est_quadrant_compare_piggy) &&
-        sc_array_is_sorted (&ghost->mirrors,p4est_quadrant_compare) &&
-        p4est_locidx_is_sorted (ghost->tree_offsets,num_trees+1) &&
-        p4est_locidx_is_sorted (ghost->proc_offsets,mpisize+1) &&
-        p4est_locidx_is_sorted (ghost->mirror_tree_offsets,num_trees+1) &&
-        p4est_locidx_is_sorted (ghost->mirror_proc_offsets,mpisize+1))){
-            return 0;
-    }
+  /* check if the last entries of the offset arrays are the element count of ghosts/mirrors array. */
+  if (!
+      (ghost->tree_offsets[num_trees] == ghost->ghosts.elem_count
+       && ghost->proc_offsets[mpisize] == ghost->ghosts.elem_count
+       && ghost->mirror_tree_offsets[num_trees] ==
+       ghost->mirrors.elem_count)) {
+    return 0;
+  }
 
-    /* check if mirror_proc_offsets is ascending within each rank
-     */
-    for(i=0;i<mpisize;i++){
-        proc_offset=ghost->mirror_proc_offsets[i];
-        proc_length=ghost->mirror_proc_offsets[i+1]-proc_offset;
-        if(!p4est_locidx_is_sorted (ghost->mirror_proc_mirrors+proc_offset,
-                                    proc_length)){
-            return 0;
-        }
+  /* check if quadrants in ghost and mirror layer are in p4est_quadrant_compare_piggy order.
+   * also check if tree_offsets, proc_offsets, mirror_tree_offstes
+   * and mirror_proc_offsets are sorted.
+   */
+  if (!(sc_array_is_sorted (&ghost->ghosts, p4est_quadrant_compare_piggy) &&
+        sc_array_is_sorted (&ghost->mirrors, p4est_quadrant_compare_piggy))) {
+    return 0;
+  }
+  array =
+    sc_array_new_data (ghost->tree_offsets, sizeof (p4est_locidx_t),
+                       num_trees + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+  sc_array_init_data (array, ghost->proc_offsets, sizeof (p4est_locidx_t),
+                      mpisize + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+  sc_array_init_data (array, ghost->mirror_tree_offsets,
+                      sizeof (p4est_locidx_t), num_trees + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+  sc_array_init_data (array, ghost->mirror_proc_offsets,
+                      sizeof (p4est_locidx_t), mpisize + 1);
+  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+    return 0;
+
+  /* check if mirror_proc_offsets is ascending within each rank
+   */
+  for (i = 0; i < mpisize; i++) {
+    proc_offset = ghost->mirror_proc_offsets[i];
+    proc_length = ghost->mirror_proc_offsets[i + 1] - proc_offset;
+    sc_array_init_data (array, ghost->mirror_proc_mirrors + proc_offset,
+                        sizeof (p4est_locidx_t), proc_length);
+    if (!sc_array_is_sorted (array, p4est_locidx_compare)) {
+      return 0;
     }
-    return 1;
+  }
+  return 1;
 }
