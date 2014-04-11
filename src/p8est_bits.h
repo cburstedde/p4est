@@ -361,7 +361,7 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
  * tree across \face, then -1 is returned.
  */
 p4est_locidx_t      p8est_quadrant_face_neighbor_extra (const p8est_quadrant_t
-                                                        * q, p4est_locidx_t t,
+                                                        * q, p4est_topidx_t t,
                                                         int face,
                                                         p8est_quadrant_t * r,
                                                         int *nface,

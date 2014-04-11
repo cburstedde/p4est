@@ -33,6 +33,7 @@
 #define P4EST_EXTENDED_H
 
 #include <p4est.h>
+#include <p4est_iterate.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -158,6 +159,18 @@ void                p4est_balance_subtree_ext (p4est_t * p4est,
 p4est_gloidx_t      p4est_partition_ext (p4est_t * p4est,
                                          int partition_for_coarsening,
                                          p4est_weight_t weight_fn);
+
+/** p4est_iterate_ext adds the option \a remote: if this is false, then it is
+ * the same as p4est_iterate; if this is true, then corner callbacks are also
+ * called on corners for hanging faces touched by local quadrants.
+ */
+void                p4est_iterate_ext (p4est_t * p4est,
+                                       p4est_ghost_t * ghost_layer,
+                                       void *user_data,
+                                       p4est_iter_volume_t iter_volume,
+                                       p4est_iter_face_t iter_face,
+                                       p4est_iter_corner_t iter_corner,
+                                       int remote);
 
 /** Save the complete connectivity/p4est data to disk.  This is a collective
  * operation that all MPI processes need to call.  All processes write
