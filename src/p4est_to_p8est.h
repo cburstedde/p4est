@@ -179,6 +179,7 @@
 #define p4est_balance_ext               p8est_balance_ext
 #define p4est_balance_subtree_ext       p8est_balance_subtree_ext
 #define p4est_partition_ext             p8est_partition_ext
+#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext
 

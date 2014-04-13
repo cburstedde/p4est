@@ -77,20 +77,6 @@ static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
 
-#ifdef P4EST_MPI
-
-/** Correct partition to allow one level of coarsening.
- *
- * \param [in] p4est                     forest whose partition is corrected
- * \param [in,out] num_quadrants_in_proc partition that will be corrected
- * \return                               absolute number of moved quadrants
- */
-static p4est_locidx_t p4est_partition_for_coarsening (p4est_t * p4est,
-                                                      p4est_locidx_t *
-                                                      num_quadrants_in_proc);
-
-#endif
-
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
                         p4est_topidx_t treeid,
@@ -2718,7 +2704,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
 #ifdef P4EST_MPI
 
-static              p4est_locidx_t
+p4est_locidx_t
 p4est_partition_for_coarsening (p4est_t * p4est,
                                 p4est_locidx_t * num_quadrants_in_proc)
 {

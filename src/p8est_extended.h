@@ -160,6 +160,16 @@ p4est_gloidx_t      p8est_partition_ext (p8est_t * p8est,
                                          int partition_for_coarsening,
                                          p8est_weight_t weight_fn);
 
+/** Correct partition to allow one level of coarsening.
+ *
+ * \param [in] p8est                     forest whose partition is corrected
+ * \param [in,out] num_quadrants_in_proc partition that will be corrected
+ * \return                               absolute number of moved quadrants
+ */
+p4est_locidx_t      p8est_partition_for_coarsening (p8est_t * p4est,
+                                                    p4est_locidx_t *
+                                                    num_quadrants_in_proc);
+
 /** p8est_iterate_ext adds the option \a remote: if this is false, then it is
  * the same as p8est_iterate; if this is true, then corner/edge callbacks are
  * also called on corners/edges for hanging faces/edges touched by local
