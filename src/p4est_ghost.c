@@ -3488,18 +3488,16 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
 {
   const p4est_topidx_t num_trees = ghost->num_trees;
   const int           mpisize = ghost->mpisize;
-  int                 i, proc_length;
+  int                 i;
   p4est_locidx_t      proc_offset;
-  size_t              zz;
-  void               *vold, *vnew;
-  sc_array_t         *array;
+  size_t              view_length, proc_length;
+  sc_array_t          array;
 
   /* check if the last entries of the offset arrays are the element count of ghosts/mirrors array. */
-  if (!
-      (ghost->tree_offsets[num_trees] == ghost->ghosts.elem_count
-       && ghost->proc_offsets[mpisize] == ghost->ghosts.elem_count
-       && ghost->mirror_tree_offsets[num_trees] ==
-       ghost->mirrors.elem_count)) {
+  if (!ghost->tree_offsets[num_trees] == ghost->ghosts.elem_count
+      || !ghost->proc_offsets[mpisize] == ghost->ghosts.elem_count
+      || !ghost->mirror_tree_offsets[num_trees] ==
+      ghost->mirrors.elem_count) {
     return 0;
   }
 
@@ -3507,8 +3505,10 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
    * also check if tree_offsets, proc_offsets, mirror_tree_offstes
    * and mirror_proc_offsets are sorted.
    */
-  if (!(sc_array_is_sorted (&ghost->ghosts, p4est_quadrant_compare_piggy) &&
-        sc_array_is_sorted (&ghost->mirrors, p4est_quadrant_compare_piggy))) {
+  if (!sc_array_is_sorted (&ghost->ghosts, p4est_quadrant_compare_piggy) ||
+      !sc_array_is_sorted (&ghost->mirrors, p4est_quadrant_compare_piggy)
+      || !sc_array_is_sorted (&ghost->mirrors,
+                              p4est_quadrant_compare_local_num)) {
     sc_array_destroy (array);
     return 0;
   }
@@ -3530,22 +3530,21 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
   if (!sc_array_is_sorted (array, p4est_locidx_compare))
     return 0;
   }
-  array =
-    sc_array_new_data (ghost->tree_offsets, sizeof (p4est_locidx_t),
-                       num_trees + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+  sc_array_init_data (&array, ghost->tree_offsets, sizeof (p4est_locidx_t),
+                      num_trees + 1);
+  if (!sc_array_is_sorted (&array, p4est_locidx_compare)) {
     return 0;
-  sc_array_init_data (array, ghost->proc_offsets, sizeof (p4est_locidx_t),
+  sc_array_init_data (&array, ghost->proc_offsets, sizeof (p4est_locidx_t),
                       mpisize + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+  if (!sc_array_is_sorted (&array, p4est_locidx_compare)) {
     return 0;
-  sc_array_init_data (array, ghost->mirror_tree_offsets,
+  sc_array_init_data (&array, ghost->mirror_tree_offsets,
                       sizeof (p4est_locidx_t), num_trees + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+  if (!sc_array_is_sorted (&array, p4est_locidx_compare)) {
     return 0;
-  sc_array_init_data (array, ghost->mirror_proc_offsets,
+  sc_array_init_data (&array, ghost->mirror_proc_offsets,
                       sizeof (p4est_locidx_t), mpisize + 1);
-  if (!sc_array_is_sorted (array, p4est_locidx_compare))
+  if (!sc_array_is_sorted (&array, p4est_locidx_compare)) {
     return 0;
 
   /* check if local number in piggy3 data member of the quadrants in ghost is
@@ -3553,10 +3552,10 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
    */
   for (i = 0; i < mpisize; i++) {
     proc_offset = ghost->proc_offsets[i];
-    view_length = ghost->proc_offsets[i + 1] - proc_offset;
-    sc_array_init_view (array, &ghost->ghosts, proc_offset, view_length);
-    if (!sc_array_is_sorted (array, p4est_quadrant_compare_local_num)) {
-      sc_array_destroy (array);
+    view_length = (size_t) (ghost->proc_offsets[i + 1] - proc_offset);
+    sc_array_init_view (&array, &ghost->ghosts, (size_t) proc_offset,
+                        view_length);
+    if (!sc_array_is_sorted (&array, p4est_quadrant_compare_local_num)) {
       return 0;
     }
   }
@@ -3565,14 +3564,12 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
    */
   for (i = 0; i < mpisize; i++) {
     proc_offset = ghost->mirror_proc_offsets[i];
-    proc_length = ghost->mirror_proc_offsets[i + 1] - proc_offset;
-    sc_array_init_data (array, ghost->mirror_proc_mirrors + proc_offset,
+    proc_length = (size_t) ghost->mirror_proc_offsets[i + 1] - proc_offset;
+    sc_array_init_data (&array, ghost->mirror_proc_mirrors + proc_offset,
                         sizeof (p4est_locidx_t), proc_length);
-    if (!sc_array_is_sorted (array, p4est_locidx_compare)) {
-      sc_array_destroy (array);
+    if (!sc_array_is_sorted (&array, p4est_locidx_compare)) {
       return 0;
     }
   }
-  sc_array_destroy (array);
   return 1;
 }
