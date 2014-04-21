@@ -2724,7 +2724,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   MPI_Request        *send_requests;
   MPI_Request        *receive_requests;
   int                 receive_lowest, receive_highest, num_receives;
-  int                 process_with_cut, process_with_cut_recv_id;
+  int                 process_with_cut = -1, process_with_cut_recv_id = -1;
   p4est_quadrant_t   *parent_receive;
   int                *receive_process;
   int                *correction, correction_local = 0;
