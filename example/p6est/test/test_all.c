@@ -194,7 +194,7 @@ main (int argc, char **argv)
   sc_options_add_int (opt, 'z', "z-level", &refine_zlevel, 2,
                       "initial refine level");
   sc_options_add_string (opt, 'c', "configuration", &config_name, "unit",
-                         "configuration: brick23|corner|cubed|disc|moebius|periodic|pillow|rotwrap|star|unit");
+                         "configuration: brick23|corner|cubed|disk|moebius|periodic|pillow|rotwrap|star|unit");
   sc_options_add_string (opt, 'P', "save-file", &save_filename,
                          NULL, "filename for saving");
   sc_options_add_switch (opt, 'w', "write-vtk", &vtk, "write vtk files");
