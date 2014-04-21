@@ -61,7 +61,7 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
+run_bricks (sc_MPI_Comm mpicomm, int per, int l, int rlevel)
 {
   int                 mpiret;
   int                 tcount;
@@ -77,9 +77,9 @@ run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
 
   /* create and refine the forest */
 
-  mpiret = MPI_Barrier (mpicomm);
+  mpiret = sc_MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
-  elapsed_create = -MPI_Wtime ();
+  elapsed_create = -sc_MPI_Wtime ();
 
   tcount = 1 << l;
 #ifndef P4_TO_P8
@@ -93,27 +93,27 @@ run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
   refine_level = rlevel - l + level_shift;
   p4est_refine (p4est, 1, refine_fractal, NULL);
 
-  elapsed_create += MPI_Wtime ();
+  elapsed_create += sc_MPI_Wtime ();
 
   /* partition the forest */
 
-  mpiret = MPI_Barrier (mpicomm);
+  mpiret = sc_MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
-  elapsed_partition = -MPI_Wtime ();
+  elapsed_partition = -sc_MPI_Wtime ();
 
   p4est_partition (p4est, NULL);
 
-  elapsed_partition += MPI_Wtime ();
+  elapsed_partition += sc_MPI_Wtime ();
 
   /* balance the forest */
 
-  mpiret = MPI_Barrier (mpicomm);
+  mpiret = sc_MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
-  elapsed_balance = -MPI_Wtime ();
+  elapsed_balance = -sc_MPI_Wtime ();
 
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
-  elapsed_balance += MPI_Wtime ();
+  elapsed_balance += sc_MPI_Wtime ();
 
   /* postprocessing */
 
@@ -132,17 +132,17 @@ run_bricks (MPI_Comm mpicomm, int per, int l, int rlevel)
 int
 main (int argc, char **argv)
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpiret, retval;
   int                 rlevel, l;
   int                 periodic;
   sc_options_t       *opt;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
+  mpicomm = sc_MPI_COMM_WORLD;
 
-  sc_init (MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   opt = sc_options_new (argv[0]);
@@ -164,7 +164,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

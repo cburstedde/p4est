@@ -146,14 +146,14 @@ main (int argc, char **argv)
   };
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
   /* create connectivity and forest structures */
   connectivity = p8est_connectivity_new_unitcube ();
-  p4est1 = p4est_new_ext (MPI_COMM_SELF, connectivity, 15, 0, 0,
+  p4est1 = p4est_new_ext (sc_MPI_COMM_SELF, connectivity, 15, 0, 0,
                           0, NULL, NULL);
-  p4est2 = p4est_new_ext (MPI_COMM_SELF, connectivity, 15, 0, 0,
+  p4est2 = p4est_new_ext (sc_MPI_COMM_SELF, connectivity, 15, 0, 0,
                           8, NULL, NULL);
 
   /* refine the second tree to a uniform level */
@@ -686,7 +686,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

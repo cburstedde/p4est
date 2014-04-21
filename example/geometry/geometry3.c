@@ -162,15 +162,15 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p8est_connectivity_t *conn;
   p8est_geometry_t   *geye, *gshell, *gsphere;
   p8est_t            *p8est;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  mpicomm = MPI_COMM_WORLD;
+  mpicomm = sc_MPI_COMM_WORLD;
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
@@ -213,7 +213,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

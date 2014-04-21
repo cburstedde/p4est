@@ -1125,7 +1125,7 @@ failtest:
 #endif
   p4est_ghost_destroy (gl);
 
-  return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
+  return !p4est_comm_sync_flag (p4est, failed, sc_MPI_BOR);
 }
 
 static              size_t
@@ -2343,12 +2343,12 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_t          requests, sbuffers;
   p4est_locidx_t      ng_excl, ng_incl, ng, theg;
   p4est_locidx_t      mirr;
-  MPI_Request        *r;
+  sc_MPI_Request     *r;
 
   if (data_size == 0) {
     return;
   }
-  sc_array_init (&requests, sizeof (MPI_Request));
+  sc_array_init (&requests, sizeof (sc_MPI_Request));
   sc_array_init (&sbuffers, sizeof (char *));
 
   /* receive data from other processors */
@@ -2358,10 +2358,10 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
     ng = ng_incl - ng_excl;
     P4EST_ASSERT (ng >= 0);
     if (ng > 0) {
-      r = (MPI_Request *) sc_array_push (&requests);
-      mpiret = MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
-                          ng * data_size, MPI_BYTE, q,
-                          P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      r = (sc_MPI_Request *) sc_array_push (&requests);
+      mpiret = sc_MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
+                             ng * data_size, sc_MPI_BYTE, q,
+                             P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
       SC_CHECK_MPI (mpiret);
       ng_excl = ng_incl;
     }
@@ -2384,17 +2384,17 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
         memcpy (mem, mirror_data[mirr], data_size);
         mem += data_size;
       }
-      r = (MPI_Request *) sc_array_push (&requests);
-      mpiret = MPI_Isend (*sbuf, ng * data_size, MPI_BYTE, q,
-                          P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      r = (sc_MPI_Request *) sc_array_push (&requests);
+      mpiret = sc_MPI_Isend (*sbuf, ng * data_size, sc_MPI_BYTE, q,
+                             P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
       SC_CHECK_MPI (mpiret);
       ng_excl = ng_incl;
     }
   }
 
   /* wait and clean up */
-  mpiret = MPI_Waitall (requests.elem_count, (MPI_Request *) requests.array,
-                        MPI_STATUSES_IGNORE);
+  mpiret = sc_MPI_Waitall (requests.elem_count, (sc_MPI_Request *)
+                           requests.array, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
   sc_array_reset (&requests);
   for (zz = 0; zz < sbuffers.elem_count; ++zz) {
@@ -2422,7 +2422,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      lmatches;
   p4est_locidx_t      mirr;
   p4est_quadrant_t   *g, *m;
-  MPI_Request        *r;
+  sc_MPI_Request     *r;
 
   if (minlevel <= 0 && maxlevel >= P4EST_QMAXLEVEL) {
     /* this saves a copy for the ghost quadrants */
@@ -2435,8 +2435,8 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
     return;
   }
 
-  sc_array_init (&rrequests, sizeof (MPI_Request));
-  sc_array_init (&srequests, sizeof (MPI_Request));
+  sc_array_init (&rrequests, sizeof (sc_MPI_Request));
+  sc_array_init (&srequests, sizeof (sc_MPI_Request));
   sc_array_init (&rbuffers, sizeof (char *));
   sc_array_init (&sbuffers, sizeof (char *));
   qactive = P4EST_ALLOC (int, num_procs);
@@ -2461,22 +2461,24 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
       }
       if (lmatches > 0) {
         theq = qactive + rrequests.elem_count;
-        r = (MPI_Request *) sc_array_push (&rrequests);
+        r = (sc_MPI_Request *) sc_array_push (&rrequests);
         if (lmatches < ng) {
           /* every peer populates its own receive buffer */
           *theq = q;
           qbuffer[q] = (int) rbuffers.elem_count;
           rbuf = (char **) sc_array_push (&rbuffers);
           *rbuf = P4EST_ALLOC (char, lmatches * data_size);
-          mpiret = MPI_Irecv (*rbuf, lmatches * data_size, MPI_BYTE, q,
-                              P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+          mpiret = sc_MPI_Irecv (*rbuf, lmatches * data_size, sc_MPI_BYTE, q,
+                                 P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm,
+                                 r);
         }
         else {
           /* use the ghost data memory as is */
           *theq = -1;
-          mpiret = MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
-                              ng * data_size, MPI_BYTE, q,
-                              P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+          mpiret = sc_MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
+                                 ng * data_size, sc_MPI_BYTE, q,
+                                 P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm,
+                                 r);
         }
         SC_CHECK_MPI (mpiret);
       }
@@ -2513,9 +2515,9 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
             mem += data_size;
           }
         }
-        r = (MPI_Request *) sc_array_push (&srequests);
-        mpiret = MPI_Isend (*sbuf, lmatches * data_size, MPI_BYTE, q,
-                            P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+        r = (sc_MPI_Request *) sc_array_push (&srequests);
+        mpiret = sc_MPI_Isend (*sbuf, lmatches * data_size, sc_MPI_BYTE, q,
+                               P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
         SC_CHECK_MPI (mpiret);
       }
       ng_excl = ng_incl;
@@ -2526,10 +2528,10 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   peers = P4EST_ALLOC (int, rrequests.elem_count);
   expected = remaining = (int) rrequests.elem_count;
   while (remaining > 0) {
-    mpiret = MPI_Waitsome (expected, (MPI_Request *) rrequests.array,
-                           &received, peers, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitsome (expected, (sc_MPI_Request *) rrequests.array,
+                              &received, peers, sc_MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
-    P4EST_ASSERT (received != MPI_UNDEFINED);
+    P4EST_ASSERT (received != sc_MPI_UNDEFINED);
     P4EST_ASSERT (received > 0);
     for (i = 0; i < received; ++i) {
       P4EST_ASSERT (0 <= peers[i] && peers[i] < (int) rrequests.elem_count);
@@ -2564,8 +2566,8 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_reset (&rbuffers);
 
   /* wait for sends and clean up */
-  mpiret = MPI_Waitall (srequests.elem_count, (MPI_Request *) srequests.array,
-                        MPI_STATUSES_IGNORE);
+  mpiret = sc_MPI_Waitall (srequests.elem_count, (sc_MPI_Request *)
+                           srequests.array, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
   sc_array_reset (&srequests);
   for (zz = 0; zz < sbuffers.elem_count; ++zz) {
@@ -2666,7 +2668,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
   }
 
   /* walk lidx forward to find the first quad that overlaps nq */
-  while (lidx < quads->elem_count - 1) {
+  while (lidx < (ssize_t) quads->elem_count - 1) {
     p4est_quadrant_t   *testq = p4est_quadrant_array_index (quads, (size_t)
                                                             lidx + 1);
 
@@ -2679,7 +2681,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
 
   /* for every overlapping quadrant, test to see if mq overlaps the neighbor
    * */
-  for (zz = fidx; zz <= lidx; zz++) {
+  for (zz = (size_t) fidx; zz <= (size_t) lidx; zz++) {
     ssize_t             midx;
     p4est_topidx_t      nnt;
     p4est_quadrant_t   *p = p4est_quadrant_array_index (quads, zz);
@@ -2950,7 +2952,8 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
                         mirror_proc_offsets[p + 1] - mirror_proc_offsets[p]);
 
     /* for every mirror */
-    for (zm = first_mirror; zm < end_mirror; zm++) {
+    P4EST_ASSERT (first_mirror >= 0 && end_mirror >= 0);
+    for (zm = (size_t) first_mirror; zm < (size_t) end_mirror; zm++) {
       int                 f, c;
 #ifdef P4_TO_P8
       int                 e;
@@ -3215,13 +3218,13 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
         if (idx >= 0) {
           ssize_t             idx2;
           sc_array_t          pview;
-          p4est_locidx_t      lidx = (p4est_locidx_t) idx;
+          p4est_locidx_t      locidx = (p4est_locidx_t) idx;
           sc_array_init_data (&pview,
                               mirror_proc_mirrors + mirror_proc_offsets[p],
                               sizeof (p4est_locidx_t),
                               mirror_proc_offsets[p + 1] -
                               mirror_proc_offsets[p]);
-          idx2 = sc_array_bsearch (&pview, &lidx, p4est_locidx_compare);
+          idx2 = sc_array_bsearch (&pview, &locidx, p4est_locidx_compare);
           P4EST_ASSERT (idx2 < 0);
         }
 #endif
@@ -3255,7 +3258,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
          * than p */
         int                 target = q2->p.piggy1.owner_rank;
         ssize_t             idx, idx2;
-        p4est_locidx_t      lidx;
+        p4est_locidx_t      locidx;
         sc_array_t          pview;
 
         P4EST_ASSERT (0 <= target && target < mpisize);
@@ -3265,13 +3268,13 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
         idx = sc_array_bsearch (mirrors, q2, p4est_quadrant_compare_piggy);
         P4EST_ASSERT (idx >= 0);
         /* does the target already know about this ? */
-        lidx = (p4est_locidx_t) idx;
+        locidx = (p4est_locidx_t) idx;
         sc_array_init_data (&pview,
                             mirror_proc_mirrors + mirror_proc_offsets[target],
                             sizeof (p4est_locidx_t),
                             mirror_proc_offsets[target + 1] -
                             mirror_proc_offsets[target]);
-        idx2 = sc_array_bsearch (&pview, &lidx, p4est_locidx_compare);
+        idx2 = sc_array_bsearch (&pview, &locidx, p4est_locidx_compare);
         sc_array_reset (&pview);
 
         if (idx2 < 0) {
@@ -3417,6 +3420,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
     p4est_locidx_t      old_offset = mirror_proc_offsets[p];
     p4est_locidx_t      old_count = mirror_proc_offsets[p + 1] - old_offset;
 
+    P4EST_ASSERT (old_count >= 0);
     mirror_proc_offsets[p] = offset;
 
     P4EST_LDEBUGF
@@ -3429,7 +3433,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
     if (old_count) {
       sc_array_t          pview;
-      for (zz = 0; zz < old_count; zz++) {
+      for (zz = 0; zz < (size_t) old_count; zz++) {
         ssize_t             idx;
         p4est_quadrant_t   *q1 = p4est_quadrant_array_index (mirrors,
                                                              mirror_proc_mirrors

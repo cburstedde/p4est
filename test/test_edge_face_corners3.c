@@ -65,7 +65,7 @@ main (int argc, char **argv)
   int                 edge, face, cs[2];
   int                 success;
 
-  sc_init (MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (sc_MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (edge = 0; edge < 12; ++edge) {

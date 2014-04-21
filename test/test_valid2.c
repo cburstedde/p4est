@@ -83,7 +83,7 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
+check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected, unsigned gcrc_expected)
 {
   int                 mpiret;
@@ -121,8 +121,8 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
   lsize[0] = (long long) size_conn;
   lsize[1] = (long long) size_p4est;
   lsize[2] = (long long) size_ghost;
-  mpiret =
-    MPI_Reduce (lsize, gsize, 3, MPI_LONG_LONG_INT, MPI_SUM, 0, mpicomm);
+  mpiret = sc_MPI_Reduce (lsize, gsize, 3, sc_MPI_LONG_LONG_INT, sc_MPI_SUM,
+                          0, mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_INFOF ("Global byte sizes: %lld %lld %lld\n",
                       gsize[0], gsize[1], gsize[2]);
@@ -149,16 +149,16 @@ check_all (MPI_Comm mpicomm, p4est_connectivity_t * conn,
 int
 main (int argc, char **argv)
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 size, rank;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpicomm, &size);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (mpicomm, &size);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -198,7 +198,7 @@ main (int argc, char **argv)
   /* clean up and exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

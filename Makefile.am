@@ -3,6 +3,9 @@
 # Makefile.am in toplevel directory
 
 ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
+if P4EST_SC_MK_USE
+@P4EST_SC_MK_INCLUDE@
+endif
 
 # initialize empty variables
 AM_CPPFLAGS =
@@ -15,7 +18,6 @@ TESTS =
 bin_PROGRAMS =
 check_PROGRAMS =
 include_HEADERS =
-lib_LIBRARIES =
 lib_LTLIBRARIES =
 nodist_include_HEADERS =
 noinst_HEADERS =
@@ -34,13 +36,16 @@ Makefile.p4est.mk : Makefile.p4est.pre
 # install p4est m4 macros in the correct directory
 p4estaclocaldir = $(datadir)/aclocal
 dist_p4estaclocal_DATA = \
-        config/p4est_include.m4
+        config/p4est_include.m4 config/p4est_metis.m4
 
 # install p4est data files in the correct directory
 p4estdatadir = $(datadir)/data
 
-# set test environment
-TESTS_ENVIRONMENT = @P4EST_MPI_TESTS_ENVIRONMENT@
+# setup test environment
+if P4EST_MPIRUN
+LOG_COMPILER = @P4EST_MPIRUN@
+AM_LOG_FLAGS = @P4EST_MPI_TEST_FLAGS@
+endif
 
 # recurse only into subpackages
 SUBDIRS = @P4EST_SC_SUBDIR@
@@ -48,9 +53,9 @@ DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
 EXTRA_DIST += \
-        bootstrap p4estindent config/git-version-gen config/git2cl bugs doc
+        bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
 DISTCLEANFILES += \
-        _configs.sed src/p4est_config.h
+        _configs.sed src/p4est_config.h @P4EST_DISTCLEAN@
 .PHONY: lint ChangeLog
 
 # non-recursive build
@@ -66,22 +71,10 @@ include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
 
-if P4EST_BLAS
-if P4EST_LAPACK
-LDADD += @LAPACK_LIBS@
-endif
-LDADD += @BLAS_LIBS@ @FLIBS@
-endif
-
-if P4EST_WITH_METIS
-LDADD += @METIS_LIBS@
-AM_CPPFLAGS += @METIS_INCLUDES@
-endif
-
+# lint static syntax checker
 ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
                  $(src_libp4est_a_CPPFLAGS)
-
 lint:
 if LINT
 	@for subdir in $(SUBDIRS) ; do \
@@ -96,24 +89,26 @@ else
 	@echo "Static source code check disabled by configure"
 endif
 
+# revision control and ChangeLog
 ChangeLog:
 	(GIT_DIR=@top_srcdir@/.git git log > .ChangeLog.tmp && \
-         cat .ChangeLog.tmp | @top_srcdir@/config/git2cl > ChangeLog) ; \
+         cat .ChangeLog.tmp | @top_srcdir@/build-aux/git2cl > ChangeLog) ; \
         rm -f .ChangeLog.tmp
 
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
-	test "x$(VERSION)" = "x`@top_srcdir@/config/git-version-gen\
+	test "x$(VERSION)" = "x`@top_srcdir@/build-aux/git-version-gen\
               @top_srcdir@/.tarball-version`" || \
         ((echo "Stale version;" ; echo "Please run:" ; \
           echo "     cd @top_srcdir@ && ./bootstrap" ; \
-          echo "before make dist") 1>&2 ; exit 1)
-if !P4EST_DIST_ALLOW
+          echo "before make dist") 1>&2 ; rm -r $(distdir) ; exit 1)
+if P4EST_DIST_DENY
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with external libsc"
 	@echo "-----------------------------------------------------"
+	rm -rf $(distdir)
 	@exit 1
 endif
 
 clean-local: clean-local-p6est
-	rm -f *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p

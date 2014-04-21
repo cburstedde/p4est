@@ -1,5 +1,9 @@
 #! /bin/sh
 
+# Call this without arguments if p4est is the toplevel package.
+# Call this with one argument if p4est is itself a subdirectory:
+# ./bootstrap <sc config directory>
+
 # override by option argument
 SC_CONFIG="sc/config"
 if test -n "$1" ; then
@@ -13,15 +17,20 @@ fi
 SC_CONFIG=`cd "$SC_CONFIG" && pwd`
 
 if test -x "sc/bootstrap" ; then
-  echo "Running bootstrap in directory sc"
+  echo "Running bootstrap in subdirectory sc"
   (cd sc && ./bootstrap)
 fi
 
 echo "--- This is the bootstrap script for p4est ---"
 echo "Current directory is $PWD"
 
+LIBTOOLIZE=`which glibtoolize`
+if test ! -x "$LIBTOOLIZE" ; then LIBTOOLIZE=`which libtoolize` ; fi
+if test ! -x "$LIBTOOLIZE" ; then echo "bootstrap requires libtoolize" ; \
+   exit 1 ; fi
+
 aclocal -Wall -I config -I "$SC_CONFIG"
 autoconf -Wall --force
 autoheader -Wall --force
-libtoolize --automake --force --copy
+"$LIBTOOLIZE" --install --copy
 automake -Wall --add-missing --copy

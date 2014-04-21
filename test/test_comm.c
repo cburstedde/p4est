@@ -78,16 +78,16 @@ main (int argc, char **argv)
 {
   int                 num_procs, rank;
   int                 mpiret;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   p4est_gloidx_t      qglobal, qlocal, qbegin, qend, qsum;
   int                 i;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -111,8 +111,9 @@ main (int argc, char **argv)
   /* Check the global number of elements */
   qlocal = p4est->local_num_quadrants;
   qglobal = -13473829;
-  mpiret = MPI_Allreduce (&qlocal, &qglobal, 1, P4EST_MPI_GLOIDX, MPI_SUM,
-                          p4est->mpicomm);
+  mpiret =
+    sc_MPI_Allreduce (&qlocal, &qglobal, 1, P4EST_MPI_GLOIDX, sc_MPI_SUM,
+                      p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   SC_CHECK_ABORT (qglobal == p4est->global_num_quadrants,
                   "wrong number of p4est->global_num_quadrants");
@@ -128,7 +129,7 @@ main (int argc, char **argv)
     }
 
     qglobal = qlocal;
-    mpiret = MPI_Bcast (&qglobal, 1, P4EST_MPI_GLOIDX, i, p4est->mpicomm);
+    mpiret = sc_MPI_Bcast (&qglobal, 1, P4EST_MPI_GLOIDX, i, p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
 
     qsum += qglobal;
@@ -145,7 +146,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

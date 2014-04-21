@@ -126,7 +126,7 @@ search_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 int
 main (int argc, char **argv)
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 found_total;
   p4est_locidx_t      jt, Al, Bl;
@@ -139,9 +139,9 @@ main (int argc, char **argv)
   const char         *vtkname;
 
   /* Initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
+  mpicomm = sc_MPI_COMM_WORLD;
 
   /* Initialize packages */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -208,8 +208,8 @@ main (int argc, char **argv)
   /* Go */
   found_count = 0;
   p4est_search (p4est, NULL, search_callback, points);
-  mpiret = MPI_Allreduce (&found_count, &found_total,
-                          1, MPI_INT, MPI_SUM, mpicomm);
+  mpiret = sc_MPI_Allreduce (&found_count, &found_total,
+                             1, sc_MPI_INT, sc_MPI_SUM, mpicomm);
   SC_CHECK_MPI (mpiret);
   SC_CHECK_ABORT (found_total == (int) points->elem_count, "Point search");
   SC_CHECK_ABORT (A->p.piggy3.local_num == Al, "Search A");
@@ -223,7 +223,7 @@ main (int argc, char **argv)
 
   /* Finalize */
   sc_finalize ();
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

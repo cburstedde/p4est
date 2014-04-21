@@ -33,10 +33,10 @@ main (int argc, char **argv)
   int                 mpiret;
   p4est_connectivity_t *conn1, *conn2;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
 #ifndef P4_TO_P8
@@ -58,7 +58,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (conn2);
 
   sc_finalize ();
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
   return 0;
 }

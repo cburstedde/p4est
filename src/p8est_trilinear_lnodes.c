@@ -464,8 +464,9 @@ p8est_trilinear_mesh_new_from_lnodes (p4est_t * p4est, p4est_lnodes_t * nodes)
   local_counts[2] = mesh->local_onode_num;
   local_counts[3] = mesh->local_dnode_num;
   local_counts[4] = num_owned_shared;
-  mpiret = MPI_Allreduce (local_counts, global_counts, 5, MPI_LONG_LONG_INT,
-                          MPI_SUM, p4est->mpicomm);
+  mpiret = sc_MPI_Allreduce (local_counts, global_counts, 5,
+                             sc_MPI_LONG_LONG_INT, sc_MPI_SUM,
+                             p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (global_counts[0] == p4est->global_num_quadrants);
   mesh->total_elem_num = global_counts[0];

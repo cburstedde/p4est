@@ -128,7 +128,7 @@ p8est_inspect_t;
 
 typedef struct p8est
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize, mpirank;
 
   size_t              data_size;        /* size of per-quadrant user_data */
@@ -239,7 +239,7 @@ void                p8est_qcoord_to_vertex (p8est_connectivity_t *
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
  */
-p8est_t            *p8est_new (MPI_Comm mpicomm,
+p8est_t            *p8est_new (sc_MPI_Comm mpicomm,
                                p8est_connectivity_t * connectivity,
                                size_t data_size,
                                p8est_init_t init_fn, void *user_pointer);
@@ -351,7 +351,7 @@ unsigned            p8est_checksum (p8est_t * p8est);
  * \note            If p4est is not configured to use MPI-IO, some processes
  *                  return from this function before the file is complete, in
  *                  which case immediate read-access to the file may require a
- *                  call to MPI_Barrier.
+ *                  call to sc_MPI_Barrier.
  */
 void                p8est_save (const char *filename, p8est_t * p8est,
                                 int save_data);
@@ -373,7 +373,7 @@ void                p8est_save (const char *filename, p8est_t * p8est,
  *                  argument.
  * \note            Aborts on file errors or invalid file contents.
  */
-p8est_t            *p8est_load (const char *filename, MPI_Comm mpicomm,
+p8est_t            *p8est_load (const char *filename, sc_MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
                                 p8est_connectivity_t ** connectivity);

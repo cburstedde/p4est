@@ -24,15 +24,9 @@
 #ifndef P4EST_BASE_H
 #define P4EST_BASE_H
 
-/* include p4est config header */
-
+/* include config headers */
 #include <p4est_config.h>
-
-/* indirectly also include sc.h and sc_config.h */
-
-#include <sc_containers.h>
-#define _p4est_const _sc_const
-
+#include <sc_config.h>
 #if \
   (defined (P4EST_MPI) && !defined (SC_MPI)) || \
   (!defined (P4EST_MPI) && defined (SC_MPI))
@@ -44,12 +38,16 @@
 #error "MPI I/O configured differently in p4est and libsc"
 #endif
 
+/* indirectly also include sc.h */
+#include <sc_containers.h>
+#define _p4est_const _sc_const
+
 SC_EXTERN_C_BEGIN;
 
 /** Typedef for quadrant coordinates. */
 typedef int32_t     p4est_qcoord_t;
 #define p4est_qcoord_compare sc_int32_compare
-#define P4EST_MPI_QCOORD MPI_INT
+#define P4EST_MPI_QCOORD sc_MPI_INT
 #define P4EST_VTK_QCOORD "Int32"
 #define P4EST_QCOORD_MIN INT32_MIN
 #define P4EST_QCOORD_MAX INT32_MAX
@@ -58,7 +56,7 @@ typedef int32_t     p4est_qcoord_t;
 /** Typedef for counting topological entities (trees, tree vertices). */
 typedef int32_t     p4est_topidx_t;
 #define p4est_topidx_compare sc_int32_compare
-#define P4EST_MPI_TOPIDX MPI_INT
+#define P4EST_MPI_TOPIDX sc_MPI_INT
 #define P4EST_VTK_TOPIDX "Int32"
 #define P4EST_TOPIDX_MIN INT32_MIN
 #define P4EST_TOPIDX_MAX INT32_MAX
@@ -68,7 +66,7 @@ typedef int32_t     p4est_topidx_t;
 /** Typedef for processor-local indexing of quadrants and nodes. */
 typedef int32_t     p4est_locidx_t;
 #define p4est_locidx_compare sc_int32_compare
-#define P4EST_MPI_LOCIDX MPI_INT
+#define P4EST_MPI_LOCIDX sc_MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
 #define P4EST_LOCIDX_MIN INT32_MIN
 #define P4EST_LOCIDX_MAX INT32_MAX
@@ -77,7 +75,7 @@ typedef int32_t     p4est_locidx_t;
 /** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
 #define p4est_gloidx_compare sc_int64_compare
-#define P4EST_MPI_GLOIDX MPI_LONG_LONG_INT
+#define P4EST_MPI_GLOIDX sc_MPI_LONG_LONG_INT
 #define P4EST_VTK_GLOIDX "Int64"
 #define P4EST_GLOIDX_MIN INT64_MIN
 #define P4EST_GLOIDX_MAX INT64_MAX
@@ -237,6 +235,7 @@ p4est_log_indent_pop ()
 
 /** Registers p4est with the SC Library and sets the logging behavior.
  * This function is optional.
+ * This function must only be called before additional threads are created.
  * If this function is not called or called with log_handler == NULL,
  * the default SC log handler will be used.
  * If this function is not called or called with log_threshold == SC_LP_DEFAULT,

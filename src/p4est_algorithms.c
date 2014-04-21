@@ -638,7 +638,7 @@ p4est_is_valid (p4est_t * p4est)
   }
 
 failtest:
-  return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
+  return !p4est_comm_sync_flag (p4est, failed, sc_MPI_BOR);
 }
 
 /* here come the heavyweight algorithms */

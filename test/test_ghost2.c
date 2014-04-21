@@ -311,7 +311,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   p4est_ghost_t      *ghost;
@@ -319,9 +319,9 @@ main (int argc, char **argv)
   int                 i;
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
+  mpicomm = sc_MPI_COMM_WORLD;
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
@@ -370,7 +370,7 @@ main (int argc, char **argv)
   /* exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

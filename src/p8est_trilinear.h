@@ -240,7 +240,7 @@ typedef struct trilinear_mesh_t
   tick_t              sizes[3], minsize, maxsize;
   double              ticksize;
 
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int32_t             mpisize, mpirank;
   int32_t             recsize;
 

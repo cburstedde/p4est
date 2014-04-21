@@ -41,7 +41,7 @@ main (int argc, char **argv)
   int                *target_axis = &ft[3];
   int                *edge_reverse = &ft[6];
 
-  sc_init (MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (sc_MPI_COMM_NULL, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   for (my_face = 0; my_face < 2 * P4EST_DIM; ++my_face) {

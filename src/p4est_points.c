@@ -45,11 +45,6 @@
 #include <sc_allgather.h>
 #include <sc_sort.h>
 
-#ifdef SC_ALLGATHER
-#include <sc_allgather.h>
-#define MPI_Allgather sc_allgather
-#endif
-
 typedef struct
 {
   p4est_quadrant_t   *points;
@@ -101,7 +96,7 @@ p4est_points_refine (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 p4est_t            *
-p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                   int maxlevel, p4est_quadrant_t * points,
                   p4est_locidx_t num_points, p4est_locidx_t max_points,
                   size_t data_size, p4est_init_t init_fn, void *user_pointer)
@@ -130,9 +125,9 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (max_points >= -1);
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   /* This implementation runs in O(P/p * maxlevel)
@@ -148,8 +143,8 @@ p4est_new_points (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   lcount = (size_t) num_points;
   nmemb = P4EST_ALLOC_ZERO (size_t, num_procs);
   isizet = (int) sizeof (size_t);
-  mpiret = MPI_Allgather (&lcount, isizet, MPI_BYTE,
-                          nmemb, isizet, MPI_BYTE, mpicomm);
+  mpiret = sc_MPI_Allgather (&lcount, isizet, sc_MPI_BYTE,
+                             nmemb, isizet, sc_MPI_BYTE, mpicomm);
   SC_CHECK_MPI (mpiret);
   sc_psort (mpicomm, points, nmemb, sizeof (p4est_quadrant_t),
             p4est_quadrant_compare_piggy);

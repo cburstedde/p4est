@@ -314,7 +314,7 @@ main (int argc, char **argv)
   int                 maxlevel = 6;
 #endif
   int                 mpiret, mpisize, mpirank;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   uint64_t            i, ifirst, ilast;
   int                 level;
   sc_array_t         *seeds, *seeds_check;
@@ -323,12 +323,12 @@ main (int argc, char **argv)
   int                 j, nrand = 1000;
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpicomm, &mpisize);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
   srandom (9212007);
@@ -632,7 +632,7 @@ main (int argc, char **argv)
 
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

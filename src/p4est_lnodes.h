@@ -83,7 +83,7 @@ typedef int8_t      p4est_lnodes_code_t;
  */
 typedef struct p4est_lnodes
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p4est_locidx_t      num_local_nodes;
   p4est_locidx_t      owned_count;
   p4est_gloidx_t      global_offset;
@@ -180,7 +180,7 @@ void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
  */
 typedef struct p4est_lnodes_buffer
 {
-  sc_array_t         *requests; /* MPI_Request */
+  sc_array_t         *requests; /* sc_MPI_Request */
   sc_array_t         *send_buffers;
   sc_array_t         *recv_buffers;
 }

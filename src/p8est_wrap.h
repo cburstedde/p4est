@@ -62,14 +62,14 @@ typedef struct p8est_wrap
 p8est_wrap_t;
 
 /** Create p8est and auxiliary data structures.
- * Expects MPI_Init to be called beforehand.
+ * Expects sc_MPI_Init to be called beforehand.
  */
-p8est_wrap_t       *p8est_wrap_new_unitcube (MPI_Comm mpicomm,
+p8est_wrap_t       *p8est_wrap_new_unitcube (sc_MPI_Comm mpicomm,
                                              int initial_level);
-p8est_wrap_t       *p8est_wrap_new_rotwrap (MPI_Comm mpicomm,
+p8est_wrap_t       *p8est_wrap_new_rotwrap (sc_MPI_Comm mpicomm,
                                             int initial_level);
 
-/** Passes MPI_COMM_WORLD to p8est_wrap_new_unitcube. */
+/** Passes sc_MPI_COMM_WORLD to p8est_wrap_new_unitcube. */
 p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
 

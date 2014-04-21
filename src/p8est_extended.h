@@ -75,7 +75,7 @@ typedef void        (*p8est_replace_t) (p8est_t * p8est,
  *                              The latter is partition-specific so that
  *                              is usually not a good idea.
  */
-p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
+p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                    p8est_connectivity_t * connectivity,
                                    p4est_locidx_t min_quadrants,
                                    int min_level, int fill_uniform,
@@ -215,7 +215,7 @@ void                p8est_save_ext (const char *filename, p8est_t * p8est,
  *                  argument.
  * \note            Aborts on file errors or invalid file contents.
  */
-p8est_t            *p8est_load_ext (const char *filename, MPI_Comm mpicomm,
+p8est_t            *p8est_load_ext (const char *filename, sc_MPI_Comm mpicomm,
                                     size_t data_size, int load_data,
                                     int autopartition, int broadcasthead,
                                     void *user_pointer,
