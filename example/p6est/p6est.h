@@ -107,7 +107,7 @@ p2est_quadrant_t;
 
 typedef struct p6est
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize, mpirank;
 
   size_t              data_size;        /* size of per-quadrant user_data */
@@ -216,7 +216,7 @@ extern void        *P2EST_DATA_UNINITIALIZED;
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
  */
-p6est_t            *p6est_new (MPI_Comm mpicomm,
+p6est_t            *p6est_new (sc_MPI_Comm mpicomm,
                                p6est_connectivity_t * connectivity,
                                size_t data_size,
                                p6est_init_t init_fn, void *user_pointer);
@@ -417,7 +417,7 @@ void                p6est_save (const char *filename, p6est_t * p6est,
  *                  argument.
  * \note            Aborts on file errors or invalid file contents.
  */
-p6est_t            *p6est_load (const char *filename, MPI_Comm mpicomm,
+p6est_t            *p6est_load (const char *filename, sc_MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
                                 p6est_connectivity_t ** connectivity);

@@ -39,7 +39,7 @@
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#include <sc_zlib.h>
+#include <zlib.h>
 
 p6est_connectivity_t *
 p6est_connectivity_new (p4est_connectivity_t * conn4,
@@ -394,7 +394,7 @@ p6est_init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 p6est_t            *
-p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
+p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
                p4est_locidx_t min_quadrants, int min_level, int min_zlevel,
                int fill_uniform, size_t data_size, p6est_init_t init_fn,
                void *user_pointer)
@@ -413,9 +413,9 @@ p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
      (long long) min_quadrants, SC_MAX (min_zlevel, 0));
   p4est_log_indent_push ();
 
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   layers = sc_array_new (sizeof (p2est_quadrant_t));
@@ -473,7 +473,7 @@ p6est_new_ext (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
 }
 
 p6est_t            *
-p6est_new (MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
+p6est_new (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
            size_t data_size, p6est_init_t init_fn, void *user_pointer)
 {
   return p6est_new_ext (mpicomm, connectivity, 0, 0, 0, 1,
@@ -692,7 +692,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   MPI_Offset          mpithis;
 #else
   long                fthis;
-  MPI_Status          mpistatus;
+  sc_MPI_Status       mpistatus;
 #endif
   int                 num_procs = p6est->mpisize;
 
@@ -749,7 +749,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
 
   /* we need a barrier so that all files have finished writing in
    * p4est_save_ext before we start writing additional data to the file */
-  mpiret = MPI_Barrier (p6est->mpicomm);
+  mpiret = sc_MPI_Barrier (p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   if (rank == 0) {
@@ -817,11 +817,9 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
 #ifndef P4EST_MPIIO_WRITE
   if (rank > 0) {
     /* wait for sequential synchronization */
-#ifdef P4EST_MPI
-    mpiret = MPI_Recv (&fpos, 1, MPI_LONG, rank - 1, P4EST_COMM_SAVE,
-                       p6est->mpicomm, &mpistatus);
+    mpiret = sc_MPI_Recv (&fpos, 1, sc_MPI_LONG, rank - 1, P4EST_COMM_SAVE,
+                          p6est->mpicomm, &mpistatus);
     SC_CHECK_MPI (mpiret);
-#endif
 
     /* open file after all previous processors have written to it */
     file = fopen (filename, "rb+");
@@ -889,13 +887,11 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   file = NULL;
 
   /* initiate sequential synchronization */
-#ifdef P4EST_MPI
   if (rank < num_procs - 1) {
-    mpiret = MPI_Send (&fpos, 1, MPI_LONG, rank + 1, P4EST_COMM_SAVE,
-                       p6est->mpicomm);
+    mpiret = sc_MPI_Send (&fpos, 1, sc_MPI_LONG, rank + 1, P4EST_COMM_SAVE,
+                          p6est->mpicomm);
     SC_CHECK_MPI (mpiret);
   }
-#endif
 #else
   mpiret = MPI_File_close (&mpifile);
   SC_CHECK_MPI (mpiret);
@@ -906,7 +902,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
 }
 
 p6est_t            *
-p6est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
+p6est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
             int load_data, void *user_pointer,
             p6est_connectivity_t ** connectivity)
 {
@@ -915,7 +911,7 @@ p6est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 }
 
 p6est_t            *
-p6est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
+p6est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                 int load_data, int autopartition, int broadcasthead,
                 void *user_pointer, p6est_connectivity_t ** connectivity)
 {
@@ -1217,8 +1213,8 @@ p6est_update_offsets (p6est_t * p6est)
   p4est_gloidx_t      mycount = p6est->layers->elem_count;
   p4est_gloidx_t      psum = 0, thiscount;
 
-  mpiret = MPI_Allgather (&mycount, 1, P4EST_MPI_GLOIDX, gfl, 1,
-                          P4EST_MPI_GLOIDX, p6est->mpicomm);
+  mpiret = sc_MPI_Allgather (&mycount, 1, P4EST_MPI_GLOIDX, gfl, 1,
+                             P4EST_MPI_GLOIDX, p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   for (p = 0; p < p6est->mpisize; p++) {
@@ -1241,8 +1237,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_columns with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   refine_col.refine_col_fn = refine_fn;
@@ -1262,8 +1258,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_columns with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -1291,8 +1287,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_layers with %lld total layers"
                             " in %lld total columns, allowed level %d\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants,
                             allowed_level);
   p4est_log_indent_push ();
@@ -1369,8 +1365,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_layers with %lld total layers "
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -1744,8 +1740,8 @@ p6est_coarsen_layers_ext (p6est_t * p6est, int coarsen_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_coarsen_layers with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
 
@@ -1869,7 +1865,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   int                 send_count, recv_count;
   sc_array_t         *send_requests;
   sc_array_t         *recv_requests;
-  MPI_Request        *req;
+  sc_MPI_Request     *req;
   void               *layer_data;
   p2est_quadrant_t   *layer;
   p2est_quadrant_t   *packedlayer;
@@ -1886,8 +1882,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_parition with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   /* wrap the p6est_weight_t in a p4est_weight_t */
@@ -1922,8 +1918,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
 
   /* calculate the new global_first_layer */
   new_gfl = P4EST_ALLOC (p4est_gloidx_t, p6est->mpisize + 1);
-  mpiret = MPI_Allgather (&my_count, 1, P4EST_MPI_GLOIDX, new_gfl, 1,
-                          P4EST_MPI_GLOIDX, p6est->mpicomm);
+  mpiret = sc_MPI_Allgather (&my_count, 1, P4EST_MPI_GLOIDX, new_gfl, 1,
+                             P4EST_MPI_GLOIDX, p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   psum = 0;
@@ -1971,7 +1967,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
                       (size_t) mpisize);
 
   /* create the mpi recv requests */
-  recv_requests = sc_array_new (sizeof (MPI_Request));
+  recv_requests = sc_array_new (sizeof (sc_MPI_Request));
   /* create the list of procs from which to receive */
   recv_procs = sc_array_new (sizeof (int));
 
@@ -2005,13 +2001,13 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
     if (overlap != rank) {
       if (recv_count) {
         /* post the receive */
-        req = (MPI_Request *) sc_array_push (recv_requests);
+        req = (sc_MPI_Request *) sc_array_push (recv_requests);
         ip = (int *) sc_array_push (recv_procs);
         *ip = overlap;
-        mpiret = MPI_Irecv (sc_array_index (recv, local_offset),
-                            (int) (recv_count * recv->elem_size), MPI_BYTE,
-                            overlap, P6EST_COMM_PARTITION, p6est->mpicomm,
-                            req);
+        mpiret = sc_MPI_Irecv (sc_array_index (recv, local_offset),
+                               (int) (recv_count * recv->elem_size),
+                               sc_MPI_BYTE, overlap, P6EST_COMM_PARTITION,
+                               p6est->mpicomm, req);
         SC_CHECK_MPI (mpiret);
       }
     }
@@ -2028,7 +2024,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   nrecv = (int) recv_requests->elem_count;
 
   /* create the mpi send requests */
-  send_requests = sc_array_new (sizeof (MPI_Request));
+  send_requests = sc_array_new (sizeof (sc_MPI_Request));
 
   /* create the send buffer */
   if (!data_size) {
@@ -2074,11 +2070,11 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
           }
         }
         /* post the send */
-        req = (MPI_Request *) sc_array_push (send_requests);
-        mpiret = MPI_Isend (sc_array_index (send, local_offset),
-                            (int) (send_count * send->elem_size), MPI_BYTE,
-                            overlap, P6EST_COMM_PARTITION, p6est->mpicomm,
-                            req);
+        req = (sc_MPI_Request *) sc_array_push (send_requests);
+        mpiret = sc_MPI_Isend (sc_array_index (send, local_offset),
+                               (int) (send_count * send->elem_size),
+                               sc_MPI_BYTE, overlap, P6EST_COMM_PARTITION,
+                               p6est->mpicomm, req);
         SC_CHECK_MPI (mpiret);
       }
       else {
@@ -2099,10 +2095,11 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   array_of_indices = P4EST_ALLOC (int, nrecv);
   while (nleft > 0) {
     /* finalize some receives */
-    mpiret = MPI_Waitsome (nrecv, (MPI_Request *) (recv_requests->array),
-                           &outcount, array_of_indices, MPI_STATUSES_IGNORE);
+    mpiret =
+      sc_MPI_Waitsome (nrecv, (sc_MPI_Request *) (recv_requests->array),
+                       &outcount, array_of_indices, sc_MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
-    P4EST_ASSERT (outcount != MPI_UNDEFINED);
+    P4EST_ASSERT (outcount != sc_MPI_UNDEFINED);
     P4EST_ASSERT (outcount >= 0);
     if (!outcount) {
       continue;
@@ -2146,8 +2143,8 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   P4EST_FREE (old_gfl);
 
   /* wait for sends to complete */
-  mpiret = MPI_Waitall (nsend, (MPI_Request *) (send_requests->array),
-                        MPI_STATUSES_IGNORE);
+  mpiret = sc_MPI_Waitall (nsend, (sc_MPI_Request *) (send_requests->array),
+                           sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
   /* clean up send and old_layers */
@@ -2225,8 +2222,8 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_balance with %lld total layers"
                             " in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
 
@@ -2301,8 +2298,8 @@ p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype,
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_balance with %lld total layers "
                             "in %lld total columns\n",
-                            (long long) p6est->global_first_layer[p6est->
-                                                                  mpisize],
+                            (long long) p6est->
+                            global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 

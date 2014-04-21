@@ -114,9 +114,9 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
     owned_offsets = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
 
-    mpiret = MPI_Allgather (&newowned, 1, P4EST_MPI_LOCIDX,
-                            lnodes->global_owned_count, 1, P4EST_MPI_LOCIDX,
-                            p6est->mpicomm);
+    mpiret = sc_MPI_Allgather (&newowned, 1, P4EST_MPI_LOCIDX,
+                               lnodes->global_owned_count, 1,
+                               P4EST_MPI_LOCIDX, p6est->mpicomm);
 
     owned_offsets[0] = 0;
     for (i = 0; i < mpisize; i++) {
@@ -269,8 +269,9 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   owned_offsets = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
   global_owned_count = P4EST_ALLOC (p4est_locidx_t, mpisize);
 
-  mpiret = MPI_Allgather (&gnum_owned, 1, P4EST_MPI_GLOIDX,
-                          owned_offsets, 1, P4EST_MPI_GLOIDX, p6est->mpicomm);
+  mpiret = sc_MPI_Allgather (&gnum_owned, 1, P4EST_MPI_GLOIDX,
+                             owned_offsets, 1, P4EST_MPI_GLOIDX,
+                             p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   offset = 0;

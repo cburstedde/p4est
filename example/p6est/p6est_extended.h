@@ -26,7 +26,7 @@
 
 #include <p6est.h>
 
-p6est_t            *p6est_new_ext (MPI_Comm mpicomm,
+p6est_t            *p6est_new_ext (sc_MPI_Comm mpicomm,
                                    p6est_connectivity_t * connectivity,
                                    p4est_locidx_t min_quadrants,
                                    int min_level, int min_zlevel,
@@ -34,7 +34,7 @@ p6est_t            *p6est_new_ext (MPI_Comm mpicomm,
                                    p6est_init_t init_fn, void *user_pointer);
 void                p6est_save_ext (const char *filename, p6est_t * p6est,
                                     int save_data, int save_partition);
-p6est_t            *p6est_load_ext (const char *filename, MPI_Comm mpicomm,
+p6est_t            *p6est_load_ext (const char *filename, sc_MPI_Comm mpicomm,
                                     size_t data_size, int load_data,
                                     int autopartition, int broadcasthead,
                                     void *user_pointer,

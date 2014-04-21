@@ -62,7 +62,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   int                 i, j, *ip;
   int                 mpisize = p6est->mpisize, mpiret, nneighout;
   p4est_locidx_t      lfirst, llast, lj, midx, lcount, loffset;
-  MPI_Request        *req;
+  sc_MPI_Request     *req;
   p4est_ghost_t      *cghost = ghost->column_ghost;
   sc_array_t         *glayers = &ghost->ghosts;
   sc_array_t         *cmirrors = &cghost->mirrors;
@@ -86,7 +86,8 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   p4est_topidx_t      num_trees = ghost->num_trees;
 
   /* create the recv data */
-  recv_requests = sc_array_new_size (sizeof (MPI_Request), (size_t) nneighin);
+  recv_requests =
+    sc_array_new_size (sizeof (sc_MPI_Request), (size_t) nneighin);
   recv_procs = sc_array_new_size (sizeof (int), (size_t) nneighin);
 
   /* post the receives */
@@ -95,12 +96,13 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     lfirst = recv_off[i];
     lcount = recv_count[i];
     if (lcount) {
-      req = (MPI_Request *) sc_array_index (recv_requests, j);
+      req = (sc_MPI_Request *) sc_array_index (recv_requests, j);
       ip = (int *) sc_array_index (recv_procs, j++);
       *ip = i;
-      mpiret = MPI_Irecv (sc_array_index (glayers, (size_t) lfirst),
-                          (int) lcount * sizeof (p2est_quadrant_t), MPI_BYTE,
-                          i, P6EST_COMM_GHOST, p6est->mpicomm, req);
+      mpiret = sc_MPI_Irecv (sc_array_index (glayers, (size_t) lfirst),
+                             (int) lcount * sizeof (p2est_quadrant_t),
+                             sc_MPI_BYTE, i, P6EST_COMM_GHOST, p6est->mpicomm,
+                             req);
       SC_CHECK_MPI (mpiret);
     }
   }
@@ -136,7 +138,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   nneighout = j;
 
   send = sc_array_new_size (sizeof (p2est_quadrant_t), (size_t) nlmirror);
-  send_requests = sc_array_new_size (sizeof (MPI_Request), nneighout);
+  send_requests = sc_array_new_size (sizeof (sc_MPI_Request), nneighout);
 
   /* fill the send buffer */
   j = 0;
@@ -149,7 +151,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     if (!lcount) {
       continue;
     }
-    req = (MPI_Request *) sc_array_index (send_requests, j);
+    req = (sc_MPI_Request *) sc_array_index (send_requests, j);
     j++;
     for (lj = lfirst; lj < llast; lj++) {
       midx = cmpf[lj];
@@ -172,9 +174,10 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     llast = lmpfo[i + 1];
     lcount = llast - lfirst;
     P4EST_ASSERT (lcount);
-    mpiret = MPI_Isend (sc_array_index (send, (size_t) lfirst),
-                        (int) lcount * sizeof (p2est_quadrant_t), MPI_BYTE,
-                        i, P6EST_COMM_GHOST, p6est->mpicomm, req);
+    mpiret = sc_MPI_Isend (sc_array_index (send, (size_t) lfirst),
+                           (int) lcount * sizeof (p2est_quadrant_t),
+                           sc_MPI_BYTE, i, P6EST_COMM_GHOST, p6est->mpicomm,
+                           req);
     P4EST_ASSERT (lmpfo[i + 1] == loffset);
   }
 
@@ -311,9 +314,9 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
 
     /* finish the receives */
     while (nleft) {
-      mpiret = MPI_Waitsome (nneighin, (MPI_Request *) recv_requests->array,
-                             &outcount, array_of_indices,
-                             MPI_STATUSES_IGNORE);
+      mpiret =
+        sc_MPI_Waitsome (nneighin, (sc_MPI_Request *) recv_requests->array,
+                         &outcount, array_of_indices, sc_MPI_STATUSES_IGNORE);
       SC_CHECK_MPI (mpiret);
 
       if (recv_off != ghost->proc_offsets) {
@@ -340,8 +343,8 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   }
 
   /* finish the sends */
-  mpiret = MPI_Waitall (nneighout, (MPI_Request *) send_requests->array,
-                        MPI_STATUSES_IGNORE);
+  mpiret = sc_MPI_Waitall (nneighout, (sc_MPI_Request *) send_requests->array,
+                           sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
   sc_array_destroy (send);

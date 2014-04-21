@@ -892,7 +892,7 @@ p6est_profile_sync (p6est_profile_t * profile)
   p4est_locidx_t     *send_offsets, send_offset;
   p4est_locidx_t (*lr)[2];
   sc_array_t         *lc = profile->lnode_columns;
-  MPI_Request        *recv_request, *send_request;
+  sc_MPI_Request     *recv_request, *send_request;
   sc_array_t         *work;
   int                 any_change = 0;
   int                 any_global_change;
@@ -903,7 +903,7 @@ p6est_profile_sync (p6est_profile_t * profile)
   sharers = lnodes->sharers;
   nsharers = sharers->elem_count;
 
-  mpiret = MPI_Comm_rank (lnodes->mpicomm, &mpirank);
+  mpiret = sc_MPI_Comm_rank (lnodes->mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
   sc_array_init_data (&lrview, lr, 2 * sizeof (p4est_locidx_t), nln);
@@ -967,9 +967,9 @@ p6est_profile_sync (p6est_profile_t * profile)
   recv_total = recv_offsets[nsharers] = recv_offset;
 
   recv = P4EST_ALLOC (int8_t, recv_total);
-  recv_request = P4EST_ALLOC (MPI_Request, nsharers);
+  recv_request = P4EST_ALLOC (sc_MPI_Request, nsharers);
   send = P4EST_ALLOC (int8_t, send_total);
-  send_request = P4EST_ALLOC (MPI_Request, nsharers);
+  send_request = P4EST_ALLOC (sc_MPI_Request, nsharers);
 
   /* post receives */
   nleft = 0;
@@ -979,18 +979,19 @@ p6est_profile_sync (p6est_profile_t * profile)
 
     sharer = p4est_lnodes_rank_array_index (sharers, zz);
     if (sharer->rank == mpirank) {
-      recv_request[zz] = MPI_REQUEST_NULL;
+      recv_request[zz] = sc_MPI_REQUEST_NULL;
       continue;
     }
     if (icount) {
-      mpiret = MPI_Irecv (recv + recv_offsets[zz], icount * sizeof (int8_t),
-                          MPI_BYTE, sharer->rank, P6EST_COMM_BALANCE,
-                          lnodes->mpicomm, recv_request + zz);
+      mpiret =
+        sc_MPI_Irecv (recv + recv_offsets[zz], icount * sizeof (int8_t),
+                      sc_MPI_BYTE, sharer->rank, P6EST_COMM_BALANCE,
+                      lnodes->mpicomm, recv_request + zz);
       SC_CHECK_MPI (mpiret);
       nleft++;
     }
     else {
-      recv_request[zz] = MPI_REQUEST_NULL;
+      recv_request[zz] = sc_MPI_REQUEST_NULL;
     }
   }
 
@@ -1003,7 +1004,7 @@ p6est_profile_sync (p6est_profile_t * profile)
 
     sharer = p4est_lnodes_rank_array_index (sharers, zz);
     if (sharer->rank == mpirank) {
-      send_request[zz] = MPI_REQUEST_NULL;
+      send_request[zz] = sc_MPI_REQUEST_NULL;
       continue;
     }
     shared_nodes = &sharer->shared_nodes;
@@ -1027,13 +1028,14 @@ p6est_profile_sync (p6est_profile_t * profile)
     }
     P4EST_ASSERT (icount == send_offsets[zz + 1] - send_offsets[zz]);
     if (icount) {
-      mpiret = MPI_Isend (send + send_offsets[zz], icount * sizeof (int8_t),
-                          MPI_BYTE, sharer->rank, P6EST_COMM_BALANCE,
-                          lnodes->mpicomm, send_request + zz);
+      mpiret =
+        sc_MPI_Isend (send + send_offsets[zz], icount * sizeof (int8_t),
+                      sc_MPI_BYTE, sharer->rank, P6EST_COMM_BALANCE,
+                      lnodes->mpicomm, send_request + zz);
       SC_CHECK_MPI (mpiret);
     }
     else {
-      send_request[zz] = MPI_REQUEST_NULL;
+      send_request[zz] = sc_MPI_REQUEST_NULL;
     }
   }
 
@@ -1043,8 +1045,8 @@ p6est_profile_sync (p6est_profile_t * profile)
     int                 outcount;
     int                 i;
 
-    mpiret = MPI_Waitsome (nsharers, recv_request, &outcount,
-                           array_of_indices, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitsome (nsharers, recv_request, &outcount,
+                              array_of_indices, sc_MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
     for (i = 0; i < outcount; i++) {
@@ -1118,7 +1120,7 @@ p6est_profile_sync (p6est_profile_t * profile)
   P4EST_FREE (recv);
 
   {
-    mpiret = MPI_Waitall (nsharers, send_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (nsharers, send_request, sc_MPI_STATUSES_IGNORE);
 
     SC_CHECK_MPI (mpiret);
     P4EST_FREE (send_request);
@@ -1126,8 +1128,8 @@ p6est_profile_sync (p6est_profile_t * profile)
     P4EST_FREE (send);
 
     any_global_change = any_change;
-    mpiret = MPI_Allreduce (&any_change, &any_global_change, 1, MPI_INT,
-                            MPI_LOR, lnodes->mpicomm);
+    mpiret = sc_MPI_Allreduce (&any_change, &any_global_change, 1, sc_MPI_INT,
+                               sc_MPI_LOR, lnodes->mpicomm);
 
     SC_CHECK_MPI (mpiret);
   }

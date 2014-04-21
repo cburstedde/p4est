@@ -162,7 +162,7 @@ enum
 int
 main (int argc, char **argv)
 {
-  MPI_Comm            mpicomm = MPI_COMM_WORLD;
+  sc_MPI_Comm         mpicomm = sc_MPI_COMM_WORLD;
   p4est_connectivity_t *conn4;
   p6est_connectivity_t *conn, *copy_conn;
   p6est_t            *p6est, *copy_p6est;
@@ -179,7 +179,7 @@ main (int argc, char **argv)
   sc_flopinfo_t       fi, snapshot;
   int                 mpiret;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 #ifndef P4EST_DEBUG
@@ -209,7 +209,7 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   /* start overall timing */
-  mpiret = MPI_Barrier (mpicomm);
+  mpiret = sc_MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&fi);
 
@@ -415,7 +415,7 @@ main (int argc, char **argv)
   /* exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;
