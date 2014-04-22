@@ -1114,9 +1114,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     eside = NULL;
     for (zz = 1; zz < count; zz++) {
       eside = p8est_iter_eside_array_index (sides, zz);
-      if ((eside->is_hanging && eside->is.hanging.quad[0]
-           && eside->is.hanging.quad[1])
-          || eside->is.full.quad) {
+      if ((!eside->is_hanging) && eside->is.full.quad) {
         break;
       }
     }
@@ -1125,15 +1123,10 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     tid = eside->treeid;
     o = eside->orientation;
     c = p8est_edge_corners[e][o];
-    if (!eside->is_hanging) {
-      q = eside->is.full.quad;
-      P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
-      p4est_quadrant_corner_descendant (q, &tempr, c, q->level + 1);
-      q = &tempr;
-    }
-    else {
-      q = eside->is.hanging.quad[o];
-    }
+    q = eside->is.full.quad;
+    P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
+    p4est_quadrant_corner_descendant (q, &tempr, c, q->level + 1);
+    q = &tempr;
     P4EST_ASSERT (c == p4est_quadrant_child_id (q));
     p8est_quadrant_edge_neighbor (q, e, &tempq);
     /* get the coordinates of the edge */
