@@ -39,7 +39,9 @@
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+#ifdef P4EST_HAVE_ZLIB
 #include <zlib.h>
+#endif
 
 p6est_connectivity_t *
 p6est_connectivity_new (p4est_connectivity_t * conn4,
