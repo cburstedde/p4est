@@ -72,6 +72,7 @@ typedef struct
   double              expected;
   sc_array_t         *points;
   int                 test_rays;
+  int                 skip_1;
 
   /* data for the currently active quadrant */
   p4est_locidx_t      which_tree;
@@ -894,7 +895,12 @@ time_search_all (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     }
   }
 
-  time_search_1 (tsg, p4est, znum_points, fi, stats);
+  if (!tsg->skip_1) {
+    time_search_1 (tsg, p4est, znum_points, fi, stats);
+  }
+  else {
+    sc_stats_set1 (&stats[TSEARCH_SEARCH_1], 0., "Search_1");
+  }
   time_search_N (tsg, p4est, znum_points, fi, stats);
 
   sc_array_destroy (tsg->points);
@@ -921,6 +927,7 @@ main (int argc, char **argv)
   sc_flopinfo_t       fi, snapshot;
   sc_options_t       *opt;
   tsearch_global_t    tsgt, *tsg = &tsgt;
+  int                 skip_1;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -961,6 +968,8 @@ main (int argc, char **argv)
                          "Number of points");
   sc_options_add_switch (opt, 'r', "rays", &test_rays,
                          "Test rays instead of points");
+  sc_options_add_switch (opt, 'm', "skip-1", &skip_1,
+                         "only test parallelized search");
   first_argc = sc_options_parse (p4est_package_id, SC_LP_ERROR,
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
@@ -970,6 +979,7 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
   tsg->test_rays = test_rays;
+  tsg->skip_1 = skip_1;
 
   /* start overall timing */
   mpiret = sc_MPI_Barrier (tsg->mpicomm);
