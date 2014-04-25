@@ -548,12 +548,38 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
   p4est_quadrant_t    root;
+  p4est_quadrant_t    temp, temp2;
+  p4est_quadrant_t   *f, *l;
+  uint64_t            midx;
   sc_array_t          actives;
   sc_array_t         *tquadrants;
   size_t              zz, *pz;
 
-  P4EST_QUADRANT_INIT (&root);
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+
+    P4EST_QUADRANT_INIT (&root);
+    f = NULL;
+    l = NULL;
+    if (jt == p4est->first_local_tree) {
+      f = &p4est->global_first_position[p4est->mpirank];
+      p4est_quadrant_last_descendant (&root, &temp, P4EST_QMAXLEVEL);
+      l = &temp;
+    }
+    if (jt == p4est->last_local_tree) {
+      if (!f) {
+        p4est_quadrant_first_descendant (&root, &temp, P4EST_QMAXLEVEL);
+        f = &temp;
+      }
+      l = &p4est->global_first_position[p4est->mpirank + 1];
+      midx = p4est_quadrant_linear_id (l, P4EST_QMAXLEVEL);
+      p4est_quadrant_set_morton (&temp2, P4EST_QMAXLEVEL, midx - 1);
+      l = &temp2;
+    }
+    if (f != NULL) {
+      P4EST_ASSERT (l != NULL);
+      p4est_nearest_common_ancestor (f, l, &root);
+    }
+
     /* grab complete tree quadrant array */
     tree = p4est_tree_array_index (p4est->trees, jt);
     tquadrants = &tree->quadrants;
