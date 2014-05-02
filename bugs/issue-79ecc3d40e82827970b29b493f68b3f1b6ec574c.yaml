@@ -1,0 +1,39 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: read-safe file write routines
+desc: Should the files created by the _save routines be readable by all processes immediately?  With parallel I/O, we need to be sure that the writing has complete before any reading begins, maybe with an MPI_Barrier at the end of _save routines?
+type: :task
+component: p4est
+release: 
+reporter: Tobin Isaac <tisaac@ices.utexas.edu>
+status: :unstarted
+disposition: 
+creation_time: 2014-01-27 14:44:25.946743 Z
+references: []
+
+id: 79ecc3d40e82827970b29b493f68b3f1b6ec574c
+log_events: 
+- - 2014-01-27 14:44:29.058674 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - created
+  - ""
+- - 2014-01-28 17:11:05.821708 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    We could document that MPI_File_Close is called.
+    The user is then referred to the MPI standard and can take their own actions.
+    I think a barrier would not be transparent and rarely needed.
+    Propose to keep as is with added documentation.
+- - 2014-02-01 16:23:10.905239 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - commented
+  - |-
+    if P4EST_MPIIO_WRITE is not defined, processes write in serial, and each exits
+    as soon as it has written its section.  Comment added to documentation about
+    this issue.
+- - 2014-02-08 16:44:06.149912 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    For non-MPI I/O configuration, we might indeed add a barrier or broadcast.
+    Also thinking to enable MPI I/O by default and run a configure test for it.

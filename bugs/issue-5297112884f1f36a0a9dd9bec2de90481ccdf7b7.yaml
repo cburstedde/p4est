@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Create p4est connectivity structure from common mesh formats
+desc: |-
+  Survey external mesh storage formats that describe conforming hex meshes.
+  Write conversion code/scripts to turn them into a p4est_connectivity_t.
+type: :feature
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-03-27 09:52:29.635056 Z
+references: []
+
+id: 5297112884f1f36a0a9dd9bec2de90481ccdf7b7
+log_events: 
+- - 2014-03-27 09:52:30.275027 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

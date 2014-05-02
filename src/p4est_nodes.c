@@ -34,11 +34,6 @@
 #endif
 #include <sc_ranges.h>
 
-#ifdef SC_ALLGATHER
-#include <sc_allgather.h>
-#define MPI_Allgather sc_allgather
-#endif
-
 #ifdef P4EST_MPI
 
 typedef struct
@@ -486,7 +481,6 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   const int           rank = p4est->mpirank;
 #ifdef P4EST_MPI
   int                 mpiret;
-  int                 found;
   int                 owner, prev, start;
   int                 first_peer, last_peer;
   int                 num_send_queries, num_send_nonzero, num_recv_queries;
@@ -902,8 +896,8 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
       ttt = (p4est_topidx_t *) (&xyz[P4EST_DIM]);
       inkey.p.which_tree = *ttt;
-      found = sc_hash_array_lookup (indep_nodes, &inkey, &position);
-      P4EST_ASSERT (found);
+      P4EST_EXECUTE_ASSERT_TRUE (sc_hash_array_lookup
+                                 (indep_nodes, &inkey, &position));
       P4EST_ASSERT ((p4est_locidx_t) position >= offset_owned_indeps &&
                     (p4est_locidx_t) position < end_owned_indeps);
       node_number = (p4est_locidx_t *) xyz;
@@ -1306,7 +1300,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                   (unsigned long long) shared_indeps->elem_count);
 
   P4EST_ASSERT (0 <= offset_owned_indeps &&
-                offset_owned_indeps <= end_owned_indeps && 
+                offset_owned_indeps <= end_owned_indeps &&
                 end_owned_indeps <= num_indep_nodes);
 #endif
 
@@ -1522,5 +1516,5 @@ p4est_nodes_is_valid (p4est_t * p4est, p4est_nodes_t * nodes)
 failtest:
   P4EST_FREE (sorted);
 
-  return !p4est_comm_sync_flag (p4est, failed, MPI_BOR);
+  return !p4est_comm_sync_flag (p4est, failed, sc_MPI_BOR);
 }

@@ -58,6 +58,8 @@
 #define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
 #define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
 #define P4EST_COMM_GHOST_EXCHANGE       P8EST_COMM_GHOST_EXCHANGE
+#define P4EST_COMM_GHOST_EXPAND_COUNT   P8EST_COMM_GHOST_EXPAND_COUNT
+#define P4EST_COMM_GHOST_EXPAND_LOAD    P8EST_COMM_GHOST_EXPAND_LOAD
 #define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
 #define P4EST_COMM_NODES_REPLY          P8EST_COMM_NODES_REPLY
 #define P4EST_COMM_SAVE                 P8EST_COMM_SAVE
@@ -182,6 +184,7 @@
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
+#define p4est_iterate_ext               p8est_iterate_ext
 #define p4est_iter_fside_array_index    p8est_iter_fside_array_index
 #define p4est_iter_fside_array_index_int p8est_iter_fside_array_index_int
 #define p4est_iter_cside_array_index    p8est_iter_cside_array_index
@@ -284,6 +287,7 @@
 #define p4est_linearize_tree            p8est_linearize_tree
 #define p4est_next_nonempty_process     p8est_next_nonempty_process
 #define p4est_partition_correction      p8est_partition_correction
+#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
@@ -323,6 +327,7 @@
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced
 #define p4est_ghost_checksum            p8est_ghost_checksum
+#define p4est_ghost_expand              p8est_ghost_expand
 
 /* functions in p4est_nodes */
 #define p4est_nodes_new                 p8est_nodes_new

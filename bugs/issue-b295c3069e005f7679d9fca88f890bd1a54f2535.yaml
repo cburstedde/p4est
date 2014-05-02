@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Simplify p4est_comm_is_owner and p4est_comm_find_owner
+desc: |-
+  In p4est_comm_neighborhood_owned, it would be sufficient to call
+  p4est_comm_is_owner instead of the more expensife p4est_comm_find_owner.
+  Both of these functions can be simplified by using
+  p4est_quadrant_first_descendant and p4est_quadrant_compare_piggy.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-04-02 11:44:55.908031 Z
+references: []
+
+id: b295c3069e005f7679d9fca88f890bd1a54f2535
+log_events: 
+- - 2014-04-02 11:44:56.419998 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

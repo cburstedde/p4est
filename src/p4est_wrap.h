@@ -62,25 +62,26 @@ typedef struct p4est_wrap
 p4est_wrap_t;
 
 /** Create p4est and auxiliary data structures.
- * Expects MPI_Init to be called beforehand.
+ * Expects sc_MPI_Init to be called beforehand.
  */
-p4est_wrap_t       *p4est_wrap_new_unitsquare (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_unitsquare (sc_MPI_Comm mpicomm,
                                                int initial_level);
-p4est_wrap_t       *p4est_wrap_new_periodic (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_periodic (sc_MPI_Comm mpicomm,
                                              int initial_level);
-p4est_wrap_t       *p4est_wrap_new_rotwrap (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_rotwrap (sc_MPI_Comm mpicomm,
                                             int initial_level);
-p4est_wrap_t       *p4est_wrap_new_corner (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_corner (sc_MPI_Comm mpicomm,
                                            int initial_level);
-p4est_wrap_t       *p4est_wrap_new_pillow (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_pillow (sc_MPI_Comm mpicomm,
                                            int initial_level);
-p4est_wrap_t       *p4est_wrap_new_moebius (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_moebius (sc_MPI_Comm mpicomm,
                                             int initial_level);
-p4est_wrap_t       *p4est_wrap_new_cubed (MPI_Comm mpicomm,
+p4est_wrap_t       *p4est_wrap_new_cubed (sc_MPI_Comm mpicomm,
                                           int initial_level);
-p4est_wrap_t       *p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level);
+p4est_wrap_t       *p4est_wrap_new_disk (sc_MPI_Comm mpicomm,
+                                         int initial_level);
 
-/** Passes MPI_COMM_WORLD to p4est_wrap_new_unitsquare. */
+/** Passes sc_MPI_COMM_WORLD to p4est_wrap_new_unitsquare. */
 p4est_wrap_t       *p4est_wrap_new_world (int initial_level);
 void                p4est_wrap_destroy (p4est_wrap_t * pp);
 

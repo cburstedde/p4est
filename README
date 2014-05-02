@@ -89,11 +89,15 @@ nodes.  This function requires previous calls to p?est_balance and p?est_ghost.
 It provides a global numbering for degrees of freedom that can be associated
 with piecewise linear finite elements.
 
+p?est_lnodes: Like p?est_nodes, but for arbitrary order Lagrangian basis
+functions.  Supersedes p?est_nodes for the piecewise linear special case.
 
- 5. Installation
+
+ 5. Installation from a release tarball
 
 p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
-file for details.  The following configure options are important.
+file for details.  The tarball contains the configure script and all required
+files.  The following configure options are important.
 
 --enable-mpi: Necessary for parallel functionality.  Without this option, p4est
 does not require MPI, which is replaced by a dummy implementation that always
@@ -103,8 +107,42 @@ assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
 is generally helpful for development, even if it is somewhat slower and
 produces a lot of diagnostic log messages.
 
+For a one-time installation, ./configure can be called in the root directory of
+the unpacked tree.  For development or for testing multiple configure options,
+create an empty directory for each configuration and invoke configure with a
+relative path.
 
- 6. Using p4est through the deal.II interface
+The subpackage 'sc' is contained in the tarball and used by default.  It is
+possible to use a version of sc that has been make install'd independently:
+(1.) Create an empty directory and call sc/configure with its relative path.
+     Use --prefix=path-to-install-sc to specify the destination for the
+     compiled files.  Then call make install.
+(2.) Create another empty directory and call the p4est configure with its
+     relative path and the options --prefix=path-to-install-p4est and
+     --with-sc=path-to-install-sc.  Make sure to use the same compiler flags
+     and configure options as in (1.).  Finally, call make install.
+This is the proposed procedure to split the p4est installation into two
+packages, say for a linux binary distribution.  The benefit is that other
+packages that might require sc do not force p4est to get installed.
+
+
+ 6. Installation from source
+
+When installing from source, GNU autotools must be invoked to generate the
+necessary configuration files and the configure script.  A bootstrap script is
+provided for this purpose: give the shell command './bootstrap' before
+following the instructions in the INSTALL file.  Then proceed as in 5.
+
+
+ 7. Installation from git repository
+
+If you have obtained p4est from a git repository, the libsc submodule must be
+obtained before installation.  This can be accomplished with the shell command
+'git submodule init; git submodule update'.  After the submodule has been
+obtained, you can install from source as described above in 6.
+
+
+ 8. Using p4est through the deal.II interface
 
 The recent development version of the generic adaptive finite element software
 library deal.II interfaces to p4est to parallelize its mesh handling.  The most

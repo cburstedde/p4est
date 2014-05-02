@@ -28,11 +28,8 @@
 #include <p4est_communication.h>
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
-#include <sc_zlib.h>
-
-#ifdef SC_ALLGATHER
-#include <sc_allgather.h>
-#define MPI_Allgather sc_allgather
+#ifdef P4EST_HAVE_ZLIB
+#include <zlib.h>
 #endif
 
 void
@@ -45,9 +42,9 @@ p4est_comm_count_quadrants (p4est_t * p4est)
   const int           num_procs = p4est->mpisize;
 
   global_first_quadrant[0] = 0;
-  mpiret = MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
-                          global_first_quadrant + 1, 1, P4EST_MPI_GLOIDX,
-                          p4est->mpicomm);
+  mpiret = sc_MPI_Allgather (&qlocal, 1, P4EST_MPI_GLOIDX,
+                             global_first_quadrant + 1, 1, P4EST_MPI_GLOIDX,
+                             p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   for (i = 0; i < num_procs; ++i) {
@@ -100,10 +97,10 @@ p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
   }
   input.level = P4EST_QMAXLEVEL;
   input.p.which_tree = first_tree;
-  mpiret = MPI_Allgather (&input, (int) sizeof (p4est_quadrant_t), MPI_BYTE,
-                          p4est->global_first_position,
-                          (int) sizeof (p4est_quadrant_t), MPI_BYTE,
-                          p4est->mpicomm);
+  mpiret = sc_MPI_Allgather (&input, (int) sizeof (p4est_quadrant_t),
+                             sc_MPI_BYTE, p4est->global_first_position,
+                             (int) sizeof (p4est_quadrant_t), sc_MPI_BYTE,
+                             p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* correct for processors that don't have any quadrants */
@@ -139,8 +136,8 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
   p4est_topidx_t      t;
   p4est_locidx_t      recvbuf, sendbuf;
   p4est_gloidx_t     *mypertree;
-  MPI_Request         req_recv, req_send;
-  MPI_Status          status;
+  sc_MPI_Request      req_recv, req_send;
+  sc_MPI_Status       status;
   p4est_tree_t       *tree;
 #ifdef P4EST_DEBUG
   const p4est_quadrant_t *q;
@@ -242,9 +239,9 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
       if (gfp[p].p.which_tree == t) {
         P4EST_ASSERT (p < num_procs);
         /* Processor p has part of this tree too and needs to tell me */
-        mpiret = MPI_Irecv (&recvbuf, 1, P4EST_MPI_LOCIDX, p,
-                            P4EST_COMM_COUNT_PERTREE, p4est->mpicomm,
-                            &req_recv);
+        mpiret = sc_MPI_Irecv (&recvbuf, 1, P4EST_MPI_LOCIDX, p,
+                               P4EST_COMM_COUNT_PERTREE, p4est->mpicomm,
+                               &req_recv);
         SC_CHECK_MPI (mpiret);
         addtomytree = c;
       }
@@ -263,27 +260,28 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
     for (p = rank - 1; treecount[p] == 0; --p) {
       P4EST_ASSERT (p > 0);
     }
-    mpiret = MPI_Isend (&sendbuf, 1, P4EST_MPI_LOCIDX, p,
-                        P4EST_COMM_COUNT_PERTREE, p4est->mpicomm, &req_send);
+    mpiret = sc_MPI_Isend (&sendbuf, 1, P4EST_MPI_LOCIDX, p,
+                           P4EST_COMM_COUNT_PERTREE, p4est->mpicomm,
+                           &req_send);
     SC_CHECK_MPI (mpiret);
   }
 
   /* Complete MPI operations and cumulative count */
   if (addtomytree >= 0) {
-    mpiret = MPI_Wait (&req_recv, &status);
+    mpiret = sc_MPI_Wait (&req_recv, &status);
     SC_CHECK_MPI (mpiret);
     mypertree[addtomytree] += (p4est_gloidx_t) recvbuf;
   }
   pertree[0] = 0;
-  mpiret = MPI_Allgatherv (mypertree, mycount, P4EST_MPI_GLOIDX, pertree + 1,
-                           treecount, treeoffset, P4EST_MPI_GLOIDX,
-                           p4est->mpicomm);
+  mpiret = sc_MPI_Allgatherv (mypertree, mycount, P4EST_MPI_GLOIDX,
+                              pertree + 1, treecount, treeoffset,
+                              P4EST_MPI_GLOIDX, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   for (c = 0; c < (int) num_trees; ++c) {
     pertree[c + 1] += pertree[c];
   }
   if (sendbuf >= 0) {
-    mpiret = MPI_Wait (&req_send, &status);
+    mpiret = sc_MPI_Wait (&req_send, &status);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -536,16 +534,16 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 int
-p4est_comm_sync_flag (p4est_t * p4est, int flag, MPI_Op operation)
+p4est_comm_sync_flag (p4est_t * p4est, int flag, sc_MPI_Op operation)
 {
   int8_t              lbyte, gbyte;
   int                 mpiret;
 
-  P4EST_ASSERT (operation == MPI_BAND || operation == MPI_BOR);
+  P4EST_ASSERT (operation == sc_MPI_BAND || operation == sc_MPI_BOR);
 
   lbyte = (int8_t) (flag ? 1 : 0);
-  mpiret = MPI_Allreduce (&lbyte, &gbyte, 1, MPI_BYTE, operation,
-                          p4est->mpicomm);
+  mpiret = sc_MPI_Allreduce (&lbyte, &gbyte, 1, sc_MPI_BYTE, operation,
+                             p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   return (int) gbyte;
@@ -554,6 +552,7 @@ p4est_comm_sync_flag (p4est_t * p4est, int flag, MPI_Op operation)
 unsigned
 p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 {
+#ifdef P4EST_HAVE_ZLIB
   uLong               crc = (uLong) local_crc;
 
 #ifdef P4EST_MPI
@@ -582,7 +581,13 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
   else {
     crc = 0;
   }
-#endif
+#endif /* P4EST_MPI */
 
   return (unsigned) crc;
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+
+  return 0;
+#endif /* !P4EST_HAVE_ZLIB */
 }

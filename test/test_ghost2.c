@@ -112,7 +112,7 @@ test_exchange_A (p4est_t * p4est, p4est_ghost_t * ghost)
 
   ghost_void_data = P4EST_ALLOC (void *, ghost->ghosts.elem_count);
   p4est_ghost_exchange_data (p4est, ghost, ghost_void_data);
-  
+
   gexcl = 0;
   for (p = 0; p < p4est->mpisize; ++p) {
     gincl = ghost->proc_offsets[p + 1];
@@ -172,7 +172,7 @@ test_exchange_B (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
-      e = ghost_struct_data + gl,
+      e = ghost_struct_data + gl;
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
                       e->gi, "Ghost exchange mismatch B1");
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
@@ -200,7 +200,8 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
 
   /* Test C: don't use p4est user_data at all */
 
-  mirror_struct_data = P4EST_ALLOC (test_exchange_t, ghost->mirrors.elem_count);
+  mirror_struct_data =
+    P4EST_ALLOC (test_exchange_t, ghost->mirrors.elem_count);
   mirror_data = P4EST_ALLOC (void *, ghost->mirrors.elem_count);
   for (zz = 0; zz < ghost->mirrors.elem_count; ++zz) {
     q = p4est_quadrant_array_index (&ghost->mirrors, zz);
@@ -228,7 +229,7 @@ test_exchange_C (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
     for (gl = gexcl; gl < gincl; ++gl) {
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
-      e = ghost_struct_data + gl,
+      e = ghost_struct_data + gl;
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
                       e->gi, "Ghost exchange mismatch C1");
       SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
@@ -258,7 +259,8 @@ test_exchange_D (p4est_t * p4est, p4est_ghost_t * ghost)
 
   /* Test C: don't use p4est user_data at all */
 
-  mirror_struct_data = P4EST_ALLOC (test_exchange_t, ghost->mirrors.elem_count);
+  mirror_struct_data =
+    P4EST_ALLOC (test_exchange_t, ghost->mirrors.elem_count);
   mirror_data = P4EST_ALLOC (void *, ghost->mirrors.elem_count);
   for (zz = 0; zz < ghost->mirrors.elem_count; ++zz) {
     q = p4est_quadrant_array_index (&ghost->mirrors, zz);
@@ -290,7 +292,7 @@ test_exchange_D (p4est_t * p4est, p4est_ghost_t * ghost)
       q = p4est_quadrant_array_index (&ghost->ghosts, gl);
       if (exchange_minlevel <= (int) q->level &&
           (int) q->level <= exchange_maxlevel) {
-        e = ghost_struct_data + gl,
+        e = ghost_struct_data + gl;
         SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
                         e->gi, "Ghost exchange mismatch D1");
         SC_CHECK_ABORT (gnum + (p4est_gloidx_t) q->p.piggy3.local_num ==
@@ -309,15 +311,17 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   p4est_ghost_t      *ghost;
+  int                 num_cycles = 2;
+  int                 i;
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
+  mpicomm = sc_MPI_COMM_WORLD;
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
@@ -348,6 +352,16 @@ main (int argc, char **argv)
   test_exchange_C (p4est, ghost);
   test_exchange_D (p4est, ghost);
 
+  for (i = 0; i < num_cycles; i++) {
+    /* expand and test that the ghost layer can still exchange data properly
+     * */
+    p4est_ghost_expand (p4est, ghost);
+    test_exchange_A (p4est, ghost);
+    test_exchange_B (p4est, ghost);
+    test_exchange_C (p4est, ghost);
+    test_exchange_D (p4est, ghost);
+  }
+
   /* clean up */
   p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
@@ -356,7 +370,7 @@ main (int argc, char **argv)
   /* exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

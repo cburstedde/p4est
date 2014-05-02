@@ -1,0 +1,36 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Crash in p8est_timings
+desc: |-
+  The following call crashes with double-free/corruption:
+  mpirun -np 8 example/timings/p8est_timings -c twocubes -l 5
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :closed
+disposition: :fixed
+creation_time: 2014-02-14 10:22:28.844116 Z
+references: []
+
+id: 3209cbc7fe045c201f5f0b4af7951a3b81c164ab
+log_events: 
+- - 2014-02-14 10:22:29.345901 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
+- - 2014-02-14 10:27:35.658114 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    We actually hit an assertion:
+    [p4est] Into p8est_lnodes_new
+    [libsc 4] Abort: Assertion 'nproc != rank'
+    [libsc 4] Abort: /home/carsten/work/p4est/src/p4est_lnodes.c:921
+- - 2014-02-14 14:19:21.305941 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - commented
+  - I fixed the assertion, but there is still a checksum mismatch.
+- - 2014-02-14 15:34:12.672817 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - The checksums are clean up and cherry-picked.

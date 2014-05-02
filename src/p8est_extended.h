@@ -33,6 +33,7 @@
 #define P8EST_EXTENDED_H
 
 #include <p8est.h>
+#include <p8est_iterate.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -74,7 +75,7 @@ typedef void        (*p8est_replace_t) (p8est_t * p8est,
  *                              The latter is partition-specific so that
  *                              is usually not a good idea.
  */
-p8est_t            *p8est_new_ext (MPI_Comm mpicomm,
+p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                    p8est_connectivity_t * connectivity,
                                    p4est_locidx_t min_quadrants,
                                    int min_level, int fill_uniform,
@@ -159,6 +160,20 @@ p4est_gloidx_t      p8est_partition_ext (p8est_t * p8est,
                                          int partition_for_coarsening,
                                          p8est_weight_t weight_fn);
 
+/** p8est_iterate_ext adds the option \a remote: if this is false, then it is
+ * the same as p8est_iterate; if this is true, then corner/edge callbacks are
+ * also called on corners/edges for hanging faces/edges touched by local
+ * quadrants.
+ */
+void                p8est_iterate_ext (p8est_t * p8est,
+                                       p8est_ghost_t * ghost_layer,
+                                       void *user_data,
+                                       p8est_iter_volume_t iter_volume,
+                                       p8est_iter_face_t iter_face,
+                                       p8est_iter_edge_t iter_edge,
+                                       p8est_iter_corner_t iter_corner,
+                                       int remote);
+
 /** Save the complete connectivity/p8est data to disk.  This is a collective
  * operation that all MPI processes need to call.  All processes write
  * into the same file, so the filename given needs to be identical over
@@ -200,7 +215,7 @@ void                p8est_save_ext (const char *filename, p8est_t * p8est,
  *                  argument.
  * \note            Aborts on file errors or invalid file contents.
  */
-p8est_t            *p8est_load_ext (const char *filename, MPI_Comm mpicomm,
+p8est_t            *p8est_load_ext (const char *filename, sc_MPI_Comm mpicomm,
                                     size_t data_size, int load_data,
                                     int autopartition, int broadcasthead,
                                     void *user_pointer,

@@ -32,7 +32,7 @@
 
 typedef struct
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize;
   int                 mpirank;
 }
@@ -61,12 +61,12 @@ main (int argc, char **argv)
   const p4est_locidx_t given[5] = { 3, 7, 36, 10, 10 };
 
   /* initialize MPI and p4est internals */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpi->mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  mpi->mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
+  mpiret = sc_MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -101,7 +101,7 @@ main (int argc, char **argv)
   /* clean up and exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

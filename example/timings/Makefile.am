@@ -23,14 +23,19 @@ if P4EST_ENABLE_BUILD_3D
 bin_PROGRAMS += \
         example/timings/p8est_timings \
         example/timings/p8est_bricks \
-        example/timings/p8est_loadconn
+        example/timings/p8est_loadconn \
+        example/timings/p8est_tsearch
 
 example_timings_p8est_timings_SOURCES = example/timings/timings3.c
 example_timings_p8est_bricks_SOURCES = example/timings/bricks3.c
 example_timings_p8est_loadconn_SOURCES = example/timings/loadconn3.c
+example_timings_p8est_tsearch_SOURCES = example/timings/tsearch3.c
 
 LINT_CSOURCES += \
         $(example_timings_p8est_timings_SOURCES) \
         $(example_timings_p8est_bricks_SOURCES) \
-        $(example_timings_p8est_loadconn_SOURCES)
+        $(example_timings_p8est_loadconn_SOURCES) \
+        $(example_timings_p8est_tsearch_SOURCES)
 endif
+
+EXTRA_DIST += example/timings/timana.awk example/timings/timana.sh

@@ -97,7 +97,7 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static p4est_wrap_t *
-p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
+p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
   p4est_wrap_t       *pp;
@@ -130,7 +130,7 @@ p4est_wrap_new_conn (MPI_Comm mpicomm, p4est_connectivity_t * conn,
 #ifndef P4_TO_P8
 
 p4est_wrap_t       *
-p4est_wrap_new_unitsquare (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_unitsquare (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_unitsquare (),
@@ -138,7 +138,7 @@ p4est_wrap_new_unitsquare (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_periodic (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_periodic (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_periodic (),
@@ -146,7 +146,7 @@ p4est_wrap_new_periodic (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_rotwrap (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_rotwrap (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_rotwrap (),
@@ -154,7 +154,7 @@ p4est_wrap_new_rotwrap (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_corner (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_corner (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_corner (),
@@ -162,7 +162,7 @@ p4est_wrap_new_corner (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_pillow (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_pillow (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_pillow (),
@@ -170,7 +170,7 @@ p4est_wrap_new_pillow (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_moebius (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_moebius (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_moebius (),
@@ -178,14 +178,14 @@ p4est_wrap_new_moebius (MPI_Comm mpicomm, int initial_level)
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_cubed (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_cubed (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_cubed (), initial_level);
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level)
+p4est_wrap_new_disk (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_disk (), initial_level);
@@ -194,7 +194,7 @@ p4est_wrap_new_disk (MPI_Comm mpicomm, int initial_level)
 #else
 
 p8est_wrap_t       *
-p8est_wrap_new_unitcube (MPI_Comm mpicomm, int initial_level)
+p8est_wrap_new_unitcube (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p8est_connectivity_new_unitcube (),
@@ -202,7 +202,7 @@ p8est_wrap_new_unitcube (MPI_Comm mpicomm, int initial_level)
 }
 
 p8est_wrap_t       *
-p8est_wrap_new_rotwrap (MPI_Comm mpicomm, int initial_level)
+p8est_wrap_new_rotwrap (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p8est_connectivity_new_rotwrap (),
@@ -215,9 +215,9 @@ p4est_wrap_t       *
 p4est_wrap_new_world (int initial_level)
 {
 #ifndef P4_TO_P8
-  return p4est_wrap_new_unitsquare (MPI_COMM_WORLD, initial_level);
+  return p4est_wrap_new_unitsquare (sc_MPI_COMM_WORLD, initial_level);
 #else
-  return p8est_wrap_new_unitcube (MPI_COMM_WORLD, initial_level);
+  return p8est_wrap_new_unitcube (sc_MPI_COMM_WORLD, initial_level);
 #endif
 }
 
@@ -268,7 +268,8 @@ p4est_wrap_mark_refine (p4est_wrap_t * pp,
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
   tree = p4est_tree_array_index (p4est->trees, which_tree);
-  P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
+  P4EST_ASSERT (0 <= which_quad &&
+                which_quad < (p4est_locidx_t) tree->quadrants.elem_count);
   pos = tree->quadrants_offset + which_quad;
   P4EST_ASSERT (0 <= pos && pos < p4est->local_num_quadrants);
 
@@ -293,7 +294,8 @@ p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
   tree = p4est_tree_array_index (p4est->trees, which_tree);
-  P4EST_ASSERT (0 <= which_quad && which_quad < tree->quadrants.elem_count);
+  P4EST_ASSERT (0 <= which_quad &&
+                which_quad < (p4est_locidx_t) tree->quadrants.elem_count);
   pos = tree->quadrants_offset + which_quad;
   P4EST_ASSERT (0 <= pos && pos < p4est->local_num_quadrants);
 

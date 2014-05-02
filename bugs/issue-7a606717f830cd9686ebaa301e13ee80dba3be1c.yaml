@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Fix p4est_comm_neighborhood_owned
+desc: |-
+  The full_tree variables only cover tree face neighbors.
+  For some connectivities, there may only be tree edge or corner neighbors.
+  In this case, p4est_comm_neighborhood_owned may return a false positive.
+  We should also document that it may return a false negative.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-04-02 11:59:52.880003 Z
+references: []
+
+id: 7a606717f830cd9686ebaa301e13ee80dba3be1c
+log_events: 
+- - 2014-04-02 11:59:53.487977 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

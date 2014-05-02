@@ -40,11 +40,8 @@
 #include <sc_notify.h>
 #include <sc_ranges.h>
 #include <sc_search.h>
-#include <sc_zlib.h>
-
-#ifdef SC_ALLGATHER
-#include <sc_allgather.h>
-#define MPI_Allgather sc_allgather
+#ifdef P4EST_HAVE_ZLIB
+#include <zlib.h>
 #endif
 
 #ifdef P4EST_MPIIO
@@ -76,20 +73,6 @@ const int           p4est_num_ranges = 25;
 static const size_t number_toread_quadrants = 32;
 static const int8_t fully_owned_flag = 0x01;
 static const int8_t any_face_flag = 0x02;
-
-#ifdef P4EST_MPI
-
-/** Correct partition to allow one level of coarsening.
- *
- * \param [in] p4est                     forest whose partition is corrected
- * \param [in,out] num_quadrants_in_proc partition that will be corrected
- * \return                               absolute number of moved quadrants
- */
-static p4est_locidx_t p4est_partition_for_coarsening (p4est_t * p4est,
-                                                      p4est_locidx_t *
-                                                      num_quadrants_in_proc);
-
-#endif
 
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
@@ -186,7 +169,7 @@ p4est_memory_used (p4est_t * p4est)
 }
 
 p4est_t            *
-p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+p4est_new (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
            size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
   return p4est_new_ext (mpicomm, connectivity, 0, 0, 1,
@@ -194,7 +177,7 @@ p4est_new (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 }
 
 p4est_t            *
-p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                p4est_locidx_t min_quadrants, int min_level, int fill_uniform,
                size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
@@ -224,9 +207,9 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   /* assign some data members */
@@ -1380,7 +1363,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* start balance_A timing */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_A = -MPI_Wtime ();
+    p4est->inspect->balance_A = -sc_MPI_Wtime ();
     p4est->inspect->balance_A_count_in = 0;
     p4est->inspect->balance_A_count_out = 0;
     p4est->inspect->use_B = 0;
@@ -1615,8 +1598,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   is_balance_verify = 0;
 #endif
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_A += MPI_Wtime ();
-    p4est->inspect->balance_comm = -MPI_Wtime ();
+    p4est->inspect->balance_A += sc_MPI_Wtime ();
+    p4est->inspect->balance_comm = -sc_MPI_Wtime ();
     p4est->inspect->balance_comm_sent = 0;
     p4est->inspect->balance_comm_nzpeers = 0;
     for (k = 0; k < 2; ++k) {
@@ -2195,8 +2178,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* end balance_comm, start balance_B */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_comm += MPI_Wtime ();
-    p4est->inspect->balance_B = -MPI_Wtime ();
+    p4est->inspect->balance_comm += sc_MPI_Wtime ();
+    p4est->inspect->balance_B = -sc_MPI_Wtime ();
     p4est->inspect->balance_B_count_in = 0;
     p4est->inspect->balance_B_count_out = 0;
     p4est->inspect->use_B = 1;
@@ -2284,7 +2267,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* end balance_B */
   if (p4est->inspect != NULL) {
-    p4est->inspect->balance_B += MPI_Wtime ();
+    p4est->inspect->balance_B += sc_MPI_Wtime ();
   }
 
 #ifdef P4EST_MPI
@@ -2410,7 +2393,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   p4est_tree_t       *tree;
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
-  p4est_locidx_t      num_corrected;
+  p4est_gloidx_t      num_corrected;
 #endif /* P4EST_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -2716,12 +2699,11 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   return global_shipped;
 }
 
-#ifdef P4EST_MPI
-
-static              p4est_locidx_t
+p4est_gloidx_t
 p4est_partition_for_coarsening (p4est_t * p4est,
                                 p4est_locidx_t * num_quadrants_in_proc)
 {
+#ifdef P4EST_MPI
   int                 num_procs = p4est->mpisize;
   int                 rank = p4est->mpirank;
   int                 mpiret;
@@ -2744,9 +2726,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   int                 process_with_cut, process_with_cut_recv_id;
   p4est_quadrant_t   *parent_receive;
   int                *receive_process;
-  int                *correction, correction_local;
+  int                *correction, correction_local = 0;
   int                 current_proc, next_proc;
-  p4est_locidx_t      num_moved_quadrants;
+  p4est_gloidx_t      num_moved_quadrants;
 
   /* create array with first quadrants of new partition */
   partition_new = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
@@ -2924,8 +2906,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
       }
-      else {                    /* if quadrant near cut is root of tree, i.e. level is zero */
-        /* set parent as tree root `q` */
+      else {
+        /* if quadrant near cut is root of tree, i.e., level is zero,
+           set parent as tree root `q` */
         parent_send[parent_index].level = q->level;
         parent_send[parent_index].x = q->x;
         parent_send[parent_index].y = q->y;
@@ -3025,17 +3008,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   }
   /* END: receive */
 
-  /* BEGIN: wait for MPI communication to complete */
-  if (num_sends > 0) {
-    /* wait for sends to complete */
-    mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
-    SC_CHECK_MPI (mpiret);
-
-    /* free send memory */
-    P4EST_FREE (parent_send);
-    P4EST_FREE (send_requests);
-  }
-
+  /* BEGIN: wait for MPI receive to complete */
   if (num_receives > 0) {
     /* wait for receives to complete */
     mpiret =
@@ -3045,7 +3018,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI communication to complete */
+  /* END: wait for MPI recieve to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {
@@ -3105,6 +3078,18 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                           correction, 1, MPI_INT, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
+  /* BEGIN: wait for MPI send to complete */
+  if (num_sends > 0) {
+    /* wait for sends to complete */
+    mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    /* free send memory */
+    P4EST_FREE (parent_send);
+    P4EST_FREE (send_requests);
+  }
+  /* END: wait for MPI send to complete */
+
   /* correct partition */
   current_proc =
     p4est_next_nonempty_process (0, num_procs, num_quadrants_in_proc);
@@ -3118,9 +3103,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     if (0 < current_proc && current_proc < num_procs) {
       /* if any process but first */
       num_quadrants_in_proc[current_proc] += correction[current_proc];
-      num_moved_quadrants += (p4est_locidx_t) abs (correction[current_proc]);
+      num_moved_quadrants += (p4est_gloidx_t) abs (correction[current_proc]);
     }
-    if (current_proc == 0 || next_proc < num_procs) {
+    if (next_proc < num_procs) {
       /* if first process or next process is feasible */
       num_quadrants_in_proc[current_proc] -= correction[next_proc];
     }
@@ -3137,13 +3122,17 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
   /* return absolute number of moved quadrants */
   return num_moved_quadrants;
-}
+#else
+  P4EST_ASSERT (num_quadrants_in_proc[0] == p4est->local_num_quadrants);
 
+  return 0;
 #endif
+}
 
 unsigned
 p4est_checksum (p4est_t * p4est)
 {
+#ifdef P4EST_HAVE_ZLIB
   uLong               treecrc, crc;
   size_t              scount, ssum;
   p4est_topidx_t      nt;
@@ -3168,6 +3157,12 @@ p4est_checksum (p4est_t * p4est)
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
 
   return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+
+  return 0;
+#endif /* !P4EST_HAVE_ZLIB */
 }
 
 void
@@ -3405,7 +3400,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 }
 
 p4est_t            *
-p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
+p4est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
             int load_data, void *user_pointer,
             p4est_connectivity_t ** connectivity)
 {
@@ -3414,7 +3409,7 @@ p4est_load (const char *filename, MPI_Comm mpicomm, size_t data_size,
 }
 
 p4est_t            *
-p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
+p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                 int load_data, int autopartition, int broadcasthead,
                 void *user_pointer, p4est_connectivity_t ** connectivity)
 {
@@ -3446,9 +3441,9 @@ p4est_load_ext (const char *filename, MPI_Comm mpicomm, size_t data_size,
   SC_CHECK_ABORT (!broadcasthead, "Header broadcast not implemented");
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   /* open file on all processors */

@@ -41,6 +41,38 @@ static int          refine_level = 5;
 static int          refine_level = 3;
 #endif
 
+#ifndef P4_TO_P8
+static p4est_connectivity_t *
+p4est_connectivity_new_lnodes_test (void)
+{
+  const p4est_topidx_t num_vertices = 6;
+  const p4est_topidx_t num_trees = 2;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[6 * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    0, 2, 0,
+    1, 2, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 4] = {
+    2, 3, 4, 5, 0, 1, 2, 3,
+  };
+  const p4est_topidx_t tree_to_tree[2 * 4] = {
+    0, 0, 1, 0, 1, 1, 1, 0,
+  };
+  const int8_t        tree_to_face[2 * 4] = {
+    0, 1, 3, 3, 0, 1, 2, 2,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
+#endif
+
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
@@ -78,6 +110,25 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
   return 1;
 }
+
+#ifndef P4_TO_P8
+static int
+refine_fn_lnodes_test (p4est_t * p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t * quadrant)
+{
+  int                 cid;
+
+  cid = p4est_quadrant_child_id (quadrant);
+
+  if (!which_tree && cid == 1) {
+    return 1;
+  }
+  if (which_tree == 1 && cid == 2) {
+    return 1;
+  }
+  return 0;
+}
+#endif
 
 typedef struct tpoint
 {
@@ -529,7 +580,7 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
 int
 main (int argc, char **argv)
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 mpisize, mpirank;
   p4est_t            *p4est;
@@ -570,18 +621,18 @@ main (int argc, char **argv)
   p4est_gloidx_t      gn;
 
 #ifndef P4_TO_P8
-  ntests = 3;
+  ntests = 4;
 #else
   ntests = 4;
 #endif
 
   /* initialize MPI */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_size (mpicomm, &mpisize);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &mpirank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -599,6 +650,9 @@ main (int argc, char **argv)
       break;
     case 2:
       conn = p4est_connectivity_new_periodic ();
+      break;
+    case 3:
+      conn = p4est_connectivity_new_lnodes_test ();
       break;
 #else
     case 0:
@@ -618,10 +672,29 @@ main (int argc, char **argv)
       SC_ABORT_NOT_REACHED ();
       break;
     }
+#ifndef P4_TO_P8
+    if (i == 3) {
+      p4est = p4est_new_ext (mpicomm, conn, 0, 1, 1, 0, NULL, NULL);
+    }
+    else {
+      p4est = p4est_new_ext (mpicomm, conn, 15, 0, 0, 0, NULL, NULL);
+    }
+#else
     p4est = p4est_new_ext (mpicomm, conn, 15, 0, 0, 0, NULL, NULL);
+#endif
 
     /* refine to make the number of elements interesting */
+#ifndef P4_TO_P8
+    if (i == 3) {
+      p4est_refine (p4est, 0, refine_fn_lnodes_test, NULL);
+      P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
+    }
+    else {
+      p4est_refine (p4est, 1, refine_fn, NULL);
+    }
+#else
     p4est_refine (p4est, 1, refine_fn, NULL);
+#endif
 
     /* balance the forest */
 #ifndef P4_TO_P8
@@ -631,7 +704,17 @@ main (int argc, char **argv)
 #endif
 
     /* do a uniform partition */
+#ifndef P4_TO_P8
+    if (i == 3 && mpisize == 3) {
+      p4est_locidx_t num_quads[3] = {3,8,3};
+      p4est_partition_given (p4est, num_quads);
+    }
+    else {
+      p4est_partition (p4est, NULL);
+    }
+#else
     p4est_partition (p4est, NULL);
+#endif
 
     ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
 
@@ -858,7 +941,7 @@ main (int argc, char **argv)
   /* exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

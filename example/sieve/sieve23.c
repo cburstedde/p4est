@@ -33,7 +33,7 @@
 
 typedef struct
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize;
   int                 mpirank;
 }
@@ -53,16 +53,16 @@ main (int argc, char **argv)
   p8est_connectivity_t *connectivity3;
 
   /* initialize MPI and p4est internals */
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpi->mpicomm = MPI_COMM_WORLD;        /* your favourite comm here */
-  mpiret = MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
+  mpi->mpicomm = sc_MPI_COMM_WORLD;     /* your favourite comm here */
+  mpiret = sc_MPI_Comm_size (mpi->mpicomm, &mpi->mpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
+  mpiret = sc_MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
-  /* this should alwaps be MPI_COMM_WORLD (no effect on p4est) */
-  sc_init (MPI_COMM_WORLD, 0, 0, NULL, SC_LP_DEFAULT);
+  /* this should alwaps be sc_MPI_COMM_WORLD (no effect on p4est) */
+  sc_init (sc_MPI_COMM_WORLD, 0, 0, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* initial level of refinement */
@@ -86,7 +86,8 @@ main (int argc, char **argv)
   lsize[0] = (long long) size2;
   lsize[1] = (long long) size3;
   mpiret =
-    MPI_Reduce (lsize, gsize, 2, MPI_LONG_LONG_INT, MPI_SUM, 0, mpi->mpicomm);
+    sc_MPI_Reduce (lsize, gsize, 2, sc_MPI_LONG_LONG_INT, sc_MPI_SUM, 0,
+                   mpi->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_INFOF ("Total forest byte sizes: %lld (2D), %lld (3D)\n",
                       gsize[0], gsize[1]);
@@ -104,7 +105,7 @@ main (int argc, char **argv)
   /* clean up and exit */
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

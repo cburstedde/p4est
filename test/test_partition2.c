@@ -132,7 +132,7 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
 }
 
 static void
-test_partition_circle (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+test_partition_circle (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                        p4est_gloidx_t * pertree1, p4est_gloidx_t * pertree2)
 {
   int                 i, j;
@@ -226,7 +226,7 @@ main (int argc, char **argv)
   int                 rank;
   int                 num_procs;
   int                 mpiret;
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
   int                 i;
@@ -241,10 +241,10 @@ main (int argc, char **argv)
   int64_t             sum;
   unsigned            crc;
 
-  mpiret = MPI_Init (&argc, &argv);
+  mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
-  mpicomm = MPI_COMM_WORLD;
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
@@ -375,7 +375,7 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (connectivity);
   sc_finalize ();
 
-  mpiret = MPI_Finalize ();
+  mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
   return 0;

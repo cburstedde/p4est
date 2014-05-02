@@ -132,7 +132,7 @@ p4est_inspect_t;
 
 typedef struct p4est
 {
-  MPI_Comm            mpicomm;
+  sc_MPI_Comm         mpicomm;
   int                 mpisize, mpirank;
 
   size_t              data_size;        /* size of per-quadrant user_data */
@@ -242,7 +242,7 @@ void                p4est_qcoord_to_vertex (p4est_connectivity_t *
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
  */
-p4est_t            *p4est_new (MPI_Comm mpicomm,
+p4est_t            *p4est_new (sc_MPI_Comm mpicomm,
                                p4est_connectivity_t * connectivity,
                                size_t data_size,
                                p4est_init_t init_fn, void *user_pointer);
@@ -346,11 +346,17 @@ unsigned            p4est_checksum (p4est_t * p4est);
  * operation that all MPI processes need to call.  All processes write
  * into the same file, so the filename given needs to be identical over
  * all parallel invocations.
+ *
+ *
  * \param [in] filename    Name of the file to write.
  * \param [in] p4est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
  *                         Otherwise, a data size of 0 is saved.
  * \note            Aborts on file errors.
+ * \note            If p4est is not configured to use MPI-IO, some processes
+ *                  return from this function before the file is complete, in
+ *                  which case immediate read-access to the file may require a
+ *                  call to sc_MPI_Barrier.
  */
 void                p4est_save (const char *filename, p4est_t * p4est,
                                 int save_data);
@@ -372,7 +378,7 @@ void                p4est_save (const char *filename, p4est_t * p4est,
  *                  argument.
  * \note            Aborts on file errors or invalid file contents.
  */
-p4est_t            *p4est_load (const char *filename, MPI_Comm mpicomm,
+p4est_t            *p4est_load (const char *filename, sc_MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
                                 p4est_connectivity_t ** connectivity);

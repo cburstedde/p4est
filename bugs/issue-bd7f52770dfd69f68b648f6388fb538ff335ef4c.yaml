@@ -1,0 +1,20 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Add num_nonempty_processors member variable to p4est?
+desc: |-
+  This number is currently only available by iterating through the
+  global_first_quadrant array, which is somewhat costly.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-03-27 10:26:11.725022 Z
+references: []
+
+id: bd7f52770dfd69f68b648f6388fb538ff335ef4c
+log_events: 
+- - 2014-03-27 10:26:12.140968 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

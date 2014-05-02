@@ -85,7 +85,7 @@ p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
 }
 
 p4est_t            *
-p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                const p4est_gloidx_t * global_first_quadrant,
                const p4est_gloidx_t * pertree,
                sc_array_t * quadrants, sc_array_t * data, void *user_pointer)
@@ -120,9 +120,9 @@ p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* user_pointer may be anything, we don't look at it */
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   /* assign some data members */
