@@ -2174,13 +2174,13 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
  * allows local element nodes to point to global nodes.  After this is done, the
  * sharers can be created.
  */
-static void
+static              p4est_gloidx_t
 p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
                                  p4est_lnodes_t * lnodes, p4est_t * p4est)
 {
   int                 i, j, k, l;
   int                 mpisize = p4est->mpisize;
-  p4est_gloidx_t     *gnodes = lnodes->nonlocal_nodes;
+  p4est_gloidx_t     *gnodes = lnodes->nonlocal_nodes, gtotal;
   size_t              count, zz;
   p4est_locidx_t     *lp, li, *inode;
   sc_array_t         *inodes = data->inodes;
@@ -2225,6 +2225,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
       (p4est_gloidx_t) global_num_indep[i];
   }
   lnodes->global_offset = global_offsets[p4est->mpirank];
+  gtotal = global_offsets[p4est->mpisize];
 
   i = p4est->mpirank;
   for (i = 0; i < mpisize; i++) {
@@ -2413,6 +2414,8 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   }
   P4EST_FREE (comm_proc);
   P4EST_FREE (global_offsets);
+
+  return gtotal;
 }
 
 p4est_lnodes_t     *
@@ -2431,8 +2434,10 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   p4est_locidx_t      lj;
 #endif
   p4est_lnodes_t     *lnodes = P4EST_ALLOC (p4est_lnodes_t, 1);
+  p4est_gloidx_t      gtotal;
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_lnodes_new\n");
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_lnodes_new, degree %d\n",
+                            degree);
   P4EST_ASSERT (degree >= 1);
 
   lnodes->mpicomm = p4est->mpicomm;
@@ -2483,11 +2488,13 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 
   p4est_lnodes_recv (p4est, &data, lnodes);
 
-  p4est_lnodes_global_and_sharers (&data, lnodes, p4est);
+  gtotal = p4est_lnodes_global_and_sharers (&data, lnodes, p4est);
 
   p4est_lnodes_reset_data (&data, p4est);
 
-  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_lnodes_new\n");
+  P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING "_lnodes_new with"
+                            " %lld global nodes\n",
+                            (unsigned long long) gtotal);
   return lnodes;
 }
 
