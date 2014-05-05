@@ -459,10 +459,11 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   int                 i;
   int                 is_leaf, is_match;
+  size_t              qcount = quadrants->elem_count;
   size_t              zz, *pz, *qz;
   size_t              split[P4EST_CHILDREN + 1];
   p4est_locidx_t      local_num;
-  p4est_quadrant_t   *q, children[P4EST_CHILDREN];
+  p4est_quadrant_t   *q, *lq, children[P4EST_CHILDREN];
   sc_array_t          child_quadrants, child_actives;
 
   /*
@@ -474,22 +475,29 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (actives->elem_count <= points->elem_count);
 
   /* return if there are no quadrants or active points */
-  if (quadrants->elem_count == 0 || actives->elem_count == 0)
+  if (qcount == 0 || actives->elem_count == 0)
     return;
 
   /* determine leaf situation */
   q = p4est_quadrant_array_index (quadrants, 0);
-  if (quadrant->level != q->level) {
+  if (qcount > 1) {
     P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, q));
     is_leaf = 0;
     local_num = -1;
+    lq = p4est_quadrant_array_index (quadrants, quadrants->elem_count - 1);
+    if (p4est_quadrant_ancestor_id (q, quadrant->level + 1) ==
+        p4est_quadrant_ancestor_id (lq, quadrant->level + 1)) {
+      p4est_nearest_common_ancestor (q, lq, quadrant);
+      P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, q));
+      P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, lq));
+    }
   }
   else {
     p4est_locidx_t      offset;
     p4est_tree_t       *tree;
 
-    P4EST_ASSERT (quadrants->elem_count == 1);
-    P4EST_ASSERT (p4est_quadrant_is_equal (quadrant, q));
+    P4EST_ASSERT (p4est_quadrant_is_equal (quadrant, q) ||
+                  p4est_quadrant_is_ancestor (quadrant, q));
     is_leaf = 1;
 
     /* determine offset of quadrant in local forest */
