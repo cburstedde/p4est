@@ -2482,8 +2482,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   }
 #endif
 
-  //P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &data));
-  //maybe there's an error in this function
+  P4EST_ASSERT (p4est_lnodes_test_comm (p4est, &data));
 
   p4est_lnodes_count_send (&data, p4est, lnodes);
 
