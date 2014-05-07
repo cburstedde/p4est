@@ -265,14 +265,6 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
         cid = p4est_quadrant_child_id (quad[i]);
         if (p4est_corner_face_corners[cid][f] >= 0) {
           dep->face[fdir] = -2;
-#ifdef P4_TO_P8
-          if (dep->edge[(fdir + 1) % 3] == -1) {
-            dep->edge[(fdir + 1) % 3] = -2;
-          }
-          if (dep->edge[(fdir + 2) % 3] == -1) {
-            dep->edge[(fdir + 2) % 3] = -2;
-          }
-#endif
         }
       }
     }
@@ -2439,6 +2431,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_lnodes_new, degree %d\n",
                             degree);
   p4est_log_indent_push ();
+
   P4EST_ASSERT (degree >= 1);
 
   lnodes->mpicomm = p4est->mpicomm;
