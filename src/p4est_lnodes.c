@@ -271,14 +271,6 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
         cid = p4est_quadrant_child_id (quad[i]);
         if (p4est_corner_face_corners[cid][f] >= 0) {
           dep->face[fdir] = -2;
-#ifdef P4_TO_P8
-          if (dep->edge[(fdir + 1) % 3] == -1) {
-            dep->edge[(fdir + 1) % 3] = -2;
-          }
-          if (dep->edge[(fdir + 2) % 3] == -1) {
-            dep->edge[(fdir + 2) % 3] = -2;
-          }
-#endif
         }
       }
     }
