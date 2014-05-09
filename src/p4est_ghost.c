@@ -2192,6 +2192,9 @@ failtest:
 
   gl->mirror_proc_fronts = gl->mirror_proc_mirrors;
   gl->mirror_proc_front_offsets = gl->mirror_proc_offsets;
+
+  P4EST_ASSERT (p4est_ghost_is_valid (gl));
+
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
   return gl;
 }
@@ -3466,6 +3469,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
   }
 #endif
+  P4EST_ASSERT (p4est_ghost_is_valid (ghost));
 
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_expand\n");
 #endif
