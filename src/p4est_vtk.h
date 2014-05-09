@@ -61,6 +61,7 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  * \param [in] geom     A p4est_geometry_t structure or NULL for identity.
  * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
  * \param [in] write_tree   Include the tree id as output field.
+ * \param [in] write_level  Include the tree levels as output field.
  * \param [in] write_rank   Include the MPI rank as output field.
  * \param [in] wrap_tree    The MPI rank is written module wrap_tree, or 0.
  * \param filename      First part of the name, see p4est_vtk_write_file.
@@ -72,7 +73,8 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  */
 void                p4est_vtk_write_all (p4est_t * p4est,
                                          p4est_geometry_t * geom,
-                                         double scale, int write_tree,
+                                         double scale,
+                                         int write_tree, int write_level,
                                          int write_rank, int wrap_rank,
                                          int num_scalars, int num_vectors,
                                          const char *filename, ...);
@@ -95,6 +97,7 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  * \param scale     The relative length factor of the quadrants.
  *                  Use 1.0 to fit quadrants exactly, less to create gaps.
  * \param write_tree    Boolean to determine if the tree id should be output.
+ * \param write_level   Boolean to determine if the tree levels should be output.
  * \param write_rank    Boolean to determine if the MPI rank should be output.
  * \param wrap_rank Number to wrap around the rank with a modulo operation.
  *                  Can be 0 for no wrapping.
@@ -108,7 +111,8 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  */
 int                 p4est_vtk_write_header (p4est_t * p4est,
                                             p4est_geometry_t * geom,
-                                            double scale, int write_tree,
+                                            double scale,
+                                            int write_tree, int write_level,
                                             int write_rank, int wrap_rank,
                                             const char *point_scalars,
                                             const char *point_vectors,

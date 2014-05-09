@@ -150,7 +150,7 @@ write_vtk (p8est_t * p8est, p8est_geometry_t * geom, const char *name)
   P4EST_ASSERT (dptr[2] == double_data + 3 * Ntotal);
   P4EST_ASSERT (dptr[3] == double_data + 4 * Ntotal);
 
-  p8est_vtk_write_all (p8est, geom, 1., 1, 1, 16, 4, 0, name,
+  p8est_vtk_write_all (p8est, geom, 1., 1, 1, 1, 16, 4, 0, name,
                        "X", double_data, "Y", double_data + Ntotal,
                        "Z", double_data + 2 * Ntotal,
                        "D", double_data + 3 * Ntotal);
