@@ -21,3 +21,10 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - created
   - ""
+- - 2014-05-09 09:01:35.286084 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    The ghost API seems fine.
+    balance_subtree(_ext) should be just one function not in p4est_extended.h.
+    balance_ext needs to be documented.  Other than that, the file seems fine.
