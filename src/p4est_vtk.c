@@ -497,7 +497,6 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   fprintf (vtufile, "          ");
   retval = p4est_vtk_write_binary (vtufile, (char *) uint8_data,
                                    sizeof (*uint8_data) * Ncells);
-  P4EST_FREE (uint8_data);
   fprintf (vtufile, "\n");
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
@@ -509,15 +508,15 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   fprintf (vtufile, "      </Cells>\n");
 
   if (write_rank || write_tree || write_level) {
-    char vtkCellDataString[BUFSIZ] = "'\0'";
+    char vtkCellDataString[BUFSIZ] = "";
     int printed = 0;
 
     if (write_rank)
-      printed += snprintf(vtkCellDataString, BUFSIZ, "mpirank");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
     if (write_tree)
-      printed += snprintf(vtkCellDataString + printed, BUFSIZ, printed > 0 ? ",treeid" : "treeid");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",treeid" : "treeid");
     if (write_level)
-      printed = snprintf(vtkCellDataString + printed, BUFSIZ, printed > 0 ? ",level" : "level");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",level" : "level");
 
     fprintf (vtufile, "      <CellData Scalars=\"%s\">\n", vtkCellDataString);
   }
@@ -576,13 +575,14 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       num_quads = quadrants->elem_count;
       for (zz = 0; zz < num_quads; ++zz, ++il) {
         quad = p4est_quadrant_array_index (quadrants, zz);
-        locidx_data[il] = (p4est_locidx_t) quad->level;
+        uint8_data[il] = (uint8_t) quad->level;
       }
     }
 
     fprintf (vtufile, "          ");
-    retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
-                                     sizeof (*locidx_data) * Ncells);
+    retval = p4est_vtk_write_binary (vtufile, (char *) uint8_data,
+                                     sizeof (*uint8_data) * Ncells);
+    P4EST_FREE (uint8_data);
     fprintf (vtufile, "\n");
     if (retval) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
@@ -688,15 +688,15 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
              P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
     fprintf (pvtufile, "    </PPoints>\n");
     if (write_rank || write_tree || write_level) {
-      char vtkCellDataString[BUFSIZ] = "'\0'";
+      char vtkCellDataString[BUFSIZ] = "";
       int printed = 0;
 
       if (write_rank)
-        printed += snprintf(vtkCellDataString, BUFSIZ, "mpirank");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
       if (write_tree)
-        printed += snprintf(vtkCellDataString + printed, BUFSIZ, printed > 0 ? ",treeid" : "treeid");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",treeid" : "treeid");
       if (write_level)
-        printed = snprintf(vtkCellDataString + printed, BUFSIZ, printed > 0 ? ",level" : "level");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",level" : "level");
 
       fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n", vtkCellDataString);
     }
