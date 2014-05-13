@@ -553,7 +553,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 
   if (write_level) {
     fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"level\""
-             " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+             " format=\"%s\">\n", "UInt8", P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
     fprintf (vtufile, "         ");
     for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
@@ -562,7 +562,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       num_quads = quadrants->elem_count;
       for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
         quad = p4est_quadrant_array_index (quadrants, zz);
-        fprintf (vtufile, " %lld", (long long) quad->level);
+        fprintf (vtufile, " %d", (int) quad->level);
         if (!(sk % 20) && il != (Ncells - 1))
           fprintf (vtufile, "\n         ");
       }
@@ -711,7 +711,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     if (write_level) {
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"level\" format=\"%s\"/>\n",
-               P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+               "UInt8", P4EST_VTK_FORMAT_STRING);
     }
     if (write_tree) {
       fprintf (pvtufile, "      "
