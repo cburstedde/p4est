@@ -349,10 +349,15 @@ void                p4est_partition (p4est_t * p4est,
  */
 unsigned            p4est_checksum (p4est_t * p4est);
 
-/** Save the complete connectivity/p4est data to disk.  This is a collective
- * operation that all MPI processes need to call.  All processes write
- * into the same file, so the filename given needs to be identical over
- * all parallel invocations.
+/** Save the complete connectivity/p4est data to disk.
+ *
+ * This is a collective operation that all MPI processes need to call.  All
+ * processes write into the same file, so the filename given needs to be
+ * identical over all parallel invocations.
+ *
+ * By default, we write the current processor count and partition into the file
+ * header.  This makes the file depend on mpisize.  For changing this see
+ * p4est_save_ext() in p4est_extended.h.
  *
  * \param [in] filename    Name of the file to write.
  * \param [in] p4est       Valid forest structure.
@@ -368,6 +373,15 @@ void                p4est_save (const char *filename, p4est_t * p4est,
                                 int save_data);
 
 /** Load the complete connectivity/p4est structure from disk.
+ *
+ * This is a collective operation that all MPI processes need to call.  All
+ * processes read from the same file, so the filename given needs to be
+ * identical over all parallel invocations.
+ *
+ * By default, a file can only be loaded with the same number of processors
+ * that it was stored with.  The defaults can be changed with p4est_load_ext()
+ * in p4est_extended.h.
+ *
  * \param [in] filename         Name of the file to read.
  * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] data_size        Size of data for each quadrant which can be
