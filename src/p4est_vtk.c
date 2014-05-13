@@ -582,7 +582,6 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     fprintf (vtufile, "          ");
     retval = p4est_vtk_write_binary (vtufile, (char *) uint8_data,
                                      sizeof (*uint8_data) * Ncells);
-    P4EST_FREE (uint8_data);
     fprintf (vtufile, "\n");
     if (retval) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
@@ -592,6 +591,10 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #endif
     fprintf (vtufile, "        </DataArray>\n");
   }
+
+#ifndef P4EST_VTK_ASCII
+  P4EST_FREE (uint8_data);
+#endif
 
   if (write_tree) {
     fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"treeid\""
