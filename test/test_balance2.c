@@ -175,7 +175,7 @@ main (int argc, char **argv)
 
   /* checksum and partition */
   crc = p4est_checksum (p4est);
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
   SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Partition");
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL), "Balance 4");
 

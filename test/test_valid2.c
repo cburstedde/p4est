@@ -103,7 +103,7 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, NULL, vtkname);
 
   crc_computed = p4est_checksum (p4est);

@@ -113,7 +113,7 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
  * \param [in] p4est            The forest for which the ghost layer will be
  *                              generated.
  * \param [in] btype            Which ghosts to include (across face, corner
- *                              or default, full).
+ *                              or full).
  * \return                      A fully initialized ghost layer.
  */
 p4est_ghost_t      *p4est_ghost_new (p4est_t * p4est,

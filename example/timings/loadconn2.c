@@ -97,7 +97,7 @@ run_load (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn, int level)
   SC_CHECK_MPI (mpiret);
   elapsed_partition = -sc_MPI_Wtime ();
 
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
 
   elapsed_partition += sc_MPI_Wtime ();
 

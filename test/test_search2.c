@@ -159,7 +159,7 @@ main (int argc, char **argv)
 #endif
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);
 
   /* Prepare a point search -- fixe size so the memory is not relocated */

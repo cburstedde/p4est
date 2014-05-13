@@ -65,7 +65,6 @@ typedef enum
   /* make sure to have different values 2D and 3D */
   P4EST_CONNECT_FACE = 21,
   P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_DEFAULT = P4EST_CONNECT_CORNER,
   P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
 }
 p4est_connect_type_t;
@@ -77,17 +76,6 @@ typedef enum
   P4EST_CONN_ENCODE_LAST        /**< Invalid entry to close the list. */
 }
 p4est_connectivity_encode_t;
-
-#ifndef P4EST_STRICT_API
-
-/** The following definitions are deprecated, do NOT use in new code. */
-#define P4EST_BALANCE_FACE    P4EST_CONNECT_FACE
-#define P4EST_BALANCE_CORNER  P4EST_CONNECT_CORNER
-#define P4EST_BALANCE_DEFAULT P4EST_CONNECT_DEFAULT
-#define P4EST_BALANCE_FULL    P4EST_CONNECT_FULL
-#define p4est_balance_type_t  p4est_connect_type_t
-
-#endif /* P4EST_STRICT_API */
 
 /** Convert the p4est_connect_type_t into a number.
  * \param [in] btype    The balance type to convert.

@@ -64,7 +64,6 @@ typedef enum
   P8EST_CONNECT_FACE = 31,
   P8EST_CONNECT_EDGE = 32,
   P8EST_CONNECT_CORNER = 33,
-  P8EST_CONNECT_DEFAULT = P8EST_CONNECT_EDGE,
   P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
 }
 p8est_connect_type_t;
@@ -76,18 +75,6 @@ typedef enum
   P8EST_CONN_ENCODE_LAST        /**< Invalid entry to close the list. */
 }
 p8est_connectivity_encode_t;
-
-#ifndef P4EST_STRICT_API
-
-/** The following definitions are deprecated, do NOT use in new code. */
-#define P8EST_BALANCE_FACE    P8EST_CONNECT_FACE
-#define P8EST_BALANCE_EDGE    P8EST_CONNECT_EDGE
-#define P8EST_BALANCE_CORNER  P8EST_CONNECT_CORNER
-#define P8EST_BALANCE_DEFAULT P8EST_CONNECT_DEFAULT
-#define P8EST_BALANCE_FULL    P8EST_CONNECT_FULL
-#define p8est_balance_type_t  p8est_connect_type_t
-
-#endif /* P4EST_STRICT_API */
 
 /** Convert the p8est_connect_type_t into a number.
  * \param [in] btype    The balance type to convert.

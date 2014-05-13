@@ -270,6 +270,7 @@ p8est_t            *p8est_copy (p8est_t * input, int copy_data);
  *                           can be zero.  Then user_data_pool is set to NULL.
  * \param [in] init_fn       Callback function to initialize the user_data
  *                           which is already allocated automatically.
+ *                           May be NULL.
  * \param [in] user_pointer  Assign to the user_pointer member of the p8est
  *                           before init_fn is called the first time.
  */
@@ -311,9 +312,14 @@ void                p8est_coarsen (p8est_t * p8est,
                                    p8est_coarsen_t coarsen_fn,
                                    p8est_init_t init_fn);
 
-/** Balance a forest.
+/** 2:1 balance the size differences of neighboring elements in a forest.
  * \param [in] p8est     The p8est to be worked on.
- * \param [in] btype     Balance type (face, edge, corner or default, full).
+ * \param [in] btype     Balance type (face, edge, or corner/full).  Examples:
+ *                       Finite volume or discontinous Galerkin methods only
+ *                       require face balance.  Continuous finite element
+ *                       methods usually require edge balance.  Corner balance
+ *                       is almost never required mathematically; it just
+ *                       produces a smoother mesh grading.
  * \param [in] init_fn   Callback function to initialize the user_data
  *                       which is already allocated automatically.
  */
@@ -322,15 +328,19 @@ void                p8est_balance (p8est_t * p8est,
                                    p8est_init_t init_fn);
 
 /** Equally partition the forest.
+ * The partition can be by element count or by a user-defined weight.
  *
- * The forest will be partitioned between processors where they each
- * have an approximately equal number of quadrants.
+ * The forest will be partitioned between processors such that they
+ * have an approximately equal number of quadrants (or sum of weights).
  *
  * \param [in,out] p8est      The forest that will be partitioned.
+ * \param [in]     allow_for_coarsening Slightly modify partition such that
+ *                            quadrant families are not split between ranks.
  * \param [in]     weight_fn  A weighting function or NULL
  *                            for uniform partitioning.
  */
 void                p8est_partition (p8est_t * p8est,
+                                     int allow_for_coarsening,
                                      p8est_weight_t weight_fn);
 
 /** Compute the checksum for a forest.
@@ -343,6 +353,7 @@ unsigned            p8est_checksum (p8est_t * p8est);
  * operation that all MPI processes need to call.  All processes write
  * into the same file, so the filename given needs to be identical over
  * all parallel invocations.
+ *
  * \param [in] filename    Name of the file to write.
  * \param [in] p8est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
