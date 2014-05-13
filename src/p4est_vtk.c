@@ -632,7 +632,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     fprintf (vtufile, "        </DataArray>\n");
     P4EST_ASSERT (il == Ncells);
   }
-  if (write_rank || write_tree) {
+  if (write_rank || write_tree || write_level) {
     fprintf (vtufile, "      </CellData>\n");
   }
 #ifndef P4EST_VTK_ASCII
