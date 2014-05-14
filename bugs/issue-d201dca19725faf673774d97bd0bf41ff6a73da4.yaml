@@ -19,3 +19,9 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - created
   - ""
+- - 2014-05-14 09:26:40.168944 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    The doxygen might be slightly improved on ghost in general.
+    p4est_ghost_is_valid needs to test the fronts too.

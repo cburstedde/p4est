@@ -28,3 +28,9 @@ log_events:
     The ghost API seems fine.
     balance_subtree(_ext) should be just one function not in p4est_extended.h.
     balance_ext needs to be documented.  Other than that, the file seems fine.
+- - 2014-05-14 09:23:32.138605 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    balance_ext and balance_subtree_ext can stay in p4est_extended.
+    They just need to be properly doxygenated.
