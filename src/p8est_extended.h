@@ -37,6 +37,43 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* Data pertaining to selecting, inspecting, and profiling algorithms.
+ * A pointer to this structure is hooked into the p8est main structure.
+ *
+ * TODO: Describe the purpose of various switches, counters, and timings.
+ *
+ * The balance_ranges and balance_notify* times are collected
+ * whenever an inspect structure is present in p8est.
+ */
+struct p8est_inspect
+{
+  /** Use sc_ranges to determine the asymmetric communication pattern.
+   * If \a use_balance_ranges is false (the default), sc_notify is used. */
+  int                 use_balance_ranges;
+  /** If true, call both sc_ranges and sc_notify and verify consistency.
+   * Which is actually used is still determined by \a use_balance_ranges. */
+  int                 use_balance_ranges_notify;
+  /** Verify sc_ranges and/or sc_notify as applicable. */
+  int                 use_balance_verify;
+  /** If positive and smaller than p8est_num ranges, overrides it */
+  int                 balance_max_ranges;
+  size_t              balance_A_count_in;
+  size_t              balance_A_count_out;
+  size_t              balance_comm_sent;
+  size_t              balance_comm_nzpeers;
+  size_t              balance_B_count_in;
+  size_t              balance_B_count_out;
+  size_t              balance_zero_sends[2], balance_zero_receives[2];
+  double              balance_A;
+  double              balance_comm;
+  double              balance_B;
+  double              balance_ranges;   /**< time spent in sc_ranges */
+  double              balance_notify;   /**< time spent in sc_notify */
+  /** time spent in sc_notify_allgather */
+  double              balance_notify_allgather;
+  int                 use_B;
+};
+
 /** Callback function prototype used by extended routines when the quadrants
  * of an existing, valid p8est are changed.  The callback allows the user to
  * make changes to newly initialized quadrants before the quadrants that they
