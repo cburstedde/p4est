@@ -3626,5 +3626,6 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
 
   /* assert that we loaded a valid forest and return */
   SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
+
   return p4est;
 }
