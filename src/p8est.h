@@ -88,43 +88,11 @@ typedef struct p8est_tree
 }
 p8est_tree_t;
 
-/* Data pertaining to selecting, inspecting, and profiling algorithms.
+/** Data pertaining to selecting, inspecting, and profiling algorithms.
  * A pointer to this structure is hooked into the p8est main structure.
- *
- * TODO: Describe the purpose of various switches, counters, and timings.
- *
- * The balance_ranges and balance_notify* times are collected
- * whenever an inspect structure is present in p8est.
+ * Declared in p8est_extended.h.
  */
-typedef struct p8est_inspect
-{
-  /** Use sc_ranges to determine the asymmetric communication pattern.
-   * If \a use_balance_ranges is false (the default), sc_notify is used. */
-  int                 use_balance_ranges;
-  /** If true, call both sc_ranges and sc_notify and verify consistency.
-   * Which is actually used is still determined by \a use_balance_ranges. */
-  int                 use_balance_ranges_notify;
-  /** Verify sc_ranges and/or sc_notify as applicable. */
-  int                 use_balance_verify;
-  /** If positive and smaller than p8est_num ranges, overrides it */
-  int                 balance_max_ranges;
-  size_t              balance_A_count_in;
-  size_t              balance_A_count_out;
-  size_t              balance_comm_sent;
-  size_t              balance_comm_nzpeers;
-  size_t              balance_B_count_in;
-  size_t              balance_B_count_out;
-  size_t              balance_zero_sends[2], balance_zero_receives[2];
-  double              balance_A;
-  double              balance_comm;
-  double              balance_B;
-  double              balance_ranges;   /**< time spent in sc_ranges */
-  double              balance_notify;   /**< time spent in sc_notify */
-  /** time spent in sc_notify_allgather */
-  double              balance_notify_allgather;
-  int                 use_B;
-}
-p8est_inspect_t;
+typedef struct p8est_inspect p8est_inspect_t;
 
 typedef struct p8est
 {
@@ -254,6 +222,7 @@ void                p8est_destroy (p8est_t * p8est);
  * The connectivity is not duplicated.
  * Copying of quadrant user data is optional.
  * If old and new data sizes are 0, the user_data field is copied regardless.
+ * The inspect member of the copy is set to NULL.
  *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
@@ -270,6 +239,7 @@ p8est_t            *p8est_copy (p8est_t * input, int copy_data);
  *                           can be zero.  Then user_data_pool is set to NULL.
  * \param [in] init_fn       Callback function to initialize the user_data
  *                           which is already allocated automatically.
+ *                           May be NULL.
  * \param [in] user_pointer  Assign to the user_pointer member of the p8est
  *                           before init_fn is called the first time.
  */
@@ -311,9 +281,14 @@ void                p8est_coarsen (p8est_t * p8est,
                                    p8est_coarsen_t coarsen_fn,
                                    p8est_init_t init_fn);
 
-/** Balance a forest.
+/** 2:1 balance the size differences of neighboring elements in a forest.
  * \param [in] p8est     The p8est to be worked on.
- * \param [in] btype     Balance type (face, edge, corner or default, full).
+ * \param [in] btype     Balance type (face, edge, or corner/full).  Examples:
+ *                       Finite volume or discontinous Galerkin methods only
+ *                       require face balance.  Continuous finite element
+ *                       methods usually require edge balance.  Corner balance
+ *                       is almost never required mathematically; it just
+ *                       produces a smoother mesh grading.
  * \param [in] init_fn   Callback function to initialize the user_data
  *                       which is already allocated automatically.
  */
@@ -322,15 +297,19 @@ void                p8est_balance (p8est_t * p8est,
                                    p8est_init_t init_fn);
 
 /** Equally partition the forest.
+ * The partition can be by element count or by a user-defined weight.
  *
- * The forest will be partitioned between processors where they each
- * have an approximately equal number of quadrants.
+ * The forest will be partitioned between processors such that they
+ * have an approximately equal number of quadrants (or sum of weights).
  *
  * \param [in,out] p8est      The forest that will be partitioned.
+ * \param [in]     allow_for_coarsening Slightly modify partition such that
+ *                            quadrant families are not split between ranks.
  * \param [in]     weight_fn  A weighting function or NULL
  *                            for uniform partitioning.
  */
 void                p8est_partition (p8est_t * p8est,
+                                     int allow_for_coarsening,
                                      p8est_weight_t weight_fn);
 
 /** Compute the checksum for a forest.
@@ -339,10 +318,16 @@ void                p8est_partition (p8est_t * p8est,
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
-/** Save the complete connectivity/p4est data to disk.  This is a collective
- * operation that all MPI processes need to call.  All processes write
- * into the same file, so the filename given needs to be identical over
- * all parallel invocations.
+/** Save the complete connectivity/p4est data to disk.
+ *
+ * This is a collective operation that all MPI processes need to call.  All
+ * processes write into the same file, so the filename given needs to be
+ * identical over all parallel invocations.
+ *
+ * By default, we write the current processor count and partition into the file
+ * header.  This makes the file depend on mpisize.  For changing this see
+ * p8est_save_ext() in p8est_extended.h.
+ *
  * \param [in] filename    Name of the file to write.
  * \param [in] p8est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
@@ -357,6 +342,15 @@ void                p8est_save (const char *filename, p8est_t * p8est,
                                 int save_data);
 
 /** Load the complete connectivity/p4est structure from disk.
+ *
+ * This is a collective operation that all MPI processes need to call.  All
+ * processes read from the same file, so the filename given needs to be
+ * identical over all parallel invocations.
+ *
+ * By default, a file can only be loaded with the same number of processors
+ * that it was stored with.  The defaults can be changed with p8est_load_ext()
+ * in p8est_extended.h.
+ *
  * \param [in] filename         Name of the file to read.
  * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] data_size        Size of data for each quadrant which can be

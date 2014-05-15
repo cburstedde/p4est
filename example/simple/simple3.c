@@ -291,7 +291,7 @@ main (int argc, char **argv)
   crc = p8est_checksum (p8est);
 
   /* partition */
-  p8est_partition (p8est, NULL);
+  p8est_partition (p8est, 0, NULL);
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, geom, "simple3_partition");
 #endif

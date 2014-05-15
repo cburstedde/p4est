@@ -1,0 +1,1 @@
+I place my contributions to p4est under the GNU GPL.  Johannes Holke (holke@ins.uni-bonn.de)

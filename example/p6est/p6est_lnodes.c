@@ -220,7 +220,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
   /* first get the profile */
   profile = p6est_profile_new_local (p6est, ghost, P6EST_PROFILE_INTERSECTION,
-                                     P8EST_CONNECT_DEFAULT, degree);
+                                     P8EST_CONNECT_FULL, degree);
   p6est_profile_sync (profile);
 
   lr = (p4est_locidx_t (*)[2]) profile->lnode_ranges;

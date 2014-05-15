@@ -1,0 +1,22 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Library versioning
+desc: |-
+  We might want to switch to the API versioning scheme in
+  https://sourceware.org/autobook/autobook/autobook_91.html#SEC91
+  Even though package versions and API versions do not need to coincide,
+  we could switch to that convention starting with 1.0.0 for July 1st.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-05-02 14:49:24.800135 Z
+references: []
+
+id: 52b927ff7d7bab4ea8f05c9d153dddba25199564
+log_events: 
+- - 2014-05-02 14:49:25.814381 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

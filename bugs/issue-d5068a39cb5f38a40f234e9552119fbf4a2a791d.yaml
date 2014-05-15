@@ -7,8 +7,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-10-30 22:03:51.715030 Z
 references: []
 
@@ -22,3 +22,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - unassigned from release 0.3
   - ""
+- - 2014-05-14 09:24:02.421839 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - This is done.

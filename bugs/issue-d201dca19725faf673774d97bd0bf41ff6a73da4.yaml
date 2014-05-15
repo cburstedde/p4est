@@ -1,0 +1,27 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: p4est_ghost
+desc: |-
+  Mirror fronts seem to be set always even though docs say they are NULL.
+  My preference is to keep them NULL until ghost_expand is called.
+  Also, ghost_memory_used does not reflect all members yet.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-05-09 09:37:31.585055 Z
+references: []
+
+id: d201dca19725faf673774d97bd0bf41ff6a73da4
+log_events: 
+- - 2014-05-09 09:37:32.320829 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
+- - 2014-05-14 09:26:40.168944 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    The doxygen might be slightly improved on ghost in general.
+    p4est_ghost_is_valid needs to test the fronts too.

@@ -25,3 +25,9 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - assigned to release 0.4 from unassigned
   - We should resolve this issue one way or another.
+- - 2014-05-02 14:54:50.503541 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - |-
+    For maximum safety, what about switching to the new function names
+    p4est_is_equal_or_ancestor, p4est_is_unequal/strict_ancestor?

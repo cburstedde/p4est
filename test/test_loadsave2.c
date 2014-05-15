@@ -219,7 +219,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est_connectivity_destroy (conn2);
 
   /* partition and balance */
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
   csum = p4est_checksum (p4est);
   sc_stats_set1 (stats + STATS_P4EST_ELEMS,

@@ -710,10 +710,10 @@ main (int argc, char **argv)
       p4est_partition_given (p4est, num_quads);
     }
     else {
-      p4est_partition (p4est, NULL);
+      p4est_partition (p4est, 0, NULL);
     }
 #else
-    p4est_partition (p4est, NULL);
+    p4est_partition (p4est, 0, NULL);
 #endif
 
     ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);

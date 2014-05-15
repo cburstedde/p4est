@@ -43,6 +43,7 @@
 
 static const double p4est_vtk_scale = 0.95;
 static const int    p4est_vtk_write_tree = 1;
+static const int    p4est_vtk_write_level = 1;
 static const int    p4est_vtk_write_rank = 1;
 static const int    p4est_vtk_wrap_rank = 0;
 
@@ -78,14 +79,16 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
                       const char *filename)
 {
   p4est_vtk_write_all (p4est, geom,
-                       p4est_vtk_scale, p4est_vtk_write_tree,
+                       p4est_vtk_scale,
+                       p4est_vtk_write_tree, p4est_vtk_write_level,
                        p4est_vtk_write_rank, p4est_vtk_wrap_rank,
                        0, 0, filename);
 }
 
 void
 p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
-                     double scale, int write_tree,
+                     double scale,
+                     int write_tree, int write_level,
                      int write_rank, int wrap_rank,
                      int num_scalars, int num_vectors,
                      const char *filename, ...)
@@ -130,7 +133,8 @@ p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
   va_end (ap);
 
   retval = p4est_vtk_write_header (p4est, geom, scale,
-                                   write_tree, write_rank, wrap_rank,
+                                   write_tree, write_level,
+                                   write_rank, wrap_rank,
                                    num_scalars > 0 ? point_scalars : NULL,
                                    num_vectors > 0 ? point_vectors : NULL,
                                    filename);
@@ -159,9 +163,11 @@ p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
 
 int
 p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
-                        double scale, int write_tree, int write_rank,
-                        int wrap_rank, const char *point_scalars,
-                        const char *point_vectors, const char *filename)
+                        double scale,
+                        int write_tree, int write_level,
+                        int write_rank, int wrap_rank,
+                        const char *point_scalars, const char *point_vectors,
+                        const char *filename)
 {
   p4est_connectivity_t *connectivity = p4est->connectivity;
   sc_array_t         *trees = p4est->trees;
@@ -491,7 +497,6 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   fprintf (vtufile, "          ");
   retval = p4est_vtk_write_binary (vtufile, (char *) uint8_data,
                                    sizeof (*uint8_data) * Ncells);
-  P4EST_FREE (uint8_data);
   fprintf (vtufile, "\n");
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
@@ -502,10 +507,23 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </Cells>\n");
 
-  if (write_rank || write_tree) {
-    fprintf (vtufile, "      <CellData Scalars=\"%s\">\n",
-             !write_tree ? "mpirank" : !write_rank ? "treeid" :
-             "mpirank,treeid");
+  if (write_rank || write_tree || write_level) {
+    char                vtkCellDataString[BUFSIZ] = "";
+    int                 printed = 0;
+
+    if (write_rank)
+      printed +=
+        snprintf (vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
+    if (write_tree)
+      printed +=
+        snprintf (vtkCellDataString + printed, BUFSIZ - printed,
+                  printed > 0 ? ",treeid" : "treeid");
+    if (write_level)
+      printed +=
+        snprintf (vtkCellDataString + printed, BUFSIZ - printed,
+                  printed > 0 ? ",level" : "level");
+
+    fprintf (vtufile, "      <CellData Scalars=\"%s\">\n", vtkCellDataString);
   }
   if (write_rank) {
     const int           wrapped_rank =
@@ -537,6 +555,52 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #endif
     fprintf (vtufile, "        </DataArray>\n");
   }
+
+  if (write_level) {
+    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"level\""
+             " format=\"%s\">\n", "UInt8", P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+    fprintf (vtufile, "         ");
+    for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+      tree = p4est_tree_array_index (trees, jt);
+      quadrants = &tree->quadrants;
+      num_quads = quadrants->elem_count;
+      for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
+        quad = p4est_quadrant_array_index (quadrants, zz);
+        fprintf (vtufile, " %d", (int) quad->level);
+        if (!(sk % 20) && il != (Ncells - 1))
+          fprintf (vtufile, "\n         ");
+      }
+    }
+    fprintf (vtufile, "\n");
+#else
+    for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+      tree = p4est_tree_array_index (trees, jt);
+      quadrants = &tree->quadrants;
+      num_quads = quadrants->elem_count;
+      for (zz = 0; zz < num_quads; ++zz, ++il) {
+        quad = p4est_quadrant_array_index (quadrants, zz);
+        uint8_data[il] = (uint8_t) quad->level;
+      }
+    }
+
+    fprintf (vtufile, "          ");
+    retval = p4est_vtk_write_binary (vtufile, (char *) uint8_data,
+                                     sizeof (*uint8_data) * Ncells);
+    fprintf (vtufile, "\n");
+    if (retval) {
+      P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+      fclose (vtufile);
+      return -1;
+    }
+#endif
+    fprintf (vtufile, "        </DataArray>\n");
+  }
+
+#ifndef P4EST_VTK_ASCII
+  P4EST_FREE (uint8_data);
+#endif
+
   if (write_tree) {
     fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"treeid\""
              " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
@@ -573,7 +637,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     fprintf (vtufile, "        </DataArray>\n");
     P4EST_ASSERT (il == Ncells);
   }
-  if (write_rank || write_tree) {
+  if (write_rank || write_tree || write_level) {
     fprintf (vtufile, "      </CellData>\n");
   }
 #ifndef P4EST_VTK_ASCII
@@ -631,22 +695,41 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
              " NumberOfComponents=\"3\" format=\"%s\"/>\n",
              P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
     fprintf (pvtufile, "    </PPoints>\n");
-    if (write_rank || write_tree) {
+    if (write_rank || write_tree || write_level) {
+      char                vtkCellDataString[BUFSIZ] = "";
+      int                 printed = 0;
+
+      if (write_rank)
+        printed +=
+          snprintf (vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
+      if (write_tree)
+        printed +=
+          snprintf (vtkCellDataString + printed, BUFSIZ - printed,
+                    printed > 0 ? ",treeid" : "treeid");
+      if (write_level)
+        printed +=
+          snprintf (vtkCellDataString + printed, BUFSIZ - printed,
+                    printed > 0 ? ",level" : "level");
+
       fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n",
-               !write_tree ? "mpirank" : !write_rank ? "treeid" :
-               "mpirank,treeid");
+               vtkCellDataString);
     }
     if (write_rank) {
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
+    if (write_level) {
+      fprintf (pvtufile, "      "
+               "<PDataArray type=\"%s\" Name=\"level\" format=\"%s\"/>\n",
+               "UInt8", P4EST_VTK_FORMAT_STRING);
+    }
     if (write_tree) {
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"treeid\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
-    if (write_rank || write_tree) {
+    if (write_rank || write_tree || write_level) {
       fprintf (pvtufile, "    </PCellData>\n");
     }
     fprintf (pvtufile, "    <PPointData>\n");

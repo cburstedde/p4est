@@ -2363,9 +2363,10 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 }
 
 void
-p4est_partition (p4est_t * p4est, p4est_weight_t weight_fn)
+p4est_partition (p4est_t * p4est, int allow_for_coarsening,
+                 p4est_weight_t weight_fn)
 {
-  (void) p4est_partition_ext (p4est, 0, weight_fn);
+  (void) p4est_partition_ext (p4est, allow_for_coarsening, weight_fn);
 }
 
 p4est_gloidx_t

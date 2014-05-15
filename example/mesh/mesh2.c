@@ -221,7 +221,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
     p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_balanced");
 
   /* partition */
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
   if (!uniform) {
     p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_partition");
   }

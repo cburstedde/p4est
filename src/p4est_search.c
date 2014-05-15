@@ -565,7 +565,8 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
 
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
 
-    P4EST_QUADRANT_INIT (&root);
+    /* start recursion with root quadrant */
+    p4est_quadrant_set_morton (&root, 0, 0);
     f = NULL;
     l = NULL;
     if (jt == p4est->first_local_tree) {
@@ -579,9 +580,15 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
         f = &temp;
       }
       l = &p4est->global_first_position[p4est->mpirank + 1];
-      midx = p4est_quadrant_linear_id (l, P4EST_QMAXLEVEL);
-      p4est_quadrant_set_morton (&temp2, P4EST_QMAXLEVEL, midx - 1);
-      l = &temp2;
+      if (l->p.which_tree == jt) {
+        midx = p4est_quadrant_linear_id (l, P4EST_QMAXLEVEL);
+        p4est_quadrant_set_morton (&temp2, P4EST_QMAXLEVEL, midx - 1);
+        l = &temp2;
+      }
+      else {
+        p4est_quadrant_last_descendant (&root, &temp2, P4EST_QMAXLEVEL);
+        l = &temp2;
+      }
     }
     if (f != NULL) {
       P4EST_ASSERT (l != NULL);
@@ -599,8 +606,6 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
       *pz = zz;
     }
 
-    /* start recursion with root quadrant */
-    p4est_quadrant_set_morton (&root, 0, 0);
     p4est_search_recursion (p4est, jt, &root, search_quadrant_fn,
                             search_point_fn, tquadrants, points, &actives);
     sc_array_reset (&actives);

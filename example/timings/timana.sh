@@ -26,8 +26,9 @@ gnuplot <<EOF
 
 set logscale xy
 set key left
+set style data points
 
-set output "timana.eps"
+#set output "timana.eps"
 set term postscript color
 $TITLECOMM
 
@@ -35,17 +36,25 @@ $TITLECOMM
 
 set xlabel "\#elements / core"
 set ylabel "runtime [1s]"
-plot "$TMPF" using (\$3 / \$1):(\$5) title "Balance", \
+
+set output "timana-balance.eps"
+plot "$TMPF" using (\$3 / \$1):(\$5) title "Balance" pt 5, \
 	5e-6 * x title "linear scaling" with lines, \
 	8e-4 * x**(2./3.) title "scaling with x**(2/3)" with lines, \
 	1 title "1 second"
-plot "$TMPF" using (\$3 / \$1):(\$7) title "Ghost", \
+
+set output "timana-ghost.eps"
+plot "$TMPF" using (\$3 / \$1):(\$7) title "Ghost" pt 5, \
 	2e-4 * x**(2./3.) title "scaling with x**(2/3)" with lines, \
 	1 title "1 second"
-plot "$TMPF" using (\$3 / \$1):(\$8) title "Nodes", \
+
+set output "timana-nodes.eps"
+plot "$TMPF" using (\$3 / \$1):(\$8) title "Nodes" pt 5, \
 	2e-5 * x title "linear scaling" with lines, \
 	1 title "1 second"
-plot "$TMPF" using (\$3 / \$1):(\$9) title "Lnodes", \
+
+set output "timana-lnodes.eps"
+plot "$TMPF" using (\$3 / \$1):(\$9) title "Lnodes" pt 5, \
 	2e-5 * x title "linear scaling" with lines, \
 	1 title "1 second"
 

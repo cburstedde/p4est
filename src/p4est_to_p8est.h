@@ -69,7 +69,6 @@
 #define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
-#define P4EST_CONNECT_DEFAULT           P8EST_CONNECT_DEFAULT
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
 #define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
@@ -202,6 +201,7 @@
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
+#define p4est_quadrant_compare_local_num p8est_quadrant_compare_local_num
 #define p4est_quadrant_equal_fn         p8est_quadrant_equal_fn
 #define p4est_quadrant_hash_fn          p8est_quadrant_hash_fn
 #define p4est_node_equal_piggy_fn       p8est_node_equal_piggy_fn
@@ -324,6 +324,7 @@
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
+#define p4est_ghost_is_valid            p8est_ghost_is_valid
 #define p4est_face_quadrant_exists      p8est_face_quadrant_exists
 #define p4est_quadrant_exists           p8est_quadrant_exists
 #define p4est_is_balanced               p8est_is_balanced

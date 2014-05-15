@@ -69,6 +69,18 @@ typedef struct
 }
 p4est_ghost_t;
 
+/** Examine if a ghost structure is valid.
+ * Test if within a ghost-structure the array ghosts is in
+ * Test if local_num in piggy3 data member of the quadrants in ghosts and
+ * mirrors are in ascending order (ascending within each rank for ghost).
+ *
+ * Test if the p4est_locidx_t arrays are in ascending order
+ * (for mirror_proc_mirrors ascending within each rank)
+ * \param [in] ghost    Ghost layer structure.
+ * \return true if \a ghost is valid
+ */
+int                 p4est_ghost_is_valid (p4est_ghost_t * ghost);
+
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.
  * \return              Memory used in bytes.
@@ -101,7 +113,7 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
  * \param [in] p4est            The forest for which the ghost layer will be
  *                              generated.
  * \param [in] btype            Which ghosts to include (across face, corner
- *                              or default, full).
+ *                              or full).
  * \return                      A fully initialized ghost layer.
  */
 p4est_ghost_t      *p4est_ghost_new (p4est_t * p4est,

@@ -222,7 +222,7 @@ main (int argc, char **argv)
   P4EST_FREE (points);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_created");
 
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_partition");
 
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);

@@ -101,7 +101,7 @@ run_bricks (sc_MPI_Comm mpicomm, int per, int l, int rlevel)
   SC_CHECK_MPI (mpiret);
   elapsed_partition = -sc_MPI_Wtime ();
 
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
 
   elapsed_partition += sc_MPI_Wtime ();
 

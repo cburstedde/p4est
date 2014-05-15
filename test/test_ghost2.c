@@ -341,7 +341,7 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
   /* do a uniform partition */
-  p4est_partition (p4est, NULL);
+  p4est_partition (p4est, 0, NULL);
 
   /* create the ghost layer */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
