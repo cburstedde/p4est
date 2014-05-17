@@ -507,37 +507,43 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </Cells>\n");
 
-  if (write_rank || write_tree || write_level) {
+  if (write_tree || write_level || write_rank) {
     char vtkCellDataString[BUFSIZ] = "";
     int printed = 0;
 
-    if (write_rank)
-      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
     if (write_tree)
-      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",treeid" : "treeid");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "treeid");
     if (write_level)
       printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",level" : "level");
+    if (write_rank)
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",mpirank" : "mpirank");
 
     fprintf (vtufile, "      <CellData Scalars=\"%s\">\n", vtkCellDataString);
   }
-  if (write_rank) {
-    const int           wrapped_rank =
-      wrap_rank > 0 ? mpirank % wrap_rank : mpirank;
 
-    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
+  if (write_tree) {
+    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"treeid\""
              " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
     fprintf (vtufile, "         ");
-    for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
-      fprintf (vtufile, " %d", wrapped_rank);
-      if (!(sk % 20) && il != (Ncells - 1))
-        fprintf (vtufile, "\n         ");
+    for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+      tree = p4est_tree_array_index (trees, jt);
+      num_quads = tree->quadrants.elem_count;
+      for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
+        fprintf (vtufile, " %lld", (long long) jt);
+        if (!(sk % 20) && il != (Ncells - 1))
+          fprintf (vtufile, "\n         ");
+      }
     }
     fprintf (vtufile, "\n");
 #else
-    for (il = 0; il < Ncells; ++il)
-      locidx_data[il] = (p4est_locidx_t) wrapped_rank;
-
+    for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+      tree = p4est_tree_array_index (trees, jt);
+      num_quads = tree->quadrants.elem_count;
+      for (zz = 0; zz < num_quads; ++zz, ++il) {
+        locidx_data[il] = (p4est_locidx_t) jt;
+      }
+    }
     fprintf (vtufile, "          ");
     retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
                                      sizeof (*locidx_data) * Ncells);
@@ -549,6 +555,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     }
 #endif
     fprintf (vtufile, "        </DataArray>\n");
+    P4EST_ASSERT (il == Ncells);
   }
 
   if (write_level) {
@@ -592,33 +599,24 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     fprintf (vtufile, "        </DataArray>\n");
   }
 
-#ifndef P4EST_VTK_ASCII
-  P4EST_FREE (uint8_data);
-#endif
+  if (write_rank) {
+    const int           wrapped_rank =
+      wrap_rank > 0 ? mpirank % wrap_rank : mpirank;
 
-  if (write_tree) {
-    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"treeid\""
+    fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"mpirank\""
              " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
     fprintf (vtufile, "         ");
-    for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (trees, jt);
-      num_quads = tree->quadrants.elem_count;
-      for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
-        fprintf (vtufile, " %lld", (long long) jt);
-        if (!(sk % 20) && il != (Ncells - 1))
-          fprintf (vtufile, "\n         ");
-      }
+    for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
+      fprintf (vtufile, " %d", wrapped_rank);
+      if (!(sk % 20) && il != (Ncells - 1))
+        fprintf (vtufile, "\n         ");
     }
     fprintf (vtufile, "\n");
 #else
-    for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (trees, jt);
-      num_quads = tree->quadrants.elem_count;
-      for (zz = 0; zz < num_quads; ++zz, ++il) {
-        locidx_data[il] = (p4est_locidx_t) jt;
-      }
-    }
+    for (il = 0; il < Ncells; ++il)
+      locidx_data[il] = (p4est_locidx_t) wrapped_rank;
+
     fprintf (vtufile, "          ");
     retval = p4est_vtk_write_binary (vtufile, (char *) locidx_data,
                                      sizeof (*locidx_data) * Ncells);
@@ -630,14 +628,17 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     }
 #endif
     fprintf (vtufile, "        </DataArray>\n");
-    P4EST_ASSERT (il == Ncells);
   }
-  if (write_rank || write_tree || write_level) {
+
+  if (write_tree || write_level || write_rank) {
     fprintf (vtufile, "      </CellData>\n");
   }
+
 #ifndef P4EST_VTK_ASCII
   P4EST_FREE (locidx_data);
+  P4EST_FREE (uint8_data);
 #endif
+
   if (nodes != NULL) {
     p4est_nodes_destroy (nodes);
   }
@@ -690,22 +691,22 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
              " NumberOfComponents=\"3\" format=\"%s\"/>\n",
              P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
     fprintf (pvtufile, "    </PPoints>\n");
-    if (write_rank || write_tree || write_level) {
+    if (write_tree || write_level || write_rank) {
       char vtkCellDataString[BUFSIZ] = "";
       int printed = 0;
 
-      if (write_rank)
-        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
       if (write_tree)
-        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",treeid" : "treeid");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "treeid");
       if (write_level)
         printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",level" : "level");
+      if (write_rank)
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",mpirank" : "mpirank");
 
       fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n", vtkCellDataString);
     }
-    if (write_rank) {
+    if (write_tree) {
       fprintf (pvtufile, "      "
-               "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
+               "<PDataArray type=\"%s\" Name=\"treeid\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
     if (write_level) {
@@ -713,12 +714,12 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
                "<PDataArray type=\"%s\" Name=\"level\" format=\"%s\"/>\n",
                "UInt8", P4EST_VTK_FORMAT_STRING);
     }
-    if (write_tree) {
+    if (write_rank) {
       fprintf (pvtufile, "      "
-               "<PDataArray type=\"%s\" Name=\"treeid\" format=\"%s\"/>\n",
+               "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
-    if (write_rank || write_tree || write_level) {
+    if (write_tree || write_level || write_rank) {
       fprintf (pvtufile, "    </PCellData>\n");
     }
     fprintf (pvtufile, "    <PPointData>\n");
