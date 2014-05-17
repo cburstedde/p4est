@@ -42,9 +42,9 @@
 #include <sc_io.h>
 
 static const double p4est_vtk_scale = 0.95;
-static const int    p4est_vtk_write_tree = 1;
+static const int    p4est_vtk_write_tree  = 1;
+static const int    p4est_vtk_write_rank  = 1;
 static const int    p4est_vtk_write_level = 1;
-static const int    p4est_vtk_write_rank = 1;
 static const int    p4est_vtk_wrap_rank = 0;
 
 #ifndef P4EST_VTK_DOUBLES
@@ -508,20 +508,15 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   fprintf (vtufile, "      </Cells>\n");
 
   if (write_rank || write_tree || write_level) {
-    char                vtkCellDataString[BUFSIZ] = "";
-    int                 printed = 0;
+    char vtkCellDataString[BUFSIZ] = "";
+    int printed = 0;
 
     if (write_rank)
-      printed +=
-        snprintf (vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
     if (write_tree)
-      printed +=
-        snprintf (vtkCellDataString + printed, BUFSIZ - printed,
-                  printed > 0 ? ",treeid" : "treeid");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",treeid" : "treeid");
     if (write_level)
-      printed +=
-        snprintf (vtkCellDataString + printed, BUFSIZ - printed,
-                  printed > 0 ? ",level" : "level");
+      printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",level" : "level");
 
     fprintf (vtufile, "      <CellData Scalars=\"%s\">\n", vtkCellDataString);
   }
@@ -696,23 +691,17 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
              P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
     fprintf (pvtufile, "    </PPoints>\n");
     if (write_rank || write_tree || write_level) {
-      char                vtkCellDataString[BUFSIZ] = "";
-      int                 printed = 0;
+      char vtkCellDataString[BUFSIZ] = "";
+      int printed = 0;
 
       if (write_rank)
-        printed +=
-          snprintf (vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, "mpirank");
       if (write_tree)
-        printed +=
-          snprintf (vtkCellDataString + printed, BUFSIZ - printed,
-                    printed > 0 ? ",treeid" : "treeid");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",treeid" : "treeid");
       if (write_level)
-        printed +=
-          snprintf (vtkCellDataString + printed, BUFSIZ - printed,
-                    printed > 0 ? ",level" : "level");
+        printed += snprintf(vtkCellDataString + printed, BUFSIZ - printed, printed > 0 ? ",level" : "level");
 
-      fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n",
-               vtkCellDataString);
+      fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n", vtkCellDataString);
     }
     if (write_rank) {
       fprintf (pvtufile, "      "
