@@ -21,14 +21,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/********************************************************************
- *                          IMPORTANT NOTE                          *
- *                                                                  *
- * The p4est_geometry interface will be removed shortly.            *
- * Please do NOT use this interface for newly written code.         *
- * It will be replaced with a generic transfinite blending scheme.  *
- ********************************************************************/
-
 #ifndef P4EST_GEOMETRY_H
 #define P4EST_GEOMETRY_H
 
@@ -37,6 +29,34 @@
 SC_EXTERN_C_BEGIN;
 
 typedef struct p4est_geometry p4est_geometry_t;
+
+/** Forward transformation from vertex frame to physical space.
+ * The vertex space "abc" is defined per octree and spanned by the vertices
+ * at its corners by bilinear interpolation; see p4est_connectivity.h.
+ * Note that the two-dimensional connectivities have 3D vertex coordinates
+ * that can be used in the transformation if so desired.
+ * The physical space "xyz" is user-defined, currently used for VTK output.
+ */
+typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
+                                           p4est_topidx_t which_tree,
+                                           const double abc[3],
+                                           double xyz[3]);
+
+/** This structure can be created by the user,
+ * p4est will never change its contents.
+ */
+struct p4est_geometry
+{
+  const char         *name;     /**< User's choice is arbitrary. */
+  void               *user;     /**< User's choice is arbitrary. */
+  p4est_geometry_X_t  X;        /**< Coordinate transformation. */
+};
+
+/** Create a geometry structure for the identity transformation.
+ * This function is just for demonstration since a NULL geometry works too.
+ * \return          Geometry structure which must be freed with P4EST_FREE.
+ */
+p4est_geometry_t   *p4est_geometry_new_identity (void);
 
 SC_EXTERN_C_END;
 

@@ -21,14 +21,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/********************************************************************
- *                          IMPORTANT NOTE                          *
- *                                                                  *
- * The p4est_geometry interface will be removed shortly.            *
- * Please do NOT use this interface for newly written code.         *
- * It will be replaced with a generic transfinite blending scheme.  *
- ********************************************************************/
-
 #ifdef P4_TO_P8
 #include <p8est_vtk.h>
 #include <p8est_nodes.h>
@@ -190,10 +182,9 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   int                 xi, yi, j, k;
 #ifdef P4_TO_P8
   int                 zi;
-  double              XYZ[3];   /* 3 not P4EST_DIM */
 #endif
   double              h2, eta_x, eta_y, eta_z = 0.;
-  double              xyz[3];   /* 3 not P4EST_DIM */
+  double              xyz[3], XYZ[3];   /* 3 not P4EST_DIM */
   size_t              num_quads, zz;
   p4est_topidx_t      jt;
   p4est_topidx_t      vt[P4EST_CHILDREN];
@@ -306,20 +297,16 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
                 /* *INDENT-ON* */
               }
               if (geom != NULL) {
-#ifdef P4_TO_P8
                 geom->X (geom, jt, xyz, XYZ);
                 for (j = 0; j < 3; ++j) {
-                  float_data[3 * (P4EST_CHILDREN * quad_count + k) +
-                             j] = (P4EST_VTK_FLOAT_TYPE) XYZ[j];
+                  float_data[3 * (P4EST_CHILDREN * quad_count + k) + j] =
+                    (P4EST_VTK_FLOAT_TYPE) XYZ[j];
                 }
-#else
-                SC_ABORT ("Geometry in 2D not implemented");
-#endif
               }
               else {
                 for (j = 0; j < 3; ++j) {
-                  float_data[3 * (P4EST_CHILDREN * quad_count + k) +
-                             j] = (P4EST_VTK_FLOAT_TYPE) xyz[j];
+                  float_data[3 * (P4EST_CHILDREN * quad_count + k) + j] =
+                    (P4EST_VTK_FLOAT_TYPE) xyz[j];
                 }
               }
               ++k;
@@ -365,14 +352,10 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
         /* *INDENT-ON* */
       }
       if (geom != NULL) {
-#ifdef P4_TO_P8
         geom->X (geom, jt, xyz, XYZ);
         for (j = 0; j < 3; ++j) {
           float_data[3 * zz + j] = (P4EST_VTK_FLOAT_TYPE) XYZ[j];
         }
-#else
-        SC_ABORT ("Geometry in 2D not implemented");
-#endif
       }
       else {
         for (j = 0; j < 3; ++j) {

@@ -21,12 +21,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/********************************************************************
- *                          IMPORTANT NOTE                          *
- *                                                                  *
- * The p4est_geometry interface will be removed shortly.            *
- ********************************************************************/
-
 #ifndef P8EST_GEOMETRY_H
 #define P8EST_GEOMETRY_H
 
@@ -34,21 +28,21 @@
 
 SC_EXTERN_C_BEGIN;
 
-/*
- * Naming convention for coordinate systems:
- * abc              p4est coordinate space spanned by octree vertices
- * xyz              physical domain of the problem
- */
-
 typedef struct p8est_geometry p8est_geometry_t;
 
 /** Forward transformation from vertex frame to physical space.
+ * The vertex space "abc" is defined per octree and spanned by the vertices
+ * at its corners; see p8est_connectivity.h.
+ * The physical space "xyz" is user-defined, currently used for VTK output.
  */
 typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
                                            const double abc[3],
                                            double xyz[3]);
 
+/** This structure can be created by the user,
+ * p4est will never change its contents.
+ */
 struct p8est_geometry
 {
   const char         *name;     /**< User's choice is arbitrary. */

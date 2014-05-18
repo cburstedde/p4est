@@ -24,14 +24,6 @@
 #ifndef P4EST_VTK_H
 #define P4EST_VTK_H
 
-/********************************************************************
- *                          IMPORTANT NOTE                          *
- *                                                                  *
- * The p4est_geometry interface will be removed shortly.            *
- * Please do NOT use this interface for newly written code.         *
- * It will be replaced with a generic transfinite blending scheme.  *
- ********************************************************************/
-
 #include <p4est_geometry.h>
 
 SC_EXTERN_C_BEGIN;
