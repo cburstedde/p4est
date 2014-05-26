@@ -1,0 +1,63 @@
+#! /bin/sh
+
+# This file can be used to compile and install p4est on the juqueen
+# supercomputer at the Juelich Supercomputing Center (JSC), Germany.
+#
+# That this script requires ZLIB_INC and ZLIB_LIB environment variables that
+# point to a current zlib installation, and a directory $HOME/nosave/unpack.
+#
+# Usage: <this script> <p4est-version.tar.gz>
+# The .tar.gz file can be created by calling make dist in a p4est build.
+
+FILE=`readlink -f "$1"`
+NAME=`basename "$FILE" .tar.gz`
+
+function bdie {
+	echo "$1"
+	exit 1
+}
+
+if test ! -f "$FILE" ; then
+	bdie "Please specify a p4est .tar.gz"
+fi
+
+# Check directories
+
+UNPACK="$HOME/nosave/unpack"
+BUILD="$HOME/nosave/build/$NAME"
+INSTALL="$HOME/stuff/local/$NAME"
+
+mkdir -p "$INSTALL" || bdie "Could not mkdir -p INSTALL"
+
+# Unpack
+
+cd "$UNPACK" || bdie "Could not cd into UNPACK"
+tar -xvzf "$FILE" || bdie "Could not UNPACK"
+
+# Make and install
+
+rm -rf "$BUILD"
+for TYPE in DEBUG FAST ; do
+	DIR="$BUILD/$TYPE"
+	export LDFLAGS="-L$ZLIB_LIB"
+	export CPPFLAGS="-I$ZLIB_INC"
+	CONFOPTS=
+	if test "x$TYPE" = xDEBUG ; then
+		export CFLAGS="-g -O0"
+		CONFOPTS="--enable-debug --enable-logging=SC_LP_INFO"
+		#continue
+	else
+		export CFLAGS="-O2 -qarch=qp -qtune=qp"
+		CONFOPTS=
+		#continue
+	fi
+	mkdir -p "$DIR" || bdie "Could not mkdir -p $DIR"
+	cd "$DIR" || bdie "Could not cd into $DIR"
+
+	"$UNPACK/$NAME/configure" \
+--enable-mpi --enable-mpiio --enable-p6est \
+--prefix="$INSTALL/$TYPE" --without-blas --disable-shared $CONFOPTS
+
+	echo "Make $TYPE"
+	make -j8 install >"$DIR/make.log" 2>"$DIR/make.err"
+done
