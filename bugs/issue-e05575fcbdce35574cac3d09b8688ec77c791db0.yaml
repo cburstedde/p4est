@@ -8,8 +8,8 @@ type: :feature
 component: p4est
 release: 
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :reorg
 creation_time: 2009-02-04 17:39:44.419216 Z
 references: []
 
@@ -19,3 +19,7 @@ log_events:
   - Carsten Burstedde <carsten@ices.utexas.edu>
   - created
   - ""
+- - 2014-05-18 09:31:14.434061 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition reorg
+  - With the current p4est_geometry interface, this can be implemented as needed.

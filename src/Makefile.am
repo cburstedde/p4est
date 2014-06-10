@@ -22,7 +22,7 @@ libp4est_compiled_sources += \
         src/p4est_bits.c src/p4est_search.c \
         src/p4est_algorithms.c src/p4est_communication.c \
         src/p4est_ghost.c src/p4est_nodes.c src/p4est_vtk.c \
-        src/p4est_points.c \
+        src/p4est_points.c src/p4est_geometry.c \
         src/p4est_iterate.c src/p4est_lnodes.c src/p4est_mesh.c \
         src/p4est_balance.c src/p4est_io.c \
         src/p4est_wrap.c

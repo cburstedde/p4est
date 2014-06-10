@@ -278,6 +278,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
   p4est_locidx_t      save_local_count;
+  p4est_geometry_t   *geom;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -288,8 +289,10 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
+  geom = NULL;
   connectivity = p8est_connectivity_new_rotcubes ();
 #else
+  geom = p4est_geometry_new_identity ();
   connectivity = p4est_connectivity_new_star ();
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
@@ -311,7 +314,7 @@ main (int argc, char **argv)
   coarsen_all = 1;
 
   p4est_coarsen_both (p4est, 1, test_coarsen, NULL);
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_endcoarsen");
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_endcoarsen");
 
   if (p4est->mpisize == 1) {
     SC_CHECK_ABORT (p4est->global_num_quadrants ==
@@ -320,6 +323,7 @@ main (int argc, char **argv)
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
+  P4EST_FREE (geom);
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();
