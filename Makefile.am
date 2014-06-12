@@ -111,3 +111,11 @@ endif
 
 clean-local:
 	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+
+maintainer-clean-local:
+	rm -rf doxygen
+
+doxygen: Doxyfile
+	doxygen
+
+.PHONY: doxygen
