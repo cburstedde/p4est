@@ -24,7 +24,7 @@
 #ifndef P8EST_GEOMETRY_H
 #define P8EST_GEOMETRY_H
 
-#include <p8est.h>
+#include <p4est_base.h>
 
 SC_EXTERN_C_BEGIN;
 

@@ -25,6 +25,7 @@
 #define P8EST_VTK_H
 
 #include <p8est_geometry.h>
+#include <p8est.h>
 
 SC_EXTERN_C_BEGIN;
 
