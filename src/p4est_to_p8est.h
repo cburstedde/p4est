@@ -359,6 +359,7 @@
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
+#define p4est_mesh_face_neighbor_data   p8est_mesh_face_neighbor_data
 
 /* functions in p4est_balance */
 #define p4est_balance_seeds_face        p8est_balance_seeds_face

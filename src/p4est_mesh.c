@@ -567,6 +567,7 @@ p4est_mesh_face_neighbor_init2 (p4est_mesh_face_neighbor_t * mfn,
 
   mfn->face = 0;
   mfn->subface = 0;
+  mfn->current_qtq = -1;
 }
 
 void
@@ -594,6 +595,7 @@ p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t * mfn,
 
   mfn->face = 0;
   mfn->subface = 0;
+  mfn->current_qtq = -1;
 }
 
 p4est_quadrant_t   *
@@ -612,6 +614,7 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
 
   /* We have already processed the last quadrant */
   if (mfn->face == P4EST_FACES) {
+    mfn->current_qtq = -1;
     P4EST_ASSERT (mfn->subface == 0);
     return NULL;
   }
@@ -651,6 +654,7 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
     }
   }
 
+  mfn->current_qtq = qtq;
   /* From here on face and subface have advanced and can no longer be used */
   P4EST_ASSERT (qtq >= 0);
   if (qtq < lnq) {
@@ -684,4 +688,28 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   }
 
   return q;
+}
+
+void               *
+p4est_mesh_face_neighbor_data (p4est_mesh_face_neighbor_t * mfn,
+                               void *ghost_data)
+{
+  p4est_locidx_t      qtq = mfn->current_qtq;
+  p4est_locidx_t      lnq = mfn->mesh->local_num_quadrants;
+  size_t              data_size = mfn->p4est->data_size;
+
+  P4EST_ASSERT (qtq >= 0);
+
+  if (qtq < lnq) {
+    p4est_topidx_t      which_tree;
+    p4est_quadrant_t   *q;
+    /* Local quadrant */
+    which_tree = mfn->which_tree;
+    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, &which_tree, NULL);
+    return q->p.user_data;
+  }
+  else {
+    qtq -= lnq;
+    return ghost_data + data_size * qtq;
+  }
 }
