@@ -8,10 +8,13 @@
 SC_CONFIG="sc/config"
 if test -n "$1" ; then
   SC_CONFIG="$1"
-  if test ! -d "$SC_CONFIG" ; then
-    echo "Cannot find directory $SC_CONFIG"
-    exit 1
-  fi
+fi
+if test ! -d "$SC_CONFIG" ; then
+  echo "Error: Cannot find directory $SC_CONFIG"
+  echo "   If you just called ./bootstrap from a fresh clone of p4est"
+  echo "   you may need to checkout the submodule sc:"
+  echo "   \$ git submodule init && git submodule update"
+  exit 1
 fi
 # convert into an absolute path
 SC_CONFIG=`cd "$SC_CONFIG" && pwd`
