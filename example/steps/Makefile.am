@@ -16,3 +16,5 @@ example_steps_p8est_step1_SOURCES = example/steps/p8est_step1.c
 
 LINT_CSOURCES += $(example_steps_p8est_step1_SOURCES)
 endif
+
+EXTRA_DIST += example/steps/hw32.h
