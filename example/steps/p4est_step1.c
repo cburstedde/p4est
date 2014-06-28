@@ -26,7 +26,6 @@
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
-/* #include <p4est_bits.h> */
 #include <p4est_vtk.h>
 #else
 #include <p8est_vtk.h>
@@ -149,7 +148,7 @@ main (int argc, char **argv)
 
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
    * by more than a factor of 2.  This can optionally include diagonal
-   * neighbors acroos edges or corners as well; see p4est.h. */
+   * neighbors across edges or corners as well; see p4est.h. */
   balance = 1;
   if (balance) {
     p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
