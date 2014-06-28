@@ -64,6 +64,7 @@ include test/Makefile.am
 include example/mesh/Makefile.am
 include example/points/Makefile.am
 include example/simple/Makefile.am
+include example/steps/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
