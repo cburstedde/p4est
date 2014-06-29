@@ -29,7 +29,7 @@ not necessarily reflect the views of the National Science Foundation (NSF).
  1. Purpose
 
 Many applications in applied mathematics and numerical simulation use a mesh of
-computation cells that covers the domain of interest.  The numerical solution
+computational cells that covers the domain of interest.  The numerical solution
 is then approximated by functions, each of which is associated with a small set
 of cells (or even one).  Dynamic ``adaptive'' methods change the mesh during
 the simulation by local refinement or coarsening, and ``parallel'' methods
@@ -39,17 +39,23 @@ isolates the task of parallel dynamic adaptive mesh refinement (AMR),
 coarsening, and load balancing, and encapsulates algorithms that scale well to
 large numbers (10^5) of processors.
 
+These algorithms are predominantly used for the numerical solution of partial
+differential equations, but also support various other tasks where fast
+hierarchical space subdivision is required, for example to locate particles in
+space or to organize, sort, and search in large data sets.
+
 
  2. Geometric structure
 
 The basic structure used in p4est is a ``connectivity'' of quadtrees (2D) or
-octrees (3D) which covers the domain of interest in a conforming macro-mesh.
-These trees can then be arbitrarily refined and coarsened, where the storage of
-quadrants/octants is distributed in parallel.  Thus, the mesh primitives used
-in p4est are quadrilaterals in 2D and hexahedra in 3D.  The adaptive structure
-allows for quadrants/octants of different sizes to neighbor each other, which
-is commonly called ``non-conforming''.  This concept leads to ``hanging'' faces
-and edges.
+octrees (3D) that covers the domain of interest in a conforming macro-mesh.
+This includes the case of using exactly one tree for representing the
+hypercube.  The trees can be arbitrarily refined and coarsened, where the
+storage of quadrants/octants is distributed in parallel.  Thus, the mesh
+primitives used in p4est are quadrilaterals in 2D and hexahedra in 3D.  The
+adaptive structure allows for quadrants/octants of different sizes to neighbor
+each other, which is commonly called ``non-conforming''.  This concept leads to
+``hanging'' faces and edges.
 
 
  3. Core p4est (2D) and p8est (3D) routines
