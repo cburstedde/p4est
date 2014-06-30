@@ -105,18 +105,23 @@ p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
 file for details.  The tarball contains the configure script and all required
 files.  The following configure options are important.
 
---enable-mpi: Necessary for parallel functionality.  Without this option, p4est
+--enable-mpi is necessary for parallel functionality.  Without this option, p4est
 does not require MPI, which is replaced by a dummy implementation that always
 assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
 
---enable-debug: Enable assertions and additional code for verification.  This
+--enable-debug enables assertions and additional code for verification.  This
 is generally helpful for development, even if it is somewhat slower and
 produces a lot of diagnostic log messages.
 
-For a one-time installation, ./configure can be called in the root directory of
-the unpacked tree.  For development or for testing multiple configure options,
-create an empty directory for each configuration and invoke configure with a
-relative path.
+CFLAGS="-Wall -g -O0" is an example of setting flags for a development build
+compiled with the GNU compilers.  p4est is written in plain C and does not
+require FFLAGS or CXXFLAGS.
+
+Both in-source and out-of-source builds are supported.  For a one-time
+installation, ./configure can be called in the root directory of the unpacked
+tree.  For development or for testing multiple configure options, create an
+empty directory for each configuration and invoke configure with a relative
+path.
 
 The subpackage 'sc' is contained in the tarball and used by default.  It is
 possible to use a version of sc that has been make install'd independently:
