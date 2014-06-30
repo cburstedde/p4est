@@ -31,12 +31,16 @@
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include <p4est_ghost.h>
 #include <p4est_lnodes.h>
 #include <p4est_vtk.h>
 #else
+#if 0 /* The 3D example is not yet implemented */
+#include <p8est_bits.h>
 #include <p8est_ghost.h>
 #include <p8est_lnodes.h>
+#endif
 #include <p8est_vtk.h>
 #endif
 
@@ -68,21 +72,63 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 /* This example only does something numerical for 2D. */
 #ifndef P4_TO_P8
 
+/** Decode the information from p4est_lnodes_t for a given element.
+ *
+ * \see p4est_lnodes.h for an in-depth discussion of the encoding.
+ * \param [in] face_code         Bit code as defined in p4est_lnodes.h.
+ * \param [out] hanging_corner   Undefined if no node is hanging.
+ *                               If any node is hanging, this contains
+ *                               one integer per corner, which is -1
+ *                               for corners that are not hanging,
+ *                               and the number of the non-hanging
+ *                               corner on the hanging face otherwise.
+ * \return true if any node is hanging, false otherwise.
+ */
+static int
+lnodes_decode2 (p4est_lnodes_code_t face_code,
+                int hanging_corner[P4EST_CHILDREN])
+{
+  if (face_code) {
+    const int           ones = P4EST_CHILDREN - 1;
+    const int           c = (int) (face_code & ones);
+    int                 i, h;
+    int                 work = (int) (face_code >> P4EST_DIM);
+
+    hanging_corner[c] = hanging_corner[c ^ ones] = -1;
+    for (i = 0; i < P4EST_DIM; ++i) {
+      h = c ^ ones ^ (1 << i);
+      hanging_corner[h] = (work & 1) ? c : -1;
+      work >>= 1;
+    }
+    return 1;
+  }
+  return 0;
+}
+
 /** Interpolate right hand side and exact solution onto mesh nodes.
  *
  * \param [in] p4est          The forest is not changed.
  * \param [in] lnodes         The node numbering is not changed.
  * \param [out] rhs_eval      Is allocated and filled with function values.
  * \param [out] uexact_eval   Is allocated and filled with function values.
- * \param [out] bc            Boolean flags for Dirichlet boundary nodes.
+ * \param [out] pbc           Boolean flags for Dirichlet boundary nodes.
  */
 static void
 interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
                        double **rhs_eval, double **uexact_eval, int8_t ** pbc)
 {
   const p4est_locidx_t nloc = lnodes->num_local_nodes;
-  int8_t             *bc, *ndone;
+  int                 anyhang, hanging_corner[P4EST_CHILDREN];
+  int                 i;        /* We use plain int for small loops. */
   double             *rhs, *uexact;
+  double              vxyz[3];  /* We embed the 2D vertices into 3D space. */
+  int8_t             *bc, *ndone;
+  p4est_topidx_t      tt;       /* Connectivity variables have this type. */
+  p4est_locidx_t      k, q, Q;  /* Process-local counters have this type. */
+  p4est_locidx_t      lni;      /* Node index relative to this processor. */
+  p4est_tree_t       *tree;     /* Pointer to one octree */
+  p4est_quadrant_t   *quad, *parent, sp, node;
+  sc_array_t         *tquadrants;       /* Quadrant array for one tree */
 
   rhs = *rhs_eval = P4EST_ALLOC (double, nloc);
   uexact = *uexact_eval = P4EST_ALLOC (double, nloc);
@@ -92,8 +138,53 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
   /* We need to compute the xyz locations of non-hanging nodes to evaluate the
    * given functions.  For hanging nodes, we have to look at the corresponding
    * independent nodes.  Usually we would cache this information, here we only
-   * need it once and throw it away again. */
+   * need it once and throw it away again.
+   * We also compute boundary status of independent nodes. */
+  for (tt = p4est->first_local_tree, k = 0;
+       tt <= p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (p4est->trees, tt);   /* Current tree */
+    tquadrants = &tree->quadrants;
+    Q = (p4est_locidx_t) tquadrants->elem_count;
+    for (q = 0; q < Q; ++q, ++k) {
+      /* This is now a loop over all local elements.
+       * Users might aggregate the above code into a more compact iterator. */
+      quad = p4est_quadrant_array_index (tquadrants, q);
 
+      /* We need to determine whether any node on this element is hanging. */
+      anyhang = lnodes_decode2 (lnodes->face_code[q], hanging_corner);
+      if (!anyhang) {
+        parent = NULL;
+      }
+      else {
+        /* At least one node is hanging.  We need the parent quadrant to
+         * find the location of the corresponding non-hanging node. */
+        parent = &sp;
+        p4est_quadrant_parent (quad, parent);
+      }
+      for (i = 0; i < P4EST_CHILDREN; ++i) {
+        lni = lnodes->element_nodes[P4EST_CHILDREN * k + i];
+        P4EST_ASSERT (lni >= 0);
+        if (!ndone[lni]) {
+          if (anyhang && hanging_corner[i] >= 0) {
+            /* This node is hanging; access the referenced node instead. */
+            p4est_quadrant_corner_node (parent, i, &node);
+          }
+          else {
+            p4est_quadrant_corner_node (quad, i, &node);
+          }
+          /* Transform per-tree reference coordinates into physical space. */
+          p4est_qcoord_to_vertex (p4est->connectivity, tt,
+                                  quad->x, quad->y, vxyz);
+
+          /* TODO: we can now evaluate function values at vxyz. */
+          /* TODO: determine boundary status of independent node. */
+
+          /* We are done computing for this node; we only need this once. */
+          ndone[lni] = 1;
+        }
+      }
+    }
+  }
   P4EST_FREE (ndone);
 }
 
