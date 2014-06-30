@@ -21,12 +21,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_step1.c
- *
- * This 2D example program refines a domain based on given image data.
- * The image file hw32.h has been created with the GIMP and is compiled in.
- */
-
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
@@ -36,76 +30,17 @@
 #else
 #include <p8est_vtk.h>
 #endif
-#include "hw32.h"
 
-/** The resolution of the image data in powers of two. */
-#define P4EST_STEP1_PATTERN_LEVEL 5
-/** The dimension of the image data. */
-#define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
-static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /**< Shortcut */
-static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
-#ifdef P4_TO_P8
-static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
-#endif
-
-/** Callback function to decide on refinement.
- *
- * Refinement and coarsening is controlled by callback functions.
+/* Refinement and coarsening is controlled by callback functions.
  * This function is called for every processor-local quadrant in order; its
- * return value is understood as a boolean refinement flag.
- * In this example we use the image file hw32.h to determine the refinement.
- */
+ * return value is understood as a boolean refinement flag. */
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
 {
-  int                 tilelen;
-  int                 offsi, offsj;
-  int                 i, j;
-  const char         *d;
-  unsigned char       p[3];
-
-  /* The connectivity chosen in main () only consists of one tree. */
-  P4EST_ASSERT (which_tree == 0);
-
-  /* We do not want to refine deeper than a given maximum level. */
-  if (quadrant->level > plv) {
-    return 0;
-  }
-#ifdef P4_TO_P8
-  /* In 3D we extrude the 2D image in the z direction between [3/8, 5/8]. */
-  if (quadrant->level >= 3 &&
-      (quadrant->z < 3 * eighth || quadrant->z >= 5 * eighth)) {
-    return 0;
-  }
-#endif
-
-  /* We read the image data and refine wherever the color value is dark.
-   * We can then visualize the output and highlight level > PATTERN_LEVEL. */
-  tilelen = 1 << (plv - quadrant->level);       /* Pixel size of quadrant */
-  offsi = quadrant->x / P4EST_QUADRANT_LEN (plv);       /* Pixel x offset */
-  offsj = quadrant->y / P4EST_QUADRANT_LEN (plv);       /* Pixel y offset */
-  P4EST_ASSERT (offsi >= 0 && offsj >= 0);
-  for (j = 0; j < tilelen; ++j) {
-    P4EST_ASSERT (offsj + j < ple);
-    for (i = 0; i < tilelen; ++i) {
-      P4EST_ASSERT (offsi + i < ple);
-      d =
-        hw32_header_data + 4 * (ple * (ple - 1 - (offsj + j)) + (offsi + i));
-      HW32_HEADER_PIXEL (d, p);
-      P4EST_ASSERT (p[0] == p[1] && p[1] == p[2]);      /* Grayscale image */
-      if (p[0] < 128) {
-        return 1;
-      }
-    }
-  }
   return 0;
 }
 
-/** The main function of the step1 example program.
- *
- * It creates a connectivity and forest, refines it, and writes a VTK file.
- */
 int
 main (int argc, char **argv)
 {
@@ -128,7 +63,7 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
   p4est_init (NULL, SC_LP_PRODUCTION);
   P4EST_GLOBAL_PRODUCTIONF
-    ("This is the p4est %dD demo example/steps/%s_step1\n",
+    ("This is the p4est %dD demo example/steps/%s_step4\n",
      P4EST_DIM, P4EST_STRING);
 
   /* Create a forest that consists of just one quadtree/octree.
@@ -147,11 +82,7 @@ main (int argc, char **argv)
    * Since refinement does not change the partition boundary, this call
    * must not create an overly large number of quadrants.  A numerical
    * application would call p4est_refine non-recursively in a loop,
-   * repartitioning in each iteration.
-   * The P4EST_ASSERT macro only activates with --enable-debug.
-   * We check against the data dimensions in example/steps/hw32.h. */
-  P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == width);
-  P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == height);
+   * repartitioning in each iteration. */
   recursive = 1;
   p4est_refine (p4est, recursive, refine_fn, NULL);
 
@@ -171,7 +102,7 @@ main (int argc, char **argv)
   }
 
   /* Write the forest to disk for visualization, one file per processor. */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step1");
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step4");
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);

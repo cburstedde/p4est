@@ -106,6 +106,9 @@ typedef struct
   /* neighbor information */
   int                 face;     /* Face number in 0..3. */
   int                 subface;  /* Hanging neighbor number in 0..1. */
+
+  /* internal information */
+  p4est_locidx_t      current_qtq;
 }
 p4est_mesh_face_neighbor_t;
 
@@ -187,6 +190,16 @@ p4est_quadrant_t   *p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t
                                                    p4est_topidx_t * ntree,
                                                    p4est_locidx_t * nquad,
                                                    int *nface, int *nrank);
+
+/** Get the user data for the current face neighbor.
+ * \param [in]     mfn           Internal status of the iterator.
+ * \param [in]     ghost_data    Data for the ghost quadrants that has been
+ *                               synchronized with p4est_ghost_exchange_data.
+ * \return                       A pointer the the user data for the current
+ *                               neighbor.
+ */
+void               *p4est_mesh_face_neighbor_data (p4est_mesh_face_neighbor_t
+                                                   * mfn, void *ghost_data);
 
 SC_EXTERN_C_END;
 

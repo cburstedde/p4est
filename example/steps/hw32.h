@@ -1,5 +1,10 @@
 /*  GIMP header image file format (RGB) */
 
+/** \file hw32.h
+ *
+ * This file containts the image data used in the step1 example.
+ */
+
 #ifdef P4EST_ENABLE_DEBUG
 static unsigned int width = 32;
 static unsigned int height = 32;
@@ -7,12 +12,14 @@ static unsigned int height = 32;
 
 /*  Call this macro repeatedly.  After each use, the pixel data can be extracted  */
 
+/** Access a pixel of the image and move the data pointer forward. */
 #define HW32_HEADER_PIXEL(data,pixel) {\
 pixel[0] = (((data[0] - 33) << 2) | ((data[1] - 33) >> 4)); \
 pixel[1] = ((((data[1] - 33) & 0xF) << 4) | ((data[2] - 33) >> 2)); \
 pixel[2] = ((((data[2] - 33) & 0x3) << 6) | ((data[3] - 33))); \
 data += 4; \
 }
+/** The image data is encoded as a C string. */
 static char *hw32_header_data =
 	"````````````````````````````````````````````````````````````````"
 	"````````````````````````````````````````````````````````````````"
