@@ -24,6 +24,7 @@
 /** \file p8est_step1.c
  *
  * This 3D example program refines a domain based on given image data.
+ *
  * To avoid redundancy, it shares the source code of the 2D example and changes
  * it to 3D using the preprocessor defines in p4est_to_p8est.h.
  *

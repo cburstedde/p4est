@@ -21,6 +21,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_step4.c
+ *
+ * This 2D example program solves the Poisson equation using finite elements.
+ */
+
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
@@ -31,21 +36,41 @@
 #include <p8est_vtk.h>
 #endif
 
-/* Refinement and coarsening is controlled by callback functions.
+/** Callback function to decide on refinement.
+ *
  * This function is called for every processor-local quadrant in order; its
- * return value is understood as a boolean refinement flag. */
+ * return value is understood as a boolean refinement flag.  We refine around a
+ * h = 1/8 block with left front lower corner (5/8, 2/8, 6/8).
+ */
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
 {
-  return 0;
+  /* Compute the integer coordinate extent of a quadrant of length 2^(-3). */
+  const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
+
+  /* Compute the length of the current quadrant in integer coordinates. */
+  const p4est_qcoord_t length = P4EST_QUADRANT_LEN (quadrant->level);
+
+  /* Refine if the quadrant intersects the block in question. */
+  return ((quadrant->x + length > 5 * eighth && quadrant->x < 6 * eighth) &&
+          (quadrant->y + length > 2 * eighth && quadrant->y < 3 * eighth) &&
+#ifdef P4_TO_P8
+          (quadrant->z + length > 6 * eighth && quadrant->z < 7 * eighth) &&
+#endif
+          1);
 }
 
+/** The main function of the step4 example program.
+ *
+ * It creates a connectivity and forest, refines it, and solves the Poisson
+ * equation with piecewise linear finite elements.
+ */
 int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 recursive, partforcoarsen, balance;
+  int                 startlevel, endlevel, level;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
@@ -75,30 +100,28 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_unitcube ();
 #endif
 
-  /* Create a forest that is not refined; it consists of the root octant. */
+  /* Create a forest that is not refined; it consists of the root octant.
+   * The p4est_new_ext function can take a startlevel for a load-balanced
+   * initial uniform refinement.  Here we refine adaptively instead. */
+  startlevel = 0;
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
 
-  /* Refine the forest recursively in parallel.
-   * Since refinement does not change the partition boundary, this call
-   * must not create an overly large number of quadrants.  A numerical
-   * application would call p4est_refine non-recursively in a loop,
-   * repartitioning in each iteration. */
-  recursive = 1;
-  p4est_refine (p4est, recursive, refine_fn, NULL);
-
-  /* Partition: The quadrants are redistributed for equal element count.  The
-   * partition can optionally be modified such that a family of octants, which
-   * are possibly ready for coarsening, are never split between processors. */
-  partforcoarsen = 0;
-  p4est_partition (p4est, partforcoarsen, NULL);
-
-  /* If we call the 2:1 balance we ensure that neighbors do not differ in size
-   * by more than a factor of 2.  This can optionally include diagonal
-   * neighbors across edges or corners as well; see p4est.h. */
-  balance = 1;
-  if (balance) {
-    p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
-    p4est_partition (p4est, partforcoarsen, NULL);
+  /* Refine the forest iteratively, load balancing at each iteration.
+   * This is important when starting with an unrefined forest */
+  endlevel = 5;
+  for (level = startlevel; level < endlevel; ++level) {
+    p4est_refine (p4est, 0, refine_fn, NULL);
+    /* Refinement has lead to up to 8x more elements; redistribute them. */
+    p4est_partition (p4est, 0, NULL);
+  }
+  if (startlevel < endlevel) {
+    /* For finite elements this corner balance is not strictly required.
+     * We call balance only once since it's more expensive than coarsen/refine
+     * and partition. */
+    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+    /* We repartition with coarsening in mind to allow for
+     * partition-independent a-posteriori adaptation. */
+    p4est_partition (p4est, 1, NULL);
   }
 
   /* Write the forest to disk for visualization, one file per processor. */
