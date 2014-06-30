@@ -53,6 +53,9 @@ typedef struct step3_ctx
   double              bump_width;       /* width of the initial condition Gaussian bump */
   double              max_err;  /* maximum global interpolation error */
   double              v[P4EST_DIM];     /* advection direction */
+  int                 refine_period;
+  int                 repartition_period;
+  int                 write_period;
 }
 step3_ctx_t;
 
@@ -214,6 +217,120 @@ coarsen_err_estimate_initial_condition (p4est_t * p4est,
   }
 }
 
+static int
+coarsen_err_estimate (p4est_t * p4est,
+                      p4est_topidx_t which_tree,
+                      p4est_quadrant_t * children[])
+{
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
+  double              global_err = ctx->max_err;
+  double              global_err2 = global_err * global_err;
+  double              h;
+  step3_data_t       *data;
+  double              vol, err2, childerr2;
+  double              parentu;
+  double              diff;
+  int                 i;
+
+  h =
+    (double) P4EST_QUADRANT_LEN (children[0]->level) /
+    (double) P4EST_ROOT_LEN;
+  /* the quadrant's volume is also its volume fraction */
+#ifdef P4_TO_P8
+  vol = h * h * h;
+#else
+  vol = h * h;
+#endif
+
+  /* compute the average */
+  parentu = 0.;
+  for (i = 0; i < P4EST_CHILDREN; i++) {
+    data = (step3_data_t *) children[i]->p.user_data;
+    parentu += data->u / P4EST_CHILDREN;
+  }
+
+  err2 = 0.;
+  for (i = 0; i < P4EST_CHILDREN; i++) {
+    childerr2 = error_sqr_estimate (children[i]);
+
+    if (childerr2 > global_err2 * vol) {
+      return 0;
+    }
+    err2 += error_sqr_estimate (children[i]);
+    diff = (parentu - data->u) * (parentu - data->u);
+    err2 += diff * vol;
+  }
+  if (err2 < global_err2 * (vol * P4EST_CHILDREN)) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+static void
+step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
+                     int num_outgoing,
+                     p4est_quadrant_t * outgoing[],
+                     int num_incoming, p4est_quadrant_t * incoming[])
+{
+  step3_data_t       *parent_data, *child_data;
+  int                 i, j;
+  double              h;
+  double              du_old, du_est;
+
+  if (num_outgoing > 1) {
+    /* this is coarsening */
+    parent_data = (step3_data_t *) incoming[0]->p.user_data;
+    h =
+      (double) P4EST_QUADRANT_LEN (incoming[0]->level) /
+      (double) P4EST_ROOT_LEN;
+    for (j = 0; j < 3; j++) {
+      parent_data->du[j] = (1. / 0.);
+
+    }
+    for (i = 0; i < P4EST_CHILDREN; i++) {
+      child_data = (step3_data_t *) incoming[i]->p.user_data;
+      parent_data->u += child_data->u / P4EST_CHILDREN;
+      for (j = 0; j < 3; j++) {
+        du_old = parent_data->du[j];
+        du_est = child_data->du[j];
+
+        if (du_old == du_old) {
+          if (du_est * du_old >= 0.) {
+            if (fabs (du_est) < fabs (du_old)) {
+              parent_data->du[j] = du_est;
+            }
+          }
+          else {
+            parent_data->du[j] = 0.;
+          }
+        }
+        else {
+          parent_data->du[j] = du_est;
+        }
+      }
+    }
+  }
+  else {
+    /* this is refinement */
+    parent_data = (step3_data_t *) outgoing[0]->p.user_data;
+    h =
+      (double) P4EST_QUADRANT_LEN (outgoing[0]->level) /
+      (double) P4EST_ROOT_LEN;
+
+    for (i = 0; i < P4EST_CHILDREN; i++) {
+      child_data = (step3_data_t *) incoming[i]->p.user_data;
+      child_data->u = parent_data->u;
+      for (j = 0; j < 3; j++) {
+        child_data->du[j] = parent_data->du[j];
+        child_data->u +=
+          (h / 2.) * parent_data->du[j] * ((i & (1 << j)) ? 1. : -1);
+      }
+    }
+  }
+}
+
 /* Callback function for interpolating the solution from quadrant midpoints to
  * corners.  This callback is passed to p4est_iterate, which calls it for
  * every quadrant. The info object passes information about the current
@@ -305,8 +422,6 @@ cell_divergence (p4est_iter_volume_info_t * info, void *user_data)
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
 
   data->dudt = 0.;
-  data->du[0] = data->du[1] = 0.;
-
 }
 
 static void
@@ -430,25 +545,156 @@ timestep_update (p4est_iter_volume_info_t * info, void *user_data)
   p4est_quadrant_t   *q = info->quad;
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
   double              dt = *((double *) user_data);
+  double              vol;
+  double              h =
+    (double) P4EST_QUADRANT_LEN (q->level) / (double) P4EST_ROOT_LEN;
 
-  data->u += dt * data->dudt;
+#ifdef P4_TO_P8
+  vol = h * h * h;
+#else
+  vol = h * h;
+#endif
+
+  data->u += dt * data->dudt / vol;
 
 }
 
 static void
-step3_timestep (p4est_t * p4est, double time)
+reset_derivatives (p4est_iter_volume_info_t * info, void *user_data)
 {
-  int                 max_level, global_max_level;
-  double              min_h;
-  double              dt;
-  double              vnorm;
+  p4est_quadrant_t   *q = info->quad;
+  step3_data_t       *data = (step3_data_t *) q->p.user_data;
+  int                 j;
+
+  for (j = 0; j < P4EST_DIM; j++) {
+    data->du[j] = (1. / 0.);
+  }
+}
+
+static void
+minmod_estimate (p4est_iter_face_info_t * info, void *user_data)
+{
+  int                 i, j;
+  p4est_iter_face_side_t *side[2];
+  sc_array_t         *sides = &(info->sides);
+  step3_data_t       *ghost_data = (step3_data_t *) user_data;
+  step3_data_t       *udata;
+  p4est_quadrant_t   *quad;
+  double              uavg[2];
+  double              h[2];
+  double              du_est, du_old;
+  int                 which_dir;
+
+  /* because there are no boundaries, every face has two sides */
+  P4EST_ASSERT (sides->elem_count == 2);
+
+  side[0] = p4est_iter_fside_array_index_int (sides, 0);
+  side[1] = p4est_iter_fside_array_index_int (sides, 1);
+
+  which_dir = side[0]->face / 2;        /* 0 == x, 1 == y, 2 == z */
+
+  for (i = 0; i < 2; i++) {
+    uavg[i] = 0;
+    if (side[i]->is_hanging) {
+      /* there are 2^(d-1) (P4EST_HALF) subfaces */
+      for (j = 0; j < P4EST_HALF; j++) {
+        quad = side[i]->is.hanging.quad[j];
+        h[i] =
+          (double) P4EST_QUADRANT_LEN (quad->level) / (double) P4EST_ROOT_LEN;
+        if (side[i]->is.hanging.is_ghost[j]) {
+          udata = &ghost_data[side[i]->is.hanging.quadid[j]];
+        }
+        else {
+          udata = (step3_data_t *) side[i]->is.hanging.quad[j]->p.user_data;
+        }
+        uavg[i] += udata->u;
+      }
+      uavg[i] /= P4EST_HALF;
+    }
+    else {
+      quad = side[i]->is.full.quad;
+      h[i] =
+        (double) P4EST_QUADRANT_LEN (quad->level) / (double) P4EST_ROOT_LEN;
+      if (side[i]->is.full.is_ghost) {
+        udata = &ghost_data[side[i]->is.full.quadid];
+      }
+      else {
+        udata = (step3_data_t *) side[i]->is.full.quad->p.user_data;
+      }
+      uavg[i] = udata->u;
+    }
+  }
+  du_est = (uavg[1] - uavg[0]) / ((h[0] + h[1]) / 2.);
+  for (i = 0; i < 2; i++) {
+    if (side[i]->is_hanging) {
+      /* there are 2^(d-1) (P4EST_HALF) subfaces */
+      for (j = 0; j < P4EST_HALF; j++) {
+        quad = side[i]->is.hanging.quad[j];
+        if (!side[i]->is.hanging.is_ghost[j]) {
+          udata = (step3_data_t *) quad->p.user_data;
+          du_old = udata->du[which_dir];
+          if (du_old == du_old) {
+            /* there has already been an update */
+            if (du_est * du_old >= 0.) {
+              if (fabs (du_est) < fabs (du_old)) {
+                udata->du[which_dir] = du_est;
+              }
+            }
+            else {
+              udata->du[which_dir] = 0.;
+            }
+          }
+          else {
+            udata->du[which_dir] = du_est;
+          }
+        }
+      }
+    }
+    else {
+      quad = side[i]->is.full.quad;
+      if (!side[i]->is.full.is_ghost) {
+        udata = (step3_data_t *) quad->p.user_data;
+        du_old = udata->du[which_dir];
+        if (du_old == du_old) {
+          /* there has already been an update */
+          if (du_est * du_old >= 0.) {
+            if (fabs (du_est) < fabs (du_old)) {
+              udata->du[which_dir] = du_est;
+            }
+          }
+          else {
+            udata->du[which_dir] = 0.;
+          }
+        }
+        else {
+          udata->du[which_dir] = du_est;
+        }
+      }
+    }
+  }
+}
+
+static void
+compute_umax (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_quadrant_t   *q = info->quad;
+  step3_data_t       *data = (step3_data_t *) q->p.user_data;
+  double              umax = *((double *) user_data);
+
+  umax = SC_MAX (data->u, umax);
+  *((double *) user_data) = umax;
+}
+
+static double
+get_timestep (p4est_t * p4est)
+{
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
   p4est_topidx_t      t, flt, llt;
   p4est_tree_t       *tree;
-  p4est_ghost_t      *ghost;
+  int                 max_level, global_max_level;
   int                 mpiret, i;
-  int                 ntimesteps;
-  step3_data_t       *ghost_data;
-  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
+  double              min_h, vnorm;
+  double              dt;
 
   /* compute the timestep by finding the smallest quadrant */
   flt = p4est->first_local_tree;
@@ -476,19 +722,112 @@ step3_timestep (p4est_t * p4est, double time)
 
   dt = min_h / 2. / vnorm;
 
-  ntimesteps = time / dt;
+  return dt;
+}
+
+static void
+step3_timestep (p4est_t * p4est, double time)
+{
+  double              t = 0.;
+  double              dt = 0.;
+  p4est_ghost_t      *ghost;
+  int                 i;
+  step3_data_t       *ghost_data;
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
+  int                 refine_period = ctx->refine_period;
+  int                 repartition_period = ctx->repartition_period;
+  int                 write_period = ctx->write_period;
+  int                 recursive = 0;
+  int                 allowed_level = P4EST_QMAXLEVEL;
+  int                 allowcoarsening = 1;
+  int                 callbackorphans = 0;
+  int                 mpiret;
+  double              orig_max_err = ctx->max_err;
+  double              umax, global_umax;
 
   /* create the ghost cells */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
   ghost_data = P4EST_ALLOC (step3_data_t, ghost->ghosts.elem_count);
+  /* synchronize the ghost data */
+  p4est_ghost_exchange_data (p4est, ghost, ghost_data);
 
-  for (i = 0; i < ntimesteps; i++) {
-    P4EST_GLOBAL_PRODUCTIONF ("time step %d\n", i);
-    p4est_ghost_exchange_data (p4est, ghost, ghost_data);
+  /* initialize derivative estimates */
+  p4est_iterate (p4est, ghost, (void *) ghost_data,     /* pass in ghost data that we just exchanged */
+                 reset_derivatives,     /* blank the previously calculated derivatives */
+                 minmod_estimate,       /* compute the minmod estimate of each cell's derivative */
+#ifdef P4_TO_P8
+                 NULL,          /* there is no callback for the edges between quadrants */
+#endif
+                 NULL);         /* there is no callback for the corners between quadrants */
+
+  for (t = 0., i = 0; t < time; t += dt, i++) {
+    P4EST_GLOBAL_PRODUCTIONF ("time %f\n", t);
+
+    /* refine */
+    if (!(i % refine_period)) {
+      if (i) {
+        /* compute umax */
+        umax = 0.;
+        /* initialize derivative estimates */
+        p4est_iterate (p4est, NULL, (void *) &umax,     /* pass in ghost data that we just exchanged */
+                       compute_umax,    /* blank the previously calculated derivatives */
+                       NULL,    /* there is no callback for the faces between quadrants */
+#ifdef P4_TO_P8
+                       NULL,    /* there is no callback for the edges between quadrants */
+#endif
+                       NULL);   /* there is no callback for the corners between quadrants */
+
+        mpiret =
+          sc_MPI_Allreduce (&umax, &global_umax, 1, sc_MPI_DOUBLE, sc_MPI_MAX,
+                            p4est->mpicomm);
+        SC_CHECK_MPI (mpiret);
+        ctx->max_err = orig_max_err * global_umax;
+        P4EST_GLOBAL_PRODUCTIONF ("u_max %f\n", global_umax);
+
+#if 0
+        p4est_coarsen_ext (p4est, recursive, callbackorphans,
+                           coarsen_err_estimate, NULL, step3_replace_quads);
+#endif
+        p4est_refine_ext (p4est, recursive, allowed_level,
+                          refine_err_estimate, NULL, step3_replace_quads);
+        p4est_balance_ext (p4est, P4EST_CONNECT_FACE, NULL,
+                           step3_replace_quads);
+
+        p4est_ghost_destroy (ghost);
+        P4EST_FREE (ghost_data);
+        ghost = NULL;
+        ghost_data = NULL;
+      }
+      dt = get_timestep (p4est);
+    }
+
+    /* repartition */
+    if (i && !(i % repartition_period)) {
+      p4est_partition (p4est, allowcoarsening, NULL);
+
+      if (ghost) {
+        p4est_ghost_destroy (ghost);
+        P4EST_FREE (ghost_data);
+        ghost = NULL;
+        ghost_data = NULL;
+      }
+    }
+
+    /* write out solution */
+    if (!(i % write_period)) {
+      step3_write_solution (p4est, i);
+    }
+
+    /* synchronize the ghost data */
+    if (!ghost) {
+      ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
+      ghost_data = P4EST_ALLOC (step3_data_t, ghost->ghosts.elem_count);
+      p4est_ghost_exchange_data (p4est, ghost, ghost_data);
+    }
 
     /* compute dudt */
     p4est_iterate (p4est, ghost,        /* pass in the ghost quadrants */
-                   (void *) &ghost_data,        /* pass in ghost data that we just exchanged */
+                   (void *) ghost_data, /* pass in ghost data that we just exchanged */
                    cell_divergence,     /* compute each cell's contribution to dudt */
                    upwind_flux, /* compute the face fluxes that change each cell's dudt */
 #ifdef P4_TO_P8
@@ -505,6 +844,18 @@ step3_timestep (p4est_t * p4est, double time)
                    NULL,        /* there is no callback for the edges between quadrants */
 #endif
                    NULL);       /* there is no callback for the corners between quadrants */
+
+    /* synchronize the ghost data */
+    p4est_ghost_exchange_data (p4est, ghost, ghost_data);
+
+    /* update du estimate */
+    p4est_iterate (p4est, ghost, (void *) ghost_data,   /* pass in ghost data that we just exchanged */
+                   reset_derivatives,   /* blank the previously calculated derivatives */
+                   minmod_estimate,     /* compute the minmod estimate of each cell's derivative */
+#ifdef P4_TO_P8
+                   NULL,        /* there is no callback for the edges between quadrants */
+#endif
+                   NULL);       /* there is no callback for the corners between quadrants */
   }
 
   P4EST_FREE (ghost_data);
@@ -515,7 +866,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 recursive, partforcoarsen, balance;
+  int                 recursive, partforcoarsen;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
@@ -538,7 +889,7 @@ main (int argc, char **argv)
      P4EST_DIM, P4EST_STRING);
 
   ctx.bump_width = 0.1;
-  ctx.max_err = 1.e-2;
+  ctx.max_err = 5.e-2;
   ctx.center[0] = 0.5;
   ctx.center[1] = 0.5;
 #ifdef P4_TO_P8
@@ -553,6 +904,9 @@ main (int argc, char **argv)
   ctx.v[1] = -0.427996381877778;
   ctx.v[2] = 0.762501176669961;
 #endif
+  ctx.refine_period = 2;
+  ctx.repartition_period = 4;
+  ctx.write_period = 1;
 
   /* Create a forest that consists of just one periodic quadtree/octree. */
 #ifndef P4_TO_P8
@@ -579,25 +933,15 @@ main (int argc, char **argv)
    * partition can optionally be modified such that a family of octants, which
    * are possibly ready for coarsening, are never split between processors. */
   partforcoarsen = 1;
-  p4est_partition (p4est, partforcoarsen, NULL);
 
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
    * by more than a factor of 2.  This can optionally include diagonal
    * neighbors across edges or corners as well; see p4est.h. */
-  balance = 1;
-  if (balance) {
-    p4est_balance (p4est, P4EST_CONNECT_FACE, init_initial_condition);
-    p4est_partition (p4est, partforcoarsen, NULL);
-  }
-
-  /* Write the forest and the solution to disk for visualization, one file per
-   * processor. */
-  step3_write_solution (p4est, 0);
+  p4est_balance (p4est, P4EST_CONNECT_FACE, init_initial_condition);
+  p4est_partition (p4est, partforcoarsen, NULL);
 
   /* time step */
   step3_timestep (p4est, 0.1);
-
-  step3_write_solution (p4est, 1);
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
