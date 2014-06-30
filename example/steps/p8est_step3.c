@@ -22,4 +22,4 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "p4est_step1.c"
+#include "p4est_step3.c"
