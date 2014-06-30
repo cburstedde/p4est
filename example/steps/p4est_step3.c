@@ -43,6 +43,7 @@ typedef struct step3_data
 {
   double              u;
   double              du[P4EST_DIM];
+  double              dudt;
 }
 step3_data_t;
 
@@ -262,7 +263,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
   double             *u_interp;
   p4est_locidx_t      numquads;
 
-  snprintf (filename, 16, P4EST_STRING "_step3_%4.4d", timestep);
+  snprintf (filename, 17, P4EST_STRING "_step3_%04d", timestep);
 
   numquads = p4est->local_num_quadrants;
 
@@ -297,6 +298,219 @@ step3_write_solution (p4est_t * p4est, int timestep)
   P4EST_FREE (u_interp);
 }
 
+static void
+cell_divergence (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_quadrant_t   *q = info->quad;
+  step3_data_t       *data = (step3_data_t *) q->p.user_data;
+
+  data->dudt = 0.;
+  data->du[0] = data->du[1] = 0.;
+
+}
+
+static void
+upwind_flux (p4est_iter_face_info_t * info, void *user_data)
+{
+  int                 i, j;
+  p4est_t            *p4est = info->p4est;
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
+  p4est_iter_face_side_t *side[2];
+  sc_array_t         *sides = &(info->sides);
+  step3_data_t       *ghost_data = (step3_data_t *) user_data;
+  step3_data_t       *udata;
+  p4est_quadrant_t   *quad;
+  double              vdotn;
+  double              uavg;
+  double              q;
+  double              h, facearea;
+  int                 which_face;
+  int                 upwindside;
+
+  /* because there are no boundaries, every face has two sides */
+  P4EST_ASSERT (sides->elem_count == 2);
+
+  side[0] = p4est_iter_fside_array_index_int (sides, 0);
+  side[1] = p4est_iter_fside_array_index_int (sides, 1);
+
+  which_face = side[0]->face;
+
+  switch (which_face) {
+  case 0:                      /* -x side */
+    vdotn = -ctx->v[0];
+    break;
+  case 1:                      /* +x side */
+    vdotn = ctx->v[0];
+    break;
+  case 2:                      /* -y side */
+    vdotn = -ctx->v[1];
+    break;
+  case 3:                      /* +y side */
+    vdotn = ctx->v[1];
+    break;
+#ifdef P4_TO_P8
+  case 4:                      /* -z side */
+    vdotn = -ctx->v[2];
+    break;
+  case 5:                      /* +z side */
+    vdotn = ctx->v[2];
+    break;
+#endif
+  }
+  upwindside = vdotn >= 0. ? 0 : 1;
+
+  uavg = 0;
+  if (side[upwindside]->is_hanging) {
+    /* there are 2^(d-1) (P4EST_HALF) subfaces */
+    for (j = 0; j < P4EST_HALF; j++) {
+      if (side[upwindside]->is.hanging.is_ghost[j]) {
+        udata = &ghost_data[side[upwindside]->is.hanging.quadid[j]];
+      }
+      else {
+        udata =
+          (step3_data_t *) side[upwindside]->is.hanging.quad[j]->p.user_data;
+      }
+      uavg += udata->u;
+    }
+    uavg /= P4EST_HALF;
+  }
+  else {
+    if (side[upwindside]->is.full.is_ghost) {
+      udata = &ghost_data[side[upwindside]->is.full.quadid];
+    }
+    else {
+      udata = (step3_data_t *) side[upwindside]->is.full.quad->p.user_data;
+    }
+    uavg = udata->u;
+  }
+  /* flux from side 0 to side 1 */
+  q = vdotn * uavg;
+  for (i = 0; i < 2; i++) {
+    if (side[i]->is_hanging) {
+      /* there are 2^(d-1) (P4EST_HALF) subfaces */
+      for (j = 0; j < P4EST_HALF; j++) {
+        quad = side[i]->is.hanging.quad[j];
+        h =
+          (double) P4EST_QUADRANT_LEN (quad->level) / (double) P4EST_ROOT_LEN;
+#ifndef P4_TO_P8
+        facearea = h;
+#else
+        facearea = h * h;
+#endif
+        if (!side[i]->is.hanging.is_ghost[j]) {
+          udata = quad->p.user_data;
+          if (i == upwindside) {
+            udata->dudt += vdotn * udata->u * facearea * (i ? 1. : -1.);
+          }
+          else {
+            udata->dudt += q * facearea * (i ? 1. : -1.);
+          }
+        }
+      }
+    }
+    else {
+      quad = side[i]->is.full.quad;
+      h = (double) P4EST_QUADRANT_LEN (quad->level) / (double) P4EST_ROOT_LEN;
+#ifndef P4_TO_P8
+      facearea = h;
+#else
+      facearea = h * h;
+#endif
+      if (!side[i]->is.full.is_ghost) {
+        udata = quad->p.user_data;
+        udata->dudt += q * facearea * (i ? 1. : -1.);
+      }
+    }
+  }
+}
+
+static void
+timestep_update (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_quadrant_t   *q = info->quad;
+  step3_data_t       *data = (step3_data_t *) q->p.user_data;
+  double              dt = *((double *) user_data);
+
+  data->u += dt * data->dudt;
+
+}
+
+static void
+step3_timestep (p4est_t * p4est, double time)
+{
+  int                 max_level, global_max_level;
+  double              min_h;
+  double              dt;
+  double              vnorm;
+  p4est_topidx_t      t, flt, llt;
+  p4est_tree_t       *tree;
+  p4est_ghost_t      *ghost;
+  int                 mpiret, i;
+  int                 ntimesteps;
+  step3_data_t       *ghost_data;
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
+
+  /* compute the timestep by finding the smallest quadrant */
+  flt = p4est->first_local_tree;
+  llt = p4est->last_local_tree;
+
+  max_level = 0;
+  for (t = flt; t <= llt; t++) {
+    tree = p4est_tree_array_index (p4est->trees, t);
+    max_level = SC_MAX (max_level, tree->maxlevel);
+
+  }
+  mpiret =
+    sc_MPI_Allreduce (&max_level, &global_max_level, 1, sc_MPI_INT,
+                      sc_MPI_MAX, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  min_h =
+    (double) P4EST_QUADRANT_LEN (global_max_level) / (double) P4EST_ROOT_LEN;
+
+  vnorm = 0;
+  for (i = 0; i < P4EST_DIM; i++) {
+    vnorm += ctx->v[i] * ctx->v[i];
+  }
+  vnorm = sqrt (vnorm);
+
+  dt = min_h / 2. / vnorm;
+
+  ntimesteps = time / dt;
+
+  /* create the ghost cells */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
+  ghost_data = P4EST_ALLOC (step3_data_t, ghost->ghosts.elem_count);
+
+  for (i = 0; i < ntimesteps; i++) {
+    P4EST_GLOBAL_PRODUCTIONF ("time step %d\n", i);
+    p4est_ghost_exchange_data (p4est, ghost, ghost_data);
+
+    /* compute dudt */
+    p4est_iterate (p4est, ghost,        /* pass in the ghost quadrants */
+                   (void *) &ghost_data,        /* pass in ghost data that we just exchanged */
+                   cell_divergence,     /* compute each cell's contribution to dudt */
+                   upwind_flux, /* compute the face fluxes that change each cell's dudt */
+#ifdef P4_TO_P8
+                   NULL,        /* there is no callback for the edges between quadrants */
+#endif
+                   NULL);       /* there is no callback for the corners between quadrants */
+
+    /* update u */
+    p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
+                   (void *) &dt,        /* pass in dt */
+                   timestep_update,     /* update each sell */
+                   NULL,        /* there is no callback for the faces between quadrants */
+#ifdef P4_TO_P8
+                   NULL,        /* there is no callback for the edges between quadrants */
+#endif
+                   NULL);       /* there is no callback for the corners between quadrants */
+  }
+
+  P4EST_FREE (ghost_data);
+  p4est_ghost_destroy (ghost);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -329,6 +543,15 @@ main (int argc, char **argv)
   ctx.center[1] = 0.5;
 #ifdef P4_TO_P8
   ctx.center[2] = 0.5;
+#endif
+#ifndef P4_TO_P8
+  /* randomly chosen advection direction */
+  ctx.v[0] = -0.445868402501118;
+  ctx.v[1] = -0.895098523991131;
+#else
+  ctx.v[0] = 0.485191768970225;
+  ctx.v[1] = -0.427996381877778;
+  ctx.v[2] = 0.762501176669961;
 #endif
 
   /* Create a forest that consists of just one periodic quadtree/octree. */
@@ -370,6 +593,11 @@ main (int argc, char **argv)
   /* Write the forest and the solution to disk for visualization, one file per
    * processor. */
   step3_write_solution (p4est, 0);
+
+  /* time step */
+  step3_timestep (p4est, 0.1);
+
+  step3_write_solution (p4est, 1);
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
