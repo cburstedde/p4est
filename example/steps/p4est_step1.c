@@ -21,6 +21,12 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_step1.c
+ *
+ * This 2D example program refines a domain based on given image data.
+ * The image file hw32.h has been created with the GIMP and is compiled in.
+ */
+
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
@@ -32,18 +38,23 @@
 #endif
 #include "hw32.h"
 
+/** The resolution of the image data in powers of two. */
 #define P4EST_STEP1_PATTERN_LEVEL 5
+/** The dimension of the image data. */
 #define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
-static const int    plv = P4EST_STEP1_PATTERN_LEVEL;
-static const int    ple = P4EST_STEP1_PATTERN_LENGTH;
+static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /**< Shortcut */
+static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
 #ifdef P4_TO_P8
 static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 #endif
 
-/* Refinement and coarsening is controlled by callback functions.
+/** Callback function to decide on refinement.
+ *
+ * Refinement and coarsening is controlled by callback functions.
  * This function is called for every processor-local quadrant in order; its
  * return value is understood as a boolean refinement flag.
- * In this example we use the image file hw32.h to determine the refinement. */
+ * In this example we use the image file hw32.h to determine the refinement.
+ */
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
@@ -91,6 +102,10 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+/** The main function of the step1 example program.
+ *
+ * It creates a connectivity and forest, refines it, and writes a VTK file.
+ */
 int
 main (int argc, char **argv)
 {
