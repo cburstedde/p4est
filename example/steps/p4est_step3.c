@@ -53,9 +53,9 @@ typedef struct step3_ctx
   double              bump_width;       /* width of the initial condition Gaussian bump */
   double              max_err;  /* maximum global interpolation error */
   double              v[P4EST_DIM];     /* advection direction */
-  int                 refine_period;
-  int                 repartition_period;
-  int                 write_period;
+  int                 refine_period;    /* the number of time steps between refinement */
+  int                 repartition_period;       /* the number of time steps between repartitioning */
+  int                 write_period;     /* the number of time steps between writing vtk files */
 }
 step3_ctx_t;
 
@@ -282,17 +282,15 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
   if (num_outgoing > 1) {
     /* this is coarsening */
     parent_data = (step3_data_t *) incoming[0]->p.user_data;
-    h =
-      (double) P4EST_QUADRANT_LEN (incoming[0]->level) /
-      (double) P4EST_ROOT_LEN;
-    for (j = 0; j < 3; j++) {
+    parent_data->u = 0.;
+    for (j = 0; j < P4EST_DIM; j++) {
       parent_data->du[j] = (1. / 0.);
 
     }
     for (i = 0; i < P4EST_CHILDREN; i++) {
-      child_data = (step3_data_t *) incoming[i]->p.user_data;
+      child_data = (step3_data_t *) outgoing[i]->p.user_data;
       parent_data->u += child_data->u / P4EST_CHILDREN;
-      for (j = 0; j < 3; j++) {
+      for (j = 0; j < P4EST_DIM; j++) {
         du_old = parent_data->du[j];
         du_est = child_data->du[j];
 
@@ -322,7 +320,7 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
     for (i = 0; i < P4EST_CHILDREN; i++) {
       child_data = (step3_data_t *) incoming[i]->p.user_data;
       child_data->u = parent_data->u;
-      for (j = 0; j < 3; j++) {
+      for (j = 0; j < P4EST_DIM; j++) {
         child_data->du[j] = parent_data->du[j];
         child_data->u +=
           (h / 2.) * parent_data->du[j] * ((i & (1 << j)) ? 1. : -1);
@@ -682,6 +680,7 @@ compute_umax (p4est_iter_volume_info_t * info, void *user_data)
   double              umax = *((double *) user_data);
 
   umax = SC_MAX (data->u, umax);
+
   *((double *) user_data) = umax;
 }
 
@@ -784,12 +783,10 @@ step3_timestep (p4est_t * p4est, double time)
         ctx->max_err = orig_max_err * global_umax;
         P4EST_GLOBAL_PRODUCTIONF ("u_max %f\n", global_umax);
 
-#if 0
-        p4est_coarsen_ext (p4est, recursive, callbackorphans,
-                           coarsen_err_estimate, NULL, step3_replace_quads);
-#endif
         p4est_refine_ext (p4est, recursive, allowed_level,
                           refine_err_estimate, NULL, step3_replace_quads);
+        p4est_coarsen_ext (p4est, recursive, callbackorphans,
+                           coarsen_err_estimate, NULL, step3_replace_quads);
         p4est_balance_ext (p4est, P4EST_CONNECT_FACE, NULL,
                            step3_replace_quads);
 
