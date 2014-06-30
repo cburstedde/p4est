@@ -27,68 +27,136 @@
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
 #include <p4est_vtk.h>
+#include <p4est_extended.h>
 #else
 #include <p8est_vtk.h>
-#endif
-#include "hw32.h"
-
-#define P4EST_STEP1_PATTERN_LEVEL 5
-#define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
-static const int    plv = P4EST_STEP1_PATTERN_LEVEL;
-static const int    ple = P4EST_STEP1_PATTERN_LENGTH;
-#ifdef P4_TO_P8
-static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
+#include <p8est_extended.h>
 #endif
 
-/* Refinement and coarsening is controlled by callback functions.
- * This function is called for every processor-local quadrant in order; its
- * return value is understood as a boolean refinement flag.
- * In this example we use the image file hw32.h to determine the refinement. */
-static int
-refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant)
+/* In this example we store data with each quadrant/octant. */
+
+typedef struct step3_data
 {
-  int                 tilelen;
-  int                 offsi, offsj;
-  int                 i, j;
-  const char         *d;
-  unsigned char       p[3];
+  double u;
+  double du[P4EST_DIM];
+}
+step3_data_t;
 
-  /* The connectivity chosen in main () only consists of one tree. */
-  P4EST_ASSERT (which_tree == 0);
 
-  /* We do not want to refine deeper than a given maximum level. */
-  if (quadrant->level > plv) {
-    return 0;
+typedef struct step3_ctx
+{
+  double center[P4EST_DIM];
+  double bump_width;
+  double max_err;
+  double v[P4EST_DIM];
+}
+step3_ctx_t;
+
+
+/* The initial condition: a Gaussian bump */
+static double
+initial_condition (double x[], double du[], step3_ctx_t *ctx)
+{
+  int    i;
+  double *c = ctx->center;
+  double bump_width = ctx->bump_width;
+  double r2, d[P4EST_DIM];
+  double arg, retval;
+
+  r2 = 0.;
+  for (i = 0; i < P4EST_DIM; i++) {
+    d[i] = x[i] - c[i];
+    r2 += d[i] * d[i];
   }
-#ifdef P4_TO_P8
-  /* In 3D we extrude the 2D image in the z direction between [3/8, 5/8]. */
-  if (quadrant->level >= 3 &&
-      (quadrant->z < 3 * eighth || quadrant->z >= 5 * eighth)) {
-    return 0;
-  }
-#endif
 
-  /* We read the image data and refine wherever the color value is dark.
-   * We can then visualize the output and highlight level > PATTERN_LEVEL. */
-  tilelen = 1 << (plv - quadrant->level);       /* Pixel size of quadrant */
-  offsi = quadrant->x / P4EST_QUADRANT_LEN (plv);       /* Pixel x offset */
-  offsj = quadrant->y / P4EST_QUADRANT_LEN (plv);       /* Pixel y offset */
-  P4EST_ASSERT (offsi >= 0 && offsj >= 0);
-  for (j = 0; j < tilelen; ++j) {
-    P4EST_ASSERT (offsj + j < ple);
-    for (i = 0; i < tilelen; ++i) {
-      P4EST_ASSERT (offsi + i < ple);
-      d =
-        hw32_header_data + 4 * (ple * (ple - 1 - (offsj + j)) + (offsi + i));
-      HW32_HEADER_PIXEL (d, p);
-      P4EST_ASSERT (p[0] == p[1] && p[1] == p[2]);      /* Grayscale image */
-      if (p[0] < 128) {
-        return 1;
-      }
+  arg = -(1./2.) * r2 / bump_width / bump_width;
+  retval = exp(arg);
+
+  if (du) {
+    for (i = 0; i < P4EST_DIM; i++) {
+      du[i] = - retval * (1./bump_width/bump_width) * d[i];
     }
   }
-  return 0;
+
+  return retval;
+}
+
+static void
+quad_get_midpoint (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *q, double xyz[3])
+{
+  p4est_qcoord_t half_length = P4EST_QUADRANT_LEN(q->level)/2;
+
+  p4est_qcoord_to_vertex(p4est->connectivity, which_tree,
+                         q->x + half_length,
+                         q->y + half_length,
+#ifdef P4_TO_P8
+                         q->z + half_length,
+#endif
+                         xyz);
+}
+
+/* Initialize by the initial condition */
+static void
+init_initial_condition (p4est_t *p4est, p4est_topidx_t which_tree,
+                        p4est_quadrant_t *q)
+{
+  step3_ctx_t *ctx = (step3_ctx_t *) p4est->user_pointer;
+  step3_data_t * data = (step3_data_t *) q->p.user_data;
+  double midpoint[3];
+
+  quad_get_midpoint (p4est, which_tree, q, midpoint);
+  data->u = initial_condition (midpoint, data->du, ctx);
+}
+
+static double
+error_sqr_estimate (p4est_quadrant_t *q)
+{
+  step3_data_t * data = (step3_data_t *) q->p.user_data;
+  int i;
+  double diff2;
+  double *du = data->du;
+  double h = (double) P4EST_QUADRANT_LEN(q->level) / (double) P4EST_ROOT_LEN;
+  double vol;
+
+#ifdef P4_TO_P8
+  vol = h * h * h;
+#else
+  vol = h * h;
+#endif
+
+  diff2 = 0.;
+  /* use the approximate derivative to esimate the L2 error */
+  for (i = 0; i < P4EST_DIM; i++) {
+    diff2 += du[i] * du[i] * (1./12.) * h * h * vol;
+  }
+
+  return diff2;
+}
+
+static int
+refine_err_estimate (p4est_t *p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t *q)
+{
+  step3_ctx_t *ctx = (step3_ctx_t *) p4est->user_pointer;
+  double global_err = ctx->max_err;
+  double global_err2 = global_err * global_err;
+  double h = (double) P4EST_QUADRANT_LEN(q->level) / (double) P4EST_ROOT_LEN;
+  double vol, volfrac, err2;
+
+#ifdef P4_TO_P8
+  vol = h * h * h;
+#else
+  vol = h * h;
+#endif
+
+  err2 = error_sqr_estimate (q);
+  if (err2 > global_err2 * vol) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
 }
 
 int
@@ -99,6 +167,7 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
+  step3_ctx_t         ctx;
 
   /* Initialize MPI; see sc_mpi.h.
    * If configure --enable-mpi is given these are true MPI calls.
@@ -113,37 +182,40 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
   p4est_init (NULL, SC_LP_PRODUCTION);
   P4EST_GLOBAL_PRODUCTIONF
-    ("This is the p4est %dD demo example/steps/%s_step1\n",
+    ("This is the p4est %dD demo example/steps/%s_step3\n",
      P4EST_DIM, P4EST_STRING);
 
-  /* Create a forest that consists of just one quadtree/octree.
-   * This file is compiled for both 2D and 3D: the macro P4_TO_P8 can be
-   * checked to execute dimension-dependent code. */
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_unitsquare ();
-#else
-  conn = p8est_connectivity_new_unitcube ();
+  ctx.bump_width = 0.1;
+  ctx.max_err = 1.e-4;
+  ctx.center[0] = 0.5;
+  ctx.center[1] = 0.5;
+#ifdef P4_TO_P8
+  ctx.center[2] = 0.5;
 #endif
 
-  /* Create a forest that is not refined; it consists of the root octant. */
-  p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
+  /* Create a forest that consists of just one periodic quadtree/octree. */
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_periodic ();
+#else
+  conn = p8est_connectivity_new_periodic ();
+#endif
 
-  /* Refine the forest recursively in parallel.
-   * Since refinement does not change the partition boundary, this call
-   * must not create an overly large number of quadrants.  A numerical
-   * application would call p4est_refine non-recursively in a loop,
-   * repartitioning in each iteration.
-   * The P4EST_ASSERT macro only activates with --enable-debug.
-   * We check against the data dimensions in example/steps/hw32.h. */
-  P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == width);
-  P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == height);
+  /* Create a forest that has 16 cells in each direction */
+  p4est = p4est_new_ext (mpicomm, conn,
+                         0, /* minimum quadrants per mpi process */
+                         4, /* minimum level of refinement */
+                         1, /* fill uniform */
+                         sizeof (step3_data_t),  /* data size */
+                         init_initial_condition, /* data initializiation */
+                         (void *) (&ctx));       /* user data */
+
   recursive = 1;
-  p4est_refine (p4est, recursive, refine_fn, NULL);
+  p4est_refine (p4est, recursive, refine_err_estimate, init_initial_condition);
 
   /* Partition: The quadrants are redistributed for equal element count.  The
    * partition can optionally be modified such that a family of octants, which
    * are possibly ready for coarsening, are never split between processors. */
-  partforcoarsen = 0;
+  partforcoarsen = 1;
   p4est_partition (p4est, partforcoarsen, NULL);
 
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
@@ -156,7 +228,7 @@ main (int argc, char **argv)
   }
 
   /* Write the forest to disk for visualization, one file per processor. */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step1");
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step3");
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
