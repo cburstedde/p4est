@@ -31,8 +31,12 @@
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
+#include <p4est_ghost.h>
+#include <p4est_lnodes.h>
 #include <p4est_vtk.h>
 #else
+#include <p8est_ghost.h>
+#include <p8est_lnodes.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -60,6 +64,74 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
           1);
 }
+
+/* This example only does something numerical for 2D. */
+#ifndef P4_TO_P8
+
+/** Interpolate right hand side and exact solution onto mesh nodes.
+ *
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [out] rhs_eval      Is allocated and filled with function values.
+ * \param [out] uexact_eval   Is allocated and filled with function values.
+ * \param [out] bc            Boolean flags for Dirichlet boundary nodes.
+ */
+static void
+interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
+                       double **rhs_eval, double **uexact_eval, int8_t ** pbc)
+{
+  const p4est_locidx_t nloc = lnodes->num_local_nodes;
+  int8_t             *bc, *ndone;
+  double             *rhs, *uexact;
+
+  rhs = *rhs_eval = P4EST_ALLOC (double, nloc);
+  uexact = *uexact_eval = P4EST_ALLOC (double, nloc);
+  bc = *pbc = P4EST_ALLOC_ZERO (int8_t, nloc);
+  ndone = P4EST_ALLOC_ZERO (int8_t, nloc);
+
+  /* We need to compute the xyz locations of non-hanging nodes to evaluate the
+   * given functions.  For hanging nodes, we have to look at the corresponding
+   * independent nodes.  Usually we would cache this information, here we only
+   * need it once and throw it away again. */
+
+  P4EST_FREE (ndone);
+}
+
+/** Execute the numerical part of the example: Solve Poisson's equation.
+ * \param [in] p4est    Solve the PDE with the given mesh refinement.
+ */
+static void
+solve_poisson (p4est_t * p4est)
+{
+  int8_t             *bc;
+  double             *rhs_eval, *uexact_eval;
+  p4est_ghost_t      *ghost;
+  p4est_lnodes_t     *lnodes;
+
+  /* Create the ghost layer to learn about parallel neighbors. */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+
+  /* Create a node numbering for continuous linear finite elements. */
+  lnodes = p4est_lnodes_new (p4est, ghost, 1);
+
+  /* Destroy the ghost structure -- no longer needed after node creation. */
+  p4est_ghost_destroy (ghost);
+  ghost = NULL;
+
+  /* Interpolate right hand side and exact solution onto mesh nodes. */
+  interpolate_functions (p4est, lnodes, &rhs_eval, &uexact_eval, &bc);
+
+  /* Free finite element vectors */
+  P4EST_FREE (rhs_eval);
+  P4EST_FREE (uexact_eval);
+  P4EST_FREE (bc);
+
+  /* We are done with the FE node numbering. */
+  p4est_lnodes_destroy (lnodes);
+  lnodes = NULL;
+}
+
+#endif /* !P4_TO_P8 */
 
 /** The main function of the step4 example program.
  *
@@ -91,13 +163,13 @@ main (int argc, char **argv)
     ("This is the p4est %dD demo example/steps/%s_step4\n",
      P4EST_DIM, P4EST_STRING);
 
-  /* Create a forest that consists of just one quadtree/octree.
+  /* Create a forest that consists of multiple quadtrees/octrees.
    * This file is compiled for both 2D and 3D: the macro P4_TO_P8 can be
    * checked to execute dimension-dependent code. */
 #ifndef P4_TO_P8
-  conn = p4est_connectivity_new_unitsquare ();
+  conn = p4est_connectivity_new_moebius ();
 #else
-  conn = p8est_connectivity_new_unitcube ();
+  conn = p8est_connectivity_new_rotcubes ();
 #endif
 
   /* Create a forest that is not refined; it consists of the root octant.
@@ -116,16 +188,24 @@ main (int argc, char **argv)
   }
   if (startlevel < endlevel) {
     /* For finite elements this corner balance is not strictly required.
-     * We call balance only once since it's more expensive than coarsen/refine
-     * and partition. */
+     * We call balance only once since it's more expensive than both
+     * coarsen/refine and partition. */
     p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
     /* We repartition with coarsening in mind to allow for
-     * partition-independent a-posteriori adaptation. */
+     * partition-independent a-posteriori adaptation (not covered in step4). */
     p4est_partition (p4est, 1, NULL);
   }
 
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step4");
+
+#ifndef P4_TO_P8
+  /* Execute the numerical mathematics part of the example. */
+  solve_poisson (p4est);
+#else
+  P4EST_GLOBAL_PRODUCTION
+    ("This example does not do anything in 3D.  Just writes a VTK file.\n");
+#endif
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
