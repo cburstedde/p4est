@@ -746,7 +746,7 @@ step3_timestep (p4est_t * p4est, double time)
   double              umax, global_umax;
 
   /* create the ghost cells */
-  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   ghost_data = P4EST_ALLOC (step3_data_t, ghost->ghosts.elem_count);
   /* synchronize the ghost data */
   p4est_ghost_exchange_data (p4est, ghost, ghost_data);
@@ -820,7 +820,7 @@ step3_timestep (p4est_t * p4est, double time)
 
     /* synchronize the ghost data */
     if (!ghost) {
-      ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
+      ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
       ghost_data = P4EST_ALLOC (step3_data_t, ghost->ghosts.elem_count);
       p4est_ghost_exchange_data (p4est, ghost, ghost_data);
     }
@@ -889,7 +889,7 @@ main (int argc, char **argv)
      P4EST_DIM, P4EST_STRING);
 
   ctx.bump_width = 0.1;
-  ctx.max_err = 5.e-2;
+  ctx.max_err = 2.e-2;
   ctx.center[0] = 0.5;
   ctx.center[1] = 0.5;
 #ifdef P4_TO_P8
@@ -906,7 +906,7 @@ main (int argc, char **argv)
 #endif
   ctx.refine_period = 2;
   ctx.repartition_period = 4;
-  ctx.write_period = 1;
+  ctx.write_period = 8;
 
   /* Create a forest that consists of just one periodic quadtree/octree. */
 #ifndef P4_TO_P8
