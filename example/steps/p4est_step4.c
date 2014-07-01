@@ -36,7 +36,7 @@
 #include <p4est_lnodes.h>
 #include <p4est_vtk.h>
 #else
-#if 0 /* The 3D example is not yet implemented */
+#if 0                           /* The 3D example is not yet implemented */
 #include <p8est_bits.h>
 #include <p8est_ghost.h>
 #include <p8est_lnodes.h>
@@ -71,6 +71,51 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
 /* This example only does something numerical for 2D. */
 #ifndef P4_TO_P8
+
+/** Right hand side function for the 2D Poisson problem.
+ *
+ * This is the negative Laplace operator acting on the function \a uexact.
+ * \param [in] vxyz    x, y, and z coordinates in physical space.
+ * \return             Scalar function value at vxyz.
+ */
+static double
+func_rhs (const double vxyz[3])
+{
+  const double        x = vxyz[0];
+  const double        y = vxyz[1];
+
+  return -32. * (x * (1. - x) + y * (1. - y));
+}
+
+/** Exact solution for the 2D Poisson problem.
+ *
+ * We pick a function with zero Dirichlet boundary conditions on the unit square.
+ * \param [in] vxyz    x, y, and z coordinates in physical space.
+ * \return             Scalar function value at vxyz.
+ */
+static double
+func_uexact (const double vxyz[3])
+{
+  const double        x = vxyz[0];
+  const double        y = vxyz[1];
+
+  return 16. * x * (1. - x) * y * (1. - y);
+}
+
+/** Determine the boundary status on the unit square.
+ * \param [in] p4est    Can be used to access the connectivity.
+ * \param [in] tt       The tree number (always zero for the unit square).
+ * \param [in] node     The corner node of an element to be examined.
+ * \return              True for Dirichlet boundary, false otherwise.
+ */
+static int
+is_boundary_unitsquare (p4est_t * p4est, p4est_topidx_t tt,
+                        p4est_quadrant_t * node)
+{
+  /* For this simple connectivity it is sufficient to check x and y. */
+  return (node->x == 0 || node->x == P4EST_ROOT_LEN ||
+          node->y == 0 || node->y == P4EST_ROOT_LEN);
+}
 
 /** Decode the information from p4est_lnodes_t for a given element.
  *
@@ -122,7 +167,7 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
   int                 i;        /* We use plain int for small loops. */
   double             *rhs, *uexact;
   double              vxyz[3];  /* We embed the 2D vertices into 3D space. */
-  int8_t             *bc, *ndone;
+  int8_t             *bc;
   p4est_topidx_t      tt;       /* Connectivity variables have this type. */
   p4est_locidx_t      k, q, Q;  /* Process-local counters have this type. */
   p4est_locidx_t      lni;      /* Node index relative to this processor. */
@@ -132,8 +177,8 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
   rhs = *rhs_eval = P4EST_ALLOC (double, nloc);
   uexact = *uexact_eval = P4EST_ALLOC (double, nloc);
-  bc = *pbc = P4EST_ALLOC_ZERO (int8_t, nloc);
-  ndone = P4EST_ALLOC_ZERO (int8_t, nloc);
+  bc = *pbc = P4EST_ALLOC (int8_t, nloc);
+  memset (bc, -1, sizeof (int8_t) * nloc);      /* Indicator for visiting. */
 
   /* We need to compute the xyz locations of non-hanging nodes to evaluate the
    * given functions.  For hanging nodes, we have to look at the corresponding
@@ -153,7 +198,7 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
       /* We need to determine whether any node on this element is hanging. */
       anyhang = lnodes_decode2 (lnodes->face_code[q], hanging_corner);
       if (!anyhang) {
-        parent = NULL;
+        parent = NULL;          /* Defensive programming. */
       }
       else {
         /* At least one node is hanging.  We need the parent quadrant to
@@ -163,8 +208,8 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
       }
       for (i = 0; i < P4EST_CHILDREN; ++i) {
         lni = lnodes->element_nodes[P4EST_CHILDREN * k + i];
-        P4EST_ASSERT (lni >= 0);
-        if (!ndone[lni]) {
+        P4EST_ASSERT (lni >= 0 && lni < nloc);
+        if (bc[lni] < 0) {
           if (anyhang && hanging_corner[i] >= 0) {
             /* This node is hanging; access the referenced node instead. */
             p4est_quadrant_corner_node (parent, i, &node);
@@ -172,20 +217,21 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
           else {
             p4est_quadrant_corner_node (quad, i, &node);
           }
+
+          /* Determine boundary status of independent node. */
+          bc[lni] = is_boundary_unitsquare (p4est, tt, &node);
+
           /* Transform per-tree reference coordinates into physical space. */
           p4est_qcoord_to_vertex (p4est->connectivity, tt,
-                                  quad->x, quad->y, vxyz);
+                                  node.x, node.y, vxyz);
 
-          /* TODO: we can now evaluate function values at vxyz. */
-          /* TODO: determine boundary status of independent node. */
-
-          /* We are done computing for this node; we only need this once. */
-          ndone[lni] = 1;
+          /* Use physical space coordinates to evaluate functions */
+          rhs[lni] = func_rhs (vxyz);
+          uexact[lni] = func_uexact (vxyz);
         }
       }
     }
   }
-  P4EST_FREE (ndone);
 }
 
 /** Execute the numerical part of the example: Solve Poisson's equation.
@@ -249,7 +295,7 @@ main (int argc, char **argv)
    * static variable so subsequent global p4est log messages are only issued
    * from processor zero.  Here we turn off most of the logging; see sc.h. */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
-  p4est_init (NULL, SC_LP_PRODUCTION);
+  p4est_init (NULL, SC_LP_PRODUCTION);  /* SC_LP_ERROR for silence. */
   P4EST_GLOBAL_PRODUCTIONF
     ("This is the p4est %dD demo example/steps/%s_step4\n",
      P4EST_DIM, P4EST_STRING);
@@ -258,7 +304,8 @@ main (int argc, char **argv)
    * This file is compiled for both 2D and 3D: the macro P4_TO_P8 can be
    * checked to execute dimension-dependent code. */
 #ifndef P4_TO_P8
-  conn = p4est_connectivity_new_moebius ();
+  conn = p4est_connectivity_new_unitsquare ();
+  /* conn = p4est_connectivity_new_moebius (); */
 #else
   conn = p8est_connectivity_new_rotcubes ();
 #endif
