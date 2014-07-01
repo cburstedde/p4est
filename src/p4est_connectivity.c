@@ -3963,11 +3963,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
 
         retval = sscanf (line, "%lld, %lf, %lf, %lf", &node, &x, &y, &z);
         P4EST_ASSERT (retval == 4);
-#if 0
-#ifdef P4EST_DEBUG
-        printf ("   nodes: %10lld %25.16e %25.16e %25.16e\n", node, x, y, z);
-#endif
-#endif
 
         vertices[3 * (node - 1) + 0] = x;
         vertices[3 * (node - 1) + 1] = y;
@@ -3998,15 +3993,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
 
         P4EST_ASSERT (retval == P4EST_CHILDREN);
 
-#if 0
-#ifdef P4EST_DEBUG
-        printf ("elements:");
-        for (n = 0; n < P4EST_CHILDREN; ++n)
-          printf (" %10lld ", v[n] - 1);
-        printf ("\n");
-#endif
-#endif
-
         for (n = 0; n < P4EST_CHILDREN; ++n)
           tree_to_vertex[P4EST_CHILDREN * num_elements + n] = v[n] - 1;
       }
@@ -4017,8 +4003,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
     ++lines_free;
     P4EST_FREE (line);
   }
-
-  printf ("Lines read:%d free:%d\n", lines_read, lines_free);
 
   *num_vertices = num_nodes;
   *num_trees = num_elements;
