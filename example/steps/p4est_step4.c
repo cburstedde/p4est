@@ -150,12 +150,99 @@ lnodes_decode2 (p4est_lnodes_code_t face_code,
   return 0;
 }
 
+/** Parallel sum of values in node vector across all sharers.
+ *
+ * This function is necessary in the matrix-vector product since elements
+ * from multiple processors can contribute to any given node value.
+ *
+ * \param [in] p4est      The mesh is not changed.
+ * \param [in] lnodes     The node numbering is not changed.
+ * \param [in,out] v      On input, vector with local contributions.
+ *                        On output, the node-wise sum across all sharers.
+ */
+static void
+share_sum (p4est_t * p4est, p4est_lnodes_t * lnodes, double *v)
+{
+  const int           nloc = lnodes->num_local_nodes;
+  const int           npeers = (int) lnodes->sharers->elem_count;
+  int                 iq, jn;
+  int                 gl;
+  sc_array_t          node_data;
+  p4est_lnodes_rank_t *lrank;
+  p4est_lnodes_buffer_t *buffer;
+
+  sc_array_init_data (&node_data, v, sizeof (double), nloc);
+  buffer = p4est_lnodes_share_all (&node_data, lnodes);
+
+  for (iq = 0; iq < npeers; ++iq) {
+    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (lnodes->sharers, iq);
+    sc_array_t         *recv_data =
+      (sc_array_t *) sc_array_index_int (buffer->recv_buffers, iq);
+    P4EST_ASSERT (recv_data->elem_size == node_data.elem_size);
+
+    if (lrank->rank != p4est->mpirank) {
+      const int           nshared = (int) lrank->shared_nodes.elem_count;
+      const double       *w = (const double *) recv_data->array;
+
+      P4EST_ASSERT ((int) recv_data->elem_count == nshared);
+
+      for (jn = 0; jn < nshared; ++jn) {
+        gl = (int)
+          *(p4est_locidx_t *) sc_array_index_int (&lrank->shared_nodes, jn);
+        P4EST_ASSERT (0 <= gl && gl < nloc);
+        v[gl] += w[jn];
+      }
+    }
+#ifdef P4EST_ENABLE_DEBUG
+    else {
+      P4EST_ASSERT (recv_data->elem_count == 0);
+      P4EST_ASSERT (lrank->owned_offset == 0);
+      P4EST_ASSERT (lrank->owned_count == lnodes->owned_count);
+    }
+#endif
+  }
+
+  p4est_lnodes_buffer_destroy (buffer);
+  sc_array_reset (&node_data);
+}
+
+/** Compute the inner product of two node vectors in parallel.
+ *
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] v1             First node vector.
+ * \param [in] v2             Second node vector.
+ * \return                    Parallel l_2 inner product over the domain.
+ */
+static double
+vector_dot (p4est_t * p4est, p4est_lnodes_t * lnodes,
+            const double *v1, const double *v2)
+{
+  const int           nown = lnodes->owned_count;
+  int                 mpiret;
+  int                 lnid;
+  double              lsum, gsum;
+
+  /* We only sum the locally owned values to avoid double counting. */
+  lsum = 0.;
+  for (lnid = 0; lnid < nown; ++lnid) {
+    lsum += v1[lnid] * v2[lnid];
+  }
+
+  /* The result is made available on all processors. */
+  mpiret = sc_MPI_Allreduce (&lsum, &gsum, 1, sc_MPI_DOUBLE, sc_MPI_SUM,
+                             p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  return gsum;
+}
+
 /** Allocate storage for processor-relevant nodal degrees of freedom.
  *
  * \param [in] lnodes   This structure is queried for the node count.
  * \return              Allocated double array; must be freed with P4EST_FREE.
  */
-static double *
+static double      *
 allocate_vector (p4est_lnodes_t * lnodes)
 {
   return P4EST_ALLOC (double, lnodes->num_local_nodes);
@@ -248,27 +335,157 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
 /** Apply a finite element matrix to a node vector, y = Mx.
  * \param [in] p4est          The forest is not changed.
  * \param [in] lnodes         The node numbering is not changed.
- * \param [in] stiffness      If false use the mass matrix,
- *                            if true use the stiffness matrix.
- * \param [in] boundary       If true, zero rows and columns for boundary nodes
- *                            and put a value of 1.0 on the diagonal.
+ * \param [in] bc             Boolean flags for Dirichlet boundary nodes.
+ *                            If NULL, no special action is taken.
+ * \param [in] stiffness      If false use scaling for the mass matrix,
+ *                            if true use the scaling for stiffness matrix.
+ * \param [in] matrix         A 4x4 matrix computed on the reference element.
  * \param [in] in             Input vector x.
  * \param [out] out           Output vector y = Mx.
  */
 static void
-multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes,
-                 int stiffness, int boundary, const double * in, double * out)
+multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
+                 int stiffness,
+                 double (*matrix)[P4EST_CHILDREN][P4EST_CHILDREN],
+                 const double *in, double *out)
 {
+  const int           nloc = lnodes->num_local_nodes;
+  const int           nown = lnodes->owned_count;
+  int                 i, j, k;
+  int                 q, Q;
+  int                 anyhang, hanging_corner[P4EST_CHILDREN];
+  int                 isboundary[P4EST_CHILDREN];
+  int                 ncontrib, contrib_corner[P4EST_HALF];
+  double              factor, sum, inloc[P4EST_CHILDREN];
+  sc_array_t         *tquadrants;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lni, all_lni[P4EST_CHILDREN];
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
 
+  /* Initialize the output vector. */
+  if (bc == NULL) {
+    /* No boundary values, output vector has all zero values. */
+    for (lni = 0; lni < nloc; ++lni) {
+      out[lni] = 0.;
+    }
+  }
+  else {
+    /* We have boundary conditions, switch on the locally owned nodes. */
+    for (lni = 0; lni < nown; ++lni) {
+      out[lni] = bc[lni] ? in[lni] : 0.;
+    }
+    /* The node values owned by other processors will be added there. */
+    for (lni = nown; lni < nloc; ++lni) {
+      out[lni] = 0.;
+    }
+  }
+
+  /* Loop over local quadrants to apply the element matrices. */
+  for (tt = p4est->first_local_tree, k = 0;
+       tt <= p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (p4est->trees, tt);
+    tquadrants = &tree->quadrants;
+    Q = (p4est_locidx_t) tquadrants->elem_count;
+    for (q = 0; q < Q; ++q, ++k) {
+      quad = p4est_quadrant_array_index (tquadrants, q);
+
+      /* We are on the 2D unit square.  The Jacobian determinant is h^2.
+       * For the stiffness matrix this cancels with the inner derivatives. */
+      factor = !stiffness ? pow (.5, 2. * quad->level) : 1.;
+      for (i = 0; i < P4EST_CHILDREN; ++i) {
+        /* Cache some information on corner nodes. */
+        lni = lnodes->element_nodes[P4EST_CHILDREN * k + i];
+        isboundary[i] = (bc == NULL ? 0 : bc[lni]);
+        inloc[i] = !isboundary[i] ? in[lni] : 0.;
+        all_lni[i] = lni;
+      }
+
+      /* Figure out the hanging corners on this element, if any. */
+      anyhang = lnodes_decode2 (lnodes->face_code[k], hanging_corner);
+
+      if (!anyhang) {
+        /* No hanging nodes on this element; just apply the matrix. */
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
+          if (!isboundary[i]) {
+            sum = 0.;
+            for (j = 0; j < P4EST_CHILDREN; ++j) {
+              sum += (*matrix)[i][j] * inloc[j];
+            }
+            out[all_lni[i]] += factor * sum;
+          }
+        }
+      }
+      else {
+        /* Compute input values at hanging nodes by interpolation. */
+        for (j = 0; j < P4EST_CHILDREN; ++j) {
+          if (hanging_corner[j] >= 0) {
+            P4EST_ASSERT (hanging_corner[j] != j &&
+                          hanging_corner[j] < P4EST_CHILDREN);
+            P4EST_ASSERT (hanging_corner[hanging_corner[j]] == -1);
+            /* (3D: process face hanging nodes before edge hanging nodes.) */
+            inloc[j] = .5 * (inloc[j] + inloc[hanging_corner[j]]);
+          }
+        }
+
+        /* Apply element matrix and then the transpose interpolation. */
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
+          sum = 0.;
+          for (j = 0; j < P4EST_CHILDREN; ++j) {
+            sum += (*matrix)[i][j] * inloc[j];
+          }
+          contrib_corner[0] = i;
+          if (hanging_corner[i] == -1) {
+            ncontrib = 1;
+            sum *= factor;
+          }
+          else {
+            ncontrib = 2;
+            contrib_corner[1] = hanging_corner[i];
+            sum *= .5 * factor;
+          }
+          for (j = 0; j < ncontrib; ++j) {
+            if (!isboundary[contrib_corner[j]]) {
+              out[all_lni[contrib_corner[j]]] += sum;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* Parallel sum of result. */
+  share_sum (p4est, lnodes, out);
+}
+
+/** Multiply the mass matrix with a vector of ones to compute the volume.
+ */
+static void
+test_area (p4est_t * p4est, p4est_lnodes_t * lnodes,
+           double (*matrix)[P4EST_CHILDREN][P4EST_CHILDREN],
+           double *tmp1, double *tmp2)
+{
+  const int           nloc = lnodes->num_local_nodes;
+  double              dot;
+  p4est_locidx_t      lni;
+
+  for (lni = 0; lni < nloc; ++lni) {
+    tmp1[lni] = 1.;
+  }
+  multiply_matrix (p4est, lnodes, NULL, 0, matrix, tmp1, tmp2);
+  dot = vector_dot (p4est, lnodes, tmp1, tmp2);
+  dot = sqrt (dot);
+
+  P4EST_GLOBAL_PRODUCTIONF ("Area of domain: %g\n", dot);
 }
 
 static void
 solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes,
-             const double * b, double * x)
+             const double *b, double *x)
 {
-  int                  i;
-  double              *aux[4];
-  double              *r, *p, *Ap, *z;
+  int                 i;
+  double             *aux[4];
+  double             *r, *p, *Ap, *z;
 
   for (i = 0; i < 4; ++i) {
     aux[i] = allocate_vector (lnodes);
@@ -289,9 +506,21 @@ solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes,
 static void
 solve_poisson (p4est_t * p4est)
 {
-  int8_t             *bc;
+  /** 1D mass matrix on the reference element [0, 1]. */
+  static const double m_1d[2][2] = {
+    {1 / 3., 1 / 6.},
+    {1 / 6., 1 / 3.},
+  };
+  /** 1D stiffness matrix on the reference element [0, 1]. */
+  static const double s_1d[2][2] = {
+    {1., -1.},
+    {-1., 1.},
+  };
+  int                 i, j, k, l;
+  double              mass_2d[4][4], stiffness_2d[4][4];
   double             *rhs_eval, *uexact_eval;
   double             *rhs_fe, *u_fe;
+  int8_t             *bc;
   p4est_ghost_t      *ghost;
   p4est_lnodes_t     *lnodes;
 
@@ -305,15 +534,32 @@ solve_poisson (p4est_t * p4est)
   p4est_ghost_destroy (ghost);
   ghost = NULL;
 
+  /* Compute entries of reference mass and stiffness matrices in 2D.
+   * In this example we can proceed without numerical integration. */
+  for (l = 0; l < 2; ++l) {
+    for (k = 0; k < 2; ++k) {
+      for (j = 0; j < 2; ++j) {
+        for (i = 0; i < 2; ++i) {
+          mass_2d[2 * j + i][2 * l + k] = m_1d[i][k] * m_1d[j][l];
+          stiffness_2d[2 * j + i][2 * l + k] =
+            m_1d[i][k] * s_1d[j][l] + s_1d[i][k] * m_1d[j][l];
+        }
+      }
+    }
+  }
+
+  /* Test mass matrix multiplication by computing the area of the domain. */
+  rhs_fe = allocate_vector (lnodes);
+  u_fe = allocate_vector (lnodes);
+  test_area (p4est, lnodes, &mass_2d, rhs_fe, u_fe);
+
   /* Interpolate right hand side and exact solution onto mesh nodes. */
   interpolate_functions (p4est, lnodes, &rhs_eval, &uexact_eval, &bc);
 
   /* Apply mass matrix to create right hand side FE vector. */
-  rhs_fe = allocate_vector (lnodes);
-  multiply_matrix (p4est, lnodes, 0, 0, rhs_eval, rhs_fe);
+  multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, rhs_eval, rhs_fe);
 
   /* Run conjugate gradient method with initial value zero. */
-  u_fe = allocate_vector (lnodes);
   solve_by_cg (p4est, lnodes, rhs_fe, u_fe);
 
   /* Free finite element vectors */
@@ -325,7 +571,6 @@ solve_poisson (p4est_t * p4est)
 
   /* We are done with the FE node numbering. */
   p4est_lnodes_destroy (lnodes);
-  lnodes = NULL;
 }
 
 #endif /* !P4_TO_P8 */
