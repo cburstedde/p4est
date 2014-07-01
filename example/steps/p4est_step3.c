@@ -21,6 +21,17 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_step3.c
+ *
+ * This 2D example program uses p4est to solve a simple advection problem.  It
+ * is numerically very simple, and intended to demonstrate several methods of
+ * interacting with the p4est data after it has been refined and partitioned.
+ * It demonstrates the construction of ghost layers (see p4est_ghost_t in
+ * p4est_ghost.h) and communication of ghost-layer data, and it demonstrates
+ * iteracting with the quadrants and quadrant boundaries through the
+ * p4est_iterate() routine (see p4est_iterate.h).
+ */
+
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
@@ -39,31 +50,46 @@
 
 /* In this example we store data with each quadrant/octant. */
 
+/** Per-quadrant data for this example.
+ *
+ * In this problem, we keep track of the state variable u, its
+ * derivatives in space, and in time.
+ */
 typedef struct step3_data
 {
-  double              u;
-  double              du[P4EST_DIM];
-  double              dudt;
+  double              u; /**< the state variable that is advected */
+  double              du[P4EST_DIM]; /**< the (approximately calculated) spatial derivatives of the state */
+  double              dudt; /**< the (approximately calculated) time derivatives of the state */
 }
 step3_data_t;
 
+/** The example parameters.
+ *
+ * This describes the advection problem and time-stepping used in this
+ * example.
+ */
 typedef struct step3_ctx
 {
-  double              center[P4EST_DIM];        /* center of the initial condition Gaussian bump */
-  double              bump_width;       /* width of the initial condition Gaussian bump */
-  double              max_err;  /* maximum global interpolation error */
-  double              v[P4EST_DIM];     /* advection direction */
-  int                 refine_period;    /* the number of time steps between refinement */
-  int                 repartition_period;       /* the number of time steps between repartitioning */
-  int                 write_period;     /* the number of time steps between writing vtk files */
+  double              center[P4EST_DIM];        /**< coordinates of the center of the initial condition Gaussian bump */
+  double              bump_width;       /**< width of the initial condition Gaussian bump */
+  double              max_err;  /**< maximum allowed global interpolation error */
+  double              v[P4EST_DIM];     /**< the advection velocity */
+  int                 refine_period;    /**< the number of time steps between mesh refinement */
+  int                 repartition_period;       /**< the number of time steps between repartitioning */
+  int                 write_period;     /**< the number of time steps between writing vtk files */
 }
 step3_ctx_t;
 
-/* The initial condition: a Gaussian bump.
- * Returns the value of the initial condition at x, and optionally the
- * gradient at that point as well */
+/** Compute the value and derivatives of the initial condition.
+ *
+ * \param [in]  x   the coordinates
+ * \param [out] du  the derivative at \a x
+ * \param [in]  ctx the example parameters
+ *
+ * \return the initial condition at \a x
+ */
 static double
-initial_condition (double x[], double du[], step3_ctx_t * ctx)
+step3_initial_condition (double x[], double du[], step3_ctx_t * ctx)
 {
   int                 i;
   double             *c = ctx->center;
@@ -89,11 +115,16 @@ initial_condition (double x[], double du[], step3_ctx_t * ctx)
   return retval;
 }
 
-/* This function converts the quadrant data to the coordinates of the center
- * of a quadrant */
+/** Get the coordinates of the midpoint of a quadrant.
+ *
+ * \param [in]  p4est      the forest
+ * \param [in]  which_tree the tree in the forest containing \a q
+ * \param [in]  q          the quadrant
+ * \param [out] xyz        the coordinates of the midpoint of \a q
+ */
 static void
-quad_get_midpoint (p4est_t * p4est, p4est_topidx_t which_tree,
-                   p4est_quadrant_t * q, double xyz[3])
+step3_get_midpoint (p4est_t * p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t * q, double xyz[3])
 {
   p4est_qcoord_t      half_length = P4EST_QUADRANT_LEN (q->level) / 2;
 
@@ -105,25 +136,40 @@ quad_get_midpoint (p4est_t * p4est, p4est_topidx_t which_tree,
                           xyz);
 }
 
-/* Initialize the initial condition value and derivative for each newly
- * created quadrant */
+/** Initialize the inital condition data of a quadrant.
+ *
+ * This function matches the p4est_init_t prototype that is used by
+ * p4est_new(), p4est_refine(), p4est_coarsen(), and p4est_balance().
+ *
+ * \param [in] p4est          the forest
+ * \param [in] which_tree     the tree in the forest containing \a q
+ * \param [in,out] q          the quadrant whose data gets initialized
+ */
 static void
-init_initial_condition (p4est_t * p4est, p4est_topidx_t which_tree,
-                        p4est_quadrant_t * q)
+step3_init_initial_condition (p4est_t * p4est, p4est_topidx_t which_tree,
+                              p4est_quadrant_t * q)
 {
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
   double              midpoint[3];
 
-  quad_get_midpoint (p4est, which_tree, q, midpoint);
-  data->u = initial_condition (midpoint, data->du, ctx);
+  step3_get_midpoint (p4est, which_tree, q, midpoint);
+  data->u = step3_initial_condition (midpoint, data->du, ctx);
 }
 
-/* Estimate the square of the L2 error on the quadrant by assuming that the
- * function is linear and that the value and derivative are correct at the
- * midpoint. */
+/** Estimate the square of the approximation error on a quadrant.
+ *
+ * We compute our estimate by integrating the difference of a constant
+ * approximation at the midpoint and a linear approximation that interpolates
+ * at the midpoint.
+ *
+ * \param [in] q a quadrant
+ *
+ * \return the square of the error estimate for the state variables contained
+ * in \a q's data.
+ */
 static double
-error_sqr_estimate (p4est_quadrant_t * q)
+step3_error_sqr_estimate (p4est_quadrant_t * q)
 {
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
   int                 i;
@@ -148,12 +194,24 @@ error_sqr_estimate (p4est_quadrant_t * q)
   return diff2;
 }
 
-/* Refine by error estimate above.  Given the maximum global error, we
- * enforce that each quadrant's portion of the error must not exceed is
- * fraction of the total volume of the domain (which is 1). */
+/** Refine by the L2 error estimate.
+ *
+ * Given the maximum global error, we enforce that each quadrant's portion of
+ * the error must not exceed is fraction of the total volume of the domain
+ * (which is 1).
+ *
+ * This function matches the p4est_refine_t prototype that is used by
+ * p4est_refine() and p4est_refine_ext().
+ *
+ * \param [in] p4est          the forest
+ * \param [in] which_tree     the tree in the forest containing \a q
+ * \param [in] q              the quadrant
+ *
+ * \return 1 if \a q should be refined, 0 otherwise.
+ */
 static int
-refine_err_estimate (p4est_t * p4est, p4est_topidx_t which_tree,
-                     p4est_quadrant_t * q)
+step3_refine_err_estimate (p4est_t * p4est, p4est_topidx_t which_tree,
+                           p4est_quadrant_t * q)
 {
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
   double              global_err = ctx->max_err;
@@ -169,7 +227,7 @@ refine_err_estimate (p4est_t * p4est, p4est_topidx_t which_tree,
   vol = h * h;
 #endif
 
-  err2 = error_sqr_estimate (q);
+  err2 = step3_error_sqr_estimate (q);
   if (err2 > global_err2 * vol) {
     return 1;
   }
@@ -178,13 +236,22 @@ refine_err_estimate (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 }
 
-/* Coarsen by error estimate above.  Given the maximum global error, we
- * enforce that each quadrant's portion of the error must not exceed is
- * fraction of the total volume of the domain (which is 1). */
+/** Coarsen by the L2 error estimate of the initial condition.
+ *
+ * Given the maximum global error, we enforce that each quadrant's portion of
+ * the error must not exceed is fraction of the total volume of the domain
+ * (which is 1).
+ *
+ * \param [in] p4est          the forest
+ * \param [in] which_tree     the tree in the forest containing \a children
+ * \param [in] children       a family of quadrants
+ *
+ * \return 1 if \a children should be coarsened, 0 otherwise.
+ */
 static int
-coarsen_err_estimate_initial_condition (p4est_t * p4est,
-                                        p4est_topidx_t which_tree,
-                                        p4est_quadrant_t * children[])
+step3_coarsen_initial_condition (p4est_t * p4est,
+                                 p4est_topidx_t which_tree,
+                                 p4est_quadrant_t * children[])
 {
   p4est_quadrant_t    parent;
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
@@ -192,13 +259,13 @@ coarsen_err_estimate_initial_condition (p4est_t * p4est,
   double              global_err2 = global_err * global_err;
   double              h;
   step3_data_t        parentdata;
-  double              parentmidpoint[P4EST_DIM];
+  double              parentmidpoint[3];
   double              vol, err2;
 
   /* get the parent of the first child (the parent of all children) */
   p4est_quadrant_parent (children[0], &parent);
-  quad_get_midpoint (p4est, which_tree, &parent, parentmidpoint);
-  parentdata.u = initial_condition (parentmidpoint, parentdata.du, ctx);
+  step3_get_midpoint (p4est, which_tree, &parent, parentmidpoint);
+  parentdata.u = step3_initial_condition (parentmidpoint, parentdata.du, ctx);
   h = (double) P4EST_QUADRANT_LEN (parent.level) / (double) P4EST_ROOT_LEN;
   /* the quadrant's volume is also its volume fraction */
 #ifdef P4_TO_P8
@@ -208,7 +275,7 @@ coarsen_err_estimate_initial_condition (p4est_t * p4est,
 #endif
   parent.p.user_data = (void *) (&parentdata);
 
-  err2 = error_sqr_estimate (&parent);
+  err2 = step3_error_sqr_estimate (&parent);
   if (err2 < global_err2 * vol) {
     return 1;
   }
@@ -217,10 +284,25 @@ coarsen_err_estimate_initial_condition (p4est_t * p4est,
   }
 }
 
+/** Coarsen by the L2 error estimate of the current state approximation.
+ *
+ * Given the maximum global error, we enforce that each quadrant's portion of
+ * the error must not exceed its fraction of the total volume of the domain
+ * (which is 1).
+ *
+ * This function matches the p4est_coarsen_t prototype that is used by
+ * p4est_coarsen() and p4est_coarsen_ext().
+ *
+ * \param [in] p4est          the forest
+ * \param [in] which_tree     the tree in the forest containing \a children
+ * \param [in] children       a family of quadrants
+ *
+ * \return 1 if \a children should be coarsened, 0 otherwise.
+ */
 static int
-coarsen_err_estimate (p4est_t * p4est,
-                      p4est_topidx_t which_tree,
-                      p4est_quadrant_t * children[])
+step3_coarsen_err_estimate (p4est_t * p4est,
+                            p4est_topidx_t which_tree,
+                            p4est_quadrant_t * children[])
 {
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
   double              global_err = ctx->max_err;
@@ -251,12 +333,12 @@ coarsen_err_estimate (p4est_t * p4est,
 
   err2 = 0.;
   for (i = 0; i < P4EST_CHILDREN; i++) {
-    childerr2 = error_sqr_estimate (children[i]);
+    childerr2 = step3_error_sqr_estimate (children[i]);
 
     if (childerr2 > global_err2 * vol) {
       return 0;
     }
-    err2 += error_sqr_estimate (children[i]);
+    err2 += step3_error_sqr_estimate (children[i]);
     diff = (parentu - data->u) * (parentu - data->u);
     err2 += diff * vol;
   }
@@ -268,6 +350,32 @@ coarsen_err_estimate (p4est_t * p4est,
   }
 }
 
+/** Initialize the state variables of incoming quadrants from outgoing
+ * quadrants.
+ *
+ * The functions p4est_refine_ext(), p4est_coarsen_ext(), and
+ * p4est_balance_ext() take as an argument a p4est_replace_t callback function,
+ * which allows one to setup the quadrant data of incoming quadrants from the
+ * data of outgoing quadrants, before the outgoing data is destroyed.  This
+ * function mathces the p4est_replace_t prototype.
+ *
+ * In this example, we linearly interpolate the state variable of a quadrant
+ * that is refined to its children, and we average the midpoints of children
+ * that are being coarsened to the parent.
+ *
+ * \param [in] p4est          the forest
+ * \param [in] which_tree     the tree in the forest containing \a children
+ * \param [in] num_outgoing   the number of quadrants that are being replaced:
+ *                            either 1 if a quadrant is being refined, or
+ *                            P4EST_CHILDREN if a family of children are being
+ *                            coarsened.
+ * \param [in] outgoing       the outgoing quadrants
+ * \param [in] num_incoming   the number of quadrants that are being added:
+ *                            either P4EST_CHILDREN if a quadrant is being refined, or
+ *                            1 if a family of children are being
+ *                            coarsened.
+ * \param [in,out] incoming   quadrants whose data are initialized.
+ */
 static void
 step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
                      int num_outgoing,
@@ -323,19 +431,34 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
       for (j = 0; j < P4EST_DIM; j++) {
         child_data->du[j] = parent_data->du[j];
         child_data->u +=
-          (h / 2.) * parent_data->du[j] * ((i & (1 << j)) ? 1. : -1);
+          (h / 4.) * parent_data->du[j] * ((i & (1 << j)) ? 1. : -1);
       }
     }
   }
 }
 
-/* Callback function for interpolating the solution from quadrant midpoints to
- * corners.  This callback is passed to p4est_iterate, which calls it for
- * every quadrant. The info object passes information about the current
- * quadrant to the callback: it is populated by p4est_iterate.  (See
- * p4est_iterate.h) */
+/** Callback function for interpolating the solution from quadrant midpoints to
+ * corners.
+ *
+ * The function p4est_iterate() takes as an argument a p4est_iter_volume_t
+ * callback function, which it executes at every local quadrant (see
+ * p4est_iterate.h).  This function matches the p4est_iter_volume_t prototype.
+ *
+ * In this example, we use the callback function to interpolate the state
+ * variable to the corners, and write those corners into an array so that they
+ * can be written out.
+ *
+ * \param [in] info          the information about this quadrant that has been
+ *                           populated by p4est_iterate()
+ * \param [in,out] user_data the user_data that was given as an argument to
+ *                           p4est_iterate: in this case, it points to the
+ *                           array of corner values that we want to write.
+ *                           The values for the corner of the quadrant
+ *                           described by \a info are written during the
+ *                           execution of the callback.
+ */
 static void
-interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
+step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
 {
   double             *u_interp = (double *) user_data;  /* we passed the array of values to fill as the user_data in the call to p4est_iterate */
   p4est_t            *p4est = info->p4est;
@@ -371,6 +494,11 @@ interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
 
 }
 
+/** Write the state variable to vtk format, one file per process.
+ *
+ * \param [in] p4est    the forest, whose quadrant data contains the state
+ * \param [in] timestep the timestep number, used to name the output files
+ */
 static void
 step3_write_solution (p4est_t * p4est, int timestep)
 {
@@ -393,7 +521,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
    * the usage of p4est_iterate in this example */
   p4est_iterate (p4est, NULL,   /* we don't need any ghost quadrants for this loop */
                  (void *) u_interp,     /* pass in u_interp so that we can fill it */
-                 interpolate_solution,  /* callback function that interpolate from the cell center to the cell corners, defined above */
+                 step3_interpolate_solution,  /* callback function that interpolate from the cell center to the cell corners, defined above */
                  NULL,          /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                  NULL,          /* there is no callback for the edges between quadrants */
@@ -413,8 +541,20 @@ step3_write_solution (p4est_t * p4est, int timestep)
   P4EST_FREE (u_interp);
 }
 
+/** Approximate the divergence of (vu) on each quadrant
+ *
+ * We use piecewise constant approximations on each quadrant, so the value is
+ * always 0.
+ *
+ * Like step3_interpolate_solution(), this function matches the
+ * p4est_iter_volume_t prototype used by p4est_iterate().
+ *
+ * \param [in] info          the information about the quadrant populated by
+ *                           p4est_iterate()
+ * \param [in] user_data     not used
+ */
 static void
-cell_divergence (p4est_iter_volume_info_t * info, void *user_data)
+step3_quad_divergence (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q = info->quad;
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
@@ -422,8 +562,22 @@ cell_divergence (p4est_iter_volume_info_t * info, void *user_data)
   data->dudt = 0.;
 }
 
+/** Approximate the flux across a boundary between quadrants.
+ *
+ * We use a very simple upwind numerical flux.
+ *
+ * This function matches the p4est_iter_face_t prototype used by
+ * p4est_iterate().
+ *
+ * \param [in] info the information about the quadrants on either side of the
+ *                  interface, populated by p4est_iterate()
+ * \param [in] user_data the user_data given to p4est_iterate(): in this case,
+ *                       it points to the ghost_data array, which contains the
+ *                       step3_data_t data for all of the ghost cells, which
+ *                       was populated by p4est_ghost_exchange_data()
+ */
 static void
-upwind_flux (p4est_iter_face_info_t * info, void *user_data)
+step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
 {
   int                 i, j;
   p4est_t            *p4est = info->p4est;
@@ -433,7 +587,7 @@ upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   step3_data_t       *ghost_data = (step3_data_t *) user_data;
   step3_data_t       *udata;
   p4est_quadrant_t   *quad;
-  double              vdotn;
+  double              vdotn = 0.;
   double              uavg;
   double              q;
   double              h, facearea;
@@ -446,6 +600,7 @@ upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   side[0] = p4est_iter_fside_array_index_int (sides, 0);
   side[1] = p4est_iter_fside_array_index_int (sides, 1);
 
+  /* which of the quadrant's faces the interface touches */
   which_face = side[0]->face;
 
   switch (which_face) {
@@ -472,6 +627,11 @@ upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   }
   upwindside = vdotn >= 0. ? 0 : 1;
 
+  /* Because we have non-conforming boundaries, one side of an interface can
+   * either have one large ("full") quadrant or 2^(d-1) small ("hanging")
+   * quadrants: we have to compute the average differently in each case.  The
+   * info populated by p4est_iterate() gives us the context we need to
+   * proceed. */
   uavg = 0;
   if (side[upwindside]->is_hanging) {
     /* there are 2^(d-1) (P4EST_HALF) subfaces */
@@ -537,8 +697,24 @@ upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   }
 }
 
+/** Compute the new value of the state from the computed time derivative.
+ *
+ * We use a simple forward Euler scheme.
+ *
+ * The derivative was computed by a p4est_iterate() loop by the callbacks
+ * step3_quad_divergence() and step3_upwind_flux(). Now we multiply this by
+ * the timestep and add to the current solution.
+ *
+ * This function matches the p4est_iter_volume_t prototype used by
+ * p4est_iterate().
+ *
+ * \param [in] info          the information about this quadrant that has been
+ *                           populated by p4est_iterate()
+ * \param [in] user_data the user_data given to p4est_iterate(): in this case,
+ *                       it points to the timestep.
+ */
 static void
-timestep_update (p4est_iter_volume_info_t * info, void *user_data)
+step3_timestep_update (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q = info->quad;
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
@@ -554,11 +730,25 @@ timestep_update (p4est_iter_volume_info_t * info, void *user_data)
 #endif
 
   data->u += dt * data->dudt / vol;
-
 }
 
+/** Reset the approxmate derivatives.
+ *
+ * p4est_iterate() has an invariant to the order of callback execution: the
+ * p4est_iter_volume_t callback will be executed on a quadrant before the
+ * p4est_iter_face_t callbacks are executed on its faces.  This function
+ * resets the derivative stored in the quadrant's data before
+ * step3_minmod_estimate() updates the derivative based on the face neighbors.
+ *
+ * This function matches the p4est_iter_volume_t prototype used by
+ * p4est_iterate().
+ *
+ * \param [in] info          the information about this quadrant that has been
+ *                           populated by p4est_iterate()
+ * \param [in] user_data     not used
+ */
 static void
-reset_derivatives (p4est_iter_volume_info_t * info, void *user_data)
+step3_reset_derivatives (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q = info->quad;
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
@@ -569,8 +759,21 @@ reset_derivatives (p4est_iter_volume_info_t * info, void *user_data)
   }
 }
 
+/** For two quadrants on either side of a face, estimate the derivative normal
+ * to the face.
+ *
+ * This function matches the p4est_iter_face_t prototype used by
+ * p4est_iterate().
+ *
+ * \param [in] info          the information about this quadrant that has been
+ *                           populated by p4est_iterate()
+ * \param [in] user_data the user_data given to p4est_iterate(): in this case,
+ *                       it points to the ghost_data array, which contains the
+ *                       step3_data_t data for all of the ghost cells, which
+ *                       was populated by p4est_ghost_exchange_data()
+ */
 static void
-minmod_estimate (p4est_iter_face_info_t * info, void *user_data)
+step3_minmod_estimate (p4est_iter_face_info_t * info, void *user_data)
 {
   int                 i, j;
   p4est_iter_face_side_t *side[2];
@@ -672,8 +875,20 @@ minmod_estimate (p4est_iter_face_info_t * info, void *user_data)
   }
 }
 
+/** Compute the maximum state value.
+ *
+ * This function updates the maximum value from the value of a single cell.
+ *
+ * This function matches the p4est_iter_volume_t prototype used by
+ * p4est_iterate().
+ *
+ * \param [in] info              the information about this quadrant that has been
+ *                               populated by p4est_iterate()
+ * \param [in,out] user_data     the user_data given to p4est_iterate(): in this case,
+ *                               it points to the maximum value that will be updated
+ */
 static void
-compute_umax (p4est_iter_volume_info_t * info, void *user_data)
+step3_compute_max (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q = info->quad;
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
@@ -684,8 +899,16 @@ compute_umax (p4est_iter_volume_info_t * info, void *user_data)
   *((double *) user_data) = umax;
 }
 
+/** Compute the timestep.
+ *
+ * Find the smallest quadrant and scale the timestep based on that length and
+ * the advection velocity.
+ *
+ * \param [in] p4est the forest
+ * \return the timestep.
+ */
 static double
-get_timestep (p4est_t * p4est)
+step3_get_timestep (p4est_t * p4est)
 {
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
   p4est_topidx_t      t, flt, llt;
@@ -724,6 +947,13 @@ get_timestep (p4est_t * p4est)
   return dt;
 }
 
+/** Timestep the advection problem.
+ *
+ * Update the state, refine, repartition, and write the solution to file.
+ *
+ * \param [in,out] p4est the forest, whose state is updated
+ * \param [in] time      the end time
+ */
 static void
 step3_timestep (p4est_t * p4est, double time)
 {
@@ -750,10 +980,10 @@ step3_timestep (p4est_t * p4est, double time)
   /* synchronize the ghost data */
   p4est_ghost_exchange_data (p4est, ghost, ghost_data);
 
-  /* initialize derivative estimates */
+  /* initialize du/dx estimates */
   p4est_iterate (p4est, ghost, (void *) ghost_data,     /* pass in ghost data that we just exchanged */
-                 reset_derivatives,     /* blank the previously calculated derivatives */
-                 minmod_estimate,       /* compute the minmod estimate of each cell's derivative */
+                 step3_reset_derivatives,     /* blank the previously calculated derivatives */
+                 step3_minmod_estimate,       /* compute the minmod estimate of each cell's derivative */
 #ifdef P4_TO_P8
                  NULL,          /* there is no callback for the edges between quadrants */
 #endif
@@ -769,7 +999,7 @@ step3_timestep (p4est_t * p4est, double time)
         umax = 0.;
         /* initialize derivative estimates */
         p4est_iterate (p4est, NULL, (void *) &umax,     /* pass in ghost data that we just exchanged */
-                       compute_umax,    /* blank the previously calculated derivatives */
+                       step3_compute_max,    /* blank the previously calculated derivatives */
                        NULL,    /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                        NULL,    /* there is no callback for the edges between quadrants */
@@ -783,10 +1013,11 @@ step3_timestep (p4est_t * p4est, double time)
         ctx->max_err = orig_max_err * global_umax;
         P4EST_GLOBAL_PRODUCTIONF ("u_max %f\n", global_umax);
 
+        /* adapt */
         p4est_refine_ext (p4est, recursive, allowed_level,
-                          refine_err_estimate, NULL, step3_replace_quads);
+                          step3_refine_err_estimate, NULL, step3_replace_quads);
         p4est_coarsen_ext (p4est, recursive, callbackorphans,
-                           coarsen_err_estimate, NULL, step3_replace_quads);
+                           step3_coarsen_err_estimate, NULL, step3_replace_quads);
         p4est_balance_ext (p4est, P4EST_CONNECT_FACE, NULL,
                            step3_replace_quads);
 
@@ -795,7 +1026,7 @@ step3_timestep (p4est_t * p4est, double time)
         ghost = NULL;
         ghost_data = NULL;
       }
-      dt = get_timestep (p4est);
+      dt = step3_get_timestep (p4est);
     }
 
     /* repartition */
@@ -822,11 +1053,11 @@ step3_timestep (p4est_t * p4est, double time)
       p4est_ghost_exchange_data (p4est, ghost, ghost_data);
     }
 
-    /* compute dudt */
+    /* compute du/dt */
     p4est_iterate (p4est, ghost,        /* pass in the ghost quadrants */
                    (void *) ghost_data, /* pass in ghost data that we just exchanged */
-                   cell_divergence,     /* compute each cell's contribution to dudt */
-                   upwind_flux, /* compute the face fluxes that change each cell's dudt */
+                   step3_quad_divergence,     /* compute each cell's contribution to dudt */
+                   step3_upwind_flux, /* compute the face fluxes that change each cell's dudt */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */
 #endif
@@ -835,7 +1066,7 @@ step3_timestep (p4est_t * p4est, double time)
     /* update u */
     p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
                    (void *) &dt,        /* pass in dt */
-                   timestep_update,     /* update each sell */
+                   step3_timestep_update,     /* update each sell */
                    NULL,        /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */
@@ -845,10 +1076,10 @@ step3_timestep (p4est_t * p4est, double time)
     /* synchronize the ghost data */
     p4est_ghost_exchange_data (p4est, ghost, ghost_data);
 
-    /* update du estimate */
+    /* update du/dx estimate */
     p4est_iterate (p4est, ghost, (void *) ghost_data,   /* pass in ghost data that we just exchanged */
-                   reset_derivatives,   /* blank the previously calculated derivatives */
-                   minmod_estimate,     /* compute the minmod estimate of each cell's derivative */
+                   step3_reset_derivatives,   /* blank the previously calculated derivatives */
+                   step3_minmod_estimate,     /* compute the minmod estimate of each cell's derivative */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */
 #endif
@@ -859,6 +1090,12 @@ step3_timestep (p4est_t * p4est, double time)
   p4est_ghost_destroy (ghost);
 }
 
+/** The main step 3 program.
+ *
+ * Setup of the example parameters; create the forest, with the state variable
+ * stored in the quadrant data; refine, balance, and partition the forest;
+ * timestep; clean up, and exit.
+ */
 int
 main (int argc, char **argv)
 {
@@ -917,14 +1154,15 @@ main (int argc, char **argv)
                          4,     /* minimum level of refinement */
                          1,     /* fill uniform */
                          sizeof (step3_data_t), /* data size */
-                         init_initial_condition,        /* data initializiation */
+                         step3_init_initial_condition,        /* data initializiation */
                          (void *) (&ctx));      /* user data */
 
+  /* refine and coarsen based on an interpolation error estimate */
   recursive = 1;
-  p4est_refine (p4est, recursive, refine_err_estimate,
-                init_initial_condition);
-  p4est_coarsen (p4est, recursive, coarsen_err_estimate_initial_condition,
-                 init_initial_condition);
+  p4est_refine (p4est, recursive, step3_refine_err_estimate,
+                step3_init_initial_condition);
+  p4est_coarsen (p4est, recursive, step3_coarsen_initial_condition,
+                 step3_init_initial_condition);
 
   /* Partition: The quadrants are redistributed for equal element count.  The
    * partition can optionally be modified such that a family of octants, which
@@ -934,7 +1172,7 @@ main (int argc, char **argv)
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
    * by more than a factor of 2.  This can optionally include diagonal
    * neighbors across edges or corners as well; see p4est.h. */
-  p4est_balance (p4est, P4EST_CONNECT_FACE, init_initial_condition);
+  p4est_balance (p4est, P4EST_CONNECT_FACE, step3_init_initial_condition);
   p4est_partition (p4est, partforcoarsen, NULL);
 
   /* time step */
