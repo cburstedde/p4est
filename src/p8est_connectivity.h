@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_connectivity.h
+ *
+ * The coarse topological description of the forest.
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_CONNECTIVITY_H
 #define P8EST_CONNECTIVITY_H
 
@@ -29,19 +36,28 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* the spatial dimension */
+/** The spatial dimension */
 #define P8EST_DIM 3
+/** The number of faces of an octant
+ *
+ * \note for uniform naming reasons, an
+ * octant is represented by the datatype p8est_quadrant_t */
 #define P8EST_FACES (2 * P8EST_DIM)
+/** The number of children of an octant
+ *
+ * also the nmber of corners */
 #define P8EST_CHILDREN 8
+/** The number of children/corners touching one face */
 #define P8EST_HALF (P8EST_CHILDREN / 2)
+/** The number of edges around an octant */
 #define P8EST_EDGES 12
-/* size of insulation layer */
+/** The size of insulation layer */
 #define P8EST_INSUL 27
 
 /* size of face transformation encoding */
 #define P8EST_FTRANSFORM 9
 
-/* p8est identification string */
+/** p8est identification string */
 #define P8EST_STRING "p8est"
 
 /* Increase this number whenever the on-disk format for
@@ -50,7 +66,9 @@ SC_EXTERN_C_BEGIN;
  */
 #define P8EST_ONDISK_FORMAT 0x3000009
 
-/* Several functions involve relationships between neighboring trees and/or
+/** Characterize a type of adjacency.
+ *
+ * Several functions involve relationships between neighboring trees and/or
  * quadrants, and their behavior depends on how one defines adjacency:
  * 1) entities are adjacent if they share a face, or
  * 2) entities are adjacent if they share a face or corner, or
@@ -135,27 +153,40 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  */
 typedef struct p8est_connectivity
 {
-  p4est_topidx_t      num_vertices;
-  p4est_topidx_t      num_trees;
-  p4est_topidx_t      num_edges;
-  p4est_topidx_t      num_corners;
+  p4est_topidx_t      num_vertices; /**< the number of vertices that define
+                                         the \a embedding of the forest (not
+                                         the topology) */
+  p4est_topidx_t      num_trees;    /**< the number of trees */
+  p4est_topidx_t      num_edges;    /**< the number of edges that help define
+                                         the topology */
+  p4est_topidx_t      num_corners;  /**< the number of corners that help
+                                         define the topology */
 
-  double             *vertices;
-  p4est_topidx_t     *tree_to_vertex;
-  int8_t             *tree_to_attr;
+  double             *vertices;     /**< an array of size
+                                         (3 * \a num_vertices) */
+  p4est_topidx_t     *tree_to_vertex; /**< embed each tree into \f$R^3\f$ for
+                                           e.g. visualization (see
+                                           p8est_vtk.h) */
+  int8_t             *tree_to_attr; /**< not touched by p4est */
 
-  p4est_topidx_t     *tree_to_tree;
-  int8_t             *tree_to_face;
-
-  p4est_topidx_t     *tree_to_edge;
-  p4est_topidx_t     *ett_offset;
-  p4est_topidx_t     *edge_to_tree;
-  int8_t             *edge_to_edge;
-
-  p4est_topidx_t     *tree_to_corner;
-  p4est_topidx_t     *ctt_offset;
-  p4est_topidx_t     *corner_to_tree;
-  int8_t             *corner_to_corner;
+  p4est_topidx_t     *tree_to_tree; /**< (6 * \a num_trees) neighbors across
+                                         faces */
+  int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
+                                         face+orientation (see description) */
+  p4est_topidx_t     *tree_to_edge; /**< (12 * \a num_trees) or NULL (see
+                                          description) */
+  p4est_topidx_t     *ett_offset; /**< edge to offset in \a edge_to_tree and
+                                       \a edge_to_edge */
+  p4est_topidx_t     *edge_to_tree; /**< list of trees that meet at an edge */
+  int8_t             *edge_to_edge; /**< list of tree-edges+orientations that
+                                         meet at an edge (see description) */
+  p4est_topidx_t     *tree_to_corner; /**< (8 * \a num_trees) or NULL (see
+                                           description) */
+  p4est_topidx_t     *ctt_offset; /**< corner to offset in \a corner_to_tree
+                                       and \a corner_to_corner */
+  p4est_topidx_t     *corner_to_tree; /**< list of trees that meet at a corner */
+  int8_t             *corner_to_corner; /**< list of tree-corners that meet at
+                                             a corner */
 }
 p8est_connectivity_t;
 

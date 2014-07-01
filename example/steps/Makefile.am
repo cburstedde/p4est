@@ -37,4 +37,13 @@ LINT_CSOURCES += $(example_steps_p8est_step1_SOURCES) \
                  $(example_steps_p8est_step4_SOURCES)
 endif
 
-EXTRA_DIST += example/steps/hw32.h
+EXTRA_DIST += \
+  example/steps/hw32.h \
+  example/steps/hole_2d_cubit.inp \
+  example/steps/hole_2d_cubit.jou \
+  example/steps/hole_3d_cubit.inp \
+  example/steps/hole_3d_cubit.jou \
+  example/steps/hole_2d_gmsh.inp \
+  example/steps/hole_2d_gmsh.geo \
+  example/steps/hole_3d_gmsh.inp \
+  example/steps/hole_3d_gmsh.geo

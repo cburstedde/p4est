@@ -57,9 +57,9 @@
  */
 typedef struct step3_data
 {
-  double              u; /**< the state variable that is advected */
-  double              du[P4EST_DIM]; /**< the (approximately calculated) spatial derivatives of the state */
-  double              dudt; /**< the (approximately calculated) time derivatives of the state */
+  double              u;             /**< the state variable */
+  double              du[P4EST_DIM]; /**< the spatial derivatives */
+  double              dudt;          /**< the time derivative */
 }
 step3_data_t;
 
@@ -70,13 +70,20 @@ step3_data_t;
  */
 typedef struct step3_ctx
 {
-  double              center[P4EST_DIM];        /**< coordinates of the center of the initial condition Gaussian bump */
-  double              bump_width;       /**< width of the initial condition Gaussian bump */
-  double              max_err;  /**< maximum allowed global interpolation error */
-  double              v[P4EST_DIM];     /**< the advection velocity */
-  int                 refine_period;    /**< the number of time steps between mesh refinement */
-  int                 repartition_period;       /**< the number of time steps between repartitioning */
-  int                 write_period;     /**< the number of time steps between writing vtk files */
+  double              center[P4EST_DIM];  /**< coordinates of the center of
+                                               the initial condition Gaussian
+                                               bump */
+  double              bump_width;         /**< width of the initial condition
+                                               Gaussian bump */
+  double              max_err;            /**< maximum allowed global
+                                               interpolation error */
+  double              v[P4EST_DIM];       /**< the advection velocity */
+  int                 refine_period;      /**< the number of time steps
+                                               between mesh refinement */
+  int                 repartition_period; /**< the number of time steps
+                                               between repartitioning */
+  int                 write_period;       /**< the number of time steps
+                                               between writing vtk files */
 }
 step3_ctx_t;
 
@@ -149,11 +156,14 @@ static void
 step3_init_initial_condition (p4est_t * p4est, p4est_topidx_t which_tree,
                               p4est_quadrant_t * q)
 {
+  /* the data associated with a forest is accessible by user_pointer */
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
+  /* the data associated with a quadrant is accessible by p.user_data */
   step3_data_t       *data = (step3_data_t *) q->p.user_data;
   double              midpoint[3];
 
   step3_get_midpoint (p4est, which_tree, q, midpoint);
+  /* initialize the data */
   data->u = step3_initial_condition (midpoint, data->du, ctx);
 }
 
@@ -582,8 +592,6 @@ step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   int                 i, j;
   p4est_t            *p4est = info->p4est;
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
-  p4est_iter_face_side_t *side[2];
-  sc_array_t         *sides = &(info->sides);
   step3_data_t       *ghost_data = (step3_data_t *) user_data;
   step3_data_t       *udata;
   p4est_quadrant_t   *quad;
@@ -593,6 +601,8 @@ step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   double              h, facearea;
   int                 which_face;
   int                 upwindside;
+  p4est_iter_face_side_t *side[2];
+  sc_array_t         *sides = &(info->sides);
 
   /* because there are no boundaries, every face has two sides */
   P4EST_ASSERT (sides->elem_count == 2);
@@ -959,7 +969,6 @@ step3_timestep (p4est_t * p4est, double time)
 {
   double              t = 0.;
   double              dt = 0.;
-  p4est_ghost_t      *ghost;
   int                 i;
   step3_data_t       *ghost_data;
   step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
@@ -973,9 +982,11 @@ step3_timestep (p4est_t * p4est, double time)
   int                 mpiret;
   double              orig_max_err = ctx->max_err;
   double              umax, global_umax;
+  p4est_ghost_t      *ghost;
 
-  /* create the ghost cells */
+  /* create the ghost quadrants */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  /* create space for storing the ghost data */
   ghost_data = P4EST_ALLOC (step3_data_t, ghost->ghosts.elem_count);
   /* synchronize the ghost data */
   p4est_ghost_exchange_data (p4est, ghost, ghost_data);
@@ -1056,14 +1067,19 @@ step3_timestep (p4est_t * p4est, double time)
     }
 
     /* compute du/dt */
-    p4est_iterate (p4est, ghost,        /* pass in the ghost quadrants */
-                   (void *) ghost_data, /* pass in ghost data that we just exchanged */
-                   step3_quad_divergence,       /* compute each cell's contribution to dudt */
-                   step3_upwind_flux,   /* compute the face fluxes that change each cell's dudt */
+    p4est_iterate (p4est,                 /* the forest */
+                   ghost,                 /* the ghost layer */
+                   (void *) ghost_data,   /* the synchronized ghost data */
+                   step3_quad_divergence, /* callback to compute each quad's
+                                             interior contribution to du/dt */
+                   step3_upwind_flux,     /* callback to compute each quads'
+                                             faces' contributions to du/du */
 #ifdef P4_TO_P8
-                   NULL,        /* there is no callback for the edges between quadrants */
+                   NULL,                  /* there is no callback for the
+                                             edges between quadrants */
 #endif
-                   NULL);       /* there is no callback for the corners between quadrants */
+                   NULL);                 /* there is no callback for the
+                                             corners between quadrants */
 
     /* update u */
     p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
@@ -1151,13 +1167,14 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_periodic ();
 #endif
 
-  /* Create a forest that has 16 cells in each direction */
-  p4est = p4est_new_ext (mpicomm, conn, 0,      /* minimum quadrants per mpi process */
-                         4,     /* minimum level of refinement */
-                         1,     /* fill uniform */
-                         sizeof (step3_data_t), /* data size */
-                         step3_init_initial_condition,  /* data initializiation */
-                         (void *) (&ctx));      /* user data */
+  p4est = p4est_new_ext (mpicomm, /* communicator */
+                         conn,    /* connectivity */
+                         0,       /* minimum quadrants per MPI process */
+                         4,       /* minimum level of refinement */
+                         1,       /* fill uniform */
+                         sizeof (step3_data_t),         /* data size */
+                         step3_init_initial_condition,  /* initializes data */
+                         (void *) (&ctx));              /* context */
 
   /* refine and coarsen based on an interpolation error estimate */
   recursive = 1;

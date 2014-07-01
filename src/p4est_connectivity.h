@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_connectivity.h
+ *
+ * The coarse topological description of the forest.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_CONNECTIVITY_H
 #define P4EST_CONNECTIVITY_H
 
@@ -33,18 +40,23 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* spatial dimension */
+/** The spatial dimension */
 #define P4EST_DIM 2
+/** The number of faces of a quadrant */
 #define P4EST_FACES (2 * P4EST_DIM)
+/** The number of children of a quadrant
+ *
+ * also the nmber of corners */
 #define P4EST_CHILDREN 4
+/** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
-/* size of insulation layer */
+/** The size of insulation layer */
 #define P4EST_INSUL 9
 
 /* size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
 
-/* p4est identification string */
+/** p4est identification string */
 #define P4EST_STRING "p4est"
 
 /* Increase this number whenever the on-disk format for
@@ -53,7 +65,9 @@ SC_EXTERN_C_BEGIN;
  */
 #define P4EST_ONDISK_FORMAT 0x2000009
 
-/* Several functions involve relationships between neighboring trees and/or
+/** Characterize a type of adjacency.
+ *
+ * Several functions involve relationships between neighboring trees and/or
  * quadrants, and their behavior depends on how one defines adjacency:
  * 1) entities are adjacent if they share a face, or
  * 2) entities are adjacent if they share a face or corner.
@@ -120,21 +134,31 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  */
 typedef struct p4est_connectivity
 {
-  p4est_topidx_t      num_vertices;
-  p4est_topidx_t      num_trees;
-  p4est_topidx_t      num_corners;
+  p4est_topidx_t      num_vertices; /**< the number of vertices that define
+                                         the \a embedding of the forest (not
+                                         the topology) */
+  p4est_topidx_t      num_trees;    /**< the number of trees */
+  p4est_topidx_t      num_corners;  /**< the number of corners that help
+                                         define topology */
+  double             *vertices;     /**< an array of size
+                                         (3 * \a num_vertices) */
+  p4est_topidx_t     *tree_to_vertex; /**< embed each tree into \f$R^3\f$ for
+                                           e.g. visualization (see
+                                           p4est_vtk.h) */
+  int8_t             *tree_to_attr; /**< not touched by p4est */
 
-  double             *vertices;
-  p4est_topidx_t     *tree_to_vertex;
-  int8_t             *tree_to_attr;
+  p4est_topidx_t     *tree_to_tree; /**< (4 * \a num_trees) neighbors across
+                                         faces */
+  int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
+                                         face+orientation (see description) */
 
-  p4est_topidx_t     *tree_to_tree;
-  int8_t             *tree_to_face;
-
-  p4est_topidx_t     *tree_to_corner;
-  p4est_topidx_t     *ctt_offset;
-  p4est_topidx_t     *corner_to_tree;
-  int8_t             *corner_to_corner;
+  p4est_topidx_t     *tree_to_corner; /**< (4 * \a num_trees) or NULL (see
+                                           description) */
+  p4est_topidx_t     *ctt_offset; /**< corner to offset in \a corner_to_tree
+                                       and \a corner_to_corner */
+  p4est_topidx_t     *corner_to_tree; /**< list of trees that meet at a corner */
+  int8_t             *corner_to_corner; /**< list of tree-corners that meet at
+                                             a corner */
 }
 p4est_connectivity_t;
 

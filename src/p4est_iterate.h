@@ -52,33 +52,36 @@ p4est_iter_volume_info_t;
 typedef void        (*p4est_iter_volume_t) (p4est_iter_volume_info_t * info,
                                             void *user_data);
 
-/* Information about one side of a face in the forest.  If a \a quad is local
- * (\a is_ghost is false), then its \a quadid indexes the tree's quadrant array;
- * otherwise, it indexes the ghosts array. If the face is hanging, then the
- * quadrants are listed in z-order.  If a quadrant should be present, but it is
- * not included in the ghost layer, then quad = NULL, is_ghost is true, and
- * quadid = -1.
- *
+/** Information about one side of a face in the forest.  If a \a quad is local
+ * (\a is_ghost is false), then its \a quadid indexes the tree's quadrant
+ * array; otherwise, it indexes the ghosts array. If the face is hanging, then
+ * the quadrants are listed in z-order.  If a quadrant should be present, but
+ * it is not included in the ghost layer, then quad = NULL, is_ghost is true,
+ * and quadid = -1.
  */
 typedef struct p4est_iter_face_side
 {
-  p4est_topidx_t      treeid;
-  int8_t              face;
-  int8_t              is_hanging;
+  p4est_topidx_t      treeid;          /**< the tree on this side */
+  int8_t              face;            /**< which quadrant side the face
+                                            touches */
+  int8_t              is_hanging;      /**< boolean: one full quad (0) or
+                                            two smaller quads (1) */
+  /* if is_hanging == 0, use is.full to access per-quadrant data;
+   * if is_hanging == 1, use is.hanging to access per-quadrant data */
   union p4est_iter_face_side_data
   {
     struct
     {
-      int8_t              is_ghost;
-      p4est_quadrant_t   *quad;
-      p4est_locidx_t      quadid;
+      int8_t              is_ghost;    /**< boolean: local (0) or ghost (1) */
+      p4est_quadrant_t   *quad;        /**< the actual quadrant */
+      p4est_locidx_t      quadid;      /**< index in tree or ghost array */
     }
     full;
     struct
     {
-      int8_t              is_ghost[2];
-      p4est_quadrant_t   *quad[2];
-      p4est_locidx_t      quadid[2];
+      int8_t              is_ghost[2]; /**< boolean: local (0) or ghost (1) */
+      p4est_quadrant_t   *quad[2];     /**< the actual quadrant */
+      p4est_locidx_t      quadid[2];   /**< index in tree or ghost array */
     }
     hanging;
   }
