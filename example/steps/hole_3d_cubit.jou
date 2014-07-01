@@ -1,0 +1,10 @@
+#!python
+import os
+
+cubit.cmd('set node constraint on')
+cubit.cmd('brick x 10')
+cubit.cmd('create Cylinder height 12 radius 3')
+cubit.cmd('subtract volume 2  from volume 1')
+cubit.cmd('volume 1 size auto factor 5')
+cubit.cmd('mesh volume 1')
+cubit.cmd("export Abaqus \"%s/hole_3d_cubit.inp\" overwrite cubitids"%(os.environ['HOME'],))
