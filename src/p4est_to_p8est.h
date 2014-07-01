@@ -147,6 +147,8 @@
 #define p4est_connectivity_permute      p8est_connectivity_permute
 #define p4est_connectivity_join_faces   p8est_connectivity_join_faces
 #define p4est_connectivity_is_equivalent p8est_connectivity_is_equivalent
+#define p4est_connectivity_read_inp_stream p8est_connectivity_read_inp_stream
+#define p4est_connectivity_read_inp     p8est_connectivity_read_inp
 
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex

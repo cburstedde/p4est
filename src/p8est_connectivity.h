@@ -605,6 +605,17 @@ p8est_corner_array_index (sc_array_t * array, size_t it)
                                   sizeof (p8est_corner_transform_t) * it);
 }
 
+int                 p8est_connectivity_read_inp_stream (FILE * stream,
+                                                        p4est_topidx_t *
+                                                        num_vertices,
+                                                        p4est_topidx_t *
+                                                        num_trees,
+                                                        double *vertices,
+                                                        p4est_topidx_t *
+                                                        tree_to_vertex);
+
+p8est_connectivity_t *p8est_connectivity_read_inp (const char *filename);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_CONNECTIVITY_H */
