@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_iterate.h
+ *
+ * Iteration over mesh topology via callbacks
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_ITERATE_H
 #define P8EST_ITERATE_H
 
@@ -40,19 +47,22 @@ typedef struct p8est_iter_volume_info
 {
   p8est_t            *p4est;
   p8est_ghost_t      *ghost_layer;
-  p8est_quadrant_t   *quad;
-  p4est_locidx_t      quadid;
-  p4est_topidx_t      treeid;
+  p8est_quadrant_t   *quad;    /**< the quadrant of the callback */
+  p4est_locidx_t      quadid;  /**< id in \a quad's tree array (see
+                                    p8est_tree_t) */
+  p4est_topidx_t      treeid;  /**< the tree containing \a quad */
 }
 p8est_iter_volume_info_t;
 
-/** The prototype for a function that p8est_iterate will execute at every
+/** The prototype for a function that p8est_iterate() will execute at every
  * quadrant local to the current process.
+ * \param [in] info          information about a quadrant provided to the user
+ * \param [in,out] user_data the user context passed to p8est_iterate()
  */
 typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
                                             void *user_data);
 
-/* Information about one side of a face in the forest.  If a \a quad is local
+/** Information about one side of a face in the forest.  If a \a quad is local
  * (\a is_ghost is false), then its \a quadid indexes the tree's quadrant array;
  * otherwise, it indexes the ghosts array. If the face is hanging, then the
  * quadrants are listed in z-order. If a quadrant should be present, but it is
@@ -61,67 +71,81 @@ typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
  */
 typedef struct p8est_iter_face_side
 {
-  p4est_topidx_t      treeid;
-  int8_t              face;
-  int8_t              is_hanging;
+  p4est_topidx_t      treeid;          /**< the tree on this side */
+  int8_t              face;            /**< which quadrant side the face
+                                            touches */
+  int8_t              is_hanging;      /**< boolean: one full quad (0) or
+                                            four smaller quads (1) */
   union p8est_iter_face_side_data
   {
     struct
     {
-      int8_t              is_ghost;
-      p8est_quadrant_t   *quad;
-      p4est_locidx_t      quadid;
+      int8_t              is_ghost;    /**< boolean: local (0) or ghost (1) */
+      p8est_quadrant_t   *quad;        /**< the actual quadrant */
+      p4est_locidx_t      quadid;      /**< index in tree or ghost array */
     }
-    full;
+    full; /**< if \a is_hanging = 0,
+               use is.full to access per-quadrant data */
     struct
     {
-      int8_t              is_ghost[4];
-      p8est_quadrant_t   *quad[4];
-      p4est_locidx_t      quadid[4];
+      int8_t              is_ghost[4]; /**< boolean: local (0) or ghost (1) */
+      p8est_quadrant_t   *quad[4];     /**< the actual quadrant */
+      p4est_locidx_t      quadid[4];   /**< index in tree or ghost array */
     }
-    hanging;
+    hanging; /**< if \a is_hanging = 1,
+                  use is.hanging to access per-quadrant data */
   }
   is;
 }
 p8est_iter_face_side_t;
 
-/** The information about both sides of a face in the forest.  The orientation
- * is 0 if the face is within one tree; otherwise, it is the same as the
- * orientation value between the two trees given in the connectivity.  If the
- * face is on the outside of the forest, then there is only one side.
- * If tree_boundary is false, the face is on the interior of a tree.
- * When tree_boundary false, sides[0] contains the lowest z-order quadrant that
- * touches the face.
+/** The information that is available to the user-defined p8est_iter_face_t
+ * callback.
+ *
+ * The orientation is 0 if the face is within one tree; otherwise, it is the
+ * same as the orientation value between the two trees given in the
+ * connectivity.  If the face is on the outside of the forest, then there is
+ * only one side.  If tree_boundary is false, the face is on the interior of a
+ * tree.  When tree_boundary false, sides[0] contains the lowest z-order
+ * quadrant that touches the face.
  * When tree_boundary is true, its value is P8EST_CONNECT_FACE.
  */
 typedef struct p8est_iter_face_info
 {
   p8est_t            *p4est;
   p8est_ghost_t      *ghost_layer;
-  int8_t              orientation;
-  int8_t              tree_boundary;
-  sc_array_t          sides;    /* p8est_iter_face_side_t */
+  int8_t              orientation; /**< the orientation of the sides to each
+                                        other, as in the definition of
+                                        p8est_connectivity_t */
+  int8_t              tree_boundary; /**< boolean: interior face (0),
+                                          boundary face (1) */
+  sc_array_t          sides;    /* array of p8est_iter_face_side_t type */
 }
 p8est_iter_face_info_t;
 
-/** The prototype for a function that p8est_iterate will execute wherever two
- * quadrants share a face: the face can be a 2:1 hanging face, it does not have
- * to be conformal.
+/** The prototype for a function that p8est_iterate() will execute wherever
+ * two quadrants share a face: the face can be a 2:1 hanging face, it does not
+ * have to be conformal.
  *
- * Note: the forest must be face balanced for p8est_iterate to execute a
- * callback function on faces.
+ * \param [in] info          information about a quadrant provided to the user
+ * \param [in,out] user_data the user context passed to p8est_iterate()
+ *
+ * \note the forest must be face balanced for p8est_iterate() to execute a
+ * callback function on faces (see p8est_balance()).
  */
 typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
                                           void *user_data);
 
-/* Information about one side of an edge in the forest.  If a \a quad is local
- * (\a is_ghost is false), then its \a quadid indexes the tree's quadrant
- * array; otherwise, it indexes the ghosts array. If the edge is hanging, then
- * the quadrants are listed in z-order. If an edge is in the interior of a
- * tree, orientation is 0; if an edge is between trees, orientation is the same
- * as edge orientation in the connectivity. If a quadrant should be present,
- * but it is not included in the ghost layer, then quad = NULL, is_ghost is
- * true, and quadid = -1.
+/* The information that is available to the user-defined p8est_iter_edge_t
+ * callback.
+ *
+ * If a \a quad is local (\a is_ghost is false), then its \a quadid indexes
+ * the tree's quadrant array; otherwise, it indexes the ghosts array. If the
+ * edge is hanging, then the quadrants are listed in z-order. If an edge is in
+ * the interior of a tree, orientation is 0; if an edge is between trees,
+ * orientation is the same as edge orientation in the connectivity. If a
+ * quadrant should be present, but it is not included in the ghost layer, then
+ * quad = NULL, is_ghost is true, and quadid = -1.
                       *
  * the \a faces field provides some additional information about the local
  * neighborhood: if side[i]->faces[j] == side[k]->faces[l], this indicates that
@@ -129,26 +153,34 @@ typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
  */
 typedef struct p8est_iter_edge_side
 {
-  p4est_topidx_t      treeid;
-  int8_t              edge;
-  int8_t              orientation;
-  int8_t              is_hanging;
+  p4est_topidx_t      treeid;          /**< the tree on this side */
+  int8_t              edge;            /**< which quadrant side the edge
+                                            touches */
+  int8_t              orientation; /**< the orientation of each quadrant
+                                        relative to this edge, as in the
+                                        definition of p8est_connectivity_t */
+
+  int8_t              is_hanging;      /**< boolean: one full quad (0) or
+                                            two smaller quads (1) */
   union p8est_iter_edge_side_data
   {
     struct
     {
-      int8_t              is_ghost;
-      p8est_quadrant_t   *quad;
-      p4est_locidx_t      quadid;
+      int8_t              is_ghost;    /**< boolean: local (0) or ghost (1) */
+      p8est_quadrant_t   *quad;        /**< the actual quadrant */
+      p4est_locidx_t      quadid;      /**< index in tree or ghost array */
     }
-    full;
+    full; /**< if \a is_hanging = 0,
+               use is.full to access per-quadrant data */
+
     struct
     {
-      int8_t              is_ghost[2];
-      p8est_quadrant_t   *quad[2];
-      p4est_locidx_t      quadid[2];
+      int8_t              is_ghost[2]; /**< boolean: local (0) or ghost (1) */
+      p8est_quadrant_t   *quad[2];     /**< the actual quadrant */
+      p4est_locidx_t      quadid[2];   /**< index in tree or ghost array */
     }
-    hanging;
+    hanging; /**< if \a is_hanging = 1,
+                  use is.hanging to access per-quadrant data */
   }
   is;
   int8_t              faces[2];
@@ -166,8 +198,9 @@ typedef struct p8est_iter_edge_info
 {
   p8est_t            *p4est;
   p8est_ghost_t      *ghost_layer;
-  int8_t              tree_boundary;
-  sc_array_t          sides;    /* p8est_iter_edge_side_t */
+  int8_t              tree_boundary;  /**< boolean: interior face (0),
+                                           boundary face (1) */
+  sc_array_t          sides; /**< array of p8est_iter_edge_side_t type */
 }
 p8est_iter_edge_info_t;
 
@@ -175,7 +208,10 @@ p8est_iter_edge_info_t;
  * the edge is an edge of all quadrants that touch it i.e. the callback will
  * not execute on an edge the sits on a hanging face.
  *
- * Note: the forest must be edge balanced for p8est_iterate to execute a
+ * \param [in] info          information about a quadrant provided to the user
+ * \param [in,out] user_data the user context passed to p8est_iterate()
+ *
+ * \note the forest must be edge balanced for p8est_iterate() to execute a
  * callback function on edges.
  */
 typedef void        (*p8est_iter_edge_t) (p8est_iter_edge_info_t * info,
@@ -192,17 +228,20 @@ typedef void        (*p8est_iter_edge_t) (p8est_iter_edge_info_t * info,
  */
 typedef struct p8est_iter_corner_side
 {
-  p4est_topidx_t      treeid;
-  int8_t              corner;
-  int8_t              is_ghost;
+  p4est_topidx_t      treeid;   /**< the tree that contains \a quad */
+  int8_t              corner;   /**< which of the quadrant's corners touches
+                                     this corner */
+  int8_t              is_ghost; /**< boolean: local (0) or ghost (1) */
   p8est_quadrant_t   *quad;
-  p4est_locidx_t      quadid;
-  int8_t              faces[3];
-  int8_t              edges[3];
+  p4est_locidx_t      quadid;   /**< the index in the tree or ghost array */
+  int8_t              faces[3]; /**< internal work data */
+  int8_t              edges[3]; /**< internal work data */
 }
 p8est_iter_corner_side_t;
 
-/** The information about all sides of a face in the forest.
+/** The information that is availalbe to the user-defined p8est_iter_corner_t
+ * callback.
+ *
  * If tree_boundary is false, the corner is on the interior of a tree.
  * When tree_boundary is false, sides[0] contains the lowest z-order quadrant
  * that touches the corner.
@@ -213,28 +252,35 @@ typedef struct p8est_iter_corner_info
 {
   p8est_t            *p4est;
   p8est_ghost_t      *ghost_layer;
-  int8_t              tree_boundary;
-  sc_array_t          sides;    /* p8est_iter_corner_side_t */
+  int8_t              tree_boundary; /**< boolean: interior face (0),
+                                           boundary face (1) */
+  sc_array_t          sides; /**< array of p8est_iter_corner_side_t type */
 }
 p8est_iter_corner_info_t;
 
 /** The prototype for a function that p8est_iterate will execute wherever
- * the corner is a corner for all quadrants that touch it i.e. the callback
- * will not execute on a corner that sits on a hanging face or edge.
+ * the corner is a corner for all quadrants that touch it
  *
- * Note: the forest does not need to be corner balanced for p8est_iterate to
+ * i.e. the callback will not execute on a corner that sits on a hanging face
+ * or edge.
+ *
+ * \param [in] info          information about a quadrant provided to the user
+ * \param [in,out] user_data the user context passed to p8est_iterate()
+ *
+ * \note the forest does not need to be corner balanced for p8est_iterate() to
  * execute a callback function at corners, only face and edge balanced.
  */
 typedef void        (*p8est_iter_corner_t) (p8est_iter_corner_info_t * info,
                                             void *user_data);
 
-/** p8est_iterate executes the user-supplied callback functions at every
- * volume, face, edge and corner in the local forest. The ghost_layer may be
- * NULL. The \a user_data pointer is not touched by p8est_iterate, but is
- * passed to each of the callbacks. Any of the callback functions may be NULL.
- * The callback functions are interspersed with each other, i.e. some face
- * callbacks will occur between volume callbacks, and some edge callbacks will
- * occur between face callbacks, etc.:
+/** Execute the user-supplied callback functions at every volume, face, edge
+ * and corner in the local forest.
+ *
+ * The ghost_layer may be NULL. The \a user_data pointer is not touched by
+ * p8est_iterate, but is passed to each of the callbacks. Any of the callback
+ * functions may be NULL.  The callback functions are interspersed with each
+ * other, i.e. some face callbacks will occur between volume callbacks, and
+ * some edge callbacks will occur between face callbacks, etc.:
  *
  * 1) volume callbacks occur in the sorted Morton-index order.
  * 2) a face callback is not executed until after the volume callbacks have
@@ -250,6 +296,21 @@ typedef void        (*p8est_iter_corner_t) (p8est_iter_corner_info_t * info,
  * 6) callbacks are not executed at faces, edges or corners that only involve
  *    ghost quadrants, i.e. that are not adjacent in the local section of the
  *    forest.
+ *
+ * \param[in] p4est          the forest
+ * \param[in] ghost_layer    optional: when not given, callbacks at the
+ *                           boundaries of the local partition cannot provide
+ *                           quadrant data about ghost quadrants: missing
+ *                           (p8est_quadrant_t *) pointers are set to NULL,
+ *                           missing indices are set to -1.
+ * \param[in,out] user_data  optional context to supply to each callback
+ * \param[in] iter_volume    callback function for every quadrant's interior
+ * \param[in] iter_face      callback function for every face between
+ *                           quadrants
+ * \param[in] iter_edge      callback function for every edge between
+ *                           quadrants
+ * \param[in] iter_corner    callback function for every corner between
+ *                           quadrants
  */
 void                p8est_iterate (p8est_t * p4est,
                                    p8est_ghost_t * ghost_layer,

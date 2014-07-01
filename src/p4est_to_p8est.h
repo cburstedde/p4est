@@ -21,6 +21,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_to_p8est.h
+ *
+ * transforms 2D \ref p4est routines into 3D \ref p8est routines
+ */
+
 #ifndef P4EST_TO_P8EST_H
 #define P4EST_TO_P8EST_H
 
