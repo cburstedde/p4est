@@ -458,7 +458,35 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
   share_sum (p4est, lnodes, out);
 }
 
+/** Set Dirichlet boundary values of a node vector to zero.
+ *
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] bc             Boolean flags for Dirichlet boundary nodes.
+ *                            If NULL, this function does nothing.
+ * \param [in,out] v          Dirichlet nodes are overwritten with zero.
+ */
+static void
+set_dirichlet (p4est_lnodes_t * lnodes, int8_t * bc, double * v)
+{
+  const int           nloc = lnodes->num_local_nodes;
+  p4est_locidx_t      lni;
+
+  if (bc == NULL) {
+    return;
+  }
+  for (lni = 0; lni < nloc; ++lni) {
+    if (bc[lni]) {
+      v[lni] = 0.;
+    }
+  }
+}
+
 /** Multiply the mass matrix with a vector of ones to compute the volume.
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] matrix         The mass matrix should be passed in here.
+ * \param [in] tmp1           Must be allocated, entries are undefined.
+ * \param [in] tmp2           Must be allocated, entries are undefined.
  */
 static void
 test_area (p4est_t * p4est, p4est_lnodes_t * lnodes,
@@ -558,6 +586,7 @@ solve_poisson (p4est_t * p4est)
 
   /* Apply mass matrix to create right hand side FE vector. */
   multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, rhs_eval, rhs_fe);
+  set_dirichlet (lnodes, bc, rhs_fe);
 
   /* Run conjugate gradient method with initial value zero. */
   solve_by_cg (p4est, lnodes, rhs_fe, u_fe);
