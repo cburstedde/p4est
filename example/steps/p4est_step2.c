@@ -31,6 +31,8 @@
 #include <p8est_vtk.h>
 #endif
 
+static int          refine_level = 0;
+
 /* Refinement and coarsening is controlled by callback functions.
  * This function is called for every processor-local quadrant in order; its
  * return value is understood as a boolean refinement flag.  */
@@ -38,7 +40,27 @@ static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
 {
-  return 0;
+  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
+    return 0;
+  }
+  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+    return 1;
+  }
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+#ifndef P4_TO_P8
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+#else
+  if (quadrant->z >= P8EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+#endif
+
+  return 1;
 }
 
 int
@@ -68,11 +90,13 @@ main (int argc, char **argv)
      P4EST_DIM, P4EST_STRING);
 
   /* Get the inp file name from the list of arguments.  */
-  if (argc != 2) {
-    SC_GLOBAL_LERRORF ("Usage: %s <inp file name>\n", argv[0]);
+  if (argc != 3) {
+    SC_GLOBAL_LERRORF ("Usage: %s <inp file name> <level of refinement>\n",
+                       argv[0]);
     sc_abort ();
   }
   filename = argv[1];
+  refine_level = atoi (argv[2]);
 
   /* Create a forest from the inp file with name filename  */
   conn = p4est_connectivity_read_inp (filename);
