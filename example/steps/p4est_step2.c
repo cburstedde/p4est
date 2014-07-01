@@ -106,6 +106,14 @@ main (int argc, char **argv)
     P4EST_LERRORF ("Failed to read connectivity from %s\n", filename);
   }
 
+#ifdef P4EST_WITH_METIS
+  /* Use metis (if p4est is compiled with the flag '--with-metis') to
+   * reorder the connectivity for better parititioning of the forest
+   * across processors.
+   */
+  p4est_connectivity_reorder (mpicomm, 0, conn, P4EST_CONNECT_FACE);
+#endif /* P4EST_WITH_METIS */
+
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
 
