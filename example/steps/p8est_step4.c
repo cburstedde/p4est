@@ -21,5 +21,18 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_step4.c
+ *
+ * This 3D example program only writes a VTK file for now.  See p4est_step4.c
+ * for a real numerical example.
+ *
+ * To avoid redundancy, it shares the source code of the 2D example and changes
+ * it to 3D using the preprocessor defines in p4est_to_p8est.h.
+ *
+ * It is entirely possible to write a 3D-only program without relying on this
+ * mechanism.  In this case use the p8est* header files, functions, and data
+ * structures.
+ */
+
 #include <p4est_to_p8est.h>
 #include "p4est_step4.c"
