@@ -49,6 +49,7 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
+  const char         *filename;
 
   /* Initialize MPI; see sc_mpi.h.
    * If configure --enable-mpi is given these are true MPI calls.
@@ -66,14 +67,18 @@ main (int argc, char **argv)
     ("This is the p4est %dD demo example/steps/%s_step2\n",
      P4EST_DIM, P4EST_STRING);
 
-  /* Create a forest that consists of just one quadtree/octree.
-   * This file is compiled for both 2D and 3D: the macro P4_TO_P8 can be
-   * checked to execute dimension-dependent code. */
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_unitsquare ();
-#else
-  conn = p8est_connectivity_new_unitcube ();
-#endif
+  /* Get the inp file name from the list of arguments.  */
+  if (argc != 2) {
+    SC_GLOBAL_LERRORF ("Usage: %s <inp file name>\n", argv[0]);
+    sc_abort ();
+  }
+  filename = argv[1];
+
+  /* Create a forest from the inp file with name filename  */
+  conn = p4est_connectivity_read_inp (filename);
+  if (conn == NULL) {
+    P4EST_LERRORF ("Failed to read connectivity from %s\n", filename);
+  }
 
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
