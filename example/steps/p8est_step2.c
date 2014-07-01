@@ -21,5 +21,10 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_step2.c
+ *
+ * This 3D example program refines a domain given by an ABAQUS .inp file.
+ */
+
 #include <p4est_to_p8est.h>
 #include "p4est_step2.c"
