@@ -42,4 +42,8 @@ EXTRA_DIST += \
   example/steps/hole_2d_cubit.inp \
   example/steps/hole_2d_cubit.jou \
   example/steps/hole_3d_cubit.inp \
-  example/steps/hole_3d_cubit.jou
+  example/steps/hole_3d_cubit.jou \
+  example/steps/hole_2d_gmsh.inp \
+  example/steps/hole_2d_gmsh.geo \
+  example/steps/hole_3d_gmsh.inp \
+  example/steps/hole_3d_gmsh.geo
