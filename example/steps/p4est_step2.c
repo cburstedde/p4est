@@ -26,8 +26,10 @@
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include <p4est_vtk.h>
 #else
+#include <p8est_bits.h>
 #include <p8est_vtk.h>
 #endif
 

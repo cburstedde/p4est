@@ -187,12 +187,14 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
     P4EST_ASSERT (mfn2.quadrant_id == quadrant_id);
     while ((q = p4est_mesh_face_neighbor_next (&mfn, &which_tree, &which_quad,
                                                &nface, &nrank)) != NULL) {
+#ifdef P4EST_ENABLE_DEBUG
       user_data_t        *data;
 
       data = (user_data_t *) p4est_mesh_face_neighbor_data (&mfn, ghost_data);
 
       P4EST_ASSERT (p4est_quadrant_is_equal (q, &(data->quad)));
       P4EST_ASSERT (data->quad.p.which_tree == which_tree);
+#endif
     }
   }
 }
