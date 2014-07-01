@@ -21,6 +21,18 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est.h
+ *
+ * The top-level 3D p8est interface.
+ *
+ * \ingroup p8est
+ */
+
+/** \defgroup p8est p8est
+ *
+ * The 3D version of the p4est library.
+ */
+
 #ifndef P8EST_H
 #define P8EST_H
 
@@ -29,104 +41,122 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* finest level of the octree for representing nodes */
+/** The finest level of the octree for representing nodes */
 #define P8EST_MAXLEVEL 19
 
-/* finest level of the octree for representing octants */
+/** The finest level of the octree for representing octants */
 #define P8EST_QMAXLEVEL 18
 
-/* the length of a root quadrant */
+/** The length of a side of the root quadrant */
 #define P8EST_ROOT_LEN ((p4est_qcoord_t) 1 << P8EST_MAXLEVEL)
 
-/* the length of a quadrant of level l */
+/** The length of a quadrant of level l */
 #define P8EST_QUADRANT_LEN(l) ((p4est_qcoord_t) 1 << (P8EST_MAXLEVEL - (l)))
 
-/* the offset of the highest quadrant at level l */
+/** The offset of the highest (farthest from the origin) quadrant at level l
+ */
 #define P8EST_LAST_OFFSET(l) (P8EST_ROOT_LEN - P8EST_QUADRANT_LEN (l))
 
+/** The 3D quadrant (i.e. octant) datatype */
 typedef struct p8est_quadrant
 {
-  p4est_qcoord_t      x, y, z;
-  int8_t              level, pad8;
-  int16_t             pad16;
+  /*@{*/
+  p4est_qcoord_t      x, y, z;  /**< coordinates */
+  /*@}*/
+  int8_t              level,    /**< level of refinement */
+                      pad8;     /**< padding */
+  int16_t             pad16;    /**< padding */
   union p8est_quadrant_data
   {
-    void               *user_data;      /* never changed by p4est */
-    long                user_long;      /* never changed by p4est */
-    int                 user_int;       /* never changed by p4est */
-    p4est_topidx_t      which_tree;
+    void               *user_data;      /**< never changed by p4est */
+    long                user_long;      /**< never changed by p4est */
+    int                 user_int;       /**< never changed by p4est */
+    p4est_topidx_t      which_tree;     /**< the tree containing the quadrant
+                                             (used in auxiliary octants such
+                                             as the ghost octants in
+                                             p4est_ghost_t) */
     struct
     {
       p4est_topidx_t      which_tree;
       int                 owner_rank;
     }
-    piggy1;
+    piggy1; /**< of ghost octants, store the tree and owner rank */
     struct
     {
       p4est_topidx_t      which_tree;
       p4est_topidx_t      from_tree;
     }
-    piggy2;
+    piggy2; /**< of transformed octants, store the original tree and the
+                 target tree */
     struct
     {
       p4est_topidx_t      which_tree;
       p4est_locidx_t      local_num;
     }
-    piggy3;
+    piggy3; /**< of ghost octants, store the tree and index in the owner's
+                 numbering */
   }
-  p;
+  p; /**< a union of additional data attached to a quadrant */
 }
 p8est_quadrant_t;
 
+/** The p8est tree datatype */
 typedef struct p8est_tree
 {
-  sc_array_t          quadrants;        /* locally stored quadrants */
-  p8est_quadrant_t    first_desc, last_desc;    /* first and last descendant */
-  p4est_locidx_t      quadrants_offset; /* cumulative sum over earlier trees */
-  p4est_locidx_t      quadrants_per_level[P8EST_MAXLEVEL + 1];  /* locals only */
-  int8_t              maxlevel; /* highest local quadrant level */
+  sc_array_t          quadrants;             /**< locally stored quadrants */
+  p8est_quadrant_t    first_desc,            /**< first local descendant */
+                      last_desc;             /**< last local descendant */
+  p4est_locidx_t      quadrants_offset;      /**< cumulative sum over earlier
+                                                  trees on this processor
+                                                  (locals only) */
+  p4est_locidx_t      quadrants_per_level[P8EST_MAXLEVEL + 1];
+                                             /**< locals only */
+  int8_t              maxlevel;              /**< highest local quadrant level */
 }
 p8est_tree_t;
 
 /** Data pertaining to selecting, inspecting, and profiling algorithms.
  * A pointer to this structure is hooked into the p8est main structure.
- * Declared in p8est_extended.h.
+ * Declared in p8est_extended.h.  Used to profile important algorithms.
  */
 typedef struct p8est_inspect p8est_inspect_t;
 
+/** The p8est forest datatype */
 typedef struct p8est
 {
-  sc_MPI_Comm         mpicomm;
-  int                 mpisize, mpirank;
+  sc_MPI_Comm         mpicomm;          /**< MPI communicator */
+  int                 mpisize,          /**< number of MPI processes */
+                      mpirank;          /**< this process's MPI rank */
+  size_t              data_size;        /**< size of per-quadrant p.user_data
+                     (see p8est_quadrant_t::p8est_quadrant_data::user_data) */
+  void               *user_pointer;     /**< convenience pointer for users,
+                                             never touched by p4est */
 
-  size_t              data_size;        /* size of per-quadrant user_data */
-  void               *user_pointer;     /* convenience pointer for users,
-                                           will never be touched by p8est */
+  p4est_topidx_t      first_local_tree; /**< 0-based index of first local
+                                             tree, must be -1 for an empty
+                                             processor */
+  p4est_topidx_t      last_local_tree;  /**< 0-based index of last local
+                                             tree, must be -2 for an empty
+                                             processor */
+  p4est_locidx_t      local_num_quadrants;   /**< number of quadrants on all
+                                                  trees on this processor */
+  p4est_gloidx_t      global_num_quadrants;  /**< number of quadrants on all
+                                                  trees on all processors */
+  p4est_gloidx_t     *global_first_quadrant; /**< first global quadrant index
+                                                  for each process and 1
+                                                  beyond */
+  p8est_quadrant_t   *global_first_position; /**< first smallest possible quad
+                                                  for each process and 1
+                                                  beyond */
+  p8est_connectivity_t *connectivity; /**< connectivity structure, not owned */
+  sc_array_t         *trees;          /**< array of all trees */
 
-  p4est_topidx_t      first_local_tree; /* 0-based index of first local tree,
-                                           must be -1 for an empty processor */
-  p4est_topidx_t      last_local_tree;  /* 0-based index of last local tree,
-                                           must be -2 for an empty processor */
-  p4est_locidx_t      local_num_quadrants;      /* number of quadrants on all
-                                                   trees on this processor */
-  p4est_gloidx_t      global_num_quadrants;     /* number of quadrants on all
-                                                   trees on all processors */
-  p4est_gloidx_t     *global_first_quadrant;    /* first global quadrant index
-                                                   for each proc and 1 beyond
-                                                 */
-  p8est_quadrant_t   *global_first_position;    /* first smallest possible quad
-                                                   for each proc and 1 beyond
-                                                 */
-  p8est_connectivity_t *connectivity;   /* connectivity structure, not owned */
-  sc_array_t         *trees;    /* list of all trees */
-
-  sc_mempool_t       *user_data_pool;   /* memory allocator for user data
-                                         * WARNING: This is NULL if data size
-                                         *          equals zero.
-                                         */
-  sc_mempool_t       *quadrant_pool;    /* memory allocator
-                                           for temporary quadrants */
-  p8est_inspect_t    *inspect;  /* algorithmic switches */
+  sc_mempool_t       *user_data_pool; /**< memory allocator for user data */
+                                      /*   WARNING: This is NULL if data size
+                                                    equals zero. */
+  sc_mempool_t       *quadrant_pool;  /**< memory allocator for temporary
+                                           quadrants */
+  p8est_inspect_t    *inspect;        /**< algorithmic switches */
 }
 p8est_t;
 
@@ -139,12 +169,22 @@ p8est_t;
 size_t              p8est_memory_used (p8est_t * p8est);
 
 /** Callback function prototype to initialize the quadrant's user data.
+ * \param [in] p8est         the forest
+ * \param [in] which_tree    the tree containing \a quadrant
+ * \param [in,out] quadrant  the quadrant to be initialized: if data_size > 0,
+ *                           the data to be initialized is at
+ *                           \a quadrant->p.user_data; otherwise, the
+ *                           non-pointer user data (such as
+ *                           \a quadrant->p.user_int) can be initialized
  */
 typedef void        (*p8est_init_t) (p8est_t * p8est,
                                      p4est_topidx_t which_tree,
                                      p8est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for refinement.
+ * \param [in] p8est       the forest
+ * \param [in] which_tree  the tree containing \a quadrant
+ * \param [in] quadrant    the quadrant that may be refined
  * \return nonzero if the quadrant shall be refined.
  */
 typedef int         (*p8est_refine_t) (p8est_t * p8est,
@@ -152,6 +192,8 @@ typedef int         (*p8est_refine_t) (p8est_t * p8est,
                                        p8est_quadrant_t * quadrant);
 
 /** Callback function prototype to decide for coarsening.
+ * \param [in] p8est       the forest
+ * \param [in] which_tree  the tree containing \a quadrant
  * \param [in] quadrants   Pointers to 8 siblings in Morton ordering.
  * \return nonzero if the quadrants shall be replaced with their parent.
  */
@@ -160,6 +202,8 @@ typedef int         (*p8est_coarsen_t) (p8est_t * p8est,
                                         p8est_quadrant_t * quadrants[]);
 
 /** Callback function prototype to calculate weights for partitioning.
+ * \param [in] p8est       the forest
+ * \param [in] which_tree  the tree containing \a quadrant
  * \return a 32bit integer >= 0 as the quadrant weight.
  * \note    Global sum of weights must fit into a 64bit integer.
  */
@@ -318,7 +362,7 @@ void                p8est_partition (p8est_t * p8est,
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
-/** Save the complete connectivity/p4est data to disk.
+/** Save the complete connectivity/p8est data to disk.
  *
  * This is a collective operation that all MPI processes need to call.  All
  * processes write into the same file, so the filename given needs to be
@@ -341,7 +385,7 @@ unsigned            p8est_checksum (p8est_t * p8est);
 void                p8est_save (const char *filename, p8est_t * p8est,
                                 int save_data);
 
-/** Load the complete connectivity/p4est structure from disk.
+/** Load the complete connectivity/p8est structure from disk.
  *
  * This is a collective operation that all MPI processes need to call.  All
  * processes read from the same file, so the filename given needs to be
@@ -359,7 +403,7 @@ void                p8est_save (const char *filename, p8est_t * p8est,
  * \param [in] load_data        If true, the element data is loaded.  This is
  *                              only permitted if the saved data size matches.
  *                              If false, the stored data size is ignored.
- * \param [in] user_pointer     Assign to the user_pointer member of the p4est
+ * \param [in] user_pointer     Assign to the user_pointer member of the p8est
  *                              before init_fn is called the first time.
  * \param [out] connectivity    Connectivity must be destroyed separately.
  * \return          Returns a valid forest structure. A pointer to a valid
