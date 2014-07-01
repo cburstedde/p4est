@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_ghost.h
+ *
+ * passing quadrants and data to neighboring processes
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_GHOST_H
 #define P4EST_GHOST_H
 
@@ -28,42 +35,43 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** quadrants that neighbor the local domain */
 typedef struct
 {
   int                 mpisize;
   p4est_topidx_t      num_trees;
-  p4est_connect_type_t btype;
+  p4est_connect_type_t btype; /**< which neighbors are in the ghost layer */
 
   /** An array of quadrants which make up the ghost layer around \a
    * p4est.  Their piggy3 data member is filled with their owner's tree
    * and local number (cumulative over trees).  Quadrants are ordered in \c
    * p4est_quadrant_compare_piggy order.  These are quadrants inside the
-   * neighboring tree, i.e., \c p4est_quadrant_is_inside is true for the
+   * neighboring tree, i.e., \c p4est_quadrant_is_inside() is true for the
    * quadrant and the neighboring tree.
    */
-  sc_array_t          ghosts;
-  p4est_locidx_t     *tree_offsets;     /* num_trees + 1 ghost indices */
-  p4est_locidx_t     *proc_offsets;     /* mpisize + 1 ghost indices */
+  sc_array_t          ghosts; /**< array of p4est_quadrant_t type */
+  p4est_locidx_t     *tree_offsets;     /**< num_trees + 1 ghost indices */
+  p4est_locidx_t     *proc_offsets;     /**< mpisize + 1 ghost indices */
 
   /** An array of local quadrants that touch the parallel boundary from the
    * inside, i.e., that are ghosts in the perspective of at least one other
    * processor.  The storage convention is the same as for \c ghosts above.
    */
-  sc_array_t          mirrors;
-  p4est_locidx_t     *mirror_tree_offsets;      /* num_trees + 1 mirror indices */
-  p4est_locidx_t     *mirror_proc_mirrors;      /* indices into mirrors grouped by
+  sc_array_t          mirrors; /**< array of p4est_quadrant_t type */
+  p4est_locidx_t     *mirror_tree_offsets;      /**< num_trees + 1 mirror indices */
+  p4est_locidx_t     *mirror_proc_mirrors;      /**< indices into mirrors grouped by
                                                    outside processor rank and
                                                    ascending within each rank */
-  p4est_locidx_t     *mirror_proc_offsets;      /* mpisize + 1 indices into 
+  p4est_locidx_t     *mirror_proc_offsets;      /**< mpisize + 1 indices into 
                                                    mirror_proc_mirrors */
 
-  p4est_locidx_t     *mirror_proc_fronts;       /* like mirror_proc_mirrors,
+  p4est_locidx_t     *mirror_proc_fronts;       /**< like mirror_proc_mirrors,
                                                    but limited to the
                                                    outermost octants.  This is
                                                    NULL until
                                                    p4est_ghost_expand is
                                                    called */
-  p4est_locidx_t     *mirror_proc_front_offsets;        /* NULL until
+  p4est_locidx_t     *mirror_proc_front_offsets;        /**< NULL until
                                                            p4est_ghost_expand is
                                                            called */
 }
