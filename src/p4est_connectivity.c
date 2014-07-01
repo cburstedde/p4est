@@ -4020,6 +4020,8 @@ p4est_connectivity_read_inp (const char *filename)
   p4est_connectivity_t *conn = NULL;
   FILE               *fid = NULL;
 
+  P4EST_GLOBAL_PRODUCTIONF ("Reading connectivity from %s\n", filename);
+
   fid = fopen (filename, "rb");
   if (fid == NULL) {
     P4EST_LERRORF ("Failed to open %s\n", filename);
@@ -4070,6 +4072,10 @@ p4est_connectivity_read_inp (const char *filename)
     P4EST_LERRORF ("Failed to close %s\n", filename);
     goto dead;
   }
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("New connectivity with %lld trees and %lld vertices\n",
+     (long long) conn->num_trees, (long long) conn->num_vertices);
 
   return conn;
 
