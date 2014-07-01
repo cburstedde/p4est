@@ -506,6 +506,17 @@ p4est_corner_array_index (sc_array_t * array, size_t it)
                                   sizeof (p4est_corner_transform_t) * it);
 }
 
+int                 p4est_connectivity_read_inp_stream (FILE * stream,
+                                                        p4est_topidx_t *
+                                                        num_vertices,
+                                                        p4est_topidx_t *
+                                                        num_trees,
+                                                        double *vertices,
+                                                        p4est_topidx_t *
+                                                        tree_to_vertex);
+
+p4est_connectivity_t *p4est_connectivity_read_inp (const char *filename);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_CONNECTIVITY_H */
