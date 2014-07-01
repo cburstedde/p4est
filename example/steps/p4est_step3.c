@@ -521,7 +521,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
    * the usage of p4est_iterate in this example */
   p4est_iterate (p4est, NULL,   /* we don't need any ghost quadrants for this loop */
                  (void *) u_interp,     /* pass in u_interp so that we can fill it */
-                 step3_interpolate_solution,  /* callback function that interpolate from the cell center to the cell corners, defined above */
+                 step3_interpolate_solution,    /* callback function that interpolate from the cell center to the cell corners, defined above */
                  NULL,          /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                  NULL,          /* there is no callback for the edges between quadrants */
@@ -982,8 +982,8 @@ step3_timestep (p4est_t * p4est, double time)
 
   /* initialize du/dx estimates */
   p4est_iterate (p4est, ghost, (void *) ghost_data,     /* pass in ghost data that we just exchanged */
-                 step3_reset_derivatives,     /* blank the previously calculated derivatives */
-                 step3_minmod_estimate,       /* compute the minmod estimate of each cell's derivative */
+                 step3_reset_derivatives,       /* blank the previously calculated derivatives */
+                 step3_minmod_estimate, /* compute the minmod estimate of each cell's derivative */
 #ifdef P4_TO_P8
                  NULL,          /* there is no callback for the edges between quadrants */
 #endif
@@ -999,7 +999,7 @@ step3_timestep (p4est_t * p4est, double time)
         umax = 0.;
         /* initialize derivative estimates */
         p4est_iterate (p4est, NULL, (void *) &umax,     /* pass in ghost data that we just exchanged */
-                       step3_compute_max,    /* blank the previously calculated derivatives */
+                       step3_compute_max,       /* blank the previously calculated derivatives */
                        NULL,    /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                        NULL,    /* there is no callback for the edges between quadrants */
@@ -1015,9 +1015,11 @@ step3_timestep (p4est_t * p4est, double time)
 
         /* adapt */
         p4est_refine_ext (p4est, recursive, allowed_level,
-                          step3_refine_err_estimate, NULL, step3_replace_quads);
+                          step3_refine_err_estimate, NULL,
+                          step3_replace_quads);
         p4est_coarsen_ext (p4est, recursive, callbackorphans,
-                           step3_coarsen_err_estimate, NULL, step3_replace_quads);
+                           step3_coarsen_err_estimate, NULL,
+                           step3_replace_quads);
         p4est_balance_ext (p4est, P4EST_CONNECT_FACE, NULL,
                            step3_replace_quads);
 
@@ -1056,8 +1058,8 @@ step3_timestep (p4est_t * p4est, double time)
     /* compute du/dt */
     p4est_iterate (p4est, ghost,        /* pass in the ghost quadrants */
                    (void *) ghost_data, /* pass in ghost data that we just exchanged */
-                   step3_quad_divergence,     /* compute each cell's contribution to dudt */
-                   step3_upwind_flux, /* compute the face fluxes that change each cell's dudt */
+                   step3_quad_divergence,       /* compute each cell's contribution to dudt */
+                   step3_upwind_flux,   /* compute the face fluxes that change each cell's dudt */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */
 #endif
@@ -1066,7 +1068,7 @@ step3_timestep (p4est_t * p4est, double time)
     /* update u */
     p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
                    (void *) &dt,        /* pass in dt */
-                   step3_timestep_update,     /* update each sell */
+                   step3_timestep_update,       /* update each sell */
                    NULL,        /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */
@@ -1078,8 +1080,8 @@ step3_timestep (p4est_t * p4est, double time)
 
     /* update du/dx estimate */
     p4est_iterate (p4est, ghost, (void *) ghost_data,   /* pass in ghost data that we just exchanged */
-                   step3_reset_derivatives,   /* blank the previously calculated derivatives */
-                   step3_minmod_estimate,     /* compute the minmod estimate of each cell's derivative */
+                   step3_reset_derivatives,     /* blank the previously calculated derivatives */
+                   step3_minmod_estimate,       /* compute the minmod estimate of each cell's derivative */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */
 #endif
@@ -1154,7 +1156,7 @@ main (int argc, char **argv)
                          4,     /* minimum level of refinement */
                          1,     /* fill uniform */
                          sizeof (step3_data_t), /* data size */
-                         step3_init_initial_condition,        /* data initializiation */
+                         step3_init_initial_condition,  /* data initializiation */
                          (void *) (&ctx));      /* user data */
 
   /* refine and coarsen based on an interpolation error estimate */
