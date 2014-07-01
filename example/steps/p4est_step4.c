@@ -150,6 +150,17 @@ lnodes_decode2 (p4est_lnodes_code_t face_code,
   return 0;
 }
 
+/** Allocate storage for processor-relevant nodal degrees of freedom.
+ *
+ * \param [in] lnodes   This structure is queried for the node count.
+ * \return              Allocated double array; must be freed with P4EST_FREE.
+ */
+static double *
+allocate_vector (p4est_lnodes_t * lnodes)
+{
+  return P4EST_ALLOC (double, lnodes->num_local_nodes);
+}
+
 /** Interpolate right hand side and exact solution onto mesh nodes.
  *
  * \param [in] p4est          The forest is not changed.
@@ -175,8 +186,8 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
   p4est_quadrant_t   *quad, *parent, sp, node;
   sc_array_t         *tquadrants;       /* Quadrant array for one tree */
 
-  rhs = *rhs_eval = P4EST_ALLOC (double, nloc);
-  uexact = *uexact_eval = P4EST_ALLOC (double, nloc);
+  rhs = *rhs_eval = allocate_vector (lnodes);
+  uexact = *uexact_eval = allocate_vector (lnodes);
   bc = *pbc = P4EST_ALLOC (int8_t, nloc);
   memset (bc, -1, sizeof (int8_t) * nloc);      /* Indicator for visiting. */
 
@@ -234,6 +245,44 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
   }
 }
 
+/** Apply a finite element matrix to a node vector, y = Mx.
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] stiffness      If false use the mass matrix,
+ *                            if true use the stiffness matrix.
+ * \param [in] boundary       If true, zero rows and columns for boundary nodes
+ *                            and put a value of 1.0 on the diagonal.
+ * \param [in] in             Input vector x.
+ * \param [out] out           Output vector y = Mx.
+ */
+static void
+multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes,
+                 int stiffness, int boundary, const double * in, double * out)
+{
+
+}
+
+static void
+solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes,
+             const double * b, double * x)
+{
+  int                  i;
+  double              *aux[4];
+  double              *r, *p, *Ap, *z;
+
+  for (i = 0; i < 4; ++i) {
+    aux[i] = allocate_vector (lnodes);
+  }
+  r = aux[0];
+  p = aux[1];
+  Ap = aux[2];
+  z = aux[3];
+
+  for (i = 0; i < 4; ++i) {
+    P4EST_FREE (aux[i]);
+  }
+}
+
 /** Execute the numerical part of the example: Solve Poisson's equation.
  * \param [in] p4est    Solve the PDE with the given mesh refinement.
  */
@@ -242,6 +291,7 @@ solve_poisson (p4est_t * p4est)
 {
   int8_t             *bc;
   double             *rhs_eval, *uexact_eval;
+  double             *rhs_fe, *u_fe;
   p4est_ghost_t      *ghost;
   p4est_lnodes_t     *lnodes;
 
@@ -258,7 +308,17 @@ solve_poisson (p4est_t * p4est)
   /* Interpolate right hand side and exact solution onto mesh nodes. */
   interpolate_functions (p4est, lnodes, &rhs_eval, &uexact_eval, &bc);
 
+  /* Apply mass matrix to create right hand side FE vector. */
+  rhs_fe = allocate_vector (lnodes);
+  multiply_matrix (p4est, lnodes, 0, 0, rhs_eval, rhs_fe);
+
+  /* Run conjugate gradient method with initial value zero. */
+  u_fe = allocate_vector (lnodes);
+  solve_by_cg (p4est, lnodes, rhs_fe, u_fe);
+
   /* Free finite element vectors */
+  P4EST_FREE (u_fe);
+  P4EST_FREE (rhs_fe);
   P4EST_FREE (rhs_eval);
   P4EST_FREE (uexact_eval);
   P4EST_FREE (bc);
