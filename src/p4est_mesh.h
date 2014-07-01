@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_mesh.h
+ *
+ * forest topology in a conventional mesh format
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_MESH_H
 #define P4EST_MESH_H
 
@@ -72,12 +79,12 @@ typedef struct
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
 
-  p4est_topidx_t     *quad_to_tree;     /* tree index for each local quad */
-  int                *ghost_to_proc;    /* 1 integer for each ghost quad */
+  p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad */
+  int                *ghost_to_proc;    /**< processor index for each ghost quad */
 
-  p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 4 faces */
-  int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
-  sc_array_t         *quad_to_half;     /* stores half-size neigbors */
+  p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 4 faces */
+  int8_t             *quad_to_face;     /**< encodes orientation/2:1 status */
+  sc_array_t         *quad_to_half;     /**< stores half-size neigbors */
 
   /* CAUTION: tree-boundary corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */

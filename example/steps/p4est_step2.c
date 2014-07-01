@@ -23,13 +23,14 @@
 
 /** \file p4est_step2.c
  *
- * This 2D or 3D example program refines a domain given by an ABAQUS .inp file.
+ * This 2D example program refines a domain given by an ABAQUS .inp file.
  */
 
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
- * only needs to be written once.  In this example, we rely on this. */
+ * only needs to be written once.  In this example, we rely on this
+ * to compile both 2D and 3D from the same source file. */
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_vtk.h>
@@ -38,6 +39,8 @@
 #include <p8est_vtk.h>
 #endif
 
+/** We're not using p4est->user_pointer here but take a shortcut.
+ */
 static int          refine_level = 0;
 
 /** Callback function to decide on refinement.

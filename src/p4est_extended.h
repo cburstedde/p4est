@@ -29,6 +29,13 @@
  * The API may change without notice.                               *
  ********************************************************************/
 
+/** \file p4est_extended.h
+ *
+ * Interface routines with extended capabilities.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_EXTENDED_H
 #define P4EST_EXTENDED_H
 
@@ -37,14 +44,14 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* Data pertaining to selecting, inspecting, and profiling algorithms.
+/** Data pertaining to selecting, inspecting, and profiling algorithms.
  * A pointer to this structure is hooked into the p4est main structure.
  *
- * TODO: Describe the purpose of various switches, counters, and timings.
  *
  * The balance_ranges and balance_notify* times are collected
  * whenever an inspect structure is present in p4est.
  */
+/* TODO: Describe the purpose of various switches, counters, and timings. */
 struct p4est_inspect
 {
   /** Use sc_ranges to determine the asymmetric communication pattern.
@@ -74,17 +81,18 @@ struct p4est_inspect
   int                 use_B;
 };
 
-/** Callback function prototype used by extended routines when the quadrants
- * of an existing, valid p4est are changed.  The callback allows the user to
- * make changes to newly initialized quadrants before the quadrants that they
- * replace are destroyed.
+/** Callback function prototype to replace one set of quadrants with another.
+ *
+ * This is used by extended routines when the quadrants of an existing, valid
+ * p4est are changed.  The callback allows the user to make changes to newly
+ * initialized quadrants before the quadrants that they replace are destroyed.
  *
  * \param [in] num_outgoing The number of outgoing quadrants.
  * \param [in] outgoing     The outgoing quadrants: after the callback, the
  *                          user_data, if \a p4est->data_size is nonzero,
  *                          will be destroyed.
  * \param [in] num_incoming The number of incoming quadrants.
- * \param [in/out] incoming The incoming quadrants: prior to the callback,
+ * \param [in,out] incoming The incoming quadrants: prior to the callback,
  *                          the user_data, if \a p4est->data_size is nonzero,
  *                          is allocated, and the p4est_init_t callback,
  *                          if it has been provided, will be called.
@@ -170,6 +178,17 @@ void                p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive,
                                        p4est_init_t init_fn,
                                        p4est_replace_t replace_fn);
 
+/** 2:1 balance the size differences of neighboring elements in a forest.
+ * \param [in,out] p4est  The p4est to be worked on.
+ * \param [in] btype      Balance type (face or corner/full).
+ *                        Corner balance is almost never required when
+ *                        discretizing a PDE; just causes smoother mesh grading.
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
+ * \param [in] replace_fn Callback function that allows the user to change
+ *                        incoming quadrants based on the quadrants they
+ *                        replace.
+ */
 void                p4est_balance_ext (p4est_t * p4est,
                                        p4est_connect_type_t btype,
                                        p4est_init_t init_fn,
