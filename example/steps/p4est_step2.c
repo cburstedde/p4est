@@ -21,6 +21,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_step2.c
+ *
+ * This 2D or 3D example program refines a domain given by an ABAQUS .inp file.
+ */
+
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
@@ -35,9 +40,12 @@
 
 static int          refine_level = 0;
 
-/* Refinement and coarsening is controlled by callback functions.
+/** Callback function to decide on refinement.
+ *
+ * Refinement and coarsening is controlled by callback functions.
  * This function is called for every processor-local quadrant in order; its
- * return value is understood as a boolean refinement flag.  */
+ * return value is understood as a boolean refinement flag.
+ */
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
@@ -65,6 +73,11 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+/** The main function of the step2 example program.
+ *
+ * It creates a connectivity from an ABAQUS .inp file and forest, refines it,
+ * and writes a VTK file.
+ */
 int
 main (int argc, char **argv)
 {
@@ -91,7 +104,7 @@ main (int argc, char **argv)
     ("This is the p4est %dD demo example/steps/%s_step2\n",
      P4EST_DIM, P4EST_STRING);
 
-  /* Get the inp file name from the list of arguments.  */
+  /* Get the .inp file name from the list of arguments.  */
   if (argc != 3) {
     SC_GLOBAL_LERRORF ("Usage: %s <inp file name> <level of refinement>\n",
                        argv[0]);
@@ -122,8 +135,7 @@ main (int argc, char **argv)
    * must not create an overly large number of quadrants.  A numerical
    * application would call p4est_refine non-recursively in a loop,
    * repartitioning in each iteration.
-   * The P4EST_ASSERT macro only activates with --enable-debug.
-   * We check against the data dimensions in example/steps/hw32.h. */
+   * The P4EST_ASSERT macro only activates with --enable-debug. */
   recursive = 1;
   p4est_refine (p4est, recursive, refine_fn, NULL);
 
