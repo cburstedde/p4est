@@ -557,23 +557,23 @@ set_dirichlet (p4est_lnodes_t * lnodes, int8_t * bc, double *v)
  * \param [in] p4est          The forest is not changed.
  * \param [in] lnodes         The node numbering is not changed.
  * \param [in] matrix         The mass matrix should be passed in here.
- * \param [in] tmp1           Must be allocated, entries are undefined.
- * \param [in] tmp2           Must be allocated, entries are undefined.
+ * \param [in] tmp            Must be allocated, entries are undefined.
+ * \param [in] lump           Must be allocated, receives matrix * ones.
  */
 static void
 test_area (p4est_t * p4est, p4est_lnodes_t * lnodes,
            double (*matrix)[P4EST_CHILDREN][P4EST_CHILDREN],
-           double *tmp1, double *tmp2)
+           double *tmp, double *lump)
 {
   const int           nloc = lnodes->num_local_nodes;
   double              dot;
   p4est_locidx_t      lni;
 
   for (lni = 0; lni < nloc; ++lni) {
-    tmp1[lni] = 1.;
+    tmp[lni] = 1.;
   }
-  multiply_matrix (p4est, lnodes, NULL, 0, matrix, tmp1, tmp2);
-  dot = vector_dot (p4est, lnodes, tmp1, tmp2);
+  multiply_matrix (p4est, lnodes, NULL, 0, matrix, tmp, lump);
+  dot = vector_dot (p4est, lnodes, tmp, lump);
   dot = sqrt (dot);
 
   P4EST_GLOBAL_PRODUCTIONF ("Area of domain: %g\n", dot);
@@ -585,50 +585,50 @@ solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
              double (*matrix)[P4EST_CHILDREN][P4EST_CHILDREN],
              const double *b, double *x)
 {
+  const int           imax = 100;
+  const double        tol = 1.e-6;
+
   int                 i;
-  double              alpha, beta, rr, pAp, rrnew, rrorig;
+  double              alpha, beta, pAp;
+  double              rr, rrnew, rrorig;
   double             *aux[4];
-  double             *r, *p, *Ap, *z;
-  double              tol = 1.e-6;
-  int                 imax = 100;
+  double             *r, *z, *p, *Ap;
 
   for (i = 0; i < 4; ++i) {
     aux[i] = allocate_vector (lnodes);
   }
   r = aux[0];
-  p = aux[1];
-  Ap = aux[2];
-  z = aux[3];
+  z = aux[1];
+  p = aux[2];
+  Ap = aux[3];
 
-  /* initialize the temporary vector */
+  /* Initialize the temporary vector. */
   vector_zero (p4est, lnodes, x);
   vector_copy (p4est, lnodes, b, r);
   vector_copy (p4est, lnodes, b, p);
   rr = rrorig = vector_dot (p4est, lnodes, r, r);
 
-  for (i = 0; i < imax; i++) {
+  for (i = 0; i < imax && rr > rrorig * tol * tol; i++) {
     multiply_matrix (p4est, lnodes, bc, stiffness, matrix, p, Ap);
     pAp = vector_dot (p4est, lnodes, p, Ap);
     alpha = rr / pAp;
     vector_axpy (p4est, lnodes, alpha, p, x);
     vector_axpy (p4est, lnodes, -alpha, Ap, r);
     rrnew = vector_dot (p4est, lnodes, r, r);
-    if (rrnew <= rrorig * tol) {
-      break;
-    }
     beta = rrnew / rr;
     vector_xpby (p4est, lnodes, r, beta, p);
-    P4EST_GLOBAL_VERBOSEF ("%03d: r'r %e alpha %e beta %e\n", i, rr, alpha,
-                           beta);
+    P4EST_GLOBAL_VERBOSEF ("%03d: r'r %g alpha %g beta %g\n",
+                           i, rr, alpha, beta);
     rr = rrnew;
   }
   if (i < imax) {
     P4EST_GLOBAL_PRODUCTIONF ("cg converged in %d iterations\n", i);
   }
   else {
-    P4EST_GLOBAL_PRODUCTION ("cg did not converge\n");
+    P4EST_GLOBAL_PRODUCTIONF ("cg did not converge in %d iterations\n", imax);
   }
 
+  /* Free temporary storage. */
   for (i = 0; i < 4; ++i) {
     P4EST_FREE (aux[i]);
   }
@@ -652,7 +652,7 @@ solve_poisson (p4est_t * p4est)
   };
   int                 i, j, k, l;
   double              mass_2d[4][4], stiffness_2d[4][4];
-  double             *rhs_eval, *uexact_eval;
+  double             *rhs_eval, *uexact_eval, *lump;
   double             *rhs_fe, *u_fe, *u_diff, *diff_mass;
   double              err2, err;
   int8_t             *bc;
@@ -685,8 +685,8 @@ solve_poisson (p4est_t * p4est)
 
   /* Test mass matrix multiplication by computing the area of the domain. */
   rhs_fe = allocate_vector (lnodes);
-  u_fe = allocate_vector (lnodes);
-  test_area (p4est, lnodes, &mass_2d, rhs_fe, u_fe);
+  lump = allocate_vector (lnodes);
+  test_area (p4est, lnodes, &mass_2d, rhs_fe, lump);
 
   /* Interpolate right hand side and exact solution onto mesh nodes. */
   interpolate_functions (p4est, lnodes, &rhs_eval, &uexact_eval, &bc);
@@ -696,24 +696,27 @@ solve_poisson (p4est_t * p4est)
   set_dirichlet (lnodes, bc, rhs_fe);
 
   /* Run conjugate gradient method with initial value zero. */
+  u_fe = allocate_vector (lnodes);
   solve_by_cg (p4est, lnodes, bc, 1, &stiffness_2d, rhs_fe, u_fe);
 
-  /* Compute the pointwise difference with the exact vector */
+  /* Compute the pointwise difference with the exact vector. */
   u_diff = allocate_vector (lnodes);
   vector_copy (p4est, lnodes, u_fe, u_diff);
   vector_axpy (p4est, lnodes, -1., uexact_eval, u_diff);
 
-  /* Compute the L2 difference with the exact vector */
+  /* Compute the L2 difference with the exact vector.
+   * We know that this is over-optimistic: Quadrature will be sharper. */
   diff_mass = allocate_vector (lnodes);
   multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, u_diff, diff_mass);
   err2 = vector_dot (p4est, lnodes, diff_mass, u_diff);
   err = sqrt (err2);
-  P4EST_GLOBAL_PRODUCTIONF ("|u_fe - u_exact| = %e\n", err);
+  P4EST_GLOBAL_PRODUCTIONF ("||u_fe - u_exact||_L2 = %g\n", err);
 
   /* Free finite element vectors */
   P4EST_FREE (diff_mass);
   P4EST_FREE (u_diff);
   P4EST_FREE (u_fe);
+  P4EST_FREE (lump);
   P4EST_FREE (rhs_fe);
   P4EST_FREE (rhs_eval);
   P4EST_FREE (uexact_eval);
