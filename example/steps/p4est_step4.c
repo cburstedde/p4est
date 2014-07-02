@@ -24,6 +24,10 @@
 /** \file p4est_step4.c
  *
  * This 2D example program solves the Poisson equation using finite elements.
+ * Currently, it works on the unit square.  For more general domains, a
+ * coordinate transformation to physical space would need to be implemented.
+ * This will usually entail using a quadrature instead of exact integration.
+ * The check for boundary nodes would need to be adapted to the new geometry.
  */
 
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
@@ -279,7 +283,7 @@ vector_xpby (p4est_t * p4est, p4est_lnodes_t * lnodes, const double *x,
   }
 }
 
-/** zero a vector.
+/** Zero all entries of a vector.
  *
  * \param [in] p4est          The forest is not changed.
  * \param [in] lnodes         The node numbering is not changed.
@@ -558,7 +562,7 @@ set_dirichlet (p4est_lnodes_t * lnodes, const int8_t * bc, double *v)
  * \param [in] lnodes         The node numbering is not changed.
  * \param [in] matrix         The mass matrix should be passed in here.
  * \param [in] tmp            Must be allocated, entries are undefined.
- * \param [in] lump           Must be allocated, receives matrix * ones.
+ * \param [in,out] lump       Must be allocated, receives matrix * ones.
  */
 static void
 test_area (p4est_t * p4est, p4est_lnodes_t * lnodes,
@@ -651,12 +655,12 @@ solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
 static void
 solve_poisson (p4est_t * p4est)
 {
-  /** 1D mass matrix on the reference element [0, 1]. */
+  /* 1D mass matrix on the reference element [0, 1]. */
   static const double m_1d[2][2] = {
     {1 / 3., 1 / 6.},
     {1 / 6., 1 / 3.},
   };
-  /** 1D stiffness matrix on the reference element [0, 1]. */
+  /* 1D stiffness matrix on the reference element [0, 1]. */
   static const double s_1d[2][2] = {
     {1., -1.},
     {-1., 1.},
@@ -716,7 +720,8 @@ solve_poisson (p4est_t * p4est)
   vector_axpy (p4est, lnodes, -1., uexact_eval, u_diff);
 
   /* Compute the L2 difference with the exact vector.
-   * We know that this is over-optimistic: Quadrature will be sharper. */
+   * We know that this is over-optimistic: Quadrature will be sharper.
+   * We could also reuse another vector instead of allocating a new one. */
   diff_mass = allocate_vector (lnodes);
   multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, u_diff, diff_mass);
   err2 = vector_dot (p4est, lnodes, diff_mass, u_diff);
@@ -774,8 +779,11 @@ main (int argc, char **argv)
    * checked to execute dimension-dependent code. */
 #ifndef P4_TO_P8
   conn = p4est_connectivity_new_unitsquare ();
+  /* More complex domains would require a couple changes. */
   /* conn = p4est_connectivity_new_moebius (); */
 #else
+  /* For 3D computation, the matrix-vector product would need to be extended
+   * by interpolating on both hanging edges and faces. */
   conn = p8est_connectivity_new_rotcubes ();
 #endif
 
