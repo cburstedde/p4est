@@ -38,7 +38,9 @@ LINT_CSOURCES += $(example_steps_p8est_step1_SOURCES) \
 endif
 
 EXTRA_DIST += \
-  example/steps/hw32.h \
+  example/steps/hw32.h 
+
+dist_p4estdata_DATA +=  \
   example/steps/hole_2d_cubit.inp \
   example/steps/hole_2d_cubit.jou \
   example/steps/hole_3d_cubit.inp \
