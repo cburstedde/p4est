@@ -4007,7 +4007,13 @@ p4est_connectivity_read_inp_stream (FILE * stream,
   *num_vertices = num_nodes;
   *num_trees = num_elements;
 
-  return 0;
+  if (num_nodes == 0 || num_elements == 0) {
+    P4EST_LERROR ("No elements or nodes found in mesh file.\n");
+    return 1;
+  }
+  else {
+    return 0;
+  }
 }
 
 p4est_connectivity_t *
