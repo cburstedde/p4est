@@ -68,7 +68,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 recursive, balance;
+  int                 balance;
   int                 level;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
