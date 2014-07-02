@@ -107,14 +107,16 @@ main (int argc, char **argv)
     ("This is the p4est %dD demo example/steps/%s_step2\n",
      P4EST_DIM, P4EST_STRING);
 
-  /* Get the .inp file name from the list of arguments.  */
-  if (argc != 3) {
-    SC_GLOBAL_LERRORF ("Usage: %s <inp file name> <level of refinement>\n",
+  /* Get the .inp file name from the list of arguments along with an optional
+   * level of refinement.  */
+  if (argc != 2 && argc != 3) {
+    SC_GLOBAL_LERRORF ("Usage: %s <inp file name> [level of refinement]\n",
                        argv[0]);
     sc_abort ();
   }
   filename = argv[1];
-  refine_level = atoi (argv[2]);
+  if (argc == 3)
+    refine_level = atoi (argv[2]);
 
   /* Create a forest from the inp file with name filename  */
   conn = p4est_connectivity_read_inp (filename);
