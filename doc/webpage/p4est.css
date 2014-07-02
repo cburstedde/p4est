@@ -15,6 +15,15 @@ hr {
         margin-bottom: 1em;
 }
 
+h3 {
+	margin-top: 0em;
+}
+
+p.text {
+        margin-top: 0;
+        margin-bottom: 0;
+}
+
 p.cite {
         text-indent: -1em;
         margin-left: 1em;
@@ -31,6 +40,15 @@ div.citation {
         border-style: dashed;
         border-width: thin;
         padding: 1ex;
+}
+
+table.text {
+	border-style: solid;
+	border-collapse: collapse;
+	border-width: 1px;
+}
+table.text td {
+	padding: .5em;
 }
 
 table.faq {
