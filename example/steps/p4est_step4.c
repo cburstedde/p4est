@@ -237,13 +237,13 @@ vector_dot (p4est_t * p4est, p4est_lnodes_t * lnodes,
   return gsum;
 }
 
-/** Compute y := y + a * x
+/** Compute y := y + a * x.
  *
  * \param [in] p4est          The forest is not changed.
  * \param [in] lnodes         The node numbering is not changed.
  * \param [in] a              The scalar.
  * \param [in] x              First node vector.
- * \param [in] y              Second node vector.
+ * \param [in,out] y          Second node vector.
  */
 static void
 vector_axpy (p4est_t * p4est, p4est_lnodes_t * lnodes, double a,
@@ -257,13 +257,13 @@ vector_axpy (p4est_t * p4est, p4est_lnodes_t * lnodes, double a,
   }
 }
 
-/** Compute y := x + b * y
+/** Compute y := x + b * y.
  *
  * \param [in] p4est          The forest is not changed.
  * \param [in] lnodes         The node numbering is not changed.
  * \param [in] x              First node vector.
  * \param [in] b              The scalar.
- * \param [in] y              Second node vector.
+ * \param [in,out] y          Second node vector.
  */
 static void
 vector_xpby (p4est_t * p4est, p4est_lnodes_t * lnodes, const double *x,
@@ -538,7 +538,7 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
  * \param [in,out] v          Dirichlet nodes are overwritten with zero.
  */
 static void
-set_dirichlet (p4est_lnodes_t * lnodes, int8_t * bc, double *v)
+set_dirichlet (p4est_lnodes_t * lnodes, const int8_t * bc, double *v)
 {
   const int           nloc = lnodes->num_local_nodes;
   p4est_locidx_t      lni;
@@ -579,6 +579,16 @@ test_area (p4est_t * p4est, p4est_lnodes_t * lnodes,
   P4EST_GLOBAL_PRODUCTIONF ("Area of domain: %g\n", dot);
 }
 
+/** Execute the conjugate gradient method.
+ * \param [in] p4est     The forest is not changed.
+ * \param [in] lnodes    The node numbering is not changed.
+ * \param [in] bc        Boolean flags for Dirichlet boundary nodes.
+ * \param [in] stiffness If false use scaling for the mass matrix,
+ *                       if true use the scaling for stiffness matrix.
+ * \param [in] matrix    The mass matrix should be passed in here.
+ * \param [in] b         The right hand side vector.
+ * \param [out] x        The result; we use an initial value of zero.
+ */
 static void
 solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
              int stiffness,
@@ -592,17 +602,16 @@ solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
   double              alpha, beta, pAp;
   double              rr, rrnew, rrorig;
   double             *aux[4];
-  double             *r, *z, *p, *Ap;
+  double             *r, *p, *Ap;
 
-  for (i = 0; i < 4; ++i) {
+  for (i = 0; i < 3; ++i) {
     aux[i] = allocate_vector (lnodes);
   }
   r = aux[0];
-  z = aux[1];
-  p = aux[2];
-  Ap = aux[3];
+  p = aux[1];
+  Ap = aux[2];
 
-  /* Initialize the temporary vector. */
+  /* Initialize the solution vector to zero. */
   vector_zero (p4est, lnodes, x);
   vector_copy (p4est, lnodes, b, r);
   vector_copy (p4est, lnodes, b, p);
@@ -622,14 +631,16 @@ solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
     rr = rrnew;
   }
   if (i < imax) {
-    P4EST_GLOBAL_PRODUCTIONF ("cg converged in %d iterations\n", i);
+    P4EST_GLOBAL_PRODUCTIONF ("cg converged to %g in %d iterations\n",
+                              sqrt (rr), i);
   }
   else {
-    P4EST_GLOBAL_PRODUCTIONF ("cg did not converge in %d iterations\n", imax);
+    P4EST_GLOBAL_PRODUCTIONF ("cg did not converge (%g) in %d iterations\n",
+                              sqrt (rr), imax);
   }
 
   /* Free temporary storage. */
-  for (i = 0; i < 4; ++i) {
+  for (i = 0; i < 3; ++i) {
     P4EST_FREE (aux[i]);
   }
 }
