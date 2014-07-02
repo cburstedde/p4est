@@ -6,7 +6,7 @@ desc: |-
   Using macro expansion and concatenation could eliminate wrong usage.
 type: :task
 component: p4est
-release: "0.4"
+release: "1.4"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :closed
 disposition: :wontfix
