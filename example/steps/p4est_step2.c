@@ -48,31 +48,14 @@ static int          refine_level = 0;
  * Refinement and coarsening is controlled by callback functions.
  * This function is called for every processor-local quadrant in order; its
  * return value is understood as a boolean refinement flag.
+ *
+ * Here we use uniform refinement.  Note that this function is not suitable for
+ * recursive refinement and must be used in an iterative fashion.
  */
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant)
 {
-  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
-    return 0;
-  }
-  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
-    return 1;
-  }
-  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
-      quadrant->y == P4EST_LAST_OFFSET (2)) {
-    return 1;
-  }
-#ifndef P4_TO_P8
-  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
-    return 0;
-  }
-#else
-  if (quadrant->z >= P8EST_QUADRANT_LEN (2)) {
-    return 0;
-  }
-#endif
-
   return 1;
 }
 
@@ -85,7 +68,8 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 recursive, partforcoarsen, balance;
+  int                 recursive, balance;
+  int                 level;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
@@ -121,7 +105,8 @@ main (int argc, char **argv)
   /* Create a forest from the inp file with name filename  */
   conn = p4est_connectivity_read_inp (filename);
   if (conn == NULL) {
-    P4EST_LERRORF ("Failed to read connectivity from %s\n", filename);
+    P4EST_LERRORF ("Failed to read a valid connectivity from %s\n", filename);
+    sc_abort ();
   }
 
 #ifdef P4EST_WITH_METIS
@@ -135,28 +120,25 @@ main (int argc, char **argv)
   /* Create a forest that is not refined; it consists of the root octant. */
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
 
-  /* Refine the forest recursively in parallel.
-   * Since refinement does not change the partition boundary, this call
-   * must not create an overly large number of quadrants.  A numerical
-   * application would call p4est_refine non-recursively in a loop,
-   * repartitioning in each iteration.
-   * The P4EST_ASSERT macro only activates with --enable-debug. */
-  recursive = 1;
-  p4est_refine (p4est, recursive, refine_fn, NULL);
-
-  /* Partition: The quadrants are redistributed for equal element count.  The
-   * partition can optionally be modified such that a family of octants, which
-   * are possibly ready for coarsening, are never split between processors. */
-  partforcoarsen = 0;
-  p4est_partition (p4est, partforcoarsen, NULL);
+  /* Refine the forest iteratively, load balancing at each iteration.
+   * This is important when starting with an unrefined forest */
+  for (level = 0; level < refine_level; ++level) {
+    p4est_refine (p4est, 0, refine_fn, NULL);
+    /* Refinement has lead to up to 8x more elements; redistribute them. */
+    p4est_partition (p4est, 0, NULL);
+  }
 
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
    * by more than a factor of 2.  This can optionally include diagonal
-   * neighbors across edges or corners as well; see p4est.h. */
+   * neighbors across edges or corners as well; see p4est.h.
+   *
+   * Note that this balance step is not strictly necessary since we are using
+   * uniform refinement but may be required for other types of refinement.
+   */
   balance = 1;
   if (balance) {
     p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
-    p4est_partition (p4est, partforcoarsen, NULL);
+    p4est_partition (p4est, 0, NULL);
   }
 
   /* Write the forest to disk for visualization, one file per processor. */
