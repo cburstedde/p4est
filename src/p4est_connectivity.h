@@ -432,6 +432,13 @@ void                p4est_find_corner_transform (p4est_connectivity_t *
  */
 void                p4est_connectivity_complete (p4est_connectivity_t * conn);
 
+/** Removes corner information of a connectivity
+ *  such that enough information is left to run p4est_connectivity_complete successfully.
+ *  The reduced connectivity still passes p4est_connectivity_is_valid.
+ * \param [in,out] conn     The connectivity to be reduced.
+ */
+void                p4est_connectivity_reduce (p4est_connectivity_t * conn);
+
 /** p4est_connectivity_permute
  * Given a permutation \a perm of the trees in a connectivity \a conn,
  * permute the trees of \a conn in place and update \a conn to match.
