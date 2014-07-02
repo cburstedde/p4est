@@ -84,7 +84,7 @@ func_rhs (const double vxyz[3])
   const double        x = vxyz[0];
   const double        y = vxyz[1];
 
-  return -32. * (x * (1. - x) + y * (1. - y));
+  return 32. * (x * (1. - x) + y * (1. - y));
 }
 
 /** Exact solution for the 2D Poisson problem.
@@ -235,6 +235,78 @@ vector_dot (p4est_t * p4est, p4est_lnodes_t * lnodes,
   SC_CHECK_MPI (mpiret);
 
   return gsum;
+}
+
+/** Compute y := y + a * x
+ *
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] a              The scalar.
+ * \param [in] x              First node vector.
+ * \param [in] y              Second node vector.
+ */
+static void
+vector_axpy (p4est_t * p4est, p4est_lnodes_t * lnodes, double a,
+             const double *x, double *y)
+{
+  const int           nloc = lnodes->num_local_nodes;
+  int                 lnid;
+
+  for (lnid = 0; lnid < nloc; ++lnid) {
+    y[lnid] += a * x[lnid];
+  }
+}
+
+/** Compute y := x + b * y
+ *
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] x              First node vector.
+ * \param [in] b              The scalar.
+ * \param [in] y              Second node vector.
+ */
+static void
+vector_xpby (p4est_t * p4est, p4est_lnodes_t * lnodes, const double *x,
+             double b, double *y)
+{
+  const int           nloc = lnodes->num_local_nodes;
+  int                 lnid;
+  double              yy;
+
+  for (lnid = 0; lnid < nloc; ++lnid) {
+    yy = y[lnid];
+    y[lnid] = x[lnid] + b * yy;
+  }
+}
+
+/** zero a vector.
+ *
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [out] x             The vector.
+ */
+static void
+vector_zero (p4est_t * p4est, p4est_lnodes_t * lnodes, double *x)
+{
+  const int           nloc = lnodes->num_local_nodes;
+
+  memset (x, 0., nloc * sizeof (double));
+}
+
+/** copy a vector.
+ *
+ * \param [in] p4est          The forest is not changed.
+ * \param [in] lnodes         The node numbering is not changed.
+ * \param [in] x              Input node vector.
+ * \param [out] y             output node vector.
+ */
+static void
+vector_copy (p4est_t * p4est, p4est_lnodes_t * lnodes, const double *x,
+             double *y)
+{
+  const int           nloc = lnodes->num_local_nodes;
+
+  memcpy (y, x, nloc * sizeof (double));
 }
 
 /** Allocate storage for processor-relevant nodal degrees of freedom.
@@ -466,7 +538,7 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
  * \param [in,out] v          Dirichlet nodes are overwritten with zero.
  */
 static void
-set_dirichlet (p4est_lnodes_t * lnodes, int8_t * bc, double * v)
+set_dirichlet (p4est_lnodes_t * lnodes, int8_t * bc, double *v)
 {
   const int           nloc = lnodes->num_local_nodes;
   p4est_locidx_t      lni;
@@ -508,12 +580,17 @@ test_area (p4est_t * p4est, p4est_lnodes_t * lnodes,
 }
 
 static void
-solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes,
+solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
+             int stiffness,
+             double (*matrix)[P4EST_CHILDREN][P4EST_CHILDREN],
              const double *b, double *x)
 {
   int                 i;
+  double              alpha, beta, rr, pAp, rrnew, rrorig;
   double             *aux[4];
   double             *r, *p, *Ap, *z;
+  double              tol = 1.e-6;
+  int                 imax = 100;
 
   for (i = 0; i < 4; ++i) {
     aux[i] = allocate_vector (lnodes);
@@ -522,6 +599,35 @@ solve_by_cg (p4est_t * p4est, p4est_lnodes_t * lnodes,
   p = aux[1];
   Ap = aux[2];
   z = aux[3];
+
+  /* initialize the temporary vector */
+  vector_zero (p4est, lnodes, x);
+  vector_copy (p4est, lnodes, b, r);
+  vector_copy (p4est, lnodes, b, p);
+  rr = rrorig = vector_dot (p4est, lnodes, r, r);
+
+  for (i = 0; i < imax; i++) {
+    multiply_matrix (p4est, lnodes, bc, stiffness, matrix, p, Ap);
+    pAp = vector_dot (p4est, lnodes, p, Ap);
+    alpha = rr / pAp;
+    vector_axpy (p4est, lnodes, alpha, p, x);
+    vector_axpy (p4est, lnodes, -alpha, Ap, r);
+    rrnew = vector_dot (p4est, lnodes, r, r);
+    if (rrnew <= rrorig * tol) {
+      break;
+    }
+    beta = rrnew / rr;
+    vector_xpby (p4est, lnodes, r, beta, p);
+    P4EST_GLOBAL_VERBOSEF ("%03d: r'r %e alpha %e beta %e\n", i, rr, alpha,
+                           beta);
+    rr = rrnew;
+  }
+  if (i < imax) {
+    P4EST_GLOBAL_PRODUCTIONF ("cg converged in %d iterations\n", i);
+  }
+  else {
+    P4EST_GLOBAL_PRODUCTION ("cg did not converge\n");
+  }
 
   for (i = 0; i < 4; ++i) {
     P4EST_FREE (aux[i]);
@@ -547,7 +653,8 @@ solve_poisson (p4est_t * p4est)
   int                 i, j, k, l;
   double              mass_2d[4][4], stiffness_2d[4][4];
   double             *rhs_eval, *uexact_eval;
-  double             *rhs_fe, *u_fe;
+  double             *rhs_fe, *u_fe, *u_diff, *diff_mass;
+  double              err2, err;
   int8_t             *bc;
   p4est_ghost_t      *ghost;
   p4est_lnodes_t     *lnodes;
@@ -589,9 +696,23 @@ solve_poisson (p4est_t * p4est)
   set_dirichlet (lnodes, bc, rhs_fe);
 
   /* Run conjugate gradient method with initial value zero. */
-  solve_by_cg (p4est, lnodes, rhs_fe, u_fe);
+  solve_by_cg (p4est, lnodes, bc, 1, &stiffness_2d, rhs_fe, u_fe);
+
+  /* Compute the pointwise difference with the exact vector */
+  u_diff = allocate_vector (lnodes);
+  vector_copy (p4est, lnodes, u_fe, u_diff);
+  vector_axpy (p4est, lnodes, -1., uexact_eval, u_diff);
+
+  /* Compute the L2 difference with the exact vector */
+  diff_mass = allocate_vector (lnodes);
+  multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, u_diff, diff_mass);
+  err2 = vector_dot (p4est, lnodes, diff_mass, u_diff);
+  err = sqrt (err2);
+  P4EST_GLOBAL_PRODUCTIONF ("|u_fe - u_exact| = %e\n", err);
 
   /* Free finite element vectors */
+  P4EST_FREE (diff_mass);
+  P4EST_FREE (u_diff);
   P4EST_FREE (u_fe);
   P4EST_FREE (rhs_fe);
   P4EST_FREE (rhs_eval);
