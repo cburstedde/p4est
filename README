@@ -29,7 +29,7 @@ not necessarily reflect the views of the National Science Foundation (NSF).
  1. Purpose
 
 Many applications in applied mathematics and numerical simulation use a mesh of
-computation cells that covers the domain of interest.  The numerical solution
+computational cells that covers the domain of interest.  The numerical solution
 is then approximated by functions, each of which is associated with a small set
 of cells (or even one).  Dynamic ``adaptive'' methods change the mesh during
 the simulation by local refinement or coarsening, and ``parallel'' methods
@@ -39,17 +39,23 @@ isolates the task of parallel dynamic adaptive mesh refinement (AMR),
 coarsening, and load balancing, and encapsulates algorithms that scale well to
 large numbers (10^5) of processors.
 
+These algorithms are predominantly used for the numerical solution of partial
+differential equations, but also support various other tasks where fast
+hierarchical space subdivision is required, for example to locate particles in
+space or to organize, sort, and search in large data sets.
+
 
  2. Geometric structure
 
 The basic structure used in p4est is a ``connectivity'' of quadtrees (2D) or
-octrees (3D) which covers the domain of interest in a conforming macro-mesh.
-These trees can then be arbitrarily refined and coarsened, where the storage of
-quadrants/octants is distributed in parallel.  Thus, the mesh primitives used
-in p4est are quadrilaterals in 2D and hexahedra in 3D.  The adaptive structure
-allows for quadrants/octants of different sizes to neighbor each other, which
-is commonly called ``non-conforming''.  This concept leads to ``hanging'' faces
-and edges.
+octrees (3D) that covers the domain of interest in a conforming macro-mesh.
+This includes the case of using exactly one tree for representing the
+hypercube.  The trees can be arbitrarily refined and coarsened, where the
+storage of quadrants/octants is distributed in parallel.  Thus, the mesh
+primitives used in p4est are quadrilaterals in 2D and hexahedra in 3D.  The
+adaptive structure allows for quadrants/octants of different sizes to neighbor
+each other, which is commonly called ``non-conforming''.  This concept leads to
+``hanging'' faces and edges.
 
 
  3. Core p4est (2D) and p8est (3D) routines
@@ -99,18 +105,23 @@ p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
 file for details.  The tarball contains the configure script and all required
 files.  The following configure options are important.
 
---enable-mpi: Necessary for parallel functionality.  Without this option, p4est
+--enable-mpi is necessary for parallel functionality.  Without this option, p4est
 does not require MPI, which is replaced by a dummy implementation that always
 assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
 
---enable-debug: Enable assertions and additional code for verification.  This
+--enable-debug enables assertions and additional code for verification.  This
 is generally helpful for development, even if it is somewhat slower and
 produces a lot of diagnostic log messages.
 
-For a one-time installation, ./configure can be called in the root directory of
-the unpacked tree.  For development or for testing multiple configure options,
-create an empty directory for each configuration and invoke configure with a
-relative path.
+CFLAGS="-Wall -g -O0" is an example of setting flags for a development build
+compiled with the GNU compilers.  p4est is written in plain C and does not
+require FFLAGS or CXXFLAGS.
+
+Both in-source and out-of-source builds are supported.  For a one-time
+installation, ./configure can be called in the root directory of the unpacked
+tree.  For development or for testing multiple configure options, create an
+empty directory for each configuration and invoke configure with a relative
+path.
 
 The subpackage 'sc' is contained in the tarball and used by default.  It is
 possible to use a version of sc that has been make install'd independently:

@@ -67,7 +67,7 @@ simple_config_t;
 
 typedef struct
 {
-  p4est_topidx_t      a;
+  p4est_quadrant_t    quad;
 }
 user_data_t;
 
@@ -87,7 +87,8 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
-  data->a = which_tree;
+  data->quad = *quadrant;
+  data->quad.p.which_tree = which_tree;
 }
 
 static int
@@ -126,7 +127,7 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static void
 test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
-           int uniform)
+           user_data_t * ghost_data, int uniform)
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
   int                 f, nf;
@@ -186,6 +187,14 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
     P4EST_ASSERT (mfn2.quadrant_id == quadrant_id);
     while ((q = p4est_mesh_face_neighbor_next (&mfn, &which_tree, &which_quad,
                                                &nface, &nrank)) != NULL) {
+#ifdef P4EST_ENABLE_DEBUG
+      user_data_t        *data;
+
+      data = (user_data_t *) p4est_mesh_face_neighbor_data (&mfn, ghost_data);
+
+      P4EST_ASSERT (p4est_quadrant_is_equal (q, &(data->quad)));
+      P4EST_ASSERT (data->quad.p.which_tree == which_tree);
+#endif
     }
   }
 }
@@ -200,6 +209,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  user_data_t        *ghost_data;
 
   p4est = p4est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn, NULL);
@@ -233,8 +243,10 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
 
   /* create ghost layer and mesh */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  ghost_data = P4EST_ALLOC (user_data_t, ghost->ghosts.elem_count);
+  p4est_ghost_exchange_data (p4est, ghost, ghost_data);
   mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
-  test_mesh (p4est, ghost, mesh, uniform);
+  test_mesh (p4est, ghost, mesh, ghost_data, uniform);
 
   /* compute memory used */
   local_used[0] = (long) p4est_connectivity_memory_used (p4est->connectivity);
@@ -250,6 +262,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
                             global_used[2], global_used[3]);
 
   /* destroy ghost layer and mesh */
+  P4EST_FREE (ghost_data);
   p4est_mesh_destroy (mesh);
   p4est_ghost_destroy (ghost);
 

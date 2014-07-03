@@ -8,7 +8,7 @@ desc: |-
   If we miss any of these occurrences that could be very bad.
 type: :bugfix
 component: p4est
-release: "0.4"
+release: "1.4"
 reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
 status: :unstarted
 disposition: 
@@ -23,7 +23,7 @@ log_events:
   - ""
 - - 2014-03-18 10:15:26.154771 Z
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
-  - assigned to release 0.4 from unassigned
+  - assigned to release 1.4 from unassigned
   - We should resolve this issue one way or another.
 - - 2014-05-02 14:54:50.503541 Z
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>

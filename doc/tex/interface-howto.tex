@@ -44,13 +44,13 @@ We generally separate the adaptive mesh refinement (AMR) topology from any
 numerical information.  The former is stored and modified internally by the
 \pforest software library, while an application is free to define the way it
 uses this information and arranges numerical and other data.  This document is
-inteded to describe the interface by which \pforest relates mesh information
+intended to describe the interface by which \pforest relates mesh information
 to the application.
 
 The general, modular AMR pipeline is described in
 \cite{BursteddeGhattasStadlerEtAl08}, which is not specific to \pforest but can
 in principle be applied to any AMR provider.  The \pforest algorithms and main
-interface routines are destribed in \cite{BursteddeWilcoxGhattas11}.
+interface routines are described in \cite{BursteddeWilcoxGhattas11}.
 % \cite{IsaacBursteddeGhattas12}
 An example usage of \pforest as scalable mesh backend for the general-purpose
 finite element software \dealii is described in

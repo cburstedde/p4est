@@ -21,10 +21,18 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_vtk.h
+ *
+ * Routines for printing a forest and associated fields to vtk format.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_VTK_H
 #define P4EST_VTK_H
 
 #include <p4est_geometry.h>
+#include <p4est.h>
 
 SC_EXTERN_C_BEGIN;
 

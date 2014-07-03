@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_bits.h
+ *
+ * Routines for manipulating quadrants (neighbors, parents, children, etc.)
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_BITS_H
 #define P8EST_BITS_H
 
@@ -29,6 +36,9 @@
 SC_EXTERN_C_BEGIN;
 
 /** Prints one line with quadrant's x, y, z and level.
+ * \param [in] log_priority  see \ref logpriorities in sc.h for the meanings
+ *                           of numerical priority values
+ * \param [in] q             quadrant to print
  */
 void                p8est_quadrant_print (int log_priority,
                                           const p8est_quadrant_t * q);

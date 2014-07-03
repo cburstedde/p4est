@@ -5,7 +5,7 @@ desc: |-
   This is a waste of memory with many trees.  Only store non-empty ones.
 type: :bugfix
 component: p4est
-release: "0.5"
+release: "1.5"
 reporter: Carsten Burstedde <carsten@ices.utexas.edu>
 status: :unstarted
 disposition: 
@@ -20,5 +20,5 @@ log_events:
   - ""
 - - 2013-05-11 15:41:40.120676 Z
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
-  - assigned to release 0.5 from unassigned
-  - Release 0.5 should contain major improvements for many trees
+  - assigned to release 1.5 from unassigned
+  - Release 1.5 should contain major improvements for many trees

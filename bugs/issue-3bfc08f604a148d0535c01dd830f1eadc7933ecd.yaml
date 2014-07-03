@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Additional verification
+desc: Verify nodes agains lnodes.  Verify p4est_quadrant_is_inside_tree again.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-07-02 14:30:38.610317 Z
+references: []
+
+id: 3bfc08f604a148d0535c01dd830f1eadc7933ecd
+log_events: 
+- - 2014-07-02 14:30:39.426218 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""

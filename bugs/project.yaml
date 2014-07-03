@@ -1,6 +1,6 @@
 --- !ditz.rubyforge.org,2008-03-06/project 
 name: p4est
-version: "0.4"
+version: "1.1"
 components: 
 - !ditz.rubyforge.org,2008-03-06/component 
   name: p4est
@@ -19,7 +19,7 @@ releases:
     - released
     - This has been done on 2010-01-22.
 - !ditz.rubyforge.org,2008-03-06/release 
-  name: "0.4"
+  name: "1.4"
   status: :unreleased
   release_time: 
   log_events: 
@@ -28,7 +28,7 @@ releases:
     - created
     - Implement and test all code necessary for inclusion in Deal.II.
 - !ditz.rubyforge.org,2008-03-06/release 
-  name: "0.5"
+  name: "1.5"
   status: :unreleased
   release_time: 
   log_events: 
