@@ -33,11 +33,11 @@
  */
 
 #ifndef P4_TO_P8
-#include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_mesh.h>
 #include <p4est_vtk.h>
 #else
-#include <p8est_bits.h>
+#include <p8est_extended.h>
 #include <p8est_mesh.h>
 #include <p8est_vtk.h>
 #endif
@@ -130,6 +130,8 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
            user_data_t * ghost_data, int uniform)
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
+  size_t              i;
+  int                 level;
   int                 f, nf;
   int                 c;
   int                 nface;
@@ -173,6 +175,25 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
         SC_CHECK_ABORTF (-HF <= nf && nf < (P4EST_HALF + 1) * HF,
                          "quad %d face %d code %d mismatch", kl, f, nf);
       }
+    }
+  }
+
+  /* Test the level lists */
+  for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
+    for (i = 0; i < mesh->quad_level[level].elem_count; ++i) {
+      /* get the local quadrant id */
+      quadrant_id =
+        *(p4est_locidx_t *) sc_array_index (&mesh->quad_level[level], i);
+
+      /* get the tree it belongs to */
+      kl = mesh->quad_to_tree[quadrant_id];
+      tree = p4est_tree_array_index (p4est->trees, kl);
+
+      /* and finally, get the actual quadrant from the tree quadrant list */
+      quadrant_id -= tree->quadrants_offset;
+      q = p4est_quadrant_array_index (&tree->quadrants, (size_t) quadrant_id);
+
+      P4EST_ASSERT (q->level == level);
     }
   }
 
@@ -245,7 +266,7 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   ghost_data = P4EST_ALLOC (user_data_t, ghost->ghosts.elem_count);
   p4est_ghost_exchange_data (p4est, ghost, ghost_data);
-  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, mesh_btype);
   test_mesh (p4est, ghost, mesh, ghost_data, uniform);
 
   /* compute memory used */

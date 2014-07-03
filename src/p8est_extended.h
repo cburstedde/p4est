@@ -40,6 +40,7 @@
 #define P8EST_EXTENDED_H
 
 #include <p8est.h>
+#include <p8est_mesh.h>
 #include <p8est_iterate.h>
 
 SC_EXTERN_C_BEGIN;
@@ -126,6 +127,24 @@ p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                    int min_level, int fill_uniform,
                                    size_t data_size, p8est_init_t init_fn,
                                    void *user_pointer);
+
+/** Create a new mesh.
+ * \param [in] p8est                A forest that is fully 2:1 balanced.
+ * \param [in] ghost                The ghost layer created from the
+ *                                  provided p4est.
+ * \param [in] compute_tree_index   Boolean to decide whether to allocate and
+ *                                  compute the quad_to_tree list.
+ * \param [in] compute_level_lists  Boolean to decide whether to compute the
+ *                                  level lists in quad_level.
+ * \param [in] btype                Currently ignored, only face neighbors
+ *                                  are stored.
+ * \return                          A fully allocated mesh structure.
+ */
+p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
+                                        p8est_ghost_t * ghost,
+                                        int compute_tree_index,
+                                        int compute_level_lists,
+                                        p8est_connect_type_t btype);
 
 /** Refine a forest with a bounded refinement level and a replace option.
  * \param [in,out] p8est The forest is changed in place.

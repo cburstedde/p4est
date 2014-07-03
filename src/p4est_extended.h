@@ -40,6 +40,7 @@
 #define P4EST_EXTENDED_H
 
 #include <p4est.h>
+#include <p4est_mesh.h>
 #include <p4est_iterate.h>
 
 SC_EXTERN_C_BEGIN;
@@ -126,6 +127,24 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
                                    int min_level, int fill_uniform,
                                    size_t data_size, p4est_init_t init_fn,
                                    void *user_pointer);
+
+/** Create a new mesh.
+ * \param [in] p4est                A forest that is fully 2:1 balanced.
+ * \param [in] ghost                The ghost layer created from the
+ *                                  provided p4est.
+ * \param [in] compute_tree_index   Boolean to decide whether to allocate and
+ *                                  compute the quad_to_tree list.
+ * \param [in] compute_level_lists  Boolean to decide whether to compute the
+ *                                  level lists in quad_level.
+ * \param [in] btype                Currently ignored, only face neighbors
+ *                                  are stored.
+ * \return                          A fully allocated mesh structure.
+ */
+p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,
+                                        p4est_ghost_t * ghost,
+                                        int compute_tree_index,
+                                        int compute_level_lists,
+                                        p4est_connect_type_t btype);
 
 /** Refine a forest with a bounded refinement level and a replace option.
  * \param [in,out] p4est The forest is changed in place.
