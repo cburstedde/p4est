@@ -162,7 +162,7 @@ main (int argc, char **argv)
   p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);
 
-  /* Prepare a point search -- fixe size so the memory is not relocated */
+  /* Prepare a point search -- fix size so the memory is not relocated */
   points = sc_array_new_size (sizeof (test_point_t), 2);
 
   /* A */

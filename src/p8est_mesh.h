@@ -41,7 +41,7 @@ SC_EXTERN_C_BEGIN;
  * The quad_to_face list has equally many entries which are either:
  * 1. A value of v = 0..23 indicates one same-size neighbor.
  *    This value is decoded as v = r * 6 + nf, where nf = 0..5 is the
- *    neigbbor's connecting face number and r = 0..3 is the relative
+ *    neighbor's connecting face number and r = 0..3 is the relative
  *    orientation of the neighbor's face, see p8est_connectivity.h.
  * 2. A value of v = 24..119 indicates a double-size neighbor.
  *    This value is decoded as v = 24 + h * 24 + r * 6 + nf, where
@@ -78,7 +78,7 @@ typedef struct
 
   p4est_locidx_t     *quad_to_quad;     /* 1 index for each of the 6 faces */
   int8_t             *quad_to_face;     /* encodes orientation/2:1 status */
-  sc_array_t         *quad_to_half;     /* stores half-size neigbors */
+  sc_array_t         *quad_to_half;     /* stores half-size neighbors */
 
   /* CAUTION: tree-boundary/tree-edge corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
