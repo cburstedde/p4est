@@ -21,6 +21,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_connectivity.h
+ *
+ * The coarse topological description of the forest.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_CONNECTIVITY_H
 #define P4EST_CONNECTIVITY_H
 
@@ -33,18 +40,23 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* spatial dimension */
+/** The spatial dimension */
 #define P4EST_DIM 2
+/** The number of faces of a quadrant */
 #define P4EST_FACES (2 * P4EST_DIM)
+/** The number of children of a quadrant
+ *
+ * also the nmber of corners */
 #define P4EST_CHILDREN 4
+/** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
-/* size of insulation layer */
+/** The size of insulation layer */
 #define P4EST_INSUL 9
 
 /* size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
 
-/* p4est identification string */
+/** p4est identification string */
 #define P4EST_STRING "p4est"
 
 /* Increase this number whenever the on-disk format for
@@ -53,7 +65,9 @@ SC_EXTERN_C_BEGIN;
  */
 #define P4EST_ONDISK_FORMAT 0x2000009
 
-/* Several functions involve relationships between neighboring trees and/or
+/** Characterize a type of adjacency.
+ *
+ * Several functions involve relationships between neighboring trees and/or
  * quadrants, and their behavior depends on how one defines adjacency:
  * 1) entities are adjacent if they share a face, or
  * 2) entities are adjacent if they share a face or corner.
@@ -120,21 +134,31 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  */
 typedef struct p4est_connectivity
 {
-  p4est_topidx_t      num_vertices;
-  p4est_topidx_t      num_trees;
-  p4est_topidx_t      num_corners;
+  p4est_topidx_t      num_vertices; /**< the number of vertices that define
+                                         the \a embedding of the forest (not
+                                         the topology) */
+  p4est_topidx_t      num_trees;    /**< the number of trees */
+  p4est_topidx_t      num_corners;  /**< the number of corners that help
+                                         define topology */
+  double             *vertices;     /**< an array of size
+                                         (3 * \a num_vertices) */
+  p4est_topidx_t     *tree_to_vertex; /**< embed each tree into \f$R^3\f$ for
+                                           e.g. visualization (see
+                                           p4est_vtk.h) */
+  int8_t             *tree_to_attr; /**< not touched by p4est */
 
-  double             *vertices;
-  p4est_topidx_t     *tree_to_vertex;
-  int8_t             *tree_to_attr;
+  p4est_topidx_t     *tree_to_tree; /**< (4 * \a num_trees) neighbors across
+                                         faces */
+  int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
+                                         face+orientation (see description) */
 
-  p4est_topidx_t     *tree_to_tree;
-  int8_t             *tree_to_face;
-
-  p4est_topidx_t     *tree_to_corner;
-  p4est_topidx_t     *ctt_offset;
-  p4est_topidx_t     *corner_to_tree;
-  int8_t             *corner_to_corner;
+  p4est_topidx_t     *tree_to_corner; /**< (4 * \a num_trees) or NULL (see
+                                           description) */
+  p4est_topidx_t     *ctt_offset; /**< corner to offset in \a corner_to_tree
+                                       and \a corner_to_corner */
+  p4est_topidx_t     *corner_to_tree; /**< list of trees that meet at a corner */
+  int8_t             *corner_to_corner; /**< list of tree-corners that meet at
+                                             a corner */
 }
 p4est_connectivity_t;
 
@@ -505,6 +529,166 @@ p4est_corner_array_index (sc_array_t * array, size_t it)
     (p4est_corner_transform_t *) (array->array +
                                   sizeof (p4est_corner_transform_t) * it);
 }
+
+/** Read an ABAQUS input file from a file stream.
+ *
+ * This utility function reads a basic ABAQUS file supporting element type with
+ * the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as
+ * bilinear quadrilateral and trilinear hexahedral trees respectively.
+ *
+ * A basic 2D mesh is given below.  The \c *Node section gives the vertex
+ * number and x, y, and z components for each vertex.  The \c *Element section
+ * gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter
+ * clockwise order. So in 2D the nodes are given as:
+ *
+ *   4                     3
+ *   +-------------------+
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   +-------------------+
+ *   1                   2
+ *
+ * and in 3D they are given as:
+ *
+ * 8                     7
+ *  +---------------------+
+ *  |\                    |\
+ *  | \                   | \
+ *  |  \                  |  \
+ *  |   \                 |   \
+ *  |   5+---------------------+6
+ *  |    |                |    |
+ *  +----|----------------+    |
+ *  4\   |               3 \   |
+ *    \  |                  \  |
+ *     \ |                   \ |
+ *      \|                    \|
+ *       +---------------------+
+ *       1                     2
+ *
+ * \code
+ * *Heading
+ *  box.inp
+ * *Node
+ * 1,  -5, -5, 0
+ * 2,   5, -5, 0
+ * 3,   5,  5, 0
+ * 4,  -5,  5, 0
+ * 5,   0, -5, 0
+ * 6,   5,  0, 0
+ * 7,   0,  5, 0
+ * 8,  -5,  0, 0
+ * 9,   1, -1, 0
+ * 10,  0,  0, 0
+ * 11, -2,  1, 0
+ * *Element, type=CPS4, ELSET=Surface1
+ * 1,  1, 10, 11, 8
+ * 2,  3, 10, 9,  6
+ * 3,  9, 10, 1,  5
+ * 4,  7,  4, 8, 11
+ * 5, 11, 10, 3,  7
+ * 6,  2,  6, 9,  5
+ * \endcode
+ *
+ * This code can be called two ways.  The first, when \c vertex==NULL and \c
+ * tree_to_vertex==NULL, is used to count the number of tress and vertices in
+ * the connectivity to be generated by the \c .inp mesh in the \a stream.  The
+ * second, when \c vertices!=NULL and \c tree_to_vertex!=NULL, fill \c vertices
+ * and \c tree_to_vertex.
+ *
+ * \param[in,out]  stream         file stream to read the connectivity from
+ * \param[out]     num_vertices   the number of vertices in the connectivity
+ * \param[out]     num_trees      the number of trees in the connectivity
+ * \param[out]     vertices       the list of \c vertices of the connectivity
+ * \param[out]     tree_to_vertex the \c tree_to_vertex map of the connectivity
+ *
+ * \returns 0 if successful and nonzero if not
+ */
+int                 p4est_connectivity_read_inp_stream (FILE * stream,
+                                                        p4est_topidx_t *
+                                                        num_vertices,
+                                                        p4est_topidx_t *
+                                                        num_trees,
+                                                        double *vertices,
+                                                        p4est_topidx_t *
+                                                        tree_to_vertex);
+
+/** Create a p4est connectivity from an ABAQUS input file.
+ *
+ * This utility function reads a basic ABAQUS file supporting element type with
+ * the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as
+ * bilinear quadrilateral and trilinear hexahedral trees respectively.
+ *
+ * A basic 2D mesh is given below.  The \c *Node section gives the vertex
+ * number and x, y, and z components for each vertex.  The \c *Element section
+ * gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter
+ * clockwise order. So in 2D the nodes are given as:
+ *
+ *   4                     3
+ *   +-------------------+
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   |                   |
+ *   +-------------------+
+ *   1                   2
+ *
+ * and in 3D they are given as:
+ *
+ * 8                     7
+ *  +---------------------+
+ *  |\                    |\
+ *  | \                   | \
+ *  |  \                  |  \
+ *  |   \                 |   \
+ *  |   5+---------------------+6
+ *  |    |                |    |
+ *  +----|----------------+    |
+ *  4\   |               3 \   |
+ *    \  |                  \  |
+ *     \ |                   \ |
+ *      \|                    \|
+ *       +---------------------+
+ *       1                     2
+ *
+ * \code
+ * *Heading
+ *  box.inp
+ * *Node
+ * 1,  -5, -5, 0
+ * 2,   5, -5, 0
+ * 3,   5,  5, 0
+ * 4,  -5,  5, 0
+ * 5,   0, -5, 0
+ * 6,   5,  0, 0
+ * 7,   0,  5, 0
+ * 8,  -5,  0, 0
+ * 9,   1, -1, 0
+ * 10,  0,  0, 0
+ * 11, -2,  1, 0
+ * *Element, type=CPS4, ELSET=Surface1
+ * 1,  1, 10, 11, 8
+ * 2,  3, 10, 9,  6
+ * 3,  9, 10, 1,  5
+ * 4,  7,  4, 8, 11
+ * 5, 11, 10, 3,  7
+ * 6,  2,  6, 9,  5
+ * \endcode
+ *
+ * This function reads a mesh from \a filename and returns an associated p4est
+ * connectivity.
+ *
+ * \param[in]  filename         file to read the connectivity from
+ *
+ * \returns an allocated connectivity associated with the mesh in \a filename
+ */
+p4est_connectivity_t *p4est_connectivity_read_inp (const char *filename);
 
 SC_EXTERN_C_END;
 

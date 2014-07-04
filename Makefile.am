@@ -63,9 +63,8 @@ include src/Makefile.am
 include test/Makefile.am
 include example/mesh/Makefile.am
 include example/points/Makefile.am
-include example/second/Makefile.am
 include example/simple/Makefile.am
-include example/sieve/Makefile.am
+include example/steps/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
@@ -111,3 +110,11 @@ endif
 
 clean-local:
 	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+
+maintainer-clean-local:
+	rm -rf doxygen
+
+doxygen: Doxyfile
+	doxygen
+
+.PHONY: doxygen

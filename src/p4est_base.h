@@ -21,6 +21,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_base.h
+ *
+ * General support types and functions
+ */
+
 #ifndef P4EST_BASE_H
 #define P4EST_BASE_H
 
@@ -101,13 +106,18 @@ typedef int64_t     p4est_gloidx_t;
 #endif
 
 /* macros for memory allocation, will abort if out of memory */
+/** allocate a \a t-array with \a n elements */
 #define P4EST_ALLOC(t,n)          (t *) sc_malloc (p4est_package_id,    \
                                                    (n) * sizeof(t))
+/** allocate a \a t-array with \a n elements and zero */
 #define P4EST_ALLOC_ZERO(t,n)     (t *) sc_calloc (p4est_package_id,    \
                                                    (size_t) (n), sizeof(t))
+/** reallocate the \a t-array \a p with \a n elements */
 #define P4EST_REALLOC(p,t,n)      (t *) sc_realloc (p4est_package_id,   \
                                                     (p), (n) * sizeof(t))
+/** duplicate a string */
 #define P4EST_STRDUP(s)                 sc_strdup (p4est_package_id, (s))
+/** free an allocated array */
 #define P4EST_FREE(p)                   sc_free (p4est_package_id, (p))
 
 /* log helper macros */
@@ -219,6 +229,7 @@ void                P4EST_LERRORF (const char *fmt, ...)
 #define P4EST_NOTICEF           P4EST_STATISTICSF
 
 /* extern declarations */
+/** the libsc package id for p4est (set in p4est_init()) */
 extern int          p4est_package_id;
 
 /** Registers p4est with the SC Library and sets the logging behavior.

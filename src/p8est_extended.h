@@ -29,6 +29,13 @@
  * The API may change without notice.                               *
  ********************************************************************/
 
+/** \file p8est_extended.h
+ *
+ * Interface routines with extended capabilities.
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_EXTENDED_H
 #define P8EST_EXTENDED_H
 
@@ -74,17 +81,18 @@ struct p8est_inspect
   int                 use_B;
 };
 
-/** Callback function prototype used by extended routines when the quadrants
- * of an existing, valid p8est are changed.  The callback allows the user to
- * make changes to newly initialized quadrants before the quadrants that they
- * replace are destroyed.
+/** Callback function prototype to replace one set of quadrants with another.
+ *
+ * This is used by extended routines when the quadrants of an existing, valid
+ * p8est are changed.  The callback allows the user to make changes to newly
+ * initialized quadrants before the quadrants that they replace are destroyed.
  *
  * \param [in] num_outgoing The number of outgoing quadrants.
  * \param [in] outgoing     The outgoing quadrants: after the callback, the
  *                          user_data, if \a p8est->data_size is nonzero,
  *                          will be destroyed.
  * \param [in] num_incoming The number of incoming quadrants.
- * \param [in/out] incoming The incoming quadrants: prior to the callback,
+ * \param [in,out] incoming The incoming quadrants: prior to the callback,
  *                          the user_data, if \a p8est->data_size is nonzero,
  *                          is allocated, and the p8est_init_t callback,
  *                          if it has been provided, will be called.
@@ -170,6 +178,17 @@ void                p8est_coarsen_ext (p8est_t * p8est, int coarsen_recursive,
                                        p8est_init_t init_fn,
                                        p8est_replace_t replace_fn);
 
+/** 2:1 balance the size differences of neighboring elements in a forest.
+ * \param [in,out] p8est  The p8est to be worked on.
+ * \param [in] btype      Balance type (face, edge, or corner/full).
+ *                        Corner balance is almost never required when
+ *                        discretizing a PDE; just causes smoother mesh grading.
+ * \param [in] init_fn    Callback function to initialize the user_data
+ *                        which is already allocated automatically.
+ * \param [in] replace_fn Callback function that allows the user to change
+ *                        incoming quadrants based on the quadrants they
+ *                        replace.
+ */
 void                p8est_balance_ext (p8est_t * p8est,
                                        p8est_connect_type_t btype,
                                        p8est_init_t init_fn,

@@ -7,7 +7,7 @@ desc: |-
   This should remove the current limit of about 10**5--10**6 octrees.
 type: :bugfix
 component: p4est
-release: "0.5"
+release: "1.5"
 reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
 status: :unstarted
 disposition: 
@@ -19,4 +19,4 @@ log_events:
 - - 2013-05-11 15:44:06.336136 Z
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - created
-  - Release 0.5 should be fine for zillions of octrees.
+  - Release 1.5 should be fine for zillions of octrees.

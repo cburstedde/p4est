@@ -21,6 +21,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_to_p8est.h
+ *
+ * transforms 2D \ref p4est routines into 3D \ref p8est routines
+ */
+
 #ifndef P4EST_TO_P8EST_H
 #define P4EST_TO_P8EST_H
 
@@ -147,6 +152,8 @@
 #define p4est_connectivity_permute      p8est_connectivity_permute
 #define p4est_connectivity_join_faces   p8est_connectivity_join_faces
 #define p4est_connectivity_is_equivalent p8est_connectivity_is_equivalent
+#define p4est_connectivity_read_inp_stream p8est_connectivity_read_inp_stream
+#define p4est_connectivity_read_inp     p8est_connectivity_read_inp
 
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex
@@ -359,6 +366,7 @@
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
+#define p4est_mesh_face_neighbor_data   p8est_mesh_face_neighbor_data
 
 /* functions in p4est_balance */
 #define p4est_balance_seeds_face        p8est_balance_seeds_face

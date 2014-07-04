@@ -96,7 +96,7 @@ echo "| LIBS:        $LIBS"
 echo "o----------------------------------"
 
 # Create output files.
-AC_CONFIG_FILES([Makefile Makefile.p4est.pre])
+AC_CONFIG_FILES([Makefile Makefile.p4est.pre Doxyfile])
 AC_OUTPUT
 
 # Final messages.
