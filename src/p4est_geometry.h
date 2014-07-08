@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_geometry.h tranforms from vertex frame to physical space
+/** \file p4est_geometry.h transforms from vertex frame to physical space
  *
  * \ingroup p4est
  */
