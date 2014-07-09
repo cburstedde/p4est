@@ -144,7 +144,7 @@ typedef int         (*p8est_search_query_t) (p8est_t * p8est,
  * \param [in] search_quadrant_fn   Executed once for each quadrant that is
  *                          entered.  This quadrant is always local.  If the
  *                          callback returns false, this quadrant and its
- *                          descendents are excluded from the search.
+ *                          descendants are excluded from the search.
  *                          May be NULL in which case it is ignored.
  * \param [in] search_point_fn      Must return true for a possible match.
  * \param [in] points       User-defined array of "points".

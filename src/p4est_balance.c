@@ -459,7 +459,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *q,
       }
 
       if ((temp.x & pmask) != porig.x || (temp.y & pmask) != porig.y) {
-        /* only test other descendents of p */
+        /* only test other descendants of p */
         continue;
       }
 
@@ -501,7 +501,7 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *q,
 
         if ((temp.x & pmask) != porig.x || (temp.y & pmask) != porig.y ||
             (temp.z & pmask) != porig.z) {
-          /* only test other descendents of p */
+          /* only test other descendants of p */
           continue;
         }
 
@@ -697,7 +697,7 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *q,
 
       if ((temp.x & pmask) != porig.x || (temp.y & pmask) != porig.y ||
           (temp.z & pmask) != porig.z) {
-        /* only test other descendents of p */
+        /* only test other descendants of p */
         continue;
       }
 
