@@ -128,7 +128,7 @@ typedef int         (*p8est_search_query_t) (p8est_t * p8est,
  * Each quadrant in that loop either is a leaf, or a (direct or indirect)
  * strict ancestor of a leaf.  On entering a new quadrant, a user-provided
  * quadrant-callback is executed.
- * The set of points that potentially matches a given quadrants diminishes from
+ * The set of points that potentially matches a given quadrant diminishes from
  * the root down to the leaves:  For each quadrant, an inner loop over the
  * potentially matching points executes a point-callback for each candidate
  * that determines whether the point may be a match.  If not, it is discarded

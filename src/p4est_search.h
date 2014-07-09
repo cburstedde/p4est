@@ -125,7 +125,7 @@ typedef int         (*p4est_search_query_t) (p4est_t * p4est,
  * Each quadrant in that loop either is a leaf, or a (direct or indirect)
  * strict ancestor of a leaf.  On entering a new quadrant, a user-provided
  * quadrant-callback is executed.
- * The set of points that potentially matches a given quadrants diminishes from
+ * The set of points that potentially matches a given quadrant diminishes from
  * the root down to the leaves:  For each quadrant, an inner loop over the
  * potentially matching points executes a point-callback for each candidate
  * that determines whether the point may be a match.  If not, it is discarded
@@ -141,7 +141,7 @@ typedef int         (*p4est_search_query_t) (p4est_t * p4est,
  * \param [in] search_quadrant_fn   Executed once for each quadrant that is
  *                          entered.  This quadrant is always local.  If the
  *                          callback returns false, this quadrant and its
- *                          descendents are excluded from the search.
+ *                          descendants are excluded from the search.
  *                          May be NULL in which case it is ignored.
  * \param [in] search_point_fn      Must return true for a possible match.
  * \param [in] points       User-defined array of "points".

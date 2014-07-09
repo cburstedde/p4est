@@ -51,7 +51,7 @@ test_complete (p4est_connectivity_t * conn, const char *which, int test_p4est)
 {
   SC_GLOBAL_INFOF ("Testing standard connectivity %s\n", which);
   SC_CHECK_ABORTF (p4est_connectivity_is_valid (conn),
-                   "Invalid connectivity %s before compqletion", which);
+                   "Invalid connectivity %s before completion", which);
   if (0 && test_p4est) {
     test_the_p4est (conn, 3);
   }
