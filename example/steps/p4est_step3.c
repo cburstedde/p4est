@@ -1067,6 +1067,7 @@ step3_timestep (p4est_t * p4est, double time)
     }
 
     /* compute du/dt */
+    /* *INDENT-OFF* */
     p4est_iterate (p4est,                 /* the forest */
                    ghost,                 /* the ghost layer */
                    (void *) ghost_data,   /* the synchronized ghost data */
@@ -1080,6 +1081,7 @@ step3_timestep (p4est_t * p4est, double time)
 #endif
                    NULL);                 /* there is no callback for the
                                              corners between quadrants */
+    /* *INDENT-ON* */
 
     /* update u */
     p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
@@ -1167,6 +1169,7 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_periodic ();
 #endif
 
+  /* *INDENT-OFF* */
   p4est = p4est_new_ext (mpicomm, /* communicator */
                          conn,    /* connectivity */
                          0,       /* minimum quadrants per MPI process */
@@ -1175,6 +1178,7 @@ main (int argc, char **argv)
                          sizeof (step3_data_t),         /* data size */
                          step3_init_initial_condition,  /* initializes data */
                          (void *) (&ctx));              /* context */
+  /* *INDENT-ON* */
 
   /* refine and coarsen based on an interpolation error estimate */
   recursive = 1;

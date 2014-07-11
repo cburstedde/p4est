@@ -46,19 +46,19 @@
 #include <p8est_vtk.h>
 #endif
 
-/** List number of possible independent nodes for each reference node. */
-static const int corner_num_hanging[P4EST_CHILDREN] =
+/** List number of possible independent nodes for each hanging node. */
+static const int    corner_num_hanging[P4EST_CHILDREN] =
 #ifndef P4_TO_P8
 { 1, 2, 2, 1 }
 #else
 { 1, 2, 2, 4, 2, 4, 4, 1 }
 #endif
 ;
-static const int zero = 0;
-static const int ones = P4EST_CHILDREN - 1;
+static const int    zero = 0;           /**< Constant zero. */
+static const int    ones = P4EST_CHILDREN - 1;  /**< One bit per dimension. */
 
-/** For each node i of the reference quadrant corner_num_hanging[i] many. */
-static const int *corner_to_hanging[P4EST_CHILDREN];
+/** For each node i of the reference quadrant, corner_num_hanging[i] many. */
+static const int   *corner_to_hanging[P4EST_CHILDREN];
 
 /** Callback function to decide on refinement.
  *
@@ -101,8 +101,7 @@ func_rhs (const double vxyz[3])
   const double        z = vxyz[2];
 
   return 128. * (x * (1. - x) * y * (1. - y) +
-                 y * (1. - y) * z * (1. - z) +
-                 z * (1. - z) * x * (1. - x));
+                 y * (1. - y) * z * (1. - z) + z * (1. - z) * x * (1. - x));
 #else
   return 32. * (x * (1. - x) + y * (1. - y));
 #endif
@@ -147,7 +146,7 @@ is_boundary_unitsquare (p4est_t * p4est, p4est_topidx_t tt,
 #ifdef P4_TO_P8
           node->z == 0 || node->z == P4EST_ROOT_LEN ||
 #endif
-      0);
+          0);
 }
 
 /** Decode the information from p{4,8}est_lnodes_t for a given element.
@@ -189,6 +188,16 @@ lnodes_decode2 (p4est_lnodes_code_t face_code,
   return 0;
 }
 
+/** Compute values at hanging nodes by interpolation.
+ * A face hanging node in 3D depends on the four corner nodes of the face,
+ * edge hanging nodes or face hanging nodes in 2D depend on two nodes.
+ * This function works in place, we have to be careful about the ordering.
+ * Face hanging node values are not reused, so they are overwritten first.
+ * \param [in] face_code    This number encodes the child id of the quadrant
+ *                          and the hanging status of faces and edges.
+ * \param [in,out] inplace  On input, the values at the independent nodes.
+ *                          On output, interpolated to hanging node locations.
+ */
 static void
 interpolate_hanging_nodes (p4est_lnodes_code_t face_code,
                            double inplace[P4EST_CHILDREN])
@@ -468,8 +477,7 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
           bc[lni] = is_boundary_unitsquare (p4est, tt, &node);
 
           /* Transform per-tree reference coordinates into physical space. */
-          p4est_qcoord_to_vertex (p4est->connectivity, tt,
-                                  node.x, node.y,
+          p4est_qcoord_to_vertex (p4est->connectivity, tt, node.x, node.y,
 #ifdef P4_TO_P8
                                   node.z,
 #endif
@@ -586,21 +594,23 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
             sum += (*matrix)[i][j] * inloc[j];
           }
           if (hanging_corner[i] == -1) {
-            /* This node is not hanging. */
+            /* This node is not hanging, there is no need to transform. */
             c = 0;
             ncontrib = 1;
             contrib_corner = &i;
             sum *= factor;
           }
           else {
-            /* This node is hanging.  Work on transformed quadrant. */
-            c = lnodes->face_code[k] & ones;
+            /* This node is hanging.  Use hanging node relations from the
+             * reference quadrant by transforming corner numbers with ^ c. */
+            c = lnodes->face_code[k] & ones;    /* Child id of quadrant. */
             ncontrib = corner_num_hanging[i ^ c];
             contrib_corner = corner_to_hanging[i ^ c];
             sum *= factor / (double) ncontrib;
           }
+          /* The result is added into the output vector. */
           for (j = 0; j < ncontrib; ++j) {
-            h = contrib_corner[j] ^ c;
+            h = contrib_corner[j] ^ c;  /* Inverse transform of node number. */
             if (!isboundary[h]) {
               out[all_lni[h]] += sum;
             }
