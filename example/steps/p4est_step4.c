@@ -603,7 +603,7 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
           else {
             /* This node is hanging.  Use hanging node relations from the
              * reference quadrant by transforming corner numbers with ^ c. */
-            c = lnodes->face_code[k] & ones;    /* Child id of quadrant. */
+            c = hanging_corner[i];      /* Child id of quadrant. */
             ncontrib = corner_num_hanging[i ^ c];
             contrib_corner = corner_to_hanging[i ^ c];
             sum *= factor / (double) ncontrib;
