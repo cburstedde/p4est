@@ -40,13 +40,25 @@
 #include <p4est_lnodes.h>
 #include <p4est_vtk.h>
 #else
-#if 0                           /* The 3D example is not yet implemented */
 #include <p8est_bits.h>
 #include <p8est_ghost.h>
 #include <p8est_lnodes.h>
-#endif
 #include <p8est_vtk.h>
 #endif
+
+/** List number of possible independent nodes for each reference node. */
+static const int corner_num_hanging[P4EST_CHILDREN] =
+#ifndef P4_TO_P8
+{ 1, 2, 2, 1 }
+#else
+{ 1, 2, 2, 4, 2, 4, 4, 1 }
+#endif
+;
+static const int zero = 0;
+static const int ones = P4EST_CHILDREN - 1;
+
+/** For each node i of the reference quadrant corner_num_hanging[i] many. */
+static const int *corner_to_hanging[P4EST_CHILDREN];
 
 /** Callback function to decide on refinement.
  *
@@ -73,13 +85,11 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
           1);
 }
 
-/* This example only does something numerical for 2D. */
-#ifndef P4_TO_P8
-
 /** Right hand side function for the 2D Poisson problem.
  *
  * This is the negative Laplace operator acting on the function \a uexact.
  * \param [in] vxyz    x, y, and z coordinates in physical space.
+ *                     Even for the 2D case z is well defined, but ignored here.
  * \return             Scalar function value at vxyz.
  */
 static double
@@ -87,14 +97,22 @@ func_rhs (const double vxyz[3])
 {
   const double        x = vxyz[0];
   const double        y = vxyz[1];
+#ifdef P4_TO_P8
+  const double        z = vxyz[2];
 
+  return 128. * (x * (1. - x) * y * (1. - y) +
+                 y * (1. - y) * z * (1. - z) +
+                 z * (1. - z) * x * (1. - x));
+#else
   return 32. * (x * (1. - x) + y * (1. - y));
+#endif
 }
 
 /** Exact solution for the 2D Poisson problem.
  *
  * We pick a function with zero Dirichlet boundary conditions on the unit square.
  * \param [in] vxyz    x, y, and z coordinates in physical space.
+ *                     Even for the 2D case z is well defined, but ignored here.
  * \return             Scalar function value at vxyz.
  */
 static double
@@ -102,11 +120,18 @@ func_uexact (const double vxyz[3])
 {
   const double        x = vxyz[0];
   const double        y = vxyz[1];
+#ifdef P4_TO_P8
+  const double        z = vxyz[2];
+#endif
 
-  return 16. * x * (1. - x) * y * (1. - y);
+  return 4. * 4.
+#ifdef P4_TO_P8
+    * 4 * z * (1. - z)
+#endif
+    * x * (1. - x) * y * (1. - y);
 }
 
-/** Determine the boundary status on the unit square.
+/** Determine the boundary status on the unit square/cube.
  * \param [in] p4est    Can be used to access the connectivity.
  * \param [in] tt       The tree number (always zero for the unit square).
  * \param [in] node     The corner node of an element to be examined.
@@ -116,21 +141,26 @@ static int
 is_boundary_unitsquare (p4est_t * p4est, p4est_topidx_t tt,
                         p4est_quadrant_t * node)
 {
-  /* For this simple connectivity it is sufficient to check x and y. */
+  /* For this simple connectivity it is sufficient to check x, y (and z). */
   return (node->x == 0 || node->x == P4EST_ROOT_LEN ||
-          node->y == 0 || node->y == P4EST_ROOT_LEN);
+          node->y == 0 || node->y == P4EST_ROOT_LEN ||
+#ifdef P4_TO_P8
+          node->z == 0 || node->z == P4EST_ROOT_LEN ||
+#endif
+      0);
 }
 
-/** Decode the information from p4est_lnodes_t for a given element.
+/** Decode the information from p{4,8}est_lnodes_t for a given element.
  *
  * \see p4est_lnodes.h for an in-depth discussion of the encoding.
- * \param [in] face_code         Bit code as defined in p4est_lnodes.h.
+ * \param [in] face_code         Bit code as defined in p{4,8}est_lnodes.h.
  * \param [out] hanging_corner   Undefined if no node is hanging.
  *                               If any node is hanging, this contains
  *                               one integer per corner, which is -1
  *                               for corners that are not hanging,
  *                               and the number of the non-hanging
- *                               corner on the hanging face otherwise.
+ *                               corner on the hanging face/edge otherwise.
+ *                               For faces in 3D, it is diagonally opposite.
  * \return true if any node is hanging, false otherwise.
  */
 static int
@@ -138,20 +168,62 @@ lnodes_decode2 (p4est_lnodes_code_t face_code,
                 int hanging_corner[P4EST_CHILDREN])
 {
   if (face_code) {
-    const int           ones = P4EST_CHILDREN - 1;
     const int           c = (int) (face_code & ones);
     int                 i, h;
     int                 work = (int) (face_code >> P4EST_DIM);
 
+    /* These two corners are never hanging by construction. */
     hanging_corner[c] = hanging_corner[c ^ ones] = -1;
     for (i = 0; i < P4EST_DIM; ++i) {
-      h = c ^ ones ^ (1 << i);
-      hanging_corner[h] = (work & 1) ? c : -1;
+      /* Process face hanging corners. */
+      h = c ^ (1 << i);
+      hanging_corner[h ^ ones] = (work & 1) ? c : -1;
+#ifdef P4_TO_P8
+      /* Process edge hanging corners. */
+      hanging_corner[h] = (work & P4EST_CHILDREN) ? c : -1;
+#endif
       work >>= 1;
     }
     return 1;
   }
   return 0;
+}
+
+static void
+interpolate_hanging_nodes (p4est_lnodes_code_t face_code,
+                           double inplace[P4EST_CHILDREN])
+{
+  const int           c = (int) (face_code & ones);
+  int                 i, j;
+  int                 ef;
+  int                 work = (int) (face_code >> P4EST_DIM);
+  double              sum;
+  const double        factor = 1. / P4EST_HALF;
+
+  /* Compute face hanging nodes first (this is all there is in 2D). */
+  for (i = 0; i < P4EST_DIM; ++i) {
+    if (work & 1) {
+      ef = p4est_corner_faces[c][i];
+      sum = 0.;
+      for (j = 0; j < P4EST_HALF; ++j) {
+        sum += inplace[p4est_face_corners[ef][j]];
+      }
+      inplace[c ^ ones ^ (1 << i)] = factor * sum;
+    }
+    work >>= 1;
+  }
+
+#ifdef P4_TO_P8
+  /* Compute edge hanging nodes afterwards */
+  for (i = 0; i < P4EST_DIM; ++i) {
+    if (work & 1) {
+      ef = p8est_corner_edges[c][i];
+      inplace[c ^ (1 << i)] = .5 * (inplace[p8est_edge_corners[ef][0]] +
+                                    inplace[p8est_edge_corners[ef][1]]);
+    }
+    work >>= 1;
+  }
+#endif
 }
 
 /** Parallel sum of values in node vector across all sharers.
@@ -397,7 +469,11 @@ interpolate_functions (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
           /* Transform per-tree reference coordinates into physical space. */
           p4est_qcoord_to_vertex (p4est->connectivity, tt,
-                                  node.x, node.y, vxyz);
+                                  node.x, node.y,
+#ifdef P4_TO_P8
+                                  node.z,
+#endif
+                                  vxyz);
 
           /* Use physical space coordinates to evaluate functions */
           rhs[lni] = func_rhs (vxyz);
@@ -427,11 +503,13 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
 {
   const int           nloc = lnodes->num_local_nodes;
   const int           nown = lnodes->owned_count;
+  int                 c, h;
   int                 i, j, k;
   int                 q, Q;
   int                 anyhang, hanging_corner[P4EST_CHILDREN];
   int                 isboundary[P4EST_CHILDREN];
-  int                 ncontrib, contrib_corner[P4EST_HALF];
+  int                 ncontrib;
+  const int          *contrib_corner;
   double              factor, sum, inloc[P4EST_CHILDREN];
   sc_array_t         *tquadrants;
   p4est_topidx_t      tt;
@@ -466,9 +544,14 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
     for (q = 0; q < Q; ++q, ++k) {
       quad = p4est_quadrant_array_index (tquadrants, q);
 
-      /* We are on the 2D unit square.  The Jacobian determinant is h^2.
-       * For the stiffness matrix this cancels with the inner derivatives. */
+      /* If we are on the 2D unit square, the Jacobian determinant is h^2;
+       * for the stiffness matrix this cancels with the inner derivatives.
+       * On the 3D unit cube we have an additional power of h. */
+#ifndef P4_TO_P8
       factor = !stiffness ? pow (.5, 2. * quad->level) : 1.;
+#else
+      factor = pow (.5, (!stiffness ? 3. : 1.) * quad->level);
+#endif
       for (i = 0; i < P4EST_CHILDREN; ++i) {
         /* Cache some information on corner nodes. */
         lni = lnodes->element_nodes[P4EST_CHILDREN * k + i];
@@ -494,15 +577,7 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
       }
       else {
         /* Compute input values at hanging nodes by interpolation. */
-        for (j = 0; j < P4EST_CHILDREN; ++j) {
-          if (hanging_corner[j] >= 0) {
-            P4EST_ASSERT (hanging_corner[j] != j &&
-                          hanging_corner[j] < P4EST_CHILDREN);
-            P4EST_ASSERT (hanging_corner[hanging_corner[j]] == -1);
-            /* (3D: process face hanging nodes before edge hanging nodes.) */
-            inloc[j] = .5 * (inloc[j] + inloc[hanging_corner[j]]);
-          }
-        }
+        interpolate_hanging_nodes (lnodes->face_code[k], inloc);
 
         /* Apply element matrix and then the transpose interpolation. */
         for (i = 0; i < P4EST_CHILDREN; ++i) {
@@ -510,19 +585,24 @@ multiply_matrix (p4est_t * p4est, p4est_lnodes_t * lnodes, const int8_t * bc,
           for (j = 0; j < P4EST_CHILDREN; ++j) {
             sum += (*matrix)[i][j] * inloc[j];
           }
-          contrib_corner[0] = i;
           if (hanging_corner[i] == -1) {
+            /* This node is not hanging. */
+            c = 0;
             ncontrib = 1;
+            contrib_corner = &i;
             sum *= factor;
           }
           else {
-            ncontrib = 2;
-            contrib_corner[1] = hanging_corner[i];
-            sum *= .5 * factor;
+            /* This node is hanging.  Work on transformed quadrant. */
+            c = lnodes->face_code[k] & ones;
+            ncontrib = corner_num_hanging[i ^ c];
+            contrib_corner = corner_to_hanging[i ^ c];
+            sum *= factor / (double) ncontrib;
           }
           for (j = 0; j < ncontrib; ++j) {
-            if (!isboundary[contrib_corner[j]]) {
-              out[all_lni[contrib_corner[j]]] += sum;
+            h = contrib_corner[j] ^ c;
+            if (!isboundary[h]) {
+              out[all_lni[h]] += sum;
             }
           }
         }
@@ -666,7 +746,11 @@ solve_poisson (p4est_t * p4est)
     {-1., 1.},
   };
   int                 i, j, k, l;
-  double              mass_2d[4][4], stiffness_2d[4][4];
+#ifdef P4_TO_P8
+  int                 m, n;
+#endif
+  double              mass_dd[P4EST_CHILDREN][P4EST_CHILDREN];
+  double              stiffness_dd[P4EST_CHILDREN][P4EST_CHILDREN];
   double             *rhs_eval, *uexact_eval, *lump;
   double             *rhs_fe, *u_fe, *u_diff, *diff_mass;
   double              err2, err;
@@ -690,29 +774,54 @@ solve_poisson (p4est_t * p4est)
     for (k = 0; k < 2; ++k) {
       for (j = 0; j < 2; ++j) {
         for (i = 0; i < 2; ++i) {
-          mass_2d[2 * j + i][2 * l + k] = m_1d[i][k] * m_1d[j][l];
-          stiffness_2d[2 * j + i][2 * l + k] =
-            m_1d[i][k] * s_1d[j][l] + s_1d[i][k] * m_1d[j][l];
+#ifndef P4_TO_P8
+          mass_dd[2 * j + i][2 * l + k] = m_1d[i][k] * m_1d[j][l];
+          stiffness_dd[2 * j + i][2 * l + k] =
+            s_1d[i][k] * m_1d[j][l] + m_1d[i][k] * s_1d[j][l];
+#else
+          for (n = 0; n < 2; ++n) {
+            for (m = 0; m < 2; ++m) {
+              mass_dd[4 * i + 2 * n + m][4 * l + 2 * k + j] =
+                m_1d[m][j] * m_1d[n][k] * m_1d[i][l];
+              stiffness_dd[4 * i + 2 * n + m][4 * l + 2 * k + j] =
+                s_1d[m][j] * m_1d[n][k] * m_1d[i][l] +
+                m_1d[m][j] * s_1d[n][k] * m_1d[i][l] +
+                m_1d[m][j] * m_1d[n][k] * s_1d[i][l];
+            }
+          }
+#endif
         }
       }
     }
   }
 
+  /* Assign independent nodes for hanging nodes. */
+  corner_to_hanging[0] = &zero;
+#ifdef P4_TO_P8
+  corner_to_hanging[1] = p8est_edge_corners[0];
+  corner_to_hanging[2] = p8est_edge_corners[4];
+  corner_to_hanging[3] = p8est_face_corners[4];
+  corner_to_hanging[4] = p8est_edge_corners[8];
+#endif
+  corner_to_hanging[ones - 2] = p4est_face_corners[2];
+  corner_to_hanging[ones - 1] = p4est_face_corners[0];
+  corner_to_hanging[ones] = &ones;
+
   /* Test mass matrix multiplication by computing the area of the domain. */
   rhs_fe = allocate_vector (lnodes);
   lump = allocate_vector (lnodes);
-  test_area (p4est, lnodes, &mass_2d, rhs_fe, lump);
+  test_area (p4est, lnodes, &mass_dd, rhs_fe, lump);
 
   /* Interpolate right hand side and exact solution onto mesh nodes. */
   interpolate_functions (p4est, lnodes, &rhs_eval, &uexact_eval, &bc);
 
   /* Apply mass matrix to create right hand side FE vector. */
-  multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, rhs_eval, rhs_fe);
+  multiply_matrix (p4est, lnodes, bc, 0, &mass_dd, rhs_eval, rhs_fe);
   set_dirichlet (lnodes, bc, rhs_fe);
 
   /* Run conjugate gradient method with initial value zero. */
   u_fe = allocate_vector (lnodes);
-  solve_by_cg (p4est, lnodes, bc, 1, &stiffness_2d, rhs_fe, u_fe);
+  solve_by_cg (p4est, lnodes, bc, 1, &stiffness_dd, rhs_fe, u_fe);
 
   /* Compute the pointwise difference with the exact vector. */
   u_diff = allocate_vector (lnodes);
@@ -723,7 +832,7 @@ solve_poisson (p4est_t * p4est)
    * We know that this is over-optimistic: Quadrature will be sharper.
    * We could also reuse another vector instead of allocating a new one. */
   diff_mass = allocate_vector (lnodes);
-  multiply_matrix (p4est, lnodes, bc, 0, &mass_2d, u_diff, diff_mass);
+  multiply_matrix (p4est, lnodes, bc, 0, &mass_dd, u_diff, diff_mass);
   err2 = vector_dot (p4est, lnodes, diff_mass, u_diff);
   err = sqrt (err2);
   P4EST_GLOBAL_PRODUCTIONF ("||u_fe - u_exact||_L2 = %g\n", err);
@@ -741,8 +850,6 @@ solve_poisson (p4est_t * p4est)
   /* We are done with the FE node numbering. */
   p4est_lnodes_destroy (lnodes);
 }
-
-#endif /* !P4_TO_P8 */
 
 /** The main function of the step4 example program.
  *
@@ -782,9 +889,11 @@ main (int argc, char **argv)
   /* More complex domains would require a couple changes. */
   /* conn = p4est_connectivity_new_moebius (); */
 #else
+  conn = p8est_connectivity_new_unitcube ();
   /* For 3D computation, the matrix-vector product would need to be extended
    * by interpolating on both hanging edges and faces. */
-  conn = p8est_connectivity_new_rotcubes ();
+  /* More complex domains would require a couple changes. */
+  /* conn = p8est_connectivity_new_rotcubes (); */
 #endif
 
   /* Create a forest that is not refined; it consists of the root octant.
@@ -814,13 +923,8 @@ main (int argc, char **argv)
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step4");
 
-#ifndef P4_TO_P8
   /* Execute the numerical mathematics part of the example. */
   solve_poisson (p4est);
-#else
-  P4EST_GLOBAL_PRODUCTION
-    ("This example does not do anything in 3D.  Just writes a VTK file.\n");
-#endif
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
