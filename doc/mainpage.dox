@@ -26,7 +26,7 @@
  * \author Carsten Burstedde, Lucas C. Wilcox, Tobin Isaac et.al.
  * \copyright GNU General Public License version 2
  * (or, at your option, any later version)
- * 
+ *
  * p4est is a software library for parallel adaptive mesh refinement (AMR).  It
  * represents the mesh as one or more conforming hexahedra that can be
  * individually refined as adaptive octrees, yielding a distributed
@@ -45,9 +45,11 @@
  *  * communicating ghost layers and data between processes;
  *  * converting the octree format to other static mesh formats;
  *  * etc.
- *  
- * More guidance on the usage of p4est can be found in p4est-howto.pdf,
- * which is distributed with the source in the doc/ directory.
+ *
+ * More guidance on the usage of p4est can be found in
+ * [p4est-howto.pdf](http://p4est.github.io/p4est-howto.pdf),
+ * which is distributed with the
+ * [source](http://github.com/cburstedde/p4est) under the doc/ directory.
  *
  * To build the p4est library from a tar distribution, use the standard
  * procedure of the GNU autotools.  The configure script takes the following
