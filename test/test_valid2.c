@@ -32,7 +32,6 @@
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_nodes.h>
-#include <p8est_trilinear.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -93,9 +92,6 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
-#ifdef P4_TO_P8
-  trilinear_mesh_t   *mesh;
-#endif
 
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
@@ -135,10 +131,6 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   }
 
   nodes = p4est_nodes_new (p4est, ghost);
-#ifdef P4_TO_P8
-  mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
-  p8est_trilinear_mesh_destroy (mesh);
-#endif
   p4est_nodes_destroy (nodes);
   p4est_ghost_destroy (ghost);
 
