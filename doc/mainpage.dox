@@ -49,7 +49,8 @@
  * More guidance on the usage of p4est can be found in
  * [p4est-howto.pdf](http://p4est.github.io/p4est-howto.pdf),
  * which is distributed with the
- * [source](http://github.com/cburstedde/p4est) under the doc/ directory.
+ * [source](http://github.com/cburstedde/p4est) under the
+ * [doc/](https://github.com/cburstedde/p4est/tree/develop/doc) directory.
  *
  * To build the p4est library from a tar distribution, use the standard
  * procedure of the GNU autotools.  The configure script takes the following
