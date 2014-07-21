@@ -1,11 +1,22 @@
 
 This file describes coding standards that p4est tries to adhere to.
 
+ * Portability
+
+   The code should be safe for C++ compilers.  This means that all .h
+   files need to protect external declarations with extern "C" { ... }.
+   C++ also needs explicit casts in many places where C does not care.
+ 
+   To test this, try /relative/path/to/configure --enable-mpi \
+   CC=mpicxx CFLAGS="-Wall" CXXFLAGS="-Wall" --enable-debug and run make.
+
  * Indentation
 
    All .c and .h files must be indented with the p4estindent script in
    the main directory.  It calls GNU indent with some extra options.
    This does not apply for included third party code.
+
+   If ./p4estindent gets it wrong, use /* *INDENT-OFF* */ and -ON comments.
 
  * Boolean variables
 

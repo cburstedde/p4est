@@ -773,6 +773,6 @@ p4est_mesh_face_neighbor_data (p4est_mesh_face_neighbor_t * mfn,
   }
   else {
     qtq -= lnq;
-    return ghost_data + data_size * qtq;
+    return (void *) ((char *) ghost_data + data_size * qtq);
   }
 }
