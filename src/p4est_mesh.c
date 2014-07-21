@@ -25,10 +25,12 @@
 #include <p4est_extended.h>
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
+#include <p4est_bits.h>
 #else
 #include <p8est_extended.h>
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
+#include <p8est_bits.h>
 #endif
 
 /** For a quadrant that touches a tree face with a corner inside the face,
@@ -397,10 +399,10 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
   int                 level = info->quad->level;
 
   /* We could use a static quadrant counter, but that gets uglier */
+  tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
+  P4EST_ASSERT (0 <= info->quadid &&
+                info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
   if (mesh->quad_to_tree != NULL) {
-    tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
-    P4EST_ASSERT (0 <= info->quadid &&
-                  info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
     mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
   }
 
