@@ -399,10 +399,11 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
   int                 level = info->quad->level;
 
   /* We could use a static quadrant counter, but that gets uglier */
+  tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
+  P4EST_ASSERT (0 <= info->quadid &&
+                info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
+
   if (mesh->quad_to_tree != NULL) {
-    tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
-    P4EST_ASSERT (0 <= info->quadid &&
-                  info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
     mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
   }
 

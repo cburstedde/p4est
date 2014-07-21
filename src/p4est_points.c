@@ -120,6 +120,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_new_points with max level %d max points %lld\n",
                             maxlevel, (long long) max_points);
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (max_points >= -1);
 
@@ -363,6 +364,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                   (long long) p4est->local_num_quadrants);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_new_points with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);

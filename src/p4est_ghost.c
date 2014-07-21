@@ -1479,6 +1479,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_new %s\n",
                             p4est_connect_type_string (btype));
+  p4est_log_indent_push ();
 
   gl = P4EST_ALLOC (p4est_ghost_t, 1);
   gl->mpisize = num_procs;
@@ -2195,6 +2196,7 @@ failtest:
 
   P4EST_ASSERT (p4est_ghost_is_valid (gl));
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
   return gl;
 }
@@ -2874,6 +2876,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_expand %s\n",
                             p4est_connect_type_string (btype));
+  p4est_log_indent_push ();
 
   tempquads = sc_array_new (sizeof (p4est_quadrant_t));
   temptrees = sc_array_new (sizeof (p4est_topidx_t));
@@ -3479,6 +3482,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
   P4EST_ASSERT (p4est_ghost_is_valid (ghost));
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_expand\n");
 #endif
 }

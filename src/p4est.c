@@ -202,6 +202,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     ("Into " P4EST_STRING
      "_new with min quadrants %lld level %d uniform %d\n",
      (long long) min_quadrants, SC_MAX (min_level, 0), fill_uniform);
+  p4est_log_indent_push ();
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
@@ -470,6 +471,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                   (long long) p4est->local_num_quadrants);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_new with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
@@ -675,6 +677,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
                             " allowed level %d\n",
                             (long long) p4est->global_num_quadrants,
                             allowed_level);
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (0 <= allowed_level && allowed_level <= P4EST_QMAXLEVEL);
   P4EST_ASSERT (refine_fn != NULL);
@@ -876,6 +879,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_refine with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
@@ -913,6 +917,7 @@ p4est_coarsen_ext (p4est_t * p4est,
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (coarsen_fn != NULL);
 
@@ -1071,6 +1076,7 @@ p4est_coarsen_ext (p4est_t * p4est,
   p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_coarsen with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
@@ -1269,6 +1275,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                             "_balance %s with %lld total quadrants\n",
                             p4est_connect_type_string (btype),
                             (long long) p4est->global_num_quadrants);
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
 #ifndef P4_TO_P8
   P4EST_ASSERT (btype == P4EST_CONNECT_FACE || btype == P4EST_CONNECT_CORNER);
@@ -2349,6 +2356,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (p4est_is_balanced (p4est, btype));
   P4EST_VERBOSEF ("Balance skipped %lld\n", (long long) skipped);
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_balance with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
@@ -2408,6 +2416,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
     return global_shipped;
   }
+
+  p4est_log_indent_push ();
 
 #ifdef P4EST_MPI
   /* allocate new quadrant distribution counts */
@@ -2482,6 +2492,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
       P4EST_FREE (local_weights);
       P4EST_FREE (global_weight_sums);
       P4EST_FREE (num_quadrants_in_proc);
+      p4est_log_indent_pop ();
       P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING
                                "_partition no shipping\n");
       return global_shipped;
@@ -2692,6 +2703,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   P4EST_ASSERT (p4est_is_valid (p4est));
 #endif /* P4EST_MPI */
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_partition shipped %lld quadrants %.3g%%\n",
      (long long) global_shipped,
@@ -3208,6 +3220,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   sc_array_t         *tquadrants;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_save %s\n", filename);
+  p4est_log_indent_push ();
 
   P4EST_ASSERT (p4est_connectivity_is_valid (p4est->connectivity));
   P4EST_ASSERT (p4est_is_valid (p4est));
@@ -3397,6 +3410,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   SC_CHECK_MPI (mpiret);
 #endif
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_save\n");
 }
 
@@ -3419,6 +3433,7 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   sc_io_source_t     *src;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
+  p4est_log_indent_push ();
 
   /* open file on all processors */
 
@@ -3431,6 +3446,7 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   retval = sc_io_source_destroy (src);
   SC_CHECK_ABORT (!retval, "source destroy");
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_load with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);

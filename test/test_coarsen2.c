@@ -57,6 +57,7 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_coarsen_old with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   /* loop over all local trees */
@@ -206,6 +207,7 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
   p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_coarsen_old with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
