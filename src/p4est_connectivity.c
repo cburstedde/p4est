@@ -3909,8 +3909,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
 {
   int                 reading_nodes = 0, reading_elements = 0;
   char               *line;
-  *num_vertices = 0;
-  *num_trees = 0;
   p4est_topidx_t      num_nodes = 0;
   p4est_topidx_t      num_elements = 0;
   int                 fill_trees_and_vertices = (vertices != NULL
@@ -3964,6 +3962,15 @@ p4est_connectivity_read_inp_stream (FILE * stream,
         retval = sscanf (line, "%lld, %lf, %lf, %lf", &node, &x, &y, &z);
         P4EST_ASSERT (retval == 4);
 
+        if (node > *num_vertices) {
+          P4EST_LERRORF
+            ("Encountered vertex %lld that will not fit in vertices"
+             " array of length %lld.  Are the vertices contiguously"
+             " numbered?\n", node, (long long int) *num_vertices);
+          P4EST_FREE (line);
+          return 1;
+        }
+
         vertices[3 * (node - 1) + 0] = x;
         vertices[3 * (node - 1) + 1] = y;
         vertices[3 * (node - 1) + 2] = z;
@@ -3990,6 +3997,13 @@ p4est_connectivity_read_inp_stream (FILE * stream,
                          , &v[4], &v[5], &v[7], &v[6]
 #endif
           );
+
+        if (num_elements >= *num_trees) {
+          P4EST_LERROR ("Encountered element that will not fit into"
+                        " tree_to_vertex array. More elements than expected.\n");
+          P4EST_FREE (line);
+          return 1;
+        }
 
         P4EST_ASSERT (retval == P4EST_CHILDREN);
 
