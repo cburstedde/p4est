@@ -22,10 +22,12 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
 #else
+#include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
