@@ -180,6 +180,7 @@
 /* functions in p4est_extended */
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
+#define p4est_mesh_new_ext              p8est_mesh_new_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
 #define p4est_balance_ext               p8est_balance_ext

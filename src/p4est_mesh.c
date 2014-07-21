@@ -22,11 +22,11 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
 #else
-#include <p8est_bits.h>
+#include <p8est_extended.h>
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
 #endif
@@ -393,23 +393,45 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_tree_t       *tree;
+  p4est_locidx_t     *quadid;
+  int                 level = info->quad->level;
 
   /* We could use a static quadrant counter, but that gets uglier */
-  tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
-  P4EST_ASSERT (0 <= info->quadid &&
-                info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
-  mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
+  if (mesh->quad_to_tree != NULL) {
+    tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
+    P4EST_ASSERT (0 <= info->quadid &&
+                  info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
+    mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
+  }
+
+  if (mesh->quad_level) {
+    quadid = (p4est_locidx_t *) sc_array_push (mesh->quad_level + level);
+    *quadid = tree->quadrants_offset + info->quadid;
+  }
 }
 
 size_t
 p4est_mesh_memory_used (p4est_mesh_t * mesh)
 {
   size_t              lqz, ngz;
+  int                 level;
+  size_t              qtt_memory = 0;
+  size_t              ql_memory = 0;
 
   lqz = (size_t) mesh->local_num_quadrants;
   ngz = (size_t) mesh->ghost_num_quadrants;
 
-  return sizeof (p4est_mesh_t) + lqz * sizeof (p4est_topidx_t) +
+  if (mesh->quad_to_tree != NULL) {
+    qtt_memory = sizeof (p4est_locidx_t) * lqz;
+  }
+
+  if (mesh->quad_level != NULL) {
+    for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
+      ql_memory += sc_array_memory_used (mesh->quad_level + level, 0);
+    }
+  }
+
+  return sizeof (p4est_mesh_t) + qtt_memory + ql_memory +
     (P4EST_CHILDREN + P4EST_FACES) * lqz * sizeof (p4est_locidx_t) +
     ngz * sizeof (int) + (P4EST_FACES * lqz) * sizeof (int8_t) +
     sc_array_memory_used (mesh->quad_to_half, 1) +
@@ -420,7 +442,16 @@ p4est_mesh_t       *
 p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                 p4est_connect_type_t btype)
 {
+  return p4est_mesh_new_ext (p4est, ghost, 0, 0, btype);
+}
+
+p4est_mesh_t       *
+p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
+                    int compute_tree_index, int compute_level_lists,
+                    p4est_connect_type_t btype)
+{
   int                 do_corner = 0;
+  int                 do_volume = 0;
   int                 rank;
   p4est_locidx_t      lq, ng;
   p4est_locidx_t      jl;
@@ -438,16 +469,34 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->corner_offset = sc_array_new (sizeof (p4est_locidx_t));
   mesh->corner_quad = NULL;
   mesh->corner_corner = NULL;
+
   if (btype == P4EST_CONNECT_FULL) {
     do_corner = 1;
   }
+  do_volume = (compute_tree_index || compute_level_lists ? 1 : 0);
 
-  mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
+  if (compute_tree_index) {
+    mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
+  }
+  else {
+    mesh->quad_to_tree = NULL;
+  }
 
   mesh->ghost_to_proc = P4EST_ALLOC (int, ng);
   mesh->quad_to_quad = P4EST_ALLOC (p4est_locidx_t, P4EST_FACES * lq);
   mesh->quad_to_face = P4EST_ALLOC (int8_t, P4EST_FACES * lq);
   mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
+
+  if (compute_level_lists) {
+    mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL);
+
+    for (jl = 0; jl < P4EST_QMAXLEVEL; ++jl) {
+      sc_array_init (mesh->quad_level + jl, sizeof (p4est_locidx_t));
+    }
+  }
+  else {
+    mesh->quad_level = NULL;
+  }
 
   /* Populate ghost information */
   rank = 0;
@@ -466,7 +515,8 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
           sizeof (p4est_locidx_t));
 
   /* Call the forest iterator to collect face connectivity */
-  p4est_iterate (p4est, ghost, mesh, mesh_iter_volume, mesh_iter_face,
+  p4est_iterate (p4est, ghost, mesh,
+                 (do_volume ? mesh_iter_volume : NULL), mesh_iter_face,
 #ifdef P4_TO_P8
                  NULL,
 #endif
@@ -479,9 +529,20 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
 void
 p4est_mesh_destroy (p4est_mesh_t * mesh)
 {
-  P4EST_FREE (mesh->quad_to_tree);
-  P4EST_FREE (mesh->ghost_to_proc);
+  int                 level = 0;
 
+  if (mesh->quad_to_tree) {
+    P4EST_FREE (mesh->quad_to_tree);
+  }
+
+  if (mesh->quad_level) {
+    for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
+      sc_array_reset (mesh->quad_level + level);
+    }
+    P4EST_FREE (mesh->quad_level);
+  }
+
+  P4EST_FREE (mesh->ghost_to_proc);
   P4EST_FREE (mesh->quad_to_quad);
   P4EST_FREE (mesh->quad_to_face);
   sc_array_destroy (mesh->quad_to_half);

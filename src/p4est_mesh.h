@@ -84,7 +84,8 @@ typedef struct
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 4 faces */
   int8_t             *quad_to_face;     /**< encodes orientation/2:1 status */
-  sc_array_t         *quad_to_half;     /**< stores half-size neigbors */
+  sc_array_t         *quad_to_half;     /**< stores half-size neighbors */
+  sc_array_t         *quad_level;       /**< stores lists of per-level quads */
 
   /* CAUTION: tree-boundary corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
