@@ -232,6 +232,18 @@ void                P4EST_LERRORF (const char *fmt, ...)
 /** the libsc package id for p4est (set in p4est_init()) */
 extern int          p4est_package_id;
 
+static inline void
+p4est_log_indent_push ()
+{
+  sc_log_indent_push_count (p4est_package_id, 1);
+}
+
+static inline void
+p4est_log_indent_pop ()
+{
+  sc_log_indent_pop_count (p4est_package_id, 1);
+}
+
 /** Registers p4est with the SC Library and sets the logging behavior.
  * This function is optional.
  * This function must only be called before additional threads are created.

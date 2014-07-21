@@ -110,6 +110,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   char               *dap;
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_inflate\n");
+  p4est_log_indent_push ();
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (global_first_quadrant != NULL);
@@ -261,6 +262,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                   (long long) p4est->local_num_quadrants);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_inflate\n");
 
   return p4est;
