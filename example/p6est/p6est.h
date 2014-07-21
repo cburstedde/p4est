@@ -21,6 +21,31 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p6est.h
+ *
+ * A hybrid 2D+1D AMR extension.
+ *
+ * \ingroup p6est
+ */
+
+/** \defgroup p6est p6est
+ *
+ * A hybrid 2D+1D AMR extension.
+ *
+ * To include this component of the p4est library, configure p4est with the
+ * --enable-p6est option given.  This module provides a specific kind of
+ * anisotropic adaptive mesh refinement for 3D meshes: it organizes the
+ * hexahedral cells into columns.  Each column has the footprint of a 2D p4est
+ * quadrant.  The cells within a column can be individually refined
+ * vertically, and a whole column of cells can be refined horizontally.  When
+ * the forest is partitioned, each column is assigned to a single MPI process,
+ * i.e., a column cannot be split between processes.  Most of the main 2D / 3D
+ * interface is available for p6est: refinement and coarsening, balance, ghost
+ * layers, and i/o.  Finite element nodes can also be created using
+ * p6est_lnodes_new(): this creates nodes in the same data structure as
+ * p8est_lnodes_new().
+ */
+
 #ifndef P6EST_H
 #define P6EST_H
 
@@ -31,34 +56,57 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** This structure holds the 2D+1D inter-tree connectivity information.
+ * It is essentially a wrapper of the 2D p4est_connecitivity_t datatype, with
+ * some additional information about how the third dimension is embedded.
+ */
 typedef struct p6est_connectivity
 {
-  p4est_connectivity_t *conn4;  /* owned: vertices interpreted as the vertices
-                                   of the bottom of the sheet */
-  double             *top_vertices;     /* if NULL, uniform vertical profile,
+  p4est_connectivity_t *conn4;  /**< the 2D connecitvity; owned; vertices
+                                  interpreted as the vertices of the bottom of
+                                  the sheet */
+  double             *top_vertices;     /**< if NULL, uniform vertical profile,
                                            otherwise the vertices of the top of
                                            the sheet: should be the same size
                                            as \a conn4->tree_to_vertex; owned. */
-  double              height[3];        /* if top_to_vertex == NULL, this gives the
+  double              height[3];        /**< if \a top_vertices == NULL, this gives the
                                            offset from the bottom of the sheet to
                                            the top */
 }
 p6est_connectivity_t;
 
 /** Create a p6est_connectivity_t from a p4est_connectivity_t.  All fields
- * are copied.
+ * are copied, so all inputs can be safey destroyed.
+ *
+ * \param[in] conn4         the 2D connectivity
+ * \param[in] top_vertices  if NULL, then the sheet has a uniform vertical
+ *                          profile; otherwise, \a top_vertices gives teh
+ *                          vertices of the top of the sheet; should be the
+ *                          same size as \a conn4->tree_to_vertex
+ * \param[in] height        if \a top_vertices == NULL, then this gives the
+ *                          offset fro the bottom of the sheet to the top.
+ *
+ * \return the 2D+1D connectivity information.
  */
 p6est_connectivity_t *p6est_connectivity_new (p4est_connectivity_t * conn4,
-                                              double *top_to_vertex,
+                                              double *top_vertices,
                                               double height[3]);
 
+/** Destroy a p6est_connectivity structure */
 void                p6est_connectivity_destroy (p6est_connectivity_t * conn);
 
+/** Get the vertices of the corners of a tree.
+ *
+ * \param[in]  conn         the 2D+1D connectivity structure
+ * \param[in]  which_tree   a tree in the forest
+ * \param[out] vertices     the coordinates of the corners of the tree
+ */
 void                p6est_tree_get_vertices (p6est_connectivity_t * conn,
                                              p4est_topidx_t which_tree,
                                              double vertices[24]);
 
 /** Transform a quadrant coordinate into the space spanned by tree vertices.
+ *
  * \param [in] connectivity     Connectivity must provide the vertices.
  * \param [in] treeid           Identify the tree that contains x, y.
  * \param [in] x, y             Quadrant coordinates relative to treeid.
@@ -71,63 +119,78 @@ void                p6est_qcoord_to_vertex (p6est_connectivity_t *
                                             p4est_qcoord_t y,
                                             p4est_qcoord_t z, double vxyz[3]);
 
+/** A 1D quadrant datatype: this is used to encode a "layer" of a column in
+ * the 2D+1D AMR scheme.
+ */
 typedef struct p2est_quadrant
 {
-  p4est_qcoord_t      z;
-  int8_t              level, pad8;
-  int16_t             pad16;
+  p4est_qcoord_t      z;                /**< vertical coordinate */
+  int8_t              level,            /**< level of refinement */
+                      pad8;             /**< padding */
+  int16_t             pad16;            /**< padding */
   union p6est_quadrant_data
   {
-    void               *user_data;      /* never changed by p6est */
-    long                user_long;      /* never changed by p6est */
-    int                 user_int;       /* never changed by p6est */
-    p4est_topidx_t      which_tree;
+    void               *user_data;      /**< never changed by p4est */
+    long                user_long;      /**< never changed by p4est */
+    int                 user_int;       /**< never changed by p4est */
+    p4est_topidx_t      which_tree;     /**< the tree containing the quadrant */
     struct
     {
       p4est_topidx_t      which_tree;
       int                 owner_rank;
     }
-    piggy1;
+    piggy1; /**< of ghost layer, store the tree and owner rank */
     struct
     {
       p4est_topidx_t      which_tree;
       p4est_topidx_t      from_tree;
     }
-    piggy2;
+    piggy2; /**< of transformed layers, store the original tree and the
+                 target tree */
     struct
     {
       p4est_topidx_t      which_tree;
       p4est_locidx_t      local_num;
     }
-    piggy3;
+    piggy3; /**< of ghost layers, store the tree and index in the owner's
+                 numbering */
   }
-  p;
+  p; /**< a union of additional data attached to a layer */
 }
 p2est_quadrant_t;
 
+/** The p6est forest datatype */
 typedef struct p6est
 {
-  sc_MPI_Comm         mpicomm;
-  int                 mpisize, mpirank;
-
-  size_t              data_size;        /* size of per-quadrant user_data */
-  void               *user_pointer;     /* convenience pointer for users,
-                                           will never be touched by p4est */
-  p6est_connectivity_t *connectivity;   /* topology of sheet, not owned. */
-  p4est_t            *columns;  /* 2D description of column layout
-                                   built from \a connectivity */
-  sc_array_t         *layers;   /* single array that stores
-                                   p2est_quadrant_t layers within columns */
-  sc_mempool_t       *user_data_pool;   /* memory allocator for user data
-                                         * WARNING: This is NULL if data size
+  sc_MPI_Comm         mpicomm;          /**< MPI communicator */
+  int                 mpisize,          /**< number of MPI processes */
+                      mpirank;          /**< this process's MPI rank */
+  size_t              data_size;        /**< size of per-quadrant p.user_data
+                     (see p2est_quadrant_t::p2est_quadrant_data::user_data) */
+  void               *user_pointer;     /**< convenience pointer for users,
+                                             never touched by p4est */
+  p6est_connectivity_t *connectivity;   /**< topology of sheet, not owned. */
+  p4est_t            *columns;  /**< 2D description of column layout
+                                     built from \a connectivity */
+  sc_array_t         *layers;   /**< single array that stores
+                                     p2est_quadrant_t layers within columns */
+  sc_mempool_t       *user_data_pool;   /**< memory allocator for user data */
+                                        /* WARNING: This is NULL if data size
                                          *          equals zero.  */
-  sc_mempool_t       *layer_pool;       /* memory allocator
-                                           for temporary quadrants */
-  p4est_gloidx_t     *global_first_layer;
+  sc_mempool_t       *layer_pool;       /**< memory allocator
+                                             for temporary layers */
+  p4est_gloidx_t     *global_first_layer; /**< first global quadrant index for
+                                               each process and 1 beyond */
 }
 p6est_t;
 
-/** Callback function prototype to initialize the quadrant's user data.
+/** Callback function prototype to initialize the layers's user data.
+ *
+ * \param[in] p6est        the forest
+ * \param[in] which_tree   the tree in the forest
+ * \param[in] column       the column in the tree in the forest
+ * \param[in] layer        the layer in the column in the tree in the
+ *                         forest, whose \a user_data is to be initialized
  */
 typedef void        (*p6est_init_t) (p6est_t * p6est,
                                      p4est_topidx_t which_tree,
@@ -135,7 +198,33 @@ typedef void        (*p6est_init_t) (p6est_t * p6est,
                                      p2est_quadrant_t * layer);
 
 /** Callback function prototype to transfer information from outgoing layers
- * to incoming layers */
+ * to incoming layers.
+ *
+ * This is used by extended routines when the layers of an existing, valid
+ * p6est are changed.  The callback allows the user to make changes to newly
+ * initialized layers before the layers that they replace are destroyed.
+ *
+ * \param [in] num_outcolumns  The number of columns that contain the outgoing
+ *                             layers: will be either 1 or 4.
+ * \param [in] num_outlayers   The number of outgoing layers: will be either 1
+ *                             (a single layer is being refined), 2 (two
+ *                             layers are being vertically coarsened), or 4
+ *                             (four layers are being horizontally coarsened).
+ * \param [in] outcolumns      The columns of the outgoing layers
+ * \param [in] outlayers       The outgoing layers: after the callback, the
+ *                             user_data, if \a p6est->data_size is nonzero,
+ *                             will be destroyed.
+ * \param [in] num_incolumns   The number of columns that contain the outgoing
+ *                             layers: will be either 1 or 4.
+ * \param [in] num_inlayers    The number of incoming layers: will be either 1
+ *                             (coarsening), 2 (vertical refinement), or 4
+ *                             (horizontal refinement)
+ * \param [in] incolumns       The columns of the incoming layers
+ * \param [in,out] inlayers    The incoming layers: prior to the callback,
+ *                             the user_data, if \a p6est->data_size is nonzero,
+ *                             is allocated, and the p6est_init_t callback,
+ *                             if it has been provided, will be called.
+ */
 typedef void        (*p6est_replace_t) (p6est_t * p6est,
                                         p4est_topidx_t which_tree,
                                         int num_outcolumns,
@@ -148,7 +237,7 @@ typedef void        (*p6est_replace_t) (p6est_t * p6est,
                                         p2est_quadrant_t * inlayers[]);
 
 /** Callback function prototype to decide whether to horizontally refine a
- * layer.
+ * column, i.e., horizontally refine all of the layers in the column.
  * \return nonzero if the layer shall be refined.
  */
 typedef int         (*p6est_refine_column_t) (p6est_t * p6est,
@@ -173,7 +262,7 @@ typedef int         (*p6est_coarsen_column_t) (p6est_t * p6est,
                                                p4est_quadrant_t * columns[]);
 
 /** Callback function prototype to decide for vertical coarsening.
- * \param [in] layers      Pointers to 2 vertical siblings.
+ * \param [in] layers      Pointers to 2 vertical sibling layers.
  * \return nonzero if the layers shall be replaced with their parent.
  */
 typedef int         (*p6est_coarsen_layer_t) (p6est_t * p6est,
@@ -197,6 +286,7 @@ extern void        *P2EST_DATA_UNINITIALIZED;
   ((void) memset ((q), -1, sizeof (p2est_quadrant_t)))
 
 /** Create a new forest.
+ *
  * The new forest consists of equi-partitioned root quadrants.
  * When there are more processors than trees, some processors are empty.
  *
@@ -227,12 +317,12 @@ p6est_t            *p6est_new (sc_MPI_Comm mpicomm,
  * \param [in] p4est         A valid p4est.  A deep copy will be created, so
  *                           this can be destroyed without affectin the new
  *                           p6est object.
- * \param [in] top_vertices  the same as in p6est_conectivity_new
- * \param [in] height        the same as in p6est_conectivity_new
- * \param [in] min_zlevel    the same as in p6est_new
- * \param [in] data_size     the same as in p6est_new
- * \param [in] init_fn       the same as in p6est_new
- * \param [in] user_pointer  the same as in p6est_new
+ * \param [in] top_vertices  the same as in p6est_conectivity_new()
+ * \param [in] height        the same as in p6est_conectivity_new()
+ * \param [in] min_zlevel    the same as in p6est_new()
+ * \param [in] data_size     the same as in p6est_new()
+ * \param [in] init_fn       the same as in p6est_new()
+ * \param [in] user_pointer  the same as in p6est_new()
  *
  * \return This returns a valid forest.  The user must destroy the
  * connectivity for the new p6est independently.
@@ -278,6 +368,7 @@ void                p6est_reset_data (p6est_t * p6est, size_t data_size,
                                       void *user_pointer);
 
 /** Refine the columns of a sheet.
+ *
  * \param [in,out] p6est The forest is changed in place.
  * \param [in] refine_recursive Boolean to decide on recursive refinement.
  * \param [in] refine_fn Callback function that must return true if a column
@@ -300,6 +391,7 @@ void                p6est_refine_columns (p6est_t * p6est,
                                           p6est_init_t init_fn);
 
 /** Refine the layers within the columns of a sheet.
+ *
  * \param [in,out] p6est The forest is changed in place.
  * \param [in] refine_recursive Boolean to decide on recursive refinement.
  * \param [in] refine_fn Callback function that must return true if a layer
@@ -322,6 +414,7 @@ void                p6est_refine_layers (p6est_t * p6est,
                                          p6est_init_t init_fn);
 
 /** Coarsen the columns of a sheet.
+ *
  * \param [in,out] p6est  The forest is changed in place.
  * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
  * \param [in] coarsen_fn Callback function that returns true if a
@@ -335,6 +428,7 @@ void                p6est_coarsen_columns (p6est_t * p6est,
                                            p6est_init_t init_fn);
 
 /** Coarsen the layers of a sheet.
+ *
  * \param [in,out] p6est  The forest is changed in place.
  * \param [in] coarsen_recursive Boolean to decide on recursive coarsening.
  * \param [in] coarsen_fn Callback function that returns true if a
@@ -348,6 +442,7 @@ void                p6est_coarsen_layers (p6est_t * p6est,
                                           p6est_init_t init_fn);
 
 /** Balance a forest.
+ *
  * \param [in] p6est     The p6est to be worked on.
  * \param [in] btype     Balance type (face, corner or default, full).
  * \param [in] init_fn   Callback function to initialize the user_data
@@ -388,6 +483,7 @@ p4est_gloidx_t      p6est_partition (p6est_t * p6est,
 unsigned            p6est_checksum (p6est_t * p6est);
 
 /** Save the complete connectivity/p6est data to disk.  This is a collective
+ *
  * operation that all MPI processes need to call.  All processes write
  * into the same file, so the filename given needs to be identical over
  * all parallel invocations.
@@ -401,6 +497,7 @@ void                p6est_save (const char *filename, p6est_t * p6est,
                                 int save_data);
 
 /** Load the complete connectivity/p6est structure from disk.
+ *
  * \param [in] filename         Name of the file to read.
  * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] data_size        Size of data for each quadrant which can be
