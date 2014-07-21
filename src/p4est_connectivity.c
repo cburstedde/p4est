@@ -3908,17 +3908,17 @@ p4est_connectivity_read_inp_stream (FILE * stream,
                                     p4est_topidx_t * tree_to_vertex)
 {
   int                 reading_nodes = 0, reading_elements = 0;
+  int                 lines_read = 0, lines_free = 0;
   char               *line;
   *num_vertices = 0;
   *num_trees = 0;
   p4est_topidx_t      num_nodes = 0;
   p4est_topidx_t      num_elements = 0;
-  int                 fill_trees_and_vertices = (vertices != NULL
-                                                 && tree_to_vertex != NULL);
+  int                 fill_trees_and_vertices = (vertices != NULL &&
+                                                 tree_to_vertex != NULL);
 
   P4EST_ASSERT ((vertices == NULL && tree_to_vertex == NULL) ||
                 (vertices != NULL && tree_to_vertex != NULL));
-  int                 lines_read = 0, lines_free = 0;
 
   for (;;) {
     line = p4est_connectivity_getline_upper (stream);
@@ -4009,7 +4009,7 @@ p4est_connectivity_read_inp_stream (FILE * stream,
 
   if (num_nodes == 0 || num_elements == 0) {
     P4EST_LERROR ("No elements or nodes found in mesh file.\n");
-    return 1;
+    return -1;
   }
   else {
     return 0;
@@ -4065,12 +4065,10 @@ p4est_connectivity_read_inp (const char *filename)
       conn->tree_to_face[P4EST_FACES * tree + face] = face;
     }
   }
-
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
+  /* Compute real tree_to_* fields and complete (edge and) corner fields. */
   p4est_connectivity_complete (conn);
-
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   retval = fclose (fid);
   fid = NULL;

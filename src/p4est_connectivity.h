@@ -686,7 +686,8 @@ int                 p4est_connectivity_read_inp_stream (FILE * stream,
  *
  * \param[in]  filename         file to read the connectivity from
  *
- * \returns an allocated connectivity associated with the mesh in \a filename
+ * \return  an allocated connectivity associated with the mesh in \a filename
+ *          or NULL if an error occurred.
  */
 p4est_connectivity_t *p4est_connectivity_read_inp (const char *filename);
 
