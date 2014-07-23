@@ -195,7 +195,8 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       quadrant_id -= tree->quadrants_offset;
       q = p4est_quadrant_array_index (&tree->quadrants, (size_t) quadrant_id);
 
-      P4EST_ASSERT (q->level == level);
+      SC_CHECK_ABORTF (q->level == level,
+                       "quad %d level %d mismatch", quadrant_id, level);
     }
   }
 

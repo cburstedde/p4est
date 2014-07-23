@@ -407,7 +407,7 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
     mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
   }
 
-  if (mesh->quad_level) {
+  if (mesh->quad_level != NULL) {
     quadid = (p4est_locidx_t *) sc_array_push (mesh->quad_level + level);
     *quadid = tree->quadrants_offset + info->quadid;
   }
@@ -429,6 +429,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   }
 
   if (mesh->quad_level != NULL) {
+    ql_memory = sizeof (sc_array_t) * P4EST_QMAXLEVEL;
     for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
       ql_memory += sc_array_memory_used (mesh->quad_level + level, 0);
     }
@@ -534,11 +535,11 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
 {
   int                 level = 0;
 
-  if (mesh->quad_to_tree) {
+  if (mesh->quad_to_tree != NULL) {
     P4EST_FREE (mesh->quad_to_tree);
   }
 
-  if (mesh->quad_level) {
+  if (mesh->quad_level != NULL) {
     for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
       sc_array_reset (mesh->quad_level + level);
     }
