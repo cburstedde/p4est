@@ -101,6 +101,14 @@ functions.  Supersedes p?est_nodes for the piecewise linear special case.
 
  5. Installation from a release tarball
 
+IMPORTANT NOTE:
+Our official tarballs are linked from http://www.p4est.org/.
+The tarballs under
+   https://github.com/cburstedde/p4est/releases/
+are created by github and are NOT endorsed by us.  In particular, they are
+missing the subdirectory sc, the configure script, and other generated files.
+We recommend to proceed with a repository checkout described below under 7.
+
 p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
 file for details.  The tarball contains the configure script and all required
 files.  The following configure options are important.
@@ -147,10 +155,12 @@ following the instructions in the INSTALL file.  Then proceed as in 5.
 
  7. Installation from git repository
 
-If you have obtained p4est from a git repository, the libsc submodule must be
-obtained before installation.  This can be accomplished with the shell command
-'git submodule init; git submodule update'.  After the submodule has been
-obtained, you can install from source as described above in 6.
+If you have obtained p4est from a git repository, such as via the shell command
+   git clone https://github.com/cburstedde/p4est.git
+then the libsc submodule, which resides in the subdirectory sc, must be
+downloaded before configuring and compiling.  This can be accomplished with the
+shell command 'git submodule init; git submodule update'.  After the submodule
+has been obtained, you can install from source as described above in 6.
 
 
  8. Using p4est through the deal.II interface
