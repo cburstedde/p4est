@@ -34,6 +34,8 @@
 #endif
 #define P4_TO_P8
 
+#include <p4est_base.h>
+
 /* redefine macros */
 #define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
@@ -81,6 +83,9 @@
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
 
 /* redefine types */
+#ifdef P4EST_BACKWARD_DEALII
+#define p4est_balance_type_t            p8est_balance_type_t
+#endif
 #define p4est_connect_type_t            p8est_connect_type_t
 #define p4est_connectivity_encode_t     p8est_connectivity_encode_t
 #define p4est_connectivity_t            p8est_connectivity_t

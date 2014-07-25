@@ -86,6 +86,10 @@ typedef enum
 }
 p8est_connect_type_t;
 
+#ifdef P4EST_BACKWARD_DEALII
+typedef p8est_connect_type_t p8est_balance_type_t;
+#endif
+
 /** Typedef for serialization method. */
 typedef enum
 {
