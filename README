@@ -102,20 +102,19 @@ functions.  Supersedes p?est_nodes for the piecewise linear special case.
  5. Installation from a release tarball
 
 IMPORTANT NOTE:
-Our official tarballs are linked from http://www.p4est.org/.
+Our official tarballs are linked from http://www.p4est.org/ and work fine.
 The tarballs under
    https://github.com/cburstedde/p4est/releases/
 are created by github and are NOT endorsed by us.  In particular, they are
 missing the subdirectory sc, the configure script, and other generated files.
-We recommend to proceed with a repository checkout described below under 7.
 
 p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
-file for details.  The tarball contains the configure script and all required
-files.  The following configure options are important.
+file for details.  Our official tarballs contain the configure script and all
+required files.  The following configure options are commonly used.
 
---enable-mpi is necessary for parallel functionality.  Without this option, p4est
-does not require MPI, which is replaced by a dummy implementation that always
-assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
+--enable-mpi is necessary for parallel functionality.  Without this option,
+p4est does not require MPI, which is replaced by a dummy implementation that
+always assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
 
 --enable-debug enables assertions and additional code for verification.  This
 is generally helpful for development, even if it is somewhat slower and
