@@ -49,7 +49,13 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
+#ifdef __cplusplus
+typedef
+  p4est_quadrant::p4est_quadrant_data
+  p4est_quadrant_data_t;
+#else
 typedef union p4est_quadrant_data p4est_quadrant_data_t;
+#endif
 
 static void
 p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
@@ -185,7 +191,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   new_mirrors = sc_array_new_size (lmirrors->elem_size, lmirrors->elem_count);
   sc_array_copy (new_mirrors, lmirrors);
   old_count = lmirrors->elem_count;
-  mlayer = sc_array_push_count (new_mirrors, nlmirror);
+  mlayer = (p2est_quadrant_t *) sc_array_push_count (new_mirrors, nlmirror);
   if (send->elem_count) {
     memcpy (mlayer, sc_array_index (send, 0),
             send->elem_count * send->elem_size);
@@ -226,10 +232,11 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     p4est_locidx_t     *lp;
     size_t              offset = nmpfa->elem_count;
 
-    lp = sc_array_push_count (nmpfa, lmpfo[i + 1] - lmpfo[i]);
+    lp = (p4est_locidx_t *) sc_array_push_count (nmpfa, lmpfo[i + 1] -
+                                                 lmpfo[i]);
     mpfo[i] = (p4est_locidx_t) offset;
 
-    for (zz = lmpfo[i]; zz < lmpfo[i + 1]; zz++) {
+    for (zz = lmpfo[i]; zz < (size_t) lmpfo[i + 1]; zz++) {
       ssize_t             idx;
       p2est_quadrant_t   *q1 = p2est_quadrant_array_index (send, zz);
 
@@ -270,7 +277,8 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
 
       mpo[i] = offset;
 
-      lp = sc_array_push_count (nmpma, old_count + frontsize);
+      lp = (p4est_locidx_t *) sc_array_push_count (nmpma, old_count +
+                                                   frontsize);
       memcpy (lp, mpf + mpfo[i], sizeof (p4est_locidx_t) * frontsize);
       lp += frontsize;
 
@@ -362,7 +370,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
     P4EST_ASSERT (sizeof (void *) == sizeof (p4est_quadrant_data_t));
     p4est_ghost_exchange_data (p6est->columns, cghost, cdata);
 
-    for (zz = 0; zz < ngcol; zz++) {
+    for (zz = 0; zz < (size_t) ngcol; zz++) {
       p4est_quadrant_t    dummy;
       size_t              first, last, zy;
       p4est_locidx_t      gfirst, glast;
@@ -378,10 +386,11 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
 
       P4EST_ASSERT ((glast - gfirst) == last - first);
 
-      for (zy = gfirst; zy < glast; zy++) {
+      for (zy = gfirst; zy < (size_t) glast; zy++) {
         layer = p2est_quadrant_array_index (&ghost->ghosts, zy);
         P4EST_ASSERT (col->p.piggy3.which_tree == layer->p.piggy3.which_tree);
-        P4EST_ASSERT (layer->p.piggy3.local_num == (zy - gfirst) + first);
+        P4EST_ASSERT ((size_t) layer->p.piggy3.local_num ==
+                      (zy - gfirst) + first);
       }
     }
 

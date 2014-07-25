@@ -384,7 +384,7 @@ p6est_profile_element_to_node_col (p6est_profile_t * profile,
           (degree + 1) * (degree + 1) * (degree + 1) * ll + (degree + 1) * k;
       }
       if (!(i % degree) && !(j % degree)) {
-        int                 c = 2 * (!!j) + (!!i);
+        int                 c = 2 * (! !j) + (! !i);
 
         p6est_profile_element_to_node_single (&elem, &node, degree,
                                               offsets[nid], elem_to_node, fc,
@@ -1186,10 +1186,10 @@ p6est_refine_to_profile (p6est_t * p6est, p6est_profile_t * profile,
       col = p4est_quadrant_array_index (tquadrants, zz);
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
       nidx = en[P4EST_INSUL * eidx + P4EST_INSUL / 2];
-      P4EST_ASSERT (lr[nidx][1] >= last - first);
+      P4EST_ASSERT ((size_t) lr[nidx][1] >= last - first);
       pfirst = lr[nidx][0];
       plast = pfirst + lr[nidx][1];
-      if (lr[nidx][1] > last - first) {
+      if ((size_t) lr[nidx][1] > last - first) {
         p2est_quadrant_t    stack[P4EST_QMAXLEVEL];
         p2est_quadrant_t   *q, *r, s, t;
         int                 stackcount;
@@ -1234,7 +1234,7 @@ p6est_refine_to_profile (p6est_t * p6est, p6est_profile_t * profile,
           r = p2est_quadrant_array_push (work);
           *r = *q;
         }
-        P4EST_ASSERT (work->elem_count == lr[nidx][1]);
+        P4EST_ASSERT (work->elem_count == (size_t) lr[nidx][1]);
         first = layers->elem_count;
         last = first + work->elem_count;
         P6EST_COLUMN_SET_RANGE (col, first, last);

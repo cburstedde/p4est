@@ -334,7 +334,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
       for (il = 0; il < nthis; il++) {
         lp[il] = layernodeoffsets[cnid] + il;
-        if (zy >= crank->shared_mine_offset
+        if (zy >= (size_t) crank->shared_mine_offset
             && (p4est_locidx_t) zy - crank->shared_mine_offset <
             crank->shared_mine_count) {
           rank->shared_mine_count++;
