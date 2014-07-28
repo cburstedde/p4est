@@ -28,7 +28,7 @@
 #endif
 
 static void
-test_reduce (p4est_connectivity_t * conn, char *which)
+test_reduce (p4est_connectivity_t * conn, const char *which)
 {
   SC_GLOBAL_INFOF ("Testing standard connectivity %s\n", which);
   SC_CHECK_ABORTF (p4est_connectivity_is_valid (conn),
