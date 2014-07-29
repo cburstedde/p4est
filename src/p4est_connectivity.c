@@ -2853,9 +2853,6 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
 void
 p4est_connectivity_reduce (p4est_connectivity_t * conn)
 {
-  int                 i;
-
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   conn->num_corners = 0;
   conn->ctt_offset[conn->num_corners] = 0;
   P4EST_FREE (conn->tree_to_corner);
