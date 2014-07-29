@@ -46,7 +46,6 @@ test_reduce (p4est_connectivity_t * conn, const char *which)
 int
 main (int argc, char *argv[])
 {
-  p4est_connectivity_t *connectivity;
   int                 mpiret;
 
   /* initialize MPI and p4est internals */
