@@ -98,7 +98,7 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static p4est_wrap_t *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
-                     int initial_level)
+                     p4est_geometry_t * geom, int initial_level)
 {
   p4est_wrap_t       *pp;
 
@@ -110,6 +110,8 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
+  pp->geom = geom;
+
   pp->weight_exponent = 0;
   pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
   pp->temp_flags = NULL;
@@ -134,7 +136,7 @@ p4est_wrap_new_unitsquare (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_unitsquare (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
@@ -142,7 +144,7 @@ p4est_wrap_new_periodic (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_periodic (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
@@ -150,7 +152,7 @@ p4est_wrap_new_rotwrap (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_rotwrap (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
@@ -158,7 +160,7 @@ p4est_wrap_new_corner (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_corner (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
@@ -166,7 +168,7 @@ p4est_wrap_new_pillow (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_pillow (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
@@ -174,21 +176,23 @@ p4est_wrap_new_moebius (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p4est_connectivity_new_moebius (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_cubed (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
-                              p4est_connectivity_new_cubed (), initial_level);
+                              p4est_connectivity_new_cubed (),
+                              NULL, initial_level);
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_disk (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
-                              p4est_connectivity_new_disk (), initial_level);
+                              p4est_connectivity_new_disk (),
+                              p4est_geometry_new_identity (), initial_level);
 }
 
 #else
@@ -198,7 +202,7 @@ p8est_wrap_new_unitcube (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p8est_connectivity_new_unitcube (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 p8est_wrap_t       *
@@ -206,7 +210,7 @@ p8est_wrap_new_rotwrap (sc_MPI_Comm mpicomm, int initial_level)
 {
   return p4est_wrap_new_conn (mpicomm,
                               p8est_connectivity_new_rotwrap (),
-                              initial_level);
+                              NULL, initial_level);
 }
 
 #endif
@@ -239,6 +243,10 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
 
   p4est_destroy (pp->p4est);
   p4est_connectivity_destroy (pp->conn);
+  if (pp->geom != NULL) {
+    /* This will have to be extended for non-owned geometries */
+    P4EST_FREE (pp->geom);
+  }
 
   P4EST_FREE (pp);
 }
