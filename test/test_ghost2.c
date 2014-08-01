@@ -352,6 +352,16 @@ main (int argc, char **argv)
   test_exchange_C (p4est, ghost);
   test_exchange_D (p4est, ghost);
 
+  if (p4est->mpisize <= 2) {
+    p4est_ghost_support_nodes (p4est, ghost);
+
+    /* test ghost data exchange */
+    test_exchange_A (p4est, ghost);
+    test_exchange_B (p4est, ghost);
+    test_exchange_C (p4est, ghost);
+    test_exchange_D (p4est, ghost);
+  }
+
   for (i = 0; i < num_cycles; i++) {
     /* expand and test that the ghost layer can still exchange data properly
      * */

@@ -298,6 +298,16 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
 void                p4est_ghost_expand (p4est_t * p4est,
                                         p4est_ghost_t * ghost);
 
+/** Expand the ghost layer to include the support of all nodes supported on
+ * the local partition.
+ *
+ * \param [in]     p4est        The forest from which the ghost layer was
+ *                              generated.
+ * \param [in,out] ghost        The ghost layer to be expanded.
+ */
+void                p4est_ghost_support_nodes (p4est_t *p4est,
+                                               p4est_ghost_t *ghost);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_GHOST_H */
