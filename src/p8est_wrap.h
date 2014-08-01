@@ -67,9 +67,9 @@ p8est_wrap_t;
  * \param [in] initial_level  Initial level of uniform refinement.
  * \return                    A fully initialized p8est_wrap structure.
  */
-p8est_wrap_t *
-p8est_wrap_new_conn (sc_MPI_Comm mpicomm, p8est_connectivity_t * conn,
-                     int initial_level);
+p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
+                                         p8est_connectivity_t * conn,
+                                         int initial_level);
 
 /** Create p8est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.
