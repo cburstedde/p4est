@@ -96,7 +96,7 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-static p4est_wrap_t *
+p4est_wrap_t       *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
