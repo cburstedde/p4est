@@ -23,7 +23,6 @@
 #ifndef P4EST_WRAP_H
 #define P4EST_WRAP_H
 
-#include <p4est_geometry.h>
 #include <p4est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
@@ -47,7 +46,6 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
-  p4est_geometry_t   *geom;     /**< Owned.  May be NULL */
 
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
