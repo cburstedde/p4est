@@ -3983,7 +3983,11 @@ p4est_connectivity_read_inp_stream (FILE * stream,
         int                 retval;
 
         retval = sscanf (line, "%lld, %lf, %lf, %lf", &node, &x, &y, &z);
-        P4EST_ASSERT (retval == 4);
+        if (retval != 4) {
+          P4EST_LERROR ("Premature end of file");
+          P4EST_FREE (line);
+          return 1;
+        }
 
         if (node > *num_vertices) {
           P4EST_LERRORF
@@ -4007,6 +4011,13 @@ p4est_connectivity_read_inp_stream (FILE * stream,
         int                 n;
         int                 retval;
 
+        if (num_elements >= *num_trees) {
+          P4EST_LERROR ("Encountered element that will not fit into"
+                        " tree_to_vertex array. More elements than expected.\n");
+          P4EST_FREE (line);
+          return 1;
+        }
+
         /* Note that when we read in the
          * vertices we switch from right-hand
          * vertex ordering to z-order
@@ -4020,15 +4031,11 @@ p4est_connectivity_read_inp_stream (FILE * stream,
                          , &v[4], &v[5], &v[7], &v[6]
 #endif
           );
-
-        if (num_elements >= *num_trees) {
-          P4EST_LERROR ("Encountered element that will not fit into"
-                        " tree_to_vertex array. More elements than expected.\n");
+        if (retval != P4EST_CHILDREN) {
+          P4EST_LERROR ("Premature end of file");
           P4EST_FREE (line);
           return 1;
         }
-
-        P4EST_ASSERT (retval == P4EST_CHILDREN);
 
         for (n = 0; n < P4EST_CHILDREN; ++n)
           tree_to_vertex[P4EST_CHILDREN * num_elements + n] = v[n] - 1;
