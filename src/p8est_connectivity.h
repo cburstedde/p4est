@@ -529,6 +529,13 @@ void                p8est_find_corner_transform (p8est_connectivity_t *
  */
 void                p8est_connectivity_complete (p8est_connectivity_t * conn);
 
+/** Removes corner and edge information of a connectivity
+ *  such that enough information is left to run p8est_connectivity_complete successfully.
+ *  The reduced connectivity still passes p8est_connectivity_is_valid.
+ * \param [in,out] conn     The connectivity to be reduced.
+ */
+void                p8est_connectivity_reduce (p8est_connectivity_t * conn);
+
 /** p8est_connectivity_permute
  * Given a permutation \a perm of the trees in a connectivity \a conn,
  * permute the trees of \a conn in place and update \a conn to match.

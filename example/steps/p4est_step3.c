@@ -367,7 +367,7 @@ step3_coarsen_err_estimate (p4est_t * p4est,
  * p4est_balance_ext() take as an argument a p4est_replace_t callback function,
  * which allows one to setup the quadrant data of incoming quadrants from the
  * data of outgoing quadrants, before the outgoing data is destroyed.  This
- * function mathces the p4est_replace_t prototype.
+ * function matches the p4est_replace_t prototype.
  *
  * In this example, we linearly interpolate the state variable of a quadrant
  * that is refined to its children, and we average the midpoints of children

@@ -3499,9 +3499,12 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
 
   /* check if the last entries of the offset arrays are the element count
    * of ghosts/mirrors array. */
-  if (ghost->tree_offsets[num_trees] != ghost->ghosts.elem_count
-      || ghost->proc_offsets[mpisize] != ghost->ghosts.elem_count
-      || ghost->mirror_tree_offsets[num_trees] != ghost->mirrors.elem_count) {
+  if (ghost->tree_offsets[num_trees] !=
+      (p4est_locidx_t) ghost->ghosts.elem_count
+      || ghost->proc_offsets[mpisize] !=
+      (p4est_locidx_t) ghost->ghosts.elem_count
+      || ghost->mirror_tree_offsets[num_trees] !=
+      (p4est_locidx_t) ghost->mirrors.elem_count) {
     return 0;
   }
 

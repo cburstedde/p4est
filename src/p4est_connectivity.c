@@ -2851,6 +2851,30 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
 }
 
 void
+p4est_connectivity_reduce (p4est_connectivity_t * conn)
+{
+  conn->num_corners = 0;
+  conn->ctt_offset[conn->num_corners] = 0;
+  P4EST_FREE (conn->tree_to_corner);
+  P4EST_FREE (conn->corner_to_tree);
+  P4EST_FREE (conn->corner_to_corner);
+  conn->tree_to_corner = NULL;
+  conn->corner_to_tree = NULL;
+  conn->corner_to_corner = NULL;
+#ifdef P4_TO_P8
+  conn->num_edges = 0;
+  conn->ett_offset[conn->num_edges] = 0;
+  P4EST_FREE (conn->tree_to_edge);
+  P4EST_FREE (conn->edge_to_tree);
+  P4EST_FREE (conn->edge_to_edge);
+  conn->tree_to_edge = NULL;
+  conn->edge_to_tree = NULL;
+  conn->edge_to_edge = NULL;
+#endif
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+}
+
+void
 p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
                             int is_current_to_new)
 {
@@ -3854,7 +3878,6 @@ p4est_connect_type_string (p4est_connect_type_t btype)
 }
 
 #endif /* !P4_TO_P8 */
-
 /*
  * Read a line from a file. Obtained from:
  * http://stackoverflow.com/questions/314401/
