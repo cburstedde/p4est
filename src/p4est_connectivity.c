@@ -243,16 +243,17 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
 
 void
 p4est_connectivity_set_attr (p4est_connectivity_t * conn,
-                             int enable_tree_attr)
+                             size_t bytes_per_tree)
 {
-  if (enable_tree_attr) {
+  if (bytes_per_tree > 0) {
     P4EST_ASSERT (conn->tree_to_attr == NULL);
-    conn->tree_to_attr = P4EST_ALLOC (int8_t, conn->num_trees);
+    conn->tree_to_attr = P4EST_ALLOC (char, bytes_per_tree * conn->num_trees);
   }
   else {
     P4EST_FREE (conn->tree_to_attr);
     conn->tree_to_attr = NULL;
   }
+  conn->tree_attr_bytes = bytes_per_tree;
 }
 
 int
@@ -347,6 +348,12 @@ p4est_connectivity_is_valid (p4est_connectivity_t * conn)
         }
       }
     }
+  }
+
+  if ((conn->tree_to_attr != NULL) != (conn->tree_attr_bytes > 0)) {
+    P4EST_NOTICEF ("Tree attribute properties inconsistent %lld",
+                   (long long) conn->tree_attr_bytes);
+    goto failure;
   }
 
   for (tree = 0; tree < num_trees; ++tree) {
@@ -584,12 +591,14 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
     return 0;
   }
 
-  if ((conn1->tree_to_attr == NULL) != (conn2->tree_to_attr == NULL)) {
+  if ((conn1->tree_to_attr == NULL) != (conn2->tree_to_attr == NULL) ||
+      conn1->tree_attr_bytes != conn2->tree_attr_bytes) {
     return 0;
   }
   tcount = (size_t) conn1->num_trees;
   if (conn1->tree_to_attr != NULL &&
-      memcmp (conn1->tree_to_attr, conn2->tree_to_attr, tcount * int8size)) {
+      memcmp (conn1->tree_to_attr, conn2->tree_to_attr,
+              tcount * conn1->tree_attr_bytes)) {
     return 0;
   }
 
@@ -628,6 +637,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
   int                 has_tree_attr;
   char                magic8[8 + 1];
   char                pkgversion24[24 + 1];
+  size_t              tree_attr_bytes;
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array10[10];
@@ -647,7 +657,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
 #endif
   num_corners = conn->num_corners;
   num_ctt = conn->ctt_offset[num_corners];
-  has_tree_attr = (conn->tree_to_attr != NULL);
+  has_tree_attr = ((tree_attr_bytes = conn->tree_attr_bytes) > 0);
 
   strncpy (magic8, P4EST_STRING, 8);
   magic8[8] = '\0';
@@ -668,7 +678,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
   array10[5] = (uint64_t) num_ett;
   array10[6] = (uint64_t) num_corners;
   array10[7] = (uint64_t) num_ctt;
-  array10[8] = (uint64_t) has_tree_attr;
+  array10[8] = (uint64_t) conn->tree_attr_bytes;
   array10[9] = (uint64_t) 0;
   retval = retval || sc_io_sink_write (sink, array10, 10 * u64z);
 
@@ -704,7 +714,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
   if (has_tree_attr) {
     tcount = (size_t) num_trees;
     retval = retval ||
-      sc_io_sink_write (sink, conn->tree_to_attr, tcount * int8size);
+      sc_io_sink_write (sink, conn->tree_to_attr, tcount * tree_attr_bytes);
   }
 
 #ifdef P4_TO_P8
@@ -778,6 +788,7 @@ p4est_connectivity_source (sc_io_source_t * source)
   int                 has_tree_attr;
   char                magic8[9];
   char                pkgversion24[25];
+  size_t              tree_attr_bytes;
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array10[10];
@@ -820,7 +831,7 @@ p4est_connectivity_source (sc_io_source_t * source)
   num_ett = (p4est_topidx_t) array10[5];
   num_corners = (p4est_topidx_t) array10[6];
   num_ctt = (p4est_topidx_t) array10[7];
-  has_tree_attr = (array10[8] & 1);
+  has_tree_attr = ((tree_attr_bytes = (size_t) array10[8]) > 0);
   if (num_vertices < 0) {
     /* "negative num_vertices" */
     return NULL;
@@ -862,7 +873,7 @@ p4est_connectivity_source (sc_io_source_t * source)
                                  num_edges, num_ett,
 #endif
                                  num_corners, num_ctt);
-  p4est_connectivity_set_attr (conn, has_tree_attr);
+  p4est_connectivity_set_attr (conn, tree_attr_bytes);
 
   if (num_vertices > 0) {
     tcount = (size_t) (3 * num_vertices);
@@ -924,8 +935,8 @@ p4est_connectivity_source (sc_io_source_t * source)
   }
   if (has_tree_attr) {
     tcount = (size_t) num_trees;
-    retval = sc_io_source_read (source, conn->tree_to_attr, int8size * tcount,
-                                NULL);
+    retval = sc_io_source_read (source, conn->tree_to_attr,
+                                tcount * tree_attr_bytes, NULL);
     if (retval) {
       /* "write tree_to_attr" */
       p4est_connectivity_destroy (conn);

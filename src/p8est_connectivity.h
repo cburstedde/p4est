@@ -171,7 +171,9 @@ typedef struct p8est_connectivity
   p4est_topidx_t     *tree_to_vertex; /**< embed each tree into \f$R^3\f$ for
                                            e.g. visualization (see
                                            p8est_vtk.h) */
-  int8_t             *tree_to_attr; /**< not touched by p4est */
+
+  size_t              tree_attr_bytes;  /**< bytes per tree in tree_to_attr */
+  char               *tree_to_attr;     /**< not touched by p4est */
 
   p4est_topidx_t     *tree_to_tree; /**< (6 * \a num_trees) neighbors across
                                          faces */
@@ -331,11 +333,11 @@ void                p8est_connectivity_destroy (p8est_connectivity_t *
 /** Allocate or free the attribute fields in a connectivity.
  * \param [in,out] conn         The conn->*_to_attr fields must either be NULL
  *                              or previously be allocated by this function.
- * \param [in] enable_tree_attr If false, tree_to_attr is freed (NULL is ok).
- *                              If true, it must be NULL and is allocated.
+ * \param [in] bytes_per_tree   If 0, tree_to_attr is freed (being NULL is ok).
+ *                              If positive, requested space is allocated.
  */
 void                p8est_connectivity_set_attr (p8est_connectivity_t * conn,
-                                                 int enable_tree_attr);
+                                                 size_t bytes_per_tree);
 
 /** Examine a connectivity structure.
  * \return  Returns true if structure is valid, false otherwise.
