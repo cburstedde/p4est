@@ -42,7 +42,6 @@ p8est_geometry_builtin_type_t;
 typedef struct p8est_geometry_builtin_shell
 {
   p8est_geometry_builtin_type_t type;
-  p8est_connectivity_t *conn;
   double              R2, R1;
   double              R2byR1, R1sqrbyR2, Rlog;
 }
@@ -51,7 +50,6 @@ p8est_geometry_builtin_shell_t;
 typedef struct p8est_geometry_builtin_sphere
 {
   p8est_geometry_builtin_type_t type;
-  p8est_connectivity_t *conn;
   double              R2, R1, R0;
   double              R2byR1, R1sqrbyR2, R1log;
   double              R1byR0, R0sqrbyR1, R0log;
@@ -61,7 +59,9 @@ p8est_geometry_builtin_sphere_t;
 
 typedef struct p8est_geometry_builtin
 {
+  /** The geom member needs to come first; we cast to p8est_geometry_t * */
   p8est_geometry_t    geom;
+  p8est_connectivity_t *conn;
   union
   {
     p8est_geometry_builtin_type_t type;
@@ -283,7 +283,7 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
   sphere->Clength = R0 / sqrt (3.);
   sphere->CdetJ = pow (R0 / sqrt (3.), 3.);
 
-  builtin->geom.name = "p8est:sphere";
+  builtin->geom.name = "p8est_sphere";
   builtin->geom.X = p8est_geometry_sphere_X;
 
   return (p8est_geometry_t *) builtin;

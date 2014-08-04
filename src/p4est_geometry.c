@@ -61,7 +61,7 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 
   geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
 
-  geom->name = "p4est_identity";
+  geom->name = P4EST_STRING "_connectivity";
   geom->user = conn;
   geom->X = p4est_geometry_connectivity_X;
 
