@@ -85,10 +85,11 @@ p4est_ghost_t;
  *
  * Test if the p4est_locidx_t arrays are in ascending order
  * (for mirror_proc_mirrors ascending within each rank)
+ * \param [in] p4est    the forest.
  * \param [in] ghost    Ghost layer structure.
  * \return true if \a ghost is valid
  */
-int                 p4est_ghost_is_valid (p4est_ghost_t * ghost);
+int                 p4est_ghost_is_valid (p4est_t *p4est, p4est_ghost_t * ghost);
 
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.

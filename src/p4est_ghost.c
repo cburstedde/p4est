@@ -27,11 +27,13 @@
 #include <p4est_ghost.h>
 #include <p4est_search.h>
 #include <p4est_lnodes.h>
+#include <p4est_algorithms.h>
 #else
 /* bits and communication are included in p8est_ghost.c */
 #include <p8est_ghost.h>
 #include <p8est_search.h>
 #include <p8est_lnodes.h>
+#include <p8est_algorithms.h>
 #endif
 #include <sc_search.h>
 
@@ -2196,7 +2198,7 @@ failtest:
   gl->mirror_proc_fronts = gl->mirror_proc_mirrors;
   gl->mirror_proc_front_offsets = gl->mirror_proc_offsets;
 
-  P4EST_ASSERT (p4est_ghost_is_valid (gl));
+  P4EST_ASSERT (p4est_ghost_is_valid (p4est, gl));
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_new\n");
@@ -2672,7 +2674,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
     fidx--;
   }
 
-  /* walk lidx forward to find the first quad that overlaps nq */
+  /* walk lidx forward to find the last quad that overlaps nq */
   while (lidx < (ssize_t) quads->elem_count - 1) {
     p4est_quadrant_t   *testq = p4est_quadrant_array_index (quads, (size_t)
                                                             lidx + 1);
@@ -3482,7 +3484,7 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 
   }
 #endif
-  P4EST_ASSERT (p4est_ghost_is_valid (ghost));
+  P4EST_ASSERT (p4est_ghost_is_valid (p4est, ghost));
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_expand\n");
@@ -4030,7 +4032,7 @@ p4est_ghost_support_nodes (p4est_t * p4est, p4est_ghost_t * ghost)
     sc_array_destroy (send_requests);
   }
 
-  P4EST_ASSERT (p4est_ghost_is_valid (ghost));
+  P4EST_ASSERT (p4est_ghost_is_valid (p4est, ghost));
 
   /* clean up */
   p4est_lnodes_destroy (lnodes);
@@ -4041,14 +4043,15 @@ p4est_ghost_support_nodes (p4est_t * p4est, p4est_ghost_t * ghost)
 }
 
 int
-p4est_ghost_is_valid (p4est_ghost_t * ghost)
+p4est_ghost_is_valid (p4est_t * p4est, p4est_ghost_t * ghost)
 {
   const p4est_topidx_t num_trees = ghost->num_trees;
   const int           mpisize = ghost->mpisize;
-  int                 i;
+  int                 i, mpiret, retval;
   size_t              view_length, proc_length;
   p4est_locidx_t      proc_offset;
-  sc_array_t          array;
+  sc_array_t          array, *workspace, *requests;
+  uint64_t           *checksums_recv, *checksums_send;
 
   /* check if the last entries of the offset arrays are the element count
    * of ghosts/mirrors array. */
@@ -4111,5 +4114,86 @@ p4est_ghost_is_valid (p4est_ghost_t * ghost)
       return 0;
     }
   }
-  return 1;
+
+  /* compare checksums of ghosts with checksums of mirrors */
+  checksums_recv = P4EST_ALLOC (uint64_t, mpisize);
+  checksums_send = P4EST_ALLOC (uint64_t, mpisize);
+  requests = sc_array_new (sizeof (sc_MPI_Request));
+  workspace = sc_array_new (sizeof (p4est_quadrant_t));
+  for (i = 0; i < mpisize; i++) {
+    p4est_locidx_t      count;
+    sc_MPI_Request     *req;
+
+    proc_offset = ghost->proc_offsets[i];
+    count = ghost->proc_offsets[i + 1] - proc_offset;
+
+    if (count) {
+      req = (sc_MPI_Request *) sc_array_push (requests);
+      mpiret = sc_MPI_Irecv (&checksums_recv[i], 1, sc_MPI_LONG_LONG_INT, i,
+                             P4EST_COMM_GHOST_CHECKSUM, p4est->mpicomm, req);
+      SC_CHECK_MPI (mpiret);
+    }
+
+    proc_offset = ghost->mirror_proc_offsets[i];
+    count = ghost->mirror_proc_offsets[i + 1] - proc_offset;
+
+    if (count) {
+      p4est_locidx_t      jl;
+
+      sc_array_truncate (workspace);
+
+      for (jl = proc_offset; jl < proc_offset + count; jl++) {
+        p4est_locidx_t      idx;
+        p4est_quadrant_t   *q1, *q2;
+
+        idx = ghost->mirror_proc_mirrors[jl];
+
+        q1 = p4est_quadrant_array_index (&ghost->mirrors, (size_t) idx);
+        q2 = p4est_quadrant_array_push (workspace);
+        *q2 = *q1;
+      }
+
+      checksums_send[i] =
+        (uint64_t) p4est_quadrant_checksum (workspace, NULL, 0);
+
+      req = (sc_MPI_Request *) sc_array_push (requests);
+      mpiret = sc_MPI_Isend (&checksums_send[i], 1, sc_MPI_LONG_LONG_INT, i,
+                             P4EST_COMM_GHOST_CHECKSUM, p4est->mpicomm, req);
+      SC_CHECK_MPI (mpiret);
+    }
+  }
+
+  mpiret = sc_MPI_Waitall (requests->elem_count, (sc_MPI_Request *)
+                           requests->array, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_destroy (workspace);
+  sc_array_destroy (requests);
+  P4EST_FREE (checksums_send);
+
+  retval = 1;
+  for (i = 0; i < mpisize; i++) {
+    p4est_locidx_t      count;
+
+    proc_offset = ghost->proc_offsets[i];
+    count = ghost->proc_offsets[i + 1] - proc_offset;
+
+    if (count) {
+      sc_array_t          view;
+      uint64_t            thiscrc;
+
+      sc_array_init_view (&view, &ghost->ghosts, (size_t) proc_offset,
+                          (size_t) count);
+
+      thiscrc = (uint64_t) p4est_quadrant_checksum (&view, NULL, 0);
+      if (thiscrc != checksums_recv[i]) {
+        P4EST_LERRORF ("Ghost layer checksum mismatch: "
+                       "proc %d, my checksum %llu, their checksum %llu\n",
+                       i, (long long unsigned) thiscrc,
+                       (long long unsigned) checksums_recv[i]);
+        retval = 0;
+      }
+    }
+  }
+  P4EST_FREE (checksums_recv);
+  return retval;
 }
