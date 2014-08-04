@@ -52,17 +52,17 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
   p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
   const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
   const double       *v = connectivity->vertices;
-  double              eta_x, eta_y, eta_z=0.;
+  double              eta_x, eta_y, eta_z = 0.;
   int                 j, k;
   p4est_topidx_t      vt[P4EST_CHILDREN];
 
   /* retrieve corners of the tree */
-  for (k = 0; k < P4EST_CHILDREN; ++k){
+  for (k = 0; k < P4EST_CHILDREN; ++k) {
     vt[k] = tree_to_vertex[which_tree * P4EST_CHILDREN + k];
   }
-  eta_x=abc[0]; 
-  eta_y=abc[1]; 
-  eta_z=abc[2]; 
+  eta_x = abc[0];
+  eta_y = abc[1];
+  eta_z = abc[2];
 
   for (j = 0; j < 3; ++j) {
     /* *INDENT-OFF* */

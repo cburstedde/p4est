@@ -80,7 +80,9 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
   double              x, y, R, q;
   double              abc[3];
+
   p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
   P4EST_ASSERT (0 <= which_tree && which_tree < 24);
@@ -134,8 +136,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
 }
 
 p8est_geometry_t   *
-p8est_geometry_new_shell (p8est_connectivity_t *
-                            conn, double R2, double R1)
+p8est_geometry_new_shell (p8est_connectivity_t * conn, double R2, double R1)
 {
   p8est_geometry_builtin_t *builtin;
   struct p8est_geometry_builtin_shell *shell;
@@ -166,6 +167,7 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
     = &((p8est_geometry_builtin_t *) geom)->p.sphere;
   double              x, y, R, q;
   double              abc[3];
+
   p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /* assert that input points are in the expected range */
@@ -261,7 +263,7 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
 
 p8est_geometry_t   *
 p8est_geometry_new_sphere (p8est_connectivity_t *
-                              conn, double R2, double R1, double R0)
+                           conn, double R2, double R1, double R0)
 {
   p8est_geometry_builtin_t *builtin;
   struct p8est_geometry_builtin_sphere *sphere;
