@@ -83,7 +83,9 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
  * \param [in] R1   The inner radius of the shell.
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
-p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
+p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t *
+                                                     conn, double R2, double R1);
+
 
 /** Create a geometry structure for the solid sphere of 13 trees.
  * This is suitable for forests obtained with p8est_connectivity_new_sphere.
@@ -92,7 +94,8 @@ p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
  * \param [in] R0   The inner radius of the inner shell.
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
-p8est_geometry_t   *p8est_geometry_new_sphere (double R2, double R1,
+p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t *
+                                                     conn, double R2, double R1,
                                                double R0);
 
 SC_EXTERN_C_END;

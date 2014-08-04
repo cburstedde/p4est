@@ -49,7 +49,36 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
-  memcpy (xyz, abc, 3 * sizeof (double));
+  p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
+  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
+  const double       *v = connectivity->vertices;
+  double              eta_x, eta_y, eta_z=0.;
+  int                 j, k;
+  p4est_topidx_t      vt[P4EST_CHILDREN];
+
+  /* retrieve corners of the tree */
+  for (k = 0; k < P4EST_CHILDREN; ++k){
+    vt[k] = tree_to_vertex[which_tree * P4EST_CHILDREN + k];
+  }
+  eta_x=abc[0]; 
+  eta_y=abc[1]; 
+  eta_z=abc[2]; 
+
+  for (j = 0; j < 3; ++j) {
+    /* *INDENT-OFF* */
+    xyz[j] =
+           ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
+                                                  eta_x  * v[3 * vt[1] + j]) +
+                                  eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
+                                                  eta_x  * v[3 * vt[3] + j]))
+#ifdef P4_TO_P8
+           +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
+                                                 eta_x  * v[3 * vt[5] + j]) +
+                                 eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
+                                                 eta_x  * v[3 * vt[7] + j]))
+#endif
+           );
+  }
 }
 
 p4est_geometry_t   *
