@@ -29,7 +29,7 @@
  */
 
 #include <p4est_to_p8est.h>
-#include <p8est_geometry.h>
+#include "p4est_geometry.c"
 
 typedef enum
 {
@@ -42,6 +42,7 @@ p8est_geometry_builtin_type_t;
 typedef struct p8est_geometry_builtin_shell
 {
   p8est_geometry_builtin_type_t type;
+  p8est_connectivity_t *conn;
   double              R2, R1;
   double              R2byR1, R1sqrbyR2, Rlog;
 }
@@ -50,6 +51,7 @@ p8est_geometry_builtin_shell_t;
 typedef struct p8est_geometry_builtin_sphere
 {
   p8est_geometry_builtin_type_t type;
+  p8est_connectivity_t *conn;
   double              R2, R1, R0;
   double              R2byR1, R1sqrbyR2, R1log;
   double              R1byR0, R0sqrbyR1, R0log;
@@ -69,27 +71,6 @@ typedef struct p8est_geometry_builtin
   p;
 }
 p8est_geometry_builtin_t;
-
-static void
-p8est_geometry_identity_X (p8est_geometry_t * geom,
-                           p4est_topidx_t which_tree,
-                           const double abc[3], double xyz[3])
-{
-  memcpy (xyz, abc, 3 * sizeof (double));
-}
-
-p8est_geometry_t   *
-p8est_geometry_new_identity (void)
-{
-  p8est_geometry_t   *geom;
-
-  geom = P4EST_ALLOC_ZERO (p8est_geometry_t, 1);
-
-  geom->name = "p8est_identity";
-  geom->X = p8est_geometry_identity_X;
-
-  return geom;
-}
 
 static void
 p8est_geometry_shell_X (p8est_geometry_t * geom,
@@ -307,5 +288,3 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
 
   return (p8est_geometry_t *) builtin;
 }
-
-#include "p4est_geometry.c"

@@ -29,7 +29,7 @@
 #ifndef P8EST_GEOMETRY_H
 #define P8EST_GEOMETRY_H
 
-#include <p4est_base.h>
+#include <p8est_connectivity.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -70,11 +70,12 @@ struct p8est_geometry
  */
 void                p8est_geometry_destroy (p8est_geometry_t * geom);
 
-/** Create a geometry structure for the identity transformation.
- * This function is just for demonstration since a NULL geometry works too.
- * \return          Geometry structure; use with p4est_geometry_destroy.
+/** Create a geometry structure based on the vertices in a connectivity.
+ * \param [in] conn A p8est_connectivity_t with valid vertices.  We do NOT
+ *                  take ownership and expect this structure to stay alive.
  */
-p8est_geometry_t   *p8est_geometry_new_identity (void);
+p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
+                                                     conn);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * This is suitable for forests obtained with p8est_connectivity_new_shell.

@@ -44,27 +44,26 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
   }
 }
 
-#ifndef P4_TO_P8
-
 static void
-p4est_geometry_identity_X (p4est_geometry_t * geom,
-                           p4est_topidx_t which_tree,
-                           const double abc[3], double xyz[3])
+p4est_geometry_connectivity_X (p4est_geometry_t * geom,
+                               p4est_topidx_t which_tree,
+                               const double abc[3], double xyz[3])
 {
   memcpy (xyz, abc, 3 * sizeof (double));
 }
 
 p4est_geometry_t   *
-p4est_geometry_new_identity (void)
+p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 {
   p4est_geometry_t   *geom;
+
+  P4EST_ASSERT (conn->vertices != NULL);
 
   geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
 
   geom->name = "p4est_identity";
-  geom->X = p4est_geometry_identity_X;
+  geom->user = conn;
+  geom->X = p4est_geometry_connectivity_X;
 
   return geom;
 }
-
-#endif /* !P4_TO_P8 */

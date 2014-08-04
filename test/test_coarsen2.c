@@ -289,11 +289,11 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
-  geom = NULL;
   connectivity = p8est_connectivity_new_rotcubes ();
+  geom = NULL;
 #else
-  geom = p4est_geometry_new_identity ();
   connectivity = p4est_connectivity_new_star ();
+  geom = p4est_geometry_new_connectivity (connectivity);
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
 

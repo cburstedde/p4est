@@ -29,7 +29,7 @@
 #ifndef P4EST_GEOMETRY_H
 #define P4EST_GEOMETRY_H
 
-#include <p4est_base.h>
+#include <p4est_connectivity.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -72,11 +72,13 @@ struct p4est_geometry
  */
 void                p4est_geometry_destroy (p4est_geometry_t * geom);
 
-/** Create a geometry structure for the identity transformation.
- * This function is just for demonstration since a NULL geometry works too.
+/** Create a geometry structure based on the vertices in a connectivity.
+ * \param [in] conn A p4est_connectivity_t with valid vertices.  We do NOT
+ *                  take ownership and expect this structure to stay alive.
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
-p4est_geometry_t   *p4est_geometry_new_identity (void);
+p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
+                                                     conn);
 
 SC_EXTERN_C_END;
 
