@@ -45,6 +45,12 @@ typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
                                            const double abc[3],
                                            double xyz[3]);
 
+/** Destructor prototype for a user-allocated \a p8est_geometry_t.
+ * It is invoked by p8est_geometry_destroy.  If the user chooses to
+ * reserve the structure statically, simply don't call p4est_geometry_destroy.
+ */
+typedef void        (*p8est_geometry_destroy_t) (p8est_geometry_t * geom);
+
 /** This structure can be created by the user,
  * p4est will never change its contents.
  */
@@ -53,11 +59,20 @@ struct p8est_geometry
   const char         *name;     /**< User's choice is arbitrary. */
   void               *user;     /**< User's choice is arbitrary. */
   p8est_geometry_X_t  X;        /**< Coordinate transformation. */
+  p8est_geometry_destroy_t destroy;     /**< Destructor called by
+                                             p8est_geometry_destroy.  If
+                                             NULL, P4EST_FREE is called. */
 };
+
+/** Can be used to conveniently destroy a geometry structure.
+ * The user is free not to call this function at all if they handle the
+ * memory of the p8est_geometry_t in their own way.
+ */
+void                p8est_geometry_destroy (p8est_geometry_t * geom);
 
 /** Create a geometry structure for the identity transformation.
  * This function is just for demonstration since a NULL geometry works too.
- * \return          Geometry structure which must be freed with P4EST_FREE.
+ * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_identity (void);
 
@@ -65,7 +80,7 @@ p8est_geometry_t   *p8est_geometry_new_identity (void);
  * This is suitable for forests obtained with p8est_connectivity_new_shell.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
- * \return          Geometry structure which must be freed with P4EST_FREE.
+ * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
 
@@ -74,7 +89,7 @@ p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
  * \param [in] R2   The outer radius of the sphere.
  * \param [in] R1   The outer radius of the inner shell.
  * \param [in] R0   The inner radius of the inner shell.
- * \return          Geometry structure which must be freed with P4EST_FREE.
+ * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_sphere (double R2, double R1,
                                                double R0);

@@ -218,7 +218,9 @@ main (int argc, char **argv)
   /* Clear memory */
   sc_array_destroy (points);
   p4est_destroy (p4est);
-  P4EST_FREE (geom);
+  if (geom != NULL) {
+    p4est_geometry_destroy (geom);
+  }
   p4est_connectivity_destroy (conn);
 
   /* Finalize */

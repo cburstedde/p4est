@@ -320,6 +320,9 @@
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
 
+/* functions in p4est_geometry */
+#define p4est_geometry_destroy          p8est_geometry_destroy
+
 /* functions in p4est_vtk */
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_all             p8est_vtk_write_all

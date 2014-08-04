@@ -28,6 +28,7 @@
  * Please implement p8est_geometry_t as you see fit.
  */
 
+#include <p4est_to_p8est.h>
 #include <p8est_geometry.h>
 
 typedef enum
@@ -306,3 +307,5 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
 
   return (p8est_geometry_t *) builtin;
 }
+
+#include "p4est_geometry.c"

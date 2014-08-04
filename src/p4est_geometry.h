@@ -26,7 +26,6 @@
  * \ingroup p4est
  */
 
-
 #ifndef P4EST_GEOMETRY_H
 #define P4EST_GEOMETRY_H
 
@@ -48,7 +47,13 @@ typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
                                            const double abc[3],
                                            double xyz[3]);
 
-/** This structure can be created by the user,
+/** Destructor prototype for a user-allocated \a p4est_geometry_t.
+ * It is invoked by p4est_geometry_destroy.  If the user chooses to
+ * reserve the structure statically, simply don't call p4est_geometry_destroy.
+ */
+typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
+
+/** This structure can be filled or allocated by the user.
  * p4est will never change its contents.
  */
 struct p4est_geometry
@@ -56,11 +61,20 @@ struct p4est_geometry
   const char         *name;     /**< User's choice is arbitrary. */
   void               *user;     /**< User's choice is arbitrary. */
   p4est_geometry_X_t  X;        /**< Coordinate transformation. */
+  p4est_geometry_destroy_t destroy;     /**< Destructor called by
+                                             p4est_geometry_destroy.  If
+                                             NULL, P4EST_FREE is called. */
 };
+
+/** Can be used to conveniently destroy a geometry structure.
+ * The user is free not to call this function at all if they handle the
+ * memory of the p4est_geometry_t in their own way.
+ */
+void                p4est_geometry_destroy (p4est_geometry_t * geom);
 
 /** Create a geometry structure for the identity transformation.
  * This function is just for demonstration since a NULL geometry works too.
- * \return          Geometry structure which must be freed with P4EST_FREE.
+ * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p4est_geometry_t   *p4est_geometry_new_identity (void);
 

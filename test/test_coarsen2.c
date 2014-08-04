@@ -322,8 +322,10 @@ main (int argc, char **argv)
   }
 
   p4est_destroy (p4est);
+  if (geom != NULL) {
+    p4est_geometry_destroy (geom);
+  }
   p4est_connectivity_destroy (connectivity);
-  P4EST_FREE (geom);
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();

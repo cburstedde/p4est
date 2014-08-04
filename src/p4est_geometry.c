@@ -27,7 +27,24 @@
  * Please implement p4est_geometry_t as you see fit.
  */
 
+#ifndef P4_TO_P8
 #include <p4est_geometry.h>
+#else
+#include <p8est_geometry.h>
+#endif
+
+void
+p4est_geometry_destroy (p4est_geometry_t * geom)
+{
+  if (geom->destroy != NULL) {
+    geom->destroy (geom);
+  }
+  else {
+    P4EST_FREE (geom);
+  }
+}
+
+#ifndef P4_TO_P8
 
 static void
 p4est_geometry_identity_X (p4est_geometry_t * geom,
@@ -49,3 +66,5 @@ p4est_geometry_new_identity (void)
 
   return geom;
 }
+
+#endif /* !P4_TO_P8 */

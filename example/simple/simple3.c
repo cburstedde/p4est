@@ -317,7 +317,9 @@ main (int argc, char **argv)
 
   /* destroy the p8est and its connectivity structure */
   p8est_destroy (p8est);
-  P4EST_FREE (geom);
+  if (geom != NULL) {
+    p8est_geometry_destroy (geom);
+  }
   p8est_connectivity_destroy (connectivity);
 
   /* clean up and exit */
