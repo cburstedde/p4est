@@ -211,6 +211,18 @@ p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
 
 void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
 
+/** Expand the ghost layer to include the support of all nodes supported on
+ * the local partition.
+ *
+ * \param [in]     p4est        The forest from which the ghost layer was
+ *                              generated.
+ * \param [in]     lnodes       The nodes to support.
+ * \param [in,out] ghost        The ghost layer to be expanded.
+ */
+void                p4est_ghost_support_lnodes (p4est_t *p4est,
+                                                p4est_lnodes_t *lnodes,
+                                                p4est_ghost_t *ghost);
+
 /** p4est_lnodes_buffer_t handles the communication of data associated with
  * nodes.
  *

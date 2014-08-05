@@ -24,9 +24,11 @@
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_ghost.h>
+#include <p4est_lnodes.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_ghost.h>
+#include <p8est_lnodes.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -353,7 +355,13 @@ main (int argc, char **argv)
   test_exchange_D (p4est, ghost);
 
   if (p4est->mpisize <= 2) {
-    p4est_ghost_support_nodes (p4est, ghost);
+    p4est_lnodes_t *lnodes;
+    int type = p4est_connect_type_int (ghost->btype);
+
+    lnodes = p4est_lnodes_new (p4est, ghost, -type);
+    p4est_ghost_support_lnodes (p4est, lnodes, ghost);
+
+    p4est_lnodes_destroy (lnodes);
 
     /* test ghost data exchange */
     test_exchange_A (p4est, ghost);

@@ -250,6 +250,19 @@ p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
 
 void                p8est_lnodes_destroy (p8est_lnodes_t *);
 
+/** Expand the ghost layer to include the support of all nodes supported on
+ * the local partition.
+ *
+ * \param [in]     p8est        The forest from which the ghost layer was
+ *                              generated.
+ * \param [in]     lnodes       The nodes to support.
+ * \param [in,out] ghost        The ghost layer to be expanded.
+ */
+void                p8est_ghost_support_lnodes (p8est_t *p8est,
+                                                p8est_lnodes_t *lnodes,
+                                                p8est_ghost_t *ghost);
+
+
 /** p8est_lnodes_buffer_t handles the communication of data associated with
  * nodes.
  *
