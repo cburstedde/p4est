@@ -3644,6 +3644,7 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
   P4EST_ASSERT (tree_right >= 0 && tree_right < conn->num_trees);
   P4EST_ASSERT (face_left >= 0 && face_left < P4EST_FACES);
   P4EST_ASSERT (face_right >= 0 && face_right < P4EST_FACES);
+  P4EST_ASSERT (orientation >= 0 && orientation < P4EST_HALF);
   P4EST_ASSERT (conn->tree_to_tree[P4EST_FACES * tree_left + face_left] ==
                 tree_left);
   P4EST_ASSERT (conn->tree_to_tree[P4EST_FACES * tree_right + face_right] ==
@@ -3664,7 +3665,7 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
     e_left = p8est_face_edges[face_left][i];
 
     for (j = 0; j < 2; j++) {
-      /* get a corners of that edge */
+      /* get corners of that edge */
       c[j] = p8est_edge_corners[e_left][j];
       /* get the numbering of that corner in the face numbering */
       c[j] = p8est_corner_face_corners[c[j]][face_left];
