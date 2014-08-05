@@ -3263,8 +3263,14 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
     {
       int                 ref = p8est_face_permutation_refs[f][nf];
       int                 set = p8est_face_permutation_sets[ref][o];
+      int                 fc, nfc;
 
-      nc = p8est_face_permutations[set][c];
+      P4EST_ASSERT (c < P4EST_CHILDREN);
+      fc = p8est_corner_face_corners[c][f];
+      P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
+      nfc = p8est_face_permutations[set][fc];
+      P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
+      nc = p8est_face_corners[nf][nfc];
     }
 #endif
 
