@@ -154,7 +154,7 @@ main (int argc, char **argv)
   vtkname = "test_search2";
 #else
   conn = p8est_connectivity_new_sphere ();
-  geom = p8est_geometry_new_sphere (1., 0.191728, 0.039856);
+  geom = p8est_geometry_new_sphere (conn, 1., 0.191728, 0.039856);
   vtkname = "test_search3";
 #endif
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
