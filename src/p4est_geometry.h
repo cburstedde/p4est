@@ -35,9 +35,7 @@ SC_EXTERN_C_BEGIN;
 
 typedef struct p4est_geometry p4est_geometry_t;
 
-/** Forward transformation from vertex frame to physical space.
- * The vertex space "abc" is defined per octree and spanned by the vertices
- * at its corners by bilinear interpolation; see p4est_connectivity.h.
+/** Forward transformation from the reference unit square to physical space.
  * Note that the two-dimensional connectivities have 3D vertex coordinates
  * that can be used in the transformation if so desired.
  * The physical space "xyz" is user-defined, currently used for VTK output.
@@ -73,6 +71,7 @@ struct p4est_geometry
 void                p4est_geometry_destroy (p4est_geometry_t * geom);
 
 /** Create a geometry structure based on the vertices in a connectivity.
+ * The transformation is constructed using bilinear interpolation.
  * \param [in] conn A p4est_connectivity_t with valid vertices.  We do NOT
  *                  take ownership and expect this structure to stay alive.
  * \return          Geometry structure; use with p4est_geometry_destroy.

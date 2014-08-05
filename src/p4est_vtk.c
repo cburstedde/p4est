@@ -279,9 +279,9 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
               P4EST_ASSERT (0 <= k && k < P4EST_CHILDREN);
               eta_x = intsize * quad->x + h2 * (1. + (xi * 2 - 1) * scale);
               if (geom != NULL) {
-                xyz[0]=eta_x; 
-                xyz[1]=eta_y; 
-                xyz[2]=eta_z; 
+                xyz[0] = eta_x;
+                xyz[1] = eta_y;
+                xyz[2] = eta_z;
                 geom->X (geom, jt, xyz, XYZ);
                 for (j = 0; j < 3; ++j) {
                   float_data[3 * (P4EST_CHILDREN * quad_count + k) + j] =
@@ -335,9 +335,9 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       eta_z = intsize * in->z;
 #endif
       if (geom != NULL) {
-        xyz[0]=eta_x; 
-        xyz[1]=eta_y; 
-        xyz[2]=eta_z; 
+        xyz[0] = eta_x;
+        xyz[1] = eta_y;
+        xyz[2] = eta_z;
         geom->X (geom, jt, xyz, XYZ);
         for (j = 0; j < 3; ++j) {
           float_data[3 * zz + j] = (P4EST_VTK_FLOAT_TYPE) XYZ[j];
@@ -359,7 +359,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   #endif
             );
           /* *INDENT-ON* */
-        
+
           float_data[3 * zz + j] = (P4EST_VTK_FLOAT_TYPE) xyz[j];
         }
       }
