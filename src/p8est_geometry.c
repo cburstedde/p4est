@@ -61,7 +61,6 @@ typedef struct p8est_geometry_builtin
 {
   /** The geom member needs to come first; we cast to p8est_geometry_t * */
   p8est_geometry_t    geom;
-  p8est_connectivity_t *conn;
   union
   {
     p8est_geometry_builtin_type_t type;
@@ -75,11 +74,15 @@ p8est_geometry_builtin_t;
 static void
 p8est_geometry_shell_X (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree,
-                        const double abc[3], double xyz[3])
+                        const double rst[3], double xyz[3])
 {
   const struct p8est_geometry_builtin_shell *shell
     = &((p8est_geometry_builtin_t *) geom)->p.shell;
   double              x, y, R, q;
+  double              abc[3];
+
+  /* transform from the reference cube into vertex space */
+  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
@@ -134,7 +137,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
 }
 
 p8est_geometry_t   *
-p8est_geometry_new_shell (double R2, double R1)
+p8est_geometry_new_shell (p8est_connectivity_t * conn, double R2, double R1)
 {
   p8est_geometry_builtin_t *builtin;
   struct p8est_geometry_builtin_shell *shell;
@@ -150,6 +153,7 @@ p8est_geometry_new_shell (double R2, double R1)
   shell->Rlog = log (R2 / R1);
 
   builtin->geom.name = "p8est_shell";
+  builtin->geom.user = conn;
   builtin->geom.X = p8est_geometry_shell_X;
 
   return (p8est_geometry_t *) builtin;
@@ -158,11 +162,15 @@ p8est_geometry_new_shell (double R2, double R1)
 static void
 p8est_geometry_sphere_X (p8est_geometry_t * geom,
                          p4est_topidx_t which_tree,
-                         const double abc[3], double xyz[3])
+                         const double rst[3], double xyz[3])
 {
   const struct p8est_geometry_builtin_sphere *sphere
     = &((p8est_geometry_builtin_t *) geom)->p.sphere;
   double              x, y, R, q;
+  double              abc[3];
+
+  /* transform from the reference cube into vertex space */
+  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
@@ -256,7 +264,8 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
 }
 
 p8est_geometry_t   *
-p8est_geometry_new_sphere (double R2, double R1, double R0)
+p8est_geometry_new_sphere (p8est_connectivity_t * conn,
+                           double R2, double R1, double R0)
 {
   p8est_geometry_builtin_t *builtin;
   struct p8est_geometry_builtin_sphere *sphere;
@@ -284,6 +293,7 @@ p8est_geometry_new_sphere (double R2, double R1, double R0)
   sphere->CdetJ = pow (R0 / sqrt (3.), 3.);
 
   builtin->geom.name = "p8est_sphere";
+  builtin->geom.user = conn;
   builtin->geom.X = p8est_geometry_sphere_X;
 
   return (p8est_geometry_t *) builtin;

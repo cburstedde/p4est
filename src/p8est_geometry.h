@@ -35,9 +35,7 @@ SC_EXTERN_C_BEGIN;
 
 typedef struct p8est_geometry p8est_geometry_t;
 
-/** Forward transformation from vertex frame to physical space.
- * The vertex space "abc" is defined per octree and spanned by the vertices
- * at its corners; see p8est_connectivity.h.
+/** Forward transformation from the reference unit square to physical space.
  * The physical space "xyz" is user-defined, currently used for VTK output.
  */
 typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
@@ -71,6 +69,7 @@ struct p8est_geometry
 void                p8est_geometry_destroy (p8est_geometry_t * geom);
 
 /** Create a geometry structure based on the vertices in a connectivity.
+ * The transformation is constructed using trilinear interpolation.
  * \param [in] conn A p8est_connectivity_t with valid vertices.  We do NOT
  *                  take ownership and expect this structure to stay alive.
  */
@@ -78,21 +77,23 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
                                                      conn);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
- * This is suitable for forests obtained with p8est_connectivity_new_shell.
+ * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
-p8est_geometry_t   *p8est_geometry_new_shell (double R2, double R1);
+p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t * conn,
+                                              double R2, double R1);
 
 /** Create a geometry structure for the solid sphere of 13 trees.
- * This is suitable for forests obtained with p8est_connectivity_new_sphere.
+ * \param [in] conn Obtained with p8est_connectivity_new_sphere or equivalent.
  * \param [in] R2   The outer radius of the sphere.
  * \param [in] R1   The outer radius of the inner shell.
  * \param [in] R0   The inner radius of the inner shell.
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
-p8est_geometry_t   *p8est_geometry_new_sphere (double R2, double R1,
+p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
+                                               double R2, double R1,
                                                double R0);
 
 SC_EXTERN_C_END;
