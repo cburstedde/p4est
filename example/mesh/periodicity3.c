@@ -28,7 +28,8 @@
 int
 main (int argc, char **argv)
 {
-  int                 i;
+  int                 i, j;
+  int                 t0, t1;
   size_t              bytes;
   const char         *filename = "conndebug.p8c";
   p4est_connectivity_t *conn;
@@ -43,10 +44,25 @@ main (int argc, char **argv)
   p4est_connectivity_complete (conn);
 
   for (i = 0; i < 4; ++i) {
-    P4EST_VERBOSEF ("Z face %d\n", i);
-    p4est_connectivity_join_faces (conn, 2 * i + 0, 2 * i + 1, 4, 5, 0);
+    t0 = i + 0;
+    t1 = i + 4;
+    P4EST_VERBOSEF ("X face %d: %d %d\n", i, t0, t1);
+    p4est_connectivity_join_faces (conn, t0, t1, 0, 1, 0);
   }
-  /* p4est_connectivity_join_faces (conn, 0, 2, 3, 2, 0); */
+  for (i = 0; i < 2; ++i) {
+    for (j = 0; j < 2; ++j) {
+      t0 = 4 * i + j + 0;
+      t1 = 4 * i + j + 2;
+      P4EST_VERBOSEF ("Y face %d: %d %d\n", 2 * i + j, t0, t1);
+      p4est_connectivity_join_faces (conn, t0, t1, 2, 3, 0);
+    }
+  }
+  for (i = 0; i < 4; ++i) {
+    t0 = 2 * i + 0;
+    t1 = 2 * i + 1;
+    P4EST_VERBOSEF ("Z face %d: %d %d\n", i, t0, t1);
+    p4est_connectivity_join_faces (conn, t0, t1, 4, 5, 0);
+  }
 
   p4est_connectivity_destroy (conn);
 
