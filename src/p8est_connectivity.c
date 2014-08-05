@@ -159,6 +159,24 @@ const int           p8est_child_corner_edges[8][8] =
  { -1, -1, -1, 11, -1,  7,  3, -1 }};
 /* *INDENT-ON* */
 
+int
+p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int set)
+{
+  int                 fc, nfc;
+
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= f && f < P4EST_FACES);
+  P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
+  P4EST_ASSERT (0 <= set && set < 8);
+
+  fc = p8est_corner_face_corners[c][f];
+  P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
+  nfc = p8est_face_permutations[set][fc];
+  P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
+
+  return p8est_face_corners[nf][nfc];
+}
+
 p4est_connectivity_t *
 p8est_connectivity_new_unitcube (void)
 {

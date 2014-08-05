@@ -3263,14 +3263,8 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
     {
       int                 ref = p8est_face_permutation_refs[f][nf];
       int                 set = p8est_face_permutation_sets[ref][o];
-      int                 fc, nfc;
 
-      P4EST_ASSERT (c < P4EST_CHILDREN);
-      fc = p8est_corner_face_corners[c][f];
-      P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
-      nfc = p8est_face_permutations[set][fc];
-      P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
-      nc = p8est_face_corners[nf][nfc];
+      nc = p8est_connectivity_face_neighbor_corner (c, f, nf, set);
     }
 #endif
 
@@ -3386,15 +3380,8 @@ p8est_connectivity_store_edge (p4est_connectivity_t * conn, p4est_topidx_t t,
     set = p8est_face_permutation_sets[ref][o];
 
     for (j = 0; j < 2; j++) {
-      int                 fc, nfc;
-
       c[j] = p8est_edge_corners[e][j];
-      P4EST_ASSERT (c[j] < P4EST_CHILDREN);
-      fc = p8est_corner_face_corners[c[j]][f];
-      P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
-      nfc = p8est_face_permutations[set][fc];
-      P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
-      nc[j] = p8est_face_corners[nf][nfc];
+      nc[j] = p8est_connectivity_face_neighbor_corner (c[j], f, nf, set);
     }
     diff = SC_MAX (nc[0], nc[1]) - SC_MIN (nc[0], nc[1]);
     switch (diff) {
@@ -3680,14 +3667,10 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
     for (j = 0; j < 2; j++) {
       /* get corners of that edge */
       c[j] = p8est_edge_corners[e_left][j];
-      /* get the numbering of that corner in the face numbering */
-      c[j] = p8est_corner_face_corners[c[j]][face_left];
-      P4EST_ASSERT (c[j] >= 0);
-      /* use the permutation to get the equivalent face numbering on
-       * face_right */
-      c[j] = p8est_face_permutations[set][c[j]];
-      /* finally, turn that in the octant numbering for tree_right */
-      c[j] = p8est_face_corners[face_right][c[j]];
+
+      /* use the permutation to get the equivalent number from face_right */
+      c[j] = p8est_connectivity_face_neighbor_corner
+        (c[j], face_left, face_right, set);
     }
     /* now from the two corners, we can figure out e_right */
     e_right = p8est_child_corner_edges[c[0]][c[1]];
