@@ -3386,8 +3386,15 @@ p8est_connectivity_store_edge (p4est_connectivity_t * conn, p4est_topidx_t t,
     set = p8est_face_permutation_sets[ref][o];
 
     for (j = 0; j < 2; j++) {
+      int                 fc, nfc;
+
       c[j] = p8est_edge_corners[e][j];
-      nc[j] = p8est_face_permutations[set][c[j]];
+      P4EST_ASSERT (c[j] < P4EST_CHILDREN);
+      fc = p8est_corner_face_corners[c[j]][f];
+      P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
+      nfc = p8est_face_permutations[set][fc];
+      P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
+      nc[j] = p8est_face_corners[nf][nfc];
     }
     diff = SC_MAX (nc[0], nc[1]) - SC_MIN (nc[0], nc[1]);
     switch (diff) {
