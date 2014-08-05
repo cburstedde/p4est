@@ -219,9 +219,21 @@ void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
  * \param [in]     lnodes       The nodes to support.
  * \param [in,out] ghost        The ghost layer to be expanded.
  */
-void                p4est_ghost_support_lnodes (p4est_t *p4est,
-                                                p4est_lnodes_t *lnodes,
-                                                p4est_ghost_t *ghost);
+void                p4est_ghost_support_lnodes (p4est_t * p4est,
+                                                p4est_lnodes_t * lnodes,
+                                                p4est_ghost_t * ghost);
+
+/** Expand the ghost layer as in p4est_ghost_expand(), but use node support to
+ * define adjacency instead of geometric adjacency.
+ *
+ * \param [in]     p4est        The forest from which the ghost layer was
+ *                              generated.
+ * \param [in]     lnodes       The nodes to support.
+ * \param [in,out] ghost        The ghost layer to be expanded.
+ */
+void                p4est_ghost_expand_by_lnodes (p4est_t * p4est,
+                                                  p4est_lnodes_t * lnodes,
+                                                  p4est_ghost_t * ghost);
 
 /** p4est_lnodes_buffer_t handles the communication of data associated with
  * nodes.

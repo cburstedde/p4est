@@ -2841,8 +2841,9 @@ p4est_quadrant_compare_piggy_proc (const void *a, const void *b)
 
 #endif /* P4EST_MPI */
 
-void
-p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
+static void
+p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
+                             p4est_ghost_t * ghost)
 {
 #ifdef P4EST_MPI
   int                 p;
@@ -2877,6 +2878,9 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   sc_array_t         *tempquads2;
   sc_array_t         *temptrees2;
   sc_array_t         *npoints;
+  p4est_locidx_t     *ntq_offset = NULL;
+  p4est_locidx_t     *node_to_quad = NULL;
+  p4est_topidx_t     *node_to_tree = NULL;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_expand %s\n",
                             p4est_connect_type_string (btype));
@@ -2887,6 +2891,197 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   tempquads2 = sc_array_new (sizeof (p4est_quadrant_t));
   temptrees2 = sc_array_new (sizeof (p4est_topidx_t));
   npoints = sc_array_new (sizeof (int));
+
+  /* if lnodes, build node_to_quad */
+  if (lnodes) {
+    p4est_gloidx_t    **mirror_data;
+    p4est_locidx_t      il, num_mirrors, qid, K = lnodes->num_local_elements;
+    p4est_locidx_t      G = (p4est_locidx_t) ghost->ghosts.elem_count;
+    p4est_locidx_t      N = lnodes->num_local_nodes;
+    int                 v, nid;
+    int                 vnodes = lnodes->vnodes;
+    int                *node_to_quad_count;
+    int                *quad_counted;
+    p4est_gloidx_t     *quad_to_node_global;
+    p4est_gloidx_t     *quad_to_node_global_ghost;
+    p4est_topidx_t      flt, llt, t;
+
+    quad_to_node_global = P4EST_ALLOC (p4est_gloidx_t, K * vnodes);
+    quad_to_node_global_ghost = P4EST_ALLOC (p4est_gloidx_t, G * vnodes);
+#ifdef P4EST_DEBUG
+    memset (quad_to_node_global_ghost, -1,
+            vnodes * G * sizeof (p4est_gloidx_t));
+#endif
+
+    mirror_data = P4EST_ALLOC (p4est_gloidx_t *, ghost->mirrors.elem_count);
+
+    for (qid = 0; qid < K * vnodes; qid++) {
+      quad_to_node_global[qid] =
+        p4est_lnodes_global_index (lnodes, lnodes->element_nodes[qid]);
+    }
+
+    num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
+    for (il = 0; (size_t) il < num_mirrors; il++) {
+      p4est_quadrant_t   *q;
+
+      q = p4est_quadrant_array_index (&ghost->mirrors, il);
+
+      qid = q->p.piggy3.local_num;
+      mirror_data[il] = &quad_to_node_global[qid * vnodes];
+    }
+
+    p4est_ghost_exchange_custom (p4est, ghost,
+                                 (size_t) vnodes * sizeof (p4est_gloidx_t),
+                                 (void **) mirror_data,
+                                 quad_to_node_global_ghost);
+    P4EST_FREE (mirror_data);
+    P4EST_FREE (quad_to_node_global);
+
+    /* convert global back to local */
+    for (qid = 0; qid < G; qid++) {
+      for (v = 0; v < vnodes; v++) {
+        p4est_gloidx_t      gnid;
+
+        gnid = quad_to_node_global_ghost[qid * vnodes + v];
+#ifdef P4EST_DEBUG
+        P4EST_ASSERT (gnid >= 0);
+#endif
+        nid = -1;
+        if ((gnid >= lnodes->global_offset) &&
+            (gnid < (lnodes->global_offset + lnodes->owned_count))) {
+          nid = gnid - lnodes->global_offset;
+        }
+        else {
+          sc_array_t          view;
+          ssize_t             idx;
+
+          sc_array_init_data (&view, lnodes->nonlocal_nodes,
+                              sizeof (p4est_gloidx_t),
+                              (size_t) (lnodes->num_local_nodes -
+                                        lnodes->owned_count));
+
+          idx = sc_array_bsearch (&view, &gnid, p4est_gloidx_compare);
+          if (idx >= 0) {
+            nid = idx + lnodes->owned_count;
+          }
+        }
+        P4EST_ASSERT (nid == -1
+                      || p4est_lnodes_global_index (lnodes, nid) == gnid);
+        quad_to_node_global_ghost[qid * vnodes + v] = nid;
+      }
+    }
+
+    node_to_quad_count = P4EST_ALLOC_ZERO (int, N);
+    quad_counted = P4EST_ALLOC_ZERO (int, K);
+
+    /* first count fronts */
+    for (p = 0; p < mpisize; p++) {
+      p4est_locidx_t      ilstart, ilend;
+
+      ilstart = ghost->mirror_proc_front_offsets[p];
+      ilend = ghost->mirror_proc_front_offsets[p + 1];
+
+      for (il = ilstart; il < ilend; il++) {
+        p4est_quadrant_t   *q;
+        int                 v;
+
+        qid = ghost->mirror_proc_fronts[il];
+        q = p4est_quadrant_array_index (&ghost->mirrors, (size_t) qid);
+        qid = q->p.piggy3.local_num;
+        if (!quad_counted[qid]) {
+          quad_counted[qid] = 1;
+          for (v = 0; v < vnodes; v++) {
+            nid = lnodes->element_nodes[qid * vnodes + v];
+            node_to_quad_count[nid]++;
+          }
+        }
+      }
+    }
+
+    /* count the rest of the quads and ghosts, only incrementing nodes that
+     * have a front quad adjacent */
+    for (qid = 0; qid < K; qid++) {
+      if (!quad_counted[qid]) {
+        quad_counted[qid] = 1;
+        for (v = 0; v < vnodes; v++) {
+          nid = lnodes->element_nodes[qid * vnodes + v];
+          if (node_to_quad_count[nid]) {
+            node_to_quad_count[nid]++;
+          }
+        }
+      }
+    }
+    for (qid = 0; qid < G; qid++) {
+      for (v = 0; v < vnodes; v++) {
+        nid = (p4est_locidx_t) quad_to_node_global_ghost[qid * vnodes + v];
+        if (nid >= 0) {
+          if (node_to_quad_count[nid]) {
+            node_to_quad_count[nid]++;
+          }
+        }
+      }
+    }
+    P4EST_FREE (quad_counted);
+
+    ntq_offset = P4EST_ALLOC (p4est_locidx_t, N + 1);
+    ntq_offset[0] = 0;
+    for (nid = 0; nid < N; nid++) {
+      ntq_offset[nid + 1] = ntq_offset[nid] + node_to_quad_count[nid];
+    }
+    node_to_quad = P4EST_ALLOC (p4est_locidx_t, ntq_offset[N]);
+    node_to_tree = P4EST_ALLOC (p4est_topidx_t, ntq_offset[N]);
+#ifdef P4EST_DEBUG
+    memset (node_to_quad, -1, ntq_offset[N] * sizeof (p4est_locidx_t));
+    memset (node_to_tree, -1, ntq_offset[N] * sizeof (p4est_topidx_t));
+#endif
+
+    memset (node_to_quad_count, 0, N * sizeof (int));
+
+    flt = p4est->first_local_tree;
+    llt = p4est->last_local_tree;
+    for (qid = 0, t = flt; t <= llt; t++) {
+      p4est_tree_t       *tree = p4est_tree_array_index (p4est->trees, t);
+      p4est_locidx_t      nquads =
+        (p4est_locidx_t) tree->quadrants.elem_count;
+
+      for (il = 0; il < nquads; il++, qid++) {
+        for (v = 0; v < vnodes; v++) {
+          p4est_locidx_t      ilstart;
+          nid = lnodes->element_nodes[qid * vnodes + v];
+          ilstart = ntq_offset[nid];
+          if (ntq_offset[nid + 1] > ilstart) {
+            node_to_quad[ilstart + node_to_quad_count[nid]] = qid;
+            node_to_tree[ilstart + node_to_quad_count[nid]++] = t;
+          }
+        }
+      }
+    }
+    for (qid = 0; qid < G; qid++) {
+      p4est_quadrant_t   *q =
+        p4est_quadrant_array_index (&ghost->ghosts, (size_t) qid);
+
+      for (v = 0; v < vnodes; v++) {
+        p4est_locidx_t      ilstart;
+        nid = (p4est_locidx_t) quad_to_node_global_ghost[qid * vnodes + v];
+        if (nid >= 0) {
+          ilstart = ntq_offset[nid];
+          if (ntq_offset[nid + 1] > ilstart) {
+            node_to_quad[ilstart + node_to_quad_count[nid]] = -(qid + 1);
+            node_to_tree[ilstart + node_to_quad_count[nid]++] =
+              q->p.piggy3.which_tree;
+          }
+        }
+      }
+    }
+#ifdef P4EST_DEBUG
+    for (qid = 0; qid < ntq_offset[N]; qid++) {
+      P4EST_ASSERT (node_to_tree[qid] >= 0);
+    }
+#endif
+
+    P4EST_FREE (node_to_quad_count);
+    P4EST_FREE (quad_to_node_global_ghost);
+  }
 
   /* post recvs */
   for (p = 0, num_peers = 0; p < mpisize; p++) {
@@ -2969,99 +3164,174 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
                                                            (size_t) mpf[zm]);
       p4est_locidx_t      t = mq->p.piggy3.which_tree;
 
-      /* for every face */
-      for (f = 0; f < P4EST_FACES; f++) {
-        p4est_quadrant_t    nq;
-        p4est_topidx_t      nt;
-        int                 nf;
+      if (lnodes) {
+        /* construct adjacency via lnodes */
+        int                 v, vnodes = lnodes->vnodes;
+        p4est_locidx_t      qid = mq->p.piggy3.local_num;
 
-        nf = (f ^ 1);
-        nt = t;
+        for (v = 0; v < vnodes; v++) {
+          p4est_locidx_t      nid = lnodes->element_nodes[qid * vnodes + v];
+          p4est_locidx_t      qstart, qend, il;
+          int                 owner = -1;
 
-        /* get the neighbor */
-        nt = p4est_quadrant_face_neighbor_extra (mq, t, f, &nq, &nf, conn);
-        if (nt == -1) {
+          qstart = ntq_offset[nid];
+          qend = ntq_offset[nid + 1];
+          P4EST_ASSERT (qend > qstart);
+
+          for (il = qstart; il < qend; il++) {
+            p4est_locidx_t      nqid = node_to_quad[il];
+            p4est_topidx_t      nt = node_to_tree[il];
+            p4est_quadrant_t    qtemp;
+            p4est_quadrant_t   *q;
+            int                 already_in_mirrors = 0;
+
+            P4EST_ASSERT ((double) nqid == (double) nqid);
+            P4EST_ASSERT ((double) qid == (double) qid);
+            if (nqid == qid) {
+              continue;
+            }
+            if (nqid < 0) {
+              /* ghost */
+              size_t              idx = (size_t) - (nqid + 1);
+              q = p4est_quadrant_array_index (&ghost->ghosts, idx);
+              owner = p4est_comm_find_owner (p4est, nt, q, mpirank);
+            }
+            else {
+              /* local */
+              ssize_t             idx;
+              p4est_tree_t       *tree =
+                p4est_tree_array_index (p4est->trees, nt);
+              q =
+                p4est_quadrant_array_index (&tree->quadrants,
+                                            nqid - tree->quadrants_offset);
+
+              owner = mpirank;
+              qtemp = *q;
+
+              qtemp.p.piggy3.which_tree = nt;
+              qtemp.p.piggy3.local_num = qid;
+
+              idx =
+                sc_array_bsearch (mirrors, &qtemp,
+                                  p4est_quadrant_compare_piggy);
+              if (idx >= 0) {
+                p4est_locidx_t      key = (p4est_locidx_t) idx;
+
+                idx = sc_array_bsearch (&pview, &key, p4est_locidx_compare);
+
+                if (idx >= 0) {
+                  already_in_mirrors = 1;
+                }
+              }
+            }
+            if (!already_in_mirrors && owner != p) {
+              p4est_ghost_expand_insert (q, nt, nqid < 0 ? -(nqid + 1) : nqid,
+                                         send_bufs, p, owner,
+                                         nqid < 0 ? 1 : 0);
+            }
+          }
+        }
+      }
+      else {
+        /* for every face */
+        for (f = 0; f < P4EST_FACES; f++) {
+          p4est_quadrant_t    nq;
+          p4est_topidx_t      nt;
+          int                 nf;
+
+          nf = (f ^ 1);
+          nt = t;
+
+          /* get the neighbor */
+          nt = p4est_quadrant_face_neighbor_extra (mq, t, f, &nq, &nf, conn);
+          if (nt == -1) {
+            continue;
+          }
+
+          nf = nf % P4EST_FACES;
+
+          /* add any quadrant that overlaps this neighbor and touches the mirror
+           * to the buffer */
+          p4est_ghost_expand_int (t, mq, nt, &nq, &pview, P4EST_CONNECT_FACE,
+                                  nf, tempquads, temptrees, p, p4est, ghost,
+                                  send_bufs);
+        }
+        if (btype == P4EST_CONNECT_FACE) {
           continue;
         }
 
-        nf = nf % P4EST_FACES;
-
-        /* add any quadrant that overlaps this neighbor and touches the mirror
-         * to the buffer */
-        p4est_ghost_expand_int (t, mq, nt, &nq, &pview, P4EST_CONNECT_FACE,
-                                nf, tempquads, temptrees, p, p4est, ghost,
-                                send_bufs);
-      }
-      if (btype == P4EST_CONNECT_FACE) {
-        continue;
-      }
-
 #ifdef P4_TO_P8
-      /* for every edge */
-      for (e = 0; e < P8EST_EDGES; e++) {
-        p4est_quadrant_t   *nq;
-        p4est_topidx_t      nt;
-        int                 ne;
+        /* for every edge */
+        for (e = 0; e < P8EST_EDGES; e++) {
+          p4est_quadrant_t   *nq;
+          p4est_topidx_t      nt;
+          int                 ne;
 
-        nt = t;
+          nt = t;
 
-        /* get the neighbors */
-        p8est_quadrant_edge_neighbor_extra (mq, t, e, tempquads2, temptrees2,
-                                            npoints, conn);
-
-        /* for every neighbor */
-        for (zz = 0; zz < tempquads2->elem_count; zz++) {
-          nq = p4est_quadrant_array_index (tempquads2, zz);
-          nt = *((p4est_locidx_t *) sc_array_index (temptrees2, zz));
-          ne = *((int *) sc_array_index (npoints, zz));
-          ne = ne % P8EST_EDGES;
-
-          /* add any quadrant that overlaps this neighbor and touches the mirror
-           * to the buffer */
-          p4est_ghost_expand_int (t, mq, nt, nq, &pview, P8EST_CONNECT_EDGE,
-                                  ne, tempquads, temptrees, p, p4est, ghost,
-                                  send_bufs);
-
-        }
-        sc_array_reset (tempquads2);
-        sc_array_reset (temptrees2);
-        sc_array_reset (npoints);
-      }
-      if (btype == P8EST_CONNECT_EDGE) {
-        continue;
-      }
-#endif
-      /* for every corner */
-      for (c = 0; c < P4EST_CHILDREN; c++) {
-        p4est_quadrant_t   *nq;
-        p4est_topidx_t      nt;
-        int                 nc;
-
-        nt = t;
-
-        /* get the neighbors */
-        p4est_quadrant_corner_neighbor_extra (mq, t, c, tempquads2,
+          /* get the neighbors */
+          p8est_quadrant_edge_neighbor_extra (mq, t, e, tempquads2,
                                               temptrees2, npoints, conn);
 
-        /* for every neighbor */
-        for (zz = 0; zz < tempquads2->elem_count; zz++) {
-          nq = p4est_quadrant_array_index (tempquads2, zz);
-          nt = *((p4est_locidx_t *) sc_array_index (temptrees2, zz));
-          nc = *((int *) sc_array_index (npoints, zz));
+          /* for every neighbor */
+          for (zz = 0; zz < tempquads2->elem_count; zz++) {
+            nq = p4est_quadrant_array_index (tempquads2, zz);
+            nt = *((p4est_locidx_t *) sc_array_index (temptrees2, zz));
+            ne = *((int *) sc_array_index (npoints, zz));
+            ne = ne % P8EST_EDGES;
 
-          /* add any quadrant that overlaps this neighbor and touches the mirror
-           * to the buffer */
-          p4est_ghost_expand_int (t, mq, nt, nq, &pview, P4EST_CONNECT_CORNER,
-                                  nc, tempquads, temptrees, p, p4est, ghost,
-                                  send_bufs);
+            /* add any quadrant that overlaps this neighbor and touches the mirror
+             * to the buffer */
+            p4est_ghost_expand_int (t, mq, nt, nq, &pview, P8EST_CONNECT_EDGE,
+                                    ne, tempquads, temptrees, p, p4est, ghost,
+                                    send_bufs);
+
+          }
+          sc_array_reset (tempquads2);
+          sc_array_reset (temptrees2);
+          sc_array_reset (npoints);
         }
-        sc_array_reset (tempquads2);
-        sc_array_reset (temptrees2);
-        sc_array_reset (npoints);
+        if (btype == P8EST_CONNECT_EDGE) {
+          continue;
+        }
+#endif
+        /* for every corner */
+        for (c = 0; c < P4EST_CHILDREN; c++) {
+          p4est_quadrant_t   *nq;
+          p4est_topidx_t      nt;
+          int                 nc;
+
+          nt = t;
+
+          /* get the neighbors */
+          p4est_quadrant_corner_neighbor_extra (mq, t, c, tempquads2,
+                                                temptrees2, npoints, conn);
+
+          /* for every neighbor */
+          for (zz = 0; zz < tempquads2->elem_count; zz++) {
+            nq = p4est_quadrant_array_index (tempquads2, zz);
+            nt = *((p4est_locidx_t *) sc_array_index (temptrees2, zz));
+            nc = *((int *) sc_array_index (npoints, zz));
+
+            /* add any quadrant that overlaps this neighbor and touches the mirror
+             * to the buffer */
+            p4est_ghost_expand_int (t, mq, nt, nq, &pview,
+                                    P4EST_CONNECT_CORNER, nc, tempquads,
+                                    temptrees, p, p4est, ghost, send_bufs);
+          }
+          sc_array_reset (tempquads2);
+          sc_array_reset (temptrees2);
+          sc_array_reset (npoints);
+        }
       }
     }
 
     sc_array_reset (&pview);
+  }
+  if (lnodes) {
+    P4EST_FREE (ntq_offset);
+    P4EST_FREE (node_to_quad);
+    P4EST_FREE (node_to_tree);
   }
   sc_array_destroy (tempquads);
   sc_array_destroy (temptrees);
@@ -3489,6 +3759,19 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_expand\n");
 #endif
+}
+
+void
+p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
+{
+  p4est_ghost_expand_internal (p4est, NULL, ghost);
+}
+
+void
+p4est_ghost_expand_by_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
+                              p4est_ghost_t * ghost)
+{
+  p4est_ghost_expand_internal (p4est, lnodes, ghost);
 }
 
 int

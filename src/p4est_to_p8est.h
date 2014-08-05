@@ -361,6 +361,7 @@
 #define p4est_lnodes_new                p8est_lnodes_new
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
 #define p4est_ghost_support_lnodes      p8est_ghost_support_lnodes
+#define p4est_ghost_expand_by_lnodes    p8est_ghost_expand_by_lnodes
 #define p4est_lnodes_decode             p8est_lnodes_decode
 #define p4est_lnodes_share_owned_begin  p8est_lnodes_share_owned_begin
 #define p4est_lnodes_share_owned_end    p8est_lnodes_share_owned_end
