@@ -3665,12 +3665,9 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
     e_left = p8est_face_edges[face_left][i];
 
     for (j = 0; j < 2; j++) {
-      /* get corners of that edge */
-      c[j] = p8est_edge_corners[e_left][j];
-
-      /* use the permutation to get the equivalent number from face_right */
+      /* get corners of that edge and their numbers seen from face_right */
       c[j] = p8est_connectivity_face_neighbor_corner
-        (c[j], face_left, face_right, set);
+        (p8est_edge_corners[e_left][j], face_left, face_right, set);
     }
     /* now from the two corners, we can figure out e_right */
     e_right = p8est_child_corner_edges[c[0]][c[1]];

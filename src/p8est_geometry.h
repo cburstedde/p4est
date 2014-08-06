@@ -72,12 +72,14 @@ void                p8est_geometry_destroy (p8est_geometry_t * geom);
  * The transformation is constructed using trilinear interpolation.
  * \param [in] conn A p8est_connectivity_t with valid vertices.  We do NOT
  *                  take ownership and expect this structure to stay alive.
+ * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
                                                      conn);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
+ *                  We do NOT take ownership and expect it to stay alive.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
  * \return          Geometry structure; use with p4est_geometry_destroy.
@@ -86,7 +88,8 @@ p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t * conn,
                                               double R2, double R1);
 
 /** Create a geometry structure for the solid sphere of 13 trees.
- * \param [in] conn Obtained with p8est_connectivity_new_sphere or equivalent.
+ * \param [in] conn Result of p8est_connectivity_new_sphere or equivalent.
+ *                  We do NOT take ownership and expect it to stay alive.
  * \param [in] R2   The outer radius of the sphere.
  * \param [in] R1   The outer radius of the inner shell.
  * \param [in] R0   The inner radius of the inner shell.
