@@ -2814,7 +2814,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
       /* create the send buffer */
       shared = &(lrank->shared_nodes);
       nshared = (p4est_locidx_t) shared->elem_count;
-      send_quads = sc_array_index_int (send_all, i);
+      send_quads = (sc_array_t *) sc_array_index_int (send_all, i);
       sc_array_init (send_quads, sizeof (p4est_quadrant_t));
       for (il = 0; il < nshared; il++) {
         p4est_locidx_t      startquad, endquad, qid;
@@ -2973,7 +2973,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
       if (p == self) {
         continue;
       }
-      send_quads = sc_array_index_int (send_all, i);
+      send_quads = (sc_array_t *) sc_array_index_int (send_all, i);
       if (send_quads->elem_count) {
         p4est_locidx_t      il, startidx, endidx;
         p4est_locidx_t      old_offset = mirror_proc_offsets[p];
@@ -3055,7 +3055,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
       new_proc_counts[p] += recv_count;
 
-      recv_quads = sc_array_index (recv_all, i);
+      recv_quads = (sc_array_t *) sc_array_index (recv_all, i);
       sc_array_init_size (recv_quads, sizeof (p4est_quadrant_t),
                           (size_t) recv_count);
       if (recv_count) {
@@ -3108,7 +3108,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
         continue;
       }
 
-      recv_quads = sc_array_index (recv_all, i);
+      recv_quads = (sc_array_t *) sc_array_index (recv_all, i);
 
       if (recv_quads->elem_count) {
         p4est_quadrant_t   *dest, *src;
