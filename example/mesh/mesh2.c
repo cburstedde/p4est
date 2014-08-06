@@ -37,13 +37,11 @@
 #include <p4est_extended.h>
 #include <p4est_mesh.h>
 #include <p4est_vtk.h>
-#include <p4est_bits.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_mesh.h>
 #include <p8est_vtk.h>
-#include <p8est_bits.h>
 #endif
 
 typedef enum
