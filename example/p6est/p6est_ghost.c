@@ -384,7 +384,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
       glast = *((p4est_locidx_t *) sc_array_index
                 (ghost->column_layer_offsets, zz + 1));
 
-      P4EST_ASSERT ((glast - gfirst) == last - first);
+      P4EST_ASSERT ((size_t) (glast - gfirst) == last - first);
 
       for (zy = gfirst; zy < (size_t) glast; zy++) {
         layer = p2est_quadrant_array_index (&ghost->ghosts, zy);
