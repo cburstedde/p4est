@@ -3438,7 +3438,7 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   /* open file on all processors */
 
   src = sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
-  SC_CHECK_ABORT (src != NULL, "file source");
+  SC_CHECK_ABORT (src != NULL, "file source: possibly file not found");
 
   p4est = p4est_source_ext (src, mpicomm, data_size, load_data, autopartition,
                             broadcasthead, user_pointer, connectivity);
