@@ -463,27 +463,21 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
 
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
 
-  mesh = P4EST_ALLOC (p4est_mesh_t, 1);
+  mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
   ng = mesh->ghost_num_quadrants = (p4est_locidx_t) ghost->ghosts.elem_count;
 
-  mesh->local_num_corners = 0;
-  mesh->quad_to_corner = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
   mesh->corner_offset = sc_array_new (sizeof (p4est_locidx_t));
-  mesh->corner_quad = NULL;
-  mesh->corner_corner = NULL;
 
   if (btype == P4EST_CONNECT_FULL) {
     do_corner = 1;
+    mesh->quad_to_corner = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
   }
   do_volume = (compute_tree_index || compute_level_lists ? 1 : 0);
 
   if (compute_tree_index) {
     mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
-  }
-  else {
-    mesh->quad_to_tree = NULL;
   }
 
   mesh->ghost_to_proc = P4EST_ALLOC (int, ng);
@@ -497,9 +491,6 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     for (jl = 0; jl < P4EST_QMAXLEVEL; ++jl) {
       sc_array_init (mesh->quad_level + jl, sizeof (p4est_locidx_t));
     }
-  }
-  else {
-    mesh->quad_level = NULL;
   }
 
   /* Populate ghost information */
@@ -515,8 +506,10 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   /* Fill arrays with default values */
   memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
   memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
-  memset (mesh->quad_to_corner, -1, P4EST_CHILDREN * lq *
-          sizeof (p4est_locidx_t));
+  if (do_corner) {
+    memset (mesh->quad_to_corner, -1, P4EST_CHILDREN * lq *
+            sizeof (p4est_locidx_t));
+  }
 
   /* Call the forest iterator to collect face connectivity */
   p4est_iterate (p4est, ghost, mesh,

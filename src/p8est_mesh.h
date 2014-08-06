@@ -137,7 +137,7 @@ size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
 /** Create a p8est_mesh structure.
  * \param [in] p8est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
- * \param [in] btype    Currently ignored, only face neighbors are stored.
+ * \param [in] btype    Determines the highest codimension of neighbors.
  * \return              A fully allocated mesh structure.
  */
 p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
