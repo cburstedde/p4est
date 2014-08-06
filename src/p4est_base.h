@@ -54,6 +54,7 @@ typedef int32_t     p4est_qcoord_t;
 #define p4est_qcoord_compare sc_int32_compare
 #define P4EST_MPI_QCOORD sc_MPI_INT
 #define P4EST_VTK_QCOORD "Int32"
+#define P4EST_F90_QCOORD INTEGER(KIND=C_INT32_T)
 #define P4EST_QCOORD_MIN INT32_MIN
 #define P4EST_QCOORD_MAX INT32_MAX
 #define P4EST_QCOORD_1   ((p4est_qcoord_t) 1)
@@ -63,6 +64,7 @@ typedef int32_t     p4est_topidx_t;
 #define p4est_topidx_compare sc_int32_compare
 #define P4EST_MPI_TOPIDX sc_MPI_INT
 #define P4EST_VTK_TOPIDX "Int32"
+#define P4EST_F90_TOPIDX INTEGER(KIND=C_INT32_T)
 #define P4EST_TOPIDX_MIN INT32_MIN
 #define P4EST_TOPIDX_MAX INT32_MAX
 #define P4EST_TOPIDX_FITS_32 1
@@ -73,6 +75,7 @@ typedef int32_t     p4est_locidx_t;
 #define p4est_locidx_compare sc_int32_compare
 #define P4EST_MPI_LOCIDX sc_MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
+#define P4EST_F90_LOCIDX INTEGER(KIND=C_INT32_T)
 #define P4EST_LOCIDX_MIN INT32_MIN
 #define P4EST_LOCIDX_MAX INT32_MAX
 #define P4EST_LOCIDX_1   ((p4est_locidx_t) 1)
@@ -82,6 +85,7 @@ typedef int64_t     p4est_gloidx_t;
 #define p4est_gloidx_compare sc_int64_compare
 #define P4EST_MPI_GLOIDX sc_MPI_LONG_LONG_INT
 #define P4EST_VTK_GLOIDX "Int64"
+#define P4EST_F90_GLOIDX INTEGER(KIND=C_INT64_T)
 #define P4EST_GLOIDX_MIN INT64_MIN
 #define P4EST_GLOIDX_MAX INT64_MAX
 #define P4EST_GLOIDX_1   ((p4est_gloidx_t) 1)
