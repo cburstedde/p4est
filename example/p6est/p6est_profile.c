@@ -711,7 +711,6 @@ p6est_profile_balance_local (p6est_profile_t * profile)
 {
   p4est_lnodes_t     *lnodes = profile->lnodes;
   p4est_locidx_t      nln, nle;
-  size_t              count;
   p4est_locidx_t     *en, (*lr)[2];
   sc_array_t         *lc;
   int                 i, j;
@@ -837,7 +836,6 @@ p6est_profile_balance_local (p6est_profile_t * profile)
             else {
               thisprof = faceprof;
             }
-            count = thisprof->elem_count;
             P4EST_ASSERT (lr[nidx][1]);
             /* if this node has been initialized, combine the two profiles,
              * taking the finer layers from each */
@@ -1066,7 +1064,6 @@ p6est_profile_sync (p6est_profile_t * profile)
       for (zy = 0; zy < nnode; zy++) {
         p4est_locidx_t     *lp;
         p4est_locidx_t      nidx;
-        p4est_locidx_t      count;
         sc_array_t          oldview, newview;
 
         nidx = *((p4est_locidx_t *) sc_array_index (shared_nodes, zy));
@@ -1078,7 +1075,6 @@ p6est_profile_sync (p6est_profile_t * profile)
         if (profile->ptype == P6EST_PROFILE_UNION) {
           p6est_profile_union (&oldview, &newview, work);
 
-          count = work->elem_count;
           if (work->elem_count > oldview.elem_count) {
             int8_t             *c;
 

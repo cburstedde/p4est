@@ -47,7 +47,6 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   p4est_gloidx_t      gnum_owned, offset;
   p4est_gloidx_t     *owned_offsets;
   int                 i, j, k;
-  int                 is_owned;
   int                 mpisize = p6est->mpisize;
   int                 mpiret;
   sc_array_t          lnoview;
@@ -236,7 +235,6 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
     for (j = 0; j < Nrp; j++) {
       for (i = 0; i < Nrp; i++, enid++) {
         ncid = en[enid];
-        is_owned = (ncid < clnodes->owned_count);
         nlayers = lr[ncid][1];
         P4EST_ASSERT (nlayers);
         ncolnodes = nlayers * degree + 1;

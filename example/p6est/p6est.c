@@ -327,33 +327,6 @@ p6est_memory_used (p6est_t * p6est)
   return size;
 }
 
-static int
-p8est_connectivity_is_flat (p8est_connectivity_t * conn8)
-{
-  p4est_topidx_t      num_trees = conn8->num_trees;
-  p4est_topidx_t      ti;
-  p4est_topidx_t      j;
-
-  P4EST_ASSERT (p8est_connectivity_is_valid (conn8));
-  for (ti = 0; ti < num_trees; ti++) {
-    for (j = 4; j < 6; j++) {
-      if (conn8->tree_to_tree[P8EST_FACES * ti + j] != ti) {
-        return 0;
-      }
-      if (conn8->tree_to_face[P8EST_FACES * ti + j] != j) {
-        return 0;
-      }
-    }
-    for (j = 0; j < 8; j++) {
-      if (conn8->tree_to_edge[P8EST_EDGES * ti + j] != -1) {
-        return 0;
-      }
-    }
-  }
-
-  return 1;
-}
-
 typedef struct p6est_init_data
 {
   int                 min_zlevel;
@@ -1419,20 +1392,6 @@ p6est_coarsen_column_int (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-p2est_quadrant_compare (const void *A, const void *B)
-{
-  const p2est_quadrant_t *a = (const p2est_quadrant_t *) A;
-  const p2est_quadrant_t *b = (const p2est_quadrant_t *) B;
-  p4est_qcoord_t      diff = a->z - b->z;
-
-  if (!diff) {
-    return (int) a->level - b->level;
-  }
-
-  return (int) diff;
-}
-
-static int
 p2est_quadrant_is_equal (p2est_quadrant_t * a, p2est_quadrant_t * b)
 {
   return (a->z == b->z && a->level == b->level);
@@ -2358,14 +2317,12 @@ unsigned
 p6est_checksum (p6est_t * p6est)
 {
   uLong               columncrc, locallayercrc, layercrc;
-  size_t              nlayers;
   sc_array_t          checkarray;
   size_t              scount, globalscount;
 
   columncrc = p4est_checksum (p6est->columns);
 
   sc_array_init (&checkarray, 4);
-  nlayers = p6est->layers->elem_count;
   locallayercrc =
     (uLong) p2est_quadrant_checksum (p6est->layers, &checkarray, 0);
   scount = 4 * checkarray.elem_count;

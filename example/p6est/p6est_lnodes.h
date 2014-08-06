@@ -239,7 +239,7 @@ p6est_lnodes_share_all (sc_array_t * node_data, p6est_lnodes_t * lnodes)
 }
 
 /*@unused@*/
-static void
+static inline void
 p6est_lnodes_buffer_destroy (p6est_lnodes_buffer_t * buffer)
 {
   p8est_lnodes_buffer_destroy (buffer);
