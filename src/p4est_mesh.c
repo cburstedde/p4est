@@ -105,6 +105,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         if (visited[j]) {
           continue;
         }
+
         /* Remember the first side we want to pair up */
         if (side1 == NULL) {
           side1 =
@@ -119,6 +120,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           visited[j] = 1;
           continue;
         }
+
         /* Examine a potential second side */
         P4EST_ASSERT (side2 == NULL);
         side2 =
@@ -130,6 +132,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           side2 = NULL;
           continue;
         }
+
         /* This side as in the opposite tree */
         fc2 = p4est_corner_face_corners[side2->corner][f2];
         P4EST_ASSERT (0 <= fc2 && fc2 < P4EST_HALF);
@@ -144,37 +147,37 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 #else
         diagonal = (fc1 ^ fc2) != orientation;
 #endif
-        if (diagonal) {
-          /* We have found a diagonally opposite second side */
-          tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
-          qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
-                                  : tree2->quadrants_offset);
-          if (!side1->is_ghost) {
-            P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-            P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                               side1->corner] == -1);
-            mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] =
-              qid2;
-          }
-          if (!side2->is_ghost) {
-            P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
-            P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid2 +
-                                               side2->corner] == -1);
-            mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] =
-              qid1;
-          }
-          visited[j] = 1;
-          break;
-        }
-        else {
+        if (!diagonal) {
           side2 = NULL;
+          continue;
         }
+
+        /* We have found a diagonally opposite second side */
+        /* TODO: store in to corner_to_* fields as written in p4est_mesh.h */
+        tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
+        qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
+                                : tree2->quadrants_offset);
+        if (!side1->is_ghost) {
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                             side1->corner] == -1);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = qid2;
+        }
+        if (!side2->is_ghost) {
+          P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid2 +
+                                             side2->corner] == -1);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] = qid1;
+        }
+        visited[j] = 1;
+        break;
       }
       P4EST_ASSERT (side1 != NULL && side2 != NULL);
     }
     return;
   }
-  else if (info->tree_boundary) {
+
+  if (info->tree_boundary) {
     /* Other tree boundary corners are not implemented yet: set to -2 */
     for (zz = 0; zz < cz; ++zz) {
       side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
@@ -204,6 +207,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       if (visited[j]) {
         continue;
       }
+
       /* Remember the first side we want to pair up */
       if (side1 == NULL) {
         side1 =
@@ -213,33 +217,34 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         visited[j] = 1;
         continue;
       }
+
       /* Examine a potential second side */
       P4EST_ASSERT (side2 == NULL);
       side2 =
         (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, j);
       P4EST_ASSERT (side1->treeid == side2->treeid);
-      if (side1->corner + side2->corner == P4EST_CHILDREN - 1) {
-        /* We have found a diagonally opposite second side */
-        qid2 = side2->quadid +
-          (side2->is_ghost ? mesh->local_num_quadrants : qoffset);
-        if (!side1->is_ghost) {
-          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                             side1->corner] == -1);
-          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = qid2;
-        }
-        if (!side2->is_ghost) {
-          P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
-          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid2 +
-                                             side2->corner] == -1);
-          mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] = qid1;
-        }
-        visited[j] = 1;
-        break;
-      }
-      else {
+      if (side1->corner + side2->corner != P4EST_CHILDREN - 1) {
         side2 = NULL;
+        continue;
       }
+
+      /* We have found a diagonally opposite second side */
+      qid2 = side2->quadid +
+        (side2->is_ghost ? mesh->local_num_quadrants : qoffset);
+      if (!side1->is_ghost) {
+        P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                           side1->corner] == -1);
+        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = qid2;
+      }
+      if (!side2->is_ghost) {
+        P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid2 +
+                                           side2->corner] == -1);
+        mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] = qid1;
+      }
+      visited[j] = 1;
+      break;
     }
     P4EST_ASSERT (side1 != NULL && side2 != NULL);
   }
