@@ -67,17 +67,21 @@ SC_EXTERN_C_BEGIN;
  * A quadrant on the boundary of the forest sees itself and its face number.
  *
  * The quad_to_corner list stores corner neighbors that are not face or edge
- * neighbors.  On the inside of a tree or inside an inter-tree face, there is
- * precisely one such neighbor per corner.  In this case, its index is encoded
- * as described above for quad_to_quad.
- * On the other hand, if a corner is an inter-tree corner or inside an inter-tree
- * edge, then the number of corner neighbors may be any non-negative number.
- * In this case, the value is
- * in local_num_quadrants + local_num_ghosts + [0 .. num_corners - 1].
+ * neighbors.  On the inside of a tree, there is precisely one such neighbor
+ * per corner.  In this case, its index is encoded as described above for
+ * quad_to_quad.  The neighbor's matching corner number is always diagonally
+ * opposite.
+ *
+ * On the inside of an inter-tree face, we have precisely one corner neighbor.
+ * If a corner is across an inter-tree edge or corner, then the number of
+ * corner neighbors may be any non-negative number.  In all inter-tree cases,
+ * the quad_to_corner value is in
+ *    local_num_quadrants + local_num_ghosts + [0 .. num_corners - 1].
  * It indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
- * Inter-tree/tree-edge corners are NOT YET IMPLEMENTED and set to -2.
+ *
+ * Inter-tree corners are NOT YET IMPLEMENTED and are assigned the value -2.
  * Corners with no diagonal neighbor at all are assigned the value -1.
  */
 typedef struct
@@ -86,7 +90,7 @@ typedef struct
   p4est_locidx_t      ghost_num_quadrants;
 
   p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad,
-                                             NULL by default. */
+                                             NULL by default */
   int                *ghost_to_proc;    /**< processor for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 6 faces */
@@ -95,7 +99,8 @@ typedef struct
   sc_array_t         *quad_level;       /**< stores lists of per-level quads,
                                              NULL by default */
 
-  /* CAUTION: tree-boundary/tree-edge corners not yet implemented */
+  /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
+  /* CAUTION: tree-boundary corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 8 indices for each local quad */
   sc_array_t         *corner_offset;    /* has num_corners + 1 entries */
