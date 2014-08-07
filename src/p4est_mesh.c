@@ -429,8 +429,8 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   }
 
   if (mesh->quad_level != NULL) {
-    ql_memory = sizeof (sc_array_t) * P4EST_QMAXLEVEL;
-    for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
+    ql_memory = sizeof (sc_array_t) * (P4EST_QMAXLEVEL + 1);
+    for (level = 0; level <= P4EST_QMAXLEVEL; ++level) {
       ql_memory += sc_array_memory_used (mesh->quad_level + level, 0);
     }
   }
@@ -486,9 +486,9 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
 
   if (compute_level_lists) {
-    mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL);
+    mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL + 1);
 
-    for (jl = 0; jl < P4EST_QMAXLEVEL; ++jl) {
+    for (jl = 0; jl <= P4EST_QMAXLEVEL; ++jl) {
       sc_array_init (mesh->quad_level + jl, sizeof (p4est_locidx_t));
     }
   }
@@ -533,7 +533,7 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   }
 
   if (mesh->quad_level != NULL) {
-    for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
+    for (level = 0; level <= P4EST_QMAXLEVEL; ++level) {
       sc_array_reset (mesh->quad_level + level);
     }
     P4EST_FREE (mesh->quad_level);
