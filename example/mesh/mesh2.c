@@ -142,7 +142,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   int                 nrank;
   p4est_topidx_t      which_tree;
   p4est_locidx_t      K, kl;
-  p4est_locidx_t      ql, QpG;
+  p4est_locidx_t      ql, QpG, lnC;
   p4est_locidx_t      qlid, qumid, quadrant_id, which_quad;
   p4est_mesh_face_neighbor_t mfn, mfn2;
   p4est_quadrant_t   *q;
@@ -151,6 +151,8 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   K = mesh->local_num_quadrants;
   P4EST_ASSERT (K == p4est->local_num_quadrants);
   QpG = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
+  lnC = mesh->local_num_corners;
+  P4EST_ASSERT (lnC >= 0);
 
   P4EST_ASSERT (compute_tree_index == (mesh->quad_to_tree != NULL));
   P4EST_ASSERT (compute_level_lists == (mesh->quad_level != NULL));
@@ -172,7 +174,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       for (c = 0; c < P4EST_CHILDREN; ++c) {
         qlid = mesh->quad_to_corner[P4EST_CHILDREN * kl + c];
         SC_CHECK_ABORTF (qlid >= -2
-                         && qlid < QpG, "quad %lld corner %d mismatch",
+                         && qlid < QpG + lnC, "quad %lld corner %d mismatch",
                          (long long) kl, c);
       }
     }

@@ -75,7 +75,8 @@ SC_EXTERN_C_BEGIN;
  * If a corner is an inter-tree corner, then the number of corner neighbors
  * may be any non-negative number.  In both cases, the quad_to_corner value
  * is in
- *    local_num_quadrants + local_num_ghosts + [0 .. num_corners - 1].
+ *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1]
+ * where the offset by local quadrants and ghosts is implicitly substracted.
  * It indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
@@ -102,7 +103,7 @@ typedef struct
   /* CAUTION: tree-boundary corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 4 indices for each local quad */
-  sc_array_t         *corner_offset;    /* has num_corners + 1 entries */
+  sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
   sc_array_t         *corner_quad;      /* corner_offset indexes into this */
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
 }

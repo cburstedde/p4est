@@ -62,6 +62,35 @@ tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
   SC_ABORT_NOT_REACHED ();
 }
 
+static              p4est_locidx_t
+mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
+                      p4est_locidx_t ** pcquad, int8_t ** pccorner)
+{
+  p4est_locidx_t      cornerid, cstart, cend;
+
+  P4EST_ASSERT (clen > 0);
+  P4EST_ASSERT (mesh->corner_offset->elem_count ==
+                (size_t) (mesh->local_num_corners + 1));
+
+  cornerid = mesh->local_num_corners++;
+  cstart = *(p4est_locidx_t *) sc_array_index (mesh->corner_offset, cornerid);
+  cend = cstart + clen;
+  *(p4est_locidx_t *) sc_array_push (mesh->corner_offset) = cend;
+
+  P4EST_ASSERT (mesh->corner_offset->elem_count ==
+                (size_t) (mesh->local_num_corners + 1));
+
+  P4EST_ASSERT (mesh->corner_quad->elem_count == (size_t) cstart);
+  *pcquad = (p4est_locidx_t *) sc_array_push_count (mesh->corner_quad, clen);
+  P4EST_ASSERT (mesh->corner_quad->elem_count == (size_t) cend);
+
+  P4EST_ASSERT (mesh->corner_corner->elem_count == (size_t) cstart);
+  *pccorner = (int8_t *) sc_array_push_count (mesh->corner_corner, clen);
+  P4EST_ASSERT (mesh->corner_corner->elem_count == (size_t) cend);
+
+  return cornerid;
+}
+
 static void
 mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
@@ -71,9 +100,12 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 #ifdef P4_TO_P8
   int                 pref, pset;
 #endif
+  int8_t             *pccorner;
   int8_t              visited[P4EST_CHILDREN];
   size_t              cz, zz;
   p4est_locidx_t      qoffset, qid1, qid2;
+  p4est_locidx_t      cornerid_offset, cornerid;
+  p4est_locidx_t     *pcquad;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_iter_corner_side_t *side1, *side2;
   p4est_tree_t       *tree1, *tree2;
@@ -93,6 +125,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       return;
     }
     P4EST_ASSERT (cz == P4EST_CHILDREN);
+    cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
     /* Process a corner in pairs of diagonal inter-tree neighbors */
     memset (visited, 0, P4EST_CHILDREN * sizeof (int8_t));
@@ -153,7 +186,6 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         }
 
         /* We have found a diagonally opposite second side */
-        /* TODO: store in to corner_to_* fields as written in p4est_mesh.h */
         tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
         qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
                                 : tree2->quadrants_offset);
@@ -161,13 +193,21 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
           P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
                                              side1->corner] == -1);
-          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = qid2;
+          cornerid = mesh_corner_allocate (mesh, 1, &pcquad, &pccorner);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] =
+            cornerid_offset + cornerid;
+          *pcquad = qid2;
+          *pccorner = side2->corner;
         }
         if (!side2->is_ghost) {
           P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
           P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid2 +
                                              side2->corner] == -1);
-          mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] = qid1;
+          cornerid = mesh_corner_allocate (mesh, 1, &pcquad, &pccorner);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid2 + side2->corner] =
+            cornerid_offset + cornerid;
+          *pcquad = qid1;
+          *pccorner = side1->corner;
         }
         visited[j] = 1;
         break;
