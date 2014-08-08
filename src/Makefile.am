@@ -25,7 +25,7 @@ libp4est_compiled_sources += \
         src/p4est_points.c src/p4est_geometry.c \
         src/p4est_iterate.c src/p4est_lnodes.c src/p4est_mesh.c \
         src/p4est_balance.c src/p4est_io.c \
-        src/p4est_wrap.c
+        src/p4est_wrap.c src/p4est_plex.c
 endif
 if P4EST_ENABLE_BUILD_3D
 libp4est_installed_headers += \
