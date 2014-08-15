@@ -100,8 +100,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 #ifdef P4_TO_P8
   int                 pref, pset;
 #endif
+  int                 visited[P4EST_CHILDREN];
   int8_t             *pccorner;
-  int8_t              visited[P4EST_CHILDREN];
   size_t              cz, zz;
   p4est_locidx_t      qoffset, qid1, qid2;
   p4est_locidx_t      cornerid_offset, cornerid;
@@ -128,7 +128,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
     /* Process a corner in pairs of diagonal inter-tree neighbors */
-    memset (visited, 0, P4EST_CHILDREN * sizeof (int8_t));
+    memset (visited, 0, P4EST_CHILDREN * sizeof (int));
     for (i = 0; i < P4EST_HALF; ++i) {
       side1 = side2 = NULL;
       f1 = -1;
@@ -217,8 +217,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     return;
   }
 
-  if (info->tree_boundary) {
-    /* Other tree boundary corners are not implemented yet: set to -2 */
+#ifdef P4_TO_P8
+  if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+    /* Tree corner neighbors across an edge are not implemented: set to -2 */
     for (zz = 0; zz < cz; ++zz) {
       side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
       if (!side1->is_ghost) {
@@ -226,9 +227,24 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         qid1 = side1->quadid + tree1->quadrants_offset;
         P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
         P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                           side1->corner] <= -1);
+                                           side1->corner] == -1);
+        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -2;
+      }
+    }
+    return;
+  }
+#endif
+
+  if (info->tree_boundary == P4EST_CONNECT_CORNER) {
+    /* True tree corner neighbors are not implemented yet: set to -2 */
+    for (zz = 0; zz < cz; ++zz) {
+      side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
+      if (!side1->is_ghost) {
+        tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+        qid1 = side1->quadid + tree1->quadrants_offset;
+        P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
         P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                           side1->corner] >= -2);
+                                           side1->corner] == -1);
         mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -2;
       }
     }
@@ -236,10 +252,11 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   }
 
   /* Process a corner inside the tree in pairs of diagonal neighbors */
+  P4EST_ASSERT (!info->tree_boundary);
   side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, 0);
   tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
   qoffset = tree1->quadrants_offset;
-  memset (visited, 0, P4EST_CHILDREN * sizeof (int8_t));
+  memset (visited, 0, P4EST_CHILDREN * sizeof (int));
   for (i = 0; i < P4EST_HALF; ++i) {
     side1 = side2 = NULL;
     qid1 = -3;
