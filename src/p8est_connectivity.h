@@ -336,6 +336,20 @@ p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
+/** Broadcast a connectivity structure which exists only on one
+ *  process to all other processes.
+ *  \param [in] conn_in For the root process the connectivity to be broadcasted,
+ *                      for the other processes this variable is not touched.
+ *  \param [in] root    The process id of the root process.
+ *  \param [in] comm    The MPI communicator.
+ *  \return             A pointer to a newly allocated connectivity structure with
+ *                      the same values as conn_in on the root process.
+ *                      For the root process this is a pointer to conn_in.
+ */
+p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t *
+                                                conn_in, int root,
+                                                sc_MPI_Comm comm);
+
 /** Destroy a connectivity structure.  Also destroy all attributes.
  */
 void                p8est_connectivity_destroy (p8est_connectivity_t *

@@ -215,6 +215,133 @@ p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees,
   return conn;
 }
 
+p4est_connectivity_t *
+p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
+                          sc_MPI_Comm mpicomm)
+{
+#ifdef P4_TO_P8
+  p4est_topidx_t      dims_buffer[6];
+  int                 num_dims = 6;
+#else
+  p4est_topidx_t      dims_buffer[4];
+  int                 num_dims = 4;
+#endif
+  int                 mpirank, mpiret;
+  p4est_connectivity_t *conn;
+
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+  /* fill dims_buffer on root process */
+  if (mpirank == root) {
+    conn = conn_in;
+    dims_buffer[0] = conn->num_vertices;
+    dims_buffer[1] = conn->num_trees;
+    dims_buffer[2] = conn->num_corners;
+    dims_buffer[3] = conn->ctt_offset[conn->num_corners];       /* num_ctt */
+#ifdef P4_TO_P8
+    dims_buffer[4] = conn->num_edges;
+    dims_buffer[5] = conn->ett_offset[conn->num_edges]; /* num_ett */
+#endif
+  }
+  /* broadcast the dimensions to all processes */
+  mpiret =
+    sc_MPI_Bcast (dims_buffer, num_dims, P4EST_MPI_TOPIDX, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* allocate memory for new connectivity */
+  if (mpirank != root) {
+    conn = p4est_connectivity_new (dims_buffer[0], dims_buffer[1],
+#ifdef P4_TO_P8
+                                   dims_buffer[4], dims_buffer[5],
+#endif
+                                   dims_buffer[2], dims_buffer[3]);
+  }
+  /* broadcast the arrays if not set to NULL. If a pointer is NULL on one process
+   * then it is NULL on every process, therefore the if-constructions work */
+  if (conn->vertices != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->vertices, 3 * dims_buffer[0], sc_MPI_DOUBLE,
+                    root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  if (conn->tree_to_vertex != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->tree_to_vertex, P4EST_CHILDREN * dims_buffer[1],
+                    P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  mpiret =
+    sc_MPI_Bcast (conn->tree_to_tree, P4EST_FACES * dims_buffer[1],
+                  P4EST_MPI_TOPIDX, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  mpiret =
+    sc_MPI_Bcast (conn->tree_to_face, P4EST_FACES * dims_buffer[1],
+                  sc_MPI_BYTE, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  if (conn->tree_to_corner != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->tree_to_corner,
+                    P4EST_CHILDREN * dims_buffer[1], P4EST_MPI_TOPIDX, root,
+                    mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  if (conn->corner_to_tree != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->corner_to_tree, dims_buffer[3],
+                    P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  if (conn->corner_to_corner != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->corner_to_corner, dims_buffer[3],
+                    sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  mpiret =
+    sc_MPI_Bcast (conn->ctt_offset, dims_buffer[2],
+                  P4EST_MPI_TOPIDX, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+#ifdef P4_TO_P8
+  if (conn->tree_to_edge != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->tree_to_edge, P8EST_EDGES * dims_buffer[1],
+                    P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  if (conn->edge_to_tree != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->edge_to_tree, dims_buffer[5],
+                    P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  if (conn->edge_to_edge != NULL) {
+    mpiret =
+      sc_MPI_Bcast (conn->edge_to_edge, dims_buffer[5], sc_MPI_BYTE,
+                    root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  mpiret =
+    sc_MPI_Bcast (conn->ett_offset, dims_buffer[4], P4EST_MPI_TOPIDX,
+                  root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+#endif
+  mpiret =
+    sc_MPI_Bcast (&conn->tree_attr_bytes, 1 * sizeof (size_t), sc_MPI_BYTE,
+                  root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  if (mpirank != root)
+    p4est_connectivity_set_attr (conn, conn->tree_attr_bytes);
+  if (conn->tree_attr_bytes != 0) {
+    mpiret =
+      sc_MPI_Bcast (conn->tree_to_attr,
+                    conn->tree_attr_bytes * conn->num_trees, sc_MPI_CHAR,
+                    root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  return conn;
+}
+
 void
 p4est_connectivity_destroy (p4est_connectivity_t * conn)
 {
