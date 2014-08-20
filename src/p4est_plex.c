@@ -119,8 +119,8 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
                  p4est_lnodes_code_t *F, p4est_locidx_t *quad_to_local,
                  int8_t *quad_to_orientations,
                  int8_t *referenced,
-                 int8_t *is_parent, int8_t *node_dim,
-                 p4est_locidx_t * child_offsets, p4est_locidx_t *child_to_parent,
+                 int8_t *node_dim,
+                 p4est_locidx_t *child_offsets,
                  p4est_locidx_t *child_to_id, p4est_connectivity_t *conn)
 {
 #ifndef P4_TO_P8
@@ -442,8 +442,19 @@ p4est_locidx_compare_double (const void *A, const void *B)
 }
 
 static void
-p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
-                     p4est_lnodes_t *lnodes, int overlap, int local_first)
+p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
+                         p4est_lnodes_t *lnodes, int overlap, int local_first,
+                         p4est_locidx_t *first_local_quad,
+                         sc_array_t *out_points_per_dim,
+                         sc_array_t *out_cone_sizes,
+                         sc_array_t *out_cones,
+                         sc_array_t *out_cone_orientations,
+                         sc_array_t *out_vertex_coords,
+                         sc_array_t *out_children,
+                         sc_array_t *out_parents,
+                         sc_array_t *out_childids,
+                         sc_array_t *out_leaves,
+                         sc_array_t *out_remotes)
 {
 #ifndef P4_TO_P8
   int                 dim_limits[3] = {0, 4, 8};
@@ -452,10 +463,9 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
   int                 dim_limits[4] = {0, 6, 18, 26};
   int                 no = P4EST_FACES + P8EST_EDGES;
 #endif
-  p4est_locidx_t *cell_cones;
-  int *cell_orientations;
+  p4est_locidx_t *cones;
+  int *orientations;
   sc_array_t *child_to_parent, *child_to_id;
-  p4est_gloidx_t *quad_to_global;
   p4est_locidx_t *quad_to_local;
   int8_t *quad_to_orientations;
   int8_t *referenced;
@@ -466,7 +476,6 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
   p4est_locidx_t Klocal = p4est->local_num_quadrants;
   p4est_locidx_t K = Klocal + overlap ? G : 0;
   p4est_locidx_t Gpre, Gpost;
-  p4est_locidx_t local_quad_offset;
   int p, mpirank = p4est->mpirank;
   int mpisize = p4est->mpisize;
   p4est_locidx_t qid;
@@ -475,71 +484,79 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
   int ctype_int = p4est_connect_type_int (ghost->btype);
   p4est_locidx_t num_global, num_global_plus_children, last_global, *child_offsets;
   sc_array_t *all_global;
-
-  quad_to_global = P4EST_ALLOC (p4est_gloidx_t, K * V);
-  if (overlap) {
-    F = P4EST_ALLOC (p4est_lnodes_code_t, K);
-  }
-  else {
-    F = lnodes->face_code;
-  }
-
-  for (qid = 0; qid < Klocal * V; qid++) {
-    quad_to_global[qid] = p4est_lnodes_global_index (lnodes, qid);
-  }
+  p4est_locidx_t num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
 
   if (overlap) {
-    p4est_gloidx_t    **mirror_data;
+    /* get the face codes for ghosts */
     p4est_lnodes_code_t **mirror_data_F;
-    p4est_locidx_t num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
 
-    mirror_data = P4EST_ALLOC (p4est_gloidx_t *, ghost->mirrors.elem_count);
+    F = P4EST_ALLOC (p4est_lnodes_code_t, K);
+    memcpy (F, lnodes, K * sizeof (p4est_lnodes_code_t));
+
+    mirror_data_F = P4EST_ALLOC (p4est_lnodes_code_t *, num_mirrors);
     for (il = 0; (size_t) il < num_mirrors; il++) {
       p4est_quadrant_t   *q;
 
       q = p4est_quadrant_array_index (&ghost->mirrors, il);
-
       qid = q->p.piggy3.local_num;
-      mirror_data[il] = &quad_to_global[qid * V];
-    }
-    p4est_ghost_exchange_custom (p4est, ghost,
-                                 (size_t) V * sizeof (p4est_gloidx_t),
-                                 (void **) mirror_data,
-                                 &quad_to_global[K * V]);
-    P4EST_FREE (mirror_data);
-
-    memcpy (F, lnodes, K * sizeof (p4est_lnodes_code_t));
-
-    mirror_data_F = P4EST_ALLOC (p4est_lnodes_code_t *, ghost->mirrors.elem_count);
-    for (il = 0; (size_t) il < num_mirrors; il++) {
       mirror_data_F[il] = &F[qid];
     }
     p4est_ghost_exchange_custom (p4est, ghost,
                                  sizeof (p4est_lnodes_code_t),
                                  (void **) mirror_data_F,
-                                 &F[K]);
+                                 &F[Klocal]);
     P4EST_FREE (mirror_data_F);
   }
-
-  /* create a list of all global nodes seen */
-  all_global = sc_array_new_size (2 * sizeof (p4est_gloidx_t), V * K);
-
-  for (qid = 0; qid < K; qid++) {
-    for (v = 0; v < V; v++) {
-      p4est_gloidx_t *pair = (p4est_gloidx_t *) sc_array_index (all_global, (size_t) qid * V + v);
-
-      pair[0] = quad_to_global[qid * V + v];
-      pair[1] = qid * V + v;
-    }
+  else {
+    F = lnodes->face_code;
   }
 
-  sc_array_sort (all_global, p4est_gloidx_compare);
+  /* we use the existing lnodes global indices as our anchors to keep all of
+   * the new indices straight */
+  /* create a list of all global nodes seen */
+  {
+    p4est_gloidx_t *quad_to_global = P4EST_ALLOC (p4est_gloidx_t, K * V);
 
+    /* fill the local portion of quad_to_global */
+    for (qid = 0; qid < Klocal * V; qid++) {
+      quad_to_global[qid] = p4est_lnodes_global_index (lnodes, qid);
+    }
+    if (overlap) {
+      /* get the ghost portion of quad_to_global */
+      p4est_gloidx_t    **mirror_data;
+
+      mirror_data = P4EST_ALLOC (p4est_gloidx_t *, num_mirrors);
+      for (il = 0; (size_t) il < num_mirrors; il++) {
+        p4est_quadrant_t   *q;
+
+        q = p4est_quadrant_array_index (&ghost->mirrors, il);
+        qid = q->p.piggy3.local_num;
+        mirror_data[il] = &quad_to_global[qid * V];
+      }
+      p4est_ghost_exchange_custom (p4est, ghost,
+                                   (size_t) V * sizeof (p4est_gloidx_t),
+                                   (void **) mirror_data,
+                                   &quad_to_global[Klocal * V]);
+      P4EST_FREE (mirror_data);
+    }
+
+    all_global = sc_array_new_size (2 * sizeof (p4est_gloidx_t), V * K);
+    for (qid = 0; qid < K; qid++) {
+      for (v = 0; v < V; v++) {
+        p4est_gloidx_t *pair = (p4est_gloidx_t *) sc_array_index (all_global, (size_t) qid * V + v);
+
+        pair[0] = quad_to_global[qid * V + v];
+        pair[1] = qid * V + v;
+      }
+    }
+    P4EST_FREE (quad_to_global);
+  }
+
+  /* assign a local index to each global node referenced */
+  sc_array_sort (all_global, p4est_gloidx_compare);
+  quad_to_local = P4EST_ALLOC (p4est_locidx_t, K * V);
   num_global = 0;
   last_global = -1;
-
-  quad_to_local = P4EST_ALLOC (p4est_locidx_t, K * V);
-  quad_to_orientations = P4EST_ALLOC (int8_t, K * no);
   for (il = 0; il < K * V; il++) {
     p4est_gloidx_t *pair = (p4est_gloidx_t *) sc_array_index (all_global, (size_t) il);
     p4est_gloidx_t gidx;
@@ -551,10 +568,17 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
     }
     quad_to_local[pair[1]] = num_global - 1;
   }
+  /* remove duplicates from all_global so we can use it to search for the
+   * local index of a global index */
   sc_array_uniq (all_global, p4est_gloidx_compare);
   P4EST_ASSERT (all_global->elem_count == (size_t) num_global);
 
-  /* figure out which nodes are parents */
+  /* in lnodes, hanging faces/edges/corners are not assigned indices, they are
+   * simply references to the anchor points with a hanging type arrow.  In
+   * plex, however, all points have indices, so we have to expand these points
+   * at the end of the list of local nodes (they do not, however, get global
+   * indices) */
+  /* figure out which nodes are parents and mark node dimensions */
   is_parent = sc_array_new_size (sizeof (int8_t), num_global);
   node_dim = sc_array_new_size (sizeof (int8_t), num_global);
   memset (is_parent->array, 0, is_parent->elem_count * is_parent->elem_size);
@@ -563,7 +587,7 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
                  (int8_t *) node_dim->array);
   }
   child_offsets = P4EST_ALLOC (p4est_locidx_t, num_global+1);
-
+  /* childredn are appended to the list of global nodes */
   child_offsets[0] = num_global;
   for (il = 0; il < num_global; il++) {
     int8_t parent = *((int8_t *) sc_array_index (is_parent, (size_t) il));
@@ -583,30 +607,30 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
     }
     child_offsets[il+1] = child_offsets[il] + count;
   }
-
+  sc_array_destroy (is_parent);
   num_global_plus_children = child_offsets[num_global];
 
-  sc_array_resize (is_parent, num_global_plus_children);
+  /* expand the node_dim array so that they also have entries
+   * for children */
   sc_array_resize (node_dim, num_global_plus_children);
-  child_to_parent = sc_array_new_size (sizeof (p4est_locidx_t), num_global_plus_children);
-  memset (child_to_parent->array, -1, child_to_parent->elem_count * child_to_parent->elem_size);
   child_to_id = sc_array_new_size (sizeof (p4est_locidx_t), num_global_plus_children);
-
+  child_to_parent = sc_array_new_size (sizeof (p4est_locidx_t), num_global_plus_children);
+  memset (child_to_id->array, -1, child_to_parent->elem_count * child_to_parent->elem_size);
+  memset (child_to_parent->array, -1, child_to_parent->elem_count * child_to_parent->elem_size);
+  /* fill the child_to_parent, child_to_id, and node_dim arrays for
+   * the children */
   for (il = 0; il < num_global; il++) {
     p4est_locidx_t jstart, jend, jl;
     int8_t pdim = *((int8_t *) sc_array_index (node_dim, (size_t) il));
 
     jstart = child_offsets[il];
     jend = child_offsets[il+1];
-
     for (jl = jstart; jl < jend; jl++) {
-      int8_t *parent = (int8_t *) sc_array_index (is_parent, (size_t) jl);
       int8_t *dim = (int8_t *) sc_array_index (node_dim, (size_t) jl);
       p4est_locidx_t *parentidx = (p4est_locidx_t *) sc_array_index (child_to_parent, (size_t) jl);
       p4est_locidx_t *childid = (p4est_locidx_t *) sc_array_index (child_to_id, (size_t) jl);
 
       *parentidx = (p4est_locidx_t) il;
-      *parent = 0;
       *childid = (p4est_locidx_t) (jl - jstart);
       if (pdim == 1) {
         if (jl - jstart < 2) {
@@ -630,7 +654,13 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
     }
   }
 
-  /* put children in quad_to_local */
+  /* loop over quads:
+   * - where quad_to_local refers to a parent, make it refer to the correct
+   *   child
+   * - mark children that are actually referenced (some may not be)
+   * - fill quad_to_orientations
+   */
+  quad_to_orientations = P4EST_ALLOC (int8_t, K * no);
   referenced = P4EST_ALLOC_ZERO (int8_t, num_global_plus_children);
   for (il = 0; il < num_global; il++) {
     referenced[il] = 1;
@@ -638,17 +668,14 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
   for (qid = 0, t = flt; t <= llt; t++) {
     p4est_tree_t * tree = p4est_tree_array_index (p4est->trees, t);
     sc_array_t *quadrants = &(tree->quadrants);
-    p4est_locidx_t il, num_quads = (p4est_locidx_t) quadrants->elem_count;
+    p4est_locidx_t num_quads = (p4est_locidx_t) quadrants->elem_count;
 
     for (il = 0; il < num_quads; il++, qid++) {
       p4est_quadrant_t *q = p4est_quadrant_array_index (quadrants, (size_t) il);
 
       parent_to_child (q, t, qid, ctype_int, F, quad_to_local,
-                       quad_to_orientations,
-                       referenced,
-                       (int8_t *) is_parent->array,
+                       quad_to_orientations, referenced,
                        (int8_t *) node_dim->array, child_offsets,
-                       (p4est_locidx_t *) child_to_parent->array,
                        (p4est_locidx_t *) child_to_id->array,
                        p4est->connectivity);
     }
@@ -662,16 +689,17 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
         p4est_quadrant_t *q = p4est_quadrant_array_index (&ghost->ghosts, (size_t) il);
 
         parent_to_child (q, t, il + Klocal, ctype_int, F, quad_to_local,
-                         quad_to_orientations,
-                         referenced,
-                         (int8_t *) is_parent->array,
+                         quad_to_orientations, referenced,
                          (int8_t *) node_dim->array, child_offsets,
-                         (p4est_locidx_t *) child_to_parent->array,
                          (p4est_locidx_t *) child_to_id->array,
                          p4est->connectivity);
       }
     }
+    P4EST_FREE (F);
   }
+  P4EST_FREE (child_offsets);
+
+  /* compress unreferenced children out of the local list */
   {
     p4est_locidx_t *old_to_new, *new_to_old;
     p4est_locidx_t new_count, diff;
@@ -697,7 +725,7 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
     for (il = 0; il < num_global_plus_children; il++) {
       p4est_locidx_t oldidx = new_to_old[il];
       p4est_locidx_t *pidold, *pidnew, *cidold, *cidnew;
-      int8_t *ispold, *ispnew, *dimold, *dimnew;
+      int8_t *dimold, *dimnew;
 
       if (oldidx != il) {
         cidold = (p4est_locidx_t *) sc_array_index (child_to_id, (size_t) oldidx);
@@ -706,33 +734,30 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
         pidold = (p4est_locidx_t *) sc_array_index (child_to_parent, (size_t) oldidx);
         pidnew = (p4est_locidx_t *) sc_array_index (child_to_parent, (size_t) il);
         *pidnew = *pidold;
-        ispold = (int8_t *) sc_array_index (is_parent, (size_t) oldidx);
-        ispnew = (int8_t *) sc_array_index (is_parent, (size_t) il);
-        *ispnew = *ispold;
         dimold = (int8_t *) sc_array_index (node_dim, (size_t) oldidx);
         dimnew = (int8_t *) sc_array_index (node_dim, (size_t) il);
         *dimnew = *dimold;
       }
-
-      sc_array_resize (child_to_id, num_global_plus_children);
-      sc_array_resize (child_to_parent, num_global_plus_children);
-      sc_array_resize (is_parent, num_global_plus_children);
-      sc_array_resize (node_dim, num_global_plus_children);
-
-      for (il = 0; il < K * V; il++) {
-        quad_to_local[il] = old_to_new[quad_to_local[il]];
-      }
+    }
+    sc_array_resize (child_to_id, num_global_plus_children);
+    sc_array_resize (child_to_parent, num_global_plus_children);
+    sc_array_resize (node_dim, num_global_plus_children);
+    for (il = 0; il < K * V; il++) {
+      quad_to_local[il] = old_to_new[quad_to_local[il]];
     }
     P4EST_FREE (old_to_new);
     P4EST_FREE (new_to_old);
     P4EST_FREE (referenced);
   }
 
+  /* now that we have the list of local nodes with children,
+   * we have to assign each local node a plex index: plex indices are
+   * stratified, and include the cells */
   {
     int c;
-    p4est_locidx_t dim_counts[5] = {0};
+    p4est_locidx_t dim_counts[4] = {0};
     p4est_locidx_t dim_offsets[5];
-    p4est_locidx_t cone_offsets[5];
+    p4est_locidx_t dim_cone_offsets[5];
     p4est_locidx_t *plex_to_local;
     p4est_locidx_t *local_to_plex;
     p4est_locidx_t Nplex = num_global_plus_children + K;
@@ -740,6 +765,7 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
     p4est_locidx_t point_count, cone_count;
     p4est_gloidx_t *lnode_global_offset;
 
+    /* count the number of points of each dimension */
     dim_counts[0] = K;
     for (il = 0; il < num_global_plus_children; il++) {
       int dim = *((int8_t *) p4est_quadrant_array_index (node_dim, (size_t) il));
@@ -747,47 +773,67 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
       P4EST_ASSERT (0 <= dim && dim <= P4EST_DIM - 1);
       dim_counts[P4EST_DIM - dim]++;
     }
-
+    /* get the offsets and the cone offsets of the dimensions */
+    /* fill out_points_per_dim */
+    sc_array_resize (out_points_per_dim, ctype_int + 1);
     dim_offsets[0] = 0;
-    cone_offsets[0] = 0;
+    dim_cone_offsets[0] = 0;
+    for (c = 0; c <= ctype_int; c++) {
+      int dim = P4EST_DIM - c;
+      p4est_locidx_t * ppd = sc_array_index (out_points_per_dim, dim);
+
+      *ppd = dim_counts[c];
+      dim_offsets[c + 1] = dim_offsets[c] + dim_counts[c];
+      dim_cone_offsets[c + 1] = dim_cone_offsets[c] + 2 * dim * dim_counts[c];
+    }
+    P4EST_ASSERT (dim_offsets[ctype_int+1] == Nplex);
     for (c = 0; c <= ctype_int; c++) {
       int dim = P4EST_DIM - c;
 
       dim_offsets[c + 1] = dim_offsets[c] + dim_counts[c];
-      cone_offsets[c + 1] = cone_offsets[c] + 2 * dim * dim_counts[c];
+      dim_cone_offsets[c + 1] = dim_cone_offsets[c] + 2 * dim * dim_counts[c];
     }
-    P4EST_ASSERT (dim_offsets[ctype_int+1] == Nplex);
+    /* fill out_cone_sizes */
+    sc_array_resize (out_cone_sizes, Nplex);
+    for (c = 0; c <= ctype_int; c++) {
+      p4est_locidx_t pstart, pend;
+      int dim = P4EST_DIM - c;
 
+      pstart = dim_cone_offsets[c];
+      pend = dim_cone_offsets[c];
+      for (il = pstart; il < pend; il++) {
+        p4est_locidx_t *size = (p4est_locidx_t *) sc_array_index (out_cone_sizes, (size_t) il);
+
+        *size = 2 * dim;
+      }
+    }
+    /* construct the local_to_plex, plex_to_local, and plex_to_proc arrays */
     plex_to_local = P4EST_ALLOC (p4est_locidx_t, Nplex);
     local_to_plex = P4EST_ALLOC (p4est_locidx_t, Nplex);
     plex_to_proc = P4EST_ALLOC (int, Nplex);
-    cell_cones = P4EST_ALLOC (p4est_locidx_t, cone_offsets[ctype_int+1]);
-    cell_orientations = P4EST_ALLOC (int, cone_offsets[ctype_int+1]);
+    sc_array_resize (out_cones, dim_cone_offsets[ctype_int+1]);
+    cones = (p4est_locidx_t *) out_cones->array;
+    sc_array_resize (out_cone_orientations, dim_cone_offsets[ctype_int+1]);
+    orientations = (p4est_locidx_t *) out_cone_orientations->array;
 #ifdef P4EST_DEBUG
     memset (plex_to_local, -1, Nplex * sizeof (p4est_locidx_t));
     memset (local_to_plex, -1, Nplex * sizeof (p4est_locidx_t));
     memset (plex_to_proc, -1, Nplex * sizeof (int));
 #endif
-
     point_count = 0;
     cone_count = 0;
-    /* cells first */
-    Gpre = (overlap && local_first) ? (ghost->proc_offsets[mpirank] -
-                                       ghost->proc_offsets[0]) : 0;
+    /* figure out the locations of ghosts within the base */
+    Gpre = (overlap && local_first) ? 0 : (ghost->proc_offsets[mpirank] -
+                                           ghost->proc_offsets[0]);
     Gpost = overlap ?
-            (local_first ? ghost->proc_offsets[mpisize] -
-             ghost->proc_offsets[mpirank + 1] : G) : 0;
-
-    local_quad_offset = Gpre;
-
-    /* compute plex_to_local, local_to_plex, and plex_to_proc */
+            (local_first ? G : (ghost->proc_offsets[mpisize] -
+                                ghost->proc_offsets[mpirank + 1])) : 0;
     for (qid = 0, p = 0; qid < Gpre; qid++) {
       while (p < mpisize && ghost->proc_offsets[p+1] <= qid) {
         p++;
       }
       P4EST_ASSERT (ghost->proc_offsets[p] <= qid &&
                     ghost->proc_offsets[p+1] > qid);
-
       il = Klocal + qid;
       plex_to_local[point_count] = il;
       plex_to_proc[point_count] = p;
@@ -804,15 +850,16 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
       }
       P4EST_ASSERT (ghost->proc_offsets[p] <= qid + Gpre &&
                     ghost->proc_offsets[p+1] > qid + Gpre);
-
       il = Klocal + qid + Gpre;
       plex_to_local[point_count] = il;
       plex_to_proc[point_count] = p;
       local_to_plex[il] = point_count++;
     }
+    /* reset dim counts so that we can us them for the offsets */
     for (c = 1; c <= ctype_int; c++) {
       dim_counts[c] = 0;
     }
+    /* compute the lnodes partition */
     lnode_global_offset = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
     lnode_global_offset[0] = 0;
     for (p = 0; p < mpisize; p++) {
@@ -828,11 +875,13 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
       if (il < num_global) {
         gid = *((p4est_gloidx_t *) sc_array_index (all_global, il));
       }
-      while (gid >= 0 && p < mpisize && lnode_global_offset[p+1] <= gid) {
-        p++;
+      else {
+        while (p < mpisize && lnode_global_offset[p+1] <= gid) {
+          p++;
+        }
+        P4EST_ASSERT (lnode_global_offset[p] <= gid &&
+                      gid < lnode_global_offset[p + 1]);
       }
-      P4EST_ASSERT (lnode_global_offset[p] <= gid &&
-                    gid < lnode_global_offset[p + 1]);
       c = P4EST_DIM - dim;
       offset = dim_counts[c]++;
       pid = dim_offsets[c] + offset;
@@ -853,6 +902,29 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
       P4EST_ASSERT (plex_to_proc[il] >= 0);
     }
 #endif
+    /* now that we have the plex indices, we can compute out_children,
+     * out_parents, out_childids */
+    for (il = 0; il < Nplex; il++) {
+      p4est_locidx_t nid = plex_to_local[il] - K;
+      p4est_locidx_t parent;
+
+      if (nid < 0) {
+        continue;
+      }
+      parent = *((p4est_locidx_t *) sc_array_index (child_to_parent, nid));
+      if (parent >= 0) {
+        p4est_locidx_t *outc = (p4est_locidx_t *) sc_array_push (out_children);
+        p4est_locidx_t *outp = (p4est_locidx_t *) sc_array_push (out_parents);
+        p4est_locidx_t *outid = (p4est_locidx_t *) sc_array_push (out_childids);
+
+        *outc = il;
+        *outp = local_to_plex[parent + K];
+        *outid = *((p4est_locidx_t *) sc_array_index (child_to_id, nid));
+      }
+    }
+    sc_array_destroy (child_to_parent);
+    sc_array_destroy (child_to_id);
+
     /* compute cones and orientations */
     for (qid = 0; qid < K; il++) {
       il = plex_to_local[qid];
@@ -863,25 +935,26 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
         vstart = dim_limits[c];
         vend = dim_limits[c+1];
         if (!c) {
+          /* cell to face cones */
           p4est_locidx_t pid;
           p4est_locidx_t cone_off;
 
           pid = qid;
           cone_off = P4EST_FACES * pid;
           for (v = vstart; v < vend; v++) {
-            P4EST_ASSERT (cell_cones[cone_off + v] == -1);
-            cell_cones[cone_off + v] = local_to_plex[quad_to_local[il * V + v] + K];
-            cell_orientations[cone_off + v] = quad_to_orientations[il * V + v];
+            P4EST_ASSERT (cones[cone_off + v] == -1);
+            cones[cone_off + v] = local_to_plex[quad_to_local[il * V + v] + K];
+            orientations[cone_off + v] = quad_to_orientations[il * V + v];
           }
         }
         else if (c == P4EST_DIM - 1) {
+          /* x to vertex cones */
           for (v = vstart; v < vend; v++) {
             int corner = v - vstart;
             int j;
             p4est_locidx_t vid;
 
             vid = local_to_plex[quad_to_local[il * V + v] + K];
-
             for (j = 0; j < P4EST_DIM; j++) {
               p4est_locidx_t pid;
               p4est_locidx_t cone_off;
@@ -907,17 +980,20 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
               if (o) {
                 pos = (pos ^ 1);
               }
-              cone_off = 2 * dim * (pid - dim_offsets[c]) + cone_offsets[c];
+              cone_off = 2 * dim * (pid - dim_offsets[c]) + dim_cone_offsets[c];
               cone_off += pos;
-              P4EST_ASSERT (cell_cones[cone_off] == -1 ||
-                            cell_cones[cone_off] == vid);
-              cell_cones[cone_off] = vid;
-              cell_orientations[cone_off] = 0;
+              /* another cell may have already computed this cell, but we want
+               * to make sure they agree */
+              P4EST_ASSERT (cones[cone_off] == -1 ||
+                            cones[cone_off] == vid);
+              cones[cone_off] = vid;
+              orientations[cone_off] = 0;
             }
           }
         }
 #ifdef P4_TO_P8
         else {
+          /* compute face to edge cones */
           for (v = vstart; v < vend; v++) {
             int edge = v - vstart;
             int j, o;
@@ -925,7 +1001,6 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
 
             vid = local_to_plex[quad_to_local[il * V + v] + K];
             o = quad_to_orientations[il * V + P4EST_FACES + edge];
-
             for (j = 0; j < 2; j++) {
               p4est_locidx_t pid;
               p4est_locidx_t cone_off;
@@ -946,21 +1021,24 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
               }
               minc = SC_MIN (cid[0], cid[1]);
               maxc = SC_MAX (cid[0], cid[1]);
-              if ((maxc - minc) & 2) {
+              /* p4est convention is to number x edges before y edges before z
+               * edges, but to be consistent across dimensions, we treat edges
+               * as faces, so the numbering is different */
+              if ((maxc - minc) == 2) {
                 pos = (minc & 1);
               }
               else {
                 pos = 2 + ((minc & 2) >> 1);
               }
-              cone_off = 2 * dim * (pid - dim_offsets[c]) + cone_offsets[c];
+              cone_off = 2 * dim * (pid - dim_offsets[c]) + dim_cone_offsets[c];
               cone_off += pos;
-              P4EST_ASSERT (cell_cones[cone_off] == -1 ||
-                            cell_cones[cone_off] == vid);
-              cell_cones[cone_off] = vid;
+              P4EST_ASSERT (cones[cone_off] == -1 ||
+                            cones[cone_off] == vid);
+              cones[cone_off] = vid;
               or = cid[0] < cid[1] ? 0 : 1;
-              P4EST_ASSERT (cell_orientations[cone_off] == -1 ||
-                            cell_orientations[cone_off] == or);
-              cell_orientations[cone_off] = or;
+              P4EST_ASSERT (orientations[cone_off] == -1 ||
+                            orientations[cone_off] == or);
+              orientations[cone_off] = or;
             }
           }
         }
@@ -968,54 +1046,61 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
       }
     }
 
-    /* communicate local_to_plex for quads to update plex_to_local */
-    if (overlap) {
-      p4est_locidx_t    **mirror_data;
-      sc_array_t *quad_local;
-      p4est_locidx_t num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
+    /* cleanup */
+    P4EST_FREE (quad_to_local);
+    P4EST_FREE (quad_to_orientations);
+    sc_array_destroy (node_dim);
 
-      mirror_data = P4EST_ALLOC (p4est_locidx_t *, ghost->mirrors.elem_count);
-
-      quad_local = sc_array_new_size (sizeof (p4est_locidx_t), K);
-
-      for (il = 0; il < Klocal; il++) {
-        p4est_locidx_t *ql = (p4est_locidx_t *) sc_array_index (quad_local, il);
-        *ql = local_to_plex[il];
-      }
-      for (il = 0; (size_t) il < num_mirrors; il++) {
-        p4est_quadrant_t   *q;
-
-        q = p4est_quadrant_array_index (&ghost->mirrors, il);
-
-        qid = q->p.piggy3.local_num;
-        mirror_data[il] = (p4est_locidx_t *) sc_array_index (quad_local, qid);
-      }
-      p4est_ghost_exchange_custom (p4est, ghost,
-                                   (size_t) sizeof (p4est_locidx_t),
-                                   (void **) mirror_data,
-                                   (p4est_locidx_t *)
-                                   sc_array_index (quad_local, Klocal));
-      P4EST_FREE (mirror_data);
-      for (il = 0; il < K; il++) {
-        p4est_locidx_t ql;
-
-        qid = plex_to_local[il];
-        ql = *((p4est_locidx_t *) sc_array_index (quad_local, qid));
-        plex_to_local[il] = ql;
-      }
-      sc_array_destroy (quad_local);
-    }
-
-    /* communicate quad_to_local * local_to_plex to build plex_to_plex */
     {
       sc_array_t *quad_to_plex;
       sc_array_t *lnodes_to_plex;
-      sc_array_t *plex_to_plex;
+
+      /* communicate local_to_plex for quads to compute leaves and remotes */
+      if (overlap) {
+        p4est_locidx_t    **mirror_data;
+        sc_array_t *quad_plex;
+
+        mirror_data = P4EST_ALLOC (p4est_locidx_t *, num_mirrors);
+        quad_plex = sc_array_new_size (sizeof (p4est_locidx_t), K);
+        for (il = 0; il < Klocal; il++) {
+          p4est_locidx_t *ql = (p4est_locidx_t *) sc_array_index (quad_plex, il);
+          *ql = local_to_plex[il];
+        }
+        for (il = 0; (size_t) il < num_mirrors; il++) {
+          p4est_quadrant_t   *q;
+
+          q = p4est_quadrant_array_index (&ghost->mirrors, il);
+          qid = q->p.piggy3.local_num;
+          mirror_data[il] = (p4est_locidx_t *) sc_array_index (quad_plex, qid);
+        }
+        p4est_ghost_exchange_custom (p4est, ghost,
+                                     (size_t) sizeof (p4est_locidx_t),
+                                     (void **) mirror_data,
+                                     (p4est_locidx_t *)
+                                     sc_array_index (quad_plex, Klocal));
+        P4EST_FREE (mirror_data);
+        for (il = 0; il < K; il++) {
+          p = plex_to_proc[il];
+          if (p != mpirank) {
+            p4est_locidx_t ql;
+            p4est_locidx_t *leaf = (p4est_locidx_t *) sc_array_push (out_leaves);
+            p4est_locidx_t *remote = (p4est_locidx_t *) sc_array_push (out_remotes);
+
+            qid = plex_to_local[il];
+            ql = *((p4est_locidx_t *) sc_array_index (quad_plex, qid));
+            *leaf = il;
+            remote[0] = p;
+            remote[1] = ql;
+          }
+        }
+        sc_array_destroy (quad_plex);
+      }
+      /* communicate all_global * local_to_plex to build leaves and remotes */
       lnodes_to_plex = sc_array_new_size (sizeof (p4est_locidx_t), lnodes->num_local_nodes);
       quad_to_plex = sc_array_new_size (sizeof (p4est_locidx_t), V * K);
-
       if (lnodes->owned_count) {
         ssize_t firstidx;
+
         firstidx = sc_array_bsearch (all_global, &lnodes->global_offset, p4est_gloidx_compare);
         P4EST_ASSERT (firstidx >= 0);
         for (il = 0; il < lnodes->owned_count; il++) {
@@ -1030,21 +1115,19 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
           p4est_locidx_t nid = lnodes->element_nodes[il * V + v];
           p4est_locidx_t lp = *((p4est_locidx_t *) sc_array_index (lnodes_to_plex, (size_t) nid));
           p4est_locidx_t *qp = (p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) (il * V + v));
+
           *qp = lp;
         }
       }
       sc_array_destroy (lnodes_to_plex);
       if (overlap) {
         p4est_locidx_t    **mirror_data;
-        p4est_locidx_t num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
 
-        mirror_data = P4EST_ALLOC (p4est_locidx_t *, ghost->mirrors.elem_count);
-
+        mirror_data = P4EST_ALLOC (p4est_locidx_t *, num_mirrors);
         for (il = 0; (size_t) il < num_mirrors; il++) {
           p4est_quadrant_t   *q;
 
           q = p4est_quadrant_array_index (&ghost->mirrors, il);
-
           qid = q->p.piggy3.local_num;
           mirror_data[il] = (p4est_locidx_t *) sc_array_index (quad_to_plex, qid * V);
         }
@@ -1055,33 +1138,30 @@ p4est_get_plex_data (p4est_t *p4est, p4est_ghost_t *ghost,
                                      sc_array_index (quad_to_plex, Klocal * V));
         P4EST_FREE (mirror_data);
       }
-      plex_to_plex = sc_array_new (3 * sizeof (p4est_locidx_t));
-      for (il = 0; il < K; il++) {
-        for (v = 0; v < V; v++) {
-          p4est_gloidx_t gid = quad_to_global[il * V + v];
-          p4est_locidx_t pid = *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) (il * V + v)));
+      for (il = 0; il < num_global; il++) {
+        p4est_locidx_t localpid = il + K;
 
-          if (gid < lnodes->global_offset || gid >= (lnodes->global_offset + lnodes->owned_count)) {
-            ssize_t idx;
-            p4est_locidx_t *ptp;
-            int localpid;
-            int proc;
+        p = plex_to_proc[localpid];
+        if (p != mpirank) {
+          p4est_gloidx_t *gid = (p4est_gloidx_t *) sc_array_index (all_global, il);
+          p4est_locidx_t nid = gid[1];
+          p4est_locidx_t pid = *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) nid));
+          p4est_locidx_t *leaf = (p4est_locidx_t *) sc_array_push (out_leaves);
+          p4est_locidx_t *remote = (p4est_locidx_t *) sc_array_push (out_remotes);
 
-            idx = sc_array_bsearch (all_global, &gid, p4est_gloidx_compare);
-            P4EST_ASSERT (idx >= 0);
-            localpid = local_to_plex[idx + K];
-            proc = plex_to_proc[localpid];
-            ptp = (p4est_locidx_t *) sc_array_push (plex_to_plex);
-            ptp[0] = proc;
-            ptp[1] = localpid;
-            ptp[2] = pid;
-          }
+          *leaf = localpid;
+          remote[0] = p;
+          remote[1] = pid;
         }
       }
-      sc_array_sort (plex_to_plex, p4est_locidx_compare_double);
-      sc_array_uniq (plex_to_plex, p4est_locidx_compare_double);
       sc_array_destroy (quad_to_plex);
     }
+    P4EST_FREE (plex_to_local);
+    P4EST_FREE (local_to_plex);
+    P4EST_FREE (plex_to_proc);
   }
+
+  /* cleanup */
+  sc_array_destroy (all_global);
 }
 
