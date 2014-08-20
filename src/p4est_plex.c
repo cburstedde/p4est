@@ -321,13 +321,13 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
         dir = f / 2;
         switch (dir) {
         case 0:
-          d = tempq->x;
+          d = tempq.x;
           break;
         case 1:
-          d = tempq->y;
+          d = tempq.y;
           break;
         case 2:
-          d = tempq->z;
+          d = tempq.z;
           break;
         default:
           SC_ABORT_NOT_REACHED();
@@ -342,7 +342,6 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
       set = quad_to_orientations[qid * no + f];
       for (i = 0; i < 2; i++) {
         int c, face_ex, face_in;
-        int facec;
 
         c = p8est_edge_corners[e][0];
         face_ex = p8est_corner_face_corners[c][f];
@@ -358,8 +357,8 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
         quad_to_orientations[qid * no + P4EST_FACES + e] = 1;
       }
     }
-    else if (p4est_quadrant_is_outside_edge (&tempq)) {
-      int edge = conn->tree_to_edge ? connn->tree_to_edge[t * P8EST_EDGES + e] : -1;
+    else if (p8est_quadrant_is_outside_edge (&tempq)) {
+      int edge = conn->tree_to_edge ? conn->tree_to_edge[t * P8EST_EDGES + e] : -1;
 
       if (edge >= 0) {
         int estart, eend, i;
@@ -383,7 +382,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
       else {
         p4est_locidx_t ownt = t;
         int owne = e;
-        int o = 0;
+        int i, j, o = 0;
         for (i = 0; i < 2; i++) {
           p4est_locidx_t nt;
           int8_t nf;
@@ -402,7 +401,6 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
           set = p8est_face_permutation_sets[ref][fo];
           for (j = 0; j < 2; j++) {
             int c, face_ex, face_in;
-            int facec;
 
             c = p8est_edge_corners[e][0];
             face_ex = p8est_corner_face_corners[c][f];
@@ -440,6 +438,26 @@ p4est_locidx_compare_double (const void *A, const void *B)
     return p4est_locidx_compare (&a[1], &b[1]);
   }
 }
+
+#ifndef P4_TO_P8
+static int p4est_to_plex_child_id[1][3] = {{13, 14, 26}};
+static int p4est_to_plex_orientation[4][2] = {{0, 1},
+                                              {0, 1},
+                                              {0, 1},
+                                              {0, 1}};
+static int p4est_to_plex_position[1][3] = {{0, 1, 2}};
+#else
+static int p4est_to_plex_child_id[2][9] = {{13, 14, 26, -1, -1, -1, -1, -1, -1},
+                                           {27, 28, 30, 29, 69, 70, 71, 72, 126}};
+static int p4est_to_plex_orientation[6][8] = {{0, 1, 2, 3, 4, 5, 6, 7},
+                                              {0, 1, 2, 3, 4, 5, 6, 7},
+                                              {0, 1, 2, 3, 4, 5, 6, 7},
+                                              {0, 1, 2, 3, 4, 5, 6, 7},
+                                              {0, 1, 2, 3, 4, 5, 6, 7},
+                                              {0, 1, 2, 3, 4, 5, 6, 7}};
+static int p4est_to_plex_position[2][9] = {{13, 14, 26, -1, -1, -1, -1, -1, -1},
+                                           {27, 28, 30, 29, 69, 70, 71, 72, 126}};
+#endif
 
 static void
 p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
@@ -1011,7 +1029,6 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
               pid = local_to_plex[quad_to_local[il * V + k] + K];
               for (l = 0; l < 2; l++) {
                 int cor, face_ex, face_in;
-                int facec;
 
                 cor = p8est_edge_corners[edge][l ^ o];
                 face_ex = p8est_corner_face_corners[cor][k];
