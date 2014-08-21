@@ -419,6 +419,13 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
         quad_to_orientations[qid * no + P4EST_FACES + e] = o;
       }
     }
+    {
+      p4est_locidx_t childid = child_to_id[quad_to_local[qid * V + P4EST_FACES
+                               + e]];
+      if (childid >= 4 && childid & 1) {
+        quad_to_orientations[qid * no + P4EST_FACES + e] ^= 1;
+      }
+    }
   }
 #endif
 }
