@@ -31,6 +31,7 @@
 
 #ifdef P4EST_PETSC
 #include <petsc.h>
+#include <petscdmplex.h>
 const char help[] = "test creating DMPlex from " P4EST_STRING "\n";
 #endif
 
@@ -86,8 +87,21 @@ main (int argc, char **argv)
 #ifdef P4EST_PETSC
   {
     PetscErrorCode ierr;
+    DM plex;
 
     ierr = PetscInitialize (&argc, &argv, 0, help);CHKERRQ(ierr);
+
+    ierr = DMPlexCreate (mpicomm, &plex);CHKERRQ(ierr);
+    ierr = DMSetDimension (plex, P4EST_DIM);CHKERRQ(ierr);
+    ierr = DMPlexCreateFromDAG (plex, P4EST_DIM,
+                                (PetscInt *) points_per_dim->array,
+                                (PetscInt *) cone_sizes->array,
+                                (PetscInt *) cones->array,
+                                (PetscInt *) cone_orientations->array,
+                                (PetscScalar *) coords->array);CHKERRQ(ierr);
+    ierr = DMViewFromOptions(plex,NULL,"-dm_view");CHKERRQ(ierr);
+    ierr = DMDestroy (&plex);CHKERRQ(ierr);
+
     ierr = PetscFinalize();
   }
 #endif

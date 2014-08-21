@@ -847,8 +847,8 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
       p4est_locidx_t pstart, pend;
       int dim = P4EST_DIM - c;
 
-      pstart = dim_cone_offsets[c];
-      pend = dim_cone_offsets[c];
+      pstart = dim_offsets[c];
+      pend = dim_offsets[c+1];
       for (il = pstart; il < pend; il++) {
         p4est_locidx_t *size = (p4est_locidx_t *) sc_array_index (out_cone_sizes, (size_t) il);
 
