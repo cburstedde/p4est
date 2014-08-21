@@ -440,23 +440,27 @@ p4est_locidx_compare_double (const void *A, const void *B)
 }
 
 #ifndef P4_TO_P8
-static int p4est_to_plex_child_id[1][3] = {{13, 14, 26}};
-static int p4est_to_plex_orientation[4][2] = {{0, 1},
-                                              {0, 1},
-                                              {0, 1},
-                                              {0, 1}};
-static int p4est_to_plex_position[1][3] = {{0, 1, 2}};
+static int p4est_to_plex_child_id[1][3] = {{9, 10, 25}};
+static int p4est_to_plex_face_orientation[4][2] = {{-2,  0},
+                                                   { 0, -2},
+                                                   { 0, -2},
+                                                   {-2,  0}};
+static int p4est_to_plex_position[1][4] = {{3, 2, 0, 1}};
 #else
-static int p4est_to_plex_child_id[2][9] = {{13, 14, 26, -1, -1, -1, -1, -1, -1},
-                                           {27, 28, 30, 29, 69, 70, 71, 72, 126}};
-static int p4est_to_plex_orientation[6][8] = {{0, 1, 2, 3, 4, 5, 6, 7},
-                                              {0, 1, 2, 3, 4, 5, 6, 7},
-                                              {0, 1, 2, 3, 4, 5, 6, 7},
-                                              {0, 1, 2, 3, 4, 5, 6, 7},
-                                              {0, 1, 2, 3, 4, 5, 6, 7},
-                                              {0, 1, 2, 3, 4, 5, 6, 7}};
-static int p4est_to_plex_position[2][9] = {{13, 14, 26, -1, -1, -1, -1, -1, -1},
-                                           {27, 28, 30, 29, 69, 70, 71, 72, 126}};
+static int p4est_to_plex_child_id[2][9] = {{15, 16, 18, 17, 90, 88, 87, 89, 137},
+                                           {63, 64, 125, -1, -1, -1, -1, -1, -1}};
+static int p4est_to_plex_face_orientation[6][8] = {{-1,  0,  3, -2, -4,  1,  2, -3},
+                                                   { 0, -1, -2,  3,  1, -4, -3,  2},
+                                                   { 0, -1, -2,  3,  1, -4, -3,  2},
+                                                   {-2,  1,  0, -3, -1,  2,  3, -4},
+                                                   {-1,  0,  3, -2, -4,  1,  2, -3},
+                                                   { 0, -1, -2,  3,  1, -4, -3,  2}};
+static int p4est_to_plex_edge_orientation[4][2] = {{-2,  0},
+                                                   { 0, -2},
+                                                   { 0, -2},
+                                                   {-2,  0}};
+static int p4est_to_plex_position[2][6] = {{4, 5, 5, 4, 0, 1},
+                                           {3, 2, 0, 1, -1, -1}};
 #endif
 
 static void
@@ -934,10 +938,13 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
         p4est_locidx_t *outc = (p4est_locidx_t *) sc_array_push (out_children);
         p4est_locidx_t *outp = (p4est_locidx_t *) sc_array_push (out_parents);
         p4est_locidx_t *outid = (p4est_locidx_t *) sc_array_push (out_childids);
+        int8_t pdim = *((int8_t *) sc_array_index (node_dim, (size_t) parent));
+        p4est_locidx_t id;
 
         *outc = il;
         *outp = local_to_plex[parent + K];
-        *outid = *((p4est_locidx_t *) sc_array_index (child_to_id, nid));
+        id = *((p4est_locidx_t *) sc_array_index (child_to_id, nid));
+        *outid = p4est_to_plex_child_id[P4EST_DIM - 1 - pdim][id];
       }
     }
     sc_array_destroy (child_to_parent);
@@ -960,9 +967,13 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
           pid = qid;
           cone_off = P4EST_FACES * pid;
           for (v = vstart; v < vend; v++) {
+            int pos;
+
             P4EST_ASSERT (cones[cone_off + v] == -1);
-            cones[cone_off + v] = local_to_plex[quad_to_local[il * V + v] + K];
-            orientations[cone_off + v] = quad_to_orientations[il * V + v];
+            pos = p4est_to_plex_position[0][v - vstart];
+
+            cones[cone_off + pos] = local_to_plex[quad_to_local[il * V + v] + K];
+            orientations[cone_off + pos] = p4est_to_plex_face_orientation[v][quad_to_orientations[il * V + v]];
           }
         }
         else if (c == P4EST_DIM - 1) {
@@ -1022,7 +1033,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
             for (j = 0; j < 2; j++) {
               p4est_locidx_t pid;
               p4est_locidx_t cone_off;
-              int k, pos, fo, cid[2], l, minc, maxc, or;
+              int k, f, pos, fo, cid[2], l, minc, maxc, or, faceor;
 
               k = p8est_edge_faces[edge][j];
               fo = quad_to_orientations[il * V + k];
@@ -1040,19 +1051,21 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
               maxc = SC_MAX (cid[0], cid[1]);
               /* p4est convention is to number x edges before y edges before z
                * edges, but to be consistent across dimensions, we treat edges
-               * as faces, so the numbering is different */
+               * as faces, so the order of the dimensions is reversed */
               if ((maxc - minc) == 2) {
-                pos = (minc & 1);
+                f = (minc & 1);
               }
               else {
-                pos = 2 + ((minc & 2) >> 1);
+                f = 2 + ((minc & 2) >> 1);
               }
+              pos = p4est_to_plex_position[1][f];
               cone_off = 2 * dim * (pid - dim_offsets[c]) + dim_cone_offsets[c];
               cone_off += pos;
               P4EST_ASSERT (cones[cone_off] == -1 ||
                             cones[cone_off] == vid);
               cones[cone_off] = vid;
-              or = cid[0] < cid[1] ? 0 : 1;
+              faceor = cid[0] < cid[1] ? 0 : 1;
+              or = p4est_to_plex_edge_orientation[f][faceor];
               P4EST_ASSERT (orientations[cone_off] == -1 ||
                             orientations[cone_off] == or);
               orientations[cone_off] = or;
