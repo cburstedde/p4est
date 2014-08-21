@@ -800,6 +800,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
     int *plex_to_proc;
     p4est_locidx_t point_count, cone_count;
     p4est_gloidx_t *lnode_global_offset;
+    double *coords;
 
     /* count the number of points of each dimension */
     dim_counts[0] = K;
@@ -851,6 +852,8 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
     cones = (p4est_locidx_t *) out_cones->array;
     sc_array_resize (out_cone_orientations, dim_cone_offsets[ctype_int+1]);
     orientations = (p4est_locidx_t *) out_cone_orientations->array;
+    sc_array_resize (out_vertex_coords, dim_offsets[ctype_int+1]-dim_offsets[ctype_int]);
+    coords = (double *) out_vertex_coords->array;
 #ifdef P4EST_DEBUG
     memset (plex_to_local, -1, Nplex * sizeof (p4est_locidx_t));
     memset (local_to_plex, -1, Nplex * sizeof (p4est_locidx_t));
@@ -1090,6 +1093,68 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
           }
         }
 #endif
+      }
+    }
+    /* compute coordinates */
+    for (qid = 0, t = flt; t <= llt; t++) {
+      p4est_tree_t * tree = p4est_tree_array_index (p4est->trees, t);
+      sc_array_t *quadrants = &(tree->quadrants);
+      p4est_locidx_t num_quads = (p4est_locidx_t) quadrants->elem_count;
+
+      for (il = 0; il < num_quads; il++, qid++) {
+        p4est_quadrant_t *q = p4est_quadrant_array_index (quadrants, (size_t) il);
+        p4est_qcoord_t h = P4EST_QUADRANT_LEN (q->level);
+        int vstart, vend;
+
+        vstart = dim_limits[P4EST_DIM-1];
+        vend = dim_limits[P4EST_DIM];
+        for (v = vstart; v < vend; v++) {
+          int corner = v - vstart;
+          p4est_locidx_t vid = local_to_plex[quad_to_local[qid * V + v] + K] - dim_offsets[P4EST_DIM];
+          double vcoord[3];
+
+          p4est_qcoord_to_vertex (p4est->connectivity, t,
+                                  q->x + ((corner & 1) ? h : 0),
+                                  q->y + ((corner & 2) ? h : 0),
+#ifdef P4_TO_P8
+                                  q->z + ((corner & 4) ? h : 0),
+#endif
+                                  vcoord);
+          coords[3 * vid + 0] = vcoord[0];
+          coords[3 * vid + 1] = vcoord[1];
+          coords[3 * vid + 2] = vcoord[2];
+        }
+      }
+    }
+    if (overlap) {
+      for (t = 0; t < p4est->connectivity->num_trees; t++) {
+        p4est_locidx_t il, istart = ghost->tree_offsets[t];
+        p4est_locidx_t iend = ghost->tree_offsets[t+1];
+
+        for (il = istart; il < iend; il++, qid++) {
+          p4est_quadrant_t *q = p4est_quadrant_array_index (&ghost->ghosts, (size_t) il);
+          p4est_qcoord_t h = P4EST_QUADRANT_LEN (q->level);
+          int vstart, vend;
+
+          vstart = dim_limits[P4EST_DIM-1];
+          vend = dim_limits[P4EST_DIM];
+          for (v = vstart; v < vend; v++) {
+            int corner = v - vstart;
+            p4est_locidx_t vid = local_to_plex[quad_to_local[qid * V + v] + K] - dim_offsets[P4EST_DIM];
+            double vcoord[3];
+
+            p4est_qcoord_to_vertex (p4est->connectivity, t,
+                                    q->x + ((corner & 1) ? h : 0),
+                                    q->y + ((corner & 2) ? h : 0),
+#ifdef P4_TO_P8
+                                    q->z + ((corner & 4) ? h : 0),
+#endif
+                                    vcoord);
+            coords[3 * vid + 0] = vcoord[0];
+            coords[3 * vid + 1] = vcoord[1];
+            coords[3 * vid + 2] = vcoord[2];
+          }
+        }
       }
     }
 
