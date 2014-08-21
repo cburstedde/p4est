@@ -237,13 +237,15 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
                   if (p4est_quadrant_is_outside_face (&tempq)) {
                     p4est_topidx_t nt;
                     int nf;
+                    int o;
 
                     nt = conn->tree_to_tree[P4EST_FACES * t + f];
                     nf = conn->tree_to_face[P4EST_FACES * t + f];
+                    o = nf / P4EST_FACES;
+                    nf = nf % P4EST_FACES;
                     if (nt != t && nf != f) {
                       if (nt < t || (nt == t && nf < f)) {
-                        int o = nf / P4EST_FACES;
-                        int ref = p8est_face_permutation_refs[nf][f];
+                        int ref = p8est_face_permutation_refs[f][nf];
                         int set = p8est_face_permutation_sets[ref][o];
                         if (set == 1 || set == 3 || set == 4 || set == 6) {
                           dir = (dir ^ 1);
@@ -281,22 +283,23 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
     quad_to_orientations[qid * no + f] = 0;
     if (p4est_quadrant_is_outside_face (&tempq)) {
       p4est_topidx_t nt;
-      int nf;
+      int nf, o;
 
       nt = conn->tree_to_tree[P4EST_FACES * t + f];
       nf = conn->tree_to_face[P4EST_FACES * t + f];
+      o = nf / P4EST_FACES;
+      nf = nf % P4EST_FACES;
       if (nt != t && nf != f) {
         if (nt < t || (nt == t && nf < f)) {
-          int set, o = nf / P4EST_FACES;
+          int set;
 #ifdef P4_TO_P8
           int ref;
 #endif
-          o = nf / P4EST_FACES;
 
 #ifndef P4_TO_P8
           set = o;
 #else
-          ref = p8est_face_permutation_refs[nf][f];
+          ref = p8est_face_permutation_refs[f][nf];
           set = p8est_face_permutation_sets[ref][o];
 #endif
           quad_to_orientations[qid * no + f] = set;
@@ -305,10 +308,10 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
     }
   }
 #ifdef P4_TO_P8
-  for (e = 0; e < P4EST_FACES; e++) {
+  for (e = 0; e < P8EST_EDGES; e++) {
     p4est_quadrant_t tempq;
 
-    p4est_quadrant_face_neighbor (q, e, &tempq);
+    p8est_quadrant_edge_neighbor (q, e, &tempq);
     quad_to_orientations[qid * no + P4EST_FACES + e] = 0;
     if (p4est_quadrant_is_outside_face (&tempq)) {
       int set;
@@ -345,7 +348,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
       for (i = 0; i < 2; i++) {
         int c, face_ex, face_in;
 
-        c = p8est_edge_corners[e][0];
+        c = p8est_edge_corners[e][i];
         face_ex = p8est_corner_face_corners[c][f];
         P4EST_ASSERT (face_ex >= 0);
         face_in = p8est_face_permutations[set][face_ex];
@@ -393,7 +396,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
           int cid[2];
           int ne;
 
-          f = p8est_face_edges[e][i];
+          f = p8est_edge_faces[e][i];
           nt = conn->tree_to_tree[P4EST_FACES * t + f];
           nf = conn->tree_to_face[P4EST_FACES * t + f];
           fo = nf / P8EST_FACES;
@@ -404,7 +407,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
           for (j = 0; j < 2; j++) {
             int c, face_ex, face_in;
 
-            c = p8est_edge_corners[e][0];
+            c = p8est_edge_corners[e][j];
             face_ex = p8est_corner_face_corners[c][f];
             P4EST_ASSERT (face_ex >= 0);
             face_in = p8est_face_permutations[set][face_ex];
@@ -468,7 +471,7 @@ static int p4est_to_plex_edge_orientation[4][2] = {{-2,  0},
                                                    { 0, -2},
                                                    { 0, -2},
                                                    {-2,  0}};
-static int p4est_to_plex_position[2][6] = {{4, 5, 5, 4, 0, 1},
+static int p4est_to_plex_position[2][6] = {{5, 4, 2, 3, 0, 1},
                                            {3, 1, 0, 2, -1, -1}};
 #endif
 
@@ -697,6 +700,9 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
    * - fill quad_to_orientations
    */
   quad_to_orientations = P4EST_ALLOC (int8_t, K * no);
+#ifdef P4EST_DEBUG
+  memset (quad_to_orientations, -1, K * no * sizeof (int8_t));
+#endif
   referenced = P4EST_ALLOC_ZERO (int8_t, num_global_plus_children);
   for (il = 0; il < num_global; il++) {
     referenced[il] = 1;
@@ -734,6 +740,11 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
     P4EST_FREE (F);
   }
   P4EST_FREE (child_offsets);
+#ifdef P4EST_DEBUG
+  for (il = 0; il < K * no; il++) {
+    P4EST_ASSERT (quad_to_orientations[il] >= 0);
+  }
+#endif
 
   /* compress unreferenced children out of the local list */
   {
