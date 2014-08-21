@@ -42,6 +42,11 @@ main (int argc, char **argv)
   int                 mpisize, mpirank;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
+  sc_array_t         *points_per_dim, *cone_sizes, *cones,
+                     *cone_orientations, *coords,
+                     *children, *parents,
+                     *childids, *leaves, *remotes;
+  p4est_locidx_t      first_local_quad = -1;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -62,6 +67,22 @@ main (int argc, char **argv)
 #endif
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 1, 0, NULL, NULL);
 
+  points_per_dim = sc_array_new (sizeof (p4est_locidx_t));
+  cone_sizes = sc_array_new (sizeof (p4est_locidx_t));
+  cones = sc_array_new (sizeof (p4est_locidx_t));
+  cone_orientations = sc_array_new (sizeof (p4est_locidx_t));
+  coords = sc_array_new (3 * sizeof (double));
+  children = sc_array_new (sizeof (p4est_locidx_t));
+  parents = sc_array_new (sizeof (p4est_locidx_t));
+  childids = sc_array_new (sizeof (p4est_locidx_t));
+  leaves = sc_array_new (sizeof (p4est_locidx_t));
+  remotes = sc_array_new (sizeof (p4est_locidx_t));
+
+  p4est_get_plex_data (p4est, P4EST_CONNECT_FULL, (mpisize > 1) ? 2 : 0,
+                       &first_local_quad, points_per_dim, cone_sizes, cones,
+                       cone_orientations, coords, children, parents, childids,
+                       leaves, remotes);
+
 #ifdef P4EST_PETSC
   {
     PetscErrorCode ierr;
@@ -70,6 +91,17 @@ main (int argc, char **argv)
     ierr = PetscFinalize();
   }
 #endif
+
+  sc_array_destroy (points_per_dim);
+  sc_array_destroy (cone_sizes);
+  sc_array_destroy (cones);
+  sc_array_destroy (cone_orientations);
+  sc_array_destroy (coords);
+  sc_array_destroy (children);
+  sc_array_destroy (parents);
+  sc_array_destroy (childids);
+  sc_array_destroy (leaves);
+  sc_array_destroy (remotes);
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
