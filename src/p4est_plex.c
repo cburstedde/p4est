@@ -161,7 +161,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
         for (v = vstart; v < vend; v++) {
           int corner = v-vstart;
           if (hanging[P4EST_DIM - 1][corner] >= 0) {
-            p4est_locidx_t child;
+            p4est_locidx_t child = -1;
             int dim;
 
             f = p4est_child_corner_faces[cid][corner];
@@ -503,10 +503,12 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
   p4est_locidx_t qid;
   int v, V = lnodes->vnodes;
   sc_array_t *is_parent, *node_dim;
-  int ctype_int = p4est_connect_type_int (ghost->btype);
+  int ctype_int = p4est_connect_type_int (P4EST_CONNECT_FULL);
   p4est_locidx_t num_global, num_global_plus_children, last_global, *child_offsets;
   sc_array_t *all_global;
   p4est_locidx_t num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
+
+  P4EST_ASSERT (lnodes->degree == -ctype_int);
 
   if (overlap) {
     /* get the face codes for ghosts */
@@ -1045,7 +1047,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
                 face_ex = p8est_corner_face_corners[cor][k];
                 P4EST_ASSERT (face_ex >= 0);
                 face_in = p8est_face_permutations[fo][face_ex];
-                cid[j] = face_in;
+                cid[l] = face_in;
               }
               minc = SC_MIN (cid[0], cid[1]);
               maxc = SC_MAX (cid[0], cid[1]);
@@ -1193,5 +1195,46 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
 
   /* cleanup */
   sc_array_destroy (all_global);
+}
+
+void
+p4est_get_plex_data (p4est_t *p4est, p4est_connect_type_t ctype,
+                     int overlap,
+                     p4est_locidx_t *first_local_quad,
+                     sc_array_t *out_points_per_dim,
+                     sc_array_t *out_cone_sizes,
+                     sc_array_t *out_cones,
+                     sc_array_t *out_cone_orientations,
+                     sc_array_t *out_vertex_coords,
+                     sc_array_t *out_children,
+                     sc_array_t *out_parents,
+                     sc_array_t *out_childids,
+                     sc_array_t *out_leaves,
+                     sc_array_t *out_remotes)
+{
+  p4est_ghost_t *ghost;
+  p4est_lnodes_t * lnodes;
+  int ctype_int = p4est_connect_type_int (ctype);
+  int i;
+
+  ghost = p4est_ghost_new (p4est, ctype);
+  lnodes = p4est_lnodes_new (p4est, ghost, -ctype_int);
+  if (overlap) {
+    p4est_ghost_support_lnodes (p4est, lnodes, ghost);
+  }
+  for (i = 1; i < overlap; i++) {
+    p4est_ghost_expand_by_lnodes (p4est, lnodes, ghost);
+  }
+  if (ctype != P4EST_CONNECT_FULL) {
+    p4est_lnodes_destroy (lnodes);
+    lnodes = p4est_lnodes_new (p4est, ghost, -ctype);
+  }
+  p4est_get_plex_data_int (p4est, ghost, lnodes, overlap, 0,
+                           first_local_quad, out_points_per_dim,
+                           out_cone_sizes, out_cones, out_cone_orientations,
+                           out_vertex_coords, out_children, out_parents,
+                           out_childids, out_leaves, out_remotes);
+  p4est_ghost_destroy (ghost);
+  p4est_lnodes_destroy (lnodes);
 }
 

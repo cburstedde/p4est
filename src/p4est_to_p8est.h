@@ -403,4 +403,6 @@
 #define p4est_wrap_leaf_next            p8est_wrap_leaf_next
 #define p4est_wrap_leaf_first           p8est_wrap_leaf_first
 
+/* functions in p4est_plex */
+#define p4est_get_plex_data             p8est_get_plex_data
 #endif /* !P4EST_TO_P8EST_H */
