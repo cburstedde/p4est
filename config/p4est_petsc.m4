@@ -13,7 +13,7 @@ if test "x$$1_WITH_PETSC" != xno ; then
   $1_PETSC_LIB="-lpetsc"
   if test "x$$1_WITH_PETSC" != xyes ; then
     $1_PETSC_INC="-I$$1_WITH_PETSC/include"
-    $1_PETSC_LD="-L$$1_WITH_PETSC/lib"
+    $1_PETSC_LD="-L$$1_WITH_PETSC/lib -Wl,-rpath -Wl,$$1_WITH_PETSC/lib"
   fi
   PRE_PETSC_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $$1_PETSC_INC"

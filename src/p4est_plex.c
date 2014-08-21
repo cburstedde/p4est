@@ -24,9 +24,11 @@
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_lnodes.h>
+#include <p4est_plex.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_lnodes.h>
+#include <p8est_plex.h>
 #endif
 
 /** Decode the information from p{4,8}est_lnodes_t for a given element.

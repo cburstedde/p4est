@@ -24,6 +24,8 @@
 #ifndef P4EST_PLEX_H
 #define P4EST_PLEX_H
 
+#include <p4est.h>
+
 SC_EXTERN_C_BEGIN;
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
