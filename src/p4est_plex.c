@@ -117,36 +117,19 @@ mark_parent (p4est_locidx_t qid, int ctype_int, p4est_lnodes_code_t *F,
 }
 
 static void
-parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int ctype_int,
-                 p4est_lnodes_code_t *F, p4est_locidx_t *quad_to_local,
-                 int8_t *quad_to_orientations,
-                 int8_t *referenced,
-                 int8_t *node_dim,
-                 p4est_locidx_t *child_offsets,
-                 p4est_locidx_t *child_to_id, p4est_connectivity_t *conn)
+fill_orientations (p4est_quadrant_t *q, p4est_topidx_t t, p4est_connectivity_t *conn,
+                   int8_t *quad_to_orientations)
 {
-#ifndef P4_TO_P8
-  int                 dim_limits[3] = {0, 4, 8};
-  int                 no = P4EST_FACES;
-#else
-  int                 dim_limits[4] = {0, 6, 18, 26};
-  int                 e, no = P4EST_FACES + P8EST_EDGES;
+  int f;
+#ifdef P4_TO_P8
+  int                 e;
 #endif
-  int hanging[3][12];
-  int has_hanging;
-  int f, V = dim_limits[ctype_int];
 
-#ifndef P4_TO_P8
-  has_hanging = p4est_lnodes_decode (F[qid], &hanging[0][0]);
-#else
-  has_hanging = p8est_lnodes_decode (F[qid], &hanging[0][0], &hanging[1][0]);
-#endif
-  has_hanging |= lnodes_decode2 (F[qid], &hanging[P4EST_DIM-1][0]);
   for (f = 0; f < P4EST_FACES; f++) {
     p4est_quadrant_t tempq;
 
     p4est_quadrant_face_neighbor (q, f, &tempq);
-    quad_to_orientations[qid * no + f] = 0;
+    quad_to_orientations[f] = 0;
     if (p4est_quadrant_is_outside_face (&tempq)) {
       p4est_topidx_t nt;
       int nf, o;
@@ -168,7 +151,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
           ref = p8est_face_permutation_refs[f][nf];
           set = p8est_face_permutation_sets[ref][o];
 #endif
-          quad_to_orientations[qid * no + f] = set;
+          quad_to_orientations[f] = set;
         }
       }
     }
@@ -178,7 +161,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
     p4est_quadrant_t tempq;
 
     p8est_quadrant_edge_neighbor (q, e, &tempq);
-    quad_to_orientations[qid * no + P4EST_FACES + e] = 0;
+    quad_to_orientations[P4EST_FACES + e] = 0;
     if (p4est_quadrant_is_outside_face (&tempq)) {
       int set;
       int i, f = -1;
@@ -210,7 +193,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
       }
       P4EST_ASSERT (f >= 0);
 
-      set = quad_to_orientations[qid * no + f];
+      set = quad_to_orientations[f];
       for (i = 0; i < 2; i++) {
         int c, face_ex, face_in;
 
@@ -222,10 +205,10 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
       }
 
       if (cid[0] < cid[1]) {
-        quad_to_orientations[qid * no + P4EST_FACES + e] = 0;
+        quad_to_orientations[P4EST_FACES + e] = 0;
       }
       else {
-        quad_to_orientations[qid * no + P4EST_FACES + e] = 1;
+        quad_to_orientations[P4EST_FACES + e] = 1;
       }
     }
     else if (p8est_quadrant_is_outside_edge (&tempq)) {
@@ -244,7 +227,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
           nt = conn->edge_to_tree[i];
           te = conn->edge_to_edge[i];
           if (nt == t && (te % P8EST_EDGES == e)) {
-            quad_to_orientations[qid * no + P4EST_FACES + e] = te / P8EST_EDGES;
+            quad_to_orientations[P4EST_FACES + e] = te / P8EST_EDGES;
             break;
           }
         }
@@ -287,14 +270,62 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
             o = (cid[0] < cid[1]) ? 0 : 1;
           }
         }
-        quad_to_orientations[qid * no + P4EST_FACES + e] = o;
+        quad_to_orientations[P4EST_FACES + e] = o;
       }
     }
   }
 #endif
+}
+
+static void
+parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int ctype_int,
+                 p4est_lnodes_code_t *F, p4est_locidx_t *quad_to_local,
+                 int8_t *quad_to_orientations,
+                 int8_t *quad_to_orientations_orig,
+                 int8_t *referenced,
+                 int8_t *node_dim,
+                 p4est_locidx_t *child_offsets,
+                 p4est_locidx_t *child_to_id, p4est_connectivity_t *conn)
+{
+#ifndef P4_TO_P8
+  int                 dim_limits[3] = {0, 4, 8};
+  int                 no = P4EST_FACES;
+#else
+  int                 dim_limits[4] = {0, 6, 18, 26};
+  int                 no = P4EST_FACES + P8EST_EDGES;
+#endif
+  int hanging[3][12];
+  int has_hanging;
+  int f, V = dim_limits[ctype_int];
+
+#ifndef P4_TO_P8
+  has_hanging = p4est_lnodes_decode (F[qid], &hanging[0][0]);
+#else
+  has_hanging = p8est_lnodes_decode (F[qid], &hanging[0][0], &hanging[1][0]);
+#endif
+  has_hanging |= lnodes_decode2 (F[qid], &hanging[P4EST_DIM-1][0]);
+  fill_orientations (q, t, conn, &quad_to_orientations[qid * no]);
   if (has_hanging) {
     int c, cid = p4est_quadrant_child_id (q), v;
 
+    if (quad_to_orientations_orig) {
+      p4est_quadrant_t tempq;
+
+      p4est_quadrant_parent (q, &tempq);
+      fill_orientations (&tempq, t, conn, &quad_to_orientations_orig[qid * no]);
+      for (f = 0; f < P4EST_FACES; f++) {
+        if (hanging[0][f] < 0) {
+          quad_to_orientations_orig[qid * no + f] = -1;
+        }
+      }
+#ifdef P4_TO_P8
+      for (f = 0; f < P8EST_EDGES; f++) {
+        if (hanging[1][f] < 0) {
+          quad_to_orientations_orig[qid * no + P4EST_FACES + f] = -1;
+        }
+      }
+#endif
+    }
     /* no corners */
     for (c = ctype_int - 1; c >= 0; c--) {
       int vstart = dim_limits[c];
@@ -498,8 +529,8 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
   p4est_locidx_t *cones;
   int *orientations;
   sc_array_t *child_to_parent, *child_to_id;
-  p4est_locidx_t *quad_to_local;
-  int8_t *quad_to_orientations;
+  p4est_locidx_t *quad_to_local, *quad_to_local_orig = NULL;
+  int8_t *quad_to_orientations, *quad_to_orientations_orig = NULL;
   int8_t *referenced;
   p4est_lnodes_code_t *F;
   p4est_topidx_t t, flt = p4est->first_local_tree;
@@ -525,7 +556,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
     p4est_lnodes_code_t **mirror_data_F;
 
     F = P4EST_ALLOC (p4est_lnodes_code_t, K);
-    memcpy (F, lnodes, K * sizeof (p4est_lnodes_code_t));
+    memcpy (F, lnodes->face_code, Klocal * sizeof (p4est_lnodes_code_t));
 
     mirror_data_F = P4EST_ALLOC (p4est_lnodes_code_t *, num_mirrors);
     for (il = 0; (size_t) il < num_mirrors; il++) {
@@ -604,6 +635,11 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
       last_global = gidx;
     }
     quad_to_local[pair[1]] = num_global - 1;
+  }
+
+  if (mpisize > 1) {
+    quad_to_local_orig = P4EST_ALLOC (p4est_locidx_t, K * V);
+    memcpy (quad_to_local_orig, quad_to_local, K * V * sizeof (p4est_locidx_t));
   }
   /* remove duplicates from all_global so we can use it to search for the
    * local index of a global index */
@@ -698,6 +734,10 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
    * - fill quad_to_orientations
    */
   quad_to_orientations = P4EST_ALLOC (int8_t, K * no);
+  if (quad_to_local_orig) {
+    quad_to_orientations_orig = P4EST_ALLOC (int8_t, K * no);
+    memset (quad_to_orientations_orig, -1, K * no * sizeof (int8_t));
+  }
 #ifdef P4EST_DEBUG
   memset (quad_to_orientations, -1, K * no * sizeof (int8_t));
 #endif
@@ -714,7 +754,9 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
       p4est_quadrant_t *q = p4est_quadrant_array_index (quadrants, (size_t) il);
 
       parent_to_child (q, t, qid, ctype_int, F, quad_to_local,
-                       quad_to_orientations, referenced,
+                       quad_to_orientations,
+                       quad_to_orientations_orig,
+                       referenced,
                        (int8_t *) node_dim->array, child_offsets,
                        (p4est_locidx_t *) child_to_id->array,
                        p4est->connectivity);
@@ -729,7 +771,9 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
         p4est_quadrant_t *q = p4est_quadrant_array_index (&ghost->ghosts, (size_t) il);
 
         parent_to_child (q, t, il + Klocal, ctype_int, F, quad_to_local,
-                         quad_to_orientations, referenced,
+                         quad_to_orientations,
+                         quad_to_orientations_orig,
+                         referenced,
                          (int8_t *) node_dim->array, child_offsets,
                          (p4est_locidx_t *) child_to_id->array,
                          p4est->connectivity);
@@ -1009,42 +1053,51 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
             int corner = v - vstart;
             int j;
             p4est_locidx_t vid;
+            int iter, limit = (quad_to_local_orig != NULL) ? 2 : 1;
 
-            vid = local_to_plex[quad_to_local[il * V + v] + K];
-            for (j = 0; j < P4EST_DIM; j++) {
-              p4est_locidx_t pid;
-              p4est_locidx_t cone_off;
-              int k, pos, o;
+            for (iter = 0; iter < limit; iter++) {
+              p4est_locidx_t * qtl = (iter == 0) ? quad_to_local : quad_to_local_orig;
+              int8_t * qto = (iter == 0) ? quad_to_orientations : quad_to_orientations_orig;
+
+              vid = local_to_plex[qtl[il * V + v] + K];
+              for (j = 0; j < P4EST_DIM; j++) {
+                p4est_locidx_t pid;
+                p4est_locidx_t cone_off;
+                int k, pos, o;
 
 #ifndef P4_TO_P8
-              k = p4est_corner_faces[corner][j];
-              o = quad_to_orientations[il * no + k];
-              pos = p4est_corner_face_corners[corner][k];
-              P4EST_ASSERT (pos >= 0);
-              pid = local_to_plex[quad_to_local[il * V + k] + K];
+                k = p4est_corner_faces[corner][j];
+                o = qto[il * no + k];
+                pos = p4est_corner_face_corners[corner][k];
+                P4EST_ASSERT (pos >= 0);
+                pid = local_to_plex[qtl[il * V + k] + K];
 #else
-              k = p8est_corner_edges[corner][j];
-              o = quad_to_orientations[il * no + P4EST_FACES + k];
-              if (p8est_edge_corners[k][0] == corner) {
-                pos = 0;
-              }
-              else {
-                pos = 1;
-              }
-              pid = local_to_plex[quad_to_local[il * V + P4EST_FACES + k] + K];
+                k = p8est_corner_edges[corner][j];
+                o = qto[il * no + P4EST_FACES + k];
+                if (p8est_edge_corners[k][0] == corner) {
+                  pos = 0;
+                }
+                else {
+                  pos = 1;
+                }
+                pid = local_to_plex[qtl[il * V + P4EST_FACES + k] + K];
 #endif
-              if (o) {
-                pos = (pos ^ 1);
+                if (o < 0) {
+                  continue;
+                }
+                if (o) {
+                  pos = (pos ^ 1);
+                }
+                P4EST_ASSERT (pid >= dim_offsets[c] && pid < dim_offsets[c + 1]);
+                cone_off = 2 * (dim + 1)* (pid - dim_offsets[c]) + dim_cone_offsets[c];
+                cone_off += pos;
+                /* another cell may have already computed this cell, but we want
+                 * to make sure they agree */
+                P4EST_ASSERT (cones[cone_off] == -1 ||
+                              cones[cone_off] == vid);
+                cones[cone_off] = vid;
+                orientations[cone_off] = 0;
               }
-              P4EST_ASSERT (pid >= dim_offsets[c] && pid < dim_offsets[c + 1]);
-              cone_off = 2 * (dim + 1)* (pid - dim_offsets[c]) + dim_cone_offsets[c];
-              cone_off += pos;
-              /* another cell may have already computed this cell, but we want
-               * to make sure they agree */
-              P4EST_ASSERT (cones[cone_off] == -1 ||
-                            cones[cone_off] == vid);
-              cones[cone_off] = vid;
-              orientations[cone_off] = 0;
             }
           }
         }
@@ -1055,55 +1108,78 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
             int edge = v - vstart;
             int j, o;
             p4est_locidx_t vid;
+            int iter, limit = (quad_to_local_orig != NULL) ? 2 : 1;
 
-            vid = local_to_plex[quad_to_local[il * V + v] + K];
-            o = quad_to_orientations[il * no + P4EST_FACES + edge];
-            for (j = 0; j < 2; j++) {
-              p4est_locidx_t pid;
-              p4est_locidx_t cone_off;
-              int k, f, pos, fo, cid[2], l, minc, maxc, or, faceor;
+            for (iter = 0; iter < limit; iter++) {
+              p4est_locidx_t * qtl = (iter == 0) ? quad_to_local : quad_to_local_orig;
+              int8_t * qto = (iter == 0) ? quad_to_orientations : quad_to_orientations_orig;
 
-              k = p8est_edge_faces[edge][j];
-              fo = quad_to_orientations[il * no + k];
-              pid = local_to_plex[quad_to_local[il * V + k] + K];
-              for (l = 0; l < 2; l++) {
-                int cor, face_ex, face_in;
+              vid = local_to_plex[qtl[il * V + v] + K];
+              o = qto[il * no + P4EST_FACES + edge];
+              if (o < 0) {
+                continue;
+              }
+              for (j = 0; j < 2; j++) {
+                p4est_locidx_t pid;
+                p4est_locidx_t cone_off;
+                int k, f, pos, fo, cid[2], l, minc, maxc, or, faceor;
 
-                cor = p8est_edge_corners[edge][l ^ o];
-                face_ex = p8est_corner_face_corners[cor][k];
-                P4EST_ASSERT (face_ex >= 0);
-                face_in = p8est_face_permutations[fo][face_ex];
-                cid[l] = face_in;
+                k = p8est_edge_faces[edge][j];
+                fo = qto[il * no + k];
+                if (fo < 0) {
+                  continue;
+                }
+                pid = local_to_plex[qtl[il * V + k] + K];
+                for (l = 0; l < 2; l++) {
+                  int cor, face_ex, face_in;
+
+                  cor = p8est_edge_corners[edge][l ^ o];
+                  face_ex = p8est_corner_face_corners[cor][k];
+                  P4EST_ASSERT (face_ex >= 0);
+                  face_in = p8est_face_permutations[fo][face_ex];
+                  cid[l] = face_in;
+                }
+                minc = SC_MIN (cid[0], cid[1]);
+                maxc = SC_MAX (cid[0], cid[1]);
+                /* p4est convention is to number x edges before y edges before z
+                 * edges, but to be consistent across dimensions, we treat edges
+                 * as faces, so the order of the dimensions is reversed */
+                if ((maxc - minc) == 2) {
+                  f = (minc & 1);
+                }
+                else {
+                  f = 2 + ((minc & 2) >> 1);
+                }
+                pos = p4est_to_plex_position[1][f];
+                P4EST_ASSERT (pid >= dim_offsets[c] && pid < dim_offsets[c + 1]);
+                cone_off = 2 * (dim + 1) * (pid - dim_offsets[c]) + dim_cone_offsets[c];
+                cone_off += pos;
+                P4EST_ASSERT (cones[cone_off] == -1 ||
+                              cones[cone_off] == vid);
+                cones[cone_off] = vid;
+                faceor = cid[0] < cid[1] ? 0 : 1;
+                or = p4est_to_plex_edge_orientation[f][faceor];
+                P4EST_ASSERT (orientations[cone_off] == -1 ||
+                              orientations[cone_off] == or);
+                orientations[cone_off] = or;
               }
-              minc = SC_MIN (cid[0], cid[1]);
-              maxc = SC_MAX (cid[0], cid[1]);
-              /* p4est convention is to number x edges before y edges before z
-               * edges, but to be consistent across dimensions, we treat edges
-               * as faces, so the order of the dimensions is reversed */
-              if ((maxc - minc) == 2) {
-                f = (minc & 1);
-              }
-              else {
-                f = 2 + ((minc & 2) >> 1);
-              }
-              pos = p4est_to_plex_position[1][f];
-              P4EST_ASSERT (pid >= dim_offsets[c] && pid < dim_offsets[c + 1]);
-              cone_off = 2 * (dim + 1) * (pid - dim_offsets[c]) + dim_cone_offsets[c];
-              cone_off += pos;
-              P4EST_ASSERT (cones[cone_off] == -1 ||
-                            cones[cone_off] == vid);
-              cones[cone_off] = vid;
-              faceor = cid[0] < cid[1] ? 0 : 1;
-              or = p4est_to_plex_edge_orientation[f][faceor];
-              P4EST_ASSERT (orientations[cone_off] == -1 ||
-                            orientations[cone_off] == or);
-              orientations[cone_off] = or;
             }
           }
         }
 #endif
       }
     }
+#ifdef P4EST_DEBUG
+    {
+      size_t zz, count = out_cones->elem_count;
+
+      for (zz = 0; zz < count; zz++) {
+        p4est_locidx_t cone = *((p4est_locidx_t *) sc_array_index (out_cones, zz));
+
+        P4EST_ASSERT (cone >= 0);
+      }
+    }
+#endif
     /* compute coordinates */
     for (qid = 0, t = flt; t <= llt; t++) {
       p4est_tree_t * tree = p4est_tree_array_index (p4est->trees, t);
@@ -1170,6 +1246,10 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
     /* cleanup */
     P4EST_FREE (quad_to_local);
     P4EST_FREE (quad_to_orientations);
+    if (quad_to_local_orig) {
+      P4EST_FREE (quad_to_local_orig);
+      P4EST_FREE (quad_to_orientations_orig);
+    }
     sc_array_destroy (node_dim);
 
     {
