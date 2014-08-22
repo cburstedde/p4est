@@ -212,7 +212,10 @@ main (int argc, char **argv)
 #ifdef P4EST_PETSC
   {
     PetscErrorCode ierr;
-    DM plex;
+    DM plex, refTree;
+    PetscInt pStart, pEnd;
+    PetscSection parentSection;
+    size_t zz, count;
 
     locidx_to_PetscInt (points_per_dim);
     locidx_to_PetscInt (cone_sizes);
@@ -225,6 +228,7 @@ main (int argc, char **argv)
     locidx_to_PetscInt (leaves);
     locidx_pair_to_PetscSFNode (remotes);
 
+    P4EST_GLOBAL_PRODUCTION ("Begin PETSc routines\n");
     ierr = PetscInitialize (&argc, &argv, 0, help);CHKERRQ(ierr);
 
     ierr = DMPlexCreate (mpicomm, &plex);CHKERRQ(ierr);
@@ -236,10 +240,27 @@ main (int argc, char **argv)
                                 (PetscInt *) cones->array,
                                 (PetscInt *) cone_orientations->array,
                                 (PetscScalar *) coords->array);CHKERRQ(ierr);
+    ierr = DMPlexCreateDefaultReferenceTree (mpicomm,P4EST_DIM,PETSC_FALSE,&refTree);CHKERRQ(ierr);
+    ierr = DMPlexSetReferenceTree (plex,refTree);CHKERRQ(ierr);
+    ierr = DMDestroy (&refTree);CHKERRQ(ierr);
+    ierr = PetscSectionCreate (mpicomm, &parentSection);CHKERRQ(ierr);
+    ierr = DMPlexGetChart (plex, &pStart, &pEnd);CHKERRQ(ierr);
+    ierr = PetscSectionSetChart (parentSection, pStart, pEnd);CHKERRQ(ierr);
+    count = children->elem_count;
+    for (zz = 0; zz < count; zz++) {
+      PetscInt child = *((PetscInt *) sc_array_index (children, zz));
+
+      ierr = PetscSectionSetDof (parentSection, child, 1);CHKERRQ(ierr);
+    }
+    ierr = PetscSectionSetUp (parentSection);CHKERRQ(ierr);
+    ierr = DMPlexSetTree (plex, parentSection, (PetscInt *) parents->array, (PetscInt *) childids->array);CHKERRQ(ierr);
+    ierr = PetscSectionDestroy (&parentSection);CHKERRQ(ierr);
     ierr = DMViewFromOptions(plex,NULL,"-dm_view");CHKERRQ(ierr);
+    /* TODO: test with rigid body modes as in plex ex3 */
     ierr = DMDestroy (&plex);CHKERRQ(ierr);
 
     ierr = PetscFinalize();
+    P4EST_GLOBAL_PRODUCTION ("End   PETSc routines\n");
   }
 #endif
 
