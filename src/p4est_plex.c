@@ -142,140 +142,6 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
   has_hanging = p8est_lnodes_decode (F[qid], &hanging[0][0], &hanging[1][0]);
 #endif
   has_hanging |= lnodes_decode2 (F[qid], &hanging[P4EST_DIM-1][0]);
-  if (has_hanging) {
-    int c, cid = p4est_quadrant_child_id (q), v;
-
-    /* no corners */
-    for (c = ctype_int - 1; c >= 0; c--) {
-      int vstart = dim_limits[c];
-      int vend = dim_limits[c+1];
-
-      if (!c) {
-        for (v = vstart; v < vend; v++) {
-          if (hanging[0][v] >= 0) {
-            p4est_locidx_t child = child_offsets[quad_to_local[qid * V + v]] + hanging[0][v];
-            quad_to_local[qid * V + v] = child;
-            referenced[child] = 1;
-          }
-        }
-      }
-      else if (c == P4EST_DIM - 1) {
-        for (v = vstart; v < vend; v++) {
-          int corner = v-vstart;
-          if (hanging[P4EST_DIM - 1][corner] >= 0) {
-            p4est_locidx_t child = -1;
-            int dim;
-
-            f = p4est_child_corner_faces[cid][corner];
-            P4EST_ASSERT (P4EST_DIM == 3 || f >= 0);
-            if (f >= 0) {
-              dim = P4EST_DIM - 1;
-              child = child_offsets[quad_to_local[qid * V + f]];
-            }
-#ifdef P4_TO_P8
-            else {
-              int e = p8est_child_corner_edges[cid][corner];
-
-              P4EST_ASSERT (e >= 0);
-              dim = 1;
-              child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
-            }
-#endif
-            P4EST_ASSERT (dim == 1 || dim == 2);
-            child += (dim == 1) ? 2 : 8;
-            quad_to_local[qid * V + v] = child;
-            referenced[child] = 1;
-          }
-        }
-      }
-#ifdef P4_TO_P8
-      else {
-        for (v = vstart; v < vend; v++) {
-          int edge = v-vstart;
-          if (hanging[1][edge] >= 0) {
-            p4est_locidx_t child;
-
-            if (hanging[1][edge] < 4) {
-              int h = hanging[1][edge] % 2;
-
-              child = child_offsets[quad_to_local[qid * V + v]] + h;
-              quad_to_local[qid * V + v] = child;
-              referenced[child] = 1;
-            }
-            else {
-              int i;
-
-              for (i = 0; i < 2; i++) {
-                int f = p8est_face_edges[edge][i];
-                int c = p8est_corner_face_corners[cid][f];
-                int e, j;
-                p4est_quadrant_t tempq;
-
-                if (c >= 0) {
-                  int dir;
-                  int hc = hanging[0][f];
-                  int he[2];
-                  int child_edge;
-
-                  P4EST_ASSERT (hc >= 0);
-
-                  for (j = 0; j < 4; j++) {
-                    e = p8est_face_edges[f][j];
-
-                    if (e == edge) {
-                      break;
-                    }
-                  }
-                  P4EST_ASSERT (j < 4);
-                  dir = j / 2;
-
-                  he[0] = (hc & 1);
-                  he[1] = 2 + ((hc & 2) >> 1);
-
-                  /* flip dir if the orientation is different */
-                  p4est_quadrant_face_neighbor (q, f, &tempq);
-                  if (p4est_quadrant_is_outside_face (&tempq)) {
-                    p4est_topidx_t nt;
-                    int nf;
-                    int o;
-
-                    nt = conn->tree_to_tree[P4EST_FACES * t + f];
-                    nf = conn->tree_to_face[P4EST_FACES * t + f];
-                    o = nf / P4EST_FACES;
-                    nf = nf % P4EST_FACES;
-                    if (nt != t && nf != f) {
-                      if (nt < t || (nt == t && nf < f)) {
-                        int ref = p8est_face_permutation_refs[f][nf];
-                        int set = p8est_face_permutation_sets[ref][o];
-                        if (set == 1 || set == 3 || set == 4 || set == 6) {
-                          dir = (dir ^ 1);
-                        }
-                      }
-                    }
-                  }
-                  if (!dir) {
-                    /* first direction */
-                    child_edge = he[0];
-                  }
-                  else {
-                    /* second direction */
-                    child_edge = he[1];
-                  }
-
-                  child = child_offsets[quad_to_local[qid * V + f]] + child_edge;
-                  quad_to_local[qid * V + v] = child;
-                  referenced[child] = 1;
-                  break;
-                }
-              }
-              P4EST_ASSERT (i < 2);
-            }
-          }
-        }
-      }
-#endif
-    }
-  }
   for (f = 0; f < P4EST_FACES; f++) {
     p4est_quadrant_t tempq;
 
@@ -424,15 +290,147 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
         quad_to_orientations[qid * no + P4EST_FACES + e] = o;
       }
     }
-    {
-      p4est_locidx_t childid = child_to_id[quad_to_local[qid * V + P4EST_FACES
-                               + e]];
-      if (childid >= 4 && childid & 1) {
-        quad_to_orientations[qid * no + P4EST_FACES + e] ^= 1;
-      }
-    }
   }
 #endif
+  if (has_hanging) {
+    int c, cid = p4est_quadrant_child_id (q), v;
+
+    /* no corners */
+    for (c = ctype_int - 1; c >= 0; c--) {
+      int vstart = dim_limits[c];
+      int vend = dim_limits[c+1];
+
+      if (!c) {
+        for (v = vstart; v < vend; v++) {
+          if (hanging[0][v] >= 0) {
+            int o = quad_to_orientations[qid * no + v];
+            int childid = hanging[0][v];
+            p4est_locidx_t child;
+
+#ifndef P4_TO_P8
+            childid ^= o;
+#else
+            childid = p8est_face_permutations[o][childid];
+#endif
+            child = child_offsets[quad_to_local[qid * V + v]] + childid;
+            quad_to_local[qid * V + v] = child;
+            referenced[child] = 1;
+          }
+        }
+      }
+      else if (c == P4EST_DIM - 1) {
+        for (v = vstart; v < vend; v++) {
+          int corner = v-vstart;
+          if (hanging[P4EST_DIM - 1][corner] >= 0) {
+            p4est_locidx_t child = -1;
+            int dim;
+
+            f = p4est_child_corner_faces[cid][corner];
+            P4EST_ASSERT (P4EST_DIM == 3 || f >= 0);
+            if (f >= 0) {
+              dim = P4EST_DIM - 1;
+              child = child_offsets[quad_to_local[qid * V + f]];
+            }
+#ifdef P4_TO_P8
+            else {
+              int e = p8est_child_corner_edges[cid][corner];
+
+              P4EST_ASSERT (e >= 0);
+              dim = 1;
+              child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
+            }
+#endif
+            P4EST_ASSERT (dim == 1 || dim == 2);
+            child += (dim == 1) ? 2 : 8;
+            quad_to_local[qid * V + v] = child;
+            referenced[child] = 1;
+          }
+        }
+      }
+#ifdef P4_TO_P8
+      else {
+        for (v = vstart; v < vend; v++) {
+          int edge = v-vstart;
+          int o = quad_to_orientations[qid * no + P4EST_FACES + edge];
+
+          if (hanging[1][edge] >= 0) {
+            p4est_locidx_t child;
+
+            if (hanging[1][edge] < 4) {
+              int h = hanging[1][edge] % 2;
+
+              /* TODO: reconcile intrinsic/extrinsic order */
+              child = child_offsets[quad_to_local[qid * V + v]] + (h ^ o);
+              quad_to_local[qid * V + v] = child;
+              referenced[child] = 1;
+            }
+            else {
+              int i;
+
+              for (i = 0; i < 2; i++) {
+                int f = p8est_edge_faces[edge][i];
+                int ch = p8est_corner_face_corners[cid][f];
+                int e, j;
+
+                if (ch >= 0) {
+                  int fo = quad_to_orientations[qid * no + f];
+                  int dir;
+                  int hc = p8est_face_permutations[fo][hanging[0][f]];
+                  int he[2];
+                  int child_edge;
+                  int cid[2];
+                  int diff;
+
+                  P4EST_ASSERT (hanging[0][f] >= 0);
+
+                  he[0] = (hc & 1);
+                  he[1] = 2 + ((hc & 2) >> 1);
+
+                  for (j = 0; j < 4; j++) {
+                    e = p8est_face_edges[f][j];
+
+                    if (e == edge) {
+                      break;
+                    }
+                  }
+                  P4EST_ASSERT (j < 4);
+                  dir = j / 2;
+
+                  cid[0] = p8est_face_permutations[fo][0];
+                  cid[1] = p8est_face_permutations[fo][1];
+                  diff = cid[1] - cid[0];
+                  diff = (diff < 0) ? -diff : diff;
+
+                  if (diff == 2) {
+                    dir ^= 1;
+                  }
+
+                  if (!dir) {
+                    /* first direction */
+                    child_edge = he[0];
+                  }
+                  else {
+                    /* second direction */
+                    child_edge = he[1];
+                  }
+
+                  child = child_offsets[quad_to_local[qid * V + f]] + P4EST_HALF + child_edge;
+                  quad_to_local[qid * V + v] = child;
+                  referenced[child] = 1;
+                  if (child_edge & 1) {
+                    quad_to_orientations[qid * no + P4EST_FACES + edge] ^= 1;
+                  }
+                  break;
+                }
+              }
+              P4EST_ASSERT (i < 2);
+            }
+          }
+        }
+      }
+#endif
+    }
+  }
 }
 
 static int
@@ -1038,6 +1036,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
               if (o) {
                 pos = (pos ^ 1);
               }
+              P4EST_ASSERT (pid >= dim_offsets[c] && pid < dim_offsets[c + 1]);
               cone_off = 2 * (dim + 1)* (pid - dim_offsets[c]) + dim_cone_offsets[c];
               cone_off += pos;
               /* another cell may have already computed this cell, but we want
@@ -1088,6 +1087,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
                 f = 2 + ((minc & 2) >> 1);
               }
               pos = p4est_to_plex_position[1][f];
+              P4EST_ASSERT (pid >= dim_offsets[c] && pid < dim_offsets[c + 1]);
               cone_off = 2 * (dim + 1) * (pid - dim_offsets[c]) + dim_cone_offsets[c];
               cone_off += pos;
               P4EST_ASSERT (cones[cone_off] == -1 ||
