@@ -1188,6 +1188,7 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
 
       for (il = 0; il < num_quads; il++, qid++) {
         p4est_quadrant_t *q = p4est_quadrant_array_index (quadrants, (size_t) il);
+        p4est_quadrant_t tempq;
         p4est_qcoord_t h = P4EST_QUADRANT_LEN (q->level);
         int vstart, vend;
 
@@ -1196,6 +1197,8 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
         for (v = vstart; v < vend; v++) {
           int corner = v - vstart;
           p4est_locidx_t vid = local_to_plex[quad_to_local[qid * V + v] + K] - dim_offsets[P4EST_DIM];
+          p4est_locidx_t vid2 = (quad_to_local_orig != NULL) ?
+            (local_to_plex[quad_to_local_orig[qid * V + v] + K] - dim_offsets[P4EST_DIM]) : vid;
           double vcoord[3];
 
           p4est_qcoord_to_vertex (p4est->connectivity, t,
@@ -1208,6 +1211,22 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
           coords[3 * vid + 0] = vcoord[0];
           coords[3 * vid + 1] = vcoord[1];
           coords[3 * vid + 2] = vcoord[2];
+
+          if (vid2 != vid) {
+            p4est_quadrant_t p;
+
+            p4est_quadrant_parent (q, &p);
+            p4est_qcoord_to_vertex (p4est->connectivity, t,
+                                    p.x + ((corner & 1) ? (2 * h) : 0),
+                                    p.y + ((corner & 2) ? (2 * h) : 0),
+#ifdef P4_TO_P8
+                                    p.z + ((corner & 4) ? (2 * h) : 0),
+#endif
+                                    vcoord);
+            coords[3 * vid2 + 0] = vcoord[0];
+            coords[3 * vid2 + 1] = vcoord[1];
+            coords[3 * vid2 + 2] = vcoord[2];
+          }
         }
       }
     }
@@ -1226,6 +1245,8 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
           for (v = vstart; v < vend; v++) {
             int corner = v - vstart;
             p4est_locidx_t vid = local_to_plex[quad_to_local[qid * V + v] + K] - dim_offsets[P4EST_DIM];
+            p4est_locidx_t vid2 = (quad_to_local_orig != NULL) ?
+              (local_to_plex[quad_to_local_orig[qid * V + v] + K] - dim_offsets[P4EST_DIM]) : vid;
             double vcoord[3];
 
             p4est_qcoord_to_vertex (p4est->connectivity, t,
@@ -1238,6 +1259,22 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
             coords[3 * vid + 0] = vcoord[0];
             coords[3 * vid + 1] = vcoord[1];
             coords[3 * vid + 2] = vcoord[2];
+
+            if (vid2 != vid) {
+              p4est_quadrant_t p;
+
+              p4est_quadrant_parent (q, &p);
+              p4est_qcoord_to_vertex (p4est->connectivity, t,
+                                      p.x + ((corner & 1) ? (2 * h) : 0),
+                                      p.y + ((corner & 2) ? (2 * h) : 0),
+#ifdef P4_TO_P8
+                                      p.z + ((corner & 4) ? (2 * h) : 0),
+#endif
+                                      vcoord);
+              coords[3 * vid2 + 0] = vcoord[0];
+              coords[3 * vid2 + 1] = vcoord[1];
+              coords[3 * vid2 + 2] = vcoord[2];
+            }
           }
         }
       }
