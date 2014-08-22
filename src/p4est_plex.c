@@ -155,7 +155,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
           if (hanging[0][v] >= 0) {
             p4est_locidx_t child = child_offsets[quad_to_local[qid * V + v]] + hanging[0][v];
             quad_to_local[qid * V + v] = child;
-            referenced[qid * V + v] = 1;
+            referenced[child] = 1;
           }
         }
       }
@@ -184,7 +184,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
             P4EST_ASSERT (dim == 1 || dim == 2);
             child += (dim == 1) ? 2 : 8;
             quad_to_local[qid * V + v] = child;
-            referenced[qid * V + v] = 1;
+            referenced[child] = 1;
           }
         }
       }
@@ -200,7 +200,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
 
               child = child_offsets[quad_to_local[qid * V + v]] + h;
               quad_to_local[qid * V + v] = child;
-              referenced[qid * V + v] = 1;
+              referenced[child] = 1;
             }
             else {
               int i;
@@ -264,7 +264,7 @@ parent_to_child (p4est_quadrant_t *q, p4est_topidx_t t, p4est_locidx_t qid, int 
 
                   child = child_offsets[quad_to_local[qid * V + f]] + child_edge;
                   quad_to_local[qid * V + v] = child;
-                  referenced[qid * V + v] = 1;
+                  referenced[child] = 1;
                   break;
                 }
               }
@@ -926,8 +926,6 @@ p4est_get_plex_data_int (p4est_t *p4est, p4est_ghost_t *ghost,
       P4EST_ASSERT (0 <= dim && dim <= P4EST_DIM - 1);
       if (il < num_global) {
         gid = *((p4est_gloidx_t *) sc_array_index (all_global, il));
-      }
-      else {
         while (p < mpisize && lnode_global_offset[p+1] <= gid) {
           p++;
         }
