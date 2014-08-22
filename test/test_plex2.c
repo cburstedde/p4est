@@ -215,6 +215,7 @@ main (int argc, char **argv)
     DM plex, refTree;
     PetscInt pStart, pEnd;
     PetscSection parentSection;
+    PetscSF pointSF;
     size_t zz, count;
 
     locidx_to_PetscInt (points_per_dim);
@@ -240,6 +241,7 @@ main (int argc, char **argv)
                                 (PetscInt *) cones->array,
                                 (PetscInt *) cone_orientations->array,
                                 (PetscScalar *) coords->array);CHKERRQ(ierr);
+    ierr = PetscSFCreate (mpicomm, &pointSF);CHKERRQ(ierr);
     ierr = DMPlexCreateDefaultReferenceTree (mpicomm,P4EST_DIM,PETSC_FALSE,&refTree);CHKERRQ(ierr);
     ierr = DMPlexSetReferenceTree (plex,refTree);CHKERRQ(ierr);
     ierr = DMDestroy (&refTree);CHKERRQ(ierr);
@@ -255,6 +257,9 @@ main (int argc, char **argv)
     ierr = PetscSectionSetUp (parentSection);CHKERRQ(ierr);
     ierr = DMPlexSetTree (plex, parentSection, (PetscInt *) parents->array, (PetscInt *) childids->array);CHKERRQ(ierr);
     ierr = PetscSectionDestroy (&parentSection);CHKERRQ(ierr);
+    ierr = PetscSFSetGraph (pointSF, pEnd - pStart, (PetscInt) leaves->elem_count,
+                            (PetscInt *) leaves->array, PETSC_COPY_VALUES,
+                            (PetscSFNode *) remotes->array, PETSC_COPY_VALUES);CHKERRQ(ierr);
     ierr = DMViewFromOptions(plex,NULL,"-dm_view");CHKERRQ(ierr);
     /* TODO: test with rigid body modes as in plex ex3 */
     ierr = DMDestroy (&plex);CHKERRQ(ierr);
