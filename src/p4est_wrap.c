@@ -103,6 +103,8 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_wrap_t       *pp;
 
   pp = P4EST_ALLOC (p4est_wrap_t, 1);
+  pp->user_pointer = NULL;
+
   pp->p4est_dim = P4EST_DIM;
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
