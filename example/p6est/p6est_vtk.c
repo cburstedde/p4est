@@ -205,7 +205,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 #if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
   fprintf (vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_WORDS_BIGENDIAN
+#ifdef SC_IS_BIGENDIAN
   fprintf (vtufile, " byte_order=\"BigEndian\">\n");
 #else
   fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
@@ -515,7 +515,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 #if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
     fprintf (pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_WORDS_BIGENDIAN
+#ifdef SC_IS_BIGENDIAN
     fprintf (pvtufile, " byte_order=\"BigEndian\">\n");
 #else
     fprintf (pvtufile, " byte_order=\"LittleEndian\">\n");
