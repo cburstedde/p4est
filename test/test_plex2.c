@@ -36,13 +36,13 @@
 #include <petscdmplex.h>
 #include <petscsf.h>
 
-const char help[] = "test creating DMPlex from " P4EST_STRING "\n";
+const char          help[] = "test creating DMPlex from " P4EST_STRING "\n";
 
 static void
 locidx_to_PetscInt (sc_array_t * array)
 {
-  sc_array_t * newarray;
-  size_t zz, count = array->elem_count;
+  sc_array_t         *newarray;
+  size_t              zz, count = array->elem_count;
   P4EST_ASSERT (array->elem_size == sizeof (p4est_locidx_t));
 
   if (sizeof (p4est_locidx_t) == sizeof (PetscInt)) {
@@ -51,8 +51,8 @@ locidx_to_PetscInt (sc_array_t * array)
 
   newarray = sc_array_new_size (sizeof (PetscInt), array->elem_count);
   for (zz = 0; zz < count; zz++) {
-    p4est_locidx_t il = *((p4est_locidx_t *) sc_array_index (array, zz));
-    PetscInt *ip = (PetscInt *) sc_array_index (newarray, zz);
+    p4est_locidx_t      il = *((p4est_locidx_t *) sc_array_index (array, zz));
+    PetscInt           *ip = (PetscInt *) sc_array_index (newarray, zz);
 
     *ip = (PetscInt) il;
   }
@@ -66,8 +66,8 @@ locidx_to_PetscInt (sc_array_t * array)
 static void
 coords_double_to_PetscScalar (sc_array_t * array)
 {
-  sc_array_t * newarray;
-  size_t zz, count = array->elem_count;
+  sc_array_t         *newarray;
+  size_t              zz, count = array->elem_count;
   P4EST_ASSERT (array->elem_size == 3 * sizeof (double));
 
   if (sizeof (double) == sizeof (PetscScalar)) {
@@ -76,8 +76,8 @@ coords_double_to_PetscScalar (sc_array_t * array)
 
   newarray = sc_array_new_size (3 * sizeof (PetscScalar), array->elem_count);
   for (zz = 0; zz < count; zz++) {
-    double *id = (double *) sc_array_index (array, zz);
-    PetscScalar *ip = (PetscScalar *) sc_array_index (newarray, zz);
+    double             *id = (double *) sc_array_index (array, zz);
+    PetscScalar        *ip = (PetscScalar *) sc_array_index (newarray, zz);
 
     ip[0] = (PetscScalar) id[0];
     ip[1] = (PetscScalar) id[1];
@@ -93,14 +93,14 @@ coords_double_to_PetscScalar (sc_array_t * array)
 static void
 locidx_pair_to_PetscSFNode (sc_array_t * array)
 {
-  sc_array_t * newarray;
-  size_t zz, count = array->elem_count;
+  sc_array_t         *newarray;
+  size_t              zz, count = array->elem_count;
   P4EST_ASSERT (array->elem_size == 2 * sizeof (p4est_locidx_t));
 
   newarray = sc_array_new_size (sizeof (PetscSFNode), array->elem_count);
   for (zz = 0; zz < count; zz++) {
-    p4est_locidx_t *il = (p4est_locidx_t *) sc_array_index (array, zz);
-    PetscSFNode *ip = (PetscSFNode *) sc_array_index (newarray, zz);
+    p4est_locidx_t     *il = (p4est_locidx_t *) sc_array_index (array, zz);
+    PetscSFNode        *ip = (PetscSFNode *) sc_array_index (newarray, zz);
 
     ip->rank = (PetscInt) il[0];
     ip->index = (PetscInt) il[1];
@@ -166,9 +166,8 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   sc_array_t         *points_per_dim, *cone_sizes, *cones,
-                     *cone_orientations, *coords,
-                     *children, *parents,
-                     *childids, *leaves, *remotes;
+    *cone_orientations, *coords,
+    *children, *parents, *childids, *leaves, *remotes;
   p4est_locidx_t      first_local_quad = -1;
 
   /* initialize MPI */
@@ -211,12 +210,12 @@ main (int argc, char **argv)
 
 #ifdef P4EST_PETSC
   {
-    PetscErrorCode ierr;
-    DM plex, refTree;
-    PetscInt pStart, pEnd;
-    PetscSection parentSection;
-    PetscSF pointSF;
-    size_t zz, count;
+    PetscErrorCode      ierr;
+    DM                  plex, refTree;
+    PetscInt            pStart, pEnd;
+    PetscSection        parentSection;
+    PetscSF             pointSF;
+    size_t              zz, count;
 
     locidx_to_PetscInt (points_per_dim);
     locidx_to_PetscInt (cone_sizes);
@@ -230,41 +229,66 @@ main (int argc, char **argv)
     locidx_pair_to_PetscSFNode (remotes);
 
     P4EST_GLOBAL_PRODUCTION ("Begin PETSc routines\n");
-    ierr = PetscInitialize (&argc, &argv, 0, help);CHKERRQ(ierr);
+    ierr = PetscInitialize (&argc, &argv, 0, help);
+    CHKERRQ (ierr);
 
-    ierr = DMPlexCreate (mpicomm, &plex);CHKERRQ(ierr);
-    ierr = DMSetDimension (plex, P4EST_DIM);CHKERRQ(ierr);
-    ierr = DMSetCoordinateDim (plex, 3);CHKERRQ(ierr);
+    ierr = DMPlexCreate (mpicomm, &plex);
+    CHKERRQ (ierr);
+    ierr = DMSetDimension (plex, P4EST_DIM);
+    CHKERRQ (ierr);
+    ierr = DMSetCoordinateDim (plex, 3);
+    CHKERRQ (ierr);
     ierr = DMPlexCreateFromDAG (plex, P4EST_DIM,
                                 (PetscInt *) points_per_dim->array,
                                 (PetscInt *) cone_sizes->array,
                                 (PetscInt *) cones->array,
                                 (PetscInt *) cone_orientations->array,
-                                (PetscScalar *) coords->array);CHKERRQ(ierr);
-    ierr = PetscSFCreate (mpicomm, &pointSF);CHKERRQ(ierr);
-    ierr = DMPlexCreateDefaultReferenceTree (mpicomm,P4EST_DIM,PETSC_FALSE,&refTree);CHKERRQ(ierr);
-    ierr = DMPlexSetReferenceTree (plex,refTree);CHKERRQ(ierr);
-    ierr = DMDestroy (&refTree);CHKERRQ(ierr);
-    ierr = PetscSectionCreate (mpicomm, &parentSection);CHKERRQ(ierr);
-    ierr = DMPlexGetChart (plex, &pStart, &pEnd);CHKERRQ(ierr);
-    ierr = PetscSectionSetChart (parentSection, pStart, pEnd);CHKERRQ(ierr);
+                                (PetscScalar *) coords->array);
+    CHKERRQ (ierr);
+    ierr = PetscSFCreate (mpicomm, &pointSF);
+    CHKERRQ (ierr);
+    ierr =
+      DMPlexCreateDefaultReferenceTree (mpicomm, P4EST_DIM, PETSC_FALSE,
+                                        &refTree);
+    CHKERRQ (ierr);
+    ierr = DMPlexSetReferenceTree (plex, refTree);
+    CHKERRQ (ierr);
+    ierr = DMDestroy (&refTree);
+    CHKERRQ (ierr);
+    ierr = PetscSectionCreate (mpicomm, &parentSection);
+    CHKERRQ (ierr);
+    ierr = DMPlexGetChart (plex, &pStart, &pEnd);
+    CHKERRQ (ierr);
+    ierr = PetscSectionSetChart (parentSection, pStart, pEnd);
+    CHKERRQ (ierr);
     count = children->elem_count;
     for (zz = 0; zz < count; zz++) {
-      PetscInt child = *((PetscInt *) sc_array_index (children, zz));
+      PetscInt            child =
+        *((PetscInt *) sc_array_index (children, zz));
 
-      ierr = PetscSectionSetDof (parentSection, child, 1);CHKERRQ(ierr);
+      ierr = PetscSectionSetDof (parentSection, child, 1);
+      CHKERRQ (ierr);
     }
-    ierr = PetscSectionSetUp (parentSection);CHKERRQ(ierr);
-    ierr = DMPlexSetTree (plex, parentSection, (PetscInt *) parents->array, (PetscInt *) childids->array);CHKERRQ(ierr);
-    ierr = PetscSectionDestroy (&parentSection);CHKERRQ(ierr);
-    ierr = PetscSFSetGraph (pointSF, pEnd - pStart, (PetscInt) leaves->elem_count,
-                            (PetscInt *) leaves->array, PETSC_COPY_VALUES,
-                            (PetscSFNode *) remotes->array, PETSC_COPY_VALUES);CHKERRQ(ierr);
-    ierr = DMViewFromOptions(plex,NULL,"-dm_view");CHKERRQ(ierr);
+    ierr = PetscSectionSetUp (parentSection);
+    CHKERRQ (ierr);
+    ierr =
+      DMPlexSetTree (plex, parentSection, (PetscInt *) parents->array,
+                     (PetscInt *) childids->array);
+    CHKERRQ (ierr);
+    ierr = PetscSectionDestroy (&parentSection);
+    CHKERRQ (ierr);
+    ierr =
+      PetscSFSetGraph (pointSF, pEnd - pStart, (PetscInt) leaves->elem_count,
+                       (PetscInt *) leaves->array, PETSC_COPY_VALUES,
+                       (PetscSFNode *) remotes->array, PETSC_COPY_VALUES);
+    CHKERRQ (ierr);
+    ierr = DMViewFromOptions (plex, NULL, "-dm_view");
+    CHKERRQ (ierr);
     /* TODO: test with rigid body modes as in plex ex3 */
-    ierr = DMDestroy (&plex);CHKERRQ(ierr);
+    ierr = DMDestroy (&plex);
+    CHKERRQ (ierr);
 
-    ierr = PetscFinalize();
+    ierr = PetscFinalize ();
     P4EST_GLOBAL_PRODUCTION ("End   PETSc routines\n");
   }
 #endif

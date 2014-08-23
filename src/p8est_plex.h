@@ -30,7 +30,7 @@ SC_EXTERN_C_BEGIN;
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest.  The forest must be at least edge balanced (see p8est_balance()).
- * See example XXX.
+ * See test/test_plex2.c for example usage.
  *
  * All arrays should be initialized to hold sizeof (p4est_locidx_t), except
  * for \a out_remotes, which should be initialized to hold
@@ -64,20 +64,20 @@ SC_EXTERN_C_BEGIN;
  * \param[in,out] out_remotes           filled with argument for
  *                                      PetscSFSetGraph()
  */
-void                p8est_get_plex_data (p8est_t *p8est,
+void                p8est_get_plex_data (p8est_t * p8est,
                                          p8est_connect_type_t ctype,
                                          int overlap,
-                                         p4est_locidx_t *first_local_quad,
-                                         sc_array_t *out_points_per_dim,
-                                         sc_array_t *out_cone_sizes,
-                                         sc_array_t *out_cones,
-                                         sc_array_t *out_cone_orientations,
-                                         sc_array_t *out_vertex_coords,
-                                         sc_array_t *out_children,
-                                         sc_array_t *out_parents,
-                                         sc_array_t *out_childids,
-                                         sc_array_t *out_leaves,
-                                         sc_array_t *out_remotes);
+                                         p4est_locidx_t * first_local_quad,
+                                         sc_array_t * out_points_per_dim,
+                                         sc_array_t * out_cone_sizes,
+                                         sc_array_t * out_cones,
+                                         sc_array_t * out_cone_orientations,
+                                         sc_array_t * out_vertex_coords,
+                                         sc_array_t * out_children,
+                                         sc_array_t * out_parents,
+                                         sc_array_t * out_childids,
+                                         sc_array_t * out_leaves,
+                                         sc_array_t * out_remotes);
 
 SC_EXTERN_C_END;
 #endif /* P4EST_PLEX_H */
