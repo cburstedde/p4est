@@ -468,22 +468,6 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
   }
 }
 
-static int
-p4est_locidx_compare_double (const void *A, const void *B)
-{
-  const p4est_locidx_t *a = (const p4est_locidx_t *) A;
-  const p4est_locidx_t *b = (const p4est_locidx_t *) A;
-  int                 diff;
-
-  diff = p4est_locidx_compare (A, B);
-  if (diff) {
-    return diff;
-  }
-  else {
-    return p4est_locidx_compare (&a[1], &b[1]);
-  }
-}
-
 /* *INDENT-OFF* */
 #ifndef P4_TO_P8
 static int p4est_to_plex_child_id[1][3] = {{9, 10, 25}};
@@ -878,7 +862,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     p4est_locidx_t     *local_to_plex;
     p4est_locidx_t      Nplex = num_global_plus_children + K;
     int                *plex_to_proc;
-    p4est_locidx_t      point_count, cone_count;
+    p4est_locidx_t      point_count;
     p4est_gloidx_t     *lnode_global_offset;
     double             *coords;
 
@@ -898,7 +882,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     dim_cone_offsets[0] = 0;
     for (c = 0; c <= ctype_int; c++) {
       int                 dim = P4EST_DIM - c;
-      p4est_locidx_t     *ppd = sc_array_index (out_points_per_dim, dim);
+      p4est_locidx_t     *ppd =
+        (p4est_locidx_t *) sc_array_index (out_points_per_dim, dim);
 
       *ppd = dim_counts[c];
       dim_offsets[c + 1] = dim_offsets[c] + dim_counts[c];
@@ -948,7 +933,6 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             out_cone_orientations->elem_size);
 #endif
     point_count = 0;
-    cone_count = 0;
     /* figure out the locations of ghosts within the base */
     Gpre = (overlap && local_first) ? 0 : (ghost->proc_offsets[mpirank] -
                                            ghost->proc_offsets[0]);
@@ -1175,8 +1159,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
               for (j = 0; j < 2; j++) {
                 p4est_locidx_t      pid;
                 p4est_locidx_t      cone_off;
-                int                 k, f, pos, fo, cid[2], l, minc, maxc, or,
-                  faceor;
+                int                 k, f, pos, fo, cid[2], l, minc, maxc;
+                int                 edgeor, faceor;
 
                 k = p8est_edge_faces[edge][j];
                 fo = qto[il * no + k];
@@ -1215,10 +1199,10 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
                               cones[cone_off] == vid);
                 cones[cone_off] = vid;
                 faceor = cid[0] < cid[1] ? 0 : 1;
-                or = p4est_to_plex_edge_orientation[f][faceor];
+                edgeor = p4est_to_plex_edge_orientation[f][faceor];
                 P4EST_ASSERT (orientations[cone_off] == -1 ||
-                              orientations[cone_off] == or);
-                orientations[cone_off] = or;
+                              orientations[cone_off] == edgeor);
+                orientations[cone_off] = edgeor;
               }
             }
           }
@@ -1247,7 +1231,6 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       for (il = 0; il < num_quads; il++, qid++) {
         p4est_quadrant_t   *q =
           p4est_quadrant_array_index (quadrants, (size_t) il);
-        p4est_quadrant_t    tempq;
         p4est_qcoord_t      h = P4EST_QUADRANT_LEN (q->level);
         int                 vstart, vend;
 
@@ -1426,9 +1409,9 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       for (il = 0; il < Klocal; il++) {
         for (v = 0; v < V; v++) {
           p4est_locidx_t      nid = lnodes->element_nodes[il * V + v];
-          p4est_locidx_t      lp =
-            *((p4est_locidx_t *)
-              sc_array_index (lnodes_to_plex, (size_t) nid));
+          p4est_locidx_t      lp = *((p4est_locidx_t *)
+                                     sc_array_index (lnodes_to_plex,
+                                                     (size_t) nid));
           p4est_locidx_t     *qp =
             (p4est_locidx_t *) sc_array_index (quad_to_plex,
                                                (size_t) (il * V + v));
