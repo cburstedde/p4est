@@ -93,6 +93,11 @@ test_p8est_test_join_SOURCES = test/test_join3.c
 test_p8est_test_conn_reduce_SOURCES = test/test_conn_reduce3.c
 test_p8est_test_plex_SOURCES = test/test_plex3.c
 
+test_p4est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
+test_p8est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
+test_p4est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD) 
+test_p8est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD) 
+
 
 if P4EST_WITH_METIS
 test_p4est_test_reorder_SOURCES = test/test_reorder2.c
