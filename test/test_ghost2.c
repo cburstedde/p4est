@@ -24,9 +24,11 @@
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_ghost.h>
+#include <p4est_lnodes.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_ghost.h>
+#include <p8est_lnodes.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -317,6 +319,8 @@ main (int argc, char **argv)
   p4est_ghost_t      *ghost;
   int                 num_cycles = 2;
   int                 i;
+  p4est_lnodes_t     *lnodes;
+  int                 type;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -362,7 +366,31 @@ main (int argc, char **argv)
     test_exchange_D (p4est, ghost);
   }
 
+  p4est_ghost_destroy (ghost);
+  /* repeate the cyle, but with lnodes */
+  /* create the ghost layer */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  type = p4est_connect_type_int (ghost->btype);
+  lnodes = p4est_lnodes_new (p4est, ghost, -type);
+  p4est_ghost_support_lnodes (p4est, lnodes, ghost);
+  /* test ghost data exchange */
+  test_exchange_A (p4est, ghost);
+  test_exchange_B (p4est, ghost);
+  test_exchange_C (p4est, ghost);
+  test_exchange_D (p4est, ghost);
+
+  for (i = 0; i < num_cycles; i++) {
+    /* expand and test that the ghost layer can still exchange data properly
+     * */
+    p4est_ghost_expand_by_lnodes (p4est, lnodes, ghost);
+    test_exchange_A (p4est, ghost);
+    test_exchange_B (p4est, ghost);
+    test_exchange_C (p4est, ghost);
+    test_exchange_D (p4est, ghost);
+  }
+
   /* clean up */
+  p4est_lnodes_destroy (lnodes);
   p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
