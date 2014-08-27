@@ -31,7 +31,7 @@
 #include <p8est_bits.h>
 #endif
 
-#ifdef P4EST_PETSC
+#ifdef P4EST_WITH_PETSC
 #include <petsc.h>
 #include <petscdmplex.h>
 #include <petscsf.h>
@@ -208,7 +208,7 @@ main (int argc, char **argv)
                        cone_orientations, coords, children, parents, childids,
                        leaves, remotes);
 
-#ifdef P4EST_PETSC
+#ifdef P4EST_WITH_PETSC
   {
     PetscErrorCode      ierr;
     DM                  plex, refTree;

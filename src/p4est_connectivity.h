@@ -462,7 +462,7 @@ void                p4est_connectivity_reduce (p4est_connectivity_t * conn);
 void                p4est_connectivity_permute (p4est_connectivity_t * conn,
                                                 sc_array_t * perm,
                                                 int is_current_to_new);
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 
 /** p4est_connectivity_reorder
  * This function takes a connectivity \a conn and a parameter \a k,
@@ -490,7 +490,7 @@ void                p4est_connectivity_reorder (MPI_Comm comm, int k,
                                                 p4est_connectivity_t * conn,
                                                 p4est_connect_type_t ctype);
 
-#endif /* P4EST_METIS */
+#endif /* P4EST_WITH_METIS */
 
 /** p4est_connectivity_join_faces
  * This function takes an existing valid connectivity \a conn and modifies it

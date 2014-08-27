@@ -27,7 +27,7 @@
 #include <p4est_connectivity.h>
 #endif
 #include <sc_io.h>
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 #include <metis.h>
 #endif
 
@@ -2982,7 +2982,7 @@ p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
   }
 }
 
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 static int
 reorder_comp (const void *a, const void *b)
 {
@@ -3195,7 +3195,7 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   sc_array_destroy (newid);
 }
 
-#endif /* P4EST_METIS */
+#endif /* P4EST_WITH_METIS */
 
 static int
 p4est_topidx_compare_2 (const void *A, const void *B)
