@@ -241,6 +241,7 @@ p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
 
 /** Broadcast a connectivity structure which exists only on one
  *  process to all other processes.
+ *  The new connectivities will be allocated using p4est_connectivity_new.
  *  \param [in] conn_in For the root process the connectivity to be broadcasted,
  *                      for the other processes this variable is not touched.
  *  \param [in] root    The process id of the root process.

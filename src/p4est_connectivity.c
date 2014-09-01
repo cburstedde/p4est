@@ -263,8 +263,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
 #endif
                               conn_dimensions.num_corners,
                               conn_dimensions.num_ctt);
-    conn->tree_attr_bytes = conn_dimensions.tree_attr_bytes;
-    p4est_connectivity_set_attr (conn, conn->tree_attr_bytes);
+    p4est_connectivity_set_attr (conn, conn_dimensions.tree_attr_bytes);
   }
 
   /* broadcast the arrays if not set to NULL. If a pointer is NULL on one process
@@ -314,6 +313,8 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   mpiret =
     sc_MPI_Bcast (conn->ctt_offset, conn_dimensions.num_corners,
                   P4EST_MPI_TOPIDX, root, mpicomm);
+  P4EST_ASSERT (conn->ctt_offset[conn->num_corners] ==
+                conn_dimensions.num_ctt);
   SC_CHECK_MPI (mpiret);
 #ifdef P4_TO_P8
   if (conn->num_edges > 0) {
@@ -337,6 +338,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   mpiret =
     sc_MPI_Bcast (conn->ett_offset, conn_dimensions.num_edges,
                   P4EST_MPI_TOPIDX, root, mpicomm);
+  P4EST_ASSERT (conn->ett_offset[conn->num_edges] == conn_dimensions.num_ett);
   SC_CHECK_MPI (mpiret);
 #endif
 
