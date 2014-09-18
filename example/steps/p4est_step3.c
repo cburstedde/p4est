@@ -647,7 +647,10 @@ step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
     /* there are 2^(d-1) (P4EST_HALF) subfaces */
     for (j = 0; j < P4EST_HALF; j++) {
       if (side[upwindside]->is.hanging.is_ghost[j]) {
-        udata = &ghost_data[side[upwindside]->is.hanging.quadid[j]];
+        /* *INDENT-OFF* */
+        udata =
+          (step3_data_t *) &ghost_data[side[upwindside]->is.hanging.quadid[j]];
+        /* *INDENT-ON* */
       }
       else {
         udata =
@@ -659,7 +662,7 @@ step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
   }
   else {
     if (side[upwindside]->is.full.is_ghost) {
-      udata = &ghost_data[side[upwindside]->is.full.quadid];
+      udata = (step3_data_t *) & ghost_data[side[upwindside]->is.full.quadid];
     }
     else {
       udata = (step3_data_t *) side[upwindside]->is.full.quad->p.user_data;
@@ -681,7 +684,7 @@ step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
         facearea = h * h;
 #endif
         if (!side[i]->is.hanging.is_ghost[j]) {
-          udata = quad->p.user_data;
+          udata = (step3_data_t *) quad->p.user_data;
           if (i == upwindside) {
             udata->dudt += vdotn * udata->u * facearea * (i ? 1. : -1.);
           }
@@ -700,7 +703,7 @@ step3_upwind_flux (p4est_iter_face_info_t * info, void *user_data)
       facearea = h * h;
 #endif
       if (!side[i]->is.full.is_ghost) {
-        udata = quad->p.user_data;
+        udata = (step3_data_t *) quad->p.user_data;
         udata->dudt += q * facearea * (i ? 1. : -1.);
       }
     }
@@ -1067,6 +1070,7 @@ step3_timestep (p4est_t * p4est, double time)
     }
 
     /* compute du/dt */
+    /* *INDENT-OFF* */
     p4est_iterate (p4est,                 /* the forest */
                    ghost,                 /* the ghost layer */
                    (void *) ghost_data,   /* the synchronized ghost data */
@@ -1080,6 +1084,7 @@ step3_timestep (p4est_t * p4est, double time)
 #endif
                    NULL);                 /* there is no callback for the
                                              corners between quadrants */
+    /* *INDENT-ON* */
 
     /* update u */
     p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
@@ -1167,6 +1172,7 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_periodic ();
 #endif
 
+  /* *INDENT-OFF* */
   p4est = p4est_new_ext (mpicomm, /* communicator */
                          conn,    /* connectivity */
                          0,       /* minimum quadrants per MPI process */
@@ -1175,6 +1181,7 @@ main (int argc, char **argv)
                          sizeof (step3_data_t),         /* data size */
                          step3_init_initial_condition,  /* initializes data */
                          (void *) (&ctx));              /* context */
+  /* *INDENT-ON* */
 
   /* refine and coarsen based on an interpolation error estimate */
   recursive = 1;

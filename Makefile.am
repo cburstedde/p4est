@@ -108,7 +108,7 @@ if P4EST_DIST_DENY
 	@exit 1
 endif
 
-clean-local:
+clean-local: clean-local-p6est
 	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
 
 maintainer-clean-local:

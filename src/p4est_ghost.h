@@ -79,15 +79,17 @@ p4est_ghost_t;
 
 /** Examine if a ghost structure is valid.
  * Test if within a ghost-structure the array ghosts is in
+ * p4est_quadrant_compare_piggy order.
  * Test if local_num in piggy3 data member of the quadrants in ghosts and
  * mirrors are in ascending order (ascending within each rank for ghost).
  *
  * Test if the p4est_locidx_t arrays are in ascending order
  * (for mirror_proc_mirrors ascending within each rank)
+ * \param [in] p4est    the forest.
  * \param [in] ghost    Ghost layer structure.
  * \return true if \a ghost is valid
  */
-int                 p4est_ghost_is_valid (p4est_ghost_t * ghost);
+int                 p4est_ghost_is_valid (p4est_t *p4est, p4est_ghost_t * ghost);
 
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.
@@ -296,6 +298,7 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
  */
 void                p4est_ghost_expand (p4est_t * p4est,
                                         p4est_ghost_t * ghost);
+
 
 SC_EXTERN_C_END;
 

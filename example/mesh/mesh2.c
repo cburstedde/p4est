@@ -34,10 +34,12 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_mesh.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 #include <p8est_mesh.h>
 #include <p8est_vtk.h>
 #endif
@@ -127,16 +129,20 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static void
 test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
+           int compute_tree_index, int compute_level_lists,
+           p4est_connect_type_t mesh_btype,
            user_data_t * ghost_data, int uniform)
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
+  size_t              i;
+  int                 level;
   int                 f, nf;
   int                 c;
   int                 nface;
   int                 nrank;
   p4est_topidx_t      which_tree;
   p4est_locidx_t      K, kl;
-  p4est_locidx_t      ql, QpG;
+  p4est_locidx_t      ql, QpG, lnC;
   p4est_locidx_t      qlid, qumid, quadrant_id, which_quad;
   p4est_mesh_face_neighbor_t mfn, mfn2;
   p4est_quadrant_t   *q;
@@ -145,20 +151,32 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   K = mesh->local_num_quadrants;
   P4EST_ASSERT (K == p4est->local_num_quadrants);
   QpG = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
+  lnC = mesh->local_num_corners;
+  P4EST_ASSERT (lnC >= 0);
+
+  P4EST_ASSERT (compute_tree_index == (mesh->quad_to_tree != NULL));
+  P4EST_ASSERT (compute_level_lists == (mesh->quad_level != NULL));
+  P4EST_ASSERT ((mesh_btype == P4EST_CONNECT_CORNER) ==
+                (mesh->quad_to_corner != NULL));
 
   /* TODO: test the mesh relations in more depth */
+  tree = NULL;
   for (kl = 0; kl < K; ++kl) {
-    tree = p4est_tree_array_index (p4est->trees, mesh->quad_to_tree[kl]);
-    SC_CHECK_ABORTF (tree->quadrants_offset <= kl && kl <
-                     tree->quadrants_offset +
-                     (p4est_locidx_t) tree->quadrants.elem_count,
-                     "Tree index mismatch %lld", (long long) kl);
+    if (compute_tree_index) {
+      tree = p4est_tree_array_index (p4est->trees, mesh->quad_to_tree[kl]);
+      SC_CHECK_ABORTF (tree->quadrants_offset <= kl && kl <
+                       tree->quadrants_offset +
+                       (p4est_locidx_t) tree->quadrants.elem_count,
+                       "Tree index mismatch %lld", (long long) kl);
+    }
 
-    for (c = 0; c < P4EST_CHILDREN; ++c) {
-      qlid = mesh->quad_to_corner[P4EST_CHILDREN * kl + c];
-      SC_CHECK_ABORTF (qlid >= -2
-                       && qlid < QpG, "quad %lld corner %d mismatch",
-                       (long long) kl, c);
+    if (mesh_btype == P4EST_CONNECT_CORNER) {
+      for (c = 0; c < P4EST_CHILDREN; ++c) {
+        qlid = mesh->quad_to_corner[P4EST_CHILDREN * kl + c];
+        SC_CHECK_ABORTF (qlid >= -2
+                         && qlid < QpG + lnC, "quad %lld corner %d mismatch",
+                         (long long) kl, c);
+      }
     }
     for (f = 0; f < P4EST_FACES; ++f) {
       ql = mesh->quad_to_quad[P4EST_FACES * kl + f];
@@ -172,6 +190,29 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       else {
         SC_CHECK_ABORTF (-HF <= nf && nf < (P4EST_HALF + 1) * HF,
                          "quad %d face %d code %d mismatch", kl, f, nf);
+      }
+    }
+  }
+
+  /* Test the level lists */
+  if (compute_tree_index && compute_level_lists) {
+    for (level = 0; level < P4EST_QMAXLEVEL; ++level) {
+      for (i = 0; i < mesh->quad_level[level].elem_count; ++i) {
+        /* get the local quadrant id */
+        quadrant_id =
+          *(p4est_locidx_t *) sc_array_index (&mesh->quad_level[level], i);
+
+        /* get the tree it belongs to */
+        kl = mesh->quad_to_tree[quadrant_id];
+        tree = p4est_tree_array_index (p4est->trees, kl);
+
+        /* and finally, get the actual quadrant from the tree quadrant list */
+        quadrant_id -= tree->quadrants_offset;
+        q =
+          p4est_quadrant_array_index (&tree->quadrants, (size_t) quadrant_id);
+
+        SC_CHECK_ABORTF (q->level == level,
+                         "quad %d level %d mismatch", quadrant_id, level);
       }
     }
   }
@@ -201,7 +242,8 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
 static void
 mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
-          int uniform, p4est_connect_type_t mesh_btype)
+          int uniform, int compute_tree_index, int compute_level_lists,
+          p4est_connect_type_t mesh_btype)
 {
   int                 mpiret;
   unsigned            crc;
@@ -245,8 +287,12 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   ghost_data = P4EST_ALLOC (user_data_t, ghost->ghosts.elem_count);
   p4est_ghost_exchange_data (p4est, ghost, ghost_data);
-  mesh = p4est_mesh_new (p4est, ghost, mesh_btype);
-  test_mesh (p4est, ghost, mesh, ghost_data, uniform);
+  mesh = p4est_mesh_new_ext (p4est, ghost,
+                             compute_tree_index, compute_level_lists,
+                             mesh_btype);
+  test_mesh (p4est, ghost, mesh,
+             compute_tree_index, compute_level_lists, mesh_btype,
+             ghost_data, uniform);
 
   /* compute memory used */
   local_used[0] = (long) p4est_connectivity_memory_used (p4est->connectivity);
@@ -416,9 +462,10 @@ main (int argc, char **argv)
   }
 
   /* run mesh tests */
-  mesh_run (mpi, connectivity, 1, P4EST_CONNECT_FULL);
-  mesh_run (mpi, connectivity, 0, P4EST_CONNECT_FULL);
-  mesh_run (mpi, connectivity, 0, P4EST_CONNECT_FACE);
+  mesh_run (mpi, connectivity, 1, 0, 1, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, 1, 0, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, 0, 0, P4EST_CONNECT_FACE);
+  mesh_run (mpi, connectivity, 1, 1, 1, P4EST_CONNECT_FACE);
 
   /* clean up and exit */
   p4est_connectivity_destroy (connectivity);

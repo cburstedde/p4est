@@ -54,7 +54,6 @@
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_nodes.h>
-#include <p8est_trilinear.h>
 #include <p8est_vtk.h>
 #include <p8est_lnodes.h>
 #endif
@@ -115,7 +114,7 @@ enum
   TIMINGS_PARTITION,
   TIMINGS_GHOSTS,
   TIMINGS_NODES,
-  TIMINGS_TRILINEAR,
+  TIMINGS_TRILINEAR_OBSOLETE,
   TIMINGS_REPARTITION,
   TIMINGS_LNODES,
   TIMINGS_LNODES3,
@@ -245,10 +244,6 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_nodes_t      *nodes = NULL;
   p4est_ghost_t      *ghost;
-#ifdef P4_TO_P8
-  int                 do_trilinear;
-  trilinear_mesh_t   *mesh;
-#endif
   p4est_lnodes_t     *lnodes;
   const timings_regression_t *r, *regression;
   timings_config_t    config;
@@ -301,10 +296,6 @@ main (int argc, char **argv)
                          "use both ranges and notify");
   sc_options_add_switch (opt, 'y', "balance-verify", &use_balance_verify,
                          "use verifications in balance");
-#ifdef P4_TO_P8
-  sc_options_add_bool (opt, 0, "trilinear", &do_trilinear, 0,
-                       "Time trilinear_mesh_new");
-#endif
   sc_options_add_int (opt, 'l', "level", &refine_level, 0,
                       "initial refine level");
 #ifndef P4_TO_P8
@@ -338,15 +329,6 @@ main (int argc, char **argv)
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
-#ifdef P4_TO_P8
-  if (skip_nodes) {
-    if (do_trilinear) {
-      SC_GLOBAL_PRODUCTION
-        ("Warning: cannot test trilinear if --skip-nodes is given.\n");
-      do_trilinear = 0;
-    }
-  }
-#endif
   if (skip_lnodes) {
     if (test_multiple_orders) {
       SC_GLOBAL_PRODUCTION
@@ -648,19 +630,7 @@ main (int argc, char **argv)
   }
 
   /* set this anyway so the output format is dimension independent */
-  sc_stats_set1 (&stats[TIMINGS_TRILINEAR], 0., "Trilinear");
-#ifdef P4_TO_P8
-  if (do_trilinear) {
-    /* time trilinear mesh extraction */
-    sc_flops_snap (&fi, &snapshot);
-    mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
-    sc_flops_shot (&fi, &snapshot);
-    sc_stats_set1 (&stats[TIMINGS_TRILINEAR], snapshot.iwtime, "Trilinear");
-
-    /* destroy mesh related memory */
-    p8est_trilinear_mesh_destroy (mesh);
-  }
-#endif
+  sc_stats_set1 (&stats[TIMINGS_TRILINEAR_OBSOLETE], 0., "Unused");
 
   if (!skip_nodes) {
     p4est_nodes_destroy (nodes);

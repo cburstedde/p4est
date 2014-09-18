@@ -9,7 +9,7 @@ and released under the GNU General Public Licence version 2 (or later),
 Copyright (C) 2010 The University of Texas System.
 
 The official web page for source code and documentation is www.p4est.org.
-Please send bug reports and ideas for contribution to info@p4est.org.
+Please send bug reports and ideas for contribution to p4est@librelist.com.
 
 
  0. Acknowledgement and Disclaimer
@@ -101,13 +101,20 @@ functions.  Supersedes p?est_nodes for the piecewise linear special case.
 
  5. Installation from a release tarball
 
-p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
-file for details.  The tarball contains the configure script and all required
-files.  The following configure options are important.
+IMPORTANT NOTE:
+Our official tarballs are linked from http://www.p4est.org/ and work fine.
+The tarballs under
+   https://github.com/cburstedde/p4est/releases/
+are created by github and are NOT endorsed by us.  In particular, they are
+missing the subdirectory sc, the configure script, and other generated files.
 
---enable-mpi is necessary for parallel functionality.  Without this option, p4est
-does not require MPI, which is replaced by a dummy implementation that always
-assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
+p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
+file for details.  Our official tarballs contain the configure script and all
+required files.  The following configure options are commonly used.
+
+--enable-mpi is necessary for parallel functionality.  Without this option,
+p4est does not require MPI, which is replaced by a dummy implementation that
+always assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
 
 --enable-debug enables assertions and additional code for verification.  This
 is generally helpful for development, even if it is somewhat slower and
@@ -147,10 +154,12 @@ following the instructions in the INSTALL file.  Then proceed as in 5.
 
  7. Installation from git repository
 
-If you have obtained p4est from a git repository, the libsc submodule must be
-obtained before installation.  This can be accomplished with the shell command
-'git submodule init; git submodule update'.  After the submodule has been
-obtained, you can install from source as described above in 6.
+If you have obtained p4est from a git repository, such as via the shell command
+   git clone https://github.com/cburstedde/p4est.git
+then the libsc submodule, which resides in the subdirectory sc, must be
+downloaded before configuring and compiling.  This can be accomplished with the
+shell command 'git submodule init; git submodule update'.  After the submodule
+has been obtained, you can install from source as described above in 6.
 
 
  8. Using p4est through the deal.II interface

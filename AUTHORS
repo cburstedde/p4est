@@ -27,15 +27,23 @@
   Carsten Burstedde <carsten@ices.utexas.edu>
   Lucas C. Wilcox <lucasw@ices.utexas.edu>
   Tobin Isaac <tisaac@ices.utexas.edu>
+ */
+
+/*
+  Contributors:
+
   Johann Rudi <johann@ices.utexas.edu>
   Johannes Holke <holke@ins.uni-bonn.de>
   Ethan Alan Hereth <e.a.hereth@gmail.com>
+  Alex Fikl <alexfikl@gmail.com>
+  Hannes Frank <frank@iag.uni-stuttgart.de>
 */
 
 /*
   Thanks to:
 
   Matthias Maier <matthias.maier@iwr.uni-heidelberg.de>
+  Fabian Hempert <fabian.hempert@de.bosch.com>
 */
 
 /*
@@ -62,13 +70,3 @@
   These are not compiled or linked with p4est, so we consider them
   independent programs that are not part of p4est.
 */
-
-Contact:
-
-Carsten Burstedde <carsten@ices.utexas.edu>
-Lucas Wilcox <lucasw@ices.utexas.edu>
-
-ICES, The University of Texas at Austin
-1 University Station C0200
-Austin, TX 78712
-USA

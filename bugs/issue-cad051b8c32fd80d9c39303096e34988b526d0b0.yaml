@@ -1,0 +1,24 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Make p6est_layer_init/free_data extern
+desc: |-
+  The two static non-inline functions in p6est.h cause a warning.
+  Can these functions be made extern and defined in p6est.c?
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :unstarted
+disposition: 
+creation_time: 2014-02-18 20:36:38.965551 Z
+references: []
+
+id: cad051b8c32fd80d9c39303096e34988b526d0b0
+log_events: 
+- - 2014-02-18 20:36:40.432498 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
+- - 2014-02-19 15:55:07.465952 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - commented
+  - I made them static inline instead.

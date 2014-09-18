@@ -39,13 +39,16 @@ p4est_wrap_flags_t;
 
 typedef struct p4est_wrap
 {
+  /* this member is never used or changed by p4est_wrap */
+  void               *user_pointer;     /**< Convenience member for users */
+
   /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
   p4est_connectivity_t *conn;
-  p4est_t            *p4est;
+  p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
@@ -60,6 +63,16 @@ typedef struct p4est_wrap
   int                 match_aux;
 }
 p4est_wrap_t;
+
+/** Create a p4est wrapper from a given connectivity structure.
+ * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
+ * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] initial_level  Initial level of uniform refinement.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_conn (sc_MPI_Comm mpicomm,
+                                         p4est_connectivity_t * conn,
+                                         int initial_level);
 
 /** Create p4est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.

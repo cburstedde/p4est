@@ -27,7 +27,7 @@
 #include <p4est_connectivity.h>
 #endif
 #include <sc_io.h>
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 #include <metis.h>
 #endif
 
@@ -243,16 +243,17 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
 
 void
 p4est_connectivity_set_attr (p4est_connectivity_t * conn,
-                             int enable_tree_attr)
+                             size_t bytes_per_tree)
 {
-  if (enable_tree_attr) {
+  if (bytes_per_tree > 0) {
     P4EST_ASSERT (conn->tree_to_attr == NULL);
-    conn->tree_to_attr = P4EST_ALLOC (int8_t, conn->num_trees);
+    conn->tree_to_attr = P4EST_ALLOC (char, bytes_per_tree * conn->num_trees);
   }
   else {
     P4EST_FREE (conn->tree_to_attr);
     conn->tree_to_attr = NULL;
   }
+  conn->tree_attr_bytes = bytes_per_tree;
 }
 
 int
@@ -347,6 +348,12 @@ p4est_connectivity_is_valid (p4est_connectivity_t * conn)
         }
       }
     }
+  }
+
+  if ((conn->tree_to_attr != NULL) != (conn->tree_attr_bytes > 0)) {
+    P4EST_NOTICEF ("Tree attribute properties inconsistent %lld",
+                   (long long) conn->tree_attr_bytes);
+    goto failure;
   }
 
   for (tree = 0; tree < num_trees; ++tree) {
@@ -584,12 +591,14 @@ p4est_connectivity_is_equal (p4est_connectivity_t * conn1,
     return 0;
   }
 
-  if ((conn1->tree_to_attr == NULL) != (conn2->tree_to_attr == NULL)) {
+  if ((conn1->tree_to_attr == NULL) != (conn2->tree_to_attr == NULL) ||
+      conn1->tree_attr_bytes != conn2->tree_attr_bytes) {
     return 0;
   }
   tcount = (size_t) conn1->num_trees;
   if (conn1->tree_to_attr != NULL &&
-      memcmp (conn1->tree_to_attr, conn2->tree_to_attr, tcount * int8size)) {
+      memcmp (conn1->tree_to_attr, conn2->tree_to_attr,
+              tcount * conn1->tree_attr_bytes)) {
     return 0;
   }
 
@@ -628,6 +637,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
   int                 has_tree_attr;
   char                magic8[8 + 1];
   char                pkgversion24[24 + 1];
+  size_t              tree_attr_bytes;
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array10[10];
@@ -647,7 +657,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
 #endif
   num_corners = conn->num_corners;
   num_ctt = conn->ctt_offset[num_corners];
-  has_tree_attr = (conn->tree_to_attr != NULL);
+  has_tree_attr = ((tree_attr_bytes = conn->tree_attr_bytes) > 0);
 
   strncpy (magic8, P4EST_STRING, 8);
   magic8[8] = '\0';
@@ -668,7 +678,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
   array10[5] = (uint64_t) num_ett;
   array10[6] = (uint64_t) num_corners;
   array10[7] = (uint64_t) num_ctt;
-  array10[8] = (uint64_t) has_tree_attr;
+  array10[8] = (uint64_t) conn->tree_attr_bytes;
   array10[9] = (uint64_t) 0;
   retval = retval || sc_io_sink_write (sink, array10, 10 * u64z);
 
@@ -704,7 +714,7 @@ p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink)
   if (has_tree_attr) {
     tcount = (size_t) num_trees;
     retval = retval ||
-      sc_io_sink_write (sink, conn->tree_to_attr, tcount * int8size);
+      sc_io_sink_write (sink, conn->tree_to_attr, tcount * tree_attr_bytes);
   }
 
 #ifdef P4_TO_P8
@@ -778,6 +788,7 @@ p4est_connectivity_source (sc_io_source_t * source)
   int                 has_tree_attr;
   char                magic8[9];
   char                pkgversion24[25];
+  size_t              tree_attr_bytes;
   size_t              u64z, topsize, int8size;
   size_t              tcount;
   uint64_t            array10[10];
@@ -820,7 +831,7 @@ p4est_connectivity_source (sc_io_source_t * source)
   num_ett = (p4est_topidx_t) array10[5];
   num_corners = (p4est_topidx_t) array10[6];
   num_ctt = (p4est_topidx_t) array10[7];
-  has_tree_attr = (array10[8] & 1);
+  has_tree_attr = ((tree_attr_bytes = (size_t) array10[8]) > 0);
   if (num_vertices < 0) {
     /* "negative num_vertices" */
     return NULL;
@@ -862,7 +873,7 @@ p4est_connectivity_source (sc_io_source_t * source)
                                  num_edges, num_ett,
 #endif
                                  num_corners, num_ctt);
-  p4est_connectivity_set_attr (conn, has_tree_attr);
+  p4est_connectivity_set_attr (conn, tree_attr_bytes);
 
   if (num_vertices > 0) {
     tcount = (size_t) (3 * num_vertices);
@@ -924,8 +935,8 @@ p4est_connectivity_source (sc_io_source_t * source)
   }
   if (has_tree_attr) {
     tcount = (size_t) num_trees;
-    retval = sc_io_source_read (source, conn->tree_to_attr, int8size * tcount,
-                                NULL);
+    retval = sc_io_source_read (source, conn->tree_to_attr,
+                                tcount * tree_attr_bytes, NULL);
     if (retval) {
       /* "write tree_to_attr" */
       p4est_connectivity_destroy (conn);
@@ -2851,6 +2862,30 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
 }
 
 void
+p4est_connectivity_reduce (p4est_connectivity_t * conn)
+{
+  conn->num_corners = 0;
+  conn->ctt_offset[conn->num_corners] = 0;
+  P4EST_FREE (conn->tree_to_corner);
+  P4EST_FREE (conn->corner_to_tree);
+  P4EST_FREE (conn->corner_to_corner);
+  conn->tree_to_corner = NULL;
+  conn->corner_to_tree = NULL;
+  conn->corner_to_corner = NULL;
+#ifdef P4_TO_P8
+  conn->num_edges = 0;
+  conn->ett_offset[conn->num_edges] = 0;
+  P4EST_FREE (conn->tree_to_edge);
+  P4EST_FREE (conn->edge_to_tree);
+  P4EST_FREE (conn->edge_to_edge);
+  conn->tree_to_edge = NULL;
+  conn->edge_to_tree = NULL;
+  conn->edge_to_edge = NULL;
+#endif
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+}
+
+void
 p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
                             int is_current_to_new)
 {
@@ -2947,7 +2982,7 @@ p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
   }
 }
 
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 static int
 reorder_comp (const void *a, const void *b)
 {
@@ -3160,7 +3195,7 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   sc_array_destroy (newid);
 }
 
-#endif /* P4EST_METIS */
+#endif /* P4EST_WITH_METIS */
 
 static int
 p4est_topidx_compare_2 (const void *A, const void *B)
@@ -3229,7 +3264,7 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
       int                 ref = p8est_face_permutation_refs[f][nf];
       int                 set = p8est_face_permutation_sets[ref][o];
 
-      nc = p8est_face_permutations[set][c];
+      nc = p8est_connectivity_face_neighbor_corner (c, f, nf, set);
     }
 #endif
 
@@ -3346,7 +3381,7 @@ p8est_connectivity_store_edge (p4est_connectivity_t * conn, p4est_topidx_t t,
 
     for (j = 0; j < 2; j++) {
       c[j] = p8est_edge_corners[e][j];
-      nc[j] = p8est_face_permutations[set][c[j]];
+      nc[j] = p8est_connectivity_face_neighbor_corner (c[j], f, nf, set);
     }
     diff = SC_MAX (nc[0], nc[1]) - SC_MIN (nc[0], nc[1]);
     switch (diff) {
@@ -3609,6 +3644,7 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
   P4EST_ASSERT (tree_right >= 0 && tree_right < conn->num_trees);
   P4EST_ASSERT (face_left >= 0 && face_left < P4EST_FACES);
   P4EST_ASSERT (face_right >= 0 && face_right < P4EST_FACES);
+  P4EST_ASSERT (orientation >= 0 && orientation < P4EST_HALF);
   P4EST_ASSERT (conn->tree_to_tree[P4EST_FACES * tree_left + face_left] ==
                 tree_left);
   P4EST_ASSERT (conn->tree_to_tree[P4EST_FACES * tree_right + face_right] ==
@@ -3629,16 +3665,9 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
     e_left = p8est_face_edges[face_left][i];
 
     for (j = 0; j < 2; j++) {
-      /* get a corners of that edge */
-      c[j] = p8est_edge_corners[e_left][j];
-      /* get the numbering of that corner in the face numbering */
-      c[j] = p8est_corner_face_corners[c[j]][face_left];
-      P4EST_ASSERT (c[j] >= 0);
-      /* use the permutation to get the equivalent face numbering on
-       * face_right */
-      c[j] = p8est_face_permutations[set][c[j]];
-      /* finally, turn that in the octant numbering for tree_right */
-      c[j] = p8est_face_corners[face_right][c[j]];
+      /* get corners of that edge and their numbers seen from face_right */
+      c[j] = p8est_connectivity_face_neighbor_corner
+        (p8est_edge_corners[e_left][j], face_left, face_right, set);
     }
     /* now from the two corners, we can figure out e_right */
     e_right = p8est_child_corner_edges[c[0]][c[1]];
@@ -3854,7 +3883,6 @@ p4est_connect_type_string (p4est_connect_type_t btype)
 }
 
 #endif /* !P4_TO_P8 */
-
 /*
  * Read a line from a file. Obtained from:
  * http://stackoverflow.com/questions/314401/
@@ -3908,17 +3936,15 @@ p4est_connectivity_read_inp_stream (FILE * stream,
                                     p4est_topidx_t * tree_to_vertex)
 {
   int                 reading_nodes = 0, reading_elements = 0;
+  int                 lines_read = 0, lines_free = 0;
   char               *line;
-  *num_vertices = 0;
-  *num_trees = 0;
   p4est_topidx_t      num_nodes = 0;
   p4est_topidx_t      num_elements = 0;
-  int                 fill_trees_and_vertices = (vertices != NULL
-                                                 && tree_to_vertex != NULL);
+  int                 fill_trees_and_vertices = (vertices != NULL &&
+                                                 tree_to_vertex != NULL);
 
   P4EST_ASSERT ((vertices == NULL && tree_to_vertex == NULL) ||
                 (vertices != NULL && tree_to_vertex != NULL));
-  int                 lines_read = 0, lines_free = 0;
 
   for (;;) {
     line = p4est_connectivity_getline_upper (stream);
@@ -3962,7 +3988,20 @@ p4est_connectivity_read_inp_stream (FILE * stream,
         int                 retval;
 
         retval = sscanf (line, "%lld, %lf, %lf, %lf", &node, &x, &y, &z);
-        P4EST_ASSERT (retval == 4);
+        if (retval != 4) {
+          P4EST_LERROR ("Premature end of file");
+          P4EST_FREE (line);
+          return 1;
+        }
+
+        if (node > *num_vertices) {
+          P4EST_LERRORF
+            ("Encountered vertex %lld that will not fit in vertices"
+             " array of length %lld.  Are the vertices contiguously"
+             " numbered?\n", node, (long long int) *num_vertices);
+          P4EST_FREE (line);
+          return 1;
+        }
 
         vertices[3 * (node - 1) + 0] = x;
         vertices[3 * (node - 1) + 1] = y;
@@ -3977,6 +4016,13 @@ p4est_connectivity_read_inp_stream (FILE * stream,
         int                 n;
         int                 retval;
 
+        if (num_elements >= *num_trees) {
+          P4EST_LERROR ("Encountered element that will not fit into"
+                        " tree_to_vertex array. More elements than expected.\n");
+          P4EST_FREE (line);
+          return 1;
+        }
+
         /* Note that when we read in the
          * vertices we switch from right-hand
          * vertex ordering to z-order
@@ -3990,8 +4036,11 @@ p4est_connectivity_read_inp_stream (FILE * stream,
                          , &v[4], &v[5], &v[7], &v[6]
 #endif
           );
-
-        P4EST_ASSERT (retval == P4EST_CHILDREN);
+        if (retval != P4EST_CHILDREN) {
+          P4EST_LERROR ("Premature end of file");
+          P4EST_FREE (line);
+          return 1;
+        }
 
         for (n = 0; n < P4EST_CHILDREN; ++n)
           tree_to_vertex[P4EST_CHILDREN * num_elements + n] = v[n] - 1;
@@ -4009,7 +4058,7 @@ p4est_connectivity_read_inp_stream (FILE * stream,
 
   if (num_nodes == 0 || num_elements == 0) {
     P4EST_LERROR ("No elements or nodes found in mesh file.\n");
-    return 1;
+    return -1;
   }
   else {
     return 0;
@@ -4065,12 +4114,10 @@ p4est_connectivity_read_inp (const char *filename)
       conn->tree_to_face[P4EST_FACES * tree + face] = face;
     }
   }
-
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
+  /* Compute real tree_to_* fields and complete (edge and) corner fields. */
   p4est_connectivity_complete (conn);
-
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   retval = fclose (fid);
   fid = NULL;

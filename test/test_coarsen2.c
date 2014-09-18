@@ -57,6 +57,7 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_coarsen_old with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+  p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   /* loop over all local trees */
@@ -206,6 +207,7 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
   p4est_comm_count_quadrants (p4est);
 
   P4EST_ASSERT (p4est_is_valid (p4est));
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_coarsen_old with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
@@ -287,11 +289,11 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
-  geom = NULL;
   connectivity = p8est_connectivity_new_rotcubes ();
+  geom = NULL;
 #else
-  geom = p4est_geometry_new_identity ();
   connectivity = p4est_connectivity_new_star ();
+  geom = p4est_geometry_new_connectivity (connectivity);
 #endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
 
@@ -320,8 +322,10 @@ main (int argc, char **argv)
   }
 
   p4est_destroy (p4est);
+  if (geom != NULL) {
+    p4est_geometry_destroy (geom);
+  }
   p4est_connectivity_destroy (connectivity);
-  P4EST_FREE (geom);
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();

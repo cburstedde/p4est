@@ -4,7 +4,7 @@ dnl
 
 AC_INIT([p4est],
         [m4_esyscmd([build-aux/git-version-gen .tarball-version])],
-        [info@p4est.org])
+        [p4est@librelist.com])
 AC_PREREQ(2.61)
 AC_CONFIG_HEADERS([src/pre_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
@@ -30,12 +30,13 @@ P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
                   [VTK_COMPRESSION])
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
+P4EST_ARG_ENABLE([p6est], [enable hybrid 2D+1D p6est library], [BUILD_P6EST])
 
 echo "o---------------------------------------"
 echo "| Checking MPI and related programs"
 echo "o---------------------------------------"
 
-dnl A nonempty second/third argument causes to enable F77/CXX, respectively.
+dnl A nonempty second/third argument causes to enable F77+F90/CXX, respectively.
 SC_MPI_CONFIG([P4EST], [yes], [yes])
 SC_MPI_ENGAGE([P4EST])
 # This is needed for compatibility with automake >= 1.12

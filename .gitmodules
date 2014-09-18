@@ -1,3 +1,4 @@
 [submodule "sc"]
 	path = sc
-	url = http://burstedde.ins.uni-bonn.de/repos/libsc.git
+	url = https://github.com/cburstedde/libsc.git
+	# url = http://burstedde.ins.uni-bonn.de/repos/libsc.git

@@ -7,8 +7,8 @@ type: :feature
 component: p4est
 release: 
 reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2014-03-27 09:52:29.635056 Z
 references: []
 
@@ -18,3 +18,11 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - created
   - ""
+- - 2014-07-21 09:08:29.886199 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - commented
+  - We have the abaqus reader now.  Robustify and then close.
+- - 2014-07-25 08:33:38.109922 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - closed with disposition fixed
+  - This is done -- basic safety checks are in place.

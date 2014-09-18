@@ -125,12 +125,13 @@ typedef struct p4est_lnodes_data
   int                 nodes_per_volume;
   int                *volume_nodes;
   int                 nodes_per_face;
-  int                *face_nodes[2 * P4EST_DIM];
+  int                *face_nodes[P4EST_FACES];
 #ifdef P4_TO_P8
   int                 nodes_per_edge;
-  int                *edge_nodes[12];
+  int                *edge_nodes[P8EST_EDGES];
 #endif
-  int                 corner_nodes[P4EST_CHILDREN];
+  int                 nodes_per_corner;
+  int                *corner_nodes[P4EST_CHILDREN];
   sc_array_t          send_requests;
   sc_array_t         *send_buf;
   sc_array_t         *touching_procs;
@@ -197,6 +198,8 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
 #ifdef P4_TO_P8
   int                 j;
 #endif
+  int                 k, c;
+  p4est_quadrant_t    tempq;
 
   P4EST_ASSERT (touching_procs->elem_size == sizeof (int));
   sc_array_truncate (touching_procs);
@@ -213,9 +216,29 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
     fdir = f / 2;
     tree = p4est_tree_array_index (trees, tid);
     quadrants_offset = tree->quadrants_offset;
+    k = -1;
     for (i = 0; i < limit; i++) {
       qid[i] = quadid[i];
-      if (is_ghost[i]) {
+      if (qid[i] < 0) {
+        P4EST_ASSERT (limit == P4EST_HALF);
+        if (k < 0) {
+          for (k = 0; k < P4EST_HALF; k++) {
+            if (quadid[k] >= 0) {
+              P4EST_ASSERT (quad[k]);
+              break;
+            }
+          }
+        }
+        P4EST_ASSERT (k >= 0 && k < P4EST_HALF);
+        c = p4est_face_corners[f][i];
+        p4est_quadrant_sibling (quad[k], &tempq, c);
+        procs[i] = p4est_comm_find_owner (info->p4est, tid,
+                                          &tempq, info->p4est->mpirank);
+        P4EST_ASSERT (procs[i] >= 0 && procs[i] != rank);
+        ip = (int *) sc_array_push (touching_procs);
+        *ip = procs[i];
+      }
+      else if (is_ghost[i]) {
         procs[i] = (int) sc_array_bsearch (&proc_offsets, &(qid[i]),
                                            p4est_locidx_offset_compare);
         P4EST_ASSERT (procs[i] >= 0 && procs[i] != rank);
@@ -233,6 +256,13 @@ p4est_lnodes_face_simple_callback (p4est_iter_face_info_t * info, void *Data)
                                  1 << (P4EST_DIM + f / 2));
         }
       }
+    }
+    if (!data->nodes_per_corner &&
+#ifdef P4_TO_P8
+        !data->nodes_per_edge &&
+#endif
+        1) {
+      continue;
     }
     for (i = 0; i < limit; i++) {
       dep = !is_ghost[i] ? &(local_dep[qid[i]]) : &(ghost_dep[qid[i]]);
@@ -331,7 +361,8 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      qid[2];
   p4est_locidx_t      quadrants_offset;
   p4est_lnodes_code_t *face_codes = data->face_codes;
-  int                 is_hanging, o, has_local = 0;
+  int                 is_hanging, o, has_local = 0, c;
+  p4est_quadrant_t    tempq;
 
   P4EST_ASSERT (touching_procs->elem_size == sizeof (int));
   sc_array_truncate (touching_procs);
@@ -351,9 +382,18 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
     for (i = 0; i < limit; i++) {
       qid[i] = quadid[i];
       if (qid[i] < 0) {
-        continue;
+        if (limit == 2 && quadid[i ^ 1] >= 0) {
+          P4EST_ASSERT (quad[i ^ 1]);
+          c = p8est_edge_corners[e][i];
+          p4est_quadrant_sibling (quad[i ^ 1], &tempq, c);
+          procs[i] = p4est_comm_find_owner (info->p4est, tid,
+                                            &tempq, info->p4est->mpirank);
+          P4EST_ASSERT (procs[i] >= 0 && procs[i] != rank);
+          ip = (int *) sc_array_push (touching_procs);
+          *ip = procs[i];
+        }
       }
-      if (is_ghost[i]) {
+      else if (is_ghost[i]) {
         procs[i] = (int) sc_array_bsearch (&proc_offsets, &(qid[i]),
                                            p4est_locidx_offset_compare);
         P4EST_ASSERT (procs[i] >= 0 && procs[i] != rank);
@@ -378,7 +418,7 @@ p8est_lnodes_edge_simple_callback (p8est_iter_edge_info_t * info, void *Data)
       }
       dep = !is_ghost[i] ? &(local_dep[qid[i]]) : &(ghost_dep[qid[i]]);
       if (is_hanging) {
-        if (qid[i ^ 1] < 0) {
+        if (!has_local && qid[i ^ 1] < 0) {
           dep->edge[edir] = -1;
         }
         else if (is_ghost[i ^ 1]) {
@@ -579,7 +619,7 @@ p4est_lnodes_missing_proc_corner (p4est_iter_corner_info_t * info, int side,
 static void
 p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
 {
-  int                 i, limit;
+  int                 i, j, limit;
   sc_array_t         *sides = &(info->sides);
   size_t              zz, count = sides->elem_count;
   p4est_lnodes_data_t *data = (p4est_lnodes_data_t *) Data;
@@ -603,6 +643,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   sc_array_t          proc_offsets;
   p4est_locidx_t      qid, owner_qid, nqid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
+  int                 npc = data->nodes_per_corner;
   int8_t              is_ghost, owner_is_ghost;
   p4est_locidx_t      nid;
   int                 proc, owner_proc, nproc;
@@ -610,7 +651,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
   int                 c, owner_c;
   p4est_quadrant_t    ownq, tempq, tempr;
   p4est_quadrant_t   *q, *owner_q;
-  int                *corner_nodes = data->corner_nodes;
+  int               **corner_nodes = data->corner_nodes;
   int                 nodes_per_elem = data->nodes_per_elem;
   p4est_locidx_t      quadrants_offset;
   int8_t              type;
@@ -828,9 +869,11 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     }
   }
   /* create the new node */
-  inode = (p4est_locidx_t *) sc_array_push (inodes);
-  inode[0] = owner_proc;
-  inode[1] = owner_qid;
+  for (j = 0; j < npc; j++) {
+    inode = (p4est_locidx_t *) sc_array_push (inodes);
+    inode[0] = owner_proc;
+    inode[1] = owner_qid;
+  }
 
   /* figure out if this is a remote corner or one for which we can determing
    * all touching and sharing procs */
@@ -860,9 +903,11 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     if (!is_ghost) {
       proc = rank;
       qid += quadrants_offset;
-      nid = qid * nodes_per_elem + corner_nodes[c];
-      P4EST_ASSERT (local_elem_nodes[nid] == -1);
-      local_elem_nodes[nid] = num_inodes;
+      for (j = 0; j < npc; j++) {
+        nid = qid * nodes_per_elem + corner_nodes[c][j];
+        P4EST_ASSERT (local_elem_nodes[nid] == -1);
+        local_elem_nodes[nid] = num_inodes + j;
+      }
     }
     else if (!is_remote) {
       P4EST_ASSERT (qid >= 0);
@@ -904,9 +949,11 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       if (nqid >= 0) {
         has_local = 1;
         /* remote local quad */
-        nid = nqid * nodes_per_elem + corner_nodes[c];
-        P4EST_ASSERT (local_elem_nodes[nid] == -1);
-        local_elem_nodes[nid] = num_inodes;
+        for (j = 0; j < npc; j++) {
+          nid = nqid * nodes_per_elem + corner_nodes[c][j];
+          P4EST_ASSERT (local_elem_nodes[nid] == -1);
+          local_elem_nodes[nid] = num_inodes + j;
+        }
       }
       else if (!is_remote) {
         nproc = nqid;
@@ -973,6 +1020,10 @@ p8est_lnodes_missing_proc_edge (p8est_iter_edge_info_t * info, int side,
   P4EST_ASSERT (thisside->is_hanging);
   P4EST_ASSERT (p8est_edge_faces[e][b < missdir ? 0 : 1] / 2 == b);
   q = thisside->is.hanging.quad[0];
+  if (!q) {
+    q = thisside->is.hanging.quad[1];
+    P4EST_ASSERT (q);
+  }
   key = thisside->faces[b < missdir ? 0 : 1];
   c = p8est_edge_corners[e][0];
   f = p8est_corner_faces[c][b];
@@ -1221,10 +1272,10 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       quadrants_offset = tree->quadrants_offset;
       owner_qid += quadrants_offset;
     }
-    if (has_local) {
-      sc_array_sort (touching_procs, sc_int_compare);
-      sc_array_uniq (touching_procs, sc_int_compare);
-    }
+  }
+  if (has_local) {
+    sc_array_sort (touching_procs, sc_int_compare);
+    sc_array_uniq (touching_procs, sc_int_compare);
   }
   /* create nodes */
   for (i = 0; i < nodes_per_edge; i++) {
@@ -1258,6 +1309,9 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
     mproc[1][1] = -2;
     for (i = 0; i < limit; i++) {
       qid = qids[i];
+      if (qid < 0) {
+        continue;
+      }
       stride = (o ? -1 : 1);
       if (!is_ghost[i]) {
         qid += quadrants_offset;
@@ -1272,7 +1326,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       if (!is_hanging) {
         continue;
       }
-      if (qids[0] < 0 || qids[1] < 0) {
+      if (is_remote && qids[i ^ 1] < 0) {
         continue;
       }
       /* get quads that may be dependent because of hanging faces */
@@ -1293,6 +1347,12 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
                                             &(mproc[j][0]));
             P4EST_ASSERT (mproc[j][0] != -2 && mproc[j][1] != -2);
             P4EST_ASSERT (mproc[j][0] != rank && mproc[j][1] != rank);
+            for (k = 0; k < 2; k++) {
+              if (mproc[j][k] >= 0) {
+                ip = (int *) sc_array_push (all_procs);
+                *ip = mproc[j][k];
+              }
+            }
             dep->face[xdir[1]] = -((p4est_locidx_t) mproc[j][i] + 3);
           }
           else {
@@ -1415,7 +1475,7 @@ p4est_lnodes_face_callback (p4est_iter_face_info_t * info, void *Data)
 #ifndef P4_TO_P8
   int                 stride;
 #else
-  int                 nodes_per_edge = data->nodes_per_edge;
+  int                 nodes_per_edge = SC_MAX (1, data->nodes_per_edge);
   int8_t              flipj, flipk, swapjk;
   int                 k, l, jind, kind, lind;
 #endif
@@ -1560,8 +1620,9 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   int                 i, j, n;
   int                 npv;
   int                 vcount;
-  int                 npf;
-  int                 fcount[P4EST_DIM * 2];
+  int                 npf, npc;
+  int                 fcount[P4EST_FACES];
+  int                 ccount[P4EST_CHILDREN];
   int                 f;
   int                 bcount;
   int                 c;
@@ -1569,7 +1630,8 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   int                 e;
   int                 eshift;
   int                 k;
-  int                 ecount[12];
+  int                 npe;
+  int                 ecount[P8EST_EDGES];
 #endif
   p4est_locidx_t      nlq = p4est->local_num_quadrants;
   p4est_locidx_t      ngq = (p4est_locidx_t) ghost_layer->ghosts.elem_count;
@@ -1577,127 +1639,197 @@ p4est_lnodes_init_data (p4est_lnodes_data_t * data, int p, p4est_t * p4est,
   p4est_locidx_t      ngdep = ngq;
   int                 mpisize = p4est->mpisize;
 
+  if (p == -1) {
+    data->nodes_per_elem = P4EST_FACES;
+    npv = data->nodes_per_volume = 0;
+    npf = data->nodes_per_face = 1;
+#ifdef P4_TO_P8
+    npe = data->nodes_per_edge = 0;
+#endif
+    npc = data->nodes_per_corner = 0;
+  }
+#ifdef P4_TO_P8
+  else if (p == -2) {
+    data->nodes_per_elem = P4EST_FACES + P8EST_EDGES;
+    npv = data->nodes_per_volume = 0;
+    npf = data->nodes_per_face = 1;
+    npe = data->nodes_per_edge = 1;
+    npc = data->nodes_per_corner = 0;
+  }
+#endif
+  else if (p == -P4EST_DIM) {
+    data->nodes_per_elem = P4EST_FACES +
+#ifdef P4_TO_P8
+      P8EST_EDGES +
+#endif
+      P4EST_CHILDREN;
+
+    npv = data->nodes_per_volume = 0;
+    npf = data->nodes_per_face = 1;
+#ifdef P4_TO_P8
+    npe = data->nodes_per_edge = 1;
+#endif
+    npc = data->nodes_per_corner = 1;
+  }
+  else {
 #ifndef P4_TO_P8
-  data->nodes_per_elem = (p + 1) * (p + 1);
-  npv = data->nodes_per_volume = (p - 1) * (p - 1);
-  npf = data->nodes_per_face = p - 1;
-  fcount[0] = fcount[1] = fcount[2] = fcount[3] = 0;
+    data->nodes_per_elem = (p + 1) * (p + 1);
+    npv = data->nodes_per_volume = (p - 1) * (p - 1);
+    npf = data->nodes_per_face = p - 1;
 #else
-  data->nodes_per_elem = (p + 1) * (p + 1) * (p + 1);
-  npv = data->nodes_per_volume = (p - 1) * (p - 1) * (p - 1);
-  npf = data->nodes_per_face = (p - 1) * (p - 1);
+    data->nodes_per_elem = (p + 1) * (p + 1) * (p + 1);
+    npv = data->nodes_per_volume = (p - 1) * (p - 1) * (p - 1);
+    npf = data->nodes_per_face = (p - 1) * (p - 1);
+    npe = data->nodes_per_edge = (p - 1);
+#endif
+    npc = data->nodes_per_corner = 1;
+  }
+#ifndef P4_TO_P8
+  fcount[0] = fcount[1] = fcount[2] = fcount[3] = 0;
+  ccount[0] = ccount[1] = ccount[2] = ccount[3] = 0;
+#else
   fcount[0] = fcount[1] = fcount[2] = fcount[3] = fcount[4] = fcount[5] = 0;
-  data->nodes_per_edge = p - 1;
+  ccount[0] = ccount[1] = ccount[2] = ccount[3] = 0;
+  ccount[4] = ccount[5] = ccount[6] = ccount[7] = 0;
   ecount[0] = ecount[1] = ecount[2] = ecount[3] = ecount[4] = ecount[5] = 0;
   ecount[6] = ecount[7] = ecount[8] = ecount[9] = ecount[10] = ecount[11] = 0;
 #endif
   vcount = 0;
 
   data->volume_nodes = P4EST_ALLOC (int, npv);
-  for (i = 0; i < P4EST_DIM * 2; i++) {
+  for (i = 0; i < P4EST_FACES; i++) {
     data->face_nodes[i] = P4EST_ALLOC (int, npf);
   }
 #ifdef P4_TO_P8
-  for (i = 0; i < 12; i++) {
-    data->edge_nodes[i] = P4EST_ALLOC (int, npf);
+  for (i = 0; i < P8EST_EDGES; i++) {
+    data->edge_nodes[i] = P4EST_ALLOC (int, npe);
   }
 #endif
+  for (i = 0; i < P4EST_CHILDREN; i++) {
+    data->corner_nodes[i] = P4EST_ALLOC (int, npc);
+  }
 
-  /* figure out which nodes live on which parts of the quadrants */
-  n = 0;
+  if (p > 0) {
+    /* figure out which nodes live on which parts of the quadrants */
+    n = 0;
 #ifdef P4_TO_P8
-  for (k = 0; k < p + 1; k++) {
+    for (k = 0; k < p + 1; k++) {
 #endif
-    for (j = 0; j < p + 1; j++) {
-      for (i = 0; i < p + 1; i++, n++) {
-        bcount = f = c = 0;
+      for (j = 0; j < p + 1; j++) {
+        for (i = 0; i < p + 1; i++, n++) {
+          bcount = f = c = 0;
 #ifdef P4_TO_P8
-        e = 0;
-        eshift = -1;
-        switch (k == 0 ? 0 : k == p ? 1 : 2) {
-        case 0:
-          f = 4;
-          bcount++;
-          break;
-        case 1:
-          f = 5;
-          c |= 4;
-          e++;
-          bcount++;
-          break;
-        default:
-          eshift = 8;
-          break;
+          e = 0;
+          eshift = -1;
+          switch (k == 0 ? 0 : k == p ? 1 : 2) {
+          case 0:
+            f = 4;
+            bcount++;
+            break;
+          case 1:
+            f = 5;
+            c |= 4;
+            e++;
+            bcount++;
+            break;
+          default:
+            eshift = 8;
+            break;
+          }
+#endif
+          switch (j == 0 ? 0 : j == p ? 1 : 2) {
+          case 0:
+            f = 2;
+#ifdef P4_TO_P8
+            e <<= 1;
+#endif
+            bcount++;
+            break;
+          case 1:
+            f = 3;
+            c |= 2;
+#ifdef P4_TO_P8
+            e <<= 1;
+            e++;
+#endif
+            bcount++;
+            break;
+          default:
+#ifdef P4_TO_P8
+            eshift = 4;
+#endif
+            break;
+          }
+          switch (i == 0 ? 0 : i == p ? 1 : 2) {
+          case 0:
+            bcount++;
+#ifdef P4_TO_P8
+            e <<= 1;
+#endif
+            break;
+          case 1:
+            f = 1;
+            c |= 1;
+#ifdef P4_TO_P8
+            e <<= 1;
+            e++;
+#endif
+            bcount++;
+            break;
+          default:
+#ifdef P4_TO_P8
+            eshift = 0;
+#endif
+            break;
+          }
+          switch (bcount) {
+          case 0:
+            data->volume_nodes[vcount++] = n;
+            break;
+          case 1:
+            data->face_nodes[f][fcount[f]++] = n;
+            break;
+#ifdef P4_TO_P8
+          case 2:
+            P4EST_ASSERT (eshift >= 0);
+            e += eshift;
+            data->edge_nodes[e][ecount[e]++] = n;
+            break;
+#endif
+          default:
+            data->corner_nodes[c][ccount[c]++] = n;
+            break;
+          }
         }
-#endif
-        switch (j == 0 ? 0 : j == p ? 1 : 2) {
-        case 0:
-          f = 2;
+      }
 #ifdef P4_TO_P8
-          e <<= 1;
+    }
 #endif
-          bcount++;
-          break;
-        case 1:
-          f = 3;
-          c |= 2;
-#ifdef P4_TO_P8
-          e <<= 1;
-          e++;
-#endif
-          bcount++;
-          break;
-        default:
-#ifdef P4_TO_P8
-          eshift = 4;
-#endif
-          break;
-        }
-        switch (i == 0 ? 0 : i == p ? 1 : 2) {
-        case 0:
-          bcount++;
-#ifdef P4_TO_P8
-          e <<= 1;
-#endif
-          break;
-        case 1:
-          f = 1;
-          c |= 1;
-#ifdef P4_TO_P8
-          e <<= 1;
-          e++;
-#endif
-          bcount++;
-          break;
-        default:
-#ifdef P4_TO_P8
-          eshift = 0;
-#endif
-          break;
-        }
-        switch (bcount) {
-        case 0:
-          data->volume_nodes[vcount++] = n;
-          break;
-        case 1:
-          data->face_nodes[f][fcount[f]++] = n;
-          break;
-#ifdef P4_TO_P8
-        case 2:
-          P4EST_ASSERT (eshift >= 0);
-          e += eshift;
-          data->edge_nodes[e][ecount[e]++] = n;
-          break;
-#endif
-        default:
-          data->corner_nodes[c] = n;
-          break;
-        }
+  }
+  else {
+    int                 offset = 0;
+
+    for (i = 0; i < npv; i++) {
+      data->volume_nodes[vcount++] = offset++;
+    }
+    for (f = 0; f < P4EST_FACES; f++) {
+      for (i = 0; i < npf; i++) {
+        data->face_nodes[f][fcount[f]++] = offset++;
       }
     }
 #ifdef P4_TO_P8
-  }
+    for (e = 0; e < P8EST_EDGES; e++) {
+      for (i = 0; i < npe; i++) {
+        data->edge_nodes[e][ecount[e]++] = offset++;
+      }
+    }
 #endif
+    for (c = 0; c < P4EST_CHILDREN; c++) {
+      for (i = 0; i < npc; i++) {
+        data->corner_nodes[c][ccount[c]++] = offset++;
+      }
+    }
+  }
 
   data->local_dep = P4EST_ALLOC (p4est_lnodes_dep_t, nldep);
   memset (data->local_dep, -1, nldep * sizeof (p4est_lnodes_dep_t));
@@ -1732,14 +1864,17 @@ p4est_lnodes_reset_data (p4est_lnodes_data_t * data, p4est_t * p4est)
   sc_array_destroy (data->all_procs);
   P4EST_FREE (data->poff);
   P4EST_FREE (data->volume_nodes);
-  for (i = 0; i < P4EST_DIM * 2; i++) {
+  for (i = 0; i < P4EST_FACES; i++) {
     P4EST_FREE (data->face_nodes[i]);
   }
 #ifdef P4_TO_P8
-  for (i = 0; i < 12; i++) {
+  for (i = 0; i < P8EST_EDGES; i++) {
     P4EST_FREE (data->edge_nodes[i]);
   }
 #endif
+  for (i = 0; i < P4EST_CHILDREN; i++) {
+    P4EST_FREE (data->corner_nodes[i]);
+  }
 
   sc_array_destroy (data->inodes);
   sc_array_destroy (data->inode_sharers);
@@ -1794,6 +1929,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
 #ifdef P4_TO_P8
   int                 nodes_per_edge = data->nodes_per_edge;
 #endif
+  int                 nodes_per_corner = data->nodes_per_corner;
   int                 share_count;
   int                 share_proc;
   sc_array_t         *inode_sharers = data->inode_sharers;
@@ -1858,7 +1994,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
         zindex = (size_t) binfo->first_index;
         type = binfo->type;
         if (type >= P4EST_LN_C_OFFSET) {
-          limit = 1;
+          limit = nodes_per_corner;
         }
 #ifdef P4_TO_P8
         else if (type >= P8EST_LN_E_OFFSET) {
@@ -1866,7 +2002,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
         }
 #endif
         else {
-          P4EST_ASSERT (0 <= type && type < P4EST_DIM * 2);
+          P4EST_ASSERT (0 <= type && type < P4EST_FACES);
           limit = nodes_per_face;
         }
         for (j = 0; j < limit; j++) {
@@ -2038,6 +2174,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
 #ifdef P4_TO_P8
   int                 nodes_per_edge = data->nodes_per_edge;
 #endif
+  int                 nodes_per_corner = data->nodes_per_corner;
   p4est_locidx_t     *lp;
   int                *ip;
   p4est_locidx_t     *inode;
@@ -2089,7 +2226,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
     for (zz = 0; zz < info_count; zz++) {
       binfo = (p4est_lnodes_buf_info_t *) sc_array_index (recv_info, zz);
       if (binfo->type >= P4EST_LN_C_OFFSET) {
-        limit = 1;
+        limit = nodes_per_corner;
       }
 #ifdef P4_TO_P8
       else if (binfo->type >= P8EST_LN_E_OFFSET) {
@@ -2430,37 +2567,57 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_lnodes_new, degree %d\n",
                             degree);
-  P4EST_ASSERT (degree >= 1);
+  p4est_log_indent_push ();
+
+  P4EST_ASSERT (degree >= 1 || degree == -1 ||
+#ifdef P4_TO_P8
+                degree == -2 ||
+#endif
+                degree == -P4EST_DIM);
 
   lnodes->mpicomm = p4est->mpicomm;
   lnodes->degree = degree;
   lnodes->num_local_elements = nel = p4est->local_num_quadrants;
+  if (degree > 0) {
 #ifndef P4_TO_P8
-  lnodes->vnodes = (degree + 1) * (degree + 1);
+    lnodes->vnodes = (degree + 1) * (degree + 1);
 #else
-  lnodes->vnodes = (degree + 1) * (degree + 1) * (degree + 1);
+    lnodes->vnodes = (degree + 1) * (degree + 1) * (degree + 1);
 #endif
+  }
+  else if (degree == -1) {
+    lnodes->vnodes = P4EST_FACES;
+  }
+#ifdef P4_TO_P8
+  else if (degree == -2) {
+    lnodes->vnodes = P4EST_FACES + P8EST_EDGES;
+  }
+#endif
+  else if (degree == -P4EST_DIM) {
+    lnodes->vnodes = P4EST_FACES +
+#ifdef P4_TO_P8
+      P8EST_EDGES +
+#endif
+      P4EST_CHILDREN;
+  }
   lnodes->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, nel);
   nlen = nel * lnodes->vnodes;
   lnodes->element_nodes = P4EST_ALLOC (p4est_locidx_t, nlen);
   memset (lnodes->element_nodes, -1, nlen * sizeof (p4est_locidx_t));
 
   p4est_lnodes_init_data (&data, degree, p4est, ghost_layer, lnodes);
-  if (degree == 1) {
-    viter = NULL;
-    fiter = p4est_lnodes_face_simple_callback;
+  viter = data.nodes_per_volume ? p4est_lnodes_volume_callback : NULL;
+  fiter = data.nodes_per_face ? p4est_lnodes_face_callback :
+    ((data.nodes_per_corner ||
 #ifdef P4_TO_P8
-    eiter = p8est_lnodes_edge_simple_callback_void;
+      data.nodes_per_edge ||
 #endif
-  }
-  else {
-    viter = p4est_lnodes_volume_callback;
-    fiter = p4est_lnodes_face_callback;
+      0) ? p4est_lnodes_face_simple_callback : NULL);
 #ifdef P4_TO_P8
-    eiter = p8est_lnodes_edge_callback;
+  eiter = data.nodes_per_edge ? p8est_lnodes_edge_callback :
+    (data.nodes_per_corner ? p8est_lnodes_edge_simple_callback_void : NULL);
 #endif
-  }
-  citer = p4est_lnodes_corner_callback;
+  citer = data.nodes_per_corner ? p4est_lnodes_corner_callback : NULL;
 
   p4est_iterate_ext (p4est, ghost_layer, &data, viter, fiter,
 #ifdef P4_TO_P8
@@ -2484,6 +2641,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 
   p4est_lnodes_reset_data (&data, p4est);
 
+  p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING "_lnodes_new with"
                             " %lld global nodes\n",
                             (unsigned long long) gtotal);
@@ -2509,6 +2667,564 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   sc_array_destroy (lnodes->sharers);
 
   P4EST_FREE (lnodes);
+}
+
+static              size_t
+ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
+{
+  p4est_quadrant_t   *q;
+
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
+
+  q = (p4est_quadrant_t *) sc_array_index (array, zindex);
+  return (size_t) q->p.which_tree;
+}
+
+void
+p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
+                            p4est_ghost_t * ghost)
+{
+#ifdef P4EST_MPI
+  sc_array_t         *ghosts = &ghost->ghosts;
+  sc_array_t         *mirrors = &ghost->mirrors;
+  p4est_locidx_t     *proc_offsets = ghost->proc_offsets;
+  p4est_locidx_t     *tree_offsets = ghost->tree_offsets;
+  p4est_locidx_t     *mirror_proc_offsets = ghost->mirror_proc_offsets;
+  p4est_locidx_t     *mirror_proc_mirrors = ghost->mirror_proc_mirrors;
+  p4est_locidx_t     *mirror_tree_offsets = ghost->mirror_tree_offsets;
+  sc_array_t         *new_ghosts, *new_mirrors;
+  int                 mpisize = p4est->mpisize;
+  int                 self = p4est->mpirank;
+  int                 mpiret;
+  int                 n_comm;
+  p4est_locidx_t      old_num_mirrors, *newmpcount;
+  sc_array_t         *recv_counts, *send_counts;
+  sc_array_t         *recv_all, *send_all;
+  sc_array_t         *recv_requests;
+  sc_array_t         *send_requests;
+  p4est_connectivity_t *conn = p4est->connectivity;
+
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_ghost_support_lnodes %s\n",
+                            p4est_connect_type_string (ghost->btype));
+  p4est_log_indent_push ();
+
+  /* this should only be done with an unexpanded ghost layer */
+  P4EST_ASSERT (ghost->mirror_proc_fronts == ghost->mirror_proc_mirrors &&
+                ghost->mirror_proc_front_offsets ==
+                ghost->mirror_proc_front_offsets);
+
+  /* get the topological nodes */
+  n_comm = lnodes->sharers ? (int) lnodes->sharers->elem_count : 0;
+  recv_counts = sc_array_new_size (sizeof (p4est_locidx_t), n_comm);
+  send_counts = sc_array_new_size (sizeof (p4est_locidx_t), n_comm);
+  recv_all = sc_array_new_size (sizeof (sc_array_t), n_comm);
+  send_all = sc_array_new_size (sizeof (sc_array_t), n_comm);
+  recv_requests = sc_array_new (sizeof (sc_MPI_Request));
+  send_requests = sc_array_new (sizeof (sc_MPI_Request));
+
+  new_mirrors =
+    sc_array_new_size (sizeof (p4est_quadrant_t), mirrors->elem_count);
+  old_num_mirrors = (p4est_locidx_t) mirrors->elem_count;
+  sc_array_copy (new_mirrors, mirrors);
+
+  /* figure out which quads to send and send them */
+  {
+    int                *quads_per_node;
+    int                *tmp_count;
+    p4est_quadrant_t   *node_to_quad;
+    p4est_locidx_t     *qpn_offsets;
+    int                 V, vid;
+    p4est_locidx_t      nid, elid, N, K;
+    p4est_lnodes_rank_t *lrank;
+    int                 i, p;
+    p4est_topidx_t      flt, llt, t;
+
+    N = lnodes->num_local_nodes;
+    K = lnodes->num_local_elements;
+    V = lnodes->vnodes;
+    /* count the quadrants per node */
+    quads_per_node = P4EST_ALLOC_ZERO (int, N);
+    for (elid = 0; elid < K; elid++) {
+      for (vid = 0; vid < V; vid++) {
+        nid = lnodes->element_nodes[V * elid + vid];
+        quads_per_node[nid]++;
+      }
+    }
+
+    /* convert counts to offsets */
+    qpn_offsets = P4EST_ALLOC (int, N + 1);
+    qpn_offsets[0] = 0;
+    for (nid = 0; nid < N; nid++) {
+      qpn_offsets[nid + 1] = qpn_offsets[nid] + quads_per_node[nid];
+    }
+
+    /* create and fill the node to quadrant array */
+    node_to_quad = P4EST_ALLOC (p4est_quadrant_t, qpn_offsets[N]);
+    tmp_count = P4EST_ALLOC_ZERO (int, N);
+
+    flt = p4est->first_local_tree;
+    llt = p4est->last_local_tree;
+
+    for (elid = 0, t = flt; t <= llt; t++) {
+      p4est_tree_t       *tree = p4est_tree_array_index (p4est->trees, t);
+      sc_array_t         *quadrants = &tree->quadrants;
+      p4est_locidx_t      il, nquads = (p4est_locidx_t) quadrants->elem_count;
+
+      for (il = 0; il < nquads; il++, elid++) {
+        for (vid = 0; vid < V; vid++) {
+          p4est_quadrant_t   *q;
+
+          nid = lnodes->element_nodes[V * elid + vid];
+          q = &(node_to_quad[qpn_offsets[nid] + tmp_count[nid]++]);
+          *q = *p4est_quadrant_array_index (quadrants, (size_t) il);
+          q->p.piggy3.which_tree = t;
+          q->p.piggy3.local_num = elid;
+        }
+      }
+    }
+
+    newmpcount = P4EST_ALLOC (p4est_locidx_t, p4est->mpisize);
+    for (i = 0; i < p4est->mpisize; i++) {
+      newmpcount[i] = mirror_proc_offsets[i + 1] - mirror_proc_offsets[i];
+    }
+
+    /* for each communication partner */
+    for (i = 0; i < n_comm; i++) {
+      p4est_locidx_t     *count_recv, *count_send;
+      sc_MPI_Request     *req;
+      p4est_locidx_t      nshared, il, jl, nquads;
+      sc_array_t         *shared, *send_quads;
+      sc_array_t          mirror_view;
+      p4est_locidx_t      startmirror, endmirror;
+
+      lrank = p4est_lnodes_rank_array_index_int (lnodes->sharers, i);
+
+      p = lrank->rank;
+      if (p == self) {
+        continue;
+      }
+      /* post the count receive */
+      count_recv = (p4est_locidx_t *) sc_array_index_int (recv_counts, i);
+      req = (sc_MPI_Request *) sc_array_push (recv_requests);
+      mpiret = sc_MPI_Irecv (count_recv, 1, P4EST_MPI_LOCIDX, p,
+                             P4EST_COMM_GHOST_SUPPORT_COUNT, p4est->mpicomm,
+                             req);
+      SC_CHECK_MPI (mpiret);
+
+      /* create the send buffer */
+      shared = &(lrank->shared_nodes);
+      nshared = (p4est_locidx_t) shared->elem_count;
+      send_quads = (sc_array_t *) sc_array_index_int (send_all, i);
+      sc_array_init (send_quads, sizeof (p4est_quadrant_t));
+      for (il = 0; il < nshared; il++) {
+        p4est_locidx_t      startquad, endquad, qid;
+
+        nid = *((p4est_locidx_t *) sc_array_index (shared, il));
+        startquad = qpn_offsets[nid];
+        endquad = qpn_offsets[nid + 1];
+        for (qid = startquad; qid < endquad; qid++) {
+          p4est_quadrant_t   *q;
+
+          q = p4est_quadrant_array_push (send_quads);
+          *q = node_to_quad[qid];
+        }
+      }
+      sc_array_sort (send_quads, p4est_quadrant_compare_piggy);
+      sc_array_uniq (send_quads, p4est_quadrant_compare_piggy);
+
+      nquads = (p4est_locidx_t) send_quads->elem_count;
+
+      startmirror = mirror_proc_offsets[p];
+      endmirror = mirror_proc_offsets[p + 1];
+      sc_array_init_data (&mirror_view,
+                          &(mirror_proc_mirrors[startmirror]),
+                          sizeof (p4est_locidx_t),
+                          (size_t) (endmirror - startmirror));
+
+      for (il = 0, jl = 0; (size_t) il < send_quads->elem_count; il++) {
+        p4est_quadrant_t   *q;
+        ssize_t             idx;
+        int                 already_sent = 0;
+
+        q = p4est_quadrant_array_index (send_quads, (size_t) il);
+        idx = sc_array_bsearch (mirrors, q, p4est_quadrant_compare_piggy);
+        if (idx >= 0) {
+          p4est_locidx_t      key = (p4est_locidx_t) idx;
+          idx = sc_array_bsearch (&mirror_view, &key, p4est_locidx_compare);
+          if (idx >= 0) {
+            already_sent = 1;
+          }
+        }
+        else {
+          p4est_quadrant_t   *q2;
+
+          q2 = p4est_quadrant_array_push (new_mirrors);
+          *q2 = *q;
+        }
+        if (already_sent) {
+          nquads--;
+        }
+        else {
+          size_t              jz;
+
+          jz = (size_t) jl++;
+          if (jz != (size_t) il) {
+            p4est_quadrant_t   *q2;
+
+            q2 = p4est_quadrant_array_index (send_quads, jz);
+            *q2 = *q;
+          }
+        }
+      }
+      sc_array_resize (send_quads, nquads);
+      newmpcount[p] += nquads;
+
+      P4EST_LDEBUGF ("ghost layer support nodes sending %lld new to %d\n",
+                     (long long) nquads, p);
+
+      count_send = (p4est_locidx_t *) sc_array_index_int (send_counts, i);
+      *count_send = nquads;
+      req = (sc_MPI_Request *) sc_array_push (send_requests);
+      mpiret = sc_MPI_Isend (count_send, 1, P4EST_MPI_LOCIDX, p,
+                             P4EST_COMM_GHOST_SUPPORT_COUNT, p4est->mpicomm,
+                             req);
+      SC_CHECK_MPI (mpiret);
+
+      if (nquads) {
+        req = (sc_MPI_Request *) sc_array_push (send_requests);
+        mpiret = sc_MPI_Isend (send_quads->array, nquads * sizeof
+                               (p4est_quadrant_t), sc_MPI_BYTE, p,
+                               P4EST_COMM_GHOST_SUPPORT_LOAD, p4est->mpicomm,
+                               req);
+        SC_CHECK_MPI (mpiret);
+      }
+    }
+
+    P4EST_FREE (quads_per_node);
+    P4EST_FREE (tmp_count);
+    P4EST_FREE (node_to_quad);
+    P4EST_FREE (qpn_offsets);
+  }
+
+  /* update mirror structures */
+  {
+    p4est_locidx_t      new_num_mirrors;
+    p4est_locidx_t     *newmpoffset, *new_mirror_proc_mirrors;
+    int                 i, p;
+    p4est_lnodes_rank_t *lrank;
+
+    newmpoffset = P4EST_ALLOC (p4est_locidx_t, mpisize + 1);
+    newmpoffset[0] = 0;
+    for (i = 0; i < mpisize; i++) {
+      newmpoffset[i + 1] = newmpoffset[i] + newmpcount[i];
+    }
+    new_mirror_proc_mirrors =
+      P4EST_ALLOC (p4est_locidx_t, newmpoffset[mpisize]);
+
+    sc_array_sort (new_mirrors, p4est_quadrant_compare_piggy);
+    sc_array_uniq (new_mirrors, p4est_quadrant_compare_piggy);
+    new_num_mirrors = (p4est_locidx_t) new_mirrors->elem_count;
+    P4EST_ASSERT (new_num_mirrors >= old_num_mirrors);
+
+    if (new_num_mirrors > old_num_mirrors) {
+      sc_array_t          split;
+      p4est_topidx_t      t;
+
+      /* update mirror_tree_offsets */
+      sc_array_init (&split, sizeof (size_t));
+      sc_array_split (new_mirrors, &split,
+                      (size_t) conn->num_trees, ghost_tree_type, NULL);
+      P4EST_ASSERT (split.elem_count == (size_t) conn->num_trees + 1);
+      for (t = 0; t <= conn->num_trees; ++t) {
+        size_t             *ppz;
+
+        ppz = (size_t *) sc_array_index (&split, (size_t) t);
+        mirror_tree_offsets[t] = (p4est_locidx_t) (*ppz);
+      }
+      sc_array_reset (&split);
+    }
+
+    /* update mirror_proc_mirrors */
+    for (p = 0; p < mpisize; p++) {
+      p4est_locidx_t      old_offset = mirror_proc_offsets[p];
+      p4est_locidx_t      old_count = mirror_proc_offsets[p + 1] - old_offset;
+      p4est_locidx_t      il;
+
+      for (il = 0; il < old_count; il++) {
+        ssize_t             idx;
+        p4est_quadrant_t   *q;
+
+        q = p4est_quadrant_array_index (mirrors, (size_t)
+                                        mirror_proc_mirrors[old_offset + il]);
+
+        idx = sc_array_bsearch (new_mirrors, q, p4est_quadrant_compare_piggy);
+        P4EST_ASSERT (idx >= 0);
+        new_mirror_proc_mirrors[newmpoffset[p] + il] = (p4est_locidx_t) idx;
+      }
+    }
+
+    for (i = 0; i < n_comm; i++) {
+      sc_array_t         *send_quads;
+      int                 p;
+
+      lrank = p4est_lnodes_rank_array_index_int (lnodes->sharers, i);
+
+      p = lrank->rank;
+      if (p == self) {
+        continue;
+      }
+      send_quads = (sc_array_t *) sc_array_index_int (send_all, i);
+      if (send_quads->elem_count) {
+        p4est_locidx_t      il, startidx, endidx;
+        p4est_locidx_t      old_offset = mirror_proc_offsets[p];
+        p4est_locidx_t      old_count =
+          mirror_proc_offsets[p + 1] - old_offset;
+        sc_array_t          pview;
+
+        startidx = newmpoffset[p];
+        endidx = newmpoffset[p + 1];
+
+        for (il = 0; (size_t) il < send_quads->elem_count; il++) {
+          p4est_quadrant_t   *q;
+          ssize_t             idx;
+          p4est_locidx_t      idxl;
+
+          q = p4est_quadrant_array_index (send_quads, (size_t) il);
+          idx =
+            sc_array_bsearch (new_mirrors, q, p4est_quadrant_compare_piggy);
+          P4EST_ASSERT (idx >= 0);
+          idxl = (p4est_locidx_t) idx;
+          new_mirror_proc_mirrors[startidx + old_count + il] = idxl;
+        }
+
+        sc_array_init_data (&pview, &new_mirror_proc_mirrors[startidx],
+                            sizeof (p4est_locidx_t),
+                            (size_t) (endidx - startidx));
+        sc_array_sort (&pview, p4est_locidx_compare);
+        sc_array_reset (&pview);
+      }
+    }
+    P4EST_FREE (mirror_proc_mirrors);
+    P4EST_FREE (mirror_proc_offsets);
+    ghost->mirror_proc_mirrors = mirror_proc_mirrors =
+      new_mirror_proc_mirrors;
+    ghost->mirror_proc_offsets = mirror_proc_offsets = newmpoffset;
+    ghost->mirror_proc_fronts = mirror_proc_mirrors;
+    ghost->mirror_proc_front_offsets = mirror_proc_offsets;
+
+    sc_array_resize (mirrors, new_mirrors->elem_count);
+    sc_array_copy (mirrors, new_mirrors);
+    sc_array_destroy (new_mirrors);
+    P4EST_FREE (newmpcount);
+  }
+
+  /* update the ghost layer */
+  {
+    int                 i, p;
+    p4est_locidx_t     *new_proc_counts, *new_proc_offsets;
+    p4est_lnodes_rank_t *lrank;
+
+    mpiret =
+      sc_MPI_Waitall ((int) recv_requests->elem_count,
+                      (sc_MPI_Request *) recv_requests->array,
+                      sc_MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+    sc_array_reset (recv_requests);
+    sc_array_init (recv_requests, sizeof (sc_MPI_Request));
+    new_proc_counts = P4EST_ALLOC (p4est_locidx_t, mpisize);
+    for (p = 0; p < mpisize; p++) {
+      new_proc_counts[p] = proc_offsets[p + 1] - proc_offsets[p];
+    }
+
+    for (i = 0; i < n_comm; i++) {
+      sc_array_t         *recv_quads;
+      p4est_locidx_t      recv_count;
+
+      lrank = p4est_lnodes_rank_array_index_int (lnodes->sharers, i);
+
+      p = lrank->rank;
+      if (p == self) {
+        continue;
+      }
+
+      recv_count = *((p4est_locidx_t *) sc_array_index_int (recv_counts, i));
+
+      P4EST_LDEBUGF
+        ("ghost layer support nodes receiving  %lld new from %d\n",
+         (long long) recv_count, p);
+
+      new_proc_counts[p] += recv_count;
+
+      recv_quads = (sc_array_t *) sc_array_index (recv_all, i);
+      sc_array_init_size (recv_quads, sizeof (p4est_quadrant_t),
+                          (size_t) recv_count);
+      if (recv_count) {
+        sc_MPI_Request     *req;
+
+        req = (sc_MPI_Request *) sc_array_push (recv_requests);
+
+        mpiret =
+          sc_MPI_Irecv (recv_quads->array,
+                        recv_count * sizeof (p4est_quadrant_t), sc_MPI_BYTE,
+                        p, P4EST_COMM_GHOST_SUPPORT_LOAD, p4est->mpicomm,
+                        req);
+        SC_CHECK_MPI (mpiret);
+      }
+    }
+
+    new_proc_offsets = P4EST_ALLOC (p4est_locidx_t, mpisize + 1);
+    new_proc_offsets[0] = 0;
+    for (p = 0; p < mpisize; p++) {
+      new_proc_offsets[p + 1] = new_proc_offsets[p] + new_proc_counts[p];
+    }
+
+    new_ghosts = sc_array_new_size (sizeof (p4est_quadrant_t),
+                                    (size_t) new_proc_offsets[mpisize]);
+    for (p = 0; p < mpisize; p++) {
+      p4est_quadrant_t   *dest, *src;
+      p4est_locidx_t      count;
+
+      count = proc_offsets[p + 1] - proc_offsets[p];
+      if (count) {
+        dest = p4est_quadrant_array_index (new_ghosts, new_proc_offsets[p]);
+        src = p4est_quadrant_array_index (ghosts, proc_offsets[p]);
+        memcpy (dest, src, count * sizeof (p4est_quadrant_t));
+      }
+    }
+
+    mpiret =
+      sc_MPI_Waitall ((int) recv_requests->elem_count,
+                      (sc_MPI_Request *) recv_requests->array,
+                      sc_MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    for (i = 0; i < n_comm; i++) {
+      sc_array_t         *recv_quads;
+
+      lrank = p4est_lnodes_rank_array_index_int (lnodes->sharers, i);
+
+      p = lrank->rank;
+      if (p == self) {
+        continue;
+      }
+
+      recv_quads = (sc_array_t *) sc_array_index (recv_all, i);
+
+      if (recv_quads->elem_count) {
+        p4est_quadrant_t   *dest, *src;
+        p4est_locidx_t      startidx, endidx, oldcount;
+        sc_array_t          pview;
+
+        startidx = new_proc_offsets[p];
+        endidx = new_proc_offsets[p + 1];
+
+        oldcount = proc_offsets[p + 1] - proc_offsets[p];
+
+        dest = p4est_quadrant_array_index (new_ghosts, (size_t)
+                                           (new_proc_offsets[p] + oldcount));
+
+        src = p4est_quadrant_array_index (recv_quads, 0);
+
+        memcpy (dest, src,
+                recv_quads->elem_count * sizeof (p4est_quadrant_t));
+
+        sc_array_init_view (&pview, new_ghosts, startidx,
+                            (size_t) (endidx - startidx));
+        sc_array_sort (&pview, p4est_quadrant_compare_piggy);
+        sc_array_reset (&pview);
+      }
+    }
+
+    if (new_ghosts->elem_count > ghosts->elem_count) {
+      p4est_topidx_t      t;
+      sc_array_t          split;
+
+      /* update tree_offsets */
+      sc_array_init (&split, sizeof (size_t));
+      sc_array_split (new_ghosts, &split,
+                      (size_t) conn->num_trees, ghost_tree_type, NULL);
+      P4EST_ASSERT (split.elem_count == (size_t) conn->num_trees + 1);
+      for (t = 0; t <= conn->num_trees; ++t) {
+        size_t             *ppz;
+
+        ppz = (size_t *) sc_array_index (&split, (size_t) t);
+        tree_offsets[t] = *ppz;
+      }
+      sc_array_reset (&split);
+
+      P4EST_ASSERT (sc_array_is_sorted
+                    (new_ghosts, p4est_quadrant_compare_piggy));
+#ifdef P4EST_DEBUG
+      {
+        size_t              zz;
+
+        for (zz = 0; zz < ghosts->elem_count - 1; zz++) {
+          p4est_quadrant_t   *q1 = p4est_quadrant_array_index (ghosts, zz);
+          p4est_quadrant_t   *q2 =
+            p4est_quadrant_array_index (ghosts, zz + 1);
+
+          if (!p4est_quadrant_compare_piggy (q1, q2)) {
+            P4EST_LERROR ("already duplicate in ghost:\n");
+            p4est_quadrant_print (SC_LP_ERROR, q1);
+          }
+        }
+        for (zz = 0; zz < new_ghosts->elem_count - 1; zz++) {
+          p4est_quadrant_t   *q1 =
+            p4est_quadrant_array_index (new_ghosts, zz);
+          p4est_quadrant_t   *q2 =
+            p4est_quadrant_array_index (new_ghosts, zz + 1);
+
+          if (!p4est_quadrant_compare_piggy (q1, q2)) {
+            P4EST_LERROR ("duplicate in new ghost:\n");
+            p4est_quadrant_print (SC_LP_ERROR, q1);
+          }
+        }
+      }
+#endif
+      sc_array_resize (ghosts, new_ghosts->elem_count);
+      sc_array_copy (ghosts, new_ghosts);
+    }
+    P4EST_FREE (proc_offsets);
+    ghost->proc_offsets = new_proc_offsets;
+    sc_array_destroy (new_ghosts);
+    P4EST_FREE (new_proc_counts);
+
+    /* end sends */
+    mpiret =
+      sc_MPI_Waitall ((int) send_requests->elem_count,
+                      (sc_MPI_Request *) send_requests->array,
+                      sc_MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+
+    /* clean up */
+    sc_array_destroy (recv_counts);
+    sc_array_destroy (send_counts);
+    for (i = 0; i < n_comm; i++) {
+      sc_array_t         *quads;
+
+      lrank = p4est_lnodes_rank_array_index_int (lnodes->sharers, i);
+
+      p = lrank->rank;
+      if (p == self) {
+        continue;
+      }
+
+      quads = (sc_array_t *) sc_array_index (recv_all, i);
+      sc_array_reset (quads);
+      quads = (sc_array_t *) sc_array_index (send_all, i);
+      sc_array_reset (quads);
+    }
+    sc_array_destroy (recv_all);
+    sc_array_destroy (send_all);
+    sc_array_destroy (recv_requests);
+    sc_array_destroy (send_requests);
+  }
+
+  P4EST_ASSERT (p4est_ghost_is_valid (p4est, ghost));
+
+  p4est_log_indent_pop ();
+  P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_ghost_support_lnodes\n");
+#endif
 }
 
 p4est_lnodes_buffer_t *

@@ -586,6 +586,10 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   p4est_ghost_t      *ghost_layer;
+  p4est_ghost_t      *face_ghost_layer;
+#ifdef P4_TO_P8
+  p4est_ghost_t      *edge_ghost_layer;
+#endif
   int                 ntests;
   int                 i, j, k;
   p4est_lnodes_t     *lnodes;
@@ -706,7 +710,7 @@ main (int argc, char **argv)
     /* do a uniform partition */
 #ifndef P4_TO_P8
     if (i == 3 && mpisize == 3) {
-      p4est_locidx_t num_quads[3] = {3,8,3};
+      p4est_locidx_t      num_quads[3] = { 3, 8, 3 };
       p4est_partition_given (p4est, num_quads);
     }
     else {
@@ -717,14 +721,39 @@ main (int argc, char **argv)
 #endif
 
     ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+    face_ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FACE);
+#ifdef P4_TO_P8
+    edge_ghost_layer = p4est_ghost_new (p4est, P8EST_CONNECT_EDGE);
+#endif
 
     flt = p4est->first_local_tree;
     llt = p4est->last_local_tree;
 
-    for (j = 1; j <= 4; j++) {
+    for (j = -P4EST_DIM; j <= 4; j++) {
+      if (!j) {
+        continue;
+      }
       P4EST_GLOBAL_PRODUCTIONF ("Begin lnodes test %d:%d\n", i, j);
-      lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
+      p4est_log_indent_push ();
+      switch (j) {
+#ifdef P4_TO_P8
+      case -2:
+        lnodes = p4est_lnodes_new (p4est, edge_ghost_layer, j);
+        break;
+#endif
+      case -1:
+        lnodes = p4est_lnodes_new (p4est, face_ghost_layer, j);
+        break;
+      default:
+        lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
+        break;
+      }
 
+      if (j < 0) {
+        p4est_lnodes_destroy (lnodes);
+        p4est_log_indent_pop ();
+        continue;
+      }
       nin = lnodes->num_local_nodes;
       tpoints = P4EST_ALLOC (tpoint_t, nin);
       memset (tpoints, -1, nin * sizeof (tpoint_t));
@@ -928,11 +957,16 @@ main (int argc, char **argv)
 
       p4est_lnodes_destroy (lnodes);
       P4EST_FREE (tpoints);
+      p4est_log_indent_pop ();
       P4EST_GLOBAL_PRODUCTIONF ("End lnodes test %d:%d\n", i, j);
     }
 
     /* clean up */
     p4est_ghost_destroy (ghost_layer);
+    p4est_ghost_destroy (face_ghost_layer);
+#ifdef P4_TO_P8
+    p4est_ghost_destroy (edge_ghost_layer);
+#endif
 
     p4est_destroy (p4est);
     p4est_connectivity_destroy (conn);

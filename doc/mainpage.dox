@@ -1,0 +1,74 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \mainpage The p4est parallel adaptive mesh refinement library
+ *
+ * \author Carsten Burstedde, Lucas C. Wilcox, Tobin Isaac et.al.
+ * \copyright GNU General Public License version 2
+ * (or, at your option, any later version)
+ *
+ * p4est is a software library for parallel adaptive mesh refinement (AMR).  It
+ * represents the mesh as one or more conforming hexahedra that can be
+ * individually refined as adaptive octrees, yielding a distributed
+ * non-conforming mesh.  Both 2D and 3D are supported.  p4est is intended to be
+ * compiled and linked against by numerical simulation codes that require
+ * efficient in-core, static or dynamic load balancing and (re-)adaptation of
+ * the computational mesh.
+ *
+ * The p4est provides data structures and routines for all of the following:
+ *
+ *  * creating a coarse computational mesh;
+ *  * adapting the mesh by refining, coarsening, and enforcing 2:1 conditions
+ *    between neighbors;
+ *  * partitioning a mesh between MPI processes;
+ *  * visualizing a mesh;
+ *  * communicating ghost layers and data between processes;
+ *  * converting the octree format to other static mesh formats;
+ *  * etc.
+ *
+ * More guidance on the usage of p4est can be found in
+ * [p4est-howto.pdf](http://p4est.github.io/p4est-howto.pdf),
+ * which is distributed with the
+ * [source](http://github.com/cburstedde/p4est) under the
+ * [doc/](https://github.com/cburstedde/p4est/tree/develop/doc) directory.
+ *
+ * To build the p4est library from a tar distribution, use the standard
+ * procedure of the GNU autotools.  The configure script takes the following
+ * options:
+ *
+ * * `--enable-debug`   lowers the log level for increased verbosity and
+ *                    activates the `P4EST_ASSERT` macro for consistency checks.
+ * * `--enable-mpi`     pulls in the mpi.h include file and activates the MPI
+ *                    compiler wrappers.  If this option is not given, wrappers
+ *                    for MPI routines are used instead and the code is compiled
+ *                    in serial only.
+ * * `--disable-mpiio`  may be used to avoid using `MPI_File` based calls.
+ *
+ * A typical development configure line looks as follows:
+ * > `relative/path/to/configure CFLAGS="-Wall -O0 -g" --enable-mpi --enable-debug`
+ * A typical production configure line looks as follows:
+ * > `relative/path/to/configure CFLAGS="-Wall -O2" --enable-mpi`
+ *
+ * \see http://www.p4est.org/
+ * \see http://www.gnu.org/licenses/licenses.html
+ */

@@ -257,11 +257,11 @@ main (int argc, char **argv)
   }
   else if (config == P8EST_CONFIG_SHELL) {
     connectivity = p8est_connectivity_new_shell ();
-    geom = p8est_geometry_new_shell (1., .55);
+    geom = p8est_geometry_new_shell (connectivity, 1., .55);
   }
   else if (config == P8EST_CONFIG_SPHERE) {
     connectivity = p8est_connectivity_new_sphere ();
-    geom = p8est_geometry_new_sphere (1., 0.191728, 0.039856);
+    geom = p8est_geometry_new_sphere (connectivity, 1., 0.191728, 0.039856);
   }
   else {
     connectivity = p8est_connectivity_new_unitcube ();
@@ -317,7 +317,9 @@ main (int argc, char **argv)
 
   /* destroy the p8est and its connectivity structure */
   p8est_destroy (p8est);
-  P4EST_FREE (geom);
+  if (geom != NULL) {
+    p8est_geometry_destroy (geom);
+  }
   p8est_connectivity_destroy (connectivity);
 
   /* clean up and exit */

@@ -235,7 +235,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
   fprintf (vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_WORDS_BIGENDIAN
+#ifdef SC_IS_BIGENDIAN
   fprintf (vtufile, " byte_order=\"BigEndian\">\n");
 #else
   fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
@@ -271,32 +271,17 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
         k = 0;
 #ifdef P4_TO_P8
         for (zi = 0; zi < 2; ++zi) {
+          eta_z = intsize * quad->z + h2 * (1. + (zi * 2 - 1) * scale);
 #endif
           for (yi = 0; yi < 2; ++yi) {
+            eta_y = intsize * quad->y + h2 * (1. + (yi * 2 - 1) * scale);
             for (xi = 0; xi < 2; ++xi) {
               P4EST_ASSERT (0 <= k && k < P4EST_CHILDREN);
               eta_x = intsize * quad->x + h2 * (1. + (xi * 2 - 1) * scale);
-              eta_y = intsize * quad->y + h2 * (1. + (yi * 2 - 1) * scale);
-#ifdef P4_TO_P8
-              eta_z = intsize * quad->z + h2 * (1. + (zi * 2 - 1) * scale);
-#endif
-              for (j = 0; j < 3; ++j) {
-                /* *INDENT-OFF* */
-              xyz[j] =
-          ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
-                                                 eta_x  * v[3 * vt[1] + j]) +
-                                 eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
-                                                 eta_x  * v[3 * vt[3] + j]))
-#ifdef P4_TO_P8
-           +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
-                                                 eta_x  * v[3 * vt[5] + j]) +
-                                 eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
-                                                 eta_x  * v[3 * vt[7] + j]))
-#endif
-          );
-                /* *INDENT-ON* */
-              }
               if (geom != NULL) {
+                xyz[0] = eta_x;
+                xyz[1] = eta_y;
+                xyz[2] = eta_z;
                 geom->X (geom, jt, xyz, XYZ);
                 for (j = 0; j < 3; ++j) {
                   float_data[3 * (P4EST_CHILDREN * quad_count + k) + j] =
@@ -305,6 +290,20 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
               }
               else {
                 for (j = 0; j < 3; ++j) {
+                  /* *INDENT-OFF* */
+                xyz[j] =
+            ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
+                                                   eta_x  * v[3 * vt[1] + j]) +
+                                   eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
+                                                   eta_x  * v[3 * vt[3] + j]))
+#ifdef P4_TO_P8
+             +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
+                                                   eta_x  * v[3 * vt[5] + j]) +
+                                   eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
+                                                   eta_x  * v[3 * vt[7] + j]))
+#endif
+            );
+                  /* *INDENT-ON* */
                   float_data[3 * (P4EST_CHILDREN * quad_count + k) + j] =
                     (P4EST_VTK_FLOAT_TYPE) xyz[j];
                 }
@@ -335,23 +334,10 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #ifdef P4_TO_P8
       eta_z = intsize * in->z;
 #endif
-      for (j = 0; j < 3; ++j) {
-        /* *INDENT-OFF* */
-        xyz[j] =
-          ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
-                                                 eta_x  * v[3 * vt[1] + j]) +
-                                 eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
-                                                 eta_x  * v[3 * vt[3] + j]))
-#ifdef P4_TO_P8
-           +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
-                                                 eta_x  * v[3 * vt[5] + j]) +
-                                 eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
-                                                 eta_x  * v[3 * vt[7] + j]))
-#endif
-          );
-        /* *INDENT-ON* */
-      }
       if (geom != NULL) {
+        xyz[0] = eta_x;
+        xyz[1] = eta_y;
+        xyz[2] = eta_z;
         geom->X (geom, jt, xyz, XYZ);
         for (j = 0; j < 3; ++j) {
           float_data[3 * zz + j] = (P4EST_VTK_FLOAT_TYPE) XYZ[j];
@@ -359,6 +345,21 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       }
       else {
         for (j = 0; j < 3; ++j) {
+          /* *INDENT-OFF* */
+          xyz[j] =
+            ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
+                                                   eta_x  * v[3 * vt[1] + j]) +
+                                   eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
+                                                   eta_x  * v[3 * vt[3] + j]))
+  #ifdef P4_TO_P8
+             +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
+                                                   eta_x  * v[3 * vt[5] + j]) +
+                                   eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
+                                                   eta_x  * v[3 * vt[7] + j]))
+  #endif
+            );
+          /* *INDENT-ON* */
+
           float_data[3 * zz + j] = (P4EST_VTK_FLOAT_TYPE) xyz[j];
         }
       }
@@ -667,7 +668,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
     fprintf (pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_WORDS_BIGENDIAN
+#ifdef SC_IS_BIGENDIAN
     fprintf (pvtufile, " byte_order=\"BigEndian\">\n");
 #else
     fprintf (pvtufile, " byte_order=\"LittleEndian\">\n");

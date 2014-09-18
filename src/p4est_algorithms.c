@@ -1877,7 +1877,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
         q->z == tempq.z &&
 #endif
         1) {
-      /* if q is the first descendent of tempq, set tempq = q and get the next
+      /* if q is the first descendant of tempq, set tempq = q and get the next
        * q */
       if (q->level > tempq.level) {
         pid = 0;

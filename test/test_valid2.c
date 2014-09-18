@@ -21,6 +21,10 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4EST_BACKWARD_DEALII
+#define P4EST_BACKWARD_DEALII
+#endif
+
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
@@ -32,7 +36,6 @@
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_nodes.h>
-#include <p8est_trilinear.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -41,6 +44,15 @@ static const int    refine_level = 5;
 #else
 static const int    refine_level = 4;
 #endif
+
+static p4est_balance_type_t
+check_backward_compatibility (void)
+{
+  p4est_balance_type_t b;
+
+  b = P4EST_CONNECT_FULL;
+  return b;
+}
 
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -93,9 +105,6 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
-#ifdef P4_TO_P8
-  trilinear_mesh_t   *mesh;
-#endif
 
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
@@ -135,10 +144,6 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   }
 
   nodes = p4est_nodes_new (p4est, ghost);
-#ifdef P4_TO_P8
-  mesh = p8est_trilinear_mesh_new_from_nodes (p4est, nodes);
-  p8est_trilinear_mesh_destroy (mesh);
-#endif
   p4est_nodes_destroy (nodes);
   p4est_ghost_destroy (ghost);
 
@@ -163,6 +168,8 @@ main (int argc, char **argv)
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  (void) check_backward_compatibility ();
 
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),

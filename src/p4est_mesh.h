@@ -39,8 +39,13 @@ SC_EXTERN_C_BEGIN;
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
  *
- * For each local quadrant, its tree number is stored in quad_to_tree.
+ * For each local quadrant, its tree number is stored in quad_to_tree. The
+ * quad_to_tree array is NULL by default and can be enabled using
+ * p4est_mesh_new_ext.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
+ * For each level, an array of local quadrant numbers is stored in quad_level.
+ * The quad_level array is NULL by default and can be enabled using
+ * p4est_mesh_new_ext.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * This value is in 0..local_num_quadrants-1 for local quadrants, or in
@@ -62,16 +67,22 @@ SC_EXTERN_C_BEGIN;
  * A quadrant on the boundary of the forest sees itself and its face number.
  *
  * The quad_to_corner list stores corner neighbors that are not face neighbors.
- * On the inside of a tree or inside an inter-tree face, there is precisely one
- * such neighbor per corner.  In this case, its index is encoded as described
- * above for quad_to_quad.
- * On the other hand, if a corner is an inter-tree corner, then the number of
- * corner neighbors may be any non-negative number.  In this case, the value is
- * in local_num_quadrants + local_num_ghosts + [0 .. num_corners - 1].
+ * On the inside of a tree, there is precisely one such neighbor per corner.
+ * In this case, its index is encoded as described above for quad_to_quad.
+ * The neighbor's matching corner number is always diagonally opposite.
+ *
+ * On the inside of an inter-tree face, we have precisely one corner neighbor.
+ * If a corner is an inter-tree corner, then the number of corner neighbors
+ * may be any non-negative number.  In both cases, the quad_to_corner value
+ * is in
+ *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1]
+ * where the offset by local quadrants and ghosts is implicitly substracted.
  * It indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
- * Inter-tree corners are NOT YET IMPLEMENTED and are assigned the value -2.
+ *
+ * Intra-tree corners and corners across an inter-tree face are implemented.
+ * Other Inter-tree corners are NOT IMPLEMENTED and are assigned the value -2.
  * Corners with no diagonal neighbor at all are assigned the value -1.
  */
 typedef struct
@@ -79,17 +90,21 @@ typedef struct
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
 
-  p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad */
-  int                *ghost_to_proc;    /**< processor index for each ghost quad */
+  p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad,
+                                             NULL by default */
+  int                *ghost_to_proc;    /**< processor for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 4 faces */
   int8_t             *quad_to_face;     /**< encodes orientation/2:1 status */
   sc_array_t         *quad_to_half;     /**< stores half-size neighbors */
+  sc_array_t         *quad_level;       /**< stores lists of per-level quads,
+                                             NULL by default */
 
+  /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
   /* CAUTION: tree-boundary corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 4 indices for each local quad */
-  sc_array_t         *corner_offset;    /* has num_corners + 1 entries */
+  sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
   sc_array_t         *corner_quad;      /* corner_offset indexes into this */
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
 }
@@ -128,7 +143,7 @@ size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
 /** Create a p4est_mesh structure.
  * \param [in] p4est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
- * \param [in] btype    Currently ignored, only face neighbors are stored.
+ * \param [in] btype    Determines the highest codimension of neighbors.
  * \return              A fully allocated mesh structure.
  */
 p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,

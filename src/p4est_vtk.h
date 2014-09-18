@@ -44,7 +44,7 @@ SC_EXTERN_C_BEGIN;
  * This function will abort if there is a file error.
  *
  * \param [in] p4est    The p4est to be written.
- * \param [in] geom     A p4est_geometry_t structure or NULL for identity.
+ * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
  * \param [in] filename The first part of the file name which will have the
  *                      MPI rank appended to it: The output file will be
  *                      filename_rank.vtu, and the meta file filename.pvtu).
@@ -58,7 +58,7 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  * This is a convenience function that will abort if there is a file error.
  *
  * \param [in] p4est    The p4est to be written.
- * \param [in] geom     A p4est_geometry_t structure or NULL for identity.
+ * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
  * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
  * \param [in] write_tree   Include the tree id as output field.
  * \param [in] write_level  Include the tree levels as output field.
@@ -93,7 +93,7 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  * \endcode
  *
  * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for identity.
+ * \param geom      A p4est_geometry_t structure or NULL for vertex space.
  * \param scale     The relative length factor of the quadrants.
  *                  Use 1.0 to fit quadrants exactly, less to create gaps.
  * \param write_tree    Boolean to determine if the tree id should be output.
@@ -128,7 +128,7 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  * The allows there to be an arbitrary number of fields.
  *
  * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for identity.
+ * \param geom      A p4est_geometry_t structure or NULL for vertex space.
  * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be filename_procNum.vtu).
@@ -153,7 +153,7 @@ int                 p4est_vtk_write_point_scalar (p4est_t * p4est,
  * The allows there to be an arbitrary number of fields.
  *
  * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for identity.
+ * \param geom      A p4est_geometry_t structure or NULL for vertex space.
  * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be filename_procNum.vtu).

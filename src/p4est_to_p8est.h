@@ -34,6 +34,8 @@
 #endif
 #define P4_TO_P8
 
+#include <p4est_base.h>
+
 /* redefine macros */
 #define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
@@ -65,6 +67,9 @@
 #define P4EST_COMM_GHOST_EXCHANGE       P8EST_COMM_GHOST_EXCHANGE
 #define P4EST_COMM_GHOST_EXPAND_COUNT   P8EST_COMM_GHOST_EXPAND_COUNT
 #define P4EST_COMM_GHOST_EXPAND_LOAD    P8EST_COMM_GHOST_EXPAND_LOAD
+#define P4EST_COMM_GHOST_SUPPORT_COUNT  P8EST_COMM_GHOST_SUPPORT_COUNT
+#define P4EST_COMM_GHOST_SUPPORT_LOAD   P8EST_COMM_GHOST_SUPPORT_LOAD
+#define P4EST_COMM_GHOST_CHECKSUM       P8EST_COMM_GHOST_CHECKSUM
 #define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
 #define P4EST_COMM_NODES_REPLY          P8EST_COMM_NODES_REPLY
 #define P4EST_COMM_SAVE                 P8EST_COMM_SAVE
@@ -81,6 +86,9 @@
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
 
 /* redefine types */
+#ifdef P4EST_BACKWARD_DEALII
+#define p4est_balance_type_t            p8est_balance_type_t
+#endif
 #define p4est_connect_type_t            p8est_connect_type_t
 #define p4est_connectivity_encode_t     p8est_connectivity_encode_t
 #define p4est_connectivity_t            p8est_connectivity_t
@@ -144,6 +152,7 @@
 #define p4est_connectivity_inflate      p8est_connectivity_inflate
 #define p4est_connectivity_load         p8est_connectivity_load
 #define p4est_connectivity_complete     p8est_connectivity_complete
+#define p4est_connectivity_reduce       p8est_connectivity_reduce
 #define p4est_expand_face_transform     p8est_expand_face_transform
 #define p4est_find_face_transform       p8est_find_face_transform
 #define p4est_find_corner_transform     p8est_find_corner_transform
@@ -180,6 +189,7 @@
 /* functions in p4est_extended */
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
+#define p4est_mesh_new_ext              p8est_mesh_new_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
 #define p4est_balance_ext               p8est_balance_ext
@@ -313,6 +323,10 @@
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
 
+/* functions in p4est_geometry */
+#define p4est_geometry_destroy          p8est_geometry_destroy
+#define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
+
 /* functions in p4est_vtk */
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_all             p8est_vtk_write_all
@@ -346,6 +360,8 @@
 /* functions in p4est_lnodes */
 #define p4est_lnodes_new                p8est_lnodes_new
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
+#define p4est_ghost_support_lnodes      p8est_ghost_support_lnodes
+#define p4est_ghost_expand_by_lnodes    p8est_ghost_expand_by_lnodes
 #define p4est_lnodes_decode             p8est_lnodes_decode
 #define p4est_lnodes_share_owned_begin  p8est_lnodes_share_owned_begin
 #define p4est_lnodes_share_owned_end    p8est_lnodes_share_owned_end
@@ -387,4 +403,6 @@
 #define p4est_wrap_leaf_next            p8est_wrap_leaf_next
 #define p4est_wrap_leaf_first           p8est_wrap_leaf_first
 
+/* functions in p4est_plex */
+#define p4est_get_plex_data             p8est_get_plex_data
 #endif /* !P4EST_TO_P8EST_H */
