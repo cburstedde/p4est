@@ -28,7 +28,7 @@
  * interacting with the p4est data after it has been refined and partitioned.
  * It demonstrates the construction of ghost layers (see p4est_ghost_t in
  * p4est_ghost.h) and communication of ghost-layer data, and it demonstrates
- * iteracting with the quadrants and quadrant boundaries through the
+ * interacting with the quadrants and quadrant boundaries through the
  * p4est_iterate() routine (see p4est_iterate.h).
  */
 
@@ -143,7 +143,7 @@ step3_get_midpoint (p4est_t * p4est, p4est_topidx_t which_tree,
                           xyz);
 }
 
-/** Initialize the inital condition data of a quadrant.
+/** Initialize the initial condition data of a quadrant.
  *
  * This function matches the p4est_init_t prototype that is used by
  * p4est_new(), p4est_refine(), p4est_coarsen(), and p4est_balance().
@@ -196,7 +196,7 @@ step3_error_sqr_estimate (p4est_quadrant_t * q)
 #endif
 
   diff2 = 0.;
-  /* use the approximate derivative to esimate the L2 error */
+  /* use the approximate derivative to estimate the L2 error */
   for (i = 0; i < P4EST_DIM; i++) {
     diff2 += du[i] * du[i] * (1. / 12.) * h * h * vol;
   }
@@ -367,7 +367,7 @@ step3_coarsen_err_estimate (p4est_t * p4est,
  * p4est_balance_ext() take as an argument a p4est_replace_t callback function,
  * which allows one to setup the quadrant data of incoming quadrants from the
  * data of outgoing quadrants, before the outgoing data is destroyed.  This
- * function mathces the p4est_replace_t prototype.
+ * function matches the p4est_replace_t prototype.
  *
  * In this example, we linearly interpolate the state variable of a quadrant
  * that is refined to its children, and we average the midpoints of children
@@ -742,7 +742,7 @@ step3_timestep_update (p4est_iter_volume_info_t * info, void *user_data)
   data->u += dt * data->dudt / vol;
 }
 
-/** Reset the approxmate derivatives.
+/** Reset the approximate derivatives.
  *
  * p4est_iterate() has an invariant to the order of callback execution: the
  * p4est_iter_volume_t callback will be executed on a quadrant before the
@@ -1084,7 +1084,7 @@ step3_timestep (p4est_t * p4est, double time)
     /* update u */
     p4est_iterate (p4est, NULL, /* ghosts are not needed for this loop */
                    (void *) &dt,        /* pass in dt */
-                   step3_timestep_update,       /* update each sell */
+                   step3_timestep_update,       /* update each cell */
                    NULL,        /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                    NULL,        /* there is no callback for the edges between quadrants */

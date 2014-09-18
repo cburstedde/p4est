@@ -328,7 +328,7 @@ void                p8est_coarsen (p8est_t * p8est,
 /** 2:1 balance the size differences of neighboring elements in a forest.
  * \param [in,out] p8est  The p8est to be worked on.
  * \param [in] btype      Balance type (face, edge, or corner/full).  Examples:
- *                        Finite volume or discontinous Galerkin methods only
+ *                        Finite volume or discontinuous Galerkin methods only
  *                        require face balance.  Continuous finite element
  *                        methods usually require edge balance.  Corner balance
  *                        is almost never required mathematically; it just

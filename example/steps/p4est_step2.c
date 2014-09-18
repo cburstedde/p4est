@@ -111,7 +111,7 @@ main (int argc, char **argv)
 
 #ifdef P4EST_WITH_METIS
   /* Use metis (if p4est is compiled with the flag '--with-metis') to
-   * reorder the connectivity for better parititioning of the forest
+   * reorder the connectivity for better partitioning of the forest
    * across processors.
    */
   p4est_connectivity_reorder (mpicomm, 0, conn, P4EST_CONNECT_FACE);
