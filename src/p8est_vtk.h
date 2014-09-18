@@ -39,7 +39,7 @@ SC_EXTERN_C_BEGIN;
 /** This writes out the p8est in VTK format.
  *
  * This is a convenience function for the special
- * case of writing out the tree id and MPI rank only.
+ * case of writing out the tree id, quadrant level, and MPI rank only.
  * One file is written per MPI rank, and one meta file on rank 0.
  * This function will abort if there is a file error.
  *
