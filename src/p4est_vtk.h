@@ -53,30 +53,46 @@ void                p4est_vtk_write_file (p4est_t * p4est,
                                           p4est_geometry_t * geom,
                                           const char *filename);
 
-/** This writes out the p4est and any number of point fields in VTK format.
+/** This writes out the p4est and any number of point/cell fields in VTK format.
  *
  * This is a convenience function that will abort if there is a file error.
  *
  * \param [in] p4est    The p4est to be written.
  * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
  * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
- * \param [in] write_tree   Include the tree id as output field.
- * \param [in] write_level  Include the tree levels as output field.
- * \param [in] write_rank   Include the MPI rank as output field.
- * \param [in] wrap_tree    The MPI rank is written module wrap_tree, or 0.
- * \param filename      First part of the name, see p4est_vtk_write_file.
- * \param num_scalars   Number of scalar fields to write.
- * \param num_vectors   Number of vector fields to write.
+ * \param [in] write_tree  Include the tree id as output field.
+ * \param [in] write_level Include the tree levels as output field.
+ * \param [in] write_rank  Include the MPI rank as output field.
+ * \param [in] wrap_tree   The MPI rank is written module wrap_tree, or 0.
+ * \param [in] num_point_scalars  Number of scalar fields to write.
+ * \param [in] num_point_vectors  Number of vector fields to write.
+ * \param [in] num_cell_scalars   Number of scalar fields to write.
+ * \param [in] num_cell_vectors   Number of vector fields to write.
+ * \param [in] filename           First part of the name, see p4est_vtk_write_file.
  *
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
- * where the scalars come first, then the vectors.
+ * where the point scalars come first, followed by the point vectors, then the
+ * cell scalars, and lastly the cell vectors.
  */
+//void                p4est_vtk_write_all (p4est_t * p4est,
+                                         //p4est_geometry_t * geom,
+                                         //double scale,
+                                         //int write_tree, int write_level,
+                                         //int write_rank, int wrap_rank,
+                                         //int num_scalars, int num_vectors,
+                                         //const char *filename, ...);
+
 void                p4est_vtk_write_all (p4est_t * p4est,
                                          p4est_geometry_t * geom,
                                          double scale,
-                                         int write_tree, int write_level,
-                                         int write_rank, int wrap_rank,
-                                         int num_scalars, int num_vectors,
+                                         int write_tree,
+                                         int write_level,
+                                         int write_rank,
+                                         int wrap_rank,
+                                         int num_point_scalars,
+                                         int num_point_vectors,
+                                         int num_cell_scalars,
+                                         int num_cell_vectors,
                                          const char *filename, ...);
 
 /** This will write the header of the vtu file.
@@ -101,21 +117,48 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  * \param write_rank    Boolean to determine if the MPI rank should be output.
  * \param wrap_rank Number to wrap around the rank with a modulo operation.
  *                  Can be 0 for no wrapping.
+ * \param num_cell_scalars Number of cell scalar datasets to output.
+ * \param num_cell_vectors Number of cell vector datasets to output.
  * \param point_scalars  Comma-separated list of point scalar fields, or NULL.
  * \param point_vectors  Comma-separated list of point vector fields, or NULL.
+ * \param cell_scalars   Comma-separated list of cell scalar fields, or NULL.
+ * \param cell_vectors   Comma-separated list of cell vector fields, or NULL.
+ * \param cell_scalar_names   Array of cell scalar names, or NULL.
+ * \param cell_vector_names   Array of cell vector names, or NULL.
+ * \param cell_scalar_values  Array of cell scalar datasets, or NULL.
+ * \param cell_vector_values  Array of cell vector datasets, or NULL.
  * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
  *                  output file will be filename_procNum.vtu).
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
+//int                 p4est_vtk_write_header (p4est_t * p4est,
+                                            //p4est_geometry_t * geom,
+                                            //double scale,
+                                            //int write_tree, int write_level,
+                                            //int write_rank, int wrap_rank,
+                                            //const char *point_scalars,
+                                            //const char *point_vectors,
+                                            //const char *filename);
+
 int                 p4est_vtk_write_header (p4est_t * p4est,
                                             p4est_geometry_t * geom,
                                             double scale,
-                                            int write_tree, int write_level,
-                                            int write_rank, int wrap_rank,
+                                            int write_tree,
+                                            int write_level,
+                                            int write_rank,
+                                            int wrap_rank,
+                                            const int num_cell_scalars,
+                                            const int num_cell_vectors,
                                             const char *point_scalars,
                                             const char *point_vectors,
+                                            const char *cell_scalars,
+                                            const char *cell_vectors,
+                                            const char **cell_scalar_names,
+                                            const char **cell_vector_names,
+                                            double **cell_scalar_values,
+                                            double **cell_vector_values,
                                             const char *filename);
 
 /** This will write a scalar field to the vtu file.
@@ -143,6 +186,12 @@ int                 p4est_vtk_write_point_scalar (p4est_t * p4est,
                                                   const char *scalar_name,
                                                   const double *values);
 
+int                 p4est_vtk_write_cell_scalar (p4est_t * p4est,
+                                                 p4est_geometry_t * geom,
+                                                 const char *filename,
+                                                 const char *scalar_name,
+                                                 const double *values);
+
 /** This will write a 3-vector field to the vtu file.
  *
  * It is good practice to make sure that the vector field also
@@ -167,6 +216,12 @@ int                 p4est_vtk_write_point_vector (p4est_t * p4est,
                                                   const char *filename,
                                                   const char *vector_name,
                                                   const double *values);
+
+int                 p4est_vtk_write_cell_vector (p4est_t * p4est,
+                                                 p4est_geometry_t * geom,
+                                                 const char *filename,
+                                                 const char *vector_name,
+                                                 const double *values);
 
 /** This will write the footer of the vtu file.
  *
