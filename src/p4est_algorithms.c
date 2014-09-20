@@ -2683,7 +2683,7 @@ p4est_partition_given (p4est_t * p4est,
   p4est_quadrant_t   *quad_recv_buf;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   MPI_Comm            comm = p4est->mpicomm;
   MPI_Request        *recv_request, *send_request;
@@ -2820,7 +2820,7 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Post receives for the quadrants and their data */
   recv_buf = P4EST_ALLOC_ZERO (char *, num_procs);
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   recv_request = P4EST_ALLOC (MPI_Request, num_proc_recv_from);
 #endif
 
@@ -2836,7 +2836,7 @@ p4est_partition_given (p4est_t * p4est,
       recv_buf[from_proc] = P4EST_ALLOC (char, recv_size);
 
       /* Post receives for the quadrants and their data */
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
       P4EST_LDEBUGF ("partition recv %lld quadrants from %d\n",
                      (long long) num_recv_from[from_proc], from_proc);
       mpiret = MPI_Irecv (recv_buf[from_proc], (int) recv_size, MPI_BYTE,
@@ -2847,7 +2847,7 @@ p4est_partition_given (p4est_t * p4est,
       ++sk;
     }
   }
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   for (; sk < num_proc_recv_from; ++sk) {
     /* for empty processors in receiving range */
     recv_request[sk] = MPI_REQUEST_NULL;
@@ -2900,7 +2900,7 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Communicate the quadrants and their data */
   send_buf = P4EST_ALLOC (char *, num_procs);
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   send_request = P4EST_ALLOC (MPI_Request, num_proc_send_to);
 #endif
 
@@ -2998,7 +2998,7 @@ p4est_partition_given (p4est_t * p4est,
       }
 
       /* Post send operation for the quadrants and their data */
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
       P4EST_LDEBUGF ("partition send %lld quadrants to %d\n",
                      (long long) num_send_to[to_proc], to_proc);
       mpiret = MPI_Isend (send_buf[to_proc], (int) send_size, MPI_BYTE,
@@ -3012,7 +3012,7 @@ p4est_partition_given (p4est_t * p4est,
       send_buf[to_proc] = NULL;
     }
   }
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   for (; sk < num_proc_send_to; ++sk) {
     send_request[sk] = MPI_REQUEST_NULL;
   }
@@ -3331,7 +3331,7 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Clean up */
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   mpiret = MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 

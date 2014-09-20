@@ -33,13 +33,13 @@
 #include <p4est_config.h>
 #include <sc_config.h>
 #if \
-  (defined (P4EST_MPI) && !defined (SC_MPI)) || \
-  (!defined (P4EST_MPI) && defined (SC_MPI))
+  (defined (P4EST_ENABLE_MPI) && !defined (SC_ENABLE_MPI)) || \
+  (!defined (P4EST_ENABLE_MPI) && defined (SC_ENABLE_MPI))
 #error "MPI configured differently in p4est and libsc"
 #endif
 #if \
-  (defined (P4EST_MPIIO) && !defined (SC_MPIIO)) || \
-  (!defined (P4EST_MPIIO) && defined (SC_MPIIO))
+  (defined (P4EST_ENABLE_MPIIO) && !defined (SC_ENABLE_MPIIO)) || \
+  (!defined (P4EST_ENABLE_MPIIO) && defined (SC_ENABLE_MPIIO))
 #error "MPI I/O configured differently in p4est and libsc"
 #endif
 

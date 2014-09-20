@@ -44,7 +44,7 @@
 #include <zlib.h>
 #endif
 
-#ifdef P4EST_MPIIO
+#ifdef P4EST_ENABLE_MPIIO
 #define P4EST_MPIIO_WRITE
 #endif
 
@@ -1239,7 +1239,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   p4est_corner_info_t ci;
   p4est_corner_transform_t *ct;
   sc_array_t         *cta;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 #ifdef P4EST_DEBUG
   unsigned            checksum;
   sc_array_t          checkarray;
@@ -1269,7 +1269,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   MPI_Request        *send_requests_first_count, *send_requests_first_load;
   MPI_Request        *send_requests_second_count, *send_requests_second_load;
   MPI_Status         *recv_statuses, *jstatus;
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
                             "_balance %s with %lld total quadrants\n",
@@ -1311,7 +1311,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     sc_array_init (qarray, sizeof (p4est_quadrant_t));
   }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   requests_first = P4EST_ALLOC (MPI_Request, 6 * num_procs);
   requests_second = requests_first + 1 * num_procs;
   send_requests_first_count = requests_first + 2 * num_procs;
@@ -1330,7 +1330,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_DEBUG
   sc_array_init (&checkarray, 4);
 #endif /* P4EST_DEBUG */
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* allocate per peer storage and initialize requests */
   peers = P4EST_ALLOC (p4est_balance_peer_t, num_procs);
@@ -1598,7 +1598,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   }
 
   /* end balance_A, start balance_comm */
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   is_ranges_primary = 0;
   is_ranges_active = 0;
   is_notify_active = 1;
@@ -1616,7 +1616,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     p4est->inspect->balance_ranges = 0.;
     p4est->inspect->balance_notify = 0.;
     p4est->inspect->balance_notify_allgather = 0.;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
     is_ranges_primary = p4est->inspect->use_balance_ranges;
     is_ranges_active = is_ranges_primary;
     is_notify_active = !is_ranges_primary;
@@ -1627,7 +1627,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
   }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   /* encode and distribute the asymmetric communication pattern */
   procs = NULL;
   receiver_ranks = sender_ranks = NULL;
@@ -2060,7 +2060,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   for (j = 0; j < num_procs; ++j) {
     P4EST_ASSERT (requests_first[j] == MPI_REQUEST_NULL);
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* simulate send and receive with myself across tree boundaries */
   peer = peers + rank;
@@ -2079,7 +2079,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   sc_array_resize (qarray, qcount);
   memcpy (qarray->array, peer->send_second.array, qbytes);
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   /* receive second round appending to the same receive buffer */
   while (request_second_count > 0) {
     mpiret = MPI_Waitsome (num_procs, requests_second,
@@ -2181,7 +2181,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                       peer->recv_second_count);
     }
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* end balance_comm, start balance_B */
   if (p4est->inspect != NULL) {
@@ -2190,7 +2190,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     p4est->inspect->balance_B_count_in = 0;
     p4est->inspect->balance_B_count_out = 0;
     p4est->inspect->use_B = 1;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
     for (k = 0; k < 2; ++k) {
       p4est->inspect->balance_zero_sends[k] = send_zero[k];
       p4est->inspect->balance_zero_receives[k] = recv_zero[k];
@@ -2277,7 +2277,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     p4est->inspect->balance_B += sc_MPI_Wtime ();
   }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   /* wait for all send operations */
   if (request_send_count > 0) {
     mpiret = MPI_Waitall (4 * num_procs,
@@ -2297,7 +2297,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                             (long long) gtotal[0]);
   P4EST_ASSERT (rank != 0 || gtotal[0] == gtotal[1]);
 #endif /* P4EST_DEBUG */
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* loop over all local trees to finalize balance */
   all_outcount = 0;
@@ -2334,14 +2334,14 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
   sc_array_reset (cta);
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   P4EST_FREE (requests_first);  /* includes allocation for requests_second */
   P4EST_FREE (recv_statuses);
   P4EST_FREE (wait_indices);
 #ifdef P4EST_DEBUG
   sc_array_reset (&checkarray);
 #endif /* P4EST_DEBUG */
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
@@ -2375,7 +2375,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 {
   p4est_gloidx_t      global_shipped = 0;
   const p4est_gloidx_t global_num_quadrants = p4est->global_num_quadrants;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   int                 low_source, high_source;
   const int           num_procs = p4est->mpisize;
@@ -2403,7 +2403,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   MPI_Request        *send_requests, recv_requests[2];
   MPI_Status          recv_statuses[2];
   p4est_gloidx_t      num_corrected;
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_GLOBAL_PRODUCTIONF
@@ -2419,7 +2419,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
   p4est_log_indent_push ();
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   /* allocate new quadrant distribution counts */
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
@@ -2701,7 +2701,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
   /* check validity of the p4est */
   P4EST_ASSERT (p4est_is_valid (p4est));
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF
@@ -2716,7 +2716,7 @@ p4est_gloidx_t
 p4est_partition_for_coarsening (p4est_t * p4est,
                                 p4est_locidx_t * num_quadrants_in_proc)
 {
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 num_procs = p4est->mpisize;
   int                 rank = p4est->mpirank;
   int                 mpiret;
@@ -3190,7 +3190,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 {
   const int           headc = 6;
   const int           align = 32;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
 #ifndef P4EST_MPIIO_WRITE
   MPI_Status          mpistatus;
@@ -3319,7 +3319,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 #ifndef P4EST_MPIIO_WRITE
   if (rank > 0) {
     /* wait for sequential synchronization */
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
     mpiret = MPI_Recv (&fpos, 1, MPI_LONG, rank - 1, P4EST_COMM_SAVE,
                        p4est->mpicomm, &mpistatus);
     SC_CHECK_MPI (mpiret);
@@ -3398,7 +3398,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   file = NULL;
 
   /* initiate sequential synchronization */
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   if (rank < num_procs - 1) {
     mpiret = MPI_Send (&fpos, 1, MPI_LONG, rank + 1, P4EST_COMM_SAVE,
                        p4est->mpicomm);

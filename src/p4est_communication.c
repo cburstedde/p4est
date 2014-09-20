@@ -555,7 +555,7 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 #ifdef P4EST_HAVE_ZLIB
   uLong               crc = (uLong) local_crc;
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   int                 p;
   uint64_t            send[2];
@@ -581,7 +581,7 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
   else {
     crc = 0;
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   return (unsigned) crc;
 #else

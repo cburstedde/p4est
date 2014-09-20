@@ -34,7 +34,7 @@
 #endif
 #include <sc_ranges.h>
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 typedef struct
 {
@@ -453,7 +453,7 @@ p4est_nodes_foreach (void **item, const void *u)
   return 1;
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static p4est_locidx_t *
 p4est_shared_offsets (sc_array_t * inda)
@@ -481,7 +481,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 {
   const int           num_procs = p4est->mpisize;
   const int           rank = p4est->mpirank;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   int                 owner, prev, start;
   int                 first_peer, last_peer;
@@ -507,7 +507,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   MPI_Request        *send_request;
   MPI_Status          probe_status, recv_status;
 #endif
-#if defined (P4EST_MPI) || defined (P4_TO_P8)
+#if defined (P4EST_ENABLE_MPI) || defined (P4_TO_P8)
   int                 l;
 #endif
   int                 k;
@@ -720,7 +720,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   for (il = 0; il < num_indep_nodes; ++il) {
     in = (p4est_indep_t *) sc_array_index (inda, (size_t) il);
     new_node_number[in->p.piggy3.local_num] = il;
-#ifndef P4EST_MPI
+#ifndef P4EST_ENABLE_MPI
     in->p.piggy3.local_num = il;
 #endif
   }
@@ -734,7 +734,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     P4EST_ASSERT (local_nodes[il] >= 0 && local_nodes[il] < num_indep_nodes);
     local_nodes[il] = new_node_number[local_nodes[il]];
   }
-#ifndef P4EST_MPI
+#ifndef P4EST_ENABLE_MPI
   num_owned_indeps = num_indep_nodes;
   offset_owned_indeps = 0;
 #else
@@ -744,7 +744,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   num_owned_shared = 0;
   P4EST_FREE (new_node_number);
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   /* Fill send buffers and number owned nodes. */
   first_size = P4EST_DIM * sizeof (p4est_qcoord_t) + sizeof (p4est_topidx_t);
   first_size = SC_MAX (first_size, sizeof (p4est_locidx_t));
@@ -1006,7 +1006,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     SC_CHECK_MPI (mpiret);
     sc_array_reset (&peer->recv_first);
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* This second loop will collect and assign all hanging nodes. */
   num_face_hangings = dup_face_hangings = 0;    /* still unknown */
@@ -1152,7 +1152,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   nodes->global_owned_indeps[rank] = num_owned_indeps;
   indep_nodes = NULL;
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   nonlocal_ranks = nodes->nonlocal_ranks;
 
   /* Receive the replies. */
@@ -1172,13 +1172,13 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     SC_CHECK_MPI (mpiret);
     peer->expect_reply = 0;
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* Convert receive buffers into the output data structures and unclamp. */
   for (il = 0; il < num_indep_nodes; ++il) {
     in = (p4est_indep_t *) sc_array_index (inda, (size_t) il);
     p4est_node_unclamp ((p4est_quadrant_t *) in);
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
     if (il >= offset_owned_indeps && il < end_owned_indeps) {
       continue;
     }
@@ -1235,7 +1235,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       shared_offsets[il] = (p4est_locidx_t) new_position;
     }
     peer->recv_offset += this_size;
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
   }
 
   /* Unclamp the hanging nodes as well. */
@@ -1254,7 +1254,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   }
 #endif
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   /* Wait and close all send requests. */
   if (send_requests.elem_count > 0) {
     mpiret = MPI_Waitall ((int) send_requests.elem_count,
@@ -1282,7 +1282,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                           nodes->global_owned_indeps, 1, P4EST_MPI_LOCIDX,
                           p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* Print some statistics and clean up. */
   P4EST_VERBOSEF ("Collected %lld independent nodes with %lld duplicates\n",
@@ -1295,7 +1295,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                   (long long) num_edge_hangings,
                   (long long) dup_edge_hangings);
 #endif
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   P4EST_VERBOSEF ("Owned nodes %lld/%lld/%lld max sharer count %llu\n",
                   (long long) num_owned_shared,
                   (long long) num_owned_indeps,
