@@ -2669,6 +2669,8 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   P4EST_FREE (lnodes);
 }
 
+#ifdef P4EST_ENABLE_MPI
+
 static              size_t
 ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
 {
@@ -2680,11 +2682,13 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
+#endif /* P4EST_ENABLE_MPI */
+
 void
 p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
                             p4est_ghost_t * ghost)
 {
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   sc_array_t         *ghosts = &ghost->ghosts;
   sc_array_t         *mirrors = &ghost->mirrors;
   p4est_locidx_t     *proc_offsets = ghost->proc_offsets;
