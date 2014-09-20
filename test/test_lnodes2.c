@@ -874,7 +874,7 @@ main (int argc, char **argv)
                     else if (jb < 0) {
                       e = e + 4;
                     }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
                     else {
                       P4EST_ASSERT (ib < 0);
                     }

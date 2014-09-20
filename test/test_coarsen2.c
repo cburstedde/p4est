@@ -39,7 +39,7 @@ static void
 p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
                    p4est_coarsen_t coarsen_fn, p4est_init_t init_fn)
 {
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              data_pool_size;
 #endif
   int                 i, maxlevel;
@@ -65,7 +65,7 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
     tree = p4est_tree_array_index (p4est->trees, jt);
     tquadrants = &tree->quadrants;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     data_pool_size = 0;
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
