@@ -337,7 +337,7 @@ main (int argc, char **argv)
   p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, NULL, "simple2_partition");
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   /* rebalance should not change checksum */
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
   P4EST_ASSERT (p4est_checksum (p4est) == crc);
