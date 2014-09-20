@@ -177,14 +177,14 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   P4EST_ASSERT (0 <= which_tree && which_tree < 13);
   P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
   P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   if (which_tree < 12) {
     P4EST_ASSERT (abc[2] < 2.0 + SC_1000_EPS && abc[2] > 1.0 - SC_1000_EPS);
   }
   else {
     P4EST_ASSERT (abc[2] < 1.0 + SC_1000_EPS && abc[2] > -1.0 - SC_1000_EPS);
   }
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
   if (which_tree < 6) {         /* outer shell */
     const double        z_cmb = abc[2] - (1. + 5. / 8.);

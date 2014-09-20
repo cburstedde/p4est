@@ -742,7 +742,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     quad_to_orientations_orig = P4EST_ALLOC (int8_t, K * no);
     memset (quad_to_orientations_orig, -1, K * no * sizeof (int8_t));
   }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   memset (quad_to_orientations, -1, K * no * sizeof (int8_t));
 #endif
   referenced = P4EST_ALLOC_ZERO (int8_t, num_global_plus_children);
@@ -788,7 +788,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_FREE (F);
   }
   P4EST_FREE (child_offsets);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (il = 0; il < K * no; il++) {
     P4EST_ASSERT (quad_to_orientations[il] >= 0);
   }
@@ -922,7 +922,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     sc_array_resize (out_vertex_coords,
                      dim_offsets[ctype_int + 1] - dim_offsets[ctype_int]);
     coords = (double *) out_vertex_coords->array;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     memset (plex_to_local, -1, Nplex * sizeof (p4est_locidx_t));
     memset (local_to_plex, -1, Nplex * sizeof (p4est_locidx_t));
     memset (plex_to_proc, -1, Nplex * sizeof (int));
@@ -1007,7 +1007,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       }
     }
     P4EST_FREE (lnode_global_offset);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     for (il = 0; il < Nplex; il++) {
       P4EST_ASSERT (plex_to_local[il] >= 0);
       P4EST_ASSERT (local_to_plex[il] >= 0);
@@ -1210,7 +1210,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
       }
     }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     {
       size_t              zz, count = out_cones->elem_count;
 

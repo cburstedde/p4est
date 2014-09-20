@@ -67,7 +67,7 @@ p4est_possible_corner_neighbor (const p4est_quadrant_t * q, int corner,
   const int           nlevel = (int) q->level + neighbor_rlev;
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
   const p4est_qcoord_t nh = P4EST_QUADRANT_LEN (nlevel);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 qcid;
 #endif
 
@@ -76,7 +76,7 @@ p4est_possible_corner_neighbor (const p4est_quadrant_t * q, int corner,
   P4EST_ASSERT (0 <= nlevel && nlevel <= P4EST_QMAXLEVEL);
   P4EST_ASSERT (corner != nnum);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   /* Check to see if it is possible to construct the neighbor */
   qcid = p4est_quadrant_child_id (q);
   P4EST_ASSERT (neighbor_rlev >= 0 || qcid == corner);
@@ -100,7 +100,7 @@ p4est_nodes_new_local (p4est_t * p4est)
   int                 qcid;
   int                 corner, nnum, rlev;
   int                 neighbor_proc;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 is_balanced;
 #endif
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
@@ -123,7 +123,7 @@ p4est_nodes_new_local (p4est_t * p4est)
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_nodes_new_local\n");
   p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   is_balanced = p4est_is_balanced (p4est, P4EST_CONNECT_FULL);
 #endif
 
@@ -314,7 +314,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   }
 
   /* Check face neighbors */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   ntreeid = -1;
 #endif
   for (face = 0; face < P4EST_FACES; ++face) {
@@ -539,7 +539,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   p4est_hang2_t      *fh;
 #else
   int                 edge, corner;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      num_face_hangings_end;
 #endif
   p4est_locidx_t      num_edge_hangings_begin;
@@ -627,7 +627,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
       if (q->level > 0) {
         p4est_quadrant_parent (q, &p);
       }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
       else {
         P4EST_QUADRANT_INIT (&p);
       }
@@ -812,7 +812,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
                              p4est->mpicomm, procs, &maxpeers, &maxwin,
                              p4est_num_ranges, my_ranges, &all_ranges);
   twomaxwin = 2 * maxwin;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                             maxpeers, maxwin, p4est_num_ranges);
   sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
@@ -1126,7 +1126,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   P4EST_ASSERT (num_edge_hangings == (p4est_locidx_t) edha->elem_count);
 
   /* Correct the offsets of edge hanging nodes */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   num_face_hangings_end = num_indep_nodes + num_face_hangings;
 #endif
   for (il = 0; il < num_local_nodes; ++il) {

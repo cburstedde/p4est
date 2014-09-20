@@ -99,7 +99,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 p;
 #endif
   int8_t              ql, tml;
@@ -143,7 +143,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
   memcpy (p4est->global_first_quadrant, global_first_quadrant,
           (num_procs + 1) * sizeof (p4est_gloidx_t));
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   P4EST_ASSERT (gfq[0] == 0);
   for (p = 0; p < num_procs; ++p) {
     P4EST_ASSERT (gfq[p] <= gfq[p + 1]);

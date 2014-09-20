@@ -139,7 +139,7 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
   sc_MPI_Request      req_recv, req_send;
   sc_MPI_Status       status;
   p4est_tree_t       *tree;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   const p4est_quadrant_t *q;
 #endif
 
@@ -200,7 +200,7 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
   }
   P4EST_ASSERT ((p4est_topidx_t) treeoffset[num_procs] == num_trees);
   mycount = treecount[rank];
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   P4EST_ASSERT (p4est->first_local_tree <= treeoffset[rank]);
   P4EST_ASSERT (gfq[rank + 1] - gfq[rank] ==
                 (p4est_gloidx_t) p4est->local_num_quadrants);

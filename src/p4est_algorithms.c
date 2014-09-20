@@ -438,7 +438,7 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   /* check last item of global partition */
   P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
                 p4est->connectivity->num_trees &&
@@ -452,7 +452,7 @@ p4est_is_valid (p4est_t * p4est)
   for (i = 0; i <= num_procs; ++i) {
     P4EST_ASSERT (p4est->global_first_position[i].level == P4EST_QMAXLEVEL);
   }
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
   /* check first tree in global partition */
   if (first_tree < 0) {
@@ -1122,7 +1122,7 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
 {
   int                 full_tree[2];
   size_t              zz, incount, prev_good, removed;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   const p4est_topidx_t first_tree = p4est->first_local_tree;
   const p4est_topidx_t last_tree = p4est->last_local_tree;
 #endif
@@ -1169,7 +1169,7 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
       --tree->quadrants_per_level[q2->level];
       p4est_quadrant_free_data (p4est, q2);
       ++removed;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
       P4EST_QUADRANT_INIT (q2);
 #endif
     }
@@ -1186,7 +1186,7 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
       q1 = p4est_quadrant_array_index (quadrants, prev_good);
       if (zz > prev_good) {
         *q1 = *q2;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         P4EST_QUADRANT_INIT (q2);
 #endif
       }
@@ -1225,7 +1225,7 @@ p4est_complete_region (p4est_t * p4est,
                        p4est_tree_t * tree,
                        p4est_topidx_t which_tree, p4est_init_t init_fn)
 {
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              quadrant_pool_size, data_pool_size;
 #endif
 
@@ -1257,7 +1257,7 @@ p4est_complete_region (p4est_t * p4est,
   R = tree;
 
   /* needed for sanity check */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   quadrant_pool_size = p4est->quadrant_pool->elem_count;
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
@@ -1436,7 +1436,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
   int                 inserted;
   size_t              iz, jz;
   size_t              incount, ocount;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              quadrant_pool_size;
   sc_array_t          outview;
 #endif
@@ -1464,7 +1464,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
   P4EST_QUADRANT_INIT (&tempp);
   P4EST_QUADRANT_INIT (&fd);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   quadrant_pool_size = qpool->elem_count;
 #endif
 
@@ -1747,7 +1747,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 
   for (l = minlevel + 1; l < maxlevel; ++l) {
     /* print statistics and free hash tables */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     sc_hash_print_statistics (p4est_package_id, SC_LP_DEBUG, hash[l]);
 #endif
     sc_hash_unlink_destroy (hash[l]);
@@ -1918,7 +1918,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
     }
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   sc_array_init_view (&outview, out, ocount, out->elem_count - ocount);
   P4EST_ASSERT (sc_array_is_sorted (&outview, p4est_quadrant_compare));
   P4EST_ASSERT (outview.elem_count > 1);
@@ -2002,7 +2002,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   sc_array_t         *tquadrants;
   int                 bound;
   sc_mempool_t       *qpool;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              data_pool_size;
 #endif
   size_t              tcount;
@@ -2043,7 +2043,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 
   qpool = p4est->quadrant_pool;
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
@@ -2482,7 +2482,7 @@ p4est_balance_subtree_ext (p4est_t * p4est, p4est_connect_type_t btype,
 size_t
 p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 {
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              data_pool_size;
 #endif
   size_t              incount, removed;
@@ -2498,7 +2498,7 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
   if (incount <= 1) {
     return 0;
   }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   data_pool_size = 0;
   if (p4est->user_data_pool != NULL) {
     data_pool_size = p4est->user_data_pool->elem_count;
@@ -2688,7 +2688,7 @@ p4est_partition_given (p4est_t * p4est,
   MPI_Comm            comm = p4est->mpicomm;
   MPI_Request        *recv_request, *send_request;
 #endif
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   unsigned            crc;
   p4est_gloidx_t      total_requested_quadrants = 0;
 #endif
@@ -2697,7 +2697,7 @@ p4est_partition_given (p4est_t * p4est,
     ("Into " P4EST_STRING "_partition_given with %lld total quadrants\n",
      (long long) p4est->global_num_quadrants);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   /* Save a checksum of the original forest */
   crc = p4est_checksum (p4est);
 #endif
@@ -2706,7 +2706,7 @@ p4est_partition_given (p4est_t * p4est,
   global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
   for (i = 0; i < num_procs; ++i) {
     global_last_quad_index[i] = p4est->global_first_quadrant[i + 1] - 1;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     total_requested_quadrants += new_num_quadrants_in_proc[i];
     P4EST_ASSERT (new_num_quadrants_in_proc[i] >= 0);
 #endif
@@ -2776,7 +2776,7 @@ p4est_partition_given (p4est_t * p4est,
       + local_tree_last_quad_index[which_tree - 1];
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (which_tree = first_local_tree; which_tree <= last_local_tree;
        ++which_tree) {
     tree = p4est_tree_array_index (trees, which_tree);
@@ -2809,7 +2809,7 @@ p4est_partition_given (p4est_t * p4est,
     }
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_procs; ++i) {
     if (num_recv_from[i] != 0) {
       P4EST_LDEBUGF ("partition num_recv_from[%d] = %lld\n", i,
@@ -2883,7 +2883,7 @@ p4est_partition_given (p4est_t * p4est,
     }
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_procs; ++i) {
     if (num_send_to[i] != 0) {
       P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
@@ -3335,7 +3335,7 @@ p4est_partition_given (p4est_t * p4est,
   mpiret = MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_proc_recv_from; ++i) {
     P4EST_ASSERT (recv_request[i] == MPI_REQUEST_NULL);
   }

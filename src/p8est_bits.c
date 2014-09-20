@@ -357,7 +357,7 @@ p8est_quadrant_touches_edge (const p4est_quadrant_t * q, int edge, int inside)
     side = (edge >> 1) & 1;
     incount += quad_contact[4 + side];
   }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   upper = P4EST_ROOT_LEN + (p4est_qcoord_t) (q->level == P4EST_MAXLEVEL
                                              && !inside);
   P4EST_ASSERT (axis != 0 || (q->x >= 0 && q->x < upper));
@@ -448,7 +448,7 @@ p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
     SC_ABORT_NOT_REACHED ();
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   {
     /* This is the code from the paper. */
 
