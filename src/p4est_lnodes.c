@@ -1240,7 +1240,6 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
         z = q->z + h * ((c & 4) >> 2);
       }
       else {
-        int                 c2;
         p4est_topidx_t      nnt;
 
         P4EST_ASSERT (nt == tid);
