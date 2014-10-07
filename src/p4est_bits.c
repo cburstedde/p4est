@@ -226,7 +226,7 @@ p4est_node_equal_piggy_fn (const void *v1, const void *v2, const void *u)
 {
   const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
   const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   const int           clamped = *(int *) u;
 #endif
 
@@ -245,7 +245,7 @@ unsigned
 p4est_node_hash_piggy_fn (const void *v, const void *u)
 {
   const p4est_quadrant_t *q = (const p4est_quadrant_t *) v;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   const int           clamped = *(int *) u;
 #endif
   uint32_t            a, b, c;
@@ -1428,7 +1428,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
   const int          *target_axis = &ftransform[3];
   const int          *edge_reverse = &ftransform[6];
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 i;
 
   for (i = 0; i < 3; ++i) {
@@ -1476,7 +1476,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
   target_xyz[2] = &r->z;
 #endif
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   r->x = r->y = (p4est_qcoord_t) P4EST_QCOORD_MIN;
 #ifdef P4_TO_P8
   r->z = (p4est_qcoord_t) P4EST_QCOORD_MIN;
@@ -1506,7 +1506,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
     SC_ABORT_NOT_REACHED ();
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   {
     /* This is the code from the paper -- not sure which is preferable. */
 
@@ -1526,7 +1526,7 @@ p4est_quadrant_transform_face (const p4est_quadrant_t * q,
 #endif
 
   r->level = q->level;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   if (r->level == P4EST_MAXLEVEL) {
     P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
   }

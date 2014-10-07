@@ -103,6 +103,8 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_wrap_t       *pp;
 
   pp = P4EST_ALLOC (p4est_wrap_t, 1);
+  pp->user_pointer = NULL;
+
   pp->p4est_dim = P4EST_DIM;
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
@@ -312,7 +314,7 @@ int
 p4est_wrap_adapt (p4est_wrap_t * pp)
 {
   int                 changed;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      jl, local_num;
 #endif
   p4est_gloidx_t      global_num;
@@ -335,7 +337,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
   /* Execute refinement */
   pp->inside_counter = pp->num_replaced = 0;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   local_num = p4est->local_num_quadrants;
 #endif
   global_num = p4est->global_num_quadrants;
@@ -347,7 +349,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
   /* Execute coarsening */
   pp->inside_counter = pp->num_replaced = 0;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   local_num = p4est->local_num_quadrants;
 #endif
   global_num = p4est->global_num_quadrants;
@@ -372,7 +374,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
                                        P4EST_CONNECT_FULL);
     pp->match_aux = 1;
   }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   else {
     for (jl = 0; jl < p4est->local_num_quadrants; ++jl) {
       P4EST_ASSERT (pp->flags[jl] == 0);
@@ -455,7 +457,7 @@ static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
 #if 0
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 nface;
   p4est_mesh_t       *mesh = p4est_wrap_get_mesh (leaf->pp);
 #endif
@@ -482,7 +484,7 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
                           leaf->upperright);
 
 #if 0
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   printf ("C: Leaf level %d tree %d tree_leaf %d local_leaf %d\n",
           leaf->level, leaf->which_tree, leaf->which_quad, leaf->total_quad);
   for (nface = 0; nface < P4EST_FACES; ++nface) {

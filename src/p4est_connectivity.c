@@ -27,7 +27,7 @@
 #include <p4est_connectivity.h>
 #endif
 #include <sc_io.h>
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 #include <metis.h>
 #endif
 
@@ -2270,7 +2270,7 @@ p4est_expand_face_transform_internal (int iface, int target_face,
 {
 #ifdef P4_TO_P8
   int                 reverse;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 i;
   int                *my_axis = &ftransform[0];
   int                *target_axis = &ftransform[3];
@@ -2298,7 +2298,7 @@ p4est_expand_face_transform_internal (int iface, int target_face,
   ftransform[6 + !reverse] = (orientation >> 1);
   ftransform[8] = 2 * (iface & 1) + (target_face & 1);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < 3; ++i) {
     P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
     P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);
@@ -2517,7 +2517,7 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
                              p4est_corner_info_t * ci)
 {
   int                 ignored;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              expected_count;
 #endif
   p4est_topidx_t      ntree[P4EST_DIM], corner_trees, acorner, cttac;
@@ -2550,7 +2550,7 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
                                                   cttac,
                                                   conn->corner_to_corner +
                                                   cttac, corner_trees, ntree);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   expected_count = cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
 #ifdef P4_TO_P8
   expected_count += (ntree[2] != -1);
@@ -2587,7 +2587,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   int                 ignored;
   int8_t             *ct;
   size_t              zcount;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              expected_count;
 #endif
   p4est_topidx_t      real_corners, ntree[P4EST_DIM];
@@ -2862,7 +2862,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
     P4EST_ASSERT (ei->trees.elem_count >= 1);
     P4EST_ASSERT (ei->trees.elem_count == ei->edges.elem_count);
     P4EST_ASSERT (-1 <= ei->edgeid && ei->edgeid < conn->num_edges);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     if (ei->trees.elem_count == 1) {
       /* isolated edge does not count */
       P4EST_ASSERT (ei->edgeid == -1);
@@ -2944,7 +2944,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
         }
         else {
           /* corner is non-redundant */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           expected_count =
             cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
 #ifdef P4_TO_P8
@@ -3120,7 +3120,7 @@ p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
   }
 }
 
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 static int
 reorder_comp (const void *a, const void *b)
 {
@@ -3333,7 +3333,7 @@ p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
   sc_array_destroy (newid);
 }
 
-#endif /* P4EST_METIS */
+#endif /* P4EST_WITH_METIS */
 
 static int
 p4est_topidx_compare_2 (const void *A, const void *B)

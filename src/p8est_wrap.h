@@ -39,13 +39,16 @@ p8est_wrap_flags_t;
 
 typedef struct p8est_wrap
 {
+  /* this member is never used or changed by p8est_wrap */
+  void               *user_pointer;     /**< Convenience member for users */
+
   /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
   p8est_connectivity_t *conn;
-  p8est_t            *p4est;
+  p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;

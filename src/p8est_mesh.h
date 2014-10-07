@@ -218,7 +218,7 @@ p8est_quadrant_t   *p8est_mesh_face_neighbor_next (p8est_mesh_face_neighbor_t
  * \param [in]     mfn           Internal status of the iterator.
  * \param [in]     ghost_data    Data for the ghost quadrants that has been
  *                               synchronized with p4est_ghost_exchange_data.
- * \return                       A pointer the the user data for the current
+ * \return                       A pointer to the user data for the current
  *                               neighbor.
  */
 void               *p8est_mesh_face_neighbor_data (p8est_mesh_face_neighbor_t

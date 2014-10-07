@@ -160,7 +160,7 @@ typedef struct p4est_iter_corner_side
 }
 p4est_iter_corner_side_t;
 
-/** The information that is availalbe to the user-defined p4est_iter_corner_t
+/** The information that is available to the user-defined p4est_iter_corner_t
  * callback.
  *
  * If tree_boundary is false, the corner is on the interior of a tree.

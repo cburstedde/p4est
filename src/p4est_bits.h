@@ -75,9 +75,9 @@ int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
 /** Compare two quadrants in their Morton ordering, with equivalence if the
  * two quadrants overlap.
- * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \v2 do not overlap,
+ * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \a v2 do not overlap,
  *                   0 if \a v1 and \a v2 overlap,
- *                 > 0 if \a v1 > \a v2 and \a v1 and \v2 do not overlap.
+ *                 > 0 if \a v1 > \a v2 and \a v1 and \a v2 do not overlap.
  */
 int                 p4est_quadrant_disjoint (const void *v1, const void *v2);
 

@@ -85,7 +85,7 @@ main (int argc, char **argv)
               high[0] == p8est_edge_corners[i][1]) {
             P4EST_ASSERT (target_axis[0] == -1);
             target_axis[0] = i / 4;
-#ifndef P4EST_DEBUG
+#ifndef P4EST_ENABLE_DEBUG
             if (target_axis[1] >= 0)
               break;
 #endif
@@ -94,7 +94,7 @@ main (int argc, char **argv)
                    high[1] == p8est_edge_corners[i][1]) {
             P4EST_ASSERT (target_axis[1] == -1);
             target_axis[1] = i / 4;
-#ifndef P4EST_DEBUG
+#ifndef P4EST_ENABLE_DEBUG
             if (target_axis[0] >= 0)
               break;
 #endif
@@ -106,7 +106,7 @@ main (int argc, char **argv)
         target_axis[2] = target_face / 2;
         edge_reverse[2] = 2 * (my_face % 2) + target_face % 2;
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         for (i = 0; i < 3; ++i) {
           P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
           P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);

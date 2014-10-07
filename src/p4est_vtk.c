@@ -235,7 +235,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
   fprintf (vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_WORDS_BIGENDIAN
+#ifdef SC_IS_BIGENDIAN
   fprintf (vtufile, " byte_order=\"BigEndian\">\n");
 #else
   fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
@@ -668,7 +668,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
 #if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
     fprintf (pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_WORDS_BIGENDIAN
+#ifdef SC_IS_BIGENDIAN
     fprintf (pvtufile, " byte_order=\"BigEndian\">\n");
 #else
     fprintf (pvtufile, " byte_order=\"LittleEndian\">\n");

@@ -53,7 +53,7 @@ SC_EXTERN_C_BEGIN;
  * The quad_to_face list has equally many entries which are either:
  * 1. A value of v = 0..7 indicates one same-size neighbor.
  *    This value is decoded as v = r * 4 + nf, where nf = 0..3 is the
- *    neigbbor's connecting face number and r = 0..1 is the relative
+ *    neighbor's connecting face number and r = 0..1 is the relative
  *    orientation of the neighbor's face, see p4est_connectivity.h.
  * 2. A value of v = 8..23 indicates a double-size neighbor.
  *    This value is decoded as v = 8 + h * 8 + r * 4 + nf, where
@@ -217,7 +217,7 @@ p4est_quadrant_t   *p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t
  * \param [in]     mfn           Internal status of the iterator.
  * \param [in]     ghost_data    Data for the ghost quadrants that has been
  *                               synchronized with p4est_ghost_exchange_data.
- * \return                       A pointer the the user data for the current
+ * \return                       A pointer to the user data for the current
  *                               neighbor.
  */
 void               *p4est_mesh_face_neighbor_data (p4est_mesh_face_neighbor_t

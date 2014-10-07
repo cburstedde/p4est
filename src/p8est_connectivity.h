@@ -582,7 +582,7 @@ void                p8est_connectivity_permute (p8est_connectivity_t * conn,
                                                 sc_array_t * perm,
                                                 int is_current_to_new);
 
-#ifdef P4EST_METIS
+#ifdef P4EST_WITH_METIS
 
 /** p8est_connectivity_reorder
  * This function takes a connectivity \a conn and a parameter \a k,
@@ -610,7 +610,7 @@ void                p8est_connectivity_reorder (MPI_Comm comm, int k,
                                                 p8est_connectivity_t * conn,
                                                 p8est_connect_type_t ctype);
 
-#endif /* P4EST_METIS */
+#endif /* P4EST_WITH_METIS */
 
 /** p8est_connectivity_join_faces
  * This function takes an existing valid connectivity \a conn and modifies it
