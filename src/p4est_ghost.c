@@ -2878,8 +2878,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
                                           NULL, conn);
 
       for (zy = 0; zy < tempquads->elem_count; zy++) {
-        p4est_topidx_t      nnt =
-          *((p4est_topidx_t *) sc_array_index (temptrees, zy));
+        nnt = *((p4est_topidx_t *) sc_array_index (temptrees, zy));
 
         if (nnt == t) {
           p4est_quadrant_t   *tempq =
@@ -2904,8 +2903,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
                                             temptrees, NULL, conn);
 
       for (zy = 0; zy < tempquads->elem_count; zy++) {
-        p4est_topidx_t      nnt =
-          *((p4est_topidx_t *) sc_array_index (temptrees, zy));
+        nnt = *((p4est_topidx_t *) sc_array_index (temptrees, zy));
 
         if (nnt == t) {
           p4est_quadrant_t   *tempq =
@@ -3842,8 +3840,8 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
     P4EST_LDEBUGF
       ("ghost layer expanded with proc %d: send %lld receive %lld\n",
-       p, (long long) old_count + frontsize,
-       (long long) proc_offsets[p + 1] - proc_offsets[p]);
+       p, (long long) (old_count + frontsize),
+       (long long) (proc_offsets[p + 1] - proc_offsets[p]));
     sc_array_resize (nmpma, offset + old_count + frontsize);
     memcpy (nmpma->array + nmpma->elem_size * offset,
             mpf + mpfo[p], sizeof (p4est_locidx_t) * frontsize);
