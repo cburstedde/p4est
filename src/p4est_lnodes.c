@@ -2040,7 +2040,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
       total_sent += (send_count * sizeof (p4est_locidx_t));
     }
   }
-  P4EST_VERBOSEF ("Total of %lld bytes sent to %d processes\n",
+  P4EST_VERBOSEF ("Total of %llu bytes sent to %d processes\n",
                   (unsigned long long) total_sent, num_send_procs);
 }
 
@@ -2291,7 +2291,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
     sc_array_reset (&(recv_buf[i]));
   }
 
-  P4EST_VERBOSEF ("Total of %lld bytes received from %d processes\n",
+  P4EST_VERBOSEF ("Total of %llu bytes received from %d processes\n",
                   (unsigned long long) total_recv, num_recv_procs);
   P4EST_FREE (data->send_buf);
   P4EST_FREE (recv_buf);
