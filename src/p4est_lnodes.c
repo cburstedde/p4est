@@ -1059,7 +1059,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      qid, owner_qid, nqid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
   int8_t             *is_ghost, owner_is_ghost;
-  int                 e, edir, owner_e, owner_c, o, o2;
+  int                 e, edir, owner_e, owner_c, o/*, o2 UNUSED */;
   p4est_locidx_t      nid;
   int                 owner_proc, nproc;
   int                 rank = info->p4est->mpirank;
@@ -1178,7 +1178,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
       nt = conn->tree_to_tree[P4EST_FACES * owner_tid + owner_f];
       nf = conn->tree_to_face[P4EST_FACES * owner_tid + owner_f];
 
-      o2 = nf / P4EST_FACES;
+      /* o2 = nf / P4EST_FACES; UNUSED */
       nf %= P4EST_FACES;
 
       if ((nt == owner_tid && nf == owner_f) || (zz % 2) == 0) {
@@ -1906,7 +1906,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
       total_sent += (send_count * sizeof (p4est_locidx_t));
     }
   }
-  P4EST_VERBOSEF ("Total of %lld bytes sent to %d processes\n",
+  P4EST_VERBOSEF ("Total of %llu bytes sent to %d processes\n",
                   (unsigned long long) total_sent, num_send_procs);
 }
 
@@ -2155,7 +2155,7 @@ p4est_lnodes_recv (p4est_t * p4est, p4est_lnodes_data_t * data,
     sc_array_reset (&(recv_buf[i]));
   }
 
-  P4EST_VERBOSEF ("Total of %lld bytes received from %d processes\n",
+  P4EST_VERBOSEF ("Total of %llu bytes received from %d processes\n",
                   (unsigned long long) total_recv, num_recv_procs);
   P4EST_FREE (data->send_buf);
   P4EST_FREE (recv_buf);
