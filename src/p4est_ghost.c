@@ -2948,7 +2948,8 @@ p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost)
 #endif
       p4est_quadrant_t   *mq = p4est_quadrant_array_index (mirrors,
                                                            (size_t) mpf[zm]);
-      p4est_locidx_t      t = mq->p.piggy3.which_tree;
+
+      t = mq->p.piggy3.which_tree;
 
       /* for every face */
       for (f = 0; f < P4EST_FACES; f++) {
