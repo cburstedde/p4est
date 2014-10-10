@@ -550,7 +550,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     memcpy (F, lnodes->face_code, Klocal * sizeof (p4est_lnodes_code_t));
 
     mirror_data_F = P4EST_ALLOC (p4est_lnodes_code_t *, num_mirrors);
-    for (il = 0; (size_t) il < num_mirrors; il++) {
+    for (il = 0; il < num_mirrors; il++) {
       p4est_quadrant_t   *q;
 
       q = p4est_quadrant_array_index (&ghost->mirrors, il);
@@ -584,7 +584,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       p4est_gloidx_t    **mirror_data;
 
       mirror_data = P4EST_ALLOC (p4est_gloidx_t *, num_mirrors);
-      for (il = 0; (size_t) il < num_mirrors; il++) {
+      for (il = 0; il < num_mirrors; il++) {
         p4est_quadrant_t   *q;
 
         q = p4est_quadrant_array_index (&ghost->mirrors, il);
@@ -1356,7 +1356,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             (p4est_locidx_t *) sc_array_index (quad_plex, il);
           *ql = local_to_plex[il];
         }
-        for (il = 0; (size_t) il < num_mirrors; il++) {
+        for (il = 0; il < num_mirrors; il++) {
           p4est_quadrant_t   *q;
 
           q = p4est_quadrant_array_index (&ghost->mirrors, il);
@@ -1424,7 +1424,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         p4est_locidx_t    **mirror_data;
 
         mirror_data = P4EST_ALLOC (p4est_locidx_t *, num_mirrors);
-        for (il = 0; (size_t) il < num_mirrors; il++) {
+        for (il = 0; il < num_mirrors; il++) {
           p4est_quadrant_t   *q;
 
           q = p4est_quadrant_array_index (&ghost->mirrors, il);
