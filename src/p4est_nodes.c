@@ -36,6 +36,8 @@
 
 #ifdef P4EST_ENABLE_MPI
 
+#define p4est_num_ranges (25)
+
 typedef struct
 {
   int                 expect_query, expect_reply;

@@ -62,7 +62,7 @@ p4est_ghost_memory_used (p4est_ghost_t * ghost)
     (ghost->num_trees + 1) * sizeof (p4est_locidx_t);
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static inline sc_array_t *
 p4est_ghost_array_index (sc_array_t * array, int i)
@@ -153,7 +153,7 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   return p4est_comm_find_owner (p4est, ntreeid, &nq, rank);
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 /** Gets the procids of the owners of \a q.
  *
@@ -221,7 +221,7 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
   sc_array_reset (cta);
 }
 
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 /* Returns true for matching proc and tree range, false otherwise. */
 static int
@@ -1143,7 +1143,7 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static              size_t
 ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
@@ -1413,7 +1413,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   }
 }
 
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 static p4est_ghost_t *
 p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
@@ -1421,7 +1421,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
 {
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
   const int           num_procs = p4est->mpisize;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   const int           rank = p4est->mpirank;
   MPI_Comm            comm = p4est->mpicomm;
   p4est_connectivity_t *conn = p4est->connectivity;
@@ -1504,7 +1504,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
 
   gl->proc_offsets[0] = 0;
   gl->mirror_proc_offsets[0] = 0;
-#ifndef P4EST_MPI
+#ifndef P4EST_ENABLE_MPI
   gl->proc_offsets[1] = 0;
   gl->mirror_proc_offsets[1] = 0;
 #else
@@ -2166,7 +2166,7 @@ failtest:
   for (i = 0; i < P4EST_DIM - 1; ++i) {
     sc_array_reset (&procs[i]);
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* calculate tree offsets */
   sc_array_init (&split, sizeof (size_t));
@@ -2187,7 +2187,7 @@ failtest:
       }
     }
 #endif
-#ifndef P4EST_MPI
+#ifndef P4EST_ENABLE_MPI
     gl->mirror_tree_offsets[nt] = 0;
 #endif
   }
@@ -2584,7 +2584,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_reset (&sbuffers);
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static void
 p4est_ghost_expand_insert (p4est_quadrant_t * q, p4est_topidx_t t,
@@ -2839,13 +2839,13 @@ p4est_quadrant_compare_piggy_proc (const void *a, const void *b)
   return (A->p.piggy1.owner_rank - B->p.piggy1.owner_rank);
 }
 
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 static void
 p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
                              p4est_ghost_t * ghost)
 {
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 p;
   int                 mpisize = p4est->mpisize;
   int                 mpirank = p4est->mpirank;

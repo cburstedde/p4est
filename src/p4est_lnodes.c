@@ -2569,11 +2569,12 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
                             degree);
   p4est_log_indent_push ();
 
+#ifndef P4_TO_P8
+  P4EST_ASSERT (degree >= 1 || degree == -1 || degree == -P4EST_DIM);
+#else
   P4EST_ASSERT (degree >= 1 || degree == -1 ||
-#ifdef P4_TO_P8
-                degree == -2 ||
+                degree == -2 || degree == -P4EST_DIM);
 #endif
-                degree == -P4EST_DIM);
 
   lnodes->mpicomm = p4est->mpicomm;
   lnodes->degree = degree;
