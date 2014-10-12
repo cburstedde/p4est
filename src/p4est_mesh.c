@@ -103,12 +103,14 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                 visited[P4EST_CHILDREN];
   int8_t             *pccorner;
   size_t              cz, zz;
+  sc_array_t         *trees;
   p4est_locidx_t      qoffset, qid1, qid2;
   p4est_locidx_t      cornerid_offset, cornerid;
   p4est_locidx_t     *pcquad;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_iter_corner_side_t *side1, *side2;
   p4est_tree_t       *tree1, *tree2;
+  p4est_connectivity_t *conn;
 
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
@@ -117,6 +119,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   if (cz == 1) {
     return;
   }
+  conn = info->p4est->connectivity;
+  trees = info->p4est->trees;
+  cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
   if (info->tree_boundary == P4EST_CONNECT_FACE) {
     /* This corner is inside an inter-tree face */
@@ -125,7 +130,6 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       return;
     }
     P4EST_ASSERT (cz == P4EST_CHILDREN);
-    cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
     /* Process a corner in pairs of diagonal inter-tree neighbors */
     memset (visited, 0, P4EST_CHILDREN * sizeof (int));
@@ -147,7 +151,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           f1 = tree_face_quadrant_corner_face (side1->quad, side1->corner);
           fc1 = p4est_corner_face_corners[side1->corner][f1];
           P4EST_ASSERT (0 <= fc1 && fc1 < P4EST_HALF);
-          tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+          tree1 = p4est_tree_array_index (trees, side1->treeid);
           qid1 = side1->quadid + (side1->is_ghost ? mesh->local_num_quadrants
                                   : tree1->quadrants_offset);
           visited[j] = 1;
@@ -169,8 +173,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         /* This side as in the opposite tree */
         fc2 = p4est_corner_face_corners[side2->corner][f2];
         P4EST_ASSERT (0 <= fc2 && fc2 < P4EST_HALF);
-        code = info->p4est->connectivity->tree_to_face[P4EST_FACES *
-                                                       side1->treeid + f1];
+        code = conn->tree_to_face[P4EST_FACES * side1->treeid + f1];
         orientation = code / P4EST_FACES;
         P4EST_ASSERT (f2 == code % P4EST_FACES);
 #ifdef P4_TO_P8
@@ -186,7 +189,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         }
 
         /* We have found a diagonally opposite second side */
-        tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
+        tree2 = p4est_tree_array_index (trees, side2->treeid);
         qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
                                 : tree2->quadrants_offset);
         if (!side1->is_ghost) {
@@ -223,7 +226,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     for (zz = 0; zz < cz; ++zz) {
       side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
       if (!side1->is_ghost) {
-        tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+        tree1 = p4est_tree_array_index (trees, side1->treeid);
         qid1 = side1->quadid + tree1->quadrants_offset;
         P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
         P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
@@ -254,7 +257,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   /* Process a corner inside the tree in pairs of diagonal neighbors */
   P4EST_ASSERT (!info->tree_boundary);
   side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, 0);
-  tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+  tree1 = p4est_tree_array_index (trees, side1->treeid);
   qoffset = tree1->quadrants_offset;
   memset (visited, 0, P4EST_CHILDREN * sizeof (int));
   for (i = 0; i < P4EST_HALF; ++i) {
