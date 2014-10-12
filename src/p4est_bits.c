@@ -1275,9 +1275,9 @@ p4est_quadrant_children (const p4est_quadrant_t * q,
 void
 p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 {
-  return p4est_quadrant_children (q, &c[0], &c[1], &c[2], &c[3]
+  p4est_quadrant_children (q, &c[0], &c[1], &c[2], &c[3]
 #ifdef P4_TO_P8
-                                  , &c[4], &c[5], &c[6], &c[7]
+                           , &c[4], &c[5], &c[6], &c[7]
 #endif
     );
 }
@@ -1285,9 +1285,9 @@ p4est_quadrant_childrenv (const p4est_quadrant_t * q, p4est_quadrant_t c[])
 void
 p4est_quadrant_childrenpv (const p4est_quadrant_t * q, p4est_quadrant_t * c[])
 {
-  return p4est_quadrant_children (q, c[0], c[1], c[2], c[3]
+  p4est_quadrant_children (q, c[0], c[1], c[2], c[3]
 #ifdef P4_TO_P8
-                                  , c[4], c[5], c[6], c[7]
+                           , c[4], c[5], c[6], c[7]
 #endif
     );
 }

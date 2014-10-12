@@ -216,7 +216,6 @@ typedef int         (*p4est_weight_t) (p4est_t * p4est,
                                        p4est_quadrant_t * quadrant);
 
 extern void        *P4EST_DATA_UNINITIALIZED;
-extern const int    p4est_num_ranges;
 
 /** set statically allocated quadrant to defined values */
 #define P4EST_QUADRANT_INIT(q) \

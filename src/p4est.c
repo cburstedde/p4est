@@ -62,11 +62,12 @@ typedef struct
 }
 p4est_balance_peer_t;
 
+#define p4est_num_ranges (25)
+
 #ifndef P4_TO_P8
 
 static int          p4est_uninitialized_key;
 void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
-const int           p4est_num_ranges = 25;
 
 #endif /* P4_TO_P8 */
 

@@ -212,7 +212,6 @@ typedef int         (*p8est_weight_t) (p8est_t * p8est,
                                        p8est_quadrant_t * quadrant);
 
 extern void        *P8EST_DATA_UNINITIALIZED;
-extern const int    p8est_num_ranges;
 
 /** set statically allocated quadrant to defined values */
 #define P8EST_QUADRANT_INIT(q) \
