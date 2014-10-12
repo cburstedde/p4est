@@ -279,15 +279,28 @@ extern const int    p8est_child_corner_faces[8][8];
 extern const int    p8est_child_corner_edges[8][8];
 
 /** Transform a corner across one of the adjacent faces into a neighbor tree.
+ * It expects a face permutation index that has been precomputed.
  * \param [in] c    A corner number in 0..7.
  * \param [in] f    A face number that touches the corner \a c.
  * \param [in] nf   A neighbor face that is on the other side of \f.
  * \param [in] set  A value from \a p8est_face_permutation_sets that is
- *                  obtained using \a f, \a nf, and a valid orientation.
+ *                  obtained using \a f, \a nf, and a valid orientation:
+ *                  ref = p8est_face_permutation_refs[f][nf];
+ *                  set = p8est_face_permutation_sets[ref][orientation];
  * \return          The corner number in 0..7 seen from the other face.
  */
-int                 p8est_connectivity_face_neighbor_corner
+int                 p8est_connectivity_face_neighbor_corner_set
   (int c, int f, int nf, int set);
+
+/** Transform a corner across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] c    A corner number in 0..7.
+ * \param [in] f    A face number that touches the corner \a c.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ */
+int                 p8est_connectivity_face_neighbor_corner_orientation
+  (int c, int f, int nf, int o);
 
 /** Allocate a connectivity structure.
  * The attribute fields are initialized to NULL.

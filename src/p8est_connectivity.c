@@ -160,7 +160,7 @@ const int           p8est_child_corner_edges[8][8] =
 /* *INDENT-ON* */
 
 int
-p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int set)
+p8est_connectivity_face_neighbor_corner_set (int c, int f, int nf, int set)
 {
   int                 fc, nfc;
 

@@ -136,6 +136,8 @@
 #define p4est_num_ranges                p8est_num_ranges
 
 /* functions in p4est_connectivity */
+#define p4est_connectivity_face_neighbor_corner_orientation \
+        p8est_connectivity_face_neighbor_corner_orientation
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick
