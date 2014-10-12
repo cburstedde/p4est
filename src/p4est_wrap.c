@@ -215,6 +215,32 @@ p8est_wrap_new_rotwrap (sc_MPI_Comm mpicomm, int initial_level)
 #endif
 
 p4est_wrap_t       *
+p4est_wrap_new_brick (sc_MPI_Comm mpicomm, int bx, int by,
+#ifdef P4_TO_P8
+                      int bz,
+#endif
+                      int px, int py,
+#ifdef P4_TO_P8
+                      int pz,
+#endif
+                      int initial_level)
+{
+  P4EST_ASSERT (bx > 0 && by > 0);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (bz > 0);
+#endif
+  return p4est_wrap_new_conn (mpicomm, p4est_connectivity_new_brick (bx, by,
+#ifdef P4_TO_P8
+                                                                     bz,
+#endif
+                                                                     px, py
+#ifdef P4_TO_P8
+                                                                     , pz
+#endif
+                              ), initial_level);
+}
+
+p4est_wrap_t       *
 p4est_wrap_new_world (int initial_level)
 {
 #ifndef P4_TO_P8

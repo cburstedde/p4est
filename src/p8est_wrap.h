@@ -81,6 +81,10 @@ p8est_wrap_t       *p8est_wrap_new_unitcube (sc_MPI_Comm mpicomm,
                                              int initial_level);
 p8est_wrap_t       *p8est_wrap_new_rotwrap (sc_MPI_Comm mpicomm,
                                             int initial_level);
+p8est_wrap_t       *p8est_wrap_new_brick (sc_MPI_Comm mpicomm,
+                                          int bx, int by, int bz,
+                                          int px, int py, int pz,
+                                          int initial_level);
 
 /** Passes sc_MPI_COMM_WORLD to p8est_wrap_new_unitcube. */
 p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
