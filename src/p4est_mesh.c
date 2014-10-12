@@ -239,18 +239,96 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 #endif
 
   if (info->tree_boundary == P4EST_CONNECT_CORNER) {
-    /* True tree corner neighbors are not implemented yet: set to -2 */
+    int                 c1, ncorner[P4EST_DIM];
+    int                 nface[P4EST_DIM];
+    int                 ignore;
+    size_t              z2;
+    int8_t             *ccorners;
+    p4est_topidx_t      t1, ntree[P4EST_DIM];
+    p4est_locidx_t      goodones;
+    p4est_locidx_t     *cquads;
+
+    /* Loop through all corner sides, that is the quadrants touching it.  For
+     * each of these quadrants, determine the corner sides that can potentially
+     * occur by being a face neighbor as well.  Exclude these face neighbors
+     * and the quadrant itself, record all others as corner neighbors.
+     */
+    cquads = P4EST_ALLOC (p4est_locidx_t, cz - 1);
+    ccorners = P4EST_ALLOC (int8_t, cz - 1);
     for (zz = 0; zz < cz; ++zz) {
       side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
       if (!side1->is_ghost) {
-        tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+        /* We only create corner information for processor-local quadrants */
+        t1 = side1->treeid;
+        c1 = (int) side1->corner;
+        tree1 = p4est_tree_array_index (trees, t1);
         qid1 = side1->quadid + tree1->quadrants_offset;
         P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                           side1->corner] == -1);
-        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -2;
+        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] == -1);
+
+        /* Check all quadrant faces that touch this corner */
+        for (i = 0; i < P4EST_DIM; ++i) {
+          f1 = p4est_corner_faces[c1][i];
+          ntree[i] = conn->tree_to_tree[P4EST_FACES * t1 + f1];
+          nface[i] = conn->tree_to_face[P4EST_FACES * t1 + f1];
+          if (ntree[i] == t1 && nface[i] == f1) {
+            /* This is a physical face boundary, no face neighbor present */
+            ncorner[i] = -1;
+            continue;
+          }
+          /* We have a face neighbor */
+          orientation = nface[i] / P4EST_FACES;
+          nface[i] %= P4EST_FACES;
+          ncorner[i] = p4est_connectivity_face_neighbor_corner_orientation
+            (c1, f1, nface[i], orientation);
+        }
+
+        /* Go through corner neighbors and collect the true corners */
+        goodones = 0;
+        for (z2 = 0; z2 < cz; ++z2) {
+          if (z2 == zz) {
+            /* We do not count ourselves as a neighbor */
+            continue;
+          }
+          ignore = 0;
+          side2 =
+            (p4est_iter_corner_side_t *) sc_array_index (&info->sides, z2);
+          P4EST_ASSERT (side2->corner >= 0);
+          for (i = 0; i < P4EST_DIM; ++i) {
+            /* Ignore if this is one of the face neighbors' corners */
+            if (ncorner[i] == (int) side2->corner &&
+                ntree[i] == side2->treeid) {
+              ignore = 1;
+              break;
+            }
+          }
+          if (ignore) {
+            continue;
+          }
+
+          /* Record this corner neighbor */
+          tree2 = p4est_tree_array_index (trees, side2->treeid);
+          qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
+                                  : tree2->quadrants_offset);
+          cquads[goodones] = qid2;
+          ccorners[goodones] = (int) side2->corner;
+          ++goodones;
+        }
+        P4EST_ASSERT ((size_t) goodones < cz);
+        if (goodones == 0) {
+          continue;
+        }
+
+        /* Allocate and fill corner information in the mesh structure */
+        cornerid = mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
+        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] =
+          cornerid_offset + cornerid;
+        memcpy (pcquad, cquads, goodones * sizeof (p4est_locidx_t));
+        memcpy (pccorner, ccorners, goodones * sizeof (int8_t));
       }
     }
+    P4EST_FREE (cquads);
+    P4EST_FREE (ccorners);
     return;
   }
 
