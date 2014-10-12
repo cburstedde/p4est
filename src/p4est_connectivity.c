@@ -3286,16 +3286,7 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
       continue;
     }
 
-#ifndef P4_TO_P8
-    nc = p4est_face_corners[nf][o ^ p4est_corner_face_corners[c][f]];
-#else
-    {
-      int                 ref = p8est_face_permutation_refs[f][nf];
-      int                 set = p8est_face_permutation_sets[ref][o];
-
-      nc = p8est_connectivity_face_neighbor_corner_set (c, f, nf, set);
-    }
-#endif
+    nc = p4est_connectivity_face_neighbor_corner_orientation (c, f, nf, o);
 
     conn->tree_to_corner[P4EST_CHILDREN * nt + nc] = n - 1;
     tc = (p4est_topidx_t *) sc_array_push (corner_to_tc);
