@@ -352,7 +352,7 @@ p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
 /** Broadcast a connectivity structure that exists only on one process to all.
  *  On the other processors, it will be allocated using p8est_connectivity_new.
  *  \param [in] conn_in For the root process the connectivity to be broadcast,
- *                      for the other processes this variable is not touched.
+ *                      for the other processes it must be NULL.
  *  \param [in] root    The rank of the process that provides the connectivity.
  *  \param [in] comm    The MPI communicator.
  *  \return             For the root process this is a pointer to \a conn_in.
