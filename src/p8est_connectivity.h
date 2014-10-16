@@ -349,16 +349,16 @@ p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
-/** Broadcast a connectivity structure which exists only on one
- *  process to all other processes.
- *  The new connectivities will be allocated using p4est_connectivity_new.
- *  \param [in] conn_in For the root process the connectivity to be broadcasted,
+/** Broadcast a connectivity structure that exists only on one process to all.
+ *  On the other processors, it will be allocated using p8est_connectivity_new.
+ *  \param [in] conn_in For the root process the connectivity to be broadcast,
  *                      for the other processes this variable is not touched.
- *  \param [in] root    The process id of the root process.
+ *  \param [in] root    The rank of the process that provides the connectivity.
  *  \param [in] comm    The MPI communicator.
- *  \return             A pointer to a newly allocated connectivity structure with
- *                      the same values as conn_in on the root process.
- *                      For the root process this is a pointer to conn_in.
+ *  \return             For the root process this is a pointer to \a conn_in.
+ *                      Else, a pointer to a newly allocated connectivity
+ *                      structure with the same values as \a conn_in on the
+ *                      root process.
  */
 p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t *
                                                 conn_in, int root,
