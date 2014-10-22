@@ -398,7 +398,7 @@ tsearch_setup (tsearch_global_t * tsg)
   double              cref[3];
   double             *center = tsg->center;
   p4est_quadrant_t   *q = tsg->sq, c;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 retval;
   double              nref[P4EST_DIM];
 #endif
@@ -416,7 +416,7 @@ tsearch_setup (tsearch_global_t * tsg)
   ref[2] = cref[2] = q->z * mlen + hwidth;
   reference_to_physical (tsg, ref, center);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   retval = physical_to_reference (tsg, center, nref);
   P4EST_ASSERT (retval);
   for (j = 0; j < P4EST_DIM; ++j) {
@@ -940,7 +940,7 @@ main (int argc, char **argv)
 
   /* initialize p4est internals */
   sc_init (tsg->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
-#ifndef P4EST_DEBUG
+#ifndef P4EST_ENABLE_DEBUG
   sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
 #endif
   p4est_init (NULL, SC_LP_DEFAULT);

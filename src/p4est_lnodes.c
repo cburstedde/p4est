@@ -2040,7 +2040,7 @@ p4est_lnodes_count_send (p4est_lnodes_data_t * data, p4est_t * p4est,
                   (unsigned long long) total_sent, num_send_procs);
 }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
 /* p4est_lnodes_test_comm:
  *
  * If the buf_info_t array is the same on both ends of a communication, then the
@@ -2315,7 +2315,7 @@ p4est_lnodes_global_and_sharers (p4est_lnodes_data_t * data,
   sc_array_t         *inodes = data->inodes;
   p4est_locidx_t     *elnodes = lnodes->element_nodes;
   p4est_locidx_t      nlen = lnodes->num_local_elements * lnodes->vnodes;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      num_inodes = (p4est_locidx_t) data->inodes->elem_count;
 #endif
   p4est_locidx_t      inidx;
@@ -2559,7 +2559,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   p4est_lnodes_data_t data;
   p4est_locidx_t      nel;
   p4est_locidx_t      nlen;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      lj;
 #endif
   p4est_lnodes_t     *lnodes = P4EST_ALLOC (p4est_lnodes_t, 1);
@@ -2569,11 +2569,12 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
                             degree);
   p4est_log_indent_push ();
 
+#ifndef P4_TO_P8
+  P4EST_ASSERT (degree >= 1 || degree == -1 || degree == -P4EST_DIM);
+#else
   P4EST_ASSERT (degree >= 1 || degree == -1 ||
-#ifdef P4_TO_P8
-                degree == -2 ||
+                degree == -2 || degree == -P4EST_DIM);
 #endif
-                degree == -P4EST_DIM);
 
   lnodes->mpicomm = p4est->mpicomm;
   lnodes->degree = degree;
@@ -2625,7 +2626,7 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 #endif
                      citer, 1);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (lj = 0; lj < nlen; lj++) {
     P4EST_ASSERT (lnodes->element_nodes[lj] >= 0);
   }
@@ -2669,6 +2670,8 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
   P4EST_FREE (lnodes);
 }
 
+#ifdef P4EST_ENABLE_MPI
+
 static              size_t
 ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
 {
@@ -2680,11 +2683,13 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
+#endif /* P4EST_ENABLE_MPI */
+
 void
 p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
                             p4est_ghost_t * ghost)
 {
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   sc_array_t         *ghosts = &ghost->ghosts;
   sc_array_t         *mirrors = &ghost->mirrors;
   p4est_locidx_t     *proc_offsets = ghost->proc_offsets;
@@ -3154,7 +3159,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
       P4EST_ASSERT (sc_array_is_sorted
                     (new_ghosts, p4est_quadrant_compare_piggy));
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
       {
         size_t              zz;
 

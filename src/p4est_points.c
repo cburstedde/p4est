@@ -106,7 +106,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   int                 i, isizet;
   size_t              lcount;
   size_t             *nmemb;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              zz;
 #endif
   p4est_topidx_t      jt, num_trees;
@@ -149,7 +149,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   sc_psort (mpicomm, points, nmemb, sizeof (p4est_quadrant_t),
             p4est_quadrant_compare_piggy);
   P4EST_FREE (nmemb);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   first_quad = points;
   for (zz = 1; zz < lcount; ++zz) {
     next_quad = points + zz;
@@ -338,7 +338,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     p4est_quadrant_last_descendant (quad, &tree->last_desc, P4EST_QMAXLEVEL);
 
     /* verification */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     first_quad = p4est_quadrant_array_index (&tree->quadrants, 0);
     for (zz = 1; zz < tree->quadrants.elem_count; ++zz) {
       next_quad = p4est_quadrant_array_index (&tree->quadrants, zz);
@@ -373,7 +373,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   if (max_points >= 0) {
     p4est_refine_ext (p4est, 1, maxlevel, p4est_points_refine,
                       p4est_points_init, NULL);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     for (jt = first_tree; jt <= last_tree; ++jt) {
       tree = p4est_tree_array_index (p4est->trees, jt);
       first_quad = p4est_quadrant_array_index (&tree->quadrants, 0);

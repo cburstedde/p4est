@@ -26,4 +26,3 @@
 
 static int          p8est_uninitialized_key;
 void               *P8EST_DATA_UNINITIALIZED = &p8est_uninitialized_key;
-const int           p8est_num_ranges = 25;

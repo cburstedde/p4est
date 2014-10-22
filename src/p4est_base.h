@@ -33,13 +33,13 @@
 #include <p4est_config.h>
 #include <sc_config.h>
 #if \
-  (defined (P4EST_MPI) && !defined (SC_MPI)) || \
-  (!defined (P4EST_MPI) && defined (SC_MPI))
+  (defined (P4EST_ENABLE_MPI) && !defined (SC_ENABLE_MPI)) || \
+  (!defined (P4EST_ENABLE_MPI) && defined (SC_ENABLE_MPI))
 #error "MPI configured differently in p4est and libsc"
 #endif
 #if \
-  (defined (P4EST_MPIIO) && !defined (SC_MPIIO)) || \
-  (!defined (P4EST_MPIIO) && defined (SC_MPIIO))
+  (defined (P4EST_ENABLE_MPIIO) && !defined (SC_ENABLE_MPIIO)) || \
+  (!defined (P4EST_ENABLE_MPIIO) && defined (SC_ENABLE_MPIIO))
 #error "MPI I/O configured differently in p4est and libsc"
 #endif
 
@@ -91,7 +91,7 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_GLOIDX_1   ((p4est_gloidx_t) 1)
 
 /* some error checking possibly specific to p4est */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
 #define P4EST_ASSERT(c) SC_CHECK_ABORT ((c), "Assertion '" #c "'")
 #define P4EST_EXECUTE_ASSERT_FALSE(expression)                          \
   do { int _p4est_i = (int) (expression);                               \

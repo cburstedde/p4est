@@ -53,7 +53,7 @@ typedef enum
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
   P8EST_CONFIG_SHELL,
-  P8EST_CONFIG_SPHERE,
+  P8EST_CONFIG_SPHERE
 }
 simple_config_t;
 
@@ -296,7 +296,7 @@ main (int argc, char **argv)
   p8est_vtk_write_file (p8est, geom, "simple3_partition");
 #endif
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   /* rebalance should not change checksum */
   p8est_balance (p8est, P8EST_CONNECT_FULL, init_fn);
   P4EST_ASSERT (p8est_checksum (p8est) == crc);

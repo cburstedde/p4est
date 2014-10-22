@@ -31,8 +31,8 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   p6est_profile_t    *profile;
   p4est_lnodes_t     *clnodes;
   int                 nperelem = (degree + 1) * (degree + 1) * (degree + 1);
-  //int nperface = (degree - 1) * (degree - 1);
-  //int nperedge = (degree - 1);
+  /* int nperface = (degree - 1) * (degree - 1); */
+  /* int nperedge = (degree - 1); */
   p4est_locidx_t      ncid, cid, enid, *en;
   p4est_locidx_t      nnodecols;
   p4est_locidx_t      nelemcols;

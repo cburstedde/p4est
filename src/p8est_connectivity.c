@@ -160,7 +160,7 @@ const int           p8est_child_corner_edges[8][8] =
 /* *INDENT-ON* */
 
 int
-p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int set)
+p8est_connectivity_face_neighbor_corner_set (int c, int f, int nf, int set)
 {
   int                 fc, nfc;
 
@@ -881,7 +881,7 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
   int                 redge, nedge, iflip, nflip;
   int                 pref, pset, fc[2];
   int                 faces[2], nfaces[2], orients[2];
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 founds[2];
 #endif
   int                 nows[2];
@@ -912,7 +912,7 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
       fcorners[i] = p8est_edge_face_corners[iedge][faces[i]];
       P4EST_ASSERT (fcorners[i][0] >= 0 && fcorners[i][1] >= 0);
     }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     founds[i] = 0;
 #endif
   }
@@ -960,7 +960,7 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
 
           if (fc[0] == nfcorners[nflip] && fc[1] == nfcorners[!nflip]) {
             P4EST_ASSERT (!founds[i] && !nows[!i]);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
             founds[i] = 1;
 #endif
             nows[i] = 1;
