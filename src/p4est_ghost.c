@@ -62,7 +62,7 @@ p4est_ghost_memory_used (p4est_ghost_t * ghost)
     (ghost->num_trees + 1) * sizeof (p4est_locidx_t);
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static inline sc_array_t *
 p4est_ghost_array_index (sc_array_t * array, int i)
@@ -82,7 +82,7 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
 {
   const int           rank = p4est->mpirank;
   p4est_connectivity_t *conn = p4est->connectivity;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 dims;
 #endif
   int                 ftransform[P4EST_FTRANSFORM];
@@ -121,7 +121,7 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
 #endif
 
     /* Make sure we are neither tree edge nor tree corner */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     dims = (((quad_contact[0] || quad_contact[1]) ? 1 : 0) +
             ((quad_contact[2] || quad_contact[3]) ? 1 : 0));
 #ifdef P4_TO_P8
@@ -153,7 +153,7 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   return p4est_comm_find_owner (p4est, ntreeid, &nq, rank);
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 /** Gets the procids of the owners of \a q.
  *
@@ -221,7 +221,7 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
   sc_array_reset (cta);
 }
 
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 /* Returns true for matching proc and tree range, false otherwise. */
 static int
@@ -872,7 +872,7 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
   int                *pe3;
   int                 bigger_edge[12];
   sc_array_t          e3_a;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              big_count[12];
 #endif
 #endif
@@ -949,7 +949,7 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
       /* Find edge neighbors */
       for (edge = 0; edge < P8EST_EDGES; ++edge) {
         bigger_edge[edge] = 0;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         big_count[edge] = 0;
 #endif
 
@@ -1010,7 +1010,7 @@ p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype)
           }
         }
         bigger_edge[edge] = e3;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         big_count[edge] = e3_a.elem_count;
 #endif
       }
@@ -1143,7 +1143,7 @@ ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
   return (size_t) q->p.which_tree;
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static              size_t
 ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
@@ -1393,7 +1393,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
       p4est_quadrant_set_morton (uq, P4EST_QMAXLEVEL, uid);
       P4EST_ASSERT (p4est_quadrant_is_valid (uq));
     }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     if (lq != NULL && uq != NULL) {
       P4EST_ASSERT (p4est_quadrant_compare (lq, uq) <= 0);
     }
@@ -1413,7 +1413,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   }
 }
 
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 static p4est_ghost_t *
 p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
@@ -1421,7 +1421,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
 {
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
   const int           num_procs = p4est->mpisize;
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   const int           rank = p4est->mpirank;
   MPI_Comm            comm = p4est->mpicomm;
   p4est_connectivity_t *conn = p4est->connectivity;
@@ -1437,7 +1437,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
   size_t              pz, zz;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;
   p4est_topidx_t      last_local_tree = p4est->last_local_tree;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      li;
 #endif
   p4est_locidx_t      local_num;
@@ -1463,7 +1463,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
   int                 oppedge;
   int                 n1ur_proc;
 #endif
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_quadrant_t   *q2;
 #endif
   int                 ftransform[P4EST_FTRANSFORM];
@@ -1504,7 +1504,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
 
   gl->proc_offsets[0] = 0;
   gl->mirror_proc_offsets[0] = 0;
-#ifndef P4EST_MPI
+#ifndef P4EST_ENABLE_MPI
   gl->proc_offsets[1] = 0;
   gl->mirror_proc_offsets[1] = 0;
 #else
@@ -2060,7 +2060,7 @@ failtest:
     SC_CHECK_MPI (mpiret);
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_peers; ++i) {
     P4EST_ASSERT (recv_request[i] == MPI_REQUEST_NULL);
   }
@@ -2134,7 +2134,7 @@ failtest:
   /* Clean up */
   P4EST_FREE (recv_counts);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_peers; ++i) {
     P4EST_ASSERT (recv_load_request[i] == MPI_REQUEST_NULL);
   }
@@ -2166,7 +2166,7 @@ failtest:
   for (i = 0; i < P4EST_DIM - 1; ++i) {
     sc_array_reset (&procs[i]);
   }
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
   /* calculate tree offsets */
   sc_array_init (&split, sizeof (size_t));
@@ -2176,7 +2176,7 @@ failtest:
   for (nt = 0; nt <= num_trees; ++nt) {
     ppz = (size_t *) sc_array_index (&split, (size_t) nt);
     gl->tree_offsets[nt] = *ppz;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     if (nt > 0) {
       p4est_locidx_t      lk;
       p4est_quadrant_t   *q3;
@@ -2187,7 +2187,7 @@ failtest:
       }
     }
 #endif
-#ifndef P4EST_MPI
+#ifndef P4EST_ENABLE_MPI
     gl->mirror_tree_offsets[nt] = 0;
 #endif
   }
@@ -2299,7 +2299,7 @@ p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
 {
   size_t              zz;
   size_t              data_size;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_topidx_t      prev_tree;
 #endif
   p4est_topidx_t      which_tree;
@@ -2311,7 +2311,7 @@ p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
   mirror_data = P4EST_ALLOC (void *, ghost->mirrors.elem_count);
 
   data_size = p4est->data_size == 0 ? sizeof (void *) : p4est->data_size;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   prev_tree = -1;
 #endif
   for (zz = 0; zz < ghost->mirrors.elem_count; ++zz) {
@@ -2320,7 +2320,7 @@ p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT (p4est->first_local_tree <= which_tree &&
                   which_tree <= p4est->last_local_tree);
     P4EST_ASSERT (prev_tree <= which_tree);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     prev_tree = which_tree;
 #endif
     tree = p4est_tree_array_index (p4est->trees, which_tree);
@@ -2584,7 +2584,7 @@ p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_reset (&sbuffers);
 }
 
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
 
 static void
 p4est_ghost_expand_insert (p4est_quadrant_t * q, p4est_topidx_t t,
@@ -2839,13 +2839,13 @@ p4est_quadrant_compare_piggy_proc (const void *a, const void *b)
   return (A->p.piggy1.owner_rank - B->p.piggy1.owner_rank);
 }
 
-#endif /* P4EST_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 static void
 p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
                              p4est_ghost_t * ghost)
 {
-#ifdef P4EST_MPI
+#ifdef P4EST_ENABLE_MPI
   int                 p;
   int                 mpisize = p4est->mpisize;
   int                 mpirank = p4est->mpirank;
@@ -2908,7 +2908,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
     quad_to_node_global = P4EST_ALLOC (p4est_gloidx_t, K * vnodes);
     quad_to_node_global_ghost = P4EST_ALLOC (p4est_gloidx_t, G * vnodes);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     memset (quad_to_node_global_ghost, -1,
             vnodes * G * sizeof (p4est_gloidx_t));
 #endif
@@ -2943,7 +2943,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
         p4est_gloidx_t      gnid;
 
         gnid = quad_to_node_global_ghost[qid * vnodes + v];
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         P4EST_ASSERT (gnid >= 0);
 #endif
         nid = -1;
@@ -3030,7 +3030,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
     }
     node_to_quad = P4EST_ALLOC (p4est_locidx_t, ntq_offset[N]);
     node_to_tree = P4EST_ALLOC (p4est_topidx_t, ntq_offset[N]);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     memset (node_to_quad, -1, ntq_offset[N] * sizeof (p4est_locidx_t));
     memset (node_to_tree, -1, ntq_offset[N] * sizeof (p4est_topidx_t));
 #endif
@@ -3073,7 +3073,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
         }
       }
     }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     for (qid = 0; qid < ntq_offset[N]; qid++) {
       P4EST_ASSERT (node_to_tree[qid] >= 0);
     }
@@ -3374,7 +3374,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
     SC_CHECK_MPI (mpiret);
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (p = 0; p < num_peers; ++p) {
     P4EST_ASSERT (recv_request[p] == MPI_REQUEST_NULL);
   }
@@ -3455,7 +3455,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
     SC_CHECK_MPI (mpiret);
   }
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (p = 0; p < num_peers; p++) {
     P4EST_ASSERT (recv_load_request[p] == MPI_REQUEST_NULL);
   }
@@ -3487,7 +3487,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
       q2 = p4est_quadrant_array_index (buf, zz);
       P4EST_ASSERT (p4est_quadrant_is_valid (q2));
       if (p4est_comm_is_owner (p4est, q2->p.which_tree, q2, mpirank)) {
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         ssize_t             idx;
 
         idx = sc_array_bsearch (mirrors, q2, p4est_quadrant_compare_piggy);
@@ -3742,7 +3742,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
   sc_array_copy (mirrors, new_mirrors);
   sc_array_destroy (new_mirrors);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (p = 0; p < mpisize; p++) {
     int                 ghost_count =
       ghost->proc_offsets[p + 1] - ghost->proc_offsets[p];

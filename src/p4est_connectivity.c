@@ -61,6 +61,35 @@ const int           p4est_child_corner_faces[4][4] =
 
 #endif /* !P4_TO_P8 */
 
+int
+p4est_connectivity_face_neighbor_corner_orientation (int c, int f,
+                                                     int nf, int o)
+{
+  int                 fc, nfc;
+#ifdef P4_TO_P8
+  int                 pref, pset;
+#endif
+
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= f && f < P4EST_FACES);
+  P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
+  P4EST_ASSERT (0 <= o && o < P4EST_HALF);
+
+  fc = p4est_corner_face_corners[c][f];
+  P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
+
+#ifndef P4_TO_P8
+  nfc = fc ^ o;
+#else
+  pref = p8est_face_permutation_refs[f][nf];
+  pset = p8est_face_permutation_sets[pref][o];
+  nfc = p8est_face_permutations[pset][fc];
+#endif
+  P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
+
+  return p4est_face_corners[nf][nfc];
+}
+
 size_t
 p4est_connectivity_memory_used (p4est_connectivity_t * conn)
 {
@@ -212,6 +241,136 @@ p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees,
   conn->ctt_offset = P4EST_ALLOC (p4est_topidx_t, num_corners + 1);
   conn->ctt_offset[num_corners] = num_ctt;
 
+  return conn;
+}
+
+p4est_connectivity_t *
+p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
+                          sc_MPI_Comm mpicomm)
+{
+  int                 mpirank, mpiret;
+  p4est_connectivity_t *conn;
+  struct
+  {
+    p4est_topidx_t      num_vertices, num_trees, num_corners, num_ctt;
+    size_t              tree_attr_bytes;
+#ifdef P4_TO_P8
+    p4est_topidx_t      num_edges, num_ett;
+#endif
+  }
+  conn_dimensions;
+
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+  /* fill dims_buffer on root process */
+  if (mpirank == root) {
+    P4EST_ASSERT (conn_in != NULL);
+    memset (&conn_dimensions, -1, sizeof (conn_dimensions));
+    conn = conn_in;
+    conn_dimensions.num_corners = conn->num_corners;
+    conn_dimensions.num_trees = conn->num_trees;
+    conn_dimensions.num_vertices = conn->num_vertices;
+    conn_dimensions.tree_attr_bytes = conn->tree_attr_bytes;
+    conn_dimensions.num_ctt = conn->ctt_offset[conn->num_corners];
+#ifdef P4_TO_P8
+    conn_dimensions.num_edges = conn->num_edges;
+    conn_dimensions.num_ett = conn->ett_offset[conn->num_edges];
+#endif
+  }
+  else {
+    P4EST_ASSERT (conn_in == NULL);
+  }
+  /* broadcast the dimensions to all processes */
+  mpiret = sc_MPI_Bcast (&conn_dimensions, sizeof (conn_dimensions),
+                         sc_MPI_BYTE, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* allocate memory for new connectivity */
+  if (mpirank != root) {
+    conn = p4est_connectivity_new (conn_dimensions.num_vertices,
+                                   conn_dimensions.num_trees,
+#ifdef P4_TO_P8
+                                   conn_dimensions.num_edges,
+                                   conn_dimensions.num_ett,
+#endif
+                                   conn_dimensions.num_corners,
+                                   conn_dimensions.num_ctt);
+    p4est_connectivity_set_attr (conn, conn_dimensions.tree_attr_bytes);
+  }
+
+  /* Broadcast the arrays if not NULL.  If a pointer is NULL on one process
+   * then it is NULL on every process, therefore the if-constructions work */
+  if (conn->num_vertices > 0) {
+    P4EST_ASSERT (conn->vertices != NULL);
+    P4EST_ASSERT (conn->tree_to_vertex != NULL);
+    mpiret = sc_MPI_Bcast (conn->vertices, 3 * conn_dimensions.num_vertices,
+                           sc_MPI_DOUBLE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->tree_to_vertex,
+                           P4EST_CHILDREN * conn_dimensions.num_trees,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  mpiret =
+    sc_MPI_Bcast (conn->tree_to_tree, P4EST_FACES * conn_dimensions.num_trees,
+                  P4EST_MPI_TOPIDX, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  mpiret =
+    sc_MPI_Bcast (conn->tree_to_face, P4EST_FACES * conn_dimensions.num_trees,
+                  sc_MPI_BYTE, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  if (conn->num_corners > 0) {
+    P4EST_ASSERT (conn->tree_to_corner != NULL);
+    P4EST_ASSERT (conn->corner_to_tree != NULL);
+    P4EST_ASSERT (conn->corner_to_corner != NULL);
+    mpiret = sc_MPI_Bcast (conn->tree_to_corner,
+                           P4EST_CHILDREN * conn_dimensions.num_trees,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->corner_to_tree, conn_dimensions.num_ctt,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->corner_to_corner, conn_dimensions.num_ctt,
+                           sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  mpiret = sc_MPI_Bcast (conn->ctt_offset, conn_dimensions.num_corners,
+                         P4EST_MPI_TOPIDX, root, mpicomm);
+  P4EST_ASSERT (conn->ctt_offset[conn->num_corners] ==
+                conn_dimensions.num_ctt);
+  SC_CHECK_MPI (mpiret);
+#ifdef P4_TO_P8
+  if (conn->num_edges > 0) {
+    P4EST_ASSERT (conn->tree_to_edge != NULL);
+    P4EST_ASSERT (conn->edge_to_tree != NULL);
+    P4EST_ASSERT (conn->edge_to_edge != NULL);
+    mpiret = sc_MPI_Bcast (conn->tree_to_edge,
+                           P8EST_EDGES * conn_dimensions.num_trees,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->edge_to_tree, conn_dimensions.num_ett,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->edge_to_edge, conn_dimensions.num_ett,
+                           sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  mpiret = sc_MPI_Bcast (conn->ett_offset, conn_dimensions.num_edges,
+                         P4EST_MPI_TOPIDX, root, mpicomm);
+  P4EST_ASSERT (conn->ett_offset[conn->num_edges] == conn_dimensions.num_ett);
+  SC_CHECK_MPI (mpiret);
+#endif
+
+  if (conn->tree_attr_bytes != 0) {
+    mpiret = sc_MPI_Bcast (conn->tree_to_attr,
+                           conn->tree_attr_bytes * conn->num_trees,
+                           sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   return conn;
 }
 
@@ -2132,7 +2291,7 @@ p4est_expand_face_transform_internal (int iface, int target_face,
 {
 #ifdef P4_TO_P8
   int                 reverse;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 i;
   int                *my_axis = &ftransform[0];
   int                *target_axis = &ftransform[3];
@@ -2160,7 +2319,7 @@ p4est_expand_face_transform_internal (int iface, int target_face,
   ftransform[6 + !reverse] = (orientation >> 1);
   ftransform[8] = 2 * (iface & 1) + (target_face & 1);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < 3; ++i) {
     P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < 3);
     P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < 3);
@@ -2379,7 +2538,7 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
                              p4est_corner_info_t * ci)
 {
   int                 ignored;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              expected_count;
 #endif
   p4est_topidx_t      ntree[P4EST_DIM], corner_trees, acorner, cttac;
@@ -2412,7 +2571,7 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
                                                   cttac,
                                                   conn->corner_to_corner +
                                                   cttac, corner_trees, ntree);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   expected_count = cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
 #ifdef P4_TO_P8
   expected_count += (ntree[2] != -1);
@@ -2449,7 +2608,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   int                 ignored;
   int8_t             *ct;
   size_t              zcount;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              expected_count;
 #endif
   p4est_topidx_t      real_corners, ntree[P4EST_DIM];
@@ -2724,7 +2883,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
     P4EST_ASSERT (ei->trees.elem_count >= 1);
     P4EST_ASSERT (ei->trees.elem_count == ei->edges.elem_count);
     P4EST_ASSERT (-1 <= ei->edgeid && ei->edgeid < conn->num_edges);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
     if (ei->trees.elem_count == 1) {
       /* isolated edge does not count */
       P4EST_ASSERT (ei->edgeid == -1);
@@ -2806,7 +2965,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
         }
         else {
           /* corner is non-redundant */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           expected_count =
             cta->elem_count + 1 + (ntree[0] != -1) + (ntree[1] != -1);
 #ifdef P4_TO_P8
@@ -3257,16 +3416,7 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
       continue;
     }
 
-#ifndef P4_TO_P8
-    nc = p4est_face_corners[nf][o ^ p4est_corner_face_corners[c][f]];
-#else
-    {
-      int                 ref = p8est_face_permutation_refs[f][nf];
-      int                 set = p8est_face_permutation_sets[ref][o];
-
-      nc = p8est_connectivity_face_neighbor_corner (c, f, nf, set);
-    }
-#endif
+    nc = p4est_connectivity_face_neighbor_corner_orientation (c, f, nf, o);
 
     conn->tree_to_corner[P4EST_CHILDREN * nt + nc] = n - 1;
     tc = (p4est_topidx_t *) sc_array_push (corner_to_tc);
@@ -3381,7 +3531,7 @@ p8est_connectivity_store_edge (p4est_connectivity_t * conn, p4est_topidx_t t,
 
     for (j = 0; j < 2; j++) {
       c[j] = p8est_edge_corners[e][j];
-      nc[j] = p8est_connectivity_face_neighbor_corner (c[j], f, nf, set);
+      nc[j] = p8est_connectivity_face_neighbor_corner_set (c[j], f, nf, set);
     }
     diff = SC_MAX (nc[0], nc[1]) - SC_MIN (nc[0], nc[1]);
     switch (diff) {
@@ -3666,7 +3816,7 @@ p4est_connectivity_join_faces (p4est_connectivity_t * conn,
 
     for (j = 0; j < 2; j++) {
       /* get corners of that edge and their numbers seen from face_right */
-      c[j] = p8est_connectivity_face_neighbor_corner
+      c[j] = p8est_connectivity_face_neighbor_corner_set
         (p8est_edge_corners[e_left][j], face_left, face_right, set);
     }
     /* now from the two corners, we can figure out e_right */

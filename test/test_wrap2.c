@@ -45,7 +45,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 changed;
   int                 loop;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   int                 lp = SC_LP_DEFAULT;
 #else
   int                 lp = SC_LP_PRODUCTION;

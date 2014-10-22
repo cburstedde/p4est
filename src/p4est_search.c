@@ -145,7 +145,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
 {
   size_t              count = array->elem_count;
   sc_array_t          view;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   p4est_quadrant_t   *test1, test2;
   p4est_quadrant_t   *cur;
 #endif
@@ -162,7 +162,7 @@ p4est_split_array (sc_array_t * array, int level, size_t indices[])
   }
 
   P4EST_ASSERT (sc_array_is_sorted (array, p4est_quadrant_compare));
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   cur = p4est_quadrant_array_index (array, 0);
   P4EST_ASSERT ((int) cur->level > level);
   test1 = p4est_quadrant_array_index (array, count - 1);
