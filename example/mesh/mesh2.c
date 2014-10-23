@@ -53,7 +53,9 @@ typedef enum
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_PERIODIC,
-  P4EST_CONFIG_ROTWRAP
+  P4EST_CONFIG_ROTWRAP,
+  P4EST_CONFIG_CUBED,
+  P4EST_CONFIG_DISK
 #else
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
@@ -126,6 +128,67 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 
   return 1;
 }
+
+#if 0
+
+static void
+hack_test (mpi_context_t * mpi, p4est_connectivity_t * connectivity)
+{
+  int                 i;
+  int8_t              cc;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lnq, lng, lnc, lnco;
+  p4est_locidx_t      li, qtc;
+  p4est_locidx_t      co0, co1, coi, cq;
+  p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
+  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0,
+                         refine_level, 1, 0, NULL, NULL);
+  p4est_vtk_write_file (p4est, NULL, "mesh_hack");
+
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+
+  lnq = mesh->local_num_quadrants;
+  lng = mesh->ghost_num_quadrants;
+  lnco = lnq + lng;
+  lnc = mesh->local_num_corners;
+  P4EST_LDEBUGF ("Local quads %lld corners %lld array %lld\n",
+                 (long long) lnq, (long long) lnc,
+                 (long long) mesh->corner_offset->elem_count);
+  for (li = 0; li < lnq; ++li) {
+    tt = mesh->quad_to_tree[li];
+    if (tt >= 2) {
+      // break;
+    }
+    for (i = 0; i < P4EST_CHILDREN; ++i) {
+      qtc = mesh->quad_to_corner[P4EST_CHILDREN * li + i];
+      if (qtc >= lnco) {
+        P4EST_LDEBUGF ("Quad %lld tree %lld Corner %d is %lld\n",
+                       (long long) li, (long long) tt, i, (long long) qtc);
+        if (qtc >= lnco) {
+          qtc -= lnco;
+          co0 = *(p4est_locidx_t *) sc_array_index (mesh->corner_offset, qtc);
+          co1 = *(p4est_locidx_t *) sc_array_index (mesh->corner_offset, qtc + 1);
+          for (coi = co0; coi < co1; ++coi) {
+            cq = *(p4est_locidx_t *) sc_array_index (mesh->corner_quad, coi);
+            cc = *(int8_t *) sc_array_index (mesh->corner_corner, coi);
+            P4EST_LDEBUGF ("   Part %d quad %lld corner %d\n",
+                           (int) (coi - co0), (long long) cq, (int) cc);
+          }
+        }
+      }
+    }
+  }
+
+  p4est_mesh_destroy (mesh);
+  p4est_ghost_destroy (ghost);
+  p4est_destroy (p4est);
+}
+
+#endif
 
 static void
 test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
@@ -342,7 +405,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n   Configuration can be any of\n"
 #ifndef P4_TO_P8
-    "      unit|three|moebius|star|periodic|rotwrap\n"
+    "      unit|three|moebius|star|periodic|rotwrap|cubed|disk\n"
 #else
     "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
 #endif
@@ -375,6 +438,12 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "rotwrap")) {
       config = P4EST_CONFIG_ROTWRAP;
+    }
+    else if (!strcmp (argv[1], "cubed")) {
+      config = P4EST_CONFIG_CUBED;
+    }
+    else if (!strcmp (argv[1], "disk")) {
+      config = P4EST_CONFIG_DISK;
     }
 #else
     else if (!strcmp (argv[1], "periodic")) {
@@ -430,6 +499,12 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_ROTWRAP) {
     connectivity = p4est_connectivity_new_rotwrap ();
   }
+  else if (config == P4EST_CONFIG_CUBED) {
+    connectivity = p4est_connectivity_new_cubed ();
+  }
+  else if (config == P4EST_CONFIG_DISK) {
+    connectivity = p4est_connectivity_new_disk ();
+  }
 #else
   else if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
@@ -461,11 +536,16 @@ main (int argc, char **argv)
 #endif
   }
 
+#if 0
+  /* hack test */
+  hack_test (mpi, connectivity);
+#else
   /* run mesh tests */
   mesh_run (mpi, connectivity, 1, 0, 1, P4EST_CONNECT_FULL);
   mesh_run (mpi, connectivity, 0, 1, 0, P4EST_CONNECT_FULL);
   mesh_run (mpi, connectivity, 0, 0, 0, P4EST_CONNECT_FACE);
   mesh_run (mpi, connectivity, 1, 1, 1, P4EST_CONNECT_FACE);
+#endif
 
   /* clean up and exit */
   p4est_connectivity_destroy (connectivity);
