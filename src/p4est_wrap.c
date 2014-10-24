@@ -126,9 +126,8 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->temp_flags = NULL;
   pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
 
-  pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
-  pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1,
-                                 P4EST_CONNECT_FULL);
+  pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+  pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
 
   pp->ghost_aux = NULL;
   pp->mesh_aux = NULL;
@@ -401,12 +400,11 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
     P4EST_FREE (pp->flags);
-    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+    p4est_balance (p4est, pp->btype, NULL);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
-    pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-    pp->mesh_aux = p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1,
-                                       P4EST_CONNECT_FULL);
+    pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);
+    pp->mesh_aux = p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1, pp->btype);
     pp->match_aux = 1;
   }
 #ifdef P4EST_ENABLE_DEBUG
@@ -457,9 +455,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
     P4EST_FREE (pp->flags);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
 
-    pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1,
-                                   P4EST_CONNECT_FULL);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
   }
   else {
     memset (pp->flags, 0, sizeof (uint8_t) * pp->p4est->local_num_quadrants);
