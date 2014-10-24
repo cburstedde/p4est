@@ -1249,12 +1249,12 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *filename)
   fprintf (vtufile, "</VTKFile>\n");
 
   if (ferror (vtufile)) {
-    P4EST_LERROR ("p4est_vtk: Error writing footer\n");
+    P4EST_LERROR (P4EST_STRING "_vtk: Error writing footer\n");
     fclose (vtufile);
     return -1;
   }
   if (fclose (vtufile)) {
-    P4EST_LERROR ("p4est_vtk: Error closing footer\n");
+    P4EST_LERROR (P4EST_STRING "_vtk: Error closing footer\n");
     return -1;
   }
   vtufile = NULL;
@@ -1294,25 +1294,25 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *filename)
 
     /* Close paraview master file */
     if (ferror (pvtufile)) {
-      P4EST_LERROR ("p4est_vtk: Error writing parallel footer\n");
+      P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel footer\n");
       fclose (visitfile);
       fclose (pvtufile);
       return -1;
     }
     if (fclose (pvtufile)) {
       fclose (visitfile);
-      P4EST_LERROR ("p4est_vtk: Error closing parallel footer\n");
+      P4EST_LERROR (P4EST_STRING "_vtk: Error closing parallel footer\n");
       return -1;
     }
 
     /* Close visit master file */
     if (ferror (visitfile)) {
-      P4EST_LERROR ("p4est_vtk: Error writing parallel footer\n");
+      P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel footer\n");
       fclose (visitfile);
       return -1;
     }
     if (fclose (visitfile)) {
-      P4EST_LERROR ("p4est_vtk: Error closing parallel footer\n");
+      P4EST_LERROR (P4EST_STRING "_vtk: Error closing parallel footer\n");
       return -1;
     }
   }
