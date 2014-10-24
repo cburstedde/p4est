@@ -395,6 +395,7 @@
 #define p4est_wrap_new_conn             p8est_wrap_new_conn
 #define p4est_wrap_new_brick            p8est_wrap_new_brick
 #define p4est_wrap_new_world            p8est_wrap_new_world
+#define p4est_wrap_new_ext              p8est_wrap_new_ext
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_get_ghost            p8est_wrap_get_ghost
 #define p4est_wrap_get_mesh             p8est_wrap_get_mesh

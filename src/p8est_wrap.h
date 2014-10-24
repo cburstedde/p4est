@@ -27,7 +27,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-/*** COMPLETE INTERNAL STATE OF P4EST ***/
+/*** COMPLETE INTERNAL STATE OF P8EST ***/
 
 typedef enum p8est_wrap_flags
 {
@@ -47,6 +47,7 @@ typedef struct p8est_wrap
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
+  p8est_connect_type_t btype;
   p8est_connectivity_t *conn;
   p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
@@ -55,7 +56,7 @@ typedef struct p8est_wrap
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
 
-  /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
+  /* for ghost and mesh use p8est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;
   p8est_mesh_t       *mesh;
   p8est_ghost_t      *ghost_aux;
@@ -64,7 +65,9 @@ typedef struct p8est_wrap
 }
 p8est_wrap_t;
 
-/** Create a p4est wrapper from a given connectivity structure.
+/** Create a p8est wrapper from a given connectivity structure.
+ * The ghost and mesh members are initialized as well as the flags.
+ * The btype is set to P8EST_CONNECT_FULL.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -141,7 +144,7 @@ int                 p8est_wrap_adapt (p8est_wrap_t * pp);
  *                  equal weight to all leaves.  Passing 1 increases the
  *                  leaf weight by a factor of two for each level increase.
  *                  CURRENTLY ONLY 0 AND 1 ARE LEGAL VALUES.
- * \return          boolean whether p4est has changed.
+ * \return          boolean whether p8est has changed.
  *                  If true, complete must be called.
  *                  If false, complete must not be called.
  */

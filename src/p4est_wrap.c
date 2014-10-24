@@ -100,6 +100,14 @@ p4est_wrap_t       *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
+  return p4est_wrap_new_ext (mpicomm, conn, initial_level,
+                             0, P4EST_CONNECT_FULL);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
+                    int initial_level, int hollow, p4est_connect_type_t btype)
+{
   p4est_wrap_t       *pp;
 
   pp = P4EST_ALLOC (p4est_wrap_t, 1);
@@ -109,6 +117,7 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
+  pp->btype = btype;
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);

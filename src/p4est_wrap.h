@@ -47,6 +47,7 @@ typedef struct p4est_wrap
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
+  p4est_connect_type_t btype;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
@@ -65,6 +66,8 @@ typedef struct p4est_wrap
 p4est_wrap_t;
 
 /** Create a p4est wrapper from a given connectivity structure.
+ * The ghost and mesh members are initialized as well as the flags.
+ * The btype is set to P4EST_CONNECT_FULL.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
