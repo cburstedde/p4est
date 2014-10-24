@@ -249,6 +249,21 @@ p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
+/** Broadcast a connectivity structure that exists only on one process to all.
+ *  On the other processors, it will be allocated using p4est_connectivity_new.
+ *  \param [in] conn_in For the root process the connectivity to be broadcast,
+ *                      for the other processes it must be NULL.
+ *  \param [in] root    The rank of the process that provides the connectivity.
+ *  \param [in] comm    The MPI communicator.
+ *  \return             For the root process this is a pointer to \a conn_in.
+ *                      Else, a pointer to a newly allocated connectivity
+ *                      structure with the same values as \a conn_in on the
+ *                      root process.
+ */
+p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t *
+                                                conn_in, int root,
+                                                sc_MPI_Comm comm);
+
 /** Destroy a connectivity structure.  Also destroy all attributes.
  */
 void                p4est_connectivity_destroy (p4est_connectivity_t *
