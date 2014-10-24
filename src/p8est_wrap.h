@@ -42,6 +42,10 @@ typedef struct p8est_wrap
   /* this member is never used or changed by p8est_wrap */
   void               *user_pointer;     /**< Convenience member for users */
 
+  /** If true, this wrap has NULL for ghost, mesh, and flag members.
+   * If false, they are properly allocated and kept current internally. */
+  int                 hollow;
+
   /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
@@ -93,21 +97,30 @@ p8est_wrap_t       *p8est_wrap_new_brick (sc_MPI_Comm mpicomm,
 p8est_wrap_t       *p8est_wrap_new_world (int initial_level);
 void                p8est_wrap_destroy (p8est_wrap_t * pp);
 
+/** Change hollow status of the wrap.
+ * It is legal to set to the current hollow status.
+ * \param [in,out] pp   The present wrap structure, hollow or not.
+ * \param [in] hollow   The desired hollow status.
+ */
+void                p8est_wrap_set_hollow (p8est_wrap_t * pp, int hollow);
+
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously
  * after refinement and before partition/complete.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * */
 p8est_ghost_t      *p8est_wrap_get_ghost (p8est_wrap_t * pp);
 
 /** Return the appropriate mesh structure.
  * This function is necessary since two versions may exist simultaneously
  * after refinement and before partition/complete.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * */
 p8est_mesh_t       *p8est_wrap_get_mesh (p8est_wrap_t * pp);
 
 /** Mark a local element for refinement.
  * This will cancel any coarsening mark set previously for this element.
- * \param [in,out] wrap The p8est wrapper to work with.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * \param [in] which_tree The number of the tree this element lives in.
  * \param [in] which_quad The number of this element relative to its tree.
  */
@@ -117,7 +130,7 @@ void                p8est_wrap_mark_refine (p8est_wrap_t * pp,
 
 /** Mark a local element for coarsening.
  * This will cancel any refinement mark set previously for this element.
- * \param [in,out] wrap The p8est wrapper to work with.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * \param [in] which_tree The number of the tree this element lives in.
  * \param [in] which_quad The number of this element relative to its tree.
  */
@@ -129,6 +142,7 @@ void                p8est_wrap_mark_coarsen (p8est_wrap_t * pp,
  * Checks pp->flags as per-quadrant input against p8est_wrap_flags_t.
  * The pp->flags array is updated along with p8est and reset to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * \return          boolean whether p8est has changed.
  *                  If true, partition must be called.
  *                  If false, partition must not be called,
@@ -139,6 +153,7 @@ int                 p8est_wrap_adapt (p8est_wrap_t * pp);
 /** Call p8est_partition for equal leaf distribution.
  * Frees the old ghost and mesh first and updates pp->flags along with p8est.
  * Creates ghost and mesh to represent the new mesh.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * \param [in] weight_exponent      Integer weight assigned to each leaf
  *                  according to 2 ** (level * exponent).  Passing 0 assigns
  *                  equal weight to all leaves.  Passing 1 increases the
@@ -155,6 +170,7 @@ int                 p8est_wrap_partition (p8est_wrap_t * pp,
  * Sets mesh_aux and ghost_aux to NULL.
  * This function must be used if both refinement and partition effect changes.
  * After this call, we are ready for another mark-refine-partition cycle.
+ * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  */
 void                p8est_wrap_complete (p8est_wrap_t * pp);
 

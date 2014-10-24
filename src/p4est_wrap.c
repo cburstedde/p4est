@@ -110,8 +110,9 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
 {
   p4est_wrap_t       *pp;
 
-  pp = P4EST_ALLOC (p4est_wrap_t, 1);
-  pp->user_pointer = NULL;
+  pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
+
+  pp->hollow = hollow;
 
   pp->p4est_dim = P4EST_DIM;
   pp->p4est_half = P4EST_HALF;
@@ -121,17 +122,14 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
-  pp->weight_exponent = 0;
-  pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
-  pp->temp_flags = NULL;
-  pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
 
-  pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-  pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+  pp->weight_exponent = 0;      /* keep this event though using ALLOC_ZERO */
 
-  pp->ghost_aux = NULL;
-  pp->mesh_aux = NULL;
-  pp->match_aux = 0;
+  if (!pp->hollow) {
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+  }
 
   pp->p4est->user_pointer = pp;
 
@@ -268,8 +266,10 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
     p4est_ghost_destroy (pp->ghost_aux);
   }
 
-  p4est_mesh_destroy (pp->mesh);
-  p4est_ghost_destroy (pp->ghost);
+  if (!pp->hollow) {
+    p4est_mesh_destroy (pp->mesh);
+    p4est_ghost_destroy (pp->ghost);
+  }
 
   P4EST_FREE (pp->flags);
   P4EST_FREE (pp->temp_flags);
@@ -280,15 +280,64 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   P4EST_FREE (pp);
 }
 
+void
+p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
+{
+  /* Verify consistency */
+  if (!pp->hollow) {
+    P4EST_ASSERT (pp->flags != NULL);
+    P4EST_ASSERT (pp->ghost != NULL);
+    P4EST_ASSERT (pp->mesh != NULL);
+  }
+  else {
+    P4EST_ASSERT (pp->flags == NULL);
+    P4EST_ASSERT (pp->ghost == NULL);
+    P4EST_ASSERT (pp->mesh == NULL);
+  }
+
+  /* Make sure a full wrap is only set to hollow outside of adaptation cycle */
+  P4EST_ASSERT (!pp->match_aux);
+  P4EST_ASSERT (pp->temp_flags == NULL);
+  P4EST_ASSERT (pp->ghost_aux == NULL);
+  P4EST_ASSERT (pp->mesh_aux == NULL);
+
+  /* Do nothing if the status is right */
+  if (hollow == pp->hollow) {
+    return;
+  }
+
+  if (pp->hollow) {
+    /* Allocate the ghost, mesh, and flag members */
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+  }
+  else {
+    /* Free and nullify the ghost, mesh, and flag members */
+    p4est_mesh_destroy (pp->mesh);
+    p4est_ghost_destroy (pp->ghost);
+    P4EST_FREE (pp->flags);
+    pp->ghost = NULL;
+    pp->mesh = NULL;
+    pp->flags = NULL;
+  }
+  pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
+  pp->hollow = hollow;
+}
+
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (!pp->hollow);
+
   return pp->match_aux ? pp->ghost_aux : pp->ghost;
 }
 
 p4est_mesh_t       *
 p4est_wrap_get_mesh (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (!pp->hollow);
+
   return pp->match_aux ? pp->mesh_aux : pp->mesh;
 }
 
@@ -301,6 +350,7 @@ p4est_wrap_mark_refine (p4est_wrap_t * pp,
   p4est_locidx_t      pos;
   uint8_t             flag;
 
+  P4EST_ASSERT (!pp->hollow);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
@@ -327,6 +377,7 @@ p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
   p4est_locidx_t      pos;
   uint8_t             flag;
 
+  P4EST_ASSERT (!pp->hollow);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
@@ -353,6 +404,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #endif
   p4est_gloidx_t      global_num;
   p4est_t            *p4est = pp->p4est;
+
+  P4EST_ASSERT (!pp->hollow);
 
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
@@ -433,6 +486,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 {
   int                 changed;
 
+  P4EST_ASSERT (!pp->hollow);
+
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
@@ -473,6 +528,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 void
 p4est_wrap_complete (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (!pp->hollow);
+
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
@@ -488,12 +545,6 @@ p4est_wrap_complete (p4est_wrap_t * pp)
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
-#if 0
-#ifdef P4EST_ENABLE_DEBUG
-  int                 nface;
-  p4est_mesh_t       *mesh = p4est_wrap_get_mesh (leaf->pp);
-#endif
-#endif
   p4est_quadrant_t    corner;
 
   leaf->total_quad = leaf->tree->quadrants_offset + leaf->which_quad;
@@ -519,10 +570,6 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 #ifdef P4EST_ENABLE_DEBUG
   printf ("C: Leaf level %d tree %d tree_leaf %d local_leaf %d\n",
           leaf->level, leaf->which_tree, leaf->which_quad, leaf->total_quad);
-  for (nface = 0; nface < P4EST_FACES; ++nface) {
-    printf ("C: Leaf face %d neighbor leaf %d\n", nface,
-            mesh->quad_to_quad[P4EST_FACES * leaf->total_quad + nface]);
-  }
 #endif
 #endif
 
