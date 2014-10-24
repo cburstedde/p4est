@@ -158,8 +158,10 @@ If you have obtained p4est from a git repository, such as via the shell command
    git clone https://github.com/cburstedde/p4est.git
 then the libsc submodule, which resides in the subdirectory sc, must be
 downloaded before configuring and compiling.  This can be accomplished with the
-shell command 'git submodule init; git submodule update'.  After the submodule
-has been obtained, you can install from source as described above in 6.
+shell commands
+   git submodule init; git submodule update
+After the submodule has been obtained, install from source as described above
+in 6.
 
 
  8. Using p4est through the deal.II interface
