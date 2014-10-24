@@ -760,7 +760,11 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
     return 0;
 
   /* check if the end of q is not after the last tree quadrant */
+  /* tree->last_desc is an upper right corner quadrant by construction.
+   * It is ok to compare with q. */ 
+#if 0
   p4est_quadrant_last_descendant (q, &desc, P4EST_QMAXLEVEL);
+#endif
   if (p4est_quadrant_compare (&tree->last_desc, q) < 0)
     return 0;
 
