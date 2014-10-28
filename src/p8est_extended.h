@@ -312,12 +312,17 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
  * \param [in] initial_level  Initial level of uniform refinement.
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in p8est_wrap_adapt.
+ * \param [in] user_pointer   Set the user pointer in p8est_wrap_t.
  * \return                    A fully initialized p4est_wrap structure.
  */
 p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p8est_connectivity_t * conn,
                                         int initial_level, int hollow,
-                                        p8est_connect_type_t btype);
+                                        p8est_connect_type_t btype,
+                                        p8est_replace_t replace_fn,
+                                        void * user_pointer);
 
 SC_EXTERN_C_END;
 

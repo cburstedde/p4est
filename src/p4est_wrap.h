@@ -52,6 +52,7 @@ typedef struct p4est_wrap
   int                 p4est_faces;
   int                 p4est_children;
   p4est_connect_type_t btype;
+  void               *replace_fn;
   p4est_connectivity_t *conn;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
@@ -224,7 +225,7 @@ p4est_wrap_leaf_t;
  * \param [in] track_mirrors    If true, \a pp must not be hollow and mirror
  *                              information from the ghost layer is stored.
  * \return          NULL if processor is empty, otherwise a leaf iterator for
- *                  subsequent use with \a p4est_wrap_leaf_next. 
+ *                  subsequent use with \a p4est_wrap_leaf_next.
  */
 p4est_wrap_leaf_t  *p4est_wrap_leaf_first (p4est_wrap_t * pp,
                                            int track_mirrors);

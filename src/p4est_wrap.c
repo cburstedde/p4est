@@ -59,6 +59,7 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   const p4est_locidx_t new_counter =
     pp->inside_counter - 1 + (P4EST_CHILDREN - 1) * pp->num_replaced++;
   const uint8_t       flag = pp->temp_flags[new_counter];
+  p4est_replace_t     replace_fn = (p4est_replace_t) pp->replace_fn;
   int                 k;
 
   /* this function is only called when refinement actually happens */
@@ -67,6 +68,12 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
 
   for (k = 1; k < P4EST_CHILDREN; ++k) {
     pp->temp_flags[new_counter + k] = flag;
+  }
+
+  /* pass the replaced quadrants to the user provided function */
+  if (replace_fn != NULL) {
+    replace_fn (p4est, which_tree, num_outgoing, outgoing, num_incoming,
+                incoming);
   }
 }
 
@@ -101,12 +108,13 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
   return p4est_wrap_new_ext (mpicomm, conn, initial_level,
-                             0, P4EST_CONNECT_FULL);
+                             0, P4EST_CONNECT_FULL, NULL, NULL);
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
-                    int initial_level, int hollow, p4est_connect_type_t btype)
+                    int initial_level, int hollow, p4est_connect_type_t btype,
+                    p4est_replace_t replace_fn, void *user_pointer)
 {
   p4est_wrap_t       *pp;
 
@@ -119,6 +127,7 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
   pp->btype = btype;
+  pp->replace_fn = replace_fn;
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
@@ -132,6 +141,7 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   }
 
   pp->p4est->user_pointer = pp;
+  pp->user_pointer = user_pointer;
 
   return pp;
 }
@@ -404,6 +414,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #endif
   p4est_gloidx_t      global_num;
   p4est_t            *p4est = pp->p4est;
+  p4est_replace_t     replace_fn = (p4est_replace_t) pp->replace_fn;
 
   P4EST_ASSERT (!pp->hollow);
 
@@ -440,7 +451,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   local_num = p4est->local_num_quadrants;
 #endif
   global_num = p4est->global_num_quadrants;
-  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, NULL);
+  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, replace_fn);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
                 pp->num_replaced * (P4EST_CHILDREN - 1));
@@ -453,7 +464,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
     P4EST_FREE (pp->flags);
-    p4est_balance (p4est, pp->btype, NULL);
+    p4est_balance_ext (p4est, pp->btype, NULL, replace_fn);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
     pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);
