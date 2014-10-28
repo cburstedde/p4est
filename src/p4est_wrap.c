@@ -545,13 +545,18 @@ p4est_wrap_complete (p4est_wrap_t * pp)
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
+  p4est_t            *p4est = leaf->pp->p4est;
+#if 0
   p4est_quadrant_t    corner;
+#endif
+  p4est_quadrant_t   *mirror;
 
-  leaf->total_quad = leaf->tree->quadrants_offset + leaf->which_quad;
-  leaf->quad = p4est_quadrant_array_index (&leaf->tree->quadrants,
-                                           leaf->which_quad);
+  /* complete information on current quadrant */
+  leaf->local_quad = leaf->tree->quadrants_offset + leaf->which_quad;
+  leaf->quad =
+    p4est_quadrant_array_index (leaf->tquadrants, leaf->which_quad);
 
-  leaf->level = (int) leaf->quad->level;
+#if 0
   p4est_qcoord_to_vertex (leaf->pp->conn, leaf->which_tree,
                           leaf->quad->x, leaf->quad->y,
 #ifdef P4_TO_P8
@@ -565,34 +570,77 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
                           corner.z,
 #endif
                           leaf->upperright);
+#endif
 
 #if 0
 #ifdef P4EST_ENABLE_DEBUG
   printf ("C: Leaf level %d tree %d tree_leaf %d local_leaf %d\n",
-          leaf->level, leaf->which_tree, leaf->which_quad, leaf->total_quad);
+          (int) leaf->quad->level, leaf->which_tree, leaf->which_quad,
+          leaf->local_quad);
 #endif
 #endif
+
+  /* track parallel mirror quadrants */
+  if (leaf->mirrors != NULL) {
+    if (leaf->local_quad == leaf->next_mirror_quadrant) {
+      if (++leaf->nm + 1 < (p4est_locidx_t) leaf->mirrors->elem_count) {
+        mirror = p4est_quadrant_array_index (leaf->mirrors, leaf->nm + 1);
+        leaf->next_mirror_quadrant = mirror->p.piggy3.local_num;
+        P4EST_ASSERT (leaf->next_mirror_quadrant > leaf->local_quad);
+        P4EST_ASSERT (leaf->next_mirror_quadrant <
+                      p4est->local_num_quadrants);
+      }
+      else {
+        leaf->next_mirror_quadrant = -1;
+      }
+      leaf->is_mirror = 1;
+    }
+    else {
+      leaf->is_mirror = 0;
+    }
+  }
 
   return leaf;
 }
 
 p4est_wrap_leaf_t  *
-p4est_wrap_leaf_first (p4est_wrap_t * pp)
+p4est_wrap_leaf_first (p4est_wrap_t * pp, int track_mirrors)
 {
-  p4est_wrap_leaf_t  *leaf;
   p4est_t            *p4est = pp->p4est;
+  p4est_wrap_leaf_t  *leaf;
+  p4est_quadrant_t   *mirror;
 
   if (p4est->local_num_quadrants == 0) {
     return NULL;
   }
 
+  /* prepare internal state of the leaf iterator */
   leaf = P4EST_ALLOC (p4est_wrap_leaf_t, 1);
   leaf->pp = pp;
   leaf->which_tree = p4est->first_local_tree;
+  P4EST_ASSERT (leaf->which_tree >= 0);
   leaf->tree = p4est_tree_array_index (p4est->trees, leaf->which_tree);
-  P4EST_ASSERT (leaf->tree->quadrants.elem_size > 0);
+  leaf->tquadrants = &leaf->tree->quadrants;
+  P4EST_ASSERT (leaf->tquadrants->elem_size > 0);
   leaf->which_quad = 0;
 
+  /* initialize mirror tracking if desired */
+  leaf->nm = leaf->next_mirror_quadrant = -1;
+  if (track_mirrors) {
+    leaf->mirrors = &(p4est_wrap_get_ghost (pp))->mirrors;
+    if (leaf->mirrors->elem_count > 0) {
+      mirror = p4est_quadrant_array_index (leaf->mirrors, 0);
+      leaf->next_mirror_quadrant = (int) mirror->p.piggy3.local_num;
+      P4EST_ASSERT (leaf->next_mirror_quadrant >= 0);
+      P4EST_ASSERT (leaf->next_mirror_quadrant < p4est->local_num_quadrants);
+    }
+  }
+  else {
+    leaf->mirrors = NULL;
+    leaf->is_mirror = 0;
+  }
+
+  /* complete leaf and mirror information */
   return p4est_wrap_leaf_info (leaf);
 }
 
@@ -603,14 +651,22 @@ p4est_wrap_leaf_next (p4est_wrap_leaf_t * leaf)
 
   P4EST_ASSERT (leaf != NULL);
 
-  if ((size_t) leaf->which_quad + 1 == leaf->tree->quadrants.elem_count) {
+  if ((size_t) leaf->which_quad + 1 == leaf->tquadrants->elem_count) {
     ++leaf->which_tree;
     if (leaf->which_tree > p4est->last_local_tree) {
+#ifdef P4EST_ENABLE_DEBUG
+      if (leaf->mirrors != NULL) {
+        P4EST_ASSERT (leaf->nm + 1 ==
+                      (p4est_locidx_t) leaf->mirrors->elem_count);
+        P4EST_ASSERT (leaf->next_mirror_quadrant == -1);
+      }
+#endif
       P4EST_FREE (leaf);
       return NULL;
     }
     leaf->tree = p4est_tree_array_index (p4est->trees, leaf->which_tree);
-    P4EST_ASSERT (leaf->tree->quadrants.elem_size > 0);
+    leaf->tquadrants = &leaf->tree->quadrants;
+    P4EST_ASSERT (leaf->tquadrants->elem_size > 0);
     leaf->which_quad = 0;
   }
   else {

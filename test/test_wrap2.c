@@ -78,7 +78,7 @@ main (int argc, char **argv)
 
   for (loop = 0; loop < 3; ++loop) {
     /* mark for refinement */
-    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap); leaf != NULL;
+    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 1); leaf != NULL;
          jl++, leaf = p4est_wrap_leaf_next (leaf)) {
       if (leaf->which_quad % 3 == 0) {
         p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
@@ -92,7 +92,7 @@ main (int argc, char **argv)
 
   for (loop = 0; loop < 2; ++loop) {
     /* mark some elements for coarsening that does not effect anything */
-    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap); leaf != NULL;
+    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 0); leaf != NULL;
          jl++, leaf = p4est_wrap_leaf_next (leaf)) {
       if (leaf->which_quad % 5 == 0) {
         p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
@@ -104,10 +104,10 @@ main (int argc, char **argv)
     changed = wrap_adapt_partition (wrap, 0);
     SC_CHECK_ABORT (!changed, "Wrap noop");
   }
-  
+
   for (loop = 0; loop < 2; ++loop) {
     /* mark for coarsening */
-    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap); leaf != NULL;
+    for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 1); leaf != NULL;
          jl++, leaf = p4est_wrap_leaf_next (leaf)) {
       if ((leaf->which_quad / 13) % 17 != 3) {
         p4est_wrap_mark_coarsen (wrap, leaf->which_tree, leaf->which_quad);

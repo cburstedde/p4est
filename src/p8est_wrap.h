@@ -178,23 +178,40 @@ void                p8est_wrap_complete (p8est_wrap_t * pp);
 
 typedef struct p8est_wrap_leaf
 {
-  p8est_wrap_t       *pp;
+  p8est_wrap_t       *pp;             /**< Must contain a valid ghost */
+
+  /* Information about the current quadrant */
+  p4est_topidx_t      which_tree;     /**< Current tree number */
+  p4est_locidx_t      which_quad;     /**< Quadrant number relative to tree */
+  p4est_locidx_t      local_quad;     /**< Quadrant number relative to proc */
+  p8est_tree_t       *tree;           /**< Current tree */
+  sc_array_t         *tquadrants;     /**< Current tree's quadrants */
+  p8est_quadrant_t   *quad;           /**< Current quadrant */
+#if 0                           /* DEPRECATED -- anyone using them? */
   int                 level;
-  p4est_topidx_t      which_tree;
-  p4est_locidx_t      which_quad;
-  p4est_locidx_t      total_quad;
-  p8est_tree_t       *tree;
-  p8est_quadrant_t   *quad;
   double              lowerleft[3];
   double              upperright[3];
+#endif
+
+  /* Information about parallel neighbors */
+  sc_array_t         *mirrors;        /**< If not NULL, from pp's ghost */
+  int                 is_mirror;      /**< Quadrant at parallel boundary? */
+  p4est_locidx_t      nm;             /**< Internal: mirror counter */
+  p4est_locidx_t      next_mirror_quadrant;     /**< Internal: next */
 }
 p8est_wrap_leaf_t;
 
 /* Create an iterator over the leaves in the forest.
  * Returns a newly allocated state containing the first leaf,
  * or NULL if the local partition of the tree is empty.
+ * \param [in] pp   Legal p4est_wrap structure, hollow or not.
+ * \param [in] track_mirrors    If true, \a pp must not be hollow and mirror
+ *                              information from the ghost layer is stored.
+ * \return          NULL if processor is empty, otherwise a leaf iterator for
+ *                  subsequent use with \a p8est_wrap_leaf_next. 
  */
-p8est_wrap_leaf_t  *p8est_wrap_leaf_first (p8est_wrap_t * pp);
+p8est_wrap_leaf_t  *p8est_wrap_leaf_first (p8est_wrap_t * pp,
+                                           int track_mirrors);
 
 /* Move the forest leaf iterator forward.
  * Returns the state that was input with information for the next leaf,
