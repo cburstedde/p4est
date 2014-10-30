@@ -40,8 +40,8 @@
 #define P4EST_EXTENDED_H
 
 #include <p4est.h>
+#include <p4est_mesh.h>
 #include <p4est_iterate.h>
-#include <p4est_wrap.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -302,25 +302,6 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
-
-/** Create a p4est wrapper from a given connectivity structure.
- * Like p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
- * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
- * \param [in] conn           Connectivity structure.  Wrap takes ownership.
- * \param [in] initial_level  Initial level of uniform refinement.
- * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
- * \param [in] btype          The neighborhood used for balance, ghost, mesh.
- * \param [in] replace_fn     Callback to replace quadrants during refinement,
- *                            coarsening or balancing in p4est_wrap_adapt.
- * \param [in] user_pointer   Set the user pointer in p4est_wrap_t.
- * \return                    A fully initialized p4est_wrap structure.
- */
-p4est_wrap_t       *p4est_wrap_new_ext (sc_MPI_Comm mpicomm,
-                                        p4est_connectivity_t * conn,
-                                        int initial_level, int hollow,
-                                        p4est_connect_type_t btype,
-                                        p4est_replace_t replace_fn,
-                                        void * user_pointer);
 
 SC_EXTERN_C_END;
 

@@ -24,6 +24,7 @@
 #define P8EST_WRAP_H
 
 #include <p8est_mesh.h>
+#include <p8est_extended.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -52,7 +53,7 @@ typedef struct p8est_wrap
   int                 p4est_faces;
   int                 p4est_children;
   p8est_connect_type_t btype;
-  void               *replace_fn;
+  p8est_replace_t     replace_fn;
   p8est_connectivity_t *conn;
   p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
@@ -81,6 +82,25 @@ p8est_wrap_t;
 p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
                                          p8est_connectivity_t * conn,
                                          int initial_level);
+
+/** Create a p8est wrapper from a given connectivity structure.
+ * Like p8est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
+ * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] initial_level  Initial level of uniform refinement.
+ * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
+ * \param [in] btype          The neighborhood used for balance, ghost, mesh.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in p8est_wrap_adapt.
+ * \param [in] user_pointer   Set the user pointer in p8est_wrap_t.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
+                                        p8est_connectivity_t * conn,
+                                        int initial_level, int hollow,
+                                        p8est_connect_type_t btype,
+                                        p8est_replace_t replace_fn,
+                                        void * user_pointer);
 
 /** Create p8est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.

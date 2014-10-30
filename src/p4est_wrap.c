@@ -22,11 +22,9 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
-#include <p4est_extended.h>
 #include <p4est_wrap.h>
 #else
 #include <p8est_bits.h>
-#include <p8est_extended.h>
 #include <p8est_wrap.h>
 #endif
 
@@ -59,7 +57,6 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   const p4est_locidx_t new_counter =
     pp->inside_counter - 1 + (P4EST_CHILDREN - 1) * pp->num_replaced++;
   const uint8_t       flag = pp->temp_flags[new_counter];
-  p4est_replace_t     replace_fn = (p4est_replace_t) pp->replace_fn;
   int                 k;
 
   /* this function is only called when refinement actually happens */
@@ -71,9 +68,9 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   /* pass the replaced quadrants to the user provided function */
-  if (replace_fn != NULL) {
-    replace_fn (p4est, which_tree, num_outgoing, outgoing, num_incoming,
-                incoming);
+  if (pp->replace_fn != NULL) {
+    pp->replace_fn (p4est, which_tree, num_outgoing, outgoing, num_incoming,
+                    incoming);
   }
 }
 
@@ -414,7 +411,6 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #endif
   p4est_gloidx_t      global_num;
   p4est_t            *p4est = pp->p4est;
-  p4est_replace_t     replace_fn = (p4est_replace_t) pp->replace_fn;
 
   P4EST_ASSERT (!pp->hollow);
 
@@ -451,7 +447,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   local_num = p4est->local_num_quadrants;
 #endif
   global_num = p4est->global_num_quadrants;
-  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, replace_fn);
+  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, pp->replace_fn);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
                 pp->num_replaced * (P4EST_CHILDREN - 1));
@@ -464,7 +460,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
     P4EST_FREE (pp->flags);
-    p4est_balance_ext (p4est, pp->btype, NULL, replace_fn);
+    p4est_balance_ext (p4est, pp->btype, NULL, pp->replace_fn);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
     pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);
