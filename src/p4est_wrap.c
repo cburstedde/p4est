@@ -552,7 +552,9 @@ p4est_wrap_complete (p4est_wrap_t * pp)
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
+#ifdef P4EST_ENABLE_DEBUG
   p4est_t            *p4est = leaf->pp->p4est;
+#endif
 #if 0
   p4est_quadrant_t    corner;
 #endif
