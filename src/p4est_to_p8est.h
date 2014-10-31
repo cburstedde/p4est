@@ -23,7 +23,11 @@
 
 /** \file p4est_to_p8est.h
  *
- * transforms 2D \ref p4est routines into 3D \ref p8est routines
+ * Transform 2D \ref p4est routines into 3D \ref p8est routines.  This file can
+ * be included from a .c file that has been written for 2D to turn it into a 3D
+ * code with minor modifications.  We #define P4_TO_P8, which allows to compile
+ * a source file twice, once for 2D without and once for 3D with including this
+ * header, adding extra code for 3D if necessary.
  */
 
 #ifndef P4EST_TO_P8EST_H
@@ -51,6 +55,7 @@
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
+#define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
 
 /* redefine enums */
 #define P4EST_COMM_COUNT_PERTREE        P8EST_COMM_COUNT_PERTREE
@@ -410,4 +415,5 @@
 
 /* functions in p4est_plex */
 #define p4est_get_plex_data             p8est_get_plex_data
+
 #endif /* !P4EST_TO_P8EST_H */

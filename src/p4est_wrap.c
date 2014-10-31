@@ -611,6 +611,8 @@ p4est_wrap_leaf_first (p4est_wrap_t * pp, int track_mirrors)
   p4est_quadrant_t   *mirror;
 
   if (p4est->local_num_quadrants == 0) {
+    P4EST_ASSERT (p4est->first_local_tree == -1);
+    P4EST_ASSERT (p4est->last_local_tree == -2);
     return NULL;
   }
 

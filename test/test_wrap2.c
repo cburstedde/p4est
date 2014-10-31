@@ -50,6 +50,7 @@ main (int argc, char **argv)
 #else
   int                 lp = SC_LP_PRODUCTION;
 #endif
+  p4est_topidx_t      treecount;
   p4est_locidx_t      jl;
   p4est_wrap_leaf_t  *leaf;
   p4est_ghost_t      *ghost;
@@ -92,14 +93,21 @@ main (int argc, char **argv)
 
   for (loop = 0; loop < 2; ++loop) {
     /* mark some elements for coarsening that does not effect anything */
+    treecount = 0;
     for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 0); leaf != NULL;
          jl++, leaf = p4est_wrap_leaf_next (leaf)) {
+      if (P4EST_LEAF_IS_FIRST_IN_TREE (leaf)) {
+        ++treecount;
+      }
       if (leaf->which_quad % 5 == 0) {
         p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
         p4est_wrap_mark_coarsen (wrap, leaf->which_tree, leaf->which_quad);
       }
     }
     SC_CHECK_ABORT (jl == wrap->p4est->local_num_quadrants, "Iterator");
+    /* this test should also be fine with empty processors */
+    SC_CHECK_ABORT (treecount == wrap->p4est->last_local_tree -
+                    wrap->p4est->first_local_tree + 1, "Iterator");
 
     changed = wrap_adapt_partition (wrap, 0);
     SC_CHECK_ABORT (!changed, "Wrap noop");

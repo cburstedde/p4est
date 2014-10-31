@@ -23,6 +23,13 @@
 #ifndef P4EST_WRAP_H
 #define P4EST_WRAP_H
 
+/** \file p4est_wrap.h
+ * The logic in p4est_wrap encapsulates core p4est data structures and provides
+ * functions that clarify the mark-adapt-partition cycle.  There is also an
+ * element iterator that can replace the nested loops over trees and tree
+ * quadrants, respectively, which can help make application code cleaner.
+ */
+
 #include <p4est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
@@ -210,12 +217,15 @@ typedef struct p4est_wrap_leaf
 #endif
 
   /* Information about parallel neighbors */
-  sc_array_t         *mirrors;        /**< If not NULL, from pp's ghost */
   int                 is_mirror;      /**< Quadrant at parallel boundary? */
+  sc_array_t         *mirrors;        /**< If not NULL, from pp's ghost */
   p4est_locidx_t      nm;             /**< Internal: mirror counter */
   p4est_locidx_t      next_mirror_quadrant;     /**< Internal: next */
 }
 p4est_wrap_leaf_t;
+
+/** Determine whether we have just entered a different tree */
+#define P4EST_LEAF_IS_FIRST_IN_TREE(pp) ((leaf)->which_quad == 0)
 
 /* Create an iterator over the leaves in the forest.
  * Returns a newly allocated state containing the first leaf,
