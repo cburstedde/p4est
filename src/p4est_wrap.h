@@ -249,7 +249,7 @@ typedef struct p4est_wrap_leaf
 p4est_wrap_leaf_t;
 
 /** Determine whether we have just entered a different tree */
-#define P4EST_LEAF_IS_FIRST_IN_TREE(pp) ((leaf)->which_quad == 0)
+#define P4EST_LEAF_IS_FIRST_IN_TREE(wleaf) ((wleaf)->which_quad == 0)
 
 /* Create an iterator over the local leaves in the forest.
  * Returns a newly allocated state containing the first leaf,
