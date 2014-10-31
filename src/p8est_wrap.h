@@ -95,11 +95,14 @@ p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
+ *                            No effect if less/equal to zero.
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,
  *                            coarsening or balancing in p8est_wrap_adapt.
+ *                            May be NULL.
  * \param [in] user_pointer   Set the user pointer in p8est_wrap_t.
+ *                            Subsequently, we will never access it.
  * \return                    A fully initialized p4est_wrap structure.
  */
 p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
@@ -232,7 +235,7 @@ p8est_wrap_leaf_t;
 /** Determine whether we have just entered a different tree */
 #define P8EST_LEAF_IS_FIRST_IN_TREE(pp) ((leaf)->which_quad == 0)
 
-/* Create an iterator over the leaves in the forest.
+/* Create an iterator over the local leaves in the forest.
  * Returns a newly allocated state containing the first leaf,
  * or NULL if the local partition of the tree is empty.
  * \param [in] pp   Legal p4est_wrap structure, hollow or not.
@@ -245,8 +248,11 @@ p8est_wrap_leaf_t  *p8est_wrap_leaf_first (p8est_wrap_t * pp,
                                            int track_mirrors);
 
 /* Move the forest leaf iterator forward.
- * Returns the state that was input with information for the next leaf,
- * or NULL and deallocates the input if called with the last leaf.
+ * \param [in,out] leaf     A non-NULL leaf iterator created by
+ *                          \ref p8est_wrap_leaf_first.
+ * \return          The state that was input with updated information for the
+ *                  next leaf, or NULL and deallocates the input if called with
+ *                  the last leaf on this processor.
  */
 p8est_wrap_leaf_t  *p8est_wrap_leaf_next (p8est_wrap_leaf_t * leaf);
 
