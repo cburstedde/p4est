@@ -38,13 +38,14 @@ SC_EXTERN_C_BEGIN;
 
 /** This writes out the p4est in VTK format.
  *
- * This is a convenience function for the special
- * case of writing out the tree id, quadrant level, and MPI rank only.
+ * This is a convenience function for the special case of writing out
+ * the tree id, quadrant level, and MPI rank only.
  * One file is written per MPI rank, and one meta file on rank 0.
  * This function will abort if there is a file error.
  *
  * \param [in] p4est    The p4est to be written.
- * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
+ * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space
+ *                      as defined by p4est->connectivity.
  * \param [in] filename The first part of the file name which will have the
  *                      MPI rank appended to it: The output file will be
  *                      filename_rank.vtu, and the meta file filename.pvtu.
@@ -60,13 +61,14 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  * \param [in] p4est    The p4est to be written.
  * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
  * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
- * \param [in] write_tree  Include the tree id as output field.
- * \param [in] write_level Include the tree levels as output field.
- * \param [in] write_rank  Include the MPI rank as output field.
- * \param [in] wrap_tree   The MPI rank is written module wrap_tree, or 0.
+ * \param [in] write_tree  Include the tree id as cell output field.
+ * \param [in] write_level Include the tree levels as cell output field.
+ * \param [in] write_rank  Include the MPI rank as cell output field.
+ * \param [in] wrap_rank   The MPI rank is written module wrap_tree, or 0.
  * \param [in] num_point_scalars  Number of point scalar fields to write.
  * \param [in] num_point_vectors  Number of point vector fields to write.
- * \param [in] filename           First part of the name, see p4est_vtk_write_file.
+ * \param [in] filename           First part of the name;
+ *                                see p4est_vtk_write_file.
  *
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
  * where the point scalars come first, followed by the point vectors.
@@ -79,7 +81,8 @@ void                p4est_vtk_write_all (p4est_t * p4est,
                                          double scale,
                                          int write_tree, int write_level,
                                          int write_rank, int wrap_rank,
-                                         int num_scalars, int num_vectors,
+                                         int num_point_scalars,
+                                         int num_point_vectors,
                                          const char *filename, ...);
 
 /** This will write the header of the vtu file.
@@ -89,11 +92,11 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  * fields.  The calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header(p4est, geom, 1., "output");
+ * p4est_vtk_write_header (p4est, geom, 1., "output");
  * p4est_vtk_write_point_data (...);
  * p4est_vtk_write_cell_data (...);
  * ...
- * p4est_vtk_write_footer(p4est, "output");
+ * p4est_vtk_write_footer (p4est, "output");
  * \endcode
  *
  * \param p4est     The p4est to be written.
@@ -113,6 +116,9 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
 
 /** This will write custom cell data to the vtu file.
  *
+ * There are options to have this function write
+ * the tree id, quadrant level, or MPI rank without explicit input data.
+ *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of
  * fields.
@@ -131,7 +137,7 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  *                  output file will be filename_rank.vtu).
  *
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
- * where the cell scalars come first, followed by the cell vectors.
+ * where the cell scalar pairs come first, followed by the cell vector pairs.
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
@@ -160,7 +166,7 @@ int                 p4est_vtk_write_cell_data (p4est_t * p4est,
  *                  output file will be filename_rank.vtu).
  *
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
- * where the point scalars come first, followed by the point vectors.
+ * where the point scalar pairs come first, followed by the point vector pairs.
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
@@ -170,7 +176,10 @@ int                 p4est_vtk_write_point_data (p4est_t * p4est,
                                                 const int num_point_vectors,
                                                 const char *filename, ...);
 
-int                 vp4est_vtk_write_point_data (p4est_t * p4est,
+/** TODO: Please document this function and
+ *        add analogous function for cell data.
+ */
+int                 p4est_vtk_write_point_datav (p4est_t * p4est,
                                                  p4est_geometry_t * geom,
                                                  const int num_point_scalars,
                                                  const int num_point_vectors,
@@ -269,8 +278,8 @@ int                 p4est_vtk_write_cell_vector (p4est_t * p4est,
  * calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header(p4est, ..., "output");
- * p4est_vtk_write_footer(p4est, "output");
+ * p4est_vtk_write_header (p4est, ..., "output");
+ * p4est_vtk_write_footer (p4est, "output");
  * \endcode
  *
  * \param p4est     The p4est to be written.

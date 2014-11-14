@@ -102,7 +102,7 @@ p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
   /* Write the point data. */
   va_start (ap, filename);
   retval =
-    vp4est_vtk_write_point_data (p4est, geom, num_point_scalars,
+    p4est_vtk_write_point_datav (p4est, geom, num_point_scalars,
                                  num_point_vectors, filename, ap);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing point data");
   va_end (ap);
@@ -519,7 +519,7 @@ p4est_vtk_write_point_data (p4est_t * p4est, p4est_geometry_t * geom,
   va_list             ap;
   va_start (ap, filename);
   const int           retval =
-    vp4est_vtk_write_point_data (p4est, geom, num_point_scalars,
+    p4est_vtk_write_point_datav (p4est, geom, num_point_scalars,
                                  num_point_vectors, filename, ap);
   va_end (ap);
 
@@ -527,7 +527,7 @@ p4est_vtk_write_point_data (p4est_t * p4est, p4est_geometry_t * geom,
 }
 
 int
-vp4est_vtk_write_point_data (p4est_t * p4est, p4est_geometry_t * geom,
+p4est_vtk_write_point_datav (p4est_t * p4est, p4est_geometry_t * geom,
                              const int num_point_scalars,
                              const int num_point_vectors,
                              const char *filename, va_list ap)
