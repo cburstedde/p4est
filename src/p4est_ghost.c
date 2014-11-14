@@ -2921,7 +2921,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
     }
 
     num_mirrors = (p4est_locidx_t) ghost->mirrors.elem_count;
-    for (il = 0; (size_t) il < num_mirrors; il++) {
+    for (il = 0; il < num_mirrors; il++) {
       p4est_quadrant_t   *q;
 
       q = p4est_quadrant_array_index (&ghost->mirrors, il);
