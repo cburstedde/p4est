@@ -81,8 +81,6 @@ SC_EXTERN_C_BEGIN;
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
  *
- * Intra-tree corners and corners across an inter-tree face are implemented.
- * Other Inter-tree corners are NOT IMPLEMENTED and are assigned the value -2.
  * Corners with no diagonal neighbor at all are assigned the value -1.
  */
 typedef struct

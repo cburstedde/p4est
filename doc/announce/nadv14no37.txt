@@ -1,0 +1,36 @@
+Subject: NA Digest, V. 14, # 37
+
+NA Digest  Thursday, October 23, 2014  Volume 14 : Issue 37
+
+Today's Topics:
+
+	New software release, p4est 1.1
+
+-------------------------------------------------------
+
+From: Carsten Burstedde burstedde@ins.uni-bonn.de
+Date: October 21, 2014
+Subject: New software release, p4est 1.1
+
+We are pleased to announce the release v1.1 of the p4est software.
+p4est is a C library to manage a collection (a forest) of multiple
+connected adaptive quadtrees or octrees in parallel.  p4est offers
+fast absolute-time and low-memory algorithms for a feature-complete
+set of octree-based AMR operations.  p4est has been shown to scale to
+the full size of the Jaguar (2011) and Juqueen (2014) supercomputers
+and is used in several production science applications.  This version
+is considered stable and includes all recent updates.
+
+The software is freely available at www.p4est.org where we also link
+to a howto document, technical papers, and inline source
+documentation.
+
+There is an archived mailing list for discussion of any p4est related
+issues; please see http://librelist.com/browser/p4est/.  Everybody is
+free to subscribe.  We are happy to help and respond to any issues
+that may arise.
+
+Enjoy!  The p4est developers,
+Carsten Burstedde
+Lucas C. Wilcox
+Tobin Isaac

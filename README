@@ -88,15 +88,16 @@ applications.  By querying the ghost layer, the application can associate
 degrees of freedom with the mesh which are the basis for all numerical
 computation.
 
-p?est_nodes: Create a globally unique numbering of the mesh nodes (i.e., the
-vertices at the corners of octants, not to be confused with octree nodes),
-taking into account the classification into ``independent'' and ``hanging''
-nodes.  This function requires previous calls to p?est_balance and p?est_ghost.
-It provides a global numbering for degrees of freedom that can be associated
-with piecewise linear finite elements.
+p?est_lnodes: Create a globally unique numbering of finite element degrees of
+freedom for arbitrary order C0 nodal polynomials, also known as GLL basis.  The
+function takes into account the classification into ``independent'' and
+``hanging'' degrees of freedom.  Numberings for standard piecewise d-linear
+finite elements or lowest-order Raviart-Thomas velocity variables are created
+by calling this function with the parameters degree = 1 and -1, respectively.
+This function requires previous calls to p?est_balance and p?est_ghost.
 
-p?est_lnodes: Like p?est_nodes, but for arbitrary order Lagrangian basis
-functions.  Supersedes p?est_nodes for the piecewise linear special case.
+p?est_nodes: Like p?est_lnodes, but only for piecewise linear finite elements.
+Technically no longer required, but we keep it around for its simplicity.
 
 
  5. Installation from a release tarball
@@ -123,6 +124,13 @@ produces a lot of diagnostic log messages.
 CFLAGS="-Wall -g -O0" is an example of setting flags for a development build
 compiled with the GNU compilers.  p4est is written in plain C and does not
 require FFLAGS or CXXFLAGS.
+
+So, with a gcc style compiler a good debug configure line would be
+  /path/to/configure CFLAGS="-O0 -g -Wall -Wuninitialized" \
+                     --enable-debug --enable-mpi --disable-shared
+and for a production build use for example
+  /path/to/configure CFLAGS="-O2 -Wall -Wno-unused-but-set-variable" \
+                     --enable-mpi
 
 Both in-source and out-of-source builds are supported.  For a one-time
 installation, ./configure can be called in the root directory of the unpacked
@@ -158,8 +166,10 @@ If you have obtained p4est from a git repository, such as via the shell command
    git clone https://github.com/cburstedde/p4est.git
 then the libsc submodule, which resides in the subdirectory sc, must be
 downloaded before configuring and compiling.  This can be accomplished with the
-shell command 'git submodule init; git submodule update'.  After the submodule
-has been obtained, you can install from source as described above in 6.
+shell commands
+   git submodule init; git submodule update
+After the submodule has been obtained, install from source as described above
+in 6.
 
 
  8. Using p4est through the deal.II interface
