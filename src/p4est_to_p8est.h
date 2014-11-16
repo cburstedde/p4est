@@ -110,6 +110,7 @@
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_ghost_t                   p8est_ghost_t
+#define p4est_ghost_exchange_t          p8est_ghost_exchange_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_lnodes_t                  p8est_lnodes_t
@@ -348,7 +349,11 @@
 #define p4est_ghost_new                 p8est_ghost_new
 #define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_ghost_exchange_data       p8est_ghost_exchange_data
+#define p4est_ghost_exchange_data_begin p8est_ghost_exchange_data_begin
+#define p4est_ghost_exchange_data_end   p8est_ghost_exchange_data_end
 #define p4est_ghost_exchange_custom     p8est_ghost_exchange_custom
+#define p4est_ghost_exchange_custom_begin p8est_ghost_exchange_custom_begin
+#define p4est_ghost_exchange_custom_end p8est_ghost_exchange_custom_end
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains

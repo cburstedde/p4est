@@ -2297,6 +2297,14 @@ void
 p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
                            void *ghost_data)
 {
+  p4est_ghost_exchange_data_end (p4est_ghost_exchange_data_begin
+                                 (p4est, ghost, ghost_data));
+}
+
+p4est_ghost_exchange_t *
+p4est_ghost_exchange_data_begin (p4est_t * p4est, p4est_ghost_t * ghost,
+                                 void *ghost_data)
+{
   size_t              zz;
   size_t              data_size;
 #ifdef P4EST_ENABLE_DEBUG
@@ -2306,8 +2314,10 @@ p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      which_quad;
   p4est_quadrant_t   *mirror, *q;
   p4est_tree_t       *tree;
+  p4est_ghost_exchange_t *exc;
   void              **mirror_data;
 
+  /* allocate temporary storage */
   mirror_data = P4EST_ALLOC (void *, ghost->mirrors.elem_count);
 
   data_size = p4est->data_size == 0 ? sizeof (void *) : p4est->data_size;
@@ -2332,9 +2342,28 @@ p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost,
       p4est->data_size == 0 ? &q->p.user_data : q->p.user_data;
   }
 
-  p4est_ghost_exchange_custom (p4est, ghost, data_size,
-                               mirror_data, ghost_data);
+  /* delegate the rest of the work */
+  exc = p4est_ghost_exchange_custom_begin (p4est, ghost, data_size,
+                                           mirror_data, ghost_data);
+  P4EST_ASSERT (exc->is_custom);
+  exc->is_custom = 0;
+
+  /* the mirror_data is copied before sending so it can be freed */
   P4EST_FREE (mirror_data);
+
+  /* return message buffers */
+  return exc;
+}
+
+void
+p4est_ghost_exchange_data_end (p4est_ghost_exchange_t * exc)
+{
+  /* don't confuse this function with p4est_ghost_exchage_custom_end */
+  P4EST_ASSERT (!exc->is_custom);
+
+  /* delegate the rest of the work, including freeing the context */
+  exc->is_custom = 1;
+  p4est_ghost_exchange_custom_end (exc);
 }
 
 void
@@ -2342,21 +2371,40 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
                              size_t data_size,
                              void **mirror_data, void *ghost_data)
 {
+  p4est_ghost_exchange_custom_end (p4est_ghost_exchange_custom_begin
+                                   (p4est, ghost, data_size,
+                                    mirror_data, ghost_data));
+}
+
+p4est_ghost_exchange_t *
+p4est_ghost_exchange_custom_begin (p4est_t * p4est, p4est_ghost_t * ghost,
+                                   size_t data_size,
+                                   void **mirror_data, void *ghost_data)
+{
   const int           num_procs = p4est->mpisize;
   int                 mpiret;
   int                 q;
   char               *mem, **sbuf;
-  size_t              zz;
-  sc_array_t          requests, sbuffers;
   p4est_locidx_t      ng_excl, ng_incl, ng, theg;
   p4est_locidx_t      mirr;
+  p4est_ghost_exchange_t *exc;
   sc_MPI_Request     *r;
 
+  /* initialize transient storage */
+  exc = P4EST_ALLOC (p4est_ghost_exchange_t, 1);
+  exc->is_custom = 1;
+  exc->p4est = p4est;
+  exc->ghost = ghost;
+  exc->minlevel = 0;
+  exc->maxlevel = P4EST_QMAXLEVEL;
+  exc->data_size = data_size;
+  sc_array_init (&exc->requests, sizeof (sc_MPI_Request));
+  sc_array_init (&exc->sbuffers, sizeof (char *));
+
+  /* return early if there is nothing to do */
   if (data_size == 0) {
-    return;
+    return exc;
   }
-  sc_array_init (&requests, sizeof (sc_MPI_Request));
-  sc_array_init (&sbuffers, sizeof (char *));
 
   /* receive data from other processors */
   ng_excl = 0;
@@ -2365,7 +2413,7 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
     ng = ng_incl - ng_excl;
     P4EST_ASSERT (ng >= 0);
     if (ng > 0) {
-      r = (sc_MPI_Request *) sc_array_push (&requests);
+      r = (sc_MPI_Request *) sc_array_push (&exc->requests);
       mpiret = sc_MPI_Irecv ((char *) ghost_data + ng_excl * data_size,
                              ng * data_size, sc_MPI_BYTE, q,
                              P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
@@ -2383,7 +2431,7 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT (ng >= 0);
     if (ng > 0) {
       /* every peer populates its own send buffer */
-      sbuf = (char **) sc_array_push (&sbuffers);
+      sbuf = (char **) sc_array_push (&exc->sbuffers);
       mem = *sbuf = P4EST_ALLOC (char, ng * data_size);
       for (theg = 0; theg < ng; ++theg) {
         mirr = ghost->mirror_proc_mirrors[ng_excl + theg];
@@ -2391,7 +2439,7 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
         memcpy (mem, mirror_data[mirr], data_size);
         mem += data_size;
       }
-      r = (sc_MPI_Request *) sc_array_push (&requests);
+      r = (sc_MPI_Request *) sc_array_push (&exc->requests);
       mpiret = sc_MPI_Isend (*sbuf, ng * data_size, sc_MPI_BYTE, q,
                              P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
       SC_CHECK_MPI (mpiret);
@@ -2399,16 +2447,33 @@ p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost,
     }
   }
 
-  /* wait and clean up */
-  mpiret = sc_MPI_Waitall (requests.elem_count, (sc_MPI_Request *)
-                           requests.array, sc_MPI_STATUSES_IGNORE);
+  /* we are done posting the messages */
+  return exc;
+}
+
+void
+p4est_ghost_exchange_custom_end (p4est_ghost_exchange_t * exc)
+{
+  int                 mpiret;
+  size_t              zz;
+  char              **sbuf;
+
+  /* don't confuse this function with p4est_ghost_exchage_data_end */
+  P4EST_ASSERT (exc->is_custom);
+
+  /* wait for messages to complete and clean up */
+  mpiret = sc_MPI_Waitall (exc->requests.elem_count, (sc_MPI_Request *)
+                           exc->requests.array, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
-  sc_array_reset (&requests);
-  for (zz = 0; zz < sbuffers.elem_count; ++zz) {
-    sbuf = (char **) sc_array_index (&sbuffers, zz);
+  sc_array_reset (&exc->requests);
+  for (zz = 0; zz < exc->sbuffers.elem_count; ++zz) {
+    sbuf = (char **) sc_array_index (&exc->sbuffers, zz);
     P4EST_FREE (*sbuf);
   }
-  sc_array_reset (&sbuffers);
+  sc_array_reset (&exc->sbuffers);
+
+  /* free the store */
+  P4EST_FREE (exc);
 }
 
 void
