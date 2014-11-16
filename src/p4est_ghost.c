@@ -2346,6 +2346,7 @@ p4est_ghost_exchange_data_begin (p4est_t * p4est, p4est_ghost_t * ghost,
   exc = p4est_ghost_exchange_custom_begin (p4est, ghost, data_size,
                                            mirror_data, ghost_data);
   P4EST_ASSERT (exc->is_custom);
+  P4EST_ASSERT (!exc->is_levels);
   exc->is_custom = 0;
 
   /* the mirror_data is copied before sending so it can be freed */
@@ -2358,8 +2359,9 @@ p4est_ghost_exchange_data_begin (p4est_t * p4est, p4est_ghost_t * ghost,
 void
 p4est_ghost_exchange_data_end (p4est_ghost_exchange_t * exc)
 {
-  /* don't confuse this function with p4est_ghost_exchage_custom_end */
+  /* don't confuse this function with p4est_ghost_exchange_custom_end */
   P4EST_ASSERT (!exc->is_custom);
+  P4EST_ASSERT (!exc->is_levels);
 
   /* delegate the rest of the work, including freeing the context */
   exc->is_custom = 1;
@@ -2391,7 +2393,7 @@ p4est_ghost_exchange_custom_begin (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_MPI_Request     *r;
 
   /* initialize transient storage */
-  exc = P4EST_ALLOC (p4est_ghost_exchange_t, 1);
+  exc = P4EST_ALLOC_ZERO (p4est_ghost_exchange_t, 1);
   exc->is_custom = 1;
   exc->p4est = p4est;
   exc->ghost = ghost;
@@ -2458,8 +2460,11 @@ p4est_ghost_exchange_custom_end (p4est_ghost_exchange_t * exc)
   size_t              zz;
   char              **sbuf;
 
-  /* don't confuse this function with p4est_ghost_exchage_data_end */
+  /* don't confuse this function with p4est_ghost_exchange_data_end */
   P4EST_ASSERT (exc->is_custom);
+
+  /* don't confuse it with p4est_ghost_exchange_custom_levels_end either */
+  P4EST_ASSERT (!exc->is_levels);
 
   /* wait for messages to complete and clean up */
   mpiret = sc_MPI_Waitall (exc->requests.elem_count, (sc_MPI_Request *)

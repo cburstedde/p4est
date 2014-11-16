@@ -254,11 +254,14 @@ void                p8est_ghost_exchange_data (p8est_t * p4est,
 typedef struct p8est_ghost_exchange
 {
   int                 is_custom;
+  int                 is_levels;
   p8est_t            *p4est;
   p8est_ghost_t      *ghost;
   int                 minlevel, maxlevel;
   size_t              data_size;
+  int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
+  sc_array_t          rrequests, rbuffers;
 }
 p8est_ghost_exchange_t;
 
