@@ -2637,8 +2637,10 @@ void
 p4est_ghost_exchange_custom_levels_end (p4est_ghost_exchange_t * exc)
 {
   p4est_ghost_t      *ghost = exc->ghost;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_t            *p4est = exc->p4est;
   const int           num_procs = p4est->mpisize;
+#endif
   const int           minlevel = exc->minlevel;
   const int           maxlevel = exc->maxlevel;
   const size_t        data_size = exc->data_size;
