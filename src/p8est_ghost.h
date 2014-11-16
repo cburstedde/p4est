@@ -88,8 +88,8 @@ p8est_ghost_t;
  * \param [in] ghost    Ghost layer structure.
  * \return true if \a ghost is valid
  */
-int                 p8est_ghost_is_valid (p8est_t * p8est, p8est_ghost_t *ghost);
-
+int                 p8est_ghost_is_valid (p8est_t * p8est,
+                                          p8est_ghost_t * ghost);
 
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.

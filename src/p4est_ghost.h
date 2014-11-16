@@ -89,7 +89,8 @@ p4est_ghost_t;
  * \param [in] ghost    Ghost layer structure.
  * \return true if \a ghost is valid
  */
-int                 p4est_ghost_is_valid (p4est_t *p4est, p4est_ghost_t * ghost);
+int                 p4est_ghost_is_valid (p4est_t * p4est,
+                                          p4est_ghost_t * ghost);
 
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.
@@ -298,7 +299,6 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
  */
 void                p4est_ghost_expand (p4est_t * p4est,
                                         p4est_ghost_t * ghost);
-
 
 SC_EXTERN_C_END;
 
