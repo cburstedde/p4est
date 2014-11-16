@@ -260,6 +260,7 @@ typedef struct p4est_ghost_exchange
   p4est_ghost_t      *ghost;
   int                 minlevel, maxlevel;       /**< Meaningful with is_levels */
   size_t              data_size;
+  void               *ghost_data;       /**< Only used with is_levels */
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;
@@ -347,6 +348,29 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
                                                         size_t data_size,
                                                         void **mirror_data,
                                                         void *ghost_data);
+
+/** Begin an asynchronous ghost data exchange by posting messages.
+ * The arguments are identical to p4est_ghost_exchange_custom_levels.
+ * The return type is always non-NULL and must be passed to
+ * p4est_ghost_exchange_custom_levels_end to complete the exchange.
+ * The ghost data must not be accessed before completion.
+ * The mirror data can be safely discarded right after this function returns
+ * since it is copied into internal send buffers.
+ * \param [in]      mirror_data Not required to stay alive any longer.
+ * \param [in,out]  ghost_data  Must stay alive into the completion call.
+ * \return          Transient storage for messages in progress.
+ */
+p4est_ghost_exchange_t *p4est_ghost_exchange_custom_levels_begin
+  (p4est_t * p4est, p4est_ghost_t * ghost, int minlevel, int maxlevel,
+   size_t data_size, void **mirror_data, void *ghost_data);
+
+/** Complete an asynchronous ghost data exchange.
+ * This function waits for all pending MPI communications.
+ * \param [in,out]  Data created ONLY by p4est_ghost_exchange_custom_levels_begin.
+ *                  It is deallocated before this function returns.
+ */
+void                p4est_ghost_exchange_custom_levels_end
+  (p4est_ghost_exchange_t * exc);
 
 /** Expand the size of the ghost layer and mirrors by one additional layer of
  * adjacency.

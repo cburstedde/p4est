@@ -259,6 +259,7 @@ typedef struct p8est_ghost_exchange
   p8est_ghost_t      *ghost;
   int                 minlevel, maxlevel;
   size_t              data_size;
+  void               *ghost_data;       /**< Only used with is_levels */
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;
@@ -332,7 +333,7 @@ void                p8est_ghost_exchange_custom_end
  * \param [in] minlevel         Level of the largest quads to be exchanged.
  *                              Use <= 0 for no restriction.
  * \param [in] maxlevel         Level of the smallest quads to be exchanged.
- *                              Use >= P4EST_QMAXLEVEL for no restriction.
+ *                              Use >= P8EST_QMAXLEVEL for no restriction.
  * \param [in] data_size        The data size to transfer per quadrant.
  * \param [in] mirror_data      One data pointer per mirror quadrant as input. 
  * \param [in,out] ghost_data   Pre-allocated contiguous data for all ghosts
@@ -346,6 +347,29 @@ void                p8est_ghost_exchange_custom_levels (p8est_t * p8est,
                                                         size_t data_size,
                                                         void **mirror_data,
                                                         void *ghost_data);
+
+/** Begin an asynchronous ghost data exchange by posting messages.
+ * The arguments are identical to p8est_ghost_exchange_custom_levels.
+ * The return type is always non-NULL and must be passed to
+ * p8est_ghost_exchange_custom_levels_end to complete the exchange.
+ * The ghost data must not be accessed before completion.
+ * The mirror data can be safely discarded right after this function returns
+ * since it is copied into internal send buffers.
+ * \param [in]      mirror_data Not required to stay alive any longer.
+ * \param [in,out]  ghost_data  Must stay alive into the completion call.
+ * \return          Transient storage for messages in progress.
+ */
+p8est_ghost_exchange_t *p8est_ghost_exchange_custom_levels_begin
+  (p8est_t * p4est, p8est_ghost_t * ghost, int minlevel, int maxlevel,
+   size_t data_size, void **mirror_data, void *ghost_data);
+
+/** Complete an asynchronous ghost data exchange.
+ * This function waits for all pending MPI communications.
+ * \param [in,out]  Data created ONLY by p8est_ghost_exchange_custom_levels_begin.
+ *                  It is deallocated before this function returns.
+ */
+void                p8est_ghost_exchange_custom_levels_end
+  (p8est_ghost_exchange_t * exc);
 
 /** Expand the size of the ghost layer and mirrors by one additional layer of
  * adjacency.

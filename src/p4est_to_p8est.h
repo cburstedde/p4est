@@ -355,6 +355,10 @@
 #define p4est_ghost_exchange_custom_begin p8est_ghost_exchange_custom_begin
 #define p4est_ghost_exchange_custom_end p8est_ghost_exchange_custom_end
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
+#define p4est_ghost_exchange_custom_levels_begin \
+                                        p8est_ghost_exchange_custom_levels_begin
+#define p4est_ghost_exchange_custom_levels_end \
+                                        p8est_ghost_exchange_custom_levels_end
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
 #define p4est_ghost_is_valid            p8est_ghost_is_valid
