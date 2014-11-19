@@ -260,7 +260,7 @@ typedef struct p4est_ghost_exchange
   p4est_ghost_t      *ghost;
   int                 minlevel, maxlevel;       /**< Meaningful with is_levels */
   size_t              data_size;
-  void               *ghost_data;       /**< Only used with is_levels */
+  void               *ghost_data;
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;

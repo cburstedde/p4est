@@ -253,13 +253,13 @@ void                p8est_ghost_exchange_data (p8est_t * p4est,
 /** Transient storage for asynchronous ghost exchange. */
 typedef struct p8est_ghost_exchange
 {
-  int                 is_custom;
-  int                 is_levels;
+  int                 is_custom;        /**< False for p4est_ghost_exchange_data */
+  int                 is_levels;        /**< Are we restricted to levels or not */
   p8est_t            *p4est;
   p8est_ghost_t      *ghost;
-  int                 minlevel, maxlevel;
+  int                 minlevel, maxlevel;       /**< Meaningful with is_levels */
   size_t              data_size;
-  void               *ghost_data;       /**< Only used with is_levels */
+  void               *ghost_data;
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;

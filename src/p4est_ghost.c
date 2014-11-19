@@ -2400,6 +2400,7 @@ p4est_ghost_exchange_custom_begin (p4est_t * p4est, p4est_ghost_t * ghost,
   exc->minlevel = 0;
   exc->maxlevel = P4EST_QMAXLEVEL;
   exc->data_size = data_size;
+  exc->ghost_data = ghost_data;
   sc_array_init (&exc->requests, sizeof (sc_MPI_Request));
   sc_array_init (&exc->sbuffers, sizeof (char *));
 
