@@ -87,6 +87,70 @@ typedef struct test_exchange
 }
 test_exchange_t;
 
+static p4est_ghost_exchange_t *
+test_exchange_begin (p4est_t * p4est, p4est_ghost_t * ghost)
+{
+  size_t              zz;
+  p4est_topidx_t      nt;
+  p4est_gloidx_t      gnum;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *q;
+  void              **ghost_void_data;
+
+  /* Test begin/end: p4est data size is 0, transfer what's in the user_data void* */
+
+  p4est_reset_data (p4est, 0, NULL, NULL);
+  gnum = p4est->global_first_quadrant[p4est->mpirank];
+  for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
+    tree = p4est_tree_array_index (p4est->trees, nt);
+    for (zz = 0; zz < tree->quadrants.elem_count; ++gnum, ++zz) {
+      q = p4est_quadrant_array_index (&tree->quadrants, zz);
+      q->p.user_long = (long) (3 * gnum + 17);
+    }
+  }
+  P4EST_ASSERT (gnum == p4est->global_first_quadrant[p4est->mpirank + 1]);
+
+  /* allocate data to receive the messages */
+  ghost_void_data = P4EST_ALLOC (void *, ghost->ghosts.elem_count);
+
+  /* the ghost data are safely packed into the return type */
+  return p4est_ghost_exchange_data_begin (p4est, ghost, ghost_void_data);
+}
+
+static void
+test_exchange_end (p4est_ghost_exchange_t * exc)
+{
+  void              **ghost_void_data = (void **) exc->ghost_data;
+  p4est_t            *p4est = exc->p4est;
+  p4est_ghost_t      *ghost = exc->ghost;
+  int                 p;
+  p4est_locidx_t      gexcl, gincl, gl;
+  p4est_gloidx_t      gnum;
+  p4est_quadrant_t   *q;
+  
+  /* free this structure on the inside */
+  p4est_ghost_exchange_data_end (exc);
+
+  /* verify results of ghost exchange */
+  gexcl = 0;
+  for (p = 0; p < p4est->mpisize; ++p) {
+    gincl = ghost->proc_offsets[p + 1];
+    gnum = p4est->global_first_quadrant[p];
+#ifdef P4EST_TEST_CHATTY
+    P4EST_LDEBUGF ("In test begin/end for %d with %d %d\n", p, gexcl, gincl);
+#endif
+    for (gl = gexcl; gl < gincl; ++gl) {
+      q = p4est_quadrant_array_index (&ghost->ghosts, gl);
+      SC_CHECK_ABORT (3 * (gnum + (p4est_gloidx_t) q->p.piggy3.local_num) + 17
+                      == (p4est_gloidx_t) ghost_void_data[gl],
+                      "Ghost exchange mismatch begin/end");
+    }
+    gexcl = gincl;
+  }
+  P4EST_ASSERT (gexcl == (p4est_locidx_t) ghost->ghosts.elem_count);
+  P4EST_FREE (ghost_void_data);
+}
+
 static void
 test_exchange_A (p4est_t * p4est, p4est_ghost_t * ghost)
 {
@@ -317,6 +381,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   p4est_ghost_t      *ghost;
+  p4est_ghost_exchange_t * exc;
   int                 num_cycles = 2;
   int                 i;
   p4est_lnodes_t     *lnodes;
@@ -383,10 +448,12 @@ main (int argc, char **argv)
     /* expand and test that the ghost layer can still exchange data properly
      * */
     p4est_ghost_expand_by_lnodes (p4est, lnodes, ghost);
+    exc = test_exchange_begin (p4est, ghost);
     test_exchange_A (p4est, ghost);
     test_exchange_B (p4est, ghost);
     test_exchange_C (p4est, ghost);
     test_exchange_D (p4est, ghost);
+    test_exchange_end (exc);
   }
 
   /* clean up */
