@@ -66,6 +66,18 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
 
 #endif /* P4EST_VTK_BINARY */
 
+#ifndef P4_TO_P8                /* hack for now */
+
+struct p4est_vtk_context
+{
+  /* TODO: Add members as needed */
+  p4est_t            *p4est;
+  p4est_geometry_t   *geom;
+  FILE               *vtu, *pvtu, *visit;
+};
+
+#endif
+
 void
 p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
                       const char *filename)
@@ -110,6 +122,25 @@ p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
   retval = p4est_vtk_write_footer (p4est, filename);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 }
+
+#ifndef P4_TO_P8                /* hack for now */
+
+p4est_vtk_context_t *
+p4est_vtk_write_header_next (p4est_t * p4est,
+                             p4est_geometry_t * geom,
+                             double scale, const char *filename)
+{
+  p4est_vtk_context_t *cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
+
+  cont->p4est = p4est;
+  cont->geom = geom;
+
+  /* work but don't close files */
+
+  return cont;
+}
+
+#endif
 
 int
 p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,

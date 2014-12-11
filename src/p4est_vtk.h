@@ -58,6 +58,8 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  *
  * This is a convenience function that will abort if there is a file error.
  *
+ * TODO: This function shall be removed.
+ *
  * \param [in] p4est    The p4est to be written.
  * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
  * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
@@ -114,6 +116,23 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
                                             double scale,
                                             const char *filename);
 
+/** Opaque context type for writing VTK output with multiple function calls. */
+typedef struct p4est_vtk_context p4est_vtk_context_t;
+
+/** This shall replace p4est_vtk_write_header.
+ * \return          On success, an opaque context pointer that must be passed
+ *                  to subsequent p4est_vtk calls.  It is required to call
+ *                  p4est_vtk_write_footer_next eventually with this value.
+ *                  Returns NULL on error.
+ *
+ * TODO: Make sure that all files are closed and internall buffers freed on error,
+ *       also in the other functions in this file.
+ */
+p4est_vtk_context_t *p4est_vtk_write_header_next (p4est_t * p4est,
+                                                  p4est_geometry_t * geom,
+                                                  double scale,
+                                                  const char *filename);
+
 /** This will write custom cell data to the vtu file.
  *
  * There are options to have this function write
@@ -139,6 +158,8 @@ int                 p4est_vtk_write_header (p4est_t * p4est,
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
  * where the cell scalar pairs come first, followed by the cell vector pairs.
  *
+ * TODO: each field shall be an sc_array_t * holding double variables.
+ *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p4est_vtk_write_cell_data (p4est_t * p4est,
@@ -150,6 +171,32 @@ int                 p4est_vtk_write_cell_data (p4est_t * p4est,
                                                const int num_cell_scalars,
                                                const int num_cell_vectors,
                                                const char *filename, ...);
+
+/** Write VTK cell data.
+ *
+ * TODO: This function shall replace p4est_vtk_write_cell_data.
+ * TODO: Each field shall be an sc_array_t * holding double variables.
+ *       Their number must be exactly <PUT CORRECT NUMBER HERE>.
+ * TODO: For safety reasons, there must be a final parameter holding the context
+ *       after the list of pairs.
+ * TODO: The int parameters need not be const.  Only pointers should be.
+ *
+ * \param [in,out] cont         A context created by p4est_
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p4est_vtk_context_t *p4est_vtk_write_cell_data_next (p4est_vtk_context_t *
+                                                     cont, int foo_bar_etc,
+                                                     ...);
+
+/** TODO: This is an alternate version of the varargs function above.
+ * Works exactly the same otherwise.
+ * TODO: not sure about this one yet, let's wait and think it over again soon.
+ */
+p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
+                                                 int foo_bar_etc,
+                                                 const char *filenames[],
+                                                 const sc_array_t * scalars[]);
 
 /** This will write custom point data to the vtu file.
  *
@@ -291,6 +338,12 @@ int                 p4est_vtk_write_cell_vector (p4est_t * p4est,
  */
 int                 p4est_vtk_write_footer (p4est_t * p4est,
                                             const char *filename);
+
+/** This shall replace p4est_vtk_write_footer.
+ * \param [in,out] cont       Context is deallocated before the function returns.
+ * \return          This returns 0 if no error and -1 if there is an error.
+ */
+int                 p4est_vtk_write_footer_next (p4est_vtk_context_t * cont);
 
 SC_EXTERN_C_END;
 
