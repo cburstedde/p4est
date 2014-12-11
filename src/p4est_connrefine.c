@@ -29,6 +29,32 @@
 #include <p8est_bits.h>
 #endif
 
+static void
+trilinear_interp (double (*v)[3], double eta[3], double xyz[3])
+{
+  int                 i;
+
+  for (i = 0; i < 3; i++) {
+    xyz[i] = (1. - eta[2]) * ((1. - eta[1]) * ((1. - eta[0]) * v[0][i]
+                                               + eta[0] * v[1][i]
+                              )
+                              + eta[1] * ((1. - eta[0]) * v[2][i]
+                                          + eta[0] * v[3][i]
+                              )
+      )
+#ifdef P4_TO_P8
+      + eta[2] * ((1. - eta[1]) * ((1. - eta[0]) * v[4][i]
+                                   + eta[0] * v[5][i]
+                  )
+                  + eta[1] * ((1. - eta[0]) * v[6][i]
+                              + eta[0] * v[7][i]
+                  )
+      )
+#endif
+      ;
+  }
+}
+
 p4est_connectivity_t *
 p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
 {
@@ -65,12 +91,32 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
 #endif
                                      0, 0);
 
+  for (ti = 0; ti < num_new_trees; ti++) {
+    for (j = 0; j < P4EST_FACES; j++) {
+      conn_out->tree_to_tree[P4EST_FACES * ti + j] = ti;
+      conn_out->tree_to_face[P4EST_FACES * ti + j] = j;
+    }
+  }
   for (count = 0, ti = 0; ti < num_old_trees; ti++) {
+    double              v[P4EST_CHILDREN][3];
+
+    for (j = 0; j < P4EST_CHILDREN; j++) {
+      int                 k;
+
+      for (k = 0; k < 3; k++) {
+        v[j][k] =
+          conn_in->vertices[3 *
+                            conn_in->tree_to_vertex[P4EST_CHILDREN * ti + j] +
+                            k];
+      }
+    }
     for (j = 0; j < M; j++) {
       p4est_quadrant_t    dummy;
       uint64_t            R = j;
       int                 x[P4EST_DIM], k;
       int                 id, pow;
+      double              xyz[3];
+      p4est_topidx_t      thisvert;
 
       p4est_quadrant_set_morton (&dummy, ceillog, R);
 
@@ -81,27 +127,40 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
 #endif
       for (k = 0; k < P4EST_DIM; k++) {
         if (x[k] >= num_per_edge) {
-          continue;
+          break;
         }
+      }
+      if (k < P4EST_DIM) {
+        continue;
       }
 
       id = 0;
       pow = 1;
       for (k = 0; k < P4EST_DIM; k++) {
         id += x[k] * pow;
-        pow *= num_per_edge;
+        pow *= (num_per_edge + 1);
       }
 
       for (k = 0; k < P4EST_CHILDREN; k++) {
         int                 thisid = id, l;
+        double              eta[3] = { 0. };
 
         pow = 1;
         for (l = 0; l < P4EST_DIM; l++) {
-          thisid += pow * ! !(k & (1 << l));
-          pow *= num_per_edge;
+          int                 thisx = x[l];
+          int                 thisincr = (! !(k & 1 << l));
+
+          thisid += pow * thisincr;
+          pow *= (num_per_edge + 1);
+          eta[l] = ((double) (thisx + thisincr)) / ((double) num_per_edge);
         }
-        conn_out->tree_to_vertex[P4EST_CHILDREN * count + k] =
+        P4EST_ASSERT (thisid < dummy_lnodes->vnodes);
+        trilinear_interp (v, eta, xyz);
+        conn_out->tree_to_vertex[P4EST_CHILDREN * count + k] = thisvert =
           dummy_lnodes->element_nodes[dummy_lnodes->vnodes * ti + thisid];
+        for (l = 0; l < 3; l++) {
+          conn_out->vertices[3 * thisvert + l] = xyz[l];
+        }
       }
 
       count++;
@@ -112,6 +171,8 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
   p4est_lnodes_destroy (dummy_lnodes);
   p4est_ghost_destroy (dummy_ghost);
   p4est_destroy (dummy_forest);
+
+  p4est_connectivity_complete (conn_out);
 
   return conn_out;
 }
