@@ -326,7 +326,11 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
  * \param [in] num_edges      Number of tree-connecting edges.
  * \param [in] num_corners    Number of tree-connecting corners.
  * \param [in] eoff           Edge-to-tree offsets (num_edges + 1 values).
+ *                            This must always be non-NULL; in trivial cases
+ *                            it is just a pointer to a p4est_topix value of 0.
  * \param [in] coff           Corner-to-tree offsets (num_corners + 1 values).
+ *                            This must always be non-NULL; in trivial cases
+ *                            it is just a pointer to a p4est_topix value of 0.
  * \return                    The connectivity is checked for validity.
  */
 p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t

@@ -136,9 +136,16 @@ p4est_connectivity_new_copy (p4est_topidx_t num_vertices,
   p4est_topidx_t      num_ctt;
   p4est_connectivity_t *conn;
 
+  P4EST_ASSERT (num_vertices >= 0);
+  P4EST_ASSERT (num_trees >= 0);
+
 #ifdef P4_TO_P8
+  P4EST_ASSERT (num_edges >= 0);
+  P4EST_ASSERT (eoff != NULL);
   num_ett = eoff[num_edges];
 #endif
+  P4EST_ASSERT (num_corners >= 0);
+  P4EST_ASSERT (coff != NULL);
   num_ctt = coff[num_corners];
   conn = p4est_connectivity_new (num_vertices, num_trees,
 #ifdef P4_TO_P8
@@ -192,6 +199,15 @@ p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees,
                         p4est_topidx_t num_corners, p4est_topidx_t num_ctt)
 {
   p4est_connectivity_t *conn;
+
+  P4EST_ASSERT (num_vertices >= 0);
+  P4EST_ASSERT (num_trees >= 0);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (num_edges >= 0);
+  P4EST_ASSERT (num_ett >= 0);
+#endif
+  P4EST_ASSERT (num_corners >= 0);
+  P4EST_ASSERT (num_ctt >= 0);
 
   conn = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
 
