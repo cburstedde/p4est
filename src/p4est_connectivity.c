@@ -3890,12 +3890,13 @@ int
 p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
                                   p4est_connectivity_t * conn2)
 {
+  const size_t        topsize = sizeof (p4est_topidx_t);
+  const size_t        int8size = sizeof (int8_t);
   size_t              count;
   p4est_topidx_t      ntrees, t;
+
   P4EST_ASSERT (p4est_connectivity_is_valid (conn1));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn2));
-  size_t              topsize = sizeof (p4est_topidx_t);
-  size_t              int8size = sizeof (int8_t);
 
   /* same pointer or equality are stronger */
   if (conn1 == conn2 || p4est_connectivity_is_equal (conn1, conn2)) {
@@ -4060,14 +4061,17 @@ p4est_connectivity_getline_upper (FILE * stream)
     }
 
     if (--len == 0) {
+      char               *linen;
+
       len = lenmax;
       lenmax *= 2;
-      char               *linen = P4EST_REALLOC (linep, char, lenmax);
 
+      linen = P4EST_REALLOC (linep, char, lenmax);
       if (linen == NULL) {
         P4EST_FREE (linep);
         return NULL;
       }
+
       line = linen + (line - linep);
       linep = linen;
     }
