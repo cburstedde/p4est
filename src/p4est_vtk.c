@@ -697,15 +697,16 @@ p4est_vtk_write_point_datav (p4est_t * p4est, p4est_geometry_t * geom,
 
     fprintf (pvtufile, "    <PPointData>\n");
 
-    for (i = 0; i < num_point_scalars; i++)
+    all = 0;
+    for (i = 0; i < num_point_scalars; ++all, i++)
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"%s\" format=\"%s\"/>\n",
-               P4EST_VTK_FLOAT_NAME, names[i], P4EST_VTK_FORMAT_STRING);
+               P4EST_VTK_FLOAT_NAME, names[all], P4EST_VTK_FORMAT_STRING);
 
-    for (i = 0; i < num_point_vectors; i++)
+    for (i = 0; i < num_point_vectors; ++all, i++)
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"%s\" format=\"%s\"/>\n",
-               P4EST_VTK_FLOAT_NAME, names[i], P4EST_VTK_FORMAT_STRING);
+               P4EST_VTK_FLOAT_NAME, names[all], P4EST_VTK_FORMAT_STRING);
 
     fprintf (pvtufile, "    </PPointData>\n");
 
@@ -1046,15 +1047,16 @@ p4est_vtk_write_cell_data (p4est_t * p4est, p4est_geometry_t * geom,
                "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 
-    for (i = 0; i < num_cell_scalars; i++)
+    all = 0;
+    for (i = 0; i < num_cell_scalars; ++all, i++)
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"%s\" format=\"%s\"/>\n",
-               P4EST_VTK_FLOAT_NAME, names[i], P4EST_VTK_FORMAT_STRING);
+               P4EST_VTK_FLOAT_NAME, names[all], P4EST_VTK_FORMAT_STRING);
 
-    for (i = 0; i < num_cell_vectors; i++)
+    for (i = 0; i < num_cell_vectors; ++all, i++)
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"%s\" format=\"%s\"/>\n",
-               P4EST_VTK_FLOAT_NAME, names[i], P4EST_VTK_FORMAT_STRING);
+               P4EST_VTK_FLOAT_NAME, names[all], P4EST_VTK_FORMAT_STRING);
 
     fprintf (pvtufile, "    </PCellData>\n");
 
