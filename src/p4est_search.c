@@ -485,6 +485,10 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
     is_leaf = 0;
     local_num = -1;
     lq = p4est_quadrant_array_index (quadrants, quadrants->elem_count - 1);
+    P4EST_ASSERT (!p4est_quadrant_is_equal (q, lq) &&
+                  p4est_quadrant_is_ancestor (quadrant, lq));
+
+    /* skip unnecessary intermediate levels if possible */
     if (p4est_quadrant_ancestor_id (q, quadrant->level + 1) ==
         p4est_quadrant_ancestor_id (lq, quadrant->level + 1)) {
       p4est_nearest_common_ancestor (q, lq, quadrant);
@@ -507,6 +511,8 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (offset >= 0 &&
                   (size_t) offset < tree->quadrants.elem_count);
     local_num = tree->quadrants_offset + offset;
+
+    /* skip unnecessary intermediate levels if possible */
     quadrant = q;
   }
 
