@@ -36,6 +36,30 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Opaque context type for writing VTK output with multiple function calls. */
+//typedef struct p4est_vtk_context p4est_vtk_context_t;
+
+typedef struct p4est_vtk_context
+{
+  /* TODO: Add members as needed */
+  p4est_t            *p4est;
+  p4est_geometry_t   *geom;
+  char               *filename;
+  char                vtufilename[BUFSIZ], pvtufilename[BUFSIZ],
+    visitfilename[BUFSIZ];
+  FILE               *vtufile, *pvtufile, *visitfile;
+}
+p4est_vtk_context_t;
+
+/** Cleanly destroy a \a p4est_vtk_context_t structure.
+ *
+ * This function closes all the file pointers and free's the \a
+ * p4est_vtk_context_t structure.
+ *
+ * \param[in] context the \a p4est_vtk_context_t to be destroyed.
+ */
+void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
+
 /** This writes out the p4est in VTK format.
  *
  * This is a convenience function for the special case of writing out
@@ -98,7 +122,7 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  * p4est_vtk_write_point_data (...);
  * p4est_vtk_write_cell_data (...);
  * ...
- * p4est_vtk_write_footer (p4est, "output");
+ * p4est_vtk_write_footer (vtk_context);
  * \endcode
  *
  * \param p4est     The p4est to be written.
@@ -109,31 +133,17 @@ void                p4est_vtk_write_all (p4est_t * p4est,
  *                  the proc number appended to it (i.e., the
  *                  output file will be filename_rank.vtu).
  *
- * \return          This returns 0 if no error and -1 if there is an error.
+ * \return          On success, an opaque context (p4est_vtk_context_t) pointer
+ *                  that must be passed to subsequent p4est_vtk calls.  It is
+ *                  required to call p4est_vtk_write_footer eventually with
+ *                  this value.  Returns NULL on error.
  */
-int                 p4est_vtk_write_header (p4est_t * p4est,
-                                            p4est_geometry_t * geom,
-                                            double scale,
-                                            const char *filename);
+p4est_vtk_context_t *p4est_vtk_write_header (p4est_t * p4est,
+                                             p4est_geometry_t * geom,
+                                             double scale,
+                                             const char *filename);
 
-/** Opaque context type for writing VTK output with multiple function calls. */
-typedef struct p4est_vtk_context p4est_vtk_context_t;
-
-/** This shall replace p4est_vtk_write_header.
- * \return          On success, an opaque context pointer that must be passed
- *                  to subsequent p4est_vtk calls.  It is required to call
- *                  p4est_vtk_write_footer_next eventually with this value.
- *                  Returns NULL on error.
- *
- * TODO: Make sure that all files are closed and internall buffers freed on error,
- *       also in the other functions in this file.
- */
-p4est_vtk_context_t *p4est_vtk_write_header_next (p4est_t * p4est,
-                                                  p4est_geometry_t * geom,
-                                                  double scale,
-                                                  const char *filename);
-
-/** This will write custom cell data to the vtu file.
+/** Write VTK cell data.
  *
  * There are options to have this function write
  * the tree id, quadrant level, or MPI rank without explicit input data.
@@ -142,52 +152,33 @@ p4est_vtk_context_t *p4est_vtk_write_header_next (p4est_t * p4est,
  * This allows there to be an arbitrary number of
  * fields.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param write_tree    Boolean to determine if the tree id should be output.
- * \param write_level   Boolean to determine if the tree levels should be output.
- * \param write_rank    Boolean to determine if the MPI rank should be output.
- * \param wrap_rank Number to wrap around the rank with a modulo operation.
- *                  Can be 0 for no wrapping.
- * \param num_cell_scalars Number of cell scalar datasets to output.
- * \param num_cell_vectors Number of cell vector datasets to output.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] write_tree  Boolean to determine if the tree id should be output.
+ * \param [in] write_level Boolean to determine if the tree levels should be output.
+ * \param [in] write_rank  Boolean to determine if the MPI rank should be output.
+ * \param [in] wrap_rank   Number to wrap around the rank with a modulo operation.
+ *                         Can be 0 for no wrapping.
+ * \param [in] num_cell_scalars Number of cell scalar datasets to output.
+ * \param [in] num_cell_vectors Number of cell vector datasets to output.
  *
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
  * where the cell scalar pairs come first, followed by the cell vector pairs.
  *
- * TODO: each field shall be an sc_array_t * holding double variables.
- *
- * \return          This returns 0 if no error and -1 if there is an error.
- */
-int                 p4est_vtk_write_cell_data (p4est_t * p4est,
-                                               p4est_geometry_t * geom,
-                                               const int write_tree,
-                                               const int write_level,
-                                               const int write_rank,
-                                               const int wrap_rank,
-                                               const int num_cell_scalars,
-                                               const int num_cell_vectors,
-                                               const char *filename, ...);
-
-/** Write VTK cell data.
- *
- * TODO: This function shall replace p4est_vtk_write_cell_data.
  * TODO: Each field shall be an sc_array_t * holding double variables.
  *       Their number must be exactly <PUT CORRECT NUMBER HERE>.
  * TODO: For safety reasons, there must be a final parameter holding the context
  *       after the list of pairs.
- * TODO: The int parameters need not be const.  Only pointers should be.
  *
- * \param [in,out] cont         A context created by p4est_
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
  */
-p4est_vtk_context_t *p4est_vtk_write_cell_data_next (p4est_vtk_context_t *
-                                                     cont, int foo_bar_etc,
-                                                     ...);
+p4est_vtk_context_t *p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
+                                                int write_tree,
+                                                int write_level,
+                                                int write_rank,
+                                                int wrap_rank,
+                                                int num_cell_scalars,
+                                                int num_cell_vectors, ...);
 
 /** TODO: This is an alternate version of the varargs function above.
  * Works exactly the same otherwise.
@@ -196,7 +187,8 @@ p4est_vtk_context_t *p4est_vtk_write_cell_data_next (p4est_vtk_context_t *
 p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
                                                  int foo_bar_etc,
                                                  const char *filenames[],
-                                                 const sc_array_t * scalars[]);
+                                                 const sc_array_t *
+                                                 scalars[]);
 
 /** This will write custom point data to the vtu file.
  *
@@ -204,33 +196,35 @@ p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of
  * fields.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param num_point_scalars Number of point scalar datasets to output.
- * \param num_point_vectors Number of point vector datasets to output.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
+ * \param [in,out] cont          A vtk context created by p4est_vtk_write_header.
+ * \param [in] num_point_scalars Number of point scalar datasets to output.
+ * \param [in] num_point_vectors Number of point vector datasets to output.
  *
  * The variable arguments need to be pairs of (fieldname, fieldvalues)
  * where the point scalar pairs come first, followed by the point vector pairs.
  *
- * \return          This returns 0 if no error and -1 if there is an error.
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
  */
-int                 p4est_vtk_write_point_data (p4est_t * p4est,
-                                                p4est_geometry_t * geom,
-                                                const int num_point_scalars,
-                                                const int num_point_vectors,
-                                                const char *filename, ...);
+p4est_vtk_context_t *p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
+                                                 int num_point_scalars,
+                                                 int num_point_vectors, ...);
 
 /** TODO: Please document this function and
  *        add analogous function for cell data.
  */
-int                 p4est_vtk_write_point_datav (p4est_t * p4est,
-                                                 p4est_geometry_t * geom,
-                                                 const int num_point_scalars,
-                                                 const int num_point_vectors,
-                                                 const char *filename,
+p4est_vtk_context_t *p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
+                                                  int num_point_scalars,
+                                                  int num_point_vectors,
+                                                  va_list ap);
+
+p4est_vtk_context_t *p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
+                                                 int write_tree,
+                                                 int write_level,
+                                                 int write_rank,
+                                                 int wrap_rank,
+                                                 int num_cell_scalars,
+                                                 int num_cell_vectors,
                                                  va_list ap);
 
 /** This will write a point scalar field to the vtu file.
@@ -238,86 +232,66 @@ int                 p4est_vtk_write_point_datav (p4est_t * p4est,
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
- * \param scalar_name The name of the scalar field.
- * \param values    The point values that will be written.
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The point values that will be written.
  *
- * \return          This returns 0 if no error and -1 if there is an error.
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
  */
-int                 p4est_vtk_write_point_scalar (p4est_t * p4est,
-                                                  p4est_geometry_t * geom,
-                                                  const char *filename,
-                                                  const char *scalar_name,
-                                                  const double *values);
+p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
+                                                   const char *scalar_name,
+                                                   const double *values);
 
 /** This will write a cell scalar field to the vtu file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
- * \param scalar_name The name of the scalar field.
- * \param values    The cell values that will be written.
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The cell values that will be written.
  *
- * \return          This returns 0 if no error and -1 if there is an error.
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
  */
-int                 p4est_vtk_write_cell_scalar (p4est_t * p4est,
-                                                 p4est_geometry_t * geom,
-                                                 const char *filename,
-                                                 const char *scalar_name,
-                                                 const double *values);
+p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
+                                                  const char *scalar_name,
+                                                  const double *values);
 
 /** This will write a 3-vector point field to the vtu file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
- * \param vector_name The name of the vector field.
- * \param values    The point values that will be written.
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The point values that will be written.
  *
- * \return          This returns 0 if no error and -1 if there is an error.
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
  */
-int                 p4est_vtk_write_point_vector (p4est_t * p4est,
-                                                  p4est_geometry_t * geom,
-                                                  const char *filename,
-                                                  const char *vector_name,
-                                                  const double *values);
+p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
+                                                   const char *vector_name,
+                                                   const double *values);
 
 /** This will write a 3-vector cell field to the vtu file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
- * \param vector_name The name of the vector field.
- * \param values    The cell values that will be written.
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The cell values that will be written.
  *
- * \return          This returns 0 if no error and -1 if there is an error.
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
  */
-int                 p4est_vtk_write_cell_vector (p4est_t * p4est,
-                                                 p4est_geometry_t * geom,
-                                                 const char *filename,
-                                                 const char *vector_name,
-                                                 const double *values);
+p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
+                                                  const char *vector_name,
+                                                  const double *values);
 
-/** This will write the footer of the vtu file.
+/** Write the footer of the vtu file and clean up.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of
@@ -326,24 +300,20 @@ int                 p4est_vtk_write_cell_vector (p4est_t * p4est,
  *
  * \begincode
  * p4est_vtk_write_header (p4est, ..., "output");
- * p4est_vtk_write_footer (p4est, "output");
+ * p4est_vtk_write_point_data (...);
+ * p4est_vtk_write_cell_data (...);
+ * ...
+ * p4est_vtk_write_footer (vtk_context);
  * \endcode
  *
- * \param p4est     The p4est to be written.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
+ * This function writes the footer information to the vtk file and cleanly
+ * destroys the vtk context.
+ *
+ * \param [in] cont Context is deallocated before the function returns.
  *
  * \return          This returns 0 if no error and -1 if there is an error.
  */
-int                 p4est_vtk_write_footer (p4est_t * p4est,
-                                            const char *filename);
-
-/** This shall replace p4est_vtk_write_footer.
- * \param [in,out] cont       Context is deallocated before the function returns.
- * \return          This returns 0 if no error and -1 if there is an error.
- */
-int                 p4est_vtk_write_footer_next (p4est_vtk_context_t * cont);
+int                 p4est_vtk_write_footer (p4est_vtk_context_t * cont);
 
 SC_EXTERN_C_END;
 

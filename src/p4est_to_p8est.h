@@ -130,6 +130,7 @@
 #define p4est_wrap_t                    p8est_wrap_t
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
+#define p4est_vtk_context_t             p8est_vtk_context_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -335,16 +336,18 @@
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 
 /* functions in p4est_vtk */
+#define p4est_vtk_context_destroy       p8est_vtk_context_destroy
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_all             p8est_vtk_write_all
 #define p4est_vtk_write_header          p8est_vtk_write_header
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
+#define p4est_vtk_write_cell_datav      p8est_vtk_write_cell_datav
+#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
+#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
 #define p4est_vtk_write_point_datav     p8est_vtk_write_point_datav
 #define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
 #define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
-#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
-#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */

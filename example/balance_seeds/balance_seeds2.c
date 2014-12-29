@@ -156,7 +156,8 @@ main (int argc, char **argv)
 
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
-  p4est_vtk_write_header (p4est, NULL, 1. - 2. * SC_EPS, filename);
+  p4est_vtk_context_t * context = p4est_vtk_write_header (p4est, NULL, 1. - 2. * SC_EPS, filename);
+  SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk: Error writing header");
 
   vtkvec = sc_dmatrix_new (p4est->local_num_quadrants, P4EST_CHILDREN);
   tree = p4est_tree_array_index (p4est->trees, 0);
@@ -169,8 +170,11 @@ main (int argc, char **argv)
         ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
-  p4est_vtk_write_point_scalar (p4est, NULL, filename, "level", vtkvec->e[0]);
-  p4est_vtk_write_footer (p4est, filename);
+  context = p4est_vtk_write_point_scalar (context, "level", vtkvec->e[0]);
+  SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk: Error writing point data");
+
+  const int retval = p4est_vtk_write_footer (context);
+  SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_dmatrix_destroy (vtkvec);
   p4est_destroy (p4est);
