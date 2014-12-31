@@ -81,7 +81,7 @@ p4est_vtk_context_t;
  */
 void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
 
-/** This writes out the p4est in VTK format.
+/** Write the p4est in VTK format.
  *
  * This is a convenience function for the special case of writing out
  * the tree id, quadrant level, and MPI rank only.
@@ -99,7 +99,7 @@ void                p4est_vtk_write_file (p4est_t * p4est,
                                           p4est_geometry_t * geom,
                                           const char *filename);
 
-/** This writes out the p4est and any number of point fields in VTK format.
+/** Write the p4est and any number of point fields in VTK format.
  *
  * This is a convenience function that will abort if there is a file error.
  *
@@ -132,16 +132,16 @@ void                p4est_vtk_write_all (p4est_t * p4est,
                                          int num_point_vectors,
                                          const char *filename, ...);
 
-/** This will write the header of the vtu file.
+/** Write the VTK header.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of
  * fields.  The calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header (p4est, geom, 1., "output");
- * p4est_vtk_write_point_data (...);
- * p4est_vtk_write_cell_data (...);
+ * vtk_context = p4est_vtk_write_header (p4est, geom, 1., "output");
+ * vtk_context = p4est_vtk_write_point_data (vtk_context, ...);
+ * vtk_context = p4est_vtk_write_cell_data (vtk_context, ...);
  * ...
  * p4est_vtk_write_footer (vtk_context);
  * \endcode
@@ -182,11 +182,14 @@ p4est_vtk_context_t *p4est_vtk_write_header (p4est_t * p4est,
  * \param [in] num_cell_scalars Number of cell scalar datasets to output.
  * \param [in] num_cell_vectors Number of cell vector datasets to output.
  *
- * The variable arguments need to be pairs of (fieldname, fieldvalues)
- * where the cell scalar pairs come first, followed by the cell vector pairs.
+ * The variable arguments need to be pairs of (fieldname, fieldvalues) where
+ * the cell scalar pairs come first, followed by the cell vector pairs.  Each
+ * 'fieldname' argument shall be a char string containing the name of the data
+ * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
+ * arguments shall be an sc_array_t * holding double variables.  The number of
+ * doubles in each sc_array must be exactly \a p4est->local_num_quadrants for
+ * scalar data and \a 3*p4est->local_num_quadrants for vector data.
  *
- * TODO: Each field shall be an sc_array_t * holding double variables.
- *       Their number must be exactly <PUT CORRECT NUMBER HERE>.
  * TODO: For safety reasons, there must be a final parameter holding the context
  *       after the list of pairs.
  *
@@ -211,7 +214,7 @@ p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
                                                  const sc_array_t *
                                                  scalars[]);
 
-/** This will write custom point data to the vtu file.
+/** Write VTK point data.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of
@@ -221,8 +224,16 @@ p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
  * \param [in] num_point_scalars Number of point scalar datasets to output.
  * \param [in] num_point_vectors Number of point vector datasets to output.
  *
- * The variable arguments need to be pairs of (fieldname, fieldvalues)
- * where the point scalar pairs come first, followed by the point vector pairs.
+ * The variable arguments need to be pairs of (fieldname, fieldvalues) where
+ * the point scalar pairs come first, followed by the point vector pairs.  Each
+ * 'fieldname' argument shall be a char string containing the name of the data
+ * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
+ * arguments shall be an sc_array_t * holding double variables. The number of
+ * doubles in each sc_array must be exactly \a cont->num_nodes for scalar data
+ * and \a 3*cont->num_nodes for vector data.
+ *
+ * \note \a cont->num_nodes is set in \b p4est_vtk_write_header based on the \a
+ * scale parameter.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
@@ -248,7 +259,7 @@ p4est_vtk_context_t *p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                                                  int num_cell_vectors,
                                                  va_list ap);
 
-/** This will write a point scalar field to the vtu file.
+/** Write a point scalar field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
@@ -262,9 +273,9 @@ p4est_vtk_context_t *p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
  */
 p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
                                                    const char *scalar_name,
-                                                   const double *values);
+                                                   const sc_array_t * values);
 
-/** This will write a cell scalar field to the vtu file.
+/** Write a cell scalar field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
@@ -278,9 +289,9 @@ p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
  */
 p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
                                                   const char *scalar_name,
-                                                  const double *values);
+                                                  const sc_array_t * values);
 
-/** This will write a 3-vector point field to the vtu file.
+/** Write a 3-vector point field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
@@ -294,9 +305,9 @@ p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
  */
 p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
                                                    const char *vector_name,
-                                                   const double *values);
+                                                   const sc_array_t * values);
 
-/** This will write a 3-vector cell field to the vtu file.
+/** Write a 3-vector cell field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
@@ -310,9 +321,9 @@ p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
  */
 p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
                                                   const char *vector_name,
-                                                  const double *values);
+                                                  const sc_array_t * values);
 
-/** Write the footer of the vtu file and clean up.
+/** Write the VTU footer and clean up.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of
@@ -320,9 +331,9 @@ p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
  * calling sequence would be something like
  *
  * \begincode
- * p4est_vtk_write_header (p4est, ..., "output");
- * p4est_vtk_write_point_data (...);
- * p4est_vtk_write_cell_data (...);
+ * vtk_context = p4est_vtk_write_header (p4est, ..., "output");
+ * vtk_context = p4est_vtk_write_point_data (vtk_context, ...);
+ * vtk_context = p4est_vtk_write_cell_data (vtk_context, ...);
  * ...
  * p4est_vtk_write_footer (vtk_context);
  * \endcode

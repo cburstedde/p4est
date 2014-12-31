@@ -609,9 +609,9 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   int                 scalar_strlen, vector_strlen;
   char                point_scalars[BUFSIZ], point_vectors[BUFSIZ];
   const char         *name, **names;
-  double            **values;
+  sc_array_t        **values;
 
-  values = P4EST_ALLOC (double *, num_point_scalars + num_point_vectors);
+  values = P4EST_ALLOC (sc_array_t *, num_point_scalars + num_point_vectors);
   names = P4EST_ALLOC (const char *, num_point_scalars + num_point_vectors);
 
   /* Gather point data. */
@@ -624,7 +624,11 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     SC_CHECK_ABORT (retval > 0,
                     P4EST_STRING "_vtk: Error collecting point scalars");
     scalar_strlen += retval;
-    values[all] = va_arg (ap, double *);
+    values[all] = va_arg (ap, sc_array_t *);
+
+    /* Validate input. */
+    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
+    P4EST_ASSERT (values[all]->elem_count == cont->num_nodes);
   }
 
   vector_strlen = 0;
@@ -636,7 +640,11 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     SC_CHECK_ABORT (retval > 0,
                     P4EST_STRING "_vtk: Error collecting point vectors");
     vector_strlen += retval;
-    values[all] = va_arg (ap, double *);
+    values[all] = va_arg (ap, sc_array_t *);
+
+    /* Validate input. */
+    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
+    P4EST_ASSERT (values[all]->elem_count == 3 * cont->num_nodes);
   }
 
   fprintf (cont->vtufile, "      <PointData");
@@ -660,12 +668,14 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   all = 0;
   for (i = 0; i < num_point_scalars; ++all, ++i) {
     cont = p4est_vtk_write_point_scalar (cont, names[all], values[all]);
-    SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing point scalars");
+    SC_CHECK_ABORT (cont != NULL,
+                    P4EST_STRING "_vtk: Error writing point scalars");
   }
 
   for (i = 0; i < num_point_vectors; ++all, ++i) {
     cont = p4est_vtk_write_point_vector (cont, names[all], values[all]);
-    SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing point vectors");
+    SC_CHECK_ABORT (cont != NULL,
+                    P4EST_STRING "_vtk: Error writing point vectors");
   }
 
   fprintf (cont->vtufile, "      </PointData>\n");
@@ -756,7 +766,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   char                cell_scalars[BUFSIZ], cell_vectors[BUFSIZ];
   const char         *name, **names;
-  double            **values;
+  sc_array_t        **values;
   size_t              num_quads, zz;
   sc_array_t         *quadrants;
   p4est_quadrant_t   *quad;
@@ -771,7 +781,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
 
   P4EST_ASSERT (wrap_rank >= 0);
 
-  values = P4EST_ALLOC (double *, num_cell_scalars + num_cell_vectors);
+  values = P4EST_ALLOC (sc_array_t *, num_cell_scalars + num_cell_vectors);
   names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors);
 
   /* Gather cell data. */
@@ -784,7 +794,12 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
     SC_CHECK_ABORT (retval > 0,
                     P4EST_STRING "_vtk: Error collecting cell scalars");
     scalar_strlen += retval;
-    values[all] = va_arg (ap, double *);
+    values[all] = va_arg (ap, sc_array_t *);
+
+    /* Validate input. */
+    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
+    P4EST_ASSERT (values[all]->elem_count ==
+                  cont->p4est->local_num_quadrants);
   }
 
   vector_strlen = 0;
@@ -796,7 +811,12 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
     SC_CHECK_ABORT (retval > 0,
                     P4EST_STRING "_vtk: Error collecting cell vectors");
     vector_strlen += retval;
-    values[all] = va_arg (ap, double *);
+    values[all] = va_arg (ap, sc_array_t *);
+
+    /* Validate input. */
+    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
+    P4EST_ASSERT (values[all]->elem_count ==
+                  3 * cont->p4est->local_num_quadrants);
   }
 
   char                vtkCellDataString[BUFSIZ] = "";
@@ -978,12 +998,14 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   all = 0;
   for (i = 0; i < num_cell_scalars; ++all, ++i) {
     cont = p4est_vtk_write_cell_scalar (cont, names[all], values[all]);
-    SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing cell scalars");
+    SC_CHECK_ABORT (cont != NULL,
+                    P4EST_STRING "_vtk: Error writing cell scalars");
   }
 
   for (i = 0; i < num_cell_vectors; ++all, ++i) {
     cont = p4est_vtk_write_cell_vector (cont, names[all], values[all]);
-    SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing cell vectors");
+    SC_CHECK_ABORT (cont != NULL,
+                    P4EST_STRING "_vtk: Error writing cell vectors");
   }
 
   fprintf (cont->vtufile, "      </CellData>\n");
@@ -1050,7 +1072,8 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
 
 p4est_vtk_context_t *
 p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
-                              const char *scalar_name, const double *values)
+                              const char *scalar_name,
+                              const sc_array_t * values)
 {
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   const p4est_locidx_t Ncorners = P4EST_CHILDREN * Ncells;      /* type ok */
@@ -1068,15 +1091,17 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
 #ifdef P4EST_VTK_ASCII
   for (il = 0; il < Ncorners; ++il) {
 #ifdef P4EST_VTK_DOUBLES
-    fprintf (cont->vtufile, "     %24.16e\n", values[il]);
+    fprintf (cont->vtufile, "     %24.16e\n",
+             *((P4EST_VTK_FLOAT_TYPE *) sc_array_index (values, il)));
 #else
-    fprintf (cont->vtufile, "          %16.8e\n", values[il]);
+    fprintf (cont->vtufile, "          %16.8e\n",
+             *((P4EST_VTK_FLOAT_TYPE *) sc_array_index (values, il)));
 #endif
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncorners);
   for (il = 0; il < Ncorners; ++il) {
-    float_data[il] = (P4EST_VTK_FLOAT_TYPE) values[il];
+    float_data[il] = *((P4EST_VTK_FLOAT_TYPE *) sc_array_index (values, il));
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1109,14 +1134,16 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
 
 p4est_vtk_context_t *
 p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
-                              const char *vector_name, const double *values)
+                              const char *vector_name,
+                              const sc_array_t * values)
 {
   SC_ABORT (P4EST_STRING "_vtk_write_point_vector not implemented");
 }
 
 p4est_vtk_context_t *
 p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
-                             const char *scalar_name, const double *values)
+                             const char *scalar_name,
+                             const sc_array_t * values)
 {
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   p4est_locidx_t      il;
@@ -1133,15 +1160,17 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
 #ifdef P4EST_VTK_ASCII
   for (il = 0; il < Ncells; ++il) {
 #ifdef P4EST_VTK_DOUBLES
-    fprintf (cont->vtufile, "     %24.16e\n", values[il]);
+    fprintf (cont->vtufile, "     %24.16e\n",
+             *((P4EST_VTK_FLOAT_TYPE *) sc_array_index (values, il)));
 #else
-    fprintf (cont->vtufile, "          %16.8e\n", values[il]);
+    fprintf (cont->vtufile, "          %16.8e\n",
+             *((P4EST_VTK_FLOAT_TYPE *) sc_array_index (values, il)));
 #endif
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncells);
   for (il = 0; il < Ncells; ++il) {
-    float_data[il] = (P4EST_VTK_FLOAT_TYPE) values[il];
+    float_data[il] = *((P4EST_VTK_FLOAT_TYPE *) sc_array_index (values, il));
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1174,7 +1203,8 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
 
 p4est_vtk_context_t *
 p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
-                             const char *vector_name, const double *values)
+                             const char *vector_name,
+                             const sc_array_t * values)
 {
   SC_ABORT (P4EST_STRING "_vtk_write_cell_vector not implemented");
 }

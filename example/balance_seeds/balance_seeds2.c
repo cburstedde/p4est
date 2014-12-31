@@ -170,8 +170,10 @@ main (int argc, char **argv)
         ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
-  context = p4est_vtk_write_point_scalar (context, "level", vtkvec->e[0]);
+  sc_array_t * level = sc_array_new_data((void *) vtkvec->e[0], sizeof (double), count*P4EST_CHILDREN);
+  context = p4est_vtk_write_point_data (context, 1, 0, "level", level);
   SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk: Error writing point data");
+  sc_array_destroy(level);
 
   const int retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk: Error writing footer");
