@@ -213,6 +213,9 @@ p4est_vtk_write_header (p4est_t * p4est,
     P4EST_ASSERT ((size_t) Ntotal == indeps->elem_count);
   }
 
+  /* Store the number of nodes in the vtk context. */
+  cont->num_nodes = Ntotal;
+
   /* Have each proc write to its own file */
   snprintf (cont->vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
   /* Use "w" for writing the initial part of the file.
