@@ -740,7 +740,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
     qalloc = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
     *qalloc = *q;               /* never prepend array members directly */
     qalloc->pad8 = 0;           /* this quadrant has not been refined yet */
-    sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
+    (void) sc_list_prepend (list, qalloc);      /* only new quadrants */
 
     P4EST_QUADRANT_INIT (&parent);
 
@@ -798,15 +798,15 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         p4est_quadrant_init_data (p4est, nt, c7, init_fn);
         c4->pad8 = c5->pad8 = c6->pad8 = c7->pad8 = 1;
 
-        sc_list_prepend (list, c7);
-        sc_list_prepend (list, c6);
-        sc_list_prepend (list, c5);
-        sc_list_prepend (list, c4);
+        (void) sc_list_prepend (list, c7);
+        (void) sc_list_prepend (list, c6);
+        (void) sc_list_prepend (list, c5);
+        (void) sc_list_prepend (list, c4);
 #endif
-        sc_list_prepend (list, c3);
-        sc_list_prepend (list, c2);
-        sc_list_prepend (list, c1);
-        sc_list_prepend (list, c0);
+        (void) sc_list_prepend (list, c3);
+        (void) sc_list_prepend (list, c2);
+        (void) sc_list_prepend (list, c1);
+        (void) sc_list_prepend (list, c0);
 
         if (replace_fn != NULL) {
           /* in family mode we always call the replace callback right
@@ -834,7 +834,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
             qalloc = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
             *qalloc = *q;       /* never append array members directly */
             qalloc->pad8 = 0;   /* has not been refined yet */
-            sc_list_append (list, qalloc);      /* only newly allocated quadrants */
+            (void) sc_list_append (list, qalloc);       /* only new quadrants */
             --movecount;
             ++restpos;
           }

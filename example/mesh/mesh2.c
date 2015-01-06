@@ -161,7 +161,7 @@ hack_test (mpi_context_t * mpi, p4est_connectivity_t * connectivity)
   for (li = 0; li < lnq; ++li) {
     tt = mesh->quad_to_tree[li];
     if (tt >= 2) {
-      // break;
+      /* break; */
     }
     for (i = 0; i < P4EST_CHILDREN; ++i) {
       qtc = mesh->quad_to_corner[P4EST_CHILDREN * li + i];
@@ -171,7 +171,8 @@ hack_test (mpi_context_t * mpi, p4est_connectivity_t * connectivity)
         if (qtc >= lnco) {
           qtc -= lnco;
           co0 = *(p4est_locidx_t *) sc_array_index (mesh->corner_offset, qtc);
-          co1 = *(p4est_locidx_t *) sc_array_index (mesh->corner_offset, qtc + 1);
+          co1 =
+            *(p4est_locidx_t *) sc_array_index (mesh->corner_offset, qtc + 1);
           for (coi = co0; coi < co1; ++coi) {
             cq = *(p4est_locidx_t *) sc_array_index (mesh->corner_quad, coi);
             cc = *(int8_t *) sc_array_index (mesh->corner_corner, coi);

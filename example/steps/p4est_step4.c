@@ -260,11 +260,11 @@ share_sum (p4est_t * p4est, p4est_lnodes_t * lnodes, double *v)
   buffer = p4est_lnodes_share_all (&node_data, lnodes);
 
   for (iq = 0; iq < npeers; ++iq) {
-    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (lnodes->sharers, iq);
     sc_array_t         *recv_data =
       (sc_array_t *) sc_array_index_int (buffer->recv_buffers, iq);
-    P4EST_ASSERT (recv_data->elem_size == node_data.elem_size);
 
+    P4EST_ASSERT (recv_data->elem_size == node_data.elem_size);
+    lrank = (p4est_lnodes_rank_t *) sc_array_index_int (lnodes->sharers, iq);
     if (lrank->rank != p4est->mpirank) {
       const int           nshared = (int) lrank->shared_nodes.elem_count;
       const double       *w = (const double *) recv_data->array;

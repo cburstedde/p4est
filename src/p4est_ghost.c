@@ -3770,15 +3770,16 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
   for (p = 0; p < mpisize; p++) {
     /* add all of the potentially new mirrors */
     buf = (sc_array_t *) sc_array_index_int (send_bufs, p);
-    size_t              oldsize;
 
     if (!buf->elem_count) {
       continue;
     }
-    oldsize = new_mirrors->elem_count;
-    sc_array_resize (new_mirrors, oldsize + buf->elem_count);
-    memcpy (new_mirrors->array + oldsize * new_mirrors->elem_size,
-            buf->array, buf->elem_count * buf->elem_size);
+    else {
+      size_t              oldsize = new_mirrors->elem_count;
+      sc_array_resize (new_mirrors, oldsize + buf->elem_count);
+      memcpy (new_mirrors->array + oldsize * new_mirrors->elem_size,
+              buf->array, buf->elem_count * buf->elem_size);
+    }
   }
   sc_array_sort (new_mirrors, p4est_quadrant_compare_piggy);
   sc_array_uniq (new_mirrors, p4est_quadrant_compare_piggy);
