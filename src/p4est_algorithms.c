@@ -1303,15 +1303,15 @@ p4est_complete_region (p4est_t * p4est,
     p4est_quadrant_children (&Afinest, c0, c1, c2, c3);
 #endif
 
-    sc_list_append (W, c0);
-    sc_list_append (W, c1);
-    sc_list_append (W, c2);
-    sc_list_append (W, c3);
+    (void) sc_list_append (W, c0);
+    (void) sc_list_append (W, c1);
+    (void) sc_list_append (W, c2);
+    (void) sc_list_append (W, c3);
 #ifdef P4_TO_P8
-    sc_list_append (W, c4);
-    sc_list_append (W, c5);
-    sc_list_append (W, c6);
-    sc_list_append (W, c7);
+    (void) sc_list_append (W, c4);
+    (void) sc_list_append (W, c5);
+    (void) sc_list_append (W, c6);
+    (void) sc_list_append (W, c7);
 #endif
 
     /* for each w in W */
@@ -1350,15 +1350,15 @@ p4est_complete_region (p4est_t * p4est,
 #endif
 
 #ifdef P4_TO_P8
-        sc_list_prepend (W, c7);
-        sc_list_prepend (W, c6);
-        sc_list_prepend (W, c5);
-        sc_list_prepend (W, c4);
+        (void) sc_list_prepend (W, c7);
+        (void) sc_list_prepend (W, c6);
+        (void) sc_list_prepend (W, c5);
+        (void) sc_list_prepend (W, c4);
 #endif
-        sc_list_prepend (W, c3);
-        sc_list_prepend (W, c2);
-        sc_list_prepend (W, c1);
-        sc_list_prepend (W, c0);
+        (void) sc_list_prepend (W, c3);
+        (void) sc_list_prepend (W, c2);
+        (void) sc_list_prepend (W, c1);
+        (void) sc_list_prepend (W, c0);
       }
 
       /* W <- W - w */
