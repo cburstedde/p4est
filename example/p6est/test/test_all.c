@@ -170,7 +170,7 @@ main (int argc, char **argv)
   double              height[3] = { 0., 0., 0.1 };
   int                 i;
   int                 vtk;
-  unsigned            crc_computed;
+  unsigned            crc_computed = 0;
   sc_options_t       *opt;
   int                 first_argc;
   const char         *config_name;
@@ -375,9 +375,11 @@ main (int argc, char **argv)
     p6est_lnodes_destroy (lnodes);
   }
 
+#ifdef P4EST_HAVE_ZLIB
   crc_computed = p6est_checksum (p6est);
 
   P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
+#endif
 
   if (save_filename) {
     sc_flops_snap (&fi, &snapshot);
