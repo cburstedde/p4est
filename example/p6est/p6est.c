@@ -2290,6 +2290,7 @@ unsigned
 p2est_quadrant_checksum (sc_array_t * quadrants,
                          sc_array_t * checkarray, size_t first_quadrant)
 {
+#ifdef P4EST_HAVE_ZLIB
   int                 own_check;
   size_t              kz, qcount;
   unsigned            crc;
@@ -2325,11 +2326,16 @@ p2est_quadrant_checksum (sc_array_t * quadrants,
   }
 
   return crc;
+#else
+  SC_ABORT ("Configure did not find a recent enough zlib.  Abort.\n");
+  return 0;
+#endif
 }
 
 unsigned
 p6est_checksum (p6est_t * p6est)
 {
+#ifdef P4EST_HAVE_ZLIB
   uLong               columncrc, locallayercrc, layercrc;
   sc_array_t          checkarray;
   size_t              scount, globalscount;
@@ -2348,4 +2354,9 @@ p6est_checksum (p6est_t * p6est)
   globalscount = p6est->global_first_layer[p6est->mpisize] * 8;
 
   return adler32_combine (columncrc, layercrc, globalscount);
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+  return 0;
+#endif
 }
