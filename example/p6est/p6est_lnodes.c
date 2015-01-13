@@ -397,3 +397,16 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
   return lnodes;
 }
+
+p4est_gloidx_t     *
+p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
+{
+  p4est_gloidx_t     *labels;
+  p4est_locidx_t      num_cols = 0;
+  p4est_gloidx_t      global_num_cols;
+
+  labels = P4EST_ALLOC (p4est_gloidx_t, lnodes->num_local_nodes);
+  memset (labels, -1, lnodes->num_local_nodes * sizeof (*labels));
+
+  return labels;
+}
