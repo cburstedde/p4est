@@ -53,6 +53,8 @@
  * \param [in] min_zlevel       The forest is vertically refined at least to
  *                              this level.  May be negative or 0, then it has
  *                              no effect.
+ * \parem [in] num_zroot        The number of "root" vertical layers
+ *                              (used when non-power-of-2 layers are desired)
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
  *                              instead of the coarsest possible one.
  *                              The latter is partition-specific so that
@@ -62,6 +64,7 @@ p6est_t            *p6est_new_ext (sc_MPI_Comm mpicomm,
                                    p6est_connectivity_t * connectivity,
                                    p4est_locidx_t min_quadrants,
                                    int min_level, int min_zlevel,
+                                   int num_zroot,
                                    int fill_uniform, size_t data_size,
                                    p6est_init_t init_fn, void *user_pointer);
 
