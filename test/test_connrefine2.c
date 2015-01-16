@@ -22,10 +22,10 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est_connrefine.h>
+#include <p4est_connectivity.h>
 #include <p4est_vtk.h>
 #else
-#include <p8est_connrefine.h>
+#include <p8est_connectivity.h>
 #include <p8est_vtk.h>
 #endif
 

@@ -16,7 +16,6 @@ libp4est_installed_headers += \
         src/p4est_points.h src/p4est_geometry.h \
         src/p4est_iterate.h src/p4est_lnodes.h src/p4est_mesh.h \
         src/p4est_balance.h src/p4est_io.h \
-        src/p4est_connrefine.h \
         src/p4est_wrap.h src/p4est_plex.h
 libp4est_compiled_sources += \
         src/p4est_connectivity.c src/p4est.c \
@@ -39,7 +38,6 @@ libp4est_installed_headers += \
         src/p8est_points.h src/p8est_geometry.h \
         src/p8est_iterate.h src/p8est_lnodes.h src/p8est_mesh.h \
         src/p8est_tets_hexes.h src/p8est_balance.h src/p8est_io.h \
-        src/p8est_connrefine.h \
         src/p8est_wrap.h src/p8est_plex.h
 libp4est_compiled_sources += \
         src/p8est_connectivity.c src/p8est.c \
