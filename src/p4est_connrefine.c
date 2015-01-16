@@ -79,7 +79,7 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
   P4EST_ASSERT (num_per_edge >= 1);
 
   /* each processor redundantly creates the new connectivity */
-  dummy_forest = p4est_new (MPI_COMM_SELF, conn_in, 0, 0, NULL);
+  dummy_forest = p4est_new (sc_MPI_COMM_SELF, conn_in, 0, 0, NULL);
   dummy_ghost = p4est_ghost_new (dummy_forest, P4EST_CONNECT_FULL);
   dummy_lnodes = p4est_lnodes_new (dummy_forest, dummy_ghost, num_per_edge);
 
