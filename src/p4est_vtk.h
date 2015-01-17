@@ -36,41 +36,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-//typedef struct p4est_vtk_context p4est_vtk_context_t;
-/** \struct p4est_vtk_context_t
- * Opaque context type for writing VTK output with multiple function calls.
- *
- * This structure holds all the information needed for the p4est vtk context.
- * It is used to relay necessary vtk information to the \b p4est_vtk_write_*
- * functions. This structure is initialized by \b p4est_vtk_write_header and
- * destroyed by \b p4est_vtk_write_footer; it can also be destroyed manually
- * using the \b p4est_vtk_context_destroy function if necessary.
- *
- * The \a p4est member is a pointer to the local p4est.
- * The \a geom member is a pointer to the geometry used to create the p4est.
- * The \a num_nodes member holds the number of nodes present in the vtk output;
- * this is determined in \b p4est_vtk_write_header using the \a scale parameter
- * and is used to assure the proper number of point variables are provided.
- * The \a filename member holds the vtk file basename: for error reporting.
- * The \a vtufilename, \a pvtufilename, and \a visitfilename members are the
- * vtk file names.
- * The \a vtufile, \a pvtufile, and \a visitfile members are the vtk file
- * pointers; opened by \b p4est_vtk_write_header and closed by \b
- * p4est_vtk_write_footer.
- *
- */
-typedef struct p4est_vtk_context
-{
-  /* TODO: Add members as needed */
-  p4est_t            *p4est;
-  p4est_geometry_t   *geom;
-  p4est_locidx_t      num_nodes;
-  char               *filename;
-  char                vtufilename[BUFSIZ], pvtufilename[BUFSIZ],
-    visitfilename[BUFSIZ];
-  FILE               *vtufile, *pvtufile, *visitfile;
-}
-p4est_vtk_context_t;
+typedef struct p4est_vtk_context p4est_vtk_context_t;
 
 /** Cleanly destroy a \a p4est_vtk_context_t structure.
  *
