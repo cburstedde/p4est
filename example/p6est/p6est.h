@@ -181,6 +181,7 @@ typedef struct p6est
                                              for temporary layers */
   p4est_gloidx_t     *global_first_layer; /**< first global quadrant index for
                                                each process and 1 beyond */
+  p4est_qcoord_t      root_len; /**< height of the domain */
 }
 p6est_t;
 

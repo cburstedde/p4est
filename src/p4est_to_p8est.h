@@ -406,4 +406,7 @@
 /* functions in p4est_plex */
 #define p4est_get_plex_data             p8est_get_plex_data
 
+/* functions in p4est_connrefine */
+#define p4est_connectivity_refine       p8est_connectivity_refine
+
 #endif /* !P4EST_TO_P8EST_H */

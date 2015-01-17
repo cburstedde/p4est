@@ -397,3 +397,82 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
   return lnodes;
 }
+
+p4est_gloidx_t     *
+p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
+{
+  p4est_gloidx_t     *labels;
+  p4est_gloidx_t      num_cols = 0;
+  p4est_gloidx_t      global_num_cols = 0;
+  p4est_topidx_t      jt;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *col;
+  size_t              zz, first, last;
+  p4est_locidx_t      lfirst, llast, lk;
+  int                 stride = lnodes->degree + 1;
+  int                 vnodes = lnodes->vnodes;
+  int                 mpiret, i;
+
+  labels = P4EST_ALLOC (p4est_gloidx_t, lnodes->owned_count);
+  memset (labels, -1, lnodes->num_local_nodes * sizeof (*labels));
+
+  for (jt = p6est->columns->first_local_tree;
+       jt <= p6est->columns->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (p6est->columns->trees, jt);
+    tquadrants = &tree->quadrants;
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      col = p4est_quadrant_array_index (tquadrants, zz);
+      P6EST_COLUMN_GET_RANGE (col, &first, &last);
+      lfirst = (p4est_locidx_t) first;
+      llast = (p4est_locidx_t) last;
+      for (i = 0; i < vnodes; i += stride) {
+        p4est_locidx_t      fnid = lnodes->element_nodes[vnodes * lfirst + i];
+        p4est_locidx_t      lnid =
+          lnodes->element_nodes[vnodes * llast + i + (stride - 1)];
+        P4EST_ASSERT (lnid >= 0);
+        P4EST_ASSERT (lnid >= fnid);
+        P4EST_ASSERT (fnid < lnodes->num_local_nodes);
+        if (lnid < lnodes->owned_count) {
+          P4EST_ASSERT (fnid < lnodes->owned_count);
+          if (labels[fnid] < 0) {
+            for (lk = fnid; lk <= lnid; lk++) {
+              labels[lk] = num_cols;
+            }
+            num_cols++;
+          }
+        }
+      }
+    }
+  }
+
+  mpiret =
+    sc_MPI_Exscan (&num_cols, &global_num_cols, 1, P4EST_MPI_GLOIDX,
+                   sc_MPI_SUM, lnodes->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  if (!p6est->mpirank) {
+    global_num_cols = 0;
+  }
+
+  for (lk = 0; lk < lnodes->owned_count; lk++) {
+    labels[lk] += global_num_cols;
+  }
+
+#if 0
+  {
+    sc_array_t          view;
+
+    sc_array_init_data (&view, labels, sizeof (*labels),
+                        (size_t) lnodes->num_local_nodes);
+
+    p6est_lnodes_share_owned (&view, lnodes);
+  }
+#endif
+
+  for (lk = 0; lk < lnodes->owned_count; lk++) {
+    P4EST_ASSERT (labels[lk] >= 0);
+  }
+
+  return labels;
+}

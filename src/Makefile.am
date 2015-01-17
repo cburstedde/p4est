@@ -25,6 +25,7 @@ libp4est_compiled_sources += \
         src/p4est_points.c src/p4est_geometry.c \
         src/p4est_iterate.c src/p4est_lnodes.c src/p4est_mesh.c \
         src/p4est_balance.c src/p4est_io.c \
+        src/p4est_connrefine.c \
         src/p4est_wrap.c src/p4est_plex.c
 endif
 if P4EST_ENABLE_BUILD_3D
@@ -46,6 +47,7 @@ libp4est_compiled_sources += \
         src/p8est_points.c src/p8est_geometry.c \
         src/p8est_iterate.c src/p8est_lnodes.c src/p8est_mesh.c \
         src/p8est_tets_hexes.c src/p8est_balance.c src/p8est_io.c \
+        src/p8est_connrefine.c \
         src/p8est_wrap.c src/p8est_plex.c
 endif
 include example/p6est/Makefile.am

@@ -170,7 +170,7 @@ main (int argc, char **argv)
   double              height[3] = { 0., 0., 0.1 };
   int                 i;
   int                 vtk;
-  unsigned            crc_computed;
+  unsigned            crc_computed = 0;
   sc_options_t       *opt;
   int                 first_argc;
   const char         *config_name;
@@ -232,8 +232,9 @@ main (int argc, char **argv)
   p6est_destroy (p6est);
 
   sc_flops_snap (&fi, &snapshot);
-  p6est = p6est_new_ext (mpicomm, conn, 0, refine_level, refine_zlevel, 1, 3,
-                         init_fn, TEST_USER_POINTER);
+  p6est =
+    p6est_new_ext (mpicomm, conn, 0, refine_level, refine_zlevel, 3, 1, 3,
+                   init_fn, TEST_USER_POINTER);
   sc_flops_shot (&fi, &snapshot);
   sc_stats_set1 (&stats[TIMINGS_NEW_EXT], snapshot.iwtime, "New extended");
 
@@ -375,9 +376,11 @@ main (int argc, char **argv)
     p6est_lnodes_destroy (lnodes);
   }
 
+#ifdef P4EST_HAVE_ZLIB
   crc_computed = p6est_checksum (p6est);
 
   P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
+#endif
 
   if (save_filename) {
     sc_flops_snap (&fi, &snapshot);
