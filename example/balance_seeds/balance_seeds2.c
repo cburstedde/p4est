@@ -128,9 +128,9 @@ main (int argc, char **argv)
   p4est_quadrant_t   *q;
   int                 i;
 #ifndef P4_TO_P8
-  const char          filename[] = "p4est_balance_face";
+  char          filename[] = "p4est_balance_face";
 #else
-  const char          filename[] = "p8est_balance_edge";
+  char          filename[] = "p8est_balance_edge";
 #endif
 
   /* initialize MPI */

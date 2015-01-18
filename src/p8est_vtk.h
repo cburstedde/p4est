@@ -88,7 +88,7 @@ p8est_vtk_context_t;
  */
 void                p8est_vtk_write_file (p8est_t * p8est,
                                           p8est_geometry_t * geom,
-                                          const char *filename);
+                                          char *filename);
 
 /** Write the VTK header.
  *
@@ -120,7 +120,7 @@ void                p8est_vtk_write_file (p8est_t * p8est,
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_t * p8est,
                                              p8est_geometry_t * geom,
                                              double scale,
-                                             const char *filename);
+                                             char *filename);
 
 /** Write VTK cell data.
  *

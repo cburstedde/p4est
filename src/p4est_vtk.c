@@ -130,7 +130,7 @@ p4est_vtk_context_destroy (p4est_vtk_context_t * context)
 
 void
 p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
-                      const char *filename)
+                      char *filename)
 {
   int                 retval;
   p4est_vtk_context_t *cont = NULL;
@@ -152,7 +152,7 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
 p4est_vtk_context_t *
 p4est_vtk_write_header (p4est_t * p4est,
                         p4est_geometry_t * geom,
-                        double scale, const char *filename)
+                        double scale, char *filename)
 {
   /* Allocate, initialize the vtk context. */
   p4est_vtk_context_t *cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
