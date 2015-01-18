@@ -159,6 +159,38 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
                                                 int num_cell_scalars,
                                                 int num_cell_vectors, ...);
 
+/** Write a cell scalar field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ *
+ * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The cell values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p8est_vtk_context_t *p8est_vtk_write_cell_scalar (p8est_vtk_context_t * cont,
+                                                  const char *scalar_name,
+                                                  const sc_array_t * values);
+
+/** Write a 3-vector cell field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ *
+ * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The cell values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
+                                                  const char *vector_name,
+                                                  const sc_array_t * values);
+
 /** Write VTK point data.
  *
  * Writing a VTK file is split into a few routines.
@@ -187,60 +219,6 @@ p8est_vtk_context_t *p8est_vtk_write_point_data (p8est_vtk_context_t * cont,
                                                  int num_point_scalars,
                                                  int num_point_vectors, ...);
 
-/** Write VTK point data.
- *
- * This function exports custom point data to the vtk file; it is functionally
- * the same as \b p8est_vtk_write_point_data with the only difference being
- * that instead of a variable argument list, an initialized \a va_list is
- * passed as the last argument. The \a va_list is initialized from the variable
- * argument list of the calling function.
- *
- * \note This function is actually called from \b p8est_vtk_write_point_data
- * and does all of the work.
- *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
- * \param [in] num_point_scalars Number of point scalar datasets to output.
- * \param [in] num_point_vectors Number of point vector datasets to output.
- * \param [in,out] ap      An initialized va_list used to access the
- *                         scalar/vector data.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-p8est_vtk_context_t *p8est_vtk_write_point_datav (p8est_vtk_context_t * cont,
-                                                  int num_point_scalars,
-                                                  int num_point_vectors,
-                                                  va_list ap);
-
-/** Write VTK cell data.
- *
- * This function exports custom cell data to the vtk file; it is functionally
- * the same as \b p8est_vtk_write_cell_data with the only difference being
- * that instead of a variable argument list, an initialized \a va_list is
- * passed as the last argument. The \a va_list is initialized from the variable
- * argument list of the calling function.
- *
- * \note This function is actually called from \b p8est_vtk_write_cell_data
- * and does all of the work.
- *
- * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
- * \param [in] num_point_scalars Number of point scalar datasets to output.
- * \param [in] num_point_vectors Number of point vector datasets to output.
- * \param [in,out] ap      An initialized va_list used to access the
- *                         scalar/vector data.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-p8est_vtk_context_t *p8est_vtk_write_cell_datav (p8est_vtk_context_t * cont,
-                                                 int write_tree,
-                                                 int write_level,
-                                                 int write_rank,
-                                                 int wrap_rank,
-                                                 int num_cell_scalars,
-                                                 int num_cell_vectors,
-                                                 va_list ap);
-
 /** Write a point scalar field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
@@ -257,22 +235,6 @@ p8est_vtk_context_t *p8est_vtk_write_point_scalar (p8est_vtk_context_t * cont,
                                                    const char *scalar_name,
                                                    const sc_array_t * values);
 
-/** Write a cell scalar field to the VTU file.
- *
- * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of fields.
- *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
- * \param [in] scalar_name The name of the scalar field.
- * \param [in] values      The cell values that will be written.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-p8est_vtk_context_t *p8est_vtk_write_cell_scalar (p8est_vtk_context_t * cont,
-                                                  const char *scalar_name,
-                                                  const sc_array_t * values);
-
 /** Write a 3-vector point field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
@@ -288,22 +250,6 @@ p8est_vtk_context_t *p8est_vtk_write_cell_scalar (p8est_vtk_context_t * cont,
 p8est_vtk_context_t *p8est_vtk_write_point_vector (p8est_vtk_context_t * cont,
                                                    const char *vector_name,
                                                    const sc_array_t * values);
-
-/** Write a 3-vector cell field to the VTU file.
- *
- * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of fields.
- *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
- * \param [in] vector_name The name of the vector field.
- * \param [in] values      The cell values that will be written.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
-                                                  const char *vector_name,
-                                                  const sc_array_t * values);
 
 /** Write the VTU footer and clean up.
  *

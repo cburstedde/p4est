@@ -340,11 +340,9 @@
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_header          p8est_vtk_write_header
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
-#define p4est_vtk_write_cell_datav      p8est_vtk_write_cell_datav
 #define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
 #define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
-#define p4est_vtk_write_point_datav     p8est_vtk_write_point_datav
 #define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
 #define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer

@@ -588,21 +588,27 @@ p4est_vtk_write_header (p4est_t * p4est,
   return cont;
 }
 
-p4est_vtk_context_t *
-p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
-                            int num_point_scalars, int num_point_vectors, ...)
-{
-  va_list             ap;
-  va_start (ap, num_point_vectors);
-
-  cont = p4est_vtk_write_point_datav (cont, num_point_scalars,
-                                      num_point_vectors, ap);
-  va_end (ap);
-
-  return cont;
-}
-
-p4est_vtk_context_t *
+/** Write VTK point data.
+ *
+ * This function exports custom point data to the vtk file; it is functionally
+ * the same as \b p4est_vtk_write_point_data with the only difference being
+ * that instead of a variable argument list, an initialized \a va_list is
+ * passed as the last argument. The \a va_list is initialized from the variable
+ * argument list of the calling function.
+ *
+ * \note This function is actually called from \b p4est_vtk_write_point_data
+ * and does all of the work.
+ *
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] num_point_scalars Number of point scalar datasets to output.
+ * \param [in] num_point_vectors Number of point vector datasets to output.
+ * \param [in,out] ap      An initialized va_list used to access the
+ *                         scalar/vector data.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+static p4est_vtk_context_t *
 p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                              int num_point_scalars,
                              int num_point_vectors, va_list ap)
@@ -733,24 +739,40 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
-                           int write_tree, int write_level,
-                           int write_rank, int wrap_rank,
-                           int num_cell_scalars, int num_cell_vectors, ...)
+p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
+                            int num_point_scalars, int num_point_vectors, ...)
 {
   va_list             ap;
-  va_start (ap, num_cell_vectors);
+  va_start (ap, num_point_vectors);
 
-  cont = p4est_vtk_write_cell_datav (cont,
-                                     write_tree, write_level,
-                                     write_rank, wrap_rank,
-                                     num_cell_scalars, num_cell_vectors, ap);
+  cont = p4est_vtk_write_point_datav (cont, num_point_scalars,
+                                      num_point_vectors, ap);
   va_end (ap);
 
   return cont;
 }
 
-p4est_vtk_context_t *
+/** Write VTK cell data.
+ *
+ * This function exports custom cell data to the vtk file; it is functionally
+ * the same as \b p4est_vtk_write_cell_data with the only difference being
+ * that instead of a variable argument list, an initialized \a va_list is
+ * passed as the last argument. The \a va_list is initialized from the variable
+ * argument list of the calling function.
+ *
+ * \note This function is actually called from \b p4est_vtk_write_cell_data
+ * and does all of the work.
+ *
+ * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in] num_point_scalars Number of point scalar datasets to output.
+ * \param [in] num_point_vectors Number of point vector datasets to output.
+ * \param [in,out] ap      An initialized va_list used to access the
+ *                         scalar/vector data.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+static p4est_vtk_context_t *
 p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                             int write_tree, int write_level,
                             int write_rank, int wrap_rank,
@@ -1074,6 +1096,24 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   }
 
   P4EST_FREE (names);
+
+  return cont;
+}
+
+p4est_vtk_context_t *
+p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
+                           int write_tree, int write_level,
+                           int write_rank, int wrap_rank,
+                           int num_cell_scalars, int num_cell_vectors, ...)
+{
+  va_list             ap;
+  va_start (ap, num_cell_vectors);
+
+  cont = p4est_vtk_write_cell_datav (cont,
+                                     write_tree, write_level,
+                                     write_rank, wrap_rank,
+                                     num_cell_scalars, num_cell_vectors, ap);
+  va_end (ap);
 
   return cont;
 }
