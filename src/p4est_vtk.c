@@ -132,44 +132,18 @@ void
 p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
                       const char *filename)
 {
-  p4est_vtk_write_all (p4est, geom,
-                       p4est_vtk_scale,
-                       p4est_vtk_write_tree, p4est_vtk_write_level,
-                       p4est_vtk_write_rank, p4est_vtk_wrap_rank,
-                       0, 0, filename);
-}
-
-void
-p4est_vtk_write_all (p4est_t * p4est, p4est_geometry_t * geom,
-                     double scale,
-                     int write_tree, int write_level,
-                     int write_rank, int wrap_rank,
-                     int num_point_scalars, int num_point_vectors,
-                     const char *filename, ...)
-{
   int                 retval;
-  va_list             ap;
   p4est_vtk_context_t *cont = NULL;
 
-  P4EST_ASSERT (num_point_scalars >= 0 && num_point_vectors >= 0);
-
-  cont = p4est_vtk_write_header (p4est, geom, scale, filename);
+  cont = p4est_vtk_write_header (p4est, geom, p4est_vtk_scale, filename);
   SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing header");
 
   /* Write the tree/level/rank data. */
   cont =
-    p4est_vtk_write_cell_data (cont, write_tree, write_level,
-                               write_rank, wrap_rank, 0, 0);
+    p4est_vtk_write_cell_data (cont, p4est_vtk_write_tree,
+                               p4est_vtk_write_level, p4est_vtk_write_rank,
+                               p4est_vtk_wrap_rank, 0, 0);
   SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing cell data");
-
-  /* Write the point data. */
-  va_start (ap, filename);
-  cont =
-    p4est_vtk_write_point_datav (cont, num_point_scalars,
-                                 num_point_vectors, ap);
-  SC_CHECK_ABORT (cont != NULL,
-                  P4EST_STRING "_vtk: Error writing point data");
-  va_end (ap);
 
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");

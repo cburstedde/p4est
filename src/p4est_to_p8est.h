@@ -338,7 +338,6 @@
 /* functions in p4est_vtk */
 #define p4est_vtk_context_destroy       p8est_vtk_context_destroy
 #define p4est_vtk_write_file            p8est_vtk_write_file
-#define p4est_vtk_write_all             p8est_vtk_write_all
 #define p4est_vtk_write_header          p8est_vtk_write_header
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
 #define p4est_vtk_write_cell_datav      p8est_vtk_write_cell_datav

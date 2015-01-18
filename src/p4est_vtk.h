@@ -65,39 +65,6 @@ void                p4est_vtk_write_file (p4est_t * p4est,
                                           p4est_geometry_t * geom,
                                           const char *filename);
 
-/** Write the p4est and any number of point fields in VTK format.
- *
- * This is a convenience function that will abort if there is a file error.
- *
- * TODO: This function shall be removed.
- *
- * \param [in] p4est    The p4est to be written.
- * \param [in] geom     A p4est_geometry_t structure or NULL for vertex space.
- * \param [in] scale    Double value between 0 and 1 to scale each quadrant.
- * \param [in] write_tree  Include the tree id as cell output field.
- * \param [in] write_level Include the tree levels as cell output field.
- * \param [in] write_rank  Include the MPI rank as cell output field.
- * \param [in] wrap_rank   The MPI rank is written module wrap_tree, or 0.
- * \param [in] num_point_scalars  Number of point scalar fields to write.
- * \param [in] num_point_vectors  Number of point vector fields to write.
- * \param [in] filename           First part of the name;
- *                                see p4est_vtk_write_file.
- *
- * The variable arguments need to be pairs of (fieldname, fieldvalues)
- * where the point scalars come first, followed by the point vectors.
- *
- * \note this function only supports point data; if cell data is required see
- * p4est_vtk_write_cell_data.
- */
-void                p4est_vtk_write_all (p4est_t * p4est,
-                                         p4est_geometry_t * geom,
-                                         double scale,
-                                         int write_tree, int write_level,
-                                         int write_rank, int wrap_rank,
-                                         int num_point_scalars,
-                                         int num_point_vectors,
-                                         const char *filename, ...);
-
 /** Write the VTK header.
  *
  * Writing a VTK file is split into a few routines.
