@@ -23,9 +23,11 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_communication.h>
 #include <p4est_search.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_communication.h>
 #include <p8est_search.h>
 #endif
 
@@ -590,4 +592,173 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
                             search_point_fn, tquadrants, points, &actives);
     sc_array_reset (&actives);
   }
+}
+
+static              size_t
+p4est_traverse_array_index (sc_array_t * array, p4est_topidx_t tt)
+{
+  P4EST_ASSERT (array != NULL);
+  P4EST_ASSERT (array->elem_size == sizeof (size_t));
+  P4EST_ASSERT (tt >= 0);
+
+  return *(size_t *) sc_array_index (array, (size_t) tt);
+}
+
+static              size_t
+p4est_traverse_type_fn (sc_array_t * array, size_t pindex, void *data)
+{
+  p4est_quadrant_t   *pos;
+
+  P4EST_ASSERT (data == NULL);
+  P4EST_ASSERT (array != NULL);
+  pos = p4est_quadrant_array_index (array, pindex);
+  P4EST_ASSERT (pos->p.which_tree >= 0);
+
+  return (size_t) pos->p.which_tree;
+}
+
+static int
+p4est_traverse_is_empty (p4est_t * p4est, int p)
+{
+  const p4est_gloidx_t *gfq;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= p && p < p4est->mpisize);
+  gfq = p4est->global_first_quadrant;
+
+  return gfq[p] == gfq[p + 1];
+}
+
+static int
+p4est_traverse_is_clean_start (p4est_t * p4est, int p)
+{
+  const p4est_quadrant_t *marker;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= p && p <= p4est->mpisize);
+
+  marker = p4est->global_first_position + p;
+  P4EST_ASSERT (marker->level == P4EST_QMAXLEVEL);
+  P4EST_ASSERT (0 <= marker->p.which_tree &&
+                marker->p.which_tree <= p4est->connectivity->num_trees);
+
+  return marker->x == 0 && marker->y == 0
+#ifdef P4_TO_P8
+    && marker->z == 0
+#endif
+    ;
+}
+
+#ifdef P4EST_ENABLE_DEBUG
+
+static int
+p4est_traverse_is_valid_tree (p4est_t * p4est, p4est_topidx_t which_tree,
+                              int pfirst, int plast)
+{
+  p4est_quadrant_t    root, desc;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < p4est->mpisize);
+
+  /* check that pfirst is really the owner of the first quadrant in the tree */
+  p4est_quadrant_set_morton (&root, 0, 0);
+  p4est_quadrant_first_descendant (&root, &desc, P4EST_QMAXLEVEL);
+  if (!p4est_comm_is_owner (p4est, which_tree, &desc, pfirst)) {
+    return 0;
+  }
+
+  /* check that plast is really the owner of the last quadrant in the tree */
+  p4est_quadrant_last_descendant (&root, &desc, P4EST_QMAXLEVEL);
+  if (!p4est_comm_is_owner (p4est, which_tree, &desc, plast)) {
+    return 0;
+  }
+
+  /* this is redundant after the checks above */
+  P4EST_ASSERT (!p4est_traverse_is_empty (p4est, pfirst) &&
+                !p4est_traverse_is_empty (p4est, plast));
+
+  return 1;
+}
+
+#endif /* P4EST_ENABLE_DEBUG */
+
+void
+p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
+{
+  const int           num_procs = p4est->mpisize;
+  const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
+  int                 pfirst, plast, pnext;
+  sc_array_t          position_array;
+  sc_array_t         *tree_offsets;
+  p4est_topidx_t      tt;
+  p4est_quadrant_t    root;
+
+  /* array to split is the p4est partition marker */
+  /* it is important to include the highest tree number plus one */
+  sc_array_init_data (&position_array, p4est->global_first_position,
+                      sizeof (p4est_quadrant_t), num_procs + 1);
+
+  /* the enumerable type is the tree number -- we know the size already */
+  tree_offsets = sc_array_new_size (sizeof (size_t), num_trees + 2);
+
+  /* split processors into tree-wise sections, going one beyond */
+  sc_array_split (&position_array, tree_offsets, num_trees + 1,
+                  p4est_traverse_type_fn, NULL);
+  P4EST_ASSERT (tree_offsets->elem_count == (size_t) (num_trees + 2));
+  P4EST_ASSERT (p4est_traverse_array_index
+                (tree_offsets, num_trees + 1) == (size_t) num_procs + 1);
+  P4EST_ASSERT (p4est_traverse_array_index
+                (tree_offsets, num_trees) <= (size_t) num_procs);
+  P4EST_ASSERT (p4est_traverse_array_index (tree_offsets, 0) == 0);
+
+  /* now loop through all trees, local or not */
+  for (pfirst = 0, tt = 0; tt < num_trees; pfirst = pnext, ++tt) {
+    /* pfirst is the first processor indexed for this tree */
+
+    /* determine the exclusive upper bound of processors starting in this tree */
+    pnext = p4est_traverse_array_index (tree_offsets, tt + 1);
+    P4EST_ASSERT (pfirst <= pnext && pnext <= num_procs);
+
+    /* fix the last processor in the tree, which is known at this point */
+    P4EST_ASSERT (pnext > 0);
+    plast = pnext - 1;
+
+    /* now check multiple cases for the beginning processor */
+    if (pfirst < pnext) {
+      /* at least one processor starts in this tree */
+
+      if (p4est_traverse_is_clean_start (p4est, pfirst)) {
+        /* pfirst starts at the tree's first descendant but may be empty */
+        while (p4est_traverse_is_empty (p4est, pfirst)) {
+          ++pfirst;
+          P4EST_ASSERT (p4est_traverse_type_fn
+                        (&position_array, pfirst, NULL) == (size_t) tt);
+        }
+      }
+      else {
+        /* there must be exactly one processor before us in this tree */
+        --pfirst;
+        P4EST_ASSERT (p4est_traverse_type_fn
+                      (&position_array, pfirst, NULL) < (size_t) tt);
+      }
+    }
+    else {
+      /* this whole tree is owned by one processor */
+      pfirst = plast;
+    }
+
+    /* we should have found tight bounds on processors for this tree */
+    P4EST_ASSERT (pfirst <= plast && plast < num_procs);
+    P4EST_ASSERT (plast <= pnext && pnext <= num_procs);
+    P4EST_ASSERT (p4est_traverse_type_fn
+                  (&position_array, plast, NULL) <= (size_t) tt);
+    P4EST_ASSERT (p4est_traverse_is_valid_tree (p4est, tt, pfirst, plast));
+
+    /* TODO: go into recursion for this tree */
+    p4est_quadrant_set_morton (&root, 0, 0);
+  }
+
+  /* cleanup */
+  sc_array_destroy (tree_offsets);
+  sc_array_reset (&position_array);
 }

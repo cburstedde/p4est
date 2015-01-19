@@ -157,6 +157,21 @@ void                p8est_search (p8est_t * p8est,
                                   p8est_search_query_t search_point_fn,
                                   sc_array_t * points);
 
+/** Traverse the global partition top-down.
+ * The recursion will only go down a branch
+ * when it is split between multiple processors.
+ * A callback function can stop any branch recursion.
+ * \note Traversing the whole processor partition will likely by inefficient.
+ * \param [in] p4est        The forest to traverse.
+ * \param [in] traverse_info_fn         This function controls the recursion,
+ *                                      which only continues deeper if this
+ *                                      callback returns true for a quadrant.
+ *                                      Explain how we set its parameters.
+ * TODO: the search function does nothing, and there is no recursion yet.
+ */
+void                p8est_traverse (p8est_t * p4est,
+                                    p8est_search_query_t traverse_info_fn);
+
 SC_EXTERN_C_END;
 
 #endif
