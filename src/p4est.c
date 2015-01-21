@@ -2425,7 +2425,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   if (weight_fn == NULL) {
-    /* Divide up the quadants equally */
+    /* Divide up the quadrants equally */
     for (p = 0, next_quadrant = 0; p < num_procs; ++p) {
       prev_quadrant = next_quadrant;
       next_quadrant =
