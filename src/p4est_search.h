@@ -163,11 +163,14 @@ void                p4est_search (p4est_t * p4est,
  * \param [in] traverse_info_fn         This function controls the recursion,
  *                                      which only continues deeper if this
  *                                      callback returns true for a quadrant.
- *                                      Explain how we set its parameters.
+ *                                      TODO: Explain how we set its parameters.
+ * \param [in,out] user     This is passed as the \b points argument to
+ *                          \b traverse_info_fn.
  * TODO: the search function does nothing, and there is no recursion yet.
  */
 void                p4est_traverse (p4est_t * p4est,
-                                    p4est_search_query_t traverse_info_fn);
+                                    p4est_search_query_t traverse_info_fn,
+                                    void *user);
 
 SC_EXTERN_C_END;
 

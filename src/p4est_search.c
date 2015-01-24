@@ -605,7 +605,7 @@ p4est_traverse_array_index (sc_array_t * array, p4est_topidx_t tt)
 }
 
 static              size_t
-p4est_traverse_type_fn (sc_array_t * array, size_t pindex, void *data)
+p4est_traverse_type_tree (sc_array_t * array, size_t pindex, void *data)
 {
   p4est_quadrant_t   *pos;
 
@@ -649,26 +649,46 @@ p4est_traverse_is_clean_start (p4est_t * p4est, int p)
     ;
 }
 
+static              size_t
+p4est_traverse_type_childid (sc_array_t * array, size_t pindex, void *data)
+{
+  p4est_quadrant_t   *quadrant = (p4est_quadrant_t *) data;
+  p4est_quadrant_t   *pos;
+
+  P4EST_ASSERT (array != NULL);
+  P4EST_ASSERT (data != NULL);
+  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
+
+  pos = p4est_quadrant_array_index (array, pindex);
+  P4EST_ASSERT (pos->p.which_tree >= 0);
+  P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, pos));
+
+  return (size_t) p4est_quadrant_ancestor_id (pos, quadrant->level + 1);
+}
+
 #ifdef P4EST_ENABLE_DEBUG
 
 static int
-p4est_traverse_is_valid_tree (p4est_t * p4est, p4est_topidx_t which_tree,
-                              int pfirst, int plast)
+p4est_traverse_is_valid_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
+                                  const p4est_quadrant_t * quadrant,
+                                  int pfirst, int plast)
 {
-  p4est_quadrant_t    root, desc;
+  p4est_quadrant_t    desc;
 
   P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
   P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < p4est->mpisize);
 
-  /* check that pfirst is really the owner of the first quadrant in the tree */
-  p4est_quadrant_set_morton (&root, 0, 0);
-  p4est_quadrant_first_descendant (&root, &desc, P4EST_QMAXLEVEL);
+  /* check that pfirst is really the first owner in this quadrant */
+  p4est_quadrant_first_descendant (quadrant, &desc, P4EST_QMAXLEVEL);
   if (!p4est_comm_is_owner (p4est, which_tree, &desc, pfirst)) {
     return 0;
   }
 
-  /* check that plast is really the owner of the last quadrant in the tree */
-  p4est_quadrant_last_descendant (&root, &desc, P4EST_QMAXLEVEL);
+  /* check that plast is really the last owner in this quadrant */
+  p4est_quadrant_last_descendant (quadrant, &desc, P4EST_QMAXLEVEL);
   if (!p4est_comm_is_owner (p4est, which_tree, &desc, plast)) {
     return 0;
   }
@@ -680,10 +700,85 @@ p4est_traverse_is_valid_tree (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static int
+p4est_traverse_is_valid_tree (p4est_t * p4est, p4est_topidx_t which_tree,
+                              int pfirst, int plast)
+{
+  p4est_quadrant_t    root;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < p4est->mpisize);
+
+  p4est_quadrant_set_morton (&root, 0, 0);
+
+  return p4est_traverse_is_valid_quadrant (p4est, which_tree, &root,
+                                           pfirst, plast);
+}
+
 #endif /* P4EST_ENABLE_DEBUG */
 
+typedef struct p4est_traverse_recursion
+{
+  p4est_t            *p4est;
+  p4est_topidx_t      which_tree;
+  p4est_search_query_t traverse_info_fn;
+  sc_array_t         *position_array;
+  void               *user;
+}
+p4est_traverse_recursion_t;
+
+static void
+p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
+                          p4est_quadrant_t * quadrant, int pfirst, int plast)
+{
+  int                 i;
+  int                 proceed;
+  sc_array_t          pview, offsets;
+  p4est_quadrant_t    child;
+
+  P4EST_ASSERT (rec != NULL);
+  P4EST_ASSERT (rec->p4est != NULL);
+  P4EST_ASSERT (0 <= rec->which_tree &&
+                rec->which_tree < rec->p4est->connectivity->num_trees);
+  P4EST_ASSERT (rec->traverse_info_fn != NULL);
+  P4EST_ASSERT (p4est_traverse_is_valid_quadrant (rec->p4est, rec->which_tree,
+                                                  quadrant, pfirst, plast));
+
+  /* call user-provided function */
+  proceed = rec->traverse_info_fn (rec->p4est, rec->which_tree,
+                                   quadrant, -1, rec->user);
+
+  /* terminate recursion at the latest when we are down to one processor */
+  if (pfirst == plast || !proceed) {
+    return;
+  }
+  P4EST_ASSERT (quadrant->level < P4EST_QMAXLEVEL);
+
+  /* find the processors for all children of the quadrant */
+  sc_array_init_view (&pview, rec->position_array,
+                      pfirst + 1, plast - pfirst);
+  sc_array_init_size (&offsets, sizeof (size_t), P4EST_CHILDREN + 1);
+  sc_array_split (&pview, &offsets, P4EST_CHILDREN,
+                  p4est_traverse_type_childid, quadrant);
+  P4EST_ASSERT (offsets.elem_count == (size_t) (P4EST_CHILDREN + 1));
+
+  /* go through the quadrant's children */
+  for (i = 0; i < P4EST_CHILDREN; ++i) {
+    p4est_quadrant_child (quadrant, &child, i);
+
+    /* TODO: update pfirst, plast for this child, go into recursion */
+  }
+
+  /* this is it */
+  sc_array_reset (&offsets);
+  sc_array_reset (&pview);
+}
+
 void
-p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
+p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn,
+                void *user)
 {
   const int           num_procs = p4est->mpisize;
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
@@ -692,6 +787,13 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
   sc_array_t         *tree_offsets;
   p4est_topidx_t      tt;
   p4est_quadrant_t    root;
+  p4est_traverse_recursion_t srec, *rec = &srec;
+
+  /* we do nothing if there is nothing to be done */
+  P4EST_ASSERT (p4est != NULL);
+  if (traverse_info_fn == NULL) {
+    return;
+  }
 
   /* array to split is the p4est partition marker */
   /* it is important to include the highest tree number plus one */
@@ -703,7 +805,7 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
 
   /* split processors into tree-wise sections, going one beyond */
   sc_array_split (&position_array, tree_offsets, num_trees + 1,
-                  p4est_traverse_type_fn, NULL);
+                  p4est_traverse_type_tree, NULL);
   P4EST_ASSERT (tree_offsets->elem_count == (size_t) (num_trees + 2));
   P4EST_ASSERT (p4est_traverse_array_index
                 (tree_offsets, num_trees + 1) == (size_t) num_procs + 1);
@@ -712,6 +814,11 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
   P4EST_ASSERT (p4est_traverse_array_index (tree_offsets, 0) == 0);
 
   /* now loop through all trees, local or not */
+  rec->p4est = p4est;
+  rec->which_tree = -1;
+  rec->traverse_info_fn = traverse_info_fn;
+  rec->position_array = &position_array;
+  rec->user = user;
   for (pfirst = 0, tt = 0; tt < num_trees; pfirst = pnext, ++tt) {
     /* pfirst is the first processor indexed for this tree */
 
@@ -731,14 +838,14 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
         /* pfirst starts at the tree's first descendant but may be empty */
         while (p4est_traverse_is_empty (p4est, pfirst)) {
           ++pfirst;
-          P4EST_ASSERT (p4est_traverse_type_fn
+          P4EST_ASSERT (p4est_traverse_type_tree
                         (&position_array, pfirst, NULL) == (size_t) tt);
         }
       }
       else {
         /* there must be exactly one processor before us in this tree */
         --pfirst;
-        P4EST_ASSERT (p4est_traverse_type_fn
+        P4EST_ASSERT (p4est_traverse_type_tree
                       (&position_array, pfirst, NULL) < (size_t) tt);
       }
     }
@@ -750,12 +857,14 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn)
     /* we should have found tight bounds on processors for this tree */
     P4EST_ASSERT (pfirst <= plast && plast < num_procs);
     P4EST_ASSERT (plast <= pnext && pnext <= num_procs);
-    P4EST_ASSERT (p4est_traverse_type_fn
+    P4EST_ASSERT (p4est_traverse_type_tree
                   (&position_array, plast, NULL) <= (size_t) tt);
     P4EST_ASSERT (p4est_traverse_is_valid_tree (p4est, tt, pfirst, plast));
 
-    /* TODO: go into recursion for this tree */
+    /* go into recursion for this tree */
+    rec->which_tree = tt;
     p4est_quadrant_set_morton (&root, 0, 0);
+    p4est_traverse_recursion (rec, &root, pfirst, plast);
   }
 
   /* cleanup */

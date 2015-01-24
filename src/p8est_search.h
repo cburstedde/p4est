@@ -170,7 +170,8 @@ void                p8est_search (p8est_t * p8est,
  * TODO: the search function does nothing, and there is no recursion yet.
  */
 void                p8est_traverse (p8est_t * p4est,
-                                    p8est_search_query_t traverse_info_fn);
+                                    p8est_search_query_t traverse_info_fn,
+                                    void *user);
 
 SC_EXTERN_C_END;
 

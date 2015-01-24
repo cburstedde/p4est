@@ -95,6 +95,16 @@ weight_once (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int
+traverse_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+             void * point)
+{
+  P4EST_ASSERT (p4est == (p4est_t *) point);
+
+  return 1;
+}
+
 static int          circle_count;
 
 static void
@@ -134,7 +144,7 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   }
 
   /* test traversal routine */
-  p4est_traverse (p4est, NULL);
+  p4est_traverse (p4est, traverse_fn, p4est);
 }
 
 static void
