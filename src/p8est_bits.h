@@ -234,6 +234,15 @@ int                 p8est_quadrant_is_extended (const p8est_quadrant_t * q);
 int                 p8est_quadrant_is_sibling (const p8est_quadrant_t * q1,
                                                const p8est_quadrant_t * q2);
 
+/** Compute a specific child of a quadrant.
+ * \param [in]     q    Input quadrant.
+ * \param [in,out] r    Existing quadrant whose Morton index will be filled
+ *                      with the coordinates of its child no. \b child_id.
+ * \param [in] child_id The id of the child computed, 0..7.
+ */
+void                p8est_quadrant_child (const p8est_quadrant_t * q,
+                                          p8est_quadrant_t * r, int child_id);
+
 /** Test if two quadrants are siblings.
  * Descriptive, slower version of \a p8est_quadrant_is_sibling.
  * For debugging and educational purposes only.
