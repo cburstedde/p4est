@@ -292,6 +292,20 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
 }
 
 int
+p4est_comm_is_empty (p4est_t * p4est, int p)
+{
+  const p4est_gloidx_t *gfq;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= p && p < p4est->mpisize);
+
+  gfq = p4est->global_first_quadrant;
+  P4EST_ASSERT (gfq != NULL);
+
+  return gfq[p] == gfq[p + 1];
+}
+
+int
 p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
                      const p4est_quadrant_t * q, int rank)
 {

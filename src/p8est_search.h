@@ -157,6 +157,48 @@ void                p8est_search (p8est_t * p8est,
                                   p8est_search_query_t search_point_fn,
                                   sc_array_t * points);
 
+/** Callback function for the traversal recursion.
+ * \param [in] p8est        The forest to traverse.
+ *                          Its local quadrants are never accessed.
+ * \param [in] which_tree   The tree number under consideration.
+ * \param [in] quadrant     This quadrant is not from local forest storage,
+ *                          and its user data is undefined.  It represents
+ *                          the branch of the forest in the top-down recursion.
+ * \param [in] pfirst       The lowest processor that owns part of \b quadrant.
+ *                          Guaranteed to be non-empty.
+ * \param [in] plast        The highest processor that owns part of \b quadrant.
+ *                          Guaranteed to be non-empty.  If this is equal to
+ *                          \b pfirst, then the recursion will stop for
+ *                          quadrant's branch after this function returns.
+ * \param [in,out] user     Application-defined data passed through.
+ * \return                  If false, the recursion at quadrant is terminated.
+ *                          If true, it continues if \b pfirst < \b plast.
+ */
+typedef int         (*p8est_traverse_query_t) (p8est_t * p8est,
+                                               p4est_topidx_t which_tree,
+                                               p8est_quadrant_t * quadrant,
+                                               int pfirst, int plast,
+                                               void *user);
+
+/** Traverse the global partition top-down.
+ * We proceed top-down through the partition, identically on all processors
+ * except for the results of a user-provided callback.  The recursion will only
+ * go down branches that are split between multiple processors.  The callback
+ * function can be used to stop a branch recursion even for split branches.
+ * \note Traversing the whole processor partition will likely by inefficient,
+ *       so sensible use of the callback function is advised.
+ * \param [in] p8est        The forest to traverse.
+ *                          Its local quadrants are never accessed.
+ * \param [in] traverse_fn  This function controls the recursion,
+ *                          which only continues deeper if this
+ *                          callback returns true for a branch quadrant.
+ * \param [in,out] user     This is passed untouched as the \b user argument to
+ *                          \b traverse_fn.
+ */
+void                p8est_traverse (p8est_t * p8est,
+                                    p8est_traverse_query_t traverse_fn,
+                                    void *user);
+
 SC_EXTERN_C_END;
 
 #endif

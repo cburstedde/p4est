@@ -102,6 +102,7 @@
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
+#define p4est_traverse_query_t          p8est_traverse_query_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_wrap_t                    p8est_wrap_t
@@ -236,6 +237,7 @@
 #define p4est_quadrant_ancestor         p8est_quadrant_ancestor
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
+#define p4est_quadrant_child            p8est_quadrant_child
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor
 #define p4est_quadrant_face_neighbor_extra p8est_quadrant_face_neighbor_extra
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors
@@ -267,6 +269,7 @@
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
+#define p4est_traverse                  p8est_traverse
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
@@ -296,6 +299,7 @@
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
+#define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
