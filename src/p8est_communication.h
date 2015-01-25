@@ -86,6 +86,13 @@ void                p8est_comm_global_partition (p8est_t * p8est,
 void                p8est_comm_count_pertree (p8est_t * p8est,
                                               p4est_gloidx_t * pertree);
 
+/** Query whether a processor has no quadrants.
+ * \param [in] p8est    This forests' global_first_position array must be valid.
+ * \param [in] p        Valid processor id.
+ * \return              True if and only if processor \p is empty.
+ */
+int                 p8est_comm_is_empty (p8est_t * p8est, int p);
+
 /** Tests ownershop of a quadrant via p8est->global_first_position.
  * Assumes a tree with no overlaps.
  * \param [in] rank    Rank whose ownership is tested.

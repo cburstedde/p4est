@@ -637,18 +637,6 @@ p4est_traverse_type_tree (sc_array_t * array, size_t pindex, void *data)
   return (size_t) pos->p.which_tree;
 }
 
-static int
-p4est_traverse_is_empty (p4est_t * p4est, int p)
-{
-  const p4est_gloidx_t *gfq;
-
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (0 <= p && p < p4est->mpisize);
-  gfq = p4est->global_first_quadrant;
-
-  return gfq[p] == gfq[p + 1];
-}
-
 /** Check whether a processor begins entering a given quadrant.
  * \param [in] p4est    Used for its partition markers.
  * \param [in] quadrant This quadrant's q->p.which_tree field must match p's.
@@ -723,8 +711,8 @@ p4est_traverse_is_valid_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   /* this is redundant after the checks above */
-  P4EST_ASSERT (!p4est_traverse_is_empty (p4est, pfirst) &&
-                !p4est_traverse_is_empty (p4est, plast));
+  P4EST_ASSERT (!p4est_comm_is_empty (p4est, pfirst) &&
+                !p4est_comm_is_empty (p4est, plast));
 
   return 1;
 }
@@ -821,7 +809,7 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
       if (p4est_traverse_is_clean_start (rec->p4est, &child, cpfirst)) {
         /* cpfirst starts at the tree's first descendant but may be empty */
         P4EST_ASSERT (i > 0);
-        while (p4est_traverse_is_empty (rec->p4est, cpfirst)) {
+        while (p4est_comm_is_empty (rec->p4est, cpfirst)) {
           ++cpfirst;
           P4EST_ASSERT (p4est_traverse_type_childid
                         (rec->position_array, cpfirst, quadrant) ==
@@ -923,7 +911,7 @@ p4est_traverse (p4est_t * p4est, p4est_traverse_query_t traverse_fn,
 
       if (p4est_traverse_is_clean_start (p4est, &root, pfirst)) {
         /* pfirst starts at the tree's first descendant but may be empty */
-        while (p4est_traverse_is_empty (p4est, pfirst)) {
+        while (p4est_comm_is_empty (p4est, pfirst)) {
           ++pfirst;
           P4EST_ASSERT (p4est_traverse_type_tree
                         (&position_array, pfirst, NULL) == (size_t) tt);
