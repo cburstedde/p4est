@@ -97,10 +97,15 @@ weight_once (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static int
 traverse_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
-             void * point)
+             p4est_quadrant_t * quadrant, int pfirst, int plast,
+             void * user)
 {
-  P4EST_ASSERT (p4est == (p4est_t *) point);
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < p4est->mpisize);
+  P4EST_ASSERT (p4est == (p4est_t *) user);
 
   return 1;
 }

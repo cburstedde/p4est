@@ -728,13 +728,15 @@ p4est_traverse_is_valid_tree (p4est_t * p4est, p4est_topidx_t which_tree,
 
 #endif /* P4EST_ENABLE_DEBUG */
 
+/** This recursion context saves on the number of parameters passed. */
 typedef struct p4est_traverse_recursion
 {
-  p4est_t            *p4est;
-  p4est_topidx_t      which_tree;
-  p4est_search_query_t traverse_info_fn;
-  sc_array_t         *position_array;
-  void               *user;
+  p4est_t            *p4est;            /**< Forest being traversed. */
+  p4est_topidx_t      which_tree;       /**< Current tree number. */
+  p4est_traverse_query_t traverse_fn;   /**< The traversal callback. */
+  sc_array_t         *position_array;   /**< Array view of p4est's
+                                             global_first_position */
+  void               *user;             /**< Data from \b p4est_traverse. */
 }
 p4est_traverse_recursion_t;
 
@@ -752,15 +754,15 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
   P4EST_ASSERT (rec->p4est != NULL);
   P4EST_ASSERT (0 <= rec->which_tree &&
                 rec->which_tree < rec->p4est->connectivity->num_trees);
-  P4EST_ASSERT (rec->traverse_info_fn != NULL);
+  P4EST_ASSERT (rec->traverse_fn != NULL);
   P4EST_ASSERT (p4est_traverse_is_valid_quadrant (rec->p4est, rec->which_tree,
                                                   quadrant, pfirst, plast));
   P4EST_ASSERT (quadrant != NULL && p4est_quadrant_is_valid (quadrant));
   P4EST_ASSERT (quadrant->p.which_tree == rec->which_tree);
 
-  /* call the user-provided function */
-  proceed = rec->traverse_info_fn (rec->p4est, rec->which_tree,
-                                   quadrant, -1, rec->user);
+  /* call the user-provided callback function */
+  proceed = rec->traverse_fn (rec->p4est, rec->which_tree, quadrant,
+                              pfirst, plast, rec->user);
 
   /* terminate recursion at the latest when we are down to one processor */
   if (pfirst == plast || !proceed) {
@@ -840,7 +842,7 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
 }
 
 void
-p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn,
+p4est_traverse (p4est_t * p4est, p4est_traverse_query_t traverse_fn,
                 void *user)
 {
   const int           num_procs = p4est->mpisize;
@@ -854,7 +856,7 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn,
 
   /* we do nothing if there is nothing to be done */
   P4EST_ASSERT (p4est != NULL);
-  if (traverse_info_fn == NULL) {
+  if (traverse_fn == NULL) {
     return;
   }
 
@@ -879,7 +881,7 @@ p4est_traverse (p4est_t * p4est, p4est_search_query_t traverse_info_fn,
   /* now loop through all trees, local or not */
   rec->p4est = p4est;
   rec->which_tree = -1;
-  rec->traverse_info_fn = traverse_info_fn;
+  rec->traverse_fn = traverse_fn;
   rec->position_array = &position_array;
   rec->user = user;
   p4est_quadrant_set_morton (&root, 0, 0);
