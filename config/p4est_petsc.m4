@@ -44,8 +44,19 @@ EOF
     $1_PETSC_LINK_LIBS=`make -s -f Makefile_config_petsc getlinklibs`
     $1_PETSC_INCLUDE_DIRS=`make -s -f Makefile_config_petsc getincludedirs`
     rm -f Makefile_config_petsc
+  elif test -r $$1_PETSC_DIR/lib/petsc-conf/variables ; then
+    if ! test -r $$1_PETSC_DIR/lib/petsc-conf/rules ; then
+      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/lib/petsc-conf/rules])
+    fi
+    cat <<EOF >Makefile_config_petsc
+include $$1_PETSC_DIR/lib/petsc-conf/variables
+include $$1_PETSC_DIR/lib/petsc-conf/rules
+EOF
+    $1_PETSC_LINK_LIBS=`make -s -f Makefile_config_petsc getlinklibs`
+    $1_PETSC_INCLUDE_DIRS=`make -s -f Makefile_config_petsc getincludedirs`
+    rm -f Makefile_config_petsc
   else 
-    AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables])
+    AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables of $$1_PETSC_DIR/lib/petsc-conf/variables])
   fi
   PRE_PETSC_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $$1_PETSC_INCLUDE_DIRS"
