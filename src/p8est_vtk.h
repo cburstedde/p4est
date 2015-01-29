@@ -119,8 +119,7 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  */
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_t * p8est,
                                              p8est_geometry_t * geom,
-                                             double scale,
-                                             char *filename);
+                                             double scale, char *filename);
 
 /** Write VTK cell data.
  *
@@ -210,7 +209,15 @@ p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
  * and \a 3*cont->num_nodes for vector data.
  *
  * \note \a cont->num_nodes is set in \b p8est_vtk_write_header based on the \a
- * scale parameter.
+ * scale parameter. If \a scale < 1 the number of point scalar data in each
+ * sc_array must be exactly \a P8EST_CHILDREN*local_num_quadrants, and the
+ * number of point vector data must be exactly \a
+ * 3*P8EST_CHILDREN*local_num_quadrants. I.e. there must be data for every
+ * corner of every quadrant in the \a p8est, even if the corner is shared by
+ * multiple quadrants. If \a scale = 1 the number of point data in each
+ * sc_array is determined by the number of nodes returned by \b
+ * p8est_nodes_new, specifically by the value of \a num_owned_indeps in the
+ * p8est_nodes_t structure. See p8est_nodes.h for more information.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.

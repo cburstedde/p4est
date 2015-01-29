@@ -94,8 +94,7 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  */
 p4est_vtk_context_t *p4est_vtk_write_header (p4est_t * p4est,
                                              p4est_geometry_t * geom,
-                                             double scale,
-                                             char *filename);
+                                             double scale, char *filename);
 
 /** Write VTK cell data.
  *
@@ -198,7 +197,15 @@ p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
  * and \a 3*cont->num_nodes for vector data.
  *
  * \note \a cont->num_nodes is set in \b p4est_vtk_write_header based on the \a
- * scale parameter.
+ * scale parameter. If \a scale < 1 the number of point scalar data in each
+ * sc_array must be exactly \a P4EST_CHILDREN*local_num_quadrants, and the
+ * number of point vector data must be exactly \a
+ * 3*P4EST_CHILDREN*local_num_quadrants. I.e. there must be data for every
+ * corner of every quadrant in the \a p4est, even if the corner is shared by
+ * multiple quadrants. If \a scale = 1 the number of point data in each
+ * sc_array is determined by the number of nodes returned by \b
+ * p4est_nodes_new, specifically by the value of \a num_owned_indeps in the
+ * p4est_nodes_t structure. See p4est_nodes.h for more information.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.

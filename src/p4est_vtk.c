@@ -151,8 +151,7 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
 
 p4est_vtk_context_t *
 p4est_vtk_write_header (p4est_t * p4est,
-                        p4est_geometry_t * geom,
-                        double scale, char *filename)
+                        p4est_geometry_t * geom, double scale, char *filename)
 {
   /* Allocate, initialize the vtk context. */
   p4est_vtk_context_t *cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
@@ -641,8 +640,13 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     values[all] = va_arg (ap, sc_array_t *);
 
     /* Validate input. */
-    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
-    P4EST_ASSERT (values[all]->elem_count == cont->num_nodes);
+    SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
+                    P4EST_STRING
+                    "_vtk: Error: incorrect point scalar data type; scalar data must contain doubles.");
+    SC_CHECK_ABORT (values[all]->elem_count == cont->num_nodes,
+                    P4EST_STRING
+                    "_vtk: Error: incorrect point scalar data count; see "
+                    P4EST_STRING ".h for more details.");
   }
 
   vector_strlen = 0;
@@ -657,8 +661,13 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     values[all] = va_arg (ap, sc_array_t *);
 
     /* Validate input. */
-    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
-    P4EST_ASSERT (values[all]->elem_count == 3 * cont->num_nodes);
+    SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
+                    P4EST_STRING
+                    "_vtk: Error: incorrect point vector data type; vector data must contain doubles.");
+    SC_CHECK_ABORT (values[all]->elem_count == (3 * cont->num_nodes),
+                    P4EST_STRING
+                    "_vtk: Error: incorrect point vector data count; see "
+                    P4EST_STRING ".h for more details.");
   }
 
   fprintf (cont->vtufile, "      <PointData");
@@ -827,9 +836,13 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
     values[all] = va_arg (ap, sc_array_t *);
 
     /* Validate input. */
-    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
-    P4EST_ASSERT (values[all]->elem_count ==
-                  cont->p4est->local_num_quadrants);
+    SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
+                    P4EST_STRING
+                    "_vtk: Error: incorrect cell scalar data type; scalar data must contain doubles.");
+    SC_CHECK_ABORT (values[all]->elem_count ==
+                    cont->p4est->local_num_quadrants,
+                    P4EST_STRING
+                    "_vtk: Error: incorrect cell scalar data count; scalar data must contain exactly p4est->local_num_quadrants doubles.");
   }
 
   vector_strlen = 0;
@@ -844,9 +857,13 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
     values[all] = va_arg (ap, sc_array_t *);
 
     /* Validate input. */
-    P4EST_ASSERT (values[all]->elem_size == sizeof (double));
-    P4EST_ASSERT (values[all]->elem_count ==
-                  3 * cont->p4est->local_num_quadrants);
+    SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
+                    P4EST_STRING
+                    "_vtk: Error: incorrect cell vector data type; vector data must contain doubles.");
+    SC_CHECK_ABORT (values[all]->elem_count ==
+                    3 * cont->p4est->local_num_quadrants,
+                    P4EST_STRING
+                    "_vtk: Error: incorrect cell vector data count; vector data must contain exactly 3*p4est->local_num_quadrants doubles.");
   }
 
   char                vtkCellDataString[BUFSIZ] = "";
