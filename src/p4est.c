@@ -1806,21 +1806,23 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* verify sc_ranges and sc_notify against each other */
   if (is_ranges_active && is_notify_active && is_balance_verify) {
+#ifdef P4EST_ENABLE_DEBUG
     int                 found_in_ranges, found_in_notify;
+#endif
 
     /* verify receiver side */
     P4EST_ASSERT (num_receivers_notify <= num_receivers_ranges);
     k = l = 0;
     for (j = 0; j < num_procs; ++j) {
-      found_in_ranges = found_in_notify = 0;
+      P4EST_DEBUG_EXECUTE (found_in_ranges = found_in_notify = 0);
       if (k < num_receivers_ranges && receiver_ranks_ranges[k] == j) {
         P4EST_ASSERT (j != rank);
-        found_in_ranges = 1;
+        P4EST_DEBUG_EXECUTE (found_in_ranges = 1);
         ++k;
       }
       if (l < num_receivers_notify && receiver_ranks_notify[l] == j) {
         P4EST_ASSERT (j != rank && found_in_ranges);
-        found_in_notify = 1;
+        P4EST_DEBUG_EXECUTE (found_in_notify = 1);
         ++l;
       }
       if (j != rank && peers[j].send_first.elem_count > 0) {
@@ -1837,15 +1839,15 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     P4EST_ASSERT (num_senders_notify <= num_senders_ranges);
     k = l = 0;
     for (j = 0; j < num_procs; ++j) {
-      found_in_ranges = found_in_notify = 0;
+      P4EST_DEBUG_EXECUTE (found_in_ranges = found_in_notify = 0);
       if (k < num_senders_ranges && sender_ranks_ranges[k] == j) {
         P4EST_ASSERT (j != rank);
-        found_in_ranges = 1;
+        P4EST_DEBUG_EXECUTE (found_in_ranges = 1);
         ++k;
       }
       if (l < num_senders_notify && sender_ranks_notify[l] == j) {
         P4EST_ASSERT (j != rank && found_in_ranges);
-        found_in_notify = 1;    /* kept for symmetry */
+        P4EST_DEBUG_EXECUTE (found_in_notify = 1);      /* for symmetry */
         ++l;
       }
     }
