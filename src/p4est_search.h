@@ -129,17 +129,21 @@ typedef int         (*p4est_search_query_t) (p4est_t * p4est,
                                              p4est_locidx_t local_num,
                                              void *point);
 
-/** Search "points" from a given set in the forest.
- * This search is a top-down recursion over processor-local/relevant quadrants.
+/** Search through the local part of a forest.
+ * The search is especially efficient if multiple targets, called "points"
+ * below, are searched for simultaneously.
  *
  * The search runs over all local quadrants and proceeds recursively top-down.
  * For each tree, it may start at the root of that tree, or further down at the
- * root of the subtree that contains all of the tree's quadrants.
+ * root of the subtree that contains all of the tree's local quadrants.
  * Likewise, some intermediate levels in the recursion may be skipped.
  * Its outer loop is thus a depth-first, processor-local forest traversal.
  * Each quadrant in that loop either is a leaf, or a (direct or indirect)
  * strict ancestor of a leaf.  On entering a new quadrant, a user-provided
  * quadrant-callback is executed.
+ *
+ * As a convenience, the user may provide anonymous "points" that are tracked
+ * down the forest.  This way one search call may be used for multiple targets.
  * The set of points that potentially matches a given quadrant diminishes from
  * the root down to the leaves:  For each quadrant, an inner loop over the
  * potentially matching points executes a point-callback for each candidate
@@ -154,12 +158,20 @@ typedef int         (*p4est_search_query_t) (p4est_t * p4est,
  *
  * \param [in] p4est        The forest to be searched.
  * \param [in] search_quadrant_fn   Executed once for each quadrant that is
- *                          entered.  This quadrant is always local.  If the
+ *                          entered.  This quadrant is always local, if not
+ *                          itself then at least one child of it.  If the
  *                          callback returns false, this quadrant and its
  *                          descendants are excluded from the search.
+ *                          Its \b point argument is always NULL.
  *                          May be NULL in which case it is ignored.
- * \param [in] search_point_fn      Must return true for a possible match.
+ * \param [in] search_point_fn      If \b points is not NULL, must be not NULL.
+ *                          Must return true for any possible matching point.
+ *                          If \b points is NULL, this callback is ignored.
  * \param [in] points       User-defined array of "points".
+ *                          If NULL, only the \b search_quadrant_fn callback
+ *                          is executed.  If that is NULL, this function noops.
+ *                          If not NULL, the \b search_point_fn is called on
+ *                          its members during the search.
  */
 void                p4est_search (p4est_t * p4est,
                                   p4est_search_query_t search_quadrant_fn,
