@@ -142,7 +142,7 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
   cont =
     p4est_vtk_write_cell_data (cont, p4est_vtk_write_tree,
                                p4est_vtk_write_level, p4est_vtk_write_rank,
-                               p4est_vtk_wrap_rank, 0, 0);
+                               p4est_vtk_wrap_rank, 0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing cell data");
 
   retval = p4est_vtk_write_footer (cont);
@@ -670,6 +670,12 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                     P4EST_STRING ".h for more details.");
   }
 
+  /* Check for pointer variable marking the end of variable data input. */
+  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
+  SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
+                  "data must be specified by passing, as the last argument, the current "
+                  P4EST_STRING "_vtk_context_t struct.");
+
   fprintf (cont->vtufile, "      <PointData");
   if (point_scalars != NULL)
     fprintf (cont->vtufile, " Scalars=\"%s\"", point_scalars);
@@ -865,6 +871,12 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                     P4EST_STRING
                     "_vtk: Error: incorrect cell vector data count; vector data must contain exactly 3*p4est->local_num_quadrants doubles.");
   }
+
+  /* Check for pointer variable marking the end of variable data input. */
+  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
+  SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
+                  "data must be specified by passing, as the last argument, the current "
+                  P4EST_STRING "_vtk_context_t struct.");
 
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;

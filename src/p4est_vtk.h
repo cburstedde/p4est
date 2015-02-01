@@ -122,9 +122,6 @@ p4est_vtk_context_t *p4est_vtk_write_header (p4est_t * p4est,
  * doubles in each sc_array must be exactly \a p4est->local_num_quadrants for
  * scalar data and \a 3*p4est->local_num_quadrants for vector data.
  *
- * TODO: For safety reasons, there must be a final parameter holding the context
- *       after the list of pairs.
- *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
  */
