@@ -674,7 +674,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
   SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
                   "data must be specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t struct.");
+                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING "_vtk.h for more information.");
 
   fprintf (cont->vtufile, "      <PointData");
   if (point_scalars != NULL)
@@ -876,7 +876,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
   SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
                   "data must be specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t struct.");
+                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING "_vtk.h for more information.");
 
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;

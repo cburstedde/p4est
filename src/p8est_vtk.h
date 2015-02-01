@@ -145,7 +145,10 @@ p8est_vtk_context_t *p8est_vtk_write_header (p8est_t * p8est,
  * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
  * arguments shall be an sc_array_t * holding double variables.  The number of
  * doubles in each sc_array must be exactly \a p4est->local_num_quadrants for
- * scalar data and \a 3*p4est->local_num_quadrants for vector data.
+ * scalar data and \a 3*p4est->local_num_quadrants for vector data. <em> Note:
+ * the current p8est_vtk_context_t structure, cont, must be the last argument
+ * of any call to this function; this argument is used to validate that the
+ * correct number of variable arguments have been provided. </em>
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
@@ -206,7 +209,10 @@ p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
  * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
  * arguments shall be an sc_array_t * holding double variables. The number of
  * doubles in each sc_array must be exactly \a cont->num_nodes for scalar data
- * and \a 3*cont->num_nodes for vector data.
+ * and \a 3*cont->num_nodes for vector data. <em> Note: the current
+ * p8est_vtk_context_t structure, cont, must be the last argument of any call
+ * to this function; this argument is used to validate that the correct number
+ * of variable arguments have been provided. </em>
  *
  * \note \a cont->num_nodes is set in \b p8est_vtk_write_header based on the \a
  * scale parameter. If \a scale < 1 the number of point scalar data in each
