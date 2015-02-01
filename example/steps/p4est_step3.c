@@ -533,7 +533,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
    * the usage of p4est_iterate in this example */
   p4est_iterate (p4est, NULL,   /* we don't need any ghost quadrants for this loop */
                  (void *) u_interp,     /* pass in u_interp so that we can fill it */
-                 step3_interpolate_solution,    /* callback function that interpolate from the cell center to the cell corners, defined above */
+                 step3_interpolate_solution,    /* callback function that interpolates from the cell center to the cell corners, defined above */
                  NULL,          /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                  NULL,          /* there is no callback for the edges between quadrants */
