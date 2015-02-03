@@ -56,6 +56,7 @@ typedef struct p6est_profile
   int                *lnode_changed[2];
   p4est_locidx_t     *enode_counts;
   int                 evenodd;
+  p4est_qcoord_t      diff;
 }
 p6est_profile_t;
 

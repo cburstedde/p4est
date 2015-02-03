@@ -50,7 +50,7 @@
  * [p4est-howto.pdf](http://p4est.github.io/p4est-howto.pdf),
  * which is distributed with the
  * [source](http://github.com/cburstedde/p4est) under the
- * [doc/](https://github.com/cburstedde/p4est/tree/develop/doc) directory.
+ * [doc/](https://github.com/cburstedde/p4est/tree/master/doc) directory.
  *
  * To build the p4est library from a tar distribution, use the standard
  * procedure of the GNU autotools.  The configure script takes the following
@@ -64,10 +64,11 @@
  *                    in serial only.
  * * `--disable-mpiio`  may be used to avoid using `MPI_File` based calls.
  *
- * A typical development configure line looks as follows:
- * > `relative/path/to/configure CFLAGS="-Wall -O0 -g" --enable-mpi --enable-debug`
+ * A typical development configure line looks as follows (your mileage may vary
+ * wrt. compiler-dependent warning options):
+ * > `relative/path/to/configure CFLAGS="-Wall -Wuninitialized -O0 -g" --enable-mpi --enable-debug`
  * A typical production configure line looks as follows:
- * > `relative/path/to/configure CFLAGS="-Wall -O2" --enable-mpi`
+ * > `relative/path/to/configure CFLAGS="-Wall -Wno-unused-but-set-variable -O2" --enable-mpi`
  *
  * \see http://www.p4est.org/
  * \see http://www.gnu.org/licenses/licenses.html

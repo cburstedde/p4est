@@ -502,6 +502,18 @@ p8est_connectivity_t *p8est_connectivity_new_sphere (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
 
+/** Uniformly refine a connectivity.
+ * This is useful if you would like to uniformly refine by something other
+ * than a power of 2.
+ *
+ * \param [in] conn         a valid connectivity
+ * \param [in] num_per_edge the number of new trees in each direction
+ *
+ * \return a refined connectivity.
+ */
+p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn,
+                                                 int num_per_edge);
+
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
  * \param [in]  nface       Encoded as nface = r * 6 + nf, where nf = 0..5 is

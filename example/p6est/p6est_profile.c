@@ -182,13 +182,13 @@ p6est_profile_balance_self (sc_array_t * a, sc_array_t * work)
 }
 
 static void
-p6est_profile_balance_face_one_pass (sc_array_t * read, sc_array_t * write)
+p6est_profile_balance_face_one_pass (sc_array_t * read, sc_array_t * write,
+                                     p4est_qcoord_t readh)
 {
   int8_t             *wc;
   size_t              count;
   int                 stackcount;
   int8_t              n, nn, newn, p, l;
-  p4est_qcoord_t      readh;
   size_t              zy;
 
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (write));
@@ -200,7 +200,6 @@ p6est_profile_balance_face_one_pass (sc_array_t * read, sc_array_t * write)
   sc_array_truncate (write);
   l = 0;
   zy = 0;
-  readh = 0;
   while (zy < count) {
     n = *((int8_t *) sc_array_index (read, count - 1 - zy++));
     if (n && !(readh & P4EST_QUADRANT_LEN (n))) {
@@ -225,7 +224,8 @@ p6est_profile_balance_face_one_pass (sc_array_t * read, sc_array_t * write)
 
 /* assumes a is already self balanced */
 static void
-p6est_profile_balance_face (sc_array_t * a, sc_array_t * b, sc_array_t * work)
+p6est_profile_balance_face (sc_array_t * a, sc_array_t * b, sc_array_t * work,
+                            p4est_qcoord_t diff)
 {
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (b));
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (work));
@@ -233,18 +233,18 @@ p6est_profile_balance_face (sc_array_t * a, sc_array_t * b, sc_array_t * work)
   P4EST_ASSERT (b->elem_size == sizeof (int8_t));
   P4EST_ASSERT (work->elem_size == sizeof (int8_t));
 
-  p6est_profile_balance_face_one_pass (a, work);
+  p6est_profile_balance_face_one_pass (a, work, diff);
   p6est_profile_balance_self_one_pass (work, b);
 }
 
 static void
-p6est_profile_balance_full_one_pass (sc_array_t * read, sc_array_t * write)
+p6est_profile_balance_full_one_pass (sc_array_t * read, sc_array_t * write,
+                                     p4est_qcoord_t readh)
 {
   int8_t             *wc;
   size_t              count;
   int                 stackcount;
   int8_t              n, nn, newn, p, l, prevl, nextl;
-  p4est_qcoord_t      readh;
   size_t              zy;
 
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (write));
@@ -256,7 +256,6 @@ p6est_profile_balance_full_one_pass (sc_array_t * read, sc_array_t * write)
   sc_array_truncate (write);
   l = 0;
   zy = 0;
-  readh = 0;
   while (zy < count) {
     n = *((int8_t *) sc_array_index (read, count - 1 - zy++));
     if (n && !(readh & P4EST_QUADRANT_LEN (n))) {
@@ -295,7 +294,8 @@ p6est_profile_balance_full_one_pass (sc_array_t * read, sc_array_t * write)
 
 /* assumes a is already self balanced */
 static void
-p6est_profile_balance_full (sc_array_t * a, sc_array_t * b, sc_array_t * work)
+p6est_profile_balance_full (sc_array_t * a, sc_array_t * b, sc_array_t * work,
+                            p4est_qcoord_t diff)
 {
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (b));
   P4EST_ASSERT (SC_ARRAY_IS_OWNER (work));
@@ -303,7 +303,7 @@ p6est_profile_balance_full (sc_array_t * a, sc_array_t * b, sc_array_t * work)
   P4EST_ASSERT (b->elem_size == sizeof (int8_t));
   P4EST_ASSERT (work->elem_size == sizeof (int8_t));
 
-  p6est_profile_balance_full_one_pass (a, work);
+  p6est_profile_balance_full_one_pass (a, work, diff);
   p6est_profile_balance_self_one_pass (work, b);
 }
 
@@ -533,6 +533,7 @@ p6est_profile_new_local (p6est_t * p6est,
   p4est_tree_t       *tree;
   sc_array_t         *tquadrants;
   p4est_quadrant_t   *col;
+  p4est_qcoord_t      diff = P4EST_ROOT_LEN - p6est->root_len;
   size_t              first, last, count, zz, zy;
   p4est_locidx_t     *en, (*lr)[2];
   sc_array_t         *lc;
@@ -556,6 +557,7 @@ p6est_profile_new_local (p6est_t * p6est,
   profile->lnode_changed[0] = NULL;
   profile->lnode_changed[1] = NULL;
   profile->enode_counts = NULL;
+  profile->diff = diff;
   if (btype == P8EST_CONNECT_FACE) {
     hbtype = P4EST_CONNECT_FACE;
   }
@@ -614,16 +616,16 @@ p6est_profile_new_local (p6est_t * p6est,
       if (ptype == P6EST_PROFILE_UNION) {
         p6est_profile_balance_self (selfprof, work);
         if (btype == P8EST_CONNECT_FACE) {
-          p6est_profile_balance_face (selfprof, faceprof, work);
+          p6est_profile_balance_face (selfprof, faceprof, work, diff);
         }
         else {
-          p6est_profile_balance_full (selfprof, faceprof, work);
+          p6est_profile_balance_full (selfprof, faceprof, work, diff);
         }
         if (btype == P8EST_CONNECT_EDGE) {
-          p6est_profile_balance_face (selfprof, cornerprof, work);
+          p6est_profile_balance_face (selfprof, cornerprof, work, diff);
         }
         else if (btype == P8EST_CONNECT_FULL) {
-          p6est_profile_balance_full (selfprof, cornerprof, work);
+          p6est_profile_balance_full (selfprof, cornerprof, work, diff);
         }
       }
       for (j = 0; j < Nrp; j++) {
@@ -728,6 +730,7 @@ p6est_profile_balance_local (p6est_profile_t * profile)
   int                 any_prof_change;
   int                 any_local_change;
   int                 evenodd = profile->evenodd;
+  p4est_qcoord_t      diff = profile->diff;
 
   P4EST_ASSERT (profile->lnodes->degree == 2);
 
@@ -803,16 +806,16 @@ p6est_profile_balance_local (p6est_profile_t * profile)
         P4EST_ASSERT (selfprof->elem_count > oldprof.elem_count);
         /* update */
         if (btype == P8EST_CONNECT_FACE) {
-          p6est_profile_balance_face (selfprof, faceprof, work);
+          p6est_profile_balance_face (selfprof, faceprof, work, diff);
         }
         else {
-          p6est_profile_balance_full (selfprof, faceprof, work);
+          p6est_profile_balance_full (selfprof, faceprof, work, diff);
         }
         if (btype == P8EST_CONNECT_EDGE) {
-          p6est_profile_balance_face (selfprof, cornerprof, work);
+          p6est_profile_balance_face (selfprof, cornerprof, work, diff);
         }
         else if (btype == P8EST_CONNECT_FULL) {
-          p6est_profile_balance_full (selfprof, cornerprof, work);
+          p6est_profile_balance_full (selfprof, cornerprof, work, diff);
         }
         enidx = start_enidx;
         for (j = 0; j < 3; j++) {

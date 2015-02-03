@@ -485,6 +485,10 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
     is_leaf = 0;
     local_num = -1;
     lq = p4est_quadrant_array_index (quadrants, quadrants->elem_count - 1);
+    P4EST_ASSERT (!p4est_quadrant_is_equal (q, lq) &&
+                  p4est_quadrant_is_ancestor (quadrant, lq));
+
+    /* skip unnecessary intermediate levels if possible */
     if (p4est_quadrant_ancestor_id (q, quadrant->level + 1) ==
         p4est_quadrant_ancestor_id (lq, quadrant->level + 1)) {
       p4est_nearest_common_ancestor (q, lq, quadrant);
@@ -507,6 +511,8 @@ p4est_search_recursion (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (offset >= 0 &&
                   (size_t) offset < tree->quadrants.elem_count);
     local_num = tree->quadrants_offset + offset;
+
+    /* skip unnecessary intermediate levels if possible */
     quadrant = q;
   }
 
@@ -556,48 +562,21 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
   p4est_quadrant_t    root;
-  p4est_quadrant_t    temp, temp2;
   p4est_quadrant_t   *f, *l;
-  uint64_t            midx;
   sc_array_t          actives;
   sc_array_t         *tquadrants;
   size_t              zz, *pz;
 
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
 
-    /* start recursion with root quadrant */
-    p4est_quadrant_set_morton (&root, 0, 0);
-    f = NULL;
-    l = NULL;
-    if (jt == p4est->first_local_tree) {
-      f = &p4est->global_first_position[p4est->mpirank];
-      p4est_quadrant_last_descendant (&root, &temp, P4EST_QMAXLEVEL);
-      l = &temp;
-    }
-    if (jt == p4est->last_local_tree) {
-      if (!f) {
-        p4est_quadrant_first_descendant (&root, &temp, P4EST_QMAXLEVEL);
-        f = &temp;
-      }
-      l = &p4est->global_first_position[p4est->mpirank + 1];
-      if (l->p.which_tree == jt) {
-        midx = p4est_quadrant_linear_id (l, P4EST_QMAXLEVEL);
-        p4est_quadrant_set_morton (&temp2, P4EST_QMAXLEVEL, midx - 1);
-        l = &temp2;
-      }
-      else {
-        p4est_quadrant_last_descendant (&root, &temp2, P4EST_QMAXLEVEL);
-        l = &temp2;
-      }
-    }
-    if (f != NULL) {
-      P4EST_ASSERT (l != NULL);
-      p4est_nearest_common_ancestor (f, l, &root);
-    }
-
     /* grab complete tree quadrant array */
     tree = p4est_tree_array_index (p4est->trees, jt);
     tquadrants = &tree->quadrants;
+
+    /* find the smallest quadrant that contains all of this tree */
+    f = p4est_quadrant_array_index (tquadrants, 0);
+    l = p4est_quadrant_array_index (tquadrants, tquadrants->elem_count - 1);
+    p4est_nearest_common_ancestor (f, l, &root);
 
     /* mark all points as active */
     sc_array_init_size (&actives, sizeof (size_t), points->elem_count);
@@ -606,6 +585,7 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
       *pz = zz;
     }
 
+    /* perform top-down search */
     p4est_search_recursion (p4est, jt, &root, search_quadrant_fn,
                             search_point_fn, tquadrants, points, &actives);
     sc_array_reset (&actives);

@@ -89,7 +89,8 @@ p4est_ghost_t;
  * \param [in] ghost    Ghost layer structure.
  * \return true if \a ghost is valid
  */
-int                 p4est_ghost_is_valid (p4est_t *p4est, p4est_ghost_t * ghost);
+int                 p4est_ghost_is_valid (p4est_t * p4est,
+                                          p4est_ghost_t * ghost);
 
 /** Calculate the memory usage of the ghost layer.
  * \param [in] ghost    Ghost layer structure.
@@ -250,6 +251,41 @@ void                p4est_ghost_exchange_data (p4est_t * p4est,
                                                p4est_ghost_t * ghost,
                                                void *ghost_data);
 
+/** Transient storage for asynchronous ghost exchange. */
+typedef struct p4est_ghost_exchange
+{
+  int                 is_custom;        /**< False for p4est_ghost_exchange_data */
+  int                 is_levels;        /**< Are we restricted to levels or not */
+  p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
+  int                 minlevel, maxlevel;       /**< Meaningful with is_levels */
+  size_t              data_size;
+  void               *ghost_data;
+  int                *qactive, *qbuffer;
+  sc_array_t          requests, sbuffers;
+  sc_array_t          rrequests, rbuffers;
+}
+p4est_ghost_exchange_t;
+
+/** Begin an asynchronous ghost data exchange by posting messages.
+ * The arguments are identical to p4est_ghost_exchange_data.
+ * The return type is always non-NULL and must be passed to
+ * p4est_ghost_exchange_data_end to complete the exchange.
+ * The ghost data must not be accessed before completion.
+ * \param [in,out]  ghost_data  Must stay alive into the completion call.
+ * \return          Transient storage for messages in progress.
+ */
+p4est_ghost_exchange_t *p4est_ghost_exchange_data_begin
+  (p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data);
+
+/** Complete an asynchronous ghost data exchange.
+ * This function waits for all pending MPI communications.
+ * \param [in,out]  Data created ONLY by p4est_ghost_exchange_data_begin.
+ *                  It is deallocated before this function returns.
+ */
+void                p4est_ghost_exchange_data_end
+  (p4est_ghost_exchange_t * exc);
+
 /** Transfer data for local quadrants that are ghosts to other processors.
  * The data size is the same for all quadrants and can be chosen arbitrarily.
  * \param [in] p4est            The forest used for reference.
@@ -265,6 +301,29 @@ void                p4est_ghost_exchange_custom (p4est_t * p4est,
                                                  size_t data_size,
                                                  void **mirror_data,
                                                  void *ghost_data);
+
+/** Begin an asynchronous ghost data exchange by posting messages.
+ * The arguments are identical to p4est_ghost_exchange_custom.
+ * The return type is always non-NULL and must be passed to
+ * p4est_ghost_exchange_custom_end to complete the exchange.
+ * The ghost data must not be accessed before completion.
+ * The mirror data can be safely discarded right after this function returns
+ * since it is copied into internal send buffers.
+ * \param [in]      mirror_data Not required to stay alive any longer.
+ * \param [in,out]  ghost_data  Must stay alive into the completion call.
+ * \return          Transient storage for messages in progress.
+ */
+p4est_ghost_exchange_t *p4est_ghost_exchange_custom_begin
+  (p4est_t * p4est, p4est_ghost_t * ghost,
+   size_t data_size, void **mirror_data, void *ghost_data);
+
+/** Complete an asynchronous ghost data exchange.
+ * This function waits for all pending MPI communications.
+ * \param [in,out]  Data created ONLY by p4est_ghost_exchange_custom_begin.
+ *                  It is deallocated before this function returns.
+ */
+void                p4est_ghost_exchange_custom_end
+  (p4est_ghost_exchange_t * exc);
 
 /** Transfer data for local quadrants that are ghosts to other processors.
  * The data size is the same for all quadrants and can be chosen arbitrarily.
@@ -290,6 +349,29 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
                                                         void **mirror_data,
                                                         void *ghost_data);
 
+/** Begin an asynchronous ghost data exchange by posting messages.
+ * The arguments are identical to p4est_ghost_exchange_custom_levels.
+ * The return type is always non-NULL and must be passed to
+ * p4est_ghost_exchange_custom_levels_end to complete the exchange.
+ * The ghost data must not be accessed before completion.
+ * The mirror data can be safely discarded right after this function returns
+ * since it is copied into internal send buffers.
+ * \param [in]      mirror_data Not required to stay alive any longer.
+ * \param [in,out]  ghost_data  Must stay alive into the completion call.
+ * \return          Transient storage for messages in progress.
+ */
+p4est_ghost_exchange_t *p4est_ghost_exchange_custom_levels_begin
+  (p4est_t * p4est, p4est_ghost_t * ghost, int minlevel, int maxlevel,
+   size_t data_size, void **mirror_data, void *ghost_data);
+
+/** Complete an asynchronous ghost data exchange.
+ * This function waits for all pending MPI communications.
+ * \param [in,out]  Data created ONLY by p4est_ghost_exchange_custom_levels_begin.
+ *                  It is deallocated before this function returns.
+ */
+void                p4est_ghost_exchange_custom_levels_end
+  (p4est_ghost_exchange_t * exc);
+
 /** Expand the size of the ghost layer and mirrors by one additional layer of
  * adjacency.
  * \param [in] p4est            The forest from which the ghost layer was
@@ -298,7 +380,6 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
  */
 void                p4est_ghost_expand (p4est_t * p4est,
                                         p4est_ghost_t * ghost);
-
 
 SC_EXTERN_C_END;
 

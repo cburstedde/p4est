@@ -268,4 +268,16 @@ p6est_lnodes_global_index (p6est_lnodes_t * lnodes, p4est_locidx_t lidx)
 
 SC_EXTERN_C_END;
 
+/** For each owned node, get the global 2D number for the node-column
+ * containing it.
+ *
+ * \param[in] p6est  The forest
+ * \param[in] lnodes The nodes
+ * \return an array of size \a lnodes->owned_count, giving the unique global
+ * number of the node-column containing each node.  Should be free'd with
+ * P4EST_FREE().
+ */
+p4est_gloidx_t     *p6est_lnodes_get_column_labels (p6est_t * p6est,
+                                                    p8est_lnodes_t * lnodes);
+
 #endif /* !P6EST_LNODES */
