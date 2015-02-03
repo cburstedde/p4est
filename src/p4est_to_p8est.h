@@ -23,7 +23,11 @@
 
 /** \file p4est_to_p8est.h
  *
- * transforms 2D \ref p4est routines into 3D \ref p8est routines
+ * Transform 2D \ref p4est routines into 3D \ref p8est routines.  This file can
+ * be included from a .c file that has been written for 2D to turn it into a 3D
+ * code with minor modifications.  We #define P4_TO_P8, which allows to compile
+ * a source file twice, once for 2D without and once for 3D with including this
+ * header, adding extra code for 3D if necessary.
  */
 
 #ifndef P4EST_TO_P8EST_H
@@ -51,8 +55,10 @@
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
+#define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
 
 /* redefine enums */
+#define P4EST_COMM_TAG_FIRST            P8EST_COMM_TAG_FIRST
 #define P4EST_COMM_COUNT_PERTREE        P8EST_COMM_COUNT_PERTREE
 #define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
 #define P4EST_COMM_BALANCE_FIRST_LOAD   P8EST_COMM_BALANCE_FIRST_LOAD
@@ -77,6 +83,7 @@
 #define P4EST_COMM_LNODES_PASS          P8EST_COMM_LNODES_PASS
 #define P4EST_COMM_LNODES_OWNED         P8EST_COMM_LNODES_OWNED
 #define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
+#define P4EST_COMM_TAG_LAST             P8EST_COMM_TAG_LAST
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
@@ -105,6 +112,7 @@
 #define p4est_coarsen_t                 p8est_coarsen_t
 #define p4est_weight_t                  p8est_weight_t
 #define p4est_ghost_t                   p8est_ghost_t
+#define p4est_ghost_exchange_t          p8est_ghost_exchange_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
 #define p4est_lnodes_t                  p8est_lnodes_t
@@ -343,8 +351,16 @@
 #define p4est_ghost_new                 p8est_ghost_new
 #define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_ghost_exchange_data       p8est_ghost_exchange_data
+#define p4est_ghost_exchange_data_begin p8est_ghost_exchange_data_begin
+#define p4est_ghost_exchange_data_end   p8est_ghost_exchange_data_end
 #define p4est_ghost_exchange_custom     p8est_ghost_exchange_custom
+#define p4est_ghost_exchange_custom_begin p8est_ghost_exchange_custom_begin
+#define p4est_ghost_exchange_custom_end p8est_ghost_exchange_custom_end
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
+#define p4est_ghost_exchange_custom_levels_begin \
+                                        p8est_ghost_exchange_custom_levels_begin
+#define p4est_ghost_exchange_custom_levels_end \
+                                        p8est_ghost_exchange_custom_levels_end
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
 #define p4est_ghost_is_valid            p8est_ghost_is_valid
@@ -393,8 +409,11 @@
 
 /* functions in p4est_wrap */
 #define p4est_wrap_new_conn             p8est_wrap_new_conn
+#define p4est_wrap_new_brick            p8est_wrap_new_brick
 #define p4est_wrap_new_world            p8est_wrap_new_world
+#define p4est_wrap_new_ext              p8est_wrap_new_ext
 #define p4est_wrap_destroy              p8est_wrap_destroy
+#define p4est_wrap_set_hollow           p8est_wrap_set_hollow
 #define p4est_wrap_get_ghost            p8est_wrap_get_ghost
 #define p4est_wrap_get_mesh             p8est_wrap_get_mesh
 #define p4est_wrap_mark_refine          p8est_wrap_mark_refine
@@ -407,4 +426,8 @@
 
 /* functions in p4est_plex */
 #define p4est_get_plex_data             p8est_get_plex_data
+
+/* functions in p4est_connrefine */
+#define p4est_connectivity_refine       p8est_connectivity_refine
+
 #endif /* !P4EST_TO_P8EST_H */

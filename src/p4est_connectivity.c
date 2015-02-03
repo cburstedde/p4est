@@ -3890,12 +3890,13 @@ int
 p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
                                   p4est_connectivity_t * conn2)
 {
+  const size_t        topsize = sizeof (p4est_topidx_t);
+  const size_t        int8size = sizeof (int8_t);
   size_t              count;
   p4est_topidx_t      ntrees, t;
+
   P4EST_ASSERT (p4est_connectivity_is_valid (conn1));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn2));
-  size_t              topsize = sizeof (p4est_topidx_t);
-  size_t              int8size = sizeof (int8_t);
 
   /* same pointer or equality are stronger */
   if (conn1 == conn2 || p4est_connectivity_is_equal (conn1, conn2)) {
@@ -4060,14 +4061,17 @@ p4est_connectivity_getline_upper (FILE * stream)
     }
 
     if (--len == 0) {
+      char               *linen;
+
       len = lenmax;
       lenmax *= 2;
-      char               *linen = P4EST_REALLOC (linep, char, lenmax);
 
+      linen = P4EST_REALLOC (linep, char, lenmax);
       if (linen == NULL) {
         P4EST_FREE (linep);
         return NULL;
       }
+
       line = linen + (line - linep);
       linep = linen;
     }
@@ -4162,38 +4166,40 @@ p4est_connectivity_read_inp_stream (FILE * stream,
     }
     else if (reading_elements) {
       if (fill_trees_and_vertices) {
+        long long int       element_number;
         long long int       v[P4EST_CHILDREN];
         int                 n;
         int                 retval;
 
-        if (num_elements >= *num_trees) {
+        /* Note that when we read in the
+         * vertices we switch from right-hand
+         * vertex ordering to z-order
+         */
+        retval = sscanf (line, "%lld, %lld, %lld, %lld, %lld"
+#ifdef P4_TO_P8
+                         ", %lld, %lld, %lld, %lld"
+#endif
+                         , &element_number, &v[0], &v[1], &v[3], &v[2]
+#ifdef P4_TO_P8
+                         , &v[4], &v[5], &v[7], &v[6]
+#endif
+          );
+        if (retval != P4EST_CHILDREN + 1) {
+          P4EST_LERROR ("Premature end of file");
+          P4EST_FREE (line);
+          return 1;
+        }
+
+        if (element_number > *num_trees) {
           P4EST_LERROR ("Encountered element that will not fit into"
                         " tree_to_vertex array. More elements than expected.\n");
           P4EST_FREE (line);
           return 1;
         }
 
-        /* Note that when we read in the
-         * vertices we switch from right-hand
-         * vertex ordering to z-order
-         */
-        retval = sscanf (line, "%*d, %lld, %lld, %lld, %lld"
-#ifdef P4_TO_P8
-                         ", %lld, %lld, %lld, %lld"
-#endif
-                         , &v[0], &v[1], &v[3], &v[2]
-#ifdef P4_TO_P8
-                         , &v[4], &v[5], &v[7], &v[6]
-#endif
-          );
-        if (retval != P4EST_CHILDREN) {
-          P4EST_LERROR ("Premature end of file");
-          P4EST_FREE (line);
-          return 1;
-        }
-
         for (n = 0; n < P4EST_CHILDREN; ++n)
-          tree_to_vertex[P4EST_CHILDREN * num_elements + n] = v[n] - 1;
+          tree_to_vertex[P4EST_CHILDREN * (element_number - 1) + n] =
+            v[n] - 1;
       }
 
       ++num_elements;

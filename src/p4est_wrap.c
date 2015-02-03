@@ -22,11 +22,9 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
-#include <p4est_extended.h>
 #include <p4est_wrap.h>
 #else
 #include <p8est_bits.h>
-#include <p8est_extended.h>
 #include <p8est_wrap.h>
 #endif
 
@@ -68,6 +66,12 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   for (k = 1; k < P4EST_CHILDREN; ++k) {
     pp->temp_flags[new_counter + k] = flag;
   }
+
+  /* pass the replaced quadrants to the user provided function */
+  if (pp->replace_fn != NULL) {
+    pp->replace_fn (p4est, which_tree, num_outgoing, outgoing, num_incoming,
+                    incoming);
+  }
 }
 
 static int
@@ -100,32 +104,41 @@ p4est_wrap_t       *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
+  return p4est_wrap_new_ext (mpicomm, conn, initial_level,
+                             0, P4EST_CONNECT_FULL, NULL, NULL);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
+                    int initial_level, int hollow, p4est_connect_type_t btype,
+                    p4est_replace_t replace_fn, void *user_pointer)
+{
   p4est_wrap_t       *pp;
 
-  pp = P4EST_ALLOC (p4est_wrap_t, 1);
-  pp->user_pointer = NULL;
+  pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
+
+  pp->hollow = hollow;
 
   pp->p4est_dim = P4EST_DIM;
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
+  pp->btype = btype;
+  pp->replace_fn = replace_fn;
   pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
-  pp->weight_exponent = 0;
-  pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
-  pp->temp_flags = NULL;
-  pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
 
-  pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
-  pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1,
-                                 P4EST_CONNECT_FULL);
+  pp->weight_exponent = 0;      /* keep this event though using ALLOC_ZERO */
 
-  pp->ghost_aux = NULL;
-  pp->mesh_aux = NULL;
-  pp->match_aux = 0;
+  if (!pp->hollow) {
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+  }
 
   pp->p4est->user_pointer = pp;
+  pp->user_pointer = user_pointer;
 
   return pp;
 }
@@ -215,6 +228,32 @@ p8est_wrap_new_rotwrap (sc_MPI_Comm mpicomm, int initial_level)
 #endif
 
 p4est_wrap_t       *
+p4est_wrap_new_brick (sc_MPI_Comm mpicomm, int bx, int by,
+#ifdef P4_TO_P8
+                      int bz,
+#endif
+                      int px, int py,
+#ifdef P4_TO_P8
+                      int pz,
+#endif
+                      int initial_level)
+{
+  P4EST_ASSERT (bx > 0 && by > 0);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (bz > 0);
+#endif
+  return p4est_wrap_new_conn (mpicomm, p4est_connectivity_new_brick (bx, by,
+#ifdef P4_TO_P8
+                                                                     bz,
+#endif
+                                                                     px, py
+#ifdef P4_TO_P8
+                                                                     , pz
+#endif
+                              ), initial_level);
+}
+
+p4est_wrap_t       *
 p4est_wrap_new_world (int initial_level)
 {
 #ifndef P4_TO_P8
@@ -234,8 +273,10 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
     p4est_ghost_destroy (pp->ghost_aux);
   }
 
-  p4est_mesh_destroy (pp->mesh);
-  p4est_ghost_destroy (pp->ghost);
+  if (!pp->hollow) {
+    p4est_mesh_destroy (pp->mesh);
+    p4est_ghost_destroy (pp->ghost);
+  }
 
   P4EST_FREE (pp->flags);
   P4EST_FREE (pp->temp_flags);
@@ -246,15 +287,64 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   P4EST_FREE (pp);
 }
 
+void
+p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
+{
+  /* Verify consistency */
+  if (!pp->hollow) {
+    P4EST_ASSERT (pp->flags != NULL);
+    P4EST_ASSERT (pp->ghost != NULL);
+    P4EST_ASSERT (pp->mesh != NULL);
+  }
+  else {
+    P4EST_ASSERT (pp->flags == NULL);
+    P4EST_ASSERT (pp->ghost == NULL);
+    P4EST_ASSERT (pp->mesh == NULL);
+  }
+
+  /* Make sure a full wrap is only set to hollow outside of adaptation cycle */
+  P4EST_ASSERT (!pp->match_aux);
+  P4EST_ASSERT (pp->temp_flags == NULL);
+  P4EST_ASSERT (pp->ghost_aux == NULL);
+  P4EST_ASSERT (pp->mesh_aux == NULL);
+
+  /* Do nothing if the status is right */
+  if (hollow == pp->hollow) {
+    return;
+  }
+
+  if (pp->hollow) {
+    /* Allocate the ghost, mesh, and flag members */
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+  }
+  else {
+    /* Free and nullify the ghost, mesh, and flag members */
+    p4est_mesh_destroy (pp->mesh);
+    p4est_ghost_destroy (pp->ghost);
+    P4EST_FREE (pp->flags);
+    pp->ghost = NULL;
+    pp->mesh = NULL;
+    pp->flags = NULL;
+  }
+  pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
+  pp->hollow = hollow;
+}
+
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (!pp->hollow);
+
   return pp->match_aux ? pp->ghost_aux : pp->ghost;
 }
 
 p4est_mesh_t       *
 p4est_wrap_get_mesh (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (!pp->hollow);
+
   return pp->match_aux ? pp->mesh_aux : pp->mesh;
 }
 
@@ -267,6 +357,7 @@ p4est_wrap_mark_refine (p4est_wrap_t * pp,
   p4est_locidx_t      pos;
   uint8_t             flag;
 
+  P4EST_ASSERT (!pp->hollow);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
@@ -293,6 +384,7 @@ p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
   p4est_locidx_t      pos;
   uint8_t             flag;
 
+  P4EST_ASSERT (!pp->hollow);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
@@ -319,6 +411,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #endif
   p4est_gloidx_t      global_num;
   p4est_t            *p4est = pp->p4est;
+
+  P4EST_ASSERT (!pp->hollow);
 
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
@@ -353,7 +447,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   local_num = p4est->local_num_quadrants;
 #endif
   global_num = p4est->global_num_quadrants;
-  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, NULL);
+  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, pp->replace_fn);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
                 pp->num_replaced * (P4EST_CHILDREN - 1));
@@ -366,12 +460,11 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
     P4EST_FREE (pp->flags);
-    p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+    p4est_balance_ext (p4est, pp->btype, NULL, pp->replace_fn);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
-    pp->ghost_aux = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-    pp->mesh_aux = p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1,
-                                       P4EST_CONNECT_FULL);
+    pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);
+    pp->mesh_aux = p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1, pp->btype);
     pp->match_aux = 1;
   }
 #ifdef P4EST_ENABLE_DEBUG
@@ -400,6 +493,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 {
   int                 changed;
 
+  P4EST_ASSERT (!pp->hollow);
+
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
@@ -422,9 +517,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
     P4EST_FREE (pp->flags);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
 
-    pp->ghost = p4est_ghost_new (pp->p4est, P4EST_CONNECT_FULL);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1,
-                                   P4EST_CONNECT_FULL);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
   }
   else {
     memset (pp->flags, 0, sizeof (uint8_t) * pp->p4est->local_num_quadrants);
@@ -441,6 +535,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 void
 p4est_wrap_complete (p4est_wrap_t * pp)
 {
+  P4EST_ASSERT (!pp->hollow);
+
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
@@ -456,19 +552,20 @@ p4est_wrap_complete (p4est_wrap_t * pp)
 static p4est_wrap_leaf_t *
 p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
 {
-#if 0
 #ifdef P4EST_ENABLE_DEBUG
-  int                 nface;
-  p4est_mesh_t       *mesh = p4est_wrap_get_mesh (leaf->pp);
+  p4est_t            *p4est = leaf->pp->p4est;
 #endif
-#endif
+#if 0
   p4est_quadrant_t    corner;
+#endif
+  p4est_quadrant_t   *mirror;
 
-  leaf->total_quad = leaf->tree->quadrants_offset + leaf->which_quad;
-  leaf->quad = p4est_quadrant_array_index (&leaf->tree->quadrants,
-                                           leaf->which_quad);
+  /* complete information on current quadrant */
+  leaf->local_quad = leaf->tree->quadrants_offset + leaf->which_quad;
+  leaf->quad =
+    p4est_quadrant_array_index (leaf->tquadrants, leaf->which_quad);
 
-  leaf->level = (int) leaf->quad->level;
+#if 0
   p4est_qcoord_to_vertex (leaf->pp->conn, leaf->which_tree,
                           leaf->quad->x, leaf->quad->y,
 #ifdef P4_TO_P8
@@ -482,38 +579,79 @@ p4est_wrap_leaf_info (p4est_wrap_leaf_t * leaf)
                           corner.z,
 #endif
                           leaf->upperright);
+#endif
 
 #if 0
 #ifdef P4EST_ENABLE_DEBUG
   printf ("C: Leaf level %d tree %d tree_leaf %d local_leaf %d\n",
-          leaf->level, leaf->which_tree, leaf->which_quad, leaf->total_quad);
-  for (nface = 0; nface < P4EST_FACES; ++nface) {
-    printf ("C: Leaf face %d neighbor leaf %d\n", nface,
-            mesh->quad_to_quad[P4EST_FACES * leaf->total_quad + nface]);
+          (int) leaf->quad->level, leaf->which_tree, leaf->which_quad,
+          leaf->local_quad);
+#endif
+#endif
+
+  /* track parallel mirror quadrants */
+  if (leaf->mirrors != NULL) {
+    if (leaf->local_quad == leaf->next_mirror_quadrant) {
+      if (++leaf->nm + 1 < (p4est_locidx_t) leaf->mirrors->elem_count) {
+        mirror = p4est_quadrant_array_index (leaf->mirrors, leaf->nm + 1);
+        leaf->next_mirror_quadrant = mirror->p.piggy3.local_num;
+        P4EST_ASSERT (leaf->next_mirror_quadrant > leaf->local_quad);
+        P4EST_ASSERT (leaf->next_mirror_quadrant <
+                      p4est->local_num_quadrants);
+      }
+      else {
+        leaf->next_mirror_quadrant = -1;
+      }
+      leaf->is_mirror = 1;
+    }
+    else {
+      leaf->is_mirror = 0;
+    }
   }
-#endif
-#endif
 
   return leaf;
 }
 
 p4est_wrap_leaf_t  *
-p4est_wrap_leaf_first (p4est_wrap_t * pp)
+p4est_wrap_leaf_first (p4est_wrap_t * pp, int track_mirrors)
 {
-  p4est_wrap_leaf_t  *leaf;
   p4est_t            *p4est = pp->p4est;
+  p4est_wrap_leaf_t  *leaf;
+  p4est_quadrant_t   *mirror;
 
   if (p4est->local_num_quadrants == 0) {
+    P4EST_ASSERT (p4est->first_local_tree == -1);
+    P4EST_ASSERT (p4est->last_local_tree == -2);
     return NULL;
   }
 
+  /* prepare internal state of the leaf iterator */
   leaf = P4EST_ALLOC (p4est_wrap_leaf_t, 1);
   leaf->pp = pp;
   leaf->which_tree = p4est->first_local_tree;
+  P4EST_ASSERT (leaf->which_tree >= 0);
   leaf->tree = p4est_tree_array_index (p4est->trees, leaf->which_tree);
-  P4EST_ASSERT (leaf->tree->quadrants.elem_size > 0);
+  leaf->tquadrants = &leaf->tree->quadrants;
+  P4EST_ASSERT (leaf->tquadrants->elem_size > 0);
   leaf->which_quad = 0;
 
+  /* initialize mirror tracking if desired */
+  leaf->nm = leaf->next_mirror_quadrant = -1;
+  if (track_mirrors) {
+    leaf->mirrors = &(p4est_wrap_get_ghost (pp))->mirrors;
+    if (leaf->mirrors->elem_count > 0) {
+      mirror = p4est_quadrant_array_index (leaf->mirrors, 0);
+      leaf->next_mirror_quadrant = (int) mirror->p.piggy3.local_num;
+      P4EST_ASSERT (leaf->next_mirror_quadrant >= 0);
+      P4EST_ASSERT (leaf->next_mirror_quadrant < p4est->local_num_quadrants);
+    }
+  }
+  else {
+    leaf->mirrors = NULL;
+    leaf->is_mirror = 0;
+  }
+
+  /* complete leaf and mirror information */
   return p4est_wrap_leaf_info (leaf);
 }
 
@@ -524,14 +662,22 @@ p4est_wrap_leaf_next (p4est_wrap_leaf_t * leaf)
 
   P4EST_ASSERT (leaf != NULL);
 
-  if ((size_t) leaf->which_quad + 1 == leaf->tree->quadrants.elem_count) {
+  if ((size_t) leaf->which_quad + 1 == leaf->tquadrants->elem_count) {
     ++leaf->which_tree;
     if (leaf->which_tree > p4est->last_local_tree) {
+#ifdef P4EST_ENABLE_DEBUG
+      if (leaf->mirrors != NULL) {
+        P4EST_ASSERT (leaf->nm + 1 ==
+                      (p4est_locidx_t) leaf->mirrors->elem_count);
+        P4EST_ASSERT (leaf->next_mirror_quadrant == -1);
+      }
+#endif
       P4EST_FREE (leaf);
       return NULL;
     }
     leaf->tree = p4est_tree_array_index (p4est->trees, leaf->which_tree);
-    P4EST_ASSERT (leaf->tree->quadrants.elem_size > 0);
+    leaf->tquadrants = &leaf->tree->quadrants;
+    P4EST_ASSERT (leaf->tquadrants->elem_size > 0);
     leaf->which_quad = 0;
   }
   else {

@@ -121,6 +121,9 @@ typedef int         (*p4est_search_query_t) (p4est_t * p4est,
 /** Search "points" from a given set in the forest.
  *
  * The search runs over all local quadrants and proceeds recursively top-down.
+ * For each tree, it may start at the root of that tree, or further down at the
+ * root of the subtree that contains all of the tree's quadrants.
+ * Likewise, some intermediate levels in the recursion may be skipped.
  * Its outer loop is thus a depth-first, processor-local forest traversal.
  * Each quadrant in that loop either is a leaf, or a (direct or indirect)
  * strict ancestor of a leaf.  On entering a new quadrant, a user-provided

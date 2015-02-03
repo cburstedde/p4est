@@ -740,7 +740,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
     qalloc = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
     *qalloc = *q;               /* never prepend array members directly */
     qalloc->pad8 = 0;           /* this quadrant has not been refined yet */
-    sc_list_prepend (list, qalloc);     /* only newly allocated quadrants */
+    (void) sc_list_prepend (list, qalloc);      /* only new quadrants */
 
     P4EST_QUADRANT_INIT (&parent);
 
@@ -798,15 +798,15 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
         p4est_quadrant_init_data (p4est, nt, c7, init_fn);
         c4->pad8 = c5->pad8 = c6->pad8 = c7->pad8 = 1;
 
-        sc_list_prepend (list, c7);
-        sc_list_prepend (list, c6);
-        sc_list_prepend (list, c5);
-        sc_list_prepend (list, c4);
+        (void) sc_list_prepend (list, c7);
+        (void) sc_list_prepend (list, c6);
+        (void) sc_list_prepend (list, c5);
+        (void) sc_list_prepend (list, c4);
 #endif
-        sc_list_prepend (list, c3);
-        sc_list_prepend (list, c2);
-        sc_list_prepend (list, c1);
-        sc_list_prepend (list, c0);
+        (void) sc_list_prepend (list, c3);
+        (void) sc_list_prepend (list, c2);
+        (void) sc_list_prepend (list, c1);
+        (void) sc_list_prepend (list, c0);
 
         if (replace_fn != NULL) {
           /* in family mode we always call the replace callback right
@@ -834,7 +834,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
             qalloc = p4est_quadrant_mempool_alloc (p4est->quadrant_pool);
             *qalloc = *q;       /* never append array members directly */
             qalloc->pad8 = 0;   /* has not been refined yet */
-            sc_list_append (list, qalloc);      /* only newly allocated quadrants */
+            (void) sc_list_append (list, qalloc);       /* only new quadrants */
             --movecount;
             ++restpos;
           }
@@ -1806,21 +1806,23 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* verify sc_ranges and sc_notify against each other */
   if (is_ranges_active && is_notify_active && is_balance_verify) {
+#ifdef P4EST_ENABLE_DEBUG
     int                 found_in_ranges, found_in_notify;
+#endif
 
     /* verify receiver side */
     P4EST_ASSERT (num_receivers_notify <= num_receivers_ranges);
     k = l = 0;
     for (j = 0; j < num_procs; ++j) {
-      found_in_ranges = found_in_notify = 0;
+      P4EST_DEBUG_EXECUTE (found_in_ranges = found_in_notify = 0);
       if (k < num_receivers_ranges && receiver_ranks_ranges[k] == j) {
         P4EST_ASSERT (j != rank);
-        found_in_ranges = 1;
+        P4EST_DEBUG_EXECUTE (found_in_ranges = 1);
         ++k;
       }
       if (l < num_receivers_notify && receiver_ranks_notify[l] == j) {
         P4EST_ASSERT (j != rank && found_in_ranges);
-        found_in_notify = 1;
+        P4EST_DEBUG_EXECUTE (found_in_notify = 1);
         ++l;
       }
       if (j != rank && peers[j].send_first.elem_count > 0) {
@@ -1837,15 +1839,15 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     P4EST_ASSERT (num_senders_notify <= num_senders_ranges);
     k = l = 0;
     for (j = 0; j < num_procs; ++j) {
-      found_in_ranges = found_in_notify = 0;
+      P4EST_DEBUG_EXECUTE (found_in_ranges = found_in_notify = 0);
       if (k < num_senders_ranges && sender_ranks_ranges[k] == j) {
         P4EST_ASSERT (j != rank);
-        found_in_ranges = 1;
+        P4EST_DEBUG_EXECUTE (found_in_ranges = 1);
         ++k;
       }
       if (l < num_senders_notify && sender_ranks_notify[l] == j) {
         P4EST_ASSERT (j != rank && found_in_ranges);
-        found_in_notify = 1;    /* kept for symmetry */
+        P4EST_DEBUG_EXECUTE (found_in_notify = 1);      /* for symmetry */
         ++l;
       }
     }
@@ -2425,7 +2427,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   num_quadrants_in_proc = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
   if (weight_fn == NULL) {
-    /* Divide up the quadants equally */
+    /* Divide up the quadrants equally */
     for (p = 0, next_quadrant = 0; p < num_procs; ++p) {
       prev_quadrant = next_quadrant;
       next_quadrant =
