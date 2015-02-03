@@ -506,6 +506,7 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
   p6est->user_data_pool = user_data_pool;
   p6est->columns = p4est_copy (p4est, 0);
   p6est->columns->connectivity = conn->conn4;
+  p6est->root_len = P4EST_ROOT_LEN;
 
   P4EST_ASSERT (min_zlevel <= P4EST_QMAXLEVEL);
 
