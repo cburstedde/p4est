@@ -514,6 +514,7 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
   init_data.layers = layers;
   init_data.init_fn = init_fn;
   init_data.user_pointer = user_pointer;
+  init_data.num_zroot = 1;
   p6est->user_pointer = &init_data;
 
   p4est_reset_data (p6est->columns, 0, p6est_init_fn, (void *) p6est);
