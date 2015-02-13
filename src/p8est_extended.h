@@ -239,6 +239,12 @@ void                p8est_partition_lnodes_ext (p8est_t *p8est,
                                                 int nodes_per_corner,
                                                 int partition_for_coarsening);
 
+int                 p8est_reduce_mpicomm (p8est_t * p8est);
+
+int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
+                                              MPI_Group group_add,
+                                              const int add_to_beginning);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_EXTENDED_H */

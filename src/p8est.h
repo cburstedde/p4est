@@ -129,6 +129,7 @@ p8est_inspect_t;
 typedef struct p8est
 {
   MPI_Comm            mpicomm;
+  int                 mpicomm_owned;
   int                 mpisize, mpirank;
 
   size_t              data_size;        /* size of per-quadrant user_data */

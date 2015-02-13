@@ -128,6 +128,7 @@ p4est_inflate (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   p4est->mpicomm = mpicomm;
+  p4est->mpicomm_owned = 0;
   p4est->mpisize = num_procs;
   p4est->mpirank = rank;
   dsize = p4est->data_size = data == NULL ? 0 : data->elem_size;

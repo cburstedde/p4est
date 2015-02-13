@@ -237,6 +237,12 @@ void                p4est_partition_lnodes_ext (p4est_t *p4est,
                                                 int nodes_per_corner,
                                                 int partition_for_coarsening);
 
+int                 p4est_reduce_mpicomm (p4est_t * p4est);
+
+int                 p4est_reduce_mpicomm_ext (p4est_t * p4est,
+                                              MPI_Group group_add,
+                                              const int add_to_beginning);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_EXTENDED_H */

@@ -163,6 +163,8 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
+#define p4est_reduce_mpicomm            p8est_reduce_mpicomm
+#define p4est_reduce_mpicomm_ext        p8est_reduce_mpicomm_ext
 #define p4est_connect_type_int          p8est_connect_type_int
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
