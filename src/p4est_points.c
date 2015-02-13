@@ -168,6 +168,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* assign some data members */
   p4est->mpicomm = mpicomm;
+  p4est->mpicomm_owned = 0;
   p4est->mpisize = num_procs;
   p4est->mpirank = rank;
   p4est->data_size = 2 * sizeof (p4est_locidx_t);       /* temporary */

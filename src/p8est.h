@@ -125,6 +125,7 @@ typedef struct p8est_inspect p8est_inspect_t;
 typedef struct p8est
 {
   sc_MPI_Comm         mpicomm;          /**< MPI communicator */
+  int                 mpicomm_owned;    /**< flag if communicator is owned */
   int                 mpisize,          /**< number of MPI processes */
                       mpirank;          /**< this process's MPI rank */
   size_t              data_size;        /**< size of per-quadrant p.user_data
