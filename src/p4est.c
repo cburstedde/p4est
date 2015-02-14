@@ -184,7 +184,6 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                p4est_locidx_t min_quadrants, int min_level, int fill_uniform,
                size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
-  int                 mpiret;
   int                 num_procs, rank;
   int                 i, must_remove_last_quadrant;
   int                 level;
@@ -209,22 +208,17 @@ p4est_new_ext (MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
 
-  /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &num_procs);
-  SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &rank);
-  SC_CHECK_MPI (mpiret);
-
-  /* assign some data members */
+  /* create p4est object and assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  p4est->mpicomm = mpicomm;
-  p4est->mpicomm_owned = 0;
-  p4est->mpisize = num_procs;
-  p4est->mpirank = rank;
   p4est->data_size = data_size;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
+
+  /* create parallel environment */
+  p4est_comm_parallel_env_create (p4est, mpicomm);
+  num_procs = p4est->mpisize;
+  rank = p4est->mpirank;
 
   /* allocate memory pools */
   if (p4est->data_size > 0) {
@@ -509,13 +503,7 @@ p4est_destroy (p4est_t * p4est)
   }
   sc_mempool_destroy (p4est->quadrant_pool);
 
-  /* free MPI communicator if it has been allocated by p4est */
-  if (p4est->mpicomm_owned) {
-    int                 mpiret;
-
-    mpiret = MPI_Comm_free (&(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
-  }
-
+  p4est_comm_parallel_env_free (p4est);
   P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est);
@@ -543,6 +531,9 @@ p4est_copy (p4est_t * input, int copy_data)
   p4est->trees = NULL;
   p4est->user_data_pool = NULL;
   p4est->quadrant_pool = NULL;
+
+  /* create parallel environment */
+  p4est_comm_parallel_env_create (p4est, input->mpicomm);
 
   /* allocate a user data pool if necessary and a quadrant pool */
   if (copy_data && p4est->data_size > 0) {
@@ -615,11 +606,11 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
   int                 mpiret;
   p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
 
-  int                 submpisize, submpirank;
-  MPI_Group           group, subgroup;
-  MPI_Comm            submpicomm;
   p4est_gloidx_t     *n_quadrants;
   int                *include;
+  int                 submpisize;
+  MPI_Group           group, subgroup;
+  MPI_Comm            submpicomm;
   int                *ranks, *subranks;
   int                 i;
 
@@ -642,7 +633,7 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
     return 1;
   }
 
-  /* create sub-group of non-empty processes */
+  /* create sub-group of non-empty processors */
   mpiret = MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
   mpiret = MPI_Group_incl (group, submpisize, include, &subgroup);
   mpiret = MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
@@ -675,26 +666,18 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
     mpiret = MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
   }
 
-  /* destroy p4est and exit if this process is empty */
+  /* destroy p4est and exit if this processor is empty */
   if (submpicomm == MPI_COMM_NULL) {
     /* destroy */
-    p4est_destroy (p4est);
     P4EST_FREE (n_quadrants);
+    p4est_destroy (p4est);
 
     /* return that this processor is empty */
     return 0;
   }
 
-  /* set new parallel environment */
-  if (p4est->mpicomm_owned) {
-    mpiret = MPI_Comm_free (&(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
-  }
+  /* update size of new MPI communicator */
   mpiret = MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (submpicomm, &submpirank); SC_CHECK_MPI (mpiret);
-  p4est->mpicomm = submpicomm;
-  p4est->mpicomm_owned = 1;
-  p4est->mpisize = submpisize;
-  p4est->mpirank = submpirank;
 
   /* translate MPI ranks */
   ranks = P4EST_ALLOC (int, submpisize);
@@ -710,7 +693,7 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
   mpiret = MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
   P4EST_FREE (subranks);
 
-  /* allocate and copy global quadrant count */
+  /* allocate and set global quadrant count */
   P4EST_FREE (p4est->global_first_quadrant);
   p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
   p4est->global_first_quadrant[0] = 0;
@@ -724,6 +707,12 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
                 p4est->global_num_quadrants);
   P4EST_FREE (n_quadrants);
   P4EST_FREE (ranks);
+
+  /* set new parallel environment */
+  p4est_comm_parallel_env_free (p4est);
+  p4est_comm_parallel_env_create (p4est, submpicomm);
+  mpiret = MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (p4est->mpisize == submpisize);
 
   /* communicate partition information */
   P4EST_FREE (p4est->global_first_position);

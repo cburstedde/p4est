@@ -54,6 +54,16 @@ typedef enum
 }
 p4est_comm_tag_t;
 
+void                p4est_comm_parallel_env_create (p4est_t * p4est,
+                                                    MPI_Comm mpicomm);
+
+void                p4est_comm_parallel_env_free (p4est_t * p4est);
+
+int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
+
+void                p4est_comm_parallel_env_assign (p4est_t * p4est,
+                                                    MPI_Comm mpicomm);
+
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
  *                        puts cumulative sums in p4est->global_first_quadrant.

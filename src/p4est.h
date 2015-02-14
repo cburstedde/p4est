@@ -133,8 +133,8 @@ p4est_inspect_t;
 typedef struct p4est
 {
   MPI_Comm            mpicomm;
-  int                 mpicomm_owned;
   int                 mpisize, mpirank;
+  int                 mpicomm_owned;
 
   size_t              data_size;        /* size of per-quadrant user_data */
   void               *user_pointer;     /* convenience pointer for users,
