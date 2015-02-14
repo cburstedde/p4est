@@ -321,6 +321,10 @@
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
+#define p4est_comm_parallel_env_create  p8est_comm_parallel_env_create
+#define p4est_comm_parallel_env_free    p8est_comm_parallel_env_free
+#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
+#define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree

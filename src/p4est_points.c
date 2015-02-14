@@ -167,14 +167,13 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   ppstate.maxlevel = maxlevel;
 
   /* assign some data members */
-  p4est->mpicomm = mpicomm;
-  p4est->mpicomm_owned = 0;
-  p4est->mpisize = num_procs;
-  p4est->mpirank = rank;
   p4est->data_size = 2 * sizeof (p4est_locidx_t);       /* temporary */
   p4est->user_pointer = &ppstate;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
+
+  /* create parallel environment */
+  p4est_comm_parallel_env_create (p4est, mpicomm);
 
   /* allocate memory pools */
   p4est->user_data_pool = sc_mempool_new (p4est->data_size);

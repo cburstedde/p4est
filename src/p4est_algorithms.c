@@ -439,6 +439,9 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&s);
 
 #ifdef P4EST_ENABLE_DEBUG
+  /* check parallel environment */
+  P4EST_ASSERT (!p4est_comm_parallel_env_is_null (p4est));
+
   /* check last item of global partition */
   P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
                 p4est->connectivity->num_trees &&
