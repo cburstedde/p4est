@@ -36,6 +36,7 @@ refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   const p4est_locidx_t old_counter = pp->inside_counter++;
   const uint8_t       flag = pp->flags[old_counter];
 
+  P4EST_ASSERT (pp->coarsen_delay >= 0);
   P4EST_ASSERT (0 <= old_counter);
   P4EST_ASSERT (0 <= pp->num_replaced
                 && pp->num_replaced <= pp->num_refine_flags);
@@ -44,6 +45,12 @@ refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   pp->flags[old_counter] = 0;
   pp->temp_flags[old_counter + (P4EST_CHILDREN - 1) * pp->num_replaced] =
     flag & ~P4EST_WRAP_REFINE;
+
+  /* increase quadrant's counter of most recent adaptation */
+  /* if refinement actually occurs, it will be reset to zero in all children */
+  if (pp->coarsen_delay && q->p.user_int >= 0) {
+    ++q->p.user_int;
+  }
 
   return flag & P4EST_WRAP_REFINE;
 }
@@ -63,14 +70,23 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (num_outgoing == 1 && num_incoming == P4EST_CHILDREN);
   P4EST_ASSERT (!(flag & (P4EST_WRAP_REFINE | P4EST_WRAP_COARSEN)));
 
+  /* we have set the first flag in the refinement callback, do the others */
   for (k = 1; k < P4EST_CHILDREN; ++k) {
     pp->temp_flags[new_counter + k] = flag;
   }
 
-  /* pass the replaced quadrants to the user provided function */
+  /* reset the counter for most recent adaptation */
+  P4EST_ASSERT (pp->coarsen_delay >= 0);
+  if (pp->coarsen_delay) {
+    for (k = 0; k < P4EST_CHILDREN; ++k) {
+      incoming[k]->p.user_int = 0;
+    }
+  }
+
+  /* pass the replaced quadrants to the user-provided function */
   if (pp->replace_fn != NULL) {
-    pp->replace_fn (p4est, which_tree, num_outgoing, outgoing, num_incoming,
-                    incoming);
+    pp->replace_fn (p4est, which_tree,
+                    num_outgoing, outgoing, num_incoming, incoming);
   }
 }
 
@@ -82,6 +98,8 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   const p4est_locidx_t old_counter = pp->inside_counter++;
   int                 k;
 
+  P4EST_ASSERT (pp->coarsen_delay >= 0);
+
   /* are we not coarsening at all, just counting? */
   if (q[1] == NULL) {
     return 0;
@@ -90,6 +108,12 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   /* now we are possibly coarsening */
   for (k = 0; k < P4EST_CHILDREN; ++k) {
     if (!(pp->temp_flags[old_counter + k] & P4EST_WRAP_COARSEN)) {
+      /* coarsening flag was not set */
+      return 0;
+    }
+    if (pp->coarsen_delay && q[k]->p.user_int >= 0 &&
+        q[k]->p.user_int <= pp->coarsen_delay) {
+      /* most recent adaptation has been too recent */
       return 0;
     }
   }
@@ -98,6 +122,49 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   pp->inside_counter += P4EST_CHILDREN - 1;
   ++pp->num_replaced;
   return 1;
+}
+
+static void
+replace_on_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
+                    int num_outgoing, p4est_quadrant_t * outgoing[],
+                    int num_incoming, p4est_quadrant_t * incoming[])
+{
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+  P4EST_ASSERT (num_incoming == 1 && num_outgoing == P4EST_CHILDREN);
+  P4EST_ASSERT (pp->coarsen_delay > 0);
+
+  /* reset most recent adaptation timer */
+  incoming[0]->p.user_int = pp->coarsen_affect ? 0 : -1;
+
+  /* pass the replaced quadrants to the user-provided function */
+  if (pp->replace_fn != NULL) {
+    pp->replace_fn (p4est, which_tree,
+                    num_outgoing, outgoing, num_incoming, incoming);
+  }
+}
+
+static void
+replace_on_balance (p4est_t * p4est, p4est_topidx_t which_tree,
+                    int num_outgoing, p4est_quadrant_t * outgoing[],
+                    int num_incoming, p4est_quadrant_t * incoming[])
+{
+  p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
+  int                 k;
+
+  /* this function is called when refinement occurs in balance */
+  P4EST_ASSERT (num_outgoing == 1 && num_incoming == P4EST_CHILDREN);
+  P4EST_ASSERT (pp->coarsen_delay > 0);
+
+  /* negative value means coarsening is allowed next time */
+  for (k = 0; k < P4EST_CHILDREN; ++k) {
+    incoming[k]->p.user_int = -1;
+  }
+
+  /* pass the replaced quadrants to the user-provided function */
+  if (pp->replace_fn != NULL) {
+    pp->replace_fn (p4est, which_tree,
+                    num_outgoing, outgoing, num_incoming, incoming);
+  }
 }
 
 p4est_wrap_t       *
@@ -129,7 +196,7 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
 
-  pp->weight_exponent = 0;      /* keep this event though using ALLOC_ZERO */
+  pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
 
   if (!pp->hollow) {
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
@@ -332,6 +399,36 @@ p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
   pp->hollow = hollow;
 }
 
+void
+p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
+                              int coarsen_delay, int coarsen_affect)
+{
+  size_t              zz;
+  p4est_topidx_t      tt;
+  p4est_t            *p4est;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quadrant;
+  sc_array_t         *tquadrants;
+
+  P4EST_ASSERT (pp != NULL);
+  P4EST_ASSERT (coarsen_delay >= 0);
+
+  pp->coarsen_delay = coarsen_delay;
+  pp->coarsen_affect = coarsen_affect;
+  p4est = pp->p4est;
+  P4EST_ASSERT (p4est->data_size == 0);
+
+  /* initialize delay memory in the quadrants' user field */
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (p4est->trees, tt);
+    tquadrants = &tree->quadrants;
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
+      quadrant = p4est_quadrant_array_index (tquadrants, zz);
+      quadrant->p.user_int = 0;
+    }
+  }
+}
+
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {
@@ -413,6 +510,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_t            *p4est = pp->p4est;
 
   P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (pp->coarsen_delay >= 0);
 
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
@@ -447,7 +545,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   local_num = p4est->local_num_quadrants;
 #endif
   global_num = p4est->global_num_quadrants;
-  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL, pp->replace_fn);
+  p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL,
+                     pp->coarsen_delay ? replace_on_coarsen : pp->replace_fn);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
                 pp->num_replaced * (P4EST_CHILDREN - 1));
@@ -460,7 +559,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
     P4EST_FREE (pp->flags);
-    p4est_balance_ext (p4est, pp->btype, NULL, pp->replace_fn);
+    p4est_balance_ext (p4est, pp->btype, NULL, pp->coarsen_delay ?
+                       replace_on_balance : pp->replace_fn);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
     pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);

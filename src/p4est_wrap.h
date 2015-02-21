@@ -54,6 +54,14 @@ typedef struct p4est_wrap
    * If false, they are properly allocated and kept current internally. */
   int                 hollow;
 
+  /** Non-negative integer tells us how many adaptations to wait
+   * before any given quadrent may be coarsened again. */
+  int                 coarsen_delay;
+
+  /** Boolean: If true, we delay coarsening not only after refinement,
+   * but also between subsequent coarsenings of the same quadrant. */
+  int                 coarsen_affect;
+
   /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
@@ -110,7 +118,7 @@ p4est_wrap_t       *p4est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         int initial_level, int hollow,
                                         p4est_connect_type_t btype,
                                         p4est_replace_t replace_fn,
-                                        void * user_pointer);
+                                        void *user_pointer);
 
 /** Create p4est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.
@@ -149,6 +157,25 @@ void                p4est_wrap_destroy (p4est_wrap_t * pp);
  *                      refinement flags are zeroed.
  */
 void                p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow);
+
+/** Set a parameter that delays coarsening after adaptation.
+ * If positive each quadrant counts the number of adaptations it has survived.
+ * Calling this function initializes all quadrant counters to zero.
+ * On adaptation we only coarsen a quadrant if it is old enough.
+ * Optionally, we can also delay the time between subsequent coarsenings.
+ * \param [in,out] pp           A valid p4est_wrap structure.
+ * \param [in] coarsen_delay    Set how many adaptation cycles a quadrant has
+ *                              to wait to be allowed to coarsen.
+ *                              Non-negative number; 0 disables the feature.
+ *                              Suggested default value: not larger than 2.
+ * \param [in] coarsen_affect   Boolean; If true, we not only count from the
+ *                              most recent refinement but also between
+ *                              subsequent coarsenings.
+ *                              Suggested default: 0.
+ */
+void                p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
+                                                  int coarsen_delay,
+                                                  int coarsen_affect);
 
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously

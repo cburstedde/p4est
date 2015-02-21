@@ -397,6 +397,7 @@
 #define p4est_wrap_new_ext              p8est_wrap_new_ext
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_set_hollow           p8est_wrap_set_hollow
+#define p4est_wrap_set_coarsen_delay    p8est_wrap_set_coarsen_delay
 #define p4est_wrap_get_ghost            p8est_wrap_get_ghost
 #define p4est_wrap_get_mesh             p8est_wrap_get_mesh
 #define p4est_wrap_mark_refine          p8est_wrap_mark_refine

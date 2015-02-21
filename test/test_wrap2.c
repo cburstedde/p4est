@@ -39,6 +39,29 @@ wrap_adapt_partition (p4est_wrap_t * wrap, int weight_exponent)
   return 0;
 }
 
+static void
+test_coarsen_delay (p4est_wrap_t * wrap)
+{
+  p4est_locidx_t      jl;
+  p4est_wrap_leaf_t  *leaf;
+
+  p4est_wrap_set_coarsen_delay (wrap, 2, 0);
+
+  for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 1); leaf != NULL;
+       jl++, leaf = p4est_wrap_leaf_next (leaf)) {
+    if (leaf->which_quad % 4 == 0) {
+      p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
+    }
+  }
+  wrap_adapt_partition (wrap, 1);
+
+  for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 1); leaf != NULL;
+       jl++, leaf = p4est_wrap_leaf_next (leaf)) {
+    p4est_wrap_mark_coarsen (wrap, leaf->which_tree, leaf->which_quad);
+  }
+  wrap_adapt_partition (wrap, 1);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -125,6 +148,8 @@ main (int argc, char **argv)
 
     (void) wrap_adapt_partition (wrap, 0);
   }
+
+  test_coarsen_delay (wrap);
 
   p4est_wrap_destroy (wrap);
 
