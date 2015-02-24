@@ -188,6 +188,8 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
+#define p4est_reduce_mpicomm            p8est_reduce_mpicomm
+#define p4est_reduce_mpicomm_ext        p8est_reduce_mpicomm_ext
 #define p4est_connect_type_int          p8est_connect_type_int
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
@@ -205,6 +207,7 @@
 #define p4est_balance_ext               p8est_balance_ext
 #define p4est_balance_subtree_ext       p8est_balance_subtree_ext
 #define p4est_partition_ext             p8est_partition_ext
+#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext
 #define p4est_source_ext                p8est_source_ext
@@ -319,6 +322,10 @@
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
+#define p4est_comm_parallel_env_create  p8est_comm_parallel_env_create
+#define p4est_comm_parallel_env_free    p8est_comm_parallel_env_free
+#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
+#define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
@@ -380,6 +387,8 @@
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
 #define p4est_ghost_support_lnodes      p8est_ghost_support_lnodes
 #define p4est_ghost_expand_by_lnodes    p8est_ghost_expand_by_lnodes
+#define p4est_partition_lnodes          p8est_partition_lnodes
+#define p4est_partition_lnodes_detailed p8est_partition_lnodes_detailed
 #define p4est_lnodes_decode             p8est_lnodes_decode
 #define p4est_lnodes_share_owned_begin  p8est_lnodes_share_owned_begin
 #define p4est_lnodes_share_owned_end    p8est_lnodes_share_owned_end

@@ -235,6 +235,16 @@ p4est_gloidx_t      p4est_partition_ext (p4est_t * p4est,
                                          int partition_for_coarsening,
                                          p4est_weight_t weight_fn);
 
+/** Correct partition to allow one level of coarsening.
+ *
+ * \param [in] p4est                     forest whose partition is corrected
+ * \param [in,out] num_quadrants_in_proc partition that will be corrected
+ * \return                               absolute number of moved quadrants
+ */
+p4est_locidx_t      p4est_partition_for_coarsening (p4est_t * p4est,
+                                                    p4est_locidx_t *
+                                                    num_quadrants_in_proc);
+
 /** p4est_iterate_ext adds the option \a remote: if this is false, then it is
  * the same as p4est_iterate; if this is true, then corner callbacks are also
  * called on corners for hanging faces touched by local quadrants.
@@ -302,6 +312,13 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
+
+
+int                 p4est_reduce_mpicomm (p4est_t * p4est);
+
+int                 p4est_reduce_mpicomm_ext (p4est_t * p4est,
+                                              MPI_Group group_add,
+                                              const int add_to_beginning);
 
 SC_EXTERN_C_END;
 

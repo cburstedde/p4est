@@ -92,7 +92,6 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 {
   const p4est_gloidx_t *gfq;
   int                 i;
-  int                 mpiret;
   int                 num_procs, rank;
   p4est_topidx_t      num_trees, jt;
   p4est_gloidx_t      gkey, gtreeskip, gtreeremain, gquadremain;
@@ -120,23 +119,18 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* data may be NULL, in this case p4est->data_size will be 0 */
   /* user_pointer may be anything, we don't look at it */
 
-  /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
-  SC_CHECK_MPI (mpiret);
-
-  /* assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  p4est->mpicomm = mpicomm;
-  p4est->mpisize = num_procs;
-  p4est->mpirank = rank;
-  dsize = p4est->data_size = data == NULL ? 0 : data->elem_size;
+  dsize = p4est->data_size = (data == NULL ? 0 : data->elem_size);
   dap = (char *) (data == NULL ? NULL : data->array);
   qap = (p4est_locidx_t *) quadrants->array;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
+
+  /* create parallel environment */
+  p4est_comm_parallel_env_create (p4est, mpicomm);
+  num_procs = p4est->mpisize;
+  rank = p4est->mpirank;
 
   /* create global first quadrant offsets */
   gfq = p4est->global_first_quadrant =
