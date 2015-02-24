@@ -1059,7 +1059,7 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
   p4est_locidx_t      qid, owner_qid, nqid;
   p4est_locidx_t      num_inodes = (p4est_locidx_t) inodes->elem_count;
   int8_t             *is_ghost, owner_is_ghost;
-  int                 e, edir, owner_e, owner_c, o/*, o2 UNUSED */;
+  int                 e, edir, owner_e, owner_c, o /*, o2 UNUSED */ ;
   p4est_locidx_t      nid;
   int                 owner_proc, nproc;
   int                 rank = info->p4est->mpirank;
@@ -2485,13 +2485,12 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
 
 #ifdef P4EST_DEBUG
   {
-    sc_statinfo_t nodestat;
+    sc_statinfo_t       nodestat;
 
     sc_stats_set1 (&nodestat, (double) lnodes->owned_count,
                    "Nodes per processor");
     sc_stats_compute (p4est->mpicomm, 1, &nodestat);
-    sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
-                    1, &nodestat, 1, 0);
+    sc_stats_print (p4est_package_id, SC_LP_STATISTICS, 1, &nodestat, 1, 0);
   }
 #endif
 
@@ -2522,18 +2521,17 @@ p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
 
 typedef struct p4est_part_lnodes
 {
-  int nodes_per_corner;
-  int nodes_per_edge;
-  int nodes_per_face;
-  int nodes_per_volume;
-  int *weights;
-  int count;
+  int                 nodes_per_corner;
+  int                 nodes_per_edge;
+  int                 nodes_per_face;
+  int                 nodes_per_volume;
+  int                *weights;
+  int                 count;
 }
 p4est_part_lnodes_t;
 
 static void
-p4est_lnodes_count_corner (p4est_iter_corner_info_t * info,
-                           void *user_data)
+p4est_lnodes_count_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
   p4est_part_lnodes_t *part = (p4est_part_lnodes_t *) user_data;
   p4est_iter_corner_side_t *side;
@@ -2541,10 +2539,10 @@ p4est_lnodes_count_corner (p4est_iter_corner_info_t * info,
   side = p4est_iter_cside_array_index (&info->sides, 0);
 
   if (!side->is_ghost) {
-    p4est_topidx_t t;
-    p4est_tree_t *tree;
-    p4est_locidx_t offset;
-    p4est_locidx_t quadid;
+    p4est_topidx_t      t;
+    p4est_tree_t       *tree;
+    p4est_locidx_t      offset;
+    p4est_locidx_t      quadid;
 
     t = side->treeid;
     tree = p4est_tree_array_index (info->p4est->trees, t);
@@ -2556,16 +2554,15 @@ p4est_lnodes_count_corner (p4est_iter_corner_info_t * info,
 
 #ifdef P4_TO_P8
 static void
-p8est_lnodes_count_edge (p8est_iter_edge_info_t * info,
-                         void *user_data)
+p8est_lnodes_count_edge (p8est_iter_edge_info_t * info, void *user_data)
 {
   p4est_part_lnodes_t *part = (p4est_part_lnodes_t *) user_data;
   p8est_iter_edge_side_t *side;
-  int is_ghost;
-  p4est_locidx_t quadid;
-  p4est_topidx_t t;
-  p4est_tree_t *tree;
-  p4est_locidx_t offset;
+  int                 is_ghost;
+  p4est_locidx_t      quadid;
+  p4est_topidx_t      t;
+  p4est_tree_t       *tree;
+  p4est_locidx_t      offset;
 
   side = p8est_iter_eside_array_index (&info->sides, 0);
 
@@ -2589,16 +2586,15 @@ p8est_lnodes_count_edge (p8est_iter_edge_info_t * info,
 #endif
 
 static void
-p4est_lnodes_count_face (p4est_iter_face_info_t * info,
-                         void *user_data)
+p4est_lnodes_count_face (p4est_iter_face_info_t * info, void *user_data)
 {
   p4est_part_lnodes_t *part = (p4est_part_lnodes_t *) user_data;
   p4est_iter_face_side_t *side;
-  int is_ghost;
-  p4est_locidx_t quadid;
-  p4est_topidx_t t;
-  p4est_tree_t *tree;
-  p4est_locidx_t offset;
+  int                 is_ghost;
+  p4est_locidx_t      quadid;
+  p4est_topidx_t      t;
+  p4est_tree_t       *tree;
+  p4est_locidx_t      offset;
 
   side = p4est_iter_fside_array_index (&info->sides, 0);
 
@@ -2621,14 +2617,13 @@ p4est_lnodes_count_face (p4est_iter_face_info_t * info,
 }
 
 static void
-p4est_lnodes_count_volume (p4est_iter_volume_info_t *info,
-                           void *user_data)
+p4est_lnodes_count_volume (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_part_lnodes_t *part = (p4est_part_lnodes_t *) user_data;
-  p4est_locidx_t quadid;
-  p4est_topidx_t t;
-  p4est_tree_t *tree;
-  p4est_locidx_t offset;
+  p4est_locidx_t      quadid;
+  p4est_topidx_t      t;
+  p4est_tree_t       *tree;
+  p4est_locidx_t      offset;
 
   t = info->treeid;
   tree = p4est_tree_array_index (info->p4est->trees, t);
@@ -2639,12 +2634,12 @@ p4est_lnodes_count_volume (p4est_iter_volume_info_t *info,
 }
 
 static int
-p4est_lnodes_weight (p4est_t *p4est, p4est_topidx_t which_tree,
-                     p4est_quadrant_t *quadrant)
+p4est_lnodes_weight (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant)
 {
   p4est_part_lnodes_t *part = (p4est_part_lnodes_t *) p4est->user_pointer;
-  int count = part->count;
-  int weight = part->weights[count];
+  int                 count = part->count;
+  int                 weight = part->weights[count];
 
   part->count++;
 
@@ -2652,16 +2647,16 @@ p4est_lnodes_weight (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 void
-p4est_partition_lnodes_ext (p4est_t *p4est, p4est_ghost_t *ghost,
-                            int nodes_per_volume, int nodes_per_face,
+p4est_partition_lnodes_detailed (p4est_t * p4est, p4est_ghost_t * ghost,
+                                 int nodes_per_volume, int nodes_per_face,
 #ifdef P4_TO_P8
-                            int nodes_per_edge,
+                                 int nodes_per_edge,
 #endif
-                            int nodes_per_corner,
-                            int partition_for_coarsening)
+                                 int nodes_per_corner,
+                                 int partition_for_coarsening)
 {
-  int *weights;
-  int ghost_given = (ghost != NULL);
+  int                *weights;
+  int                 ghost_given = (ghost != NULL);
   p4est_iter_corner_t citer = NULL;
 #ifdef P4_TO_P8
   p8est_iter_edge_t   eiter = NULL;
@@ -2669,7 +2664,7 @@ p4est_partition_lnodes_ext (p4est_t *p4est, p4est_ghost_t *ghost,
   p4est_iter_face_t   fiter = NULL;
   p4est_iter_volume_t viter = NULL;
   p4est_part_lnodes_t part;
-  void *orig_user_pointer = p4est->user_pointer;
+  void               *orig_user_pointer = p4est->user_pointer;
 
   if (!ghost_given) {
     ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -2722,12 +2717,12 @@ p4est_partition_lnodes_ext (p4est_t *p4est, p4est_ghost_t *ghost,
 }
 
 void
-p4est_partition_lnodes (p4est_t *p4est, p4est_ghost_t *ghost, int degree,
+p4est_partition_lnodes (p4est_t * p4est, p4est_ghost_t * ghost, int degree,
                         int partition_for_coarsening)
 {
-  int nodes_per_volume, nodes_per_face, nodes_per_corner;
+  int                 nodes_per_volume, nodes_per_face, nodes_per_corner;
 #ifdef P4_TO_P8
-  int nodes_per_edge;
+  int                 nodes_per_edge;
 #endif
 
   P4EST_ASSERT (degree >= 1);
@@ -2743,13 +2738,13 @@ p4est_partition_lnodes (p4est_t *p4est, p4est_ghost_t *ghost, int degree,
   nodes_per_volume = (degree - 1) * (degree - 1) * (degree - 1);
 #endif
 
-  p4est_partition_lnodes_ext (p4est, ghost, nodes_per_volume,
-                              nodes_per_face,
+  p4est_partition_lnodes_detailed (p4est, ghost, nodes_per_volume,
+                                   nodes_per_face,
 #ifdef P4_TO_P8
-                              nodes_per_edge,
+                                   nodes_per_edge,
 #endif
-                              nodes_per_corner,
-                              partition_for_coarsening);
+                                   nodes_per_corner,
+                                   partition_for_coarsening);
 }
 
 p4est_lnodes_buffer_t *

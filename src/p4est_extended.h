@@ -230,12 +230,6 @@ p4est_t            *p4est_load_ext (const char *filename, MPI_Comm mpicomm,
                                     p4est_connectivity_t ** connectivity);
 
 
-void                p4est_partition_lnodes_ext (p4est_t *p4est,
-                                                p4est_ghost_t *ghost,
-                                                int nodes_per_volume,
-                                                int nodes_per_face,
-                                                int nodes_per_corner,
-                                                int partition_for_coarsening);
 
 int                 p4est_reduce_mpicomm (p4est_t * p4est);
 

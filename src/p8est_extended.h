@@ -231,14 +231,6 @@ p8est_t            *p8est_load_ext (const char *filename, MPI_Comm mpicomm,
                                     void *user_pointer,
                                     p8est_connectivity_t ** connectivity);
 
-void                p8est_partition_lnodes_ext (p8est_t *p8est,
-                                                p8est_ghost_t *ghost,
-                                                int nodes_per_volume,
-                                                int nodes_per_face,
-                                                int nodes_per_edge,
-                                                int nodes_per_corner,
-                                                int partition_for_coarsening);
-
 int                 p8est_reduce_mpicomm (p8est_t * p8est);
 
 int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
