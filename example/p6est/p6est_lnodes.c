@@ -415,7 +415,7 @@ p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
   int                 mpiret, i;
 
   labels = P4EST_ALLOC (p4est_gloidx_t, lnodes->owned_count);
-  memset (labels, -1, lnodes->num_local_nodes * sizeof (*labels));
+  memset (labels, -1, lnodes->owned_count * sizeof (*labels));
 
   for (jt = p6est->columns->first_local_tree;
        jt <= p6est->columns->last_local_tree; ++jt) {
@@ -429,7 +429,7 @@ p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
       for (i = 0; i < vnodes; i += stride) {
         p4est_locidx_t      fnid = lnodes->element_nodes[vnodes * lfirst + i];
         p4est_locidx_t      lnid =
-          lnodes->element_nodes[vnodes * llast + i + (stride - 1)];
+          lnodes->element_nodes[vnodes * (llast - 1) + i + (stride - 1)];
         P4EST_ASSERT (lnid >= 0);
         P4EST_ASSERT (lnid >= fnid);
         P4EST_ASSERT (fnid < lnodes->num_local_nodes);
