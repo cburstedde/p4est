@@ -267,8 +267,8 @@ void                p8est_partition_lnodes (p8est_t * p8est,
 /** Partition using weights that are broken down by where they reside: in
  * volumes, on faces, on edges, or on corners.
  */
-void                p4est_partition_lnodes_detailed (p4est_t * p4est,
-                                                     p4est_ghost_t * ghost,
+void                p8est_partition_lnodes_detailed (p8est_t * p4est,
+                                                     p8est_ghost_t * ghost,
                                                      int nodes_per_volume,
                                                      int nodes_per_face,
                                                      int nodes_per_edge,
