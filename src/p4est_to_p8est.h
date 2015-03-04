@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_to_p8est.h
+/** We do not process this file in Doxygen since it overwrites types.
  *
  * Transform 2D \ref p4est routines into 3D \ref p8est routines.  This file can
  * be included from a .c file that has been written for 2D to turn it into a 3D
@@ -134,6 +134,7 @@
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
+#define p4est_vtk_context               p8est_vtk_context
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
