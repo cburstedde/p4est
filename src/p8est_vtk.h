@@ -23,7 +23,7 @@
 
 /** \file p8est_vtk.h
  *
- * Routines for printing a forest and associated fields to vtk format.
+ * Routines for printing a forest and associated fields to VTK format.
  *
  * \ingroup p8est
  */
@@ -36,47 +36,26 @@
 
 SC_EXTERN_C_BEGIN;
 
-//typedef struct p8est_vtk_context p8est_vtk_context_t;
-/** \struct p8est_vtk_context_t
- * Opaque context type for writing VTK output with multiple function calls.
- *
- * This structure holds all the information needed for the p8est vtk context.
- * It is used to relay necessary vtk information to the \b p8est_vtk_write_*
- * functions. This structure is initialized by \b p8est_vtk_write_header and
- * destroyed by \b p8est_vtk_write_footer; it can also be destroyed manually
- * using the \b p8est_vtk_context_destroy function if necessary.
- *
- * The \a p4est member is a pointer to the local p8est.
- * The \a geom member is a pointer to the geometry used to create the p8est.
- * The \a num_nodes member holds the number of nodes present in the vtk output;
- * this is determined in \b p8est_vtk_write_header using the \a scale parameter
- * and is used to assure the proper number of point variables are provided.
- * The \a filename member holds the vtk file basename: for error reporting.
- * The \a vtufilename, \a pvtufilename, and \a visitfilename members are the
- * vtk file names.
- * The \a vtufile, \a pvtufile, and \a visitfile members are the vtk file
- * pointers; opened by \b p8est_vtk_write_header and closed by \b
- * p8est_vtk_write_footer.
- *
+/** Opaque context type for writing VTK output with multiple function calls.
  */
-typedef struct p8est_vtk_context
-{
-  /* TODO: Add members as needed */
-  p8est_t            *p4est;
-  p8est_geometry_t   *geom;
-  p4est_locidx_t      num_nodes;
-  char               *filename;
-  char                vtufilename[BUFSIZ], pvtufilename[BUFSIZ],
-    visitfilename[BUFSIZ];
-  FILE               *vtufile, *pvtufile, *visitfile;
-}
-p8est_vtk_context_t;
+typedef struct p8est_vtk_context p8est_vtk_context_t;
+
+/** Cleanly destroy a \ref p8est_vtk_context_t structure.
+ *
+ * This function closes all the file pointers and frees the context.
+ * Tt can be called even if the VTK output
+ * has only been partially written, the files' content will be incomplete.
+ *
+ * \param[in] context     The VTK file context to be destroyed.
+ */
+void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
 
 /** Write the p8est in VTK format.
  *
  * This is a convenience function for the special case of writing out
  * the tree id, quadrant level, and MPI rank only.
  * One file is written per MPI rank, and one meta file on rank 0.
+ * The quadrants are scaled to length .95; see \ref p4est_vtk_write_header.
  * This function will abort if there is a file error.
  *
  * \param [in] p8est    The p8est to be written.
@@ -88,7 +67,7 @@ p8est_vtk_context_t;
  */
 void                p8est_vtk_write_file (p8est_t * p8est,
                                           p8est_geometry_t * geom,
-                                          char *filename);
+                                          const char *filename);
 
 /** Write the VTK header.
  *
@@ -96,13 +75,11 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  * This allows there to be an arbitrary number of
  * fields.  The calling sequence would be something like
  *
- * \begincode
- * vtk_context = p8est_vtk_write_header (p8est, geom, 1., "output");
- * vtk_context = p8est_vtk_write_point_data (vtk_context, ...);
- * vtk_context = p8est_vtk_write_cell_data (vtk_context, ...);
- * ...
- * p8est_vtk_write_footer (vtk_context);
- * \endcode
+ *     vtk_context = p8est_vtk_write_header (p8est, geom, 1., "output");
+ *     vtk_context = p8est_vtk_write_point_data (vtk_context, ...);
+ *     vtk_context = p8est_vtk_write_cell_data (vtk_context, ...);
+ *     ...
+ *     p8est_vtk_write_footer (vtk_context);
  *
  * \param p8est     The p8est to be written.
  * \param geom      A p8est_geometry_t structure or NULL for vertex space.
@@ -119,7 +96,8 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  */
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_t * p8est,
                                              p8est_geometry_t * geom,
-                                             double scale, char *filename);
+                                             double scale,
+                                             const char *filename);
 
 /** Write VTK cell data.
  *
@@ -130,7 +108,7 @@ p8est_vtk_context_t *p8est_vtk_write_header (p8est_t * p8est,
  * This allows there to be an arbitrary number of
  * fields.
  *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p8est_vtk_write_header.
  * \param [in] write_tree  Boolean to determine if the tree id should be output.
  * \param [in] write_level Boolean to determine if the tree levels should be output.
  * \param [in] write_rank  Boolean to determine if the MPI rank should be output.
@@ -139,16 +117,19 @@ p8est_vtk_context_t *p8est_vtk_write_header (p8est_t * p8est,
  * \param [in] num_cell_scalars Number of cell scalar datasets to output.
  * \param [in] num_cell_vectors Number of cell vector datasets to output.
  *
- * The variable arguments need to be pairs of (fieldname, fieldvalues) where
- * the cell scalar pairs come first, followed by the cell vector pairs.  Each
- * 'fieldname' argument shall be a char string containing the name of the data
- * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
+ * The variable arguments need to be pairs of (fieldname, fieldvalues), followed
+ * by a final argument of the VTK context cont (same as the first argument).
+ * The cell scalar pairs come first, followed by the cell vector pairs, then cont.
+ * Each 'fieldname' argument shall be a char string containing the name of the data
+ * contained in the following 'fieldvalues'.  Each of the 'fieldvalues'
  * arguments shall be an sc_array_t * holding double variables.  The number of
  * doubles in each sc_array must be exactly \a p4est->local_num_quadrants for
- * scalar data and \a 3*p4est->local_num_quadrants for vector data. <em> Note:
- * the current p8est_vtk_context_t structure, cont, must be the last argument
+ * scalar data and \a 3*p4est->local_num_quadrants for vector data.
+ *
+ * \note The current p8est_vtk_context_t structure, \a cont, must be the first
+ * and the last argument
  * of any call to this function; this argument is used to validate that the
- * correct number of variable arguments have been provided. </em>
+ * correct number of variable arguments have been provided.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
@@ -165,8 +146,9 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p8est_vtk_write_cell_data instead.
  *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by p8est_vtk_write_header.
  * \param [in] scalar_name The name of the scalar field.
  * \param [in] values      The cell values that will be written.
  *
@@ -175,14 +157,15 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
  */
 p8est_vtk_context_t *p8est_vtk_write_cell_scalar (p8est_vtk_context_t * cont,
                                                   const char *scalar_name,
-                                                  const sc_array_t * values);
+                                                  sc_array_t * values);
 
 /** Write a 3-vector cell field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p8est_vtk_write_cell_data instead.
  *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by p8est_vtk_write_header.
  * \param [in] vector_name The name of the vector field.
  * \param [in] values      The cell values that will be written.
  *
@@ -191,7 +174,7 @@ p8est_vtk_context_t *p8est_vtk_write_cell_scalar (p8est_vtk_context_t * cont,
  */
 p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
                                                   const char *vector_name,
-                                                  const sc_array_t * values);
+                                                  sc_array_t * values);
 
 /** Write VTK point data.
  *
@@ -199,7 +182,7 @@ p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of
  * fields.
  *
- * \param [in,out] cont          A vtk context created by p8est_vtk_write_header.
+ * \param [in,out] cont          A VTK context created by p8est_vtk_write_header.
  * \param [in] num_point_scalars Number of point scalar datasets to output.
  * \param [in] num_point_vectors Number of point vector datasets to output.
  *
@@ -209,12 +192,14 @@ p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
  * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
  * arguments shall be an sc_array_t * holding double variables. The number of
  * doubles in each sc_array must be exactly \a cont->num_nodes for scalar data
- * and \a 3*cont->num_nodes for vector data. <em> Note: the current
+ * and \a 3*cont->num_nodes for vector data.
+ *
+ * \note The current
  * p8est_vtk_context_t structure, cont, must be the last argument of any call
  * to this function; this argument is used to validate that the correct number
- * of variable arguments have been provided. </em>
+ * of variable arguments have been provided.
  *
- * \note \a cont->num_nodes is set in \b p8est_vtk_write_header based on the \a
+ * \note \a cont->num_nodes is set in \ref p8est_vtk_write_header based on the \a
  * scale parameter. If \a scale < 1 the number of point scalar data in each
  * sc_array must be exactly \a P8EST_CHILDREN*local_num_quadrants, and the
  * number of point vector data must be exactly \a
@@ -223,7 +208,7 @@ p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
  * multiple quadrants. If \a scale = 1 the number of point data in each
  * sc_array is determined by the number of nodes returned by \b
  * p8est_nodes_new, specifically by the value of \a num_owned_indeps in the
- * p8est_nodes_t structure. See p8est_nodes.h for more information.
+ * p8est_nodes_t structure.  See p8est_nodes.h for more information.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
@@ -236,8 +221,9 @@ p8est_vtk_context_t *p8est_vtk_write_point_data (p8est_vtk_context_t * cont,
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p8est_vtk_write_point_data instead.
  *
- * \param [in,out] cont    A vtk context created by p8est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by p8est_vtk_write_header.
  * \param [in] scalar_name The name of the scalar field.
  * \param [in] values      The point values that will be written.
  *
@@ -246,14 +232,15 @@ p8est_vtk_context_t *p8est_vtk_write_point_data (p8est_vtk_context_t * cont,
  */
 p8est_vtk_context_t *p8est_vtk_write_point_scalar (p8est_vtk_context_t * cont,
                                                    const char *scalar_name,
-                                                   const sc_array_t * values);
+                                                   sc_array_t * values);
 
 /** Write a 3-vector point field to the VTU file.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p8est_vtk_write_point_data instead.
  *
- * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by p4est_vtk_write_header.
  * \param [in] vector_name The name of the vector field.
  * \param [in] values      The point values that will be written.
  *
@@ -262,7 +249,7 @@ p8est_vtk_context_t *p8est_vtk_write_point_scalar (p8est_vtk_context_t * cont,
  */
 p8est_vtk_context_t *p8est_vtk_write_point_vector (p8est_vtk_context_t * cont,
                                                    const char *vector_name,
-                                                   const sc_array_t * values);
+                                                   sc_array_t * values);
 
 /** Write the VTU footer and clean up.
  *
@@ -271,16 +258,14 @@ p8est_vtk_context_t *p8est_vtk_write_point_vector (p8est_vtk_context_t * cont,
  * fields.  To write out two fields the
  * calling sequence would be something like
  *
- * \begincode
- * p8est_vtk_write_header (p8est, ..., "output");
- * p8est_vtk_write_point_data (...);
- * p8est_vtk_write_cell_data (...);
- * ...
- * p8est_vtk_write_footer (vtk_context);
- * \endcode
+ *     p8est_vtk_write_header (p8est, ..., "output");
+ *     p8est_vtk_write_point_data (...);
+ *     p8est_vtk_write_cell_data (...);
+ *     ...
+ *     p8est_vtk_write_footer (vtk_context);
  *
- * This function writes the footer information to the vtk file and cleanly
- * destroys the vtk context.
+ * This function writes the footer information to the VTK file and cleanly
+ * destroys the VTK context.
  *
  * \param [in] cont Context is deallocated before the function returns.
  *
