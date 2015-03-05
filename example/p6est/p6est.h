@@ -175,8 +175,8 @@ typedef struct p6est
   sc_array_t         *layers;   /**< single array that stores
                                      p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /**< memory allocator for user data */
-                                        /* WARNING: This is NULL if data size
-                                         *          equals zero.  */
+  /* WARNING: This is NULL if data size
+   *          equals zero.  */
   sc_mempool_t       *layer_pool;       /**< memory allocator
                                              for temporary layers */
   p4est_gloidx_t     *global_first_layer; /**< first global quadrant index for
@@ -476,6 +476,26 @@ p6est_comm_tag_t;
  */
 p4est_gloidx_t      p6est_partition (p6est_t * p6est,
                                      p6est_weight_t weight_fn);
+void                p6est_partition_correct (p6est_t * p6est,
+                                             p4est_locidx_t *
+                                             num_layers_in_proc);
+void                p6est_partition_to_p4est_partition (p6est_t * p6est,
+                                                        p4est_locidx_t *
+                                                        num_layers_in_proc,
+                                                        p4est_locidx_t *
+                                                        num_columns_in_proc);
+void                p4est_partition_to_p6est_partition (p6est_t * p6est,
+                                                        p4est_locidx_t *
+                                                        num_columns_in_proc,
+                                                        p4est_locidx_t *
+                                                        num_layers_in_proc);
+
+p4est_gloidx_t      p6est_partition_for_coarsening (p6est_t * p6est,
+                                                    p4est_locidx_t *
+                                                    num_layers_in_proc);
+p4est_gloidx_t      p6est_partition_given (p6est_t * p6est,
+                                           p4est_locidx_t *
+                                           num_layers_in_proc);
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
