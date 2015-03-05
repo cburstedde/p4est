@@ -165,6 +165,8 @@ typedef struct p6est
   sc_MPI_Comm         mpicomm;          /**< MPI communicator */
   int                 mpisize,          /**< number of MPI processes */
                       mpirank;          /**< this process's MPI rank */
+  int                 mpicomm_owned;    /**< whether this communicator is
+                                             owned by the forest */
   size_t              data_size;        /**< size of per-quadrant p.user_data
                      (see p2est_quadrant_t::p2est_quadrant_data::user_data) */
   void               *user_pointer;     /**< convenience pointer for users,
@@ -539,6 +541,25 @@ p6est_t            *p6est_load (const char *filename, sc_MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
                                 p6est_connectivity_t ** connectivity);
+
+/** convert the p6est to a subcommunicator involving only the range active processes
+ * \param[in,out] P6est pointer to forest: on output, points to NULL if this
+ *                      process was not in the active range
+ * \returns true if this process is in the active range, else false
+ */
+int p6est_reduce_mpicomm (p6est_t ** P6est);
+
+/** convert the p6est to a subcommunicator involving only the range active processes
+ * \param[in,out] P6est pointer to forest: on output, points to NULL if this
+ *                      process was not in the active range
+ * \param[in] group_add group to include in the submpicomm group
+ * \param[in] add_to_beginning whether to add the group to the beginning of
+ *                      the end of the submpicomm group
+ * \param[out] if not null, set to point to a subcommrank->supercommrank map
+ * \returns true if this process is in the active range, else false
+ */
+int p6est_reduce_mpicomm_ext (p6est_t ** P6est, MPI_Group group_add, const int add_to_beginning,
+                              int **ranks);
 
 /** Return a pointer to a quadrant array element indexed by a size_t. */
 /*@unused@*/

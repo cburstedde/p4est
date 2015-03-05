@@ -320,7 +320,8 @@ int                 p8est_reduce_mpicomm (p8est_t * p8est);
 
 int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
                                               MPI_Group group_add,
-                                              const int add_to_beginning);
+                                              const int add_to_beginning,
+                                              int **ranks);
 
 
 SC_EXTERN_C_END;

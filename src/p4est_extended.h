@@ -318,7 +318,8 @@ int                 p4est_reduce_mpicomm (p4est_t * p4est);
 
 int                 p4est_reduce_mpicomm_ext (p4est_t * p4est,
                                               MPI_Group group_add,
-                                              const int add_to_beginning);
+                                              const int add_to_beginning,
+                                              int **ranks);
 
 SC_EXTERN_C_END;
 

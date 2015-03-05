@@ -24,6 +24,7 @@
 #include <p6est.h>
 #include <p6est_ghost.h>
 #include <p6est_profile.h>
+#include <p6est_communication.h>
 #include <p4est_lnodes.h>
 #include <p8est.h>
 #include <p4est_extended.h>
@@ -395,11 +396,6 @@ p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
      (long long) min_quadrants, SC_MAX (min_zlevel, 0));
   p4est_log_indent_push ();
 
-  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
-  SC_CHECK_MPI (mpiret);
-
   layers = sc_array_new (sizeof (p2est_quadrant_t));
 
   if (data_size > 0) {
@@ -411,15 +407,21 @@ p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
 
   p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
 
-  p6est->mpicomm = mpicomm;
-  p6est->mpisize = num_procs;
-  p6est->mpirank = rank;
   p6est->data_size = data_size;
   p6est->user_pointer = user_pointer;
   p6est->connectivity = connectivity;
   p6est->layers = layers;
   p6est->user_data_pool = user_data_pool;
   p6est->root_len = num_zroot * P4EST_QUADRANT_LEN (log_zroot);
+
+  p6est_comm_parallel_env_create (p6est, mpicomm);
+  mpicomm = p6est->mpicomm;
+
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
 
   P4EST_ASSERT (min_zlevel <= P4EST_QMAXLEVEL);
   P4EST_ASSERT (num_zroot >= 1);
@@ -436,6 +438,8 @@ p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
   p4est =
     p4est_new_ext (mpicomm, connectivity->conn4, min_quadrants / quadpercol,
                    min_level, fill_uniform, 0, p6est_init_fn, (void *) p6est);
+
+  p4est_comm_parallel_env_assign(p4est,mpicomm);
 
   p6est->user_pointer = user_pointer;
   p6est->columns = p4est;
@@ -497,9 +501,6 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
 
   p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
 
-  p6est->mpicomm = p4est->mpicomm;
-  p6est->mpisize = num_procs = p4est->mpisize;
-  p6est->mpirank = p4est->mpirank;
   p6est->data_size = data_size;
   p6est->user_pointer = user_pointer;
   p6est->connectivity = conn;
@@ -508,6 +509,9 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
   p6est->columns = p4est_copy (p4est, 0);
   p6est->columns->connectivity = conn->conn4;
   p6est->root_len = P4EST_ROOT_LEN;
+
+  p6est_comm_parallel_env_assign (p6est, p4est->mpicomm);
+  num_procs = p6est->mpisize;
 
   P4EST_ASSERT (min_zlevel <= P4EST_QMAXLEVEL);
 
@@ -554,11 +558,14 @@ p6est_destroy (p6est_t * p6est)
   }
   sc_array_destroy (p6est->layers);
 
-  p4est_destroy (p6est->columns);
+  if (p6est->columns) {
+    p4est_destroy (p6est->columns);
+  }
   if (p6est->user_data_pool != NULL) {
     sc_mempool_destroy (p6est->user_data_pool);
   }
   sc_mempool_destroy (p6est->layer_pool);
+  p6est_comm_parallel_env_free (p6est);
   P4EST_FREE (p6est->global_first_layer);
   P4EST_FREE (p6est);
 }
@@ -919,7 +926,7 @@ p6est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   size_t              save_data_size, comb_size;
   uint64_t            u64a;
   p4est_gloidx_t     *gfl;
-  int                 rank, mpisize;
+  int                 rank;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_load %s\n", filename);
   p4est_log_indent_push ();
@@ -993,9 +1000,9 @@ p6est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   p6est->columns = columns;
   p6est->connectivity = conn;
   p6est->data_size = data_size;
-  p6est->mpicomm = mpicomm;
-  p6est->mpisize = mpisize = columns->mpisize;
-  p6est->mpirank = rank = columns->mpirank;
+  p6est_comm_parallel_env_create (p6est, mpicomm);
+  mpicomm = p6est->mpicomm;
+  rank = p6est->mpirank;
   p6est->global_first_layer = gfl = P4EST_ALLOC (p4est_gloidx_t,
                                                  p6est->mpisize + 1);
   p6est->layers =
@@ -2630,4 +2637,77 @@ p6est_checksum (p6est_t * p6est)
     ("Configure did not find a recent enough zlib.  Abort.\n");
   return 0;
 #endif
+}
+
+int
+p6est_reduce_mpicomm (p6est_t ** P6est)
+{
+  return p6est_reduce_mpicomm_ext (P6est, MPI_GROUP_NULL, 0, NULL);
+}
+
+int
+p6est_reduce_mpicomm_ext (p6est_t ** P6est, MPI_Group group_add,
+                          const int add_to_beginning, int **Ranks)
+{
+  p6est_t            *p6est = *P6est;
+  int                 mpisize = p6est->mpisize;
+  int                 mpiret;
+  p4est_gloidx_t     *global_first_layer = p6est->global_first_layer;
+
+  p4est_gloidx_t     *n_quadrants;
+  int                 submpisize;
+  MPI_Comm            submpicomm;
+  int                *ranks;
+  int                 i;
+  int                 active;
+
+  if (Ranks) {
+    *Ranks = NULL;
+  }
+
+  /* create array of non-empty processes that will be included to sub-comm */
+  n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    n_quadrants[i] = global_first_layer[i+1] - global_first_layer[i];
+  }
+
+  active = p4est_reduce_mpicomm_ext(p6est->columns,group_add,add_to_beginning,&ranks);
+  if (!active) {
+    p6est->columns = NULL;
+    p6est_destroy (p6est);
+    *P6est = NULL;
+    P4EST_ASSERT(ranks == NULL);
+    return 0;
+  }
+  submpicomm = p6est->columns->mpicomm;
+  /* update size of new MPI communicator */
+  mpiret = MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
+  if (submpisize == p6est->mpisize) {
+    P4EST_ASSERT(ranks == NULL);
+    return 1;
+  }
+
+  /* allocate and set global layer count */
+  P4EST_FREE (p6est->global_first_layer);
+  p6est->global_first_layer = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
+  p6est->global_first_layer[0] = 0;
+  for (i = 0; i < submpisize; i++) {
+    P4EST_ASSERT (ranks[i] != MPI_UNDEFINED);
+    P4EST_ASSERT (group_add != MPI_GROUP_NULL || 0 < n_quadrants[ranks[i]]);
+    p6est->global_first_layer[i+1] = p6est->global_first_layer[i] +
+                                        n_quadrants[ranks[i]];
+  }
+  P4EST_FREE (n_quadrants);
+  if (Ranks) {
+    *Ranks = ranks;
+  }
+  else {
+    P4EST_FREE (ranks);
+  }
+
+  p6est_comm_parallel_env_assign (p6est, submpicomm);
+  P4EST_ASSERT (p6est->mpisize == submpisize);
+
+  /* return that this processor has quadrants */
+  return 1;
 }

@@ -594,12 +594,13 @@ p4est_copy (p4est_t * input, int copy_data)
 int
 p4est_reduce_mpicomm (p4est_t * p4est)
 {
-  return p4est_reduce_mpicomm_ext (p4est, MPI_GROUP_NULL, 0);
+  return p4est_reduce_mpicomm_ext (p4est, MPI_GROUP_NULL, 0, NULL);
 }
 
 int
 p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
-                          const int add_to_beginning)
+                          const int add_to_beginning,
+                          int **Ranks)
 {
   MPI_Comm            mpicomm = p4est->mpicomm;
   int                 mpisize = p4est->mpisize;
@@ -613,6 +614,10 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
   MPI_Comm            submpicomm;
   int                *ranks, *subranks;
   int                 i;
+
+  if (Ranks) {
+    *Ranks = NULL;
+  }
 
   /* create array of non-empty processes that will be included to sub-comm */
   n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
@@ -706,7 +711,12 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
   P4EST_ASSERT (p4est->global_first_quadrant[submpisize] =
                 p4est->global_num_quadrants);
   P4EST_FREE (n_quadrants);
-  P4EST_FREE (ranks);
+  if (Ranks) {
+    *Ranks = ranks;
+  }
+  else {
+    P4EST_FREE (ranks);
+  }
 
   /* set new parallel environment */
   p4est_comm_parallel_env_free (p4est);
