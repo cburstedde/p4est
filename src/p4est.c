@@ -636,8 +636,8 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
   /* create sub-group of non-empty processors */
   mpiret = MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
   mpiret = MPI_Group_incl (group, submpisize, include, &subgroup);
-  mpiret = MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
   SC_CHECK_MPI (mpiret);
+  mpiret = MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
   P4EST_FREE (include);
 
   /* create sub-communicator */
