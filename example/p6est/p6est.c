@@ -1948,12 +1948,17 @@ p6est_partition_after_p4est (p6est_t * p6est)
   }
 
   /* find the first proc that owns layers to send to me */
-  search = sc_array_bsearch (&old_gfl_bsearch, new_gfl + rank,
-                             gloidx_compare_overlap);
-  P4EST_ASSERT (search >= 0 && search < mpisize);
-  overlap = search;
-  P4EST_ASSERT (old_gfl[overlap] <= new_gfl[rank] &&
-                new_gfl[rank] < old_gfl[overlap + 1]);
+  if (new_gfl[rank] == new_fgl[mpisize]) {
+    overlap = mpisize;
+  }
+  else {
+    search = sc_array_bsearch (&old_gfl_bsearch, new_gfl + rank,
+                               gloidx_compare_overlap);
+    P4EST_ASSERT (search >= 0 && search < mpisize);
+    overlap = search;
+    P4EST_ASSERT (old_gfl[overlap] <= new_gfl[rank] &&
+                  new_gfl[rank] < old_gfl[overlap + 1]);
+  }
 
   offset = new_gfl[rank];
   self_offset = my_count;
@@ -2002,13 +2007,18 @@ p6est_partition_after_p4est (p6est_t * p6est)
                               old_layers->elem_count);
   }
 
-  /* find the first proc that owns layers to send to me */
-  search = sc_array_bsearch (&new_gfl_bsearch, old_gfl + rank,
-                             gloidx_compare_overlap);
-  P4EST_ASSERT (search >= 0 && search < mpisize);
-  overlap = search;
-  P4EST_ASSERT (new_gfl[overlap] <= old_gfl[rank] &&
-                old_gfl[rank] < new_gfl[overlap + 1]);
+  /* find the first proc that owns layers to receive from me */
+  if (old_gfl[rank] == old_gfl[mpisize]) {
+    overlap = mpisize;
+  }
+  else {
+    search = sc_array_bsearch (&new_gfl_bsearch, old_gfl + rank,
+                               gloidx_compare_overlap);
+    P4EST_ASSERT (search >= 0 && search < mpisize);
+    overlap = search;
+    P4EST_ASSERT (new_gfl[overlap] <= old_gfl[rank] &&
+                  old_gfl[rank] < new_gfl[overlap + 1]);
+  }
 
   offset = old_gfl[rank];
   /* for every proc whose new range overlaps with this rank's old range */
