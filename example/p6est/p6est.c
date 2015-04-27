@@ -577,10 +577,12 @@ p6est_copy (p6est_t * input, int copy_data)
   size_t              zz, qcount = input->layers->elem_count;
 
   memcpy (p6est, input, sizeof (p6est_t));
+  p6est_comm_parallel_env_create (p6est, input->mpicomm);
   p6est->layers =
     sc_array_new_size (input->layers->elem_size, input->layers->elem_count);
   sc_array_copy (p6est->layers, input->layers);
   p6est->columns = p4est_copy (input->columns, 0);
+  p4est_comm_parallel_env_assign(p6est->columns,p6est->mpicomm);
   p6est->columns->user_pointer = p6est;
   if (copy_data && p6est->data_size > 0) {
     p6est->user_data_pool = sc_mempool_new (p6est->data_size);
@@ -1948,7 +1950,7 @@ p6est_partition_after_p4est (p6est_t * p6est)
   }
 
   /* find the first proc that owns layers to send to me */
-  if (new_gfl[rank] == new_fgl[mpisize]) {
+  if (new_gfl[rank] == new_gfl[mpisize]) {
     overlap = mpisize;
   }
   else {
