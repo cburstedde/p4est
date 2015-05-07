@@ -79,6 +79,17 @@ void                p8est_vtk_write_all (p8est_t * p8est,
                                          int num_scalars, int num_vectors,
                                          const char *filename, ...);
 
+void                p8est_vtk_writeAll (p8est_t * p8est,
+                                        p8est_geometry_t * geom,
+                                        double scale,
+                                        int write_tree, int write_level,
+                                        int write_rank, int wrap_rank,
+                                        int num_cell_scalars,
+                                        int num_cell_vectors,
+                                        int num_point_scalars,
+                                        int num_point_vectors,
+                                        const char * filename);
+
 /** This will write the header of the vtu file.
  *
  * Writing a VTK file is split into a couple of routines.
@@ -117,6 +128,37 @@ int                 p8est_vtk_write_header (p8est_t * p8est,
                                             const char *point_scalars,
                                             const char *point_vectors,
                                             const char *filename);
+
+int                 p8est_vtk_writeHeader (p8est_t * p8est,
+                                           p8est_geometry_t * geom,
+                                           double scale,
+                                           int write_tree, int write_level,
+                                           int write_rank, int wrap_rank,
+                                           const char * cell_scalars,
+                                           const char * cell_vectors,
+                                           const char * filename);
+
+int                 p8est_vtk_write_cell_scalar (p8est_t * p8est,
+                                                 p8est_geometry_t * geom,
+                                                 const char * filename,
+                                                 const char * scalar_name,
+                                                 const double * values);
+
+int                 p8est_vtk_write_cell_vector (p8est_t * p8est,
+                                                 p8est_geometry_t * geom,
+                                                 const char * filename,
+                                                 const char * vector_name,
+                                                 const double * values);
+
+int                 p8est_vtk_switch_to_point_data (p8est_t * p8est,
+                                                    p8est_geometry_t * geom,
+                                                    int write_tree,
+                                                    int write_level,
+                                                    int write_rank,
+                                                    int num_cell_data,
+                                                    const char * point_scalars,
+                                                    const char * point_vectors,
+                                                    const char * filename);
 
 /** This will write a scalar field to the vtu file.
  *
