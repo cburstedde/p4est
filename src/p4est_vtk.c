@@ -159,8 +159,8 @@ p4est_vtk_writeAll (p4est_t * p4est,
                     double scale,
                     int write_tree, int write_level,
                     int write_rank, int wrap_rank,
-                    int num_cellScalars,
-                    int num_cellVectors,
+                    int num_cell_scalars,
+                    int num_cell_vectors,
                     int num_point_scalars,
                     int num_point_vectors,
                     const char *filename, ...)
@@ -176,14 +176,14 @@ p4est_vtk_writeAll (p4est_t * p4est,
   va_list             ap;
 
   /* enforce that at least 0 scalars/vectors shall be written to file */
-  P4EST_ASSERT (num_cellScalars >= 0 && num_cellVectors >= 0 && 
-                num_scalars >= 0 && num_vectors >= 0);
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0 && 
+                num_point_scalars >= 0 && num_point_vectors >= 0);
 
   /* allocate memory */
-  values = P4EST_ALLOC (double *, num_cellScalars + num_cellVectors 
-                                  + num_scalars + num_vectors);
-  names = P4EST_ALLOC (const char *, num_cellScalars + num_cellVectors
-                                     + num_scalars + num_vectors);
+  values = P4EST_ALLOC (double *, num_cell_scalars + num_cell_vectors 
+                                  + num_point_scalars + num_point_vectors);
+  names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors
+                                     + num_point_scalars + num_point_vectors);
 
   /* prepare data collection */
   va_start (ap, filename);
@@ -193,7 +193,7 @@ p4est_vtk_writeAll (p4est_t * p4est,
   /* 1. cell scalars */
   cell_scalar_strlen = 0;
   cell_scalars[0] = '\0';
-  for (i = 0; i < num_cellScalars; ++all, ++i) {
+  for (i = 0; i < num_cell_scalars; ++all, ++i) {
     name = names[all] = va_arg (ap, const char*);
     retval = snprintf (cell_scalars + cell_scalar_strlen,
                        BUFSIZ - cell_scalar_strlen,
@@ -207,7 +207,7 @@ p4est_vtk_writeAll (p4est_t * p4est,
   /* 2. cell vectors */
   cell_vector_strlen = 0;
   cell_vectors[0] = '\0';
-  for (i = 0; i < num_vectors; ++all, ++i) {
+  for (i = 0; i < num_cell_vectors; ++all, ++i) {
     name = names[all] = va_arg (ap, const char *);
     retval = snprintf (cell_vectors + cell_vector_strlen,
                        BUFSIZ - cell_vector_strlen,
@@ -221,7 +221,7 @@ p4est_vtk_writeAll (p4est_t * p4est,
   /* 3. point scalars */
   scalar_strlen = 0;
   point_scalars[0] = '\0';
-  for (i = 0; i < num_scalars; ++all, ++i) {
+  for (i = 0; i < num_point_scalars; ++all, ++i) {
     name = names[all] = va_arg (ap, const char *);
     retval = snprintf (point_scalars + scalar_strlen, BUFSIZ - scalar_strlen,
                        "%s%s", i == 0 ? "" : ",", name);
@@ -234,7 +234,7 @@ p4est_vtk_writeAll (p4est_t * p4est,
   /* 4. point vectors */
   vector_strlen = 0;
   point_vectors[0] = '\0';
-  for (i = 0; i < num_vectors; ++all, ++i) {
+  for (i = 0; i < num_point_vectors; ++all, ++i) {
     name = names[all] = va_arg (ap, const char *);
     retval = snprintf (point_vectors + vector_strlen, BUFSIZ - vector_strlen,
                        "%s%s", i == 0 ? "" : ",", name);
@@ -246,20 +246,22 @@ p4est_vtk_writeAll (p4est_t * p4est,
   va_end (ap);
 
   /* write vtk header */
-  retval = p4est_vtk_writeHeader (p4est, geom, scale,
-                                  write_tree, write_level,
-                                  write_rank, wrap_rank,
-                                  num_scalars > 0 ? point_scalars : NULL,
-                                  num_vectors > 0 ? point_vectors : NULL,
-                                  num_cellScalars > 0 ? cell_scalars : NULL,
-                                  num_cellVectors > 0 ? cell_vectors : NULL,
+  retval = p4est_vtk_writeHeader (p4est,
+                                  geom,
+                                  scale,
+                                  write_tree,
+                                  write_level,
+                                  write_rank,
+                                  wrap_rank,
+                                  num_cell_scalars > 0 ? cell_scalars : NULL,
+                                  num_cell_vectors > 0 ? cell_vectors : NULL,
                                   filename);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing header");
 
   all = 0;
   /* write payload */
   /* 1. cell scalars */
-  for (i = 0; i < num_cellScalars; ++all, ++i)
+  for (i = 0; i < num_cell_scalars; ++all, ++i)
   {
     retval = p4est_vtk_write_cell_scalar (p4est, geom, filename,
                                           names[all], values[all]);
@@ -268,17 +270,26 @@ p4est_vtk_writeAll (p4est_t * p4est,
   }
 
   /* 2. cell vectors */
-  for (i = 0; i < num_cellVectors; ++all, ++i) {
+  for (i = 0; i < num_cell_vectors; ++all, ++i) {
     retval = p4est_vtk_write_cell_vector (p4est, geom, filename,
                                            names[all], values[all]);
     SC_CHECK_ABORT (!retval,
                     P4EST_STRING "_vtk: Error writing cell vectors");
   }
 
-  p4est_vtk_switch_to_point_data(p4est, geom, filename);
+  /* switch from cell centered data to data living on cell corners */
+  p4est_vtk_switch_to_point_data(p4est,
+                                 geom,
+                                 write_tree,
+                                 write_level,
+                                 write_rank,
+                                 num_cell_scalars + num_cell_vectors,
+                                 point_scalars,
+                                 point_vectors,
+                                 filename);
 
   /* 3. point scalars */
-  for (i = 0; i < num_scalars; ++all, ++i) {
+  for (i = 0; i < num_point_scalars; ++all, ++i) {
     retval = p4est_vtk_write_point_scalar (p4est, geom, filename,
                                            names[all], values[all]);
     SC_CHECK_ABORT (!retval,
@@ -286,7 +297,7 @@ p4est_vtk_writeAll (p4est_t * p4est,
   }
 
   /* 4. point vectors */
-  for (i = 0; i < num_vectors; ++all, ++i) {
+  for (i = 0; i < num_point_vectors; ++all, ++i) {
     retval = p4est_vtk_write_point_vector (p4est, geom, filename,
                                            names[all], values[all]);
     SC_CHECK_ABORT (!retval,
@@ -1431,20 +1442,6 @@ p4est_vtk_writeHeader (p4est_t * p4est,
                "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
     }
-    if (write_tree || write_level || write_rank) {
-      fprintf (pvtufile, "    </PCellData>\n");
-    }
-    fprintf (pvtufile, "    <PPointData>\n");
-
-    if (ferror (pvtufile)) {
-      P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel header\n");
-      fclose (pvtufile);
-      return -1;
-    }
-    if (fclose (pvtufile)) {
-      P4EST_LERROR (P4EST_STRING "_vtk: Error closing parallel header\n");
-      return -1;
-    }
   }
 
   return 0;
@@ -1583,7 +1580,31 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
                                    const char * point_vectors,
                                    const char * filename)
 {
-  /* 1. write vtk "slave" files
+  int                 retval;
+
+  /* 1. write vtk "slave" files */
+  const int           mpirank = p4est->mpirank;
+  char                vtufilename[BUFSIZ];
+  FILE               *vtufile;
+
+
+  /* Have each proc write to its own file */
+  snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
+  /* Use "w" for writing the initial part of the file.
+   * For further parts, use "r+" and fseek so write_compressed succeeds.
+   */
+  vtufile = fopen (vtufilename, "rb+");
+  if (vtufile == NULL) {
+    P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
+    return -1;
+  }
+  retval = fseek (vtufile, 0L, SEEK_END);
+  if (retval) {
+    P4EST_LERRORF ("Could not fseek %s for output\n", vtufilename);
+    fclose (vtufile);
+    return -1;
+  }
+
   /* close xml tag for cell data */
   if (write_tree || write_level || write_rank || num_cellData) {
     fprintf (vtufile, "      </CellData>\n");
@@ -1617,10 +1638,28 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
     pvtufile = fopen (pvtufilename, "ab");
+
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
       return -1;
     }
+    
+    /* close xml tag for cell data and prepare writing point data */
+    if (write_tree || write_level || write_rank || num_cellData) {
+      fprintf (pvtufile, "    </PCellData>\n");
+    }
+    fprintf (pvtufile, "    <PPointData>\n");
+
+    if (ferror (pvtufile)) {
+      P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel header\n");
+      fclose (pvtufile);
+      return -1;
+    }
+    if (fclose (pvtufile)) {
+      P4EST_LERROR (P4EST_STRING "_vtk: Error closing parallel header\n");
+      return -1;
+    }
+  }
   return 0;
 }
 

@@ -88,7 +88,7 @@ void                p8est_vtk_writeAll (p8est_t * p8est,
                                         int num_cell_vectors,
                                         int num_point_scalars,
                                         int num_point_vectors,
-                                        const char * filename);
+                                        const char * filename, ...);
 
 /** This will write the header of the vtu file.
  *
