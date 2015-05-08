@@ -807,6 +807,9 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
     fclose (vtufile);
     return -1;
   }
+
+  fflush(vtufile);
+
   if (fclose (vtufile)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error closing header\n");
     return -1;
@@ -887,6 +890,9 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
       fclose (pvtufile);
       return -1;
     }
+
+    fflush(pvtufile);
+
     if (fclose (pvtufile)) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error closing parallel header\n");
       return -1;
@@ -1237,10 +1243,10 @@ p4est_vtk_writeHeader (p4est_t * p4est,
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </Cells>\n");
 
-  // if (write_tree || write_level || write_rank) {
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
+  /* generate information about how many scalars are to be expected */
   if (write_tree)
     printed +=
       snprintf (vtkCellDataString + printed, BUFSIZ - printed, "treeid");
@@ -1255,7 +1261,7 @@ p4est_vtk_writeHeader (p4est_t * p4est,
 
   if (printed > 0 || sizeof(cell_scalars) > 0 || sizeof(cell_vectors))
   {
-    fprintf (vtufile, "      <CellData Scalars=\"%s\">\n", vtkCellDataString);
+    fprintf (vtufile, "      <CellData Scalars=\"%s,%s\">\n", vtkCellDataString,cell_scalars);
 
 
     /* check for information of cell data */
@@ -1369,6 +1375,21 @@ p4est_vtk_writeHeader (p4est_t * p4est,
     }
   }
 
+  if (ferror (vtufile)) {
+    P4EST_LERROR (P4EST_STRING
+                  "_vtk: Error writing header\n");
+    fclose (vtufile);
+    return -1;
+  }
+  fflush(vtufile);
+  if (fclose (vtufile)) {
+    P4EST_LERROR (P4EST_STRING
+                  "_vtk: Error closing header\n");
+    return -1;
+  }
+  vtufile = NULL;
+  
+
 #ifndef P4EST_VTK_ASCII
   P4EST_FREE (locidx_data);
   P4EST_FREE (uint8_data);
@@ -1408,24 +1429,10 @@ p4est_vtk_writeHeader (p4est_t * p4est,
              " NumberOfComponents=\"3\" format=\"%s\"/>\n",
              P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
     fprintf (pvtufile, "    </PPoints>\n");
-    if (write_tree || write_level || write_rank) {
-      char                vtkCellDataString[BUFSIZ] = "";
-      int                 printed = 0;
 
-      if (write_tree)
-        printed +=
-          snprintf (vtkCellDataString + printed, BUFSIZ - printed, "treeid");
-      if (write_level)
-        printed +=
-          snprintf (vtkCellDataString + printed, BUFSIZ - printed,
-                    printed > 0 ? ",level" : "level");
-      if (write_rank)
-        printed +=
-          snprintf (vtkCellDataString + printed, BUFSIZ - printed,
-                    printed > 0 ? ",mpirank" : "mpirank");
-
-      fprintf (pvtufile, "    <PCellData Scalars=\"%s\">\n",
-               vtkCellDataString);
+    /* prepare writing cell data */
+    if (write_tree || write_level || write_rank || cell_scalars || cell_vectors) {
+      fprintf (pvtufile, "    <PCellData>\n");
     }
     if (write_tree) {
       fprintf (pvtufile, "      "
@@ -1441,6 +1448,20 @@ p4est_vtk_writeHeader (p4est_t * p4est,
       fprintf (pvtufile, "      "
                "<PDataArray type=\"%s\" Name=\"mpirank\" format=\"%s\"/>\n",
                P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+    }
+
+    if (ferror (pvtufile)) {
+      P4EST_LERROR (P4EST_STRING
+                    "_vtk: Error writing parallel point scalar\n");
+      fclose (pvtufile);
+      return -1;
+    }
+
+    fflush(pvtufile);
+    if (fclose (pvtufile)) {
+      P4EST_LERROR (P4EST_STRING
+                    "_vtk: Error closing parallel point scalar\n");
+      return -1;
     }
   }
 
@@ -1466,6 +1487,7 @@ p4est_vtk_write_cell_scalar (p4est_t * p4est,
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
+
   /* To be able to fseek in a file you cannot open in append mode.
    * so you need to open with "r+" and fseek to SEEK_END.
    */
@@ -1487,7 +1509,7 @@ p4est_vtk_write_cell_scalar (p4est_t * p4est,
            P4EST_VTK_FLOAT_NAME, scalar_name, P4EST_VTK_FORMAT_STRING);
 
 #ifdef P4EST_VTK_ASCII
-  for (il = 0; il < Ncells; ++il) {
+  for (il = 0; il < Ncells; il++) {
 #ifdef P4EST_VTK_DOUBLES
     fprintf (vtufile, "     %24.16e\n", values[il]);
 #else
@@ -1534,9 +1556,15 @@ p4est_vtk_write_cell_scalar (p4est_t * p4est,
     FILE               *pvtufile;
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
-    pvtufile = fopen (pvtufilename, "ab");
-    if (!pvtufile) {
-      P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
+    pvtufile = fopen(pvtufilename, "rb+");
+    if (pvtufile == NULL) {
+      P4EST_LERRORF ("Could not open %s for output\n", pvtufilename);
+      return -1;
+    }
+    retval = fseek (pvtufile, 0L, SEEK_END);
+    if (retval) {
+      P4EST_LERRORF ("Could not fseek %s for output\n", pvtufilename);
+      fclose (pvtufile);
       return -1;
     }
 
@@ -1575,7 +1603,7 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
                                    int write_tree,
                                    int write_level,
                                    int write_rank,
-                                   int num_cellData,
+                                   int num_cell_data,
                                    const char * point_scalars,
                                    const char * point_vectors,
                                    const char * filename)
@@ -1606,7 +1634,7 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
   }
 
   /* close xml tag for cell data */
-  if (write_tree || write_level || write_rank || num_cellData) {
+  if (write_tree || write_level || write_rank || num_cell_data) {
     fprintf (vtufile, "      </CellData>\n");
   }
 
@@ -1619,12 +1647,13 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
   fprintf (vtufile, ">\n");
 
   if (ferror (vtufile)) {
-    P4EST_LERROR (P4EST_STRING "_vtk: Error writing header\n");
+    P4EST_LERROR (P4EST_STRING "_vtk: Error writing transition to point data\n");
     fclose (vtufile);
     return -1;
   }
+  fflush(vtufile);
   if (fclose (vtufile)) {
-    P4EST_LERROR (P4EST_STRING "_vtk: Error closing header\n");
+    P4EST_LERROR (P4EST_STRING "_vtk: Error closing transition to point data\n");
     return -1;
   }
   vtufile = NULL;
@@ -1637,15 +1666,24 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
 
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
-    pvtufile = fopen (pvtufilename, "ab");
-
-    if (!pvtufile) {
-      P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
+    pvtufile = fopen (pvtufilename, "rb+");
+    if (pvtufile == NULL) {
+      P4EST_LERRORF ("Could not open %s for output\n", pvtufilename);
       return -1;
     }
+    retval = fseek (pvtufile, 0L, SEEK_END);
+    if (retval) {
+      P4EST_LERRORF ("Could not fseek %s for output\n", pvtufilename);
+      fclose (pvtufile);
+      return -1;
+    }
+
     
     /* close xml tag for cell data and prepare writing point data */
-    if (write_tree || write_level || write_rank || num_cellData) {
+    if (write_tree || write_level || write_rank || num_cell_data) {
+      char                vtkCellDataString[BUFSIZ] = "";
+      int                 printed = 0;
+
       fprintf (pvtufile, "    </PCellData>\n");
     }
     fprintf (pvtufile, "    <PPointData>\n");
@@ -1681,6 +1719,7 @@ p4est_vtk_write_point_scalar (p4est_t * p4est, p4est_geometry_t * geom,
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
+
   /* To be able to fseek in a file you cannot open in append mode.
    * so you need to open with "r+" and fseek to SEEK_END.
    */
@@ -1749,7 +1788,7 @@ p4est_vtk_write_point_scalar (p4est_t * p4est, p4est_geometry_t * geom,
     FILE               *pvtufile;
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
 
-    pvtufile = fopen (pvtufilename, "ab");
+    pvtufile = fopen (pvtufilename, "ab+");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
       return -1;
@@ -1794,7 +1833,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *filename)
 
   /* Have each proc write to its own file */
   snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", filename, procRank);
-  vtufile = fopen (vtufilename, "ab");
+  vtufile = fopen (vtufilename, "ab+");
   if (vtufile == NULL) {
     P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
     return -1;
@@ -1824,7 +1863,7 @@ p4est_vtk_write_footer (p4est_t * p4est, const char *filename)
 
     /* Reopen paraview master file for writing bottom half */
     snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
-    pvtufile = fopen (pvtufilename, "ab");
+    pvtufile = fopen (pvtufilename, "ab+");
     if (!pvtufile) {
       P4EST_LERRORF ("Could not open %s for output!\n", vtufilename);
       return -1;
