@@ -2520,7 +2520,9 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
                              p4est_topidx_t itree, int icorner,
                              p4est_corner_info_t * ci)
 {
+#ifdef P4EST_ENABLE_DEBUG
   int                 ignored;
+#endif
   p4est_topidx_t      corner_trees, acorner, cttac;
   sc_array_t         *cta = &ci->corner_transforms;
 
@@ -2546,11 +2548,16 @@ p4est_find_corner_transform (p4est_connectivity_t * conn,
   P4EST_ASSERT (0 <= cttac && 1 <= corner_trees);
 
   /* loop through all corner neighbors and find corner connections */
-  ignored = p4est_find_corner_transform_internal (conn, itree, icorner, ci,
-                                                  conn->corner_to_tree +
-                                                  cttac,
-                                                  conn->corner_to_corner +
-                                                  cttac, corner_trees);
+#ifdef P4EST_ENABLE_DEBUG
+  ignored =
+#else
+  (void)
+#endif
+    p4est_find_corner_transform_internal (conn, itree, icorner, ci,
+                                          conn->corner_to_tree +
+                                          cttac,
+                                          conn->corner_to_corner +
+                                          cttac, corner_trees);
   P4EST_ASSERT (corner_trees == (p4est_topidx_t) (cta->elem_count + ignored));
 }
 
@@ -2576,7 +2583,6 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
   sc_array_t          edge_array, edge_to_pz;
   sc_array_t         *eta = &einfo.edge_transforms;
 #endif
-  int                 ignored;
   int8_t             *ct;
   size_t              zcount;
   p4est_topidx_t      real_corners;
@@ -2908,7 +2914,7 @@ p4est_connectivity_complete (p4est_connectivity_t * conn)
         pt = (p4est_topidx_t *) sc_array_index (nt, pz);
         ct = (int8_t *) sc_array_index (nc, pz);
         cinfo.icorner = -1;     /* unused */
-        ignored =
+        (void)
           p4est_find_corner_transform_internal (conn, *pt, *ct, &cinfo,
                                                 conn->corner_to_tree +
                                                 ctt_offset,
