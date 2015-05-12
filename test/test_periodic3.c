@@ -196,8 +196,8 @@ weird_edges[2][2] = {{ 5, 7 }, { 7, 5 }};
 static void
 test_weird (void)
 {
-  const p4est_topidx_t num_edges = 1, num_ett = 2;
-  const p4est_topidx_t num_corners = 1, num_ctt = 4;
+  const p4est_topidx_t num_edges = 1, num_ett = 4;
+  const p4est_topidx_t num_corners = 1, num_ctt = 6;
   int                 i;
   size_t              zz;
   p8est_edge_info_t   ei;
@@ -223,8 +223,12 @@ test_weird (void)
   conn->tree_to_edge[7] = 0;
   conn->edge_to_tree[0] = 0;
   conn->edge_to_tree[1] = 0;
+  conn->edge_to_tree[2] = 0;
+  conn->edge_to_tree[3] = 0;
   conn->edge_to_edge[0] = 5;
-  conn->edge_to_edge[1] = 19;
+  conn->edge_to_edge[1] = 17;
+  conn->edge_to_edge[2] = 7;
+  conn->edge_to_edge[3] = 19;
   conn->ett_offset[0] = 0;
 
   for (i = 0; i < 8; ++i) {
@@ -232,16 +236,22 @@ test_weird (void)
   }
   conn->tree_to_corner[0] = 0;
   conn->tree_to_corner[1] = 0;
+  conn->tree_to_corner[3] = 0;
   conn->tree_to_corner[4] = 0;
   conn->tree_to_corner[5] = 0;
+  conn->tree_to_corner[7] = 0;
   conn->corner_to_tree[0] = 0;
   conn->corner_to_tree[1] = 0;
   conn->corner_to_tree[2] = 0;
   conn->corner_to_tree[3] = 0;
+  conn->corner_to_tree[4] = 0;
+  conn->corner_to_tree[5] = 0;
   conn->corner_to_corner[0] = 0;
   conn->corner_to_corner[1] = 1;
-  conn->corner_to_corner[2] = 4;
-  conn->corner_to_corner[3] = 5;
+  conn->corner_to_corner[2] = 3;
+  conn->corner_to_corner[3] = 4;
+  conn->corner_to_corner[4] = 5;
+  conn->corner_to_corner[5] = 7;
   conn->ctt_offset[0] = 0;
 
   P4EST_ASSERT (p8est_connectivity_is_valid (conn));
@@ -251,11 +261,11 @@ test_weird (void)
   for (i = 0; i < 2; ++i) {
     p8est_find_edge_transform (conn, 0, weird_edges[i][0], &ei);
     SC_CHECK_ABORT ((int) ei.iedge == weird_edges[i][0], "WE ei");
-    SC_CHECK_ABORT (eta->elem_count == 1, "WE count A");
+    SC_CHECK_ABORT (eta->elem_count == 2, "WE count A");
     for (zz = 0; zz < eta->elem_count; ++zz) {
       et = p8est_edge_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == 0, "WE tree");
-      SC_CHECK_ABORT ((int) et->nedge == weird_edges[i][1], "WE edge");
+      SC_CHECK_ABORT ((int) et->nedge == weird_edges[i][1] || (int) et->nedge == weird_edges[i][0], "WE edge");
       SC_CHECK_ABORT (et->nflip == 1, "WE flip");
       SC_CHECK_ABORT (et->corners == et->nedge % 4, "WE corners");
       SC_CHECK_ABORT (et->naxis[0] == 1 && et->naxis[1] == 0 &&
@@ -269,11 +279,24 @@ test_weird (void)
   for (i = 0; i < 8; ++i) {
     p8est_find_corner_transform (conn, 0, i, &ci);
     SC_CHECK_ABORT ((int) ci.icorner == i, "WC ci");
-    SC_CHECK_ABORT ((int) cta->elem_count == 2 - (i & 0x02), "WC count");
-    for (zz = 0; zz < cta->elem_count; ++zz) {
-      ct = p8est_corner_array_index (cta, zz);
-      SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
-      SC_CHECK_ABORT ((size_t) ct->ncorner == 4 * zz + !(i % 2), "WC corner");
+    if (i == 2 || i == 6) {
+      SC_CHECK_ABORT ((int) cta->elem_count == 0, "WC count");
+    }
+    else if (i == 0 || i == 4) {
+      SC_CHECK_ABORT ((int) cta->elem_count == 4, "WC count");
+      for (zz = 0; zz < cta->elem_count; ++zz) {
+        ct = p8est_corner_array_index (cta, zz);
+        SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
+        SC_CHECK_ABORT ((size_t) ct->ncorner == 2 * zz + 1, "WC corner");
+      }
+    }
+    else {
+      SC_CHECK_ABORT ((int) cta->elem_count == 2, "WC count");
+      for (zz = 0; zz < cta->elem_count; ++zz) {
+        ct = p8est_corner_array_index (cta, zz);
+        SC_CHECK_ABORT (ct->ntree == 0, "WC tree");
+        SC_CHECK_ABORT ((size_t) ct->ncorner == 4 * zz, "WC corner");
+      }
     }
   }
   sc_array_reset (cta);
