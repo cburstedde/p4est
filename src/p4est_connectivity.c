@@ -279,6 +279,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   }
   else {
     P4EST_ASSERT (conn_in == NULL);
+    conn = NULL;   /* This is to suppress 'maybe used ininitialized' warning */
   }
   /* broadcast the dimensions to all processes */
   mpiret = sc_MPI_Bcast (&conn_dimensions, sizeof (conn_dimensions),
