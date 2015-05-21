@@ -279,7 +279,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   }
   else {
     P4EST_ASSERT (conn_in == NULL);
-    conn = NULL;   /* This is to suppress 'maybe used ininitialized' warning */
+    conn = NULL;                /* suppress 'maybe used ininitialized' warning */
   }
   /* broadcast the dimensions to all processes */
   mpiret = sc_MPI_Bcast (&conn_dimensions, sizeof (conn_dimensions),
@@ -288,6 +288,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
 
   /* allocate memory for new connectivity */
   if (mpirank != root) {
+    P4EST_ASSERT (conn == NULL);
     conn = p4est_connectivity_new (conn_dimensions.num_vertices,
                                    conn_dimensions.num_trees,
 #ifdef P4_TO_P8
