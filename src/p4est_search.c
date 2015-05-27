@@ -777,7 +777,6 @@ typedef struct p4est_traverse_recursion
   p4est_traverse_query_t traverse_fn;   /**< The traversal callback. */
   sc_array_t         *position_array;   /**< Array view of p4est's
                                              global_first_position */
-  void               *user;             /**< Data from \b p4est_traverse. */
 }
 p4est_traverse_recursion_t;
 
@@ -803,7 +802,7 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
 
   /* call the user-provided callback function */
   proceed = rec->traverse_fn (rec->p4est, rec->which_tree, quadrant,
-                              pfirst, plast, rec->user);
+                              pfirst, plast);
 
   /* terminate recursion at the latest when we are down to one processor */
   if (pfirst == plast || !proceed) {
@@ -883,8 +882,7 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
 }
 
 void
-p4est_traverse (p4est_t * p4est, p4est_traverse_query_t traverse_fn,
-                void *user)
+p4est_traverse (p4est_t * p4est, p4est_traverse_query_t traverse_fn)
 {
   const int           num_procs = p4est->mpisize;
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
@@ -924,7 +922,6 @@ p4est_traverse (p4est_t * p4est, p4est_traverse_query_t traverse_fn,
   rec->which_tree = -1;
   rec->traverse_fn = traverse_fn;
   rec->position_array = &position_array;
-  rec->user = user;
   p4est_quadrant_set_morton (&root, 0, 0);
   for (pfirst = 0, tt = 0; tt < num_trees; pfirst = pnext, ++tt) {
     /* pfirst is the first processor indexed for this tree */

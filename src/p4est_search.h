@@ -191,15 +191,13 @@ void                p4est_search (p4est_t * p4est,
  *                          Guaranteed to be non-empty.  If this is equal to
  *                          \b pfirst, then the recursion will stop for
  *                          quadrant's branch after this function returns.
- * \param [in,out] user     Application-defined data passed through.
  * \return                  If false, the recursion at quadrant is terminated.
  *                          If true, it continues if \b pfirst < \b plast.
  */
 typedef int         (*p4est_traverse_query_t) (p4est_t * p4est,
                                                p4est_topidx_t which_tree,
                                                p4est_quadrant_t * quadrant,
-                                               int pfirst, int plast,
-                                               void *user);
+                                               int pfirst, int plast);
 
 /** Traverse the global partition top-down.
  * We proceed top-down through the partition, identically on all processors
@@ -213,12 +211,9 @@ typedef int         (*p4est_traverse_query_t) (p4est_t * p4est,
  * \param [in] traverse_fn  This function controls the recursion,
  *                          which only continues deeper if this
  *                          callback returns true for a branch quadrant.
- * \param [in,out] user     This is passed untouched as the \b user argument to
- *                          \b traverse_fn.
  */
 void                p4est_traverse (p4est_t * p4est,
-                                    p4est_traverse_query_t traverse_fn,
-                                    void *user);
+                                    p4est_traverse_query_t traverse_fn);
 
 SC_EXTERN_C_END;
 
