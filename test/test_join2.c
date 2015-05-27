@@ -57,6 +57,17 @@ main (int argc, char **argv)
   p4est_connectivity_destroy (conn1);
   p4est_connectivity_destroy (conn2);
 
+#ifndef P4_TO_P8
+  conn1 = p4est_connectivity_new_unitsquare ();
+#else
+  conn1 = p8est_connectivity_new_unitcube ();
+#endif
+
+  p4est_connectivity_join_faces (conn1, 0, 0, 0, P4EST_FACES - 2, 0);
+  SC_CHECK_ABORT (p4est_connectivity_is_valid (conn1),
+                  "Created rotation around edge, but not valid");
+  p4est_connectivity_destroy (conn1);
+
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
