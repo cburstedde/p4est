@@ -213,6 +213,42 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   return pp;
 }
 
+p4est_wrap_t       *
+p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
+                     p4est_replace_t replace_fn, void *user_pointer)
+{
+  p4est_wrap_t       *pp;
+
+  P4EST_ASSERT (source != NULL);
+
+  pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
+
+  pp->hollow = 1;
+
+  sc_refcount_init_invalid (&pp->conn_rc);
+  pp->conn_owner = (source->conn_owner != NULL ? source->conn_owner : source);
+  pp->conn = pp->conn_owner->conn;
+  sc_refcount_ref (&pp->conn_owner->conn_rc);
+
+  pp->p4est_dim = P4EST_DIM;
+  pp->p4est_half = P4EST_HALF;
+  pp->p4est_faces = P4EST_FACES;
+  pp->p4est_children = P4EST_CHILDREN;
+  pp->btype = source->btype;
+  pp->replace_fn = replace_fn;
+  pp->p4est = p4est_copy (source->p4est, 0);
+  if (data_size > 0) {
+    p4est_reset_data (pp->p4est, data_size, NULL, NULL);
+  }
+
+  pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
+
+  pp->p4est->user_pointer = pp;
+  pp->user_pointer = user_pointer;
+
+  return pp;
+}
+
 #ifndef P4_TO_P8
 
 p4est_wrap_t       *

@@ -44,6 +44,7 @@ test_coarsen_delay (p4est_wrap_t * wrap)
 {
   p4est_locidx_t      jl;
   p4est_wrap_leaf_t  *leaf;
+  p4est_wrap_t       *copy1, *copy2;
 
   p4est_wrap_set_coarsen_delay (wrap, 2, 0);
 
@@ -53,13 +54,23 @@ test_coarsen_delay (p4est_wrap_t * wrap)
       p4est_wrap_mark_refine (wrap, leaf->which_tree, leaf->which_quad);
     }
   }
+
+  copy1 = p4est_wrap_new_copy (wrap, 17, NULL, NULL);
+  copy2 = p4est_wrap_new_copy (copy1, 0, NULL, NULL);
+
   wrap_adapt_partition (wrap, 1);
+
+  /* copies must be destroyed before the original is destroyed, in any order */
+  p4est_wrap_destroy (copy1);
 
   for (jl = 0, leaf = p4est_wrap_leaf_first (wrap, 1); leaf != NULL;
        jl++, leaf = p4est_wrap_leaf_next (leaf)) {
     p4est_wrap_mark_coarsen (wrap, leaf->which_tree, leaf->which_quad);
   }
   wrap_adapt_partition (wrap, 1);
+
+  /* copies must be destroyed before the original is destroyed, anywhere */
+  p4est_wrap_destroy (copy2);
 }
 
 int

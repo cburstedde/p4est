@@ -116,9 +116,9 @@ p4est_wrap_t       *p4est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,
- *                            coarsening or balancing in p4est_wrap_adapt.
+ *                            coarsening or balancing in \ref p4est_wrap_adapt.
  *                            May be NULL.
- * \param [in] user_pointer   Set the user pointer in p4est_wrap_t.
+ * \param [in] user_pointer   Set the user pointer in \ref p4est_wrap_t.
  *                            Subsequently, we will never access it.
  * \return                    A fully initialized p4est_wrap structure.
  */
@@ -128,6 +128,23 @@ p4est_wrap_t       *p4est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p4est_connect_type_t btype,
                                         p4est_replace_t replace_fn,
                                         void *user_pointer);
+
+/** Create a p4est wrapper from an existing one.
+ * \note This wrapper must be destroyed before the original one.
+ * We set it to hollow and copy the original p4est data structure.
+ * \param [in,out] source   We access the source for debugging purposes.
+ * \param [in] data_size    The data size installed in the copied forest.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in \ref p4est_wrap_adapt.
+ *                            May be NULL.
+ * \param [in] user_pointer   Set the user pointer in \ref p4est_wrap_t.
+ *                            Subsequently, we will never access it.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_copy (p4est_wrap_t * source,
+                                         size_t data_size,
+                                         p4est_replace_t replace_fn,
+                                         void *user_pointer);
 
 /** Create p4est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.

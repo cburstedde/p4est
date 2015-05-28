@@ -116,11 +116,11 @@ p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,
- *                            coarsening or balancing in p8est_wrap_adapt.
+ *                            coarsening or balancing in \ref p8est_wrap_adapt.
  *                            May be NULL.
- * \param [in] user_pointer   Set the user pointer in p8est_wrap_t.
+ * \param [in] user_pointer   Set the user pointer in \ref p8est_wrap_t.
  *                            Subsequently, we will never access it.
- * \return                    A fully initialized p4est_wrap structure.
+ * \return                    A fully initialized p8est_wrap structure.
  */
 p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p8est_connectivity_t * conn,
@@ -128,6 +128,23 @@ p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p8est_connect_type_t btype,
                                         p8est_replace_t replace_fn,
                                         void *user_pointer);
+
+/** Create a p8est wrapper from an existing one.
+ * \note This wrapper must be destroyed before the original one.
+ * We set it to hollow and copy the original p8est data structure.
+ * \param [in,out] source   We access the source for debugging purposes.
+ * \param [in] data_size    The data size installed in the copied forest.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in \ref p8est_wrap_adapt.
+ *                            May be NULL.
+ * \param [in] user_pointer   Set the user pointer in \ref p8est_wrap_t.
+ *                            Subsequently, we will never access it.
+ * \return                    A fully initialized p8est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_copy (p8est_wrap_t * source,
+                                         size_t data_size,
+                                         p8est_replace_t replace_fn,
+                                         void *user_pointer);
 
 /** Create p8est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.
