@@ -186,13 +186,16 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
 
   pp->hollow = hollow;
 
+  sc_refcount_init (&pp->conn_rc, p4est_package_id);
+  pp->conn = conn;
+  pp->conn_owner = NULL;
+
   pp->p4est_dim = P4EST_DIM;
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
   pp->btype = btype;
   pp->replace_fn = replace_fn;
-  pp->conn = conn;
   pp->p4est = p4est_new_ext (mpicomm, pp->conn,
                              0, initial_level, 1, 0, NULL, NULL);
 
@@ -349,7 +352,18 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   P4EST_FREE (pp->temp_flags);
 
   p4est_destroy (pp->p4est);
-  p4est_connectivity_destroy (pp->conn);
+
+  /* safety checks for connectivity ownership */
+  if (pp->conn_owner != NULL) {
+    /* we are a copy of a wrap and have borrowed its connectivity */
+    P4EST_ASSERT (!sc_refcount_is_active (&pp->conn_rc));
+    P4EST_EXECUTE_ASSERT_FALSE (sc_refcount_unref (&pp->conn_owner->conn_rc));
+  }
+  else {
+    /* we are the original wrap that owns the connectivity */
+    P4EST_EXECUTE_ASSERT_TRUE (sc_refcount_unref (&pp->conn_rc));
+    p4est_connectivity_destroy (pp->conn);
+  }
 
   P4EST_FREE (pp);
 }

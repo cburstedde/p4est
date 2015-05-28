@@ -32,6 +32,7 @@
 
 #include <p4est_mesh.h>
 #include <p4est_extended.h>
+#include <sc_refcount.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -62,6 +63,15 @@ typedef struct p4est_wrap
    * but also between subsequent coarsenings of the same quadrant. */
   int                 coarsen_affect;
 
+  /** This reference counter is a workaround for internal use only.
+   * Until we have refcounting/copy-on-write for the connectivity,
+   * we count the references to conn by copies of this wrap structure.
+   * There must be no external references left when this wrap is destroyed.
+   */
+  sc_refcount_t       conn_rc;
+  p4est_connectivity_t *conn;
+  struct p4est_wrap  *conn_owner;
+
   /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
@@ -69,7 +79,6 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_connect_type_t btype;
   p4est_replace_t     replace_fn;
-  p4est_connectivity_t *conn;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* anything below here is considered private und should not be touched */
