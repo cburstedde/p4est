@@ -40,6 +40,25 @@ SC_EXTERN_C_BEGIN;
  */
 typedef struct p8est_vtk_context p8est_vtk_context_t;
 
+/** Write the p8est in VTK format.
+ *
+ * This is a convenience function for the special case of writing out
+ * the tree id, quadrant level, and MPI rank only.
+ * One file is written per MPI rank, and one meta file on rank 0.
+ * The quadrants are scaled to length .95; see \ref p8est_vtk_write_header.
+ * This function will abort if there is a file error.
+ *
+ * \param [in] p8est    The p8est to be written.
+ * \param [in] geom     A p8est_geometry_t structure or NULL for vertex space
+ *                      as defined by p8est->connectivity.
+ * \param [in] filename The first part of the file name which will have the
+ *                      MPI rank appended to it: The output file will be
+ *                      filename_rank.vtu, and the meta file filename.pvtu.
+ */
+void                p8est_vtk_write_file (p8est_t * p8est,
+                                          p8est_geometry_t * geom,
+                                          const char *filename);
+
 /** The first call to write a VTK file using individual functions.
  *
  * Writing a VTK file is split into multiple functions that keep a context.
@@ -65,8 +84,8 @@ p8est_vtk_context_t *p8est_vtk_context_new (p8est_t * p4est,
 /** Modify the context parameter for scaling the quadrants.
  * After \ref p8est_vtk_context_new, it is at the default 0.95.
  * \param [in,out] cont         The context is modified.
- *                              It must not have been used to start writing in
- *                              \ref p8est_vtk_write_header.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p8est_vtk_write_header.
  * \param [in] scale            Scale parameter must be in (0, 1].
  */
 void                p8est_vtk_context_set_scale (p8est_vtk_context_t * cont,
@@ -78,8 +97,8 @@ void                p8est_vtk_context_set_scale (p8est_vtk_context_t * cont,
  * For discontinuous point data, it should be set to false.
  * After \ref p8est_vtk_context_new, it is at the default true.
  * \param [in,out] cont         The context is modified.
- *                              It must not have been used to start writing in
- *                              \ref p8est_vtk_write_header.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p8est_vtk_write_header.
  * \param [in] continuous       Boolean parameter.
  */
 void                p8est_vtk_context_set_continuous (p8est_vtk_context_t *
@@ -93,25 +112,6 @@ void                p8est_vtk_context_set_continuous (p8est_vtk_context_t *
  * \param[in] context     The VTK file context to be destroyed.
  */
 void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
-
-/** Write the p8est in VTK format.
- *
- * This is a convenience function for the special case of writing out
- * the tree id, quadrant level, and MPI rank only.
- * One file is written per MPI rank, and one meta file on rank 0.
- * The quadrants are scaled to length .95; see \ref p8est_vtk_write_header.
- * This function will abort if there is a file error.
- *
- * \param [in] p8est    The p8est to be written.
- * \param [in] geom     A p8est_geometry_t structure or NULL for vertex space
- *                      as defined by p8est->connectivity.
- * \param [in] filename The first part of the file name which will have the
- *                      MPI rank appended to it: The output file will be
- *                      filename_rank.vtu, and the meta file filename.pvtu.
- */
-void                p8est_vtk_write_file (p8est_t * p8est,
-                                          p8est_geometry_t * geom,
-                                          const char *filename);
 
 /** Write the VTK header.
  *

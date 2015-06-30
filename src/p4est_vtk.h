@@ -84,8 +84,8 @@ p4est_vtk_context_t *p4est_vtk_context_new (p4est_t * p4est,
 /** Modify the context parameter for scaling the quadrants.
  * After \ref p4est_vtk_context_new, it is at the default 0.95.
  * \param [in,out] cont         The context is modified.
- *                              It must not have been used to start writing in
- *                              \ref p4est_vtk_write_header.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p4est_vtk_write_header.
  * \param [in] scale            Scale parameter must be in (0, 1].
  */
 void                p4est_vtk_context_set_scale (p4est_vtk_context_t * cont,
@@ -97,8 +97,8 @@ void                p4est_vtk_context_set_scale (p4est_vtk_context_t * cont,
  * For discontinuous point data, it should be set to false.
  * After \ref p4est_vtk_context_new, it is at the default true.
  * \param [in,out] cont         The context is modified.
- *                              It must not have been used to start writing in
- *                              \ref p4est_vtk_write_header.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p4est_vtk_write_header.
  * \param [in] continuous       Boolean parameter.
  */
 void                p4est_vtk_context_set_continuous (p4est_vtk_context_t *
