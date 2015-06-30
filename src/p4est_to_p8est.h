@@ -134,7 +134,6 @@
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
-#define p4est_vtk_context               p8est_vtk_context
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -340,7 +339,10 @@
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 
 /* functions in p4est_vtk */
+#define p4est_vtk_context_new           p8est_vtk_context_new
 #define p4est_vtk_context_destroy       p8est_vtk_context_destroy
+#define p4est_vtk_context_set_scale     p8est_vtk_context_set_scale
+#define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_header          p8est_vtk_write_header
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data

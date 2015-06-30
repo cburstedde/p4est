@@ -40,6 +40,50 @@ SC_EXTERN_C_BEGIN;
  */
 typedef struct p8est_vtk_context p8est_vtk_context_t;
 
+/** The first call to write a VTK file using individual functions.
+ *
+ * Writing a VTK file is split into multiple functions that keep a context.
+ * This is the first function that allocates the opaque context structure.
+ * After allocation, further parameters can be set for the context.
+ * Then, the header, possible data fields, and the footer must be written.
+ * The process can be aborted any time by destroying the context.  In this
+ * case, open files are closed cleanly with only partially written content.
+ *
+ * \param p4est     The p8est to be written.
+ * \param geom      A \ref p8est_geometry_t structure, or NULL for vertex space.
+ *                  If NULL, \b p8est->connectivity->vertices must be non-NULL.
+ * \param filename  The first part of the name which will have the processor
+ *                  number appended to it (i.e., the output file will be
+ *                  filename_rank.vtu).  The parallel meta-files for Paraview
+ *                  and Visit use this basename too.
+ * \return          A VTK context fur further use.
+ */
+p8est_vtk_context_t *p8est_vtk_context_new (p8est_t * p4est,
+                                            p8est_geometry_t * geom,
+                                            const char *filename);
+
+/** Modify the context parameter for scaling the quadrants.
+ * After \ref p8est_vtk_context_new, it is at the default 0.95.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not have been used to start writing in
+ *                              \ref p8est_vtk_write_header.
+ * \param [in] scale            Scale parameter must be in (0, 1].
+ */
+void                p8est_vtk_context_set_scale (p8est_vtk_context_t * cont,
+                                                 double scale);
+
+/** Modify the context parameter for expecting continuous point data.
+ * If set to true, the point data is understood as a continuous field.
+ * In this case, we can significantly reduce the file size.
+ * For discontinuous point data, it should be set to false.
+ * After \ref p8est_vtk_context_new, it is at the default true.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not have been used to start writing in
+ *                              \ref p8est_vtk_write_header.
+ * \param [in] continuous       Boolean parameter.
+ */
+void                p8est_vtk_context_set_continuous (p8est_vtk_context_t *
+                                                      cont, int continuous);
 /** Cleanly destroy a \ref p8est_vtk_context_t structure.
  *
  * This function closes all the file pointers and frees the context.
@@ -55,7 +99,7 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
  * This is a convenience function for the special case of writing out
  * the tree id, quadrant level, and MPI rank only.
  * One file is written per MPI rank, and one meta file on rank 0.
- * The quadrants are scaled to length .95; see \ref p4est_vtk_write_header.
+ * The quadrants are scaled to length .95; see \ref p8est_vtk_write_header.
  * This function will abort if there is a file error.
  *
  * \param [in] p8est    The p8est to be written.
@@ -83,7 +127,7 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  *
  * \param p8est     The p8est to be written.
  * \param geom      A p8est_geometry_t structure or NULL for vertex space.
- * \param scale     The relative length factor of the quadrants.
+ * \param scale     The (positive) relative length factor of the quadrants.
  *                  Use 1.0 to fit quadrants exactly, less to create gaps.
  * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
@@ -240,7 +284,7 @@ p8est_vtk_context_t *p8est_vtk_write_point_scalar (p8est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of fields.
  * When in doubt, please use \ref p8est_vtk_write_point_data instead.
  *
- * \param [in,out] cont    A VTK context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by p8est_vtk_write_header.
  * \param [in] vector_name The name of the vector field.
  * \param [in] values      The point values that will be written.
  *

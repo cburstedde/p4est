@@ -31,13 +31,19 @@
 #define P4EST_VTK_CELL_TYPE      8      /* VTK_PIXEL */
 #endif /* !P4_TO_P8 */
 
-#include <sc_io.h>
-
+/* default parameters for the vtk context and thus p4est_vtk_write_file */
 static const double p4est_vtk_scale = 0.95;
+static const int    p4est_vtk_continuous = 1;
+
+/* default parameters for p4est_vtk_write_file */
 static const int    p4est_vtk_write_tree = 1;
 static const int    p4est_vtk_write_level = 1;
 static const int    p4est_vtk_write_rank = 1;
 static const int    p4est_vtk_wrap_rank = 0;
+
+#ifdef P4_TO_P8
+#define p4est_vtk_context               p8est_vtk_context
+#endif
 
 #ifndef P4EST_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"
@@ -89,10 +95,18 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
  */
 struct p4est_vtk_context
 {
+  /* data passed initially */
   p4est_t            *p4est;       /**< The p4est structure must be alive. */
   p4est_geometry_t   *geom;        /**< The geometry may be NULL. */
-  p4est_locidx_t      num_nodes;   /**< Number of Q1 dofs passed. */
   const char         *filename;    /**< Original filename provided. */
+
+  /* parameters that can be set on a context */
+  double              scale;       /**< Parameter to shrink quadrants. */
+  int                 continuous;  /**< Assume continuous data. */
+
+  /* internal context data */
+  int                 writing;     /**< True after p4est_vtk_write_header. */
+  p4est_locidx_t      num_nodes;   /**< Number of Q1 dofs passed. */
   char                vtufilename[BUFSIZ];   /**< Each process writes one. */
   char                pvtufilename[BUFSIZ];  /**< Only root writes this one. */
   char                visitfilename[BUFSIZ]; /**< Only root writes this one. */
@@ -101,31 +115,84 @@ struct p4est_vtk_context
   FILE               *visitfile;   /**< Visit meta file. */
 };
 
+p4est_vtk_context_t *
+p4est_vtk_context_new (p4est_t * p4est, p4est_geometry_t * geom,
+                       const char *filename)
+{
+  p4est_vtk_context_t *cont;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (filename != NULL);
+
+  /* Allocate, initialize the vtk context.  Important to zero all fields. */
+  cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
+
+  cont->p4est = p4est;
+  cont->geom = geom;
+  cont->filename = filename;
+
+  cont->scale = p4est_vtk_scale;
+  cont->continuous = p4est_vtk_continuous;
+
+  return cont;
+}
+
+void
+p4est_vtk_context_set_scale (p4est_vtk_context_t * cont, double scale)
+{
+  P4EST_ASSERT (cont != NULL);
+  P4EST_ASSERT (!cont->writing);
+  P4EST_ASSERT (0. < scale && scale <= 1.);
+
+  cont->scale = scale;
+}
+
+void
+p4est_vtk_context_set_continuous (p4est_vtk_context_t * cont, int continuous)
+{
+  P4EST_ASSERT (cont != NULL);
+  P4EST_ASSERT (!cont->writing);
+
+  cont->continuous = continuous;
+}
+
 void
 p4est_vtk_context_destroy (p4est_vtk_context_t * context)
 {
+  P4EST_ASSERT (context != NULL);
+  P4EST_ASSERT (context->p4est != NULL);
+
+  /* since this function is called inside write_header and write_footer,
+   * we cannot assume a consistent state of all member variables */
+
   /* Close all file pointers. */
-  P4EST_ASSERT (context->vtufile != NULL);
-  if (fclose (context->vtufile))
-    P4EST_LERRORF (P4EST_STRING "_vtk: Error closing <%s>.\n",
-                   context->vtufilename);
-  context->vtufile = NULL;
+  if (context->vtufile != NULL) {
+    if (fclose (context->vtufile)) {
+      P4EST_LERRORF (P4EST_STRING "_vtk: Error closing <%s>.\n",
+                     context->vtufilename);
+    }
+    context->vtufile = NULL;
+  }
 
-  /* Only the root process opens/closes these files. */
-  if (context->p4est->mpirank == 0) {
-
-    /* Close paraview master file */
-    P4EST_ASSERT (context->pvtufile != NULL);
-    if (fclose (context->pvtufile))
+  /* Close paraview master file */
+  if (context->pvtufile != NULL) {
+    /* Only the root process opens/closes these files. */
+    P4EST_ASSERT (context->p4est->mpirank == 0);
+    if (fclose (context->pvtufile)) {
       P4EST_LERRORF (P4EST_STRING "_vtk: Error closing <%s>.\n",
                      context->pvtufilename);
+    }
     context->pvtufile = NULL;
+  }
 
-    /* Close visit master file */
-    P4EST_ASSERT (context->visitfile != NULL);
-    if (fclose (context->visitfile))
+  /* Close visit master file */
+  if (context->visitfile != NULL) {
+    /* Only the root process opens/closes these files. */
+    P4EST_ASSERT (context->p4est->mpirank == 0);
+    if (fclose (context->visitfile)) {
       P4EST_LERRORF (P4EST_STRING "_vtk: Error closing <%s>.\n",
                      context->visitfilename);
+    }
     context->visitfile = NULL;
   }
 
@@ -161,6 +228,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   /* Allocate, initialize the vtk context. */
   p4est_vtk_context_t *cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
 
+  /* TODO: move instructions after declarations for C conformance */
   cont->filename = filename;
   cont->p4est = p4est;
   cont->geom = geom;
@@ -208,8 +276,13 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
                   "Must provide connectivity with vertex information");
 
-  P4EST_ASSERT (0. <= scale && scale <= 1.);
+  P4EST_ASSERT (0. < scale && scale <= 1.);
   P4EST_ASSERT (v != NULL && tree_to_vertex != NULL);
+
+  P4EST_ASSERT (!cont->writing);
+
+  /* this context is officially in use for writing */
+  cont->writing = 1;
 
   if (scale < 1.) {
     /* when we scale the quadrants we need each corner separately */
@@ -629,6 +702,8 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   const char         *name, **names;
   sc_array_t        **values;
 
+  P4EST_ASSERT (cont != NULL && cont->writing);
+
   values = P4EST_ALLOC (sc_array_t *, num_point_scalars + num_point_vectors);
   names = P4EST_ALLOC (const char *, num_point_scalars + num_point_vectors);
 
@@ -766,6 +841,8 @@ p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
   va_list             ap;
   va_start (ap, num_point_vectors);
 
+  P4EST_ASSERT (cont != NULL && cont->writing);
+
   cont = p4est_vtk_write_point_datav (cont, num_point_scalars,
                                       num_point_vectors, ap);
   va_end (ap);
@@ -830,6 +907,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
 
+  P4EST_ASSERT (cont != NULL && cont->writing);
   P4EST_ASSERT (wrap_rank >= 0);
 
   values = P4EST_ALLOC (sc_array_t *, num_cell_scalars + num_cell_vectors);
@@ -1144,6 +1222,8 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
 {
   va_list             ap;
 
+  P4EST_ASSERT (cont != NULL && cont->writing);
+
   va_start (ap, num_cell_vectors);
   cont = p4est_vtk_write_cell_datav (cont,
                                      write_tree, write_level,
@@ -1165,6 +1245,8 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
   int                 retval;
   P4EST_VTK_FLOAT_TYPE *float_data;
 #endif
+
+  P4EST_ASSERT (cont != NULL && cont->writing);
 
   /* write point data */
   fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"%s\""
@@ -1222,6 +1304,8 @@ p4est_vtk_context_t *
 p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
                               const char *vector_name, sc_array_t * values)
 {
+  P4EST_ASSERT (cont != NULL && cont->writing);
+
   SC_ABORT (P4EST_STRING "_vtk_write_point_vector not implemented");
 }
 
@@ -1235,6 +1319,8 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
   int                 retval;
   P4EST_VTK_FLOAT_TYPE *float_data;
 #endif
+
+  P4EST_ASSERT (cont != NULL && cont->writing);
 
   /* Write cell data. */
   fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"%s\""
@@ -1292,6 +1378,8 @@ p4est_vtk_context_t *
 p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
                              const char *vector_name, sc_array_t * values)
 {
+  P4EST_ASSERT (cont != NULL && cont->writing);
+
   SC_ABORT (P4EST_STRING "_vtk_write_cell_vector not implemented");
 }
 
@@ -1301,6 +1389,8 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
   int                 p;
   int                 procRank = cont->p4est->mpirank;
   int                 numProcs = cont->p4est->mpisize;
+
+  P4EST_ASSERT (cont != NULL && cont->writing);
 
   fprintf (cont->vtufile, "    </Piece>\n");
   fprintf (cont->vtufile, "  </UnstructuredGrid>\n");

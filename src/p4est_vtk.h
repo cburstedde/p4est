@@ -40,16 +40,6 @@ SC_EXTERN_C_BEGIN;
  */
 typedef struct p4est_vtk_context p4est_vtk_context_t;
 
-/** Cleanly destroy a \ref p4est_vtk_context_t structure.
- *
- * This function closes all the file pointers and frees the context.
- * It can be called even if the VTK output
- * has only been partially written, the files' content will be incomplete.
- *
- * \param[in] context     The VTK file context to be destroyed.
- */
-void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
-
 /** Write the p4est in VTK format.
  *
  * This is a convenience function for the special case of writing out
@@ -69,6 +59,61 @@ void                p4est_vtk_write_file (p4est_t * p4est,
                                           p4est_geometry_t * geom,
                                           const char *filename);
 
+/** The first call to write a VTK file using individual functions.
+ *
+ * Writing a VTK file is split into multiple functions that keep a context.
+ * This is the first function that allocates the opaque context structure.
+ * After allocation, further parameters can be set for the context.
+ * Then, the header, possible data fields, and the footer must be written.
+ * The process can be aborted any time by destroying the context.  In this
+ * case, open files are closed cleanly with only partially written content.
+ *
+ * \param p4est     The p4est to be written.
+ * \param geom      A \ref p4est_geometry_t structure, or NULL for vertex space.
+ *                  If NULL, \b p4est->connectivity->vertices must be non-NULL.
+ * \param filename  The first part of the name which will have the processor
+ *                  number appended to it (i.e., the output file will be
+ *                  filename_rank.vtu).  The parallel meta-files for Paraview
+ *                  and Visit use this basename too.
+ * \return          A VTK context fur further use.
+ */
+p4est_vtk_context_t *p4est_vtk_context_new (p4est_t * p4est,
+                                            p4est_geometry_t * geom,
+                                            const char *filename);
+
+/** Modify the context parameter for scaling the quadrants.
+ * After \ref p4est_vtk_context_new, it is at the default 0.95.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not have been used to start writing in
+ *                              \ref p4est_vtk_write_header.
+ * \param [in] scale            Scale parameter must be in (0, 1].
+ */
+void                p4est_vtk_context_set_scale (p4est_vtk_context_t * cont,
+                                                 double scale);
+
+/** Modify the context parameter for expecting continuous point data.
+ * If set to true, the point data is understood as a continuous field.
+ * In this case, we can significantly reduce the file size.
+ * For discontinuous point data, it should be set to false.
+ * After \ref p4est_vtk_context_new, it is at the default true.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not have been used to start writing in
+ *                              \ref p4est_vtk_write_header.
+ * \param [in] continuous       Boolean parameter.
+ */
+void                p4est_vtk_context_set_continuous (p4est_vtk_context_t *
+                                                      cont, int continuous);
+
+/** Cleanly destroy a \ref p4est_vtk_context_t structure.
+ *
+ * This function closes all the file pointers and frees the context.
+ * It can be called even if the VTK output
+ * has only been partially written, the files' content will be incomplete.
+ *
+ * \param[in] context     The VTK file context to be destroyed.
+ */
+void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
+
 /** Write the VTK header.
  *
  * Writing a VTK file is split into a few routines.
@@ -83,7 +128,7 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  *
  * \param p4est     The p4est to be written.
  * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param scale     The relative length factor of the quadrants.
+ * \param scale     The (positive) relative length factor of the quadrants.
  *                  Use 1.0 to fit quadrants exactly, less to create gaps.
  * \param filename  The first part of the name which will have
  *                  the proc number appended to it (i.e., the
