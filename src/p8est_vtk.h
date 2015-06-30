@@ -69,6 +69,9 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  * case, open files are closed cleanly with only partially written content.
  *
  * \param p4est     The p8est to be written.
+ *                  If no geometry is specified in
+ *                  \ref p8est_vtk_context_set_geom, we require
+ *                  \b p8est->connectivity to have valid vertex arrays.
  * \param filename  The first part of the name which will have the processor
  *                  number appended to it (i.e., the output file will be
  *                  filename_rank.vtu).  The parallel meta-files for Paraview
@@ -86,7 +89,8 @@ p8est_vtk_context_t *p8est_vtk_context_new (p8est_t * p4est,
  *                              It must not yet have been used to start writing
  *                              in \ref p8est_vtk_write_header.
  * \param geom      A \ref p8est_geometry_t structure, or NULL for vertex space.
- *                  If NULL, \b p8est->connectivity->vertices must be non-NULL.
+ *                  If NULL, \b p8est->connectivity->vertices and
+ *                  \b tree_to_vertex must be non-NULL.
  */
 void                p8est_vtk_context_set_geom (p8est_vtk_context_t * cont,
                                                 p8est_geometry_t * geom);

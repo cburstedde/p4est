@@ -281,12 +281,13 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   p4est_nodes_t      *nodes;
   p4est_indep_t      *in;
 
-  SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
-                  "Must provide connectivity with vertex information");
-
-  P4EST_ASSERT (v != NULL && tree_to_vertex != NULL);
-
+  P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
+  if (geom == NULL) {
+    SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
+                    "Must provide connectivity with vertex information");
+    P4EST_ASSERT (v != NULL && tree_to_vertex != NULL);
+  }
 
   /* this context is officially in use for writing */
   cont->writing = 1;
@@ -356,8 +357,15 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
       num_quads = quadrants->elem_count;
 
       /* retrieve corners of the tree */
-      for (k = 0; k < P4EST_CHILDREN; ++k)
-        vt[k] = tree_to_vertex[jt * P4EST_CHILDREN + k];
+      if (geom == NULL) {
+        for (k = 0; k < P4EST_CHILDREN; ++k) {
+          vt[k] = tree_to_vertex[jt * P4EST_CHILDREN + k];
+        }
+      }
+      else {
+        /* provoke crash on logic bug */
+        v = NULL;
+      }
 
       /* loop over the elements in tree and calculate vertex coordinates */
       for (zz = 0; zz < num_quads; ++zz, ++quad_count) {
@@ -420,8 +428,15 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 
       /* retrieve corners of the tree */
       jt = in->p.which_tree;
-      for (k = 0; k < P4EST_CHILDREN; ++k)
-        vt[k] = tree_to_vertex[jt * P4EST_CHILDREN + k];
+      if (geom == NULL) {
+        for (k = 0; k < P4EST_CHILDREN; ++k) {
+          vt[k] = tree_to_vertex[jt * P4EST_CHILDREN + k];
+        }
+      }
+      else {
+        /* provoke crash on logic bug */
+        v = NULL;
+      }
 
       /* calculate vertex coordinates */
       eta_x = intsize * in->x;
