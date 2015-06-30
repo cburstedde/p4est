@@ -26,12 +26,12 @@
 #include <p4est_extended.h>
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
-#else
+#else /* P4_TO_P8 */
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
-#endif
+#endif /* P4_TO_P8 */
 
 /** For a quadrant that touches a tree face with a corner inside the face,
  * get the number of the touching face.
@@ -58,7 +58,7 @@ tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
   if (q->z == (which ? end : 0)) {
     return 4 + (which >> 2);
   }
-#endif
+#endif /* P4_TO_P8 */
   SC_ABORT_NOT_REACHED ();
 }
 
@@ -99,7 +99,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                 fc1, fc2, diagonal;
 #ifdef P4_TO_P8
   int                 pref, pset;
-#endif
+#endif /* P4_TO_P8 */
   int                 visited[P4EST_CHILDREN];
   int8_t             *pccorner;
   size_t              cz, zz;
@@ -180,9 +180,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         pref = p8est_face_permutation_refs[f1][f2];
         pset = p8est_face_permutation_sets[pref][orientation];
         diagonal = (p8est_face_permutations[pset][fc1] ^ fc2) == 3;
-#else
+#else /* P4_TO_P8 */
         diagonal = (fc1 ^ fc2) != orientation;
-#endif
+#endif /* P4_TO_P8 */
         if (!diagonal) {
           side2 = NULL;
           continue;
@@ -236,7 +236,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     }
     return;
   }
-#endif
+#endif /* P4_TO_P8 */
 
   if (info->tree_boundary == P4EST_CONNECT_CORNER) {
     int                 c1, ncorner[P4EST_DIM];
@@ -605,8 +605,10 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 
 p4est_mesh_t       *
-p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
-                    int compute_tree_index, int compute_level_lists,
+p4est_mesh_new_ext (p4est_t * p4est,
+                    p4est_ghost_t * ghost,
+                    int compute_tree_index,
+                    int compute_level_lists,
                     p4est_connect_type_t btype)
 {
   int                 do_corner = 0;
@@ -616,13 +618,16 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      jl;
   p4est_mesh_t       *mesh;
 
+  /* check whether input condition for p4est is met */
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
+  /* number of local quadrants and number of local ghost cells */
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
   ng = mesh->ghost_num_quadrants = (p4est_locidx_t) ghost->ghosts.elem_count;
 
+  /* decide which callback function have to be activated */
   if (btype == P4EST_CONNECT_FULL) {
     do_corner = 1;
   }
@@ -633,12 +638,13 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
   }
 
+  /* allocate data structures */
   mesh->ghost_to_proc = P4EST_ALLOC (int, ng);
   mesh->quad_to_quad = P4EST_ALLOC (p4est_locidx_t, P4EST_FACES * lq);
   mesh->quad_to_face = P4EST_ALLOC (int8_t, P4EST_FACES * lq);
   mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
 
-  /* Optional per-level lists of quadrants */
+  /* Allocate optional per-level lists of quadrants */
   if (compute_level_lists) {
     mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL + 1);
 
@@ -661,6 +667,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
   memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
 
+  /* Allocate optional lists of corner information */
   if (do_corner) {
     /* Initialize corner information to a consistent state */
     mesh->quad_to_corner = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
@@ -675,11 +682,13 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 
   /* Call the forest iterator to collect face connectivity */
-  p4est_iterate (p4est, ghost, mesh,
+  p4est_iterate (p4est,      /* p4est */
+                 ghost,      /* ghost layer */
+                 mesh,       /* user_data */
                  (do_volume ? mesh_iter_volume : NULL), mesh_iter_face,
 #ifdef P4_TO_P8
                  NULL,
-#endif
+#endif /* P4_TO_P8 */
                  do_corner ? mesh_iter_corner : NULL);
 
   return mesh;
