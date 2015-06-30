@@ -107,9 +107,9 @@ void                p8est_vtk_context_set_scale (p8est_vtk_context_t * cont,
 
 /** Modify the context parameter for expecting continuous point data.
  * If set to true, the point data is understood as a continuous field.
- * In this case, we can significantly reduce the file size.
+ * In this case, we can significantly reduce the file size when scale == 1.
  * For discontinuous point data, it should be set to false.
- * After \ref p8est_vtk_context_new, it is at the default true.
+ * After \ref p8est_vtk_context_new, it is at the default false.
  * \param [in,out] cont         The context is modified.
  *                              It must not yet have been used to start writing
  *                              in \ref p8est_vtk_write_header.
@@ -261,7 +261,7 @@ p8est_vtk_context_t *p8est_vtk_write_cell_vector (p8est_vtk_context_t * cont,
  * number of point vector data must be exactly \a
  * 3*P8EST_CHILDREN*local_num_quadrants. I.e. there must be data for every
  * corner of every quadrant in the \a p8est, even if the corner is shared by
- * multiple quadrants. If \a scale = 1 the number of point data in each
+ * multiple quadrants. If \a scale == 1. the number of point data in each
  * sc_array is determined by the number of nodes returned by \b
  * p8est_nodes_new, specifically by the value of \a num_owned_indeps in the
  * p8est_nodes_t structure.  See p8est_nodes.h for more information.

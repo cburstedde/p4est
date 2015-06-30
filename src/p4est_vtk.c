@@ -33,7 +33,7 @@
 
 /* default parameters for the vtk context and thus p4est_vtk_write_file */
 static const double p4est_vtk_scale = 0.95;
-static const int    p4est_vtk_continuous = 1;
+static const int    p4est_vtk_continuous = 0;
 
 /* default parameters for p4est_vtk_write_file */
 static const int    p4est_vtk_write_tree = 1;
@@ -102,7 +102,7 @@ struct p4est_vtk_context
   /* parameters that can optionally be set in a context */
   p4est_geometry_t   *geom;        /**< The geometry may be NULL. */
   double              scale;       /**< Parameter to shrink quadrants. */
-  int                 continuous;  /**< Assume continuous data. */
+  int                 continuous;  /**< Assume continuous point data? */
 
   /* internal context data */
   int                 writing;     /**< True after p4est_vtk_write_header. */
@@ -241,20 +241,18 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
 p4est_vtk_context_t *
 p4est_vtk_write_header (p4est_vtk_context_t * cont)
 {
-  p4est_t            *p4est = cont->p4est;
-  p4est_geometry_t   *geom = cont->geom;
-  const char         *filename = cont->filename;
-  const double        scale = cont->scale;
-  p4est_connectivity_t *connectivity = p4est->connectivity;
-  sc_array_t         *trees = p4est->trees;
-  const int           mpirank = p4est->mpirank;
   const double        intsize = 1.0 / P4EST_ROOT_LEN;
-  const double       *v = connectivity->vertices;
-  const p4est_topidx_t first_local_tree = p4est->first_local_tree;
-  const p4est_topidx_t last_local_tree = p4est->last_local_tree;
-  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
-  const p4est_locidx_t Ncells = p4est->local_num_quadrants;
-  const p4est_locidx_t Ncorners = P4EST_CHILDREN * Ncells;
+  int                 mpirank;
+  int                 conti;
+  double              scale;
+  const char         *filename;
+  const double       *v;
+  const p4est_topidx_t *tree_to_vertex;
+  p4est_topidx_t      first_local_tree, last_local_tree;
+  p4est_locidx_t      Ncells, Ncorners;
+  p4est_t            *p4est;
+  p4est_connectivity_t *connectivity;
+  p4est_geometry_t   *geom;
 #ifdef P4EST_VTK_ASCII
   double              wx, wy, wz;
   p4est_locidx_t      sk;
@@ -276,30 +274,54 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   p4est_locidx_t      il;
   P4EST_VTK_FLOAT_TYPE *float_data;
   sc_array_t         *quadrants, *indeps;
+  sc_array_t         *trees;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   p4est_nodes_t      *nodes;
   p4est_indep_t      *in;
 
+  /* check a whole bunch of assertions, here and below */
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
+
+  /* from now on this context is officially in use for writing */
+  cont->writing = 1;
+  
+  /* grab context variables */
+  p4est = cont->p4est;
+  filename = cont->filename;
+  geom = cont->geom;
+  scale = cont->scale;
+  conti = cont->continuous;
+  P4EST_ASSERT (filename != NULL);
+
+  /* grab details from the forest */
+  P4EST_ASSERT (p4est != NULL);
+  mpirank = p4est->mpirank;
+  connectivity = p4est->connectivity;
+  P4EST_ASSERT (connectivity != NULL);
+  v = connectivity->vertices;
+  tree_to_vertex = connectivity->tree_to_vertex;
   if (geom == NULL) {
-    SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
+    SC_CHECK_ABORT (connectivity->num_vertices > 0,
                     "Must provide connectivity with vertex information");
     P4EST_ASSERT (v != NULL && tree_to_vertex != NULL);
   }
+  trees = p4est->trees;
+  first_local_tree = p4est->first_local_tree;
+  last_local_tree = p4est->last_local_tree;
+  Ncells = p4est->local_num_quadrants;
+  Ncorners = P4EST_CHILDREN * Ncells;
 
-  /* this context is officially in use for writing */
-  cont->writing = 1;
-
-  if (scale < 1.) {
+  if (scale < 1. || !conti) {
     /* when we scale the quadrants we need each corner separately */
     nodes = NULL;
     indeps = NULL;
     Ntotal = Ncorners;
   }
   else {
-    /* when scale == 1. we can reuse shared quadrant corners */
+    /* when scale == 1. and the point data is continuous,
+     * we can reuse shared quadrant corners */
     nodes = p4est_nodes_new (p4est, NULL);
     indeps = &nodes->indep_nodes;
     Ntotal = nodes->num_owned_indeps;
