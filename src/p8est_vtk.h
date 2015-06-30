@@ -73,6 +73,8 @@ void                p8est_vtk_write_file (p8est_t * p8est,
  *                  number appended to it (i.e., the output file will be
  *                  filename_rank.vtu).  The parallel meta-files for Paraview
  *                  and Visit use this basename too.
+ *                  We copy this filename to internal storage, so it is not
+ *                  needed to remain alive after calling this function.
  * \return          A VTK context fur further use.
  */
 p8est_vtk_context_t *p8est_vtk_context_new (p8est_t * p4est,

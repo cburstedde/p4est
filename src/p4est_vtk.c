@@ -97,7 +97,7 @@ struct p4est_vtk_context
 {
   /* data passed initially */
   p4est_t            *p4est;       /**< The p4est structure must be alive. */
-  const char         *filename;    /**< Original filename provided is copied. */
+  char               *filename;    /**< Original filename provided is copied. */
 
   /* parameters that can optionally be set in a context */
   p4est_geometry_t   *geom;        /**< The geometry may be NULL. */
@@ -127,7 +127,7 @@ p4est_vtk_context_new (p4est_t * p4est, const char *filename)
   cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
 
   cont->p4est = p4est;
-  cont->filename = filename;
+  cont->filename = P4EST_STRDUP (filename);
 
   cont->scale = p4est_vtk_scale;
   cont->continuous = p4est_vtk_continuous;
@@ -172,6 +172,9 @@ p4est_vtk_context_destroy (p4est_vtk_context_t * context)
 
   /* since this function is called inside write_header and write_footer,
    * we cannot assume a consistent state of all member variables */
+
+  P4EST_ASSERT (context->filename != NULL);
+  P4EST_FREE (context->filename);
 
   /* Close all file pointers. */
   if (context->vtufile != NULL) {
