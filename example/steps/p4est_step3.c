@@ -470,7 +470,7 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
 {
-  sc_array_t         *u_interp = (sc_array_t *) user_data;  /* we passed the array of values to fill as the user_data in the call to p4est_iterate */
+  sc_array_t         *u_interp = (sc_array_t *) user_data;      /* we passed the array of values to fill as the user_data in the call to p4est_iterate */
   p4est_t            *p4est = info->p4est;
   p4est_quadrant_t   *q = info->quad;
   p4est_topidx_t      which_tree = info->treeid;
@@ -500,7 +500,7 @@ step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
        * the +y side, etc. */
       this_u += (h / 2) * data->du[j] * ((i & (1 << j)) ? 1. : -1.);
     }
-    this_u_ptr = (double *) sc_array_index(u_interp, arrayoffset + i);
+    this_u_ptr = (double *) sc_array_index (u_interp, arrayoffset + i);
     this_u_ptr[0] = this_u;
   }
 
@@ -547,27 +547,26 @@ step3_write_solution (p4est_t * p4est, int timestep)
 
   /* begin writing the output files */
   context = p4est_vtk_write_header (context);
-  SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing vtk header");
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing vtk header");
 
-  context = p4est_vtk_write_cell_data (context,
-                                       0,        /* do not write the tree id's of each quadrant (there is only one tree in this example) */
-                                       1,        /* do write the refinement level of each quadrant */
-                                       1,        /* do write the mpi process id of each quadrant */
-                                       0,        /* do not wrap the mpi rank (if this were > 0, the modulus of the rank relative to this number would be written instead of the rank) */
-                                       0,        /* there is no custom cell scalar data. */
-                                       0,        /* there is no custom cell vector data. */
-                                       context); /* mark the end of the variable cell data. */
-  SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing cell data");
+  context = p4est_vtk_write_cell_data (context, 0,      /* do not write the tree id's of each quadrant (there is only one tree in this example) */
+                                       1,       /* do write the refinement level of each quadrant */
+                                       1,       /* do write the mpi process id of each quadrant */
+                                       0,       /* do not wrap the mpi rank (if this were > 0, the modulus of the rank relative to this number would be written instead of the rank) */
+                                       0,       /* there is no custom cell scalar data. */
+                                       0,       /* there is no custom cell vector data. */
+                                       context);        /* mark the end of the variable cell data. */
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing cell data");
 
-  context = p4est_vtk_write_point_data (context,
-                                        1,       /* write one scalar field: the solution value */
-                                        0,       /* write no vector fields */
-                                        "solution",
-                                        u_interp,
-                                        context); /* mark the end of the variable cell data. */
-  SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing cell data");
+  context = p4est_vtk_write_point_data (context, 1,     /* write one scalar field: the solution value */
+                                        0,      /* write no vector fields */
+                                        "solution", u_interp, context); /* mark the end of the variable cell data. */
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing cell data");
 
-  const int retval = p4est_vtk_write_footer (context);
+  const int           retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_array_destroy (u_interp);
