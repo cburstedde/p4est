@@ -341,6 +341,7 @@
 /* functions in p4est_vtk */
 #define p4est_vtk_context_new           p8est_vtk_context_new
 #define p4est_vtk_context_destroy       p8est_vtk_context_destroy
+#define p4est_vtk_context_set_geom      p8est_vtk_context_set_geom
 #define p4est_vtk_context_set_scale     p8est_vtk_context_set_scale
 #define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file

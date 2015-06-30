@@ -69,8 +69,6 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  * case, open files are closed cleanly with only partially written content.
  *
  * \param p4est     The p4est to be written.
- * \param geom      A \ref p4est_geometry_t structure, or NULL for vertex space.
- *                  If NULL, \b p4est->connectivity->vertices must be non-NULL.
  * \param filename  The first part of the name which will have the processor
  *                  number appended to it (i.e., the output file will be
  *                  filename_rank.vtu).  The parallel meta-files for Paraview
@@ -78,8 +76,18 @@ void                p4est_vtk_write_file (p4est_t * p4est,
  * \return          A VTK context fur further use.
  */
 p4est_vtk_context_t *p4est_vtk_context_new (p4est_t * p4est,
-                                            p4est_geometry_t * geom,
                                             const char *filename);
+
+/** Modify the geometry transformation registered in the context.
+ * After \ref p4est_vtk_context_new, it is at the default NULL.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p4est_vtk_write_header.
+ * \param geom      A \ref p4est_geometry_t structure, or NULL for vertex space.
+ *                  If NULL, \b p4est->connectivity->vertices must be non-NULL.
+ */
+void                p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
+                                                p4est_geometry_t * geom);
 
 /** Modify the context parameter for scaling the quadrants.
  * After \ref p4est_vtk_context_new, it is at the default 0.95.
@@ -120,29 +128,27 @@ void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
  * This allows there to be an arbitrary number of
  * fields.  The calling sequence would be something like
  *
- *     vtk_context = p4est_vtk_write_header (p4est, geom, 1., "output");
- *     vtk_context = p4est_vtk_write_point_data (vtk_context, ...);
+ *     vtk_context = p4est_vtk_context_new (p4est, "output");
+ *     p4est_vtk_context_set_* (vtk_context, parameter);
+ *     vtk_context = p4est_vtk_write_header (vtk_context, ...);
+ *     if (vtk_context == NULL) { error; }
  *     vtk_context = p4est_vtk_write_cell_data (vtk_context, ...);
- *     ...
- *     p4est_vtk_write_footer (vtk_context);
+ *     if (vtk_context == NULL) { error; }
+ *     vtk_context = p4est_vtk_write_point_data (vtk_context, ...);
+ *     if (vtk_context == NULL) { error; }
+ *     retval = p4est_vtk_write_footer (vtk_context);
+ *     if (retval) { error; }
  *
- * \param p4est     The p4est to be written.
- * \param geom      A p4est_geometry_t structure or NULL for vertex space.
- * \param scale     The (positive) relative length factor of the quadrants.
- *                  Use 1.0 to fit quadrants exactly, less to create gaps.
- * \param filename  The first part of the name which will have
- *                  the proc number appended to it (i.e., the
- *                  output file will be filename_rank.vtu).
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ *                         None of the vtk_write functions must have been called.
+ *                         This context is the return value if no error occurs.
  *
  * \return          On success, an opaque context (p4est_vtk_context_t) pointer
  *                  that must be passed to subsequent p4est_vtk calls.  It is
- *                  required to call p4est_vtk_write_footer eventually with
+ *                  required to call \ref p4est_vtk_write_footer eventually with
  *                  this value.  Returns NULL on error.
  */
-p4est_vtk_context_t *p4est_vtk_write_header (p4est_t * p4est,
-                                             p4est_geometry_t * geom,
-                                             double scale,
-                                             const char *filename);
+p4est_vtk_context_t *p4est_vtk_write_header (p4est_vtk_context_t * cont);
 
 /** Write VTK cell data.
  *
@@ -153,7 +159,7 @@ p4est_vtk_context_t *p4est_vtk_write_header (p4est_t * p4est,
  * This allows there to be an arbitrary number of
  * fields.
  *
- * \param [in,out] cont    A VTK context created by \ref p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
  * \param [in] write_tree  Boolean to determine if the tree id should be output.
  * \param [in] write_level Boolean to determine if the tree levels should be output.
  * \param [in] write_rank  Boolean to determine if the MPI rank should be output.
@@ -207,7 +213,7 @@ p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of fields.
  * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
  *
- * \param [in,out] cont    A VTK context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
  * \param [in] scalar_name The name of the scalar field.
  * \param [in] values      The cell values that will be written.
  *
@@ -224,7 +230,7 @@ p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of fields.
  * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
  *
- * \param [in,out] cont    A VTK context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
  * \param [in] vector_name The name of the vector field.
  * \param [in] values      The cell values that will be written.
  *
@@ -241,7 +247,7 @@ p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of
  * fields.
  *
- * \param [in,out] cont          A VTK context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
  * \param [in] num_point_scalars Number of point scalar datasets to output.
  * \param [in] num_point_vectors Number of point vector datasets to output.
  *
@@ -282,7 +288,7 @@ p4est_vtk_context_t *p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of fields.
  * When in doubt, please use \ref p4est_vtk_write_point_data instead.
  *
- * \param [in,out] cont    A VTK context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
  * \param [in] scalar_name The name of the scalar field.
  * \param [in] values      The point values that will be written.
  *
@@ -299,7 +305,7 @@ p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
  * This allows there to be an arbitrary number of fields.
  * When in doubt, please use \ref p4est_vtk_write_point_data instead.
  *
- * \param [in,out] cont    A VTK context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
  * \param [in] vector_name The name of the vector field.
  * \param [in] values      The point values that will be written.
  *
@@ -313,16 +319,6 @@ p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
 /** Write the VTU footer and clean up.
  *
  * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of
- * fields.  To write out two fields the
- * calling sequence would be something like
- *
- *     vtk_context = p4est_vtk_write_header (p4est, ..., "output");
- *     vtk_context = p4est_vtk_write_point_data (vtk_context, ...);
- *     vtk_context = p4est_vtk_write_cell_data (vtk_context, ...);
- *     ...
- *     p4est_vtk_write_footer (vtk_context);
- *
  * This function writes the footer information to the VTK file and cleanly
  * destroys the VTK context.
  *

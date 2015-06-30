@@ -156,8 +156,11 @@ main (int argc, char **argv)
 
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
-  p4est_vtk_context_t * context = p4est_vtk_write_header (p4est, NULL, 1. - 2. * SC_EPS, filename);
-  SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk: Error writing header");
+  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
+  p4est_vtk_context_set_continuous (context, 0);
+  p4est_vtk_context_set_scale (context, 1. - 2. * SC_EPS);
+  context = p4est_vtk_write_header (context);
+  SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing header");
 
   vtkvec = sc_dmatrix_new (p4est->local_num_quadrants, P4EST_CHILDREN);
   tree = p4est_tree_array_index (p4est->trees, 0);

@@ -76,20 +76,20 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
  *
  * This structure holds all the information needed for the p4est vtk context.
  * It is used to relay necessary vtk information to the \b p4est_vtk_write_*
- * functions. This structure is initialized by \b p4est_vtk_write_header and
+ * functions. This structure is initialized by \ref p4est_vtk_write_header and
  * destroyed by \b p4est_vtk_write_footer; it can also be destroyed manually
  * using the \b p4est_vtk_context_destroy function if necessary.
  *
  * The \a p4est member is a pointer to the local p4est.
  * The \a geom member is a pointer to the geometry used to create the p4est.
  * The \a num_nodes member holds the number of nodes present in the vtk output;
- * this is determined in \b p4est_vtk_write_header using the \a scale parameter
+ * this is determined in \ref p4est_vtk_write_header using the \a scale parameter
  * and is used to assure the proper number of point variables are provided.
  * The \a filename member holds the vtk file basename: for error reporting.
  * The \a vtufilename, \a pvtufilename, and \a visitfilename members are the
  * vtk file names.
  * The \a vtufile, \a pvtufile, and \a visitfile members are the vtk file
- * pointers; opened by \b p4est_vtk_write_header and closed by \b
+ * pointers; opened by \ref p4est_vtk_write_header and closed by \b
  * p4est_vtk_write_footer.
  *
  */
@@ -97,10 +97,10 @@ struct p4est_vtk_context
 {
   /* data passed initially */
   p4est_t            *p4est;       /**< The p4est structure must be alive. */
-  p4est_geometry_t   *geom;        /**< The geometry may be NULL. */
-  const char         *filename;    /**< Original filename provided. */
+  const char         *filename;    /**< Original filename provided is copied. */
 
-  /* parameters that can be set on a context */
+  /* parameters that can optionally be set in a context */
+  p4est_geometry_t   *geom;        /**< The geometry may be NULL. */
   double              scale;       /**< Parameter to shrink quadrants. */
   int                 continuous;  /**< Assume continuous data. */
 
@@ -116,8 +116,7 @@ struct p4est_vtk_context
 };
 
 p4est_vtk_context_t *
-p4est_vtk_context_new (p4est_t * p4est, p4est_geometry_t * geom,
-                       const char *filename)
+p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 {
   p4est_vtk_context_t *cont;
 
@@ -128,13 +127,22 @@ p4est_vtk_context_new (p4est_t * p4est, p4est_geometry_t * geom,
   cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
 
   cont->p4est = p4est;
-  cont->geom = geom;
   cont->filename = filename;
 
   cont->scale = p4est_vtk_scale;
   cont->continuous = p4est_vtk_continuous;
 
   return cont;
+}
+
+void
+p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
+                            p4est_geometry_t * geom)
+{
+  P4EST_ASSERT (cont != NULL);
+  P4EST_ASSERT (!cont->writing);
+
+  cont->geom = geom;
 }
 
 void
@@ -205,38 +213,35 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
                       const char *filename)
 {
   int                 retval;
-  p4est_vtk_context_t *cont = NULL;
+  p4est_vtk_context_t *cont;
 
-  cont = p4est_vtk_write_header (p4est, geom, p4est_vtk_scale, filename);
+  /* allocate context and set parameters */
+  cont = p4est_vtk_context_new (p4est, filename);
+  p4est_vtk_context_set_geom (cont, geom);
+
+  /* write header, that is, vertex positions and quadrant-to-vertex map */
+  cont = p4est_vtk_write_header (cont);
   SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing header");
 
-  /* Write the tree/level/rank data. */
+  /* write the tree/level/rank data */
   cont =
     p4est_vtk_write_cell_data (cont, p4est_vtk_write_tree,
                                p4est_vtk_write_level, p4est_vtk_write_rank,
                                p4est_vtk_wrap_rank, 0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing cell data");
 
+  /* properly write rest of the files' contents */
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
-                        double scale, const char *filename)
+p4est_vtk_write_header (p4est_vtk_context_t * cont)
 {
-  /* Allocate, initialize the vtk context. */
-  p4est_vtk_context_t *cont = P4EST_ALLOC_ZERO (p4est_vtk_context_t, 1);
-
-  /* TODO: move instructions after declarations for C conformance */
-  cont->filename = filename;
-  cont->p4est = p4est;
-  cont->geom = geom;
-  /*
-   * TODO: [ehereth 2014-12-25 02:18:43]
-   *       Move all context file initialization here for clarity.
-   */
-
+  p4est_t            *p4est = cont->p4est;
+  p4est_geometry_t   *geom = cont->geom;
+  const char         *filename = cont->filename;
+  const double        scale = cont->scale;
   p4est_connectivity_t *connectivity = p4est->connectivity;
   sc_array_t         *trees = p4est->trees;
   const int           mpirank = p4est->mpirank;
@@ -276,7 +281,6 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
   SC_CHECK_ABORT (p4est->connectivity->num_vertices > 0,
                   "Must provide connectivity with vertex information");
 
-  P4EST_ASSERT (0. < scale && scale <= 1.);
   P4EST_ASSERT (v != NULL && tree_to_vertex != NULL);
 
   P4EST_ASSERT (!cont->writing);
@@ -676,7 +680,7 @@ p4est_vtk_write_header (p4est_t * p4est, p4est_geometry_t * geom,
  * \note This function is actually called from \b p4est_vtk_write_point_data
  * and does all of the work.
  *
- * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
  * \param [in] num_point_scalars Number of point scalar datasets to output.
  * \param [in] num_point_vectors Number of point vector datasets to output.
  * \param [in,out] ap      An initialized va_list used to access the
@@ -861,7 +865,7 @@ p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
  * \note This function is actually called from \b p4est_vtk_write_cell_data
  * and does all of the work.
  *
- * \param [in,out] cont    A vtk context created by p4est_vtk_write_header.
+ * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
  * \param [in] num_point_scalars Number of point scalar datasets to output.
  * \param [in] num_point_vectors Number of point vector datasets to output.
  * \param [in,out] ap      An initialized va_list used to access the
