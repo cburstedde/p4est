@@ -997,7 +997,9 @@ COLS_IN_ALPHA_INDEX    = 3
 # while generating the index headers.
 # This tag requires that the tag ALPHABETICAL_INDEX is set to YES.
 
-IGNORE_PREFIX          = p4est_ \
+IGNORE_PREFIX          = p2est_ \
+                         p4est_ \
+                         p6est_ \
                          p8est_
 
 #---------------------------------------------------------------------------
