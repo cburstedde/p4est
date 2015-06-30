@@ -170,7 +170,7 @@ p4est_vtk_context_t *p4est_vtk_write_cell_data2 (p4est_vtk_context_t * cont,
  *                  On failure, returns NULL and deallocates the context.
  */
 p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
-                                                  const char * scalar_name,
+                                                  const char *scalar_name,
                                                   sc_array_t * values);
 
 /** Write a 3-vector cell field to the VTU file.

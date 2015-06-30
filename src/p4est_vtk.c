@@ -679,7 +679,8 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
   SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
                   "data must be specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING "_vtk.h for more information.");
+                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING
+                  "_vtk.h for more information.");
 
   fprintf (cont->vtufile, "      <PointData");
   if (point_scalars != NULL)
@@ -881,7 +882,8 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
   SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
                   "data must be specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING "_vtk.h for more information.");
+                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING
+                  "_vtk.h for more information.");
 
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
@@ -1154,8 +1156,7 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
 
 p4est_vtk_context_t *
 p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
-                              const char *scalar_name,
-                              sc_array_t * values)
+                              const char *scalar_name, sc_array_t * values)
 {
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   const p4est_locidx_t Ncorners = P4EST_CHILDREN * Ncells;      /* type ok */
@@ -1174,16 +1175,19 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
   for (il = 0; il < Ncorners; ++il) {
 #ifdef P4EST_VTK_DOUBLES
     fprintf (cont->vtufile, "     %24.16e\n",
-             (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, il)));
+             (P4EST_VTK_FLOAT_TYPE) *
+             ((double *) sc_array_index (values, il)));
 #else
     fprintf (cont->vtufile, "          %16.8e\n",
-             (P4EST_VTK_FLOAT_TYPE) *((double *) sc_array_index (values, il)));
+             (P4EST_VTK_FLOAT_TYPE) *
+             ((double *) sc_array_index (values, il)));
 #endif
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncorners);
   for (il = 0; il < Ncorners; ++il) {
-    float_data[il] = (P4EST_VTK_FLOAT_TYPE) *((double *) sc_array_index (values, il));
+    float_data[il] =
+      (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, il));
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1216,16 +1220,14 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
 
 p4est_vtk_context_t *
 p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
-                              const char *vector_name,
-                              sc_array_t * values)
+                              const char *vector_name, sc_array_t * values)
 {
   SC_ABORT (P4EST_STRING "_vtk_write_point_vector not implemented");
 }
 
 p4est_vtk_context_t *
 p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
-                             const char *scalar_name,
-                             sc_array_t * values)
+                             const char *scalar_name, sc_array_t * values)
 {
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   p4est_locidx_t      il;
@@ -1243,16 +1245,19 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
   for (il = 0; il < Ncells; ++il) {
 #ifdef P4EST_VTK_DOUBLES
     fprintf (cont->vtufile, "     %24.16e\n",
-             (P4EST_VTK_FLOAT_TYPE) *((double *) sc_array_index (values, il)));
+             (P4EST_VTK_FLOAT_TYPE) *
+             ((double *) sc_array_index (values, il)));
 #else
     fprintf (cont->vtufile, "          %16.8e\n",
-             (P4EST_VTK_FLOAT_TYPE) *((double *) sc_array_index (values, il)));
+             (P4EST_VTK_FLOAT_TYPE) *
+             ((double *) sc_array_index (values, il)));
 #endif
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncells);
   for (il = 0; il < Ncells; ++il) {
-    float_data[il] = (P4EST_VTK_FLOAT_TYPE) *((double *) sc_array_index (values, il));
+    float_data[il] =
+      (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, il));
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1285,8 +1290,7 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
 
 p4est_vtk_context_t *
 p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
-                             const char *vector_name,
-                             sc_array_t * values)
+                             const char *vector_name, sc_array_t * values)
 {
   SC_ABORT (P4EST_STRING "_vtk_write_cell_vector not implemented");
 }
