@@ -31,7 +31,7 @@
 #define P4EST_VTK_CELL_TYPE      8      /* VTK_PIXEL */
 #endif /* !P4_TO_P8 */
 
-/* default parameters for the vtk context and thus p4est_vtk_write_file */
+/* default parameters for the vtk context */
 static const double p4est_vtk_scale = 0.95;
 static const int    p4est_vtk_continuous = 0;
 
@@ -221,6 +221,10 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
   /* allocate context and set parameters */
   cont = p4est_vtk_context_new (p4est, filename);
   p4est_vtk_context_set_geom (cont, geom);
+
+  /* We do not write point data, so it is safe to set continuous to true.
+   * This will not save any space though since the default scale is < 1. */
+  p4est_vtk_context_set_continuous (cont, 1);
 
   /* write header, that is, vertex positions and quadrant-to-vertex map */
   cont = p4est_vtk_write_header (cont);
