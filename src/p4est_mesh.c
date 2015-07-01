@@ -94,23 +94,23 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
 static void
 mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
-  int                 i, j;
-  int                 f1, f2, code, orientation;
-  int                 fc1, fc2, diagonal;
-#ifdef P4_TO_P8
-  int                 pref, pset;
-#endif /* P4_TO_P8 */
-  int                 visited[P4EST_CHILDREN];
-  int8_t             *pccorner;
-  size_t              cz, zz;
-  sc_array_t         *trees;
-  p4est_locidx_t      qoffset, qid1, qid2;
-  p4est_locidx_t      cornerid_offset, cornerid;
-  p4est_locidx_t     *pcquad;
-  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  int                      i, j;
+  int                      f1, f2, code, orientation;
+  int                      fc1, fc2, diagonal;
+#ifdef                     P4_TO_P8
+  int                      pref, pset;
+#endif                     /* P4_TO_P8 */
+  int                      visited[P4EST_CHILDREN];
+  int8_t                   *pccorner;
+  size_t                   cz, zz;
+  p4est_locidx_t           qoffset, qid1, qid2;
+  p4est_locidx_t           cornerid_offset, cornerid;
+  p4est_locidx_t           *pcquad;
+  p4est_mesh_t             *mesh = (p4est_mesh_t *) user_data;
   p4est_iter_corner_side_t *side1, *side2;
-  p4est_tree_t       *tree1, *tree2;
+  p4est_tree_t             *tree1, *tree2;
   p4est_connectivity_t *conn;
+  sc_array_t               *trees;
 
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
@@ -420,7 +420,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
     /* this face is between two quadrants */
     P4EST_ASSERT (info->orientation == 0 || info->tree_boundary);
     P4EST_ASSERT (info->sides.elem_count == 2);
-    side = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 0);
+    side  = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 0);
     side2 = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 1);
     P4EST_ASSERT (info->tree_boundary || side->treeid == side2->treeid);
     P4EST_ASSERT (!side->is_hanging || !side2->is_hanging);
@@ -451,6 +451,9 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       }
 
       /* encode quadrant neighborhood */
+      /* check that nothing has been written to that spot, i.e. nothing is
+       * overwritten and at the position we want to write to we still find the
+       * initially set values. */
       if (!side->is.full.is_ghost) {
         in_qtoq = P4EST_FACES * jl + side->face;
         P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
@@ -505,6 +508,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       }
 
       /* encode quadrant neighborhood */
+      /* again: check before writing that corresponding values are untouched */
       if (!side->is.full.is_ghost) {
         in_qtoq = P4EST_FACES * jl + side->face;
         P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
