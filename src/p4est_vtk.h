@@ -262,24 +262,20 @@ p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
  * 'fieldname' argument shall be a char string containing the name of the data
  * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
  * arguments shall be an sc_array_t * holding double variables. The number of
- * doubles in each sc_array must be exactly \a cont->num_nodes for scalar data
- * and \a 3*cont->num_nodes for vector data.
+ * doubles in each sc_array must be exactly the number of components (1 for
+ * scalar and 3 for vector) times 4 times number of elements.
  *
  * \note The current
  * p4est_vtk_context_t structure, cont, must be the last argument of any call
  * to this function; this argument is used to validate that the correct number
  * of variable arguments have been provided.
  *
- * \note \a cont->num_nodes is set in \ref p4est_vtk_write_header based on the \a
- * scale parameter. If \a scale < 1 the number of point scalar data in each
+ * \note The number of point scalar data in each
  * sc_array must be exactly \a P4EST_CHILDREN*local_num_quadrants, and the
  * number of point vector data must be exactly \a
  * 3*P4EST_CHILDREN*local_num_quadrants. I.e. there must be data for every
  * corner of every quadrant in the \a p4est, even if the corner is shared by
- * multiple quadrants. If \a scale == 1. the number of point data in each
- * sc_array is determined by the number of nodes returned by \b
- * p4est_nodes_new, specifically by the value of \a num_owned_indeps in the
- * p4est_nodes_t structure.  See p4est_nodes.h for more information.
+ * multiple quadrants.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.

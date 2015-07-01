@@ -82,7 +82,7 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
  *
  * The \a p4est member is a pointer to the local p4est.
  * The \a geom member is a pointer to the geometry used to create the p4est.
- * The \a num_nodes member holds the number of nodes present in the vtk output;
+ * The \a num_points member holds the number of nodes present in the vtk output;
  * this is determined in \ref p4est_vtk_write_header using the \a scale parameter
  * and is used to assure the proper number of point variables are provided.
  * The \a filename member holds the vtk file basename: for error reporting.
@@ -106,7 +106,9 @@ struct p4est_vtk_context
 
   /* internal context data */
   int                 writing;     /**< True after p4est_vtk_write_header. */
-  p4est_locidx_t      num_nodes;   /**< Number of Q1 dofs passed. */
+  p4est_locidx_t      num_points;  /**< Number of VTK points written. */
+  p4est_locidx_t     *node_to_corner;     /**< Map a node to one cell corner. */
+  p4est_nodes_t      *nodes;       /**< NULL? depending on scale/continuous. */
   char                vtufilename[BUFSIZ];   /**< Each process writes one. */
   char                pvtufilename[BUFSIZ];  /**< Only root writes this one. */
   char                visitfilename[BUFSIZ]; /**< Only root writes this one. */
@@ -175,6 +177,12 @@ p4est_vtk_context_destroy (p4est_vtk_context_t * context)
 
   P4EST_ASSERT (context->filename != NULL);
   P4EST_FREE (context->filename);
+
+  /* deallocate node storage */
+  if (context->nodes != NULL) {
+    p4est_nodes_destroy (context->nodes);
+  }
+  P4EST_FREE (context->node_to_corner);
 
   /* Close all file pointers. */
   if (context->vtufile != NULL) {
@@ -259,7 +267,6 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   p4est_geometry_t   *geom;
 #ifdef P4EST_VTK_ASCII
   double              wx, wy, wz;
-  p4est_locidx_t      sk;
 #else
   int                 retval;
   uint8_t            *uint8_data;
@@ -274,8 +281,8 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   size_t              num_quads, zz;
   p4est_topidx_t      jt;
   p4est_topidx_t      vt[P4EST_CHILDREN];
-  p4est_locidx_t      quad_count, Ntotal;
-  p4est_locidx_t      il;
+  p4est_locidx_t      quad_count, Npoints;
+  p4est_locidx_t      sk, il, ntcid, *ntc;
   P4EST_VTK_FLOAT_TYPE *float_data;
   sc_array_t         *quadrants, *indeps;
   sc_array_t         *trees;
@@ -290,7 +297,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 
   /* from now on this context is officially in use for writing */
   cont->writing = 1;
-  
+
   /* grab context variables */
   p4est = cont->p4est;
   filename = cont->filename;
@@ -319,21 +326,41 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 
   if (scale < 1. || !conti) {
     /* when we scale the quadrants we need each corner separately */
-    nodes = NULL;
+    cont->nodes = nodes = NULL;
+    cont->num_points = Npoints = Ncorners;
+    cont->node_to_corner = ntc = NULL;
     indeps = NULL;
-    Ntotal = Ncorners;
   }
   else {
-    /* when scale == 1. and the point data is continuous,
+    /* if scale == 1. and the point data is continuous,
      * we can reuse shared quadrant corners */
-    nodes = p4est_nodes_new (p4est, NULL);
+    cont->nodes = nodes = p4est_nodes_new (p4est, NULL);
     indeps = &nodes->indep_nodes;
-    Ntotal = nodes->num_owned_indeps;
-    P4EST_ASSERT ((size_t) Ntotal == indeps->elem_count);
-  }
+    cont->num_points = Npoints = nodes->num_owned_indeps;
+    P4EST_ASSERT ((size_t) Npoints == indeps->elem_count);
 
-  /* Store the number of nodes in the vtk context. */
-  cont->num_nodes = Ntotal;
+    /* Establish a reverse lookup table from a node to its first reference.
+     * It is slow to run twice through memory like this.  However, we also know
+     * that writing data to disk is slower still, so we do not optimize.
+     */
+    cont->node_to_corner = ntc = P4EST_ALLOC (p4est_locidx_t, Npoints);
+    memset (ntc, -1, Npoints * sizeof (p4est_locidx_t));
+    for (sk = 0, il = 0; il < Ncells; ++il) {
+      for (k = 0; k < P4EST_CHILDREN; ++sk, ++k) {
+        ntcid = nodes->local_nodes[sk];
+        P4EST_ASSERT (0 <= ntcid && ntcid < Npoints);
+        if (ntc[ntcid] < 0) {
+          ntc[ntcid] = sk;
+        }
+      }
+    }
+#ifdef P4EST_ENABLE_DEBUG
+    /* the particular version of nodes we call makes sure they are tight */
+    for (ntcid = 0; ntcid < Npoints; ++ntcid) {
+      P4EST_ASSERT (0 <= ntc[ntcid] && ntc[ntcid] < Ncorners);
+    }
+#endif
+  }
 
   /* Have each proc write to its own file */
   snprintf (cont->vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
@@ -344,10 +371,6 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   if (cont->vtufile == NULL) {
     P4EST_LERRORF ("Could not open %s for output\n", cont->vtufilename);
     p4est_vtk_context_destroy (cont);
-
-    if (nodes != NULL)
-      p4est_nodes_destroy (nodes);
-
     return NULL;
   }
 
@@ -365,10 +388,10 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
   fprintf (cont->vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
-           (long long) Ntotal, (long long) Ncells);
+           (long long) Npoints, (long long) Ncells);
   fprintf (cont->vtufile, "      <Points>\n");
 
-  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Ntotal);
+  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Npoints);
 
   /* write point position data */
   fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"Position\""
@@ -446,7 +469,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
         P4EST_ASSERT (k == P4EST_CHILDREN);
       }
     }
-    P4EST_ASSERT (P4EST_CHILDREN * quad_count == Ntotal);
+    P4EST_ASSERT (P4EST_CHILDREN * quad_count == Npoints);
   }
   else {
     for (zz = 0; zz < indeps->elem_count; ++zz) {
@@ -503,7 +526,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   }
 
 #ifdef P4EST_VTK_ASCII
-  for (il = 0; il < Ntotal; ++il) {
+  for (il = 0; il < Npoints; ++il) {
     wx = float_data[3 * il + 0];
     wy = float_data[3 * il + 1];
     wz = float_data[3 * il + 2];
@@ -521,16 +544,12 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
    * at a time.
    */
   retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * 3 * Ntotal);
+                                   sizeof (*float_data) * 3 * Npoints);
   fprintf (cont->vtufile, "\n");
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
     p4est_vtk_context_destroy (cont);
-
     P4EST_FREE (float_data);
-    if (nodes != NULL)
-      p4est_nodes_destroy (nodes);
-
     return NULL;
   }
 #endif
@@ -554,30 +573,26 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     fprintf (cont->vtufile, "\n");
   }
 #else
-  locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncorners);
   fprintf (cont->vtufile, "          ");
   if (nodes == NULL) {
+    locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncorners);
     for (il = 0; il < Ncorners; ++il) {
       locidx_data[il] = il;
     }
     retval =
       p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                              sizeof (*locidx_data) * Ncorners);
+                              sizeof (p4est_locidx_t) * Ncorners);
+    P4EST_FREE (locidx_data);
   }
   else {
     retval =
       p4est_vtk_write_binary (cont->vtufile, (char *) nodes->local_nodes,
-                              sizeof (*locidx_data) * Ncorners);
+                              sizeof (p4est_locidx_t) * Ncorners);
   }
   fprintf (cont->vtufile, "\n");
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
     p4est_vtk_context_destroy (cont);
-
-    if (nodes != NULL)
-      p4est_nodes_destroy (nodes);
-    P4EST_FREE (locidx_data);
-
     return NULL;
   }
 #endif
@@ -595,12 +610,13 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   }
   fprintf (cont->vtufile, "\n");
 #else
+  locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
   for (il = 1; il <= Ncells; ++il)
     locidx_data[il - 1] = P4EST_CHILDREN * il;  /* same type */
 
   fprintf (cont->vtufile, "          ");
   retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                   sizeof (*locidx_data) * Ncells);
+                                   sizeof (p4est_locidx_t) * Ncells);
   fprintf (cont->vtufile, "\n");
 
   P4EST_FREE (locidx_data);
@@ -608,9 +624,6 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
     p4est_vtk_context_destroy (cont);
-
-    if (nodes != NULL)
-      p4est_nodes_destroy (nodes);
     return NULL;
   }
 #endif
@@ -642,19 +655,11 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
     p4est_vtk_context_destroy (cont);
-
-    if (nodes != NULL)
-      p4est_nodes_destroy (nodes);
-
     return NULL;
   }
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
   fprintf (cont->vtufile, "      </Cells>\n");
-
-  if (nodes != NULL) {
-    p4est_nodes_destroy (nodes);
-  }
 
   if (ferror (cont->vtufile)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error writing header\n");
@@ -771,7 +776,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
                     P4EST_STRING
                     "_vtk: Error: incorrect point scalar data type; scalar data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count == (size_t) cont->num_nodes,
+    SC_CHECK_ABORT (values[all]->elem_count == (size_t) cont->num_points,
                     P4EST_STRING
                     "_vtk: Error: incorrect point scalar data count; see "
                     P4EST_STRING ".h for more details.");
@@ -792,7 +797,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
                     P4EST_STRING
                     "_vtk: Error: incorrect point vector data type; vector data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) cont->num_nodes,
+    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) cont->num_points,
                     P4EST_STRING
                     "_vtk: Error: incorrect point vector data count; see "
                     P4EST_STRING ".h for more details.");
