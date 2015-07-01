@@ -346,12 +346,10 @@
 #define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_cell_dataf      p8est_vtk_write_cell_dataf
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
-#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
-#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
+#define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
-#define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
-#define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */

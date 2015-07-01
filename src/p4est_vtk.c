@@ -41,6 +41,82 @@ static const int    p4est_vtk_write_level = 1;
 static const int    p4est_vtk_write_rank = 1;
 static const int    p4est_vtk_wrap_rank = 0;
 
+/** Write a cell scalar field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The cell values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+static
+  p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t *
+                                                    cont,
+                                                    const char *scalar_name,
+                                                    sc_array_t * values);
+
+/** Write a 3-vector cell field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The cell values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+static
+  p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t *
+                                                    cont,
+                                                    const char *vector_name,
+                                                    sc_array_t * values);
+
+/** Write a point scalar field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_point_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The point values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+static
+  p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t *
+                                                     cont,
+                                                     const char *scalar_name,
+                                                     sc_array_t * values);
+
+/** Write a 3-vector point field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_point_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The point values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+static
+  p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t *
+                                                     cont,
+                                                     const char *vector_name,
+                                                     sc_array_t * values);
+
 #ifdef P4_TO_P8
 #define p4est_vtk_context               p8est_vtk_context
 #endif
@@ -241,9 +317,9 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
 
   /* write the tree/level/rank data */
   cont =
-    p4est_vtk_write_cell_data (cont, p4est_vtk_write_tree,
-                               p4est_vtk_write_level, p4est_vtk_write_rank,
-                               p4est_vtk_wrap_rank, 0, 0, cont);
+    p4est_vtk_write_cell_dataf (cont, p4est_vtk_write_tree,
+                                p4est_vtk_write_level, p4est_vtk_write_rank,
+                                p4est_vtk_wrap_rank, 0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, P4EST_STRING "_vtk: Error writing cell data");
 
   /* properly write rest of the files' contents */
@@ -728,12 +804,12 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 /** Write VTK point data.
  *
  * This function exports custom point data to the vtk file; it is functionally
- * the same as \b p4est_vtk_write_point_data with the only difference being
+ * the same as \b p4est_vtk_write_point_dataf with the only difference being
  * that instead of a variable argument list, an initialized \a va_list is
  * passed as the last argument. The \a va_list is initialized from the variable
  * argument list of the calling function.
  *
- * \note This function is actually called from \b p4est_vtk_write_point_data
+ * \note This function is actually called from \b p4est_vtk_write_point_dataf
  * and does all of the work.
  *
  * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
@@ -907,8 +983,9 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
-                            int num_point_scalars, int num_point_vectors, ...)
+p4est_vtk_write_point_dataf (p4est_vtk_context_t * cont,
+                             int num_point_scalars, int num_point_vectors,
+                             ...)
 {
   va_list             ap;
 
@@ -926,12 +1003,12 @@ p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
 /** Write VTK cell data.
  *
  * This function exports custom cell data to the vtk file; it is functionally
- * the same as \b p4est_vtk_write_cell_data with the only difference being
+ * the same as \b p4est_vtk_write_cell_dataf with the only difference being
  * that instead of a variable argument list, an initialized \a va_list is
  * passed as the last argument. The \a va_list is initialized from the variable
  * argument list of the calling function.
  *
- * \note This function is actually called from \b p4est_vtk_write_cell_data
+ * \note This function is actually called from \b p4est_vtk_write_cell_dataf
  * and does all of the work.
  *
  * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
@@ -1288,10 +1365,10 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
-                           int write_tree, int write_level,
-                           int write_rank, int wrap_rank,
-                           int num_cell_scalars, int num_cell_vectors, ...)
+p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
+                            int write_tree, int write_level,
+                            int write_rank, int wrap_rank,
+                            int num_cell_scalars, int num_cell_vectors, ...)
 {
   va_list             ap;
 

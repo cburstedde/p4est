@@ -549,19 +549,20 @@ step3_write_solution (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (context != NULL,
                   P4EST_STRING "_vtk: Error writing vtk header");
 
-  context = p4est_vtk_write_cell_data (context, 0,      /* do not write the tree id's of each quadrant (there is only one tree in this example) */
-                                       1,       /* do write the refinement level of each quadrant */
-                                       1,       /* do write the mpi process id of each quadrant */
-                                       0,       /* do not wrap the mpi rank (if this were > 0, the modulus of the rank relative to this number would be written instead of the rank) */
-                                       0,       /* there is no custom cell scalar data. */
-                                       0,       /* there is no custom cell vector data. */
-                                       context);        /* mark the end of the variable cell data. */
+  /* do not write the tree id's of each quadrant
+   * (there is only one tree in this example) */
+  context = p4est_vtk_write_cell_dataf (context, 0, 1,  /* do write the refinement level of each quadrant */
+                                        1,      /* do write the mpi process id of each quadrant */
+                                        0,      /* do not wrap the mpi rank (if this were > 0, the modulus of the rank relative to this number would be written instead of the rank) */
+                                        0,      /* there is no custom cell scalar data. */
+                                        0,      /* there is no custom cell vector data. */
+                                        context);       /* mark the end of the variable cell data. */
   SC_CHECK_ABORT (context != NULL,
                   P4EST_STRING "_vtk: Error writing cell data");
 
-  context = p4est_vtk_write_point_data (context, 1,     /* write one scalar field: the solution value */
-                                        0,      /* write no vector fields */
-                                        "solution", u_interp, context); /* mark the end of the variable cell data. */
+  /* write one scalar field: the solution value */
+  context = p4est_vtk_write_point_dataf (context, 1, 0, /* write no vector fields */
+                                         "solution", u_interp, context);        /* mark the end of the variable cell data. */
   SC_CHECK_ABORT (context != NULL,
                   P4EST_STRING "_vtk: Error writing cell data");
 
