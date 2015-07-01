@@ -147,11 +147,12 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   }
 
   /* test traversal routine */
-  p4est_traverse (p4est, traverse_fn);
+  p4est_search_partition (p4est, traverse_fn);
 }
 
 static void
-test_partition_circle (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+test_partition_circle (sc_MPI_Comm mpicomm,
+                       p4est_connectivity_t * connectivity,
                        p4est_gloidx_t * pertree1, p4est_gloidx_t * pertree2)
 {
   int                 i, j;

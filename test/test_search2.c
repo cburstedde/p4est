@@ -230,7 +230,7 @@ main (int argc, char **argv)
 
   /* Go */
   found_count = 0;
-  p4est_search (p4est, NULL, search_callback, points);
+  p4est_search_local (p4est, NULL, search_callback, points);
   mpiret = sc_MPI_Allreduce (&found_count, &found_total,
                              1, sc_MPI_INT, sc_MPI_SUM, mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -240,7 +240,7 @@ main (int argc, char **argv)
 
   /* Use another search to count local quadrants */
   local_count = 0;
-  p4est_search (p4est, count_callback, NULL, NULL);
+  p4est_search_local (p4est, count_callback, NULL, NULL);
   SC_CHECK_ABORT (local_count == p4est->local_num_quadrants, "Count search");
 
   /* Clear memory */

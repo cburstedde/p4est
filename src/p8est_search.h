@@ -124,7 +124,7 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
  *                          quadrant and false otherwise; the return value has
  *                          no effect on a leaf.
  */
-typedef int         (*p8est_search_query_t) (p8est_t * p8est,
+typedef int         (*p8est_search_local_t) (p8est_t * p8est,
                                              p4est_topidx_t which_tree,
                                              p8est_quadrant_t * quadrant,
                                              p4est_locidx_t local_num,
@@ -174,12 +174,13 @@ typedef int         (*p8est_search_query_t) (p8est_t * p8est,
  *                          If not NULL, the \b search_point_fn is called on
  *                          its members during the search.
  */
-void                p8est_search (p8est_t * p8est,
-                                  p8est_search_query_t search_quadrant_fn,
-                                  p8est_search_query_t search_point_fn,
-                                  sc_array_t * points);
+void                p8est_search_local (p8est_t * p8est,
+                                        p8est_search_local_t
+                                        search_quadrant_fn,
+                                        p8est_search_local_t search_point_fn,
+                                        sc_array_t * points);
 
-/** Callback function for the traversal recursion.
+/** Callback function for the partition recursion.
  * \param [in] p8est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] which_tree   The tree number under consideration.
@@ -195,10 +196,10 @@ void                p8est_search (p8est_t * p8est,
  * \return                  If false, the recursion at quadrant is terminated.
  *                          If true, it continues if \b pfirst < \b plast.
  */
-typedef int         (*p8est_traverse_query_t) (p8est_t * p8est,
-                                               p4est_topidx_t which_tree,
-                                               p8est_quadrant_t * quadrant,
-                                               int pfirst, int plast);
+typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
+                                                 p4est_topidx_t which_tree,
+                                                 p8est_quadrant_t * quadrant,
+                                                 int pfirst, int plast);
 
 /** Traverse the global partition top-down.
  * We proceed top-down through the partition, identically on all processors
@@ -213,8 +214,9 @@ typedef int         (*p8est_traverse_query_t) (p8est_t * p8est,
  *                          which only continues deeper if this
  *                          callback returns true for a branch quadrant.
  */
-void                p8est_traverse (p8est_t * p8est,
-                                    p8est_traverse_query_t traverse_fn);
+void                p8est_search_partition (p8est_t * p8est,
+                                            p8est_search_partition_t
+                                            traverse_fn);
 
 SC_EXTERN_C_END;
 

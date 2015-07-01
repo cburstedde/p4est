@@ -456,8 +456,8 @@ typedef struct p4est_search_recursion
 {
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
-  p4est_search_query_t search_quadrant_fn;      /**< The quadrant callback. */
-  p4est_search_query_t search_point_fn;         /**< The point callback. */
+  p4est_search_local_t search_quadrant_fn;      /**< The quadrant callback. */
+  p4est_search_local_t search_point_fn;         /**< The point callback. */
   sc_array_t         *points;           /**< Array of points to search. */
 }
 p4est_search_recursion_t;
@@ -582,8 +582,8 @@ p4est_search_recursion (const p4est_search_recursion_t * rec,
 }
 
 void
-p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
-              p4est_search_query_t search_point_fn, sc_array_t * points)
+p4est_search_local (p4est_t * p4est, p4est_search_local_t search_quadrant_fn,
+                    p4est_search_local_t search_point_fn, sc_array_t * points)
 {
   p4est_topidx_t      jt;
   p4est_tree_t       *tree;
@@ -774,7 +774,7 @@ typedef struct p4est_traverse_recursion
 {
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
-  p4est_traverse_query_t traverse_fn;   /**< The traversal callback. */
+  p4est_search_partition_t traverse_fn;   /**< The traversal callback. */
   sc_array_t         *position_array;   /**< Array view of p4est's
                                              global_first_position */
 }
@@ -882,7 +882,7 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
 }
 
 void
-p4est_traverse (p4est_t * p4est, p4est_traverse_query_t traverse_fn)
+p4est_search_partition (p4est_t * p4est, p4est_search_partition_t traverse_fn)
 {
   const int           num_procs = p4est->mpisize;
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
