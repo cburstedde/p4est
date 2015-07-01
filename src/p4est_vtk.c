@@ -608,11 +608,13 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     wy = float_data[3 * il + 1];
     wz = float_data[3 * il + 2];
 
+    fprintf (cont->vtufile,
 #ifdef P4EST_VTK_DOUBLES
-    fprintf (cont->vtufile, "     %24.16e %24.16e %24.16e\n", wx, wy, wz);
+             "     %24.16e %24.16e %24.16e\n",
 #else
-    fprintf (cont->vtufile, "          %16.8e %16.8e %16.8e\n", wx, wy, wz);
+             "          %16.8e %16.8e %16.8e\n",
 #endif
+             wx, wy, wz);
   }
 #else
   fprintf (cont->vtufile, "          ");
@@ -1429,15 +1431,14 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
   for (il = 0; il < Npoints; ++il) {
     ddl = use_nodes ? ntc[il] : il;
     P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+
+    fprintf (cont->vtufile,
 #ifdef P4EST_VTK_DOUBLES
-    fprintf (cont->vtufile, "     %24.16e\n",
-             (P4EST_VTK_FLOAT_TYPE) *
-             ((double *) sc_array_index (values, ddl)));
+             "     %24.16e\n",
 #else
-    fprintf (cont->vtufile, "          %16.8e\n",
-             (P4EST_VTK_FLOAT_TYPE) *
-             ((double *) sc_array_index (values, ddl)));
+             "          %16.8e\n",
 #endif
+             *(double *) sc_array_index (values, ddl));
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints);
@@ -1505,15 +1506,13 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
 
 #ifdef P4EST_VTK_ASCII
   for (il = 0; il < Ncells; ++il) {
+    fprintf (cont->vtufile,
 #ifdef P4EST_VTK_DOUBLES
-    fprintf (cont->vtufile, "     %24.16e\n",
-             (P4EST_VTK_FLOAT_TYPE) *
-             ((double *) sc_array_index (values, il)));
+             "     %24.16e\n",
 #else
-    fprintf (cont->vtufile, "          %16.8e\n",
-             (P4EST_VTK_FLOAT_TYPE) *
-             ((double *) sc_array_index (values, il)));
+             "          %16.8e\n",
 #endif
+             *(double *) sc_array_index (values, il));
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncells);
