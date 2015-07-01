@@ -106,8 +106,9 @@ struct p4est_vtk_context
 
   /* internal context data */
   int                 writing;     /**< True after p4est_vtk_write_header. */
+  p4est_locidx_t      num_corners; /**< Number of local element corners. */
   p4est_locidx_t      num_points;  /**< Number of VTK points written. */
-  p4est_locidx_t     *node_to_corner;     /**< Map a node to one cell corner. */
+  p4est_locidx_t     *node_to_corner;     /**< Map a node to an element corner. */
   p4est_nodes_t      *nodes;       /**< NULL? depending on scale/continuous. */
   char                vtufilename[BUFSIZ];   /**< Each process writes one. */
   char                pvtufilename[BUFSIZ];  /**< Only root writes this one. */
@@ -322,8 +323,8 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   first_local_tree = p4est->first_local_tree;
   last_local_tree = p4est->last_local_tree;
   Ncells = p4est->local_num_quadrants;
-  Ncorners = P4EST_CHILDREN * Ncells;
 
+  cont->num_corners = Ncorners = P4EST_CHILDREN * Ncells;
   if (scale < 1. || !conti) {
     /* when we scale the quadrants we need each corner separately */
     cont->nodes = nodes = NULL;
@@ -715,6 +716,12 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     }
   }
 
+  /* the nodes object is no longer needed */
+  if (nodes != NULL) {
+    p4est_nodes_destroy (cont->nodes);
+    cont->nodes = NULL;
+  }
+
   return cont;
 }
 
@@ -743,24 +750,31 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                              int num_point_scalars,
                              int num_point_vectors, va_list ap)
 {
-  /* This function needs to do nothing if there is no data. */
-  if (!(num_point_scalars || num_point_vectors))
-    return cont;
-
+  const int           num_point_all = num_point_scalars + num_point_vectors;
+  int                 mpirank;
   int                 retval;
-  int                 i, all = 0;
-  const int           mpirank = cont->p4est->mpirank;
+  int                 i, all;
   int                 scalar_strlen, vector_strlen;
   char                point_scalars[BUFSIZ], point_vectors[BUFSIZ];
   const char         *name, **names;
+  p4est_vtk_context_t *list_end;
   sc_array_t        **values;
 
   P4EST_ASSERT (cont != NULL && cont->writing);
+  P4EST_ASSERT (cont->p4est != NULL);
 
-  values = P4EST_ALLOC (sc_array_t *, num_point_scalars + num_point_vectors);
-  names = P4EST_ALLOC (const char *, num_point_scalars + num_point_vectors);
+  /* This function needs to do nothing if there is no data. */
+  if (!(num_point_scalars || num_point_vectors)) {
+    return cont;
+  }
+  mpirank = cont->p4est->mpirank;
+
+  /* Allocate storage to manage the data fields. */
+  values = P4EST_ALLOC (sc_array_t *, num_point_all);
+  names = P4EST_ALLOC (const char *, num_point_all);
 
   /* Gather point data. */
+  all = 0;
   scalar_strlen = 0;
   point_scalars[0] = '\0';
   for (i = 0; i < num_point_scalars; ++all, ++i) {
@@ -775,13 +789,15 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     /* Validate input. */
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
                     P4EST_STRING
-                    "_vtk: Error: incorrect point scalar data type; scalar data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count == (size_t) cont->num_points,
+                    "_vtk: Error: incorrect point scalar data type;"
+                    " scalar data must contain doubles.");
+    SC_CHECK_ABORT (values[all]->elem_count == (size_t) cont->num_corners,
                     P4EST_STRING
                     "_vtk: Error: incorrect point scalar data count; see "
-                    P4EST_STRING ".h for more details.");
+                    P4EST_STRING "_vtk.h for more details.");
   }
 
+  /* keep variable all at current value */
   vector_strlen = 0;
   point_vectors[0] = '\0';
   for (i = 0; i < num_point_vectors; ++all, ++i) {
@@ -796,18 +812,20 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     /* Validate input. */
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
                     P4EST_STRING
-                    "_vtk: Error: incorrect point vector data type; vector data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) cont->num_points,
+                    "_vtk: Error: incorrect point vector data type;"
+                    " vector data must contain doubles.");
+    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) cont->num_corners,
                     P4EST_STRING
                     "_vtk: Error: incorrect point vector data count; see "
-                    P4EST_STRING ".h for more details.");
+                    P4EST_STRING "_vtk.h for more details.");
   }
 
   /* Check for pointer variable marking the end of variable data input. */
-  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
-  SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
-                  "data must be specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING
+  list_end = va_arg (ap, p4est_vtk_context_t *);
+  SC_CHECK_ABORT (list_end == cont,
+                  P4EST_STRING "_vtk Error: the end of variable data must be"
+                  " specified by passing, as the last argument, the current "
+                  P4EST_STRING "_vtk_context_t pointer.  See " P4EST_STRING
                   "_vtk.h for more information.");
 
   fprintf (cont->vtufile, "      <PointData");
@@ -828,6 +846,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
     return NULL;
   }
 
+  /* now we are done counting and checking we write the fields */
   all = 0;
   for (i = 0; i < num_point_scalars; ++all, ++i) {
     cont = p4est_vtk_write_point_scalar (cont, names[all], values[all]);
@@ -892,10 +911,11 @@ p4est_vtk_write_point_data (p4est_vtk_context_t * cont,
                             int num_point_scalars, int num_point_vectors, ...)
 {
   va_list             ap;
-  va_start (ap, num_point_vectors);
 
   P4EST_ASSERT (cont != NULL && cont->writing);
+  P4EST_ASSERT (num_point_scalars >= 0 && num_point_vectors >= 0);
 
+  va_start (ap, num_point_vectors);
   cont = p4est_vtk_write_point_datav (cont, num_point_scalars,
                                       num_point_vectors, ap);
   va_end (ap);
@@ -1276,6 +1296,7 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   va_list             ap;
 
   P4EST_ASSERT (cont != NULL && cont->writing);
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
 
   va_start (ap, num_cell_vectors);
   cont = p4est_vtk_write_cell_datav (cont,
@@ -1291,15 +1312,36 @@ p4est_vtk_context_t *
 p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
                               const char *scalar_name, sc_array_t * values)
 {
-  const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
-  const p4est_locidx_t Ncorners = P4EST_CHILDREN * Ncells;      /* type ok */
-  p4est_locidx_t      il;
+  p4est_locidx_t      il, ddl;
+  int                 use_nodes;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 Ncorners;
+#endif
+  int                 Npoints;
 #ifndef P4EST_VTK_ASCII
   int                 retval;
   P4EST_VTK_FLOAT_TYPE *float_data;
 #endif
+  p4est_locidx_t     *ntc;
 
   P4EST_ASSERT (cont != NULL && cont->writing);
+#ifdef P4EST_ENABLE_DEBUG
+  Ncorners = cont->num_corners;
+#endif
+  Npoints = cont->num_points;
+  ntc = cont->node_to_corner;
+  P4EST_ASSERT (values != NULL && values->elem_count == (size_t) Ncorners);
+  if (ntc == NULL) {
+    /* we are writing a discontinuous field, possibly due to vertex scaling */
+    P4EST_ASSERT (cont->num_corners == cont->num_points);
+    P4EST_ASSERT (cont->scale < 1. || !cont->continuous);
+    use_nodes = 0;
+  }
+  else {
+    /* we are definitely writing a continuous field, reusing corner values */
+    P4EST_ASSERT (cont->scale == 1. && cont->continuous);
+    use_nodes = 1;
+  }
 
   /* write point data */
   fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"%s\""
@@ -1307,22 +1349,26 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
            P4EST_VTK_FLOAT_NAME, scalar_name, P4EST_VTK_FORMAT_STRING);
 
 #ifdef P4EST_VTK_ASCII
-  for (il = 0; il < Ncorners; ++il) {
+  for (il = 0; il < Npoints; ++il) {
+    ddl = use_nodes ? ntc[il] : il;
+    P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
 #ifdef P4EST_VTK_DOUBLES
     fprintf (cont->vtufile, "     %24.16e\n",
              (P4EST_VTK_FLOAT_TYPE) *
-             ((double *) sc_array_index (values, il)));
+             ((double *) sc_array_index (values, ddl)));
 #else
     fprintf (cont->vtufile, "          %16.8e\n",
              (P4EST_VTK_FLOAT_TYPE) *
-             ((double *) sc_array_index (values, il)));
+             ((double *) sc_array_index (values, ddl)));
 #endif
   }
 #else
-  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncorners);
-  for (il = 0; il < Ncorners; ++il) {
+  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints);
+  for (il = 0; il < Npoints; ++il) {
+    ddl = use_nodes ? ntc[il] : il;
+    P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
     float_data[il] =
-      (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, il));
+      (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, ddl));
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1331,7 +1377,7 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
    * at a time.
    */
   retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * Ncorners);
+                                   sizeof (*float_data) * Npoints);
   fprintf (cont->vtufile, "\n");
 
   P4EST_FREE (float_data);
