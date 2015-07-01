@@ -97,9 +97,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                      i, j;
   int                      f1, f2, code, orientation;
   int                      fc1, fc2, diagonal;
-#ifdef                     P4_TO_P8
+#ifdef P4_TO_P8
   int                      pref, pset;
-#endif                     /* P4_TO_P8 */
+#endif /* P4_TO_P8 */
   int                      visited[P4EST_CHILDREN];
   int8_t                   *pccorner;
   size_t                   cz, zz;
