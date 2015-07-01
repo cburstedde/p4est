@@ -103,6 +103,7 @@
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_local_t            p8est_search_local_t
 #define p4est_search_partition_t        p8est_search_partition_t
+#define p4est_search_all_t              p8est_search_all_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_wrap_t                    p8est_wrap_t
@@ -270,6 +271,7 @@
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search_local              p8est_search_local
 #define p4est_search_partition          p8est_search_partition
+#define p4est_search_all                p8est_search_all
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
