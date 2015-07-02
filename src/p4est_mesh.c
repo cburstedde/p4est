@@ -357,6 +357,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       }
 
       /* Examine a potential second side */
+      /* The diagonally opposite corner is found by adding the corner indeces
+       * of z-ordering convention. diagonally opposite corner indeces add up
+       * to 3 in 2D and to 7 in 3D, i.e. P4EST_CHILDREN - 1. */
       P4EST_ASSERT (side2 == NULL);
       side2 =
         (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, j);
@@ -387,6 +390,14 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     P4EST_ASSERT (side1 != NULL && side2 != NULL);
   }
 }
+
+#ifdef P4_TO_P8
+static void
+mesh_iter_edge (p4est_iter_edge_info_t * info, void * user_data)
+{
+
+}
+#endif /* P4_TO_P8 */
 
 static void
 mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
