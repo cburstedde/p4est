@@ -393,7 +393,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 
 #ifdef P4_TO_P8
 static void
-mesh_iter_edge (p4est_iter_edge_info_t * info, void * user_data)
+mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
 {
 
 }
@@ -627,6 +627,9 @@ p4est_mesh_new_ext (p4est_t * p4est,
                     p4est_connect_type_t btype)
 {
   int                 do_corner = 0;
+#ifdef P4_TO_P8
+  int                 do_edge   = 0;
+#endif /* P4_TO_P8 */
   int                 do_volume = 0;
   int                 rank;
   p4est_locidx_t      lq, ng;
@@ -645,6 +648,9 @@ p4est_mesh_new_ext (p4est_t * p4est,
   /* decide which callback function have to be activated */
   if (btype == P4EST_CONNECT_FULL) {
     do_corner = 1;
+#ifdef P4_TO_P8
+    do_edge   = 1;
+#endif /* P4_TO_P8 */
   }
   do_volume = (compute_tree_index || compute_level_lists ? 1 : 0);
 
@@ -682,6 +688,23 @@ p4est_mesh_new_ext (p4est_t * p4est,
   memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
   memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
 
+#ifdef P4_TO_P8
+  if (do_edge) {
+    /* Allocate optional lists for edge information */
+    mesh->quad_to_quad_edge = P4EST_ALLOC (p4est_locidx_t, P8EST_EDGES * lq);
+    mesh->quad_to_edge      = P4EST_ALLOC (int8_t, P8EST_EDGES * lq);
+    mesh->quad_to_half_edge = sc_array_new (2 * sizeof (p4est_locidx_t));
+
+    /* Initialize lists with default values */
+    memset (mesh->quad_to_quad_edge,
+            -1,
+            P8EST_EDGES * lq * sizeof (p4est_locidx_t));
+    memset (mesh->quad_to_edge,
+            -25,
+            P8EST_EDGES * lq * sizeof (int8_t));
+  }
+#endif /* P4_TO_P8 */
+
   /* Allocate optional lists of corner information */
   if (do_corner) {
     /* Initialize corner information to a consistent state */
@@ -700,11 +723,12 @@ p4est_mesh_new_ext (p4est_t * p4est,
   p4est_iterate (p4est,      /* p4est */
                  ghost,      /* ghost layer */
                  mesh,       /* user_data */
-                 (do_volume ? mesh_iter_volume : NULL), mesh_iter_face,
+                 (do_volume ? mesh_iter_volume : NULL),
+                 mesh_iter_face,
 #ifdef P4_TO_P8
-                 NULL,
+                 (do_edge ? mesh_iter_edge : NULL),
 #endif /* P4_TO_P8 */
-                 do_corner ? mesh_iter_corner : NULL);
+                 (do_corner ? mesh_iter_corner : NULL));
 
   return mesh;
 }
@@ -729,6 +753,14 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   P4EST_FREE (mesh->quad_to_quad);
   P4EST_FREE (mesh->quad_to_face);
   sc_array_destroy (mesh->quad_to_half);
+
+#ifdef P4_TO_P8
+  if (mesh->quad_to_edge != NULL) {
+    P4EST_FREE (mesh->quad_to_quad_edge);
+    P4EST_FREE (mesh->quad_to_edge);
+    sc_array_destroy (mesh->quad_to_half_edge);
+  }
+#endif /* P4_TO_P8 */
 
   if (mesh->quad_to_corner != NULL) {
     P4EST_FREE (mesh->quad_to_corner);
