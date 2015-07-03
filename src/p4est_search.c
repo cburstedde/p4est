@@ -774,7 +774,9 @@ typedef struct p4est_traverse_recursion
 {
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
-  p4est_search_partition_t traverse_fn;   /**< The traversal callback. */
+  p4est_search_partition_t quadrant_fn; /**< Per-quadrant callback. */
+  p4est_search_partition_t point_fn;    /**< Per-point callback. */
+  sc_array_t         *points;           /**< Array of points to search. */
   sc_array_t         *position_array;   /**< Array view of p4est's
                                              global_first_position */
 }
@@ -794,15 +796,15 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
   P4EST_ASSERT (rec->p4est != NULL);
   P4EST_ASSERT (0 <= rec->which_tree &&
                 rec->which_tree < rec->p4est->connectivity->num_trees);
-  P4EST_ASSERT (rec->traverse_fn != NULL);
+  P4EST_ASSERT (rec->quadrant_fn != NULL);
   P4EST_ASSERT (p4est_traverse_is_valid_quadrant (rec->p4est, rec->which_tree,
                                                   quadrant, pfirst, plast));
   P4EST_ASSERT (quadrant != NULL && p4est_quadrant_is_valid (quadrant));
   P4EST_ASSERT (quadrant->p.which_tree == rec->which_tree);
 
   /* call the user-provided callback function */
-  proceed = rec->traverse_fn (rec->p4est, rec->which_tree, quadrant,
-                              pfirst, plast);
+  proceed = rec->quadrant_fn (rec->p4est, rec->which_tree, quadrant,
+                              pfirst, plast, NULL);
 
   /* terminate recursion at the latest when we are down to one processor */
   if (pfirst == plast || !proceed) {
@@ -882,7 +884,9 @@ p4est_traverse_recursion (const p4est_traverse_recursion_t * rec,
 }
 
 void
-p4est_search_partition (p4est_t * p4est, p4est_search_partition_t traverse_fn)
+p4est_search_partition (p4est_t * p4est, p4est_search_partition_t quadrant_fn,
+                        p4est_search_partition_t point_fn,
+                        sc_array_t * points)
 {
   const int           num_procs = p4est->mpisize;
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
@@ -895,7 +899,7 @@ p4est_search_partition (p4est_t * p4est, p4est_search_partition_t traverse_fn)
 
   /* we do nothing if there is nothing to be done */
   P4EST_ASSERT (p4est != NULL);
-  if (traverse_fn == NULL) {
+  if (quadrant_fn == NULL) {
     return;
   }
 
@@ -920,7 +924,9 @@ p4est_search_partition (p4est_t * p4est, p4est_search_partition_t traverse_fn)
   /* now loop through all trees, local or not */
   rec->p4est = p4est;
   rec->which_tree = -1;
-  rec->traverse_fn = traverse_fn;
+  rec->quadrant_fn = quadrant_fn;
+  rec->point_fn = point_fn;
+  rec->points = points;
   rec->position_array = &position_array;
   p4est_quadrant_set_morton (&root, 0, 0);
   for (pfirst = 0, tt = 0; tt < num_trees; pfirst = pnext, ++tt) {

@@ -97,7 +97,7 @@ weight_once (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static int
 traverse_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t * quadrant, int pfirst, int plast)
+             p4est_quadrant_t * quadrant, int pfirst, int plast, void *point)
 {
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (0 <= which_tree &&
@@ -147,7 +147,7 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   }
 
   /* test traversal routine */
-  p4est_search_partition (p4est, traverse_fn);
+  p4est_search_partition (p4est, traverse_fn, NULL, NULL);
 }
 
 static void
