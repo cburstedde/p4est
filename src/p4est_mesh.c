@@ -395,7 +395,41 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 static void
 mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
 {
+  int i, j;
+  size_t cz, zz;
+  p4est_locidx_t          jl, jl2, jls[P4EST_HALF];
+  p4est_locidx_t      in_qtoq, halfindex;
+  p4est_locidx_t           qoffset, qid1, qid2;
+  p4est_locidx_t           cornerid_offset, cornerid;
+  p4est_mesh_t * mesh = (p4est_mesh_t *) user_data;
+  p8est_iter_edge_side_t *side1, *side2;
+  p4est_tree_t           *tree1, *tree2;
 
+  /* general sanity checks */
+  cz = info->sides.elem_count;
+  P4EST_ASSERT (cz > 0);
+  P4EST_ASSERT (info->tree_boundary || cz == P4EST_HALF);
+
+  if (cz == 1) {
+    /* this edge is on an outside boundary of the forest */
+    P4EST_ASSERT (info->orientation == 0);
+    P4EST_ASSERT (info->tree_boundary);
+    side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
+    P4EST_ASSERT (0 <= side1->treeid &&
+                  side1->treeid < info->p4est->connectivity->num_trees);
+    P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
+    P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
+    tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+    jl = side1->is.full.quadid + tree1->quadrants_offset;
+    P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
+    in_qtoq = P8EST_EDGES * jl + side1->edge;
+    mesh->quad_to_quad_edge[in_qtoq] = jl;   /* put in myself and my own edge */
+    mesh->quad_to_face[in_qtoq] = side1->edge;
+  }
+
+  if (info->tree_boundary) {
+    /* Tree neighbors of edges are not implemented yet: set to -2 and -26 */
+  }
 }
 #endif /* P4_TO_P8 */
 

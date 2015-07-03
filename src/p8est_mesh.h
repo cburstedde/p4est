@@ -114,8 +114,8 @@ typedef struct
   /* CAUTION: tree-boundary corners not yet implemented */
   /* edges */
   p4est_locidx_t     *quad_to_quad_edge; /**< stores 12 indices for each local edge */
-  int8_t             *quad_to_edge;      /**< stores half-size edge neighbors */
-  sc_array_t         *quad_to_half_edge; /**< stores orientation/2:1 status */
+  int8_t             *quad_to_edge;      /**< stores orientation/2:1 status */
+  sc_array_t         *quad_to_half_edge; /**< stores half-size edge neighbors */
 
   /* corners */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
