@@ -395,13 +395,12 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 static void
 mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
 {
-  int i, j;
-  size_t cz, zz;
-  p4est_locidx_t          jl, jl2, jls[P4EST_HALF];
-  p4est_locidx_t      in_qtoq, halfindex;
-  p4est_locidx_t           qoffset, qid1, qid2;
-  p4est_locidx_t           cornerid_offset, cornerid;
-  p4est_mesh_t * mesh = (p4est_mesh_t *) user_data;
+  int8_t                 visited[P4EST_HALF];
+  size_t                 i, j, cz, zz;
+  p4est_locidx_t         halfindex;
+  p4est_locidx_t         qoffset, qid1, qid2;
+  p4est_locidx_t         eid1, eid2, ec1, ec2;
+  p4est_mesh_t           * mesh = (p4est_mesh_t *) user_data;
   p8est_iter_edge_side_t *side1, *side2;
   p4est_tree_t           *tree1, *tree2;
 
@@ -411,24 +410,118 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
   P4EST_ASSERT (info->tree_boundary || cz == P4EST_HALF);
 
   if (cz == 1) {
-    /* this edge is on an outside boundary of the forest */
+    /* edge limits domain */
     P4EST_ASSERT (info->orientation == 0);
     P4EST_ASSERT (info->tree_boundary);
+
     side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
     P4EST_ASSERT (0 <= side1->treeid &&
                   side1->treeid < info->p4est->connectivity->num_trees);
     P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
     P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
     tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
-    jl = side1->is.full.quadid + tree1->quadrants_offset;
+    qid1 = side1->is.full.quadid + tree1->quadrants_offset;
     P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
-    in_qtoq = P8EST_EDGES * jl + side1->edge;
-    mesh->quad_to_quad_edge[in_qtoq] = jl;   /* put in myself and my own edge */
-    mesh->quad_to_face[in_qtoq] = side1->edge;
+    mesh->quad_to_quad_edge[P8EST_EDGES * qid1 +
+                            side1->edge] = qid1;   /* put in myself and my own edge */
+    mesh->quad_to_edge[P8EST_EDGES * qid1 +
+                       side1->edge] = side1->edge;
   }
+  else if (cz == 2) {
+    /* edge on a domain limiting face */
+    P4EST_ASSERT (info->orientation == 0);
+    P4EST_ASSERT (info->tree_boundary);
 
-  if (info->tree_boundary) {
-    /* Tree neighbors of edges are not implemented yet: set to -2 and -26 */
+    for (zz = 0; zz < cz; ++zz) {
+      side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
+      P4EST_ASSERT (0 <= side1->treeid &&
+          side1->treeid < info->p4est->connectivity->num_trees);
+      P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
+      P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
+      tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+      qid1 = side1->is.full.quadid + tree1->quadrants_offset;
+      P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
+      mesh->quad_to_quad_edge[P8EST_EDGES * qid1 +
+        side1->edge] = qid1;   /* put in myself and my own edge */
+      mesh->quad_to_edge[P8EST_EDGES * qid1 +
+        side1->edge] = side1->edge;
+    }
+  }
+  else {
+    /* inner edge */
+    if (info->tree_boundary) {
+      /* Tree neighbors of edges are not implemented yet: set to -2 and -26 */
+      for (zz = 0; zz < cz; ++zz) {
+        side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
+        if (!side1->is_hanging && !side1->is.full.is_ghost) {
+          tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+          qid1 = side1->is.full.quadid + tree1->quadrants_offset;
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_quad_edge[P8EST_EDGES * qid1 +
+              side1->edge] == -1);
+          P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 +
+              side1->edge] == -25);
+          mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] = -2;
+          mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -26;
+        }
+      }
+    }
+    else {
+      /* Process an edge inside the tree in pairs of diagonal neighbors */
+      P4EST_ASSERT (!info->tree_boundary);
+      side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
+      tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+      qoffset = tree1->quadrants_offset;
+      memset (visited, 0, P4EST_HALF * sizeof (int8_t));
+
+      for (i = 0; i < 0.5 * cz; ++i) {
+        side1 = side2 = NULL;
+        qid1 = -1;
+        for (j = 0; j < P4EST_HALF; ++j) {
+          if (visited[j]) {
+            continue;
+          }
+
+          /* remember first side */
+          if (side1 == NULL) {
+            side1 =
+              (p8est_iter_edge_side_t *) sc_array_index (&info->sides, j);
+            eid1 = side1->edge;
+            ec1 = eid1;
+            visited[j] = 1;
+            continue;
+          }
+
+          /* Examine second side */
+          P4EST_ASSERT (side2 == NULL);
+          side2 =
+            (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, j);
+          eid2 = side2->edge;
+          P4EST_ASSERT (side2->treeid == side1->treeid);
+
+          /* edge is diagonal opposite if edge indeces sum up to
+           *  3 for an edge parallel to x-axis
+           * 11 for an edge parallel to y-axis
+           * 19 for an edge parallel to z-axis
+           */
+          int edgesum[3] = {3, 11, 19};
+          cz = -1;
+          while (ec1 > 0) {
+            ec1 -= P4EST_HALF;
+            ++cz;
+          }
+          if (eid1 + eid2 != edgesum[cz])
+          {
+            side2 = NULL;
+            continue;
+          }
+
+          /* we found a pair of diagonal edges */
+          printf ("eid1: %2i, eid2: %2i\n", eid1, eid2);
+
+        }
+      }
+    }
   }
 }
 #endif /* P4_TO_P8 */
@@ -736,6 +829,7 @@ p4est_mesh_new_ext (p4est_t * p4est,
     memset (mesh->quad_to_edge,
             -25,
             P8EST_EDGES * lq * sizeof (int8_t));
+    printf("Length of edge vector: %i\n", P8EST_EDGES * lq);
   }
 #endif /* P4_TO_P8 */
 
