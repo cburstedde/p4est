@@ -396,7 +396,8 @@ static void
 mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
 {
   int8_t                 visited[P4EST_HALF];
-  size_t                 i, j, cz, zz;
+  size_t                 i, j, cz, zz, ctr;
+  int                    swapsides;
   p4est_locidx_t         halfindex;
   p4est_locidx_t         qoffset, qid1, qid2;
   p4est_locidx_t         eid1, eid2, ec1, ec2;
@@ -458,9 +459,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
           qid1 = side1->is.full.quadid + tree1->quadrants_offset;
           P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
           P4EST_ASSERT (mesh->quad_to_quad_edge[P8EST_EDGES * qid1 +
-              side1->edge] == -1);
+                                                side1->edge] == -1);
           P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 +
-              side1->edge] == -25);
+                                           side1->edge] == -25);
           mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] = -2;
           mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -26;
         }
@@ -477,6 +478,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
       for (i = 0; i < 0.5 * cz; ++i) {
         side1 = side2 = NULL;
         qid1 = -1;
+
         for (j = 0; j < P4EST_HALF; ++j) {
           if (visited[j]) {
             continue;
@@ -487,7 +489,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
             side1 =
               (p8est_iter_edge_side_t *) sc_array_index (&info->sides, j);
             eid1 = side1->edge;
-            ec1 = eid1;
             visited[j] = 1;
             continue;
           }
@@ -497,6 +498,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
           side2 =
             (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, j);
           eid2 = side2->edge;
+          ec1 = eid1;
           P4EST_ASSERT (side2->treeid == side1->treeid);
 
           /* edge is diagonal opposite if edge indeces sum up to
@@ -505,13 +507,12 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
            * 19 for an edge parallel to z-axis
            */
           int edgesum[3] = {3, 11, 19};
-          cz = -1;
+          ctr = -1;
           while (ec1 > 0) {
             ec1 -= P4EST_HALF;
-            ++cz;
+            ++ctr;
           }
-          if (eid1 + eid2 != edgesum[cz])
-          {
+          if (eid1 + eid2 != edgesum[ctr]) {
             side2 = NULL;
             continue;
           }
@@ -519,6 +520,56 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
           /* we found a pair of diagonal edges */
           printf ("eid1: %2i, eid2: %2i\n", eid1, eid2);
 
+          P4EST_ASSERT (!side1->is_hanging || !side2->is_hanging);
+          if (!side1->is_hanging && !side2->is_hanging) {
+            /* case 1: equally sized cells */
+            P4EST_ASSERT (!side1->is.full.is_ghost || !side2->is.full.is_ghost);
+
+            if (!side1->is.full.is_ghost) {
+              tree1 = p4est_tree_array_index (info->p4est->trees,
+                                              side1->treeid);
+              qid1 = side1->is.full.quadid + tree1->quadrants_offset;
+              P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+            }
+            else {
+              P4EST_ASSERT (side->is.full.quad != NULL);
+              P4EST_ASSERT (side->is.full.quadid >= 0);
+              qid1 = mesh->local_num_quadrants + side1->is.full.quadid;
+            }
+            if (!side2->is.full.is_ghost) {
+              tree2 = p4est_tree_array_index (info->p4est->trees,
+                                              side2->treeid);
+              qid2 = side2->is.full.quadid + tree2->quadrants_offset;
+              P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+            }
+            else {
+              P4EST_ASSERT (side->is.full.quad != NULL);
+              P4EST_ASSERT (side->is.full.quadid >= 0);
+              qid2 = mesh->local_num_quadrants + side1->is.full.quadid;
+            }
+
+            /* encode quadrant neighborhood */
+            if (!side1->is.full.is_ghost) {
+              printf("[side1] trying to write at %2i\n", P8EST_EDGES * qid1 + side1->edge);
+              P4EST_ASSERT (mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+              P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -25);
+              mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] = qid2;
+              mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
+                P8EST_EDGES + side2->edge;
+            }
+            if (!side2->is.full.is_ghost) {
+              printf("[side2] trying to write at %2i\n", P8EST_EDGES * qid2 + side2->edge);
+              P4EST_ASSERT (mesh->quad_to_quad_edge[P8EST_EDGES * qid2 + side2->edge] == -1);
+              P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid2 + side2->edge] == -25);
+              mesh->quad_to_quad_edge[P8EST_EDGES * qid2 + side2->edge] = qid1;
+              mesh->quad_to_edge[P8EST_EDGES * qid2 + side2->edge] =
+                P8EST_EDGES + side1->edge;
+            }
+          }
+          else {
+
+          }
+          visited[j] = 1;
         }
       }
     }
