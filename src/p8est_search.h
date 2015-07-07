@@ -204,7 +204,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
                                                  p4est_topidx_t which_tree,
                                                  p8est_quadrant_t * quadrant,
                                                  int pfirst, int plast,
-                                                 void * point);
+                                                 void *point);
 
 /** Traverse the global partition top-down.
  * We proceed top-down through the partition, identically on all processors
@@ -223,7 +223,8 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
  * \param [in] points       NOT IMPLEMENTED.
  */
 void                p8est_search_partition (p8est_t * p8est,
-                                            p8est_search_partition_t quadrant_fn,
+                                            p8est_search_partition_t
+                                            quadrant_fn,
                                             p8est_search_partition_t point_fn,
                                             sc_array_t * points);
 
