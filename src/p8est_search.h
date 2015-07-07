@@ -157,6 +157,10 @@ typedef int         (*p8est_search_local_t) (p8est_t * p8est,
  * The points can really be anything, p4est does not perform any
  * interpretation, just passes the pointer along to the callback function.
  *
+ * If the points are a NULL array, they are ignored and the recursion proceeds
+ * by querying the per-quadrant callback.  If the points are not NULL but an
+ * empty array, the recursion will stop immediately!
+ *
  * \param [in] p8est        The forest to be searched.
  * \param [in] quadrant_fn  Executed once for each quadrant that is
  *                          entered.  This quadrant is always local, if not

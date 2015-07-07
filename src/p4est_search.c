@@ -467,9 +467,9 @@ p4est_search_recursion (const p4est_search_recursion_t * rec,
                         p4est_quadrant_t * quadrant,
                         sc_array_t * quadrants, sc_array_t * actives)
 {
-  const size_t        qcount = quadrants->elem_count;
   int                 i;
   int                 is_leaf, is_match;
+  size_t              qcount, act_count;
   size_t              zz, *pz, *qz;
   size_t              split[P4EST_CHILDREN + 1];
   p4est_locidx_t      local_num;
@@ -481,13 +481,23 @@ p4est_search_recursion (const p4est_search_recursion_t * rec,
    * 1. quadrant is larger or equal in size than those in the array.
    * 2. quadrant is equal to or an ancestor of those in the array.
    */
+  P4EST_ASSERT (rec != NULL);
+  P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
+  qcount = quadrants->elem_count;
 
-  P4EST_ASSERT ((rec->points == NULL) == (actives == NULL));
-  P4EST_ASSERT (rec->points == NULL ||
-                actives->elem_count <= rec->points->elem_count);
+  /* As an optimization we pass a NULL actives array to every root. */
+  if (rec->points != NULL && actives == NULL) {
+    act_count = rec->points->elem_count;
+  }
+  else {
+    P4EST_ASSERT ((rec->points == NULL) == (actives == NULL));
+    P4EST_ASSERT (rec->points == NULL ||
+                  actives->elem_count <= rec->points->elem_count);
+    act_count = actives == NULL ? 0 : actives->elem_count;
+  }
 
   /* return if there are no quadrants or active points */
-  if (qcount == 0 || (rec->points != NULL && actives->elem_count == 0))
+  if (qcount == 0 || (rec->points != NULL && act_count == 0))
     return;
 
   /* determine leaf situation */
@@ -547,8 +557,8 @@ p4est_search_recursion (const p4est_search_recursion_t * rec,
     /* query callback for all points and return if none remain */
     chact = &child_actives;
     sc_array_init (chact, sizeof (size_t));
-    for (zz = 0; zz < actives->elem_count; ++zz) {
-      pz = (size_t *) sc_array_index (actives, zz);
+    for (zz = 0; zz < act_count; ++zz) {
+      pz = actives == NULL ? &zz : (size_t *) sc_array_index (actives, zz);
       is_match = rec->search_point_fn (rec->p4est, rec->which_tree,
                                        quadrant, local_num,
                                        sc_array_index (rec->points, *pz));
@@ -590,9 +600,7 @@ p4est_search_local (p4est_t * p4est, p4est_search_local_t search_quadrant_fn,
   p4est_quadrant_t    root;
   p4est_quadrant_t   *f, *l;
   p4est_search_recursion_t srec, *rec = &srec;
-  sc_array_t          actives, *acts;
   sc_array_t         *tquadrants;
-  size_t              zz, *pz;
 
   /* correct call convention? */
   P4EST_ASSERT (p4est != NULL);
@@ -601,21 +609,6 @@ p4est_search_local (p4est_t * p4est, p4est_search_local_t search_quadrant_fn,
   /* we do nothing if there is nothing we can do */
   if (search_quadrant_fn == NULL && points == NULL) {
     return;
-  }
-
-  /* prepare start of recursion by listing the active points */
-  if (points == NULL) {
-    /* we ignore the points logic completely */
-    acts = NULL;
-  }
-  else {
-    /* mark all input points as active */
-    acts = &actives;
-    sc_array_init_size (acts, sizeof (size_t), points->elem_count);
-    for (zz = 0; zz < acts->elem_count; ++zz) {
-      pz = (size_t *) sc_array_index (acts, zz);
-      *pz = zz;
-    }
   }
 
   /* set recursion context */
@@ -637,13 +630,7 @@ p4est_search_local (p4est_t * p4est, p4est_search_local_t search_quadrant_fn,
     p4est_nearest_common_ancestor (f, l, &root);
 
     /* perform top-down search */
-    p4est_search_recursion (rec, &root, tquadrants, acts);
-  }
-
-  /* clean up after the tree loop */
-  if (acts != NULL) {
-    P4EST_ASSERT (points->elem_count == acts->elem_count);
-    sc_array_reset (acts);
+    p4est_search_recursion (rec, &root, tquadrants, NULL);
   }
 }
 
