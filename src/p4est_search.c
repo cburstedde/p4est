@@ -775,32 +775,77 @@ p4est_partition_recursion_t;
 
 static void
 p4est_partition_recursion (const p4est_partition_recursion_t * rec,
-                           p4est_quadrant_t * quadrant, int pfirst, int plast)
+                           p4est_quadrant_t * quadrant, int pfirst, int plast,
+                           sc_array_t * actives)
 {
   int                 i;
-  int                 proceed;
+  int                 is_match;
   int                 cpfirst, cplast, cpnext;
-  sc_array_t          pview, offsets;
+  size_t              zz, *pz, *qz;
+  size_t              act_count;
   p4est_quadrant_t    child;
+  sc_array_t          pview, offsets;
+  sc_array_t          child_actives, *chact;
 
   P4EST_ASSERT (rec != NULL);
-  P4EST_ASSERT (rec->p4est != NULL);
   P4EST_ASSERT (0 <= rec->which_tree &&
                 rec->which_tree < rec->p4est->connectivity->num_trees);
-  P4EST_ASSERT (rec->quadrant_fn != NULL);
   P4EST_ASSERT (p4est_traverse_is_valid_quadrant (rec->p4est, rec->which_tree,
                                                   quadrant, pfirst, plast));
   P4EST_ASSERT (quadrant != NULL && p4est_quadrant_is_valid (quadrant));
   P4EST_ASSERT (quadrant->p.which_tree == rec->which_tree);
 
-  /* call the user-provided callback function */
-  proceed = rec->quadrant_fn (rec->p4est, rec->which_tree, quadrant,
-                              pfirst, plast, NULL);
+  /* As an optimization we pass a NULL actives array to every root. */
+  if (rec->points != NULL && actives == NULL) {
+    act_count = rec->points->elem_count;
+  }
+  else {
+    P4EST_ASSERT ((rec->points == NULL) == (actives == NULL));
+    P4EST_ASSERT (rec->points == NULL ||
+                  actives->elem_count <= rec->points->elem_count);
+    act_count = actives == NULL ? 0 : actives->elem_count;
+  }
 
-  /* terminate recursion at the latest when we are down to one processor */
-  if (pfirst == plast || !proceed) {
+  /* return if there are no active points */
+  if (rec->points != NULL && act_count == 0)
+    return;
+
+  /* execute quadrant callback if present, which may stop the recursion */
+  if (rec->quadrant_fn != NULL &&
+      !rec->quadrant_fn (rec->p4est, rec->which_tree,
+                         quadrant, pfirst, plast, NULL)) {
     return;
   }
+
+  /* check out points */
+  if (rec->points == NULL) {
+    /* we have called the callback already.  Maybe we are done */
+    if (pfirst == plast) {
+      return;
+    }
+    chact = NULL;
+  }
+  else {
+    /* query callback for all points and return if none remain */
+    chact = &child_actives;
+    sc_array_init (chact, sizeof (size_t));
+    for (zz = 0; zz < act_count; ++zz) {
+      pz = actives == NULL ? &zz : (size_t *) sc_array_index (actives, zz);
+      is_match = rec->point_fn (rec->p4est, rec->which_tree,
+                                quadrant, pfirst, plast,
+                                sc_array_index (rec->points, *pz));
+      if (!(pfirst == plast) && is_match) {
+        qz = (size_t *) sc_array_push (chact);
+        *qz = *pz;
+      }
+    }
+    if (chact->elem_count == 0) {
+      return;
+    }
+  }
+
+  /* the one-processor branch has returned above */
+  P4EST_ASSERT (!(pfirst == plast));
   P4EST_ASSERT (quadrant->level < P4EST_QMAXLEVEL);
 
   /* find the processors for all children of the quadrant */
@@ -866,10 +911,13 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
                   (rec->p4est, rec->which_tree, &child, cpfirst, cplast));
 
     /* go deeper into the recursion */
-    p4est_partition_recursion (rec, &child, cpfirst, cplast);
+    p4est_partition_recursion (rec, &child, cpfirst, cplast, chact);
   }
 
   /* this is it */
+  if (chact != NULL) {
+    sc_array_reset (chact);
+  }
   sc_array_reset (&offsets);
   sc_array_reset (&pview);
 }
@@ -890,7 +938,8 @@ p4est_search_partition (p4est_t * p4est, p4est_search_partition_t quadrant_fn,
 
   /* we do nothing if there is nothing to be done */
   P4EST_ASSERT (p4est != NULL);
-  if (quadrant_fn == NULL) {
+  P4EST_ASSERT (points == NULL || point_fn != NULL);
+  if (quadrant_fn == NULL && points == NULL) {
     return;
   }
 
@@ -964,7 +1013,7 @@ p4est_search_partition (p4est_t * p4est, p4est_search_partition_t quadrant_fn,
     P4EST_ASSERT (p4est_traverse_is_valid_tree (p4est, tt, pfirst, plast));
 
     /* go into recursion for this tree */
-    p4est_partition_recursion (rec, &root, pfirst, plast);
+    p4est_partition_recursion (rec, &root, pfirst, plast, NULL);
   }
 
   /* cleanup */

@@ -194,8 +194,9 @@ void                p4est_search_local (p4est_t * p4est,
  * \param [in] plast        The highest processor that owns part of \b quadrant.
  *                          Guaranteed to be non-empty.  If this is equal to
  *                          \b pfirst, then the recursion will stop for
- *                          quadrant's branch after this function returns.
+ *                          \b quadrant's branch after this function returns.
  * \param [in,out] point    Pointer to a user-defined point object.
+ *                          If called per-quadrant, this is NULL.
  * \return                  If false, the recursion at quadrant is terminated.
  *                          If true, it continues if \b pfirst < \b plast.
  */
@@ -207,9 +208,9 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
 
 /** Traverse the global partition top-down.
  * We proceed top-down through the partition, identically on all processors
- * except for the results of a user-provided callback.  The recursion will only
+ * except for the results of two user-provided callbacks.  The recursion will only
  * go down branches that are split between multiple processors.  The callback
- * function can be used to stop a branch recursion even for split branches.
+ * functions can be used to stop a branch recursion even for split branches.
  * \note Traversing the whole processor partition will likely by inefficient,
  *       so sensible use of the callback function is advised.
  * \param [in] p4est        The forest to traverse.
@@ -218,8 +219,12 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
  *                          which only continues deeper if this
  *                          callback returns true for a branch quadrant.
  *                          It is allowed to set this to NULL.
- * \param [in] point_fn     NOT IMPLEMENtED.
- * \param [in] points       NOT IMPLEMENTED.
+ * \param [in] point_fn     This function decides per-point whether it is
+ *                          followed down the recursion.
+ *                          Must be non-NULL if \b points are not NULL.
+ * \param [in] points       User-provided array of \b points that are
+ *                          passed to the callback \b point_fn.
+ *                          See \ref p4est_search_local for details.
  */
 void                p4est_search_partition (p4est_t * p4est,
                                             p4est_search_partition_t
