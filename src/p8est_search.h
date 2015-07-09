@@ -233,6 +233,18 @@ void                p8est_search_partition (p8est_t * p8est,
                                             p8est_search_partition_t point_fn,
                                             sc_array_t * points);
 
+typedef int         (*p8est_search_all_t) (p8est_t * p8est,
+                                           p4est_topidx_t which_tree,
+                                           p8est_quadrant_t * quadrant,
+                                           int pfirst, int plast,
+                                           p4est_locidx_t local_num,
+                                           void *point);
+
+void                p8est_search_all (p8est_t * p8est,
+                                      p8est_search_all_t quadrant_fn,
+                                      p8est_search_all_t point_fn,
+                                      sc_array_t * points);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_SEARCH_H */
