@@ -469,6 +469,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
 {
   int                 i;
   int                 is_leaf, is_match;
+  int                 level;
   size_t              qcount, act_count;
   size_t              zz, *pz, *qz;
   size_t              split[P4EST_CHILDREN + 1];
@@ -511,9 +512,11 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
                   p4est_quadrant_is_ancestor (quadrant, lq));
 
     /* skip unnecessary intermediate levels if possible */
-    if (p4est_quadrant_ancestor_id (q, quadrant->level + 1) ==
-        p4est_quadrant_ancestor_id (lq, quadrant->level + 1)) {
+    level = (int) quadrant->level;
+    if (p4est_quadrant_ancestor_id (q, level + 1) ==
+        p4est_quadrant_ancestor_id (lq, level + 1)) {
       p4est_nearest_common_ancestor (q, lq, quadrant);
+      P4EST_ASSERT (level < (int) quadrant->level);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, q));
       P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, lq));
     }
@@ -574,6 +577,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
 
   /* leaf situation has returned above */
   P4EST_ASSERT (!is_leaf);
+  P4EST_ASSERT (quadrant->level < P4EST_QMAXLEVEL);
 
   /* split quadrant array and run recursion */
   p4est_split_array (quadrants, (int) quadrant->level, split);
