@@ -137,9 +137,9 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
  *                          which case it is a temporary variable and not part
  *                          of the forest storage.  Otherwise, it is a leaf and
  *                          points directly into the forest storage.
- * \param [in] local_num    If the quadrant is not a leaf, this is -1.  Otherwise
- *                          it is the (non-negative) index of the quadrant
- *                          relative to the processor-local quadrant storage.
+ * \param [in] local_num    If the quadrant is not a leaf, this is < 0.
+ *                          Otherwise it is the (non-negative) index of the
+ *                          quadrant relative to the processor-local storage.
  * \param [in] point        Representation of a "point"; user-defined.
  *                          If \b point is NULL, the callback may be used to
  *                          prepare quadrant-related search meta data.
@@ -238,8 +238,10 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
  * except for the results of two user-provided callbacks.  The recursion will only
  * go down branches that are split between multiple processors.  The callback
  * functions can be used to stop a branch recursion even for split branches.
- * \note Traversing the whole processor partition will likely by inefficient,
- *       so sensible use of the callback function is advised.
+ * This function offers the option to search for arbitrary user-defined points
+ * analogously to \ref p4est_search_local.
+ * \note Traversing the whole processor partition will be at least O(P),
+ *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p8est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] quadrant_fn  This function controls the recursion,
@@ -259,7 +261,55 @@ void                p8est_search_partition (p8est_t * p8est,
                                             p8est_search_partition_t point_fn,
                                             sc_array_t * points);
 
-/** TODO: document */
+/** Callback function for the top-down search through the whole forest.
+ * \param [in] p4est        The forest to search.
+ *                          We recurse through the trees one after another.
+ * \param [in] which_tree   The current tree number.
+ * \param [in] quadrant     The current quadrant in the recursion.
+ *                          This quadrant is either a non-leaf tree branch
+ *                          or a leaf.  If the quadrant is contained in the
+ *                          local partition, we know which, otherwise we don't.
+ *                          Let us first consider the situation when \b
+ *                          quadrant is local, which is indicated by both \b
+ *                          pfirst and \b plast being equal to \b
+ *                          p4est->mpirank.  Then the parameter \b local_num is
+ *                          negative for non-leaves and the number of the
+ *                          quadrant as a leaf in local storage otherwise.
+ *                          Only if the quadrant is a local leaf, it points to
+ *                          the actual local storage and can be used to access
+ *                          user data etc., and the recursion terminates.
+ *                          The other possibility is that \b pfirst < \b plast,
+ *                          in which case we proceed with the recursion,
+ *                          or both are equal to the same remote rank, in
+ *                          which case the recursion terminates.  Either way,
+ *                          the quadrant is not from local forest storage.
+ *
+ * \param [in] pfirst       The lowest processor that owns part of \b quadrant.
+ *                          Guaranteed to be non-empty.
+ * \param [in] plast        The highest processor that owns part of \b quadrant.
+ *                          Guaranteed to be non-empty.
+ * \param [in] local_num    If \b quadrant is a local leaf, this number is the
+ *                          index of the leaf in local quadrant storage.
+ *                          Else, this is a negative value.
+ *
+ * \param [in,out] point    User-defined representation of a point.  This
+ *                          parameter distinguishes two uses of the callback.
+ *                          For each quadrant, the callback is first called
+ *                          with a NULL point, and if this callback returns
+ *                          true, once for each point tracked in this branch.
+ *                          The return value for a point determines whether
+ *                          it shall be tracked further down the branch or not,
+ *                          and has no effect on a local leaf.
+ *                          The call with a NULL point is intended to prepare
+ *                          quadrant-related search meta data that is common to
+ *                          all points, and/or to efficiently terminate the
+ *                          recursion for all points in the branch in one call.
+ *
+ * \return                  If false, the recursion at \b quadrant terminates.
+ *                          If true, it continues if \b pfirst < \b plast or
+ *                          if they are both equal to \b p4est->mpirank and
+ *                          the recursion has not reached a leaf yet.
+ */
 typedef int         (*p8est_search_all_t) (p8est_t * p8est,
                                            p4est_topidx_t which_tree,
                                            p8est_quadrant_t * quadrant,
@@ -267,7 +317,66 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
                                            p4est_locidx_t local_num,
                                            void *point);
 
-/** TODO: document */
+/** Perform a top-down search on the whole forest.
+ *
+ * This function combines the functionality of \ref p4est_search_local and \ref
+ * p4est_search_partition; their documentation applies for the most part.
+ *
+ * The recursion proceeds from the root quadrant of each tree until
+ * (a) we encounter a remote quadrant that covers only one processor, or
+ * (b) we encounter a local leaf quadrant.
+ * In other words, we proceed with the recursion into a quadrant's children if
+ * (a) the quadrant is split between two or more processors, no matter whether
+ * one of them is the calling processor or not, or (b) if the quadrant is on
+ * the local processor but we have not reached a leaf yet.
+ *
+ * The search can track one or more points, which are abstract placeholders.
+ * They are matched against the quadrants traversed using a callback function.
+ * The result of the callback function can be used to stop a recursion early.
+ * The user determines how a point is interpreted, we only pass it around.
+ *
+ * Note that in the remote case (a), we may terminate the recursion even if
+ * the quadrant is not a leaf, which we have no means of knowing.  Still,
+ * this case is sufficient to determine the processor ownership of a point.
+ *
+ * \note
+ * This is a very powerful function that can become slow if not used carefully.
+ *
+ * \note
+ * As with the two other search functions in this file, calling it once with
+ * many points is generally much faster than calling it once for each point.
+ * Using multiple points also allows for a per-quadrant termination of the
+ * recursion in addition to a more costly per-point termination.
+ *
+ * \note
+ * This function works fine when used for the special cases that either the
+ * partition or the local quadrants are not of interest.  However, in the case
+ * of querying only local information we expect that \ref p4est_search_local
+ * will be faster since it employs specific local optimizations.
+ *
+ * \param [in] p4est        The forest to be searched.
+ *
+ * \param [in] quadrant_fn  Executed once for each quadrant that is entered.
+ *                          If the callback returns false, this quadrant and
+ *                          its descendants are excluded from the search, and
+ *                          the points in this branch are not queried further.
+ *                          Its \b point argument is always NULL.
+ *                          Callback may be NULL in which case it is ignored.
+ *
+ * \param [in] point_fn     Executed once for each point that is relevant for a
+ *                          quadrant of the search.  If it returns true, the
+ *                          point is tracked further down that branch, else it
+ *                          is discarded from the queries for the children.
+ *                          If \b points is not NULL, this callback must be not
+ *                          NULL.  If \b points is NULL, it is not called.
+ *
+ * \param [in] points       User-defined array of points.  We do not interpret
+ *                          a point, just pass it into the callbacks.
+ *                          If NULL, only the \b quadrant_fn callback
+ *                          is executed.  If that is NULL, the whole function
+ *                          noops.  If not NULL, the \b point_fn is
+ *                          called on its members during the search.
+ */
 void                p8est_search_all (p8est_t * p8est,
                                       p8est_search_all_t quadrant_fn,
                                       p8est_search_all_t point_fn,

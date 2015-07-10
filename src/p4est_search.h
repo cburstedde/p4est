@@ -136,9 +136,9 @@ int32_t             p4est_find_range_boundaries (p4est_quadrant_t * lq,
  *                          which case it is a temporary variable and not part
  *                          of the forest storage.  Otherwise, it is a leaf and
  *                          points directly into the forest storage.
- * \param [in] local_num    If the quadrant is not a leaf, this is -1.  Otherwise
- *                          it is the (non-negative) index of the quadrant
- *                          relative to the processor-local quadrant storage.
+ * \param [in] local_num    If the quadrant is not a leaf, this is < 0.
+ *                          Otherwise it is the (non-negative) index of the
+ *                          quadrant relative to the processor-local storage.
  * \param [in] point        Representation of a "point"; user-defined.
  *                          If \b point is NULL, the callback may be used to
  *                          prepare quadrant-related search meta data.
@@ -237,8 +237,10 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
  * except for the results of two user-provided callbacks.  The recursion will only
  * go down branches that are split between multiple processors.  The callback
  * functions can be used to stop a branch recursion even for split branches.
- * \note Traversing the whole processor partition will likely by inefficient,
- *       so sensible use of the callback function is advised.
+ * This function offers the option to search for arbitrary user-defined points
+ * analogously to \ref p4est_search_local.
+ * \note Traversing the whole processor partition will be at least O(P),
+ *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] quadrant_fn  This function controls the recursion,
@@ -287,7 +289,7 @@ void                p4est_search_partition (p4est_t * p4est,
  *                          Guaranteed to be non-empty.
  * \param [in] local_num    If \b quadrant is a local leaf, this number is the
  *                          index of the leaf in local quadrant storage.
- *                          Else, this is -1.
+ *                          Else, this is a negative value.
  *
  * \param [in,out] point    User-defined representation of a point.  This
  *                          parameter distinguishes two uses of the callback.
@@ -316,8 +318,8 @@ typedef int         (*p4est_search_all_t) (p4est_t * p4est,
 
 /** Perform a top-down search on the whole forest.
  *
- * This function combines the functionality of \ref p4est_search_local
- * and \ref p4est_search_partition; their documentation applies as well.
+ * This function combines the functionality of \ref p4est_search_local and \ref
+ * p4est_search_partition; their documentation applies for the most part.
  *
  * The recursion proceeds from the root quadrant of each tree until
  * (a) we encounter a remote quadrant that covers only one processor, or
@@ -340,10 +342,10 @@ typedef int         (*p4est_search_all_t) (p4est_t * p4est,
  * This is a very powerful function that can become slow if not used carefully.
  *
  * \note
- * Calling this function once with many points is generally much faster than
- * calling it once for each point.  Using multiple points also allows for a
- * per-quadrant termination of the recursion in addition to a more costly
- * per-point termination.
+ * As with the two other search functions in this file, calling it once with
+ * many points is generally much faster than calling it once for each point.
+ * Using multiple points also allows for a per-quadrant termination of the
+ * recursion in addition to a more costly per-point termination.
  *
  * \note
  * This function works fine when used for the special cases that either the
