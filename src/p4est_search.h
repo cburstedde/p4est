@@ -27,7 +27,32 @@
 /** \file p4est_search.h
  * Search through quadrants, the local part of a forest, or the partition.
  *
- * This file provides several helper functions and recursive algorithms.
+ * This file provides several helper functions and a couple highlevel
+ * recursive search algorithms.  These can be used to search for a collection
+ * of user-defined "points" through the forest.  There are three flavors of
+ * the main search algorithm:
+ *
+ * 1. \ref p4est_search_local
+ *
+ *    This function examines the processor-local part of the refinement tree.
+ *    It proceeds top-down along all subtrees that have at least one local leaf.
+ *    Non-local subtrees are ignored in an optimized way.  Use this function to
+ *    compare points against the local branches and leaves.
+ *
+ * 2. \ref p4est_search_partition
+ *
+ *    This function examines the parallel partition that is known to all
+ *    processors without knowing about actual leaves on remote processors.
+ *    Use this to find the processors relevant for a collection of points,
+ *    which can then be used to send each point to its assigned processor.
+ *
+ * 3. \ref p4est_search_all
+ *
+ *    This function combines the first two into one algorithm.  Note that when
+ *    the parallel partition is not of interest, \ref p4est_search_local is
+ *    recommended instead since it employs optimizations that are only possible
+ *    on the local processor.
+ *
  * \ingroup p4est
  */
 
@@ -136,8 +161,9 @@ typedef int         (*p4est_search_local_t) (p4est_t * p4est,
  * The search runs over all local quadrants and proceeds recursively top-down.
  * For each tree, it may start at the root of that tree, or further down at the
  * root of the subtree that contains all of the tree's local quadrants.
- * Likewise, some intermediate levels in the recursion may be skipped.
- * Its outer loop is thus a depth-first, processor-local forest traversal.
+ * Likewise, some intermediate levels in the recursion may be skipped if the
+ * processor-local part is contained in a single deeper subtree.
+ * The outer loop is thus a depth-first, processor-local forest traversal.
  * Each quadrant in that loop either is a leaf, or a (direct or indirect)
  * strict ancestor of a leaf.  On entering a new quadrant, a user-provided
  * quadrant-callback is executed.
@@ -148,7 +174,7 @@ typedef int         (*p4est_search_local_t) (p4est_t * p4est,
  * the root down to the leaves:  For each quadrant, an inner loop over the
  * potentially matching points executes a point-callback for each candidate
  * that determines whether the point may be a match.  If not, it is discarded
- * immediately, otherwise it is passed to the next finer level.
+ * in the current branch, otherwise it is passed to the next finer level.
  * The callback is allowed to return true for the same point and more than one
  * quadrant; in this case more than one matching quadrant may be identified.
  * The callback is also allowed to return false for all children of a quadrant
@@ -163,13 +189,13 @@ typedef int         (*p4est_search_local_t) (p4est_t * p4est,
  * \param [in] p4est        The forest to be searched.
  * \param [in] quadrant_fn  Executed once for each quadrant that is
  *                          entered.  This quadrant is always local, if not
- *                          itself then at least one child of it.  If the
- *                          callback returns false, this quadrant and its
+ *                          completey then at least one descendant of it.  If
+ *                          the callback returns false, this quadrant and its
  *                          descendants are excluded from the search.
  *                          Its \b point argument is always NULL.
- *                          May be NULL in which case it is ignored.
+ *                          Callback may be NULL in which case it is ignored.
  * \param [in] point_fn     If \b points is not NULL, must be not NULL.
- *                          Must return true for any possible matching point.
+ *                          Shall return true for any possible matching point.
  *                          If \b points is NULL, this callback is ignored.
  * \param [in] points       User-defined array of "points".
  *                          If NULL, only the \b quadrant_fn callback
@@ -318,6 +344,12 @@ typedef int         (*p4est_search_all_t) (p4est_t * p4est,
  * calling it once for each point.  Using multiple points also allows for a
  * per-quadrant termination of the recursion in addition to a more costly
  * per-point termination.
+ *
+ * \note
+ * This function works fine when used for the special cases that either the
+ * partition or the local quadrants are not of interest.  However, in the case
+ * of querying only local information we expect that \ref p4est_search_local
+ * will be faster since it employs specific local optimizations.
  *
  * \param [in] p4est        The forest to be searched.
  *
