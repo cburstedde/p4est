@@ -431,41 +431,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
   }
   else if (cz == 2) {
     /* edge on a domain limiting face */
-    P4EST_ASSERT (info->orientation == 0);
-    P4EST_ASSERT (info->tree_boundary);
-
-    for (zz = 0; zz < cz; ++zz) {
-      side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
-      P4EST_ASSERT (0 <= side1->treeid &&
-          side1->treeid < info->p4est->connectivity->num_trees);
-      P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
-      P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
-      tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
-
-      /* if we are at a domain limiting face the edge may be hanging. Thus,
-       * there is no generic way of "putting itself in". However, it is
-       * irrelevant for edge neighboring as it is covered as a face neighbor.
-       * So write -3 to quad_to_quad_edge and -27 to quad_to_edge */
-      if (side1->is_hanging) {
-        for (k = 0; k < 2; k++) {
-          if (!side1->is.hanging.is_ghost[k]) {
-            qls1[k] = side1->is.hanging.quadid[k] + tree1->quadrants_offset;
-            P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
-            in_qtoq = P8EST_EDGES * qls1[k] + side1->edge;
-            P4EST_ASSERT (mesh->quad_to_quad_edge[in_qtoq] == -1);
-            P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -25);
-            mesh->quad_to_quad_edge[in_qtoq] = -3;   /* put in myself and my own edge */
-            mesh->quad_to_edge[in_qtoq] = -27;
-          }
-        }
-      }
-      else {
-        qid1 = side1->is.full.quadid + tree1->quadrants_offset;
-        P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
-        mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
-        mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -27;
-      }
-    }
+  	/* do not touch, set to -1 */
+  	return;
   }
   else {
     /* inner edge */
