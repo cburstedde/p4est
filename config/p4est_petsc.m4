@@ -62,7 +62,8 @@ if test "x$$1_WITH_PETSC" != xno ; then
       make -s -C $$1_PETSC_DIR getincludedirs`
   elif test -r $$1_PETSC_DIR/conf/variables ; then
     if ! test -r $$1_PETSC_DIR/conf/rules ; then
-AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/rules])
+      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile\
+ or $$1_PETSC_DIR/conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
 include $$1_PETSC_DIR/conf/variables
@@ -77,7 +78,8 @@ EOF
     rm -f Makefile_config_petsc
   elif test -r $$1_PETSC_DIR/lib/petsc-conf/variables ; then
     if ! test -r $$1_PETSC_DIR/lib/petsc-conf/rules ; then
-      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/lib/petsc-conf/rules])
+      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or\
+ $$1_PETSC_DIR/lib/petsc-conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
 include $$1_PETSC_DIR/lib/petsc-conf/variables
@@ -88,7 +90,8 @@ EOF
     rm -f Makefile_config_petsc
   elif test -r $$1_PETSC_DIR/lib/petsc/conf/variables ; then
     if ! test -r $$1_PETSC_DIR/lib/petsc/conf/rules ; then
-      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/lib/petsc/conf/rules])
+      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or\
+ $$1_PETSC_DIR/lib/petsc/conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
 include $$1_PETSC_DIR/lib/petsc/conf/variables
@@ -98,7 +101,8 @@ EOF
     $1_PETSC_INCLUDE_DIRS=`make -s -f Makefile_config_petsc getincludedirs`
     rm -f Makefile_config_petsc
   else 
-    AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables or $$1_PETSC_DIR/lib/petsc-conf/variables or $$1_PETSC_DIR/lib/petsc/conf/variables])
+    AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables\
+ or $$1_PETSC_DIR/lib/petsc-conf/variables or $$1_PETSC_DIR/lib/petsc/conf/variables])
   fi
   PRE_PETSC_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $$1_PETSC_INCLUDE_DIRS"
