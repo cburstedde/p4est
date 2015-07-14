@@ -2491,6 +2491,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     }
 
     /* if all quadrants have zero weight we do nothing */
+    /* TODO: if partition_for_coarsening is true, we should execute it */
     if (weight_sum == 0) {
       P4EST_FREE (local_weights);
       P4EST_FREE (global_weight_sums);
@@ -2502,6 +2503,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     }
 
     /* determine processor ids to send to */
+    /* TODO: replace this loop by two binary searches */
     send_lowest = num_procs;
     send_highest = 0;
     for (i = 1; i <= num_procs; ++i) {
@@ -2572,6 +2574,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     }
 
     /* determine processor ids to receive from and post irecv */
+    /* TODO: post irecv before isend */
     i = 0;
     my_lowcut = p4est_partition_cut_uint64 (weight_sum, rank, num_procs);
     if (my_lowcut == 0) {
@@ -2624,6 +2627,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     P4EST_FREE (global_weight_sums);
 
     /* wait for sends and receives to complete */
+    /* TODO: move this wait below the wait for the receives */
     if (num_sends > 0) {
       mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
       SC_CHECK_MPI (mpiret);
@@ -2690,6 +2694,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   }
 
   /* correct partition */
+  /* TODO: we do not take into account the weights. does this matter? */
   if (partition_for_coarsening) {
     num_corrected =
       p4est_partition_for_coarsening (p4est, num_quadrants_in_proc);
