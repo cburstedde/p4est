@@ -423,33 +423,31 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
     P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
     tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
     qid1 = side1->is.full.quadid + tree1->quadrants_offset;
-    P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
-    mesh->quad_to_quad_edge[P8EST_EDGES * qid1 +
-                            side1->edge] = qid1;   /* put in myself and my own edge */
-    mesh->quad_to_edge[P8EST_EDGES * qid1 +
-                       side1->edge] = side1->edge;
+
+    P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+    /* put in myself and my own edge */
+    mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] = qid1;
+    mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = side1->edge;
   }
   else if (cz == 2) {
     /* edge on a domain limiting face */
-  	/* do not touch, set to -1 */
-  	return;
+    /* do not touch, set to -1 */
+    return;
   }
   else {
     /* inner edge */
     if (info->tree_boundary) {
-      /* Tree neighbors of edges are not implemented yet: set to -2 and -26 */
       for (zz = 0; zz < cz; ++zz) {
         side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
         P4EST_ASSERT (0 <= side1->treeid &&
             side1->treeid < info->p4est->connectivity->num_trees);
         P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
-        P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
         tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
         if (side1->is_hanging) {
           for (k = 0; k < 2; k++) {
             if (!side1->is.hanging.is_ghost[k]) {
               qls1[k] = side1->is.hanging.quadid[k] + tree1->quadrants_offset;
-              P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
+              P4EST_ASSERT (0 <= qls1[k] && qls1[k] < mesh->local_num_quadrants);
               in_qtoq = P8EST_EDGES * qls1[k] + side1->edge;
               P4EST_ASSERT (mesh->quad_to_quad_edge[in_qtoq] == -1);
               P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -25);
@@ -460,8 +458,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
         }
         else {
           qid1 = side1->is.full.quadid + tree1->quadrants_offset;
-          P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
-              in_qtoq = P8EST_EDGES * qls1[k] + side1->edge;
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          in_qtoq = P8EST_EDGES * qid1 + side1->edge;
           P4EST_ASSERT (mesh->quad_to_quad_edge[in_qtoq] == -1);
           P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -25);
           mesh->quad_to_quad_edge[in_qtoq] = -2;
