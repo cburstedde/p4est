@@ -132,7 +132,8 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
 }
 
 static void
-test_partition_circle (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+test_partition_circle (sc_MPI_Comm mpicomm,
+                       p4est_connectivity_t * connectivity,
                        p4est_gloidx_t * pertree1, p4est_gloidx_t * pertree2)
 {
   int                 i, j;
@@ -218,6 +219,57 @@ test_partition_circle (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_FREE (new_counts);
   p4est_destroy (copy);
   p4est_destroy (p4est);
+}
+
+static int
+test_weight_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * quadrant)
+{
+  P4EST_ASSERT (quadrant->level == 0);
+
+  if (p4est->mpirank == 0 && which_tree == 0) {
+    return 256;
+  }
+  else {
+    return 1;
+  }
+}
+
+static void
+test_partition_weighted (sc_MPI_Comm mpicomm)
+{
+  int                 mpiret;
+  int                 bdim, mlev;
+  int                 pforc;
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est;
+
+  bdim = 4;
+  mlev = 0;
+  pforc = 0;
+
+  conn = p4est_connectivity_new_brick (bdim, bdim,
+#ifdef P4_TO_P8
+                                       bdim,
+#endif
+                                       0, 0
+#ifdef P4_TO_P8
+                                       , 0
+#endif
+    );
+  p4est = p4est_new_ext (mpicomm, conn, 0, mlev, 1, 0, NULL, NULL);
+
+  /* do a weighted partition */
+  p4est_partition (p4est, pforc, test_weight_fn);
+
+  /* don't clutter the following output */
+  mpiret = sc_MPI_Barrier (mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_LDEBUGF ("Quadrants after partition: %lld\n",
+                 (long long) p4est->local_num_quadrants);
+
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
 }
 
 int
@@ -365,6 +417,9 @@ main (int argc, char **argv)
 
   /* Add another test.  Overwrites pertree1, pertree2 */
   test_partition_circle (mpicomm, connectivity, pertree1, pertree2);
+
+  /* More specific tests for weighted partition */
+  test_partition_weighted (mpicomm);
 
   /* clean up and exit */
   P4EST_FREE (pertree1);
