@@ -542,7 +542,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
             else {
               P4EST_ASSERT (side->is.full.quad != NULL);
               P4EST_ASSERT (side->is.full.quadid >= 0);
-              qid2 = mesh->local_num_quadrants + side1->is.full.quadid;
+              qid2 = mesh->local_num_quadrants + side2->is.full.quadid;
             }
 
             /* encode quadrant neighborhood */
@@ -586,8 +586,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
             /* determine quadrant numbers for both hanging edges */
             for (k = 0; k < 2; ++k) {
               if (!side2->is.hanging.is_ghost[k]) {
-                tree1 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
-                qls1[k] = side2->is.hanging.quadid[k] + tree1->quadrants_offset;
+                tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
+                qls1[k] = side2->is.hanging.quadid[k] + tree2->quadrants_offset;
                 P4EST_ASSERT (0 <= qls1[k] && qls1[k] < mesh->local_num_quadrants);
               }
               else {
@@ -634,13 +634,14 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
               if (!side1->is.hanging.is_ghost[k]) {
                 tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
                 qid1 = side1->is.hanging.quadid[k]; + tree1->quadrants_offset;
-                P4EST_ASSERT (0 <= qls1[k] && qls1[k] < mesh->local_num_quadrants);
+                P4EST_ASSERT (0 <= qid1[k] && qid1[k] < mesh->local_num_quadrants);
               }
               else {
                 P4EST_ASSERT (side1->is.hanging.quad[k] != NULL);
                 P4EST_ASSERT (side1->is.hanging.quadid[k] >= 0);
                 qid1 = mesh->local_num_quadrants + side1->is.hanging.quadid[k];
               }
+
               if (!side2->is.hanging.is_ghost[k]) {
                 tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
                 qid2 = side2->is.hanging.quadid[k]; + tree2->quadrants_offset;
