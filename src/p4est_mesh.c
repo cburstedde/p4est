@@ -458,15 +458,17 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void * user_data)
         quadIds[zz] = side1->is.full.quadid;
         edgeIds[zz] = side1->edge;
 
-        /*xCoord[zz] = side1->is.full.quad->x /
+        /*
+        xCoord[zz] = side1->is.full.quad->x /
           (1 << (P8EST_MAXLEVEL - side1->is.full.quad->level));
         yCoord[zz] = side1->is.full.quad->y /
           (1 << (P8EST_MAXLEVEL - side1->is.full.quad->level));
         zCoord[zz] = side1->is.full.quad->z /
           (1 << (P8EST_MAXLEVEL - side1->is.full.quad->level));
 
-        printf("e%i: edge %2i (%2i, %2i, %2i); qid: %i\n"
-               zz, side1->edge, xCoord[zz], yCoord[zz], zCoord[zz], quadIds[zz]); */
+        printf("e%i: edge %2i (%2i, %2i, %2i); qid: %i\n",
+               zz, side1->edge, xCoord[zz], yCoord[zz], zCoord[zz], quadIds[zz]);
+               */
       }
       if (!sameTree || hanging) {
         for (zz = 0; zz < cz; ++zz) {
