@@ -638,10 +638,64 @@ partition_weight (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1 << ((int) quadrant->level * pp->weight_exponent);
 }
 
+static void
+p4est_wrap_partition_unchanged (p4est_gloidx_t pre_me,
+                                p4est_gloidx_t pre_next,
+                                p4est_gloidx_t post_me,
+                                p4est_gloidx_t post_next,
+                                p4est_locidx_t * unchanged_first,
+                                p4est_locidx_t * unchanged_length,
+                                p4est_locidx_t * unchanged_old_first)
+{
+  p4est_locidx_t      uf, ul, uof;
+  p4est_gloidx_t      unext;
+
+  /* consistency checks */
+  P4EST_ASSERT (0 <= pre_me && pre_me <= pre_next);
+  P4EST_ASSERT (0 <= post_me && post_me <= post_next);
+
+  /* initialize the case that no quadrants stay on this processor */
+  uf = ul = uof = 0;
+
+  /* check whether any quadrants stay at all, and which ones */
+  if (pre_me < post_next && post_me < pre_next) {
+    unext = SC_MIN (pre_next, post_next);
+    if (pre_me <= post_me) {
+      uof = (p4est_locidx_t) (post_me - pre_me);
+      ul = (p4est_locidx_t) (unext - post_me);
+    }
+    else {
+      uf = (p4est_locidx_t) (pre_me - post_me);
+      ul = (p4est_locidx_t) (unext - pre_me);
+    }
+  }
+
+  /* consistency checks */
+  P4EST_ASSERT (uf >= 0 && ul >= 0 && uof >= 0);
+  P4EST_ASSERT ((p4est_gloidx_t) uf + ul <= post_next - post_me);
+  P4EST_ASSERT ((p4est_gloidx_t) uof + ul <= pre_next - pre_me);
+
+  /* assign to output variables */
+  if (unchanged_first != NULL) {
+    *unchanged_first = uf;
+  }
+  if (unchanged_length != NULL) {
+    *unchanged_length = ul;
+  }
+  if (unchanged_old_first != NULL) {
+    *unchanged_old_first = uof;
+  }
+}
+
 int
-p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
+p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
+                      p4est_locidx_t * unchanged_first,
+                      p4est_locidx_t * unchanged_length,
+                      p4est_locidx_t * unchanged_old_first)
 {
   int                 changed;
+  p4est_gloidx_t      pre_me, pre_next;
+  p4est_gloidx_t      post_me, post_next;
 
   P4EST_ASSERT (!pp->hollow);
 
@@ -654,6 +708,21 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
   p4est_mesh_destroy (pp->mesh);
   p4est_ghost_destroy (pp->ghost);
   pp->match_aux = 0;
+
+  /* Remember the window onto global quadrant sequence before partition */
+  pre_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
+  pre_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
+
+  /* Initialize output for the case that the partition does not change */
+  if (unchanged_first != NULL) {
+    *unchanged_first = 0;
+  }
+  if (unchanged_length != NULL) {
+    *unchanged_length = pp->p4est->local_num_quadrants;
+  }
+  if (unchanged_old_first != NULL) {
+    *unchanged_old_first = 0;
+  }
 
   /* In the future the flags could be used to pass partition weights */
   /* We need to lift the restriction on 64 bits for the global weight sum */
@@ -669,6 +738,20 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent)
 
     pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
     pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+
+    /* Query the window onto global quadrant sequence after partition */
+    if (unchanged_first != NULL || unchanged_length != NULL ||
+        unchanged_old_first != NULL) {
+
+      /* compute new windof of local quadrants */
+      post_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
+      post_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
+
+      /* compute the range of quadrants that have stayed on this processor */
+      p4est_wrap_partition_unchanged (pre_me, pre_next, post_me, post_next,
+                                      unchanged_first, unchanged_length,
+                                      unchanged_old_first);
+    }
   }
   else {
     memset (pp->flags, 0, sizeof (uint8_t) * pp->p4est->local_num_quadrants);
