@@ -2472,6 +2472,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
     for (i = 0; i < num_procs; ++i) {
       global_weight_sums[i + 1] += global_weight_sums[i];
     }
+    /* TODO: there should be a way not to need the loop below */
     if (rank > 0) {
       weight_sum = global_weight_sums[rank];
       for (kl = 0; kl <= local_num_quadrants; ++kl) {
@@ -2504,6 +2505,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
     /* determine processor ids to send to */
     /* TODO: replace this loop by two binary searches */
+    /* TODO: would it be sufficient to do i < num_procs below? */
     send_lowest = num_procs;
     send_highest = 0;
     for (i = 1; i <= num_procs; ++i) {
