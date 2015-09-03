@@ -60,38 +60,57 @@ SC_EXTERN_C_BEGIN;
  *    r and nf are as above and h = 0..3 is the number of the subface.
  * 3. A value of v = -24..-1 indicates four half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
- *    quad_to_half array which stores four quadrant numbers per index,
+ *    quad_to_half array that stores four quadrant numbers per index,
  *    and the orientation of the smaller faces follows from 24 + v.
  *    The entries of quad_to_half encode between local and ghost quadrant
  *    in the same way as the quad_to_quad values described above.
  * A quadrant on the boundary of the forest sees itself and its face number.
  *
- * The quad_to_quad_edge list stores one value for each local quadrant's edge.
- * This value is determined in the same way as in quad_to_quad.
- * The quad_to_edge list has equally many entries as quad_to_quad_edge list
- * to indicate the size and orientation of the corresponding neighbor. The
- * encoding scheme used here is the same as in quad_to_face list.
- * Within quad_to_edge list stores the two directly adjoined neighbors along
- * the edge in case the edge has 2 half-sized neighbors.
+ * The quad_to_edge list stores edge neighbors that are not face neighbors.
+ * On the inside of a tree, there are one or two of those depending on size.
+ * Between trees, there can be any number of same- or different sized neighbors.
+ * For same-tree same/double-size edge neighbors, we record their number in
+ * quad_to_edge by the same convention as described for quad_to_quad above.
+ *
+ * For half-size neighbors and all inter-tree neighbors, the quad_to_edge value
+ * is in
+ *    local_num_quadrants + local_num_ghosts + [0 .. local_num_edges - 1]
+ * where the offset by local quadrants and ghosts is implicitly subtracted.
+ * It indexes into edge_offset, which encodes a group of edge neighbors.
+ * Each member of a group may be one same/double-size quadrant or two half-size
+ * quadrants; this is determined by the value of the edge_edge field as follows.
+ * 1. A value of e = 0..23 indicates one same-size neighbor.
+ *    This value is encoded as e = r * 12 + ne, where ne = 0..11 is the
+ *    neighbor's connecting edge number and r = 0..1 indicates an edge flip.
+ * 2. A value of e = 24..71 indicates a double-size neighbor.
+ *    This value is decoded as e = 24 + h * 24 + r * 12 + ne, where
+ *    r and ne are as above and h = 0..1 is the number of the subedge.
+ * 3. A value of e = -24..-1 indicates two half-size neighbors.
+ *    In this case the corresponding edge_to_quad index points into the
+ *    quad_to_hedge array that stores two quadrant numbers per index,
+ *    and the orientation of the smaller edges follows from 24 + e.
+ *    The entries of quad_to_hedge encode between local and ghost quadrant
+ *    in the same way as the quad_to_quad values described above.
  *
  * The quad_to_corner list stores corner neighbors that are not face or edge
  * neighbors.  On the inside of a tree, there is precisely one such neighbor
  * per corner.  In this case, its index is encoded as described above for
  * quad_to_quad.  The neighbor's matching corner number is always diagonally
- * opposite.
+ * opposite, that is, corner number ^ 7.
  *
  * On the inside of an inter-tree face, we have precisely one corner neighbor.
  * If a corner is across an inter-tree edge or corner, then the number of
  * corner neighbors may be any non-negative number.  In all inter-tree cases,
  * the quad_to_corner value is in
  *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1]
- * where the offset by local quadrants and ghosts is implicitly substracted.
+ * where the offset by local quadrants and ghosts is implicitly subtracted.
  * It indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
  *
  * Intra-tree corners and inter-tree face and corner corners are implemented.
- * Edge inter-tree corners are NOT IMPLEMENTED and are assigned the value -2.
+ * Inter-tree-edge corners are NOT IMPLEMENTED and are assigned the value -2.
+ * Currently we do NOT exclude inter-tree-corners of inter-tree-edge neighbors.
  * Corners with no diagonal neighbor at all are assigned the value -1.
  */
 typedef struct
@@ -109,15 +128,20 @@ typedef struct
   sc_array_t         *quad_level;       /**< stores lists of per-level quads,
                                              NULL by default */
 
-  /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
-  /* CAUTION: tree-boundary edges are not yet implemented */
-  /* CAUTION: tree-boundary corners not yet implemented */
-  /* edges */
-  p4est_locidx_t     *quad_to_quad_edge; /**< stores 12 indices for each local edge */
-  int8_t             *quad_to_edge;      /**< stores orientation/2:1 status */
-  sc_array_t         *quad_to_half_edge; /**< stores half-size edge neighbors */
+  /* These members are NULL if connect_t is less than P4EST_CONNECT_EDGE */
+  /* CAUTION: not yet implemented */
+  p4est_locidx_t      local_num_edges;  /* half-size and tree-boundary edges */
+  p4est_locidx_t     *quad_to_edge;     /* 12 indices for each local quad */
+  sc_array_t         *edge_offset;      /* local_num_edges + 1 entries */
+  sc_array_t         *edge_quad;        /* edge_offset indexes into this */
+  sc_array_t         *edge_edge;        /* and this one too (type int8_t) */
+  sc_array_t         *quad_to_hedge;    /**< stores half-size edge neighbors */
 
-  /* corners */
+  /* DEPRECATED (will go away) */
+  p4est_locidx_t     *quad_to_quad_edge; /**< stores 12 indices for each local quad */
+
+  /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
+  /* CAUTION: tree-boundary corners do not exclude tree-boundary edge corners */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 8 indices for each local quad */
   sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */

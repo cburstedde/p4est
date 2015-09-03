@@ -61,7 +61,7 @@ SC_EXTERN_C_BEGIN;
  *    r and nf are as above and h = 0..1 is the number of the subface.
  * 3. A value of v = -8..-1 indicates two half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
- *    quad_to_half array which stores two quadrant numbers per index,
+ *    quad_to_half array that stores two quadrant numbers per index,
  *    and the orientation of the smaller faces follows from 8 + v.
  *    The entries of quad_to_half encode between local and ghost quadrant
  *    in the same way as the quad_to_quad values described above.
@@ -70,14 +70,15 @@ SC_EXTERN_C_BEGIN;
  * The quad_to_corner list stores corner neighbors that are not face neighbors.
  * On the inside of a tree, there is precisely one such neighbor per corner.
  * In this case, its index is encoded as described above for quad_to_quad.
- * The neighbor's matching corner number is always diagonally opposite.
+ * The neighbor's matching corner number is always diagonally opposite,
+ * that is, corner number ^ 3.
  *
  * On the inside of an inter-tree face, we have precisely one corner neighbor.
  * If a corner is an inter-tree corner, then the number of corner neighbors
  * may be any non-negative number.  In both cases, the quad_to_corner value
  * is in
  *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1]
- * where the offset by local quadrants and ghosts is implicitly substracted.
+ * where the offset by local quadrants and ghosts is implicitly subtracted.
  * It indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
@@ -100,7 +101,6 @@ typedef struct
                                              NULL by default */
 
   /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
-  /* CAUTION: tree-boundary corners not yet implemented */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 4 indices for each local quad */
   sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */

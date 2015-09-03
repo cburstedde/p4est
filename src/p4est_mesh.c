@@ -306,6 +306,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             continue;
           }
 
+          /* TODO: in 3D we also have to exclude tree-edge neighbors */
+
           /* Record this corner neighbor */
           tree2 = p4est_tree_array_index (trees, side2->treeid);
           qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
@@ -392,6 +394,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 }
 
 #ifdef P4_TO_P8
+
 static void
 mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 {
@@ -841,6 +844,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     }
   }
 }
+
 #endif /* P4_TO_P8 */
 
 static void
@@ -1137,7 +1141,7 @@ p4est_mesh_new_ext (p4est_t * p4est,
   if (do_edge) {
     /* Allocate optional lists for edge information */
     mesh->quad_to_quad_edge = P4EST_ALLOC (p4est_locidx_t, P8EST_EDGES * lq);
-    mesh->quad_to_edge = P4EST_ALLOC (int8_t, P8EST_EDGES * lq);
+    mesh->quad_to_edge = P4EST_ALLOC (p4est_locidx_t, P8EST_EDGES * lq);
     mesh->quad_to_half_edge = sc_array_new (2 * sizeof (p4est_locidx_t));
 
     /* Initialize lists with default values */
