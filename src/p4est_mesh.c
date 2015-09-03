@@ -1089,11 +1089,13 @@ p4est_mesh_new_ext (p4est_t * p4est,
   ng = mesh->ghost_num_quadrants = (p4est_locidx_t) ghost->ghosts.elem_count;
 
   /* decide which callback function have to be activated */
-  if (btype == P4EST_CONNECT_FULL) {
-    do_corner = 1;
 #ifdef P4_TO_P8
+  if (btype >= P8EST_CONNECT_EDGE) {
     do_edge = 1;
-#endif /* P4_TO_P8 */
+  }
+#endif
+  if (btype >= P4EST_CONNECT_FULL) {
+    do_corner = 1;
   }
   do_volume = (compute_tree_index || compute_level_lists ? 1 : 0);
 
