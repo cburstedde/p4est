@@ -398,8 +398,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   int8_t              visited[P4EST_HALF];
   size_t              i, j, k, cz, zz, ctr;
   int                 swapsides;
-  p4est_locidx_t      qoffset, qid1, qid2, qls1[2];
-  p4est_locidx_t      eid1, eid2, ec1, ec2, e1, e2;
+  p4est_locidx_t      qid1, qid2, qls1[2];
+  p4est_locidx_t      eid1, eid2, ec1, e1, e2;
   p4est_locidx_t     *halfentries;
   p4est_locidx_t      in_qtoq, halfindex;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
@@ -408,8 +408,10 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   int                 hanging = 0, sameTree = 1;
   int                 treeIds[P4EST_HALF], quadIds[P4EST_HALF],
     edgeIds[P4EST_HALF];
-  int                 xCoord[P4EST_HALF], yCoord[P4EST_HALF],
-    zCoord[P4EST_HALF];
+#if 0
+  int                 xCoord[P4EST_HALF], yCoord[P4EST_HALF];
+  int                 zCoord[P4EST_HALF];
+#endif
 
   /* general sanity checks */
   cz = info->sides.elem_count;
@@ -418,7 +420,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 
   if (cz == 1) {
     /* edge limits domain */
-    P4EST_ASSERT (info->orientation == 0);
     P4EST_ASSERT (info->tree_boundary);
 
     side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
@@ -615,7 +616,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       P4EST_ASSERT (!info->tree_boundary);
       side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
       tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+#if 0
       qoffset = tree1->quadrants_offset;
+#endif
       memset (visited, 0, P4EST_HALF * sizeof (int8_t));
 
       for (i = 0; i < 0.5 * cz; ++i) {
