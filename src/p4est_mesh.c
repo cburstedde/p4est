@@ -692,24 +692,20 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             /* encode quadrant neighborhood */
             /* inside a tree, the orientation is always 0 */
             if (!side1->is.full.is_ghost) {
-              P4EST_ASSERT (mesh->
-                            quad_to_quad_edge[P8EST_EDGES * qid1 +
-                                              side1->edge] == -1);
-              P4EST_ASSERT (mesh->
-                            quad_to_edge[P8EST_EDGES * qid1 + side1->edge] ==
-                            -25);
+              P4EST_ASSERT (mesh->quad_to_quad_edge[P8EST_EDGES * qid1 +
+                                                    side1->edge] == -1);
+              P4EST_ASSERT (mesh->quad_to_edge
+                            [P8EST_EDGES * qid1 + side1->edge] == -25);
               mesh->quad_to_quad_edge[P8EST_EDGES * qid1 + side1->edge] =
                 qid2;
               mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
                 side2->edge;
             }
             if (!side2->is.full.is_ghost) {
-              P4EST_ASSERT (mesh->
-                            quad_to_quad_edge[P8EST_EDGES * qid2 +
-                                              side2->edge] == -1);
-              P4EST_ASSERT (mesh->
-                            quad_to_edge[P8EST_EDGES * qid2 + side2->edge] ==
-                            -25);
+              P4EST_ASSERT (mesh->quad_to_quad_edge[P8EST_EDGES * qid2 +
+                                                    side2->edge] == -1);
+              P4EST_ASSERT (mesh->quad_to_edge
+                            [P8EST_EDGES * qid2 + side2->edge] == -25);
               mesh->quad_to_quad_edge[P8EST_EDGES * qid2 + side2->edge] =
                 qid1;
               mesh->quad_to_edge[P8EST_EDGES * qid2 + side2->edge] =
