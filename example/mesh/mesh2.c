@@ -87,8 +87,7 @@ static int          refine_level = 0;
 
 static void
 init_fn (p4est_t * p4est,
-         p4est_topidx_t which_tree,
-         p4est_quadrant_t * quadrant)
+         p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
@@ -98,16 +97,14 @@ init_fn (p4est_t * p4est,
 
 static int
 refine_uniform (p4est_t * p4est,
-                p4est_topidx_t which_tree,
-                p4est_quadrant_t * quadrant)
+                p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
 {
   return (int) quadrant->level < refine_level;
 }
 
 static int
 refine_normal (p4est_t * p4est,
-               p4est_topidx_t which_tree,
-               p4est_quadrant_t * quadrant)
+               p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -201,8 +198,7 @@ test_mesh (p4est_t * p4est,
            int compute_tree_index,
            int compute_level_lists,
            p4est_connect_type_t mesh_btype,
-           user_data_t * ghost_data,
-           int uniform)
+           user_data_t * ghost_data, int uniform)
 {
   const int           HF = P4EST_HALF * P4EST_FACES;
   size_t              i;
@@ -316,8 +312,7 @@ mesh_run (mpi_context_t * mpi,
           p4est_connectivity_t * connectivity,
           int uniform,
           int compute_tree_index,
-          int compute_level_lists,
-          p4est_connect_type_t mesh_btype)
+          int compute_level_lists, p4est_connect_type_t mesh_btype)
 {
   int                 mpiret;
   unsigned            crc;
@@ -329,10 +324,7 @@ mesh_run (mpi_context_t * mpi,
 
   /* create new p4est from specified connectivity */
   p4est = p4est_new (mpi->mpicomm,
-                     connectivity,
-                     sizeof (user_data_t),
-                     init_fn,
-                     NULL);
+                     connectivity, sizeof (user_data_t), init_fn, NULL);
 
   if (!uniform)
     p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_new");
@@ -369,15 +361,12 @@ mesh_run (mpi_context_t * mpi,
   mesh = p4est_mesh_new_ext (p4est,
                              ghost,
                              compute_tree_index,
-                             compute_level_lists,
-                             mesh_btype);
+                             compute_level_lists, mesh_btype);
   test_mesh (p4est,
              ghost,
              mesh,
              compute_tree_index,
-             compute_level_lists,
-             mesh_btype,
-             ghost_data, uniform);
+             compute_level_lists, mesh_btype, ghost_data, uniform);
 
   /* compute memory used */
   local_used[0] = (long) p4est_connectivity_memory_used (p4est->connectivity);
@@ -563,12 +552,12 @@ main (int argc, char **argv)
   hack_test (mpi, connectivity);
 #else
   /* run mesh tests */
-  mesh_run (mpi,                   /* mpi context */
-            connectivity,          /* p4est connectivity */
-            1,                     /* uniform refinement? */
-            0,                     /* compute tree index? */
-            1,                     /* compute level lists? */
-            P4EST_CONNECT_FULL);   /* connect type */
+  mesh_run (mpi,                /* mpi context */
+            connectivity,       /* p4est connectivity */
+            1,                  /* uniform refinement? */
+            0,                  /* compute tree index? */
+            1,                  /* compute level lists? */
+            P4EST_CONNECT_FULL);        /* connect type */
   mesh_run (mpi, connectivity, 0, 1, 0, P4EST_CONNECT_FULL);
   mesh_run (mpi, connectivity, 0, 0, 0, P4EST_CONNECT_FACE);
   mesh_run (mpi, connectivity, 1, 1, 1, P4EST_CONNECT_FACE);

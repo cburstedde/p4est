@@ -180,33 +180,38 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
  * \return                      The identified quadrant.
  */
 p8est_quadrant_t   *p8est_mesh_quadrant_cumulative (p8est_t * p8est,
-                                                    p4est_locidx_t cumulative_id,
-                                                    p4est_topidx_t * which_tree,
-                                                    p4est_locidx_t * quadrant_id);
+                                                    p4est_locidx_t
+                                                    cumulative_id,
+                                                    p4est_topidx_t *
+                                                    which_tree,
+                                                    p4est_locidx_t *
+                                                    quadrant_id);
 
 /** Initialize a mesh neighbor iterator by quadrant index.
  * \param [out] mfn         A p8est_mesh_face_neighbor_t to be initialized.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant_id Index relative to which_tree of quadrant.
  */
-void                p8est_mesh_face_neighbor_init2 (p8est_mesh_face_neighbor_t * mfn,
-                                                    p8est_t * p8est,
+void                p8est_mesh_face_neighbor_init2 (p8est_mesh_face_neighbor_t
+                                                    * mfn, p8est_t * p8est,
                                                     p8est_ghost_t * ghost,
                                                     p8est_mesh_t * mesh,
                                                     p4est_topidx_t which_tree,
-                                                    p4est_locidx_t quadrant_id);
+                                                    p4est_locidx_t
+                                                    quadrant_id);
 
 /** Initialize a mesh neighbor iterator by quadrant pointer.
  * \param [out] mfn         A p8est_mesh_face_neighbor_t to be initialized.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant    Pointer to quadrant contained in which_tree.
  */
-void                p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t * mfn,
-                                                   p8est_t * p8est,
+void                p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t
+                                                   * mfn, p8est_t * p8est,
                                                    p8est_ghost_t * ghost,
                                                    p8est_mesh_t * mesh,
                                                    p4est_topidx_t which_tree,
-                                                   p8est_quadrant_t * quadrant);
+                                                   p8est_quadrant_t *
+                                                   quadrant);
 
 /** Move the iterator forward to loop around neighbors of the quadrant.
  * \param [in,out] mfn      Internal status of the iterator.
@@ -218,7 +223,8 @@ void                p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t * 
  * \return                  Either a real quadrant or one from the ghost layer.
  *                          Returns NULL when the iterator is done.
  */
-p8est_quadrant_t   *p8est_mesh_face_neighbor_next (p8est_mesh_face_neighbor_t * mfn,
+p8est_quadrant_t   *p8est_mesh_face_neighbor_next (p8est_mesh_face_neighbor_t
+                                                   * mfn,
                                                    p4est_topidx_t * ntree,
                                                    p4est_locidx_t * nquad,
                                                    int *nface, int *nrank);
@@ -230,8 +236,8 @@ p8est_quadrant_t   *p8est_mesh_face_neighbor_next (p8est_mesh_face_neighbor_t * 
  * \return                       A pointer to the user data for the current
  *                               neighbor.
  */
-void               *p8est_mesh_face_neighbor_data (p8est_mesh_face_neighbor_t * mfn,
-                                                   void *ghost_data);
+void               *p8est_mesh_face_neighbor_data (p8est_mesh_face_neighbor_t
+                                                   * mfn, void *ghost_data);
 
 SC_EXTERN_C_END;
 
