@@ -21,7 +21,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <sc_statistics.h>
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_communication.h>
@@ -34,6 +33,10 @@
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_lnodes.h>
+#endif
+
+#ifdef P4EST_ENABLE_DEBUG
+#include <sc_statistics.h>
 #endif
 
 #ifndef P4_TO_P8
