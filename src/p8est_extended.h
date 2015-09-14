@@ -235,6 +235,36 @@ p4est_gloidx_t      p8est_partition_ext (p8est_t * p8est,
                                          int partition_for_coarsening,
                                          p8est_weight_t weight_fn);
 
+/** Repartition the forest with weights corresponding to owned Lobatto points.
+ * \param [in/out] p4est      The forest that will be partitioned.
+ * \param [in]     ghost      The ghost layer created from the provided p4est.
+ * \param [in]     degree     Lobatto points degree > 0.
+ * \param [in]     partition_for_coarsening     If true, the partition
+ *                            is modified to allow one level of coarsening.
+ */
+void                p8est_partition_lnodes (p8est_t * p8est,
+                                            p8est_ghost_t * ghost,
+                                            int degree,
+                                            int partition_for_coarsening);
+
+/** Repartition the forest with weights corresponding to owned Lobatto points.
+ * \param [in/out] p4est      The forest that will be partitioned.
+ * \param [in]     ghost      The ghost layer created from the provided p4est.
+ * \param [in]     nodes_per_volume             Number of nodes per quad volume.
+ * \param [in]     nodes_per_face               Number of nodes per quad face.
+ * \param [in]     nodes_per_edge               Number of nodes per quad edge.
+ * \param [in]     nodes_per_corner             Number of nodes per quad corner.
+ * \param [in]     partition_for_coarsening     If true, the partition
+ *                            is modified to allow one level of coarsening.
+ */
+void                p8est_partition_lnodes_ext (p8est_t * p8est,
+                                                p8est_ghost_t * ghost,
+                                                int nodes_per_volume,
+                                                int nodes_per_face,
+                                                int nodes_per_edge,
+                                                int nodes_per_corner,
+                                                int partition_for_coarsening);
+
 /** p8est_iterate_ext adds the option \a remote: if this is false, then it is
  * the same as p8est_iterate; if this is true, then corner/edge callbacks are
  * also called on corners/edges for hanging faces/edges touched by local
@@ -304,19 +334,6 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
-
-void                p8est_partition_lnodes (p8est_t *p8est,
-                                            p8est_ghost_t *ghost,
-                                            int degree,
-                                            int partition_for_coarsening);
-
-void                p8est_partition_lnodes_ext (p8est_t *p8est,
-                                                p8est_ghost_t *ghost,
-                                                int nodes_per_volume,
-                                                int nodes_per_face,
-                                                int nodes_per_edge,
-                                                int nodes_per_corner,
-                                                int partition_for_coarsening);
 
 SC_EXTERN_C_END;
 

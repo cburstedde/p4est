@@ -235,6 +235,34 @@ p4est_gloidx_t      p4est_partition_ext (p4est_t * p4est,
                                          int partition_for_coarsening,
                                          p4est_weight_t weight_fn);
 
+/** Repartition the forest with weights corresponding to owned Lobatto points.
+ * \param [in/out] p4est      The forest that will be partitioned.
+ * \param [in]     ghost      The ghost layer created from the provided p4est.
+ * \param [in]     degree     Lobatto points degree > 0.
+ * \param [in]     partition_for_coarsening     If true, the partition
+ *                            is modified to allow one level of coarsening.
+ */
+void                p4est_partition_lnodes (p4est_t * p4est,
+                                            p4est_ghost_t * ghost,
+                                            int degree,
+                                            int partition_for_coarsening);
+
+/** Repartition the forest with weights corresponding to owned Lobatto points.
+ * \param [in/out] p4est      The forest that will be partitioned.
+ * \param [in]     ghost      The ghost layer created from the provided p4est.
+ * \param [in]     nodes_per_volume             Number of nodes per quad volume.
+ * \param [in]     nodes_per_face               Number of nodes per quad face.
+ * \param [in]     nodes_per_corner             Number of nodes per quad corner.
+ * \param [in]     partition_for_coarsening     If true, the partition
+ *                            is modified to allow one level of coarsening.
+ */
+void                p4est_partition_lnodes_ext (p4est_t * p4est,
+                                                p4est_ghost_t * ghost,
+                                                int nodes_per_volume,
+                                                int nodes_per_face,
+                                                int nodes_per_corner,
+                                                int partition_for_coarsening);
+
 /** p4est_iterate_ext adds the option \a remote: if this is false, then it is
  * the same as p4est_iterate; if this is true, then corner callbacks are also
  * called on corners for hanging faces touched by local quadrants.
@@ -302,18 +330,6 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
-
-void                p4est_partition_lnodes (p4est_t *p4est,
-                                            p4est_ghost_t *ghost,
-                                            int degree,
-                                            int partition_for_coarsening);
-
-void                p4est_partition_lnodes_ext (p4est_t *p4est,
-                                                p4est_ghost_t *ghost,
-                                                int nodes_per_volume,
-                                                int nodes_per_face,
-                                                int nodes_per_corner,
-                                                int partition_for_coarsening);
 
 SC_EXTERN_C_END;
 
