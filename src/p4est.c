@@ -215,7 +215,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   num_trees = connectivity->num_trees;
 
   /* create parallel environment */
-  p4est_comm_parallel_env_create (p4est, mpicomm);
+  p4est_comm_parallel_env_assign (p4est, mpicomm);
   num_procs = p4est->mpisize;
   rank = p4est->mpirank;
 
@@ -503,7 +503,7 @@ p4est_destroy (p4est_t * p4est)
   }
   sc_mempool_destroy (p4est->quadrant_pool);
 
-  p4est_comm_parallel_env_free (p4est);
+  p4est_comm_parallel_env_release (p4est);
   P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est);
@@ -511,6 +511,12 @@ p4est_destroy (p4est_t * p4est)
 
 p4est_t            *
 p4est_copy (p4est_t * input, int copy_data)
+{
+  return p4est_copy_ext (input, copy_data, 0 /* don't duplicate MPI comm */);
+}
+
+p4est_t            *
+p4est_copy_ext (p4est_t * input, int copy_data, int duplicate_mpicomm)
 {
   const p4est_topidx_t num_trees = input->connectivity->num_trees;
   const p4est_topidx_t first_tree = input->first_local_tree;
@@ -533,7 +539,10 @@ p4est_copy (p4est_t * input, int copy_data)
   p4est->quadrant_pool = NULL;
 
   /* create parallel environment */
-  p4est_comm_parallel_env_create (p4est, input->mpicomm);
+  p4est_comm_parallel_env_assign (p4est, input->mpicomm);
+  if (duplicate_mpicomm) {
+    p4est_comm_parallel_env_duplicate (p4est);
+  }
 
   /* allocate a user data pool if necessary and a quadrant pool */
   if (copy_data && p4est->data_size > 0) {
@@ -709,8 +718,9 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, MPI_Group group_add,
   P4EST_FREE (ranks);
 
   /* set new parallel environment */
-  p4est_comm_parallel_env_free (p4est);
-  p4est_comm_parallel_env_create (p4est, submpicomm);
+  p4est_comm_parallel_env_release (p4est);
+  p4est_comm_parallel_env_assign (p4est, submpicomm);
+  p4est_comm_parallel_env_duplicate (p4est);
   mpiret = MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (p4est->mpisize == submpisize);
 

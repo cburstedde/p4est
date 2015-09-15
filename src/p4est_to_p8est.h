@@ -202,6 +202,7 @@
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
+#define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
 #define p4est_balance_ext               p8est_balance_ext
@@ -321,10 +322,12 @@
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
-#define p4est_comm_parallel_env_create  p8est_comm_parallel_env_create
-#define p4est_comm_parallel_env_free    p8est_comm_parallel_env_free
-#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
+#define p4est_comm_parallel_env_duplicate p8est_comm_parallel_env_duplicate
+#define p4est_comm_parallel_env_release p8est_comm_parallel_env_release
+#define p4est_comm_parallel_env_replace p8est_comm_parallel_env_replace
+#define p4est_comm_parallel_env_get_info p8est_comm_parallel_env_get_info
+#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
