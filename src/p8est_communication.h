@@ -73,6 +73,12 @@ void                p8est_comm_parallel_env_get_info (p8est_t * p8est);
 
 int                 p8est_comm_parallel_env_is_null (p8est_t * p8est);
 
+int                 p8est_comm_parallel_env_reduce (p8est_t * p8est);
+
+int                 p8est_comm_parallel_env_reduce_ext (p8est_t * p8est,
+                                                        MPI_Group group_add,
+                                                        int add_to_beginning);
+
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p8est  Adds all \c p8est->local_num_quadrant counters and
  *                        puts cumulative sums in p4est->global_first_quadrant.

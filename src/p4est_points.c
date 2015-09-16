@@ -172,7 +172,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
-  /* create parallel environment */
+  /* set parallel environment */
   p4est_comm_parallel_env_assign (p4est, mpicomm);
 
   /* allocate memory pools */

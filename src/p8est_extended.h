@@ -349,12 +349,6 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
 
-int                 p8est_reduce_mpicomm (p8est_t * p8est);
-
-int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
-                                              MPI_Group group_add,
-                                              const int add_to_beginning);
-
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_EXTENDED_H */

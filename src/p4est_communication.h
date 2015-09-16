@@ -73,6 +73,12 @@ void                p4est_comm_parallel_env_get_info (p4est_t * p4est);
 
 int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
 
+int                 p4est_comm_parallel_env_reduce (p4est_t * p4est);
+
+int                 p4est_comm_parallel_env_reduce_ext (p4est_t * p4est,
+                                                        MPI_Group group_add,
+                                                        int add_to_beginning);
+
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
  *                        puts cumulative sums in p4est->global_first_quadrant.

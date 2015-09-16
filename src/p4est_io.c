@@ -128,7 +128,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
-  /* create parallel environment */
+  /* set parallel environment */
   p4est_comm_parallel_env_assign (p4est, mpicomm);
   num_procs = p4est->mpisize;
   rank = p4est->mpirank;
