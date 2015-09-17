@@ -133,7 +133,8 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   sc_MPI_Group        group, subgroup;
   sc_MPI_Comm         submpicomm;
   int                *ranks, *subranks;
-  int                 i;
+  p4est_quadrant_t   *gfp;
+  int                 p;
 
   /* exit if MPI communicator cannot be reduced */
   if (mpisize == 1) {
@@ -144,11 +145,10 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
   include = P4EST_ALLOC (int, mpisize);
   submpisize = 0;
-  for (i = 0; i < mpisize; i++) {
-    n_quadrants[i] = global_first_quadrant[i+1] - global_first_quadrant[i];
-    if (global_first_quadrant[i] < global_first_quadrant[i+1]) {
-      include[submpisize] = i;
-      submpisize++;
+  for (p = 0; p < mpisize; p++) {
+    n_quadrants[p] = global_first_quadrant[p+1] - global_first_quadrant[p];
+    if (global_first_quadrant[p] < global_first_quadrant[p+1]) {
+      include[submpisize++] = p;
     }
   }
 
@@ -192,13 +192,13 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
     mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
   }
 
-  /* destroy p4est and exit if this processor is empty */
+  /* destroy p4est and exit if this rank is empty */
   if (submpicomm == sc_MPI_COMM_NULL) {
     /* destroy */
     P4EST_FREE (n_quadrants);
     p4est_destroy (p4est);
 
-    /* return that this processor is empty */
+    /* return that p4est does not exist on this rank */
     return 0;
   }
 
@@ -208,13 +208,13 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   /* translate MPI ranks */
   ranks = P4EST_ALLOC (int, submpisize);
   subranks = P4EST_ALLOC (int, submpisize);
-  for (i = 0; i < submpisize; i++) {
-    subranks[i] = i;
+  for (p = 0; p < submpisize; p++) {
+    subranks[p] = p;
   }
   mpiret = sc_MPI_Comm_group (submpicomm, &subgroup); SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Group_translate_ranks (subgroup, submpisize, subranks,
-                                      group, ranks); SC_CHECK_MPI (mpiret);
+                                         group, ranks); SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
   P4EST_FREE (subranks);
@@ -223,16 +223,15 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   P4EST_FREE (p4est->global_first_quadrant);
   p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
   p4est->global_first_quadrant[0] = 0;
-  for (i = 0; i < submpisize; i++) {
-    P4EST_ASSERT (ranks[i] != sc_MPI_UNDEFINED);
-    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL || 0 < n_quadrants[ranks[i]]);
-    p4est->global_first_quadrant[i+1] = p4est->global_first_quadrant[i] +
-                                        n_quadrants[ranks[i]];
+  for (p = 0; p < submpisize; p++) {
+    P4EST_ASSERT (ranks[p] != sc_MPI_UNDEFINED);
+    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL || 0 < n_quadrants[ranks[p]]);
+    p4est->global_first_quadrant[p+1] = p4est->global_first_quadrant[p] +
+                                        n_quadrants[ranks[p]];
   }
   P4EST_ASSERT (p4est->global_first_quadrant[submpisize] =
                 p4est->global_num_quadrants);
   P4EST_FREE (n_quadrants);
-  P4EST_FREE (ranks);
 
   /* set new parallel environment */
   p4est_comm_parallel_env_release (p4est);
@@ -241,15 +240,26 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   mpiret = sc_MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (p4est->mpisize == submpisize);
 
-  /* communicate partition information */
-  P4EST_FREE (p4est->global_first_position);
+  /* allocate and set partition information */
+  gfp = p4est->global_first_position;
   p4est->global_first_position = P4EST_ALLOC (p4est_quadrant_t, submpisize + 1);
-  p4est_comm_global_partition (p4est, NULL);
+  if (group_add != sc_MPI_GROUP_NULL) { /* if communication is required */
+    p4est_comm_global_partition (p4est, NULL);
+  }
+  else { /* if we can set partition information communication-free */
+    for (p = 0; p < submpisize; p++) {
+      P4EST_ASSERT (0 == p || ranks[p-1] < ranks[p]);
+      p4est->global_first_position[p] = gfp[ranks[p]];
+    }
+    p4est->global_first_position[submpisize] = gfp[mpisize];
+  }
+  P4EST_FREE (gfp);
+  P4EST_FREE (ranks);
 
   /* check for valid p4est */
   P4EST_ASSERT (p4est_is_valid (p4est));
 
-  /* return that this processor has quadrants */
+  /* return that p4est exists on this rank */
   return 1;
 }
 
