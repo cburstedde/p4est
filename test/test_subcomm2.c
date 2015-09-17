@@ -151,10 +151,37 @@ main (int argc, char **argv)
   P4EST_GLOBAL_INFOF ("%s: Done test 1\n", this_fn_name);
 
   /*
-   * Test 2: Reduce MPI communicator to non-empty ranks, but keep rank 0
+   * Test 2: Reduce MPI communicator to non-empty ranks, but now the MPI
+   * communicator is not owned
    */
 
   P4EST_GLOBAL_INFOF ("%s: Into test 2\n", this_fn_name);
+  {
+    p4est_t            *p4est_subcomm;
+    int                 is_nonempty;
+
+    /* create p4est copy and re-partition */
+    p4est_subcomm = p4est_copy_ext (p4est, 1, 0 /* don't dup. comm. */);
+    (void) p4est_partition_given (p4est_subcomm, partition);
+
+    /* reduce MPI communicator to non-empty ranks */
+    is_nonempty = p4est_comm_parallel_env_reduce (p4est_subcomm);
+    P4EST_ASSERT ( (is_nonempty && 0 < partition[rank]) ||
+                   (!is_nonempty && 0 == partition[rank]) );
+
+    if (is_nonempty) {
+      /* destroy the p4est that has a reduced MPI communicator */
+      p4est_destroy (p4est_subcomm);
+    }
+  }
+  mpiret = sc_MPI_Barrier (mpicomm); SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_INFOF ("%s: Done test 2\n", this_fn_name);
+
+  /*
+   * Test 3: Reduce MPI communicator to non-empty ranks, but keep rank 0
+   */
+
+  P4EST_GLOBAL_INFOF ("%s: Into test 3\n", this_fn_name);
   {
     p4est_t            *p4est_subcomm;
     int                 sub_exists;
@@ -183,20 +210,20 @@ main (int argc, char **argv)
 
     if (sub_exists) {
       /* write vtk: reduced communicator */
-      p4est_vtk_write_file (p4est_subcomm, NULL, P4EST_STRING "_subcomm_sub2");
+      p4est_vtk_write_file (p4est_subcomm, NULL, P4EST_STRING "_subcomm_sub3");
 
       /* destroy the p4est that has a reduced MPI communicator */
       p4est_destroy (p4est_subcomm);
     }
   }
   mpiret = sc_MPI_Barrier (mpicomm); SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_INFOF ("%s: Done test 2\n", this_fn_name);
+  P4EST_GLOBAL_INFOF ("%s: Done test 3\n", this_fn_name);
 
   /*
-   * Test 3: Reduce MPI communicator to non-empty ranks, but keep last 2 ranks
+   * Test 4: Reduce MPI communicator to non-empty ranks, but keep last 2 ranks
    */
 
-  P4EST_GLOBAL_INFOF ("%s: Into test 3\n", this_fn_name);
+  P4EST_GLOBAL_INFOF ("%s: Into test 4\n", this_fn_name);
   {
     p4est_t            *p4est_subcomm;
     int                 sub_exists;
@@ -226,14 +253,14 @@ main (int argc, char **argv)
 
     if (sub_exists) {
       /* write vtk: reduced communicator */
-      p4est_vtk_write_file (p4est_subcomm, NULL, P4EST_STRING "_subcomm_sub3");
+      p4est_vtk_write_file (p4est_subcomm, NULL, P4EST_STRING "_subcomm_sub4");
 
       /* destroy the p4est that has a reduced MPI communicator */
       p4est_destroy (p4est_subcomm);
     }
   }
   mpiret = sc_MPI_Barrier (mpicomm); SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_INFOF ("%s: Done test 3\n", this_fn_name);
+  P4EST_GLOBAL_INFOF ("%s: Done test 4\n", this_fn_name);
 
   /* destroy */
   P4EST_FREE (partition);
