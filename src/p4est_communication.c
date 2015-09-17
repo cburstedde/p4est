@@ -122,18 +122,19 @@ int
 p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
                                     int add_to_beginning)
 {
+  const char         *this_fn_name = "comm_parallel_env_reduce";
   sc_MPI_Comm         mpicomm = p4est->mpicomm;
   int                 mpisize = p4est->mpisize;
   int                 mpiret;
   p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
+  p4est_quadrant_t   *global_first_position = p4est->global_first_position;
 
   p4est_gloidx_t     *n_quadrants;
   int                *include;
-  int                 submpisize;
   sc_MPI_Group        group, subgroup;
   sc_MPI_Comm         submpicomm;
+  int                 submpisize, submpirank;
   int                *ranks, *subranks;
-  p4est_quadrant_t   *gfp;
   int                 p;
 
   /* exit if MPI communicator cannot be reduced */
@@ -202,8 +203,16 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
     return 0;
   }
 
-  /* update size of new MPI communicator */
+  /* update parallel environment */
   mpiret = sc_MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (submpicomm, &submpirank); SC_CHECK_MPI (mpiret);
+
+  if (submpirank == 0) {
+    P4EST_VERBOSEF ("%s: Reduce MPI communicator from %i to %i\n",
+                    this_fn_name, mpisize, submpisize);
+    /* TODO: There should be a function for printing to stdout that works with
+     *       sub-communicators. */
+  }
 
   /* translate MPI ranks */
   ranks = P4EST_ALLOC (int, submpisize);
@@ -241,7 +250,6 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   P4EST_ASSERT (p4est->mpisize == submpisize);
 
   /* allocate and set partition information */
-  gfp = p4est->global_first_position;
   p4est->global_first_position = P4EST_ALLOC (p4est_quadrant_t, submpisize + 1);
   if (group_add != sc_MPI_GROUP_NULL) { /* if communication is required */
     p4est_comm_global_partition (p4est, NULL);
@@ -249,11 +257,11 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
   else { /* if we can set partition information communication-free */
     for (p = 0; p < submpisize; p++) {
       P4EST_ASSERT (0 == p || ranks[p-1] < ranks[p]);
-      p4est->global_first_position[p] = gfp[ranks[p]];
+      p4est->global_first_position[p] = global_first_position[ranks[p]];
     }
-    p4est->global_first_position[submpisize] = gfp[mpisize];
+    p4est->global_first_position[submpisize] = global_first_position[mpisize];
   }
-  P4EST_FREE (gfp);
+  P4EST_FREE (global_first_position);
   P4EST_FREE (ranks);
 
   /* check for valid p4est */
