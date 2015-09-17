@@ -59,22 +59,65 @@ typedef enum
 }
 p4est_comm_tag_t;
 
+/** Assign an MPI communicator to p4est; retrieve parallel environment.
+ *
+ * \param [in] mpicomm    A valid MPI communicator.
+ *
+ * \note The provided MPI communicator is not owned by p4est.
+ */
 void                p4est_comm_parallel_env_assign (p4est_t * p4est,
                                                     MPI_Comm mpicomm);
 
+/** Duplicate MPI communicator and replace the current one by the duplicate.
+ *
+ * \note The duplicated MPI communicator is owned by p4est.
+ */
 void                p4est_comm_parallel_env_duplicate (p4est_t * p4est);
 
+/** Release MPI communicator if it is owned by p4est.
+ */
 void                p4est_comm_parallel_env_release (p4est_t * p4est);
 
+/** Replace the current MPI communicator by the one provided as input.
+ *
+ * \param [in] mpicomm    A valid MPI communicator.
+ *
+ * \note The provided MPI communicator is not owned by p4est.
+ */
 void                p4est_comm_parallel_env_replace (p4est_t * p4est,
                                                      MPI_Comm mpicomm);
 
+/** Retrieve parallel environment information.
+ */
 void                p4est_comm_parallel_env_get_info (p4est_t * p4est);
 
+/** Check if the MPI communicator is valid.
+ *
+ * \return True if communicator is not NULL communicator, false otherwise.
+ */
 int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
 
+/** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
+ *
+ * \param [in/out] p4est  p4est object which communicator is reduced.
+ *
+ * \return True if p4est exists on this MPI rank after reduction.
+ */
 int                 p4est_comm_parallel_env_reduce (p4est_t * p4est);
 
+/** Reduce MPI communicator to non-empty ranks and add a group of ranks that
+ * will remain in the reduced communicator regardless whether they are empty
+ * or not.
+ *
+ * \param [in/out] p4est         p4est object which communicator is reduced.
+ * \param [in] group_add         Group of ranks that will remain in
+ *                               communicator.
+ * \param [in] add_to_beginning  If true, ranks will be added to the beginning
+ *                               of the reduced communicator, otherwise to the
+ *                               end.
+ *
+ * \return True if p4est exists on this MPI rank after reduction.
+ */
 int                 p4est_comm_parallel_env_reduce_ext (p4est_t * p4est,
                                                         MPI_Group group_add,
                                                         int add_to_beginning);

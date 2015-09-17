@@ -59,22 +59,65 @@ typedef enum
 }
 p8est_comm_tag_t;
 
+/** Assign an MPI communicator to p8est; retrieve parallel environment.
+ *
+ * \param [in] mpicomm    A valid MPI communicator.
+ *
+ * \note The provided MPI communicator is not owned by p8est.
+ */
 void                p8est_comm_parallel_env_assign (p8est_t * p8est,
                                                     MPI_Comm mpicomm);
 
+/** Duplicate MPI communicator and replace the current one by the duplicate.
+ *
+ * \note The duplicated MPI communicator is owned by p8est.
+ */
 void                p8est_comm_parallel_env_duplicate (p8est_t * p8est);
 
+/** Release MPI communicator if it is owned by p8est.
+ */
 void                p8est_comm_parallel_env_release (p8est_t * p8est);
 
+/** Replace the current MPI communicator by the one provided as input.
+ *
+ * \param [in] mpicomm    A valid MPI communicator.
+ *
+ * \note The provided MPI communicator is not owned by p8est.
+ */
 void                p8est_comm_parallel_env_replace (p8est_t * p8est,
                                                      MPI_Comm mpicomm);
 
+/** Retrieve parallel environment information.
+ */
 void                p8est_comm_parallel_env_get_info (p8est_t * p8est);
 
+/** Check if the MPI communicator is valid.
+ *
+ * \return True if communicator is not NULL communicator, false otherwise.
+ */
 int                 p8est_comm_parallel_env_is_null (p8est_t * p8est);
 
+/** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
+ *
+ * \param [in/out] p8est  p8est object which communicator is reduced.
+ *
+ * \return True if p8est exists on this MPI rank after reduction.
+ */
 int                 p8est_comm_parallel_env_reduce (p8est_t * p8est);
 
+/** Reduce MPI communicator to non-empty ranks and add a group of ranks that
+ * will remain in the reduced communicator regardless whether they are empty
+ * or not.
+ *
+ * \param [in/out] p8est         p8est object which communicator is reduced.
+ * \param [in] group_add         Group of ranks that will remain in
+ *                               communicator.
+ * \param [in] add_to_beginning  If true, ranks will be added to the beginning
+ *                               of the reduced communicator, otherwise to the
+ *                               end.
+ *
+ * \return True if p8est exists on this MPI rank after reduction.
+ */
 int                 p8est_comm_parallel_env_reduce_ext (p8est_t * p8est,
                                                         MPI_Group group_add,
                                                         int add_to_beginning);
