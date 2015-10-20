@@ -772,8 +772,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               in_qtoq = P8EST_EDGES * qid1 + side1->edge;
               P4EST_ASSERT (mesh->quad_to_quad_edge[in_qtoq] == -1);
               P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -25);
-              halfindex =
-                (p4est_locidx_t) mesh->quad_to_hedge->elem_count;
+              halfindex = (p4est_locidx_t) mesh->quad_to_hedge->elem_count;
               mesh->quad_to_quad_edge[in_qtoq] = halfindex;
               mesh->quad_to_edge[in_qtoq] = -1 - side2->edge;
               halfentries =
