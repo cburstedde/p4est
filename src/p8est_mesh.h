@@ -158,7 +158,6 @@ typedef struct
 
   /* DEPRECATED (will go away) */
   p4est_locidx_t     *quad_to_quad_edge; /**< stores 12 indices for each local quad */
-  sc_array_t         *quad_to_half_edge;
 
   /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
   /* CAUTION: tree-boundary corners do not exclude tree-boundary edge corners */

@@ -773,11 +773,11 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               P4EST_ASSERT (mesh->quad_to_quad_edge[in_qtoq] == -1);
               P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -25);
               halfindex =
-                (p4est_locidx_t) mesh->quad_to_half_edge->elem_count;
+                (p4est_locidx_t) mesh->quad_to_hedge->elem_count;
               mesh->quad_to_quad_edge[in_qtoq] = halfindex;
               mesh->quad_to_edge[in_qtoq] = -1 - side2->edge;
               halfentries =
-                (p4est_locidx_t *) sc_array_push (mesh->quad_to_half_edge);
+                (p4est_locidx_t *) sc_array_push (mesh->quad_to_hedge);
               for (k = 0; k < 2; ++k) {
                 halfentries[k] = qls1[k];
               }
@@ -1148,7 +1148,7 @@ p4est_mesh_new_ext (p4est_t * p4est,
     /* Allocate optional lists for edge information */
     mesh->quad_to_quad_edge = P4EST_ALLOC (p4est_locidx_t, P8EST_EDGES * lq);
     mesh->quad_to_edge = P4EST_ALLOC (p4est_locidx_t, P8EST_EDGES * lq);
-    mesh->quad_to_half_edge = sc_array_new (2 * sizeof (p4est_locidx_t));
+    mesh->quad_to_hedge = sc_array_new (2 * sizeof (p4est_locidx_t));
 
     /* Initialize lists with default values */
     memset (mesh->quad_to_quad_edge,
@@ -1211,7 +1211,7 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   if (mesh->quad_to_edge != NULL) {
     P4EST_FREE (mesh->quad_to_quad_edge);
     P4EST_FREE (mesh->quad_to_edge);
-    sc_array_destroy (mesh->quad_to_half_edge);
+    sc_array_destroy (mesh->quad_to_hedge);
   }
 #endif /* P4_TO_P8 */
 
