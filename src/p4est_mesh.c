@@ -109,6 +109,7 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
   return cornerid;
 }
 
+#ifdef P4_TO_P8
 /** Populate mesh information for hanging edges and edges across tree
  *  boundaries, i.e. every neighborhood scenario where we need more information
  *  (like orientation) than a single index.
@@ -144,6 +145,7 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
 
   return edgeid;
 }
+#endif /* P4_TO_P8 */
 
 static void
 mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
