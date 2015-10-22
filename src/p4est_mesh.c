@@ -109,6 +109,42 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
   return cornerid;
 }
 
+/** Populate mesh information for hanging edges and edges across tree
+ *  boundaries, i.e. every neighborhood scenario where we need more information
+ *  (like orientation) than a single index.
+ *
+ * \param [in][out] mesh     The mesh structure to which we will add edge
+ *                           information
+ * \param [in]      clen     Number of quadrants to be added
+ * \param [in]      pcquad   List of quadrant indices
+ * \param [in]      pccorner List of quadrant encodings
+ */
+static              p4est_locidx_t
+mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
+                    p4est_locidx_t ** pcquad, int8_t ** pcedge)
+{
+  p4est_locidx_t      edgeid, estart, eend;
+
+  P4EST_ASSERT (elen > 0);
+  edgeid = mesh->local_num_edges++;
+  estart = *(p4est_locidx_t *) sc_array_index (mesh->edge_offset, edgeid);
+  eend = estart + elen;
+  *(p4est_locidx_t *) sc_array_push (mesh->edge_offset) = eend;
+
+  P4EST_ASSERT (mesh->edge_offset->elem_count ==
+                (size_t) (mesh->local_num_edges + 1));
+
+  P4EST_ASSERT (mesh->edge_quad->elem_count == (size_t) estart);
+  *pcquad = (p4est_locidx_t *) sc_array_push_count (mesh->edge_quad, elen);
+  P4EST_ASSERT (mesh->corner_quad->elem_count == (size_t) eend);
+
+  P4EST_ASSERT (mesh->edge_edge->elem_count == (size_t) estart);
+  *pcquad = (int8_t *) sc_array_push_count (mesh->edge_edge, elen);
+  P4EST_ASSERT (mesh->corner_edge->elem_count == (size_t) eend);
+
+  return edgeid;
+}
+
 static void
 mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
