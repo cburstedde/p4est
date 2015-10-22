@@ -137,11 +137,11 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
 
   P4EST_ASSERT (mesh->edge_quad->elem_count == (size_t) estart);
   *pcquad = (p4est_locidx_t *) sc_array_push_count (mesh->edge_quad, elen);
-  P4EST_ASSERT (mesh->corner_quad->elem_count == (size_t) eend);
+  P4EST_ASSERT (mesh->edge_quad->elem_count == (size_t) eend);
 
   P4EST_ASSERT (mesh->edge_edge->elem_count == (size_t) estart);
   *pcquad = (int8_t *) sc_array_push_count (mesh->edge_edge, elen);
-  P4EST_ASSERT (mesh->corner_edge->elem_count == (size_t) eend);
+  P4EST_ASSERT (mesh->edge_edge->elem_count == (size_t) eend);
 
   return edgeid;
 }
