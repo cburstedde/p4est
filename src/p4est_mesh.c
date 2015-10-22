@@ -39,6 +39,10 @@
 
 /** For a quadrant that touches a tree face with a corner inside the face,
  * get the number of the touching face.
+ *
+ * \param [in] q        currently considered quadrant
+ * \param [in] corner   corner index
+ * \return              face index
  */
 static int
 tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
@@ -66,7 +70,17 @@ tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
   SC_ABORT_NOT_REACHED ();
 }
 
-static              p4est_locidx_t
+/** Populate mesh information for corners across tree boundaries, i.e. every
+ *  neighborhood scenario where we need more information (like orientation) than
+ *  a single index.
+ *
+ * \param [in][out] mesh     The mesh structure to which we will add corner
+ *                           information
+ * \param [in]      clen     Number of quadrants to be added
+ * \param [in]      pcquad   List of quadrant indices
+ * \param [in]      pccorner List of quadrant encodings
+ */
+static p4est_locidx_t
 mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
                       p4est_locidx_t ** pcquad, int8_t ** pccorner)
 {
