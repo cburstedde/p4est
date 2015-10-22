@@ -153,6 +153,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                 i, j;
   int                 f1, f2, code, orientation;
   int                 fc1, fc2, diagonal;
+  int                 e1, e2;
 #ifdef P4_TO_P8
   int                 pref, pset;
 #endif /* P4_TO_P8 */
@@ -338,6 +339,11 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           ncorner[i] = p4est_connectivity_face_neighbor_corner_orientation
             (c1, f1, nface[i], orientation);
         }
+
+#ifdef P4_TO_P8
+        /* Check all quadrant edges that touch this corner */
+
+#endif /* P4_TO_P8 */
 
         /* Go through corner neighbors and collect the true corners */
         goodones = 0;
