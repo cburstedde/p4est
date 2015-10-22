@@ -118,7 +118,7 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
  *                           information
  * \param [in]      clen     Number of quadrants to be added
  * \param [in]      pcquad   List of quadrant indices
- * \param [in]      pccorner List of quadrant encodings
+ * \param [in]      pcedge   List of quadrant encodings
  */
 static              p4est_locidx_t
 mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
@@ -140,7 +140,7 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
   P4EST_ASSERT (mesh->edge_quad->elem_count == (size_t) eend);
 
   P4EST_ASSERT (mesh->edge_edge->elem_count == (size_t) estart);
-  *pcquad = (int8_t *) sc_array_push_count (mesh->edge_edge, elen);
+  *pcedge = (int8_t *) sc_array_push_count (mesh->edge_edge, elen);
   P4EST_ASSERT (mesh->edge_edge->elem_count == (size_t) eend);
 
   return edgeid;
