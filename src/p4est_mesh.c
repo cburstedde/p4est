@@ -80,7 +80,7 @@ tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
  * \param [in]      pcquad   List of quadrant indices
  * \param [in]      pccorner List of quadrant encodings
  */
-static p4est_locidx_t
+static              p4est_locidx_t
 mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
                       p4est_locidx_t ** pcquad, int8_t ** pccorner)
 {
@@ -151,10 +151,10 @@ static void
 mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
   int                 i, j;
-  int                 f1, f2, code, orientation;
+  int                 f1, f2, code, faceOrientation;
   int                 fc1, fc2, diagonal;
-  int                 e1, e2;
 #ifdef P4_TO_P8
+  int                 e1, e2, edgeOrientation;
   int                 pref, pset;
 #endif /* P4_TO_P8 */
   int                 visited[P4EST_CHILDREN];
@@ -231,14 +231,14 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         fc2 = p4est_corner_face_corners[side2->corner][f2];
         P4EST_ASSERT (0 <= fc2 && fc2 < P4EST_HALF);
         code = conn->tree_to_face[P4EST_FACES * side1->treeid + f1];
-        orientation = code / P4EST_FACES;
+        faceOrientation = code / P4EST_FACES;
         P4EST_ASSERT (f2 == code % P4EST_FACES);
 #ifdef P4_TO_P8
         pref = p8est_face_permutation_refs[f1][f2];
-        pset = p8est_face_permutation_sets[pref][orientation];
+        pset = p8est_face_permutation_sets[pref][faceOrientation];
         diagonal = (p8est_face_permutations[pset][fc1] ^ fc2) == 3;
 #else /* P4_TO_P8 */
-        diagonal = (fc1 ^ fc2) != orientation;
+        diagonal = (fc1 ^ fc2) != faceOrientation;
 #endif /* P4_TO_P8 */
         if (!diagonal) {
           side2 = NULL;
@@ -296,12 +296,16 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 #endif /* P4_TO_P8 */
 
   if (info->tree_boundary == P4EST_CONNECT_CORNER) {
-    int                 c1, ncorner[P4EST_DIM];
+    int                 c1, ncornerf[P4EST_DIM];
     int                 nface[P4EST_DIM];
+#ifdef P4_TO_P8
+    int                 n, ncornere[P4EST_DIM], nedge[P4EST_DIM];
+    p4est_locidx_t      netree[P4EST_DIM];
+#endif /* P4_TO_P8 */
     int                 ignore;
     size_t              z2;
     int8_t             *ccorners;
-    p4est_topidx_t      t1, ntree[P4EST_DIM];
+    p4est_topidx_t      t1, nftree[P4EST_DIM];
     p4est_locidx_t      goodones;
     p4est_locidx_t     *cquads;
 
@@ -323,27 +327,36 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
         P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] == -1);
 
-        /* Check all quadrant faces that touch this corner */
+        /* Get all quadrant faces and edges touching this corner */
         for (i = 0; i < P4EST_DIM; ++i) {
-          f1 = p4est_corner_faces[c1][i];
-          ntree[i] = conn->tree_to_tree[P4EST_FACES * t1 + f1];
-          nface[i] = conn->tree_to_face[P4EST_FACES * t1 + f1];
-          if (ntree[i] == t1 && nface[i] == f1) {
-            /* This is a physical face boundary, no face neighbor present */
-            ncorner[i] = -1;
-            continue;
-          }
-          /* We have a face neighbor */
-          orientation = nface[i] / P4EST_FACES;
-          nface[i] %= P4EST_FACES;
-          ncorner[i] = p4est_connectivity_face_neighbor_corner_orientation
-            (c1, f1, nface[i], orientation);
-        }
-
 #ifdef P4_TO_P8
-        /* Check all quadrant edges that touch this corner */
+          /* Check all quadrant edges that touch this corner */
+          e1 = p8est_corner_edges[c1][i];
+          netree[i] = conn->edge_to_tree[P8EST_EDGES * t1 + e1];
+          nedge[i] = conn->edge_to_edge[P8EST_EDGES * t1 + e1];
 
 #endif /* P4_TO_P8 */
+          f1 = p4est_corner_faces[c1][i];
+          nftree[i] = conn->tree_to_tree[P4EST_FACES * t1 + f1];
+          nface[i] = conn->tree_to_face[P4EST_FACES * t1 + f1];
+
+          if (nftree[i] == t1 && nface[i] == f1) {
+            /* This is a physical face boundary, no face neighbor present */
+            ncornerf[i] = -1;
+          }
+
+#ifdef P4_TO_P8
+          if (netree[i] == t1 && nedge[i] == e1) {
+            /* This is a physical edge boundary, no edge neighbor present */
+            ncornere[i] = -1;
+          }
+#endif /* !P4_TO_P8 */
+          /* We have a face neighbor */
+          faceOrientation = nface[i] / P4EST_FACES;
+          nface[i] %= P4EST_FACES;
+          ncornerf[i] = p4est_connectivity_face_neighbor_corner_orientation
+            (c1, f1, nface[i], faceOrientation);
+        }
 
         /* Go through corner neighbors and collect the true corners */
         goodones = 0;
@@ -358,8 +371,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           P4EST_ASSERT (side2->corner >= 0);
           for (i = 0; i < P4EST_DIM; ++i) {
             /* Ignore if this is one of the face neighbors' corners */
-            if (ncorner[i] == (int) side2->corner &&
-                ntree[i] == side2->treeid) {
+            if (ncornerf[i] == (int) side2->corner &&
+                nftree[i] == side2->treeid) {
               ignore = 1;
               break;
             }
