@@ -387,8 +387,16 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           P4EST_ASSERT (side2->corner >= 0);
           for (i = 0; i < P4EST_DIM; ++i) {
             /* Ignore if this is one of the face neighbors' corners */
+#ifdef P4_TO_P8
+            if ((ncornerf[i] == (int) side2->corner &&
+                 nftree[i] == side2->treeid) ||
+                (ncornere[i] == (int) side2->corner &&
+                 netree[i] == side2->treeid))
+#else /* P4_TO_P8 */
             if (ncornerf[i] == (int) side2->corner &&
-                nftree[i] == side2->treeid) {
+                nftree[i] == side2->treeid)
+#endif /* P4_TO_P8 */
+            {
               ignore = 1;
               break;
             }
