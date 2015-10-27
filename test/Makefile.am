@@ -11,7 +11,7 @@ p4est_test_programs += \
         test/p4est_test_partition test/p4est_test_coarsen \
         test/p4est_test_valid test/p4est_test_balance_type \
         test/p4est_test_loadsave test/p4est_test_order \
-        test/p4est_test_ghost \
+        test/p4est_test_ghost test/p4est_test_mesh \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search test/p4est_test_brick \
         test/p4est_test_partition_corr \
@@ -31,7 +31,7 @@ p4est_test_programs += \
         test/p8est_test_valid test/p8est_test_balance_type \
         test/p8est_test_face_transform test/p8est_test_edge_face_corners \
         test/p8est_test_periodic test/p8est_test_loadsave \
-        test/p8est_test_ghost \
+        test/p8est_test_ghost test/p8est_test_mesh \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_brick \
         test/p8est_test_partition_corr \
@@ -58,6 +58,7 @@ test_p4est_test_valid_SOURCES = test/test_valid2.c
 test_p4est_test_balance_type_SOURCES = test/test_balance_type2.c
 test_p4est_test_loadsave_SOURCES = test/test_loadsave2.c
 test_p4est_test_ghost_SOURCES = test/test_ghost2.c
+test_p4est_test_mesh_SOURCES = test/test_mesh2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
 test_p4est_test_search_SOURCES = test/test_search2.c
@@ -83,6 +84,7 @@ test_p8est_test_edge_face_corners_SOURCES = test/test_edge_face_corners3.c
 test_p8est_test_periodic_SOURCES = test/test_periodic3.c
 test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 test_p8est_test_ghost_SOURCES = test/test_ghost3.c
+test_p8est_test_mesh_SOURCES = test/test_mesh3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
 test_p8est_test_lnodes_SOURCES = test/test_lnodes3.c
@@ -97,10 +99,10 @@ test_p8est_test_conn_reduce_SOURCES = test/test_conn_reduce3.c
 test_p8est_test_plex_SOURCES = test/test_plex3.c
 test_p8est_test_connrefine_SOURCES = test/test_connrefine3.c
 
-test_p4est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
-test_p8est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
-test_p4est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD) 
-test_p8est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD) 
+test_p4est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS)
+test_p8est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS)
+test_p4est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD)
+test_p8est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD)
 
 if P4EST_WITH_METIS
 test_p4est_test_reorder_SOURCES = test/test_reorder2.c
@@ -121,6 +123,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_balance_type_SOURCES) \
         $(test_p4est_test_loadsave_SOURCES) \
         $(test_p4est_test_ghost_SOURCES) \
+        $(test_p4est_test_mesh_SOURCES) \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
         $(test_p4est_test_search_SOURCES) \
@@ -145,6 +148,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_periodic_SOURCES) \
         $(test_p8est_test_loadsave_SOURCES) \
         $(test_p8est_test_ghost_SOURCES) \
+        $(test_p8est_test_mesh_SOURCES) \
         $(test_p8est_test_brick_SOURCES) \
         $(test_p8est_test_iterate_SOURCES) \
         $(test_p8est_test_lnodes_SOURCES) \
