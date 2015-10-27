@@ -30,5 +30,35 @@
 int
 main (int argc, char **argv)
 {
+  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+  int                 mpisize, mpirank;
+  p4est_t            *p4est;
+  p4est_connectivity_t *connectivity;
+
+  /* initialize MPI */
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+  mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* test one tree */
+
+  /* test multiple trees; brick */
+
+  /* test multiple trees; non-brick */
+
+  /* exit */
+  sc_finalize ();
+
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
+
   return 0;
 }
