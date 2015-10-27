@@ -22,12 +22,14 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_connectivity.h>
 #include <p4est_mesh.h>
 #else /* !P4_TO_P8 */
+#include <p8est_connectivity.h>
 #include <p8est_mesh.h>
 #endif /* !P4_TO_P8 */
 
-/* Function for testing p4est-mesh for multiple trees in a non-brick scenario
+/* Function for testing p4est-mesh for a single tree scenario
  *
  * \param [in] p4est     The forest.
  * \param [in] conn      The connectivity structure
@@ -35,10 +37,31 @@
  * \returns 0 for success, -1 for failure
  */
 int
-test_mesh_multiple_trees_nonbrick (p4est_t * p4est,
-                                   p4est_connectivity_t * conn,
-                                   int8_t periodic)
+test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
+                    int8_t periodic)
 {
+  /* ensure that we have null pointers at beginning and end of function */
+  P4EST_ASSERT (p4est == NULL);
+  P4EST_ASSERT (conn == NULL);
+
+#ifndef P4_TO_P8
+  conn =
+    periodic == 1 ? p4est_connectivity_new_periodic () :
+    p4est_connectivity_new_unitsquare ();
+#else /* !P4_TO_P8 */
+  conn =
+    periodic == 1 ? p8est_connectivity_new_periodic () :
+    p8est_connectivity_new_unitcube ();
+#endif /* !P4_TO_P8 */
+
+  /* cleanup */
+  p4est_connectivity_destroy (conn);
+
+  conn = 0;
+  p4est = 0;
+
+  P4EST_ASSERT (p4est == NULL);
+  P4EST_ASSERT (conn == NULL);
   return 0;
 }
 
@@ -56,7 +79,7 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   return 0;
 }
 
-/* Function for testing p4est-mesh for a single tree scenario
+/* Function for testing p4est-mesh for multiple trees in a non-brick scenario
  *
  * \param [in] p4est     The forest.
  * \param [in] conn      The connectivity structure
@@ -64,8 +87,9 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
  * \returns 0 for success, -1 for failure
  */
 int
-test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
-                    int8_t periodic)
+test_mesh_multiple_trees_nonbrick (p4est_t * p4est,
+                                   p4est_connectivity_t * conn,
+                                   int8_t periodic)
 {
   return 0;
 }
@@ -77,7 +101,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 mpisize, mpirank;
   p4est_t            *p4est;
-  p4est_connectivity_t *connectivity;
+  p4est_connectivity_t *conn;
   int8_t              periodic_boundaries;
 
   /* initialize MPI */
@@ -92,6 +116,8 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  p4est = 0;
+  conn = 0;
   /* test both periodic and non-periodic boundaries */
   /* test one tree */
   periodic_boundaries = 0;
