@@ -80,11 +80,19 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_partition (p4est, 0, 0);
   p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
 
+  /* inspect setup of geometry */
   char                filename[35] = "test_mesh_setup_single_tree_";
   strcat (filename, P4EST_STRING);
   p4est_vtk_write_file (p4est, 0, filename);
 
+  /* create mesh */
+  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  p4est_mesh_t       *mesh =
+    p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+
   /* cleanup */
+  p4est_ghost_destroy (ghost);
+  p4est_mesh_destroy (mesh);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
@@ -130,7 +138,14 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   strcat (filename, P4EST_STRING);
   p4est_vtk_write_file (p4est, 0, filename);
 
+  /* create mesh */
+  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  p4est_mesh_t       *mesh =
+    p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+
   /* cleanup */
+  p4est_ghost_destroy (ghost);
+  p4est_mesh_destroy (mesh);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
