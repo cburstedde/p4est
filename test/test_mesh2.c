@@ -24,10 +24,28 @@
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
 #include <p4est_mesh.h>
+#include <p4est_vtk.h>
 #else /* !P4_TO_P8 */
 #include <p8est_extended.h>
 #include <p8est_mesh.h>
+#include <p8est_vtk.h>
 #endif /* !P4_TO_P8 */
+
+static int
+refineExactlyOnce (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * q)
+{
+  int                 dec;
+#ifndef P4_TO_P8
+  dec = q->x == 0 && q->y == 0 && which_tree == 0;
+#else /* !P4_TO_P8 */
+  dec = q->x == 0 && q->y == 0 && q->z == 0 && which_tree == 0;
+#endif /* !P4_TO_P8 */
+  if (dec) {
+    return 1;
+  }
+  return 0;
+}
 
 /* Function for testing p4est-mesh for a single tree scenario
  *
@@ -58,6 +76,13 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   /* setup p4est */
   int                 minLevel = 1;
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, 0, 0);
+  p4est_refine (p4est, 0, refineExactlyOnce, 0);
+  p4est_partition (p4est, 0, 0);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
+
+  char                filename[35] = "test_mesh_setup_single_tree_";
+  strcat (filename, P4EST_STRING);
+  p4est_vtk_write_file (p4est, 0, filename);
 
   /* cleanup */
   p4est_destroy (p4est);
@@ -89,14 +114,22 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
 
   /* create connectivity */
 #ifndef P4_TO_P8
-  conn = p4est_connectivity_new_brick (1, 1, periodic, periodic);
+  conn = p4est_connectivity_new_brick (2, 2, periodic, periodic);
 #else /* !P4_TO_P8 */
-  conn = p8est_connectivity_new_brick (1, 1, 1, periodic, periodic, periodic);
+  conn = p8est_connectivity_new_brick (2, 2, 2, periodic, periodic, periodic);
 #endif /* !P4_TO_P8 */
 
   /* setup p4est */
-  int                 minLevel = 1;
+  int                 minLevel = 0;
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, 0, 0);
+  p4est_refine (p4est, 0, refineExactlyOnce, 0);
+  p4est_partition (p4est, 0, 0);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
+
+  char                filename[29] = "test_mesh_setup_brick_";
+  strcat (filename, P4EST_STRING);
+  p4est_vtk_write_file (p4est, 0, filename);
+
   /* cleanup */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
