@@ -56,7 +56,8 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 #endif /* !P4_TO_P8 */
 
   /* setup p4est */
-  p4est = p4est_new_ext (mpicomm, conn, 0, 1, 0, 0, 0, 0);
+  int                 minLevel = 1;
+  p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, 0, 0);
 
   /* cleanup */
   p4est_destroy (p4est);
@@ -67,6 +68,7 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
+
   return 0;
 }
 
@@ -81,6 +83,30 @@ int
 test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
                                 int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  /* ensure that we have null pointers at beginning and end of function */
+  P4EST_ASSERT (p4est == NULL);
+  P4EST_ASSERT (conn == NULL);
+
+  /* create connectivity */
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_brick (1, 1, periodic, periodic);
+#else /* !P4_TO_P8 */
+  conn = p8est_connectivity_new_brick (1, 1, 1, periodic, periodic, periodic);
+#endif /* !P4_TO_P8 */
+
+  /* setup p4est */
+  int                 minLevel = 1;
+  p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, 0, 0);
+  /* cleanup */
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
+
+  conn = 0;
+  p4est = 0;
+
+  P4EST_ASSERT (p4est == NULL);
+  P4EST_ASSERT (conn == NULL);
+
   return 0;
 }
 
