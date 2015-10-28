@@ -22,10 +22,10 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est_connectivity.h>
+#include <p4est_extended.h>
 #include <p4est_mesh.h>
 #else /* !P4_TO_P8 */
-#include <p8est_connectivity.h>
+#include <p8est_extended.h>
 #include <p8est_mesh.h>
 #endif /* !P4_TO_P8 */
 
@@ -55,8 +55,8 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
     p8est_connectivity_new_unitcube ();
 #endif /* !P4_TO_P8 */
 
-  /* build p4est */
-  p4est = p4est_new (mpicomm, conn, 0, 0, 0);
+  /* setup p4est */
+  p4est = p4est_new_ext (mpicomm, conn, 0, 1, 0, 0, 0, 0);
 
   /* cleanup */
   p4est_destroy (p4est);
