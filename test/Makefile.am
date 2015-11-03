@@ -44,6 +44,9 @@ p4est_test_programs += \
         test/p8est_test_reorder
 endif
 endif
+if P4EST_ENABLE_BUILD_P6EST
+p4est_test_programs += test/p6est_test_all
+endif
 
 check_PROGRAMS += $(p4est_test_programs)
 
@@ -96,6 +99,8 @@ test_p8est_test_join_SOURCES = test/test_join3.c
 test_p8est_test_conn_reduce_SOURCES = test/test_conn_reduce3.c
 test_p8est_test_plex_SOURCES = test/test_plex3.c
 test_p8est_test_connrefine_SOURCES = test/test_connrefine3.c
+
+test_p6est_test_all_SOURCES = example/p6est/test/test_all6.c
 
 test_p4est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
 test_p8est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
@@ -157,7 +162,8 @@ LINT_CSOURCES += \
         $(test_p8est_test_join_SOURCES) \
         $(test_p8est_test_conn_reduce_SOURCES) \
         $(test_p8est_test_plex_SOURCES) \
-        $(test_p8est_test_connrefine_SOURCES)
+        $(test_p8est_test_connrefine_SOURCES) \
+        $(test_p6est_test_all_SOURCES)
 
 if P4EST_WITH_METIS
 LINT_CSOURCES += \
