@@ -227,7 +227,7 @@ extern void        *P4EST_DATA_UNINITIALIZED;
  * \param [in] connectivity     Connectivity must provide the vertices.
  * \param [in] treeid           Identify the tree that contains x, y.
  * \param [in] x, y             Quadrant coordinates relative to treeid.
- * \param [out] vxy             Transformed coordinates in vertex space.
+ * \param [out] vxyz            Transformed coordinates in vertex space.
  */
 void                p4est_qcoord_to_vertex (p4est_connectivity_t *
                                             connectivity,

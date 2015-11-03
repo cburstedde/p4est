@@ -21,14 +21,16 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifdef P4_TO_P8
-#include <p8est_algorithms.h>
-#include <p8est_communication.h>
-#include <p8est_extended.h>
-#else
+#ifndef P4_TO_P8
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
 #include <p4est_extended.h>
+#include <p4est_search.h>
+#else
+#include <p8est_algorithms.h>
+#include <p8est_communication.h>
+#include <p8est_extended.h>
+#include <p8est_search.h>
 #endif
 
 typedef struct
@@ -93,6 +95,19 @@ weight_once (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int
+traverse_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrant, int pfirst, int plast)
+{
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < p4est->mpisize);
+
+  return 1;
+}
+
 static int          circle_count;
 
 static void
@@ -111,6 +126,7 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   const p4est_topidx_t num_trees = p4est->connectivity->num_trees;
   p4est_gloidx_t     *pertree;
 
+  /* test counting of quadrants in individual trees */
   P4EST_ASSERT ((size_t) num_trees == p4est->trees->elem_count);
   if (new_pertree == NULL) {
     pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
@@ -129,6 +145,9 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   if (new_pertree == NULL) {
     P4EST_FREE (pertree);
   }
+
+  /* test traversal routine */
+  p4est_traverse (p4est, traverse_fn);
 }
 
 static void

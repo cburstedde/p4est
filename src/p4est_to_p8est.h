@@ -58,32 +58,6 @@
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
 
 /* redefine enums */
-#define P4EST_COMM_TAG_FIRST            P8EST_COMM_TAG_FIRST
-#define P4EST_COMM_COUNT_PERTREE        P8EST_COMM_COUNT_PERTREE
-#define P4EST_COMM_BALANCE_FIRST_COUNT  P8EST_COMM_BALANCE_FIRST_COUNT
-#define P4EST_COMM_BALANCE_FIRST_LOAD   P8EST_COMM_BALANCE_FIRST_LOAD
-#define P4EST_COMM_BALANCE_SECOND_COUNT P8EST_COMM_BALANCE_SECOND_COUNT
-#define P4EST_COMM_BALANCE_SECOND_LOAD  P8EST_COMM_BALANCE_SECOND_LOAD
-#define P4EST_COMM_PARTITION_GIVEN      P8EST_COMM_PARTITION_GIVEN
-#define P4EST_COMM_PARTITION_WEIGHTED_LOW P8EST_COMM_PARTITION_WEIGHTED_LOW
-#define P4EST_COMM_PARTITION_WEIGHTED_HIGH P8EST_COMM_PARTITION_WEIGHTED_HIGH
-#define P4EST_COMM_PARTITION_CORRECTION P8EST_COMM_PARTITION_CORRECTION
-#define P4EST_COMM_GHOST_COUNT          P8EST_COMM_GHOST_COUNT
-#define P4EST_COMM_GHOST_LOAD           P8EST_COMM_GHOST_LOAD
-#define P4EST_COMM_GHOST_EXCHANGE       P8EST_COMM_GHOST_EXCHANGE
-#define P4EST_COMM_GHOST_EXPAND_COUNT   P8EST_COMM_GHOST_EXPAND_COUNT
-#define P4EST_COMM_GHOST_EXPAND_LOAD    P8EST_COMM_GHOST_EXPAND_LOAD
-#define P4EST_COMM_GHOST_SUPPORT_COUNT  P8EST_COMM_GHOST_SUPPORT_COUNT
-#define P4EST_COMM_GHOST_SUPPORT_LOAD   P8EST_COMM_GHOST_SUPPORT_LOAD
-#define P4EST_COMM_GHOST_CHECKSUM       P8EST_COMM_GHOST_CHECKSUM
-#define P4EST_COMM_NODES_QUERY          P8EST_COMM_NODES_QUERY
-#define P4EST_COMM_NODES_REPLY          P8EST_COMM_NODES_REPLY
-#define P4EST_COMM_SAVE                 P8EST_COMM_SAVE
-#define P4EST_COMM_LNODES_TEST          P8EST_COMM_LNODES_TEST
-#define P4EST_COMM_LNODES_PASS          P8EST_COMM_LNODES_PASS
-#define P4EST_COMM_LNODES_OWNED         P8EST_COMM_LNODES_OWNED
-#define P4EST_COMM_LNODES_ALL           P8EST_COMM_LNODES_ALL
-#define P4EST_COMM_TAG_LAST             P8EST_COMM_TAG_LAST
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
@@ -128,6 +102,7 @@
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
+#define p4est_traverse_query_t          p8est_traverse_query_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_wrap_t                    p8est_wrap_t
@@ -265,6 +240,7 @@
 #define p4est_quadrant_ancestor         p8est_quadrant_ancestor
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
+#define p4est_quadrant_child            p8est_quadrant_child
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor
 #define p4est_quadrant_face_neighbor_extra p8est_quadrant_face_neighbor_extra
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors
@@ -296,6 +272,7 @@
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
+#define p4est_traverse                  p8est_traverse
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
@@ -329,6 +306,7 @@
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
+#define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
@@ -348,8 +326,13 @@
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_all             p8est_vtk_write_all
 #define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
+#define p4est_vtk_write_point_data      p8est_vtk_write_point_data
+#define p4est_vtk_write_point_datav     p8est_vtk_write_point_datav
 #define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
 #define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
+#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
+#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */
@@ -421,8 +404,10 @@
 #define p4est_wrap_new_brick            p8est_wrap_new_brick
 #define p4est_wrap_new_world            p8est_wrap_new_world
 #define p4est_wrap_new_ext              p8est_wrap_new_ext
+#define p4est_wrap_new_copy             p8est_wrap_new_copy
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_set_hollow           p8est_wrap_set_hollow
+#define p4est_wrap_set_coarsen_delay    p8est_wrap_set_coarsen_delay
 #define p4est_wrap_get_ghost            p8est_wrap_get_ghost
 #define p4est_wrap_get_mesh             p8est_wrap_get_mesh
 #define p4est_wrap_mark_refine          p8est_wrap_mark_refine

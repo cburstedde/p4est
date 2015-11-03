@@ -28,37 +28,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef enum
-{
-  P8EST_COMM_TAG_FIRST = SC_TAG_FIRST,
-  P8EST_COMM_COUNT_PERTREE = SC_TAG_LAST,
-  P8EST_COMM_BALANCE_FIRST_COUNT,
-  P8EST_COMM_BALANCE_FIRST_LOAD,
-  P8EST_COMM_BALANCE_SECOND_COUNT,
-  P8EST_COMM_BALANCE_SECOND_LOAD,
-  P8EST_COMM_PARTITION_GIVEN,
-  P8EST_COMM_PARTITION_WEIGHTED_LOW,
-  P8EST_COMM_PARTITION_WEIGHTED_HIGH,
-  P8EST_COMM_PARTITION_CORRECTION,
-  P8EST_COMM_GHOST_COUNT,
-  P8EST_COMM_GHOST_LOAD,
-  P8EST_COMM_GHOST_EXCHANGE,
-  P8EST_COMM_GHOST_EXPAND_COUNT,
-  P8EST_COMM_GHOST_EXPAND_LOAD,
-  P8EST_COMM_GHOST_SUPPORT_COUNT,
-  P8EST_COMM_GHOST_SUPPORT_LOAD,
-  P8EST_COMM_GHOST_CHECKSUM,
-  P8EST_COMM_NODES_QUERY,
-  P8EST_COMM_NODES_REPLY,
-  P8EST_COMM_SAVE,
-  P8EST_COMM_LNODES_TEST,
-  P8EST_COMM_LNODES_PASS,
-  P8EST_COMM_LNODES_OWNED,
-  P8EST_COMM_LNODES_ALL,
-  P8EST_COMM_TAG_LAST
-}
-p8est_comm_tag_t;
-
 void                p8est_comm_parallel_env_create (p8est_t * p8est,
                                                     MPI_Comm mpicomm);
 
@@ -95,6 +64,13 @@ void                p8est_comm_global_partition (p8est_t * p8est,
  */
 void                p8est_comm_count_pertree (p8est_t * p8est,
                                               p4est_gloidx_t * pertree);
+
+/** Query whether a processor has no quadrants.
+ * \param [in] p8est    This forests' global_first_position array must be valid.
+ * \param [in] p        Valid processor id.
+ * \return              True if and only if processor \p is empty.
+ */
+int                 p8est_comm_is_empty (p8est_t * p8est, int p);
 
 /** Tests ownershop of a quadrant via p8est->global_first_position.
  * Assumes a tree with no overlaps.
