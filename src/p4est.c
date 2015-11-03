@@ -1577,7 +1577,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       qh = P4EST_QUADRANT_LEN (q->level);
       if (p4est_comm_neighborhood_owned (p4est, nt,
                                          full_tree, tree_contact, q)) {
-        /* this quadrant's 3x3 neighborhood is onwed by this processor */
+        /* this quadrant's 3x3 neighborhood is owned by this processor */
         ++skipped;
         continue;
       }

@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_to_p8est.h
+/** We do not process this file in Doxygen since it overwrites types.
  *
  * Transform 2D \ref p4est routines into 3D \ref p8est routines.  This file can
  * be included from a .c file that has been written for 2D to turn it into a 3D
@@ -108,6 +108,7 @@
 #define p4est_wrap_t                    p8est_wrap_t
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
+#define p4est_vtk_context_t             p8est_vtk_context_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -323,16 +324,17 @@
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 
 /* functions in p4est_vtk */
+#define p4est_vtk_context_new           p8est_vtk_context_new
+#define p4est_vtk_context_destroy       p8est_vtk_context_destroy
+#define p4est_vtk_context_set_geom      p8est_vtk_context_set_geom
+#define p4est_vtk_context_set_scale     p8est_vtk_context_set_scale
+#define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
-#define p4est_vtk_write_all             p8est_vtk_write_all
 #define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_cell_dataf      p8est_vtk_write_cell_dataf
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
+#define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
-#define p4est_vtk_write_point_datav     p8est_vtk_write_point_datav
-#define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
-#define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
-#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
-#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */
