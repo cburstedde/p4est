@@ -50,6 +50,11 @@ endif
 
 check_PROGRAMS += $(p4est_test_programs)
 
+## Comment: We should probably wrap this into P4EST_ENABLE_BUILD_2D etc.
+##          Otherwise automake generates the targets and it will be legal
+##          to call make test/p4est_test_comm even when BUILD_2D is off,
+##          which will fail due to missing dependencies from libp4est.so.
+
 test_p4est_test_comm_SOURCES = test/test_comm.c
 test_p4est_test_hash_SOURCES = test/test_hash.c
 test_p4est_test_quadrants_SOURCES = test/test_quadrants2.c
