@@ -157,9 +157,6 @@ typedef struct
   sc_array_t         *edge_edge;        /* and this one too (type int8_t) */
   sc_array_t         *quad_to_hedge;    /**< stores half-size edge neighbors */
 
-  /* DEPRECATED (will go away) */
-  p4est_locidx_t     *quad_to_quad_edge; /**< stores 12 indices for each local quad */
-
   /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
   /* CAUTION: tree-boundary corners do not exclude tree-boundary edge corners */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
