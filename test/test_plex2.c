@@ -282,6 +282,10 @@ main (int argc, char **argv)
                        (PetscInt *) leaves->array, PETSC_COPY_VALUES,
                        (PetscSFNode *) remotes->array, PETSC_COPY_VALUES);
     CHKERRQ (ierr);
+    ierr = DMSetPointSF (plex, pointSF);
+    CHKERRQ (ierr);
+    ierr = PetscSFDestroy (&pointSF);
+    CHKERRQ(ierr);
     ierr = DMViewFromOptions (plex, NULL, "-dm_view");
     CHKERRQ (ierr);
     /* TODO: test with rigid body modes as in plex ex3 */
