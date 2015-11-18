@@ -546,7 +546,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     /* edge on face boundary */
     if (info->tree_boundary == P4EST_CONNECT_FACE) {
       /* on a face boundary at most 7 quadrants are adjacent to an edge */
-      P4EST_ASSERT (cz <= (1 << DIM) - 1);
+      P4EST_ASSERT (cz <= (1 << P4EST_DIM) - 1);
 
     }
 
@@ -559,7 +559,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     /* intra-tree */
     else {
       /* on edges inside a tree at most 7 quadrants are adjacent to that edge */
-      P4EST_ASSERT (cz <= (1 << DIM) - 1);
+      P4EST_ASSERT (cz <= (1 << P4EST_DIM) - 1);
       P4EST_ASSERT (!info->tree_boundary);
 
       side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
@@ -737,7 +737,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 P4EST_ASSERT (mesh->local_num_quadrants <= qid1
                               && qid1 <
                               mesh->local_num_quadrants +
-                              mesh->local_num_ghosts);
+                              mesh->ghost_num_quadrants);
               }
 
               if (!side2->is.hanging.is_ghost[k]) {
