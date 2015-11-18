@@ -522,14 +522,17 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     P4EST_ASSERT (info->tree_boundary);
 
     side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
+
     P4EST_ASSERT (0 <= side1->treeid &&
                   side1->treeid < info->p4est->connectivity->num_trees);
     P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
     P4EST_ASSERT (!side1->is_hanging && !side1->is.full.is_ghost);
+
     tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
     qid1 = side1->is.full.quadid + tree1->quadrants_offset;
 
     P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+
     /* put in myself */
     mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = qid1;
   }
@@ -539,7 +542,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     return;
   }
   else {
-    /* edge inside of domain */
+    /* edges inside of domain have at least 4 adjacent quadrants */
     P4EST_ASSERT (4 <= cz);
 
     /* edges on tree boundaries */
@@ -579,7 +582,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           /* remember first side */
           if (side1 == NULL) {
             side1 =
-              (p8est_iter_edge_side_t *) sc_array_index (&info->sides, j);
+              (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, j);
             eid1 = side1->edge;
             visited[j] = 1;
             continue;
@@ -628,6 +631,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               P4EST_ASSERT (side1->is.full.quad != NULL);
               P4EST_ASSERT (side1->is.full.quadid >= 0);
               qid1 = mesh->local_num_quadrants + side1->is.full.quadid;
+              P4EST_ASSERT (mesh->local_num_quadrants <= qid1
+                            && qid1 < mesh->local_num_quadrants +
+                            mesh->ghost_num_quadrants);
             }
             if (!side2->is.full.is_ghost) {
               tree2 = p4est_tree_array_index (info->p4est->trees,
@@ -639,6 +645,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               P4EST_ASSERT (side2->is.full.quad != NULL);
               P4EST_ASSERT (side2->is.full.quadid >= 0);
               qid2 = mesh->local_num_quadrants + side2->is.full.quadid;
+              P4EST_ASSERT (mesh->local_num_quadrants <= qid2
+                            && qid2 < mesh->local_num_quadrants +
+                            mesh->ghost_num_quadrants);
             }
 
             /* write info to correct position in quad_to_edge array if cell
@@ -676,6 +685,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               P4EST_ASSERT (side1->is.full.quad != NULL);
               P4EST_ASSERT (side1->is.full.quadid >= 0);
               qid1 = mesh->local_num_quadrants + side1->is.full.quadid;
+              P4EST_ASSERT (mesh->local_num_quadrants <= qid1
+                            && qid1 < mesh->local_num_quadrants +
+                            mesh->ghost_num_quadrants);
             }
 
             /* determine quadrant numbers for both hanging quadrants */
@@ -699,11 +711,11 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               }
             }
 
-            P4EST_ASSERT (!side1->is_hanging);
             /* encode quadrant neighborhood:
-             * inside an octree the orientation is always 0. All we need to encode is
-             * the information, if it is the first or second quadrant along the edge */
-            /* again: check before writing that corresponding values are untouched */
+             * inside an octree the orientation is always 0. All we need to
+             * encode is the information, if it is the first or second quadrant
+             * along the edge */
+            /* again: check before writing that values are untouched */
             // TODO: adapt to new way of filling arrays :-)
             if (!side1->is.full.is_ghost) {
               in_qtoq = P8EST_EDGES * qid1 + side1->edge;
@@ -735,8 +747,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 qid1 =
                   mesh->local_num_quadrants + side1->is.hanging.quadid[k];
                 P4EST_ASSERT (mesh->local_num_quadrants <= qid1
-                              && qid1 <
-                              mesh->local_num_quadrants +
+                              && qid1 < mesh->local_num_quadrants +
                               mesh->ghost_num_quadrants);
               }
 
@@ -751,6 +762,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 P4EST_ASSERT (side2->is.hanging.quadid[k] >= 0);
                 qid2 =
                   mesh->local_num_quadrants + side2->is.hanging.quadid[k];
+                P4EST_ASSERT (mesh->local_num_quadrants <= qid2
+                              && qid2 < mesh->local_num_quadrants +
+                              mesh->ghost_num_quadrants);
               }
 
               if (!side1->is.hanging.is_ghost[k]) {
