@@ -25,10 +25,12 @@
 #include <p4est_bits.h>
 #include <p4est_lnodes.h>
 #include <p4est_plex.h>
+#include <p4est_extended.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_lnodes.h>
 #include <p8est_plex.h>
+#include <p8est_extended.h>
 #endif
 
 /** Decode the information from p{4,8}est_lnodes_t for a given element.
@@ -1472,9 +1474,46 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 
 void
+p4est_get_plex_data_ext (p4est_t * p4est,
+                         p4est_ghost_t ** ghost,
+                         p4est_lnodes_t ** lnodes,
+                         p4est_connect_type_t ctype,
+                         int overlap, p4est_locidx_t * first_local_quad,
+                         sc_array_t * out_points_per_dim,
+                         sc_array_t * out_cone_sizes,
+                         sc_array_t * out_cones,
+                         sc_array_t * out_cone_orientations,
+                         sc_array_t * out_vertex_coords,
+                         sc_array_t * out_children,
+                         sc_array_t * out_parents,
+                         sc_array_t * out_childids,
+                         sc_array_t * out_leaves, sc_array_t * out_remotes)
+{
+  int                 ctype_int = p4est_connect_type_int (ctype);
+  int                 i;
+
+  *ghost = p4est_ghost_new (p4est, ctype);
+  *lnodes = p4est_lnodes_new (p4est, *ghost, -ctype_int);
+  if (overlap) {
+    p4est_ghost_support_lnodes (p4est, *lnodes, *ghost);
+  }
+  for (i = 1; i < overlap; i++) {
+    p4est_ghost_expand_by_lnodes (p4est, *lnodes, *ghost);
+  }
+  if (ctype != P4EST_CONNECT_FULL) {
+    p4est_lnodes_destroy (*lnodes);
+    *lnodes = p4est_lnodes_new (p4est, *ghost, -ctype);
+  }
+  p4est_get_plex_data_int (p4est, *ghost, *lnodes, overlap, 0,
+                           first_local_quad, out_points_per_dim,
+                           out_cone_sizes, out_cones, out_cone_orientations,
+                           out_vertex_coords, out_children, out_parents,
+                           out_childids, out_leaves, out_remotes);
+}
+
+void
 p4est_get_plex_data (p4est_t * p4est, p4est_connect_type_t ctype,
-                     int overlap,
-                     p4est_locidx_t * first_local_quad,
+                     int overlap, p4est_locidx_t * first_local_quad,
                      sc_array_t * out_points_per_dim,
                      sc_array_t * out_cone_sizes,
                      sc_array_t * out_cones,
@@ -1485,28 +1524,16 @@ p4est_get_plex_data (p4est_t * p4est, p4est_connect_type_t ctype,
                      sc_array_t * out_childids,
                      sc_array_t * out_leaves, sc_array_t * out_remotes)
 {
-  p4est_ghost_t      *ghost;
-  p4est_lnodes_t     *lnodes;
-  int                 ctype_int = p4est_connect_type_int (ctype);
-  int                 i;
+  p4est_ghost_t      *ghost = NULL;
+  p4est_lnodes_t     *lnodes = NULL;
 
-  ghost = p4est_ghost_new (p4est, ctype);
-  lnodes = p4est_lnodes_new (p4est, ghost, -ctype_int);
-  if (overlap) {
-    p4est_ghost_support_lnodes (p4est, lnodes, ghost);
-  }
-  for (i = 1; i < overlap; i++) {
-    p4est_ghost_expand_by_lnodes (p4est, lnodes, ghost);
-  }
-  if (ctype != P4EST_CONNECT_FULL) {
-    p4est_lnodes_destroy (lnodes);
-    lnodes = p4est_lnodes_new (p4est, ghost, -ctype);
-  }
-  p4est_get_plex_data_int (p4est, ghost, lnodes, overlap, 0,
+  p4est_get_plex_data_ext (p4est, &ghost, &lnodes, ctype, overlap,
                            first_local_quad, out_points_per_dim,
-                           out_cone_sizes, out_cones, out_cone_orientations,
-                           out_vertex_coords, out_children, out_parents,
-                           out_childids, out_leaves, out_remotes);
-  p4est_ghost_destroy (ghost);
+                           out_cone_sizes, out_cones,
+                           out_cone_orientations, out_vertex_coords,
+                           out_children, out_parents, out_childids,
+                           out_leaves, out_remotes);
+
   p4est_lnodes_destroy (lnodes);
+  p4est_ghost_destroy (ghost);
 }
