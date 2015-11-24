@@ -403,31 +403,28 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
               break;
             }
           }
-          if (ignore) {
-            continue;
+          if (!ignore) {
+            /* Record this corner neighbor if we don't want to ignore it */
+            tree2 = p4est_tree_array_index (trees, side2->treeid);
+            qid2 =
+              side2->quadid +
+              (side2->is_ghost ? mesh->
+               local_num_quadrants : tree2->quadrants_offset);
+            cquads[goodones] = qid2;
+            ccorners[goodones] = (int) side2->corner;
+            ++goodones;
           }
-
-          /* TODO: in 3D we also have to exclude tree-edge neighbors */
-
-          /* Record this corner neighbor */
-          tree2 = p4est_tree_array_index (trees, side2->treeid);
-          qid2 = side2->quadid + (side2->is_ghost ? mesh->local_num_quadrants
-                                  : tree2->quadrants_offset);
-          cquads[goodones] = qid2;
-          ccorners[goodones] = (int) side2->corner;
-          ++goodones;
         }
-        P4EST_ASSERT ((size_t) goodones < cz);
-        if (goodones == 0) {
-          continue;
+        P4EST_ASSERT (0 <= (size_t) goodones && (size_t) goodones < cz);
+        if (goodones > 0) {
+          /* Allocate and fill corner information in the mesh structure */
+          cornerid =
+            mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] =
+            cornerid_offset + cornerid;
+          memcpy (pcquad, cquads, goodones * sizeof (p4est_locidx_t));
+          memcpy (pccorner, ccorners, goodones * sizeof (int8_t));
         }
-
-        /* Allocate and fill corner information in the mesh structure */
-        cornerid = mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
-        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] =
-          cornerid_offset + cornerid;
-        memcpy (pcquad, cquads, goodones * sizeof (p4est_locidx_t));
-        memcpy (pccorner, ccorners, goodones * sizeof (int8_t));
       }
     }
     P4EST_FREE (cquads);
@@ -732,8 +729,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           else {
             /* both sides are hanging with respect to a bigger edge that is not
              * diagonally opposite */
-            /* determine quadrant numbers for both hanging edges and write them
-             * directly to the corresponding positions */
+            /* determine quadrant numbers for both "hanging" edges and write
+             * them directly to the corresponding positions */
             for (k = 0; k < 2; ++k) {
               if (!side1->is.hanging.is_ghost[k]) {
                 tree1 =
