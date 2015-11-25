@@ -404,18 +404,21 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             }
           }
           if (!ignore) {
-            /* Record this corner neighbor if we don't want to ignore it */
+            /* Record this corner neighbor if we don't ignore it */
             tree2 = p4est_tree_array_index (trees, side2->treeid);
             qid2 =
               side2->quadid +
-              (side2->is_ghost ? mesh->
-               local_num_quadrants : tree2->quadrants_offset);
+              (side2->is_ghost ? mesh->local_num_quadrants : tree2->
+               quadrants_offset);
             cquads[goodones] = qid2;
             ccorners[goodones] = (int) side2->corner;
             ++goodones;
           }
         }
+
+        /* we have excluded between 0 and all quadrants. */
         P4EST_ASSERT (0 <= (size_t) goodones && (size_t) goodones < cz);
+
         if (goodones > 0) {
           /* Allocate and fill corner information in the mesh structure */
           cornerid =
@@ -713,16 +716,34 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
              * encode is the information, if it is the first or second quadrant
              * along the edge */
             /* again: check before writing that values are untouched */
-            // TODO: adapt to new way of filling arrays :-)
             if (!side1->is.full.is_ghost) {
               in_qtoq = P8EST_EDGES * qid1 + side1->edge;
               P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
               halfindex = (p4est_locidx_t) mesh->quad_to_hedge->elem_count;
+
+              /* TODO: write appropriate index to quad_to_edge
+               *       idx = mesh->local_num_quadrants + mesh->ghost_num_quadrants + mesh->local_num_edges;
+               */
+              /* TODO: increment mesh->local_num_edges */
+              /* TODO: append 1 into corner offset */
+              /* TODO: write half index into edge_quad */
+              /* TODO: write appropriate encoding into edge_edge */
+              /* TODO: call mesh_edge_allocate to actually perform that */
             }
             for (k = 0; k < 2; ++k) {
               if (!side2->is.hanging.is_ghost[k]) {
                 in_qtoq = P8EST_EDGES * qls1[k] + side2->edge;
                 P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
+
+                /* TODO: write appropriate index to quad_to_edge
+                 *       idx = mesh->local_num_quadrants + mesh->ghost_num_quadrants + mesh->local_num_edges;
+                 */
+                /* TODO: increment mesh->local_num_edges */
+
+                /* TODO: append 1 into corner offset */
+                /* TODO: write index of bigger cell into edge_quad */
+                /* TODO: write appropriate encoding into edge_edge */
+                /* TODO: call mesh_edge_allocate to actually perform that */
               }
             }
           }
