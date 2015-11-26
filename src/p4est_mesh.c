@@ -719,12 +719,13 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             if (!side1->is.full.is_ghost) {
               in_qtoq = P8EST_EDGES * qid1 + side1->edge;
               P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
+              // this one goes as index into edge_quad
               halfindex = (p4est_locidx_t) mesh->quad_to_hedge->elem_count;
+              int                 indexQuadEdge =
+                mesh->local_num_quadrants + mesh->ghost_num_quadrants +
+                mesh->local_num_corners;
+              ++mesh->local_num_corners;
 
-              /* TODO: write appropriate index to quad_to_edge
-               *       idx = mesh->local_num_quadrants + mesh->ghost_num_quadrants + mesh->local_num_edges;
-               */
-              /* TODO: increment mesh->local_num_edges */
               /* TODO: append 1 into corner offset */
               /* TODO: write half index into edge_quad */
               /* TODO: write appropriate encoding into edge_edge */
