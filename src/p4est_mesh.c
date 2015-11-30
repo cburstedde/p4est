@@ -509,8 +509,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   p4est_locidx_t     *pequad;
   p4est_locidx_t      qid1, qid2, qls1[2], qoffset;
   p4est_locidx_t      eid1, eid2, ec1, e1, e2;
+  p4est_locidx_t      edgeid;
   p4est_locidx_t     *halfentries;
-  p4est_locidx_t      in_qtoq, halfindex;
+  p4est_locidx_t      in_qtoe, halfindex, edgeindex;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p8est_iter_edge_side_t *side1, *side2, *tempside;
   p4est_tree_t       *tree1, *tree2;
@@ -723,35 +724,39 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
              * along the edge */
             /* again: check before writing that values are untouched */
             if (!side1->is.full.is_ghost) {
-              in_qtoq = P8EST_EDGES * qid1 + side1->edge;
-              P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
-              // this one goes as index into edge_quad
+              in_qtoe = P8EST_EDGES * qid1 + side1->edge;
+
+              P4EST_ASSERT (mesh->quad_to_edge[in_qtoe] == -1);
+
               halfindex = (p4est_locidx_t) mesh->quad_to_hedge->elem_count;
-              int                 indexQuadEdge =
+              halfentries =
+                (p4est_locidx_t *) sc_array_push (mesh->quad_to_hedge);
+
+              for (k = 0; k < 2; ++k) {
+                halfentries[k] = qls1[k];
+              }
+
+              edgeid = mesh_edge_allocate (mesh, 1, &pequad, &peedge);
+              *pequad = halfindex;
+              *peedge = -1 - side2->edge;
+
+              mesh->quad_to_edge[in_qtoe] =
                 mesh->local_num_quadrants + mesh->ghost_num_quadrants +
-                mesh->local_num_corners;
-              ++mesh->local_num_corners;
-
-              /* TODO: write indices of small cells to quad_to_hedge */
-
-              mesh_edge_allocate (mesh, 1, &pequad, &peedge);
-
-              /* TODO: write half index into edge_quad */
-              /* TODO: write appropriate encoding into edge_edge */
-
+                edgeid;
             }
             for (k = 0; k < 2; ++k) {
               if (!side2->is.hanging.is_ghost[k]) {
-                in_qtoq = P8EST_EDGES * qls1[k] + side2->edge;
-                P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
+                in_qtoe = P8EST_EDGES * qls1[k] + side2->edge;
 
-                /* TODO: write appropriate index to quad_to_edge
-                 *       idx = mesh->local_num_quadrants + mesh->ghost_num_quadrants + mesh->local_num_edges;
-                 */
+                P4EST_ASSERT (mesh->quad_to_edge[in_qtoe] == -1);
 
-                /* TODO: call mesh_edge_allocate to allocate necessary space edge_quad, edge_offset, and edge_edge arrays */
-                /* TODO: write index of bigger cell into edge_quad */
-                /* TODO: write appropriate encoding into edge_edge */
+                edgeid = mesh_edge_allocate (mesh, 1, &pequad, &peedge);
+                *pequad = qid1;
+                *peedge = 2 * P8EST_EDGES * k + side1->edge;
+
+                mesh->quad_to_edge[in_qtoe] =
+                  mesh->local_num_quadrants + mesh->ghost_num_quadrants +
+                  edgeid;
               }
             }
           }
@@ -794,14 +799,14 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               }
 
               if (!side1->is.hanging.is_ghost[k]) {
-                in_qtoq = P8EST_EDGES * qid1 + side1->edge;
-                P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
-                mesh->quad_to_edge[in_qtoq] = qid2;
+                in_qtoe = P8EST_EDGES * qid1 + side1->edge;
+                P4EST_ASSERT (mesh->quad_to_edge[in_qtoe] == -1);
+                mesh->quad_to_edge[in_qtoe] = qid2;
               }
               if (!side2->is.hanging.is_ghost[k]) {
-                in_qtoq = P8EST_EDGES * qid2 + side1->edge;
-                P4EST_ASSERT (mesh->quad_to_edge[in_qtoq] == -1);
-                mesh->quad_to_edge[in_qtoq] = qid1;
+                in_qtoe = P8EST_EDGES * qid2 + side1->edge;
+                P4EST_ASSERT (mesh->quad_to_edge[in_qtoe] == -1);
+                mesh->quad_to_edge[in_qtoe] = qid1;
               }
             }
           }
