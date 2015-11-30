@@ -410,8 +410,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             tree2 = p4est_tree_array_index (trees, side2->treeid);
             qid2 =
               side2->quadid +
-              (side2->is_ghost ? mesh->local_num_quadrants : tree2->
-               quadrants_offset);
+              (side2->is_ghost ?
+               mesh->local_num_quadrants : tree2->quadrants_offset);
             cquads[goodones] = qid2;
             ccorners[goodones] = (int) side2->corner;
             ++goodones;
