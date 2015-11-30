@@ -38,7 +38,8 @@
 /*********************** constructor functions ***********************/
 
 /** For a quadrant that touches a tree face with a corner inside the face,
- * get the number of the touching face.
+ *  get the number of the touching face. Note that this function only pushes an
+ *  address which data has to be set separately.
  *
  * \param [in] q        currently considered quadrant
  * \param [in] corner   corner index
@@ -72,7 +73,8 @@ tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
 
 /** Populate mesh information for corners across tree boundaries, i.e. every
  *  neighborhood scenario where we need more information (like orientation) than
- *  a single index.
+ *  a single index. Note that this function only allocates the memory, correct
+ *  values have to be set separately
  *
  * \param [in][out] mesh     The mesh structure to which we will add corner
  *                           information
@@ -423,8 +425,10 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           /* Allocate and fill corner information in the mesh structure */
           cornerid =
             mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
+          /* "link" to arrays encoding inter-tree corner-neighborhood */
           mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] =
             cornerid_offset + cornerid;
+          /* populate allocated memory */
           memcpy (pcquad, cquads, goodones * sizeof (p4est_locidx_t));
           memcpy (pccorner, ccorners, goodones * sizeof (int8_t));
         }
