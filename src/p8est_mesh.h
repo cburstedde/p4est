@@ -149,13 +149,12 @@ typedef struct
 
   /* These members are NULL if connect_t is less than P4EST_CONNECT_EDGE */
   /* CAUTION: not yet implemented */
-  p4est_locidx_t      local_num_edges;  /* half-size and tree-boundary edges */
-  p4est_locidx_t     *quad_to_edge;     /* 12 indices for each local quad */
+  p4est_locidx_t      local_num_edges;  /**< half-size and tree-boundary edges */
+  p4est_locidx_t     *quad_to_edge;     /**< 12 indices for each local quad */
   /* TODO: use these containers at all and use them properly */
-  sc_array_t         *edge_offset;      /* local_num_edges + 1 entries */
-  sc_array_t         *edge_quad;        /* edge_offset indexes into this */
-  sc_array_t         *edge_edge;        /* and this one too (type int8_t) */
-  sc_array_t         *quad_to_hedge;    /**< stores half-size edge neighbors */
+  sc_array_t         *edge_offset;      /**< local_num_edges + 1 entries */
+  sc_array_t         *edge_quad;        /**< edge_offset indexes into this */
+  sc_array_t         *edge_edge;        /**< and this one too (type int8_t) */
 
   /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
   /* CAUTION: tree-boundary corners do not exclude tree-boundary edge corners */
