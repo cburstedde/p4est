@@ -503,8 +503,10 @@ static void
 mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 {
   int8_t              visited[P4EST_HALF];
+  int8_t             *peedge;
   size_t              i, j, k, cz, zz, ctr;
   int                 swapsides;
+  p4est_locidx_t     *pequad;
   p4est_locidx_t      qid1, qid2, qls1[2], qoffset;
   p4est_locidx_t      eid1, eid2, ec1, e1, e2;
   p4est_locidx_t     *halfentries;
@@ -730,10 +732,13 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 mesh->local_num_corners;
               ++mesh->local_num_corners;
 
-              /* TODO: append 1 into corner offset */
+              /* TODO: write indices of small cells to quad_to_hedge */
+
+              mesh_edge_allocate (mesh, 1, &pequad, &peedge);
+
               /* TODO: write half index into edge_quad */
               /* TODO: write appropriate encoding into edge_edge */
-              /* TODO: call mesh_edge_allocate to actually perform that */
+
             }
             for (k = 0; k < 2; ++k) {
               if (!side2->is.hanging.is_ghost[k]) {
@@ -743,12 +748,10 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 /* TODO: write appropriate index to quad_to_edge
                  *       idx = mesh->local_num_quadrants + mesh->ghost_num_quadrants + mesh->local_num_edges;
                  */
-                /* TODO: increment mesh->local_num_edges */
 
-                /* TODO: append 1 into corner offset */
+                /* TODO: call mesh_edge_allocate to allocate necessary space edge_quad, edge_offset, and edge_edge arrays */
                 /* TODO: write index of bigger cell into edge_quad */
                 /* TODO: write appropriate encoding into edge_edge */
-                /* TODO: call mesh_edge_allocate to actually perform that */
               }
             }
           }
