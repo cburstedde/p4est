@@ -29,12 +29,15 @@ p6est_comm_parallel_env_create (p6est_t * p6est, sc_MPI_Comm mpicomm)
   int                 mpiret;
 
   /* duplicate MPI communicator */
-  mpiret = sc_MPI_Comm_dup (mpicomm, &(p6est->mpicomm)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_dup (mpicomm, &(p6est->mpicomm));
+  SC_CHECK_MPI (mpiret);
   p6est->mpicomm_owned = 1;
 
   /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &(p6est->mpisize)); SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &(p6est->mpirank)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (mpicomm, &(p6est->mpisize));
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &(p6est->mpirank));
+  SC_CHECK_MPI (mpiret);
 }
 
 void
@@ -44,7 +47,8 @@ p6est_comm_parallel_env_free (p6est_t * p6est)
 
   /* free MPI communicator if it's owned */
   if (p6est->mpicomm_owned) {
-    mpiret = sc_MPI_Comm_free (&(p6est->mpicomm)); SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Comm_free (&(p6est->mpicomm));
+    SC_CHECK_MPI (mpiret);
   }
   p6est->mpicomm = sc_MPI_COMM_NULL;
   p6est->mpicomm_owned = 0;
@@ -83,7 +87,8 @@ p6est_comm_parallel_env_assign (p6est_t * p6est, sc_MPI_Comm mpicomm)
   p6est->mpicomm_owned = 0;
 
   /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &(p6est->mpisize)); SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &(p6est->mpirank)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (mpicomm, &(p6est->mpisize));
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &(p6est->mpirank));
+  SC_CHECK_MPI (mpiret);
 }
-

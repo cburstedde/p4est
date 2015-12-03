@@ -313,7 +313,6 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
 
-
 int                 p4est_reduce_mpicomm (p4est_t * p4est);
 
 int                 p4est_reduce_mpicomm_ext (p4est_t * p4est,

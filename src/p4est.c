@@ -599,10 +599,9 @@ p4est_reduce_mpicomm (p4est_t * p4est)
 
 int
 p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
-                          const int add_to_beginning,
-                          int **Ranks)
+                          const int add_to_beginning, int **Ranks)
 {
-  sc_MPI_Comm            mpicomm = p4est->mpicomm;
+  sc_MPI_Comm         mpicomm = p4est->mpicomm;
   int                 mpisize = p4est->mpisize;
   int                 mpiret;
   p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
@@ -610,8 +609,8 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   p4est_gloidx_t     *n_quadrants;
   int                *include;
   int                 submpisize;
-  sc_MPI_Group           group, subgroup;
-  sc_MPI_Comm            submpicomm;
+  sc_MPI_Group        group, subgroup;
+  sc_MPI_Comm         submpicomm;
   int                *ranks, *subranks;
   int                 i;
 
@@ -624,8 +623,8 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   include = P4EST_ALLOC (int, mpisize);
   submpisize = 0;
   for (i = 0; i < mpisize; i++) {
-    n_quadrants[i] = global_first_quadrant[i+1] - global_first_quadrant[i];
-    if (global_first_quadrant[i] < global_first_quadrant[i+1]) {
+    n_quadrants[i] = global_first_quadrant[i + 1] - global_first_quadrant[i];
+    if (global_first_quadrant[i] < global_first_quadrant[i + 1]) {
       include[submpisize] = i;
       submpisize++;
     }
@@ -639,15 +638,17 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   }
 
   /* create sub-group of non-empty processors */
-  mpiret = sc_MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_group (mpicomm, &group);
+  SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Group_incl (group, submpisize, include, &subgroup);
-  mpiret = sc_MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_free (&group);
+  SC_CHECK_MPI (mpiret);
   SC_CHECK_MPI (mpiret);
   P4EST_FREE (include);
 
   /* create sub-communicator */
   if (group_add != sc_MPI_GROUP_NULL) {
-    sc_MPI_Group           group_union;
+    sc_MPI_Group        group_union;
 
     /* create union with optional group */
     if (add_to_beginning) {
@@ -661,14 +662,17 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
     /* create sub-communicator */
     mpiret = sc_MPI_Comm_create (mpicomm, group_union, &submpicomm);
     SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Group_free (&group_union); SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Group_free (&group_union);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Group_free (&subgroup);
+    SC_CHECK_MPI (mpiret);
   }
   else {
     /* create sub-communicator */
     mpiret = sc_MPI_Comm_create (mpicomm, subgroup, &submpicomm);
     SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Group_free (&subgroup);
+    SC_CHECK_MPI (mpiret);
   }
 
   /* destroy p4est and exit if this processor is empty */
@@ -682,7 +686,8 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   }
 
   /* update size of new MPI communicator */
-  mpiret = sc_MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (submpicomm, &submpisize);
+  SC_CHECK_MPI (mpiret);
 
   /* translate MPI ranks */
   ranks = P4EST_ALLOC (int, submpisize);
@@ -690,12 +695,17 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   for (i = 0; i < submpisize; i++) {
     subranks[i] = i;
   }
-  mpiret = sc_MPI_Comm_group (submpicomm, &subgroup); SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_group (submpicomm, &subgroup);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_group (mpicomm, &group);
+  SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Group_translate_ranks (subgroup, submpisize, subranks,
-                                      group, ranks); SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
+                                         group, ranks);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_free (&subgroup);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_free (&group);
+  SC_CHECK_MPI (mpiret);
   P4EST_FREE (subranks);
 
   /* allocate and set global quadrant count */
@@ -704,9 +714,10 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   p4est->global_first_quadrant[0] = 0;
   for (i = 0; i < submpisize; i++) {
     P4EST_ASSERT (ranks[i] != sc_MPI_UNDEFINED);
-    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL || 0 < n_quadrants[ranks[i]]);
-    p4est->global_first_quadrant[i+1] = p4est->global_first_quadrant[i] +
-                                        n_quadrants[ranks[i]];
+    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL
+                  || 0 < n_quadrants[ranks[i]]);
+    p4est->global_first_quadrant[i + 1] =
+      p4est->global_first_quadrant[i] + n_quadrants[ranks[i]];
   }
   P4EST_ASSERT (p4est->global_first_quadrant[submpisize] =
                 p4est->global_num_quadrants);
@@ -721,12 +732,14 @@ p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
   /* set new parallel environment */
   p4est_comm_parallel_env_free (p4est);
   p4est_comm_parallel_env_create (p4est, submpicomm);
-  mpiret = sc_MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_free (&submpicomm);
+  SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (p4est->mpisize == submpisize);
 
   /* communicate partition information */
   P4EST_FREE (p4est->global_first_position);
-  p4est->global_first_position = P4EST_ALLOC (p4est_quadrant_t, submpisize + 1);
+  p4est->global_first_position =
+    P4EST_ALLOC (p4est_quadrant_t, submpisize + 1);
   p4est_comm_global_partition (p4est, NULL);
 
   /* check for valid p4est */

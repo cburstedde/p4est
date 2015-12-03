@@ -306,7 +306,6 @@ p8est_t            *p8est_load_ext (const char *filename, sc_MPI_Comm mpicomm,
                                     void *user_pointer,
                                     p8est_connectivity_t ** connectivity);
 
-
 /** The same as p8est_load_ext, but reading the connectivity/p8est from an
  * open sc_io_source_t stream.
  */
@@ -322,7 +321,6 @@ int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
                                               sc_MPI_Group group_add,
                                               const int add_to_beginning,
                                               int **ranks);
-
 
 SC_EXTERN_C_END;
 
