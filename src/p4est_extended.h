@@ -317,7 +317,7 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
 int                 p4est_reduce_mpicomm (p4est_t * p4est);
 
 int                 p4est_reduce_mpicomm_ext (p4est_t * p4est,
-                                              MPI_Group group_add,
+                                              sc_MPI_Group group_add,
                                               const int add_to_beginning,
                                               int **ranks);
 

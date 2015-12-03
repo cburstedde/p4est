@@ -319,7 +319,7 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
 int                 p8est_reduce_mpicomm (p8est_t * p8est);
 
 int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
-                                              MPI_Group group_add,
+                                              sc_MPI_Group group_add,
                                               const int add_to_beginning,
                                               int **ranks);
 

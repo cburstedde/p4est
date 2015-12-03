@@ -684,9 +684,9 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   int                 retval, mpiret;
   p4est_t            *savecolumns;
 #ifdef P4EST_MPIIO_WRITE
-  MPI_File            mpifile;
-  MPI_Offset          mpipos;
-  MPI_Offset          mpithis;
+  sc_MPI_File            mpifile;
+  sc_MPI_Offset          mpipos;
+  sc_MPI_Offset          mpithis;
 #else
   long                fthis;
   sc_MPI_Status       mpistatus;
@@ -2224,7 +2224,7 @@ p6est_partition_correct (p6est_t * p6est, p4est_locidx_t * num_layers_in_proc)
 
   mpiret =
     sc_MPI_Allreduce (new_offsets, new_offsets_recv, mpisize,
-                      P4EST_MPI_GLOIDX, MPI_MAX, p6est->mpicomm);
+                      P4EST_MPI_GLOIDX, sc_MPI_MAX, p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   for (p = 0; p < mpisize; p++) {
@@ -2294,7 +2294,7 @@ p6est_partition_to_p4est_partition (p6est_t * p6est,
 
   mpiret =
     sc_MPI_Allreduce (new_offsets, new_offsets_recv, mpisize,
-                      P4EST_MPI_GLOIDX, MPI_MAX, p6est->mpicomm);
+                      P4EST_MPI_GLOIDX, sc_MPI_MAX, p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   for (p = 0; p < mpisize; p++) {
@@ -2364,7 +2364,7 @@ p4est_partition_to_p6est_partition (p6est_t * p6est,
 
   mpiret =
     sc_MPI_Allreduce (new_offsets, new_offsets_recv, mpisize,
-                      P4EST_MPI_GLOIDX, MPI_MAX, p6est->mpicomm);
+                      P4EST_MPI_GLOIDX, sc_MPI_MAX, p6est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   for (p = 0; p < mpisize; p++) {
@@ -2654,11 +2654,11 @@ p6est_checksum (p6est_t * p6est)
 int
 p6est_reduce_mpicomm (p6est_t ** P6est)
 {
-  return p6est_reduce_mpicomm_ext (P6est, MPI_GROUP_NULL, 0, NULL);
+  return p6est_reduce_mpicomm_ext (P6est, sc_MPI_GROUP_NULL, 0, NULL);
 }
 
 int
-p6est_reduce_mpicomm_ext (p6est_t ** P6est, MPI_Group group_add,
+p6est_reduce_mpicomm_ext (p6est_t ** P6est, sc_MPI_Group group_add,
                           const int add_to_beginning, int **Ranks)
 {
   p6est_t            *p6est = *P6est;
@@ -2668,7 +2668,7 @@ p6est_reduce_mpicomm_ext (p6est_t ** P6est, MPI_Group group_add,
 
   p4est_gloidx_t     *n_quadrants;
   int                 submpisize;
-  MPI_Comm            submpicomm;
+  sc_MPI_Comm            submpicomm;
   int                *ranks;
   int                 i;
   int                 active;
@@ -2693,7 +2693,7 @@ p6est_reduce_mpicomm_ext (p6est_t ** P6est, MPI_Group group_add,
   }
   submpicomm = p6est->columns->mpicomm;
   /* update size of new MPI communicator */
-  mpiret = MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
   if (submpisize == p6est->mpisize) {
     P4EST_ASSERT(ranks == NULL);
     return 1;
@@ -2704,8 +2704,8 @@ p6est_reduce_mpicomm_ext (p6est_t ** P6est, MPI_Group group_add,
   p6est->global_first_layer = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
   p6est->global_first_layer[0] = 0;
   for (i = 0; i < submpisize; i++) {
-    P4EST_ASSERT (ranks[i] != MPI_UNDEFINED);
-    P4EST_ASSERT (group_add != MPI_GROUP_NULL || 0 < n_quadrants[ranks[i]]);
+    P4EST_ASSERT (ranks[i] != sc_MPI_UNDEFINED);
+    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL || 0 < n_quadrants[ranks[i]]);
     p6est->global_first_layer[i+1] = p6est->global_first_layer[i] +
                                         n_quadrants[ranks[i]];
   }

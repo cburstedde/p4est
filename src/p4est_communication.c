@@ -33,17 +33,17 @@
 #endif
 
 void
-p4est_comm_parallel_env_create (p4est_t * p4est, MPI_Comm mpicomm)
+p4est_comm_parallel_env_create (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
   int                 mpiret;
 
   /* duplicate MPI communicator */
-  mpiret = MPI_Comm_dup (mpicomm, &(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_dup (mpicomm, &(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
   p4est->mpicomm_owned = 1;
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &(p4est->mpisize)); SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &(p4est->mpirank)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (mpicomm, &(p4est->mpisize)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &(p4est->mpirank)); SC_CHECK_MPI (mpiret);
 }
 
 void
@@ -53,24 +53,24 @@ p4est_comm_parallel_env_free (p4est_t * p4est)
 
   /* free MPI communicator if it's owned */
   if (p4est->mpicomm_owned) {
-    mpiret = MPI_Comm_free (&(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Comm_free (&(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
   }
-  p4est->mpicomm = MPI_COMM_NULL;
+  p4est->mpicomm = sc_MPI_COMM_NULL;
   p4est->mpicomm_owned = 0;
 
   /* set MPI information */
   p4est->mpisize = 0;
-  p4est->mpirank = MPI_UNDEFINED;
+  p4est->mpirank = sc_MPI_UNDEFINED;
 }
 
 int
 p4est_comm_parallel_env_is_null (p4est_t * p4est)
 {
-  return (p4est->mpicomm == MPI_COMM_NULL);
+  return (p4est->mpicomm == sc_MPI_COMM_NULL);
 }
 
 void
-p4est_comm_parallel_env_assign (p4est_t * p4est, MPI_Comm mpicomm)
+p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
   int                 mpiret;
 
@@ -79,10 +79,10 @@ p4est_comm_parallel_env_assign (p4est_t * p4est, MPI_Comm mpicomm)
   {
     int                 result;
 
-    mpiret = MPI_Comm_compare (p4est->mpicomm, mpicomm, &result);
+    mpiret = sc_MPI_Comm_compare (p4est->mpicomm, mpicomm, &result);
     SC_CHECK_MPI (mpiret);
 
-    P4EST_ASSERT (result == MPI_IDENT || result == MPI_CONGRUENT);
+    P4EST_ASSERT (result == sc_MPI_IDENT || result == sc_MPI_CONGRUENT);
   }
 #endif
 
@@ -94,8 +94,8 @@ p4est_comm_parallel_env_assign (p4est_t * p4est, MPI_Comm mpicomm)
   p4est->mpicomm_owned = 0;
 
   /* retrieve MPI information */
-  mpiret = MPI_Comm_size (mpicomm, &(p4est->mpisize)); SC_CHECK_MPI (mpiret);
-  mpiret = MPI_Comm_rank (mpicomm, &(p4est->mpirank)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (mpicomm, &(p4est->mpisize)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &(p4est->mpirank)); SC_CHECK_MPI (mpiret);
 }
 
 void

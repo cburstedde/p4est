@@ -32,7 +32,7 @@
 
 /** duplicate the mpi communicator in the p6est */
 void                p6est_comm_parallel_env_create (p6est_t * p6est,
-                                                    MPI_Comm mpicomm);
+                                                    sc_MPI_Comm mpicomm);
 
 /** free an owned mpi communicator */
 void                p6est_comm_parallel_env_free (p6est_t * p6est);
@@ -42,4 +42,4 @@ int                 p6est_comm_parallel_env_is_null (p6est_t * p6est);
 
 /** assign an mpi communicator */
 void                p6est_comm_parallel_env_assign (p6est_t * p6est,
-                                                    MPI_Comm mpicomm);
+                                                    sc_MPI_Comm mpicomm);
