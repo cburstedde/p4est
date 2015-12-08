@@ -62,6 +62,26 @@ const int           p8est_face_permutation_refs[6][6] =
  { 0, 2, 2, 0, 0, 1 },
  { 2, 0, 0, 2, 2, 0 }};
 
+const int           p8est_face_edge_permutations[8][4] =
+{{ 0, 1, 2, 3 },
+ { 0, 1, 3, 2 },
+ { 1, 0, 2, 3 },
+ { 1, 0, 3, 2 },
+ { 2, 3, 0, 1 },
+ { 2, 3, 1, 0 },
+ { 3, 2, 0, 1 },
+ { 3, 2, 1, 0 }};
+const int           p8est_face_edge_permutation_sets[2][4] =
+{{ 4, 1, 2, 7 },
+ { 0, 6, 5, 3 }};
+const int           p8est_face_edge_permutation_refs[6][6] =
+{{ 0, 1, 1, 0, 0, 1 },
+ { 1, 0, 0, 1, 1, 0 },
+ { 1, 0, 0, 1, 1, 0 },
+ { 0, 1, 1, 0, 0, 1 },
+ { 0, 1, 1, 0, 0, 1 },
+ { 1, 0, 0, 1, 1, 0 }};
+
 const int           p8est_edge_faces[12][2] =
 {{ 2, 4 },
  { 3, 4 },
