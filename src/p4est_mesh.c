@@ -38,8 +38,7 @@
 /*********************** constructor functions ***********************/
 
 /** For a quadrant that touches a tree face with a corner inside the face,
- *  get the number of the touching face. Note that this function only pushes an
- *  address which data has to be set separately.
+ *  get the number of the touching face.
  *
  * \param [in] q        currently considered quadrant
  * \param [in] corner   corner index
@@ -114,7 +113,8 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
 #ifdef P4_TO_P8
 /** Populate mesh information for hanging edges and edges across tree
  *  boundaries, i.e. every neighborhood scenario where we need more information
- *  (like orientation) than a single index.
+ *  (like orientation) than a single index. Note that this function only pushes
+ *  an address whose data has to be set separately. 
  *
  * \param [in][out] mesh     The mesh structure to which we will add edge
  *                           information
