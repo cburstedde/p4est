@@ -211,8 +211,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           fc1 = p4est_corner_face_corners[side1->corner][f1];
           P4EST_ASSERT (0 <= fc1 && fc1 < P4EST_HALF);
           tree1 = p4est_tree_array_index (trees, side1->treeid);
-          qid1 = side1->quadid + (side1->is_ghost ? mesh->local_num_quadrants
-                                  : tree1->quadrants_offset);
+          qid1 = side1->quadid + (side1->is_ghost ?
+                                  mesh->local_num_quadrants :
+                                  tree1->quadrants_offset);
           visited[j] = 1;
           continue;
         }
@@ -351,8 +352,10 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             /* We have a face neighbor */
             faceOrientation = nface[i] / P4EST_FACES;
             nface[i] %= P4EST_FACES;
-            ncornerf[i] = p4est_connectivity_face_neighbor_corner_orientation
-              (c1, f1, nface[i], faceOrientation);
+            ncornerf[i] =
+              p4est_connectivity_face_neighbor_corner_orientation (c1, f1,
+                                                                   nface[i],
+                                                                   faceOrientation);
           }
 
 #ifdef P4_TO_P8
