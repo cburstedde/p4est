@@ -46,7 +46,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_FACES (2 * P4EST_DIM)
 /** The number of children of a quadrant
  *
- * also the nmber of corners */
+ * also the number of corners */
 #define P4EST_CHILDREN 4
 /** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
