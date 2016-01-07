@@ -212,6 +212,30 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
  */
 void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 
+/** Lookup neighboring quads of quadrant in a specific direction
+ * CAUTION: This is working only for brick scenarios or scenarios where there
+ *          are no different encodings, e.g. through different orientations or
+ *          hanging quads, over tree-edge and tree-corner boundaries.
+ * \param [in]  p4est              Forest to be worked with.
+ * \param [in]  ghost              Ghost quadrants.
+ * \param [in]  mesh               Mesh structure.
+ * \param [in]  curr_quad_id       Process-local ID of current quad.
+ * \param [in]  direction          Direction in which to look for adjacent
+ *                                 quadrants is encoded as follows:
+ *                                   0 ..  5 neighbor(-s) across f_i,
+ *                                   6 .. 17 neighbor(-s) across e_{i-6}
+ *                                  18 .. 25 neighbor(-s) across c_{i-18}
+ * \param [out] neighboring_quads  Array containing neighboring quad(-s)
+ * \return                         Encoding of neighboring quadrant(-s) or -10
+ *                                 if no neighbor is present.
+ */
+p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
+                                              p8est_ghost_t * ghost,
+                                              p8est_mesh_t * mesh,
+                                              p4est_locidx_t curr_quad_id,
+                                              p4est_locidx_t direction,
+                                              sc_array_t * neighboring_quads);
+
 /** Find a quadrant based on its cumulative number in the local forest.
  * If the quad_to_tree field of the mesh structure exists, this is O(1).
  * Otherwise, we perform a binary search over the processor-local trees.
