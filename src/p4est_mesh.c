@@ -397,7 +397,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             /* This is a physical face boundary, no face neighbor present */
             ncornerf[i] = -1;
           }
-          if (ncornerf == 0) {
+          if (ncornerf[i] == 0) {
             /* We have a face neighbor */
             faceOrientation = nface[i] / P4EST_FACES;
             nface[i] %= P4EST_FACES;
@@ -417,7 +417,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             ncornere[i] = -1;
           }
 
-          if (ncornere == 0) {
+          if (ncornere[i] == 0) {
             /* We have an edge neighbor */
             edgeOrientation = nedge[i] / P8EST_EDGES;
             nedge[i] %= P8EST_EDGES;
@@ -560,14 +560,12 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   int                 swapsides;
   p4est_locidx_t     *pequad;
   p4est_locidx_t      qid1, qid2, qls1[2], qoffset;
-  p4est_locidx_t      eid1, eid2, ec1, e1, e2;
+  p4est_locidx_t      eid1, eid2, ec1;
   p4est_locidx_t      edgeid;
-  p4est_locidx_t     *halfentries;
-  p4est_locidx_t      in_qtoe, halfindex, edgeindex, edgeid_offset;
+  p4est_locidx_t      in_qtoe, edgeid_offset;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p8est_iter_edge_side_t *side1, *side2, *tempside;
   p4est_tree_t       *tree1, *tree2;
-  int                 hanging = 0, sameTree = 1;
 
   edgeid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
@@ -614,7 +612,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       int                 ignore;
       size_t              z2;
       int8_t             *eedges;
-      p4est_topidx_t      faceOrientation, f1, t1, nftree[2];
+      p4est_topidx_t      nftree[2];
       p4est_locidx_t      goodones;
       p4est_locidx_t     *equads;
 
@@ -1502,7 +1500,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   uCorner = lCorner + P4EST_CHILDREN;
 #endif /* P4_TO_P8 */
 
-  p4est_locidx_t      neighbor_idx, neighbor_encoding, neighbor_ghost;
+  p4est_locidx_t      neighbor_idx, neighbor_encoding;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
 
