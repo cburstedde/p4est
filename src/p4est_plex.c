@@ -140,21 +140,19 @@ fill_orientations (p4est_quadrant_t * q, p4est_topidx_t t,
       nf = conn->tree_to_face[P4EST_FACES * t + f];
       o = nf / P4EST_FACES;
       nf = nf % P4EST_FACES;
-      if (nt != t && nf != f) {
-        if (nt < t || (nt == t && nf < f)) {
-          int                 set;
+      if (nt < t || (nt == t && nf < f)) {
+        int                 set;
 #ifdef P4_TO_P8
-          int                 ref;
+        int                 ref;
 #endif
 
 #ifndef P4_TO_P8
-          set = o;
+        set = o;
 #else
-          ref = p8est_face_permutation_refs[f][nf];
-          set = p8est_face_permutation_sets[ref][o];
+        ref = p8est_face_permutation_refs[f][nf];
+        set = p8est_face_permutation_sets[ref][o];
 #endif
-          quad_to_orientations[f] = set;
-        }
+        quad_to_orientations[f] = set;
       }
     }
   }
