@@ -243,12 +243,30 @@ int                 p8est_wrap_adapt (p8est_wrap_t * pp);
  *                  equal weight to all leaves.  Passing 1 increases the
  *                  leaf weight by a factor of two for each level increase.
  *                  CURRENTLY ONLY 0 AND 1 ARE LEGAL VALUES.
+ * \param [out] unchanged_first
+ *                  If not NULL, is assigned the processor-local index of the
+ *                  first local quadrant that has stayed on this processor.  If
+ *                  no quadrant has stayed, the value is set to zero.
+ *                  This number is in reference to the new (output) partition.
+ * \param [out] unchanged_length
+ *                  If not NULL, is assigned the number of quadrants that have
+ *                  stayed on this processor.  If no quadrant has stayed, the
+ *                  value is set to zero.
+ * \param [out] unchanged_old_first
+ *                  If not NULL, is assigned the processor-local index of the
+ *                  first local quadrant that has stayed with reference to
+ *                  the old (input) partition.  If no quadrant has stayed,
+ *                  the value is set to zero.
  * \return          boolean whether p8est has changed.
  *                  If true, complete must be called.
  *                  If false, complete must not be called.
  */
 int                 p8est_wrap_partition (p8est_wrap_t * pp,
-                                          int weight_exponent);
+                                          int weight_exponent,
+                                          p4est_locidx_t * unchanged_first,
+                                          p4est_locidx_t * unchanged_length,
+                                          p4est_locidx_t *
+                                          unchanged_old_first);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.

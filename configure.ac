@@ -30,7 +30,7 @@ P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
                   [VTK_COMPRESSION])
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
-P4EST_ARG_ENABLE([p6est], [enable hybrid 2D+1D p6est library], [BUILD_P6EST])
+P4EST_ARG_DISABLE([p6est], [disable hybrid 2D+1D p6est library], [BUILD_P6EST])
 
 echo "o---------------------------------------"
 echo "| Checking MPI and related programs"

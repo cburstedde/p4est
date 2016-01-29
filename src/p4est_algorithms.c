@@ -438,6 +438,9 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
 
+  /* check parallel environment */
+  P4EST_ASSERT (!p4est_comm_parallel_env_is_null (p4est));
+
 #ifdef P4EST_ENABLE_DEBUG
   /* check last item of global partition */
   P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
@@ -644,24 +647,24 @@ failtest:
 /* here come the heavyweight algorithms */
 #ifndef P4_TO_P8
 /* which face of the center quad touches this insul */
-const static int    insul_to_f[9] = { -1, 2, -1, 0, -1, 1, -1, 3, -1 };
+static const int    insul_to_f[9] = { -1, 2, -1, 0, -1, 1, -1, 3, -1 };
 
 /* which corner of the center quad touches this insul */
-const static int    insul_to_c[9] = { 0, -1, 1, -1, -1, -1, 2, -1, 3 };
+static const int    insul_to_c[9] = { 0, -1, 1, -1, -1, -1, 2, -1, 3 };
 #else
 /* which face of the center quad touches this insul */
 /* *INDENT-OFF* */
-const static int insul_to_f[27] =
+static const int insul_to_f[27] =
 {-1, -1, -1, -1, 4, -1, -1, -1, -1,
  -1, 2, -1, 0, -1, 1, -1, 3, -1,
  -1, -1, -1, -1, 5, -1, -1, -1, -1};
 /* which corner of the center quad touches this insul */
-const static int insul_to_c[27] =
+static const int insul_to_c[27] =
 {0, -1, 1, -1, -1, -1, 2, -1, 3,
  -1, -1, -1, -1, -1, -1, -1, -1, -1,
  4, -1, 5, -1, -1, -1, 6, -1, 7};
 /* which edge of the center quad touches this insul */
-const static int insul_to_e[27] =
+static const int insul_to_e[27] =
 {-1, 0, -1, 4, -1, 5, -1, 1, -1,
   8, -1, 9, -1, -1, -1, 10, -1, 11,
   -1, 2, -1, 6, -1, 7, -1, 3, -1};

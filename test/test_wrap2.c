@@ -29,8 +29,15 @@
 static int
 wrap_adapt_partition (p4est_wrap_t * wrap, int weight_exponent)
 {
+  p4est_locidx_t      uf, ul;
+
   if (p4est_wrap_adapt (wrap)) {
-    if (p4est_wrap_partition (wrap, weight_exponent)) {
+    if (p4est_wrap_partition (wrap, weight_exponent, &uf, &ul, NULL)) {
+
+      SC_CHECK_ABORT (uf >= 0 && ul >= 0, "Invalid post window");
+      SC_CHECK_ABORT (uf + ul <= wrap->p4est->local_num_quadrants,
+                      "Invalid post count");
+
       p4est_wrap_complete (wrap);
     }
     return 1;

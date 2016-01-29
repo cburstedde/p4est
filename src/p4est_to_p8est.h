@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_to_p8est.h
+/** We do not process this file in Doxygen since it overwrites types.
  *
  * Transform 2D \ref p4est routines into 3D \ref p8est routines.  This file can
  * be included from a .c file that has been written for 2D to turn it into a 3D
@@ -109,6 +109,7 @@
 #define p4est_wrap_t                    p8est_wrap_t
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
+#define p4est_vtk_context_t             p8est_vtk_context_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -164,6 +165,8 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
+#define p4est_reduce_mpicomm            p8est_reduce_mpicomm
+#define p4est_reduce_mpicomm_ext        p8est_reduce_mpicomm_ext
 #define p4est_connect_type_int          p8est_connect_type_int
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
@@ -181,6 +184,7 @@
 #define p4est_balance_ext               p8est_balance_ext
 #define p4est_balance_subtree_ext       p8est_balance_subtree_ext
 #define p4est_partition_ext             p8est_partition_ext
+#define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext
 #define p4est_source_ext                p8est_source_ext
@@ -298,6 +302,10 @@
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
+#define p4est_comm_parallel_env_create  p8est_comm_parallel_env_create
+#define p4est_comm_parallel_env_free    p8est_comm_parallel_env_free
+#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
+#define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
@@ -318,16 +326,17 @@
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 
 /* functions in p4est_vtk */
+#define p4est_vtk_context_new           p8est_vtk_context_new
+#define p4est_vtk_context_destroy       p8est_vtk_context_destroy
+#define p4est_vtk_context_set_geom      p8est_vtk_context_set_geom
+#define p4est_vtk_context_set_scale     p8est_vtk_context_set_scale
+#define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
-#define p4est_vtk_write_all             p8est_vtk_write_all
 #define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_cell_dataf      p8est_vtk_write_cell_dataf
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
+#define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
-#define p4est_vtk_write_point_datav     p8est_vtk_write_point_datav
-#define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
-#define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
-#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
-#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
 
 /* functions in p4est_ghost */
@@ -365,6 +374,8 @@
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
 #define p4est_ghost_support_lnodes      p8est_ghost_support_lnodes
 #define p4est_ghost_expand_by_lnodes    p8est_ghost_expand_by_lnodes
+#define p4est_partition_lnodes          p8est_partition_lnodes
+#define p4est_partition_lnodes_detailed p8est_partition_lnodes_detailed
 #define p4est_lnodes_decode             p8est_lnodes_decode
 #define p4est_lnodes_share_owned_begin  p8est_lnodes_share_owned_begin
 #define p4est_lnodes_share_owned_end    p8est_lnodes_share_owned_end
@@ -413,6 +424,7 @@
 
 /* functions in p4est_plex */
 #define p4est_get_plex_data             p8est_get_plex_data
+#define p4est_get_plex_data_ext         p8est_get_plex_data_ext
 
 /* functions in p4est_connrefine */
 #define p4est_connectivity_refine       p8est_connectivity_refine
