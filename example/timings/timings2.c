@@ -485,7 +485,7 @@ main (int argc, char **argv)
           break;
         }
         P4EST_GLOBAL_PRODUCTIONF ("mpirun -np %3d %s%s -c %10s -l %2d\n",
-                                  r->mpisize, opt->program_path,
+                                  r->mpisize, P4EST_STRING "_timings",
                                   oldschool ? " --oldschool" : "",
                                   config_name, r->level);
       }
