@@ -28,36 +28,15 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef enum
-{
-  P4EST_COMM_TAG_FIRST = SC_TAG_FIRST,
-  P4EST_COMM_COUNT_PERTREE = SC_TAG_LAST,
-  P4EST_COMM_BALANCE_FIRST_COUNT,
-  P4EST_COMM_BALANCE_FIRST_LOAD,
-  P4EST_COMM_BALANCE_SECOND_COUNT,
-  P4EST_COMM_BALANCE_SECOND_LOAD,
-  P4EST_COMM_PARTITION_GIVEN,
-  P4EST_COMM_PARTITION_WEIGHTED_LOW,
-  P4EST_COMM_PARTITION_WEIGHTED_HIGH,
-  P4EST_COMM_PARTITION_CORRECTION,
-  P4EST_COMM_GHOST_COUNT,
-  P4EST_COMM_GHOST_LOAD,
-  P4EST_COMM_GHOST_EXCHANGE,
-  P4EST_COMM_GHOST_EXPAND_COUNT,
-  P4EST_COMM_GHOST_EXPAND_LOAD,
-  P4EST_COMM_GHOST_SUPPORT_COUNT,
-  P4EST_COMM_GHOST_SUPPORT_LOAD,
-  P4EST_COMM_GHOST_CHECKSUM,
-  P4EST_COMM_NODES_QUERY,
-  P4EST_COMM_NODES_REPLY,
-  P4EST_COMM_SAVE,
-  P4EST_COMM_LNODES_TEST,
-  P4EST_COMM_LNODES_PASS,
-  P4EST_COMM_LNODES_OWNED,
-  P4EST_COMM_LNODES_ALL,
-  P4EST_COMM_TAG_LAST
-}
-p4est_comm_tag_t;
+void                p4est_comm_parallel_env_create (p4est_t * p4est,
+                                                    sc_MPI_Comm mpicomm);
+
+void                p4est_comm_parallel_env_free (p4est_t * p4est);
+
+int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
+
+void                p4est_comm_parallel_env_assign (p4est_t * p4est,
+                                                    sc_MPI_Comm mpicomm);
 
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
@@ -85,6 +64,13 @@ void                p4est_comm_global_partition (p4est_t * p4est,
  */
 void                p4est_comm_count_pertree (p4est_t * p4est,
                                               p4est_gloidx_t * pertree);
+
+/** Query whether a processor has no quadrants.
+ * \param [in] p4est    This forests' global_first_position array must be valid.
+ * \param [in] p        Valid processor id.
+ * \return              True if and only if processor \p is empty.
+ */
+int                 p4est_comm_is_empty (p4est_t * p4est, int p);
 
 /** Tests ownershop of a quadrant via p4est->global_first_position.
  * Assumes a tree with no overlaps.

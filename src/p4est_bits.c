@@ -761,7 +761,7 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
 
   /* check if the end of q is not after the last tree quadrant */
   /* tree->last_desc is an upper right corner quadrant by construction.
-   * It is ok to compare with q. */ 
+   * It is ok to compare with q. */
 #if 0
   p4est_quadrant_last_descendant (q, &desc, P4EST_QMAXLEVEL);
 #endif
@@ -824,6 +824,25 @@ p4est_quadrant_sibling (const p4est_quadrant_t * q, p4est_quadrant_t * r,
 #endif
   r->level = q->level;
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
+void
+p4est_quadrant_child (const p4est_quadrant_t * q, p4est_quadrant_t * r,
+                      int child_id)
+{
+  const p4est_qcoord_t shift = P4EST_QUADRANT_LEN (q->level + 1);
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+  P4EST_ASSERT (q->level < P4EST_QMAXLEVEL);
+  P4EST_ASSERT (child_id >= 0 && child_id < P4EST_CHILDREN);
+
+  r->x = child_id & 0x01 ? (q->x | shift) : q->x;
+  r->y = child_id & 0x02 ? (q->y | shift) : q->y;
+#ifdef P4_TO_P8
+  r->z = child_id & 0x04 ? (q->z | shift) : q->z;
+#endif
+  r->level = q->level + 1;
+  P4EST_ASSERT (p4est_quadrant_is_parent (q, r));
 }
 
 void

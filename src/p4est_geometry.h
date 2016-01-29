@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_geometry.h transforms from vertex frame to physical space
+/** \file p4est_geometry.h transforms from vertex frame to physical space.
  *
  * \ingroup p4est
  */
@@ -33,6 +33,7 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** This object encapsulates a custom geometry transformation. */
 typedef struct p4est_geometry p4est_geometry_t;
 
 /** Forward transformation from the reference unit square to physical space.

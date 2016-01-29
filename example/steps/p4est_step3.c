@@ -470,7 +470,7 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
 {
-  double             *u_interp = (double *) user_data;  /* we passed the array of values to fill as the user_data in the call to p4est_iterate */
+  sc_array_t         *u_interp = (sc_array_t *) user_data;      /* we passed the array of values to fill as the user_data in the call to p4est_iterate */
   p4est_t            *p4est = info->p4est;
   p4est_quadrant_t   *q = info->quad;
   p4est_topidx_t      which_tree = info->treeid;
@@ -480,6 +480,7 @@ step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
   double              h;
   p4est_locidx_t      arrayoffset;
   double              this_u;
+  double             *this_u_ptr;
   int                 i, j;
 
   tree = p4est_tree_array_index (p4est->trees, which_tree);
@@ -499,7 +500,8 @@ step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
        * the +y side, etc. */
       this_u += (h / 2) * data->du[j] * ((i & (1 << j)) ? 1. : -1.);
     }
-    u_interp[arrayoffset + i] = this_u;
+    this_u_ptr = (double *) sc_array_index (u_interp, arrayoffset + i);
+    this_u_ptr[0] = this_u;
   }
 
 }
@@ -513,7 +515,7 @@ static void
 step3_write_solution (p4est_t * p4est, int timestep)
 {
   char                filename[BUFSIZ] = { '\0' };
-  double             *u_interp;
+  sc_array_t         *u_interp;
   p4est_locidx_t      numquads;
 
   snprintf (filename, 17, P4EST_STRING "_step3_%04d", timestep);
@@ -522,7 +524,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
 
   /* create a vector with one value for the corner of every local quadrant
    * (the number of children is always the same as the number of corners) */
-  u_interp = P4EST_ALLOC (double, numquads * P4EST_CHILDREN);
+  u_interp = sc_array_new_size (sizeof (double), numquads * P4EST_CHILDREN);
 
   /* Use the iterator to visit every cell and fill in the solution values.
    * Using the iterator is not absolutely necessary in this case: we could
@@ -531,24 +533,43 @@ step3_write_solution (p4est_t * p4est, int timestep)
    * the usage of p4est_iterate in this example */
   p4est_iterate (p4est, NULL,   /* we don't need any ghost quadrants for this loop */
                  (void *) u_interp,     /* pass in u_interp so that we can fill it */
-                 step3_interpolate_solution,    /* callback function that interpolate from the cell center to the cell corners, defined above */
+                 step3_interpolate_solution,    /* callback function that interpolates from the cell center to the cell corners, defined above */
                  NULL,          /* there is no callback for the faces between quadrants */
 #ifdef P4_TO_P8
                  NULL,          /* there is no callback for the edges between quadrants */
 #endif
                  NULL);         /* there is no callback for the corners between quadrants */
 
-  p4est_vtk_write_all (p4est, NULL,     /* we do not need to transform from the vertex space into physical space, so we do not need a p4est_geometry_t * pointer */
-                       0.99,    /* draw each quadrant at almost full scale */
-                       0,       /* do not write the tree id's of each quadrant (there is only one tree in this example) */
-                       1,       /* do write the refinement level of each quadrant */
-                       1,       /* do write the mpi process id of each quadrant */
-                       0,       /* do not wrap the mpi rank (if this were > 0, the modulus of the rank relative to this number would be written instead of the rank) */
-                       1,       /* write one scalar field: the solution value */
-                       0,       /* write no vector fields */
-                       filename, "solution", u_interp);
+  /* create VTK output context and set its parameters */
+  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
+  p4est_vtk_context_set_scale (context, 0.99);  /* quadrant at almost full scale */
 
-  P4EST_FREE (u_interp);
+  /* begin writing the output files */
+  context = p4est_vtk_write_header (context);
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing vtk header");
+
+  /* do not write the tree id's of each quadrant
+   * (there is only one tree in this example) */
+  context = p4est_vtk_write_cell_dataf (context, 0, 1,  /* do write the refinement level of each quadrant */
+                                        1,      /* do write the mpi process id of each quadrant */
+                                        0,      /* do not wrap the mpi rank (if this were > 0, the modulus of the rank relative to this number would be written instead of the rank) */
+                                        0,      /* there is no custom cell scalar data. */
+                                        0,      /* there is no custom cell vector data. */
+                                        context);       /* mark the end of the variable cell data. */
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing cell data");
+
+  /* write one scalar field: the solution value */
+  context = p4est_vtk_write_point_dataf (context, 1, 0, /* write no vector fields */
+                                         "solution", u_interp, context);        /* mark the end of the variable cell data. */
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing cell data");
+
+  const int           retval = p4est_vtk_write_footer (context);
+  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
+
+  sc_array_destroy (u_interp);
 }
 
 /** Approximate the divergence of (vu) on each quadrant

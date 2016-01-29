@@ -235,6 +235,31 @@ void                p4est_ghost_expand_by_lnodes (p4est_t * p4est,
                                                   p4est_lnodes_t * lnodes,
                                                   p4est_ghost_t * ghost);
 
+/** Partition using weights based on the number of nodes assigned to each
+ * element in lnodes
+ *
+ * \param[in,out] p4est                    the forest to be repartitioned
+ * \param[in]     ghost                    the ghost layer
+ * \param[in]     degree                   the degree that would be passed to p4est_lnodes_new()
+ * \param[in]     partition_for_coarsening whether the partition should allow
+ *                                         coarsening (i.e. group siblings who
+ *                                         might merge)
+ */
+void                p4est_partition_lnodes (p4est_t * p4est,
+                                            p4est_ghost_t * ghost, int degree,
+                                            int partition_for_coarsening);
+
+/** Partition using weights that are broken down by where they reside: in
+ * volumes, on faces, or on corners.
+ */
+void                p4est_partition_lnodes_detailed (p4est_t * p4est,
+                                                     p4est_ghost_t * ghost,
+                                                     int nodes_per_volume,
+                                                     int nodes_per_face,
+                                                     int nodes_per_corner,
+                                                     int
+                                                     partition_for_coarsening);
+
 /** p4est_lnodes_buffer_t handles the communication of data associated with
  * nodes.
  *

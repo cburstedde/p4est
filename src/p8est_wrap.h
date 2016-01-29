@@ -32,6 +32,7 @@
 
 #include <p8est_mesh.h>
 #include <p8est_extended.h>
+#include <sc_refcount.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -54,6 +55,23 @@ typedef struct p8est_wrap
    * If false, they are properly allocated and kept current internally. */
   int                 hollow;
 
+  /** Non-negative integer tells us how many adaptations to wait
+   * before any given quadrent may be coarsened again. */
+  int                 coarsen_delay;
+
+  /** Boolean: If true, we delay coarsening not only after refinement,
+   * but also between subsequent coarsenings of the same quadrant. */
+  int                 coarsen_affect;
+
+  /** This reference counter is a workaround for internal use only.
+   * Until we have refcounting/copy-on-write for the connectivity,
+   * we count the references to conn by copies of this wrap structure.
+   * There must be no external references left when this wrap is destroyed.
+   */
+  sc_refcount_t       conn_rc;
+  p8est_connectivity_t *conn;
+  struct p8est_wrap  *conn_owner;
+
   /* these members are considered public and read-only */
   int                 p4est_dim;
   int                 p4est_half;
@@ -61,7 +79,6 @@ typedef struct p8est_wrap
   int                 p4est_children;
   p8est_connect_type_t btype;
   p8est_replace_t     replace_fn;
-  p8est_connectivity_t *conn;
   p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* anything below here is considered private und should not be touched */
@@ -99,18 +116,35 @@ p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,
- *                            coarsening or balancing in p8est_wrap_adapt.
+ *                            coarsening or balancing in \ref p8est_wrap_adapt.
  *                            May be NULL.
- * \param [in] user_pointer   Set the user pointer in p8est_wrap_t.
+ * \param [in] user_pointer   Set the user pointer in \ref p8est_wrap_t.
  *                            Subsequently, we will never access it.
- * \return                    A fully initialized p4est_wrap structure.
+ * \return                    A fully initialized p8est_wrap structure.
  */
 p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p8est_connectivity_t * conn,
                                         int initial_level, int hollow,
                                         p8est_connect_type_t btype,
                                         p8est_replace_t replace_fn,
-                                        void * user_pointer);
+                                        void *user_pointer);
+
+/** Create a p8est wrapper from an existing one.
+ * \note This wrapper must be destroyed before the original one.
+ * We set it to hollow and copy the original p8est data structure.
+ * \param [in,out] source   We access the source for debugging purposes.
+ * \param [in] data_size    The data size installed in the copied forest.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in \ref p8est_wrap_adapt.
+ *                            May be NULL.
+ * \param [in] user_pointer   Set the user pointer in \ref p8est_wrap_t.
+ *                            Subsequently, we will never access it.
+ * \return                    A fully initialized p8est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_copy (p8est_wrap_t * source,
+                                         size_t data_size,
+                                         p8est_replace_t replace_fn,
+                                         void *user_pointer);
 
 /** Create p8est and auxiliary data structures.
  * Expects sc_MPI_Init to be called beforehand.
@@ -134,6 +168,25 @@ void                p8est_wrap_destroy (p8est_wrap_t * pp);
  * \param [in] hollow   The desired hollow status.
  */
 void                p8est_wrap_set_hollow (p8est_wrap_t * pp, int hollow);
+
+/** Set a parameter that delays coarsening after adaptation.
+ * If positive each quadrant counts the number of adaptations it has survived.
+ * Calling this function initializes all quadrant counters to zero.
+ * On adaptation we only coarsen a quadrant if it is old enough.
+ * Optionally, we can also delay the time between subsequent coarsenings.
+ * \param [in,out] pp           A valid p4est_wrap structure.
+ * \param [in] coarsen_delay    Set how many adaptation cycles a quadrant has
+ *                              to wait to be allowed to coarsen.
+ *                              Non-negative number; 0 disables the feature.
+ *                              Suggested default value: not larger than 2.
+ * \param [in] coarsen_affect   Boolean; If true, we not only count from the
+ *                              most recent refinement but also between
+ *                              subsequent coarsenings.
+ *                              Suggested default: 0.
+ */
+void                p8est_wrap_set_coarsen_delay (p8est_wrap_t * pp,
+                                                  int coarsen_delay,
+                                                  int coarsen_affect);
 
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously
@@ -190,12 +243,30 @@ int                 p8est_wrap_adapt (p8est_wrap_t * pp);
  *                  equal weight to all leaves.  Passing 1 increases the
  *                  leaf weight by a factor of two for each level increase.
  *                  CURRENTLY ONLY 0 AND 1 ARE LEGAL VALUES.
+ * \param [out] unchanged_first
+ *                  If not NULL, is assigned the processor-local index of the
+ *                  first local quadrant that has stayed on this processor.  If
+ *                  no quadrant has stayed, the value is set to zero.
+ *                  This number is in reference to the new (output) partition.
+ * \param [out] unchanged_length
+ *                  If not NULL, is assigned the number of quadrants that have
+ *                  stayed on this processor.  If no quadrant has stayed, the
+ *                  value is set to zero.
+ * \param [out] unchanged_old_first
+ *                  If not NULL, is assigned the processor-local index of the
+ *                  first local quadrant that has stayed with reference to
+ *                  the old (input) partition.  If no quadrant has stayed,
+ *                  the value is set to zero.
  * \return          boolean whether p8est has changed.
  *                  If true, complete must be called.
  *                  If false, complete must not be called.
  */
 int                 p8est_wrap_partition (p8est_wrap_t * pp,
-                                          int weight_exponent);
+                                          int weight_exponent,
+                                          p4est_locidx_t * unchanged_first,
+                                          p4est_locidx_t * unchanged_length,
+                                          p4est_locidx_t *
+                                          unchanged_old_first);
 
 /** Free memory for the intermediate mesh.
  * Sets mesh_aux and ghost_aux to NULL.

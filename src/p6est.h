@@ -165,6 +165,8 @@ typedef struct p6est
   sc_MPI_Comm         mpicomm;          /**< MPI communicator */
   int                 mpisize,          /**< number of MPI processes */
                       mpirank;          /**< this process's MPI rank */
+  int                 mpicomm_owned;    /**< whether this communicator is
+                                             owned by the forest */
   size_t              data_size;        /**< size of per-quadrant p.user_data
                      (see p2est_quadrant_t::p2est_quadrant_data::user_data) */
   void               *user_pointer;     /**< convenience pointer for users,
@@ -175,8 +177,8 @@ typedef struct p6est
   sc_array_t         *layers;   /**< single array that stores
                                      p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /**< memory allocator for user data */
-                                        /* WARNING: This is NULL if data size
-                                         *          equals zero.  */
+  /* WARNING: This is NULL if data size
+   *          equals zero.  */
   sc_mempool_t       *layer_pool;       /**< memory allocator
                                              for temporary layers */
   p4est_gloidx_t     *global_first_layer; /**< first global quadrant index for
@@ -476,6 +478,26 @@ p6est_comm_tag_t;
  */
 p4est_gloidx_t      p6est_partition (p6est_t * p6est,
                                      p6est_weight_t weight_fn);
+void                p6est_partition_correct (p6est_t * p6est,
+                                             p4est_locidx_t *
+                                             num_layers_in_proc);
+void                p6est_partition_to_p4est_partition (p6est_t * p6est,
+                                                        p4est_locidx_t *
+                                                        num_layers_in_proc,
+                                                        p4est_locidx_t *
+                                                        num_columns_in_proc);
+void                p4est_partition_to_p6est_partition (p6est_t * p6est,
+                                                        p4est_locidx_t *
+                                                        num_columns_in_proc,
+                                                        p4est_locidx_t *
+                                                        num_layers_in_proc);
+
+p4est_gloidx_t      p6est_partition_for_coarsening (p6est_t * p6est,
+                                                    p4est_locidx_t *
+                                                    num_layers_in_proc);
+p4est_gloidx_t      p6est_partition_given (p6est_t * p6est,
+                                           p4est_locidx_t *
+                                           num_layers_in_proc);
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
@@ -519,6 +541,25 @@ p6est_t            *p6est_load (const char *filename, sc_MPI_Comm mpicomm,
                                 size_t data_size, int load_data,
                                 void *user_pointer,
                                 p6est_connectivity_t ** connectivity);
+
+/** convert the p6est to a subcommunicator involving only the range active processes
+ * \param[in,out] P6est pointer to forest: on output, points to NULL if this
+ *                      process was not in the active range
+ * \returns true if this process is in the active range, else false
+ */
+int p6est_reduce_mpicomm (p6est_t ** P6est);
+
+/** convert the p6est to a subcommunicator involving only the range active processes
+ * \param[in,out] P6est pointer to forest: on output, points to NULL if this
+ *                      process was not in the active range
+ * \param[in] group_add group to include in the submpicomm group
+ * \param[in] add_to_beginning whether to add the group to the beginning of
+ *                      the end of the submpicomm group
+ * \param[out] if not null, set to point to a subcommrank->supercommrank map
+ * \returns true if this process is in the active range, else false
+ */
+int p6est_reduce_mpicomm_ext (p6est_t ** P6est, sc_MPI_Group group_add,
+                              const int add_to_beginning, int **ranks);
 
 /** Return a pointer to a quadrant array element indexed by a size_t. */
 /*@unused@*/
