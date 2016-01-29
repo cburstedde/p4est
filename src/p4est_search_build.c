@@ -48,7 +48,7 @@ p4est_search_build_new (p4est_t * from)
   memcpy (p4est, from, sizeof (p4est_t));
   num_trees = from->connectivity->num_trees;
 
-  /* remove anything that we will not use from the template */
+  /* remove anything that we will not use from the template forest */
   p4est->mpicomm_owned = 0;
   p4est->data_size = 0;
   p4est->user_pointer = NULL;
@@ -99,12 +99,11 @@ p4est_search_build_new (p4est_t * from)
 
 #ifndef P4_TO_P8
 
-/* TODO: define the search callbacks here */
-
-#endif /* !P4_TO_P8 */
-
-p4est_t            *
-p4est_search_build_complete (p4est_search_build_t * build)
+int
+p4est_search_build_local (p4est_search_build_t * build,
+                          p4est_topidx_t which_tree,
+                          p4est_quadrant_t * quadrant,
+                          p4est_locidx_t local_num)
 {
   p4est_t            *p4est;
 
@@ -113,8 +112,51 @@ p4est_search_build_complete (p4est_search_build_t * build)
   P4EST_ASSERT (build->p4est != NULL);
 
   p4est = build->p4est;
+
+  /*           *** Notes ***
+   * 0. The search goes through the nonempty local trees.
+   * 1. The search may begin below the root at the top of a branch.
+   * 2. The search may skip intermediate levels in the tree.
+   */
+
+  return 0;
+}
+
+#endif /* !P4_TO_P8 */
+
+p4est_t            *
+p4est_search_build_complete (p4est_search_build_t * build)
+{
+  p4est_topidx_t      jt, last_local_tree, num_trees;
+  p4est_t            *p4est;
+  p4est_tree_t       *ptree;
+
+  P4EST_ASSERT (build != NULL);
+  P4EST_ASSERT (build->from != NULL);
+  P4EST_ASSERT (build->p4est != NULL);
+
+  p4est = build->p4est;
   P4EST_FREE (build);
 
+  if (p4est->first_local_tree <= p4est->last_local_tree) {
+    /* fix quadrants_offset in empty trees > last_local_tree */
+    num_trees = p4est->connectivity->num_trees;
+    last_local_tree = p4est->last_local_tree;
+    P4EST_ASSERT (0 <= last_local_tree && last_local_tree < num_trees);
+    P4EST_ASSERT (p4est->local_num_quadrants > 0);
+    for (jt = last_local_tree + 1; jt < num_trees; ++jt) {
+      ptree = p4est_tree_array_index (p4est->trees, jt);
+      ptree->quadrants_offset = p4est->local_num_quadrants;
+    }
+  }
+  else {
+    /* this is an empty processor */
+    P4EST_ASSERT (p4est->first_local_tree == -1);
+    P4EST_ASSERT (p4est->last_local_tree == -2);
+    P4EST_ASSERT (p4est->local_num_quadrants == 0);
+  }
+
+  /* fix global cumulative quadrant count per processor */
   p4est_comm_count_quadrants (p4est);
   P4EST_ASSERT (p4est_is_valid (p4est));
 

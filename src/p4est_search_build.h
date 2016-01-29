@@ -31,6 +31,8 @@
  * This allows to create a heavily coarsened forest in one pass.
  */
 
+/** Context object for building a new p4est from search callbacks.
+ */
 typedef struct
 {
   p4est_t            *from;      /**< Existing forest used as template. */
@@ -38,8 +40,28 @@ typedef struct
 }
 p4est_search_build_t;
 
-p4est_search_build_t *p4est_search_build_new (p4est_t * p4est);
+/** Allocate a context for building a new forest.
+ * \param [in] from         This forest is used as a template for creation.
+ * \return                  A context that needs to be processed further.
+ */
+p4est_search_build_t *p4est_search_build_new (p4est_t * from);
 
+/** This function is usable from a \ref p4est_search_local_t callback.
+ * \param [in,out] build    The building context must be passed through.
+ * \param [in] which_tree   The tree number is passed from the search callback.
+ * \param [in] quadrant     The quadrant is passed from the search callback.
+ * \param [in] local_num    The quadrant number is passed from the search callback.
+ * \return                  TODO: figure out what to do on return.
+ */
+int                 p4est_search_build_local (p4est_search_build_t * build,
+                                              p4est_topidx_t which_tree,
+                                              p4est_quadrant_t * quadrant,
+                                              p4est_locidx_t local_num);
+
+/** Finalize the construction of the new forest after the search.
+ * \param [in,out] build    The building context will be deallocated inside.
+ * \return                  A valid forest object.
+ */
 p4est_t            *p4est_search_build_complete (p4est_search_build_t *
                                                  build);
 
