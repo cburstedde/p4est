@@ -422,6 +422,7 @@
 
 /* functions in p4est_plex */
 #define p4est_get_plex_data             p8est_get_plex_data
+#define p4est_get_plex_data_ext         p8est_get_plex_data_ext
 
 /* functions in p4est_connrefine */
 #define p4est_connectivity_refine       p8est_connectivity_refine
