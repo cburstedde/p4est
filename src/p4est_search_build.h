@@ -33,18 +33,15 @@
 
 /** Context object for building a new p4est from search callbacks.
  */
-typedef struct
-{
-  p4est_t            *from;      /**< Existing forest used as template. */
-  p4est_t            *p4est;     /**< New forest being built. */
-}
-p4est_search_build_t;
+typedef struct p4est_search_build p4est_search_build_t;
 
 /** Allocate a context for building a new forest.
  * \param [in] from         This forest is used as a template for creation.
+ * \param [in] data_size    Data size of the created forest, may be zero.
  * \return                  A context that needs to be processed further.
  */
-p4est_search_build_t *p4est_search_build_new (p4est_t * from);
+p4est_search_build_t *p4est_search_build_new (p4est_t * from,
+                                              size_t data_size);
 
 /** This function is usable from a \ref p4est_search_local_t callback.
  * \param [in,out] build    The building context must be passed through.

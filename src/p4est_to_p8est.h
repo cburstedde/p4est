@@ -104,6 +104,7 @@
 #define p4est_search_local_t            p8est_search_local_t
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
+#define p4est_search_build              p8est_search_build
 #define p4est_search_build_t            p8est_search_build_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t

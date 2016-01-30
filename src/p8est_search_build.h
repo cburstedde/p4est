@@ -31,14 +31,10 @@
  * This allows to create a heavily coarsened forest in one pass.
  */
 
-typedef struct
-{
-  p8est_t            *from;      /**< Existing forest used as template. */
-  p8est_t            *p4est;     /**< New forest being built. */
-}
-p8est_search_build_t;
+typedef struct p8est_search_build p8est_search_build_t;
 
-p8est_search_build_t *p8est_search_build_new (p8est_t * p4est);
+p8est_search_build_t *p8est_search_build_new (p8est_t * p4est,
+                                              size_t data_size);
 
 p8est_t            *p8est_search_build_complete (p8est_search_build_t *
                                                  build);
