@@ -27,7 +27,7 @@
 #include <p4est_search.h>
 
 /** \file p4est_search_build.h
- * Create a new p4est object by running p4est_search_local.
+ * Create a new p4est object by running \ref p4est_search_local.
  * This allows to create a heavily coarsened forest in one pass.
  */
 

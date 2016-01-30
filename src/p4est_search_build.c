@@ -78,6 +78,7 @@ p4est_search_build_begin_tree (p4est_search_build_t * build,
 p4est_search_build_t *
 p4est_search_build_new (p4est_t * from, size_t data_size)
 {
+  int                 ell;
   p4est_topidx_t      jt, num_trees;
   p4est_t            *p4est;
   p4est_tree_t       *ftree, *ptree;
@@ -121,6 +122,9 @@ p4est_search_build_new (p4est_t * from, size_t data_size)
     ptree->quadrants_offset = 0;
     memset (ptree->quadrants_per_level, 0,
             (P4EST_MAXLEVEL + 1) * sizeof (p4est_locidx_t));
+    for (ell = P4EST_QMAXLEVEL + 1; ell <= P4EST_MAXLEVEL; ++ell) {
+      ptree->quadrants_per_level[ell] = -1;
+    }
     ptree->maxlevel = 0;
   }
   if (p4est->data_size > 0) {
@@ -151,7 +155,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size)
 static              p4est_locidx_t
 p4est_search_build_end_tree (p4est_search_build_t * build)
 {
-  int8_t              ell;
+  int                 ell;
   p4est_t            *p4est;
 
   /* check sanity of call */
@@ -160,7 +164,7 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
   P4EST_ASSERT (build->tree != NULL);
 
   p4est = build->p4est;
-  P4EST_ASSERT (build->tree->quadrants_per_level[P4EST_MAXLEVEL] == 0);
+  P4EST_ASSERT (build->tree->quadrants_per_level[P4EST_MAXLEVEL] == -1);
   P4EST_ASSERT (build->tree->maxlevel == 0);
   for (ell = P4EST_QMAXLEVEL; ell > 0; --ell) {
     if (build->tree->quadrants_per_level[ell] > 0) {
@@ -178,8 +182,6 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
     build->tree->quadrants_offset +
     (p4est_locidx_t) build->tquadrants->elem_count;
 }
-
-#ifndef P4_TO_P8
 
 int
 p4est_search_build_local (p4est_search_build_t * build,
@@ -233,8 +235,6 @@ p4est_search_build_local (p4est_search_build_t * build,
   return 0;
 }
 
-#endif /* !P4_TO_P8 */
-
 p4est_t            *
 p4est_search_build_complete (p4est_search_build_t * build)
 {
@@ -245,8 +245,8 @@ p4est_search_build_complete (p4est_search_build_t * build)
   P4EST_ASSERT (build != NULL);
   P4EST_ASSERT (build->p4est != NULL);
 
+  /* wrap up constructing the missing bits and pieces */
   p4est = build->p4est;
-  P4EST_FREE (build);
 
   if (p4est->first_local_tree <= p4est->last_local_tree) {
     /* finish last tree of the iteration */
@@ -269,6 +269,9 @@ p4est_search_build_complete (p4est_search_build_t * build)
     P4EST_ASSERT (p4est->last_local_tree == -2);
     P4EST_ASSERT (p4est->local_num_quadrants == 0);
   }
+
+  /* we do no longer require the build context */
+  P4EST_FREE (build);
 
   /* fix global cumulative quadrant count per processor */
   p4est_comm_count_quadrants (p4est);

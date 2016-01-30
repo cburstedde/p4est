@@ -27,15 +27,38 @@
 #include <p8est_search.h>
 
 /** \file p8est_search_build.h
- * Create a new p8est object by running p8est_search_local.
+ * Create a new p8est object by running \ref p8est_search_local.
  * This allows to create a heavily coarsened forest in one pass.
  */
 
+/** Context object for building a new p4est from search callbacks.
+ */
 typedef struct p8est_search_build p8est_search_build_t;
 
-p8est_search_build_t *p8est_search_build_new (p8est_t * p4est,
+/** Allocate a context for building a new forest.
+ * \param [in] from         This forest is used as a template for creation.
+ * \param [in] data_size    Data size of the created forest, may be zero.
+ * \return                  A context that needs to be processed further.
+ */
+p8est_search_build_t *p8est_search_build_new (p8est_t * from,
                                               size_t data_size);
 
+/** This function is usable from a \ref p8est_search_local_t callback.
+ * \param [in,out] build    The building context must be passed through.
+ * \param [in] which_tree   The tree number is passed from the search callback.
+ * \param [in] quadrant     The quadrant is passed from the search callback.
+ * \param [in] local_num    The quadrant number is passed from the search callback.
+ * \return                  TODO: figure out what to do on return.
+ */
+int                 p8est_search_build_local (p8est_search_build_t * build,
+                                              p4est_topidx_t which_tree,
+                                              p8est_quadrant_t * quadrant,
+                                              p4est_locidx_t local_num);
+
+/** Finalize the construction of the new forest after the search.
+ * \param [in,out] build    The building context will be deallocated inside.
+ * \return                  A valid forest object.
+ */
 p8est_t            *p8est_search_build_complete (p8est_search_build_t *
                                                  build);
 
