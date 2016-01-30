@@ -22,16 +22,18 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_geometry.h>
-#include <p4est_search.h>
+#include <p4est_search_build.h>
 #include <p4est_vtk.h>
 #else
+#include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_geometry.h>
-#include <p8est_search.h>
+#include <p8est_search_build.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -145,6 +147,85 @@ search_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   return is_match;
 }
 
+typedef struct
+{
+  int                 maxlevel;
+  int                 counter;
+  int                 wrapper;
+  p4est_search_build_t *build;
+}
+test_search_build_t;
+
+static int
+test_search_build_refine (p4est_t * p4est, p4est_topidx_t which_tree,
+                          p4est_quadrant_t * quadrant)
+{
+  test_search_build_t *tb;
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  if (quadrant->level >= tb->maxlevel) {
+    return 0;
+  }
+  return !(tb->counter = (tb->counter + 1) % tb->wrapper);
+}
+
+static int
+test_search_local (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                   void *point)
+{
+  test_search_build_t *tb;
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  /* P4EST_LDEBUGF ("Search local callback %d\n", local_num); */
+  (void) p4est_search_build_local (tb->build, which_tree, quadrant,
+                                   local_num);
+
+  return 1;
+}
+
+static void
+test_search_build_local (sc_MPI_Comm mpicomm)
+{
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est, *built;
+  test_search_build_t stb, *tb = &stb;
+
+  /* 0. prepare data that we will reuse */
+  tb->maxlevel = 7 - P4EST_DIM;
+  tb->counter = -1;
+  tb->wrapper = 3;
+  tb->build = NULL;
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_moebius ();
+#else
+  conn = p8est_connectivity_new_rotcubes ();
+#endif /* P4_TO_P8 */
+  p4est = p4est_new_ext (mpicomm, conn, 0, 0, 2, 0, NULL, tb);
+  p4est_refine (p4est, 1, test_search_build_refine, NULL);
+  p4est_partition (p4est, 0, NULL);
+
+  /* TODO: enrich tests with quadrant data */
+
+  /* 1. Create a p4est that shall be identical to the old one. */
+
+  tb->build = p4est_search_build_new (p4est, 0);
+  p4est_search_local (p4est, test_search_local, NULL, NULL);
+  built = p4est_search_build_complete (tb->build);
+  SC_CHECK_ABORT (p4est_is_equal (p4est, built, 0), "Mismatch build_local 1");
+  p4est_destroy (built);
+
+  /* 2. Create a p4est that is as coarse as possible.
+   *    Coarsen recursively, compare. */
+  /* 3. Create a p4est with some random pattern for demonstration */
+  /* 4. Create a p4est from a multiple-point search */
+
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -184,6 +265,8 @@ main (int argc, char **argv)
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);
+
+  /* The following code should really be in a separate function. */
 
   /* Prepare a point search -- fix size so the memory is not relocated */
   points = sc_array_new_size (sizeof (test_point_t), 2);
@@ -250,6 +333,9 @@ main (int argc, char **argv)
     p4est_geometry_destroy (geom);
   }
   p4est_connectivity_destroy (conn);
+
+  /* Test the search_build_local function and friends */
+  test_search_build_local (mpicomm);
 
   /* Finalize */
   sc_finalize ();
