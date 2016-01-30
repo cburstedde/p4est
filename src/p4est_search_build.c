@@ -155,8 +155,10 @@ p4est_search_build_new (p4est_t * from, size_t data_size)
 static              p4est_locidx_t
 p4est_search_build_end_tree (p4est_search_build_t * build)
 {
-  int                 ell;
+  int                 ell, maxl;
   p4est_t            *p4est;
+  p4est_quadrant_t    q1, q2, *q;
+  p4est_quadrant_t    cand, desc;
 
   /* check sanity of call */
   P4EST_ASSERT (build != NULL);
@@ -175,8 +177,67 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
 
   /* do the heavy lifting: complete this tree as coarsely as possible */
-  p4est_complete_subtree (p4est, build->cur_tree, build->init_complete);
-  P4EST_ASSERT (&build->tree->quadrants == build->tquadrants);
+  if (build->tquadrants->elem_count == 0) {
+    q1 = build->tree->first_desc;
+    q2 = build->tree->last_desc;
+    if (0) {
+      /* TODO: the loops below may be shortened using the actual maximum level
+       *       in that case we require additional assertions */
+      maxl = P4EST_QMAXLEVEL;
+      p4est_quadrant_ancestor (&q1, maxl, &q1);
+      p4est_quadrant_ancestor (&q2, maxl, &q2);
+    }
+
+    /* we enlarge the first quadrant as much as possible */
+    while (q1.level > 0) {
+      if (p4est_quadrant_child_id (&q1) != 0) {
+        /* only child zero may be coarsened without spreading forward */
+        break;
+      }
+      p4est_quadrant_parent (&q1, &cand);
+      p4est_quadrant_last_descendant (&cand, &desc, P4EST_QMAXLEVEL);
+      if (p4est_quadrant_compare (&desc, &build->tree->last_desc) > 0) {
+        /* we would grow q1 so much that it would spread beyond the partition */
+        break;
+      }
+      q1 = cand;
+    }
+
+    /* we enlarge the last quadrant as much as possible */
+    while (q2.level > 0) {
+      if (p4est_quadrant_child_id (&q2) != P4EST_CHILDREN - 1) {
+        /* only last child may be coarsened without spreading backward */
+        break;
+      }
+      p4est_quadrant_parent (&q2, &cand);
+      p4est_quadrant_first_descendant (&cand, &desc, P4EST_QMAXLEVEL);
+      if (p4est_quadrant_compare (&desc, &build->tree->first_desc) < 0) {
+        /* we would grow q2 so much that it would spread beyond the partition */
+        break;
+      }
+      q2 = cand;
+    }
+    P4EST_ASSERT (p4est_quadrant_compare (&q1, &q2) <= 0);
+
+    if (p4est_quadrant_is_equal (&q1, &q2)) {
+      /* special case: we create a subtree that is one quadrant */
+      q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
+      *q = q1;
+      p4est_quadrant_init_data (p4est, build->cur_tree, q,
+                                build->init_complete);
+      build->tree->maxlevel = SC_MAX ((int) q->level, build->tree->maxlevel);
+      ++build->tree->quadrants_per_level[q->level];
+    }
+    else {
+      p4est_complete_region (p4est, &q1, 1, &q2, 1,
+                             build->tree, build->cur_tree,
+                             build->init_complete);
+    }
+  }
+  else {
+    p4est_complete_subtree (p4est, build->cur_tree, build->init_complete);
+    P4EST_ASSERT (&build->tree->quadrants == build->tquadrants);
+  }
 
   return
     build->tree->quadrants_offset +
