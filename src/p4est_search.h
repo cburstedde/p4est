@@ -189,7 +189,7 @@ typedef int         (*p4est_search_local_t) (p4est_t * p4est,
  * \param [in] p4est        The forest to be searched.
  * \param [in] quadrant_fn  Executed once for each quadrant that is
  *                          entered.  This quadrant is always local, if not
- *                          completey then at least one descendant of it.  If
+ *                          completely then at least one descendant of it.  If
  *                          the callback returns false, this quadrant and its
  *                          descendants are excluded from the search.
  *                          Its \b point argument is always NULL.

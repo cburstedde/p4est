@@ -62,7 +62,7 @@ SC_EXTERN_C_BEGIN;
 
 /** Find the lowest position tq in a quadrant array such that tq >= q.
  * \return  Returns the id of the matching quadrant
- *                  or -1 if not found or the array is empty.
+ *                  or -1 if array < q or the array is empty.
  */
 ssize_t             p8est_find_lower_bound (sc_array_t * array,
                                             const p8est_quadrant_t * q,
@@ -70,13 +70,15 @@ ssize_t             p8est_find_lower_bound (sc_array_t * array,
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
  * \return  Returns the id of the matching quadrant
- *                  or -1 if not found or the array is empty.
+ *                  or -1 if array > q or the array is empty.
  */
 ssize_t             p8est_find_higher_bound (sc_array_t * array,
                                              const p8est_quadrant_t * q,
                                              size_t guess);
 
-/** Given a sorted \b array of quadrants that have a common ancestor at level
+/** Split an array of quadrants by the children of an ancestor.
+ *
+ * Given a sorted \b array of quadrants that have a common ancestor at level
  * \b level, compute the \b indices of the first quadrant in each of the common
  * ancestor's children at level \b level + 1.
  * \param [in] array     The sorted array of quadrants of level > \b level.
@@ -129,7 +131,7 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
  * This function can be called in two roles:  Per-quadrant, in which case the
  * parameter \b point is NULL, or per-point, possibly many times per quadrant.
  *
- * \param [in] p8est        The forest to be queried.
+ * \param [in] p4est        The forest to be queried.
  * \param [in] which_tree   The tree id under consideration.
  * \param [in] quadrant     The quadrant under consideration.
  *                          This quadrant may be coarser than the quadrants
@@ -149,7 +151,7 @@ int32_t             p8est_find_range_boundaries (p8est_quadrant_t * lq,
  *                          quadrant and false otherwise; the return value has
  *                          no effect on a leaf.
  */
-typedef int         (*p8est_search_local_t) (p8est_t * p8est,
+typedef int         (*p8est_search_local_t) (p8est_t * p4est,
                                              p4est_topidx_t which_tree,
                                              p8est_quadrant_t * quadrant,
                                              p4est_locidx_t local_num,
@@ -187,7 +189,7 @@ typedef int         (*p8est_search_local_t) (p8est_t * p8est,
  * by querying the per-quadrant callback.  If the points are not NULL but an
  * empty array, the recursion will stop immediately!
  *
- * \param [in] p8est        The forest to be searched.
+ * \param [in] p4est        The forest to be searched.
  * \param [in] quadrant_fn  Executed once for each quadrant that is
  *                          entered.  This quadrant is always local, if not
  *                          completely than at least one descendant of it.  If
@@ -204,13 +206,13 @@ typedef int         (*p8est_search_local_t) (p8est_t * p8est,
  *                          If not NULL, the \b point_fn is called on
  *                          its members during the search.
  */
-void                p8est_search_local (p8est_t * p8est,
+void                p8est_search_local (p8est_t * p4est,
                                         p8est_search_local_t quadrant_fn,
                                         p8est_search_local_t point_fn,
                                         sc_array_t * points);
 
 /** Callback function for the partition recursion.
- * \param [in] p8est        The forest to traverse.
+ * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] which_tree   The tree number under consideration.
  * \param [in] quadrant     This quadrant is not from local forest storage,
@@ -227,7 +229,7 @@ void                p8est_search_local (p8est_t * p8est,
  * \return                  If false, the recursion at quadrant is terminated.
  *                          If true, it continues if \b pfirst < \b plast.
  */
-typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
+typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
                                                  p4est_topidx_t which_tree,
                                                  p8est_quadrant_t * quadrant,
                                                  int pfirst, int plast,
@@ -242,7 +244,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
  * analogously to \ref p4est_search_local.
  * \note Traversing the whole processor partition will be at least O(P),
  *       so sensible use of the callback function is advised to cut it short.
- * \param [in] p8est        The forest to traverse.
+ * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] quadrant_fn  This function controls the recursion,
  *                          which only continues deeper if this
@@ -255,7 +257,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p8est,
  *                          passed to the callback \b point_fn.
  *                          See \ref p8est_search_local for details.
  */
-void                p8est_search_partition (p8est_t * p8est,
+void                p8est_search_partition (p8est_t * p4est,
                                             p8est_search_partition_t
                                             quadrant_fn,
                                             p8est_search_partition_t point_fn,
@@ -377,7 +379,7 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  *                          noops.  If not NULL, the \b point_fn is
  *                          called on its members during the search.
  */
-void                p8est_search_all (p8est_t * p8est,
+void                p8est_search_all (p8est_t * p4est,
                                       p8est_search_all_t quadrant_fn,
                                       p8est_search_all_t point_fn,
                                       sc_array_t * points);
