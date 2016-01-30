@@ -171,17 +171,40 @@ test_search_build_refine (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-test_search_local (p4est_t * p4est, p4est_topidx_t which_tree,
-                   p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
-                   void *point)
+test_search_build_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
+                           p4est_quadrant_t * quadrants[])
+{
+  return 1;
+}
+
+static int
+test_search_local_1 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
 {
   test_search_build_t *tb;
 
   tb = (test_search_build_t *) p4est->user_pointer;
 
-  /* P4EST_LDEBUGF ("Search local callback %d\n", local_num); */
   (void) p4est_search_build_local (tb->build, which_tree, quadrant,
                                    local_num);
+
+  return 1;
+}
+
+static int
+test_search_local_2 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  test_search_build_t *tb;
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  if (quadrant->level == 0) {
+    (void) p4est_search_build_local (tb->build, which_tree, quadrant,
+                                     local_num);
+  }
 
   return 1;
 }
@@ -190,7 +213,7 @@ static void
 test_search_build_local (sc_MPI_Comm mpicomm)
 {
   p4est_connectivity_t *conn;
-  p4est_t            *p4est, *built;
+  p4est_t            *p4est, *built, *copy;
   test_search_build_t stb, *tb = &stb;
 
   /* 0. prepare data that we will reuse */
@@ -212,16 +235,27 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   /* 1. Create a p4est that shall be identical to the old one. */
 
   tb->build = p4est_search_build_new (p4est, 0);
-  p4est_search_local (p4est, test_search_local, NULL, NULL);
+  p4est_search_local (p4est, test_search_local_1, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   SC_CHECK_ABORT (p4est_is_equal (p4est, built, 0), "Mismatch build_local 1");
   p4est_destroy (built);
 
   /* 2. Create a p4est that is as coarse as possible.
    *    Coarsen recursively, compare. */
+
+  tb->build = p4est_search_build_new (p4est, 0);
+  p4est_search_local (p4est, test_search_local_2, NULL, NULL);
+  built = p4est_search_build_complete (tb->build);
+  copy = p4est_copy (p4est, 0);
+  p4est_coarsen (copy, 1, test_search_build_coarsen, NULL);
+  SC_CHECK_ABORT (p4est_is_equal (copy, built, 0), "Mismatch build_local 2");
+  p4est_destroy (copy);
+  p4est_destroy (built);
+
   /* 3. Create a p4est with some random pattern for demonstration */
   /* 4. Create a p4est from a multiple-point search */
 
+  /* clean up */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 }
