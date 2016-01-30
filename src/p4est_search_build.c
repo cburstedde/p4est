@@ -225,8 +225,8 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
       *q = q1;
       p4est_quadrant_init_data (p4est, build->cur_tree, q,
                                 build->init_complete);
-      build->tree->maxlevel = SC_MAX ((int) q->level, build->tree->maxlevel);
-      ++build->tree->quadrants_per_level[q->level];
+      build->tree->maxlevel = (int) q->level;
+      build->tree->quadrants_per_level[q->level] = 1;
     }
     else {
       p4est_complete_region (p4est, &q1, 1, &q2, 1,
@@ -264,13 +264,13 @@ p4est_search_build_local (p4est_search_build_t * build,
                 which_tree <= p4est->last_local_tree);
   P4EST_ASSERT (p4est->first_local_tree <= build->cur_tree &&
                 build->cur_tree <= p4est->last_local_tree);
-  P4EST_ASSERT (which_tree == build->cur_tree ||
-                which_tree == build->cur_tree + 1);
+  P4EST_ASSERT (which_tree >= build->cur_tree);
 
   /* finish up previous tree if we are entering a new one */
-  if (which_tree > build->cur_tree) {
+  while (which_tree > build->cur_tree) {
     quadrants_offset = p4est_search_build_end_tree (build);
-    p4est_search_build_begin_tree (build, which_tree, quadrants_offset);
+    p4est_search_build_begin_tree (build, build->cur_tree + 1,
+                                   quadrants_offset);
   }
 
   /* we do nothing if we are not at a leaf of the tree */
@@ -300,6 +300,7 @@ p4est_t            *
 p4est_search_build_complete (p4est_search_build_t * build)
 {
   p4est_topidx_t      jt, last_local_tree, num_trees;
+  p4est_locidx_t      quadrants_offset;
   p4est_t            *p4est;
   p4est_tree_t       *ptree;
 
@@ -308,15 +309,20 @@ p4est_search_build_complete (p4est_search_build_t * build)
 
   /* wrap up constructing the missing bits and pieces */
   p4est = build->p4est;
+  last_local_tree = p4est->last_local_tree;
 
-  if (p4est->first_local_tree <= p4est->last_local_tree) {
+  if (p4est->first_local_tree <= last_local_tree) {
     /* finish last tree of the iteration */
-    P4EST_ASSERT (build->cur_tree == p4est->last_local_tree);
+    P4EST_ASSERT (build->cur_tree <= last_local_tree);
+    while (last_local_tree > build->cur_tree) {
+      quadrants_offset = p4est_search_build_end_tree (build);
+      p4est_search_build_begin_tree (build, build->cur_tree + 1,
+                                     quadrants_offset);
+    }
     p4est->local_num_quadrants = p4est_search_build_end_tree (build);
 
     /* fix quadrants_offset in empty trees > last_local_tree */
     num_trees = p4est->connectivity->num_trees;
-    last_local_tree = p4est->last_local_tree;
     P4EST_ASSERT (0 <= last_local_tree && last_local_tree < num_trees);
     P4EST_ASSERT (p4est->local_num_quadrants > 0);
     for (jt = last_local_tree + 1; jt < num_trees; ++jt) {

@@ -197,15 +197,6 @@ test_search_local_2 (p4est_t * p4est, p4est_topidx_t which_tree,
                      p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
                      void *point)
 {
-  test_search_build_t *tb;
-
-  tb = (test_search_build_t *) p4est->user_pointer;
-
-  if (quadrant->level == 0) {
-    (void) p4est_search_build_local (tb->build, which_tree, quadrant,
-                                     local_num);
-  }
-
   return 1;
 }
 
