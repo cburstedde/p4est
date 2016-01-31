@@ -237,6 +237,22 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
   else {
     p4est_complete_subtree (p4est, build->cur_tree, build->init_complete);
     P4EST_ASSERT (&build->tree->quadrants == build->tquadrants);
+
+    /* hack level statistics, this is slow but seems necessary currently */
+    build->tree->maxlevel = 0;
+    for (ell = 0; ell <= P4EST_QMAXLEVEL; ++ell) {
+      build->tree->quadrants_per_level[ell] = 0;
+    }
+    for (; ell <= P4EST_MAXLEVEL; ++ell) {
+      build->tree->quadrants_per_level[ell] = -1;
+    }
+    for (zz = 0; zz < build->tquadrants->elem_count; ++zz) {
+      ell = p4est_quadrant_array_index (build->tquadrants, zz)->level;
+      ++build->tree->quadrants_per_level[ell];
+      if (ell > build->tree->maxlevel) {
+        build->tree->maxlevel = ell;
+      }
+    }
   }
 
   return
