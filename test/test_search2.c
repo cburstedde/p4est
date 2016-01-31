@@ -152,6 +152,7 @@ typedef struct
   int                 maxlevel;
   int                 counter;
   int                 wrapper;
+  p4est_topidx_t      last_tree;
   p4est_search_build_t *build;
 }
 test_search_build_t;
@@ -200,6 +201,46 @@ test_search_local_2 (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static int
+test_search_local_3 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  test_search_build_t *tb;
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  /* take every third quadrant or so */
+  if (local_num >= 0 &&
+      !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    (void) p4est_search_build_local (tb->build, which_tree, quadrant,
+                                     local_num);
+  }
+
+  return 1;
+}
+
+static int
+test_search_local_4 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  test_search_build_t *tb;
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  /* take the first third quadrant or so in every tree */
+  if (local_num >= 0 && tb->last_tree != which_tree &&
+      !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    (void) p4est_search_build_local (tb->build, which_tree, quadrant,
+                                     local_num);
+
+    tb->last_tree = which_tree;
+  }
+
+  return 1;
+}
+
 static void
 test_search_build_local (sc_MPI_Comm mpicomm)
 {
@@ -211,6 +252,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   tb->maxlevel = 7 - P4EST_DIM;
   tb->counter = -1;
   tb->wrapper = 3;
+  tb->last_tree = -1;
   tb->build = NULL;
 #ifndef P4_TO_P8
   conn = p4est_connectivity_new_moebius ();
@@ -244,7 +286,21 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   p4est_destroy (built);
 
   /* 3. Create a p4est with some random pattern for demonstration */
-  /* 4. Create a p4est from a multiple-point search */
+
+  tb->build = p4est_search_build_new (p4est, 4);
+  p4est_search_local (p4est, test_search_local_3, NULL, NULL);
+  built = p4est_search_build_complete (tb->build);
+  p4est_destroy (built);
+
+  /* 4. Create a p4est from a search with one quadrant per tree */
+
+  tb->last_tree = -1;
+  tb->build = p4est_search_build_new (p4est, 0);
+  p4est_search_local (p4est, test_search_local_4, NULL, NULL);
+  built = p4est_search_build_complete (tb->build);
+  p4est_destroy (built);
+
+  /* 5. Create a p4est from a multiple-item search */
 
   /* clean up */
   p4est_destroy (p4est);
