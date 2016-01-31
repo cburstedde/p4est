@@ -2091,7 +2091,11 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     p4est_nearest_common_ancestor (p, q, &tempq);
     if (tempq.level >= SC_MIN (q->level, p->level) - 1) {
       if (p->level > q->level) {
+#if 0
         *q = *p;
+#else
+        p4est_quadrant_sibling (p, q, 0);
+#endif
       }
       continue;
     }
