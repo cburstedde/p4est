@@ -40,6 +40,7 @@ struct p4est_search_build
   p4est_t            *p4est;    /**< New forest being built. */
 
   /* Context for the tree walk */
+  int                 cur_maxlevel;     /**< Current tree's maxlevel on input. */
   p4est_topidx_t      cur_tree;         /**< Current tree under examination. */
   p4est_tree_t       *tree;             /**< Pointer to current tree. */
   sc_array_t         *tquadrants;       /**< Points to the tree's quadrants. */
@@ -73,6 +74,10 @@ p4est_search_build_begin_tree (p4est_search_build_t * build,
   build->tquadrants = &build->tree->quadrants;
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
   P4EST_ASSERT (build->tquadrants->elem_count == 0);
+
+  /* we had remembered the original tree's maxlevel */
+  build->cur_maxlevel = build->tree->maxlevel;
+  build->tree->maxlevel = 0;
 }
 
 p4est_search_build_t *
@@ -125,7 +130,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size)
     for (ell = P4EST_QMAXLEVEL + 1; ell <= P4EST_MAXLEVEL; ++ell) {
       ptree->quadrants_per_level[ell] = -1;
     }
-    ptree->maxlevel = 0;
+    ptree->maxlevel = ftree->maxlevel;
   }
   if (p4est->data_size > 0) {
     p4est->user_data_pool = sc_mempool_new (p4est->data_size);
@@ -156,6 +161,7 @@ static              p4est_locidx_t
 p4est_search_build_end_tree (p4est_search_build_t * build)
 {
   int                 ell, maxl;
+  size_t              zz;
   p4est_t            *p4est;
   p4est_quadrant_t    q1, q2, *q;
   p4est_quadrant_t    cand, desc;
@@ -167,23 +173,22 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 
   p4est = build->p4est;
   P4EST_ASSERT (build->tree->quadrants_per_level[P4EST_MAXLEVEL] == -1);
-  P4EST_ASSERT (build->tree->maxlevel == 0);
+#ifdef P4EST_ENABLE_DEBUG
   for (ell = P4EST_QMAXLEVEL; ell > 0; --ell) {
     if (build->tree->quadrants_per_level[ell] > 0) {
-      build->tree->maxlevel = ell;
+      P4EST_ASSERT (build->tree->maxlevel == ell);
       break;
     }
   }
+#endif
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
 
   /* do the heavy lifting: complete this tree as coarsely as possible */
   if (build->tquadrants->elem_count == 0) {
+    maxl = build->cur_maxlevel;
     q1 = build->tree->first_desc;
     q2 = build->tree->last_desc;
-    if (0) {
-      /* TODO: the loops below may be shortened using the actual maximum level
-       *       in that case we require additional assertions */
-      maxl = P4EST_QMAXLEVEL;
+    if (maxl < P4EST_QMAXLEVEL) {
       p4est_quadrant_ancestor (&q1, maxl, &q1);
       p4est_quadrant_ancestor (&q2, maxl, &q2);
     }
@@ -225,8 +230,8 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
       *q = q1;
       p4est_quadrant_init_data (p4est, build->cur_tree, q,
                                 build->init_complete);
-      build->tree->maxlevel = (int) q->level;
       build->tree->quadrants_per_level[q->level] = 1;
+      build->tree->maxlevel = (int) q->level;
     }
     else {
       p4est_complete_region (p4est, &q1, 1, &q2, 1,
@@ -307,6 +312,9 @@ p4est_search_build_local (p4est_search_build_t * build,
   *q = *quadrant;
   p4est_quadrant_init_data (p4est, which_tree, q, build->init_local);
   ++build->tree->quadrants_per_level[q->level];
+  if (q->level > build->tree->maxlevel) {
+    build->tree->maxlevel = q->level;
+  }
 
   /* TODO: figure out if we need a return value */
   return 0;
