@@ -934,8 +934,10 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
     point_count = 0;
     /* figure out the locations of ghosts within the base */
-    Gpre = (overlap && local_first) ? 0 : (ghost->proc_offsets[mpirank] -
-                                           ghost->proc_offsets[0]);
+    Gpre =
+      overlap ? (local_first ? 0
+                 : (ghost->proc_offsets[mpirank] -
+                    ghost->proc_offsets[0])) : 0;
     *first_local_quad = Gpre;
     Gpost = overlap ?
       (local_first ? G : (ghost->proc_offsets[mpisize] -
