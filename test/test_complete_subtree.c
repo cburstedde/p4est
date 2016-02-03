@@ -98,7 +98,7 @@ test_build_local (sc_MPI_Comm mpicomm)
 
     /* now construct one quadrant to challenge complete_subtree */
     lid = -1;
-    if (p4est->mpisize >= 2 && conn->num_trees >= 5) {
+    if (p4est->mpisize <= 2 && conn->num_trees <= 5) {
       lid = local_id[p4est->mpirank][treeid];
     }
     if (lid >= 0) {
