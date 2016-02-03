@@ -21,6 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 #include <unistd.h>
+#include <inttypes.h>
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
 #include <p4est_ghost.h>
@@ -32,6 +33,110 @@
 #include <p8est_mesh.h>
 #include <p8est_vtk.h>
 #endif /* !P4_TO_P8 */
+
+/** Per-quadrant data
+ *
+ * Marker
+ */
+typedef struct test_mesh_data
+{
+  double              marker;
+}
+test_mesh_marker_t;
+
+/** Init function for quadrants
+ *
+ * \param [in] p4est       The forest
+ * \param [in] which_tree  Index of currently processed tree
+ * \param [in] q           Quadrant which payload will be set
+ */
+static void
+test_mesh_init (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * q)
+{
+  test_mesh_marker_t *data = (test_mesh_marker_t *) q->p.user_data;
+  data->marker = -1.;
+}
+
+/** Function to fetch payload of each quadrant on current process
+ *
+ * \param [in]      info        Volume callback info
+ * \param [in][out] user_data   Array which will be set to value of markers
+ */
+static void
+test_mesh_collect_markers (p4est_iter_volume_info_t * info, void *user_data)
+{
+  /* fetch payload */
+  p4est_quadrant_t   *q = info->quad;
+  test_mesh_marker_t *data = (test_mesh_marker_t *) q->p.user_data;
+
+  /* fetch user_data */
+  sc_array_t         *markers = (sc_array_t *) user_data;
+  double             *marker_ptr;
+
+  /* calculate position to write to and write data there */
+  p4est_t            *p4est = info->p4est;
+  p4est_topidx_t      which_tree = info->treeid;
+  p4est_locidx_t      local_id = info->quadid;  /* this is the index of q 
+                                                   within its tree's numbering.
+                                                   We want to convert the index
+                                                   for all the quadrants on this
+                                                   process, which we do below */
+  p4est_tree_t       *tree;
+
+  tree = p4est_tree_array_index (p4est->trees, which_tree);
+  local_id += tree->quadrants_offset;   /* now the id is relative to the MPI
+                                           process */
+
+  marker_ptr = sc_array_index_int (markers, local_id);
+  marker_ptr[0] = (double) data->marker;
+}
+
+/** Create VTK output
+ *
+ * \param [in] p4est     The forest
+ * \param [in] filename  The base name of the vtk files
+ */
+static int
+test_mesh_write_vtk (p4est_t * p4est, char *filename)
+{
+  sc_array_t         *marks;
+  marks = sc_array_new_size (sizeof (double), p4est->local_num_quadrants);
+
+  p4est_iterate (p4est, NULL, (void *) marks, test_mesh_collect_markers, NULL,
+#ifdef P4_TO_P8
+                 NULL,
+#endif /* P4_TO_P8 */
+                 NULL);
+
+  /* create VTK output context and set its parameters */
+  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
+  p4est_vtk_context_set_scale (context, 0.99);  /* quadrant at almost full scale */
+
+  /* begin writing the output files */
+  context = p4est_vtk_write_header (context);
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing vtk header");
+  context = p4est_vtk_write_cell_dataf (context, 1,
+                                        /* write tree indices */
+                                        1,      /* write the refinement level */
+                                        1,      /* write the mpi process id */
+                                        0,      /* do not wrap the mpi rank */
+                                        1,      /* write marks as scalar cell
+                                                   data */
+                                        0,      /* no custom cell vector data */
+                                        "marks", marks, context);
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing cell data");
+
+  const int           retval = p4est_vtk_write_footer (context);
+  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
+
+  sc_array_destroy (marks);
+
+  return 0;
+}
+
 /* Function for refining a mesh exactly once, in the very first quadrant
  *
  * \param [in] p4est        The forest.
@@ -63,39 +168,105 @@ refineExactlyOnce (p4est_t * p4est, p4est_topidx_t which_tree,
 int
 check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
 {
-  for (uint32_t c = 0; c < p4est->local_num_quadrants; ++c) {
-    printf ("[p4est %i] Cell %i\n", p4est->mpirank,
-            p4est->global_first_quadrant[p4est->mpirank] + c);
-    for (uint32_t f = 0; f < P4EST_FACES; ++f) {
-      char               *ghostInfo;
-      int                 idx;
-      int                 enc = mesh->quad_to_face[P4EST_FACES * c + f];
-      if (mesh->quad_to_quad[P4EST_FACES * c + f] <
-          p4est->local_num_quadrants) {
-        ghostInfo = "";
-        idx = mesh->quad_to_quad[P4EST_FACES * c + f];
-      }
-      else {
-        ghostInfo = "(g)";
-        p4est_quadrant_t   *q = sc_array_index_int (&ghost->ghosts,
-                                                    mesh->quad_to_quad
-                                                    [P4EST_FACES * c + f] -
-                                                    p4est->local_num_quadrants);
-        p4est_tree_t       *tree;
-        int                 offset = 0;
-        tree = (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                                    q->p.piggy3.which_tree);
-        offset =
-          tree->quadrants_offset +
-          p4est->global_first_quadrant[q->p.piggy1.owner_rank];
-        idx = q->p.piggy3.local_num + offset;
-      }
+  int                 printFaces = 1;
+#ifdef P4_TO_P8
+  int                 printEdges = 1;
+#endif /* P4_TO_P8 */
+  int                 printCorners = 1;
+  int                 direction = 0;
+  for (uint32_t quad = 0; quad < p4est->global_num_quadrants; ++quad) {
+    /* printf ("[p4est %i] Cell %i\n", p4est->mpirank, */
+    /*         p4est->global_first_quadrant[p4est->mpirank] + quad); */
 
-      printf ("[p4est %i] Face neighbor %i: index %i, encoding %i %s\n",
-              p4est->mpirank, f, idx, enc, ghostInfo);
+    if (p4est->global_first_quadrant[p4est->mpirank] <= quad
+        && quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
+      /* set */
+      if (printFaces) {
+        for (uint i = 0; i < P4EST_FACES; ++i) {
+          direction = i;
+          sc_array_t         *neighboring_quads;
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, quad, direction,
+                                    neighboring_quads);
+
+          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+            p4est_quadrant_t   *q =
+              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                         j);
+            printf ("rank %i, direction: %i, owner of neighbor: %i\n",
+                    p4est->mpirank, direction, q->p.piggy1.owner_rank);
+
+            if (q->p.piggy1.owner_rank == p4est->mpirank) {
+              test_mesh_marker_t *marker =
+                (test_mesh_marker_t *) q->p.user_data;
+              marker->marker = (double) direction;
+            }
+          }
+          sc_array_destroy (neighboring_quads);
+        }
+      }
+#ifdef P4_TO_P8
+      if (printEdges) {
+        for (uint i = 0; i < P8EST_EDGES; ++i) {
+
+        }
+      }
+#endif /* P4_TO_P8 */
+      if (printCorners) {
+        for (uint i = 0; i < P4EST_CHILDREN; ++i) {
+
+        }
+      }
     }
-  }
 
+    sc_MPI_Barrier (p4est->mpicomm);
+
+    char                filename[42] = "test_mesh_neighbors_quad_";
+    sprintf (filename, "%i", quad);
+    strcat (filename, "_");
+    strcat (filename, P4EST_STRING);
+
+    test_mesh_write_vtk (p4est, filename);
+
+    /* unset */
+    if (p4est->global_first_quadrant[p4est->mpirank] <= quad
+        && p4est->global_first_quadrant[p4est->mpirank + 1]) {
+      if (printFaces) {
+        for (uint i = 0; i < P4EST_FACES; ++i) {
+          direction = i;
+          sc_array_t         *neighboring_quads;
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, quad, direction,
+                                    neighboring_quads);
+          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+            p4est_quadrant_t   *q =
+              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                         j);
+
+            if (q->p.piggy1.owner_rank == p4est->mpirank) {
+              test_mesh_marker_t *marker =
+                (test_mesh_marker_t *) q->p.user_data;
+              marker->marker = -1.;
+            }
+          }
+          sc_array_destroy (neighboring_quads);
+        }
+      }
+#ifdef P4_TO_P8
+      if (printEdges) {
+        for (uint i = 0; i < P8EST_EDGES; ++i) {
+
+        }
+      }
+#endif /* P4_TO_P8 */
+      if (printCorners) {
+        for (uint i = 0; i < P4EST_CHILDREN; ++i) {
+
+        }
+      }
+    }
+    sc_MPI_Barrier (p4est->mpicomm);
+  }
   return 0;
 }
 
@@ -114,7 +285,6 @@ test_mesh_one_tree (p4est_t * p4est,
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
-
   /* create connectivity */
 #ifndef P4_TO_P8
   conn =
@@ -125,18 +295,22 @@ test_mesh_one_tree (p4est_t * p4est,
     periodic == 1 ? p8est_connectivity_new_periodic () :
     p8est_connectivity_new_unitcube ();
 #endif /* !P4_TO_P8 */
-
   /* setup p4est */
   int                 minLevel = 1;
-  p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, 0, 0);
-  p4est_refine (p4est, 0, refineExactlyOnce, 0);
-  p4est_partition (p4est, 0, 0);
-  p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
+  p4est = p4est_new_ext (mpicomm,
+                         conn,
+                         0,
+                         minLevel,
+                         0, sizeof (test_mesh_marker_t), test_mesh_init, 0);
 
-  /* inspect setup of geometry */
+  p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
+  p4est_partition (p4est, 0, 0);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
+
+  /* inspect setup of geometry and check if payload is set correctly */
   char                filename[35] = "test_mesh_setup_single_tree_";
   strcat (filename, P4EST_STRING);
-  p4est_vtk_write_file (p4est, 0, filename);
+  test_mesh_write_vtk (p4est, filename);
 
   /* create mesh */
   p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -144,7 +318,6 @@ test_mesh_one_tree (p4est_t * p4est,
     p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
 
   /* check mesh */
-  sleep (p4est->mpirank);
   check_mesh (p4est, ghost, mesh);
 
   sc_MPI_Barrier (p4est->mpicomm);
@@ -158,7 +331,6 @@ test_mesh_one_tree (p4est_t * p4est,
   p4est = 0;
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
-
   return 0;
 }
 
@@ -217,8 +389,8 @@ test_mesh_multiple_trees_brick (p4est_t * p4est,
  */
 int
 test_mesh_multiple_trees_nonbrick (p4est_t * p4est,
-                                   p4est_connectivity_t * conn,
-                                   int8_t periodic, sc_MPI_Comm mpicomm)
+                                   p4est_connectivity_t *
+                                   conn, int8_t periodic, sc_MPI_Comm mpicomm)
 {
   return 0;
 }
@@ -247,12 +419,11 @@ main (int argc, char **argv)
   /* test both periodic and non-periodic boundaries */
   /* test one tree */
   periodic_boundaries = 0;
-
   test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
-  periodic_boundaries = 1;
+  /*periodic_boundaries = 1;
 
-  test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
-
+     test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
+   */
   /* test multiple trees; brick */
   /*
      periodic_boundaries = 0;
@@ -260,7 +431,6 @@ main (int argc, char **argv)
      periodic_boundaries = 1;
      test_mesh_multiple_trees_brick (p4est, conn, periodic_boundaries, mpicomm);
    */
-
   /* test multiple trees; non-brick */
   /*
      periodic_boundaries = 0;

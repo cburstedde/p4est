@@ -148,10 +148,8 @@ typedef struct
                                              NULL by default */
 
   /* These members are NULL if connect_t is less than P4EST_CONNECT_EDGE */
-  /* CAUTION: not yet implemented */
   p4est_locidx_t      local_num_edges;  /**< half-size and tree-boundary edges */
   p4est_locidx_t     *quad_to_edge;     /**< 12 indices for each local quad */
-  /* TODO: use these containers at all and use them properly */
   sc_array_t         *edge_offset;      /**< local_num_edges + 1 entries */
   sc_array_t         *edge_quad;        /**< edge_offset indexes into this */
   sc_array_t         *edge_edge;        /**< and this one too (type int8_t) */
