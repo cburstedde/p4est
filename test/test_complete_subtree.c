@@ -126,8 +126,8 @@ test_build_local (sc_MPI_Comm mpicomm)
       p4est_complete_subtree (built, treeid, NULL);
       correct += (p4est_locidx_t) subtree->quadrants.elem_count;
     }
-    built->local_num_quadrants += correct;
   }
+  built->local_num_quadrants += correct;
   p4est_comm_count_quadrants (built);
   P4EST_ASSERT (p4est_is_valid (built));
 
