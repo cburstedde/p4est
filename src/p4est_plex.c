@@ -73,6 +73,31 @@ lnodes_decode2 (p4est_lnodes_code_t face_code,
   return 0;
 }
 
+static int
+p4est_gloidx_pair_compare (const void *a, const void *b)
+{
+  const p4est_gloidx_t *A = (const p4est_gloidx_t *) a;
+  const p4est_gloidx_t *B = (const p4est_gloidx_t *) b;
+
+  if (A[0] < B[0]) {
+    return -1;
+  }
+  else if (A[0] == B[0]) {      /* switch the order for the second value, because we want the value selected by sc_array_uniq (the last, though this is undocumented) to be the smallest */
+    if (A[1] < B[1]) {
+      return 1;
+    }
+    else if (A[1] == B[1]) {
+      return 0;
+    }
+    else {
+      return -1;
+    }
+  }
+  else {
+    return 1;
+  }
+}
+
 static void
 mark_parent (p4est_locidx_t qid, int ctype_int, p4est_lnodes_code_t * F,
              p4est_locidx_t * quad_to_local, int8_t * is_parent,
@@ -613,7 +638,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 
   /* assign a local index to each global node referenced */
-  sc_array_sort (all_global, p4est_gloidx_compare);
+  sc_array_sort (all_global, p4est_gloidx_pair_compare);
   quad_to_local = P4EST_ALLOC (p4est_locidx_t, K * V);
   num_global = 0;
   last_global = -1;
@@ -1402,8 +1427,16 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
                             p4est_gloidx_compare);
         P4EST_ASSERT (firstidx >= 0);
         for (il = 0; il < lnodes->owned_count; il++) {
+          p4est_gloidx_t     *gid =
+            (p4est_gloidx_t *) sc_array_index (all_global,
+                                               (size_t) firstidx + il);
+          p4est_locidx_t      eid = (p4est_locidx_t) gid[1];
+          p4est_locidx_t      lid = lnodes->element_nodes[eid];
+
+          P4EST_ASSERT (gid[0] == lnodes->global_offset + il);
+          P4EST_ASSERT (eid / V < lnodes->num_local_elements);
           p4est_locidx_t     *lp =
-            (p4est_locidx_t *) sc_array_index (lnodes_to_plex, (size_t) il);
+            (p4est_locidx_t *) sc_array_index (lnodes_to_plex, (size_t) lid);
 
           *lp = local_to_plex[firstidx + il + K];
         }
@@ -1449,9 +1482,9 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         if (p != mpirank) {
           p4est_gloidx_t     *gid =
             (p4est_gloidx_t *) sc_array_index (all_global, il);
-          p4est_locidx_t      nid = gid[1];
+          p4est_locidx_t      eid = gid[1];
           p4est_locidx_t      pid =
-            *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) nid));
+            *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) eid));
           p4est_locidx_t     *leaf =
             (p4est_locidx_t *) sc_array_push (out_leaves);
           p4est_locidx_t     *remote =
