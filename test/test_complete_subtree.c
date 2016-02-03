@@ -38,7 +38,6 @@ typedef struct
   int                 maxlevel;
   int                 counter;
   int                 wrapper;
-  p4est_topidx_t      last_tree;
 }
 test_build_t;
 
@@ -79,7 +78,6 @@ test_build_local (sc_MPI_Comm mpicomm)
   tb->maxlevel = 4;
   tb->counter = -1;
   tb->wrapper = 3;
-  tb->last_tree = -1;
 #ifndef P4_TO_P8
   conn = p4est_connectivity_new_moebius ();
 #else
