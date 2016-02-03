@@ -1480,8 +1480,10 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 
         p = plex_to_proc[localpid];
         if (p != mpirank) {
+          p4est_locidx_t      lid = plex_to_local[localpid];
+
           p4est_gloidx_t     *gid =
-            (p4est_gloidx_t *) sc_array_index (all_global, il);
+            (p4est_gloidx_t *) sc_array_index (all_global, lid - K);
           p4est_locidx_t      eid = gid[1];
           p4est_locidx_t      pid =
             *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) eid));
