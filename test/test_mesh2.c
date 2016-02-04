@@ -174,20 +174,24 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
 #endif /* P4_TO_P8 */
   int                 printCorners = 1;
   int                 direction = 0;
+  int                 is_ghost;
+  uint32_t            norm_quad;
   for (uint32_t quad = 0; quad < p4est->global_num_quadrants; ++quad) {
     /* printf ("[p4est %i] Cell %i\n", p4est->mpirank, */
     /*         p4est->global_first_quadrant[p4est->mpirank] + quad); */
 
     if (p4est->global_first_quadrant[p4est->mpirank] <= quad
         && quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
+      norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
       /* set */
       if (printFaces) {
         for (uint i = 0; i < P4EST_FACES; ++i) {
           direction = i;
           sc_array_t         *neighboring_quads;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, quad, direction,
-                                    neighboring_quads);
+          is_ghost =
+            p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
+                                      direction, neighboring_quads);
 
           for (int j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
@@ -196,9 +200,9 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
             printf ("rank %i, direction: %i, owner of neighbor: %i\n",
                     p4est->mpirank, direction, q->p.piggy1.owner_rank);
 
-            if (q->p.piggy1.owner_rank == p4est->mpirank) {
-              test_mesh_marker_t *marker =
-                (test_mesh_marker_t *) q->p.user_data;
+            if (is_ghost > 0) {
+              test_mesh_marker_t *marker = (test_mesh_marker_t *)
+                q->p.user_data;
               marker->marker = (double) direction;
             }
           }
@@ -219,12 +223,9 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
       }
     }
 
-    sc_MPI_Barrier (p4est->mpicomm);
-
-    char                filename[42] = "test_mesh_neighbors_quad_";
-    sprintf (filename, "%i", quad);
-    strcat (filename, "_");
-    strcat (filename, P4EST_STRING);
+    /* write vtk output */
+    char                filename[42];
+    sprintf (filename, "test_mesh_neighbors_quad_%s_%i", P4EST_STRING, quad);
 
     test_mesh_write_vtk (p4est, filename);
 
@@ -236,14 +237,15 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
           direction = i;
           sc_array_t         *neighboring_quads;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, quad, direction,
-                                    neighboring_quads);
+          is_ghost =
+            p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
+                                      direction, neighboring_quads);
           for (int j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
 
-            if (q->p.piggy1.owner_rank == p4est->mpirank) {
+            if (is_ghost > 0) {
               test_mesh_marker_t *marker =
                 (test_mesh_marker_t *) q->p.user_data;
               marker->marker = -1.;
