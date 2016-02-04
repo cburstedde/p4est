@@ -17,7 +17,7 @@ desc: |-
   
   It is also possible that the crash in the test is not complete_subtree's
   fault but goes back to find_higher_bound; at least worth checking.
-
+  
   I'm also suggesting to expand the docs on complete_subtree to clarify
   what legal input data looks like (the p4est need not be valid),
   especially regarding the level statistics in the tree.
@@ -25,8 +25,8 @@ type: :bugfix
 component: p4est
 release: 
 reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2016-02-03 10:48:13.169545 Z
 references: []
 
@@ -36,3 +36,7 @@ log_events:
   - Carsten Burstedde <burstedde@ins.uni-bonn.de>
   - created
   - ""
+- - 2016-02-04 15:58:59.711115 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - closed with disposition fixed
+  - Carsten was right, the new algorithm had assumptions that were only correct for input arrays that were already complete; there was also some buggy usage of memmove() and the counters were not properly updated when used from completion.
