@@ -14,6 +14,7 @@ p4est_test_programs += \
         test/p4est_test_ghost \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search test/p4est_test_brick \
+	test/p4est_test_complete_subtree \
         test/p4est_test_partition_corr \
         test/p4est_test_conn_complete test/p4est_test_balance_seeds \
         test/p4est_test_wrap test/p4est_test_replace test/p4est_test_join \
@@ -69,6 +70,7 @@ test_p4est_test_ghost_SOURCES = test/test_ghost2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
 test_p4est_test_search_SOURCES = test/test_search2.c
+test_p4est_test_complete_subtree_SOURCES = test/test_complete_subtree.c
 test_p4est_test_brick_SOURCES = test/test_brick2.c
 test_p4est_test_partition_corr_SOURCES = test/test_partition_corr2.c
 test_p4est_test_conn_complete_SOURCES = test/test_conn_complete2.c
@@ -134,6 +136,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
         $(test_p4est_test_search_SOURCES) \
+        $(test_p4est_test_complete_subtree_SOURCES) \
         $(test_p4est_test_brick_SOURCES) \
         $(test_p4est_test_partition_corr_SOURCES) \
         $(test_p4est_test_reorder_SOURCES) \
