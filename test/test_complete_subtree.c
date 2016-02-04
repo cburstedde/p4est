@@ -57,8 +57,8 @@ test_build_refine (p4est_t * p4est, p4est_topidx_t which_tree,
 
 /* specify in which tree we add which quadrant at all */
 static p4est_topidx_t local_id[2][5] = {
-  {-1, -1, -1, -1, -1},
-  {-1, -1, +2, -1, -1}
+  {2, 48, 94, -1, -1},
+  {-1, -1, 2, 25, 71}
 };
 
 static void
@@ -75,7 +75,7 @@ test_build_local (sc_MPI_Comm mpicomm)
   test_build_t        stb, *tb = &stb;
 
   /* 0. prepare data that we will reuse */
-  tb->maxlevel = 4;
+  tb->maxlevel = 7 - P4EST_DIM;
   tb->counter = -1;
   tb->wrapper = 3;
 #ifndef P4_TO_P8
