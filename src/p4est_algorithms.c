@@ -2008,6 +2008,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   p4est_tree_t       *tree;
   sc_array_t         *tquadrants;
   int                 bound;
+  int8_t              maxlevel;
   sc_mempool_t       *qpool;
 #ifdef P4EST_ENABLE_DEBUG
   size_t              data_pool_size;
@@ -2116,6 +2117,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 
   iz = 0;                       /* tquadrants */
   jz = 0;                       /* outlist */
+  maxlevel = tree->maxlevel;
 
   /* initialize quadrants in outlist */
   while (iz < tcount && jz < ocount) {
@@ -2125,6 +2127,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
     /* watch out for gaps in tquadrants */
     while (p4est_quadrant_compare (p, q) < 0) {
       P4EST_ASSERT (!p4est_quadrant_is_ancestor (p, q));
+      maxlevel = SC_MAX (maxlevel, p->level);
       ++tree->quadrants_per_level[p->level];
       p4est_quadrant_init_data (p4est, which_tree, p, init_fn);
       jz++;
@@ -2145,6 +2148,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
         jzstart = jz;
       }
       while (jz < ocount && p4est_quadrant_is_ancestor (q, p)) {
+        maxlevel = SC_MAX (maxlevel, p->level);
         ++tree->quadrants_per_level[p->level];
         p4est_quadrant_init_data (p4est, which_tree, p, init_fn);
         if (++jz < ocount) {
@@ -2172,6 +2176,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   /* initialize new quadrants after last tquadrant */
   for (; jz < ocount; jz++) {
     p = p4est_quadrant_array_index (outlist, jz);
+    maxlevel = SC_MAX (maxlevel, p->level);
     ++tree->quadrants_per_level[p->level];
     p4est_quadrant_init_data (p4est, which_tree, p, init_fn);
   }
@@ -2179,6 +2184,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   /* resize tquadrants and copy */
   sc_array_resize (tquadrants, ocount);
   memcpy (tquadrants->array, outlist->array, outlist->elem_size * ocount);
+  tree->maxlevel = maxlevel;
 
   /* sanity check */
   if (p4est->user_data_pool != NULL) {
