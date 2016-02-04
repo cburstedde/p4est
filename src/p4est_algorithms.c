@@ -1411,18 +1411,44 @@ p4est_quadrant_disjoint_parent (const void *a, const void *b)
   return 0;
 }
 
-/* kernel for balancing quadrants.
- * inlist: sorted linear array: every quadrant should be child_id == 0
- * dom: quadrant that is ancestor to all quadrants in \a in.
- * bound: balance type bound
- * qpool: quadrant mempool
- * list_alloc: sc_link_t mempool
- * out: output complete balance array
- * first_desc: optional first descendant
- * last_desct: optional last_descendant
- * count_in: count_already_inlist accumulator
- * count_out: count_already_outlist accumulator
- * count_an: count_ancestor_inlist_accumulator
+/** Complete/balance a region of an tree.
+ *
+ * \param [in] inlist             List of quadrants to consider: should be
+ *                                sorted and reduced, i.e., every quadrant
+ *                                should have child_id == 0.
+ * \param [in]     dom            Least common ancestor of all quadrants in
+ *                                \a inlist.
+ * \param [in]     bound          The number of quadrants in a neighborhood to
+ *                                consider when balancing.
+ *                                bound = 1 : just the quadrant itself, i.e.,
+ *                                            completion.
+ *                                bound = P4EST_DIM + 1 : face balance
+ *                                bound = 2**P4EST_DIM  : full balance
+ *                                bound = 2**P4EST_DIM - 1 : edge balance
+ * \param [in/out] qpool          quadrant pool for temporary quadrants
+ * \param [in/out] list_alloc     list mempool for hash tables
+ * \param [in/out] out            the sorted, complete, balance quadrants in
+ *                                the region will be appended to out
+ * \param [in]     first_desc     the first quadrant defining the start of the
+ *                                region.  if NULL, the region is understood
+ *                                to start with the first descendant of \a
+ *                                dom.
+ * \param [in]     last_desc      the last quadrant defining the start of the
+ *                                region.  if NULL, the region is understood
+ *                                to end with the last descendant of \a
+ *                                dom.
+ * \param [in/out] count_in       If not NULL, points to an accumulator for
+ *                                the number of times the balance algorithm
+ *                                tries to insert a quadrant that already
+ *                                exists
+ * \param [in/out] count_out      If not NULL, points to an accumulator for
+ *                                the number of times the balance algorithm
+ *                                tries to duplicate the insertion of a new
+ *                                quadrant
+ * \param [in/out] count_an       If not NULL, points to an accumulator for
+ *                                the number of times the balance algorithm
+ *                                tries to insert the ancestor of an existing
+ *                                quadrant
  */
 static void
 p4est_complete_or_balance_kernel (sc_array_t * inlist,
