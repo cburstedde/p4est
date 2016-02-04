@@ -1452,6 +1452,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
 
+  int                 is_ghost = 0;
+
 #ifdef P4EST_DEBUG
   /* Integrity checks: */
   /*  result array should be empty, */
@@ -1492,11 +1494,20 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   /* tools for decoding direction */
 #ifndef P4_TO_P8
   p4est_locidx_t      lFace, uFace, lCorner, uCorner;
+  p4est_locidx_t      convFace, convCorner;
+  convFace = 33;
+  convCorner = 1;
+
   lFace = 0;
   uFace = lCorner = P4EST_FACES;
   uCorner = P4EST_FACES + P4EST_CHILDREN;
 #else /* !P4_TO_P8 */
   p4est_locidx_t      lFace, uFace, lEdge, uEdge, lCorner, uCorner;
+  p4est_locidx_t      convFace, convEdge, convCorner;
+  convFace = 145;
+  convEdge = 97;
+  convCorner = 1;
+
   lFace = 0;
   uFace = lEdge = P4EST_FACES;
   uEdge = lCorner = lEdge + P8EST_EDGES;
@@ -1515,9 +1526,12 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
     neighbor_encoding =
       mesh->quad_to_face[P4EST_FACES * curr_quad_id + direction];
 
+    /* convert encoding */
+    neighbor_encoding += (neighbor_encoding < 0 ? convFace : 1);
+
     /* no neighbor present */
     if (neighbor_idx < 0 || neighbor_idx == curr_quad_id) {
-      return -10;
+      return 0;
     }
 
     /* if hanging */
@@ -1548,9 +1562,11 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                      quad_idx - lq);
           *quad_ins = quad;
+          is_ghost = 1;
         }
       }
-      return neighbor_encoding;
+      /* avoid pow (-1, is_ghost) */
+      return (neighbor_encoding - (2 * is_ghost * neighbor_encoding));
     }
     else {
       /* neighbor is part of quadrants owned by processor */
@@ -1573,8 +1589,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                    neighbor_idx - lq);
         *quad_ins = quad;
+        is_ghost = 1;
       }
-      return neighbor_encoding;
+      /* avoid pow (-1, is_ghost) */
+      return (neighbor_encoding - (2 * is_ghost * neighbor_encoding));
     }
   }
 
