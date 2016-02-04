@@ -224,8 +224,24 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
  *                                   6 .. 17 neighbor(-s) across e_{i-6}
  *                                  18 .. 25 neighbor(-s) across c_{i-18}
  * \param [out] neighboring_quads  Array containing neighboring quad(-s)
- * \return                         Encoding of neighboring quadrant(-s) or -10
- *                                 if no neighbor is present.
+ * \return                         Encoding of neighboring quadrant(-s) as it is
+ *                                 described below or 0 if no neighbor is
+ *                                 present.
+ * CAUTION: Note, that the encodings differ from the encodings saved in the
+ *          mesh.
+ *          Positive values are for local quadrants, negative values indicate
+ *          ghost quadrants.
+ *          Faces:     1 ..  24 => (r * 6 + nf) + 1; nf = 0 .. 5 face index;
+ *                                 r = 0 .. 3 relative orientation
+ *                    25 .. 120 => 25 + h * 24 + r * 6 + nf; h = 0 .. 3 number
+ *                                 of the subface; r, nf as above
+ *                   121 .. 144 => 121 + r * 6 + nf; r, nf as above
+ *          Edges:     1 ..  24 => r * 12 + ne + 1; ne = 0 .. 11 edge index;
+ *                                 r = 0 .. 1 relative orientation
+ *                    25 ..  72 => 25 + h * 24 + r * 12 + ne; h = 0 .. 1 number
+ *                                 of the subedge; r, ne as above
+ *                    73 ..  96 => 73 + r * 12 + ne; r, ne as above
+ *          Corners:   1 ..   8 => nc + 1; nc = 0 .. 7 corner index
  */
 p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
                                               p8est_ghost_t * ghost,

@@ -179,8 +179,19 @@ void                p4est_mesh_destroy (p4est_mesh_t * mesh);
  *                                  0 .. 3 neighbor(-s) across f_i,
  *                                  4 .. 7 neighbor(-s) across c_{i-4}
  * \param [out] neighboring_quads  Array containing neighboring quad(-s)
- * \return                         Encoding of neighboring quadrant(-s) or -10
- *                                 if no neighbor is present.
+ * \return                         Encoding of neighboring quadrant(-s) as it is
+ *                                 described below or 0 if no neighbor is
+ *                                 present.
+ * CAUTION: Note, that the encodings differ from the encodings saved in the
+ *          mesh.
+ *          Positive values are for local quadrants, negative values indicate
+ *          ghost quadrants.
+ *          Faces:     1 ..   8 => (r * 4 + nf) + 1; nf = 0 .. 3 face index;
+ *                                 r = 0 .. 1 relative orientation
+ *                     9 ..  24 => 9 + h * 8 + r * 4 + nf; h = 0 .. 1 number
+ *                                 of the subface; r, nf as above
+ *                    25 ..  32 => 25 + r * 4 + nf; r, nf as above
+ *          Corners:   1 ..   4 => nc + 1; nc = 0 .. 3 corner index
  */
 p4est_locidx_t      p4est_mesh_get_neighbors (p4est_t * p4est,
                                               p4est_ghost_t * ghost,
