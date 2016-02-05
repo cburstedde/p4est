@@ -279,7 +279,7 @@
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_all                p8est_search_all
 #define p4est_search_build_new          p8est_search_build_new
-#define p4est_search_build_local        p8est_search_build_local
+#define p4est_search_build_add          p8est_search_build_add
 #define p4est_search_build_complete     p8est_search_build_complete
 
 /* functions in p4est_algorithms */

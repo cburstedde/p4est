@@ -187,8 +187,8 @@ test_search_local_1 (p4est_t * p4est, p4est_topidx_t which_tree,
 
   tb = (test_search_build_t *) p4est->user_pointer;
 
-  (void) p4est_search_build_local (tb->build, which_tree, quadrant,
-                                   local_num);
+  (void) p4est_search_build_add (tb->build, which_tree, quadrant,
+                                 local_num, NULL);
 
   return 1;
 }
@@ -213,8 +213,8 @@ test_search_local_3 (p4est_t * p4est, p4est_topidx_t which_tree,
   /* take every third quadrant or so */
   if (local_num >= 0 &&
       !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
-    (void) p4est_search_build_local (tb->build, which_tree, quadrant,
-                                     local_num);
+    (void) p4est_search_build_add (tb->build, which_tree, quadrant,
+                                   local_num, NULL);
   }
 
   return 1;
@@ -232,8 +232,8 @@ test_search_local_4 (p4est_t * p4est, p4est_topidx_t which_tree,
   /* take the first third quadrant or so in every tree */
   if (local_num >= 0 && tb->last_tree != which_tree &&
       !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
-    (void) p4est_search_build_local (tb->build, which_tree, quadrant,
-                                     local_num);
+    (void) p4est_search_build_add (tb->build, which_tree, quadrant,
+                                   local_num, NULL);
 
     tb->last_tree = which_tree;
   }
@@ -267,7 +267,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
 
   /* 1. Create a p4est that shall be identical to the old one. */
 
-  tb->build = p4est_search_build_new (p4est, 0);
+  tb->build = p4est_search_build_new (p4est, 0, NULL, NULL);
   p4est_search_local (p4est, test_search_local_1, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   SC_CHECK_ABORT (p4est_is_equal (p4est, built, 0), "Mismatch build_local 1");
@@ -276,7 +276,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   /* 2. Create a p4est that is as coarse as possible.
    *    Coarsen recursively, compare. */
 
-  tb->build = p4est_search_build_new (p4est, 0);
+  tb->build = p4est_search_build_new (p4est, 0, NULL, NULL);
   p4est_search_local (p4est, test_search_local_2, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   copy = p4est_copy (p4est, 0);
@@ -287,7 +287,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
 
   /* 3. Create a p4est with some random pattern for demonstration */
 
-  tb->build = p4est_search_build_new (p4est, 4);
+  tb->build = p4est_search_build_new (p4est, 4, NULL, NULL);
   p4est_search_local (p4est, test_search_local_3, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   p4est_destroy (built);
@@ -295,7 +295,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   /* 4. Create a p4est from a search with one quadrant per tree */
 
   tb->last_tree = -1;
-  tb->build = p4est_search_build_new (p4est, 0);
+  tb->build = p4est_search_build_new (p4est, 0, NULL, NULL);
   p4est_search_local (p4est, test_search_local_4, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   p4est_destroy (built);

@@ -38,16 +38,13 @@
 struct p4est_search_build
 {
   p4est_t            *p4est;    /**< New forest being built. */
+  p4est_init_t        init_fn;  /**< Passed to quadrant completion. */
 
   /* Context for the tree walk */
   int                 cur_maxlevel;     /**< Current tree's maxlevel on input. */
   p4est_topidx_t      cur_tree;         /**< Current tree under examination. */
   p4est_tree_t       *tree;             /**< Pointer to current tree. */
   sc_array_t         *tquadrants;       /**< Points to the tree's quadrants. */
-
-  /* TODO: Does it make sense to add an init_fn callback? */
-  p4est_init_t        init_local;       /**< By p4est_search_build_local. */
-  p4est_init_t        init_complete;    /**< Used on tree completion. */
 };
 
 static void
@@ -81,7 +78,8 @@ p4est_search_build_begin_tree (p4est_search_build_t * build,
 }
 
 p4est_search_build_t *
-p4est_search_build_new (p4est_t * from, size_t data_size)
+p4est_search_build_new (p4est_t * from, size_t data_size,
+                        p4est_init_t init_fn, void *user_pointer)
 {
   int                 ell;
   p4est_topidx_t      jt, num_trees;
@@ -100,7 +98,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size)
   /* remove anything that we will not use from the template forest */
   p4est->mpicomm_owned = 0;
   p4est->data_size = data_size;
-  p4est->user_pointer = NULL;
+  p4est->user_pointer = user_pointer;
   p4est->local_num_quadrants = 0;
   p4est->global_num_quadrants = 0;
   p4est->global_first_quadrant = NULL;
@@ -138,8 +136,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size)
   p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
 
   /* initialize context structure */
-  build->init_local = NULL;
-  build->init_complete = NULL;
+  build->init_fn = init_fn;
   p4est_search_build_begin_tree (build, p4est->first_local_tree, 0);
 
   /*
@@ -228,19 +225,17 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
       /* special case: we create a subtree that is one quadrant */
       q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
       *q = q1;
-      p4est_quadrant_init_data (p4est, build->cur_tree, q,
-                                build->init_complete);
+      p4est_quadrant_init_data (p4est, build->cur_tree, q, build->init_fn);
       build->tree->quadrants_per_level[q->level] = 1;
       build->tree->maxlevel = (int) q->level;
     }
     else {
       p4est_complete_region (p4est, &q1, 1, &q2, 1,
-                             build->tree, build->cur_tree,
-                             build->init_complete);
+                             build->tree, build->cur_tree, build->init_fn);
     }
   }
   else {
-    p4est_complete_subtree (p4est, build->cur_tree, build->init_complete);
+    p4est_complete_subtree (p4est, build->cur_tree, build->init_fn);
     P4EST_ASSERT (&build->tree->quadrants == build->tquadrants);
 
     /* hack level statistics, this is slow but seems necessary currently */
@@ -266,10 +261,10 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 }
 
 int
-p4est_search_build_local (p4est_search_build_t * build,
-                          p4est_topidx_t which_tree,
-                          p4est_quadrant_t * quadrant,
-                          p4est_locidx_t local_num)
+p4est_search_build_add (p4est_search_build_t * build,
+                        p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant,
+                        p4est_locidx_t local_num, p4est_init_t init_quadrant)
 {
   p4est_t            *p4est;
   p4est_quadrant_t   *q;
@@ -310,7 +305,9 @@ p4est_search_build_local (p4est_search_build_t * build,
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
   q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
   *q = *quadrant;
-  p4est_quadrant_init_data (p4est, which_tree, q, build->init_local);
+  p4est_quadrant_init_data
+    (p4est, which_tree, q,
+     init_quadrant == NULL ? build->init_fn : init_quadrant);
   ++build->tree->quadrants_per_level[q->level];
   if (q->level > build->tree->maxlevel) {
     build->tree->maxlevel = q->level;
