@@ -42,11 +42,8 @@ typedef struct p8est_search_build p8est_search_build_t;
 /** Allocate a context for building a new forest.
  * \param [in] from         This forest is used as a template for creation.
  * \param [in] data_size    Data size of the created forest, may be zero.
- * \param [in] init_fn      This functions is called for created quadrants
- *                          that we populate internally to complete the trees.
+ * \param [in] init_fn      This functions is called for all created quadrants.
  *                          NULL leaves the quadrant data uninitialized.
- *                          This function can be overridden on a per-quadrant
- *                          basis in \ref p4est_search_build_local.
  * \param [in] user_pointer Registered into the newly built forest.
  * \return                  A context that needs to be processed further.
  */
@@ -70,17 +67,12 @@ p8est_search_build_t *p8est_search_build_new (p8est_t * from,
  * \param [in,out] build    The building context must be passed through.
  * \param [in] which_tree   The tree number is passed from the search callback.
  * \param [in] quadrant     The quadrant is passed from the search callback.
- * \param [in] init_quadrant    If NULL, use value from \ref
- *                          p8est_search_build_new.  Otherwise, this function
- *                          is passed on and may be used to initialize this
- *                          quadrant's data.
  * \return                  True if the quadrant was added, false if it was
  *                          identical to the previous one and thus not added.
  */
 int                 p8est_search_build_add (p8est_search_build_t * build,
                                             p4est_topidx_t which_tree,
-                                            p8est_quadrant_t * quadrant,
-                                            p8est_init_t init_quadrant);
+                                            p8est_quadrant_t * quadrant);
 
 /** Finalize the construction of the new forest after the search.
  * \param [in,out] build    The building context will be deallocated inside.

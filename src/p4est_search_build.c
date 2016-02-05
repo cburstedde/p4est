@@ -258,8 +258,7 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 int
 p4est_search_build_add (p4est_search_build_t * build,
                         p4est_topidx_t which_tree,
-                        p4est_quadrant_t * quadrant,
-                        p4est_init_t init_quadrant)
+                        p4est_quadrant_t * quadrant)
 {
   p4est_t            *p4est;
   p4est_quadrant_t   *q;
@@ -312,9 +311,7 @@ p4est_search_build_add (p4est_search_build_t * build,
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
   q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
   *q = *quadrant;
-  p4est_quadrant_init_data
-    (p4est, which_tree, q,
-     init_quadrant == NULL ? build->init_fn : init_quadrant);
+  p4est_quadrant_init_data (p4est, which_tree, q, build->init_fn);
   ++build->tree->quadrants_per_level[q->level];
   if (q->level > build->tree->maxlevel) {
     build->tree->maxlevel = q->level;
