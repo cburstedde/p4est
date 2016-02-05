@@ -44,6 +44,9 @@ struct p4est_search_build
   int                 cur_maxlevel;     /**< Current tree's maxlevel on input. */
   p4est_topidx_t      cur_tree;         /**< Current tree under examination. */
   p4est_tree_t       *tree;             /**< Pointer to current tree. */
+  p4est_quadrant_t    prev;             /**< Previously added in this tree.
+                                             If there is none yet, we set
+                                             its level to -1. */
   sc_array_t         *tquadrants;       /**< Points to the tree's quadrants. */
 };
 
@@ -69,6 +72,7 @@ p4est_search_build_begin_tree (p4est_search_build_t * build,
   build->tree = p4est_tree_array_index (p4est->trees, build->cur_tree);
   build->tree->quadrants_offset = quadrants_offset;
   build->tquadrants = &build->tree->quadrants;
+  build->prev.level = -1;
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
   P4EST_ASSERT (build->tquadrants->elem_count == 0);
 
@@ -124,10 +128,12 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
     ptree->last_desc = ftree->last_desc;
     ptree->quadrants_offset = 0;
     memset (ptree->quadrants_per_level, 0,
-            (P4EST_MAXLEVEL + 1) * sizeof (p4est_locidx_t));
+            (P4EST_QMAXLEVEL + 1) * sizeof (p4est_locidx_t));
     for (ell = P4EST_QMAXLEVEL + 1; ell <= P4EST_MAXLEVEL; ++ell) {
       ptree->quadrants_per_level[ell] = -1;
     }
+
+    /* this is tempmorary just to pass the information along */
     ptree->maxlevel = ftree->maxlevel;
   }
   if (p4est->data_size > 0) {
@@ -157,7 +163,10 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
 static              p4est_locidx_t
 p4est_search_build_end_tree (p4est_search_build_t * build)
 {
-  int                 ell, maxl;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 ell;
+#endif
+  int                 maxl;
   p4est_t            *p4est;
   p4est_quadrant_t    q1, q2, *q;
   p4est_quadrant_t    cand, desc;
@@ -181,6 +190,8 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 
   /* do the heavy lifting: complete this tree as coarsely as possible */
   if (build->tquadrants->elem_count == 0) {
+    P4EST_ASSERT (build->tree->maxlevel == 0);
+    P4EST_ASSERT (build->prev.level == -1);
     maxl = build->cur_maxlevel;
     q1 = build->tree->first_desc;
     q2 = build->tree->last_desc;
@@ -248,7 +259,7 @@ int
 p4est_search_build_add (p4est_search_build_t * build,
                         p4est_topidx_t which_tree,
                         p4est_quadrant_t * quadrant,
-                        p4est_locidx_t local_num, p4est_init_t init_quadrant)
+                        p4est_init_t init_quadrant)
 {
   p4est_t            *p4est;
   p4est_quadrant_t   *q;
@@ -273,19 +284,31 @@ p4est_search_build_add (p4est_search_build_t * build,
                                    quadrants_offset);
   }
 
-  /* we do nothing if we are not at a leaf of the tree */
-  if (local_num < 0) {
-    return 0;
+  /* we require that the quadrant fits into the tree's range */
+  /* thus it will not be legal to pass in too coarse search quadrants */
+  /* it is safest to call this function only on leaves */
+  P4EST_ASSERT (p4est_quadrant_in_range (&build->tree->first_desc,
+                                         &build->tree->last_desc, quadrant));
+
+  /* If there was a previous quadrant added, we may be identical
+   * in which case this function does nothing and returns false.
+   * If not identical, this quadrant must be non-overlapping and bigger.
+   */
+  P4EST_ASSERT ((build->prev.level == -1) ==
+                (build->tquadrants->elem_count == 0));
+  if (build->prev.level >= 0) {
+    P4EST_ASSERT (p4est_quadrant_in_range (&build->tree->first_desc,
+                                           &build->tree->last_desc,
+                                           &build->prev));
+    P4EST_ASSERT (p4est_quadrant_compare (&build->prev, quadrant) <= 0);
+    if (p4est_quadrant_is_equal (&build->prev, quadrant)) {
+      /* special exception */
+      return 0;
+    }
+    P4EST_ASSERT (!p4est_quadrant_is_ancestor (&build->prev, quadrant));
   }
 
-  /*           *** Notes ***
-   * 0. The search goes through the nonempty local trees.
-   * 1. The search may begin below the root at the top of a branch.
-   * 2. The search may skip intermediate levels in the tree.
-   */
-
-  /* insert only relevant leaves */
-  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
+  /* insert this quadrant as a new leaf of the tree */
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
   q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
   *q = *quadrant;
@@ -297,8 +320,11 @@ p4est_search_build_add (p4est_search_build_t * build,
     build->tree->maxlevel = q->level;
   }
 
-  /* TODO: figure out if we need a return value */
-  return 0;
+  /* record this quadrant for context checking */
+  build->prev = *quadrant;
+
+  /* return true for a newly added quadrant */
+  return 1;
 }
 
 p4est_t            *

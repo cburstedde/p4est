@@ -187,8 +187,10 @@ test_search_local_1 (p4est_t * p4est, p4est_topidx_t which_tree,
 
   tb = (test_search_build_t *) p4est->user_pointer;
 
-  (void) p4est_search_build_add (tb->build, which_tree, quadrant,
-                                 local_num, NULL);
+  if (local_num >= 0) {
+    P4EST_EXECUTE_ASSERT_TRUE (p4est_search_build_add
+                               (tb->build, which_tree, quadrant, NULL));
+  }
 
   return 1;
 }
@@ -211,10 +213,9 @@ test_search_local_3 (p4est_t * p4est, p4est_topidx_t which_tree,
   tb = (test_search_build_t *) p4est->user_pointer;
 
   /* take every third quadrant or so */
-  if (local_num >= 0 &&
-      !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
-    (void) p4est_search_build_add (tb->build, which_tree, quadrant,
-                                   local_num, NULL);
+  if (local_num >= 0 && !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    P4EST_EXECUTE_ASSERT_TRUE (p4est_search_build_add
+                               (tb->build, which_tree, quadrant, NULL));
   }
 
   return 1;
@@ -232,8 +233,8 @@ test_search_local_4 (p4est_t * p4est, p4est_topidx_t which_tree,
   /* take the first third quadrant or so in every tree */
   if (local_num >= 0 && tb->last_tree != which_tree &&
       !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
-    (void) p4est_search_build_add (tb->build, which_tree, quadrant,
-                                   local_num, NULL);
+    P4EST_EXECUTE_ASSERT_TRUE (p4est_search_build_add
+                               (tb->build, which_tree, quadrant, NULL));
 
     tb->last_tree = which_tree;
   }

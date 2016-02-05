@@ -29,6 +29,10 @@
 /** \file p4est_search_build.h
  * Create a new p4est object by running \ref p4est_search_local.
  * This allows to create a heavily coarsened forest in one pass.
+ * It is also legal to add more refined quadrants.
+ *
+ * The only rules are to respect the original partition boundary
+ * and to add non-overlapping quadrants in Morton order.
  */
 
 /** Context object for building a new p4est from search callbacks.
@@ -38,7 +42,8 @@ typedef struct p4est_search_build p4est_search_build_t;
 /** Allocate a context for building a new forest.
  * \param [in] from         This forest is used as a template for creation.
  * \param [in] data_size    Data size of the created forest, may be zero.
- * \param [in] init_fn      This functions is called for created quadrants.
+ * \param [in] init_fn      This functions is called for created quadrants
+ *                          that we populate internally to complete the trees.
  *                          NULL leaves the quadrant data uninitialized.
  *                          This function can be overridden on a per-quadrant
  *                          basis in \ref p4est_search_build_local.
@@ -51,21 +56,30 @@ p4est_search_build_t *p4est_search_build_new (p4est_t * from,
                                               void *user_pointer);
 
 /** This function is usable from a \ref p4est_search_local_t callback.
+ * It can also be used outside of a search context using proper care.
+ *
+ * It may be called multiple times in order of trees and then quadrants.
+ * The quadrant added in each call must fit entirely into the current tree.
+ * This means that inner nodes of the tree may not be legal to pass in here.
+ * It is safest to call this function only on leaves of the original tree.
+ * However, other calls are possible if subsequent quadrants do not overlap.
+ *
+ * It is legal to call this function twice with the same quadrant.
+ * In this case the second call does nothing.
+ *
  * \param [in,out] build    The building context must be passed through.
  * \param [in] which_tree   The tree number is passed from the search callback.
  * \param [in] quadrant     The quadrant is passed from the search callback.
- * \param [in] local_num    The quadrant number is passed from search callback.
  * \param [in] init_quadrant    If NULL, use value from \ref
  *                          p4est_search_build_new.  Otherwise, this function
  *                          is passed on and may be used to initialize this
  *                          quadrant's data.
- *
- * \return                  TODO: figure out what to do on return.
+ * \return                  True if the quadrant was added, false if it was
+ *                          identical to the previous one and thus not added.
  */
 int                 p4est_search_build_add (p4est_search_build_t * build,
                                             p4est_topidx_t which_tree,
                                             p4est_quadrant_t * quadrant,
-                                            p4est_locidx_t local_num,
                                             p4est_init_t init_quadrant);
 
 /** Finalize the construction of the new forest after the search.
