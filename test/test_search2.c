@@ -384,9 +384,67 @@ p4est_search_build_verify_4 (p4est_t * p4est)
   SC_CHECK_ABORT (c2 == (p4est_locidx_t) tb->init_add, "Test 4 count add");
 }
 
+static int
+test_search_point_5 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  int                 retval;
+#ifdef P4EST_ENABLE_DEBUG
+  int8_t              ip;
+#endif
+  test_search_build_t *tb;
+
+  P4EST_ASSERT (point != NULL);
+
+#ifdef P4EST_ENABLE_DEBUG
+  ip = *(int8_t *) point;
+#endif
+  P4EST_ASSERT (0 <= ip && ip < 2);
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  if (!(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    /* rare */
+    return 0;
+  }
+  else {
+    /* frequent */
+
+    if (local_num >= 0) {
+      /* this is a leaf, add it */
+      retval = p4est_search_build_add (tb->build, which_tree, quadrant);
+      if (!retval) {
+        /* this is a duplicate leaf */
+        ++tb->init_default;
+      }
+      else {
+        /* first addition of this quadrant */
+        ++tb->init_add;
+      }
+    }
+    return 1;
+  }
+}
+
+#if 0
+
+static void
+p4est_search_build_verify_5 (p4est_t * p4est)
+{
+  test_search_build_t *tb;
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+
+  P4EST_LDEBUGF ("T5 added %d dup %d\n", tb->init_add, tb->init_default);
+}
+
+#endif
+
 static void
 test_search_build_local (sc_MPI_Comm mpicomm)
 {
+  sc_array_t         *points;
   p4est_connectivity_t *conn;
   p4est_t            *p4est, *built, *copy;
   test_search_build_t stb, *tb = &stb;
@@ -460,6 +518,22 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   p4est_destroy (built);
 
   /* 5. Create a p4est from a multiple-item search */
+
+  points = sc_array_new_size (sizeof (int8_t), 2);
+  *(int8_t *) sc_array_index (points, 0) = 0;
+  *(int8_t *) sc_array_index (points, 1) = 1;
+  tb->wrapper = 5;
+  tb->init_default = 0;
+  tb->init_add = 0;
+  tb->build = p4est_search_build_new (p4est, 0, NULL, tb);
+  p4est_search_local (p4est, NULL, test_search_point_5, points);
+  built = p4est_search_build_complete (tb->build);
+#if 0
+  p4est_search_build_verify_5 (built);
+#endif
+  SC_CHECK_ABORT (p4est_is_valid (built), "Invalid build_local 5");
+  p4est_destroy (built);
+  sc_array_destroy (points);
 
   /* clean up */
   p4est_destroy (p4est);
