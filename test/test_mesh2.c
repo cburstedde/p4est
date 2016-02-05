@@ -111,7 +111,7 @@ test_mesh_write_vtk (p4est_t * p4est, char *filename)
 
   /* create VTK output context and set its parameters */
   p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
-  p4est_vtk_context_set_scale (context, 0.99);  /* quadrant at almost full scale */
+  p4est_vtk_context_set_scale (context, 1);     /* quadrant at almost full scale */
 
   /* begin writing the output files */
   context = p4est_vtk_write_header (context);
@@ -176,13 +176,23 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
   int                 direction = 0;
   int                 is_ghost;
   uint32_t            norm_quad;
-  for (uint32_t quad = 0; quad < p4est->global_num_quadrants; ++quad) {
-    /* printf ("[p4est %i] Cell %i\n", p4est->mpirank, */
-    /*         p4est->global_first_quadrant[p4est->mpirank] + quad); */
+#ifdef P4_TO_P8
+  int                 dir_offset_edge, dir_offset_corner;
+  dir_offset_edge = P4EST_FACES;
+  dir_offset_corner = P4EST_FACES + P8EST_EDGES;
+#else /* P4_TO_P8 */
+  int                 dir_offset_corner;
+  dir_offset_corner = P4EST_FACES;
+#endif /* P4_TO_P8 */
 
+  for (uint32_t quad = 0; quad < p4est->global_num_quadrants; ++quad) {
+    /* loop over all cells, set and unset only if cell is owned by processor */
     if (p4est->global_first_quadrant[p4est->mpirank] <= quad
         && quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
+
+      /* norm global quad index to local index */
       norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
+
       /* set */
       if (printFaces) {
         for (uint i = 0; i < P4EST_FACES; ++i) {
@@ -193,13 +203,18 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
             p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
                                       direction, neighboring_quads);
 
+#ifdef P4EST_DEBUG
+          /* print some debug info */
+          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
+                  " number of neighboring cells: %zu\n",
+                  p4est->mpirank, quad, norm_quad, direction,
+                  neighboring_quads->elem_count);
+#endif /* P4EST_DEBUG */
+
           for (int j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
-            printf ("rank %i, direction: %i, owner of neighbor: %i\n",
-                    p4est->mpirank, direction, q->p.piggy1.owner_rank);
-
             if (is_ghost > 0) {
               test_mesh_marker_t *marker = (test_mesh_marker_t *)
                 q->p.user_data;
@@ -257,18 +272,68 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh)
 #ifdef P4_TO_P8
       if (printEdges) {
         for (uint i = 0; i < P8EST_EDGES; ++i) {
+          direction = dir_offset_edge + i;
+          sc_array_t         *neighboring_quads;
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          is_ghost =
+            p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
+                                      direction, neighboring_quads);
 
+#ifdef P4EST_DEBUG
+          /* print some debug info */
+          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
+                  " number of neighboring cells: %zu\n",
+                  p4est->mpirank, quad, norm_quad, direction,
+                  neighboring_quads->elem_count);
+#endif /* P4EST_DEBUG */
+
+          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+            p4est_quadrant_t   *q =
+              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                         j);
+            if (is_ghost > 0) {
+              test_mesh_marker_t *marker = (test_mesh_marker_t *)
+                q->p.user_data;
+              marker->marker = 0.;
+            }
+          }
+          sc_array_destroy (neighboring_quads);
         }
       }
 #endif /* P4_TO_P8 */
       if (printCorners) {
         for (uint i = 0; i < P4EST_CHILDREN; ++i) {
+          direction = dir_offset_corner + i;
+          sc_array_t         *neighboring_quads;
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          is_ghost =
+            p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
+                                      direction, neighboring_quads);
 
+#ifdef P4EST_DEBUG
+          /* print some debug info */
+          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
+                  " number of neighboring cells: %zu\n",
+                  p4est->mpirank, quad, norm_quad, direction,
+                  neighboring_quads->elem_count);
+#endif /* P4EST_DEBUG */
+
+          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+            p4est_quadrant_t   *q =
+              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                         j);
+            if (is_ghost > 0) {
+              test_mesh_marker_t *marker = (test_mesh_marker_t *)
+                q->p.user_data;
+              marker->marker = 0.;
+            }
+          }
+          sc_array_destroy (neighboring_quads);
         }
       }
     }
-    sc_MPI_Barrier (p4est->mpicomm);
   }
+
   return 0;
 }
 

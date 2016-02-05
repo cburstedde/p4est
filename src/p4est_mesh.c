@@ -1526,9 +1526,6 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
     neighbor_encoding =
       mesh->quad_to_face[P4EST_FACES * curr_quad_id + direction];
 
-    /* convert encoding */
-    neighbor_encoding += (neighbor_encoding < 0 ? convFace : 1);
-
     /* no neighbor present */
     if (neighbor_idx < 0 || neighbor_idx == curr_quad_id) {
       return 0;
@@ -1565,6 +1562,9 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           is_ghost = 1;
         }
       }
+      /* convert encoding */
+      neighbor_encoding += convFace;
+
       /* avoid pow (-1, is_ghost) */
       return (neighbor_encoding - (2 * is_ghost * neighbor_encoding));
     }
@@ -1591,6 +1591,9 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
         *quad_ins = quad;
         is_ghost = 1;
       }
+      /* convert encoding */
+      neighbor_encoding++;
+
       /* avoid pow (-1, is_ghost) */
       return (neighbor_encoding - (2 * is_ghost * neighbor_encoding));
     }
