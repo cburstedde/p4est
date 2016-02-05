@@ -286,6 +286,7 @@
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
 #define p4est_quadrant_checksum         p8est_quadrant_checksum
+#define p4est_quadrant_in_range         p8est_quadrant_in_range
 #define p4est_tree_is_sorted            p8est_tree_is_sorted
 #define p4est_tree_is_linear            p8est_tree_is_linear
 #define p4est_tree_is_almost_sorted     p8est_tree_is_almost_sorted
