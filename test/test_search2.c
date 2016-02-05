@@ -183,13 +183,20 @@ test_search_local_1 (p4est_t * p4est, p4est_topidx_t which_tree,
                      p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
                      void *point)
 {
+  int                 retval;
   test_search_build_t *tb;
 
   tb = (test_search_build_t *) p4est->user_pointer;
 
+  /* take all quadrants and try duplicates regularly */
   if (local_num >= 0) {
     P4EST_EXECUTE_ASSERT_TRUE (p4est_search_build_add
                                (tb->build, which_tree, quadrant, NULL));
+    if (!(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+      /* try to add it twice which should be reported properly */
+      retval = p4est_search_build_add (tb->build, which_tree, quadrant, NULL);
+      SC_CHECK_ABORT (!retval, "Tried to add a duplicate");
+    }
   }
 
   return 1;
