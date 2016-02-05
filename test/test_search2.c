@@ -222,14 +222,23 @@ test_search_init_3 (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (p4est->data_size == 0);
 
   tb = (test_search_build_t *) p4est->user_pointer;
-  if (0) {
-    ++tb->init_add;
-    quadrant->p.user_int = 629;
-  }
-  else {
-    ++tb->init_default;
-    quadrant->p.user_int = 1135;
-  }
+  ++tb->init_default;
+
+  quadrant->p.user_int = 1135;
+}
+
+static void
+test_search_init_add_3 (p4est_t * p4est, p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant)
+{
+  test_search_build_t *tb;
+
+  P4EST_ASSERT (p4est->data_size == 0);
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+  ++tb->init_add;
+
+  quadrant->p.user_int = 629;
 }
 
 static int
@@ -279,12 +288,13 @@ p4est_search_build_verify_3 (p4est_t * p4est)
       }
     }
   }
-  P4EST_LDEBUGF ("T3 %ld quads %d %d calls %d and %ld %ld counts\n",
-                 (long) p4est->local_num_quadrants,
-                 tb->init_default, tb->init_add,
-                 tb->count_add, (long) c1, (long) c2);
+  SC_CHECK_ABORT (c1 + c2 == p4est->local_num_quadrants,
+                  "Test 3 count quadrants");
   SC_CHECK_ABORT (c1 + c2 >= (p4est_locidx_t) tb->count_add,
-                  "Test 3 count add");
+                  "Test 3 count sum");
+  SC_CHECK_ABORT (c1 == (p4est_locidx_t) tb->init_default,
+                  "Test 3 count default");
+  SC_CHECK_ABORT (c2 == (p4est_locidx_t) tb->init_add, "Test 3 count add");
 }
 
 static void
@@ -299,6 +309,20 @@ test_search_init_4 (p4est_t * p4est, p4est_topidx_t which_tree,
   ++tb->init_default;
 
   *(long *) quadrant->p.user_data = 11321;
+}
+
+static void
+test_search_init_add_4 (p4est_t * p4est, p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant)
+{
+  test_search_build_t *tb;
+
+  P4EST_ASSERT (p4est->data_size == sizeof (long));
+
+  tb = (test_search_build_t *) p4est->user_pointer;
+  ++tb->init_add;
+
+  *(long *) quadrant->p.user_data = -748;
 }
 
 static int
@@ -343,22 +367,21 @@ p4est_search_build_verify_4 (p4est_t * p4est)
       case 11321:
         ++c1;
         break;
-#if 0
-      case 629:
+      case -748:
         ++c2;
         break;
-#endif
       default:
         SC_ABORT_NOT_REACHED ();
       }
     }
   }
-  P4EST_LDEBUGF ("T4 %ld quads %d %d calls %d and %ld %ld counts\n",
-                 (long) p4est->local_num_quadrants,
-                 tb->init_default, tb->init_add,
-                 tb->count_add, (long) c1, (long) c2);
+  SC_CHECK_ABORT (c1 + c2 == p4est->local_num_quadrants,
+                  "Test 4 count quadrants");
   SC_CHECK_ABORT (c1 + c2 >= (p4est_locidx_t) tb->count_add,
-                  "Test 4 count add");
+                  "Test 4 count sum");
+  SC_CHECK_ABORT (c1 == (p4est_locidx_t) tb->init_default,
+                  "Test 4 count default");
+  SC_CHECK_ABORT (c2 == (p4est_locidx_t) tb->init_add, "Test 4 count add");
 }
 
 static void
@@ -414,6 +437,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   tb->init_add = 0;
   tb->count_add = 0;
   tb->build = p4est_search_build_new (p4est, 0, test_search_init_3, tb);
+  p4est_search_build_init_add (tb->build, test_search_init_add_3);
   p4est_search_local (p4est, test_search_local_3, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   p4est_search_build_verify_3 (built);
@@ -428,6 +452,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   tb->last_tree = -1;
   tb->build =
     p4est_search_build_new (p4est, sizeof (long), test_search_init_4, tb);
+  p4est_search_build_init_add (tb->build, test_search_init_add_4);
   p4est_search_local (p4est, test_search_local_4, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   p4est_search_build_verify_4 (built);

@@ -39,6 +39,7 @@ struct p4est_search_build
 {
   p4est_t            *p4est;    /**< New forest being built. */
   p4est_init_t        init_fn;  /**< Passed to quadrant completion. */
+  p4est_init_t        add_init_fn;      /**< Used for added quadrants. */
 
   /* Context for the tree walk */
   int                 cur_maxlevel;     /**< Current tree's maxlevel on input. */
@@ -143,6 +144,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
 
   /* initialize context structure */
   build->init_fn = init_fn;
+  build->add_init_fn = init_fn;
   p4est_search_build_begin_tree (build, p4est->first_local_tree, 0);
 
   /*
@@ -158,6 +160,16 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
    */
 
   return build;
+}
+
+void
+p4est_search_build_init_add (p4est_search_build_t * build,
+                             p4est_init_t add_init_fn)
+{
+  P4EST_ASSERT (build != NULL);
+  P4EST_ASSERT (build->p4est != NULL);
+
+  build->add_init_fn = add_init_fn;
 }
 
 static              p4est_locidx_t
@@ -311,7 +323,7 @@ p4est_search_build_add (p4est_search_build_t * build,
   P4EST_ASSERT (build->tquadrants->elem_size == sizeof (p4est_quadrant_t));
   q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
   *q = *quadrant;
-  p4est_quadrant_init_data (p4est, which_tree, q, build->init_fn);
+  p4est_quadrant_init_data (p4est, which_tree, q, build->add_init_fn);
   ++build->tree->quadrants_per_level[q->level];
   if (q->level > build->tree->maxlevel) {
     build->tree->maxlevel = q->level;

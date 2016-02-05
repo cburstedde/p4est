@@ -42,7 +42,11 @@ typedef struct p4est_search_build p4est_search_build_t;
 /** Allocate a context for building a new forest.
  * \param [in] from         This forest is used as a template for creation.
  * \param [in] data_size    Data size of the created forest, may be zero.
- * \param [in] init_fn      This functions is called for all created quadrants.
+ * \param [in] init_fn      This functions is called for created quadrants,
+ *                          added manually by \ref p4est_search_build_add
+ *                          or by the internal completion of the subtrees.
+ *                          It may be overridden for added quadrants by
+ *                          \ref p4est_search_build_init_add.
  *                          NULL leaves the quadrant data uninitialized.
  * \param [in] user_pointer Registered into the newly built forest.
  * \return                  A context that needs to be processed further.
@@ -51,6 +55,15 @@ p4est_search_build_t *p4est_search_build_new (p4est_t * from,
                                               size_t data_size,
                                               p4est_init_t init_fn,
                                               void *user_pointer);
+
+/** Set a dedicated initialization callback for manually added quadrants.
+ * \param [in,out] build    The building context at any stage.
+ * \param [in] add_init_fn  Henceforth used for quadrants added by
+ *                          \ref p4est_search_build_add.
+ *                          NULL leaves the quadrant data uninitialized.
+ */
+void                p4est_search_build_init_add (p4est_search_build_t * build,
+                                                 p4est_init_t add_init_fn);
 
 /** This function is usable from a \ref p4est_search_local_t callback.
  * It can also be used outside of a search context using proper care.
