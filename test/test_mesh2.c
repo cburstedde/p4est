@@ -432,12 +432,12 @@ test_mesh_one_tree (p4est_t * p4est,
     p8est_connectivity_new_unitcube ();
 #endif /* !P4_TO_P8 */
   /* setup p4est */
-  int                 minLevel = 1;
+  int                 minLevel = 2;
   p4est = p4est_new_ext (mpicomm,
                          conn,
                          0,
                          minLevel,
-                         0, sizeof (test_mesh_marker_t), test_mesh_init, 0);
+                         1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
 
   p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
   p4est_partition (p4est, 0, 0);
@@ -558,10 +558,10 @@ main (int argc, char **argv)
   /* test one tree */
   periodic_boundaries = 0;
   test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
-  /*periodic_boundaries = 1;
 
-     test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
-   */
+  periodic_boundaries = 1;
+  test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
+
   /* test multiple trees; brick */
   /*
      periodic_boundaries = 0;
