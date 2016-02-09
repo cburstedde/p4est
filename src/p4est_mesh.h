@@ -167,9 +167,6 @@ p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est,
 void                p4est_mesh_destroy (p4est_mesh_t * mesh);
 
 /** Lookup neighboring quads of quadrant in a specific direction
- * CAUTION: This is working only for brick scenarios or scenarios where there
- *          are no different encodings, e.g. through different orientations or
- *          hanging quads, over tree-corner boundaries.
  * \param [in]  p4est              Forest to be worked with.
  * \param [in]  ghost              Ghost quadrants.
  * \param [in]  mesh               Mesh structure.
@@ -178,10 +175,11 @@ void                p4est_mesh_destroy (p4est_mesh_t * mesh);
  *                                 quadrants is encoded as follows:
  *                                  0 .. 3 neighbor(-s) across f_i,
  *                                  4 .. 7 neighbor(-s) across c_{i-4}
- * \param [out] neighboring_quads  Array containing neighboring quad(-s)
- * \return                         Encoding of neighboring quadrant(-s) as it is
- *                                 described below or 0 if no neighbor is
- *                                 present.
+ * \param [out] neighboring_quads  Array containing neighboring quad(-s).
+ *                                 Contains p4est_quadrant_t **.
+ * \param [out] neighboring_encs   Array containing encodings for neighboring
+ *                                 quads.
+ *                                 Contains int.
  * CAUTION: Note, that the encodings differ from the encodings saved in the
  *          mesh.
  *          Positive values are for local quadrants, negative values indicate
@@ -198,7 +196,8 @@ p4est_locidx_t      p4est_mesh_get_neighbors (p4est_t * p4est,
                                               p4est_mesh_t * mesh,
                                               p4est_locidx_t curr_quad_id,
                                               p4est_locidx_t direction,
-                                              sc_array_t * neighboring_quads);
+                                              sc_array_t * neighboring_quads,
+                                              sc_array_t * neighboring_encs);
 
 /** Find a quadrant based on its cumulative number in the local forest.
  * If the quad_to_tree field of the mesh structure exists, this is O(1).

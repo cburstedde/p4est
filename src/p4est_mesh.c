@@ -1447,17 +1447,17 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                           p4est_mesh_t * mesh,
                           p4est_locidx_t curr_quad_id,
                           p4est_locidx_t direction,
-                          sc_array_t * neighboring_quads)
+                          sc_array_t * neighboring_quads,
+                          sc_array_t * neighboring_encs)
 {
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
 
-  int                 is_ghost = 0;
-
 #ifdef P4EST_DEBUG
   /* Integrity checks: */
-  /*  result array should be empty, */
+  /*  result arrays should be empty, */
   P4EST_ASSERT (neighboring_quads->elem_count == 0);
+  P4EST_ASSERT (neighboring_encs->elem_count == 0);
   /*  mesh has to be created, i.e. not NULL, */
   P4EST_ASSERT (mesh != NULL);
   /*  curr_quad_id must be part of the processors quadrants, */
@@ -1494,19 +1494,16 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   /* tools for decoding direction */
 #ifndef P4_TO_P8
   p4est_locidx_t      lFace, uFace, lCorner, uCorner;
-  p4est_locidx_t      convFace, convCorner;
-  convFace = 33;
-  convCorner = 1;
+  p4est_locidx_t      convFace = 33;
 
   lFace = 0;
   uFace = lCorner = P4EST_FACES;
   uCorner = P4EST_FACES + P4EST_CHILDREN;
 #else /* !P4_TO_P8 */
   p4est_locidx_t      lFace, uFace, lEdge, uEdge, lCorner, uCorner;
-  p4est_locidx_t      convFace, convEdge, convCorner;
+  p4est_locidx_t      convFace, convEdge;
   convFace = 145;
   convEdge = 97;
-  convCorner = 1;
 
   lFace = 0;
   uFace = lEdge = P4EST_FACES;
@@ -1518,6 +1515,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   p4est_tree_t       *tree;
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
+  int                *enc_ptr;
 
   /* obtain quadrants and write them into result array */
   /* faces */
@@ -1531,8 +1529,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       return 0;
     }
 
-    /* if hanging */
     if (neighbor_encoding < 0) {
+      /* half size */
       p4est_locidx_t      quad_idx;
       p4est_locidx_t     *quad_ptr;
       quad_ptr =
@@ -1540,8 +1538,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                                                neighbor_idx);
       for (int i = 0; i < P4EST_HALF; ++i) {
         quad_idx = quad_ptr[i];
-        /* neighbor is part of quadrants owned by processor */
         if (quad_idx < lq) {
+          /* neighbor is part of quadrants owned by processor */
           tree =
             (p4est_tree_t *) sc_array_index_int (p4est->trees,
                                                  mesh->quad_to_tree
@@ -1551,26 +1549,32 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
             (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
                                                      quad_idx);
           *quad_ins = quad;
+
+          enc_ptr = (int *) sc_array_push (neighboring_encs);
+
+          /* convert encoding */
+          neighbor_encoding += convFace;
+          *enc_ptr = neighbor_encoding;
         }
-        /* neighbor is part of ghost layer */
         else {
+          /* neighbor is part of ghost layer */
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                      quad_idx - lq);
           *quad_ins = quad;
-          is_ghost = 1;
+          enc_ptr = (int *) sc_array_push (neighboring_encs);
+
+          /* convert encoding */
+          neighbor_encoding += convFace;
+          *enc_ptr = -neighbor_encoding;
         }
       }
-      /* convert encoding */
-      neighbor_encoding += convFace;
-
-      /* avoid pow (-1, is_ghost) */
-      return (neighbor_encoding - (2 * is_ghost * neighbor_encoding));
     }
     else {
-      /* neighbor is part of quadrants owned by processor */
+      /* same or double size */
       if (neighbor_idx < lq) {
+        /* neighbor is part of quadrants owned by processor */
         tree =
           (p4est_tree_t *) sc_array_index_int (p4est->trees,
                                                mesh->quad_to_tree
@@ -1581,6 +1585,12 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                                                    neighbor_idx -
                                                    tree->quadrants_offset);
         *quad_ins = quad;
+
+        enc_ptr = (int *) sc_array_push (neighboring_encs);
+
+        /* convert encoding */
+        neighbor_encoding++;
+        *enc_ptr = neighbor_encoding;
       }
       /* neighbor is part of ghost layer */
       else {
@@ -1589,14 +1599,15 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                    neighbor_idx - lq);
         *quad_ins = quad;
-        is_ghost = 1;
-      }
-      /* convert encoding */
-      neighbor_encoding++;
 
-      /* avoid pow (-1, is_ghost) */
-      return (neighbor_encoding - (2 * is_ghost * neighbor_encoding));
+        enc_ptr = (int *) sc_array_push (neighboring_encs);
+
+        /* convert encoding */
+        neighbor_encoding++;
+        *enc_ptr = -neighbor_encoding;
+      }
     }
+    return 0;
   }
 
 #ifdef P4_TO_P8
@@ -1607,11 +1618,11 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
     /* no neighbor present */
     if (neighbor_idx < 0 || neighbor_idx == curr_quad_id) {
-      return -10;
+      return 0;
     }
 
-    /* same size neighbor, same proc */
     if (neighbor_idx < lq) {
+      /* same size neighbor, same proc */
       tree =
         (p4est_tree_t *) sc_array_index_int (p4est->trees,
                                              mesh->quad_to_tree
@@ -1621,24 +1632,35 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
         (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
                                                  neighbor_idx -
                                                  tree->quadrants_offset);
-      quad_ins = &quad;
+      *quad_ins = quad;
+      enc_ptr = (int *) sc_array_push (neighboring_encs);
+
       /* create implicitly saved encoding */
-      return (direction - lEdge) ^ 3;
+      neighbor_encoding = (direction - lEdge) ^ 3;
+
+      /* convert encoding */
+      neighbor_encoding++;
+      *enc_ptr = neighbor_encoding;
     }
 
-    /* same size neighbor, ghost layer */
     if (lq < neighbor_idx && neighbor_idx < lq + gq) {
+      /* same size neighbor, ghost layer */
       quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
       quad =
         (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                  neighbor_idx - lq);
-      quad_ins = &quad;
+      *quad_ins = quad;
+
+      enc_ptr = (int *) sc_array_push (neighboring_encs);
       /* create implicitly saved encoding */
-      return (direction - lEdge) ^ 3;
+      neighbor_encoding = (direction - lEdge) ^ 3;
+      /* convert encoding */
+      neighbor_encoding++;
+      *enc_ptr = -neighbor_encoding;
     }
 
-    /* anything else */
     if ((lq + gq) < neighbor_idx) {
+      /* anything else */
       /* normalize neighbor index */
       neighbor_idx -= (lq + gq);
       P4EST_ASSERT (0 <= neighbor_idx
@@ -1656,31 +1678,43 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       for (int i = 0; i < n_adj_quads; ++i) {
         quad_idx = *((p4est_locidx_t *)
                      sc_array_index_int (mesh->edge_quad, offset + i));
+        neighbor_encoding = *((int8_t *)
+                              sc_array_index_int (mesh->edge_edge,
+                                                  offset + i));
 
-        /* neighbor is part of quadrants owned by processor */
         if (quad_idx < lq) {
+          /* neighbor is part of quadrants owned by processor */
           tree =
             (p4est_tree_t *) sc_array_index_int (p4est->trees,
                                                  mesh->quad_to_tree
                                                  [quad_idx]);
-          quad = (p4est_quadrant_t *) sc_array_push (neighboring_quads);
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
                                                      quad_idx -
                                                      tree->quadrants_offset);
+          *quad_ins = quad;
+          enc_ptr = (int *) sc_array_push (neighboring_encs);
+          /* convert encoding */
+          neighbor_encoding += (neighbor_encoding < 0 ? convEdge : 1);
+          *enc_ptr = neighbor_encoding;
         }
-        /* neighbor is part of ghost layer */
         else {
-          quad = (p4est_quadrant_t *) sc_array_push (neighboring_quads);
+          /* neighbor is part of ghost layer */
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                      quad_idx - lq);
+          *quad_ins = quad;
+
+          enc_ptr = (int *) sc_array_push (neighboring_encs);
+          /* convert encoding */
+          neighbor_encoding += (neighbor_encoding < 0 ? convEdge : 1);
+          *enc_ptr = -neighbor_encoding;
         }
       }
-
-      return (int) *((int8_t *)
-                     sc_array_index_int (mesh->edge_edge, offset));
     }
+    return 0;
   }
 #endif /* P4_TO_P8 */
   /* corners */
@@ -1698,36 +1732,48 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
     /* no neighbor present */
     if (neighbor_idx < 0 || neighbor_idx == curr_quad_id) {
-      return -10;
+      return 0;
     }
 
-    /* same size neighbor, same proc */
     if (neighbor_idx < lq) {
+      /* same size neighbor, same proc */
       tree =
         (p4est_tree_t *) sc_array_index_int (p4est->trees,
                                              mesh->quad_to_tree
                                              [neighbor_idx]);
-      quad = (p4est_quadrant_t *) sc_array_push (neighboring_quads);
+      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
       quad =
         (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
                                                  neighbor_idx -
                                                  tree->quadrants_offset);
+      *quad_ins = quad;
+
+      enc_ptr = (int *) sc_array_push (neighboring_encs);
       /* create implicitly saved encoding */
-      return (direction - lCorner) ^ encHelper;
+      neighbor_encoding = (direction - lCorner) ^ encHelper;
+      /* convert encoding */
+      neighbor_encoding++;
+      *enc_ptr = neighbor_encoding;
     }
 
-    /* same size neighbor, ghost layer */
-    if (lq < neighbor_idx && neighbor_idx < lq + gq) {
-      quad = (p4est_quadrant_t *) sc_array_push (neighboring_quads);
+    else if (lq < neighbor_idx && neighbor_idx < lq + gq) {
+      /* same size neighbor, ghost layer */
+      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
       quad =
         (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                  neighbor_idx - lq);
+      *quad_ins = quad;
+
+      enc_ptr = (int *) sc_array_push (neighboring_encs);
       /* create implicitly saved encoding */
-      return (direction - lCorner) ^ encHelper;
+      neighbor_encoding = (direction - lCorner) ^ encHelper;
+      /* convert encoding */
+      neighbor_encoding++;
+      *enc_ptr = -neighbor_encoding;
     }
 
-    /* anything else */
-    if ((lq + gq) < neighbor_idx) {
+    else if ((lq + gq) < neighbor_idx) {
+      /* anything else */
       /* normalize neighbor index */
       neighbor_idx -= (lq + gq);
       P4EST_ASSERT (0 <= neighbor_idx
@@ -1745,39 +1791,53 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       for (int i = 0; i < n_adj_quads; ++i) {
         quad_idx = *((p4est_locidx_t *)
                      sc_array_index_int (mesh->corner_quad, offset + i));
+        neighbor_encoding = *((int8_t *)
+                              sc_array_index_int (mesh->corner_corner,
+                                                  offset + i));
 
-        /* neighbor is part of quadrants owned by processor */
         if (quad_idx < lq) {
+          /* neighbor is part of quadrants owned by processor */
           tree =
             (p4est_tree_t *) sc_array_index_int (p4est->trees,
                                                  mesh->quad_to_tree
                                                  [quad_idx]);
-          quad = (p4est_quadrant_t *) sc_array_push (neighboring_quads);
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
                                                      quad_idx -
                                                      tree->quadrants_offset);
+          *quad_ins = quad;
+
+          enc_ptr = (int *) sc_array_push (neighboring_encs);
+          /* convert encoding */
+          neighbor_encoding++;
+          *enc_ptr = neighbor_encoding;
         }
-        /* neighbor is part of ghost layer */
         else {
-          quad = (p4est_quadrant_t *) sc_array_push (neighboring_quads);
+          /* neighbor is part of ghost layer */
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                      quad_idx - lq);
+          *quad_ins = quad;
+
+          enc_ptr = (int *) sc_array_push (neighboring_encs);
+          /* convert encoding */
+          neighbor_encoding++;
+          *enc_ptr = -neighbor_encoding;
         }
       }
-
-      return (int) *((int8_t *)
-                     sc_array_index_int (mesh->corner_corner, offset));
     }
+    return 0;
   }
+
   /* must not occur */
   else {
     SC_ABORT_NOT_REACHED ();
   }
 
   /* this is not reached anyways */
-  return -42;
+  return -420;
 }
 
 p4est_quadrant_t   *
