@@ -205,7 +205,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                 f1, f2, code, faceOrientation;
   int                 fc1, fc2, diagonal;
 #ifdef P4_TO_P8
-  int                 e1, e2, edgeOrientation;
+  int                 e1, edgeOrientation;
   int                 pref, pset;
 #endif /* P4_TO_P8 */
   int                 visited[P4EST_CHILDREN];
@@ -1659,7 +1659,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       *enc_ptr = -neighbor_encoding;
     }
 
-    if ((lq + gq) < neighbor_idx) {
+    if ((lq + gq) <= neighbor_idx) {
       /* anything else */
       /* normalize neighbor index */
       neighbor_idx -= (lq + gq);
@@ -1772,7 +1772,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       *enc_ptr = -neighbor_encoding;
     }
 
-    else if ((lq + gq) < neighbor_idx) {
+    else if ((lq + gq) <= neighbor_idx) {
       /* anything else */
       /* normalize neighbor index */
       neighbor_idx -= (lq + gq);
