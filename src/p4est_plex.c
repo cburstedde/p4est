@@ -502,8 +502,11 @@ static int p4est_to_plex_face_orientation[4][2] = {{-2,  0},
                                                    {-2,  0}};
 static int p4est_to_plex_position[1][4] = {{3, 1, 0, 2}};
 #else
-static int p4est_to_plex_child_id[2][9] =
+static int p4est_to_plex_child_id_orig[2][9] =
                                      {{15, 16, 18, 17, 90, 88, 87, 89, 137},
+                                      {63, 64, 125, -1, -1, -1, -1, -1, -1}};
+static int p4est_to_plex_child_id_custom[2][9] =
+                                     {{15, 16, 17, 18, 87, 88, 89, 90, 137},
                                       {63, 64, 125, -1, -1, -1, -1, -1, -1}};
 static int p4est_to_plex_face_orientation[6][8] =
                                            {{-4,  0,  3, -1, -3,  1,  2, -2},
@@ -531,7 +534,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
                          sc_array_t * out_vertex_coords,
                          sc_array_t * out_children, sc_array_t * out_parents,
                          sc_array_t * out_childids, sc_array_t * out_leaves,
-                         sc_array_t * out_remotes)
+                         sc_array_t * out_remotes, int custom_numbering)
 {
 #ifndef P4_TO_P8
   int                 dim_limits[3] = { 0, 4, 8 };
@@ -539,6 +542,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 #else
   int                 dim_limits[4] = { 0, 6, 18, 26 };
   int                 no = P4EST_FACES + P8EST_EDGES;
+  const int           (*p4est_to_plex_child_id)[9] = custom_numbering ?
+    p4est_to_plex_child_id_custom : p4est_to_plex_child_id_orig;
 #endif
   p4est_locidx_t     *cones;
   int                *orientations;
@@ -1522,7 +1527,8 @@ p4est_get_plex_data_ext (p4est_t * p4est,
                          sc_array_t * out_children,
                          sc_array_t * out_parents,
                          sc_array_t * out_childids,
-                         sc_array_t * out_leaves, sc_array_t * out_remotes)
+                         sc_array_t * out_leaves, sc_array_t * out_remotes,
+                         int custom_numbering)
 {
   int                 ctype_int = p4est_connect_type_int (ctype);
   int                 i;
@@ -1543,7 +1549,8 @@ p4est_get_plex_data_ext (p4est_t * p4est,
                            first_local_quad, out_points_per_dim,
                            out_cone_sizes, out_cones, out_cone_orientations,
                            out_vertex_coords, out_children, out_parents,
-                           out_childids, out_leaves, out_remotes);
+                           out_childids, out_leaves, out_remotes,
+                           custom_numbering);
 }
 
 void
@@ -1567,7 +1574,7 @@ p4est_get_plex_data (p4est_t * p4est, p4est_connect_type_t ctype,
                            out_cone_sizes, out_cones,
                            out_cone_orientations, out_vertex_coords,
                            out_children, out_parents, out_childids,
-                           out_leaves, out_remotes);
+                           out_leaves, out_remotes, 0);
 
   p4est_lnodes_destroy (lnodes);
   p4est_ghost_destroy (ghost);
