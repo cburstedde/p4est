@@ -248,7 +248,33 @@ p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
                                       p8est_ghost_t * ghost_layer,
                                       int degree);
 
-void                p8est_lnodes_destroy (p8est_lnodes_t *);
+void                p8est_lnodes_destroy (p8est_lnodes_t * lnodes);
+
+/** Partition using weights based on the number of nodes assigned to each
+ * element in lnodes
+ *
+ * \param[in,out] p8est                    the forest to be repartitioned
+ * \param[in]     ghost                    the ghost layer
+ * \param[in]     degree                   the degree that would be passed to p8est_lnodes_new()
+ * \param[in]     partition_for_coarsening whether the partition should allow
+ *                                         coarsening (i.e. group siblings who
+ *                                         might merge)
+ */
+void                p8est_partition_lnodes (p8est_t * p8est,
+                                            p8est_ghost_t * ghost, int degree,
+                                            int partition_for_coarsening);
+
+/** Partition using weights that are broken down by where they reside: in
+ * volumes, on faces, on edges, or on corners.
+ */
+void                p8est_partition_lnodes_detailed (p8est_t * p4est,
+                                                     p8est_ghost_t * ghost,
+                                                     int nodes_per_volume,
+                                                     int nodes_per_face,
+                                                     int nodes_per_edge,
+                                                     int nodes_per_corner,
+                                                     int
+                                                     partition_for_coarsening);
 
 /** Expand the ghost layer to include the support of all nodes supported on
  * the local partition.
@@ -371,7 +397,7 @@ p8est_lnodes_rank_array_index_int (sc_array_t * array, int it)
   P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
 
   return (p8est_lnodes_rank_t *)
-    (array->array + sizeof (p8est_lnodes_rank_t) * it);
+    (array->array + sizeof (p8est_lnodes_rank_t) * (size_t) it);
 }
 
 /** Return a pointer to a lnodes_rank array element indexed by a size_t.

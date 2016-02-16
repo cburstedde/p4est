@@ -141,7 +141,7 @@ v=`echo "$v" |sed 's/^v//'`
 # Don't declare a version "dirty" merely because a time stamp has changed.
 git status > /dev/null 2>&1
 
-dirty=`sh -c 'git diff-index --name-only HEAD' 2>/dev/null` || dirty=
+dirty=`sh -c 'git diff-index --name-only HEAD --ignore-submodules=untracked' 2>/dev/null` || dirty=
 case "$dirty" in
   '') ;;
   *) # Append the suffix only if there isn't one already.

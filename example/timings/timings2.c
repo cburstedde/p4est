@@ -260,6 +260,7 @@ main (int argc, char **argv)
   int                 first_argc;
   int                 test_multiple_orders;
   int                 skip_nodes, skip_lnodes;
+  int                 repartition_lnodes;
 
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -316,6 +317,9 @@ main (int argc, char **argv)
                          "Also time lnodes for orders 2, 4, and 8");
   sc_options_add_switch (opt, 0, "skip-nodes", &skip_nodes, "Skip nodes");
   sc_options_add_switch (opt, 0, "skip-lnodes", &skip_lnodes, "Skip lnodes");
+  sc_options_add_switch (opt, 0, "repartition-lnodes",
+                         &repartition_lnodes,
+                         "Repartition to load-balance lnodes");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -485,7 +489,7 @@ main (int argc, char **argv)
           break;
         }
         P4EST_GLOBAL_PRODUCTIONF ("mpirun -np %3d %s%s -c %10s -l %2d\n",
-                                  r->mpisize, argv[0],
+                                  r->mpisize, P4EST_STRING "_timings",
                                   oldschool ? " --oldschool" : "",
                                   config_name, r->level);
       }
@@ -636,6 +640,12 @@ main (int argc, char **argv)
     p4est_nodes_destroy (nodes);
   }
 
+  if (repartition_lnodes) {
+    p4est_partition_lnodes (p4est, ghost, 1, 0);
+    p4est_ghost_destroy (ghost);
+    ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  }
+
   /* time the lnode numbering */
   if (!skip_lnodes) {
     sc_flops_snap (&fi, &snapshot);
@@ -649,12 +659,22 @@ main (int argc, char **argv)
   }
 
   if (test_multiple_orders) {
+    if (repartition_lnodes) {
+      p4est_partition_lnodes (p4est, ghost, 3, 0);
+      p4est_ghost_destroy (ghost);
+      ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+    }
     sc_flops_snap (&fi, &snapshot);
     lnodes = p4est_lnodes_new (p4est, ghost, 3);
     sc_flops_shot (&fi, &snapshot);
     sc_stats_set1 (&stats[TIMINGS_LNODES3], snapshot.iwtime, "L-Nodes 3");
     p4est_lnodes_destroy (lnodes);
 
+    if (repartition_lnodes) {
+      p4est_partition_lnodes (p4est, ghost, 7, 0);
+      p4est_ghost_destroy (ghost);
+      ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+    }
     sc_flops_snap (&fi, &snapshot);
     lnodes = p4est_lnodes_new (p4est, ghost, 7);
     sc_flops_shot (&fi, &snapshot);

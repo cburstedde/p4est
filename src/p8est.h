@@ -127,6 +127,8 @@ typedef struct p8est
   sc_MPI_Comm         mpicomm;          /**< MPI communicator */
   int                 mpisize,          /**< number of MPI processes */
                       mpirank;          /**< this process's MPI rank */
+  int                 mpicomm_owned;    /**< whether this communicator is
+                                             owned by the forest */
   size_t              data_size;        /**< size of per-quadrant p.user_data
                      (see p8est_quadrant_t::p8est_quadrant_data::user_data) */
   void               *user_pointer;     /**< convenience pointer for users,

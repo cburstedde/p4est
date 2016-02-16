@@ -1,0 +1,42 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Check on p4est_complete_subtree
+desc: |-
+  I've added a branch fix-complete-subtree that introduces a program
+  test/p4est_test_complete_subtree.  It crashes for me on 2 processes.
+  Basically I'm calling complete_subtree with an array that is one quadrant
+  and would expect it to fill the range between first_desc and last_desc in
+  the coarsest possible way, including that quadrant.
+  
+  I also have a proposed fix in 0211af53fc429d0deb586c761d4b5e09acc62fdf
+  that I'm not triggering with this version of the test, but it should be
+  possible to reproduce the assertion child_id != 0 without the fix.
+  But then the fix leaves the following question: if I replace a quadrant
+  by its sibling with child id 0, I may be moving it before first_desc,
+  thus creating a quadrant that is invalid for that tree.  Is this issue
+  being considered?
+  
+  It is also possible that the crash in the test is not complete_subtree's
+  fault but goes back to find_higher_bound; at least worth checking.
+  
+  I'm also suggesting to expand the docs on complete_subtree to clarify
+  what legal input data looks like (the p4est need not be valid),
+  especially regarding the level statistics in the tree.
+type: :bugfix
+component: p4est
+release: 
+reporter: Carsten Burstedde <burstedde@ins.uni-bonn.de>
+status: :closed
+disposition: :fixed
+creation_time: 2016-02-03 10:48:13.169545 Z
+references: []
+
+id: c27b6579bbf507787146bd88e1b2c4f998a9ea07
+log_events: 
+- - 2016-02-03 10:48:14.465530 Z
+  - Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  - created
+  - ""
+- - 2016-02-04 15:58:59.711115 Z
+  - Tobin Isaac <tisaac@ices.utexas.edu>
+  - closed with disposition fixed
+  - Carsten was right, the new algorithm had assumptions that were only correct for input arrays that were already complete; there was also some buggy usage of memmove() and the counters were not properly updated when used from completion.
