@@ -224,7 +224,11 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   cz = info->sides.elem_count;
   P4EST_ASSERT (cz > 0);
   P4EST_ASSERT (info->tree_boundary || cz == P4EST_CHILDREN);
+
   if (cz == 1) {
+    side1 = (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, 0);
+    qid1 = side1->quadid;
+    mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
     return;
   }
   conn = info->p4est->connectivity;
@@ -235,6 +239,15 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     /* This corner is inside an inter-tree face */
     if (cz == P4EST_HALF) {
       /* This is a tree face boundary, no corner neighbors exist */
+      for (i = 0; i < P4EST_HALF; ++i) {
+        side1 =
+          (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, i);
+        qid1 = side1->quadid;
+        P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                           side1->corner] == -1);
+        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+      }
       return;
     }
     P4EST_ASSERT (cz == P4EST_CHILDREN);
@@ -331,6 +344,19 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 
 #ifdef P4_TO_P8
   if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+    if (cz == 2) {
+      /* This is a tree edge boundary, no corner neighbors exist */
+      for (i = 0; i < 2; ++i) {
+        side1 =
+          (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, i);
+        qid1 = side1->quadid;
+        P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                           side1->corner] == -1);
+        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+      }
+      return;
+    }
     /* Tree corner neighbors across an edge are not implemented: set to -2 */
     for (zz = 0; zz < cz; ++zz) {
       side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
@@ -352,7 +378,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     int                 nface[P4EST_DIM];
 #ifdef P4_TO_P8
     int8_t              which_corner;
-    int                 n, ncornere[P4EST_DIM], nedge[P4EST_DIM];
+    int                 ncornere[P4EST_DIM], nedge[P4EST_DIM];
     p4est_locidx_t      netree[P4EST_DIM];
 #endif /* P4_TO_P8 */
     int                 ignore;

@@ -94,6 +94,7 @@ SC_EXTERN_C_BEGIN;
  * in corner_quad, and the corner number from the neighbor as corner_corner.
  *
  * Corners with no diagonal neighbor at all are assigned the value -1.
+ * Corner-neighbors for hanging nodes are assigned the value -3.
  */
 typedef struct
 {

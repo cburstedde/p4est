@@ -82,8 +82,8 @@ SC_EXTERN_C_BEGIN;
  * For same-tree same/double-size edge neighbors, we record their number in
  * quad_to_edge by the same convention as described for quad_to_quad above.
  *
- * For half-size neighbors and all inter-tree neighbors, the quad_to_edge value
- * is in
+ * For half and double-size neighbors and all inter-tree neighbors, the
+ * quad_to_edge value is in
  *    local_num_quadrants + local_num_ghosts + [0 .. local_num_edges - 1]
  * where the offset by local quadrants and ghosts is implicitly subtracted.
  * It indexes into edge_offset, which encodes a group of edge neighbors.
@@ -99,10 +99,9 @@ SC_EXTERN_C_BEGIN;
  *          Is it what the respective neighbor sees the small quadrant as?
  * 3. A value of e = -24..-1 indicates two half-size neighbors.
  *    In this case the corresponding edge_to_quad index points into the
- *    quad_to_hedge array that stores two quadrant numbers per index,
- *    and the orientation of the smaller edges follows from 24 + e.
- *    The entries of quad_to_hedge encode between local and ghost quadrant
- *    in the same way as the quad_to_quad values described above.
+ *    edge_edge and edge_quad arrays storing two quadrant numbers as well as
+ *    the orientation of the smaller edges follows from -24 + 12 * r + ne, where
+ *    r and ne are defined as above.
  *    TODO: In what sequence are these neighbors stored in quad_to_hedge?
  *          Compare this is the same convention as with quad_to_half.
  *
@@ -131,6 +130,7 @@ SC_EXTERN_C_BEGIN;
  * Inter-tree-edge corners are NOT IMPLEMENTED and are assigned the value -2.
  * Currently we do NOT exclude inter-tree-corners of inter-tree-edge neighbors.
  * Corners with no diagonal neighbor at all are assigned the value -1.
+ * Corner-neighbors for hanging nodes are assigned the value -3.
  */
 typedef struct
 {
