@@ -7,12 +7,11 @@ if P4EST_ENABLE_BUILD_2D
 bin_PROGRAMS += \
   example/steps/p4est_step1 \
   example/steps/p4est_step2 \
+  example/steps/p4est_step3 \
   example/steps/p4est_step4
-## Does not compile on JUQUEEN due to 1. / 0. construct
-## example/steps/p4est_step3 \
 example_steps_p4est_step1_SOURCES = example/steps/p4est_step1.c
 example_steps_p4est_step2_SOURCES = example/steps/p4est_step2.c
-## example_steps_p4est_step3_SOURCES = example/steps/p4est_step3.c
+example_steps_p4est_step3_SOURCES = example/steps/p4est_step3.c
 example_steps_p4est_step4_SOURCES = example/steps/p4est_step4.c
 
 LINT_CSOURCES += $(example_steps_p4est_step1_SOURCES) \
@@ -25,12 +24,11 @@ if P4EST_ENABLE_BUILD_3D
 bin_PROGRAMS += \
   example/steps/p8est_step1 \
   example/steps/p8est_step2 \
+  example/steps/p8est_step3 \
   example/steps/p8est_step4
-## Does not compile on JUQUEEN due to 1. / 0. construct
-## example/steps/p8est_step3 \
 example_steps_p8est_step1_SOURCES = example/steps/p8est_step1.c
 example_steps_p8est_step2_SOURCES = example/steps/p8est_step2.c
-## example_steps_p8est_step3_SOURCES = example/steps/p8est_step3.c
+example_steps_p8est_step3_SOURCES = example/steps/p8est_step3.c
 example_steps_p8est_step4_SOURCES = example/steps/p8est_step4.c
 
 LINT_CSOURCES += $(example_steps_p8est_step1_SOURCES) \

@@ -48,6 +48,9 @@
 #include <p8est_iterate.h>
 #endif
 
+/** We had 1. / 0. here to create a NaN but that is not portable. */
+static const double step3_invalid = -1.;
+
 /* In this example we store data with each quadrant/octant. */
 
 /** Per-quadrant data for this example.
@@ -402,7 +405,7 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
     parent_data = (step3_data_t *) incoming[0]->p.user_data;
     parent_data->u = 0.;
     for (j = 0; j < P4EST_DIM; j++) {
-      parent_data->du[j] = (1. / 0.);
+      parent_data->du[j] = step3_invalid;
 
     }
     for (i = 0; i < P4EST_CHILDREN; i++) {
@@ -768,7 +771,7 @@ step3_reset_derivatives (p4est_iter_volume_info_t * info, void *user_data)
   int                 j;
 
   for (j = 0; j < P4EST_DIM; j++) {
-    data->du[j] = (1. / 0.);
+    data->du[j] = step3_invalid;
   }
 }
 
