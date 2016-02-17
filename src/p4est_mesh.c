@@ -227,6 +227,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 
   if (cz == 1) {
     side1 = (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, 0);
+    P4EST_ASSERT (!side1->is_ghost);
     qid1 = side1->quadid;
     mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
     return;
@@ -242,11 +243,13 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       for (i = 0; i < P4EST_HALF; ++i) {
         side1 =
           (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, i);
-        qid1 = side1->quadid;
-        P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                           side1->corner] == -1);
-        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+        if (!side1->is_ghost) {
+          qid1 = side1->quadid;
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                             side1->corner] == -1);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+        }
       }
       return;
     }
@@ -349,11 +352,13 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       for (i = 0; i < 2; ++i) {
         side1 =
           (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides, i);
-        qid1 = side1->quadid;
-        P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-        P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                           side1->corner] == -1);
-        mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+        if (!side1->is_ghost) {
+          qid1 = side1->quadid;
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                             side1->corner] == -1);
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+        }
       }
       return;
     }
