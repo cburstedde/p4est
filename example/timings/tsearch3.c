@@ -43,6 +43,10 @@
 #include <sc_options.h>
 #include <sc_statistics.h>
 
+/** We had 1. / 0. here to create a NaN but that is not portable. */
+#define TSEARCH_INVALID (-1.)
+static const double tsearch_invalid = TSEARCH_INVALID;
+
 static int          refine_level, level_shift;
 
 typedef enum tsearch_stats
@@ -402,9 +406,9 @@ tsearch_setup (tsearch_global_t * tsg)
   int                 retval;
   double              nref[P4EST_DIM];
 #endif
-  double              bbox[3][2] = { {1. / 0., -1. / 0.},
-  {1. / 0., -1. / 0.},
-  {1. / 0., -1. / 0.}
+  double              bbox[3][2] = { {TSEARCH_INVALID, TSEARCH_INVALID},
+  {TSEARCH_INVALID, TSEARCH_INVALID},
+  {TSEARCH_INVALID, TSEARCH_INVALID}
   };
 
   mlen = 1. / P4EST_ROOT_LEN;
@@ -449,7 +453,7 @@ tsearch_setup (tsearch_global_t * tsg)
   }
   else {
     tsg->R2 = 0.;
-    tsg->r2 = 1. / 0.;
+    tsg->r2 = tsearch_invalid;
     for (k = 0; k < P4EST_CHILDREN; ++k) {
       p4est_quadrant_corner_node (q, k, &c);
       ref[0] = c.x * mlen - 1. + (tsg->which_tree & 1);

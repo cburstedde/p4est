@@ -357,7 +357,7 @@ p4est_lnodes_rank_array_index_int (sc_array_t * array, int it)
   P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
 
   return (p4est_lnodes_rank_t *)
-    (array->array + sizeof (p4est_lnodes_rank_t) * it);
+    (array->array + sizeof (p4est_lnodes_rank_t) * (size_t) it);
 }
 
 /** Return a pointer to a lnodes_rank array element indexed by a size_t.
