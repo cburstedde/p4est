@@ -89,6 +89,7 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_GLOIDX_MIN INT64_MIN
 #define P4EST_GLOIDX_MAX INT64_MAX
 #define P4EST_GLOIDX_1   ((p4est_gloidx_t) 1)
+#define P4EST_GLOIDX_ABS llabs
 
 /* some error checking possibly specific to p4est */
 #ifdef P4EST_ENABLE_DEBUG

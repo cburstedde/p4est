@@ -2801,8 +2801,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         quad_id_near_cut = partition_new[i];
       }
       else {
-        if (abs (partition_new[i] - partition_now[rank]) <
-            abs (partition_new[i] - partition_now[rank + 1] + 1)) {
+        if (P4EST_GLOIDX_ABS (partition_new[i] - partition_now[rank]) <
+            P4EST_GLOIDX_ABS (partition_new[i] - partition_now[rank + 1] +
+                              1)) {
           quad_id_near_cut = partition_now[rank];
         }
         else {
