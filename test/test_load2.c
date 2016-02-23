@@ -89,7 +89,8 @@ main (int argc, char **argv)
   if (filename != NULL) {
     /* load the file */
     p4est = p4est_load_ext (filename, mpicomm, 0, 0,
-                            autopartition, broadcasthead, NULL, &connectivity);
+                            autopartition, broadcasthead,
+                            NULL, &connectivity);
 
     /* and destroy the forest read */
     p4est_destroy (p4est);
