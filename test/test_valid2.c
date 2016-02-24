@@ -151,6 +151,31 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_connectivity_destroy (conn);
 }
 
+static void
+check_int_types (void)
+{
+  p4est_qcoord_t      qco, qobs;
+  p4est_topidx_t      top, tobs;
+  p4est_locidx_t      loc, lobs;
+  p4est_gloidx_t      glo, gobs;
+
+  qco = P4EST_QCOORD_MAX;
+  qobs = P4EST_QCOORD_ABS (qco);
+  SC_CHECK_ABORT (qco == qobs, "Failed qcoord abs function");
+
+  top = P4EST_TOPIDX_MAX;
+  tobs = P4EST_TOPIDX_ABS (top);
+  SC_CHECK_ABORT (top == tobs, "Failed topidx abs function");
+
+  loc = P4EST_LOCIDX_MAX;
+  lobs = P4EST_LOCIDX_ABS (loc);
+  SC_CHECK_ABORT (loc == lobs, "Failed locidx abs function");
+
+  glo = P4EST_GLOIDX_MAX;
+  gobs = P4EST_GLOIDX_ABS (glo);
+  SC_CHECK_ABORT (glo == gobs, "Failed gloidx abs function");
+}
+
 int
 main (int argc, char **argv)
 {
@@ -170,6 +195,7 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
   (void) check_backward_compatibility ();
+  check_int_types ();
 
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),
