@@ -220,6 +220,10 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   p4est_connectivity_t *conn;
   sc_array_t         *trees;
 
+  conn = info->p4est->connectivity;
+  trees = info->p4est->trees;
+  cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
+
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
   P4EST_ASSERT (cz > 0);
@@ -235,9 +239,6 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
     return;
   }
-  conn = info->p4est->connectivity;
-  trees = info->p4est->trees;
-  cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
   if (info->tree_boundary == P4EST_CONNECT_FACE) {
     /* This corner is inside an inter-tree face */

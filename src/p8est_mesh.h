@@ -102,6 +102,8 @@ SC_EXTERN_C_BEGIN;
  *    edge_edge and edge_quad arrays storing two quadrant numbers as well as
  *    the orientation of the smaller edges follows from -24 + 12 * r + ne, where
  *    r and ne are defined as above.
+ * Edges with no diagonal neighbor at all are assigned the value -3.
+ * Edge-neighbors for hanging nodes are assigned the value -1.
  *    TODO: In what sequence are these neighbors stored in quad_to_hedge?
  *          Compare this is the same convention as with quad_to_half.
  *
