@@ -1095,6 +1095,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             }
           }
           visited[j] = 1;
+          side1 = side2 = NULL;
         }
       }
     }
