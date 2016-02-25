@@ -1502,13 +1502,13 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   p4est_locidx_t      limit;
   switch (ghost->btype) {
   case P4EST_CONNECT_FACE:
-    P4EST_ASSERT (direction > 0 && direction < P4EST_FACES);
+    P4EST_ASSERT (direction >= 0 && direction < P4EST_FACES);
     break;
 
 #ifdef P4_TO_P8
   case P8EST_CONNECT_EDGE:
     limit = P4EST_FACES + P8EST_EDGES;
-    P4EST_ASSERT (direction > 0 && direction < limit);
+    P4EST_ASSERT (direction >= 0 && direction < limit);
     break;
 #endif /* P4_TO_P8 */
 
@@ -1518,7 +1518,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 #else /* P4_TO_P8 */
     limit = P4EST_FACES + P4EST_CHILDREN;
 #endif /* P4_TO_P8 */
-    P4EST_ASSERT (direction < limit);
+    P4EST_ASSERT (direction >= 0 && direction < limit);
     break;
 
   default:
