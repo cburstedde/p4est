@@ -45,7 +45,7 @@ static const int    refine_level = 5;
 static const int    refine_level = 4;
 #endif
 
-static p4est_balance_type_t
+static              p4est_balance_type_t
 check_backward_compatibility (void)
 {
   p4est_balance_type_t b;
