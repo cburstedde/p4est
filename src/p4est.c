@@ -2960,8 +2960,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         quad_id_near_cut = partition_new[i];
       }
       else {
-        if (abs (partition_new[i] - partition_now[rank]) <
-            abs (partition_new[i] - partition_now[rank + 1] + 1)) {
+        if (P4EST_GLOIDX_ABS (partition_new[i] - partition_now[rank]) <
+            P4EST_GLOIDX_ABS (partition_new[i] - partition_now[rank + 1] +
+                              1)) {
           quad_id_near_cut = partition_now[rank];
         }
         else {
@@ -3276,7 +3277,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     if (0 < current_proc && current_proc < num_procs) {
       /* if any process but first */
       num_quadrants_in_proc[current_proc] += correction[current_proc];
-      num_moved_quadrants += (p4est_gloidx_t) abs (correction[current_proc]);
+      /* input is just a locidx, but the result is gloidx so we cast cleanly */
+      num_moved_quadrants += P4EST_GLOIDX_ABS (correction[current_proc]);
     }
     if (next_proc < num_procs) {
       /* if first process or next process is feasible */
