@@ -1532,14 +1532,22 @@ p4est_get_plex_data_ext (p4est_t * p4est,
 {
   int                 ctype_int = p4est_connect_type_int (ctype);
   int                 i;
+  int                 created_ghost = 0;
 
-  *ghost = p4est_ghost_new (p4est, ctype);
-  *lnodes = p4est_lnodes_new (p4est, *ghost, -ctype_int);
-  if (overlap) {
-    p4est_ghost_support_lnodes (p4est, *lnodes, *ghost);
+  if (!*ghost) {
+    *ghost = p4est_ghost_new (p4est, ctype);
+    created_ghost = 1;
   }
-  for (i = 1; i < overlap; i++) {
-    p4est_ghost_expand_by_lnodes (p4est, *lnodes, *ghost);
+  if (!*lnodes) {
+    *lnodes = p4est_lnodes_new (p4est, *ghost, -ctype_int);
+  }
+  if (created_ghost) {
+    if (overlap) {
+      p4est_ghost_support_lnodes (p4est, *lnodes, *ghost);
+    }
+    for (i = 1; i < overlap; i++) {
+      p4est_ghost_expand_by_lnodes (p4est, *lnodes, *ghost);
+    }
   }
   if (ctype != P4EST_CONNECT_FULL) {
     p4est_lnodes_destroy (*lnodes);
