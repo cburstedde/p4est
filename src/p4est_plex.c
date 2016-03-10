@@ -1480,7 +1480,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
                                                      Klocal * V));
         P4EST_FREE (mirror_data);
       }
-      for (il = 0; il < num_global; il++) {
+      for (il = 0; il < num_global_plus_children; il++) {
         p4est_locidx_t      localpid = il + K;
 
         p = plex_to_proc[localpid];
