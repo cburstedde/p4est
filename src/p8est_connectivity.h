@@ -268,11 +268,20 @@ extern const int    p8est_edge_faces[12][2];
 /** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
 
-/** Store the face corner numbers for the faces touching a tree edge. */
+/** Store the edge corner numbers 0..1 for the corners touching a tree edge */
+extern const int    p8est_edge_edge_corners[12][8];
+
+/** Store the face corner numbers 0..3 for the faces touching a tree edge. */
 extern const int    p8est_edge_face_corners[12][6][2];
 
-/** Store the face edge numbers for the faces touching a tree edge. */
+/** Store the face edge numbers 0..3 for the faces touching a tree edge. */
 extern const int    p8est_edge_face_edges[12][6];
+
+/** Store the sets of permutations that occur */
+extern const int    p8est_edge_corner_permutation_sets[2];
+
+/** Store the two possible permutations that occur */
+extern const int    p8est_edge_corner_permutations[2][2];
 
 /** Store the face numbers 0..5 for each tree corner. */
 extern const int    p8est_corner_faces[8][3];
@@ -319,12 +328,22 @@ int                 p8est_connectivity_face_neighbor_corner_orientation
 /** Transform an edge across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.
  * \param [in] e    A edge number in 0..11.
- * \param [in] f    A face number that touches the corner \a c.
+ * \param [in] f    A face number that touches the edge \a e.
  * \param [in] nf   A neighbor face that is on the other side of \f.
  * \param [in] o    The orientation between tree boundary faces \a f and \nf.
  */
 int                 p8est_connectivity_face_neighbor_edge_orientation
   (int e, int f, int nf, int o);
+
+/** Transform a corner across one of the adjacent edges into a neighbor tree.
+ * This version expects the neighbor edge and orientation separately.
+ * \param [in] c    A corner number in 0..7.
+ * \param [in] e    A edge number that touches the corner \a c.
+ * \param [in] ne   A neighbor edge that is on the other side of \e.
+ * \param [in] o    The orientation between tree boundary faces \a e and \ne.
+ */
+int                 p8est_connectivity_edge_neighbor_corner_orientation
+  (int c, int e, int ne, int o);
 
 /** Allocate a connectivity structure.
  * The attribute fields are initialized to NULL.
@@ -394,8 +413,9 @@ p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t *
 
 /** Destroy a connectivity structure.  Also destroy all attributes.
  */
-void                p8est_connectivity_destroy (p8est_connectivity_t *
-                                                connectivity);
+void
+ 
+             p8est_connectivity_destroy (p8est_connectivity_t * connectivity);
 
 /** Allocate or free the attribute fields in a connectivity.
  * \param [in,out] conn         The conn->*_to_attr fields must either be NULL
@@ -403,29 +423,54 @@ void                p8est_connectivity_destroy (p8est_connectivity_t *
  * \param [in] bytes_per_tree   If 0, tree_to_attr is freed (being NULL is ok).
  *                              If positive, requested space is allocated.
  */
-void                p8est_connectivity_set_attr (p8est_connectivity_t * conn,
-                                                 size_t bytes_per_tree);
+void
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ p8est_connectivity_set_attr (p8est_connectivity_t * conn,
+                              size_t bytes_per_tree);
 
 /** Examine a connectivity structure.
  * \return  Returns true if structure is valid, false otherwise.
  */
-int                 p8est_connectivity_is_valid (p8est_connectivity_t *
-                                                 connectivity);
+int
+ 
+ 
+            p8est_connectivity_is_valid (p8est_connectivity_t * connectivity);
 
 /** Check two connectivity structures for equality.
  * \return          Returns true if structures are equal, false otherwise.
  */
-int                 p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
-                                                 p8est_connectivity_t *
-                                                 conn2);
+int
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+p8est_connectivity_is_equal (p8est_connectivity_t * conn1,
+                             p8est_connectivity_t * conn2);
 
 /** Write connectivity to a sink object.
  * \param [in] conn     The connectivity to be written.
  * \param [in,out] sink The connectivity is written into this sink.
  * \return              0 on success, nonzero on error.
  */
-int                 p8est_connectivity_sink (p8est_connectivity_t * conn,
-                                             sc_io_sink_t * sink);
+int
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  p8est_connectivity_sink (p8est_connectivity_t * conn, sc_io_sink_t * sink);
 
 /** Allocate memory and store the connectivity information there.
  * \param [in] conn     The connectivity structure to be exported to memory.
@@ -441,9 +486,17 @@ sc_array_t         *p8est_connectivity_deflate (p8est_connectivity_t * conn,
  * \param [in] connectivity     Valid connectivity structure.
  * \return                      Returns 0 on success, nonzero on file error.
  */
-int                 p8est_connectivity_save (const char *filename,
-                                             p8est_connectivity_t *
-                                             connectivity);
+int
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+p8est_connectivity_save (const char *filename,
+                         p8est_connectivity_t * connectivity);
 
 /** Read connectivity from a source object.
  * \param [in,out] source       The connectivity is read from this source.
@@ -560,8 +613,11 @@ p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn,
  *                          2: q' = q - 1
  *                          3: q' = 2 - q
  */
-void                p8est_expand_face_transform (int iface, int nface,
-                                                 int ftransform[]);
+void
+ 
+ 
+ 
+         p8est_expand_face_transform (int iface, int nface, int ftransform[]);
 
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  itree       The number of the originating tree.
@@ -572,32 +628,49 @@ void                p8est_expand_face_transform (int iface, int nface,
  *              [6]..[8]    Edge reverse flag for axes t1, t2; face code for n.
  * \return                  The face neighbor tree if it exists, -1 otherwise.
  */
-p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
-                                               connectivity,
-                                               p4est_topidx_t itree,
-                                               int iface, int ftransform[]);
+p4est_topidx_t
+ 
+ 
+ p8est_find_face_transform (p8est_connectivity_t *
+                            connectivity,
+                            p4est_topidx_t itree,
+                            int iface, int ftransform[]);
 
 /** Fills an array with information about edge neighbors.
  * \param [in] itree    The number of the originating tree.
  * \param [in] iedge    The number of the originating edge.
  * \param [in,out] ei   A p8est_edge_info_t structure with initialized array.
  */
-void                p8est_find_edge_transform (p8est_connectivity_t *
-                                               connectivity,
-                                               p4est_topidx_t itree,
-                                               int iedge,
-                                               p8est_edge_info_t * ei);
+void
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ p8est_find_edge_transform (p8est_connectivity_t *
+                            connectivity,
+                            p4est_topidx_t itree,
+                            int iedge, p8est_edge_info_t * ei);
 
 /** Fills an array with information about corner neighbors.
  * \param [in] itree    The number of the originating tree.
  * \param [in] icorner  The number of the originating corner.
  * \param [in,out] ci   A p8est_corner_info_t structure with initialized array.
  */
-void                p8est_find_corner_transform (p8est_connectivity_t *
-                                                 connectivity,
-                                                 p4est_topidx_t itree,
-                                                 int icorner,
-                                                 p8est_corner_info_t * ci);
+void
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ p8est_find_corner_transform (p8est_connectivity_t *
+                              connectivity,
+                              p4est_topidx_t itree,
+                              int icorner, p8est_corner_info_t * ci);
 
 /** Internally connect a connectivity based on tree_to_vertex information.
  * Periodicity that is not inherent in the list of vertices will be lost.
@@ -631,9 +704,16 @@ void                p8est_connectivity_reduce (p8est_connectivity_t * conn);
  *                                     whose index will be j after the
  *                                     permutation.
  */
-void                p8est_connectivity_permute (p8est_connectivity_t * conn,
-                                                sc_array_t * perm,
-                                                int is_current_to_new);
+void
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ p8est_connectivity_permute (p8est_connectivity_t * conn,
+                             sc_array_t * perm, int is_current_to_new);
 
 #ifdef P4EST_WITH_METIS
 
@@ -659,9 +739,17 @@ void                p8est_connectivity_permute (p8est_connectivity_t * conn,
  * \param [in]     ctype      determines when an edge exists in the dual graph
  *                            of the connectivity structure.
  */
-void                p8est_connectivity_reorder (MPI_Comm comm, int k,
-                                                p8est_connectivity_t * conn,
-                                                p8est_connect_type_t ctype);
+void
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ p8est_connectivity_reorder (MPI_Comm comm, int k,
+                             p8est_connectivity_t * conn,
+                             p8est_connect_type_t ctype);
 
 #endif /* P4EST_WITH_METIS */
 
@@ -680,13 +768,20 @@ void                p8est_connectivity_reorder (MPI_Comm comm, int k,
  *                             of p8est_connectivity_t to understand
  *                             orientation).
  */
-void                p8est_connectivity_join_faces (p8est_connectivity_t *
-                                                   conn,
-                                                   p4est_topidx_t tree_left,
-                                                   p4est_topidx_t tree_right,
-                                                   int face_left,
-                                                   int face_right,
-                                                   int orientation);
+void
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ p8est_connectivity_join_faces (p8est_connectivity_t *
+                                conn,
+                                p4est_topidx_t tree_left,
+                                p4est_topidx_t tree_right,
+                                int face_left,
+                                int face_right, int orientation);
 
 /** p8est_connectivity_is_equivalent
  * This function compares two connectivities for equivalence: it returns
@@ -698,10 +793,17 @@ void                p8est_connectivity_join_faces (p8est_connectivity_t *
  * \param[in]      conn1    a valid connectivity
  * \param[out]     conn2    a valid connectivity
  */
-int                 p8est_connectivity_is_equivalent (p8est_connectivity_t *
-                                                      conn1,
-                                                      p8est_connectivity_t *
-                                                      conn2);
+int
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+p8est_connectivity_is_equivalent (p8est_connectivity_t *
+                                  conn1, p8est_connectivity_t * conn2);
 
 /** Return a pointer to a p8est_edge_transform_t array element. */
 /*@unused@*/

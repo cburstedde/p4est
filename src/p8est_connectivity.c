@@ -108,6 +108,19 @@ const int           p8est_edge_corners[12][2] =
  { 1, 5 },
  { 2, 6 },
  { 3, 7 }};
+const int           p8est_edge_edge_corners[12][8] =
+{{  0,  1, -1, -1, -1, -1, -1, -1},
+ { -1, -1,  0,  1, -1, -1, -1, -1},
+ { -1, -1, -1, -1,  0,  1, -1, -1},
+ { -1, -1, -1, -1, -1, -1,  0,  1},
+ {  0, -1,  1, -1, -1, -1, -1, -1},
+ { -1,  0, -1,  1, -1, -1, -1, -1},
+ { -1, -1, -1, -1,  0, -1,  1, -1},
+ { -1, -1, -1, -1, -1,  0, -1,  1},
+ {  0, -1, -1, -1,  1, -1, -1, -1},
+ { -1,  0, -1, -1, -1,  1, -1, -1},
+ { -1, -1,  0, -1, -1, -1,  1, -1},
+ { -1, -1, -1,  0, -1, -1, -1,  1}};
 const int           p8est_edge_face_corners[12][6][2] =
 {{{ -1, -1 }, { -1, -1 }, {  0,  1 }, { -1, -1 }, {  0,  1 }, { -1, -1 }},
  {{ -1, -1 }, { -1, -1 }, { -1, -1 }, {  0,  1 }, {  2,  3 }, { -1, -1 }},
@@ -134,6 +147,11 @@ const int           p8est_edge_face_edges[12][6] =
  { -1,  2,  3, -1, -1, -1 },
  {  3, -1, -1,  2, -1, -1 },
  { -1,  3, -1,  3, -1, -1 }};
+const int           p8est_edge_corner_permutation_sets[2] =
+{0, 1};
+const int           p8est_edge_corner_permuations[2][2] =
+{{0, 1},
+ {1, 0}};
 
 const int           p8est_corner_faces[8][3] =
 {{ 0, 2, 4 },
@@ -1070,6 +1088,26 @@ p8est_connectivity_face_neighbor_edge_orientation (int e, int f,
   P4EST_ASSERT (0 <= nfe && nfe < P4EST_HALF);
 
   return p8est_face_edges[nf][nfe];
+}
+
+int
+p8est_connectivity_edge_neighbor_corner_orientation (int c, int e,
+                                                     int ne, int o)
+{
+  int                 ec, nec, pset;
+
+  P4EST_ASSERT (0 <= c && e < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
+  P4EST_ASSERT (0 <= ne && ne < P8EST_EDGES);
+
+  ec = p8est_edge_edge_corners[e][c];
+  P4EST_ASSERT (0 < ec && ec < 2);
+
+  pset = p8est_edge_corner_permutation_sets[o];
+  nec = p8est_edge_corner_permuations[pset][ec];
+  P4EST_ASSERT (0 < nec && nec < 2);
+
+  return p8est_edge_corners[ne][nec];
 }
 
 void
