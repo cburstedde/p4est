@@ -896,18 +896,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           ec1 = eid1;
           P4EST_ASSERT (side2->treeid == side1->treeid);
 
-          /* edge is diagonal opposite if edge indeces sum up to
-           *  3 for an edge parallel to x-axis
-           * 11 for an edge parallel to y-axis
-           * 19 for an edge parallel to z-axis
-           */
-          int                 edgesum[3] = { 3, 11, 19 };
-          ctr = -1;
-          while (ec1 >= 0) {
-            ec1 -= P4EST_HALF;
-            ++ctr;
-          }
-          if (eid1 + eid2 != edgesum[ctr]) {
+          /* edge is diagonal opposite if e1 XOR 3 = e2 */
+          if ((eid1 ^ 3) != eid2) {
             side2 = NULL;
             continue;
           }
