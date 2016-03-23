@@ -173,7 +173,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 #ifdef P4_TO_P8
   int                 printEdges = 1;
 #endif /* P4_TO_P8 */
-  int                 printCorners = 1;
+  int                 printCorners = 0;
   int                 direction = 0;
   int                 encoding;
   uint32_t            norm_quad;
@@ -439,9 +439,9 @@ test_mesh_one_tree (p4est_t * p4est,
                          minLevel,
                          1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
 
-  p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
-  p4est_partition (p4est, 0, 0);
-  p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
+  // p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
+  // p4est_partition (p4est, 0, 0);
+  // p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
 
   /* inspect setup of geometry and check if payload is set correctly */
   char                filename[35] = "test_mesh_setup_single_tree_";
@@ -489,23 +489,45 @@ test_mesh_multiple_trees_brick (p4est_t * p4est,
   P4EST_ASSERT (conn == NULL);
   /* create connectivity */
 #ifndef P4_TO_P8
-  conn = p4est_connectivity_new_brick (2, 2, periodic, periodic);
+  conn = p4est_connectivity_new_brick (2, 1, periodic, periodic);
 #else /* !P4_TO_P8 */
-  conn = p8est_connectivity_new_brick (2, 2, 2, periodic, periodic, periodic);
+  conn = p8est_connectivity_new_brick (2, 1, 1, periodic, periodic, periodic);
 #endif /* !P4_TO_P8 */
   /* setup p4est */
-  int                 minLevel = 0;
-  p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, 0, 0);
-  p4est_refine (p4est, 0, refineExactlyOnce, 0);
-  p4est_partition (p4est, 0, 0);
-  p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
+  int                 minLevel = 2;
+  p4est = p4est_new_ext (mpicomm,
+                         conn,
+                         0,
+                         minLevel,
+                         1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
+  /*
+     p4est_refine (p4est, 0, refineExactlyOnce, 0);
+     p4est_partition (p4est, 0, 0);
+     p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
+   */
   char                filename[29] = "test_mesh_setup_brick_";
   strcat (filename, P4EST_STRING);
   p4est_vtk_write_file (p4est, 0, filename);
   /* create mesh */
+
+#ifdef P4_TO_P8
   p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   p4est_mesh_t       *mesh =
     p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+#else /* P4_TO_P8 */
+  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  p4est_mesh_t       *mesh =
+    p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+#endif /* P4_TO_P8 */
+
+  /* check mesh */
+  char                scenario[30];
+  snprintf (scenario, 30,
+            (periodic ? "multiple_tree_brick_p" : "multiple_tree_brick_np"));
+  check_mesh (p4est, ghost, mesh, scenario);
+
+  sc_MPI_Barrier (p4est->mpicomm);
+
   /* cleanup */
   p4est_ghost_destroy (ghost);
   p4est_mesh_destroy (mesh);
@@ -554,30 +576,41 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
   p4est = 0;
   conn = 0;
+
+  int                 test_single, test_multi_brick, test_multi_non_brick;
+  test_single = 0;
+  test_multi_brick = 1;
+  test_multi_non_brick = 0;
+
   /* test both periodic and non-periodic boundaries */
-  /* test one tree */
-  periodic_boundaries = 0;
-  test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
+  if (test_single) {
+    /* test one tree */
+    periodic_boundaries = 0;
+    test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
 
-  periodic_boundaries = 1;
-  test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
+    periodic_boundaries = 1;
+    test_mesh_one_tree (p4est, conn, periodic_boundaries, mpicomm);
+  }
 
-  /* test multiple trees; brick */
-  /*
-     periodic_boundaries = 0;
-     test_mesh_multiple_trees_brick (p4est, conn, periodic_boundaries, mpicomm);
-     periodic_boundaries = 1;
-     test_mesh_multiple_trees_brick (p4est, conn, periodic_boundaries, mpicomm);
-   */
-  /* test multiple trees; non-brick */
-  /*
-     periodic_boundaries = 0;
-     test_mesh_multiple_trees_nonbrick (p4est, conn,
-     periodic_boundaries, mpicomm);
-     periodic_boundaries = 1;
-     test_mesh_multiple_trees_nonbrick (p4est, conn,
-     periodic_boundaries, mpicomm);
-   */
+  if (test_multi_brick) {
+    /* test multiple trees; brick */
+    periodic_boundaries = 0;
+    test_mesh_multiple_trees_brick (p4est, conn, periodic_boundaries,
+                                    mpicomm);
+    periodic_boundaries = 1;
+    test_mesh_multiple_trees_brick (p4est, conn, periodic_boundaries,
+                                    mpicomm);
+  }
+
+  if (test_multi_non_brick) {
+    /* test multiple trees; non-brick */
+    periodic_boundaries = 0;
+    test_mesh_multiple_trees_nonbrick (p4est, conn,
+                                       periodic_boundaries, mpicomm);
+    periodic_boundaries = 1;
+    test_mesh_multiple_trees_nonbrick (p4est, conn,
+                                       periodic_boundaries, mpicomm);
+  }
   /* exit */
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
