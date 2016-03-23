@@ -589,7 +589,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 {
   int8_t              visited[P4EST_HALF];
   int8_t             *peedge;
-  size_t              i, j, k, cz, zz, ctr;
+  size_t              i, j, k, cz, zz;
   int                 swapsides;
   p4est_locidx_t     *pequad;
   p4est_locidx_t      qid1, qid2, qls1[2], qoffset;
@@ -622,6 +622,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     qid1 = side1->is.full.quadid + tree1->quadrants_offset;
 
     P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+    P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
 
     /* put in -3 */
     mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
@@ -634,19 +635,29 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       side1 = (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, i);
       if (!side1->is_hanging) {
         if (!side1->is.full.is_ghost) {
-          qid1 = side1->is.full.quadid;
-          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          tree1 =
+            p4est_tree_array_index (info->p4est->trees, side1->treeid);
+          qid1 = side1->is.full.quadid + tree1->quadrants_offset;
 
-          mesh->quad_to_edge[P4EST_CHILDREN * qid1 + side1->edge] = -3;
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+          P4EST_ASSERT
+            (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+
+          mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
         }
       }
       else {
         for (j = 0; j < 2; ++j) {
           if (!side1->is.hanging.is_ghost[j]) {
-            qid1 = side1->is.hanging.quadid[j];
+            tree1 =
+              p4est_tree_array_index (info->p4est->trees, side1->treeid);
+            qid1 = side1->is.hanging.quadid[j] + tree1->quadrants_offset;
+
             P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
 
-            mesh->quad_to_edge[P4EST_CHILDREN * qid1 + side1->edge] = -3;
+            P4EST_ASSERT
+              (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+            mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
           }
         }
       }
