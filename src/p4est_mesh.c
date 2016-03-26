@@ -593,7 +593,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   int                 swapsides;
   p4est_locidx_t     *pequad;
   p4est_locidx_t      qid1, qid2, qls1[2], qoffset;
-  p4est_locidx_t      eid1, eid2, ec1;
+  p4est_locidx_t      eid1, eid2;
   p4est_locidx_t      edgeid;
   p4est_locidx_t      in_qtoe, edgeid_offset;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
@@ -635,8 +635,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       side1 = (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, i);
       if (!side1->is_hanging) {
         if (!side1->is.full.is_ghost) {
-          tree1 =
-            p4est_tree_array_index (info->p4est->trees, side1->treeid);
+          tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
           qid1 = side1->is.full.quadid + tree1->quadrants_offset;
 
           P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
@@ -690,7 +689,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
         nAdjacentQuads =
           side1->is_hanging ? nAdjacentQuads + 2 : nAdjacentQuads + 1;
       }
-      /* allocate space for saving quads in mesh structure */
+      /* allocate space for saving quads in mesh structure, consider
+         that the cell itself is not saved as neighboring cell */
       equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads - 1);
       eedges = P4EST_ALLOC (int8_t, nAdjacentQuads - 1);
 
@@ -812,10 +812,20 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 
               /* check if current side 2 is among the face neighbors */
               for (i = 0; i < 2; ++i) {
-                if (nedgef[i] == (int) side2->edge
-                    && nftree[i] == side2->treeid) {
-                  ignore = 1;
-                  break;
+                if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+                  if (nedgef[i] == (int) side2->edge
+                      && nftree[i] == side2->treeid) {
+                    ignore = 1;
+                    break;
+                  }
+                }
+                else if (info->tree_boundary == P8EST_CONNECT_FACE) {
+                  if (nedgef[i] == (int) side2->edge
+                      && (nftree[0] == side2->treeid
+                          || nftree[1] == side2->treeid)) {
+                    ignore = 1;
+                    break;
+                  }
                 }
               }
               if (!ignore) {
@@ -904,7 +914,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           side2 =
             (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, j);
           eid2 = side2->edge;
-          ec1 = eid1;
           P4EST_ASSERT (side2->treeid == side1->treeid);
 
           /* edge is diagonal opposite if e1 XOR 3 = e2 */
@@ -1138,11 +1147,13 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
     /* this face is on an outside boundary of the forest */
     P4EST_ASSERT (info->orientation == 0);
     P4EST_ASSERT (info->tree_boundary);
+
     side = (p4est_iter_face_side_t *) sc_array_index (&info->sides, 0);
     P4EST_ASSERT (0 <= side->treeid &&
                   side->treeid < info->p4est->connectivity->num_trees);
     P4EST_ASSERT (0 <= side->face && side->face < P4EST_FACES);
     P4EST_ASSERT (!side->is_hanging && !side->is.full.is_ghost);
+
     tree = p4est_tree_array_index (info->p4est->trees, side->treeid);
     jl = side->is.full.quadid + tree->quadrants_offset;
     P4EST_ASSERT (0 <= jl && jl < mesh->local_num_quadrants);
@@ -1602,7 +1613,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                     quad_idx);
+                                                     quad_idx -
+                                                     tree->quadrants_offset);
           *quad_ins = quad;
 
           enc_ptr = (int *) sc_array_push (neighboring_encs);
