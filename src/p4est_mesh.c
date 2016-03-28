@@ -1526,6 +1526,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                           sc_array_t * neighboring_quads,
                           sc_array_t * neighboring_encs)
 {
+  int i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
 
@@ -1612,7 +1613,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       quad_ptr =
         (p4est_locidx_t *) sc_array_index_int (mesh->quad_to_half,
                                                neighbor_idx);
-      for (int i = 0; i < P4EST_HALF; ++i) {
+      for (i = 0; i < P4EST_HALF; ++i) {
         quad_idx = quad_ptr[i];
         if (quad_idx < lq) {
           /* neighbor is part of quadrants owned by processor */
@@ -1865,7 +1866,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                                           neighbor_idx + 1)) - offset;
 
       p4est_locidx_t      quad_idx;
-      for (int i = 0; i < n_adj_quads; ++i) {
+      for (i = 0; i < n_adj_quads; ++i) {
         quad_idx = *((p4est_locidx_t *)
                      sc_array_index_int (mesh->corner_quad, offset + i));
         neighbor_encoding = *((int8_t *)
