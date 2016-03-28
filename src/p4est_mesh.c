@@ -86,12 +86,13 @@ mesh_edge_find_face_neighbors (p8est_iter_edge_side_t * side,
                                p4est_locidx_t * nface,
                                p4est_locidx_t * nedgef)
 {
+  int                 i;
   p4est_locidx_t      t1 = side->treeid;
   int                 e1 = (int) side->edge;
   p4est_locidx_t      f1, faceOrientation;
 
   /* Get all local quadrant faces touching this edge */
-  for (int i = 0; i < 2; ++i) {
+  for (i = 0; i < 2; ++i) {
     f1 = p8est_edge_faces[e1][i];
     nftree[i] = conn->tree_to_tree[P4EST_FACES * t1 + f1];
     nface[i] = conn->tree_to_face[P4EST_FACES * t1 + f1];
@@ -1526,7 +1527,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                           sc_array_t * neighboring_quads,
                           sc_array_t * neighboring_encs)
 {
-  int i;
+  int                 i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
 
@@ -1753,7 +1754,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                                           neighbor_idx + 1)) - offset;
 
       p4est_locidx_t      quad_idx;
-      for (int i = 0; i < n_adj_quads; ++i) {
+      for (i = 0; i < n_adj_quads; ++i) {
         quad_idx = *((p4est_locidx_t *)
                      sc_array_index_int (mesh->edge_quad, offset + i));
         neighbor_encoding = *((int8_t *)
