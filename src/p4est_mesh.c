@@ -97,7 +97,7 @@ mesh_edge_find_face_neighbors (p8est_iter_edge_side_t * side,
     nface[i] = conn->tree_to_face[P4EST_FACES * t1 + f1];
 
     if (nftree[i] == t1 && nface[i] == f1) {
-      /* If the quadrant sees itself, we are at a physical face 
+      /* If the quadrant sees itself, we are at a physical face
        * boundary, i.e. there is no face neighbor */
       nedgef[i] = -1;
     }
@@ -161,7 +161,7 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
 /** Populate mesh information for hanging edges and edges across tree
  *  boundaries, i.e. every neighborhood scenario where we need more information
  *  (like orientation) than a single index. Note that this function only pushes
- *  an address whose data has to be set separately. 
+ *  an address whose data has to be set separately.
  *
  * \param [in][out] mesh     The mesh structure to which we will add edge
  *                           information
@@ -689,6 +689,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
         nAdjacentQuads =
           side1->is_hanging ? nAdjacentQuads + 2 : nAdjacentQuads + 1;
       }
+
       /* allocate space for saving quads in mesh structure, consider
          that the cell itself is not saved as neighboring cell */
       equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads - 1);
@@ -728,11 +729,21 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 P4EST_ASSERT (side2->edge >= 0 && side2->edge < P8EST_EDGES);
 
                 /* check if current side 2 is among the face neighbors */
-                for (i = 0; i < 2; ++i) {
-                  if (nedgef[i] == (int) side2->edge
-                      && nftree[i] == side2->treeid) {
-                    ignore = 1;
-                    break;
+                for (j = 0; j < 2; ++j) {
+                  if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+                    if (nedgef[j] == (int) side2->edge
+                        && nftree[j] == side2->treeid) {
+                      ignore = 1;
+                      break;
+                    }
+                  }
+                  else if (info->tree_boundary == P8EST_CONNECT_FACE) {
+                    if (nedgef[j] == (int) side2->edge
+                        && (nftree[0] == side2->treeid
+                            || nftree[1] == side2->treeid)) {
+                      ignore = 1;
+                      break;
+                    }
                   }
                 }
                 if (!ignore) {
@@ -770,19 +781,21 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               P4EST_ASSERT (0 <= (size_t) goodones
                             && (size_t) goodones < nAdjacentQuads);
 
+              if (goodones > 0) {
+                /* Allocate and fill edge information in the mesh structure */
+                edgeid =
+                  mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
+                /* "link" to arrays encoding inter-tree edge-neighborhood */
+                P4EST_ASSERT
+                  (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] ==
+                   -1);
+                mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
+                  edgeid_offset + edgeid;
+                /* populate allocated memory */
+                memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
+                memcpy (peedge, eedges, goodones * sizeof (int8_t));
+              }
             }
-          }
-          if (goodones > 0) {
-            /* Allocate and fill edge information in the mesh structure */
-            edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
-            /* "link" to arrays encoding inter-tree edge-neighborhood */
-            P4EST_ASSERT
-              (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
-            mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
-              edgeid_offset + edgeid;
-            /* populate allocated memory */
-            memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
-            memcpy (peedge, eedges, goodones * sizeof (int8_t));
           }
         }
         else {
@@ -874,7 +887,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           }
         }
       }
-
       P4EST_FREE (equads);
       P4EST_FREE (eedges);
       return;
