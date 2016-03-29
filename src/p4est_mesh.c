@@ -682,7 +682,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       p4est_locidx_t     *equads;
 
       /* initialize nedgef to zero */
-      SC_BZERO (nedgef, P4EST_DIM);
+      SC_BZERO (nedgef, 2);
 
       /* determine number of adjacentQuads beforehand. */
       for (zz = 0; zz < cz; ++zz) {
