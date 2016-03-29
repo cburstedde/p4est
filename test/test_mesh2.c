@@ -187,6 +187,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 #endif /* P4_TO_P8 */
 
   for (uint32_t quad = 0; quad < p4est->global_num_quadrants; ++quad) {
+    sc_MPI_Barrier(p4est->mpicomm);
     /* loop over all cells, set and unset only if cell is owned by processor */
     if (p4est->global_first_quadrant[p4est->mpirank] <= quad
         && quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
@@ -207,7 +208,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
 #ifdef P4EST_DEBUG
           /* print some debug info */
-          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
+          printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
@@ -241,7 +242,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
 #ifdef P4EST_DEBUG
           /* print some debug info */
-          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
+          printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
@@ -275,7 +276,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
 #ifdef P4EST_DEBUG
           /* print some debug info */
-          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
+          printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
@@ -343,14 +344,6 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                     direction, neighboring_quads,
                                     neighboring_encs);
 
-#ifdef P4EST_DEBUG
-          /* print some debug info */
-          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
-                  " number of neighboring cells: %zu\n",
-                  p4est->mpirank, quad, norm_quad, direction,
-                  neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
-
           for (int j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
@@ -376,14 +369,6 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
           p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
                                     direction, neighboring_quads,
                                     neighboring_encs);
-
-#ifdef P4EST_DEBUG
-          /* print some debug info */
-          printf ("rank %i, local quad %i, global quad %i, direction: %i,"
-                  " number of neighboring cells: %zu\n",
-                  p4est->mpirank, quad, norm_quad, direction,
-                  neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
 
           for (int j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
