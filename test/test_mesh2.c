@@ -177,6 +177,8 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   int                 direction = 0;
   int                 encoding;
   uint32_t            norm_quad;
+  uint32_t            quad, i;
+  int                 j;
 #ifdef P4_TO_P8
   int                 dir_offset_edge, dir_offset_corner;
   dir_offset_edge = P4EST_FACES;
@@ -186,7 +188,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   dir_offset_corner = P4EST_FACES;
 #endif /* P4_TO_P8 */
 
-  for (uint32_t quad = 0; quad < p4est->global_num_quadrants; ++quad) {
+  for (quad = 0; quad < p4est->global_num_quadrants; ++quad) {
     sc_MPI_Barrier(p4est->mpicomm);
     /* loop over all cells, set and unset only if cell is owned by processor */
     if (p4est->global_first_quadrant[p4est->mpirank] <= quad
@@ -197,7 +199,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 
       /* set */
       if (printFaces) {
-        for (uint i = 0; i < P4EST_FACES; ++i) {
+        for (i = 0; i < P4EST_FACES; ++i) {
           direction = i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
@@ -214,7 +216,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                   neighboring_quads->elem_count);
 #endif /* P4EST_DEBUG */
 
-          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+          for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
@@ -231,7 +233,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       }
 #ifdef P4_TO_P8
       if (printEdges) {
-        for (uint i = 0; i < P8EST_EDGES; ++i) {
+        for (i = 0; i < P8EST_EDGES; ++i) {
           direction = dir_offset_edge + i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
@@ -248,7 +250,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                   neighboring_quads->elem_count);
 #endif /* P4EST_DEBUG */
 
-          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+          for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
@@ -265,7 +267,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       }
 #endif /* P4_TO_P8 */
       if (printCorners) {
-        for (uint i = 0; i < P4EST_CHILDREN; ++i) {
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
           direction = dir_offset_corner + i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
@@ -282,7 +284,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                   neighboring_quads->elem_count);
 #endif /* P4EST_DEBUG */
 
-          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+          for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
@@ -310,7 +312,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
     if (p4est->global_first_quadrant[p4est->mpirank] <= quad
         && p4est->global_first_quadrant[p4est->mpirank + 1]) {
       if (printFaces) {
-        for (uint i = 0; i < P4EST_FACES; ++i) {
+        for (i = 0; i < P4EST_FACES; ++i) {
           direction = i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
@@ -318,7 +320,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
           p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
                                     direction, neighboring_quads,
                                     neighboring_encs);
-          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+          for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
@@ -335,7 +337,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       }
 #ifdef P4_TO_P8
       if (printEdges) {
-        for (uint i = 0; i < P8EST_EDGES; ++i) {
+        for (i = 0; i < P8EST_EDGES; ++i) {
           direction = dir_offset_edge + i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
@@ -344,7 +346,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                     direction, neighboring_quads,
                                     neighboring_encs);
 
-          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+          for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
@@ -361,7 +363,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       }
 #endif /* P4_TO_P8 */
       if (printCorners) {
-        for (uint i = 0; i < P4EST_CHILDREN; ++i) {
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
           direction = dir_offset_corner + i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
@@ -370,7 +372,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                     direction, neighboring_quads,
                                     neighboring_encs);
 
-          for (int j = 0; j < neighboring_quads->elem_count; ++j) {
+          for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
               *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
                                                          j);
