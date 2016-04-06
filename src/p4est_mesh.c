@@ -1632,8 +1632,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           enc_ptr = (int *) sc_array_push (neighboring_encs);
 
           /* convert encoding */
-          neighbor_encoding += convFace;
-          *enc_ptr = neighbor_encoding;
+          *enc_ptr = neighbor_encoding + convFace;
         }
         else {
           /* neighbor is part of ghost layer */
@@ -1645,8 +1644,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           enc_ptr = (int *) sc_array_push (neighboring_encs);
 
           /* convert encoding */
-          neighbor_encoding += convFace;
-          *enc_ptr = -neighbor_encoding;
+          *enc_ptr = -neighbor_encoding - convFace;
         }
       }
     }
