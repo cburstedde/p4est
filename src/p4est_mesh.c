@@ -35,6 +35,8 @@
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
 
+/*********************** constructor functions ***********************/
+
 /** For a quadrant that touches a tree face with a corner inside the face,
  * get the number of the touching face.
  */
@@ -1050,6 +1052,8 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
     P4EST_FACES * lqz * (sizeof (p4est_locidx_t) + sizeof (int8_t)) +
     ngz * sizeof (int) + sc_array_memory_used (mesh->quad_to_half, 1);
 
+  /* TODO: add edge information */
+
   /* add corner information */
   if (mesh->quad_to_corner != NULL) {
     all_memory +=
@@ -1103,7 +1107,7 @@ p4est_mesh_new_ext (p4est_t * p4est,
   if (btype >= P4EST_CONNECT_FULL) {
     do_corner = 1;
   }
-  do_volume = (compute_tree_index || compute_level_lists ? 1 : 0);
+  do_volume = compute_tree_index || compute_level_lists;
 
   /* Optional map of tree index for each quadrant */
   if (compute_tree_index) {
@@ -1150,6 +1154,8 @@ p4est_mesh_new_ext (p4est_t * p4est,
     memset (mesh->quad_to_quad_edge,
             -1, P8EST_EDGES * lq * sizeof (p4est_locidx_t));
     memset (mesh->quad_to_edge, -25, P8EST_EDGES * lq * sizeof (int8_t));
+
+    /* TODO: change to current convention documented in p{4,8}est_mesh.h */
   }
 #endif /* P4_TO_P8 */
 
@@ -1218,6 +1224,8 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
 
   P4EST_FREE (mesh);
 }
+
+/************************* accessor functions ************************/
 
 p4est_quadrant_t   *
 p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_mesh_t * mesh,
