@@ -196,8 +196,13 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
 void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 
 /** Find a quadrant based on its cumulative number in the local forest.
+ * If the quad_to_tree field of the mesh structure exists, this is O(1).
+ * Otherwise, we perform a binary search over the processor-local trees.
+ *
  * \param [in]  p8est           Forest to be worked with.
+ * \param [in]  mesh            A mesh derived from the forest.
  * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
+ *                              Must refer to a local (non-ghost) quadrant.
  * \param [in,out] which_tree   If not NULL, the input value can be -1
  *                              or an initial guess for the quadrant's tree
  *                              and output is the tree of returned quadrant.
@@ -205,6 +210,7 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
  * \return                      The identified quadrant.
  */
 p8est_quadrant_t   *p8est_mesh_quadrant_cumulative (p8est_t * p8est,
+                                                    p8est_mesh_t * mesh,
                                                     p4est_locidx_t
                                                     cumulative_id,
                                                     p4est_topidx_t *

@@ -287,7 +287,7 @@ test_mesh (p4est_t * p4est,
   /* Test face neighbor iterator */
   for (qumid = 0; qumid < mesh->local_num_quadrants; ++qumid) {
     which_tree = -1;
-    q = p4est_mesh_quadrant_cumulative (p4est, qumid,
+    q = p4est_mesh_quadrant_cumulative (p4est, mesh, qumid,
                                         &which_tree, &quadrant_id);
     p4est_mesh_face_neighbor_init2 (&mfn, p4est, ghost, mesh,
                                     which_tree, quadrant_id);

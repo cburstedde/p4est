@@ -26,11 +26,13 @@
 #include <p4est_extended.h>
 #include <p4est_iterate.h>
 #include <p4est_mesh.h>
+#include <p4est_search.h>
 #else /* P4_TO_P8 */
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_iterate.h>
 #include <p8est_mesh.h>
+#include <p8est_search.h>
 #endif /* P4_TO_P8 */
 
 /** For a quadrant that touches a tree face with a corner inside the face,
@@ -1218,53 +1220,65 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
 }
 
 p4est_quadrant_t   *
-p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
-                                p4est_topidx_t * which_tree,
-                                p4est_locidx_t * quadrant_id)
+p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_mesh_t * mesh,
+                                p4est_locidx_t cumulative_id,
+                                p4est_topidx_t * pwhich_tree,
+                                p4est_locidx_t * pquadrant_id)
 {
-  int                 the_quadrant_id;
-  p4est_topidx_t      low_tree, high_tree, guess_tree;
+  p4est_topidx_t      which_tree;
+  p4est_locidx_t      quadrant_id;
+  p4est_quadrant_t   *quadrant;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_topidx_t      dwhich_tree;
+  p4est_locidx_t      dquadrant_id;
+  p4est_quadrant_t   *dquadrant;
+#endif
   p4est_tree_t       *tree;
 
-  P4EST_ASSERT (0 <= cumulative_id &&
-                cumulative_id < p4est->local_num_quadrants);
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (mesh != NULL);
+  P4EST_ASSERT (p4est->local_num_quadrants == mesh->local_num_quadrants);
 
-  low_tree = p4est->first_local_tree;
-  high_tree = p4est->last_local_tree;
-  if (which_tree != NULL && *which_tree != -1) {
-    guess_tree = *which_tree;
+  P4EST_ASSERT (0 <= cumulative_id &&
+                cumulative_id < mesh->local_num_quadrants);
+  P4EST_ASSERT (NULL == pwhich_tree || *pwhich_tree == -1 ||
+                (0 <= *pwhich_tree &&
+                 *pwhich_tree < p4est->connectivity->num_trees));
+
+  if (mesh->quad_to_tree != NULL) {
+    /* in this case we can do an O(1) lookup */
+    which_tree = mesh->quad_to_tree[cumulative_id];
+    if (pwhich_tree != NULL) {
+#ifdef P4EST_ENABLE_DEBUG
+      dwhich_tree = *pwhich_tree;
+#endif
+      *pwhich_tree = which_tree;
+    }
+    tree = p4est_tree_array_index (p4est->trees, which_tree);
+    P4EST_ASSERT (tree->quadrants_offset <= cumulative_id);
+    quadrant_id = cumulative_id - tree->quadrants_offset;
+    P4EST_ASSERT (quadrant_id < (p4est_locidx_t) tree->quadrants.elem_count);
+    if (pquadrant_id != NULL) {
+      *pquadrant_id = quadrant_id;
+    }
+    quadrant = p4est_quadrant_array_index (&tree->quadrants, quadrant_id);
+
+#ifdef P4EST_ENABLE_DEBUG
+    /* we use the more expensive binary search for debugging */
+    dquadrant = p4est_find_quadrant_cumulative (p4est, cumulative_id,
+                                                &dwhich_tree, &dquadrant_id);
+    P4EST_ASSERT (dwhich_tree == which_tree);
+    P4EST_ASSERT (dquadrant_id == quadrant_id);
+    P4EST_ASSERT (dquadrant == quadrant);
+#endif
   }
   else {
-    guess_tree = (low_tree + high_tree) / 2;
+    /* we do not have the O(1) lookup table and need to binary search */
+    quadrant = p4est_find_quadrant_cumulative (p4est, cumulative_id,
+                                               pwhich_tree, pquadrant_id);
   }
-  for (;;) {
-    P4EST_ASSERT (p4est->first_local_tree <= low_tree);
-    P4EST_ASSERT (high_tree <= p4est->last_local_tree);
-    P4EST_ASSERT (low_tree <= guess_tree && guess_tree <= high_tree);
 
-    tree = p4est_tree_array_index (p4est->trees, guess_tree);
-    if (cumulative_id < tree->quadrants_offset) {
-      high_tree = guess_tree - 1;
-    }
-    else if (cumulative_id >= tree->quadrants_offset +
-             (p4est_locidx_t) tree->quadrants.elem_count) {
-      low_tree = guess_tree + 1;
-    }
-    else {
-      the_quadrant_id = cumulative_id - tree->quadrants_offset;
-      P4EST_ASSERT (0 <= the_quadrant_id);
-
-      if (which_tree != NULL) {
-        *which_tree = guess_tree;
-      }
-      if (quadrant_id != NULL) {
-        *quadrant_id = the_quadrant_id;
-      }
-      return p4est_quadrant_array_index (&tree->quadrants,
-                                         (size_t) the_quadrant_id);
-    }
-    guess_tree = (low_tree + high_tree) / 2;
-  }
+  return quadrant;
 }
 
 void
@@ -1385,7 +1399,8 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   if (qtq < lnq) {
     /* Local quadrant */
     which_tree = mfn->which_tree;
-    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, &which_tree, nquad);
+    q = p4est_mesh_quadrant_cumulative (mfn->p4est, mfn->mesh,
+                                        qtq, &which_tree, nquad);
     if (ntree != NULL) {
       *ntree = which_tree;
     }
@@ -1430,7 +1445,8 @@ p4est_mesh_face_neighbor_data (p4est_mesh_face_neighbor_t * mfn,
     p4est_quadrant_t   *q;
     /* Local quadrant */
     which_tree = mfn->which_tree;
-    q = p4est_mesh_quadrant_cumulative (mfn->p4est, qtq, &which_tree, NULL);
+    q = p4est_mesh_quadrant_cumulative (mfn->p4est, mfn->mesh,
+                                        qtq, &which_tree, NULL);
     return q->p.user_data;
   }
   else {
