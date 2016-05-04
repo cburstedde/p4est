@@ -36,6 +36,10 @@
 #include <p8est_lnodes.h>
 #endif
 
+#ifdef P4EST_ENABLE_DEBUG
+#include <sc_statistics.h>
+#endif
+
 #ifndef P4_TO_P8
 #define P4EST_LN_C_OFFSET 4
 #else

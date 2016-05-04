@@ -22,9 +22,11 @@
 */
 
 #ifdef P4_TO_P8
+#include <p8est_algorithms.h>
 #include <p8est_communication.h>
 #include <p8est_bits.h>
 #else
+#include <p4est_algorithms.h>
 #include <p4est_communication.h>
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
@@ -33,31 +35,35 @@
 #endif
 
 void
-p4est_comm_parallel_env_create (p4est_t * p4est, sc_MPI_Comm mpicomm)
+p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
-  int                 mpiret;
-
-  /* duplicate MPI communicator */
-  mpiret = sc_MPI_Comm_dup (mpicomm, &(p4est->mpicomm));
-  SC_CHECK_MPI (mpiret);
-  p4est->mpicomm_owned = 1;
+  /* set MPI communicator */
+  p4est->mpicomm = mpicomm;
+  p4est->mpicomm_owned = 0;
 
   /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &(p4est->mpisize));
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &(p4est->mpirank));
-  SC_CHECK_MPI (mpiret);
+  p4est_comm_parallel_env_get_info (p4est);
 }
 
 void
-p4est_comm_parallel_env_free (p4est_t * p4est)
+p4est_comm_parallel_env_duplicate (p4est_t * p4est)
+{
+  sc_MPI_Comm         mpicomm = p4est->mpicomm;
+  int                 mpiret;
+
+  /* duplicate MPI communicator */
+  mpiret = sc_MPI_Comm_dup (mpicomm, &(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
+  p4est->mpicomm_owned = 1;
+}
+
+void
+p4est_comm_parallel_env_release (p4est_t * p4est)
 {
   int                 mpiret;
 
   /* free MPI communicator if it's owned */
   if (p4est->mpicomm_owned) {
-    mpiret = sc_MPI_Comm_free (&(p4est->mpicomm));
-    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Comm_free (&(p4est->mpicomm)); SC_CHECK_MPI (mpiret);
   }
   p4est->mpicomm = sc_MPI_COMM_NULL;
   p4est->mpicomm_owned = 0;
@@ -67,21 +73,13 @@ p4est_comm_parallel_env_free (p4est_t * p4est)
   p4est->mpirank = sc_MPI_UNDEFINED;
 }
 
-int
-p4est_comm_parallel_env_is_null (p4est_t * p4est)
-{
-  return (p4est->mpicomm == sc_MPI_COMM_NULL);
-}
-
 void
-p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
+p4est_comm_parallel_env_replace (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
-  int                 mpiret;
-
   /* check if input MPI communicator has same size and same rank order */
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   {
-    int                 result;
+    int                 mpiret, result;
 
     mpiret = sc_MPI_Comm_compare (p4est->mpicomm, mpicomm, &result);
     SC_CHECK_MPI (mpiret);
@@ -90,18 +88,187 @@ p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
   }
 #endif
 
-  /* free the current parallel environment */
-  p4est_comm_parallel_env_free (p4est);
+  /* release the current parallel environment */
+  p4est_comm_parallel_env_release (p4est);
 
-  /* assign MPI communicator of input, it is therefore not owned */
-  p4est->mpicomm = mpicomm;
-  p4est->mpicomm_owned = 0;
+  /* assign new MPI communicator */
+  p4est_comm_parallel_env_assign (p4est, mpicomm);
+}
 
-  /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &(p4est->mpisize));
+void
+p4est_comm_parallel_env_get_info (p4est_t * p4est)
+{
+  int                 mpiret;
+
+  mpiret = sc_MPI_Comm_size (p4est->mpicomm, &(p4est->mpisize));
   SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &(p4est->mpirank));
+  mpiret = sc_MPI_Comm_rank (p4est->mpicomm, &(p4est->mpirank));
   SC_CHECK_MPI (mpiret);
+}
+
+int
+p4est_comm_parallel_env_is_null (p4est_t * p4est)
+{
+  return (p4est->mpicomm == sc_MPI_COMM_NULL);
+}
+
+int
+p4est_comm_parallel_env_reduce (p4est_t * p4est)
+{
+  return p4est_comm_parallel_env_reduce_ext (p4est, sc_MPI_GROUP_NULL, 0);
+}
+
+int
+p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
+                                    int add_to_beginning)
+{
+  const char         *this_fn_name = "comm_parallel_env_reduce";
+  sc_MPI_Comm         mpicomm = p4est->mpicomm;
+  int                 mpisize = p4est->mpisize;
+  int                 mpiret;
+  p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
+  p4est_quadrant_t   *global_first_position = p4est->global_first_position;
+
+  p4est_gloidx_t     *n_quadrants;
+  int                *include;
+  sc_MPI_Group        group, subgroup;
+  sc_MPI_Comm         submpicomm;
+  int                 submpisize, submpirank;
+  int                *ranks, *subranks;
+  int                 p;
+
+  /* exit if MPI communicator cannot be reduced */
+  if (mpisize == 1) {
+    return 1;
+  }
+
+  /* create array of non-empty processes that will be included to sub-comm */
+  n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
+  include = P4EST_ALLOC (int, mpisize);
+  submpisize = 0;
+  for (p = 0; p < mpisize; p++) {
+    n_quadrants[p] = global_first_quadrant[p+1] - global_first_quadrant[p];
+    if (global_first_quadrant[p] < global_first_quadrant[p+1]) {
+      include[submpisize++] = p;
+    }
+  }
+
+  /* exit if reduction not possible */
+  if (submpisize == mpisize) {
+    P4EST_FREE (n_quadrants);
+    P4EST_FREE (include);
+    return 1;
+  }
+
+  /* create sub-group of non-empty processors */
+  mpiret = sc_MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_incl (group, submpisize, include, &subgroup);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
+  P4EST_FREE (include);
+
+  /* create sub-communicator */
+  if (group_add != sc_MPI_GROUP_NULL) {
+    sc_MPI_Group        group_union;
+
+    /* create union with optional group */
+    if (add_to_beginning) {
+      mpiret = sc_MPI_Group_union (group_add, subgroup, &group_union);
+    }
+    else {
+      mpiret = sc_MPI_Group_union (subgroup, group_add, &group_union);
+    }
+    SC_CHECK_MPI (mpiret);
+
+    /* create sub-communicator */
+    mpiret = sc_MPI_Comm_create (mpicomm, group_union, &submpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Group_free (&group_union); SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
+  }
+  else {
+    /* create sub-communicator */
+    mpiret = sc_MPI_Comm_create (mpicomm, subgroup, &submpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
+  }
+
+  /* destroy p4est and exit if this rank is empty */
+  if (submpicomm == sc_MPI_COMM_NULL) {
+    /* destroy */
+    P4EST_FREE (n_quadrants);
+    p4est_destroy (p4est);
+
+    /* return that p4est does not exist on this rank */
+    return 0;
+  }
+
+  /* update parallel environment */
+  mpiret = sc_MPI_Comm_size (submpicomm, &submpisize); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (submpicomm, &submpirank); SC_CHECK_MPI (mpiret);
+
+  if (submpirank == 0) {
+    P4EST_VERBOSEF ("%s: Reduce MPI communicator from %i to %i\n",
+                    this_fn_name, mpisize, submpisize);
+    /* TODO: There should be a function for printing to stdout that works with
+     *       sub-communicators. */
+  }
+
+  /* translate MPI ranks */
+  ranks = P4EST_ALLOC (int, submpisize);
+  subranks = P4EST_ALLOC (int, submpisize);
+  for (p = 0; p < submpisize; p++) {
+    subranks[p] = p;
+  }
+  mpiret = sc_MPI_Comm_group (submpicomm, &subgroup); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_group (mpicomm, &group); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_translate_ranks (subgroup, submpisize, subranks,
+                                         group, ranks); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_free (&subgroup); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Group_free (&group); SC_CHECK_MPI (mpiret);
+  P4EST_FREE (subranks);
+
+  /* allocate and set global quadrant count */
+  P4EST_FREE (p4est->global_first_quadrant);
+  p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
+  p4est->global_first_quadrant[0] = 0;
+  for (p = 0; p < submpisize; p++) {
+    P4EST_ASSERT (ranks[p] != sc_MPI_UNDEFINED);
+    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL || 0 < n_quadrants[ranks[p]]);
+    p4est->global_first_quadrant[p+1] = p4est->global_first_quadrant[p] +
+                                        n_quadrants[ranks[p]];
+  }
+  P4EST_ASSERT (p4est->global_first_quadrant[submpisize] =
+                p4est->global_num_quadrants);
+  P4EST_FREE (n_quadrants);
+
+  /* set new parallel environment */
+  p4est_comm_parallel_env_release (p4est);
+  p4est_comm_parallel_env_assign (p4est, submpicomm);
+  p4est_comm_parallel_env_duplicate (p4est);
+  mpiret = sc_MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (p4est->mpisize == submpisize);
+
+  /* allocate and set partition information */
+  p4est->global_first_position = P4EST_ALLOC (p4est_quadrant_t, submpisize + 1);
+  if (group_add != sc_MPI_GROUP_NULL) { /* if communication is required */
+    p4est_comm_global_partition (p4est, NULL);
+  }
+  else { /* if we can set partition information communication-free */
+    for (p = 0; p < submpisize; p++) {
+      P4EST_ASSERT (0 == p || ranks[p-1] < ranks[p]);
+      p4est->global_first_position[p] = global_first_position[ranks[p]];
+    }
+    p4est->global_first_position[submpisize] = global_first_position[mpisize];
+  }
+  P4EST_FREE (global_first_position);
+  P4EST_FREE (ranks);
+
+  /* check for valid p4est */
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  /* return that p4est exists on this rank */
+  return 1;
 }
 
 void
@@ -653,8 +820,8 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
   if (p4est->mpirank == 0) {
     gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
   }
-  mpiret = MPI_Gather (send, 2, MPI_LONG_LONG_INT,
-                       gather, 2, MPI_LONG_LONG_INT, 0, p4est->mpicomm);
+  mpiret = sc_MPI_Gather (send, 2, sc_MPI_LONG_LONG_INT,
+                          gather, 2, sc_MPI_LONG_LONG_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   if (p4est->mpirank == 0) {

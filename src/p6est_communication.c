@@ -24,31 +24,35 @@
 #include <p6est_communication.h>
 
 void
-p6est_comm_parallel_env_create (p6est_t * p6est, sc_MPI_Comm mpicomm)
+p6est_comm_parallel_env_assign (p6est_t * p6est, sc_MPI_Comm mpicomm)
 {
-  int                 mpiret;
-
-  /* duplicate MPI communicator */
-  mpiret = sc_MPI_Comm_dup (mpicomm, &(p6est->mpicomm));
-  SC_CHECK_MPI (mpiret);
-  p6est->mpicomm_owned = 1;
+  /* set MPI communicator */
+  p6est->mpicomm = mpicomm;
+  p6est->mpicomm_owned = 0;
 
   /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &(p6est->mpisize));
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &(p6est->mpirank));
-  SC_CHECK_MPI (mpiret);
+  p6est_comm_parallel_env_get_info (p6est);
 }
 
 void
-p6est_comm_parallel_env_free (p6est_t * p6est)
+p6est_comm_parallel_env_duplicate (p6est_t * p6est)
+{
+  sc_MPI_Comm         mpicomm = p6est->mpicomm;
+  int                 mpiret;
+
+  /* duplicate MPI communicator */
+  mpiret = sc_MPI_Comm_dup (mpicomm, &(p6est->mpicomm)); SC_CHECK_MPI (mpiret);
+  p6est->mpicomm_owned = 1;
+}
+
+void
+p6est_comm_parallel_env_release (p6est_t * p6est)
 {
   int                 mpiret;
 
   /* free MPI communicator if it's owned */
   if (p6est->mpicomm_owned) {
-    mpiret = sc_MPI_Comm_free (&(p6est->mpicomm));
-    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Comm_free (&(p6est->mpicomm)); SC_CHECK_MPI (mpiret);
   }
   p6est->mpicomm = sc_MPI_COMM_NULL;
   p6est->mpicomm_owned = 0;
@@ -58,37 +62,123 @@ p6est_comm_parallel_env_free (p6est_t * p6est)
   p6est->mpirank = sc_MPI_UNDEFINED;
 }
 
+void
+p6est_comm_parallel_env_replace (p6est_t * p6est, sc_MPI_Comm mpicomm)
+{
+  /* check if input MPI communicator has same size and same rank order */
+#ifdef P4EST_ENABLE_DEBUG
+  {
+    int                 mpiret, result;
+
+    mpiret = sc_MPI_Comm_compare (p6est->mpicomm, mpicomm, &result);
+    SC_CHECK_MPI (mpiret);
+
+    P4EST_ASSERT (result == sc_MPI_IDENT || result == sc_MPI_CONGRUENT);
+  }
+#endif
+
+  /* release the current parallel environment */
+  p6est_comm_parallel_env_release (p6est);
+
+  /* assign new MPI communicator */
+  p6est_comm_parallel_env_assign (p6est, mpicomm);
+}
+
+void
+p6est_comm_parallel_env_get_info (p6est_t * p6est)
+{
+  int                 mpiret;
+
+  mpiret = sc_MPI_Comm_size (p6est->mpicomm, &(p6est->mpisize));
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (p6est->mpicomm, &(p6est->mpirank));
+  SC_CHECK_MPI (mpiret);
+}
+
 int
 p6est_comm_parallel_env_is_null (p6est_t * p6est)
 {
   return (p6est->mpicomm == sc_MPI_COMM_NULL);
 }
 
-void
-p6est_comm_parallel_env_assign (p6est_t * p6est, sc_MPI_Comm mpicomm)
+int
+p6est_comm_parallel_env_reduce (p6est_t ** P6est)
 {
-  int                 mpiret;
-  int                 result;
+  return p6est_comm_parallel_env_reduce_ext (P6est, sc_MPI_GROUP_NULL, 0, NULL);
+}
 
-  mpiret = sc_MPI_Comm_compare (p6est->mpicomm, mpicomm, &result);
-  SC_CHECK_MPI (mpiret);
-  /* check if input MPI communicator has same size and same rank order */
-  if (result == sc_MPI_IDENT) {
-    return;
+int
+p6est_comm_parallel_env_reduce_ext (p6est_t ** P6est, sc_MPI_Group group_add,
+                                    int add_to_beginning, int **Ranks)
+{
+  p6est_t            *p6est = *P6est;
+  int                 mpisize = p6est->mpisize;
+  int                 mpiret;
+  p4est_gloidx_t     *global_first_layer = p6est->global_first_layer;
+
+  p4est_gloidx_t     *n_quadrants;
+  int                 submpisize;
+  sc_MPI_Comm         submpicomm;
+  int                *ranks;
+  int                 i;
+  int                 active;
+
+  if (Ranks) {
+    *Ranks = NULL;
   }
 
-  P4EST_ASSERT (result == sc_MPI_CONGRUENT);
+  /* create array of non-empty processes that will be included to sub-comm */
+  n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    n_quadrants[i] = global_first_layer[i + 1] - global_first_layer[i];
+  }
 
-  /* free the current parallel environment */
-  p6est_comm_parallel_env_free (p6est);
-
-  /* assign MPI communicator of input, it is therefore not owned */
-  p6est->mpicomm = mpicomm;
-  p6est->mpicomm_owned = 0;
-
-  /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &(p6est->mpisize));
+  active =
+    p4est_comm_parallel_env_reduce_ext (p6est->columns, group_add,
+                                        add_to_beginning, &ranks);
+  if (!active) {
+    p6est->columns = NULL;
+    p6est_destroy (p6est);
+    *P6est = NULL;
+    P4EST_ASSERT (ranks == NULL);
+    return 0;
+  }
+  submpicomm = p6est->columns->mpicomm;
+  /* update size of new MPI communicator */
+  mpiret = sc_MPI_Comm_size (submpicomm, &submpisize);
   SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &(p6est->mpirank));
-  SC_CHECK_MPI (mpiret);
+  if (submpisize == p6est->mpisize) {
+    P4EST_ASSERT (ranks == NULL);
+    return 1;
+  }
+
+  /* set new parallel environment */
+  p6est_comm_parallel_env_release (p6est);
+  p6est_comm_parallel_env_assign (p6est, submpicomm);
+  p6est_comm_parallel_env_duplicate (p6est);
+  mpiret = sc_MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (p6est->mpisize == submpisize);
+
+  /* allocate and set global layer count */
+  P4EST_FREE (p6est->global_first_layer);
+  p6est->global_first_layer = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
+  p6est->global_first_layer[0] = 0;
+  for (i = 0; i < submpisize; i++) {
+    P4EST_ASSERT (ranks[i] != sc_MPI_UNDEFINED);
+    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL
+                  || 0 < n_quadrants[ranks[i]]);
+    p6est->global_first_layer[i + 1] =
+      p6est->global_first_layer[i] + n_quadrants[ranks[i]];
+  }
+  P4EST_FREE (n_quadrants);
+  if (Ranks) {
+    *Ranks = ranks;
+  }
+  else {
+    P4EST_FREE (ranks);
+  }
+
+  /* return that this processor has quadrants */
+  return 1;
 }
+
