@@ -135,7 +135,7 @@ main (int argc, char **argv)
     p4est_vtk_write_file (p4est_subcomm, NULL, P4EST_STRING "_subcomm_part");
 
     /* reduce MPI communicator to non-empty ranks */
-    is_nonempty = p4est_comm_parallel_env_reduce (p4est_subcomm);
+    is_nonempty = p4est_comm_parallel_env_reduce (&p4est_subcomm);
     P4EST_ASSERT ( (is_nonempty && 0 < partition[rank]) ||
                    (!is_nonempty && 0 == partition[rank]) );
 
@@ -165,7 +165,7 @@ main (int argc, char **argv)
     (void) p4est_partition_given (p4est_subcomm, partition);
 
     /* reduce MPI communicator to non-empty ranks */
-    is_nonempty = p4est_comm_parallel_env_reduce (p4est_subcomm);
+    is_nonempty = p4est_comm_parallel_env_reduce (&p4est_subcomm);
     P4EST_ASSERT ( (is_nonempty && 0 < partition[rank]) ||
                    (!is_nonempty && 0 == partition[rank]) );
 
@@ -203,8 +203,8 @@ main (int argc, char **argv)
     (void) p4est_partition_given (p4est_subcomm, partition);
 
     /* reduce MPI communicator to non-empty ranks, but keep rank 0 */
-    sub_exists = p4est_comm_parallel_env_reduce_ext (p4est_subcomm,
-                                                     group_reserve, 1);
+    sub_exists = p4est_comm_parallel_env_reduce_ext (&p4est_subcomm,
+                                                     group_reserve, 1, NULL);
     P4EST_ASSERT ( (sub_exists && (0 < partition[rank] || rank == 0)) ||
                    (!sub_exists && 0 == partition[rank]) );
 
@@ -245,8 +245,8 @@ main (int argc, char **argv)
     (void) p4est_partition_given (p4est_subcomm, partition);
 
     /* reduce MPI communicator to non-empty ranks, but keep last 2 ranks */
-    sub_exists = p4est_comm_parallel_env_reduce_ext (p4est_subcomm,
-                                                     group_reserve, 0);
+    sub_exists = p4est_comm_parallel_env_reduce_ext (&p4est_subcomm,
+                                                     group_reserve, 0, NULL);
     P4EST_ASSERT (
         (sub_exists && (0 < partition[rank] || mpisize - 2 <= rank)) ||
         (!sub_exists && 0 == partition[rank]) );

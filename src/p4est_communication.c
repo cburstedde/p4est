@@ -113,16 +113,20 @@ p4est_comm_parallel_env_is_null (p4est_t * p4est)
 }
 
 int
-p4est_comm_parallel_env_reduce (p4est_t * p4est)
+p4est_comm_parallel_env_reduce (p4est_t ** p4est_supercomm)
 {
-  return p4est_comm_parallel_env_reduce_ext (p4est, sc_MPI_GROUP_NULL, 0);
+  return p4est_comm_parallel_env_reduce_ext (p4est_supercomm, sc_MPI_GROUP_NULL,
+                                             0, NULL);
 }
 
 int
-p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
-                                    int add_to_beginning)
+p4est_comm_parallel_env_reduce_ext (p4est_t ** p4est_supercomm,
+                                    sc_MPI_Group group_add,
+                                    int add_to_beginning,
+                                    int ** ranks_subcomm)
 {
   const char         *this_fn_name = "comm_parallel_env_reduce";
+  p4est_t            *p4est = *p4est_supercomm;
   sc_MPI_Comm         mpicomm = p4est->mpicomm;
   int                 mpisize = p4est->mpisize;
   int                 mpiret;
@@ -198,6 +202,10 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
     /* destroy */
     P4EST_FREE (n_quadrants);
     p4est_destroy (p4est);
+    *p4est_supercomm = NULL;
+    if (ranks_subcomm) {
+      *ranks_subcomm = NULL;
+    }
 
     /* return that p4est does not exist on this rank */
     return 0;
@@ -262,7 +270,12 @@ p4est_comm_parallel_env_reduce_ext (p4est_t * p4est, sc_MPI_Group group_add,
     p4est->global_first_position[submpisize] = global_first_position[mpisize];
   }
   P4EST_FREE (global_first_position);
-  P4EST_FREE (ranks);
+  if (ranks_subcomm) {
+    *ranks_subcomm = ranks;
+  }
+  else {
+    P4EST_FREE (ranks);
+  }
 
   /* check for valid p4est */
   P4EST_ASSERT (p4est_is_valid (p4est));

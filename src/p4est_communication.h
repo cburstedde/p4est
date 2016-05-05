@@ -68,28 +68,36 @@ int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
 
 /** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
  *
- * \param [in/out] p4est  p4est object which communicator is reduced.
+ * \param [in/out] p4est_supercomm  Object which communicator is reduced.
+ *                                  Points to NULL if this p4est does not
+ *                                  exists.
  *
  * \return True if p4est exists on this MPI rank after reduction.
  */
-int                 p4est_comm_parallel_env_reduce (p4est_t * p4est);
+int                 p4est_comm_parallel_env_reduce (p4est_t ** p4est_supercomm);
 
 /** Reduce MPI communicator to non-empty ranks and add a group of ranks that
  * will remain in the reduced communicator regardless whether they are empty
  * or not.
  *
- * \param [in/out] p4est         p4est object which communicator is reduced.
+ * \param [in/out] p4est_supercomm  Object which communicator is reduced.
+ *                                  Points to NULL if this p4est does not
+ *                                  exists.
  * \param [in] group_add         Group of ranks that will remain in
  *                               communicator.
  * \param [in] add_to_beginning  If true, ranks will be added to the beginning
  *                               of the reduced communicator, otherwise to the
  *                               end.
+ * \param[out] ranks_subcomm     If not null, array of size 'subcommsize' with
+ *                               subcommrank->supercommrank map.
  *
  * \return True if p4est exists on this MPI rank after reduction.
  */
-int                 p4est_comm_parallel_env_reduce_ext (p4est_t * p4est,
-                                                        MPI_Group group_add,
-                                                        int add_to_beginning);
+int                 p4est_comm_parallel_env_reduce_ext (
+                                                    p4est_t ** p4est_supercomm,
+                                                    MPI_Group group_add,
+                                                    int add_to_beginning,
+                                                    int ** ranks_subcomm);
 
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and

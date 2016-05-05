@@ -102,16 +102,19 @@ p6est_comm_parallel_env_is_null (p6est_t * p6est)
 }
 
 int
-p6est_comm_parallel_env_reduce (p6est_t ** P6est)
+p6est_comm_parallel_env_reduce (p6est_t ** p6est_supercomm)
 {
-  return p6est_comm_parallel_env_reduce_ext (P6est, sc_MPI_GROUP_NULL, 0, NULL);
+  return p6est_comm_parallel_env_reduce_ext (p6est_supercomm, sc_MPI_GROUP_NULL,
+                                             0, NULL);
 }
 
 int
-p6est_comm_parallel_env_reduce_ext (p6est_t ** P6est, sc_MPI_Group group_add,
-                                    int add_to_beginning, int **Ranks)
+p6est_comm_parallel_env_reduce_ext (p6est_t ** p6est_supercomm,
+                                    sc_MPI_Group group_add,
+                                    int add_to_beginning,
+                                    int ** ranks_subcomm)
 {
-  p6est_t            *p6est = *P6est;
+  p6est_t            *p6est = *p6est_supercomm;
   int                 mpisize = p6est->mpisize;
   int                 mpiret;
   p4est_gloidx_t     *global_first_layer = p6est->global_first_layer;
@@ -121,29 +124,28 @@ p6est_comm_parallel_env_reduce_ext (p6est_t ** P6est, sc_MPI_Group group_add,
   sc_MPI_Comm         submpicomm;
   int                *ranks;
   int                 i;
-  int                 active;
+  int                 is_nonempty;
 
-  if (Ranks) {
-    *Ranks = NULL;
-  }
-
-  /* create array of non-empty processes that will be included to sub-comm */
-  n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
-  for (i = 0; i < mpisize; i++) {
-    n_quadrants[i] = global_first_layer[i + 1] - global_first_layer[i];
-  }
-
-  active =
-    p4est_comm_parallel_env_reduce_ext (p6est->columns, group_add,
+  /* reduce MPI communicator of column layout */
+  is_nonempty =
+    p4est_comm_parallel_env_reduce_ext (&(p6est->columns), group_add,
                                         add_to_beginning, &ranks);
-  if (!active) {
+
+  /* destroy p4est and exit if this rank is empty */
+  if (!is_nonempty) {
     p6est->columns = NULL;
     p6est_destroy (p6est);
-    *P6est = NULL;
+    *p6est_supercomm = NULL;
+    if (ranks_subcomm) {
+      *ranks_subcomm = NULL;
+    }
     P4EST_ASSERT (ranks == NULL);
     return 0;
   }
+
+  /* get sub-communicator */
   submpicomm = p6est->columns->mpicomm;
+
   /* update size of new MPI communicator */
   mpiret = sc_MPI_Comm_size (submpicomm, &submpisize);
   SC_CHECK_MPI (mpiret);
@@ -159,6 +161,12 @@ p6est_comm_parallel_env_reduce_ext (p6est_t ** P6est, sc_MPI_Group group_add,
   mpiret = sc_MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (p6est->mpisize == submpisize);
 
+  /* create array of non-empty processes that will be included to sub-comm */
+  n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
+  for (i = 0; i < mpisize; i++) {
+    n_quadrants[i] = global_first_layer[i + 1] - global_first_layer[i];
+  }
+
   /* allocate and set global layer count */
   P4EST_FREE (p6est->global_first_layer);
   p6est->global_first_layer = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
@@ -171,14 +179,14 @@ p6est_comm_parallel_env_reduce_ext (p6est_t ** P6est, sc_MPI_Group group_add,
       p6est->global_first_layer[i] + n_quadrants[ranks[i]];
   }
   P4EST_FREE (n_quadrants);
-  if (Ranks) {
-    *Ranks = ranks;
+  if (ranks_subcomm) {
+    *ranks_subcomm = ranks;
   }
   else {
     P4EST_FREE (ranks);
   }
 
-  /* return that this processor has quadrants */
+  /* return that p6est exists on this rank */
   return 1;
 }
 

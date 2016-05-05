@@ -70,31 +70,34 @@ int                 p6est_comm_parallel_env_is_null (p6est_t * p6est);
 
 /** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
  *
- * \param [in/out] p6est  p6est object which communicator is reduced;
- *                        points to NULL if this p6est does not exists.
+ * \param [in/out] p6est_supercomm  Object which communicator is reduced.
+ *                                  points to NULL if this p6est does not
+ *                                  exists.
  *
  * \return True if p6est exists on this MPI rank after reduction.
  */
-int                 p6est_comm_parallel_env_reduce (p6est_t ** p6est);
+int                 p6est_comm_parallel_env_reduce (p6est_t ** p6est_supercomm);
 
 /** Reduce MPI communicator to non-empty ranks and add a group of ranks that
  * will remain in the reduced communicator regardless whether they are empty
  * or not.
  *
- * \param [in/out] p6est         p6est object which communicator is reduced.
- *                               points to NULL if this p6est does not exists.
+ * \param [in/out] p6est_supercomm  Object which communicator is reduced.
+ *                                  Points to NULL if this p6est does not
+ *                                  exists.
  * \param [in] group_add         Group of ranks that will remain in
  *                               communicator.
  * \param [in] add_to_beginning  If true, ranks will be added to the beginning
  *                               of the reduced communicator, otherwise to the
  *                               end.
- * \param[out] ranks             if not null, set to point to a
- *                               subcommrank->supercommrank map
+ * \param[out] ranks_subcomm     If not null, array of size 'subcommsize' with
+ *                               subcommrank->supercommrank map.
  *
  * \return True if p6est exists on this MPI rank after reduction.
  */
-int                 p6est_comm_parallel_env_reduce_ext (p6est_t ** p6est,
-                                                        MPI_Group group_add,
-                                                        int add_to_beginning,
-                                                        int **ranks);
+int                 p6est_comm_parallel_env_reduce_ext (
+                                                    p6est_t ** p6est_supercomm,
+                                                    MPI_Group group_add,
+                                                    int add_to_beginning,
+                                                    int ** ranks_subcomm);
 
