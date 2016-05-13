@@ -271,6 +271,9 @@ extern const int    p8est_edge_corners[12][2];
 /** Store the face corner numbers for the faces touching a tree edge. */
 extern const int    p8est_edge_face_corners[12][6][2];
 
+/** Store the face edge numbers for the faces touching a tree edge. */
+extern const int    p8est_edge_face_edges[12][6];
+
 /** Store the face numbers 0..5 for each tree corner. */
 extern const int    p8est_corner_faces[8][3];
 
@@ -312,6 +315,16 @@ int                 p8est_connectivity_face_neighbor_corner_set
  */
 int                 p8est_connectivity_face_neighbor_corner_orientation
   (int c, int f, int nf, int o);
+
+/** Transform an edge across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] e    A edge number in 0..11.
+ * \param [in] f    A face number that touches the corner \a c.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ */
+int                 p8est_connectivity_face_neighbor_edge_orientation
+  (int e, int f, int nf, int o);
 
 /** Allocate a connectivity structure.
  * The attribute fields are initialized to NULL.
