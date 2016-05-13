@@ -121,6 +121,19 @@ const int           p8est_edge_face_corners[12][6][2] =
  {{ -1, -1 }, {  0,  2 }, {  1,  3 }, { -1, -1 }, { -1, -1 }, { -1, -1 }},
  {{  1,  3 }, { -1, -1 }, { -1, -1 }, {  0,  2 }, { -1, -1 }, { -1, -1 }},
  {{ -1, -1 }, {  1,  3 }, { -1, -1 }, {  1,  3 }, { -1, -1 }, { -1, -1 }}};
+const int           p8est_edge_face_edges[12][6] =
+{{ -1, -1,  0, -1,  0, -1 },
+ { -1, -1, -1,  0,  1, -1 },
+ { -1, -1,  1, -1, -1,  0 },
+ { -1, -1, -1,  1, -1,  1 },
+ {  0, -1, -1, -1,  2, -1 },
+ { -1,  0, -1, -1,  3, -1 },
+ {  1, -1, -1, -1, -1,  2 },
+ { -1,  1, -1, -1, -1,  3 },
+ {  2, -1,  2, -1, -1, -1 },
+ { -1,  2,  3, -1, -1, -1 },
+ {  3, -1, -1,  2, -1, -1 },
+ { -1,  3, -1,  3, -1, -1 }};
 
 const int           p8est_corner_faces[8][3] =
 {{ 0, 2, 4 },
@@ -1036,6 +1049,28 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
 }
 
 #include "p4est_connectivity.c"
+
+p8est_connectivity_face_neighbor_edge_orientation (int e, int f,
+                                                   int nf, int o)
+{
+  int                 fe, nfe, pref, pset;
+
+  P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
+  P4EST_ASSERT (0 <= f && f < P4EST_FACES);
+  P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
+  P4EST_ASSERT (0 <= o && o < P4EST_HALF);
+
+  fe = p8est_edge_face_corners[e][f];
+  P4EST_ASSERT (0 <= fe && fe < P4EST_HALF);
+
+  pref = p8est_face_edge_permutation_refs[f][nf];
+  pset = p8est_face_edge_permutation_sets[pref][o];
+  nfe = p8est_face_edge_permutations[pset][fe];
+
+  P4EST_ASSERT (0 <= nfe && nfe < P4EST_HALF);
+
+  return p8est_face_edges[nf][nfe];
+}
 
 void
 p8est_find_edge_transform (p4est_connectivity_t * conn,
