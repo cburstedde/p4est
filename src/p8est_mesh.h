@@ -212,6 +212,17 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
  */
 void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 
+/** Get specific process local quadrant
+ *
+ * \param [in] p4est  The forest.
+ * \param [in] mesh   The mesh
+ * \param [in] qid    The id of the quadrant we want to obtain
+ * \returns           A pointer to the requested quadrant
+ */
+p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
+                                             p8est_mesh_t * mesh,
+                                             p4est_locidx_t qid);
+
 /** Lookup neighboring quads of quadrant in a specific direction
  * \param [in]  p4est              Forest to be worked with.
  * \param [in]  ghost              Ghost quadrants.
@@ -231,16 +242,22 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
  *          mesh.
  *          Positive values are for local quadrants, negative values indicate
  *          ghost quadrants.
- *          Faces:     1 ..  24 => (r * 6 + nf) + 1; nf = 0 .. 5 face index;
+ *          Faces:     1 ..  24 => same size neighbor
+ *                                 (r * 6 + nf) + 1; nf = 0 .. 5 face index;
  *                                 r = 0 .. 3 relative orientation
- *                    25 .. 120 => 25 + h * 24 + r * 6 + nf; h = 0 .. 3 number
+ *                    25 .. 120 => double size neighbor
+ *                                 25 + h * 24 + r * 6 + nf; h = 0 .. 3 number
  *                                 of the subface; r, nf as above
- *                   121 .. 144 => 121 + r * 6 + nf; r, nf as above
- *          Edges:     1 ..  24 => r * 12 + ne + 1; ne = 0 .. 11 edge index;
+ *                   121 .. 144 => half size neighbors
+ *                                 121 + r * 6 + nf; r, nf as above
+ *          Edges:     1 ..  24 => same size neighbor
+ *                                 r * 12 + ne + 1; ne = 0 .. 11 edge index;
  *                                 r = 0 .. 1 relative orientation
- *                    25 ..  72 => 25 + h * 24 + r * 12 + ne; h = 0 .. 1 number
+ *                    25 ..  72 => double size neighbor
+ *                                 25 + h * 24 + r * 12 + ne; h = 0 .. 1 number
  *                                 of the subedge; r, ne as above
- *                    73 ..  96 => 73 + r * 12 + ne; r, ne as above
+ *                    73 ..  96 => half size neighbors
+ *                                 73 + r * 12 + ne; r, ne as above
  *          Corners:   1 ..   8 => nc + 1; nc = 0 .. 7 corner index
  */
 p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,

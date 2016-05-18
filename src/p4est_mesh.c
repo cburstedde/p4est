@@ -221,10 +221,6 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   p4est_connectivity_t *conn;
   sc_array_t         *trees;
 
-  conn = info->p4est->connectivity;
-  trees = info->p4est->trees;
-  cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
-
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
   P4EST_ASSERT (cz > 0);
@@ -1298,8 +1294,8 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_tree_t       *tree;
-  p4est_locidx_t     *quadid;
-  int                 level = info->quad->level;
+  p4est_locidx_t     *quadid, qid;
+  int                 level = info->quad->level, i;
 
   /* We could use a static quadrant counter, but that gets uglier */
   tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
@@ -1312,7 +1308,19 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
 
   if (mesh->quad_level != NULL) {
     quadid = (p4est_locidx_t *) sc_array_push (mesh->quad_level + level);
-    *quadid = tree->quadrants_offset + info->quadid;
+    qid = tree->quadrants_offset + info->quadid;
+    *quadid = qid;
+
+    if (mesh->quad_to_virtual != NULL) {
+      if (mesh->quad_to_virtual[qid] != -1) {
+        quadid =
+          (p4est_locidx_t *) sc_array_push_count (mesh->quad_level + level,
+                                                  P4EST_CHILDREN);
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
+          *(quadid + i) = mesh->quad_to_virtual[qid] + i;
+        }
+      }
+    }
   }
 }
 
@@ -1344,6 +1352,8 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
     sizeof (p4est_mesh_t) + qtt_memory + ql_memory +
     P4EST_FACES * lqz * (sizeof (p4est_locidx_t) + sizeof (int8_t)) +
     ngz * sizeof (int) + sc_array_memory_used (mesh->quad_to_half, 1);
+
+  /* add edge information */
 
   /* add corner information */
   if (mesh->quad_to_corner != NULL) {
@@ -1381,7 +1391,9 @@ p4est_mesh_new_ext (p4est_t * p4est,
   p4est_mesh_t       *mesh;
 
   /* check whether input condition for p4est is met */
-  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
+#ifdef P4EST_DEBUG
+  P4EST_ASSERT (p4est_is_balanced (p4est, btype));
+#endif /* P4EST_DEBUG */
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
@@ -1518,6 +1530,21 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
 
 /************************* accessor functions ************************/
 
+p4est_quadrant_t   *
+p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
+                         p4est_locidx_t qid)
+{
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  tree =
+    (p4est_tree_t *) sc_array_index_int (p4est->trees,
+                                         mesh->quad_to_tree[qid]);
+  quad =
+    (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
+                                             qid - tree->quadrants_offset);
+  return quad;
+}
+
 p4est_locidx_t
 p4est_mesh_get_neighbors (p4est_t * p4est,
                           p4est_ghost_t * ghost,
@@ -1590,7 +1617,6 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 #endif /* P4_TO_P8 */
 
   p4est_locidx_t      neighbor_idx, neighbor_encoding;
-  p4est_tree_t       *tree;
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
   int                *enc_ptr;
@@ -1603,7 +1629,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       mesh->quad_to_face[P4EST_FACES * curr_quad_id + direction];
 
     /* no neighbor present */
-    if (neighbor_idx < 0 || neighbor_idx == curr_quad_id) {
+    if ((neighbor_idx < 0 || neighbor_idx == curr_quad_id)
+        && neighbor_encoding < P4EST_FACES) {
       return 0;
     }
 
@@ -1617,16 +1644,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       for (i = 0; i < P4EST_HALF; ++i) {
         quad_idx = quad_ptr[i];
         if (quad_idx < lq) {
-          /* neighbor is part of quadrants owned by processor */
-          tree =
-            (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                                 mesh->quad_to_tree
-                                                 [quad_idx]);
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-          quad =
-            (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                     quad_idx -
-                                                     tree->quadrants_offset);
+          quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
           *quad_ins = quad;
 
           enc_ptr = (int *) sc_array_push (neighboring_encs);
@@ -1652,15 +1671,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       /* same or double size */
       if (neighbor_idx < lq) {
         /* neighbor is part of quadrants owned by processor */
-        tree =
-          (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                               mesh->quad_to_tree
-                                               [neighbor_idx]);
         quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-        quad =
-          (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                   neighbor_idx -
-                                                   tree->quadrants_offset);
+        quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
         *quad_ins = quad;
 
         enc_ptr = (int *) sc_array_push (neighboring_encs);
@@ -1700,15 +1712,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
     if (neighbor_idx < lq) {
       /* same size neighbor, same proc */
-      tree =
-        (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                             mesh->quad_to_tree
-                                             [neighbor_idx]);
       quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-      quad =
-        (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                 neighbor_idx -
-                                                 tree->quadrants_offset);
+      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
       *quad_ins = quad;
       enc_ptr = (int *) sc_array_push (neighboring_encs);
 
@@ -1761,16 +1766,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
         if (quad_idx < lq) {
           /* neighbor is part of quadrants owned by processor */
-          tree =
-            (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                                 mesh->quad_to_tree
-                                                 [quad_idx]);
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-          quad =
-            (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                     quad_idx -
-                                                     tree->quadrants_offset);
+          quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
           *quad_ins = quad;
+
           enc_ptr = (int *) sc_array_push (neighboring_encs);
           /* convert encoding */
           neighbor_encoding += (neighbor_encoding < 0 ? convEdge : 1);
@@ -1814,15 +1813,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
     if (neighbor_idx < lq) {
       /* same size neighbor, same proc */
-      tree =
-        (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                             mesh->quad_to_tree
-                                             [neighbor_idx]);
       quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-      quad =
-        (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                 neighbor_idx -
-                                                 tree->quadrants_offset);
+      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
       *quad_ins = quad;
 
       enc_ptr = (int *) sc_array_push (neighboring_encs);
@@ -1874,15 +1866,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
         if (quad_idx < lq) {
           /* neighbor is part of quadrants owned by processor */
-          tree =
-            (p4est_tree_t *) sc_array_index_int (p4est->trees,
-                                                 mesh->quad_to_tree
-                                                 [quad_idx]);
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-          quad =
-            (p4est_quadrant_t *) sc_array_index_int (&tree->quadrants,
-                                                     quad_idx -
-                                                     tree->quadrants_offset);
+          quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
           *quad_ins = quad;
 
           enc_ptr = (int *) sc_array_push (neighboring_encs);

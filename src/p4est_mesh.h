@@ -167,6 +167,17 @@ p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est,
  */
 void                p4est_mesh_destroy (p4est_mesh_t * mesh);
 
+/** Get specific process local quadrant
+ *
+ * \param [in] p4est  The forest.
+ * \param [in] mesh   The mesh
+ * \param [in] qid    The id of the quadrant we want to obtain
+ * \returns           A pointer to the requested quadrant
+ */
+p4est_quadrant_t   *p4est_mesh_get_quadrant (p4est_t * p4est,
+                                             p4est_mesh_t * mesh,
+                                             p4est_locidx_t qid);
+
 /** Lookup neighboring quads of quadrant in a specific direction
  * \param [in]  p4est              Forest to be worked with.
  * \param [in]  ghost              Ghost quadrants.
@@ -185,12 +196,16 @@ void                p4est_mesh_destroy (p4est_mesh_t * mesh);
  *          mesh.
  *          Positive values are for local quadrants, negative values indicate
  *          ghost quadrants.
- *          Faces:     1 ..   8 => (r * 4 + nf) + 1; nf = 0 .. 3 face index;
+ *          Faces:     1 ..   8 => same size neighbor
+ *                                 (r * 4 + nf) + 1; nf = 0 .. 3 face index;
  *                                 r = 0 .. 1 relative orientation
- *                     9 ..  24 => 9 + h * 8 + r * 4 + nf; h = 0 .. 1 number
+ *                     9 ..  24 => double size neighbor
+ *                                 9 + h * 8 + r * 4 + nf; h = 0 .. 1 number
  *                                 of the subface; r, nf as above
- *                    25 ..  32 => 25 + r * 4 + nf; r, nf as above
- *          Corners:   1 ..   4 => nc + 1; nc = 0 .. 3 corner index
+ *                    25 ..  32 => half-size neighbors
+ *                                 25 + r * 4 + nf; r, nf as above
+ *          Corners:   1 ..   4 => size not encoded for corners
+ *                                 nc + 1; nc = 0 .. 3 corner index
  */
 p4est_locidx_t      p4est_mesh_get_neighbors (p4est_t * p4est,
                                               p4est_ghost_t * ghost,
