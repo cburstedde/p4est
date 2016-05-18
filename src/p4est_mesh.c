@@ -234,9 +234,9 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
     P4EST_ASSERT (!side1->is_ghost);
     qid1 = side1->quadid;
     P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-    P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                       side1->corner] == -1);
-    mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+
+    mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -3;
+
     return;
   }
 
@@ -250,9 +250,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         if (!side1->is_ghost) {
           qid1 = side1->quadid;
           P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                             side1->corner] == -1);
-          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -3;
         }
       }
       return;
@@ -359,9 +358,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
         if (!side1->is_ghost) {
           qid1 = side1->quadid;
           P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
-          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
-                                             side1->corner] == -1);
-          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -1;
+
+          mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -3;
         }
       }
       return;
@@ -625,13 +623,35 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 
     P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
 
-    /* put in myself */
-    P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
-    mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = qid1;
+    /* put in -3 */
+    mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
+
+    return;
   }
   else if (cz == 2) {
     /* edge on a domain limiting face */
-    /* do not touch, already set to -1 */
+    for (i = 0; i < 2; ++i) {
+      side1 = (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, i);
+      if (!side1->is_hanging) {
+        if (!side1->is.full.is_ghost) {
+          qid1 = side1->is.full.quadid;
+          P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+
+          mesh->quad_to_edge[P4EST_CHILDREN * qid1 + side1->edge] = -3;
+        }
+      }
+      else {
+        for (j = 0; j < 2; ++j) {
+          if (!side1->is.hanging.is_ghost[j]) {
+            qid1 = side1->is.hanging.quadid[j];
+            P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+
+            mesh->quad_to_edge[P4EST_CHILDREN * qid1 + side1->edge] = -3;
+          }
+        }
+      }
+    }
+
     return;
   }
   else {
@@ -639,11 +659,10 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     P4EST_ASSERT (4 <= cz);
 
     /* edges on tree boundaries */
-    /* edge on face boundary */
     if (info->tree_boundary) {
       p4est_locidx_t      nedgef[2];
       p4est_locidx_t      nface[2];
-      int                 nAdjacentQuads;
+      int                 nAdjacentQuads = 0;
       int                 ignore;
       size_t              z2;
       int8_t             *eedges;
@@ -651,7 +670,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       p4est_locidx_t      goodones;
       p4est_locidx_t     *equads;
 
-      /* initialize ncornerf to zero */
+      /* initialize nedgef to zero */
       SC_BZERO (nedgef, P4EST_DIM);
 
       /* determine number of adjacentQuads beforehand. */
@@ -664,16 +683,15 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads - 1);
       eedges = P4EST_ALLOC (int8_t, nAdjacentQuads - 1);
 
-      /* Loop through all corner sides, that is the quadrants touching it.  For
+      /* Loop through all edge sides, that is the quadrants touching it.  For
        * each of these quadrants, determine the edge sides that can potentially
        * occur by being a face neighbor as well.  Exclude these face neighbors
        * and the quadrant itself, record all others as edge neighbors.
        */
       for (zz = 0; zz < cz; ++zz) {
-
         side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
 
-        /* We only create corner information for processor-local quadrants */
+        /* We only create edge information for processor-local quadrants */
         if (side1->is_hanging) {
           for (i = 0; i < 2; ++i) {
             if (!side1->is.hanging.is_ghost[i]) {
@@ -707,7 +725,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                   }
                 }
                 if (!ignore) {
-                  /* Record this corner neighbor if we don't ignore it */
+                  /* Record this edge neighbor if we don't ignore it */
                   int8_t              localOri =
                     (side1->orientation + side2->orientation) % 2;
                   tree2 =
@@ -742,10 +760,10 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                             && (size_t) goodones < nAdjacentQuads);
 
               if (goodones > 0) {
-                /* Allocate and fill corner information in the mesh structure */
+                /* Allocate and fill edge information in the mesh structure */
                 edgeid =
                   mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
-                /* "link" to arrays encoding inter-tree corner-neighborhood */
+                /* "link" to arrays encoding inter-tree edge-neighborhood */
                 P4EST_ASSERT
                   (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] ==
                    -1);
@@ -790,7 +808,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 }
               }
               if (!ignore) {
-                /* Record this corner neighbor if we don't ignore it */
+                /* Record this edge neighbor if we don't ignore it */
                 int8_t              localOri =
                   (side1->orientation + side2->orientation) % 2;
                 tree2 =
@@ -823,9 +841,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                           && (size_t) goodones < nAdjacentQuads);
 
             if (goodones > 0) {
-              /* Allocate and fill corner information in the mesh structure */
+              /* Allocate and fill edge information in the mesh structure */
               edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
-              /* "link" to arrays encoding inter-tree corner-neighborhood */
+              /* "link" to arrays encoding inter-tree edge-neighborhood */
               P4EST_ASSERT
                 (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
               mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
