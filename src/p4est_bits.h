@@ -331,6 +331,15 @@ void                p4est_quadrant_sibling (const p4est_quadrant_t * q,
                                             p4est_quadrant_t * r,
                                             int sibling_id);
 
+/** Compute a specific child of a quadrant.
+ * \param [in]     q    Input quadrant.
+ * \param [in,out] r    Existing quadrant whose Morton index will be filled
+ *                      with the coordinates of its child no. \b child_id.
+ * \param [in] child_id The id of the child computed, 0..3.
+ */
+void                p4est_quadrant_child (const p4est_quadrant_t * q,
+                                          p4est_quadrant_t * r, int child_id);
+
 /** Compute the face neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     face   The face across which to generate the neighbor.

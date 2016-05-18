@@ -186,6 +186,9 @@ void                p8est_complete_region (p8est_t * p8est,
 
 /** Completes a sorted tree within a p8est. It may have exterior quadrants.
  * The completed tree will have only owned quadrants and no overlap.
+ * Note that the tree's counters (\a quadrants_per_level, \a maxlevel) must be
+ * correct for the quadrants in the incoming tree.
+ *
  * \param [in,out] p8est      The p8est to work on.
  * \param [in]     which_tree The 0-based index of the subtree to complete.
  * \param [in]     init_fn    Callback function to initialize the user_data
