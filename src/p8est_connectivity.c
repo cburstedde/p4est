@@ -1077,6 +1077,7 @@ p8est_connectivity_face_neighbor_edge_orientation (int e, int f,
   P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
   P4EST_ASSERT (0 <= f && f < P4EST_FACES);
   P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
+  P4EST_ASSERT (0 <= o && o < 2);
 
   fe = p8est_edge_face_edges[e][f];
   P4EST_ASSERT (0 <= fe && fe < P4EST_HALF);
@@ -1099,13 +1100,15 @@ p8est_connectivity_edge_neighbor_corner_orientation (int c, int e,
   P4EST_ASSERT (0 <= c && e < P4EST_CHILDREN);
   P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
   P4EST_ASSERT (0 <= ne && ne < P8EST_EDGES);
+  P4EST_ASSERT (0 <= o && o < 2);
 
   ec = p8est_edge_edge_corners[e][c];
-  P4EST_ASSERT (0 < ec && ec < 2);
+  P4EST_ASSERT (0 <= ec && ec < 2);
 
   pset = p8est_edge_corner_permutation_sets[o];
   nec = p8est_edge_corner_permuations[pset][ec];
-  P4EST_ASSERT (0 < nec && nec < 2);
+
+  P4EST_ASSERT (0 <= nec && nec < 2);
 
   return p8est_edge_corners[ne][nec];
 }
