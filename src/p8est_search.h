@@ -51,6 +51,11 @@ ssize_t             p8est_find_higher_bound (sc_array_t * array,
                                              const p8est_quadrant_t * q,
                                              size_t guess);
 
+p8est_quadrant_t   *
+p8est_find_quadrant_cumulative (p8est_t * p4est, p4est_locidx_t cumulative_id,
+                                p4est_topidx_t * which_tree,
+                                p4est_locidx_t * quadrant_id);
+
 /** Given a sorted \b array of quadrants that have a common ancestor at level
  * \b level, compute the \b indices of the first quadrant in each of the common
  * ancestor's children at level \b level + 1.

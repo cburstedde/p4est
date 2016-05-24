@@ -77,7 +77,7 @@ test_mesh_collect_markers (p4est_iter_volume_info_t * info, void *user_data)
   /* calculate position to write to and write data there */
   p4est_t            *p4est = info->p4est;
   p4est_topidx_t      which_tree = info->treeid;
-  p4est_locidx_t      local_id = info->quadid;  /* this is the index of q 
+  p4est_locidx_t      local_id = info->quadid;  /* this is the index of q
                                                    within its tree's numbering.
                                                    We want to convert the index
                                                    for all the quadrants on this
@@ -565,8 +565,8 @@ main (int argc, char **argv)
   conn = 0;
 
   int                 test_single, test_multi_brick, test_multi_non_brick;
-  test_single = 0;
-  test_multi_brick = 1;
+  test_single = 1;
+  test_multi_brick = 0;
   test_multi_non_brick = 0;
 
   /* test both periodic and non-periodic boundaries */

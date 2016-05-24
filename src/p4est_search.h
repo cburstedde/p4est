@@ -51,6 +51,11 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
                                              size_t guess);
 
+p4est_quadrant_t   *
+p4est_find_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
+                                p4est_topidx_t * which_tree,
+                                p4est_locidx_t * quadrant_id);
+
 /** Split an array of quadrants by the children of an ancestor.
  *
  * Given a sorted \b array of quadrants that have a common ancestor at level

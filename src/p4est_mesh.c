@@ -1310,17 +1310,6 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
     quadid = (p4est_locidx_t *) sc_array_push (mesh->quad_level + level);
     qid = tree->quadrants_offset + info->quadid;
     *quadid = qid;
-
-    if (mesh->quad_to_virtual != NULL) {
-      if (mesh->quad_to_virtual[qid] != -1) {
-        quadid =
-          (p4est_locidx_t *) sc_array_push_count (mesh->quad_level + level,
-                                                  P4EST_CHILDREN);
-        for (i = 0; i < P4EST_CHILDREN; ++i) {
-          *(quadid + i) = mesh->quad_to_virtual[qid] + i;
-        }
-      }
-    }
   }
 }
 
