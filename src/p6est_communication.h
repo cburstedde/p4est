@@ -21,6 +21,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P6EST_COMMUNICATION_H
+#define P6EST_COMMUNICATION_H
+
 /** \file p6est_communication.h
  *
  * MPI_Comm management.
@@ -29,6 +32,8 @@
  */
 
 #include <p6est.h>
+
+SC_EXTERN_C_BEGIN;
 
 /** Assign an MPI communicator to p6est; retrieve parallel environment.
  *
@@ -101,3 +106,6 @@ int                 p6est_comm_parallel_env_reduce_ext (
                                                     int add_to_beginning,
                                                     int ** ranks_subcomm);
 
+SC_EXTERN_C_END;
+
+#endif /* !P6EST_COMMUNICATION_H */

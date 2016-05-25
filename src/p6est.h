@@ -21,6 +21,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P6EST_H
+#define P6EST_H
+
 /** \file p6est.h
  *
  * A hybrid 2D+1D AMR extension.
@@ -45,9 +48,6 @@
  * p6est_lnodes_new(): this creates nodes in the same data structure as
  * p8est_lnodes_new().
  */
-
-#ifndef P6EST_H
-#define P6EST_H
 
 /* 2+1D refinement is based on the 2D p4est datatypes */
 #include <p4est.h>

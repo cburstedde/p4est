@@ -266,8 +266,6 @@ p6est_lnodes_global_index (p6est_lnodes_t * lnodes, p4est_locidx_t lidx)
   return p8est_lnodes_global_index (lnodes, lidx);
 }
 
-SC_EXTERN_C_END;
-
 /** For each owned node, get the global 2D number for the node-column
  * containing it.
  *
@@ -279,5 +277,7 @@ SC_EXTERN_C_END;
  */
 p4est_gloidx_t     *p6est_lnodes_get_column_labels (p6est_t * p6est,
                                                     p8est_lnodes_t * lnodes);
+
+SC_EXTERN_C_END;
 
 #endif /* !P6EST_LNODES */

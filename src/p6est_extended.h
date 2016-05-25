@@ -21,6 +21,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P6EST_EXTENDED_H
+#define P6EST_EXTENDED_H
+
 /********************************************************************
  *                          IMPORTANT NOTE                          *
  *                                                                  *
@@ -36,10 +39,9 @@
  * \ingroup p6est
  */
 
-#ifndef P6EST_EXTENDED_H
-#define P6EST_EXTENDED_H
-
 #include <p6est.h>
+
+SC_EXTERN_C_BEGIN;
 
 /** Create a new forest.
  * This is a more general form of p6est_new().
@@ -265,5 +267,7 @@ void                p6est_balance_ext (p6est_t * p6est,
                                        int max_diff, int min_diff,
                                        p6est_init_t init_fn,
                                        p6est_replace_t replace_fn);
+
+SC_EXTERN_C_END;
 
 #endif
