@@ -372,6 +372,11 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
 
+  /* avoid uninitialized warning */
+  for (k = 0; k < P4EST_CHILDREN; ++k) {
+    vt[k] = -(k + 1);
+  }
+
   /* from now on this context is officially in use for writing */
   cont->writing = 1;
 
@@ -490,6 +495,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
       }
       else {
         /* provoke crash on logic bug */
+        P4EST_ASSERT (vt[0] == -1);
         v = NULL;
       }
 
@@ -561,6 +567,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
       }
       else {
         /* provoke crash on logic bug */
+        P4EST_ASSERT (vt[0] == -1);
         v = NULL;
       }
 
