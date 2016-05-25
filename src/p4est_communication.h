@@ -74,7 +74,8 @@ int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
  *
  * \return True if p4est exists on this MPI rank after reduction.
  */
-int                 p4est_comm_parallel_env_reduce (p4est_t ** p4est_supercomm);
+int                 p4est_comm_parallel_env_reduce (p4est_t **
+                                                    p4est_supercomm);
 
 /** Reduce MPI communicator to non-empty ranks and add a group of ranks that
  * will remain in the reduced communicator regardless whether they are empty
@@ -93,11 +94,11 @@ int                 p4est_comm_parallel_env_reduce (p4est_t ** p4est_supercomm);
  *
  * \return True if p4est exists on this MPI rank after reduction.
  */
-int                 p4est_comm_parallel_env_reduce_ext (
-                                                    p4est_t ** p4est_supercomm,
-                                                    MPI_Group group_add,
-                                                    int add_to_beginning,
-                                                    int ** ranks_subcomm);
+int                 p4est_comm_parallel_env_reduce_ext (p4est_t **
+                                                        p4est_supercomm,
+                                                        MPI_Group group_add,
+                                                        int add_to_beginning,
+                                                        int **ranks_subcomm);
 
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and

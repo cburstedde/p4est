@@ -512,7 +512,7 @@ p4est_destroy (p4est_t * p4est)
 p4est_t            *
 p4est_copy (p4est_t * input, int copy_data)
 {
-  return p4est_copy_ext (input, copy_data, 0 /* don't duplicate MPI comm */);
+  return p4est_copy_ext (input, copy_data, 0 /* don't duplicate MPI comm */ );
 }
 
 p4est_t            *

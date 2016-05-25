@@ -81,7 +81,8 @@ int                 p6est_comm_parallel_env_is_null (p6est_t * p6est);
  *
  * \return True if p6est exists on this MPI rank after reduction.
  */
-int                 p6est_comm_parallel_env_reduce (p6est_t ** p6est_supercomm);
+int                 p6est_comm_parallel_env_reduce (p6est_t **
+                                                    p6est_supercomm);
 
 /** Reduce MPI communicator to non-empty ranks and add a group of ranks that
  * will remain in the reduced communicator regardless whether they are empty
@@ -100,11 +101,11 @@ int                 p6est_comm_parallel_env_reduce (p6est_t ** p6est_supercomm);
  *
  * \return True if p6est exists on this MPI rank after reduction.
  */
-int                 p6est_comm_parallel_env_reduce_ext (
-                                                    p6est_t ** p6est_supercomm,
-                                                    MPI_Group group_add,
-                                                    int add_to_beginning,
-                                                    int ** ranks_subcomm);
+int                 p6est_comm_parallel_env_reduce_ext (p6est_t **
+                                                        p6est_supercomm,
+                                                        MPI_Group group_add,
+                                                        int add_to_beginning,
+                                                        int **ranks_subcomm);
 
 SC_EXTERN_C_END;
 

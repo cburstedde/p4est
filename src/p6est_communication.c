@@ -42,7 +42,8 @@ p6est_comm_parallel_env_duplicate (p6est_t * p6est)
   int                 mpiret;
 
   /* duplicate MPI communicator */
-  mpiret = sc_MPI_Comm_dup (mpicomm, &(p6est->mpicomm)); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_dup (mpicomm, &(p6est->mpicomm));
+  SC_CHECK_MPI (mpiret);
   p6est->mpicomm_owned = 1;
 }
 
@@ -53,7 +54,8 @@ p6est_comm_parallel_env_release (p6est_t * p6est)
 
   /* free MPI communicator if it's owned */
   if (p6est->mpicomm_owned) {
-    mpiret = sc_MPI_Comm_free (&(p6est->mpicomm)); SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Comm_free (&(p6est->mpicomm));
+    SC_CHECK_MPI (mpiret);
   }
   p6est->mpicomm = sc_MPI_COMM_NULL;
   p6est->mpicomm_owned = 0;
@@ -105,15 +107,14 @@ p6est_comm_parallel_env_is_null (p6est_t * p6est)
 int
 p6est_comm_parallel_env_reduce (p6est_t ** p6est_supercomm)
 {
-  return p6est_comm_parallel_env_reduce_ext (p6est_supercomm, sc_MPI_GROUP_NULL,
-                                             0, NULL);
+  return p6est_comm_parallel_env_reduce_ext (p6est_supercomm,
+                                             sc_MPI_GROUP_NULL, 0, NULL);
 }
 
 int
 p6est_comm_parallel_env_reduce_ext (p6est_t ** p6est_supercomm,
                                     sc_MPI_Group group_add,
-                                    int add_to_beginning,
-                                    int ** ranks_subcomm)
+                                    int add_to_beginning, int **ranks_subcomm)
 {
   p6est_t            *p6est = *p6est_supercomm;
   int                 mpisize = p6est->mpisize;
@@ -159,7 +160,8 @@ p6est_comm_parallel_env_reduce_ext (p6est_t ** p6est_supercomm,
   p6est_comm_parallel_env_release (p6est);
   p6est_comm_parallel_env_assign (p6est, submpicomm);
   p6est_comm_parallel_env_duplicate (p6est);
-  mpiret = sc_MPI_Comm_free (&submpicomm); SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_free (&submpicomm);
+  SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (p6est->mpisize == submpisize);
 
   /* create array of non-empty processes that will be included to sub-comm */
@@ -190,4 +192,3 @@ p6est_comm_parallel_env_reduce_ext (p6est_t ** p6est_supercomm,
   /* return that p6est exists on this rank */
   return 1;
 }
-
