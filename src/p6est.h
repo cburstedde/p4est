@@ -547,7 +547,7 @@ p6est_t            *p6est_load (const char *filename, sc_MPI_Comm mpicomm,
  *                      process was not in the active range
  * \returns true if this process is in the active range, else false
  */
-int p6est_reduce_mpicomm (p6est_t ** P6est);
+int                 p6est_reduce_mpicomm (p6est_t ** P6est);
 
 /** convert the p6est to a subcommunicator involving only the range active processes
  * \param[in,out] P6est pointer to forest: on output, points to NULL if this
@@ -558,8 +558,10 @@ int p6est_reduce_mpicomm (p6est_t ** P6est);
  * \param[out] if not null, set to point to a subcommrank->supercommrank map
  * \returns true if this process is in the active range, else false
  */
-int p6est_reduce_mpicomm_ext (p6est_t ** P6est, sc_MPI_Group group_add,
-                              const int add_to_beginning, int **ranks);
+int                 p6est_reduce_mpicomm_ext (p6est_t ** P6est,
+                                              sc_MPI_Group group_add,
+                                              const int add_to_beginning,
+                                              int **ranks);
 
 /** Return a pointer to a quadrant array element indexed by a size_t. */
 /*@unused@*/
