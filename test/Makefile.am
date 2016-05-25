@@ -180,7 +180,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_conn_reduce_SOURCES) \
         $(test_p8est_test_plex_SOURCES) \
         $(test_p8est_test_connrefine_SOURCES) \
-        $(test_p8est_test_subcomm_SOURCES)
+        $(test_p8est_test_subcomm_SOURCES) \
         $(test_p6est_test_all_SOURCES)
 
 if P4EST_WITH_METIS
