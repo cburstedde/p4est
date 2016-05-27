@@ -265,7 +265,8 @@ test_weird (void)
     for (zz = 0; zz < eta->elem_count; ++zz) {
       et = p8est_edge_array_index (eta, zz);
       SC_CHECK_ABORT (et->ntree == 0, "WE tree");
-      SC_CHECK_ABORT ((int) et->nedge == weird_edges[i][1] || (int) et->nedge == weird_edges[i][0], "WE edge");
+      SC_CHECK_ABORT ((int) et->nedge == weird_edges[i][1]
+                      || (int) et->nedge == weird_edges[i][0], "WE edge");
       SC_CHECK_ABORT (et->nflip == 1, "WE flip");
       SC_CHECK_ABORT (et->corners == et->nedge % 4, "WE corners");
       SC_CHECK_ABORT (et->naxis[0] == 1 && et->naxis[1] == 0 &&
