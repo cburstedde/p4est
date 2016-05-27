@@ -107,6 +107,24 @@ p4est_wrap_t       *p4est_wrap_new_conn (sc_MPI_Comm mpicomm,
                                          p4est_connectivity_t * conn,
                                          int initial_level);
 
+/** Create a wrapper for a given p4est structure.
+ * \param [in,out] p4est      Valid p4est object that we will own.
+ *                            We take ownership of its connectivity too.
+ *                            Its user pointer must be NULL and will be changed.
+ * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
+ * \param [in] btype          The neighborhood used for balance, ghost, mesh.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in \ref p4est_wrap_adapt.
+ *                            May be NULL.
+ * \param [in] user_pointer   Set the user pointer in \ref p4est_wrap_t.
+ *                            Subsequently, we will never access it.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_p4est (p4est_t * p4est, int hollow,
+                                          p4est_connect_type_t btype,
+                                          p4est_replace_t replace_fn,
+                                          void *user_pointer);
+
 /** Create a p4est wrapper from a given connectivity structure.
  * Like p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.

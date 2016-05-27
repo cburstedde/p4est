@@ -21,9 +21,11 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_wrap.h>
 #else
+#include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_wrap.h>
 #endif
@@ -176,18 +178,20 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
 }
 
 p4est_wrap_t       *
-p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
-                    int initial_level, int hollow, p4est_connect_type_t btype,
-                    p4est_replace_t replace_fn, void *user_pointer)
+p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
+                      p4est_replace_t replace_fn, void *user_pointer)
 {
   p4est_wrap_t       *pp;
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (p4est->user_pointer == NULL);
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
   pp->hollow = hollow;
 
   sc_refcount_init (&pp->conn_rc, p4est_package_id);
-  pp->conn = conn;
+  pp->conn = p4est->connectivity;
   pp->conn_owner = NULL;
 
   pp->p4est_dim = P4EST_DIM;
@@ -196,9 +200,7 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->p4est_children = P4EST_CHILDREN;
   pp->btype = btype;
   pp->replace_fn = replace_fn;
-  pp->p4est = p4est_new_ext (mpicomm, pp->conn,
-                             0, initial_level, 1, 0, NULL, NULL);
-
+  pp->p4est = p4est;
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
 
   if (!pp->hollow) {
@@ -211,6 +213,19 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   pp->user_pointer = user_pointer;
 
   return pp;
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
+                    int initial_level, int hollow, p4est_connect_type_t btype,
+                    p4est_replace_t replace_fn, void *user_pointer)
+{
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  return p4est_wrap_new_p4est (p4est_new_ext (mpicomm, conn,
+                                              0, initial_level, 1,
+                                              0, NULL, NULL),
+                               hollow, btype, replace_fn, user_pointer);
 }
 
 p4est_wrap_t       *

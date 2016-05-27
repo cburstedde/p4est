@@ -107,6 +107,24 @@ p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
                                          p8est_connectivity_t * conn,
                                          int initial_level);
 
+/** Create a wrapper for a given p8est structure.
+ * \param [in,out] p8est      Valid p8est object that we will own.
+ *                            We take ownership of its connectivity too.
+ *                            Its user pointer must be NULL and will be changed.
+ * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
+ * \param [in] btype          The neighborhood used for balance, ghost, mesh.
+ * \param [in] replace_fn     Callback to replace quadrants during refinement,
+ *                            coarsening or balancing in \ref p8est_wrap_adapt.
+ *                            May be NULL.
+ * \param [in] user_pointer   Set the user pointer in \ref p8est_wrap_t.
+ *                            Subsequently, we will never access it.
+ * \return                    A fully initialized p8est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_p8est (p8est_t * p8est, int hollow,
+                                          p8est_connect_type_t btype,
+                                          p8est_replace_t replace_fn,
+                                          void *user_pointer);
+
 /** Create a p8est wrapper from a given connectivity structure.
  * Like p8est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
