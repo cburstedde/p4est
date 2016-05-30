@@ -285,7 +285,7 @@ main (int argc, char **argv)
     ierr = DMSetPointSF (plex, pointSF);
     CHKERRQ (ierr);
     ierr = PetscSFDestroy (&pointSF);
-    CHKERRQ(ierr);
+    CHKERRQ (ierr);
     ierr = DMViewFromOptions (plex, NULL, "-dm_view");
     CHKERRQ (ierr);
     /* TODO: test with rigid body modes as in plex ex3 */

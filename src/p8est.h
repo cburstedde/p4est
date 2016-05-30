@@ -60,9 +60,9 @@ SC_EXTERN_C_BEGIN;
 /** The 3D quadrant (i.e. octant) datatype */
 typedef struct p8est_quadrant
 {
-  /*@{*/
+  /*@{ */
   p4est_qcoord_t      x, y, z;  /**< coordinates */
-  /*@}*/
+  /*@} */
   int8_t              level,    /**< level of refinement */
                       pad8;     /**< padding */
   int16_t             pad16;    /**< padding */
@@ -154,8 +154,8 @@ typedef struct p8est
   sc_array_t         *trees;          /**< array of all trees */
 
   sc_mempool_t       *user_data_pool; /**< memory allocator for user data */
-                                      /*   WARNING: This is NULL if data size
-                                                    equals zero. */
+  /*   WARNING: This is NULL if data size
+     equals zero. */
   sc_mempool_t       *quadrant_pool;  /**< memory allocator for temporary
                                            quadrants */
   p8est_inspect_t    *inspect;        /**< algorithmic switches */
