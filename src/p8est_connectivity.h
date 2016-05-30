@@ -240,7 +240,8 @@ extern const int    p8est_face_edges[6][4];
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
 
-/** face corners */
+/* face corners */
+
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_permutations[8][4];
 
@@ -251,7 +252,8 @@ extern const int    p8est_face_permutation_sets[3][4];
  * The order is [my_face][neighbor_face] */
 extern const int    p8est_face_permutation_refs[6][6];
 
-/** face edges */
+/* face edges */
+
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_edge_permutations[8][4];
 
