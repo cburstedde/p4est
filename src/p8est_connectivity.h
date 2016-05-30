@@ -292,6 +292,9 @@ extern const int    p8est_corner_edges[8][3];
 /** Store the face corner numbers for the faces touching a tree corner. */
 extern const int    p8est_corner_face_corners[8][6];
 
+/** Store the edge corner numbers for the edges touching a tree corner. */
+extern const int    p8est_corner_edge_corners[8][12];
+
 /** Store the faces for each child and edge, can be -1. */
 extern const int    p8est_child_edge_faces[8][12];
 
