@@ -64,9 +64,9 @@ SC_EXTERN_C_BEGIN;
 /** The 2D quadrant datatype */
 typedef struct p4est_quadrant
 {
-  /*@{*/
+  /*@{ */
   p4est_qcoord_t      x, y;  /**< coordinates */
-  /*@}*/
+  /*@} */
   int8_t              level, /**< level of refinement */
                       pad8;  /**< padding */
   int16_t             pad16; /**< padding */
@@ -158,8 +158,8 @@ typedef struct p4est
   sc_array_t         *trees;          /**< array of all trees */
 
   sc_mempool_t       *user_data_pool; /**< memory allocator for user data */
-                                      /*   WARNING: This is NULL if data size
-                                                    equals zero. */
+  /*   WARNING: This is NULL if data size
+     equals zero. */
   sc_mempool_t       *quadrant_pool;  /**< memory allocator for temporary
                                            quadrants */
   p4est_inspect_t    *inspect;        /**< algorithmic switches */
