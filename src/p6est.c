@@ -438,8 +438,6 @@ p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
     p4est_new_ext (mpicomm, connectivity->conn4, min_quadrants / quadpercol,
                    min_level, fill_uniform, 0, p6est_init_fn, (void *) p6est);
 
-  p4est_comm_parallel_env_duplicate (p4est);
-
   p6est->user_pointer = user_pointer;
   p6est->columns = p4est;
   p6est->global_first_layer = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
@@ -510,7 +508,6 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
   p6est->root_len = P4EST_ROOT_LEN;
 
   p6est_comm_parallel_env_assign (p6est, p4est->mpicomm);
-  p6est_comm_parallel_env_duplicate (p6est);
   num_procs = p6est->mpisize;
 
   P4EST_ASSERT (min_zlevel <= P4EST_QMAXLEVEL);
@@ -573,17 +570,27 @@ p6est_destroy (p6est_t * p6est)
 p6est_t            *
 p6est_copy (p6est_t * input, int copy_data)
 {
+  return p6est_copy_ext (input, copy_data, 0);
+}
+
+p6est_t            *
+p6est_copy_ext (p6est_t * input, int copy_data, int duplicate_comm)
+{
   p6est_t            *p6est = P4EST_ALLOC (p6est_t, 1);
   size_t              zz, qcount = input->layers->elem_count;
 
   memcpy (p6est, input, sizeof (p6est_t));
+
+  /* set parallel environment */
   p6est_comm_parallel_env_assign (p6est, input->mpicomm);
+  if (duplicate_comm) {
+    p6est_comm_parallel_env_duplicate (p6est);
+  }
   p6est->layers =
     sc_array_new_size (input->layers->elem_size, input->layers->elem_count);
   sc_array_copy (p6est->layers, input->layers);
   p6est->columns = p4est_copy (input->columns, 0);
   p4est_comm_parallel_env_assign (p6est->columns, p6est->mpicomm);
-  p4est_comm_parallel_env_duplicate (p6est->columns);
   p6est->columns->user_pointer = p6est;
   if (copy_data && p6est->data_size > 0) {
     p6est->user_data_pool = sc_mempool_new (p6est->data_size);

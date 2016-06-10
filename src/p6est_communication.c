@@ -159,9 +159,10 @@ p6est_comm_parallel_env_reduce_ext (p6est_t ** p6est_supercomm,
   /* set new parallel environment */
   p6est_comm_parallel_env_release (p6est);
   p6est_comm_parallel_env_assign (p6est, submpicomm);
-  p6est_comm_parallel_env_duplicate (p6est);
-  mpiret = sc_MPI_Comm_free (&submpicomm);
-  SC_CHECK_MPI (mpiret);
+  if (p6est->columns->mpicomm_owned) {
+    p6est->columns->mpicomm_owned = 0;
+    p6est->mpicomm_owned = 1;
+  }
   P4EST_ASSERT (p6est->mpisize == submpisize);
 
   /* create array of non-empty processes that will be included to sub-comm */

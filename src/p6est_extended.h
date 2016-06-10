@@ -70,6 +70,20 @@ p6est_t            *p6est_new_ext (sc_MPI_Comm mpicomm,
                                    int fill_uniform, size_t data_size,
                                    p6est_init_t init_fn, void *user_pointer);
 
+/** Make a deep copy of a p6est.
+ * The connectivity is not duplicated.
+ * Copying of quadrant user data is optional.
+ * If old and new data sizes are 0, the user_data field is copied regardless.
+ * The inspect member of the copy is set to NULL.
+ *
+ * \param [in]  copy_data  If true, data are copied.
+ *                         If false, data_size is set to 0.
+ * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
+ * \return  Returns a valid p6est that does not depend on the input.
+ */
+p6est_t            *p6est_copy_ext (p6est_t * input, int copy_data,
+                                    int duplicate_mpicomm);
+
 /** Save the complete connectivity/p6est data to disk.
  *
  * This is a collective operation that all MPI processes need to call.  All
