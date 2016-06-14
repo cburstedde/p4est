@@ -35,7 +35,7 @@ SC_EXTERN_C_BEGIN;
  * \note The provided MPI communicator is not owned by p8est.
  */
 void                p8est_comm_parallel_env_assign (p8est_t * p8est,
-                                                    MPI_Comm mpicomm);
+                                                    sc_MPI_Comm mpicomm);
 
 /** Duplicate MPI communicator and replace the current one by the duplicate.
  *
@@ -54,7 +54,7 @@ void                p8est_comm_parallel_env_release (p8est_t * p8est);
  * \note The provided MPI communicator is not owned by p8est.
  */
 void                p8est_comm_parallel_env_replace (p8est_t * p8est,
-                                                     MPI_Comm mpicomm);
+                                                     sc_MPI_Comm mpicomm);
 
 /** Retrieve parallel environment information.
  */
@@ -96,7 +96,8 @@ int                 p8est_comm_parallel_env_reduce (p8est_t **
  */
 int                 p8est_comm_parallel_env_reduce_ext (p8est_t **
                                                         p8est_supercomm,
-                                                        MPI_Group group_add,
+                                                        sc_MPI_Group
+                                                        group_add,
                                                         int add_to_beginning,
                                                         int **ranks_subcomm);
 

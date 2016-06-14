@@ -35,7 +35,7 @@ SC_EXTERN_C_BEGIN;
  * \note The provided MPI communicator is not owned by p4est.
  */
 void                p4est_comm_parallel_env_assign (p4est_t * p4est,
-                                                    MPI_Comm mpicomm);
+                                                    sc_MPI_Comm mpicomm);
 
 /** Duplicate MPI communicator and replace the current one by the duplicate.
  *
@@ -54,7 +54,7 @@ void                p4est_comm_parallel_env_release (p4est_t * p4est);
  * \note The provided MPI communicator is not owned by p4est.
  */
 void                p4est_comm_parallel_env_replace (p4est_t * p4est,
-                                                     MPI_Comm mpicomm);
+                                                     sc_MPI_Comm mpicomm);
 
 /** Retrieve parallel environment information.
  */
@@ -96,7 +96,8 @@ int                 p4est_comm_parallel_env_reduce (p4est_t **
  */
 int                 p4est_comm_parallel_env_reduce_ext (p4est_t **
                                                         p4est_supercomm,
-                                                        MPI_Group group_add,
+                                                        sc_MPI_Group
+                                                        group_add,
                                                         int add_to_beginning,
                                                         int **ranks_subcomm);
 

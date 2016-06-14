@@ -42,7 +42,7 @@ SC_EXTERN_C_BEGIN;
  * \note The provided MPI communicator is not owned by p6est.
  */
 void                p6est_comm_parallel_env_assign (p6est_t * p6est,
-                                                    MPI_Comm mpicomm);
+                                                    sc_MPI_Comm mpicomm);
 
 /** Duplicate MPI communicator and replace the current one by the duplicate.
  *
@@ -61,7 +61,7 @@ void                p6est_comm_parallel_env_release (p6est_t * p6est);
  * \note The provided MPI communicator is not owned by p6est.
  */
 void                p6est_comm_parallel_env_replace (p6est_t * p6est,
-                                                     MPI_Comm mpicomm);
+                                                     sc_MPI_Comm mpicomm);
 
 /** Retrieve parallel environment information.
  */
@@ -103,7 +103,8 @@ int                 p6est_comm_parallel_env_reduce (p6est_t **
  */
 int                 p6est_comm_parallel_env_reduce_ext (p6est_t **
                                                         p6est_supercomm,
-                                                        MPI_Group group_add,
+                                                        sc_MPI_Group
+                                                        group_add,
                                                         int add_to_beginning,
                                                         int **ranks_subcomm);
 
