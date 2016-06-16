@@ -177,7 +177,7 @@ typedef struct p8est_connectivity
 
   p4est_topidx_t     *tree_to_tree; /**< (6 * \a num_trees) neighbors across
                                          faces */
-  int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
+  int8_t             *tree_to_face; /**< (6 * \a num_trees) face to
                                          face+orientation (see description) */
   p4est_topidx_t     *tree_to_edge; /**< (12 * \a num_trees) or NULL (see
                                           description) */
