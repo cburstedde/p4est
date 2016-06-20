@@ -133,24 +133,30 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
- * The edges are only stored when they connect trees.
+ * The edges are only stored when they connect trees. In this case,
+ * tree_to_edge indexes into \a ett_offset.
  * Otherwise the tree_to_edge entry must be -1 and this edge is ignored.
  * If num_edges == 0, tree_to_edge and edge_to_* arrays are set to NULL.
  *
  * The arrays edge_to_* store a variable number of entries per edge.
  * For edge e these are at position [ett_offset[e]]..[ett_offset[e+1]-1].
  * Their number for edge e is ett_offset[e+1] - ett_offset[e].
+ * The entries do not exclude face neighbors but all trees adjacent to
+ * edge e are stored.
  * The size of the edge_to_* arrays is num_ett = ett_offset[num_edges].
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
  * one edge orientation and the higher 12 the opposite edge orientation.
  *
- * The corners are only stored when they connect trees.
+ * The corners are only stored when they connect trees. In this case
+ * tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
+ * The entries do not exclude face and edge neighbors but all trees
+ * adjacent to corner c are stored.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
