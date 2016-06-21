@@ -35,10 +35,10 @@
 
 /* *INDENT-OFF* */
 const int           p4est_face_corners[4][2] =
-{{ 0, 2 },
- { 1, 3 },
- { 0, 1 },
- { 2, 3 }};
+  {{ 0, 2 },
+   { 1, 3 },
+   { 0, 1 },
+   { 2, 3 }};
 const int           p4est_face_dual[4] = { 1, 0, 3, 2 };
 
 const int           p4est_corner_faces[4][2] =
@@ -1298,6 +1298,55 @@ p4est_connectivity_new_periodic (void)
   return p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
                                       vertices, tree_to_vertex,
                                       tree_to_tree, tree_to_face,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
+}
+
+p4est_connectivity_t *
+p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t rface,
+                                 p4est_topidx_t orientation)
+{
+  const p4est_topidx_t num_vertices = (P4EST_DIM - 1) * 6;      // 6 or 12
+  const p4est_topidx_t num_trees = 2;
+
+  // no tree connection via edges and corners
+#ifdef P4_TO_P8
+  const p4est_topidx_t num_edges = 0;
+  const p4est_topidx_t num_ett = 0;
+#endif /* P4_TO_P8 */
+  const p4est_topidx_t num_corners = 0;
+  const p4est_topidx_t num_ctt = 0;
+
+  const double        vertices[num_vertices * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    2, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    2, 1, 0,
+#ifdef P4_TO_P8
+    0, 0, 1,
+    1, 0, 1,
+    2, 0, 1,
+    0, 1, 1,
+    1, 1, 1,
+    2, 1, 1,
+#endif /* P4_TO_P8 */
+  };
+
+
+
+  /* create connectivity structure */
+  return p4est_connectivity_new_copy (num_vertices, num_trees,
+#ifdef P4_TO_P8
+                                      num_edges,
+#endif /* P4_TO_P8 */
+                                      num_corners, vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+#ifdef P4_TO_P8
+                                      tree_to_edge, ett_offset, edge_to_tree,
+                                      edge_to_edge,
+#endif /* P4_TO_P8 */
                                       tree_to_corner, ctt_offset,
                                       corner_to_tree, corner_to_corner);
 }
