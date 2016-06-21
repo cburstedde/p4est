@@ -1408,7 +1408,10 @@ p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t r_face,
   if (orientation == 3) {
   op = 2}
   else if (1 <= orientation && orientation <= 2) {
-    op = p8est_face_permutation_refs[0][orientation];
+    if (l_face <= r_face)
+      op = p8est_face_permutation_refs[l_face][r_face];
+    else
+      op = p8est_face_permutation_refs[r_face][l_face];
   }
   switch (op) {
   case 0:                      // clockwise rotation
