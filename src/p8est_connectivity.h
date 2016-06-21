@@ -133,24 +133,34 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
- * The edges are only stored when they connect trees.
+ * The edges are only stored when they connect trees. In this case,
+ * tree_to_edge indexes into \a ett_offset.
  * Otherwise the tree_to_edge entry must be -1 and this edge is ignored.
  * If num_edges == 0, tree_to_edge and edge_to_* arrays are set to NULL.
  *
  * The arrays edge_to_* store a variable number of entries per edge.
  * For edge e these are at position [ett_offset[e]]..[ett_offset[e+1]-1].
  * Their number for edge e is ett_offset[e+1] - ett_offset[e].
+ * The entries contains the tree from which the query originated
+ * as well as trees that are face neighbors wrt. the querying tree,
+ * i.e. all trees adjacent to edge e are stored.
  * The size of the edge_to_* arrays is num_ett = ett_offset[num_edges].
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
  * one edge orientation and the higher 12 the opposite edge orientation.
  *
- * The corners are only stored when they connect trees.
+ * The corners are only stored when they connect trees. In this case
+ * tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
+ * The entries contains the tree from which the query originated
+ * as well as trees that are face and edge neighbors wrt. the querying
+ * tree, i.e. all trees adjacent to corner c are stored.
+ * The entries do not exclude face and edge neighbors but all trees
+ * adjacent to corner c are stored.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
@@ -177,7 +187,7 @@ typedef struct p8est_connectivity
 
   p4est_topidx_t     *tree_to_tree; /**< (6 * \a num_trees) neighbors across
                                          faces */
-  int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
+  int8_t             *tree_to_face; /**< (6 * \a num_trees) face to
                                          face+orientation (see description) */
   p4est_topidx_t     *tree_to_edge; /**< (12 * \a num_trees) or NULL (see
                                           description) */
@@ -240,7 +250,8 @@ extern const int    p8est_face_edges[6][4];
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
 
-/** face corners */
+/* face corners */
+
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_permutations[8][4];
 
@@ -251,16 +262,13 @@ extern const int    p8est_face_permutation_sets[3][4];
  * The order is [my_face][neighbor_face] */
 extern const int    p8est_face_permutation_refs[6][6];
 
-/** face edges */
+/* face edges */
+
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_edge_permutations[8][4];
 
 /** Store the 2 occurring sets of 4 permutations per face. */
-extern const int    p8est_face_edge_permutation_sets[2][4];
-
-/** For each face combination store the permutation set.
- * The order is [my_face][neighbor_face] */
-extern const int    p8est_face_edge_permutation_refs[6][6];
+extern const int    p8est_face_edge_permutation_sets[3][4];
 
 /** Store the face numbers 0..5 for each tree edge. */
 extern const int    p8est_edge_faces[12][2];
@@ -291,6 +299,9 @@ extern const int    p8est_corner_edges[8][3];
 
 /** Store the face corner numbers for the faces touching a tree corner. */
 extern const int    p8est_corner_face_corners[8][6];
+
+/** Store the edge corner numbers for the edges touching a tree corner. */
+extern const int    p8est_corner_edge_corners[8][12];
 
 /** Store the faces for each child and edge, can be -1. */
 extern const int    p8est_child_edge_faces[8][12];

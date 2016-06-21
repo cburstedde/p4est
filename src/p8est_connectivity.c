@@ -71,16 +71,10 @@ const int           p8est_face_edge_permutations[8][4] =
  { 2, 3, 1, 0 },
  { 3, 2, 0, 1 },
  { 3, 2, 1, 0 }};
-const int           p8est_face_edge_permutation_sets[2][4] =
+const int           p8est_face_edge_permutation_sets[3][4] =
 {{ 4, 1, 2, 7 },
- { 0, 6, 5, 3 }};
-const int           p8est_face_edge_permutation_refs[6][6] =
-{{ 0, 1, 1, 0, 0, 1 },
- { 1, 0, 0, 1, 1, 0 },
- { 1, 0, 0, 1, 1, 0 },
- { 0, 1, 1, 0, 0, 1 },
- { 0, 1, 1, 0, 0, 1 },
- { 1, 0, 0, 1, 1, 0 }};
+ { 0, 6, 5, 3 },
+ { 0, 5, 6, 3 }};
 
 const int           p8est_edge_faces[12][2] =
 {{ 2, 4 },
@@ -180,7 +174,15 @@ const int           p8est_corner_face_corners[8][6] =
  { -1,  2,  3, -1, -1,  1 },
  {  3, -1, -1,  2, -1,  2 },
  { -1,  3, -1,  3, -1,  3 }};
-
+const int           p8est_corner_edge_corners[8][12] =
+{{  0, -1, -1, -1,  0, -1, -1, -1,  0, -1, -1, -1 },
+ {  1, -1, -1, -1, -1,  0, -1, -1, -1,  0, -1, -1 },
+ { -1,  0, -1, -1,  1, -1, -1, -1, -1, -1,  0, -1 },
+ { -1,  1, -1, -1, -1,  1, -1, -1, -1, -1, -1,  0 },
+ { -1, -1,  0, -1, -1, -1,  0, -1,  1, -1, -1, -1 },
+ { -1, -1,  1, -1, -1, -1, -1,  0, -1,  1, -1, -1 },
+ { -1, -1, -1,  0, -1, -1,  1, -1, -1, -1,  1, -1 },
+ { -1, -1, -1,  1, -1, -1, -1,  1, -1, -1, -1,  1 }};
 const int           p8est_child_edge_faces[8][12] =
 {{ -1,  4,  2, -1, -1,  4,  0, -1, -1,  2,  0, -1 },
  { -1,  4,  2, -1,  4, -1, -1,  1,  2, -1, -1,  1 },
@@ -1082,7 +1084,7 @@ p8est_connectivity_face_neighbor_edge_orientation (int e, int f,
   fe = p8est_edge_face_edges[e][f];
   P4EST_ASSERT (0 <= fe && fe < P4EST_HALF);
 
-  pref = p8est_face_edge_permutation_refs[f][nf];
+  pref = p8est_face_permutation_refs[f][nf];
   pset = p8est_face_edge_permutation_sets[pref][o];
   nfe = p8est_face_edge_permutations[pset][fe];
 
