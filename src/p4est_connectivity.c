@@ -1317,6 +1317,7 @@ p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t rface,
   const p4est_topidx_t num_corners = 0;
   const p4est_topidx_t num_ctt = 0;
 
+/* *INDENT-OFF* */
   const double        vertices[num_vertices * 3] = {
     0, 0, 0,
     1, 0, 0,
