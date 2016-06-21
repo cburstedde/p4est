@@ -357,7 +357,7 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
 p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
 
 /** Create a connectivity structure for two trees being rotated
- * w.r.t. in a user-defined way
+ * w.r.t. each other in a user-defined way
  * \param[in] l_face      index of left face
  * \param[in] r_face      index of right face
  * \param[in] orientation orientation of trees w.r.t. each other
