@@ -264,11 +264,7 @@ extern const int    p8est_face_permutation_refs[6][6];
 extern const int    p8est_face_edge_permutations[8][4];
 
 /** Store the 2 occurring sets of 4 permutations per face. */
-extern const int    p8est_face_edge_permutation_sets[2][4];
-
-/** For each face combination store the permutation set.
- * The order is [my_face][neighbor_face] */
-extern const int    p8est_face_edge_permutation_refs[6][6];
+extern const int    p8est_face_edge_permutation_sets[3][4];
 
 /** Store the face numbers 0..5 for each tree edge. */
 extern const int    p8est_edge_faces[12][2];
