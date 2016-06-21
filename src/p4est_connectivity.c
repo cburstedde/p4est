@@ -1406,7 +1406,8 @@ p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t r_face,
 #else /* P4_TO_P8 */
   int                 op = -1;
   if (orientation == 3) {
-  op = 2}
+    op = 2;
+  }
   else if (1 <= orientation && orientation <= 2) {
     op = p8est_face_permutation_refs[0][orientation];
   }
@@ -1442,7 +1443,7 @@ p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t r_face,
     {0, 0, 0, 0, 0, 0,
      1, 1, 1, 1, 1, 1};
 #endif /* !P4_TO_P8 */
-  int tree_to_face[2 * P4EST_FACES] =
+  int8_t tree_to_face[2 * P4EST_FACES] =
 #ifndef P4_TO_P8
     {0, 1, 2, 3,
      0, 1, 2, 3,};
