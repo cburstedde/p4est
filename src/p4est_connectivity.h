@@ -75,13 +75,13 @@ SC_EXTERN_C_BEGIN;
  * This enum must fit into an int8_t.
  */
 typedef enum
-{
-  /* make sure to have different values 2D and 3D */
-  P4EST_CONNECT_FACE = 21,
-  P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
-}
-p4est_connect_type_t;
+  {
+    /* make sure to have different values 2D and 3D */
+    P4EST_CONNECT_FACE = 21,
+    P4EST_CONNECT_CORNER = 22,
+    P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+  }
+  p4est_connect_type_t;
 
 #ifdef P4EST_BACKWARD_DEALII
 typedef p4est_connect_type_t p4est_balance_type_t;
@@ -139,32 +139,32 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
 typedef struct p4est_connectivity
 {
   p4est_topidx_t      num_vertices; /**< the number of vertices that define
-                                         the \a embedding of the forest (not
-                                         the topology) */
+                                       the \a embedding of the forest (not
+                                       the topology) */
   p4est_topidx_t      num_trees;    /**< the number of trees */
   p4est_topidx_t      num_corners;  /**< the number of corners that help
-                                         define topology */
+                                       define topology */
   double             *vertices;     /**< an array of size
-                                         (3 * \a num_vertices) */
+                                       (3 * \a num_vertices) */
   p4est_topidx_t     *tree_to_vertex; /**< embed each tree into \f$R^3\f$ for
-                                           e.g. visualization (see
-                                           p4est_vtk.h) */
+                                         e.g. visualization (see
+                                         p4est_vtk.h) */
 
   size_t              tree_attr_bytes;  /**< bytes per tree in tree_to_attr */
   char               *tree_to_attr;     /**< not touched by p4est */
 
   p4est_topidx_t     *tree_to_tree; /**< (4 * \a num_trees) neighbors across
-                                         faces */
+                                       faces */
   int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
-                                         face+orientation (see description) */
+                                       face+orientation (see description) */
 
   p4est_topidx_t     *tree_to_corner; /**< (4 * \a num_trees) or NULL (see
-                                           description) */
+                                         description) */
   p4est_topidx_t     *ctt_offset; /**< corner to offset in \a corner_to_tree
-                                       and \a corner_to_corner */
+                                     and \a corner_to_corner */
   p4est_topidx_t     *corner_to_tree; /**< list of trees that meet at a corner */
   int8_t             *corner_to_corner; /**< list of tree-corners that meet at
-                                             a corner */
+                                           a corner */
 }
 p4est_connectivity_t;
 
@@ -351,6 +351,17 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
  * The left and right faces are identified, and bottom and top opposite.
  */
 p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
+
+/** Create a connectivity structure for two trees being rotated
+ * w.r.t. in a user-defined way
+ * \param[in] l_face      index of left face
+ * \param[in] r_face      index of right face
+ * \param[in] orientation orientation of trees w.r.t. each other
+ */
+p4est_connectivity_t *p4est_connectivity_new_twotrees (p4est_topidx_t l_face,
+                                                       p4est_topidx_t r_face,
+                                                       p4est_topidx_t
+                                                       orientation);
 
 /** Create a connectivity structure for a three-tree mesh around a corner.
  */
