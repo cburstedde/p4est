@@ -133,8 +133,9 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
- * The entries do not exclude face neighbors but all trees adjacent to
- * corner c are stored.
+ * The entries contains the tree from which the query originated
+ * as well as trees that are face neighbors wrt. the querying tree,
+ * i.e. all trees adjacent to corner c are stored.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
