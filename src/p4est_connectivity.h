@@ -75,13 +75,13 @@ SC_EXTERN_C_BEGIN;
  * This enum must fit into an int8_t.
  */
 typedef enum
-  {
-    /* make sure to have different values 2D and 3D */
-    P4EST_CONNECT_FACE = 21,
-    P4EST_CONNECT_CORNER = 22,
-    P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
-  }
-  p4est_connect_type_t;
+{
+  /* make sure to have different values 2D and 3D */
+  P4EST_CONNECT_FACE = 21,
+  P4EST_CONNECT_CORNER = 22,
+  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+}
+p4est_connect_type_t;
 
 #ifdef P4EST_BACKWARD_DEALII
 typedef p4est_connect_type_t p4est_balance_type_t;
@@ -357,7 +357,7 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
 p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
 
 /** Create a connectivity structure for two trees being rotated
- * w.r.t. in a user-defined way
+ * w.r.t. each other in a user-defined way
  * \param[in] l_face      index of left face
  * \param[in] r_face      index of right face
  * \param[in] orientation orientation of trees w.r.t. each other
