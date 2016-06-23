@@ -1094,8 +1094,6 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         *outid = p4est_to_plex_child_id[P4EST_DIM - 1 - pdim][id];
       }
     }
-    sc_array_destroy (child_to_parent);
-    sc_array_destroy (child_to_id);
 
     /* compute cones and orientations */
     for (qid = 0; qid < K; qid++) {
@@ -1480,7 +1478,6 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       P4EST_FREE (quad_to_local_orig);
       P4EST_FREE (quad_to_orientations_orig);
     }
-    sc_array_destroy (node_dim);
 
     {
       sc_array_t         *quad_to_plex;
@@ -1531,8 +1528,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       }
       /* communicate all_global * local_to_plex to build leaves and remotes */
       lnodes_to_plex =
-        sc_array_new_size (sizeof (p4est_locidx_t), lnodes->num_local_nodes);
-      quad_to_plex = sc_array_new_size (sizeof (p4est_locidx_t), V * K);
+        sc_array_new_size (sizeof (p4est_locidx_t) * (P4EST_DIM + 1), lnodes->num_local_nodes);
+      quad_to_plex = sc_array_new_size (sizeof (p4est_locidx_t) * (P4EST_DIM+1), V * K);
       if (lnodes->owned_count) {
         ssize_t             firstidx;
 
@@ -1546,27 +1543,50 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
                                                (size_t) firstidx + il);
           p4est_locidx_t      eid = (p4est_locidx_t) gid[1];
           p4est_locidx_t      lid = lnodes->element_nodes[eid];
+          p4est_locidx_t      loc, cstart, cend, j;
 
           P4EST_ASSERT (gid[0] == lnodes->global_offset + il);
           P4EST_ASSERT (eid / V < lnodes->num_local_elements);
           p4est_locidx_t     *lp =
             (p4est_locidx_t *) sc_array_index (lnodes_to_plex, (size_t) lid);
 
-          *lp = local_to_plex[firstidx + il + K];
+          loc = firstidx + il;
+          lp[0] = local_to_plex[loc + K];
+          for (j = 1; j < P4EST_DIM; j++) {
+            lp[j] = -1;
+          }
+          if (loc < num_global) {
+            cstart = child_offsets[loc];
+            cend = child_offsets[loc+1];
+            if (cend > cstart) {
+              int8_t ndim = *((int8_t *) sc_array_index (node_dim, loc)), d;
+
+              for (d = ndim; d >= 0; d--) {
+                lp[P4EST_DIM - d] = local_to_plex[cstart + K];
+                if (d == P4EST_DIM - 1) {
+                  cstart += P4EST_HALF;
+                }
+#ifdef P4_TO_P8
+                else if (d > 0) {
+                  cstart += 4;
+                }
+#endif
+              }
+            }
+          }
         }
       }
       p4est_lnodes_share_owned (lnodes_to_plex, lnodes);
       for (il = 0; il < Klocal; il++) {
         for (v = 0; v < V; v++) {
+          int j;
           p4est_locidx_t      nid = lnodes->element_nodes[il * V + v];
-          p4est_locidx_t      lp = *((p4est_locidx_t *)
-                                     sc_array_index (lnodes_to_plex,
-                                                     (size_t) nid));
-          p4est_locidx_t     *qp =
-            (p4est_locidx_t *) sc_array_index (quad_to_plex,
-                                               (size_t) (il * V + v));
+          p4est_locidx_t     *lp = (p4est_locidx_t *) sc_array_index (lnodes_to_plex, (size_t) nid);
+          p4est_locidx_t     *qp = (p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) (il * V + v));
 
-          *qp = lp;
+          for (j = 0; j < P4EST_DIM + 1; j++) {
+            qp[j] = lp[j];
+          }
         }
       }
       sc_array_destroy (lnodes_to_plex);
@@ -1583,7 +1603,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             (p4est_locidx_t *) sc_array_index (quad_to_plex, qid * V);
         }
         p4est_ghost_exchange_custom (p4est, ghost,
-                                     (size_t) V * sizeof (p4est_locidx_t),
+                                     (size_t) V * (P4EST_DIM + 1) * sizeof (p4est_locidx_t),
                                      (void **) mirror_data, (p4est_locidx_t *)
                                      sc_array_index (quad_to_plex,
                                                      Klocal * V));
@@ -1594,25 +1614,60 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 
         p = plex_to_proc[localpid];
         if (p != mpirank) {
-          p4est_locidx_t      lid = plex_to_local[localpid];
+          p4est_locidx_t      lid = plex_to_local[localpid] - K;
 
-          p4est_gloidx_t     *gid =
-            (p4est_gloidx_t *) sc_array_index (all_global, lid - K);
-          p4est_locidx_t      eid = gid[1];
-          p4est_locidx_t      pid =
-            *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) eid));
-          p4est_locidx_t     *leaf =
-            (p4est_locidx_t *) sc_array_push (out_leaves);
-          p4est_locidx_t     *remote =
-            (p4est_locidx_t *) sc_array_push (out_remotes);
+          if (lid < num_global) {
+            p4est_gloidx_t     *gid =
+                                     (p4est_gloidx_t *) sc_array_index (all_global, lid);
+            p4est_locidx_t      eid = gid[1];
+            p4est_locidx_t      pid =
+                                     *((p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) eid));
+            p4est_locidx_t     *leaf =
+                                      (p4est_locidx_t *) sc_array_push (out_leaves);
+            p4est_locidx_t     *remote =
+                                        (p4est_locidx_t *) sc_array_push (out_remotes);
 
-          *leaf = localpid;
-          remote[0] = p;
-          remote[1] = pid;
+            *leaf = localpid;
+            remote[0] = p;
+            remote[1] = pid;
+          }
+          else {
+            p4est_locidx_t parent = *((p4est_locidx_t *) sc_array_index(child_to_parent, lid));
+            p4est_locidx_t id     = *((p4est_locidx_t *) sc_array_index(child_to_id, lid));
+            int8_t         dim    = *((int8_t *) sc_array_index(node_dim, lid));
+
+            P4EST_ASSERT (parent >= 0);
+            {
+              p4est_gloidx_t     *pgid =
+                                       (p4est_gloidx_t *) sc_array_index (all_global, parent);
+              p4est_locidx_t      peid = pgid[1];
+              p4est_locidx_t     *ppid = (p4est_locidx_t *) sc_array_index (quad_to_plex, (size_t) peid);
+              p4est_locidx_t     *leaf = (p4est_locidx_t *) sc_array_push (out_leaves);
+              p4est_locidx_t     *remote = (p4est_locidx_t *) sc_array_push (out_remotes);
+
+              *leaf = localpid;
+              remote[0] = p;
+              remote[1] = -1;
+              if (dim == 0) {
+                remote[1] = ppid[P4EST_DIM - dim];
+              }
+              else if (dim == P4EST_DIM - 1) {
+                remote[1] = ppid[P4EST_DIM - dim] + id;
+              }
+#ifdef P4_TO_P8
+              else {
+                remote[1] = ppid[P4EST_DIM - dim] + (id - 4);
+              }
+#endif
+            }
+          }
         }
       }
       sc_array_destroy (quad_to_plex);
     }
+    sc_array_destroy (child_to_parent);
+    sc_array_destroy (child_to_id);
+    sc_array_destroy (node_dim);
     P4EST_FREE (plex_to_local);
     P4EST_FREE (local_to_plex);
     P4EST_FREE (plex_to_proc);
