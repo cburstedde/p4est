@@ -1781,8 +1781,8 @@ p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t r_face,
   tree_to_tree[l_face] = 1;
   tree_to_tree[P4EST_FACES + r_face] = 0;
 
-  tree_to_face[l_face] = orientation * r_face;
-  tree_to_face[P4EST_FACES + r_face] = orientation * l_face;
+  tree_to_face[l_face] = P4EST_FACES * orientation + r_face;
+  tree_to_face[P4EST_FACES + r_face] = P4EST_FACES * orientation + l_face;
 
   /* create connectivity structure */
   return p4est_connectivity_new_copy (num_vertices, num_trees,
