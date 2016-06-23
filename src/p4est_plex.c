@@ -542,7 +542,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     p4est_to_plex_child_id_custom : p4est_to_plex_child_id_orig;
 #endif
   p4est_locidx_t     *cones;
-  int                *orientations;
+  p4est_locidx_t     *orientations;
   sc_array_t         *child_to_parent, *child_to_id;
   p4est_locidx_t     *quad_to_local, *quad_to_local_orig = NULL;
   int8_t             *quad_to_orientations, *quad_to_orientations_orig = NULL;
@@ -1274,7 +1274,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       p4est_locidx_t cstart, cend, ppid;
       p4est_locidx_t *pcones, poff;
 #ifdef P4_TO_P8
-      int            *ornts;
+      p4est_locidx_t *ornts;
 #endif
       int8_t         pdim;
 
@@ -1294,7 +1294,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         p4est_locidx_t cpid;
         int8_t         cdim;
         p4est_locidx_t *ccones, coff;
-        int            *cornts;
+        p4est_locidx_t *cornts;
 
         cpid = local_to_plex[K + c];
         cdim = *((int8_t *) sc_array_index(node_dim,(size_t) c));
