@@ -62,6 +62,8 @@ test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
                                                          higherFaceIndex,
                                                          orientation);
 
+  neighboring_face_corner =
+    p4est_corner_face_corners[neighboring_face_corner][higherFaceIndex];
   P4EST_ASSERT (neighboring_face_corner == orientation);
 
   return 0;
@@ -83,7 +85,7 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
                                              p4est_topidx_t r_face,
                                              p4est_topidx_t orientation)
 {
-  int                 c0, c1, cx, fc0, fc1;
+  int                 c0, c1, cx;
   int                 i;
   int                 lowerFaceIndex, higherFaceIndex;
 
@@ -100,17 +102,16 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
   /* verify bijectivity of transformation */
   for (i = 0; i < P4EST_HALF; ++i) {
     c0 = p4est_face_corners[lowerFaceIndex][i];
-    fc1 =
+    c1 =
       p4est_connectivity_face_neighbor_corner_orientation (c0, lowerFaceIndex,
                                                            higherFaceIndex,
                                                            orientation);
-    c1 = p4est_face_corners[higherFaceIndex][fc1];
-    fc0 =
+    // c1 = p4est_face_corners[higherFaceIndex][fc1];
+    cx =
       p4est_connectivity_face_neighbor_corner_orientation (c1,
                                                            higherFaceIndex,
                                                            lowerFaceIndex,
                                                            orientation);
-    cx = p4est_face_corners[lowerFaceIndex][fc0];
 
     P4EST_ASSERT (c0 == cx);
   }
@@ -119,23 +120,23 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
 }
 
 #ifdef P4_TO_P8
-  /** Checks for each face edge if the edge indices match on both
-   * sides.
-   * Let face edge fei, corresponding to edge index ei, be
-   * adjacent to face edge fej, corresponding to edge index ej. We
-   * test if fei is seen from fej and vice versa.
-   * \param [in] conn        p4est_connectivity structure two trees
-   * \param [in] l_face      left face index
-   * \param [in] r_face      right face index
-   * \param [in] orientation the orientation that has been set
-   */
+/** Checks for each face edge if the edge indices match on both
+ * sides.
+ * Let face edge fei, corresponding to edge index ei, be
+ * adjacent to face edge fej, corresponding to edge index ej. We
+ * test if fei is seen from fej and vice versa.
+ * \param [in] conn        p4est_connectivity structure two trees
+ * \param [in] l_face      left face index
+ * \param [in] r_face      right face index
+ * \param [in] orientation the orientation that has been set
+ */
 static int
 test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
                                            p4est_topidx_t l_face,
                                            p4est_topidx_t r_face,
                                            p4est_topidx_t orientation)
 {
-  int                 e0, e1, ex, fe0, fe1;
+  int                 e0, e1, ex;
   int                 i;
   int                 lowerFaceIndex, higherFaceIndex;
 
@@ -152,16 +153,14 @@ test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
   /* verify bijectivity of transformation */
   for (i = 0; i < P4EST_HALF; ++i) {
     e0 = p8est_face_edges[lowerFaceIndex][i];
-    fe1 =
+    e1 =
       p8est_connectivity_face_neighbor_edge_orientation (e0, lowerFaceIndex,
                                                          higherFaceIndex,
                                                          orientation);
-    e1 = p8est_face_edges[higherFaceIndex][fe1];
-    fe0 =
+    ex =
       p8est_connectivity_face_neighbor_edge_orientation (e1, higherFaceIndex,
                                                          lowerFaceIndex,
                                                          orientation);
-    ex = p8est_face_edges[lowerFaceIndex][fe0];
 
     P4EST_ASSERT (e0 == ex);
   }
@@ -196,10 +195,10 @@ main (int argc, char **argv)
 
   int                 i, j, k;
 
-  for (i = 0; i < P4EST_FACES; ++i) {      /* set l_face */
-    for (j = 0; j < P4EST_FACES; ++j) {    /* set r_face */
-      for (k = 0; k < P4EST_HALF; ++k) {   /* set orientation */
-        P4EST_ASSERT(conn == 0);
+  for (i = 0; i < P4EST_FACES; ++i) {   /* set l_face */
+    for (j = 0; j < P4EST_FACES; ++j) { /* set r_face */
+      for (k = 0; k < P4EST_HALF; ++k) {        /* set orientation */
+        P4EST_ASSERT (conn == NULL);
 
         /* create connectivity structure */
         conn = p4est_connectivity_new_twotrees (i, j, k);
@@ -210,9 +209,8 @@ main (int argc, char **argv)
         test_conn_transformation_check_face_edges (conn, i, j, k);
 #endif /* P4_TO_P8 */
 
-        p4est_connectivity_destroy(conn);
-
-        P4EST_ASSERT(conn == 0);
+        p4est_connectivity_destroy (conn);
+        conn = 0;
       }
     }
   }
