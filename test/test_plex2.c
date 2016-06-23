@@ -157,40 +157,29 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-int
-main (int argc, char **argv)
+static int
+refine_tree_one_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t * quadrant)
+{
+  return !!which_tree;
+}
+
+static int test_forest(p4est_t * p4est, int overlap)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 mpisize, mpirank;
-  p4est_t            *p4est;
-  p4est_connectivity_t *conn;
   sc_array_t         *points_per_dim, *cone_sizes, *cones,
     *cone_orientations, *coords,
     *children, *parents, *childids, *leaves, *remotes;
   p4est_locidx_t      first_local_quad = -1;
 
   /* initialize MPI */
-  mpiret = sc_MPI_Init (&argc, &argv);
-  SC_CHECK_MPI (mpiret);
-  mpicomm = sc_MPI_COMM_WORLD;
+  mpicomm = p4est->mpicomm;
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
-
-  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
-  p4est_init (NULL, SC_LP_DEFAULT);
-
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_moebius ();
-#else
-  conn = p8est_connectivity_new_rotcubes ();
-#endif
-  p4est = p4est_new_ext (mpicomm, conn, 0, 1, 1, 0, NULL, NULL);
-  p4est_refine (p4est, 1, refine_fn, NULL);
-  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
-  p4est_partition (p4est, 0, NULL);
 
   points_per_dim = sc_array_new (sizeof (p4est_locidx_t));
   cone_sizes = sc_array_new (sizeof (p4est_locidx_t));
@@ -203,7 +192,7 @@ main (int argc, char **argv)
   leaves = sc_array_new (sizeof (p4est_locidx_t));
   remotes = sc_array_new (2 * sizeof (p4est_locidx_t));
 
-  p4est_get_plex_data (p4est, P4EST_CONNECT_FULL, (mpisize > 1) ? 2 : 0,
+  p4est_get_plex_data (p4est, P4EST_CONNECT_FULL, (mpisize > 1) ? overlap : 0,
                        &first_local_quad, points_per_dim, cone_sizes, cones,
                        cone_orientations, coords, children, parents, childids,
                        leaves, remotes);
@@ -308,8 +297,98 @@ main (int argc, char **argv)
   sc_array_destroy (leaves);
   sc_array_destroy (remotes);
 
+  return 0;
+}
+
+static int test_big(int argc, char **argv)
+{
+  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+  p4est_t            *p4est;
+  p4est_connectivity_t *conn;
+
+  /* initialize MPI */
+  mpicomm = sc_MPI_COMM_WORLD;
+
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_moebius ();
+#else
+  conn = p8est_connectivity_new_rotcubes ();
+#endif
+  p4est = p4est_new_ext (mpicomm, conn, 0, 1, 1, 0, NULL, NULL);
+  p4est_refine (p4est, 1, refine_fn, NULL);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+  p4est_partition (p4est, 0, NULL);
+
+  mpiret = test_forest(p4est,2);
+  if (mpiret) {
+    return mpiret;
+  }
+
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
+
+  return 0;
+}
+
+static int test_small(int argc, char **argv)
+{
+  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+  p4est_t            *p4est;
+  p4est_connectivity_t *conn;
+
+  /* initialize MPI */
+  mpicomm = sc_MPI_COMM_WORLD;
+
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_brick (2,1,0,0);
+#else
+  conn = p8est_connectivity_new_brick (2,1,1,0,0,0);
+#endif
+  p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
+  p4est_refine (p4est, 0, refine_tree_one_fn, NULL);
+
+  mpiret = test_forest(p4est,0);
+  if (mpiret) {
+    return mpiret;
+  }
+
+  p4est_partition (p4est, 0, NULL);
+
+  mpiret = test_forest(p4est,0);
+  if (mpiret) {
+    return mpiret;
+  }
+
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
+
+  return 0;
+}
+
+int
+main (int argc, char **argv)
+{
+  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+
+  /* initialize MPI */
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+  mpicomm = sc_MPI_COMM_WORLD;
+
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  mpiret = test_small(argc,argv);
+  if (mpiret) {
+    return mpiret;
+  }
+  mpiret = test_big(argc,argv);
+  if (mpiret) {
+    return mpiret;
+  }
 
   sc_finalize ();
 
