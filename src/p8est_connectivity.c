@@ -1079,7 +1079,7 @@ p8est_connectivity_face_neighbor_edge_orientation (int e, int f,
   P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
   P4EST_ASSERT (0 <= f && f < P4EST_FACES);
   P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
-  P4EST_ASSERT (0 <= o && o < 2);
+  P4EST_ASSERT (0 <= o && o < P4EST_HALF);
 
   fe = p8est_edge_face_edges[e][f];
   P4EST_ASSERT (0 <= fe && fe < P4EST_HALF);
