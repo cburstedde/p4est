@@ -1573,11 +1573,11 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 
               for (d = ndim; d >= 0; d--) {
                 lp[P4EST_DIM - d] = local_to_plex[cstart + K];
-                if (d == P4EST_DIM - 1) {
-                  cstart += P4EST_HALF;
+                if (d == ndim) {
+                  cstart += 2 * ndim;
                 }
 #ifdef P4_TO_P8
-                else if (d > 0) {
+                else if (d == 1) {
                   cstart += 4;
                 }
 #endif
