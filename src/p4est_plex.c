@@ -1045,17 +1045,25 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       plex_to_local[pid] = nid;
       local_to_plex[nid] = pid;
       if (gid >= 0) {
-        int8_t isp;
 
         plex_to_proc[pid] = p;
-        isp = *((int8_t *) sc_array_index(is_parent, il));
-        if (isp) {
-          p4est_locidx_t cstart = child_offsets[il];
-          p4est_locidx_t cend = child_offsets[il+1], c;
+      }
+    }
+    for (il = 0; il < num_global; il++) {
+      p4est_locidx_t      pid, nid;
+      int8_t              isp;
+      int                 p;
 
-          for (c = cstart; c < cend; c++) {
-            plex_to_proc[c] = p;
-          }
+      nid = il + K;
+      pid = local_to_plex[nid];
+      isp = *((int8_t *) sc_array_index(is_parent, il));
+      if (isp) {
+        p4est_locidx_t cstart = child_offsets[il];
+        p4est_locidx_t cend = child_offsets[il+1], c;
+
+        p = plex_to_proc[pid];
+        for (c = cstart; c < cend; c++) {
+          plex_to_proc[local_to_plex[c+K]] = p;
         }
       }
     }
@@ -1552,7 +1560,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
 
           loc = firstidx + il;
           lp[0] = local_to_plex[loc + K];
-          for (j = 1; j < P4EST_DIM; j++) {
+          for (j = 1; j < P4EST_DIM + 1; j++) {
             lp[j] = -1;
           }
           if (loc < num_global) {
