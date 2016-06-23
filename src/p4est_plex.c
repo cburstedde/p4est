@@ -1312,7 +1312,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           else {
             p4est_locidx_t epid, lepid, estart, eend;
 
-            epid = cones[p4est_to_plex_position[1][c - cstart]];
+            epid = pcones[p4est_to_plex_position[1][c - (cstart + 4)]];
             lepid = plex_to_local[epid] - K;
 
             estart = child_offsets[lepid];
@@ -1337,15 +1337,17 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             else {
               int epid, lepid, estart, eend;
               int side = cone_to_side[c - cstart][j];
+              int expected;
 
-              epid = cones[-(nchild + 1)];
+              epid = pcones[-(nchild + 1)];
               lepid = plex_to_local[epid] - K;
 
               estart = child_offsets[lepid];
               eend   = child_offsets[lepid + 1];
               P4EST_ASSERT (eend > estart);
               cornts[j] = ornts[j];
-              if (!ornts[-(nchild + 1)]) {
+              expected = (-(nchild + 1) < 2) ? 0 : -2;
+              if (ornts[-(nchild + 1)] == expected) {
                 ccones[j] = local_to_plex[K + estart + side];
               }
               else {
