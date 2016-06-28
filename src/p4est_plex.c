@@ -1342,10 +1342,12 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           int                 j;
           p4est_locidx_t      cone_to_child[4][4] =
             { {-1, 6, 4, -4}, {-1, -2, 5, 6}, {4, 7, -3, -4}, {5, -2, -3,
-                                                               7} };
+                                                               7}
+          };
           int                 cone_to_side[4][4] =
             { {0, -1, -1, 0}, {1, 0, -1, -1}, {-1, -1, 0, 1}, {-1, 1, 1,
-                                                               -1} };
+                                                               -1}
+          };
 
           for (j = 0; j < 4; j++) {
             p4est_locidx_t      nchild = cone_to_child[c - cstart][j];
@@ -1443,6 +1445,68 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             coords[3 * vid2 + 2] = vcoord[2];
           }
         }
+      }
+    }
+    /* interpolate children coordinates from parent vertices */
+    for (il = 0; il < num_global; il++) {
+      p4est_locidx_t      pid, nid;
+      int8_t              isp;
+
+      nid = il + K;
+      pid = local_to_plex[nid];
+      isp = *((int8_t *) sc_array_index (is_parent, il));
+      if (isp) {
+        p4est_locidx_t      cvert = child_offsets[il + 1] - 1, poff, vid;
+        int8_t              pdim;
+        p4est_locidx_t     *pcones;
+
+        pdim = *((int8_t *) sc_array_index (node_dim, (size_t) il));
+        poff =
+          dim_cone_offsets[P4EST_DIM - pdim] + 2 * pdim * (pid -
+                                                           dim_offsets
+                                                           [P4EST_DIM -
+                                                            pdim]);
+        pcones = &cones[poff];
+        vid = local_to_plex[cvert + K] - dim_offsets[P4EST_DIM];
+        if (pdim == 1) {
+          p4est_locidx_t      pvid[2];
+
+          pvid[0] = pcones[0] - dim_offsets[P4EST_DIM];
+          pvid[1] = pcones[1] - dim_offsets[P4EST_DIM];
+          coords[3 * vid + 0] =
+            0.5 * (coords[3 * pvid[0] + 0] + coords[3 * pvid[1] + 0]);
+          coords[3 * vid + 1] =
+            0.5 * (coords[3 * pvid[0] + 1] + coords[3 * pvid[1] + 1]);
+          coords[3 * vid + 2] =
+            0.5 * (coords[3 * pvid[0] + 2] + coords[3 * pvid[1] + 2]);
+        }
+#ifdef P4_TO_P8
+        else {
+          int                 j, k;
+
+          coords[3 * vid + 0] = 0.;
+          coords[3 * vid + 1] = 0.;
+          coords[3 * vid + 2] = 0.;
+
+          for (j = 0; j < 4; j++) {
+            p4est_locidx_t      coff, *ccones;
+            p4est_locidx_t      pvid[2];
+
+            coff =
+              dim_cone_offsets[P4EST_DIM - 1] + 2 * (pcones[j] -
+                                                     dim_offsets[P4EST_DIM -
+                                                                 1]);
+            ccones = &cones[coff];
+
+            pvid[0] = ccones[0] - dim_offsets[P4EST_DIM];
+            pvid[1] = ccones[1] - dim_offsets[P4EST_DIM];
+            for (k = 0; k < 3; k++) {
+              coords[3 * vid + k] +=
+                0.125 * (coords[3 * pvid[0] + k] + coords[3 * pvid[1] + k]);
+            }
+          }
+        }
+#endif
       }
     }
     if (overlap) {
@@ -1657,9 +1721,9 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             p4est_gloidx_t     *gid =
               (p4est_gloidx_t *) sc_array_index (all_global, lid);
             p4est_locidx_t      eid = gid[1];
-            p4est_locidx_t      pid =
-              *((p4est_locidx_t *)
-                sc_array_index (quad_to_plex, (size_t) eid));
+            p4est_locidx_t      pid = *((p4est_locidx_t *)
+                                        sc_array_index (quad_to_plex,
+                                                        (size_t) eid));
             p4est_locidx_t     *leaf =
               (p4est_locidx_t *) sc_array_push (out_leaves);
             p4est_locidx_t     *remote =
