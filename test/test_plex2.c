@@ -161,10 +161,11 @@ static int
 refine_tree_one_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                     p4est_quadrant_t * quadrant)
 {
-  return !!which_tree;
+  return ! !which_tree;
 }
 
-static int test_forest(p4est_t * p4est, int overlap)
+static int
+test_forest (p4est_t * p4est, int overlap)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
@@ -274,7 +275,7 @@ static int test_forest(p4est_t * p4est, int overlap)
     ierr = DMSetPointSF (plex, pointSF);
     CHKERRQ (ierr);
     ierr = PetscSFDestroy (&pointSF);
-    CHKERRQ(ierr);
+    CHKERRQ (ierr);
     ierr = DMViewFromOptions (plex, NULL, "-dm_view");
     CHKERRQ (ierr);
     /* TODO: test with rigid body modes as in plex ex3 */
@@ -300,7 +301,8 @@ static int test_forest(p4est_t * p4est, int overlap)
   return 0;
 }
 
-static int test_big(int argc, char **argv)
+static int
+test_big (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
@@ -320,7 +322,7 @@ static int test_big(int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   p4est_partition (p4est, 0, NULL);
 
-  mpiret = test_forest(p4est,2);
+  mpiret = test_forest (p4est, 2);
   if (mpiret) {
     return mpiret;
   }
@@ -331,7 +333,8 @@ static int test_big(int argc, char **argv)
   return 0;
 }
 
-static int test_small(int argc, char **argv)
+static int
+test_small (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
@@ -342,21 +345,21 @@ static int test_small(int argc, char **argv)
   mpicomm = sc_MPI_COMM_WORLD;
 
 #ifndef P4_TO_P8
-  conn = p4est_connectivity_new_brick (2,1,0,0);
+  conn = p4est_connectivity_new_brick (2, 1, 0, 0);
 #else
-  conn = p8est_connectivity_new_brick (2,1,1,0,0,0);
+  conn = p8est_connectivity_new_brick (2, 1, 1, 0, 0, 0);
 #endif
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
   p4est_refine (p4est, 0, refine_tree_one_fn, NULL);
 
-  mpiret = test_forest(p4est,0);
+  mpiret = test_forest (p4est, 0);
   if (mpiret) {
     return mpiret;
   }
 
   p4est_partition (p4est, 0, NULL);
 
-  mpiret = test_forest(p4est,0);
+  mpiret = test_forest (p4est, 0);
   if (mpiret) {
     return mpiret;
   }
@@ -381,11 +384,11 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  mpiret = test_small(argc,argv);
+  mpiret = test_small (argc, argv);
   if (mpiret) {
     return mpiret;
   }
-  mpiret = test_big(argc,argv);
+  mpiret = test_big (argc, argv);
   if (mpiret) {
     return mpiret;
   }
