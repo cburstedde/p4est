@@ -78,14 +78,14 @@ SC_EXTERN_C_BEGIN;
  * This enum must fit into an int8_t.
  */
 typedef enum
-{
-  /* make sure to have different values 2D and 3D */
-  P8EST_CONNECT_FACE = 31,
-  P8EST_CONNECT_EDGE = 32,
-  P8EST_CONNECT_CORNER = 33,
-  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
-}
-p8est_connect_type_t;
+  {
+    /* make sure to have different values 2D and 3D */
+    P8EST_CONNECT_FACE = 31,
+    P8EST_CONNECT_EDGE = 32,
+    P8EST_CONNECT_CORNER = 33,
+    P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
+  }
+  p8est_connect_type_t;
 
 #ifdef P4EST_BACKWARD_DEALII
 typedef p8est_connect_type_t p8est_balance_type_t;
@@ -320,6 +320,16 @@ extern const int    p8est_child_corner_edges[8][8];
  */
 int                 p8est_connectivity_face_neighbor_corner_set
   (int c, int f, int nf, int set);
+
+/** Transform a corner across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] fc   A corner number in 0..4.
+ * \param [in] f    A face number that touches the corner \a c.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ */
+int                 p8est_connectivity_face_neighbor_face_corner_orientation
+  (int fc, int f, int nf, int o);
 
 /** Transform a corner across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.
