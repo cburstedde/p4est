@@ -88,7 +88,7 @@ test_mesh_collect_markers (p4est_iter_volume_info_t * info, void *user_data)
   local_id += tree->quadrants_offset;   /* now the id is relative to the MPI
                                            process */
 
-  marker_ptr = sc_array_index_int (markers, local_id);
+  marker_ptr = (double*) sc_array_index_int (markers, local_id);
   marker_ptr[0] = (double) data->marker;
 }
 
