@@ -684,6 +684,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
        */
       for (zz = 0; zz < cz; ++zz) {
         side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
+        P4EST_ASSERT (0 <= side1->treeid &&
+                      side1->treeid < info->p4est->connectivity->num_trees);
+        P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
 
         /* We only create edge information for processor-local quadrants */
         if (side1->is_hanging) {
