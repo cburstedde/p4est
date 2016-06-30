@@ -653,7 +653,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     if (info->tree_boundary) {
       p4est_locidx_t      nedgef[2];
       p4est_locidx_t      nface[2];
-      int                 nAdjacentQuads = 0;
+      int                 nAdjacentQuads;
       int                 ignore;
       size_t              z2;
       int8_t             *eedges;
@@ -664,17 +664,18 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       /* initialize nedgef to zero */
       SC_BZERO (nedgef, 2);
 
-      /* determine number of adjacentQuads beforehand. */
-      for (zz = 0; zz < cz; ++zz) {
-        side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
-        nAdjacentQuads =
-          side1->is_hanging ? nAdjacentQuads + 2 : nAdjacentQuads + 1;
-      }
+      /* overestimate number of adjacent quads:
+       * Due to hanging edges we cannot avoid iterating over all
+       * quadrants, if we want to know the exact number. so assume
+       * that each edge is hanging (which cannot be the case; it would
+       * be 2 separate edges if they were) and allocate space for
+       * twice the number of adjacent quadrants.
+       * However, we can consider that the quadrant itself is not
+       * stored as its own neighbor. */
+      nAdjacentQuads = 2 * cz - 1;
 
-      /* allocate space for saving quads in mesh structure, consider
-         that the cell itself is not saved as neighboring cell */
-      equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads - 1);
-      eedges = P4EST_ALLOC (int8_t, nAdjacentQuads - 1);
+      equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
+      eedges = P4EST_ALLOC (int8_t, nAdjacentQuads);
 
       /* Loop through all edge sides, that is the quadrants touching it.  For
        * each of these quadrants, determine the edge sides that can potentially
