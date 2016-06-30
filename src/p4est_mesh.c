@@ -687,12 +687,12 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 
         /* We only create edge information for processor-local quadrants */
         if (side1->is_hanging) {
+          /* look for face neighbors of current quadrant */
+          mesh_edge_find_face_neighbors (side1,
+                                         info->p4est->connectivity,
+                                         nftree, nface, nedgef);
           for (i = 0; i < 2; ++i) {
             if (!side1->is.hanging.is_ghost[i]) {
-              /* look for face neighbors of current quadrant */
-              mesh_edge_find_face_neighbors (side1,
-                                             info->p4est->connectivity,
-                                             nftree, nface, nedgef);
               tree1 =
                 p4est_tree_array_index (info->p4est->trees, side1->treeid);
               qid1 = side1->is.hanging.quadid[i] + tree1->quadrants_offset;
