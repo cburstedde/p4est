@@ -1233,11 +1233,10 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
           p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->
-                                                                    face,
-                                                                    side2->
-                                                                    face,
-                                                                    info->orientation);
+                                                                    side->face,
+                                                                    side2->face,
+                                                                    info->
+                                                                    orientation);
         if (!side2->is.hanging.is_ghost[h]) {
           tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
           jls[h] = side2->is.hanging.quadid[pos] + tree->quadrants_offset;
