@@ -125,17 +125,15 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
- * The corners are only stored when they connect trees. In this case
- * tree_to_corner indexes into \a ctt_offset.
+ * The corners are only stored when they connect trees.
+ * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
- * The entries contains the tree from which the query originated
- * as well as trees that are face neighbors wrt. the querying tree,
- * i.e. all trees adjacent to corner c are stored.
+ * The entries encode all trees adjacent to corner c.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
