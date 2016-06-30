@@ -24,10 +24,8 @@
 #include <inttypes.h>
 #ifndef P4_TO_P8
 #include <p4est_connectivity.h>
-//#include <p4est_extended.h>
 #else /* !P4_TO_P8 */
 #include <p8est_connectivity.h>
-//#include <p8est_extended.h>
 #endif /* !P4_TO_P8 */
 
 /** Checks that orientation is properly set, i.e. face corner 0 of the
@@ -106,7 +104,6 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
       p4est_connectivity_face_neighbor_corner_orientation (c0, lowerFaceIndex,
                                                            higherFaceIndex,
                                                            orientation);
-    // c1 = p4est_face_corners[higherFaceIndex][fc1];
     cx =
       p4est_connectivity_face_neighbor_corner_orientation (c1,
                                                            higherFaceIndex,
