@@ -35,10 +35,10 @@
 
 /* *INDENT-OFF* */
 const int           p4est_face_corners[4][2] =
-  {{ 0, 2 },
-   { 1, 3 },
-   { 0, 1 },
-   { 2, 3 }};
+{{ 0, 2 },
+ { 1, 3 },
+ { 0, 1 },
+ { 2, 3 }};
 const int           p4est_face_dual[4] = { 1, 0, 3, 2 };
 
 const int           p4est_corner_faces[4][2] =
@@ -1796,7 +1796,6 @@ p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t r_face,
 #endif /* P4_TO_P8 */
                                       NULL, &num_ctt, NULL, NULL);
 }
-
 
 static inline void
 brick_linear_to_xyz (p4est_topidx_t ti, const int logx[P4EST_DIM],
