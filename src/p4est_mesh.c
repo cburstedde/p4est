@@ -196,7 +196,7 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
   return edgeid;
 }
 
-/** Process intra-tree edge neighbors
+/** Process inter-tree edge neighbors
  * \param[in]      info       General iterator information
  * \param[in]      side1      Currently processed edge
  * \param[in]      subedge_id Sub edge index in 0..1 for hanging edges, -1
