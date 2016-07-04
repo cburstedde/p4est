@@ -1638,7 +1638,7 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
   const p4est_topidx_t num_corners = 0;
   const p4est_topidx_t num_ctt = 0;
 
-  /* *INDENT-OFF* */
+/* *INDENT-OFF* */
   const double        vertices[(P4EST_DIM - 1) * 6 * 3] = {
     0, 0, 0,
     1, 0, 0,
@@ -1664,12 +1664,12 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
      { 1, 4, 0, 3 },
      { 0, 3, 1, 4}};
 #else /* !P4_TO_P8 */
-  {{  1,  0,  7,  6,  4,  3, 10,  9 },
-   {  0,  1,  3,  4,  6,  7,  9, 10 },
-   {  1,  4,  0,  3,  7, 10,  6,  9 },
-   {  0,  6,  1,  7,  3,  9,  4, 10 },
-   {  1,  7,  4, 10,  0,  6,  3,  9 },
-   {  0,  3,  6,  9,  1,  4,  7, 10 }};
+    {{  1,  0,  7,  6,  4,  3, 10,  9 },
+     {  0,  1,  3,  4,  6,  7,  9, 10 },
+     {  1,  4,  0,  3,  7, 10,  6,  9 },
+     {  0,  6,  1,  7,  3,  9,  4, 10 },
+     {  1,  7,  4, 10,  0,  6,  3,  9 },
+     {  0,  3,  6,  9,  1,  4,  7, 10 }};
 #endif /* !P4_TO_P8 */
 
   const int           rightTree[P4EST_FACES][P4EST_CHILDREN] =
@@ -1679,12 +1679,12 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
      { 1, 4, 2, 5 },
      { 2, 5, 1, 4 }};
 #else /* !P4_TO_P8 */
-  {{  1,  2,  4,  5,  7,  8, 10, 11 },
-   {  2,  1,  8,  7,  5,  4, 11, 10 },
-   {  1,  7,  2,  8,  4, 10,  5, 11 },
-   {  2,  5,  1,  4,  8, 11,  7, 10 },
-   {  1,  4,  7, 10,  2,  5,  8, 11 },
-   {  2,  8,  5, 11,  1,  7,  4, 10 }};
+    {{  1,  2,  4,  5,  7,  8, 10, 11 },
+     {  2,  1,  8,  7,  5,  4, 11, 10 },
+     {  1,  7,  2,  8,  4, 10,  5, 11 },
+     {  2,  5,  1,  4,  8, 11,  7, 10 },
+     {  1,  4,  7, 10,  2,  5,  8, 11 },
+     {  2,  8,  5, 11,  1,  7,  4, 10 }};
 #endif /* !P4_TO_P8 */
 
   /* define rotations for right tree in order to set the orientation */
@@ -1692,13 +1692,13 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
 #ifndef P4_TO_P8
     { -1,  4,  5, -1,  1,  2 };
 #else /* !P4_TO_P8 */
-  { -1, 10, 11, -1,  7,  8, -1,  4,  5, -1,  1,  2 };
+    { -1, 10, 11, -1,  7,  8, -1,  4,  5, -1,  1,  2 };
   const int rotateClockWise[(P4EST_DIM - 1) * 6] =
     { -1,  7,  8, -1,  1,  2, -1, 10, 11, -1,  4,  5 };
   const int rotateCounterClockWise[(P4EST_DIM - 1) * 6] =
     { -1,  4,  5, -1, 10, 11, -1,  1,  2, -1,  7,  8 };
 #endif /* !P4_TO_P8 */
-  /* *INDENT-ON* */
+/* *INDENT-ON* */
 
   /* initialize values in tree_to_vertex */
   p4est_topidx_t      tree_to_vertex[P4EST_CHILDREN * 2] = {
@@ -1729,10 +1729,12 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
     op = 2;
   }
   else if (1 <= orientation && orientation <= 2) {
-    if (l_face <= r_face)
+    if (l_face <= r_face) {
       op = p8est_face_permutation_refs[l_face][r_face];
-    else
+    }
+    else {
       op = p8est_face_permutation_refs[r_face][l_face];
+    }
   }
   switch (op) {
   case 0:                      // clockwise rotation
@@ -1756,25 +1758,25 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
   }
 #endif /* P4_TO_P8 */
 
-  /* *INDENT-OFF* */
+/* *INDENT-OFF* */
   /* create tree_to_tree and tree_to_face */
-  int tree_to_tree[2 * P4EST_FACES] =
+  p4est_topidx_t tree_to_tree[2 * P4EST_FACES] =
 #ifndef P4_TO_P8
     {0, 0, 0, 0,
      1, 1, 1, 1};
 #else /* !P4_TO_P8 */
-  {0, 0, 0, 0, 0, 0,
-      1, 1, 1, 1, 1, 1};
+    {0, 0, 0, 0, 0, 0,
+     1, 1, 1, 1, 1, 1};
 #endif /* !P4_TO_P8 */
   int8_t tree_to_face[2 * P4EST_FACES] =
 #ifndef P4_TO_P8
     {0, 1, 2, 3,
      0, 1, 2, 3,};
 #else /* !P4_TO_P8 */
-  {0, 1, 2, 3, 4, 5,
-      0, 1, 2, 3, 4, 5};
+    {0, 1, 2, 3, 4, 5,
+     0, 1, 2, 3, 4, 5};
 #endif /* !P4_TO_P8 */
-  /* *INDENT-ON* */
+/* *INDENT-ON* */
 
   /* set values where trees are connected */
   tree_to_tree[l_face] = 1;
