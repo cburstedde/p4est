@@ -310,24 +310,26 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
         ++goodones;
       }
     }
-
-    /* we have excluded between 0 and all quadrants. */
-    P4EST_ASSERT (0 <= (size_t) goodones
-                  && (size_t) goodones < nAdjacentQuads);
-
-    if (goodones > 0) {
-      /* Allocate and fill edge information in the mesh structure */
-      edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
-      /* "link" to arrays encoding inter-tree edge-neighborhood */
-      P4EST_ASSERT
-        (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
-      mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
-        edgeid_offset + edgeid;
-      /* populate allocated memory */
-      memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
-      memcpy (peedge, eedges, goodones * sizeof (int8_t));
-    }
   }
+
+  /* we have excluded between 0 and all quadrants. */
+  P4EST_ASSERT (0 <= (size_t) goodones
+                && (size_t) goodones < nAdjacentQuads);
+
+  if (goodones > 0) {
+    /* Allocate and fill edge information in the mesh structure */
+    edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
+    /* "link" to arrays encoding inter-tree edge-neighborhood */
+    P4EST_ASSERT
+      (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+    mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
+      edgeid_offset + edgeid;
+    /* populate allocated memory */
+    memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
+    memcpy (peedge, eedges, goodones * sizeof (int8_t));
+  }
+  P4EST_FREE (equads);
+  P4EST_FREE (eedges);
 }
 #endif /* P4_TO_P8 */
 
@@ -827,8 +829,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           }
         }
       }
-      P4EST_FREE (equads);
-      P4EST_FREE (eedges);
       return;
     }
 
