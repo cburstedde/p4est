@@ -523,10 +523,9 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
  * \param[in] r_face      index of right face
  * \param[in] orientation orientation of trees w.r.t. each other
  */
-p8est_connectivity_t *p8est_connectivity_new_twotrees (p4est_topidx_t l_face,
-                                                       p4est_topidx_t r_face,
-                                                       p4est_topidx_t
-                                                       orientation);
+p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face,
+                                                       int r_face,
+                                                       int8_t orientation);
 
 /** Create a connectivity structure that contains two cubes
  * where the two far ends are identified periodically.

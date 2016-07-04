@@ -38,9 +38,8 @@
  */
 static int
 test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
-                                            p4est_topidx_t l_face,
-                                            p4est_topidx_t r_face,
-                                            p4est_topidx_t orientation)
+                                            int l_face, int r_face,
+                                            int8_t orientation)
 {
   int                 neighboring_face_corner, corner_index;
   int                 lowerFaceIndex, higherFaceIndex;
@@ -79,9 +78,8 @@ test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
  */
 static int
 test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
-                                             p4est_topidx_t l_face,
-                                             p4est_topidx_t r_face,
-                                             p4est_topidx_t orientation)
+                                             int l_face, int r_face,
+                                             int8_t orientation)
 {
   int                 c0, c1, cx;
   int                 i;
@@ -129,9 +127,8 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
  */
 static int
 test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
-                                           p4est_topidx_t l_face,
-                                           p4est_topidx_t r_face,
-                                           p4est_topidx_t orientation)
+                                           int l_face, int r_face,
+                                           int8_t orientation)
 {
   int                 e0, e1, ex;
   int                 i;
@@ -190,7 +187,8 @@ main (int argc, char **argv)
 
   conn = 0;
 
-  int                 i, j, k;
+  int                 i, j;
+  int8_t              k;
 
   for (i = 0; i < P4EST_FACES; ++i) {   /* set l_face */
     for (j = 0; j < P4EST_FACES; ++j) { /* set r_face */
