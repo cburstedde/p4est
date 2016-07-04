@@ -1624,8 +1624,7 @@ p4est_connectivity_new_disk (void)
 #endif /* !P4_TO_P8 */
 
 p4est_connectivity_t *
-p4est_connectivity_new_twotrees (p4est_topidx_t l_face, p4est_topidx_t r_face,
-                                 p4est_topidx_t orientation)
+p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
 {
   int                 i;
   const p4est_topidx_t num_vertices = (P4EST_DIM - 1) * 6;      // 6 or 12
