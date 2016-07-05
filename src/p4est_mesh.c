@@ -293,7 +293,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
           (side2->is.hanging.is_ghost[subEdgeIdx] ?
            mesh->local_num_quadrants : tree2->quadrants_offset);
         equads[goodones] = qid2;
-        eedges[goodones] = 12 * localOri + (int) side2->edge;
+        eedges[goodones] = P8EST_EDGES * localOri + (int) side2->edge;
         ++goodones;
       }
       else if (!side1->is_hanging && side2->is_hanging) {
@@ -308,16 +308,24 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
             (side2->is.hanging.is_ghost[pos] ?
              mesh->local_num_quadrants : tree2->quadrants_offset);
           equads[goodones] = qid2;
-          eedges[goodones] = 24 + 24 * j + 12 * localOri + (int) side2->edge;
+          eedges[goodones] = -24 + P8EST_EDGES * localOri + side2->edge;
           ++goodones;
         }
+      }
+      else if (side1->is_hanging && !side2->is_hanging) {
+        qid2 = side2->is.full.quadid +
+          (side2->is.full.is_ghost ?
+           mesh->local_num_quadrants : tree2->quadrants_offset);
+        equads[goodones] = qid2;
+        eedges[goodones] = 24 + 24 * j + P8EST_EDGES * localOri + (int) side2->edge;
+        ++goodones;
       }
       else {
         qid2 = side2->is.full.quadid +
           (side2->is.full.is_ghost ?
            mesh->local_num_quadrants : tree2->quadrants_offset);
         equads[goodones] = qid2;
-        eedges[goodones] = -24 + 12 * localOri + (int) side2->edge;
+        eedges[goodones] = P8EST_EDGES * localOri + side2->edge;
         ++goodones;
       }
     }
