@@ -369,8 +369,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_iter_corner_side_t *side1, *side2;
   p4est_tree_t       *tree1, *tree2;
-  p4est_connectivity_t *conn;
-  sc_array_t         *trees;
+  p4est_connectivity_t *conn = info->p4est->connectivity;
+  sc_array_t         *trees = info->p4est->trees;
 
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
