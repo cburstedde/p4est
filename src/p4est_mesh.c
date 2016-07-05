@@ -317,7 +317,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
           (side2->is.full.is_ghost ?
            mesh->local_num_quadrants : tree2->quadrants_offset);
         equads[goodones] = qid2;
-        eedges[goodones] = 24 + 24 * j + P8EST_EDGES * localOri + (int) side2->edge;
+        eedges[goodones] = 24 + 24 * subedge_id + P8EST_EDGES * localOri + (int) side2->edge;
         ++goodones;
       }
       else {
@@ -831,7 +831,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
         /* We only create edge information for processor-local quadrants */
         if (side1->is_hanging) {
           for (i = 0; i < 2; ++i) {
-            if (!side1->is.hanging.is_ghost[1]) {
+            if (!side1->is.hanging.is_ghost[i]) {
               mesh_edge_process_inter_tree_edges (info, side1, i, mesh,
                                                   nftree, nedgef, cz, zz);
             }
