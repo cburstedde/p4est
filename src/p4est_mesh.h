@@ -59,21 +59,16 @@ SC_EXTERN_C_BEGIN;
  * 2. A value of v = 8..23 indicates a double-size neighbor.
  *    This value is decoded as v = 8 + h * 8 + r * 4 + nf, where
  *    r and nf are as above and h = 0..1 is the number of the subface.
- *    TODO: Define what perspective is used to define h?
- *          We may prefer it to be the perspective of the neighbor,
- *          as is the usual convention for quad_to_face.
- *          Our own perspective can be derived from our child id.
- *          On the other hand, getting the child id requires quadrant access,
- *          which we may want to avoid in most cases.
+ *    h designates the subface of the large neighbor that the quadrant
+ *    touches (this is the same as the large neighbor's face corner).
  * 3. A value of v = -8..-1 indicates two half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
  *    quad_to_half array that stores two quadrant numbers per index,
  *    and the orientation of the smaller faces follows from 8 + v.
  *    The entries of quad_to_half encode between local and ghost quadrant
  *    in the same way as the quad_to_quad values described above.
- *    TODO: Define exactly in which sequence the four small neighbors
- *          are stored in the current version of the code.
- *          We may subsequently consider reordering them.
+ *    The small neighbors in quad_to_half are stored in the sequence
+ *    of the face corners of the large quadrant.
  *
  * A quadrant on the boundary of the forest sees itself and its face number.
  *

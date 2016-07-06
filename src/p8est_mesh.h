@@ -58,21 +58,16 @@ SC_EXTERN_C_BEGIN;
  * 2. A value of v = 24..119 indicates a double-size neighbor.
  *    This value is decoded as v = 24 + h * 24 + r * 6 + nf, where
  *    r and nf are as above and h = 0..3 is the number of the subface.
- *    TODO: Define what perspective is used to define h?
- *          We may prefer it to be the perspective of the neighbor,
- *          as is the usual convention for quad_to_face.
- *          Our own perspective can be derived from our child id.
- *          On the other hand, getting the child id requires quadrant access,
- *          which we may want to avoid in most cases.
+ *    h designates the subface of the large neighbor that the quadrant
+ *    touches (this is the same as the large neighbor's face corner).
  * 3. A value of v = -24..-1 indicates four half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
  *    quad_to_half array that stores four quadrant numbers per index,
  *    and the orientation of the smaller faces follows from 24 + v.
  *    The entries of quad_to_half encode between local and ghost quadrant
  *    in the same way as the quad_to_quad values described above.
- *    TODO: Define exactly in which sequence the four small neighbors
- *          are stored in the current version of the code.
- *          We may subsequently consider reordering them.
+ *    The small neighbors in quad_to_half are stored in the sequence
+ *    of the face corners of the large quadrant.
  *
  * A quadrant on the boundary of the forest sees itself and its face number.
  *
@@ -95,22 +90,17 @@ SC_EXTERN_C_BEGIN;
  * 2. A value of e = 24..71 indicates a double-size neighbor.
  *    This value is decoded as e = 24 + h * 24 + r * 12 + ne, where
  *    r and ne are as above and h = 0..1 is the number of the subedge.
- *    TODO: How do we interpret h?
- *          Is it what the respective neighbor sees the small quadrant as?
+ *    h designates the subface of the large neighbor that the quadrant
+ *    touches (this is the same as the large neighbor's face corner).
  * 3. A value of e = -24..-1 indicates two half-size neighbors.
  *    In this case the corresponding edge_to_quad index points into the
  *    edge_edge and edge_quad arrays storing two quadrant numbers as well as
  *    the orientation of the smaller edges follows from -24 + 12 * r + ne, where
  *    r and ne are defined as above.
+ *    The small neighbors are stored in the sequence of the edge
+ *    corners of the large quadrant.
  * Edges with no diagonal neighbor at all are assigned the value -3.
  * Edge-neighbors for hanging nodes are assigned the value -1.
- *    TODO: In what sequence are these neighbors stored in quad_to_hedge?
- *          Compare this is the same convention as with quad_to_half.
- *
- * TODO: Idea to remove quad_to_hedge in favor of storing two quadrant ids
- *       in the offset structure.  This would save some memory.
- *
- * TODO: With the current code test_mesh fails in debug mode (assertion).
  *
  * The quad_to_corner list stores corner neighbors that are not face or edge
  * neighbors.  On the inside of a tree, there is precisely one such neighbor
