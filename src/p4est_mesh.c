@@ -1244,7 +1244,12 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
         }
       }
       for (h = 0; h < P4EST_HALF; ++h) {
-        if (!side2->is.hanging.is_ghost[h]) {
+        int                 pos =
+          p4est_connectivity_face_neighbor_face_corner_orientation (h,
+                                                                    side->face,
+                                                                    side2->face,
+                                                                    info->orientation);
+        if (!side2->is.hanging.is_ghost[pos]) {
           in_qtoq = P4EST_FACES * jls[h] + side2->face;
           P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
           P4EST_ASSERT (mesh->quad_to_face[in_qtoq] == -25);
