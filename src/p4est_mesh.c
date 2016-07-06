@@ -316,8 +316,9 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
         qid2 = side2->is.full.quadid +
           (side2->is.full.is_ghost ?
            mesh->local_num_quadrants : tree2->quadrants_offset);
+        int                 pos = (localOri + subedge_id) % 2;
         equads[goodones] = qid2;
-        eedges[goodones] = 24 + 24 * subedge_id + P8EST_EDGES * localOri + (int) side2->edge;
+        eedges[goodones] = 24 + 24 * pos + P8EST_EDGES * localOri + side2->edge;
         ++goodones;
       }
       else {
