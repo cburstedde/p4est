@@ -572,7 +572,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
       if (!side1->is_ghost) {
         /* We only create corner information for processor-local quadrants */
         t1 = side1->treeid;
-        c1 = (int) side1->corner;
+        c1 = side1->corner;
         tree1 = p4est_tree_array_index (trees, t1);
         qid1 = side1->quadid + tree1->quadrants_offset;
         P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
@@ -589,7 +589,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
             /* This is a physical face boundary, no face neighbor present */
             ncornerf[i] = -1;
           }
-          if (ncornerf[i] == 0) {
+          else {
             /* We have a face neighbor */
             faceOrientation = nface[i] / P4EST_FACES;
             nface[i] %= P4EST_FACES;
@@ -602,20 +602,42 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 #ifdef P4_TO_P8
           /* Check all quadrant edges that touch this corner */
           e1 = p8est_corner_edges[c1][i];
-          netree[i] = conn->edge_to_tree[P8EST_EDGES * t1 + e1];
-          nedge[i] = conn->edge_to_edge[P8EST_EDGES * t1 + e1];
-          if (netree[i] == t1 && nedge[i] == e1) {
-            /* This is a physical edge boundary, no edge neighbor present */
-            ncornere[i] = -1;
-          }
+          if (conn->edge_to_tree != 0) {
+            netree[i] = conn->edge_to_tree[P8EST_EDGES * t1 + e1];
+            nedge[i] = conn->edge_to_edge[P8EST_EDGES * t1 + e1];
+            if (netree[i] == t1 && nedge[i] == e1) {
+              /* This is a physical edge boundary, no edge neighbor present */
+              ncornere[i] = -1;
+            }
 
-          if (ncornere[i] == 0) {
-            /* We have an edge neighbor */
-            edgeOrientation = nedge[i] / P8EST_EDGES;
-            nedge[i] %= P8EST_EDGES;
-            which_corner = (e1 == p8est_edge_corners[c1][0] ? 0 : 1);
-            which_corner = (which_corner + edgeOrientation) % 2;
-            ncornere[i] = p8est_edge_corners[nedge[i]][which_corner];
+            if (ncornere[i] == 0) {
+              /* We have an edge neighbor */
+              edgeOrientation = nedge[i] / P8EST_EDGES;
+              nedge[i] %= P8EST_EDGES;
+              which_corner = (e1 == p8est_edge_corners[c1][0] ? 0 : 1);
+              which_corner = (which_corner + edgeOrientation) % 2;
+              ncornere[i] = p8est_edge_corners[nedge[i]][which_corner];
+            }
+          }
+          else {
+            for (j = 0; j < cz; ++j) {
+              side1 =
+                (p4est_iter_corner_side_t *) sc_array_index_int (&info->sides,
+                                                                 i);
+              if (!side1->is_ghost) {
+                tree1 = p4est_tree_array_index (trees, side1->treeid);
+                qid1 = side1->quadid + tree1->quadrants_offset;
+                P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+
+                P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 +
+                                                   side1->corner] == -1);
+                mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] =
+                  -3;
+              }
+              P4EST_FREE (cquads);
+              P4EST_FREE (ccorners);
+              return;
+            }
           }
 #endif /* P4_TO_P8 */
         }
@@ -670,7 +692,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           cornerid =
             mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
           /* "link" to arrays encoding inter-tree corner-neighborhood */
-          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] == -1);
+          P4EST_ASSERT (mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] ==
+                        -1);
           mesh->quad_to_corner[P4EST_CHILDREN * qid1 + c1] =
             cornerid_offset + cornerid;
           /* populate allocated memory */
