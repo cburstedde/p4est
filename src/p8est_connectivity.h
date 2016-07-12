@@ -77,14 +77,14 @@ SC_EXTERN_C_BEGIN;
  * This enum must fit into an int8_t.
  */
 typedef enum
-  {
-    /* make sure to have different values 2D and 3D */
-    P8EST_CONNECT_FACE = 31,
-    P8EST_CONNECT_EDGE = 32,
-    P8EST_CONNECT_CORNER = 33,
-    P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
-  }
-  p8est_connect_type_t;
+{
+  /* make sure to have different values 2D and 3D */
+  P8EST_CONNECT_FACE = 31,
+  P8EST_CONNECT_EDGE = 32,
+  P8EST_CONNECT_CORNER = 33,
+  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
+}
+p8est_connect_type_t;
 
 #ifdef P4EST_BACKWARD_DEALII
 typedef p8est_connect_type_t p8est_balance_type_t;

@@ -35,10 +35,10 @@
 
 /* *INDENT-OFF* */
 const int           p4est_face_corners[4][2] =
-  {{ 0, 2 },
-   { 1, 3 },
-   { 0, 1 },
-   { 2, 3 }};
+{{ 0, 2 },
+ { 1, 3 },
+ { 0, 1 },
+ { 2, 3 }};
 const int           p4est_face_dual[4] = { 1, 0, 3, 2 };
 
 const int           p4est_corner_faces[4][2] =

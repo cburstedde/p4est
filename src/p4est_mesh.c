@@ -38,7 +38,7 @@
 /*********************** constructor functions ***********************/
 
 /** For a quadrant that touches a tree face with a corner inside the face,
- *  get the number of the touching face.
+ * get the number of the touching face.
  *
  * \param [in] q        currently considered quadrant
  * \param [in] corner   corner index
@@ -373,6 +373,8 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   p4est_tree_t       *tree1, *tree2;
   p4est_connectivity_t *conn = info->p4est->connectivity;
   sc_array_t         *trees = info->p4est->trees;
+
+  cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
@@ -1267,9 +1269,12 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
           p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->face,
-                                                                    side2->face,
-                                                                    info->orientation);
+                                                                    side->
+                                                                    face,
+                                                                    side2->
+                                                                    face,
+                                                                    info->
+                                                                    orientation);
         if (!side2->is.hanging.is_ghost[h]) {
           tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
           jls[h] = side2->is.hanging.quadid[pos] + tree->quadrants_offset;
@@ -1300,9 +1305,12 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
           p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->face,
-                                                                    side2->face,
-                                                                    info->orientation);
+                                                                    side->
+                                                                    face,
+                                                                    side2->
+                                                                    face,
+                                                                    info->
+                                                                    orientation);
         if (!side2->is.hanging.is_ghost[pos]) {
           in_qtoq = P4EST_FACES * jls[h] + side2->face;
           P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
@@ -1392,10 +1400,9 @@ p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 
 p4est_mesh_t       *
-p4est_mesh_new_ext (p4est_t * p4est,
-                    p4est_ghost_t * ghost,
-                    int compute_tree_index,
-                    int compute_level_lists, p4est_connect_type_t btype)
+p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
+                    int compute_tree_index, int compute_level_lists,
+                    p4est_connect_type_t btype)
 {
   int                 do_corner = 0;
 #ifdef P4_TO_P8
