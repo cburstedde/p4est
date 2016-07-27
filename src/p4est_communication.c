@@ -677,3 +677,100 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
   return 0;
 #endif /* !P4EST_HAVE_ZLIB */
 }
+
+#ifndef P4_TO_P8
+
+void
+p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
+                      p4est_transfer_comm_t which_comm, sc_MPI_Comm mpicomm,
+                      int tag, void *dest_data,
+                      const void *src_data, size_t data_size)
+{
+  p4est_transfer_context_t *tc;
+
+  tc = p4est_transfer_fixed_begin (dest, src, which_comm, mpicomm, tag,
+                                   dest_data, src_data, data_size);
+  p4est_transfer_fixed_end (tc);
+}
+
+p4est_transfer_context_t *
+p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
+                            p4est_transfer_comm_t which_comm,
+                            sc_MPI_Comm mpicomm, int tag, void *dest_data,
+                            const void *src_data, size_t data_size)
+{
+  int                 mpiret;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 mpisize, mpirank;
+#endif
+  p4est_transfer_context_t *tc;
+
+  P4EST_ASSERT (dest != NULL && src != NULL);
+  P4EST_ASSERT (dest->mpisize == src->mpisize);
+  P4EST_ASSERT (dest->mpirank == src->mpirank);
+  P4EST_ASSERT (dest->global_num_quadrants == src->global_num_quadrants);
+
+  tc = P4EST_ALLOC (p4est_transfer_context_t, 1);
+  tc->dest = dest;
+  tc->src = src;
+  tc->which_comm = which_comm;
+  switch (which_comm) {
+  case P4EST_TRANSFER_COMM_SRC:
+    tc->mpicomm = src->mpicomm;
+    break;
+  case P4EST_TRANSFER_COMM_DEST:
+    tc->mpicomm = dest->mpicomm;
+    break;
+  case P4EST_TRANSFER_COMM_SRC_DUP:
+    mpiret = sc_MPI_Comm_dup (src->mpicomm, &tc->mpicomm);
+    SC_CHECK_MPI (mpiret);
+    break;
+  case P4EST_TRANSFER_COMM_DEST_DUP:
+    mpiret = sc_MPI_Comm_dup (dest->mpicomm, &tc->mpicomm);
+    SC_CHECK_MPI (mpiret);
+    break;
+  case P4EST_TRANSFER_COMM_EXTERNAL:
+    P4EST_ASSERT (mpicomm != sc_MPI_COMM_NULL);
+#ifdef P4EST_ENABLE_DEBUG
+    mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (mpisize == src->mpisize);
+    mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (mpirank == src->mpirank);
+#endif
+    tc->mpicomm = mpicomm;
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+    break;
+  }
+  tc->tag = tag;
+  tc->dest_data = dest_data;
+  tc->src_data = src_data;
+  tc->data_size = data_size;
+
+  return tc;
+}
+
+void
+p4est_transfer_fixed_end (p4est_transfer_context_t * tc)
+{
+  int                 mpiret;
+
+  P4EST_ASSERT (tc != NULL);
+
+  switch (tc->which_comm) {
+  case P4EST_TRANSFER_COMM_SRC_DUP:
+  case P4EST_TRANSFER_COMM_DEST_DUP:
+    mpiret = sc_MPI_Comm_free (&tc->mpicomm);
+    SC_CHECK_MPI (mpiret);
+    break;
+  default:
+    break;
+  }
+
+  P4EST_FREE (tc);
+}
+
+#endif

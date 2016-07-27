@@ -142,6 +142,81 @@ unsigned            p4est_comm_checksum (p4est_t * p4est,
                                          unsigned local_crc,
                                          size_t local_bytes);
 
+/** Defines how the communicator is obtained when transfering data.
+ * It is used in \ref p4est_transfer_fixed and \ref p4est_transfer_custom.
+ */
+typedef enum p4est_transfer_comm
+{
+  P4EST_TRANSFER_COMM_SRC,      /**< Use communicator from source forest. */
+  P4EST_TRANSFER_COMM_DEST,     /**< Use communicator from target forest. */
+  P4EST_TRANSFER_COMM_SRC_DUP,  /**< Duplicate source communicator. */
+  P4EST_TRANSFER_COMM_DEST_DUP, /**< Duplicate target communicator. */
+  P4EST_TRANSFER_COMM_EXTERNAL  /**< Use user-specified communicator. */
+}
+p4est_transfer_comm_t;
+
+/** Transfer data associated with one forest to a partitioned one.
+ * In \ref p4est_partition, each quadrant's user data is transferred.
+ * If the application maintains per-quadrant data outside of p4est,
+ * this function can be used to transfer it, matching the call to partition.
+ * This variant of the function assumes that the quadrant data size is fixed.
+ * It sends point-to-point messages only and is blocking collective.
+ * There is a split collective version; see the functions
+ * \ref p4est_transfer_fixed_begin and \ref p4est_transfer_fixed_end.
+ * \param [in] dest         This forest defines the target partition.
+ *                          \b dest must have been derived from \b src by a
+ *                          call to \ref p4est_partition.
+ *                          It is ok to use \ref p4est_copy, too.
+ * \param [in] src          This forest defines the original partition.
+ * \param [in] which_comm   This enumeration defines how the communicator is
+ *                          obtained that should be used inside this function.
+ *                          If it is to be derived from either \b dest or \b
+ *                          src, there is no need to specify it in \b mpicomm.
+ *                          When it is duped, it will be freed internally.
+ * \param [in] mpicomm      If the communicator to be used is user provided,
+ *                          by specifying P4EST_TRANSFER_COMM_EXTERNAL for
+ *                          \b which_comm, it must be passed in here.  Then it
+ *                          must have the same size and rank as the ones stored
+ *                          in \b dest and \b src.
+ * \param [in] tag          This tag is used in all messages.
+ * \param [in,out] dest_data    User-allocated memory of size \b data_size * \b
+ *                              dest->local_num_quadrants bytes.
+ * \param [in] src_data         User-allocated memory of size \b data_size * \b
+ *                              src->local_num_quadrants bytes.
+ * \param [in] data_size        Fixed data size per quadrant.
+ */
+void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
+                                          p4est_transfer_comm_t which_comm,
+                                          sc_MPI_Comm mpicomm, int tag,
+                                          void *dest_data,
+                                          const void *src_data,
+                                          size_t data_size);
+
+typedef struct p4est_transfer_context
+{
+  p4est_t            *dest;
+  p4est_t            *src;
+  p4est_transfer_comm_t which_comm;
+  sc_MPI_Comm         mpicomm;
+  int                 tag;
+  void               *dest_data;
+  const void         *src_data;
+  size_t              data_size;
+}
+p4est_transfer_context_t;
+
+p4est_transfer_context_t *p4est_transfer_fixed_begin (p4est_t * dest,
+                                                      p4est_t * src,
+                                                      p4est_transfer_comm_t
+                                                      which_comm,
+                                                      sc_MPI_Comm mpicomm,
+                                                      int tag,
+                                                      void *dest_data,
+                                                      const void *src_data,
+                                                      size_t data_size);
+
+void                p4est_transfer_fixed_end (p4est_transfer_context_t * tc);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_COMMUNICATION_H */
