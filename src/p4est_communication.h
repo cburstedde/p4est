@@ -158,6 +158,7 @@ p4est_transfer_comm_t;
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
 {
+  /* remember parameters of the call */
   p4est_t            *dest;
   p4est_t            *src;
   p4est_transfer_comm_t which_comm;
@@ -171,6 +172,12 @@ typedef struct p4est_transfer_context
   const size_t       *src_sizes;
   size_t              data_size;
   int                 variable;         /**< Variable quadrant data size? */
+
+  /* operational data */
+  int                 num_senders;
+  int                 num_receivers;
+  sc_MPI_Request     *recv_req;
+  sc_MPI_Request     *send_req;
 }
 p4est_transfer_context_t;
 
@@ -233,7 +240,8 @@ void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
  * \param [in] tag          This tag is used in all messages.
  * \param [in,out] dest_data    User-allocated memory of size \b data_size * \b
  *                              dest->local_num_quadrants bytes.
- *                              It must not be accessed before completion.
+ *                              It must not be accessed before completion with
+ *                              \ref p4est_transfer_fixed_end.
  * \param [in] src_data         User-allocated memory of size \b data_size * \b
  *                              src->local_num_quadrants bytes.
  * \param [in] data_size        Fixed data size per quadrant.
