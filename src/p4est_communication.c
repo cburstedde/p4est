@@ -983,8 +983,8 @@ p4est_transfer_fixed_end (p4est_transfer_context_t * tc)
 void
 p4est_transfer_custom (p4est_t * dest, p4est_t * src,
                        p4est_transfer_comm_t which_comm, sc_MPI_Comm mpicomm,
-                       int tag, void **dest_data, size_t ** dest_sizes,
-                       const void *src_data, const size_t * src_sizes)
+                       int tag, void *dest_data, const int *dest_sizes,
+                       const void *src_data, const int *src_sizes)
 {
   p4est_transfer_context_t *tc;
 
@@ -998,28 +998,63 @@ p4est_transfer_context_t *
 p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
                              p4est_transfer_comm_t which_comm,
                              sc_MPI_Comm mpicomm, int tag,
-                             void **dest_data, size_t ** dest_sizes,
-                             const void *src_data, const size_t * src_sizes)
+                             void *dest_data, const int *dest_sizes,
+                             const void *src_data, const int *src_sizes)
 {
   p4est_transfer_context_t *tc;
+  const p4est_gloidx_t *dest_gfq;
+  const p4est_gloidx_t *src_gfq;
+  int                 mpiret;
+  int                 mpisize, mpirank;
+  int                 q;
+  int                 first_sender, last_sender;
+  int                 first_receiver, last_receiver;
+  char               *rb;
+  char               *dest_cp, *src_cp;
+  size_t              byte_len, cp_len;
+  const int          *pss;
+  p4est_locidx_t      llen;
+  p4est_gloidx_t      dest_begin, dest_end;
+  p4est_gloidx_t      src_begin, src_end;
+  p4est_gloidx_t      gbegin, gend;
+  sc_MPI_Request     *rq;
 
   P4EST_ASSERT (src->local_num_quadrants == 0 || src_sizes != NULL);
   P4EST_ASSERT (dest_data != NULL);
   P4EST_ASSERT (dest_sizes != NULL);
 
+  /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
   p4est_transfer_determine_comm (tc, dest, src, which_comm, mpicomm);
   tc->tag = tag;
-  tc->pdest_data = dest_data;
-  tc->pdest_sizes = dest_sizes;
+  tc->dest_data = dest_data;
+  tc->dest_sizes = dest_sizes;
   tc->src_data = src_data;
   tc->src_sizes = src_sizes;
   tc->data_size = 0;
   tc->variable = 1;
 
-  *dest_data = NULL;
-  *dest_sizes = NULL;
+  /* grab some p4est information */
+  mpisize = dest->mpisize;
+  mpirank = dest->mpirank;
+  dest_gfq = dest->global_first_quadrant;
+  dest_begin = dest_gfq[mpirank];
+  dest_end = dest_gfq[mpirank + 1];
+  src_gfq = src->global_first_quadrant;
+  src_begin = src_gfq[mpirank];
+  src_end = src_gfq[mpirank + 1];
 
+  /* prepare data copy for local overlap */
+  dest_cp = src_cp = NULL;
+  cp_len = 0;
+
+  /* figure out subset of processes to receive from */
+
+  /* figure out subset of processes to send to */
+
+  /* copy the data that remains local */
+
+  /* the rest goes into the p4est_transfer_custom_end function */
   return tc;
 }
 
@@ -1030,20 +1065,6 @@ p4est_transfer_custom_end (p4est_transfer_context_t * tc)
   P4EST_ASSERT (tc->variable);
 
   p4est_transfer_end (tc);
-}
-
-void
-p4est_transfer_dest_data_free (p4est_t * dest,
-                               void **dest_data, size_t ** dest_sizes)
-{
-  P4EST_ASSERT (p4est_is_valid (dest));
-  P4EST_ASSERT (dest_data != NULL);
-  P4EST_ASSERT (dest_sizes != NULL);
-
-  P4EST_FREE (*dest_data);
-  *dest_data = NULL;
-  P4EST_FREE (*dest_sizes);
-  *dest_sizes = NULL;
 }
 
 #endif

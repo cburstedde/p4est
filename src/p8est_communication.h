@@ -165,11 +165,9 @@ typedef struct p8est_transfer_context
   sc_MPI_Comm         mpicomm;
   int                 tag;
   void               *dest_data;
-  void              **pdest_data;
-  size_t             *dest_sizes;
-  size_t            **pdest_sizes;
+  const int          *dest_sizes;
   const void         *src_data;
-  const size_t       *src_sizes;
+  const int          *src_sizes;
   size_t              data_size;
   int                 variable;         /**< Variable quadrant data size? */
 

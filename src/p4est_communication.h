@@ -165,11 +165,9 @@ typedef struct p4est_transfer_context
   sc_MPI_Comm         mpicomm;
   int                 tag;
   void               *dest_data;
-  void              **pdest_data;
-  size_t             *dest_sizes;
-  size_t            **pdest_sizes;
+  const int          *dest_sizes;
   const void         *src_data;
-  const size_t       *src_sizes;
+  const int          *src_sizes;
   size_t              data_size;
   int                 variable;         /**< Variable quadrant data size? */
 
@@ -204,12 +202,14 @@ p4est_transfer_context_t;
  *                          \b which_comm, it must be passed in here.  Then it
  *                          must have the same size and rank as the ones stored
  *                          in \b dest and \b src.
- * \param [in] tag          This tag is used in all messages.
- * \param [in,out] dest_data    User-allocated memory of size \b data_size * \b
- *                              dest->local_num_quadrants bytes.
- * \param [in] src_data         User-allocated memory of size \b data_size * \b
- *                              src->local_num_quadrants bytes.
- * \param [in] data_size        Fixed data size per quadrant.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that the communicator used and \b tag
+ *                          do not conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of size \b data_size * \b
+ *                          dest->local_num_quadrants is received into.
+ * \param [in] src_data     User-allocated memory of size \b data_size * \b
+ *                          src->local_num_quadrants bytes is sent from.
+ * \param [in] data_size    Fixed data size per quadrant.
  */
 void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
                                           p4est_transfer_comm_t which_comm,
@@ -237,14 +237,18 @@ void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
  *                          \b which_comm, it must be passed in here.  Then it
  *                          must have the same size and rank as the ones stored
  *                          in \b dest and \b src.
- * \param [in] tag          This tag is used in all messages.
- * \param [in,out] dest_data    User-allocated memory of size \b data_size * \b
- *                              dest->local_num_quadrants bytes.
- *                              It must not be accessed before completion with
- *                              \ref p4est_transfer_fixed_end.
- * \param [in] src_data         User-allocated memory of size \b data_size * \b
- *                              src->local_num_quadrants bytes.
- * \param [in] data_size        Fixed data size per quadrant.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that the communicator used and \b tag
+ *                          do not conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of size \b data_size * \b
+ *                          dest->local_num_quadrants bytes is received into.
+ *                          It must not be accessed before completion with
+ *                          \ref p4est_transfer_fixed_end.
+ * \param [in] src_data     User-allocated memory of size \b data_size * \b
+ *                          src->local_num_quadrants bytes is sent from.
+ *                          It must not be accessed before completion with
+ *                          \ref p4est_transfer_fixed_end.
+ * \param [in] data_size    Fixed data size per quadrant.
  */
 p4est_transfer_context_t *p4est_transfer_fixed_begin (p4est_t * dest,
                                                       p4est_t * src,
@@ -263,34 +267,47 @@ p4est_transfer_context_t *p4est_transfer_fixed_begin (p4est_t * dest,
 void                p4est_transfer_fixed_end (p4est_transfer_context_t * tc);
 
 /** Transfer variable-size quadrant data between partitions.
- * See \ref p4est_transfer_fixed for a description of common aspects.
+ * (See \ref p4est_transfer_fixed that is optimized for fixed-size data.)
+ * The destination process may not know the data size for the elements it
+ * receives.  In this case the sizes need to be obtained separately in advance,
+ * for example by calling \ref p4est_transfer_fixed with \b src_sizes as
+ * payload data, or alternatively its split begin/end versions.
  * \param [in] dest         This forest defines the target partition.
  *                          \b dest must have been derived from \b src by a
  *                          call to \ref p4est_partition.
  *                          It is legal to use \ref p4est_copy in the process.
  * \param [in] src          This forest defines the original partition.
- * \param [in] tag          This tag is used in all messages.
- * \param [out] dest_data   On output, internally allocated memory of
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that the communicator used and \b tag
+ *                          do not conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of
  *                          sum_{i in \b dest->local_num_quadrants} \b
- *                          dest_sizes [i] many bytes.
- *                          Free with \ref p4est_transfer_dest_data_free.
- * \param [out] dest_sizes  On output, internally allocated memory of
- *                          one entry for each quadrant in \b dest.
- *                          Specifies the data size received by element.
- *                          Free with \ref p4est_transfer_dest_data_free.
+ *                          dest_sizes [i] many bytes is received into.
+ *                          See below about how to choose its size.
+ * \param [in] dest_sizes   User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to receive for it.
+ *                          We understand that the sizes are often not known a
+ *                          priori, in which case they can be obtained by a
+ *                          prior call to \ref p4est_transfer_fixed.
+ *                          Optionally the split begin/end versions can be used
+ *                          for added flexibility and overlapping of messages.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
  * \param [in] src_data     User-allocated memory of
  *                          sum_{i in \b src->local_num_quadrants} \b
- *                          src_sizes [i] many bytes.
- * \param [in] src_sizes    One entry for each quadrant in \b src.
- *                          Specifies the data size sent by element.
+ *                          src_sizes [i] many bytes is sent from.
+ * \param [in] src_sizes    User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to send for it.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
  */
 void                p4est_transfer_custom (p4est_t * dest, p4est_t * src,
                                            p4est_transfer_comm_t which_comm,
                                            sc_MPI_Comm mpicomm, int tag,
-                                           void **dest_data,
-                                           size_t ** dest_sizes,
+                                           void *dest_data,
+                                           const int *dest_sizes,
                                            const void *src_data,
-                                           const size_t * src_sizes);
+                                           const int *src_sizes);
 
 /** Initiate a variable-size data transfer between partitions.
  * See \ref p4est_transfer_custom for a full description.
@@ -301,22 +318,33 @@ void                p4est_transfer_custom (p4est_t * dest, p4est_t * src,
  *                          call to \ref p4est_partition.
  *                          It is legal to use \ref p4est_copy in the process.
  * \param [in] src          This forest defines the original partition.
- * \param [in] tag          This tag is used in all messages.
- * \param [out] dest_data   On output, internally allocated memory of
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that the communicator used and \b tag
+ *                          do not conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of
  *                          sum_{i in \b dest->local_num_quadrants} \b
- *                          dest_sizes [i] many bytes.
- *                          It must not be accessed before completion.
- *                          Free with \ref p4est_transfer_dest_data_free.
- * \param [out] dest_sizes  On output, internally allocated memory of
- *                          one entry for each quadrant in \b dest.
- *                          Specifies the data size received by element.
- *                          It must not be accessed before completion.
- *                          Free with \ref p4est_transfer_dest_data_free.
+ *                          dest_sizes [i] many bytes is received into.
+ *                          It must not be accessed before completion with
+ *                          \ref p4est_transfer_custom_end.
+ *                          See below about how to choose its size.
+ * \param [in] dest_sizes   User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to receive for it.
+ *                          We understand that the sizes are often not known a
+ *                          priori, in which case they can be obtained by a
+ *                          prior call to \ref p4est_transfer_fixed.
+ *                          Optionally the split begin/end versions can be used
+ *                          for added flexibility and overlapping of messages.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
  * \param [in] src_data     User-allocated memory of
  *                          sum_{i in \b src->local_num_quadrants} \b
- *                          src_sizes [i] many bytes.
- * \param [in] src_sizes    One entry for each quadrant in \b src.
- *                          Specifies the data size sent by element.
+ *                          src_sizes [i] many bytes is sent from.
+ *                          It must not be accessed before completion with
+ *                          \ref p4est_transfer_custom_end.
+ * \param [in] src_sizes    User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to send for it.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
  */
 p4est_transfer_context_t *p4est_transfer_custom_begin (p4est_t * dest,
                                                        p4est_t * src,
@@ -324,26 +352,16 @@ p4est_transfer_context_t *p4est_transfer_custom_begin (p4est_t * dest,
                                                        which_comm,
                                                        sc_MPI_Comm mpicomm,
                                                        int tag,
-                                                       void **dest_data,
-                                                       size_t ** dest_sizes,
+                                                       void *dest_data,
+                                                       const int *dest_sizes,
                                                        const void *src_data,
-                                                       const size_t *
-                                                       src_sizes);
+                                                       const int *src_sizes);
 
 /** Complete a variable-size data transfer between partitions.
  * \param [in] tc       Context data from \ref p4est_transfer_custom_begin.
  *                      Is deallocated before this function returns.
  */
 void                p4est_transfer_custom_end (p4est_transfer_context_t * tc);
-
-/** Matching call to free the output fields of \ref p4est_transfer_custom.
- * \param [in] dest         Target forest for reference; is not changed.
- * \param [in,out] dest_data    Deallocated in this function; NULL on output.
- * \param [in,out] dest_sizes   Deallocated in this function; NULL on output.
- */
-void                p4est_transfer_dest_data_free (p4est_t * dest,
-                                                   void **dest_data,
-                                                   size_t ** dest_sizes);
 
 SC_EXTERN_C_END;
 
