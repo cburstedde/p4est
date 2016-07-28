@@ -694,14 +694,13 @@ p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
 }
 
 static void
-p4est_transfer_assign_comm (p4est_transfer_context_t * tc,
+p4est_transfer_verify_comm (p4est_transfer_context_t * tc,
                             p4est_t * dest, p4est_t * src,
                             sc_MPI_Comm mpicomm)
 {
 #ifdef P4EST_ENABLE_DEBUG
   int                 mpiret;
   int                 mpisize, mpirank;
-#endif
 
   P4EST_ASSERT (tc != NULL);
   P4EST_ASSERT (dest != NULL && src != NULL);
@@ -712,7 +711,6 @@ p4est_transfer_assign_comm (p4est_transfer_context_t * tc,
   P4EST_ASSERT (dest->global_num_quadrants == src->global_num_quadrants);
   P4EST_ASSERT (mpicomm != sc_MPI_COMM_NULL);
 
-#ifdef P4EST_ENABLE_DEBUG
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (mpisize == src->mpisize);
@@ -720,10 +718,6 @@ p4est_transfer_assign_comm (p4est_transfer_context_t * tc,
   SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (mpirank == src->mpirank);
 #endif
-
-  tc->dest = dest;
-  tc->src = src;
-  tc->mpicomm = mpicomm;
 }
 
 /** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
@@ -769,15 +763,11 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
 
   /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
-  p4est_transfer_assign_comm (tc, dest, src, mpicomm);
-  tc->tag = tag;
-  tc->dest_data = dest_data;
-  tc->src_data = src_data;
-  tc->data_size = data_size;
+  p4est_transfer_verify_comm (tc, dest, src, mpicomm);
   tc->variable = 0;
 
   /* there is nothing to do when there is no data */
-  if (tc->data_size == 0) {
+  if (data_size == 0) {
     return tc;
   }
 
@@ -828,7 +818,7 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
       }
       else {
         /* nonzero message from this sender */
-        byte_len = (size_t) (gend - gbegin) * tc->data_size;
+        byte_len = (size_t) (gend - gbegin) * data_size;
         if (q == mpirank) {
           /* on the same rank we remember pointers for memcpy */
           cp_len = byte_len;
@@ -838,14 +828,14 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
         else {
           /* we receive a proper message */
           mpiret = sc_MPI_Irecv (rb, byte_len, sc_MPI_BYTE, q,
-                                 tc->tag, tc->mpicomm, rq++);
+                                 tag, mpicomm, rq++);
           SC_CHECK_MPI (mpiret);
         }
         rb += byte_len;
       }
     }
-    P4EST_ASSERT (rb - (char *) tc->dest_data ==
-                  (ptrdiff_t) ((dest_end - dest_begin) * tc->data_size));
+    P4EST_ASSERT (rb - (char *) dest_data ==
+                  (ptrdiff_t) ((dest_end - dest_begin) * data_size));
   }
 
   /* figure out subset of processes to send to */
@@ -881,7 +871,7 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
       }
       else {
         /* nonzero message for this receiver */
-        byte_len = (size_t) (gend - gbegin) * tc->data_size;
+        byte_len = (size_t) (gend - gbegin) * data_size;
         if (q == mpirank) {
           /* on the same rank we remember pointers for memcpy */
           P4EST_ASSERT (cp_len == byte_len);
@@ -891,14 +881,14 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
         else {
           /* we send a proper message */
           mpiret = sc_MPI_Isend (rb, byte_len, sc_MPI_BYTE, q,
-                                 tc->tag, tc->mpicomm, rq++);
+                                 tag, mpicomm, rq++);
           SC_CHECK_MPI (mpiret);
         }
         rb += byte_len;
       }
     }
-    P4EST_ASSERT (rb - (char *) tc->src_data ==
-                  (ptrdiff_t) ((src_end - src_begin) * tc->data_size));
+    P4EST_ASSERT (rb - (char *) src_data ==
+                  (ptrdiff_t) ((src_end - src_begin) * data_size));
   }
 
   /* copy the data that remains local */
@@ -933,9 +923,7 @@ p4est_transfer_end (p4est_transfer_context_t * tc)
   P4EST_FREE (tc->recv_req);
   P4EST_FREE (tc->send_req);
 
-  /* the context must disappear too */
-  tc->dest = tc->src = NULL;
-  tc->mpicomm = sc_MPI_COMM_NULL;
+  /* the context must disappear */
   P4EST_FREE (tc);
 }
 
@@ -992,13 +980,7 @@ p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
 
   /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
-  p4est_transfer_assign_comm (tc, dest, src, mpicomm);
-  tc->tag = tag;
-  tc->dest_data = dest_data;
-  tc->dest_sizes = dest_sizes;
-  tc->src_data = src_data;
-  tc->src_sizes = src_sizes;
-  tc->data_size = 0;
+  p4est_transfer_verify_comm (tc, dest, src, mpicomm);
   tc->variable = 1;
 
   /* grab some p4est information */
@@ -1063,7 +1045,7 @@ p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
         else {
           /* we receive a proper message */
           mpiret = sc_MPI_Irecv (rb, byte_len, sc_MPI_BYTE, q,
-                                 tc->tag, tc->mpicomm, rq++);
+                                 tag, mpicomm, rq++);
           SC_CHECK_MPI (mpiret);
         }
         rb += byte_len;
@@ -1120,7 +1102,7 @@ p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
         else {
           /* we send a proper message */
           mpiret = sc_MPI_Isend (rb, byte_len, sc_MPI_BYTE, q,
-                                 tc->tag, tc->mpicomm, rq++);
+                                 tag, mpicomm, rq++);
           SC_CHECK_MPI (mpiret);
         }
         rb += byte_len;

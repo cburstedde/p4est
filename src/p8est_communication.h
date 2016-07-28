@@ -145,19 +145,7 @@ unsigned            p8est_comm_checksum (p8est_t * p8est,
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p8est_transfer_context
 {
-  /* remember parameters of the call */
-  p8est_t            *dest;
-  p8est_t            *src;
-  sc_MPI_Comm         mpicomm;
-  int                 tag;
-  void               *dest_data;
-  const int          *dest_sizes;
-  const void         *src_data;
-  const int          *src_sizes;
-  size_t              data_size;
-  int                 variable;         /**< Variable quadrant data size? */
-
-  /* operational data */
+  int                 variable;
   int                 num_senders;
   int                 num_receivers;
   sc_MPI_Request     *recv_req;
