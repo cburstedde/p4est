@@ -129,6 +129,8 @@ static void
 test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
 {
   size_t              pds, gds, data_size;
+  int                *dest_sizes;
+  int                *src_sizes;
   char               *dest_data;
   char               *src_data;
   char               *td, *cmp;
@@ -138,6 +140,7 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   p4est_t            *back;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
+  p4est_transfer_context_t *tf, *tv;
 
   P4EST_ASSERT (tt != NULL);
   P4EST_ASSERT (tt->p4est == p4est);
@@ -153,7 +156,9 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   data_size = gds + pds;
   cmp = P4EST_ALLOC (char, data_size);
   dest_data = P4EST_ALLOC (char, data_size * p4est->local_num_quadrants);
+  dest_sizes = P4EST_ALLOC (int, p4est->local_num_quadrants);
   src_data = P4EST_ALLOC_ZERO (char, data_size * back->local_num_quadrants);
+  src_sizes = P4EST_ALLOC (int, back->local_num_quadrants);
 
   /* assemble data to send that includes the user_data */
   td = src_data;
@@ -172,10 +177,16 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
                 (ptrdiff_t) (data_size * back->local_num_quadrants));
   P4EST_ASSERT (tog == back->global_first_quadrant[back->mpirank + 1]);
 
+  /* allocate space for variable data sizes before and after */
+
+  /* make up variable data sizes */
+
   /* do the data transfer */
-  p4est_transfer_fixed (p4est, back,
-                        P4EST_TRANSFER_COMM_DEST_DUP, sc_MPI_COMM_NULL, 0,
-                        dest_data, src_data, data_size);
+  tf = p4est_transfer_fixed_begin (p4est, back, p4est->mpicomm, 0,
+                                   dest_data, src_data, data_size);
+  p4est_transfer_fixed (p4est, back, p4est->mpicomm, 1,
+                        dest_sizes, src_sizes, sizeof (int));
+  p4est_transfer_fixed_end (tf);
 
   /* we verify what we have sent */
   td = dest_data;
@@ -199,7 +210,9 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
 
   /* cleanup memory */
   P4EST_FREE (dest_data);
+  P4EST_FREE (dest_sizes);
   P4EST_FREE (src_data);
+  P4EST_FREE (src_sizes);
   P4EST_FREE (cmp);
 
   /* cleanup context */

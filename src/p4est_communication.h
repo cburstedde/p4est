@@ -142,26 +142,12 @@ unsigned            p4est_comm_checksum (p4est_t * p4est,
                                          unsigned local_crc,
                                          size_t local_bytes);
 
-/** Defines how the communicator is obtained when transfering data.
- * It is used in \ref p4est_transfer_fixed and \ref p4est_transfer_custom.
- */
-typedef enum p4est_transfer_comm
-{
-  P4EST_TRANSFER_COMM_SRC,      /**< Use communicator from source forest. */
-  P4EST_TRANSFER_COMM_DEST,     /**< Use communicator from target forest. */
-  P4EST_TRANSFER_COMM_SRC_DUP,  /**< Duplicate source communicator. */
-  P4EST_TRANSFER_COMM_DEST_DUP, /**< Duplicate target communicator. */
-  P4EST_TRANSFER_COMM_EXTERNAL  /**< Use user-specified communicator. */
-}
-p4est_transfer_comm_t;
-
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
 {
   /* remember parameters of the call */
   p4est_t            *dest;
   p4est_t            *src;
-  p4est_transfer_comm_t which_comm;
   sc_MPI_Comm         mpicomm;
   int                 tag;
   void               *dest_data;
@@ -192,19 +178,11 @@ p4est_transfer_context_t;
  *                          call to \ref p4est_partition.
  *                          It is legal to use \ref p4est_copy in the process.
  * \param [in] src          This forest defines the original partition.
- * \param [in] which_comm   This enumeration defines how the communicator is
- *                          obtained that should be used inside this function.
- *                          If it is to be derived from either \b dest or \b
- *                          src, there is no need to specify it in \b mpicomm.
- *                          When it is duped, it will be freed internally.
- * \param [in] mpicomm      If the communicator to be used is user provided,
- *                          by specifying P4EST_TRANSFER_COMM_EXTERNAL for
- *                          \b which_comm, it must be passed in here.  Then it
- *                          must have the same size and rank as the ones stored
- *                          in \b dest and \b src.
+ * \param [in] mpicomm      The communicator to use.  Must match \b
+ *                          dest->mpicomm and \b src->mpicomm in size and rank.
  * \param [in] tag          This tag is used in all messages.  The user must
- *                          guarantee that the communicator used and \b tag
- *                          do not conflict with other messages in transit.
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
  * \param [out] dest_data   User-allocated memory of size \b data_size * \b
  *                          dest->local_num_quadrants is received into.
  * \param [in] src_data     User-allocated memory of size \b data_size * \b
@@ -212,7 +190,6 @@ p4est_transfer_context_t;
  * \param [in] data_size    Fixed data size per quadrant.
  */
 void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
-                                          p4est_transfer_comm_t which_comm,
                                           sc_MPI_Comm mpicomm, int tag,
                                           void *dest_data,
                                           const void *src_data,
@@ -227,19 +204,11 @@ void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
  *                          call to \ref p4est_partition.
  *                          It is legal to use \ref p4est_copy in the process.
  * \param [in] src          This forest defines the original partition.
- * \param [in] which_comm   This enumeration defines how the communicator is
- *                          obtained that should be used inside this function.
- *                          If it is to be derived from either \b dest or \b
- *                          src, there is no need to specify it in \b mpicomm.
- *                          When it is duped, it will be freed internally.
- * \param [in] mpicomm      If the communicator to be used is user provided,
- *                          by specifying P4EST_TRANSFER_COMM_EXTERNAL for
- *                          \b which_comm, it must be passed in here.  Then it
- *                          must have the same size and rank as the ones stored
- *                          in \b dest and \b src.
+ * \param [in] mpicomm      The communicator to use.  Must match \b
+ *                          dest->mpicomm and \b src->mpicomm in size and rank.
  * \param [in] tag          This tag is used in all messages.  The user must
- *                          guarantee that the communicator used and \b tag
- *                          do not conflict with other messages in transit.
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
  * \param [out] dest_data   User-allocated memory of size \b data_size * \b
  *                          dest->local_num_quadrants bytes is received into.
  *                          It must not be accessed before completion with
@@ -252,8 +221,6 @@ void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
  */
 p4est_transfer_context_t *p4est_transfer_fixed_begin (p4est_t * dest,
                                                       p4est_t * src,
-                                                      p4est_transfer_comm_t
-                                                      which_comm,
                                                       sc_MPI_Comm mpicomm,
                                                       int tag,
                                                       void *dest_data,
@@ -277,9 +244,11 @@ void                p4est_transfer_fixed_end (p4est_transfer_context_t * tc);
  *                          call to \ref p4est_partition.
  *                          It is legal to use \ref p4est_copy in the process.
  * \param [in] src          This forest defines the original partition.
+ * \param [in] mpicomm      The communicator to use.  Must match \b
+ *                          dest->mpicomm and \b src->mpicomm in size and rank.
  * \param [in] tag          This tag is used in all messages.  The user must
- *                          guarantee that the communicator used and \b tag
- *                          do not conflict with other messages in transit.
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
  * \param [out] dest_data   User-allocated memory of
  *                          sum_{i in \b dest->local_num_quadrants} \b
  *                          dest_sizes [i] many bytes is received into.
@@ -302,7 +271,6 @@ void                p4est_transfer_fixed_end (p4est_transfer_context_t * tc);
  *                          and to conform to MPI that has no type for size_t.
  */
 void                p4est_transfer_custom (p4est_t * dest, p4est_t * src,
-                                           p4est_transfer_comm_t which_comm,
                                            sc_MPI_Comm mpicomm, int tag,
                                            void *dest_data,
                                            const int *dest_sizes,
@@ -318,9 +286,11 @@ void                p4est_transfer_custom (p4est_t * dest, p4est_t * src,
  *                          call to \ref p4est_partition.
  *                          It is legal to use \ref p4est_copy in the process.
  * \param [in] src          This forest defines the original partition.
+ * \param [in] mpicomm      The communicator to use.  Must match \b
+ *                          dest->mpicomm and \b src->mpicomm in size and rank.
  * \param [in] tag          This tag is used in all messages.  The user must
- *                          guarantee that the communicator used and \b tag
- *                          do not conflict with other messages in transit.
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
  * \param [out] dest_data   User-allocated memory of
  *                          sum_{i in \b dest->local_num_quadrants} \b
  *                          dest_sizes [i] many bytes is received into.
@@ -348,8 +318,6 @@ void                p4est_transfer_custom (p4est_t * dest, p4est_t * src,
  */
 p4est_transfer_context_t *p4est_transfer_custom_begin (p4est_t * dest,
                                                        p4est_t * src,
-                                                       p4est_transfer_comm_t
-                                                       which_comm,
                                                        sc_MPI_Comm mpicomm,
                                                        int tag,
                                                        void *dest_data,

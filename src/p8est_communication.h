@@ -142,26 +142,12 @@ unsigned            p8est_comm_checksum (p8est_t * p8est,
                                          unsigned local_crc,
                                          size_t local_bytes);
 
-/** Defines how the communicator is obtained when transfering data.
- * It is used in \ref p8est_transfer_fixed and \ref p8est_transfer_custom.
- */
-typedef enum p8est_transfer_comm
-{
-  P8EST_TRANSFER_COMM_SRC,      /**< Use communicator from source forest. */
-  P8EST_TRANSFER_COMM_DEST,     /**< Use communicator from target forest. */
-  P8EST_TRANSFER_COMM_SRC_DUP,  /**< Duplicate source communicator. */
-  P8EST_TRANSFER_COMM_DEST_DUP, /**< Duplicate target communicator. */
-  P8EST_TRANSFER_COMM_EXTERNAL  /**< Use user-specified communicator. */
-}
-p8est_transfer_comm_t;
-
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p8est_transfer_context
 {
   /* remember parameters of the call */
   p8est_t            *dest;
   p8est_t            *src;
-  p8est_transfer_comm_t which_comm;
   sc_MPI_Comm         mpicomm;
   int                 tag;
   void               *dest_data;
@@ -180,7 +166,6 @@ typedef struct p8est_transfer_context
 p8est_transfer_context_t;
 
 void                p8est_transfer_fixed (p8est_t * dest, p8est_t * src,
-                                          p8est_transfer_comm_t which_comm,
                                           sc_MPI_Comm mpicomm, int tag,
                                           void *dest_data,
                                           const void *src_data,
@@ -188,8 +173,6 @@ void                p8est_transfer_fixed (p8est_t * dest, p8est_t * src,
 
 p8est_transfer_context_t *p8est_transfer_fixed_begin (p8est_t * dest,
                                                       p8est_t * src,
-                                                      p8est_transfer_comm_t
-                                                      which_comm,
                                                       sc_MPI_Comm mpicomm,
                                                       int tag,
                                                       void *dest_data,
