@@ -167,7 +167,7 @@ p4est_transfer_context_t;
 
 /** Transfer data associated with one forest to a partitioned one.
  * In \ref p4est_partition, each quadrant's user data is transferred.
- * If the application maintains per-quadrant data outside of p4est,
+ * If the application maintains per-quadrant data outside of the forest,
  * this function can be used to transfer it, matching the call to partition.
  * This variant of the function assumes that the quadrant data size is fixed.
  * It sends point-to-point messages only and is blocking collective.
@@ -218,6 +218,8 @@ void                p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
  *                          It must not be accessed before completion with
  *                          \ref p4est_transfer_fixed_end.
  * \param [in] data_size    Fixed data size per quadrant.
+ * \return                  The context object must be passed to the matching
+ *                          call to \ref p4est_transfer_fixed_end.
  */
 p4est_transfer_context_t *p4est_transfer_fixed_begin (p4est_t * dest,
                                                       p4est_t * src,
@@ -315,6 +317,8 @@ void                p4est_transfer_custom (p4est_t * dest, p4est_t * src,
  *                          quadrant, storing the data size to send for it.
  *                          We use the type int to minimize the message size,
  *                          and to conform to MPI that has no type for size_t.
+ * \return                  The context object must be passed to the matching
+ *                          call to \ref p4est_transfer_custom_end.
  */
 p4est_transfer_context_t *p4est_transfer_custom_begin (p4est_t * dest,
                                                        p4est_t * src,

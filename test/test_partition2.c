@@ -231,7 +231,6 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   P4EST_ASSERT (ti - src_vdata == (ptrdiff_t) vcounts);
   dest_vdata = P4EST_ALLOC (int, vcountd * sizeof (int));
 
-#ifndef P4_TO_P8
   /* do data transfer part II */
   p4est_transfer_custom (p4est, back, p4est->mpicomm, 1,
                          dest_vdata, dest_sizes, src_vdata, src_sizes);
@@ -245,7 +244,6 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
     }
   }
   P4EST_ASSERT (ti - dest_vdata == (ptrdiff_t) vcountd);
-#endif
 
   /* cleanup memory */
   P4EST_FREE (dest_data);

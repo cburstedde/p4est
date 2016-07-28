@@ -948,8 +948,6 @@ p4est_transfer_fixed_end (p4est_transfer_context_t * tc)
   p4est_transfer_end (tc);
 }
 
-#ifndef P4_TO_P8
-
 void
 p4est_transfer_custom (p4est_t * dest, p4est_t * src,
                        sc_MPI_Comm mpicomm, int tag,
@@ -1150,5 +1148,3 @@ p4est_transfer_custom_end (p4est_transfer_context_t * tc)
 
   p4est_transfer_end (tc);
 }
-
-#endif
