@@ -129,18 +129,24 @@ static void
 test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
 {
   size_t              pds, gds, data_size;
+  int                 i;
   int                *dest_sizes;
+  int                *dest_vdata;
   int                *src_sizes;
+  int                *src_vdata;
+  int                *ti;
   char               *dest_data;
   char               *src_data;
   char               *td, *cmp;
   size_t              zz;
+  size_t              vz, vcountd, vcounts;
   p4est_topidx_t      tid;
+  p4est_locidx_t      li;
   p4est_gloidx_t      tog;
   p4est_t            *back;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
-  p4est_transfer_context_t *tf, *tv;
+  p4est_transfer_context_t *tf;
 
   P4EST_ASSERT (tt != NULL);
   P4EST_ASSERT (tt->p4est == p4est);
@@ -162,38 +168,42 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
 
   /* assemble data to send that includes the user_data */
   td = src_data;
+  li = 0;
+  vcounts = 0;
   tog = back->global_first_quadrant[back->mpirank];
   for (tid = back->first_local_tree; tid <= back->last_local_tree; ++tid) {
     tree = p4est_tree_array_index (back->trees, tid);
     for (zz = 0; zz < tree->quadrants.elem_count; ++zz) {
+      vcounts += vz = tog % 4;
       quad = p4est_quadrant_array_index (&tree->quadrants, zz);
       *(p4est_gloidx_t *) td = tog++;
       td += gds;
       memcpy (td, quad->p.user_data, p4est->data_size);
       td += pds;
+      src_sizes[li++] = vz * sizeof (int);
     }
   }
+  P4EST_ASSERT (li == back->local_num_quadrants);
   P4EST_ASSERT (td - src_data ==
                 (ptrdiff_t) (data_size * back->local_num_quadrants));
   P4EST_ASSERT (tog == back->global_first_quadrant[back->mpirank + 1]);
 
-  /* allocate space for variable data sizes before and after */
-
-  /* make up variable data sizes */
-
-  /* do the data transfer */
+  /* do data transfer part I */
   tf = p4est_transfer_fixed_begin (p4est, back, p4est->mpicomm, 0,
                                    dest_data, src_data, data_size);
   p4est_transfer_fixed (p4est, back, p4est->mpicomm, 1,
                         dest_sizes, src_sizes, sizeof (int));
   p4est_transfer_fixed_end (tf);
 
-  /* we verify what we have sent */
+  /* we verify the fixed data we have sent */
   td = dest_data;
+  li = 0;
+  vcountd = 0;
   tog = p4est->global_first_quadrant[p4est->mpirank];
   for (tid = p4est->first_local_tree; tid <= p4est->last_local_tree; ++tid) {
     tree = p4est_tree_array_index (p4est->trees, tid);
     for (zz = 0; zz < tree->quadrants.elem_count; ++zz) {
+      vcountd += vz = tog % 4;
       quad = p4est_quadrant_array_index (&tree->quadrants, zz);
       SC_CHECK_ABORT (*(p4est_gloidx_t *) td == tog,
                       "Transfer index mismatch");
@@ -202,16 +212,47 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
                       "Transfer data mismatch");
       td += pds;
       ++tog;
+      SC_CHECK_ABORT (dest_sizes[li++] == (int) (vz * sizeof (int)),
+                      "Transfer size mismatch");
     }
   }
+  P4EST_ASSERT (li == p4est->local_num_quadrants);
   P4EST_ASSERT (td - dest_data ==
                 (ptrdiff_t) (data_size * p4est->local_num_quadrants));
   P4EST_ASSERT (tog == p4est->global_first_quadrant[p4est->mpirank + 1]);
 
+  /* allocate space for variable data sizes */
+  ti = src_vdata = P4EST_ALLOC (int, vcounts * sizeof (int));
+  for (li = 0; li < back->local_num_quadrants; ++li) {
+    for (i = 0; i < src_sizes[li] / (int) sizeof (int); ++i) {
+      *ti++ = i;
+    }
+  }
+  P4EST_ASSERT (ti - src_vdata == (ptrdiff_t) vcounts);
+  dest_vdata = P4EST_ALLOC (int, vcountd * sizeof (int));
+
+#ifndef P4_TO_P8
+  /* do data transfer part II */
+  p4est_transfer_custom (p4est, back, p4est->mpicomm, 1,
+                         dest_vdata, dest_sizes, src_vdata, src_sizes);
+
+  /* we verify the variable data we have sent */
+  ti = dest_vdata;
+  for (li = 0; li < p4est->local_num_quadrants; ++li) {
+    for (i = 0; i < dest_sizes[li] / (int) sizeof (int); ++i) {
+      SC_CHECK_ABORT (*ti == i, "Transfer variable mismatch");
+      ++ti;
+    }
+  }
+  P4EST_ASSERT (ti - dest_vdata == (ptrdiff_t) vcountd);
+#endif
+
   /* cleanup memory */
   P4EST_FREE (dest_data);
+  P4EST_FREE (dest_vdata);
   P4EST_FREE (dest_sizes);
   P4EST_FREE (src_data);
+  P4EST_FREE (src_vdata);
   P4EST_FREE (src_sizes);
   P4EST_FREE (cmp);
 

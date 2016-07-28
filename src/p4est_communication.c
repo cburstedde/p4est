@@ -978,11 +978,11 @@ p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
   int                 q;
   int                 first_sender, last_sender;
   int                 first_receiver, last_receiver;
+  int                 i, ilen;
+  const int          *rs;
   char               *rb;
   char               *dest_cp, *src_cp;
   size_t              byte_len, cp_len;
-  const int          *pss;
-  p4est_locidx_t      llen;
   p4est_gloidx_t      dest_begin, dest_end;
   p4est_gloidx_t      src_begin, src_end;
   p4est_gloidx_t      gbegin, gend;
@@ -1018,10 +1018,125 @@ p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
   cp_len = 0;
 
   /* figure out subset of processes to receive from */
+  if (dest_begin < dest_end) {
+    /* our process as the receiver is not empty */
+    first_sender = p4est_bsearch_partition (dest_begin, src_gfq, mpisize);
+    P4EST_ASSERT (0 <= first_sender && first_sender < mpisize);
+    last_sender = p4est_bsearch_partition (dest_end - 1, src_gfq, mpisize);
+    P4EST_ASSERT (first_sender <= last_sender && last_sender < mpisize);
+    tc->num_senders = last_sender - first_sender + 1;
+    P4EST_ASSERT (tc->num_senders > 0);
+
+    /* go through sender processes and post receive calls */
+    gend = dest_begin;
+    rq = tc->recv_req = P4EST_ALLOC (sc_MPI_Request, tc->num_senders);
+    rb = (char *) dest_data;
+    rs = dest_sizes;
+    for (q = first_sender; q <= last_sender; ++q) {
+      /* prepare positions for the sender process q */
+      gbegin = gend;
+      gend = src_gfq[q + 1];
+      if (gend > dest_end) {
+        P4EST_ASSERT (q == last_sender);
+        gend = dest_end;
+      }
+      P4EST_ASSERT (q == first_sender || q == last_sender ?
+                    gbegin < gend : gbegin <= gend);
+
+      /* choose how to treat the sender process */
+      if (gbegin == gend) {
+        /* the sender process is empty; we need no message */
+        P4EST_ASSERT (first_sender < q && q < last_sender);
+        *rq++ = sc_MPI_REQUEST_NULL;
+      }
+      else {
+        /* determine message size for this sender; must send if zero */
+        byte_len = 0;
+        ilen = (int) (gend - gbegin);
+        for (i = 0; i < ilen; ++i) {
+          byte_len += *rs++;
+        }
+        if (q == mpirank) {
+          /* on the same rank we remember pointers for memcpy */
+          cp_len = byte_len;
+          dest_cp = rb;
+          *rq++ = sc_MPI_REQUEST_NULL;
+        }
+        else {
+          /* we receive a proper message */
+          mpiret = sc_MPI_Irecv (rb, byte_len, sc_MPI_BYTE, q,
+                                 tc->tag, tc->mpicomm, rq++);
+          SC_CHECK_MPI (mpiret);
+        }
+        rb += byte_len;
+      }
+    }
+    P4EST_ASSERT (rs - dest_sizes == (ptrdiff_t) (dest_end - dest_begin));
+  }
 
   /* figure out subset of processes to send to */
+  if (src_begin < src_end) {
+    /* our process as the sender is not empty */
+    first_receiver = p4est_bsearch_partition (src_begin, dest_gfq, mpisize);
+    P4EST_ASSERT (0 <= first_receiver && first_receiver < mpisize);
+    last_receiver = p4est_bsearch_partition (src_end - 1, dest_gfq, mpisize);
+    P4EST_ASSERT (first_receiver <= last_receiver && last_receiver < mpisize);
+    tc->num_receivers = last_receiver - first_receiver + 1;
+    P4EST_ASSERT (tc->num_receivers > 0);
+
+    /* go through receiver processes and post send calls */
+    gend = src_begin;
+    rq = tc->send_req = P4EST_ALLOC (sc_MPI_Request, tc->num_receivers);
+    rb = (char *) src_data;
+    rs = src_sizes;
+    for (q = first_receiver; q <= last_receiver; ++q) {
+      /* prepare positions for the receiver process q */
+      gbegin = gend;
+      gend = dest_gfq[q + 1];
+      if (gend > src_end) {
+        P4EST_ASSERT (q == last_receiver);
+        gend = src_end;
+      }
+      P4EST_ASSERT (q == first_receiver || q == last_receiver ?
+                    gbegin < gend : gbegin <= gend);
+
+      /* choose how to treat the receiver process */
+      if (gbegin == gend) {
+        /* the receiver process is empty; we need no message */
+        P4EST_ASSERT (first_receiver < q && q < last_receiver);
+        *rq++ = sc_MPI_REQUEST_NULL;
+      }
+      else {
+        /* determine message size for this receiver; must receive if zero */
+        byte_len = 0;
+        ilen = (int) (gend - gbegin);
+        for (i = 0; i < ilen; ++i) {
+          byte_len += *rs++;
+        }
+        if (q == mpirank) {
+          /* on the same rank we remember pointers for memcpy */
+          P4EST_ASSERT (cp_len == byte_len);
+          src_cp = rb;
+          *rq++ = sc_MPI_REQUEST_NULL;
+        }
+        else {
+          /* we send a proper message */
+          mpiret = sc_MPI_Isend (rb, byte_len, sc_MPI_BYTE, q,
+                                 tc->tag, tc->mpicomm, rq++);
+          SC_CHECK_MPI (mpiret);
+        }
+        rb += byte_len;
+      }
+    }
+    P4EST_ASSERT (rs - src_sizes == (ptrdiff_t) (src_end - src_begin));
+  }
 
   /* copy the data that remains local */
+  P4EST_ASSERT ((dest_cp == NULL) == (src_cp == NULL));
+  if (cp_len > 0) {
+    P4EST_ASSERT (dest_cp != NULL && src_cp != NULL);
+    memcpy (dest_cp, src_cp, cp_len);
+  }
 
   /* the rest goes into the p4est_transfer_custom_end function */
   return tc;
