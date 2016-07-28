@@ -681,8 +681,6 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 #endif /* !P4EST_HAVE_ZLIB */
 }
 
-#ifndef P4_TO_P8
-
 void
 p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
                       p4est_transfer_comm_t which_comm, sc_MPI_Comm mpicomm,
@@ -979,6 +977,8 @@ p4est_transfer_fixed_end (p4est_transfer_context_t * tc)
 
   p4est_transfer_end (tc);
 }
+
+#ifndef P4_TO_P8
 
 void
 p4est_transfer_custom (p4est_t * dest, p4est_t * src,
