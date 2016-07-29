@@ -46,7 +46,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_FACES (2 * P4EST_DIM)
 /** The number of children of a quadrant
  *
- * also the nmber of corners */
+ * also the number of corners */
 #define P4EST_CHILDREN 4
 /** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
@@ -126,12 +126,14 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
  * The corners are only stored when they connect trees.
+ * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
+ * The entries encode all trees adjacent to corner c.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
