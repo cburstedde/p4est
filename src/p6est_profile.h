@@ -29,6 +29,8 @@
 #include <p4est_lnodes.h>
 #include <p6est_lnodes.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** A p6est profile is used to (a) balance a p6est, and (b) generate a
  * p6est_lnodes.  In every case, layers in a column are compressed to one
  * int8_t each.  The resulting column profiles and be quickly intersected,
@@ -103,4 +105,7 @@ void                p6est_profile_element_to_node (p6est_t * p6est,
                                                    p4est_locidx_t *
                                                    elem_to_node,
                                                    p6est_lnodes_code_t * fc);
+
+SC_EXTERN_C_END;
+
 #endif /* !P6EST_PROFILE_H */

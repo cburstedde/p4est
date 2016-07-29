@@ -640,7 +640,7 @@ main (int argc, char **argv)
     p4est_nodes_destroy (nodes);
   }
 
-  if (repartition_lnodes) {
+  if (!skip_lnodes && repartition_lnodes) {
     p4est_partition_lnodes (p4est, ghost, 1, 0);
     p4est_ghost_destroy (ghost);
     ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
