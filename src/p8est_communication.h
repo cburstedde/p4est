@@ -153,21 +153,21 @@ typedef struct p8est_transfer_context
 }
 p8est_transfer_context_t;
 
-/** Transfer data associated with one forest to a partitioned one.
+/** Transfer data associated with one forest partition to another.
  * In \ref p8est_partition, each quadrant's user data is transferred.
- * If the application maintains per-quadrant data outside of the forest,
+ * If the application maintains per-quadrant data outside of the p8est object,
  * this function can be used to transfer it, matching the call to partition.
  * This variant of the function assumes that the quadrant data size is fixed.
  * It sends point-to-point messages only and is blocking collective.
  * There is a split collective version; see the functions
  * \ref p8est_transfer_fixed_begin and \ref p8est_transfer_fixed_end.
- * \param [in] dest         This forest defines the target partition.
- *                          \b dest must have been derived from \b src by a
- *                          call to \ref p8est_partition.
- *                          It is legal to use \ref p8est_copy in the process.
- * \param [in] src          This forest defines the original partition.
- * \param [in] mpicomm      The communicator to use.  Must match \b
- *                          dest->mpicomm and \b src->mpicomm in size and rank.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
  * \param [in] tag          This tag is used in all messages.  The user must
  *                          guarantee that \b mpicomm and \b tag do not
  *                          conflict with other messages in transit.
@@ -177,7 +177,8 @@ p8est_transfer_context_t;
  *                          src->local_num_quadrants bytes is sent from.
  * \param [in] data_size    Fixed data size per quadrant.
  */
-void                p8est_transfer_fixed (p8est_t * dest, p8est_t * src,
+void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
+                                          const p4est_gloidx_t * src_gfq,
                                           sc_MPI_Comm mpicomm, int tag,
                                           void *dest_data,
                                           const void *src_data,
@@ -187,13 +188,13 @@ void                p8est_transfer_fixed (p8est_t * dest, p8est_t * src,
  * See \ref p8est_transfer_fixed for a full description.
  * Must be matched with \ref p8est_transfer_fixed_end for completion.
  * All parameters must stay alive until the completion has been called.
- * \param [in] dest         This forest defines the target partition.
- *                          \b dest must have been derived from \b src by a
- *                          call to \ref p8est_partition.
- *                          It is legal to use \ref p8est_copy in the process.
- * \param [in] src          This forest defines the original partition.
- * \param [in] mpicomm      The communicator to use.  Must match \b
- *                          dest->mpicomm and \b src->mpicomm in size and rank.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
  * \param [in] tag          This tag is used in all messages.  The user must
  *                          guarantee that \b mpicomm and \b tag do not
  *                          conflict with other messages in transit.
@@ -209,8 +210,10 @@ void                p8est_transfer_fixed (p8est_t * dest, p8est_t * src,
  * \return                  The context object must be passed to the matching
  *                          call to \ref p8est_transfer_fixed_end.
  */
-p8est_transfer_context_t *p8est_transfer_fixed_begin (p8est_t * dest,
-                                                      p8est_t * src,
+p8est_transfer_context_t *p8est_transfer_fixed_begin (const p4est_gloidx_t *
+                                                      dest_gfq,
+                                                      const p4est_gloidx_t *
+                                                      src_gfq,
                                                       sc_MPI_Comm mpicomm,
                                                       int tag,
                                                       void *dest_data,
@@ -229,13 +232,13 @@ void                p8est_transfer_fixed_end (p8est_transfer_context_t * tc);
  * receives.  In this case the sizes need to be obtained separately in advance,
  * for example by calling \ref p8est_transfer_fixed with \b src_sizes as
  * payload data, or alternatively its split begin/end versions.
- * \param [in] dest         This forest defines the target partition.
- *                          \b dest must have been derived from \b src by a
- *                          call to \ref p8est_partition.
- *                          It is legal to use \ref p8est_copy in the process.
- * \param [in] src          This forest defines the original partition.
- * \param [in] mpicomm      The communicator to use.  Must match \b
- *                          dest->mpicomm and \b src->mpicomm in size and rank.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
  * \param [in] tag          This tag is used in all messages.  The user must
  *                          guarantee that \b mpicomm and \b tag do not
  *                          conflict with other messages in transit.
@@ -260,7 +263,8 @@ void                p8est_transfer_fixed_end (p8est_transfer_context_t * tc);
  *                          We use the type int to minimize the message size,
  *                          and to conform to MPI that has no type for size_t.
  */
-void                p8est_transfer_custom (p8est_t * dest, p8est_t * src,
+void                p8est_transfer_custom (const p4est_gloidx_t * dest_gfq,
+                                           const p4est_gloidx_t * src_gfq,
                                            sc_MPI_Comm mpicomm, int tag,
                                            void *dest_data,
                                            const int *dest_sizes,
@@ -271,13 +275,13 @@ void                p8est_transfer_custom (p8est_t * dest, p8est_t * src,
  * See \ref p8est_transfer_custom for a full description.
  * Must be matched with \ref p8est_transfer_custom_end for completion.
  * All parameters must stay alive until the completion has been called.
- * \param [in] dest         This forest defines the target partition.
- *                          \b dest must have been derived from \b src by a
- *                          call to \ref p8est_partition.
- *                          It is legal to use \ref p8est_copy in the process.
- * \param [in] src          This forest defines the original partition.
- * \param [in] mpicomm      The communicator to use.  Must match \b
- *                          dest->mpicomm and \b src->mpicomm in size and rank.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
  * \param [in] tag          This tag is used in all messages.  The user must
  *                          guarantee that \b mpicomm and \b tag do not
  *                          conflict with other messages in transit.
@@ -308,8 +312,10 @@ void                p8est_transfer_custom (p8est_t * dest, p8est_t * src,
  * \return                  The context object must be passed to the matching
  *                          call to \ref p8est_transfer_custom_end.
  */
-p8est_transfer_context_t *p8est_transfer_custom_begin (p8est_t * dest,
-                                                       p8est_t * src,
+p8est_transfer_context_t *p8est_transfer_custom_begin (const p4est_gloidx_t *
+                                                       dest_gfq,
+                                                       const p4est_gloidx_t *
+                                                       src_gfq,
                                                        sc_MPI_Comm mpicomm,
                                                        int tag,
                                                        void *dest_data,

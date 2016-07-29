@@ -682,42 +682,37 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 }
 
 void
-p4est_transfer_fixed (p4est_t * dest, p4est_t * src,
+p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
+                      const p4est_gloidx_t * src_gfq,
                       sc_MPI_Comm mpicomm, int tag,
                       void *dest_data, const void *src_data, size_t data_size)
 {
   p4est_transfer_context_t *tc;
 
-  tc = p4est_transfer_fixed_begin (dest, src, mpicomm, tag,
+  tc = p4est_transfer_fixed_begin (dest_gfq, src_gfq, mpicomm, tag,
                                    dest_data, src_data, data_size);
   p4est_transfer_fixed_end (tc);
 }
 
 static void
 p4est_transfer_verify_comm (p4est_transfer_context_t * tc,
-                            p4est_t * dest, p4est_t * src,
-                            sc_MPI_Comm mpicomm)
+                            const p4est_gloidx_t * dest_gfq,
+                            const p4est_gloidx_t * src_gfq,
+                            sc_MPI_Comm mpicomm, int *mpisize, int *mpirank)
 {
-#ifdef P4EST_ENABLE_DEBUG
   int                 mpiret;
-  int                 mpisize, mpirank;
 
   P4EST_ASSERT (tc != NULL);
-  P4EST_ASSERT (dest != NULL && src != NULL);
-  P4EST_ASSERT (p4est_is_valid (dest));
-  P4EST_ASSERT (p4est_is_valid (src));
-  P4EST_ASSERT (dest->mpisize == src->mpisize);
-  P4EST_ASSERT (dest->mpirank == src->mpirank);
-  P4EST_ASSERT (dest->global_num_quadrants == src->global_num_quadrants);
+  P4EST_ASSERT (dest_gfq != NULL && src_gfq != NULL);
+  P4EST_ASSERT (dest_gfq[0] == 0 && src_gfq[0] == 0);
   P4EST_ASSERT (mpicomm != sc_MPI_COMM_NULL);
+  P4EST_ASSERT (mpisize != NULL && mpirank != NULL);
 
-  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
+  mpiret = sc_MPI_Comm_size (mpicomm, mpisize);
   SC_CHECK_MPI (mpiret);
-  P4EST_ASSERT (mpisize == src->mpisize);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  mpiret = sc_MPI_Comm_rank (mpicomm, mpirank);
   SC_CHECK_MPI (mpiret);
-  P4EST_ASSERT (mpirank == src->mpirank);
-#endif
+  P4EST_ASSERT (dest_gfq[*mpisize] == src_gfq[*mpisize]);
 }
 
 /** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
@@ -741,13 +736,12 @@ p4est_bsearch_partition (p4est_gloidx_t target,
 }
 
 p4est_transfer_context_t *
-p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
+p4est_transfer_fixed_begin (const p4est_gloidx_t * dest_gfq,
+                            const p4est_gloidx_t * src_gfq,
                             sc_MPI_Comm mpicomm, int tag, void *dest_data,
                             const void *src_data, size_t data_size)
 {
   p4est_transfer_context_t *tc;
-  const p4est_gloidx_t *dest_gfq;
-  const p4est_gloidx_t *src_gfq;
   int                 mpiret;
   int                 mpisize, mpirank;
   int                 q;
@@ -763,8 +757,9 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
 
   /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
-  p4est_transfer_verify_comm (tc, dest, src, mpicomm);
   tc->variable = 0;
+  p4est_transfer_verify_comm (tc, dest_gfq, src_gfq,
+                              mpicomm, &mpisize, &mpirank);
 
   /* there is nothing to do when there is no data */
   if (data_size == 0) {
@@ -772,12 +767,8 @@ p4est_transfer_fixed_begin (p4est_t * dest, p4est_t * src,
   }
 
   /* grab some p4est information */
-  mpisize = dest->mpisize;
-  mpirank = dest->mpirank;
-  dest_gfq = dest->global_first_quadrant;
   dest_begin = dest_gfq[mpirank];
   dest_end = dest_gfq[mpirank + 1];
-  src_gfq = src->global_first_quadrant;
   src_begin = src_gfq[mpirank];
   src_end = src_gfq[mpirank + 1];
 
@@ -937,28 +928,28 @@ p4est_transfer_fixed_end (p4est_transfer_context_t * tc)
 }
 
 void
-p4est_transfer_custom (p4est_t * dest, p4est_t * src,
+p4est_transfer_custom (const p4est_gloidx_t * dest_gfq,
+                       const p4est_gloidx_t * src_gfq,
                        sc_MPI_Comm mpicomm, int tag,
                        void *dest_data, const int *dest_sizes,
                        const void *src_data, const int *src_sizes)
 {
   p4est_transfer_context_t *tc;
 
-  tc = p4est_transfer_custom_begin (dest, src, mpicomm, tag,
+  tc = p4est_transfer_custom_begin (dest_gfq, src_gfq, mpicomm, tag,
                                     dest_data, dest_sizes,
                                     src_data, src_sizes);
   p4est_transfer_end (tc);
 }
 
 p4est_transfer_context_t *
-p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
+p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
+                             const p4est_gloidx_t * src_gfq,
                              sc_MPI_Comm mpicomm, int tag,
                              void *dest_data, const int *dest_sizes,
                              const void *src_data, const int *src_sizes)
 {
   p4est_transfer_context_t *tc;
-  const p4est_gloidx_t *dest_gfq;
-  const p4est_gloidx_t *src_gfq;
   int                 mpiret;
   int                 mpisize, mpirank;
   int                 q;
@@ -974,22 +965,18 @@ p4est_transfer_custom_begin (p4est_t * dest, p4est_t * src,
   p4est_gloidx_t      gbegin, gend;
   sc_MPI_Request     *rq;
 
-  P4EST_ASSERT (src->local_num_quadrants == 0 || src_sizes != NULL);
-  P4EST_ASSERT (dest_data != NULL);
   P4EST_ASSERT (dest_sizes != NULL);
+  P4EST_ASSERT (src_sizes != NULL);
 
   /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
-  p4est_transfer_verify_comm (tc, dest, src, mpicomm);
   tc->variable = 1;
+  p4est_transfer_verify_comm (tc, dest_gfq, src_gfq,
+                              mpicomm, &mpisize, &mpirank);
 
   /* grab some p4est information */
-  mpisize = dest->mpisize;
-  mpirank = dest->mpirank;
-  dest_gfq = dest->global_first_quadrant;
   dest_begin = dest_gfq[mpirank];
   dest_end = dest_gfq[mpirank + 1];
-  src_gfq = src->global_first_quadrant;
   src_begin = src_gfq[mpirank];
   src_end = src_gfq[mpirank + 1];
 

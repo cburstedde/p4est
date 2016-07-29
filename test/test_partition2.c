@@ -189,9 +189,12 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   P4EST_ASSERT (tog == back->global_first_quadrant[back->mpirank + 1]);
 
   /* do data transfer part I */
-  tf = p4est_transfer_fixed_begin (p4est, back, p4est->mpicomm, 0,
+  tf = p4est_transfer_fixed_begin (p4est->global_first_quadrant,
+                                   back->global_first_quadrant,
+                                   p4est->mpicomm, 0,
                                    dest_data, src_data, data_size);
-  p4est_transfer_fixed (p4est, back, p4est->mpicomm, 1,
+  p4est_transfer_fixed (p4est->global_first_quadrant,
+                        back->global_first_quadrant, p4est->mpicomm, 1,
                         dest_sizes, src_sizes, sizeof (int));
   p4est_transfer_fixed_end (tf);
 
@@ -232,7 +235,8 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   dest_vdata = P4EST_ALLOC (int, vcountd * sizeof (int));
 
   /* do data transfer part II */
-  p4est_transfer_custom (p4est, back, p4est->mpicomm, 1,
+  p4est_transfer_custom (p4est->global_first_quadrant,
+                         back->global_first_quadrant, p4est->mpicomm, 1,
                          dest_vdata, dest_sizes, src_vdata, src_sizes);
 
   /* we verify the variable data we have sent */
