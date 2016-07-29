@@ -515,7 +515,7 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face,
                                                        int r_face,
-                                                       int8_t orientation);
+                                                       int orientation);
 
 /** Create a connectivity structure that contains two cubes
  * where the two far ends are identified periodically.

@@ -362,7 +362,7 @@ p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face,
                                                        int r_face,
-                                                       int8_t orientation);
+                                                       int orientation);
 
 /** Create a connectivity structure for a three-tree mesh around a corner.
  */
