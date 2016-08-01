@@ -407,7 +407,7 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   /* safety checks for connectivity ownership */
   if (pp->conn_owner != NULL) {
     /* we are a copy of a wrap and have borrowed its connectivity */
-    P4EST_ASSERT (!sc_refcount_is_active (&pp->conn_rc));
+    P4EST_ASSERT (sc_refcount_is_last (&pp->conn_rc));
     P4EST_EXECUTE_ASSERT_FALSE (sc_refcount_unref (&pp->conn_owner->conn_rc));
   }
   else {
