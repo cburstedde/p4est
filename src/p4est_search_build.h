@@ -24,7 +24,7 @@
 #ifndef P4EST_SEARCH_BUILD_H
 #define P4EST_SEARCH_BUILD_H
 
-#include <p4est_search.h>
+#include <p4est.h>
 
 /** \file p4est_search_build.h
  * Create a new p4est object by running \ref p4est_search_local.

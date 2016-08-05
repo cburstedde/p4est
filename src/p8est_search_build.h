@@ -24,7 +24,7 @@
 #ifndef P8EST_SEARCH_BUILD_H
 #define P8EST_SEARCH_BUILD_H
 
-#include <p8est_search.h>
+#include <p8est.h>
 
 /** \file p8est_search_build.h
  * Create a new p8est object by running \ref p8est_search_local.
