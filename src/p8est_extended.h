@@ -369,6 +369,9 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
  *                                      PetscSFSetGraph()
  * \param[in,out] out_remotes           filled with argument for
  *                                      PetscSFSetGraph()
+ * \param[in]     custom_numbering      Whether or use the default numbering
+ *                                      (0) of DMPlex child ids or the custom
+ *                                      (1).
  */
 void                p8est_get_plex_data_ext (p8est_t * p8est,
                                              p8est_ghost_t ** ghost,
@@ -387,7 +390,8 @@ void                p8est_get_plex_data_ext (p8est_t * p8est,
                                              sc_array_t * out_parents,
                                              sc_array_t * out_childids,
                                              sc_array_t * out_leaves,
-                                             sc_array_t * out_remotes);
+                                             sc_array_t * out_remotes,
+                                             int custom_numbering);
 
 SC_EXTERN_C_END;
 
