@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -506,6 +507,16 @@ p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
 /** Create a connectivity structure that contains two cubes.
  */
 p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
+
+/** Create a connectivity structure for two trees being rotated
+ * w.r.t. each other in a user-defined way.
+ * \param[in] l_face      index of left face
+ * \param[in] r_face      index of right face
+ * \param[in] orientation orientation of trees w.r.t. each other
+ */
+p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face,
+                                                       int r_face,
+                                                       int orientation);
 
 /** Create a connectivity structure that contains two cubes
  * where the two far ends are identified periodically.

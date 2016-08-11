@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -124,6 +125,7 @@
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick
+#define p4est_connectivity_new_twotrees p8est_connectivity_new_twotrees
 #define p4est_connectivity_new_byname   p8est_connectivity_new_byname
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
 #define p4est_connectivity_bcast        p8est_connectivity_bcast
@@ -164,8 +166,6 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
-#define p4est_reduce_mpicomm            p8est_reduce_mpicomm
-#define p4est_reduce_mpicomm_ext        p8est_reduce_mpicomm_ext
 #define p4est_connect_type_int          p8est_connect_type_int
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
@@ -178,6 +178,7 @@
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
+#define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
 #define p4est_balance_ext               p8est_balance_ext
@@ -300,10 +301,14 @@
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
-#define p4est_comm_parallel_env_create  p8est_comm_parallel_env_create
-#define p4est_comm_parallel_env_free    p8est_comm_parallel_env_free
-#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
+#define p4est_comm_parallel_env_duplicate p8est_comm_parallel_env_duplicate
+#define p4est_comm_parallel_env_release p8est_comm_parallel_env_release
+#define p4est_comm_parallel_env_replace p8est_comm_parallel_env_replace
+#define p4est_comm_parallel_env_get_info p8est_comm_parallel_env_get_info
+#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
+#define p4est_comm_parallel_env_reduce  p8est_comm_parallel_env_reduce
+#define p4est_comm_parallel_env_reduce_ext p8est_comm_parallel_env_reduce_ext
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
