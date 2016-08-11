@@ -852,9 +852,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     return;
   }
   else {
-    /* edges inside of domain have at least 4 adjacent quadrants */
-    P4EST_ASSERT (4 <= cz);
-
     /* edges on tree boundaries */
     if (info->tree_boundary) {
       p4est_locidx_t      nedgef[2];
