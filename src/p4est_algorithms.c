@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -442,6 +443,9 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_ASSERT (!p4est_comm_parallel_env_is_null (p4est));
 
 #ifdef P4EST_ENABLE_DEBUG
+  /* check parallel environment */
+  P4EST_ASSERT (!p4est_comm_parallel_env_is_null (p4est));
+
   /* check last item of global partition */
   P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
                 p4est->connectivity->num_trees &&

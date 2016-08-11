@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -238,7 +239,7 @@ p8est_corner_info_t;
 /** Store the corner numbers 0..7 for each tree face. */
 extern const int    p8est_face_corners[6][4];
 
-/** Store the face numbers 0..12 for each tree face. */
+/** Store the edge numbers 0..12 for each tree face. */
 extern const int    p8est_face_edges[6][4];
 
 /** Store the face numbers in the face neighbor's system. */
@@ -261,7 +262,7 @@ extern const int    p8est_face_permutation_refs[6][6];
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_edge_permutations[8][4];
 
-/** Store the 2 occurring sets of 4 permutations per face. */
+/** Store the 3 occurring sets of 4 permutations per face. */
 extern const int    p8est_face_edge_permutation_sets[3][4];
 
 /** Store the face numbers 0..5 for each tree edge. */
@@ -525,7 +526,7 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face,
                                                        int r_face,
-                                                       int8_t orientation);
+                                                       int orientation);
 
 /** Create a connectivity structure that contains two cubes
  * where the two far ends are identified periodically.

@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -1644,14 +1645,15 @@ p4est_connectivity_new_disk (void)
 #endif /* !P4_TO_P8 */
 
 p4est_connectivity_t *
-p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
+p4est_connectivity_new_twotrees (int l_face, int r_face, int orientation)
 {
   int                 i;
-  const p4est_topidx_t num_vertices = (P4EST_DIM - 1) * 6;      // 6 or 12
+  const p4est_topidx_t num_vertices = (P4EST_DIM - 1) * 6;      /* 6 or 12 */
   const p4est_topidx_t num_trees = 2;
 
-  // no tree connection via edges and corners
+  /* no tree connection via edges and corners */
 #ifdef P4_TO_P8
+  int                 op;
   const p4est_topidx_t num_edges = 0;
   const p4est_topidx_t num_ett = 0;
 #endif /* P4_TO_P8 */
@@ -1665,14 +1667,15 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
     2, 0, 0,
     0, 1, 0,
     1, 1, 0,
-    2, 1, 0,
+    2, 1, 0
 #ifdef P4_TO_P8
+           ,
     0, 0, 1,
     1, 0, 1,
     2, 0, 1,
     0, 1, 1,
     1, 1, 1,
-    2, 1, 1,
+    2, 1, 1
 #endif /* P4_TO_P8 */
   };
 
@@ -1722,11 +1725,16 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
 
   /* initialize values in tree_to_vertex */
   p4est_topidx_t      tree_to_vertex[P4EST_CHILDREN * 2] = {
-    -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1
 #ifdef P4_TO_P8
-    -1, -1, -1, -1, -1, -1, -1, -1,
+      ,
+    -1, -1, -1, -1, -1, -1, -1, -1
 #endif /* P4_TO_P8 */
   };
+
+  P4EST_ASSERT (0 <= l_face && l_face < P4EST_FACES);
+  P4EST_ASSERT (0 <= r_face && r_face < P4EST_FACES);
+  P4EST_ASSERT (0 <= orientation && orientation < P4EST_HALF);
 
   /* populate according to specified faces */
   for (i = 0; i < P4EST_CHILDREN; ++i) {
@@ -1744,7 +1752,7 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
     }
   }
 #else /* P4_TO_P8 */
-  int                 op = -1;
+  op = -1;
   if (orientation == 3) {
     op = 2;
   }
@@ -1757,23 +1765,26 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
     }
   }
   switch (op) {
-  case 0:                      // clockwise rotation
+  case 0:                      /* clockwise rotation */
     for (i = 0; i < P4EST_CHILDREN; ++i) {
       tree_to_vertex[P4EST_CHILDREN + i] =
         rotateClockWise[tree_to_vertex[P4EST_CHILDREN + i]];
     }
     break;
-  case 1:                      // counterclockwise rotation
+  case 1:                      /* counterclockwise rotation */
     for (i = 0; i < P4EST_CHILDREN; ++i) {
       tree_to_vertex[P4EST_CHILDREN + i] =
         rotateCounterClockWise[tree_to_vertex[P4EST_CHILDREN + i]];
     }
     break;
-  case 2:                      // flip
+  case 2:                      /* flip */
     for (i = 0; i < P4EST_CHILDREN; ++i) {
       tree_to_vertex[P4EST_CHILDREN + i] =
         flip[tree_to_vertex[P4EST_CHILDREN + i]];
     }
+    break;
+  default:
+    /* we do nothing */
     break;
   }
 #endif /* P4_TO_P8 */
@@ -1802,8 +1813,9 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int8_t orientation)
   tree_to_tree[l_face] = 1;
   tree_to_tree[P4EST_FACES + r_face] = 0;
 
-  tree_to_face[l_face] = P4EST_FACES * orientation + r_face;
-  tree_to_face[P4EST_FACES + r_face] = P4EST_FACES * orientation + l_face;
+  tree_to_face[l_face] = (int8_t) (P4EST_FACES * orientation + r_face);
+  tree_to_face[P4EST_FACES + r_face] =
+    (int8_t) (P4EST_FACES * orientation + l_face);
 
   /* create connectivity structure */
   return p4est_connectivity_new_copy (num_vertices, num_trees,

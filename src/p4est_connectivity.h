@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -372,7 +373,7 @@ p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face,
                                                        int r_face,
-                                                       int8_t orientation);
+                                                       int orientation);
 
 /** Create a connectivity structure for a three-tree mesh around a corner.
  */

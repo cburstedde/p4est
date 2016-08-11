@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -640,7 +641,7 @@ main (int argc, char **argv)
     p4est_nodes_destroy (nodes);
   }
 
-  if (repartition_lnodes) {
+  if (!skip_lnodes && repartition_lnodes) {
     p4est_partition_lnodes (p4est, ghost, 1, 0);
     p4est_ghost_destroy (ghost);
     ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);

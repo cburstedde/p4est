@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -20,8 +21,7 @@
   along with p4est; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
-#include <unistd.h>
-#include <inttypes.h>
+
 #ifndef P4_TO_P8
 #include <p4est_connectivity.h>
 #else /* !P4_TO_P8 */
@@ -39,7 +39,7 @@
 static int
 test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
                                             int l_face, int r_face,
-                                            int8_t orientation)
+                                            int orientation)
 {
   int                 neighboring_face_corner, corner_index;
   int                 lowerFaceIndex, higherFaceIndex;
@@ -79,7 +79,7 @@ test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
 static int
 test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
                                              int l_face, int r_face,
-                                             int8_t orientation)
+                                             int orientation)
 {
   int                 c0, c1, cx;
   int                 i;
@@ -128,7 +128,7 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
 static int
 test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
                                            int l_face, int r_face,
-                                           int8_t orientation)
+                                           int orientation)
 {
   int                 e0, e1, ex;
   int                 i;
@@ -170,7 +170,6 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 mpisize, mpirank;
   p4est_connectivity_t *conn;
-  int8_t              periodic_boundaries;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -188,7 +187,7 @@ main (int argc, char **argv)
   conn = 0;
 
   int                 i, j;
-  int8_t              k;
+  int                 k;
 
   for (i = 0; i < P4EST_FACES; ++i) {   /* set l_face */
     for (j = 0; j < P4EST_FACES; ++j) { /* set r_face */
