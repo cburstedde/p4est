@@ -239,7 +239,7 @@ p8est_corner_info_t;
 /** Store the corner numbers 0..7 for each tree face. */
 extern const int    p8est_face_corners[6][4];
 
-/** Store the face numbers 0..12 for each tree face. */
+/** Store the edge numbers 0..12 for each tree face. */
 extern const int    p8est_face_edges[6][4];
 
 /** Store the face numbers in the face neighbor's system. */
@@ -262,7 +262,7 @@ extern const int    p8est_face_permutation_refs[6][6];
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_edge_permutations[8][4];
 
-/** Store the 2 occurring sets of 4 permutations per face. */
+/** Store the 3 occurring sets of 4 permutations per face. */
 extern const int    p8est_face_edge_permutation_sets[3][4];
 
 /** Store the face numbers 0..5 for each tree edge. */
