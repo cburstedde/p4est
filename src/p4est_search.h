@@ -174,24 +174,32 @@ typedef int         (*p4est_search_local_t) (p4est_t * p4est,
  * the root down to the leaves:  For each quadrant, an inner loop over the
  * potentially matching points executes a point-callback for each candidate
  * that determines whether the point may be a match.  If not, it is discarded
- * in the current branch, otherwise it is passed to the next finer level.
+ * in the current branch, otherwise it is passed to the next deeper level.
  * The callback is allowed to return true for the same point and more than one
  * quadrant; in this case more than one matching quadrant may be identified.
  * The callback is also allowed to return false for all children of a quadrant
- * that it returned true for earlier.
+ * that it returned true for earlier.  If the point callback returns false for
+ * all points relevant to a quadrant, the recursion stops.
  * The points can really be anything, p4est does not perform any
  * interpretation, just passes the pointer along to the callback function.
+ *
+ * If points are present and the first quadrant callback returned true, we
+ * execute it a second time after calling the point callback for all current
+ * points.  This can be used to gather and postprocess information about the
+ * points more easily.  If it returns false, the recursion stops.
  *
  * If the points are a NULL array, they are ignored and the recursion proceeds
  * by querying the per-quadrant callback.  If the points are not NULL but an
  * empty array, the recursion will stop immediately!
  *
  * \param [in] p4est        The forest to be searched.
- * \param [in] quadrant_fn  Executed once for each quadrant that is
- *                          entered.  This quadrant is always local, if not
- *                          completely then at least one descendant of it.  If
- *                          the callback returns false, this quadrant and its
- *                          descendants are excluded from the search.
+ * \param [in] quadrant_fn  Executed once when a quadrant is entered, and once
+ *                          when it is left (the second time only if points are
+ *                          present and the first call returned true).
+ *                          This quadrant is always local, if not completely
+ *                          then at least one descendant of it.  If the
+ *                          callback returns false, this quadrant and its
+ *                          descendants are excluded from the search recursion.
  *                          Its \b point argument is always NULL.
  *                          Callback may be NULL in which case it is ignored.
  * \param [in] point_fn     If \b points is not NULL, must be not NULL.

@@ -541,7 +541,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
     quadrant = q;
   }
 
-  /* execute quadrant callback if present, which may stop the recursion */
+  /* execute pre-quadrant callback if present, which may stop the recursion */
   if (rec->quadrant_fn != NULL &&
       !rec->quadrant_fn (rec->p4est, rec->which_tree,
                          quadrant, local_num, NULL)) {
@@ -550,7 +550,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
 
   /* check out points */
   if (rec->points == NULL) {
-    /* we have called the callback already.  For leafs we are done */
+    /* we have called the callback already.  For leaves we are done */
     if (is_leaf) {
       return;
     }
@@ -570,7 +570,17 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
         *qz = *pz;
       }
     }
+
+    /* call post-quadrant callback, which may also terminate the recursion */
+    if (rec->quadrant_fn != NULL &&
+        !rec->quadrant_fn (rec->p4est, rec->which_tree,
+                           quadrant, local_num, NULL)) {
+      /* clears memory and will trigger the return below */
+      sc_array_reset (chact);
+    }
+
     if (chact->elem_count == 0) {
+      /* with zero members there is no need to call sc_array_reset */
       return;
     }
   }
