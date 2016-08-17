@@ -439,27 +439,47 @@ p4est_is_valid (p4est_t * p4est)
   P4EST_QUADRANT_INIT (&nextlow);
   P4EST_QUADRANT_INIT (&s);
 
-  /* check parallel environment */
-  P4EST_ASSERT (!p4est_comm_parallel_env_is_null (p4est));
+  /* we crash on NULL pointers */
+  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
 
-#ifdef P4EST_ENABLE_DEBUG
   /* check parallel environment */
-  P4EST_ASSERT (!p4est_comm_parallel_env_is_null (p4est));
+  if (p4est_comm_parallel_env_is_null (p4est)) {
+    P4EST_NOTICE ("p4est invalid parallel environment");
+    failed = 1;
+    goto failtest;
+  }
 
   /* check last item of global partition */
-  P4EST_ASSERT (p4est->global_first_position[num_procs].p.which_tree ==
-                p4est->connectivity->num_trees &&
-                p4est->global_first_position[num_procs].x == 0 &&
-                p4est->global_first_position[num_procs].y == 0);
+  if (!(p4est->global_first_position[num_procs].p.which_tree ==
+        p4est->connectivity->num_trees &&
+        p4est->global_first_position[num_procs].x == 0 &&
+        p4est->global_first_position[num_procs].y == 0
 #ifdef P4_TO_P8
-  P4EST_ASSERT (p4est->global_first_position[num_procs].z == 0);
+        && p4est->global_first_position[num_procs].z == 0
 #endif
-  P4EST_ASSERT (p4est->connectivity->num_trees ==
-                (p4est_topidx_t) p4est->trees->elem_count);
-  for (i = 0; i <= num_procs; ++i) {
-    P4EST_ASSERT (p4est->global_first_position[i].level == P4EST_QMAXLEVEL);
+      )) {
+    P4EST_NOTICE ("p4est invalid global first position");
+    failed = 1;
+    goto failtest;
   }
-#endif /* P4EST_ENABLE_DEBUG */
+
+  /* tree count and quadrant first position level */
+  if (p4est->connectivity->num_trees !=
+      (p4est_topidx_t) p4est->trees->elem_count) {
+    P4EST_NOTICE ("p4est invalid tree count");
+    failed = 1;
+    goto failtest;
+  }
+  for (i = 0; i <= num_procs; ++i) {
+    if (p4est->global_first_position[i].level != P4EST_QMAXLEVEL) {
+      failed = 1;
+      break;
+    }
+  }
+  if (failed) {
+    P4EST_NOTICE ("p4est invalid global first position level");
+    goto failtest;
+  }
 
   /* check first tree in global partition */
   if (first_tree < 0) {
@@ -606,23 +626,30 @@ p4est_is_valid (p4est_t * p4est)
     nquadrants = 0;
     for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
       perlevel = tree->quadrants_per_level[i];
-
-      P4EST_ASSERT (perlevel >= 0);
+      if (perlevel < 0) {
+        failed = 1;
+        break;
+      }
       nquadrants += perlevel;   /* same type */
       if (perlevel > 0) {
         maxlevel = i;
       }
     }
-    for (; i <= P4EST_MAXLEVEL; ++i) {
-      P4EST_ASSERT (tree->quadrants_per_level[i] == -1);
+    if (!failed) {
+      for (; i <= P4EST_MAXLEVEL; ++i) {
+        if (tree->quadrants_per_level[i] != -1) {
+          failed = 1;
+          break;
+        }
+      }
+      lquadrants += nquadrants; /* same type */
     }
-    lquadrants += nquadrants;   /* same type */
-
-    if (maxlevel != (int) tree->maxlevel) {
-      P4EST_NOTICE ("p4est invalid wrong maxlevel\n");
+    if (failed || maxlevel != (int) tree->maxlevel) {
+      P4EST_NOTICE ("p4est invalid tree level\n");
       failed = 1;
       goto failtest;
     }
+
     if (nquadrants != (p4est_locidx_t) tree->quadrants.elem_count) {
       P4EST_NOTICE ("p4est invalid tree quadrant count\n");
       failed = 1;
