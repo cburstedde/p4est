@@ -41,6 +41,7 @@ sc_array_t         *p4est_deflate_quadrants (p4est_t * p4est,
                                              sc_array_t ** data);
 
 /** Create a new p4est based on serialized data.
+ * Its revision counter is set to zero.
  * See p4est.h and p4est_communication.h for more information on parameters.
  * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
@@ -55,7 +56,7 @@ sc_array_t         *p4est_deflate_quadrants (p4est_t * p4est,
  *                           The elem_size of this array informs data_size.
  *                           Its elem_count equals the number of local quads.
  * \param [in] user_pointer  Assign to the user_pointer member of the p4est.
- * \return              The newly created p4est.
+ * \return              The newly created p4est with a zero revision counter.
  */
 p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
                                    p4est_connectivity_t * connectivity,

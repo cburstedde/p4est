@@ -138,6 +138,7 @@ typedef struct p4est
   void               *user_pointer;     /**< convenience pointer for users,
                                              never touched by p4est */
 
+  long                revision;         /**< Gets bumped on mesh change */
   p4est_topidx_t      first_local_tree; /**< 0-based index of first local
                                              tree, must be -1 for an empty
                                              processor */
@@ -173,6 +174,15 @@ p4est_t;
  * \return              Memory used in bytes.
  */
 size_t              p4est_memory_used (p4est_t * p4est);
+
+/** Return the revision counter of the forest.
+ * A newly created forest starts with a revision counter of zero.
+ * Every refine, coarsen, partition, and balance that actually changes the mesh
+ * increases the counter by one.  Operations with no effect keep the old value.
+ * \param [in] p8est    The forest must be valid.
+ * \return              Non-negative number.
+ */
+long                p4est_revision (p4est_t * p4est);
 
 /** Callback function prototype to initialize the quadrant's user data.
  * \param [in] p4est         the forest
@@ -275,6 +285,7 @@ void                p4est_destroy (p4est_t * p4est);
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
  * \return  Returns a valid p4est that does not depend on the input.
+ *                         The revision counter of the copy is set to zero.
  */
 p4est_t            *p4est_copy (p4est_t * input, int copy_data);
 
@@ -373,6 +384,9 @@ unsigned            p4est_checksum (p4est_t * p4est);
  * header.  This makes the file depend on mpisize.  For changing this see
  * p4est_save_ext() in p4est_extended.h.
  *
+ * The revision counter is not saved to the file, since that would make files
+ * different that come from different revisions but store the same mesh.
+ *
  * \param [in] filename    Name of the file to write.
  * \param [in] p4est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
@@ -395,6 +409,8 @@ void                p4est_save (const char *filename, p4est_t * p4est,
  * By default, a file can only be loaded with the same number of processors
  * that it was stored with.  The defaults can be changed with p4est_load_ext()
  * in p4est_extended.h.
+ *
+ * The revision counter of the loaded p4est is set to zero.
  *
  * \param [in] filename         Name of the file to read.
  * \param [in] mpicomm          A valid MPI communicator.
