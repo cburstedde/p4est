@@ -148,11 +148,17 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
 size_t
 p4est_memory_used (p4est_t * p4est)
 {
-  const int           mpisize = p4est->mpisize;
+  int                 mpisize;
   size_t              size;
   p4est_topidx_t      nt;
   p4est_tree_t       *tree;
 
+  /* do not assert p4est_is_valid since it is collective */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->connectivity != NULL);
+  P4EST_ASSERT (p4est->trees != NULL);
+
+  mpisize = p4est->mpisize;
   size = sizeof (p4est_t) +
     (mpisize + 1) * (sizeof (p4est_gloidx_t) + sizeof (p4est_quadrant_t));
 
@@ -163,8 +169,10 @@ p4est_memory_used (p4est_t * p4est)
   }
 
   if (p4est->data_size > 0) {
+    P4EST_ASSERT (p4est->user_data_pool != NULL);
     size += sc_mempool_memory_used (p4est->user_data_pool);
   }
+  P4EST_ASSERT (p4est->quadrant_pool != NULL);
   size += sc_mempool_memory_used (p4est->quadrant_pool);
 
   return size;
@@ -173,7 +181,9 @@ p4est_memory_used (p4est_t * p4est)
 long
 p4est_revision (p4est_t * p4est)
 {
-  P4EST_ASSERT (p4est_is_valid (p4est));
+  /* do not assert p4est_is_valid since it is collective */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->revision >= 0);
 
   return p4est->revision;
 }

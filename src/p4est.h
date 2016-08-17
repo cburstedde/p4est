@@ -167,15 +167,17 @@ typedef struct p4est
 }
 p4est_t;
 
-/** Calculate memory usage of a forest structure.
+/** Calculate local memory usage of a forest structure.
+ * Not collective.  The memory used on the current rank is returned.
  * The connectivity structure is not counted since it is not owned;
  * use p4est_connectivity_memory_usage (p4est->connectivity).
- * \param [in] p4est    Forest structure.
+ * \param [in] p4est    Valid forest structure.
  * \return              Memory used in bytes.
  */
 size_t              p4est_memory_used (p4est_t * p4est);
 
 /** Return the revision counter of the forest.
+ * Not collective, even though the revision value is the same on all ranks.
  * A newly created forest starts with a revision counter of zero.
  * Every refine, coarsen, partition, and balance that actually changes the mesh
  * increases the counter by one.  Operations with no effect keep the old value.
