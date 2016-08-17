@@ -27,6 +27,7 @@
 #include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_geometry.h>
+#include <p4est_search.h>
 #include <p4est_search_build.h>
 #include <p4est_vtk.h>
 #else
@@ -34,6 +35,7 @@
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_geometry.h>
+#include <p8est_search.h>
 #include <p8est_search_build.h>
 #include <p8est_vtk.h>
 #endif
