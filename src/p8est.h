@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -57,7 +58,7 @@ SC_EXTERN_C_BEGIN;
  */
 #define P8EST_LAST_OFFSET(l) (P8EST_ROOT_LEN - P8EST_QUADRANT_LEN (l))
 
-/** The 3D quadrant (i.e. octant) datatype */
+/** The 3D quadrant (i.e., octant) datatype */
 typedef struct p8est_quadrant
 {
   /*@{ */

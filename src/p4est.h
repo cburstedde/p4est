@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -67,9 +68,9 @@ typedef struct p4est_quadrant
   /*@{ */
   p4est_qcoord_t      x, y;  /**< coordinates */
   /*@} */
-  int8_t              level, /**< level of refinement */
-                      pad8;  /**< padding */
-  int16_t             pad16; /**< padding */
+  int8_t              level,    /**< level of refinement */
+                      pad8;     /**< padding */
+  int16_t             pad16;    /**< padding */
   union p4est_quadrant_data
   {
     void               *user_data;      /**< never changed by p4est */
