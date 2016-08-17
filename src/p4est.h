@@ -68,9 +68,9 @@ typedef struct p4est_quadrant
   /*@{ */
   p4est_qcoord_t      x, y;  /**< coordinates */
   /*@} */
-  int8_t              level, /**< level of refinement */
-                      pad8;  /**< padding */
-  int16_t             pad16; /**< padding */
+  int8_t              level,    /**< level of refinement */
+                      pad8;     /**< padding */
+  int16_t             pad16;    /**< padding */
   union p4est_quadrant_data
   {
     void               *user_data;      /**< never changed by p4est */
