@@ -119,6 +119,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* data may be NULL, in this case p4est->data_size will be 0 */
   /* user_pointer may be anything, we don't look at it */
 
+  /* create p4est object and assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   dsize = p4est->data_size = (data == NULL ? 0 : data->elem_size);
   dap = (char *) (data == NULL ? NULL : data->array);
@@ -127,8 +128,8 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
-  /* create parallel environment */
-  p4est_comm_parallel_env_create (p4est, mpicomm);
+  /* set parallel environment */
+  p4est_comm_parallel_env_assign (p4est, mpicomm);
   num_procs = p4est->mpisize;
   rank = p4est->mpirank;
 

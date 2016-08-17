@@ -147,6 +147,20 @@ p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,
                                         int compute_level_lists,
                                         p4est_connect_type_t btype);
 
+/** Make a deep copy of a p4est.
+ * The connectivity is not duplicated.
+ * Copying of quadrant user data is optional.
+ * If old and new data sizes are 0, the user_data field is copied regardless.
+ * The inspect member of the copy is set to NULL.
+ *
+ * \param [in]  copy_data  If true, data are copied.
+ *                         If false, data_size is set to 0.
+ * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
+ * \return  Returns a valid p4est that does not depend on the input.
+ */
+p4est_t            *p4est_copy_ext (p4est_t * input, int copy_data,
+                                    int duplicate_mpicomm);
+
 /** Refine a forest with a bounded refinement level and a replace option.
  * \param [in,out] p4est The forest is changed in place.
  * \param [in] refine_recursive Boolean to decide on recursive refinement.
@@ -313,13 +327,6 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
-
-int                 p4est_reduce_mpicomm (p4est_t * p4est);
-
-int                 p4est_reduce_mpicomm_ext (p4est_t * p4est,
-                                              sc_MPI_Group group_add,
-                                              const int add_to_beginning,
-                                              int **ranks);
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest

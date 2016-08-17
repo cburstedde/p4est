@@ -21,15 +21,15 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P6EST_GHOST_H
+#define P6EST_GHOST_H
+
 /** \file p6est_ghost.h
  *
  * passing columns of layers and data to neighboring processes
  *
  * \ingroup p6est
  */
-
-#ifndef P6EST_GHOST_H
-#define P6EST_GHOST_H
 
 #include <p6est.h>
 #include <p4est_ghost.h>
