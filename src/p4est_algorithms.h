@@ -112,7 +112,10 @@ int                 p4est_is_equal (p4est_t * p4est1, p4est_t * p4est2,
  *    the quadrant counters are consistent
  *    all trees are complete
  *    all non-local trees are empty
+ * This function is collective!
+ * It is also relatively expensive, so its use in production should be limited.
  * \param [in] p4est    The forest to be tested.
+ *                      Itself and its connectivity must be non-NULL.
  * \return              Returns true if valid, false otherwise.
  */
 int                 p4est_is_valid (p4est_t * p4est);
