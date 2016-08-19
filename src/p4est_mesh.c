@@ -350,6 +350,8 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   }
   P4EST_FREE (equads);
   P4EST_FREE (eedges);
+
+  return 0;
 }
 #endif /* P4_TO_P8 */
 
@@ -857,12 +859,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
     if (info->tree_boundary) {
       p4est_locidx_t      nedgef[2];
       p4est_locidx_t      nface[2];
-      int                 ignore;
-      size_t              z2;
       p4est_topidx_t      nftree[2];
-      p4est_locidx_t      goodones;
-      int8_t             *eedges;
-      p4est_locidx_t     *equads;
 
       /* initialize nedgef to zero */
       SC_BZERO (nedgef, 2);
@@ -1329,7 +1326,7 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_tree_t       *tree;
   p4est_locidx_t     *quadid, qid;
-  int                 level = info->quad->level, i;
+  int                 level = info->quad->level;
 
   /* We could use a static quadrant counter, but that gets uglier */
   tree = p4est_tree_array_index (info->p4est->trees, info->treeid);
