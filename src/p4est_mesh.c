@@ -1270,7 +1270,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
                                                                     face,
                                                                     info->
                                                                     orientation);
-        if (!side2->is.hanging.is_ghost[h]) {
+        if (!side2->is.hanging.is_ghost[pos]) {
           tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
           jls[h] = side2->is.hanging.quadid[pos] + tree->quadrants_offset;
           P4EST_ASSERT (0 <= jls[h] && jls[h] < mesh->local_num_quadrants);
