@@ -146,12 +146,14 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
   /* initialize context structure */
   build->init_fn = init_fn;
   build->add_init_fn = init_fn;
-  p4est_search_build_begin_tree (build, p4est->first_local_tree, 0);
+  if (p4est->first_local_tree >= 0) {
+    p4est_search_build_begin_tree (build, p4est->first_local_tree, 0);
+  }
 
   /*
    * what remains to be filled:
    * local_num_quadrants
-   * trees:
+   * local trees:
    *   quadrants
    *   quadrants_offset
    *   quadrants_per_level
