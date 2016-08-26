@@ -158,6 +158,7 @@
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex
 #define p4est_memory_used               p8est_memory_used
+#define p4est_revision                  p8est_revision
 #define p4est_new                       p8est_new
 #define p4est_destroy                   p8est_destroy
 #define p4est_copy                      p8est_copy

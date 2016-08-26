@@ -256,6 +256,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_VERBOSEF ("total local quadrants %lld\n",
                   (long long) p4est->local_num_quadrants);
 
+  P4EST_ASSERT (p4est->revision == 0);
   P4EST_ASSERT (p4est_is_valid (p4est));
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_inflate\n");
