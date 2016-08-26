@@ -104,6 +104,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
   p4est->mpicomm_owned = 0;
   p4est->data_size = data_size;
   p4est->user_pointer = user_pointer;
+  p4est->revision = 0;
   p4est->local_num_quadrants = 0;
   p4est->global_num_quadrants = 0;
   p4est->global_first_quadrant = NULL;

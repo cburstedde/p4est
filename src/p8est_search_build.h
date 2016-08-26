@@ -90,6 +90,7 @@ int                 p8est_search_build_add (p8est_search_build_t * build,
 /** Finalize the construction of the new forest after the search.
  * \param [in,out] build    The building context will be deallocated inside.
  * \return                  A valid forest object.
+ *                          Its revision number is set to zero.
  */
 p8est_t            *p8est_search_build_complete (p8est_search_build_t *
                                                  build);
