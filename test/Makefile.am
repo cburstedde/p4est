@@ -49,17 +49,22 @@ p4est_test_programs += \
         test/p8est_test_reorder
 endif
 endif
+if P4EST_ENABLE_BUILD_2D
+if P4EST_ENABLE_BUILD_3D
 if P4EST_ENABLE_BUILD_P6EST
 p4est_test_programs += test/p6est_test_all
+endif
+endif
 endif
 
 check_PROGRAMS += $(p4est_test_programs)
 
-## Comment: We should probably wrap this into P4EST_ENABLE_BUILD_2D etc.
-##          Otherwise automake generates the targets and it will be legal
-##          to call make test/p4est_test_comm even when BUILD_2D is off,
-##          which will fail due to missing dependencies from libp4est.so.
+## We must wrap this into P4EST_ENABLE_BUILD_2D etc.
+## Otherwise automake generates the targets and it will be legal
+## to call make test/p4est_test_comm even when BUILD_2D is off,
+## which will fail due to missing dependencies from libp4est.so.
 
+if P4EST_ENABLE_BUILD_2D
 test_p4est_test_comm_SOURCES = test/test_comm.c
 test_p4est_test_hash_SOURCES = test/test_hash.c
 test_p4est_test_quadrants_SOURCES = test/test_quadrants2.c
@@ -89,7 +94,15 @@ test_p4est_test_conn_reduce_SOURCES = test/test_conn_reduce2.c
 test_p4est_test_plex_SOURCES = test/test_plex2.c
 test_p4est_test_connrefine_SOURCES = test/test_connrefine2.c
 test_p4est_test_subcomm_SOURCES = test/test_subcomm2.c
+if P4EST_WITH_METIS
+test_p4est_test_reorder_SOURCES = test/test_reorder2.c
+endif
 
+test_p4est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS)
+test_p4est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD)
+endif
+
+if P4EST_ENABLE_BUILD_3D
 test_p8est_test_quadrants_SOURCES = test/test_quadrants3.c
 test_p8est_test_balance_SOURCES = test/test_balance3.c
 test_p8est_test_partition_SOURCES = test/test_partition3.c
@@ -118,17 +131,20 @@ test_p8est_test_conn_reduce_SOURCES = test/test_conn_reduce3.c
 test_p8est_test_plex_SOURCES = test/test_plex3.c
 test_p8est_test_connrefine_SOURCES = test/test_connrefine3.c
 test_p8est_test_subcomm_SOURCES = test/test_subcomm3.c
-
-test_p6est_test_all_SOURCES = test/test_all6.c
-
-test_p4est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
-test_p8est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS) 
-test_p4est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD) 
-test_p8est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD) 
-
 if P4EST_WITH_METIS
-test_p4est_test_reorder_SOURCES = test/test_reorder2.c
 test_p8est_test_reorder_SOURCES = test/test_reorder3.c
+endif
+
+test_p8est_test_plex_CPPFLAGS = @P4EST_PETSC_INCLUDE_DIRS@ $(AM_CPPFLAGS)
+test_p8est_test_plex_LDADD = @P4EST_PETSC_LINK_LIBS@ $(LDADD)
+endif
+
+if P4EST_ENABLE_BUILD_2D
+if P4EST_ENABLE_BUILD_3D
+if P4EST_ENABLE_BUILD_P6EST
+test_p6est_test_all_SOURCES = test/test_all6.c
+endif
+endif
 endif
 
 TESTS += $(p4est_test_programs)
