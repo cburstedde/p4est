@@ -136,6 +136,17 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
  */
 int                 p8est_comm_is_empty (p8est_t * p8est, int p);
 
+/** Test whether a quadrant is fully contained in a rank's owned regien.
+ * This function may return false when \ref p8est_comm_is_owner returns true.
+ * \param [in] rank    Rank whose ownership is tested.
+ *                     Assumes a forest with no overlaps.
+ * \return true if rank is the owner of the whole area of the quadrant.
+ */
+int                 p8est_comm_is_contained (p8est_t * p8est,
+                                             p4est_locidx_t which_tree,
+                                             const p8est_quadrant_t * q,
+                                             int rank);
+
 /** Test ownershop of a quadrant via p8est->global_first_position.
  * The quadrant is considered owned if its first descendant is owned.
  * This, a positive result occurs even if its last descendant overlaps

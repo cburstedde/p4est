@@ -575,6 +575,53 @@ p4est_comm_is_empty (p4est_t * p4est, int p)
 }
 
 int
+p4est_comm_is_contained (p4est_t * p4est, p4est_locidx_t which_tree,
+                         const p4est_quadrant_t * q, int rank)
+{
+  p4est_topidx_t      ctree;
+  p4est_quadrant_t    qlast;
+  const p4est_quadrant_t *cur;
+
+  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
+  P4EST_ASSERT (p4est->global_first_position != NULL);
+  P4EST_ASSERT (0 <= which_tree &&
+                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (q != NULL);
+  P4EST_ASSERT (0 <= rank && rank < p4est->mpisize);
+  P4EST_ASSERT (p4est_quadrant_is_node (q, 1) || p4est_quadrant_is_valid (q));
+
+  /* check whether q begins on a lower processor than rank */
+  cur = &p4est->global_first_position[rank];
+  P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
+  ctree = cur->p.which_tree;
+  if (which_tree < ctree ||
+      (which_tree == ctree &&
+       (p4est_quadrant_compare (q, cur) < 0 &&
+        (q->x != cur->x || q->y != cur->y
+#ifdef P4_TO_P8
+         || q->z != cur->z
+#endif
+        )))) {
+    return 0;
+  }
+
+  /* check whether q ends on a higher processor than rank */
+  ++cur;
+  P4EST_ASSERT (cur == &p4est->global_first_position[rank + 1]);
+  P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
+  ctree = cur->p.which_tree;
+  if (which_tree > ctree ||
+      (which_tree == ctree &&
+       (p4est_quadrant_last_descendant (q, &qlast, P4EST_QMAXLEVEL),
+        p4est_quadrant_compare (cur, &qlast) <= 0))) {
+    return 0;
+  }
+
+  /* the quadrant lies fully in the ownership region of rank */
+  return 1;
+}
+
+int
 p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
                      const p4est_quadrant_t * q, int rank)
 {
