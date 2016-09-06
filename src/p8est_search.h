@@ -197,6 +197,7 @@ typedef int         (*p8est_search_local_t) (p8est_t * p4est,
  * empty array, the recursion will stop immediately!
  *
  * \param [in] p4est        The forest to be searched.
+ * \param [in] call_post    If true, call quadrant callback both pre and post.
  * \param [in] quadrant_fn  Executed once when a quadrant is entered, and once
  *                          when it is left (the second time only if points are
  *                          present and the first call returned true).
@@ -215,7 +216,7 @@ typedef int         (*p8est_search_local_t) (p8est_t * p4est,
  *                          If not NULL, the \b point_fn is called on
  *                          its members during the search.
  */
-void                p8est_search_local (p8est_t * p4est,
+void                p8est_search_local (p8est_t * p4est, int call_post,
                                         p8est_search_local_t quadrant_fn,
                                         p8est_search_local_t point_fn,
                                         sc_array_t * points);
@@ -255,6 +256,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
+ * \param [in] call_post    If true, call quadrant callback both pre and post.
  * \param [in] quadrant_fn  This function controls the recursion,
  *                          which only continues deeper if this
  *                          callback returns true for a branch quadrant.
@@ -266,7 +268,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  *                          passed to the callback \b point_fn.
  *                          See \ref p8est_search_local for details.
  */
-void                p8est_search_partition (p8est_t * p4est,
+void                p8est_search_partition (p8est_t * p4est, int call_post,
                                             p8est_search_partition_t
                                             quadrant_fn,
                                             p8est_search_partition_t point_fn,
@@ -366,21 +368,19 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  * will be faster since it employs specific local optimizations.
  *
  * \param [in] p4est        The forest to be searched.
- *
+ * \param [in] call_post    If true, call quadrant callback both pre and post.
  * \param [in] quadrant_fn  Executed once for each quadrant that is entered.
  *                          If the callback returns false, this quadrant and
  *                          its descendants are excluded from the search, and
  *                          the points in this branch are not queried further.
  *                          Its \b point argument is always NULL.
  *                          Callback may be NULL in which case it is ignored.
- *
  * \param [in] point_fn     Executed once for each point that is relevant for a
  *                          quadrant of the search.  If it returns true, the
  *                          point is tracked further down that branch, else it
  *                          is discarded from the queries for the children.
  *                          If \b points is not NULL, this callback must be not
  *                          NULL.  If \b points is NULL, it is not called.
- *
  * \param [in] points       User-defined array of points.  We do not interpret
  *                          a point, just pass it into the callbacks.
  *                          If NULL, only the \b quadrant_fn callback
@@ -388,7 +388,7 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  *                          noops.  If not NULL, the \b point_fn is
  *                          called on its members during the search.
  */
-void                p8est_search_all (p8est_t * p4est,
+void                p8est_search_all (p8est_t * p4est, int call_post,
                                       p8est_search_all_t quadrant_fn,
                                       p8est_search_all_t point_fn,
                                       sc_array_t * points);

@@ -457,6 +457,7 @@ typedef struct p4est_local_recursion
 {
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
+  int                 call_post;        /**< Boolean to call quadrant twice. */
   p4est_search_local_t quadrant_fn;     /**< The quadrant callback. */
   p4est_search_local_t point_fn;        /**< The point callback. */
   sc_array_t         *points;           /**< Array of points to search. */
@@ -573,7 +574,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
     }
 
     /* call post-quadrant callback, which may also terminate the recursion */
-    if (rec->quadrant_fn != NULL &&
+    if (rec->call_post && rec->quadrant_fn != NULL &&
         !rec->quadrant_fn (rec->p4est, rec->which_tree,
                            quadrant, local_num, NULL)) {
       /* clears memory and will trigger the return below */
@@ -607,7 +608,8 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
 }
 
 void
-p4est_search_local (p4est_t * p4est, p4est_search_local_t quadrant_fn,
+p4est_search_local (p4est_t * p4est,
+                    int call_post, p4est_search_local_t quadrant_fn,
                     p4est_search_local_t point_fn, sc_array_t * points)
 {
   p4est_topidx_t      jt;
@@ -629,6 +631,7 @@ p4est_search_local (p4est_t * p4est, p4est_search_local_t quadrant_fn,
   /* set recursion context */
   rec->p4est = p4est;
   rec->which_tree = -1;
+  rec->call_post = call_post;
   rec->quadrant_fn = quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
@@ -776,6 +779,7 @@ typedef struct p4est_partition_recursion
 {
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
+  int                 call_post;        /**< Boolean to call quadrant twice. */
   p4est_search_partition_t quadrant_fn; /**< Per-quadrant callback. */
   p4est_search_partition_t point_fn;    /**< Per-point callback. */
   sc_array_t         *points;           /**< Array of points to search. */
@@ -852,7 +856,7 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
     }
 
     /* call post-quadrant callback, which may also terminate the recursion */
-    if (rec->quadrant_fn != NULL &&
+    if (rec->call_post && rec->quadrant_fn != NULL &&
         !rec->quadrant_fn (rec->p4est, rec->which_tree,
                            quadrant, pfirst, plast, NULL)) {
       /* clears memory and will trigger the return below */
@@ -944,7 +948,8 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
 }
 
 void
-p4est_search_partition (p4est_t * p4est, p4est_search_partition_t quadrant_fn,
+p4est_search_partition (p4est_t * p4est,
+                        int call_post, p4est_search_partition_t quadrant_fn,
                         p4est_search_partition_t point_fn,
                         sc_array_t * points)
 {
@@ -985,6 +990,7 @@ p4est_search_partition (p4est_t * p4est, p4est_search_partition_t quadrant_fn,
   /* now loop through all trees, local or not */
   rec->p4est = p4est;
   rec->which_tree = -1;
+  rec->call_post = call_post;
   rec->quadrant_fn = quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
@@ -1047,6 +1053,7 @@ typedef struct p4est_all_recursion
 {
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
+  int                 call_post;        /**< Boolean to call quadrant twice. */
   p4est_search_all_t  quadrant_fn;      /**< Per-quadrant callback. */
   p4est_search_all_t  point_fn;         /**< Per-point callback. */
   sc_array_t         *points;           /**< Array of points to search. */
@@ -1172,7 +1179,7 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
     }
 
     /* call post-quadrant callback, which may also terminate the recursion */
-    if (rec->quadrant_fn != NULL &&
+    if (rec->call_post && rec->quadrant_fn != NULL &&
         !rec->quadrant_fn (rec->p4est, rec->which_tree,
                            quadrant, pfirst, plast, local_num, NULL)) {
       /* clears memory and will trigger the return below */
@@ -1280,7 +1287,8 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
 }
 
 void
-p4est_search_all (p4est_t * p4est, p4est_search_all_t quadrant_fn,
+p4est_search_all (p4est_t * p4est,
+                  int call_post, p4est_search_all_t quadrant_fn,
                   p4est_search_all_t point_fn, sc_array_t * points)
 {
   const int           num_procs = p4est->mpisize;
@@ -1322,6 +1330,7 @@ p4est_search_all (p4est_t * p4est, p4est_search_all_t quadrant_fn,
   /* now loop through all trees, local or not */
   rec->p4est = p4est;
   rec->which_tree = -1;
+  rec->call_post = call_post;
   rec->quadrant_fn = quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
