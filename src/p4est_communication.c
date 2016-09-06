@@ -579,52 +579,48 @@ p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
                      const p4est_quadrant_t * q, int rank)
 {
   p4est_topidx_t      ctree;
-  p4est_quadrant_t    cur;
-  const p4est_quadrant_t *global_first_position =
-    p4est->global_first_position;
+  const p4est_quadrant_t *cur;
 
-  cur.level = P4EST_QMAXLEVEL;
+  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
+  P4EST_ASSERT (p4est->global_first_position != NULL);
   P4EST_ASSERT (0 <= which_tree &&
                 which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (q != NULL);
   P4EST_ASSERT (0 <= rank && rank < p4est->mpisize);
   P4EST_ASSERT (p4est_quadrant_is_node (q, 1) || p4est_quadrant_is_valid (q));
 
-  /* check if q is on a lower processor than guess */
-  ctree = global_first_position[rank].p.which_tree;
-  cur.x = global_first_position[rank].x;
-  cur.y = global_first_position[rank].y;
-#ifdef P4_TO_P8
-  cur.z = global_first_position[rank].z;
-#endif
+  /* check whether q begins on a lower processor than rank */
+  cur = &p4est->global_first_position[rank];
+  P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
+  ctree = cur->p.which_tree;
   if (which_tree < ctree ||
       (which_tree == ctree &&
-       (p4est_quadrant_compare (q, &cur) < 0 &&
-        (q->x != cur.x || q->y != cur.y
+       (p4est_quadrant_compare (q, cur) < 0 &&
+        (q->x != cur->x || q->y != cur->y
 #ifdef P4_TO_P8
-         || q->z != cur.z
+         || q->z != cur->z
 #endif
         )))) {
     return 0;
   }
 
-  /* check if q is on a higher processor than guess */
-  ctree = global_first_position[rank + 1].p.which_tree;
-  cur.x = global_first_position[rank + 1].x;
-  cur.y = global_first_position[rank + 1].y;
-#ifdef P4_TO_P8
-  cur.z = global_first_position[rank + 1].z;
-#endif
+  /* check whether q lies fully on a higher processor than rank */
+  ++cur;
+  P4EST_ASSERT (cur == &p4est->global_first_position[rank + 1]);
+  P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
+  ctree = cur->p.which_tree;
   if (which_tree > ctree ||
       (which_tree == ctree &&
-       (p4est_quadrant_compare (&cur, q) <= 0 ||
-        (q->x == cur.x && q->y == cur.y
+       (p4est_quadrant_compare (cur, q) <= 0 ||
+        (q->x == cur->x && q->y == cur->y
 #ifdef P4_TO_P8
-         && q->z == cur.z
+         && q->z == cur->z
 #endif
         )))) {
     return 0;
   }
 
+  /* we have not covered the case that q may end on a higher process */
   return 1;
 }
 

@@ -136,10 +136,13 @@ void                p4est_comm_count_pertree (p4est_t * p4est,
  */
 int                 p4est_comm_is_empty (p4est_t * p4est, int p);
 
-/** Tests ownershop of a quadrant via p4est->global_first_position.
- * Assumes a tree with no overlaps.
+/** Test ownershop of a quadrant via p4est->global_first_position.
+ * The quadrant is considered owned if its first descendant is owned.
+ * This, a positive result occurs even if its last descendant overlaps
+ * a higher process.
  * \param [in] rank    Rank whose ownership is tested.
- * \return true if rank is the owner.
+ *                     Assumes a forest with no overlaps.
+ * \return true if rank is the owner of the first descendant.
  */
 int                 p4est_comm_is_owner (p4est_t * p4est,
                                          p4est_locidx_t which_tree,
