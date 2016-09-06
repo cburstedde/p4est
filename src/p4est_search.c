@@ -821,7 +821,7 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
   if (rec->points != NULL && act_count == 0)
     return;
 
-  /* execute quadrant callback if present, which may stop the recursion */
+  /* execute pre-quadrant callback if present, which may stop the recursion */
   if (rec->quadrant_fn != NULL &&
       !rec->quadrant_fn (rec->p4est, rec->which_tree,
                          quadrant, pfirst, plast, NULL)) {
@@ -850,7 +850,17 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
         *qz = *pz;
       }
     }
+
+    /* call post-quadrant callback, which may also terminate the recursion */
+    if (rec->quadrant_fn != NULL &&
+        !rec->quadrant_fn (rec->p4est, rec->which_tree,
+                           quadrant, pfirst, plast, NULL)) {
+      /* clears memory and will trigger the return below */
+      sc_array_reset (chact);
+    }
+
     if (chact->elem_count == 0) {
+      /* with zero members there is no need to call sc_array_reset */
       return;
     }
   }
@@ -1123,7 +1133,7 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
   }
   P4EST_ASSERT (!is_leaf == (local_num == -1));
 
-  /* execute quadrant callback if present, which may stop the recursion */
+  /* execute pre-quadrant callback if present, which may stop the recursion */
   if (rec->quadrant_fn != NULL &&
       !rec->quadrant_fn (rec->p4est, rec->which_tree,
                          quadrant, pfirst, plast, local_num, NULL)) {
@@ -1160,7 +1170,17 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
         *qz = *pz;
       }
     }
+
+    /* call post-quadrant callback, which may also terminate the recursion */
+    if (rec->quadrant_fn != NULL &&
+        !rec->quadrant_fn (rec->p4est, rec->which_tree,
+                           quadrant, pfirst, plast, local_num, NULL)) {
+      /* clears memory and will trigger the return below */
+      sc_array_reset (chact);
+    }
+
     if (chact->elem_count == 0) {
+      /* with zero members there is no need to call sc_array_reset */
       return;
     }
   }
