@@ -153,11 +153,14 @@ p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
  * Copying of quadrant user data is optional.
  * If old and new data sizes are 0, the user_data field is copied regardless.
  * The inspect member of the copy is set to NULL.
+ * The revision counter of the copy is set to zero.
  *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
  * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
- * \return  Returns a valid p8est that does not depend on the input.
+ * \return  Returns a valid p8est that does not depend on the input,
+ *                         except for borrowing the same connectivity.
+ *                         Its revision counter is 0.
  */
 p8est_t            *p8est_copy_ext (p8est_t * input, int copy_data,
                                     int duplicate_mpicomm);

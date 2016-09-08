@@ -449,6 +449,13 @@ p4est_is_valid (p4est_t * p4est)
     goto failtest;
   }
 
+  /* make sure the revision counter is legitimate */
+  if (p4est->revision < 0) {
+    P4EST_NOTICE ("p4est invalid revision counter\n");
+    failed = 1;
+    goto failtest;
+  }
+
   /* check last item of global partition */
   if (!(p4est->global_first_position[num_procs].p.which_tree ==
         p4est->connectivity->num_trees &&
