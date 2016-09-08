@@ -272,8 +272,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
      */
     for (j = 0; j < 2; ++j) {
       if (info->tree_boundary <= P8EST_CONNECT_EDGE) {
-        if ((nedgef[j] == (int) side2->edge && nftree[j] == side2->treeid) ||
-            (side1->treeid == side2->treeid)) {
+        if ((nedgef[j] == (int) side2->edge && nftree[j] == side2->treeid)) {
           ignore = 1;
           break;
         }
