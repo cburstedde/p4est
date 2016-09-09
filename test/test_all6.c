@@ -183,7 +183,7 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
-#ifndef P4EST_DEBUG
+#ifndef P4EST_ENABLE_DEBUG
   sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
 #endif
   p4est_init (NULL, SC_LP_DEFAULT);
