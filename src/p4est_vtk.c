@@ -915,10 +915,8 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                   "_vtk.h for more information.");
 
   fprintf (cont->vtufile, "      <PointData");
-  if (point_scalars != NULL)
-    fprintf (cont->vtufile, " Scalars=\"%s\"", point_scalars);
-  if (point_vectors != NULL)
-    fprintf (cont->vtufile, " Vectors=\"%s\"", point_vectors);
+  fprintf (cont->vtufile, " Scalars=\"%s\"", point_scalars);
+  fprintf (cont->vtufile, " Vectors=\"%s\"", point_vectors);
   fprintf (cont->vtufile, ">\n");
 
   if (ferror (cont->vtufile)) {
