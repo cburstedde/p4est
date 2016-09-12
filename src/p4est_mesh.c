@@ -204,10 +204,10 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
  *                            for full edges
  * \param[in][out] mesh       The mesh structure that will be filled
  *                            with the edge neighbors along current edge
- * \param[in]      nftree     Tree indices of face neighbors wrt. the
- *                            current edge
- * \param[in]      nedgef     Edge indices of face neighbors wrt. the
- *                            current edge
+ * \param[in]      nftree     Tree indices of face neighbors wrt. the current
+ *                            edge
+ * \param[in]      nedgef     Edge indices of face neighbors wrt. the current
+ *                            edge
  * \param[in]      cz         Number of adjacent trees
  * \param[in]      zz         internal number of currently processed edge
  */
@@ -219,7 +219,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
                                     p4est_locidx_t * nftree,
                                     p4est_locidx_t * nedgef, int cz, int zz)
 {
-  int                 ignore, j, z2;
+  int                 ignore, j, k, z2;
   int                 nAdjacentQuads, qid1, qid2, edgeid;
   p8est_iter_edge_side_t *side2;
   p4est_tree_t       *tree1, *tree2;
@@ -271,11 +271,23 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
      * tree as side1.
      */
     for (j = 0; j < 2; ++j) {
-      if (info->tree_boundary <= P8EST_CONNECT_EDGE) {
+      if (info->tree_boundary == P4EST_CONNECT_FACE) {
+        for (j = 0; j < 2; ++j) {
+          for (k = 0; k < 2; ++k) {
+            if (side1->faces[j] == side2->faces[k]) {
+              ignore = 1;
+            }
+          }
+        }
+      }
+      else if (info->tree_boundary == P8EST_CONNECT_EDGE) {
         if ((nedgef[j] == (int) side2->edge && nftree[j] == side2->treeid)) {
           ignore = 1;
           break;
         }
+      }
+      else {
+        SC_ABORT_NOT_REACHED ();
       }
     }
     if (!ignore) {
@@ -1263,12 +1275,9 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
           p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->
-                                                                    face,
-                                                                    side2->
-                                                                    face,
-                                                                    info->
-                                                                    orientation);
+                                                                    side->face,
+                                                                    side2->face,
+                                                                    info->orientation);
         if (!side2->is.hanging.is_ghost[pos]) {
           tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
           jls[h] = side2->is.hanging.quadid[pos] + tree->quadrants_offset;
@@ -1299,12 +1308,9 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
           p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->
-                                                                    face,
-                                                                    side2->
-                                                                    face,
-                                                                    info->
-                                                                    orientation);
+                                                                    side->face,
+                                                                    side2->face,
+                                                                    info->orientation);
         if (!side2->is.hanging.is_ghost[pos]) {
           in_qtoq = P4EST_FACES * jls[h] + side2->face;
           P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
