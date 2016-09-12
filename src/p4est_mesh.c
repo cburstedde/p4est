@@ -1743,7 +1743,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       }
       if (neighboring_qids != NULL) {
         enc_ptr = (int *) sc_array_push (neighboring_qids);
-        *enc_ptr = quad_idx;
+        *enc_ptr = neighbor_idx;
       }
     }
     return 0;
@@ -1776,7 +1776,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
       if (neighboring_qids != NULL) {
         enc_ptr = (int *) sc_array_push (neighboring_qids);
-        *enc_ptr = quad_idx;
+        *enc_ptr = neighbor_idx;
       }
     }
 
@@ -1797,7 +1797,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
       if (neighboring_qids != NULL) {
         enc_ptr = (int *) sc_array_push (neighboring_qids);
-        *enc_ptr = quad_idx;
+        *enc_ptr = neighbor_idx;
       }
     }
 
@@ -1890,7 +1890,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
       if (neighboring_qids != NULL) {
         enc_ptr = (int *) sc_array_push (neighboring_qids);
-        *enc_ptr = quad_idx;
+        *enc_ptr = neighbor_idx;
       }
     }
 
@@ -1911,7 +1911,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
       if (neighboring_qids != NULL) {
         enc_ptr = (int *) sc_array_push (neighboring_qids);
-        *enc_ptr = quad_idx;
+        *enc_ptr = neighbor_idx;
       }
     }
 
