@@ -148,7 +148,7 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   }
 
   /* test traversal routine */
-  p4est_search_partition (p4est, traverse_fn, NULL, NULL);
+  p4est_search_partition (p4est, 1, traverse_fn, NULL, NULL);
 }
 
 static void

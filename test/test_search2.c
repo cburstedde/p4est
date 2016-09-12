@@ -475,7 +475,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   /* 1. Create a p4est that shall be identical to the old one. */
 
   tb->build = p4est_search_build_new (p4est, 0, NULL, NULL);
-  p4est_search_local (p4est, test_search_local_1, NULL, NULL);
+  p4est_search_local (p4est, 0, test_search_local_1, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   SC_CHECK_ABORT (p4est_is_equal (p4est, built, 0), "Mismatch build_local 1");
   p4est_destroy (built);
@@ -484,7 +484,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
    *    Coarsen recursively, compare. */
 
   tb->build = p4est_search_build_new (p4est, 4, NULL, NULL);
-  p4est_search_local (p4est, test_search_local_2, NULL, NULL);
+  p4est_search_local (p4est, 0, test_search_local_2, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   copy = p4est_copy (p4est, 0);
   p4est_coarsen (copy, 1, test_search_build_coarsen, NULL);
@@ -499,7 +499,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   tb->count_add = 0;
   tb->build = p4est_search_build_new (p4est, 0, test_search_init_3, tb);
   p4est_search_build_init_add (tb->build, test_search_init_add_3);
-  p4est_search_local (p4est, test_search_local_3, NULL, NULL);
+  p4est_search_local (p4est, 1, test_search_local_3, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   p4est_search_build_verify_3 (built);
   SC_CHECK_ABORT (p4est_is_valid (built), "Invalid build_local 3");
@@ -514,7 +514,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   tb->build =
     p4est_search_build_new (p4est, sizeof (long), test_search_init_4, tb);
   p4est_search_build_init_add (tb->build, test_search_init_add_4);
-  p4est_search_local (p4est, test_search_local_4, NULL, NULL);
+  p4est_search_local (p4est, 0, test_search_local_4, NULL, NULL);
   built = p4est_search_build_complete (tb->build);
   p4est_search_build_verify_4 (built);
   SC_CHECK_ABORT (p4est_is_valid (built), "Invalid build_local 4");
@@ -529,7 +529,7 @@ test_search_build_local (sc_MPI_Comm mpicomm)
   tb->init_default = 0;
   tb->init_add = 0;
   tb->build = p4est_search_build_new (p4est, 0, NULL, tb);
-  p4est_search_local (p4est, NULL, test_search_point_5, points);
+  p4est_search_local (p4est, 0, NULL, test_search_point_5, points);
   built = p4est_search_build_complete (tb->build);
 #if 0
   p4est_search_build_verify_5 (built);
@@ -630,7 +630,7 @@ main (int argc, char **argv)
 
   /* Go */
   found_count = 0;
-  p4est_search_local (p4est, NULL, search_callback, points);
+  p4est_search_local (p4est, 0, NULL, search_callback, points);
   mpiret = sc_MPI_Allreduce (&found_count, &found_total,
                              1, sc_MPI_INT, sc_MPI_SUM, mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -640,7 +640,7 @@ main (int argc, char **argv)
 
   /* Use another search to count local quadrants */
   local_count = 0;
-  p4est_search_local (p4est, count_callback, NULL, NULL);
+  p4est_search_local (p4est, 0, count_callback, NULL, NULL);
   SC_CHECK_ABORT (local_count == p4est->local_num_quadrants, "Count search");
 
   /* Clear memory */
