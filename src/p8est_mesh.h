@@ -227,10 +227,11 @@ p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
  *                                   6 .. 17 neighbor(-s) across e_{i-6}
  *                                  18 .. 25 neighbor(-s) across c_{i-18}
  * \param [out] neighboring_quads  Array containing neighboring quad(-s)
- *                                 Contains p4est_quadrant_t **.
+ *                                 Needs to be empty, contains
+ *                                 p4est_quadrant_t**.
  * \param [out] neighboring_encs   Array containing encodings for neighboring
  *                                 quads as described below
- *                                 Contains int.
+ *                                 Needs to be empty, contains int.
  * CAUTION: Note, that the encodings differ from the encodings saved in the
  *          mesh.
  *          Positive values are for local quadrants, negative values indicate
@@ -252,6 +253,11 @@ p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
  *                    73 ..  96 => half size neighbors
  *                                 73 + r * 12 + ne; r, ne as above
  *          Corners:   1 ..   8 => nc + 1; nc = 0 .. 7 corner index
+ * \param [out] neighboring_qids   Array containing quadrant ids for neighboring
+ *                                 quadrants. May be NULL, then no neighboring
+ *                                 qids are collected.
+ *                                 If non-NULL the array needs to be empty and
+ *                                 will contain int.
  */
 p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
                                               p8est_ghost_t * ghost,
@@ -259,7 +265,8 @@ p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
                                               p4est_locidx_t curr_quad_id,
                                               p4est_locidx_t direction,
                                               sc_array_t * neighboring_quads,
-                                              sc_array_t * neighboring_encs);
+                                              sc_array_t * neighboring_encs,
+                                              sc_array_t * neighboring_qids);
 
 /** Find a quadrant based on its cumulative number in the local forest.
  * If the quad_to_tree field of the mesh structure exists, this is O(1).

@@ -1584,7 +1584,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
                           p4est_locidx_t curr_quad_id,
                           p4est_locidx_t direction,
                           sc_array_t * neighboring_quads,
-                          sc_array_t * neighboring_encs)
+                          sc_array_t * neighboring_encs,
+                          sc_array_t * neighboring_qids)
 {
   int                 i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
@@ -1595,6 +1596,15 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
   /*  result arrays should be empty, */
   P4EST_ASSERT (neighboring_quads->elem_count == 0);
   P4EST_ASSERT (neighboring_encs->elem_count == 0);
+  P4EST_ASSERT (neighboring_qids == NULL ||
+                neighboring_qids->elem_count == 0);
+
+  /* result arrays should have matching element sizes */
+  P4EST_ASSERT (neighboring_quads->elem_size == sizeof (p4est_quadrant_t *));
+  P4EST_ASSERT (neighboring_encs->elem_size == sizeof (int));
+  P4EST_ASSERT (neighboring_qids == NULL ||
+                neighboring_qids->elem_size == sizeof (int));
+
   /*  mesh has to be created, i.e. not NULL, */
   P4EST_ASSERT (mesh != NULL);
   /*  curr_quad_id must be part of the processors quadrants, */
@@ -1697,6 +1707,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           /* convert encoding */
           *enc_ptr = -neighbor_encoding - convFace;
         }
+        if (neighboring_qids != NULL) {
+          enc_ptr = (int *) sc_array_push (neighboring_qids);
+          *enc_ptr = quad_idx;
+        }
       }
     }
     else {
@@ -1727,6 +1741,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
         neighbor_encoding++;
         *enc_ptr = -neighbor_encoding;
       }
+      if (neighboring_qids != NULL) {
+        enc_ptr = (int *) sc_array_push (neighboring_qids);
+        *enc_ptr = quad_idx;
+      }
     }
     return 0;
   }
@@ -1755,6 +1773,11 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       /* convert encoding */
       neighbor_encoding++;
       *enc_ptr = neighbor_encoding;
+
+      if (neighboring_qids != NULL) {
+        enc_ptr = (int *) sc_array_push (neighboring_qids);
+        *enc_ptr = quad_idx;
+      }
     }
 
     if (lq < neighbor_idx && neighbor_idx < lq + gq) {
@@ -1771,6 +1794,11 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       /* convert encoding */
       neighbor_encoding++;
       *enc_ptr = -neighbor_encoding;
+
+      if (neighboring_qids != NULL) {
+        enc_ptr = (int *) sc_array_push (neighboring_qids);
+        *enc_ptr = quad_idx;
+      }
     }
 
     if ((lq + gq) <= neighbor_idx) {
@@ -1820,6 +1848,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           neighbor_encoding += (neighbor_encoding < 0 ? convEdge : 1);
           *enc_ptr = -neighbor_encoding;
         }
+        if (neighboring_qids != NULL) {
+          enc_ptr = (int *) sc_array_push (neighboring_qids);
+          *enc_ptr = quad_idx;
+        }
       }
     }
     return 0;
@@ -1853,8 +1885,13 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       /* create implicitly saved encoding */
       neighbor_encoding = (direction - lCorner) ^ encHelper;
       /* convert encoding */
-      neighbor_encoding++;
+      ++neighbor_encoding;
       *enc_ptr = neighbor_encoding;
+
+      if (neighboring_qids != NULL) {
+        enc_ptr = (int *) sc_array_push (neighboring_qids);
+        *enc_ptr = quad_idx;
+      }
     }
 
     else if (lq < neighbor_idx && neighbor_idx < lq + gq) {
@@ -1869,8 +1906,13 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       /* create implicitly saved encoding */
       neighbor_encoding = (direction - lCorner) ^ encHelper;
       /* convert encoding */
-      neighbor_encoding++;
+      ++neighbor_encoding;
       *enc_ptr = -neighbor_encoding;
+
+      if (neighboring_qids != NULL) {
+        enc_ptr = (int *) sc_array_push (neighboring_qids);
+        *enc_ptr = quad_idx;
+      }
     }
 
     else if ((lq + gq) <= neighbor_idx) {
@@ -1919,6 +1961,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           /* convert encoding */
           neighbor_encoding++;
           *enc_ptr = -neighbor_encoding;
+        }
+        if (neighboring_qids != NULL) {
+          enc_ptr = (int *) sc_array_push (neighboring_qids);
+          *enc_ptr = quad_idx;
         }
       }
     }
