@@ -204,10 +204,12 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
 void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 
 /** Get specific process local quadrant
+ * Needs a mesh with populated quad_to_tree array.
  *
  * \param [in] p4est  The forest.
  * \param [in] mesh   The mesh
- * \param [in] qid    The id of the quadrant we want to obtain
+ * \param [in] qid    The id of the quadrant we want to obtain in process-local
+ *                    enumeration.
  * \returns           A pointer to the requested quadrant
  */
 p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
