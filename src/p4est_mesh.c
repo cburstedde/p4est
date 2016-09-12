@@ -1562,17 +1562,17 @@ p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
 
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
-  p4est_topidx_t treeid = mesh->quad_to_tree[qid];
-  p4est_locidx_t tree_local_qid;
+  p4est_topidx_t      treeid = mesh->quad_to_tree[qid];
+  p4est_locidx_t      tree_local_qid;
 
   P4EST_ASSERT (p4est->trees != NULL);
   P4EST_ASSERT (treeid < p4est->trees->elem_count);
-  tree = p4est_tree_array_index(p4est->trees, mesh->quad_to_tree[qid]);
+  tree = p4est_tree_array_index (p4est->trees, mesh->quad_to_tree[qid]);
   tree_local_qid = qid - tree->quadrants_offset;
 
   P4EST_ASSERT (&tree->quadrants != NULL);
   P4EST_ASSERT (tree_local_qid < tree->quadrants.elem_count);
-  quad = p4est_quadrant_array_index(&tree->quadrants, tree_local_qid);
+  quad = p4est_quadrant_array_index (&tree->quadrants, tree_local_qid);
 
   return quad;
 }
