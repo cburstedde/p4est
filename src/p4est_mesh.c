@@ -1378,7 +1378,16 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
     P4EST_FACES * lqz * (sizeof (p4est_locidx_t) + sizeof (int8_t)) +
     ngz * sizeof (int) + sc_array_memory_used (mesh->quad_to_half, 1);
 
+#ifdef P4_TO_P8
   /* add edge information */
+  if (mesh->quad_to_edge != NULL) {
+    all_memory +=
+      P8EST_EDGES * lqz * sizeof (p4est_locidx_t) +
+      sc_array_memory_used (mesh->edge_offset, 1) +
+      sc_array_memory_used (mesh->edge_quad, 1) +
+      sc_array_memory_used (mesh->edge_corner, 1);
+  }
+#endif /* P4_TO_P8 */
 
   /* add corner information */
   if (mesh->quad_to_corner != NULL) {
