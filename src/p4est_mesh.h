@@ -187,7 +187,7 @@ p4est_quadrant_t   *p4est_mesh_get_quadrant (p4est_t * p4est,
  *                                  4 .. 7 neighbor(-s) across c_{i-4}
  * \param [out] neighboring_quads  Array containing neighboring quad(-s).
  *                                 Needs to be empty, contains
- *                                 p4est_quadrant_t**.
+ *                                 p4est_quadrant_t*.
  * \param [out] neighboring_encs   Array containing encodings for neighboring
  *                                 quads.
  *                                 Needs to be empty, contains int.

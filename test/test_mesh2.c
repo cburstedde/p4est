@@ -325,7 +325,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
           direction = i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
           neighboring_encs = sc_array_new (sizeof (int));
           neighboring_qids = sc_array_new (sizeof (int));
           p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
@@ -353,7 +353,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
           direction = dir_offset_edge + i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
           neighboring_encs = sc_array_new (sizeof (int));
           neighboring_qids = sc_array_new (sizeof (int));
           p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
@@ -382,7 +382,7 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
           direction = dir_offset_corner + i;
           sc_array_t         *neighboring_quads, *neighboring_encs;
           sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t **));
+          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
           neighboring_encs = sc_array_new (sizeof (int));
           neighboring_qids = sc_array_new (sizeof (int));
           p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
