@@ -1385,7 +1385,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
       P8EST_EDGES * lqz * sizeof (p4est_locidx_t) +
       sc_array_memory_used (mesh->edge_offset, 1) +
       sc_array_memory_used (mesh->edge_quad, 1) +
-      sc_array_memory_used (mesh->edge_corner, 1);
+      sc_array_memory_used (mesh->edge_edge, 1);
   }
 #endif /* P4_TO_P8 */
 
