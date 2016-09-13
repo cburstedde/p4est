@@ -1105,7 +1105,6 @@ p8est_connectivity_edge_neighbor_edge_corner_orientation (int ec, int e,
   P4EST_ASSERT (0 <= ne && ne < P8EST_EDGES);
   P4EST_ASSERT (0 <= o && o < 2);
 
-
   pset = p8est_edge_corner_permutation_sets[o];
   nec = p8est_edge_corner_permuations[pset][ec];
 
