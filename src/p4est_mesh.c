@@ -1773,7 +1773,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       neighbor_encoding = (direction - lEdge) ^ 3;
 
       /* convert encoding */
-      neighbor_encoding++;
+      ++neighbor_encoding;
       *enc_ptr = neighbor_encoding;
 
       if (neighboring_qids != NULL) {
@@ -1795,7 +1795,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       /* create implicitly saved encoding */
       neighbor_encoding = (direction - lEdge) ^ 3;
       /* convert encoding */
-      neighbor_encoding++;
+      ++neighbor_encoding;
       *enc_ptr = -neighbor_encoding;
 
       if (neighboring_qids != NULL) {
@@ -1951,7 +1951,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
           enc_ptr = (int *) sc_array_push (neighboring_encs);
           /* convert encoding */
-          neighbor_encoding++;
+          ++neighbor_encoding;
           *enc_ptr = neighbor_encoding;
         }
         else {
@@ -1965,7 +1965,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
           enc_ptr = (int *) sc_array_push (neighboring_encs);
           /* convert encoding */
-          neighbor_encoding++;
+          ++neighbor_encoding;
           *enc_ptr = -neighbor_encoding;
         }
         if (neighboring_qids != NULL) {
