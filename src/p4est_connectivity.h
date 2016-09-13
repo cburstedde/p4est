@@ -207,6 +207,16 @@ extern const int    p4est_corner_face_corners[4][4];
 /** Store the faces for each child and corner, can be -1. */
 extern const int    p4est_child_corner_faces[4][4];
 
+/** Transform a face corner across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] fc   A face corner number in 0..1.
+ * \param [in] f    A face number that touches the corner \a c.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ */
+int                 p4est_connectivity_face_neighbor_face_corner_orientation
+  (int fc, int f, int nf, int o);
+
 /** Transform a corner across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.
  * \param [in] c    A corner number in 0..3.

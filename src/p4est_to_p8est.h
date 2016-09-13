@@ -120,7 +120,9 @@
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
-#define p4est_connectivity_face_neighbor_corner_orientation \
+#define p4est_connectivity_face_neighbor_face_corner_orientation        \
+        p8est_connectivity_face_neighbor_face_corner_orientation
+#define p4est_connectivity_face_neighbor_corner_orientation     \
         p8est_connectivity_face_neighbor_corner_orientation
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
@@ -249,10 +251,10 @@
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors
 #define p4est_quadrant_all_face_neighbors p8est_quadrant_all_face_neighbors
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
-#define p4est_quadrant_corner_neighbor_extra \
-                                        p8est_quadrant_corner_neighbor_extra
-#define p4est_quadrant_half_corner_neighbor \
-                                        p8est_quadrant_half_corner_neighbor
+#define p4est_quadrant_corner_neighbor_extra    \
+        p8est_quadrant_corner_neighbor_extra
+#define p4est_quadrant_half_corner_neighbor     \
+        p8est_quadrant_half_corner_neighbor
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
 #define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
@@ -355,10 +357,10 @@
 #define p4est_ghost_exchange_custom_begin p8est_ghost_exchange_custom_begin
 #define p4est_ghost_exchange_custom_end p8est_ghost_exchange_custom_end
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
-#define p4est_ghost_exchange_custom_levels_begin \
-                                        p8est_ghost_exchange_custom_levels_begin
-#define p4est_ghost_exchange_custom_levels_end \
-                                        p8est_ghost_exchange_custom_levels_end
+#define p4est_ghost_exchange_custom_levels_begin        \
+        p8est_ghost_exchange_custom_levels_begin
+#define p4est_ghost_exchange_custom_levels_end  \
+        p8est_ghost_exchange_custom_levels_end
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
 #define p4est_ghost_is_valid            p8est_ghost_is_valid

@@ -63,13 +63,37 @@ const int           p4est_child_corner_faces[4][4] =
 #endif /* !P4_TO_P8 */
 
 int
+p4est_connectivity_face_neighbor_face_corner_orientation (int fc, int f,
+                                                          int nf, int o)
+{
+  int                 nfc;
+#ifdef P4_TO_P8
+  int                 pref, pset;
+#endif
+
+  /* sanity checks */
+  P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
+  P4EST_ASSERT (0 <= f && f < P4EST_FACES);
+  P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
+  P4EST_ASSERT (0 <= o && o < P4EST_HALF);
+
+#ifndef P4_TO_P8
+  nfc = fc ^ o;
+#else
+  pref = p8est_face_permutation_refs[f][nf];
+  pset = p8est_face_permutation_sets[pref][o];
+  nfc = p8est_face_permutations[pset][fc];
+#endif
+  P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
+
+  return nfc;
+}
+
+int
 p4est_connectivity_face_neighbor_corner_orientation (int c, int f,
                                                      int nf, int o)
 {
   int                 fc, nfc;
-#ifdef P4_TO_P8
-  int                 pref, pset;
-#endif
 
   P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
   P4EST_ASSERT (0 <= f && f < P4EST_FACES);
@@ -79,13 +103,9 @@ p4est_connectivity_face_neighbor_corner_orientation (int c, int f,
   fc = p4est_corner_face_corners[c][f];
   P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
 
-#ifndef P4_TO_P8
-  nfc = fc ^ o;
-#else
-  pref = p8est_face_permutation_refs[f][nf];
-  pset = p8est_face_permutation_sets[pref][o];
-  nfc = p8est_face_permutations[pset][fc];
-#endif
+  nfc =
+    p4est_connectivity_face_neighbor_face_corner_orientation (fc, f, nf, o);
+
   P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
 
   return p4est_face_corners[nf][nfc];
