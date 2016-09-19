@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -46,7 +47,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_FACES (2 * P4EST_DIM)
 /** The number of children of a quadrant
  *
- * also the nmber of corners */
+ * also the number of corners */
 #define P4EST_CHILDREN 4
 /** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
@@ -126,12 +127,14 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
  * The corners are only stored when they connect trees.
+ * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
+ * The entries encode all trees adjacent to corner c.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
@@ -203,6 +206,16 @@ extern const int    p4est_corner_face_corners[4][4];
 
 /** Store the faces for each child and corner, can be -1. */
 extern const int    p4est_child_corner_faces[4][4];
+
+/** Transform a face corner across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] fc   A face corner number in 0..1.
+ * \param [in] f    A face number that touches the corner \a c.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ */
+int                 p4est_connectivity_face_neighbor_face_corner_orientation
+  (int fc, int f, int nf, int o);
 
 /** Transform a corner across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.
@@ -351,6 +364,16 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
  * The left and right faces are identified, and bottom and top opposite.
  */
 p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
+
+/** Create a connectivity structure for two trees being rotated
+ * w.r.t. each other in a user-defined way
+ * \param[in] l_face      index of left face
+ * \param[in] r_face      index of right face
+ * \param[in] orientation orientation of trees w.r.t. each other
+ */
+p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face,
+                                                       int r_face,
+                                                       int orientation);
 
 /** Create a connectivity structure for a three-tree mesh around a corner.
  */

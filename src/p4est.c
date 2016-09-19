@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -147,11 +148,17 @@ p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
 size_t
 p4est_memory_used (p4est_t * p4est)
 {
-  const int           mpisize = p4est->mpisize;
+  int                 mpisize;
   size_t              size;
   p4est_topidx_t      nt;
   p4est_tree_t       *tree;
 
+  /* do not assert p4est_is_valid since it is collective */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->connectivity != NULL);
+  P4EST_ASSERT (p4est->trees != NULL);
+
+  mpisize = p4est->mpisize;
   size = sizeof (p4est_t) +
     (mpisize + 1) * (sizeof (p4est_gloidx_t) + sizeof (p4est_quadrant_t));
 
@@ -162,11 +169,23 @@ p4est_memory_used (p4est_t * p4est)
   }
 
   if (p4est->data_size > 0) {
+    P4EST_ASSERT (p4est->user_data_pool != NULL);
     size += sc_mempool_memory_used (p4est->user_data_pool);
   }
+  P4EST_ASSERT (p4est->quadrant_pool != NULL);
   size += sc_mempool_memory_used (p4est->quadrant_pool);
 
   return size;
+}
+
+long
+p4est_revision (p4est_t * p4est)
+{
+  /* do not assert p4est_is_valid since it is collective */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->revision >= 0);
+
+  return p4est->revision;
 }
 
 p4est_t            *
@@ -214,8 +233,8 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
-  /* create parallel environment */
-  p4est_comm_parallel_env_create (p4est, mpicomm);
+  /* set parallel environment */
+  p4est_comm_parallel_env_assign (p4est, mpicomm);
   num_procs = p4est->mpisize;
   rank = p4est->mpirank;
 
@@ -466,6 +485,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_VERBOSEF ("total local quadrants %lld\n",
                   (long long) p4est->local_num_quadrants);
 
+  P4EST_ASSERT (p4est->revision == 0);
   P4EST_ASSERT (p4est_is_valid (p4est));
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
@@ -503,7 +523,7 @@ p4est_destroy (p4est_t * p4est)
   }
   sc_mempool_destroy (p4est->quadrant_pool);
 
-  p4est_comm_parallel_env_free (p4est);
+  p4est_comm_parallel_env_release (p4est);
   P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_first_position);
   P4EST_FREE (p4est);
@@ -511,6 +531,12 @@ p4est_destroy (p4est_t * p4est)
 
 p4est_t            *
 p4est_copy (p4est_t * input, int copy_data)
+{
+  return p4est_copy_ext (input, copy_data, 0 /* don't duplicate MPI comm */ );
+}
+
+p4est_t            *
+p4est_copy_ext (p4est_t * input, int copy_data, int duplicate_mpicomm)
 {
   const p4est_topidx_t num_trees = input->connectivity->num_trees;
   const p4est_topidx_t first_tree = input->first_local_tree;
@@ -532,8 +558,11 @@ p4est_copy (p4est_t * input, int copy_data)
   p4est->user_data_pool = NULL;
   p4est->quadrant_pool = NULL;
 
-  /* create parallel environment */
-  p4est_comm_parallel_env_create (p4est, input->mpicomm);
+  /* set parallel environment */
+  p4est_comm_parallel_env_assign (p4est, input->mpicomm);
+  if (duplicate_mpicomm) {
+    p4est_comm_parallel_env_duplicate (p4est);
+  }
 
   /* allocate a user data pool if necessary and a quadrant pool */
   if (copy_data && p4est->data_size > 0) {
@@ -585,168 +614,13 @@ p4est_copy (p4est_t * input, int copy_data)
   memcpy (p4est->global_first_position, input->global_first_position,
           (p4est->mpisize + 1) * sizeof (p4est_quadrant_t));
 
+  /* the copy starts with a revision count of zero */
+  p4est->revision = 0;
+
   /* check for valid p4est and return */
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   return p4est;
-}
-
-int
-p4est_reduce_mpicomm (p4est_t * p4est)
-{
-  return p4est_reduce_mpicomm_ext (p4est, sc_MPI_GROUP_NULL, 0, NULL);
-}
-
-int
-p4est_reduce_mpicomm_ext (p4est_t * p4est, sc_MPI_Group group_add,
-                          const int add_to_beginning, int **Ranks)
-{
-  sc_MPI_Comm         mpicomm = p4est->mpicomm;
-  int                 mpisize = p4est->mpisize;
-  int                 mpiret;
-  p4est_gloidx_t     *global_first_quadrant = p4est->global_first_quadrant;
-
-  p4est_gloidx_t     *n_quadrants;
-  int                *include;
-  int                 submpisize;
-  sc_MPI_Group        group, subgroup;
-  sc_MPI_Comm         submpicomm;
-  int                *ranks, *subranks;
-  int                 i;
-
-  if (Ranks) {
-    *Ranks = NULL;
-  }
-
-  /* create array of non-empty processes that will be included to sub-comm */
-  n_quadrants = P4EST_ALLOC (p4est_gloidx_t, mpisize);
-  include = P4EST_ALLOC (int, mpisize);
-  submpisize = 0;
-  for (i = 0; i < mpisize; i++) {
-    n_quadrants[i] = global_first_quadrant[i + 1] - global_first_quadrant[i];
-    if (global_first_quadrant[i] < global_first_quadrant[i + 1]) {
-      include[submpisize] = i;
-      submpisize++;
-    }
-  }
-
-  /* exit if reduction not possible */
-  if (submpisize == mpisize) {
-    P4EST_FREE (n_quadrants);
-    P4EST_FREE (include);
-    return 1;
-  }
-
-  /* create sub-group of non-empty processors */
-  mpiret = sc_MPI_Comm_group (mpicomm, &group);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Group_incl (group, submpisize, include, &subgroup);
-  mpiret = sc_MPI_Group_free (&group);
-  SC_CHECK_MPI (mpiret);
-  SC_CHECK_MPI (mpiret);
-  P4EST_FREE (include);
-
-  /* create sub-communicator */
-  if (group_add != sc_MPI_GROUP_NULL) {
-    sc_MPI_Group        group_union;
-
-    /* create union with optional group */
-    if (add_to_beginning) {
-      mpiret = sc_MPI_Group_union (group_add, subgroup, &group_union);
-    }
-    else {
-      mpiret = sc_MPI_Group_union (subgroup, group_add, &group_union);
-    }
-    SC_CHECK_MPI (mpiret);
-
-    /* create sub-communicator */
-    mpiret = sc_MPI_Comm_create (mpicomm, group_union, &submpicomm);
-    SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Group_free (&group_union);
-    SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Group_free (&subgroup);
-    SC_CHECK_MPI (mpiret);
-  }
-  else {
-    /* create sub-communicator */
-    mpiret = sc_MPI_Comm_create (mpicomm, subgroup, &submpicomm);
-    SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Group_free (&subgroup);
-    SC_CHECK_MPI (mpiret);
-  }
-
-  /* destroy p4est and exit if this processor is empty */
-  if (submpicomm == sc_MPI_COMM_NULL) {
-    /* destroy */
-    P4EST_FREE (n_quadrants);
-    p4est_destroy (p4est);
-
-    /* return that this processor is empty */
-    return 0;
-  }
-
-  /* update size of new MPI communicator */
-  mpiret = sc_MPI_Comm_size (submpicomm, &submpisize);
-  SC_CHECK_MPI (mpiret);
-
-  /* translate MPI ranks */
-  ranks = P4EST_ALLOC (int, submpisize);
-  subranks = P4EST_ALLOC (int, submpisize);
-  for (i = 0; i < submpisize; i++) {
-    subranks[i] = i;
-  }
-  mpiret = sc_MPI_Comm_group (submpicomm, &subgroup);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_group (mpicomm, &group);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Group_translate_ranks (subgroup, submpisize, subranks,
-                                         group, ranks);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Group_free (&subgroup);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Group_free (&group);
-  SC_CHECK_MPI (mpiret);
-  P4EST_FREE (subranks);
-
-  /* allocate and set global quadrant count */
-  P4EST_FREE (p4est->global_first_quadrant);
-  p4est->global_first_quadrant = P4EST_ALLOC (p4est_gloidx_t, submpisize + 1);
-  p4est->global_first_quadrant[0] = 0;
-  for (i = 0; i < submpisize; i++) {
-    P4EST_ASSERT (ranks[i] != sc_MPI_UNDEFINED);
-    P4EST_ASSERT (group_add != sc_MPI_GROUP_NULL
-                  || 0 < n_quadrants[ranks[i]]);
-    p4est->global_first_quadrant[i + 1] =
-      p4est->global_first_quadrant[i] + n_quadrants[ranks[i]];
-  }
-  P4EST_ASSERT (p4est->global_first_quadrant[submpisize] =
-                p4est->global_num_quadrants);
-  P4EST_FREE (n_quadrants);
-  if (Ranks) {
-    *Ranks = ranks;
-  }
-  else {
-    P4EST_FREE (ranks);
-  }
-
-  /* set new parallel environment */
-  p4est_comm_parallel_env_free (p4est);
-  p4est_comm_parallel_env_create (p4est, submpicomm);
-  mpiret = sc_MPI_Comm_free (&submpicomm);
-  SC_CHECK_MPI (mpiret);
-  P4EST_ASSERT (p4est->mpisize == submpisize);
-
-  /* communicate partition information */
-  P4EST_FREE (p4est->global_first_position);
-  p4est->global_first_position =
-    P4EST_ALLOC (p4est_quadrant_t, submpisize + 1);
-  p4est_comm_global_partition (p4est, NULL);
-
-  /* check for valid p4est */
-  P4EST_ASSERT (p4est_is_valid (p4est));
-
-  /* return that this processor has quadrants */
-  return 1;
 }
 
 void
@@ -815,6 +689,7 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   int                 firsttime;
   int                 i, maxlevel;
   p4est_topidx_t      nt;
+  p4est_gloidx_t      old_gnq;
   size_t              incount, current, restpos, movecount;
   sc_list_t          *list;
   p4est_tree_t       *tree;
@@ -839,6 +714,9 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (0 <= allowed_level && allowed_level <= P4EST_QMAXLEVEL);
   P4EST_ASSERT (refine_fn != NULL);
+
+  /* remember input quadrant count; it will not decrease */
+  old_gnq = p4est->global_num_quadrants;
 
   /*
      q points to a quadrant that is an array member
@@ -1035,6 +913,10 @@ p4est_refine_ext (p4est_t * p4est, int refine_recursive, int allowed_level,
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
+  P4EST_ASSERT (p4est->global_num_quadrants >= old_gnq);
+  if (old_gnq != p4est->global_num_quadrants) {
+    ++p4est->revision;
+  }
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   p4est_log_indent_pop ();
@@ -1066,6 +948,7 @@ p4est_coarsen_ext (p4est_t * p4est,
   size_t              window, start, length, cidz;
   p4est_locidx_t      num_quadrants, prev_offset;
   p4est_topidx_t      jt;
+  p4est_gloidx_t      old_gnq;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *c[P4EST_CHILDREN];
   p4est_quadrant_t   *cfirst, *clast;
@@ -1078,6 +961,9 @@ p4est_coarsen_ext (p4est_t * p4est,
   p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (coarsen_fn != NULL);
+
+  /* remember input quadrant count; it will not increase */
+  old_gnq = p4est->global_num_quadrants;
 
   P4EST_QUADRANT_INIT (&qtemp);
 
@@ -1232,6 +1118,10 @@ p4est_coarsen_ext (p4est_t * p4est,
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
+  P4EST_ASSERT (p4est->global_num_quadrants <= old_gnq);
+  if (old_gnq != p4est->global_num_quadrants) {
+    ++p4est->revision;
+  }
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   p4est_log_indent_pop ();
@@ -1372,6 +1262,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   p4est_topidx_t      qtree, nt;
   p4est_topidx_t      first_tree, last_tree;
   p4est_locidx_t      skipped;
+  p4est_gloidx_t      old_gnq;
   p4est_balance_peer_t *peers, *peer;
   p4est_tree_t       *tree;
   p4est_quadrant_t    mylow, nextlow;
@@ -1441,6 +1332,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   P4EST_ASSERT (btype == P8EST_CONNECT_FACE || btype == P8EST_CONNECT_EDGE ||
                 btype == P8EST_CONNECT_CORNER);
 #endif
+
+  /* remember input quadrant count; it will not decrease */
+  old_gnq = p4est->global_num_quadrants;
 
 #ifdef P4EST_ENABLE_DEBUG
   data_pool_size = 0;
@@ -2505,6 +2399,10 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* compute global number of quadrants */
   p4est_comm_count_quadrants (p4est);
+  P4EST_ASSERT (p4est->global_num_quadrants >= old_gnq);
+  if (old_gnq != p4est->global_num_quadrants) {
+    ++p4est->revision;
+  }
 
   /* some sanity checks */
   P4EST_ASSERT ((p4est_locidx_t) all_outcount == p4est->local_num_quadrants);
@@ -2574,6 +2472,9 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   /* this function does nothing in a serial setup */
   if (p4est->mpisize == 1) {
     P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
+
+    /* in particular, there is no need to bumb the revision counter */
+    P4EST_ASSERT (global_shipped == 0);
     return global_shipped;
   }
 
@@ -2655,6 +2556,9 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
       p4est_log_indent_pop ();
       P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING
                                "_partition no shipping\n");
+
+      /* in particular, there is no need to bumb the revision counter */
+      P4EST_ASSERT (global_shipped == 0);
       return global_shipped;
     }
 
@@ -2857,6 +2761,10 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
   /* run the partition algorithm with proper quadrant counts */
   global_shipped = p4est_partition_given (p4est, num_quadrants_in_proc);
+  if (global_shipped) {
+    /* the partition of the forest has changed somewhere */
+    ++p4est->revision;
+  }
   P4EST_FREE (num_quadrants_in_proc);
 
   /* check validity of the p4est */

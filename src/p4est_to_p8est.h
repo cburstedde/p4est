@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -126,11 +127,14 @@
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
-#define p4est_connectivity_face_neighbor_corner_orientation \
+#define p4est_connectivity_face_neighbor_face_corner_orientation        \
+        p8est_connectivity_face_neighbor_face_corner_orientation
+#define p4est_connectivity_face_neighbor_corner_orientation     \
         p8est_connectivity_face_neighbor_corner_orientation
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick
+#define p4est_connectivity_new_twotrees p8est_connectivity_new_twotrees
 #define p4est_connectivity_new_byname   p8est_connectivity_new_byname
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
 #define p4est_connectivity_bcast        p8est_connectivity_bcast
@@ -160,6 +164,7 @@
 /* functions in p4est */
 #define p4est_qcoord_to_vertex          p8est_qcoord_to_vertex
 #define p4est_memory_used               p8est_memory_used
+#define p4est_revision                  p8est_revision
 #define p4est_new                       p8est_new
 #define p4est_destroy                   p8est_destroy
 #define p4est_copy                      p8est_copy
@@ -171,8 +176,6 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
-#define p4est_reduce_mpicomm            p8est_reduce_mpicomm
-#define p4est_reduce_mpicomm_ext        p8est_reduce_mpicomm_ext
 #define p4est_connect_type_int          p8est_connect_type_int
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
@@ -185,6 +188,7 @@
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
+#define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
 #define p4est_balance_ext               p8est_balance_ext
@@ -254,10 +258,10 @@
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors
 #define p4est_quadrant_all_face_neighbors p8est_quadrant_all_face_neighbors
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
-#define p4est_quadrant_corner_neighbor_extra \
-                                        p8est_quadrant_corner_neighbor_extra
-#define p4est_quadrant_half_corner_neighbor \
-                                        p8est_quadrant_half_corner_neighbor
+#define p4est_quadrant_corner_neighbor_extra    \
+        p8est_quadrant_corner_neighbor_extra
+#define p4est_quadrant_half_corner_neighbor     \
+        p8est_quadrant_half_corner_neighbor
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
 #define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
@@ -307,14 +311,19 @@
 #define p4est_partition_given           p8est_partition_given
 
 /* functions in p4est_communication */
-#define p4est_comm_parallel_env_create  p8est_comm_parallel_env_create
-#define p4est_comm_parallel_env_free    p8est_comm_parallel_env_free
-#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
+#define p4est_comm_parallel_env_duplicate p8est_comm_parallel_env_duplicate
+#define p4est_comm_parallel_env_release p8est_comm_parallel_env_release
+#define p4est_comm_parallel_env_replace p8est_comm_parallel_env_replace
+#define p4est_comm_parallel_env_get_info p8est_comm_parallel_env_get_info
+#define p4est_comm_parallel_env_is_null p8est_comm_parallel_env_is_null
+#define p4est_comm_parallel_env_reduce  p8est_comm_parallel_env_reduce
+#define p4est_comm_parallel_env_reduce_ext p8est_comm_parallel_env_reduce_ext
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
+#define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
@@ -362,10 +371,10 @@
 #define p4est_ghost_exchange_custom_begin p8est_ghost_exchange_custom_begin
 #define p4est_ghost_exchange_custom_end p8est_ghost_exchange_custom_end
 #define p4est_ghost_exchange_custom_levels p8est_ghost_exchange_custom_levels
-#define p4est_ghost_exchange_custom_levels_begin \
-                                        p8est_ghost_exchange_custom_levels_begin
-#define p4est_ghost_exchange_custom_levels_end \
-                                        p8est_ghost_exchange_custom_levels_end
+#define p4est_ghost_exchange_custom_levels_begin        \
+        p8est_ghost_exchange_custom_levels_begin
+#define p4est_ghost_exchange_custom_levels_end  \
+        p8est_ghost_exchange_custom_levels_end
 #define p4est_ghost_bsearch             p8est_ghost_bsearch
 #define p4est_ghost_contains            p8est_ghost_contains
 #define p4est_ghost_is_valid            p8est_ghost_is_valid

@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -172,8 +173,8 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
 
-  /* create parallel environment */
-  p4est_comm_parallel_env_create (p4est, mpicomm);
+  /* set parallel environment */
+  p4est_comm_parallel_env_assign (p4est, mpicomm);
 
   /* allocate memory pools */
   p4est->user_data_pool = sc_mempool_new (p4est->data_size);

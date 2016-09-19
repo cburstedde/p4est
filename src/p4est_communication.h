@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -28,15 +29,78 @@
 
 SC_EXTERN_C_BEGIN;
 
-void                p4est_comm_parallel_env_create (p4est_t * p4est,
-                                                    sc_MPI_Comm mpicomm);
-
-void                p4est_comm_parallel_env_free (p4est_t * p4est);
-
-int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
-
+/** Assign an MPI communicator to p4est; retrieve parallel environment.
+ *
+ * \param [in] mpicomm    A valid MPI communicator.
+ *
+ * \note The provided MPI communicator is not owned by p4est.
+ */
 void                p4est_comm_parallel_env_assign (p4est_t * p4est,
                                                     sc_MPI_Comm mpicomm);
+
+/** Duplicate MPI communicator and replace the current one by the duplicate.
+ *
+ * \note The duplicated MPI communicator is owned by p4est.
+ */
+void                p4est_comm_parallel_env_duplicate (p4est_t * p4est);
+
+/** Release MPI communicator if it is owned by p4est.
+ */
+void                p4est_comm_parallel_env_release (p4est_t * p4est);
+
+/** Replace the current MPI communicator by the one provided as input.
+ *
+ * \param [in] mpicomm    A valid MPI communicator.
+ *
+ * \note The provided MPI communicator is not owned by p4est.
+ */
+void                p4est_comm_parallel_env_replace (p4est_t * p4est,
+                                                     sc_MPI_Comm mpicomm);
+
+/** Retrieve parallel environment information.
+ */
+void                p4est_comm_parallel_env_get_info (p4est_t * p4est);
+
+/** Check if the MPI communicator is valid.
+ *
+ * \return True if communicator is not NULL communicator, false otherwise.
+ */
+int                 p4est_comm_parallel_env_is_null (p4est_t * p4est);
+
+/** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
+ *
+ * \param [in/out] p4est_supercomm  Object which communicator is reduced.
+ *                                  Points to NULL if this p4est does not
+ *                                  exists.
+ *
+ * \return True if p4est exists on this MPI rank after reduction.
+ */
+int                 p4est_comm_parallel_env_reduce (p4est_t **
+                                                    p4est_supercomm);
+
+/** Reduce MPI communicator to non-empty ranks and add a group of ranks that
+ * will remain in the reduced communicator regardless whether they are empty
+ * or not.
+ *
+ * \param [in/out] p4est_supercomm  Object which communicator is reduced.
+ *                                  Points to NULL if this p4est does not
+ *                                  exists.
+ * \param [in] group_add         Group of ranks that will remain in
+ *                               communicator.
+ * \param [in] add_to_beginning  If true, ranks will be added to the beginning
+ *                               of the reduced communicator, otherwise to the
+ *                               end.
+ * \param[out] ranks_subcomm     If not null, array of size 'subcommsize' with
+ *                               subcommrank->supercommrank map.
+ *
+ * \return True if p4est exists on this MPI rank after reduction.
+ */
+int                 p4est_comm_parallel_env_reduce_ext (p4est_t **
+                                                        p4est_supercomm,
+                                                        sc_MPI_Group
+                                                        group_add,
+                                                        int add_to_beginning,
+                                                        int **ranks_subcomm);
 
 /** Caculate the number and partition of quadrents.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
@@ -72,10 +136,24 @@ void                p4est_comm_count_pertree (p4est_t * p4est,
  */
 int                 p4est_comm_is_empty (p4est_t * p4est, int p);
 
-/** Tests ownershop of a quadrant via p4est->global_first_position.
- * Assumes a tree with no overlaps.
+/** Test whether a quadrant is fully contained in a rank's owned regien.
+ * This function may return false when \ref p4est_comm_is_owner returns true.
  * \param [in] rank    Rank whose ownership is tested.
- * \return true if rank is the owner.
+ *                     Assumes a forest with no overlaps.
+ * \return true if rank is the owner of the whole area of the quadrant.
+ */
+int                 p4est_comm_is_contained (p4est_t * p4est,
+                                             p4est_locidx_t which_tree,
+                                             const p4est_quadrant_t * q,
+                                             int rank);
+
+/** Test ownershop of a quadrant via p4est->global_first_position.
+ * The quadrant is considered owned if its first descendant is owned.
+ * This, a positive result occurs even if its last descendant overlaps
+ * a higher process.
+ * \param [in] rank    Rank whose ownership is tested.
+ *                     Assumes a forest with no overlaps.
+ * \return true if rank is the owner of the first descendant.
  */
 int                 p4est_comm_is_owner (p4est_t * p4est,
                                          p4est_locidx_t which_tree,
