@@ -359,7 +359,7 @@ p6est_ghost_send_front_layers (p6est_ghost_t * ghost,
   sc_array_destroy (send);
   sc_array_destroy (send_requests);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   {
     p4est_quadrant_data_t *cdata;
     p4est_locidx_t      ngcol = cghost->ghosts.elem_count;

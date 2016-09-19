@@ -1452,7 +1452,7 @@ p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
   size_t              zz, new_count = 0;
   p2est_quadrant_t   *q, *r, a, s, *sib[2];
   int                 i, stackheight;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   size_t              mcount = p6est->user_data_pool->elem_count;
   p4est_qcoord_t      startpos, endpos;
 #endif
@@ -1460,7 +1460,7 @@ p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
   P4EST_ASSERT (old_count > 0);
 
   q = p2est_quadrant_array_index (descendants, 0);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   startpos = q->z;
 #endif
 
@@ -1559,7 +1559,7 @@ p6est_coarsen_all_layers (p6est_t * p6est, p4est_topidx_t which_tree,
 
   sc_array_resize (descendants, new_count);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   P4EST_ASSERT (mcount - p6est->user_data_pool->elem_count ==
                 (old_count - new_count));
 
