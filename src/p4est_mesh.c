@@ -1673,6 +1673,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 #ifdef P4EST_ENABLE_DEBUG
   int                 l_same_size, u_same_size, l_double_size, u_double_size;
   int                 l_half_size, u_half_size;
+  p4est_quadrant_t   *curr_quad = p4est_mesh_get_quadrant(p4est, mesh, curr_quad_id);
 #ifndef P4_TO_P8
   if (lFace <= direction && direction < uFace) {
     l_same_size = 0;
@@ -1754,9 +1755,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
           /* sanity check level */
-          P4EST_ASSERT (quad->level ==
-                        p4est_mesh_get_quadrant (p4est, mesh,
-                                                 curr_quad_id)->level + 1);
+          P4EST_ASSERT (quad->level == curr_quad->level + 1);
 #endif /* P4EST_ENABLE_DEBUG
 
           /* convert encoding */
@@ -1774,9 +1773,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
           /* sanity check level */
-          P4EST_ASSERT (quad->level ==
-                        p4est_mesh_get_quadrant (p4est, mesh,
-                                                 curr_quad_id)->level + 1);
+          P4EST_ASSERT (quad->level == curr_quad->level + 1);
 #endif /* P4EST_ENABLE_DEBUG
 
           /* convert encoding */
@@ -1802,14 +1799,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
         /* sanity check level */
         if (l_same_size <= neighbor_encoding
             && neighbor_encoding < u_same_size) {
-          P4EST_ASSERT (quad->level ==
-                        p4est_mesh_get_quadrant (p4est, mesh,
-                                                 curr_quad_id)->level);
+          P4EST_ASSERT (quad->level == curr_quad->level);
         }
         else if (l_double_size <= neighbor_encoding) {
-          P4EST_ASSERT (quad->level ==
-                        p4est_mesh_get_quadrant (p4est, mesh,
-                                                 curr_quad_id)->level - 1);
+          P4EST_ASSERT (quad->level == curr_quad->level - 1);
         }
         else {
           SC_ABORT_NOT_REACHED ();
@@ -1835,14 +1828,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
         /* sanity check level */
         if (l_same_size <= neighbor_encoding
             && neighbor_encoding < u_same_size) {
-          P4EST_ASSERT (quad->level ==
-                        p4est_mesh_get_quadrant (p4est, mesh,
-                                                 curr_quad_id)->level);
+          P4EST_ASSERT (quad->level == curr_quad->level);
         }
         else if (l_double_size <= neighbor_encoding) {
-          P4EST_ASSERT (quad->level ==
-                        p4est_mesh_get_quadrant (p4est, mesh,
-                                                 curr_quad_id)->level - 1);
+          P4EST_ASSERT (quad->level == curr_quad->level - 1);
         }
         else {
           SC_ABORT_NOT_REACHED ();
@@ -1880,12 +1869,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
       /* sanity check level */
-      P4EST_ASSERT (quad->level ==
-                    p4est_mesh_get_quadrant (p4est, mesh,
-                                             curr_quad_id)->level);
+      P4EST_ASSERT (quad->level == curr_quad->level);
 #endif /* P4EST_ENABLE_DEBUG
 
-          /* create implicitly saved encoding */
+      /* create implicitly saved encoding */
       enc_ptr = (int *) sc_array_push (neighboring_encs);
       neighbor_encoding = (direction - lEdge) ^ 3;
 
@@ -1910,12 +1897,10 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
       /* sanity check level */
-      P4EST_ASSERT (quad->level ==
-                    p4est_mesh_get_quadrant (p4est, mesh,
-                                             curr_quad_id)->level);
+      P4EST_ASSERT (quad->level == curr_quad->level);
 #endif /* P4EST_ENABLE_DEBUG
 
-          /* create implicitly saved encoding */
+      /* create implicitly saved encoding */
       enc_ptr = (int *) sc_array_push (neighboring_encs);
       neighbor_encoding = (direction - lEdge) ^ 3;
       /* convert encoding */
@@ -1961,21 +1946,15 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           /* sanity check level */
           if (l_same_size <= neighbor_encoding
               && neighbor_encoding < u_same_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level);
+            P4EST_ASSERT (quad->level == curr_quad->level);
           }
           else if (l_double_size <= neighbor_encoding
                    && neighbor_encoding < u_double_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level + 1);
+            P4EST_ASSERT (quad->level == curr_quad->level - 1);
           }
           else if (l_half_size <= neighbor_encoding
                    && neighbor_encoding < u_half_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level - 1);
+            P4EST_ASSERT (quad->level == curr_quad->level + 1);
           }
           else {
             SC_ABORT_NOT_REACHED ();
@@ -2000,21 +1979,15 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           /* sanity check level */
           if (l_same_size <= neighbor_encoding
               && neighbor_encoding < u_same_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level);
+            P4EST_ASSERT (quad->level == curr_quad->level);
           }
           else if (l_double_size <= neighbor_encoding
                    && neighbor_encoding < u_double_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level + 1);
+            P4EST_ASSERT (quad->level == curr_quad->level - 1);
           }
           else if (l_half_size <= neighbor_encoding
                    && neighbor_encoding < u_half_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level - 1);
+            P4EST_ASSERT (quad->level == curr_quad->level + 1);
           }
           else {
             SC_ABORT_NOT_REACHED ();
@@ -2064,9 +2037,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
       /* sanity check level */
-      P4EST_ASSERT (quad->level ==
-                    p4est_mesh_get_quadrant (p4est, mesh,
-                                             curr_quad_id)->level);
+      P4EST_ASSERT (quad->level == curr_quad->level);
 #endif /* P4EST_ENABLE_DEBUG
 
           /* create implicitly saved encoding */
@@ -2093,9 +2064,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
       /* sanity check level */
-      P4EST_ASSERT (quad->level ==
-                    p4est_mesh_get_quadrant (p4est, mesh,
-                                             curr_quad_id)->level);
+      P4EST_ASSERT (quad->level == curr_quad->level);
 #endif /* P4EST_ENABLE_DEBUG
 
           /* create implicitly saved encoding */
@@ -2144,21 +2113,15 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           /* sanity check level */
           if (l_same_size <= neighbor_encoding
               && neighbor_encoding < u_same_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level);
+            P4EST_ASSERT (quad->level == curr_quad->level);
           }
           else if (l_double_size <= neighbor_encoding
                    && neighbor_encoding < u_double_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level + 1);
+            P4EST_ASSERT (quad->level == curr_quad->level - 1);
           }
           else if (l_half_size <= neighbor_encoding
                    && neighbor_encoding < u_half_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level - 1);
+            P4EST_ASSERT (quad->level == curr_quad->level + 1);
           }
           else {
             SC_ABORT_NOT_REACHED ();
@@ -2183,21 +2146,15 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
           /* sanity check level */
           if (l_same_size <= neighbor_encoding
               && neighbor_encoding < u_same_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level);
+            P4EST_ASSERT (quad->level == curr_quad->level);
           }
           else if (l_double_size <= neighbor_encoding
                    && neighbor_encoding < u_double_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level + 1);
+            P4EST_ASSERT (quad->level == curr_quad->level - 1);
           }
           else if (l_half_size <= neighbor_encoding
                    && neighbor_encoding < u_half_size) {
-            P4EST_ASSERT (quad->level ==
-                          p4est_mesh_get_quadrant (p4est, mesh,
-                                                   curr_quad_id)->level - 1);
+            P4EST_ASSERT (quad->level == curr_quad->level + 1);
           }
           else {
             SC_ABORT_NOT_REACHED ();
