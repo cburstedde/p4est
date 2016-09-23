@@ -901,11 +901,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
           }
         }
         else {
-          /* side1 is full */
           if (!side1->is.full.is_ghost) {
             mesh_edge_process_inter_tree_edges (info, side1, -1, mesh, nftree,
                                                 nedgef, cz, zz);
-
           }
         }
       }
@@ -1274,10 +1272,9 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       /* determine quadrant numbers for all hanging faces */
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
-          p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->face,
-                                                                    side2->face,
-                                                                    info->orientation);
+          p4est_connectivity_face_neighbor_face_corner_orientation
+          (h, side->face, side2->face, info->orientation);
+
         if (!side2->is.hanging.is_ghost[pos]) {
           tree = p4est_tree_array_index (info->p4est->trees, side2->treeid);
           jls[h] = side2->is.hanging.quadid[pos] + tree->quadrants_offset;
@@ -1307,10 +1304,9 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       }
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
-          p4est_connectivity_face_neighbor_face_corner_orientation (h,
-                                                                    side->face,
-                                                                    side2->face,
-                                                                    info->orientation);
+          p4est_connectivity_face_neighbor_face_corner_orientation
+          (h, side->face, side2->face, info->orientation);
+
         if (!side2->is.hanging.is_ghost[pos]) {
           in_qtoq = P4EST_FACES * jls[h] + side2->face;
           P4EST_ASSERT (mesh->quad_to_quad[in_qtoq] == -1);
@@ -1673,7 +1669,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 #ifdef P4EST_ENABLE_DEBUG
   int                 l_same_size, u_same_size, l_double_size, u_double_size;
   int                 l_half_size, u_half_size;
-  p4est_quadrant_t   *curr_quad = p4est_mesh_get_quadrant(p4est, mesh, curr_quad_id);
+  p4est_quadrant_t   *curr_quad =
+    p4est_mesh_get_quadrant (p4est, mesh, curr_quad_id);
 #ifndef P4_TO_P8
   if (lFace <= direction && direction < uFace) {
     l_same_size = 0;
