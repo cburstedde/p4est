@@ -1598,9 +1598,6 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_DEBUG
   /* Integrity checks: */
-  /* grid must be balanced */
-  P4EST_ASSERT (p4est_is_balanced (p4est, ghost->btype));
-
   /* result arrays should be empty, */
   P4EST_ASSERT (neighboring_quads->elem_count == 0);
   P4EST_ASSERT (neighboring_encs->elem_count == 0);
