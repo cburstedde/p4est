@@ -444,9 +444,11 @@ test_mesh_one_tree (p4est_t * p4est,
                          minLevel,
                          1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
 
-  // p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
-  // p4est_partition (p4est, 0, 0);
-  // p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
+  /*
+  p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
+  p4est_partition (p4est, 0, 0);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
+  */
 
   /* inspect setup of geometry and check if payload is set correctly */
   char                filename[35] = "test_mesh_setup_single_tree_";
@@ -454,16 +456,20 @@ test_mesh_one_tree (p4est_t * p4est,
   test_mesh_write_vtk (p4est, filename);
 
   /* create mesh */
+#ifdef P4_TO_P8
+  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P8EST_CONNECT_EDGE);
+  p4est_mesh_t       *mesh =
+    p4est_mesh_new_ext (p4est, ghost, 1, 1, P8EST_CONNECT_EDGE);
+#else /* P4_TO_P8 */
   p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   p4est_mesh_t       *mesh =
     p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+#endif /* P4_TO_P8 */
 
   /* check mesh */
   char                scenario[30];
   snprintf (scenario, 30, (periodic ? "single_tree_p" : "single_tree_np"));
   check_mesh (p4est, ghost, mesh, scenario);
-
-  sc_MPI_Barrier (p4est->mpicomm);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
@@ -510,15 +516,16 @@ test_mesh_multiple_trees_brick (p4est_t * p4est,
      p4est_partition (p4est, 0, 0);
      p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
    */
+
   char                filename[29] = "test_mesh_setup_brick_";
   strcat (filename, P4EST_STRING);
   p4est_vtk_write_file (p4est, 0, filename);
   /* create mesh */
 
 #ifdef P4_TO_P8
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P8EST_CONNECT_EDGE);
   p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+    p4est_mesh_new_ext (p4est, ghost, 1, 1, P8EST_CONNECT_EDGE);
 #else /* P4_TO_P8 */
   p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   p4est_mesh_t       *mesh =
@@ -530,8 +537,6 @@ test_mesh_multiple_trees_brick (p4est_t * p4est,
   snprintf (scenario, 30,
             (periodic ? "multiple_tree_brick_p" : "multiple_tree_brick_np"));
   check_mesh (p4est, ghost, mesh, scenario);
-
-  sc_MPI_Barrier (p4est->mpicomm);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);

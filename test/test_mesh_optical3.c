@@ -22,6 +22,4 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "test_mesh2.c"
-
-/* EOF test_mesh3.c */
+#include "test_mesh_optical2.c"
