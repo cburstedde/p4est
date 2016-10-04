@@ -33,41 +33,6 @@
 #include <p8est_mesh.h>
 #endif /* !P4_TO_P8 */
 
-/** Get opposite face-, (edge-), or corner index
- * \param [in]   dir  Encoded direction.
- *
- * \returns Decoded index of opposite face (, edge,) or corner.
- */
-static int
-get_opposite (int dir)
-{
-  int                 res;
-  if (0 <= dir && dir < P4EST_FACES) {
-    res = dir ^ 1;
-  }
-#ifdef P4_TO_P8
-  /** edges */
-  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P8EST_EDGES)) {
-    res = ((dir - P4EST_FACES) ^ 3) + P4EST_FACES;
-  }
-  /** corners 3D */
-  else if ((P4EST_FACES + P8EST_EDGES) <= dir &&
-           dir < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
-    res =
-      ((dir - (P4EST_FACES + P8EST_EDGES)) ^ 7) + (P4EST_FACES + P8EST_EDGES);
-  }
-#else /* P4_TO_P8 */
-  /** corners 2D */
-  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P4EST_CHILDREN)) {
-    res = ((dir - P4EST_FACES) ^ 3) + P4EST_FACES;
-  }
-#endif /* P4_TO_P8 */
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-  return res;
-}
-
 /** Set constants needed to decode an encoding obtained from \ref
  * p4est_mesh_get_neighbors
  * CAUTION: Encoding needs to be normalized to 0 (done by (abs(enc) - 1)).
@@ -155,6 +120,23 @@ set_limits (int direction, p4est_connect_type_t btype,
 #endif /* !P4_TO_P8 */
 
   return 0;
+}
+
+static int
+encode_direction (int dir, int entity)
+{
+  switch (entity) {
+  case 0:
+    return dir;
+  case 1:
+    return dir + P4EST_FACES;
+#ifdef P4_TO_P8
+  case 2:
+    return dir + P4EST_FACES + P8EST_EDGES;
+#endif /* P4_TO_P8 */
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
 }
 
 /** Decode encoding obtained in neighbor search
@@ -248,7 +230,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 {
   int                 quad, norm_quad;
   int                 i, imax, iinv, j, k;
-  int                 dir, dir_inv;
+  int                 dir;
   int                 n_neighbor_entities, n_hanging_quads;
   int                 l_same_size, u_same_size;
   int                 l_double_size, u_double_size;
@@ -263,6 +245,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_t         *found_qids;
   int                 found_qid, found_enc, found_sub_ctr;
   int                 found_subquad, found_entity, found_orientation;
+  int                 entity;
   int                 success;
 
   switch (ghost->btype) {
@@ -301,28 +284,27 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
         neighboring_qids = sc_array_new (sizeof (int));
 
         /** set constants for decoding */
-        iinv = get_opposite (i);
         set_limits (i, ghost->btype, &l_same_size, &u_same_size,
                     &l_double_size, &u_double_size, &l_half_size,
                     &u_half_size, &n_neighbor_entities, &n_hanging_quads);
         if (0 <= i && i < P4EST_FACES) {
           dir = i;
-          dir_inv = iinv;
+          entity = 0;
         }
 #ifdef P4_TO_P8
         else if (P4EST_FACES <= i && i < (P4EST_FACES + P8EST_EDGES)) {
           dir = i - P4EST_FACES;
-          dir_inv = iinv - P4EST_FACES;
+          entity = 1;
         }
         else if ((P4EST_FACES + P8EST_EDGES) <= i &&
                  i < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
           dir = i - (P4EST_FACES + P8EST_EDGES);
-          dir_inv = iinv - (P4EST_FACES + P8EST_EDGES);
+          entity = 2;
         }
 #else /* P4_TO_P8 */
         else if (P4EST_FACES <= i && i < (P4EST_FACES + P4EST_CHILDREN)) {
           dir = i - P4EST_FACES;
-          dir_inv = iinv - P4EST_FACES;
+          entity = 1;
         }
 #endif /* P4_TO_P8 */
         else {
@@ -352,6 +334,10 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 
           /** we can only search neighbors of local quadrants */
           if (neighbor_enc < 0) {
+            if (l_half_size <= -1 - neighbor_enc &&
+                -1 - neighbor_enc < u_half_size) {
+              neighbor_sub_ctr = (neighbor_sub_ctr + 1) % n_hanging_quads;
+            }
             continue;
           }
 
@@ -362,6 +348,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                            u_same_size, l_double_size, u_double_size,
                            l_half_size, u_half_size, &neighbor_subquad,
                            &neighbor_orientation, &neighbor_entity);
+          iinv = encode_direction (neighbor_entity, entity);
 
           if (l_same_size <= neighbor_enc && neighbor_enc < u_same_size) {
             P4EST_ASSERT (0 == neighbor_sub_ctr);
