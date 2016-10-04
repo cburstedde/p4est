@@ -1726,8 +1726,8 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
       mesh->quad_to_face[P4EST_FACES * curr_quad_id + direction];
 
     /* no neighbor present */
-    if ((neighbor_idx < 0 || neighbor_idx == curr_quad_id)
-        && neighbor_encoding < P4EST_FACES) {
+    if ((neighbor_idx < 0 || neighbor_idx == curr_quad_id) &&
+        neighbor_encoding == direction) {
       return 0;
     }
 
