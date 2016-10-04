@@ -2031,7 +2031,9 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
       /* sanity check level */
-      P4EST_ASSERT (quad->level == curr_quad->level);
+      P4EST_ASSERT ((quad->level == curr_quad->level) ||
+                    (quad->level == curr_quad->level - 1) ||
+                    (quad->level == curr_quad->level + 1));
 #endif /* P4EST_ENABLE_DEBUG
 
           /* create implicitly saved encoding */
@@ -2058,7 +2060,9 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
       /* sanity check level */
-      P4EST_ASSERT (quad->level == curr_quad->level);
+      P4EST_ASSERT ((quad->level == curr_quad->level) ||
+                    (quad->level == curr_quad->level - 1) ||
+                    (quad->level == curr_quad->level + 1));
 #endif /* P4EST_ENABLE_DEBUG
 
           /* create implicitly saved encoding */
@@ -2105,21 +2109,9 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
           /* sanity check level */
-          if (l_same_size <= neighbor_encoding
-              && neighbor_encoding < u_same_size) {
-            P4EST_ASSERT (quad->level == curr_quad->level);
-          }
-          else if (l_double_size <= neighbor_encoding
-                   && neighbor_encoding < u_double_size) {
-            P4EST_ASSERT (quad->level == curr_quad->level - 1);
-          }
-          else if (l_half_size <= neighbor_encoding
-                   && neighbor_encoding < u_half_size) {
-            P4EST_ASSERT (quad->level == curr_quad->level + 1);
-          }
-          else {
-            SC_ABORT_NOT_REACHED ();
-          }
+          P4EST_ASSERT ((quad->level == curr_quad->level) ||
+                        (quad->level == curr_quad->level - 1) ||
+                        (quad->level == curr_quad->level + 1));
 #endif /* P4EST_ENABLE_DEBUG */
 
           /* convert encoding */
@@ -2138,21 +2130,9 @@ p4est_mesh_get_neighbors (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
           /* sanity check level */
-          if (l_same_size <= neighbor_encoding
-              && neighbor_encoding < u_same_size) {
-            P4EST_ASSERT (quad->level == curr_quad->level);
-          }
-          else if (l_double_size <= neighbor_encoding
-                   && neighbor_encoding < u_double_size) {
-            P4EST_ASSERT (quad->level == curr_quad->level - 1);
-          }
-          else if (l_half_size <= neighbor_encoding
-                   && neighbor_encoding < u_half_size) {
-            P4EST_ASSERT (quad->level == curr_quad->level + 1);
-          }
-          else {
-            SC_ABORT_NOT_REACHED ();
-          }
+          P4EST_ASSERT ((quad->level == curr_quad->level) ||
+                        (quad->level == curr_quad->level - 1) ||
+                        (quad->level == curr_quad->level + 1));
 #endif /* P4EST_ENABLE_DEBUG */
 
           /* convert encoding */
