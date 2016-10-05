@@ -1016,6 +1016,11 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             }
             P4EST_ASSERT (!side1->is_hanging && side2->is_hanging);
 
+            if (side1->is.full.is_ghost && side2->is.hanging.is_ghost[0] &&
+                side2->is.hanging.is_ghost[1]) {
+              continue;
+            }
+
             /* determine quadrant number for non-hanging large quadrant */
             if (!side1->is.full.is_ghost) {
               tree1 =
@@ -1107,6 +1112,10 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             /* determine quadrant numbers for both "hanging" edges and write
              * them directly to the corresponding positions */
             for (k = 0; k < 2; ++k) {
+              if (side1->is.hanging.is_ghost[k] &&
+                  side2->is.hanging.is_ghost[k]) {
+                continue;
+              }
               if (!side1->is.hanging.is_ghost[k]) {
                 tree1 =
                   p4est_tree_array_index (info->p4est->trees, side1->treeid);
