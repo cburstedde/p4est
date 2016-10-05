@@ -367,9 +367,8 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 
             for (k = 0; k < found_quads->elem_count; ++k) {
               found_qid = *(int *) sc_array_index (found_qids, k);
-              if (found_qid == norm_quad) {
-                found_enc = *(int *) sc_array_index (found_encs, k);
-
+              found_enc = *(int *) sc_array_index (found_encs, k);
+              if (found_qid == norm_quad && 0 < found_enc) {
                 /** normalize encoding before decoding (abs not necessary,
                     because quadrant must be local by design) */
                 --found_enc;
@@ -414,9 +413,9 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             for (k = 0; k < found_quads->elem_count; ++k) {
               /** inspect quad id and encoding beforehand: */
               found_qid = *(int *) sc_array_index (found_qids, k);
+              found_enc = *(int *) sc_array_index (found_encs, k);
 
-              if (found_qid == norm_quad) {
-                found_enc = *(int *) sc_array_index (found_encs, k);
+              if (found_qid == norm_quad && 0 < found_enc) {
                 /** normalize encoding before decoding (abs not necessary,
                     because quadrant must be local by design) */
                 --found_enc;
@@ -475,9 +474,9 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             for (k = 0; k < found_quads->elem_count; ++k) {
               /** inspect quad id and encoding beforehand: */
               found_qid = *(int *) sc_array_index (found_qids, k);
+              found_enc = *(int *) sc_array_index (found_encs, k);
 
-              if (found_qid == norm_quad) {
-                found_enc = *(int *) sc_array_index (found_encs, k);
+              if (found_qid == norm_quad && 0 < found_enc) {
                 /** normalize encoding before decoding (abs not necessary,
                     because quadrant must be local by design) */
                 --found_enc;
