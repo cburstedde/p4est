@@ -292,6 +292,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
       }
     }
     else {
+      /* only inter-tree edges are processed here */
       SC_ABORT_NOT_REACHED ();
     }
     if (!ignore) {
@@ -1593,6 +1594,119 @@ p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
   return quad;
 }
 
+/** Decode encoding obtained in neighbor search.
+ * \param[in]      enc           The normalized encoding, i.e. 0 based and no
+ *                               longer containing ghost status, i.e. 0 <= enc
+ * \param[in]      n_entities    Number of faces, edges, or corners, depending
+ *                               on the direction the neighbor has been looked
+ *                               up.
+ * \param[in]      l_same_size   Lower bound for encoding a neighbor of same
+ *                               size.
+ * \param[in]      u_same_size   Upper bound for encoding a neighbor of same
+ *                               size.
+ * \param[in]      l_double_size Lower bound for encoding a neighbor of double
+ *                               size.
+ * \param[in]      u_double_size Upper bound for encoding a neighbor of double
+ *                               size.
+ * \param[in]      l_half_size   Lower bound for encoding a neighbor of half
+ *                               size.
+ * \param[in]      u_half_size   Upper bound for encoding a neighbor of half
+ *                               size.
+ * \param    [out] n_subquad     Pointer to neighbor subquad index. -1 if
+ *                               neighbor is not half as big as current quad.
+ * \param    [out] n_orientation Orientation between both quadrants.
+ * \param    [out] n_entity      The index of the entity across which the
+ *                               neighboring sees the querying quadrant.
+ */
+static int
+decode_encoding (int enc, int n_entities, int l_same_size, int u_same_size,
+                 int l_double_size, int u_double_size, int l_half_size,
+                 int u_half_size, int *n_subquad, int *n_orientation,
+                 int *n_entity)
+{
+  P4EST_ASSERT (u_same_size == l_double_size && u_double_size == l_half_size);
+  P4EST_ASSERT (l_same_size == 0);
+  P4EST_ASSERT (l_same_size < l_double_size);
+  P4EST_ASSERT (l_double_size <= l_half_size);
+  P4EST_ASSERT (l_double_size <= enc);
+
+  if (l_double_size <= enc && enc < u_double_size) {
+    int                 e = enc;
+    e -= l_double_size;
+    *n_subquad = e / l_double_size;
+    e -= (l_double_size * *n_subquad);
+    *n_orientation = e / n_entities;
+    *n_entity = e % n_entities;
+  }
+  else if (l_half_size <= enc && enc < u_half_size) {
+    int                 e = enc;
+    e -= l_half_size;
+    *n_orientation = e / n_entities;
+    *n_entity = e % n_entities;
+    *n_subquad = -1;
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+
+#ifdef P4EST_ENABLE_DEBUG
+  int8_t              upper_bnd;
+  if (n_entities == P4EST_FACES) {
+    upper_bnd = P4EST_HALF;
+  }
+#ifdef P4_TO_P8
+  else if (n_entities == P8EST_EDGES) {
+    upper_bnd = 2;
+  }
+#endif /* P4_TO_P8 */
+  else if (n_entities == P4EST_CHILDREN) {
+    upper_bnd = 1;
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  P4EST_ASSERT (0 <= *n_orientation && *n_orientation < upper_bnd);
+#endif /* P4EST_ENABLE_DEBUG */
+  P4EST_ASSERT (0 <= *n_entity && *n_entity < n_entities);
+
+  return 0;
+}
+
+/** Get opposite face-, (edge-), or corner index
+ * \param [in]   dir  Encoded direction.
+ *
+ * \returns Decoded index of opposite face (, edge,) or corner.
+ */
+static int
+get_opposite (int dir)
+{
+  if (0 <= dir && dir < P4EST_FACES) {
+    return dir ^ 1;
+  }
+#ifdef P4_TO_P8
+  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P8EST_EDGES)) {
+    return (dir - P4EST_FACES) ^ 3;
+  }
+  else if ((P4EST_FACES + P8EST_EDGES) <= dir
+           && dir < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
+    return (dir - (P4EST_FACES + P8EST_EDGES)) ^ 7;
+  }
+#else /* P4_TO_P8 */
+  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P4EST_CHILDREN)) {
+    return (dir - P4EST_FACES) ^ 3;
+  }
+#endif /* P4_TO_P8 */
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+  return -42;
+}
+
+/** Find neighboring quadrants across faces
+ * All parameters are defined exactly the same as in
+ * \ref p4est_mesh_get_neighbors
+ */
 int
 get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                     p4est_mesh_t * mesh, p4est_locidx_t curr_quad_id,
@@ -1611,10 +1725,9 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      neighbor_idx, neighbor_encoding;
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
-  int                *enc_ptr;
+  int                *int_ins;
 
 #ifdef P4_TO_P8
-  convFace = 145;
   l_same_size = 0;
   u_same_size = 4 * P4EST_FACES;
   l_double_size = u_same_size;
@@ -1622,7 +1735,6 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   l_half_size = -24;
   u_half_size = l_same_size;
 #else /* P4_TO_P8 */
-  convFace = 33;
   l_same_size = 0;
   u_same_size = 2 * P4EST_FACES;
   l_double_size = u_same_size;
@@ -1630,123 +1742,130 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   l_half_size = -8;
   u_half_size = l_same_size;
 #endif /* P4_TO_P8 */
+  convFace = -l_half_size + u_double_size;
+
   neighbor_idx = mesh->quad_to_quad[P4EST_FACES * curr_quad_id + direction];
   neighbor_encoding =
     mesh->quad_to_face[P4EST_FACES * curr_quad_id + direction];
 
   /* no neighbor present */
-  if ((neighbor_idx < 0 || neighbor_idx == curr_quad_id) &&
-      neighbor_encoding == direction) {
+  if ((neighbor_idx == curr_quad_id) && neighbor_encoding == direction) {
     return 0;
   }
 
-  if (neighbor_encoding < 0) {
-    /* half size */
+  if (l_same_size <= neighbor_encoding && neighbor_encoding < u_same_size) {
+    /** same size neighbor: */
+    if (neighbor_idx < lq) {
+      /* neighbor is part of quadrants owned by processor */
+      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
+      /* convert encoding */
+      ++neighbor_encoding;
+    }
+    else {
+      neighbor_idx -= lq;
+      P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < gq);
+      quad =
+        (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
+                                                 neighbor_idx);
+      neighbor_encoding = -(neighbor_encoding + 1);
+    }
+
+    quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+    *quad_ins = quad;
+
+#ifdef P4EST_ENABLE_DEBUG
+    /* sanity check level */
+    P4EST_ASSERT (quad->level == curr_quad->level);
+#endif /* P4EST_ENABLE_DEBUG */
+
+    int_ins = (int *) sc_array_push (neighboring_encs);
+    *int_ins = neighbor_encoding;
+
+    if (neighboring_qids != NULL) {
+      int_ins = (int *) sc_array_push (neighboring_qids);
+      *int_ins = neighbor_idx;
+    }
+  }
+  else if (l_double_size <= neighbor_encoding
+           && neighbor_encoding < u_double_size) {
+    /** double size neighbor: */
+    if (neighbor_idx < lq) {
+      /* neighbor is part of quadrants owned by processor */
+      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
+
+      /* convert encoding */
+      ++neighbor_encoding;
+    }
+    else {
+      neighbor_idx -= lq;
+      P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < gq);
+      quad =
+        (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
+                                                 neighbor_idx);
+
+      /* convert encoding */
+      neighbor_encoding = -neighbor_encoding - 1;
+    }
+    quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+    *quad_ins = quad;
+
+    int_ins = (int *) sc_array_push (neighboring_encs);
+
+#ifdef P4EST_ENABLE_DEBUG
+    /* sanity check level */
+    P4EST_ASSERT (quad->level == curr_quad->level - 1);
+#endif /* P4EST_ENABLE_DEBUG */
+
+    *int_ins = neighbor_encoding;
+
+    if (neighboring_qids != NULL) {
+      int_ins = (int *) sc_array_push (neighboring_qids);
+      *int_ins = neighbor_idx;
+    }
+  }
+  else if (l_half_size <= neighbor_encoding
+           && neighbor_encoding < u_half_size) {
+    /* half size: */
     p4est_locidx_t      quad_idx;
     p4est_locidx_t     *quad_ptr;
     quad_ptr =
-      (p4est_locidx_t *) sc_array_index_int (mesh->quad_to_half,
-                                             neighbor_idx);
+      (p4est_locidx_t *) sc_array_index (mesh->quad_to_half, neighbor_idx);
+    int                 nenc;
+
     for (i = 0; i < P4EST_HALF; ++i) {
+      nenc = neighbor_encoding + convFace;
       quad_idx = quad_ptr[i];
       if (quad_idx < lq) {
-        quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
         quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
-        *quad_ins = quad;
-
-        enc_ptr = (int *) sc_array_push (neighboring_encs);
-
-#ifdef P4EST_ENABLE_DEBUG
-        /* sanity check level */
-        P4EST_ASSERT (quad->level == curr_quad->level + 1);
-#endif /* P4EST_ENABLE_DEBUG
-
-          /* convert encoding */
-        *enc_ptr = neighbor_encoding + convFace;
+        ++nenc;
       }
       else {
-        /* neighbor is part of ghost layer */
         quad_idx -= lq;
-        quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+        P4EST_ASSERT (0 <= quad_idx && quad_idx < gq);
         quad =
           (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts, quad_idx);
-        *quad_ins = quad;
-        enc_ptr = (int *) sc_array_push (neighboring_encs);
+        nenc = -nenc - 1;
+      }
+      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+      *quad_ins = quad;
+
+      int_ins = (int *) sc_array_push (neighboring_encs);
+      *int_ins = nenc;
 
 #ifdef P4EST_ENABLE_DEBUG
-        /* sanity check level */
-        P4EST_ASSERT (quad->level == curr_quad->level + 1);
-#endif /* P4EST_ENABLE_DEBUG
-
-          /* convert encoding */
-        *enc_ptr = -neighbor_encoding - convFace;
-      }
+      /* sanity check level */
+      P4EST_ASSERT (quad->level == curr_quad->level + 1);
+#endif /* P4EST_ENABLE_DEBUG */
       if (neighboring_qids != NULL) {
-        enc_ptr = (int *) sc_array_push (neighboring_qids);
-        *enc_ptr = quad_idx;
+        int_ins = (int *) sc_array_push (neighboring_qids);
+        *int_ins = quad_idx;
       }
     }
   }
   else {
-    /* same or double size */
-    if (neighbor_idx < lq) {
-      /* neighbor is part of quadrants owned by processor */
-      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
-      *quad_ins = quad;
-
-      enc_ptr = (int *) sc_array_push (neighboring_encs);
-
-#ifdef P4EST_ENABLE_DEBUG
-      /* sanity check level */
-      if (l_same_size <= neighbor_encoding && neighbor_encoding < u_same_size) {
-        P4EST_ASSERT (quad->level == curr_quad->level);
-      }
-      else if (l_double_size <= neighbor_encoding) {
-        P4EST_ASSERT (quad->level == curr_quad->level - 1);
-      }
-      else {
-        SC_ABORT_NOT_REACHED ();
-      }
-#endif /* P4EST_ENABLE_DEBUG
-
-          /* convert encoding */
-      ++neighbor_encoding;
-      *enc_ptr = neighbor_encoding;
-    }
-    /* neighbor is part of ghost layer */
-    else {
-      neighbor_idx -= lq;
-      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-      quad =
-        (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
-                                                 neighbor_idx);
-      *quad_ins = quad;
-
-      enc_ptr = (int *) sc_array_push (neighboring_encs);
-
-#ifdef P4EST_ENABLE_DEBUG
-      /* sanity check level */
-      if (l_same_size <= neighbor_encoding && neighbor_encoding < u_same_size) {
-        P4EST_ASSERT (quad->level == curr_quad->level);
-      }
-      else if (l_double_size <= neighbor_encoding) {
-        P4EST_ASSERT (quad->level == curr_quad->level - 1);
-      }
-      else {
-        SC_ABORT_NOT_REACHED ();
-      }
-#endif /* P4EST_ENABLE_DEBUG
-
-          /* convert encoding */
-      ++neighbor_encoding;
-      *enc_ptr = -neighbor_encoding;
-    }
-    if (neighboring_qids != NULL) {
-      enc_ptr = (int *) sc_array_push (neighboring_qids);
-      *enc_ptr = neighbor_idx;
-    }
+    SC_ABORT_NOT_REACHED ();
   }
+
   return 0;
 }
 
@@ -1792,9 +1911,9 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4EST_ENABLE_DEBUG
     /* sanity check level */
     P4EST_ASSERT (quad->level == curr_quad->level);
-#endif /* P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
 
-          /* create implicitly saved encoding */
+    /* create implicitly saved encoding */
     enc_ptr = (int *) sc_array_push (neighboring_encs);
     neighbor_encoding = (direction) ^ 3;
 
@@ -1819,9 +1938,9 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4EST_ENABLE_DEBUG
     /* sanity check level */
     P4EST_ASSERT (quad->level == curr_quad->level);
-#endif /* P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
 
-          /* create implicitly saved encoding */
+    /* create implicitly saved encoding */
     enc_ptr = (int *) sc_array_push (neighboring_encs);
     neighbor_encoding = (direction) ^ 3;
     /* convert encoding */
@@ -1981,9 +2100,9 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT ((quad->level == curr_quad->level) ||
                   (quad->level == curr_quad->level - 1) ||
                   (quad->level == curr_quad->level + 1));
-#endif /* P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
 
-          /* create implicitly saved encoding */
+    /* create implicitly saved encoding */
     enc_ptr = (int *) sc_array_push (neighboring_encs);
     neighbor_encoding = (direction) ^ encHelper;
     /* convert encoding */
@@ -2009,9 +2128,9 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT ((quad->level == curr_quad->level) ||
                   (quad->level == curr_quad->level - 1) ||
                   (quad->level == curr_quad->level + 1));
-#endif /* P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
 
-          /* create implicitly saved encoding */
+    /* create implicitly saved encoding */
     enc_ptr = (int *) sc_array_push (neighboring_encs);
     neighbor_encoding = (direction) ^ encHelper;
     /* convert encoding */
