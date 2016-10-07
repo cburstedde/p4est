@@ -228,7 +228,8 @@ p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
  *                                  18 .. 25 neighbor(-s) across c_{i-18}
  * \param [out] neighboring_quads  Array containing neighboring quad(-s)
  *                                 Needs to be empty, contains
- *                                 p4est_quadrant_t*.
+ *                                 p4est_quadrant_t*. May be NULL, then \ref
+ *                                 neighboring_qids must not be NULL.
  * \param [out] neighboring_encs   Array containing encodings for neighboring
  *                                 quads as described below
  *                                 Needs to be empty, contains int.
