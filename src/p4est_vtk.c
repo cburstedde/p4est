@@ -1570,6 +1570,7 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
   int                 p;
   int                 procRank = cont->p4est->mpirank;
   int                 numProcs = cont->p4est->mpisize;
+  char                Basename[BUFSIZ];
 
   P4EST_ASSERT (cont != NULL && cont->writing);
 
@@ -1589,9 +1590,13 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
 
     /* Write data about the parallel pieces into both files */
     for (p = 0; p < numProcs; ++p) {
+      /* We want to write the basename of each processes file, since
+       * the basename function could modify its argument, we create a
+       * temporary copy. */
+      strncpy (Basename, cont->filename, BUFSIZ);
       fprintf (cont->pvtufile,
-               "    <Piece Source=\"%s_%04d.vtu\"/>\n", cont->filename, p);
-      fprintf (cont->visitfile, "%s_%04d.vtu\n", cont->filename, p);
+               "    <Piece Source=\"%s_%04d.vtu\"/>\n", basename (Basename), p);
+      fprintf (cont->visitfile, "%s_%04d.vtu\n", basename (Basename), p);
     }
     fprintf (cont->pvtufile, "  </PUnstructuredGrid>\n");
     fprintf (cont->pvtufile, "</VTKFile>\n");
