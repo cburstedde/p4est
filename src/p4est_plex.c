@@ -1357,10 +1357,12 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           for (j = 0; j < 4; j++) {
             p4est_locidx_t      nchild = cone_to_child[c - cstart][j];
             if (nchild >= 0) {
+              p4est_locidx_t      prevchild =
+                cone_to_child[c - cstart][(j + 3) % 4];
+
               ccones[j] = local_to_plex[K + cstart + nchild];
-              cornts[j] =
-                custom_numbering ? ((j < 2) ? 0 : -2)
-                : ((j == ((c - cstart + 1) % 4)) ? 0 : -2);
+              cornts[j] = custom_numbering ? ((j < 2) ? 0 : -2)
+                : ((prevchild < 0) ? 0 : -2);
             }
             else {
               int                 epid, lepid, estart, eend;
