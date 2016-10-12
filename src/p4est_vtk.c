@@ -1353,7 +1353,8 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
 
     for (i = 0; i < num_cell_vectors; ++all, i++)
       fprintf (cont->pvtufile, "      "
-               "<PDataArray type=\"%s\" Name=\"%s\" format=\"%s\"/>\n",
+               "<PDataArray type=\"%s\" NumberOfComponents=\"3\" Name=\"%s\" "
+               "format=\"%s\"/>\n",
                P4EST_VTK_FLOAT_NAME, names[all], P4EST_VTK_FORMAT_STRING);
 
     fprintf (cont->pvtufile, "    </PCellData>\n");
@@ -1545,9 +1546,13 @@ p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
   return p4est_vtk_write_point (cont, vector_name, values, 1);
 }
 
-p4est_vtk_context_t *
-p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
-                             const char *scalar_name, sc_array_t * values)
+/* Write either a scalar or a vector field.
+ * If is_vector is true then a vector field with 3 values per cell
+ * is written. */
+static p4est_vtk_context_t *
+p4est_vtk_write_cell (p4est_vtk_context_t * cont,
+                      const char *field_name, sc_array_t * values,
+                      int is_vector)
 {
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   p4est_locidx_t      il;
@@ -1559,25 +1564,57 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
   P4EST_ASSERT (cont != NULL && cont->writing);
 
   /* Write cell data. */
-  fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"%s\""
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\" %s Name=\"%s\""
            " format=\"%s\">\n",
-           P4EST_VTK_FLOAT_NAME, scalar_name, P4EST_VTK_FORMAT_STRING);
-
+           P4EST_VTK_FLOAT_NAME, is_vector ? "NumberOfComponents=\"3\"" : "",
+           field_name, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
-  for (il = 0; il < Ncells; ++il) {
-    fprintf (cont->vtufile,
+  if (!is_vector) {
+    for (il = 0; il < Ncells; ++il) {
+      fprintf (cont->vtufile,
 #ifdef P4EST_VTK_DOUBLES
-             "     %24.16e\n",
+               "     %24.16e\n",
 #else
-             "          %16.8e\n",
+               "          %16.8e\n",
 #endif
-             *(double *) sc_array_index (values, il));
+               *(double *) sc_array_index (values, il));
+    }
+  }
+  else {
+    /* Write vector data */
+    for (il = 0; il < Ncells; ++il) {
+      fprintf (cont->vtufile,
+#ifdef P4EST_VTK_DOUBLES
+               "     %24.16e  %24.16e  %24.16e\n",
+#else
+               "          %16.8e  %16.8e  %16.8e\n",
+#endif
+               *(double *) sc_array_index (values, 3 * il),
+               *(double *) sc_array_index (values, 3 * il + 1),
+               *(double *) sc_array_index (values, 3 * il + 2));
+    }
   }
 #else
-  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncells);
-  for (il = 0; il < Ncells; ++il) {
-    float_data[il] =
-      (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, il));
+  if (!is_vector) {
+    float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Ncells);
+    for (il = 0; il < Ncells; ++il) {
+      float_data[il] =
+        (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, il));
+    }
+  }
+  else {
+    /* vector data */
+    float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Ncells);
+    for (il = 0; il < Ncells; ++il) {
+      float_data[3 * il] =
+        (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, 3 * il));
+      float_data[3 * il + 1] =
+        (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (values, 3 * il + 1));
+      float_data[3 * il + 2] =
+        (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (values, 3 * il + 2));
+    }
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1586,7 +1623,8 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
    * at a time.
    */
   retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * Ncells);
+                                   sizeof (*float_data) * Ncells
+                                   * (is_vector ? 3 : 1));
   fprintf (cont->vtufile, "\n");
 
   P4EST_FREE (float_data);
@@ -1609,12 +1647,17 @@ p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
+p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
+                             const char *scalar_name, sc_array_t * values)
+{
+  return p4est_vtk_write_cell (cont, scalar_name, values, 0);
+}
+
+p4est_vtk_context_t *
 p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
                              const char *vector_name, sc_array_t * values)
 {
-  P4EST_ASSERT (cont != NULL && cont->writing);
-
-  SC_ABORT (P4EST_STRING "_vtk_write_cell_vector not implemented");
+  return p4est_vtk_write_cell (cont, vector_name, values, 1);
 }
 
 int
