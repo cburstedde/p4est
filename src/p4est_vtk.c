@@ -970,7 +970,8 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
 
     for (i = 0; i < num_point_vectors; ++all, i++)
       fprintf (cont->pvtufile, "      "
-               "<PDataArray type=\"%s\" Name=\"%s\" format=\"%s\"/>\n",
+               "<PDataArray type=\"%s\" Name=\"%s\" NumberOfComponents=\"3\" "
+               "format=\"%s\"/>\n",
                P4EST_VTK_FLOAT_NAME, names[all], P4EST_VTK_FORMAT_STRING);
 
     fprintf (cont->pvtufile, "    </PPointData>\n");
@@ -1393,14 +1394,19 @@ p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
   return cont;
 }
 
-p4est_vtk_context_t *
-p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
-                              const char *scalar_name, sc_array_t * values)
+/* Write either a scalar or a vector field.
+ * If is_vector is true then a vector field with 3 values per point
+ * is written. */
+static p4est_vtk_context_t *
+p4est_vtk_write_point (p4est_vtk_context_t * cont,
+                       const char *field_name, sc_array_t * values,
+                       int is_vector)
 {
   p4est_locidx_t      il, ddl;
   int                 use_nodes;
 #ifdef P4EST_ENABLE_DEBUG
   int                 Ncorners;
+  int                 Nentries;
 #endif
   int                 Npoints;
 #ifndef P4EST_VTK_ASCII
@@ -1412,10 +1418,13 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
   P4EST_ASSERT (cont != NULL && cont->writing);
 #ifdef P4EST_ENABLE_DEBUG
   Ncorners = cont->num_corners;
+  Nentries = Ncorners * (is_vector ? 3 : 1);
 #endif
   Npoints = cont->num_points;
   ntc = cont->node_to_corner;
-  P4EST_ASSERT (values != NULL && values->elem_count == (size_t) Ncorners);
+
+  P4EST_ASSERT (values != NULL && values->elem_count == (size_t) Nentries);
+
   if (ntc == NULL) {
     /* we are writing a discontinuous field, possibly due to vertex scaling */
     P4EST_ASSERT (cont->num_corners == cont->num_points);
@@ -1429,30 +1438,68 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
   }
 
   /* write point data */
-  fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"%s\""
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\" %s Name=\"%s\""
            " format=\"%s\">\n",
-           P4EST_VTK_FLOAT_NAME, scalar_name, P4EST_VTK_FORMAT_STRING);
+           P4EST_VTK_FLOAT_NAME,
+           is_vector ? "NumberOfComponents=\"3\"" : "", field_name,
+           P4EST_VTK_FORMAT_STRING);
 
 #ifdef P4EST_VTK_ASCII
-  for (il = 0; il < Npoints; ++il) {
-    ddl = use_nodes ? ntc[il] : il;
-    P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+  if (!is_vector) {
+    for (il = 0; il < Npoints; ++il) {
+      ddl = use_nodes ? ntc[il] : il;
+      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
 
-    fprintf (cont->vtufile,
+      fprintf (cont->vtufile,
 #ifdef P4EST_VTK_DOUBLES
-             "     %24.16e\n",
+               "     %24.16e\n",
 #else
-             "          %16.8e\n",
+               "          %16.8e\n",
 #endif
-             *(double *) sc_array_index (values, ddl));
+               *(double *) sc_array_index (values, ddl));
+    }
+  }
+  else {
+    for (il = 0; il < Npoints; ++il) {
+      ddl = use_nodes ? ntc[il] : il;
+      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+
+      fprintf (cont->vtufile,
+#ifdef P4EST_VTK_DOUBLES
+               "     %24.16e %24.16e %24.16e\n",
+#else
+               "          %16.8e %16.8e %16.8e\n",
+#endif
+               *(double *) sc_array_index (values, 3 * ddl),
+               *(double *) sc_array_index (values, 3 * ddl + 1),
+               *(double *) sc_array_index (values, 3 * ddl + 2));
+    }
   }
 #else
-  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints);
-  for (il = 0; il < Npoints; ++il) {
-    ddl = use_nodes ? ntc[il] : il;
-    P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
-    float_data[il] =
-      (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, ddl));
+  if (!is_vector) {
+    float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints);
+    for (il = 0; il < Npoints; ++il) {
+      ddl = use_nodes ? ntc[il] : il;
+      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+      float_data[il] =
+        (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, ddl));
+    }
+  }
+  else {
+    float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints * 3);
+    for (il = 0; il < Npoints; ++il) {
+      ddl = use_nodes ? ntc[il] : il;
+      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+      float_data[3 * il] =
+        (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (values, 3 * ddl));
+      float_data[3 * il + 1] =
+        (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (values, 3 * ddl + 1));
+      float_data[3 * il + 2] =
+        (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (values, 3 * ddl + 2));
+    }
   }
 
   fprintf (cont->vtufile, "          ");
@@ -1461,7 +1508,8 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
    * at a time.
    */
   retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * Npoints);
+                                   sizeof (*float_data) * Npoints
+                                   * (is_vector ? 3 : 1));
   fprintf (cont->vtufile, "\n");
 
   P4EST_FREE (float_data);
@@ -1484,12 +1532,17 @@ p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
+p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
+                              const char *scalar_name, sc_array_t * values)
+{
+  return p4est_vtk_write_point (cont, scalar_name, values, 0);
+}
+
+p4est_vtk_context_t *
 p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
                               const char *vector_name, sc_array_t * values)
 {
-  P4EST_ASSERT (cont != NULL && cont->writing);
-
-  SC_ABORT (P4EST_STRING "_vtk_write_point_vector not implemented");
+  return p4est_vtk_write_point (cont, vector_name, values, 1);
 }
 
 p4est_vtk_context_t *
