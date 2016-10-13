@@ -1666,7 +1666,7 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
   int                 p;
   int                 procRank = cont->p4est->mpirank;
   int                 numProcs = cont->p4est->mpisize;
-  char                Basename[BUFSIZ];
+  char               *filename_basename, filename_cpy[BUFSIZ];
 
   P4EST_ASSERT (cont != NULL && cont->writing);
 
@@ -1689,11 +1689,12 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
       /* We want to write the basename of each processes file, since
        * the basename function could modify its argument, we create a
        * temporary copy. */
-      strncpy (Basename, cont->filename, BUFSIZ);
+      snprintf (filename_cpy, BUFSIZ, "%s", cont->filename);
+      filename_basename = basename (filename_cpy);
       fprintf (cont->pvtufile,
-               "    <Piece Source=\"%s_%04d.vtu\"/>\n", basename (Basename),
+               "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename_basename,
                p);
-      fprintf (cont->visitfile, "%s_%04d.vtu\n", basename (Basename), p);
+      fprintf (cont->visitfile, "%s_%04d.vtu\n", filename_basename, p);
     }
     fprintf (cont->pvtufile, "  </PUnstructuredGrid>\n");
     fprintf (cont->pvtufile, "</VTKFile>\n");
