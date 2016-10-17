@@ -1773,7 +1773,7 @@ set_xor_constants (int edge_dir, int face_dir, int *edge_offset,
  * All parameters are defined exactly the same as in
  * \ref p4est_mesh_get_neighbors
  */
-int
+static int
 get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                     p4est_mesh_t * mesh, p4est_locidx_t curr_quad_id,
                     p4est_locidx_t direction, sc_array_t * neighboring_quads,
@@ -1975,7 +1975,7 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 
 #ifdef P4_TO_P8
-int
+static int
 get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                     p4est_mesh_t * mesh, p4est_locidx_t curr_quad_id,
                     p4est_locidx_t direction, sc_array_t * neighboring_quads,
@@ -2156,7 +2156,7 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 #endif /* P4_TO_P8 */
 
-int
+static int
 get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                       p4est_mesh_t * mesh, p4est_locidx_t curr_quad_id,
                       p4est_locidx_t direction,
