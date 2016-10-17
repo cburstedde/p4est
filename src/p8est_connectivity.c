@@ -1118,7 +1118,7 @@ int
 p8est_connectivity_edge_neighbor_corner_orientation (int c, int e,
                                                      int ne, int o)
 {
-  P4EST_ASSERT (0 <= c && e < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
 
   int                 ec, nec;
   ec = p8est_corner_edge_corners[c][e];
