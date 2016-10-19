@@ -302,9 +302,9 @@ int                 p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
 
 /** Enlarge a quadrant as long as its first corner stays the same.
  * We limit the enlargement by containing it in an ancestor quadrant.
- * \param [in] a    Valid quadrant.  On input and output, equal to or
+ * \param [in] a    Extended quadrant.  On input and output, equal to or
  *                  strict ancestor of the quadrant \b q to be modified.
- * \param [in,out] q    On input and output, a valid quadrant and also
+ * \param [in,out] q    On input and output, an extended quadrant and also
  *                      equal or a strict descendant of \b a.
  *                      Possibly enlarged by this function.
  */
@@ -313,9 +313,9 @@ void                p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
 
 /** Enlarge a quadrant as long as its last corner stays the same.
  * We limit the enlargement by containing it in an ancestor quadrant.
- * \param [in] a    Valid quadrant.  On input and output, equal to or
+ * \param [in] a    Extended quadrant.  On input and output, equal to or
  *                  strict ancestor of the quadrant \b q to be modified.
- * \param [in,out] q    On input and output, a valid quadrant and also
+ * \param [in,out] q    On input and output, an extended quadrant and also
  *                      equal or a strict descendant of \b a.
  *                      Possibly enlarged by this function.
  */

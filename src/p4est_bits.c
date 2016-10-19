@@ -781,7 +781,6 @@ p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
   p4est_quadrant_t    inp = *q;
 #endif
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (a));
   P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
                 p4est_quadrant_is_ancestor (a, q));
 
@@ -793,7 +792,7 @@ p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
   while (a->level < q->level && (w & P4EST_QUADRANT_LEN (q->level)) == 0) {
     --q->level;
   }
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
   P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
                 p4est_quadrant_is_ancestor (a, q));
@@ -817,7 +816,6 @@ p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
   p4est_quadrant_t    inp = *q;
 #endif
 
-  P4EST_ASSERT (p4est_quadrant_is_valid (a));
   P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
                 p4est_quadrant_is_ancestor (a, q));
 
@@ -838,7 +836,7 @@ p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
 #ifdef P4_TO_P8
   q->z &= w;
 #endif
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
 
   P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
                 p4est_quadrant_is_ancestor (a, q));
