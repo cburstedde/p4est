@@ -773,6 +773,91 @@ p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
 }
 
 void
+p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
+                              p4est_quadrant_t * q)
+{
+  p4est_qcoord_t      w;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_quadrant_t    inp = *q;
+#endif
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (a));
+  P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
+                p4est_quadrant_is_ancestor (a, q));
+
+  w = q->x | q->y
+#ifdef P4_TO_P8
+    | q->z
+#endif
+    ;
+  while (a->level < q->level && (w & P4EST_QUADRANT_LEN (q->level)) == 0) {
+    --q->level;
+  }
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
+                p4est_quadrant_is_ancestor (a, q));
+  P4EST_ASSERT (p4est_quadrant_is_equal (q, &inp) ||
+                p4est_quadrant_is_ancestor (q, &inp));
+
+  /* verify that the first corner stayed the same */
+  P4EST_ASSERT (q->x == inp.x && q->y == inp.y
+#ifdef P4_TO_P8
+                && q->z == inp.z
+#endif
+    );
+}
+
+void
+p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
+{
+  int                 inlevel;
+  p4est_qcoord_t      w;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_quadrant_t    inp = *q;
+#endif
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (a));
+  P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
+                p4est_quadrant_is_ancestor (a, q));
+
+  inlevel = (int) q->level;
+  w = q->x & q->y
+#ifdef P4_TO_P8
+    & q->z
+#endif
+    ;
+  while (a->level < q->level && (w & P4EST_QUADRANT_LEN (q->level)) != 0) {
+    --q->level;
+  }
+
+  /* move first corner to the lower left according to q's enlargement */
+  w = ~(P4EST_QUADRANT_LEN (q->level) - P4EST_QUADRANT_LEN (inlevel));
+  q->x &= w;
+  q->y &= w;
+#ifdef P4_TO_P8
+  q->z &= w;
+#endif
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  P4EST_ASSERT (p4est_quadrant_is_equal (a, q) ||
+                p4est_quadrant_is_ancestor (a, q));
+  P4EST_ASSERT (p4est_quadrant_is_equal (q, &inp) ||
+                p4est_quadrant_is_ancestor (q, &inp));
+
+  /* verify that the last corner stayed the same */
+#ifdef P4EST_ENABLE_DEBUG
+  P4EST_ASSERT (inlevel == inp.level);
+  P4EST_ASSERT (~w >= 0);
+  P4EST_ASSERT (q->x + ~w == inp.x && q->y + ~w == inp.y
+#ifdef P4_TO_P8
+                && q->z + ~w == inp.z
+#endif
+    );
+#endif
+}
+
+void
 p4est_quadrant_ancestor (const p4est_quadrant_t * q,
                          int level, p4est_quadrant_t * r)
 {
