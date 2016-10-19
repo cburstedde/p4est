@@ -330,6 +330,19 @@ int                 p8est_quadrant_is_inside_tree (p8est_tree_t * tree,
                                                    const p8est_quadrant_t *
                                                    q);
 
+/** Whether two descendants of a quadrant are first and last, up to size.
+ * \param [in] f    An extended quadrant, need not be of maximum level.
+ * \param [in] l    An extended quadrant, need not be of maximum level.
+ *                  It must be greater equal \b f in the space filling curve.
+ * \param [in] a    An extended quadrant,
+ *                  equal to or ancestor of \b f, and likewise to/of \b l.
+ * \return          Whether the first corner of \b f equals that of \b a and
+ *                  the last corner of \b l equals that of \b a.
+ */
+int                 p8est_quadrant_is_first_last (const p8est_quadrant_t * f,
+                                                  const p8est_quadrant_t * l,
+                                                  const p8est_quadrant_t * a);
+
 /** Enlarge a quadrant as long as its first corner stays the same.
  * We limit the enlargement by containing it in an ancestor quadrant.
  * \param [in] a    Extended quadrant.  On input and output, equal to or

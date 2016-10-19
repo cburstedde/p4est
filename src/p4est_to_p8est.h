@@ -245,6 +245,7 @@
 #define p4est_quadrant_is_next_D        p8est_quadrant_is_next_D
 #define p4est_quadrant_overlaps_tree    p8est_quadrant_overlaps_tree
 #define p4est_quadrant_is_inside_tree   p8est_quadrant_is_inside_tree
+#define p4est_quadrant_is_first_last    p8est_quadrant_is_first_last
 #define p4est_quadrant_enlarge_first    p8est_quadrant_enlarge_first
 #define p4est_quadrant_enlarge_last     p8est_quadrant_enlarge_last
 #define p4est_quadrant_ancestor         p8est_quadrant_ancestor
