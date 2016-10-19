@@ -181,10 +181,8 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 #ifdef P4EST_ENABLE_DEBUG
   int                 ell;
 #endif
-  int                 maxl;
   p4est_t            *p4est;
-  p4est_quadrant_t    q1, q2, *q;
-  p4est_quadrant_t    cand, desc;
+  p4est_quadrant_t   *q;
 
   /* check sanity of call */
   P4EST_ASSERT (build != NULL);
@@ -205,8 +203,20 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 
   /* do the heavy lifting: complete this tree as coarsely as possible */
   if (build->tquadrants->elem_count == 0) {
+#ifdef P4EST_ENABLE_DEBUG
+    int                 maxl;
+    int                 onetree;
+    p4est_quadrant_t    q1, q2;
+    p4est_quadrant_t    cand, desc;
+#endif
+    p4est_quadrant_t    a;
+    const p4est_quadrant_t *qfp, *qlp;
+
     P4EST_ASSERT (build->tree->maxlevel == 0);
     P4EST_ASSERT (build->prev.level == -1);
+
+#ifdef P4EST_ENABLE_DEBUG
+    /* this is older code now used for checking consistency */
     maxl = build->cur_maxlevel;
     q1 = build->tree->first_desc;
     q2 = build->tree->last_desc;
@@ -247,15 +257,66 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
     P4EST_ASSERT (p4est_quadrant_compare (&q1, &q2) <= 0);
 
     if (p4est_quadrant_is_equal (&q1, &q2)) {
-      /* special case: we create a subtree that is one quadrant */
+      /* special case: we create a subtree that is one quadrant q1 */
+      P4EST_ASSERT (p4est_quadrant_is_first_last (&build->tree->first_desc,
+                                                  &build->tree->last_desc,
+                                                  &q1));
+      onetree = 1;
+    }
+    else {
+      /* tree boundaries are q1 and q2 */
+      P4EST_ASSERT (!p4est_quadrant_overlaps (&q1, &q2));
+      onetree = 0;
+    }
+#endif
+
+    /* work with the recently added quadrant_enlarge functions */
+    qfp = &build->tree->first_desc;
+    qlp = &build->tree->last_desc;
+    p4est_nearest_common_ancestor (qfp, qlp, &a);
+    if (p4est_quadrant_is_first_last (qfp, qlp, &a)) {
+      /* the tree consists of only a */
+
+      /* double checking */
+      P4EST_ASSERT (onetree);
+      P4EST_ASSERT (p4est_quadrant_is_equal (&a, &q1));
+
+      /* stuff the quadrant into the tree data structure */
       q = (p4est_quadrant_t *) sc_array_push (build->tquadrants);
-      *q = q1;
+      *q = a;
       p4est_quadrant_init_data (p4est, build->cur_tree, q, build->init_fn);
       build->tree->quadrants_per_level[q->level] = 1;
       build->tree->maxlevel = (int) q->level;
     }
     else {
-      p4est_complete_region (p4est, &q1, 1, &q2, 1,
+      int                 idf, idl;
+      p4est_quadrant_t    cf, cl;
+      p4est_quadrant_t    qf, ql;
+
+      /* find the children of a containing qf, ql */
+      idf = p4est_quadrant_ancestor_id (qfp, a.level + 1);
+      idl = p4est_quadrant_ancestor_id (qlp, a.level + 1);
+      P4EST_ASSERT (idf < idl);
+      p4est_quadrant_child (&a, &cf, idf);
+      p4est_quadrant_child (&a, &cl, idl);
+
+      /* we modify these quadrants */
+      qf = *qfp;
+      ql = *qlp;
+
+      /* the tree must be filled up between its first and last end */
+      P4EST_ASSERT (!p4est_quadrant_overlaps (&qf, &ql));
+      p4est_quadrant_enlarge_first (&cf, &qf);
+      p4est_quadrant_enlarge_last (&cl, &ql);
+      P4EST_ASSERT (!p4est_quadrant_overlaps (&qf, &ql));
+
+      /* double checking */
+      P4EST_ASSERT (!onetree);
+      P4EST_ASSERT (p4est_quadrant_is_equal (&qf, &q1));
+      P4EST_ASSERT (p4est_quadrant_is_equal (&ql, &q2));
+
+      /* do the filling up */
+      p4est_complete_region (p4est, &qf, 1, &ql, 1,
                              build->tree, build->cur_tree, build->init_fn);
     }
   }
