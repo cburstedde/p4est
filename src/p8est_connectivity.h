@@ -341,6 +341,16 @@ int                 p8est_connectivity_face_neighbor_face_corner_orientation
 int                 p8est_connectivity_face_neighbor_corner_orientation
   (int c, int f, int nf, int o);
 
+/** Transform a face-edge across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] fe   A face edge number in 0..3.
+ * \param [in] f    A face number that touches the edge \a e.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ */
+int                 p8est_connectivity_face_neighbor_face_edge_orientation
+  (int fe, int f, int nf, int o);
+
 /** Transform an edge across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.
  * \param [in] e    A edge number in 0..11.
