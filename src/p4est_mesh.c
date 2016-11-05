@@ -2002,6 +2002,7 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   l_half_size = -24;
   u_half_size = l_same_size;
   int                 convEdge = -l_half_size + u_double_size;
+
   neighbor_idx = mesh->quad_to_edge[P8EST_EDGES * curr_quad_id + (direction)];
 
   /** Domain boundary or hanging edge: No neighbor present */
@@ -2033,8 +2034,8 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
         quad =
           (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                    neighbor_idx);
-        neighbor_encoding = -neighbor_encoding - 1;
       }
+      neighbor_encoding = -neighbor_encoding - 1;
     }
 
 #ifdef P4EST_ENABLE_DEBUG
