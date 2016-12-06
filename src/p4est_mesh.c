@@ -2200,9 +2200,11 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 
   if (neighbor_idx < lq) {
     /* same size neighbor, same proc */
-    quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-    quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
-    *quad_ins = quad;
+    if (neighboring_quads != NULL) {
+      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
+      *quad_ins = quad;
+    }
 
 #ifdef P4EST_ENABLE_DEBUG
     /* sanity check level */
@@ -2227,10 +2229,13 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   else if (lq <= neighbor_idx && neighbor_idx < lq + gq) {
     /* same size neighbor, ghost layer */
     neighbor_idx -= lq;
-    quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-    quad =
-      (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts, neighbor_idx);
-    *quad_ins = quad;
+    if (neighboring_quads != NULL) {
+      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+      quad =
+        (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
+                                                 neighbor_idx);
+      *quad_ins = quad;
+    }
 
 #ifdef P4EST_ENABLE_DEBUG
     /* sanity check level */
@@ -2277,9 +2282,11 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 
       if (quad_idx < lq) {
         /* neighbor is part of quadrants owned by processor */
-        quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-        quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
-        *quad_ins = quad;
+        if (neighboring_quads != NULL) {
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+          quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
+          *quad_ins = quad;
+        }
 
 #ifdef P4EST_ENABLE_DEBUG
         /* sanity check level */
@@ -2296,10 +2303,13 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
       else {
         /* neighbor is part of ghost layer */
         quad_idx -= lq;
-        quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-        quad =
-          (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts, quad_idx);
-        *quad_ins = quad;
+        if (neighboring_quads != NULL) {
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+          quad =
+            (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
+                                                     quad_idx);
+          *quad_ins = quad;
+        }
 
 #ifdef P4EST_ENABLE_DEBUG
         /* sanity check level */
