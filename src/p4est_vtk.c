@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -914,10 +915,8 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                   "_vtk.h for more information.");
 
   fprintf (cont->vtufile, "      <PointData");
-  if (point_scalars != NULL)
-    fprintf (cont->vtufile, " Scalars=\"%s\"", point_scalars);
-  if (point_vectors != NULL)
-    fprintf (cont->vtufile, " Vectors=\"%s\"", point_vectors);
+  fprintf (cont->vtufile, " Scalars=\"%s\"", point_scalars);
+  fprintf (cont->vtufile, " Vectors=\"%s\"", point_vectors);
   fprintf (cont->vtufile, ">\n");
 
   if (ferror (cont->vtufile)) {

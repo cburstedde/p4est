@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -146,6 +147,23 @@ p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
                                         int compute_tree_index,
                                         int compute_level_lists,
                                         p8est_connect_type_t btype);
+
+/** Make a deep copy of a p8est.
+ * The connectivity is not duplicated.
+ * Copying of quadrant user data is optional.
+ * If old and new data sizes are 0, the user_data field is copied regardless.
+ * The inspect member of the copy is set to NULL.
+ * The revision counter of the copy is set to zero.
+ *
+ * \param [in]  copy_data  If true, data are copied.
+ *                         If false, data_size is set to 0.
+ * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
+ * \return  Returns a valid p8est that does not depend on the input,
+ *                         except for borrowing the same connectivity.
+ *                         Its revision counter is 0.
+ */
+p8est_t            *p8est_copy_ext (p8est_t * input, int copy_data,
+                                    int duplicate_mpicomm);
 
 /** Refine a forest with a bounded refinement level and a replace option.
  * \param [in,out] p8est The forest is changed in place.
@@ -316,13 +334,6 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
 
-int                 p8est_reduce_mpicomm (p8est_t * p8est);
-
-int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
-                                              sc_MPI_Group group_add,
-                                              const int add_to_beginning,
-                                              int **ranks);
-
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest
  * must be at least face balanced (see p4est_balance()).  See
@@ -361,6 +372,9 @@ int                 p8est_reduce_mpicomm_ext (p8est_t * p8est,
  *                                      PetscSFSetGraph()
  * \param[in,out] out_remotes           filled with argument for
  *                                      PetscSFSetGraph()
+ * \param[in]     custom_numbering      Whether or use the default numbering
+ *                                      (0) of DMPlex child ids or the custom
+ *                                      (1).
  */
 void                p8est_get_plex_data_ext (p8est_t * p8est,
                                              p8est_ghost_t ** ghost,
@@ -379,7 +393,8 @@ void                p8est_get_plex_data_ext (p8est_t * p8est,
                                              sc_array_t * out_parents,
                                              sc_array_t * out_childids,
                                              sc_array_t * out_leaves,
-                                             sc_array_t * out_remotes);
+                                             sc_array_t * out_remotes,
+                                             int custom_numbering);
 
 SC_EXTERN_C_END;
 

@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -34,6 +35,10 @@
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_lnodes.h>
+#endif
+
+#ifdef P4EST_ENABLE_DEBUG
+#include <sc_statistics.h>
 #endif
 
 #ifndef P4_TO_P8

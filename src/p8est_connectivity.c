@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -62,6 +63,20 @@ const int           p8est_face_permutation_refs[6][6] =
  { 0, 2, 2, 0, 0, 1 },
  { 2, 0, 0, 2, 2, 0 }};
 
+const int           p8est_face_edge_permutations[8][4] =
+{{ 0, 1, 2, 3 },
+ { 0, 1, 3, 2 },
+ { 1, 0, 2, 3 },
+ { 1, 0, 3, 2 },
+ { 2, 3, 0, 1 },
+ { 2, 3, 1, 0 },
+ { 3, 2, 0, 1 },
+ { 3, 2, 1, 0 }};
+const int           p8est_face_edge_permutation_sets[3][4] =
+{{ 4, 1, 2, 7 },
+ { 0, 6, 5, 3 },
+ { 0, 5, 6, 3 }};
+
 const int           p8est_edge_faces[12][2] =
 {{ 2, 4 },
  { 3, 4 },
@@ -88,6 +103,19 @@ const int           p8est_edge_corners[12][2] =
  { 1, 5 },
  { 2, 6 },
  { 3, 7 }};
+const int           p8est_edge_edge_corners[12][8] =
+{{  0,  1, -1, -1, -1, -1, -1, -1},
+ { -1, -1,  0,  1, -1, -1, -1, -1},
+ { -1, -1, -1, -1,  0,  1, -1, -1},
+ { -1, -1, -1, -1, -1, -1,  0,  1},
+ {  0, -1,  1, -1, -1, -1, -1, -1},
+ { -1,  0, -1,  1, -1, -1, -1, -1},
+ { -1, -1, -1, -1,  0, -1,  1, -1},
+ { -1, -1, -1, -1, -1,  0, -1,  1},
+ {  0, -1, -1, -1,  1, -1, -1, -1},
+ { -1,  0, -1, -1, -1,  1, -1, -1},
+ { -1, -1,  0, -1, -1, -1,  1, -1},
+ { -1, -1, -1,  0, -1, -1, -1,  1}};
 const int           p8est_edge_face_corners[12][6][2] =
 {{{ -1, -1 }, { -1, -1 }, {  0,  1 }, { -1, -1 }, {  0,  1 }, { -1, -1 }},
  {{ -1, -1 }, { -1, -1 }, { -1, -1 }, {  0,  1 }, {  2,  3 }, { -1, -1 }},
@@ -101,6 +129,24 @@ const int           p8est_edge_face_corners[12][6][2] =
  {{ -1, -1 }, {  0,  2 }, {  1,  3 }, { -1, -1 }, { -1, -1 }, { -1, -1 }},
  {{  1,  3 }, { -1, -1 }, { -1, -1 }, {  0,  2 }, { -1, -1 }, { -1, -1 }},
  {{ -1, -1 }, {  1,  3 }, { -1, -1 }, {  1,  3 }, { -1, -1 }, { -1, -1 }}};
+const int           p8est_edge_face_edges[12][6] =
+{{ -1, -1,  0, -1,  0, -1 },
+ { -1, -1, -1,  0,  1, -1 },
+ { -1, -1,  1, -1, -1,  0 },
+ { -1, -1, -1,  1, -1,  1 },
+ {  0, -1, -1, -1,  2, -1 },
+ { -1,  0, -1, -1,  3, -1 },
+ {  1, -1, -1, -1, -1,  2 },
+ { -1,  1, -1, -1, -1,  3 },
+ {  2, -1,  2, -1, -1, -1 },
+ { -1,  2,  3, -1, -1, -1 },
+ {  3, -1, -1,  2, -1, -1 },
+ { -1,  3, -1,  3, -1, -1 }};
+const int           p8est_edge_corner_permutation_sets[2] =
+{0, 1};
+const int           p8est_edge_corner_permuations[2][2] =
+{{0, 1},
+ {1, 0}};
 
 const int           p8est_corner_faces[8][3] =
 {{ 0, 2, 4 },
@@ -129,7 +175,15 @@ const int           p8est_corner_face_corners[8][6] =
  { -1,  2,  3, -1, -1,  1 },
  {  3, -1, -1,  2, -1,  2 },
  { -1,  3, -1,  3, -1,  3 }};
-
+const int           p8est_corner_edge_corners[8][12] =
+{{  0, -1, -1, -1,  0, -1, -1, -1,  0, -1, -1, -1 },
+ {  1, -1, -1, -1, -1,  0, -1, -1, -1,  0, -1, -1 },
+ { -1,  0, -1, -1,  1, -1, -1, -1, -1, -1,  0, -1 },
+ { -1,  1, -1, -1, -1,  1, -1, -1, -1, -1, -1,  0 },
+ { -1, -1,  0, -1, -1, -1,  0, -1,  1, -1, -1, -1 },
+ { -1, -1,  1, -1, -1, -1, -1,  0, -1,  1, -1, -1 },
+ { -1, -1, -1,  0, -1, -1,  1, -1, -1, -1,  1, -1 },
+ { -1, -1, -1,  1, -1, -1, -1,  1, -1, -1, -1,  1 }};
 const int           p8est_child_edge_faces[8][12] =
 {{ -1,  4,  2, -1, -1,  4,  0, -1, -1,  2,  0, -1 },
  { -1,  4,  2, -1,  4, -1, -1,  1,  2, -1, -1,  1 },
@@ -1016,6 +1070,64 @@ p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
 }
 
 #include "p4est_connectivity.c"
+
+int
+p8est_connectivity_face_neighbor_edge_orientation (int e, int f,
+                                                   int nf, int o)
+{
+  int                 fe, nfe, pref, pset;
+
+  P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
+  P4EST_ASSERT (0 <= f && f < P4EST_FACES);
+  P4EST_ASSERT (0 <= nf && nf < P4EST_FACES);
+  P4EST_ASSERT (0 <= o && o < P4EST_HALF);
+
+  fe = p8est_edge_face_edges[e][f];
+  P4EST_ASSERT (0 <= fe && fe < P4EST_HALF);
+
+  pref = p8est_face_permutation_refs[f][nf];
+  pset = p8est_face_edge_permutation_sets[pref][o];
+  nfe = p8est_face_edge_permutations[pset][fe];
+
+  P4EST_ASSERT (0 <= nfe && nfe < P4EST_HALF);
+
+  return p8est_face_edges[nf][nfe];
+}
+
+int
+p8est_connectivity_edge_neighbor_edge_corner_orientation (int ec, int e,
+                                                          int ne, int o)
+{
+  int                 nec, pset;
+
+  P4EST_ASSERT (0 <= ec && ec < 2);
+  P4EST_ASSERT (0 <= e && e < P8EST_EDGES);
+  P4EST_ASSERT (0 <= ne && ne < P8EST_EDGES);
+  P4EST_ASSERT (0 <= o && o < 2);
+
+  pset = p8est_edge_corner_permutation_sets[o];
+  nec = p8est_edge_corner_permuations[pset][ec];
+
+  P4EST_ASSERT (0 <= nec && nec < 2);
+
+  return nec;
+}
+
+int
+p8est_connectivity_edge_neighbor_corner_orientation (int c, int e,
+                                                     int ne, int o)
+{
+  P4EST_ASSERT (0 <= c && e < P4EST_CHILDREN);
+
+  int                 ec, nec;
+  ec = p8est_corner_edge_corners[c][e];
+  P4EST_ASSERT (0 <= ec && ec < 2);
+
+  nec =
+    p8est_connectivity_edge_neighbor_edge_corner_orientation (ec, e, ne, o);
+
+  return p8est_edge_corners[ne][nec];
+}
 
 void
 p8est_find_edge_transform (p4est_connectivity_t * conn,
