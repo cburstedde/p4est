@@ -107,6 +107,163 @@ circle_init (p4est_t * p4est, p4est_topidx_t which_tree,
   *idata = ++circle_count;
 }
 
+typedef struct test_transfer
+{
+  p4est_t            *p4est;
+  p4est_t            *back;
+}
+test_transfer_t;
+
+static test_transfer_t *
+test_transfer_pre (p4est_t * p4est)
+{
+  test_transfer_t    *tt;
+
+  tt = P4EST_ALLOC (test_transfer_t, 1);
+  tt->p4est = p4est;
+  tt->back = p4est_copy (tt->p4est, 1);
+
+  return tt;
+}
+
+static void
+test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
+{
+  size_t              pds, gds, data_size;
+  int                 i;
+  int                *dest_sizes;
+  int                *dest_vdata;
+  int                *src_sizes;
+  int                *src_vdata;
+  int                *ti;
+  char               *dest_data;
+  char               *src_data;
+  char               *td, *cmp;
+  size_t              zz;
+  size_t              vz, vcountd, vcounts;
+  p4est_topidx_t      tid;
+  p4est_locidx_t      li;
+  p4est_gloidx_t      tog;
+  p4est_t            *back;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  p4est_transfer_context_t *tf;
+
+  P4EST_ASSERT (tt != NULL);
+  P4EST_ASSERT (tt->p4est == p4est);
+  back = tt->back;
+  P4EST_ASSERT (p4est->data_size == back->data_size);
+
+  /* now back is a copy of the p4est before partiton */
+  /* p4est has been partitioned once */
+
+  /* put together some buffers */
+  gds = sizeof (p4est_gloidx_t);
+  pds = SC_MAX (p4est->data_size, gds);
+  data_size = gds + pds;
+  cmp = P4EST_ALLOC (char, data_size);
+  dest_data = P4EST_ALLOC (char, data_size * p4est->local_num_quadrants);
+  dest_sizes = P4EST_ALLOC (int, p4est->local_num_quadrants);
+  src_data = P4EST_ALLOC_ZERO (char, data_size * back->local_num_quadrants);
+  src_sizes = P4EST_ALLOC (int, back->local_num_quadrants);
+
+  /* assemble data to send that includes the user_data */
+  td = src_data;
+  li = 0;
+  vcounts = 0;
+  tog = back->global_first_quadrant[back->mpirank];
+  for (tid = back->first_local_tree; tid <= back->last_local_tree; ++tid) {
+    tree = p4est_tree_array_index (back->trees, tid);
+    for (zz = 0; zz < tree->quadrants.elem_count; ++zz) {
+      vcounts += vz = tog % 4;
+      quad = p4est_quadrant_array_index (&tree->quadrants, zz);
+      *(p4est_gloidx_t *) td = tog++;
+      td += gds;
+      memcpy (td, quad->p.user_data, p4est->data_size);
+      td += pds;
+      src_sizes[li++] = vz * sizeof (int);
+    }
+  }
+  P4EST_ASSERT (li == back->local_num_quadrants);
+  P4EST_ASSERT (td - src_data ==
+                (ptrdiff_t) (data_size * back->local_num_quadrants));
+  P4EST_ASSERT (tog == back->global_first_quadrant[back->mpirank + 1]);
+
+  /* do data transfer part I */
+  tf = p4est_transfer_fixed_begin (p4est->global_first_quadrant,
+                                   back->global_first_quadrant,
+                                   p4est->mpicomm, 0,
+                                   dest_data, src_data, data_size);
+  p4est_transfer_fixed (p4est->global_first_quadrant,
+                        back->global_first_quadrant, p4est->mpicomm, 1,
+                        dest_sizes, src_sizes, sizeof (int));
+  p4est_transfer_fixed_end (tf);
+
+  /* we verify the fixed data we have sent */
+  td = dest_data;
+  li = 0;
+  vcountd = 0;
+  tog = p4est->global_first_quadrant[p4est->mpirank];
+  for (tid = p4est->first_local_tree; tid <= p4est->last_local_tree; ++tid) {
+    tree = p4est_tree_array_index (p4est->trees, tid);
+    for (zz = 0; zz < tree->quadrants.elem_count; ++zz) {
+      vcountd += vz = tog % 4;
+      quad = p4est_quadrant_array_index (&tree->quadrants, zz);
+      SC_CHECK_ABORT (*(p4est_gloidx_t *) td == tog,
+                      "Transfer index mismatch");
+      td += gds;
+      SC_CHECK_ABORT (!memcmp (td, quad->p.user_data, p4est->data_size),
+                      "Transfer data mismatch");
+      td += pds;
+      ++tog;
+      SC_CHECK_ABORT (dest_sizes[li++] == (int) (vz * sizeof (int)),
+                      "Transfer size mismatch");
+    }
+  }
+  P4EST_ASSERT (li == p4est->local_num_quadrants);
+  P4EST_ASSERT (td - dest_data ==
+                (ptrdiff_t) (data_size * p4est->local_num_quadrants));
+  P4EST_ASSERT (tog == p4est->global_first_quadrant[p4est->mpirank + 1]);
+
+  /* allocate space for variable data sizes */
+  ti = src_vdata = P4EST_ALLOC (int, vcounts * sizeof (int));
+  for (li = 0; li < back->local_num_quadrants; ++li) {
+    for (i = 0; i < src_sizes[li] / (int) sizeof (int); ++i) {
+      *ti++ = i;
+    }
+  }
+  P4EST_ASSERT (ti - src_vdata == (ptrdiff_t) vcounts);
+  dest_vdata = P4EST_ALLOC (int, vcountd * sizeof (int));
+
+  /* do data transfer part II */
+  p4est_transfer_custom (p4est->global_first_quadrant,
+                         back->global_first_quadrant, p4est->mpicomm, 1,
+                         dest_vdata, dest_sizes, src_vdata, src_sizes);
+
+  /* we verify the variable data we have sent */
+  ti = dest_vdata;
+  for (li = 0; li < p4est->local_num_quadrants; ++li) {
+    for (i = 0; i < dest_sizes[li] / (int) sizeof (int); ++i) {
+      SC_CHECK_ABORT (*ti == i, "Transfer variable mismatch");
+      ++ti;
+    }
+  }
+  P4EST_ASSERT (ti - dest_vdata == (ptrdiff_t) vcountd);
+
+  /* cleanup memory */
+  P4EST_FREE (dest_data);
+  P4EST_FREE (dest_vdata);
+  P4EST_FREE (dest_sizes);
+  P4EST_FREE (src_data);
+  P4EST_FREE (src_vdata);
+  P4EST_FREE (src_sizes);
+  P4EST_FREE (cmp);
+
+  /* cleanup context */
+  p4est_destroy (tt->back);
+  P4EST_FREE (tt);
+}
+
 static void
 test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
               p4est_gloidx_t * new_pertree)
@@ -147,6 +304,7 @@ test_partition_circle (sc_MPI_Comm mpicomm,
   p4est_gloidx_t      global_num;
   p4est_locidx_t     *new_counts;
   p4est_t            *p4est, *copy;
+  test_transfer_t    *tt;
 
   /* Create a forest and make a copy */
 
@@ -181,7 +339,9 @@ test_partition_circle (sc_MPI_Comm mpicomm,
       }
     }
     P4EST_ASSERT (j == num_procs - 1);
+    tt = test_transfer_pre (p4est);
     p4est_partition_given (p4est, new_counts);
+    test_transfer_post (tt, p4est);
     test_pertree (p4est, pertree1, pertree2);
     crc2 = p4est_checksum (p4est);
     SC_CHECK_ABORT (crc1 == crc2, "First checksum mismatch");
@@ -206,7 +366,9 @@ test_partition_circle (sc_MPI_Comm mpicomm,
       }
     }
     P4EST_ASSERT (j == num_procs - 2);
+    tt = test_transfer_pre (p4est);
     p4est_partition_given (p4est, new_counts);
+    test_transfer_post (tt, p4est);
     test_pertree (p4est, pertree1, pertree2);
     crc2 = p4est_checksum (p4est);
     SC_CHECK_ABORT (crc1 == crc2, "Second checksum mismatch");
@@ -214,7 +376,9 @@ test_partition_circle (sc_MPI_Comm mpicomm,
 
   /* Uniform partition */
   P4EST_GLOBAL_INFO ("Third circle partition\n");
+  tt = test_transfer_pre (p4est);
   p4est_partition (p4est, 0, NULL);
+  test_transfer_post (tt, p4est);
   test_pertree (p4est, pertree1, pertree2);
   crc2 = p4est_checksum (p4est);
   SC_CHECK_ABORT (crc1 == crc2, "Third checksum mismatch");
@@ -245,6 +409,7 @@ main (int argc, char **argv)
   user_data_t        *user_data;
   int64_t             sum;
   unsigned            crc;
+  test_transfer_t    *tt;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -291,7 +456,9 @@ main (int argc, char **argv)
   crc = p4est_checksum (p4est);
 
   /* partition the forest */
+  tt = test_transfer_pre (p4est);
   (void) p4est_partition_given (p4est, num_quadrants_in_proc);
+  test_transfer_post (tt, p4est);
   test_pertree (p4est, pertree1, pertree2);
 
   /* Double check that we didn't loose any quads */
@@ -317,7 +484,9 @@ main (int argc, char **argv)
   }
 
   /* do a weighted partition with uniform weights */
+  tt = test_transfer_pre (p4est);
   p4est_partition (p4est, 0, weight_one);
+  test_transfer_post (tt, p4est);
   test_pertree (p4est, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (p4est),
                   "bad checksum after uniformly weighted partition");
@@ -329,7 +498,9 @@ main (int argc, char **argv)
   /* do a weighted partition with many zero weights */
   weight_counter = 0;
   weight_index = (rank == 1) ? 1342 : 0;
+  tt = test_transfer_pre (copy);
   p4est_partition (copy, 0, weight_once);
+  test_transfer_post (tt, copy);
   test_pertree (copy, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 1");
@@ -337,7 +508,9 @@ main (int argc, char **argv)
   /* do a weighted partition with many zero weights */
   weight_counter = 0;
   weight_index = 0;
+  tt = test_transfer_pre (copy);
   p4est_partition (copy, 0, weight_once);
+  test_transfer_post (tt, copy);
   test_pertree (copy, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 2");
@@ -350,7 +523,9 @@ main (int argc, char **argv)
   weight_counter = 0;
   weight_index =
     (rank == num_procs - 1) ? ((int) copy->local_num_quadrants - 1) : 0;
+  tt = test_transfer_pre (copy);
   p4est_partition (copy, 0, weight_once);
+  test_transfer_post (tt, copy);
   test_pertree (copy, pertree1, pertree2);
   SC_CHECK_ABORT (crc == p4est_checksum (copy),
                   "bad checksum after unevenly weighted partition 3");
