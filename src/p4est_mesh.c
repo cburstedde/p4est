@@ -198,18 +198,19 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
 }
 
 /** Process inter-tree edge neighbors
- * \param[in]      info       General iterator information
- * \param[in]      side1      Currently processed edge
- * \param[in]      subedge_id Sub edge index in 0..1 for hanging edges, -1
- *                            for full edges
- * \param[in][out] mesh       The mesh structure that will be filled
- *                            with the edge neighbors along current edge
- * \param[in]      nftree     Tree indices of face neighbors wrt. the current
- *                            edge
- * \param[in]      nedgef     Edge indices of face neighbors wrt. the current
- *                            edge
- * \param[in]      cz         Number of adjacent trees
- * \param[in]      zz         internal number of currently processed edge
+ * \param[in]      info        General iterator information
+ * \param[in]      side1       Currently processed edge
+ * \param[in]      subedge_id  Sub edge index in 0..1 for hanging edges, -1
+ *                             for full edges
+ * \param[in][out] mesh        The mesh structure that will be filled
+ *                             with the edge neighbors along current edge
+ * \param[in]      do_virtuals Flag if virtual quadrants are created
+ * \param[in]      nftree      Tree indices of face neighbors wrt. the current
+ *                             edge
+ * \param[in]      nedgef      Edge indices of face neighbors wrt. the current
+ *                             edge
+ * \param[in]      cz          Number of adjacent trees
+ * \param[in]      zz          internal number of currently processed edge
  */
 static int
 mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
@@ -373,6 +374,12 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
     /* populate allocated memory */
     memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
     memcpy (peedge, eedges, goodones * sizeof (int8_t));
+  }
+  else if (0 == goodones) {
+    mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
+  }
+  else {
+    SC_ABORT_NOT_REACHED();
   }
   P4EST_FREE (equads);
   P4EST_FREE (eedges);
@@ -840,16 +847,71 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   P4EST_ASSERT (info->tree_boundary || cz == P4EST_HALF);
 
   /* edge limits domain or is located on a face limitting the domain */
-  if (cz <= 2) {
     /* sanity checks */
     if (cz == 1) {
       P4EST_ASSERT (info->tree_boundary);
+    side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
+    P4EST_ASSERT (0 <= side1->treeid
+                  && side1->treeid < info->p4est->connectivity->num_trees);
+    P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
+    if (!side1->is_hanging) {
+      if (!side1->is.full.is_ghost) {
+        tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
+        qid1 = side1->is.full.quadid + tree1->quadrants_offset;
+
+      P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+      P4EST_ASSERT
+        (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+
+      mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
     }
+    }
+    return;
+  }
+  if (cz == 2) {
     for (i = 0; i < cz; ++i) {
-      side1 = (p8est_iter_edge_side_t *) sc_array_index_int (&info->sides, i);
-      P4EST_ASSERT (0 <= side1->treeid
-                    && side1->treeid < info->p4est->connectivity->num_trees);
+      side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, i);
+      P4EST_ASSERT (0 <= side1->treeid &&
+      side1->treeid < info->p4est->connectivity->num_trees);
       P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
+
+      if (info->tree_boundary) {
+        p4est_locidx_t      nedgef[2];
+        p4est_locidx_t      nface[2];
+        p4est_topidx_t      nftree[2];
+        /* look for face neighbors of current quadrant */
+        mesh_edge_find_face_neighbors (side1,
+                                       info->p4est->connectivity,
+                                       nftree, nface, nedgef);
+        if (side1->is_hanging) {
+          for (j = 0; j < 2; ++j) {
+            if (!side1->is.hanging.is_ghost[j]) {
+              mesh_edge_process_inter_tree_edges(info,
+                                                side1,
+                                                j,
+                                                mesh,
+                                                do_virtuals,
+                                                nftree,
+                                                nedgef,
+                                                cz,
+                                                i);
+            }
+          }
+        } else {
+          if (!side1->is.full.is_ghost) {
+            mesh_edge_process_inter_tree_edges(info,
+                                              side1,
+                                              -1,
+                                              mesh,
+                                              do_virtuals,
+                                              nftree,
+                                              nedgef,
+                                              cz,
+                                              i);
+          }
+        }
+      }
+      else {
       if (!side1->is_hanging) {
         if (!side1->is.full.is_ghost) {
           tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
@@ -874,6 +936,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             P4EST_ASSERT
               (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
             mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
+            }
           }
         }
       }
