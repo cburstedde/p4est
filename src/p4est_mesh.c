@@ -772,8 +772,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       P4EST_ASSERT (0 <= side1->treeid &&
                     side1->treeid < info->p4est->connectivity->num_trees);
       tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
-
       qoffset = tree1->quadrants_offset;
+
       memset (visited, 0, P4EST_HALF * sizeof (int8_t));
 
       for (i = 0; i < 0.5 * cz; ++i) {
