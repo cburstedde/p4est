@@ -215,9 +215,7 @@ static int
 mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
                                     p8est_iter_edge_side_t * side1,
                                     p4est_topidx_t subedge_id,
-                                    p4est_mesh_t * mesh,
-                                    p4est_locidx_t * nftree,
-                                    p4est_locidx_t * nedgef, int cz, int zz)
+                                    p4est_mesh_t * mesh, int cz, int zz)
 {
   int                 ignore, j, k, z2;
   int                 nAdjacentQuads, qid1, qid2, edgeid;
@@ -271,29 +269,12 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
     side2 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, z2);
     P4EST_ASSERT (side2->edge >= 0 && side2->edge < P8EST_EDGES);
 
-    /* check if current side2 is among the face neighbors:
-     * We have either found it via connectivity or it is in the same
-     * tree as side1.
-     */
-    if (info->tree_boundary == P4EST_CONNECT_FACE) {
-      for (j = 0; j < 2; ++j) {
-        for (k = 0; k < 2; ++k) {
-          if (side1->faces[j] == side2->faces[k]) {
-            ignore = 1;
-          }
-        }
-      }
-    }
-    else if (info->tree_boundary == P8EST_CONNECT_EDGE) {
-      for (j = 0; j < 2; ++j) {
-        if ((nedgef[j] == (int) side2->edge && nftree[j] == side2->treeid)) {
+    for (j = 0; j < 2; ++j) {
+      for (k = 0; k < 2; ++k) {
+        if (side1->faces[j] == side2->faces[k]) {
           ignore = 1;
         }
       }
-    }
-    else {
-      /* only inter-tree edges are processed here */
-      SC_ABORT_NOT_REACHED ();
     }
     if (!ignore) {
       /* Record this edge neighbor if we don't ignore it */
@@ -461,8 +442,8 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
       tree2 = p4est_tree_array_index (info->p4est->trees, side2->treeid);
 
       qid2 = side2->quadid + (side2->is_ghost ?
-                              mesh->local_num_quadrants : tree2->
-                              quadrants_offset);
+                              mesh->local_num_quadrants :
+                              tree2->quadrants_offset);
       cquads[goodones] = qid2;
       ccorners[goodones] = (int) side2->corner;
       ++goodones;
@@ -664,22 +645,17 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
         p4est_locidx_t      nedgef[2];
         p4est_locidx_t      nface[2];
         p4est_topidx_t      nftree[2];
-        /* look for face neighbors of current quadrant */
-        mesh_edge_find_face_neighbors (side1,
-                                       info->p4est->connectivity,
-                                       nftree, nface, nedgef);
         if (side1->is_hanging) {
           for (j = 0; j < 2; ++j) {
             if (!side1->is.hanging.is_ghost[j]) {
-              mesh_edge_process_inter_tree_edges (info, side1, j, mesh,
-                                                  nftree, nedgef, cz, i);
+              mesh_edge_process_inter_tree_edges (info, side1, j, mesh, cz,
+                                                  i);
             }
           }
         }
         else {
           if (!side1->is.full.is_ghost) {
-            mesh_edge_process_inter_tree_edges (info, side1, -1, mesh, nftree,
-                                                nedgef, cz, i);
+            mesh_edge_process_inter_tree_edges (info, side1, -1, mesh, cz, i);
           }
         }
       }
@@ -737,24 +713,19 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                       side1->treeid < info->p4est->connectivity->num_trees);
         P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
 
-        /* look for face neighbors of current quadrant */
-        mesh_edge_find_face_neighbors (side1,
-                                       info->p4est->connectivity,
-                                       nftree, nface, nedgef);
-
         /* We only create edge information for processor-local quadrants */
         if (side1->is_hanging) {
           for (i = 0; i < 2; ++i) {
             if (!side1->is.hanging.is_ghost[i]) {
-              mesh_edge_process_inter_tree_edges (info, side1, i, mesh,
-                                                  nftree, nedgef, cz, zz);
+              mesh_edge_process_inter_tree_edges (info, side1, i, mesh, cz,
+                                                  zz);
             }
           }
         }
         else {
           if (!side1->is.full.is_ghost) {
-            mesh_edge_process_inter_tree_edges (info, side1, -1, mesh, nftree,
-                                                nedgef, cz, zz);
+            mesh_edge_process_inter_tree_edges (info, side1, -1, mesh, cz,
+                                                zz);
           }
         }
       }
@@ -2036,7 +2007,10 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 
   if (neighbor_idx < lq) {
     /* same size neighbor, same proc */
-    if (neighboring_quads != NULL) {
+#ifndef P4EST_ENABLE_DEBUG
+    if (neighboring_quads != NULL)
+#endif // P4EST_ENABLE_DEBUG
+    {
       quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
       quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
       *quad_ins = quad;
@@ -2065,7 +2039,10 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   else if (lq <= neighbor_idx && neighbor_idx < lq + gq) {
     /* same size neighbor, ghost layer */
     neighbor_idx -= lq;
-    if (neighboring_quads != NULL) {
+#ifndef P4EST_ENABLE_DEBUG
+    if (neighboring_quads != NULL)
+#endif // P4EST_ENABLE_DEBUG
+    {
       quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
       quad =
         (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
@@ -2118,7 +2095,10 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 
       if (quad_idx < lq) {
         /* neighbor is part of quadrants owned by processor */
-        if (neighboring_quads != NULL) {
+#ifndef P4EST_ENABLE_DEBUG
+        if (neighboring_quads != NULL)
+#endif // P4EST_ENABLE_DEBUG
+        {
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
           *quad_ins = quad;
@@ -2139,7 +2119,10 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
       else {
         /* neighbor is part of ghost layer */
         quad_idx -= lq;
-        if (neighboring_quads != NULL) {
+#ifndef P4EST_ENABLE_DEBUG
+        if (neighboring_quads != NULL)
+#endif // P4EST_ENABLE_DEBUG
+        {
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
