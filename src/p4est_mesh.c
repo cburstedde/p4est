@@ -204,10 +204,6 @@ mesh_edge_allocate (p4est_mesh_t * mesh, p4est_locidx_t elen,
  *                             for full edges
  * \param[in][out] mesh        The mesh structure that will be filled
  *                             with the edge neighbors along current edge
- * \param[in]      nftree      Tree indices of face neighbors wrt. the current
- *                             edge
- * \param[in]      nedgef      Edge indices of face neighbors wrt. the current
- *                             edge
  * \param[in]      cz          Number of adjacent trees
  * \param[in]      zz          internal number of currently processed edge
  */
