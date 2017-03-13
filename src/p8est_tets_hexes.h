@@ -40,6 +40,8 @@ typedef struct p8est_tets
 }
 p8est_tets_t;
 
+SC_EXTERN_C_BEGIN;
+
 /** Read nodes from a tetgen .node file.
  * \param [in] nodefile     Name of file in tetgen .node format.
  * \return                  An array with three double coordinates per node,
@@ -84,5 +86,7 @@ p4est_topidx_t      p8est_tets_make_righthanded (p8est_tets_t * ptg);
  * \return          Connectivity (free with p8est_connectivity_destroy).
  */
 p8est_connectivity_t *p8est_connectivity_new_tets (p8est_tets_t * ptg);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_TETS_HEXES */
