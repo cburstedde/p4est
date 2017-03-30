@@ -695,6 +695,8 @@ void                p8est_quadrant_shift_corner (const p8est_quadrant_t * q,
 
 /** Computes the linear position of a quadrant in a uniform grid.
  * \param [in] quadrant  Quadrant whose id will be computed.
+ * \param [in] level     The level of the regular grid compared to which the
+ *                       linear position is to be computed.
  * \return Returns the linear position of this quadrant on a grid.
  * \note This is the inverse operation of p8est_quadrant_set_morton.
  *       The user_data of \a quadrant is never modified.
