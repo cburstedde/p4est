@@ -1960,6 +1960,23 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 #endif /* P4_TO_P8 */
 
+/** Internal function for looking up corner neighbors
+ *
+ * \param[in]      p4est               The forest.
+ * \param[in]      ghost               Ghost layer.
+ * \param[in]      mesh                Mesh encoding quadrant neighborhood.
+ * \param[in]      curr_quad_id        Quadrant ID of current quadrant.
+ * \param[in]      direction           Direction 0 .. P4EST_CHILDREN encoding
+ *                                     corner across which to search.
+ * \param    [out] neighboring_quads   Container for storing pointer to
+ *                                     neighboring p4est_quadrant_t. May be
+ *                                     NULL.
+ * \param    [out] neighboring_encs    Store encoding of neighboring quadrants,
+ *                                     i.e. the corner index that is touching
+ *                                     corner of current quadrant.
+ * \param    [out] neighboring_qids    Store neighboring quadrant id. May be
+ *                                     NULL.
+ */
 static int
 get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                       p4est_mesh_t * mesh, p4est_locidx_t curr_quad_id,
@@ -1994,7 +2011,7 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif /* P4_TO_P8 */
 
   neighbor_idx =
-    mesh->quad_to_corner[P4EST_CHILDREN * curr_quad_id + (direction)];
+    mesh->quad_to_corner[P4EST_CHILDREN * curr_quad_id + direction];
 
   /* no neighbor present */
   if (neighbor_idx < 0 || neighbor_idx == curr_quad_id) {
@@ -2005,19 +2022,21 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     /* same size neighbor, same proc */
 #ifndef P4EST_ENABLE_DEBUG
     if (neighboring_quads != NULL)
-#endif // P4EST_ENABLE_DEBUG
+#endif /* !P4EST_ENABLE_DEBUG */
     {
-      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
       quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
-      *quad_ins = quad;
     }
-
 #ifdef P4EST_ENABLE_DEBUG
     /* sanity check level */
     P4EST_ASSERT ((quad->level == curr_quad->level) ||
                   (quad->level == curr_quad->level - 1) ||
                   (quad->level == curr_quad->level + 1));
 #endif /* P4EST_ENABLE_DEBUG */
+
+    if (neighboring_quads != NULL) {
+      quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
+      *quad_ins = quad;
+    }
 
     /* create implicitly saved encoding */
     int_ins = (int *) sc_array_push (neighboring_encs);
@@ -2037,12 +2056,13 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     neighbor_idx -= lq;
 #ifndef P4EST_ENABLE_DEBUG
     if (neighboring_quads != NULL)
-#endif // P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
     {
+      quad = (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
+                                                      neighbor_idx);
+    }
+    if (neighboring_quads != NULL) {
       quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
-      quad =
-        (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
-                                                 neighbor_idx);
       *quad_ins = quad;
     }
 
@@ -2093,10 +2113,12 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
         /* neighbor is part of quadrants owned by processor */
 #ifndef P4EST_ENABLE_DEBUG
         if (neighboring_quads != NULL)
-#endif // P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
         {
-          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad = p4est_mesh_get_quadrant (p4est, mesh, quad_idx);
+        }
+        if (neighboring_quads != NULL) {
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           *quad_ins = quad;
         }
 
@@ -2119,10 +2141,12 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
         if (neighboring_quads != NULL)
 #endif // P4EST_ENABLE_DEBUG
         {
-          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                      quad_idx);
+        }
+        if (neighboring_quads != NULL) {
+          quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           *quad_ins = quad;
         }
 
