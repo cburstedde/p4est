@@ -2139,12 +2139,13 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
         quad_idx -= lq;
 #ifndef P4EST_ENABLE_DEBUG
         if (neighboring_quads != NULL)
-#endif // P4EST_ENABLE_DEBUG
+#endif /* P4EST_ENABLE_DEBUG */
         {
           quad =
             (p4est_quadrant_t *) sc_array_index_int (&ghost->ghosts,
                                                      quad_idx);
         }
+
         if (neighboring_quads != NULL) {
           quad_ins = (p4est_quadrant_t **) sc_array_push (neighboring_quads);
           *quad_ins = quad;
