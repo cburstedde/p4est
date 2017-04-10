@@ -715,7 +715,7 @@ uint64_t            p8est_quadrant_linear_id (const p8est_quadrant_t *
  * This is the inverse operation of \ref p8est_quadrant_linear_id.
  * \param [in,out] quadrant  Quadrant whose Morton indices will be set.
  * \param [in]     level     Level of the grid and of the resulting quadrant.
- * \param [in]     id        The linear index of the quadrant on a grid.
+ * \param [in]     id        Linear index of the quadrant on a uniform grid.
  * \note The user_data of \a quadrant is never modified.
  */
 void                p8est_quadrant_set_morton (p8est_quadrant_t * quadrant,
