@@ -1795,6 +1795,7 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     p4est_mesh_get_quadrant (p4est, mesh, curr_quad_id);
 #endif /* P4EST_ENABLE_DEBUG */
   p4est_locidx_t      neighbor_idx, neighbor_encoding;
+  int                 is_ghost = 0;
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
   int                *int_ins;
@@ -1867,7 +1868,6 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     neighbor_idx -= (lq + gq);
     P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < mesh->local_num_edges);
     p4est_locidx_t      n_adj_quads, offset;
-    int                 is_ghost = 0;
 
     /* get offset and number of adjacent quads */
     offset = *((p4est_locidx_t *)
