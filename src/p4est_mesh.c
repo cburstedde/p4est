@@ -2279,8 +2279,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     SC_ABORT_NOT_REACHED ();
   }
 
-  /* this is not reached anyways */
-  return -420;
+  return 0;
 }
 
 p4est_quadrant_t   *
