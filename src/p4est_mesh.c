@@ -112,52 +112,6 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
 }
 
 #ifdef P4_TO_P8
-/** Find face neighbors of an edge neighborship
- *
- * \param side    Contains the quadrant to search face neighbors for
- * \param conn    p4est connectivity information encoding the tree relations
- * \param nftree  Result vector containing the tree index of the face neighbors
- * \param nface   Result vector containing the face index of the face neighbors
- * \param nedgef  Result vector containing the edge index of the face neighbors
- */
-static int
-mesh_edge_find_face_neighbors (p8est_iter_edge_side_t * side,
-                               p4est_connectivity_t * conn,
-                               p4est_locidx_t * nftree,
-                               p4est_locidx_t * nface,
-                               p4est_locidx_t * nedgef)
-{
-  int                 i;
-  p4est_locidx_t      t1 = side->treeid;
-  int                 e1 = (int) side->edge;
-  p4est_locidx_t      f1, faceOrientation;
-
-  /* Get all local quadrant faces touching this edge */
-  for (i = 0; i < 2; ++i) {
-    f1 = p8est_edge_faces[e1][i];
-    nftree[i] = conn->tree_to_tree[P4EST_FACES * t1 + f1];
-    nface[i] = conn->tree_to_face[P4EST_FACES * t1 + f1];
-
-    if (nftree[i] == t1 && nface[i] == f1) {
-      /* If the quadrant sees itself, we are at a physical face
-       * boundary, i.e. there is no face neighbor */
-      nedgef[i] = -1;
-    }
-    else {
-      /* calculate orientation and index of the adjacent face and derive
-       * the currently processed edge's edge index w.r.t. the adjacent
-       * quadrant */
-      faceOrientation = nface[i] / P4EST_FACES;
-      nface[i] %= P4EST_FACES;
-      nedgef[i] =
-        p8est_connectivity_face_neighbor_edge_orientation (e1, f1,
-                                                           nface[i],
-                                                           faceOrientation);
-    }
-  }
-  return 0;
-}
-
 /** Populate mesh information for hanging edges and edges across tree
  *  boundaries, i.e. every neighborhood scenario where we need more information
  *  (like orientation) than a single index. Note that this function only pushes
@@ -265,6 +219,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
     side2 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, z2);
     P4EST_ASSERT (side2->edge >= 0 && side2->edge < P8EST_EDGES);
 
+    P4EST_ASSERT (info->tree_boundary <= P8EST_CONNECT_EDGE);
     for (j = 0; j < 2; ++j) {
       for (k = 0; k < 2; ++k) {
         if (side1->faces[j] == side2->faces[k]) {
@@ -638,9 +593,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       P4EST_ASSERT (0 <= side1->edge && side1->edge < P8EST_EDGES);
 
       if (info->tree_boundary) {
-        p4est_locidx_t      nedgef[2];
-        p4est_locidx_t      nface[2];
-        p4est_topidx_t      nftree[2];
         if (side1->is_hanging) {
           for (j = 0; j < 2; ++j) {
             if (!side1->is.hanging.is_ghost[j]) {
@@ -691,13 +643,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   else {
     /* edges on tree boundaries */
     if (info->tree_boundary) {
-      p4est_locidx_t      nedgef[2];
-      p4est_locidx_t      nface[2];
-      p4est_topidx_t      nftree[2];
-
-      /* initialize nedgef to zero */
-      SC_BZERO (nedgef, 2);
-
       /* Loop through all edge sides, that is the quadrants touching it.  For
        * each of these quadrants, determine the edge sides that can potentially
        * occur by being a face neighbor as well.  Exclude these face neighbors
