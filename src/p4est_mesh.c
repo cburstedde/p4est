@@ -119,7 +119,7 @@ mesh_corner_allocate (p4est_mesh_t * mesh, p4est_locidx_t clen,
  *
  * \param [in][out] mesh     The mesh structure to which we will add edge
  *                           information
- * \param [in]      clen     Number of quadrants to be added
+ * \param [in]      elen     Number of quadrants to be added
  * \param [in]      pequad   List of quadrant indices
  * \param [in]      peedge   List of quadrant encodings
  */
