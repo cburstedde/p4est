@@ -400,6 +400,13 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
                               tree2->quadrants_offset);
       cquads[goodones] = qid2;
       ccorners[goodones] = (int) side2->corner;
+      if (side2->is_ghost) {
+        P4EST_ASSERT (mesh->local_num_quadrants <= qid2 &&
+                      qid2 < cornerid_offset);
+      }
+      else {
+        P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+      }
       ++goodones;
     }
   }
@@ -868,10 +875,13 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             /* determine quadrant numbers for both "hanging" edges and write
              * them directly to the corresponding positions */
             for (k = 0; k < 2; ++k) {
+              /* do not record anything if both sides are ghost */
               if (side1->is.hanging.is_ghost[k] &&
                   side2->is.hanging.is_ghost[k]) {
                 continue;
               }
+
+              /* get qid1 and qid2 */
               if (!side1->is.hanging.is_ghost[k]) {
                 qid1 = side1->is.hanging.quadid[k] + qoffset;
                 P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
@@ -884,7 +894,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 qid1 =
                   mesh->local_num_quadrants + side1->is.hanging.quadid[k];
               }
-
               if (!side2->is.hanging.is_ghost[k]) {
                 qid2 = side2->is.hanging.quadid[k] + qoffset;
                 P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
