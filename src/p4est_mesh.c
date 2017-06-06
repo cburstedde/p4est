@@ -198,10 +198,12 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
                 side1->treeid < info->p4est->connectivity->num_trees);
   tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
   if (0 <= subedge_id) {
+    P4EST_ASSERT(side1->is_hanging);
     qid1 = side1->is.hanging.quadid[subedge_id] + tree1->quadrants_offset;
     P4EST_ASSERT (!side1->is.hanging.is_ghost[subedge_id]);
   }
   else {
+    P4EST_ASSERT(!side1->is_hanging);
     qid1 = side1->is.full.quadid + tree1->quadrants_offset;
     P4EST_ASSERT (!side1->is.full.is_ghost);
   }
