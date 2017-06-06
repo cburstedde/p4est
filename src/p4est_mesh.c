@@ -554,7 +554,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   p4est_locidx_t      in_qtoe, edgeid_offset;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p8est_iter_edge_side_t *side1, *side2, *tempside;
-  p4est_tree_t       *tree1, *tree2;
+  p4est_tree_t       *tree1;
 
   edgeid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
