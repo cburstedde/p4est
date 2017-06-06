@@ -436,22 +436,13 @@ static void
 mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 {
   int                 i, j;
-  int                 f1, f2, code, faceOrientation;
-  int                 fc1, fc2, diagonal;
-#ifdef P4_TO_P8
-  int                 e1, edgeOrientation;
-  int                 pref, pset;
-#endif /* P4_TO_P8 */
   int                 visited[P4EST_CHILDREN];
-  int8_t             *pccorner;
   size_t              cz, zz;
   p4est_locidx_t      qoffset, qid1, qid2;
-  p4est_locidx_t      cornerid_offset, cornerid;
-  p4est_locidx_t     *pcquad;
+  p4est_locidx_t      cornerid_offset;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_iter_corner_side_t *side1, *side2;
-  p4est_tree_t       *tree1, *tree2;
-  p4est_connectivity_t *conn = info->p4est->connectivity;
+  p4est_tree_t       *tree1;
   sc_array_t         *trees = info->p4est->trees;
 
   cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
