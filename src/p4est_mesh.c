@@ -907,6 +907,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                   mesh->local_num_quadrants + side2->is.hanging.quadid[k];
               }
 
+              /* write values */
               if (!side1->is.hanging.is_ghost[k]) {
                 in_qtoe = P8EST_EDGES * qid1 + side1->edge;
                 P4EST_ASSERT (mesh->quad_to_edge[in_qtoe] == -1);
