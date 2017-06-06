@@ -167,7 +167,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
                                     p4est_topidx_t subedge_id,
                                     p4est_mesh_t * mesh, int cz, int zz)
 {
-  int                 ignore, j, k, z2;
+  int                 ignore, j, k, iz;
   int                 nAdjacentQuads, qid1, qid2, edgeid;
   p8est_iter_edge_side_t *side2;
   p4est_tree_t       *tree1, *tree2;
@@ -198,12 +198,12 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
                 side1->treeid < info->p4est->connectivity->num_trees);
   tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
   if (0 <= subedge_id) {
-    P4EST_ASSERT(side1->is_hanging);
+    P4EST_ASSERT (side1->is_hanging);
     qid1 = side1->is.hanging.quadid[subedge_id] + tree1->quadrants_offset;
     P4EST_ASSERT (!side1->is.hanging.is_ghost[subedge_id]);
   }
   else {
-    P4EST_ASSERT(!side1->is_hanging);
+    P4EST_ASSERT (!side1->is_hanging);
     qid1 = side1->is.full.quadid + tree1->quadrants_offset;
     P4EST_ASSERT (!side1->is.full.is_ghost);
   }
@@ -211,14 +211,14 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
 
   /* Go through edge neighbors and collect the true edges */
   int                 goodones = 0;
-  for (z2 = 0; z2 < cz; ++z2) {
-    if (z2 == zz) {
+  for (iz = 0; iz < cz; ++iz) {
+    if (iz == zz) {
       /* We do not count ourselves as a neighbor */
       continue;
     }
     ignore = 0;
-    P4EST_ASSERT (0 <= z2 && z2 < info->sides.elem_count);
-    side2 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, z2);
+    P4EST_ASSERT (0 <= iz && iz < info->sides.elem_count);
+    side2 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, iz);
     P4EST_ASSERT (side2->edge >= 0 && side2->edge < P8EST_EDGES);
 
     P4EST_ASSERT (info->tree_boundary <= P8EST_CONNECT_EDGE);
@@ -333,7 +333,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
                                         p4est_iter_corner_side_t * side1,
                                         p4est_mesh_t * mesh, int cz, int zz)
 {
-  int                 ignore, j, k, z2;
+  int                 ignore, j, k, iz;
   int                 n_adjacent_quads, qid1, qid2, corner_id;
   p4est_iter_corner_side_t *side2;
   p4est_tree_t       *tree1, *tree2;
@@ -355,6 +355,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   P4EST_ASSERT (0 <= side1->treeid &&
                 side1->treeid < info->p4est->connectivity->num_trees);
 
+  /* currently processed quadrant must be local */
   tree1 = p4est_tree_array_index (info->p4est->trees, side1->treeid);
   qid1 = side1->quadid + tree1->quadrants_offset;
   P4EST_ASSERT (!side1->is_ghost);
@@ -362,14 +363,14 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
 
   /* Go through corner neighbors and collect the true corners */
   int                 goodones = 0;
-  for (z2 = 0; z2 < cz; ++z2) {
-    if (z2 == zz) {
+  for (iz = 0; iz < cz; ++iz) {
+    if (iz == zz) {
       /* We do not count ourselves as a neighbor */
       continue;
     }
     ignore = 0;
-    P4EST_ASSERT (0 <= z2 && z2 < info->sides.elem_count);
-    side2 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, z2);
+    P4EST_ASSERT (0 <= iz && iz < info->sides.elem_count);
+    side2 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, iz);
     P4EST_ASSERT (side2->corner >= 0 && side2->corner < P4EST_CHILDREN);
 
     /* check if current side2 is among the face neighbors:
@@ -404,8 +405,8 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   }
 
   /* we have excluded between 0 and all quadrants. */
-  P4EST_ASSERT (0 <= (size_t) goodones
-                && (size_t) goodones < n_adjacent_quads);
+  P4EST_ASSERT (0 <= (size_t) goodones &&
+                (size_t) goodones < n_adjacent_quads);
 
   if (goodones > 0) {
     /* Allocate and fill corner information in the mesh structure */
@@ -486,13 +487,16 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 
   /* Process a corner inside the tree in pairs of diagonal neighbors */
   P4EST_ASSERT (!info->tree_boundary);
+  P4EST_ASSERT (cz == P4EST_CHILDREN);
+
   side1 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, 0);
   tree1 = p4est_tree_array_index (trees, side1->treeid);
   qoffset = tree1->quadrants_offset;
+
   memset (visited, 0, P4EST_CHILDREN * sizeof (int));
   for (i = 0; i < P4EST_HALF; ++i) {
     side1 = side2 = NULL;
-    qid1 = -3;
+    qid1 = qid2 = -2;
     for (j = 0; j < P4EST_CHILDREN; ++j) {
       if (visited[j]) {
         continue;
