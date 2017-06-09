@@ -27,6 +27,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Determines if quadrant \a q causes quadrant \a p to split under the given
  * \a balance condition.
  *
@@ -69,5 +71,6 @@ int                 p8est_balance_seeds_corner (p8est_quadrant_t * q,
                                                 p8est_quadrant_t * p,
                                                 int face, p8est_connect_type_t
                                                 balance, sc_array_t * seeds);
+SC_EXTERN_C_END;
 
 #endif

@@ -27,6 +27,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
  * \param [in] p8est    The forest is not modified.
@@ -65,5 +67,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
                                    const p4est_gloidx_t * pertree,
                                    sc_array_t * quadrants, sc_array_t * data,
                                    void *user_pointer);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_IO_H */
