@@ -220,6 +220,193 @@ unsigned            p8est_comm_checksum (p8est_t * p8est,
                                          unsigned local_crc,
                                          size_t local_bytes);
 
+/** Context data to allow for split begin/end data transfer. */
+typedef struct p8est_transfer_context
+{
+  int                 variable;
+  int                 num_senders;
+  int                 num_receivers;
+  sc_MPI_Request     *recv_req;
+  sc_MPI_Request     *send_req;
+}
+p8est_transfer_context_t;
+
+/** Transfer data associated with one forest partition to another.
+ * In \ref p8est_partition, each quadrant's user data is transferred.
+ * If the application maintains per-quadrant data outside of the p8est object,
+ * this function can be used to transfer it, matching the call to partition.
+ * This variant of the function assumes that the quadrant data size is fixed.
+ * It sends point-to-point messages only and is blocking collective.
+ * There is a split collective version; see the functions
+ * \ref p8est_transfer_fixed_begin and \ref p8est_transfer_fixed_end.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of size \b data_size * \b
+ *                          dest->local_num_quadrants is received into.
+ * \param [in] src_data     User-allocated memory of size \b data_size * \b
+ *                          src->local_num_quadrants bytes is sent from.
+ * \param [in] data_size    Fixed data size per quadrant.
+ */
+void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
+                                          const p4est_gloidx_t * src_gfq,
+                                          sc_MPI_Comm mpicomm, int tag,
+                                          void *dest_data,
+                                          const void *src_data,
+                                          size_t data_size);
+
+/** Initiate a fixed-size data transfer between partitions.
+ * See \ref p8est_transfer_fixed for a full description.
+ * Must be matched with \ref p8est_transfer_fixed_end for completion.
+ * All parameters must stay alive until the completion has been called.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of size \b data_size * \b
+ *                          dest->local_num_quadrants bytes is received into.
+ *                          It must not be accessed before completion with
+ *                          \ref p8est_transfer_fixed_end.
+ * \param [in] src_data     User-allocated memory of size \b data_size * \b
+ *                          src->local_num_quadrants bytes is sent from.
+ *                          It must not be accessed before completion with
+ *                          \ref p8est_transfer_fixed_end.
+ * \param [in] data_size    Fixed data size per quadrant.
+ * \return                  The context object must be passed to the matching
+ *                          call to \ref p8est_transfer_fixed_end.
+ */
+p8est_transfer_context_t *p8est_transfer_fixed_begin (const p4est_gloidx_t *
+                                                      dest_gfq,
+                                                      const p4est_gloidx_t *
+                                                      src_gfq,
+                                                      sc_MPI_Comm mpicomm,
+                                                      int tag,
+                                                      void *dest_data,
+                                                      const void *src_data,
+                                                      size_t data_size);
+
+/** Complete a fixed-size data transfer between partitions.
+ * \param [in] tc       Context data from \ref p8est_transfer_fixed_begin.
+ *                      Is deallocated before this function returns.
+ */
+void                p8est_transfer_fixed_end (p8est_transfer_context_t * tc);
+
+/** Transfer variable-size quadrant data between partitions.
+ * (See \ref p8est_transfer_fixed that is optimized for fixed-size data.)
+ * The destination process may not know the data size for the elements it
+ * receives.  In this case the sizes need to be obtained separately in advance,
+ * for example by calling \ref p8est_transfer_fixed with \b src_sizes as
+ * payload data, or alternatively its split begin/end versions.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of
+ *                          sum_{i in \b dest->local_num_quadrants} \b
+ *                          dest_sizes [i] many bytes is received into.
+ *                          See below about how to choose its size.
+ * \param [in] dest_sizes   User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to receive for it.
+ *                          We understand that the sizes are often not known a
+ *                          priori, in which case they can be obtained by a
+ *                          prior call to \ref p8est_transfer_fixed.
+ *                          Optionally the split begin/end versions can be used
+ *                          for added flexibility and overlapping of messages.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
+ * \param [in] src_data     User-allocated memory of
+ *                          sum_{i in \b src->local_num_quadrants} \b
+ *                          src_sizes [i] many bytes is sent from.
+ * \param [in] src_sizes    User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to send for it.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
+ */
+void                p8est_transfer_custom (const p4est_gloidx_t * dest_gfq,
+                                           const p4est_gloidx_t * src_gfq,
+                                           sc_MPI_Comm mpicomm, int tag,
+                                           void *dest_data,
+                                           const int *dest_sizes,
+                                           const void *src_data,
+                                           const int *src_sizes);
+
+/** Initiate a variable-size data transfer between partitions.
+ * See \ref p8est_transfer_custom for a full description.
+ * Must be matched with \ref p8est_transfer_custom_end for completion.
+ * All parameters must stay alive until the completion has been called.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p8est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of
+ *                          sum_{i in \b dest->local_num_quadrants} \b
+ *                          dest_sizes [i] many bytes is received into.
+ *                          It must not be accessed before completion with
+ *                          \ref p8est_transfer_custom_end.
+ *                          See below about how to choose its size.
+ * \param [in] dest_sizes   User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to receive for it.
+ *                          We understand that the sizes are often not known a
+ *                          priori, in which case they can be obtained by a
+ *                          prior call to \ref p8est_transfer_fixed.
+ *                          Optionally the split begin/end versions can be used
+ *                          for added flexibility and overlapping of messages.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
+ * \param [in] src_data     User-allocated memory of
+ *                          sum_{i in \b src->local_num_quadrants} \b
+ *                          src_sizes [i] many bytes is sent from.
+ *                          It must not be accessed before completion with
+ *                          \ref p8est_transfer_custom_end.
+ * \param [in] src_sizes    User-allocated memory of one integer for each
+ *                          quadrant, storing the data size to send for it.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
+ * \return                  The context object must be passed to the matching
+ *                          call to \ref p8est_transfer_custom_end.
+ */
+p8est_transfer_context_t *p8est_transfer_custom_begin (const p4est_gloidx_t *
+                                                       dest_gfq,
+                                                       const p4est_gloidx_t *
+                                                       src_gfq,
+                                                       sc_MPI_Comm mpicomm,
+                                                       int tag,
+                                                       void *dest_data,
+                                                       const int *dest_sizes,
+                                                       const void *src_data,
+                                                       const int *src_sizes);
+
+/** Complete a variable-size data transfer between partitions.
+ * \param [in] tc       Context data from \ref p8est_transfer_custom_begin.
+ *                      Is deallocated before this function returns.
+ */
+void                p8est_transfer_custom_end (p8est_transfer_context_t * tc);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_COMMUNICATION_H */
