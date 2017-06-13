@@ -1293,7 +1293,7 @@ p4est_connectivity_new_periodic (void)
   const p4est_topidx_t num_edges = 3;
 #endif /* P4_TO_P8 */
   const p4est_topidx_t num_corners = 1;
-  const double        vertices[num_vertices * 3] = {
+  const double        vertices[P4EST_CHILDREN * 3] = {
     0, 0, 0,
     1, 0, 0,
     0, 1, 0,
@@ -1339,6 +1339,9 @@ p4est_connectivity_new_periodic (void)
 #endif /* P4_TO_P8 */
   const p4est_topidx_t tree_to_corner[1 * P4EST_CHILDREN] = {
     0, 0, 0, 0,
+#ifdef P4_TO_P8
+    0, 0, 0, 0,
+#endif /* P4_TO_P8 */
   };
   const p4est_topidx_t ctt_offset[1 + 1] = {
     0, P4EST_CHILDREN,
