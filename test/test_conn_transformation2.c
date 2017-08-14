@@ -54,10 +54,8 @@ test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
 
   corner_index = p4est_face_corners[lowerFaceIndex][0];
   neighboring_face_corner =
-    p4est_connectivity_face_neighbor_corner_orientation (corner_index,
-                                                         lowerFaceIndex,
-                                                         higherFaceIndex,
-                                                         orientation);
+    p4est_connectivity_face_neighbor_corner (corner_index, lowerFaceIndex,
+                                             higherFaceIndex, orientation);
 
   neighboring_face_corner =
     p4est_corner_face_corners[neighboring_face_corner][higherFaceIndex];
@@ -99,14 +97,11 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
   for (i = 0; i < P4EST_HALF; ++i) {
     c0 = p4est_face_corners[lowerFaceIndex][i];
     c1 =
-      p4est_connectivity_face_neighbor_corner_orientation (c0, lowerFaceIndex,
-                                                           higherFaceIndex,
-                                                           orientation);
+      p4est_connectivity_face_neighbor_corner (c0, lowerFaceIndex,
+                                               higherFaceIndex, orientation);
     cx =
-      p4est_connectivity_face_neighbor_corner_orientation (c1,
-                                                           higherFaceIndex,
-                                                           lowerFaceIndex,
-                                                           orientation);
+      p4est_connectivity_face_neighbor_corner (c1, higherFaceIndex,
+                                               lowerFaceIndex, orientation);
 
     P4EST_ASSERT (c0 == cx);
   }
@@ -148,13 +143,11 @@ test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
   for (i = 0; i < P4EST_HALF; ++i) {
     e0 = p8est_face_edges[lowerFaceIndex][i];
     e1 =
-      p8est_connectivity_face_neighbor_edge_orientation (e0, lowerFaceIndex,
-                                                         higherFaceIndex,
-                                                         orientation);
+      p8est_connectivity_face_neighbor_edge (e0, lowerFaceIndex,
+                                             higherFaceIndex, orientation);
     ex =
-      p8est_connectivity_face_neighbor_edge_orientation (e1, higherFaceIndex,
-                                                         lowerFaceIndex,
-                                                         orientation);
+      p8est_connectivity_face_neighbor_edge (e1, higherFaceIndex,
+                                             lowerFaceIndex, orientation);
 
     P4EST_ASSERT (e0 == ex);
   }
