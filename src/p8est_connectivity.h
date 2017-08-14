@@ -353,7 +353,7 @@ int                 p8est_connectivity_face_neighbor_edge_orientation
 
 /** Transform an edge corner across one of the adjacent edges into a neighbor tree.
  * This version expects the neighbor edge and orientation separately.
- * \param [in] ec    An edge corner number in 0..1.
+ * \param [in] ec   An edge corner number in 0..1.
  * \param [in] e    A edge number that touches the corner \a c.
  * \param [in] ne   A neighbor edge that is on the other side of \e.
  * \param [in] o    The orientation between tree boundary faces \a e and \ne.
