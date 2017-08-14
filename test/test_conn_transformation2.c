@@ -154,6 +154,36 @@ test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
 
   return 0;
 }
+
+/** Checks for each edge corner if the corner indices match on both
+ * sides.
+ * Let edge corner eci, corresponding to edge index ei, be
+ * adjacent to edge corner ecj, corresponding to edge index ej. We
+ * test if eci is seen from ecj and vice versa.
+ */
+static int
+test_conn_transformation_check_edge_corners ()
+{
+  int                 e0, e1, o, ci;
+  int                 c0, c1, cx;
+
+  /* verify bijectivity of transformation */
+  for (e0 = 0; e0 < P8EST_EDGES; ++e0) {
+    for (e1 = 0; e1 < P8EST_EDGES; ++e1) {
+      for (o = 0; o < 2; ++o) {
+        for (ci = 0; ci < 2; ++ci) {
+          c0 = p8est_edge_corners[e0][ci];
+          c1 = p8est_connectivity_edge_neighbor_corner (c0, e0, e1, o);
+          cx = p8est_connectivity_edge_neighbor_corner (c1, e1, e0, o);
+
+          P4EST_ASSERT (c0 == cx);
+        }
+      }
+    }
+  }
+
+  return 0;
+}
 #endif /* P4_TO_P8 */
 
 int
@@ -187,7 +217,8 @@ main (int argc, char **argv)
       for (k = 0; k < P4EST_HALF; ++k) {        /* set orientation */
         P4EST_ASSERT (conn == NULL);
 
-        /* create connectivity structure */
+        /* create connectivity structure. This is not really needed, it just
+         * performs the validation check p4est_connectivity_is_valid */
         conn = p4est_connectivity_new_twotrees (i, j, k);
 
         test_conn_transformation_check_orientation (conn, i, j, k);
@@ -201,6 +232,9 @@ main (int argc, char **argv)
       }
     }
   }
+#ifdef P4_TO_P8
+  test_conn_transformation_check_edge_corners ();
+#endif /* P4_TO_P8 */
 
   /* exit */
   sc_finalize ();
