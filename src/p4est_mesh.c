@@ -341,10 +341,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
     side2 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, iz);
     P4EST_ASSERT (side2->corner >= 0 && side2->corner < P4EST_CHILDREN);
 
-    /* check if current side2 is among the face neighbors:
-     * We have either found it via connectivity or it is in the same
-     * tree as side1.
-     */
+    /* check if current side2 is among the face or edge neighbors */
     for (j = 0; j < P4EST_DIM; ++j) {
       for (k = 0; k < P4EST_DIM; ++k) {
 #ifdef P4_TO_P8
