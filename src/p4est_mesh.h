@@ -91,6 +91,15 @@ SC_EXTERN_C_BEGIN;
  *
  * Corners with no diagonal neighbor at all are assigned the value -1.
  * Corner-neighbors for hanging nodes are assigned the value -3.
+ * TODO: Are the two sentences above correct?
+ *
+ * TODO: Potential optimizations:
+ *       a) use the pattern that is used for corners for faces
+ *       b) in case of an inter-tree neighboring relation in a brick-like
+ *          condition (orientation 0, only one neighbor (= not hanging), same
+ *          neighboring entity is seen as in an intra-tree setting) do not use
+ *          sparse matrix storage scheme but just store qid, generate encoding
+ *          on the fly
  */
 typedef struct
 {
