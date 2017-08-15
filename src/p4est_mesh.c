@@ -38,39 +38,6 @@
 
 /*********************** constructor functions ***********************/
 
-/** For a quadrant that touches a tree face with a corner inside the face,
- * get the number of the touching face.
- *
- * \param [in] q        currently considered quadrant
- * \param [in] corner   corner index
- * \return              face index
- */
-static int
-tree_face_quadrant_corner_face (const p4est_quadrant_t * q, int corner)
-{
-  int                 which;
-  p4est_qcoord_t      end = P4EST_LAST_OFFSET (q->level);
-
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
-
-  which = corner & 1;
-  if (q->x == (which ? end : 0)) {
-    return which;
-  }
-  which = corner & 2;
-  if (q->y == (which ? end : 0)) {
-    return 2 + (which >> 1);
-  }
-#ifdef P4_TO_P8
-  which = corner & 4;
-  if (q->z == (which ? end : 0)) {
-    return 4 + (which >> 2);
-  }
-#endif /* P4_TO_P8 */
-  SC_ABORT_NOT_REACHED ();
-}
-
 /** Populate mesh information for corners across tree boundaries, i.e. every
  *  neighborhood scenario where we need more information (like orientation) than
  *  a single index. Note that this function only allocates the memory, correct
@@ -446,13 +413,10 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                 visited[P4EST_CHILDREN];
   size_t              cz, zz;
   p4est_locidx_t      qoffset, qid1, qid2;
-  p4est_locidx_t      cornerid_offset;
   p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
   p4est_iter_corner_side_t *side1, *side2;
   p4est_tree_t       *tree1;
   sc_array_t         *trees = info->p4est->trees;
-
-  cornerid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
   /* Check the case when the corner does not involve neighbors */
   cz = info->sides.elem_count;
@@ -1337,7 +1301,9 @@ p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
 
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_topidx_t      treeid = mesh->quad_to_tree[qid];
+#endif /* P4EST_ENABLE_DEBUG */
   p4est_locidx_t      tree_local_qid;
 
   P4EST_ASSERT (p4est->trees != NULL);
@@ -1350,178 +1316,6 @@ p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
   quad = p4est_quadrant_array_index (&tree->quadrants, tree_local_qid);
 
   return quad;
-}
-
-/** Decode encoding obtained in neighbor search.
- * \param[in]      enc           The normalized encoding, i.e. 0 based and no
- *                               longer containing ghost status, i.e. 0 <= enc
- * \param[in]      n_entities    Number of faces, edges, or corners, depending
- *                               on the direction the neighbor has been looked
- *                               up.
- * \param[in]      l_same_size   Lower bound for encoding a neighbor of same
- *                               size.
- * \param[in]      u_same_size   Upper bound for encoding a neighbor of same
- *                               size.
- * \param[in]      l_double_size Lower bound for encoding a neighbor of double
- *                               size.
- * \param[in]      u_double_size Upper bound for encoding a neighbor of double
- *                               size.
- * \param[in]      l_half_size   Lower bound for encoding a neighbor of half
- *                               size.
- * \param[in]      u_half_size   Upper bound for encoding a neighbor of half
- *                               size.
- * \param    [out] n_subquad     Pointer to neighbor subquad index. -1 if
- *                               neighbor is not half as big as current quad.
- * \param    [out] n_orientation Orientation between both quadrants.
- * \param    [out] n_entity      The index of the entity across which the
- *                               neighboring sees the querying quadrant.
- */
-static int
-decode_encoding (int enc, int n_entities, int l_same_size, int u_same_size,
-                 int l_double_size, int u_double_size, int l_half_size,
-                 int u_half_size, int *n_subquad, int *n_orientation,
-                 int *n_entity)
-{
-  P4EST_ASSERT (u_same_size == l_double_size && u_double_size == l_half_size);
-  P4EST_ASSERT (l_same_size == 0);
-  P4EST_ASSERT (l_same_size < l_double_size);
-  P4EST_ASSERT (l_double_size <= l_half_size);
-  P4EST_ASSERT (l_same_size <= enc && enc < u_half_size);
-
-  if (l_same_size <= enc && enc < u_same_size) {
-    *n_orientation = enc / n_entities;
-    *n_entity = enc % n_entities;
-    *n_subquad = -1;
-  }
-  else if (l_double_size <= enc && enc < u_double_size) {
-    int                 e = enc;
-    e -= l_double_size;
-    *n_subquad = e / l_double_size;
-    e -= (l_double_size * *n_subquad);
-    *n_orientation = e / n_entities;
-    *n_entity = e % n_entities;
-  }
-  else if (l_half_size <= enc && enc < u_half_size) {
-    int                 e = enc;
-    e -= l_half_size;
-    *n_orientation = e / n_entities;
-    *n_entity = e % n_entities;
-    *n_subquad = -1;
-  }
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-
-#ifdef P4EST_ENABLE_DEBUG
-  int8_t              upper_bnd;
-  if (n_entities == P4EST_FACES) {
-    upper_bnd = P4EST_HALF;
-  }
-#ifdef P4_TO_P8
-  else if (n_entities == P8EST_EDGES) {
-    upper_bnd = 2;
-  }
-#endif /* P4_TO_P8 */
-  else if (n_entities == P4EST_CHILDREN) {
-    upper_bnd = 1;
-  }
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-
-  P4EST_ASSERT (0 <= *n_orientation && *n_orientation < upper_bnd);
-#endif /* P4EST_ENABLE_DEBUG */
-  P4EST_ASSERT (0 <= *n_entity && *n_entity < n_entities);
-
-  return 0;
-}
-
-/** Get opposite face-, (edge-), or corner index
- * \param [in]   dir  Encoded direction.
- *
- * \returns Decoded index of opposite face (, edge,) or corner.
- */
-static int
-get_opposite (int dir)
-{
-  if (0 <= dir && dir < P4EST_FACES) {
-    return dir ^ 1;
-  }
-#ifdef P4_TO_P8
-  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P8EST_EDGES)) {
-    return (dir - P4EST_FACES) ^ 3;
-  }
-  else if ((P4EST_FACES + P8EST_EDGES) <= dir
-           && dir < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
-    return (dir - (P4EST_FACES + P8EST_EDGES)) ^ 7;
-  }
-#else /* P4_TO_P8 */
-  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P4EST_CHILDREN)) {
-    return (dir - P4EST_FACES) ^ 3;
-  }
-#endif /* P4_TO_P8 */
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-  return -42;
-}
-
-static int
-set_xor_constants (int edge_dir, int face_dir, int *edge_offset,
-                   int *corner_offset)
-{
-    /** edges parallel to x axis */
-  if (0 <= edge_dir && edge_dir < 4) {
-        /** faces normal to y axis */
-    if (2 <= face_dir && face_dir < 4) {
-      *edge_offset = 2;
-      *corner_offset = 4;
-    }
-        /** faces normal to z axis */
-    else if (4 <= face_dir && face_dir < 6) {
-      *edge_offset = 1;
-      *corner_offset = 2;
-    }
-    else {
-      SC_ABORT_NOT_REACHED ();
-    }
-  }
-    /** edges parallel to y axis */
-  else if (4 <= edge_dir && edge_dir < 8) {
-        /** faces normal to x axis */
-    if (0 <= face_dir && face_dir < 2) {
-      *edge_offset = 2;
-      *corner_offset = 4;
-    }
-        /** faces normal to z axis */
-    else if (4 <= face_dir && face_dir < 6) {
-      *edge_offset = 1;
-      *corner_offset = 1;
-    }
-    else {
-      SC_ABORT_NOT_REACHED ();
-    }
-  }
-    /** edges parallel to z axis */
-  else if (8 <= edge_dir && edge_dir < 12) {
-        /** faces normal to x axis */
-    if (0 <= face_dir && face_dir < 2) {
-      *edge_offset = 2;
-      *corner_offset = 2;
-    }
-        /** faces normal to y axis */
-    else if (2 <= face_dir && face_dir < 4) {
-      *edge_offset = 1;
-      *corner_offset = 1;
-    }
-    else {
-      SC_ABORT_NOT_REACHED ();
-    }
-  }
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-  return 0;
 }
 
 /** Find neighboring quadrants across faces
@@ -1537,10 +1331,10 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 {
   int                 i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
-  p4est_locidx_t      gq = mesh->ghost_num_quadrants;
   int                 l_same_size, u_same_size, l_double_size, u_double_size;
   int                 l_half_size, u_half_size;
 #ifdef P4EST_ENABLE_DEBUG
+  p4est_locidx_t      gq = mesh->ghost_num_quadrants;
   p4est_quadrant_t   *curr_quad =
     p4est_mesh_get_quadrant (p4est, mesh, curr_quad_id);
 #endif /* P4EST_ENABLE_DEBUG */
@@ -1940,8 +1734,6 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
-  int                 l_same_size, u_same_size, l_double_size, u_double_size;
-  int                 l_half_size, u_half_size;
 #ifdef P4EST_ENABLE_DEBUG
   p4est_quadrant_t   *curr_quad =
     p4est_mesh_get_quadrant (p4est, mesh, curr_quad_id);
@@ -1951,10 +1743,6 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_quadrant_t   *quad;
   int                *int_ins;
   int                 encHelper;
-
-  l_same_size = 0;
-  u_same_size = P4EST_CHILDREN;
-  l_double_size = u_double_size = l_half_size = u_half_size = P4EST_CHILDREN;
 
 #ifdef P4_TO_P8
   encHelper = 7;
@@ -2135,8 +1923,12 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                           sc_array_t * neighboring_encs,
                           sc_array_t * neighboring_qids)
 {
-  p4est_locidx_t      lq = mesh->local_num_quadrants;
 #ifdef P4EST_ENABLE_DEBUG
+  p4est_locidx_t      lq = mesh->local_num_quadrants;
+
+  /* direction must be within the allowed range */
+  p4est_locidx_t      limit;
+
   /* Integrity checks: */
   /* result arrays should be empty, */
   P4EST_ASSERT (neighboring_quads == NULL ||
@@ -2160,8 +1952,6 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   /*  curr_quad_id must be part of the processors quadrants, */
   P4EST_ASSERT (curr_quad_id < lq);
 
-  /*  and direction must be within the allowed range */
-  p4est_locidx_t      limit;
   switch (ghost->btype) {
   case P4EST_CONNECT_FACE:
     P4EST_ASSERT (direction >= 0 && direction < P4EST_FACES);
@@ -2169,18 +1959,22 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 
 #ifdef P4_TO_P8
   case P8EST_CONNECT_EDGE:
+#ifdef P4EST_ENABLE_DEBUG
     limit = P4EST_FACES + P8EST_EDGES;
     P4EST_ASSERT (direction >= 0 && direction < limit);
+#endif
     break;
 #endif /* P4_TO_P8 */
 
   case P4EST_CONNECT_CORNER:
+#ifdef P4EST_ENABLE_DEBUG
 #ifdef P4_TO_P8
     limit = P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN;
 #else /* P4_TO_P8 */
     limit = P4EST_FACES + P4EST_CHILDREN;
 #endif /* P4_TO_P8 */
     P4EST_ASSERT (direction >= 0 && direction < limit);
+#endif /* P4EST_ENABLE_DEBUG */
     break;
 
   default:
