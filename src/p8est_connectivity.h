@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -134,23 +135,27 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
  * The edges are only stored when they connect trees.
+ * In this case tree_to_edge indexes into \a ett_offset.
  * Otherwise the tree_to_edge entry must be -1 and this edge is ignored.
  * If num_edges == 0, tree_to_edge and edge_to_* arrays are set to NULL.
  *
  * The arrays edge_to_* store a variable number of entries per edge.
  * For edge e these are at position [ett_offset[e]]..[ett_offset[e+1]-1].
  * Their number for edge e is ett_offset[e+1] - ett_offset[e].
+ * The entries encode all trees adjacent to edge e.
  * The size of the edge_to_* arrays is num_ett = ett_offset[num_edges].
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
  * one edge orientation and the higher 12 the opposite edge orientation.
  *
  * The corners are only stored when they connect trees.
+ * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
  *
  * The arrays corner_to_* store a variable number of entries per corner.
  * For corner c these are at position [ctt_offset[c]]..[ctt_offset[c+1]-1].
  * Their number for corner c is ctt_offset[c+1] - ctt_offset[c].
+ * The entries encode all trees adjacent to corner c.
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
@@ -177,7 +182,7 @@ typedef struct p8est_connectivity
 
   p4est_topidx_t     *tree_to_tree; /**< (6 * \a num_trees) neighbors across
                                          faces */
-  int8_t             *tree_to_face; /**< (4 * \a num_trees) face to
+  int8_t             *tree_to_face; /**< (6 * \a num_trees) face to
                                          face+orientation (see description) */
   p4est_topidx_t     *tree_to_edge; /**< (12 * \a num_trees) or NULL (see
                                           description) */
@@ -234,11 +239,13 @@ p8est_corner_info_t;
 /** Store the corner numbers 0..7 for each tree face. */
 extern const int    p8est_face_corners[6][4];
 
-/** Store the face numbers 0..12 for each tree face. */
+/** Store the edge numbers 0..12 for each tree face. */
 extern const int    p8est_face_edges[6][4];
 
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
+
+/* face corners */
 
 /** Store only the 8 out of 24 possible permutations that occur. */
 extern const int    p8est_face_permutations[8][4];
@@ -247,18 +254,34 @@ extern const int    p8est_face_permutations[8][4];
 extern const int    p8est_face_permutation_sets[3][4];
 
 /** For each face combination store the permutation set.
- * The order is [my_face][neighbor_face]
- */
+ * The order is [my_face][neighbor_face] */
 extern const int    p8est_face_permutation_refs[6][6];
 
-/** Store the face numbers 0..5 for each tree edge. */
+/* face edges */
+
+/** Store only the 8 out of 24 possible permutations that occur. */
+extern const int    p8est_face_edge_permutations[8][4];
+
+/** Store the 3 occurring sets of 4 permutations per face. */
+extern const int    p8est_face_edge_permutation_sets[3][4];
+
+/** Store the face numbers 0..5 adjacent to each tree edge. */
 extern const int    p8est_edge_faces[12][2];
 
 /** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
 
-/** Store the face corner numbers for the faces touching a tree edge. */
+/** Store the edge corner numbers 0..1 for the corners touching a tree edge
+    or -1 if combination is invalid */
+extern const int    p8est_edge_edge_corners[12][8];
+
+/** Store the face corner numbers 0..3 for the faces touching a tree edge.
+    Is -1 for invalid combinations of indices */
 extern const int    p8est_edge_face_corners[12][6][2];
+
+/** Store the face edge numbers 0..3 for the faces touching a tree edge.
+    Is -1 for invalid combinations of indices */
+extern const int    p8est_edge_face_edges[12][6];
 
 /** Store the face numbers 0..5 for each tree corner. */
 extern const int    p8est_corner_faces[8][3];
@@ -266,8 +289,13 @@ extern const int    p8est_corner_faces[8][3];
 /** Store the edge numbers 0..11 for each tree corner. */
 extern const int    p8est_corner_edges[8][3];
 
-/** Store the face corner numbers for the faces touching a tree corner. */
+/** Store the face corner numbers for the faces touching a tree corner.
+    Is -1 for invalid combinations. */
 extern const int    p8est_corner_face_corners[8][6];
+
+/** Store the edge corner numbers for the edges touching a tree corner.
+    Is -1 for invalid combinations. */
+extern const int    p8est_corner_edge_corners[8][12];
 
 /** Store the faces for each child and edge, can be -1. */
 extern const int    p8est_child_edge_faces[8][12];
@@ -292,15 +320,68 @@ extern const int    p8est_child_corner_edges[8][8];
 int                 p8est_connectivity_face_neighbor_corner_set
   (int c, int f, int nf, int set);
 
+/** Transform a face corner across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] fc   A face corner number in 0..3.
+ * \param [in] f    A face that the face corner \a fc is relative to.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \return          The face corner number relative to the neighbor's face.
+ */
+int                 p8est_connectivity_face_neighbor_face_corner
+  (int fc, int f, int nf, int o);
+
 /** Transform a corner across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.
  * \param [in] c    A corner number in 0..7.
  * \param [in] f    A face number that touches the corner \a c.
  * \param [in] nf   A neighbor face that is on the other side of \f.
  * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \return          The number of the corner seen from the neighbor tree.
  */
-int                 p8est_connectivity_face_neighbor_corner_orientation
+int                 p8est_connectivity_face_neighbor_corner
   (int c, int f, int nf, int o);
+
+/** Transform a face-edge across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] fe   A face edge number in 0..3.
+ * \param [in] f    A face number that touches the edge \a e.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \return          The face edge number seen from the neighbor tree.
+ */
+int                 p8est_connectivity_face_neighbor_face_edge
+  (int fe, int f, int nf, int o);
+
+/** Transform an edge across one of the adjacent faces into a neighbor tree.
+ * This version expects the neighbor face and orientation separately.
+ * \param [in] e    A edge number in 0..11.
+ * \param [in] f    A face 0..5 that touches the edge \a e.
+ * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \return          The edge's number seen from the neighbor.
+ */
+int                 p8est_connectivity_face_neighbor_edge
+  (int e, int f, int nf, int o);
+
+/** Transform an edge corner across one of the adjacent edges into a neighbor tree.
+ * \param [in] ec   An edge corner number in 0..1.
+ * \param [in] o    The orientation of a tree boundary edge connection.
+ * \return          The edge corner number seen from the other tree.
+ */
+int                 p8est_connectivity_edge_neighbor_edge_corner
+  (int ec, int o);
+
+/** Transform a corner across one of the adjacent edges into a neighbor tree.
+ * This version expects the neighbor edge and orientation separately.
+ * \param [in] c    A corner number in 0..7.
+ * \param [in] e    An edge 0..11 that touches the corner \a c.
+ * \param [in] ne   A neighbor edge that is on the other side of \e.
+ * \param [in] o    The orientation between tree boundary edges \a e and \ne.
+ * \return          Corner number seen from the neighbor.
+ */
+int                 p8est_connectivity_edge_neighbor_corner
+  (int c, int e, int ne, int o);
 
 /** Allocate a connectivity structure.
  * The attribute fields are initialized to NULL.
@@ -326,7 +407,11 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
  * \param [in] num_edges      Number of tree-connecting edges.
  * \param [in] num_corners    Number of tree-connecting corners.
  * \param [in] eoff           Edge-to-tree offsets (num_edges + 1 values).
+ *                            This must always be non-NULL; in trivial cases
+ *                            it is just a pointer to a p4est_topix value of 0.
  * \param [in] coff           Corner-to-tree offsets (num_corners + 1 values).
+ *                            This must always be non-NULL; in trivial cases
+ *                            it is just a pointer to a p4est_topix value of 0.
  * \return                    The connectivity is checked for validity.
  */
 p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
@@ -454,6 +539,16 @@ p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
 /** Create a connectivity structure that contains two cubes.
  */
 p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
+
+/** Create a connectivity structure for two trees being rotated
+ * w.r.t. each other in a user-defined way.
+ * \param[in] l_face      index of left face
+ * \param[in] r_face      index of right face
+ * \param[in] orientation orientation of trees w.r.t. each other
+ */
+p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face,
+                                                       int r_face,
+                                                       int orientation);
 
 /** Create a connectivity structure that contains two cubes
  * where the two far ends are identified periodically.
@@ -783,7 +878,7 @@ p8est_corner_array_index (sc_array_t * array, size_t it)
  * \endcode
  *
  * This code can be called two ways.  The first, when \c vertex==NULL and \c
- * tree_to_vertex==NULL, is used to count the number of tress and vertices in
+ * tree_to_vertex==NULL, is used to count the number of trees and vertices in
  * the connectivity to be generated by the \c .inp mesh in the \a stream.  The
  * second, when \c vertices!=NULL and \c tree_to_vertex!=NULL, fill \c vertices
  * and \c tree_to_vertex.  In this case \c num_vertices and \c num_trees need

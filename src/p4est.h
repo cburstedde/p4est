@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -64,12 +65,12 @@ SC_EXTERN_C_BEGIN;
 /** The 2D quadrant datatype */
 typedef struct p4est_quadrant
 {
-  /*@{*/
+  /*@{ */
   p4est_qcoord_t      x, y;  /**< coordinates */
-  /*@}*/
-  int8_t              level, /**< level of refinement */
-                      pad8;  /**< padding */
-  int16_t             pad16; /**< padding */
+  /*@} */
+  int8_t              level,    /**< level of refinement */
+                      pad8;     /**< padding */
+  int16_t             pad16;    /**< padding */
   union p4est_quadrant_data
   {
     void               *user_data;      /**< never changed by p4est */
@@ -131,11 +132,13 @@ typedef struct p4est
   sc_MPI_Comm         mpicomm;          /**< MPI communicator */
   int                 mpisize,          /**< number of MPI processes */
                       mpirank;          /**< this process's MPI rank */
+  int                 mpicomm_owned;    /**< flag if communicator is owned */
   size_t              data_size;        /**< size of per-quadrant p.user_data
                      (see p4est_quadrant_t::p4est_quadrant_data::user_data) */
   void               *user_pointer;     /**< convenience pointer for users,
                                              never touched by p4est */
 
+  long                revision;         /**< Gets bumped on mesh change */
   p4est_topidx_t      first_local_tree; /**< 0-based index of first local
                                              tree, must be -1 for an empty
                                              processor */
@@ -156,21 +159,32 @@ typedef struct p4est
   sc_array_t         *trees;          /**< array of all trees */
 
   sc_mempool_t       *user_data_pool; /**< memory allocator for user data */
-                                      /*   WARNING: This is NULL if data size
-                                                    equals zero. */
+  /*   WARNING: This is NULL if data size
+     equals zero. */
   sc_mempool_t       *quadrant_pool;  /**< memory allocator for temporary
                                            quadrants */
   p4est_inspect_t    *inspect;        /**< algorithmic switches */
 }
 p4est_t;
 
-/** Calculate memory usage of a forest structure.
+/** Calculate local memory usage of a forest structure.
+ * Not collective.  The memory used on the current rank is returned.
  * The connectivity structure is not counted since it is not owned;
  * use p4est_connectivity_memory_usage (p4est->connectivity).
- * \param [in] p4est    Forest structure.
+ * \param [in] p4est    Valid forest structure.
  * \return              Memory used in bytes.
  */
 size_t              p4est_memory_used (p4est_t * p4est);
+
+/** Return the revision counter of the forest.
+ * Not collective, even though the revision value is the same on all ranks.
+ * A newly created forest starts with a revision counter of zero.
+ * Every refine, coarsen, partition, and balance that actually changes the mesh
+ * increases the counter by one.  Operations with no effect keep the old value.
+ * \param [in] p8est    The forest must be valid.
+ * \return              Non-negative number.
+ */
+long                p4est_revision (p4est_t * p4est);
 
 /** Callback function prototype to initialize the quadrant's user data.
  * \param [in] p4est         the forest
@@ -225,7 +239,7 @@ extern void        *P4EST_DATA_UNINITIALIZED;
  * \param [in] connectivity     Connectivity must provide the vertices.
  * \param [in] treeid           Identify the tree that contains x, y.
  * \param [in] x, y             Quadrant coordinates relative to treeid.
- * \param [out] vxy             Transformed coordinates in vertex space.
+ * \param [out] vxyz            Transformed coordinates in vertex space.
  */
 void                p4est_qcoord_to_vertex (p4est_connectivity_t *
                                             connectivity,
@@ -269,10 +283,13 @@ void                p4est_destroy (p4est_t * p4est);
  * Copying of quadrant user data is optional.
  * If old and new data sizes are 0, the user_data field is copied regardless.
  * The inspect member of the copy is set to NULL.
+ * The revision counter of the copy is set to zero.
  *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
- * \return  Returns a valid p4est that does not depend on the input.
+ * \return  Returns a valid p4est that does not depend on the input,
+ *                         except for borrowing the same connectivity.
+ *                         Its revision counter is 0.
  */
 p4est_t            *p4est_copy (p4est_t * input, int copy_data);
 
@@ -371,6 +388,9 @@ unsigned            p4est_checksum (p4est_t * p4est);
  * header.  This makes the file depend on mpisize.  For changing this see
  * p4est_save_ext() in p4est_extended.h.
  *
+ * The revision counter is not saved to the file, since that would make files
+ * different that come from different revisions but store the same mesh.
+ *
  * \param [in] filename    Name of the file to write.
  * \param [in] p4est       Valid forest structure.
  * \param [in] save_data   If true, the element data is saved.
@@ -393,6 +413,8 @@ void                p4est_save (const char *filename, p4est_t * p4est,
  * By default, a file can only be loaded with the same number of processors
  * that it was stored with.  The defaults can be changed with p4est_load_ext()
  * in p4est_extended.h.
+ *
+ * The revision counter of the loaded p4est is set to zero.
  *
  * \param [in] filename         Name of the file to read.
  * \param [in] mpicomm          A valid MPI communicator.

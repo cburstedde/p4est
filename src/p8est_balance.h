@@ -3,7 +3,8 @@
   p4est is a C library to manage a collection (a forest) of multiple
   connected adaptive quadtrees or octrees in parallel.
 
-  Copyright (C) 2011 The University of Texas System
+  Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -25,6 +26,8 @@
 #define P8EST_BALANCE_H
 
 #include <p8est.h>
+
+SC_EXTERN_C_BEGIN;
 
 /** Determines if quadrant \a q causes quadrant \a p to split under the given
  * \a balance condition.
@@ -68,5 +71,6 @@ int                 p8est_balance_seeds_corner (p8est_quadrant_t * q,
                                                 p8est_quadrant_t * p,
                                                 int face, p8est_connect_type_t
                                                 balance, sc_array_t * seeds);
+SC_EXTERN_C_END;
 
 #endif

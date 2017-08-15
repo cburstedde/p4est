@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -58,6 +59,7 @@ typedef int32_t     p4est_qcoord_t;
 #define P4EST_QCOORD_MIN INT32_MIN
 #define P4EST_QCOORD_MAX INT32_MAX
 #define P4EST_QCOORD_1   ((p4est_qcoord_t) 1)
+#define P4EST_QCOORD_ABS(x) ((p4est_qcoord_t) labs ((long) (x)))
 
 /** Typedef for counting topological entities (trees, tree vertices). */
 typedef int32_t     p4est_topidx_t;
@@ -69,6 +71,7 @@ typedef int32_t     p4est_topidx_t;
 #define P4EST_TOPIDX_MAX INT32_MAX
 #define P4EST_TOPIDX_FITS_32 1
 #define P4EST_TOPIDX_1   ((p4est_topidx_t) 1)
+#define P4EST_TOPIDX_ABS(x) ((p4est_topidx_t) labs ((long) (x)))
 
 /** Typedef for processor-local indexing of quadrants and nodes. */
 typedef int32_t     p4est_locidx_t;
@@ -79,6 +82,7 @@ typedef int32_t     p4est_locidx_t;
 #define P4EST_LOCIDX_MIN INT32_MIN
 #define P4EST_LOCIDX_MAX INT32_MAX
 #define P4EST_LOCIDX_1   ((p4est_locidx_t) 1)
+#define P4EST_LOCIDX_ABS(x) ((p4est_locidx_t) labs ((long) (x)))
 
 /** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
@@ -89,6 +93,39 @@ typedef int64_t     p4est_gloidx_t;
 #define P4EST_GLOIDX_MIN INT64_MIN
 #define P4EST_GLOIDX_MAX INT64_MAX
 #define P4EST_GLOIDX_1   ((p4est_gloidx_t) 1)
+#define P4EST_GLOIDX_ABS(x) ((p4est_gloidx_t) llabs ((long long) (x)))
+
+/** Tags for MPI messages */
+typedef enum p4est_comm_tag
+{
+  P4EST_COMM_TAG_FIRST = SC_TAG_FIRST,
+  P4EST_COMM_COUNT_PERTREE = SC_TAG_LAST,
+  P4EST_COMM_BALANCE_FIRST_COUNT,
+  P4EST_COMM_BALANCE_FIRST_LOAD,
+  P4EST_COMM_BALANCE_SECOND_COUNT,
+  P4EST_COMM_BALANCE_SECOND_LOAD,
+  P4EST_COMM_PARTITION_GIVEN,
+  P4EST_COMM_PARTITION_WEIGHTED_LOW,
+  P4EST_COMM_PARTITION_WEIGHTED_HIGH,
+  P4EST_COMM_PARTITION_CORRECTION,
+  P4EST_COMM_GHOST_COUNT,
+  P4EST_COMM_GHOST_LOAD,
+  P4EST_COMM_GHOST_EXCHANGE,
+  P4EST_COMM_GHOST_EXPAND_COUNT,
+  P4EST_COMM_GHOST_EXPAND_LOAD,
+  P4EST_COMM_GHOST_SUPPORT_COUNT,
+  P4EST_COMM_GHOST_SUPPORT_LOAD,
+  P4EST_COMM_GHOST_CHECKSUM,
+  P4EST_COMM_NODES_QUERY,
+  P4EST_COMM_NODES_REPLY,
+  P4EST_COMM_SAVE,
+  P4EST_COMM_LNODES_TEST,
+  P4EST_COMM_LNODES_PASS,
+  P4EST_COMM_LNODES_OWNED,
+  P4EST_COMM_LNODES_ALL,
+  P4EST_COMM_TAG_LAST
+}
+p4est_comm_tag_t;
 
 /* some error checking possibly specific to p4est */
 #ifdef P4EST_ENABLE_DEBUG

@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -127,7 +128,7 @@ test_exchange_end (p4est_ghost_exchange_t * exc)
   p4est_locidx_t      gexcl, gincl, gl;
   p4est_gloidx_t      gnum;
   p4est_quadrant_t   *q;
-  
+
   /* free this structure on the inside */
   p4est_ghost_exchange_data_end (exc);
 
@@ -381,7 +382,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   p4est_ghost_t      *ghost;
-  p4est_ghost_exchange_t * exc;
+  p4est_ghost_exchange_t *exc;
   int                 num_cycles = 2;
   int                 i;
   p4est_lnodes_t     *lnodes;

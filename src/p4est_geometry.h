@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -21,7 +22,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_geometry.h transforms from vertex frame to physical space
+/** \file p4est_geometry.h transforms from vertex frame to physical space.
  *
  * \ingroup p4est
  */
@@ -33,6 +34,7 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** This object encapsulates a custom geometry transformation. */
 typedef struct p4est_geometry p4est_geometry_t;
 
 /** Forward transformation from the reference unit square to physical space.

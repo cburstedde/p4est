@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -283,7 +284,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           /* We have a face neighbor */
           orientation = nface[i] / P4EST_FACES;
           nface[i] %= P4EST_FACES;
-          ncorner[i] = p4est_connectivity_face_neighbor_corner_orientation
+          ncorner[i] = p4est_connectivity_face_neighbor_corner
             (c1, f1, nface[i], orientation);
         }
 

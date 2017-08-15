@@ -3,7 +3,8 @@
   p4est is a C library to manage a collection (a forest) of multiple
   connected adaptive quadtrees or octrees in parallel.
 
-  Copyright (C) 2013 The University of Texas System
+  Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -21,6 +22,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P6EST_EXTENDED_H
+#define P6EST_EXTENDED_H
+
 /********************************************************************
  *                          IMPORTANT NOTE                          *
  *                                                                  *
@@ -36,10 +40,9 @@
  * \ingroup p6est
  */
 
-#ifndef P6EST_EXTENDED_H
-#define P6EST_EXTENDED_H
-
 #include <p6est.h>
+
+SC_EXTERN_C_BEGIN;
 
 /** Create a new forest.
  * This is a more general form of p6est_new().
@@ -67,6 +70,20 @@ p6est_t            *p6est_new_ext (sc_MPI_Comm mpicomm,
                                    int num_zroot,
                                    int fill_uniform, size_t data_size,
                                    p6est_init_t init_fn, void *user_pointer);
+
+/** Make a deep copy of a p6est.
+ * The connectivity is not duplicated.
+ * Copying of quadrant user data is optional.
+ * If old and new data sizes are 0, the user_data field is copied regardless.
+ * The inspect member of the copy is set to NULL.
+ *
+ * \param [in]  copy_data  If true, data are copied.
+ *                         If false, data_size is set to 0.
+ * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
+ * \return  Returns a valid p6est that does not depend on the input.
+ */
+p6est_t            *p6est_copy_ext (p6est_t * input, int copy_data,
+                                    int duplicate_mpicomm);
 
 /** Save the complete connectivity/p6est data to disk.
  *
@@ -265,5 +282,7 @@ void                p6est_balance_ext (p6est_t * p6est,
                                        int max_diff, int min_diff,
                                        p6est_init_t init_fn,
                                        p6est_replace_t replace_fn);
+
+SC_EXTERN_C_END;
 
 #endif

@@ -3,7 +3,8 @@
   p4est is a C library to manage a collection (a forest) of multiple
   connected adaptive quadtrees or octrees in parallel.
 
-  Copyright (C) 2013 The University of Texas System
+  Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -20,6 +21,9 @@
   along with p4est; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
+
+#ifndef P6EST_H
+#define P6EST_H
 
 /** \file p6est.h
  *
@@ -45,9 +49,6 @@
  * p6est_lnodes_new(): this creates nodes in the same data structure as
  * p8est_lnodes_new().
  */
-
-#ifndef P6EST_H
-#define P6EST_H
 
 /* 2+1D refinement is based on the 2D p4est datatypes */
 #include <p4est.h>
@@ -165,6 +166,8 @@ typedef struct p6est
   sc_MPI_Comm         mpicomm;          /**< MPI communicator */
   int                 mpisize,          /**< number of MPI processes */
                       mpirank;          /**< this process's MPI rank */
+  int                 mpicomm_owned;    /**< whether this communicator is
+                                             owned by the forest */
   size_t              data_size;        /**< size of per-quadrant p.user_data
                      (see p2est_quadrant_t::p2est_quadrant_data::user_data) */
   void               *user_pointer;     /**< convenience pointer for users,
@@ -175,8 +178,8 @@ typedef struct p6est
   sc_array_t         *layers;   /**< single array that stores
                                      p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /**< memory allocator for user data */
-                                        /* WARNING: This is NULL if data size
-                                         *          equals zero.  */
+  /* WARNING: This is NULL if data size
+   *          equals zero.  */
   sc_mempool_t       *layer_pool;       /**< memory allocator
                                              for temporary layers */
   p4est_gloidx_t     *global_first_layer; /**< first global quadrant index for
@@ -476,6 +479,26 @@ p6est_comm_tag_t;
  */
 p4est_gloidx_t      p6est_partition (p6est_t * p6est,
                                      p6est_weight_t weight_fn);
+void                p6est_partition_correct (p6est_t * p6est,
+                                             p4est_locidx_t *
+                                             num_layers_in_proc);
+void                p6est_partition_to_p4est_partition (p6est_t * p6est,
+                                                        p4est_locidx_t *
+                                                        num_layers_in_proc,
+                                                        p4est_locidx_t *
+                                                        num_columns_in_proc);
+void                p4est_partition_to_p6est_partition (p6est_t * p6est,
+                                                        p4est_locidx_t *
+                                                        num_columns_in_proc,
+                                                        p4est_locidx_t *
+                                                        num_layers_in_proc);
+
+p4est_gloidx_t      p6est_partition_for_coarsening (p6est_t * p6est,
+                                                    p4est_locidx_t *
+                                                    num_layers_in_proc);
+p4est_gloidx_t      p6est_partition_given (p6est_t * p6est,
+                                           p4est_locidx_t *
+                                           num_layers_in_proc);
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.

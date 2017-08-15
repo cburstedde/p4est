@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -73,6 +74,28 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
+count_callback (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                void *point)
+{
+  P4EST_ASSERT (point == NULL);
+
+  if (local_num == -1) {
+    /* keep recursing to reach a leaf eventually */
+    return 1;
+  }
+  else {
+    p4est_locidx_t     *local_count = (p4est_locidx_t *) p4est->user_pointer;
+
+    /* return value shall be ignored for leaves */
+    P4EST_ASSERT (local_count != NULL);
+    SC_CHECK_ABORT (local_num == *local_count, "Count mismatch");
+    ++*local_count;
+    return 0;
+  }
+}
+
+static int
 search_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                  p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
                  void *point)
@@ -130,6 +153,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 found_total;
   p4est_locidx_t      jt, Al, Bl;
+  p4est_locidx_t      local_count;
   p4est_connectivity_t *conn;
   p4est_quadrant_t   *A, *B;
   p4est_geometry_t   *geom;
@@ -157,7 +181,7 @@ main (int argc, char **argv)
   geom = p8est_geometry_new_sphere (conn, 1., 0.191728, 0.039856);
   vtkname = "test_search3";
 #endif
-  p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
+  p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, &local_count);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);
@@ -214,6 +238,11 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (found_total == (int) points->elem_count, "Point search");
   SC_CHECK_ABORT (A->p.piggy3.local_num == Al, "Search A");
   SC_CHECK_ABORT (B->p.piggy3.local_num == Bl, "Search B");
+
+  /* Use another search to count local quadrants */
+  local_count = 0;
+  p4est_search (p4est, count_callback, NULL, NULL);
+  SC_CHECK_ABORT (local_count == p4est->local_num_quadrants, "Count search");
 
   /* Clear memory */
   sc_array_destroy (points);

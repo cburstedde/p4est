@@ -3,7 +3,8 @@
   p4est is a C library to manage a collection (a forest) of multiple
   connected adaptive quadtrees or octrees in parallel.
 
-  Copyright (C) 2014 The University of Texas System
+  Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -415,7 +416,7 @@ p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
   int                 mpiret, i;
 
   labels = P4EST_ALLOC (p4est_gloidx_t, lnodes->owned_count);
-  memset (labels, -1, lnodes->num_local_nodes * sizeof (*labels));
+  memset (labels, -1, lnodes->owned_count * sizeof (*labels));
 
   for (jt = p6est->columns->first_local_tree;
        jt <= p6est->columns->last_local_tree; ++jt) {
@@ -429,7 +430,7 @@ p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
       for (i = 0; i < vnodes; i += stride) {
         p4est_locidx_t      fnid = lnodes->element_nodes[vnodes * lfirst + i];
         p4est_locidx_t      lnid =
-          lnodes->element_nodes[vnodes * llast + i + (stride - 1)];
+          lnodes->element_nodes[vnodes * (llast - 1) + i + (stride - 1)];
         P4EST_ASSERT (lnid >= 0);
         P4EST_ASSERT (lnid >= fnid);
         P4EST_ASSERT (fnid < lnodes->num_local_nodes);

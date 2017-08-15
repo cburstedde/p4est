@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -331,6 +332,15 @@ void                p4est_quadrant_sibling (const p4est_quadrant_t * q,
                                             p4est_quadrant_t * r,
                                             int sibling_id);
 
+/** Compute a specific child of a quadrant.
+ * \param [in]     q    Input quadrant.
+ * \param [in,out] r    Existing quadrant whose Morton index will be filled
+ *                      with the coordinates of its child no. \b child_id.
+ * \param [in] child_id The id of the child computed, 0..3.
+ */
+void                p4est_quadrant_child (const p4est_quadrant_t * q,
+                                          p4est_quadrant_t * r, int child_id);
+
 /** Compute the face neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     face   The face across which to generate the neighbor.
@@ -582,19 +592,29 @@ void                p4est_quadrant_shift_corner (const p4est_quadrant_t * q,
                                                  int corner);
 
 /** Computes the linear position of a quadrant in a uniform grid.
- * \param [in] quadrant  Quadrant whose id will be computed.
+ * The grid and quadrant levels need not coincide.
+ * If they do, this is the inverse of \ref p4est_quadrant_set_morton.
+ * \param [in] quadrant  Quadrant whose linear index will be computed.
+ *                       If the quadrant is smaller than the grid (has a higher
+ *                       quadrant->level), the result is computed from its
+ *                       ancestor at the grid's level.
+ *                       If the quadrant has a smaller level than the grid (it
+ *                       is bigger than a grid cell), the grid cell sharing its
+ *                       lower left corner is used as reference.
+ * \param [in] level     The level of the regular grid compared to which the
+ *                       linear position is to be computed.
  * \return Returns the linear position of this quadrant on a grid.
- * \note This is the inverse operation of p4est_quadrant_set_morton.
- *       The user_data of \a quadrant is never modified.
+ * \note The user_data of \a quadrant is never modified.
  */
 uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
                                               quadrant, int level);
 
 /** Set quadrant Morton indices based on linear position in uniform grid.
+ * This is the inverse operation of \ref p4est_quadrant_linear_id.
  * \param [in,out] quadrant  Quadrant whose Morton indices will be set.
- * \param [in]     id        The linear position of this quadrant on a grid.
- * \note This is the inverse operation of p4est_quadrant_linear_id.
- *       The user_data of \a quadrant is never modified.
+ * \param [in]     level     Level of the grid and of the resulting quadrant.
+ * \param [in]     id        Linear index of the quadrant on a uniform grid.
+ * \note The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int level, uint64_t id);

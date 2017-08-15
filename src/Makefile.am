@@ -50,7 +50,20 @@ libp4est_compiled_sources += \
         src/p8est_connrefine.c \
         src/p8est_wrap.c src/p8est_plex.c
 endif
-include example/p6est/Makefile.am
+if P4EST_ENABLE_BUILD_2D
+if P4EST_ENABLE_BUILD_3D
+if P4EST_ENABLE_BUILD_P6EST
+libp4est_installed_headers += \
+        src/p6est.h src/p6est_ghost.h src/p6est_lnodes.h \
+        src/p6est_profile.h src/p6est_vtk.h \
+        src/p6est_extended.h src/p6est_communication.h
+libp4est_compiled_sources += \
+        src/p6est.c src/p6est_ghost.c src/p6est_lnodes.c \
+        src/p6est_profile.c src/p6est_vtk.c \
+        src/p6est_communication.c
+endif
+endif
+endif
 
 # this variable is used for headers that are not publicly installed
 P4EST_CPPFLAGS =

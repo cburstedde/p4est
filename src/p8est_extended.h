@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -42,6 +43,7 @@
 #include <p8est.h>
 #include <p8est_mesh.h>
 #include <p8est_iterate.h>
+#include <p8est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -146,6 +148,23 @@ p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
                                         int compute_level_lists,
                                         p8est_connect_type_t btype);
 
+/** Make a deep copy of a p8est.
+ * The connectivity is not duplicated.
+ * Copying of quadrant user data is optional.
+ * If old and new data sizes are 0, the user_data field is copied regardless.
+ * The inspect member of the copy is set to NULL.
+ * The revision counter of the copy is set to zero.
+ *
+ * \param [in]  copy_data  If true, data are copied.
+ *                         If false, data_size is set to 0.
+ * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
+ * \return  Returns a valid p8est that does not depend on the input,
+ *                         except for borrowing the same connectivity.
+ *                         Its revision counter is 0.
+ */
+p8est_t            *p8est_copy_ext (p8est_t * input, int copy_data,
+                                    int duplicate_mpicomm);
+
 /** Refine a forest with a bounded refinement level and a replace option.
  * \param [in,out] p8est The forest is changed in place.
  * \param [in] refine_recursive Boolean to decide on recursive refinement.
@@ -235,6 +254,16 @@ p4est_gloidx_t      p8est_partition_ext (p8est_t * p8est,
                                          int partition_for_coarsening,
                                          p8est_weight_t weight_fn);
 
+/** Correct partition to allow one level of coarsening.
+ *
+ * \param [in] p8est                     forest whose partition is corrected
+ * \param [in,out] num_quadrants_in_proc partition that will be corrected
+ * \return                               absolute number of moved quadrants
+ */
+p4est_gloidx_t      p8est_partition_for_coarsening (p8est_t * p8est,
+                                                    p4est_locidx_t *
+                                                    num_quadrants_in_proc);
+
 /** p8est_iterate_ext adds the option \a remote: if this is false, then it is
  * the same as p8est_iterate; if this is true, then corner/edge callbacks are
  * also called on corners/edges for hanging faces/edges touched by local
@@ -304,6 +333,68 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
+
+/** Create the data necessary to create a PETsc DMPLEX representation of a
+ * forest, as well as the accompanying lnodes and ghost layer.  The forest
+ * must be at least face balanced (see p4est_balance()).  See
+ * test/test_plex2.c for example usage.
+ *
+ * All arrays should be initialized to hold sizeof (p4est_locidx_t), except
+ * for \a out_remotes, which should be initialized to hold
+ * (2 * sizeof (p4est_locidx_t)).
+ *
+ * \param[in]     p8est                 the forest
+ * \param[out]    ghost                 the ghost layer
+ * \param[out]    lnodes                the lnodes
+ * \param[in]     ctype                 the type of adjacency for the overlap
+ * \param[in]     overlap               the number of layers of overlap (zero
+ *                                      is acceptable)
+ * \param[out]    first_local_quad      the local quadrants are assigned
+ *                                      contiguous plex indices, starting with
+ *                                      this index
+ * \param[in,out] out_points_per_dim    filled with argument for
+ *                                      DMPlexCreateFromDAG()
+ * \param[in,out] out_cone_sizes        filled with argument for
+ *                                      DMPlexCreateFromDAG()
+ * \param[in,out] out_cones             filled with argument for
+ *                                      DMPlexCreateFromDAG()
+ * \param[in,out] out_cone_orientations filled with argument for
+ *                                      DMPlexCreateFromDAG()
+ * \param[in,out] out_vertex_coords     filled with argument for
+ *                                      DMPlexCreateFromDAG()
+ * \param[in,out] out_children          filled with argument for
+ *                                      DMPlexSetTree()
+ * \param[in,out] out_parents           filled with argument for
+ *                                      DMPlexSetTree()
+ * \param[in,out] out_childids          filled with argument for
+ *                                      DMPlexSetTree()
+ * \param[in,out] out_leaves            filled with argument for
+ *                                      PetscSFSetGraph()
+ * \param[in,out] out_remotes           filled with argument for
+ *                                      PetscSFSetGraph()
+ * \param[in]     custom_numbering      Whether or use the default numbering
+ *                                      (0) of DMPlex child ids or the custom
+ *                                      (1).
+ */
+void                p8est_get_plex_data_ext (p8est_t * p8est,
+                                             p8est_ghost_t ** ghost,
+                                             p8est_lnodes_t ** lnodes,
+                                             p8est_connect_type_t ctype,
+                                             int overlap,
+                                             p4est_locidx_t *
+                                             first_local_quad,
+                                             sc_array_t * out_points_per_dim,
+                                             sc_array_t * out_cone_sizes,
+                                             sc_array_t * out_cones,
+                                             sc_array_t *
+                                             out_cone_orientations,
+                                             sc_array_t * out_vertex_coords,
+                                             sc_array_t * out_children,
+                                             sc_array_t * out_parents,
+                                             sc_array_t * out_childids,
+                                             sc_array_t * out_leaves,
+                                             sc_array_t * out_remotes,
+                                             int custom_numbering);
 
 SC_EXTERN_C_END;
 

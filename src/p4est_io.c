@@ -4,7 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
-  Copyright (C) 2012 Carsten Burstedde
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -92,7 +92,6 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 {
   const p4est_gloidx_t *gfq;
   int                 i;
-  int                 mpiret;
   int                 num_procs, rank;
   p4est_topidx_t      num_trees, jt;
   p4est_gloidx_t      gkey, gtreeskip, gtreeremain, gquadremain;
@@ -120,23 +119,19 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   /* data may be NULL, in this case p4est->data_size will be 0 */
   /* user_pointer may be anything, we don't look at it */
 
-  /* retrieve MPI information */
-  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
-  SC_CHECK_MPI (mpiret);
-
-  /* assign some data members */
+  /* create p4est object and assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  p4est->mpicomm = mpicomm;
-  p4est->mpisize = num_procs;
-  p4est->mpirank = rank;
-  dsize = p4est->data_size = data == NULL ? 0 : data->elem_size;
+  dsize = p4est->data_size = (data == NULL ? 0 : data->elem_size);
   dap = (char *) (data == NULL ? NULL : data->array);
   qap = (p4est_locidx_t *) quadrants->array;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = connectivity;
   num_trees = connectivity->num_trees;
+
+  /* set parallel environment */
+  p4est_comm_parallel_env_assign (p4est, mpicomm);
+  num_procs = p4est->mpisize;
+  rank = p4est->mpirank;
 
   /* create global first quadrant offsets */
   gfq = p4est->global_first_quadrant =
@@ -261,6 +256,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_VERBOSEF ("total local quadrants %lld\n",
                   (long long) p4est->local_num_quadrants);
 
+  P4EST_ASSERT (p4est->revision == 0);
   P4EST_ASSERT (p4est_is_valid (p4est));
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_inflate\n");

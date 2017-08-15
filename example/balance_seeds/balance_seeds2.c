@@ -3,7 +3,8 @@
   p4est is a C library to manage a collection (a forest) of multiple
   connected adaptive quadtrees or octrees in parallel.
 
-  Copyright (C) 2011 The University of Texas System
+  Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -128,9 +129,9 @@ main (int argc, char **argv)
   p4est_quadrant_t   *q;
   int                 i;
 #ifndef P4_TO_P8
-  const char          filename[] = "p4est_balance_face";
+  char                filename[] = "p4est_balance_face";
 #else
-  const char          filename[] = "p8est_balance_edge";
+  char                filename[] = "p8est_balance_edge";
 #endif
 
   /* initialize MPI */
@@ -156,8 +157,11 @@ main (int argc, char **argv)
 
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
-  p4est_vtk_write_header (p4est, NULL, 1. - 2. * SC_EPS,
-                          0, 0, 0, 0, "level", NULL, filename);
+  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
+  p4est_vtk_context_set_scale (context, 1. - 2. * SC_EPS);
+  context = p4est_vtk_write_header (context);
+  SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing header");
+
   vtkvec = sc_dmatrix_new (p4est->local_num_quadrants, P4EST_CHILDREN);
   tree = p4est_tree_array_index (p4est->trees, 0);
   quadrants = &(tree->quadrants);
@@ -169,8 +173,17 @@ main (int argc, char **argv)
         ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
-  p4est_vtk_write_point_scalar (p4est, NULL, filename, "level", vtkvec->e[0]);
-  p4est_vtk_write_footer (p4est, filename);
+  sc_array_t         *level =
+    sc_array_new_data ((void *) vtkvec->e[0], sizeof (double),
+                       count * P4EST_CHILDREN);
+  context =
+    p4est_vtk_write_point_dataf (context, 1, 0, "level", level, context);
+  SC_CHECK_ABORT (context != NULL,
+                  P4EST_STRING "_vtk: Error writing point data");
+  sc_array_destroy (level);
+
+  const int           retval = p4est_vtk_write_footer (context);
+  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_dmatrix_destroy (vtkvec);
   p4est_destroy (p4est);

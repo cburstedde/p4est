@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -24,9 +25,9 @@
 /*
   Authors:
 
-  Carsten Burstedde <carsten@ices.utexas.edu>
-  Lucas C. Wilcox <lucasw@ices.utexas.edu>
-  Tobin Isaac <tisaac@ices.utexas.edu>
+  Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  Lucas C. Wilcox <me@lucaswilcox.com>
+  Tobin Isaac <tisaac@uchicago.edu>
  */
 
 /*
@@ -37,6 +38,7 @@
   Ethan Alan Hereth <e.a.hereth@gmail.com>
   Alex Fikl <alexfikl@gmail.com>
   Hannes Frank <frank@iag.uni-stuttgart.de>
+  Michael Lahnert <michael.lahnert@ipvs.uni-stuttgart.de>
 */
 
 /*
@@ -67,6 +69,8 @@
 /*
   The subdirectory sc contains the SC Library licensed under GNU LGPL.
   See the files sc/AUTHORS and sc/COPYING for copyright information.
+
+  For information on individual contributions see doc/author_*.txt.
 
   Several scripts under config are released under GNU GPL versions.
   These are not compiled or linked with p4est, so we consider them

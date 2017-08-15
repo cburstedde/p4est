@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -111,7 +112,10 @@ int                 p8est_is_equal (p8est_t * p8est1, p8est_t * p8est2,
  *    the quadrant counters are consistent
  *    all trees are complete
  *    all non-local trees are empty
+ * This function is collective!
+ * It is also relatively expensive, so its use in production should be limited.
  * \param [in] p8est    The forest to be tested.
+ *                      Itself and its connectivity must be non-NULL.
  * \return              Returns true if valid, false otherwise.
  */
 int                 p8est_is_valid (p8est_t * p8est);
@@ -186,6 +190,9 @@ void                p8est_complete_region (p8est_t * p8est,
 
 /** Completes a sorted tree within a p8est. It may have exterior quadrants.
  * The completed tree will have only owned quadrants and no overlap.
+ * Note that the tree's counters (\a quadrants_per_level, \a maxlevel) must be
+ * correct for the quadrants in the incoming tree.
+ *
  * \param [in,out] p8est      The p8est to work on.
  * \param [in]     which_tree The 0-based index of the subtree to complete.
  * \param [in]     init_fn    Callback function to initialize the user_data

@@ -4,6 +4,7 @@
   connected adaptive quadtrees or octrees in parallel.
 
   Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
   Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 
   p4est is free software; you can redistribute it and/or modify
@@ -38,6 +39,8 @@ typedef struct p8est_tets
   sc_array_t         *tet_attributes;
 }
 p8est_tets_t;
+
+SC_EXTERN_C_BEGIN;
 
 /** Read nodes from a tetgen .node file.
  * \param [in] nodefile     Name of file in tetgen .node format.
@@ -83,5 +86,7 @@ p4est_topidx_t      p8est_tets_make_righthanded (p8est_tets_t * ptg);
  * \return          Connectivity (free with p8est_connectivity_destroy).
  */
 p8est_connectivity_t *p8est_connectivity_new_tets (p8est_tets_t * ptg);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_TETS_HEXES */
