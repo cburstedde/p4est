@@ -283,11 +283,13 @@ void                p4est_destroy (p4est_t * p4est);
  * Copying of quadrant user data is optional.
  * If old and new data sizes are 0, the user_data field is copied regardless.
  * The inspect member of the copy is set to NULL.
+ * The revision counter of the copy is set to zero.
  *
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
- * \return  Returns a valid p4est that does not depend on the input.
- *                         The revision counter of the copy is set to zero.
+ * \return  Returns a valid p4est that does not depend on the input,
+ *                         except for borrowing the same connectivity.
+ *                         Its revision counter is 0.
  */
 p4est_t            *p4est_copy (p4est_t * input, int copy_data);
 

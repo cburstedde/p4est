@@ -166,7 +166,7 @@ refine_tree_one_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-test_forest (p4est_t * p4est, int overlap)
+test_forest (int argc, char **argv, p4est_t * p4est, int overlap)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
@@ -323,7 +323,7 @@ test_big (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   p4est_partition (p4est, 0, NULL);
 
-  mpiret = test_forest (p4est, 2);
+  mpiret = test_forest (argc, argv, p4est, 2);
   if (mpiret) {
     return mpiret;
   }
@@ -353,14 +353,14 @@ test_small (int argc, char **argv)
   p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
   p4est_refine (p4est, 0, refine_tree_one_fn, NULL);
 
-  mpiret = test_forest (p4est, 0);
+  mpiret = test_forest (argc, argv, p4est, 0);
   if (mpiret) {
     return mpiret;
   }
 
   p4est_partition (p4est, 0, NULL);
 
-  mpiret = test_forest (p4est, 0);
+  mpiret = test_forest (argc, argv, p4est, 0);
   if (mpiret) {
     return mpiret;
   }

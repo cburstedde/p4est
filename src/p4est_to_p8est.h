@@ -63,6 +63,11 @@
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
+#define P4EST_TRANSFER_COMM_SRC         P8EST_TRANSFER_COMM_SRC
+#define P4EST_TRANSFER_COMM_DEST        P8EST_TRANSFER_COMM_DEST
+#define P4EST_TRANSFER_COMM_SRC_DUP     P8EST_TRANSFER_COMM_SRC_DUP
+#define P4EST_TRANSFER_COMM_DEST_DUP    P8EST_TRANSFER_COMM_DEST_DUP
+#define P4EST_TRANSFER_COMM_EXTERNAL    P8EST_TRANSFER_COMM_EXTERNAL
 #define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
 #define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
@@ -103,6 +108,8 @@
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
+#define p4est_transfer_comm_t           p8est_transfer_comm_t
+#define p4est_transfer_context_t        p8est_transfer_context_t
 #define p4est_traverse_query_t          p8est_traverse_query_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
@@ -120,13 +127,14 @@
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
-#define p4est_connectivity_face_neighbor_face_corner_orientation        \
-        p8est_connectivity_face_neighbor_face_corner_orientation
-#define p4est_connectivity_face_neighbor_corner_orientation     \
-        p8est_connectivity_face_neighbor_corner_orientation
+#define p4est_connectivity_face_neighbor_face_corner    \
+        p8est_connectivity_face_neighbor_face_corner
+#define p4est_connectivity_face_neighbor_corner         \
+        p8est_connectivity_face_neighbor_corner
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick
+#define p4est_connectivity_new_periodic p8est_connectivity_new_periodic
 #define p4est_connectivity_new_twotrees p8est_connectivity_new_twotrees
 #define p4est_connectivity_new_byname   p8est_connectivity_new_byname
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
@@ -274,7 +282,6 @@
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
-#define p4est_find_quadrant_cumulative  p8est_find_quadrant_cumulative
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
@@ -317,12 +324,19 @@
 #define p4est_comm_global_partition     p8est_comm_global_partition
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
+#define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 #define p4est_comm_checksum             p8est_comm_checksum
+#define p4est_transfer_fixed            p8est_transfer_fixed
+#define p4est_transfer_fixed_begin      p8est_transfer_fixed_begin
+#define p4est_transfer_fixed_end        p8est_transfer_fixed_end
+#define p4est_transfer_custom           p8est_transfer_custom
+#define p4est_transfer_custom_begin     p8est_transfer_custom_begin
+#define p4est_transfer_custom_end       p8est_transfer_custom_end
 
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
@@ -399,8 +413,6 @@
 #define p4est_mesh_memory_used          p8est_mesh_memory_used
 #define p4est_mesh_new                  p8est_mesh_new
 #define p4est_mesh_destroy              p8est_mesh_destroy
-#define p4est_mesh_get_quadrant         p8est_mesh_get_quadrant
-#define p4est_mesh_get_neighbors        p8est_mesh_get_neighbors
 #define p4est_mesh_quadrant_cumulative  p8est_mesh_quadrant_cumulative
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2

@@ -171,7 +171,7 @@ p6est_lnodes_decode (p6est_lnodes_code_t face_code, int hanging_face[6],
         if (hanging_edge[e] < 0) {
           hanging_edge[e] = h;
         }
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
         else {
           P4EST_ASSERT (hanging_edge[e] == 2 + h || hanging_edge[e] == 4);
         }
