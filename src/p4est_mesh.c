@@ -312,8 +312,9 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
     mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
   /* overestimate number of adjacent quads:
-   * We can consider that the quadrant itself is not  stored as its own
-   * neighbor. */
+   * We know that the quadrant itself is not stored as its own neighbor but do
+   * not make any other assumptions regarding the number of corner neighbors
+   * here. */
   n_adjacent_quads = cz - 1;
 
   cquads = P4EST_ALLOC (p4est_locidx_t, n_adjacent_quads);
