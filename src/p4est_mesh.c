@@ -184,7 +184,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
       continue;
     }
     ignore = 0;
-    P4EST_ASSERT (0 <= iz && iz < info->sides.elem_count);
+    P4EST_ASSERT (0 <= iz && iz < (int) info->sides.elem_count);
     side2 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, iz);
     P4EST_ASSERT (side2->edge >= 0 && side2->edge < P8EST_EDGES);
 
@@ -337,7 +337,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
       continue;
     }
     ignore = 0;
-    P4EST_ASSERT (0 <= iz && iz < info->sides.elem_count);
+    P4EST_ASSERT (0 <= iz && iz < (int) info->sides.elem_count);
     side2 = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, iz);
     P4EST_ASSERT (side2->corner >= 0 && side2->corner < P4EST_CHILDREN);
 
@@ -1305,12 +1305,14 @@ p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
   p4est_locidx_t      tree_local_qid;
 
   P4EST_ASSERT (p4est->trees != NULL);
-  P4EST_ASSERT (treeid < p4est->trees->elem_count);
+  P4EST_ASSERT (0 <= treeid &&
+                treeid < (p4est_topidx_t) p4est->trees->elem_count);
   tree = p4est_tree_array_index (p4est->trees, mesh->quad_to_tree[qid]);
   tree_local_qid = qid - tree->quadrants_offset;
 
   P4EST_ASSERT (&tree->quadrants != NULL);
-  P4EST_ASSERT (tree_local_qid < tree->quadrants.elem_count);
+  P4EST_ASSERT (0 <= tree_local_qid &&
+                tree_local_qid < (p4est_locidx_t) tree->quadrants.elem_count);
   quad = p4est_quadrant_array_index (&tree->quadrants, tree_local_qid);
 
   return quad;
