@@ -474,7 +474,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
 
       /* Examine a potential second side */
       /* The diagonally opposite corner is found by adding the corner indices
-       * of z-ordering convention. diagonally opposite corner indeces add up
+       * in p4est's naming-convention. Diagonally opposite corner indices add up
        * to 3 in 2D and to 7 in 3D, i.e. P4EST_CHILDREN - 1. */
       P4EST_ASSERT (side2 == NULL);
       side2 =
