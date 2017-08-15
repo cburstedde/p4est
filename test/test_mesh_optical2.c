@@ -444,11 +444,11 @@ test_mesh_one_tree (p4est_t * p4est,
                          minLevel,
                          1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
 
-  /*
+#if 0
   p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
   p4est_partition (p4est, 0, 0);
   p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
-  */
+#endif
 
   /* inspect setup of geometry and check if payload is set correctly */
   char                filename[35] = "test_mesh_setup_single_tree_";

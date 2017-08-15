@@ -224,7 +224,7 @@ decode_encoding (int enc, int n_entities, int l_same_size,
   return 0;
 }
 
-int
+void
 check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_mesh_t * mesh)
 {
@@ -328,7 +328,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
         }
 
         /** inspect obtained neighbors */
-        for (j = 0; j < neighboring_quads->elem_count; ++j) {
+        for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
           neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
           neighbor_enc = *(int *) sc_array_index (neighboring_encs, j);
 
@@ -365,7 +365,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             P4EST_ASSERT (found_encs->elem_count == found_qids->elem_count);
             P4EST_ASSERT (0 < found_quads->elem_count);
 
-            for (k = 0; k < found_quads->elem_count; ++k) {
+            for (k = 0; k < (int) found_quads->elem_count; ++k) {
               found_qid = *(int *) sc_array_index (found_qids, k);
               found_enc = *(int *) sc_array_index (found_encs, k);
               if (found_qid == norm_quad && 0 < found_enc) {
@@ -410,7 +410,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             P4EST_ASSERT (found_encs->elem_count == found_qids->elem_count);
             P4EST_ASSERT (0 < found_quads->elem_count);
 
-            for (k = 0; k < found_quads->elem_count; ++k) {
+            for (k = 0; k < (int) found_quads->elem_count; ++k) {
               /** inspect quad id and encoding beforehand: */
               found_qid = *(int *) sc_array_index (found_qids, k);
               found_enc = *(int *) sc_array_index (found_encs, k);
@@ -471,7 +471,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             P4EST_ASSERT (found_encs->elem_count == found_qids->elem_count);
             P4EST_ASSERT (0 < found_quads->elem_count);
 
-            for (k = 0; k < found_quads->elem_count; ++k) {
+            for (k = 0; k < (int) found_quads->elem_count; ++k) {
               /** inspect quad id and encoding beforehand: */
               found_qid = *(int *) sc_array_index (found_qids, k);
               found_enc = *(int *) sc_array_index (found_encs, k);
