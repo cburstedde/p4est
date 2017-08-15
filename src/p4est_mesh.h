@@ -89,9 +89,8 @@ SC_EXTERN_C_BEGIN;
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
  *
- * Corners with no diagonal neighbor at all are assigned the value -1.
- * Corner-neighbors for hanging nodes are assigned the value -3.
- * TODO: Are the two sentences above correct?
+ * Corners with no diagonal neighbor at all are assigned the value -3.
+ * Corner-neighbors for hanging nodes are assigned the value -1.
  *
  * TODO: Potential optimizations:
  *       a) use the pattern that is used for corners for faces

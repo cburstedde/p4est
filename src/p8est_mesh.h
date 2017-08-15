@@ -122,9 +122,8 @@ SC_EXTERN_C_BEGIN;
  * Intra-tree corners and inter-tree face and corner corners are implemented.
  * Inter-tree-edge corners are NOT IMPLEMENTED and are assigned the value -2.
  * Currently we do NOT exclude inter-tree-corners of inter-tree-edge neighbors.
- * Corners with no diagonal neighbor at all are assigned the value -1.
- * Corner-neighbors for hanging nodes are assigned the value -3.
- * TODO: Are the two sentences above correct?
+ * Corners with no diagonal neighbor at all are assigned the value -3.
+ * Corner-neighbors for hanging nodes are assigned the value -1.
  *
  * TODO: Potential optimizations:
  *       a) use the pattern that is used for edges and corners for faces
