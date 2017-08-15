@@ -282,6 +282,7 @@
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
+#define p4est_find_quadrant_cumulative  p8est_find_quadrant_cumulative
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
@@ -413,6 +414,8 @@
 #define p4est_mesh_memory_used          p8est_mesh_memory_used
 #define p4est_mesh_new                  p8est_mesh_new
 #define p4est_mesh_destroy              p8est_mesh_destroy
+#define p4est_mesh_get_quadrant         p8est_mesh_get_quadrant
+#define p4est_mesh_get_neighbors        p8est_mesh_get_neighbors
 #define p4est_mesh_quadrant_cumulative  p8est_mesh_quadrant_cumulative
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2

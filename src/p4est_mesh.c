@@ -1039,7 +1039,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       /* determine quadrant numbers for all hanging faces */
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
-          p4est_connectivity_face_neighbor_face_corner_orientation
+          p4est_connectivity_face_neighbor_face_corner
           (h, side->face, side2->face, info->orientation);
         if (side->is.full.is_ghost && side2->is.hanging.is_ghost[pos]) {
           continue;
@@ -1074,7 +1074,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
       }
       for (h = 0; h < P4EST_HALF; ++h) {
         int                 pos =
-          p4est_connectivity_face_neighbor_face_corner_orientation
+          p4est_connectivity_face_neighbor_face_corner
           (h, side->face, side2->face, info->orientation);
 
         if (!side2->is.hanging.is_ghost[pos]) {
