@@ -127,10 +127,10 @@
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
-#define p4est_connectivity_face_neighbor_face_corner_orientation        \
-        p8est_connectivity_face_neighbor_face_corner_orientation
-#define p4est_connectivity_face_neighbor_corner_orientation     \
-        p8est_connectivity_face_neighbor_corner_orientation
+#define p4est_connectivity_face_neighbor_face_corner    \
+        p8est_connectivity_face_neighbor_face_corner
+#define p4est_connectivity_face_neighbor_corner         \
+        p8est_connectivity_face_neighbor_corner
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
 #define p4est_connectivity_new_brick    p8est_connectivity_new_brick

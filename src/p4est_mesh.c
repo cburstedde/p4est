@@ -280,7 +280,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           /* We have a face neighbor */
           orientation = nface[i] / P4EST_FACES;
           nface[i] %= P4EST_FACES;
-          ncorner[i] = p4est_connectivity_face_neighbor_corner_orientation
+          ncorner[i] = p4est_connectivity_face_neighbor_corner
             (c1, f1, nface[i], orientation);
         }
 

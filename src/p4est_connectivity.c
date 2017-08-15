@@ -63,8 +63,7 @@ const int           p4est_child_corner_faces[4][4] =
 #endif /* !P4_TO_P8 */
 
 int
-p4est_connectivity_face_neighbor_face_corner_orientation (int fc, int f,
-                                                          int nf, int o)
+p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o)
 {
   int                 nfc;
 #ifdef P4_TO_P8
@@ -90,8 +89,7 @@ p4est_connectivity_face_neighbor_face_corner_orientation (int fc, int f,
 }
 
 int
-p4est_connectivity_face_neighbor_corner_orientation (int c, int f,
-                                                     int nf, int o)
+p4est_connectivity_face_neighbor_corner (int c, int f, int nf, int o)
 {
   int                 fc, nfc;
 
@@ -103,8 +101,7 @@ p4est_connectivity_face_neighbor_corner_orientation (int c, int f,
   fc = p4est_corner_face_corners[c][f];
   P4EST_ASSERT (0 <= fc && fc < P4EST_HALF);
 
-  nfc =
-    p4est_connectivity_face_neighbor_face_corner_orientation (fc, f, nf, o);
+  nfc = p4est_connectivity_face_neighbor_face_corner (fc, f, nf, o);
 
   P4EST_ASSERT (0 <= nfc && nfc < P4EST_HALF);
 
@@ -3642,7 +3639,7 @@ p4est_connectivity_store_corner (p4est_connectivity_t * conn,
       continue;
     }
 
-    nc = p4est_connectivity_face_neighbor_corner_orientation (c, f, nf, o);
+    nc = p4est_connectivity_face_neighbor_corner (c, f, nf, o);
 
     conn->tree_to_corner[P4EST_CHILDREN * nt + nc] = n - 1;
     tc = (p4est_topidx_t *) sc_array_push (corner_to_tc);
