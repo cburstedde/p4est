@@ -52,10 +52,29 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
                                              size_t guess);
 
-p4est_quadrant_t   *
-p4est_find_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
-                                p4est_topidx_t * which_tree,
-                                p4est_locidx_t * quadrant_id);
+/** Search a local quadrant by its cumulative number in the forest.
+ *
+ * We perform a binary search over the processor-local trees,
+ * which means that it is advisable NOT to use this function if possible,
+ * and to try to maintain O(1) tree context information in the calling code.
+ *
+ * \param [in]  p4est           Forest to be worked with.
+ * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
+ * \param [in,out] which_tree   If not NULL, the input value can be -1
+ *                              or an initial guess for the quadrant's tree.
+ *                              An initial guess must be the index of a
+ *                              nonempty local tree.
+ *                              Output is the tree of returned quadrant.
+ * \param [out] quadrant_id     If not NULL, the number of quadrant in tree.
+ * \return                      The identified quadrant.
+ */
+p4est_quadrant_t   *p4est_find_quadrant_cumulative (p4est_t * p4est,
+                                                    p4est_locidx_t
+                                                    cumulative_id,
+                                                    p4est_topidx_t *
+                                                    which_tree,
+                                                    p4est_locidx_t *
+                                                    quadrant_id);
 
 /** Split an array of quadrants by the children of an ancestor.
  *
