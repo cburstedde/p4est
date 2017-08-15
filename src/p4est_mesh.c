@@ -189,10 +189,11 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
     P4EST_ASSERT (side2->edge >= 0 && side2->edge < P8EST_EDGES);
 
     P4EST_ASSERT (info->tree_boundary <= P8EST_CONNECT_EDGE);
-    for (j = 0; j < 2; ++j) {
+    for (ignore = 0, j = 0; !ignore && j < 2; ++j) {
       for (k = 0; k < 2; ++k) {
         if (side1->faces[j] == side2->faces[k]) {
           ignore = 1;
+          break;
         }
       }
     }
@@ -342,15 +343,15 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
     P4EST_ASSERT (side2->corner >= 0 && side2->corner < P4EST_CHILDREN);
 
     /* check if current side2 is among the face or edge neighbors */
-    for (j = 0; j < P4EST_DIM; ++j) {
+    for (ignore = 0, j = 0; !ignore && j < P4EST_DIM; ++j) {
       for (k = 0; k < P4EST_DIM; ++k) {
+        if ((side1->faces[j] == side2->faces[k])
 #ifdef P4_TO_P8
-        if (side1->faces[j] == side2->faces[k] ||
-            side1->edges[j] == side2->edges[k]) {
-#else /* P4_TO_P8 */
-        if (side1->faces[j] == side2->faces[k]) {
+            || (side1->edges[j] == side2->edges[k])
 #endif /* P4_TO_P8 */
+          ) {
           ignore = 1;
+          break;
         }
       }
     }
@@ -1090,7 +1091,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   ngz = (size_t) mesh->ghost_num_quadrants;
 
   if (mesh->quad_to_tree != NULL) {
-    qtt_memory = sizeof (p4est_locidx_t) * lqz;
+    qtt_memory = sizeof (p4est_topidx_t) * lqz;
   }
 
   if (mesh->quad_level != NULL) {
@@ -1152,9 +1153,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_mesh_t       *mesh;
 
   /* check whether input condition for p4est is met */
-#ifdef P4EST_ENABLE_DEBUG
   P4EST_ASSERT (p4est_is_balanced (p4est, btype));
-#endif /* P4EST_ENABLE_DEBUG */
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
@@ -1204,8 +1203,9 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 
   /* Fill face arrays with default values */
-  memset (mesh->quad_to_quad, -1, P4EST_FACES * lq * sizeof (p4est_locidx_t));
-  memset (mesh->quad_to_face, -25, P4EST_FACES * lq * sizeof (int8_t));
+  memset (mesh->quad_to_quad, (char) -1,
+          P4EST_FACES * lq * sizeof (p4est_locidx_t));
+  memset (mesh->quad_to_face, (char) -25, P4EST_FACES * lq * sizeof (int8_t));
 
 #ifdef P4_TO_P8
   if (do_edge) {
@@ -1216,7 +1216,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     mesh->edge_edge = sc_array_new (sizeof (int8_t));
 
     /* Initialize lists with default values */
-    memset (mesh->quad_to_edge, -1,
+    memset (mesh->quad_to_edge, (char) -1,
             P8EST_EDGES * lq * sizeof (p4est_locidx_t));
     *(p4est_locidx_t *) sc_array_push (mesh->edge_offset) = 0;
   }
@@ -1226,7 +1226,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   if (do_corner) {
     /* Initialize corner information to a consistent state */
     mesh->quad_to_corner = P4EST_ALLOC (p4est_locidx_t, P4EST_CHILDREN * lq);
-    memset (mesh->quad_to_corner, -1,
+    memset (mesh->quad_to_corner, (char) -1,
             P4EST_CHILDREN * lq * sizeof (p4est_locidx_t));
 
     mesh->corner_offset = sc_array_new (sizeof (p4est_locidx_t));
