@@ -31,14 +31,12 @@
 /** Checks that orientation is properly set, i.e. face corner 0 of the
  * face with the lower face index is touching face corner \a
  * orientation of the face with the higher face index.
- * \param[in] conn        p4est_connectivity structure two trees
  * \param[in] l_face      left face index
  * \param[in] r_face      right face index
  * \param[in] orientation the orientation that has been set
  */
 static int
-test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
-                                            int l_face, int r_face,
+test_conn_transformation_check_orientation (int l_face, int r_face,
                                             int orientation)
 {
   int                 neighboring_face_corner, corner_index;
@@ -69,14 +67,12 @@ test_conn_transformation_check_orientation (p4est_connectivity_t * conn,
  * Let face corner fci, corresponding to corner index ci, be
  * adjacent to face corner fcj, corresponding to corner index cj. We
  * test if fci is seen from fcj and vice versa.
- * \param [in] conn        p4est_connectivity structure two trees
  * \param [in] l_face      left face index
  * \param [in] r_face      right face index
  * \param [in] orientation the orientation that has been set
  */
 static int
-test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
-                                             int l_face, int r_face,
+test_conn_transformation_check_face_corners (int l_face, int r_face,
                                              int orientation)
 {
   int                 c0, c1, cx;
@@ -115,14 +111,12 @@ test_conn_transformation_check_face_corners (p4est_connectivity_t * conn,
  * Let face edge fei, corresponding to edge index ei, be
  * adjacent to face edge fej, corresponding to edge index ej. We
  * test if fei is seen from fej and vice versa.
- * \param [in] conn        p4est_connectivity structure two trees
  * \param [in] l_face      left face index
  * \param [in] r_face      right face index
  * \param [in] orientation the orientation that has been set
  */
 static int
-test_conn_transformation_check_face_edges (p4est_connectivity_t * conn,
-                                           int l_face, int r_face,
+test_conn_transformation_check_face_edges (int l_face, int r_face,
                                            int orientation)
 {
   int                 e0, e1, ex;
@@ -221,10 +215,10 @@ main (int argc, char **argv)
          * performs the validation check p4est_connectivity_is_valid */
         conn = p4est_connectivity_new_twotrees (i, j, k);
 
-        test_conn_transformation_check_orientation (conn, i, j, k);
-        test_conn_transformation_check_face_corners (conn, i, j, k);
+        test_conn_transformation_check_orientation (i, j, k);
+        test_conn_transformation_check_face_corners (i, j, k);
 #ifdef P4_TO_P8
-        test_conn_transformation_check_face_edges (conn, i, j, k);
+        test_conn_transformation_check_face_edges (i, j, k);
 #endif /* P4_TO_P8 */
 
         p4est_connectivity_destroy (conn);
