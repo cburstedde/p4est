@@ -36,12 +36,12 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** This structure contains complete mesh information on the forest.
+/** This structure contains complete mesh information on a 2:1 balanced forest.
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
  *
- * For each local quadrant, its tree number is stored in quad_to_tree. The
- * quad_to_tree array is NULL by default and can be enabled using
+ * For each local quadrant, its tree number is stored in quad_to_tree.
+ * The quad_to_tree array is NULL by default and can be enabled using
  * \ref p4est_mesh_new_ext.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  * For each level, an array of local quadrant numbers is stored in quad_level.
