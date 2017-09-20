@@ -41,7 +41,14 @@ SC_EXTERN_C_BEGIN;
 typedef struct part_global
 {
   sc_MPI_Comm         mpicomm;
-  int                 bricklen;
+
+  int                 minlevel;
+  int                 bricklev;
+
+  int                 bricklength;
+
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est;
 }
 part_global_t;
 

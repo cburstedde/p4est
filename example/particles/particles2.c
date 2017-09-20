@@ -23,12 +23,55 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_extended.h>
 #include <p4est_search.h>
 #else
+#include <p8est_extended.h>
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
 #include <sc_options.h>
 #include "global.h"
+
+static void
+run (part_global_t * g)
+{
+  int                 b;
+
+  /*** initial mesh for domain ***/
+  b = g->bricklength = (1 << g->bricklev);
+  if (g->bricklev > 0) {
+    g->conn = p4est_connectivity_new_brick (b, b
+#ifdef P4_TO_P8
+                                            , b
+#endif
+                                            , 1, 1
+#ifdef P4_TO_P8
+                                            , 1
+#endif
+      );
+  }
+  else {
+#ifndef P4_TO_P8
+    g->conn = p4est_connectivity_new_unitsquare ();
+#else
+    g->conn = p8est_connectivity_new_unitcube ();
+#endif
+  }
+  g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0,
+                            g->minlevel - g->bricklev, 1, 0, NULL, g);
+
+  /*** destroy mesh ***/
+  p4est_destroy (g->p4est);
+  p4est_connectivity_destroy (g->conn);
+}
+
+static int
+usagerr (sc_options_t * opt, const char *msg)
+{
+  SC_GLOBAL_LERRORF ("Usage required: %s\n", msg);
+  sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+  return 1;
+}
 
 int
 main (int argc, char **argv)
@@ -50,17 +93,26 @@ main (int argc, char **argv)
   /*** read command line parameters ***/
 
   opt = sc_options_new (argv[0]);
-  sc_options_add_int (opt, 'B', "bricklen", &g->bricklen, 1, "Brick length");
+  sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
+  sc_options_add_int (opt, 'b', "bricklev", &g->bricklev, 0, "Brick level");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
-    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-    return 1;
+    return usagerr (opt, "No non-option arguments permitted");
+  }
+  if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
+    return usagerr (opt, "Minlevel between 0 and P4EST_QMAXLEVEL");
+  }
+  if (g->bricklev < 0 || g->bricklev > g->minlevel) {
+    return usagerr (opt, "Brick level between 0 and minlevel");
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
-
   sc_options_destroy (opt);
+
+  /*** run program ***/
+
+  run (g);
 
   /*** clean up and exit ***/
 
