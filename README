@@ -183,3 +183,52 @@ convenient way to compile and install p4est to be accessible for deal.II is to
 use the doc/p4est-setup.sh script.  This creates both a debug and production
 version compiled with minimal logging output.  To know what is going on within
 p4est, the log level needs to be relaxed in the script.
+
+
+ 9. Building a release tarball from a git clone
+
+The following script may be used to build a release tarball
+
+    #!/bin/sh
+
+    SRC_DIR=$(pwd)
+    WORK_DIR=$(mktemp -d)
+
+    cleanup() {
+      rm -rf "$WORK_DIR"
+      echo ""
+      echo "Deleted working directory $WORK_DIR"
+    }
+    trap cleanup EXIT
+
+    echo "Building p4est tarball in $WORK_DIR"
+    echo ""
+
+    # Get p4est
+    cd "$WORK_DIR"
+    git clone --recursive https://github.com/cburstedde/p4est
+    cd p4est
+
+    # Setup exclude files so that version number is not dirty
+    ./bootstrap
+    ./configure
+    git ls-files --others --exclude-standard >> .git/info/exclude
+    GIT_DIR=.git/modules/sc git ls-files --others --exclude-standard \
+                                     >> .git/modules/sc/info/exclude
+    echo ChangeLog >> .git/info/exclude
+    echo ChangeLog >> .git/modules/sc/info/exclude
+    git clean -xdf
+    git submodule foreach git clean -xdf
+
+    # Configure and build distribution tarball
+    ./bootstrap
+    ./configure
+    echo ""
+    echo "Building versions"
+    echo ""
+    git describe --dirty
+    git submodule foreach git describe --dirty
+    echo ""
+    make -j distcheck
+    mkdir -p "$SRC_DIR"
+    cp p4est-*.tar.gz "$SRC_DIR"
