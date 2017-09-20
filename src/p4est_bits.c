@@ -1851,7 +1851,7 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
-  P4EST_ASSERT ((int) quadrant->level >= level && level >= 0);
+  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
 
   /* this preserves the high bits from negative numbers */
   x = quadrant->x >> (P4EST_MAXLEVEL - level);
