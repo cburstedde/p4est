@@ -1138,7 +1138,7 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
       quadrant = q;
     }
   }
-  P4EST_ASSERT (!is_leaf == (local_num == -1));
+  P4EST_ASSERT ((!is_leaf) == (local_num == -1));
 
   /* execute pre-quadrant callback if present, which may stop the recursion */
   if (rec->quadrant_fn != NULL &&
