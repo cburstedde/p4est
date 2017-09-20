@@ -27,9 +27,47 @@
 #else
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
+#include <sc_options.h>
+#include "global.h"
 
 int
-main (void)
+main (int argc, char **argv)
 {
+  int                 mpiret;
+  int                 first_argc;
+  sc_options_t       *opt;
+  part_global_t global, *g = &global;
+
+  /*** setup mpi environment ***/
+
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+
+  g->mpicomm = sc_MPI_COMM_WORLD;
+  sc_init (g->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  /*** read command line parameters ***/
+
+  opt = sc_options_new (argv[0]);
+  sc_options_add_int (opt, 'B', "bricklen", &g->bricklen, 1, "Brick length");
+
+  first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                 opt, argc, argv);
+  if (first_argc < 0 || first_argc != argc) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+    return 1;
+  }
+  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
+
+  sc_options_destroy (opt);
+
+  /*** clean up and exit ***/
+
+  sc_finalize ();
+
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
+
   return 0;
 }
