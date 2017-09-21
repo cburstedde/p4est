@@ -41,6 +41,14 @@ typedef struct pi_data
 }
 pi_data_t;
 
+typedef struct qu_data
+{
+  double              d;
+}
+qu_data_t;
+
+static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
+
 static double
 gaussnorm (double sigma)
 {
@@ -66,8 +74,79 @@ pidense (double x, double y, double z, void *data)
 static void
 initrp (part_global_t * g)
 {
+  int                 mpiret;
+  int                 i, j, k;
+  double              lxyz[3], hxyz[3], dxyz[3];
+  double              wk, wkj, wkji;
+  double              d, ld, gd;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lq;
+  p4est_qcoord_t      qh;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+
   for (;;) {
-    /*** iterate through local cells and determine local particle density ***/
+    /*** iterate through local cells to determine local particle density ***/
+    ld = 0.;
+    for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
+         ++tt) {
+      tree = p4est_tree_array_index (g->p4est->trees, tt);
+      for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+        quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+        qh = P4EST_QUADRANT_LEN (quad->level);
+        p4est_qcoord_to_vertex (g->conn, tt, quad->x, quad->y,
+#ifdef P4_TO_P8
+                                quad->z,
+#endif
+                                lxyz);
+        p4est_qcoord_to_vertex (g->conn, tt, quad->x + qh, quad->y + qh,
+#ifdef P4_TO_P8
+                                quad->z + qh,
+#endif
+                                hxyz);
+        for (i = 0; i < 3; ++i) {
+          lxyz[i] /= g->bricklength;
+          hxyz[i] /= g->bricklength;
+          dxyz[i] = hxyz[i] - lxyz[i];
+        }
+
+        /*** run Simpson's rule to integrate density over quadrant ***/
+        d = 0.;
+#ifdef P4_TO_P8
+        for (k = 0; k < 3; ++k) {
+          wk = simpson[k] * dxyz[2];
+#if 0
+        }
+#endif
+#else
+        k = 0;
+        wk = 1.;
+#endif
+        for (j = 0; j < 3; ++j) {
+          wkj = wk * simpson[j] * dxyz[1];
+          for (i = 0; i < 3; ++i) {
+            wkji = wkj * simpson[i] * dxyz[0];
+            d += wkji * g->pidense (lxyz[0] + .5 * i * dxyz[0],
+                                    lxyz[1] + .5 * j * dxyz[1],
+                                    lxyz[2] + .5 * k * dxyz[2], g->piddata);
+          }
+        }
+#ifdef P4_TO_P8
+#if 0
+        {
+#endif
+        }
+#endif
+        ((qu_data_t *) quad->p.user_data)->d = d;
+        ld += d;
+      }
+    }
+
+    /*** get global integral over density ***/
+    mpiret = sc_MPI_Allreduce (&ld, &gd, 1, sc_MPI_DOUBLE, sc_MPI_SUM,
+                               g->mpicomm);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_INFOF ("Global integral over density %g\n", gd);
 
     /*** refine/coarsen ***/
 
@@ -129,7 +208,8 @@ run (part_global_t * g)
 #endif
   }
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0,
-                            g->minlevel - g->bricklev, 1, 0, NULL, g);
+                            g->minlevel - g->bricklev, 1,
+                            sizeof (qu_data_t), NULL, g);
 
   /*** initial refinement and partition ***/
   initrp (g);
