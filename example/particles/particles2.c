@@ -32,10 +32,81 @@
 #include <sc_options.h>
 #include "global.h"
 
+typedef struct pi_data
+{
+  double              sigma;
+  double              invs2;
+  double              gnorm;
+  double              center[3];
+}
+pi_data_t;
+
+static double
+gaussnorm (double sigma)
+{
+  return pow (2. * M_PI * sigma * sigma, -.5 * P4EST_DIM);
+}
+
+static double
+pidense (double x, double y, double z, void *data)
+{
+  pi_data_t          *piddata = (pi_data_t *) data;
+
+  P4EST_ASSERT (piddata != NULL);
+  P4EST_ASSERT (piddata->sigma > 0.);
+  P4EST_ASSERT (piddata->invs2 > 0.);
+  P4EST_ASSERT (piddata->gnorm > 0.);
+
+  return piddata->gnorm * exp (-.5 * (SC_SQR (x - piddata->center[0]) +
+                                      SC_SQR (y - piddata->center[1]) +
+                                      SC_SQR (z - piddata->center[2])) *
+                               piddata->invs2);
+}
+
+static void
+initrp (part_global_t * g)
+{
+  for (;;) {
+    /*** iterate through local cells and determine local particle density ***/
+
+    /*** refine/coarsen ***/
+
+    /*** weighted partition ***/
+
+    break;
+  }
+}
+
+static void
+create (part_global_t * g)
+{
+  /*** iterate through local cells and populate with particles ***/
+}
+
+static void
+sim (part_global_t * g)
+{
+}
+
 static void
 run (part_global_t * g)
 {
   int                 b;
+  pi_data_t           spiddata, *piddata = &spiddata;
+
+  /*** initial particle density ***/
+  piddata->sigma = .1;
+  piddata->invs2 = 1. / SC_SQR (piddata->sigma);
+  piddata->gnorm = gaussnorm (piddata->sigma);
+  piddata->center[0] = .3;
+  piddata->center[1] = .4;
+#ifndef P4_TO_P8
+  piddata->center[2] = 0.;
+#else
+  piddata->center[2] = .5;
+#endif
+  g->pidense = pidense;
+  g->piddata = piddata;
 
   /*** initial mesh for domain ***/
   b = g->bricklength = (1 << g->bricklev);
@@ -59,6 +130,17 @@ run (part_global_t * g)
   }
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0,
                             g->minlevel - g->bricklev, 1, 0, NULL, g);
+
+  /*** initial refinement and partition ***/
+  initrp (g);
+
+  /*** create particles ***/
+  create (g);
+
+  /*** run simulation ***/
+  sim (g);
+
+  /*** destroy data ***/
 
   /*** destroy mesh ***/
   p4est_destroy (g->p4est);
@@ -94,7 +176,11 @@ main (int argc, char **argv)
 
   opt = sc_options_new (argv[0]);
   sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
-  sc_options_add_int (opt, 'b', "bricklev", &g->bricklev, 0, "Brick level");
+  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, 0, "Highest level");
+  sc_options_add_int (opt, 'b', "bricklev", &g->bricklev,
+                      0, "Brick refinement level");
+  sc_options_add_double (opt, 'n', "particles", &g->num_particles,
+                         1e3, "Global number of particles");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -104,8 +190,14 @@ main (int argc, char **argv)
   if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
     return usagerr (opt, "Minlevel between 0 and P4EST_QMAXLEVEL");
   }
+  if (g->maxlevel < g->minlevel || g->maxlevel > P4EST_QMAXLEVEL) {
+    return usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
+  }
   if (g->bricklev < 0 || g->bricklev > g->minlevel) {
     return usagerr (opt, "Brick level between 0 and minlevel");
+  }
+  if (g->num_particles <= 0.) {
+    return usagerr (opt, "Global number of particles positive");
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
   sc_options_destroy (opt);

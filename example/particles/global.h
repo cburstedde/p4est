@@ -38,14 +38,21 @@
 
 SC_EXTERN_C_BEGIN;
 
+typedef double      (*part_init_density_t) (double x, double y, double z,
+                                            void *data);
+
 typedef struct part_global
 {
   sc_MPI_Comm         mpicomm;
 
   int                 minlevel;
+  int                 maxlevel;
   int                 bricklev;
+  double              num_particles;
 
   int                 bricklength;
+  part_init_density_t pidense;
+  void               *piddata;
 
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
