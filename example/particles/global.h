@@ -49,10 +49,12 @@ typedef struct part_global
   int                 maxlevel;
   int                 bricklev;
   double              num_particles;
+  double              elem_particles;
 
   int                 bricklength;
   part_init_density_t pidense;
   void               *piddata;
+  double              global_density;
 
   p4est_connectivity_t *conn;
   p4est_t            *p4est;

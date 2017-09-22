@@ -71,21 +71,37 @@ pidense (double x, double y, double z, void *data)
                                piddata->invs2);
 }
 
+static int
+initrp_refine (p4est_t * p4est,
+               p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+{
+  qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+  double              elem_particles;
+
+  elem_particles = qud->d / g->global_density * g->num_particles;
+
+  return elem_particles > g->elem_particles;
+}
+
 static void
 initrp (part_global_t * g)
 {
   int                 mpiret;
   int                 i, j, k;
+  int                 cycle, max_cycles;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              wk, wkj, wkji;
-  double              d, ld, gd;
+  double              d, ld;
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
   p4est_qcoord_t      qh;
+  p4est_gloidx_t      old_gnum, new_gnum;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
 
-  for (;;) {
+  max_cycles = g->maxlevel - g->minlevel;
+  for (cycle = 0;; ++cycle) {
     /*** iterate through local cells to determine local particle density ***/
     ld = 0.;
     for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
@@ -143,16 +159,33 @@ initrp (part_global_t * g)
     }
 
     /*** get global integral over density ***/
-    mpiret = sc_MPI_Allreduce (&ld, &gd, 1, sc_MPI_DOUBLE, sc_MPI_SUM,
-                               g->mpicomm);
+    mpiret = sc_MPI_Allreduce (&ld, &g->global_density, 1, sc_MPI_DOUBLE,
+                               sc_MPI_SUM, g->mpicomm);
     SC_CHECK_MPI (mpiret);
-    P4EST_GLOBAL_INFOF ("Global integral over density %g\n", gd);
+    P4EST_GLOBAL_INFOF ("Global integral over density %g\n",
+                        g->global_density);
 
-    /*** refine/coarsen ***/
+    /*** we have computed the density, this may be enough ***/
+    if (cycle >= max_cycles) {
+      break;
+    }
+
+    /*** refine and balance ***/
+    old_gnum = g->p4est->global_num_quadrants;
+    p4est_refine_ext (g->p4est, 0, g->maxlevel - g->bricklev,
+                      initrp_refine, NULL, NULL);
+    new_gnum = g->p4est->global_num_quadrants;
+    if (old_gnum == new_gnum) {
+      break;
+    }
+#if 0                           /* we do not need balance for this application */
+    if (cycle > 0) {
+      p4est_balance (g->p4est, P4EST_CONNECT_FULL, NULL);
+    }
+#endif
 
     /*** weighted partition ***/
-
-    break;
+    p4est_partition (g->p4est, 0, NULL);
   }
 }
 
@@ -261,6 +294,8 @@ main (int argc, char **argv)
                       0, "Brick refinement level");
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
+  sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
+                         3., "Number of particles per element");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -278,6 +313,9 @@ main (int argc, char **argv)
   }
   if (g->num_particles <= 0.) {
     return usagerr (opt, "Global number of particles positive");
+  }
+  if (g->elem_particles <= 0.) {
+    return usagerr (opt, "Number of particles per element positive");
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
   sc_options_destroy (opt);
