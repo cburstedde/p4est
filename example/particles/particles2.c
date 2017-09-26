@@ -75,6 +75,69 @@ pidense (double x, double y, double z, void *data)
                                piddata->invs2);
 }
 
+static void
+loopquad (part_global_t * g, p4est_topidx_t tt, p4est_quadrant_t * quad,
+          double lxyz[3], double hxyz[3], double dxyz[3])
+{
+
+  int                 i;
+  p4est_qcoord_t      qh;
+
+  qh = P4EST_QUADRANT_LEN (quad->level);
+  p4est_qcoord_to_vertex (g->conn, tt, quad->x, quad->y,
+#ifdef P4_TO_P8
+                          quad->z,
+#endif
+                          lxyz);
+  p4est_qcoord_to_vertex (g->conn, tt, quad->x + qh, quad->y + qh,
+#ifdef P4_TO_P8
+                          quad->z + qh,
+#endif
+                          hxyz);
+  for (i = 0; i < 3; ++i) {
+    lxyz[i] /= g->bricklength;
+    hxyz[i] /= g->bricklength;
+    dxyz[i] = hxyz[i] - lxyz[i];
+  }
+}
+
+static double
+integrate (part_global_t * g, const double lxyz[3], const double dxyz[3])
+{
+  int                 i, j, k;
+  double              wk, wkj, wkji;
+  double              d;
+
+  /*** run Simpson's rule ***/
+  d = 0.;
+#ifdef P4_TO_P8
+  for (k = 0; k < 3; ++k) {
+    wk = simpson[k] * dxyz[2];
+#if 0
+  }
+#endif
+#else
+  k = 0;
+  wk = 1.;
+#endif
+  for (j = 0; j < 3; ++j) {
+    wkj = wk * simpson[j] * dxyz[1];
+    for (i = 0; i < 3; ++i) {
+      wkji = wkj * simpson[i] * dxyz[0];
+      d += wkji * g->pidense (lxyz[0] + .5 * i * dxyz[0],
+                              lxyz[1] + .5 * j * dxyz[1],
+                              lxyz[2] + .5 * k * dxyz[2], g->piddata);
+    }
+  }
+#ifdef P4_TO_P8
+#if 0
+  {
+#endif
+  }
+#endif
+  return d;
+}
+
 static int
 initrp_refine (p4est_t * p4est,
                p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
@@ -92,14 +155,11 @@ static void
 initrp (part_global_t * g)
 {
   int                 mpiret;
-  int                 i, j, k;
   int                 cycle, max_cycles;
   double              lxyz[3], hxyz[3], dxyz[3];
-  double              wk, wkj, wkji;
   double              d, ld;
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
-  p4est_qcoord_t      qh;
   p4est_gloidx_t      old_gnum, new_gnum;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
@@ -113,51 +173,10 @@ initrp (part_global_t * g)
       tree = p4est_tree_array_index (g->p4est->trees, tt);
       for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
         quad = p4est_quadrant_array_index (&tree->quadrants, lq);
-        qh = P4EST_QUADRANT_LEN (quad->level);
-        p4est_qcoord_to_vertex (g->conn, tt, quad->x, quad->y,
-#ifdef P4_TO_P8
-                                quad->z,
-#endif
-                                lxyz);
-        p4est_qcoord_to_vertex (g->conn, tt, quad->x + qh, quad->y + qh,
-#ifdef P4_TO_P8
-                                quad->z + qh,
-#endif
-                                hxyz);
-        for (i = 0; i < 3; ++i) {
-          lxyz[i] /= g->bricklength;
-          hxyz[i] /= g->bricklength;
-          dxyz[i] = hxyz[i] - lxyz[i];
-        }
+        loopquad (g, tt, quad, lxyz, hxyz, dxyz);
 
-        /*** run Simpson's rule to integrate density over quadrant ***/
-        d = 0.;
-#ifdef P4_TO_P8
-        for (k = 0; k < 3; ++k) {
-          wk = simpson[k] * dxyz[2];
-#if 0
-        }
-#endif
-#else
-        k = 0;
-        wk = 1.;
-#endif
-        for (j = 0; j < 3; ++j) {
-          wkj = wk * simpson[j] * dxyz[1];
-          for (i = 0; i < 3; ++i) {
-            wkji = wkj * simpson[i] * dxyz[0];
-            d += wkji * g->pidense (lxyz[0] + .5 * i * dxyz[0],
-                                    lxyz[1] + .5 * j * dxyz[1],
-                                    lxyz[2] + .5 * k * dxyz[2], g->piddata);
-          }
-        }
-#ifdef P4_TO_P8
-#if 0
-        {
-#endif
-        }
-#endif
-        ((qu_data_t *) quad->p.user_data)->d = d;
+        /***  integrate density over quadrant ***/
+        ((qu_data_t *) quad->p.user_data)->d = d = integrate (g, lxyz, dxyz);
         ld += d;
       }
     }
