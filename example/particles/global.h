@@ -48,8 +48,11 @@ typedef struct part_global
   int                 minlevel;
   int                 maxlevel;
   int                 bricklev;
+  int                 vtk;
+  int                 check;
   double              num_particles;
   double              elem_particles;
+  const char         *prefix;
 
   int                 bricklength;
   part_init_density_t pidense;

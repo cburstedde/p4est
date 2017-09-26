@@ -32,6 +32,10 @@
 #include <sc_options.h>
 #include "global.h"
 
+#define PARTICLES_xstr(s) PARTICLES_str(s)
+#define PARTICLES_str(s) #s
+#define PARTICLES_48() PARTICLES_xstr(P4EST_CHILDREN)
+
 typedef struct pi_data
 {
   double              sigma;
@@ -296,6 +300,12 @@ main (int argc, char **argv)
                          1e3, "Global number of particles");
   sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
                          3., "Number of particles per element");
+  sc_options_add_switch (opt, 'V', "vtk", &g->vtk, "write VTK output");
+  sc_options_add_switch (opt, 'C', "check", &g->check,
+                         "write checkpoint output");
+  sc_options_add_string (opt, 'P', "prefix", &g->prefix,
+                         "p" PARTICLES_48 ()"rticles",
+                         "prefix for file output");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
