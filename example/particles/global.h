@@ -58,6 +58,8 @@ typedef struct part_global
   part_init_density_t pidense;
   void               *piddata;
   double              global_density;
+  double              refine_maxp;
+  double              refine_maxl;
 
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
