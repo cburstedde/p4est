@@ -231,7 +231,31 @@ initrp (part_global_t * g)
 static void
 create (part_global_t * g)
 {
+  int                 i;
+  double              lxyz[3], hxyz[3], dxyz[3];
+  double              elem_particles;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lq;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  qu_data_t          *qud;
+
   /*** iterate through local cells and populate with particles ***/
+  for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (g->p4est->trees, tt);
+    for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+      quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+      qud = (qu_data_t *) quad->p.user_data;
+      elem_particles = round (qud->d / g->global_density * g->num_particles);
+
+      /*** generate required number of particles ***/
+      loopquad (g, tt, quad, lxyz, hxyz, dxyz);
+      for (i = 0; i < (int) elem_particles; ++i) {
+
+
+      }
+    }
+  }
 }
 
 static void
