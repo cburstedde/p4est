@@ -144,13 +144,12 @@ initrp_refine (p4est_t * p4est,
 {
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
-  double              elem_particles;
+  int                 ilem_particles;
 
-  elem_particles = round (qud->d / g->global_density * g->num_particles);
-  g->refine_maxp = SC_MAX (g->refine_maxp, elem_particles);
-  g->refine_maxl = SC_MAX (g->refine_maxl, (double) quadrant->level);
+  ilem_particles =
+    (int) round (qud->d * g->num_particles / g->global_density);
 
-  return elem_particles > g->elem_particles;
+  return (double) ilem_particles > g->elem_particles;
 }
 
 static void
@@ -158,29 +157,38 @@ initrp (part_global_t * g)
 {
   int                 mpiret;
   int                 cycle, max_cycles;
+  int                 mlem_particles;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              d, ld;
+  double              refine_maxd, refine_maxl;
   double              loclp[2], glolp[2];
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
   p4est_gloidx_t      old_gnum, new_gnum;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
+  qu_data_t          *qud;
 
   max_cycles = g->maxlevel - g->minlevel;
   for (cycle = 0;; ++cycle) {
     /*** iterate through local cells to determine local particle density ***/
     ld = 0.;
+    refine_maxd = refine_maxl = 0.;
     for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
          ++tt) {
       tree = p4est_tree_array_index (g->p4est->trees, tt);
       for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
         quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+        qud = (qu_data_t *) quad->p.user_data;
         loopquad (g, tt, quad, lxyz, hxyz, dxyz);
 
         /***  integrate density over quadrant ***/
-        ((qu_data_t *) quad->p.user_data)->d = d = integrate (g, lxyz, dxyz);
+        qud->d = d = integrate (g, lxyz, dxyz);
         ld += d;
+
+        /*** maximum particle count and level ***/
+        refine_maxd = SC_MAX (refine_maxd, d);
+        refine_maxl = SC_MAX (refine_maxl, (double) quad->level);
       }
     }
 
@@ -191,30 +199,31 @@ initrp (part_global_t * g)
     P4EST_GLOBAL_INFOF ("Global integral over density %g\n",
                         g->global_density);
 
+    /*** get global maximum of particle count and level ***/
+    loclp[0] = refine_maxd;
+    loclp[1] = refine_maxl;
+    mpiret = sc_MPI_Allreduce (loclp, glolp, 2, sc_MPI_DOUBLE,
+                               sc_MPI_MAX, g->mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mlem_particles =
+      (int) round (glolp[0] * g->num_particles / g->global_density);
+    P4EST_GLOBAL_INFOF ("Maximum particle number per quadrant %d"
+                        " and level %g\n", mlem_particles, glolp[1]);
+
     /*** we have computed the density, this may be enough ***/
-    if (cycle >= max_cycles) {
+    if (cycle >= max_cycles || (double) mlem_particles <= g->elem_particles) {
       break;
     }
 
     /*** refine and balance ***/
     old_gnum = g->p4est->global_num_quadrants;
-    g->refine_maxp = 0.;
-    g->refine_maxl = 0.;
     p4est_refine_ext (g->p4est, 0, g->maxlevel - g->bricklev,
                       initrp_refine, NULL, NULL);
     new_gnum = g->p4est->global_num_quadrants;
-    loclp[0] = g->refine_maxp;
-    loclp[1] = g->refine_maxl;
-
-    /*** get max planned particles in a quadrant ***/
-    mpiret = sc_MPI_Allreduce (loclp, glolp, 2, sc_MPI_DOUBLE,
-                               sc_MPI_MAX, g->mpicomm);
-    SC_CHECK_MPI (mpiret);
-    P4EST_GLOBAL_INFOF ("Was: maximum planned particle number per quadrant %g"
-                        " at level %d\n", glolp[0], (int) glolp[1]);
-
-    /*** we are done with refinement if no quadrants were added globally ***/
     if (old_gnum == new_gnum) {
+      /* done with refinement if no quadrants were added globally */
+      /* cannot happen due to particle count above */
+      SC_ABORT_NOT_REACHED ();
       break;
     }
 #if 0                           /* we do not need balance for this application */
