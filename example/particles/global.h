@@ -57,6 +57,7 @@ typedef struct part_global
   int                 bricklength;
   long long           gpnum;
   double              global_density;
+  sc_array_t         *padata;
   part_init_density_t pidense;
   void               *piddata;
 

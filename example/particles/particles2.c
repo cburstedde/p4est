@@ -23,9 +23,11 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #else
+#include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
@@ -47,9 +49,16 @@ pi_data_t;
 
 typedef struct qu_data
 {
+  long long           lpoffset;
   double              d;
 }
 qu_data_t;
+
+typedef struct pa_data
+{
+  double              xyz[3];
+}
+pa_data_t;
 
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
 
@@ -238,33 +247,59 @@ initrp (part_global_t * g)
 }
 
 static void
+srandquad (part_global_t * g, p4est_quadrant_t * quad)
+{
+  srand ((unsigned int) p4est_quadrant_linear_id (quad, P4EST_QMAXLEVEL));
+}
+
+static void
 create (part_global_t * g)
 {
-  int                 i;
+  int                 mpiret;
+  int                 i, j;
+  int                 ilem_particles;
+  long long           lpnum;
   double              lxyz[3], hxyz[3], dxyz[3];
-  double              elem_particles;
+  double              r;
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
+  pa_data_t          *pad;
 
   /*** iterate through local cells and populate with particles ***/
+  g->padata = sc_array_new (sizeof (pa_data_t));
+  lpnum = 0;
   for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree; ++tt) {
     tree = p4est_tree_array_index (g->p4est->trees, tt);
     for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
       quad = p4est_quadrant_array_index (&tree->quadrants, lq);
       qud = (qu_data_t *) quad->p.user_data;
-      elem_particles = round (qud->d / g->global_density * g->num_particles);
+      qud->lpoffset = lpnum;
+      ilem_particles =
+        (int) round (qud->d / g->global_density * g->num_particles);
+      pad = (pa_data_t *) sc_array_push_count (g->padata,
+                                               (size_t) ilem_particles);
 
       /*** generate required number of particles ***/
       loopquad (g, tt, quad, lxyz, hxyz, dxyz);
-      for (i = 0; i < (int) elem_particles; ++i) {
-
-
+      srandquad (g, quad);
+      for (i = 0; i < ilem_particles; ++i) {
+        for (j = 0; j < P4EST_DIM; ++j) {
+          r = rand () / (double) RAND_MAX;
+          pad->xyz[j] = lxyz[j] + r * dxyz[j];
+        }
+        ++pad;
       }
+      lpnum += (long long) ilem_particles;
     }
   }
+  mpiret = sc_MPI_Allreduce (&lpnum, &g->gpnum, 1, sc_MPI_LONG_LONG_INT,
+                             sc_MPI_SUM, g->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_INFOF ("Created %lld particles for %g\n",
+                      g->gpnum, g->num_particles);
 }
 
 static void
@@ -326,6 +361,7 @@ run (part_global_t * g)
   sim (g);
 
   /*** destroy data ***/
+  sc_array_destroy (g->padata);
 
   /*** destroy mesh ***/
   p4est_destroy (g->p4est);
