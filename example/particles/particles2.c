@@ -166,7 +166,7 @@ initrp (part_global_t * g)
 {
   int                 mpiret;
   int                 cycle, max_cycles;
-  int                 mlem_particles;
+  int                 ilem_particles;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              d, ld;
   double              refine_maxd, refine_maxl;
@@ -214,13 +214,13 @@ initrp (part_global_t * g)
     mpiret = sc_MPI_Allreduce (loclp, glolp, 2, sc_MPI_DOUBLE,
                                sc_MPI_MAX, g->mpicomm);
     SC_CHECK_MPI (mpiret);
-    mlem_particles =
+    ilem_particles =
       (int) round (glolp[0] * g->num_particles / g->global_density);
     P4EST_GLOBAL_INFOF ("Maximum particle number per quadrant %d"
-                        " and level %g\n", mlem_particles, glolp[1]);
+                        " and level %g\n", ilem_particles, glolp[1]);
 
     /*** we have computed the density, this may be enough ***/
-    if (cycle >= max_cycles || (double) mlem_particles <= g->elem_particles) {
+    if (cycle >= max_cycles || (double) ilem_particles <= g->elem_particles) {
       break;
     }
 
