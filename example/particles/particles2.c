@@ -38,6 +38,8 @@
 #define PARTICLES_str(s) #s
 #define PARTICLES_48() PARTICLES_xstr(P4EST_CHILDREN)
 
+#define PART_PLANETS (2)
+
 typedef struct pi_data
 {
   double              sigma;
@@ -56,13 +58,38 @@ typedef union qu_data
 }
 qu_data_t;
 
+/** Data stored in a flat array over all particles */
 typedef struct pa_data
 {
-  double              xyz[3];
+  double              xv[6];
+  double              wo[6];
+  double              up[6];
 }
 pa_data_t;
 
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
+
+static const double planet_xyz[PART_PLANETS][3] = {
+  {.48, .48, .56},
+  {.58, .43, .59}
+};
+static const double planet_mass[PART_PLANETS] = { .1, .2 };
+
+static const double rk1b[0] = { };
+static const double rk1g[1] = { 1. };
+static const double rk2b[1] = { 1. };
+static const double rk2g[2] = { .5, .5 };
+static const double rk3b[2] = { 1. / 3., 2. / 3. };
+static const double rk3g[3] = { .25, 0., .75 };
+static const double rk4b[3] = { .5, .5, 1. };
+static const double rk4g[4] = { 1. / 6., 1. / 3., 1. / 3., 1. / 6. };
+
+static const double *prk[4][2] = {
+  {rk1b, rk1g},
+  {rk2b, rk2g},
+  {rk3b, rk3g},
+  {rk4b, rk4g}
+};
 
 static double
 gaussnorm (double sigma)
@@ -289,8 +316,12 @@ create (part_global_t * g)
       for (i = 0; i < ilem_particles; ++i) {
         for (j = 0; j < P4EST_DIM; ++j) {
           r = rand () / (double) RAND_MAX;
-          pad->xyz[j] = lxyz[j] + r * dxyz[j];
+          pad->xv[j] = lxyz[j] + r * dxyz[j];
+          pad->xv[3 + j] = 0.;
         }
+#ifndef P4_TO_P8
+        pad->xv[2] = pad->xv[5] = 0.;
+#endif
         ++pad;
       }
       qud->lpoffset = lpnum;
@@ -305,8 +336,126 @@ create (part_global_t * g)
 }
 
 static void
+rkrhs (part_global_t * g, const double xv[6], double rk[6])
+{
+  int                 i;
+  int                 j;
+  double              d;
+  double              diff[3];
+
+  for (i = 0; i < P4EST_DIM; ++i) {
+    rk[i] = xv[3 + i];
+    rk[3 + i] = 0.;
+  }
+#ifndef P4_TO_P8
+  rk[2] = rk[5] = 0.;
+#endif
+
+  for (j = 0; j < PART_PLANETS; ++j) {
+    d = 0.;
+    /* distance is always computed in 3D space */
+    for (i = 0; i < 3; ++i) {
+      diff[i] = planet_xyz[j][i] - xv[i];
+      d += SC_SQR (diff[i]);
+    }
+    d = planet_mass[j] * pow (d, -1.5);
+    for (i = 0; i < P4EST_DIM; ++i) {
+      rk[3 + i] += d * diff[i];
+    }
+  }
+}
+
+static void
 sim (part_global_t * g)
 {
+  int                 i;
+  int                 k, stage;
+  double              t, h, f;
+  double              d;
+  double              rk[6];
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lq;
+  p4est_tree_t       *tree;
+#if 0
+  p4est_quadrant_t   *quad;
+  qu_data_t          *qud;
+#endif
+  pa_data_t          *pad;
+
+  /*** loop over simulation time ***/
+  k = 0;
+  t = 0.;
+  while (t < g->finaltime) {
+    h = g->deltat;
+    f = t + h;
+    if (f > g->finaltime) {
+      f = g->finaltime;
+      h = f - t;
+    }
+
+    /*** loop over Runge Kutta stages ***/
+    for (stage = 0; stage < g->order; ++stage) {
+      /* if a stage is not the last compute new evaluation location */
+      /* for the last stage compute the new location of the particle */
+      /* do parallel transfer at end of each stage */
+
+      /*** time step for local particles ***/
+      pad = (pa_data_t *) sc_array_index (g->padata, 0);
+      for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
+           ++tt) {
+        tree = p4est_tree_array_index (g->p4est->trees, tt);
+        for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+#if 0
+          quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+          qud = (qu_data_t *) quad->p.user_data;
+#endif
+
+          /*** loop through particles in this element */
+
+          /* evaluate right hand side */
+          rkrhs (g, stage == 0 ? pad->xv : pad->wo, rk);
+
+          /* compute new evaluation point if necessary */
+          if (stage + 1 < g->order) {
+            d = prk[g->order - 1][0][stage];
+            for (i = 0; i < 6; ++i) {
+              pad->wo[i] = pad->xv[i] + d * rk[i];
+            }
+          }
+
+          /* compute an update to the state */
+          d = prk[g->order - 1][1][stage];
+          if (stage == 0) {
+            for (i = 0; i < 6; ++i) {
+              pad->up[i] = d * rk[i];
+            }
+          }
+          else if (stage + 1 < g->order) {
+            for (i = 0; i < 6; ++i) {
+              pad->up[i] += d * rk[i];
+            }
+          }
+          else {
+            for (i = 0; i < 6; ++i) {
+              pad->xv[i] += h * (pad->up[i] + d * rk[i]);
+            }
+          }
+
+          /* move to next particle */
+          ++pad;
+        }
+      }
+
+      /* TODO:
+         reassign particle to other quadrant
+         according to position in either wo (not last stage) or xv;
+         parallel transfer and load balance */
+    }
+
+    /*** finish up time step ***/
+    ++k;
+    t = f;
+  }
 }
 
 static void
