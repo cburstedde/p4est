@@ -47,8 +47,10 @@ typedef struct pi_data
 }
 pi_data_t;
 
-typedef struct qu_data
+/** Data type for payload data inside each quadrant */
+typedef union qu_data
 {
+  /** Offset into local array of all particles */
   long long           lpoffset;
   double              d;
 }
@@ -276,7 +278,6 @@ create (part_global_t * g)
     for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
       quad = p4est_quadrant_array_index (&tree->quadrants, lq);
       qud = (qu_data_t *) quad->p.user_data;
-      qud->lpoffset = lpnum;
       ilem_particles =
         (int) round (qud->d / g->global_density * g->num_particles);
       pad = (pa_data_t *) sc_array_push_count (g->padata,
@@ -292,6 +293,7 @@ create (part_global_t * g)
         }
         ++pad;
       }
+      qud->lpoffset = lpnum;
       lpnum += (long long) ilem_particles;
     }
   }
