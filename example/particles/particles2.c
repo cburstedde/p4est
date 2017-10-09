@@ -52,8 +52,8 @@ pi_data_t;
 /** Data type for payload data inside each quadrant */
 typedef union qu_data
 {
-  /** Offset into local array of all particles */
-  long long           lpoffset;
+  /** Offset into local array of all particles after this quadrant */
+  long long           lpend;
   double              d;
 }
 qu_data_t;
@@ -239,7 +239,7 @@ initrp (part_global_t * g)
 
     /*** get global maximum of particle count and level ***/
     loclp[0] = refine_maxd;
-    loclp[1] = refine_maxl;
+    loclp[1] = refine_maxl + g->bricklev;
     mpiret = sc_MPI_Allreduce (loclp, glolp, 2, sc_MPI_DOUBLE,
                                sc_MPI_MAX, g->mpicomm);
     SC_CHECK_MPI (mpiret);
@@ -324,8 +324,8 @@ create (part_global_t * g)
 #endif
         ++pad;
       }
-      qud->lpoffset = lpnum;
       lpnum += (long long) ilem_particles;
+      qud->lpend = lpnum;
     }
   }
   mpiret = sc_MPI_Allreduce (&lpnum, &g->gpnum, 1, sc_MPI_LONG_LONG_INT,
@@ -368,18 +368,18 @@ rkrhs (part_global_t * g, const double xv[6], double rk[6])
 static void
 sim (part_global_t * g)
 {
-  int                 i;
+  int                 i, j;
   int                 k, stage;
+  int                 ilem_particles;
+  long long           lpnum;
   double              t, h, f;
   double              d;
   double              rk[6];
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
   p4est_tree_t       *tree;
-#if 0
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
-#endif
   pa_data_t          *pad;
 
   /*** loop over simulation time ***/
@@ -388,10 +388,11 @@ sim (part_global_t * g)
   while (t < g->finaltime) {
     h = g->deltat;
     f = t + h;
-    if (f > g->finaltime) {
+    if (f > g->finaltime - 1e-3 * g->deltat) {
       f = g->finaltime;
       h = f - t;
     }
+    P4EST_GLOBAL_INFOF ("Time %g into step %d with %g\n", t, k, h);
 
     /*** loop over Runge Kutta stages ***/
     for (stage = 0; stage < g->order; ++stage) {
@@ -400,49 +401,54 @@ sim (part_global_t * g)
       /* do parallel transfer at end of each stage */
 
       /*** time step for local particles ***/
+      lpnum = 0;
       pad = (pa_data_t *) sc_array_index (g->padata, 0);
       for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
            ++tt) {
         tree = p4est_tree_array_index (g->p4est->trees, tt);
         for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
-#if 0
           quad = p4est_quadrant_array_index (&tree->quadrants, lq);
           qud = (qu_data_t *) quad->p.user_data;
-#endif
+          ilem_particles = (int) (qud->lpend - lpnum);
 
           /*** loop through particles in this element */
+          for (j = 0; j < ilem_particles; ++j) {
 
-          /* evaluate right hand side */
-          rkrhs (g, stage == 0 ? pad->xv : pad->wo, rk);
+            /* evaluate right hand side */
+            rkrhs (g, stage == 0 ? pad->xv : pad->wo, rk);
 
-          /* compute new evaluation point if necessary */
-          if (stage + 1 < g->order) {
-            d = prk[g->order - 1][0][stage];
-            for (i = 0; i < 6; ++i) {
-              pad->wo[i] = pad->xv[i] + d * rk[i];
+            /* compute new evaluation point if necessary */
+            if (stage + 1 < g->order) {
+              d = prk[g->order - 1][0][stage];
+              for (i = 0; i < 6; ++i) {
+                pad->wo[i] = pad->xv[i] + d * rk[i];
+              }
             }
+
+            /* compute an update to the state */
+            d = prk[g->order - 1][1][stage];
+            if (stage == 0) {
+              for (i = 0; i < 6; ++i) {
+                pad->up[i] = d * rk[i];
+              }
+            }
+            else if (stage + 1 < g->order) {
+              for (i = 0; i < 6; ++i) {
+                pad->up[i] += d * rk[i];
+              }
+            }
+            else {
+              for (i = 0; i < 6; ++i) {
+                pad->xv[i] += h * (pad->up[i] + d * rk[i]);
+              }
+            }
+
+            /* move to next particle */
+            ++pad;
           }
 
-          /* compute an update to the state */
-          d = prk[g->order - 1][1][stage];
-          if (stage == 0) {
-            for (i = 0; i < 6; ++i) {
-              pad->up[i] = d * rk[i];
-            }
-          }
-          else if (stage + 1 < g->order) {
-            for (i = 0; i < 6; ++i) {
-              pad->up[i] += d * rk[i];
-            }
-          }
-          else {
-            for (i = 0; i < 6; ++i) {
-              pad->xv[i] += h * (pad->up[i] + d * rk[i]);
-            }
-          }
-
-          /* move to next particle */
-          ++pad;
+          /* move to next quadrant */
+          lpnum = qud->lpend;
         }
       }
 
@@ -456,6 +462,8 @@ sim (part_global_t * g)
     ++k;
     t = f;
   }
+
+  P4EST_GLOBAL_PRODUCTIONF ("Time %g is final after %d steps\n", t, k);
 }
 
 static void
@@ -548,7 +556,8 @@ main (int argc, char **argv)
 
   opt = sc_options_new (argv[0]);
   sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
-  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, 0, "Highest level");
+  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel,
+                      P4EST_QMAXLEVEL, "Highest level");
   sc_options_add_int (opt, 'b', "bricklev", &g->bricklev,
                       0, "Brick refinement level");
   sc_options_add_int (opt, 'r', "rk", &g->order,
