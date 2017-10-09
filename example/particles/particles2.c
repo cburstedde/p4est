@@ -400,10 +400,16 @@ main (int argc, char **argv)
   sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, 0, "Highest level");
   sc_options_add_int (opt, 'b', "bricklev", &g->bricklev,
                       0, "Brick refinement level");
+  sc_options_add_int (opt, 'r', "rk", &g->order,
+                      1, "Order of Runge Kutta method");
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
   sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
                          3., "Number of particles per element");
+  sc_options_add_double (opt, 'h', "deltat", &g->deltat,
+                         1e-1, "Time step size");
+  sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
+                         1., "Final time of simulation");
   sc_options_add_switch (opt, 'V', "vtk", &g->vtk, "write VTK output");
   sc_options_add_switch (opt, 'C', "check", &g->check,
                          "write checkpoint output");
@@ -424,6 +430,9 @@ main (int argc, char **argv)
   }
   if (g->bricklev < 0 || g->bricklev > g->minlevel) {
     return usagerr (opt, "Brick level between 0 and minlevel");
+  }
+  if (g->order < 1 || g->order > 4) {
+    return usagerr (opt, "Runge Kutta order between 1 and 4");
   }
   if (g->num_particles <= 0.) {
     return usagerr (opt, "Global number of particles positive");
