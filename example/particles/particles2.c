@@ -419,7 +419,8 @@ sim (part_global_t * g)
 
             /* compute new evaluation point if necessary */
             if (stage + 1 < g->order) {
-              d = prk[g->order - 1][0][stage];
+              /* stage is not the last */
+              d = h * prk[g->order - 1][0][stage];
               for (i = 0; i < 6; ++i) {
                 pad->wo[i] = pad->xv[i] + d * rk[i];
               }
@@ -428,18 +429,37 @@ sim (part_global_t * g)
             /* compute an update to the state */
             d = prk[g->order - 1][1][stage];
             if (stage == 0) {
-              for (i = 0; i < 6; ++i) {
-                pad->up[i] = d * rk[i];
+              /* first stage */
+              if (g->order > 1) {
+                /* first stage is not the last */
+                P4EST_ASSERT (stage + 1 < g->order);
+                for (i = 0; i < 6; ++i) {
+                  pad->up[i] = d * rk[i];
+                }
               }
-            }
-            else if (stage + 1 < g->order) {
-              for (i = 0; i < 6; ++i) {
-                pad->up[i] += d * rk[i];
+              else {
+                /* first stage is also the last */
+                P4EST_ASSERT (stage + 1 == g->order);
+                for (i = 0; i < 6; ++i) {
+                  pad->xv[i] = h * d * rk[i];
+                }
               }
             }
             else {
-              for (i = 0; i < 6; ++i) {
-                pad->xv[i] += h * (pad->up[i] + d * rk[i]);
+              /* stage is not the first */
+              if (stage + 1 < g->order) {
+                /* stage is neither first nor last */
+                P4EST_ASSERT (0 < stage);
+                for (i = 0; i < 6; ++i) {
+                  pad->up[i] += d * rk[i];
+                }
+              }
+              else {
+                /* stage is last of several */
+                P4EST_ASSERT (stage + 1 == g->order);
+                for (i = 0; i < 6; ++i) {
+                  pad->xv[i] += h * (pad->up[i] + d * rk[i]);
+                }
               }
             }
 
