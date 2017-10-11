@@ -399,7 +399,7 @@ rkstage (part_global_t * g, pa_data_t * pad, double h, int stage)
       /* first stage is also the last */
       P4EST_ASSERT (stage + 1 == g->order);
       for (i = 0; i < 6; ++i) {
-        pad->xv[i] = h * d * rk[i];
+        pad->xv[i] += h * d * rk[i];
       }
     }
   }
