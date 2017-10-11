@@ -475,7 +475,26 @@ sim (part_global_t * g)
       /* TODO:
          reassign particle to other quadrant
          according to position in either wo (not last stage) or xv;
-         parallel transfer and load balance */
+         notify quadrants of assignment to refine/coarsen
+         parallel transfer and partition */
+
+      /* begin loop */
+
+      /* p4est_search_all to find new local element or process for each particle */
+
+      /* send to-be-received particles to receiver processes */
+
+      /* receive particles and run local search to count them per-quadrant */
+
+      /* refine the mesh based on current + received count */
+
+      /* if no refinement occurred, store received particles and break loop */
+
+      /* partition weighted by current + received count (?) */
+
+      /* transfer particles accordingly */
+
+      /* end loop */
     }
 
     /*** finish up time step ***/
