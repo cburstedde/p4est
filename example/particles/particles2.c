@@ -366,15 +366,69 @@ rkrhs (part_global_t * g, const double xv[6], double rk[6])
 }
 
 static void
+rkstage (part_global_t * g, pa_data_t * pad, double h, int stage)
+{
+  int                 i;
+  double              d;
+  double              rk[6];
+
+  /* evaluate right hand side */
+  rkrhs (g, stage == 0 ? pad->xv : pad->wo, rk);
+
+  /* compute new evaluation point if necessary */
+  if (stage + 1 < g->order) {
+    /* stage is not the last */
+    d = h * prk[g->order - 1][0][stage];
+    for (i = 0; i < 6; ++i) {
+      pad->wo[i] = pad->xv[i] + d * rk[i];
+    }
+  }
+
+  /* compute an update to the state */
+  d = prk[g->order - 1][1][stage];
+  if (stage == 0) {
+    /* first stage */
+    if (g->order > 1) {
+      /* first stage is not the last */
+      P4EST_ASSERT (stage + 1 < g->order);
+      for (i = 0; i < 6; ++i) {
+        pad->up[i] = d * rk[i];
+      }
+    }
+    else {
+      /* first stage is also the last */
+      P4EST_ASSERT (stage + 1 == g->order);
+      for (i = 0; i < 6; ++i) {
+        pad->xv[i] = h * d * rk[i];
+      }
+    }
+  }
+  else {
+    /* stage is not the first */
+    if (stage + 1 < g->order) {
+      /* stage is neither first nor last */
+      P4EST_ASSERT (0 < stage);
+      for (i = 0; i < 6; ++i) {
+        pad->up[i] += d * rk[i];
+      }
+    }
+    else {
+      /* stage is last of several */
+      P4EST_ASSERT (stage + 1 == g->order);
+      for (i = 0; i < 6; ++i) {
+        pad->xv[i] += h * (pad->up[i] + d * rk[i]);
+      }
+    }
+  }
+}
+
+static void
 sim (part_global_t * g)
 {
-  int                 i, j;
-  int                 k, stage;
+  int                 i, k, stage;
   int                 ilem_particles;
   long long           lpnum;
   double              t, h, f;
-  double              d;
-  double              rk[6];
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
   p4est_tree_t       *tree;
@@ -412,59 +466,9 @@ sim (part_global_t * g)
           ilem_particles = (int) (qud->lpend - lpnum);
 
           /*** loop through particles in this element */
-          for (j = 0; j < ilem_particles; ++j) {
-
-            /* evaluate right hand side */
-            rkrhs (g, stage == 0 ? pad->xv : pad->wo, rk);
-
-            /* compute new evaluation point if necessary */
-            if (stage + 1 < g->order) {
-              /* stage is not the last */
-              d = h * prk[g->order - 1][0][stage];
-              for (i = 0; i < 6; ++i) {
-                pad->wo[i] = pad->xv[i] + d * rk[i];
-              }
-            }
-
-            /* compute an update to the state */
-            d = prk[g->order - 1][1][stage];
-            if (stage == 0) {
-              /* first stage */
-              if (g->order > 1) {
-                /* first stage is not the last */
-                P4EST_ASSERT (stage + 1 < g->order);
-                for (i = 0; i < 6; ++i) {
-                  pad->up[i] = d * rk[i];
-                }
-              }
-              else {
-                /* first stage is also the last */
-                P4EST_ASSERT (stage + 1 == g->order);
-                for (i = 0; i < 6; ++i) {
-                  pad->xv[i] = h * d * rk[i];
-                }
-              }
-            }
-            else {
-              /* stage is not the first */
-              if (stage + 1 < g->order) {
-                /* stage is neither first nor last */
-                P4EST_ASSERT (0 < stage);
-                for (i = 0; i < 6; ++i) {
-                  pad->up[i] += d * rk[i];
-                }
-              }
-              else {
-                /* stage is last of several */
-                P4EST_ASSERT (stage + 1 == g->order);
-                for (i = 0; i < 6; ++i) {
-                  pad->xv[i] += h * (pad->up[i] + d * rk[i]);
-                }
-              }
-            }
-
-            /* move to next particle */
-            ++pad;
+          for (i = 0; i < ilem_particles; ++i) {
+            /* one Runge Kutta stage for this particle */
+            rkstage (g, pad++, h, stage);
           }
 
           /* move to next quadrant */
