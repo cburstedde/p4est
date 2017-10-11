@@ -44,6 +44,7 @@ typedef double      (*part_init_density_t) (double x, double y, double z,
 typedef struct part_global
 {
   sc_MPI_Comm         mpicomm;
+  int                 mpisize, mpirank;
 
   int                 minlevel;
   int                 maxlevel;
@@ -58,7 +59,8 @@ typedef struct part_global
   const char         *prefix;
 
   int                 bricklength;
-  long long           gpnum;
+  int                 stage;
+  long long           gpnum, gplost;
   double              global_density;
   double              t;
   sc_array_t         *padata;

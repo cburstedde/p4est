@@ -58,7 +58,7 @@ typedef union qu_data
 }
 qu_data_t;
 
-/** Data stored in a flat array over all particles */
+/** Property data stored in a flat array over all particles */
 typedef struct pa_data
 {
   double              xv[6];
@@ -328,6 +328,7 @@ create (part_global_t * g)
       qud->lpend = lpnum;
     }
   }
+  g->gplost = 0;
   mpiret = sc_MPI_Allreduce (&lpnum, &g->gpnum, 1, sc_MPI_LONG_LONG_INT,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -366,8 +367,9 @@ rkrhs (part_global_t * g, const double xv[6], double rk[6])
 }
 
 static void
-rkstage (part_global_t * g, pa_data_t * pad, double h, int stage)
+rkstage (part_global_t * g, pa_data_t * pad, double h)
 {
+  int                 stage = g->stage;
   int                 i;
   double              d;
   double              rk[6];
@@ -425,7 +427,7 @@ rkstage (part_global_t * g, pa_data_t * pad, double h, int stage)
 static void
 sim (part_global_t * g)
 {
-  int                 i, k, stage;
+  int                 i, k;
   int                 ilem_particles;
   long long           lpnum;
   double              t, h, f;
@@ -449,7 +451,8 @@ sim (part_global_t * g)
     P4EST_GLOBAL_INFOF ("Time %g into step %d with %g\n", t, k, h);
 
     /*** loop over Runge Kutta stages ***/
-    for (stage = 0; stage < g->order; ++stage) {
+    for (g->stage = 0; g->stage < g->order; ++g->stage) {
+
       /* if a stage is not the last compute new evaluation location */
       /* for the last stage compute the new location of the particle */
       /* do parallel transfer at end of each stage */
@@ -468,7 +471,7 @@ sim (part_global_t * g)
           /*** loop through particles in this element */
           for (i = 0; i < ilem_particles; ++i) {
             /* one Runge Kutta stage for this particle */
-            rkstage (g, pad++, h, stage);
+            rkstage (g, pad++, h);
           }
 
           /* move to next quadrant */
@@ -592,6 +595,10 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
 
   g->mpicomm = sc_MPI_COMM_WORLD;
+  mpiret = sc_MPI_Comm_size (g->mpicomm, &g->mpisize);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (g->mpicomm, &g->mpirank);
+  SC_CHECK_MPI (mpiret);
   sc_init (g->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
