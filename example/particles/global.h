@@ -64,6 +64,7 @@ typedef struct part_global
   double              global_density;
   double              t;
   sc_array_t         *padata;
+  sc_array_t         *pfound;
   part_init_density_t pidense;
   void               *piddata;
 

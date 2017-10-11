@@ -67,6 +67,13 @@ typedef struct pa_data
 }
 pa_data_t;
 
+/** Search metadata stored in a flat array over all particles */
+typedef struct pa_found
+{
+  p4est_locidx_t      pori;
+}
+pa_found_t;
+
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
 
 static const double planet_xyz[PART_PLANETS][3] = {
@@ -424,6 +431,76 @@ rkstage (part_global_t * g, pa_data_t * pad, double h)
   }
 }
 
+static int
+psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
+              p4est_quadrant_t * quadrant, int pfirst, int plast,
+              p4est_locidx_t local_num, void *point)
+{
+  return 1;
+}
+
+static int
+psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
+               p4est_quadrant_t * quadrant, int pfirst, int plast,
+               p4est_locidx_t local_num, void *point)
+{
+  int                 i;
+  size_t              zp;
+  double              lxyz[3], hxyz[3], dxyz[3];
+  const double       *x;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+  pa_data_t          *pad = (pa_data_t *) point;
+  pa_found_t         *pfn;
+
+  /* access location of particle to be searched */
+  P4EST_ASSERT (pad != NULL);
+  x = g->stage + 1 < g->order ? pad->wo : pad->xv;
+
+  /* due to roundoff we call this even for a local leaf */
+  loopquad (g, which_tree, quadrant, lxyz, hxyz, dxyz);
+  for (i = 0; i < P4EST_DIM; ++i) {
+    if (!(lxyz[i] <= x[i] && x[i] <= hxyz[i])) {
+      /* the point is outside the search quadrant */
+      return 0;
+    }
+  }
+
+  /* find process/quadrant for this particle */
+  if (local_num >= 0) {
+    /* quadrant is a local leaf */
+    P4EST_ASSERT (pfirst == g->mpirank && plast == g->mpirank);
+    zp = sc_array_position (g->padata, pad);
+    pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
+    /* first local match counts (due to roundoff there may be multiple) */
+    if (pfn->pori < g->mpisize) {
+      pfn->pori = (p4est_locidx_t) g->mpisize + local_num;
+      /* TODO: bump counter of particles in this local quadrant */
+    }
+    /* return value will have no effect */
+    return 0;
+  }
+  if (pfirst == plast) {
+    if (pfirst == g->mpirank) {
+      /* continue recursion for local branch quadrant */
+      P4EST_ASSERT (plast == g->mpirank);
+      return 1;
+    }
+    /* found particle on a remote process */
+    P4EST_ASSERT (plast != g->mpirank);
+    zp = sc_array_position (g->padata, pad);
+    pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
+    /* only count match if it has not been found locally or on lower rank */
+    if (pfn->pori < 0 || (pfirst < pfn->pori && pfn->pori < g->mpisize)) {
+      pfn->pori = (p4est_locidx_t) pfirst;
+    }
+    /* return value will have no effect */
+    return 0;
+  }
+
+  /* the process for this particle has not yet been found */
+  return 1;
+}
+
 static void
 sim (part_global_t * g)
 {
@@ -488,6 +565,11 @@ sim (part_global_t * g)
       /* begin loop */
 
       /* p4est_search_all to find new local element or process for each particle */
+      g->pfound =
+        sc_array_new_count (sizeof (pa_found_t), g->padata->elem_count);
+      sc_array_memset (g->pfound, -1);
+      p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
+      sc_array_destroy (g->pfound);
 
       /* send to-be-received particles to receiver processes */
 
