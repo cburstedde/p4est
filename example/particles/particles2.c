@@ -705,7 +705,7 @@ main (int argc, char **argv)
                       P4EST_QMAXLEVEL, "Highest level");
   sc_options_add_int (opt, 'b', "bricklev", &g->bricklev,
                       0, "Brick refinement level");
-  sc_options_add_int (opt, 'r', "rk", &g->order,
+  sc_options_add_int (opt, 'r', "rkorder", &g->order,
                       1, "Order of Runge Kutta method");
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
