@@ -65,6 +65,8 @@ typedef struct part_global
   double              t;
   sc_array_t         *padata;
   sc_array_t         *pfound;
+  sc_hash_t          *psend;
+  sc_mempool_t       *psmem;
   part_init_density_t pidense;
   void               *piddata;
 

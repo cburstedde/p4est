@@ -74,6 +74,14 @@ typedef struct pa_found
 }
 pa_found_t;
 
+/** Data type for a process that we send messages to */
+typedef struct comm_psend
+{
+  int                 rank;
+  sc_array_t          message;
+}
+comm_psend_t;
+
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
 
 static const double planet_xyz[PART_PLANETS][3] = {
@@ -514,6 +522,130 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static unsigned
+psend_hash (const void *v, const void *u)
+{
+  const comm_psend_t *ps = (const comm_psend_t *) v;
+
+  P4EST_ASSERT (u == NULL);
+
+  return ps->rank;
+}
+
+static int
+psend_equal (const void *v1, const void *v2, const void *u)
+{
+  const comm_psend_t *ps1 = (const comm_psend_t *) v1;
+  const comm_psend_t *ps2 = (const comm_psend_t *) v2;
+
+  P4EST_ASSERT (u == NULL);
+
+  return ps1->rank == ps2->rank;
+}
+
+static void
+pack (part_global_t * g)
+{
+  int                 mpiret;
+  int                 retval;
+  long long           loclrs[3], glolrs[3];
+  size_t              zz, numz;
+  size_t              remainz, sendz, lostz;
+  void              **hfound;
+  pa_data_t          *pad;
+  pa_found_t         *pfn;
+  comm_psend_t       *cps, *there;
+
+  P4EST_ASSERT (g->pfound != NULL);
+  numz = g->pfound->elem_count;
+
+  P4EST_ASSERT (g->padata != NULL);
+  P4EST_ASSERT (g->padata->elem_count == numz);
+
+  remainz = sendz = lostz = 0;
+  cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
+  cps->rank = -1;
+  for (pfn = (pa_found_t *) sc_array_index (g->pfound, 0), zz = 0;
+       zz < numz; ++zz, ++pfn) {
+    /* treat those that leave the domain or stay local */
+    if (pfn->pori < 0) {
+      ++lostz;
+      continue;
+    }
+    if (pfn->pori >= g->mpisize) {
+      ++remainz;
+      continue;
+    }
+
+    /* access message structure */
+    P4EST_ASSERT (0 <= pfn->pori && pfn->pori < g->mpisize);
+    cps->rank = (int) pfn->pori;
+    retval = sc_hash_insert_unique (g->psend, cps, &hfound);
+    P4EST_ASSERT (hfound != NULL);
+    there = *((comm_psend_t **) hfound);
+    if (!retval) {
+      /* message for this rank exists already */
+      P4EST_ASSERT (there->message.elem_size == sizeof (pa_data_t));
+      P4EST_ASSERT (there->message.elem_count > 0);
+    }
+    else {
+      /* message is added for this rank */
+      P4EST_ASSERT (there == cps);
+      sc_array_init (&there->message, sizeof (pa_data_t));
+      cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
+      cps->rank = -1;
+    }
+
+    /* add to message buffer */
+    pad = (pa_data_t *) sc_array_push (&there->message);
+    memcpy (pad, sc_array_index (g->padata, zz), sizeof (pa_data_t));
+
+    /* this particle is to be sent to another process */
+    ++sendz;
+  }
+  sc_mempool_free (g->psmem, cps);
+
+  loclrs[0] = (long long) remainz;
+  loclrs[1] = (long long) sendz;
+  loclrs[2] = (long long) lostz;
+  mpiret = sc_MPI_Allreduce (loclrs, glolrs, 3, sc_MPI_LONG_LONG_INT,
+                             sc_MPI_SUM, g->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_INFOF ("Particles remain %lld sent %lld lost %lld\n",
+                      glolrs[0], glolrs[1], glolrs[2]);
+  P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
+
+  /* TODO: update lost count globally for next stage/step */
+}
+
+static void
+send (part_global_t * g)
+{
+  /* TODO: post non-blocking send for messages */
+}
+
+static int
+wait_foreach (void **v, const void *u)
+{
+  comm_psend_t       *there;
+
+  P4EST_ASSERT (u == NULL);
+  there = *(comm_psend_t **) v;
+  P4EST_ASSERT (there->message.elem_size == sizeof (pa_data_t));
+  P4EST_ASSERT (there->message.elem_count > 0);
+
+  sc_array_reset (&there->message);
+  return 1;
+}
+
+static void
+wait (part_global_t * g)
+{
+  /* TODO: wait for sent messages to complete */
+
+  sc_hash_foreach (g->psend, wait_foreach);
+}
+
 static void
 sim (part_global_t * g)
 {
@@ -527,6 +659,8 @@ sim (part_global_t * g)
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
   pa_data_t          *pad;
+
+  P4EST_ASSERT (g->padata != NULL);
 
   /*** loop over simulation time ***/
   k = 0;
@@ -582,9 +716,18 @@ sim (part_global_t * g)
         sc_array_new_count (sizeof (pa_found_t), g->padata->elem_count);
       sc_array_memset (g->pfound, -1);
       p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
-      sc_array_destroy (g->pfound);
 
       /* send to-be-received particles to receiver processes */
+      g->psmem = sc_mempool_new (sizeof (comm_psend_t));
+      g->psend = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
+      pack (g);
+      send (g);
+
+      /* TODO: move wait farther down */
+      wait (g);
+      sc_hash_destroy (g->psend);
+      sc_mempool_destroy (g->psmem);
+      sc_array_destroy (g->pfound);
 
       /* receive particles and run local search to count them per-quadrant */
 
