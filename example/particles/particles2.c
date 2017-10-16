@@ -283,9 +283,18 @@ initrp (part_global_t * g)
 }
 
 static void
-srandquad (part_global_t * g, p4est_quadrant_t * quad)
+srandquad (part_global_t * g, const double l[3])
 {
-  srand ((unsigned int) p4est_quadrant_linear_id (quad, P4EST_QMAXLEVEL));
+  unsigned            u;
+
+  P4EST_ASSERT (0 <= l[0] && l[0] < 1.);
+  P4EST_ASSERT (0 <= l[1] && l[1] < 1.);
+  P4EST_ASSERT (0 <= l[2] && l[2] < 1.);
+
+  u = ((unsigned int) (l[2] * (1 << 10)) << 20) +
+    ((unsigned int) (l[1] * (1 << 10)) << 10) +
+    (unsigned int) (l[0] * (1 << 10));
+  srand (u);
 }
 
 static void
@@ -319,7 +328,7 @@ create (part_global_t * g)
 
       /*** generate required number of particles ***/
       loopquad (g, tt, quad, lxyz, hxyz, dxyz);
-      srandquad (g, quad);
+      srandquad (g, lxyz);
       for (i = 0; i < ilem_particles; ++i) {
         for (j = 0; j < P4EST_DIM; ++j) {
           r = rand () / (double) RAND_MAX;
@@ -328,6 +337,10 @@ create (part_global_t * g)
         }
 #ifndef P4_TO_P8
         pad->xv[2] = pad->xv[5] = 0.;
+#endif
+#if 0
+        P4EST_LDEBUGF ("Create particle <%g %g %g>\n",
+                       pad->xv[0], pad->xv[1], pad->xv[2]);
 #endif
         ++pad;
       }
