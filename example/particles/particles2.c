@@ -575,8 +575,9 @@ pack (part_global_t * g)
   remainz = sendz = lostz = 0;
   cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
   cps->rank = -1;
-  for (pfn = (pa_found_t *) sc_array_index (g->pfound, 0), zz = 0;
-       zz < numz; ++zz, ++pfn) {
+  for (zz = 0; zz < numz; ++zz) {
+    pfn = (pa_found_t *) sc_array_index (g->pfound, zz);
+
     /* treat those that leave the domain or stay local */
 #if 0
     P4EST_LDEBUGF ("Pack for %d is %d\n", (int) zz, pfn->pori);
@@ -696,23 +697,25 @@ sim (part_global_t * g)
 
       /*** time step for local particles ***/
       lpnum = 0;
-      pad = (pa_data_t *) sc_array_index (g->padata, 0);
-      for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
-           ++tt) {
-        tree = p4est_tree_array_index (g->p4est->trees, tt);
-        for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
-          quad = p4est_quadrant_array_index (&tree->quadrants, lq);
-          qud = (qu_data_t *) quad->p.user_data;
-          ilem_particles = (int) (qud->lpend - lpnum);
+      if (g->padata->elem_count > 0) {
+        pad = (pa_data_t *) sc_array_index (g->padata, 0);
+        for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
+             ++tt) {
+          tree = p4est_tree_array_index (g->p4est->trees, tt);
+          for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+            quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+            qud = (qu_data_t *) quad->p.user_data;
+            ilem_particles = (int) (qud->lpend - lpnum);
 
-          /*** loop through particles in this element */
-          for (i = 0; i < ilem_particles; ++i) {
-            /* one Runge Kutta stage for this particle */
-            rkstage (g, pad++, h);
+            /*** loop through particles in this element */
+            for (i = 0; i < ilem_particles; ++i) {
+              /* one Runge Kutta stage for this particle */
+              rkstage (g, pad++, h);
+            }
+
+            /* move to next quadrant */
+            lpnum = qud->lpend;
           }
-
-          /* move to next quadrant */
-          lpnum = qud->lpend;
         }
       }
 
