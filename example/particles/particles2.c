@@ -450,6 +450,12 @@ rkstage (part_global_t * g, pa_data_t * pad, double h)
       }
     }
   }
+
+#if 0
+  /* TODO: this is wrong for RK order > 1 */
+  P4EST_LDEBUGF ("New location <%g %g %g>\n", pad->xv[0], pad->xv[1],
+                 pad->xv[2]);
+#endif
 }
 
 static int
@@ -496,6 +502,10 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     if (pfn->pori < g->mpisize) {
       pfn->pori = (p4est_locidx_t) g->mpisize + local_num;
       /* TODO: bump counter of particles in this local quadrant */
+#if 0
+      P4EST_LDEBUGF ("Found leaf particle %d local_num %d becomes %d\n",
+                     (int) zp, local_num, pfn->pori);
+#endif
     }
     /* return value will have no effect */
     return 0;
@@ -568,6 +578,9 @@ pack (part_global_t * g)
   for (pfn = (pa_found_t *) sc_array_index (g->pfound, 0), zz = 0;
        zz < numz; ++zz, ++pfn) {
     /* treat those that leave the domain or stay local */
+#if 0
+    P4EST_LDEBUGF ("Pack for %d is %d\n", (int) zz, pfn->pori);
+#endif
     if (pfn->pori < 0) {
       ++lostz;
       continue;
