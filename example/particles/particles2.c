@@ -558,7 +558,7 @@ pack (part_global_t * g)
 {
   int                 mpiret;
   int                 retval;
-  long long           loclrs[3], glolrs[3];
+  long long           loclrs[4], glolrs[4];
   size_t              zz, numz;
   size_t              remainz, sendz, lostz;
   void              **hfound;
@@ -571,6 +571,8 @@ pack (part_global_t * g)
 
   P4EST_ASSERT (g->padata != NULL);
   P4EST_ASSERT (g->padata->elem_count == numz);
+
+  g->recevs = sc_array_new (sizeof (int));
 
   remainz = sendz = lostz = 0;
   cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
@@ -605,6 +607,7 @@ pack (part_global_t * g)
     else {
       /* message is added for this rank */
       P4EST_ASSERT (there == cps);
+      *(int *) sc_array_push (g->recevs) = there->rank;
       sc_array_init (&there->message, sizeof (pa_data_t));
       cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
       cps->rank = -1;
@@ -619,14 +622,20 @@ pack (part_global_t * g)
   }
   sc_mempool_free (g->psmem, cps);
 
+  /* TODO: can this call be overlapped with communication? */
+  sc_array_sort (g->recevs, sc_int_compare);
+
   loclrs[0] = (long long) remainz;
   loclrs[1] = (long long) sendz;
   loclrs[2] = (long long) lostz;
-  mpiret = sc_MPI_Allreduce (loclrs, glolrs, 3, sc_MPI_LONG_LONG_INT,
+  loclrs[3] = (long long) g->recevs->elem_count;
+  mpiret = sc_MPI_Allreduce (loclrs, glolrs, 4, sc_MPI_LONG_LONG_INT,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_INFOF ("Particles remain %lld sent %lld lost %lld\n",
-                      glolrs[0], glolrs[1], glolrs[2]);
+  P4EST_GLOBAL_INFOF ("Particles remain %lld sent %lld lost %lld"
+                      " avg peers %.3g\n",
+                      glolrs[0], glolrs[1], glolrs[2],
+                      glolrs[3] / (double) g->mpisize);
   P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
 
   /* TODO: update lost count globally for next stage/step */
@@ -655,9 +664,14 @@ wait_foreach (void **v, const void *u)
 static void
 wait (part_global_t * g)
 {
+  P4EST_ASSERT (g->psend != NULL);
+
   /* TODO: wait for sent messages to complete */
 
   sc_hash_foreach (g->psend, wait_foreach);
+
+  /* TODO: move this forward in program */
+  sc_array_destroy (g->recevs);
 }
 
 static void
