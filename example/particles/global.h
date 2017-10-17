@@ -66,6 +66,7 @@ typedef struct part_global
   sc_array_t         *padata;
   sc_array_t         *pfound;
   sc_array_t         *recevs;
+  sc_array_t         *sendes;
   sc_hash_t          *psend;
   sc_mempool_t       *psmem;
   part_init_density_t pidense;

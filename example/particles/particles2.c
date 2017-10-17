@@ -31,6 +31,7 @@
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
+#include <sc_notify.h>
 #include <sc_options.h>
 #include "global.h"
 
@@ -644,6 +645,17 @@ pack (part_global_t * g)
 static void
 send (part_global_t * g)
 {
+  int                 num_senders;
+  int                *irecvs, *isends;
+
+  /* TODO: move this into pack function? */
+  g->sendes = sc_array_new_count (sizeof (int), g->mpisize);
+  isends = (int *) g->sendes->array;
+  irecvs = (int *) g->recevs->array;
+
+  sc_notify (irecvs, (int) g->recevs->elem_count,
+             isends, &num_senders, g->mpicomm);
+
   /* TODO: post non-blocking send for messages */
 }
 
@@ -672,6 +684,7 @@ wait (part_global_t * g)
 
   /* TODO: move this forward in program */
   sc_array_destroy (g->recevs);
+  sc_array_destroy (g->sendes);
 }
 
 static void
