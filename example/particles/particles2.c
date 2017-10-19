@@ -91,6 +91,12 @@ typedef struct comm_prank
 }
 comm_prank_t;
 
+enum comm_tag_e
+{
+  COMM_TAG_ISEND = P4EST_COMM_TAG_LAST,
+  COMM_TAG_LAST
+};
+
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
 
 static const double planet_xyz[PART_PLANETS][3] = {
@@ -114,6 +120,14 @@ static const double *prk[4][2] = {
   {rk3b, rk3g},
   {rk4b, rk4g}
 };
+
+static void
+p4est_free_int (int **pptr)
+{
+  P4EST_ASSERT (pptr != NULL);
+  P4EST_FREE (*pptr);
+  *pptr = NULL;
+}
 
 static void
 sc_array_destroy_null (sc_array_t ** parr)
@@ -651,7 +665,7 @@ pack (part_global_t * g)
   }
   sc_mempool_free (g->psmem, cps);
 
-  /* TODO: can this call be overlapped with communication? */
+  /* TODO: can comm pattern reversal be overlapped with communication? */
   sc_array_sort (g->recevs, comm_prank_compare);
 
   loclrs[0] = (long long) remainz;
@@ -673,48 +687,132 @@ pack (part_global_t * g)
 static void
 send (part_global_t * g)
 {
+  int                 mpiret;
+  int                 retval;
   int                 i;
   int                 num_receivers;
   int                 num_senders;
   int                *irecvs, *isends;
-#if 0
+  void              **hfound;
   sc_array_t         *arr;
-  comm_psend_t       *psend;
-  comm_prank_t       *prank;
-#endif
+  comm_psend_t       *cps;
+  comm_prank_t       *trank;
 
   /* TODO: move some of this code into pack function? */
 
-  /* create temporary array of receiver ranks */
+  /* post non-blocking send for messages */
   num_receivers = (int) g->recevs->elem_count;
   P4EST_ASSERT (0 <= num_receivers && num_receivers < g->mpisize);
   irecvs = P4EST_ALLOC (int, num_receivers);
+  g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
   for (i = 0; i < num_receivers; ++i) {
-    irecvs[i] = ((comm_prank_t *) sc_array_index_int (g->recevs, i))->rank;
+    trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
+    irecvs[i] = trank->rank;
+    cps = trank->psend;
+    P4EST_ASSERT (trank->rank == cps->rank);
+    arr = &cps->message;
+    P4EST_ASSERT (arr->elem_count > 0);
+    P4EST_ASSERT (arr->elem_size == sizeof (pa_data_t));
+    mpiret = sc_MPI_Isend
+      (arr->array, arr->elem_count * arr->elem_size, sc_MPI_BYTE,
+       cps->rank, COMM_TAG_ISEND, g->mpicomm,
+       (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
+    SC_CHECK_MPI (mpiret);
   }
 
   /* reverse communication pattern */
-  g->sendes = sc_array_new_count (sizeof (int), g->mpisize);
-  isends = (int *) g->sendes->array;
+  isends = P4EST_ALLOC (int, g->mpisize);
   sc_notify (irecvs, num_receivers, isends, &num_senders, g->mpicomm);
   P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
-  sc_array_rewind (g->sendes, num_senders);
-  P4EST_FREE (irecvs);
-  irecvs = isends = NULL;
+  p4est_free_int (&irecvs);
+
+  /* allocate slots to receive data */
+  g->precv = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
+  g->sendes = sc_array_new_count (sizeof (comm_prank_t), num_senders);
+  for (i = 0; i < num_senders; ++i) {
+    cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
+    cps->rank = isends[i];
+    cps->message.elem_size = 0;
+    retval = sc_hash_insert_unique (g->precv, cps, &hfound);
+    P4EST_ASSERT (retval && hfound != NULL);
+    P4EST_ASSERT (*((comm_psend_t **) hfound) == cps);
+    trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
+    trank->rank = cps->rank;
+    trank->psend = cps;
+  }
+  p4est_free_int (&isends);
+
+  /* TODO: is the sendes array necessary? */
 }
 
 static void
 recv (part_global_t * g)
 {
+  int                 mpiret;
+  int                 retval;
   int                 i;
   int                 num_senders;
+  int                 source;
+  int                 bcount;
+  void              **hfound;
+  size_t              zcount;
+  sc_MPI_Status       status;
+  comm_psend_t        pcps, *cps;
 
+  /* loop to receive messages of unknown size */
+  P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
   num_senders = (int) g->sendes->elem_count;
-
-  /* TODO: loop to receive messages of unknown size */
   for (i = 0; i < num_senders; ++i) {
+    mpiret = sc_MPI_Probe (sc_MPI_ANY_SOURCE, COMM_TAG_ISEND,
+                           g->mpicomm, &status);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (status.MPI_TAG == COMM_TAG_ISEND);
+    mpiret = sc_MPI_Get_count (&status, sc_MPI_BYTE, &bcount);
+    P4EST_ASSERT (0 < bcount && bcount % sizeof (pa_data_t) == 0);
+    zcount = bcount / sizeof (pa_data_t);
+    source = status.MPI_SOURCE;
+    P4EST_ASSERT (0 <= source && source < g->mpisize);
+    P4EST_ASSERT (source != g->mpirank);
+    cps = &pcps;
+    cps->rank = source;
+    retval = sc_hash_lookup (g->precv, cps, &hfound);
+    P4EST_ASSERT (retval && hfound != NULL);
+    cps = *((comm_psend_t **) hfound);
+    P4EST_ASSERT (cps != NULL && cps->rank == source);
+    P4EST_ASSERT (cps->message.elem_size == 0);
+    sc_array_init_count (&cps->message, sizeof (pa_data_t), zcount);
+    mpiret = sc_MPI_Recv (cps->message.array, bcount, sc_MPI_BYTE, source,
+                          COMM_TAG_ISEND, g->mpicomm, sc_MPI_STATUS_IGNORE);
+    SC_CHECK_MPI (mpiret);
 
+    /* TODO: do something at this point already with received data? */
+  }
+}
+
+static void
+use (part_global_t * g)
+{
+  int                 num_senders;
+  int                 i;
+  comm_psend_t       *cps;
+  comm_prank_t       *trank;
+
+  /* go through received particles */
+
+  P4EST_ASSERT (g->precv != NULL);
+  P4EST_ASSERT (g->sendes != NULL);
+  num_senders = (int) g->sendes->elem_count;
+  for (i = 0; i < num_senders; ++i) {
+    trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
+    cps = trank->psend;
+    P4EST_ASSERT (cps->rank == trank->rank);
+    P4EST_ASSERT (cps->message.elem_size == sizeof (pa_data_t));
+    P4EST_ASSERT (cps->message.elem_count > 0);
+
+    /* TODO: do something with the data in cps->message */
+
+    sc_array_reset (&cps->message);
   }
 }
 
@@ -735,13 +833,26 @@ wait_foreach (void **v, const void *u)
 static void
 wait (part_global_t * g)
 {
+  int                 mpiret;
+  int                 num_receivers;
+
+  P4EST_ASSERT (g->recevs != NULL);
   P4EST_ASSERT (g->psend != NULL);
+  P4EST_ASSERT (g->send_req != NULL);
 
-  /* TODO: wait for sent messages to complete */
+  /* wait for sent messages to complete */
+  if ((num_receivers = (int) g->recevs->elem_count) > 0) {
+    mpiret = sc_MPI_Waitall
+      (num_receivers, (sc_MPI_Request *) sc_array_index (g->send_req, 0),
+       sc_MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+  }
 
+  /* TODO: this can be done without hash_foreach: use recevs */
+  sc_array_destroy_null (&g->send_req);
   sc_hash_foreach (g->psend, wait_foreach);
 
-  /* TODO: move this forward in program */
+  /* TODO: move these forward in program */
   sc_array_destroy_null (&g->recevs);
   sc_array_destroy_null (&g->sendes);
 }
@@ -826,14 +937,18 @@ sim (part_global_t * g)
       send (g);
 
       /* TODO: do something else here first */
+
       recv (g);
+      use (g);
 
       /* TODO: move wait farther down */
       wait (g);
 
-      /* TODO: move dealloc farther up */
+      /* TODO: move deallocation farther up */
       sc_hash_destroy (g->psend);
       g->psend = NULL;
+      sc_hash_destroy (g->precv);
+      g->precv = NULL;
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
       sc_array_destroy_null (&g->pfound);
