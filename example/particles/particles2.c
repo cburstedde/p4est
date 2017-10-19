@@ -75,13 +75,21 @@ typedef struct pa_found
 }
 pa_found_t;
 
-/** Data type for a process that we send messages to */
+/** Hash table entry for a process that we send messages to */
 typedef struct comm_psend
 {
   int                 rank;
-  sc_array_t          message;
+  sc_array_t          message;     /** Message data to send */
 }
 comm_psend_t;
+
+/** Array entry for a process that we send messages to */
+typedef struct comm_prank
+{
+  int                 rank;
+  comm_psend_t       *psend;        /**< Points to hash table entry */
+}
+comm_prank_t;
 
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
 
@@ -106,6 +114,22 @@ static const double *prk[4][2] = {
   {rk3b, rk3g},
   {rk4b, rk4g}
 };
+
+static void
+sc_array_destroy_null (sc_array_t ** parr)
+{
+  P4EST_ASSERT (parr != NULL);
+  P4EST_ASSERT (*parr != NULL);
+  sc_array_destroy (*parr);
+  *parr = NULL;
+}
+
+static int
+comm_prank_compare (const void *v1, const void *v2)
+{
+  return sc_int_compare (&((const comm_prank_t *) v1)->rank,
+                         &((const comm_prank_t *) v2)->rank);
+}
 
 static double
 gaussnorm (double sigma)
@@ -566,14 +590,16 @@ pack (part_global_t * g)
   pa_data_t          *pad;
   pa_found_t         *pfn;
   comm_psend_t       *cps, *there;
+  comm_prank_t       *trank;
 
   P4EST_ASSERT (g->pfound != NULL);
   numz = g->pfound->elem_count;
 
   P4EST_ASSERT (g->padata != NULL);
   P4EST_ASSERT (g->padata->elem_count == numz);
+  P4EST_ASSERT (g->psmem != NULL);
 
-  g->recevs = sc_array_new (sizeof (int));
+  g->recevs = sc_array_new (sizeof (comm_prank_t));
 
   remainz = sendz = lostz = 0;
   cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
@@ -608,7 +634,9 @@ pack (part_global_t * g)
     else {
       /* message is added for this rank */
       P4EST_ASSERT (there == cps);
-      *(int *) sc_array_push (g->recevs) = there->rank;
+      trank = (comm_prank_t *) sc_array_push (g->recevs);
+      trank->rank = there->rank;
+      trank->psend = there;
       sc_array_init (&there->message, sizeof (pa_data_t));
       cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
       cps->rank = -1;
@@ -624,7 +652,7 @@ pack (part_global_t * g)
   sc_mempool_free (g->psmem, cps);
 
   /* TODO: can this call be overlapped with communication? */
-  sc_array_sort (g->recevs, sc_int_compare);
+  sc_array_sort (g->recevs, comm_prank_compare);
 
   loclrs[0] = (long long) remainz;
   loclrs[1] = (long long) sendz;
@@ -645,18 +673,49 @@ pack (part_global_t * g)
 static void
 send (part_global_t * g)
 {
+  int                 i;
+  int                 num_receivers;
   int                 num_senders;
   int                *irecvs, *isends;
+#if 0
+  sc_array_t         *arr;
+  comm_psend_t       *psend;
+  comm_prank_t       *prank;
+#endif
 
-  /* TODO: move this into pack function? */
+  /* TODO: move some of this code into pack function? */
+
+  /* create temporary array of receiver ranks */
+  num_receivers = (int) g->recevs->elem_count;
+  P4EST_ASSERT (0 <= num_receivers && num_receivers < g->mpisize);
+  irecvs = P4EST_ALLOC (int, num_receivers);
+  for (i = 0; i < num_receivers; ++i) {
+    irecvs[i] = ((comm_prank_t *) sc_array_index_int (g->recevs, i))->rank;
+  }
+
+  /* reverse communication pattern */
   g->sendes = sc_array_new_count (sizeof (int), g->mpisize);
   isends = (int *) g->sendes->array;
-  irecvs = (int *) g->recevs->array;
+  sc_notify (irecvs, num_receivers, isends, &num_senders, g->mpicomm);
+  P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
+  sc_array_rewind (g->sendes, num_senders);
+  P4EST_FREE (irecvs);
+  irecvs = isends = NULL;
+}
 
-  sc_notify (irecvs, (int) g->recevs->elem_count,
-             isends, &num_senders, g->mpicomm);
+static void
+recv (part_global_t * g)
+{
+  int                 i;
+  int                 num_senders;
 
-  /* TODO: post non-blocking send for messages */
+  P4EST_ASSERT (g->sendes != NULL);
+  num_senders = (int) g->sendes->elem_count;
+
+  /* TODO: loop to receive messages of unknown size */
+  for (i = 0; i < num_senders; ++i) {
+
+  }
 }
 
 static int
@@ -683,8 +742,8 @@ wait (part_global_t * g)
   sc_hash_foreach (g->psend, wait_foreach);
 
   /* TODO: move this forward in program */
-  sc_array_destroy (g->recevs);
-  sc_array_destroy (g->sendes);
+  sc_array_destroy_null (&g->recevs);
+  sc_array_destroy_null (&g->sendes);
 }
 
 static void
@@ -766,11 +825,18 @@ sim (part_global_t * g)
       pack (g);
       send (g);
 
+      /* TODO: do something else here first */
+      recv (g);
+
       /* TODO: move wait farther down */
       wait (g);
+
+      /* TODO: move dealloc farther up */
       sc_hash_destroy (g->psend);
+      g->psend = NULL;
       sc_mempool_destroy (g->psmem);
-      sc_array_destroy (g->pfound);
+      g->psmem = NULL;
+      sc_array_destroy_null (&g->pfound);
 
       /* receive particles and run local search to count them per-quadrant */
 
@@ -847,11 +913,13 @@ run (part_global_t * g)
   sim (g);
 
   /*** destroy data ***/
-  sc_array_destroy (g->padata);
+  sc_array_destroy_null (&g->padata);
 
   /*** destroy mesh ***/
   p4est_destroy (g->p4est);
+  g->p4est = NULL;
   p4est_connectivity_destroy (g->conn);
+  g->conn = NULL;
 }
 
 static int
