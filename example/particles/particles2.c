@@ -611,8 +611,10 @@ pack (part_global_t * g)
 
   P4EST_ASSERT (g->padata != NULL);
   P4EST_ASSERT (g->padata->elem_count == numz);
+
   P4EST_ASSERT (g->psmem != NULL);
 
+  g->psend = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
   g->recevs = sc_array_new (sizeof (comm_prank_t));
 
   remainz = sendz = lostz = 0;
@@ -698,6 +700,8 @@ send (part_global_t * g)
   comm_psend_t       *cps;
   comm_prank_t       *trank;
 
+  P4EST_ASSERT (g->psmem != NULL);
+
   /* TODO: move some of this code into pack function? */
 
   /* post non-blocking send for messages */
@@ -741,8 +745,6 @@ send (part_global_t * g)
     trank->psend = cps;
   }
   p4est_free_int (&isends);
-
-  /* TODO: is the sendes array necessary? */
 }
 
 static void
@@ -793,15 +795,15 @@ recv (part_global_t * g)
 static void
 use (part_global_t * g)
 {
-  int                 num_senders;
   int                 i;
+  int                 num_senders;
   comm_psend_t       *cps;
   comm_prank_t       *trank;
 
-  /* go through received particles */
-
   P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
+
+  /* go through received particles */
   num_senders = (int) g->sendes->elem_count;
   for (i = 0; i < num_senders; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
@@ -814,31 +816,23 @@ use (part_global_t * g)
 
     sc_array_reset (&cps->message);
   }
-}
-
-static int
-wait_foreach (void **v, const void *u)
-{
-  comm_psend_t       *there;
-
-  P4EST_ASSERT (u == NULL);
-  there = *(comm_psend_t **) v;
-  P4EST_ASSERT (there->message.elem_size == sizeof (pa_data_t));
-  P4EST_ASSERT (there->message.elem_count > 0);
-
-  sc_array_reset (&there->message);
-  return 1;
+  sc_array_destroy_null (&g->sendes);
+  sc_hash_destroy (g->precv);
+  g->precv = NULL;
 }
 
 static void
 wait (part_global_t * g)
 {
   int                 mpiret;
+  int                 i;
   int                 num_receivers;
+  comm_psend_t       *cps;
+  comm_prank_t       *trank;
 
+  P4EST_ASSERT (g->send_req != NULL);
   P4EST_ASSERT (g->recevs != NULL);
   P4EST_ASSERT (g->psend != NULL);
-  P4EST_ASSERT (g->send_req != NULL);
 
   /* wait for sent messages to complete */
   if ((num_receivers = (int) g->recevs->elem_count) > 0) {
@@ -847,14 +841,20 @@ wait (part_global_t * g)
        sc_MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
-
-  /* TODO: this can be done without hash_foreach: use recevs */
   sc_array_destroy_null (&g->send_req);
-  sc_hash_foreach (g->psend, wait_foreach);
 
-  /* TODO: move these forward in program */
+  /* free send buffer */
+  for (i = 0; i < num_receivers; ++i) {
+    trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
+    cps = trank->psend;
+    P4EST_ASSERT (cps->rank == trank->rank);
+    P4EST_ASSERT (cps->message.elem_size == sizeof (pa_data_t));
+    P4EST_ASSERT (cps->message.elem_count > 0);
+    sc_array_reset (&cps->message);
+  }
   sc_array_destroy_null (&g->recevs);
-  sc_array_destroy_null (&g->sendes);
+  sc_hash_destroy (g->psend);
+  g->psend = NULL;
 }
 
 static void
@@ -932,25 +932,15 @@ sim (part_global_t * g)
 
       /* send to-be-received particles to receiver processes */
       g->psmem = sc_mempool_new (sizeof (comm_psend_t));
-      g->psend = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
       pack (g);
       send (g);
-
-      /* TODO: do something else here first */
-
       recv (g);
       use (g);
-
-      /* TODO: move wait farther down */
       wait (g);
-
-      /* TODO: move deallocation farther up */
-      sc_hash_destroy (g->psend);
-      g->psend = NULL;
-      sc_hash_destroy (g->precv);
-      g->precv = NULL;
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
+
+      /* TODO: move deallocation of pfound upward */
       sc_array_destroy_null (&g->pfound);
 
       /* receive particles and run local search to count them per-quadrant */
