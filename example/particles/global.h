@@ -68,6 +68,7 @@ typedef struct part_global
   sc_array_t         *recevs;
   sc_array_t         *sendes;
   sc_array_t         *send_req;
+  sc_array_t         *prebuf;
   sc_hash_t          *psend;
   sc_hash_t          *precv;
   sc_mempool_t       *psmem;

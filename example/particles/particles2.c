@@ -505,6 +505,15 @@ psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static const double *
+particle_lookfor (part_global_t * g, const pa_data_t * pad)
+{
+  P4EST_ASSERT (0 <= g->stage && g->stage < g->order);
+  P4EST_ASSERT (pad != NULL);
+
+  return g->stage + 1 < g->order ? pad->wo : pad->xv;
+}
+
 static int
 psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
                p4est_quadrant_t * quadrant, int pfirst, int plast,
@@ -519,8 +528,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
   pa_found_t         *pfn;
 
   /* access location of particle to be searched */
-  P4EST_ASSERT (pad != NULL);
-  x = g->stage + 1 < g->order ? pad->wo : pad->xv;
+  x = particle_lookfor (g, pad);
 
   /* due to roundoff we call this even for a local leaf */
   loopquad (g, which_tree, quadrant, lxyz, hxyz, dxyz);
@@ -600,8 +608,12 @@ pack (part_global_t * g)
   long long           loclrs[4], glolrs[4];
   size_t              zz, numz;
   size_t              remainz, sendz, lostz;
+  double             *msg;
+  const double       *x;
   void              **hfound;
+#if 0
   pa_data_t          *pad;
+#endif
   pa_found_t         *pfn;
   comm_psend_t       *cps, *there;
   comm_prank_t       *trank;
@@ -644,7 +656,10 @@ pack (part_global_t * g)
     there = *((comm_psend_t **) hfound);
     if (!retval) {
       /* message for this rank exists already */
+#if 0
       P4EST_ASSERT (there->message.elem_size == sizeof (pa_data_t));
+#endif
+      P4EST_ASSERT (there->message.elem_size == 3 * sizeof (double));
       P4EST_ASSERT (there->message.elem_count > 0);
     }
     else {
@@ -653,14 +668,24 @@ pack (part_global_t * g)
       trank = (comm_prank_t *) sc_array_push (g->recevs);
       trank->rank = there->rank;
       trank->psend = there;
+#if 0
       sc_array_init (&there->message, sizeof (pa_data_t));
+#endif
+      sc_array_init (&there->message, 3 * sizeof (double));
       cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
       cps->rank = -1;
     }
 
     /* add to message buffer */
+#if 0
+    /* we switched to sending three doubles only */
     pad = (pa_data_t *) sc_array_push (&there->message);
     memcpy (pad, sc_array_index (g->padata, zz), sizeof (pa_data_t));
+#endif
+    msg = (double *) sc_array_push (&there->message);
+    x = particle_lookfor
+      (g, (const pa_data_t *) sc_array_index (g->padata, zz));
+    memcpy (msg, x, 3 * sizeof (double));
 
     /* this particle is to be sent to another process */
     ++sendz;
@@ -690,7 +715,6 @@ static void
 send (part_global_t * g)
 {
   int                 mpiret;
-  int                 retval;
   int                 i;
   int                 num_receivers;
   int                 num_senders;
@@ -716,7 +740,10 @@ send (part_global_t * g)
     P4EST_ASSERT (trank->rank == cps->rank);
     arr = &cps->message;
     P4EST_ASSERT (arr->elem_count > 0);
+#if 0
     P4EST_ASSERT (arr->elem_size == sizeof (pa_data_t));
+#endif
+    P4EST_ASSERT (arr->elem_size == 3 * sizeof (double));
     mpiret = sc_MPI_Isend
       (arr->array, arr->elem_count * arr->elem_size, sc_MPI_BYTE,
        cps->rank, COMM_TAG_ISEND, g->mpicomm,
@@ -737,8 +764,9 @@ send (part_global_t * g)
     cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
     cps->rank = isends[i];
     cps->message.elem_size = 0;
-    retval = sc_hash_insert_unique (g->precv, cps, &hfound);
-    P4EST_ASSERT (retval && hfound != NULL);
+    P4EST_EXECUTE_ASSERT_TRUE
+      (sc_hash_insert_unique (g->precv, cps, &hfound));
+    P4EST_ASSERT (hfound != NULL);
     P4EST_ASSERT (*((comm_psend_t **) hfound) == cps);
     trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
     trank->rank = cps->rank;
@@ -751,17 +779,22 @@ static void
 recv (part_global_t * g)
 {
   int                 mpiret;
-  int                 retval;
   int                 i;
   int                 num_senders;
   int                 source;
   int                 bcount;
-  void              **hfound;
   size_t              zcount;
+  double             *msg;
+  void              **hfound;
   sc_MPI_Status       status;
   comm_psend_t        pcps, *cps;
 
-  /* loop to receive messages of unknown size */
+  /* receive particles into a flat array over all processes */
+  g->prebuf = sc_array_new (3 * sizeof (double));
+
+  /* TODO: do not go through precv here if not needed */
+
+  /* loop to receive messages of unknown length */
   P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
   num_senders = (int) g->sendes->elem_count;
@@ -771,20 +804,30 @@ recv (part_global_t * g)
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (status.MPI_TAG == COMM_TAG_ISEND);
     mpiret = sc_MPI_Get_count (&status, sc_MPI_BYTE, &bcount);
+#if 0
     P4EST_ASSERT (0 < bcount && bcount % sizeof (pa_data_t) == 0);
     zcount = bcount / sizeof (pa_data_t);
+#endif
+    P4EST_ASSERT (0 < bcount && bcount % (3 * sizeof (double)) == 0);
+    zcount = bcount / (3 * sizeof (double));
     source = status.MPI_SOURCE;
     P4EST_ASSERT (0 <= source && source < g->mpisize);
     P4EST_ASSERT (source != g->mpirank);
     cps = &pcps;
     cps->rank = source;
-    retval = sc_hash_lookup (g->precv, cps, &hfound);
-    P4EST_ASSERT (retval && hfound != NULL);
+    P4EST_EXECUTE_ASSERT_TRUE (sc_hash_lookup (g->precv, cps, &hfound));
+    P4EST_ASSERT (hfound != NULL);
     cps = *((comm_psend_t **) hfound);
     P4EST_ASSERT (cps != NULL && cps->rank == source);
     P4EST_ASSERT (cps->message.elem_size == 0);
+#if 0
     sc_array_init_count (&cps->message, sizeof (pa_data_t), zcount);
     mpiret = sc_MPI_Recv (cps->message.array, bcount, sc_MPI_BYTE, source,
+                          COMM_TAG_ISEND, g->mpicomm, sc_MPI_STATUS_IGNORE);
+#endif
+    cps->message.elem_size = 1;
+    msg = (double *) sc_array_push_count (g->prebuf, zcount);
+    mpiret = sc_MPI_Recv (msg, bcount, sc_MPI_BYTE, source,
                           COMM_TAG_ISEND, g->mpicomm, sc_MPI_STATUS_IGNORE);
     SC_CHECK_MPI (mpiret);
 
@@ -795,27 +838,33 @@ recv (part_global_t * g)
 static void
 use (part_global_t * g)
 {
+#ifdef P4EST_ENABLE_DEBUG
   int                 i;
   int                 num_senders;
   comm_psend_t       *cps;
   comm_prank_t       *trank;
+#endif
 
   P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
 
+  /* TODO: has this loop become unnecessary? */
+
   /* go through received particles */
+#ifdef P4EST_ENABLE_DEBUG
   num_senders = (int) g->sendes->elem_count;
   for (i = 0; i < num_senders; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
     cps = trank->psend;
     P4EST_ASSERT (cps->rank == trank->rank);
+#if 0
     P4EST_ASSERT (cps->message.elem_size == sizeof (pa_data_t));
     P4EST_ASSERT (cps->message.elem_count > 0);
-
-    /* TODO: do something with the data in cps->message */
-
     sc_array_reset (&cps->message);
+#endif
+    P4EST_ASSERT (cps->message.elem_size == 1);
   }
+#endif
   sc_array_destroy_null (&g->sendes);
   sc_hash_destroy (g->precv);
   g->precv = NULL;
@@ -848,7 +897,10 @@ wait (part_global_t * g)
     trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
     cps = trank->psend;
     P4EST_ASSERT (cps->rank == trank->rank);
+#if 0
     P4EST_ASSERT (cps->message.elem_size == sizeof (pa_data_t));
+#endif
+    P4EST_ASSERT (cps->message.elem_size == 3 * sizeof (double));
     P4EST_ASSERT (cps->message.elem_count > 0);
     sc_array_reset (&cps->message);
   }
@@ -937,10 +989,11 @@ sim (part_global_t * g)
       recv (g);
       use (g);
       wait (g);
+
+      /* TODO: move deallocation of these upward */
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
-
-      /* TODO: move deallocation of pfound upward */
+      sc_array_destroy_null (&g->prebuf);
       sc_array_destroy_null (&g->pfound);
 
       /* receive particles and run local search to count them per-quadrant */
