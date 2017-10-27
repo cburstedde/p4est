@@ -51,11 +51,15 @@ typedef struct pi_data
 pi_data_t;
 
 /** Data type for payload data inside each quadrant */
-typedef union qu_data
+typedef struct qu_data
 {
-  /** Offset into local array of all particles after this quadrant */
-  long long           lpend;
-  double              d;
+  union
+  {
+    /** Offset into local array of all particles after this quadrant */
+    long long           lpend;
+    double              d;
+  } u;
+  int                 premain, preceive;
 }
 qu_data_t;
 
@@ -239,7 +243,7 @@ initrp_refine (p4est_t * p4est,
   int                 ilem_particles;
 
   ilem_particles =
-    (int) round (qud->d * g->num_particles / g->global_density);
+    (int) round (qud->u.d * g->num_particles / g->global_density);
 
   return (double) ilem_particles > g->elem_particles;
 }
@@ -275,7 +279,7 @@ initrp (part_global_t * g)
         loopquad (g, tt, quad, lxyz, hxyz, dxyz);
 
         /***  integrate density over quadrant ***/
-        qud->d = d = integrate (g, lxyz, dxyz);
+        qud->u.d = d = integrate (g, lxyz, dxyz);
         ld += d;
 
         /*** maximum particle count and level ***/
@@ -368,8 +372,12 @@ create (part_global_t * g)
     for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
       quad = p4est_quadrant_array_index (&tree->quadrants, lq);
       qud = (qu_data_t *) quad->p.user_data;
+
+      /* TODO: maybe move this line elsewhere */
+      qud->premain = qud->preceive = 0;
+
       ilem_particles =
-        (int) round (qud->d / g->global_density * g->num_particles);
+        (int) round (qud->u.d / g->global_density * g->num_particles);
       pad = (pa_data_t *) sc_array_push_count (g->padata,
                                                (size_t) ilem_particles);
 
@@ -392,7 +400,7 @@ create (part_global_t * g)
         ++pad;
       }
       lpnum += (long long) ilem_particles;
-      qud->lpend = lpnum;
+      qud->u.lpend = lpnum;
     }
   }
   g->gplost = 0;
@@ -524,6 +532,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
   double              lxyz[3], hxyz[3], dxyz[3];
   const double       *x;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
+  qu_data_t          *qud;
   pa_data_t          *pad = (pa_data_t *) point;
   pa_found_t         *pfn;
 
@@ -547,8 +556,10 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
     /* first local match counts (due to roundoff there may be multiple) */
     if (pfn->pori < g->mpisize) {
+      /* bump counter of particles in this local quadrant */
       pfn->pori = (p4est_locidx_t) g->mpisize + local_num;
-      /* TODO: bump counter of particles in this local quadrant */
+      qud = (qu_data_t *) quadrant->p.user_data;
+      ++qud->premain;
 #if 0
       P4EST_LDEBUGF ("Found leaf particle %d local_num %d becomes %d\n",
                      (int) zp, local_num, pfn->pori);
@@ -835,6 +846,53 @@ recv (part_global_t * g)
   }
 }
 
+static int
+slocal_quad (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+             void *point)
+{
+  return 1;
+}
+
+static int
+slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
+              p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+              void *point)
+{
+  int                 i;
+  double              lxyz[3], hxyz[3], dxyz[3];
+  double             *x = (double *) point;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+  qu_data_t          *qud;
+
+  /* due to roundoff we call this even for a local leaf */
+  loopquad (g, which_tree, quadrant, lxyz, hxyz, dxyz);
+  for (i = 0; i < P4EST_DIM; ++i) {
+    if (!(lxyz[i] <= x[i] && x[i] <= hxyz[i])) {
+      /* the point is outside the search quadrant */
+      return 0;
+    }
+  }
+
+  if (local_num >= 0) {
+    /* quadrant is a local leaf */
+    /* first local match counts (due to roundoff there may be multiple) */
+    /* make sure this particle is not found again */
+    x[0] = -1.;
+    ++g->lfound;
+
+    /* count this particle in its target quadrant */
+    qud = (qu_data_t *) quadrant->p.user_data;
+    ++qud->preceive;
+
+    /* return value will have no effect */
+    return 0;
+  }
+
+  /* the leaf for this particle has not yet been found */
+  return 1;
+}
+
 static void
 use (part_global_t * g)
 {
@@ -845,8 +903,14 @@ use (part_global_t * g)
   comm_prank_t       *trank;
 #endif
 
+  P4EST_ASSERT (g->prebuf != NULL);
   P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
+
+  /* run local search to find particles sent to us */
+  g->lfound = 0;
+  p4est_search_local (g->p4est, 0, slocal_quad, slocal_point, g->prebuf);
+  P4EST_ASSERT (g->prebuf->elem_count == (size_t) g->lfound);
 
   /* TODO: has this loop become unnecessary? */
 
@@ -954,7 +1018,7 @@ sim (part_global_t * g)
           for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
             quad = p4est_quadrant_array_index (&tree->quadrants, lq);
             qud = (qu_data_t *) quad->p.user_data;
-            ilem_particles = (int) (qud->lpend - lpnum);
+            ilem_particles = (int) (qud->u.lpend - lpnum);
 
             /*** loop through particles in this element */
             for (i = 0; i < ilem_particles; ++i) {
@@ -963,7 +1027,7 @@ sim (part_global_t * g)
             }
 
             /* move to next quadrant */
-            lpnum = qud->lpend;
+            lpnum = qud->u.lpend;
           }
         }
       }

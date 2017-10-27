@@ -60,6 +60,7 @@ typedef struct part_global
 
   int                 bricklength;
   int                 stage;
+  int                 lfound;
   long long           gpnum, gplost;
   double              global_density;
   double              t;
