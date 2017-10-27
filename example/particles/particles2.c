@@ -1083,8 +1083,14 @@ run (part_global_t * g)
 static int
 usagerr (sc_options_t * opt, const char *msg)
 {
+  int                 mpiret;
+
   SC_GLOBAL_LERRORF ("Usage required: %s\n", msg);
   sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
+
   return 1;
 }
 
