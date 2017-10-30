@@ -62,6 +62,7 @@ typedef struct part_global
   int                 stage;
   int                 lfound;
   long long           gpnum, gplost;
+  long long           prevlp, prev2;
   double              global_density;
   double              t;
   sc_array_t         *padata;

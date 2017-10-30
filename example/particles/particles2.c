@@ -893,6 +893,109 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static int
+use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t * quadrants[])
+{
+  int                 i;
+  int                 remain, receive;
+  qu_data_t          *qud;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+
+  /* TODO: coarsen/refine on sum of still-there and to-be-there particles? */
+
+  /* sum expected particle count over siblings */
+  remain = receive = 0;
+  for (i = 0; i < P4EST_CHILDREN; ++i) {
+    qud = (qu_data_t *) quadrants[i]->p.user_data;
+    remain += qud->premain;
+    receive += qud->preceive;
+  }
+
+  return (double) (remain + receive) < .5 * g->elem_particles;
+}
+
+static int
+use_refine (p4est_t * p4est, p4est_topidx_t which_tree,
+            p4est_quadrant_t * quadrant)
+{
+  qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+
+  if ((double) (qud->premain + qud->preceive) > g->elem_particles) {
+    /* we are trying to refine, if yes we will go into the replace function */
+    g->prev2 = g->prevlp;
+    g->prevlp = qud->u.lpend;
+    return 1;
+  }
+  else {
+    /* maintain cumulative particle count for next quadrant */
+    g->prevlp = qud->u.lpend;
+    return 0;
+  }
+}
+
+static void
+use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
+             int num_outgoing, p4est_quadrant_t * outgoing[],
+             int num_incoming, p4est_quadrant_t * incoming[])
+{
+  int                 i;
+  int                 remain, receive;
+  int                 iloc;
+  long long           lpbeg, lpend;
+  qu_data_t          *qud;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+
+  if (num_outgoing == P4EST_CHILDREN) {
+    P4EST_ASSERT (num_incoming == 1);
+    P4EST_ASSERT (g->prevlp == -1 && g->prev2 == -1);
+    /* we are coarsening */
+
+    /* sum counts over siblings */
+    remain = receive = 0;
+    for (i = 0; i < P4EST_CHILDREN; ++i) {
+      qud = (qu_data_t *) outgoing[i]->p.user_data;
+      remain += qud->premain;
+      receive += qud->preceive;
+    }
+    lpend = qud->u.lpend;
+    /* TODO: assigning premain and preceive is not necessary */
+
+    /* assign members of parent */
+    qud = (qu_data_t *) incoming[0]->p.user_data;
+    qud->premain = remain;
+    qud->preceive = receive;
+    qud->u.lpend = lpend;
+  }
+  else {
+    P4EST_ASSERT (num_outgoing == 1);
+    P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
+    P4EST_ASSERT
+      (((qu_data_t *) outgoing[0]->p.user_data)->u.lpend == g->prevlp);
+    /* we are refining */
+    /* future values of premain and preceive are ignored */
+
+    /* recover window onto particles for the new family */
+    lpbeg = g->prev2;
+    lpend = g->prevlp;
+    iloc = (int) (lpend - lpbeg);
+    P4EST_ASSERT (iloc >= 0);
+
+    /* TODO: sort particles into the children */
+
+    /* reassign particles evenly to quadrants.
+       This is not respecting the onwership:
+       All we guarantee is they belong to the parent */
+    for (i = 0; i < P4EST_CHILDREN; ++i) {
+      qud = (qu_data_t *) incoming[i]->p.user_data;
+      qud->premain = qud->preceive = -1;
+      qud->u.lpend = lpbeg + (long long) ((iloc * (i + 1)) / P4EST_CHILDREN);
+    }
+    P4EST_ASSERT (qud->u.lpend == lpend);
+  }
+}
+
 static void
 use (part_global_t * g)
 {
@@ -912,8 +1015,22 @@ use (part_global_t * g)
   p4est_search_local (g->p4est, 0, slocal_quad, slocal_point, g->prebuf);
   P4EST_ASSERT (g->prebuf->elem_count == (size_t) g->lfound);
 
-  /* TODO: has this loop become unnecessary? */
+  /* coarsen the forest according to expected number of particles */
+  g->prevlp = g->prev2 = -1;
+  p4est_coarsen_ext (g->p4est, 0, 0, use_coarsen, NULL, use_replace);
 
+  /* refine the forest according to expected number of particles */
+  g->prevlp = g->prev2 = 0;
+  p4est_refine_ext (g->p4est, 0, g->maxlevel - g->bricklev,
+                    use_refine, NULL, use_replace);
+
+  /* TODO: if there is no coarsening or refinement we are done with loop */
+
+  /* TODO: partition the forest and send particles along with the partition */
+
+  /* TODO: think about partitioning and sending particles to future owner */
+
+  /* TODO: has this loop become unnecessary? */
   /* go through received particles */
 #ifdef P4EST_ENABLE_DEBUG
   num_senders = (int) g->sendes->elem_count;
