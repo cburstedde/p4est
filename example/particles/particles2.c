@@ -59,6 +59,8 @@ typedef struct qu_data
     long long           lpend;
     double              d;
   } u;
+
+  /** counts of local particles remaining on this quadrant and recieved ones */
   int                 premain, preceive;
 }
 qu_data_t;
@@ -510,6 +512,15 @@ psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
               p4est_quadrant_t * quadrant, int pfirst, int plast,
               p4est_locidx_t local_num, void *point)
 {
+#ifdef P4EST_ENABLE_DEBUG
+  qu_data_t          *qud;
+
+  if (local_num >= 0) {
+    qud = (qu_data_t *) quadrant->p.user_data;
+    P4EST_ASSERT (qud->premain == 0);
+    P4EST_ASSERT (qud->preceive == 0);
+  }
+#endif
   return 1;
 }
 
@@ -558,6 +569,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     if (pfn->pori < g->mpisize) {
       /* bump counter of particles in this local quadrant */
       pfn->pori = (p4est_locidx_t) g->mpisize + local_num;
+      *(p4est_locidx_t *) sc_array_push (g->iremain) = (p4est_locidx_t) zp;
       qud = (qu_data_t *) quadrant->p.user_data;
       ++qud->premain;
 #if 0
@@ -662,6 +674,7 @@ pack (part_global_t * g)
     /* access message structure */
     P4EST_ASSERT (0 <= pfn->pori && pfn->pori < g->mpisize);
     cps->rank = (int) pfn->pori;
+    P4EST_ASSERT (cps->rank != g->mpirank);
     retval = sc_hash_insert_unique (g->psend, cps, &hfound);
     P4EST_ASSERT (hfound != NULL);
     there = *((comm_psend_t **) hfound);
@@ -885,6 +898,8 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
     qud = (qu_data_t *) quadrant->p.user_data;
     ++qud->preceive;
 
+    /* TODO: record which particles are found in this quadrant */
+
     /* return value will have no effect */
     return 0;
   }
@@ -904,6 +919,15 @@ use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* TODO: coarsen/refine on sum of still-there and to-be-there particles? */
 
+  /* maybe this quadrant is just called for counting */
+  if (quadrants[1] == NULL) {
+    qud = (qu_data_t *) quadrants[0]->p.user_data;
+    P4EST_ASSERT (g->prevlp <= qud->u.lpend);
+    g->prevlp = qud->u.lpend;
+    g->irindex += qud->premain;
+    return 0;
+  }
+
   /* sum expected particle count over siblings */
   remain = receive = 0;
   for (i = 0; i < P4EST_CHILDREN; ++i) {
@@ -911,8 +935,19 @@ use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
     remain += qud->premain;
     receive += qud->preceive;
   }
-
-  return (double) (remain + receive) < .5 * g->elem_particles;
+  if ((double) (remain + receive) < .5 * g->elem_particles) {
+    /* we will coarsen and adjust prevlp and irindex in use_replace */
+    g->qremain = remain;
+    return 1;
+  }
+  else {
+    /* we will not coarsen and proceed with next quadrant */
+    /* TODO: change p4est to not call orphans in a non-coarsened family */
+    qud = (qu_data_t *) quadrants[0]->p.user_data;
+    g->prevlp = qud->u.lpend;
+    g->irindex += qud->premain;
+    return 0;
+  }
 }
 
 static int
@@ -922,16 +957,60 @@ use_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
 
+  /* TODO: adjust pori values in pfound for remaining particles */
+
   if ((double) (qud->premain + qud->preceive) > g->elem_particles) {
-    /* we are trying to refine, if yes we will go into the replace function */
+    /* we are trying to refine, we will possibly go into the replace function */
     g->prev2 = g->prevlp;
     g->prevlp = qud->u.lpend;
+    g->ir2 = g->irindex;
+    g->irindex += qud->premain;
     return 1;
   }
   else {
     /* maintain cumulative particle count for next quadrant */
     g->prevlp = qud->u.lpend;
+    g->irindex += qud->premain;
+
+    /* TODO: adjust pori values in pfound for remaining particles? */
+
     return 0;
+  }
+}
+
+static void
+split_by_coord (part_global_t * g, sc_array_t * in,
+                sc_array_t * out[2], int component,
+                const double lxyz[3], const double dxyz[3])
+{
+  p4est_locidx_t      ppos;
+  const double       *x;
+  size_t              zz, znum;
+  pa_data_t          *pad;
+
+  P4EST_ASSERT (g->padata != NULL);
+
+  P4EST_ASSERT (in != NULL);
+  P4EST_ASSERT (in->elem_size == sizeof (p4est_locidx_t));
+  P4EST_ASSERT (out != NULL);
+  P4EST_ASSERT (out[0] != NULL);
+  P4EST_ASSERT (out[0]->elem_size == sizeof (p4est_locidx_t));
+  sc_array_truncate (out[0]);
+  P4EST_ASSERT (out[1] != NULL);
+  P4EST_ASSERT (out[1]->elem_size == sizeof (p4est_locidx_t));
+  sc_array_truncate (out[1]);
+
+  znum = in->elem_count;
+  for (zz = 0; zz < znum; ++zz) {
+    ppos = *(p4est_locidx_t *) sc_array_index (in, zz);
+    pad = (pa_data_t *) sc_array_index (g->padata, ppos);
+    x = particle_lookfor (g, pad);
+    if (x[component] <= lxyz[component] + .5 * dxyz[component]) {
+      *(p4est_locidx_t *) sc_array_push (out[0]) = ppos;
+    }
+    else {
+      *(p4est_locidx_t *) sc_array_push (out[1]) = ppos;
+    }
   }
 }
 
@@ -940,18 +1019,28 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
              int num_outgoing, p4est_quadrant_t * outgoing[],
              int num_incoming, p4est_quadrant_t * incoming[])
 {
+#ifdef P4EST_ENABLE_DEBUG
   int                 i;
   int                 remain, receive;
+#endif
   int                 iloc;
+  int                 wx, wy, wz;
   long long           lpbeg, lpend;
-  qu_data_t          *qud;
+  double              lxyz[3], hxyz[3], dxyz[3];
+  sc_array_t          iview, *arr;
+  sc_array_t         *ilow, *ihigh, *ilh[2];
+  sc_array_t         *jlow, *jhigh, *jlh[2];
+  sc_array_t         *klow, *khigh, *klh[2];
+  p4est_locidx_t      irem, irbeg;
+  p4est_quadrant_t  **pchild;
+  qu_data_t          *qud, *qod;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
 
   if (num_outgoing == P4EST_CHILDREN) {
     P4EST_ASSERT (num_incoming == 1);
-    P4EST_ASSERT (g->prevlp == -1 && g->prev2 == -1);
     /* we are coarsening */
 
+#ifdef P4EST_ENABLE_DEBUG
     /* sum counts over siblings */
     remain = receive = 0;
     for (i = 0; i < P4EST_CHILDREN; ++i) {
@@ -959,14 +1048,15 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
       remain += qud->premain;
       receive += qud->preceive;
     }
-    lpend = qud->u.lpend;
-    /* TODO: assigning premain and preceive is not necessary */
-
-    /* assign members of parent */
+    P4EST_ASSERT (remain == g->qremain);
+#endif
+    qod = (qu_data_t *) outgoing[P4EST_CHILDREN - 1]->p.user_data;
     qud = (qu_data_t *) incoming[0]->p.user_data;
-    qud->premain = remain;
-    qud->preceive = receive;
-    qud->u.lpend = lpend;
+    g->prevlp = qud->u.lpend = qod->u.lpend;
+    qud->premain = g->qremain;
+
+    /* TODO: fix preceive */
+    qud->preceive = -1;
   }
   else {
     P4EST_ASSERT (num_outgoing == 1);
@@ -974,25 +1064,82 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT
       (((qu_data_t *) outgoing[0]->p.user_data)->u.lpend == g->prevlp);
     /* we are refining */
-    /* future values of premain and preceive are ignored */
 
     /* recover window onto particles for the new family */
     lpbeg = g->prev2;
     lpend = g->prevlp;
     iloc = (int) (lpend - lpbeg);
     P4EST_ASSERT (iloc >= 0);
+    irbeg = g->ir2;
+    irem = g->irindex - irbeg;
+    P4EST_ASSERT (irem >= 0);
+    sc_array_init_view (&iview, g->iremain, irbeg, irem);
 
-    /* TODO: sort particles into the children */
+    /* access parent quadrant */
+    loopquad (g, which_tree, outgoing[0], lxyz, hxyz, dxyz);
+    qod = (qu_data_t *) outgoing[0]->p.user_data;
+    P4EST_ASSERT (qod->premain == irem);
 
-    /* reassign particles evenly to quadrants.
-       This is not respecting the onwership:
-       All we guarantee is they belong to the parent */
-    for (i = 0; i < P4EST_CHILDREN; ++i) {
-      qud = (qu_data_t *) incoming[i]->p.user_data;
-      qud->premain = qud->preceive = -1;
-      qud->u.lpend = lpbeg + (long long) ((iloc * (i + 1)) / P4EST_CHILDREN);
+    /* sort remaining particles into the children */
+    irbeg = 0;
+    pchild = incoming;
+    ilow = sc_array_new (sizeof (p4est_locidx_t));
+    ihigh = sc_array_new (sizeof (p4est_locidx_t));
+    ilh[0] = ilow;
+    ilh[1] = ihigh;
+    jlow = sc_array_new (sizeof (p4est_locidx_t));
+    jhigh = sc_array_new (sizeof (p4est_locidx_t));
+    jlh[0] = jlow;
+    jlh[1] = jhigh;
+#ifdef P4_TO_P8
+    klow = sc_array_new (sizeof (p4est_locidx_t));
+    khigh = sc_array_new (sizeof (p4est_locidx_t));
+    klh[0] = klow;
+    klh[1] = khigh;
+    split_by_coord (g, &iview, klh, 2, lxyz, dxyz);
+    for (wz = 0; wz < 2; ++wz) {
+#if 0
     }
-    P4EST_ASSERT (qud->u.lpend == lpend);
+#endif
+#else
+    klh[0] = &iview;
+    klh[1] = klow = khigh = NULL;
+    wz = 0;
+#endif
+    split_by_coord (g, klh[wz], jlh, 1, lxyz, dxyz);
+    for (wy = 0; wy < 2; ++wy) {
+      split_by_coord (g, jlh[wy], ilh, 0, lxyz, dxyz);
+      for (wx = 0; wx < 2; ++wx) {
+        /* we have a set of particles for child 4 * wz + 2 * wy + wx */
+        arr = ilh[wx];
+        sc_array_init_view (&iview, g->iremain, irbeg, arr->elem_count);
+        sc_array_copy (&iview, arr);
+        qud = (qu_data_t *) (*pchild++)->p.user_data;
+        qud->u.lpend = qod->u.lpend;
+        irbeg += (qud->premain = (int) arr->elem_count);
+      }
+    }
+#ifdef P4_TO_P8
+#if 0
+    {
+#endif
+    }
+#endif
+    P4EST_ASSERT (irbeg == irem);
+    sc_array_destroy (ihigh);
+    sc_array_destroy (ilow);
+    sc_array_destroy (jhigh);
+    sc_array_destroy (jlow);
+#ifdef P4_TO_P8
+    sc_array_destroy (khigh);
+    sc_array_destroy (klow);
+#endif
+
+    /* TODO: currently the first child is assigned the whole padata of parent */
+    /* TODO: sort received particles into the children */
+
+    /* TODO: update pfound for the remaining particles? */
+    /* TODO: update pfound for the non-remaining particles? */
   }
 }
 
@@ -1016,13 +1163,19 @@ use (part_global_t * g)
   P4EST_ASSERT (g->prebuf->elem_count == (size_t) g->lfound);
 
   /* coarsen the forest according to expected number of particles */
-  g->prevlp = g->prev2 = -1;
-  p4est_coarsen_ext (g->p4est, 0, 0, use_coarsen, NULL, use_replace);
+  g->prevlp = 0;
+  g->irindex = 0;
+  p4est_coarsen_ext (g->p4est, 0, 1, use_coarsen, NULL, use_replace);
+  P4EST_ASSERT ((size_t) g->prevlp == g->padata->elem_count);
+  P4EST_ASSERT ((size_t) g->irindex == g->iremain->elem_count);
 
   /* refine the forest according to expected number of particles */
   g->prevlp = g->prev2 = 0;
+  g->irindex = g->ir2 = 0;
   p4est_refine_ext (g->p4est, 0, g->maxlevel - g->bricklev,
                     use_refine, NULL, use_replace);
+  P4EST_ASSERT ((size_t) g->prevlp == g->padata->elem_count);
+  P4EST_ASSERT ((size_t) g->irindex == g->iremain->elem_count);
 
   /* TODO: if there is no coarsening or refinement we are done with loop */
 
@@ -1161,6 +1314,7 @@ sim (part_global_t * g)
       g->pfound =
         sc_array_new_count (sizeof (pa_found_t), g->padata->elem_count);
       sc_array_memset (g->pfound, -1);
+      g->iremain = sc_array_new (sizeof (p4est_locidx_t));
       p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
 
       /* send to-be-received particles to receiver processes */
@@ -1174,6 +1328,7 @@ sim (part_global_t * g)
       /* TODO: move deallocation of these upward */
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
+      sc_array_destroy_null (&g->iremain);
       sc_array_destroy_null (&g->prebuf);
       sc_array_destroy_null (&g->pfound);
 

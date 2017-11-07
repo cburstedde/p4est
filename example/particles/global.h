@@ -65,8 +65,11 @@ typedef struct part_global
   long long           prevlp, prev2;
   double              global_density;
   double              t;
-  sc_array_t         *padata;
-  sc_array_t         *pfound;
+  sc_array_t         *padata;   /**< Numerical data of local particles */
+  sc_array_t         *pfound;   /**< Target rank for local particles */
+  sc_array_t         *iremain;  /**< Index into padata of stay-local particles */
+  p4est_locidx_t      irindex, ir2;     /**< Running index into iremain */
+  p4est_locidx_t      qremain;  /**< Particles remaining in quadrant */
   sc_array_t         *recevs;
   sc_array_t         *sendes;
   sc_array_t         *send_req;
