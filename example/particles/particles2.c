@@ -152,6 +152,15 @@ sc_array_index_begin (sc_array_t * arr)
 }
 
 static void
+sc_array_paste (sc_array_t * dest, sc_array_t * src)
+{
+  P4EST_ASSERT (dest->elem_size == src->elem_size);
+  P4EST_ASSERT (dest->elem_count == src->elem_count);
+
+  memcpy (dest->array, src->array, src->elem_count * src->elem_size);
+}
+
+static void
 sc_array_destroy_null (sc_array_t ** parr)
 {
   P4EST_ASSERT (parr != NULL);
@@ -1122,8 +1131,8 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     qod = (qu_data_t *) outgoing[P4EST_CHILDREN - 1]->p.user_data;
     qud = (qu_data_t *) incoming[0]->p.user_data;
     g->prevlp = qud->u.lpend = qod->u.lpend;
-    qud->premain = g->qremain;
-    qud->preceive = g->qreceive;
+    g->ireindex += (qud->premain = g->qremain);
+    g->irvindex += (qud->preceive = g->qreceive);
   }
   else {
     P4EST_ASSERT (num_outgoing == 1);
@@ -1183,7 +1192,7 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
         /* we have a set of particles for child 4 * wz + 2 * wy + wx */
         arr = ilh[wx];
         sc_array_init_view (&iview, g->iremain, ibeg, arr->elem_count);
-        sc_array_copy (&iview, arr);
+        sc_array_paste (&iview, arr);
         qud = (qu_data_t *) (*pchild++)->p.user_data;
         qud->u.lpend = qod->u.lpend;
         ibeg += (qud->premain = (p4est_locidx_t) arr->elem_count);
@@ -1228,7 +1237,7 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
         /* we have a set of particles for child 4 * wz + 2 * wy + wx */
         arr = ilh[wx];
         sc_array_init_view (&iview, g->ireceive, ibeg, arr->elem_count);
-        sc_array_copy (&iview, arr);
+        sc_array_paste (&iview, arr);
         qud = (qu_data_t *) (*pchild++)->p.user_data;
         P4EST_ASSERT (qud->u.lpend == qod->u.lpend);
         ibeg += (qud->preceive = (p4est_locidx_t) arr->elem_count);
@@ -1262,7 +1271,7 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 use (part_global_t * g)
 {
-#if defined P4EST_ENABLE_DEBUG || defined PART_SENDFULL
+#if defined P4EST_ENABLE_DEBUG
   int                 i;
   int                 num_senders;
   comm_psend_t       *cps;
@@ -1307,19 +1316,20 @@ use (part_global_t * g)
 
   /* TODO: has this loop become unnecessary? */
   /* go through received particles */
-#if defined P4EST_ENABLE_DEBUG || defined PART_SENDFULL
+#if defined P4EST_ENABLE_DEBUG
   num_senders = (int) g->sendes->elem_count;
   for (i = 0; i < num_senders; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
     cps = trank->psend;
     P4EST_ASSERT (cps->rank == trank->rank);
 #ifdef PART_SENDFULL
+#if 0
     P4EST_ASSERT (cps->message.elem_size == sizeof (pa_data_t));
     P4EST_ASSERT (cps->message.elem_count > 0);
     sc_array_reset (&cps->message);
-#else
-    P4EST_ASSERT (cps->message.elem_size == 1);
 #endif
+#endif
+    P4EST_ASSERT (cps->message.elem_size == 1);
   }
 #endif
   sc_array_destroy_null (&g->sendes);
