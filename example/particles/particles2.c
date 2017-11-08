@@ -875,6 +875,7 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
   int                 i;
   double              lxyz[3], hxyz[3], dxyz[3];
   double             *x = (double *) point;
+  size_t              zp;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
 
@@ -895,10 +896,10 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
     ++g->lfound;
 
     /* count this particle in its target quadrant */
+    zp = sc_array_position (g->prebuf, point);
+    *(p4est_locidx_t *) sc_array_push (g->ireceive) = (p4est_locidx_t) zp;
     qud = (qu_data_t *) quadrant->p.user_data;
     ++qud->preceive;
-
-    /* TODO: record which particles are found in this quadrant */
 
     /* return value will have no effect */
     return 0;
@@ -1158,6 +1159,7 @@ use (part_global_t * g)
   P4EST_ASSERT (g->prebuf != NULL);
   P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
+  P4EST_ASSERT (g->ireceive != NULL);
 
   /* run local search to find particles sent to us */
   g->lfound = 0;
@@ -1324,12 +1326,14 @@ sim (part_global_t * g)
       pack (g);
       send (g);
       recv (g);
+      g->ireceive = sc_array_new (sizeof (p4est_locidx_t));
       use (g);
       wait (g);
 
       /* TODO: move deallocation of these upward */
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
+      sc_array_destroy_null (&g->ireceive);
       sc_array_destroy_null (&g->iremain);
       sc_array_destroy_null (&g->prebuf);
       sc_array_destroy_null (&g->pfound);
