@@ -68,9 +68,11 @@ typedef struct part_global
   sc_array_t         *padata;   /**< Numerical data of local particles */
   sc_array_t         *pfound;   /**< Target rank for local particles */
   sc_array_t         *iremain;  /**< Index into padata of stay-local particles */
-  p4est_locidx_t      irindex, ir2;     /**< Running index into iremain */
+  p4est_locidx_t      ireindex, ire2;   /**< Running index into iremain */
   p4est_locidx_t      qremain;  /**< Particles remaining in quadrant */
   sc_array_t         *ireceive; /**< Index into particle receive buffer */
+  p4est_locidx_t      irvindex, irv2;   /**< Running index into ireceive */
+  p4est_locidx_t      qreceive; /**< Particles received for quadrant */
   sc_array_t         *recevs;
   sc_array_t         *sendes;
   sc_array_t         *send_req;
