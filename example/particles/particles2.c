@@ -563,7 +563,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
   if (local_num >= 0) {
     /* quadrant is a local leaf */
     P4EST_ASSERT (pfirst == g->mpirank && plast == g->mpirank);
-    zp = sc_array_position (g->padata, pad);
+    zp = sc_array_position (g->padata, point);
     pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
     /* first local match counts (due to roundoff there may be multiple) */
     if (pfn->pori < g->mpisize) {
@@ -588,7 +588,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     }
     /* found particle on a remote process */
     P4EST_ASSERT (plast != g->mpirank);
-    zp = sc_array_position (g->padata, pad);
+    zp = sc_array_position (g->padata, point);
     pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
     /* only count match if it has not been found locally or on lower rank */
     if (pfn->pori < 0 || (pfirst < pfn->pori && pfn->pori < g->mpisize)) {
@@ -1022,10 +1022,10 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #ifdef P4EST_ENABLE_DEBUG
   int                 i;
   int                 remain, receive;
-#endif
   int                 iloc;
-  int                 wx, wy, wz;
   long long           lpbeg, lpend;
+#endif
+  int                 wx, wy, wz;
   double              lxyz[3], hxyz[3], dxyz[3];
   sc_array_t          iview, *arr;
   sc_array_t         *ilow, *ihigh, *ilh[2];
@@ -1066,10 +1066,12 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     /* we are refining */
 
     /* recover window onto particles for the new family */
+#ifdef P4EST_ENABLE_DEBUG
     lpbeg = g->prev2;
     lpend = g->prevlp;
     iloc = (int) (lpend - lpbeg);
     P4EST_ASSERT (iloc >= 0);
+#endif
     irbeg = g->ir2;
     irem = g->irindex - irbeg;
     P4EST_ASSERT (irem >= 0);
