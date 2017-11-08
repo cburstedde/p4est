@@ -51,7 +51,7 @@ typedef struct part_global
   int                 bricklev;
   int                 order;
   int                 vtk;
-  int                 check;
+  int                 checkp;
   double              num_particles;
   double              elem_particles;
   double              deltat;
@@ -60,11 +60,10 @@ typedef struct part_global
 
   int                 bricklength;
   int                 stage;
-  int                 lfound;
-  long long           gpnum, gplost;
-  long long           prevlp, prev2;
   double              global_density;
   double              t;
+  p4est_locidx_t      lfound;   /**< DEPRECATED */
+  p4est_locidx_t      prevlp, prev2;
   sc_array_t         *padata;   /**< Numerical data of local particles */
   sc_array_t         *pfound;   /**< Target rank for local particles */
   sc_array_t         *iremain;  /**< Index into padata of stay-local particles */
@@ -82,6 +81,7 @@ typedef struct part_global
   sc_mempool_t       *psmem;
   part_init_density_t pidense;
   void               *piddata;
+  p4est_gloidx_t      gpnum, gplost;
 
   p4est_connectivity_t *conn;
   p4est_t            *p4est;

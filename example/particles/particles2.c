@@ -56,12 +56,12 @@ typedef struct qu_data
   union
   {
     /** Offset into local array of all particles after this quadrant */
-    long long           lpend;
+    p4est_locidx_t      lpend;
     double              d;
   } u;
 
   /** counts of local particles remaining on this quadrant and recieved ones */
-  int                 premain, preceive;
+  p4est_locidx_t      premain, preceive;
 }
 qu_data_t;
 
@@ -243,10 +243,10 @@ initrp_refine (p4est_t * p4est,
 {
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
-  int                 ilem_particles;
+  p4est_locidx_t      ilem_particles;
 
   ilem_particles =
-    (int) round (qud->u.d * g->num_particles / g->global_density);
+    (p4est_locidx_t) round (qud->u.d * g->num_particles / g->global_density);
 
   return (double) ilem_particles > g->elem_particles;
 }
@@ -256,13 +256,13 @@ initrp (part_global_t * g)
 {
   int                 mpiret;
   int                 cycle, max_cycles;
-  int                 ilem_particles;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              d, ld;
   double              refine_maxd, refine_maxl;
   double              loclp[2], glolp[2];
   p4est_topidx_t      tt;
   p4est_locidx_t      lq;
+  p4est_locidx_t      ilem_particles;
   p4est_gloidx_t      old_gnum, new_gnum;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
@@ -304,10 +304,10 @@ initrp (part_global_t * g)
     mpiret = sc_MPI_Allreduce (loclp, glolp, 2, sc_MPI_DOUBLE,
                                sc_MPI_MAX, g->mpicomm);
     SC_CHECK_MPI (mpiret);
-    ilem_particles =
-      (int) round (glolp[0] * g->num_particles / g->global_density);
-    P4EST_GLOBAL_INFOF ("Maximum particle number per quadrant %d"
-                        " and level %g\n", ilem_particles, glolp[1]);
+    ilem_particles = (p4est_locidx_t) round
+      (glolp[0] * g->num_particles / g->global_density);
+    P4EST_GLOBAL_INFOF ("Maximum particle number per quadrant %ld"
+                        " and level %g\n", (long) ilem_particles, glolp[1]);
 
     /*** we have computed the density, this may be enough ***/
     if (cycle >= max_cycles || (double) ilem_particles <= g->elem_particles) {
@@ -355,13 +355,13 @@ static void
 create (part_global_t * g)
 {
   int                 mpiret;
-  int                 i, j;
-  int                 ilem_particles;
-  long long           lpnum;
+  int                 j;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              r;
   p4est_topidx_t      tt;
-  p4est_locidx_t      lq;
+  p4est_locidx_t      lpnum, lq;
+  p4est_locidx_t      li, ilem_particles;
+  p4est_gloidx_t      gpnum;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
@@ -379,15 +379,14 @@ create (part_global_t * g)
       /* TODO: maybe move this line elsewhere */
       qud->premain = qud->preceive = 0;
 
-      ilem_particles =
-        (int) round (qud->u.d / g->global_density * g->num_particles);
-      pad = (pa_data_t *) sc_array_push_count (g->padata,
-                                               (size_t) ilem_particles);
+      ilem_particles = (p4est_locidx_t) round
+        (qud->u.d / g->global_density * g->num_particles);
+      pad = (pa_data_t *) sc_array_push_count (g->padata, ilem_particles);
 
       /*** generate required number of particles ***/
       loopquad (g, tt, quad, lxyz, hxyz, dxyz);
       srandquad (g, lxyz);
-      for (i = 0; i < ilem_particles; ++i) {
+      for (li = 0; li < ilem_particles; ++li) {
         for (j = 0; j < P4EST_DIM; ++j) {
           r = rand () / (double) RAND_MAX;
           pad->xv[j] = lxyz[j] + r * dxyz[j];
@@ -402,16 +401,17 @@ create (part_global_t * g)
 #endif
         ++pad;
       }
-      lpnum += (long long) ilem_particles;
+      lpnum += ilem_particles;
       qud->u.lpend = lpnum;
     }
   }
   g->gplost = 0;
-  mpiret = sc_MPI_Allreduce (&lpnum, &g->gpnum, 1, sc_MPI_LONG_LONG_INT,
+  gpnum = (p4est_gloidx_t) lpnum;
+  mpiret = sc_MPI_Allreduce (&gpnum, &g->gpnum, 1, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_INFOF ("Created %lld particles for %g\n",
-                      g->gpnum, g->num_particles);
+                      (long long) g->gpnum, g->num_particles);
 }
 
 static void
@@ -574,8 +574,8 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
       qud = (qu_data_t *) quadrant->p.user_data;
       ++qud->premain;
 #if 0
-      P4EST_LDEBUGF ("Found leaf particle %d local_num %d becomes %d\n",
-                     (int) zp, local_num, pfn->pori);
+      P4EST_LDEBUGF ("Found leaf particle %ld local_num %ld becomes %ld\n",
+                     (long) zp, (long) local_num, (long) pfn->pori);
 #endif
     }
     /* return value will have no effect */
@@ -629,12 +629,12 @@ pack (part_global_t * g)
 {
   int                 mpiret;
   int                 retval;
-  long long           loclrs[4], glolrs[4];
   size_t              zz, numz;
-  size_t              remainz, sendz, lostz;
   double             *msg;
   const double       *x;
   void              **hfound;
+  p4est_locidx_t      lremain, lsend, llost;
+  p4est_gloidx_t      loclrs[4], glolrs[4];
 #if 0
   pa_data_t          *pad;
 #endif
@@ -653,7 +653,7 @@ pack (part_global_t * g)
   g->psend = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
   g->recevs = sc_array_new (sizeof (comm_prank_t));
 
-  remainz = sendz = lostz = 0;
+  lremain = lsend = llost = 0;
   cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
   cps->rank = -1;
   for (zz = 0; zz < numz; ++zz) {
@@ -661,14 +661,14 @@ pack (part_global_t * g)
 
     /* treat those that leave the domain or stay local */
 #if 0
-    P4EST_LDEBUGF ("Pack for %d is %d\n", (int) zz, pfn->pori);
+    P4EST_LDEBUGF ("Pack for %ld is %ld\n", (long) zz, (long) pfn->pori);
 #endif
     if (pfn->pori < 0) {
-      ++lostz;
+      ++llost;
       continue;
     }
     if (pfn->pori >= g->mpisize) {
-      ++remainz;
+      ++lremain;
       continue;
     }
 
@@ -713,27 +713,27 @@ pack (part_global_t * g)
     memcpy (msg, x, 3 * sizeof (double));
 
     /* this particle is to be sent to another process */
-    ++sendz;
+    ++lsend;
   }
   sc_mempool_free (g->psmem, cps);
 
   /* TODO: can comm pattern reversal be overlapped with communication? */
   sc_array_sort (g->recevs, comm_prank_compare);
 
-  loclrs[0] = (long long) remainz;
-  loclrs[1] = (long long) sendz;
-  loclrs[2] = (long long) lostz;
-  loclrs[3] = (long long) g->recevs->elem_count;
-  mpiret = sc_MPI_Allreduce (loclrs, glolrs, 4, sc_MPI_LONG_LONG_INT,
+  loclrs[0] = (p4est_gloidx_t) lremain;
+  loclrs[1] = (p4est_gloidx_t) lsend;
+  loclrs[2] = (p4est_gloidx_t) llost;
+  loclrs[3] = (p4est_gloidx_t) g->recevs->elem_count;
+  mpiret = sc_MPI_Allreduce (loclrs, glolrs, 4, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_INFOF ("Particles remain %lld sent %lld lost %lld"
-                      " avg peers %.3g\n",
-                      glolrs[0], glolrs[1], glolrs[2],
+                      " avg peers %.3g\n", (long long) glolrs[0],
+                      (long long) glolrs[1], (long long) glolrs[2],
                       glolrs[3] / (double) g->mpisize);
   P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
-
-  /* TODO: update lost count globally for next stage/step */
+  g->gplost += glolrs[2];
+  g->gpnum -= glolrs[2];
 }
 
 static void
@@ -925,7 +925,7 @@ use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
              p4est_quadrant_t * quadrants[])
 {
   int                 i;
-  int                 remain, receive;
+  p4est_locidx_t      remain, receive;
   qu_data_t          *qud;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
 
@@ -1052,9 +1052,8 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 {
 #ifdef P4EST_ENABLE_DEBUG
   int                 i;
-  int                 remain, receive;
-  int                 iloc;
-  long long           lpbeg, lpend;
+  p4est_locidx_t      remain, receive;
+  p4est_locidx_t      lpbeg, lpend, iloc;
 #endif
   int                 wx, wy, wz;
   double              lxyz[3], hxyz[3], dxyz[3];
@@ -1098,7 +1097,7 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #ifdef P4EST_ENABLE_DEBUG
     lpbeg = g->prev2;
     lpend = g->prevlp;
-    iloc = (int) (lpend - lpbeg);
+    iloc = lpend - lpbeg;
     P4EST_ASSERT (iloc >= 0);
 #endif
 
@@ -1149,7 +1148,7 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
         sc_array_copy (&iview, arr);
         qud = (qu_data_t *) (*pchild++)->p.user_data;
         qud->u.lpend = qod->u.lpend;
-        ibeg += (qud->premain = (int) arr->elem_count);
+        ibeg += (qud->premain = (p4est_locidx_t) arr->elem_count);
       }
     }
 #ifdef P4_TO_P8
@@ -1194,7 +1193,7 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
         sc_array_copy (&iview, arr);
         qud = (qu_data_t *) (*pchild++)->p.user_data;
         P4EST_ASSERT (qud->u.lpend == qod->u.lpend);
-        ibeg += (qud->preceive = (int) arr->elem_count);
+        ibeg += (qud->preceive = (p4est_locidx_t) arr->elem_count);
       }
     }
 #ifdef P4_TO_P8
@@ -1329,12 +1328,11 @@ wait (part_global_t * g)
 static void
 sim (part_global_t * g)
 {
-  int                 i, k;
-  int                 ilem_particles;
-  long long           lpnum;
+  int                 k;
   double              t, h, f;
   p4est_topidx_t      tt;
-  p4est_locidx_t      lq;
+  p4est_locidx_t      lpnum, lq;
+  p4est_locidx_t      li, ilem_particles;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
@@ -1371,10 +1369,10 @@ sim (part_global_t * g)
           for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
             quad = p4est_quadrant_array_index (&tree->quadrants, lq);
             qud = (qu_data_t *) quad->p.user_data;
-            ilem_particles = (int) (qud->u.lpend - lpnum);
+            ilem_particles = qud->u.lpend - lpnum;
 
             /*** loop through particles in this element */
-            for (i = 0; i < ilem_particles; ++i) {
+            for (li = 0; li < ilem_particles; ++li) {
               /* one Runge Kutta stage for this particle */
               rkstage (g, pad++, h);
             }
@@ -1555,7 +1553,7 @@ main (int argc, char **argv)
   sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
                          1., "Final time of simulation");
   sc_options_add_switch (opt, 'V', "vtk", &g->vtk, "write VTK output");
-  sc_options_add_switch (opt, 'C', "check", &g->check,
+  sc_options_add_switch (opt, 'C', "checkp", &g->checkp,
                          "write checkpoint output");
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
                          "p" PARTICLES_48 ()"rticles",
