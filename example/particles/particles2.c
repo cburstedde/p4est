@@ -40,7 +40,7 @@
 #define PARTICLES_48() PARTICLES_xstr(P4EST_CHILDREN)
 
 /** Send full particle information in first message, comment out if not */
-/* #define PART_SENDFULL */
+#define PART_SENDFULL
 
 /** Number of plates in physical model */
 #define PART_PLANETS (2)
@@ -529,8 +529,8 @@ psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-static const double *
-particle_lookfor (part_global_t * g, const pa_data_t * pad)
+static double      *
+particle_lookfor (part_global_t * g, pa_data_t * pad)
 {
   P4EST_ASSERT (0 <= g->stage && g->stage < g->order);
   P4EST_ASSERT (pad != NULL);
@@ -546,7 +546,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
   int                 i;
   size_t              zp;
   double              lxyz[3], hxyz[3], dxyz[3];
-  const double       *x;
+  double             *x;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
   pa_data_t          *pad = (pa_data_t *) point;
@@ -644,7 +644,7 @@ pack (part_global_t * g)
   pa_data_t          *pad;
 #else
   double             *msg;
-  const double       *x;
+  double             *x;
 #endif
 
   P4EST_ASSERT (g->pfound != NULL);
@@ -714,8 +714,7 @@ pack (part_global_t * g)
     memcpy (pad, sc_array_index (g->padata, zz), sizeof (pa_data_t));
 #else
     msg = (double *) sc_array_push (&there->message);
-    x = particle_lookfor
-      (g, (const pa_data_t *) sc_array_index (g->padata, zz));
+    x = particle_lookfor (g, (pa_data_t *) sc_array_index (g->padata, zz));
     memcpy (msg, x, 3 * sizeof (double));
 #endif
 
@@ -818,14 +817,16 @@ recv (part_global_t * g)
   int                 bcount;
   size_t              zcount;
   void              **hfound;
+  void               *msg;
   sc_MPI_Status       status;
   comm_psend_t        pcps, *cps;
-#ifndef PART_SENDFULL
-  double             *msg;
-#endif
 
   /* receive particles into a flat array over all processes */
+#ifdef PART_SENDFULL
+  g->prebuf = sc_array_new (sizeof (pa_data_t));
+#else
   g->prebuf = sc_array_new (3 * sizeof (double));
+#endif
 
   /* TODO: do not go through precv here if not needed */
 
@@ -857,15 +858,16 @@ recv (part_global_t * g)
     P4EST_ASSERT (cps != NULL && cps->rank == source);
     P4EST_ASSERT (cps->message.elem_size == 0);
 #ifdef PART_SENDFULL
+#if 0
     sc_array_init_count (&cps->message, sizeof (pa_data_t), zcount);
     mpiret = sc_MPI_Recv (cps->message.array, bcount, sc_MPI_BYTE, source,
                           COMM_TAG_ISEND, g->mpicomm, sc_MPI_STATUS_IGNORE);
-#else
+#endif
+#endif
     cps->message.elem_size = 1;
-    msg = (double *) sc_array_push_count (g->prebuf, zcount);
+    msg = sc_array_push_count (g->prebuf, zcount);
     mpiret = sc_MPI_Recv (msg, bcount, sc_MPI_BYTE, source,
                           COMM_TAG_ISEND, g->mpicomm, sc_MPI_STATUS_IGNORE);
-#endif
     SC_CHECK_MPI (mpiret);
 
     /* TODO: do something at this point already with received data? */
@@ -895,10 +897,18 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   int                 i;
   double              lxyz[3], hxyz[3], dxyz[3];
-  double             *x = (double *) point;
   size_t              zp;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
+#ifdef PART_SENDFULL
+  double             *x;
+  pa_data_t          *pad = (pa_data_t *) point;
+
+  /* access location of particle to be searched */
+  x = particle_lookfor (g, pad);
+#else
+  double             *x = (double *) point;
+#endif
 
   /* due to roundoff we call this even for a local leaf */
   loopquad (g, which_tree, quadrant, lxyz, hxyz, dxyz);
@@ -1046,7 +1056,12 @@ split_by_coord (part_global_t * g, sc_array_t * in,
     }
     else {
       P4EST_ASSERT (mode == PA_MODE_RECEIVE);
+#ifdef PART_SENDFULL
+      pad = (pa_data_t *) sc_array_index (g->prebuf, ppos);
+      x = particle_lookfor (g, pad);
+#else
       x = (const double *) sc_array_index (g->prebuf, ppos);
+#endif
     }
     if (x[component] <= lxyz[component] + .5 * dxyz[component]) {
       *(p4est_locidx_t *) sc_array_push (out[0]) = ppos;
