@@ -151,6 +151,19 @@ sc_array_index_begin (sc_array_t * arr)
   return sc_array_index (arr, 0);
 }
 
+#ifdef P4EST_ENABLE_DEBUG
+
+static void        *
+sc_array_index_end (sc_array_t * arr)
+{
+  P4EST_ASSERT (arr != NULL);
+  P4EST_ASSERT (arr->array != NULL);
+
+  return arr->array + arr->elem_count * arr->elem_size;
+}
+
+#endif
+
 static void
 sc_array_paste (sc_array_t * dest, sc_array_t * src)
 {
@@ -753,8 +766,9 @@ pack (part_global_t * g)
   mpiret = sc_MPI_Allreduce (loclrs, glolrs, 4, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_INFOF ("Particles remain %lld sent %lld lost %lld"
-                      " avg peers %.3g\n", (long long) glolrs[0],
+  P4EST_GLOBAL_INFOF ("Particles %lld remain %lld sent %lld lost %lld"
+                      " avg peers %.3g\n", (long long) g->gpnum,
+                      (long long) glolrs[0],
                       (long long) glolrs[1], (long long) glolrs[2],
                       glolrs[3] / (double) g->mpisize);
   P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
@@ -808,6 +822,8 @@ send (part_global_t * g)
   sc_notify (irecvs, num_receivers, isends, &num_senders, g->mpicomm);
   P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
   p4est_free_int (&irecvs);
+
+  /* TODO: make notify transport the size of the message */
 
   /* allocate slots to receive data */
   g->precv = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
@@ -1271,6 +1287,17 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 use (part_global_t * g)
 {
+  sc_array_t         *newpa;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      newnum;
+  p4est_locidx_t      ppos;
+  p4est_locidx_t      lq, prev;
+  p4est_locidx_t      qboth, li;
+  p4est_locidx_t     *premain, *preceive;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  qu_data_t          *qud;
+  pa_data_t          *pad;
 #if defined P4EST_ENABLE_DEBUG
   int                 i;
   int                 num_senders;
@@ -1281,6 +1308,7 @@ use (part_global_t * g)
   P4EST_ASSERT (g->prebuf != NULL);
   P4EST_ASSERT (g->precv != NULL);
   P4EST_ASSERT (g->sendes != NULL);
+  P4EST_ASSERT (g->iremain != NULL);
   P4EST_ASSERT (g->ireceive != NULL);
 
   /* run local search to find particles sent to us */
@@ -1306,9 +1334,75 @@ use (part_global_t * g)
   P4EST_ASSERT ((size_t) g->ireindex == g->iremain->elem_count);
   P4EST_ASSERT ((size_t) g->irvindex == g->ireceive->elem_count);
 
-  /* TODO: if there is no coarsening or refinement we are done with loop */
+  /* TODO: coarsen and refine repeatedly if necessary */
 
-  /* TODO: regroup remaining and received particles after adaptation */
+#ifndef PART_SENDFULL
+#error "The following code is no longer compatible with SENDFULL"
+#endif
+
+  /* regroup remaining and received particles after adaptation */
+  premain = (p4est_locidx_t *) sc_array_index_begin (g->iremain);
+  preceive = (p4est_locidx_t *) sc_array_index_begin (g->ireceive);
+  newnum =
+    (p4est_locidx_t) (g->iremain->elem_count + g->ireceive->elem_count);
+
+  P4EST_LDEBUGF ("New local particle number %lld\n", (long long) newnum);
+
+  newpa = sc_array_new_count (sizeof (pa_data_t), newnum);
+  prev = 0;
+  for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (g->p4est->trees, tt);
+    for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+      quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+      qud = (qu_data_t *) quad->p.user_data;
+      qboth = qud->premain + qud->preceive;
+      if (qboth == 0) {
+        qud->u.lpend = prev;
+        qud->premain = qud->preceive = 0;
+        continue;
+      }
+      pad = (pa_data_t *) sc_array_index (newpa, prev);
+      prev += qboth;
+      P4EST_ASSERT (prev <= newnum);
+      for (li = 0; li < qud->premain; ++li) {
+        P4EST_ASSERT (premain != NULL);
+        P4EST_ASSERT
+          (premain <= (p4est_locidx_t *) sc_array_index_end (g->iremain));
+        ppos = *premain++;
+        memcpy (pad++, sc_array_index (g->padata, ppos), sizeof (pa_data_t));
+#ifdef P4EST_ENABLE_DEBUG
+        --qboth;
+#endif
+      }
+      for (li = 0; li < qud->preceive; ++li) {
+        P4EST_ASSERT (preceive != NULL);
+        P4EST_ASSERT
+          (preceive <= (p4est_locidx_t *) sc_array_index_end (g->ireceive));
+        ppos = *preceive++;
+        memcpy (pad++, sc_array_index (g->prebuf, ppos), sizeof (pa_data_t));
+#ifdef P4EST_ENABLE_DEBUG
+        --qboth;
+#endif
+      }
+      P4EST_ASSERT (qboth == 0);
+      qud->u.lpend = prev;
+      qud->premain = qud->preceive = 0;
+    }
+  }
+  P4EST_ASSERT (prev == newnum);
+  P4EST_ASSERT
+    (premain == NULL ||
+     premain == (p4est_locidx_t *) sc_array_index_end (g->iremain));
+  sc_array_destroy_null (&g->iremain);
+  P4EST_ASSERT
+    (preceive == NULL ||
+     preceive == (p4est_locidx_t *) sc_array_index_end (g->ireceive));
+  sc_array_destroy_null (&g->ireceive);
+  sc_array_destroy_null (&g->prebuf);
+  sc_array_destroy (g->padata);
+  g->padata = newpa;
+
+  /* TODO: update local/global counters and status variables */
 
   /* TODO: partition the forest and send particles along with the partition */
 
@@ -1454,6 +1548,8 @@ sim (part_global_t * g)
       pack (g);
       send (g);
       recv (g);
+
+      /* process remaining local and newly received particles */
       g->ireceive = sc_array_new (sizeof (p4est_locidx_t));
       use (g);
       wait (g);
@@ -1461,9 +1557,6 @@ sim (part_global_t * g)
       /* TODO: move deallocation of these upward */
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
-      sc_array_destroy_null (&g->ireceive);
-      sc_array_destroy_null (&g->iremain);
-      sc_array_destroy_null (&g->prebuf);
       sc_array_destroy_null (&g->pfound);
 
       /* receive particles and run local search to count them per-quadrant */
