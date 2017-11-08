@@ -140,6 +140,17 @@ p4est_free_int (int **pptr)
   *pptr = NULL;
 }
 
+static void        *
+sc_array_index_begin (sc_array_t * arr)
+{
+  P4EST_ASSERT (arr != NULL);
+
+  if (arr->elem_count == 0) {
+    return NULL;
+  }
+  return sc_array_index (arr, 0);
+}
+
 static void
 sc_array_destroy_null (sc_array_t ** parr)
 {
@@ -1322,6 +1333,7 @@ wait (part_global_t * g)
   int                 mpiret;
   int                 i;
   int                 num_receivers;
+  sc_MPI_Request     *reqs;
   comm_psend_t       *cps;
   comm_prank_t       *trank;
 
@@ -1330,12 +1342,10 @@ wait (part_global_t * g)
   P4EST_ASSERT (g->psend != NULL);
 
   /* wait for sent messages to complete */
-  if ((num_receivers = (int) g->recevs->elem_count) > 0) {
-    mpiret = sc_MPI_Waitall
-      (num_receivers, (sc_MPI_Request *) sc_array_index (g->send_req, 0),
-       sc_MPI_STATUSES_IGNORE);
-    SC_CHECK_MPI (mpiret);
-  }
+  num_receivers = (int) g->recevs->elem_count;
+  reqs = (sc_MPI_Request *) sc_array_index_begin (g->send_req),
+    mpiret = sc_MPI_Waitall (num_receivers, reqs, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
   sc_array_destroy_null (&g->send_req);
 
   /* free send buffer */
@@ -1391,9 +1401,9 @@ sim (part_global_t * g)
       /* do parallel transfer at end of each stage */
 
       /*** time step for local particles ***/
-      lpnum = 0;
-      if (g->padata->elem_count > 0) {
-        pad = (pa_data_t *) sc_array_index (g->padata, 0);
+      pad = (pa_data_t *) sc_array_index_begin (g->padata);
+      if (pad != NULL) {
+        lpnum = 0;
         for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree;
              ++tt) {
           tree = p4est_tree_array_index (g->p4est->trees, tt);
