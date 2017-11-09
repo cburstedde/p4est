@@ -692,13 +692,15 @@ pack (part_global_t * g)
   double             *x;
 #endif
 
+  P4EST_ASSERT (g->psmem != NULL);
   P4EST_ASSERT (g->pfound != NULL);
   numz = g->pfound->elem_count;
 
   P4EST_ASSERT (g->padata != NULL);
   P4EST_ASSERT (g->padata->elem_count == numz);
 
-  P4EST_ASSERT (g->psmem != NULL);
+  P4EST_ASSERT (g->psend == NULL);
+  P4EST_ASSERT (g->recevs == NULL);
 
   g->psend = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
   g->recevs = sc_array_new (sizeof (comm_prank_t));
@@ -802,6 +804,11 @@ send (part_global_t * g)
   comm_prank_t       *trank;
 
   P4EST_ASSERT (g->psmem != NULL);
+  P4EST_ASSERT (g->recevs != NULL);
+
+  P4EST_ASSERT (g->precv == NULL);
+  P4EST_ASSERT (g->send_req == NULL);
+  P4EST_ASSERT (g->sendes == NULL);
 
   /* TODO: move some of this code into pack function? */
 
@@ -869,6 +876,11 @@ recv (part_global_t * g)
   sc_MPI_Status       status;
   comm_psend_t        pcps, *cps;
 
+  P4EST_ASSERT (g->precv != NULL);
+  P4EST_ASSERT (g->sendes != NULL);
+
+  P4EST_ASSERT (g->prebuf == NULL);
+
   /* receive particles into a flat array over all processes */
 #ifdef PART_SENDFULL
   g->prebuf = sc_array_new (sizeof (pa_data_t));
@@ -879,8 +891,6 @@ recv (part_global_t * g)
   /* TODO: do not go through precv here if not needed */
 
   /* loop to receive messages of unknown length */
-  P4EST_ASSERT (g->precv != NULL);
-  P4EST_ASSERT (g->sendes != NULL);
   num_senders = (int) g->sendes->elem_count;
   for (i = 0; i < num_senders; ++i) {
     mpiret = sc_MPI_Probe (sc_MPI_ANY_SOURCE, COMM_TAG_ISEND,
