@@ -1000,9 +1000,21 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static void
+postsearch (part_global_t * g)
+{
+  P4EST_ASSERT (g->ireceive != NULL);
+  P4EST_ASSERT (g->prebuf != NULL);
+
+  /* run local search to find particles sent to us */
+  g->lfound = 0;
+  p4est_search_local (g->p4est, 0, slocal_quad, slocal_point, g->prebuf);
+  P4EST_ASSERT (g->prebuf->elem_count == (size_t) g->lfound);
+}
+
 static int
-use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t * quadrants[])
+adapt_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
+               p4est_quadrant_t * quadrants[])
 {
   int                 i;
   p4est_locidx_t      remain, receive;
@@ -1029,7 +1041,7 @@ use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
     receive += qud->preceive;
   }
   if ((double) (remain + receive) < .5 * g->elem_particles) {
-    /* we will coarsen and adjust prevlp, ireindex, irvindex in use_replace */
+    /* we will coarsen and adjust prevlp, ireindex, irvindex in adapt_replace */
     g->qremain = remain;
     g->qreceive = receive;
     return 1;
@@ -1046,8 +1058,8 @@ use_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-use_refine (p4est_t * p4est, p4est_topidx_t which_tree,
-            p4est_quadrant_t * quadrant)
+adapt_refine (p4est_t * p4est, p4est_topidx_t which_tree,
+              p4est_quadrant_t * quadrant)
 {
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
@@ -1093,8 +1105,6 @@ split_by_coord (part_global_t * g, sc_array_t * in,
   size_t              zz, znum;
   pa_data_t          *pad;
 
-  P4EST_ASSERT (g->padata != NULL);
-
   P4EST_ASSERT (in != NULL);
   P4EST_ASSERT (in->elem_size == sizeof (p4est_locidx_t));
   P4EST_ASSERT (out != NULL);
@@ -1131,9 +1141,9 @@ split_by_coord (part_global_t * g, sc_array_t * in,
 }
 
 static void
-use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
-             int num_outgoing, p4est_quadrant_t * outgoing[],
-             int num_incoming, p4est_quadrant_t * incoming[])
+adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
+               int num_outgoing, p4est_quadrant_t * outgoing[],
+               int num_incoming, p4est_quadrant_t * incoming[])
 {
 #ifdef P4EST_ENABLE_DEBUG
   int                 i;
@@ -1307,7 +1317,36 @@ use_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-use (part_global_t * g)
+adapt (part_global_t * g)
+{
+  P4EST_ASSERT (g->padata != NULL);
+  P4EST_ASSERT (g->prebuf != NULL);
+  P4EST_ASSERT (g->iremain != NULL);
+  P4EST_ASSERT (g->ireceive != NULL);
+
+  /* coarsen the forest according to expected number of particles */
+  g->prevlp = 0;
+  g->ireindex = g->irvindex = 0;
+  p4est_coarsen_ext (g->p4est, 0, 1, adapt_coarsen, NULL, adapt_replace);
+  P4EST_ASSERT ((size_t) g->prevlp == g->padata->elem_count);
+  P4EST_ASSERT ((size_t) g->ireindex == g->iremain->elem_count);
+  P4EST_ASSERT ((size_t) g->irvindex == g->ireceive->elem_count);
+
+  /* refine the forest according to expected number of particles */
+  g->prevlp = g->prev2 = 0;
+  g->ireindex = g->ire2 = 0;
+  g->irvindex = g->irv2 = 0;
+  p4est_refine_ext (g->p4est, 0, g->maxlevel - g->bricklev,
+                    adapt_refine, NULL, adapt_replace);
+  P4EST_ASSERT ((size_t) g->prevlp == g->padata->elem_count);
+  P4EST_ASSERT ((size_t) g->ireindex == g->iremain->elem_count);
+  P4EST_ASSERT ((size_t) g->irvindex == g->ireceive->elem_count);
+
+  /* TODO: coarsen and refine repeatedly if necessary */
+}
+
+static void
+regroup (part_global_t * g)
 {
   sc_array_t         *newpa;
   p4est_topidx_t      tt;
@@ -1320,43 +1359,11 @@ use (part_global_t * g)
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
   pa_data_t          *pad;
-#if defined P4EST_ENABLE_DEBUG
-  int                 i;
-  int                 num_senders;
-  comm_psend_t       *cps;
-  comm_prank_t       *trank;
-#endif
 
+  P4EST_ASSERT (g->padata != NULL);
   P4EST_ASSERT (g->prebuf != NULL);
-  P4EST_ASSERT (g->precv != NULL);
-  P4EST_ASSERT (g->sendes != NULL);
   P4EST_ASSERT (g->iremain != NULL);
   P4EST_ASSERT (g->ireceive != NULL);
-
-  /* run local search to find particles sent to us */
-  g->lfound = 0;
-  p4est_search_local (g->p4est, 0, slocal_quad, slocal_point, g->prebuf);
-  P4EST_ASSERT (g->prebuf->elem_count == (size_t) g->lfound);
-
-  /* coarsen the forest according to expected number of particles */
-  g->prevlp = 0;
-  g->ireindex = g->irvindex = 0;
-  p4est_coarsen_ext (g->p4est, 0, 1, use_coarsen, NULL, use_replace);
-  P4EST_ASSERT ((size_t) g->prevlp == g->padata->elem_count);
-  P4EST_ASSERT ((size_t) g->ireindex == g->iremain->elem_count);
-  P4EST_ASSERT ((size_t) g->irvindex == g->ireceive->elem_count);
-
-  /* refine the forest according to expected number of particles */
-  g->prevlp = g->prev2 = 0;
-  g->ireindex = g->ire2 = 0;
-  g->irvindex = g->irv2 = 0;
-  p4est_refine_ext (g->p4est, 0, g->maxlevel - g->bricklev,
-                    use_refine, NULL, use_replace);
-  P4EST_ASSERT ((size_t) g->prevlp == g->padata->elem_count);
-  P4EST_ASSERT ((size_t) g->ireindex == g->iremain->elem_count);
-  P4EST_ASSERT ((size_t) g->irvindex == g->ireceive->elem_count);
-
-  /* TODO: coarsen and refine repeatedly if necessary */
 
 #ifndef PART_SENDFULL
 #error "The following code is no longer compatible with SENDFULL"
@@ -1429,10 +1436,27 @@ use (part_global_t * g)
   /* TODO: partition the forest and send particles along with the partition */
 
   /* TODO: think about partitioning and sending particles to future owner? */
+}
+
+static void
+use (part_global_t * g)
+{
+#if defined P4EST_ENABLE_DEBUG
+  int                 i;
+  int                 num_senders;
+  comm_psend_t       *cps;
+  comm_prank_t       *trank;
+#endif
+
+  P4EST_ASSERT (g->precv != NULL);
+  P4EST_ASSERT (g->sendes != NULL);
 
   /* TODO: has this loop become unnecessary? */
   /* go through received particles */
 #if defined P4EST_ENABLE_DEBUG
+
+  /* TODO: this code can be moved up */
+
   num_senders = (int) g->sendes->elem_count;
   for (i = 0; i < num_senders; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->sendes, i);
@@ -1572,6 +1596,9 @@ sim (part_global_t * g)
 
       /* process remaining local and newly received particles */
       g->ireceive = sc_array_new (sizeof (p4est_locidx_t));
+      postsearch (g);
+      adapt (g);
+      regroup (g);
       use (g);
       wait (g);
 
