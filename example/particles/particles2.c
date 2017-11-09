@@ -404,8 +404,9 @@ create (part_global_t * g)
   qu_data_t          *qud;
   pa_data_t          *pad;
 
+  P4EST_ASSERT (g->padata != NULL);
+
   /*** iterate through local cells and populate with particles ***/
-  g->padata = sc_array_new (sizeof (pa_data_t));
   lpnum = 0;
   for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree; ++tt) {
     tree = p4est_tree_array_index (g->p4est->trees, tt);
@@ -638,6 +639,17 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* the process for this particle has not yet been found */
   return 1;
+}
+
+static void
+presearch (part_global_t * g)
+{
+  P4EST_ASSERT (g->padata != NULL);
+  P4EST_ASSERT (g->pfound != NULL);
+  P4EST_ASSERT (g->iremain != NULL);
+
+  sc_array_memset (g->pfound, -1);
+  p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
 }
 
 static unsigned
@@ -1539,9 +1551,8 @@ sim (part_global_t * g)
       /* p4est_search_all to find new local element or process for each particle */
       g->pfound =
         sc_array_new_count (sizeof (pa_found_t), g->padata->elem_count);
-      sc_array_memset (g->pfound, -1);
       g->iremain = sc_array_new (sizeof (p4est_locidx_t));
-      p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
+      presearch (g);
 
       /* send to-be-received particles to receiver processes */
       g->psmem = sc_mempool_new (sizeof (comm_psend_t));
@@ -1628,12 +1639,11 @@ run (part_global_t * g)
   initrp (g);
 
   /*** create particles ***/
+  g->padata = sc_array_new (sizeof (pa_data_t));
   create (g);
 
   /*** run simulation ***/
   sim (g);
-
-  /*** destroy data ***/
   sc_array_destroy_null (&g->padata);
 
   /*** destroy mesh ***/
@@ -1670,6 +1680,7 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
+  memset (g, 0, sizeof (*g));
   g->mpicomm = sc_MPI_COMM_WORLD;
   mpiret = sc_MPI_Comm_size (g->mpicomm, &g->mpisize);
   SC_CHECK_MPI (mpiret);
