@@ -3567,6 +3567,8 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
   SC_CHECK_MPI (mpiret);
 
   /* the first part of the header determines further offsets */
+  save_data_size = (size_t) ULONG_MAX;
+  save_num_procs = -1;
   conn = NULL;
   conn_bytes = 0;
   u64a = P4EST_ALLOC (uint64_t, headc + 1);
@@ -3620,6 +3622,8 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
       conn_bytes = (size_t) u64a[headc + 0];
     }
   }
+  P4EST_ASSERT (save_num_procs >= 0);
+  P4EST_ASSERT (save_data_size != (size_t) ULONG_MAX);
   *connectivity = conn;
   comb_size = qbuf_size + save_data_size;
   file_offset = conn_bytes + headc * sizeof (uint64_t);
