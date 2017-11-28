@@ -627,6 +627,14 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
   if (full_tree[0] && full_tree[1]) {
     int                 m = 0, n, k, insul;
 
+    if (q->level == 0) {
+      for (m = 0; m < P4EST_INSUL; m++) {
+        if (tree_contact[m]) {
+          return 0;
+        }
+      }
+      return 1;
+    }
     k = (q->x == 0) ? 0 : (q->x == P4EST_ROOT_LEN - qh) ? 2 : 1;
     n = (q->y == 0) ? 0 : (q->y == P4EST_ROOT_LEN - qh) ? 2 : 1;
 #ifdef P4_TO_P8
