@@ -2470,6 +2470,9 @@ p4est_connectivity_new_byname (const char *name)
   else if (!strcmp (name, "unit")) {
     return p8est_connectivity_new_unitcube ();
   }
+  else if (!strcmp (name, "edge")) {
+    return p8est_connectivity_new_edge ();
+  }
 #endif
   return NULL;
 }

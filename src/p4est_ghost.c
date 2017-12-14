@@ -1433,7 +1433,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
   int                 num_peers, peer, peer_proc;
   int                 mpiret;
   int                 maxed, failed;
-  int                 full_tree[2], tree_contact[2 * P4EST_DIM];
+  int                 full_tree[2], tree_contact[P4EST_INSUL];
   int                 urg[P4EST_DIM - 1];
   size_t              pz, zz;
   p4est_topidx_t      first_local_tree = p4est->first_local_tree;

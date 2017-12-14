@@ -757,7 +757,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 {
   const p4est_quadrant_t *first_pos, *next_pos;
   p4est_connectivity_t *conn = p4est->connectivity;
-  int                 face;
+  int                 face, i;
 
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
@@ -781,11 +781,155 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
                   ));
 
   if (tree_contact != NULL) {
+    for (i = 0; i < P4EST_INSUL; i++) {
+      tree_contact[i] = 0;
+    }
     for (face = 0; face < P4EST_FACES; ++face) {
-      tree_contact[face] =
-        (conn->tree_to_tree[P4EST_FACES * which_tree + face] != which_tree
-         || (int) conn->tree_to_face[P4EST_FACES * which_tree + face] !=
-         face);
+      int                 dir = face / 2;
+      int                 n = 1, k = 1;
+#ifdef P4_TO_P8
+      int                 m = 1;
+#else
+      int                 m = 0;
+#endif
+      int                 t, s, u;
+
+      switch (dir) {
+      case 0:
+        k = 2 * (face - 0);
+        break;
+      case 1:
+        n = 2 * (face - 2);
+        break;
+      case 2:
+        m = 2 * (face - 4);
+        break;
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+      P4EST_ASSERT (0 <= k && k < 3);
+      P4EST_ASSERT (0 <= m && m < 3);
+      P4EST_ASSERT (0 <= n && n < 3);
+      t = (conn->tree_to_tree[P4EST_FACES * which_tree + face] != which_tree
+           || (int) conn->tree_to_face[P4EST_FACES * which_tree + face] !=
+           face);
+      if (t) {
+        switch (dir) {
+        case 0:
+          P4EST_ASSERT (0 <= k && k < 3);
+          P4EST_ASSERT (0 <= m && m < 3);
+          P4EST_ASSERT (0 <= n && n < 3);
+          for (s = 0; s < P4EST_INSUL / 3; s++) {
+            tree_contact[3 * s + k] = t;
+          }
+          break;
+        case 1:
+          P4EST_ASSERT (0 <= k && k < 3);
+          P4EST_ASSERT (0 <= m && m < 3);
+          P4EST_ASSERT (0 <= n && n < 3);
+          for (u = 0; u < P4EST_INSUL / 9; u++) {
+            for (s = 0; s < 3; s++) {
+              tree_contact[9 * u + 3 * n + s] = t;
+            }
+          }
+          break;
+        case 2:
+          P4EST_ASSERT (0 <= k && k < 3);
+          P4EST_ASSERT (0 <= m && m < 3);
+          P4EST_ASSERT (0 <= n && n < 3);
+          for (s = 0; s < 9; s++) {
+            tree_contact[9 * m + s] = t;
+          }
+          break;
+        default:
+          SC_ABORT_NOT_REACHED ();
+        }
+      }
+    }
+
+#ifdef P4_TO_P8
+    if (conn->tree_to_edge) {
+      int                 edge;
+
+      for (edge = 0; edge < P8EST_EDGES; edge++) {
+        p4est_topidx_t      e =
+          conn->tree_to_edge[P8EST_EDGES * which_tree + edge];
+        p4est_topidx_t      et;
+
+        if (e < 0) {
+          continue;
+        }
+        for (et = conn->ett_offset[e]; et < conn->ett_offset[e + 1]; et++) {
+          p4est_topidx_t      nt = conn->edge_to_tree[et];
+          int8_t              ne = conn->edge_to_edge[et] % P8EST_EDGES;
+
+          if (nt != which_tree || ne != edge) {
+            int                 dir = edge / 4;
+            int                 m, n, k;
+            switch (dir) {
+            case 0:
+              n = 2 * (edge % 2);
+              m = 2 * (edge / 2);
+              P4EST_ASSERT (0 <= m && m < 3);
+              P4EST_ASSERT (0 <= n && n < 3);
+              tree_contact[9 * m + 3 * n + 0] = 1;
+              tree_contact[9 * m + 3 * n + 1] = 1;
+              tree_contact[9 * m + 3 * n + 2] = 1;
+              break;
+            case 1:
+              k = 2 * ((edge - 4) % 2);
+              m = 2 * ((edge - 4) / 2);
+              P4EST_ASSERT (0 <= k && k < 3);
+              P4EST_ASSERT (0 <= m && m < 3);
+              tree_contact[9 * m + 3 * 0 + k] = 1;
+              tree_contact[9 * m + 3 * 1 + k] = 1;
+              tree_contact[9 * m + 3 * 2 + k] = 1;
+              break;
+            case 2:
+              k = 2 * ((edge - 8) % 2);
+              n = 2 * ((edge - 8) / 2);
+              P4EST_ASSERT (0 <= k && k < 3);
+              P4EST_ASSERT (0 <= n && n < 3);
+              tree_contact[9 * 0 + 3 * n + k] = 1;
+              tree_contact[9 * 1 + 3 * n + k] = 1;
+              tree_contact[9 * 2 + 3 * n + k] = 1;
+              break;
+            default:
+              SC_ABORT_NOT_REACHED ();
+            }
+            break;
+          }
+        }
+      }
+    }
+#endif
+    if (conn->tree_to_corner) {
+      int                 corner;
+
+      for (corner = 0; corner < P4EST_CHILDREN; corner++) {
+        p4est_topidx_t      c =
+          conn->tree_to_corner[P4EST_CHILDREN * which_tree + corner];
+        p4est_topidx_t      ct;
+
+        if (c < 0) {
+          continue;
+        }
+        for (ct = conn->ctt_offset[c]; ct < conn->ctt_offset[c + 1]; ct++) {
+          p4est_topidx_t      nt = conn->corner_to_tree[ct];
+          int8_t              nc = conn->corner_to_corner[ct];
+          if (nt != which_tree || nc != corner) {
+            int                 insul = 2 * (corner & 1);
+
+            insul += 6 * ((corner & 2) >> 1);
+#ifdef P4_TO_P8
+            insul += 18 * ((corner & 4) >> 2);
+#endif
+            P4EST_ASSERT (0 <= insul && insul < P4EST_INSUL);
+            tree_contact[insul] = 1;
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -808,16 +952,25 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
   p4est_quadrant_t    n0, n1;
 
   if (full_tree[0] && full_tree[1]) {
-    /* need only to consider boundary quadrants */
-    if (!((tree_contact[0] && q->x == 0) ||
-          (tree_contact[1] && q->x == P4EST_ROOT_LEN - qh) ||
-          (tree_contact[2] && q->y == 0) ||
-          (tree_contact[3] && q->y == P4EST_ROOT_LEN - qh) ||
+    int                 m = 0, n, k, insul;
+
+    if (q->level == 0) {
+      for (m = 0; m < P4EST_INSUL; m++) {
+        if (tree_contact[m]) {
+          return 0;
+        }
+      }
+      return 1;
+    }
+    k = (q->x == 0) ? 0 : (q->x == P4EST_ROOT_LEN - qh) ? 2 : 1;
+    n = (q->y == 0) ? 0 : (q->y == P4EST_ROOT_LEN - qh) ? 2 : 1;
 #ifdef P4_TO_P8
-          (tree_contact[4] && q->z == 0) ||
-          (tree_contact[5] && q->z == P4EST_ROOT_LEN - qh) ||
+    m = (q->z == 0) ? 0 : (q->z == P4EST_ROOT_LEN - qh) ? 2 : 1;
 #endif
-          0)) {
+
+    insul = 9 * m + 3 * n + k;
+    P4EST_ASSERT (0 <= insul && insul < P4EST_INSUL);
+    if (!tree_contact[insul]) {
       return 1;
     }
   }

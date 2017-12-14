@@ -628,7 +628,7 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
   ntests = 4;
 #else
-  ntests = 4;
+  ntests = 5;
 #endif
 
   /* initialize MPI */
@@ -671,6 +671,9 @@ main (int argc, char **argv)
       break;
     case 3:
       conn = p8est_connectivity_new_shell ();
+      break;
+    case 4:
+      conn = p8est_connectivity_new_edge ();
       break;
 #endif
     default:

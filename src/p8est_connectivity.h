@@ -582,6 +582,11 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
+/** Create a connectivity structure that is two cubes connected by a single
+ * edge.
+ */
+p8est_connectivity_t *p8est_connectivity_new_edge (void);
+
 /** Create connectivity structure from predefined catalogue.
  * \param [in]  name            Invokes connectivity_new_* function.
  *              brick235        brick (2, 3, 5, 0, 0, 0)
@@ -593,6 +598,7 @@ p8est_connectivity_t *p8est_connectivity_new_sphere (void);
  *              twocubes        twocubes
  *              twowrap         twowrap
  *              unit            unitcube
+ *              edge            edge
  * \return      An initialized connectivity if name is defined, NULL else.
  */
 p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);

@@ -175,7 +175,8 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree in question must be partially owned.
  * \param [out] full_tree[2]    Full ownership of beginning and end of tree.
- * \param [out] tree_contact[6] True if there are neighbors across the face.
+ * \param [out] tree_contact[27]    True if there are neighboring trees in any
+ *                                  insulation layer positions
  * \param [out] firstq          Smallest possible first quadrant on this core.
  * \param [out] nextq           Smallest possible first quadrant on next core.
  *                          Any of tree_contact, firstq and nextq may be NULL.

@@ -856,6 +856,68 @@ p8est_connectivity_new_sphere (void)
                                       NULL, &ctt_offset, NULL, NULL);
 }
 
+p8est_connectivity_t *
+p8est_connectivity_new_edge (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 14;
+  const p4est_topidx_t num_trees = 2;
+  const p4est_topidx_t num_corners = 2;
+  const p4est_topidx_t num_edges = 1;
+  const double        vertices[14 * 3] = {
+    -1, -1, -1,
+     1, -1, -1,
+    -1,  1, -1,
+     1,  1, -1,
+    -1, -1,  1,
+     1, -1,  1,
+    -1,  1,  1,
+     1,  1,  1,
+     3,  1, -1,
+     1,  3, -1,
+     3,  3, -1,
+     3,  1,  1,
+     1,  3,  1,
+     3,  3,  1,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 8] = {
+    0,  1,  2,  3,  4,  5,  6,  7,
+    7, 11,  3,  8, 12, 13,  9, 10,
+  };
+  const p4est_topidx_t tree_to_tree[2 * 6] = {
+    0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1,
+  };
+  const int8_t tree_to_face[2 * 6] = {
+    0, 1, 2, 3, 4, 5,
+    0, 1, 2, 3, 4, 5,
+  };
+  const p4est_topidx_t tree_to_edge[2 * 12] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,
+    -1, -1, -1, -1,  0, -1, -1, -1, -1, -1, -1, -1,
+  };
+  const p4est_topidx_t ett_offset[2] = {0, 2};
+  const p4est_topidx_t edge_to_tree[2] = {0, 1};
+  const int8_t edge_to_edge[2] = {11, 16};
+  const p4est_topidx_t tree_to_corner[2 * 8] = {
+    -1, -1, -1,  0, -1, -1, -1,  1,
+     1, -1,  0, -1, -1, -1, -1, -1,
+  };
+  const p4est_topidx_t ctt_offset[3] = {0, 2, 4};
+  const p4est_topidx_t corner_to_tree[4] = {0, 1, 0, 1};
+  const int8_t corner_to_corner[4] = {3, 2, 7, 0};
+/* *INDENT-ON* */
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees,
+                                      num_edges, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_edge, ett_offset,
+                                      edge_to_tree, edge_to_edge,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
+}
+
 static int
 p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
                                     p4est_topidx_t itree, int iedge,
