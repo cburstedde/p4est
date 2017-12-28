@@ -801,8 +801,9 @@ send (part_global_t * g)
   int                 i;
   int                 num_receivers;
   int                 num_senders;
+  int                 msglen;
   void              **hfound;
-  sc_array_t         *notif;
+  sc_array_t         *notif, *payl;
   sc_array_t         *arr;
   comm_psend_t       *cps;
   comm_prank_t       *trank;
@@ -820,12 +821,13 @@ send (part_global_t * g)
   num_receivers = (int) g->recevs->elem_count;
   P4EST_ASSERT (0 <= num_receivers && num_receivers < g->mpisize);
   notif = sc_array_new_count (sizeof (int), num_receivers);
+  payl = sc_array_new_count (sizeof (int), num_receivers);
   g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
   for (i = 0; i < num_receivers; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
-    *(int *) sc_array_index_int (notif, i) = trank->rank;
     cps = trank->psend;
     P4EST_ASSERT (trank->rank == cps->rank);
+    *(int *) sc_array_index_int (notif, i) = trank->rank;
     arr = &cps->message;
     P4EST_ASSERT (arr->elem_count > 0);
 #ifdef PART_SENDFULL
@@ -833,19 +835,21 @@ send (part_global_t * g)
 #else
     P4EST_ASSERT (arr->elem_size == 3 * sizeof (double));
 #endif
+    msglen = (int) (arr->elem_count * arr->elem_size);
+    *(int *) sc_array_index_int (payl, i) = msglen;
     mpiret = sc_MPI_Isend
-      (arr->array, arr->elem_count * arr->elem_size, sc_MPI_BYTE,
-       cps->rank, COMM_TAG_ISEND, g->mpicomm,
+      (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_ISEND, g->mpicomm,
        (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
     SC_CHECK_MPI (mpiret);
   }
 
-  /* TODO: make notify transport the size of the message */
-
   /* reverse communication pattern */
-  sc_notify_ext (notif, NULL, NULL, g->ntop, g->nint, g->nbot, g->mpicomm);
+  sc_notify_ext (notif, NULL, payl, g->ntop, g->nint, g->nbot, g->mpicomm);
+  P4EST_ASSERT (payl->elem_count == notif->elem_count);
   num_senders = (int) notif->elem_count;
   P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
+
+  /* TODO: change the MPI_Probe/Recv to MPI_Irecv */
 
   /* allocate slots to receive data */
   g->precv = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
@@ -863,6 +867,7 @@ send (part_global_t * g)
     trank->psend = cps;
   }
   sc_array_destroy (notif);
+  sc_array_destroy (payl);
 }
 
 static void
