@@ -50,6 +50,9 @@ typedef struct part_global
   int                 maxlevel;
   int                 bricklev;
   int                 order;
+  int                 ntop;
+  int                 nint;
+  int                 nbot;
   int                 vtk;
   int                 checkp;
   double              num_particles;

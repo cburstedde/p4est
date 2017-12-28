@@ -132,6 +132,8 @@ static const double *prk[4][2] = {
   {rk4b, rk4g}
 };
 
+#if 0
+
 static void
 p4est_free_int (int **pptr)
 {
@@ -139,6 +141,8 @@ p4est_free_int (int **pptr)
   P4EST_FREE (*pptr);
   *pptr = NULL;
 }
+
+#endif
 
 static void        *
 sc_array_index_begin (sc_array_t * arr)
@@ -797,8 +801,8 @@ send (part_global_t * g)
   int                 i;
   int                 num_receivers;
   int                 num_senders;
-  int                *irecvs, *isends;
   void              **hfound;
+  sc_array_t         *notif;
   sc_array_t         *arr;
   comm_psend_t       *cps;
   comm_prank_t       *trank;
@@ -815,11 +819,11 @@ send (part_global_t * g)
   /* post non-blocking send for messages */
   num_receivers = (int) g->recevs->elem_count;
   P4EST_ASSERT (0 <= num_receivers && num_receivers < g->mpisize);
-  irecvs = P4EST_ALLOC (int, num_receivers);
+  notif = sc_array_new_count (sizeof (int), num_receivers);
   g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
   for (i = 0; i < num_receivers; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
-    irecvs[i] = trank->rank;
+    *(int *) sc_array_index_int (notif, i) = trank->rank;
     cps = trank->psend;
     P4EST_ASSERT (trank->rank == cps->rank);
     arr = &cps->message;
@@ -836,20 +840,19 @@ send (part_global_t * g)
     SC_CHECK_MPI (mpiret);
   }
 
-  /* reverse communication pattern */
-  isends = P4EST_ALLOC (int, g->mpisize);
-  sc_notify (irecvs, num_receivers, isends, &num_senders, g->mpicomm);
-  P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
-  p4est_free_int (&irecvs);
-
   /* TODO: make notify transport the size of the message */
+
+  /* reverse communication pattern */
+  sc_notify_ext (notif, NULL, NULL, g->ntop, g->nint, g->nbot, g->mpicomm);
+  num_senders = (int) notif->elem_count;
+  P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
 
   /* allocate slots to receive data */
   g->precv = sc_hash_new (psend_hash, psend_equal, NULL, NULL);
   g->sendes = sc_array_new_count (sizeof (comm_prank_t), num_senders);
   for (i = 0; i < num_senders; ++i) {
     cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
-    cps->rank = isends[i];
+    cps->rank = *(int *) sc_array_index_int (notif, i);
     cps->message.elem_size = 0;
     P4EST_EXECUTE_ASSERT_TRUE
       (sc_hash_insert_unique (g->precv, cps, &hfound));
@@ -859,7 +862,7 @@ send (part_global_t * g)
     trank->rank = cps->rank;
     trank->psend = cps;
   }
-  p4est_free_int (&isends);
+  sc_array_destroy (notif);
 }
 
 static void
@@ -1736,6 +1739,9 @@ main (int argc, char **argv)
                       0, "Brick refinement level");
   sc_options_add_int (opt, 'r', "rkorder", &g->order,
                       1, "Order of Runge Kutta method");
+  sc_options_add_int (opt, '\0', "ntop", &g->ntop, 2, "Notify parameter top");
+  sc_options_add_int (opt, '\0', "nint", &g->nint, 2, "Notify parameter int");
+  sc_options_add_int (opt, '\0', "nbot", &g->nbot, 2, "Notify parameter bot");
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
   sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
