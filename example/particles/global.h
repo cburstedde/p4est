@@ -67,21 +67,21 @@ typedef struct part_global
   double              t;
   p4est_locidx_t      lfound;   /**< DEPRECATED */
   p4est_locidx_t      prevlp, prev2;
-  sc_array_t         *padata;   /**< Numerical data of local particles */
-  sc_array_t         *pfound;   /**< Target rank for local particles */
-  sc_array_t         *iremain;  /**< Index into padata of stay-local particles */
+  sc_array_t         *padata;   /**< pa_data_t Numerical data of local particles */
+  sc_array_t         *pfound;   /**< pa_found_t Target rank for local particles */
+  sc_array_t         *iremain;  /**< locidx_t Index into padata of stay-local particles */
   p4est_locidx_t      ireindex, ire2;   /**< Running index into iremain */
-  p4est_locidx_t      qremain;  /**< Particles remaining in quadrant */
+  p4est_locidx_t      qremain;  /**< Number of particles remaining in quadrant */
   sc_array_t         *ireceive; /**< Index into particle receive buffer */
   p4est_locidx_t      irvindex, irv2;   /**< Running index into ireceive */
-  p4est_locidx_t      qreceive; /**< Particles received for quadrant */
-  sc_array_t         *recevs;
+  p4est_locidx_t      qreceive; /**< Number of particles received for quadrant */
+  sc_array_t         *recevs;   /**< comm_prank_t with one entry per receiver, sorted */
   sc_array_t         *sendes;
   sc_array_t         *send_req;
   sc_array_t         *prebuf;
-  sc_hash_t          *psend;
+  sc_hash_t          *psend;    /**< comm_psend_t with one entry per receiver */
   sc_hash_t          *precv;
-  sc_mempool_t       *psmem;
+  sc_mempool_t       *psmem;    /**< comm_psend_t to use as hash table entries */
   part_init_density_t pidense;
   void               *piddata;
   p4est_gloidx_t      gpnum, gplost;

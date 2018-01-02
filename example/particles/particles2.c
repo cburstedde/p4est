@@ -348,7 +348,7 @@ initrp (part_global_t * g)
     ilem_particles = (p4est_locidx_t) round
       (glolp[0] * g->num_particles / g->global_density);
     P4EST_GLOBAL_INFOF ("Maximum particle number per quadrant %ld"
-                        " and level %g\n", (long) ilem_particles, glolp[1]);
+                        " maxlevel %g\n", (long) ilem_particles, glolp[1]);
 
     /*** we have computed the density, this may be enough ***/
     if (cycle >= max_cycles || (double) ilem_particles <= g->elem_particles) {
@@ -372,7 +372,7 @@ initrp (part_global_t * g)
     }
 #endif
 
-    /*** weighted partition ***/
+    /*** unweighted partition ***/
     p4est_partition (g->p4est, 0, NULL);
   }
 }
@@ -559,11 +559,14 @@ psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
   qu_data_t          *qud;
 
   if (local_num >= 0) {
+    /* quadrant is a local leaf */
     qud = (qu_data_t *) quadrant->p.user_data;
     P4EST_ASSERT (qud->premain == 0);
     P4EST_ASSERT (qud->preceive == 0);
   }
 #endif
+
+  /* always return 1 to search particles individually */
   return 1;
 }
 
@@ -602,6 +605,12 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     }
   }
 
+  /* convention for pa_found_t.pori:
+     -1              particle has not yet been found
+     [0 .. mpisize)  particle found on that rank, which is not me
+     mpisize + N     particle found on local rank in quadrant N >= 0
+   */
+
   /* find process/quadrant for this particle */
   if (local_num >= 0) {
     /* quadrant is a local leaf */
@@ -610,6 +619,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
     /* first local match counts (due to roundoff there may be multiple) */
     if (pfn->pori < g->mpisize) {
+      /* particle was either yet unfound, or found on another process */
       /* bump counter of particles in this local quadrant */
       pfn->pori = (p4est_locidx_t) g->mpisize + local_num;
       *(p4est_locidx_t *) sc_array_push (g->iremain) = (p4est_locidx_t) zp;
@@ -620,7 +630,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
                      (long) zp, (long) local_num, (long) pfn->pori);
 #endif
     }
-    /* return value will have no effect */
+    /* return value will have no effect, but we must return */
     return 0;
   }
   if (pfirst == plast) {
@@ -637,7 +647,7 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     if (pfn->pori < 0 || (pfirst < pfn->pori && pfn->pori < g->mpisize)) {
       pfn->pori = (p4est_locidx_t) pfirst;
     }
-    /* return value will have no effect */
+    /* return value will have no effect, but we must return */
     return 0;
   }
 
@@ -715,7 +725,7 @@ pack (part_global_t * g)
   for (zz = 0; zz < numz; ++zz) {
     pfn = (pa_found_t *) sc_array_index (g->pfound, zz);
 
-    /* treat those that leave the domain or stay local */
+    /* ignore those that leave the domain or stay local */
 #if 0
     P4EST_LDEBUGF ("Pack for %ld is %ld\n", (long) zz, (long) pfn->pori);
 #endif
