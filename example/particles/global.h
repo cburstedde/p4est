@@ -76,11 +76,10 @@ typedef struct part_global
   p4est_locidx_t      irvindex, irv2;   /**< Running index into ireceive */
   p4est_locidx_t      qreceive; /**< Number of particles received for quadrant */
   sc_array_t         *recevs;   /**< comm_prank_t with one entry per receiver, sorted */
-  sc_array_t         *sendes;
-  sc_array_t         *send_req;
-  sc_array_t         *prebuf;
+  sc_array_t         *recv_req; /**< sc_MPI_Request for receiving */
+  sc_array_t         *send_req; /**< sc_MPI_Request for sending */
+  sc_array_t         *prebuf;   /**< pa_data_t All received particles */
   sc_hash_t          *psend;    /**< comm_psend_t with one entry per receiver */
-  sc_hash_t          *precv;
   sc_mempool_t       *psmem;    /**< comm_psend_t to use as hash table entries */
   part_init_density_t pidense;
   void               *piddata;
