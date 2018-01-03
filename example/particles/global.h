@@ -50,6 +50,7 @@ typedef struct part_global
   int                 maxlevel;
   int                 bricklev;
   int                 order;
+  int                 olap_notify;
   int                 ntop;
   int                 nint;
   int                 nbot;

@@ -833,6 +833,10 @@ comm (part_global_t * g)
   P4EST_ASSERT (0 <= num_receivers && num_receivers < g->mpisize);
   notif = sc_array_new_count (sizeof (int), num_receivers);
   payl = sc_array_new_count (sizeof (int), num_receivers);
+  if (g->olap_notify) {
+    P4EST_ASSERT (g->send_req == NULL);
+    g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
+  }
   for (i = 0; i < num_receivers; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
     *(int *) sc_array_index_int (notif, i) = trank->rank;
@@ -842,6 +846,13 @@ comm (part_global_t * g)
     P4EST_ASSERT (arr->elem_size == PART_MSGSIZE);
     P4EST_ASSERT (arr->elem_count > 0);
     *(int *) sc_array_index_int (payl, i) = (int) arr->elem_count;
+    if (g->olap_notify) {
+      msglen = (int) (arr->elem_count * arr->elem_size);
+      mpiret = sc_MPI_Isend
+        (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_COMM,
+         g->mpicomm, (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
+      SC_CHECK_MPI (mpiret);
+    }
   }
 
   /* reverse communication pattern */
@@ -874,21 +885,23 @@ comm (part_global_t * g)
   sc_array_destroy_null (&notif);
   sc_array_destroy_null (&payl);
 
-  /* post non-blocking send */
-  /* TODO: move this above notify? */
-  g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
-  for (i = 0; i < num_receivers; ++i) {
-    trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
-    cps = trank->psend;
-    P4EST_ASSERT (trank->rank == cps->rank);
-    arr = &cps->message;
-    P4EST_ASSERT (arr->elem_size == PART_MSGSIZE);
-    P4EST_ASSERT (arr->elem_count > 0);
-    msglen = (int) (arr->elem_count * arr->elem_size);
-    mpiret = sc_MPI_Isend
-      (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_COMM, g->mpicomm,
-       (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
-    SC_CHECK_MPI (mpiret);
+  /* post non-blocking send if not done earlier */
+  if (!g->olap_notify) {
+    P4EST_ASSERT (g->send_req == NULL);
+    g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
+    for (i = 0; i < num_receivers; ++i) {
+      trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
+      cps = trank->psend;
+      P4EST_ASSERT (trank->rank == cps->rank);
+      arr = &cps->message;
+      P4EST_ASSERT (arr->elem_size == PART_MSGSIZE);
+      P4EST_ASSERT (arr->elem_count > 0);
+      msglen = (int) (arr->elem_count * arr->elem_size);
+      mpiret = sc_MPI_Isend
+        (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_COMM,
+         g->mpicomm, (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
+      SC_CHECK_MPI (mpiret);
+    }
   }
 
   /* wait for all incoming messages to complete */
@@ -1516,6 +1529,8 @@ sim (part_global_t * g)
       postsearch (g);
       adapt (g);
       regroup (g);
+
+      /* wait for sent messages to complete */
       wait (g);
 
       /* if no refinement occurred, store received particles and break loop */
@@ -1645,6 +1660,8 @@ main (int argc, char **argv)
                       0, "Brick refinement level");
   sc_options_add_int (opt, 'r', "rkorder", &g->order,
                       1, "Order of Runge Kutta method");
+  sc_options_add_bool (opt, 'p', "olap-notify", &g->olap_notify, 0,
+                       "Overlap sending with notify");
   sc_options_add_int (opt, '\0', "ntop", &g->ntop, 2, "Notify parameter top");
   sc_options_add_int (opt, '\0', "nint", &g->nint, 2, "Notify parameter int");
   sc_options_add_int (opt, '\0', "nbot", &g->nbot, 2, "Notify parameter bot");
