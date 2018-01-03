@@ -924,6 +924,7 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
               void *point)
 {
   int                 i;
+  char               *cf;
   size_t              zp;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
@@ -948,17 +949,17 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
   if (local_num >= 0) {
     /* quadrant is a local leaf */
     /* first local match counts (due to roundoff there may be multiple) */
-    /* make sure this particle is not found again */
-    x[0] = -1.;
-    ++g->lfound;
-    /* TODO: can we enforce uniqueness non-destructively? */
-    /* TODO: we may not need the lfound variable like this */
-
-    /* count this particle in its target quadrant */
     zp = sc_array_position (g->prebuf, point);
-    *(p4est_locidx_t *) sc_array_push (g->ireceive) = (p4est_locidx_t) zp;
-    qud = (qu_data_t *) quadrant->p.user_data;
-    ++qud->preceive;
+    cf = (char *) sc_array_index (g->cfound, zp);
+    if (!*cf) {
+      /* make sure this particle is not found twice */
+      *cf = 1;
+
+      /* count this particle in its target quadrant */
+      *(p4est_locidx_t *) sc_array_push (g->ireceive) = (p4est_locidx_t) zp;
+      qud = (qu_data_t *) quadrant->p.user_data;
+      ++qud->preceive;
+    }
 
     /* return value will have no effect */
     return 0;
@@ -972,14 +973,16 @@ static void
 postsearch (part_global_t * g)
 {
   P4EST_ASSERT (g->ireceive == NULL);
+  P4EST_ASSERT (g->cfound == NULL);
   P4EST_ASSERT (g->prebuf != NULL);
 
   g->ireceive = sc_array_new (sizeof (p4est_locidx_t));
+  g->cfound = sc_array_new_count (sizeof (char), g->prebuf->elem_count);
+  sc_array_memset (g->cfound, 0);
 
   /* run local search to find particles sent to us */
-  g->lfound = 0;
   p4est_search_local (g->p4est, 0, slocal_quad, slocal_point, g->prebuf);
-  P4EST_ASSERT (g->prebuf->elem_count == (size_t) g->lfound);
+  sc_array_destroy_null (&g->cfound);
 }
 
 static int

@@ -65,7 +65,6 @@ typedef struct part_global
   int                 stage;
   double              global_density;
   double              t, lxyz[3], hxyz[3], dxyz[3];
-  p4est_locidx_t      lfound;   /**< DEPRECATED */
   p4est_locidx_t      prevlp, prev2;
   sc_array_t         *padata;   /**< pa_data_t Numerical data of local particles */
   sc_array_t         *pfound;   /**< pa_found_t Target rank for local particles */
@@ -79,6 +78,7 @@ typedef struct part_global
   sc_array_t         *recv_req; /**< sc_MPI_Request for receiving */
   sc_array_t         *send_req; /**< sc_MPI_Request for sending */
   sc_array_t         *prebuf;   /**< pa_data_t All received particles */
+  sc_array_t         *cfound;   /**< char Flag for received particles */
   sc_hash_t          *psend;    /**< comm_psend_t with one entry per receiver */
   sc_mempool_t       *psmem;    /**< comm_psend_t to use as hash table entries */
   part_init_density_t pidense;
