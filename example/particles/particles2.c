@@ -1479,15 +1479,14 @@ static void
 part (part_global_t * g)
 {
   sc_array_t         *dest_data;
+  p4est_topidx_t      tt;
   p4est_locidx_t      ldatasiz, lcount;
   p4est_locidx_t      dest_quads, src_quads;
   p4est_locidx_t      dest_parts;
+  p4est_locidx_t      lquad, lq;
+  p4est_locidx_t      lpnum;
   p4est_gloidx_t      gshipped;
-  p4est_t            *copy;
-
-  p4est_topidx_t      tt;
-  p4est_locidx_t      lquad;
-  p4est_locidx_t      lpnum, lq;
+  p4est_gloidx_t     *src_gfq;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
@@ -1500,8 +1499,12 @@ part (part_global_t * g)
   }
 
   /* remember current forest and its particle counts per quadrant */
-  copy = p4est_copy (g->p4est, 0);
-  src_quads = copy->local_num_quadrants;
+  src_gfq = P4EST_ALLOC (p4est_gloidx_t, g->mpisize + 1);
+  memcpy (src_gfq, g->p4est->global_first_quadrant,
+          (g->mpisize + 1) * sizeof (p4est_gloidx_t));
+  src_quads = g->p4est->local_num_quadrants;
+  P4EST_ASSERT ((p4est_gloidx_t) src_quads ==
+                src_gfq[g->mpirank + 1] - src_gfq[g->mpirank]);
   g->src_fixed = sc_array_new_count (sizeof (int), src_quads);
 
   /* count particles per quadrant in callback */
@@ -1515,14 +1518,13 @@ part (part_global_t * g)
   /* if nothing happens, we're done */
   if (gshipped == 0) {
     sc_array_destroy_null (&g->src_fixed);
-    p4est_destroy (copy);
+    P4EST_FREE (src_gfq);
     return;
   }
 
   /* transfer particle counts per quadrant to new partition */
   g->dest_fixed = sc_array_new_count (sizeof (int), dest_quads);
-  p4est_transfer_fixed (g->p4est->global_first_quadrant,
-                        copy->global_first_quadrant,
+  p4est_transfer_fixed (g->p4est->global_first_quadrant, src_gfq,
                         g->mpicomm, COMM_TAG_FIXED,
                         (int *) g->dest_fixed->array,
                         (const int *) g->src_fixed->array, sizeof (int));
@@ -1536,8 +1538,7 @@ part (part_global_t * g)
   P4EST_ASSERT (dest_parts % ldatasiz == 0);
   dest_parts /= ldatasiz;
   dest_data = sc_array_new_count (sizeof (pa_data_t), dest_parts);
-  p4est_transfer_custom (g->p4est->global_first_quadrant,
-                         copy->global_first_quadrant,
+  p4est_transfer_custom (g->p4est->global_first_quadrant, src_gfq,
                          g->mpicomm, COMM_TAG_CUSTOM,
                          (pa_data_t *) dest_data->array,
                          (const int *) g->dest_fixed->array,
@@ -1545,8 +1546,8 @@ part (part_global_t * g)
                          (const int *) g->src_fixed->array);
 
   /* clean up and keep new particle data */
-  p4est_destroy (copy);
   sc_array_destroy_null (&g->src_fixed);
+  P4EST_FREE (src_gfq);
   sc_array_destroy (g->padata);
   g->padata = dest_data;
 
