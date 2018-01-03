@@ -561,6 +561,7 @@ psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
               p4est_quadrant_t * quadrant, int pfirst, int plast,
               p4est_locidx_t local_num, void *point)
 {
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
 #ifdef P4EST_ENABLE_DEBUG
   qu_data_t          *qud;
 
@@ -571,6 +572,9 @@ psearch_quad (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (qud->preceive == 0);
   }
 #endif
+
+  /* compute coordinate range of this quadrant */
+  loopquad (g, which_tree, quadrant, g->lxyz, g->hxyz, g->dxyz);
 
   /* always return 1 to search particles individually */
   return 1;
@@ -592,7 +596,6 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   int                 i;
   size_t              zp;
-  double              lxyz[3], hxyz[3], dxyz[3];
   double             *x;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
@@ -603,9 +606,8 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
   x = particle_lookfor (g, pad);
 
   /* due to roundoff we call this even for a local leaf */
-  loopquad (g, which_tree, quadrant, lxyz, hxyz, dxyz);
   for (i = 0; i < P4EST_DIM; ++i) {
-    if (!(lxyz[i] <= x[i] && x[i] <= hxyz[i])) {
+    if (!(g->lxyz[i] <= x[i] && x[i] <= g->hxyz[i])) {
       /* the point is outside the search quadrant */
       return 0;
     }
@@ -899,6 +901,7 @@ slocal_quad (p4est_t * p4est, p4est_topidx_t which_tree,
              p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
              void *point)
 {
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
 #ifdef P4EST_ENABLE_DEBUG
   qu_data_t          *qud;
 
@@ -907,6 +910,11 @@ slocal_quad (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (qud->preceive == 0);
   }
 #endif
+
+  /* compute coordinate range of this quadrant */
+  loopquad (g, which_tree, quadrant, g->lxyz, g->hxyz, g->dxyz);
+
+  /* always return 1 to search particles individually */
   return 1;
 }
 
@@ -916,7 +924,6 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
               void *point)
 {
   int                 i;
-  double              lxyz[3], hxyz[3], dxyz[3];
   size_t              zp;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
@@ -931,9 +938,8 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
 
   /* due to roundoff we call this even for a local leaf */
-  loopquad (g, which_tree, quadrant, lxyz, hxyz, dxyz);
   for (i = 0; i < P4EST_DIM; ++i) {
-    if (!(lxyz[i] <= x[i] && x[i] <= hxyz[i])) {
+    if (!(g->lxyz[i] <= x[i] && x[i] <= g->hxyz[i])) {
       /* the point is outside the search quadrant */
       return 0;
     }

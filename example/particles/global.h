@@ -64,7 +64,7 @@ typedef struct part_global
   int                 bricklength;
   int                 stage;
   double              global_density;
-  double              t;
+  double              t, lxyz[3], hxyz[3], dxyz[3];
   p4est_locidx_t      lfound;   /**< DEPRECATED */
   p4est_locidx_t      prevlp, prev2;
   sc_array_t         *padata;   /**< pa_data_t Numerical data of local particles */
