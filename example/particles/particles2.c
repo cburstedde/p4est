@@ -152,7 +152,9 @@ sc_array_index_begin (sc_array_t * arr)
   if (arr->elem_count == 0) {
     return NULL;
   }
-  return sc_array_index (arr, 0);
+
+  P4EST_ASSERT (arr->array != NULL);
+  return (void *) arr->array;
 }
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -161,9 +163,13 @@ static void        *
 sc_array_index_end (sc_array_t * arr)
 {
   P4EST_ASSERT (arr != NULL);
-  P4EST_ASSERT (arr->array != NULL);
 
-  return arr->array + arr->elem_count * arr->elem_size;
+  if (arr->elem_count == 0) {
+    return NULL;
+  }
+
+  P4EST_ASSERT (arr->array != NULL);
+  return (void *) (arr->array + arr->elem_count * arr->elem_size);
 }
 
 #endif
@@ -1272,7 +1278,9 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     sc_array_destroy (klow);
 #endif
 
-    /* TODO: currently the first child is assigned the whole padata of parent */
+    /* the first child is assigned the whole padata of parent */
+    /* TODO: it would be possible to set lpend to 0 in coarsening
+       and to set it correctly in regroup */
   }
 }
 
@@ -1329,15 +1337,15 @@ regroup (part_global_t * g)
 #error "The following code is no longer compatible with SENDFULL"
 #endif
 
+  newnum =
+    (p4est_locidx_t) (g->iremain->elem_count + g->ireceive->elem_count);
+  P4EST_LDEBUGF ("New local particle number %lld\n", (long long) newnum);
+
   /* regroup remaining and received particles after adaptation */
   premain = (p4est_locidx_t *) sc_array_index_begin (g->iremain);
   preceive = (p4est_locidx_t *) sc_array_index_begin (g->ireceive);
-  newnum =
-    (p4est_locidx_t) (g->iremain->elem_count + g->ireceive->elem_count);
-
-  P4EST_LDEBUGF ("New local particle number %lld\n", (long long) newnum);
-
   newpa = sc_array_new_count (sizeof (pa_data_t), newnum);
+  pad = (pa_data_t *) sc_array_index_begin (newpa);
   prev = 0;
   for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree; ++tt) {
     tree = p4est_tree_array_index (g->p4est->trees, tt);
@@ -1350,13 +1358,12 @@ regroup (part_global_t * g)
         qud->premain = qud->preceive = 0;
         continue;
       }
-      pad = (pa_data_t *) sc_array_index (newpa, prev);
       prev += qboth;
       P4EST_ASSERT (prev <= newnum);
       for (li = 0; li < qud->premain; ++li) {
         P4EST_ASSERT (premain != NULL);
         P4EST_ASSERT
-          (premain <= (p4est_locidx_t *) sc_array_index_end (g->iremain));
+          (premain < (p4est_locidx_t *) sc_array_index_end (g->iremain));
         ppos = *premain++;
         memcpy (pad++, sc_array_index (g->padata, ppos), sizeof (pa_data_t));
 #ifdef P4EST_ENABLE_DEBUG
@@ -1366,7 +1373,7 @@ regroup (part_global_t * g)
       for (li = 0; li < qud->preceive; ++li) {
         P4EST_ASSERT (preceive != NULL);
         P4EST_ASSERT
-          (preceive <= (p4est_locidx_t *) sc_array_index_end (g->ireceive));
+          (preceive < (p4est_locidx_t *) sc_array_index_end (g->ireceive));
         ppos = *preceive++;
         memcpy (pad++, sc_array_index (g->prebuf, ppos), sizeof (pa_data_t));
 #ifdef P4EST_ENABLE_DEBUG
@@ -1379,23 +1386,16 @@ regroup (part_global_t * g)
     }
   }
   P4EST_ASSERT (prev == newnum);
+  P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (newpa));
   P4EST_ASSERT
-    (premain == NULL ||
-     premain == (p4est_locidx_t *) sc_array_index_end (g->iremain));
+    (premain == (p4est_locidx_t *) sc_array_index_end (g->iremain));
   sc_array_destroy_null (&g->iremain);
   P4EST_ASSERT
-    (preceive == NULL ||
-     preceive == (p4est_locidx_t *) sc_array_index_end (g->ireceive));
+    (preceive == (p4est_locidx_t *) sc_array_index_end (g->ireceive));
   sc_array_destroy_null (&g->ireceive);
   sc_array_destroy_null (&g->prebuf);
   sc_array_destroy (g->padata);
   g->padata = newpa;
-
-  /* TODO: update local/global counters and status variables */
-
-  /* TODO: partition the forest and send particles along with the partition */
-
-  /* TODO: think about partitioning and sending particles to future owner? */
 }
 
 static void
@@ -1525,6 +1525,8 @@ sim (part_global_t * g)
       /* if no refinement occurred, store received particles and break loop */
 
       /* partition weighted by current + received count (?) */
+      /* partition the forest and send particles along with the partition */
+      /* think about partitioning and sending particles to future owner? */
 
       /* transfer particles accordingly */
 
