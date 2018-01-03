@@ -1039,8 +1039,9 @@ adapt_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* TODO: coarsen/refine on sum of still-there and to-be-there particles? */
 
-  /* maybe this quadrant is just called for counting */
-  if (quadrants[1] == NULL) {
+  /* maybe this quadrant is just called for counting, or too big already */
+  if (quadrants[1] == NULL ||
+      quadrants[0]->level == g->minlevel - g->bricklev) {
     qud = (qu_data_t *) quadrants[0]->p.user_data;
     P4EST_ASSERT (g->prevlp <= qud->u.lpend);
     g->prevlp = qud->u.lpend;
@@ -1064,8 +1065,8 @@ adapt_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
   }
   else {
     /* we will not coarsen and proceed with next quadrant */
-    /* TODO: change p4est to not call orphans in a non-coarsened family */
     qud = (qu_data_t *) quadrants[0]->p.user_data;
+    P4EST_ASSERT (g->prevlp <= qud->u.lpend);
     g->prevlp = qud->u.lpend;
     g->ireindex += qud->premain;
     g->irvindex += qud->preceive;
