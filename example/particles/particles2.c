@@ -78,6 +78,7 @@ typedef struct pa_data
   double              xv[6];
   double              wo[6];
   double              up[6];
+  p4est_gloidx_t      id;
 }
 pa_data_t;
 
@@ -412,7 +413,7 @@ create (part_global_t * g)
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
   p4est_locidx_t      li, ilem_particles;
-  p4est_gloidx_t      gpnum;
+  p4est_gloidx_t      gpnum, gpoffset;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
@@ -466,6 +467,20 @@ create (part_global_t * g)
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_INFOF ("Created %lld particles for %g\n",
                       (long long) g->gpnum, g->num_particles);
+
+  /* create globally unique particle numbers */
+  mpiret = sc_MPI_Exscan (&gpnum, &gpoffset, 1, P4EST_MPI_GLOIDX,
+                          sc_MPI_SUM, g->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  if (g->mpirank == 0) {
+    gpoffset = 0;
+  }
+  pad = (pa_data_t *) sc_array_index_begin (g->padata);
+  for (li = 0; li < lpnum; ++li) {
+    pad->id = gpoffset + li;
+    ++pad;
+  }
+  P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
 }
 
 static void
