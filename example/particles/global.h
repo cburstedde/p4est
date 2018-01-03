@@ -56,6 +56,7 @@ typedef struct part_global
   int                 nbot;
   int                 vtk;
   int                 checkp;
+  int                 printn;
   double              num_particles;
   double              elem_particles;
   double              deltat;

@@ -448,10 +448,6 @@ create (part_global_t * g)
 #ifndef P4_TO_P8
         pad->xv[2] = pad->xv[5] = 0.;
 #endif
-#if 0
-        P4EST_LDEBUGF ("Create particle <%g %g %g>\n",
-                       pad->xv[0], pad->xv[1], pad->xv[2]);
-#endif
         memset (pad->wo, 0, 6 * sizeof (double));
         memset (pad->up, 0, 6 * sizeof (double));
         ++pad;
@@ -478,6 +474,14 @@ create (part_global_t * g)
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (li = 0; li < lpnum; ++li) {
     pad->id = gpoffset + li;
+
+    /* print initial particle location */
+    if (g->printn > 0 && pad->id % g->printn == 0) {
+      P4EST_INFOF ("Particle %lld X %g %g %g V %g %g %g\n",
+                   (long long) pad->id,
+                   pad->xv[0], pad->xv[1], pad->xv[2],
+                   pad->xv[3], pad->xv[4], pad->xv[5]);
+    }
     ++pad;
   }
   P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
@@ -516,7 +520,8 @@ rkrhs (part_global_t * g, const double xv[6], double rk[6])
 static void
 rkstage (part_global_t * g, pa_data_t * pad, double h)
 {
-  int                 stage = g->stage;
+  const int           stage = g->stage;
+  const int           order = g->order;
   int                 i;
   double              d;
   double              rk[6];
@@ -525,28 +530,28 @@ rkstage (part_global_t * g, pa_data_t * pad, double h)
   rkrhs (g, stage == 0 ? pad->xv : pad->wo, rk);
 
   /* compute new evaluation point if necessary */
-  if (stage + 1 < g->order) {
+  if (stage + 1 < order) {
     /* stage is not the last */
-    d = h * prk[g->order - 1][0][stage];
+    d = h * prk[order - 1][0][stage];
     for (i = 0; i < 6; ++i) {
       pad->wo[i] = pad->xv[i] + d * rk[i];
     }
   }
 
   /* compute an update to the state */
-  d = prk[g->order - 1][1][stage];
+  d = prk[order - 1][1][stage];
   if (stage == 0) {
     /* first stage */
-    if (g->order > 1) {
+    if (order > 1) {
       /* first stage is not the last */
-      P4EST_ASSERT (stage + 1 < g->order);
+      P4EST_ASSERT (stage + 1 < order);
       for (i = 0; i < 6; ++i) {
         pad->up[i] = d * rk[i];
       }
     }
     else {
       /* first stage is also the last */
-      P4EST_ASSERT (stage + 1 == g->order);
+      P4EST_ASSERT (stage + 1 == order);
       for (i = 0; i < 6; ++i) {
         pad->xv[i] += h * d * rk[i];
       }
@@ -554,7 +559,7 @@ rkstage (part_global_t * g, pa_data_t * pad, double h)
   }
   else {
     /* stage is not the first */
-    if (stage + 1 < g->order) {
+    if (stage + 1 < order) {
       /* stage is neither first nor last */
       P4EST_ASSERT (0 < stage);
       for (i = 0; i < 6; ++i) {
@@ -563,18 +568,20 @@ rkstage (part_global_t * g, pa_data_t * pad, double h)
     }
     else {
       /* stage is last of several */
-      P4EST_ASSERT (stage + 1 == g->order);
+      P4EST_ASSERT (stage + 1 == order);
       for (i = 0; i < 6; ++i) {
         pad->xv[i] += h * (pad->up[i] + d * rk[i]);
       }
     }
   }
 
-#if 0
-  /* TODO: this is wrong for RK order > 1 */
-  P4EST_LDEBUGF ("New location <%g %g %g>\n", pad->xv[0], pad->xv[1],
-                 pad->xv[2]);
-#endif
+  /* print particle location at final stage */
+  if (stage == order - 1 && g->printn > 0 && pad->id % g->printn == 0) {
+    P4EST_INFOF ("Particle %lld X %g %g %g V %g %g %g\n",
+                 (long long) pad->id,
+                 pad->xv[0], pad->xv[1], pad->xv[2],
+                 pad->xv[3], pad->xv[4], pad->xv[5]);
+  }
 }
 
 static int
@@ -1816,6 +1823,8 @@ main (int argc, char **argv)
   sc_options_add_switch (opt, 'V', "vtk", &g->vtk, "write VTK output");
   sc_options_add_switch (opt, 'C', "checkp", &g->checkp,
                          "write checkpoint output");
+  sc_options_add_int (opt, 'R', "printn", &g->printn, 0,
+                      "Print every nth particle");
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
                          "p" PARTICLES_48 ()"rticles",
                          "prefix for file output");
