@@ -45,6 +45,7 @@
 /** Number of plates in physical model */
 #define PART_PLANETS (2)
 
+/** Context data to compute initial particle positions */
 typedef struct pi_data
 {
   double              sigma;
@@ -83,13 +84,6 @@ pa_data_t;
 #else
 #define PART_MSGSIZE (3 * sizeof (double))
 #endif
-
-/** Search metadata stored in a flat array over all particles */
-typedef struct pa_found
-{
-  p4est_locidx_t      pori;
-}
-pa_found_t;
 
 /** Hash table entry for a process that we send messages to */
 typedef struct comm_psend
@@ -595,12 +589,12 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
                p4est_locidx_t local_num, void *point)
 {
   int                 i;
+  int                *pfn;
   size_t              zp;
   double             *x;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
   qu_data_t          *qud;
   pa_data_t          *pad = (pa_data_t *) point;
-  pa_found_t         *pfn;
 
   /* access location of particle to be searched */
   x = particle_lookfor (g, pad);
@@ -613,10 +607,9 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     }
   }
 
-  /* convention for pa_found_t.pori:
+  /* convention for entries of pfound:
      -1              particle has not yet been found
-     [0 .. mpisize)  particle found on that rank, which is not me
-     mpisize + N     particle found on local rank in quadrant N >= 0
+     [0 .. mpisize)  particle found on that rank, me or other
    */
 
   /* find process/quadrant for this particle */
@@ -624,19 +617,15 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     /* quadrant is a local leaf */
     P4EST_ASSERT (pfirst == g->mpirank && plast == g->mpirank);
     zp = sc_array_position (g->padata, point);
-    pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
+    pfn = (int *) sc_array_index (g->pfound, zp);
     /* first local match counts (due to roundoff there may be multiple) */
-    if (pfn->pori < g->mpisize) {
+    if (*pfn != g->mpirank) {
       /* particle was either yet unfound, or found on another process */
       /* bump counter of particles in this local quadrant */
-      pfn->pori = (p4est_locidx_t) g->mpisize + local_num;
+      *pfn = g->mpirank;
       *(p4est_locidx_t *) sc_array_push (g->iremain) = (p4est_locidx_t) zp;
       qud = (qu_data_t *) quadrant->p.user_data;
       ++qud->premain;
-#if 0
-      P4EST_LDEBUGF ("Found leaf particle %ld local_num %ld becomes %ld\n",
-                     (long) zp, (long) local_num, (long) pfn->pori);
-#endif
     }
     /* return value will have no effect, but we must return */
     return 0;
@@ -650,10 +639,10 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     /* found particle on a remote process */
     P4EST_ASSERT (plast != g->mpirank);
     zp = sc_array_position (g->padata, point);
-    pfn = (pa_found_t *) sc_array_index (g->pfound, zp);
+    pfn = (int *) sc_array_index (g->pfound, zp);
     /* only count match if it has not been found locally or on lower rank */
-    if (pfn->pori < 0 || (pfirst < pfn->pori && pfn->pori < g->mpisize)) {
-      pfn->pori = (p4est_locidx_t) pfirst;
+    if (*pfn < 0 || (*pfn != g->mpirank && pfirst < *pfn)) {
+      *pfn = pfirst;
     }
     /* return value will have no effect, but we must return */
     return 0;
@@ -667,10 +656,14 @@ static void
 presearch (part_global_t * g)
 {
   P4EST_ASSERT (g->padata != NULL);
-  P4EST_ASSERT (g->pfound != NULL);
-  P4EST_ASSERT (g->iremain != NULL);
+  P4EST_ASSERT (g->pfound == NULL);
+  P4EST_ASSERT (g->iremain == NULL);
 
+  g->pfound = sc_array_new_count (sizeof (int), g->padata->elem_count);
   sc_array_memset (g->pfound, -1);
+
+  g->iremain = sc_array_new (sizeof (p4est_locidx_t));
+
   p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
 }
 
@@ -700,11 +693,11 @@ pack (part_global_t * g)
 {
   int                 mpiret;
   int                 retval;
+  int                *pfn;
   size_t              zz, numz;
   void              **hfound;
   p4est_locidx_t      lremain, lsend, llost;
   p4est_gloidx_t      loclrs[4], glolrs[4];
-  pa_found_t         *pfn;
   comm_psend_t       *cps, *there;
   comm_prank_t       *trank;
 #ifdef PART_SENDFULL
@@ -731,24 +724,22 @@ pack (part_global_t * g)
   cps = (comm_psend_t *) sc_mempool_alloc (g->psmem);
   cps->rank = -1;
   for (zz = 0; zz < numz; ++zz) {
-    pfn = (pa_found_t *) sc_array_index (g->pfound, zz);
+    pfn = (int *) sc_array_index (g->pfound, zz);
 
     /* ignore those that leave the domain or stay local */
-#if 0
-    P4EST_LDEBUGF ("Pack for %ld is %ld\n", (long) zz, (long) pfn->pori);
-#endif
-    if (pfn->pori < 0) {
+    if (*pfn < 0) {
+      P4EST_ASSERT (*pfn == -1);
       ++llost;
       continue;
     }
-    if (pfn->pori >= g->mpisize) {
+    if (*pfn == g->mpirank) {
       ++lremain;
       continue;
     }
 
     /* access message structure */
-    P4EST_ASSERT (0 <= pfn->pori && pfn->pori < g->mpisize);
-    cps->rank = (int) pfn->pori;
+    P4EST_ASSERT (0 <= *pfn && *pfn < g->mpisize);
+    cps->rank = *pfn;
     P4EST_ASSERT (cps->rank != g->mpirank);
     retval = sc_hash_insert_unique (g->psend, cps, &hfound);
     P4EST_ASSERT (hfound != NULL);
@@ -802,6 +793,9 @@ pack (part_global_t * g)
   P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
   g->gplost += glolrs[2];
   g->gpnum -= glolrs[2];
+
+  /* another array that is no longer needed */
+  sc_array_destroy_null (&g->pfound);
 }
 
 static void
@@ -1037,8 +1031,6 @@ adapt_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   part_global_t      *g = (part_global_t *) p4est->user_pointer;
 
-  /* TODO: adjust pori values in pfound for remaining particles */
-
   if ((double) (qud->premain + qud->preceive) > g->elem_particles) {
     /* we are trying to refine, we will possibly go into the replace function */
     g->prev2 = g->prevlp;
@@ -1054,9 +1046,6 @@ adapt_refine (p4est_t * p4est, p4est_topidx_t which_tree,
     g->prevlp = qud->u.lpend;
     g->ireindex += qud->premain;
     g->irvindex += qud->preceive;
-
-    /* TODO: adjust pori values in pfound for remaining particles? */
-
     return 0;
   }
 }
@@ -1284,8 +1273,6 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
 
     /* TODO: currently the first child is assigned the whole padata of parent */
-    /* TODO: update pfound for the remaining particles? */
-    /* TODO: update pfound for the non-remaining particles? */
   }
 }
 
@@ -1514,9 +1501,6 @@ sim (part_global_t * g)
       /* begin loop */
 
       /* p4est_search_all to find new local element or process for each particle */
-      g->pfound =
-        sc_array_new_count (sizeof (pa_found_t), g->padata->elem_count);
-      g->iremain = sc_array_new (sizeof (p4est_locidx_t));
       presearch (g);
 
       /* send to-be-received particles to receiver processes */
@@ -1533,7 +1517,6 @@ sim (part_global_t * g)
       /* TODO: move deallocation of these upward */
       sc_mempool_destroy (g->psmem);
       g->psmem = NULL;
-      sc_array_destroy_null (&g->pfound);
 
       /* receive particles and run local search to count them per-quadrant */
 
