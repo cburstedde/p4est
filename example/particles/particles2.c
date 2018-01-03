@@ -782,7 +782,7 @@ pack (part_global_t * g)
   }
   sc_mempool_free (g->psmem, cps);
   sc_array_sort (g->recevs, comm_prank_compare);
-  /* TODO: hash table still needed? */
+  /* TODO: hash table still needed?  Yes, unless we rearrange data sent */
 
   /* keep track of some global numbers */
   loclrs[0] = (p4est_gloidx_t) lremain;
@@ -867,10 +867,11 @@ comm (part_global_t * g)
     cucount += count;
   }
   P4EST_ASSERT (cucount == (int) g->prebuf->elem_count);
-  sc_array_destroy (notif);
-  sc_array_destroy (payl);
+  sc_array_destroy_null (&notif);
+  sc_array_destroy_null (&payl);
 
   /* post non-blocking send */
+  /* TODO: move this above notify? */
   g->send_req = sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
   for (i = 0; i < num_receivers; ++i) {
     trank = (comm_prank_t *) sc_array_index_int (g->recevs, i);
@@ -887,8 +888,8 @@ comm (part_global_t * g)
   }
 
   /* wait for all incoming messages to complete */
-  reqs = (sc_MPI_Request *) sc_array_index_begin (g->recv_req),
-    mpiret = sc_MPI_Waitall (num_senders, reqs, sc_MPI_STATUSES_IGNORE);
+  reqs = (sc_MPI_Request *) sc_array_index_begin (g->recv_req);
+  mpiret = sc_MPI_Waitall (num_senders, reqs, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
   sc_array_destroy_null (&g->recv_req);
 }
