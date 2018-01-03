@@ -82,6 +82,9 @@ typedef struct part_global
   sc_array_t         *cfound;   /**< char Flag for received particles */
   sc_hash_t          *psend;    /**< comm_psend_t with one entry per receiver */
   sc_mempool_t       *psmem;    /**< comm_psend_t to use as hash table entries */
+  p4est_locidx_t      qcount;   /**< Count local quadrants in partition callback */
+  sc_array_t         *src_fixed;        /**< int Particle counts per quadrant */
+  sc_array_t         *dest_fixed;       /**< int Particle counts per quadrant */
   part_init_density_t pidense;
   void               *piddata;
   p4est_gloidx_t      gpnum, gplost;

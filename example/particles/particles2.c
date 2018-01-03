@@ -24,10 +24,12 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
@@ -103,7 +105,9 @@ comm_prank_t;
 
 typedef enum comm_tag
 {
-  COMM_TAG_COMM = P4EST_COMM_TAG_LAST,
+  COMM_TAG_PART = P4EST_COMM_TAG_LAST,
+  COMM_TAG_FIXED,
+  COMM_TAG_CUSTOM,
   COMM_TAG_LAST
 }
 comm_tag_t;
@@ -447,6 +451,8 @@ create (part_global_t * g)
         P4EST_LDEBUGF ("Create particle <%g %g %g>\n",
                        pad->xv[0], pad->xv[1], pad->xv[2]);
 #endif
+        memset (pad->wo, 0, 6 * sizeof (double));
+        memset (pad->up, 0, 6 * sizeof (double));
         ++pad;
       }
       lpnum += ilem_particles;
@@ -849,7 +855,7 @@ comm (part_global_t * g)
     if (g->olap_notify) {
       msglen = (int) (arr->elem_count * arr->elem_size);
       mpiret = sc_MPI_Isend
-        (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_COMM,
+        (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_PART,
          g->mpicomm, (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
       SC_CHECK_MPI (mpiret);
     }
@@ -876,7 +882,7 @@ comm (part_global_t * g)
     msglen = count * (int) PART_MSGSIZE;
     mpiret = sc_MPI_Irecv
       (sc_array_index (g->prebuf, cucount), msglen, sc_MPI_BYTE,
-       *(int *) sc_array_index_int (notif, i), COMM_TAG_COMM, g->mpicomm,
+       *(int *) sc_array_index_int (notif, i), COMM_TAG_PART, g->mpicomm,
        (sc_MPI_Request *) sc_array_index_int (g->recv_req, i));
     SC_CHECK_MPI (mpiret);
     cucount += count;
@@ -898,7 +904,7 @@ comm (part_global_t * g)
       P4EST_ASSERT (arr->elem_count > 0);
       msglen = (int) (arr->elem_count * arr->elem_size);
       mpiret = sc_MPI_Isend
-        (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_COMM,
+        (arr->array, msglen, sc_MPI_BYTE, cps->rank, COMM_TAG_PART,
          g->mpicomm, (sc_MPI_Request *) sc_array_index_int (g->send_req, i));
       SC_CHECK_MPI (mpiret);
     }
@@ -1452,6 +1458,124 @@ wait (part_global_t * g)
   g->psmem = NULL;
 }
 
+static int
+part_weight (p4est_t * p4est,
+             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+{
+  p4est_locidx_t      ilem_particles;
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+  qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+
+  ilem_particles = qud->u.lpend - g->prevlp;
+  g->prevlp = qud->u.lpend;
+
+  *(int *) sc_array_index (g->src_fixed, g->qcount++) =
+    (int) (ilem_particles * sizeof (pa_data_t));
+
+  return 1 + ilem_particles;
+}
+
+static void
+part (part_global_t * g)
+{
+  sc_array_t         *dest_data;
+  p4est_locidx_t      ldatasiz, lcount;
+  p4est_locidx_t      dest_quads, src_quads;
+  p4est_locidx_t      dest_parts;
+  p4est_gloidx_t      gshipped;
+  p4est_t            *copy;
+
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lquad;
+  p4est_locidx_t      lpnum, lq;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  qu_data_t          *qud;
+
+  P4EST_ASSERT (g->src_fixed == NULL);
+  P4EST_ASSERT (g->dest_fixed == NULL);
+
+  if (g->mpisize == 1) {
+    return;
+  }
+
+  /* remember current forest and its particle counts per quadrant */
+  copy = p4est_copy (g->p4est, 0);
+  src_quads = copy->local_num_quadrants;
+  g->src_fixed = sc_array_new_count (sizeof (int), src_quads);
+
+  /* count particles per quadrant in callback */
+  g->qcount = 0;
+  g->prevlp = 0;
+  gshipped = p4est_partition_ext (g->p4est, 1, part_weight);
+  P4EST_ASSERT (g->qcount == src_quads);
+  dest_quads = g->p4est->local_num_quadrants;
+  P4EST_ASSERT (g->prevlp == (int) g->padata->elem_count);
+
+  /* if nothing happens, we're done */
+  if (gshipped == 0) {
+    sc_array_destroy_null (&g->src_fixed);
+    p4est_destroy (copy);
+    return;
+  }
+
+  /* transfer particle counts per quadrant to new partition */
+  g->dest_fixed = sc_array_new_count (sizeof (int), dest_quads);
+  p4est_transfer_fixed (g->p4est->global_first_quadrant,
+                        copy->global_first_quadrant,
+                        g->mpicomm, COMM_TAG_FIXED,
+                        (int *) g->dest_fixed->array,
+                        (const int *) g->src_fixed->array, sizeof (int));
+
+  /* transfer particle data to new partition */
+  ldatasiz = (p4est_locidx_t) sizeof (pa_data_t);
+  dest_parts = 0;
+  for (lq = 0; lq < dest_quads; ++lq) {
+    dest_parts += *(int *) sc_array_index (g->dest_fixed, lq);
+  }
+  P4EST_ASSERT (dest_parts % ldatasiz == 0);
+  dest_parts /= ldatasiz;
+  dest_data = sc_array_new_count (sizeof (pa_data_t), dest_parts);
+  p4est_transfer_custom (g->p4est->global_first_quadrant,
+                         copy->global_first_quadrant,
+                         g->mpicomm, COMM_TAG_CUSTOM,
+                         (pa_data_t *) dest_data->array,
+                         (const int *) g->dest_fixed->array,
+                         (const pa_data_t *) g->padata->array,
+                         (const int *) g->src_fixed->array);
+
+  /* clean up and keep new particle data */
+  p4est_destroy (copy);
+  sc_array_destroy_null (&g->src_fixed);
+  sc_array_destroy (g->padata);
+  g->padata = dest_data;
+
+  /* reassign cumulative particle counts */
+  lpnum = 0;
+  lquad = 0;
+  for (tt = g->p4est->first_local_tree; tt <= g->p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (g->p4est->trees, tt);
+    for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+      /* access quadrant */
+      quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+      qud = (qu_data_t *) quad->p.user_data;
+      P4EST_ASSERT (qud->premain == 0);
+      P4EST_ASSERT (qud->preceive == 0);
+
+      /* back out particle count in quadrant from data size */
+      lcount = *(int *) sc_array_index (g->dest_fixed, lquad);
+      P4EST_ASSERT (lcount % ldatasiz == 0);
+      lcount /= ldatasiz;
+      lpnum += lcount;
+      qud->u.lpend = lpnum;
+      ++lquad;
+    }
+  }
+  P4EST_ASSERT (lquad == dest_quads);
+  P4EST_ASSERT (lpnum == dest_parts);
+  sc_array_destroy_null (&g->dest_fixed);
+}
+
 static void
 sim (part_global_t * g)
 {
@@ -1537,9 +1661,9 @@ sim (part_global_t * g)
 
       /* partition weighted by current + received count (?) */
       /* partition the forest and send particles along with the partition */
-      /* think about partitioning and sending particles to future owner? */
-
       /* transfer particles accordingly */
+      /* think about partitioning and sending particles to future owner? */
+      part (g);
 
       /* end loop */
     }
