@@ -713,7 +713,9 @@ pack (part_global_t * g)
   double             *x;
 #endif
 
-  P4EST_ASSERT (g->psmem != NULL);
+  P4EST_ASSERT (g->psmem == NULL);
+  g->psmem = sc_mempool_new (sizeof (comm_psend_t));
+
   P4EST_ASSERT (g->pfound != NULL);
   numz = g->pfound->elem_count;
 
@@ -1412,6 +1414,7 @@ wait (part_global_t * g)
   P4EST_ASSERT (g->send_req != NULL);
   P4EST_ASSERT (g->recevs != NULL);
   P4EST_ASSERT (g->psend != NULL);
+  P4EST_ASSERT (g->psmem != NULL);
 
   /* wait for sent messages to complete */
   num_receivers = (int) g->recevs->elem_count;
@@ -1432,6 +1435,8 @@ wait (part_global_t * g)
   sc_array_destroy_null (&g->recevs);
   sc_hash_destroy (g->psend);
   g->psend = NULL;
+  sc_mempool_destroy (g->psmem);
+  g->psmem = NULL;
 }
 
 static void
@@ -1500,11 +1505,10 @@ sim (part_global_t * g)
 
       /* begin loop */
 
-      /* p4est_search_all to find new local element or process for each particle */
+      /* find new local element or process for each particle */
       presearch (g);
 
-      /* send to-be-received particles to receiver processes */
-      g->psmem = sc_mempool_new (sizeof (comm_psend_t));
+      /* send leaving particles to receiver processes */
       pack (g);
       comm (g);
 
@@ -1513,14 +1517,6 @@ sim (part_global_t * g)
       adapt (g);
       regroup (g);
       wait (g);
-
-      /* TODO: move deallocation of these upward */
-      sc_mempool_destroy (g->psmem);
-      g->psmem = NULL;
-
-      /* receive particles and run local search to count them per-quadrant */
-
-      /* refine the mesh based on current + received count */
 
       /* if no refinement occurred, store received particles and break loop */
 
