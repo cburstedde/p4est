@@ -1039,7 +1039,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   /* This function needs to do nothing if there is no data. */
   if (!
       (write_tree || write_level || write_rank || wrap_rank
-       || num_cell_vectors || num_cell_vectors))
+       || num_cell_scalars || num_cell_vectors))
     return cont;
 
   const int           mpirank = cont->p4est->mpirank;
