@@ -1821,9 +1821,9 @@ main (int argc, char **argv)
                          1e-1, "Time step size");
   sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
                          1., "Final time of simulation");
-  sc_options_add_switch (opt, 'V', "vtk", &g->vtk, "write VTK output");
-  sc_options_add_switch (opt, 'C', "checkp", &g->checkp,
-                         "write checkpoint output");
+  sc_options_add_int (opt, 'V', "vtk", &g->vtk, 0, "write VTK output");
+  sc_options_add_int (opt, 'C', "checkp", &g->checkp, 0,
+                      "write checkpoint output");
   sc_options_add_int (opt, 'R', "printn", &g->printn, 0,
                       "Print every nth particle");
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
@@ -1854,7 +1854,6 @@ main (int argc, char **argv)
     return usagerr (opt, "Number of particles per element positive");
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
-  sc_options_destroy (opt);
 
   /*** run program ***/
 
@@ -1862,6 +1861,7 @@ main (int argc, char **argv)
 
   /*** clean up and exit ***/
 
+  sc_options_destroy (opt);
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();
