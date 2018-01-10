@@ -1646,7 +1646,7 @@ outp (part_global_t * g, int k)
   }
 
   /* write cell data to file */
-  if (NULL == p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 1, 0,
+  if (NULL == p4est_vtk_write_cell_dataf (cont, 1, 1, 1, g->mpiwrap, 1, 0,
                                           "particles", pdata, cont)) {
     P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
     return;
@@ -1887,7 +1887,9 @@ main (int argc, char **argv)
                          1e-1, "Time step size");
   sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
                          1., "Final time of simulation");
-  sc_options_add_int (opt, 'V', "vtk", &g->vtk, 0, "write VTK output");
+  sc_options_add_int (opt, 'V', "vtk", &g->vtk, 0, "steps per VTK output");
+  sc_options_add_int (opt, 'W', "wrap", &g->mpiwrap, 0,
+                      "wrap VTK rank around");
   sc_options_add_int (opt, 'C', "checkp", &g->checkp, 0,
                       "write checkpoint output");
   sc_options_add_int (opt, 'R', "printn", &g->printn, 0,
@@ -1918,6 +1920,9 @@ main (int argc, char **argv)
   }
   if (g->elem_particles <= 0.) {
     return usagerr (opt, "Number of particles per element positive");
+  }
+  if (g->vtk < 0 || g->mpiwrap < 0) {
+    return usagerr (opt, "VTK output and wrap non-negative");
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
