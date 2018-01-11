@@ -478,11 +478,11 @@ create (part_global_t * g)
     pad->id = gpoffset + li;
 
     /* print initial particle location */
-    if (g->printn > 0 && pad->id % g->printn == 0) {
-      P4EST_INFOF ("Particle %lld X %g %g %g V %g %g %g\n",
-                   (long long) pad->id,
-                   pad->xv[0], pad->xv[1], pad->xv[2],
-                   pad->xv[3], pad->xv[4], pad->xv[5]);
+    if (g->printn > 0 && !(pad->id % g->printn)) {
+      P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
+                         0., (long long) pad->id,
+                         pad->xv[0], pad->xv[1], pad->xv[2],
+                         pad->xv[3], pad->xv[4], pad->xv[5]);
     }
     ++pad;
   }
@@ -575,14 +575,6 @@ rkstage (part_global_t * g, pa_data_t * pad, double h)
         pad->xv[i] += h * (pad->up[i] + d * rk[i]);
       }
     }
-  }
-
-  /* print particle location at final stage */
-  if (stage == order - 1 && g->printn > 0 && pad->id % g->printn == 0) {
-    P4EST_INFOF ("Particle %lld X %g %g %g V %g %g %g\n",
-                 (long long) pad->id,
-                 pad->xv[0], pad->xv[1], pad->xv[2],
-                 pad->xv[3], pad->xv[4], pad->xv[5]);
   }
 }
 
@@ -1385,7 +1377,7 @@ regroup (part_global_t * g)
 
   newnum =
     (p4est_locidx_t) (g->iremain->elem_count + g->ireceive->elem_count);
-  P4EST_LDEBUGF ("New local particle number %lld\n", (long long) newnum);
+  P4EST_VERBOSEF ("New local particle number %lld\n", (long long) newnum);
 
   /* regroup remaining and received particles after adaptation */
   premain = (p4est_locidx_t *) sc_array_index_begin (g->iremain);
@@ -1664,6 +1656,7 @@ static void
 sim (part_global_t * g)
 {
   int                 k;
+  int                 do_printn;
   double              t, h, f;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
@@ -1697,6 +1690,9 @@ sim (part_global_t * g)
       /* for the last stage compute the new location of the particle */
       /* do parallel transfer at end of each stage */
 
+      /* precompute output condition */
+      do_printn = g->printn > 0 && g->stage == g->order - 1;
+
       /*** time step for local particles ***/
       pad = (pa_data_t *) sc_array_index_begin (g->padata);
       if (pad != NULL) {
@@ -1712,7 +1708,18 @@ sim (part_global_t * g)
             /*** loop through particles in this element */
             for (li = 0; li < ilem_particles; ++li) {
               /* one Runge Kutta stage for this particle */
-              rkstage (g, pad++, h);
+              rkstage (g, pad, h);
+
+              /* print particle location at final stage */
+              if (do_printn && !(pad->id % g->printn)) {
+                P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
+                                   f, (long long) pad->id,
+                                   pad->xv[0], pad->xv[1], pad->xv[2],
+                                   pad->xv[3], pad->xv[4], pad->xv[5]);
+              }
+
+              /* and advance to next particle */
+              ++pad;
             }
 
             /* move to next quadrant */
