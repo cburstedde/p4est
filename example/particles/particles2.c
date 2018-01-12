@@ -1268,7 +1268,6 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (qod->premain == irem);
 
     /* sort remaining particles into the children */
-    ibeg = 0;
     pchild = incoming;
     ilow = sc_array_new (sizeof (p4est_locidx_t));
     ihigh = sc_array_new (sizeof (p4est_locidx_t));
@@ -1312,7 +1311,7 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
     }
 #endif
-    P4EST_ASSERT (ibeg == irem);
+    P4EST_ASSERT (ibeg == g->ireindex);
     P4EST_ASSERT (pchild == incoming + P4EST_CHILDREN);
 
     /* recover window onto received particles for the new family */
@@ -1323,7 +1322,6 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (qod->preceive == irem);
 
     /* sort received particles into the children */
-    ibeg = 0;
     pchild = incoming;
 #ifdef P4_TO_P8
     split_by_coord (g, &iview, klh, PA_MODE_RECEIVE, 2, lxyz, dxyz);
@@ -1357,7 +1355,7 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
     }
 #endif
-    P4EST_ASSERT (ibeg == irem);
+    P4EST_ASSERT (ibeg == g->irvindex);
     P4EST_ASSERT (pchild == incoming + P4EST_CHILDREN);
 
     /* clean up temporary memory */
