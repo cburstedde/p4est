@@ -2,7 +2,8 @@
 
 use strict;
 
-my (%ids, $id, $filename, $fh);
+my (%ids, %fns, $id, $filename, $fh);
+my ($gh, $first);
 
 while (<>) {
   if (m/^\[p[48]est (\d+)\] T (.+) I (\d+) X (.+) V (.+)$/) {
@@ -18,6 +19,7 @@ while (<>) {
       print $fh "# P T I X3 V3\n";
 
       $ids{$id} = $fh;
+      $fns{$id} = $filename;
     }
 
     # print the line into appropriate file
@@ -25,7 +27,24 @@ while (<>) {
   }
 }
 
-# close files
-foreach $fh (keys %ids) {
-  close $fh;
+# begin writing gnuplot script
+open $gh, ">", "G.gnuplot";
+#print $gh "set xrange [0:1]\nset yrange [0:1]\n";
+print $gh "set size ratio -1\n";
+print $gh "plot \\\n";
+
+# close data files
+$first = "";
+foreach $id (sort keys %ids) {
+  close $ids{$id};
+
+  $filename = $fns{$id};
+  print $gh "$first  \"$filename\" using 4:5 with lines";
+
+  $first = ",\\\n";
 }
+print $gh "\n";
+
+# finish writing gnuplot script
+print $gh "pause -1\n";
+close $gh;
