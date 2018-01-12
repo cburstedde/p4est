@@ -1489,6 +1489,31 @@ regroup (part_global_t * g)
 }
 
 static void
+pprint (part_global_t * g, double t)
+{
+  p4est_locidx_t      li, lpnum;
+  pa_data_t          *pad;
+
+  P4EST_ASSERT (g->padata != NULL);
+  P4EST_ASSERT (g->printn > 0);
+  P4EST_ASSERT (g->stage + 1 == g->order);
+
+  lpnum = (p4est_locidx_t) g->padata->elem_count;
+  pad = (pa_data_t *) sc_array_index_begin (g->padata);
+  for (li = 0; li < lpnum; ++li) {
+    if (!(pad->id % g->printn)) {
+      /* print current particle location */
+      P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
+                         t, (long long) pad->id,
+                         pad->xv[0], pad->xv[1], pad->xv[2],
+                         pad->xv[3], pad->xv[4], pad->xv[5]);
+    }
+    ++pad;
+  }
+  P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
+}
+
+static void
 wait (part_global_t * g)
 {
   int                 mpiret;
@@ -1708,7 +1733,6 @@ static void
 sim (part_global_t * g)
 {
   int                 k;
-  int                 do_printn;
   double              t, h, f;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
@@ -1742,9 +1766,6 @@ sim (part_global_t * g)
       /* for the last stage compute the new location of the particle */
       /* do parallel transfer at end of each stage */
 
-      /* precompute output condition */
-      do_printn = g->printn > 0 && g->stage == g->order - 1;
-
       /*** time step for local particles ***/
       pad = (pa_data_t *) sc_array_index_begin (g->padata);
       if (pad != NULL) {
@@ -1760,18 +1781,7 @@ sim (part_global_t * g)
             /*** loop through particles in this element */
             for (li = 0; li < ilem_particles; ++li) {
               /* one Runge Kutta stage for this particle */
-              rkstage (g, pad, h);
-
-              /* print particle location at final stage */
-              if (do_printn && !(pad->id % g->printn)) {
-                P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
-                                   f, (long long) pad->id,
-                                   pad->xv[0], pad->xv[1], pad->xv[2],
-                                   pad->xv[3], pad->xv[4], pad->xv[5]);
-              }
-
-              /* and advance to next particle */
-              ++pad;
+              rkstage (g, pad++, h);
             }
 
             /* move to next quadrant */
@@ -1806,6 +1816,9 @@ sim (part_global_t * g)
       postsearch (g);
       adapt (g);
       regroup (g);
+      if (g->printn && g->stage + 1 == g->order) {
+        pprint (g, f);
+      }
 
 #ifdef PART_WEON
       weon = 0;
