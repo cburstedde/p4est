@@ -162,10 +162,10 @@ comm_tag_t;
 static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
 
 static const double planet_xyz[PART_PLANETS][3] = {
-  {.48, .48, .56},
-  {.58, .43, .59}
+  {.48, .58, .56},
+  {.58, .41, .69}
 };
-static const double planet_mass[PART_PLANETS] = { .1, .2 };
+static const double planet_mass[PART_PLANETS] = { .029, .167 };
 
 static const double rk1b[0] = { };
 static const double rk1g[1] = { 1. };
