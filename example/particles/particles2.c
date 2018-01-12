@@ -1836,6 +1836,11 @@ sim (part_global_t * g)
       part (g);
 
       /* end loop */
+
+      if (g->gpnum == 0) {
+        /* we have run out of particles */
+        break;
+      }
     }
 
     /*** finish up time step ***/
@@ -1844,9 +1849,18 @@ sim (part_global_t * g)
 
     /* write output files */
     outp (g, k);
+
+    /* maybe we have run out of particles and stop */
+    if (g->gpnum == 0) {
+      P4EST_GLOBAL_PRODUCTIONF
+        ("We have lost all %lld particles\n", (long long) g->gplost);
+      break;
+    }
   }
 
-  P4EST_GLOBAL_PRODUCTIONF ("Time %g is final after %d steps\n", t, k);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Time %g is final after %d steps lost %lld remain %lld\n", t, k,
+     (long long) g->gplost, (long long) g->gpnum);
 }
 
 static void
