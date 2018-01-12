@@ -84,6 +84,50 @@ typedef struct pa_data
 }
 pa_data_t;
 
+#ifdef PART_WEON
+static int          weon = 0;
+#endif
+
+#if 0
+static void
+ppad (part_global_t * g, const char *lead)
+{
+  size_t              zz;
+  pa_data_t          *pad;
+
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->padata != NULL);
+
+  if (lead != NULL) {
+    P4EST_VERBOSEF ("PPAD %s\n", lead);
+  }
+
+  for (zz = 0; zz < g->padata->elem_count; ++zz) {
+    pad = (pa_data_t *) sc_array_index (g->padata, zz);
+    P4EST_VERBOSEF ("PPAD L %d I %d\n", (int) zz, (int) pad->id);
+  }
+}
+
+static void
+lrem (part_global_t * g, const char *lead)
+{
+  size_t              zz;
+  p4est_locidx_t      lrem;
+
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->iremain != NULL);
+
+  if (lead != NULL) {
+    P4EST_VERBOSEF ("LREM %s\n", lead);
+  }
+
+  for (zz = 0; zz < g->iremain->elem_count; ++zz) {
+    lrem = *(p4est_locidx_t *) sc_array_index (g->iremain, zz);
+    P4EST_VERBOSEF ("LREM Z %d N %d\n", (int) zz, (int) lrem);
+  }
+}
+#endif
+
 #ifdef PART_SENDFULL
 #define PART_MSGSIZE (sizeof (pa_data_t))
 #else
@@ -650,6 +694,16 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
     if (*pfn != g->mpirank) {
       /* particle was either yet unfound, or found on another process */
       /* bump counter of particles in this local quadrant */
+
+#if 0
+      /* HACK */
+      if (g->printn > 0 && !(pad->id % g->printn)) {
+        pad = (pa_data_t *) point;
+        P4EST_VERBOSEF ("Locremain particle %lld %d\n",
+                        (long long) pad->id, (int) zp);
+      }
+#endif
+
       *pfn = g->mpirank;
       *(p4est_locidx_t *) sc_array_push (g->iremain) = (p4est_locidx_t) zp;
       qud = (qu_data_t *) quadrant->p.user_data;
@@ -1743,10 +1797,21 @@ sim (part_global_t * g)
       pack (g);
       comm (g);
 
+#ifdef PART_WEON
+      if (g->stage == 0 && (t >= 1.44 && t <= 1.46)) {
+        weon = 1;
+        P4EST_GLOBAL_INFOF ("Yeah %d\n", 9889);
+      }
+#endif
+
       /* process remaining local and newly received particles */
       postsearch (g);
       adapt (g);
       regroup (g);
+
+#ifdef PART_WEON
+      weon = 0;
+#endif
 
       /* wait for sent messages to complete */
       wait (g);
