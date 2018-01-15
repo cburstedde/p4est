@@ -475,9 +475,7 @@ create (part_global_t * g)
       quad = p4est_quadrant_array_index (&tree->quadrants, lq);
       qud = (qu_data_t *) quad->p.user_data;
 
-      /* TODO: maybe move this line elsewhere */
-      qud->premain = qud->preceive = 0;
-
+      /* calculate required number of particles */
       ilem_particles = (p4est_locidx_t) round
         (qud->u.d / g->global_density * g->num_particles);
       pad = (pa_data_t *) sc_array_push_count (g->padata, ilem_particles);
@@ -500,6 +498,7 @@ create (part_global_t * g)
       }
       lpnum += ilem_particles;
       qud->u.lpend = lpnum;
+      qud->premain = qud->preceive = 0;
     }
   }
   g->gplost = 0;
