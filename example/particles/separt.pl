@@ -4,7 +4,7 @@ use strict;
 
 my ($dim, $finalt, $deltat, $order);
 my (%ids, %fns, $id, $filename, $fh);
-my ($gh, $first);
+my ($gh, $first, $using);
 
 $dim = 0;
 $finalt = 0.;
@@ -57,7 +57,14 @@ print $gh "set size ratio -1\n";
 #print $gh "set xrange [0:1]\nset yrange [0:1]\n";
 print $gh "set key off\n";
 print $gh "set title \"D=$dim T=$finalt dt=$deltat rk=$order\"\n";
-print $gh "plot \\\n";
+if ($dim == 2) {
+  print $gh "plot \\\n";
+  $using = "4:5";
+}
+else {
+  print $gh "splot \\\n";
+  $using = "4:5:6";
+}
 
 # close data files
 $first = "";
@@ -65,7 +72,7 @@ foreach $id (sort keys %ids) {
   close $ids{$id};
 
   $filename = $fns{$id};
-  print $gh "$first  \"$filename\" using 4:5 with lines";
+  print $gh "$first  \"$filename\" using $using with lines";
 
   $first = ",\\\n";
 }
