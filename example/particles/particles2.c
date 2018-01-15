@@ -515,16 +515,7 @@ create (part_global_t * g)
   }
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (li = 0; li < lpnum; ++li) {
-    pad->id = gpoffset + li;
-
-    /* print initial particle location */
-    if (g->printn > 0 && !(pad->id % g->printn)) {
-      P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
-                         0., (long long) pad->id,
-                         pad->xv[0], pad->xv[1], pad->xv[2],
-                         pad->xv[3], pad->xv[4], pad->xv[5]);
-    }
-    ++pad;
+    (pad++)->id = gpoffset + li;
   }
   P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
 }
@@ -1454,8 +1445,13 @@ pprint (part_global_t * g, double t)
   pa_data_t          *pad;
 
   P4EST_ASSERT (g->padata != NULL);
-  P4EST_ASSERT (g->printn > 0);
-  P4EST_ASSERT (g->stage + 1 == g->order);
+  P4EST_ASSERT ((t <= 0. && g->stage == 0) ||
+                (t > 0. && g->stage == g->order));
+
+  /* only output when specified */
+  if (g->printn <= 0) {
+    return;
+  }
 
   lpnum = (p4est_locidx_t) g->padata->elem_count;
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
@@ -1643,6 +1639,7 @@ outp (part_global_t * g, int k)
   qu_data_t          *qud;
   p4est_vtk_context_t *cont;
 
+  /* only output when specified */
   if (g->vtk <= 0 || k % g->vtk) {
     return;
   }
@@ -1715,11 +1712,12 @@ sim (part_global_t * g)
   }
 
   /* output initial condition */
+  t = 0.;
   k = 0;
+  pprint (g, t);
   outp (g, k);
 
   /*** loop over simulation time ***/
-  t = 0.;
   while (t < g->finaltime) {
     h = g->deltat;
     f = t + h;
@@ -1760,13 +1758,7 @@ sim (part_global_t * g)
         }
       }
 
-      /* TODO:
-         reassign particle to other quadrant
-         according to position in either wo (not last stage) or xv;
-         notify quadrants of assignment to refine/coarsen
-         parallel transfer and partition */
-
-      /* begin loop */
+      /* begin loop -- currently there is no loop */
 
       /* find new local element or process for each particle */
       presearch (g);
@@ -1791,7 +1783,7 @@ sim (part_global_t * g)
       /* think about partitioning and sending particles to future owner? */
       part (g);
 
-      /* end loop */
+      /* end loop -- currently there is no loop */
 
       if (g->gpnum == 0) {
         /* we have run out of particles */
@@ -1803,15 +1795,17 @@ sim (part_global_t * g)
     ++k;
     t = f;
 
-    /* write output files */
-    outp (g, k);
-
     /* maybe we have run out of particles and stop */
     if (g->gpnum == 0) {
       P4EST_GLOBAL_PRODUCTIONF
         ("We have lost all %lld particles\n", (long long) g->gplost);
       break;
     }
+    P4EST_ASSERT (g->stage == g->order);
+
+    /* write output files */
+    pprint (g, t);
+    outp (g, k);
   }
 
   P4EST_GLOBAL_PRODUCTIONF
