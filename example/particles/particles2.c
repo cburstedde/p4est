@@ -389,8 +389,8 @@ initrp (part_global_t * g)
     mpiret = sc_MPI_Allreduce (&ld, &g->global_density, 1, sc_MPI_DOUBLE,
                                sc_MPI_SUM, g->mpicomm);
     SC_CHECK_MPI (mpiret);
-    P4EST_GLOBAL_INFOF ("Global integral over density %g\n",
-                        g->global_density);
+    P4EST_GLOBAL_STATISTICSF ("Global integral over density %g\n",
+                              g->global_density);
 
     /*** get global maximum of particle count and level ***/
     loclp[0] = refine_maxd;
@@ -400,8 +400,9 @@ initrp (part_global_t * g)
     SC_CHECK_MPI (mpiret);
     ilem_particles = (p4est_locidx_t) round
       (glolp[0] * g->num_particles / g->global_density);
-    P4EST_GLOBAL_INFOF ("Maximum particle number per quadrant %ld"
-                        " maxlevel %g\n", (long) ilem_particles, glolp[1]);
+    P4EST_GLOBAL_STATISTICSF
+      ("Maximum particle number per quadrant %ld maxlevel %g\n",
+       (long) ilem_particles, glolp[1]);
 
     /*** we have computed the density, this may be enough ***/
     if (cycle >= max_cycles || (double) ilem_particles <= g->elem_particles) {
@@ -502,8 +503,8 @@ create (part_global_t * g)
   mpiret = sc_MPI_Allreduce (&gpnum, &g->gpnum, 1, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_INFOF ("Created %lld particles for %g\n",
-                      (long long) g->gpnum, g->num_particles);
+  P4EST_GLOBAL_PRODUCTIONF ("Created %lld particles for %g\n",
+                            (long long) g->gpnum, g->num_particles);
 
   /* create globally unique particle numbers */
   mpiret = sc_MPI_Exscan (&gpnum, &gpoffset, 1, P4EST_MPI_GLOIDX,
@@ -864,11 +865,11 @@ pack (part_global_t * g)
   mpiret = sc_MPI_Allreduce (loclrs, glolrs, 4, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_INFOF ("Particles %lld remain %lld sent %lld lost %lld"
-                      " avg peers %.3g\n", (long long) g->gpnum,
-                      (long long) glolrs[0],
-                      (long long) glolrs[1], (long long) glolrs[2],
-                      glolrs[3] / (double) g->mpisize);
+  P4EST_GLOBAL_STATISTICSF
+    ("Stage %d from %lld remain %lld sent %lld lost %lld avg peers %.3g\n",
+     g->stage, (long long) g->gpnum, (long long) glolrs[0],
+     (long long) glolrs[1], (long long) glolrs[2],
+     glolrs[3] / (double) g->mpisize);
   P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
   g->gplost += glolrs[2];
   g->gpnum -= glolrs[2];
@@ -1726,7 +1727,7 @@ sim (part_global_t * g)
       f = g->finaltime;
       h = f - t;
     }
-    P4EST_GLOBAL_INFOF ("Time %g into step %d with %g\n", t, k, h);
+    P4EST_GLOBAL_STATISTICSF ("Time %g into step %d with %g\n", t, k, h);
 
     /*** loop over Runge Kutta stages ***/
     for (g->stage = 0; g->stage < g->order; ++g->stage) {
