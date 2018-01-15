@@ -90,6 +90,7 @@ typedef struct part_global
   part_init_density_t pidense;
   void               *piddata;
   p4est_gloidx_t      gpnum, gplost;
+  sc_array_t         *ilh[2], *jlh[2], *klh[2];
 
   p4est_connectivity_t *conn;
   p4est_t            *p4est;

@@ -1213,9 +1213,6 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
   int                 wx, wy, wz;
   double              lxyz[3], hxyz[3], dxyz[3];
   sc_array_t          iview, *arr;
-  sc_array_t         *ilow, *ihigh, *ilh[2];
-  sc_array_t         *jlow, *jhigh, *jlh[2];
-  sc_array_t         *klow, *khigh, *klh[2];
   p4est_locidx_t      irem, ibeg;
   p4est_quadrant_t  **pchild;
   qu_data_t          *qud, *qod;
@@ -1269,35 +1266,23 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 
     /* sort remaining particles into the children */
     pchild = incoming;
-    ilow = sc_array_new (sizeof (p4est_locidx_t));
-    ihigh = sc_array_new (sizeof (p4est_locidx_t));
-    ilh[0] = ilow;
-    ilh[1] = ihigh;
-    jlow = sc_array_new (sizeof (p4est_locidx_t));
-    jhigh = sc_array_new (sizeof (p4est_locidx_t));
-    jlh[0] = jlow;
-    jlh[1] = jhigh;
 #ifdef P4_TO_P8
-    klow = sc_array_new (sizeof (p4est_locidx_t));
-    khigh = sc_array_new (sizeof (p4est_locidx_t));
-    klh[0] = klow;
-    klh[1] = khigh;
-    split_by_coord (g, &iview, klh, PA_MODE_REMAIN, 2, lxyz, dxyz);
+    split_by_coord (g, &iview, g->klh, PA_MODE_REMAIN, 2, lxyz, dxyz);
     for (wz = 0; wz < 2; ++wz) {
 #if 0
     }
 #endif
 #else
-    klh[0] = &iview;
-    klh[1] = klow = khigh = NULL;
+    g->klh[0] = &iview;
+    P4EST_ASSERT (g->klh[1] == NULL);
     wz = 0;
 #endif
-    split_by_coord (g, klh[wz], jlh, PA_MODE_REMAIN, 1, lxyz, dxyz);
+    split_by_coord (g, g->klh[wz], g->jlh, PA_MODE_REMAIN, 1, lxyz, dxyz);
     for (wy = 0; wy < 2; ++wy) {
-      split_by_coord (g, jlh[wy], ilh, PA_MODE_REMAIN, 0, lxyz, dxyz);
+      split_by_coord (g, g->jlh[wy], g->ilh, PA_MODE_REMAIN, 0, lxyz, dxyz);
       for (wx = 0; wx < 2; ++wx) {
         /* we have a set of particles for child 4 * wz + 2 * wy + wx */
-        arr = ilh[wx];
+        arr = g->ilh[wx];
         sc_array_init_view (&iview, g->iremain, ibeg, arr->elem_count);
         sc_array_paste (&iview, arr);
         qud = (qu_data_t *) (*pchild++)->p.user_data;
@@ -1324,24 +1309,22 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     /* sort received particles into the children */
     pchild = incoming;
 #ifdef P4_TO_P8
-    split_by_coord (g, &iview, klh, PA_MODE_RECEIVE, 2, lxyz, dxyz);
+    split_by_coord (g, &iview, g->klh, PA_MODE_RECEIVE, 2, lxyz, dxyz);
     for (wz = 0; wz < 2; ++wz) {
 #if 0
     }
 #endif
 #else
-    P4EST_ASSERT (klh[0] == &iview);
-    P4EST_ASSERT (klh[1] == NULL);
-    P4EST_ASSERT (klow == NULL);
-    P4EST_ASSERT (khigh == NULL);
+    P4EST_ASSERT (g->klh[0] == &iview);
+    P4EST_ASSERT (g->klh[1] == NULL);
     wz = 0;
 #endif
-    split_by_coord (g, klh[wz], jlh, PA_MODE_RECEIVE, 1, lxyz, dxyz);
+    split_by_coord (g, g->klh[wz], g->jlh, PA_MODE_RECEIVE, 1, lxyz, dxyz);
     for (wy = 0; wy < 2; ++wy) {
-      split_by_coord (g, jlh[wy], ilh, PA_MODE_RECEIVE, 0, lxyz, dxyz);
+      split_by_coord (g, g->jlh[wy], g->ilh, PA_MODE_RECEIVE, 0, lxyz, dxyz);
       for (wx = 0; wx < 2; ++wx) {
         /* we have a set of particles for child 4 * wz + 2 * wy + wx */
-        arr = ilh[wx];
+        arr = g->ilh[wx];
         sc_array_init_view (&iview, g->ireceive, ibeg, arr->elem_count);
         sc_array_paste (&iview, arr);
         qud = (qu_data_t *) (*pchild++)->p.user_data;
@@ -1357,16 +1340,6 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
     P4EST_ASSERT (ibeg == g->irvindex);
     P4EST_ASSERT (pchild == incoming + P4EST_CHILDREN);
-
-    /* clean up temporary memory */
-    sc_array_destroy (ihigh);
-    sc_array_destroy (ilow);
-    sc_array_destroy (jhigh);
-    sc_array_destroy (jlow);
-#ifdef P4_TO_P8
-    sc_array_destroy (khigh);
-    sc_array_destroy (klow);
-#endif
 
     /* the first child is assigned the whole padata of parent */
     /* TODO: it would be possible to set lpend to 0 in coarsening
@@ -1744,6 +1717,17 @@ sim (part_global_t * g)
 
   P4EST_ASSERT (g->padata != NULL);
 
+  /* allocate arrays that are reused a lot */
+  for (k = 0; k < 2; ++k) {
+    g->ilh[k] = sc_array_new (sizeof (p4est_locidx_t));
+    g->jlh[k] = sc_array_new (sizeof (p4est_locidx_t));
+#ifdef P4_TO_P8
+    g->klh[k] = sc_array_new (sizeof (p4est_locidx_t));
+#else
+    P4EST_ASSERT (g->klh[k] == NULL);
+#endif
+  }
+
   /* output initial condition */
   k = 0;
   outp (g, k);
@@ -1861,6 +1845,17 @@ sim (part_global_t * g)
   P4EST_GLOBAL_PRODUCTIONF
     ("Time %g is final after %d steps lost %lld remain %lld\n", t, k,
      (long long) g->gplost, (long long) g->gpnum);
+
+  /* clean up */
+  for (k = 0; k < 2; ++k) {
+    sc_array_destroy_null (&g->ilh[k]);
+    sc_array_destroy_null (&g->jlh[k]);
+#ifdef P4_TO_P8
+    sc_array_destroy_null (&g->klh[k]);
+#else
+    g->klh[k] = NULL;
+#endif
+  }
 }
 
 static void
