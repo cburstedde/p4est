@@ -84,10 +84,6 @@ typedef struct pa_data
 }
 pa_data_t;
 
-#ifdef PART_WEON
-static int          weon = 0;
-#endif
-
 #if 0
 static void
 ppad (part_global_t * g, const char *lead)
@@ -1778,24 +1774,10 @@ sim (part_global_t * g)
       pack (g);
       comm (g);
 
-#ifdef PART_WEON
-      if (g->stage == 0 && (t >= 1.44 && t <= 1.46)) {
-        weon = 1;
-        P4EST_GLOBAL_INFOF ("Yeah %d\n", 9889);
-      }
-#endif
-
       /* process remaining local and newly received particles */
       postsearch (g);
       adapt (g);
       regroup (g);
-      if (g->printn && g->stage + 1 == g->order) {
-        pprint (g, f);
-      }
-
-#ifdef PART_WEON
-      weon = 0;
-#endif
 
       /* wait for sent messages to complete */
       wait (g);
