@@ -80,6 +80,7 @@ typedef struct pa_data
   double              xv[6];
   double              wo[6];
   double              up[6];
+  double              rm[3];
   p4est_gloidx_t      id;
 }
 pa_data_t;
@@ -512,6 +513,7 @@ create (part_global_t * g)
 #endif
         memset (pad->wo, 0, 6 * sizeof (double));
         memset (pad->up, 0, 6 * sizeof (double));
+        pad->rm[0] = pad->rm[1] = pad->rm[2] = -1.;
         ++pad;
       }
       lpnum += ilem_particles;
@@ -1462,6 +1464,8 @@ regroup (part_global_t * g)
 static void
 pprint (part_global_t * g, double t)
 {
+  int                 k;
+  double              d, ds;
   p4est_locidx_t      li, lpnum;
   pa_data_t          *pad;
 
@@ -1478,11 +1482,21 @@ pprint (part_global_t * g, double t)
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (li = 0; li < lpnum; ++li) {
     if (!(pad->id % g->printn)) {
-      /* print current particle location */
-      P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
-                         t, (long long) pad->id,
-                         pad->xv[0], pad->xv[1], pad->xv[2],
-                         pad->xv[3], pad->xv[4], pad->xv[5]);
+      /* has the particle advanced far enough? */
+      ds = 0.;
+      for (k = 0; k < P4EST_DIM; ++k) {
+        d = pad->xv[k] - pad->rm[k];
+        ds += d * d;
+      }
+      if (ds >= SC_SQR (.005)) {
+        memcpy (pad->rm, pad->xv, P4EST_DIM * sizeof (double));
+
+        /* print current particle location */
+        P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
+                           t, (long long) pad->id,
+                           pad->xv[0], pad->xv[1], pad->xv[2],
+                           pad->xv[3], pad->xv[4], pad->xv[5]);
+      }
     }
     ++pad;
   }
