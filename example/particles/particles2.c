@@ -155,7 +155,9 @@ typedef enum comm_tag
 }
 comm_tag_t;
 
-static const double simpson[3] = { 1. / 6, 2. / 3., 1. / 6. };
+#define PART_NQPOINTS 3
+static double       qpoints[PART_NQPOINTS];
+static double       qweights[PART_NQPOINTS];
 
 static const double planet_xyz[PART_PLANETS][3] = {
   {.48, .58, .56},
@@ -299,27 +301,33 @@ integrate (part_global_t * g, const double lxyz[3], const double dxyz[3])
 {
   int                 i, j, k;
   double              wk, wkj, wkji;
+  double              qpi[3], qpj[3], qpk[3];
   double              d;
 
-  /*** run Simpson's rule ***/
+  /*** run quadrature rule ***/
+  P4EST_ASSERT (PART_NQPOINTS == 3);
+  for (k = 0; k < 3; ++k) {
+    P4EST_ASSERT (qpoints[k] >= 0. && qpoints[k] <= 1.);
+    qpi[k] = lxyz[0] + qpoints[k] * dxyz[0];
+    qpj[k] = lxyz[1] + qpoints[k] * dxyz[1];
+    qpk[k] = lxyz[2] + qpoints[k] * dxyz[2];
+  }
   d = 0.;
 #ifdef P4_TO_P8
   for (k = 0; k < 3; ++k) {
-    wk = simpson[k] * dxyz[2];
+    wk = qweights[k] * dxyz[2];
 #if 0
   }
 #endif
 #else
-  k = 0;
+  k = 1;
   wk = 1.;
 #endif
   for (j = 0; j < 3; ++j) {
-    wkj = wk * simpson[j] * dxyz[1];
+    wkj = wk * qweights[j] * dxyz[1];
     for (i = 0; i < 3; ++i) {
-      wkji = wkj * simpson[i] * dxyz[0];
-      d += wkji * g->pidense (lxyz[0] + .5 * i * dxyz[0],
-                              lxyz[1] + .5 * j * dxyz[1],
-                              lxyz[2] + .5 * k * dxyz[2], g->piddata);
+      wkji = wkj * qweights[i] * dxyz[0];
+      d += wkji * g->pidense (qpi[i], qpj[j], qpk[k], g->piddata);
     }
   }
 #ifdef P4_TO_P8
@@ -349,6 +357,7 @@ static void
 initrp (part_global_t * g)
 {
   int                 mpiret;
+  int                 i;
   int                 cycle, max_cycles;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              d, ld;
@@ -361,6 +370,18 @@ initrp (part_global_t * g)
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
+
+  /* prepare quadrature rule */
+  P4EST_ASSERT (PART_NQPOINTS == 3);
+  qpoints[2] = sqrt (3. / 5.);
+  qpoints[1] = 0.;
+  qpoints[0] = -qpoints[2];
+  qweights[0] = qweights[2] = 5. / 9.;
+  qweights[1] = 8. / 9.;
+  for (i = 0; i < 3; ++i) {
+    qpoints[i] = .5 * (1. + qpoints[i]);
+    qweights[i] *= .5;
+  }
 
   max_cycles = g->maxlevel - g->minlevel;
   for (cycle = 0;; ++cycle) {
