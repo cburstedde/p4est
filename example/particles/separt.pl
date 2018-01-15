@@ -38,15 +38,15 @@ while (<>) {
 
       # this is the first occurrence of this particle
       $filename = sprintf "I%06d.txt", $id;
-      open $fh, ">", $filename;
-      print $fh "# P T I X3 V3\n";
+      open $fh, ">", $filename or die "Open file for $id";
+      print $fh "# P T I X3 V3\n" or die "Print first line for $id";
 
       $ids{$id} = $fh;
       $fns{$id} = $filename;
     }
 
     # print the line into appropriate file
-    printf $fh "%d %g %d %s %s\n", $1, $2, $3, $4, $5;
+    printf $fh "%d %g %d %s %s\n", $1, $2, $3, $4, $5 or die "Print for $id";
   }
 }
 
