@@ -164,7 +164,7 @@ static const double planet_xyz[PART_PLANETS][3] = {
   {.48, .58, .56},
   {.58, .41, .69}
 };
-static const double planet_mass[PART_PLANETS] = { .029, .167 };
+static const double planet_mass[PART_PLANETS] = { .049, .167 };
 
 static const double rk1b[0] = { };
 static const double rk1g[1] = { 1. };
@@ -506,6 +506,8 @@ create (part_global_t * g)
         for (j = 0; j < P4EST_DIM; ++j) {
           r = rand () / (double) RAND_MAX;
           pad->xv[j] = lxyz[j] + r * dxyz[j];
+
+          /* begin with some velocity choice */
           pad->xv[3 + j] = 0.;
         }
 #ifndef P4_TO_P8
@@ -1866,7 +1868,7 @@ run (part_global_t * g)
   pi_data_t           spiddata, *piddata = &spiddata;
 
   /*** initial particle density ***/
-  piddata->sigma = .1;
+  piddata->sigma = .07;
   piddata->invs2 = 1. / SC_SQR (piddata->sigma);
   piddata->gnorm = gaussnorm (piddata->sigma);
   piddata->center[0] = .3;
