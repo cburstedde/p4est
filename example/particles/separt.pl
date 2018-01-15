@@ -2,11 +2,34 @@
 
 use strict;
 
+my ($dim, $finalt, $deltat, $order);
 my (%ids, %fns, $id, $filename, $fh);
 my ($gh, $first);
 
+$dim = 0;
+$finalt = 0.;
+$deltat = 0.;
+$order = 0;
 while (<>) {
-  if (m/^\[p[48]est (\d+)\] T (.+) I (\d+) X (.+) V (.+)$/) {
+  if (m/Into p([48])est_new/) {
+    if ($1 == "4") {
+      $dim = 2;
+    }
+    elsif ($1 == "8") {
+      $dim = 3;
+    }
+  }
+  if (m/^\[p4est\]\s+finaltime\s+([\d\.eE+-]+)/) {
+    $finalt = $1;
+  }
+  if (m/^\[p4est\]\s+deltat\s+([\d\.eE+-]+)/) {
+    $deltat = $1;
+  }
+  if (m/^\[p4est\]\s+rkorder\s+(\d+)/) {
+    $order = $1;
+  }
+
+  if (m/^\[p4est (\d+)\] T (.+) I (\d+) X (.+) V (.+)$/) {
     $id = $3;
 
     # check for existing file handle
@@ -29,8 +52,11 @@ while (<>) {
 
 # begin writing gnuplot script
 open $gh, ">", "G.gnuplot";
-#print $gh "set xrange [0:1]\nset yrange [0:1]\n";
+print $gh "set term x11 size 500,500\n";
 print $gh "set size ratio -1\n";
+#print $gh "set xrange [0:1]\nset yrange [0:1]\n";
+print $gh "set key off\n";
+print $gh "set title \"D=$dim T=$finalt dt=$deltat rk=$order\"\n";
 print $gh "plot \\\n";
 
 # close data files
