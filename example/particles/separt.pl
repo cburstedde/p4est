@@ -11,13 +11,8 @@ $finalt = 0.;
 $deltat = 0.;
 $order = 0;
 while (<>) {
-  if (m/Into p([48])est_new/) {
-    if ($1 == "4") {
-      $dim = 2;
-    }
-    elsif ($1 == "8") {
-      $dim = 3;
-    }
+  if (m/^\[p4est\]\s+Dimension is (\d+)/) {
+    $dim = $1;
   }
   if (m/^\[p4est\]\s+finaltime\s+([\d\.eE+-]+)/) {
     $finalt = $1;

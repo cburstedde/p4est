@@ -1494,10 +1494,10 @@ pprint (part_global_t * g, double t)
         memcpy (pad->rm, pad->xv, P4EST_DIM * sizeof (double));
 
         /* print current particle location */
-        P4EST_PRODUCTIONF ("T %g I %lld X %g %g %g V %g %g %g\n",
-                           t, (long long) pad->id,
-                           pad->xv[0], pad->xv[1], pad->xv[2],
-                           pad->xv[3], pad->xv[4], pad->xv[5]);
+        P4EST_ESSENTIALF ("T %g I %lld X %g %g %g V %g %g %g\n",
+                          t, (long long) pad->id,
+                          pad->xv[0], pad->xv[1], pad->xv[2],
+                          pad->xv[3], pad->xv[4], pad->xv[5]);
       }
     }
     ++pad;
@@ -1845,7 +1845,7 @@ sim (part_global_t * g)
     outp (g, k);
   }
 
-  P4EST_GLOBAL_PRODUCTIONF
+  P4EST_GLOBAL_ESSENTIALF
     ("Time %g is final after %d steps lost %lld remain %lld\n", t, k,
      (long long) g->gplost, (long long) g->gpnum);
 
@@ -2019,7 +2019,8 @@ main (int argc, char **argv)
   if (g->vtk < 0 || g->mpiwrap < 0) {
     return usagerr (opt, "VTK output and wrap non-negative");
   }
-  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
+  P4EST_GLOBAL_ESSENTIALF ("Dimension is %d\n", P4EST_DIM);
+  sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
   /*** run program ***/
 
