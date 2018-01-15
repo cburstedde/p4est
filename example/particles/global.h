@@ -68,7 +68,6 @@ typedef struct part_global
   int                 stage;
   double              global_density;
   double              t, lxyz[3], hxyz[3], dxyz[3];
-  p4est_locidx_t      prevlp, prev2;
   sc_array_t         *padata;   /**< pa_data_t Numerical data of local particles */
   sc_array_t         *pfound;   /**< int Target rank for local particles */
   sc_array_t         *iremain;  /**< locidx_t Index into padata of stay-local particles */
@@ -84,6 +83,7 @@ typedef struct part_global
   sc_array_t         *cfound;   /**< char Flag for received particles */
   sc_hash_t          *psend;    /**< comm_psend_t with one entry per receiver */
   sc_mempool_t       *psmem;    /**< comm_psend_t to use as hash table entries */
+  p4est_locidx_t      prevlp;   /**< Count local particles in partition callback */
   p4est_locidx_t      qcount;   /**< Count local quadrants in partition callback */
   sc_array_t         *src_fixed;        /**< int Particle counts per quadrant */
   sc_array_t         *dest_fixed;       /**< int Particle counts per quadrant */
