@@ -1977,7 +1977,7 @@ main (int argc, char **argv)
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
   sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
-                         3., "Number of particles per element");
+                         P4EST_CHILDREN, "Number of particles per element");
   sc_options_add_double (opt, 'h', "deltat", &g->deltat,
                          1e-1, "Time step size");
   sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
