@@ -46,9 +46,6 @@
 /** Send full particle information in first message, comment out if not */
 #define PART_SENDFULL
 
-/** Number of plates in physical model */
-#define PART_PLANETS (2)
-
 /** Context data to compute initial particle positions */
 typedef struct pi_data
 {
@@ -160,11 +157,12 @@ comm_tag_t;
 static double       qpoints[PART_NQPOINTS];
 static double       qweights[PART_NQPOINTS];
 
-static const double planet_xyz[PART_PLANETS][3] = {
-  {.48, .58, .56},
-  {.58, .41, .69}
+static const double planet_xyz[3][3] = {
+  {.48, .58, .59},
+  {.58, .41, .46},
+  {.51, .52, .42}
 };
-static const double planet_mass[PART_PLANETS] = { .049, .167 };
+static const double planet_mass[3] = { .049, .167, .06 };
 
 static const double rk1b[0] = { };
 static const double rk1g[1] = { 1. };
@@ -561,7 +559,8 @@ rkrhs (part_global_t * g, const double xv[6], double rk[6])
   rk[2] = rk[5] = 0.;
 #endif
 
-  for (j = 0; j < PART_PLANETS; ++j) {
+  /* we use as many planets as we have dimensions */
+  for (j = 0; j < P4EST_DIM; ++j) {
     d = 0.;
     /* distance is always computed in 3D space */
     for (i = 0; i < 3; ++i) {
