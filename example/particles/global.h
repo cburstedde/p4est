@@ -46,17 +46,15 @@ typedef struct part_global
   sc_MPI_Comm         mpicomm;
   int                 mpisize, mpirank;
 
+  /* command line option variables */
   int                 minlevel;
   int                 maxlevel;
   int                 bricklev;
   int                 order;
   int                 olap_notify;
-  int                 ntop;
-  int                 nint;
-  int                 nbot;
-  int                 vtk;
-  int                 mpiwrap;
+#if 0
   int                 checkp;
+#endif
   int                 printn;
   double              num_particles;
   double              elem_particles;
@@ -64,6 +62,17 @@ typedef struct part_global
   double              finaltime;
   const char         *prefix;
 
+  /* variables derived from command line */
+  int                 ntop;
+  int                 nint;
+  int                 nbot;
+  int                 vtk;
+  int                 mpiwrap;
+  int                 build_step;
+  int                 build_part;
+  int                 build_wrap;
+
+  /* runtime variables */
   int                 bricklength;
   int                 stage;
   double              global_density;

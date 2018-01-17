@@ -192,6 +192,45 @@ p4est_free_int (int **pptr)
 
 #endif
 
+static void
+part_string_to_int (const char *str, int n, ...)
+{
+  int                 i, j;
+  int                *pi;
+  char                buf[BUFSIZ];
+  va_list             ap;
+
+  P4EST_ASSERT (n >= 0);
+  if (str == NULL || n == 0) {
+    return;
+  }
+
+  va_start (ap, n);
+
+  if (n == 1) {
+    pi = va_arg (ap, int *);
+    *pi = atoi (str);
+    goto va_end_here;
+  }
+
+  j = snprintf (buf, BUFSIZ, "%s", "%d");
+  if (j >= BUFSIZ) {
+    goto va_end_here;
+  }
+  for (i = 1; i < n; ++i) {
+    j += snprintf (buf + j, BUFSIZ - j, ":%s", "%d");
+    if (j >= BUFSIZ) {
+      goto va_end_here;
+    }
+  }
+
+  /* we ignore return values and rely on defaults */
+  vsscanf (str, buf, ap);
+
+va_end_here:
+  va_end (ap);
+}
+
 static void        *
 sc_array_index_begin (sc_array_t * arr)
 {
@@ -1941,6 +1980,7 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 first_argc;
+  const char         *opt_notify, *opt_vtk, *opt_build;
   sc_options_t       *opt;
   part_global_t global, *g = &global;
 
@@ -1970,9 +2010,8 @@ main (int argc, char **argv)
                       1, "Order of Runge Kutta method");
   sc_options_add_bool (opt, 'p', "olap-notify", &g->olap_notify, 0,
                        "Overlap sending with notify");
-  sc_options_add_int (opt, '\0', "ntop", &g->ntop, 2, "Notify parameter top");
-  sc_options_add_int (opt, '\0', "nint", &g->nint, 2, "Notify parameter int");
-  sc_options_add_int (opt, '\0', "nbot", &g->nbot, 2, "Notify parameter bot");
+  sc_options_add_string (opt, 'Y', "notify", &opt_notify, NULL,
+                         "Notify ntop:nint:nbot");
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
   sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
@@ -1981,22 +2020,33 @@ main (int argc, char **argv)
                          1e-1, "Time step size");
   sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
                          1., "Final time of simulation");
-  sc_options_add_int (opt, 'V', "vtk", &g->vtk, 0, "steps per VTK output");
-  sc_options_add_int (opt, 'W', "wrap", &g->mpiwrap, 0,
-                      "wrap VTK rank around");
-  sc_options_add_int (opt, 'C', "checkp", &g->checkp, 0,
-                      "write checkpoint output");
   sc_options_add_int (opt, 'R', "printn", &g->printn, 0,
                       "Print every nth particle");
+  sc_options_add_string (opt, 'V', "vtk", &opt_vtk, NULL,
+                         "VTK output everystep:wraprank");
+  sc_options_add_string (opt, 'W', "build", &opt_build, NULL,
+                         "Build output everystep:particle:wrap");
+#if 0
+  sc_options_add_int (opt, 'C', "checkp", &g->checkp, 0,
+                      "write checkpoint output");
+#endif
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
                          "p" PARTICLES_48 ()"rticles",
                          "prefix for file output");
 
+  /* read command line and assign variables */
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
     return usagerr (opt, "No non-option arguments permitted");
   }
+  g->ntop = g->nint = g->nbot = 2;
+  part_string_to_int (opt_notify, 3, &g->ntop, &g->nint, &g->nbot);
+  part_string_to_int (opt_vtk, 2, &g->vtk, &g->mpiwrap);
+  part_string_to_int (opt_build,
+                      3, &g->build_step, &g->build_part, &g->build_wrap);
+
+  /* check options for consistency */
   if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
     return usagerr (opt, "Minlevel between 0 and P4EST_QMAXLEVEL");
   }
@@ -2009,17 +2059,31 @@ main (int argc, char **argv)
   if (g->order < 1 || g->order > 4) {
     return usagerr (opt, "Runge Kutta order between 1 and 4");
   }
+  if (g->ntop < 2 || g->nint < 2 || g->nbot < 2) {
+    return usagerr (opt, "Notify parameters must be greater equal 2");
+  }
   if (g->num_particles <= 0.) {
     return usagerr (opt, "Global number of particles positive");
   }
   if (g->elem_particles <= 0.) {
     return usagerr (opt, "Number of particles per element positive");
   }
+  if (g->printn < 0) {
+    return usagerr (opt, "Particle print interval non-negative");
+  }
   if (g->vtk < 0 || g->mpiwrap < 0) {
-    return usagerr (opt, "VTK output and wrap non-negative");
+    return usagerr (opt, "VTK output interval and wrap non-negative");
+  }
+  if (g->build_step < 0 || g->build_part < 0 || g->build_wrap) {
+    return usagerr (opt, "Build intervals and wrap non-negative");
   }
   P4EST_GLOBAL_ESSENTIALF ("Dimension is %d\n", P4EST_DIM);
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
+  P4EST_GLOBAL_ESSENTIALF ("Notify parameters: %d %d %d\n",
+                           g->ntop, g->nint, g->nbot);
+  P4EST_GLOBAL_ESSENTIALF ("VTK parameters: %d %d\n", g->vtk, g->mpiwrap);
+  P4EST_GLOBAL_ESSENTIALF ("Build parameters: %d %d %d\n",
+                           g->build_step, g->build_part, g->build_wrap);
 
   /*** run program ***/
 
