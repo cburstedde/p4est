@@ -205,29 +205,30 @@ part_string_to_int (const char *str, int n, ...)
     return;
   }
 
+  /* use a once-loop for clean early return */
   va_start (ap, n);
-
-  if (n == 1) {
-    pi = va_arg (ap, int *);
-    *pi = atoi (str);
-    goto va_end_here;
-  }
-
-  j = snprintf (buf, BUFSIZ, "%s", "%d");
-  if (j >= BUFSIZ) {
-    goto va_end_here;
-  }
-  for (i = 1; i < n; ++i) {
-    j += snprintf (buf + j, BUFSIZ - j, ":%s", "%d");
-    if (j >= BUFSIZ) {
-      goto va_end_here;
+  do {
+    if (n == 1) {
+      pi = va_arg (ap, int *);
+      *pi = atoi (str);
+      break;
     }
+
+    j = snprintf (buf, BUFSIZ, "%s", "%d");
+    if (j >= BUFSIZ) {
+      break;
+    }
+    for (i = 1; i < n; ++i) {
+      j += snprintf (buf + j, BUFSIZ - j, ":%s", "%d");
+      if (j >= BUFSIZ) {
+        break;
+      }
+    }
+
+    /* we ignore return values and rely on defaults */
+    vsscanf (str, buf, ap);
   }
-
-  /* we ignore return values and rely on defaults */
-  vsscanf (str, buf, ap);
-
-va_end_here:
+  while (0);
   va_end (ap);
 }
 
