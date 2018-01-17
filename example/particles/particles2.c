@@ -27,12 +27,14 @@
 #include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
+#include <p4est_search_build.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
+#include <p8est_search_build.h>
 #include <p8est_vtk.h>
 #endif /* P4_TO_P8 */
 #include <sc_notify.h>
@@ -1762,6 +1764,79 @@ outp (part_global_t * g, int k)
 }
 
 static void
+buildp (part_global_t * g, int k)
+{
+  char                filename[BUFSIZ];
+#if 0
+  sc_array_t         *pdata;
+#endif
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lpnum, lq;
+  p4est_locidx_t      lall, ilem_particles, li;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  p4est_search_build_t *bcon;
+  p4est_vtk_context_t *vcont;
+  p4est_t            *build;
+  qu_data_t          *qud;
+
+  /* only output when specified */
+  if (g->build_part <= 0 || g->build_step <= 0 || k % g->build_step) {
+    return;
+  }
+
+  /* iterate through particles to choose the relevant ones for new forest */
+  bcon = p4est_search_build_new (g->p4est, 0, NULL, g);
+  for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
+       tt <= g->p4est->last_local_tree; ++tt) {
+    tree = p4est_tree_array_index (g->p4est->trees, tt);
+    for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+
+      /* fetch number of particles in quadrant */
+      quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+      qud = (qu_data_t *) quad->p.user_data;
+      ilem_particles = qud->u.lpend - lpnum;
+      for (li = 0; li < ilem_particles; ++li, ++lall) {
+
+        (void) sc_array_index (g->padata, lall);
+
+      }
+
+      /* move to next quadrant */
+      lpnum = qud->u.lpend;
+    }
+  }
+
+  /* create a temporary sparse forest and write it */
+  build = p4est_search_build_complete (bcon);
+  do {
+    /* open files for output */
+    snprintf (filename, BUFSIZ, "%s_W_%06d", g->prefix, k);
+    vcont = p4est_vtk_context_new (build, filename);
+    if (NULL == p4est_vtk_write_header (vcont)) {
+      P4EST_LERRORF ("Failed to write header for %s\n", filename);
+      break;
+    }
+
+    /* write cell data to file */
+    if (NULL ==
+        p4est_vtk_write_cell_dataf (vcont, 1, 1, 1, g->build_wrap, 0, 0,
+                                    vcont)) {
+      P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
+      break;
+    }
+
+    /* finish meta information and close files */
+    if (p4est_vtk_write_footer (vcont)) {
+      P4EST_LERRORF ("Failed to write footer for %s\n", filename);
+      break;
+    }
+  }
+  while (0);
+  p4est_destroy (build);
+}
+
+static void
 sim (part_global_t * g)
 {
   int                 k;
@@ -1792,6 +1867,7 @@ sim (part_global_t * g)
   k = 0;
   pprint (g, t);
   outp (g, k);
+  buildp (g, k);
 
   /*** loop over simulation time ***/
   while (t < g->finaltime) {
@@ -1882,6 +1958,7 @@ sim (part_global_t * g)
     /* write output files */
     pprint (g, t);
     outp (g, k);
+    buildp (g, k);
   }
 
   P4EST_GLOBAL_ESSENTIALF
