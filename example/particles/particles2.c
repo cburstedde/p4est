@@ -2042,14 +2042,7 @@ run (part_global_t * g)
 static int
 usagerr (sc_options_t * opt, const char *msg)
 {
-  int                 mpiret;
-
   SC_GLOBAL_LERRORF ("Usage required: %s\n", msg);
-  sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-
-  mpiret = sc_MPI_Finalize ();
-  SC_CHECK_MPI (mpiret);
-
   return 1;
 }
 
@@ -2058,6 +2051,7 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 first_argc;
+  int                 ue;
   const char         *opt_notify, *opt_vtk, *opt_build;
   sc_options_t       *opt;
   part_global_t global, *g = &global;
@@ -2112,60 +2106,74 @@ main (int argc, char **argv)
                          "p" PARTICLES_48 ()"rticles",
                          "prefix for file output");
 
-  /* read command line and assign variables */
-  first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
-                                 opt, argc, argv);
-  if (first_argc < 0 || first_argc != argc) {
-    return usagerr (opt, "No non-option arguments permitted");
-  }
-  g->ntop = g->nint = g->nbot = 2;
-  part_string_to_int (opt_notify, 3, &g->ntop, &g->nint, &g->nbot);
-  part_string_to_int (opt_vtk, 2, &g->vtk, &g->mpiwrap);
-  part_string_to_int (opt_build,
-                      3, &g->build_step, &g->build_part, &g->build_wrap);
+  /* proceed in run-once loop for clean abort */
+  ue = 0;
+  do {
+    /* read command line and assign variables */
+    first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                   opt, argc, argv);
+    if (first_argc < 0 || first_argc != argc) {
+      ue = usagerr (opt, "Invalid option format or non-option arguments");
+      break;
+    }
+    g->ntop = g->nint = g->nbot = 2;
+    part_string_to_int (opt_notify, 3, &g->ntop, &g->nint, &g->nbot);
+    part_string_to_int (opt_vtk, 2, &g->vtk, &g->mpiwrap);
+    part_string_to_int (opt_build,
+                        3, &g->build_step, &g->build_part, &g->build_wrap);
 
-  /* check options for consistency */
-  if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
-    return usagerr (opt, "Minlevel between 0 and P4EST_QMAXLEVEL");
-  }
-  if (g->maxlevel < g->minlevel || g->maxlevel > P4EST_QMAXLEVEL) {
-    return usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
-  }
-  if (g->bricklev < 0 || g->bricklev > g->minlevel) {
-    return usagerr (opt, "Brick level between 0 and minlevel");
-  }
-  if (g->order < 1 || g->order > 4) {
-    return usagerr (opt, "Runge Kutta order between 1 and 4");
-  }
-  if (g->ntop < 2 || g->nint < 2 || g->nbot < 2) {
-    return usagerr (opt, "Notify parameters must be greater equal 2");
-  }
-  if (g->num_particles <= 0.) {
-    return usagerr (opt, "Global number of particles positive");
-  }
-  if (g->elem_particles <= 0.) {
-    return usagerr (opt, "Number of particles per element positive");
-  }
-  if (g->printn < 0) {
-    return usagerr (opt, "Particle print interval non-negative");
-  }
-  if (g->vtk < 0 || g->mpiwrap < 0) {
-    return usagerr (opt, "VTK output interval and wrap non-negative");
-  }
-  if (g->build_step < 0 || g->build_part < 0 || g->build_wrap) {
-    return usagerr (opt, "Build intervals and wrap non-negative");
-  }
-  P4EST_GLOBAL_ESSENTIALF ("Dimension is %d\n", P4EST_DIM);
-  sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
-  P4EST_GLOBAL_ESSENTIALF ("Notify parameters: %d %d %d\n",
-                           g->ntop, g->nint, g->nbot);
-  P4EST_GLOBAL_ESSENTIALF ("VTK parameters: %d %d\n", g->vtk, g->mpiwrap);
-  P4EST_GLOBAL_ESSENTIALF ("Build parameters: %d %d %d\n",
-                           g->build_step, g->build_part, g->build_wrap);
+    /* report option and parameter values */
+    P4EST_GLOBAL_ESSENTIALF ("Dimension is %d\n", P4EST_DIM);
+    sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
+    P4EST_GLOBAL_ESSENTIALF ("Notify parameters: %d %d %d\n",
+                             g->ntop, g->nint, g->nbot);
+    P4EST_GLOBAL_ESSENTIALF ("VTK parameters: %d %d\n", g->vtk, g->mpiwrap);
+    P4EST_GLOBAL_ESSENTIALF ("Build parameters: %d %d %d\n",
+                             g->build_step, g->build_part, g->build_wrap);
 
-  /*** run program ***/
+    /* check options for consistency */
+    if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
+      ue = usagerr (opt, "Minlevel between 0 and P4EST_QMAXLEVEL");
+    }
+    if (g->maxlevel < g->minlevel || g->maxlevel > P4EST_QMAXLEVEL) {
+      ue = usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
+    }
+    if (g->bricklev < 0 || g->bricklev > g->minlevel) {
+      ue = usagerr (opt, "Brick level between 0 and minlevel");
+    }
+    if (g->order < 1 || g->order > 4) {
+      ue = usagerr (opt, "Runge Kutta order between 1 and 4");
+    }
+    if (g->ntop < 2 || g->nint < 2 || g->nbot < 2) {
+      ue = usagerr (opt, "Notify parameters greater equal 2");
+    }
+    if (g->num_particles <= 0.) {
+      ue = usagerr (opt, "Global number of particles positive");
+    }
+    if (g->elem_particles <= 0.) {
+      ue = usagerr (opt, "Number of particles per element positive");
+    }
+    if (g->printn < 0) {
+      ue = usagerr (opt, "Particle print interval non-negative");
+    }
+    if (g->vtk < 0 || g->mpiwrap < 0) {
+      ue = usagerr (opt, "VTK output interval and wrap non-negative");
+    }
+    if (g->build_step < 0 || g->build_part < 0 || g->build_wrap < 0) {
+      ue = usagerr (opt, "Build intervals and wrap non-negative");
+    }
+    if (ue) {
+      break;
+    }
 
-  run (g);
+    /*** run program ***/
+
+    run (g);
+  }
+  while (0);
+  if (ue) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+  }
 
   /*** clean up and exit ***/
 
