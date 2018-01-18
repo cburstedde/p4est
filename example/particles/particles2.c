@@ -337,6 +337,46 @@ loopquad (part_global_t * g, p4est_topidx_t tt, p4est_quadrant_t * quad,
   }
 }
 
+static void
+run_pre (part_global_t * g, pi_data_t * piddata)
+{
+  int                 i;
+
+  /* prepare quadrature rule */
+  P4EST_ASSERT (PART_NQPOINTS == 3);
+  qpoints[2] = sqrt (3. / 5.);
+  qpoints[1] = 0.;
+  qpoints[0] = -qpoints[2];
+  qweights[0] = qweights[2] = 5. / 9.;
+  qweights[1] = 8. / 9.;
+  for (i = 0; i < 3; ++i) {
+    qpoints[i] = .5 * (1. + qpoints[i]);
+    qweights[i] *= .5;
+  }
+
+  /* the length of the brick is a power of 2 */
+  g->bricklength = (1 << g->bricklev);
+
+  /* initial particle density */
+  piddata->sigma = .07;
+  piddata->invs2 = 1. / SC_SQR (piddata->sigma);
+  piddata->gnorm = gaussnorm (piddata->sigma);
+  piddata->center[0] = .3;
+  piddata->center[1] = .4;
+#ifndef P4_TO_P8
+  piddata->center[2] = 0.;
+#else
+  piddata->center[2] = .5;
+#endif
+  g->pidense = pidense;
+  g->piddata = piddata;
+}
+
+static void
+run_post (part_global_t * g)
+{
+}
+
 static double
 integrate (part_global_t * g, const double lxyz[3], const double dxyz[3])
 {
@@ -398,7 +438,6 @@ static void
 initrp (part_global_t * g)
 {
   int                 mpiret;
-  int                 i;
   int                 cycle, max_cycles;
   double              lxyz[3], hxyz[3], dxyz[3];
   double              d, ld;
@@ -411,18 +450,6 @@ initrp (part_global_t * g)
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
-
-  /* prepare quadrature rule */
-  P4EST_ASSERT (PART_NQPOINTS == 3);
-  qpoints[2] = sqrt (3. / 5.);
-  qpoints[1] = 0.;
-  qpoints[0] = -qpoints[2];
-  qweights[0] = qweights[2] = 5. / 9.;
-  qweights[1] = 8. / 9.;
-  for (i = 0; i < 3; ++i) {
-    qpoints[i] = .5 * (1. + qpoints[i]);
-    qweights[i] *= .5;
-  }
 
   max_cycles = g->maxlevel - g->minlevel;
   for (cycle = 0;; ++cycle) {
@@ -1980,29 +2007,16 @@ sim (part_global_t * g)
 static void
 run (part_global_t * g)
 {
-  int                 b;
   pi_data_t           spiddata, *piddata = &spiddata;
 
-  /*** initial particle density ***/
-  piddata->sigma = .07;
-  piddata->invs2 = 1. / SC_SQR (piddata->sigma);
-  piddata->gnorm = gaussnorm (piddata->sigma);
-  piddata->center[0] = .3;
-  piddata->center[1] = .4;
-#ifndef P4_TO_P8
-  piddata->center[2] = 0.;
-#else
-  piddata->center[2] = .5;
-#endif
-  g->pidense = pidense;
-  g->piddata = piddata;
+  /*** initialize variables ***/
+  run_pre (g, piddata);
 
   /*** initial mesh for domain ***/
-  b = g->bricklength = (1 << g->bricklev);
   if (g->bricklev > 0) {
-    g->conn = p4est_connectivity_new_brick (b, b
+    g->conn = p4est_connectivity_new_brick (g->bricklength, g->bricklength
 #ifdef P4_TO_P8
-                                            , b
+                                            , g->bricklength
 #endif
                                             , 1, 1
 #ifdef P4_TO_P8
@@ -2037,6 +2051,9 @@ run (part_global_t * g)
   g->p4est = NULL;
   p4est_connectivity_destroy (g->conn);
   g->conn = NULL;
+
+  /*** clean up variables ***/
+  run_post (g);
 }
 
 static int
