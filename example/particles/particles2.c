@@ -155,16 +155,19 @@ typedef enum comm_tag
 }
 comm_tag_t;
 
-#define PART_NQPOINTS 3
-static double       qpoints[PART_NQPOINTS];
-static double       qweights[PART_NQPOINTS];
-
 static const double planet_xyz[3][3] = {
   {.48, .58, .59},
   {.58, .41, .46},
   {.51, .52, .42}
 };
 static const double planet_mass[3] = { .049, .167, .06 };
+
+static const double pidensy_sigma = .07;
+static const double pidensy_center[3] = { .3, .4, .5 };
+
+#define PART_NQPOINTS 3
+static double       qpoints[PART_NQPOINTS];
+static double       qweights[PART_NQPOINTS];
 
 static const double rk1b[0] = { };
 static const double rk1g[1] = { 1. };
@@ -358,15 +361,15 @@ run_pre (part_global_t * g, pi_data_t * piddata)
   g->bricklength = (1 << g->bricklev);
 
   /* initial particle density */
-  piddata->sigma = .07;
+  piddata->sigma = pidensy_sigma;
   piddata->invs2 = 1. / SC_SQR (piddata->sigma);
   piddata->gnorm = gaussnorm (piddata->sigma);
-  piddata->center[0] = .3;
-  piddata->center[1] = .4;
+  piddata->center[0] = pidensy_center[0];
+  piddata->center[1] = pidensy_center[1];
 #ifndef P4_TO_P8
   piddata->center[2] = 0.;
 #else
-  piddata->center[2] = .5;
+  piddata->center[2] = pidensy_center[2];
 #endif
   g->pidense = pidense;
   g->piddata = piddata;
