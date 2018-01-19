@@ -1752,44 +1752,53 @@ outp (part_global_t * g, int k)
     return;
   }
 
-  /* open files for output */
-  snprintf (filename, BUFSIZ, "%s_%06d", g->prefix, k);
-  cont = p4est_vtk_context_new (g->p4est, filename);
-  if (NULL == p4est_vtk_write_header (cont)) {
-    P4EST_LERRORF ("Failed to write header for %s\n", filename);
-    return;
-  }
+  /* run-once loop for clean return */
+  pdata = NULL;
+  do {
+    /* open files for output */
+    snprintf (filename, BUFSIZ, "%s_%06d", g->prefix, k);
+    cont = p4est_vtk_context_new (g->p4est, filename);
+    if (NULL == p4est_vtk_write_header (cont)) {
+      P4EST_LERRORF ("Failed to write header for %s\n", filename);
+      break;
+    }
 
-  /* prepare cell data for output */
-  pdata = sc_array_new_count (sizeof (double), g->p4est->local_num_quadrants);
-  for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
-       tt <= g->p4est->last_local_tree; ++tt) {
-    tree = p4est_tree_array_index (g->p4est->trees, tt);
-    for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+    /* prepare cell data for output */
+    pdata = sc_array_new_count
+      (sizeof (double), g->p4est->local_num_quadrants);
+    for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
+         tt <= g->p4est->last_local_tree; ++tt) {
+      tree = p4est_tree_array_index (g->p4est->trees, tt);
+      for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
 
-      /* fetch number of particles in quadrant */
-      quad = p4est_quadrant_array_index (&tree->quadrants, lq);
-      qud = (qu_data_t *) quad->p.user_data;
-      ilem_particles = qud->u.lpend - lpnum;
-      *(double *) sc_array_index (pdata, lall++) = (double) ilem_particles;
+        /* fetch number of particles in quadrant */
+        quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+        qud = (qu_data_t *) quad->p.user_data;
+        ilem_particles = qud->u.lpend - lpnum;
+        *(double *) sc_array_index (pdata, lall++) = (double) ilem_particles;
 
-      /* move to next quadrant */
-      lpnum = qud->u.lpend;
+        /* move to next quadrant */
+        lpnum = qud->u.lpend;
+      }
+    }
+
+    /* write cell data to file */
+    if (NULL == p4est_vtk_write_cell_dataf
+        (cont, 1, 1, 1, g->mpiwrap, 1, 0, "particles", pdata, cont)) {
+      P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
+      break;
+    }
+    sc_array_destroy_null (&pdata);
+
+    /* finish meta information and close files */
+    if (p4est_vtk_write_footer (cont)) {
+      P4EST_LERRORF ("Failed to write footer for %s\n", filename);
+      break;
     }
   }
-
-  /* write cell data to file */
-  if (NULL == p4est_vtk_write_cell_dataf (cont, 1, 1, 1, g->mpiwrap, 1, 0,
-                                          "particles", pdata, cont)) {
-    P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
-    return;
-  }
-  sc_array_destroy (pdata);
-
-  /* finish meta information and close files */
-  if (p4est_vtk_write_footer (cont)) {
-    P4EST_LERRORF ("Failed to write footer for %s\n", filename);
-    return;
+  while (0);
+  if (pdata != NULL) {
+    sc_array_destroy_null (&pdata);
   }
 }
 
@@ -1849,9 +1858,8 @@ buildp (part_global_t * g, int k)
     }
 
     /* write cell data to file */
-    if (NULL ==
-        p4est_vtk_write_cell_dataf (vcont, 1, 1, 1, g->build_wrap, 0, 0,
-                                    vcont)) {
+    if (NULL == p4est_vtk_write_cell_dataf
+        (vcont, 1, 1, 1, g->build_wrap, 0, 0, vcont)) {
       P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
       break;
     }
