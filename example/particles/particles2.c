@@ -1830,12 +1830,23 @@ outp (part_global_t * g, int k)
 }
 
 static void
+buildp_add (part_global_t * g, p4est_search_build_t * bcon,
+            p4est_topidx_t which_tree, p4est_quadrant_t * quad,
+            sc_array_t * inq)
+{
+  P4EST_ASSERT (bcon != NULL);
+  P4EST_ASSERT (inq != NULL && inq->elem_size == sizeof (p4est_locidx_t));
+
+}
+
+static void
 buildp (part_global_t * g, int k)
 {
   char                filename[BUFSIZ];
 #if 0
   sc_array_t         *pdata;
 #endif
+  sc_array_t         *inq;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
   p4est_locidx_t      lall, ilem_particles, li;
@@ -1845,6 +1856,9 @@ buildp (part_global_t * g, int k)
   p4est_vtk_context_t *vcont;
   p4est_t            *build;
   qu_data_t          *qud;
+  pa_data_t          *pad;
+
+  P4EST_ASSERT (g->padata != NULL);
 
   /* only output when specified */
   if (g->build_part <= 0 || g->build_step <= 0 || k % g->build_step) {
@@ -1853,6 +1867,8 @@ buildp (part_global_t * g, int k)
 
   /* iterate through particles to choose the relevant ones for new forest */
   bcon = p4est_search_build_new (g->p4est, 0, NULL, g);
+  inq = sc_array_new (sizeof (p4est_locidx_t));
+  pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
        tt <= g->p4est->last_local_tree; ++tt) {
     tree = p4est_tree_array_index (g->p4est->trees, tt);
@@ -1861,17 +1877,31 @@ buildp (part_global_t * g, int k)
       /* fetch number of particles in quadrant */
       quad = p4est_quadrant_array_index (&tree->quadrants, lq);
       qud = (qu_data_t *) quad->p.user_data;
-      ilem_particles = qud->u.lpend - lpnum;
-      for (li = 0; li < ilem_particles; ++li, ++lall) {
+      if ((ilem_particles = qud->u.lpend - lpnum) == 0) {
+        /* no particles in this quadrant at all */
+        continue;
+      }
 
-        (void) sc_array_index (g->padata, lall);
-
+      /* how many particles will we consider? */
+      sc_array_truncate (inq);
+      for (li = 0; li < ilem_particles; ++li, ++lall, ++pad) {
+        if (!(pad->id % g->build_part)) {
+          *(p4est_locidx_t *) sc_array_push (inq) = lall;
+        }
+      }
+      if (inq->elem_count > 0) {
+        buildp_add (g, bcon, tt, quad, inq);
       }
 
       /* move to next quadrant */
       lpnum = qud->u.lpend;
+      P4EST_ASSERT (lpnum == lall);
     }
   }
+  P4EST_ASSERT (lall == (p4est_locidx_t) g->padata->elem_count);
+  P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
+
+  sc_array_destroy_null (&inq);
 
   /* create a temporary sparse forest and write it */
   build = p4est_search_build_complete (bcon);
