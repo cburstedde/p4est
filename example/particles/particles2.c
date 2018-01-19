@@ -373,11 +373,34 @@ run_pre (part_global_t * g, pi_data_t * piddata)
 #endif
   g->pidense = pidense;
   g->piddata = piddata;
+
+  /* allocate arrays that are reused a lot */
+  for (i = 0; i < 2; ++i) {
+    g->ilh[i] = sc_array_new (sizeof (p4est_locidx_t));
+    g->jlh[i] = sc_array_new (sizeof (p4est_locidx_t));
+#ifdef P4_TO_P8
+    g->klh[i] = sc_array_new (sizeof (p4est_locidx_t));
+#else
+    P4EST_ASSERT (g->klh[i] == NULL);
+#endif
+  }
 }
 
 static void
 run_post (part_global_t * g)
 {
+  int                 i;
+
+  /* clean up simulation memory */
+  for (i = 0; i < 2; ++i) {
+    sc_array_destroy_null (&g->ilh[i]);
+    sc_array_destroy_null (&g->jlh[i]);
+#ifdef P4_TO_P8
+    sc_array_destroy_null (&g->klh[i]);
+#else
+    P4EST_ASSERT (g->klh[i] == NULL);
+#endif
+  }
 }
 
 static double
@@ -1352,8 +1375,9 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     }
 #endif
 #else
-    g->klh[0] = &iview;
+    P4EST_ASSERT (g->klh[0] == NULL);
     P4EST_ASSERT (g->klh[1] == NULL);
+    g->klh[0] = &iview;
     wz = 0;
 #endif
     split_by_coord (g, g->klh[wz], g->jlh, PA_MODE_REMAIN, 1, lxyz, dxyz);
@@ -1421,6 +1445,9 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
     P4EST_ASSERT (ibeg == g->irvindex);
     P4EST_ASSERT (pchild == incoming + P4EST_CHILDREN);
+
+    g->klh[0] = NULL;
+    P4EST_ASSERT (g->klh[1] == NULL);
   }
 }
 
@@ -1889,17 +1916,6 @@ sim (part_global_t * g)
 
   P4EST_ASSERT (g->padata != NULL);
 
-  /* allocate arrays that are reused a lot */
-  for (k = 0; k < 2; ++k) {
-    g->ilh[k] = sc_array_new (sizeof (p4est_locidx_t));
-    g->jlh[k] = sc_array_new (sizeof (p4est_locidx_t));
-#ifdef P4_TO_P8
-    g->klh[k] = sc_array_new (sizeof (p4est_locidx_t));
-#else
-    P4EST_ASSERT (g->klh[k] == NULL);
-#endif
-  }
-
   /* output initial condition */
   t = 0.;
   k = 0;
@@ -2002,17 +2018,6 @@ sim (part_global_t * g)
   P4EST_GLOBAL_ESSENTIALF
     ("Time %g is final after %d steps lost %lld remain %lld\n", t, k,
      (long long) g->gplost, (long long) g->gpnum);
-
-  /* clean up */
-  for (k = 0; k < 2; ++k) {
-    sc_array_destroy_null (&g->ilh[k]);
-    sc_array_destroy_null (&g->jlh[k]);
-#ifdef P4_TO_P8
-    sc_array_destroy_null (&g->klh[k]);
-#else
-    g->klh[k] = NULL;
-#endif
-  }
 }
 
 static void
