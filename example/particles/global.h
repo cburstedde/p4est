@@ -77,6 +77,7 @@ typedef struct part_global
   int                 stage;
   double              global_density;
   double              t, lxyz[3], hxyz[3], dxyz[3];
+  p4est_locidx_t      add_count;        /**< Number of particles for build_add */
   sc_array_t         *padata;   /**< pa_data_t Numerical data of local particles */
   sc_array_t         *pfound;   /**< int Target rank for local particles */
   sc_array_t         *iremain;  /**< locidx_t Index into padata of stay-local particles */

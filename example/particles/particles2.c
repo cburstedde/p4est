@@ -1830,14 +1830,128 @@ outp (part_global_t * g, int k)
   }
 }
 
+typedef struct bu_data
+{
+  p4est_locidx_t      count;
+}
+bu_data_t;
+
+static void
+buildp_init_default (p4est_t * p4est,
+                     p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+{
+  bu_data_t          *bud = (bu_data_t *) quadrant->p.user_data;
+  bud->count = 0;
+}
+
+static void
+buildp_init_add (p4est_t * p4est,
+                 p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+{
+  part_global_t      *g = (part_global_t *) p4est->user_pointer;
+  bu_data_t          *bud = (bu_data_t *) quadrant->p.user_data;
+
+  /* tell new quadrant how many particles are in it */
+  bud->count = g->add_count;
+}
+
+typedef struct pa_bitem
+{
+  p4est_quadrant_t    quad;
+  sc_array_t          parr;
+}
+pa_bitem_t;
+
 static void
 buildp_add (part_global_t * g, p4est_search_build_t * bcon,
-            p4est_topidx_t which_tree, p4est_quadrant_t * quad,
-            sc_array_t * inq)
+            p4est_topidx_t which_tree, pa_bitem_t * bit)
 {
-  P4EST_ASSERT (bcon != NULL);
-  P4EST_ASSERT (inq != NULL && inq->elem_size == sizeof (p4est_locidx_t));
+  int                 i;
+  int                 cid, nhits;
+  int                 wx, wy, wz;
+  sc_array_t         *arr;
+  pa_bitem_t          abita[P4EST_CHILDREN], *bita;
 
+  P4EST_ASSERT (bcon != NULL);
+  P4EST_ASSERT (bit != NULL);
+  P4EST_ASSERT (p4est_quadrant_is_valid (&bit->quad));
+  P4EST_ASSERT (bit->parr.elem_size == sizeof (p4est_locidx_t));
+
+  if (bit->quad.level == g->maxlevel) {
+
+    /*** we are at maximum level, all particles go into quadrant ***/
+
+    g->add_count = (p4est_locidx_t) bit->parr.elem_count;
+    p4est_search_build_add (bcon, which_tree, &bit->quad);
+  }
+  else {
+
+    /*** search in children and call buildp_add recursively ***/
+
+    /* access parent quadrant */
+    loopquad (g, which_tree, &bit->quad, g->lxyz, g->hxyz, g->dxyz);
+
+    /* number of child quadrant */
+    cid = 0;
+
+    /* number of child quadrants containing particles */
+    nhits = 0;
+
+    /* sort remaining particles into the children */
+#ifdef P4_TO_P8
+    split_by_coord
+      (g, &bit->parr, g->klh, PA_MODE_REMAIN, 2, g->lxyz, g->dxyz);
+    for (wz = 0; wz < 2; ++wz) {
+#if 0
+    }
+#endif
+#else
+    P4EST_ASSERT (g->klh[0] == NULL);
+    P4EST_ASSERT (g->klh[1] == NULL);
+    g->klh[0] = &bit->parr;
+    wz = 0;
+#endif
+    split_by_coord
+      (g, g->klh[wz], g->jlh, PA_MODE_REMAIN, 1, g->lxyz, g->dxyz);
+    for (wy = 0; wy < 2; ++wy) {
+      split_by_coord
+         (g, g->jlh[wy], g->ilh, PA_MODE_REMAIN, 0, g->lxyz, g->dxyz);
+      for (wx = 0; wx < 2; ++wx) {
+        /* we have a set of particles for child 4 * wz + 2 * wy + wx */
+        P4EST_ASSERT (cid == 4 * wz + 2 * wy + wx);
+        if ((arr = g->ilh[wx])->elem_count > 0) {
+
+          /* grab next available slot in array */
+          bita = &abita[nhits++];
+          p4est_quadrant_child (&bit->quad, &bita->quad, cid);
+          sc_array_init_count (&bita->parr, sizeof (p4est_locidx_t),
+                               arr->elem_count);
+          sc_array_paste (&bita->parr, arr);
+        }
+        cid++;
+      }
+    }
+#ifdef P4_TO_P8
+#if 0
+    {
+#endif
+    }
+#endif
+    P4EST_ASSERT (cid == P4EST_CHILDREN);
+
+#ifndef P4_TO_P8
+    g->klh[0] = NULL;
+    P4EST_ASSERT (g->klh[1] == NULL);
+#endif
+
+    /* go into recursion for non-empty children */
+    for (i = 0; i < nhits; ++i) {
+      buildp_add (g, bcon, which_tree, &abita[i]);
+    }
+  }
+
+  /* this call is expected to clean up the array */
+  sc_array_reset (&bit->parr);
 }
 
 static void
@@ -1858,8 +1972,10 @@ buildp (part_global_t * g, int k)
   p4est_t            *build;
   qu_data_t          *qud;
   pa_data_t          *pad;
+  pa_bitem_t          abit, *bit = &abit;
 
   P4EST_ASSERT (g->padata != NULL);
+  P4EST_ASSERT (g->add_count == 0);
 
   /* only output when specified */
   if (g->build_part <= 0 || g->build_step <= 0 || k % g->build_step) {
@@ -1867,7 +1983,9 @@ buildp (part_global_t * g, int k)
   }
 
   /* iterate through particles to choose the relevant ones for new forest */
-  bcon = p4est_search_build_new (g->p4est, 0, NULL, g);
+  bcon = p4est_search_build_new (g->p4est, sizeof (bu_data_t),
+                                 buildp_init_default, g);
+  p4est_search_build_init_add (bcon, buildp_init_add);
   inq = sc_array_new (sizeof (p4est_locidx_t));
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
@@ -1891,7 +2009,10 @@ buildp (part_global_t * g, int k)
         }
       }
       if (inq->elem_count > 0) {
-        buildp_add (g, bcon, tt, quad, inq);
+        bit->quad = *quad;
+        bit->parr = *inq;
+        sc_array_init (inq, sizeof (p4est_locidx_t));
+        buildp_add (g, bcon, tt, bit);
       }
 
       /* move to next quadrant */
@@ -1930,6 +2051,7 @@ buildp (part_global_t * g, int k)
   }
   while (0);
   p4est_destroy (build);
+  g->add_count = 0;
 }
 
 static void
