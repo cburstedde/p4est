@@ -1446,8 +1446,10 @@ adapt_replace (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (ibeg == g->irvindex);
     P4EST_ASSERT (pchild == incoming + P4EST_CHILDREN);
 
+#ifndef P4_TO_P8
     g->klh[0] = NULL;
     P4EST_ASSERT (g->klh[1] == NULL);
+#endif
   }
 }
 
