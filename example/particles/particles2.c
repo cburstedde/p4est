@@ -1572,8 +1572,7 @@ pprint (part_global_t * g, double t)
   pa_data_t          *pad;
 
   P4EST_ASSERT (g->padata != NULL);
-  P4EST_ASSERT ((t <= 0. && g->stage == 0) ||
-                (t > 0. && g->stage == g->order));
+  P4EST_ASSERT (g->stage == 0);
 
   /* only output when specified */
   if (g->printn <= 0) {
@@ -2040,6 +2039,7 @@ sim (part_global_t * g)
       break;
     }
     P4EST_ASSERT (g->stage == g->order);
+    g->stage = 0;
 
     /* write output files */
     pprint (g, t);
