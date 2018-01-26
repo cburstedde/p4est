@@ -1963,19 +1963,18 @@ static void
 buildp (part_global_t * g, int k)
 {
   char                filename[BUFSIZ];
-#if 0
-  sc_array_t         *pdata;
-#endif
   sc_array_t         *inq;
+  sc_array_t         *pdata;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
   p4est_locidx_t      lall, ilem_particles, li;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   p4est_search_build_t *bcon;
-  p4est_vtk_context_t *vcont;
+  p4est_vtk_context_t *cont;
   p4est_t            *build;
   qu_data_t          *qud;
+  bu_data_t          *bud;
   pa_data_t          *pad;
   pa_bitem_t          abit, *bit = &abit;
 
@@ -2031,30 +2030,52 @@ buildp (part_global_t * g, int k)
   sc_array_destroy_null (&inq);
 
   /* create a temporary sparse forest and write it */
+  pdata = NULL;
   build = p4est_search_build_complete (bcon);
   do {
     /* open files for output */
     snprintf (filename, BUFSIZ, "%s_W_%06d", g->prefix, k);
-    vcont = p4est_vtk_context_new (build, filename);
-    if (NULL == p4est_vtk_write_header (vcont)) {
+    cont = p4est_vtk_context_new (build, filename);
+    if (NULL == p4est_vtk_write_header (cont)) {
       P4EST_LERRORF ("Failed to write header for %s\n", filename);
       break;
     }
 
+    /* prepare cell data for output */
+    pdata = sc_array_new_count (sizeof (double), build->local_num_quadrants);
+    for (lpnum = 0, lall = 0, tt = build->first_local_tree;
+         tt <= build->last_local_tree; ++tt) {
+      tree = p4est_tree_array_index (build->trees, tt);
+      for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+
+        /* fetch number of particles in quadrant */
+        quad = p4est_quadrant_array_index (&tree->quadrants, lq);
+        bud = (bu_data_t *) quad->p.user_data;
+        *(double *) sc_array_index (pdata, lall++) = (double) bud->count;
+
+        /* move to next quadrant */
+        lpnum = qud->u.lpend;
+      }
+    }
+
     /* write cell data to file */
     if (NULL == p4est_vtk_write_cell_dataf
-        (vcont, 1, 1, 1, g->build_wrap, 0, 0, vcont)) {
+        (cont, 1, 1, 1, g->build_wrap, 1, 0, "particles", pdata, cont)) {
       P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
       break;
     }
+    sc_array_destroy_null (&pdata);
 
     /* finish meta information and close files */
-    if (p4est_vtk_write_footer (vcont)) {
+    if (p4est_vtk_write_footer (cont)) {
       P4EST_LERRORF ("Failed to write footer for %s\n", filename);
       break;
     }
   }
   while (0);
+  if (pdata != NULL) {
+    sc_array_destroy_null (&pdata);
+  }
   p4est_destroy (build);
   g->add_count = 0;
 }
