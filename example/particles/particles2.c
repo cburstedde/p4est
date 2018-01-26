@@ -1259,7 +1259,8 @@ adapt_refine (p4est_t * p4est, p4est_topidx_t which_tree,
 typedef enum pa_mode
 {
   PA_MODE_REMAIN,
-  PA_MODE_RECEIVE
+  PA_MODE_RECEIVE,
+  PA_MODE_LOCATE
 }
 pa_mode_t;
 
@@ -1290,14 +1291,18 @@ split_by_coord (part_global_t * g, sc_array_t * in,
       pad = (pa_data_t *) sc_array_index (g->padata, ppos);
       x = particle_lookfor (g, pad);
     }
-    else {
-      P4EST_ASSERT (mode == PA_MODE_RECEIVE);
+    else if (mode == PA_MODE_RECEIVE) {
 #ifdef PART_SENDFULL
       pad = (pa_data_t *) sc_array_index (g->prebuf, ppos);
       x = particle_lookfor (g, pad);
 #else
       x = (const double *) sc_array_index (g->prebuf, ppos);
 #endif
+    }
+    else {
+      P4EST_ASSERT (mode == PA_MODE_LOCATE);
+      pad = (pa_data_t *) sc_array_index (g->padata, ppos);
+      x = pad->xv;
     }
     if (x[component] <= lxyz[component] + .5 * dxyz[component]) {
       *(p4est_locidx_t *) sc_array_push (out[0]) = ppos;
@@ -1900,7 +1905,7 @@ buildp_add (part_global_t * g, p4est_search_build_t * bcon,
     /* sort remaining particles into the children */
 #ifdef P4_TO_P8
     split_by_coord
-      (g, &bit->parr, g->klh, PA_MODE_REMAIN, 2, g->lxyz, g->dxyz);
+      (g, &bit->parr, g->klh, PA_MODE_LOCATE, 2, g->lxyz, g->dxyz);
     for (wz = 0; wz < 2; ++wz) {
 #if 0
     }
@@ -1912,10 +1917,10 @@ buildp_add (part_global_t * g, p4est_search_build_t * bcon,
     wz = 0;
 #endif
     split_by_coord
-      (g, g->klh[wz], g->jlh, PA_MODE_REMAIN, 1, g->lxyz, g->dxyz);
+      (g, g->klh[wz], g->jlh, PA_MODE_LOCATE, 1, g->lxyz, g->dxyz);
     for (wy = 0; wy < 2; ++wy) {
       split_by_coord
-         (g, g->jlh[wy], g->ilh, PA_MODE_REMAIN, 0, g->lxyz, g->dxyz);
+        (g, g->jlh[wy], g->ilh, PA_MODE_LOCATE, 0, g->lxyz, g->dxyz);
       for (wx = 0; wx < 2; ++wx) {
         /* we have a set of particles for child 4 * wz + 2 * wy + wx */
         P4EST_ASSERT (cid == 4 * wz + 2 * wy + wx);
@@ -2068,6 +2073,7 @@ sim (part_global_t * g)
   pa_data_t          *pad;
 
   P4EST_ASSERT (g->padata != NULL);
+  P4EST_ASSERT (g->stage == 0);
 
   /* output initial condition */
   t = 0.;
