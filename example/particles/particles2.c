@@ -267,6 +267,7 @@ sc_array_index_end (sc_array_t * arr)
 
 #endif
 
+/** With two initialized arrays of same metadata, copy array data */
 static void
 sc_array_paste (sc_array_t * dest, sc_array_t * src)
 {
@@ -274,6 +275,14 @@ sc_array_paste (sc_array_t * dest, sc_array_t * src)
   P4EST_ASSERT (dest->elem_count == src->elem_count);
 
   memcpy (dest->array, src->array, src->elem_count * src->elem_size);
+}
+
+/** Initialize one array with contents from other, reinit the other */
+static void
+sc_array_swap_init (sc_array_t * array, sc_array_t * from, size_t elem_size)
+{
+  *array = *from;
+  sc_array_init (from, elem_size);
 }
 
 static void
@@ -2014,8 +2023,7 @@ buildp (part_global_t * g, int k)
       }
       if (inq->elem_count > 0) {
         bit->quad = *quad;
-        bit->parr = *inq;
-        sc_array_init (inq, sizeof (p4est_locidx_t));
+        sc_array_swap_init (&bit->parr, inq, sizeof (p4est_locidx_t));
         buildp_add (g, bcon, tt, bit);
       }
 
@@ -2026,7 +2034,6 @@ buildp (part_global_t * g, int k)
   }
   P4EST_ASSERT (lall == (p4est_locidx_t) g->padata->elem_count);
   P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
-
   sc_array_destroy_null (&inq);
 
   /* create a temporary sparse forest and write it */
