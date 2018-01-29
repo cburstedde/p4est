@@ -30,6 +30,7 @@
 #ifndef PART_GLOBAL_H
 #define PART_GLOBAL_H
 
+#include <sc_statistics.h>
 #ifndef P4_TO_P8
 #include <p4est.h>
 #else
@@ -37,6 +38,17 @@
 #endif /* P4_TO_P8 */
 
 SC_EXTERN_C_BEGIN;
+
+typedef enum part_stats
+{
+  PART_STATS_FIRST = 0,
+  PART_STATS_NOTIFY = PART_STATS_FIRST,
+  PART_STATS_COMM,
+  PART_STATS_WAIT1,
+  PART_STATS_WAIT2,
+  PART_STATS_LAST
+}
+part_stats_t;
 
 typedef double      (*part_init_density_t) (double x, double y, double z,
                                             void *data);
@@ -103,6 +115,10 @@ typedef struct part_global
   p4est_gloidx_t      gpnum, gplost;
   sc_array_t         *ilh[2], *jlh[2], *klh[2];
 
+  /* parallel statistics */
+  sc_statinfo_t       si[PART_STATS_LAST];
+
+  /* the mesh */
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
 }

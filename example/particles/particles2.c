@@ -185,6 +185,13 @@ static const double *prk[4][2] = {
   {rk4b, rk4g}
 };
 
+static const char  *snames[PART_STATS_LAST] = {
+  "Notify",
+  "Comm",
+  "Wait_A",
+  "Wait_B"
+};
+
 #if 0
 
 static void
@@ -354,6 +361,11 @@ run_pre (part_global_t * g, pi_data_t * piddata)
 {
   int                 i;
 
+  /* prepare parallel statistics */
+  for (i = 0; i < PART_STATS_LAST; ++i) {
+    sc_stats_init (g->si + i, snames[i]);
+  }
+
   /* prepare quadrature rule */
   P4EST_ASSERT (PART_NQPOINTS == 3);
   qpoints[2] = sqrt (3. / 5.);
@@ -410,6 +422,11 @@ run_post (part_global_t * g)
     P4EST_ASSERT (g->klh[i] == NULL);
 #endif
   }
+
+  /* analyze parallel statistics */
+  sc_stats_compute (g->mpicomm, PART_STATS_LAST, g->si);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  PART_STATS_LAST, g->si, 1, 1);
 }
 
 static double
@@ -1006,6 +1023,7 @@ comm (part_global_t * g)
   int                 num_senders;
   int                 count, cucount;
   int                 msglen;
+  double              t0_notify, t0_wait1, t0_comm, t1;
   sc_MPI_Request     *reqs;
   sc_array_t         *notif, *payl;
   sc_array_t         *arr;
@@ -1018,6 +1036,9 @@ comm (part_global_t * g)
   P4EST_ASSERT (g->prebuf == NULL);
   P4EST_ASSERT (g->recv_req == NULL);
   P4EST_ASSERT (g->send_req == NULL);
+
+  /* STATS */
+  t0_comm = sc_MPI_Wtime ();
 
   /* pass receiver ranks and message size to notify */
   num_receivers = (int) g->recevs->elem_count;
@@ -1046,11 +1067,18 @@ comm (part_global_t * g)
     }
   }
 
+  /* STATS */
+  t0_notify = sc_MPI_Wtime ();
+
   /* reverse communication pattern */
   sc_notify_ext (notif, NULL, payl, g->ntop, g->nint, g->nbot, g->mpicomm);
   P4EST_ASSERT (payl->elem_count == notif->elem_count);
   num_senders = (int) notif->elem_count;
   P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_NOTIFY, t1 - t0_notify);
 
   /* receive particles into a flat array over all processes */
   cucount = 0;
@@ -1095,11 +1123,19 @@ comm (part_global_t * g)
     }
   }
 
+  /* STATS */
+  t0_wait1 = sc_MPI_Wtime ();
+
   /* wait for all incoming messages to complete */
   reqs = (sc_MPI_Request *) sc_array_index_begin (g->recv_req);
   mpiret = sc_MPI_Waitall (num_senders, reqs, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
   sc_array_destroy_null (&g->recv_req);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_WAIT1, t1 - t0_wait1);
+  sc_stats_accumulate (g->si + PART_STATS_COMM, t1 - t0_comm);
 }
 
 static int
@@ -1624,6 +1660,7 @@ wait (part_global_t * g)
   int                 mpiret;
   int                 i;
   int                 num_receivers;
+  double              t0_wait2, t1;
   sc_MPI_Request     *reqs;
   comm_psend_t       *cps;
   comm_prank_t       *trank;
@@ -1634,12 +1671,19 @@ wait (part_global_t * g)
   P4EST_ASSERT (g->psend != NULL);
   P4EST_ASSERT (g->psmem != NULL);
 
+  /* STATS */
+  t0_wait2 = sc_MPI_Wtime ();
+
   /* wait for sent messages to complete */
   num_receivers = (int) g->recevs->elem_count;
   reqs = (sc_MPI_Request *) sc_array_index_begin (g->send_req),
     mpiret = sc_MPI_Waitall (num_receivers, reqs, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
   sc_array_destroy_null (&g->send_req);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_WAIT2, t1 - t0_wait2);
 
   /* free send buffer */
   for (i = 0; i < num_receivers; ++i) {
