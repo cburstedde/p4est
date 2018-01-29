@@ -1860,6 +1860,7 @@ outp (part_global_t * g, int k)
   }
 
   /* run-once loop for clean return */
+  cont = NULL;
   pdata = NULL;
   do {
     /* open files for output */
@@ -2108,6 +2109,7 @@ buildp (part_global_t * g, int k)
   P4EST_ASSERT (inq.elem_count == 0 && inq.array == NULL);
 
   /* create a temporary sparse forest and write it */
+  cont = NULL;
   pdata = NULL;
   build = p4est_search_build_complete (bcon);
   do {
