@@ -1972,7 +1972,7 @@ static void
 buildp (part_global_t * g, int k)
 {
   char                filename[BUFSIZ];
-  sc_array_t         *inq;
+  sc_array_t          inq;
   sc_array_t         *pdata;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
@@ -1999,7 +1999,7 @@ buildp (part_global_t * g, int k)
   bcon = p4est_search_build_new (g->p4est, sizeof (bu_data_t),
                                  buildp_init_default, g);
   p4est_search_build_init_add (bcon, buildp_init_add);
-  inq = sc_array_new (sizeof (p4est_locidx_t));
+  sc_array_init (&inq, sizeof (p4est_locidx_t));
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
        tt <= g->p4est->last_local_tree; ++tt) {
@@ -2015,15 +2015,15 @@ buildp (part_global_t * g, int k)
       }
 
       /* how many particles will we consider? */
-      sc_array_truncate (inq);
+      P4EST_ASSERT (inq.elem_count == 0);
       for (li = 0; li < ilem_particles; ++li, ++lall, ++pad) {
         if (!(pad->id % g->build_part)) {
-          *(p4est_locidx_t *) sc_array_push (inq) = lall;
+          *(p4est_locidx_t *) sc_array_push (&inq) = lall;
         }
       }
-      if (inq->elem_count > 0) {
+      if (inq.elem_count > 0) {
         bit->quad = *quad;
-        sc_array_swap_init (&bit->parr, inq, sizeof (p4est_locidx_t));
+        sc_array_swap_init (&bit->parr, &inq, sizeof (p4est_locidx_t));
         buildp_add (g, bcon, tt, bit);
       }
 
@@ -2034,7 +2034,7 @@ buildp (part_global_t * g, int k)
   }
   P4EST_ASSERT (lall == (p4est_locidx_t) g->padata->elem_count);
   P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
-  sc_array_destroy_null (&inq);
+  P4EST_ASSERT (inq.elem_count == 0 && inq.array == NULL);
 
   /* create a temporary sparse forest and write it */
   pdata = NULL;
