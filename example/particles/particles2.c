@@ -301,6 +301,22 @@ sc_array_destroy_null (sc_array_t ** parr)
   *parr = NULL;
 }
 
+/** Turn statistics collected so far into one value */
+static void
+sc_stats_collapse (sc_statinfo_t * stats)
+{
+  double              value;
+
+  SC_ASSERT (stats->dirty);
+  if (stats->count) {
+    value = stats->sum_values / (double) stats->count;
+    stats->sum_values = value;
+    stats->sum_squares = value * value;
+    stats->min = stats->max = value;
+    stats->count = 1;
+  }
+}
+
 static int
 comm_prank_compare (const void *v1, const void *v2)
 {
@@ -424,6 +440,11 @@ run_post (part_global_t * g)
   }
 
   /* analyze parallel statistics */
+  if (g->collapse) {
+    for (i = 0; i < PART_STATS_LAST; ++i) {
+      sc_stats_collapse (g->si + i);
+    }
+  }
   sc_stats_compute (g->mpicomm, PART_STATS_LAST, g->si);
   sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
                   PART_STATS_LAST, g->si, 1, 1);
@@ -2377,6 +2398,8 @@ main (int argc, char **argv)
                          "Build output everystep:particle:wrap");
   sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
                        "Configure for scaling test");
+  sc_options_add_bool (opt, 'C', "collapse", &g->collapse, 0,
+                       "Collapse statistics over time");
 #if 0
   sc_options_add_int (opt, 'C', "checkp", &g->checkp, 0,
                       "write checkpoint output");

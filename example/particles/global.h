@@ -69,6 +69,7 @@ typedef struct part_global
 #endif
   int                 printn;
   int                 scaling;
+  int                 collapse;
   double              num_particles;
   double              elem_particles;
   double              deltat;
