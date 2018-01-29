@@ -56,6 +56,7 @@ typedef struct part_global
   int                 checkp;
 #endif
   int                 printn;
+  int                 scaling;
   double              num_particles;
   double              elem_particles;
   double              deltat;

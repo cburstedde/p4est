@@ -1799,10 +1799,12 @@ outp (part_global_t * g, int k)
   do {
     /* open files for output */
     snprintf (filename, BUFSIZ, "%s_%06d", g->prefix, k);
-    cont = p4est_vtk_context_new (g->p4est, filename);
-    if (NULL == p4est_vtk_write_header (cont)) {
-      P4EST_LERRORF ("Failed to write header for %s\n", filename);
-      break;
+    if (!g->scaling) {
+      cont = p4est_vtk_context_new (g->p4est, filename);
+      if (NULL == p4est_vtk_write_header (cont)) {
+        P4EST_LERRORF ("Failed to write header for %s\n", filename);
+        break;
+      }
     }
 
     /* prepare cell data for output */
@@ -1825,17 +1827,21 @@ outp (part_global_t * g, int k)
     }
 
     /* write cell data to file */
-    if (NULL == p4est_vtk_write_cell_dataf
-        (cont, 1, 1, 1, g->mpiwrap, 1, 0, "particles", pdata, cont)) {
-      P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
-      break;
+    if (!g->scaling) {
+      if (NULL == p4est_vtk_write_cell_dataf
+          (cont, 1, 1, 1, g->mpiwrap, 1, 0, "particles", pdata, cont)) {
+        P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
+        break;
+      }
     }
     sc_array_destroy_null (&pdata);
 
     /* finish meta information and close files */
-    if (p4est_vtk_write_footer (cont)) {
-      P4EST_LERRORF ("Failed to write footer for %s\n", filename);
-      break;
+    if (!g->scaling) {
+      if (p4est_vtk_write_footer (cont)) {
+        P4EST_LERRORF ("Failed to write footer for %s\n", filename);
+        break;
+      }
     }
   }
   while (0);
@@ -2042,10 +2048,12 @@ buildp (part_global_t * g, int k)
   do {
     /* open files for output */
     snprintf (filename, BUFSIZ, "%s_W_%06d", g->prefix, k);
-    cont = p4est_vtk_context_new (build, filename);
-    if (NULL == p4est_vtk_write_header (cont)) {
-      P4EST_LERRORF ("Failed to write header for %s\n", filename);
-      break;
+    if (!g->scaling) {
+      cont = p4est_vtk_context_new (build, filename);
+      if (NULL == p4est_vtk_write_header (cont)) {
+        P4EST_LERRORF ("Failed to write header for %s\n", filename);
+        break;
+      }
     }
 
     /* prepare cell data for output */
@@ -2066,17 +2074,21 @@ buildp (part_global_t * g, int k)
     }
 
     /* write cell data to file */
-    if (NULL == p4est_vtk_write_cell_dataf
-        (cont, 1, 1, 1, g->build_wrap, 1, 0, "particles", pdata, cont)) {
-      P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
-      break;
+    if (!g->scaling) {
+      if (NULL == p4est_vtk_write_cell_dataf
+          (cont, 1, 1, 1, g->build_wrap, 1, 0, "particles", pdata, cont)) {
+        P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
+        break;
+      }
     }
     sc_array_destroy_null (&pdata);
 
     /* finish meta information and close files */
-    if (p4est_vtk_write_footer (cont)) {
-      P4EST_LERRORF ("Failed to write footer for %s\n", filename);
-      break;
+    if (!g->scaling) {
+      if (p4est_vtk_write_footer (cont)) {
+        P4EST_LERRORF ("Failed to write footer for %s\n", filename);
+        break;
+      }
     }
   }
   while (0);
@@ -2319,6 +2331,8 @@ main (int argc, char **argv)
                          "VTK output everystep:wraprank");
   sc_options_add_string (opt, 'W', "build", &opt_build, NULL,
                          "Build output everystep:particle:wrap");
+  sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
+                       "Configure for scaling test");
 #if 0
   sc_options_add_int (opt, 'C', "checkp", &g->checkp, 0,
                       "write checkpoint output");
