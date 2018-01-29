@@ -2403,6 +2403,10 @@ main (int argc, char **argv)
 
     /*** run program ***/
 
+    if (g->scaling) {
+      sc_package_set_verbosity (sc_package_id, SC_LP_PRODUCTION);
+      sc_package_set_verbosity (p4est_package_id, SC_LP_PRODUCTION);
+    }
     run (g);
   }
   while (0);
