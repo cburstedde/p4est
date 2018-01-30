@@ -189,7 +189,12 @@ static const char  *snames[PART_STATS_LAST] = {
   "Notify",
   "Comm",
   "Wait_A",
-  "Wait_B"
+  "Wait_B",
+  "Search_P",
+  "Search_L",
+  "Trans_F",
+  "Trans_C",
+  "Build"
 };
 
 #if 0
@@ -890,6 +895,8 @@ psearch_point (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 presearch (part_global_t * g)
 {
+  double              t0_searchp, t1;
+
   P4EST_ASSERT (g->padata != NULL);
   P4EST_ASSERT (g->pfound == NULL);
   P4EST_ASSERT (g->iremain == NULL);
@@ -899,7 +906,15 @@ presearch (part_global_t * g)
 
   g->iremain = sc_array_new (sizeof (p4est_locidx_t));
 
+  /* STATS */
+  t0_searchp = sc_MPI_Wtime ();
+
+  /* search through partition for parallel branch boundaries */
   p4est_search_all (g->p4est, 0, psearch_quad, psearch_point, g->padata);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_SEARCHP, t1 - t0_searchp);
 }
 
 static unsigned
@@ -1235,6 +1250,8 @@ slocal_point (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 postsearch (part_global_t * g)
 {
+  double              t0_searchl, t1;
+
   P4EST_ASSERT (g->ireceive == NULL);
   P4EST_ASSERT (g->cfound == NULL);
   P4EST_ASSERT (g->prebuf != NULL);
@@ -1243,9 +1260,16 @@ postsearch (part_global_t * g)
   g->cfound = sc_array_new_count (sizeof (char), g->prebuf->elem_count);
   sc_array_memset (g->cfound, 0);
 
+  /* STATS */
+  t0_searchl = sc_MPI_Wtime ();
+
   /* run local search to find particles sent to us */
   p4est_search_local (g->p4est, 0, slocal_quad, slocal_point, g->prebuf);
   sc_array_destroy_null (&g->cfound);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_SEARCHL, t1 - t0_searchl);
 }
 
 static int
@@ -1742,6 +1766,8 @@ part_weight (p4est_t * p4est,
 static void
 part (part_global_t * g)
 {
+  double              t0_trans1, t1_trans1;
+  double              t0_trans2, t1_trans2;
   sc_array_t         *dest_data;
   p4est_topidx_t      tt;
   p4est_locidx_t      ldatasiz, lcount;
@@ -1786,6 +1812,9 @@ part (part_global_t * g)
     return;
   }
 
+  /* STATS */
+  t0_trans1 = sc_MPI_Wtime ();
+
   /* transfer particle counts per quadrant to new partition */
   g->dest_fixed = sc_array_new_count (sizeof (int), dest_quads);
   p4est_transfer_fixed (g->p4est->global_first_quadrant, src_gfq,
@@ -1800,6 +1829,10 @@ part (part_global_t * g)
     dest_parts += *(int *) sc_array_index (g->dest_fixed, lq);
   }
   P4EST_ASSERT (dest_parts % ldatasiz == 0);
+
+  /* STATS */
+  t1_trans1 = t0_trans2 = sc_MPI_Wtime ();
+
   dest_parts /= ldatasiz;
   dest_data = sc_array_new_count (sizeof (pa_data_t), dest_parts);
   p4est_transfer_custom (g->p4est->global_first_quadrant, src_gfq,
@@ -1814,6 +1847,11 @@ part (part_global_t * g)
   P4EST_FREE (src_gfq);
   sc_array_destroy (g->padata);
   g->padata = dest_data;
+
+  /* STATS */
+  t1_trans2 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_TRANSF, t1_trans1 - t0_trans1);
+  sc_stats_accumulate (g->si + PART_STATS_TRANSC, t1_trans2 - t0_trans2);
 
   /* reassign cumulative particle counts */
   lpnum = 0;
@@ -2043,6 +2081,7 @@ buildp_add (part_global_t * g, p4est_search_build_t * bcon,
 static void
 buildp (part_global_t * g, int k)
 {
+  double              t0_build, t1;
   char                filename[BUFSIZ];
   sc_array_t          inq;
   sc_array_t         *pdata;
@@ -2066,6 +2105,9 @@ buildp (part_global_t * g, int k)
   if (g->build_part <= 0 || g->build_step <= 0 || k % g->build_step) {
     return;
   }
+
+  /* STATS */
+  t0_build = sc_MPI_Wtime ();
 
   /* iterate through particles to choose the relevant ones for new forest */
   bcon = p4est_search_build_new (g->p4est, sizeof (bu_data_t),
@@ -2108,10 +2150,16 @@ buildp (part_global_t * g, int k)
   P4EST_ASSERT (pad == (pa_data_t *) sc_array_index_end (g->padata));
   P4EST_ASSERT (inq.elem_count == 0 && inq.array == NULL);
 
-  /* create a temporary sparse forest and write it */
+  /* create a temporary sparse forest */
   cont = NULL;
   pdata = NULL;
   build = p4est_search_build_complete (bcon);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_BUILD, t1 - t0_build);
+
+  /* write temporary sparse forest to disk */
   do {
     /* open files for output */
     snprintf (filename, BUFSIZ, "%s_W_%06d", g->prefix, k);
