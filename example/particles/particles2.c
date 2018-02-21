@@ -190,6 +190,7 @@ static const char  *snames[PART_STATS_LAST] = {
   "Comm",
   "Wait_A",
   "Wait_B",
+  "Num_Peers",
   "Search_P",
   "Search_L",
   "Trans_F",
@@ -569,7 +570,7 @@ initrp (part_global_t * g)
     SC_CHECK_MPI (mpiret);
     ilem_particles = (p4est_locidx_t) round
       (glolp[0] * g->num_particles / g->global_density);
-    P4EST_GLOBAL_STATISTICSF
+    P4EST_GLOBAL_PRODUCTIONF
       ("Maximum particle number per quadrant %ld maxlevel %g\n",
        (long) ilem_particles, glolp[1]);
 
@@ -675,7 +676,7 @@ create (part_global_t * g)
   mpiret = sc_MPI_Allreduce (&gpnum, &g->gpnum, 1, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_PRODUCTIONF ("Created %lld particles for %g\n",
+  P4EST_GLOBAL_ESSENTIALF ("Created %lld particles for %g\n",
                             (long long) g->gpnum, g->num_particles);
 
   /* create globally unique particle numbers */
@@ -1047,6 +1048,9 @@ pack (part_global_t * g)
   P4EST_ASSERT (glolrs[0] + glolrs[1] + glolrs[2] == g->gpnum);
   g->gplost += glolrs[2];
   g->gpnum -= glolrs[2];
+
+  /* count number of peers as statistics */
+  sc_stats_accumulate (g->si + PART_STATS_PEERS, (double) loclrs[3]);
 
   /* another array that is no longer needed */
   sc_array_destroy_null (&g->pfound);
@@ -2157,6 +2161,9 @@ buildp (part_global_t * g, int k)
   cont = NULL;
   pdata = NULL;
   build = p4est_search_build_complete (bcon);
+  P4EST_GLOBAL_ESSENTIALF ("Built forest with %lld quadrants from %lld\n",
+                           (long long) build->global_num_quadrants,
+                           (long long) g->p4est->global_num_quadrants);
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
