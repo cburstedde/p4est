@@ -194,7 +194,9 @@ static const char  *snames[PART_STATS_LAST] = {
   "Search_L",
   "Trans_F",
   "Trans_C",
-  "Build"
+  "Build",
+  "Pertree_F",
+  "Pertree_B"
 };
 
 #if 0
@@ -2081,13 +2083,14 @@ buildp_add (part_global_t * g, p4est_search_build_t * bcon,
 static void
 buildp (part_global_t * g, int k)
 {
-  double              t0_build, t1;
+  double              t0_build, t0_pertreeF, t0_pertreeB, t1;
   char                filename[BUFSIZ];
   sc_array_t          inq;
   sc_array_t         *pdata;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
   p4est_locidx_t      lall, ilem_particles, li;
+  p4est_gloidx_t     *pertree;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   p4est_search_build_t *bcon;
@@ -2158,6 +2161,31 @@ buildp (part_global_t * g, int k)
   /* STATS */
   t1 = sc_MPI_Wtime ();
   sc_stats_accumulate (g->si + PART_STATS_BUILD, t1 - t0_build);
+
+  /* count per-tree elements */
+  pertree = P4EST_ALLOC (p4est_gloidx_t, g->conn->num_trees + 1);
+
+  /* STATS */
+  t0_pertreeF = sc_MPI_Wtime ();
+
+  /* per-tree counts of full forest */
+  p4est_comm_count_pertree (g->p4est, pertree);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_PERTREEF, t1 - t0_pertreeF);
+  t0_pertreeB = sc_MPI_Wtime ();
+
+  /* per-tree counts of full forest */
+  p4est_comm_count_pertree (build, pertree);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_PERTREEB, t1 - t0_pertreeB);
+
+  /* clean up per-tree counts */
+  P4EST_FREE (pertree);
+  pertree = NULL;
 
   /* write temporary sparse forest to disk */
   do {
