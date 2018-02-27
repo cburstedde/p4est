@@ -54,6 +54,7 @@ typedef enum part_stats
   PART_STATS_BUILD,
   PART_STATS_PERTREEF,
   PART_STATS_PERTREEB,
+  PART_STATS_RK,
   PART_STATS_LAST
 }
 part_stats_t;
@@ -97,6 +98,7 @@ typedef struct part_global
   /* runtime variables */
   int                 bricklength;
   int                 stage;
+  int                 verylast;
   double              global_density;
   double              t, lxyz[3], hxyz[3], dxyz[3];
   p4est_locidx_t      add_count;        /**< Number of particles for build_add */

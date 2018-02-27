@@ -197,7 +197,8 @@ static const char  *snames[PART_STATS_LAST] = {
   "Trans_C",
   "Build",
   "Pertree_F",
-  "Pertree_B"
+  "Pertree_B",
+  "RK"
 };
 
 #if 0
@@ -677,7 +678,7 @@ create (part_global_t * g)
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_ESSENTIALF ("Created %lld particles for %g\n",
-                            (long long) g->gpnum, g->num_particles);
+                           (long long) g->gpnum, g->num_particles);
 
   /* create globally unique particle numbers */
   mpiret = sc_MPI_Exscan (&gpnum, &gpoffset, 1, P4EST_MPI_GLOIDX,
@@ -917,7 +918,9 @@ presearch (part_global_t * g)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_SEARCHP, t1 - t0_searchp);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_SEARCHP, t1 - t0_searchp);
+  }
 }
 
 static unsigned
@@ -1050,7 +1053,9 @@ pack (part_global_t * g)
   g->gpnum -= glolrs[2];
 
   /* count number of peers as statistics */
-  sc_stats_accumulate (g->si + PART_STATS_PEERS, (double) loclrs[3]);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_PEERS, (double) loclrs[3]);
+  }
 
   /* another array that is no longer needed */
   sc_array_destroy_null (&g->pfound);
@@ -1120,7 +1125,9 @@ comm (part_global_t * g)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_NOTIFY, t1 - t0_notify);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_NOTIFY, t1 - t0_notify);
+  }
 
   /* receive particles into a flat array over all processes */
   cucount = 0;
@@ -1176,8 +1183,10 @@ comm (part_global_t * g)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_WAIT1, t1 - t0_wait1);
-  sc_stats_accumulate (g->si + PART_STATS_COMM, t1 - t0_comm);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_WAIT1, t1 - t0_wait1);
+    sc_stats_accumulate (g->si + PART_STATS_COMM, t1 - t0_comm);
+  }
 }
 
 static int
@@ -1275,7 +1284,9 @@ postsearch (part_global_t * g)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_SEARCHL, t1 - t0_searchl);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_SEARCHL, t1 - t0_searchl);
+  }
 }
 
 static int
@@ -1734,7 +1745,9 @@ wait (part_global_t * g)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_WAIT2, t1 - t0_wait2);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_WAIT2, t1 - t0_wait2);
+  }
 
   /* free send buffer */
   for (i = 0; i < num_receivers; ++i) {
@@ -1856,8 +1869,10 @@ part (part_global_t * g)
 
   /* STATS */
   t1_trans2 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_TRANSF, t1_trans1 - t0_trans1);
-  sc_stats_accumulate (g->si + PART_STATS_TRANSC, t1_trans2 - t0_trans2);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_TRANSF, t1_trans1 - t0_trans1);
+    sc_stats_accumulate (g->si + PART_STATS_TRANSC, t1_trans2 - t0_trans2);
+  }
 
   /* reassign cumulative particle counts */
   lpnum = 0;
@@ -2109,8 +2124,17 @@ buildp (part_global_t * g, int k)
   P4EST_ASSERT (g->add_count == 0);
 
   /* only output when specified */
-  if (g->build_part <= 0 || g->build_step <= 0 || k % g->build_step) {
-    return;
+  if (g->scaling && g->verylast) {
+    /* output on the last time step */
+    if (g->build_part <= 0) {
+      return;
+    }
+  }
+  else {
+    /* so this is the usual way of things: every so many steps */
+    if (g->build_part <= 0 || g->build_step <= 0 || k % g->build_step) {
+      return;
+    }
   }
 
   /* STATS */
@@ -2167,7 +2191,9 @@ buildp (part_global_t * g, int k)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_BUILD, t1 - t0_build);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_BUILD, t1 - t0_build);
+  }
 
   /* count per-tree elements */
   pertree = P4EST_ALLOC (p4est_gloidx_t, g->conn->num_trees + 1);
@@ -2180,7 +2206,9 @@ buildp (part_global_t * g, int k)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_PERTREEF, t1 - t0_pertreeF);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_PERTREEF, t1 - t0_pertreeF);
+  }
   t0_pertreeB = sc_MPI_Wtime ();
 
   /* per-tree counts of full forest */
@@ -2188,7 +2216,9 @@ buildp (part_global_t * g, int k)
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
-  sc_stats_accumulate (g->si + PART_STATS_PERTREEB, t1 - t0_pertreeB);
+  if (!g->scaling || g->verylast) {
+    sc_stats_accumulate (g->si + PART_STATS_PERTREEB, t1 - t0_pertreeB);
+  }
 
   /* clean up per-tree counts */
   P4EST_FREE (pertree);
@@ -2254,6 +2284,7 @@ sim (part_global_t * g)
 {
   int                 k;
   double              t, h, f;
+  double              t0_rk, t1;
   p4est_topidx_t      tt;
   p4est_locidx_t      lpnum, lq;
   p4est_locidx_t      li, ilem_particles;
@@ -2271,6 +2302,7 @@ sim (part_global_t * g)
   pprint (g, t);
   outp (g, k);
   buildp (g, k);
+  g->verylast = 0;
 
   /*** loop over simulation time ***/
   while (t < g->finaltime) {
@@ -2279,6 +2311,11 @@ sim (part_global_t * g)
     if (f > g->finaltime - 1e-3 * g->deltat) {
       f = g->finaltime;
       h = f - t;
+      P4EST_ASSERT (!g->verylast);
+      g->verylast = 1;
+      P4EST_GLOBAL_ESSENTIALF
+        ("Last time step with %lld particles and %lld elements\n",
+         (long long) g->gpnum, (long long) g->p4est->global_num_quadrants);
     }
     P4EST_GLOBAL_STATISTICSF ("Time %g into step %d with %g\n", t, k, h);
 
@@ -2290,6 +2327,10 @@ sim (part_global_t * g)
       /* do parallel transfer at end of each stage */
 
       /*** time step for local particles ***/
+
+      /* STATS */
+      t0_rk = sc_MPI_Wtime ();
+
       pad = (pa_data_t *) sc_array_index_begin (g->padata);
       if (pad != NULL) {
         lpnum = 0;
@@ -2311,6 +2352,12 @@ sim (part_global_t * g)
             lpnum = qud->u.lpend;
           }
         }
+      }
+
+      /* STATS */
+      t1 = sc_MPI_Wtime ();
+      if (!g->scaling || g->verylast) {
+        sc_stats_accumulate (g->si + PART_STATS_RK, t1 - t0_rk);
       }
 
       /* begin loop -- currently there is no loop */
