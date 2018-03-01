@@ -187,6 +187,8 @@ static const double *prk[4][2] = {
 
 static const char  *snames[PART_STATS_LAST] = {
   "Notify",
+  "Binary",
+  "Nary",
   "Comm",
   "Wait_A",
   "Wait_B",
@@ -2420,6 +2422,102 @@ sim (part_global_t * g)
 }
 
 static void
+notif (part_global_t * g)
+{
+  int                 mpiret;
+  int                 i, j;
+  int                 q, r;
+  double              t0_binary, t0_nary, t1;
+  sc_array_t         *recv1, *send1, *payl1;
+  sc_array_t         *recv2, *send2, *payl2;
+
+  recv1 = sc_array_new (sizeof (int));
+  send1 = sc_array_new (sizeof (int));
+  payl1 = sc_array_new (sizeof (int));
+
+  recv2 = sc_array_new (sizeof (int));
+  send2 = sc_array_new (sizeof (int));
+  payl2 = sc_array_new (sizeof (int));
+
+  /* send to 7 ranks to the left, 11 apart */
+  for (i = 0; i < 7; ++i) {
+    q = g->mpirank - (7 - i) * 11;
+    if (q >= 0) {
+      *(int *) sc_array_push (recv1) = q;
+      *(int *) sc_array_push (payl1) = g->mpirank % 19;
+    }
+  }
+  /* send to 5 ranks to the right, 13 apart */
+  for (i = 0; i < 5; ++i) {
+    q = g->mpirank + (i + 1) * 13;
+    if (q < g->mpisize) {
+      *(int *) sc_array_push (recv1) = q;
+      *(int *) sc_array_push (payl1) = g->mpirank % 19;
+    }
+  }
+  sc_array_copy (recv2, recv1);
+  sc_array_copy (payl2, payl1);
+
+  mpiret = sc_MPI_Barrier (g->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* STATS */
+  t0_binary = sc_MPI_Wtime ();
+
+  sc_notify_ext (recv1, send1, payl1, 2, 2, 2, g->mpicomm);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_BINARY, t1 - t0_binary);
+
+  mpiret = sc_MPI_Barrier (g->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* STATS */
+  t0_nary = sc_MPI_Wtime ();
+
+  sc_notify_ext (recv2, send2, payl2, g->ntop, g->nint, g->nbot, g->mpicomm);
+
+  /* STATS */
+  t1 = sc_MPI_Wtime ();
+  sc_stats_accumulate (g->si + PART_STATS_NARY, t1 - t0_nary);
+
+  SC_CHECK_ABORT (send1->elem_count == payl1->elem_count, "Send Payl 1");
+  SC_CHECK_ABORT (send2->elem_count == payl2->elem_count, "Send Payl 2");
+
+  SC_CHECK_ABORT (sc_array_is_equal (send1, send2), "Send 1 2");
+  SC_CHECK_ABORT (sc_array_is_equal (payl1, payl2), "Payl 1 2");
+
+  j = 0;
+  for (i = 0; i < 5; ++i) {
+    q = g->mpirank - (5 - i) * 13;
+    if (q >= 0) {
+      SC_CHECK_ABORT (q == *(int *) sc_array_index_int (send1, j), "Left q");
+      r = *(int *) sc_array_index_int (payl1, j);
+      SC_CHECK_ABORT (q % 19 == r, "Left r");
+      ++j;
+    }
+  }
+  for (i = 0; i < 7; ++i) {
+    q = g->mpirank + (i + 1) * 11;
+    if (q < g->mpisize) {
+      SC_CHECK_ABORT (q == *(int *) sc_array_index_int (send1, j), "Right q");
+      r = *(int *) sc_array_index_int (payl1, j);
+      SC_CHECK_ABORT (q % 19 == r, "Right r");
+      ++j;
+    }
+  }
+  SC_CHECK_ABORT (j == (int) send1->elem_count, "Count j");
+
+  sc_array_destroy (recv1);
+  sc_array_destroy (send1);
+  sc_array_destroy (payl1);
+  sc_array_destroy (recv2);
+  sc_array_destroy (send2);
+  sc_array_destroy (payl2);
+}
+
+static void
 run (part_global_t * g)
 {
   pi_data_t           spiddata, *piddata = &spiddata;
@@ -2466,6 +2564,9 @@ run (part_global_t * g)
   g->p4est = NULL;
   p4est_connectivity_destroy (g->conn);
   g->conn = NULL;
+
+  /*** extra timings for notify ***/
+  notif (g);
 
   /*** clean up variables ***/
   run_post (g);
