@@ -2185,9 +2185,11 @@ buildp (part_global_t * g, int k)
   cont = NULL;
   pdata = NULL;
   build = p4est_search_build_complete (bcon);
-  P4EST_GLOBAL_ESSENTIALF ("Built forest with %lld quadrants from %lld\n",
-                           (long long) build->global_num_quadrants,
-                           (long long) g->p4est->global_num_quadrants);
+  if (!g->scaling || g->verylast) {
+    P4EST_GLOBAL_ESSENTIALF ("Built forest with %lld quadrants from %lld\n",
+                             (long long) build->global_num_quadrants,
+                             (long long) g->p4est->global_num_quadrants);
+  }
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
@@ -2195,7 +2197,7 @@ buildp (part_global_t * g, int k)
     sc_stats_accumulate (g->si + PART_STATS_BUILD, t1 - t0_build);
   }
 
-  /* count per-tree elements */
+  /* count per-tree quadrants */
   pertree = P4EST_ALLOC (p4est_gloidx_t, g->conn->num_trees + 1);
 
   /* STATS */
@@ -2314,7 +2316,7 @@ sim (part_global_t * g)
       P4EST_ASSERT (!g->verylast);
       g->verylast = 1;
       P4EST_GLOBAL_ESSENTIALF
-        ("Last time step with %lld particles and %lld elements\n",
+        ("Last time step with %lld particles and %lld quadrants\n",
          (long long) g->gpnum, (long long) g->p4est->global_num_quadrants);
     }
     P4EST_GLOBAL_STATISTICSF ("Time %g into step %d with %g\n", t, k, h);
