@@ -535,6 +535,7 @@ initrp (part_global_t * g)
   p4est_quadrant_t   *quad;
   qu_data_t          *qud;
 
+  glolp[0] = glolp[1] = 0.;
   max_cycles = g->maxlevel - g->minlevel;
   for (cycle = 0;; ++cycle) {
     /*** iterate through local cells to determine local particle density ***/
@@ -602,6 +603,10 @@ initrp (part_global_t * g)
     /*** unweighted partition ***/
     p4est_partition (g->p4est, 0, NULL);
   }
+
+  P4EST_GLOBAL_ESSENTIALF ("Created %lld quadrants at maxlevel %g\n",
+                           (long long) g->p4est->global_num_quadrants,
+                           glolp[1]);
 }
 
 static void
@@ -2318,7 +2323,7 @@ sim (part_global_t * g)
       P4EST_ASSERT (!g->verylast);
       g->verylast = 1;
       P4EST_GLOBAL_ESSENTIALF
-        ("Last time step with %lld particles and %lld quadrants\n",
+        ("Last time step %d with %lld particles and %lld quadrants\n", k,
          (long long) g->gpnum, (long long) g->p4est->global_num_quadrants);
     }
     P4EST_GLOBAL_STATISTICSF ("Time %g into step %d with %g\n", t, k, h);
@@ -2346,7 +2351,7 @@ sim (part_global_t * g)
             qud = (qu_data_t *) quad->p.user_data;
             ilem_particles = qud->u.lpend - lpnum;
 
-            /*** loop through particles in this element */
+            /*** loop through particles in this quadrant */
             for (li = 0; li < ilem_particles; ++li) {
               /* one Runge Kutta stage for this particle */
               rkstage (g, pad++, h);
@@ -2366,7 +2371,7 @@ sim (part_global_t * g)
 
       /* begin loop -- currently there is no loop */
 
-      /* find new local element or process for each particle */
+      /* find new local quadrant or process for each particle */
       presearch (g);
 
       /* send leaving particles to receiver processes */
@@ -2620,7 +2625,7 @@ main (int argc, char **argv)
   sc_options_add_double (opt, 'n', "particles", &g->num_particles,
                          1e3, "Global number of particles");
   sc_options_add_double (opt, 'e', "pperelem", &g->elem_particles,
-                         P4EST_CHILDREN, "Number of particles per element");
+                         P4EST_CHILDREN, "Number of particles per quadrant");
   sc_options_add_double (opt, 'h', "deltat", &g->deltat,
                          1e-1, "Time step size");
   sc_options_add_double (opt, 'T', "finaltime", &g->finaltime,
@@ -2688,7 +2693,7 @@ main (int argc, char **argv)
       ue = usagerr (opt, "Global number of particles positive");
     }
     if (g->elem_particles <= 0.) {
-      ue = usagerr (opt, "Number of particles per element positive");
+      ue = usagerr (opt, "Number of particles per quadrant positive");
     }
     if (g->printn < 0) {
       ue = usagerr (opt, "Particle print interval non-negative");
