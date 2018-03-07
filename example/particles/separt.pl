@@ -49,7 +49,13 @@ while (<>) {
 open $gh, ">", "G.gnuplot";
 print $gh "set term x11 size 500,500\n";
 print $gh "set size ratio -1\n";
+print $gh "set xtics .2,.2 offset -2\n";
+print $gh "set ytics .2,.2 offset 1.5\n";
+print $gh "set zrange [0:1]\n";
 #print $gh "set xrange [0:1]\nset yrange [0:1]\n";
+#print $gh "set xrange [0:1]\nset yrange [0:1]\nset zrange [0:1]\n";
+print $gh "set view 65,30\n";
+print $gh "set xyplane at .3\n";
 print $gh "set key off\n";
 print $gh "set title \"D=$dim T=$finalt dt=$deltat rk=$order\"\n";
 if ($dim == 2) {
@@ -72,6 +78,11 @@ foreach $id (sort keys %ids) {
   $first = ",\\\n";
 }
 print $gh "\n";
+
+print $gh "set term tikz color solid tightboundingbox\n";
+print $gh "set output \"G.tikz\"\n";
+print $gh "set title\n";
+print $gh "replot\n";
 
 # finish writing gnuplot script
 print $gh "pause -1\n";
