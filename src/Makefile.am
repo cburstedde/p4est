@@ -76,6 +76,7 @@ src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 src_libp4est_la_LDFLAGS = -release $(VERSION)
 LDADD += @top_builddir@/src/libp4est.la @P4EST_SC_LDADD@
 EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_LDADD@
+src_libp4est_la_LIBADD = @P4EST_SC_LDADD@
 
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
