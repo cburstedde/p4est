@@ -27,15 +27,16 @@
 #include <p4est.h>
 
 /** \file p4est_build.h
- * Create a new p4est object by running \ref p4est_search_local.
+ * Create a new p4est object by adding individual quadrants in order.
+ * This can for example be driven by running \ref p4est_search_local.
  * This allows to create a heavily coarsened forest in one pass.
- * It is also legal to add more refined quadrants.
+ * It is also legal to add more highly refined quadrants.
  *
  * The only rules are to respect the original partition boundary
  * and to add non-overlapping quadrants in Morton order.
  */
 
-/** Context object for building a new p4est from search callbacks.
+/** Context object for building a new p4est from individual quadrants.
  */
 typedef struct p4est_build p4est_build_t;
 
@@ -87,7 +88,7 @@ int                 p4est_build_add (p4est_build_t * build,
                                      p4est_topidx_t which_tree,
                                      p4est_quadrant_t * quadrant);
 
-/** Finalize the construction of the new forest after the search.
+/** Finalize the construction of the new forest after adding quadrants.
  * \param [in,out] build    The building context will be deallocated inside.
  * \return                  A valid forest object.
  *                          Its revision number is set to zero.
