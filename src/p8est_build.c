@@ -22,4 +22,4 @@
 */
 
 #include <p4est_to_p8est.h>
-#include "p4est_search_build.c"
+#include "p4est_build.c"
