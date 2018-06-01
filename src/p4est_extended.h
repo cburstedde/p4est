@@ -130,6 +130,50 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
                                    size_t data_size, p4est_init_t init_fn,
                                    void *user_pointer);
 
+/** Initialize a preallocated forest.
+ * The initializes forest consists of equi-partitioned root quadrants.
+ * When there are more processors than trees, some processors are empty.
+ *
+ * \param [in,out] p4est     preallocated p4est
+ * \param [in] mpicomm       A valid MPI communicator.
+ * \param [in] connectivity  This is the connectivity information that
+ *                           the forest is built with.  Note the p4est
+ *                           does not take ownership of the memory.
+ * \param [in] min_quadrants Minimum initial quadrants per processor.
+ *                           Makes the refinement pattern mpisize-specific.
+ * \param [in] min_level     The forest is refined at least to this level.
+ *                           May be negative or 0, then it has no effect.
+ * \param [in] fill_uniform  If true, fill the forest with a uniform mesh
+ *                           instead of the coarsest possible one.
+ *                           The latter is partition-specific so that
+ *                           is usually not a good idea.
+ * \param [in] data_size     This is the size of data for each quadrant which
+ *                           can be zero.  Then user_data_pool is set to NULL.
+ * \param [in] init_fn       Callback function to initialize the user_data
+ *                           which is already allocated automatically.
+ * \param [in] user_pointer  Assign to the user_pointer member of the p4est
+ *                           before init_fn is called the first time.
+ *
+ * \note The connectivity structure must not be destroyed
+ *       during the lifetime of this forest.
+ */
+void                p4est_init_ext (p4est_t * p4est, sc_MPI_Comm mpicomm,
+                                    p4est_connectivity_t * connectivity,
+                                    p4est_locidx_t min_quadrants,
+                                    int min_level, int fill_uniform,
+                                    size_t data_size, p4est_init_t init_fn,
+                                    void *user_pointer);
+
+/** Destroy a p4est
+ * \param [in,out] p4est   p4est to destroy
+ * \param [in] free_p4est  Boolean on whether the p4est_t pointer should be
+ *                         freed
+ *
+ * \note The connectivity structure is not destroyed with the p4est.
+ */
+void                p4est_destroy_ext (p4est_t * p4est, int free_p4est);
+
+
 /** Create a new mesh.
  * \param [in] p4est                A forest that is fully 2:1 balanced.
  * \param [in] ghost                The ghost layer created from the

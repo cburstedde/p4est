@@ -187,6 +187,8 @@
 /* functions in p4est_extended */
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
+#define p4est_init_ext                  p8est_init_ext
+#define p4est_destroy_ext               p8est_destroy_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
 #define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext

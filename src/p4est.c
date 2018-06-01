@@ -201,6 +201,19 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                p4est_locidx_t min_quadrants, int min_level, int fill_uniform,
                size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
+  p4est_t            *p4est;
+  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  p4est_init_ext (p4est, mpicomm, connectivity, min_quadrants, min_level,
+                  fill_uniform, data_size, init_fn, user_pointer);
+  return p4est;
+}
+
+void
+p4est_init_ext (p4est_t * p4est, sc_MPI_Comm mpicomm,
+                p4est_connectivity_t * connectivity,
+                p4est_locidx_t min_quadrants, int min_level, int fill_uniform,
+                size_t data_size, p4est_init_t init_fn, void *user_pointer)
+{
   int                 num_procs, rank;
   int                 i, must_remove_last_quadrant;
   int                 level;
@@ -210,7 +223,6 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_gloidx_t      first_tree, first_quadrant, first_tree_quadrant;
   p4est_gloidx_t      last_tree, last_quadrant, last_tree_quadrant;
   p4est_gloidx_t      quadrant_index;
-  p4est_t            *p4est;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   p4est_quadrant_t    a, b, c;
@@ -227,7 +239,6 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
 
   /* create p4est object and assign some data members */
-  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   p4est->data_size = data_size;
   p4est->user_pointer = user_pointer;
   p4est->connectivity = connectivity;
@@ -491,11 +502,16 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_new with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
-  return p4est;
 }
 
 void
 p4est_destroy (p4est_t * p4est)
+{
+  p4est_destroy_ext(p4est, 1);
+}
+
+void
+p4est_destroy_ext (p4est_t * p4est, int free_p4est)
 {
 #ifdef P4EST_ENABLE_DEBUG
   size_t              qz;
@@ -526,7 +542,8 @@ p4est_destroy (p4est_t * p4est)
   p4est_comm_parallel_env_release (p4est);
   P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_first_position);
-  P4EST_FREE (p4est);
+  if (free_p4est)
+    P4EST_FREE (p4est);
 }
 
 p4est_t            *
