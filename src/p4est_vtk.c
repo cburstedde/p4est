@@ -1692,8 +1692,7 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
       snprintf (filename_cpy, BUFSIZ, "%s", cont->filename);
       filename_basename = basename (filename_cpy);
       fprintf (cont->pvtufile,
-               "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename_basename,
-               p);
+               "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename_basename, p);
       fprintf (cont->visitfile, "%s_%04d.vtu\n", filename_basename, p);
     }
     fprintf (cont->pvtufile, "  </PUnstructuredGrid>\n");
