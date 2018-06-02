@@ -519,8 +519,10 @@ static void
 step3_write_solution (p4est_t * p4est, int timestep)
 {
   char                filename[BUFSIZ] = { '\0' };
+  int                 retval;
   sc_array_t         *u_interp;
   p4est_locidx_t      numquads;
+  p4est_vtk_context_t *context;
 
   snprintf (filename, 17, P4EST_STRING "_step3_%04d", timestep);
 
@@ -545,7 +547,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
                  NULL);         /* there is no callback for the corners between quadrants */
 
   /* create VTK output context and set its parameters */
-  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
+  context = p4est_vtk_context_new (p4est, filename);
   p4est_vtk_context_set_scale (context, 0.99);  /* quadrant at almost full scale */
 
   /* begin writing the output files */
@@ -570,7 +572,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (context != NULL,
                   P4EST_STRING "_vtk: Error writing cell data");
 
-  const int           retval = p4est_vtk_write_footer (context);
+  retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_array_destroy (u_interp);

@@ -712,9 +712,9 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         continue;
       }
       for (zy = 0; zy < shared_nodes->elem_count; zy++) {
-        il = *((p4est_locidx_t *) sc_array_index (shared_nodes, zy));
         int8_t              val = *((int8_t *) sc_array_index (recv, zy));
 
+        il = *((p4est_locidx_t *) sc_array_index (shared_nodes, zy));
         *((int8_t *) sc_array_index (is_parent_lnodes, il)) |= val;
       }
     }
@@ -1646,10 +1646,11 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           p4est_locidx_t      eid = (p4est_locidx_t) gid[1];
           p4est_locidx_t      lid = lnodes->element_nodes[eid];
           p4est_locidx_t      loc, cstart, cend, j;
+          p4est_locidx_t     *lp;
 
           P4EST_ASSERT (gid[0] == lnodes->global_offset + il);
           P4EST_ASSERT (eid / V < lnodes->num_local_elements);
-          p4est_locidx_t     *lp =
+          lp =
             (p4est_locidx_t *) sc_array_index (lnodes_to_plex, (size_t) lid);
 
           loc = firstidx + il;

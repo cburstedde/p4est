@@ -1781,6 +1781,26 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int orientation)
 #endif /* P4_TO_P8 */
   };
 
+/* *INDENT-OFF* */
+  /* create tree_to_tree and tree_to_face */
+  p4est_topidx_t tree_to_tree[2 * P4EST_FACES] =
+#ifndef P4_TO_P8
+    {0, 0, 0, 0,
+     1, 1, 1, 1};
+#else /* !P4_TO_P8 */
+    {0, 0, 0, 0, 0, 0,
+     1, 1, 1, 1, 1, 1};
+#endif /* !P4_TO_P8 */
+  int8_t tree_to_face[2 * P4EST_FACES] =
+#ifndef P4_TO_P8
+    {0, 1, 2, 3,
+     0, 1, 2, 3,};
+#else /* !P4_TO_P8 */
+    {0, 1, 2, 3, 4, 5,
+     0, 1, 2, 3, 4, 5};
+#endif /* !P4_TO_P8 */
+/* *INDENT-ON* */
+
   P4EST_ASSERT (0 <= l_face && l_face < P4EST_FACES);
   P4EST_ASSERT (0 <= r_face && r_face < P4EST_FACES);
   P4EST_ASSERT (0 <= orientation && orientation < P4EST_HALF);
@@ -1837,26 +1857,6 @@ p4est_connectivity_new_twotrees (int l_face, int r_face, int orientation)
     break;
   }
 #endif /* P4_TO_P8 */
-
-/* *INDENT-OFF* */
-  /* create tree_to_tree and tree_to_face */
-  p4est_topidx_t tree_to_tree[2 * P4EST_FACES] =
-#ifndef P4_TO_P8
-    {0, 0, 0, 0,
-     1, 1, 1, 1};
-#else /* !P4_TO_P8 */
-    {0, 0, 0, 0, 0, 0,
-     1, 1, 1, 1, 1, 1};
-#endif /* !P4_TO_P8 */
-  int8_t tree_to_face[2 * P4EST_FACES] =
-#ifndef P4_TO_P8
-    {0, 1, 2, 3,
-     0, 1, 2, 3,};
-#else /* !P4_TO_P8 */
-    {0, 1, 2, 3, 4, 5,
-     0, 1, 2, 3, 4, 5};
-#endif /* !P4_TO_P8 */
-/* *INDENT-ON* */
 
   /* set values where trees are connected */
   tree_to_tree[l_face] = 1;

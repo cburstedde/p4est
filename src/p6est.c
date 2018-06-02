@@ -701,15 +701,15 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   sc_MPI_Status       mpistatus;
 #endif
   int                 num_procs = p6est->mpisize;
+  size_t              comb_size, data_size = p6est->data_size;
+  size_t              zz, nlayers = p6est->layers->elem_count;
+  char               *lbuf, *bp;
 
   P4EST_GLOBAL_PRODUCTION ("Into p6est_save\n");
   p4est_log_indent_push ();
 
   savecolumns = p4est_copy (p6est->columns, 0);
   p4est_reset_data (savecolumns, 2 * sizeof (p4est_locidx_t), NULL, NULL);
-  size_t              comb_size, data_size = p6est->data_size;
-  size_t              zz, nlayers = p6est->layers->elem_count;
-  char               *lbuf, *bp;
 
   if (!data_size) {
     save_data = 0;
