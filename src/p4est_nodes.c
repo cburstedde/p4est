@@ -194,6 +194,9 @@ p4est_nodes_new_local (p4est_t * p4est)
               /* can't check for quadrants larger than the root */
               if (q->level == 0 && rlev < 0)
                 continue;
+              /* can't check for quadrants deeper than maxlevel */
+              if (q->level == P4EST_QMAXLEVEL && rlev > 0)
+                continue;
               /* can't check for quadrants larger unless child id
                * and corner line up
                */
