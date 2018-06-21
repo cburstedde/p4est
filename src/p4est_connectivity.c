@@ -4389,40 +4389,38 @@ p4est_connectivity_read_inp_stream (FILE * stream,
     }
     else if (reading_elements) {
       if (fill_trees_and_vertices) {
-        long long int       element_number;
         long long int       v[P4EST_CHILDREN];
         int                 n;
         int                 retval;
 
-        /* Note that when we read in the
-         * vertices we switch from right-hand
-         * vertex ordering to z-order
-         */
-        retval = sscanf (line, "%lld, %lld, %lld, %lld, %lld"
-#ifdef P4_TO_P8
-                         ", %lld, %lld, %lld, %lld"
-#endif
-                         , &element_number, &v[0], &v[1], &v[3], &v[2]
-#ifdef P4_TO_P8
-                         , &v[4], &v[5], &v[7], &v[6]
-#endif
-          );
-        if (retval != P4EST_CHILDREN + 1) {
-          P4EST_LERROR ("Premature end of file");
-          P4EST_FREE (line);
-          return 1;
-        }
-
-        if (element_number > *num_trees) {
+        if (num_elements >= *num_trees) {
           P4EST_LERROR ("Encountered element that will not fit into"
                         " tree_to_vertex array. More elements than expected.\n");
           P4EST_FREE (line);
           return 1;
         }
 
+        /* Note that when we read in the
+         * vertices we switch from right-hand
+         * vertex ordering to z-order
+         */
+        retval = sscanf (line, "%*d, %lld, %lld, %lld, %lld"
+#ifdef P4_TO_P8
+                         ", %lld, %lld, %lld, %lld"
+#endif
+                         , &v[0], &v[1], &v[3], &v[2]
+#ifdef P4_TO_P8
+                         , &v[4], &v[5], &v[7], &v[6]
+#endif
+          );
+        if (retval != P4EST_CHILDREN) {
+          P4EST_LERROR ("Premature end of file");
+          P4EST_FREE (line);
+          return 1;
+        }
+
         for (n = 0; n < P4EST_CHILDREN; ++n)
-          tree_to_vertex[P4EST_CHILDREN * (element_number - 1) + n] =
-            v[n] - 1;
+          tree_to_vertex[P4EST_CHILDREN * num_elements + n] = v[n] - 1;
       }
 
       ++num_elements;
