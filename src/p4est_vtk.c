@@ -1060,7 +1060,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
 
-  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
+  p4est_vtk_context_t *list_end;
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
@@ -1120,7 +1120,8 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   }
 
   /* Check for pointer variable marking the end of variable data input. */
-  SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
+  list_end = va_arg (ap, p4est_vtk_context_t *);
+  SC_CHECK_ABORT (list_end == cont, P4EST_STRING "_vtk Error: the end of variable "
                   "data must be specified by passing, as the last argument, the current "
                   P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING
                   "_vtk.h for more information.");
