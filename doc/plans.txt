@@ -28,3 +28,4 @@ Undecided:
 1.  Only store non-empty local trees.
 1.  Remove autoconf logic for Fortran and C++ as well as the
     blas, lapack, and dmatrix code in libsc.
+1.  Call the weight function for partitioning when mpisize == 1.
