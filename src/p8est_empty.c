@@ -23,5 +23,4 @@
 */
 
 #include <p4est_to_p8est_empty.h>
-#include <p8est_empty.h>
 #include "p4est_empty.c"

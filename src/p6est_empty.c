@@ -24,4 +24,7 @@
 
 #include <p6est_empty.h>
 
-void p6est_empty_noop() {};
+void
+p6est_empty_noop (void)
+{
+}

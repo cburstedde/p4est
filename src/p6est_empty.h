@@ -25,8 +25,15 @@
 #ifndef P6EST_EMPTY_H
 #define P6EST_EMPTY_H
 
-/* This is a dummy h file that the user can replace as needed */
+#include <p4est_base.h>
 
-void p6est_empty_noop();
+SC_EXTERN_C_BEGIN;
 
-#endif /* P6EST_EMPTY_H */
+/* This is a dummy .h file that the user can replace as needed */
+
+/** This function does nothing. */
+void                p6est_empty_noop (void);
+
+SC_EXTERN_C_END;
+
+#endif /* !P6EST_EMPTY_H */

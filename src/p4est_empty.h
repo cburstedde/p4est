@@ -34,15 +34,22 @@
  *                                                                            *
  * A possible use case would be for an application to distribute its version  *
  * of these files and copy them into the p4est source directory prior to      *
- * configuration and build of p4est. By doing this, applications can use      *
- * distributed tarballs of p4est without having the re-bootstrap p4est.       *
+ * configuration and build of p4est.  By doing this, applications can use     *
+ * distributed tarballs of p4est without having to re-bootstrap p4est.        *
  ******************************************************************************/
 
 #ifndef P4EST_EMPTY_H
 #define P4EST_EMPTY_H
 
-/* This is a dummy h file that the user can replace as needed */
+#include <p4est_base.h>
 
-void p4est_empty_noop();
+SC_EXTERN_C_BEGIN;
 
-#endif /* P4EST_EMPTY_H */
+/* This is a dummy .h file that the user can replace as needed */
+
+/** This function does nothing. */
+void                p4est_empty_noop (void);
+
+SC_EXTERN_C_END;
+
+#endif /* !P4EST_EMPTY_H */
