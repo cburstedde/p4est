@@ -392,7 +392,7 @@ void
 p6est_init_ext (p6est_t * p6est, sc_MPI_Comm mpicomm,
                 p6est_connectivity_t * connectivity,
                 p4est_locidx_t min_quadrants, int min_level, int min_zlevel,
-                 int num_zroot,
+                int num_zroot,
                 int fill_uniform, size_t data_size, p6est_init_t init_fn,
                 void *user_pointer)
 {
@@ -1264,9 +1264,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
   void               *orig_user_pointer = p6est->user_pointer;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_columns with %lld total layers"
-                            " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            " in %lld total columns\n", (long long)
+                            p6est->global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
   p4est_log_indent_push ();
   refine_col.refine_col_fn = refine_fn;
@@ -1285,9 +1284,8 @@ p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive,
   p6est_update_offsets (p6est);
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF ("Done p6est_refine_columns with %lld total layers"
-                            " in %lld total columns\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            " in %lld total columns\n", (long long)
+                            p6est->global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
 }
 
@@ -1315,8 +1313,8 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
 
   P4EST_GLOBAL_PRODUCTIONF ("Into p6est_refine_layers with %lld total layers"
                             " in %lld total columns, allowed level %d\n",
-                            (long long) p6est->
-                            global_first_layer[p6est->mpisize],
+                            (long long)
+                            p6est->global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants,
                             allowed_level);
   p4est_log_indent_push ();
