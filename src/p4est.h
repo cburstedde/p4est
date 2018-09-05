@@ -362,11 +362,17 @@ void                p4est_balance (p4est_t * p4est,
  * The forest will be partitioned between processors such that they
  * have an approximately equal number of quadrants (or sum of weights).
  *
+ * On one process, the function noops and does not call the weight callback.
+ * Otherwise, the weight callback is called once per quadrant in order.
+ *
  * \param [in,out] p4est      The forest that will be partitioned.
  * \param [in]     allow_for_coarsening Slightly modify partition such that
  *                            quadrant families are not split between ranks.
  * \param [in]     weight_fn  A weighting function or NULL
  *                            for uniform partitioning.
+ *                            When running with mpisize == 1, never called.
+ *                            Otherwise, called in order for all quadrants
+ *                            if not NULL.
  */
 void                p4est_partition (p4est_t * p4est,
                                      int allow_for_coarsening,
