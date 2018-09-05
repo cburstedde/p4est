@@ -111,8 +111,9 @@ typedef void        (*p8est_replace_t) (p8est_t * p8est,
                                         p8est_quadrant_t * incoming[]);
 
 /** Create a new forest.
- * This is a more general form of p8est_new.
+ * This is a more general form of \ref p8est_new.
  * See the documentation of p8est_new for basic usage.
+ * Use \ref p8est_destroy to free the forest again.
  *
  * \param [in] min_quadrants    Minimum initial quadrants per processor.
  *                              Makes the refinement pattern mpisize-specific.
@@ -131,31 +132,33 @@ p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** Initialize a preallocated forest.
- * The initializes forest consists of equi-partitioned root quadrants.
+ * Use \ref p8est_reset to free the memory allocated.
+ * The initialized forest consists of equi-partitioned root quadrants.
  * When there are more processors than trees, some processors are empty.
  *
- * \param [in,out] p8est       preallocated p8est
- * \param [in] mpicomm         A valid MPI communicator.
- * \param [in] connectivity    This is the connectivity information that
- *                             the forest is built with.  Note the p8est
- *                             does not take ownership of the memory.
- * \param [in] min_quadrants   Minimum initial quadrants per processor.
- *                             Makes the refinement pattern mpisize-specific.
- * \param [in] min_level       The forest is refined at least to this level.
- *                             May be negative or 0, then it has no effect.
- * \param [in] fill_uniform    If true, fill the forest with a uniform mesh
- *                             instead of the coarsest possible one.
- *                             The latter is partition-specific so that
- *                             is usually not a good idea.
- * \param [in] data_size       This is the size of data for each quadrant which
- *                             can be zero.  Then user_data_pool is set to NULL.
- * \param [in] init_fn         Callback function to initialize the user_data
- *                             which is already allocated automatically.
- * \param [in] user_pointer    Assign to the user_pointer member of the p8est
- *                             before init_fn is called the first time.
+ * \param [in,out] p8est        Preallocated p8est struct on input.
+ * \param [in] mpicomm          A valid MPI communicator.
+ * \param [in] connectivity     This is the connectivity information that
+ *                              the forest is built with.  Note the p8est
+ *                              does not take ownership of the memory.
+ * \param [in] min_quadrants    Minimum initial quadrants per processor.
+ *                              Makes the refinement pattern mpisize-specific.
+ * \param [in] min_level        The forest is refined at least to this level.
+ *                              May be negative or 0, then it has no effect.
+ * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
+ *                              instead of the coarsest possible one.
+ *                              The latter is partition-specific so that
+ *                              is usually not a good idea.
+ * \param [in] data_size        This is the size of data for each quadrant which
+ *                              can be zero.  Then user_data_pool is set to NULL.
+ * \param [in] init_fn          Callback function to initialize the user_data
+ *                              which is already allocated automatically.
+ * \param [in] user_pointer     Assign to the user_pointer member of the p8est
+ *                              before init_fn is called the first time.
  *
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
+ * \note This function is not related at all to \ref p8est_init.
  */
 void                p8est_init_ext (p8est_t * p8est, sc_MPI_Comm mpicomm,
                                     p8est_connectivity_t * connectivity,
@@ -164,19 +167,18 @@ void                p8est_init_ext (p8est_t * p8est, sc_MPI_Comm mpicomm,
                                     size_t data_size, p8est_init_t init_fn,
                                     void *user_pointer);
 
-/** Destroy a p8est
- * \param [in,out] p8est   p8est to destroy
- * \param [in] free_p8est  Boolean on whether the p8est_t pointer should be
- *                         freed
+/** Free a the memory inside a p8est structure.
+ * \param [in,out] p8est   p8est allocated by \ref p8est_init_ext. 
+ *                         Its contents are undefined on output.
  *
  * \note The connectivity structure is not destroyed with the p8est.
  */
-void                p8est_destroy_ext (p8est_t * p8est, int free_p8est);
+void                p8est_reset (p8est_t * p8est);
 
 /** Create a new mesh.
  * \param [in] p8est                A forest that is fully 2:1 balanced.
  * \param [in] ghost                The ghost layer created from the
- *                                  provided p4est.
+ *                                  provided p8est.
  * \param [in] compute_tree_index   Boolean to decide whether to allocate and
  *                                  compute the quad_to_tree list.
  * \param [in] compute_level_lists  Boolean to decide whether to compute the
@@ -185,7 +187,7 @@ void                p8est_destroy_ext (p8est_t * p8est, int free_p8est);
  *                                  are stored.
  * \return                          A fully allocated mesh structure.
  */
-p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
+p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p8est,
                                         p8est_ghost_t * ghost,
                                         int compute_tree_index,
                                         int compute_level_lists,
@@ -341,7 +343,7 @@ void                p8est_iterate_ext (p8est_t * p8est,
 void                p8est_save_ext (const char *filename, p8est_t * p8est,
                                     int save_data, int save_partition);
 
-/** Load the complete connectivity/p4est structure from disk.
+/** Load the complete connectivity/p8est structure from disk.
  * It is possible to load the file with a different number of processors
  * than has been used to write it.  The partition will then be uniform.
  * \param [in] filename         Name of the file to read.
@@ -354,7 +356,7 @@ void                p8est_save_ext (const char *filename, p8est_t * p8est,
  *                              If false, the stored data size is ignored.
  * \param [in] autopartition    Ignore saved partition and make it uniform.
  * \param [in] broadcasthead    Have only rank 0 read headers and bcast them.
- * \param [in] user_pointer     Assign to the user_pointer member of the p4est
+ * \param [in] user_pointer     Assign to the user_pointer member of the p8est
  *                              before init_fn is called the first time.
  * \param [out] connectivity    Connectivity must be destroyed separately.
  * \return          Returns a valid forest structure. A pointer to a valid
@@ -379,7 +381,7 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest
- * must be at least face balanced (see p4est_balance()).  See
+ * must be at least face balanced (see \ref p8est_balance).  See
  * test/test_plex2.c for example usage.
  *
  * All arrays should be initialized to hold sizeof (p4est_locidx_t), except

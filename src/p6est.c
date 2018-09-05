@@ -411,6 +411,10 @@ p6est_init_ext (p6est_t * p6est, sc_MPI_Comm mpicomm,
      (long long) min_quadrants, SC_MAX (min_zlevel, 0));
   p4est_log_indent_push ();
 
+  /* we have undefined memory coming in */
+  P4EST_ASSERT (p6est != NULL);
+  memset (p6est, 0, sizeof (*p6est));
+
   layers = sc_array_new (sizeof (p2est_quadrant_t));
 
   if (data_size > 0) {
@@ -557,11 +561,12 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
 void
 p6est_destroy (p6est_t * p6est)
 {
-  p6est_destroy_ext(p6est, 1);
+  p6est_reset (p6est);
+  P4EST_FREE (p6est);
 }
 
 void
-p6est_destroy_ext (p6est_t * p6est, int free_p6est)
+p6est_reset (p6est_t * p6est)
 {
   sc_array_t         *layers = p6est->layers;
   size_t              layercount = layers->elem_count;
@@ -583,8 +588,6 @@ p6est_destroy_ext (p6est_t * p6est, int free_p6est)
   sc_mempool_destroy (p6est->layer_pool);
   p6est_comm_parallel_env_release (p6est);
   P4EST_FREE (p6est->global_first_layer);
-  if (free_p6est)
-    P4EST_FREE (p6est);
 }
 
 p6est_t            *

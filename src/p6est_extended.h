@@ -45,8 +45,9 @@
 SC_EXTERN_C_BEGIN;
 
 /** Create a new forest.
- * This is a more general form of p6est_new().
- * See the documentation of p6est_new() for basic usage.
+ * This is a more general form of \ref p6est_new.
+ * See the documentation of p6est_new for basic usage.
+ * Use \ref p6est_destroy to free the forest again.
  *
  * \param [in] min_quadrants    Minimum initial quadrants per processor.
  *                              Makes the refinement pattern mpisize-specific.
@@ -72,34 +73,33 @@ p6est_t            *p6est_new_ext (sc_MPI_Comm mpicomm,
                                    p6est_init_t init_fn, void *user_pointer);
 
 /** Initialize a preallocated forest.
- * This is a more general form of p6est_new_ext.
- * See the documentation of p6est_new_ext for basic usage.
+ * Use \ref p6est_reset to free the memory allocated.
  *
- * \param [int, out] p6est    preallocated p6est
- * \param [in] mpicomm        A valid MPI communicator.
- * \param [in] connectivity   This is the connectivity information that
- *                            the forest is built with.  Note the p6est
- *                            does not take ownership of the memory.
- * \param [in] min_quadrants  Minimum initial quadrants per processor.
- *                            Makes the refinement pattern mpisize-specific.
- * \param [in] min_level      The forest is horizontally refined at least to
- *                            this level.  May be negative or 0, then it has
- *                            no effect.
- * \param [in] min_zlevel     The forest is vertically refined at least to
- *                            this level.  May be negative or 0, then it has
- *                            no effect.
- * \parem [in] num_zroot      The number of "root" vertical layers
- *                            (used when non-power-of-2 layers are desired)
- * \param [in] fill_uniform   If true, fill the forest with a uniform mesh
- *                            instead of the coarsest possible one.
- *                            The latter is partition-specific so that
- *                            is usually not a good idea.
- * \param [in] data_size      This is the size of data for each quadrant which
- *                            can be zero.  Then user_data_pool is set to NULL.
- * \param [in] init_fn        Callback function to initialize the user_data
- *                            which is already allocated automatically.
- * \param [in] user_pointer   Assign to the user_pointer member of the p6est
- *                            before init_fn is called the first time.
+ * \param [int,out] p6est       Preallocated p6est struct on input.
+ * \param [in] mpicomm          A valid MPI communicator.
+ * \param [in] connectivity     This is the connectivity information that
+ *                              the forest is built with.  Note the p6est
+ *                              does not take ownership of the memory.
+ * \param [in] min_quadrants    Minimum initial quadrants per processor.
+ *                              Makes the refinement pattern mpisize-specific.
+ * \param [in] min_level        The forest is horizontally refined at least to
+ *                              this level.  May be negative or 0, then it has
+ *                              no effect.
+ * \param [in] min_zlevel       The forest is vertically refined at least to
+ *                              this level.  May be negative or 0, then it has
+ *                              no effect.
+ * \parem [in] num_zroot        The number of "root" vertical layers
+ *                              (used when non-power-of-2 layers are desired)
+ * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
+ *                              instead of the coarsest possible one.
+ *                              The latter is partition-specific so that
+ *                              is usually not a good idea.
+ * \param [in] data_size        This is the size of data for each quadrant which
+ *                              can be zero.  Then user_data_pool is set to NULL.
+ * \param [in] init_fn          Callback function to initialize the user_data
+ *                              which is already allocated automatically.
+ * \param [in] user_pointer     Assign to the user_pointer member of the p6est
+ *                              before init_fn is called the first time.
  *
  * \note The connectivity structure must not be destroyed
  *       during the lifetime of this forest.
@@ -112,14 +112,13 @@ void                p6est_init_ext (p6est_t * p6est, sc_MPI_Comm mpicomm,
                                     int fill_uniform, size_t data_size,
                                     p6est_init_t init_fn, void *user_pointer);
 
-/** Destroy a p6est
- * \param [in,out] p6est   p6est to destroy
- * \param [in] free_p6est  Boolean on whether the p6est_t pointer should be
- *                         freed
+/** Free a the memory inside a p6est structure.
+ * \param [in,out] p6est   p6est allocated by \ref p6est_init_ext. 
+ *                         Its contents are undefined on output.
  *
  * \note The connectivity structure is not destroyed with the p6est.
  */
-void                p6est_destroy_ext (p6est_t * p6est, int free_p6est);
+void                p6est_reset (p6est_t * p6est);
 
 /** Make a deep copy of a p6est.
  * The connectivity is not duplicated.
@@ -139,7 +138,7 @@ p6est_t            *p6est_copy_ext (p6est_t * input, int copy_data,
  *
  * This is a collective operation that all MPI processes need to call.  All
  * processes write into the same file, so the filename given needs to be
- * identical over all parallel invocations.  See p6est_load_ext() for
+ * identical over all parallel invocations.  See \ref p6est_load_ext for
  * information on the autopartition parameter.
  *
  * \param [in] filename    Name of the file to write.

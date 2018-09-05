@@ -202,7 +202,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                size_t data_size, p4est_init_t init_fn, void *user_pointer)
 {
   p4est_t            *p4est;
-  p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  p4est = P4EST_ALLOC (p4est_t, 1);
   p4est_init_ext (p4est, mpicomm, connectivity, min_quadrants, min_level,
                   fill_uniform, data_size, init_fn, user_pointer);
   return p4est;
@@ -237,6 +237,10 @@ p4est_init_ext (p4est_t * p4est, sc_MPI_Comm mpicomm,
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
   P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
+
+  /* we have undefined memory coming in */
+  P4EST_ASSERT (p4est != NULL);
+  memset (p4est, 0, sizeof (*p4est));
 
   /* create p4est object and assign some data members */
   p4est->data_size = data_size;
@@ -507,11 +511,12 @@ p4est_init_ext (p4est_t * p4est, sc_MPI_Comm mpicomm,
 void
 p4est_destroy (p4est_t * p4est)
 {
-  p4est_destroy_ext(p4est, 1);
+  p4est_reset (p4est);
+  P4EST_FREE (p4est);
 }
 
 void
-p4est_destroy_ext (p4est_t * p4est, int free_p4est)
+p4est_reset (p4est_t * p4est)
 {
 #ifdef P4EST_ENABLE_DEBUG
   size_t              qz;
@@ -542,8 +547,6 @@ p4est_destroy_ext (p4est_t * p4est, int free_p4est)
   p4est_comm_parallel_env_release (p4est);
   P4EST_FREE (p4est->global_first_quadrant);
   P4EST_FREE (p4est->global_first_position);
-  if (free_p4est)
-    P4EST_FREE (p4est);
 }
 
 p4est_t            *
