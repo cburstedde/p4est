@@ -22,9 +22,15 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
 #include <p4est.h>
 #include <p4est_extended.h>
 #include <p4est_nodes.h>
+#else
+#include <p8est.h>
+#include <p8est_extended.h>
+#include <p8est_nodes.h>
+#endif
 
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -34,7 +40,11 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
     return 0;
   }
   if (quadrant->x == 0 &&
-      quadrant->y == 0) {
+      quadrant->y == 0 &&
+#ifdef P4_TO_P8
+      quadrant->z == 0 &&
+#endif
+      1) {
     return 1;
   }
 
@@ -58,7 +68,11 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
+#ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_unitsquare ();
+#else
+  connectivity = p8est_connectivity_new_unitcube ();
+#endif
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
 
   /* refine and balance to make the number of elements interesting */
