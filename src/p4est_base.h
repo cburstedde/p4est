@@ -48,6 +48,10 @@
 #include <sc_containers.h>
 #define _p4est_const _sc_const
 
+/* definitions to allow user code to query the p4est library */
+/** Indicate that we do not dereference unneeded pointers in p4est_transfer_. */
+#define P4EST_COMM_TRANSFER_NULL
+
 SC_EXTERN_C_BEGIN;
 
 /** Typedef for quadrant coordinates. */
