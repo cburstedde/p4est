@@ -402,11 +402,21 @@ p4est_connectivity_t *p4est_connectivity_new_star (void);
 p4est_connectivity_t *p4est_connectivity_new_cubed (void);
 
 /** Create a connectivity structure for a five-tree flat spherical disk.
+ * This disk can just as well be used as a square to test non-Cartesian maps.
+ * \note The API of this function has changed to accept an argument.
+ *       You can query the #define P4EST_CONN_DISK_PERIODIC to check
+ *       whether the new version with the argument is in effect.
+ *
  * The ordering of the trees is as follows:   4
  *                                          1 2 3
  *                                            0.
+ *
+ * \param [in] periodic         Bool p to make the disk all-periodic,
+ *                              which creates a 2D torus topology similar to
+ *                              \ref p4est_connectivity_new_brick (1, 1, p, p).
+ *                              Currently, only false is supported!
  */
-p4est_connectivity_t *p4est_connectivity_new_disk (void);
+p4est_connectivity_t *p4est_connectivity_new_disk (int periodic);
 
 /** An m by n array with periodicity in x and y if periodic_a and periodic_b
  * are true, respectively.

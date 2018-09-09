@@ -54,6 +54,7 @@ typedef enum
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_CUBED,
   P4EST_CONFIG_DISK,
+  P4EST_CONFIG_PDISK,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP
 }
@@ -100,6 +101,7 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_CUBED, 5, 5, 0x64a1d105U },
  { P4EST_CONFIG_DISK, 5, 4, 0x4995411dU },
  { P4EST_CONFIG_DISK, 2, 6, 0x3f758706U },
+ { P4EST_CONFIG_PDISK, 5, 4, 0 }, /**< not yet done */
  { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
@@ -307,7 +309,10 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_cubed ();
   }
   else if (config == P4EST_CONFIG_DISK) {
-    connectivity = p4est_connectivity_new_disk ();
+    connectivity = p4est_connectivity_new_disk (0);
+  }
+  else if (config == P4EST_CONFIG_PDISK) {
+    connectivity = p4est_connectivity_new_disk (1);
   }
   else if (config == P4EST_CONFIG_PERIODIC) {
     connectivity = p4est_connectivity_new_periodic ();

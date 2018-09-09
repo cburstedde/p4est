@@ -1647,8 +1647,8 @@ p4est_connectivity_new_cubed (void)
                                       NULL, &num_ctt, NULL, NULL);
 }
 
-p4est_connectivity_t *
-p4est_connectivity_new_disk (void)
+static p4est_connectivity_t *
+p4est_connectivity_new_disk_nonperiodic (void)
 {
   const p4est_topidx_t num_vertices = 8;
   const p4est_topidx_t num_trees = 5;
@@ -1689,6 +1689,16 @@ p4est_connectivity_new_disk (void)
                                       vertices, tree_to_vertex,
                                       tree_to_tree, tree_to_face,
                                       NULL, &num_ctt, NULL, NULL);
+}
+
+p4est_connectivity_t *
+p4est_connectivity_new_disk (int periodic)
+{
+
+  /* periodic boundary is not yet supported */
+  P4EST_ASSERT (!periodic);
+
+  return p4est_connectivity_new_disk_nonperiodic ();
 }
 
 #endif /* !P4_TO_P8 */
@@ -2422,7 +2432,7 @@ p4est_connectivity_new_byname (const char *name)
     return p4est_connectivity_new_cubed ();
   }
   else if (!strcmp (name, "disk")) {
-    return p4est_connectivity_new_disk ();
+    return p4est_connectivity_new_disk (0);
   }
   else if (!strcmp (name, "moebius")) {
     return p4est_connectivity_new_moebius ();
