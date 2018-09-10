@@ -1694,25 +1694,25 @@ p4est_connectivity_new_disk_nonperiodic (void)
 p4est_connectivity_t *
 p4est_connectivity_new_disk (int periodic_a, int periodic_b)
 {
-  const               int8_t in_ctc[8] = {0, 0, 1, 1, 2, 2, 3, 3};
-  const               p4est_topidx_t in_ctt[8] = {0, 1, 0, 3, 1, 4, 3, 4};
+  const int8_t        in_ctc[8] = { 0, 0, 1, 1, 2, 2, 3, 3 };
+  const p4est_topidx_t in_ctt[8] = { 0, 1, 0, 3, 1, 4, 3, 4 };
   int                 i, j;
   int8_t             *ctc;
   p4est_topidx_t      nc;
   p4est_topidx_t     *ttc, *ctt;
   p4est_connectivity_t *conn = p4est_connectivity_new_disk_nonperiodic ();
 
-  /* periodic boundary is not yet supported */
-  if (!periodic_a && !periodic_b) {
-    return conn;
-  }
+  /* non-periodic boundary works as before */
   P4EST_ASSERT (conn->num_corners == 0);
   P4EST_ASSERT (conn->tree_to_corner == NULL);
   P4EST_ASSERT (conn->corner_to_tree == NULL);
   P4EST_ASSERT (conn->corner_to_corner == NULL);
-  P4EST_FREE (conn->ctt_offset);
+  if (!periodic_a && !periodic_b) {
+    return conn;
+  }
 
   /* allocate arrays of proper size */
+  P4EST_FREE (conn->ctt_offset);
   ttc = conn->tree_to_corner = P4EST_ALLOC (p4est_topidx_t, 5 * 4);
   ctt = conn->corner_to_tree = P4EST_ALLOC (p4est_topidx_t, 8);
   ctc = conn->corner_to_corner = P4EST_ALLOC (int8_t, 8);
