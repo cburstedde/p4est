@@ -51,6 +51,10 @@
 /* definitions to allow user code to query the p4est library */
 /** Indicate that we do not dereference unneeded pointers in p4est_transfer_. */
 #define P4EST_COMM_TRANSFER_NULL
+/** The \ref p4est_connectivity_new_disk function now accepts a bool arg.
+ * The same holds for \ref p4est_wrap_new_disk.
+ */
+#define P4EST_CONN_DISK_PERIODIC
 
 SC_EXTERN_C_BEGIN;
 

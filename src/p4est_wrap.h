@@ -184,7 +184,7 @@ p4est_wrap_t       *p4est_wrap_new_moebius (sc_MPI_Comm mpicomm,
 p4est_wrap_t       *p4est_wrap_new_cubed (sc_MPI_Comm mpicomm,
                                           int initial_level);
 p4est_wrap_t       *p4est_wrap_new_disk (sc_MPI_Comm mpicomm,
-                                         int initial_level);
+                                         int initial_level, int p);
 p4est_wrap_t       *p4est_wrap_new_brick (sc_MPI_Comm mpicomm,
                                           int bx, int by, int px, int py,
                                           int initial_level);
