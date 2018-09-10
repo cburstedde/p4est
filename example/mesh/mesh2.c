@@ -31,6 +31,8 @@
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o disk      Refinement on a 5-tree flat disk or square.
+ *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
  */
 
 #ifndef P4_TO_P8
@@ -447,6 +449,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "disk")) {
       config = P4EST_CONFIG_DISK;
+    }
+    else if (!strcmp (argv[1], "pdisk")) {
+      config = P4EST_CONFIG_PDISK;
     }
 #else
     else if (!strcmp (argv[1], "periodic")) {
