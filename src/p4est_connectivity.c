@@ -1694,7 +1694,12 @@ p4est_connectivity_new_disk_nonperiodic (void)
 p4est_connectivity_t *
 p4est_connectivity_new_disk (int periodic_a, int periodic_b)
 {
+  const               int8_t in_ctc[8] = {0, 0, 1, 1, 2, 2, 3, 3};
+  const               p4est_topidx_t in_ctt[8] = {0, 1, 0, 3, 1, 4, 3, 4};
+  int                 i, j;
+  int8_t             *ctc;
   p4est_topidx_t      nc;
+  p4est_topidx_t     *ttc, *ctt;
   p4est_connectivity_t *conn = p4est_connectivity_new_disk_nonperiodic ();
 
   /* periodic boundary is not yet supported */
@@ -1708,14 +1713,52 @@ p4est_connectivity_new_disk (int periodic_a, int periodic_b)
   P4EST_FREE (conn->ctt_offset);
 
   /* allocate arrays of proper size */
+  ttc = conn->tree_to_corner = P4EST_ALLOC (p4est_topidx_t, 5 * 4);
+  ctt = conn->corner_to_tree = P4EST_ALLOC (p4est_topidx_t, 8);
+  ctc = conn->corner_to_corner = P4EST_ALLOC (int8_t, 8);
   nc = conn->num_corners = (periodic_a ^ periodic_b) ? 2 : 1;
-  conn->tree_to_corner = P4EST_ALLOC (p4est_topidx_t, 5 * 4);
   conn->ctt_offset = P4EST_ALLOC (p4est_topidx_t, nc + 1);
-  conn->corner_to_tree = P4EST_ALLOC (p4est_topidx_t, 8);
-  conn->corner_to_corner = P4EST_ALLOC (int8_t, 8);
 
   /* fill new arrays with proper data */
-  SC_ABORT_NOT_REACHED ();
+  conn->ctt_offset[0] = 0;
+  if (nc == 1) {
+    conn->ctt_offset[1] = 8;
+  }
+  else {
+    P4EST_ASSERT (nc == 2);
+    conn->ctt_offset[1] = 4;
+    conn->ctt_offset[2] = 8;
+  }
+  for (i = 0; i < 8; ++i) {
+    /* we have either 1 or 2 connecting corners */
+    conn->corner_to_corner[0] = i < 4 || nc == 1 ? 0 : 1;
+  }
+  if (periodic_a) {
+    /* tree 1, face 0 meets tree 3, face 1 */
+    conn->tree_to_tree[4 * 1 + 0] = 3;
+    conn->tree_to_face[4 * 1 + 0] = 1;
+    conn->tree_to_tree[4 * 3 + 1] = 1;
+    conn->tree_to_face[4 * 3 + 1] = 0;
+  }
+  if (periodic_b) {
+    /* tree 0, face 2 meets tree 4, face 3 */
+    conn->tree_to_tree[4 * 0 + 2] = 4;
+    conn->tree_to_face[4 * 0 + 2] = 3;
+    conn->tree_to_tree[4 * 4 + 3] = 0;
+    conn->tree_to_face[4 * 4 + 3] = 2;
+  }
+  /* assign corner trees */
+  memset (ttc, -1, 5 * 4 * sizeof (p4est_topidx_t));
+  ttc[4 * 0 + 0] = ttc[4 * 1 + 0] = 0;
+  ttc[4 * 0 + 1] = ttc[4 * 3 + 1] = !periodic_a;
+  ttc[4 * 1 + 2] = ttc[4 * 4 + 2] = !periodic_b;
+  ttc[4 * 3 + 3] = ttc[4 * 4 + 3] = !periodic_a || !periodic_b;
+  /* assign corner trees and corners */
+  for (i = 0; i < 8; ++i) {
+    j = i < 2 || i >= 6 ? i : !periodic_a ? ((i - 2) ^ 2) + 2 : i;
+    ctt[i] = in_ctt[j];
+    ctc[i] = in_ctc[j];
+  }
 
   /* return modified connectivity */
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
