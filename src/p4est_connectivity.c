@@ -1692,13 +1692,34 @@ p4est_connectivity_new_disk_nonperiodic (void)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_new_disk (int periodic)
+p4est_connectivity_new_disk (int periodic_a, int periodic_b)
 {
+  p4est_topidx_t      nc;
+  p4est_connectivity_t *conn = p4est_connectivity_new_disk_nonperiodic ();
 
   /* periodic boundary is not yet supported */
-  P4EST_ASSERT (!periodic);
+  if (!periodic_a && !periodic_b) {
+    return conn;
+  }
+  P4EST_ASSERT (conn->num_corners == 0);
+  P4EST_ASSERT (conn->tree_to_corner == NULL);
+  P4EST_ASSERT (conn->corner_to_tree == NULL);
+  P4EST_ASSERT (conn->corner_to_corner == NULL);
+  P4EST_FREE (conn->ctt_offset);
 
-  return p4est_connectivity_new_disk_nonperiodic ();
+  /* allocate arrays of proper size */
+  nc = conn->num_corners = (periodic_a ^ periodic_b) ? 2 : 1;
+  conn->tree_to_corner = P4EST_ALLOC (p4est_topidx_t, 5 * 4);
+  conn->ctt_offset = P4EST_ALLOC (p4est_topidx_t, nc + 1);
+  conn->corner_to_tree = P4EST_ALLOC (p4est_topidx_t, 8);
+  conn->corner_to_corner = P4EST_ALLOC (int8_t, 8);
+
+  /* fill new arrays with proper data */
+  SC_ABORT_NOT_REACHED ();
+
+  /* return modified connectivity */
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  return conn;
 }
 
 #endif /* !P4_TO_P8 */
@@ -2432,7 +2453,7 @@ p4est_connectivity_new_byname (const char *name)
     return p4est_connectivity_new_cubed ();
   }
   else if (!strcmp (name, "disk")) {
-    return p4est_connectivity_new_disk (0);
+    return p4est_connectivity_new_disk (0, 0);
   }
   else if (!strcmp (name, "moebius")) {
     return p4est_connectivity_new_moebius ();

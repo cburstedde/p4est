@@ -411,12 +411,17 @@ p4est_connectivity_t *p4est_connectivity_new_cubed (void);
  *                                          1 2 3
  *                                            0.
  *
- * \param [in] periodic         Bool p to make the disk all-periodic,
- *                              which creates a 2D torus topology similar to
- *                              \ref p4est_connectivity_new_brick (1, 1, p, p).
- *                              Currently, only false is supported!
+ * The outside x faces may be identified topologically.
+ * The outside y faces may be identified topologically.
+ * Both identifications may be specified simultaneously.
+ * The shape and peridocicity are the same as those obtained with
+ * \ref p4est_connectivity_new_brick (1, 1, periodic_a, periodic_b).
+ *
+ * \param [in] periodic_a       Bool to make disk periodic in x direction.
+ * \param [in] periodic_b       Bool to make disk periodic in y direction.
  */
-p4est_connectivity_t *p4est_connectivity_new_disk (int periodic);
+p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
+                                                   int periodic_b);
 
 /** An m by n array with periodicity in x and y if periodic_a and periodic_b
  * are true, respectively.

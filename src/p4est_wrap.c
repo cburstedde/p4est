@@ -326,8 +326,8 @@ p4est_wrap_new_cubed (sc_MPI_Comm mpicomm, int initial_level)
 p4est_wrap_t       *
 p4est_wrap_new_disk (sc_MPI_Comm mpicomm, int initial_level, int p)
 {
-  return p4est_wrap_new_conn (mpicomm,
-                              p4est_connectivity_new_disk (p), initial_level);
+  return p4est_wrap_new_conn
+    (mpicomm, p4est_connectivity_new_disk (p, p), initial_level);
 }
 
 #else

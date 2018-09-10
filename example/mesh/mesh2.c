@@ -506,10 +506,10 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_cubed ();
   }
   else if (config == P4EST_CONFIG_DISK) {
-    connectivity = p4est_connectivity_new_disk (0);
+    connectivity = p4est_connectivity_new_disk (0, 0);
   }
   else if (config == P4EST_CONFIG_PDISK) {
-    connectivity = p4est_connectivity_new_disk (1);
+    connectivity = p4est_connectivity_new_disk (1, 1);
   }
 #else
   else if (config == P8EST_CONFIG_PERIODIC) {

@@ -64,7 +64,10 @@ main (int argc, char *argv[])
   test_reduce (p4est_connectivity_new_moebius (), "moebius");
   test_reduce (p4est_connectivity_new_star (), "star");
   test_reduce (p4est_connectivity_new_cubed (), "cubed");
-  test_reduce (p4est_connectivity_new_disk (0), "disk");
+  test_reduce (p4est_connectivity_new_disk (0, 0), "disk");
+  test_reduce (p4est_connectivity_new_disk (0, 1), "xdisk");
+  test_reduce (p4est_connectivity_new_disk (1, 0), "ydisk");
+  test_reduce (p4est_connectivity_new_disk (1, 1), "pdisk");
   test_reduce (p4est_connectivity_new_brick (3, 2, 0, 0), "brick00");
   test_reduce (p4est_connectivity_new_brick (3, 2, 0, 1), "brick01");
   test_reduce (p4est_connectivity_new_brick (3, 2, 1, 0), "brick10");
