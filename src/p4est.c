@@ -1276,8 +1276,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
   int                 ftransform[P4EST_FTRANSFORM];
   int                 face_axis[3];     /* 3 not P4EST_DIM */
-  int                 contact_face_only, contact_edge_only;
+  int                 contact_face_only;
 #ifdef P4_TO_P8
+  int                 contact_edge_only;
   int                 edge;
   size_t              etree;
   p8est_edge_info_t   ei;
@@ -1530,8 +1531,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
           quad_contact[5] = (insulq.z >= rh);
           face_axis[2] = quad_contact[4] || quad_contact[5];
           edge = -1;
+          contact_edge_only = 0;
 #endif
-          contact_edge_only = contact_face_only = 0;
+          contact_face_only = 0;
           face = -1;
           if (face_axis[0] || face_axis[1] || face_axis[2]) {
             /* this quadrant is relevant for inter-tree balancing */
@@ -1563,7 +1565,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
             if (contact_face_only) {
               /* square contact across a face */
+#ifdef P4_TO_P8
               P4EST_ASSERT (!contact_edge_only);
+#endif
               P4EST_ASSERT (face >= 0 && face < P4EST_FACES);
               P4EST_ASSERT (quad_contact[face]);
               qtree = p4est_find_face_transform (conn, nt, face, ftransform);
