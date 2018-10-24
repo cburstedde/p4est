@@ -146,6 +146,16 @@ p4est_comm_tag_t;
   do { int _p4est_i = (int) (expression);                               \
        SC_CHECK_ABORT (_p4est_i, "Expected true: '" #expression "'");   \
   } while (0)
+#define P4EST_EXECUTE_ASSERT_INT(expression,ival)                       \
+  do { int _p4est_i = (int) (expression);                               \
+       SC_CHECK_ABORT ((ival) == _p4est_i,                              \
+                       "Expected '" #ival "': '" #expression "'");      \
+  } while (0)
+#define P4EST_EXECUTE_ASSERT_TOPIDX(expression,tval)                    \
+  do { p4est_topidx_t _p4est_t = (p4est_topidx_t) (expression);         \
+       SC_CHECK_ABORT ((tval) == _p4est_t,                              \
+                       "Expected '" #tval "': '" #expression "'");      \
+  } while (0)
 #define P4EST_DEBUG_EXECUTE(expression)                 \
   do { (void) (expression); } while (0)
 #else
@@ -153,6 +163,10 @@ p4est_comm_tag_t;
 #define P4EST_EXECUTE_ASSERT_FALSE(expression)          \
   do { (void) (expression); } while (0)
 #define P4EST_EXECUTE_ASSERT_TRUE(expression)           \
+  do { (void) (expression); } while (0)
+#define P4EST_EXECUTE_ASSERT_INT(expression,ival)       \
+  do { (void) (expression); } while (0)
+#define P4EST_EXECUTE_ASSERT_TOPIDX(expression,tval)    \
   do { (void) (expression); } while (0)
 #define P4EST_DEBUG_EXECUTE(expression) SC_NOOP ()
 #endif
