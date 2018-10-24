@@ -567,7 +567,7 @@ void                p4est_connectivity_permute (p4est_connectivity_t * conn,
  * \param [in]     ctype      determines when an edge exists in the dual graph
  *                            of the connectivity structure.
  */
-void                p4est_connectivity_reorder (MPI_Comm comm, int k,
+void                p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                                                 p4est_connectivity_t * conn,
                                                 p4est_connect_type_t ctype);
 

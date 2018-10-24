@@ -3457,7 +3457,8 @@ reorder_comp (const void *a, const void *b)
 }
 
 void
-p4est_connectivity_reorder (MPI_Comm comm, int k, p4est_connectivity_t * conn,
+p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
+                            p4est_connectivity_t * conn,
                             p4est_connect_type_t ctype)
 {
   int                 n = (int) conn->num_trees;
