@@ -3487,7 +3487,6 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
   int                *ip;
   int                 conntype = p4est_connect_type_int (ctype);
   int                 ncon = 1;
-  int                 success;
 
   SC_CHECK_MPI (mpiret);
 
@@ -3610,10 +3609,10 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 
     P4EST_GLOBAL_INFO ("Entering metis\n");
     /* now call metis */
-    success = METIS_PartGraphRecursive (&n, &ncon, xadj, adjncy, NULL, NULL,
-                                        NULL, &k, NULL, NULL, NULL, &volume,
-                                        part);
-    P4EST_ASSERT (success == METIS_OK);
+    P4EST_EXECUTE_ASSERT_INT
+      (METIS_PartGraphRecursive (&n, &ncon, xadj, adjncy, NULL, NULL,
+                                 NULL, &k, NULL, NULL, NULL, &volume, part),
+       METIS_OK);
     P4EST_GLOBAL_INFO ("Done metis\n");
 
     P4EST_GLOBAL_STATISTICSF ("metis volume %d\n", volume);
