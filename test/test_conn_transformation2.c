@@ -75,7 +75,7 @@ static int
 test_conn_transformation_check_face_corners (int l_face, int r_face,
                                              int orientation)
 {
-  int                 c0, c1, cx;
+  int                 c0, c1;
   int                 i;
   int                 lowerFaceIndex, higherFaceIndex;
 
@@ -95,11 +95,10 @@ test_conn_transformation_check_face_corners (int l_face, int r_face,
     c1 =
       p4est_connectivity_face_neighbor_corner (c0, lowerFaceIndex,
                                                higherFaceIndex, orientation);
-    cx =
-      p4est_connectivity_face_neighbor_corner (c1, higherFaceIndex,
-                                               lowerFaceIndex, orientation);
-
-    P4EST_ASSERT (c0 == cx);
+    P4EST_EXECUTE_ASSERT_INT
+      (p4est_connectivity_face_neighbor_corner (c1, higherFaceIndex,
+                                                lowerFaceIndex, orientation),
+       c0);
   }
 
   return 0;
@@ -119,7 +118,7 @@ static int
 test_conn_transformation_check_face_edges (int l_face, int r_face,
                                            int orientation)
 {
-  int                 e0, e1, ex;
+  int                 e0, e1;
   int                 i;
   int                 lowerFaceIndex, higherFaceIndex;
 
@@ -139,11 +138,10 @@ test_conn_transformation_check_face_edges (int l_face, int r_face,
     e1 =
       p8est_connectivity_face_neighbor_edge (e0, lowerFaceIndex,
                                              higherFaceIndex, orientation);
-    ex =
-      p8est_connectivity_face_neighbor_edge (e1, higherFaceIndex,
-                                             lowerFaceIndex, orientation);
-
-    P4EST_ASSERT (e0 == ex);
+    P4EST_EXECUTE_ASSERT_INT
+      (p8est_connectivity_face_neighbor_edge (e1, higherFaceIndex,
+                                              lowerFaceIndex, orientation),
+       e0);
   }
 
   return 0;
@@ -159,7 +157,7 @@ static int
 test_conn_transformation_check_edge_corners ()
 {
   int                 e0, e1, o, ci;
-  int                 c0, c1, cx;
+  int                 c0, c1;
 
   /* verify bijectivity of transformation */
   for (e0 = 0; e0 < P8EST_EDGES; ++e0) {
@@ -168,9 +166,8 @@ test_conn_transformation_check_edge_corners ()
         for (ci = 0; ci < 2; ++ci) {
           c0 = p8est_edge_corners[e0][ci];
           c1 = p8est_connectivity_edge_neighbor_corner (c0, e0, e1, o);
-          cx = p8est_connectivity_edge_neighbor_corner (c1, e1, e0, o);
-
-          P4EST_ASSERT (c0 == cx);
+          P4EST_EXECUTE_ASSERT_INT
+            (p8est_connectivity_edge_neighbor_corner (c1, e1, e0, o), c0);
         }
       }
     }
