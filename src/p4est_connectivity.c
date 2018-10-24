@@ -3439,6 +3439,7 @@ p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * inperm,
 }
 
 #ifdef P4EST_WITH_METIS
+
 static int
 reorder_comp (const void *a, const void *b)
 {
@@ -3479,7 +3480,7 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 #endif
   int                 volume = -1;
   size_t              zz;
-  int                 mpiret = MPI_Comm_rank (comm, &rank);
+  int                 mpiret = sc_MPI_Comm_rank (comm, &rank);
   sc_array_t         *newid;
   size_t             *zp;
   sc_array_t         *sorter;
@@ -3491,7 +3492,7 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
   SC_CHECK_MPI (mpiret);
 
   if (k == 0) {
-    mpiret = MPI_Comm_size (comm, &k);
+    mpiret = sc_MPI_Comm_size (comm, &k);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -3623,7 +3624,7 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 
   /* broadcast part to every process: this is expensive, should probably think
    * of a better way to do this */
-  MPI_Bcast (part, n, MPI_INT, 0, comm);
+  sc_MPI_Bcast (part, n, sc_MPI_INT, 0, comm);
 
   /* now that everyone has part, each process computes the renumbering
    * for itself*/
