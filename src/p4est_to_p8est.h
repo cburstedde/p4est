@@ -285,6 +285,8 @@
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
 #define p4est_traverse                  p8est_traverse
+#define p4est_bsearch_partition         p8est_bsearch_partition
+#define p4est_search_split_array        p8est_search_split_array 
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
