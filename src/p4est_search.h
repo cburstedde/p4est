@@ -179,6 +179,25 @@ void                p4est_search (p4est_t * p4est,
                                   p4est_search_query_t search_point_fn,
                                   sc_array_t * points);
 
+/** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ */
+int
+p4est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb);
+
+/** Given two targets in the array my_begin_end, find offsets such that
+ * search_in[offsets[1]] >= my_begin_end[0] and 
+ * my_begin_end[0] < search_in[offsets[2]] >= my_begin_end[1]
+ * \param [in] num_procs    Number of processes to get the length of search_in.
+ * \param [in] search_in    The sorted array in that the function will search.
+ * \param [in] my_begin_end An array of length two with 
+ *                          my_begin_end[0] <= my_begin_end[1]. The entries
+ *                          are the targets.
+ */
+p4est_gloidx_t *
+p4est_search_split_array (const int num_procs, p4est_gloidx_t * search_in, p4est_gloidx_t * my_begin_end);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_SEARCH_H */
