@@ -3037,9 +3037,11 @@ p4est_partition_given (p4est_t * p4est,
 
   P4EST_ASSERT (num_proc_send_to == old_num_proc_send_to);
   for (i = 0; i < num_procs; ++i) {
-    if (begin_send_to[i] != -1) {
+    if (num_send_to[i] != 0) {
       P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
                      i, (long long) num_send_to[i]);
+    }
+    if (begin_send_to[i] != -1) {
       P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                      i, (long long) begin_send_to[i]);
     }
