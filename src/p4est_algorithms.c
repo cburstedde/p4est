@@ -2748,12 +2748,15 @@ p4est_partition_given (p4est_t * p4est,
   p4est_locidx_t     *num_per_tree_recv_buf;
   p4est_gloidx_t     *begin_send_to;
   p4est_gloidx_t      tree_from_begin, tree_from_end, num_copy_global;
-  p4est_gloidx_t      from_begin, from_end;
+  p4est_gloidx_t      from_begin, from_end, lower_bound,
+    from_begin_global_quad, from_end_global_quad;
   p4est_gloidx_t      to_begin, to_end;
-  p4est_gloidx_t      my_base, my_begin, my_end;
+  p4est_gloidx_t      my_base;
   p4est_gloidx_t     *global_last_quad_index;
   p4est_gloidx_t     *new_global_last_quad_index;
+  p4est_gloidx_t     *my_begin_end;
   p4est_gloidx_t     *local_tree_last_quad_index;
+  p4est_gloidx_t     *new_global_indexes;
   p4est_gloidx_t      diff64, total_quadrants_shipped;
   sc_array_t         *quadrants;
   p4est_quadrant_t   *quad_send_buf;
@@ -2867,32 +2870,67 @@ p4est_partition_given (p4est_t * p4est,
   /* Calculate where the new quadrants are coming from */
   num_recv_from = P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
 
-  my_begin = (rank == 0) ? 0 : (new_global_last_quad_index[rank - 1] + 1);
-  my_end = new_global_last_quad_index[rank];
-
   num_proc_recv_from = 0;
-  for (from_proc = 0; from_proc < num_procs; ++from_proc) {
-    from_begin = (from_proc == 0) ?
-      0 : (global_last_quad_index[from_proc - 1] + 1);
-    from_end = global_last_quad_index[from_proc];
 
-    if (from_begin <= my_end && from_end >= my_begin) {
+  my_begin_end = P4EST_ALLOC (p4est_gloidx_t, 2);
+  my_begin_end[0] =
+    (rank == 0) ? 0 : (new_global_last_quad_index[rank - 1] + 1);
+  my_begin_end[1] = new_global_last_quad_index[rank];
+  new_global_indexes =
+    p4est_search_split_array (num_procs, global_last_quad_index,
+                              my_begin_end);
+  from_begin = new_global_indexes[0];
+  from_end = new_global_indexes[1];
+
+  for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
+    lower_bound =
+      (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
+    num_recv_from[from_proc] =
+      SC_MIN (my_begin_end[1],
+              global_last_quad_index[from_proc]) - SC_MAX (my_begin_end[0],
+                                                           lower_bound)
+      + 1;
+    P4EST_ASSERT (num_recv_from[from_proc] >= 0);
+    if (from_proc != rank)
+      ++num_proc_recv_from;
+  }
+
+  from_begin_global_quad = from_begin;
+  from_end_global_quad = from_end;
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* old calculation method */
+  p4est_locidx_t     *old_num_recv_from =
+    P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
+  p4est_gloidx_t      old_from_begin, old_from_end;
+
+  int                 old_num_proc_recv_from = 0;
+  for (from_proc = 0; from_proc < num_procs; ++from_proc) {
+    old_from_begin = (from_proc == 0) ?
+      0 : (global_last_quad_index[from_proc - 1] + 1);
+    old_from_end = global_last_quad_index[from_proc];
+
+    if (old_from_begin <= my_begin_end[1] && old_from_end >= my_begin_end[0]) {
       /* from_proc sends to me but may be empty */
-      num_recv_from[from_proc] = SC_MIN (my_end, from_end)
-        - SC_MAX (my_begin, from_begin) + 1;
-      P4EST_ASSERT (num_recv_from[from_proc] >= 0);
+      old_num_recv_from[from_proc] = SC_MIN (my_begin_end[1], old_from_end)
+        - SC_MAX (my_begin_end[0], old_from_begin) + 1;
+      P4EST_ASSERT (old_num_recv_from[from_proc] >= 0);
       if (from_proc != rank)
-        ++num_proc_recv_from;
+        ++old_num_proc_recv_from;
     }
   }
 
-#ifdef P4EST_ENABLE_DEBUG
+  P4EST_ASSERT (num_proc_recv_from == old_num_proc_recv_from);
   for (i = 0; i < num_procs; ++i) {
     if (num_recv_from[i] != 0) {
       P4EST_LDEBUGF ("partition num_recv_from[%d] = %lld\n", i,
                      (long long) num_recv_from[i]);
     }
+    /* compare the results of the new and old calculation method */
+    /* old_from_begin/end and from_begin/end are not the same */
+    P4EST_ASSERT (num_recv_from[i] == old_num_recv_from[i]);
   }
+  P4EST_FREE (old_num_recv_from);
 #endif
 
   /* Post receives for the quadrants and their data */
@@ -2932,47 +2970,87 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   /* For each processor calculate the number of quadrants sent */
-  num_send_to = P4EST_ALLOC (p4est_locidx_t, num_procs);
+  num_send_to = P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
   begin_send_to = P4EST_ALLOC (p4est_gloidx_t, num_procs);
-
-  my_begin = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_end = global_last_quad_index[rank];
+  P4EST_ASSERT (memset
+                (begin_send_to, -1,
+                 num_procs * sizeof (p4est_gloidx_t)) != NULL);
 
   num_proc_send_to = 0;
-  for (to_proc = 0; to_proc < num_procs; ++to_proc) {
-    to_begin = (to_proc == 0)
-      ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
-    to_end = new_global_last_quad_index[to_proc];
 
-    if (to_begin <= my_end && to_end >= my_begin) {
-      /* I send to to_proc which may be empty */
-      num_send_to[to_proc] = SC_MIN (my_end, to_end)
-        - SC_MAX (my_begin, to_begin) + 1;
-      begin_send_to[to_proc] = SC_MAX (my_begin, to_begin);
-      P4EST_ASSERT (num_send_to[to_proc] >= 0);
-      if (to_proc != rank)
-        ++num_proc_send_to;
-    }
-    else {
-      /* I don't send to to_proc */
-      num_send_to[to_proc] = 0;
-      begin_send_to[to_proc] = -1;
-    }
+  P4EST_FREE (new_global_indexes);
+  my_begin_end[0] = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
+  my_begin_end[1] = global_last_quad_index[rank];
+  new_global_indexes =
+    p4est_search_split_array (num_procs, new_global_last_quad_index,
+                              my_begin_end);
+  to_begin = new_global_indexes[0];
+  to_end = new_global_indexes[1];
+
+  for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
+    /* I send to to_proc which may be empty */
+    lower_bound =
+      (to_proc == 0) ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
+    num_send_to[to_proc] =
+      SC_MIN (my_begin_end[1],
+              new_global_last_quad_index[to_proc]) - SC_MAX (my_begin_end[0],
+                                                             lower_bound)
+      + 1;
+    begin_send_to[to_proc] =
+      (num_send_to[to_proc] == 0) ? -1 : SC_MAX (my_begin_end[0],
+                                                 lower_bound);
+    P4EST_ASSERT (num_send_to[to_proc] >= 0);
+    if (to_proc != rank)
+      ++num_proc_send_to;
   }
 
 #ifdef P4EST_ENABLE_DEBUG
-  for (i = 0; i < num_procs; ++i) {
-    if (num_send_to[i] != 0) {
-      P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
-                     i, (long long) num_send_to[i]);
+  /* old calculation method */
+  p4est_locidx_t     *old_num_send_to =
+    P4EST_ALLOC (p4est_locidx_t, num_procs);
+  p4est_gloidx_t     *old_begin_send_to =
+    P4EST_ALLOC (p4est_gloidx_t, num_procs);
+
+  p4est_gloidx_t      old_to_end, old_to_begin;
+
+  int                 old_num_proc_send_to = 0;
+  for (to_proc = 0; to_proc < num_procs; ++to_proc) {
+    old_to_begin = (to_proc == 0)
+      ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
+    old_to_end = new_global_last_quad_index[to_proc];
+
+    if (old_to_begin <= my_begin_end[1] && old_to_end >= my_begin_end[0]) {
+      /* I send to to_proc which may be empty */
+      old_num_send_to[to_proc] = SC_MIN (my_begin_end[1], old_to_end)
+        - SC_MAX (my_begin_end[0], old_to_begin) + 1;
+      old_begin_send_to[to_proc] = SC_MAX (my_begin_end[0], old_to_begin);
+      P4EST_ASSERT (old_num_send_to[to_proc] >= 0);
+      if (to_proc != rank)
+        ++old_num_proc_send_to;
+    }
+    else {
+      /* I don't send to to_proc */
+      old_num_send_to[to_proc] = 0;
+      old_begin_send_to[to_proc] = -1;
     }
   }
+
+  P4EST_ASSERT (num_proc_send_to == old_num_proc_send_to);
   for (i = 0; i < num_procs; ++i) {
     if (begin_send_to[i] != -1) {
+      P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
+                     i, (long long) num_send_to[i]);
       P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                      i, (long long) begin_send_to[i]);
     }
+    if (begin_send_to[i] != old_begin_send_to[i])
+      P4EST_LDEBUGF ("Ungleichheit bei %d \t begin_send_to[%d] = %ld und old_begin_send_to[%d] = %ld\n", i, i, begin_send_to[i], i, old_begin_send_to[i]);      /* Debug */
+    P4EST_ASSERT (num_send_to[i] == old_num_send_to[i]);
+    P4EST_ASSERT (begin_send_to[i] == old_begin_send_to[i]);
   }
+
+  P4EST_FREE (old_num_send_to);
+  P4EST_FREE (old_begin_send_to);
 #endif
 
   /* Communicate the quadrants and their data */
@@ -2985,8 +3063,9 @@ p4est_partition_given (p4est_t * p4est,
   num_per_tree_local = P4EST_ALLOC_ZERO (p4est_locidx_t, num_send_trees);
   to_proc = rank;
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_begin = begin_send_to[to_proc] - my_base;
-  my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
+  my_begin_end[0] = begin_send_to[to_proc] - my_base;
+  my_begin_end[1] =
+    begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
   for (which_tree = first_local_tree; which_tree <= last_local_tree;
        ++which_tree) {
     tree = p4est_tree_array_index (trees, which_tree);
@@ -2995,10 +3074,10 @@ p4est_partition_given (p4est_t * p4est,
       (local_tree_last_quad_index[which_tree - 1] + 1);
     from_end = local_tree_last_quad_index[which_tree];
 
-    if (from_begin <= my_end && from_end >= my_begin) {
+    if (from_begin <= my_begin_end[1] && from_end >= my_begin_end[0]) {
       /* Need to copy from tree which_tree */
-      tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
-      tree_from_end = SC_MIN (my_end, from_end) - from_begin;
+      tree_from_begin = SC_MAX (my_begin_end[0], from_begin) - from_begin;
+      tree_from_end = SC_MIN (my_begin_end[1], from_end) - from_begin;
       num_copy_global = tree_from_end - tree_from_begin + 1;
       P4EST_ASSERT (num_copy_global >= 0);
       P4EST_ASSERT (num_copy_global <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
@@ -3029,8 +3108,9 @@ p4est_partition_given (p4est_t * p4est,
       /* Pack in the data to be sent */
 
       my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-      my_begin = begin_send_to[to_proc] - my_base;
-      my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
+      my_begin_end[0] = begin_send_to[to_proc] - my_base;
+      my_begin_end[1] =
+        begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
 
       for (which_tree = first_local_tree; which_tree <= last_local_tree;
            ++which_tree) {
@@ -3040,10 +3120,10 @@ p4est_partition_given (p4est_t * p4est,
           (local_tree_last_quad_index[which_tree - 1] + 1);
         from_end = local_tree_last_quad_index[which_tree];
 
-        if (from_begin <= my_end && from_end >= my_begin) {
+        if (from_begin <= my_begin_end[1] && from_end >= my_begin_end[0]) {
           /* Need to copy from tree which_tree */
-          tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
-          tree_from_end = SC_MIN (my_end, from_end) - from_begin;
+          tree_from_begin = SC_MAX (my_begin_end[0], from_begin) - from_begin;
+          tree_from_end = SC_MIN (my_begin_end[1], from_end) - from_begin;
           num_copy = tree_from_end - tree_from_begin + 1;
 
           num_per_tree_send_buf[which_tree - first_local_tree] = num_copy;
@@ -3068,7 +3148,7 @@ p4est_partition_given (p4est_t * p4est,
           }
 
           /* move pointer to beginning of quads that need to be copied */
-          my_begin += num_copy;
+          my_begin_end[0] += num_copy;
           quad_send_buf += num_copy;
           user_data_send_buf += num_copy * data_size;
         }
@@ -3110,44 +3190,42 @@ p4est_partition_given (p4est_t * p4est,
   new_first_local_tree = (p4est_topidx_t) P4EST_TOPIDX_MAX;
   new_last_local_tree = 0;
 
-  for (from_proc = 0; from_proc < num_procs; ++from_proc) {
-    if (num_recv_from[from_proc] > 0) {
-      first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
-      last_from_tree =
-        p4est->global_first_position[from_proc + 1].p.which_tree;
-      num_recv_trees =          /* same type */
-        last_from_tree - first_from_tree + 1;
+  for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
+       ++from_proc) {
+    first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
+    last_from_tree = p4est->global_first_position[from_proc + 1].p.which_tree;
+    num_recv_trees =            /* same type */
+      last_from_tree - first_from_tree + 1;
 
-      P4EST_LDEBUGF
-        ("partition from %d with trees [%lld,%lld] get %lld trees\n",
-         from_proc, (long long) first_from_tree, (long long) last_from_tree,
-         (long long) num_recv_trees);
-      num_per_tree_recv_buf = (from_proc == rank) ?
-        num_per_tree_local : (p4est_locidx_t *) recv_buf[from_proc];
+    P4EST_LDEBUGF
+      ("partition from %d with trees [%lld,%lld] get %lld trees\n",
+       from_proc, (long long) first_from_tree, (long long) last_from_tree,
+       (long long) num_recv_trees);
+    num_per_tree_recv_buf = (from_proc == rank) ?
+      num_per_tree_local : (p4est_locidx_t *) recv_buf[from_proc];
 
-      for (it = 0; it < num_recv_trees; ++it) {
+    for (it = 0; it < num_recv_trees; ++it) {
 
-        if (num_per_tree_recv_buf[it] > 0) {
-          from_tree = first_from_tree + it;     /* same type */
+      if (num_per_tree_recv_buf[it] > 0) {
+        from_tree = first_from_tree + it;       /* same type */
 
-          P4EST_ASSERT (from_tree >= 0
-                        && from_tree < (p4est_topidx_t) trees->elem_count);
-          P4EST_LDEBUGF ("partition recv %lld [%lld,%lld] quadrants"
-                         " from tree %lld from proc %d\n",
-                         (long long) num_per_tree_recv_buf[it],
-                         (long long) new_local_tree_elem_count[from_tree],
-                         (long long) new_local_tree_elem_count[from_tree]
-                         + num_per_tree_recv_buf[it], (long long) from_tree,
-                         from_proc);
-          new_first_local_tree =        /* same type */
-            SC_MIN (new_first_local_tree, from_tree);
-          new_last_local_tree = /* same type */
-            SC_MAX (new_last_local_tree, from_tree);
-          new_local_tree_elem_count[from_tree] +=       /* same type */
-            num_per_tree_recv_buf[it];
-          new_local_tree_elem_count_before[from_tree] +=        /* same type */
-            (from_proc < rank) ? num_per_tree_recv_buf[it] : 0;
-        }
+        P4EST_ASSERT (from_tree >= 0
+                      && from_tree < (p4est_topidx_t) trees->elem_count);
+        P4EST_LDEBUGF ("partition recv %lld [%lld,%lld] quadrants"
+                       " from tree %lld from proc %d\n",
+                       (long long) num_per_tree_recv_buf[it],
+                       (long long) new_local_tree_elem_count[from_tree],
+                       (long long) new_local_tree_elem_count[from_tree]
+                       + num_per_tree_recv_buf[it], (long long) from_tree,
+                       from_proc);
+        new_first_local_tree =  /* same type */
+          SC_MIN (new_first_local_tree, from_tree);
+        new_last_local_tree =   /* same type */
+          SC_MAX (new_last_local_tree, from_tree);
+        new_local_tree_elem_count[from_tree] += /* same type */
+          num_per_tree_recv_buf[it];
+        new_local_tree_elem_count_before[from_tree] +=  /* same type */
+          (from_proc < rank) ? num_per_tree_recv_buf[it] : 0;
       }
     }
   }
@@ -3173,8 +3251,8 @@ p4est_partition_given (p4est_t * p4est,
   last_tree =                   /* same type */
     SC_MAX (last_local_tree, new_last_local_tree);
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_begin = begin_send_to[rank] - my_base;
-  my_end = begin_send_to[rank] + num_send_to[rank] - 1 - my_base;
+  my_begin_end[0] = begin_send_to[rank] - my_base;
+  my_begin_end[1] = begin_send_to[rank] + num_send_to[rank] - 1 - my_base;
 
   for (which_tree = first_tree; which_tree <= last_tree; ++which_tree) {
     tree = p4est_tree_array_index (trees, which_tree);
@@ -3189,10 +3267,10 @@ p4est_partition_given (p4est_t * p4est,
           (local_tree_last_quad_index[which_tree - 1] + 1);
         from_end = local_tree_last_quad_index[which_tree];
 
-        if (from_begin <= my_end && from_end >= my_begin) {
+        if (from_begin <= my_begin_end[1] && from_end >= my_begin_end[0]) {
           /* Need to keep part of tree which_tree */
-          tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
-          tree_from_end = SC_MIN (my_end, from_end) - from_begin;
+          tree_from_begin = SC_MAX (my_begin_end[0], from_begin) - from_begin;
+          tree_from_end = SC_MIN (my_begin_end[1], from_end) - from_begin;
           num_copy = tree_from_end - tree_from_begin + 1;
         }
         else {
@@ -3268,84 +3346,81 @@ p4est_partition_given (p4est_t * p4est,
 
   memset (new_local_tree_elem_count_before, 0,
           trees->elem_count * sizeof (p4est_locidx_t));
-  for (from_proc = 0; from_proc < num_procs; ++from_proc) {
-    if (num_recv_from[from_proc] > 0) {
-      first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
-      last_from_tree =
-        p4est->global_first_position[from_proc + 1].p.which_tree;
-      num_recv_trees =          /* same type */
-        last_from_tree - first_from_tree + 1;
+  for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
+       ++from_proc) {
+    first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
+    last_from_tree = p4est->global_first_position[from_proc + 1].p.which_tree;
+    num_recv_trees =            /* same type */
+      last_from_tree - first_from_tree + 1;
 
-      P4EST_LDEBUGF
-        ("partition copy from %d with trees [%lld,%lld] get %lld trees\n",
-         from_proc, (long long) first_from_tree,
-         (long long) last_from_tree, (long long) num_recv_trees);
-      num_per_tree_recv_buf =
-        (from_proc == rank) ? num_per_tree_local :
-        (p4est_locidx_t *) recv_buf[from_proc];
+    P4EST_LDEBUGF
+      ("partition copy from %d with trees [%lld,%lld] get %lld trees\n",
+       from_proc, (long long) first_from_tree,
+       (long long) last_from_tree, (long long) num_recv_trees);
+    num_per_tree_recv_buf =
+      (from_proc == rank) ? num_per_tree_local :
+      (p4est_locidx_t *) recv_buf[from_proc];
 
-      quad_recv_buf = (p4est_quadrant_t *) (recv_buf[from_proc]
-                                            + num_recv_trees *
-                                            sizeof (p4est_locidx_t));
-      user_data_recv_buf =
-        recv_buf[from_proc] + num_recv_trees * sizeof (p4est_locidx_t)
-        + num_recv_from[from_proc] * sizeof (p4est_quadrant_t);
+    quad_recv_buf = (p4est_quadrant_t *) (recv_buf[from_proc]
+                                          + num_recv_trees *
+                                          sizeof (p4est_locidx_t));
+    user_data_recv_buf =
+      recv_buf[from_proc] + num_recv_trees * sizeof (p4est_locidx_t)
+      + num_recv_from[from_proc] * sizeof (p4est_quadrant_t);
 
-      for (it = 0; it < num_recv_trees; ++it) {
-        from_tree = first_from_tree + it;       /* same type */
-        num_copy = num_per_tree_recv_buf[it];
+    for (it = 0; it < num_recv_trees; ++it) {
+      from_tree = first_from_tree + it; /* same type */
+      num_copy = num_per_tree_recv_buf[it];
 
-        /* We might have sent trees that are not actual trees.  In
-         * this case the num_copy should be zero
-         */
-        P4EST_ASSERT (num_copy == 0
-                      || (num_copy > 0 && from_tree >= 0
-                          && from_tree < (p4est_topidx_t) trees->elem_count));
+      /* We might have sent trees that are not actual trees.  In
+       * this case the num_copy should be zero
+       */
+      P4EST_ASSERT (num_copy == 0
+                    || (num_copy > 0 && from_tree >= 0
+                        && from_tree < (p4est_topidx_t) trees->elem_count));
 
-        if (num_copy > 0 && rank != from_proc) {
-          tree = p4est_tree_array_index (trees, from_tree);
-          quadrants = &tree->quadrants;
-          num_quadrants = new_local_tree_elem_count[from_tree];
-          sc_array_resize (quadrants, num_quadrants);
+      if (num_copy > 0 && rank != from_proc) {
+        tree = p4est_tree_array_index (trees, from_tree);
+        quadrants = &tree->quadrants;
+        num_quadrants = new_local_tree_elem_count[from_tree];
+        sc_array_resize (quadrants, num_quadrants);
 
-          /* copy quadrants */
-          P4EST_LDEBUGF ("copying %lld remote quads to tree %lld"
-                         " with %lld quads from proc %d\n",
-                         (long long) num_copy, (long long) from_tree,
-                         (long long) num_quadrants, from_proc);
-          memcpy (quadrants->array +
-                  new_local_tree_elem_count_before[from_tree]
-                  * sizeof (p4est_quadrant_t), quad_recv_buf,
-                  num_copy * sizeof (p4est_quadrant_t));
+        /* copy quadrants */
+        P4EST_LDEBUGF ("copying %lld remote quads to tree %lld"
+                       " with %lld quads from proc %d\n",
+                       (long long) num_copy, (long long) from_tree,
+                       (long long) num_quadrants, from_proc);
+        memcpy (quadrants->array + new_local_tree_elem_count_before[from_tree]
+                * sizeof (p4est_quadrant_t), quad_recv_buf,
+                num_copy * sizeof (p4est_quadrant_t));
 
-          /* copy user data */
-          zoffset = (size_t) new_local_tree_elem_count_before[from_tree];
-          for (zz = 0; zz < (size_t) num_copy; ++zz) {
-            quad = p4est_quadrant_array_index (quadrants, zz + zoffset);
+        /* copy user data */
+        zoffset = (size_t) new_local_tree_elem_count_before[from_tree];
+        for (zz = 0; zz < (size_t) num_copy; ++zz) {
+          quad = p4est_quadrant_array_index (quadrants, zz + zoffset);
 
-            if (data_size > 0) {
-              quad->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
-              memcpy (quad->p.user_data, user_data_recv_buf + zz * data_size,
-                      data_size);
-            }
+          if (data_size > 0) {
+            quad->p.user_data = sc_mempool_alloc (p4est->user_data_pool);
+            memcpy (quad->p.user_data, user_data_recv_buf + zz * data_size,
+                    data_size);
           }
         }
-
-        if (num_copy > 0) {
-          P4EST_ASSERT (from_tree >= 0
-                        && from_tree < (p4est_topidx_t) trees->elem_count);
-          new_local_tree_elem_count_before[from_tree] +=        /* same type */
-            num_copy;
-        }
-
-        /* increment the recv quadrant pointers */
-        quad_recv_buf += num_copy;
-        user_data_recv_buf += num_copy * data_size;
       }
-      if (recv_buf[from_proc] != NULL) {
-        P4EST_FREE (recv_buf[from_proc]);
-        recv_buf[from_proc] = NULL;
+
+      if (num_copy > 0) {
+        P4EST_ASSERT (from_tree >= 0
+                      && from_tree < (p4est_topidx_t) trees->elem_count);
+        new_local_tree_elem_count_before[from_tree] +=  /* same type */
+          num_copy;
       }
+
+      /* increment the recv quadrant pointers */
+      quad_recv_buf += num_copy;
+      user_data_recv_buf += num_copy * data_size;
+    }
+    if (recv_buf[from_proc] != NULL) {
+      P4EST_FREE (recv_buf[from_proc]);
+      recv_buf[from_proc] = NULL;
     }
   }
 
@@ -3440,6 +3515,8 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_FREE (num_recv_from);
   P4EST_FREE (num_send_to);
   P4EST_FREE (begin_send_to);
+  P4EST_FREE (new_global_indexes);
+  P4EST_FREE (my_begin_end);
 
   p4est_comm_global_partition (p4est, NULL);
 
