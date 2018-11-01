@@ -31,6 +31,7 @@
 #include <p8est_communication.h>
 #include <p8est_search.h>
 #endif
+#include <sc_search.h>
 
 ssize_t
 p4est_find_lower_bound (sc_array_t * array,
@@ -646,4 +647,64 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
     P4EST_ASSERT (points->elem_count == acts->elem_count);
     sc_array_reset (acts);
   }
+}
+
+int
+p4est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb)
+{
+  size_t              res;
+
+  P4EST_ASSERT (nmemb > 0);
+  P4EST_ASSERT (gfq[0] <= target);
+  P4EST_ASSERT (target < gfq[nmemb]);
+
+  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
+                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
+  P4EST_ASSERT (res < (size_t) nmemb);
+
+  return (int) res;
+}
+
+  /** The idea is to define the type of an array entry as type 1, if
+   *  my_begin > array[i] and as type 2, if my_end > array[i].
+   **/
+
+static size_t
+type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
+{
+  p4est_gloidx_t     *my_begin_end;
+
+  my_begin_end = (p4est_gloidx_t *) data_array;
+
+  if ((my_begin_end[0] <= *(p4est_gloidx_t *) sc_array_index (array, index))
+      && (my_begin_end[1] >
+          *(p4est_gloidx_t *) sc_array_index (array, index)))
+    return 1;
+  if (my_begin_end[1] <= *(p4est_gloidx_t *) sc_array_index (array, index))
+    return 2;
+  return 0;
+}
+
+p4est_gloidx_t     *
+p4est_search_split_array (const int num_procs, p4est_gloidx_t * search_in,
+                          p4est_gloidx_t * my_begin_end)
+{
+  sc_array_t         *offsets = sc_array_new (sizeof (size_t));
+  sc_array_t         *search_data = sc_array_new (sizeof (p4est_gloidx_t));
+  sc_array_resize (search_data, num_procs);
+  sc_array_t         *view = sc_array_new (sizeof (p4est_gloidx_t));
+  sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),
+                      (size_t) num_procs);
+
+  sc_array_split (view, offsets, 3, type_fn_global_quad_index, my_begin_end);
+
+  p4est_gloidx_t     *results = P4EST_ALLOC (p4est_gloidx_t, 2);
+  results[0] = *(p4est_gloidx_t *) sc_array_index (offsets, 1);
+  results[1] = *(p4est_gloidx_t *) sc_array_index (offsets, 2);
+
+  sc_array_destroy (offsets);
+  sc_array_destroy (view);
+  sc_array_destroy (search_data);
+  return results;
 }
