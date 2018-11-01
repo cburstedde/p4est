@@ -3043,8 +3043,6 @@ p4est_partition_given (p4est_t * p4est,
       P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                      i, (long long) begin_send_to[i]);
     }
-    if (begin_send_to[i] != old_begin_send_to[i])
-      P4EST_LDEBUGF ("Ungleichheit bei %d \t begin_send_to[%d] = %ld und old_begin_send_to[%d] = %ld\n", i, i, begin_send_to[i], i, old_begin_send_to[i]);      /* Debug */
     P4EST_ASSERT (num_send_to[i] == old_num_send_to[i]);
     P4EST_ASSERT (begin_send_to[i] == old_begin_send_to[i]);
   }
