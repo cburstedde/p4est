@@ -22,6 +22,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_algorithms.h
+ *
+ * Routines for managing quadrants.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_ALGORITHMS_H
 #define P4EST_ALGORITHMS_H
 
