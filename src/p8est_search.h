@@ -217,6 +217,16 @@ typedef int         (*p8est_traverse_query_t) (p8est_t * p8est,
 void                p8est_traverse (p8est_t * p8est,
                                     p8est_traverse_query_t traverse_fn);
 
+/** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ */
+int
+p8est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb);
+
+p4est_gloidx_t *
+p8est_search_split_array (const int num_procs, p4est_gloidx_t * search_in, p4est_gloidx_t * search_from);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_SEARCH_H */
