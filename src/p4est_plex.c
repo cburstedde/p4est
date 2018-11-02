@@ -1328,14 +1328,13 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           }
 #ifdef P4_TO_P8
           else {
-            p4est_locidx_t      epid, lepid, estart, eend;
+            p4est_locidx_t      epid, lepid, eend;
 
             epid = pcones[p4est_to_plex_position[1][c - (cstart + 4)]];
             lepid = plex_to_local[epid] - K;
 
-            estart = child_offsets[lepid];
             eend = child_offsets[lepid + 1];
-            P4EST_ASSERT (eend > estart);
+            P4EST_ASSERT (eend > child_offsets[lepid]);
             ccones[custom_numbering ? (1 - side) : 1] =
               local_to_plex[K + cend - 1];
             ccones[custom_numbering ? side : 0] = local_to_plex[K + eend - 1];
@@ -1365,15 +1364,14 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
                 : ((prevchild < 0) ? 0 : -2);
             }
             else {
-              int                 epid, lepid, estart, eend;
+              int                 epid, lepid, estart;
               int                 side = cone_to_side[c - cstart][j];
 
               epid = pcones[-(nchild + 1)];
               lepid = plex_to_local[epid] - K;
 
               estart = child_offsets[lepid];
-              eend = child_offsets[lepid + 1];
-              P4EST_ASSERT (eend > estart);
+              P4EST_ASSERT (child_offsets[lepid + 1] > estart);
               cornts[j] = ornts[j];
               if (!ornts[-(nchild + 1)]) {
                 ccones[j] = local_to_plex[K + estart + side];

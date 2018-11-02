@@ -518,13 +518,13 @@ step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
 static void
 step3_write_solution (p4est_t * p4est, int timestep)
 {
-  char                filename[BUFSIZ] = { '\0' };
+  char                filename[BUFSIZ] = "";
   int                 retval;
   sc_array_t         *u_interp;
   p4est_locidx_t      numquads;
   p4est_vtk_context_t *context;
 
-  snprintf (filename, 17, P4EST_STRING "_step3_%04d", timestep);
+  snprintf (filename, BUFSIZ, P4EST_STRING "_step3_%04d", timestep);
 
   numquads = p4est->local_num_quadrants;
 

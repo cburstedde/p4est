@@ -31,6 +31,8 @@
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o disk      Refinement on a 5-tree flat disk or square.
+ *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
  */
 
 #ifndef P4_TO_P8
@@ -56,7 +58,8 @@ typedef enum
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP,
   P4EST_CONFIG_CUBED,
-  P4EST_CONFIG_DISK
+  P4EST_CONFIG_DISK,
+  P4EST_CONFIG_PDISK
 #else
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
@@ -447,6 +450,9 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "disk")) {
       config = P4EST_CONFIG_DISK;
     }
+    else if (!strcmp (argv[1], "pdisk")) {
+      config = P4EST_CONFIG_PDISK;
+    }
 #else
     else if (!strcmp (argv[1], "periodic")) {
       config = P8EST_CONFIG_PERIODIC;
@@ -505,7 +511,10 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_cubed ();
   }
   else if (config == P4EST_CONFIG_DISK) {
-    connectivity = p4est_connectivity_new_disk ();
+    connectivity = p4est_connectivity_new_disk (0, 0);
+  }
+  else if (config == P4EST_CONFIG_PDISK) {
+    connectivity = p4est_connectivity_new_disk (1, 1);
   }
 #else
   else if (config == P8EST_CONFIG_PERIODIC) {
