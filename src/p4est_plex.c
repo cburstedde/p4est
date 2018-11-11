@@ -1772,7 +1772,12 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
               }
 #ifdef P4_TO_P8
               else {
-                remote[1] = ppid[P4EST_DIM - dim] + (id - 4);
+                if (ppid[1] == -1) { /* parent is an edge */
+                  remote[1] = ppid[P4EST_DIM - dim] + id;
+                }
+                else { /* parent is a facet */
+                  remote[1] = ppid[P4EST_DIM - dim] + (id - 4);
+                }
               }
 #endif
             }
