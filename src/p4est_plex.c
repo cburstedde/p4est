@@ -1716,7 +1716,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
             (p4est_locidx_t *) sc_array_index (quad_to_plex, qid * V);
         }
         send_data = Klocal ? (p4est_locidx_t *) sc_array_index (quad_to_plex,
-                                                                Klocal) :
+                                                                Klocal * V) :
           NULL;
         p4est_ghost_exchange_custom (p4est, ghost,
                                      (size_t) V * (P4EST_DIM +
