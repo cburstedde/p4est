@@ -586,7 +586,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     }
     p4est_ghost_exchange_custom (p4est, ghost,
                                  sizeof (p4est_lnodes_code_t),
-                                 (void **) mirror_data_F, &F[Klocal]);
+                                 (void **) mirror_data_F,
+                                 Klocal ? &F[Klocal] : NULL);
     P4EST_FREE (mirror_data_F);
   }
   else {
@@ -621,7 +622,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       p4est_ghost_exchange_custom (p4est, ghost,
                                    (size_t) V * sizeof (p4est_gloidx_t),
                                    (void **) mirror_data,
-                                   &quad_to_global[Klocal * V]);
+                                   Klocal ? &quad_to_global[Klocal *
+                                                            V] : NULL);
       P4EST_FREE (mirror_data);
     }
 
@@ -731,6 +733,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     sc_array_destroy (is_parent_lnodes);
     if (overlap) {              /* share to ghosts */
       int8_t            **mirror_data;
+      int8_t             *send_data;
       sc_array_t         *is_parent_quad;
 
       mirror_data = P4EST_ALLOC (int8_t *, num_mirrors);
@@ -752,10 +755,10 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         qid = q->p.piggy3.local_num;
         mirror_data[il] = (int8_t *) sc_array_index (is_parent_quad, qid);
       }
-      p4est_ghost_exchange_custom (p4est, ghost,
-                                   (size_t) V * sizeof (int8_t),
-                                   (void **) mirror_data, (int8_t *)
-                                   sc_array_index (is_parent_quad, Klocal));
+      send_data =
+        Klocal ? (int8_t *) sc_array_index (is_parent_quad, Klocal) : NULL;
+      p4est_ghost_exchange_custom (p4est, ghost, (size_t) V * sizeof (int8_t),
+                                   (void **) mirror_data, send_data);
       P4EST_FREE (mirror_data);
       for (il = Klocal; il < K; il++) {
         int8_t             *vals =
@@ -1586,6 +1589,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       /* communicate local_to_plex for quads to compute leaves and remotes */
       if (overlap) {
         p4est_locidx_t    **mirror_data;
+        p4est_locidx_t     *send_data;
         sc_array_t         *quad_plex;
 
         mirror_data = P4EST_ALLOC (p4est_locidx_t *, num_mirrors);
@@ -1603,10 +1607,12 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           mirror_data[il] =
             (p4est_locidx_t *) sc_array_index (quad_plex, qid);
         }
+        send_data = Klocal ? (p4est_locidx_t *) sc_array_index (quad_plex,
+                                                                Klocal) :
+          NULL;
         p4est_ghost_exchange_custom (p4est, ghost,
                                      (size_t) sizeof (p4est_locidx_t),
-                                     (void **) mirror_data, (p4est_locidx_t *)
-                                     sc_array_index (quad_plex, Klocal));
+                                     (void **) mirror_data, send_data);
         P4EST_FREE (mirror_data);
         for (il = 0; il < K; il++) {
           p = plex_to_proc[il];
@@ -1698,6 +1704,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       sc_array_destroy (lnodes_to_plex);
       if (overlap) {
         p4est_locidx_t    **mirror_data;
+        p4est_locidx_t     *send_data;
 
         mirror_data = P4EST_ALLOC (p4est_locidx_t *, num_mirrors);
         for (il = 0; il < num_mirrors; il++) {
@@ -1708,13 +1715,14 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
           mirror_data[il] =
             (p4est_locidx_t *) sc_array_index (quad_to_plex, qid * V);
         }
+        send_data = Klocal ? (p4est_locidx_t *) sc_array_index (quad_to_plex,
+                                                                Klocal) :
+          NULL;
         p4est_ghost_exchange_custom (p4est, ghost,
                                      (size_t) V * (P4EST_DIM +
                                                    1) *
                                      sizeof (p4est_locidx_t),
-                                     (void **) mirror_data, (p4est_locidx_t *)
-                                     sc_array_index (quad_to_plex,
-                                                     Klocal * V));
+                                     (void **) mirror_data, send_data);
         P4EST_FREE (mirror_data);
       }
       for (il = 0; il < num_global_plus_children; il++) {
@@ -1772,10 +1780,10 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
               }
 #ifdef P4_TO_P8
               else {
-                if (ppid[1] == -1) { /* parent is an edge */
+                if (ppid[1] == -1) {    /* parent is an edge */
                   remote[1] = ppid[P4EST_DIM - dim] + id;
                 }
-                else { /* parent is a facet */
+                else {          /* parent is a facet */
                   remote[1] = ppid[P4EST_DIM - dim] + (id - 4);
                 }
               }
