@@ -281,12 +281,11 @@
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
+#define p4est_find_partition            p8est_find_partiton
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
 #define p4est_traverse                  p8est_traverse
-#define p4est_bsearch_partition         p8est_bsearch_partition
-#define p4est_search_split_array        p8est_search_split_array 
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
@@ -333,6 +332,7 @@
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 #define p4est_comm_checksum             p8est_comm_checksum
 #define p4est_transfer_fixed            p8est_transfer_fixed
+#define p4est_bsearch_partition         p8est_bsearch_partition
 #define p4est_transfer_fixed_begin      p8est_transfer_fixed_begin
 #define p4est_transfer_fixed_end        p8est_transfer_fixed_end
 #define p4est_transfer_custom           p8est_transfer_custom
