@@ -52,6 +52,24 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
                                              size_t guess);
 
+/** Given two targets my_begin and my_end with my_begin <= my_end, find offsets such that
+ * search_in[begin] >= my_begin and 
+ * my_begin < search_in[end] >= my_end holds.
+ * \param [in] num_procs    Number of processes to get the length of search_in.
+ * \param [in] search_in    The sorted array in that the function will search.
+ * \param [in] my_begin     The first target that defines the start of the search window.
+ * \param [in] my_end       The second target that defines the end of the search window.
+ * \param [in,out] begin    The first offset such that search_in[begin] >= my_begin holds.
+ * \param [in,out] end      The second offset such that my_begin < search_in[end] >= my_end
+ *                          holds.
+ */
+void                p4est_find_partition (const int num_procs,
+                                          p4est_gloidx_t * search_in,
+                                          p4est_gloidx_t my_begin,
+                                          p4est_gloidx_t my_end,
+                                          p4est_gloidx_t * begin,
+                                          p4est_gloidx_t * end);
+
 /** Split an array of quadrants by the children of an ancestor.
  *
  * Given a sorted \b array of quadrants that have a common ancestor at level
@@ -178,25 +196,6 @@ void                p4est_search (p4est_t * p4est,
                                   p4est_search_query_t search_quadrant_fn,
                                   p4est_search_query_t search_point_fn,
                                   sc_array_t * points);
-
-/** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
- * \param [in] nmemb    Number of entries in array MINUS ONE.
- */
-int
-p4est_bsearch_partition (p4est_gloidx_t target,
-                         const p4est_gloidx_t * gfq, int nmemb);
-
-/** Given two targets in the array my_begin_end, find offsets such that
- * search_in[offsets[1]] >= my_begin_end[0] and 
- * my_begin_end[0] < search_in[offsets[2]] >= my_begin_end[1]
- * \param [in] num_procs    Number of processes to get the length of search_in.
- * \param [in] search_in    The sorted array in that the function will search.
- * \param [in] my_begin_end An array of length two with 
- *                          my_begin_end[0] <= my_begin_end[1]. The entries
- *                          are the targets.
- */
-p4est_gloidx_t *
-p4est_search_split_array (const int num_procs, p4est_gloidx_t * search_in, p4est_gloidx_t * my_begin_end);
 
 SC_EXTERN_C_END;
 
