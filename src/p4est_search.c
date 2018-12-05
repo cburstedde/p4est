@@ -144,6 +144,51 @@ p4est_array_split_ancestor_id (sc_array_t * array, size_t zindex, void *data)
   return ((size_t) p4est_quadrant_ancestor_id (q, *levelp));
 }
 
+  /** The idea is to define the type of an array entry as type 1, if
+   *  my_begin > array[i] and as type 2, if my_end > array[i].
+   **/
+
+static              size_t
+type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
+{
+  p4est_gloidx_t     *my_begin_end;
+
+  my_begin_end = (p4est_gloidx_t *) data_array;
+
+  if ((my_begin_end[0] <= *(p4est_gloidx_t *) sc_array_index (array, index))
+      && (my_begin_end[1] >
+          *(p4est_gloidx_t *) sc_array_index (array, index)))
+    return 1;
+  if (my_begin_end[1] <= *(p4est_gloidx_t *) sc_array_index (array, index))
+    return 2;
+  return 0;
+}
+
+void
+p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
+                      p4est_gloidx_t my_begin, p4est_gloidx_t my_end,
+                      p4est_gloidx_t * begin, p4est_gloidx_t * end)
+{
+  sc_array_t          offsets[1] = {};
+  sc_array_init (offsets, sizeof (size_t));
+  sc_array_t          search_data[1] = {};
+  sc_array_init_size (search_data, sizeof (p4est_gloidx_t), (size_t) num_procs);
+  sc_array_t          view[1] = {};
+  sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),
+                     (size_t) num_procs);
+
+  p4est_gloidx_t my_begin_end[2] = {my_begin, my_end};
+
+  sc_array_split (view, offsets, 3, type_fn_global_quad_index, my_begin_end);
+
+  *begin = *(p4est_gloidx_t *) sc_array_index (offsets, 1);
+  *end = *(p4est_gloidx_t *) sc_array_index (offsets, 2);
+
+  sc_array_reset (offsets);
+  sc_array_reset (view);
+  sc_array_reset (search_data);
+}
+
 void
 p4est_split_array (sc_array_t * array, int level, size_t indices[])
 {
@@ -647,64 +692,4 @@ p4est_search (p4est_t * p4est, p4est_search_query_t search_quadrant_fn,
     P4EST_ASSERT (points->elem_count == acts->elem_count);
     sc_array_reset (acts);
   }
-}
-
-int
-p4est_bsearch_partition (p4est_gloidx_t target,
-                         const p4est_gloidx_t * gfq, int nmemb)
-{
-  size_t              res;
-
-  P4EST_ASSERT (nmemb > 0);
-  P4EST_ASSERT (gfq[0] <= target);
-  P4EST_ASSERT (target < gfq[nmemb]);
-
-  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
-                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
-  P4EST_ASSERT (res < (size_t) nmemb);
-
-  return (int) res;
-}
-
-  /** The idea is to define the type of an array entry as type 1, if
-   *  my_begin > array[i] and as type 2, if my_end > array[i].
-   **/
-
-static size_t
-type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
-{
-  p4est_gloidx_t     *my_begin_end;
-
-  my_begin_end = (p4est_gloidx_t *) data_array;
-
-  if ((my_begin_end[0] <= *(p4est_gloidx_t *) sc_array_index (array, index))
-      && (my_begin_end[1] >
-          *(p4est_gloidx_t *) sc_array_index (array, index)))
-    return 1;
-  if (my_begin_end[1] <= *(p4est_gloidx_t *) sc_array_index (array, index))
-    return 2;
-  return 0;
-}
-
-p4est_gloidx_t     *
-p4est_search_split_array (const int num_procs, p4est_gloidx_t * search_in,
-                          p4est_gloidx_t * my_begin_end)
-{
-  sc_array_t         *offsets = sc_array_new (sizeof (size_t));
-  sc_array_t         *search_data = sc_array_new (sizeof (p4est_gloidx_t));
-  sc_array_resize (search_data, num_procs);
-  sc_array_t         *view = sc_array_new (sizeof (p4est_gloidx_t));
-  sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),
-                      (size_t) num_procs);
-
-  sc_array_split (view, offsets, 3, type_fn_global_quad_index, my_begin_end);
-
-  p4est_gloidx_t     *results = P4EST_ALLOC (p4est_gloidx_t, 2);
-  results[0] = *(p4est_gloidx_t *) sc_array_index (offsets, 1);
-  results[1] = *(p4est_gloidx_t *) sc_array_index (offsets, 2);
-
-  sc_array_destroy (offsets);
-  sc_array_destroy (view);
-  sc_array_destroy (search_data);
-  return results;
 }
