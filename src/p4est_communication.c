@@ -26,13 +26,12 @@
 #include <p8est_algorithms.h>
 #include <p8est_communication.h>
 #include <p8est_bits.h>
-#include <p8est_search.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
 #include <p4est_bits.h>
-#include <p4est_search.h>
 #endif /* !P4_TO_P8 */
+#include <sc_search.h>
 #ifdef P4EST_HAVE_ZLIB
 #include <zlib.h>
 #endif
@@ -957,6 +956,23 @@ p4est_transfer_assign_comm (const p4est_gloidx_t * dest_gfq,
   P4EST_ASSERT (0 <= src_gfq[*mpirank] &&
                 src_gfq[*mpirank] <= src_gfq[*mpirank + 1] &&
                 src_gfq[*mpirank + 1] <= src_gfq[*mpisize]);
+}
+
+int
+p4est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb)
+{
+  size_t              res;
+
+  P4EST_ASSERT (nmemb > 0);
+  P4EST_ASSERT (gfq[0] <= target);
+  P4EST_ASSERT (target < gfq[nmemb]);
+
+  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
+                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
+  P4EST_ASSERT (res < (size_t) nmemb);
+
+  return (int) res;
 }
 
 p4est_transfer_context_t *
