@@ -262,6 +262,13 @@ void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           const void *src_data,
                                           size_t data_size);
 
+/** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ */
+int
+p8est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb);
+
 /** Initiate a fixed-size data transfer between partitions.
  * See \ref p8est_transfer_fixed for a full description.
  * Must be matched with \ref p8est_transfer_fixed_end for completion.
