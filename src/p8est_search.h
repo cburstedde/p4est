@@ -52,16 +52,16 @@ ssize_t             p8est_find_higher_bound (sc_array_t * array,
                                              const p8est_quadrant_t * q,
                                              size_t guess);
 
-/** Given two targets my_begin and my_end with my_begin <= my_end, find offsets such that
- * search_in[begin] >= my_begin and 
- * my_begin < search_in[end] >= my_end holds.
+/** Binary search in partition array.
+ * Given targets my_begin, my_end with my_begin <= my_end, find offsets such
+ * that search_in[begin] >= my_begin and my_begin < search_in[end] >= my_end.
  * \param [in] num_procs    Number of processes to get the length of search_in.
  * \param [in] search_in    The sorted array in that the function will search.
  * \param [in] my_begin     The first target that defines the start of the search window.
  * \param [in] my_end       The second target that defines the end of the search window.
- * \param [in,out] begin    The first offset such that search_in[begin] >= my_begin holds.
- * \param [in,out] end      The second offset such that my_begin < search_in[end] >= my_end
- *                          holds.
+ * \param [in,out] begin    The first offset such that search_in[begin] >= my_begin.
+ * \param [in,out] end      The second offset such that
+ *                          my_begin < search_in[end] >= my_end.
  */
 void                p8est_find_partition (const int num_procs,
                                           p4est_gloidx_t * search_in,
