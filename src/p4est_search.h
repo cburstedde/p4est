@@ -36,22 +36,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Find the lowest position tq in a quadrant array such that tq >= q.
- * \return  Returns the id of the matching quadrant
- *                  or -1 if array < q or the array is empty.
- */
-ssize_t             p4est_find_lower_bound (sc_array_t * array,
-                                            const p4est_quadrant_t * q,
-                                            size_t guess);
-
-/** Find the highest position tq in a quadrant array such that tq <= q.
- * \return  Returns the id of the matching quadrant
- *                  or -1 if array > q or the array is empty.
- */
-ssize_t             p4est_find_higher_bound (sc_array_t * array,
-                                             const p4est_quadrant_t * q,
-                                             size_t guess);
-
 /** Binary search in partition array.
  * Given targets my_begin, my_end with my_begin <= my_end, find offsets such
  * that search_in[begin] >= my_begin and my_begin < search_in[end] >= my_end.
@@ -69,6 +53,22 @@ void                p4est_find_partition (const int num_procs,
                                           p4est_gloidx_t my_end,
                                           p4est_gloidx_t * begin,
                                           p4est_gloidx_t * end);
+
+/** Find the lowest position tq in a quadrant array such that tq >= q.
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if array < q or the array is empty.
+ */
+ssize_t             p4est_find_lower_bound (sc_array_t * array,
+                                            const p4est_quadrant_t * q,
+                                            size_t guess);
+
+/** Find the highest position tq in a quadrant array such that tq <= q.
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if array > q or the array is empty.
+ */
+ssize_t             p4est_find_higher_bound (sc_array_t * array,
+                                             const p4est_quadrant_t * q,
+                                             size_t guess);
 
 /** Split an array of quadrants by the children of an ancestor.
  *
