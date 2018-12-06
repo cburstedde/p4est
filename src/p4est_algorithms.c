@@ -3036,6 +3036,7 @@ p4est_partition_given (p4est_t * p4est,
       P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                      i, (long long) begin_send_to[i]);
     }
+  }
 
   P4EST_FREE (old_num_send_to);
   P4EST_FREE (old_begin_send_to);
@@ -3523,4 +3524,3 @@ p4est_partition_given (p4est_t * p4est,
 
   return total_quadrants_shipped;
 }
-  
