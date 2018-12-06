@@ -169,15 +169,16 @@ p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
                       p4est_gloidx_t my_begin, p4est_gloidx_t my_end,
                       p4est_gloidx_t * begin, p4est_gloidx_t * end)
 {
-  sc_array_t          offsets[1] = {};
+  sc_array_t          offsets[1] = { };
   sc_array_init (offsets, sizeof (size_t));
-  sc_array_t          search_data[1] = {};
-  sc_array_init_size (search_data, sizeof (p4est_gloidx_t), (size_t) num_procs);
-  sc_array_t          view[1] = {};
+  sc_array_t          search_data[1] = { };
+  sc_array_init_size (search_data, sizeof (p4est_gloidx_t),
+                      (size_t) num_procs);
+  sc_array_t          view[1] = { };
   sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),
-                     (size_t) num_procs);
+                      (size_t) num_procs);
 
-  p4est_gloidx_t my_begin_end[2] = {my_begin, my_end};
+  p4est_gloidx_t      my_begin_end[2] = { my_begin, my_end };
 
   sc_array_split (view, offsets, 3, type_fn_global_quad_index, my_begin_end);
 
