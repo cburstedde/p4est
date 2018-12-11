@@ -39,8 +39,7 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   if (quadrant->level >= P4EST_QMAXLEVEL) {
     return 0;
   }
-  if (quadrant->x == 0 &&
-      quadrant->y == 0 &&
+  if (quadrant->x == 0 && quadrant->y == 0 &&
 #ifdef P4_TO_P8
       quadrant->z == 0 &&
 #endif
@@ -73,6 +72,7 @@ main (int argc, char **argv)
 #else
   connectivity = p8est_connectivity_new_unitcube ();
 #endif
+  /* specifying min_quadrants is not partition independent but fun */
   p4est = p4est_new_ext (mpicomm, connectivity, 15, 0, 0, 0, NULL, NULL);
 
   /* refine and balance to make the number of elements interesting */
@@ -84,9 +84,9 @@ main (int argc, char **argv)
 
   /* create the nodes structure */
   P4EST_GLOBAL_INFO ("Making nodes with ghosts\n");
-  nodes1 = p4est_nodes_new (p4est, ghost); /* this one should work */
+  nodes1 = p4est_nodes_new (p4est, ghost);
   P4EST_GLOBAL_INFO ("Making nodes without ghosts\n");
-  nodes2 = p4est_nodes_new (p4est, NULL); /* this one fails */
+  nodes2 = p4est_nodes_new (p4est, NULL);
 
   /* clean up and exit */
   p4est_nodes_destroy (nodes1);
