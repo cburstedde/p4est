@@ -12,7 +12,7 @@ p4est_test_programs += \
         test/p4est_test_valid test/p4est_test_balance_type \
         test/p4est_test_loadsave test/p4est_test_order \
         test/p4est_test_load test/p4est_test_ghost \
-        test/p4est_test_conn_transformation \
+        test/p4est_test_conn_transformation test/p4est_test_conn_valid \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search test/p4est_test_brick \
 	test/p4est_test_complete_subtree \
@@ -35,7 +35,7 @@ p4est_test_programs += \
         test/p8est_test_face_transform test/p8est_test_edge_face_corners \
         test/p8est_test_periodic test/p8est_test_loadsave \
         test/p8est_test_load test/p8est_test_ghost \
-        test/p8est_test_conn_transformation \
+        test/p8est_test_conn_transformation test/p8est_test_conn_valid \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_brick \
         test/p8est_test_partition_corr \
@@ -78,6 +78,7 @@ test_p4est_test_loadsave_SOURCES = test/test_loadsave2.c
 test_p4est_test_load_SOURCES = test/test_load2.c
 test_p4est_test_ghost_SOURCES = test/test_ghost2.c
 test_p4est_test_conn_transformation_SOURCES = test/test_conn_transformation2.c
+test_p4est_test_conn_valid_SOURCES = test/test_conn_valid2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
 test_p4est_test_search_SOURCES = test/test_search2.c
@@ -115,6 +116,7 @@ test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 test_p8est_test_load_SOURCES = test/test_load3.c
 test_p8est_test_ghost_SOURCES = test/test_ghost3.c
 test_p8est_test_conn_transformation_SOURCES = test/test_conn_transformation3.c
+test_p8est_test_conn_valid_SOURCES = test/test_conn_valid3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
 test_p8est_test_lnodes_SOURCES = test/test_lnodes3.c
