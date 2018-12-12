@@ -26,6 +26,7 @@
  * Usage: p8est_simple <configuration> <level>
  *        possible configurations:
  *        o unit      The unit cube.
+ *        o edge      Two cubes connected by an edge.
  *        o periodic  The unit cube with all-periodic boundary conditions.
  *        o rotwrap   The unit cube with various self-periodic b.c.
  *        o twocubes  Two connected cubes.
@@ -48,6 +49,7 @@ typedef enum
 {
   P8EST_CONFIG_NULL,
   P8EST_CONFIG_UNIT,
+  P8EST_CONFIG_EDGE,
   P8EST_CONFIG_PERIODIC,
   P8EST_CONFIG_ROTWRAP,
   P8EST_CONFIG_TWOCUBES,
@@ -191,7 +193,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
+    "      unit|edge|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -201,6 +203,9 @@ main (int argc, char **argv)
   if (!wrongusage) {
     if (!strcmp (argv[1], "unit")) {
       config = P8EST_CONFIG_UNIT;
+    }
+    else if (!strcmp (argv[1], "edge")) {
+      config = P8EST_CONFIG_EDGE;
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P8EST_CONFIG_PERIODIC;
@@ -239,7 +244,10 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   geom = NULL;
-  if (config == P8EST_CONFIG_PERIODIC) {
+  if (config == P8EST_CONFIG_EDGE) {
+    connectivity = p8est_connectivity_new_edge ();
+  }
+  else if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
   }
   else if (config == P8EST_CONFIG_ROTWRAP) {
