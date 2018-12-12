@@ -87,7 +87,7 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
   int                 dims;
 #endif
   int                 ftransform[P4EST_FTRANSFORM];
-  p4est_topidx_t      ntreeid, ntreeid2;
+  p4est_topidx_t      ntreeid;
   p4est_quadrant_t    nq;
 
   if (p4est_quadrant_is_inside_root (q)) {
@@ -147,8 +147,8 @@ p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid,
     P4EST_ASSERT (face < P4EST_FACES && ntreeid >= 0);
   }
 
-  ntreeid2 = p4est_find_face_transform (conn, treeid, face, ftransform);
-  P4EST_ASSERT (ntreeid2 == ntreeid);
+  P4EST_EXECUTE_ASSERT_TOPIDX
+    (p4est_find_face_transform (conn, treeid, face, ftransform), ntreeid);
   p4est_quadrant_transform_face (q, &nq, ftransform);
 
   return p4est_comm_find_owner (p4est, ntreeid, &nq, rank);
@@ -548,7 +548,7 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 nface, face, orientation;
   int                 ftransform[P4EST_FTRANSFORM];
   ssize_t             lnid;
-  p4est_topidx_t      tqtreeid, tqtreeid2;
+  p4est_topidx_t      tqtreeid;
   p4est_connectivity_t *conn = p4est->connectivity;
   p4est_quadrant_t    tq, non_existent;
 #ifdef P4_TO_P8
@@ -616,8 +616,8 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 
   /* transform quadrant */
-  tqtreeid2 = p4est_find_face_transform (conn, treeid, face, ftransform);
-  P4EST_ASSERT (tqtreeid == tqtreeid2);
+  P4EST_EXECUTE_ASSERT_TOPIDX
+    (p4est_find_face_transform (conn, treeid, face, ftransform), tqtreeid);
   p4est_quadrant_transform_face (q, &tq, ftransform);
 
   /* find its owner and local number */

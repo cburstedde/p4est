@@ -716,7 +716,7 @@ time_search_1 (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     }
 
     sc_stats_compute (tsg->mpicomm, 1, &raystat);
-    sc_stats_print (p4est_package_id, SC_LP_STATISTICS, 1, &raystat, 1, 0);
+    sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL, 1, &raystat, 1, 0);
   }
 }
 
@@ -791,7 +791,7 @@ time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     }
 
     sc_stats_compute (tsg->mpicomm, 1, &raystat);
-    sc_stats_print (p4est_package_id, SC_LP_STATISTICS, 1, &raystat, 1, 0);
+    sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL, 1, &raystat, 1, 0);
   }
 }
 
@@ -1048,7 +1048,7 @@ main (int argc, char **argv)
 
   /* calculate and print timings */
   sc_stats_compute (tsg->mpicomm, TSEARCH_NUM_STATS, stats);
-  sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
                   TSEARCH_NUM_STATS, stats, 1, 1);
 
   /* destroy the p4est and its connectivity structure */

@@ -734,7 +734,7 @@ main (int argc, char **argv)
 
   /* calculate and print timings */
   sc_stats_compute (mpi->mpicomm, TIMINGS_NUM_STATS, stats);
-  sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
                   TIMINGS_NUM_STATS, stats, 1, 1);
 
   /* destroy the p4est and its connectivity structure */

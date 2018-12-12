@@ -252,9 +252,12 @@ p4est_transfer_context_t;
  *                          conflict with other messages in transit.
  * \param [out] dest_data   User-allocated memory of size \b data_size * \b
  *                          dest->local_num_quadrants is received into.
+ *                          If dest has quadrants, must be non-NULL.
  * \param [in] src_data     User-allocated memory of size \b data_size * \b
  *                          src->local_num_quadrants bytes is sent from.
+ *                          If src has quadrants, must be non-NULL.
  * \param [in] data_size    Fixed data size per quadrant.
+ *                          If this is zero the whole transfer noops.
  */
 void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           const p4est_gloidx_t * src_gfq,
@@ -325,6 +328,7 @@ void                p4est_transfer_fixed_end (p4est_transfer_context_t * tc);
  *                          sum_{i in \b dest->local_num_quadrants} \b
  *                          dest_sizes [i] many bytes is received into.
  *                          See below about how to choose its size.
+ *                          If dest has data to transfer, must be non-NULL.
  * \param [in] dest_sizes   User-allocated memory of one integer for each
  *                          quadrant, storing the data size to receive for it.
  *                          We understand that the sizes are often not known a
@@ -334,13 +338,16 @@ void                p4est_transfer_fixed_end (p4est_transfer_context_t * tc);
  *                          for added flexibility and overlapping of messages.
  *                          We use the type int to minimize the message size,
  *                          and to conform to MPI that has no type for size_t.
+ *                          If dest has quadrants, must be non-NULL.
  * \param [in] src_data     User-allocated memory of
  *                          sum_{i in \b src->local_num_quadrants} \b
  *                          src_sizes [i] many bytes is sent from.
+ *                          If src has data to transfer, must be non-NULL.
  * \param [in] src_sizes    User-allocated memory of one integer for each
  *                          quadrant, storing the data size to send for it.
  *                          We use the type int to minimize the message size,
  *                          and to conform to MPI that has no type for size_t.
+ *                          If src has quadrants, must be non-NULL.
  */
 void                p4est_transfer_custom (const p4est_gloidx_t * dest_gfq,
                                            const p4est_gloidx_t * src_gfq,

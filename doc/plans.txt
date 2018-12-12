@@ -1,0 +1,31 @@
+## List of proposed p4est and libsc API changes
+
+### Backards compatible
+
+1.  Increase maximum level in 3D to 30.
+1.  Extend the fix for neighborhood_owned to take a btype.
+1.  Merge all mesh_edge changes to complete the file.
+
+### Not backwards compatible
+
+Fairly certain:
+
+1.  Merge the removal of comm attributes in sc_init.
+1.  Check that refine and coarsen_ext call their callback exactly once
+    for every quadrant (if not operated recursively).
+1.  Make p4est_refine/coarsen_ext call the replace callback
+    if and only if the refine/coarsen callback returns 1.
+    Allow for num_incoming = num_outgoing = 1.
+1.  Rename the p4est_search functions as in branch p4est_search.
+1.  Retire to the attic:
+    -   p4est_wrap
+    -   pdest
+    -   sc_ranges
+
+Undecided:
+
+1.  Remove the min and max levels from the p4est data structures.
+1.  Only store non-empty local trees.
+1.  Remove autoconf logic for Fortran and C++ as well as the
+    blas, lapack, and dmatrix code in libsc.
+1.  Call the weight function for partitioning when mpisize == 1.

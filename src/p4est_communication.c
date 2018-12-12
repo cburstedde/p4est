@@ -1173,6 +1173,8 @@ p4est_transfer_fixed_begin (const p4est_gloidx_t * dest_gfq,
 
   /* figure out subset of processes to receive from */
   if (dest_begin < dest_end) {
+    P4EST_ASSERT (dest_data != NULL);
+
     /* our process as the receiver is not empty */
     first_sender = p4est_bsearch_partition (dest_begin, src_gfq, mpisize);
     P4EST_ASSERT (0 <= first_sender && first_sender < mpisize);
@@ -1226,6 +1228,8 @@ p4est_transfer_fixed_begin (const p4est_gloidx_t * dest_gfq,
 
   /* figure out subset of processes to send to */
   if (src_begin < src_end) {
+    P4EST_ASSERT (src_data != NULL);
+
     /* our process as the sender is not empty */
     first_receiver = p4est_bsearch_partition (src_begin, dest_gfq, mpisize);
     P4EST_ASSERT (0 <= first_receiver && first_receiver < mpisize);
@@ -1360,9 +1364,6 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
   p4est_gloidx_t      gbegin, gend;
   sc_MPI_Request     *rq;
 
-  P4EST_ASSERT (dest_sizes != NULL);
-  P4EST_ASSERT (src_sizes != NULL);
-
   /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
   tc->variable = 1;
@@ -1380,6 +1381,8 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
 
   /* figure out subset of processes to receive from */
   if (dest_begin < dest_end) {
+    P4EST_ASSERT (dest_sizes != NULL);
+
     /* our process as the receiver is not empty */
     first_sender = p4est_bsearch_partition (dest_begin, src_gfq, mpisize);
     P4EST_ASSERT (0 <= first_sender && first_sender < mpisize);
@@ -1417,6 +1420,7 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
         *rq++ = sc_MPI_REQUEST_NULL;
       }
       else {
+        P4EST_ASSERT (dest_data != NULL);
         if (q == mpirank) {
           /* on the same rank we remember pointers for memcpy */
           cp_len = byte_len;
@@ -1437,6 +1441,8 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
 
   /* figure out subset of processes to send to */
   if (src_begin < src_end) {
+    P4EST_ASSERT (src_sizes != NULL);
+
     /* our process as the sender is not empty */
     first_receiver = p4est_bsearch_partition (src_begin, dest_gfq, mpisize);
     P4EST_ASSERT (0 <= first_receiver && first_receiver < mpisize);
@@ -1474,6 +1480,7 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
         *rq++ = sc_MPI_REQUEST_NULL;
       }
       else {
+        P4EST_ASSERT (src_data != NULL);
         if (q == mpirank) {
           /* on the same rank we remember pointers for memcpy */
           P4EST_ASSERT (cp_len == byte_len);

@@ -1140,7 +1140,6 @@ p8est_find_edge_transform (p4est_connectivity_t * conn,
                            p4est_topidx_t itree, int iedge,
                            p8est_edge_info_t * ei)
 {
-  int                 distinct;
   p4est_topidx_t      edge_trees, aedge, ettae;
   sc_array_t         *ta = &ei->edge_transforms;
 
@@ -1166,11 +1165,12 @@ p8est_find_edge_transform (p4est_connectivity_t * conn,
   P4EST_ASSERT (0 <= ettae && 1 <= edge_trees);
 
   /* loop through all edge neighbors and find edge connections */
-  distinct = p8est_find_edge_transform_internal (conn, itree, iedge, ei,
-                                                 conn->edge_to_tree + ettae,
-                                                 conn->edge_to_edge + ettae,
-                                                 edge_trees);
-  P4EST_ASSERT (edge_trees == (p4est_topidx_t) ta->elem_count + distinct);
+  P4EST_EXECUTE_ASSERT_INT
+    (p8est_find_edge_transform_internal (conn, itree, iedge, ei,
+                                         conn->edge_to_tree + ettae,
+                                         conn->edge_to_edge + ettae,
+                                         edge_trees),
+     (int) edge_trees - (int) ta->elem_count);
 }
 
 int
