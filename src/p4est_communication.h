@@ -172,19 +172,25 @@ int                 p4est_comm_find_owner (p4est_t * p4est,
 
 /** Computes information about a tree being fully owned.
  * This is determined separately for the beginning and end of the tree.
- * \param [in] p4est            The p4est to work on.
+ * If desired, the descendants bounding this range are returned.
+ * The function can also determine local tree neighbors.
+ * \param [in] p4est            The forest to work on.
  * \param [in] which_tree       The tree in question must be partially owned.
+ * \param [in] ctype            Positions of insulation layer to check.
+ *                              Unchecked positions of tree_contact are set
+ *                              to false.  The center is never checked.
+ *                              Ignored if \b tree_contact is NULL.
  * \param [out] full_tree[2]    Full ownership of beginning and end of tree.
  * \param [out] tree_contact[9] True if there are neighboring trees in any
- *                              insulation layer positions
+ *                              insulation layer position to local quadrants.
  * \param [out] firstq          Smallest possible first quadrant on this core.
  * \param [out] nextq           Smallest possible first quadrant on next core.
- *                          Any of tree_contact, firstq and nextq may be NULL.
+ * Any of tree_contact, firstq, and nextq may be NULL.
  */
 void                p4est_comm_tree_info (p4est_t * p4est,
                                           p4est_locidx_t which_tree,
-                                          int full_tree[],
-                                          int tree_contact[],
+                                          p4est_connect_type_t ctype,
+                                          int full_tree[], int tree_contact[],
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 

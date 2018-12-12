@@ -1546,7 +1546,8 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
     /* does nothing if this processor is empty */
     tree = p4est_tree_array_index (p4est->trees, nt);
     quadrants = &tree->quadrants;
-    p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
+    p4est_comm_tree_info (p4est, nt, btype,
+                          full_tree, tree_contact, NULL, NULL);
     gl->mirror_tree_offsets[nt] = (p4est_locidx_t) gl->mirrors.elem_count;
 
     /* Find the smaller neighboring processors of each quadrant */

@@ -751,6 +751,7 @@ p4est_comm_find_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
 void
 p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
+                      p4est_connect_type_t ctype,
                       int full_tree[], int tree_contact[],
                       const p4est_quadrant_t ** pfirst_pos,
                       const p4est_quadrant_t ** pnext_pos)
@@ -763,6 +764,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
+  P4EST_ASSERT (p4est_connect_type_is_valid (ctype));
   P4EST_ASSERT (full_tree != NULL);
 
   /* determine whether this process owns first quadrant in which_tree */

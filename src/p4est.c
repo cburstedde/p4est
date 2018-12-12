@@ -1434,7 +1434,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   all_incount = 0;
   skipped = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
-    p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
+    p4est_comm_tree_info (p4est, nt, btype,
+                          full_tree, tree_contact, NULL, NULL);
     tree_fully_owned = full_tree[0] && full_tree[1];
     any_boundary = 0;
     for (i = 0; i < P4EST_INSUL; ++i) {

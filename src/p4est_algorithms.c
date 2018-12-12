@@ -1189,8 +1189,8 @@ p4est_tree_remove_nonowned (p4est_t * p4est, p4est_topidx_t which_tree)
   }
 
   P4EST_QUADRANT_INIT (&ld);
-  p4est_comm_tree_info (p4est, which_tree, full_tree, NULL,
-                        &first_pos, &next_pos);
+  p4est_comm_tree_info (p4est, which_tree, P4EST_CONNECT_FULL /* ignored */ ,
+                        full_tree, NULL, &first_pos, &next_pos);
 
   /* q1 is the last known good quadrant */
   q1 = NULL;
