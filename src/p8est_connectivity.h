@@ -582,8 +582,9 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
-/** Create a connectivity structure that is two cubes connected by a single
- * edge.
+/** Create a connectivity from two cubes connected by a single edge.
+ * The two cubes are rotated against each other such that the edge is reversed.
+ * \return             Valid connectivity structure.
  */
 p8est_connectivity_t *p8est_connectivity_new_edge (void);
 
