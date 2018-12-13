@@ -754,6 +754,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   p4est_quadrant_t   *neigharray[P4EST_CHILDREN];
   size_t              nneigh = -1;
 
+  P4EST_ASSERT (p4est_connect_type_is_valid (balance));
   P4EST_QUADRANT_INIT (&fd);
   P4EST_QUADRANT_INIT (&ld);
   P4EST_QUADRANT_INIT (&tempq);
@@ -2071,7 +2072,7 @@ p4est_balance_replace_recursive (p4est_t * p4est, p4est_topidx_t nt,
 static void
 p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
                            p4est_init_t init_fn, p4est_replace_t replace_fn,
-                           int btype)
+                           int bitype)
 {
   p4est_tree_t       *tree;
   sc_array_t         *tquadrants;
@@ -2095,10 +2096,10 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   tree = p4est_tree_array_index (p4est->trees, which_tree);
   tquadrants = &(tree->quadrants);
 
-  P4EST_ASSERT (0 <= btype && btype <= P4EST_DIM);
+  P4EST_ASSERT (0 <= bitype && bitype <= P4EST_DIM);
   P4EST_ASSERT (sc_array_is_sorted (tquadrants, p4est_quadrant_compare));
 
-  switch (btype) {
+  switch (bitype) {
   case 0:
     bound = 1;
     break;
@@ -2313,6 +2314,7 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
                                                               first_tree);
   size_t              qcount = qarray->elem_count;
 
+  P4EST_ASSERT (p4est_connect_type_is_valid (btype));
   if (!qcount) {
     /* nothing to be done */
     return;

@@ -747,8 +747,10 @@ p4est_balance_seeds_face (p4est_quadrant_t * q,
   }
 #endif
   else {
+    P4EST_ASSERT (balance == P4EST_CONNECT_FACE);
     ibalance = 0;
   }
+  P4EST_ASSERT (p4est_connect_type_int (balance) - 1 == ibalance);
 
   if (seeds == NULL) {
     p4est_bal_face_con_internal (q, &temp, face, ibalance, &consistent, NULL);
@@ -797,8 +799,10 @@ p4est_balance_seeds_corner (p4est_quadrant_t * q,
   }
 #endif
   else {
+    P4EST_ASSERT (balance == P4EST_CONNECT_FACE);
     ibalance = 0;
   }
+  P4EST_ASSERT (p4est_connect_type_int (balance) - 1 == ibalance);
 
   p4est_bal_corner_con_internal (q, &temp, corner, ibalance, &consistent);
   if (seeds == NULL) {
@@ -844,8 +848,10 @@ p8est_balance_seeds_edge (p4est_quadrant_t * q,
   }
 #endif
   else {
+    P4EST_ASSERT (balance == P4EST_CONNECT_FACE);
     ibalance = 0;
   }
+  P4EST_ASSERT (p4est_connect_type_int (balance) - 1 == ibalance);
 
   if (seeds == NULL) {
     p8est_bal_edge_con_internal (q, &temp, edge, ibalance, &consistent, NULL);

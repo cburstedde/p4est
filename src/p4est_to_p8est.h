@@ -176,6 +176,7 @@
 #define p4est_checksum                  p8est_checksum
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
+#define p4est_connect_type_is_valid     p8est_connect_type_is_valid
 #define p4est_connect_type_int          p8est_connect_type_int
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index

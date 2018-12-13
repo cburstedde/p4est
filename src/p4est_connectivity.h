@@ -96,6 +96,12 @@ typedef enum
 }
 p4est_connectivity_encode_t;
 
+/** Return whether the connectivity type has a legal value.
+ * \param [in] btype    The type to examine.
+ * \return              True if one of the defined values, false otherwise.
+ */
+int                 p4est_connect_type_is_valid (p4est_connect_type_t btype);
+
 /** Convert the p4est_connect_type_t into a number.
  * \param [in] btype    The balance type to convert.
  * \return              Returns 1 or 2.

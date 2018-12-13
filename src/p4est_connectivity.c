@@ -4306,17 +4306,27 @@ p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
   return 1;
 }
 
-#ifndef P4_TO_P8
+int
+p4est_connect_type_is_valid (p4est_connect_type_t btype)
+{
+  return P4EST_CONNECT_FACE <= btype && btype <= P4EST_CONNECT_CORNER;
+}
 
 int
 p4est_connect_type_int (p4est_connect_type_t btype)
 {
+  P4EST_ASSERT (p4est_connect_type_is_valid (btype));
   switch (btype) {
   case P4EST_CONNECT_FACE:
     return 1;
-  case P4EST_CONNECT_CORNER:
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
     return 2;
+#endif
+  case P4EST_CONNECT_CORNER:
+    return P4EST_DIM;
   default:
+    /* this check is redundant in debug mode */
     SC_ABORT_NOT_REACHED ();
   }
 }
@@ -4324,17 +4334,22 @@ p4est_connect_type_int (p4est_connect_type_t btype)
 const char         *
 p4est_connect_type_string (p4est_connect_type_t btype)
 {
+  P4EST_ASSERT (p4est_connect_type_is_valid (btype));
   switch (btype) {
   case P4EST_CONNECT_FACE:
     return "FACE";
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    return "EDGE";
+#endif
   case P4EST_CONNECT_CORNER:
     return "CORNER";
   default:
+    /* this check is redundant in debug mode */
     SC_ABORT_NOT_REACHED ();
   }
 }
 
-#endif /* !P4_TO_P8 */
 /*
  * Read a line from a file. Obtained from:
  * http://stackoverflow.com/questions/314401/

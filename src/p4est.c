@@ -1330,12 +1330,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                             (long long) p4est->global_num_quadrants);
   p4est_log_indent_push ();
   P4EST_ASSERT (p4est_is_valid (p4est));
-#ifndef P4_TO_P8
-  P4EST_ASSERT (btype == P4EST_CONNECT_FACE || btype == P4EST_CONNECT_CORNER);
-#else
-  P4EST_ASSERT (btype == P8EST_CONNECT_FACE || btype == P8EST_CONNECT_EDGE ||
-                btype == P8EST_CONNECT_CORNER);
-#endif
 
   /* remember input quadrant count; it will not decrease */
   old_gnq = p4est->global_num_quadrants;
