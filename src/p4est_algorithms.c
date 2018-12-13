@@ -2874,7 +2874,7 @@ p4est_partition_given (p4est_t * p4est,
   num_proc_recv_from = 0;
 
   p4est_find_partition (num_procs, global_last_quad_index,
-                              my_begin, my_end, &from_begin, &from_end);
+                        my_begin, my_end, &from_begin, &from_end);
 
   for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
     lower_bound =
@@ -2976,7 +2976,7 @@ p4est_partition_given (p4est_t * p4est,
   num_proc_send_to = 0;
 
   p4est_find_partition (num_procs, new_global_last_quad_index,
-                              my_begin, my_end, &to_begin, &to_end);
+                        my_begin, my_end, &to_begin, &to_end);
 
   for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
     /* I send to to_proc which may be empty */
@@ -2988,8 +2988,7 @@ p4est_partition_given (p4est_t * p4est,
                                                              lower_bound)
       + 1;
     begin_send_to[to_proc] =
-      (num_send_to[to_proc] == 0) ? -1 : SC_MAX (my_begin,
-                                                 lower_bound);
+      (num_send_to[to_proc] == 0) ? -1 : SC_MAX (my_begin, lower_bound);
     P4EST_ASSERT (num_send_to[to_proc] >= 0);
     if (to_proc != rank)
       ++num_proc_send_to;
@@ -3036,6 +3035,7 @@ p4est_partition_given (p4est_t * p4est,
       P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                      i, (long long) begin_send_to[i]);
     }
+  }
 
   P4EST_FREE (old_num_send_to);
   P4EST_FREE (old_begin_send_to);
@@ -3052,8 +3052,7 @@ p4est_partition_given (p4est_t * p4est,
   to_proc = rank;
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
   my_begin = begin_send_to[to_proc] - my_base;
-  my_end =
-    begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
+  my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
   for (which_tree = first_local_tree; which_tree <= last_local_tree;
        ++which_tree) {
     tree = p4est_tree_array_index (trees, which_tree);
@@ -3097,8 +3096,7 @@ p4est_partition_given (p4est_t * p4est,
 
       my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
       my_begin = begin_send_to[to_proc] - my_base;
-      my_end =
-        begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
+      my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
 
       for (which_tree = first_local_tree; which_tree <= last_local_tree;
            ++which_tree) {
@@ -3180,7 +3178,7 @@ p4est_partition_given (p4est_t * p4est,
 
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (1) { /* to reduce the difference */
+    if (1) {                    /* to reduce the diff size */
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3339,7 +3337,7 @@ p4est_partition_given (p4est_t * p4est,
           trees->elem_count * sizeof (p4est_locidx_t));
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (1) { /* to reduce the difference */
+    if (1) {                    /* to reduce the diff size */
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3523,4 +3521,3 @@ p4est_partition_given (p4est_t * p4est,
 
   return total_quadrants_shipped;
 }
-  

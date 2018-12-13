@@ -36,6 +36,24 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Binary search in partition array.
+ * Given targets my_begin, my_end with my_begin <= my_end, find offsets such
+ * that search_in[begin] >= my_begin and my_begin < search_in[end] >= my_end.
+ * \param [in] num_procs    Number of processes to get the length of search_in.
+ * \param [in] search_in    The sorted array in that the function will search.
+ * \param [in] my_begin     The first target that defines the start of the search window.
+ * \param [in] my_end       The second target that defines the end of the search window.
+ * \param [in,out] begin    The first offset such that search_in[begin] >= my_begin.
+ * \param [in,out] end      The second offset such that
+ *                          my_begin < search_in[end] >= my_end.
+ */
+void                p8est_find_partition (const int num_procs,
+                                          p4est_gloidx_t * search_in,
+                                          p4est_gloidx_t my_begin,
+                                          p4est_gloidx_t my_end,
+                                          p4est_gloidx_t * begin,
+                                          p4est_gloidx_t * end);
+
 /** Find the lowest position tq in a quadrant array such that tq >= q.
  * \return  Returns the id of the matching quadrant
  *                  or -1 if not found or the array is empty.
@@ -51,24 +69,6 @@ ssize_t             p8est_find_lower_bound (sc_array_t * array,
 ssize_t             p8est_find_higher_bound (sc_array_t * array,
                                              const p8est_quadrant_t * q,
                                              size_t guess);
-
-/** Given two targets my_begin and my_end with my_begin <= my_end, find offsets such that
- * search_in[begin] >= my_begin and 
- * my_begin < search_in[end] >= my_end holds.
- * \param [in] num_procs    Number of processes to get the length of search_in.
- * \param [in] search_in    The sorted array in that the function will search.
- * \param [in] my_begin     The first target that defines the start of the search window.
- * \param [in] my_end       The second target that defines the end of the search window.
- * \param [in,out] begin    The first offset such that search_in[begin] >= my_begin holds.
- * \param [in,out] end      The second offset such that my_begin < search_in[end] >= my_end
- *                          holds.
- */
-void                p8est_find_partition (const int num_procs,
-                                          p4est_gloidx_t * search_in,
-                                          p4est_gloidx_t my_begin,
-                                          p4est_gloidx_t my_end,
-                                          p4est_gloidx_t * begin,
-                                          p4est_gloidx_t * end);
 
 /** Given a sorted \b array of quadrants that have a common ancestor at level
  * \b level, compute the \b indices of the first quadrant in each of the common

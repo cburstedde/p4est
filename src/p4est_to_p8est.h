@@ -279,9 +279,9 @@
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
 
 /* functions in p4est_search */
+#define p4est_find_partition            p8est_find_partition
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
-#define p4est_find_partition            p8est_find_partiton
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
