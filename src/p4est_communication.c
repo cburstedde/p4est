@@ -755,13 +755,17 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
                       const p4est_quadrant_t ** pfirst_pos,
                       const p4est_quadrant_t ** pnext_pos)
 {
-  const p4est_quadrant_t *first_pos, *next_pos;
   p4est_connectivity_t *conn = p4est->connectivity;
+  const p4est_quadrant_t *first_pos, *next_pos;
   int                 face, i;
 
+  P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
+  P4EST_ASSERT (full_tree != NULL);
+
+  /* determine whether this process owns first quadrant in which_tree */
   first_pos = &p4est->global_first_position[p4est->mpirank];
   P4EST_ASSERT (first_pos->level == P4EST_QMAXLEVEL);
   full_tree[0] = (which_tree > p4est->first_local_tree ||
@@ -771,6 +775,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 #endif
                   ));
 
+  /* determine whether this process owns last quadrant in which_tree */
   next_pos = &p4est->global_first_position[p4est->mpirank + 1];
   P4EST_ASSERT (next_pos->level == P4EST_QMAXLEVEL);
   full_tree[1] = (which_tree < p4est->last_local_tree ||
@@ -786,13 +791,15 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
     }
     for (face = 0; face < P4EST_FACES; ++face) {
       int                 dir = face / 2;
-      int                 n = 1, k = 1;
+      int                 k = 1, n = 1;
 #ifdef P4_TO_P8
       int                 m = 1;
 #else
-      int                 m = 0;
+#ifdef P4EST_ENABLE_DEBUG
+      const int           m = 0;
 #endif
-      int                 t, s, u;
+#endif
+      int                 s, u;
 
       switch (dir) {
       case 0:
@@ -801,46 +808,39 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
       case 1:
         n = 2 * (face - 2);
         break;
+#ifdef P4_TO_P8
       case 2:
         m = 2 * (face - 4);
         break;
+#endif
       default:
         SC_ABORT_NOT_REACHED ();
       }
       P4EST_ASSERT (0 <= k && k < 3);
-      P4EST_ASSERT (0 <= m && m < 3);
       P4EST_ASSERT (0 <= n && n < 3);
-      t = (conn->tree_to_tree[P4EST_FACES * which_tree + face] != which_tree
-           || (int) conn->tree_to_face[P4EST_FACES * which_tree + face] !=
-           face);
-      if (t) {
+      P4EST_ASSERT (0 <= m && m < 3);
+      if (conn->tree_to_tree[P4EST_FACES * which_tree + face] != which_tree ||
+          (int) conn->tree_to_face[P4EST_FACES * which_tree + face] != face) {
         switch (dir) {
         case 0:
-          P4EST_ASSERT (0 <= k && k < 3);
-          P4EST_ASSERT (0 <= m && m < 3);
-          P4EST_ASSERT (0 <= n && n < 3);
-          for (s = 0; s < P4EST_INSUL / 3; s++) {
-            tree_contact[3 * s + k] = t;
+          for (u = 0; u < P4EST_INSUL / 3; u++) {
+            tree_contact[3 * u + k] = 1;
           }
           break;
         case 1:
-          P4EST_ASSERT (0 <= k && k < 3);
-          P4EST_ASSERT (0 <= m && m < 3);
-          P4EST_ASSERT (0 <= n && n < 3);
           for (u = 0; u < P4EST_INSUL / 9; u++) {
             for (s = 0; s < 3; s++) {
-              tree_contact[9 * u + 3 * n + s] = t;
+              tree_contact[9 * u + 3 * n + s] = 1;
             }
           }
           break;
+#ifdef P4_TO_P8
         case 2:
-          P4EST_ASSERT (0 <= k && k < 3);
-          P4EST_ASSERT (0 <= m && m < 3);
-          P4EST_ASSERT (0 <= n && n < 3);
           for (s = 0; s < 9; s++) {
-            tree_contact[9 * m + s] = t;
+            tree_contact[9 * m + s] = 1;
           }
           break;
+#endif
         default:
           SC_ABORT_NOT_REACHED ();
         }
@@ -933,6 +933,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
     }
   }
 
+  /* assign first and next output descendants */
   if (pfirst_pos != NULL) {
     *pfirst_pos = first_pos;
   }
