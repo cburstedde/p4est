@@ -136,7 +136,7 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
  */
 int                 p8est_comm_is_empty (p8est_t * p8est, int p);
 
-/** Test whether a quadrant is fully contained in a rank's owned regien.
+/** Test whether a quadrant is fully contained in a rank's owned region.
  * This function may return false when \ref p8est_comm_is_owner returns true.
  * \param [in] rank    Rank whose ownership is tested.
  *                     Assumes a forest with no overlaps.
@@ -173,7 +173,7 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
 /** Computes information about a tree being fully owned.
  * This is determined separately for the beginning and end of the tree.
  * If desired, the descendants bounding this range are returned.
- * The function can also determine local tree neighbors.
+ * The function can also determine neighbors trees.
  * \param [in] p8est            The forest to work on.
  * \param [in] which_tree       The tree in question must be partially owned.
  * \param [in] ctype            Positions of insulation layer to check.
@@ -181,8 +181,8 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
  *                              to false.  The center is never checked.
  *                              Ignored if \b tree_contact is NULL.
  * \param [out] full_tree[2]    Full ownership of beginning and end of tree.
- * \param [out] tree_contact[27] True if there are neighboring trees in any
- *                              insulation layer position to local quadrants.
+ * \param [out] tree_contact[27] True if there are neighboring trees in the
+ *                              respective positions.
  * \param [out] firstq          Smallest possible first quadrant on this core.
  * \param [out] nextq           Smallest possible first quadrant on next core.
  * Any of tree_contact, firstq, and nextq may be NULL.
@@ -195,15 +195,22 @@ void                p8est_comm_tree_info (p8est_t * p8est,
                                           const p8est_quadrant_t ** nextq);
 
 /** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
+ * A return of false requires further checking across tree boundaries.
+ * A return of true is definite, and tree boundaries were not needed.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree index to work on.
+ * \param [in] ctype            Positions of insulation layer to check.
+ *                              Unchecked positions of tree_contact are set
+ *                              to false.  The center is never checked.
+ *                              Ignored if \b tree_contact is NULL.
  * \param [in] full_tree[2]     Flags as computed by p4est_comm_tree_info.
- * \param [in] tree_contact[6]  Flags as computed by p4est_comm_tree_info.
+ * \param [in] tree_contact[27] Flags as computed by p4est_comm_tree_info.
  * \param [in] q                The quadrant to be checked.
- * \return          Returns true iff this quadrant's 3x3 neighborhood is owned.
+ * \return     True if this quadrant's 3x3 neighborhood is definitely owned.
  */
 int                 p8est_comm_neighborhood_owned (p8est_t * p8est,
                                                    p4est_locidx_t which_tree,
+                                                   p4est_connect_type_t ctype,
                                                    int full_tree[],
                                                    int tree_contact[],
                                                    p8est_quadrant_t * q);

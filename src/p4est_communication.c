@@ -933,6 +933,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
         }
       }
     }
+    P4EST_ASSERT (!tree_contact[P4EST_INSUL / 2]);
   }
 
   /* assign first and next output descendants */
@@ -946,6 +947,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 
 int
 p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
+                               p4est_connect_type_t ctype,
                                int full_tree[], int tree_contact[],
                                p4est_quadrant_t * q)
 {
@@ -953,6 +955,12 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
   const int           rank = p4est->mpirank;
   int                 n0_proc, n1_proc;
   p4est_quadrant_t    n0, n1;
+
+  P4EST_ASSERT (p4est_connect_type_is_valid (ctype));
+  P4EST_ASSERT (full_tree != NULL);
+  P4EST_ASSERT (tree_contact != NULL);
+  P4EST_ASSERT (!tree_contact[P4EST_INSUL / 2]);
+  P4EST_ASSERT (q != NULL);
 
   if (full_tree[0] && full_tree[1]) {
     int                 m = 0, n, k, insul;
