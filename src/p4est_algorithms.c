@@ -2894,37 +2894,41 @@ p4est_partition_given (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
   /* old calculation method */
-  p4est_locidx_t     *old_num_recv_from =
-    P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
-  p4est_gloidx_t      old_from_begin, old_from_end;
+  {
+    int                 old_num_proc_recv_from;
+    p4est_locidx_t     *old_num_recv_from;
+    p4est_gloidx_t      old_from_begin, old_from_end;
 
-  int                 old_num_proc_recv_from = 0;
-  for (from_proc = 0; from_proc < num_procs; ++from_proc) {
-    old_from_begin = (from_proc == 0) ?
-      0 : (global_last_quad_index[from_proc - 1] + 1);
-    old_from_end = global_last_quad_index[from_proc];
+    old_num_recv_from = P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
 
-    if (old_from_begin <= my_end && old_from_end >= my_begin) {
-      /* from_proc sends to me but may be empty */
-      old_num_recv_from[from_proc] = SC_MIN (my_end, old_from_end)
-        - SC_MAX (my_begin, old_from_begin) + 1;
-      P4EST_ASSERT (old_num_recv_from[from_proc] >= 0);
-      if (from_proc != rank)
-        ++old_num_proc_recv_from;
+    old_num_proc_recv_from = 0;
+    for (from_proc = 0; from_proc < num_procs; ++from_proc) {
+      old_from_begin = (from_proc == 0) ?
+        0 : (global_last_quad_index[from_proc - 1] + 1);
+      old_from_end = global_last_quad_index[from_proc];
+
+      if (old_from_begin <= my_end && old_from_end >= my_begin) {
+        /* from_proc sends to me but may be empty */
+        old_num_recv_from[from_proc] = SC_MIN (my_end, old_from_end)
+          - SC_MAX (my_begin, old_from_begin) + 1;
+        P4EST_ASSERT (old_num_recv_from[from_proc] >= 0);
+        if (from_proc != rank)
+          ++old_num_proc_recv_from;
+      }
     }
-  }
 
-  P4EST_ASSERT (num_proc_recv_from == old_num_proc_recv_from);
-  for (i = 0; i < num_procs; ++i) {
-    if (num_recv_from[i] != 0) {
-      P4EST_LDEBUGF ("partition num_recv_from[%d] = %lld\n", i,
-                     (long long) num_recv_from[i]);
+    P4EST_ASSERT (num_proc_recv_from == old_num_proc_recv_from);
+    for (i = 0; i < num_procs; ++i) {
+      if (num_recv_from[i] != 0) {
+        P4EST_LDEBUGF ("partition num_recv_from[%d] = %lld\n", i,
+                       (long long) num_recv_from[i]);
+      }
+      /* compare the results of the new and old calculation method */
+      /* old_from_begin/end and from_begin/end are not the same */
+      P4EST_ASSERT (num_recv_from[i] == old_num_recv_from[i]);
     }
-    /* compare the results of the new and old calculation method */
-    /* old_from_begin/end and from_begin/end are not the same */
-    P4EST_ASSERT (num_recv_from[i] == old_num_recv_from[i]);
+    P4EST_FREE (old_num_recv_from);
   }
-  P4EST_FREE (old_num_recv_from);
 #endif
 
   /* Post receives for the quadrants and their data */
@@ -2996,49 +3000,51 @@ p4est_partition_given (p4est_t * p4est,
 
 #ifdef P4EST_ENABLE_DEBUG
   /* old calculation method */
-  p4est_locidx_t     *old_num_send_to =
-    P4EST_ALLOC (p4est_locidx_t, num_procs);
-  p4est_gloidx_t     *old_begin_send_to =
-    P4EST_ALLOC (p4est_gloidx_t, num_procs);
+  {
+    int                 old_num_proc_send_to;
+    p4est_locidx_t     *old_num_send_to, *old_begin_send_to;
+    p4est_gloidx_t      old_to_end, old_to_begin;
 
-  p4est_gloidx_t      old_to_end, old_to_begin;
+    old_num_send_to = P4EST_ALLOC (p4est_locidx_t, num_procs);
+    old_begin_send_to = P4EST_ALLOC (p4est_gloidx_t, num_procs);
 
-  int                 old_num_proc_send_to = 0;
-  for (to_proc = 0; to_proc < num_procs; ++to_proc) {
-    old_to_begin = (to_proc == 0)
-      ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
-    old_to_end = new_global_last_quad_index[to_proc];
+    old_num_proc_send_to = 0;
+    for (to_proc = 0; to_proc < num_procs; ++to_proc) {
+      old_to_begin = (to_proc == 0)
+        ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
+      old_to_end = new_global_last_quad_index[to_proc];
 
-    if (old_to_begin <= my_end && old_to_end >= my_begin) {
-      /* I send to to_proc which may be empty */
-      old_num_send_to[to_proc] = SC_MIN (my_end, old_to_end)
-        - SC_MAX (my_begin, old_to_begin) + 1;
-      old_begin_send_to[to_proc] = SC_MAX (my_begin, old_to_begin);
-      P4EST_ASSERT (old_num_send_to[to_proc] >= 0);
-      if (to_proc != rank)
-        ++old_num_proc_send_to;
+      if (old_to_begin <= my_end && old_to_end >= my_begin) {
+        /* I send to to_proc which may be empty */
+        old_num_send_to[to_proc] = SC_MIN (my_end, old_to_end)
+          - SC_MAX (my_begin, old_to_begin) + 1;
+        old_begin_send_to[to_proc] = SC_MAX (my_begin, old_to_begin);
+        P4EST_ASSERT (old_num_send_to[to_proc] >= 0);
+        if (to_proc != rank)
+          ++old_num_proc_send_to;
+      }
+      else {
+        /* I don't send to to_proc */
+        old_num_send_to[to_proc] = 0;
+        old_begin_send_to[to_proc] = -1;
+      }
     }
-    else {
-      /* I don't send to to_proc */
-      old_num_send_to[to_proc] = 0;
-      old_begin_send_to[to_proc] = -1;
+
+    P4EST_ASSERT (num_proc_send_to == old_num_proc_send_to);
+    for (i = 0; i < num_procs; ++i) {
+      if (num_send_to[i] != 0) {
+        P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
+                       i, (long long) num_send_to[i]);
+      }
+      if (begin_send_to[i] != -1) {
+        P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
+                       i, (long long) begin_send_to[i]);
+      }
     }
+
+    P4EST_FREE (old_num_send_to);
+    P4EST_FREE (old_begin_send_to);
   }
-
-  P4EST_ASSERT (num_proc_send_to == old_num_proc_send_to);
-  for (i = 0; i < num_procs; ++i) {
-    if (num_send_to[i] != 0) {
-      P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
-                     i, (long long) num_send_to[i]);
-    }
-    if (begin_send_to[i] != -1) {
-      P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
-                     i, (long long) begin_send_to[i]);
-    }
-  }
-
-  P4EST_FREE (old_num_send_to);
-  P4EST_FREE (old_begin_send_to);
 #endif
 
   /* Communicate the quadrants and their data */
