@@ -3002,8 +3002,8 @@ p4est_partition_given (p4est_t * p4est,
   /* old calculation method */
   {
     int                 old_num_proc_send_to;
-    p4est_locidx_t     *old_num_send_to, *old_begin_send_to;
-    p4est_gloidx_t      old_to_end, old_to_begin;
+    p4est_locidx_t     *old_num_send_to;
+    p4est_gloidx_t      old_to_end, old_to_begin, *old_begin_send_to;
 
     old_num_send_to = P4EST_ALLOC (p4est_locidx_t, num_procs);
     old_begin_send_to = P4EST_ALLOC (p4est_gloidx_t, num_procs);
