@@ -1246,7 +1246,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 {
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
-  int                 j, k, l, m, which;
+  int                 i, j, k, l, m, which;
 #ifdef P4EST_ENABLE_DEBUG
   int                 facewhich;
 #endif
@@ -1298,7 +1298,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   sc_array_t          checkarray;
   p4est_gloidx_t      ltotal[2], gtotal[2];
 #endif /* P4EST_ENABLE_DEBUG */
-  int                 i;
   int                 mpiret, rcount;
   int                 first_bound;
   int                 request_first_count, request_second_count, outcount;
