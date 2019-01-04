@@ -206,6 +206,13 @@ const int           p8est_child_corner_edges[8][8] =
  { -1,  9, -1, -1,  2, -1, -1,  7 },
  { -1, -1, 10, -1,  6, -1, -1,  3 },
  { -1, -1, -1, 11, -1,  7,  3, -1 }};
+
+const int           p8est_insul_faces[6] =
+{ 12, 14, 10, 16, 4, 22 };
+const int           p8est_insul_edges[12] =
+{  1,  7, 19, 25, 3, 5, 21, 23, 9, 11, 15, 17 };
+const int           p8est_insul_corners[8] =
+{  0,  2,  6,  8, 18, 20, 24, 26 };
 /* *INDENT-ON* */
 
 int

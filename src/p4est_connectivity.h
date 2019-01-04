@@ -53,6 +53,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_HALF (P4EST_CHILDREN / 2)
 /** The size of insulation layer */
 #define P4EST_INSUL 9
+#define P4EST_INSUL_CENTER (P4EST_INSUL / 2)
 
 /* size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
@@ -212,6 +213,12 @@ extern const int    p4est_corner_face_corners[4][4];
 
 /** Store the faces for each child and corner, can be -1. */
 extern const int    p4est_child_corner_faces[4][4];
+
+/** The insulation layer positions of all faces */
+extern const int    p4est_insul_faces[4];
+
+/** The insulation layer positions of all corners */
+extern const int    p4est_insul_corners[4];
 
 /** Transform a face corner across one of the adjacent faces into a neighbor tree.
  * This version expects the neighbor face and orientation separately.

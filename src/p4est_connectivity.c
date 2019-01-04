@@ -58,6 +58,11 @@ const int           p4est_child_corner_faces[4][4] =
  {  2, -1, -1,  1 },
  {  0, -1, -1,  3 },
  { -1,  1,  3, -1 }};
+
+const int           p4est_insul_faces[4] =
+{ 3, 5, 1, 7 };
+const int           p4est_insul_corners[4] =
+{ 0, 2, 6, 8 };
 /* *INDENT-ON* */
 
 #endif /* !P4_TO_P8 */

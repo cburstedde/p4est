@@ -49,6 +49,7 @@
 #define P4EST_HALF                      P8EST_HALF
 #define P4EST_FTRANSFORM                P8EST_FTRANSFORM
 #define P4EST_INSUL                     P8EST_INSUL
+#define P4EST_INSUL_CENTER              P8EST_INSUL_CENTER
 #define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_QMAXLEVEL                 P8EST_QMAXLEVEL
@@ -123,6 +124,9 @@
 #define p4est_corner_faces              p8est_corner_faces
 #define p4est_corner_face_corners       p8est_corner_face_corners
 #define p4est_child_corner_faces        p8est_child_corner_faces
+#define p4est_insul_faces               p8est_insul_faces
+#define p4est_insul_corners             p8est_insul_corners
+
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */

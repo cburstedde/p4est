@@ -54,6 +54,7 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_EDGES 12
 /** The size of insulation layer */
 #define P8EST_INSUL 27
+#define P8EST_INSUL_CENTER (P8EST_INSUL / 2)
 
 /* size of face transformation encoding */
 #define P8EST_FTRANSFORM 9
@@ -311,6 +312,15 @@ extern const int    p8est_child_corner_faces[8][8];
 
 /** Store the edges for each child and corner, can be -1. */
 extern const int    p8est_child_corner_edges[8][8];
+
+/** The insulation layer positions of all faces */
+extern const int    p8est_insul_faces[6];
+
+/** The insulation layer positions of all edges */
+extern const int    p8est_insul_edges[12];
+
+/** The insulation layer positions of all corners */
+extern const int    p8est_insul_corners[8];
 
 /** Transform a corner across one of the adjacent faces into a neighbor tree.
  * It expects a face permutation index that has been precomputed.
