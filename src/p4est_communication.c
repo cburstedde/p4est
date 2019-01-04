@@ -787,153 +787,64 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 #endif
                   ));
 
+  /* populate fields for all possible neighbor directions */
   if (tree_contact != NULL) {
     for (i = 0; i < P4EST_INSUL; i++) {
       tree_contact[i] = 0;
     }
     for (face = 0; face < P4EST_FACES; ++face) {
-      int                 dir = face / 2;
-      int                 k = 1, n = 1;
-#ifdef P4_TO_P8
-      int                 m = 1;
-#else
-#ifdef P4EST_ENABLE_DEBUG
-      const int           m = 0;
-#endif
-#endif
-      int                 s, u;
-
-      switch (dir) {
-      case 0:
-        k = 2 * (face - 0);
-        break;
-      case 1:
-        n = 2 * (face - 2);
-        break;
-#ifdef P4_TO_P8
-      case 2:
-        m = 2 * (face - 4);
-        break;
-#endif
-      default:
-        SC_ABORT_NOT_REACHED ();
-      }
-      P4EST_ASSERT (0 <= k && k < 3);
-      P4EST_ASSERT (0 <= n && n < 3);
-      P4EST_ASSERT (0 <= m && m < 3);
       if (conn->tree_to_tree[P4EST_FACES * which_tree + face] != which_tree ||
           (int) conn->tree_to_face[P4EST_FACES * which_tree + face] != face) {
-        switch (dir) {
-        case 0:
-          for (u = 0; u < P4EST_INSUL / 3; u++) {
-            tree_contact[3 * u + k] = 1;
-          }
-          break;
-        case 1:
-          for (u = 0; u < P4EST_INSUL / 9; u++) {
-            for (s = 0; s < 3; s++) {
-              tree_contact[9 * u + 3 * n + s] = 1;
-            }
-          }
-          break;
-#ifdef P4_TO_P8
-        case 2:
-          for (s = 0; s < 9; s++) {
-            tree_contact[9 * m + s] = 1;
-          }
-          break;
-#endif
-        default:
-          SC_ABORT_NOT_REACHED ();
-        }
+        tree_contact[p4est_insul_faces[face]] = 1;
       }
     }
-
 #ifdef P4_TO_P8
-    if (conn->tree_to_edge) {
+    if (conn->tree_to_edge != NULL && ctype >= P8EST_CONNECT_EDGE) {
       int                 edge;
+      p4est_topidx_t      et;
 
       for (edge = 0; edge < P8EST_EDGES; edge++) {
         p4est_topidx_t      e =
           conn->tree_to_edge[P8EST_EDGES * which_tree + edge];
-        p4est_topidx_t      et;
 
         if (e < 0) {
           continue;
         }
         for (et = conn->ett_offset[e]; et < conn->ett_offset[e + 1]; et++) {
-          p4est_topidx_t      nt = conn->edge_to_tree[et];
-          int8_t              ne = conn->edge_to_edge[et] % P8EST_EDGES;
+          if (conn->edge_to_tree[et] != which_tree ||
+              (int) conn->edge_to_edge[et] != edge) {
+            tree_contact[p8est_insul_edges[edge]] = 1;
 
-          if (nt != which_tree || ne != edge) {
-            int                 dir = edge / 4;
-            int                 m, n, k;
-            switch (dir) {
-            case 0:
-              n = 2 * (edge % 2);
-              m = 2 * (edge / 2);
-              P4EST_ASSERT (0 <= m && m < 3);
-              P4EST_ASSERT (0 <= n && n < 3);
-              tree_contact[9 * m + 3 * n + 0] = 1;
-              tree_contact[9 * m + 3 * n + 1] = 1;
-              tree_contact[9 * m + 3 * n + 2] = 1;
-              break;
-            case 1:
-              k = 2 * ((edge - 4) % 2);
-              m = 2 * ((edge - 4) / 2);
-              P4EST_ASSERT (0 <= k && k < 3);
-              P4EST_ASSERT (0 <= m && m < 3);
-              tree_contact[9 * m + 3 * 0 + k] = 1;
-              tree_contact[9 * m + 3 * 1 + k] = 1;
-              tree_contact[9 * m + 3 * 2 + k] = 1;
-              break;
-            case 2:
-              k = 2 * ((edge - 8) % 2);
-              n = 2 * ((edge - 8) / 2);
-              P4EST_ASSERT (0 <= k && k < 3);
-              P4EST_ASSERT (0 <= n && n < 3);
-              tree_contact[9 * 0 + 3 * n + k] = 1;
-              tree_contact[9 * 1 + 3 * n + k] = 1;
-              tree_contact[9 * 2 + 3 * n + k] = 1;
-              break;
-            default:
-              SC_ABORT_NOT_REACHED ();
-            }
+            /* it is sufficient to find just one neighbor tree per edge */
             break;
           }
         }
       }
     }
 #endif
-    if (conn->tree_to_corner) {
+    if (conn->tree_to_corner != NULL && ctype >= P4EST_CONNECT_CORNER) {
       int                 corner;
+      p4est_topidx_t      ct;
 
       for (corner = 0; corner < P4EST_CHILDREN; corner++) {
         p4est_topidx_t      c =
           conn->tree_to_corner[P4EST_CHILDREN * which_tree + corner];
-        p4est_topidx_t      ct;
 
         if (c < 0) {
           continue;
         }
         for (ct = conn->ctt_offset[c]; ct < conn->ctt_offset[c + 1]; ct++) {
-          p4est_topidx_t      nt = conn->corner_to_tree[ct];
-          int8_t              nc = conn->corner_to_corner[ct];
-          if (nt != which_tree || nc != corner) {
-            int                 insul = 2 * (corner & 1);
+          if (conn->corner_to_tree[ct] != which_tree ||
+              (int) conn->corner_to_corner[ct] != corner) {
+            tree_contact[p4est_insul_corners[corner]] = 1;
 
-            insul += 6 * ((corner & 2) >> 1);
-#ifdef P4_TO_P8
-            insul += 18 * ((corner & 4) >> 2);
-#endif
-            P4EST_ASSERT (0 <= insul && insul < P4EST_INSUL);
-            tree_contact[insul] = 1;
+            /* it is sufficient to find just one neighbor tree per corner */
             break;
           }
         }
       }
     }
-    P4EST_ASSERT (!tree_contact[P4EST_INSUL / 2]);
+    P4EST_ASSERT (!tree_contact[P4EST_INSUL_CENTER]);
   }
 
   /* assign first and next output descendants */
@@ -959,31 +870,84 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
   P4EST_ASSERT (p4est_connect_type_is_valid (ctype));
   P4EST_ASSERT (full_tree != NULL);
   P4EST_ASSERT (tree_contact != NULL);
-  P4EST_ASSERT (!tree_contact[P4EST_INSUL / 2]);
+  P4EST_ASSERT (!tree_contact[P4EST_INSUL_CENTER]);
   P4EST_ASSERT (q != NULL);
 
   if (full_tree[0] && full_tree[1]) {
-    int                 m = 0, n, k, insul;
+    int                 m = 0, n, k, face;
 
     if (q->level == 0) {
-      for (m = 0; m < P4EST_INSUL; m++) {
-        if (tree_contact[m]) {
+      /* check root quadrants to all sides */
+      for (face = 0; face < P4EST_FACES; ++face) {
+        if (tree_contact[p4est_insul_faces[face]]) {
           return 0;
+        }
+      }
+#ifdef P4_TO_P8
+      if (ctype >= P8EST_CONNECT_EDGE) {
+        int                 edge;
+
+        for (edge = 0; edge < P8EST_EDGES; ++edge) {
+          if (tree_contact[p8est_insul_edges[edge]]) {
+            return 0;
+          }
+        }
+      }
+#endif
+      if (ctype >= P4EST_CONNECT_CORNER) {
+        int                 corner;
+
+        for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
+          if (tree_contact[p4est_insul_corners[corner]]) {
+            return 0;
+          }
         }
       }
       return 1;
     }
-    k = (q->x == 0) ? 0 : (q->x == P4EST_ROOT_LEN - qh) ? 2 : 1;
-    n = (q->y == 0) ? 0 : (q->y == P4EST_ROOT_LEN - qh) ? 2 : 1;
+
+    /* check relevant face neighbor trees */
+    k = (q->x == 0) ? -1 : (q->x == P4EST_ROOT_LEN - qh) ? 1 : 0;
+    if (k && tree_contact[P4EST_INSUL_CENTER + k]) {
+      return 0;
+    }
+    n = 3 * ((q->y == 0) ? -1 : (q->y == P4EST_ROOT_LEN - qh) ? 1 : 0);
+    if (n && tree_contact[P4EST_INSUL_CENTER + n]) {
+      return 0;
+    }
 #ifdef P4_TO_P8
-    m = (q->z == 0) ? 0 : (q->z == P4EST_ROOT_LEN - qh) ? 2 : 1;
+    m = 9 * ((q->z == 0) ? -1 : (q->z == P4EST_ROOT_LEN - qh) ? 1 : 0);
+    if (m && tree_contact[P4EST_INSUL_CENTER + m]) {
+      return 0;
+    }
+
+    /* check relevant edge neighbor trees */
+    if (ctype >= P8EST_CONNECT_EDGE) {
+      if (k && n && tree_contact[P4EST_INSUL_CENTER + n + k]) {
+        return 0;
+      }
+      if (k && m && tree_contact[P4EST_INSUL_CENTER + m + k]) {
+        return 0;
+      }
+      if (n && m && tree_contact[P4EST_INSUL_CENTER + m + n]) {
+        return 0;
+      }
+    }
 #endif
 
-    insul = 9 * m + 3 * n + k;
-    P4EST_ASSERT (0 <= insul && insul < P4EST_INSUL);
-    if (!tree_contact[insul]) {
-      return 1;
+    /* check relevant corner neighbor trees */
+    if (ctype >= P4EST_CONNECT_CORNER) {
+      if (k && n &&
+#ifdef P4_TO_P8
+          m &&
+#endif
+          tree_contact[P4EST_INSUL_CENTER + m + n + k]) {
+        return 0;
+      }
     }
+
+    /* we have checked all relevant tree neighbors and found none */
+    return 1;
   }
   else {
     /* test lowest and highest neighbor first */
@@ -1019,9 +983,8 @@ p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
         }
       }
     }
+    return 0;
   }
-
-  return 0;
 }
 
 int
