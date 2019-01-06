@@ -1247,9 +1247,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   const int           rank = p4est->mpirank;
   const int           num_procs = p4est->mpisize;
   int                 i, j, k, l, m, which;
-#ifdef P4EST_ENABLE_DEBUG
-  int                 facewhich;
-#endif
   int                 face;
   int                 first_peer, last_peer;
   int                 quad_contact[P4EST_FACES];
@@ -1276,6 +1273,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   sc_array_t         *borders;
 #ifdef P4EST_ENABLE_DEBUG
   size_t              data_pool_size;
+  int                 facewhich;
 #endif
   int                 ftransform[P4EST_FTRANSFORM];
   int                 face_axis[3];     /* 3 not P4EST_DIM */
@@ -1433,12 +1431,16 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   all_incount = 0;
   skipped = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
-    p4est_comm_tree_info (p4est, nt, btype,
+    /* we need full tree contact even for face or edge balance */
+    p4est_comm_tree_info (p4est, nt, P4EST_CONNECT_FULL,
                           full_tree, tree_contact, NULL, NULL);
     tree_fully_owned = full_tree[0] && full_tree[1];
     any_boundary = 0;
     for (i = 0; i < P4EST_INSUL; ++i) {
-      any_boundary |= tree_contact[i];
+      if (tree_contact[i]) {
+        any_boundary = 1;
+        break;
+      }
     }
     if (any_boundary) {
       tree_flags[nt] |= any_face_flag;
@@ -1480,7 +1482,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       /* this quadrant may be on the boundary with a range of processors */
       q = p4est_quadrant_array_index (tquadrants, zz);
       qh = P4EST_QUADRANT_LEN (q->level);
-      if (p4est_comm_neighborhood_owned (p4est, nt, btype,
+      /* we need full tree contact even for face or edge balance */
+      if (p4est_comm_neighborhood_owned (p4est, nt, P4EST_CONNECT_FULL,
                                          full_tree, tree_contact, q)) {
         /* this quadrant's 3x3 neighborhood is owned by this processor */
         ++skipped;
@@ -1504,7 +1507,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
         for (l = 0; l < 3; ++l) {
           which = m * 9 + k * 3 + l;    /* 2D: 0..8, 3D: 0..26 */
           /* exclude myself from the queries */
-          if (which == P4EST_INSUL / 2) {
+          if (which == P4EST_INSUL_CENTER) {
             continue;
           }
           /* may modify insulq below, never modify q itself! */
@@ -1517,15 +1520,18 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
           /* check boundary status of insulation quadrant */
           quad_contact[0] = (insulq.x < 0);
           quad_contact[1] = (insulq.x >= rh);
+          P4EST_ASSERT (!(quad_contact[0] && quad_contact[1]));
           face_axis[0] = quad_contact[0] || quad_contact[1];
           quad_contact[2] = (insulq.y < 0);
           quad_contact[3] = (insulq.y >= rh);
+          P4EST_ASSERT (!(quad_contact[2] && quad_contact[3]));
           face_axis[1] = quad_contact[2] || quad_contact[3];
 #ifndef P4_TO_P8
           face_axis[2] = 0;
 #else
           quad_contact[4] = (insulq.z < 0);
           quad_contact[5] = (insulq.z >= rh);
+          P4EST_ASSERT (!(quad_contact[4] && quad_contact[5]));
           face_axis[2] = quad_contact[4] || quad_contact[5];
           edge = -1;
           contact_edge_only = 0;
@@ -1537,24 +1543,15 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
             if (!face_axis[1] && !face_axis[2]) {
               contact_face_only = 1;
               face = 0 + quad_contact[1];
-#ifdef P4EST_ENABLE_DEBUG
-              facewhich = P4EST_INSUL / 2 + (2 * quad_contact[1] - 1);
-#endif
             }
             else if (!face_axis[0] && !face_axis[2]) {
               contact_face_only = 1;
               face = 2 + quad_contact[3];
-#ifdef P4EST_ENABLE_DEBUG
-              facewhich = P4EST_INSUL / 2 + 3 * (2 * quad_contact[3] - 1);
-#endif
             }
 #ifdef P4_TO_P8
             else if (!face_axis[0] && !face_axis[1]) {
               contact_face_only = 1;
               face = 4 + quad_contact[5];
-#ifdef P4EST_ENABLE_DEBUG
-              facewhich = P4EST_INSUL / 2 + 9 * (2 * quad_contact[5] - 1);
-#endif
             }
             else if (!face_axis[0]) {
               contact_edge_only = 1;
@@ -1577,6 +1574,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
               P4EST_ASSERT (face >= 0 && face < P4EST_FACES);
               P4EST_ASSERT (quad_contact[face]);
               qtree = p4est_find_face_transform (conn, nt, face, ftransform);
+#ifdef P4EST_ENABLE_DEBUG
+              facewhich = p4est_insul_faces[face];
+#endif
               if (qtree >= 0) {
                 P4EST_ASSERT (tree_contact[facewhich]);
                 p4est_quadrant_transform_face (q, &tosend, ftransform);
