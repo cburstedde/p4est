@@ -152,6 +152,44 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
 }
 
 int
+p4est_quadrant_in_range (const p4est_quadrant_t * fd,
+                         const p4est_quadrant_t * ld,
+                         const p4est_quadrant_t * quadrant)
+{
+  p4est_quadrant_t    quad_last_desc;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (fd));
+  P4EST_ASSERT (fd->level == P4EST_QMAXLEVEL);
+  P4EST_ASSERT (p4est_quadrant_is_valid (ld));
+  P4EST_ASSERT (ld->level == P4EST_QMAXLEVEL);
+  P4EST_ASSERT (p4est_quadrant_compare (fd, ld) <= 0);
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+
+  /* quadrants outside of the root tree cannot be in the range */
+  if (!p4est_quadrant_is_valid (quadrant)) {
+    return 0;
+  }
+
+  /* check that the quadrant's first descendant is not smaller than fd */
+  if (p4est_quadrant_compare (fd, quadrant) > 0 &&
+      (fd->x != quadrant->x || fd->y != quadrant->y
+#ifdef P4_TO_P8
+       || fd->z != quadrant->z
+#endif
+      )) {
+    return 0;
+  }
+
+  /* check that the quadrant's last descendant is not bigger than ld */
+  p4est_quadrant_last_descendant (quadrant, &quad_last_desc, P4EST_QMAXLEVEL);
+  if (p4est_quadrant_compare (&quad_last_desc, ld) > 0) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int
 p4est_tree_is_sorted (p4est_tree_t * tree)
 {
   size_t              iz;
@@ -524,6 +562,11 @@ p4est_is_valid (p4est_t * p4est)
         failed = 1;
         goto failtest;
       }
+      if (!p4est_quadrant_in_range (&tree->first_desc, &tree->last_desc, q)) {
+        P4EST_NOTICE ("p4est invalid first quadrant range\n");
+        failed = 1;
+        goto failtest;
+      }
     }
   }
 
@@ -582,6 +625,11 @@ p4est_is_valid (p4est_t * p4est)
           failed = 1;
           goto failtest;
         }
+      }
+      if (!p4est_quadrant_in_range (&tree->first_desc, &tree->last_desc, q)) {
+        P4EST_NOTICE ("p4est invalid last quadrant range\n");
+        failed = 1;
+        goto failtest;
       }
     }
   }
