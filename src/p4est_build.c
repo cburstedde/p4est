@@ -25,17 +25,17 @@
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
-#include <p4est_search_build.h>
+#include <p4est_build.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_communication.h>
-#include <p8est_search_build.h>
+#include <p8est_build.h>
 #endif
 
 /** Context object for building a new p4est from search callbacks.
  */
-struct p4est_search_build
+struct p4est_build
 {
   p4est_t            *p4est;    /**< New forest being built. */
   p4est_init_t        init_fn;  /**< Passed to quadrant completion. */
@@ -52,9 +52,9 @@ struct p4est_search_build
 };
 
 static void
-p4est_search_build_begin_tree (p4est_search_build_t * build,
-                               p4est_topidx_t which_tree,
-                               p4est_locidx_t quadrants_offset)
+p4est_build_begin_tree (p4est_build_t * build,
+                        p4est_topidx_t which_tree,
+                        p4est_locidx_t quadrants_offset)
 {
   p4est_t            *p4est;
 
@@ -82,20 +82,20 @@ p4est_search_build_begin_tree (p4est_search_build_t * build,
   build->tree->maxlevel = 0;
 }
 
-p4est_search_build_t *
-p4est_search_build_new (p4est_t * from, size_t data_size,
-                        p4est_init_t init_fn, void *user_pointer)
+p4est_build_t      *
+p4est_build_new (p4est_t * from, size_t data_size,
+                 p4est_init_t init_fn, void *user_pointer)
 {
   int                 ell;
   p4est_topidx_t      jt, num_trees;
   p4est_t            *p4est;
   p4est_tree_t       *ftree, *ptree;
-  p4est_search_build_t *build;
+  p4est_build_t      *build;
 
   P4EST_ASSERT (p4est_is_valid (from));
 
   /* create a new p4est structure to be populated */
-  build = P4EST_ALLOC (p4est_search_build_t, 1);
+  build = P4EST_ALLOC (p4est_build_t, 1);
   build->p4est = p4est = P4EST_ALLOC (p4est_t, 1);
   memcpy (p4est, from, sizeof (p4est_t));
   num_trees = from->connectivity->num_trees;
@@ -147,7 +147,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
   build->init_fn = init_fn;
   build->add_init_fn = init_fn;
   if (p4est->first_local_tree >= 0) {
-    p4est_search_build_begin_tree (build, p4est->first_local_tree, 0);
+    p4est_build_begin_tree (build, p4est->first_local_tree, 0);
   }
 
   /*
@@ -166,8 +166,7 @@ p4est_search_build_new (p4est_t * from, size_t data_size,
 }
 
 void
-p4est_search_build_init_add (p4est_search_build_t * build,
-                             p4est_init_t add_init_fn)
+p4est_build_init_add (p4est_build_t * build, p4est_init_t add_init_fn)
 {
   P4EST_ASSERT (build != NULL);
   P4EST_ASSERT (build->p4est != NULL);
@@ -176,7 +175,7 @@ p4est_search_build_init_add (p4est_search_build_t * build,
 }
 
 static              p4est_locidx_t
-p4est_search_build_end_tree (p4est_search_build_t * build)
+p4est_build_end_tree (p4est_build_t * build)
 {
 #ifdef P4EST_ENABLE_DEBUG
   int                 ell;
@@ -266,9 +265,8 @@ p4est_search_build_end_tree (p4est_search_build_t * build)
 }
 
 int
-p4est_search_build_add (p4est_search_build_t * build,
-                        p4est_topidx_t which_tree,
-                        p4est_quadrant_t * quadrant)
+p4est_build_add (p4est_build_t * build,
+                 p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
 {
   p4est_t            *p4est;
   p4est_quadrant_t   *q;
@@ -288,9 +286,8 @@ p4est_search_build_add (p4est_search_build_t * build,
 
   /* finish up previous tree if we are entering a new one */
   while (which_tree > build->cur_tree) {
-    quadrants_offset = p4est_search_build_end_tree (build);
-    p4est_search_build_begin_tree (build, build->cur_tree + 1,
-                                   quadrants_offset);
+    quadrants_offset = p4est_build_end_tree (build);
+    p4est_build_begin_tree (build, build->cur_tree + 1, quadrants_offset);
   }
 
   /* we require that the quadrant fits into the tree's range */
@@ -335,7 +332,7 @@ p4est_search_build_add (p4est_search_build_t * build,
 }
 
 p4est_t            *
-p4est_search_build_complete (p4est_search_build_t * build)
+p4est_build_complete (p4est_build_t * build)
 {
   p4est_topidx_t      jt, last_local_tree, num_trees;
   p4est_locidx_t      quadrants_offset;
@@ -353,11 +350,10 @@ p4est_search_build_complete (p4est_search_build_t * build)
     /* finish last tree of the iteration */
     P4EST_ASSERT (build->cur_tree <= last_local_tree);
     while (last_local_tree > build->cur_tree) {
-      quadrants_offset = p4est_search_build_end_tree (build);
-      p4est_search_build_begin_tree (build, build->cur_tree + 1,
-                                     quadrants_offset);
+      quadrants_offset = p4est_build_end_tree (build);
+      p4est_build_begin_tree (build, build->cur_tree + 1, quadrants_offset);
     }
-    p4est->local_num_quadrants = p4est_search_build_end_tree (build);
+    p4est->local_num_quadrants = p4est_build_end_tree (build);
 
     /* fix quadrants_offset in empty trees > last_local_tree */
     num_trees = p4est->connectivity->num_trees;

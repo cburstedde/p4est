@@ -652,6 +652,13 @@ p4est_search_local (p4est_t * p4est,
   }
 }
 
+void
+p4est_search (p4est_t * p4est, p4est_search_query_t quadrant_fn,
+              p4est_search_query_t point_fn, sc_array_t * points)
+{
+  p4est_search_local (p4est, 0, quadrant_fn, point_fn, points);
+}
+
 static              size_t
 p4est_traverse_array_index (sc_array_t * array, p4est_topidx_t tt)
 {

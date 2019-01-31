@@ -194,6 +194,9 @@ p4est_nodes_new_local (p4est_t * p4est)
               /* can't check for quadrants larger than the root */
               if (q->level == 0 && rlev < 0)
                 continue;
+              /* can't check for quadrants deeper than maxlevel */
+              if (q->level == P4EST_QMAXLEVEL && rlev > 0)
+                continue;
               /* can't check for quadrants larger unless child id
                * and corner line up
                */
@@ -274,7 +277,7 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   int                 contacts, face, corner;
   int                 ftransform[P4EST_FTRANSFORM];
   size_t              ctreez;
-  p4est_topidx_t      ntreeid, ntreeid2, lowest;
+  p4est_topidx_t      ntreeid, lowest;
   p4est_quadrant_t    tmpq, o;
 #ifdef P4_TO_P8
   int                 edge;
@@ -336,8 +339,8 @@ p4est_node_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
       continue;
     }
     /* Transform the node into the other tree's coordinates */
-    ntreeid2 = p4est_find_face_transform (conn, treeid, face, ftransform);
-    P4EST_ASSERT (ntreeid2 == ntreeid);
+    P4EST_EXECUTE_ASSERT_TOPIDX
+      (p4est_find_face_transform (conn, treeid, face, ftransform), ntreeid);
     p4est_quadrant_transform_face (n, &o, ftransform);
     if (ntreeid < lowest) {
       /* we have found a new owning tree */

@@ -158,6 +158,9 @@ typedef int         (*p8est_search_local_t) (p8est_t * p4est,
                                              p4est_locidx_t local_num,
                                              void *point);
 
+/** This typedef is provided for backwards compatibility. */
+typedef p8est_search_local_t p8est_search_query_t;
+
 /** Search through the local part of a forest.
  * The search is especially efficient if multiple targets, called "points"
  * below, are searched for simultaneously.
@@ -220,6 +223,14 @@ void                p8est_search_local (p8est_t * p4est, int call_post,
                                         p8est_search_local_t quadrant_fn,
                                         p8est_search_local_t point_fn,
                                         sc_array_t * points);
+
+/** This function is provided for backwards compatibility.
+ * We call \ref p8est_search_local with call_post = 0.
+ */
+void                p8est_search (p8est_t * p4est,
+                                  p8est_search_query_t quadrant_fn,
+                                  p8est_search_query_t point_fn,
+                                  sc_array_t * points);
 
 /** Callback function for the partition recursion.
  * \param [in] p4est        The forest to traverse.

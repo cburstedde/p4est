@@ -121,7 +121,7 @@ typedef struct p4est_iter_face_info
                                         other, as in the definition of
                                         p4est_connectivity_t */
   int8_t              tree_boundary; /**< boolean: interior face (0),
-                                          boundary face (1) */
+                                          tree boundary face (true) */
   sc_array_t          sides;    /* array of p4est_iter_face_side_t type */
 }
 p4est_iter_face_info_t;
@@ -175,7 +175,7 @@ typedef struct p4est_iter_corner_info
   p4est_t            *p4est;
   p4est_ghost_t      *ghost_layer;
   int8_t              tree_boundary; /**< boolean: interior face (0),
-                                           boundary face (1) */
+                                          tree boundary face (true) */
   sc_array_t          sides; /**< array of type p4est_iter_corner_side_t type */
 }
 p4est_iter_corner_info_t;

@@ -23,48 +23,12 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est.h>
+#include <p4est_empty.h>
 #else
-#include <p8est.h>
+#include <p8est_empty.h>
 #endif
 
-int
-main (int argc, char **argv)
+void
+p4est_empty_noop (void)
 {
-  sc_MPI_Comm         mpicomm;
-  int                 mpiret;
-  int                 size, rank;
-  p4est_connectivity_t *conn;
-  int                 k = 5;
-
-  mpiret = sc_MPI_Init (&argc, &argv);
-  SC_CHECK_MPI (mpiret);
-  mpicomm = sc_MPI_COMM_WORLD;
-  mpiret = sc_MPI_Comm_size (mpicomm, &size);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
-  SC_CHECK_MPI (mpiret);
-
-  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
-  p4est_init (NULL, SC_LP_DEFAULT);
-
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_brick (16, 17, 0, 1);
-#else
-  conn = p8est_connectivity_new_brick (7, 8, 9, 0, 1, 1);
-#endif
-
-  p4est_connectivity_reorder (mpicomm, k, conn, P4EST_CONNECT_FULL);
-
-  SC_CHECK_ABORT (p4est_connectivity_is_valid (conn), "Bad reordering");
-
-  p4est_connectivity_destroy (conn);
-
-  /* clean up and exit */
-  sc_finalize ();
-
-  mpiret = sc_MPI_Finalize ();
-  SC_CHECK_MPI (mpiret);
-
-  return 0;
 }

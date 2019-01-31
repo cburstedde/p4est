@@ -27,7 +27,7 @@ later version.
 <p class="text">
 Please see the <a href="http://github.com/cburstedde/p4est">github repository</a>
 of <tt>p4est</tt> or download the
-<a href="http://p4est.github.io/release/p4est-1.1.tar.gz">latest release tarball</a>.
+<a href="http://p4est.github.io/release/p4est-2.0.tar.gz">latest release tarball</a>.
 The source comes with commented example programs and test cases.
 You can also download
 <a href="https://github.com/p4est/p4est.github.io/tree/master/release/">older
@@ -268,10 +268,40 @@ pages 14:1-14:28
 </div>
 
 <p>
+The <tt>p4est</tt> library is now used to implement AMR in <a
+  href="http://www.mcs.anl.gov/petsc/">PETSc</a>, the Portable Extensible
+Toolkit for Scientific Computation. The interface and design decisions are
+described in this <a href="https://arxiv.org/abs/1508.02470">article</a>.  If
+you use the <tt>p4est</tt> backend for <tt>PETSc</tt> for your publications,
+please cite it as:
+</p>
+
+<div class="citation">
+<p class="cite">
+[3]
+Tobin Isaac, Matthew G. Knepley,<br>
+<em>Support for Non-conformal Meshes in PETSc's DMPlex Interface</em><br>
+(<a href="https://arxiv.org/pdf/1508.02470">download</a>).
+</p>
+
+<pre class="bibtex">
+@ARTICLE{IsaacKnepley15,
+  author = {Tobin Isaac and Matthew G. Knepley},
+  title = {Support for Non-conformal Meshes in {PETSc}'s {DMPlex} Interface},
+  journal = {ACM Transactions on Mathematical Software},
+  eprinttype = {arxiv},
+  eprint = {1508.02470},
+  url = {http://arxiv.org/abs/1508.02470}
+}
+</pre>
+</div>
+
+<p>
 The <tt>p4est</tt> authors:<br>
 <a href="http://burstedde.ins.uni-bonn.de/">Carsten Burstedde</a><br>
 <a href="http://lucaswilcox.com/">Lucas C. Wilcox</a><br>
-<a href="http://home.uchicago.edu/~tisaac/">Tobin Isaac</a><br>
+<a href="http://www.cse.gatech.edu/people/12734/tobin-isaacs/">Tobin
+Isaac</a><br>
 Thanks to our contributors!  Please see the
 <a href="http://github.com/cburstedde/p4est/tree/master/AUTHORS">AUTHORS</a>
 file for details.

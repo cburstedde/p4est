@@ -47,8 +47,11 @@ main (int argc, char **argv)
   const int           fill_uniform = 0;
   /* parallel environment */
   sc_MPI_Comm         mpicomm = sc_MPI_COMM_WORLD;
-  int                 mpisize, submpisize, rank;
+  int                 mpisize, submpisize;
   int                 mpiret;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 rank;
+#endif
   /* p4est */
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
@@ -87,7 +90,9 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_subcomm_new");
 
   /* set variables pertaining to the parallel environment */
+#ifdef P4EST_ENABLE_DEBUG
   rank = p4est->mpirank;
+#endif
   submpisize = mpisize / 2;
   P4EST_ASSERT (submpisize <= p4est->global_num_quadrants);
 

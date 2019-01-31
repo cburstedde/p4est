@@ -21,49 +21,50 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifndef P8EST_SEARCH_BUILD_H
-#define P8EST_SEARCH_BUILD_H
+#ifndef P8EST_BUILD_H
+#define P8EST_BUILD_H
 
 #include <p8est.h>
 
-/** \file p8est_search_build.h
- * Create a new p8est object by running \ref p8est_search_local.
+/** \file p8est_build.h
+ * Create a new p8est object by adding individual quadrants in order.
+ * This can for example be driven by running \ref p8est_search_local.
  * This allows to create a heavily coarsened forest in one pass.
- * It is also legal to add more refined quadrants.
+ * It is also legal to add more highly refined quadrants.
  *
  * The only rules are to respect the original partition boundary
  * and to add non-overlapping quadrants in Morton order.
  */
 
-/** Context object for building a new p4est from search callbacks.
+/** Context object for building a new p4est from individual quadrants.
  */
-typedef struct p8est_search_build p8est_search_build_t;
+typedef struct p8est_build p8est_build_t;
 
 /** Allocate a context for building a new forest.
  * \param [in] from         This forest is used as a template for creation.
  * \param [in] data_size    Data size of the created forest, may be zero.
  * \param [in] init_fn      This functions is called for created quadrants,
- *                          added manually by \ref p8est_search_build_add
+ *                          added manually by \ref p8est_build_add
  *                          or by the internal completion of the subtrees.
  *                          It may be overridden for added quadrants by
- *                          \ref p8est_search_build_init_add.
+ *                          \ref p8est_build_init_add.
  *                          NULL leaves the quadrant data uninitialized.
  * \param [in] user_pointer Registered into the newly built forest.
  * \return                  A context that needs to be processed further.
  */
-p8est_search_build_t *p8est_search_build_new (p8est_t * from,
-                                              size_t data_size,
-                                              p8est_init_t init_fn,
-                                              void *user_pointer);
+p8est_build_t      *p8est_build_new (p8est_t * from,
+                                     size_t data_size,
+                                     p8est_init_t init_fn,
+                                     void *user_pointer);
 
 /** Set a dedicated initialization callback for manually added quadrants.
  * \param [in,out] build    The building context at any stage.
  * \param [in] add_init_fn  Henceforth used for quadrants added by
- *                          \ref p8est_search_build_add.
+ *                          \ref p8est_build_add.
  *                          NULL leaves the quadrant data uninitialized.
  */
-void                p8est_search_build_init_add (p8est_search_build_t * build,
-                                                 p8est_init_t add_init_fn);
+void                p8est_build_init_add (p8est_build_t * build,
+                                          p8est_init_t add_init_fn);
 
 /** This function is usable from a \ref p8est_search_local_t callback.
  * It can also be used outside of a search context using proper care.
@@ -83,16 +84,15 @@ void                p8est_search_build_init_add (p8est_search_build_t * build,
  * \return                  True if the quadrant was added, false if it was
  *                          identical to the previous one and thus not added.
  */
-int                 p8est_search_build_add (p8est_search_build_t * build,
-                                            p4est_topidx_t which_tree,
-                                            p8est_quadrant_t * quadrant);
+int                 p8est_build_add (p8est_build_t * build,
+                                     p4est_topidx_t which_tree,
+                                     p8est_quadrant_t * quadrant);
 
-/** Finalize the construction of the new forest after the search.
+/** Finalize the construction of the new forest after adding quadrants.
  * \param [in,out] build    The building context will be deallocated inside.
  * \return                  A valid forest object.
  *                          Its revision number is set to zero.
  */
-p8est_t            *p8est_search_build_complete (p8est_search_build_t *
-                                                 build);
+p8est_t            *p8est_build_complete (p8est_build_t * build);
 
-#endif /* ! P8EST_SEARCH_BUILD_H */
+#endif /* ! P8EST_BUILD_H */
