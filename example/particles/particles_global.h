@@ -27,8 +27,8 @@
  * It is included from a c file that may be preceded by p4est_to_p8est.h.
  */
 
-#ifndef PART_GLOBAL_H
-#define PART_GLOBAL_H
+#ifndef P4EST_PARTICLES_GLOBAL_H
+#define P4EST_PARTICLES_GLOBAL_H
 
 #include <sc_statistics.h>
 #ifndef P4_TO_P8
@@ -139,4 +139,4 @@ part_global_t;
 
 SC_EXTERN_C_END;
 
-#endif /* !PART_GLOBAL_H */
+#endif /* !P4EST_PARTICLES_GLOBAL_H */

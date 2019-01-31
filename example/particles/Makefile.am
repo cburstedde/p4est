@@ -7,7 +7,7 @@ if P4EST_ENABLE_BUILD_2D
 bin_PROGRAMS += \
   example/particles/p4est_particles
 example_particles_p4est_particles_SOURCES = \
-  example/particles/global.h \
+  example/particles/particles_global.h \
   example/particles/particles2.c
 
 LINT_CSOURCES += $(example_particles_p4est_particles_SOURCES)
@@ -17,7 +17,7 @@ if P4EST_ENABLE_BUILD_3D
 bin_PROGRAMS += \
   example/particles/p8est_particles
 example_particles_p8est_particles_SOURCES = \
-  example/particles/global.h \
+  example/particles/particles_global.h \
   example/particles/particles3.c
 
 LINT_CSOURCES += $(example_particles_p8est_particles_SOURCES)

@@ -39,7 +39,7 @@
 #endif /* P4_TO_P8 */
 #include <sc_notify.h>
 #include <sc_options.h>
-#include "global.h"
+#include "particles_global.h"
 
 #define PARTICLES_xstr(s) PARTICLES_str(s)
 #define PARTICLES_str(s) #s
