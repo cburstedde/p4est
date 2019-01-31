@@ -22,12 +22,47 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
+#include <p4est_extended.h>
+#else
+#include <p8est_extended.h>
+#endif /* P4_TO_P8 */
 #include <sc_options.h>
 #include "spheres_global.h"
+
+#define SPHERES_xstr(s) SPHERES_str(s)
+#define SPHERES_str(s) #s
+#define SPHERES_48() SPHERES_xstr(P4EST_CHILDREN)
+
+static void
+create_forest (spheres_global_t * g)
+{
+  /* create empty initial forest */
+  g->conn = p4est_connectivity_new_periodic ();
+  g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0, g->minlevel, 1,
+                            sizeof (qu_data_t), NULL, g);
+}
+
+static void
+destroy_forest (spheres_global_t * g)
+{
+  p4est_destroy (g->p4est);
+  p4est_connectivity_destroy (g->conn);
+}
 
 static void
 run (spheres_global_t * g)
 {
+  create_forest (g);
+
+  destroy_forest (g);
+}
+
+static int
+usagerr (sc_options_t * opt, const char *msg)
+{
+  SC_GLOBAL_LERRORF ("Usage required: %s\n", msg);
+  return 1;
 }
 
 int
@@ -35,8 +70,8 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 ue;
-#if 0
   int                 first_argc;
+#if 0
   const char         *opt_notify, *opt_vtk, *opt_build;
 #endif
   sc_options_t       *opt;
@@ -61,19 +96,47 @@ main (int argc, char **argv)
   /*** read command line parameters ***/
 
   opt = sc_options_new (argv[0]);
+  sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
+  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, 0, "Highest level");
+  sc_options_add_double (opt, 't', "vdensity", &g->vdensity,
+                         0., "Volume density");
 
+  sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
+                       "Configure for scaling test");
+
+  sc_options_add_string (opt, 'P', "prefix", &g->prefix,
+                         "sph" SPHERES_48 ()"res", "prefix for file output");
+
+  /* proceed in run-once loop for clean abort */
   ue = 0;
-  while (0);
-  if (ue) {
-    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+  do {
+    /*** parse command line and assign configuration variables ***/
+
+    first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                   opt, argc, argv);
+    if (first_argc < 0 || first_argc != argc) {
+      ue = usagerr (opt, "Invalid option format or non-option arguments");
+      break;
+    }
+    P4EST_GLOBAL_ESSENTIALF ("Dimension is %d\n", P4EST_DIM);
+    sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
+
+    /* check for consistency of parameters (not there yet) */
+    if (ue) {
+      break;
+    }
 
     /*** run program ***/
 
-    if (g->production) {
+    if (g->scaling) {
       sc_package_set_verbosity (sc_package_id, SC_LP_PRODUCTION);
       sc_package_set_verbosity (p4est_package_id, SC_LP_PRODUCTION);
     }
     run (g);
+  }
+  while (0);
+  if (ue) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
   }
 
   /*** clean up and exit ***/

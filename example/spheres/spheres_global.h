@@ -39,12 +39,26 @@
 
 SC_EXTERN_C_BEGIN;
 
+typedef struct qu_data
+{
+}
+qu_data_t;
+
 typedef struct spheres_global
 {
   sc_MPI_Comm         mpicomm;
   int                 mpisize, mpirank;
 
-  int                 production;
+  int                 minlevel;
+  int                 maxlevel;
+  int                 scaling;
+
+  double              vdensity;
+
+  const char         *prefix;
+
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est;
 }
 spheres_global_t;
 
