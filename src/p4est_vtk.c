@@ -1036,12 +1036,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                             int num_cell_scalars,
                             int num_cell_vectors, va_list ap)
 {
-  /* This function needs to do nothing if there is no data. */
-  if (!
-      (write_tree || write_level || write_rank || wrap_rank
-       || num_cell_scalars || num_cell_vectors))
-    return cont;
-
   const int           mpirank = cont->p4est->mpirank;
   int                 retval;
   int                 i, all = 0;
@@ -1066,8 +1060,18 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
 
+  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
+  char                vtkCellDataString[BUFSIZ] = "";
+  int                 printed = 0;
+
   P4EST_ASSERT (cont != NULL && cont->writing);
   P4EST_ASSERT (wrap_rank >= 0);
+
+  /* This function needs to do nothing if there is no data. */
+  if (!
+      (write_tree || write_level || write_rank || wrap_rank
+       || num_cell_scalars || num_cell_vectors))
+    return cont;
 
   values = P4EST_ALLOC (sc_array_t *, num_cell_scalars + num_cell_vectors);
   names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors);
@@ -1116,14 +1120,10 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   }
 
   /* Check for pointer variable marking the end of variable data input. */
-  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
   SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
                   "data must be specified by passing, as the last argument, the current "
                   P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING
                   "_vtk.h for more information.");
-
-  char                vtkCellDataString[BUFSIZ] = "";
-  int                 printed = 0;
 
   if (write_tree)
     printed +=
@@ -1692,8 +1692,7 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
       snprintf (filename_cpy, BUFSIZ, "%s", cont->filename);
       filename_basename = basename (filename_cpy);
       fprintf (cont->pvtufile,
-               "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename_basename,
-               p);
+               "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename_basename, p);
       fprintf (cont->visitfile, "%s_%04d.vtu\n", filename_basename, p);
     }
     fprintf (cont->pvtufile, "  </PUnstructuredGrid>\n");

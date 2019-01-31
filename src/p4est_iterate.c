@@ -1101,10 +1101,12 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
     p4est_topidx_t      llt = lq->p.which_tree;
 
     for (side = 0; side < num_sides; side++) {
-      cside = p4est_iter_cside_array_index_int (&info->sides, side);
-      p4est_quadrant_t   *q = cside->quad;
       int                 dir;
       int                 l = -1;
+      p4est_quadrant_t   *q;
+
+      cside = p4est_iter_cside_array_index_int (&info->sides, side);
+      q = cside->quad;
 
       if (q == NULL || (l = q->level) == lmax) {
         continue;
@@ -1229,7 +1231,7 @@ static void
 p8est_iter_init_corner_from_edge (p4est_iter_corner_args_t * args,
                                   p8est_iter_edge_args_t * edge_args)
 {
-  int                 j, k, dir, ndir1, ndir2;;
+  int                 j, k, dir, ndir1, ndir2;
   p8est_iter_corner_info_t *info = &(args->info);
   p8est_iter_edge_side_t *eside;
   p8est_iter_corner_side_t *cside;

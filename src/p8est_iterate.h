@@ -119,7 +119,7 @@ typedef struct p8est_iter_face_info
                                         other, as in the definition of
                                         p8est_connectivity_t */
   int8_t              tree_boundary; /**< boolean: interior face (0),
-                                          boundary face (1) */
+                                          tree boundary face (true) */
   sc_array_t          sides;    /* array of p8est_iter_face_side_t type */
 }
 p8est_iter_face_info_t;
@@ -200,7 +200,7 @@ typedef struct p8est_iter_edge_info
   p8est_t            *p4est;
   p8est_ghost_t      *ghost_layer;
   int8_t              tree_boundary;  /**< boolean: interior face (0),
-                                           boundary face (1) */
+                                           tree boundary face (true) */
   sc_array_t          sides; /**< array of p8est_iter_edge_side_t type */
 }
 p8est_iter_edge_info_t;
@@ -254,7 +254,7 @@ typedef struct p8est_iter_corner_info
   p8est_t            *p4est;
   p8est_ghost_t      *ghost_layer;
   int8_t              tree_boundary; /**< boolean: interior face (0),
-                                           boundary face (1) */
+                                          tree boundary face (true) */
   sc_array_t          sides; /**< array of p8est_iter_corner_side_t type */
 }
 p8est_iter_corner_info_t;

@@ -1,0 +1,90 @@
+Compiling for Windows
+=====================
+
+  It is possible to compile p4est for Windows and build a DLL for use
+in an external project within the Microsoft Visual Studio toolchain.
+
+Instructions:
+  1. Install MSYS2 from http://www.msys2.org/
+
+  2. Follow instructions to update MSYS2 package database
+     (see manual on http://www.msys2.org)
+
+  3. Install the gcc toolchain using MSYS2 package manager
+
+        pacman -S libtool
+        packman -S automake
+        pacman -S mingw-w64-x86_64-toolchain
+        (select all)
+
+  4. Install lua package
+
+        cd ~/
+        wget http://www.lua.org/ftp/lua-5.3.4.tar.gz
+        tar -xzvf lua-5.3.4.tar.gz
+        cd lua-5.3.4/
+        make
+        make install
+
+     Checking lua works OK
+        lua -v
+
+  5. Building p4est largely follows the instructions provided for Linux with
+     some alterations.
+     The number of the required external packages was reduced in this example.
+     The only essential change is disabling MPI as it does not seem to work
+     correctly on a Windows machine.
+
+    a. It is also required to change some of the files as some of the declarations
+        and instructions are not available on Windows.
+
+        File sc/sc.c, line 29:
+        #define SIGUSR2 26
+
+        File sc/src/sc.h line 96:
+        //#include <libgen.h>
+
+        File sc/src/sc.h line 121:
+        #define __attribute__(x)
+
+        In files src/p4est_algorithms.c, p8est_algorithms.c, p6est.c
+        Include definitions of htonl-function
+        #define htonl(_val) ( ((uint16_t)(_val) & 0xff00) >> 8 | ((uint16_t)(_val) & 0xff) << 8 )
+
+    b. Compile the package (MPI is disabled as some changes on signals were made
+        and it seems to result in the program crashing when MPI functions are used).
+
+        cd p4est/
+        ./bootstrap
+        ./configure --disable-mpi --disable-vtk-build --without-blas
+        ./make
+        ./make install
+
+  6. Build DLLs suitable for Windows.  Linking .a files to MS VS project
+      works fine for some projects but not for this one as it uses some functions
+      that are implemented differently in Windows.
+
+        gcc -g -O2 -o libp4est.dll src/src*.o -shared -Wl,--output-def=libp4est.def -mwindows
+        -Wl,--out-implib,libp4est.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import local/lib/libsc.a
+        -lz -lgomp -lpthread -llua
+
+        gcc -g -O2 -o libsc.dll sc/src/src*.o -shared -Wl,--output-def=libsc.def -mwindows
+        -Wl,--out-implib,libsc.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import sc/libb64/.libs/*.o
+        -lz -lgomp -lpthread -llua
+
+  7. Open Windows command promt and change directory to that with the compiled package.
+      The following instructions create .lib files from .def and .a files.
+
+        lib /def:libp4est.def /machine:x64
+        lib /def:libsc.def /machine:x64
+
+  8. Now the .lib and .dll files should be suitable to compile them within the
+     MS Visual Studio framework.
+     For that .lib files should be referenced as usual in Project
+     Properties->Linker->Input->Additional dependencies and .dll files should
+     be placed in the same folder with the .exe file or included in PATH.
+
+Note:
+1. The instructions given below have been tested for MS VS 2012.
+2. The package can be compiled, built and installed under CygWin using
+   instructions identical to those for linux.

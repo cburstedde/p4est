@@ -31,14 +31,15 @@ static void
 p6est_profile_union (sc_array_t * a, sc_array_t * b, sc_array_t * c)
 {
   size_t              az, bz, na;
-  P4EST_ASSERT (SC_ARRAY_IS_OWNER (c));
-  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
-  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
-  P4EST_ASSERT (c->elem_size == sizeof (int8_t));
   int8_t              al, bl, finel, *cc;
   p4est_qcoord_t      finesize, coarsesize;
   sc_array_t         *finer;
   size_t             *fineincr;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (c));
+  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (c->elem_size == sizeof (int8_t));
 
   sc_array_truncate (c);
   az = 0;
@@ -89,14 +90,15 @@ static void
 p6est_profile_intersection (sc_array_t * a, sc_array_t * b, sc_array_t * c)
 {
   size_t              az, bz, na;
-  P4EST_ASSERT (SC_ARRAY_IS_OWNER (c));
-  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
-  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
-  P4EST_ASSERT (c->elem_size == sizeof (int8_t));
   int8_t              al, bl, finel, *cc;
   p4est_qcoord_t      finesize, coarsesize;
   sc_array_t         *finer;
   size_t             *fineincr;
+
+  P4EST_ASSERT (SC_ARRAY_IS_OWNER (c));
+  P4EST_ASSERT (a->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (b->elem_size == sizeof (int8_t));
+  P4EST_ASSERT (c->elem_size == sizeof (int8_t));
 
   sc_array_truncate (c);
   az = 0;

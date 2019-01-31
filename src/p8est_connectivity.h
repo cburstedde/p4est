@@ -726,7 +726,7 @@ void                p8est_connectivity_permute (p8est_connectivity_t * conn,
  * \param [in]     ctype      determines when an edge exists in the dual graph
  *                            of the connectivity structure.
  */
-void                p8est_connectivity_reorder (MPI_Comm comm, int k,
+void                p8est_connectivity_reorder (sc_MPI_Comm comm, int k,
                                                 p8est_connectivity_t * conn,
                                                 p8est_connect_type_t ctype);
 

@@ -46,6 +46,8 @@
 
 #ifndef P4_TO_P8
 
+#if 0                           /* currently unused */
+
 /* *INDENT-OFF* */
 
 /** Store the number of quadrants to add for complete and balance stages. */
@@ -69,6 +71,8 @@ static const p4est_qcoord_t p4est_balance_coord[8][P4EST_DIM] =
 static const int    pbco = P4EST_FACES;
 
 /* *INDENT-ON* */
+
+#endif /* currently unused */
 
 #endif /* !P4_TO_P8 */
 
