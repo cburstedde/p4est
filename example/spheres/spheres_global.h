@@ -30,7 +30,7 @@
 #ifndef P4EST_SPHERES_GLOBAL_H
 #define P4EST_SPHERES_GLOBAL_H
 
-#include <sc_statistics.h>
+#include <sc_random.h>
 #ifndef P4_TO_P8
 #include <p4est.h>
 #else
@@ -53,12 +53,18 @@ typedef struct spheres_global
   int                 maxlevel;
   int                 scaling;
 
-  double              vdensity;
+  double              lfraction;
+  double              spherelems;
 
   const char         *prefix;
 
   p4est_connectivity_t *conn;
   p4est_t            *p4est;
+
+  sc_rand_state_t     rstate;
+
+  p4est_locidx_t      lsph;
+  double             *sphr;
 }
 spheres_global_t;
 
