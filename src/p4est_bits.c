@@ -1918,3 +1918,12 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
 }
+
+void
+p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * rstate)
+{
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+  P4EST_ASSERT (rstate != NULL);
+
+  *rstate = p4est_quadrant_linear_id (q, P4EST_QMAXLEVEL);
+}

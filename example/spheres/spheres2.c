@@ -42,15 +42,6 @@
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
 static void
-p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * state)
-{
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-  P4EST_ASSERT (state != NULL);
-
-  *state = p4est_quadrant_linear_id (q, P4EST_QMAXLEVEL);
-}
-
-static void
 create_forest (spheres_global_t * g)
 {
   int                 mpiret;
