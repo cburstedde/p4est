@@ -107,6 +107,7 @@
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
+#define p4est_search_query_t            p8est_search_query_t
 #define p4est_search_local_t            p8est_search_local_t
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
@@ -290,6 +291,7 @@
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
+#define p4est_search                    p8est_search
 #define p4est_search_local              p8est_search_local
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_all                p8est_search_all
