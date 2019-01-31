@@ -44,6 +44,7 @@
 /* redefine macros */
 #define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
+#define P4EST_DIM_POW                   P8EST_DIM_POW
 #define P4EST_FACES                     P8EST_FACES
 #define P4EST_CHILDREN                  P8EST_CHILDREN
 #define P4EST_HALF                      P8EST_HALF
