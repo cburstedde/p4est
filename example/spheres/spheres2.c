@@ -58,6 +58,7 @@ create_forest (spheres_global_t * g)
   double              coef, fact, vmult;
   double              Vexp, Nexp, r;
   double              vdensity, sumrd, gsrd;
+  double             *sphere;
 #if 0
   int                 iscount;
   double              dnu, dnq;
@@ -113,7 +114,7 @@ create_forest (spheres_global_t * g)
   /* generate the spheres on minimum refinement level */
   sumrd = 0.;
   sph_excl = sph_incl = 0;
-  g->sphr = P4EST_ALLOC (double, SPH_MEM * sph_incl);
+  g->sphr = sc_array_new (SPH_MEM * sizeof (double));
   for (which_tree = g->p4est->first_local_tree;
        which_tree <= g->p4est->last_local_tree; ++which_tree) {
     tree = p4est_tree_array_index (g->p4est->trees, which_tree);
@@ -133,18 +134,15 @@ create_forest (spheres_global_t * g)
       if (qunsph > 0) {
         qh = P4EST_QUADRANT_LEN (q->level);
         sph_incl = sph_excl + qunsph;
-        g->sphr = P4EST_REALLOC (g->sphr, double, SPH_MEM * sph_incl);
-        for (li = sph_excl; li < sph_incl; ++li) {
-          g->sphr[SPH_MEM * li + 0] =
-            (q->x + qh * sc_rand (&g->rstate)) * irootlen;
-          g->sphr[SPH_MEM * li + 1] =
-            (q->y + qh * sc_rand (&g->rstate)) * irootlen;
+        sphere = (double *) sc_array_push_count (g->sphr, qunsph);
+        for (li = sph_excl; li < sph_incl; ++li, sphere += SPH_MEM) {
+          sphere[0] = (q->x + qh * sc_rand (&g->rstate)) * irootlen;
+          sphere[1] = (q->y + qh * sc_rand (&g->rstate)) * irootlen;
 #ifdef P4_TO_P8
-          g->sphr[SPH_MEM * li + 2] =
-            (q->z + qh * sc_rand (&g->rstate)) * irootlen;
+          sphere[2] = (q->z + qh * sc_rand (&g->rstate)) * irootlen;
 #endif
           if (coef <= 0.) {
-            /* this happens if rmin == rmax */
+            /* this happens if rmin == rmax: no need to sample */
             r = rmin;
           }
           else {
@@ -155,7 +153,7 @@ create_forest (spheres_global_t * g)
             r = rmin * sqrt (fact);
 #endif
           }
-          g->sphr[SPH_MEM * li + P4EST_DIM] = r;
+          sphere[P4EST_DIM] = r;
           sumrd += P4EST_DIM_POW (2. * r);
         }
         sph_excl = sph_incl;
@@ -163,10 +161,10 @@ create_forest (spheres_global_t * g)
     }
   }
   P4EST_ASSERT (sph_incl == sph_excl);
-  g->lsph = sph_incl;
+  P4EST_ASSERT (sph_incl == (p4est_locidx_t) g->sphr->elem_count);
 
   /* get globally unique numbers for the spheres */
-  lnsph = (p4est_gloidx_t) g->lsph;
+  lnsph = (p4est_gloidx_t) g->sphr->elem_count;
   mpiret = sc_MPI_Exscan (&lnsph, &gnsph, 1, P4EST_MPI_GLOIDX,
                           sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -190,7 +188,7 @@ create_forest (spheres_global_t * g)
 static void
 destroy_forest (spheres_global_t * g)
 {
-  P4EST_FREE (g->sphr);
+  sc_array_destroy (g->sphr);
 
   p4est_destroy (g->p4est);
   p4est_connectivity_destroy (g->conn);
