@@ -65,6 +65,7 @@ typedef struct spheres_global
   sc_rand_state_t     rstate;
 
   sc_array_t         *sphr;
+  p4est_gloidx_t      gsoff;
 }
 spheres_global_t;
 

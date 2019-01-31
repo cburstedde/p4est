@@ -37,7 +37,9 @@
 #define SPHERES_str(s) #s
 #define SPHERES_48() SPHERES_xstr(P4EST_CHILDREN)
 
-#define SPH_MEM (P4EST_DIM + 1)
+#define SPH_RAD (P4EST_DIM + 0)
+#define SPH_MID (P4EST_DIM + 1)
+#define SPH_MEM (P4EST_DIM + 2)
 
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
@@ -144,7 +146,8 @@ create_forest (spheres_global_t * g)
             r = rmin * sqrt (fact);
 #endif
           }
-          sphere[P4EST_DIM] = r;
+          sphere[SPH_RAD] = r;
+          sphere[SPH_MID] = -1.;
           sumrd += P4EST_DIM_POW (2. * r);
         }
         sph_excl = sph_incl;
@@ -167,6 +170,7 @@ create_forest (spheres_global_t * g)
       ("Sphere expected volume %g ideal count %g generated %lld\n",
        Vexp, vmult * g->conn->num_trees, (long long) (gnsph + lnsph));
   }
+  g->gsoff = gnsph;
 
   /* confirm expected volume */
   mpiret = sc_MPI_Allreduce (&sumrd, &gsrd, 1, sc_MPI_DOUBLE,
@@ -174,6 +178,62 @@ create_forest (spheres_global_t * g)
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_PRODUCTIONF ("Total volume ideal %g achieved %g\n",
                             vdensity * g->conn->num_trees, gsrd);
+}
+
+typedef struct spheres_search
+{
+  p4est_locidx_t      lsph;
+
+}
+spheres_search_t;
+
+static void
+refine_spheres (spheres_global_t * g)
+{
+  p4est_locidx_t      li, lsph;
+  double             *sphere;
+  sc_array_t         *points;
+  spheres_search_t    spheres_search, *sss = &spheres_search;
+
+  sss->lsph = lsph = (p4est_locidx_t) g->sphr->elem_count;
+
+  /* search partition to find receivers */
+
+#if 0
+  /* prepare data to hold search results */
+  is->otherbufs = sc_array_new (sizeof (vo_otherbuf_t));
+  is->staylocal = sc_array_new_count (sizeof (char), is->lsph);
+  sc_array_memset (is->staylocal, 0);
+  is->lrmatch[0] = is->lrmatch[1] = 0;
+  is->newother = 0;
+  is->lastother = NULL;
+  is->lipool = sc_mempool_new (sizeof (p4est_locidx_t));
+#endif
+
+  /* search all quadrants, local and remote, that participate in spheres */
+  points = sc_array_new_count (sizeof (p4est_locidx_t), lsph);
+  for (li = 0; li < lsph; ++li) {
+    sphere = (double *) sc_array_index (g->sphr, li);
+    P4EST_ASSERT (sphere[SPH_MID] == -1.);
+    sphere[SPH_MID] = (double) (g->gsoff + li);
+    *(p4est_locidx_t *) sc_array_index_int (points, li) = li;
+  }
+
+#if 0
+  /* we are hacking the user data access */
+  p4est_search_all (vo->p4est, 0, sall_qfn, sall_pfn, points);
+#endif
+  sc_array_destroy_null (&points);
+
+  /* send the spheres */
+
+  /* reverse communication pattern */
+
+  /* receive the spheres */
+
+  /* refine based on received spheres */
+
+  /* partition and transfer owned spheres */
 }
 
 static void
@@ -189,6 +249,7 @@ static void
 run (spheres_global_t * g)
 {
   create_forest (g);
+  refine_spheres (g);
 
   destroy_forest (g);
 }
