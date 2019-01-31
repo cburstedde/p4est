@@ -303,15 +303,6 @@ sc_array_swap_init (sc_array_t * array, sc_array_t * from, size_t elem_size)
   sc_array_init (from, elem_size);
 }
 
-static void
-sc_array_destroy_null (sc_array_t ** parr)
-{
-  P4EST_ASSERT (parr != NULL);
-  P4EST_ASSERT (*parr != NULL);
-  sc_array_destroy (*parr);
-  *parr = NULL;
-}
-
 /** Turn statistics collected so far into one value */
 static void
 sc_stats_collapse (sc_statinfo_t * stats)
