@@ -53,6 +53,7 @@ typedef struct spheres_global
   int                 maxlevel;
   int                 scaling;
 
+  double              rmax;
   double              lfraction;
   double              spherelems;
 

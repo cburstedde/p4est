@@ -29,6 +29,7 @@
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #endif /* P4_TO_P8 */
+#include <sc_functions.h>
 #include <sc_options.h>
 #include "spheres_global.h"
 
@@ -56,6 +57,7 @@ create_forest (spheres_global_t * g)
   double              rmin, rmax, rgeom2;
   double              coef, fact, vmult;
   double              Vexp, Nexp, r;
+  double              vdensity, sumrd, gsrd;
 #if 0
   int                 iscount;
   double              dnu, dnq;
@@ -87,8 +89,8 @@ create_forest (spheres_global_t * g)
                             sizeof (qu_data_t), NULL, g);
 
   /* minimum and maximum radius determined by target levels */
-  rmax = .5;
-  rmin = .5 * g->spherelems * pow (.5, g->maxlevel);
+  rmax = g->rmax;
+  rmin = .5 * g->spherelems * sc_intpowf (.5, g->maxlevel);
   rmin = SC_MIN (rmin, rmax);
   SC_ASSERT (rmin > 0.);
   P4EST_GLOBAL_PRODUCTIONF
@@ -105,9 +107,11 @@ create_forest (spheres_global_t * g)
 #endif
 
   /* the multiplication factor is rescaled to compare to a square/cube */
-  vmult = pow (g->lfraction, P4EST_DIM) / Vexp;
+  vdensity = P4EST_DIM_POW (g->lfraction);
+  vmult = vdensity / Vexp;
 
   /* generate the spheres on minimum refinement level */
+  sumrd = 0.;
   sph_excl = sph_incl = 0;
   g->sphr = P4EST_ALLOC (double, SPH_MEM * sph_incl);
   for (which_tree = g->p4est->first_local_tree;
@@ -122,7 +126,7 @@ create_forest (spheres_global_t * g)
       p4est_quadrant_srand (q, &g->rstate);
 
       /* number of spheres relative to volume ratio of quadrant to tree */
-      Nexp = vmult * pow (.5, P4EST_DIM * q->level);
+      Nexp = vmult * sc_intpowf (.5, P4EST_DIM * q->level);
       qunsph = (p4est_locidx_t) sc_rand_poisson (&g->rstate, Nexp);
 
       /* generate spheres for this element */
@@ -152,6 +156,7 @@ create_forest (spheres_global_t * g)
 #endif
           }
           g->sphr[SPH_MEM * li + P4EST_DIM] = r;
+          sumrd += P4EST_DIM_POW (2. * r);
         }
         sph_excl = sph_incl;
       }
@@ -169,10 +174,17 @@ create_forest (spheres_global_t * g)
     gnsph = 0;                  /* value undefined so far */
   }
   if (g->mpirank == g->mpisize - 1) {
-    SC_GLOBAL_PRODUCTIONF
-      ("Spheres expected volume %g ideal count %g generated %lld\n",
+    P4EST_PRODUCTIONF
+      ("Sphere expected volume %g ideal count %g generated %lld\n",
        Vexp, vmult * g->conn->num_trees, (long long) (gnsph + lnsph));
   }
+
+  /* confirm expected volume */
+  mpiret = sc_MPI_Allreduce (&sumrd, &gsrd, 1, sc_MPI_DOUBLE,
+                             sc_MPI_SUM, g->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_PRODUCTIONF ("Total volume ideal %g achieved %g\n",
+                            vdensity * g->conn->num_trees, gsrd);
 }
 
 static void
@@ -195,7 +207,7 @@ run (spheres_global_t * g)
 static int
 usagerr (sc_options_t * opt, const char *msg)
 {
-  SC_GLOBAL_LERRORF ("Usage required: %s\n", msg);
+  P4EST_GLOBAL_LERRORF ("Usage required: %s\n", msg);
   return 1;
 }
 
@@ -233,16 +245,17 @@ main (int argc, char **argv)
   sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
   sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, -1,
                       "Highest level");
+  sc_options_add_double (opt, 'R', "rmax", &g->rmax, .5, "Max sphere radius");
   sc_options_add_double (opt, 'f', "lfraction", &g->lfraction, .3,
                          "Length density of spheres");
   sc_options_add_double (opt, 's', "spherelems", &g->spherelems, 1.,
-                         "min elements per sphere diameter");
+                         "Min elements per sphere diameter");
 
   sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
                        "Configure for scaling test");
 
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
-                         "sph" SPHERES_48 ()"res", "prefix for file output");
+                         "sph" SPHERES_48 ()"res", "Prefix for file output");
 
   /* proceed in run-once loop for clean abort */
   ue = 0;
@@ -269,6 +282,9 @@ main (int argc, char **argv)
     }
     if (g->maxlevel < g->minlevel || g->maxlevel > P4EST_QMAXLEVEL) {
       ue = usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
+    }
+    if (g->rmax <= 0.) {
+      ue = usagerr (opt, "Maximum sphere radius positive");
     }
     if (g->lfraction < 0.) {
       ue = usagerr (opt, "Length density non-negative");
