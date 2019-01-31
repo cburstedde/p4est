@@ -24,17 +24,17 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_build.h>
 #include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
-#include <p4est_search_build.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_build.h>
 #include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
-#include <p8est_search_build.h>
 #include <p8est_vtk.h>
 #endif /* P4_TO_P8 */
 #include <sc_notify.h>
@@ -2015,7 +2015,7 @@ typedef struct pa_bitem
 pa_bitem_t;
 
 static void
-buildp_add (part_global_t * g, p4est_search_build_t * bcon,
+buildp_add (part_global_t * g, p4est_build_t * bcon,
             p4est_topidx_t which_tree, pa_bitem_t * bit)
 {
   int                 i;
@@ -2034,7 +2034,7 @@ buildp_add (part_global_t * g, p4est_search_build_t * bcon,
     /*** we are at maximum level, all particles go into quadrant ***/
 
     g->add_count = (p4est_locidx_t) bit->parr.elem_count;
-    p4est_search_build_add (bcon, which_tree, &bit->quad);
+    p4est_build_add (bcon, which_tree, &bit->quad);
   }
   else {
 
@@ -2119,7 +2119,7 @@ buildp (part_global_t * g, int k)
   p4est_gloidx_t     *pertree;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
-  p4est_search_build_t *bcon;
+  p4est_build_t      *bcon;
   p4est_vtk_context_t *cont;
   p4est_t            *build;
   qu_data_t          *qud;
@@ -2148,9 +2148,9 @@ buildp (part_global_t * g, int k)
   t0_build = sc_MPI_Wtime ();
 
   /* iterate through particles to choose the relevant ones for new forest */
-  bcon = p4est_search_build_new (g->p4est, sizeof (bu_data_t),
-                                 buildp_init_default, g);
-  p4est_search_build_init_add (bcon, buildp_init_add);
+  bcon = p4est_build_new (g->p4est, sizeof (bu_data_t),
+                          buildp_init_default, g);
+  p4est_build_init_add (bcon, buildp_init_add);
   sc_array_init (&inq, sizeof (p4est_locidx_t));
   pad = (pa_data_t *) sc_array_index_begin (g->padata);
   for (lpnum = 0, lall = 0, tt = g->p4est->first_local_tree;
@@ -2191,7 +2191,7 @@ buildp (part_global_t * g, int k)
   /* create a temporary sparse forest */
   cont = NULL;
   pdata = NULL;
-  build = p4est_search_build_complete (bcon);
+  build = p4est_build_complete (bcon);
   if (!g->scaling || g->verylast) {
     P4EST_GLOBAL_ESSENTIALF ("Built forest with %lld quadrants from %lld\n",
                              (long long) build->global_num_quadrants,
