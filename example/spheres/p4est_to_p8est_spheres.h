@@ -36,6 +36,7 @@
 #define p4est_sphere_t                  p8est_sphere_t
 #define p4est_spheres_t                 p8est_spheres_t
 
+#define p4est_quadrant_sphere_box       p8est_quadrant_sphere_box
 #define p4est_sphere_match_approx       p8est_sphere_match_approx
 #define p4est_sphere_match_exact        p8est_sphere_match_exact
 

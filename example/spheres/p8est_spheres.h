@@ -22,6 +22,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_spheres.h
+ * Functions to create a random distribution of spheres in the unit cube.
+ * These spheres can be intersected with quadrants.
+ * This file ignores vertex coordinates in a \ref p8est_connectivity_t,
+ * and neither does transformations using \ref p8est_geometry_t.
+ */
+
 #ifndef P8EST_SPHERES_H
 #define P8EST_SPHERES_H
 
@@ -44,6 +51,13 @@ typedef struct p8est_spheres
   p8est_t            *p4est;
 }
 p8est_spheres_t;
+
+/** Use quadrant coordinates to represent it with a sphere type.
+ * \param [in] quadrant     Valid quadrant.
+ * \param [out] sph         On output, contains quadrant dimensions.
+ */
+void                p8est_quadrant_sphere_box
+  (const p8est_quadrant_t * quadrant, p8est_sphere_t * sph);
 
 /** Optimistically check for intersection of sphere surface and cube volume.
  * \param [in] box  We use the sphere data structure to define a box

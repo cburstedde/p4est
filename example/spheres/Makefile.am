@@ -25,7 +25,7 @@ if P4EST_ENABLE_BUILD_3D
 
 # Some of the sphere logic is generic enough for the library
 libp4est_installed_headers += \
-  example/spheres/p8est_spheres.h
+  example/spheres/p8est_spheres.h example/spheres/p4est_to_p8est_spheres.h
 libp4est_compiled_sources += \
   example/spheres/p8est_spheres.c
 

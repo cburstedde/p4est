@@ -23,12 +23,32 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include "p4est_spheres.h"
 #else
+#include <p8est_bits.h>
 #include "p8est_spheres.h"
 #endif
 
 #define P4EST_CUBE_DIAG_INV     (1. / P4EST_CUBE_DIAG)
+#define P4EST_ROOT_LEN_INV      (1. / P4EST_ROOT_LEN)
+
+void
+p4est_quadrant_sphere_box (const p4est_quadrant_t * quadrant,
+                           p4est_sphere_t * sph)
+{
+  double              r;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
+  P4EST_ASSERT (sph != NULL);
+
+  sph->radius = r = .5 * P4EST_QUADRANT_LEN (quadrant->level);
+  sph->center[0] = P4EST_ROOT_LEN_INV * quadrant->x + r;
+  sph->center[1] = P4EST_ROOT_LEN_INV * quadrant->y + r;
+#ifdef P4_TO_P8
+  sph->center[2] = P4EST_ROOT_LEN_INV * quadrant->z + r;
+#endif
+}
 
 /* Optimistic check.  We may return 1 without being sure. */
 int
