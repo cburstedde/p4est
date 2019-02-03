@@ -80,9 +80,11 @@ typedef struct spheres_global
 
   sc_rand_state_t     rstate;
 
+  /* data of generated spheres */
   sc_array_t         *sphr;
   p4est_locidx_t      lsph;
   p4est_gloidx_t      gsoff;
+  sc_array_t         *lbytes;
   sc_array_t         *goffsets;
 
   /* metadata for partition search */
@@ -102,6 +104,10 @@ typedef struct spheres_global
   int                 num_to_procs, num_from_procs;
   sc_array_t         *to_requests, *from_requests;
   sc_array_t         *from_procs;
+
+  /* refine and partition */
+  p4est_locidx_t      lqindex, lqindex_refined;
+  sc_array_t         *lbytes_refined;
 }
 spheres_global_t;
 

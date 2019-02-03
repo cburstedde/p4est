@@ -64,8 +64,50 @@ static int
 spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                          p4est_quadrant_t * quadrant)
 {
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+
+  /* update variables for the non-refining case */
+  *(int *) sc_array_index_int (g->lbytes_refined, g->lqindex_refined) =
+    *(int *) sc_array_index_int (g->lbytes, g->lqindex);
+  ++g->lqindex;
+  ++g->lqindex_refined;
+
+  /* the replace callback updates the variables if refined */
   return qud->set_refine;
+}
+
+static void
+spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
+                          int num_outgoing, p4est_quadrant_t * outgoing[],
+                          int num_incoming, p4est_quadrant_t * incoming[])
+{
+  int                 outg_ibytes;
+  p4est_locidx_t      outg_spheres, li;
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
+#if 0
+  int                 c;
+  qu_data_t          *qud_out;
+  qud_out = (qu_data_t *) outgoing[0]->p.user_data;
+#endif
+
+  P4EST_ASSERT (num_outgoing == 1);
+  P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
+
+  /* we know that the refine callback for this quadrant returned true */
+  (void) sc_array_push_count (g->lbytes_refined, P4EST_CHILDREN - 1);
+  outg_ibytes = *(int *) sc_array_index (g->lbytes, g->lqindex - 1);
+  P4EST_ASSERT (outg_ibytes % (int) sizeof (p4est_sphere_t) == 0);
+  outg_spheres = (p4est_locidx_t) (outg_ibytes / sizeof (p4est_sphere_t));
+  memset (sc_array_index (g->lbytes_refined, g->lqindex_refined - 1), 0,
+          P4EST_CHILDREN * sizeof (int));
+  for (li = 0; li < outg_spheres; ++li) {
+    /* TODO dummy: fix this */
+  }
+  *(int *) sc_array_index (g->lbytes_refined, g->lqindex_refined - 1) =
+    outg_spheres;
+
+  g->lqindex_refined += P4EST_CHILDREN - 1;
 }
 
 static void
@@ -119,6 +161,8 @@ create_forest (spheres_global_t * g)
   sumrd = 0.;
   sph_excl = sph_incl = 0;
   g->sphr = sc_array_new (sizeof (p4est_sphere_t));
+  g->lbytes = sc_array_new_count (sizeof (int),
+                                  g->p4est->local_num_quadrants);
   for (which_tree = g->p4est->first_local_tree;
        which_tree <= g->p4est->last_local_tree; ++which_tree) {
     tree = p4est_tree_array_index (g->p4est->trees, which_tree);
@@ -133,6 +177,8 @@ create_forest (spheres_global_t * g)
       /* number of spheres relative to volume ratio of quadrant to tree */
       Nexp = vmult * sc_intpowf (.5, P4EST_DIM * q->level);
       qunsph = (p4est_locidx_t) sc_rand_poisson (&g->rstate, Nexp);
+      *(int *) sc_array_index (g->lbytes, tree->quadrants_offset + tin) =
+        (int) (qunsph * sizeof (p4est_sphere_t));
 
       /* generate spheres for this element */
       if (qunsph > 0) {
@@ -547,8 +593,20 @@ refine_spheres (spheres_global_t * g)
   sc_array_destroy_null (&points);
 
   /* perform actual refinement */
+  g->lqindex = g->lqindex_refined = 0;
+  P4EST_ASSERT ((p4est_locidx_t) g->lbytes->elem_count ==
+                g->p4est->local_num_quadrants);
+  g->lbytes_refined = sc_array_new_count (sizeof (int),
+                                          g->p4est->local_num_quadrants);
   p4est_refine_ext (g->p4est, 0, P4EST_QMAXLEVEL, spheres_refine_callback,
-                    spheres_init_zero, NULL);
+                    spheres_init_zero, spheres_replace_callback);
+  P4EST_ASSERT (g->lqindex == (p4est_locidx_t) g->lbytes->elem_count);
+  P4EST_ASSERT (g->lqindex_refined ==
+                (p4est_locidx_t) g->lbytes_refined->elem_count);
+  P4EST_ASSERT ((p4est_locidx_t) g->lbytes_refined->elem_count ==
+                g->p4est->local_num_quadrants);
+  sc_array_destroy (g->lbytes);
+  g->lbytes = g->lbytes_refined;
 
   /*-------------- partition and transfer owned spheres --------------*/
 
@@ -581,6 +639,7 @@ static void
 destroy_forest (spheres_global_t * g)
 {
   sc_array_destroy_null (&g->sphr);
+  sc_array_destroy_null (&g->lbytes);
   sc_array_destroy_null (&g->goffsets);
 
   p4est_destroy (g->p4est);
