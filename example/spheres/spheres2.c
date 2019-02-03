@@ -66,10 +66,13 @@ spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+  int                 ltint;
 
   /* update variables for the non-refining case */
   *(int *) sc_array_index_int (g->lbytes_refined, g->lqindex_refined) =
-    *(int *) sc_array_index_int (g->lbytes, g->lqindex);
+    ltint = *(int *) sc_array_index_int (g->lbytes, g->lqindex);
+  P4EST_ASSERT (ltint % sizeof (p4est_sphere_t) == 0);
+  g->lsph_offset += ltint / (p4est_locidx_t) sizeof (p4est_sphere_t);
   ++g->lqindex;
   ++g->lqindex_refined;
 
@@ -77,36 +80,94 @@ spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   return qud->set_refine;
 }
 
+#ifdef P4EST_ENABLE_DEBUG
+
+static int
+center_in_box (const p4est_sphere_t * box, const p4est_sphere_t * sph)
+{
+  int                 i;
+
+  for (i = 0; i < P4EST_DIM; ++i) {
+    if (fabs (box->center[i] - sph->center[i]) > box->radius) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+#endif
+
 static void
 spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                           int num_outgoing, p4est_quadrant_t * outgoing[],
                           int num_incoming, p4est_quadrant_t * incoming[])
 {
-  int                 outg_ibytes;
-  p4est_locidx_t      outg_spheres, li;
-  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
-#if 0
   int                 c;
-  qu_data_t          *qud_out;
-  qud_out = (qu_data_t *) outgoing[0]->p.user_data;
+  int                 outg_ibytes;
+  double              discr[P4EST_DIM];
+  size_t              newbytes;
+  char               *newpos;
+  sc_array_t          neworder[P4EST_CHILDREN];
+  p4est_locidx_t      outg_spheres, prev_spheres, li;
+  p4est_sphere_t     *sph;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_sphere_t      box;
 #endif
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
 
   P4EST_ASSERT (num_outgoing == 1);
   P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
 
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_quadrant_sphere_box (outgoing[0], &box);
+#endif
+  discr[0] = incoming[1]->x / irootlen;
+  discr[1] = incoming[2]->y / irootlen;
+#ifdef P4_TO_P8
+  discr[2] = incoming[4]->z / irootlen;
+#endif
+  for (c = 0; c < P4EST_CHILDREN; ++c) {
+    sc_array_init (&neworder[c], sizeof (p4est_sphere_t));
+  }
+
+  P4EST_ASSERT (g->lqindex >= 1);
+  P4EST_ASSERT (g->lqindex_refined >= 1);
+
   /* we know that the refine callback for this quadrant returned true */
   (void) sc_array_push_count (g->lbytes_refined, P4EST_CHILDREN - 1);
   outg_ibytes = *(int *) sc_array_index (g->lbytes, g->lqindex - 1);
-  P4EST_ASSERT (outg_ibytes % (int) sizeof (p4est_sphere_t) == 0);
-  outg_spheres = (p4est_locidx_t) (outg_ibytes / sizeof (p4est_sphere_t));
-  memset (sc_array_index (g->lbytes_refined, g->lqindex_refined - 1), 0,
-          P4EST_CHILDREN * sizeof (int));
-  for (li = 0; li < outg_spheres; ++li) {
-    /* TODO dummy: fix this */
-  }
-  *(int *) sc_array_index (g->lbytes_refined, g->lqindex_refined - 1) =
-    outg_spheres;
+  P4EST_ASSERT (outg_ibytes % sizeof (p4est_sphere_t) == 0);
+  outg_spheres = outg_ibytes / (p4est_locidx_t) sizeof (p4est_sphere_t);
+  prev_spheres = g->lsph_offset - outg_spheres;
+  P4EST_ASSERT (0 <= prev_spheres && prev_spheres <= g->lsph);
 
+  /* sort spheres in child quadrant order */
+  for (li = 0; li < outg_spheres; ++li) {
+    sph = (p4est_sphere_t *) sc_array_index_int (g->sphr, prev_spheres + li);
+    P4EST_ASSERT (center_in_box (&box, sph));
+    c = 0;
+    c += (sph->center[0] > discr[0]);
+    c += (sph->center[1] > discr[1]) << 1;
+#ifdef P4_TO_P8
+    c += (sph->center[2] > discr[2]) << 2;
+#endif
+    P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+    *(p4est_sphere_t *) sc_array_push (&neworder[c]) = *sph;
+  }
+
+  /* assign sort results by child */
+  newpos = (char *) sc_array_index_null (g->sphr, prev_spheres);
+  for (c = 0; c < P4EST_CHILDREN; ++c) {
+    if ((newbytes = neworder[c].elem_count * sizeof (p4est_sphere_t)) > 0) {
+      memcpy (newpos, neworder[c].array, newbytes);
+    }
+    *(int *) sc_array_index (g->lbytes_refined, g->lqindex_refined - 1 + c) =
+      (int) newbytes;
+    newpos += newbytes;
+    sc_array_reset (&neworder[c]);
+  }
+
+  /* finally update the running offset */
   g->lqindex_refined += P4EST_CHILDREN - 1;
 }
 
@@ -594,6 +655,7 @@ refine_spheres (spheres_global_t * g)
 
   /* perform actual refinement */
   g->lqindex = g->lqindex_refined = 0;
+  g->lsph_offset = 0;
   P4EST_ASSERT ((p4est_locidx_t) g->lbytes->elem_count ==
                 g->p4est->local_num_quadrants);
   g->lbytes_refined = sc_array_new_count (sizeof (int),
@@ -605,6 +667,7 @@ refine_spheres (spheres_global_t * g)
                 (p4est_locidx_t) g->lbytes_refined->elem_count);
   P4EST_ASSERT ((p4est_locidx_t) g->lbytes_refined->elem_count ==
                 g->p4est->local_num_quadrants);
+  P4EST_ASSERT (g->lsph_offset == g->lsph);
   sc_array_destroy (g->lbytes);
   g->lbytes = g->lbytes_refined;
 

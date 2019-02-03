@@ -107,6 +107,7 @@ typedef struct spheres_global
 
   /* refine and partition */
   p4est_locidx_t      lqindex, lqindex_refined;
+  p4est_locidx_t      lsph_offset;
   sc_array_t         *lbytes_refined;
 }
 spheres_global_t;
