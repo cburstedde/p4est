@@ -231,7 +231,8 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (g != NULL && g->p4est == p4est);
   P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < g->mpisize);
   P4EST_ASSERT (point != NULL);
-  P4EST_ASSERT (g->box.radius == .5 * P4EST_QUADRANT_LEN (quadrant->level));
+  P4EST_ASSERT (g->box.radius ==
+                .5 * P4EST_QUADRANT_LEN (quadrant->level) * irootlen);
 
   li = *(p4est_locidx_t *) point;
   sph = (p4est_sphere_t *) sc_array_index_int (g->sphr, li);

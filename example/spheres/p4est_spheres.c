@@ -42,7 +42,8 @@ p4est_quadrant_sphere_box (const p4est_quadrant_t * quadrant,
   P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
   P4EST_ASSERT (sph != NULL);
 
-  sph->radius = r = .5 * P4EST_QUADRANT_LEN (quadrant->level);
+  sph->radius = r =
+    .5 * P4EST_QUADRANT_LEN (quadrant->level) * P4EST_ROOT_LEN_INV;
   sph->center[0] = P4EST_ROOT_LEN_INV * quadrant->x + r;
   sph->center[1] = P4EST_ROOT_LEN_INV * quadrant->y + r;
 #ifdef P4_TO_P8
