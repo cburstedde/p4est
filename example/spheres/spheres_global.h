@@ -88,6 +88,7 @@ typedef struct spheres_global
   int                 last_to_rank;
   p4est_sphere_t      box;
   sc_array_t         *to_procs;
+  sc_array_t         *sphere_procs;
   sr_buf_t           *last_to_proc;
 
   /* metadata for pattern reversal */

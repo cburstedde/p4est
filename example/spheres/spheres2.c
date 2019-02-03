@@ -206,6 +206,7 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
                          void *point)
 {
   spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
+  int                 last_sphere_proc;
   p4est_locidx_t      li;
   p4est_sphere_t     *sph;
   sph_item_t         *item;
@@ -249,8 +250,10 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
 #endif
 
   /* access send buffer for remote process */
+  last_sphere_proc = *(int *) sc_array_index_int (g->sphere_procs, li);
   if (pfirst != g->last_to_rank) {
     P4EST_ASSERT (g->last_to_rank < pfirst);
+    P4EST_ASSERT (last_sphere_proc <= g->last_to_rank);
 
     /* we have found a new receiver process */
     *(int *) sc_array_push (g->notify) = pfirst;
@@ -264,6 +267,15 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
     item = (sph_item_t *) sc_array_index (to_proc->items, 0);
   }
   else {
+    /* check whether the sphere is a duplicate */
+    P4EST_ASSERT (last_sphere_proc <= pfirst);
+    if (last_sphere_proc == pfirst) {
+#ifdef SPHERES_CHATTY
+      P4EST_INFOF ("Duplicate in %d %d: %ld\n", pfirst, plast, (long) li);
+#endif
+      return 0;
+    }
+
     /* pust to existing send buffer for current remote process */
     to_proc = g->last_to_proc;
     P4EST_ASSERT (to_proc->rank == pfirst);
@@ -273,6 +285,7 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
     item = (sph_item_t *) sc_array_push (to_proc->items);
     ++*g->last_payload;
   }
+  *(int *) sc_array_index_int (g->sphere_procs, li) = pfirst;
 
   /* pack sphere into send buffer */
   item->sph = *sph;
@@ -364,6 +377,8 @@ refine_spheres (spheres_global_t * g)
   g->notify = sc_array_new (sizeof (int));
   g->payload = sc_array_new (sizeof (int));
   g->last_payload = NULL;
+  g->sphere_procs = sc_array_new_count (sizeof (int), g->lsph);
+  sc_array_memset (g->sphere_procs, -1);
 
   /* search for remote quadrants that receive spheres */
   points = sc_array_new_count (sizeof (p4est_locidx_t), g->lsph);
@@ -397,6 +412,7 @@ refine_spheres (spheres_global_t * g)
        (sc_MPI_Request *) sc_array_index_int (g->to_requests, q));
     SC_CHECK_MPI (mpiret);
   }
+  sc_array_destroy_null (&g->sphere_procs);
 
   /*------------------ reverse communication pattern -----------------*/
 
