@@ -22,18 +22,22 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#include <sc_functions.h>
+#include <sc_options.h>
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
-#include "p4est_spheres.h"
+#include <p4est_search.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_extended.h>
-#include "p8est_spheres.h"
+#include <p8est_search.h>
 #endif /* P4_TO_P8 */
-#include <sc_functions.h>
-#include <sc_options.h>
 #include "spheres_global.h"
+
+#if 0
+#define SPHERES_CHATTY
+#endif
 
 #define SPHERES_xstr(s) SPHERES_str(s)
 #define SPHERES_str(s) #s
@@ -84,7 +88,7 @@ create_forest (spheres_global_t * g)
   rmax = g->rmax;
   rmin = .5 * g->spherelems * sc_intpowf (.5, g->maxlevel);
   rmin = SC_MIN (rmin, rmax);
-  SC_ASSERT (rmin > 0.);
+  P4EST_ASSERT (rmin > 0.);
   P4EST_GLOBAL_PRODUCTIONF
     ("Generating spheres with radii %g to %g\n", rmin, rmax);
 
@@ -153,9 +157,10 @@ create_forest (spheres_global_t * g)
   }
   P4EST_ASSERT (sph_incl == sph_excl);
   P4EST_ASSERT (sph_incl == (p4est_locidx_t) g->sphr->elem_count);
+  g->lsph = sph_incl;
 
   /* get globally unique numbers for the spheres */
-  lnsph = (p4est_gloidx_t) g->sphr->elem_count;
+  lnsph = (p4est_gloidx_t) g->lsph;
   mpiret = sc_MPI_Exscan (&lnsph, &gnsph, 1, P4EST_MPI_GLOIDX,
                           sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -177,51 +182,126 @@ create_forest (spheres_global_t * g)
                             vdensity * g->conn->num_trees, gsrd);
 }
 
-typedef struct spheres_search
+static int
+spheres_partition_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
+                            p4est_quadrant_t * quadrant, int pfirst,
+                            int plast, void *point)
 {
-  p4est_locidx_t      lsph;
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
 
+  P4EST_ASSERT (g != NULL && g->p4est == p4est);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < g->mpisize);
+  P4EST_ASSERT (point == NULL);
+
+  /* we are not trying to find local spheres */
+  if (pfirst == plast && pfirst == g->mpirank) {
+    return 0;
+  }
+
+  /* record quadrant's position and size */
+  p4est_quadrant_sphere_box (quadrant, &g->box);
+  return 1;
 }
-spheres_search_t;
+
+static int
+spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
+                         p4est_quadrant_t * quadrant, int pfirst, int plast,
+                         void *point)
+{
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
+  p4est_locidx_t      li;
+  p4est_sphere_t     *sph;
+  sph_item_t         *item;
+  sr_buf_t           *to_proc;
+
+  P4EST_ASSERT (g != NULL && g->p4est == p4est);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < g->mpisize);
+  P4EST_ASSERT (point != NULL);
+  P4EST_ASSERT (g->box.radius == .5 * P4EST_QUADRANT_LEN (quadrant->level));
+
+  li = *(p4est_locidx_t *) point;
+  sph = (p4est_sphere_t *) sc_array_index_int (g->sphr, li);
+
+  /* we may be up in the tree branches */
+  if (pfirst < plast) {
+    if (!p4est_sphere_match_approx (&g->box, sph, g->thickness)) {
+#ifdef SPHERES_CHATTY
+      P4EST_INFOF ("No approx match in %d %d for %ld\n",
+                   pfirst, plast, (long) li);
+#endif
+      return 0;
+    }
+
+    /* an optimistic match is good enough when we're walking the tree */
+    return 1;
+  }
+
+  /* we have found the partition of one remote process */
+  P4EST_ASSERT (pfirst == plast);
+  P4EST_ASSERT (pfirst != g->mpirank);
+  if (!p4est_sphere_match_exact (&g->box, sph, g->thickness)) {
+#ifdef SPHERES_CHATTY
+    P4EST_INFOF ("No exact match in %d %d for %ld\n",
+                 pfirst, plast, (long) li);
+#endif
+    return 0;
+  }
+
+#ifdef SPHERES_CHATTY
+  P4EST_INFOF ("Found in %d %d: %ld\n", pfirst, plast, (long) li);
+#endif
+
+  /* access send buffer for remote process */
+  if (pfirst != g->last_to_rank) {
+    P4EST_ASSERT (g->last_to_rank < pfirst);
+    g->last_to_rank = pfirst;
+    g->last_to_proc = to_proc = (sr_buf_t *) sc_array_push (g->to_procs);
+    to_proc->rank = pfirst;
+    to_proc->items = sc_array_new_count (sizeof (sph_item_t), 1);
+    item = (sph_item_t *) sc_array_index (to_proc->items, 0);
+  }
+  else {
+    to_proc = g->last_to_proc;
+    P4EST_ASSERT (to_proc->rank == pfirst);
+    P4EST_ASSERT (to_proc == (sr_buf_t *)
+                  sc_array_index (g->to_procs, g->to_procs->elem_count - 1));
+    P4EST_ASSERT (to_proc->items->elem_count > 0);
+    item = (sph_item_t *) sc_array_push (to_proc->items);
+  }
+
+  /* pack sphere into send buffer */
+  item->sph = *sph;
+  item->gid = g->gsoff + (p4est_gloidx_t) li;
+
+  /* this return value is ignored */
+  return 0;
+}
 
 static void
 refine_spheres (spheres_global_t * g)
 {
-  p4est_locidx_t      li, lsph;
+  size_t              zz;
+  p4est_locidx_t      li;
   sc_array_t         *points;
-#if 0
-  p4est_sphere_t     *sph;
-#endif
-  spheres_search_t    spheres_search, *sss = &spheres_search;
+  sr_buf_t           *proc;
 
-  sss->lsph = lsph = (p4est_locidx_t) g->sphr->elem_count;
+  /*---------------- search partition to find receivers --------------*/
 
-  /* search partition to find receivers */
+  /* prepare data structures for sending spheres */
+  g->last_to_proc = NULL;
+  g->last_to_rank = -1;
+  g->to_procs = sc_array_new (sizeof (sr_buf_t));
 
-#if 0
-  /* prepare data to hold search results */
-  is->otherbufs = sc_array_new (sizeof (vo_otherbuf_t));
-  is->staylocal = sc_array_new_count (sizeof (char), is->lsph);
-  sc_array_memset (is->staylocal, 0);
-  is->lrmatch[0] = is->lrmatch[1] = 0;
-  is->newother = 0;
-  is->lastother = NULL;
-  is->lipool = sc_mempool_new (sizeof (p4est_locidx_t));
-#endif
-
-  /* search all quadrants, local and remote, that participate in spheres */
-  points = sc_array_new_count (sizeof (p4est_locidx_t), lsph);
-  for (li = 0; li < lsph; ++li) {
-#if 0
-    sph = (p4est_sphere_t *) sc_array_index (g->sphr, li);
-#endif
+  /* search for remote quadrants that receive spheres */
+  points = sc_array_new_count (sizeof (p4est_locidx_t), g->lsph);
+  for (li = 0; li < g->lsph; ++li) {
     *(p4est_locidx_t *) sc_array_index_int (points, li) = li;
   }
-
-#if 0
-  /* we are hacking the user data access */
-  p4est_search_all (vo->p4est, 0, sall_qfn, sall_pfn, points);
+#ifdef SPHERES_CHATTY
+  P4EST_INFOF ("Searching partition for %ld local spheres\n", (long) g->lsph);
 #endif
+  p4est_search_partition (g->p4est, 0, spheres_partition_quadrant,
+                          spheres_partition_point, points);
   sc_array_destroy_null (&points);
 
   /* send the spheres */
@@ -229,6 +309,14 @@ refine_spheres (spheres_global_t * g)
   /* reverse communication pattern */
 
   /* receive the spheres */
+
+  for (zz = 0; zz < g->to_procs->elem_count; ++zz) {
+    proc = (sr_buf_t *) sc_array_index (g->to_procs, zz);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    P4EST_ASSERT (proc->items != NULL);
+    sc_array_destroy (proc->items);
+  }
+  sc_array_destroy_null (&g->to_procs);
 
   /* refine based on received spheres */
 
@@ -238,7 +326,7 @@ refine_spheres (spheres_global_t * g)
 static void
 destroy_forest (spheres_global_t * g)
 {
-  sc_array_destroy (g->sphr);
+  sc_array_destroy_null (&g->sphr);
 
   p4est_destroy (g->p4est);
   p4est_connectivity_destroy (g->conn);
@@ -295,6 +383,8 @@ main (int argc, char **argv)
   sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, -1,
                       "Highest level");
   sc_options_add_double (opt, 'R', "rmax", &g->rmax, .5, "Max sphere radius");
+  sc_options_add_double (opt, 't', "thickness", &g->thickness, .05,
+                         "Relative sphere thickness");
   sc_options_add_double (opt, 'f', "lfraction", &g->lfraction, .3,
                          "Length density of spheres");
   sc_options_add_double (opt, 's', "spherelems", &g->spherelems, 1.,

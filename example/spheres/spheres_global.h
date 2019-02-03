@@ -24,7 +24,7 @@
 
 /*
  * This is an internal header file.
- * It is included from a c file that may be preceded by p4est_to_p8est.h.
+ * It is included from a C file that may be preceded by p4est_to_p8est.h.
  */
 
 #ifndef P4EST_SPHERES_GLOBAL_H
@@ -32,9 +32,9 @@
 
 #include <sc_random.h>
 #ifndef P4_TO_P8
-#include <p4est.h>
+#include "p4est_spheres.h"
 #else
-#include <p8est.h>
+#include "p8est_spheres.h"
 #endif /* P4_TO_P8 */
 
 SC_EXTERN_C_BEGIN;
@@ -43,6 +43,20 @@ typedef struct qu_data
 {
 }
 qu_data_t;
+
+typedef struct sph_item
+{
+  p4est_sphere_t      sph;
+  p4est_gloidx_t      gid;
+}
+sph_item_t;
+
+typedef struct sr_buf
+{
+  int                 rank;
+  sc_array_t         *items;
+}
+sr_buf_t;
 
 typedef struct spheres_global
 {
@@ -54,6 +68,7 @@ typedef struct spheres_global
   int                 scaling;
 
   double              rmax;
+  double              thickness;
   double              lfraction;
   double              spherelems;
 
@@ -65,7 +80,14 @@ typedef struct spheres_global
   sc_rand_state_t     rstate;
 
   sc_array_t         *sphr;
+  p4est_locidx_t      lsph;
   p4est_gloidx_t      gsoff;
+
+  /* metadata for partition search */
+  int                 last_to_rank;
+  p4est_sphere_t      box;
+  sc_array_t         *to_procs;
+  sr_buf_t           *last_to_proc;
 }
 spheres_global_t;
 
