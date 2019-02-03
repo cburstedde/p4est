@@ -82,6 +82,7 @@ typedef struct spheres_global
   sc_array_t         *sphr;
   p4est_locidx_t      lsph;
   p4est_gloidx_t      gsoff;
+  sc_array_t         *goffsets;
 
   /* metadata for partition search */
   int                 last_to_rank;

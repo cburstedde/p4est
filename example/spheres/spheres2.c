@@ -49,32 +49,18 @@ static void
 create_forest (spheres_global_t * g)
 {
   int                 mpiret;
+  int                 p;
   double              rmin, rmax, rgeom2;
   double              coef, fact, vmult;
   double              Vexp, Nexp, r;
   double              vdensity, sumrd, gsrd;
-#if 0
-  int                 iscount;
-  double              dnu, dnq;
-  double              smin, smax, sexp, sdiv, s;
-  size_t              zz, zno;
-  sc_array_t         *points;
-  sc_array_t         *notif;
-  sc_array_t         *npayl;
-  sc_array_t         *orecs;
-  sc_MPI_Request     *sreqs, *rreqs;
-#endif
   p4est_topidx_t      which_tree;
   p4est_locidx_t      ntrel, tin;
   p4est_locidx_t      qunsph;
   p4est_locidx_t      sph_excl, sph_incl;
   p4est_locidx_t      li;
-  p4est_gloidx_t      lnsph, gnsph;
-#if 0
-  p4est_locidx_t      spoffs;
-  p4est_gloidx_t      lml[5], lmg[5];
-#endif
   p4est_qcoord_t      qh;
+  p4est_gloidx_t      lg, *gval;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
   p4est_sphere_t     *sph;
@@ -159,20 +145,24 @@ create_forest (spheres_global_t * g)
   P4EST_ASSERT (sph_incl == (p4est_locidx_t) g->sphr->elem_count);
   g->lsph = sph_incl;
 
-  /* get globally unique numbers for the spheres */
-  lnsph = (p4est_gloidx_t) g->lsph;
-  mpiret = sc_MPI_Exscan (&lnsph, &gnsph, 1, P4EST_MPI_GLOIDX,
-                          sc_MPI_SUM, g->mpicomm);
+  /* obtain globally unique numbers for the spheres */
+  g->goffsets = sc_array_new_count (sizeof (p4est_gloidx_t), g->mpisize + 1);
+  *(p4est_gloidx_t *) sc_array_index (g->goffsets, 0) = 0;
+  lg = (p4est_gloidx_t) g->lsph;
+  mpiret = sc_MPI_Allgather (&lg, 1, P4EST_MPI_GLOIDX,
+                             sc_array_index (g->goffsets, 1),
+                             1, P4EST_MPI_GLOIDX, g->mpicomm);
   SC_CHECK_MPI (mpiret);
-  if (g->mpirank == 0) {
-    gnsph = 0;                  /* value undefined so far */
+  lg = 0;
+  for (p = 1; p <= g->mpisize; ++p) {
+    gval = (p4est_gloidx_t *) sc_array_index (g->goffsets, p);
+    *gval = (lg += *gval);
   }
-  if (g->mpirank == g->mpisize - 1) {
-    P4EST_PRODUCTIONF
-      ("Sphere expected volume %g ideal count %g generated %lld\n",
-       Vexp, vmult * g->conn->num_trees, (long long) (gnsph + lnsph));
-  }
-  g->gsoff = gnsph;
+  g->gsoff = *(p4est_gloidx_t *) sc_array_index (g->goffsets, g->mpirank);
+  lg = *(p4est_gloidx_t *) sc_array_index (g->goffsets, g->mpisize);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Sphere expected volume %g ideal count %g generated %lld\n",
+     Vexp, vmult * g->conn->num_trees, (long long) lg);
 
   /* confirm expected volume */
   mpiret = sc_MPI_Allreduce (&sumrd, &gsrd, 1, sc_MPI_DOUBLE,
@@ -280,6 +270,15 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 refine_spheres (spheres_global_t * g)
 {
+#if 0
+  int                 iscount;
+  double              smin, smax, sexp, sdiv, s;
+  size_t              zz, zno;
+  sc_array_t         *notif;
+  sc_array_t         *npayl;
+  sc_array_t         *orecs;
+  sc_MPI_Request     *sreqs, *rreqs;
+#endif
   size_t              zz;
   p4est_locidx_t      li;
   sc_array_t         *points;
@@ -327,6 +326,7 @@ static void
 destroy_forest (spheres_global_t * g)
 {
   sc_array_destroy_null (&g->sphr);
+  sc_array_destroy_null (&g->goffsets);
 
   p4est_destroy (g->p4est);
   p4est_connectivity_destroy (g->conn);
@@ -375,6 +375,12 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   sc_init (g->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+#ifdef SPHERES_CHATTY
+  P4EST_GLOBAL_INFOF ("Sizeof sphere %u item %u\n",
+                      (unsigned) sizeof (p4est_sphere_t),
+                      (unsigned) sizeof (sph_item_t));
+#endif
 
   /*** read command line parameters ***/
 
