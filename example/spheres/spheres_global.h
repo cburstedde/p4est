@@ -98,6 +98,8 @@ typedef struct spheres_global
 
   /* send and receive messages */
   int                 num_to_procs, num_from_procs;
+  sc_array_t         *to_requests, *from_requests;
+  sc_array_t         *from_procs;
 }
 spheres_global_t;
 

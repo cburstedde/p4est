@@ -44,6 +44,12 @@
 #define SPHERES_str(s) #s
 #define SPHERES_48() SPHERES_xstr(P4EST_CHILDREN)
 
+typedef enum
+{
+  SPHERES_TAG_SPHERES = P4EST_COMM_TAG_LAST
+}
+spheres_tags;
+
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
 static void
@@ -279,18 +285,12 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 refine_spheres (spheres_global_t * g)
 {
-#if 0
-  int                 iscount;
-  double              smin, smax, sexp, sdiv, s;
-  size_t              zz, zno;
-  sc_array_t         *notif;
-  sc_array_t         *npayl;
-  sc_array_t         *orecs;
-  sc_MPI_Request     *sreqs, *rreqs;
-#endif
-  size_t              zz;
+  int                 mpiret;
+  int                 q;
+  int                 num_from_spheres;
   p4est_locidx_t      li;
   sc_array_t         *points;
+  sc_array_t         *pi;
   sr_buf_t           *proc;
 
   /*---------------- search partition to find receivers --------------*/
@@ -315,31 +315,91 @@ refine_spheres (spheres_global_t * g)
                           spheres_partition_point, points);
   sc_array_destroy_null (&points);
 
-  /* send the spheres */
+  /*------------------------ send the spheres ------------------------*/
+
+  P4EST_ASSERT (g->notify->elem_count == g->to_procs->elem_count);
   P4EST_ASSERT (g->notify->elem_count == g->payload->elem_count);
   g->num_to_procs = (int) g->notify->elem_count;
+  g->to_requests =
+    sc_array_new_count (sizeof (sc_MPI_Request), g->num_to_procs);
+  for (q = 0; q < g->num_to_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->to_procs, q);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    P4EST_ASSERT (proc->rank == *(int *) sc_array_index_int (g->notify, q));
+    P4EST_ASSERT (proc->items != NULL);
+    pi = proc->items;
+    P4EST_ASSERT (pi->elem_size == sizeof (sph_item_t));
+    mpiret = sc_MPI_Isend
+      (pi->array, pi->elem_count * pi->elem_size, sc_MPI_BYTE,
+       proc->rank, SPHERES_TAG_SPHERES, g->mpicomm,
+       (sc_MPI_Request *) sc_array_index_int (g->to_requests, q));
+    SC_CHECK_MPI (mpiret);
+  }
 
-  /* reverse communication pattern */
+  /*------------------ reverse communication pattern -----------------*/
+
   sc_notify_ext (g->notify, NULL, g->payload,
                  g->ntop, g->nint, g->nbot, g->mpicomm);
+
+  /*---------------------- receive the spheres -----------------------*/
+
   P4EST_ASSERT (g->notify->elem_count == g->payload->elem_count);
   g->num_from_procs = (int) g->notify->elem_count;
+  g->from_requests =
+    sc_array_new_count (sizeof (sc_MPI_Request), g->num_from_procs);
+  g->from_procs = sc_array_new_count (sizeof (sr_buf_t), g->num_from_procs);
+  for (q = 0; q < g->num_from_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
+    proc->rank = *(int *) sc_array_index_int (g->notify, q);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    num_from_spheres = *(int *) sc_array_index_int (g->payload, q);
+    pi = proc->items =
+      sc_array_new_count (sizeof (sph_item_t), num_from_spheres);
+    mpiret = sc_MPI_Irecv
+      (pi->array, pi->elem_count * pi->elem_size, sc_MPI_BYTE,
+       proc->rank, SPHERES_TAG_SPHERES, g->mpicomm,
+       (sc_MPI_Request *) sc_array_index_int (g->from_requests, q));
+    SC_CHECK_MPI (mpiret);
+  }
 
-  /* receive the spheres */
+  /*--------------- complete receive and first cleanup ---------------*/
 
-  for (zz = 0; zz < g->to_procs->elem_count; ++zz) {
-    proc = (sr_buf_t *) sc_array_index (g->to_procs, zz);
+  sc_array_destroy_null (&g->payload);
+  sc_array_destroy_null (&g->notify);
+
+  mpiret = sc_MPI_Waitall
+    (g->num_from_procs, (sc_MPI_Request *) g->from_requests->array,
+     sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_destroy_null (&g->from_requests);
+
+  /*---------------- refine based on received spheres ----------------*/
+
+  /*-------------- partition and transfer owned spheres --------------*/
+
+  /*---------------- complete send and second cleanup ----------------*/
+
+  for (q = 0; q < g->num_from_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    P4EST_ASSERT (proc->items != NULL);
+    sc_array_destroy (proc->items);
+  }
+  sc_array_destroy_null (&g->from_procs);
+
+  mpiret = sc_MPI_Waitall
+    (g->num_to_procs, (sc_MPI_Request *) g->to_requests->array,
+     sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_destroy_null (&g->to_requests);
+
+  for (q = 0; q < g->num_to_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->to_procs, q);
     P4EST_ASSERT (proc->rank != g->mpirank);
     P4EST_ASSERT (proc->items != NULL);
     sc_array_destroy (proc->items);
   }
   sc_array_destroy_null (&g->to_procs);
-  sc_array_destroy_null (&g->payload);
-  sc_array_destroy_null (&g->notify);
-
-  /* refine based on received spheres */
-
-  /* partition and transfer owned spheres */
 }
 
 static void
