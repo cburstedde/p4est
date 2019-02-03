@@ -23,6 +23,7 @@
 */
 
 #include <sc_functions.h>
+#include <sc_notify.h>
 #include <sc_options.h>
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
@@ -244,6 +245,12 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
   /* access send buffer for remote process */
   if (pfirst != g->last_to_rank) {
     P4EST_ASSERT (g->last_to_rank < pfirst);
+
+    /* we have found a new receiver process */
+    *(int *) sc_array_push (g->notify) = pfirst;
+    *(g->last_payload = (int *) sc_array_push (g->payload)) = 1;
+
+    /* establish new send buffer for this process */
     g->last_to_rank = pfirst;
     g->last_to_proc = to_proc = (sr_buf_t *) sc_array_push (g->to_procs);
     to_proc->rank = pfirst;
@@ -251,12 +258,14 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
     item = (sph_item_t *) sc_array_index (to_proc->items, 0);
   }
   else {
+    /* pust to existing send buffer for current remote process */
     to_proc = g->last_to_proc;
     P4EST_ASSERT (to_proc->rank == pfirst);
     P4EST_ASSERT (to_proc == (sr_buf_t *)
                   sc_array_index (g->to_procs, g->to_procs->elem_count - 1));
     P4EST_ASSERT (to_proc->items->elem_count > 0);
     item = (sph_item_t *) sc_array_push (to_proc->items);
+    ++*g->last_payload;
   }
 
   /* pack sphere into send buffer */
@@ -290,6 +299,9 @@ refine_spheres (spheres_global_t * g)
   g->last_to_proc = NULL;
   g->last_to_rank = -1;
   g->to_procs = sc_array_new (sizeof (sr_buf_t));
+  g->notify = sc_array_new (sizeof (int));
+  g->payload = sc_array_new (sizeof (int));
+  g->last_payload = NULL;
 
   /* search for remote quadrants that receive spheres */
   points = sc_array_new_count (sizeof (p4est_locidx_t), g->lsph);
@@ -304,8 +316,14 @@ refine_spheres (spheres_global_t * g)
   sc_array_destroy_null (&points);
 
   /* send the spheres */
+  P4EST_ASSERT (g->notify->elem_count == g->payload->elem_count);
+  g->num_to_procs = (int) g->notify->elem_count;
 
   /* reverse communication pattern */
+  sc_notify_ext (g->notify, NULL, g->payload,
+                 g->ntop, g->nint, g->nbot, g->mpicomm);
+  P4EST_ASSERT (g->notify->elem_count == g->payload->elem_count);
+  g->num_from_procs = (int) g->notify->elem_count;
 
   /* receive the spheres */
 
@@ -316,6 +334,8 @@ refine_spheres (spheres_global_t * g)
     sc_array_destroy (proc->items);
   }
   sc_array_destroy_null (&g->to_procs);
+  sc_array_destroy_null (&g->payload);
+  sc_array_destroy_null (&g->notify);
 
   /* refine based on received spheres */
 
@@ -401,6 +421,10 @@ main (int argc, char **argv)
 
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
                          "sph" SPHERES_48 ()"res", "Prefix for file output");
+
+  /* set other parameters */
+  g->ntop = 12;
+  g->nint = g->nbot = 4;
 
   /* proceed in run-once loop for clean abort */
   ue = 0;

@@ -89,6 +89,15 @@ typedef struct spheres_global
   p4est_sphere_t      box;
   sc_array_t         *to_procs;
   sr_buf_t           *last_to_proc;
+
+  /* metadata for pattern reversal */
+  int                 ntop, nint, nbot;
+  int                *last_payload;
+  sc_array_t         *notify;
+  sc_array_t         *payload;
+
+  /* send and receive messages */
+  int                 num_to_procs, num_from_procs;
 }
 spheres_global_t;
 
