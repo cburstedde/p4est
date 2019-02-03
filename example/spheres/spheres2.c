@@ -53,6 +53,22 @@ spheres_tags;
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
 static void
+spheres_init_zero (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * quadrant)
+{
+  qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+  qud->set_refine = 0;
+}
+
+static int
+spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
+                         p4est_quadrant_t * quadrant)
+{
+  qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
+  return qud->set_refine;
+}
+
+static void
 create_forest (spheres_global_t * g)
 {
   int                 mpiret;
@@ -75,7 +91,7 @@ create_forest (spheres_global_t * g)
   /* create empty initial forest */
   g->conn = p4est_connectivity_new_periodic ();
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0, g->minlevel, 1,
-                            sizeof (qu_data_t), NULL, g);
+                            sizeof (qu_data_t), spheres_init_zero, g);
 
   /* minimum and maximum radius determined by target levels */
   rmax = g->rmax;
@@ -316,6 +332,7 @@ spheres_local_point (p4est_t * p4est, p4est_topidx_t which_tree,
                      void *point)
 {
   spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
+  qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   p4est_sphere_t     *sph;
 
   P4EST_ASSERT (g != NULL && g->p4est == p4est);
@@ -338,7 +355,7 @@ spheres_local_point (p4est_t * p4est, p4est_topidx_t which_tree,
 
   if (!p4est_sphere_match_exact (&g->box, sph, g->thickness)) {
 #ifdef SPHERES_CHATTY
-    P4EST_INFOF ("No approx match in %ld\n", (long) local_num);
+    P4EST_INFOF ("No exact match in %ld\n", (long) local_num);
 #endif
     return 0;
   }
@@ -346,6 +363,7 @@ spheres_local_point (p4est_t * p4est, p4est_topidx_t which_tree,
 #ifdef SPHERES_CHATTY
   P4EST_INFOF ("Found in %ld\n", (long) local_num);
 #endif
+  qud->set_refine = 1;
 
   /* this return value is ignored */
   return 0;
@@ -514,6 +532,10 @@ refine_spheres (spheres_global_t * g)
   p4est_search_local (g->p4est, 0, spheres_local_quadrant,
                       spheres_local_point, points);
   sc_array_destroy_null (&points);
+
+  /* perform actual refinement */
+  p4est_refine_ext (g->p4est, 0, P4EST_QMAXLEVEL, spheres_refine_callback,
+                    spheres_init_zero, NULL);
 
   /*-------------- partition and transfer owned spheres --------------*/
 

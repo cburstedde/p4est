@@ -41,6 +41,7 @@ SC_EXTERN_C_BEGIN;
 
 typedef struct qu_data
 {
+  int                 set_refine;
 }
 qu_data_t;
 
