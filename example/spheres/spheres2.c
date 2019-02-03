@@ -348,6 +348,9 @@ refine_spheres (spheres_global_t * g)
   sc_array_t         *pi;
   p4est_locidx_t      li;
   p4est_locidx_t      sri, snum;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_gloidx_t      gcur, gnext;
+#endif
   p4est_sphere_t    **psph;
   sph_item_t         *item;
   sr_buf_t           *proc;
@@ -444,10 +447,16 @@ refine_spheres (spheres_global_t * g)
     if (proc->rank >= g->mpirank) {
       break;
     }
+#ifdef P4EST_ENABLE_DEBUG
+    gcur = *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, proc->rank);
+    gnext =
+      *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, proc->rank + 1);
+#endif
     snum = (p4est_locidx_t) proc->items->elem_count;
     psph = (p4est_sphere_t **) sc_array_push_count (points, snum);
     for (li = 0; li < snum; ++li) {
       item = (sph_item_t *) sc_array_index_int (proc->items, li);
+      P4EST_ASSERT (gcur <= item->gid && item->gid < gnext);
       *psph++ = &item->sph;
     }
     sri += snum;
@@ -466,10 +475,16 @@ refine_spheres (spheres_global_t * g)
   for (; q < g->num_from_procs; ++q) {
     proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
     P4EST_ASSERT (proc->rank > g->mpirank);
+#ifdef P4EST_ENABLE_DEBUG
+    gcur = *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, proc->rank);
+    gnext =
+      *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, proc->rank + 1);
+#endif
     snum = (p4est_locidx_t) proc->items->elem_count;
     psph = (p4est_sphere_t **) sc_array_push_count (points, snum);
     for (li = 0; li < snum; ++li) {
       item = (sph_item_t *) sc_array_index_int (proc->items, li);
+      P4EST_ASSERT (gcur <= item->gid && item->gid < gnext);
       *psph++ = &item->sph;
     }
     sri += snum;
