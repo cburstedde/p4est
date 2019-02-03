@@ -234,6 +234,7 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (g->box.radius ==
                 .5 * P4EST_QUADRANT_LEN (quadrant->level) * irootlen);
 
+  /* access sphere under consideration */
   li = *(p4est_locidx_t *) point;
   sph = (p4est_sphere_t *) sc_array_index_int (g->sphr, li);
 
@@ -339,7 +340,18 @@ spheres_local_point (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (g != NULL && g->p4est == p4est);
   P4EST_ASSERT (point != NULL);
 
+  /* access sphere under consideration */
   sph = *(p4est_sphere_t **) point;
+
+  /* if quadrant is small enough already, skip this sphere */
+  if (.5 * g->spherelems * P4EST_QUADRANT_LEN (quadrant->level) * irootlen <=
+      sph->radius) {
+#ifdef SPHERES_CHATTY
+    P4EST_INFOF ("No radius match %g %g in %ld\n",
+                 g->box.radius, sph->radius, (long) local_num);
+#endif
+    return 0;
+  }
 
   /* we may be up in the tree branches */
   if (local_num < 0) {
