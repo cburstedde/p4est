@@ -282,15 +282,74 @@ spheres_partition_point (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int
+spheres_local_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                        void *point)
+{
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
+
+  P4EST_ASSERT (g != NULL && g->p4est == p4est);
+  P4EST_ASSERT (point == NULL);
+
+  /* record quadrant's position and size */
+  p4est_quadrant_sphere_box (quadrant, &g->box);
+  return 1;
+}
+
+static int
+spheres_local_point (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
+  p4est_sphere_t     *sph;
+
+  P4EST_ASSERT (g != NULL && g->p4est == p4est);
+  P4EST_ASSERT (point != NULL);
+
+  sph = *(p4est_sphere_t **) point;
+
+  /* we may be up in the tree branches */
+  if (local_num < 0) {
+    if (!p4est_sphere_match_approx (&g->box, sph, g->thickness)) {
+#ifdef SPHERES_CHATTY
+      P4EST_INFOF ("No approx match in %ld\n", (long) local_num);
+#endif
+      return 0;
+    }
+
+    /* an optimistic match is good enough when we're walking the tree */
+    return 1;
+  }
+
+  if (!p4est_sphere_match_exact (&g->box, sph, g->thickness)) {
+#ifdef SPHERES_CHATTY
+    P4EST_INFOF ("No approx match in %ld\n", (long) local_num);
+#endif
+    return 0;
+  }
+
+#ifdef SPHERES_CHATTY
+  P4EST_INFOF ("Found in %ld\n", (long) local_num);
+#endif
+
+  /* this return value is ignored */
+  return 0;
+}
+
 static void
 refine_spheres (spheres_global_t * g)
 {
   int                 mpiret;
   int                 q;
   int                 num_from_spheres;
-  p4est_locidx_t      li;
   sc_array_t         *points;
   sc_array_t         *pi;
+  p4est_locidx_t      li;
+  p4est_locidx_t      sri, snum;
+  p4est_sphere_t    **psph;
+  sph_item_t         *item;
   sr_buf_t           *proc;
 
   /*---------------- search partition to find receivers --------------*/
@@ -374,6 +433,56 @@ refine_spheres (spheres_global_t * g)
   sc_array_destroy_null (&g->from_requests);
 
   /*---------------- refine based on received spheres ----------------*/
+
+  points = sc_array_new (sizeof (p4est_sphere_t *));
+  sri = 0;
+
+  /* ranks less than ours */
+  for (q = 0; q < g->num_from_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    if (proc->rank >= g->mpirank) {
+      break;
+    }
+    snum = (p4est_locidx_t) proc->items->elem_count;
+    psph = (p4est_sphere_t **) sc_array_push_count (points, snum);
+    for (li = 0; li < snum; ++li) {
+      item = (sph_item_t *) sc_array_index_int (proc->items, li);
+      *psph++ = &item->sph;
+    }
+    sri += snum;
+  }
+
+  /* our local spheres */
+  snum = g->lsph;
+  P4EST_ASSERT (snum == (p4est_locidx_t) g->sphr->elem_count);
+  psph = (p4est_sphere_t **) sc_array_push_count (points, snum);
+  for (li = 0; li < snum; ++li) {
+    *psph++ = (p4est_sphere_t *) sc_array_index_int (g->sphr, li);
+  }
+  sri += snum;
+
+  /* ranks greater than ours */
+  for (; q < g->num_from_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
+    P4EST_ASSERT (proc->rank > g->mpirank);
+    snum = (p4est_locidx_t) proc->items->elem_count;
+    psph = (p4est_sphere_t **) sc_array_push_count (points, snum);
+    for (li = 0; li < snum; ++li) {
+      item = (sph_item_t *) sc_array_index_int (proc->items, li);
+      *psph++ = &item->sph;
+    }
+    sri += snum;
+  }
+  P4EST_ASSERT (sri == (p4est_locidx_t) points->elem_count);
+
+  /* search through local elements and set refinement flag */
+#ifdef SPHERES_CHATTY
+  P4EST_INFOF ("Searching elements for %ld local spheres\n", (long) sri);
+#endif
+  p4est_search_local (g->p4est, 0, spheres_local_quadrant,
+                      spheres_local_point, points);
+  sc_array_destroy_null (&points);
 
   /*-------------- partition and transfer owned spheres --------------*/
 
