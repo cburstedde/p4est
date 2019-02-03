@@ -25,9 +25,11 @@
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
+#include "p4est_spheres.h"
 #else
 #include <p8est_bits.h>
 #include <p8est_extended.h>
+#include "p8est_spheres.h"
 #endif /* P4_TO_P8 */
 #include <sc_functions.h>
 #include <sc_options.h>
@@ -36,10 +38,6 @@
 #define SPHERES_xstr(s) SPHERES_str(s)
 #define SPHERES_str(s) #s
 #define SPHERES_48() SPHERES_xstr(P4EST_CHILDREN)
-
-#define SPH_RAD (P4EST_DIM + 0)
-#define SPH_MID (P4EST_DIM + 1)
-#define SPH_MEM (P4EST_DIM + 2)
 
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
@@ -51,7 +49,6 @@ create_forest (spheres_global_t * g)
   double              coef, fact, vmult;
   double              Vexp, Nexp, r;
   double              vdensity, sumrd, gsrd;
-  double             *sphere;
 #if 0
   int                 iscount;
   double              dnu, dnq;
@@ -76,6 +73,7 @@ create_forest (spheres_global_t * g)
   p4est_qcoord_t      qh;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
+  p4est_sphere_t     *sph;
 
   /* create empty initial forest */
   g->conn = p4est_connectivity_new_periodic ();
@@ -107,7 +105,7 @@ create_forest (spheres_global_t * g)
   /* generate the spheres on minimum refinement level */
   sumrd = 0.;
   sph_excl = sph_incl = 0;
-  g->sphr = sc_array_new (SPH_MEM * sizeof (double));
+  g->sphr = sc_array_new (sizeof (p4est_sphere_t));
   for (which_tree = g->p4est->first_local_tree;
        which_tree <= g->p4est->last_local_tree; ++which_tree) {
     tree = p4est_tree_array_index (g->p4est->trees, which_tree);
@@ -127,12 +125,12 @@ create_forest (spheres_global_t * g)
       if (qunsph > 0) {
         qh = P4EST_QUADRANT_LEN (q->level);
         sph_incl = sph_excl + qunsph;
-        sphere = (double *) sc_array_push_count (g->sphr, qunsph);
-        for (li = sph_excl; li < sph_incl; ++li, sphere += SPH_MEM) {
-          sphere[0] = (q->x + qh * sc_rand (&g->rstate)) * irootlen;
-          sphere[1] = (q->y + qh * sc_rand (&g->rstate)) * irootlen;
+        sph = (p4est_sphere_t *) sc_array_push_count (g->sphr, qunsph);
+        for (li = sph_excl; li < sph_incl; ++li, ++sph) {
+          sph->center[0] = (q->x + qh * sc_rand (&g->rstate)) * irootlen;
+          sph->center[1] = (q->y + qh * sc_rand (&g->rstate)) * irootlen;
 #ifdef P4_TO_P8
-          sphere[2] = (q->z + qh * sc_rand (&g->rstate)) * irootlen;
+          sph->center[2] = (q->z + qh * sc_rand (&g->rstate)) * irootlen;
 #endif
           if (coef <= 0.) {
             /* this happens if rmin == rmax: no need to sample */
@@ -146,8 +144,7 @@ create_forest (spheres_global_t * g)
             r = rmin * sqrt (fact);
 #endif
           }
-          sphere[SPH_RAD] = r;
-          sphere[SPH_MID] = -1.;
+          sph->radius = r;
           sumrd += P4EST_DIM_POW (2. * r);
         }
         sph_excl = sph_incl;
@@ -191,8 +188,10 @@ static void
 refine_spheres (spheres_global_t * g)
 {
   p4est_locidx_t      li, lsph;
-  double             *sphere;
   sc_array_t         *points;
+#if 0
+  p4est_sphere_t     *sph;
+#endif
   spheres_search_t    spheres_search, *sss = &spheres_search;
 
   sss->lsph = lsph = (p4est_locidx_t) g->sphr->elem_count;
@@ -213,9 +212,9 @@ refine_spheres (spheres_global_t * g)
   /* search all quadrants, local and remote, that participate in spheres */
   points = sc_array_new_count (sizeof (p4est_locidx_t), lsph);
   for (li = 0; li < lsph; ++li) {
-    sphere = (double *) sc_array_index (g->sphr, li);
-    P4EST_ASSERT (sphere[SPH_MID] == -1.);
-    sphere[SPH_MID] = (double) (g->gsoff + li);
+#if 0
+    sph = (p4est_sphere_t *) sc_array_index (g->sphr, li);
+#endif
     *(p4est_locidx_t *) sc_array_index_int (points, li) = li;
   }
 

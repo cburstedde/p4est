@@ -36,7 +36,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** The cube diagonal in 3D is sqrt (2.). */
+/** The cube diagonal in 2D is sqrt (2.). */
 #define P4EST_CUBE_DIAG                 (M_SQRT2)
 
 typedef struct p4est_sphere

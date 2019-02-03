@@ -22,5 +22,5 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <p4est_to_p8est.h>
+#include "p4est_to_p8est_spheres.h"
 #include "spheres2.c"
