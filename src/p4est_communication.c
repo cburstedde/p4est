@@ -1139,7 +1139,7 @@ p4est_transfer_fixed_begin (const p4est_gloidx_t * dest_gfq,
   return tc;
 }
 
-static void
+void
 p4est_transfer_end (p4est_transfer_context_t * tc)
 {
   int                 mpiret;
@@ -1168,7 +1168,7 @@ void
 p4est_transfer_fixed_end (p4est_transfer_context_t * tc)
 {
   P4EST_ASSERT (tc != NULL);
-  P4EST_ASSERT (!tc->variable);
+  P4EST_ASSERT (tc->variable == 0);
 
   p4est_transfer_end (tc);
 }
@@ -1185,15 +1185,16 @@ p4est_transfer_custom (const p4est_gloidx_t * dest_gfq,
   tc = p4est_transfer_custom_begin (dest_gfq, src_gfq, mpicomm, tag,
                                     dest_data, dest_sizes,
                                     src_data, src_sizes);
-  p4est_transfer_end (tc);
+  p4est_transfer_custom_end (tc);
 }
 
-p4est_transfer_context_t *
-p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
-                             const p4est_gloidx_t * src_gfq,
-                             sc_MPI_Comm mpicomm, int tag,
-                             void *dest_data, const int *dest_sizes,
-                             const void *src_data, const int *src_sizes)
+static p4est_transfer_context_t *
+p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
+                      const p4est_gloidx_t * src_gfq,
+                      sc_MPI_Comm mpicomm, int tag,
+                      void *dest_data, const int *dest_sizes,
+                      const void *src_data, const int *src_sizes,
+                      size_t item_size, int variable)
 {
   p4est_transfer_context_t *tc;
   int                 mpiret;
@@ -1211,9 +1212,18 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
   p4est_gloidx_t      gbegin, gend;
   sc_MPI_Request     *rq;
 
+  /* consistency of internal helper function */
+  P4EST_ASSERT (variable == 1 || variable == 2);
+  P4EST_ASSERT ((variable == 1 && item_size == 1) || variable == 2);
+
   /* setup context structure */
   tc = P4EST_ALLOC_ZERO (p4est_transfer_context_t, 1);
-  tc->variable = 1;
+  tc->variable = variable;
+
+  /* there is nothing to do when there is no data */
+  if (item_size == 0) {
+    return tc;
+  }
 
   /* grab local partition information */
   p4est_transfer_assign_comm (dest_gfq, src_gfq, mpicomm, &mpisize, &mpirank);
@@ -1258,7 +1268,7 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
       byte_len = 0;
       ilen = (int) (gend - gbegin);
       for (i = 0; i < ilen; ++i) {
-        byte_len += *rs++;
+        byte_len += item_size * *rs++;
       }
 
       /* choose how to treat the sender process */
@@ -1318,7 +1328,7 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
       byte_len = 0;
       ilen = (int) (gend - gbegin);
       for (i = 0; i < ilen; ++i) {
-        byte_len += *rs++;
+        byte_len += item_size * *rs++;
       }
 
       /* choose how to treat the receiver process */
@@ -1357,11 +1367,61 @@ p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
   return tc;
 }
 
+p4est_transfer_context_t *
+p4est_transfer_custom_begin (const p4est_gloidx_t * dest_gfq,
+                             const p4est_gloidx_t * src_gfq,
+                             sc_MPI_Comm mpicomm, int tag,
+                             void *dest_data, const int *dest_sizes,
+                             const void *src_data, const int *src_sizes)
+{
+  return p4est_transfer_begin
+    (dest_gfq, src_gfq, mpicomm, tag,
+     dest_data, dest_sizes, src_data, src_sizes, 1, 1);
+}
+
+p4est_transfer_context_t *
+p4est_transfer_items_begin (const p4est_gloidx_t * dest_gfq,
+                            const p4est_gloidx_t * src_gfq,
+                            sc_MPI_Comm mpicomm, int tag,
+                            void *dest_data, const int *dest_counts,
+                            const void *src_data, const int *src_counts,
+                            size_t item_size)
+{
+  return p4est_transfer_begin
+    (dest_gfq, src_gfq, mpicomm, tag,
+     dest_data, dest_counts, src_data, src_counts, item_size, 2);
+}
+
 void
 p4est_transfer_custom_end (p4est_transfer_context_t * tc)
 {
   P4EST_ASSERT (tc != NULL);
-  P4EST_ASSERT (tc->variable);
+  P4EST_ASSERT (tc->variable == 1);
+
+  p4est_transfer_end (tc);
+}
+
+void
+p4est_transfer_items (const p4est_gloidx_t * dest_gfq,
+                      const p4est_gloidx_t * src_gfq,
+                      sc_MPI_Comm mpicomm, int tag,
+                      void *dest_data, const int *dest_sizes,
+                      const void *src_data, const int *src_sizes,
+                      size_t item_size)
+{
+  p4est_transfer_context_t *tc;
+
+  tc = p4est_transfer_items_begin (dest_gfq, src_gfq, mpicomm, tag,
+                                   dest_data, dest_sizes,
+                                   src_data, src_sizes, item_size);
+  p4est_transfer_items_end (tc);
+}
+
+void
+p4est_transfer_items_end (p4est_transfer_context_t * tc)
+{
+  P4EST_ASSERT (tc != NULL);
+  P4EST_ASSERT (tc->variable == 2);
 
   p4est_transfer_end (tc);
 }
