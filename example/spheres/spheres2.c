@@ -29,14 +29,16 @@
 #include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
+#include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
+#include <p8est_vtk.h>
 #endif /* P4_TO_P8 */
 #include "spheres_global.h"
 
-#if 0
+#if 1
 #define SPHERES_CHATTY
 #endif
 
@@ -172,6 +174,78 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
+spheres_write_vtk (spheres_global_t * g, int lev)
+{
+  int                 qbytes;
+  char                filename[BUFSIZ];
+  sc_array_t         *sdata;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      lall, lq;
+  p4est_tree_t       *tree;
+  p4est_vtk_context_t *cont;
+
+  P4EST_ASSERT (0 <= g->minlevel && g->maxlevel <= P4EST_QMAXLEVEL);
+  P4EST_ASSERT (g->minlevel <= lev && lev <= g->maxlevel);
+  P4EST_ASSERT (g->lbytes != NULL);
+
+  /* write VTK output of sphere counts */
+  if (!g->write_vtk) {
+    return;
+  }
+
+  /* run-once loop for clean return */
+  cont = NULL;
+  sdata = NULL;
+  do {
+    /* open files for output */
+    snprintf (filename, BUFSIZ, "%s_sph_%d_%d_%d",
+              g->prefix, g->minlevel, g->maxlevel, lev);
+    cont = p4est_vtk_context_new (g->p4est, filename);
+    if (NULL == p4est_vtk_write_header (cont)) {
+      P4EST_LERRORF ("Failed to write header for %s\n", filename);
+      break;
+    }
+
+    /* prepare cell data for output */
+    sdata = sc_array_new_count
+      (sizeof (double), g->p4est->local_num_quadrants);
+    for (lall = 0, tt = g->p4est->first_local_tree;
+         tt <= g->p4est->last_local_tree; ++tt) {
+      tree = p4est_tree_array_index (g->p4est->trees, tt);
+      for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
+        /* access number of spheres for this quadrant */
+        qbytes = *(int *) sc_array_index_int (g->lbytes, lall);
+        P4EST_ASSERT (qbytes % sizeof (p4est_sphere_t) == 0);
+        *(double *) sc_array_index_int (sdata, lall) =
+          qbytes / (double) sizeof (p4est_sphere_t);
+        ++lall;
+      }
+    }
+    P4EST_ASSERT (lall == g->p4est->local_num_quadrants);
+
+#if 1
+    /* write cell data to file */
+    if (NULL == p4est_vtk_write_cell_dataf
+        (cont, 1, 1, 1, g->mpiwrap, 1, 0, "spheres", sdata, cont)) {
+      P4EST_LERRORF ("Failed to write cell data for %s\n", filename);
+      break;
+    }
+#endif
+    sc_array_destroy_null (&sdata);
+
+    /* finish meta information and close files */
+    if (p4est_vtk_write_footer (cont)) {
+      P4EST_LERRORF ("Failed to write footer for %s\n", filename);
+      break;
+    }
+  }
+  while (0);
+  if (sdata != NULL) {
+    sc_array_destroy_null (&sdata);
+  }
+}
+
+static void
 create_forest (spheres_global_t * g)
 {
   int                 mpiret;
@@ -195,6 +269,9 @@ create_forest (spheres_global_t * g)
   g->conn = p4est_connectivity_new_periodic ();
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0, g->minlevel, 1,
                             sizeof (qu_data_t), spheres_init_zero, g);
+  if (g->write_vtk) {
+    p4est_vtk_write_file (g->p4est, NULL, g->prefix);
+  }
 
   /* minimum and maximum radius determined by target levels */
   rmax = g->rmax;
@@ -264,6 +341,16 @@ create_forest (spheres_global_t * g)
             r = rmin * sqrt (fact);
 #endif
           }
+#if defined SPHERES_CHATTY || 1
+          P4EST_INFOF ("Created sphere at %g %g %g radius %g\n",
+                       sph->center[0], sph->center[1],
+#ifndef P4_TO_P8
+                       -1.,
+#else
+                       sph->center[2],
+#endif
+                       r);
+#endif
           sph->radius = r;
           sumrd += P4EST_DIM_POW (2. * r);
         }
@@ -671,6 +758,9 @@ refine_spheres (spheres_global_t * g)
   sc_array_destroy (g->lbytes);
   g->lbytes = g->lbytes_refined;
 
+  /* output refined forest */
+  spheres_write_vtk (g, g->minlevel);
+
   /*-------------- partition and transfer owned spheres --------------*/
 
   /*---------------- complete send and second cleanup ----------------*/
@@ -776,12 +866,15 @@ main (int argc, char **argv)
   sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
                        "Configure for scaling test");
 
+  sc_options_add_bool (opt, 'V', "write-vtk", &g->write_vtk, 0,
+                       "Output VTK files");
   sc_options_add_string (opt, 'P', "prefix", &g->prefix,
                          "sph" SPHERES_48 ()"res", "Prefix for file output");
 
   /* set other parameters */
   g->ntop = 12;
   g->nint = g->nbot = 4;
+  g->mpiwrap = 16;
 
   /* proceed in run-once loop for clean abort */
   ue = 0;

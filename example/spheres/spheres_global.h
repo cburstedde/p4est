@@ -68,6 +68,9 @@ typedef struct spheres_global
   int                 maxlevel;
   int                 scaling;
 
+  int                 write_vtk;
+  int                 mpiwrap;
+
   double              rmax;
   double              thickness;
   double              lfraction;
