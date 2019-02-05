@@ -87,7 +87,7 @@ typedef struct spheres_global
   sc_array_t         *sphr;
   p4est_locidx_t      lsph;
   p4est_gloidx_t      gsoff;
-  sc_array_t         *lbytes;
+  sc_array_t         *lcounts;
   sc_array_t         *goffsets;
 
   /* metadata for partition search */
@@ -111,7 +111,7 @@ typedef struct spheres_global
   /* refine and partition */
   p4est_locidx_t      lqindex, lqindex_refined;
   p4est_locidx_t      lsph_offset;
-  sc_array_t         *lbytes_refined;
+  sc_array_t         *lcounts_refined;
 }
 spheres_global_t;
 

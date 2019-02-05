@@ -72,14 +72,12 @@ spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
-  int                 ltint;
   int                 set_refine;
 
   /* update variables for the non-refining case */
-  *(int *) sc_array_index_int (g->lbytes_refined, g->lqindex_refined) =
-    ltint = *(int *) sc_array_index_int (g->lbytes, g->lqindex);
-  P4EST_ASSERT (ltint % sizeof (p4est_sphere_t) == 0);
-  g->lsph_offset += ltint / (p4est_locidx_t) sizeof (p4est_sphere_t);
+  g->lsph_offset +=
+    (*(int *) sc_array_index_int (g->lcounts_refined, g->lqindex_refined) =
+     *(int *) sc_array_index_int (g->lcounts, g->lqindex));
   ++g->lqindex;
   ++g->lqindex_refined;
 
@@ -112,7 +110,6 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                           int num_incoming, p4est_quadrant_t * incoming[])
 {
   int                 c;
-  int                 outg_ibytes;
   double              discr[P4EST_DIM];
   sc_array_t          neworder[P4EST_CHILDREN];
   p4est_locidx_t      outg_spheres, prev_spheres, li;
@@ -143,10 +140,8 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (g->lqindex_refined >= 1);
 
   /* we know that the refine callback for this quadrant returned true */
-  (void) sc_array_push_count (g->lbytes_refined, P4EST_CHILDREN - 1);
-  outg_ibytes = *(int *) sc_array_index (g->lbytes, g->lqindex - 1);
-  P4EST_ASSERT (outg_ibytes % sizeof (p4est_sphere_t) == 0);
-  outg_spheres = outg_ibytes / (p4est_locidx_t) sizeof (p4est_sphere_t);
+  (void) sc_array_push_count (g->lcounts_refined, P4EST_CHILDREN - 1);
+  outg_spheres = *(int *) sc_array_index (g->lcounts, g->lqindex - 1);
   prev_spheres = g->lsph_offset - outg_spheres;
   P4EST_ASSERT (0 <= prev_spheres && prev_spheres <= g->lsph);
 
@@ -168,9 +163,9 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   li = prev_spheres;
   for (c = 0; c < P4EST_CHILDREN; ++c) {
     sc_array_copy_into (g->sphr, li, &neworder[c]);
-    li += neworder[c].elem_count;
-    *(int *) sc_array_index (g->lbytes_refined, g->lqindex_refined - 1 + c) =
-      (int) (neworder[c].elem_count * sizeof (p4est_sphere_t));
+    li += (*(int *) sc_array_index_int (g->lcounts_refined,
+                                        g->lqindex_refined - 1 + c) =
+           (int) neworder[c].elem_count);
     sc_array_reset (&neworder[c]);
   }
   P4EST_ASSERT (li == g->lsph_offset);
@@ -182,7 +177,6 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 static void
 spheres_write_vtk (spheres_global_t * g, const char *str, int lev)
 {
-  int                 qbytes;
   char                filename[BUFSIZ];
   sc_array_t         *sdata;
   p4est_topidx_t      tt;
@@ -192,7 +186,7 @@ spheres_write_vtk (spheres_global_t * g, const char *str, int lev)
 
   P4EST_ASSERT (0 <= g->minlevel && g->maxlevel <= P4EST_QMAXLEVEL);
   P4EST_ASSERT (g->minlevel <= lev && lev <= g->maxlevel);
-  P4EST_ASSERT (g->lbytes != NULL);
+  P4EST_ASSERT (g->lcounts != NULL);
 
   /* write VTK output of sphere counts */
   if (!g->write_vtk) {
@@ -220,10 +214,8 @@ spheres_write_vtk (spheres_global_t * g, const char *str, int lev)
       tree = p4est_tree_array_index (g->p4est->trees, tt);
       for (lq = 0; lq < (p4est_locidx_t) tree->quadrants.elem_count; ++lq) {
         /* access number of spheres for this quadrant */
-        qbytes = *(int *) sc_array_index_int (g->lbytes, lall);
-        P4EST_ASSERT (qbytes % sizeof (p4est_sphere_t) == 0);
         *(double *) sc_array_index_int (sdata, lall) =
-          qbytes / (double) sizeof (p4est_sphere_t);
+          *(int *) sc_array_index_int (g->lcounts, lall);
         ++lall;
       }
     }
@@ -335,8 +327,8 @@ create_forest (spheres_global_t * g)
   sumrd = 0.;
   sph_excl = sph_incl = 0;
   g->sphr = sc_array_new (sizeof (p4est_sphere_t));
-  g->lbytes = sc_array_new_count (sizeof (int),
-                                  g->p4est->local_num_quadrants);
+  g->lcounts = sc_array_new_count (sizeof (int),
+                                   g->p4est->local_num_quadrants);
   for (which_tree = g->p4est->first_local_tree;
        which_tree <= g->p4est->last_local_tree; ++which_tree) {
     tree = p4est_tree_array_index (g->p4est->trees, which_tree);
@@ -351,8 +343,8 @@ create_forest (spheres_global_t * g)
       /* number of spheres relative to volume ratio of quadrant to tree */
       Nexp = vmult * sc_intpowf (.5, P4EST_DIM * q->level);
       qunsph = (p4est_locidx_t) sc_rand_poisson (&g->rstate, Nexp);
-      *(int *) sc_array_index (g->lbytes, tree->quadrants_offset + tin) =
-        (int) (qunsph * sizeof (p4est_sphere_t));
+      *(int *) sc_array_index (g->lcounts, tree->quadrants_offset + tin) =
+        (int) qunsph;
 
       /* generate spheres for this element */
       if (qunsph > 0) {
@@ -610,7 +602,7 @@ refine_spheres (spheres_global_t * g, int lev)
   int                 is_refined;
   sc_array_t         *points;
   sc_array_t         *pi;
-  sc_array_t         *lbytes_partitioned;
+  sc_array_t         *lcounts_partitioned;
   sc_array_t         *sphr_partitioned;
   p4est_locidx_t      li;
   p4est_locidx_t      sri, snum;
@@ -775,23 +767,23 @@ refine_spheres (spheres_global_t * g, int lev)
   /* perform actual refinement */
   g->lqindex = g->lqindex_refined = 0;
   g->lsph_offset = 0;
-  P4EST_ASSERT ((p4est_locidx_t) g->lbytes->elem_count ==
+  P4EST_ASSERT ((p4est_locidx_t) g->lcounts->elem_count ==
                 g->p4est->local_num_quadrants);
-  g->lbytes_refined = sc_array_new_count (sizeof (int),
-                                          g->p4est->local_num_quadrants);
+  g->lcounts_refined = sc_array_new_count (sizeof (int),
+                                           g->p4est->local_num_quadrants);
   gnq = g->p4est->global_num_quadrants;
   p4est_refine_ext (g->p4est, 0, P4EST_QMAXLEVEL, spheres_refine_callback,
                     spheres_init_zero, spheres_replace_callback);
-  P4EST_ASSERT (g->lqindex == (p4est_locidx_t) g->lbytes->elem_count);
+  P4EST_ASSERT (g->lqindex == (p4est_locidx_t) g->lcounts->elem_count);
   P4EST_ASSERT (g->lqindex_refined ==
-                (p4est_locidx_t) g->lbytes_refined->elem_count);
-  P4EST_ASSERT ((p4est_locidx_t) g->lbytes_refined->elem_count ==
+                (p4est_locidx_t) g->lcounts_refined->elem_count);
+  P4EST_ASSERT ((p4est_locidx_t) g->lcounts_refined->elem_count ==
                 g->p4est->local_num_quadrants);
   P4EST_ASSERT (g->lsph_offset == g->lsph);
   P4EST_ASSERT (gnq <= g->p4est->global_num_quadrants);
   is_refined = (gnq < g->p4est->global_num_quadrants);
-  sc_array_destroy (g->lbytes);
-  g->lbytes = g->lbytes_refined;
+  sc_array_destroy (g->lcounts);
+  g->lcounts = g->lcounts_refined;
 
   /* output refined forest */
   if (is_refined) {
@@ -806,34 +798,32 @@ refine_spheres (spheres_global_t * g, int lev)
     (void) p4est_partition_ext (post, 0, NULL);
 
     /* we go through this even if there was no change in partition. */
-    lbytes_partitioned =
+    lcounts_partitioned =
       sc_array_new_count (sizeof (int), post->local_num_quadrants);
     p4est_transfer_fixed (post->global_first_quadrant,
                           g->p4est->global_first_quadrant,
                           g->mpicomm, SPHERES_TAG_FIXED,
-                          lbytes_partitioned->array, g->lbytes->array,
+                          lcounts_partitioned->array, g->lcounts->array,
                           sizeof (int));
 
     /* transfer spheres to their new owners */
-    snum = 0;
-    for (li = 0; li < post->local_num_quadrants; ++li) {
-      snum += *(int *) sc_array_index_int (lbytes_partitioned, li);
+    for (snum = 0, li = 0; li < post->local_num_quadrants; ++li) {
+      snum += *(int *) sc_array_index_int (lcounts_partitioned, li);
     }
-    P4EST_ASSERT (snum % sizeof (p4est_sphere_t) == 0);
-    snum /= sizeof (p4est_sphere_t);
     sphr_partitioned = sc_array_new_count (sizeof (p4est_sphere_t), snum);
-    p4est_transfer_custom (post->global_first_quadrant,
-                           g->p4est->global_first_quadrant,
-                           g->mpicomm, SPHERES_TAG_CUSTOM,
-                           sphr_partitioned->array,
-                           (int *) lbytes_partitioned->array,
-                           g->sphr->array, (int *) g->lbytes->array);
+    p4est_transfer_items (post->global_first_quadrant,
+                          g->p4est->global_first_quadrant,
+                          g->mpicomm, SPHERES_TAG_CUSTOM,
+                          sphr_partitioned->array,
+                          (int *) lcounts_partitioned->array,
+                          g->sphr->array, (int *) g->lcounts->array,
+                          sizeof (p4est_sphere_t));
 
     /* reassign partitioned forest and data */
     p4est_destroy (g->p4est);
     g->p4est = post;
-    sc_array_destroy (g->lbytes);
-    g->lbytes = lbytes_partitioned;
+    sc_array_destroy (g->lcounts);
+    g->lcounts = lcounts_partitioned;
     sc_array_destroy (g->sphr);
     g->sphr = sphr_partitioned;
     g->lsph = (p4est_locidx_t) g->sphr->elem_count;
@@ -874,7 +864,7 @@ static void
 destroy_forest (spheres_global_t * g)
 {
   sc_array_destroy_null (&g->sphr);
-  sc_array_destroy_null (&g->lbytes);
+  sc_array_destroy_null (&g->lcounts);
   sc_array_destroy_null (&g->goffsets);
 
   p4est_destroy (g->p4est);
