@@ -58,6 +58,62 @@ typedef enum
 }
 spheres_tags;
 
+typedef enum
+{
+  STATS_ONCE_FIRST = 0,
+  STATS_ONCE_WALL = STATS_ONCE_FIRST,
+  STATS_ONCE_NEW,
+  STATS_ONCE_GENERATE,
+  STATS_ONCE_LAST
+}
+stats_once_t;
+
+static const char  *once_names[] = { "Walltime", "New", "Generate" };
+
+typedef enum
+{
+  STATS_LOOP_FIRST = 0,
+  STATS_LOOP_PSEARCH = STATS_LOOP_FIRST,
+  STATS_LOOP_SEND,
+  STATS_LOOP_NOTIFY,
+  STATS_LOOP_RECEIVE,
+  STATS_LOOP_WAITSEND,
+  STATS_LOOP_LSEARCH,
+  STATS_LOOP_REFINE,
+  STATS_LOOP_PARTITION,
+  STATS_LOOP_TRANSFER,
+  STATS_LOOP_LAST
+}
+stats_loop_t;
+
+static const char  *loop_names[] = { "Psearch", "Send", "Notify",
+  "Receive", "Waitsend", "Lsearch", "Refine", "Partition", "Transfer"
+};
+
+static sc_statinfo_t *
+once_index (spheres_global_t * g, stats_once_t once)
+{
+  P4EST_ASSERT (0 <= once && once < STATS_ONCE_LAST);
+  return (sc_statinfo_t *) sc_array_index_int (g->stats, once);
+}
+
+static sc_statinfo_t *
+loop_index (spheres_global_t * g, int lev, stats_loop_t loop)
+{
+  P4EST_ASSERT (g->minlevel <= lev && lev < g->maxlevel);
+  P4EST_ASSERT (0 <= loop && loop < STATS_LOOP_LAST);
+
+  return (sc_statinfo_t *)
+    sc_array_index_int (g->stats, STATS_ONCE_LAST +
+                        (lev - g->minlevel) * STATS_LOOP_LAST + loop);
+}
+
+static void
+accumulate_once (spheres_global_t * g, stats_once_t once, double t)
+{
+  sc_stats_accumulate (once_index (g, once), sc_MPI_Wtime () - t);
+}
+
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
 static void
@@ -281,6 +337,7 @@ create_forest (spheres_global_t * g)
   double              coef, fact, vmult;
   double              Vexp, Nexp, r;
   double              vdensity, sumrd, gsrd;
+  double              tnew, tgenerate;
   char                filename[BUFSIZ];
   p4est_topidx_t      which_tree;
   p4est_locidx_t      ntrel, tin;
@@ -293,9 +350,11 @@ create_forest (spheres_global_t * g)
   p4est_sphere_t     *sph;
 
   /* create empty initial forest */
+  tnew = sc_MPI_Wtime ();
   g->conn = p4est_connectivity_new_periodic ();
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0, g->minlevel, 1,
                             sizeof (qu_data_t), spheres_init_zero, g);
+  accumulate_once (g, STATS_ONCE_NEW, tnew);
   if (g->write_vtk) {
     snprintf (filename, BUFSIZ, "%s_sph_%d_%d_%s_%d",
               g->prefix, g->minlevel, g->maxlevel, "new", g->minlevel);
@@ -303,6 +362,7 @@ create_forest (spheres_global_t * g)
   }
 
   /* minimum and maximum radius determined by target levels */
+  tgenerate = sc_MPI_Wtime ();
   rmax = g->rmax;
   rmin = .5 * g->spherelems * sc_intpowf (.5, g->maxlevel);
   rmin = SC_MIN (rmin, rmax);
@@ -394,6 +454,9 @@ create_forest (spheres_global_t * g)
     ("Sphere expected volume %g ideal count %g generated %lld\n",
      Vexp, vmult * g->conn->num_trees, (long long)
      *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, g->mpisize));
+
+  /* stop sphere generation timer */
+  accumulate_once (g, STATS_ONCE_GENERATE, tgenerate);
 
   /* confirm expected volume */
   mpiret = sc_MPI_Allreduce (&sumrd, &gsrd, 1, sc_MPI_DOUBLE,
@@ -876,7 +939,29 @@ destroy_forest (spheres_global_t * g)
 static void
 run (spheres_global_t * g)
 {
+  int                 i;
   int                 lev;
+  double              twall;
+  char                name[BUFSIZ];
+  sc_statinfo_t      *si;
+
+  twall = sc_MPI_Wtime ();
+
+  /* allocate statistics counters */
+  g->num_stats =
+    STATS_ONCE_LAST + (g->maxlevel - g->minlevel) * STATS_LOOP_LAST;
+  g->stats = sc_array_new_count (sizeof (sc_statinfo_t), g->num_stats);
+  for (i = 0; i < STATS_ONCE_LAST; ++i) {
+    sc_stats_init_ext (once_index (g, (stats_once_t) i), once_names[i],
+                       1, sc_stats_group_all, sc_stats_prio_all);
+  }
+  for (lev = g->minlevel; lev < g->maxlevel; ++lev) {
+    for (i = 0; i < STATS_LOOP_LAST; ++i) {
+      snprintf (name, BUFSIZ, "%10s_%02d", loop_names[i], lev);
+      sc_stats_init_ext (loop_index (g, lev, (stats_loop_t) i), name,
+                         1, sc_stats_group_all, sc_stats_prio_all);
+    }
+  }
 
   /* create forest, populate with spheres, loop refine and partition */
   create_forest (g);
@@ -890,6 +975,16 @@ run (spheres_global_t * g)
 
   /* free all memory */
   destroy_forest (g);
+
+  /* report performance statistics */
+  accumulate_once (g, STATS_ONCE_WALL, twall);
+  si = once_index (g, STATS_ONCE_FIRST);
+  sc_stats_compute (sc_MPI_COMM_WORLD, g->num_stats, si);
+  sc_stats_print (p4est_package_id, SC_LP_PRODUCTION, g->num_stats, si, 0, 0);
+  for (i = 0; i < g->num_stats; ++i) {
+    sc_stats_reset (si + i, 1);
+  }
+  sc_array_destroy (g->stats);
 }
 
 static int

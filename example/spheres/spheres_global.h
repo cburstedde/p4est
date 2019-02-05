@@ -31,6 +31,7 @@
 #define P4EST_SPHERES_GLOBAL_H
 
 #include <sc_random.h>
+#include <sc_statistics.h>
 #ifndef P4_TO_P8
 #include "p4est_spheres.h"
 #else
@@ -112,6 +113,10 @@ typedef struct spheres_global
   p4est_locidx_t      lqindex, lqindex_refined;
   p4est_locidx_t      lsph_offset;
   sc_array_t         *lcounts_refined;
+
+  /* performance statistics */
+  int                 num_stats;
+  sc_array_t         *stats;
 }
 spheres_global_t;
 
