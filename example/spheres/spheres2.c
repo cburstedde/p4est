@@ -174,7 +174,7 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-spheres_write_vtk (spheres_global_t * g, int lev)
+spheres_write_vtk (spheres_global_t * g, const char *str, int lev)
 {
   int                 qbytes;
   char                filename[BUFSIZ];
@@ -198,8 +198,8 @@ spheres_write_vtk (spheres_global_t * g, int lev)
   sdata = NULL;
   do {
     /* open files for output */
-    snprintf (filename, BUFSIZ, "%s_sph_%d_%d_%d",
-              g->prefix, g->minlevel, g->maxlevel, lev);
+    snprintf (filename, BUFSIZ, "%s_sph_%d_%d_%s_%d",
+              g->prefix, g->minlevel, g->maxlevel, str, lev);
     cont = p4est_vtk_context_new (g->p4est, filename);
     if (NULL == p4est_vtk_write_header (cont)) {
       P4EST_LERRORF ("Failed to write header for %s\n", filename);
@@ -254,6 +254,7 @@ create_forest (spheres_global_t * g)
   double              coef, fact, vmult;
   double              Vexp, Nexp, r;
   double              vdensity, sumrd, gsrd;
+  char                filename[BUFSIZ];
   p4est_topidx_t      which_tree;
   p4est_locidx_t      ntrel, tin;
   p4est_locidx_t      qunsph;
@@ -270,7 +271,9 @@ create_forest (spheres_global_t * g)
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0, g->minlevel, 1,
                             sizeof (qu_data_t), spheres_init_zero, g);
   if (g->write_vtk) {
-    p4est_vtk_write_file (g->p4est, NULL, g->prefix);
+    snprintf (filename, BUFSIZ, "%s_sph_%d_%d_%s_%d",
+              g->prefix, g->minlevel, g->maxlevel, "new", g->minlevel);
+    p4est_vtk_write_file (g->p4est, NULL, filename);
   }
 
   /* minimum and maximum radius determined by target levels */
@@ -576,12 +579,13 @@ spheres_local_point (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
-static void
-refine_spheres (spheres_global_t * g)
+static int
+refine_spheres (spheres_global_t * g, int lev)
 {
   int                 mpiret;
   int                 q;
   int                 num_from_spheres;
+  int                 is_refined;
   sc_array_t         *points;
   sc_array_t         *pi;
   p4est_locidx_t      li;
@@ -589,9 +593,12 @@ refine_spheres (spheres_global_t * g)
 #ifdef P4EST_ENABLE_DEBUG
   p4est_gloidx_t      gcur, gnext;
 #endif
+  p4est_gloidx_t      gnq;
   p4est_sphere_t    **psph;
   sph_item_t         *item;
   sr_buf_t           *proc;
+
+  P4EST_ASSERT (g->minlevel <= lev && lev < g->maxlevel);
 
   /*---------------- search partition to find receivers --------------*/
 
@@ -747,6 +754,7 @@ refine_spheres (spheres_global_t * g)
                 g->p4est->local_num_quadrants);
   g->lbytes_refined = sc_array_new_count (sizeof (int),
                                           g->p4est->local_num_quadrants);
+  gnq = g->p4est->global_num_quadrants;
   p4est_refine_ext (g->p4est, 0, P4EST_QMAXLEVEL, spheres_refine_callback,
                     spheres_init_zero, spheres_replace_callback);
   P4EST_ASSERT (g->lqindex == (p4est_locidx_t) g->lbytes->elem_count);
@@ -755,11 +763,15 @@ refine_spheres (spheres_global_t * g)
   P4EST_ASSERT ((p4est_locidx_t) g->lbytes_refined->elem_count ==
                 g->p4est->local_num_quadrants);
   P4EST_ASSERT (g->lsph_offset == g->lsph);
+  P4EST_ASSERT (gnq <= g->p4est->global_num_quadrants);
+  is_refined = (gnq < g->p4est->global_num_quadrants);
   sc_array_destroy (g->lbytes);
   g->lbytes = g->lbytes_refined;
 
   /* output refined forest */
-  spheres_write_vtk (g, g->minlevel);
+  if (is_refined) {
+    spheres_write_vtk (g, "refined", lev);
+  }
 
   /*-------------- partition and transfer owned spheres --------------*/
 
@@ -786,6 +798,8 @@ refine_spheres (spheres_global_t * g)
     sc_array_destroy (proc->items);
   }
   sc_array_destroy_null (&g->to_procs);
+
+  return is_refined;
 }
 
 static void
@@ -802,9 +816,19 @@ destroy_forest (spheres_global_t * g)
 static void
 run (spheres_global_t * g)
 {
-  create_forest (g);
-  refine_spheres (g);
+  int                 lev;
 
+  /* create forest, populate with spheres, loop refine and partition */
+  create_forest (g);
+  for (lev = g->minlevel; lev < g->maxlevel; ++lev) {
+    P4EST_GLOBAL_PRODUCTIONF ("Trying refinement at level %d\n", lev);
+    if (!refine_spheres (g, lev)) {
+      P4EST_GLOBAL_PRODUCTIONF ("No refinement at level %d\n", lev);
+      break;
+    }
+  }
+
+  /* free all memory */
   destroy_forest (g);
 }
 
@@ -887,7 +911,7 @@ main (int argc, char **argv)
       ue = usagerr (opt, "Invalid option format or non-option arguments");
       break;
     }
-    P4EST_GLOBAL_ESSENTIALF ("Dimension is %d\n", P4EST_DIM);
+    P4EST_GLOBAL_PRODUCTIONF ("Dimension is %d\n", P4EST_DIM);
     sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
     /*** check consistency of parameters ***/
