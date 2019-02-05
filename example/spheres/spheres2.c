@@ -27,11 +27,13 @@
 #include <sc_options.h>
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #include <p8est_vtk.h>
@@ -48,7 +50,9 @@
 
 typedef enum
 {
-  SPHERES_TAG_SPHERES = P4EST_COMM_TAG_LAST
+  SPHERES_TAG_SPHERES = P4EST_COMM_TAG_LAST,
+  SPHERES_TAG_FIXED,
+  SPHERES_TAG_CUSTOM
 }
 spheres_tags;
 
@@ -606,12 +610,15 @@ refine_spheres (spheres_global_t * g, int lev)
   int                 is_refined;
   sc_array_t         *points;
   sc_array_t         *pi;
+  sc_array_t         *lbytes_partitioned;
+  sc_array_t         *sphr_partitioned;
   p4est_locidx_t      li;
   p4est_locidx_t      sri, snum;
 #ifdef P4EST_ENABLE_DEBUG
   p4est_gloidx_t      gcur, gnext;
 #endif
   p4est_gloidx_t      gnq;
+  p4est_t            *post;
   p4est_sphere_t    **psph;
   sph_item_t         *item;
   sr_buf_t           *proc;
@@ -792,6 +799,49 @@ refine_spheres (spheres_global_t * g, int lev)
   }
 
   /*-------------- partition and transfer owned spheres --------------*/
+
+  if (is_refined) {
+    /* copy the forest and partition it */
+    post = p4est_copy (g->p4est, 1);
+    (void) p4est_partition_ext (post, 0, NULL);
+
+    /* we go through this even if there was no change in partition. */
+    lbytes_partitioned =
+      sc_array_new_count (sizeof (int), post->local_num_quadrants);
+    p4est_transfer_fixed (post->global_first_quadrant,
+                          g->p4est->global_first_quadrant,
+                          g->mpicomm, SPHERES_TAG_FIXED,
+                          lbytes_partitioned->array, g->lbytes->array,
+                          sizeof (int));
+
+    /* transfer spheres to their new owners */
+    snum = 0;
+    for (li = 0; li < post->local_num_quadrants; ++li) {
+      snum += *(int *) sc_array_index_int (lbytes_partitioned, li);
+    }
+    P4EST_ASSERT (snum % sizeof (p4est_sphere_t) == 0);
+    snum /= sizeof (p4est_sphere_t);
+    sphr_partitioned = sc_array_new_count (sizeof (p4est_sphere_t), snum);
+    p4est_transfer_custom (post->global_first_quadrant,
+                           g->p4est->global_first_quadrant,
+                           g->mpicomm, SPHERES_TAG_CUSTOM,
+                           sphr_partitioned->array,
+                           (int *) lbytes_partitioned->array,
+                           g->sphr->array, (int *) g->lbytes->array);
+
+    /* reassign partitioned forest and data */
+    p4est_destroy (g->p4est);
+    g->p4est = post;
+    sc_array_destroy (g->lbytes);
+    g->lbytes = lbytes_partitioned;
+    sc_array_destroy (g->sphr);
+    g->sphr = sphr_partitioned;
+    g->lsph = (p4est_locidx_t) g->sphr->elem_count;
+    sphere_offsets (g);
+
+    /* output partitioned forest */
+    spheres_write_vtk (g, "partitioned", lev);
+  }
 
   /*---------------- complete send and second cleanup ----------------*/
 
