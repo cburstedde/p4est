@@ -757,6 +757,7 @@ refine_spheres (spheres_global_t * g, int lev)
   gsloc = (p4est_gloidx_t) sri;
   mpiret = sc_MPI_Allreduce (&gsloc, &gsglo, 1, P4EST_MPI_GLOIDX,
                              sc_MPI_SUM, g->mpicomm);
+  SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_PRODUCTIONF ("Sphere redundant sum %lld\n", (long long) gsglo);
 
   /* search through local elements and set refinement flag */
@@ -788,7 +789,7 @@ refine_spheres (spheres_global_t * g, int lev)
 
   /* output refined forest */
   if (is_refined) {
-    spheres_write_vtk (g, "refined", lev);
+    spheres_write_vtk (g, "refined", lev + 1);
   }
 
   /*-------------- partition and transfer owned spheres --------------*/
@@ -831,7 +832,7 @@ refine_spheres (spheres_global_t * g, int lev)
     sphere_offsets (g);
 
     /* output partitioned forest */
-    spheres_write_vtk (g, "partitioned", lev);
+    spheres_write_vtk (g, "partitioned", lev + 1);
   }
 
   /*---------------- complete send and second cleanup ----------------*/
