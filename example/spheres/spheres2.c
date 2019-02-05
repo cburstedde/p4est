@@ -138,10 +138,9 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (!((qu_data_t *) incoming[c]->p.user_data)->set_refine);
   }
 
+  /* we know that the refine callback for this quadrant returned true */
   P4EST_ASSERT (g->lqindex >= 1);
   P4EST_ASSERT (g->lqindex_refined >= 1);
-
-  /* we know that the refine callback for this quadrant returned true */
   (void) sc_array_push_count (g->lcounts_refined, P4EST_CHILDREN - 1);
   outg_spheres = *(int *) sc_array_index (g->lcounts, g->lqindex - 1);
   prev_spheres = g->lsph_offset - outg_spheres;
@@ -766,6 +765,15 @@ refine_spheres (spheres_global_t * g, int lev)
                       spheres_local_point, points);
   sc_array_destroy_null (&points);
 
+  /* the information received is no longer necessary */
+  for (q = 0; q < g->num_from_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    P4EST_ASSERT (proc->items != NULL);
+    sc_array_destroy (proc->items);
+  }
+  sc_array_destroy_null (&g->from_procs);
+
   /* perform actual refinement */
   g->lqindex = g->lqindex_refined = 0;
   g->lsph_offset = 0;
@@ -791,6 +799,22 @@ refine_spheres (spheres_global_t * g, int lev)
   if (is_refined) {
     spheres_write_vtk (g, "refined", lev + 1);
   }
+
+  /*---------------- complete send and second cleanup ----------------*/
+
+  mpiret = sc_MPI_Waitall
+    (g->num_to_procs, (sc_MPI_Request *) g->to_requests->array,
+     sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_destroy_null (&g->to_requests);
+
+  for (q = 0; q < g->num_to_procs; ++q) {
+    proc = (sr_buf_t *) sc_array_index_int (g->to_procs, q);
+    P4EST_ASSERT (proc->rank != g->mpirank);
+    P4EST_ASSERT (proc->items != NULL);
+    sc_array_destroy (proc->items);
+  }
+  sc_array_destroy_null (&g->to_procs);
 
   /*-------------- partition and transfer owned spheres --------------*/
 
@@ -834,30 +858,6 @@ refine_spheres (spheres_global_t * g, int lev)
     /* output partitioned forest */
     spheres_write_vtk (g, "partitioned", lev + 1);
   }
-
-  /*---------------- complete send and second cleanup ----------------*/
-
-  for (q = 0; q < g->num_from_procs; ++q) {
-    proc = (sr_buf_t *) sc_array_index_int (g->from_procs, q);
-    P4EST_ASSERT (proc->rank != g->mpirank);
-    P4EST_ASSERT (proc->items != NULL);
-    sc_array_destroy (proc->items);
-  }
-  sc_array_destroy_null (&g->from_procs);
-
-  mpiret = sc_MPI_Waitall
-    (g->num_to_procs, (sc_MPI_Request *) g->to_requests->array,
-     sc_MPI_STATUSES_IGNORE);
-  SC_CHECK_MPI (mpiret);
-  sc_array_destroy_null (&g->to_requests);
-
-  for (q = 0; q < g->num_to_procs; ++q) {
-    proc = (sr_buf_t *) sc_array_index_int (g->to_procs, q);
-    P4EST_ASSERT (proc->rank != g->mpirank);
-    P4EST_ASSERT (proc->items != NULL);
-    sc_array_destroy (proc->items);
-  }
-  sc_array_destroy_null (&g->to_procs);
 
   return is_refined;
 }
