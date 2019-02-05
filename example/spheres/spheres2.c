@@ -114,6 +114,12 @@ accumulate_once (spheres_global_t * g, stats_once_t once, double t)
   sc_stats_accumulate (once_index (g, once), sc_MPI_Wtime () - t);
 }
 
+static void
+accumulate_loop (spheres_global_t * g, int lev, stats_loop_t loop, double t)
+{
+  sc_stats_accumulate (loop_index (g, lev, loop), sc_MPI_Wtime () - t);
+}
+
 static const double irootlen = 1. / P4EST_ROOT_LEN;
 
 static void
@@ -355,6 +361,8 @@ create_forest (spheres_global_t * g)
   g->p4est = p4est_new_ext (g->mpicomm, g->conn, 0, g->minlevel, 1,
                             sizeof (qu_data_t), spheres_init_zero, g);
   accumulate_once (g, STATS_ONCE_NEW, tnew);
+
+  /* output initial mesh */
   if (g->write_vtk) {
     snprintf (filename, BUFSIZ, "%s_sph_%d_%d_%s_%d",
               g->prefix, g->minlevel, g->maxlevel, "new", g->minlevel);
@@ -455,15 +463,15 @@ create_forest (spheres_global_t * g)
      Vexp, vmult * g->conn->num_trees, (long long)
      *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, g->mpisize));
 
-  /* stop sphere generation timer */
-  accumulate_once (g, STATS_ONCE_GENERATE, tgenerate);
-
   /* confirm expected volume */
   mpiret = sc_MPI_Allreduce (&sumrd, &gsrd, 1, sc_MPI_DOUBLE,
                              sc_MPI_SUM, g->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_PRODUCTIONF ("Total volume ideal %g achieved %g\n",
                             vdensity * g->conn->num_trees, gsrd);
+
+  /* stop sphere generation timer */
+  accumulate_once (g, STATS_ONCE_GENERATE, tgenerate);
 }
 
 static int
@@ -660,6 +668,8 @@ refine_spheres (spheres_global_t * g, int lev)
   int                 q;
   int                 num_from_spheres;
   int                 is_refined;
+  double              tpsearch, tsend, tnotify, treceive, twaitsend;
+  double              tlsearch, trefine, tpartition, ttransfer;
   sc_array_t         *points;
   sc_array_t         *pi;
   sc_array_t         *lcounts_partitioned;
@@ -681,6 +691,7 @@ refine_spheres (spheres_global_t * g, int lev)
   /*---------------- search partition to find receivers --------------*/
 
   /* prepare data structures for sending spheres */
+  tpsearch = sc_MPI_Wtime ();
   g->last_to_proc = NULL;
   g->last_to_rank = -1;
   g->to_procs = sc_array_new (sizeof (sr_buf_t));
@@ -699,9 +710,11 @@ refine_spheres (spheres_global_t * g, int lev)
   p4est_search_partition (g->p4est, 0, spheres_partition_quadrant,
                           spheres_partition_point, points);
   sc_array_destroy_null (&points);
+  accumulate_loop (g, lev, STATS_LOOP_PSEARCH, tpsearch);
 
   /*------------------------ send the spheres ------------------------*/
 
+  tsend = sc_MPI_Wtime ();
   P4EST_ASSERT (g->notify->elem_count == g->to_procs->elem_count);
   P4EST_ASSERT (g->notify->elem_count == g->payload->elem_count);
   g->num_to_procs = (int) g->notify->elem_count;
@@ -721,14 +734,18 @@ refine_spheres (spheres_global_t * g, int lev)
     SC_CHECK_MPI (mpiret);
   }
   sc_array_destroy_null (&g->sphere_procs);
+  accumulate_loop (g, lev, STATS_LOOP_SEND, tsend);
 
   /*------------------ reverse communication pattern -----------------*/
 
+  tnotify = sc_MPI_Wtime ();
   sc_notify_ext (g->notify, NULL, g->payload,
                  g->ntop, g->nint, g->nbot, g->mpicomm);
+  accumulate_loop (g, lev, STATS_LOOP_NOTIFY, tnotify);
 
   /*---------------------- receive the spheres -----------------------*/
 
+  treceive = sc_MPI_Wtime ();
   P4EST_ASSERT (g->notify->elem_count == g->payload->elem_count);
   g->num_from_procs = (int) g->notify->elem_count;
   g->from_requests =
@@ -758,9 +775,11 @@ refine_spheres (spheres_global_t * g, int lev)
      sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
   sc_array_destroy_null (&g->from_requests);
+  accumulate_loop (g, lev, STATS_LOOP_RECEIVE, treceive);
 
   /*---------------- refine based on received spheres ----------------*/
 
+  tlsearch = sc_MPI_Wtime ();
   points = sc_array_new (sizeof (p4est_sphere_t *));
   sri = 0;
 
@@ -836,8 +855,10 @@ refine_spheres (spheres_global_t * g, int lev)
     sc_array_destroy (proc->items);
   }
   sc_array_destroy_null (&g->from_procs);
+  accumulate_loop (g, lev, STATS_LOOP_LSEARCH, tlsearch);
 
   /* perform actual refinement */
+  trefine = sc_MPI_Wtime ();
   g->lqindex = g->lqindex_refined = 0;
   g->lsph_offset = 0;
   P4EST_ASSERT ((p4est_locidx_t) g->lcounts->elem_count ==
@@ -857,6 +878,7 @@ refine_spheres (spheres_global_t * g, int lev)
   is_refined = (gnq < g->p4est->global_num_quadrants);
   sc_array_destroy (g->lcounts);
   g->lcounts = g->lcounts_refined;
+  accumulate_loop (g, lev, STATS_LOOP_REFINE, trefine);
 
   /* output refined forest */
   if (is_refined) {
@@ -865,6 +887,7 @@ refine_spheres (spheres_global_t * g, int lev)
 
   /*---------------- complete send and second cleanup ----------------*/
 
+  twaitsend = sc_MPI_Wtime ();
   mpiret = sc_MPI_Waitall
     (g->num_to_procs, (sc_MPI_Request *) g->to_requests->array,
      sc_MPI_STATUSES_IGNORE);
@@ -878,15 +901,19 @@ refine_spheres (spheres_global_t * g, int lev)
     sc_array_destroy (proc->items);
   }
   sc_array_destroy_null (&g->to_procs);
+  accumulate_loop (g, lev, STATS_LOOP_WAITSEND, twaitsend);
 
   /*-------------- partition and transfer owned spheres --------------*/
 
   if (is_refined) {
     /* copy the forest and partition it */
+    tpartition = sc_MPI_Wtime ();
     post = p4est_copy (g->p4est, 1);
     (void) p4est_partition_ext (post, 0, NULL);
+    accumulate_loop (g, lev, STATS_LOOP_PARTITION, tpartition);
 
     /* we go through this even if there was no change in partition. */
+    ttransfer = sc_MPI_Wtime ();
     lcounts_partitioned =
       sc_array_new_count (sizeof (int), post->local_num_quadrants);
     p4est_transfer_fixed (post->global_first_quadrant,
@@ -917,6 +944,7 @@ refine_spheres (spheres_global_t * g, int lev)
     g->sphr = sphr_partitioned;
     g->lsph = (p4est_locidx_t) g->sphr->elem_count;
     sphere_offsets (g);
+    accumulate_loop (g, lev, STATS_LOOP_TRANSFER, ttransfer);
 
     /* output partitioned forest */
     spheres_write_vtk (g, "partitioned", lev + 1);
