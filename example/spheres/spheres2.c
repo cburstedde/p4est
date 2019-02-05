@@ -69,6 +69,7 @@ spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   spheres_global_t   *g = (spheres_global_t *) p4est->user_pointer;
   qu_data_t          *qud = (qu_data_t *) quadrant->p.user_data;
   int                 ltint;
+  int                 set_refine;
 
   /* update variables for the non-refining case */
   *(int *) sc_array_index_int (g->lbytes_refined, g->lqindex_refined) =
@@ -79,7 +80,9 @@ spheres_refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   ++g->lqindex_refined;
 
   /* the replace callback updates the variables if refined */
-  return qud->set_refine;
+  set_refine = qud->set_refine;
+  qud->set_refine = 0;
+  return set_refine;
 }
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -123,13 +126,15 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 #ifdef P4EST_ENABLE_DEBUG
   p4est_quadrant_sphere_box (outgoing[0], &box);
 #endif
-  discr[0] = incoming[1]->x / irootlen;
-  discr[1] = incoming[2]->y / irootlen;
+  discr[0] = incoming[1]->x * irootlen;
+  discr[1] = incoming[2]->y * irootlen;
 #ifdef P4_TO_P8
-  discr[2] = incoming[4]->z / irootlen;
+  discr[2] = incoming[4]->z * irootlen;
 #endif
+  P4EST_ASSERT (!((qu_data_t *) outgoing[0]->p.user_data)->set_refine);
   for (c = 0; c < P4EST_CHILDREN; ++c) {
     sc_array_init (&neworder[c], sizeof (p4est_sphere_t));
+    P4EST_ASSERT (!((qu_data_t *) incoming[c]->p.user_data)->set_refine);
   }
 
   P4EST_ASSERT (g->lqindex >= 1);
