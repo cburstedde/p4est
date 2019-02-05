@@ -31,16 +31,18 @@
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
+#define SPHERES_DIM_G           "%g %g"
 #else
 #include <p8est_bits.h>
 #include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #include <p8est_vtk.h>
+#define SPHERES_DIM_G           "%g %g %g"
 #endif /* P4_TO_P8 */
 #include "spheres_global.h"
 
-#if 1
+#if 0
 #define SPHERES_CHATTY
 #endif
 
@@ -369,16 +371,12 @@ create_forest (spheres_global_t * g)
             r = rmin * sqrt (fact);
 #endif
           }
-#if defined SPHERES_CHATTY || 1
-          P4EST_INFOF ("Created sphere at %g %g %g radius %g\n",
+          P4EST_INFOF ("Created sphere at " SPHERES_DIM_G " radius %g\n",
                        sph->center[0], sph->center[1],
-#ifndef P4_TO_P8
-                       -1.,
-#else
+#ifdef P4_TO_P8
                        sph->center[2],
 #endif
                        r);
-#endif
           sph->radius = r;
           sumrd += P4EST_DIM_POW (2. * r);
         }
@@ -609,6 +607,7 @@ refine_spheres (spheres_global_t * g, int lev)
 #ifdef P4EST_ENABLE_DEBUG
   p4est_gloidx_t      gcur, gnext;
 #endif
+  p4est_gloidx_t      gsloc, gsglo;
   p4est_gloidx_t      gnq;
   p4est_t            *post;
   p4est_sphere_t    **psph;
@@ -634,9 +633,7 @@ refine_spheres (spheres_global_t * g, int lev)
   for (li = 0; li < g->lsph; ++li) {
     *(p4est_locidx_t *) sc_array_index_int (points, li) = li;
   }
-#ifdef SPHERES_CHATTY
   P4EST_INFOF ("Searching partition for %ld local spheres\n", (long) g->lsph);
-#endif
   p4est_search_partition (g->p4est, 0, spheres_partition_quadrant,
                           spheres_partition_point, points);
   sc_array_destroy_null (&points);
@@ -756,10 +753,14 @@ refine_spheres (spheres_global_t * g, int lev)
   }
   P4EST_ASSERT (sri == (p4est_locidx_t) points->elem_count);
 
+  /* report (partially redundant) global sum of spheres */
+  gsloc = (p4est_gloidx_t) sri;
+  mpiret = sc_MPI_Allreduce (&gsloc, &gsglo, 1, P4EST_MPI_GLOIDX,
+                             sc_MPI_SUM, g->mpicomm);
+  P4EST_GLOBAL_PRODUCTIONF ("Sphere redundant sum %lld\n", (long long) gsglo);
+
   /* search through local elements and set refinement flag */
-#ifdef SPHERES_CHATTY
   P4EST_INFOF ("Searching elements for %ld local spheres\n", (long) sri);
-#endif
   p4est_search_local (g->p4est, 0, spheres_local_quadrant,
                       spheres_local_point, points);
   sc_array_destroy_null (&points);
