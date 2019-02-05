@@ -110,8 +110,6 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   int                 c;
   int                 outg_ibytes;
   double              discr[P4EST_DIM];
-  size_t              newbytes;
-  char               *newpos;
   sc_array_t          neworder[P4EST_CHILDREN];
   p4est_locidx_t      outg_spheres, prev_spheres, li;
   p4est_sphere_t     *sph;
@@ -163,16 +161,15 @@ spheres_replace_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   /* assign sort results by child */
-  newpos = (char *) sc_array_index_null (g->sphr, prev_spheres);
+  li = prev_spheres;
   for (c = 0; c < P4EST_CHILDREN; ++c) {
-    if ((newbytes = neworder[c].elem_count * sizeof (p4est_sphere_t)) > 0) {
-      memcpy (newpos, neworder[c].array, newbytes);
-    }
+    sc_array_copy_into (g->sphr, li, &neworder[c]);
+    li += neworder[c].elem_count;
     *(int *) sc_array_index (g->lbytes_refined, g->lqindex_refined - 1 + c) =
-      (int) newbytes;
-    newpos += newbytes;
+      (int) (neworder[c].elem_count * sizeof (p4est_sphere_t));
     sc_array_reset (&neworder[c]);
   }
+  P4EST_ASSERT (li == g->lsph_offset);
 
   /* finally update the running offset */
   g->lqindex_refined += P4EST_CHILDREN - 1;
