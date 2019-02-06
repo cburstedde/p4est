@@ -461,7 +461,7 @@ create_forest (spheres_global_t * g)
   g->goffsets = sc_array_new_count (sizeof (p4est_gloidx_t), g->mpisize + 1);
   sphere_offsets (g);
   P4EST_GLOBAL_PRODUCTIONF
-    ("Sphere expected volume %g ideal count %g generated %lld\n",
+    ("Sphere expected volume %g ideal count %.1f generated %lld\n",
      Vexp, vmult * g->conn->num_trees, (long long)
      *(p4est_gloidx_t *) sc_array_index_int (g->goffsets, g->mpisize));
 
