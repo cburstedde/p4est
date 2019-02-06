@@ -1073,6 +1073,9 @@ main (int argc, char **argv)
   sc_options_add_double (opt, 's', "spherelems", &g->spherelems, 1.,
                          "Min elements per sphere diameter");
 
+  g->ntop = g->nint = P4EST_DIM;
+  sc_options_add_int (opt, 'N', "nbottom", &g->nbot, 12,
+                      "Notify bottom multiplicator");
   sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
                        "Configure for scaling test");
 
@@ -1082,8 +1085,6 @@ main (int argc, char **argv)
                          "sph" SPHERES_48 ()"res", "Prefix for file output");
 
   /* set other parameters */
-  g->ntop = 12;
-  g->nint = g->nbot = 4;
   g->mpiwrap = 16;
 
   /* proceed in run-once loop for clean abort */
