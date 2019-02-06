@@ -371,10 +371,12 @@ create_forest (spheres_global_t * g)
 
   /* minimum and maximum radius determined by target levels */
   tgenerate = sc_MPI_Wtime ();
-  rmax = g->rmax;
+  rmax = .5 * g->spherelems * sc_intpowf (.5, g->minlevel);
+  rmax = SC_MIN (rmax, g->rmax);
+  P4EST_ASSERT (0. < rmax);
   rmin = .5 * g->spherelems * sc_intpowf (.5, g->maxlevel);
-  rmin = SC_MIN (rmin, rmax);
-  P4EST_ASSERT (rmin > 0.);
+  rmin = SC_MIN (rmin, g->rmax);
+  P4EST_ASSERT (0. < rmin && rmin <= rmax);
   P4EST_GLOBAL_PRODUCTIONF
     ("Generating spheres with radii %g to %g\n", rmin, rmax);
 
@@ -994,7 +996,8 @@ run (spheres_global_t * g)
   /* create forest, populate with spheres, loop refine and partition */
   create_forest (g);
   for (lev = g->minlevel; lev < g->maxlevel; ++lev) {
-    P4EST_GLOBAL_PRODUCTIONF ("Trying refinement at level %d\n", lev);
+    P4EST_GLOBAL_PRODUCTIONF ("Trying refinement from level %d to %d\n",
+                              lev, lev + 1);
     if (!refine_spheres (g, lev)) {
       P4EST_GLOBAL_PRODUCTIONF ("No refinement at level %d\n", lev);
       break;
