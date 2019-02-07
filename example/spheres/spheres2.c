@@ -1015,7 +1015,7 @@ run (spheres_global_t * g)
   accumulate_once (g, STATS_ONCE_WALL, twall);
   si = once_index (g, STATS_ONCE_FIRST);
   sc_stats_compute (sc_MPI_COMM_WORLD, g->num_stats, si);
-  sc_stats_print (p4est_package_id, SC_LP_PRODUCTION, g->num_stats, si, 0, 0);
+  sc_stats_print (p4est_package_id, SC_LP_PRODUCTION, g->num_stats, si, 0, 1);
   for (i = 0; i < g->num_stats; ++i) {
     sc_stats_reset (si + i, 1);
   }
