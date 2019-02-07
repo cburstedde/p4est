@@ -1029,6 +1029,7 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
+  int                 j;
   int                 ue;
   int                 first_argc;
 #if 0
@@ -1065,7 +1066,7 @@ main (int argc, char **argv)
   sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
   sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, -1,
                       "Highest level");
-  sc_options_add_double (opt, 'R', "rmax", &g->rmax, .5, "Max sphere radius");
+  sc_options_add_double (opt, 'r', "rmax", &g->rmax, .5, "Max sphere radius");
   sc_options_add_double (opt, 't', "thickness", &g->thickness, .05,
                          "Relative sphere thickness");
   sc_options_add_double (opt, 'f', "lfraction", &g->lfraction, .3,
@@ -1078,6 +1079,8 @@ main (int argc, char **argv)
                       "Notify bottom multiplicator");
   sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
                        "Configure for scaling test");
+  sc_options_add_int (opt, 'R', "repetitions", &g->repetitions, 1,
+                      "Repeat run multiple times");
 
   sc_options_add_bool (opt, 'V', "write-vtk", &g->write_vtk, 0,
                        "Output VTK files");
@@ -1132,7 +1135,13 @@ main (int argc, char **argv)
       sc_package_set_verbosity (sc_package_id, SC_LP_PRODUCTION);
       sc_package_set_verbosity (p4est_package_id, SC_LP_PRODUCTION);
     }
-    run (g);
+    for (j = 0; j < g->repetitions; ++j) {
+      P4EST_GLOBAL_PRODUCTIONF ("Spheres run repetition %d of %d\n",
+                                j, g->repetitions);
+      run (g);
+    }
+    P4EST_GLOBAL_PRODUCTIONF ("Spheres run %d repetitions done\n",
+                              g->repetitions);
   }
   while (0);
   if (ue) {
