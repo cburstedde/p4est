@@ -969,12 +969,16 @@ destroy_forest (spheres_global_t * g)
 static void
 run (spheres_global_t * g)
 {
+  int                 mpiret;
   int                 i;
   int                 lev;
   double              twall;
   char                name[BUFSIZ];
   sc_statinfo_t      *si;
 
+  /* synchronize before timing begins */
+  mpiret = sc_MPI_Barrier (g->mpicomm);
+  SC_CHECK_MPI (mpiret);
   twall = sc_MPI_Wtime ();
 
   /* allocate statistics counters */
