@@ -1116,7 +1116,7 @@ comm (part_global_t * g)
   t0_notify = sc_MPI_Wtime ();
 
   /* reverse communication pattern */
-  sc_notify_ext (notif, NULL, payl, g->ntop, g->nint, g->nbot, g->mpicomm);
+  sc_notify_ext (notif, NULL, payl, NULL, g->mpicomm);
   P4EST_ASSERT (payl->elem_count == notif->elem_count);
   num_senders = (int) notif->elem_count;
   P4EST_ASSERT (0 <= num_senders && num_senders < g->mpisize);
@@ -2426,6 +2426,7 @@ notif (part_global_t * g)
   double              t0_binary, t0_nary, t1;
   sc_array_t         *recv1, *send1, *payl1;
   sc_array_t         *recv2, *send2, *payl2;
+  sc_notify_t        *notifyc;
 
   recv1 = sc_array_new (sizeof (int));
   send1 = sc_array_new (sizeof (int));
@@ -2454,13 +2455,18 @@ notif (part_global_t * g)
   sc_array_copy (recv2, recv1);
   sc_array_copy (payl2, payl1);
 
+  /* allocate notify controller */
+  notifyc = sc_notify_new (g->mpicomm);
+  sc_notify_set_type (notifyc, SC_NOTIFY_NARY);
+
   mpiret = sc_MPI_Barrier (g->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* STATS */
   t0_binary = sc_MPI_Wtime ();
 
-  sc_notify_ext (recv1, send1, payl1, 2, 2, 2, g->mpicomm);
+  sc_notify_nary_set_widths (notifyc, 2, 2, 2);
+  sc_notify_payload (recv1, send1, payl1, NULL, 1, notifyc);
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
@@ -2472,7 +2478,8 @@ notif (part_global_t * g)
   /* STATS */
   t0_nary = sc_MPI_Wtime ();
 
-  sc_notify_ext (recv2, send2, payl2, g->ntop, g->nint, g->nbot, g->mpicomm);
+  sc_notify_nary_set_widths (notifyc, g->ntop, g->nint, g->nbot);
+  sc_notify_payload (recv2, send2, payl2, NULL, 1, notifyc);
 
   /* STATS */
   t1 = sc_MPI_Wtime ();
@@ -2505,6 +2512,7 @@ notif (part_global_t * g)
   }
   SC_CHECK_ABORT (j == (int) send1->elem_count, "Count j");
 
+  sc_notify_destroy (notifyc);
   sc_array_destroy (recv1);
   sc_array_destroy (send1);
   sc_array_destroy (payl1);

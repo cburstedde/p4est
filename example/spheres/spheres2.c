@@ -676,6 +676,7 @@ refine_spheres (spheres_global_t * g, int lev)
   sc_array_t         *pi;
   sc_array_t         *lcounts_partitioned;
   sc_array_t         *sphr_partitioned;
+  sc_notify_t        *notifyc;
   p4est_locidx_t      li;
   p4est_locidx_t      sri, snum;
 #ifdef P4EST_ENABLE_DEBUG
@@ -741,8 +742,16 @@ refine_spheres (spheres_global_t * g, int lev)
   /*------------------ reverse communication pattern -----------------*/
 
   tnotify = sc_MPI_Wtime ();
-  sc_notify_ext (g->notify, NULL, g->payload,
-                 g->ntop, g->nint, g->nbot, g->mpicomm);
+  notifyc = sc_notify_new (g->mpicomm);
+  if (!g->notify_alltoall) {
+    sc_notify_set_type (notifyc, SC_NOTIFY_NARY);
+    sc_notify_nary_set_widths (notifyc, g->ntop, g->nint, g->nbot);
+  }
+  else {
+    sc_notify_set_type (notifyc, SC_NOTIFY_PEX);
+  }
+  sc_notify_payload (g->notify, NULL, g->payload, NULL, 1, notifyc);
+  sc_notify_destroy (notifyc);
   accumulate_loop (g, lev, STATS_LOOP_NOTIFY, tnotify);
 
   /*---------------------- receive the spheres -----------------------*/
@@ -1081,6 +1090,8 @@ main (int argc, char **argv)
   g->ntop = g->nint = P4EST_CHILDREN;
   sc_options_add_int (opt, 'N', "nbottom", &g->nbot, 48 / P4EST_CHILDREN,
                       "Notify bottom multiplicator");
+  sc_options_add_bool (opt, 'A', "alltoall", &g->notify_alltoall, 0,
+                       "Notify alltoall implementation");
   sc_options_add_bool (opt, 'S', "scaling", &g->scaling, 0,
                        "Configure for scaling test");
   sc_options_add_int (opt, 'R', "repetitions", &g->repetitions, 1,

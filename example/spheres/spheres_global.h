@@ -102,6 +102,7 @@ typedef struct spheres_global
 
   /* metadata for pattern reversal */
   int                 ntop, nint, nbot;
+  int                 notify_alltoall;
   int                *last_payload;
   sc_array_t         *notify;
   sc_array_t         *payload;
