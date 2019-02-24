@@ -1,10 +1,18 @@
 NEWS
 ====
 
+ * The current stable version 2 of the p4est code is maintained in branches
+   v2.2--v2.5.  It will be backwards compatible as much as possible.
+   The code will remain usable and bugfixed for the forseeable future.
+   The branches master (official) and develop (fairly stable) live here.
+ * We have introduced a new development branch leading up to v3.0.
+   The v3 API will be optional to use: the v2.2 API is still included.
+   v2.8+ however, we may slightly break backwards compatibility.
+   The initial version is v2.8.  The branch is called prev3-develop.
  * We begin introducing #define for backwards compatibility queries.
    These defines are placed in src/p4est_base.h.
    Please see the paragraph COMPATIBLIITY below for a list.
-   We will do the same in libsc; please see the NEWS file there.
+   We are doing the same in libsc; please see the NEWS file there.
    If your code does not compile after updating p4est, please modify it.
    The defines are reliable for the master branch, and usually for develop.
    Topic branches are not required to conform.
