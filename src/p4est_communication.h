@@ -267,7 +267,9 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
 
 /** Initiate a fixed-size data transfer between partitions.
  * See \ref p4est_transfer_fixed for a full description.
- * Must be matched with \ref p4est_transfer_fixed_end for completion.
+ * This functions calls asynchronous MPI send/receive and returns.
+ * Must be matched with \ref p4est_transfer_fixed_end for completion,
+ * which calls blocking MPI wait until all messages have been processed.
  * All parameters must stay alive until the completion has been called.
  * \param [in] dest_gfq     The target partition encoded as a \b
  *                          p4est->global_first_quadrant array.  Has \b mpisize
@@ -302,6 +304,7 @@ p4est_transfer_context_t *p4est_transfer_fixed_begin (const p4est_gloidx_t *
                                                       size_t data_size);
 
 /** Complete a fixed-size data transfer between partitions.
+ * Waits for remaining messages to complete and frees the transfer context.
  * \param [in] tc       Context data from \ref p4est_transfer_fixed_begin.
  *                      Is deallocated before this function returns.
  */
@@ -358,7 +361,9 @@ void                p4est_transfer_custom (const p4est_gloidx_t * dest_gfq,
 
 /** Initiate a variable-size data transfer between partitions.
  * See \ref p4est_transfer_custom for a full description.
- * Must be matched with \ref p4est_transfer_custom_end for completion.
+ * This functions calls asynchronous MPI send/receive and returns.
+ * Must be matched with \ref p4est_transfer_custom_end for completion,
+ * which calls blocking MPI wait until all messages have been processed.
  * All parameters must stay alive until the completion has been called.
  * \param [in] dest_gfq     The target partition encoded as a \b
  *                          p4est->global_first_quadrant array.  Has \b mpisize
@@ -409,10 +414,92 @@ p4est_transfer_context_t *p4est_transfer_custom_begin (const p4est_gloidx_t *
                                                        const int *src_sizes);
 
 /** Complete a variable-size data transfer between partitions.
+ * Waits for remaining messages to complete and frees the transfer context.
  * \param [in] tc       Context data from \ref p4est_transfer_custom_begin.
  *                      Is deallocated before this function returns.
  */
 void                p4est_transfer_custom_end (p4est_transfer_context_t * tc);
+
+/** Transfer variable-count item data between partitions.
+ * Each quadrant may have a different number of items (including 0).
+ * (See \ref p4est_transfer_fixed that is optimized for fixed-count data,
+ *  and \ref p4est_transfer_custem for data that is not itemized at all.)
+ * The destination process may not know the item count for the elements it
+ * receives.  In this case the counts need to be obtained separately in advance,
+ * for example by calling \ref p4est_transfer_fixed with \b src_sizes as
+ * payload data, or alternatively its split begin/end versions.
+ * \param [in] dest_gfq     The target partition encoded as a \b
+ *                          p4est->global_first_quadrant array.  Has \b mpisize
+ *                          + 1 members, must be non-decreasing and satisfy
+ *                          gfq[0] == 0, gfq[mpisize] == global_num_quadrants.
+ * \param [in] src_gfq      The original partition, analogous to \b dest_gfq.
+ * \param [in] mpicomm      The communicator to use.
+ *                          Its mpisize must match \b dest_gfq and \b src_gfq.
+ * \param [in] tag          This tag is used in all messages.  The user must
+ *                          guarantee that \b mpicomm and \b tag do not
+ *                          conflict with other messages in transit.
+ * \param [out] dest_data   User-allocated memory of
+ *                          sum_{i in \b dest->local_num_quadrants} item_size
+ *                          * dest_counts[i] many bytes is received into.
+ *                          See below about how to choose its size.
+ *                          If dest has data to transfer, must be non-NULL.
+ * \param [in] dest_counts  User-allocated memory of one integer for each
+ *                          quadrant, storing the item count to receive for it.
+ *                          We understand that the counts are often not known a
+ *                          priori, in which case they can be obtained by a
+ *                          prior call to \ref p4est_transfer_fixed.
+ *                          Optionally the split begin/end versions can be used
+ *                          for added flexibility and overlapping of messages.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
+ *                          If dest has quadrants, must be non-NULL.
+ * \param [in] src_data     User-allocated memory of
+ *                          sum_{i in \b src->local_num_quadrants} item_size
+ *                          * src_counts[i] many bytes is sent from.
+ *                          If src has data to transfer, must be non-NULL.
+ * \param [in] src_counts   User-allocated memory of one integer for each
+ *                          quadrant, storing the item count to send for it.
+ *                          We use the type int to minimize the message size,
+ *                          and to conform to MPI that has no type for size_t.
+ *                          If src has quadrants, must be non-NULL.
+ * \param [in] item_size    Data size for each item in bytes.
+ */
+void                p4est_transfer_items
+  (const p4est_gloidx_t * dest_gfq, const p4est_gloidx_t * src_gfq,
+   sc_MPI_Comm mpicomm, int tag,
+   void *dest_data, const int *dest_counts,
+   const void *src_data, const int *src_counts, size_t item_size);
+
+/** Initiate a variable-count item transfer between partitions.
+ * See \ref p4est_transfer_items for a full description.
+ * This functions calls asynchronous MPI send/receive and returns.
+ * Must be matched with \ref p4est_transfer_items_end for completion,
+ * which calls blocking MPI wait until all messages have been processed.
+ * All parameters must stay alive until the completion has been called.
+ */
+p4est_transfer_context_t *p4est_transfer_items_begin
+  (const p4est_gloidx_t * dest_gfq, const p4est_gloidx_t * src_gfq,
+   sc_MPI_Comm mpicomm, int tag,
+   void *dest_data, const int *dest_counts,
+   const void *src_data, const int *src_counts, size_t item_size);
+
+/** Complete a variable-count item transfer between partitions.
+ * Waits for remaining messages to complete and frees the transfer context.
+ * \param [in] tc       Context data from \ref p4est_transfer_items_begin.
+ *                      Is deallocated before this function returns.
+ */
+void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
+
+/** Complete any of the transfer_begin functions.
+ * The specialized transfer_end functions are recommended over this one
+ * for slightly stricter error checking: \ref p4est_transfer_fixed_end,
+ * \ref p4est_transfer_custom_end, and \ref p4est_transfer_items_end.
+ *
+ * \param [in,out] tc       A valid context from one of the begin functions.
+ *                          This function waits for remaining communications
+ *                          to complete and frees the transfer context.
+ */
+void                p4est_transfer_end (p4est_transfer_context_t * tc);
 
 SC_EXTERN_C_END;
 

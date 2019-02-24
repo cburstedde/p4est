@@ -33,3 +33,8 @@ Compatibility #define variables in p4est_base.h:
    indicaties that p4est_connectivity_new_disk now takes two int arguments.
    They act as bool variables to switch periodicity on across x, y boundaries.
    The call of p4est_wrap_new_disk has changed as well to two more arguments.
+ * P4EST_SEARCH_LOCAL
+   indicates that we have added search functions for the partition,
+   more precisely p4est_search_local, search_partition, and search_all.
+   Please see p4est_search.h for documentation and details.
+   The p4est_search function written earlier remains.
