@@ -1088,7 +1088,7 @@ main (int argc, char **argv)
                          "Min elements per sphere diameter");
 
   g->ntop = g->nint = P4EST_CHILDREN;
-  sc_options_add_int (opt, 'N', "nbottom", &g->nbot, 48 / P4EST_CHILDREN,
+  sc_options_add_int (opt, 'N', "nbottom", &g->nbot, 24,
                       "Notify bottom multiplicator");
   sc_options_add_bool (opt, 'A', "alltoall", &g->notify_alltoall, 0,
                        "Notify alltoall implementation");
