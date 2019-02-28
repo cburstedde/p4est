@@ -283,15 +283,34 @@ void                p4est_search_partition (p4est_t * p4est, int call_post,
                                             sc_array_t * points);
 
 /** Traverse an encoded partition top-down.
- * The partition is encoded in a global_first_position array.
+ * The algorithm is the same as \ref p4est_search_partition.
+ *
+ * Here, the partition is encoded as a global_first_position array
+ * that usually occurs as a private member of a \ref p4est_t structure.
  * This array has (num_partitions = p) + 1 members, where p >= 0.
  * The first entry g[0] must have zero coordinates and p.which_tree = 0.
  * The entries of the array must be valid quadrants whose p.which_tree member
  * is non-descending.  With reference to this tree number, the quadrants must
  * be non-descending in Morton order.  The last element is actually gfp[p],
  * must have zero coordinates and the total number of trees in p.which_tree.
- * The member global_first_position from a valid p4est is suitable.
+ *
+ * The member global_first_position from a valid forest is suitable.
  * The process numbers in the callback arguments are relative to num_partitions.
+ * The callbacks receive a bogus forest with valid global_first_position,
+ * mpisize, and connectivity->num_trees.  Its user data is set to \b user.
+ *
+ * \param [in] gpf          Array of quadrants that define a partition of
+ *                          a forest.  The quadrants must be valid, have a
+ *                          valid p.which_tree member, and non-descending.
+ *                          The number of entries must be \num_partitions + 1.
+ *                          The last of these quadrants must hold zero
+ *                          coordinates and the total number of trees.
+ * \param [in] num_partitions       Partition size of the encoded forest.
+ *                                  Takes the role of mpisize.
+ *                                  \b gfp must have \b num_partitions + 1
+ *                                  elements.
+ * \param [in] user         Installed as p4est->user_pointer passed to the
+ *                          callbacks \b quadrant_fn, \b point_fn.
  */
 void                p4est_search_gfp (const p4est_quadrant_t * gfp,
                                       int num_partitions, int call_post,

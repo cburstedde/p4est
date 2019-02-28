@@ -262,7 +262,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  * go down branches that are split between multiple processors.  The callback
  * functions can be used to stop a branch recursion even for split branches.
  * This function offers the option to search for arbitrary user-defined points
- * analogously to \ref p4est_search_local.
+ * analogously to \ref p8est_search_local.
  * \note Traversing the whole processor partition will be at least O(P),
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p4est        The forest to traverse.
@@ -285,6 +285,36 @@ void                p8est_search_partition (p8est_t * p4est, int call_post,
                                             p8est_search_partition_t point_fn,
                                             sc_array_t * points);
 
+/** Traverse an encoded partition top-down.
+ * The algorithm is the same as \ref p8est_search_partition.
+ *
+ * Here, the partition is encoded as a global_first_position array
+ * that usually occurs as a private member of a \ref p8est_t structure.
+ * This array has (num_partitions = p) + 1 members, where p >= 0.
+ * The first entry g[0] must have zero coordinates and p.which_tree = 0.
+ * The entries of the array must be valid quadrants whose p.which_tree member
+ * is non-descending.  With reference to this tree number, the quadrants must
+ * be non-descending in Morton order.  The last element is actually gfp[p],
+ * must have zero coordinates and the total number of trees in p.which_tree.
+ *
+ * The member global_first_position from a valid forest is suitable.
+ * The process numbers in the callback arguments are relative to num_partitions.
+ * The callbacks receive a bogus forest with valid global_first_position,
+ * mpisize, and connectivity->num_trees.  Its user data is set to \b user.
+ *
+ * \param [in] gpf          Array of quadrants that define a partition of
+ *                          a forest.  The quadrants must be valid, have a
+ *                          valid p.which_tree member, and non-descending.
+ *                          The number of entries must be \num_partitions + 1.
+ *                          The last of these quadrants must hold zero
+ *                          coordinates and the total number of trees.
+ * \param [in] num_partitions       Partition size of the encoded forest.
+ *                                  Takes the role of mpisize.
+ *                                  \b gfp must have \b num_partitions + 1
+ *                                  elements.
+ * \param [in] user         Installed as p4est->user_pointer passed to the
+ *                          callbacks \b quadrant_fn, \b point_fn.
+ */
 void                p8est_search_gfp (const p8est_quadrant_t * gfp,
                                       int num_partitions, int call_post,
                                       p8est_search_partition_t quadrant_fn,
@@ -349,8 +379,8 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
 
 /** Perform a top-down search on the whole forest.
  *
- * This function combines the functionality of \ref p4est_search_local and \ref
- * p4est_search_partition; their documentation applies for the most part.
+ * This function combines the functionality of \ref p8est_search_local and \ref
+ * p8est_search_partition; their documentation applies for the most part.
  *
  * The recursion proceeds from the root quadrant of each tree until
  * (a) we encounter a remote quadrant that covers only one processor, or
@@ -381,7 +411,7 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  * \note
  * This function works fine when used for the special cases that either the
  * partition or the local quadrants are not of interest.  However, in the case
- * of querying only local information we expect that \ref p4est_search_local
+ * of querying only local information we expect that \ref p8est_search_local
  * will be faster since it employs specific local optimizations.
  *
  * \param [in] p4est        The forest to be searched.
