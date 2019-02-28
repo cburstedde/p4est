@@ -282,6 +282,23 @@ void                p4est_search_partition (p4est_t * p4est, int call_post,
                                             p4est_search_partition_t point_fn,
                                             sc_array_t * points);
 
+/** Traverse an encoded partition top-down.
+ * The partition is encoded in a global_first_position array.
+ * This array has (num_partitions = p) + 1 members, where p >= 0.
+ * The first entry g[0] must have zero coordinates and p.which_tree = 0.
+ * The entries of the array must be valid quadrants whose p.which_tree member
+ * is non-descending.  With reference to this tree number, the quadrants must
+ * be non-descending in Morton order.  The last element is actually gfp[p],
+ * must have zero coordinates and the total number of trees in p.which_tree.
+ * The member global_first_position from a valid p4est is suitable.
+ * The process numbers in the callback arguments are relative to num_partitions.
+ */
+void                p4est_search_gfp (const p4est_quadrant_t * gfp,
+                                      int num_partitions, int call_post,
+                                      p4est_search_partition_t quadrant_fn,
+                                      p4est_search_partition_t point_fn,
+                                      sc_array_t * points, void *user);
+
 /** Callback function for the top-down search through the whole forest.
  * \param [in] p4est        The forest to search.
  *                          We recurse through the trees one after another.

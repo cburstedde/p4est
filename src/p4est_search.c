@@ -682,6 +682,20 @@ p4est_traverse_type_tree (sc_array_t * array, size_t pindex, void *data)
   return (size_t) pos->p.which_tree;
 }
 
+static int
+p4est_comm_is_empty_gfp (p4est_t * p4est, int p)
+{
+  const p4est_quadrant_t *gfp;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (0 <= p && p < p4est->mpisize);
+
+  gfp = p4est->global_first_position;
+  P4EST_ASSERT (gfp != NULL);
+
+  return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
+}
+
 /** Check whether a processor begins entering a given quadrant.
  * \param [in] p4est    Used for its partition markers.
  * \param [in] quadrant This quadrant's q->p.which_tree field must match p's.
@@ -756,8 +770,8 @@ p4est_traverse_is_valid_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   /* this is redundant after the checks above */
-  P4EST_ASSERT (!p4est_comm_is_empty (p4est, pfirst) &&
-                !p4est_comm_is_empty (p4est, plast));
+  P4EST_ASSERT (!p4est_comm_is_empty_gfp (p4est, pfirst) &&
+                !p4est_comm_is_empty_gfp (p4est, plast));
 
   return 1;
 }
@@ -911,7 +925,7 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
       if (p4est_traverse_is_clean_start (rec->p4est, &child, cpfirst)) {
         /* cpfirst starts at the tree's first descendant but may be empty */
         P4EST_ASSERT (i > 0);
-        while (p4est_comm_is_empty (rec->p4est, cpfirst)) {
+        while (p4est_comm_is_empty_gfp (rec->p4est, cpfirst)) {
           ++cpfirst;
           P4EST_ASSERT (p4est_traverse_type_childid
                         (rec->position_array, cpfirst, quadrant) ==
@@ -1021,7 +1035,7 @@ p4est_search_partition (p4est_t * p4est,
 
       if (p4est_traverse_is_clean_start (p4est, &root, pfirst)) {
         /* pfirst starts at the tree's first descendant but may be empty */
-        while (p4est_comm_is_empty (p4est, pfirst)) {
+        while (p4est_comm_is_empty_gfp (p4est, pfirst)) {
           ++pfirst;
           P4EST_ASSERT (p4est_traverse_type_tree
                         (&position_array, pfirst, NULL) == (size_t) tt);
@@ -1053,6 +1067,48 @@ p4est_search_partition (p4est_t * p4est,
   /* cleanup */
   sc_array_destroy (tree_offsets);
   sc_array_reset (&position_array);
+}
+
+void
+p4est_search_gfp (const p4est_quadrant_t * gfp, int num_partitions,
+                  int call_post, p4est_search_partition_t quadrant_fn,
+                  p4est_search_partition_t point_fn, sc_array_t * points,
+                  void *user)
+{
+#ifdef P4EST_ENABLE_DEBUG
+  int                 i;
+#endif
+  p4est_topidx_t      num_trees;
+  p4est_connectivity_t sconn, *conn = &sconn;
+  p4est_t             sp4est, *p4est = &sp4est;
+
+  /* check first_position argument */
+  P4EST_ASSERT (num_partitions >= 0);
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (gfp[0].x == 0);
+  P4EST_ASSERT (gfp[0].y == 0);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (gfp[0].z == 0);
+#endif
+  P4EST_ASSERT (gfp[0].p.which_tree == 0);
+#ifdef P4EST_ENABLE_DEBUG
+  for (i = 1; i <= num_partitions; ++i) {
+    P4EST_ASSERT (p4est_quadrant_compare_piggy (&gfp[i - 1], &gfp[i]) <= 0);
+  }
+#endif
+  num_trees = gfp[num_partitions].p.which_tree;
+
+  /* create mostly bogus static p4est */
+  memset (conn, 0, sizeof (*conn));
+  conn->num_trees = num_trees;
+  memset (p4est, 0, sizeof (*p4est));
+  p4est->global_first_position = (p4est_quadrant_t *) gfp;
+  p4est->mpisize = num_partitions;
+  p4est->connectivity = conn;
+  p4est->user_pointer = user;
+
+  /* call partition search */
+  p4est_search_partition (p4est, call_post, quadrant_fn, point_fn, points);
 }
 
 /** This recursion context saves on the number of parameters passed. */

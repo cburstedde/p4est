@@ -285,6 +285,12 @@ void                p8est_search_partition (p8est_t * p4est, int call_post,
                                             p8est_search_partition_t point_fn,
                                             sc_array_t * points);
 
+void                p8est_search_gfp (const p8est_quadrant_t * gfp,
+                                      int num_partitions, int call_post,
+                                      p8est_search_partition_t quadrant_fn,
+                                      p8est_search_partition_t point_fn,
+                                      sc_array_t * points, void *user);
+
 /** Callback function for the top-down search through the whole forest.
  * \param [in] p4est        The forest to search.
  *                          We recurse through the trees one after another.
