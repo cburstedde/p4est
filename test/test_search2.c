@@ -542,6 +542,72 @@ test_build_local (sc_MPI_Comm mpicomm)
   p4est_connectivity_destroy (conn);
 }
 
+typedef struct partition_state
+{
+  p4est_locidx_t      count;
+}
+partition_state_t;
+
+static int
+ps_quadrant (p4est_t * p4est,
+             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
+             int pfirst, int plast, void *point)
+{
+  partition_state_t  *ps = (partition_state_t *) p4est->user_pointer;
+  P4EST_ASSERT (point == NULL);
+
+  P4EST_INFOF ("Current count at tree %ld quadrant %d procs %d %d\n",
+               (long) which_tree, ps->count, pfirst, plast);
+  p4est_quadrant_print (SC_LP_INFO, quadrant);
+
+  return (++ps->count) % 7;
+}
+
+static int
+ps_point (p4est_t * p4est,
+          p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
+          int pfirst, int plast, void *point)
+{
+  partition_state_t  *ps = (partition_state_t *) p4est->user_pointer;
+  int                 i;
+
+  P4EST_ASSERT (point != NULL);
+  i = *(int *) point;
+
+  P4EST_INFOF ("Current count at point %d %d\n", i, ps->count);
+
+  return i == 0 ? 0 : i == 1 ? 1 : (++ps->count % 11);
+}
+
+static              p4est_locidx_t
+test_partition_search (p4est_t * p4est, int call_post, int do_gfp)
+{
+  int                 i;
+  void               *up;
+  sc_array_t         *points;
+  partition_state_t   sps, *ps = &sps;
+
+  ps->count = 0;
+
+  points = sc_array_new_count (sizeof (int), 3);
+  for (i = 0; i < 3; ++i) {
+    *(int *) sc_array_index_int (points, i) = i;
+  }
+  if (!do_gfp) {
+    up = p4est->user_pointer;
+    p4est->user_pointer = ps;
+    p4est_search_partition (p4est, call_post, ps_quadrant, ps_point, points);
+    p4est->user_pointer = up;
+  }
+  else {
+    p4est_search_gfp (p4est->global_first_position, p4est->mpisize,
+                      call_post, ps_quadrant, ps_point, points, ps);
+  }
+  sc_array_destroy (points);
+
+  return ps->count;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -549,6 +615,7 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 found_total;
   p4est_locidx_t      jt, Al, Bl;
+  p4est_locidx_t      Pla, Plb, Plc, Pld;
   p4est_locidx_t      local_count;
   p4est_connectivity_t *conn;
   p4est_quadrant_t   *A, *B;
@@ -641,6 +708,17 @@ main (int argc, char **argv)
   local_count = 0;
   p4est_search_local (p4est, 0, count_callback, NULL, NULL);
   SC_CHECK_ABORT (local_count == p4est->local_num_quadrants, "Count search");
+
+  /* Test partition search */
+  P4EST_GLOBAL_INFO ("Testing partition search\n");
+  Pla = test_partition_search (p4est, 0, 0);
+  Plb = test_partition_search (p4est, 1, 0);
+  P4EST_INFOF ("First partition search %ld %ld\n", (long) Pla, (long) Plb);
+  Plc = test_partition_search (p4est, 0, 1);
+  Pld = test_partition_search (p4est, 1, 1);
+  P4EST_INFOF ("Second partition search %ld %ld\n", (long) Plc, (long) Pld);
+  SC_CHECK_ABORT (Pla == Plc, "Mismatch in non-post partition search");
+  SC_CHECK_ABORT (Plb == Pld, "Mismatch in pre-post partition search");
 
   /* Clear memory */
   sc_array_destroy (points);
