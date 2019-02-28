@@ -685,14 +685,18 @@ p4est_traverse_type_tree (sc_array_t * array, size_t pindex, void *data)
 static int
 p4est_comm_is_empty_gfp (p4est_t * p4est, int p)
 {
+  const p4est_gloidx_t *gfq;
   const p4est_quadrant_t *gfp;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (0 <= p && p < p4est->mpisize);
 
+  if ((gfq = p4est->global_first_quadrant) != NULL) {
+    return gfq[p] == gfq[p + 1];
+  }
+
   gfp = p4est->global_first_position;
   P4EST_ASSERT (gfp != NULL);
-
   return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
 }
 
