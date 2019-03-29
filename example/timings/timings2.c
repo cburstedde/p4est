@@ -453,46 +453,46 @@ main (int argc, char **argv)
 
     /* print all available regression tests */
     if (generate) {
-      const char         *config_name = NULL;
+      const char         *config_gname = NULL;
 
       P4EST_GLOBAL_PRODUCTION ("Checksum regression tests available:\n");
       for (r = regression; r->config != P4EST_CONFIG_NULL; ++r) {
         switch (r->config) {
         case P4EST_CONFIG_PERIODIC:
-          config_name = "periodic";
+          config_gname = "periodic";
           break;
 #ifndef P4_TO_P8
         case P4EST_CONFIG_THREE:
-          config_name = "three";
+          config_gname = "three";
           break;
         case P4EST_CONFIG_MOEBIUS:
-          config_name = "moebius";
+          config_gname = "moebius";
           break;
         case P4EST_CONFIG_STAR:
-          config_name = "star";
+          config_gname = "star";
           break;
 #else
         case P4EST_CONFIG_ROTWRAP:
-          config_name = "rotwrap";
+          config_gname = "rotwrap";
           break;
         case P4EST_CONFIG_TWOCUBES:
-          config_name = "twocubes";
+          config_gname = "twocubes";
           break;
         case P4EST_CONFIG_ROTCUBES:
-          config_name = "rotcubes";
+          config_gname = "rotcubes";
           break;
         case P4EST_CONFIG_SHELL:
-          config_name = "shell";
+          config_gname = "shell";
           break;
 #endif
         default:
-          config_name = "unit";
+          config_gname = "unit";
           break;
         }
         P4EST_GLOBAL_PRODUCTIONF ("mpirun -np %3d %s%s -c %10s -l %2d\n",
                                   r->mpisize, P4EST_STRING "_timings",
                                   oldschool ? " --oldschool" : "",
-                                  config_name, r->level);
+                                  config_gname, r->level);
       }
     }
   }

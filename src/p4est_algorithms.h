@@ -58,6 +58,26 @@ unsigned            p4est_quadrant_checksum (sc_array_t * quadrants,
                                              sc_array_t * checkarray,
                                              size_t first_quadrant);
 
+/** Report whether a quadrant fits into the limits of a quadrant range.
+ * The range's boundaries are determined by its first and last descendant.
+ * Such descendants are for example stored in each tree of a p4est_t.
+ * \param [in] fd           First descendant quadrant of a range.
+ *                          Thus its level must be P4EST_QMAXLEVEL.
+ *                          Must be valid, its data is ignored.
+ * \param [in] ld           Last descendant quadrant of a range.
+ *                          Thus it must not be smaller than \a fd
+ *                          and its level must be P4EST_QMAXLEVEL.
+ *                          Must be valid, its data is ignored.
+ * \param [in] quadrant     Quadrant checked to be fully inside the range.
+ *                          Must at least be extended, its data is ignored.
+ * \return                  True if and only if quadrant is contained in range.
+ * \see p4est_quadrant_is_extended
+ */
+int                 p4est_quadrant_in_range (const p4est_quadrant_t * fd,
+                                             const p4est_quadrant_t * ld,
+                                             const p4est_quadrant_t *
+                                             quadrant);
+
 /** Test if a tree is sorted in Morton ordering.
  * \return Returns true if sorted, false otherwise.
  * \note Duplicate quadrants are not allowed.

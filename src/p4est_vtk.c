@@ -1060,7 +1060,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
 
-  p4est_vtk_context_t *end = va_arg (ap, p4est_vtk_context_t *);
+  p4est_vtk_context_t *list_end;
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
@@ -1091,11 +1091,14 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
     /* Validate input. */
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
                     P4EST_STRING
-                    "_vtk: Error: incorrect cell scalar data type; scalar data must contain doubles.");
+                    "_vtk: Error: incorrect cell scalar data type;"
+                    " scalar data must contain doubles.");
     SC_CHECK_ABORT (values[all]->elem_count ==
                     (size_t) cont->p4est->local_num_quadrants,
                     P4EST_STRING
-                    "_vtk: Error: incorrect cell scalar data count; scalar data must contain exactly p4est->local_num_quadrants doubles.");
+                    "_vtk: Error: incorrect cell scalar data count;"
+                    " scalar data must contain exactly"
+                    " p4est->local_num_quadrants doubles.");
   }
 
   vector_strlen = 0;
@@ -1112,17 +1115,22 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
     /* Validate input. */
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
                     P4EST_STRING
-                    "_vtk: Error: incorrect cell vector data type; vector data must contain doubles.");
+                    "_vtk: Error: incorrect cell vector data type;"
+                    " vector data must contain doubles.");
     SC_CHECK_ABORT (values[all]->elem_count ==
                     3 * (size_t) cont->p4est->local_num_quadrants,
                     P4EST_STRING
-                    "_vtk: Error: incorrect cell vector data count; vector data must contain exactly 3*p4est->local_num_quadrants doubles.");
+                    "_vtk: Error: incorrect cell vector data count;"
+                    " vector data must contain exactly"
+                    " 3 * p4est->local_num_quadrants doubles.");
   }
 
   /* Check for pointer variable marking the end of variable data input. */
-  SC_CHECK_ABORT (end == cont, P4EST_STRING "_vtk Error: the end of variable "
-                  "data must be specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t struct. See " P4EST_STRING
+  list_end = va_arg (ap, p4est_vtk_context_t *);
+  SC_CHECK_ABORT (list_end == cont,
+                  P4EST_STRING "_vtk Error: the end of variable data must be"
+                  " specified by passing, as the last argument, the current "
+                  P4EST_STRING "_vtk_context_t pointer.  See " P4EST_STRING
                   "_vtk.h for more information.");
 
   if (write_tree)
