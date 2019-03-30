@@ -85,39 +85,53 @@ p8est_connectivity_new_3flat (void)
 }
 
 static void
-test_conn_3flat (sc_MPI_Comm mpicomm)
+test_conn_which (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
+                 const char *cname)
 {
   int                 retval;
   int                 mpiret;
   int                 mpirank;
-  p4est_connectivity_t *conn, *conn2;
+  char                fname[BUFSIZ];
+  p4est_connectivity_t *conn2;
   p4est_t            *p4est;
-
-  /* create hand-made connectivity structure */
-  conn = p8est_connectivity_new_3flat ();
 
   /* save and load connectivity to file */
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
   if (mpirank == 0) {
-    retval = p4est_connectivity_save (P4EST_STRING "_test_3flat.p8c", conn);
-    SC_CHECK_ABORT (!retval, "Failed saving 3flat");
+    snprintf (fname, BUFSIZ, "%s_test_%s.p8c", P4EST_STRING, cname);
 
-    conn2 = p4est_connectivity_load (P4EST_STRING "_test_3flat.p8c", NULL);
-    SC_CHECK_ABORT (conn2 != NULL, "Failed loading 3flat");
-    SC_CHECK_ABORT (p4est_connectivity_is_equal (conn, conn2),
-                    "Unequal 3flat");
+    retval = p4est_connectivity_save (fname, conn);
+    SC_CHECK_ABORTF (!retval, "Failed saving %s", cname);
+
+    conn2 = p4est_connectivity_load (fname, NULL);
+    SC_CHECK_ABORTF (conn2 != NULL, "Failed loading %s", cname);
+    SC_CHECK_ABORTF (p4est_connectivity_is_equal (conn, conn2),
+                     "Unequal %s", cname);
 
     p4est_connectivity_destroy (conn2);
   }
 
   /* create a forest for visualization */
+  snprintf (fname, BUFSIZ, "%s_test_%s", P4EST_STRING, cname);
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 1, 0, NULL, NULL);
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_test_3flat");
+  p4est_vtk_write_file (p4est, NULL, fname);
   p4est_destroy (p4est);
 
   /* destroy connectivity */
   p4est_connectivity_destroy (conn);
+}
+
+static void
+test_conn_3flat (sc_MPI_Comm mpicomm)
+{
+  test_conn_which (mpicomm, p8est_connectivity_new_3flat (), "3flat");
+}
+
+static void
+test_conn_3edge (sc_MPI_Comm mpicomm)
+{
+  test_conn_which (mpicomm, p8est_connectivity_new_edge (), "3edge");
 }
 
 #endif /* P4_TO_P8 */
@@ -137,6 +151,7 @@ main (int argc, char **argv)
 
 #ifdef P4_TO_P8
   test_conn_3flat (mpicomm);
+  test_conn_3edge (mpicomm);
 #endif
 
   sc_finalize ();
