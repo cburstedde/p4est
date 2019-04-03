@@ -71,9 +71,9 @@ p8est_connectivity_new_3flat (void)
     0, 2, 1, 2, 2, 2
   };
   const int8_t        tree_to_face[3 * 6] = {
-    0, 0, 2, 0, 4, 5,
+    0, 0, 2, 6, 4, 5,
     1, 1, 2, 2, 4, 5,
-    3, 1, 3, 3, 4, 5
+    9, 1, 3, 3, 4, 5
   };
 /* *INDENT-ON* */
 
