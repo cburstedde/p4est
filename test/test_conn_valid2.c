@@ -95,6 +95,11 @@ test_conn_which (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_connectivity_t *conn2;
   p4est_t            *p4est;
 
+  P4EST_GLOBAL_PRODUCTIONF ("Testing %s\n", cname);
+  if (!p4est_connectivity_is_valid (conn)) {
+    P4EST_GLOBAL_LERRORF ("Invalid connectivity %s\n", cname);
+  }
+
   /* save and load connectivity to file */
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
@@ -134,6 +139,18 @@ test_conn_3edge (sc_MPI_Comm mpicomm)
   test_conn_which (mpicomm, p8est_connectivity_new_edge (), "3edge");
 }
 
+static void
+test_conn_load (sc_MPI_Comm mpicomm, const char *cfile)
+{
+  size_t              bytes;
+  p4est_connectivity_t *conn;
+
+  /* load connectivity specified as command line argument */
+  conn = p4est_connectivity_load (cfile, &bytes);
+  SC_CHECK_ABORTF (conn != NULL, "Failed loading connectivity %s", cfile);
+  test_conn_which (mpicomm, conn, "load");
+}
+
 #endif /* P4_TO_P8 */
 
 int
@@ -152,6 +169,9 @@ main (int argc, char **argv)
 #ifdef P4_TO_P8
   test_conn_3flat (mpicomm);
   test_conn_3edge (mpicomm);
+  if (argc >= 2) {
+    test_conn_load (mpicomm, argv[1]);
+  }
 #endif
 
   sc_finalize ();
