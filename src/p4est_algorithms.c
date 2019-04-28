@@ -3042,10 +3042,12 @@ p4est_partition_given (p4est_t * p4est,
         P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
                        i, (long long) num_send_to[i]);
       }
+      P4EST_ASSERT (num_send_to[i] == old_num_send_to[i]);
       if (begin_send_to[i] != -1) {
         P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                        i, (long long) begin_send_to[i]);
       }
+      P4EST_ASSERT (begin_send_to[i] == old_begin_send_to[i]);
     }
 
     P4EST_FREE (old_num_send_to);
@@ -3190,7 +3192,7 @@ p4est_partition_given (p4est_t * p4est,
 
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (1) {                    /* to reduce the diff size */
+    if (num_recv_from[from_proc] > 0) {
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3349,7 +3351,7 @@ p4est_partition_given (p4est_t * p4est,
           trees->elem_count * sizeof (p4est_locidx_t));
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (1) {                    /* to reduce the diff size */
+    if (num_recv_from[from_proc] > 0) {
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
