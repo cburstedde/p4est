@@ -65,7 +65,7 @@ SC_EXTERN_C_BEGIN;
  * Given two targets my_begin and my_end with my_begin <= my_end, find offsets such that
  * search_in[begin] >= my_begin, my_begin < search_in[end] and my_end <= search_in[end].
  * If more than one index satisfy the condition, then the minimal index is the result.
- * If there is no index that satisfies the condition, then begin and end are equal.
+ * If there is no index that satisfies the condition, then begin and end are set equal.
  * \param [in] num_procs    Number of processes to get the length of search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function will search.
  *                          If k indexes search_in, then 0 <= k < num_procs.

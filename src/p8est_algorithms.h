@@ -25,7 +25,7 @@
 /** \file p8est_algorithms.h
  *
  * Routines for managing quadrants as elements of trees and subtrees.
- * In addition, some high level algorithms such as p4est_partition_given.
+ * In addition, some high level algorithms such as \ref p4est_partition_given.
  *
  * \ingroup p8est
  */
