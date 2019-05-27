@@ -963,7 +963,8 @@ p4est_quadrant_child (const p4est_quadrant_t * q, p4est_quadrant_t * r,
   r->z = child_id & 0x04 ? (q->z | shift) : q->z;
 #endif
   r->level = q->level + 1;
-  P4EST_ASSERT (p4est_quadrant_is_parent (q, r));
+  P4EST_ASSERT (p4est_quadrant_is_extended (r));
+  P4EST_ASSERT (q == r || p4est_quadrant_is_parent (q, r));
 }
 
 void
