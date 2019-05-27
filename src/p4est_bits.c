@@ -1939,17 +1939,15 @@ p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
     local_index = (ancestor_id + 1) % P4EST_CHILDREN;;
   }
 
-  /* There is no successor */
-  SC_CHECK_ABORT (level != 0,
-                  "p4est_successor: There is no successor in an uniform gird.");
+  /* in this case there can be no successor */
+  P4EST_ASSERT (level != 0);
 
   if (level < quadrant->level) {
     p4est_quadrant_ancestor (quadrant, level, result);
 
-    /* Increment the sibling index */
+    /* iteratively increment the sibling index */
     p4est_quadrant_sibling (result, result, local_index);
-
-    while (result->level != quadrant->level) {
+    while (result->level < quadrant->level) {
       temp->x = result->x;
       temp->y = result->y;
 #ifdef P4_TO_P8
@@ -1959,8 +1957,9 @@ p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
       p4est_quadrant_child (temp, result, 0);
     }
   }
-  else
+  else {
     p4est_quadrant_sibling (quadrant, result, local_index);
+  }
 
   P4EST_ASSERT (p4est_quadrant_is_extended (result));
 }
@@ -1986,17 +1985,15 @@ p4est_predecessor (const p4est_quadrant_t * quadrant,
     local_index = (ancestor_id - 1) % P4EST_CHILDREN;;
   }
 
-  /* There is no predecessor */
-  SC_CHECK_ABORT (level != 0,
-                  "p4est_predecessor: There is no predecessor in an uniform gird.");
+  /* in this case there can be no predecessor */
+  P4EST_ASSERT (level != 0);
 
   if (level < quadrant->level) {
     p4est_quadrant_ancestor (quadrant, level, result);
 
-    /* Decrement the sibling index */
+    /* iteratively decrement the sibling index */
     p4est_quadrant_sibling (result, result, local_index);
-
-    while (result->level != quadrant->level) {
+    while (result->level < quadrant->level) {
       temp->x = result->x;
       temp->y = result->y;
 #ifdef P4_TO_P8
@@ -2006,8 +2003,9 @@ p4est_predecessor (const p4est_quadrant_t * quadrant,
       p4est_quadrant_child (temp, result, P4EST_CHILDREN);
     }
   }
-  else
+  else {
     p4est_quadrant_sibling (quadrant, result, local_index);
+  }
 
   P4EST_ASSERT (p4est_quadrant_is_extended (result));
 }
