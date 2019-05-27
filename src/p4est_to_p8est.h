@@ -285,6 +285,8 @@
 #define p4est_quadrant_shift_corner     p8est_quadrant_shift_corner
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
+#define p4est_successor                 p8est_successor
+#define p4est_predecessor               p8est_predecessor
 
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound

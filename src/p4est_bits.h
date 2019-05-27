@@ -654,6 +654,24 @@ uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int level, uint64_t id);
 
+/** Save the successor (according to the Morton index in an uniform gird) 
+ *  in result.
+ * \param[in] quadrant  Quadrant whose Morton successor will be saved.
+ * \param[in,out] result  The coordinates of the successor of quadrant.
+ *                        will be saved in result.
+ */
+void                p4est_successor (const p4est_quadrant_t * quadrant,
+                                     p4est_quadrant_t * result);
+
+/** Save the predecessor (according to the Morton index in an uniform gird) 
+ *  in result.
+ * \param[in] quadrant  Quadrant whose Morton predecessor will be saved.
+ * \param[in,out] result  The coordinates of the predecessor of quadrant.
+ *                        will be saved in result.
+ */
+void                p4est_predecessor (const p4est_quadrant_t * quadrant,
+                                       p4est_quadrant_t * result);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BITS_H */

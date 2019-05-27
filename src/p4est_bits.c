@@ -193,6 +193,8 @@ p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
+  printf ("q1: (%d, %d) level = %d, q2: (%d, %d) level = %d\n", q1->x, q1->y,
+          q1->level, q2->x, q2->y, q2->level);
   return q1->level == q2->level && q1->x == q2->x && q1->y == q2->y
 #ifdef P4_TO_P8
     && q1->z == q2->z
@@ -1917,4 +1919,97 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+}
+
+void
+p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
+{
+  int                 level = quadrant->level;
+  int                 ancestor_id =
+    p4est_quadrant_ancestor_id (quadrant, level);
+  int                 local_index = (ancestor_id + 1) % P4EST_CHILDREN;
+  p4est_quadrant_t    temp[1];
+
+  P4EST_QUADRANT_INIT (temp);
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+  P4EST_ASSERT (level > 0);
+
+  /* iterate until it is possible to increment the child/ancestor_id */
+  while (local_index == 0) {
+    ancestor_id = p4est_quadrant_ancestor_id (quadrant, --level);
+    local_index = (ancestor_id + 1) % P4EST_CHILDREN;;
+  }
+
+  /* There is no successor */
+  SC_CHECK_ABORT (level != 0,
+                  "p4est_successor: There is no successor in an uniform gird.");
+
+  if (level < quadrant->level) {
+    p4est_quadrant_ancestor (quadrant, level, result);
+
+    /* Increment the sibling index */
+    p4est_quadrant_sibling (result, result, local_index);
+
+    while (result->level != quadrant->level) {
+      temp->x = result->x;
+      temp->y = result->y;
+#ifdef P4_TO_P8
+      temp->z = result->z;
+#endif
+      temp->level = result->level;
+      p4est_quadrant_child (temp, result, 0);
+    }
+  }
+  else
+    p4est_quadrant_sibling (quadrant, result, local_index);
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (result));
+}
+
+void
+p4est_predecessor (const p4est_quadrant_t * quadrant,
+                   p4est_quadrant_t * result)
+{
+  int                 level = quadrant->level;
+  int                 ancestor_id =
+    p4est_quadrant_ancestor_id (quadrant, level);
+  int                 local_index = (ancestor_id + 1) % P4EST_CHILDREN;
+  p4est_quadrant_t    temp[1];
+
+  P4EST_QUADRANT_INIT (temp);
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+  P4EST_ASSERT (level > 0);
+
+  /* iterate until it is possible to decrement the child/ancestor_id */
+  while (local_index == P4EST_CHILDREN) {
+    ancestor_id = p4est_quadrant_ancestor_id (quadrant, --level);
+    local_index = (ancestor_id - 1) % P4EST_CHILDREN;;
+  }
+
+  /* There is no predecessor */
+  SC_CHECK_ABORT (level != 0,
+                  "p4est_predecessor: There is no predecessor in an uniform gird.");
+
+  if (level < quadrant->level) {
+    p4est_quadrant_ancestor (quadrant, level, result);
+
+    /* Decrement the sibling index */
+    p4est_quadrant_sibling (result, result, local_index);
+
+    while (result->level != quadrant->level) {
+      temp->x = result->x;
+      temp->y = result->y;
+#ifdef P4_TO_P8
+      temp->z = result->z;
+#endif
+      temp->level = result->level;
+      p4est_quadrant_child (temp, result, P4EST_CHILDREN);
+    }
+  }
+  else
+    p4est_quadrant_sibling (quadrant, result, local_index);
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (result));
 }
