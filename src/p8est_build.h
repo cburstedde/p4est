@@ -26,6 +26,8 @@
 
 #include <p8est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** \file p8est_build.h
  * Create a new p8est object by adding individual quadrants in order.
  * This can for example be driven by running \ref p8est_search_local.
@@ -94,5 +96,7 @@ int                 p8est_build_add (p8est_build_t * build,
  *                          Its revision number is set to zero.
  */
 p8est_t            *p8est_build_complete (p8est_build_t * build);
+
+SC_EXTERN_C_END;
 
 #endif /* ! P8EST_BUILD_H */
