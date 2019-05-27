@@ -25,9 +25,9 @@
 /*
   Authors:
 
-  Carsten Burstedde <carsten@ices.utexas.edu>
-  Lucas C. Wilcox <lucasw@ices.utexas.edu>
-  Tobin Isaac <tisaac@ices.utexas.edu>
+  Carsten Burstedde <burstedde@ins.uni-bonn.de>
+  Lucas C. Wilcox <me@lucaswilcox.com>
+  Tobin Isaac <tisaac@uchicago.edu>
  */
 
 /*
@@ -39,6 +39,7 @@
   Alex Fikl <alexfikl@gmail.com>
   Hannes Frank <frank@iag.uni-stuttgart.de>
   Michael Lahnert <michael.lahnert@ipvs.uni-stuttgart.de>
+  Olivier Iffrig <olivier.iffrig@cea.fr>
 */
 
 /*

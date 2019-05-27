@@ -202,6 +202,9 @@ void                p8est_refine_ext (p8est_t * p8est,
  *                        value is ignored.  If coarsen_recursive is true, it
  *                        is possible that a quadrant is called once or more as
  *                        an orphan and eventually becomes part of a family.
+ *                        With coarsen_recursive false and callback_orphans true,
+ *                        it is guaranteed that every quadrant is passed exactly
+ *                        once into the coarsen_fn callback.
  * \param [in] coarsen_fn Callback function that returns true if a
  *                        family of quadrants shall be coarsened.
  * \param [in] init_fn    Callback function to initialize the user_data

@@ -280,7 +280,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
           /* We have a face neighbor */
           orientation = nface[i] / P4EST_FACES;
           nface[i] %= P4EST_FACES;
-          ncorner[i] = p4est_connectivity_face_neighbor_corner_orientation
+          ncorner[i] = p4est_connectivity_face_neighbor_corner
             (c1, f1, nface[i], orientation);
         }
 
@@ -617,7 +617,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      jl;
   p4est_mesh_t       *mesh;
 
-  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
+  P4EST_ASSERT (p4est_is_balanced (p4est, btype));
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 

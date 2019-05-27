@@ -133,6 +133,9 @@ main (int argc, char **argv)
 #else
   char                filename[] = "p8est_balance_edge";
 #endif
+  p4est_vtk_context_t *context;
+  sc_array_t         *level;
+  int                 retval;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -157,7 +160,7 @@ main (int argc, char **argv)
 
   p4est_refine (p4est, 1, refine_fn, init_fn);
 
-  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
+  context = p4est_vtk_context_new (p4est, filename);
   p4est_vtk_context_set_scale (context, 1. - 2. * SC_EPS);
   context = p4est_vtk_write_header (context);
   SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing header");
@@ -173,7 +176,7 @@ main (int argc, char **argv)
         ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
-  sc_array_t         *level =
+  level =
     sc_array_new_data ((void *) vtkvec->e[0], sizeof (double),
                        count * P4EST_CHILDREN);
   context =
@@ -182,7 +185,7 @@ main (int argc, char **argv)
                   P4EST_STRING "_vtk: Error writing point data");
   sc_array_destroy (level);
 
-  const int           retval = p4est_vtk_write_footer (context);
+  retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_dmatrix_destroy (vtkvec);

@@ -23,7 +23,8 @@
 */
 
 #include <p4est_to_p8est.h>
-#include <p8est_connectivity.h>
+
+#if 0                           /* currently unused */
 
 /* *INDENT-OFF* */
 
@@ -70,5 +71,7 @@ static const int    pbeo = P4EST_FACES;
 static const int    pbco = P4EST_FACES + P8EST_EDGES;
 
 /* *INDENT-ON* */
+
+#endif /* currently unused */
 
 #include "p4est_algorithms.c"

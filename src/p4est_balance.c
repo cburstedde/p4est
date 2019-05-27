@@ -23,10 +23,12 @@
 */
 
 #ifdef P4_TO_P8
+#include <p8est_balance.h>
 #include <p8est_bits.h>
 #include <p8est_communication.h>
 #include <p8est_search.h>
 #else
+#include <p4est_balance.h>
 #include <p4est_bits.h>
 #include <p4est_communication.h>
 #include <p4est_search.h>

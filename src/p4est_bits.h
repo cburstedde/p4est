@@ -300,6 +300,41 @@ int                 p4est_quadrant_is_inside_tree (p4est_tree_t * tree,
                                                    const p4est_quadrant_t *
                                                    q);
 
+/** Whether two descendants of a quadrant are first and last, up to size.
+ * \param [in] f    An extended quadrant, need not be of maximum level.
+ * \param [in] l    An extended quadrant, need not be of maximum level.
+ *                  It must be greater equal \b f in the space filling curve.
+ * \param [in] a    An extended quadrant,
+ *                  equal to or ancestor of \b f, and likewise to/of \b l.
+ * \return          Whether the first corner of \b f equals that of \b a and
+ *                  the last corner of \b l equals that of \b a.
+ */
+int                 p4est_quadrant_is_first_last (const p4est_quadrant_t * f,
+                                                  const p4est_quadrant_t * l,
+                                                  const p4est_quadrant_t * a);
+
+/** Enlarge a quadrant as long as its first corner stays the same.
+ * We limit the enlargement by containing it in an ancestor quadrant.
+ * \param [in] a    Extended quadrant.  On input and output, equal to or
+ *                  strict ancestor of the quadrant \b q to be modified.
+ * \param [in,out] q    On input and output, an extended quadrant and also
+ *                      equal or a strict descendant of \b a.
+ *                      Possibly enlarged by this function.
+ */
+void                p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
+                                                  p4est_quadrant_t * q);
+
+/** Enlarge a quadrant as long as its last corner stays the same.
+ * We limit the enlargement by containing it in an ancestor quadrant.
+ * \param [in] a    Extended quadrant.  On input and output, equal to or
+ *                  strict ancestor of the quadrant \b q to be modified.
+ * \param [in,out] q    On input and output, an extended quadrant and also
+ *                      equal or a strict descendant of \b a.
+ *                      Possibly enlarged by this function.
+ */
+void                p4est_quadrant_enlarge_last (const p4est_quadrant_t * a,
+                                                 p4est_quadrant_t * q);
+
 /** Compute the ancestor of a quadrant at a given level.
  * \param [in]  q       Input quadrant.
  * \param [in]  level   A smaller level than q.
@@ -592,19 +627,29 @@ void                p4est_quadrant_shift_corner (const p4est_quadrant_t * q,
                                                  int corner);
 
 /** Computes the linear position of a quadrant in a uniform grid.
- * \param [in] quadrant  Quadrant whose id will be computed.
+ * The grid and quadrant levels need not coincide.
+ * If they do, this is the inverse of \ref p4est_quadrant_set_morton.
+ * \param [in] quadrant  Quadrant whose linear index will be computed.
+ *                       If the quadrant is smaller than the grid (has a higher
+ *                       quadrant->level), the result is computed from its
+ *                       ancestor at the grid's level.
+ *                       If the quadrant has a smaller level than the grid (it
+ *                       is bigger than a grid cell), the grid cell sharing its
+ *                       lower left corner is used as reference.
+ * \param [in] level     The level of the regular grid compared to which the
+ *                       linear position is to be computed.
  * \return Returns the linear position of this quadrant on a grid.
- * \note This is the inverse operation of p4est_quadrant_set_morton.
- *       The user_data of \a quadrant is never modified.
+ * \note The user_data of \a quadrant is never modified.
  */
 uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
                                               quadrant, int level);
 
 /** Set quadrant Morton indices based on linear position in uniform grid.
+ * This is the inverse operation of \ref p4est_quadrant_linear_id.
  * \param [in,out] quadrant  Quadrant whose Morton indices will be set.
- * \param [in]     id        The linear position of this quadrant on a grid.
- * \note This is the inverse operation of p4est_quadrant_linear_id.
- *       The user_data of \a quadrant is never modified.
+ * \param [in]     level     Level of the grid and of the resulting quadrant.
+ * \param [in]     id        Linear index of the quadrant on a uniform grid.
+ * \note The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int level, uint64_t id);
