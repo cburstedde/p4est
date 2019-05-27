@@ -193,8 +193,6 @@ p4est_quadrant_equal_fn (const void *v1, const void *v2, const void *u)
   P4EST_ASSERT (p4est_quadrant_is_extended (q1));
   P4EST_ASSERT (p4est_quadrant_is_extended (q2));
 
-  printf ("q1: (%d, %d) level = %d, q2: (%d, %d) level = %d\n", q1->x, q1->y,
-          q1->level, q2->x, q2->y, q2->level);
   return q1->level == q2->level && q1->x == q2->x && q1->y == q2->y
 #ifdef P4_TO_P8
     && q1->z == q2->z
