@@ -62,13 +62,10 @@ p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
                       p4est_gloidx_t * begin, p4est_gloidx_t * end)
 {
   sc_array_t          offsets[1];
-  sc_array_t          search_data[1];
   sc_array_t          view[1];
   p4est_gloidx_t      my_begin_end[2];
 
   sc_array_init (offsets, sizeof (size_t));
-  sc_array_init_size (search_data, sizeof (p4est_gloidx_t),
-                      (size_t) num_procs);
   sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),
                       (size_t) num_procs);
 
@@ -82,7 +79,6 @@ p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
 
   sc_array_reset (offsets);
   sc_array_reset (view);
-  sc_array_reset (search_data);
 }
 
 ssize_t
