@@ -2970,10 +2970,13 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
 
+#if 0
     printf
-      ("Debug[%i]: num_proc_recv_from = %i \t old_num_proc_recv_from = %i \t new_global_last_quad_index[0] = %li\n",
+      ("Debug[%i]: num_proc_recv_from %i old_num_proc_recv_from %i"
+       " new_global_last_quad_index[0] %li\n",
        rank, num_proc_recv_from, old_num_proc_recv_from,
        new_global_last_quad_index[0]);
+#endif
     P4EST_ASSERT (num_proc_recv_from == old_num_proc_recv_from);
     for (i = 0; i < num_procs; ++i) {
       if (num_recv_from[i] != 0) {
