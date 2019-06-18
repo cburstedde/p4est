@@ -26,6 +26,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 /** \file p4est_build.h
  * Create a new p4est object by adding individual quadrants in order.
  * This can for example be driven by running \ref p4est_search_local.
@@ -94,5 +96,7 @@ int                 p4est_build_add (p4est_build_t * build,
  *                          Its revision number is set to zero.
  */
 p4est_t            *p4est_build_complete (p4est_build_t * build);
+
+SC_EXTERN_C_END;
 
 #endif /* ! P4EST_BUILD_H */
