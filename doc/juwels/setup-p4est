@@ -18,6 +18,10 @@ if test ! -f "$FILE" ; then
 	bdie "Please specify a p4est .tar.gz"
 fi
 
+for MOD in Intel IntelMPI imkl ; do
+        module is-loaded "$MOD" || bdie "Please load module $MOD"
+done
+
 # check directories
 
 UNPACK="$HOME/nosave/unpack"
@@ -34,7 +38,7 @@ tar -xvzf "$FILE" || bdie "Could not UNPACK"
 # compile and install
 
 GLO_CFLAGS="-mkl"
-GLO_LDFLAGS="-L$MKLROOT/intel64/lib"
+GLO_LDFLAGS="-L$MKLROOT/lib/intel64"
 
 rm -rf "$BUILD"
 for TYPE in DEBUG FAST ; do
@@ -57,7 +61,8 @@ for TYPE in DEBUG FAST ; do
 	cd "$DIR" || bdie "Could not cd into $DIR"
 
 	"$UNPACK/$NAME/configure" \
- --enable-p6est --enable-mpi --enable-memalign \
+ --enable-p6est --enable-mpi \
+ --disable-pthread --disable-openmp --disable-memalign \
  --prefix="$INSTALL/$TYPE" --disable-shared $CONFOPTS
 
 	echo "Make $TYPE"
