@@ -3029,7 +3029,7 @@ p4est_partition_given (p4est_t * p4est,
   /* For each processor calculate the number of quadrants sent */
   num_send_to = P4EST_ALLOC_ZERO (p4est_locidx_t, num_procs);
   begin_send_to = P4EST_ALLOC (p4est_gloidx_t, num_procs);
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
   /* For checking the window of relevant processes. */
   memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));
 #endif
