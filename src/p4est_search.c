@@ -33,7 +33,8 @@
 #endif
 #include <sc_search.h>
 
-/** The idea is to define the type of an array entry as type 1, if
+/** A callback function that describes the search window.
+ *  The idea is to define the type of an array entry as type 1, if
  *  my_begin > array[i] and as type 2, if my_end > array[i].
  *  This function is passed into sc_array_split by \ref p4est_find_partition.
  *  Note that this function, as well as p4est_find_partition, is
