@@ -2832,60 +2832,57 @@ p4est_partition_given (p4est_t * p4est,
   crc = p4est_checksum (p4est);
 #endif
 
-  /* Check for a valid requested partition and create last_quad_index */
   global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
+
+  new_global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
+  new_global_last_quad_index[0] = new_num_quadrants_in_proc[0] - 1;
+
+  total_quadrants_shipped = 0;
+
   for (i = 0; i < num_procs; ++i) {
+    /* Check for a valid requested partition and create last_quad_index */
     global_last_quad_index[i] = p4est->global_first_quadrant[i + 1] - 1;
 #ifdef P4EST_ENABLE_DEBUG
     total_requested_quadrants += new_num_quadrants_in_proc[i];
     P4EST_ASSERT (new_num_quadrants_in_proc[i] >= 0);
 #endif
-  }
-  P4EST_ASSERT (total_requested_quadrants == p4est->global_num_quadrants);
 
-  /* Print some diagnostics */
-  if (rank == 0) {
-    for (i = 0; i < num_procs; ++i) {
+    /* Print some diagnostics */
+    if (rank == 0) {
       P4EST_GLOBAL_LDEBUGF ("partition global_last_quad_index[%d] = %lld\n",
                             i, (long long) global_last_quad_index[i]);
     }
-  }
 
-  /* Calculate the global_last_quad_index for the repartitioned forest */
-  new_global_last_quad_index = P4EST_ALLOC (p4est_gloidx_t, num_procs);
-  new_global_last_quad_index[0] = new_num_quadrants_in_proc[0] - 1;
-  for (i = 1; i < num_procs; ++i) {
-    new_global_last_quad_index[i] = new_num_quadrants_in_proc[i] +
-      new_global_last_quad_index[i - 1];
-  }
-  P4EST_ASSERT (global_last_quad_index[num_procs - 1] ==
-                new_global_last_quad_index[num_procs - 1]);
+    if (i >= 1) {
+      /* Calculate the global_last_quad_index for the repartitioned forest */
+      new_global_last_quad_index[i] = new_num_quadrants_in_proc[i] +
+        new_global_last_quad_index[i - 1];
 
-  /* Calculate the global number of shipped (= received) quadrants */
-  total_quadrants_shipped = 0;
-  for (i = 1; i < num_procs; ++i) {
-    diff64 =
-      global_last_quad_index[i - 1] - new_global_last_quad_index[i - 1];
-    if (diff64 >= 0) {
-      total_quadrants_shipped +=
-        SC_MIN (diff64, new_num_quadrants_in_proc[i]);
+      /* Calculate the global number of shipped (= received) quadrants */
+      diff64 =
+        global_last_quad_index[i - 1] - new_global_last_quad_index[i - 1];
+      if (diff64 >= 0) {
+        total_quadrants_shipped +=
+          SC_MIN (diff64, new_num_quadrants_in_proc[i]);
+      }
+      else {
+        total_quadrants_shipped +=
+          SC_MIN (-diff64, new_num_quadrants_in_proc[i - 1]);
+      }
     }
-    else {
-      total_quadrants_shipped +=
-        SC_MIN (-diff64, new_num_quadrants_in_proc[i - 1]);
-    }
-  }
-  P4EST_ASSERT (0 <= total_quadrants_shipped &&
-                total_quadrants_shipped <= p4est->global_num_quadrants);
 
-  /* Print some diagnostics */
-  if (rank == 0) {
-    for (i = 0; i < num_procs; ++i) {
+    /* Print some diagnostics */
+    if (rank == 0) {
       P4EST_GLOBAL_LDEBUGF
         ("partition new_global_last_quad_index[%d] = %lld\n",
          i, (long long) new_global_last_quad_index[i]);
     }
   }
+  P4EST_ASSERT (total_requested_quadrants == p4est->global_num_quadrants);
+  P4EST_ASSERT (global_last_quad_index[num_procs - 1] ==
+                new_global_last_quad_index[num_procs - 1]);
+  P4EST_ASSERT (0 <= total_quadrants_shipped &&
+                total_quadrants_shipped <= p4est->global_num_quadrants);
 
   /* Calculate the local index of the end of each tree */
   local_tree_last_quad_index =
