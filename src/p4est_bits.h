@@ -50,7 +50,10 @@ void                p4est_quadrant_print (int log_priority,
 int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                                              const p4est_quadrant_t * q2);
 
-/**Copy the Moton indices of the quadrant \a q.
+/** Copy the Moton indices of the quadrant \a q.
+ *  \param[in] q      	 An extended quadrant.
+ *  \param[in,out] copy  An existing quadrant that Morton indices will
+ *                       be set to the Morton indices of \a q.
  */
 void                p4est_quadrant_copy (const p4est_quadrant_t * q,
                                          p4est_quadrant_t * copy);
