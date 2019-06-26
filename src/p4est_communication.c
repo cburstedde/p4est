@@ -1202,6 +1202,9 @@ p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
   int                 mpisize, mpirank;
   int                 q;
   int                 first_sender, last_sender;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 old_last_sender, old_last_receiver;
+#endif
   int                 first_receiver, last_receiver;
   int                 i, ilen;
   const int          *rs;
@@ -1247,6 +1250,11 @@ p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
     last_sender =
       p4est_bsearch_partition (dest_end - 1, &src_gfq[first_sender],
                                mpisize - first_sender) + first_sender;
+#ifdef P4EST_ENABLE_DEBUG
+    old_last_sender =
+      p4est_bsearch_partition (dest_end - 1, src_gfq, mpisize);
+    P4EST_ASSERT (last_sender == old_last_sender);
+#endif
     P4EST_ASSERT (first_sender <= last_sender && last_sender < mpisize);
     tc->num_senders = last_sender - first_sender + 1;
     P4EST_ASSERT (tc->num_senders > 0);
@@ -1309,6 +1317,11 @@ p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
     last_receiver =
       p4est_bsearch_partition (src_end - 1, &dest_gfq[first_receiver],
                                mpisize - first_receiver) + first_receiver;
+#ifdef P4EST_ENABLE_DEBUG
+    old_last_receiver =
+      p4est_bsearch_partition (src_end - 1, dest_gfq, mpisize);
+    P4EST_ASSERT (last_receiver == old_last_receiver);
+#endif
     P4EST_ASSERT (first_receiver <= last_receiver && last_receiver < mpisize);
     tc->num_receivers = last_receiver - first_receiver + 1;
     P4EST_ASSERT (tc->num_receivers > 0);
