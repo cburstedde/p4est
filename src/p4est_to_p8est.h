@@ -313,6 +313,7 @@
 #define p4est_tree_is_complete          p8est_tree_is_complete
 #define p4est_tree_print                p8est_tree_print
 #define p4est_is_equal                  p8est_is_equal
+#define p4est_quadrant_copy             p8est_quadrant_copy
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap

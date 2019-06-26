@@ -55,6 +55,19 @@ p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
     ;
 }
 
+void
+p4est_quadrant_copy (const p4est_quadrant_t * q, p4est_quadrant_t * copy)
+{
+  P4EST_ASSERT (p4est_quadrant_is_extended (q));
+
+  copy->x = q->x;
+  copy->y = q->y;
+#ifdef P4_TO_P8
+  copy->z = q->z;
+#endif
+  copy->level = q->level;
+}
+
 int
 p4est_quadrant_overlaps (const p4est_quadrant_t * q1,
                          const p4est_quadrant_t * q2)
@@ -1923,21 +1936,25 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 void
 p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
 {
-  int                 level = quadrant->level;
-  int                 ancestor_id =
-    p4est_quadrant_ancestor_id (quadrant, level);
-  int                 local_index = (ancestor_id + 1) % P4EST_CHILDREN;
+  int                 level;
+  int                 ancestor_id;
+  int                 successor_id;
   p4est_quadrant_t    temp[1];
 
   P4EST_QUADRANT_INIT (temp);
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+
+  level = quadrant->level;
+  ancestor_id = p4est_quadrant_ancestor_id (quadrant, level);
+  successor_id = (ancestor_id + 1) % P4EST_CHILDREN;
+
   P4EST_ASSERT (level > 0);
 
   /* iterate until it is possible to increment the child/ancestor_id */
-  while (local_index == 0) {
+  while (successor_id == 0) {
     ancestor_id = p4est_quadrant_ancestor_id (quadrant, --level);
-    local_index = (ancestor_id + 1) % P4EST_CHILDREN;;
+    successor_id = (ancestor_id + 1) % P4EST_CHILDREN;;
   }
 
   /* in this case there can be no successor */
@@ -1947,19 +1964,14 @@ p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
     p4est_quadrant_ancestor (quadrant, level, result);
 
     /* iteratively increment the sibling index */
-    p4est_quadrant_sibling (result, result, local_index);
+    p4est_quadrant_sibling (result, result, successor_id);
     while (result->level < quadrant->level) {
-      temp->x = result->x;
-      temp->y = result->y;
-#ifdef P4_TO_P8
-      temp->z = result->z;
-#endif
-      temp->level = result->level;
+      p4est_quadrant_copy (result, temp);
       p4est_quadrant_child (temp, result, 0);
     }
   }
   else {
-    p4est_quadrant_sibling (quadrant, result, local_index);
+    p4est_quadrant_sibling (quadrant, result, successor_id);
   }
 
   P4EST_ASSERT (p4est_quadrant_is_extended (result));
@@ -1969,21 +1981,25 @@ void
 p4est_predecessor (const p4est_quadrant_t * quadrant,
                    p4est_quadrant_t * result)
 {
-  int                 level = quadrant->level;
-  int                 ancestor_id =
-    p4est_quadrant_ancestor_id (quadrant, level);
-  int                 local_index = (ancestor_id + 1) % P4EST_CHILDREN;
+  int                 level;
+  int                 ancestor_id;
+  int                 predeccessor_id;
   p4est_quadrant_t    temp[1];
 
   P4EST_QUADRANT_INIT (temp);
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+
+  level = quadrant->level;
+  ancestor_id = p4est_quadrant_ancestor_id (quadrant, level);
+  predeccessor_id = (ancestor_id - 1) % P4EST_CHILDREN;
+
   P4EST_ASSERT (level > 0);
 
   /* iterate until it is possible to decrement the child/ancestor_id */
-  while (local_index == P4EST_CHILDREN) {
+  while (predeccessor_id == P4EST_CHILDREN) {
     ancestor_id = p4est_quadrant_ancestor_id (quadrant, --level);
-    local_index = (ancestor_id - 1) % P4EST_CHILDREN;;
+    predeccessor_id = (ancestor_id - 1) % P4EST_CHILDREN;;
   }
 
   /* in this case there can be no predecessor */
@@ -1993,19 +2009,14 @@ p4est_predecessor (const p4est_quadrant_t * quadrant,
     p4est_quadrant_ancestor (quadrant, level, result);
 
     /* iteratively decrement the sibling index */
-    p4est_quadrant_sibling (result, result, local_index);
+    p4est_quadrant_sibling (result, result, predeccessor_id);
     while (result->level < quadrant->level) {
-      temp->x = result->x;
-      temp->y = result->y;
-#ifdef P4_TO_P8
-      temp->z = result->z;
-#endif
-      temp->level = result->level;
+      p4est_quadrant_copy (result, temp);
       p4est_quadrant_child (temp, result, P4EST_CHILDREN);
     }
   }
   else {
-    p4est_quadrant_sibling (quadrant, result, local_index);
+    p4est_quadrant_sibling (quadrant, result, predeccessor_id);
   }
 
   P4EST_ASSERT (p4est_quadrant_is_extended (result));
