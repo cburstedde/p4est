@@ -2801,7 +2801,8 @@ p4est_partition_given (p4est_t * p4est,
   p4est_gloidx_t     *begin_send_to;
   p4est_gloidx_t      tree_from_begin, tree_from_end, num_copy_global;
   p4est_gloidx_t      from_begin, from_end, lower_bound,
-    from_begin_global_quad, from_end_global_quad;
+    from_begin_global_quad, from_end_global_quad, to_begin_global_quad,
+    to_end_global_quad;
   p4est_gloidx_t      to_begin, to_end;
   p4est_gloidx_t      my_base, my_begin, my_end;
   p4est_gloidx_t     *global_last_quad_index;
@@ -2989,14 +2990,15 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   /* Post receives for the quadrants and their data */
-  recv_buf = P4EST_ALLOC_ZERO (char *, num_procs);
+  recv_buf = P4EST_ALLOC (char *, num_procs);
 #ifdef P4EST_ENABLE_MPI
   recv_request = P4EST_ALLOC (MPI_Request, num_proc_recv_from);
 #endif
 
   /* Allocate space for receiving quadrants and user data */
-  for (from_proc = 0, sk = 0; from_proc < num_procs; ++from_proc) {
-    if (from_proc != rank && num_recv_from[from_proc] > 0) {
+  for (from_proc = from_begin_global_quad, sk = 0;
+       from_proc <= from_end_global_quad; ++from_proc) {
+    if (from_proc != rank) {
       num_recv_trees =          /* same type */
         p4est->global_first_position[from_proc + 1].p.which_tree
         - p4est->global_first_position[from_proc].p.which_tree + 1;
@@ -3013,8 +3015,8 @@ p4est_partition_given (p4est_t * p4est,
                           from_proc, P4EST_COMM_PARTITION_GIVEN,
                           comm, recv_request + sk);
       SC_CHECK_MPI (mpiret);
-#endif
       ++sk;
+#endif
     }
   }
 #ifdef P4EST_ENABLE_MPI
@@ -3053,6 +3055,9 @@ p4est_partition_given (p4est_t * p4est,
         ++num_proc_send_to;
     }
   }
+
+  to_begin_global_quad = to_begin;
+  to_end_global_quad = to_end;
 
 #ifdef P4EST_ENABLE_DEBUG
   /* old calculation method */
@@ -3138,8 +3143,9 @@ p4est_partition_given (p4est_t * p4est,
   }
 
   /* Allocate space for receiving quadrants and user data */
-  for (to_proc = 0, sk = 0; to_proc < num_procs; ++to_proc) {
-    if (to_proc != rank && num_send_to[to_proc]) {
+  for (to_proc = to_begin_global_quad, sk = 0;
+       to_proc <= to_end_global_quad; ++to_proc) {
+    if (to_proc != rank) {
       send_size = num_send_trees * sizeof (p4est_locidx_t)
         + quad_plus_data_size * num_send_to[to_proc];
 
@@ -3215,9 +3221,6 @@ p4est_partition_given (p4est_t * p4est,
       ++sk;
 #endif
     }
-    else {
-      send_buf[to_proc] = NULL;
-    }
   }
 #ifdef P4EST_ENABLE_MPI
   for (; sk < num_proc_send_to; ++sk) {
@@ -3242,7 +3245,7 @@ p4est_partition_given (p4est_t * p4est,
 
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (num_recv_from[from_proc] > 0) {
+    if (1) {                    /* to reduce the diff in git */
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3401,7 +3404,7 @@ p4est_partition_given (p4est_t * p4est,
           trees->elem_count * sizeof (p4est_locidx_t));
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (num_recv_from[from_proc] > 0) {
+    if (1) {                    /* to reduce the diff in git */
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3473,10 +3476,6 @@ p4est_partition_given (p4est_t * p4est,
         /* increment the recv quadrant pointers */
         quad_recv_buf += num_copy;
         user_data_recv_buf += num_copy * data_size;
-      }
-      if (recv_buf[from_proc] != NULL) {
-        P4EST_FREE (recv_buf[from_proc]);
-        recv_buf[from_proc] = NULL;
       }
     }
   }
@@ -3556,10 +3555,13 @@ p4est_partition_given (p4est_t * p4est,
   P4EST_FREE (send_request);
 #endif
 
-  for (i = 0; i < num_procs; ++i) {
-    if (recv_buf[i] != NULL)
+  for (i = from_begin_global_quad; i <= from_end_global_quad; ++i) {
+    if (i != rank)
       P4EST_FREE (recv_buf[i]);
-    if (send_buf[i] != NULL)
+  }
+
+  for (i = to_begin_global_quad; i <= to_end_global_quad; ++i) {
+    if (i != rank)
       P4EST_FREE (send_buf[i]);
   }
 
