@@ -1952,7 +1952,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
       lid++;
       p4est_quadrant_set_morton (&ld_old, P4EST_QMAXLEVEL, lid);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld_old));
-      P4EST_ASSERT (p4est_quadrant_equal_fn (&ld, &ld_old, NULL));
+      P4EST_ASSERT (p4est_quadrant_is_equal (&ld, &ld_old));
 #endif
     }
   }
@@ -2033,7 +2033,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           lid++;
           p4est_quadrant_set_morton (&ld_old, P4EST_QMAXLEVEL, lid);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld_old));
-          P4EST_ASSERT (p4est_quadrant_equal_fn (&ld, &ld_old, NULL));
+          P4EST_ASSERT (p4est_quadrant_is_equal (&ld, &ld_old));
 #endif
         }
       }
