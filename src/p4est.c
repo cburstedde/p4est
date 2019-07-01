@@ -3497,19 +3497,40 @@ p4est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                          0, 0, user_pointer, connectivity);
 }
 
+#ifdef P4EST_ENABLE_MPIIO
+
+static p4est_t     *
+p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
+                int load_data, int autopartition, int broadcasthead,
+                void *user_pointer, p4est_connectivity_t ** connectivity)
+{
+  return NULL;
+}
+
+#endif
+
 p4est_t            *
 p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                 int load_data, int autopartition, int broadcasthead,
                 void *user_pointer, p4est_connectivity_t ** connectivity)
 {
+#ifndef P4EST_ENABLE_MPIIO
   int                 retval;
-  p4est_t            *p4est;
   sc_io_source_t     *src;
+#endif
+  p4est_t            *p4est;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
   p4est_log_indent_push ();
 
-  /* open file on all processors */
+#ifdef P4EST_ENABLE_MPIIO
+  /* use MPI I/O functionality */
+
+  p4est = p4est_load_mpi (filename, mpicomm, data_size, load_data,
+                          autopartition, broadcasthead, user_pointer,
+                          connectivity);
+#else
+  /* open file on all processors and rely on file system */
 
   src = sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
   SC_CHECK_ABORT (src != NULL, "file source: possibly file not found");
@@ -3519,6 +3540,7 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
 
   retval = sc_io_source_destroy (src);
   SC_CHECK_ABORT (!retval, "source destroy");
+#endif
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF
