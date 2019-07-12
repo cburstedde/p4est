@@ -3760,6 +3760,10 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   }
   P4EST_FREE (lbuf);
 
+  /* close MPI file */
+  mpiret = MPI_File_close (&mpifile);
+  SC_CHECK_MPI (mpiret);
+
   /* create p4est from accumulated information */
   p4est = p4est_inflate (mpicomm, conn, gfq, pertree,
                          qarr, darr, user_pointer);
