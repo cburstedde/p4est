@@ -3713,29 +3713,40 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   if (load_data || save_data_size == 0) {
     /* load the whole file window in one call */
     load_in_one = 1;
-    lbuf = lptr = P4EST_ALLOC (char, comb_size * zcount);
+    if (save_data_size > 0) {
+      lbuf = lptr = P4EST_ALLOC (char, comb_size * zcount);
+      /* otherwise, we read directly into the quadrant array */
+    }
   }
   if (load_data) {
     P4EST_ASSERT (data_size == save_data_size && data_size > 0);
     darr = sc_array_new_size (data_size, zcount);
     dap = darr->array;
-    if (lbuf == NULL) {
-      P4EST_ASSERT (!load_in_one);
+    if (!load_in_one) {
+      P4EST_ASSERT (lbuf == NULL);
       lbuf = P4EST_ALLOC (char, comb_size);
     }
   }
   if (load_in_one) {
-    P4EST_ASSERT (lbuf == lptr && lptr != NULL);
-    sc_mpi_read (mpifile, lptr, comb_size * zcount, MPI_BYTE,
-                 "read all local quadrant and data");
-    for (zz = 0; zz < zcount; ++zz) {
-      memcpy (qap, lptr, qbuf_size);
-      qap += P4EST_DIM + 1;
-      if (load_data) {
-        memcpy (dap, lptr + qbuf_size, data_size);
-        dap += data_size;
+    if (save_data_size > 0) {
+      P4EST_ASSERT (load_data);
+      P4EST_ASSERT (lbuf == lptr && lptr != NULL);
+      sc_mpi_read (mpifile, lptr, comb_size * zcount, MPI_BYTE,
+                   "read all local quadrants and data");
+      for (zz = 0; zz < zcount; ++zz) {
+        memcpy (qap, lptr, qbuf_size);
+        qap += P4EST_DIM + 1;
+        if (load_data) {
+          memcpy (dap, lptr + qbuf_size, data_size);
+          dap += data_size;
+        }
+        lptr += comb_size;
       }
-      lptr += comb_size;
+    }
+    else {
+      P4EST_ASSERT (comb_size == qbuf_size);
+      sc_mpi_read (mpifile, qap, qbuf_size * zcount, MPI_BYTE,
+                   "read all local quadrants");
     }
   }
   else {
