@@ -3527,36 +3527,42 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   sc_io_source_t     *src;
   sc_array_t         *qarr, *darr;
   char               *dap, *lbuf;
-
-  broadcasthead = 1;
-  if (broadcasthead) {
-    /* we load the header of the file, including the connectivity,
-       on the root process using standard file I/O and MPI_Bcast it. */
-    /* the remainder of the file is read with MPI I/O. */
-
-    src = sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
-    SC_CHECK_ABORT (src != NULL, "file source: possibly file not found");
-  }
-  else {
-    /* we read the whole file using MPI I/O. */
-
-    src = NULL;
-    SC_ABORT_NOT_REACHED ();
-  }
-
-  /* set some parameters */
-  P4EST_ASSERT (src->bytes_out == 0);
-  P4EST_ASSERT (connectivity != NULL);
-  if (data_size == 0) {
-    load_data = 0;
-  }
-  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
+  MPI_File            mpifile;
 
   /* retrieve MPI information */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
+
+  src = NULL;
+  broadcasthead = 1;
+  if (broadcasthead) {
+    /* We load the header of the file, including the connectivity,
+       on the root process using standard file I/O and MPI_Bcast it. */
+    /* The remainder of the file is read with MPI I/O. */
+
+    if (rank == root) {
+      src =
+        sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
+      SC_CHECK_ABORT (src != NULL, "file source: possibly file not found");
+    }
+  }
+  else {
+    /* We read the whole file using MPI I/O. */
+    /* Not implemented since there is currently no function to
+       load the connectivity from a file using MPI I/O. */
+
+    SC_ABORT_NOT_REACHED ();
+  }
+  P4EST_ASSERT ((rank == root) == (src != NULL));
+
+  /* set some parameters */
+  P4EST_ASSERT (connectivity != NULL);
+  if (data_size == 0) {
+    load_data = 0;
+  }
+  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
 
   /* the first part of the header determines further offsets */
   save_data_size = (size_t) ULONG_MAX;
@@ -3676,19 +3682,24 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   P4EST_FREE (u64a);
   file_offset += num_trees * sizeof (uint64_t);
 
-  /* seek to the beginning of this processor's storage */
-  if (!broadcasthead || rank == root) {
-    P4EST_ASSERT (file_offset == src->bytes_out);
-    file_offset = 0;
-  }
+  /* complete computation of header size, known to all ranks */
   head_count = (size_t) (headc + save_num_procs) + (size_t) num_trees;
   zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
-  if (zpadding > 0 || rank > 0) {
-    retval = sc_io_source_read (src, NULL, (long)
-                                (file_offset + zpadding +
-                                 gfq[rank] * comb_size), NULL);
-    SC_CHECK_ABORT (!retval, "seek data");
+
+  /* close file for serial reading */
+  if (src != NULL) {
+    retval = sc_io_source_destroy (src);
+    SC_CHECK_ABORT (!retval, "source destroy");
+    src = NULL;
   }
+
+  /* open MPI I/O file and seek to beginning of process storage */
+  mpiret = MPI_File_open (mpicomm, (char *) filename,
+                          MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifile);
+  SC_CHECK_MPI (mpiret);
+  mpiret = MPI_File_seek (mpifile, file_offset + zpadding +
+                          gfq[rank] * comb_size, MPI_SEEK_SET);
+  SC_CHECK_MPI (mpiret);
 
   /* read quadrant coordinates and data interleaved */
   qarr =
@@ -3705,35 +3716,22 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   }
   for (zz = 0; zz < zcount; ++zz) {
     if (load_data) {
-      retval = sc_io_source_read (src, lbuf, comb_size, NULL);
-      SC_CHECK_ABORT (!retval, "read quadrant with data");
+      sc_mpi_read (mpifile, lbuf, comb_size, MPI_BYTE,
+                   "read quadrant and data");
       memcpy (qap, lbuf, qbuf_size);
       memcpy (dap, lbuf + qbuf_size, data_size);
     }
     else {
-      retval = sc_io_source_read (src, qap, qbuf_size, NULL);
-      SC_CHECK_ABORT (!retval, "read quadrant with data");
+      sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
       if (save_data_size > 0) {
-        retval = sc_io_source_read (src, NULL, save_data_size, NULL);
-        SC_CHECK_ABORT (!retval, "seek over data");
+        mpiret = MPI_File_seek (mpifile, save_data_size, MPI_SEEK_CUR);
+        SC_CHECK_MPI (mpiret);
       }
     }
     qap += P4EST_DIM + 1;
     dap += data_size;
   }
   P4EST_FREE (lbuf);
-
-  /* seek every process to the end of the source (in case there is data
-   * appended to the end of this source) */
-  if (gfq[num_procs] > gfq[rank + 1]) {
-    retval = sc_io_source_read
-      (src, NULL, (long) (gfq[num_procs] - gfq[rank + 1]) * comb_size, NULL);
-    SC_CHECK_ABORT (!retval, "seek to end of data");
-  }
-
-  /* close file source */
-  retval = sc_io_source_destroy (src);
-  SC_CHECK_ABORT (!retval, "source destroy");
 
   /* create p4est from accumulated information */
   p4est = p4est_inflate (mpicomm, conn, gfq, pertree,
@@ -3751,7 +3749,7 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   return p4est;
 }
 
-#endif
+#endif /* P4EST_ENABLE_MPIIO */
 
 p4est_t            *
 p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
