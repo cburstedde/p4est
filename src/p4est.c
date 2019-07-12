@@ -3512,6 +3512,7 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   int                 num_procs, rank;
   int                 save_num_procs;
   int                 save_data;
+  int                 load_in_one;
   int                 i;
   uint64_t           *u64a, u64int;
   size_t              conn_bytes, file_offset;
@@ -3526,7 +3527,7 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   p4est_t            *p4est;
   sc_io_source_t     *src;
   sc_array_t         *qarr, *darr;
-  char               *dap, *lbuf;
+  char               *dap, *lbuf, *lptr;
   MPI_File            mpifile;
 
   /* retrieve MPI information */
@@ -3707,29 +3708,55 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
   qap = (p4est_qcoord_t *) qarr->array;
   darr = NULL;
   dap = NULL;
-  lbuf = NULL;
+  lbuf = lptr = NULL;
+  load_in_one = 0;
+  if (load_data || save_data_size == 0) {
+    /* load the whole file window in one call */
+    load_in_one = 1;
+    lbuf = lptr = P4EST_ALLOC (char, comb_size * zcount);
+  }
   if (load_data) {
     P4EST_ASSERT (data_size == save_data_size && data_size > 0);
     darr = sc_array_new_size (data_size, zcount);
     dap = darr->array;
-    lbuf = P4EST_ALLOC (char, comb_size);
+    if (lbuf == NULL) {
+      P4EST_ASSERT (!load_in_one);
+      lbuf = P4EST_ALLOC (char, comb_size);
+    }
   }
-  for (zz = 0; zz < zcount; ++zz) {
-    if (load_data) {
-      sc_mpi_read (mpifile, lbuf, comb_size, MPI_BYTE,
-                   "read quadrant and data");
-      memcpy (qap, lbuf, qbuf_size);
-      memcpy (dap, lbuf + qbuf_size, data_size);
-    }
-    else {
-      sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
-      if (save_data_size > 0) {
-        mpiret = MPI_File_seek (mpifile, save_data_size, MPI_SEEK_CUR);
-        SC_CHECK_MPI (mpiret);
+  if (load_in_one) {
+    P4EST_ASSERT (lbuf == lptr && lptr != NULL);
+    sc_mpi_read (mpifile, lptr, comb_size * zcount, MPI_BYTE,
+                 "read all local quadrant and data");
+    for (zz = 0; zz < zcount; ++zz) {
+      memcpy (qap, lptr, qbuf_size);
+      qap += P4EST_DIM + 1;
+      if (load_data) {
+        memcpy (dap, lptr + qbuf_size, data_size);
+        dap += data_size;
       }
+      lptr += comb_size;
     }
-    qap += P4EST_DIM + 1;
-    dap += data_size;
+  }
+  else {
+    P4EST_ASSERT (lptr == NULL);
+    for (zz = 0; zz < zcount; ++zz) {
+      if (load_data) {
+        sc_mpi_read (mpifile, lbuf, comb_size, MPI_BYTE,
+                     "read quadrant and data");
+        memcpy (qap, lbuf, qbuf_size);
+        memcpy (dap, lbuf + qbuf_size, data_size);
+      }
+      else {
+        sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
+        if (save_data_size > 0) {
+          mpiret = MPI_File_seek (mpifile, save_data_size, MPI_SEEK_CUR);
+          SC_CHECK_MPI (mpiret);
+        }
+      }
+      qap += P4EST_DIM + 1;
+      dap += data_size;
+    }
   }
   P4EST_FREE (lbuf);
 
