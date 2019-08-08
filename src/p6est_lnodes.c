@@ -55,8 +55,8 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
   int                 Nrp = degree + 1;
 
   if (degree == 1) {
-    p4est_locidx_t      eid, nid, enid2, nid2;
-    p4est_locidx_t     *newnum, newlocal, newowned;
+    p4est_locidx_t      eid, nid, enid2;
+    p4est_locidx_t     *newnum, *newnumg, newlocal, newowned;
 
     P4EST_GLOBAL_PRODUCTION ("Into adapt p6est_lnodes_new for degree = 1\n");
     p4est_log_indent_push ();
@@ -69,8 +69,9 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
 
     en = lnodes->element_nodes;
 
-    newnum = P4EST_ALLOC (p4est_locidx_t, P8EST_INSUL * nll);
-    memset (newnum, -1, P8EST_INSUL * nll * sizeof (p4est_locidx_t));
+    newnum  = P4EST_ALLOC (p4est_locidx_t, num_local);
+    newnumg = P4EST_ALLOC (p4est_locidx_t, num_local);
+    memset (newnum, -1, num_local * sizeof (p4est_locidx_t));
 
     for (enid = 0, eid = 0; eid < nll; eid++) {
       for (k = 0; k < 3; k++) {
@@ -109,6 +110,17 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
       }
     }
     P4EST_ASSERT (enid2 == P8EST_CHILDREN * nll);
+
+    /* send local numbers to others */
+    {
+      sc_array_t          view;
+
+      memcpy(newnumg,newnum,num_local * sizeof (p4est_locidx_t));
+      sc_array_init_data (&view, newnumg, sizeof (p4est_locidx_t), num_local);
+
+      p6est_lnodes_share_owned (&view, lnodes);
+    }
+
     lnodes->element_nodes =
       P4EST_REALLOC (en, p4est_locidx_t, P8EST_CHILDREN * nll);
 
@@ -147,7 +159,7 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
                rank->owned_count; nid++) {
             if (newnum[nid] >= 0) {
               lnodes->nonlocal_nodes[newnum[nid] - newowned] =
-                owned_offsets[rank->rank];
+                owned_offsets[rank->rank] + (p4est_gloidx_t) newnumg[nid];
               newrankowned++;
               if (newrankoffset < 0) {
                 newrankoffset = newnum[nid];
@@ -185,25 +197,9 @@ p6est_lnodes_new (p6est_t * p6est, p6est_ghost_t * ghost, int degree)
       sc_array_resize (&rank->shared_nodes, zw);
     }
 
-    /* send local numbers to others */
-    {
-      sc_array_t          view;
-
-      sc_array_init_data (&view, newnum, sizeof (p4est_locidx_t), newlocal);
-
-      p6est_lnodes_share_owned (&view, lnodes);
-    }
-
-    nid2 = 0;
-    for (nid = num_owned; nid < num_local; nid++) {
-      if (newnum[nid] >= 0) {
-        lnodes->nonlocal_nodes[nid2++] += (p4est_gloidx_t) newnum[nid];
-      }
-    }
-    P4EST_ASSERT (nid2 == newlocal - newowned);
-
     P4EST_FREE (owned_offsets);
     P4EST_FREE (newnum);
+    P4EST_FREE (newnumg);
 
     p4est_log_indent_pop ();
     P4EST_GLOBAL_PRODUCTION ("Done adapt p6est_lnodes_new for degree = 1\n");
