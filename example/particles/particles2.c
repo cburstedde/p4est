@@ -1715,7 +1715,7 @@ pprint (part_global_t * g, double t)
 }
 
 static void
-wait (part_global_t * g)
+wait_for_messages (part_global_t * g)
 {
   int                 mpiret;
   int                 i;
@@ -2375,7 +2375,7 @@ sim (part_global_t * g)
       regroup (g);
 
       /* wait for sent messages to complete */
-      wait (g);
+      wait_for_messages (g);
 
       /* if no refinement occurred, store received particles and break loop */
 
