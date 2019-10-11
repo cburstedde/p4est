@@ -795,16 +795,8 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     }
 
 #ifdef P4EST_MPIIO_WRITE
-    /* We will close the sequential access to the file */
-    /* best attempt to flush file to disk */
-    retval = fflush (file);
-    SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-    retval = fsync (fileno (file));
-    SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-    retval = fclose (file);
-    SC_CHECK_ABORT (retval == 0, "file close");
+    /* we will close the sequential access to the file */
+    sc_fflush_fsync_fclose (file);
     file = NULL;
 #else
     /* file is still open for sequential write mode */
@@ -875,15 +867,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   P4EST_FREE (lbuf);
 
 #ifndef P4EST_MPIIO_WRITE
-  /* best attempt to flush file to disk */
-  retval = fflush (file);
-  SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-  retval = fsync (fileno (file));
-  SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
+  sc_fflush_fsync_fclose (file);
   file = NULL;
 
   /* initiate sequential synchronization */
