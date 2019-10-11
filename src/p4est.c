@@ -3264,13 +3264,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 {
   const int           headc = 6;
   const int           align = 32;
-#ifdef P4EST_ENABLE_MPI
-  int                 mpiret;
-#ifndef P4EST_MPIIO_WRITE
-  MPI_Status          mpistatus;
-#endif
-#endif
-  int                 retval;
+  int                 retval, mpiret;
   int                 num_procs, save_num_procs, rank;
   int                 i;
   long                fpos = -1, foffset;
@@ -3370,16 +3364,8 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     }
 
 #ifdef P4EST_MPIIO_WRITE
-    /* We will close the sequential access to the file */
-    /* best attempt to flush file to disk */
-    retval = fflush (file);
-    SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-    retval = fsync (fileno (file));
-    SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-    retval = fclose (file);
-    SC_CHECK_ABORT (retval == 0, "file close");
+    /* we will close the sequential access to the file */
+    sc_fflush_fsync_fclose (file);
     file = NULL;
 #else
     /* file is still open for sequential write mode */
@@ -3395,7 +3381,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     /* wait for sequential synchronization */
 #ifdef P4EST_ENABLE_MPI
     mpiret = MPI_Recv (&fpos, 1, MPI_LONG, rank - 1, P4EST_COMM_SAVE,
-                       p4est->mpicomm, &mpistatus);
+                       p4est->mpicomm, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 #endif
 
@@ -3462,15 +3448,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   }
 
 #ifndef P4EST_MPIIO_WRITE
-  /* best attempt to flush file to disk */
-  retval = fflush (file);
-  SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-  retval = fsync (fileno (file));
-  SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
+  sc_fflush_fsync_fclose (file);
   file = NULL;
 
   /* initiate sequential synchronization */
@@ -3485,6 +3463,9 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   mpiret = MPI_File_close (&mpifile);
   SC_CHECK_MPI (mpiret);
 #endif
+  /* make sure subsequent code finds the final result on disk */
+  mpiret = sc_MPI_Barrier (p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_save\n");
