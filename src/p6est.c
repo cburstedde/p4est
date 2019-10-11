@@ -748,15 +748,9 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     }
   }
 
-  /* save the columns */
+  /* save the columns; this function calls sc_MPI_Barrier at the end */
   p4est_save_ext (filename, savecolumns, 1, save_partition);
-
   p4est_destroy (savecolumns);
-
-  /* we need a barrier so that all files have finished writing in
-   * p4est_save_ext before we start writing additional data to the file */
-  mpiret = sc_MPI_Barrier (p6est->mpicomm);
-  SC_CHECK_MPI (mpiret);
 
   if (rank == 0) {
     file = fopen (filename, "ab");
@@ -902,6 +896,9 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   mpiret = MPI_File_close (&mpifile);
   SC_CHECK_MPI (mpiret);
 #endif
+  /* make sure subsequent code finds the final result on disk */
+  mpiret = sc_MPI_Barrier (p6est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done p6est_save\n");
