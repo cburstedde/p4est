@@ -3756,10 +3756,19 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
     P4EST_ASSERT (save_data_size > 0);
     P4EST_ASSERT (lptr == NULL);
     P4EST_ASSERT (dap == NULL);
+#define P4EST_SEEK_CUR_BROKEN
     for (zz = 0; zz < zcount; ++zz) {
-        sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
-          mpiret = MPI_File_seek (mpifile, save_data_size, MPI_SEEK_CUR);
-          SC_CHECK_MPI (mpiret);
+      sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
+#ifndef P4EST_SEEK_CUR_BROKEN
+      mpiret = MPI_File_seek
+        (mpifile, (MPI_Offset) save_data_size, MPI_SEEK_CUR);
+      SC_CHECK_MPI (mpiret);
+#else
+      /* avoid MPI_SEEK_CUR, which appears to be broken on some systems */
+      mpiofs += comb_size;
+      mpiret = MPI_File_seek (mpifile, mpiofs, MPI_SEEK_SET);
+      SC_CHECK_MPI (mpiret);
+#endif
       qap += P4EST_DIM + 1;
     }
   }
