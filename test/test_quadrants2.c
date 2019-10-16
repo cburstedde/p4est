@@ -139,7 +139,7 @@ main (int argc, char **argv)
   p4est_quadrant_t    cv[P4EST_CHILDREN], *cp[P4EST_CHILDREN];
   p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
   p4est_quadrant_t    a, f, g, h;
-  uint64_t            Aid, Fid;
+  uint64_t            Aid, Iid, Hid, Fid;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -616,6 +616,21 @@ main (int argc, char **argv)
 
   p4est_nearest_common_ancestor_D (&I, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor_D");
+
+  Iid = p4est_quadrant_linear_id (&I, 1);
+  p4est_successor (&I, &B);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&B, 1) == (Iid + 1), "successor");
+  p4est_predecessor (&H, &C);
+  /* Check if predecessor inverts successor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&C, &I), "predecessor");
+
+  Hid = p4est_quadrant_linear_id (&H, 1);
+  p4est_predecessor (&H, &B);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&B, 1) == (Hid - 1),
+                  "predcessor");
+  p4est_successor (&B, &C);
+  /* Check if successor inverts predecessor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&C, &H), "successor");
 
   for (k = 0; k < 16; ++k) {
     if (k != 4 && k != 6 && k != 8 && k != 9 && k != 12 && k != 13 && k != 14) {
