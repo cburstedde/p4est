@@ -665,8 +665,8 @@ void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 /** Compute the successor according to the Morton index in a uniform mesh.
  * \param[in] quadrant  Quadrant whose Morton successor will be computed.
  *                      Must not be the last (top right) quadrant in the tree.
- * \param[in,out] result    The coordinates of the successor of quadrant.
- *                          Will be saved in result.
+ * \param[in,out] result    The coordinates of the successor of quadrant
+ *                          will be saved in result.
  */
 void                p4est_successor (const p4est_quadrant_t * quadrant,
                                      p4est_quadrant_t * result);
@@ -674,8 +674,8 @@ void                p4est_successor (const p4est_quadrant_t * quadrant,
 /** Compute the predecessor according to the Morton index in a uniform mesh.
  * \param[in] quadrant  Quadrant whose Morton predecessor will be computed.
  *                      Must not be the first (bottom left) quadrant in the tree.
- * \param[in,out] result    The coordinates of the predecessor of quadrant.
- *                          Will be saved in result.
+ * \param[in,out] result    The coordinates of the predecessor of quadrant
+ *                          will be saved in result.
  */
 void                p4est_predecessor (const p4est_quadrant_t * quadrant,
                                        p4est_quadrant_t * result);
