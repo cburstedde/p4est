@@ -29,6 +29,17 @@
 #endif /* !P4_TO_P8 */
 
 void
+p4est_quadrant_pad (p4est_quadrant_t * q)
+{
+  P4EST_ASSERT (q != NULL);
+
+  /* *INDENT-OFF* HORRIBLE indent bug */
+  q->pad8 = (int8_t) -1;
+  q->pad16 = (int16_t) -1;
+  /* *INDENT-ON* */
+}
+
+void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 {
 #ifdef P4_TO_P8

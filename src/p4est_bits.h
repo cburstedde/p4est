@@ -37,6 +37,11 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Write -1 into the pad8 and pad16 members of a quadrant.
+ * This helps with valgrind cleanliness if a quadrant is sent over MPI.
+ */
+void                p4est_quadrant_pad (p4est_quadrant_t * q);
+
 /** Prints one line with quadrant's x, y and level.
  * \param [in] log_priority  see \ref logpriorities in sc.h for the meanings
  *                           of numerical priority values
