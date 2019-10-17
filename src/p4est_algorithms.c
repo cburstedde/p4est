@@ -761,6 +761,19 @@ static const int insul_to_e[27] =
 /* *INDENT-ON* */
 #endif
 
+static void
+p4est_output_array_push_data (sc_array_t * out, const p4est_quadrant_t * src,
+                              p4est_topidx_t which_tree)
+{
+  p4est_quadrant_t   *outq = p4est_quadrant_array_push_pad (out);
+
+  p4est_quadrant_sibling (src, outq, 0);
+  outq->p.piggy2.which_tree = which_tree;
+  /* *INDENT-OFF* HORRIBLE indent bug */
+  outq->p.piggy2.from_tree = (p4est_topidx_t) -1;
+  /* *INDENT-ON* */
+}
+
 void
 p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                             sc_array_t * out, p4est_connect_type_t balance,
@@ -782,7 +795,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
   p4est_quadrant_t    fd, ld, tempq, ins[P4EST_INSUL];
   p4est_quadrant_t   *treefd, *treeld;
   p4est_quadrant_t   *tq, *s, *u;
-  p4est_quadrant_t   *inq, *outq;
+  p4est_quadrant_t   *inq;
   p4est_tree_t       *tree;
   p4est_connectivity_t *conn = p4est->connectivity;
 #ifdef P4_TO_P8
@@ -1033,10 +1046,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                 for (jz = 0; jz < seedcount; jz++) {
                   u = p4est_quadrant_array_index (seeds, jz);
                   P4EST_ASSERT (p4est_quadrant_is_ancestor (tq, u));
-
-                  outq = (p4est_quadrant_t *) sc_array_push (inseeds);
-                  p4est_quadrant_sibling (u, outq, 0);
-                  outq->p.piggy2.which_tree = qtree;
+                  p4est_output_array_push_data (inseeds, u, qtree);
                 }
               }
               P4EST_ASSERT (nneigh < P4EST_CHILDREN - 1);
@@ -1096,9 +1106,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                   P4EST_ASSERT (!contact_edge_only);
                   P4EST_ASSERT (ntree == ftree);
                   p4est_quadrant_transform_face (u, &tempq, ftransform);
-                  outq = p4est_quadrant_array_push (out);
-                  p4est_quadrant_sibling (&tempq, outq, 0);
-                  outq->p.piggy2.which_tree = ntree;
+                  p4est_output_array_push_data (out, &tempq, ntree);
                 }
 #ifdef P4_TO_P8
                 else if (contact_edge_only) {
@@ -1107,9 +1115,7 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                     et = p8est_edge_array_index (eta, etree);
                     if (et->ntree == ftree && et->nedge == inq->pad16) {
                       p8est_quadrant_transform_edge (u, &tempq, &ei, et, 1);
-                      outq = p4est_quadrant_array_push (out);
-                      p4est_quadrant_sibling (&tempq, outq, 0);
-                      outq->p.piggy2.which_tree = et->ntree;
+                      p4est_output_array_push_data (out, &tempq, et->ntree);
                     }
                   }
                   et = NULL;
@@ -1124,18 +1130,14 @@ p4est_tree_compute_overlap (p4est_t * p4est, sc_array_t * in,
                     if (ct->ntree == ftree && ct->ncorner == inq->pad16) {
                       p4est_quadrant_transform_corner (u, (int) ct->ncorner,
                                                        1);
-                      outq = p4est_quadrant_array_push (out);
-                      p4est_quadrant_sibling (u, outq, 0);
-                      outq->p.piggy2.which_tree = ct->ntree;
+                      p4est_output_array_push_data (out, u, ct->ntree);
                     }
                   }
                   ct = NULL;
                 }
               }
               else {
-                outq = p4est_quadrant_array_push (out);
-                p4est_quadrant_sibling (u, outq, 0);
-                outq->p.piggy2.which_tree = qtree;
+                p4est_output_array_push_data (out, u, qtree);
               }
 
               if (c >= 0) {
@@ -1582,6 +1584,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
   P4EST_QUADRANT_INIT (&tempq);
   P4EST_QUADRANT_INIT (&tempp);
   P4EST_QUADRANT_INIT (&fd);
+  P4EST_QUADRANT_INIT (&ld);
 
 #ifdef P4EST_ENABLE_DEBUG
   quadrant_pool_size = qpool->elem_count;
@@ -2145,6 +2148,9 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 
   P4EST_ASSERT (0 <= btype && btype <= P4EST_DIM);
   P4EST_ASSERT (sc_array_is_sorted (tquadrants, p4est_quadrant_compare));
+
+  P4EST_QUADRANT_INIT (&tempq);
+  P4EST_QUADRANT_INIT (&root);
 
   switch (btype) {
   case 0:
