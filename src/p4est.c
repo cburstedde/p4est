@@ -4048,3 +4048,16 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
 
   return p4est;
 }
+
+p4est_quadrant_t   *
+p4est_quadrant_array_push_pad (sc_array_t * array)
+{
+  p4est_quadrant_t   *q = p4est_quadrant_array_push (array);
+
+  /* *INDENT-OFF* HORRIBLE indent bug */
+  q->pad8 = (int8_t) -1;
+  q->pad16 = (int16_t) -1;
+  /* *INDENT-ON* */
+
+  return q;
+}

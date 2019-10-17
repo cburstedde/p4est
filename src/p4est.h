@@ -478,6 +478,9 @@ p4est_quadrant_array_push (sc_array_t * array)
   return (p4est_quadrant_t *) sc_array_push (array);
 }
 
+/** Push quadrant onto an array and initialize pad bytes to -1. */
+p4est_quadrant_t   *p4est_quadrant_array_push_pad (sc_array_t * array);
+
 /** Call sc_mempool_alloc for a mempool creating quadrants. */
 /*@unused@*/
 static inline p4est_quadrant_t *
