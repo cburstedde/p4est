@@ -2865,6 +2865,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         continue;
       }
 
+      /* we have identified the next quadrant to be sent */
+      p4est_quadrant_pad (parent_send + parent_index);
+
       /* get nearest quadrant `quad_id_near_cut` to cut `partition_new[i]` */
       if (partition_now[rank] <= partition_new[i] &&
           partition_new[i] < partition_now[rank + 1]) {
@@ -3018,6 +3021,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       /* increment parent index */
       parent_index++;
     }
+    P4EST_ASSERT (parent_index == num_sends);
   }
   /* END: send */
 
