@@ -4049,11 +4049,3 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
 
   return p4est;
 }
-
-p4est_quadrant_t   *
-p4est_quadrant_array_push_pad (sc_array_t * array)
-{
-  p4est_quadrant_t   *q = p4est_quadrant_array_push (array);
-  p4est_quadrant_pad (q);
-  return q;
-}

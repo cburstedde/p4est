@@ -765,8 +765,9 @@ static void
 p4est_output_array_push_data (sc_array_t * out, const p4est_quadrant_t * src,
                               p4est_topidx_t which_tree)
 {
-  p4est_quadrant_t   *outq = p4est_quadrant_array_push_pad (out);
+  p4est_quadrant_t   *outq = p4est_quadrant_array_push (out);
 
+  p4est_quadrant_pad (outq);
   p4est_quadrant_sibling (src, outq, 0);
   outq->p.piggy2.which_tree = which_tree;
   /* *INDENT-OFF* HORRIBLE indent bug */
