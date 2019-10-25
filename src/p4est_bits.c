@@ -1485,7 +1485,7 @@ p4est_quadrant_corner_neighbor_extra (const p4est_quadrant_t * q,
 
   if (!p4est_quadrant_is_outside_corner (&temp)) {
 #ifndef P4_TO_P8
-    qp = (p4est_quadrant_t *) sc_array_push (quads);
+    qp = p4est_quadrant_array_push (quads);
     tp = (p4est_topidx_t *) sc_array_push (treeids);
 
     face = p4est_corner_faces[corner][0];

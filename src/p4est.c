@@ -1498,7 +1498,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
 
       if (qarray != NULL) {
-        s = (p4est_quadrant_t *) sc_array_push (qarray);
+        s = p4est_quadrant_array_push (qarray);
         *s = *q;
       }
 

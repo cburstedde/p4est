@@ -1325,7 +1325,7 @@ p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive,
           }
           else {
             /* parent is accepted */
-            newq = (p2est_quadrant_t *) sc_array_push (newcol);
+            newq = p2est_quadrant_array_push (newcol);
             *newq = *parent;
             if (parent == &p) {
               parent = &nextq[level];
@@ -1600,7 +1600,7 @@ p6est_replace_column_join (p4est_t * p4est, p4est_topidx_t which_tree,
       P4EST_ASSERT (zw[j] < nlayers[j]);
       q[j] = p2est_quadrant_array_index (layers, first[j] + zw[j]);
     }
-    p = (p2est_quadrant_t *) sc_array_push (work_array);
+    p = p2est_quadrant_array_push (work_array);
     *p = *q[0];
     p6est_layer_init_data (p6est, which_tree, incoming[0], p, init_fn);
     for (j = 1; j < num_outgoing; j++) {

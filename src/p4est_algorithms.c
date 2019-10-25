@@ -1659,7 +1659,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
     }
     else {
       /* add tempq to inlist */
-      q = (p4est_quadrant_t *) sc_array_push (inlist);
+      q = p4est_quadrant_array_push (inlist);
       *q = tempq;
       q->p.user_int = 0;
       incount++;
@@ -2004,7 +2004,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
         break;
       }
       /* add tempq to out */
-      r = (p4est_quadrant_t *) sc_array_push (out);
+      r = p4est_quadrant_array_push (out);
       *r = tempq;
 
       /* if tempq is a last sibling, go up a level */
@@ -2253,7 +2253,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   outlist = sc_array_new (sizeof (p4est_quadrant_t));
 
   /* get the reduced representation of the tree */
-  q = (p4est_quadrant_t *) sc_array_push (inlist);
+  q = p4est_quadrant_array_push (inlist);
   p = p4est_quadrant_array_index (tquadrants, 0);
   p4est_quadrant_sibling (p, q, 0);
   for (iz = 1; iz < tcount; iz++) {
@@ -2266,7 +2266,7 @@ p4est_complete_or_balance (p4est_t * p4est, p4est_topidx_t which_tree,
       }
       continue;
     }
-    q = (p4est_quadrant_t *) sc_array_push (inlist);
+    q = p4est_quadrant_array_push (inlist);
     p4est_quadrant_sibling (p, q, 0);
   }
 
@@ -2563,7 +2563,7 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
         }
         continue;
       }
-      q = (p4est_quadrant_t *) sc_array_push (inlist);
+      q = p4est_quadrant_array_push (inlist);
       *q = *r;
     }
 
