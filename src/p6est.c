@@ -748,15 +748,9 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     }
   }
 
-  /* save the columns */
+  /* save the columns; this function calls sc_MPI_Barrier at the end */
   p4est_save_ext (filename, savecolumns, 1, save_partition);
-
   p4est_destroy (savecolumns);
-
-  /* we need a barrier so that all files have finished writing in
-   * p4est_save_ext before we start writing additional data to the file */
-  mpiret = sc_MPI_Barrier (p6est->mpicomm);
-  SC_CHECK_MPI (mpiret);
 
   if (rank == 0) {
     file = fopen (filename, "ab");
@@ -801,16 +795,8 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     }
 
 #ifdef P4EST_MPIIO_WRITE
-    /* We will close the sequential access to the file */
-    /* best attempt to flush file to disk */
-    retval = fflush (file);
-    SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-    retval = fsync (fileno (file));
-    SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-    retval = fclose (file);
-    SC_CHECK_ABORT (retval == 0, "file close");
+    /* we will close the sequential access to the file */
+    sc_fflush_fsync_fclose (file);
     file = NULL;
 #else
     /* file is still open for sequential write mode */
@@ -881,15 +867,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   P4EST_FREE (lbuf);
 
 #ifndef P4EST_MPIIO_WRITE
-  /* best attempt to flush file to disk */
-  retval = fflush (file);
-  SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-  retval = fsync (fileno (file));
-  SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
+  sc_fflush_fsync_fclose (file);
   file = NULL;
 
   /* initiate sequential synchronization */
@@ -902,6 +880,9 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
   mpiret = MPI_File_close (&mpifile);
   SC_CHECK_MPI (mpiret);
 #endif
+  /* make sure subsequent code finds the final result on disk */
+  mpiret = sc_MPI_Barrier (p6est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done p6est_save\n");

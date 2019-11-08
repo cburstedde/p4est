@@ -33,6 +33,7 @@
 #define P4EST_BITS_H
 
 #include <p4est.h>
+#include <sc_random.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -653,6 +654,14 @@ uint64_t            p4est_quadrant_linear_id (const p4est_quadrant_t *
  */
 void                p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                                                int level, uint64_t id);
+
+/** Initialize a random number generator by quadrant coordinates.
+ * This serves to generate partition-independent and reproducible samples.
+ * \param [in] quadrant         Valid quadrant.
+ * \param [out] rstate          New state of random number generator.
+ */
+void                p4est_quadrant_srand (const p4est_quadrant_t * q,
+                                          sc_rand_state_t * rstate);
 
 SC_EXTERN_C_END;
 

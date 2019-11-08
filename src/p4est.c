@@ -3264,13 +3264,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 {
   const int           headc = 6;
   const int           align = 32;
-#ifdef P4EST_ENABLE_MPI
-  int                 mpiret;
-#ifndef P4EST_MPIIO_WRITE
-  MPI_Status          mpistatus;
-#endif
-#endif
-  int                 retval;
+  int                 retval, mpiret;
   int                 num_procs, save_num_procs, rank;
   int                 i;
   long                fpos = -1, foffset;
@@ -3370,16 +3364,8 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     }
 
 #ifdef P4EST_MPIIO_WRITE
-    /* We will close the sequential access to the file */
-    /* best attempt to flush file to disk */
-    retval = fflush (file);
-    SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-    retval = fsync (fileno (file));
-    SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-    retval = fclose (file);
-    SC_CHECK_ABORT (retval == 0, "file close");
+    /* we will close the sequential access to the file */
+    sc_fflush_fsync_fclose (file);
     file = NULL;
 #else
     /* file is still open for sequential write mode */
@@ -3395,7 +3381,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     /* wait for sequential synchronization */
 #ifdef P4EST_ENABLE_MPI
     mpiret = MPI_Recv (&fpos, 1, MPI_LONG, rank - 1, P4EST_COMM_SAVE,
-                       p4est->mpicomm, &mpistatus);
+                       p4est->mpicomm, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 #endif
 
@@ -3404,7 +3390,9 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     SC_CHECK_ABORT (file != NULL, "file open");
   }
 #else
-  /* Every core opens the file in append mode */
+  /* Every core opens the file in append mode -- file must exist */
+  mpiret = sc_MPI_Barrier (p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
   mpiret = MPI_File_open (p4est->mpicomm, (char *) filename,
                           MPI_MODE_WRONLY | MPI_MODE_APPEND |
                           MPI_MODE_UNIQUE_OPEN, MPI_INFO_NULL, &mpifile);
@@ -3460,15 +3448,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   }
 
 #ifndef P4EST_MPIIO_WRITE
-  /* best attempt to flush file to disk */
-  retval = fflush (file);
-  SC_CHECK_ABORT (retval == 0, "file flush");
-#ifdef P4EST_HAVE_FSYNC
-  retval = fsync (fileno (file));
-  SC_CHECK_ABORT (retval == 0, "file fsync");
-#endif
-  retval = fclose (file);
-  SC_CHECK_ABORT (retval == 0, "file close");
+  sc_fflush_fsync_fclose (file);
   file = NULL;
 
   /* initiate sequential synchronization */
@@ -3483,6 +3463,9 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   mpiret = MPI_File_close (&mpifile);
   SC_CHECK_MPI (mpiret);
 #endif
+  /* make sure subsequent code finds the final result on disk */
+  mpiret = sc_MPI_Barrier (p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_save\n");
@@ -3497,19 +3480,325 @@ p4est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                          0, 0, user_pointer, connectivity);
 }
 
+#ifdef P4EST_ENABLE_MPIIO
+
+static p4est_t     *
+p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
+                int load_data, int autopartition, int broadcasthead,
+                void *user_pointer, p4est_connectivity_t ** connectivity)
+{
+  const int           headc = 6;
+  const int           align = 32;
+  int                 root = 0;
+  int                 retval;
+  int                 mpiret;
+  int                 num_procs, rank;
+  int                 save_num_procs;
+  int                 save_data;
+  int                 load_in_one;
+  int                 i;
+  uint64_t           *u64a, u64int;
+  size_t              conn_bytes, file_offset;
+  size_t              save_data_size;
+  size_t              qbuf_size, comb_size, head_count;
+  size_t              zz, zcount, zpadding;
+  p4est_topidx_t      jt, num_trees;
+  p4est_gloidx_t     *gfq;
+  p4est_gloidx_t     *pertree;
+  p4est_qcoord_t     *qap;
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est;
+  sc_io_source_t     *src;
+  sc_array_t         *qarr, *darr;
+  char               *dap, *lbuf, *lptr;
+  MPI_File            mpifile;
+  MPI_Offset          mpiofs;
+
+  /* retrieve MPI information */
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  src = NULL;
+  broadcasthead = 1;
+  if (broadcasthead) {
+    /* We load the header of the file, including the connectivity,
+       on the root process using standard file I/O and MPI_Bcast it. */
+    /* The remainder of the file is read with MPI I/O. */
+
+    if (rank == root) {
+      src =
+        sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
+      SC_CHECK_ABORT (src != NULL, "file source: possibly file not found");
+    }
+  }
+  else {
+    /* We read the whole file using MPI I/O. */
+    /* Not implemented since there is currently no function to
+       load the connectivity from a file using MPI I/O. */
+
+    SC_ABORT_NOT_REACHED ();
+  }
+  P4EST_ASSERT ((rank == root) == (src != NULL));
+
+  /* set some parameters */
+  P4EST_ASSERT (connectivity != NULL);
+  if (data_size == 0) {
+    load_data = 0;
+  }
+  qbuf_size = (P4EST_DIM + 1) * sizeof (p4est_qcoord_t);
+
+  /* the first part of the header determines further offsets */
+  save_data_size = (size_t) ULONG_MAX;
+  save_num_procs = -1;
+  conn = NULL;
+  conn_bytes = 0;
+  u64a = P4EST_ALLOC (uint64_t, headc + 1);
+  if (!broadcasthead || rank == root) {
+
+    /* read the forest connectivity */
+    conn = p4est_connectivity_source (src);
+    SC_CHECK_ABORT (conn != NULL, "connectivity source");
+    zcount = src->bytes_out;
+    zpadding = (align - zcount % align) % align;
+    retval = sc_io_source_read (src, NULL, zpadding, NULL);
+    SC_CHECK_ABORT (!retval, "source padding");
+    conn_bytes = src->bytes_out;
+
+    /* read format and some basic partition parameters */
+    retval = sc_io_source_read (src, u64a, sizeof (uint64_t) * (size_t) headc,
+                                NULL);
+    SC_CHECK_ABORT (!retval, "read format");
+    SC_CHECK_ABORT (u64a[0] == P4EST_ONDISK_FORMAT, "invalid format");
+    SC_CHECK_ABORT (u64a[1] == (uint64_t) sizeof (p4est_qcoord_t),
+                    "invalid coordinate size");
+    SC_CHECK_ABORT (u64a[2] == (uint64_t) sizeof (p4est_quadrant_t),
+                    "invalid quadrant size");
+    save_data_size = (size_t) u64a[3];
+    save_data = (int) u64a[4];
+    if (load_data) {
+      SC_CHECK_ABORT (save_data_size == data_size, "invalid data size");
+      SC_CHECK_ABORT (save_data, "quadrant data not saved");
+    }
+    save_num_procs = (int) u64a[5];
+    SC_CHECK_ABORT (autopartition || num_procs == save_num_procs,
+                    "num procs mismatch");
+
+    /* piggy-back the bytes for the connectivity onto first message */
+    u64a[headc + 0] = (uint64_t) conn_bytes;
+  }
+  if (broadcasthead) {
+
+    /* broadcast connectivity and first part of header */
+    conn = p4est_connectivity_bcast (conn, root, mpicomm);
+    mpiret = sc_MPI_Bcast (u64a, headc + 1, sc_MPI_LONG_LONG_INT,
+                           root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    if (rank != root) {
+
+      /* make sure the rest of the processes has the information */
+      SC_CHECK_ABORT (u64a[0] == P4EST_ONDISK_FORMAT, "invalid format");
+      save_data_size = (size_t) u64a[3];
+      save_data = (int) u64a[4];
+      save_num_procs = (int) u64a[5];
+      conn_bytes = (size_t) u64a[headc + 0];
+    }
+  }
+  P4EST_ASSERT (save_num_procs >= 0);
+  P4EST_ASSERT (save_data_size != (size_t) ULONG_MAX);
+  *connectivity = conn;
+  comb_size = qbuf_size + save_data_size;
+  file_offset = conn_bytes + headc * sizeof (uint64_t);
+
+  /* create partition data */
+  gfq = P4EST_ALLOC (p4est_gloidx_t, num_procs + 1);
+  gfq[0] = 0;
+  if (!broadcasthead || rank == root) {
+    if (!autopartition) {
+      P4EST_ASSERT (num_procs == save_num_procs);
+      u64a = P4EST_REALLOC (u64a, uint64_t, num_procs);
+      sc_io_source_read (src, u64a, sizeof (uint64_t) * (size_t) num_procs,
+                         NULL);
+      SC_CHECK_ABORT (!retval, "read quadrant partition");
+      for (i = 0; i < num_procs; ++i) {
+        gfq[i + 1] = (p4est_gloidx_t) u64a[i];
+      }
+    }
+    else {
+      /* ignore saved partition and compute a new uniform one */
+      retval = sc_io_source_read
+        (src, NULL, (long) ((save_num_procs - 1) * sizeof (uint64_t)), NULL);
+      SC_CHECK_ABORT (!retval, "seek over ignored partition");
+      retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
+      SC_CHECK_ABORT (!retval, "read quadrant count");
+      for (i = 1; i <= num_procs; ++i) {
+        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
+      }
+    }
+  }
+  if (broadcasthead) {
+    mpiret = sc_MPI_Bcast (gfq + 1, num_procs, P4EST_MPI_GLOIDX,
+                           root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  zcount = (size_t) (gfq[rank + 1] - gfq[rank]);
+  file_offset += save_num_procs * sizeof (uint64_t);
+
+  /* read pertree data */
+  num_trees = conn->num_trees;
+  pertree = P4EST_ALLOC (p4est_gloidx_t, num_trees + 1);
+  pertree[0] = 0;
+  if (!broadcasthead || rank == root) {
+    u64a = P4EST_REALLOC (u64a, uint64_t, num_trees);
+    retval = sc_io_source_read (src, u64a, sizeof (uint64_t) * (size_t)
+                                num_trees, NULL);
+    SC_CHECK_ABORT (!retval, "read pertree information");
+    for (jt = 0; jt < num_trees; ++jt) {
+      pertree[jt + 1] = (p4est_gloidx_t) u64a[jt];
+    }
+    SC_CHECK_ABORT (gfq[num_procs] == pertree[num_trees], "pertree mismatch");
+  }
+  if (broadcasthead) {
+    mpiret = sc_MPI_Bcast (pertree + 1, num_trees, P4EST_MPI_GLOIDX,
+                           root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  P4EST_FREE (u64a);
+  file_offset += num_trees * sizeof (uint64_t);
+
+  /* complete computation of header size, known to all ranks */
+  head_count = (size_t) (headc + save_num_procs) + (size_t) num_trees;
+  zpadding = (align - (head_count * sizeof (uint64_t)) % align) % align;
+
+  /* close file for serial reading */
+  if (src != NULL) {
+    retval = sc_io_source_destroy (src);
+    SC_CHECK_ABORT (!retval, "source destroy");
+    src = NULL;
+  }
+
+  /* open MPI I/O file and seek to beginning of process storage */
+  mpiret = MPI_File_open (mpicomm, (char *) filename,
+                          MPI_MODE_RDONLY, MPI_INFO_NULL, &mpifile);
+  SC_CHECK_MPI (mpiret);
+  mpiofs = (MPI_Offset) (file_offset + zpadding + gfq[rank] * comb_size);
+  mpiret = MPI_File_seek (mpifile, mpiofs, MPI_SEEK_SET);
+  SC_CHECK_MPI (mpiret);
+
+  /* read quadrant coordinates and data interleaved */
+  qarr =
+    sc_array_new_size (sizeof (p4est_qcoord_t), (P4EST_DIM + 1) * zcount);
+  qap = (p4est_qcoord_t *) qarr->array;
+  darr = NULL;
+  dap = NULL;
+  lbuf = lptr = NULL;
+  load_in_one = 0;
+  if (load_data || save_data_size == 0) {
+    /* load the whole file window in one call */
+    load_in_one = 1;
+    if (save_data_size > 0) {
+      lbuf = lptr = P4EST_ALLOC (char, comb_size * zcount);
+      /* otherwise, we read directly into the quadrant array */
+    }
+  }
+  if (load_data) {
+    P4EST_ASSERT (data_size == save_data_size && data_size > 0);
+    darr = sc_array_new_size (data_size, zcount);
+    dap = darr->array;
+    if (!load_in_one) {
+      P4EST_ASSERT (lbuf == NULL);
+      lbuf = P4EST_ALLOC (char, comb_size);
+    }
+  }
+  if (load_in_one) {
+    if (save_data_size > 0) {
+      P4EST_ASSERT (load_data);
+      P4EST_ASSERT (data_size == save_data_size);
+      P4EST_ASSERT (lbuf == lptr && lptr != NULL);
+      sc_mpi_read (mpifile, lptr, comb_size * zcount, MPI_BYTE,
+                   "read all local quadrants and data");
+      for (zz = 0; zz < zcount; ++zz) {
+        memcpy (qap, lptr, qbuf_size);
+        qap += P4EST_DIM + 1;
+        memcpy (dap, lptr + qbuf_size, data_size);
+        dap += data_size;
+        lptr += comb_size;
+      }
+    }
+    else {
+      P4EST_ASSERT (comb_size == qbuf_size);
+      sc_mpi_read (mpifile, qap, qbuf_size * zcount, MPI_BYTE,
+                   "read all local quadrants");
+    }
+  }
+  else {
+    P4EST_ASSERT (!load_data);
+    P4EST_ASSERT (save_data_size > 0);
+    P4EST_ASSERT (lptr == NULL);
+    P4EST_ASSERT (dap == NULL);
+#define P4EST_SEEK_CUR_BROKEN
+    for (zz = 0; zz < zcount; ++zz) {
+      sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
+#ifndef P4EST_SEEK_CUR_BROKEN
+      mpiret = MPI_File_seek
+        (mpifile, (MPI_Offset) save_data_size, MPI_SEEK_CUR);
+      SC_CHECK_MPI (mpiret);
+#else
+      /* avoid MPI_SEEK_CUR, which appears to be broken on some systems */
+      mpiofs += comb_size;
+      mpiret = MPI_File_seek (mpifile, mpiofs, MPI_SEEK_SET);
+      SC_CHECK_MPI (mpiret);
+#endif
+      qap += P4EST_DIM + 1;
+    }
+  }
+  P4EST_FREE (lbuf);
+
+  /* close MPI file */
+  mpiret = MPI_File_close (&mpifile);
+  SC_CHECK_MPI (mpiret);
+
+  /* create p4est from accumulated information */
+  p4est = p4est_inflate (mpicomm, conn, gfq, pertree,
+                         qarr, darr, user_pointer);
+  sc_array_destroy (qarr);
+  if (darr != NULL) {
+    sc_array_destroy (darr);
+  }
+  P4EST_FREE (pertree);
+  P4EST_FREE (gfq);
+
+  /* assert that we loaded a valid forest and return */
+  SC_CHECK_ABORT (p4est_is_valid (p4est), "invalid forest");
+
+  return p4est;
+}
+
+#endif /* P4EST_ENABLE_MPIIO */
+
 p4est_t            *
 p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                 int load_data, int autopartition, int broadcasthead,
                 void *user_pointer, p4est_connectivity_t ** connectivity)
 {
+#ifndef P4EST_ENABLE_MPIIO
   int                 retval;
-  p4est_t            *p4est;
   sc_io_source_t     *src;
+#endif
+  p4est_t            *p4est;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_load %s\n", filename);
   p4est_log_indent_push ();
 
-  /* open file on all processors */
+#ifdef P4EST_ENABLE_MPIIO
+  /* use MPI I/O functionality */
+
+  p4est = p4est_load_mpi (filename, mpicomm, data_size, load_data,
+                          autopartition, broadcasthead, user_pointer,
+                          connectivity);
+#else
+  /* open file on all processors and rely on file system */
 
   src = sc_io_source_new (SC_IO_TYPE_FILENAME, SC_IO_ENCODE_NONE, filename);
   SC_CHECK_ABORT (src != NULL, "file source: possibly file not found");
@@ -3519,6 +3808,7 @@ p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
 
   retval = sc_io_source_destroy (src);
   SC_CHECK_ABORT (!retval, "source destroy");
+#endif
 
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTIONF
