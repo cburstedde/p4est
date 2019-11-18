@@ -96,6 +96,7 @@
 #define p4est_ghost_exchange_t          p8est_ghost_exchange_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
+#define p4est_lid_t                     p8est_lid_t
 #define p4est_lnodes_t                  p8est_lnodes_t
 #define p4est_lnodes_code_t             p8est_lnodes_code_t
 #define p4est_lnodes_rank_t             p8est_lnodes_rank_t
@@ -192,6 +193,20 @@
 
 /* functions in p4est_extended */
 #define p4est_replace_t                 p8est_replace_t
+#define p4est_lid_alloc									p8est_lid_alloc
+#define p4est_lid_init									p8est_lid_init
+#define p4est_lid_copy									p8est_lid_copy
+#define p4est_lid_equal									p8est_lid_equal
+#define p4est_lid_compare								p8est_lid_compare
+#define p4est_lid_add_to								p8est_lid_add_to
+#define p4est_lid_substract							p8est_lid_substract
+#define p4est_lid_bitwise_and						p8est_lid_bitwise_and
+#define p4est_lid_bitwise_or_direct			p8est_lid_bitwise_or_direct
+#define p4est_lid_right_shift						p8est_lid_right_shift
+#define p4est_lid_left_shift						p8est_lid_left_shift
+#define p4est_lid_set_1									p8est_lid_set_1
+#define p4est_quadrant_linear_id_ext128 p8est_quadrant_linear_id_ext128
+#define p4est_quadrant_set_morton_ext128 p8est_quadrant_set_morton_ext128
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
 #define p4est_copy_ext                  p8est_copy_ext

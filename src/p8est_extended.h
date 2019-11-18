@@ -44,8 +44,16 @@
 #include <p8est_mesh.h>
 #include <p8est_iterate.h>
 #include <p8est_lnodes.h>
+#include <sc_uint128_t.h>
 
 SC_EXTERN_C_BEGIN;
+
+/* A datatype to handle the linear id in 3D.
+ * We use the implementation of unsigned 128 bit
+ * integer in libsc, i.e. a struct with the
+ * members high_bits and low_bits (both uint64_t).
+ */
+typedef sc_uint128_t p8est_lid_t;
 
 /* Data pertaining to selecting, inspecting, and profiling algorithms.
  * A pointer to this structure is hooked into the p8est main structure.
@@ -109,6 +117,140 @@ typedef void        (*p8est_replace_t) (p8est_t * p8est,
                                         p8est_quadrant_t * outgoing[],
                                         int num_incoming,
                                         p8est_quadrant_t * incoming[]);
+
+/** Allocates an unsigned 128 bit integer.
+ * \return	A pointer to a allocated but uninitalized p8est_lid_t.
+ *			If the allocation fails, then a error is thrown.
+ */
+p8est_lid_t        *p8est_lid_alloc ();
+
+/** Initializes an unsigned 128 bit integer.
+ * \param [in,out] input	A pointer to the p8est_lid_t that will be intialized.
+ * \param [in] high   		The given high bits to intialize \a input.
+ * \param [in] low			The given low bits to initialize \a input.
+ */
+void                p8est_lid_init (p8est_lid_t * input, uint64_t high,
+                                    uint64_t low);
+
+/** Creates a copy of an unsigned 128 bit integer.
+ * \param [in]	input			A pointer to the p8est_lid_t that is copied.
+ * \return 						A pointer to a allocated but uninitalized p8est_lid_t.
+ */
+p8est_lid_t        *p8est_lid_copy (const p8est_lid_t * input);
+
+/** Checks if the p8est_lid_t \a a and the p8est_lid_t \a b are equal.
+ * \param [in]	a	A pointer to allocated/static p8est_lid_t.
+ * \param [in]	b	A pointer to allocated/static p8est_lid_t.
+ * \return			Returns a value > 0 if a is equal to b and a value <= 0 else.
+ */
+int                 p8est_lid_equal (const p8est_lid_t * a,
+                                     const p8est_lid_t * b);
+
+/** Compare the p8est_lid_t \a a and the p8est_lid_t \a b.
+ * \param [in]	a	A pointer to allocated/static p8est_lid_t.
+ * \param [in]	b	A pointer to allocated/static p8est_lid_t.
+ * \return                  Returns -1 if a < b,
+ *							returns 1 if a > b and
+ *							returns 0 if a == b.
+ */
+int                 p8est_lid_compare (const p8est_lid_t * a,
+                                       const p8est_lid_t * b);
+
+/** Adds the p8est_lid_t \a b to the p8est_lid_t \a a.
+ *	The result is saved in \a a.
+ *	\param [in, out] a 	A pointer to a p8est_lid_t. \a a
+ *						will be overwritten by \a a + \a b.
+ *	\param [in] b 		A pointer to a p8est_lid_t.
+ */
+void                p8est_lid_add_to (p8est_lid_t * a, const p8est_lid_t * b);
+
+/** Substracts the p8est_lid_t \a b from the p8est_lid_t \a a.
+ *  This function assume that the result is >= 0.
+ *	\param [in]	a 			A pointer to a p8est_lid_t.
+ *	\param [in]	b 			A pointer to a p8est_lid_t.
+ *	\param[out] result	A pointer to a allocated p8est_lid_t.
+ *						The difference \a a - \a b will be saved.
+ *						in \a result.
+ */
+void                p8est_lid_substract (const p8est_lid_t * a,
+                                         const p8est_lid_t * b,
+                                         p8est_lid_t * result);
+
+/** Calculates the bitwise and of the p8est_lid_t \a a and the p8est_lid_t \a b.
+ *	\param [in]	a 			A pointer to a p8est_lid_t.
+ *	\param [in]	b 			A pointer to a p8est_lid_t.
+ *	\param[out] result	A pointer to a allocated p8est_lid_t.
+ *						The bitwise and of \a a and \a b will be saved.
+ *						in \a result.
+ */
+void                p8est_lid_bitwise_and (const p8est_lid_t * a,
+                                           const p8est_lid_t * b,
+                                           p8est_lid_t * result);
+
+/** Calculates the bitwise or of the p8est_lid_t \a a and the p8est_lid_t \a b.
+ *	\param [in,out]	a 	A pointer to a p8est_lid_t.
+ *						he bitwise or will be saved in \a a.
+ *	\param [in]	b 		A pointer to a p8est_lid_t.
+ */
+void                p8est_lid_bitwise_or_direct (p8est_lid_t * a,
+                                                 const p8est_lid_t * b);
+
+/** Calculates the bit right shift of the p8est_lid_t \a input by shift_count bits.
+ *	\param [in]	input 		A pointer to a p8est_lid_t.
+ *	\param [in] shift_count	Length of the shift.
+ *	\param [in,out]	result	A pointer to a allocated p8est_lid_t.
+ *							The right shifted number will be saved \a result.
+ */
+void                p8est_lid_right_shift (const p8est_lid_t * input,
+                                           unsigned shift_count,
+                                           p8est_lid_t * result);
+
+/** Calculates the bit left shift of the p8est_lid_t \a input by shift_count bits.
+ *	\param [in]	input 		A pointer to a p8est_lid_t.
+ *	\param [in] shift_count	Length of the shift.
+ *	\param [in,out]	result	A pointer to a allocated p8est_lid_t.
+ *							The left shifted number will be saved \a result.
+ */
+void                p8est_lid_left_shift (const p8est_lid_t * input,
+                                          unsigned shift_count,
+                                          p8est_lid_t * result);
+
+/** Sets the bit_number-th bit of \a input to one.
+ *	\param [in,out] input		A pointer to allocated/static p8est_lid_t.
+ *	\param[in]		shift_count	The bit (counted from the right hand side)
+ *								that is set to one.
+ */
+void                p8est_lid_set_1 (p8est_lid_t * input,
+                                     unsigned bit_number);
+
+/** Computes the linear position as p8est_lid_t of a quadrant in a uniform grid.
+ * The grid and quadrant levels need not coincide.
+ * If they do, this is the inverse of \ref p4est_quadrant_set_morton.
+ * \param [in] quadrant  Quadrant whose linear index will be computed.
+ *                       If the quadrant is smaller than the grid (has a higher
+ *                       quadrant->level), the result is computed from its
+ *                       ancestor at the grid's level.
+ *                       If the quadrant has a smaller level than the grid (it
+ *                       is bigger than a grid cell), the grid cell sharing its
+ *                       lower left corner is used as reference.
+ * \param [in] level     The level of the regular grid compared to which the
+ *                       linear position is to be computed.
+ * \return Returns the linear position of this quadrant on a grid.
+ * \note The user_data of \a quadrant is never modified.
+ */
+p8est_lid_t        *p8est_quadrant_linear_id_ext128 (const p8est_quadrant_t *
+                                                     quadrant, int level);
+
+/** Set quadrant Morton indices based on linear position given as p8est_lid_t in uniform grid.
+ * This is the inverse operation of \ref p4est_quadrant_linear_id.
+ * \param [in,out] quadrant  Quadrant whose Morton indices will be set.
+ * \param [in]     level     Level of the grid and of the resulting quadrant.
+ * \param [in]     id        Linear index of the quadrant on a uniform grid.
+ * \note The user_data of \a quadrant is never modified.
+ */
+void                p8est_quadrant_set_morton_ext128 (p8est_quadrant_t *
+                                                      quadrant, int level,
+                                                      p8est_lid_t * id);
 
 /** Create a new forest.
  * This is a more general form of p8est_new.
