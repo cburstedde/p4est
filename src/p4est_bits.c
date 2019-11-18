@@ -29,7 +29,8 @@
 #endif /* !P4_TO_P8 */
 
 /* Function declarations for 128 bit unsigned integer are in p4(8)est_extended.h. */
-p4est_lid_t * p4est_lid_alloc ()
+p4est_lid_t        *
+p4est_lid_alloc ()
 {
 #ifdef P4_TO_P8
   return (p4est_lid_t *) sc_uint128_t_alloc (p4est_package_id);
@@ -48,7 +49,8 @@ p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
 #endif
 }
 
-p4est_lid_t * p4est_lid_copy (const p4est_lid_t * input)
+p4est_lid_t        *
+p4est_lid_copy (const p4est_lid_t * input)
 {
 #ifdef P4_TO_P8
   return sc_uint128_t_copy (input, p4est_package_id);
@@ -166,8 +168,12 @@ p4est_lid_set_1 (p4est_lid_t * input, unsigned bit_number)
 static              p4est_qcoord_t
 cast_to_p4est_qcoord_t_ext128 (const p4est_lid_t * input)
 {
+#ifdef P4_TO_P8
   P4EST_ASSERT (((sc_uint128_t *) input)->high_bits == 0);
   return (p4est_qcoord_t) ((sc_uint128_t *) input)->low_bits;
+#else
+  return (p4est_qcoord_t) * input;
+#endif
 }
 
 void
@@ -2122,7 +2128,7 @@ p4est_quadrant_set_morton_ext128 (p4est_quadrant_t * quadrant,
   p4est_lid_init (&one, 0, 1);
   if (level < P4EST_QMAXLEVEL) {
     p4est_lid_left_shift (&one, P4EST_DIM * (level + 2), &(temp_result[0]));
-    P4EST_ASSERT (!p4est_lid_compare (id, &(temp_result[0])));
+    P4EST_ASSERT (p4est_lid_compare (id, &(temp_result[0])) < 0);
   }
 
   quadrant->level = (int8_t) level;
