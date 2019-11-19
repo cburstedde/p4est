@@ -110,6 +110,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 #ifdef P4EST_ENABLE_DEBUG
   size_t              zz;
 #endif
+  p4est_lid_t         zero;
   p4est_topidx_t      jt, num_trees;
   p4est_topidx_t      first_tree, last_tree, next_tree;
   p4est_quadrant_t   *first_quad, *next_quad, *quad;
@@ -130,6 +131,8 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
+
+  p4est_lid_init (&zero, 0, 0);
 
   /* This implementation runs in O(P/p * maxlevel)
    * with P the total number of points, p the number of processors.
@@ -217,7 +220,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     /* we are probably not empty */
     if (rank == 0) {
       first_tree = p4est->first_local_tree = 0;
-      p4est_quadrant_set_morton (&f, maxlevel, 0);
+      p4est_quadrant_set_morton_ext128 (&f, maxlevel, &zero);
     }
     else {
       first_tree = p4est->first_local_tree = points->p.which_tree;
@@ -272,7 +275,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       P4EST_ASSERT (p4est_quadrant_is_valid (&a));
     }
     else {
-      p4est_quadrant_set_morton (&a, maxlevel, 0);
+      p4est_quadrant_set_morton_ext128 (&a, maxlevel, &zero);
       P4EST_ASSERT (jt < next_tree || p4est_quadrant_compare (&a, &n) < 0);
     }
 
@@ -300,7 +303,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     /* determine largest possible last quadrant of this tree */
     if (jt < next_tree) {
       p4est_quadrant_last_descendant (&a, &l, maxlevel);
-      p4est_quadrant_set_morton (&b, 0, 0);
+      p4est_quadrant_set_morton_ext128 (&b, 0, &zero);
       p4est_quadrant_last_descendant (&b, &b, maxlevel);
       if (p4est_quadrant_is_equal (&l, &b)) {
         onlyone = 1;

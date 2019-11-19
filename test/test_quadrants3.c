@@ -88,21 +88,25 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   int                 l;
   int                 comp = p4est_quadrant_compare (q1, q2);
   int                 level = (int) SC_MIN (q1->level, q2->level);
-  uint64_t            id1 = p4est_quadrant_linear_id (q1, level);
-  uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
+  p4est_lid_t        *id1 = p4est_quadrant_linear_id_ext128 (q1, level);
+  p4est_lid_t        *id2 = p4est_quadrant_linear_id_ext128 (q2, level);
   p4est_quadrant_t    quad, par, anc;
 
   /* test linear id */
   if (p4est_quadrant_is_ancestor (q1, q2)) {
-    SC_CHECK_ABORT (id1 == id2 && comp < 0, "Ancestor 1");
+    SC_CHECK_ABORT (p4est_lid_equal (id1, id2) && comp < 0, "Ancestor 1");
   }
   else if (p4est_quadrant_is_ancestor (q2, q1)) {
-    SC_CHECK_ABORT (id1 == id2 && comp > 0, "Ancestor 2");
+    SC_CHECK_ABORT (p4est_lid_equal (id1, id2) && comp > 0, "Ancestor 2");
   }
   else {
-    SC_CHECK_ABORT ((comp == 0 && id1 == id2) || (comp < 0 && id1 < id2)
-                    || (comp > 0 && id1 > id2), "compare");
+    SC_CHECK_ABORT ((comp == 0 && p4est_lid_equal (id1, id2))
+                    || (comp < 0 && (p4est_lid_compare (id1, id2) < 0))
+                    || (comp > 0
+                        && (p4est_lid_compare (id1, id2) > 0)), "compare");
   }
+  P4EST_FREE (id1);
+  P4EST_FREE (id2);
 
   /* test ancestor and parent functions */
   par = quad = *q1;
@@ -127,7 +131,7 @@ main (int argc, char **argv)
   int                 k;
   int                 level, mid, cid;
   int                 id0, id1, id2, id3;
-  int64_t             index1, index2;
+  p4est_lid_t        *index1, *index2;
   size_t              iz, jz, incount;
   p4est_qcoord_t      mh = P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
   p4est_connectivity_t *connectivity;
@@ -140,7 +144,7 @@ main (int argc, char **argv)
   p4est_quadrant_t    cv[P4EST_CHILDREN], *cp[P4EST_CHILDREN];
   p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
   p4est_quadrant_t    a, f, g, h;
-  uint64_t            Aid, Fid;
+  p4est_lid_t        *Aid, *Fid, temp_lid;
   const int           indices[27] = { 0, 1, 2, 3, 4, 5, 6, 7,
     7, 9, 11, 13, 18, 19, 22, 23, 27, 31,
     36, 37, 38, 39, 45, 47, 54, 55, 63
@@ -171,16 +175,20 @@ main (int argc, char **argv)
     q1 = p4est_quadrant_array_index (&t1->quadrants, iz);
 
     /* test the index conversion */
-    index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
-    p4est_quadrant_set_morton (&r, (int) q1->level, index1);
-    index2 = p4est_quadrant_linear_id (&r, (int) r.level);
-    SC_CHECK_ABORT (index1 == index2, "index conversion");
+    index1 = p4est_quadrant_linear_id_ext128 (q1, (int) q1->level);
+    p4est_quadrant_set_morton_ext128 (&r, (int) q1->level, index1);
+    index2 = p4est_quadrant_linear_id_ext128 (&r, (int) r.level);
+    SC_CHECK_ABORT (p4est_lid_equal (index1, index2), "index conversion");
+    P4EST_FREE (index1);
+    P4EST_FREE (index2);
     level = (int) q1->level - 1;
     if (level >= 0) {
-      index1 = p4est_quadrant_linear_id (q1, level);
-      p4est_quadrant_set_morton (&r, level, index1);
-      index2 = p4est_quadrant_linear_id (&r, level);
-      SC_CHECK_ABORT (index1 == index2, "index conversion");
+      index1 = p4est_quadrant_linear_id_ext128 (q1, level);
+      p4est_quadrant_set_morton_ext128 (&r, level, index1);
+      index2 = p4est_quadrant_linear_id_ext128 (&r, level);
+      SC_CHECK_ABORT (p4est_lid_equal (index1, index2), "index conversion");
+      P4EST_FREE (index1);
+      P4EST_FREE (index2);
     }
 
     /* test the is_next function */
@@ -653,13 +661,16 @@ main (int argc, char **argv)
   p4est_quadrant_last_descendant (&A, &g, P4EST_QMAXLEVEL - 1);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&Q, &g), "last_descendant");
 
-  Fid = p4est_quadrant_linear_id (&F, P4EST_QMAXLEVEL);
-  p4est_quadrant_set_morton (&f, P4EST_QMAXLEVEL, Fid);
+  Fid = p4est_quadrant_linear_id_ext128 (&F, P4EST_QMAXLEVEL);
+  p4est_quadrant_set_morton_ext128 (&f, P4EST_QMAXLEVEL, Fid);
+  P4EST_FREE (Fid);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f), "set_morton/linear_id");
 
-  Aid = p4est_quadrant_linear_id (&A, 0);
-  p4est_quadrant_set_morton (&a, 0, Aid);
-  SC_CHECK_ABORT (Aid == 27, "linear_id");
+  Aid = p4est_quadrant_linear_id_ext128 (&A, 0);
+  p4est_quadrant_set_morton_ext128 (&a, 0, Aid);
+  p4est_lid_init (&temp_lid, 0, 27);
+  SC_CHECK_ABORT (p4est_lid_equal (Aid, &temp_lid), "linear_id");
+  P4EST_FREE (Aid);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "set_morton/linear_id");
 
   p4est_nearest_common_ancestor (&P, &H, &a);

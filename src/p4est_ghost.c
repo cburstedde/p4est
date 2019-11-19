@@ -1326,7 +1326,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
 {
   p4est_quadrant_t    temp;
   p4est_quadrant_t   *lq, *uq;
-  int64_t             next_lid, uid;
+  p4est_lid_t        *next_lid, uid, temp_lid;
   int                 n0_proc, n1_proc, proc;
   p4est_quadrant_t   *gfp = p4est->global_first_position;
 #if 0
@@ -1387,11 +1387,14 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
       P4EST_ASSERT (uq->p.which_tree == nt);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, uq) ||
                     p4est_quadrant_is_equal (nq, uq));
-      next_lid = p4est_quadrant_linear_id (uq, P4EST_QMAXLEVEL);
-      P4EST_ASSERT (next_lid > 0);
-      uid = next_lid - 1;
+      next_lid = p4est_quadrant_linear_id_ext128 (uq, P4EST_QMAXLEVEL);
+      p4est_lid_init (&temp_lid, 0, 0);
+      P4EST_ASSERT (p4est_lid_compare (next_lid, &temp_lid) > 0);
+      p4est_lid_init (&temp_lid, 0, 1);
+      p4est_lid_substract (next_lid, &temp_lid, &uid);
       uq = &temp;
-      p4est_quadrant_set_morton (uq, P4EST_QMAXLEVEL, uid);
+      p4est_quadrant_set_morton_ext128 (uq, P4EST_QMAXLEVEL, &uid);
+      P4EST_FREE (next_lid);
       P4EST_ASSERT (p4est_quadrant_is_valid (uq));
     }
 #ifdef P4EST_ENABLE_DEBUG

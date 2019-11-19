@@ -1572,7 +1572,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
   p4est_qcoord_t      ph;
   p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
   p4est_quadrant_t    par, tempq, tempp, fd, ld;
-  uint64_t            lid;
+  p4est_lid_t        *lid, one;
   sc_array_t         *olist;
   sc_hash_t          *hash[P4EST_MAXLEVEL + 1];
   sc_array_t          outlist[P4EST_MAXLEVEL + 1];
@@ -1589,6 +1589,9 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 
   count_already_inlist = count_already_outlist = 0;
   count_ancestor_inlist = 0;
+
+  /* to increment linear id */
+  p4est_lid_init (&one, 0, 1);
 
   incount = inlist->elem_count;
   maxlevel = minlevel;
@@ -1942,9 +1945,10 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
       q = NULL;
     }
     else {
-      lid = p4est_quadrant_linear_id (last_desc, P4EST_QMAXLEVEL);
-      lid++;
-      p4est_quadrant_set_morton (&ld, P4EST_QMAXLEVEL, lid);
+      lid = p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL);
+      p4est_lid_add_to (lid, &one);
+      p4est_quadrant_set_morton_ext128 (&ld, P4EST_QMAXLEVEL, lid);
+      P4EST_FREE (lid);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
       q = &ld;
     }
@@ -2017,9 +2021,10 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           q = NULL;
         }
         else {
-          lid = p4est_quadrant_linear_id (last_desc, P4EST_QMAXLEVEL);
-          lid++;
-          p4est_quadrant_set_morton (&ld, P4EST_QMAXLEVEL, lid);
+          lid = p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL);
+          p4est_lid_add_to (lid, &one);
+          p4est_quadrant_set_morton_ext128 (&ld, P4EST_QMAXLEVEL, lid);
+          P4EST_FREE (lid);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
           q = &ld;
         }
