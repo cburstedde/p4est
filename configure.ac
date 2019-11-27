@@ -62,8 +62,6 @@ echo "o---------------------------------------"
 echo "| Checking functions"
 echo "o---------------------------------------"
 
-AC_CHECK_FUNCS([fsync])
-
 echo "o---------------------------------------"
 echo "| Checking subpackages"
 echo "o---------------------------------------"
@@ -94,6 +92,7 @@ dnl echo "| C_VERSION:   $C_VERSION"
 echo "| CFLAGS:      $CFLAGS"
 echo "| LDFLAGS:     $LDFLAGS"
 echo "| LIBS:        $LIBS"
+echo "| TESTS:       $P4EST_MPIRUN $P4EST_MPI_TEST_FLAGS"
 echo "o----------------------------------"
 
 # Create output files.

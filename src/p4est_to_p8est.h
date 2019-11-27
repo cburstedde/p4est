@@ -44,6 +44,7 @@
 /* redefine macros */
 #define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
+#define P4EST_DIM_POW                   P8EST_DIM_POW
 #define P4EST_FACES                     P8EST_FACES
 #define P4EST_CHILDREN                  P8EST_CHILDREN
 #define P4EST_HALF                      P8EST_HALF
@@ -287,6 +288,7 @@
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
 #define p4est_successor                 p8est_successor
 #define p4est_predecessor               p8est_predecessor
+#define p4est_quadrant_srand            p8est_quadrant_srand
 
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound
