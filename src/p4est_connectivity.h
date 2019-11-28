@@ -54,6 +54,9 @@ SC_EXTERN_C_BEGIN;
 /** The size of insulation layer */
 #define P4EST_INSUL 9
 
+/** Exponentiate with dimension */
+#define P4EST_DIM_POW(a) ((a) * (a))
+
 /* size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
 
