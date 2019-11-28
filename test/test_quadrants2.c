@@ -142,7 +142,7 @@ check_predecessor_successor (const p4est_quadrant_t * q)
   lid = p4est_quadrant_linear_id (q, q->level);
   p4est_predecessor (q, &temp1);
   SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid - 1),
-                  "predcessor");
+                  "predecessor");
   p4est_successor (&temp1, &temp2);
   /* Check if successor inverts predecessor. */
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
