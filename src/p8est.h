@@ -43,10 +43,12 @@
 SC_EXTERN_C_BEGIN;
 
 /** The finest level of the octree for representing nodes */
-#define P8EST_MAXLEVEL 19
+#define P8EST_OLD_MAXLEVEL 19
+#define P8EST_MAXLEVEL 30
 
 /** The finest level of the octree for representing octants */
-#define P8EST_QMAXLEVEL 18
+#define P8EST_OLD_QMAXLEVEL 18
+#define P8EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */
 #define P8EST_ROOT_LEN ((p4est_qcoord_t) 1 << P8EST_MAXLEVEL)

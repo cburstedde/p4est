@@ -235,11 +235,14 @@ void                p8est_lid_set_1 (p8est_lid_t * input,
  *                       lower left corner is used as reference.
  * \param [in] level     The level of the regular grid compared to which the
  *                       linear position is to be computed.
- * \return Returns the linear position of this quadrant on a grid.
+ * \param[in,out] id	 A pointer to an allocated or static p8est_lid_t.
+ *						 id will be the linear position of this quadrant on a 
+ *						 uniform grid.
  * \note The user_data of \a quadrant is never modified.
  */
-p8est_lid_t        *p8est_quadrant_linear_id_ext128 (const p8est_quadrant_t *
-                                                     quadrant, int level);
+void                p8est_quadrant_linear_id_ext128 (const p8est_quadrant_t *
+                                                     quadrant, int level,
+                                                     p8est_lid_t * id);
 
 /** Set quadrant Morton indices based on linear position given as p8est_lid_t in uniform grid.
  * This is the inverse operation of \ref p4est_quadrant_linear_id.

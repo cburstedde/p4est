@@ -2893,7 +2893,7 @@ p4est_iter_get_boundaries (p4est_t * p4est, p4est_topidx_t * last_run_tree,
   p4est_quadrant_t   *lq = &(p4est->global_first_position[rank]);
   p4est_quadrant_t    temp;
   p4est_quadrant_t   *uq = &(p4est->global_first_position[rank + 1]);
-  p4est_lid_t        *uqid, one, temp_lid;
+  p4est_lid_t         uqid, one, temp_lid;
   p4est_quadrant_t   *tlq, *tuq;
   int                 f, nf, c, c2, nc, oc;
   p4est_topidx_t      corner;
@@ -2929,10 +2929,9 @@ p4est_iter_get_boundaries (p4est_t * p4est, p4est_topidx_t * last_run_tree,
   }
   else {
     P4EST_ASSERT (uq->p.which_tree == last_local_tree);
-    uqid = p4est_quadrant_linear_id_ext128 (uq, P4EST_QMAXLEVEL);
+    p4est_quadrant_linear_id_ext128 (uq, P4EST_QMAXLEVEL, &uqid);
     p4est_lid_init (&one, 0, 1);
-    p4est_lid_substract (uqid, &one, &temp_lid);
-    P4EST_FREE (uqid);
+    p4est_lid_substract (&uqid, &one, &temp_lid);
     p4est_quadrant_set_morton_ext128 (&temp, P4EST_QMAXLEVEL, &temp_lid);
     uq = &temp;
   }

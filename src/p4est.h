@@ -47,9 +47,11 @@
 SC_EXTERN_C_BEGIN;
 
 /** The finest level of the quadtree for representing nodes */
+#define P4EST_OLD_MAXLEVEL 30   /* to use old maxlevels independent of dimension */
 #define P4EST_MAXLEVEL 30
 
 /** The finest level of the quadtree for representing quadrants */
+#define P4EST_OLD_QMAXLEVEL 29  /* to use old maxlevels independent of dimension */
 #define P4EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */

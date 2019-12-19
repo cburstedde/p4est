@@ -316,7 +316,7 @@ main (int argc, char **argv)
 #endif
   int                 mpiret, mpisize, mpirank;
   sc_MPI_Comm         mpicomm;
-  p4est_lid_t         i, *ifirst, *ilast, temp_lid;
+  p4est_lid_t         i, ifirst, ilast, temp_lid;
   int                 level;
   sc_array_t         *seeds, *seeds_check;
   int                 testval;
@@ -358,18 +358,17 @@ main (int argc, char **argv)
     for (level = 4; level <= maxlevel; level++) {
       P4EST_GLOBAL_VERBOSEF (" level %d\n", level);
       p4est_quadrant_first_descendant (&root, &desc, level);
-      ifirst = p4est_quadrant_linear_id_ext128 (&desc, level);
+      p4est_quadrant_linear_id_ext128 (&desc, level, &ifirst);
       p4est_quadrant_last_descendant (&root, &desc, level);
-      ilast = p4est_quadrant_linear_id_ext128 (&desc, level);
+      p4est_quadrant_linear_id_ext128 (&desc, level, &ilast);
 #ifdef P4_TO_P8
-      p4est_lid_init (&i, ((sc_uint128_t *) ifirst)->high_bits,
-                      ((sc_uint128_t *) ifirst)->low_bits);
+      p4est_lid_init (&i, ((sc_uint128_t) ifirst).high_bits,
+                      ((sc_uint128_t) ifirst).low_bits);
 #else
-      i = *ifirst;              /* just a uint64_t */
+      i = ifirst;               /* just a uint64_t */
 #endif
-      for (;
-           ((p4est_lid_compare (&i, ilast) < 0)
-            || p4est_lid_equal (&i, ilast));
+      for (; ((p4est_lid_compare (&i, &ilast) < 0)
+              || p4est_lid_equal (&i, &ilast));
            p4est_lid_add_to (&i, &temp_lid)) {
         p4est_quadrant_set_morton_ext128 (&q, level, &i);
 #ifndef P4_TO_P8
@@ -408,8 +407,6 @@ main (int argc, char **argv)
                         "p4est_balance_seeds_face error");
         compare_seeds (seeds, seeds_check);
       }
-      P4EST_FREE (ifirst);
-      P4EST_FREE (ilast);
     }
     if (!face) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
@@ -467,18 +464,17 @@ main (int argc, char **argv)
     for (level = 4; level <= maxlevel; level++) {
       P4EST_GLOBAL_VERBOSEF (" level %d\n", level);
       p4est_quadrant_first_descendant (&root, &desc, level);
-      ifirst = p4est_quadrant_linear_id_ext128 (&desc, level);
+      p4est_quadrant_linear_id_ext128 (&desc, level, &ifirst);
       p4est_quadrant_last_descendant (&root, &desc, level);
-      ilast = p4est_quadrant_linear_id_ext128 (&desc, level);
+      p4est_quadrant_linear_id_ext128 (&desc, level, &ilast);
 #ifdef P4_TO_P8
-      p4est_lid_init (&i, ((sc_uint128_t *) ifirst)->high_bits,
-                      ((sc_uint128_t *) ifirst)->low_bits);
+      p4est_lid_init (&i, ((sc_uint128_t) ifirst).high_bits,
+                      ((sc_uint128_t) ifirst).low_bits);
 #else
       i = *ifirst;              /* just a uint64_t */
 #endif
-      for (;
-           ((p4est_lid_compare (&i, ilast) < 0)
-            || p4est_lid_equal (&i, ilast));
+      for (; ((p4est_lid_compare (&i, &ilast) < 0)
+              || p4est_lid_equal (&i, &ilast));
            p4est_lid_add_to (&i, &temp_lid)) {
         p4est_quadrant_set_morton_ext128 (&q, level, &i);
         testval = p8est_balance_seeds_edge (&q, &p, edge, P8EST_CONNECT_FACE,
@@ -506,8 +502,6 @@ main (int argc, char **argv)
                         "p8est_balance_seeds_edge error");
         compare_seeds (seeds, seeds_check);
       }
-      P4EST_FREE (ifirst);
-      P4EST_FREE (ilast);
     }
     if (!edge) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
@@ -555,18 +549,17 @@ main (int argc, char **argv)
     for (level = 4; level <= maxlevel; level++) {
       P4EST_GLOBAL_VERBOSEF (" level %d\n", level);
       p4est_quadrant_first_descendant (&root, &desc, level);
-      ifirst = p4est_quadrant_linear_id_ext128 (&desc, level);
+      p4est_quadrant_linear_id_ext128 (&desc, level, &ifirst);
       p4est_quadrant_last_descendant (&root, &desc, level);
-      ilast = p4est_quadrant_linear_id_ext128 (&desc, level);
+      p4est_quadrant_linear_id_ext128 (&desc, level, &ilast);
 #ifdef P4_TO_P8
-      p4est_lid_init (&i, ((sc_uint128_t *) ifirst)->high_bits,
-                      ((sc_uint128_t *) ifirst)->low_bits);
+      p4est_lid_init (&i, ((sc_uint128_t) ifirst).high_bits,
+                      ((sc_uint128_t) ifirst).low_bits);
 #else
-      i = *ifirst;              /* just a uint64_t */
+      i = ifirst;               /* just a uint64_t */
 #endif
-      for (;
-           ((p4est_lid_compare (&i, ilast) < 0)
-            || p4est_lid_equal (&i, ilast));
+      for (; ((p4est_lid_compare (&i, &ilast) < 0)
+              || p4est_lid_equal (&i, &ilast));
            p4est_lid_add_to (&i, &temp_lid)) {
         p4est_quadrant_set_morton_ext128 (&q, level, &i);
 #ifndef P4_TO_P8
@@ -608,8 +601,6 @@ main (int argc, char **argv)
                         "p4est_balance_seeds_corner error");
         compare_seeds (seeds, seeds_check);
       }
-      P4EST_FREE (ifirst);
-      P4EST_FREE (ilast);
     }
     if (!corner) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");

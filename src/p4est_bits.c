@@ -809,7 +809,7 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
   int                 minlevel, is_next;
-  p4est_lid_t        *i1, *i2, one;
+  p4est_lid_t         i1, i2, one;
   p4est_qcoord_t      mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
@@ -832,15 +832,12 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
   else {
     minlevel = (int) q->level;
   }
-  i1 = p4est_quadrant_linear_id_ext128 (q, minlevel);
-  i2 = p4est_quadrant_linear_id_ext128 (r, minlevel);
+  p4est_quadrant_linear_id_ext128 (q, minlevel, &i1);
+  p4est_quadrant_linear_id_ext128 (r, minlevel, &i2);
 
   p4est_lid_init (&one, 0, 1);
-  p4est_lid_add_to (i1, &one);
-  is_next = p4est_lid_equal (i1, i2);
-  /* p4est_quadrant_linear_id_ext128 uses a P4EST_ALLOC */
-  P4EST_FREE (i1);
-  P4EST_FREE (i2);
+  p4est_lid_add_to (&i1, &one);
+  is_next = p4est_lid_equal (&i1, &i2);
   return is_next;
 }
 
@@ -849,7 +846,7 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
   int                 is_next;
-  p4est_lid_t        *i1, *i2, one;
+  p4est_lid_t         i1, i2, one;
   p4est_quadrant_t    a, b;
 
   /* validity of q and r is asserted in p4est_quadrant_compare */
@@ -865,14 +862,12 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
     }
     p4est_quadrant_parent (&a, &a);
   }
-  i1 = p4est_quadrant_linear_id_ext128 (&a, (int) a.level);
-  i2 = p4est_quadrant_linear_id_ext128 (&b, (int) a.level);
+  p4est_quadrant_linear_id_ext128 (&a, (int) a.level, &i1);
+  p4est_quadrant_linear_id_ext128 (&b, (int) a.level, &i2);
 
   p4est_lid_init (&one, 0, 1);
-  p4est_lid_add_to (i1, &one);
-  is_next = p4est_lid_equal (i1, i2);
-  P4EST_FREE (i1);
-  P4EST_FREE (i2);
+  p4est_lid_add_to (&i1, &one);
+  is_next = p4est_lid_equal (&i1, &i2);
   return is_next;
 }
 
@@ -2032,12 +2027,11 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
   return id;
 }
 
-p4est_lid_t
-  * p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
-                                     quadrant, int level)
+void
+p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
+                                 quadrant, int level, p4est_lid_t * id)
 {
   int                 i;
-  p4est_lid_t        *id;
   uint64_t            x, y;
 #ifdef P4_TO_P8
   uint64_t            z;
@@ -2053,7 +2047,6 @@ p4est_lid_t
   z = quadrant->z >> (P4EST_MAXLEVEL - level);
 #endif
 
-  id = p4est_lid_alloc ();
   p4est_lid_init (id, 0, 0);
   for (i = 0; i < level + 2; ++i) {
     if (x & ((uint64_t) 1 << i))
@@ -2065,8 +2058,6 @@ p4est_lid_t
       p4est_lid_set_1 (id, P4EST_DIM * i + 2);
 #endif
   }
-
-  return id;
 }
 
 void
@@ -2075,8 +2066,8 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 {
   int                 i;
 
-  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
-  if (level < P4EST_QMAXLEVEL) {
+  P4EST_ASSERT (0 <= level && level <= P4EST_OLD_QMAXLEVEL);
+  if (level < P4EST_OLD_QMAXLEVEL) {
     P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
   }
 
@@ -2105,12 +2096,12 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
   quadrant->z <<= (P4EST_MAXLEVEL - level);
 
   /* this is needed whenever the number of bits is more than MAXLEVEL + 2 */
-  if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
-    quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
-  if (quadrant->y >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
-    quadrant->y -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
-  if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
-    quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 1))
+    quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 2);
+  if (quadrant->y >= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 1))
+    quadrant->y -= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 2);
+  if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 1))
+    quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 2);
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
