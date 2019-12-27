@@ -1934,7 +1934,8 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 }
 
 void
-p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
+p4est_quadrant_successor (const p4est_quadrant_t * quadrant,
+                          p4est_quadrant_t * result)
 {
   int                 level;
   int                 ancestor_id;
@@ -1978,8 +1979,8 @@ p4est_successor (const p4est_quadrant_t * quadrant, p4est_quadrant_t * result)
 }
 
 void
-p4est_predecessor (const p4est_quadrant_t * quadrant,
-                   p4est_quadrant_t * result)
+p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
+                            p4est_quadrant_t * result)
 {
   int                 level;
   int                 ancestor_id;

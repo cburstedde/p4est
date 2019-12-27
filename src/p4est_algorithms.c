@@ -1943,7 +1943,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
       q = NULL;
     }
     else {
-      p4est_successor (last_desc, &ld);
+      p4est_quadrant_successor (last_desc, &ld);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
       q = &ld;
 #ifdef P4EST_DEBUG
@@ -2024,7 +2024,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           q = NULL;
         }
         else {
-          p4est_successor (last_desc, &ld);
+          p4est_quadrant_successor (last_desc, &ld);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
           q = &ld;
 #ifdef P4EST_DEBUG
