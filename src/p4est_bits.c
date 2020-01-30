@@ -73,8 +73,7 @@ p4est_quadrant_overlaps (const p4est_quadrant_t * q1,
                          const p4est_quadrant_t * q2)
 {
   int8_t              level = SC_MIN (q1->level, q2->level);
-  p4est_qcoord_t      mask =
-    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+  p4est_qcoord_t      mask = ~((1 << (P4EST_MAXLEVEL - level)) - 1);
 
   if (((q1->x ^ q2->x) & mask) || ((q1->y ^ q2->y) & mask)
 #ifdef P4_TO_P8
@@ -155,8 +154,7 @@ p4est_quadrant_disjoint (const void *a, const void *b)
   const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
   const p4est_quadrant_t *r = (p4est_quadrant_t *) b;
   int8_t              level = SC_MIN (q->level, r->level);
-  p4est_qcoord_t      mask =
-    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+  p4est_qcoord_t      mask = ~((1 << (P4EST_MAXLEVEL - level)) - 1);
 
   if (((q->x ^ r->x) & mask) || ((q->y ^ r->y) & mask)
 #ifdef P4_TO_P8
