@@ -142,6 +142,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   p4est_locidx_t     *equads;
   int8_t             *peedge;
   p4est_locidx_t     *pequad;
+  int                 goodones = 0;
   int                 edgeid_offset =
     mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
@@ -177,7 +178,6 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
 
   /* Go through edge neighbors and collect the true edges */
-  int                 goodones = 0;
   for (iz = 0; iz < cz; ++iz) {
     if (iz == zz) {
       /* We do not count ourselves as a neighbor */
@@ -263,7 +263,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   }
 
   /* we have excluded between 0 and all quadrants. */
-  P4EST_ASSERT (0 <= (size_t) goodones && (size_t) goodones < nAdjacentQuads);
+  P4EST_ASSERT (0 <= goodones && goodones < nAdjacentQuads);
 
   if (goodones > 0) {
     /* Allocate and fill edge information in the mesh structure */
@@ -378,8 +378,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   }
 
   /* we have excluded between 0 and all quadrants. */
-  P4EST_ASSERT (0 <= (size_t) goodones &&
-                (size_t) goodones < n_adjacent_quads);
+  P4EST_ASSERT (0 <= goodones && goodones < n_adjacent_quads);
 
   if (goodones > 0) {
     /* Allocate and fill corner information in the mesh structure */
@@ -1531,9 +1530,10 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
-  int                 l_same_size, u_same_size, l_double_size, u_double_size;
-  int                 l_half_size, u_half_size;
+  int                 l_half_size, u_double_size;
 #ifdef P4EST_ENABLE_DEBUG
+  int                 u_half_size, l_double_size;
+  int                 l_same_size, u_same_size;
   p4est_quadrant_t   *curr_quad =
     p4est_mesh_get_quadrant (p4est, mesh, curr_quad_id);
 #endif /* P4EST_ENABLE_DEBUG */
@@ -1541,15 +1541,19 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 is_ghost = 0;
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
+  int                 convEdge;
   int                *int_ins;
+
+  u_double_size = 72;
+  l_half_size = -24;
+#ifdef P4EST_ENABLE_DEBUG
   l_same_size = 0;
   u_same_size = 2 * P8EST_EDGES;
   l_double_size = u_same_size;
-  u_double_size = 72;
-  l_half_size = -24;
   u_half_size = l_same_size;
-  int                 convEdge = -l_half_size + u_double_size;
+#endif /* P4EST_ENABLE_DEBUG */
 
+  convEdge = -l_half_size + u_double_size;
   neighbor_idx = mesh->quad_to_edge[P8EST_EDGES * curr_quad_id + (direction)];
 
   /** Domain boundary or hanging edge: No neighbor present */

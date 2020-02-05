@@ -380,7 +380,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                 P4EST_ASSERT (l_same_size <= found_enc &&
                               found_enc < u_same_size);
                 P4EST_ASSERT (found_subquad == neighbor_subquad);
-                P4EST_ASSERT (found_entity == dir);
+                SC_CHECK_ABORT (found_entity == dir, "Direction test");
                 P4EST_ASSERT (found_orientation == neighbor_orientation);
 
                 success = 1;
@@ -427,7 +427,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                 P4EST_ASSERT (l_half_size <= found_enc &&
                               found_enc < u_half_size);
                 P4EST_ASSERT (found_sub_ctr == neighbor_subquad);
-                P4EST_ASSERT (found_entity == dir);
+                SC_CHECK_ABORT (found_entity == dir, "Direction test");
                 P4EST_ASSERT (found_orientation == neighbor_orientation);
                 found_sub_ctr = (found_sub_ctr + 1) % n_hanging_quads;
 
@@ -488,7 +488,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                 P4EST_ASSERT (l_double_size <= found_enc &&
                               found_enc < u_double_size);
                 P4EST_ASSERT (neighbor_sub_ctr == found_subquad);
-                P4EST_ASSERT (found_entity == dir);
+                SC_CHECK_ABORT (found_entity == dir, "Direction test");
                 P4EST_ASSERT (found_orientation == neighbor_orientation);
 
                 success = 1;
@@ -504,7 +504,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
           else {
             SC_ABORT_NOT_REACHED ();
           }
-          P4EST_ASSERT (1 == success);
+          SC_CHECK_ABORT (1 == success, "Overall success test");
         }
 
         /** de-allocate containers */
@@ -533,12 +533,12 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   P4EST_ASSERT (conn == NULL);
 
   if (periodic) {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for single tree,"
-                    " periodic\n");
+    P4EST_VERBOSE ("Check if get_neighbors is bijective for single tree,"
+                   " periodic\n");
   }
   else {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for single tree,"
-                    " non-periodic\n");
+    P4EST_VERBOSE ("Check if get_neighbors is bijective for single tree,"
+                   " non-periodic\n");
   }
 
   /* create connectivity */
@@ -662,12 +662,12 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   P4EST_ASSERT (conn == NULL);
 
   if (periodic) {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for brick of trees,"
-                    " periodic\n");
+    P4EST_VERBOSE ("Check if get_neighbors is bijective for brick of trees,"
+                   " periodic\n");
   }
   else {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for brick of trees,"
-                    " non-periodic\n");
+    P4EST_VERBOSE ("Check if get_neighbors is bijective for brick of trees,"
+                   " non-periodic\n");
   }
 
   /* create connectivity */
