@@ -44,6 +44,7 @@
 /* redefine macros */
 #define P4EST_ONDISK_FORMAT             P8EST_ONDISK_FORMAT
 #define P4EST_DIM                       P8EST_DIM
+#define P4EST_DIM_POW                   P8EST_DIM_POW
 #define P4EST_FACES                     P8EST_FACES
 #define P4EST_CHILDREN                  P8EST_CHILDREN
 #define P4EST_HALF                      P8EST_HALF
@@ -108,9 +109,13 @@
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
+#define p4est_search_local_t            p8est_search_local_t
+#define p4est_search_partition_t        p8est_search_partition_t
+#define p4est_search_all_t              p8est_search_all_t
+#define p4est_build                     p8est_build
+#define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
 #define p4est_transfer_context_t        p8est_transfer_context_t
-#define p4est_traverse_query_t          p8est_traverse_query_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_wrap_t                    p8est_wrap_t
@@ -250,6 +255,9 @@
 #define p4est_quadrant_is_next_D        p8est_quadrant_is_next_D
 #define p4est_quadrant_overlaps_tree    p8est_quadrant_overlaps_tree
 #define p4est_quadrant_is_inside_tree   p8est_quadrant_is_inside_tree
+#define p4est_quadrant_is_first_last    p8est_quadrant_is_first_last
+#define p4est_quadrant_enlarge_first    p8est_quadrant_enlarge_first
+#define p4est_quadrant_enlarge_last     p8est_quadrant_enlarge_last
 #define p4est_quadrant_ancestor         p8est_quadrant_ancestor
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
@@ -278,6 +286,7 @@
 #define p4est_quadrant_shift_corner     p8est_quadrant_shift_corner
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
+#define p4est_quadrant_srand            p8est_quadrant_srand
 
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound
@@ -286,12 +295,19 @@
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
-#define p4est_traverse                  p8est_traverse
+#define p4est_search_local              p8est_search_local
+#define p4est_search_partition          p8est_search_partition
+#define p4est_search_all                p8est_search_all
+#define p4est_build_new                 p8est_build_new
+#define p4est_build_init_add            p8est_build_init_add
+#define p4est_build_add                 p8est_build_add
+#define p4est_build_complete            p8est_build_complete
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
 #define p4est_quadrant_checksum         p8est_quadrant_checksum
+#define p4est_quadrant_in_range         p8est_quadrant_in_range
 #define p4est_tree_is_sorted            p8est_tree_is_sorted
 #define p4est_tree_is_linear            p8est_tree_is_linear
 #define p4est_tree_is_almost_sorted     p8est_tree_is_almost_sorted
@@ -338,6 +354,10 @@
 #define p4est_transfer_custom           p8est_transfer_custom
 #define p4est_transfer_custom_begin     p8est_transfer_custom_begin
 #define p4est_transfer_custom_end       p8est_transfer_custom_end
+#define p4est_transfer_items            p8est_transfer_items
+#define p4est_transfer_items_begin      p8est_transfer_items_begin
+#define p4est_transfer_items_end        p8est_transfer_items_end
+#define p4est_transfer_end              p8est_transfer_end
 
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants

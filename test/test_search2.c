@@ -23,13 +23,17 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_algorithms.h>
 #include <p4est_bits.h>
+#include <p4est_build.h>
 #include <p4est_extended.h>
 #include <p4est_geometry.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
 #else
+#include <p8est_algorithms.h>
 #include <p8est_bits.h>
+#include <p8est_build.h>
 #include <p8est_extended.h>
 #include <p8est_geometry.h>
 #include <p8est_search.h>
@@ -146,6 +150,398 @@ search_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   return is_match;
 }
 
+typedef struct
+{
+  int                 maxlevel;
+  int                 counter;
+  int                 wrapper;
+  int                 init_default;
+  int                 init_add;
+  int                 count_add;
+  p4est_topidx_t      last_tree;
+  p4est_build_t      *build;
+}
+test_build_t;
+
+static int
+test_build_refine (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * quadrant)
+{
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  if (quadrant->level >= tb->maxlevel) {
+    return 0;
+  }
+  return !(tb->counter = (tb->counter + 1) % tb->wrapper);
+}
+
+static int
+test_build_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t * quadrants[])
+{
+  return 1;
+}
+
+static int
+test_search_local_1 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  int                 retval;
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  /* take all quadrants and try duplicates regularly */
+  if (local_num >= 0) {
+    P4EST_EXECUTE_ASSERT_TRUE (p4est_build_add
+                               (tb->build, which_tree, quadrant));
+    if (!(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+      /* try to add it twice which should be reported properly */
+      retval = p4est_build_add (tb->build, which_tree, quadrant);
+      SC_CHECK_ABORT (!retval, "Tried to add a duplicate");
+    }
+  }
+
+  return 1;
+}
+
+static int
+test_search_local_2 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  return 1;
+}
+
+static void
+test_search_init_3 (p4est_t * p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t * quadrant)
+{
+  test_build_t       *tb;
+
+  P4EST_ASSERT (p4est->data_size == 0);
+
+  tb = (test_build_t *) p4est->user_pointer;
+  ++tb->init_default;
+
+  quadrant->p.user_int = 1135;
+}
+
+static void
+test_search_init_add_3 (p4est_t * p4est, p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant)
+{
+  test_build_t       *tb;
+
+  P4EST_ASSERT (p4est->data_size == 0);
+
+  tb = (test_build_t *) p4est->user_pointer;
+  ++tb->init_add;
+
+  quadrant->p.user_int = 629;
+}
+
+static int
+test_search_local_3 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  /* take every third quadrant or so */
+  if (local_num >= 0 && !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    ++tb->count_add;
+    P4EST_EXECUTE_ASSERT_TRUE (p4est_build_add
+                               (tb->build, which_tree, quadrant));
+  }
+
+  return 1;
+}
+
+static void
+p4est_build_verify_3 (p4est_t * p4est)
+{
+  p4est_topidx_t      jt;
+  p4est_locidx_t      il, c1, c2;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quadrant;
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  c1 = c2 = 0;
+  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (p4est->trees, jt);
+    for (il = 0; il < (p4est_locidx_t) tree->quadrants.elem_count; ++il) {
+      quadrant = p4est_quadrant_array_index (&tree->quadrants, il);
+      switch (quadrant->p.user_int) {
+      case 1135:
+        ++c1;
+        break;
+      case 629:
+        ++c2;
+        break;
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+    }
+  }
+  SC_CHECK_ABORT (c1 + c2 == p4est->local_num_quadrants,
+                  "Test 3 count quadrants");
+  SC_CHECK_ABORT (c1 + c2 >= (p4est_locidx_t) tb->count_add,
+                  "Test 3 count sum");
+  SC_CHECK_ABORT (c1 == (p4est_locidx_t) tb->init_default,
+                  "Test 3 count default");
+  SC_CHECK_ABORT (c2 == (p4est_locidx_t) tb->init_add, "Test 3 count add");
+}
+
+static void
+test_search_init_4 (p4est_t * p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t * quadrant)
+{
+  test_build_t       *tb;
+
+  P4EST_ASSERT (p4est->data_size == sizeof (long));
+
+  tb = (test_build_t *) p4est->user_pointer;
+  ++tb->init_default;
+
+  *(long *) quadrant->p.user_data = 11321;
+}
+
+static void
+test_search_init_add_4 (p4est_t * p4est, p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant)
+{
+  test_build_t       *tb;
+
+  P4EST_ASSERT (p4est->data_size == sizeof (long));
+
+  tb = (test_build_t *) p4est->user_pointer;
+  ++tb->init_add;
+
+  *(long *) quadrant->p.user_data = -748;
+}
+
+static int
+test_search_local_4 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  /* take the first third quadrant or so in every tree */
+  if (local_num >= 0 && tb->last_tree != which_tree &&
+      !(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    ++tb->count_add;
+    P4EST_EXECUTE_ASSERT_TRUE (p4est_build_add
+                               (tb->build, which_tree, quadrant));
+
+    tb->last_tree = which_tree;
+  }
+
+  return 1;
+}
+
+static void
+p4est_build_verify_4 (p4est_t * p4est)
+{
+  p4est_topidx_t      jt;
+  p4est_locidx_t      il, c1, c2;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quadrant;
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  c1 = c2 = 0;
+  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+    tree = p4est_tree_array_index (p4est->trees, jt);
+    for (il = 0; il < (p4est_locidx_t) tree->quadrants.elem_count; ++il) {
+      quadrant = p4est_quadrant_array_index (&tree->quadrants, il);
+      switch (*(long *) quadrant->p.user_data) {
+      case 11321:
+        ++c1;
+        break;
+      case -748:
+        ++c2;
+        break;
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+    }
+  }
+  SC_CHECK_ABORT (c1 + c2 == p4est->local_num_quadrants,
+                  "Test 4 count quadrants");
+  SC_CHECK_ABORT (c1 + c2 >= (p4est_locidx_t) tb->count_add,
+                  "Test 4 count sum");
+  SC_CHECK_ABORT (c1 == (p4est_locidx_t) tb->init_default,
+                  "Test 4 count default");
+  SC_CHECK_ABORT (c2 == (p4est_locidx_t) tb->init_add, "Test 4 count add");
+}
+
+static int
+test_search_point_5 (p4est_t * p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                     void *point)
+{
+  int                 retval;
+#ifdef P4EST_ENABLE_DEBUG
+  int8_t              ip;
+#endif
+  test_build_t       *tb;
+
+  P4EST_ASSERT (point != NULL);
+
+#ifdef P4EST_ENABLE_DEBUG
+  ip = *(int8_t *) point;
+#endif
+  P4EST_ASSERT (0 <= ip && ip < 2);
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  if (!(tb->counter = (tb->counter + 1) % tb->wrapper)) {
+    /* rare */
+    return 0;
+  }
+  else {
+    /* frequent */
+
+    if (local_num >= 0) {
+      /* this is a leaf, add it */
+      retval = p4est_build_add (tb->build, which_tree, quadrant);
+      if (!retval) {
+        /* this is a duplicate leaf */
+        ++tb->init_default;
+      }
+      else {
+        /* first addition of this quadrant */
+        ++tb->init_add;
+      }
+    }
+    return 1;
+  }
+}
+
+#if 0
+
+static void
+p4est_build_verify_5 (p4est_t * p4est)
+{
+  test_build_t       *tb;
+
+  tb = (test_build_t *) p4est->user_pointer;
+
+  P4EST_LDEBUGF ("T5 added %d dup %d\n", tb->init_add, tb->init_default);
+}
+
+#endif
+
+static void
+test_build_local (sc_MPI_Comm mpicomm)
+{
+  sc_array_t         *points;
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est, *built, *copy;
+  test_build_t        stb, *tb = &stb;
+
+  /* 0. prepare data that we will reuse */
+  tb->maxlevel = 7 - P4EST_DIM;
+  tb->counter = -1;
+  tb->wrapper = 3;
+  tb->init_default = -1;
+  tb->init_add = -1;
+  tb->count_add = -1;
+  tb->last_tree = -1;
+  tb->build = NULL;
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_moebius ();
+#else
+  conn = p8est_connectivity_new_rotcubes ();
+#endif /* P4_TO_P8 */
+  p4est = p4est_new_ext (mpicomm, conn, 0, 0, 2, 0, NULL, tb);
+  p4est_refine (p4est, 1, test_build_refine, NULL);
+  p4est_partition (p4est, 0, NULL);
+
+  /* TODO: enrich tests with quadrant data */
+
+  /* 1. Create a p4est that shall be identical to the old one. */
+
+  tb->build = p4est_build_new (p4est, 0, NULL, NULL);
+  p4est_search_local (p4est, 0, test_search_local_1, NULL, NULL);
+  built = p4est_build_complete (tb->build);
+  SC_CHECK_ABORT (p4est_is_equal (p4est, built, 0), "Mismatch build_local 1");
+  p4est_destroy (built);
+
+  /* 2. Create a p4est that is as coarse as possible.
+   *    Coarsen recursively, compare. */
+
+  tb->build = p4est_build_new (p4est, 4, NULL, NULL);
+  p4est_search_local (p4est, 0, test_search_local_2, NULL, NULL);
+  built = p4est_build_complete (tb->build);
+  copy = p4est_copy (p4est, 0);
+  p4est_coarsen (copy, 1, test_build_coarsen, NULL);
+  SC_CHECK_ABORT (p4est_is_equal (copy, built, 0), "Mismatch build_local 2");
+  p4est_destroy (copy);
+  p4est_destroy (built);
+
+  /* 3. Create a p4est with some random pattern for demonstration */
+
+  tb->init_default = 0;
+  tb->init_add = 0;
+  tb->count_add = 0;
+  tb->build = p4est_build_new (p4est, 0, test_search_init_3, tb);
+  p4est_build_init_add (tb->build, test_search_init_add_3);
+  p4est_search_local (p4est, 1, test_search_local_3, NULL, NULL);
+  built = p4est_build_complete (tb->build);
+  p4est_build_verify_3 (built);
+  SC_CHECK_ABORT (p4est_is_valid (built), "Invalid build_local 3");
+  p4est_destroy (built);
+
+  /* 4. Create a p4est from a search with one quadrant per tree */
+
+  tb->init_default = 0;
+  tb->init_add = 0;
+  tb->count_add = 0;
+  tb->last_tree = -1;
+  tb->build = p4est_build_new (p4est, sizeof (long), test_search_init_4, tb);
+  p4est_build_init_add (tb->build, test_search_init_add_4);
+  p4est_search_local (p4est, 0, test_search_local_4, NULL, NULL);
+  built = p4est_build_complete (tb->build);
+  p4est_build_verify_4 (built);
+  SC_CHECK_ABORT (p4est_is_valid (built), "Invalid build_local 4");
+  p4est_destroy (built);
+
+  /* 5. Create a p4est from a multiple-item search */
+
+  points = sc_array_new_size (sizeof (int8_t), 2);
+  *(int8_t *) sc_array_index (points, 0) = 0;
+  *(int8_t *) sc_array_index (points, 1) = 1;
+  tb->wrapper = 5;
+  tb->init_default = 0;
+  tb->init_add = 0;
+  tb->build = p4est_build_new (p4est, 0, NULL, tb);
+  p4est_search_local (p4est, 0, NULL, test_search_point_5, points);
+  built = p4est_build_complete (tb->build);
+#if 0
+  p4est_build_verify_5 (built);
+#endif
+  SC_CHECK_ABORT (p4est_is_valid (built), "Invalid build_local 5");
+  p4est_destroy (built);
+  sc_array_destroy (points);
+
+  /* clean up */
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -185,6 +581,8 @@ main (int argc, char **argv)
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, geom, vtkname);
+
+  /* The following code should really be in a separate function. */
 
   /* Prepare a point search -- fix size so the memory is not relocated */
   points = sc_array_new_size (sizeof (test_point_t), 2);
@@ -231,7 +629,7 @@ main (int argc, char **argv)
 
   /* Go */
   found_count = 0;
-  p4est_search (p4est, NULL, search_callback, points);
+  p4est_search_local (p4est, 0, NULL, search_callback, points);
   mpiret = sc_MPI_Allreduce (&found_count, &found_total,
                              1, sc_MPI_INT, sc_MPI_SUM, mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -241,7 +639,7 @@ main (int argc, char **argv)
 
   /* Use another search to count local quadrants */
   local_count = 0;
-  p4est_search (p4est, count_callback, NULL, NULL);
+  p4est_search_local (p4est, 0, count_callback, NULL, NULL);
   SC_CHECK_ABORT (local_count == p4est->local_num_quadrants, "Count search");
 
   /* Clear memory */
@@ -251,6 +649,9 @@ main (int argc, char **argv)
     p4est_geometry_destroy (geom);
   }
   p4est_connectivity_destroy (conn);
+
+  /* Test the build_local function and friends */
+  test_build_local (mpicomm);
 
   /* Finalize */
   sc_finalize ();

@@ -833,12 +833,10 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
       }
       else {
         /* transform q across the face */
-        p4est_topidx_t      nnt;
-
         P4EST_ASSERT (nt == tid);
-        nnt = p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL,
-                                                  conn);
-        P4EST_ASSERT (nnt == owner_tid);
+        P4EST_EXECUTE_ASSERT_TOPIDX
+          (p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL,
+                                               conn), owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         h = P4EST_QUADRANT_LEN (tempq.level);
         x = tempq.x + h * (c2 & 1);
@@ -1242,13 +1240,11 @@ p8est_lnodes_edge_callback (p8est_iter_edge_info_t * info, void *Data)
         z = q->z + h * ((c & 4) >> 2);
       }
       else {
-        p4est_topidx_t      nnt;
-
         P4EST_ASSERT (nt == tid);
         P4EST_ASSERT (count == 4);
-        nnt =
-          p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL, conn);
-        P4EST_ASSERT (nnt == owner_tid);
+        P4EST_EXECUTE_ASSERT_TOPIDX
+          (p4est_quadrant_face_neighbor_extra (q, tid, nf, &tempq, NULL,
+                                               conn), owner_tid);
         c2 = p4est_quadrant_child_id (&tempq);
         P4EST_ASSERT (p4est_corner_face_corners[c2][owner_f] >= 0);
         h = P4EST_QUADRANT_LEN (tempq.level);

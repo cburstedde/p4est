@@ -1,0 +1,70 @@
+#! /bin/sh
+
+############################################################################
+#                                                                          #
+#  This script requires the following modules:    Intel  IntelMPI  imkl    #
+#                                                                          #
+############################################################################
+
+FILE=`readlink -f "$1"`
+NAME=`basename "$FILE" .tar.gz`
+
+function bdie {
+	echo "$1"
+	exit 1
+}
+
+if test ! -f "$FILE" ; then
+	bdie "Please specify a p4est .tar.gz"
+fi
+
+for MOD in Intel IntelMPI imkl ; do
+        module is-loaded "$MOD" || bdie "Please load module $MOD"
+done
+
+# check directories
+
+UNPACK="$HOME/nosave/unpack"
+BUILD="$HOME/nosave/build/$NAME"
+INSTALL="$HOME/stuff/local/$NAME"
+
+mkdir -p "$INSTALL" || bdie "Could not mkdir -p INSTALL"
+
+# unpack
+
+cd "$UNPACK" || bdie "Could not cd into UNPACK"
+tar -xvzf "$FILE" || bdie "Could not UNPACK"
+
+# compile and install
+
+GLO_CFLAGS="-mkl"
+GLO_LDFLAGS="-L$MKLROOT/lib/intel64"
+
+rm -rf "$BUILD"
+for TYPE in DEBUG FAST ; do
+	DIR="$BUILD/$TYPE"
+	CONFOPTS=
+	if test "x$TYPE" = xDEBUG ; then
+		export CFLAGS="$GLO_CFLAGS -g -O0"
+                export LDFLAGS="$GLO_LDFLAGS"
+		CONFOPTS="--enable-debug --enable-logging=SC_LP_INFO"
+		STRIP=
+		#continue
+	else
+		export CFLAGS="$GLO_CFLAGS -O2"
+                export LDFLAGS="$GLO_LDFLAGS"
+		CONFOPTS=
+		STRIP="-strip"
+		#continue
+	fi
+	mkdir -p "$DIR" || bdie "Could not mkdir -p $DIR"
+	cd "$DIR" || bdie "Could not cd into $DIR"
+
+	"$UNPACK/$NAME/configure" \
+ --enable-p6est --enable-mpi \
+ --disable-pthread --disable-openmp --disable-memalign \
+ --prefix="$INSTALL/$TYPE" --disable-shared $CONFOPTS
+
+	echo "Make $TYPE"
+	make -j8 "install$STRIP" >"$DIR/make.log" 2>"$DIR/make.err"
+done

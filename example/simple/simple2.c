@@ -34,6 +34,9 @@
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o cubed     Refinement on a 6-tree cubed sphere surface.
  *        o disk      Refinement on a 5-tree spherical disk.
+ *        o xdisk     Refinement on a 5-tree spherical disk periodic in x.
+ *        o ydisk     Refinement on a 5-tree spherical disk periodic in y.
+ *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  */
@@ -54,6 +57,9 @@ typedef enum
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_CUBED,
   P4EST_CONFIG_DISK,
+  P4EST_CONFIG_XDISK,
+  P4EST_CONFIG_YDISK,
+  P4EST_CONFIG_PDISK,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP
 }
@@ -100,6 +106,10 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_CUBED, 5, 5, 0x64a1d105U },
  { P4EST_CONFIG_DISK, 5, 4, 0x4995411dU },
  { P4EST_CONFIG_DISK, 2, 6, 0x3f758706U },
+ { P4EST_CONFIG_XDISK, 4, 4, 0x96324291 },
+ { P4EST_CONFIG_YDISK, 4, 4, 0x752a4207 },
+ { P4EST_CONFIG_PDISK, 4, 4, 0xf617437b },
+ { P4EST_CONFIG_PDISK, 5, 5, 0x507fd0c9 },
  { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
@@ -225,7 +235,7 @@ main (int argc, char **argv)
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
     "      unit|three|evil|evil3|pillow|moebius|\n"
-    "         star|cubed|disk|periodic|rotwrap\n"
+    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|rotwrap\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -259,6 +269,15 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "disk")) {
       config = P4EST_CONFIG_DISK;
+    }
+    else if (!strcmp (argv[1], "xdisk")) {
+      config = P4EST_CONFIG_XDISK;
+    }
+    else if (!strcmp (argv[1], "ydisk")) {
+      config = P4EST_CONFIG_YDISK;
+    }
+    else if (!strcmp (argv[1], "pdisk")) {
+      config = P4EST_CONFIG_PDISK;
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P4EST_CONFIG_PERIODIC;
@@ -307,7 +326,16 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_cubed ();
   }
   else if (config == P4EST_CONFIG_DISK) {
-    connectivity = p4est_connectivity_new_disk ();
+    connectivity = p4est_connectivity_new_disk (0, 0);
+  }
+  else if (config == P4EST_CONFIG_XDISK) {
+    connectivity = p4est_connectivity_new_disk (1, 0);
+  }
+  else if (config == P4EST_CONFIG_YDISK) {
+    connectivity = p4est_connectivity_new_disk (0, 1);
+  }
+  else if (config == P4EST_CONFIG_PDISK) {
+    connectivity = p4est_connectivity_new_disk (1, 1);
   }
   else if (config == P4EST_CONFIG_PERIODIC) {
     connectivity = p4est_connectivity_new_periodic ();

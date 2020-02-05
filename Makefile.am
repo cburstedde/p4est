@@ -36,7 +36,7 @@ Makefile.p4est.mk : Makefile.p4est.pre
 # install p4est m4 macros in the correct directory
 p4estaclocaldir = $(datadir)/aclocal
 dist_p4estaclocal_DATA = \
-        config/p4est_include.m4 config/p4est_metis.m4
+        config/p4est_include.m4 config/p4est_metis.m4 config/p4est_petsc.m4
 
 # install p4est data files in the correct directory
 p4estdatadir = $(datadir)/data
@@ -62,8 +62,10 @@ DISTCLEANFILES += \
 include src/Makefile.am
 include test/Makefile.am
 include example/mesh/Makefile.am
+include example/particles/Makefile.am
 include example/points/Makefile.am
 include example/simple/Makefile.am
+include example/spheres/Makefile.am
 include example/steps/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am

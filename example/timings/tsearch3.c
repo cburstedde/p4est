@@ -673,7 +673,7 @@ time_search_1 (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
   for (zz = 0; zz < znum_points; ++zz) {
     tsg->matches = 0;
     sc_array_init_view (&pview, tsg->points, zz, 1);
-    p4est_search (p4est, time_search_fn, time_search_fn, &pview);
+    p4est_search_local (p4est, 0, time_search_fn, time_search_fn, &pview);
     ll += (long long) tsg->matches;
   }
   sc_flops_shot (fi, &snapshot);
@@ -716,7 +716,7 @@ time_search_1 (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     }
 
     sc_stats_compute (tsg->mpicomm, 1, &raystat);
-    sc_stats_print (p4est_package_id, SC_LP_STATISTICS, 1, &raystat, 1, 0);
+    sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL, 1, &raystat, 1, 0);
   }
 }
 
@@ -747,7 +747,7 @@ time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
 
   tsg->matches = 0;
   sc_flops_snap (fi, &snapshot);
-  p4est_search (p4est, time_search_fn, time_search_fn, tsg->points);
+  p4est_search_local (p4est, 0, time_search_fn, time_search_fn, tsg->points);
   sc_flops_shot (fi, &snapshot);
   sc_stats_set1 (&stats[TSEARCH_SEARCH_N], snapshot.iwtime, "Search_N");
   ll = (long long) tsg->matches;
@@ -791,7 +791,7 @@ time_search_N (tsearch_global_t * tsg, p4est_t * p4est, size_t znum_points,
     }
 
     sc_stats_compute (tsg->mpicomm, 1, &raystat);
-    sc_stats_print (p4est_package_id, SC_LP_STATISTICS, 1, &raystat, 1, 0);
+    sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL, 1, &raystat, 1, 0);
   }
 }
 
@@ -1048,7 +1048,7 @@ main (int argc, char **argv)
 
   /* calculate and print timings */
   sc_stats_compute (tsg->mpicomm, TSEARCH_NUM_STATS, stats);
-  sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
                   TSEARCH_NUM_STATS, stats, 1, 1);
 
   /* destroy the p4est and its connectivity structure */
