@@ -2925,10 +2925,11 @@ p4est_partition_given (p4est_t * p4est,
 
   p4est_find_partition (num_procs, global_last_quad_index,
                         my_begin, my_end, &from_begin, &from_end);
-  if (my_begin <= my_end) {
-    for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
-      lower_bound =
-        (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
+  for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
+    lower_bound =
+      (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
+
+    if ((lower_bound <= my_end) && (global_last_quad_index[from_proc] >= my_begin)) {
       num_recv_from[from_proc] =
         SC_MIN (my_end,
                 global_last_quad_index[from_proc]) - SC_MAX (my_begin,
@@ -2968,13 +2969,6 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
 
-#if 0
-    printf
-      ("Debug[%i]: num_proc_recv_from %i old_num_proc_recv_from %i"
-       " new_global_last_quad_index[0] %li\n",
-       rank, num_proc_recv_from, old_num_proc_recv_from,
-       new_global_last_quad_index[0]);
-#endif
     P4EST_ASSERT (num_proc_recv_from == old_num_proc_recv_from);
     for (i = 0; i < num_procs; ++i) {
       if (num_recv_from[i] != 0) {
@@ -2998,7 +2992,7 @@ p4est_partition_given (p4est_t * p4est,
   /* Allocate space for receiving quadrants and user data */
   for (from_proc = from_begin_global_quad, sk = 0;
        from_proc <= from_end_global_quad; ++from_proc) {
-    if (from_proc != rank) {
+    if (from_proc != rank && num_recv_from[from_proc]) {
       num_recv_trees =          /* same type */
         p4est->global_first_position[from_proc + 1].p.which_tree
         - p4est->global_first_position[from_proc].p.which_tree + 1;
@@ -3041,18 +3035,18 @@ p4est_partition_given (p4est_t * p4est,
 
   p4est_find_partition (num_procs, new_global_last_quad_index,
                         my_begin, my_end, &to_begin, &to_end);
-  if (my_begin <= my_end) {
-    for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
-      /* I send to to_proc which may be empty */
-      lower_bound =
-        (to_proc == 0) ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
+  for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
+    /* I send to to_proc which may be empty */
+    lower_bound =
+      (to_proc == 0) ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
+
+    if ((lower_bound <= my_end) && (new_global_last_quad_index[to_proc] >= my_begin)) {
       num_send_to[to_proc] =
         SC_MIN (my_end,
                 new_global_last_quad_index[to_proc]) - SC_MAX (my_begin,
                                                                lower_bound)
         + 1;
-      begin_send_to[to_proc] =
-        (num_send_to[to_proc] == 0) ? -1 : SC_MAX (my_begin, lower_bound);
+      begin_send_to[to_proc] = SC_MAX (my_begin, lower_bound);
       P4EST_ASSERT (num_send_to[to_proc] >= 0);
       if (to_proc != rank)
         ++num_proc_send_to;
@@ -3148,7 +3142,7 @@ p4est_partition_given (p4est_t * p4est,
   /* Allocate space for receiving quadrants and user data */
   for (to_proc = to_begin_global_quad, sk = 0;
        to_proc <= to_end_global_quad; ++to_proc) {
-    if (to_proc != rank) {
+    if (to_proc != rank && num_send_to[to_proc]) {
       send_size = num_send_trees * sizeof (p4est_locidx_t)
         + quad_plus_data_size * num_send_to[to_proc];
 
@@ -3248,7 +3242,7 @@ p4est_partition_given (p4est_t * p4est,
 
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (1) {                    /* to reduce the diff in git */
+    if (num_recv_from[from_proc] > 0) {
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3407,7 +3401,7 @@ p4est_partition_given (p4est_t * p4est,
           trees->elem_count * sizeof (p4est_locidx_t));
   for (from_proc = from_begin_global_quad; from_proc <= from_end_global_quad;
        ++from_proc) {
-    if (1) {                    /* to reduce the diff in git */
+    if (num_recv_from[from_proc] > 0) {
       first_from_tree = p4est->global_first_position[from_proc].p.which_tree;
       last_from_tree =
         p4est->global_first_position[from_proc + 1].p.which_tree;
@@ -3559,12 +3553,12 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   for (i = from_begin_global_quad; i <= from_end_global_quad; ++i) {
-    if (i != rank)
+    if (i != rank && num_recv_from[i])
       P4EST_FREE (recv_buf[i]);
   }
 
   for (i = to_begin_global_quad; i <= to_end_global_quad; ++i) {
-    if (i != rank)
+    if (i != rank && num_send_to[i])
       P4EST_FREE (send_buf[i]);
   }
 
