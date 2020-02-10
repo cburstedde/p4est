@@ -1937,7 +1937,7 @@ p4est_quadrant_successor (const p4est_quadrant_t * quadrant,
 {
   int                 level;
   int                 successor_id;
-  int                 quadrant_length, coarser_quadrant_length;
+  int                 quadrant_length, mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level > 0);
@@ -1955,19 +1955,19 @@ p4est_quadrant_successor (const p4est_quadrant_t * quadrant,
   /* compute result */
   if (level < quadrant->level) {
     quadrant_length = P4EST_QUADRANT_LEN (level);
-    coarser_quadrant_length = P4EST_QUADRANT_LEN (level - 1);
+    mask = ~(P4EST_QUADRANT_LEN (level - 1) - 1);
 
     /* coarsen to level - 1 and add shifts according to the successor_id */
     result->x =
-      (successor_id & 0x01) ? (quadrant->x & ~(coarser_quadrant_length - 1)) +
-      quadrant_length : quadrant->x & ~(coarser_quadrant_length - 1);
+      (successor_id & 0x01) ? (quadrant->x & mask) +
+      quadrant_length : quadrant->x & mask;
     result->y =
-      (successor_id & 0x02) ? (quadrant->y & ~(coarser_quadrant_length - 1)) +
-      quadrant_length : quadrant->y & ~(coarser_quadrant_length - 1);
+      (successor_id & 0x02) ? (quadrant->y & mask) +
+      quadrant_length : quadrant->y & mask;
 #ifdef P4_TO_P8
     result->z =
-      (successor_id & 0x04) ? (quadrant->z & ~(coarser_quadrant_length - 1)) +
-      quadrant_length : quadrant->z & ~(coarser_quadrant_length - 1);
+      (successor_id & 0x04) ? (quadrant->z & mask) +
+      quadrant_length : quadrant->z & mask;
 #endif
     result->level = quadrant->level;
   }
@@ -1983,7 +1983,7 @@ p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
 {
   int                 level;
   int                 predecessor_id;
-  int                 quadrant_length, coarser_quadrant_length;
+  int                 quadrant_length, mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level > 0);
@@ -2001,22 +2001,19 @@ p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
   /* compute result */
   if (level < quadrant->level) {
     quadrant_length = P4EST_QUADRANT_LEN (level);
-    coarser_quadrant_length = P4EST_QUADRANT_LEN (level - 1);
+    mask = ~(P4EST_QUADRANT_LEN (level - 1) - 1);
 
     /* coarsen to level - 1 and add shifts according to the predecessor_id */
     result->x =
-      (predecessor_id & 0x01) ? (quadrant->
-                                 x & ~(coarser_quadrant_length - 1)) +
-      quadrant_length : quadrant->x & ~(coarser_quadrant_length - 1);
+      (predecessor_id & 0x01) ? (quadrant->x & mask) +
+      quadrant_length : quadrant->x & mask;
     result->y =
-      (predecessor_id & 0x02) ? (quadrant->
-                                 y & ~(coarser_quadrant_length - 1)) +
-      quadrant_length : quadrant->y & ~(coarser_quadrant_length - 1);
+      (predecessor_id & 0x02) ? (quadrant->y & mask) +
+      quadrant_length : quadrant->y & mask;
 #ifdef P4_TO_P8
     result->z =
-      (predecessor_id & 0x04) ? (quadrant->
-                                 z & ~(coarser_quadrant_length - 1)) +
-      quadrant_length : quadrant->z & ~(coarser_quadrant_length - 1);
+      (predecessor_id & 0x04) ? (quadrant->z & mask) +
+      quadrant_length : quadrant->z & mask;
 #endif
     result->level = quadrant->level;
   }
