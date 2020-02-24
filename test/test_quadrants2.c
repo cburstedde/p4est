@@ -118,6 +118,36 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   }
 }
 
+static void
+check_successor_predecessor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  uint64_t            lid;
+
+  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_successor (q, &temp1);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid + 1),
+                  "successor");
+  p4est_quadrant_predecessor (&temp1, &temp2);
+  /* Check if predecessor inverts successor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "predecessor");
+}
+
+static void
+check_predecessor_successor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  uint64_t            lid;
+
+  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_predecessor (q, &temp1);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid - 1),
+                  "predecessor");
+  p4est_quadrant_successor (&temp1, &temp2);
+  /* Check if successor inverts predecessor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
+}
+
 int
 main (int argc, char **argv)
 {
@@ -616,6 +646,11 @@ main (int argc, char **argv)
 
   p4est_nearest_common_ancestor_D (&I, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor_D");
+
+  check_successor_predecessor (&I);
+  check_predecessor_successor (&H);
+  check_predecessor_successor (&F);
+  check_predecessor_successor (&G);
 
   for (k = 0; k < 16; ++k) {
     if (k != 4 && k != 6 && k != 8 && k != 9 && k != 12 && k != 13 && k != 14) {
