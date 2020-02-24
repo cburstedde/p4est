@@ -1950,7 +1950,7 @@ p4est_quadrant_successor (const p4est_quadrant_t * quadrant,
     successor_id = p4est_quadrant_ancestor_id (quadrant, --level) + 1;
     P4EST_ASSERT (level > 0);
   }
-  P4EST_ASSERT (0 <= successor_id && successor_id < P4EST_CHILDREN);
+  P4EST_ASSERT (0 < successor_id && successor_id < P4EST_CHILDREN);
 
   /* compute result */
   if (level < quadrant->level) {
@@ -1996,7 +1996,7 @@ p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
     predecessor_id = p4est_quadrant_ancestor_id (quadrant, --level) - 1;
     P4EST_ASSERT (level > 0);
   }
-  P4EST_ASSERT (0 <= predecessor_id && predecessor_id < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= predecessor_id && predecessor_id < P4EST_CHILDREN - 1);
 
   /* compute result */
   if (level < quadrant->level) {
