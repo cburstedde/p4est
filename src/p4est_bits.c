@@ -1936,29 +1936,43 @@ p4est_quadrant_successor (const p4est_quadrant_t * quadrant,
                           p4est_quadrant_t * result)
 {
   int                 level;
-  int                 ancestor_id;
+  int                 successor_id;
+  int                 quadrant_length, mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level > 0);
 
-  ancestor_id =
-    p4est_quadrant_ancestor_id (quadrant, level = quadrant->level);
+  successor_id =
+    p4est_quadrant_ancestor_id (quadrant, level = quadrant->level) + 1;
 
   /* iterate until it is possible to increment the child/ancestor_id */
-  while (ancestor_id == P4EST_CHILDREN - 1) {
-    ancestor_id = p4est_quadrant_ancestor_id (quadrant, --level);
+  while (successor_id == P4EST_CHILDREN) {
+    successor_id = p4est_quadrant_ancestor_id (quadrant, --level) + 1;
     P4EST_ASSERT (level > 0);
   }
-  P4EST_ASSERT (0 <= ancestor_id && ancestor_id < P4EST_CHILDREN - 1);
+  P4EST_ASSERT (0 <= successor_id && successor_id < P4EST_CHILDREN);
 
   /* compute result */
   if (level < quadrant->level) {
-    p4est_quadrant_ancestor (quadrant, level, result);
-    p4est_quadrant_sibling (result, result, ancestor_id + 1);
-    p4est_quadrant_first_descendant (result, result, quadrant->level);
+    quadrant_length = P4EST_QUADRANT_LEN (level);
+    mask = ~(P4EST_QUADRANT_LEN (level - 1) - 1);
+
+    /* coarsen to level - 1 and add shifts according to the successor_id */
+    result->x =
+      (successor_id & 0x01) ? (quadrant->x & mask) +
+      quadrant_length : quadrant->x & mask;
+    result->y =
+      (successor_id & 0x02) ? (quadrant->y & mask) +
+      quadrant_length : quadrant->y & mask;
+#ifdef P4_TO_P8
+    result->z =
+      (successor_id & 0x04) ? (quadrant->z & mask) +
+      quadrant_length : quadrant->z & mask;
+#endif
+    result->level = quadrant->level;
   }
   else {
-    p4est_quadrant_sibling (quadrant, result, ancestor_id + 1);
+    p4est_quadrant_sibling (quadrant, result, successor_id);
   }
   P4EST_ASSERT (p4est_quadrant_is_extended (result));
 }
@@ -1968,29 +1982,43 @@ p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
                             p4est_quadrant_t * result)
 {
   int                 level;
-  int                 ancestor_id;
+  int                 predecessor_id;
+  int                 quadrant_length, mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level > 0);
 
-  ancestor_id =
-    p4est_quadrant_ancestor_id (quadrant, level = quadrant->level);
+  predecessor_id =
+    p4est_quadrant_ancestor_id (quadrant, level = quadrant->level) - 1;
 
   /* iterate until it is possible to decrement the child/ancestor_id */
-  while (ancestor_id == 0) {
-    ancestor_id = p4est_quadrant_ancestor_id (quadrant, --level);
+  while (predecessor_id == -1) {
+    predecessor_id = p4est_quadrant_ancestor_id (quadrant, --level) - 1;
     P4EST_ASSERT (level > 0);
   }
-  P4EST_ASSERT (0 < ancestor_id && ancestor_id < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= predecessor_id && predecessor_id < P4EST_CHILDREN);
 
   /* compute result */
   if (level < quadrant->level) {
-    p4est_quadrant_ancestor (quadrant, level, result);
-    p4est_quadrant_sibling (result, result, ancestor_id - 1);
-    p4est_quadrant_last_descendant (result, result, quadrant->level);
+    quadrant_length = P4EST_QUADRANT_LEN (level);
+    mask = ~(P4EST_QUADRANT_LEN (level - 1) - 1);
+
+    /* coarsen to level - 1 and add shifts according to the predecessor_id */
+    result->x =
+      (predecessor_id & 0x01) ? (quadrant->x & mask) +
+      quadrant_length : quadrant->x & mask;
+    result->y =
+      (predecessor_id & 0x02) ? (quadrant->y & mask) +
+      quadrant_length : quadrant->y & mask;
+#ifdef P4_TO_P8
+    result->z =
+      (predecessor_id & 0x04) ? (quadrant->z & mask) +
+      quadrant_length : quadrant->z & mask;
+#endif
+    result->level = quadrant->level;
   }
   else {
-    p4est_quadrant_sibling (quadrant, result, ancestor_id - 1);
+    p4est_quadrant_sibling (quadrant, result, predecessor_id);
   }
   P4EST_ASSERT (p4est_quadrant_is_extended (result));
 }
