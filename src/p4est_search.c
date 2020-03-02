@@ -41,7 +41,7 @@
  *  dimension-independent; still we duplicate it in 3D in the usual way.
  **/
 
-static              size_t
+static size_t
 type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
 {
   p4est_gloidx_t     *my_begin_end;

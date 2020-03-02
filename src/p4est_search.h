@@ -62,8 +62,10 @@
 SC_EXTERN_C_BEGIN;
 
 /** Binary search in partition array.
- * Given two targets my_begin and my_end with my_begin <= my_end, find offsets such that
- * search_in[begin] >= my_begin, my_begin < search_in[end] and my_end <= search_in[end].
+ * Given two targets my_begin and my_end, find offsets such that
+ * search_in[begin] >= my_begin and my_end <= search_in[end]. If there are no suitable
+ * elements in search_in \a begin and \a end are set to the minimal index such that
+ * the my_end <= search_in[end].
  * If more than one index satisfy the condition, then the minimal index is the result.
  * If there is no index that satisfies the condition, then begin and end are set equal.
  * \param [in] num_procs    Number of processes to get the length of search_in.
@@ -72,8 +74,7 @@ SC_EXTERN_C_BEGIN;
  * \param [in] my_begin     The first target that defines the start of the search window.
  * \param [in] my_end       The second target that defines the end of the search window.
  * \param [in,out] begin    The first offset such that search_in[begin] >= my_begin.
- * \param [in,out] end      The second offset such that
- *                          my_begin < search_in[end] and my_end <= search_in[end].
+ * \param [in,out] end      The second offset such that my_end <= search_in[end].
  */
 void                p4est_find_partition (const int num_procs,
                                           p4est_gloidx_t * search_in,
