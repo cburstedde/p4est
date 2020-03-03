@@ -286,6 +286,8 @@
 #define p4est_quadrant_shift_corner     p8est_quadrant_shift_corner
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
 #define p4est_quadrant_set_morton       p8est_quadrant_set_morton
+#define p4est_quadrant_successor        p8est_quadrant_successor
+#define p4est_quadrant_predecessor      p8est_quadrant_predecessor
 #define p4est_quadrant_srand            p8est_quadrant_srand
 
 /* functions in p4est_search */
@@ -313,6 +315,7 @@
 #define p4est_tree_is_complete          p8est_tree_is_complete
 #define p4est_tree_print                p8est_tree_print
 #define p4est_is_equal                  p8est_is_equal
+#define p4est_quadrant_copy             p8est_quadrant_copy
 #define p4est_is_valid                  p8est_is_valid
 #define p4est_tree_compute_overlap      p8est_tree_compute_overlap
 #define p4est_tree_uniqify_overlap      p8est_tree_uniqify_overlap

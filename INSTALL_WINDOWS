@@ -38,9 +38,6 @@ Instructions:
     a. It is also required to change some of the files as some of the declarations
         and instructions are not available on Windows.
 
-        File sc/sc.c, line 29:
-        #define SIGUSR2 26
-
         File sc/src/sc.h line 96:
         //#include <libgen.h>
 
