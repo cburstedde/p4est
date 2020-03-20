@@ -1391,7 +1391,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
       p4est_lid_init (&temp_lid, 0, 0);
       P4EST_ASSERT (p4est_lid_compare (&next_lid, &temp_lid) > 0);
       p4est_lid_init (&temp_lid, 0, 1);
-      p4est_lid_substract (&next_lid, &temp_lid, &uid);
+      p4est_lid_sub (&next_lid, &temp_lid, &uid);
       uq = &temp;
       p4est_quadrant_set_morton_ext128 (uq, P4EST_QMAXLEVEL, &uid);
       P4EST_ASSERT (p4est_quadrant_is_valid (uq));

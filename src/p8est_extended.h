@@ -44,7 +44,7 @@
 #include <p8est_mesh.h>
 #include <p8est_iterate.h>
 #include <p8est_lnodes.h>
-#include <sc_uint128_t.h>
+#include <sc_uint128.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -118,33 +118,29 @@ typedef void        (*p8est_replace_t) (p8est_t * p8est,
                                         int num_incoming,
                                         p8est_quadrant_t * incoming[]);
 
-/** Allocates an unsigned 128 bit integer.
- * \return	A pointer to a allocated but uninitalized p8est_lid_t.
- *			If the allocation fails, then a error is thrown.
- */
-p8est_lid_t        *p8est_lid_alloc ();
-
 /** Initializes an unsigned 128 bit integer.
  * \param [in,out] input	A pointer to the p8est_lid_t that will be intialized.
  * \param [in] high   		The given high bits to intialize \a input.
- * \param [in] low			The given low bits to initialize \a input.
+ * \param [in] low        The given low bits to initialize \a input.
  */
 void                p8est_lid_init (p8est_lid_t * input, uint64_t high,
                                     uint64_t low);
 
-/** Creates a copy of an unsigned 128 bit integer.
- * \param [in]	input			A pointer to the p8est_lid_t that is copied.
- * \return 						A pointer to a allocated but uninitalized p8est_lid_t.
+/** Creates a copy of a p8est_lid_t.
+ * \param [in]	  input   A pointer to the p8est_lid_t that is copied.
+ * \param[in,out] output  A pointer to a allocated but uninitalized p8est_lid_t.
+ *                        \a input will be copied to \a output.
  */
-p8est_lid_t        *p8est_lid_copy (const p8est_lid_t * input);
+void                p8est_lid_copy (const p8est_lid_t * input,
+                                    p8est_lid_t * output);
 
 /** Checks if the p8est_lid_t \a a and the p8est_lid_t \a b are equal.
  * \param [in]	a	A pointer to allocated/static p8est_lid_t.
  * \param [in]	b	A pointer to allocated/static p8est_lid_t.
  * \return			Returns a value > 0 if a is equal to b and a value <= 0 else.
  */
-int                 p8est_lid_equal (const p8est_lid_t * a,
-                                     const p8est_lid_t * b);
+int                 p8est_lid_is_equal (const p8est_lid_t * a,
+                                        const p8est_lid_t * b);
 
 /** Compare the p8est_lid_t \a a and the p8est_lid_t \a b.
  * \param [in]	a	A pointer to allocated/static p8est_lid_t.
@@ -162,7 +158,8 @@ int                 p8est_lid_compare (const p8est_lid_t * a,
  *						will be overwritten by \a a + \a b.
  *	\param [in] b 		A pointer to a p8est_lid_t.
  */
-void                p8est_lid_add_to (p8est_lid_t * a, const p8est_lid_t * b);
+void                p8est_lid_add_inplace (p8est_lid_t * a,
+                                           const p8est_lid_t * b);
 
 /** Substracts the p8est_lid_t \a b from the p8est_lid_t \a a.
  *  This function assume that the result is >= 0.
@@ -172,9 +169,9 @@ void                p8est_lid_add_to (p8est_lid_t * a, const p8est_lid_t * b);
  *						The difference \a a - \a b will be saved.
  *						in \a result.
  */
-void                p8est_lid_substract (const p8est_lid_t * a,
-                                         const p8est_lid_t * b,
-                                         p8est_lid_t * result);
+void                p8est_lid_sub (const p8est_lid_t * a,
+                                   const p8est_lid_t * b,
+                                   p8est_lid_t * result);
 
 /** Calculates the bitwise and of the p8est_lid_t \a a and the p8est_lid_t \a b.
  *	\param [in]	a 			A pointer to a p8est_lid_t.
@@ -192,8 +189,8 @@ void                p8est_lid_bitwise_and (const p8est_lid_t * a,
  *						he bitwise or will be saved in \a a.
  *	\param [in]	b 		A pointer to a p8est_lid_t.
  */
-void                p8est_lid_bitwise_or_direct (p8est_lid_t * a,
-                                                 const p8est_lid_t * b);
+void                p8est_lid_bitwise_or_inplace (p8est_lid_t * a,
+                                                  const p8est_lid_t * b);
 
 /** Calculates the bit right shift of the p8est_lid_t \a input by shift_count bits.
  *	\param [in]	input 		A pointer to a p8est_lid_t.
@@ -220,8 +217,7 @@ void                p8est_lid_left_shift (const p8est_lid_t * input,
  *	\param[in]		shift_count	The bit (counted from the right hand side)
  *								that is set to one.
  */
-void                p8est_lid_set_1 (p8est_lid_t * input,
-                                     unsigned bit_number);
+void                p8est_lid_set_1 (p8est_lid_t * input, int bit_number);
 
 /** Computes the linear position as p8est_lid_t of a quadrant in a uniform grid.
  * The grid and quadrant levels need not coincide.

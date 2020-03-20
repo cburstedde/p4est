@@ -368,8 +368,8 @@ main (int argc, char **argv)
       i = ifirst;               /* just a uint64_t */
 #endif
       for (; ((p4est_lid_compare (&i, &ilast) < 0)
-              || p4est_lid_equal (&i, &ilast));
-           p4est_lid_add_to (&i, &temp_lid)) {
+              || p4est_lid_is_equal (&i, &ilast));
+           p4est_lid_add_inplace (&i, &temp_lid)) {
         p4est_quadrant_set_morton_ext128 (&q, level, &i);
 #ifndef P4_TO_P8
         testval = p4est_balance_seeds_face (&q, &p, face, P4EST_CONNECT_FACE,
@@ -474,8 +474,8 @@ main (int argc, char **argv)
       i = *ifirst;              /* just a uint64_t */
 #endif
       for (; ((p4est_lid_compare (&i, &ilast) < 0)
-              || p4est_lid_equal (&i, &ilast));
-           p4est_lid_add_to (&i, &temp_lid)) {
+              || p4est_lid_is_equal (&i, &ilast));
+           p4est_lid_add_inplace (&i, &temp_lid)) {
         p4est_quadrant_set_morton_ext128 (&q, level, &i);
         testval = p8est_balance_seeds_edge (&q, &p, edge, P8EST_CONNECT_FACE,
                                             seeds);
@@ -559,8 +559,8 @@ main (int argc, char **argv)
       i = ifirst;               /* just a uint64_t */
 #endif
       for (; ((p4est_lid_compare (&i, &ilast) < 0)
-              || p4est_lid_equal (&i, &ilast));
-           p4est_lid_add_to (&i, &temp_lid)) {
+              || p4est_lid_is_equal (&i, &ilast));
+           p4est_lid_add_inplace (&i, &temp_lid)) {
         p4est_quadrant_set_morton_ext128 (&q, level, &i);
 #ifndef P4_TO_P8
         testval =

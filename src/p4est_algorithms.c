@@ -1946,7 +1946,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
     }
     else {
       p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
-      p4est_lid_add_to (&lid, &one);
+      p4est_lid_add_inplace (&lid, &one);
       p4est_quadrant_set_morton_ext128 (&ld, P4EST_QMAXLEVEL, &lid);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
       q = &ld;
@@ -2021,7 +2021,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
         }
         else {
           p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
-          p4est_lid_add_to (&lid, &one);
+          p4est_lid_add_inplace (&lid, &one);
           p4est_quadrant_set_morton_ext128 (&ld, P4EST_QMAXLEVEL, &lid);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
           q = &ld;
