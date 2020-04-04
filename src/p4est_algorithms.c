@@ -1487,8 +1487,7 @@ p4est_quadrant_disjoint_parent (const void *a, const void *b)
   const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
   const p4est_quadrant_t *r = (p4est_quadrant_t *) b;
   int8_t              level = SC_MIN (q->level - 1, r->level - 1);
-  p4est_qcoord_t      mask =
-    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+  p4est_qcoord_t      mask = P4EST_QUADRANT_MASK (level);
 
   if (((q->x ^ r->x) & mask) || ((q->y ^ r->y) & mask)
 #ifdef P4_TO_P8

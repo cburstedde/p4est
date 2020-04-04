@@ -34,6 +34,8 @@
 #include <p4est_search.h>
 #endif /* !P4_TO_P8 */
 
+#define P4EST_BALANCE_MASK(s) ((((p4est_qcoord_t) 1) << (s)) - 1)
+
 /* We have a location, and a \a level quadrant that must be shifted by
  * \a distance (>= 0) to be at the location.  This returns the largest quadrant
  * that can exist at \a location and be in balance with the \a level quadrant.
@@ -46,7 +48,11 @@ p4est_balance_kernel_1d (p4est_qcoord_t distance, int level)
   /* the distance only makes sense if it is an integer number of \a level
    * distances */
   P4EST_ASSERT (distance >= 0);
+#if 0
   P4EST_ASSERT (!(distance & (~(((p4est_qcoord_t) - 1) << shift))));
+#else
+  P4EST_ASSERT (!(distance & P4EST_BALANCE_MASK (shift)));
+#endif
   distance >>= shift;
   /* The theory says we should use ((distance + 1)&(~1) + 1), but
    * using distance + 1 is equivalent for all distance >= 0 */
@@ -66,9 +72,14 @@ p4est_balance_kernel_2d (p4est_qcoord_t dx, p4est_qcoord_t dy, int level)
   /* the distance only makes sense if it is an integer number of \a level
    * distances */
   P4EST_ASSERT (dx >= 0);
-  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (dy >= 0);
+#if 0
+  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
+#else
+  P4EST_ASSERT (!(dx & P4EST_BALANCE_MASK (shift)));
+  P4EST_ASSERT (!(dy & P4EST_BALANCE_MASK (shift)));
+#endif
 
   dx >>= shift;
   /* get the smallest even number greater than or equal to dx */
@@ -97,11 +108,17 @@ p8est_balance_kernel_3d_edge (p4est_qcoord_t dx, p4est_qcoord_t dy,
   int                 ret;
 
   P4EST_ASSERT (dx >= 0);
-  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (dy >= 0);
-  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (dz >= 0);
+#if 0
+  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (!(dz & (~(((p4est_qcoord_t) - 1) << shift))));
+#else
+  P4EST_ASSERT (!(dx & P4EST_BALANCE_MASK (shift)));
+  P4EST_ASSERT (!(dy & P4EST_BALANCE_MASK (shift)));
+  P4EST_ASSERT (!(dz & P4EST_BALANCE_MASK (shift)));
+#endif
 
   if (!dx && !dy && !dz) {
     return level;
@@ -150,11 +167,17 @@ p8est_balance_kernel_3d_face (p4est_qcoord_t dx, p4est_qcoord_t dy,
   int                 ret;
 
   P4EST_ASSERT (dx >= 0);
-  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (dy >= 0);
-  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (dz >= 0);
+#if 0
+  P4EST_ASSERT (!(dx & (~(((p4est_qcoord_t) - 1) << shift))));
+  P4EST_ASSERT (!(dy & (~(((p4est_qcoord_t) - 1) << shift))));
   P4EST_ASSERT (!(dz & (~(((p4est_qcoord_t) - 1) << shift))));
+#else
+  P4EST_ASSERT (!(dx & P4EST_BALANCE_MASK (shift)));
+  P4EST_ASSERT (!(dy & P4EST_BALANCE_MASK (shift)));
+  P4EST_ASSERT (!(dz & P4EST_BALANCE_MASK (shift)));
+#endif
 
   if (!dx && !dy && !dz) {
     return level;
@@ -292,7 +315,11 @@ p4est_bal_corner_con_internal (p4est_quadrant_t const *q,
     *consistent = 0;
   }
 
+#if 0
   mask = -1 << (P4EST_MAXLEVEL - blevel);
+#else
+  mask = P4EST_QUADRANT_MASK (blevel);
+#endif
   p->x = q->x + ((corner & 1) ? -dx : dx);
   p->x &= mask;
   p->y = q->y + ((corner & 2) ? -dy : dy);
@@ -420,7 +447,11 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *q,
     SC_ABORT_NOT_REACHED ();
   }
 
+#if 0
   mask = -1 << (P4EST_MAXLEVEL - blevel);
+#else
+  mask = P4EST_QUADRANT_MASK (blevel);
+#endif
   p->x &= mask;
   p->y &= mask;
 #ifdef P4_TO_P8
@@ -439,8 +470,13 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *q,
       return;
     }
 
+#if 0
     mask = -1 << (P4EST_MAXLEVEL - (blevel - 1));
     pmask = -1 << (P4EST_MAXLEVEL - (plevel));
+#else
+    mask = P4EST_QUADRANT_MASK (blevel - 1);
+    pmask = P4EST_QUADRANT_MASK (plevel);
+#endif
     a = *p;
     a.x &= mask;
     a.y &= mask;
@@ -475,7 +511,11 @@ p4est_bal_face_con_internal (p4est_quadrant_t const *q,
       }
     }
 #else
+#if 0
     b2mask = -1 << (P4EST_MAXLEVEL - (blevel - 2));
+#else
+    b2mask = P4EST_QUADRANT_MASK (blevel - 2);
+#endif
     if (!balance) {
       achild = p8est_quadrant_child_id (&a);
     }
@@ -656,7 +696,11 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *q,
   default:
     SC_ABORT_NOT_REACHED ();
   }
+#if 0
   mask = -1 << (P4EST_MAXLEVEL - blevel);
+#else
+  mask = P4EST_QUADRANT_MASK (blevel);
+#endif
   p->x &= mask;
   p->y &= mask;
   p->z &= mask;
@@ -672,8 +716,13 @@ p8est_bal_edge_con_internal (p4est_quadrant_t const *q,
       return;
     }
 
+#if 0
     mask = -1 << (P4EST_MAXLEVEL - (blevel - 1));
     pmask = -1 << (P4EST_MAXLEVEL - (plevel));
+#else
+    mask = P4EST_QUADRANT_MASK (blevel - 1);
+    pmask = P4EST_QUADRANT_MASK (plevel);
+#endif
     a = *p;
     a.x &= mask;
     a.y &= mask;
