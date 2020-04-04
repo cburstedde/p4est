@@ -149,6 +149,11 @@ check_predecessor_successor (const p4est_quadrant_t * q)
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
 }
 
+#define NEG_ONE_MAXL (~((((p4est_qcoord_t) 1) << P8EST_MAXLEVEL) - 1))
+#define NEG_ONE_MAXLM1 (~((((p4est_qcoord_t) 1) << (P8EST_MAXLEVEL - 1)) - 1))
+#define NEG_ONE_MAXLP1 \
+  (NEG_ONE_MAXL & ~(((p4est_qcoord_t) 1) << P8EST_MAXLEVEL))
+
 int
 main (int argc, char **argv)
 {
@@ -474,17 +479,17 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
-  A.x = -qone << P4EST_MAXLEVEL;
-  A.y = -qone << P4EST_MAXLEVEL;
+  A.x = NEG_ONE_MAXL;
+  A.y = NEG_ONE_MAXL;
   A.z = 0;
   A.level = 0;
 
   B.x = qone << P4EST_MAXLEVEL;
-  B.y = -qone << P4EST_MAXLEVEL;
+  B.y = NEG_ONE_MAXL;
   B.z = 0;
   B.level = 0;
 
-  C.x = -qone << P4EST_MAXLEVEL;
+  C.x = NEG_ONE_MAXL;
   C.y = qone << P4EST_MAXLEVEL;
   C.z = 0;
   C.level = 0;
@@ -495,14 +500,14 @@ main (int argc, char **argv)
   D.level = 0;
 
   /* this one is outside the 3x3 box */
-  E.x = -qone << (P4EST_MAXLEVEL + 1);
+  E.x = NEG_ONE_MAXLP1;
   E.y = -qone;
   E.z = -qone;
   E.level = 0;
 
   F.x = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
   F.y = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
-  F.z = -qone << P4EST_MAXLEVEL;
+  F.z = NEG_ONE_MAXL;
   F.level = P4EST_QMAXLEVEL;
 
   G.x = -mh;
@@ -510,18 +515,18 @@ main (int argc, char **argv)
   G.z = -mh;
   G.level = P4EST_QMAXLEVEL;
 
-  H.x = -qone << (P4EST_MAXLEVEL - 1);
-  H.y = -qone << (P4EST_MAXLEVEL - 1);
+  H.x = NEG_ONE_MAXLM1;
+  H.y = NEG_ONE_MAXLM1;
   H.z = qone << (P4EST_MAXLEVEL - 1);
   H.level = 1;
 
-  I.x = -qone << P4EST_MAXLEVEL;
-  I.y = -qone << (P4EST_MAXLEVEL - 1);
+  I.x = NEG_ONE_MAXL;
+  I.y = NEG_ONE_MAXLM1;
   I.z = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
   I.level = P4EST_QMAXLEVEL;
 
-  P.x = -qone << P4EST_MAXLEVEL;
-  P.y = -qone << (P4EST_MAXLEVEL - 1);
+  P.x = NEG_ONE_MAXL;
+  P.y = NEG_ONE_MAXLM1;
   P.z = qone << (P4EST_MAXLEVEL - 1);
   P.level = 1;
 
