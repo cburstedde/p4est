@@ -301,7 +301,7 @@ p4est_ghost_contains (p4est_ghost_t * ghost,
     /* and don't forget to add the window offset */
     return !(p4est_quadrant_is_equal (qresult, q) ||
              p4est_quadrant_is_ancestor (qresult, q)) ?
-      (ssize_t) (-1) : result + (ssize_t) start;
+      (ssize_t) (-1) : (ssize_t) (result + start);
   }
   else {
     P4EST_ASSERT (p4est_quadrant_is_valid (q));
