@@ -217,7 +217,8 @@ void                p8est_lid_left_shift (const p8est_lid_t * input,
  *	\param[in]		shift_count	The bit (counted from the right hand side)
  *								that is set to one.
  */
-void                p8est_lid_set_1 (p8est_lid_t * input, int bit_number);
+void                p8est_lid_bitwise_pow2 (p8est_lid_t * input,
+                                            int bit_number);
 
 /** Computes the linear position as p8est_lid_t of a quadrant in a uniform grid.
  * The grid and quadrant levels need not coincide.

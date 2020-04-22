@@ -195,17 +195,17 @@
 
 /* functions in p4est_extended */
 #define p4est_replace_t                 p8est_replace_t
-#define p4est_lid_init									p8est_lid_init
-#define p4est_lid_copy									p8est_lid_copy
-#define p4est_lid_is_equal							p8est_lid_is_equal
-#define p4est_lid_compare								p8est_lid_compare
-#define p4est_lid_add_inplace 					p8est_lid_add_inplace
-#define p4est_lid_sub							      p8est_lid_sub
-#define p4est_lid_bitwise_and						p8est_lid_bitwise_and
-#define p4est_lid_bitwise_or_inplace		p8est_lid_bitwise_or_inplace
-#define p4est_lid_shift_right						p8est_lid_shift_right
-#define p4est_lid_shift_left						p8est_lid_shift_left
-#define p4est_lid_set_1									p8est_lid_set_1
+#define p4est_lid_init                  p8est_lid_init
+#define p4est_lid_copy                  p8est_lid_copy
+#define p4est_lid_is_equal              p8est_lid_is_equal
+#define p4est_lid_compare               p8est_lid_compare
+#define p4est_lid_add_inplace           p8est_lid_add_inplace
+#define p4est_lid_sub                   p8est_lid_sub
+#define p4est_lid_bitwise_and           p8est_lid_bitwise_and
+#define p4est_lid_bitwise_or_inplace    p8est_lid_bitwise_or_inplace
+#define p4est_lid_shift_right           p8est_lid_shift_right
+#define p4est_lid_shift_left            p8est_lid_shift_left
+#define p4est_lid_bitwise_pow2          p8est_lid_bitwise_pow2
 #define p4est_quadrant_linear_id_ext128 p8est_quadrant_linear_id_ext128
 #define p4est_quadrant_set_morton_ext128 p8est_quadrant_set_morton_ext128
 #define p4est_new_ext                   p8est_new_ext
