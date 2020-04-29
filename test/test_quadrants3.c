@@ -119,6 +119,41 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   }
 }
 
+static void
+check_successor_predecessor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  uint64_t            lid;
+
+  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_successor (q, &temp1);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid + 1),
+                  "successor");
+  p4est_quadrant_predecessor (&temp1, &temp2);
+  /* Check if predecessor inverts successor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "predecessor");
+}
+
+static void
+check_predecessor_successor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  uint64_t            lid;
+
+  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_predecessor (q, &temp1);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid - 1),
+                  "predecessor");
+  p4est_quadrant_successor (&temp1, &temp2);
+  /* Check if successor inverts predecessor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
+}
+
+#define NEG_ONE_MAXL (~((((p4est_qcoord_t) 1) << P8EST_MAXLEVEL) - 1))
+#define NEG_ONE_MAXLM1 (~((((p4est_qcoord_t) 1) << (P8EST_MAXLEVEL - 1)) - 1))
+#define NEG_ONE_MAXLP1 \
+  (NEG_ONE_MAXL & ~(((p4est_qcoord_t) 1) << P8EST_MAXLEVEL))
+
 int
 main (int argc, char **argv)
 {
@@ -444,17 +479,17 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
-  A.x = -qone << P4EST_MAXLEVEL;
-  A.y = -qone << P4EST_MAXLEVEL;
+  A.x = NEG_ONE_MAXL;
+  A.y = NEG_ONE_MAXL;
   A.z = 0;
   A.level = 0;
 
   B.x = qone << P4EST_MAXLEVEL;
-  B.y = -qone << P4EST_MAXLEVEL;
+  B.y = NEG_ONE_MAXL;
   B.z = 0;
   B.level = 0;
 
-  C.x = -qone << P4EST_MAXLEVEL;
+  C.x = NEG_ONE_MAXL;
   C.y = qone << P4EST_MAXLEVEL;
   C.z = 0;
   C.level = 0;
@@ -465,14 +500,14 @@ main (int argc, char **argv)
   D.level = 0;
 
   /* this one is outside the 3x3 box */
-  E.x = -qone << (P4EST_MAXLEVEL + 1);
+  E.x = NEG_ONE_MAXLP1;
   E.y = -qone;
   E.z = -qone;
   E.level = 0;
 
   F.x = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
   F.y = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
-  F.z = -qone << P4EST_MAXLEVEL;
+  F.z = NEG_ONE_MAXL;
   F.level = P4EST_QMAXLEVEL;
 
   G.x = -mh;
@@ -480,18 +515,18 @@ main (int argc, char **argv)
   G.z = -mh;
   G.level = P4EST_QMAXLEVEL;
 
-  H.x = -qone << (P4EST_MAXLEVEL - 1);
-  H.y = -qone << (P4EST_MAXLEVEL - 1);
+  H.x = NEG_ONE_MAXLM1;
+  H.y = NEG_ONE_MAXLM1;
   H.z = qone << (P4EST_MAXLEVEL - 1);
   H.level = 1;
 
-  I.x = -qone << P4EST_MAXLEVEL;
-  I.y = -qone << (P4EST_MAXLEVEL - 1);
+  I.x = NEG_ONE_MAXL;
+  I.y = NEG_ONE_MAXLM1;
   I.z = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
   I.level = P4EST_QMAXLEVEL;
 
-  P.x = -qone << P4EST_MAXLEVEL;
-  P.y = -qone << (P4EST_MAXLEVEL - 1);
+  P.x = NEG_ONE_MAXL;
+  P.y = NEG_ONE_MAXLM1;
   P.z = qone << (P4EST_MAXLEVEL - 1);
   P.level = 1;
 
@@ -661,6 +696,16 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton (&a, 0, Aid);
   SC_CHECK_ABORT (Aid == 27, "linear_id");
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "set_morton/linear_id");
+
+  check_successor_predecessor (&F);
+  check_predecessor_successor (&F);
+  check_predecessor_successor (&G);
+  check_predecessor_successor (&H);
+  check_successor_predecessor (&I);
+  check_predecessor_successor (&I);
+  check_successor_predecessor (&P);
+  check_predecessor_successor (&P);
+  check_predecessor_successor (&Q);
 
   p4est_nearest_common_ancestor (&P, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor");

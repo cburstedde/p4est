@@ -1,0 +1,14 @@
+The file Software_p4est_newstest2.pdf contains the final author-approved
+version of the following article:
+
+@ARTICLE{Burstedde20,
+  author = {Carsten Burstedde},
+  title = {{\texttt{p4est}}: A Parallel Software Toolbox
+           for Efficient Mesh Refinement and Partitioning},
+  journal = {SIAM News},
+  year = 2020,
+  volume = 53,
+  number = 1
+}
+
+published in SIAM News 53(1), Jan./Feb. 2020.
