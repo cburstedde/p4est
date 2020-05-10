@@ -2845,15 +2845,18 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     p4est_find_partition (num_procs - 1, &(partition_new[1]), my_begin,
                           my_end, &begin, &end);
     /* Increment the indices of the window boundaries because the search is in
-     * `&(partition_new[1])` and without the first process.
+     * `&(partition_new[1])` and without the first process. But we
+     *  need a strict inequality in 
+     *  `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
+     * (cf. old method below). That is why we have to decrement `end`.
+     * All in all only `begin` is incremented.
      */
     ++begin;
-    ++end;
 
     num_sends = 0;              /* number of sends */
     send_lowest = num_procs;    /* lowest process id */
     send_highest = 0;           /* highest process id */
-    for (i = begin; i < end; i++) {
+    for (i = begin; i <= end; i++) {
       /* loop over the relevant processes */
       if (partition_new[i] < partition_new[i + 1]) {
         num_sends++;
