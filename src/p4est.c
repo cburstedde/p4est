@@ -3085,8 +3085,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     my_end = partition_new[rank] + P4EST_CHILDREN - 2;
     p4est_find_partition (num_procs, partition_now, my_begin, my_end,
                           &begin, &end);
-    --begin; /* since we have partiton_now[i + 1] */
-    --end /* for <= */;
+    --begin;                    /* since we have partiton_now[i + 1] */
+    --end /* for <= */ ;
 
     num_receives = 0;           /* number of receives */
     receive_lowest = num_procs; /* lowest process id */
@@ -3345,6 +3345,42 @@ p4est_checksum (p4est_t * p4est)
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
 
   return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+
+  return 0;
+#endif /* !P4EST_HAVE_ZLIB */
+}
+
+unsigned
+p4est_checksum_partition (p4est_t * p4est)
+{
+#ifdef P4EST_HAVE_ZLIB
+  uLong               treecrc, crc;
+  size_t              scount, ssum;
+  p4est_topidx_t      nt;
+  p4est_tree_t       *tree;
+  sc_array_t          checkarray;
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  sc_array_init (&checkarray, 4);
+  crc = adler32 (0, Z_NULL, 0);
+  ssum = 0;
+  for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
+    tree = p4est_tree_array_index (p4est->trees, nt);
+    treecrc =
+      (uLong) p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
+    scount = 4 * checkarray.elem_count;
+    ssum += scount;
+    crc = adler32_combine (crc, treecrc, (z_off_t) scount);
+  }
+  sc_array_reset (&checkarray);
+  P4EST_ASSERT ((p4est_locidx_t) ssum ==
+                p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
+
+  return p4est_comm_checksum_partition (p4est, (unsigned) crc, ssum);
 #else
   sc_abort_collective
     ("Configure did not find a recent enough zlib.  Abort.\n");

@@ -220,6 +220,16 @@ unsigned            p8est_comm_checksum (p8est_t * p8est,
                                          unsigned local_crc,
                                          size_t local_bytes);
 
+/** Compute a parallel partition dependent checksum out of local checksums.
+ * \param [in] p8est       The MPI information of this p8est will be used.
+ * \param [in] local_crc   Locally computed adler32 checksum.
+ * \param [in] local_bytes Number of bytes used for local checksum.
+ * \return                 Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p8est_comm_checksum_partition (p8est_t * p8est,
+                                                   unsigned local_crc,
+                                                   size_t local_bytes);
+
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p8est_transfer_context
 {

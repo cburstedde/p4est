@@ -181,6 +181,7 @@
 #define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
+#define p4est_checksum_partition        p8est_checksum_partition
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
 #define p4est_connect_type_int          p8est_connect_type_int
@@ -352,6 +353,7 @@
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 #define p4est_comm_checksum             p8est_comm_checksum
+#define p4est_comm_checksum_partition   p8est_comm_checksum_partition
 #define p4est_transfer_fixed            p8est_transfer_fixed
 #define p4est_bsearch_partition         p8est_bsearch_partition
 #define p4est_transfer_fixed_begin      p8est_transfer_fixed_begin
