@@ -2946,11 +2946,11 @@ p4est_partition_given (p4est_t * p4est,
     lower_bound =
       (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
 
-    if ((lower_bound <= my_end) && (global_last_quad_index[from_proc] >= my_begin)) {
+    if ((lower_bound <= my_end)
+        && (global_last_quad_index[from_proc] >= my_begin)) {
       num_recv_from[from_proc] =
-        SC_MIN (my_end,
-                global_last_quad_index[from_proc]) - SC_MAX (my_begin,
-                                                             lower_bound)
+        SC_MIN (my_end, global_last_quad_index[from_proc]) - SC_MAX (my_begin,
+                                                                     lower_bound)
         + 1;
       P4EST_ASSERT (num_recv_from[from_proc] >= 0);
       if (from_proc != rank)
@@ -3055,14 +3055,15 @@ p4est_partition_given (p4est_t * p4est,
     to_end = rank;
   }
   else
-  p4est_find_partition (num_procs, new_global_last_quad_index,
-                        my_begin, my_end, &to_begin, &to_end);
+    p4est_find_partition (num_procs, new_global_last_quad_index,
+                          my_begin, my_end, &to_begin, &to_end);
   for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
     /* I send to to_proc which may be empty */
     lower_bound =
       (to_proc == 0) ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
 
-    if ((lower_bound <= my_end) && (new_global_last_quad_index[to_proc] >= my_begin)) {
+    if ((lower_bound <= my_end)
+        && (new_global_last_quad_index[to_proc] >= my_begin)) {
       num_send_to[to_proc] =
         SC_MIN (my_end,
                 new_global_last_quad_index[to_proc]) - SC_MAX (my_begin,
